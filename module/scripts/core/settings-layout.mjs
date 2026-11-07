@@ -31,7 +31,7 @@ export const SETTINGS_TABS = Object.freeze([
       { id: "reports", icon: "fa-solid fa-flag" }, { id: "debugReport", icon: "fa-solid fa-bug", everyone: true }] },
   { id: "combat", icon: "fa-solid fa-shield-halved",
     keys: ["heroicInspiration", "cover", "flanking", "flankingSide", "flankingConga", "aurasOnlyInCombat", "zoneChoice", "npcSaveChoice", "legendaryResistance", "portent", "combatWindowUnlimited", "combatWindowSeconds",
-      "critMargin", "criticalMode", "criticalTable", "criticalNpc", "successAtCost", "successAtCostHold", "masteryRules", "sneakAttackMode", "nonLethalMenu", "endUnaffected", "somaticHands"],
+      "critMargin", "criticalMode", "criticalTable", "criticalNpc", "successAtCost", "successAtCostHold", "masteryRules", "sneakAttackMode", "potionHealing", "nonLethalMenu", "endUnaffected", "somaticHands"],
     groups: [
       g("combatGeneral", "fa-solid fa-shield-halved", ["aurasOnlyInCombat", "zoneChoice", "endUnaffected", "combatWindowUnlimited", "combatWindowSeconds"],
         { sub: { combatWindowSeconds: offIf("combatWindowUnlimited", true) } }),
@@ -45,6 +45,7 @@ export const SETTINGS_TABS = Object.freeze([
         { tag: "dmg", sub: { successAtCostHold: offIf("successAtCost", false) } }),
       g("weapons", "fa-solid fa-khanda", ["masteryRules", "sneakAttackMode", "nonLethalMenu"]),
       g("spellcasting", "fa-solid fa-hand-sparkles", ["somaticHands"]),   // §409
+      g("potions", "fa-solid fa-flask", ["potionHealing"], { tag: "house" }),   // issue #31
       g("rollAids", "fa-solid fa-star", ["portent", "heroicInspiration"])
     ] },
   { id: "movement", icon: "fa-solid fa-shoe-prints",

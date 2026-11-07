@@ -3,6 +3,8 @@
  * soins et dégâts, aides aux tests, budget, présage, utilisation, factions, furtivité. Extrait de runtime/testing.mjs.
  */
 
+import { potionOptions } from "./potion-choice.mjs";
+import { potionChoiceActivity } from "../adapter/potions.mjs";
 import { masterySlots } from "../core/mastery.mjs";
 import { baseWeapons, chosenMasteries, masterySourcesOf, restAllowanceOf } from "../adapter/mastery.mjs";
 import { judgeMasteries } from "./mastery-choices.mjs";
@@ -317,6 +319,13 @@ export function rangeCheck({ tokenId, itemId, targetIds=[], activityType=null })
 }
 
 /** §20 : le budget du tour d'un combattant (action, action Bonus, Foncer, Se désengager, Vitesse à 0, déplacement en plus). */
+/** Issue #31 : ce que la Combat UI lirait pour la potion `itemId` du token (`api.ui.potion`), ou null. */
+export function potionOptionsOf({ tokenId, itemId }) {
+  const token = viewedToken({ tokenId });
+  const item = token.actor?.items.get(itemId);
+  return potionOptions(potionChoiceActivity(item));
+}
+
 export function budget({ tokenId }) {
   const token = viewedToken({ tokenId });
   const combatant = token.actor ? combatantFor(token.actor) : null;

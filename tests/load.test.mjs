@@ -41,7 +41,7 @@ describe("chargement du module", () => {
       "door", "dropDown", "effectOrigins", "enchant", "endings", "etherealWalls", "factions", "familiar", "familiarPocket", "familiarRecall",
       "flammable", "flight", "follow", "followState", "forcePlayerWait", "foreignSetting", "fortified", "gmAlerts", "gmQueue", "gmQueueAnswer", "gmQueueForce", "gmQueueRoll", "grab", "grappleState", "groupRoll", "groupRollBreakdown", "groupRollForce", "groupRollMode", "groupRollState", "hampered", "heal", "hoist", "hood", "hurt", "identify", "inventory", "issues", "itemData", "jump",
       "lightState", "lock", "longRest", "makeScroll", "masteries", "menu", "missedOpportunities", "mount", "move", "movement", "naturalOne", "overrideContent", "owners", "perceived", "perf", "pickTargets", "placeItemEffect", "placeMenu", "placeRegionAt",
-      "plan", "planning", "portent", "range", "rangeCheck", "rangedPlacement", "rawMove", "reachCheck", "ready", "reload", "removeItemEffect", "reports", "restoreItem", "rollCard",
+      "plan", "planning", "portent", "potionOptions", "range", "rangeCheck", "rangedPlacement", "rawMove", "reachCheck", "ready", "reload", "removeItemEffect", "reports", "restoreItem", "rollCard",
       "rollCheck", "rollSave", "runMacro", "saveChance", "scatter", "sceneBright", "screenAfterUpdate", "screenHere", "scrollReading", "sees", "sequencer", "setOwners", "setting", "settingsChanged", "sheetUse", "shortRest", "sightIssues", "skillAid", "skillAids",
       "stairs", "stairsAt", "stand", "stats", "status", "stealth", "storm", "stormStrike", "summonAt", "summonCaptured", "takeStairs", "teleport",
       "teleportPick", "threats", "timer", "toggleLight", "tokenLight", "transpose", "unfollow", "upkeep", "use", "view", "viewScene", "visionMatrix", "waits", "wall", "wallSide", "windows"]);
@@ -74,7 +74,7 @@ describe("chargement du module", () => {
 
   it("le marquage « sans DAS » (§395), la relance (§16.21), puis la visée (ui), l'utilisation sans fenêtre (§68), la Métamagie, la légalité (runtime), les portes, sur dnd5e.preUseActivity", () => {
     expect(api.api.routes()["dnd5e.preUseActivity"].map(r => r.label)).toEqual([
-      "without DAS: usage not marked", "correction: quiet zone not marked", "recast of a lasting spell", "targeting: target expected", "projectiles: one per target, the rest chained", "use without dialog", "metamagic: spell not modified", "worn form lock: attempt not punished", "use legality", "gates: Sanctuary, Counterspell, pre-attack reactions, Portent", "summon on targets: neighbours asked", "Ritual: cast without a spell slot", "self area: without the \"Place Template\" box", "Sneak Attack: item activity not redirected", "Reckless Attack: prompt",
+      "without DAS: usage not marked", "correction: quiet zone not marked", "recast of a lasting spell", "targeting: target expected", "projectiles: one per target, the rest chained", "use without dialog", "metamagic: spell not modified", "healing potion: Bonus Action or action not chosen", "worn form lock: attempt not punished", "use legality", "gates: Sanctuary, Counterspell, pre-attack reactions, Portent", "summon on targets: neighbours asked", "Ritual: cast without a spell slot", "self area: without the \"Place Template\" box", "Sneak Attack: item activity not redirected", "Reckless Attack: prompt",
       "swallow: Bite not refused", "potion: concentration not removed", "ground item: area placed on use, copy kept", "light object: placed on cast", "light source: dnd5e consumption not skipped"
     ]);
   });

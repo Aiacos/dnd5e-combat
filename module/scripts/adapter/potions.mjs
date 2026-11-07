@@ -99,3 +99,47 @@ export function completeEffectChanges(effect) {
   if ( added.length ) effect.updateSource({ "system.changes": [...current, ...added] });
   return added.length;
 }
+
+/* -------------------------------------------- */
+/*  Issue #31 : action Bonus ou action           */
+/* -------------------------------------------- */
+
+/**
+ * Issue #31 : l'activité propose-t-elle le choix action Bonus / action ? Une potion (`isPotion`) dont l'activité est un soin qui coûte
+ * une action Bonus (donnée 2024). Une copie ancienne qui coûte déjà une action (règle 2014) n'est pas concernée.
+ * @param {Activity} activity
+ * @returns {boolean}
+ */
+export function offersPotionChoice(activity) {
+  return !!activity && (activity.type === "heal") && isPotion(activity.item) && (activity.activation?.type === "bonus");
+}
+
+/** L'activité de soin d'une potion qui propose le choix (la première), ou null. */
+export function potionChoiceActivity(item) {
+  if ( !isPotion(item) ) return null;
+  return Array.from(item.system?.activities ?? []).find(a => offersPotionChoice(a)) ?? null;
+}
+
+/** Une potion de soins à faire boire (menu) : une potion avec une activité de soin, quel qu'en soit le coût. */
+export function healingPotionActivity(item) {
+  if ( !isPotion(item) || !((item.system?.quantity ?? 1) > 0) ) return null;
+  return Array.from(item.system?.activities ?? []).find(a => a.type === "heal") ?? null;
+}
+
+/**
+ * Les formules du soin d'une activité, et leur maximum (« ne lancez pas les dés ») : `{ formula, max }` ou null si la donnée n'en a pas.
+ * `maximize` : la fonction pure qui met les dés à leur maximum (core/max-dice.mjs).
+ */
+export function healingFormulaOf(activity, maximize) {
+  try {
+    const config = activity.getDamageConfig({});
+    const rolls = (config.rolls ?? []).filter(r => r.parts?.length);
+    if ( !rolls.length ) return null;
+    const data = rolls[0].data ?? activity.getRollData();
+    const parts = rolls.map(r => r.parts.join(" + "));
+    const formula = parts.join(" + ");
+    const shown = new Roll(formula, data);
+    const max = new Roll(maximize(formula), data).evaluateSync({ strict: false }).total;
+    return { formula: shown.formula, max: Number.isFinite(max) ? max : null };
+  } catch { return null; }
+}

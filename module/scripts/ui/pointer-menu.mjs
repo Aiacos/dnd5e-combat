@@ -10,6 +10,8 @@ import { areAdjacent } from "../adapter/conditions.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
 import { isNonLethal, isKnockedOut, setNonLethal } from "../adapter/knockout.mjs";
 import { firstAid } from "../runtime/knockout.mjs";
+import { administerPotion } from "../runtime/potion-choice.mjs";
+import { healingPotionActivity } from "../adapter/potions.mjs";
 import { stairsDestinations } from "../adapter/movement.mjs";
 import { grappleShoveOf, unarmedAttackOf, helpActivityOf } from "../adapter/basics.mjs";
 import { pilotOf, commandActivities, commandLabel, transposeOf } from "../adapter/pilot.mjs";
@@ -457,6 +459,25 @@ function endingEntries(token, target) {
   }));
 }
 
+/**
+ * Issue #31 : « Faire boire » chaque potion de soins de sa fiche à une créature non hostile au contact (règle 2024 : boire ou faire
+ * boire une potion, action Bonus), MJ et joueurs. Une entrée par potion (même nom : une seule).
+ */
+function potionEntries(token, target) {
+  if ( !token.isOwner || !target.actor || (target === token) || hostileTo(token, target) ) return [];
+  if ( !areAdjacent(token, target, readUnitFactors()) ) return [];
+  const seen = new Set();
+  const entries = [];
+  for ( const item of token.actor?.items ?? [] ) {
+    const activity = healingPotionActivity(item);
+    if ( !activity || seen.has(item.name) ) continue;
+    seen.add(item.name);
+    entries.push({ icon: "fa-solid fa-flask", label: loc("Menu.FaireBoire", { item: item.name, name: target.name }),
+      run: event => administerPotion(target, activity, { event }) });
+  }
+  return entries;
+}
+
 function tokenEntries(token, target, { aggressive=true }={}) {
   const entries = [];
   // §16.15 : un objet piloté propose les activités de ses commandes (attaque de l'Arme spirituelle, effets de la Main).
@@ -479,6 +500,7 @@ function tokenEntries(token, target, { aggressive=true }={}) {
   if ( isKnockedOut(target.actor) && areAdjacent(token, target, readUnitFactors()) ) {
     entries.push({ icon: "fa-solid fa-kit-medical", label: loc("Menu.PremiersSoins", { name: target.name }), run: () => firstAid(token, target) });
   }
+  entries.push(...potionEntries(token, target));   // issue #31 : faire boire une potion de soins
   // §16.44 : sur une créature neutre ou amicale, rien d'offensif (Maj, menu ouvert, pour le montrer).
   if ( !aggressive ) {
     // Relâcher n'a rien d'offensif : il reste sous la main, même sur une créature amicale.

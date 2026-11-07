@@ -79,7 +79,9 @@ const DEFAULTS = Object.freeze({
   damageReturned: { success: CORE_SOUNDS.thud, failure: null },
   // §498 (B18) : un changement de forme à volonté (carillon), et le retour à la forme d'origine (le son qui s'éteint).
   formChange: { success: CORE_SOUNDS.chime, failure: null },
-  formRevert: { success: CORE_SOUNDS.fade, failure: null }
+  formRevert: { success: CORE_SOUNDS.fade, failure: null },
+  // Issue #31 : une potion de soins bue par une action — soin maximal.
+  potionMax: { success: CORE_SOUNDS.chime, failure: null }
 });
 
 /** Le son par défaut de cette action et de cette issue (null : aucun). */

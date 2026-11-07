@@ -430,7 +430,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     });
     return false;
   }
-  for ( const key of ["choice", "attackMode", "saveChoice", "legendary", "autoReact", "recast", "cost", "damageType", "order", "cleave", "metamagic", "basicChoice", "ammunition", "overridden"] ) {
+  for ( const key of ["choice", "attackMode", "saveChoice", "legendary", "autoReact", "recast", "cost", "damageType", "order", "cleave", "metamagic", "basicChoice", "ammunition", "overridden", "potionMode", "administer"] ) {
     const value = usageConfig[MODULE_ID]?.[key];
     if ( value && messageConfig ) foundry.utils.setProperty(messageConfig, `data.flags.${MODULE_ID}.${key}`, value);
   }

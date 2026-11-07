@@ -20,6 +20,7 @@ import { movableZoneOf } from "../runtime/zones.mjs";
 import { carriedLightsOf, carriedLightState } from "../adapter/lights.mjs";
 import { toggleCarriedLight } from "../runtime/lights.mjs";
 import { ritualModeOf } from "../adapter/grimoire.mjs";
+import { potionOptions } from "../runtime/potion-choice.mjs";
 import { identifierOf } from "../adapter/content.mjs";
 import { startTimer } from "./timers.mjs";
 import { awaitingState } from "./awaiting.mjs";
@@ -194,6 +195,13 @@ export const uiApi = {
    */
   awaiting: awaitingState,
   budget, wards, movableZone, movement, issues, cost, cell, ritual, multiattackLeft: multiattack, light: lightState, globalLight: globalLightState,
+  /**
+   * Issue #31 : `potion(activity)` — la règle maison des potions de soins (réglage `potionHealing`) : null si elle ne s'applique pas
+   * (réglage coupé, autre chose qu'une potion de soins en action Bonus) ; sinon `{ ask, mode, available: { bonus, action }, formula,
+   * max }` — `ask` : proposer le choix (sinon le moteur prend `mode`). L'interface passe le choix à l'utilisation :
+   * `activity.use({ "dnd5e-combat": { potionMode: "bonus" | "action" } })` — action : soin maximal (`max`), coût d'une action.
+   */
+  potion: activity => { try { return potionOptions(activity); } catch { return null; } },
   /** §41.4 : `tokenMenu(token)` — les entrées du menu contextuel de ce token pour le token en main (ui/pointer.mjs). */
   tokenMenu: menuEntriesFor,
   /** `doorMenu(wall)`, `groundMenu({ x, y })` — le menu d'une porte, d'une case, pour le token en main (ui/pointer-menu.mjs). */

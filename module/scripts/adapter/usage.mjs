@@ -369,7 +369,10 @@ function readPlan(message) {
   // §53 : une potion « sur soi » est pour le buveur, quel que soit le type d'activité (Invisibilité, Force de géant, Potion de
   // poison…) et même si une autre créature est encore visée ; de même le sort qu'une potion fait lancer (Rapidité : Hâte,
   // Croissance…), quelle que soit sa portée — « quand vous buvez cette potion, vous gagnez l'effet du sort ».
-  const potionSelf = !activity.target?.template?.type
+  // Issue #31 : « Faire boire » (menu du moteur, `administer`) — une potion de soins « personnelle » (Guide du maître) va à la
+  // créature désignée : la règle 2024 permet de boire ou de faire boire une potion.
+  const administered = (activity.type === "heal") && !!message.getFlag?.(MODULE_ID, "administer") && !!(message.system?.targets?.length);
+  const potionSelf = !activity.target?.template?.type && !administered
     && ((isPotion(activity.item) && (activity.range?.units === "self")) || potionCastsOnDrinker(activity.item));
   // §124 : une capacité que le contenu déclare « sur soi » (`ranges` : { units: "self" } — Champion ancestral, Nimbe sacré) vise le
   // lanceur, même si les données disent « une créature ».
