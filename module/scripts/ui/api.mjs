@@ -81,8 +81,17 @@ function movement(token) {
  */
 function issues(activity, options={}) {
   if ( !activity?.actor ) return [];
+  options = { ...potionCost(activity), ...options };
   // §111 : une zone déplaçable déjà posée (Rayon de lune) — l'utiliser la déplace, sans emplacement.
   return useIssues(activity, movableZoneOf(activity) ? { ...options, recast: true } : options).lines;
+}
+
+/**
+ * Issue #31 : une potion de soins que la règle maison fera boire par l'action (l'action Bonus déjà prise) — son coût est l'action, pas
+ * celui de la donnée : une interface ne la grise pas faute d'action Bonus.
+ */
+function potionCost(activity) {
+  try { const p = potionOptions(activity); return (p && !p.ask && (p.mode === "action")) ? { cost: "action" } : {}; } catch { return {}; }
 }
 
 /**
@@ -96,7 +105,7 @@ function cost(activity) {
   if ( !activity?.actor ) return null;
   // §145 : le coût après les règles du tour (Arts martiaux : la frappe à mains nues en action Bonus une fois l'action prise), sinon
   // celui de la donnée et des règles fixes (Observateur).
-  try { return useIssues(activity).request?.cost ?? costFor(activity) ?? null; } catch { return null; }
+  try { return useIssues(activity, potionCost(activity)).request?.cost ?? costFor(activity) ?? null; } catch { return null; }
 }
 
 /**
@@ -111,7 +120,7 @@ function cell(activity) {
   if ( !activity?.actor ) return { issues: [], cost: null };
   if ( movableZoneOf(activity) ) return { issues: issues(activity), cost: cost(activity) };
   let result;
-  try { result = useIssues(activity); } catch { return { issues: issues(activity), cost: null }; }
+  try { result = useIssues(activity, potionCost(activity)); } catch { return { issues: issues(activity), cost: null }; }
   // §410 : `resources` — le moteur juge aussi emplacements, utilisations, quantité et préparation (une interface n'a plus à les juger) ;
   // `forceable` — toutes ces raisons s'ouvrent dans la fenêtre « Utiliser quand même » (§408). Issue #46 : faux quand ce client ne peut
   // pas passer outre (réglage « Action impossible » en refus strict, chez un joueur) — une interface peut montrer un cadenas.
