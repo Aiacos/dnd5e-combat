@@ -7,6 +7,7 @@
  *  - Fantôme (Roublard) : une Attaque sournoise sur le Bandit — les Lamentations proposées, le Zombi choisi, dégâts nécrotiques ;
  *    Marche fantôme : l'attaque du Bandit contre lui au Désavantage.
  *  - Gardien creux (Rôdeur) : Courroux sauvage ; au début de son tour, l'Aura troublante sur le Bandit ; Courroux persistant à 0 PV.
+ *  - §441 : Effroi supérieur choisi au niveau 14 (donnée corrigée), Résistance nécrotique de la Cosse, Immunité à l'Épuisement de la Puissance ancestrale.
  */
 const MODULE_ID = "dnd5e-combat";
 const RHW = "dnd-ravenloft-horrors-within.options";
@@ -64,6 +65,16 @@ export default {
       }
       return null;
     };
+    /** §441 : un changement porté par l'effet que le moteur tient pour les items sans effet (runtime/speed-grants.mjs). */
+    const granted = async (t, key, value) => {
+      for ( let w = 0; w < 12; w++ ) {
+        const found = (await ctx.effects(t)).some(e => e.flags?.[MODULE_ID]?.speedGrant
+          && (e.system?.changes ?? e.changes ?? []).some(c => (c.key === key) && (c.value === value)));
+        if ( found ) return true;
+        await pause(500);
+      }
+      return false;
+    };
     const statuses = async t => (await ctx.effects(t)).filter(e => !e.disabled).flatMap(e => e.statuses ?? []);
     const actorOf = t => ctx.call("get-actor", { actorId: t.actorId });
     const clear = async t => { for ( const s of ["frightened", "unconscious", "prone", "incapacitated", "dead"] ) await ctx.removeStatusEffects(t, s); };
@@ -87,7 +98,10 @@ export default {
     await place(zombie, 0, 1, warlock);
     await pause(800);
     const dread = await lend(warlock, "rhwUPFormofDreOJ");
-    const fu = await ctx.use({ tokenId: warlock.id, itemId: dread, activityId: "sjAc47PXRIIRKS0u", targetTokenIds: [warlock.id] });
+    // §441 : la donnée corrigée à la création — l'activité « prendre la forme » a sa tranche du niveau 14 (Effroi supérieur).
+    const avatarEffects = ((await actorOf(warlock)).items ?? []).find(i => i._id === dread)?.system?.activities?.sjAc47PXRIIRKS0u?.effects ?? [];
+    ctx.expect(avatarEffects.some(e => (e._id === "1oBMDR1fQh6rCruX") && (e.level?.min === 14)), "Forme d'effroi : l'effet d'Effroi supérieur choisi à partir du niveau 14 (§441)");
+    const fu =await ctx.use({ tokenId: warlock.id, itemId: dread, activityId: "sjAc47PXRIIRKS0u", targetTokenIds: [warlock.id] });
     await pause(800);
     // Le connecteur coupe l'enchaînement de dnd5e : le jet de PV temporaires se lance par la carte.
     if ( fu.usageMessageId ) await ctx.engine("rollCard", { messageId: fu.usageMessageId }).catch(() => null);
@@ -117,6 +131,7 @@ export default {
     await clear(bandit);
     await ctx.removeEffectsNamed(warlock, /Dread|effroi/i);
     await lend(warlock, "rhwUPNecroticHYI");
+    ctx.expect(await granted(warlock, "system.traits.dr.value", "necrotic"), "Cosse nécrotique : Résistance nécrotique hors de la Forme (§441)");
     const exh0 = (await actorOf(warlock)).system?.attributes?.exhaustion ?? 0;
     ctx.restore(() => ctx.call("update-actor", { actorId: warlock.actorId, actorData: { "system.attributes.exhaustion": exh0 } }).catch(() => {}));
     const lvl = ((await actorOf(warlock)).items ?? []).find(i => (i.type === "class") && (i.system?.identifier === "warlock"))?.system?.levels ?? 1;
@@ -180,6 +195,7 @@ export default {
     await pause(800);
     const wrath = await lend(ranger, "rhwHWWrathofth3C");
     await lend(ranger, "rhwHWAncientMibA");
+    ctx.expect(await granted(ranger, "system.traits.ci.value", "exhaustion"), "Puissance ancestrale : Immunité contre l'état Épuisé (§441)");
     // `api.mcp.use` : l'enchantement « sur soi » se pose dans les actions enchaînées de dnd5e, que le connecteur coupe.
     await ctx.engine("use", { tokenId: ranger.id, itemId: wrath, activityType: "enchant" }).catch(err => ctx.log(`transformation : ${err.message}`));
     await pause(2500);

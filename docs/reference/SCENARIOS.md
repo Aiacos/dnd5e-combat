@@ -319,7 +319,7 @@ la sélection sans rien jouer.
 | `sorts-lot-5` |  | §287 | Rayon de soleil, Ténèbres qui dissipent les lumières de sort (lumières) |
 | `sorts-lot-6` |  | §288 | Flèche de foudre, Dissipation du mal et du bien, Dédale, Coup au but (données du PHB) |
 | `sorts-restants` |  |  | Représailles infernales, Vigueur arcanique, Foulée brumeuse |
-| `sous-classes-ravenloft` |  | §95 | Patron Mort-vivant, Sorcellerie de l'ombre, Fantôme, Gardien creux |
+| `sous-classes-ravenloft` |  | §95 §441 | Patron Mort-vivant, Sorcellerie de l'ombre, Fantôme, Gardien creux |
 | `soutien-intention` |  | §15.2 | avantage d'un allié, action préparée |
 | `sphere-otiluke` |  | §232 | cible consentante, rien ne traverse |
 | `srd61-barbare` |  | §434 §433 | Coup brutal du SRD 6.1 : handicapant, puissant, chancelant, fendant, deux effets |

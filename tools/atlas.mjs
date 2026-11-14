@@ -21,7 +21,7 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { ClassicLevel } from "classic-level";
-import { CONTENT } from "../module/scripts/content/index.mjs";
+import { CONTENT, SOURCES } from "../module/scripts/content/index.mjs";
 import { ENTRY_KEYS, STEP_TYPES } from "../module/scripts/core/content/enums.mjs";
 import { MOMENTS } from "../module/scripts/core/triggers.mjs";
 
@@ -278,10 +278,24 @@ function activation(a) {
   return `${a.value && (a.value !== 1) ? `${a.value} ` : ""}${a.type}${a.condition ? ` (${a.condition})` : ""}`;
 }
 
+/**
+ * L'identifiant sous lequel le moteur reconnaît l'item, comme `identifierOf` (adapter/content.mjs) : d'abord sa source de compendium
+ * (content/sources.mjs — « acteur.item », puis l'id seul), puis `system.identifier`, puis le nom en kebab-case, que dnd5e écrit à la
+ * création d'un item sans identifiant. Avant (§441) l'atlas ne lisait que `system.identifier` : les aptitudes Ravenloft sans identifiant
+ * (Forme d'effroi, Morsure vampirique…) y paraissaient « dnd5e seul » alors que le moteur les automatise.
+ */
+function kebab(name) {
+  return String(name ?? "").replaceAll(/(\w+)([\\|/])(\w+)/g, "$1-$3").normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .trim().toLowerCase().replace(/[\s-]+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+function identOf(item, actorId) {
+  return (actorId ? SOURCES[`${actorId}.${item._id}`] : null) ?? SOURCES[item._id] ?? (item.system?.identifier || kebab(item.name));
+}
+
 function describe({ item, tab, mod, version, pack, owner, actorId, frEntry, effects }) {
   const s = item.system ?? {};
   const acts = Object.values(s.activities ?? {});
-  const ident = s.identifier ?? "";
+  const ident = identOf(item, actorId);
   const entry = CONTENT[ident];
   const engine = entry ? Object.keys(entry).filter(k => k !== "source") : [];
   const desc = text(s.description?.value);

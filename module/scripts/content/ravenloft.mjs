@@ -158,11 +158,20 @@ export const RAVENLOFT = Object.freeze({
   // vous pouvez la forcer à un JS de Sagesse ; Effrayée jusqu'à la fin de votre prochain tour » — sous la Forme (son effet sur vous).
   // Les PV temporaires, l'immunité à Effrayé : l'activité et l'effet de la donnée.
   // §299 : la forme « prend fin si vous avez l'état Neutralisé ».
-  "form-of-dread": { hitRider: { save: "Oqz9j7aHHPnRKdD9", oncePerTurn: true, whileActive: true }, endsWhen: { incapacitated: "bearer" } },
+  // §441 : Effrayé « jusqu'à la fin de votre tour suivant » (l'effet 3K2z… de la donnée tombe au début du prochain tour de n'importe qui).
+  // Effroi supérieur (niveau 14 : Résistance contondant/perforant/tranchant, vol stationnaire) : la donnée a l'effet (1oBM…) mais
+  // l'activité « Assume Avatar » ne le choisit à aucun niveau (≤ 9 : forme de base, ≥ 10 : avec Carcasse nécrotique) — tranche ≥ 14 ajoutée.
+  "form-of-dread": { hitRider: { save: "Oqz9j7aHHPnRKdD9", oncePerTurn: true, whileActive: true }, endsWhen: { incapacitated: "bearer" },
+    effectEnds: { "3K2zIjA7tFdREiJA": "casterTurnEnd" },
+    dataFixes: [{ path: "system.activities.sjAc47PXRIIRKS0u.effects",
+      from: [{ _id: "4vZQGHnDrz11Fy0j", level: { min: null, max: 9 } }, { _id: "TH1kqbmgrvkMohdQ", level: { min: 10, max: null } }],
+      value: [{ _id: "4vZQGHnDrz11Fy0j", level: { min: null, max: 9 } }, { _id: "TH1kqbmgrvkMohdQ", level: { min: 10, max: 13 } },
+        { _id: "1oBMDR1fQh6rCruX", level: { min: 14, max: null } }] }] },
   // Cosse nécrotique, Résurrection impie : à 0 PV sans mourir, « chaque créature de votre choix dans une émanation de 9 m fait un JS de
   // Constitution (2d10 + Charisme nécrotiques, moitié si réussi) ; vos PV deviennent 2 × votre niveau d'Occultiste ; 1 niveau
   // d'Épuisement » — l'activité de la donnée, dont les consommations fixent les PV et l'Épuisement.
-  "necrotic-husk": { atZero: { activity: "TC2Yiws12Xp7kSbm" }, zoneAffects: "enemy" },
+  // §441 : Résilience nécrotique — la Résistance nécrotique hors de la Forme (la donnée ne donne que l'Immunité, sous la Forme).
+  "necrotic-husk": { atZero: { activity: "TC2Yiws12Xp7kSbm" }, zoneAffects: "enemy", grantsResistances: ["necrotic"] },
   // Fantôme, Lamentations d'outre-tombe : après une Attaque sournoise à votre tour, une seconde créature à 9 m de la première.
   "wails-from-the-grave": { afterSneak: { activity: "UxZzzGtEv93Yfs6H", radius: 30, units: "ft" } },
   // Fantôme, Marche fantôme — Forme brumeuse : « les jets d'attaque contre vous ont le Désavantage » (le vol : l'effet de la donnée ;
@@ -211,7 +220,9 @@ export const RAVENLOFT = Object.freeze({
 
   // K3 (§324) : Malédiction funeste du Vagabond des Brumes — Aveuglé ET Assourdi ; l'effet « Cursed » de la donnée ne porte qu'Assourdi.
   "death-curse": { effectStatuses: { rY64ISTXCtioTGxl: ["blinded"] } },
+  // §441 : Intemporel — l'Immunité contre l'état Épuisé (absente de la donnée).
   "ancient-might": {
+    grantsConditionImmunities: ["exhaustion"],
     atZero: { activity: "pVReuhjfvDIn7X5B", whileEffect: "wrath-of-the-wild" },
     triggers: [{ on: "preDamageRoll", if: { "activity.isAttack": true, "target.hasStatus": "frightened" }, do: [{ type: "damage", formula: "@abilities.wis.mod", damageType: "weapon" }] }]
   }
