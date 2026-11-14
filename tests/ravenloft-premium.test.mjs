@@ -49,7 +49,7 @@ describe("Ravenloft : sous-classes (§441)", () => {
   });
 });
 
-/* §446 : le lot C12 de Ravenloft — briques ajoutées ou élargies. */
+/* §447 : le lot C12 de Ravenloft — briques ajoutées ou élargies. */
 import { resistanceRuleCovers } from "../module/scripts/core/feats.mjs";
 import { holds } from "../module/scripts/core/triggers.mjs";
 
@@ -59,7 +59,7 @@ const umbralSource = () => ({
   effects: [{ _id: "vAfLEL8A1fNW5JWb", transfer: true, disabled: true }]
 });
 
-describe("Ravenloft : lot C12 (§446)", () => {
+describe("Ravenloft : lot C12 (§447)", () => {
   it("entrées valides", () => {
     const facts = { "source.hasEffect": true, "activity.classSpell": true, "activity.isAttack": true, "activity.identifier": true };
     for ( const id of ["umbral-form", "power-of-shadow", "touch-of-death", "grave-touched"] ) {
@@ -122,7 +122,7 @@ describe("Ravenloft : lot C12 (§446)", () => {
   });
 });
 
-describe("Ravenloft : Gardien creux et Fantôme (§446)", () => {
+describe("Ravenloft : Gardien creux et Fantôme (§447)", () => {
   const facts = { "target.hasEffect": true, "target.within": true, "target.seesSource": true, "self.hasEffect": true, "source.nearSelf": true, "self.seesSource": true };
   it("entrées valides", () => {
     for ( const id of ["wrath-of-the-wild", "deaths-friend"] ) expect(validateEntry(CONTENT[id], { facts }), id).toEqual([]);

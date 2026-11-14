@@ -188,7 +188,7 @@ export function canSee(observer, target, { ignoreHidden=false }={}) {
   // la Vision du diable.
   const blocked = blockedBetween(observer, target);
   if ( blocked.fog || blocked.darkness ) return seesThroughBlock(observer, target, source, config, blocked);
-  // §446 : seules des Ténèbres lancées par l'observateur, qui voit à travers (`seesThroughOwnDarkness`) : « il voit normalement ».
+  // §447 : seules des Ténèbres lancées par l'observateur, qui voit à travers (`seesThroughOwnDarkness`) : « il voit normalement ».
   if ( blocked.ownDarkness && devilsSightSeesToken(observer, target, blocked) ) return true;
 
   // Lumières qui donnent la vue (le cœur les teste en premier, pour tout le monde).
@@ -226,7 +226,7 @@ function umbralTo(target) {
 /**
  * Les régions de la scène qui bloquent la vue : brume (`obscures`, §16.24) ou ténèbres magiques (`light.darkness`,
  * §16.31), posées par l'activité d'un item (`flags.dnd5e.activity`) — et celles qui bloquent le son (Silence, `silences`, issue #42).
- * §446 : `caster` — l'acteur dont un SORT a posé des ténèbres (`seesThroughOwnDarkness`), sinon null.
+ * §447 : `caster` — l'acteur dont un SORT a posé des ténèbres (`seesThroughOwnDarkness`), sinon null.
  * @returns {Array<{region: RegionDocument, kind: "fog"|"darkness"|"silence", caster?: Actor|null}>}
  */
 export function blockingRegions(scene) {
@@ -246,7 +246,7 @@ export function blockingRegions(scene) {
 /**
  * Ce qui bloque la vue le long d'un trait (échantillonné tous les demi-carreaux), extrémités comprises : une brume, des
  * ténèbres, les deux ou rien.
- * §446 : `observer` — s'il voit à travers les ténèbres de ses propres sorts : elles comptent en `ownDarkness`, pas en `darkness`.
+ * §447 : `observer` — s'il voit à travers les ténèbres de ses propres sorts : elles comptent en `ownDarkness`, pas en `darkness`.
  * @returns {{fog: boolean, darkness: boolean, silence: boolean, ownDarkness: boolean}}
  */
 function blockedAlong(scene, from, to, observer=null) {
@@ -277,7 +277,7 @@ export function blockedBetween(a, b) {
 }
 
 /**
- * §446 : l'observateur voit-il normalement à travers les Ténèbres de ses propres sorts (`seesThroughOwnDarkness` : Pouvoir de l'ombre) ?
+ * §447 : l'observateur voit-il normalement à travers les Ténèbres de ses propres sorts (`seesThroughOwnDarkness` : Pouvoir de l'ombre) ?
  * Son acteur, ou null.
  * @param {TokenDocument} observer
  */
@@ -287,7 +287,7 @@ export function ownDarknessSight(observer) {
   return Array.from(actor.items ?? []).some(i => contentOf(i).entry?.seesThroughOwnDarkness === true) ? actor : null;
 }
 
-/** §446 : ce point est-il dans des Ténèbres qu'un sort de l'observateur a posées, et l'observateur y voit-il (`seesThroughOwnDarkness`) ? */
+/** §447 : ce point est-il dans des Ténèbres qu'un sort de l'observateur a posées, et l'observateur y voit-il (`seesThroughOwnDarkness`) ? */
 export function inOwnDarkness(observer, point) {
   const actor = observer?.actor;
   if ( !actor || !point ) return false;
@@ -364,7 +364,7 @@ function lineOfSightThrough(observer, target) {
 export function devilsSightSeesToken(observer, target, blocked=null) {
   if ( !observer || !target ) return false;
   blocked ??= blockedBetween(observer, target);
-  // §446 : seules ses propres Ténèbres entre les deux (`seesThroughOwnDarkness`) — « voit normalement », sans limite de portée.
+  // §447 : seules ses propres Ténèbres entre les deux (`seesThroughOwnDarkness`) — « voit normalement », sans limite de portée.
   const range = (blocked.ownDarkness && !blocked.darkness) ? Infinity : devilsSightRange(observer);
   if ( !range ) return false;
   const fog = blocked.fog;
@@ -401,7 +401,7 @@ export function canSeePoint(observer, point) {
   const config = { object: null, level, tests: [{ point: { x: point.x, y: point.y, elevation: point.elevation ?? 0 }, level, los: new Map() }] };
   // §16.31 : un point dans une brume ou des ténèbres, ou vu à travers, ne se voit pas — sauf par les sens qui les percent.
   const blocked = blockedAlong(observer.parent, tokenCenter(observer), point, observer);
-  // §446 : seules ses propres Ténèbres (`seesThroughOwnDarkness`) : la vue normale, sans leurs bords.
+  // §447 : seules ses propres Ténèbres (`seesThroughOwnDarkness`) : la vue normale, sans leurs bords.
   if ( blocked.ownDarkness && !blocked.fog && !blocked.darkness ) {
     const eye = observer.getVisionOrigin?.(committedPosition(observer)) ?? tokenCenter(observer);
     return CONFIG.Canvas.polygonBackends.sight.testCollision(eye, { x: point.x, y: point.y, elevation: point.elevation ?? eye.elevation },

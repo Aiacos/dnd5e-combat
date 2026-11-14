@@ -111,7 +111,7 @@ function endingEffects(actors) {
       const rule = rulesOf(item);
       if ( rule ) out.push({ actor, effect, item, rule });
     }
-    // §446 : un enchantement posé sur un de ses items (Courroux sauvage : « transformé » par un enchantement de l'aptitude elle-même) —
+    // §447 : un enchantement posé sur un de ses items (Courroux sauvage : « transformé » par un enchantement de l'aptitude elle-même) —
     // le porteur est le propriétaire de l'item enchanté ; le retirer retire ses effets compagnons (dnd5e).
     for ( const enchanted of actor?.items ?? [] ) {
       for ( const effect of enchanted.effects ?? [] ) {
@@ -208,7 +208,7 @@ async function onIncapacitated(effect) {
   });
   if ( !entries.length ) return;
   return enqueue(`endsWhen:${actor.uuid}`, async () => {
-    // §446 : tombé à 0 PV avec de quoi se relever (`atZero` : Courroux persistant, qui exige justement le Courroux sauvage) — la fin
+    // §447 : tombé à 0 PV avec de quoi se relever (`atZero` : Courroux persistant, qui exige justement le Courroux sauvage) — la fin
     // attend la décision ; relevé, l'état qui neutralisait est parti et rien ne prend fin (« vos PV changent à la place »).
     if ( ((actor.system.attributes?.hp?.value ?? 1) <= 0) && risingAtZero(actor) ) {
       for ( let n = 0; (n < 240) && risingAtZero(actor); n++ ) await sleep(500);

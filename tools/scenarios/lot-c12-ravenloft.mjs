@@ -1,5 +1,5 @@
 /**
- * §446 — Le lot C12 de Ravenloft (module premium `dnd-ravenloft-horrors-within`, pack `options`), aptitudes prêtées aux personnages de
+ * §447 — Le lot C12 de Ravenloft (module premium `dnd-ravenloft-horrors-within`, pack `options`), aptitudes prêtées aux personnages de
  * l'arène (comme `sous-classes-ravenloft`) :
  *  - Forme ombrale (Ensorceleur) : l'activité pose l'effet de l'item (donnée corrigée) — Résistances, `transformed` ; puis Trait de feu sur
  *    le Bandit avec l'Avantage (celui de la Sorcellerie innée).
@@ -152,7 +152,7 @@ export default {
     const enchanted = async () => ((await actorOf(ranger)).items ?? []).find(i => i._id === wrath)?.effects?.some(e => (e.type === "enchantment") && !e.disabled) ?? false;
     ctx.log(`Courroux sauvage : enchantement ${await enchanted() ? "actif" : "absent"}`);
     const aura = (await ctx.messagesSince(since3)).find(m => (m.type === "usage") && (m.flags?.[MODULE_ID]?.areaTick?.moment === "atStart"));
-    if ( ctx.expect(!!aura, "Aura troublante dès la transformation (§446)") ) {
+    if ( ctx.expect(!!aura, "Aura troublante dès la transformation (§447)") ) {
       const r = await ctx.settle(aura.id, { timeoutMs: 45000 }).catch(() => null);
       ctx.expect(r?.plan?.save?.ability === "wis" && (r?.targets ?? []).some(t => t.name === "Bandit"), `Sagesse du Bandit (${r?.targets?.map(t => t.name).join(", ")})`);
     }
@@ -184,7 +184,7 @@ export default {
       ctx.restore(() => ctx.call("set-status", { tokenId: ranger.id, statusId: "incapacitated", active: false }).catch(() => {}));
       let ended = false;
       for ( let w = 0; (w < 16) && !ended; w++ ) { await pause(500); ended = !(await enchanted()); }
-      ctx.expect(ended, "Courroux sauvage : Neutralisé, la transformation cesse (§446)");
+      ctx.expect(ended, "Courroux sauvage : Neutralisé, la transformation cesse (§447)");
       await ctx.call("set-status", { tokenId: ranger.id, statusId: "incapacitated", active: false });
     }
 

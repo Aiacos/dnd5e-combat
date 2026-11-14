@@ -143,7 +143,7 @@ export function sensesToward(observer, point) {
   return {
     darkvision: reaches(senseRange(observer.actor, "darkvision", grid)),
     truesight: reaches(senseRange(observer.actor, "truesight", grid)),
-    // §446 : dans les Ténèbres de son propre sort (`seesThroughOwnDarkness`), il voit normalement, comme la Vision du diable.
+    // §447 : dans les Ténèbres de son propre sort (`seesThroughOwnDarkness`), il voit normalement, comme la Vision du diable.
     devilsSight: reaches(devilsSightRange(observer)) || inOwnDarkness(observer, point)
   };
 }

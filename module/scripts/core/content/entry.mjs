@@ -707,7 +707,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     errors.push(`${at}opportunityDisadvantage: true or { whileEffect: effect id }`);
   }
   if ( "ignoresResistance" in entry ) {
-    // §446 : `from` (ces activités de l'item, ou le sort qu'elles font lancer), `if` (une condition sur l'auteur et l'activité).
+    // §447 : `from` (ces activités de l'item, ou le sort qu'elles font lancer), `if` (une condition sur l'auteur et l'activité).
     const r = entry.ignoresResistance;
     if ( !(isObject(r) && Array.isArray(r.types) && r.types.length && r.types.every(t => (typeof t === "string") && t)
       && (!("from" in r) || (Array.isArray(r.from) && r.from.length && r.from.every(isId)))

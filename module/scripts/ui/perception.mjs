@@ -35,7 +35,7 @@ import { loc } from "../runtime/shared.mjs";
 
 const SIMULATED = `${MODULE_ID}.`;   // préfixe des sources de vision jetables (adapter/vision.mjs, SOURCE_PREFIX)
 const SIGHT = 0;                      // DetectionMode.DETECTION_TYPES.SIGHT
-const OWN_DARKNESS_RANGE = 9999;      // §446 : portée du mode « Vision du diable » de qui ne voit qu'à travers ses propres Ténèbres (le test l'ignore)
+const OWN_DARKNESS_RANGE = 9999;      // §447 : portée du mode « Vision du diable » de qui ne voit qu'à travers ses propres Ténèbres (le test l'ignore)
 
 let hearingFilter = null;
 function filter() {
@@ -225,7 +225,7 @@ function grantOn(doc) {
   blindIfSenseless(doc.object);
   // L'ouïe d'un Aveuglé en DERNIER (core/light.mjs `grantInMemoryModes`) : le cœur essaie les modes spéciaux dans l'ordre.
   return grantInMemoryModes(doc.detectionModes, {
-    // §446 : qui voit à travers ses propres Ténèbres reçoit aussi ce mode (sa règle, `devilsSightSeesToken`, n'y met pas de limite).
+    // §447 : qui voit à travers ses propres Ténèbres reçoit aussi ce mode (sa règle, `devilsSightSeesToken`, n'y met pas de limite).
     devilsSight: modes[DEVILS_SIGHT.mode] ? (devilsSightRange(doc) || (ownDarknessSight(doc) ? OWN_DARKNESS_RANGE : 0)) : 0,
     hearing: !!modes[HEARING_MODE]
   });

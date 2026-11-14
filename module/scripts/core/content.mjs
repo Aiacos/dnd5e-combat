@@ -209,7 +209,7 @@
  *     lastStandHeal?: { activity }              §135 : à 0 PV, 1 PV + la moitié du maximum, sur les utilisations de l'activité (Dernier carré)
  *     elementalAdept?: true                     §134 : sorts du type choisi (flag de l'item) — résistance ignorée, 1 → 2 aux dés
  *     ignoresResistance?: { types, from?, if? } §134 : les dégâts de ces types que le porteur inflige ignorent la résistance (Empoisonneur) ;
- *                                               §446 `from` : seulement ceux de ces activités de l'item, ou du sort qu'elles font lancer
+ *                                               §447 `from` : seulement ceux de ces activités de l'item, ou du sort qu'elles font lancer
  *                                               (Toucher de la mort) ; `if` : une condition sur l'auteur (`source`) et l'activité
  *     fleeOnFailedSave?: true                   §147 : sauvegarde ratée → la cible fuit le lanceur par sa Réaction (Murmures dissonants)
  *     ritualAdept?: {class: string}           §139 : Savoir rituel — les sorts rituels de ce grimoire, non préparés, en rituel hors combat
@@ -221,7 +221,7 @@
  *     quickSearch?: true                        §134 : l'action Chercher se prend par une action Bonus quand elle est libre (Observateur)
  *     haltOnReaction?: { effect }               §133 : une attaque en Réaction (attaque d'opportunité) qui touche pose cet effet de
  *                                               l'item sur la cible (Sentinelle, Halte : Vitesse 0)
- *     spellDamageTypes?: { class?, types }      relevé des trous : un sort de cette classe (§446 : sans classe, tout sort) qui inflige des dégâts peut prendre l'un
+ *     spellDamageTypes?: { class?, types }      relevé des trous : un sort de cette classe (§447 : sans classe, tout sort) qui inflige des dégâts peut prendre l'un
  *                                               de ces types, proposé avec ses types au choix avant le jet (Sorts psychiques)
  *     endsOwnConditions?: string[] | { statuses?, at?, exhaustion?, uses? }
  *                                               §236 : à la fin de chacun de ses tours, le porteur met fin à l'un de ces états
@@ -454,7 +454,7 @@
  *                                               doit voir le porteur. Le texte anglais dit le reste (core/emanation.mjs) ;
  *                                               §92 : `radiusFormula` (lue sur le porteur, avec `units` : l'Aura de protection
  *                                               du Paladin) ; `whileActive` : seulement tant qu'un effet de l'item est sur le
- *                                               porteur (Ange vengeur) ; §446 `atStart` (avec `whileActive`) : elle agit aussi dès
+ *                                               porteur (Ange vengeur) ; §447 `atStart` (avec `whileActive`) : elle agit aussi dès
  *                                               que cet effet arrive sur le porteur (Courroux sauvage : « quand vous vous transformez »)
  *     afterTeleport?: { spells, options: [{ activity, around? }] }
  *                                               §92 : après une téléportation de soi par l'un de ces sorts (identifiants), l'effet
@@ -850,7 +850,7 @@
  *                                               porteur se déplace de façon à en mettre une dedans (Parchemin de protection)
  *     seesInvisible?: true                      §161 : le porteur d'un effet de l'item voit les créatures Invisibles (Détection de
  *                                               l'invisibilité) — vision simulée et état forfaitaire de l'attaque
- *     seesThroughOwnDarkness?: true             §446 : le porteur voit normalement à travers les ténèbres magiques (`light.darkness`)
+ *     seesThroughOwnDarkness?: true             §447 : le porteur voit normalement à travers les ténèbres magiques (`light.darkness`)
  *                                               qu'un de SES sorts a posées : règles (`canSee`, `canSeePoint`, recherche) et écran
  *                                               (le mode « Vision du diable », sans limite dans ces ténèbres) — Pouvoir de l'ombre
  *     hpTiers?: [{ atMost?, damage?: false, effects?, statuses? }]

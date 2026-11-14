@@ -137,7 +137,7 @@ export function coverLeft(cover, ignores) {
 }
 
 /**
- * §446 : `ignoresResistance.from` — l'activité qui inflige les dégâts est-elle une de ces activités de l'item, ou une copie de sort qu'une
+ * §447 : `ignoresResistance.from` — l'activité qui inflige les dégâts est-elle une de ces activités de l'item, ou une copie de sort qu'une
  * d'elles a fait lancer (`cachedFor` = « …Item.<item>.Activity.<activité> », dnd5e activity/cast.mjs) ? Sans `from` : toutes.
  * @param {string[]|undefined} from
  * @param {{itemId: string, activityItemId?: string, activityId?: string, cachedFor?: string}} at

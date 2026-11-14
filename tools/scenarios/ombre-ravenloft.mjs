@@ -1,5 +1,5 @@
 /**
- * §446 — Pouvoir de l'ombre (Sorcellerie de l'ombre, Ravenloft), Yeux des ténèbres : « si un sort que vous lancez crée des Ténèbres, vous
+ * §447 — Pouvoir de l'ombre (Sorcellerie de l'ombre, Ravenloft), Yeux des ténèbres : « si un sort que vous lancez crée des Ténèbres, vous
  * voyez normalement à travers » (`seesThroughOwnDarkness`). Dans l'« Arène de la vision » (`node tools/arene-vision.mjs` d'abord) :
  *  1. L'Humain reçoit Pouvoir de l'ombre et le sort Ténèbres, et les lance sur la Cible dans les ténèbres : il voit (règles et écran) la
  *     cible dans ses Ténèbres et celle derrière ; le Rôdeur elfe (vision dans le noir) ne voit toujours ni l'une ni l'autre.

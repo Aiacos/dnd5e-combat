@@ -115,7 +115,7 @@ async function onCreateEffect(effect) {
 }
 
 /**
- * §446 : une émanation `atStart` agit aussi quand l'effet de son item arrive sur le porteur — Courroux sauvage, « quand vous vous
+ * §447 : une émanation `atStart` agit aussi quand l'effet de son item arrive sur le porteur — Courroux sauvage, « quand vous vous
  * transformez et au début de chacun de vos tours suivants ». L'effet peut être sur l'acteur ou, transféré, sur un de ses items (l'enchantement
  * et ses effets compagnons : plusieurs effets arrivent ensemble, l'émanation n'agit qu'une fois en quelques secondes).
  */

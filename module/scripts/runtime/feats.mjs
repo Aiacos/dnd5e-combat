@@ -267,7 +267,7 @@ export function resistanceIgnoredBy(actor, activity) {
 }
 
 /**
- * §446 : la règle `ignoresResistance` de cet item vaut-elle pour cette activité ? `from` : une de ses activités, ou une copie de sort
+ * §447 : la règle `ignoresResistance` de cet item vaut-elle pour cette activité ? `from` : une de ses activités, ou une copie de sort
  * qu'une d'elles a fait lancer (`flags.dnd5e.cachedFor` = « …Item.<item>.Activity.<activité> », activity/cast.mjs) — Toucher de la mort,
  * « ce sort seulement » ; `if` : la condition, l'auteur en `source`.
  */
