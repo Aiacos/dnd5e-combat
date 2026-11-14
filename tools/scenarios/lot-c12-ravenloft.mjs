@@ -98,12 +98,19 @@ export default {
         await ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.traits.dr.value": ["necrotic"] } });
         await pause(500);
         const before = await ctx.hp(bandit);
+        const since = await ctx.lastMessageId();
         const u = await use().catch(err => { ctx.log(`lancement : ${err.message}`); return null; });
-        if ( !u?.usageMessageId ) return null;
-        const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
-        if ( r?.targets?.find(t => t.name === "Bandit")?.hit !== true ) continue;
+        await pause(1500);
+        // Une activité « cast » rend son propre message : celui du sort lancé (sa copie sur la fiche) est le dernier message d'utilisation.
+        const usage = (await ctx.messagesSince(since)).filter(m => m.type === "usage").at(-1)?.id ?? u?.usageMessageId;
+        if ( !usage ) { ctx.log("aucun message d'utilisation"); return null; }
+        const r = await ctx.settle(usage, { timeoutMs: 45000 }).catch(err => { ctx.log(`issue non lue : ${err.message}`); return null; });
+        if ( r?.targets?.find(t => t.name === "Bandit")?.hit !== true ) {
+          if ( n === 0 ) ctx.log(`  essai : rendu ${JSON.stringify(Object.keys(u ?? {}))}, message ${usage}${usage === u?.usageMessageId ? " (celui du lancement)" : ""}, cibles ${JSON.stringify(r?.targets ?? null)}`);
+          continue;
+        }
         await pause(3000);
-        const dmg = (await ctx.messagesSince(u.usageMessageId)).filter(m => m.type === "damage").at(-1);
+        const dmg = (await ctx.messagesSince(usage)).filter(m => m.type === "damage").at(-1);
         const rolled = (dmg?.rolls ?? []).reduce((s, x) => s + (x.total ?? 0), 0);
         return { dealt: before - (await ctx.hp(bandit)), rolled };
       }
@@ -113,7 +120,16 @@ export default {
     const plain = await necroticHit(() => ctx.use({ tokenId: warlock.id, itemId: chill, activityType: "attack", targetTokenIds: [bandit.id] }));
     if ( ctx.expect(!!plain, "Contact glacial du Manuel : un coup") ) ctx.expect(plain.dealt === Math.floor(plain.rolled / 2), `Résistance appliquée : ${plain.rolled} → ${plain.dealt} PV perdus`);
     const death = await lend(warlock, "rhwTouchofDeathA");
-    const viaFeat = await necroticHit(() => ctx.use({ tokenId: warlock.id, itemId: death, activityId: "UZVFEmVZMhLRl5vD", targetTokenIds: [bandit.id] }));
+    // La copie du sort que l'activité « cast » crée sur la fiche (`flags.dnd5e.cachedFor` = …Activity.UZVF…) : le lancement l'utilise ;
+    // le connecteur ne lance que le jet de l'activité qu'il utilise, donc l'attaque de la copie est utilisée directement (même chemin).
+    const cachedOf = async (t, activityId) => ((await actorOf(t)).items ?? []).find(i => String(i.flags?.dnd5e?.cachedFor ?? "").endsWith(activityId));
+    if ( !(await cachedOf(warlock, "UZVFEmVZMhLRl5vD")) ) {
+      await ctx.use({ tokenId: warlock.id, itemId: death, activityId: "UZVFEmVZMhLRl5vD", targetTokenIds: [bandit.id] }).catch(() => null);
+      await pause(1500);
+    }
+    const copy = await cachedOf(warlock, "UZVFEmVZMhLRl5vD");
+    ctx.log(`Toucher de la mort : copie du sort ${copy ? `« ${copy.name} »` : "absente"}`);
+    const viaFeat = copy ? await necroticHit(() => ctx.use({ tokenId: warlock.id, itemId: copy._id, activityType: "attack", targetTokenIds: [bandit.id] })) : null;
     if ( ctx.expect(!!viaFeat, "Contact glacial lancé par Toucher de la mort : un coup") ) {
       ctx.expect(viaFeat.dealt === viaFeat.rolled, `Toucher de la mort : la Résistance ignorée (${viaFeat.rolled} → ${viaFeat.dealt} PV perdus)`);
     }
@@ -126,6 +142,9 @@ export default {
     const ranger = T["Rôdeur"];
     await place(bandit, 1, 0, ranger);
     await pause(800);
+    const tempmax0 = (await actorOf(ranger)).system?.attributes?.hp?.tempmax ?? 0;
+    await ctx.call("update-actor", { actorId: ranger.actorId, actorData: { "system.attributes.hp.tempmax": 100 } });
+    ctx.restore(() => ctx.call("update-actor", { actorId: ranger.actorId, actorData: { "system.attributes.hp.tempmax": tempmax0 } }));
     const wrath = await lend(ranger, "rhwHWWrathofth3C");
     const since3 = await ctx.lastMessageId();
     await ctx.engine("use", { tokenId: ranger.id, itemId: wrath, activityType: "enchant" }).catch(err => ctx.log(`transformation : ${err.message}`));
@@ -139,16 +158,21 @@ export default {
     }
     // Représailles rôdeuses : le Bandit le blesse.
     let retaliated = null;
-    for ( let n = 0; (n < 10) && !retaliated; n++ ) {
-      await ctx.setHp(ranger, 80);
+    for ( let n = 0; (n < 30) && !retaliated; n++ ) {   // l'Armure ancestrale relève sa CA : le Bandit rate souvent
+      await ctx.setHp(ranger, 80);   // maximum relevé plus haut : un critique ne le met pas à 0 (à 0 PV, pas de réaction)
       const ids = await known();
-      const u = await ctx.use({ tokenId: bandit.id, identifier: "scimitar", activityType: "attack", targetTokenIds: [ranger.id] }).catch(() => null);
+      // `autoReact: "ask"` : la fenêtre « blessé » s'ouvre (l'outil la ferme d'office, `none`) ; la question est répondue plus bas.
+      const u = await ctx.use({ tokenId: bandit.id, identifier: "scimitar", activityType: "attack", targetTokenIds: [ranger.id],
+        usageConfig: { [MODULE_ID]: { autoReact: "ask" } } }).catch(() => null);
       if ( !u?.usageMessageId ) break;
       const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
       if ( r?.targets?.find(t => t.name === "Rôdeur")?.hit !== true ) continue;
       const asked = await answer(ids, /Wrath|Courroux/i, 9000);
       await pause(5000);
-      const back = (await ctx.messagesSince(u.usageMessageId)).find(m => (m.type === "attack") && (m.speaker?.token === ranger.id || m.speaker?.alias === "Rôdeur"));
+      // L'attaque de Représailles, lue dans le journal du moteur (« attack N → Bandit » du Rôdeur, après la fenêtre).
+      const lines = await ctx.engineLog();
+      const window = lines.findLastIndex(l => /Rôdeur is damaged: reaction window/.test(l));
+      const back = (window >= 0) && lines.slice(window).some(l => /attack \d+ → Bandit/.test(l));
       retaliated = { asked: !!asked, back: !!back };
     }
     if ( ctx.expect(!!retaliated?.asked, "Représailles rôdeuses proposées quand le Bandit blesse le Rôdeur transformé") ) {
@@ -168,9 +192,20 @@ export default {
     const fighter = T.Guerrier;
     const skin = await lend(fighter, "rhwSecondSkinkc1");
     ctx.restore(() => ctx.removeEffectsNamed(fighter, /Alter|apparence|concentr/i));
-    await ctx.use({ tokenId: fighter.id, itemId: skin, activityId: "ZrjtFFSbJZTj8Cfm", targetTokenIds: [fighter.id] }).catch(err => ctx.log(`Seconde peau : ${err.message}`));
+    // La copie du sort sur la fiche (`flags.dnd5e.cachedFor`) : dnd5e lui retire les propriétés que l'activité « cast » liste.
+    const cached = ((await actorOf(fighter)).items ?? []).find(i => String(i.flags?.dnd5e?.cachedFor ?? "").endsWith("ZrjtFFSbJZTj8Cfm"));
+    ctx.log(`Seconde peau : copie du sort ${cached ? `« ${cached.name} », propriétés ${JSON.stringify(cached.system?.properties ?? [])}` : "absente"}`);
+    // Modification d'apparence a trois activités (dnd5e demande laquelle, dans une liste) : celle de « Change Appearance » de la copie.
+    const appearance = Object.entries(cached?.system?.activities ?? {}).find(([, a]) => /Appearance|apparence/i.test(a.name ?? ""))?.[0];
+    const sinceSkin = await ctx.lastMessageId();
+    if ( cached && appearance ) await ctx.use({ tokenId: fighter.id, itemId: cached._id, activityId: appearance, targetTokenIds: [fighter.id] }).catch(err => ctx.log(`Seconde peau : ${err.message}`));
+    else ctx.log("Seconde peau : activité « Change Appearance » de la copie introuvable");
     await pause(3000);
-    const concentrating = (await ctx.effects(fighter)).some(e => (e.statuses ?? []).includes("concentrating"));
-    ctx.expect(!concentrating, "Seconde peau : Modification d'apparence lancée par le don, sans Concentration");
+    const effects = await ctx.effects(fighter);
+    ctx.log(`Seconde peau : effets ${effects.map(e => e.name).join(", ") || "aucun"}`);
+    const cast2 = (await ctx.messagesSince(sinceSkin)).some(m => m.type === "usage");
+    ctx.expect(cast2, "Seconde peau : Modification d'apparence lancée par le don (sa carte d'utilisation)");
+    const concentrating = effects.some(e => (e.statuses ?? []).includes("concentrating"));
+    ctx.expect(!concentrating, "Seconde peau : sans Concentration");
   }
 };

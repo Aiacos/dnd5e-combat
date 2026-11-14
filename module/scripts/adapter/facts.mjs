@@ -209,6 +209,17 @@ function hasEffectFrom(actor, spec, source=null) {
     if ( !item || (identifierOf(item).id !== identifier) ) continue;
     if ( !source || (item.actor?.uuid === source.uuid) ) return true;
   }
+  // §446 : un enchantement actif sur un item de l'acteur compte aussi (Courroux sauvage : le profil de transformation, activé sur l'item
+  // lui-même, runtime/enchant.mjs — dnd5e ne transfère jamais un effet cité par une activité, il n'est pas dans `appliedEffects`).
+  for ( const owned of actor?.items ?? [] ) {
+    for ( const effect of owned.effects ?? [] ) {
+      if ( (effect.type !== "enchantment") || effect.disabled ) continue;
+      if ( effectId && !comesFromItemEffect(effect, effectId) ) continue;
+      const item = originItemOf(effect) ?? owned;
+      if ( identifierOf(item).id !== identifier ) continue;
+      if ( !source || (item.actor?.uuid === source.uuid) ) return true;
+    }
+  }
   return false;
 }
 
