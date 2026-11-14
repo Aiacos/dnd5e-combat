@@ -2554,6 +2554,8 @@
   "DND5ECOMBAT.Nouveautes.Point.dnd61": "dnd5e 6.1.0 is supported: DAS · Core reads spells, features and items as the system now ships them (areas, summons, identifiers), and still reads those of 6.0.",
   "DND5ECOMBAT.Nouveautes.Point.antimagie": "Antimagic Field: DAS · Core follows dnd5e 6.1's \"antimagic\" status. Inside the field, magical effects are suspended, a spell or magic item is refused (with \"use anyway\"), and nothing magical reaches whoever stands in it.",
   "DND5ECOMBAT.Nouveautes.Point.phb3": "Premium Player's Handbook 3.0.0: its reworked features and spells are automated as before; sheets made with an earlier version keep working.",
+  "DND5ECOMBAT.Nouveautes.Point.ravenloft": "Ravenloft: The Horrors Within 2.0.0 (premium module): its character options (subclasses, species, backgrounds, feats and Dark Gifts) were reviewed under dnd5e 6.1, and several subclass features and Dark Gifts are now automated.",
+  "DND5ECOMBAT.Nouveautes.Point.multiattaque": "Multiattack: the number of attacks is also read from French and Portuguese texts and from English prose, so a creature's attacks stay limited to what its Multiattack allows.",
   "DND5ECOMBAT.Nouveautes.Point.tokensVideo": "Animated tokens (.webm): DAS · Core windows show a still image instead of a broken one.",
   "DND5ECOMBAT.Nouveautes.Point.ptBR": "Brazilian Portuguese: every DAS · Core text is translated (still to be reviewed by a native speaker).",
   "DND5ECOMBAT.Nouveautes.Point.niveauDeLancement": "Spells cast at a higher level: extra dice, areas and durations follow the casting level.",

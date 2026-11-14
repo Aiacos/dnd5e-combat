@@ -57,3 +57,13 @@ export function refusalOutcome(mode, { isGM=false }={}) {
   if ( (m === "strict") && !isGM ) return { mode: m, window: true, proceed: false, warn: false, report: false };
   return { mode: m, window: true, proceed: null, warn: false, report: true };
 }
+
+/**
+ * §448 : la clé d'une question « le faire quand même » — son titre (item — acteur) et ses raisons. Deux demandes de même clé ouvertes à
+ * la fois sur un poste sont un double clic : la seconde est ignorée (runtime/turn.mjs, `askAnyway`).
+ * @param {string} title
+ * @param {string[]} lines
+ */
+export function askKey(title, lines=[]) {
+  return [String(title ?? ""), ...(lines ?? []).map(String)].join("\n");
+}

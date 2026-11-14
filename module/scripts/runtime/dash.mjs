@@ -15,6 +15,7 @@ import { walk, cellOf } from "../adapter/movement.mjs";
 import { canSeePoint, isVisionAvailable } from "../adapter/vision.mjs";
 import { loc, notice, log } from "./shared.mjs";
 import { occupiedAt } from "./actions.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 /* -------------------------------------------- */
 /*  Ruée en ligne droite (§57)                  */
@@ -121,7 +122,7 @@ export async function dashStrike(activity, [config, dialog, message]=[], destina
     system: { targets: targets.map(describeTarget) },
     flags: { [MODULE_ID]: { dash: { x: to.x, y: to.y } } }
   } }, { inplace: false });
-  const results = await activity.use(use, { ...(dialog ?? {}), configure: false }, card);
+  const results = await relaunchUse(activity, use, { ...(dialog ?? {}), configure: false }, card);
   return !!results;
 }
 

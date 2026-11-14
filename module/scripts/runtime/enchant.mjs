@@ -11,6 +11,7 @@ import { concentrationOn } from "../adapter/summons.mjs";
 import { tokenOnViewedScene } from "../adapter/vision.mjs";
 import { route } from "./router.mjs";
 import { log, loc, notice, viaActiveGM } from "./shared.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 export const ENCHANT_QUERY = `${MODULE_ID}.enchant`;
 
@@ -52,7 +53,7 @@ async function handleEnchant({ activity: activityUuid, item: itemUuid, profile, 
 export function enchantWith(activity, [config, dialog, message], itemUuid, extra={}) {
   const messageConfig = foundry.utils.deepClone(message ?? {});
   if ( messageConfig.data?.system ) delete messageConfig.data.system.targets;
-  return activity.use({ ...config, [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), enchantItem: itemUuid, ...extra } }, dialog, messageConfig);
+  return relaunchUse(activity, { ...config, [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), enchantItem: itemUuid, ...extra } }, dialog, messageConfig);
 }
 
 /**

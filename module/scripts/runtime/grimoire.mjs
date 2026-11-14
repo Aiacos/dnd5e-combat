@@ -17,6 +17,7 @@ import { log, loc, notice } from "./shared.mjs";
 import { spendItemUses } from "../adapter/uses.mjs";
 import { contentOf, identifierOf } from "../adapter/content.mjs";
 import { comesFromItemEffect, originItemOf } from "../adapter/facts.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 const tokenOfActor = actor => actor?.getActiveTokens?.(false, true)?.[0] ?? null;
 
@@ -50,7 +51,7 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
     });
     if ( !answer ) return;
     const { subsequentActions, ...rest } = usageConfig;
-    await activity.use({ ...rest, [MODULE_ID]: { ...ours, ritual: answer.id } }, dialogConfig, messageConfig);
+    await relaunchUse(activity, { ...rest, [MODULE_ID]: { ...ours, ritual: answer.id } }, dialogConfig, messageConfig);
   })().catch(err => console.error(`${MODULE_ID} | ritual choice`, err));
   return false;
 }

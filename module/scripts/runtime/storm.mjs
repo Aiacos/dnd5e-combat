@@ -12,6 +12,7 @@ import { stormOf, cloudOf, cloudCircle, dressCloud, placeBolt, isBoltRegion } fr
 import { clampToCircle } from "../core/storm.mjs";
 import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 let aiming = null;
 
@@ -27,7 +28,7 @@ export function freshCloudOf(item, scene=canvas?.scene) {
 
 /** L'incantation, une fois la question de l'orage répondue (ui/pointer.mjs) : la même utilisation, la réponse notée. */
 export function castStorm(activity, [usageConfig, dialogConfig, messageConfig], stormy) {
-  return activity.use({ ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), stormy: !!stormy } }, dialogConfig, messageConfig);
+  return relaunchUse(activity, { ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), stormy: !!stormy } }, dialogConfig, messageConfig);
 }
 
 /** Habille le nuage tout juste posé. */

@@ -8,6 +8,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { isWildShape, transformActor, revertForm, isWildShaped, formShouldEnd, expiredForms } from "../adapter/wildshape.mjs";
 import { route } from "./router.mjs";
 import { log, viaActiveGM } from "./shared.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 export const TRANSFORM_QUERY = `${MODULE_ID}.transform`;
 export const REVERT_QUERY = `${MODULE_ID}.revertForm`;
@@ -55,7 +56,7 @@ function asGM(query, handler, payload) {
 export function takeForm(activity, [config, dialog, message], formUuid) {
   const use = { ...config, transform: { ...(config?.transform ?? {}), profile: MODULE_ID },
     [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), wildForm: formUuid } };
-  return activity.use(use, { ...(dialog ?? {}), configure: false }, message);
+  return relaunchUse(activity, use, { ...(dialog ?? {}), configure: false }, message);
 }
 
 /** Intention « reprendre sa forme » (menu du clic droit) : l'action Bonus de la fiche transformée, légalité comprise. */

@@ -8,6 +8,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { log } from "./shared.mjs";
 import { targetDescriptorsOf } from "../adapter/pick-targets.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 /**
  * @param {Activity} activity                 L'activité utilisée.
@@ -27,5 +28,5 @@ export async function castOnPicked(activity, [config, dialog, message]=[], { tok
   const msg = foundry.utils.mergeObject(message ?? {}, { data: { system: { targets: targetDescriptorsOf(tokens) },
     flags: { [MODULE_ID]: { givenTargets: true } } } }, { inplace: false });
   log(`${used.item?.name ?? used.name}: ${tokens.length} creature(s) chosen (${tokens.map(t => t.name).join(", ")})${upgrade ? ", in place of " + (activity.item?.name ?? activity.name) : ""}`);
-  return (await used.use(use, dialog ?? {}, msg)) ?? null;
+  return (await relaunchUse(used, use, dialog ?? {}, msg)) ?? null;
 }
