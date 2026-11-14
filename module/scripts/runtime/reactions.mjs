@@ -708,11 +708,9 @@ function onReactionDamage(config) {
 
 export function registerReactions() {
   route("dnd5e.preRollDamageV2", onReactionDamage, { cancellable: true, label: "riposte: superiority die" });
-  // §438 suite : une Riposte ratée ne laisse pas son dé au coup suivant de la même arme.
+  // §438 suite : une Riposte ratée ne laisse pas son dé au coup suivant de la même arme (pas au jet raté : une relance peut le changer).
   route("dnd5e.rollAttackV2", (rolls, { subject }={}) => {
-    const roll = rolls?.[0];
-    const missed = (roll?.isFailure === true) || (roll?.isFumble === true);
-    if ( subject?.uuid && noteReactionAttack(subject.uuid, { missed }) ) log(`riposte: ${subject.item?.name ?? subject.name} — the promised die drops (${missed ? "miss" : "new attack"})`);
+    if ( subject?.uuid && noteReactionAttack(subject.uuid) ) log(`riposte: ${subject.item?.name ?? subject.name} — the promised die drops (a new attack)`);
   }, { label: "riposte: die not dropped after a miss" });
   route("combatTurnChange", (combat, prior) => onEnemyTurnEnd(combat, prior), { executor: true, label: "\"enemy's end of turn\" window not opened" });
   // Sur tous les clients : c'est celui qui réagit qui répond à la requête.

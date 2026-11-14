@@ -38,17 +38,17 @@ describe("marques de réaction : minuteurs", () => {
 import { noteReactionAttack } from "../module/scripts/adapter/marks.mjs";
 
 describe("marques de réaction : Riposte ratée", () => {
-  it("ratée : le dé tombe, le coup suivant de la même arme ne l'a pas", () => {
+  it("ratée puis rattrapée par une relance (Chanceux) : le dé reste pour les dégâts de cette attaque", () => {
     markReactionDamage("E", "1d8", "Riposte");
-    expect(noteReactionAttack("E", { missed: true })).toBe(true);
-    expect(takeReactionDamage("E")).toBeNull();
+    expect(noteReactionAttack("E")).toBe(false);       // jet raté ; la relance ne refait pas de jet d'attaque
+    expect(takeReactionDamage("E")).toEqual({ formula: "1d8", name: "Riposte" });
   });
   it("touchée : le dé attend les dégâts de cette attaque", () => {
     markReactionDamage("F", "1d8", "Riposte");
     expect(noteReactionAttack("F")).toBe(false);
     expect(takeReactionDamage("F")).toEqual({ formula: "1d8", name: "Riposte" });
   });
-  it("issue inconnue puis une nouvelle attaque sans dégâts entre-temps : le dé tombe", () => {
+  it("ratée pour de bon, puis le coup suivant de la même arme : le dé tombe avant ses dégâts", () => {
     markReactionDamage("G", "1d8", "Riposte");
     noteReactionAttack("G");
     expect(noteReactionAttack("G")).toBe(true);
@@ -56,7 +56,7 @@ describe("marques de réaction : Riposte ratée", () => {
   });
   it("une attaque d'une autre arme ne touche pas à la marque", () => {
     markReactionDamage("H", "1d8", "Riposte");
-    expect(noteReactionAttack("autre", { missed: true })).toBe(false);
+    expect(noteReactionAttack("autre")).toBe(false);
     expect(takeReactionDamage("H")).not.toBeNull();
   });
 });

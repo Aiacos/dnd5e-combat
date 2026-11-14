@@ -65,15 +65,17 @@ export function markReactionDamage(uuid, formula, name) {
 }
 
 /**
- * §438 suite : le dé promis ne vaut que pour l'attaque de la réaction elle-même. Au jet d'attaque de l'activité marquée : ratée
- * (sous la CA connue, ou 1 naturel), la marque tombe ; sinon elle attend les dégâts de CETTE attaque — un deuxième jet d'attaque
- * de la même arme avant tout jet de dégâts veut dire que la Riposte n'en a pas eu (ratée sans CA connue), la marque tombe aussi.
- * Sans quoi une Riposte ratée laissait son dé au prochain coup de la même arme dans la minute. Rend vrai si la marque est tombée.
+ * §438 suite : le dé promis ne vaut que pour l'attaque de la réaction elle-même. Au premier jet d'attaque de l'arme marquée, la marque
+ * attend les dégâts de CETTE attaque ; un deuxième jet d'attaque de la même arme avant tout jet de dégâts veut dire que la Riposte
+ * n'en a pas eu (ratée), la marque tombe. Sans quoi une Riposte ratée laissait son dé au prochain coup de la même arme dans la minute.
+ * Un raté ne la fait PAS tomber à son jet : Chanceux, l'Inspiration héroïque ou bardique, la réussite à un prix peuvent encore le
+ * changer en coup au but après ce jet (ils relancent ou ajoutent sans nouveau jet d'attaque), et ses dégâts doivent garder le dé.
+ * Rend vrai si la marque est tombée.
  */
-export function noteReactionAttack(uuid, { missed=false }={}) {
+export function noteReactionAttack(uuid) {
   const mark = damaged.get(uuid);
   if ( !mark ) return false;
-  if ( missed || mark.attacked ) { take(damaged, uuid); return true; }
+  if ( mark.attacked ) { take(damaged, uuid); return true; }
   mark.attacked = true;
   return false;
 }
