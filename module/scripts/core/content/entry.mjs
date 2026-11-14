@@ -150,6 +150,15 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     const b = entry.breaksOn;
     if ( !Array.isArray(b) || !b.length || !b.every(m => BREAK_MOMENTS.includes(m)) ) errors.push(`${at}breaksOn: list among ${BREAK_MOMENTS.join(", ")}`);
   }
+  // §438 : `breaksOn` limité aux effets posés par une activité (Foulée évanescente : l'Invisible tombe, la Provocation du même item reste).
+  if ( "breaksOnActivity" in entry ) {
+    const b = entry.breaksOnActivity;
+    if ( !isObject(b) || !Object.keys(b).length ) errors.push(`${at}breaksOnActivity: { <activity id>: moments }`);
+    else for ( const [id, list] of Object.entries(b) ) {
+      if ( !isId(id) ) errors.push(`${at}breaksOnActivity.${id}: activity id (16 characters)`);
+      if ( !Array.isArray(list) || !list.length || !list.every(m => BREAK_MOMENTS.includes(m)) ) errors.push(`${at}breaksOnActivity.${id}: list among ${BREAK_MOMENTS.join(", ")}`);
+    }
+  }
   if ( "endsWhen" in entry ) validateEndsWhen(entry.endsWhen, `${at}endsWhen`, errors);
   if ( "afterSmite" in entry ) {
     const a = entry.afterSmite;

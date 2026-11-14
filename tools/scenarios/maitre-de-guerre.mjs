@@ -145,7 +145,29 @@ export default {
       // et tombent pendant la partie suivante.
       await answer(ids, /^Rien$|^Aucune|^None/i, 9000);   // même délai que `swing` : le choix par défaut remplacerait le dé de la Riposte
       await pause(3000);
+      // §438 suite : rien de cet essai ne doit tomber dans le suivant (des dégâts de Riposte arrivés après la borne de l'essai d'après
+      // étaient lus comme les siens) — le chat calme (aucun message nouveau pendant 3 s), toute question des manœuvres répondue.
+      await quiet(ids);
       return { r, since, before, after: await spent(), hit: r?.targets?.find(t => t.name === "Guerrier")?.hit ?? null };
+    };
+    /** Attend que le chat ne bouge plus pendant 3 s (au plus 20 s), en répondant « Rien » à toute question des manœuvres. */
+    async function quiet(ids) {
+      let last = await ctx.lastMessageId(), still = Date.now();
+      for ( const stop = Date.now() + 20000; (Date.now() < stop) && (Date.now() - still < 3000); ) {
+        await answer(ids, /^Rien$|^Aucune|^None/i, 500);
+        await pause(500);
+        const now = await ctx.lastMessageId();
+        if ( now !== last ) { last = now; still = Date.now(); }
+      }
+    }
+    /** Les messages du Guerrier qui suivent sa Riposte (son attaque), jusqu'à son attaque suivante : l'attaque, puis ses dégâts. */
+    const riposteOf = msgs => {
+      const mine = m => (m.alias === "Guerrier") || (m.speaker?.alias === "Guerrier");
+      const at = msgs.findIndex(m => (m.type === "attack") && mine(m));
+      if ( at < 0 ) return { counter: null, dmg: null };
+      const rest = msgs.slice(at + 1);
+      const end = rest.findIndex(m => (m.type === "attack") && mine(m));
+      return { counter: msgs[at], dmg: (end < 0 ? rest : rest.slice(0, end)).find(m => (m.type === "damage") && mine(m)) ?? null };
     };
 
     // Parade : un coup qui touche — un dé dépensé, les dégâts réduits du jet de la Parade.
@@ -168,16 +190,13 @@ export default {
       const a = await banditAttack();
       if ( a.hit !== false ) continue;
       riposted = a;
-      const msgs = await ctx.messagesSince(a.since);
-      if ( msgs.some(m => (m.type === "damage") && (m.speaker?.alias === "Guerrier" || m.alias === "Guerrier")) ) break;
+      if ( riposteOf(await ctx.messagesSince(a.since)).dmg ) break;
       await ctx.call("upsert-actor-item", { actorId: fighter.actorId, itemData: { "system.uses.spent": 0 }, match: { path: "_id", value: superiority } });
     }
     if ( ctx.expect(!!riposted, "le Bandit rate le Guerrier (20 essais au plus)") ) {
       ctx.expect(riposted.after === riposted.before + 1, `Riposte : un dé de supériorité dépensé (${riposted.before} → ${riposted.after})`);
-      const msgs = await ctx.messagesSince(riposted.since);
-      const counter = msgs.find(m => (m.type === "attack") && (m.speaker?.alias === "Guerrier" || m.alias === "Guerrier"));
+      const { counter, dmg } = riposteOf(await ctx.messagesSince(riposted.since));
       ctx.expect(!!counter, "Riposte : le Guerrier attaque le Bandit avec son arme");
-      const dmg = msgs.find(m => (m.type === "damage") && (m.speaker?.alias === "Guerrier" || m.alias === "Guerrier"));
       if ( dmg ) {
         const formula = (dmg.rolls ?? []).map(x => x.formula).join(" | ");
         ctx.expect(/1d8/.test(formula), `Riposte qui touche : +1d8 aux dégâts (${formula})`);

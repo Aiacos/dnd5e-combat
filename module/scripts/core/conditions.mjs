@@ -254,6 +254,19 @@ export function breakMoments({ attack, damage, spell }) {
   return out;
 }
 
+/**
+ * §438 : les moments qui font cesser un effet d'item — ceux de l'item entier (`breaksOn`), plus ceux de l'activité qui l'a posé
+ * (`breaksOnActivity`), quand elle est connue.
+ * @param {object} entry              L'entrée de contenu de l'item d'origine.
+ * @param {string|null} activityId    L'activité qui a posé l'effet.
+ * @returns {string[]}
+ */
+export function effectBreakMoments(entry, activityId=null) {
+  const out = new Set(entry?.breaksOn ?? []);
+  for ( const m of ((activityId && entry?.breaksOnActivity?.[activityId]) || []) ) out.add(m);
+  return [...out];
+}
+
 /** Les états de `cures` que la cible porte vraiment. */
 export function curable(statuses, cures) {
   return (cures ?? []).filter(s => statuses.includes(s));

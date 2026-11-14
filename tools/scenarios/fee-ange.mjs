@@ -4,7 +4,7 @@
  *  - L'Occultiste se téléporte (`api.mcp.teleport`, la validation du moteur) : la question des effets de plus ; Foulée narquoise sur le
  *    Bandit resté à côté de la case quittée (Sagesse, « Narguée » ⇔ ratée ; il attaque alors le Clerc au Désavantage, l'Occultiste
  *    sans) ; Foulée effroyable à l'arrivée (Sagesse, 2d10 psychiques ⇔ ratée) ; Foulée revigorante (PV temporaires) ; Foulée
- *    évanescente (Invisible).
+ *    évanescente (Invisible, jusqu'à sa première attaque — §438 ; Nargué, lui, ne cesse pas quand le Bandit attaque).
  *  - Le Paladin devient Ange vengeur ; le Bandit commence son tour dans l'aura : Sagesse, Effrayé ⇔ ratée ; l'attaque du Paladin
  *    contre lui a l'Avantage ; blessé, il n'est plus Effrayé.
  */
@@ -130,6 +130,8 @@ export default {
       };
       ctx.expect((await modeAgainst(cleric)) === -1, "Nargué : son attaque contre le Clerc au Désavantage");
       ctx.expect((await modeAgainst(warlock)) !== -1, "Nargué : son attaque contre l'Occultiste sans Désavantage");
+      // §438 : Nargué ne cesse pas quand le Bandit attaque (la fin à l'attaque ne vaut que pour la Foulée évanescente, `breaksOnActivity`).
+      ctx.expect((await named(bandit, /Nargu|Taunt/i)).length > 0, "Nargué reste après les attaques du Bandit");
     }
 
     // Foulée effroyable, à l'arrivée à côté du Bandit.
@@ -149,6 +151,19 @@ export default {
     await step(/évanescente|Disappearing/i);
     const invisible = (await ctx.effects(warlock)).some(e => !e.disabled && (e.statuses ?? []).includes("invisible"));
     ctx.expect(invisible, "Foulée évanescente : l'Occultiste est Invisible");
+    // §438 : « jusqu'à ce que vous fassiez un jet d'attaque, infligiez des dégâts ou lanciez un sort » — l'Occultiste attaque le Bandit.
+    if ( invisible ) {
+      const weapon = (await ctx.call("get-actor", { actorId: warlock.actorId })).items.find(i => (i.type === "weapon")
+        && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"));
+      if ( ctx.expect(!!weapon, "une arme pour l'Occultiste") ) {
+        const ids = await known();
+        await ctx.use({ tokenId: warlock.id, itemId: weapon._id, activityType: "attack", targetTokenIds: [bandit.id] });
+        await answer(ids, /^Rien$|^Aucun|^None|^Non/i, 3000);
+        await pause(3500);
+        const still = (await ctx.effects(warlock)).some(e => !e.disabled && (e.statuses ?? []).includes("invisible"));
+        ctx.expect(!still, "Foulée évanescente : l'Occultiste attaque, il n'est plus Invisible");
+      }
+    }
     await clear();
 
     // 2. Ange vengeur.

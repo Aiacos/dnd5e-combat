@@ -86,7 +86,7 @@ la sélection sans rien jouer.
 | `dons-lot-7` |  | §289 | fins des dons sombres de Ravenloft, Seconde peau, Faveur de vigueur |
 | `dons-ravenloft` |  | §94 | Cri surnaturel, Symbiose, Survivant, Savoir d'une vie passée, Hurlement, Bond féroce, Chercher |
 | `dons-sombres` |  | §93 | 1 naturel (Anatomie aberrante, Guetteurs, Être symbiotique) |
-| `druide` |  | §30 | Attaques primitives, Foulée sélène, Courroux des mers |
+| `druide` |  | §30 §438 | Attaques primitives, Foulée sélène, Courroux des mers |
 | `duel-force` |  | §270 | fin quand le lanceur attaque un autre, ou qu'un allié blesse la cible |
 | `duree-texte` |  | §18.7 | Empoisonné jusqu'au début du prochain tour de l'attaquant |
 | `duree` |  | §16.37 | Lumière du jour prend fin avec l'heure du monde |
@@ -117,7 +117,7 @@ la sélection sans rien jouer.
 | `ethere` |  | §225 | ni cible, ni zone, ni attaque d'opportunité, ni case bloquée d'un plan à l'autre |
 | `factions` |  | §181 | bandit et zombi ennemis par la matrice, rancune, disposition déduite |
 | `familier` |  | §107 | actions de base, vision, poche dimensionnelle |
-| `fee-ange` |  | §92 | Foulée des fées, Échappatoire brumeuse, Ange vengeur |
+| `fee-ange` |  | §92 §438 | Foulée des fées, Échappatoire brumeuse, Ange vengeur |
 | `fenetres-sans-delai` |  | §290 | le MJ voit qui il attend, et force |
 | `feu-gregeois` |  | §49 | En feu, dégâts au début du tour, s'éteindre à terre |
 | `fin-sur-degats` |  | §16.7 | Motif hypnotique cesse, Fou rire rejoue sa sauvegarde |

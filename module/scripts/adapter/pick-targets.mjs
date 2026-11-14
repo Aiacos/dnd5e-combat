@@ -14,6 +14,8 @@ import { samePlane } from "./plane.mjs";
 import { areEnemies } from "./factions.mjs";
 import { excludedByRule } from "./eligibility.mjs";
 import { levelHidden } from "./level-gate.mjs";
+import { originItemOf } from "./facts.mjs";
+import { picksFor, withinCenters } from "../core/pick-after.mjs";
 
 /** En sang : à la moitié de ses PV maximum ou moins (et pas à 0 : Survivance ne relève personne). */
 const isBloodied = actor => { const hp = actor?.system?.attributes?.hp ?? {}; const max = hp.effectiveMax ?? hp.max ?? 0;
@@ -30,10 +32,18 @@ export function targetDescriptorsOf(tokens) {
     img: t.texture?.src, name: t.name, token: t.uuid }));
 }
 
+/** §438 : l'effet vient-il de cet item (son origine, par uuid : l'item, ou l'une de ses activités) ? */
+function carriesFrom(effect, item) {
+  if ( originItemOf(effect)?.uuid === item.uuid ) return true;
+  const o = effect.system?.origin ?? {};
+  return [o.activity, o.item, effect.origin, effect._source?.origin].some(u => (typeof u === "string") && ((u === item.uuid) || u.startsWith(`${item.uuid}.`)));
+}
+
 /** La règle de l'activité, ou null. */
 export function pickTargetsOf(activity) {
   const rule = activity?.item ? contentOf(activity.item).entry?.pickTargets : null;
-  return (rule && rule.activities?.includes(activity.id)) ? rule : null;
+  // §438 : pas pour une manifestation utilitaire suivie d'une liste (`after`) — elle pose l'émanation, la liste vient après.
+  return (rule && picksFor(rule, activity.id, activity.type)) ? rule : null;
 }
 
 /**
@@ -60,10 +70,12 @@ export function upgradeOf(activity, rule=pickTargetsOf(activity)) {
  * @param {Activity} activity
  * @param {object} [options]
  * @param {(token: TokenDocument) => boolean} [options.seen]  Ce que l'utilisateur voit (l'interface le passe) ; par défaut, tout.
+ * @param {TokenDocument[]|null} [options.centers]  §438 : les créatures autour desquelles l'émanation est manifestée (enchaînement
+ *   `after`) ; par défaut le lanceur, et (`bearers`) toute créature qui porte un effet de l'item.
  * @returns {{caster: TokenDocument|null, radius: number, units: string, creatures: Array<{token: TokenDocument, distance: number, enemy: boolean}>}}
  */
-export function pickCandidates(activity, { seen=() => true }={}) {
-  const rule = pickTargetsOf(activity);
+export function pickCandidates(activity, { seen=() => true, centers=null, rule: given=null }={}) {
+  const rule = given ?? pickTargetsOf(activity);
   const caster = usageTokenOf(activity);
   if ( !rule || !caster?.parent ) return { caster: caster ?? null, radius: 0, units: "", creatures: [] };
   const units = caster.parent.grid.units;
@@ -71,15 +83,25 @@ export function pickCandidates(activity, { seen=() => true }={}) {
   const raw = (typeof rule.radius === "string")
     ? (Number(globalThis.dnd5e?.utils?.simplifyBonus?.(rule.radius, activity.getRollData?.() ?? {})) || 0) : rule.radius;
   const radius = lengthIn(raw, rule.units, units);
+  // §438 : les centres et leur rayon — le lanceur au rayon de la règle ; une autre créature au rayon `bearers` (Courroux des mers
+  // manifesté sur un allié : 3 m), sinon au rayon de la règle.
+  const otherRadius = rule.bearers ? lengthIn(rule.bearers.radius, rule.bearers.units, units) : radius;
+  const item = activity.item;
+  const bearers = (!centers && rule.bearers && item) ? caster.parent.tokens.filter(t => (t !== caster) && t.actor
+    && Array.from(t.actor.effects ?? []).some(e => !e.disabled && carriesFrom(e, item))) : [];
+  const around = (centers ?? [caster, ...bearers]).map(t => ({ token: t, radius: (t === caster) ? radius : otherRadius }));
   const creatures = [];
   for ( const token of caster.parent.tokens ) {
     // §296 : `self` — le lanceur aussi (Lueur d'espoir, Survivance : « vous compris »).
     if ( ((token === caster) && !rule.self) || !token.actor || token.hidden || isObjectToken(token) || isDefeated(token) ) continue;
+    // §438 : « une AUTRE créature dans l'émanation » — pas celle autour de qui elle est manifestée.
+    if ( around.some(c => (c.token === token) && (c.token !== caster)) ) continue;
     if ( !samePlane(caster, token) || !seen(token) || excludedByRule(activity, token) ) continue;
     // §296 : `filter: "bloodied"` — seulement les créatures En sang, à la moitié de leurs PV ou moins (Survivance).
     if ( (rule.filter === "bloodied") && !isBloodied(token.actor) ) continue;
-    const distance = (token === caster) ? 0 : distanceBetween(caster, token).value;
-    if ( distance > radius + 1e-6 ) continue;
+    const distance = (token === caster) ? 0
+      : withinCenters(around.map(c => ({ radius: c.radius, distance: (c.token === token) ? 0 : distanceBetween(c.token, token).value })));
+    if ( distance === null ) continue;
     const enemy = (token !== caster) && areEnemies(caster, token);
     creatures.push({ token, distance, enemy, checked: (rule.check === "allies") ? !enemy : enemy });
   }
@@ -87,5 +109,5 @@ export function pickCandidates(activity, { seen=() => true }={}) {
   // §296 : `max` — « une créature de votre choix », « jusqu'à six » : pas plus de cochées d'avance que permis.
   let left = Number.isInteger(rule.max) ? rule.max : Infinity;
   for ( const c of creatures ) if ( c.checked ) { if ( left > 0 ) left--; else c.checked = false; }
-  return { caster, radius, units, creatures, max: Number.isInteger(rule.max) ? rule.max : null };
+  return { caster, radius, units, creatures, max: Number.isInteger(rule.max) ? rule.max : null, centers: around.map(c => c.token) };
 }

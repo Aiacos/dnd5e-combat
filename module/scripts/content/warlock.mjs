@@ -54,15 +54,17 @@ export const WARLOCK = Object.freeze({
   },
   // §438 : Manuel 3.0.0 — l'Échappatoire brumeuse (Archifée 6) est rangée ici, derrière le niveau 6 : la Réaction aux dégâts
   // (« Escape », `Z2DMzP2QpvVjNVLY`, qui renvoie au lancement), Foulée évanescente (`zgz1…`) et Foulée effroyable (`PPfl…`). Les options
-  // d'un niveau que l'acteur n'a pas ne sont pas proposées (`levelHidden`). Foulée évanescente : l'Invisible commun ne cesse pas encore
-  // à l'attaque (`breaksOn` vaudrait aussi pour Provocation, posée par le même item sur les ennemis).
+  // d'un niveau que l'acteur n'a pas ne sont pas proposées (`levelHidden`). Foulée évanescente : l'Invisible commun (effet distant) cesse à
+  // l'attaque, aux dégâts, au sort — par activité (`breaksOnActivity`) : un `breaksOn` de l'item ferait aussi tomber Nargué chez l'ennemi
+  // qui attaque.
   "steps-of-the-fey": {
     triggers: [{ on: "preAttackRoll", via: "effect", fromEffect: "sERUxQRn17lzEQbl", if: { "source.hasEffect": "steps-of-the-fey", not: { "source.hasEffectFromTarget": "steps-of-the-fey" } },
       do: [{ type: "disadvantage" }] },
     { on: "isDamaged", do: [{ type: "use", activity: "Z2DMzP2QpvVjNVLY" }] }],
     afterTeleport: { spells: ["misty-step"], options: [{ activity: "QUbshQXhUDQqlu2s" }, { activity: "48TdRWDqCVcC9mh4", around: "left" },
       { activity: "zgz1KLkZUycIeVF9" }, { activity: "PPflqO75qwj2WJP9", around: "left" }, { activity: "PPflqO75qwj2WJP9", around: "arrival" }] },
-    saveDamage: { PPflqO75qwj2WJP9: "none" }
+    saveDamage: { PPflqO75qwj2WJP9: "none" },
+    breaksOnActivity: { zgz1KLkZUycIeVF9: ["attack", "damage", "spell"] }
   },
   // §92 : Échappatoire brumeuse — deux options de plus : Foulée évanescente (Invisible jusqu'au début de votre tour suivant, ou
   // jusqu'à une attaque, des dégâts, un sort : `breaksOn`) et Foulée effroyable (Sagesse ou 2d10 psychiques, à 1,50 m de la case

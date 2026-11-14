@@ -3,7 +3,8 @@
  * joueurs, Fureur élémentaire (et sa version améliorée), Foulée sélène et Courroux des mers ; le Bandit reçoit 300 PV. Vérifie :
  *  - Attaques primitives : +1d8 de feu au premier coup d'arme du tour, pas au second ; 2d8 avec Fureur élémentaire améliorée ;
  *  - Foulée sélène : l'attaque suivante a l'Avantage, la marque consommée (l'attaque d'après, non) ;
- *  - Courroux des mers : une sauvegarde de Constitution ratée repousse le Bandit de 15 ft (trois cases).
+ *  - Courroux des mers : une sauvegarde de Constitution ratée repousse le Bandit de 15 ft (trois cases) ; Manuel 3.0.0 : la manifestation
+ *    enchaîne la sauvegarde sans seconde action Bonus, sur soi ou (niveau 14) autour d'une autre créature (§438).
  * Remet positions, PV, états ; retire les items prêtés.
  */
 const MODULE_ID = "dnd5e-combat";
@@ -160,6 +161,73 @@ export default {
         checked = true;
       }
       ctx.expect(checked, "une sauvegarde ratée (20 essais au plus)");
+      await unlend(wrath);
+    });
+
+    // §438 suite : Manuel 3.0.0 — la manifestation (utilitaire) enchaîne la sauvegarde sans seconde action Bonus ; au niveau 14, sur une
+    // autre créature (« Another ») : la liste s'ouvre autour d'elle, elle exceptée ; aux tours suivants, la sauvegarde seule propose
+    // aussi les créatures autour de qui porte l'effet de l'item.
+    await part("Courroux des mers enchaîné", async () => {
+      const wrath = await lend("phbdrdWrathOfThe");
+      const acts = ((await ctx.call("get-actor", { actorId: hero.actorId })).items ?? []).find(i => i._id === wrath)?.system?.activities ?? {};
+      if ( acts.nNTYj4vqURV4Dhjt?.type !== "utility" || !acts.ituofBRxXKLI7wNW ) { ctx.log("Courroux des mers 2.2.0 : enchaînement non applicable"); await unlend(wrath); return; }
+      // Druide de niveau 14 le temps de la partie (porte de niveau d'« Another », rayon de 3 m).
+      const cls = await ctx.call("upsert-actor-item", { actorId: hero.actorId,
+        itemData: { name: "Druid", type: "class", system: { identifier: "druid", levels: 14 } }, match: { path: "system.identifier", value: "druid" } });
+      ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: hero.actorId, itemId: cls.id }).catch(() => {}));
+      const mage = tokens.some(t => t.name === "Magicien") ? await ctx.token("Magicien") : null;
+      const m0 = mage ? await ctx.position(mage) : null;
+      if ( mage ) ctx.restore(() => ctx.call("move-token", { tokenId: mage.id, x: m0.x, y: m0.y, elevation: m0.elevation ?? 0 }).catch(() => {}));
+      if ( mage ) ctx.restore(() => ctx.removeEffectsNamed(mage, /Tempétueux|Stormborn|Courroux|Wrath/i));
+      await tough();
+      const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
+      /** La liste qui suit : ses créatures, puis « Valider » (le Bandit, ennemi, coché d'avance). */
+      const pickList = async ids => {
+        for ( const stop = Date.now() + 12000; Date.now() < stop; ) {
+          const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
+          const d = (r?.windows ?? []).find(w => (w.buttons ?? []).some(b => b.action === "ok"));
+          if ( d ) { const text = JSON.stringify(d); await ctx.call("answer-dialog", { id: d.id, button: "ok" }); return text; }
+        }
+        return null;
+      };
+      /** Manifeste (sans dépenser de Forme sauvage : le Guerrier n'en a pas), répond à la liste, rend la sauvegarde qui a suivi. */
+      const manifest = async (activityId, targets=[]) => {
+        const ids = await known();
+        const since = await ctx.lastMessageId();
+        await ctx.use({ tokenId: hero.id, itemId: wrath, activityId, targetTokenIds: targets.map(t => t.id),
+          usageConfig: { consume: false, create: { measuredTemplate: false } } });
+        const list = await pickList(ids);
+        await pause(1500);
+        // La sauvegarde : l'utilisation qui vise le Bandit (la manifestation ne vise personne, ou le Magicien).
+        const msg = (await ctx.messagesSince(since)).find(m => (m.type === "usage") && (m.targets ?? []).some(t => t.name === "Bandit"));
+        const r = msg ? await ctx.settle(msg.id, { timeoutMs: 20000 }).catch(() => null) : null;
+        return { list, msg, r };
+      };
+      // 1. Sur soi : le Bandit au contact.
+      await place(hero, 3080, 4900);
+      await place(bandit, 3080, 5040);
+      const self = await manifest("nNTYj4vqURV4Dhjt");
+      ctx.expect(!!self.list && /Bandit/.test(self.list), "manifestation sur soi : la liste s'ouvre aussitôt, le Bandit dedans");
+      ctx.expect(self.msg?.flags?.[MODULE_ID]?.cost === "free", `la sauvegarde suit sans seconde action Bonus (coût ${self.msg?.flags?.[MODULE_ID]?.cost})`);
+      ctx.expect(self.r?.plan?.save?.ability === "con" && !!self.r?.targets?.find(x => x.name === "Bandit")?.save, "sauvegarde de Constitution du Bandit");
+      await remettre();
+      // 2. Sur une autre créature (niveau 14) : le Magicien, le Bandit à 3 m de lui et à 4,50 m du druide.
+      if ( !mage ) { ctx.log("Magicien absent : « Another » non joué"); }
+      else {
+        await place(hero, 3080, 4760);
+        await place(mage, 3080, 4900);
+        await place(bandit, 3080, 5180);
+        const other = await manifest("ituofBRxXKLI7wNW", [mage]);
+        ctx.expect(!!other.list && /Bandit/.test(other.list) && !/Magicien/.test(other.list), "« Another » : la liste autour du Magicien, lui excepté, le Bandit dedans");
+        ctx.expect(other.msg?.flags?.[MODULE_ID]?.cost === "free" && !!other.r?.targets?.find(x => x.name === "Bandit")?.save, "« Another » : la sauvegarde du Bandit suit, sans action de plus");
+        // 3. Au tour suivant, la sauvegarde seule : le Bandit (hors de portée du druide) proposé, s'il porte l'effet — sinon dit.
+        await place(bandit, 3080, 5180);   // une sauvegarde ratée l'a repoussé de 4,50 m
+        const carries = (await ctx.effects(mage)).some(e => !e.disabled && /Tempétueux|Stormborn/i.test(e.name ?? ""));
+        const pick = await ctx.engine("pickTargets", { tokenId: hero.id, itemId: wrath, activityId: "9U9AoJYvcrCQtIMm" });
+        const listed = (pick?.creatures ?? []).some(c => c.name === "Bandit");
+        ctx.expect(carries ? listed : !listed, `tour suivant : le Bandit proposé ⇔ le Magicien porte l'effet (effet : ${carries}, proposé : ${listed}, centres : ${(pick?.centers ?? []).join(", ")})`);
+        if ( process.env.DEBUG || (carries !== listed) ) ctx.log(`effets du Magicien : ${JSON.stringify((await ctx.effects(mage)).map(e => ({ name: e.name, origin: e.origin, sys: e.system?.origin })))}`);
+      }
       await unlend(wrath);
     });
   }

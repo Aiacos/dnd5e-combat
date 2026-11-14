@@ -77,7 +77,21 @@ export function validateExtras(entry, at, errors) {
       if ( ("self" in p) && (p.self !== true) ) errors.push(`${at}pickTargets.self: true or absent`);
       if ( ("check" in p) && !["enemies", "allies"].includes(p.check) ) errors.push(`${at}pickTargets.check: enemies, allies`);
       if ( ("filter" in p) && (p.filter !== "bloodied") ) errors.push(`${at}pickTargets.filter: bloodied`);
-      for ( const key of Object.keys(p) ) if ( !["activities", "radius", "units", "upgrade", "max", "self", "check", "filter"].includes(key) ) errors.push(`${at}pickTargets.${key}: unknown key`);
+      // §438 : `after` — l'activité utilitaire qui manifeste, puis la liste pour l'activité qui suit, autour du lanceur ou des cibles ;
+      // `bearers` — aussi autour des créatures qui portent un effet de l'item (l'émanation manifestée sur une autre créature).
+      if ( "after" in p ) {
+        const a = p.after;
+        if ( !isObject(a) || !Object.keys(a).length ) errors.push(`${at}pickTargets.after: { <activity id>: { activity, around } }`);
+        else for ( const [id, next] of Object.entries(a) ) {
+          if ( !isId(id) || !isObject(next) || !isId(next.activity) || !p.activities?.includes?.(next.activity) || !["self", "targets"].includes(next.around)
+            || Object.keys(next).some(k => !["activity", "around"].includes(k)) ) {
+            errors.push(`${at}pickTargets.after.${id}: { activity: one of activities, around: self | targets }`);
+          }
+        }
+      }
+      if ( ("bearers" in p) && !(isObject(p.bearers) && Number.isFinite(p.bearers.radius) && (p.bearers.radius > 0) && ["ft", "m"].includes(p.bearers.units)
+        && Object.keys(p.bearers).every(k => ["radius", "units"].includes(k))) ) errors.push(`${at}pickTargets.bearers: { radius, units }`);
+      for ( const key of Object.keys(p) ) if ( !["activities", "radius", "units", "upgrade", "max", "self", "check", "filter", "after", "bearers"].includes(key) ) errors.push(`${at}pickTargets.${key}: unknown key`);
     }
   }
   // §188 : une activité qui remplace une attaque — tout l'item (`true`) ou certaines activités (l'Huile : le lancer, pas l'étalage).

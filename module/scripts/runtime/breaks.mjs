@@ -10,9 +10,9 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { breakMoments } from "../core/conditions.mjs";
+import { breakMoments, effectBreakMoments } from "../core/conditions.mjs";
 import { contentOf } from "../adapter/content.mjs";
-import { originItemOf } from "../adapter/facts.mjs";
+import { originActivityIdOf, originItemOf } from "../adapter/facts.mjs";
 import { tokenOnViewedScene } from "../adapter/vision.mjs";
 import { route } from "./router.mjs";
 import { log, loc, notice } from "./shared.mjs";
@@ -25,7 +25,9 @@ async function breakEffects(actor, moments, exceptItem=null, { before=null }={})
     if ( before && ((e._stats?.createdTime ?? 0) > before) ) return false;
     const item = originItemOf(e);
     if ( !item || (exceptItem && (item.uuid === exceptItem.uuid)) ) return false;
-    const on = contentOf(item).entry?.breaksOn ?? [];
+    // §438 : `breaksOnActivity` — seulement les effets posés par cette activité (Foulée évanescente, pas Nargué du même item).
+    const entry = contentOf(item).entry;
+    const on = entry?.breaksOnActivity ? effectBreakMoments(entry, originActivityIdOf(e, item)) : (entry?.breaksOn ?? []);
     return moments.some(m => on.includes(m));
   });
   if ( !broken.length ) return;

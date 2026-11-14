@@ -15,6 +15,7 @@ import { originItemOf } from "../adapter/facts.mjs";
 import { rollerFor } from "../adapter/concentration.mjs";
 import { loc, log } from "../runtime/shared.mjs";
 import { openTargeting, reticle, setting, stormAfterUse } from "./pointer.mjs";
+import { offerChainedPick } from "./pick-targets.mjs";
 
 /* -------------------------------------------- */
 /*  Cibles relâchées                            */
@@ -213,6 +214,8 @@ export function onTurnChange(combat, prior) {
  * utilisée — le TODO de dnd5e 6 (`_triggerSubsequentActions`, teleport.mjs).
  */
 export function onPostUseActivity(activity, usageConfig, results) {
+  // §438 : la sauvegarde qui suit une manifestation (Courroux des mers 3.0.0), sous la même action.
+  if ( results ) offerChainedPick(activity, results).catch(err => console.error(`${MODULE_ID} | chained choice`, err));
   if ( results && stormOf(activity?.item) ) return void stormAfterUse(activity, usageConfig).catch(err => console.error(`${MODULE_ID} | storm`, err));
   if ( !results || !setting("teleportPlanning") || !selfTeleportOf(activity) ) return;
   if ( usageConfig?.subsequentActions === false ) return;   // un appelant qui enchaîne lui-même (connecteur, scénarios)

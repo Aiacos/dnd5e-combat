@@ -295,3 +295,64 @@ describe("§438 : la formule du Coup brutal se lit en dés simples (carte de cha
     }
   });
 });
+
+describe("§438 : Foulée évanescente — l'Invisible cesse, Nargué reste (`breaksOnActivity`)", async () => {
+  const { effectBreakMoments } = await import("../module/scripts/core/conditions.mjs");
+  const { originActivityIdOf } = await import("../module/scripts/adapter/facts.mjs");
+  const steps = CONTENT["steps-of-the-fey"];
+  it("donnée : seulement l'activité de la Foulée évanescente, pas de `breaksOn` sur l'item", () => {
+    expect(validateEntry({ breaksOnActivity: steps.breaksOnActivity })).toEqual([]);
+    expect(steps.breaksOn).toBeUndefined();
+    expect(steps.breaksOnActivity).toEqual({ zgz1KLkZUycIeVF9: ["attack", "damage", "spell"] });
+    expect(validateEntry({ breaksOnActivity: { zgz1KLkZUycIeVF9: ["jump"] } }).length).toBeGreaterThan(0);
+    expect(validateEntry({ breaksOnActivity: { court: ["attack"] } }).length).toBeGreaterThan(0);
+    expect(validateEntry({ breaksOnActivity: {} }).length).toBeGreaterThan(0);
+  });
+  it("règle : les moments de l'item, plus ceux de l'activité qui a posé l'effet", () => {
+    expect(effectBreakMoments(steps, "zgz1KLkZUycIeVF9")).toEqual(["attack", "damage", "spell"]);
+    expect(effectBreakMoments(steps, "48TdRWDqCVcC9mh4")).toEqual([]);
+    expect(effectBreakMoments(steps, null)).toEqual([]);
+    expect(effectBreakMoments({ breaksOn: ["save"], breaksOnActivity: { zgz1KLkZUycIeVF9: ["save", "attack"] } }, "zgz1KLkZUycIeVF9")).toEqual(["save", "attack"]);
+    expect(effectBreakMoments(CONTENT["misty-escape"], null)).toEqual(["attack", "damage", "spell"]);
+  });
+  it("l'activité d'origine : par dnd5e (origin.activity, profil) ou par la copie du moteur (effet distant)", () => {
+    const remote = "Compendium.dnd5e.effects.ActiveEffect.QUmDKA6mnK7HoASC";
+    const acts = [
+      { id: "zgz1KLkZUycIeVF9", effects: [{ _id: "G8l0X26HrzREMOTE", uuid: remote }] },
+      { id: "48TdRWDqCVcC9mh4", effects: [{ _id: "sERUxQRn17lzEQbl" }] }
+    ];
+    const activities = Object.assign([...acts], { get: id => acts.find(a => a.id === id) });
+    const item = { system: { activities } };
+    expect(originActivityIdOf({ system: { origin: { activity: "Actor.a.Item.i.Activity.zgz1KLkZUycIeVF9" } }, _stats: {} }, item)).toBe("zgz1KLkZUycIeVF9");
+    expect(originActivityIdOf({ system: { origin: { profile: "G8l0X26HrzREMOTE" } }, _stats: {} }, item)).toBe("zgz1KLkZUycIeVF9");
+    expect(originActivityIdOf({ system: { origin: {} }, _stats: { compendiumSource: remote } }, item)).toBe("zgz1KLkZUycIeVF9");
+    expect(originActivityIdOf({ system: { origin: {} }, _stats: { duplicateSource: "Actor.a.Item.i.ActiveEffect.sERUxQRn17lzEQbl" } }, item)).toBe("48TdRWDqCVcC9mh4");
+    expect(originActivityIdOf({ system: { origin: {} }, _stats: {} }, item)).toBeNull();
+  });
+});
+
+describe("§438 : Courroux des mers 3.0.0 — la sauvegarde suit la manifestation, sur soi ou sur une autre créature", async () => {
+  const { chainedPickOf, picksFor, withinCenters } = await import("../module/scripts/core/pick-after.mjs");
+  const rule = CONTENT["wrath-of-the-sea"].pickTargets;
+  it("donnée valide ; `after` et `bearers` refusés quand ils sont mal formés", () => {
+    expect(validateEntry({ pickTargets: rule })).toEqual([]);
+    expect(validateEntry({ pickTargets: { ...rule, after: { nNTYj4vqURV4Dhjt: { activity: "AAAAAAAAAAAAAAAA", around: "self" } } } }).length).toBeGreaterThan(0);
+    expect(validateEntry({ pickTargets: { ...rule, after: { nNTYj4vqURV4Dhjt: { activity: "9U9AoJYvcrCQtIMm", around: "loin" } } } }).length).toBeGreaterThan(0);
+    expect(validateEntry({ pickTargets: { ...rule, bearers: { radius: 10 } } }).length).toBeGreaterThan(0);
+  });
+  it("manifestation utilitaire (3.0.0) : la sauvegarde suit, autour du druide ou de la créature visée (niveau 14)", () => {
+    expect(chainedPickOf(rule, "nNTYj4vqURV4Dhjt", "utility")).toEqual({ activity: "9U9AoJYvcrCQtIMm", around: "self" });
+    expect(chainedPickOf(rule, "ituofBRxXKLI7wNW", "utility")).toEqual({ activity: "9U9AoJYvcrCQtIMm", around: "targets" });
+    expect(picksFor(rule, "nNTYj4vqURV4Dhjt", "utility")).toBe(false);
+    expect(picksFor(rule, "9U9AoJYvcrCQtIMm", "save")).toBe(true);
+  });
+  it("forme 2.2.0 : `nNTY…` est la sauvegarde — liste avant l'utilisation, rien d'enchaîné", () => {
+    expect(chainedPickOf(rule, "nNTYj4vqURV4Dhjt", "save")).toBeNull();
+    expect(picksFor(rule, "nNTYj4vqURV4Dhjt", "save")).toBe(true);
+  });
+  it("une créature est dans l'une des émanations : la distance la plus courte, ou null", () => {
+    expect(withinCenters([{ distance: 12, radius: 10 }, { distance: 5, radius: 10 }])).toBe(5);
+    expect(withinCenters([{ distance: 7, radius: 5 }, { distance: 10, radius: 10 }])).toBe(10);
+    expect(withinCenters([{ distance: 15, radius: 10 }])).toBeNull();
+  });
+});

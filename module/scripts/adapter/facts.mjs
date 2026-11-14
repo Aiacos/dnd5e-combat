@@ -155,6 +155,31 @@ export function swornEnemyOf(activity, targetToken, attackMode=null) {
 }
 
 /**
+ * §438 : l'activité de l'item d'origine qui a posé cet effet, quand elle se retrouve — l'origine écrite par dnd5e
+ * (`system.origin.activity`, puis `profile` : effect-application.mjs `_prepareEffectData`), sinon la source copiée (`_stats`) comparée aux
+ * effets de chaque activité (effet de l'item, ou effet distant `Compendium…` du Manuel 3.0.0 posé par `placeRemoteEffect`).
+ * @returns {string|null}
+ */
+export function originActivityIdOf(effect, item) {
+  const activities = item?.system?.activities;
+  if ( !effect || !activities ) return null;
+  const origin = effect.system?.origin ?? {};
+  const fromUuid = typeof origin.activity === "string" ? origin.activity.split(".").pop() : null;
+  if ( fromUuid && activities.get?.(fromUuid) ) return fromUuid;
+  const stats = effect._stats ?? {};
+  const sources = [stats.duplicateSource, stats.compendiumSource].filter(u => typeof u === "string");
+  for ( const activity of activities ) {
+    for ( const ref of activity.effects ?? [] ) {
+      if ( origin.profile && (ref._id === origin.profile) ) return activity.id;
+      const uuid = ref.uuid ?? ref.effect?.uuid ?? null;
+      if ( uuid && sources.includes(uuid) ) return activity.id;
+      if ( sources.some(u => u.endsWith(`.ActiveEffect.${ref._id}`)) ) return activity.id;
+    }
+  }
+  return null;
+}
+
+/**
  * L'effet vient-il de l'effet d'item de cet id ? Le plateau d'effets de dnd5e copie l'effet d'item en gardant sa source
  * (`_stats.duplicateSource`, ou `compendiumSource` depuis un compendium : effect-application.mjs, `_prepareEffectData`).
  */

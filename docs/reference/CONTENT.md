@@ -32,6 +32,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `bolt` | 1 | `call-lightning` |
 | `bonusAttack` | 1 | `great-weapon-master` |
 | `breaksOn` | 12 | `boon-of-the-night-spirit`, `dust-of-disappearance`, `invisibility`, `mind-sliver`, `mislead`, `misty-escape`, … |
+| `breaksOnActivity` | 1 | `steps-of-the-fey` |
 | `breaksOnOrigin` | 1 | `friends` |
 | `brutalStrike` | 3 | `brutal-strike`, `improved-brutal-strike`, `improved-brutal-strike-2` |
 | `burns` | 1 | `alchemists-fire` |

@@ -397,6 +397,9 @@
  *                                               dévastation)
  *     breaksOn?: ("attack"|"damage"|"spell")[] les effets de l'item cessent quand leur porteur fait un jet d'attaque, inflige des
  *                                               dégâts ou lance un sort (Invisibilité, §16.47)
+ *     breaksOnActivity?: { [activityId]: ("attack"|"damage"|"spell"|"save"|"forcesSave")[] }
+ *                                               §438 : comme `breaksOn`, mais seulement pour les effets posés par cette activité
+ *                                               (Foulée évanescente : l'Invisible tombe, Nargué — posé par le même item — reste)
  *     breaksOnOrigin?: ("attack"|"damage"|"forcesSave")[]
  *                                               §366 : les effets de l'item cessent sur toute créature quand celui qui les a
  *                                               posés fait un jet d'attaque, un jet de dégâts ou impose une sauvegarde par un AUTRE

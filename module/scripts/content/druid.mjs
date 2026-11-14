@@ -55,7 +55,15 @@ export const DRUID = Object.freeze({
   ] },
   // §300 : « choisissez une autre créature que vous voyez dans l'émanation » — une seule, à la manifestation comme au tour suivant.
   // §438 : le rayon (1,50 m, 3 m au niveau 6) lu sur le niveau de Druide — l'échelle `@scale.sea.wrath-range` a disparu du Manuel 3.0.0.
-  "wrath-of-the-sea": { ...seaPush, pickTargets: { activities: ["nNTYj4vqURV4Dhjt", "9U9AoJYvcrCQtIMm"], radius: "5 + 5 * min(1, floor(@classes.druid.levels / 6))", units: "ft", max: 1, check: "enemies" } },
+  // §438 suite : Manuel 3.0.0 — « Manifest Ocean Spray » (`nNTY…`) est utilitaire (émanation, Tempétueux) et la sauvegarde est la sœur
+  // `9U9A…` : la liste s'ouvre aussitôt après la manifestation, autour du druide, et la sauvegarde part sans seconde action Bonus
+  // (`after`, décision de l'utilisateur du 2026-11-14 : « quand vous manifestez l'émanation »). Niveau 14 (« Another », `ituof…`, ex-Don
+  // océanique) : l'émanation (3 m) autour d'une autre créature, qui porte l'effet de l'item — la liste s'ouvre autour d'elle, et aux tours
+  // suivants la sauvegarde propose les créatures autour du druide ET de qui porte l'effet (`bearers`). Forme 2.2.0 : `nNTY…` est la
+  // sauvegarde elle-même (liste avant l'utilisation, rien d'enchaîné).
+  "wrath-of-the-sea": { ...seaPush, pickTargets: { activities: ["nNTYj4vqURV4Dhjt", "9U9AoJYvcrCQtIMm"], radius: "5 + 5 * min(1, floor(@classes.druid.levels / 6))", units: "ft", max: 1, check: "enemies",
+    after: { nNTYj4vqURV4Dhjt: { activity: "9U9AoJYvcrCQtIMm", around: "self" }, ituofBRxXKLI7wNW: { activity: "9U9AoJYvcrCQtIMm", around: "targets" } },
+    bearers: { radius: 10, units: "ft" } } },
   // §295 : Protégé de dame Nature (Cercle de la terre 10) — « immunité à l'état Empoisonné » ; la donnée ne porte que les Résistances.
   "natures-ward": { grantsConditionImmunities: ["poisoned"] },
   "stormborn": { ...seaPush, pickTargets: { activities: ["jOppnQcyBPpUizBN"], radius: "5 + 5 * min(1, floor(@classes.druid.levels / 6))", units: "ft", max: 1, check: "enemies" } },
