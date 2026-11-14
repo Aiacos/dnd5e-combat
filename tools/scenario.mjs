@@ -1032,6 +1032,7 @@ for ( const [key, value] of Object.entries(pinned) ) {
 }
 if ( climbSystem !== undefined ) await mcp.call("call-module-api", { moduleId: "dnd5e-combat", fn: "setting", args: { key: "climbSystem", value: climbSystem }, waitMs: 8000 }).catch(() => null);
 if ( clock !== undefined ) await mcp.call("call-module-api", { moduleId: "dnd5e-combat", fn: "foreignSetting", args: { namespace: "simple-timekeeping", key: "paused", value: clock }, waitMs: 8000 }).catch(() => null);
-console.log(`\n${files.length - skipped - failed}/${files.length - skipped} scénario(s) tenus${skipped ? ` (${skipped} interactif(s) ou diagnostic(s) sauté(s))` : ""}`);
+console.log(`\n${files.length - skipped - failed}/${files.length - skipped} scénario(s) tenus${skipped ? ` (${skipped} interactif(s) ou diagnostic(s) sauté(s))` : ""}`
+  + (empty.length ? ` ; dont ${empty.length} sans rien vérifié : ${empty.join(", ")}` : ""));
 process.exitCode = failed ? 1 : 0;
 await mcp.close();

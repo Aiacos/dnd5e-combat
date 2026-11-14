@@ -99,7 +99,10 @@ export default {
       poisoned = (await ctx.effects(target)).find(e => /Empoisonn|Poison/i.test(e.name));
     }
     if ( !ctx.expect(!!poisoned, `la cible rate et est Empoisonnée (${poisoned?.name})`) ) return;
-    ctx.expect(poisoned.duration?.expiry === "targetEnd", `jusqu'à la fin de son tour suivant (${JSON.stringify(poisoned.duration ?? {})})`);
+    // En combat, le moteur tient lui-même la fin de tour (runtime/cantrips.mjs : `placedOn`, durée du cœur remplacée, §42.2).
+    const engineEnd = !!poisoned.flags?.["dnd5e-combat"]?.placedOn;
+    ctx.expect((poisoned.duration?.expiry === "targetEnd") || engineEnd,
+      `jusqu'à la fin de son tour suivant (${JSON.stringify(poisoned.duration ?? {})}${engineEnd ? ", fin de tour tenue par le moteur" : ""})`);
 
     // 4. Empoisonnée par le nuage : ni Réaction, ni action Bonus après son action.
     const ta = await ctx.call("get-actor", { actorId: target.actorId });
