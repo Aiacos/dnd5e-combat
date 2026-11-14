@@ -157,6 +157,7 @@ export function stats({ tokenId }) {
     size: actor?.system?.traits?.size ?? null,
     // §438 : les résistances préparées (effets à conditions de dnd5e 6.1 compris : Plénitude stellaire du Manuel 3.0.0).
     resistances: Array.from(actor?.system?.traits?.dr?.value ?? []),
+    prof: a.prof ?? null,
     mods: Object.fromEntries(Object.entries(actor?.system?.abilities ?? {}).map(([k, v]) => [k, v.mod ?? null])),
     statuses: Array.from(actor?.statuses ?? []),
     // K6 (§327) : Réactions perdues, action OU action Bonus (effets `noReactions`, `actionOrBonus`).

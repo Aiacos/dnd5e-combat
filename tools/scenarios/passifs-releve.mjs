@@ -62,10 +62,13 @@ export default {
      * SRD 6.1 / Manuel 3.0.0 (`potent-spellcasting`) : l'effet de l'item (`dnd5e.bonus`) l'ajoute à la formule, le moteur se tait (§431).
      */
     const wisAdded = async (m, t) => {
-      const engine = bonusesOf(m).filter(b => b.formula === "@abilities.wis.mod").length;
+      // §438 suite : la part du moteur est écrite avec les données de l'acteur (« 3 », 1e2c134) et lancée comme un jet à part ; la part
+      // du système se lit dans le premier jet seul — sans quoi la part du moteur passait pour celle du système, et un double compte aussi.
       const mod = (await ctx.engine("stats", { tokenId: t.id }))?.mods?.wis;
+      const engine = bonusesOf(m).filter(b => (b.formula === "@abilities.wis.mod") || (b.formula === String(mod))).length;
       const formula = (m?.rolls ?? []).map(r => r.formula).join(" + ").replace(/\s/g, "");
-      const system = Number.isFinite(mod) && (mod > 0) && formula.split("+").slice(1).some(t => t === String(mod)) ? 1 : 0;
+      const first = String(m?.rolls?.[0]?.formula ?? "").replace(/\s/g, "");
+      const system = Number.isFinite(mod) && (mod > 0) && first.split("+").slice(1).some(t => t === String(mod)) ? 1 : 0;
       return { once: (engine + system) === 1, text: `moteur ${engine}, formule « ${formula} », Sagesse ${mod}` };
     };
     /** Pendant `action`, répond aux fenêtres du MJ dont le texte correspond, par le premier bouton qui correspond. */

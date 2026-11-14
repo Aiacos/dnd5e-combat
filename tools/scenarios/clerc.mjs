@@ -128,7 +128,10 @@ export default {
       const damage = (await ctx.messagesSince(since)).find(m => m.type === "damage");
       const bonuses = (damage?.flags?.[MODULE_ID]?.bonuses ?? []).map(b => `${b.formula} ${b.damageType}`);
       const rolls = (damage?.rolls ?? []).map(r => r.formula);
-      ctx.expect(bonuses.includes("@abilities.wis.mod radiant") && rolls.includes("3"), `Flamme sacrée : ${bonuses.join(", ")} ; jets ${rolls.join(" + ")}`);
+      // §438 : la part bonus est écrite avec les données de l'acteur (1e2c134 : « @abilities.wis.mod » → « 3 ») — la valeur attendue est
+      // lue sur la créature, et doit aussi être un jet de la carte (le moteur y ajoute sa part).
+      const wis = String((await ctx.engine("stats", { tokenId: cleric.id }))?.mods?.wis);
+      ctx.expect([`@abilities.wis.mod radiant`, `${wis} radiant`].some(x => bonuses.includes(x)) && rolls.includes(wis), `Flamme sacrée : ${bonuses.join(", ")} ; jets ${rolls.join(" + ")} (Sagesse ${wis})`);
       await unlend(strikes);
     });
 

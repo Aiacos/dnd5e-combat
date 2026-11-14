@@ -190,7 +190,9 @@ export default {
       const cone = { shape: "circle", x: at.x + 2.5 * g, y: at.y + g / 2, radius: g / 2 };
       const { used } = await use(fighter, horn, "FMTcQOb5MZKBohdN", [zombi.id], { area: cone });
       await pause(2500);
-      const rolled = (await ctx.messagesSince(used.usageMessageId)).filter(m => m.flags?.[MODULE_ID]?.backfire);
+      // §438 suite : seule la carte du jet compte (elle porte `roll`) — sur une explosion (20 %), la carte des dégâts porte aussi le drapeau
+      // `backfire` ({ item }), et le scénario y voyait un deuxième jet (vu deux fois de suite à la passe du 2026-11-14).
+      const rolled = (await ctx.messagesSince(used.usageMessageId)).filter(m => Number.isFinite(m.flags?.[MODULE_ID]?.backfire?.roll));
       ctx.expect(rolled.length === 1, `Cor de dévastation : un jet d'explosion après le souffle (${rolled.map(m => JSON.stringify(m.flags[MODULE_ID].backfire)).join(" ; ") || "aucun"})`);
       const exploded = rolled[0]?.flags?.[MODULE_ID]?.backfire?.blows;
       if ( exploded ) { ctx.log("le cor a explosé dès le premier souffle (20 %)"); return; }
@@ -200,7 +202,7 @@ export default {
       await ctx.setHp(fighter, hpF);
       const second = await use(fighter, horn, "FMTcQOb5MZKBohdN", [zombi.id], { area: cone });
       await pause(3000);
-      const boom = (await ctx.messagesSince(second.used.usageMessageId)).filter(m => m.flags?.[MODULE_ID]?.backfire);
+      const boom = (await ctx.messagesSince(second.used.usageMessageId)).filter(m => Number.isFinite(m.flags?.[MODULE_ID]?.backfire?.roll));
       ctx.expect(boom[0]?.flags?.[MODULE_ID]?.backfire?.blows === true, `forcé à 100 % : il explose (${JSON.stringify(boom[0]?.flags?.[MODULE_ID]?.backfire ?? null)})`);
       const hp = await ctx.hp(fighter);
       ctx.expect(hp < hpF, `10d6 force au Guerrier (${hpF} → ${hp})`);

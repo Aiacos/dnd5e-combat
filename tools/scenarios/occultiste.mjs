@@ -144,7 +144,11 @@ export default {
       await pause(1500);
       const damage = (await ctx.messagesSince(since)).find(m => m.type === "damage");
       const bonuses = (damage?.flags?.[MODULE_ID]?.bonuses ?? []).map(b => `${b.formula} ${b.damageType}`);
-      ctx.expect(bonuses.includes("@abilities.cha.mod radiant"), `Flamme sacrée : ${bonuses.join(", ")} ; jets ${(damage?.rolls ?? []).map(x => x.formula).join(" + ")}`);
+      // §438 : la part bonus est écrite avec les données de l'acteur (1e2c134 : « @abilities.wis.mod » → « 3 ») — la valeur attendue est
+      // lue sur la créature, et doit aussi être un jet de la carte (le moteur y ajoute sa part).
+      const cha = String((await ctx.engine("stats", { tokenId: warlock.id }))?.mods?.cha);
+      const rolls = (damage?.rolls ?? []).map(x => x.formula);
+      ctx.expect([`@abilities.cha.mod radiant`, `${cha} radiant`].some(x => bonuses.includes(x)) && rolls.includes(cha), `Flamme sacrée : ${bonuses.join(", ")} ; jets ${rolls.join(" + ")} (Charisme ${cha})`);
     });
 
     await part("Défenses envoûtantes", async () => {

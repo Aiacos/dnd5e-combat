@@ -219,7 +219,11 @@ export default {
       if ( !ctx.expect(await fight(), "combat : au tour du Guerrier") ) return;
       const res = await heroHits();
       const bonuses = (res?.damage?.flags?.[MODULE_ID]?.bonuses ?? []).map(b => `${b.formula} ${b.damageType}`);
-      ctx.expect(bonuses.includes("@prof radiant"), `transformé : ${bonuses.join(", ")} ; jets ${(res?.damage?.rolls ?? []).map(x => x.formula).join(" + ")}`);
+      // §438 : la part bonus est écrite avec les données de l'acteur (1e2c134 : « @prof » → « 2 ») — la valeur attendue est lue sur la
+      // créature, et doit aussi être un jet de la carte (le moteur y ajoute sa part).
+      const prof = String((await ctx.engine("stats", { tokenId: hero.id }))?.prof);
+      const rolls = (res?.damage?.rolls ?? []).map(x => x.formula);
+      ctx.expect([`@prof radiant`, `${prof} radiant`].some(x => bonuses.includes(x)) && rolls.includes(prof), `transformé : ${bonuses.join(", ")} ; jets ${rolls.join(" + ")} (maîtrise ${prof})`);
       await unlend(item);
     });
 

@@ -141,7 +141,11 @@ export default {
       ctx.expect(!!tb?.save && (tb.save.auto !== "sculpted"), `Bandit : sauvegarde jouée (${tb?.save?.total})`);
       const damage = (await ctx.messagesSince(since)).find(m => m.type === "damage");
       const bonuses = (damage?.flags?.[MODULE_ID]?.bonuses ?? []).map(b => `${b.formula} ${b.damageType}`);
-      ctx.expect(bonuses.includes("@abilities.int.mod thunder"), `Évocation améliorée : ${bonuses.join(", ")} ; jets ${(damage?.rolls ?? []).map(x => x.formula).join(" + ")}`);
+      // §438 : la part bonus est écrite avec les données de l'acteur (1e2c134 : « @abilities.int.mod » → « 3 ») — la valeur attendue est
+      // lue sur la créature, et doit aussi être un jet de la carte (le moteur y ajoute sa part).
+      const int = String((await ctx.engine("stats", { tokenId: mage.id }))?.mods?.int);
+      const rolls = (damage?.rolls ?? []).map(x => x.formula);
+      ctx.expect([`@abilities.int.mod thunder`, `${int} thunder`].some(x => bonuses.includes(x)) && rolls.includes(int), `Évocation améliorée : ${bonuses.join(", ")} ; jets ${rolls.join(" + ")} (Intelligence ${int})`);
       await unlend(sculpt); await unlend(empowered);
     });
 
