@@ -61,10 +61,25 @@ export function takeReactionDisadvantage(uuid) {
 const damaged = new Map();
 
 export function markReactionDamage(uuid, formula, name) {
-  put(damaged, uuid, { formula, name }, LIFETIME_MS * 2);
+  put(damaged, uuid, { formula, name, attacked: false }, LIFETIME_MS * 2);
+}
+
+/**
+ * §438 suite : le dé promis ne vaut que pour l'attaque de la réaction elle-même. Au jet d'attaque de l'activité marquée : ratée
+ * (sous la CA connue, ou 1 naturel), la marque tombe ; sinon elle attend les dégâts de CETTE attaque — un deuxième jet d'attaque
+ * de la même arme avant tout jet de dégâts veut dire que la Riposte n'en a pas eu (ratée sans CA connue), la marque tombe aussi.
+ * Sans quoi une Riposte ratée laissait son dé au prochain coup de la même arme dans la minute. Rend vrai si la marque est tombée.
+ */
+export function noteReactionAttack(uuid, { missed=false }={}) {
+  const mark = damaged.get(uuid);
+  if ( !mark ) return false;
+  if ( missed || mark.attacked ) { take(damaged, uuid); return true; }
+  mark.attacked = true;
+  return false;
 }
 
 /** La formule promise au jet de dégâts de l'activité `uuid`, ou null ; la marque est consommée. */
 export function takeReactionDamage(uuid) {
-  return take(damaged, uuid);
+  const mark = take(damaged, uuid);
+  return mark ? { formula: mark.formula, name: mark.name } : null;
 }

@@ -34,3 +34,29 @@ describe("marques de réaction : minuteurs", () => {
     expect(takeReactionAdvantage("D")).toBe("y");
   });
 });
+
+import { noteReactionAttack } from "../module/scripts/adapter/marks.mjs";
+
+describe("marques de réaction : Riposte ratée", () => {
+  it("ratée : le dé tombe, le coup suivant de la même arme ne l'a pas", () => {
+    markReactionDamage("E", "1d8", "Riposte");
+    expect(noteReactionAttack("E", { missed: true })).toBe(true);
+    expect(takeReactionDamage("E")).toBeNull();
+  });
+  it("touchée : le dé attend les dégâts de cette attaque", () => {
+    markReactionDamage("F", "1d8", "Riposte");
+    expect(noteReactionAttack("F")).toBe(false);
+    expect(takeReactionDamage("F")).toEqual({ formula: "1d8", name: "Riposte" });
+  });
+  it("issue inconnue puis une nouvelle attaque sans dégâts entre-temps : le dé tombe", () => {
+    markReactionDamage("G", "1d8", "Riposte");
+    noteReactionAttack("G");
+    expect(noteReactionAttack("G")).toBe(true);
+    expect(takeReactionDamage("G")).toBeNull();
+  });
+  it("une attaque d'une autre arme ne touche pas à la marque", () => {
+    markReactionDamage("H", "1d8", "Riposte");
+    expect(noteReactionAttack("autre", { missed: true })).toBe(false);
+    expect(takeReactionDamage("H")).not.toBeNull();
+  });
+});

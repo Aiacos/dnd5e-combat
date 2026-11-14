@@ -776,8 +776,9 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 ### `dnd5e.rollAttackV2`
 
-1. effect ending on attack roll not removed
-2. hide: ends on attack roll
+1. riposte: die not dropped after a miss
+2. effect ending on attack roll not removed
+3. hide: ends on attack roll
 
 ### `dnd5e.rollDeathSave`
 
