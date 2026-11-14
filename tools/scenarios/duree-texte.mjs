@@ -60,7 +60,12 @@ export default {
     await sleep(800);
     const effect = await poison();
     ctx.expect(!!effect, "l'Ours est Empoisonné");
-    ctx.expect(effect?.duration?.expiry === "sourceStart", `durée lue dans le texte : expiration « ${effect?.duration?.expiry} » (attendu sourceStart)`);
+    // En combat, le moteur prend lui-même la fin de tour à sa charge (runtime/cantrips.mjs : `placedOn`, durée du cœur vidée, §42.2) ;
+    // hors de cette règle, l'expiration du cœur lue dans le texte (adapter/effects.mjs, `setTextExpiry`). Les deux vérifications
+    // suivantes disent si la fin tombe au bon moment.
+    const engineEnd = !!effect?.flags?.["dnd5e-combat"]?.placedOn;
+    ctx.expect((effect?.duration?.expiry === "sourceStart") || engineEnd,
+      `durée lue dans le texte : expiration « ${effect?.duration?.expiry} »${engineEnd ? ", fin de tour tenue par le moteur" : ""} (attendu sourceStart ou la règle du moteur)`);
 
     await ctx.nextTurn(); await sleep(1500);
     ctx.expect((await current()) === bear.id, "tour de l'Ours");

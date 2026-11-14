@@ -35,6 +35,8 @@ export default {
     const center = { x: at.x + grid / 2, y: at.y + grid / 2 };
     let r = null;
     for ( let n = 1; n <= 6; n++ ) {
+      // Le Zombi du SRD n'a que 15 PV : son maximum est relevé (token non lié, retiré à la fin), sinon la Calcination le tue.
+      await ctx.call("update-scene-object", { type: "Token", objectId: zombieId, data: { "delta.system.attributes.hp.max": 200 } });
       await ctx.setHp(zombie, 78);
       for ( const e of await ctx.effects(zombie) ) {
         await ctx.call("remove-embedded-effect", { uuid: `Scene.${(await ctx.scene()).sceneId}.Token.${zombieId}.Actor.${undeadActor.id}`, effectId: e._id }).catch(() => {});
