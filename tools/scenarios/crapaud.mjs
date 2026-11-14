@@ -16,6 +16,8 @@ export default {
   name: "crapaud géant — Engloutissement posé par le moteur, acide en fin de tour, libéré à la mort",
 
   async run(ctx) {
+    // Absent de `dnd-6` : posé au contact du Zombi le temps du scénario (Monster Manual 2024, sinon SRD 2024).
+    await ctx.cast({ "Crapaud géant": "mmGiantToad00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     const toad = tokens.find(t => /Crapaud géant|Giant Toad/i.test(t.name));
     if ( !toad ) { ctx.log("pas de Crapaud géant sur la scène : non applicable"); return; }

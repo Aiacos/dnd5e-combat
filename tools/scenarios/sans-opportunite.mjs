@@ -16,6 +16,8 @@ export default {
   name: "sans attaque d'opportunité — Agile, Rôder",
 
   async run(ctx) {
+    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    await ctx.cast({ "Loup": "mmWolf0000000000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Loup", "Bramo"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Loup ou Bramo absent : non applicable"); return; }
     const wolf = await ctx.token("Loup");

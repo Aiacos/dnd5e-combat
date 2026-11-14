@@ -1,10 +1,11 @@
 /**
  * Cordon de flèches (§75, version simple) : l'action du sort pose la sphère de 9 m (pose de dnd5e, validée par `api.mcp.placeRegionAt`) ;
  * une créature qui y entre fait la sauvegarde de Dextérité de l'activité sœur (2d4 perforants) ; quatre projectiles, puis la zone tombe.
- * Lanceur : un token de la scène dont l'acteur connaît le sort (`cordon-of-arrows`). Cibles : jusqu'à quatre autres tokens de la scène,
- * déplacés un à un dans la zone, puis remis (filet du lanceur).
+ * Lanceur : un token de la scène dont l'acteur connaît le sort (`cordon-of-arrows`), sinon le Rôdeur à qui le Player's Handbook le prête.
+ * Cibles : cinq Bandits hostiles posés pour le scénario (`ctx.cast`), déplacés un à un dans la zone, puis retirés.
  */
 const MODULE_ID = "dnd5e-combat";
+const CORDON = "Compendium.dnd-players-handbook.spells.Item.phbsplCordonofAr";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 export default {
@@ -18,9 +19,20 @@ export default {
       const i = (a?.items ?? []).find(x => x.system?.identifier === "cordon-of-arrows");
       if ( i ) { caster = t; itemId = i._id; break; }
     }
-    if ( !caster ) { ctx.log("aucun lanceur du Cordon de flèches sur la scène : non applicable"); return; }
-    const others = tokens.filter(t => t.id !== caster.id).slice(0, 5);
-    if ( others.length < 5 ) { ctx.log("il faut cinq autres tokens sur la scène : non applicable"); return; }
+    // Personne ne le connaît dans `dnd-6` : prêté au Rôdeur le temps du scénario, depuis le Player's Handbook 2024 (le sort n'est pas dans
+    // le SRD) ; sans ce module, non applicable.
+    if ( !caster && tokens.some(t => t.name === "Rôdeur") ) {
+      const ranger = await ctx.token("Rôdeur");
+      const lent = await ctx.ensureItem(ranger, CORDON).catch(() => null);
+      if ( lent ) { caster = ranger; itemId = lent; }
+    }
+    if ( !caster ) { ctx.log("aucun lanceur du Cordon de flèches sur la scène, ni Player's Handbook pour le prêter : non applicable"); return; }
+    // Les cibles : cinq Bandits hostiles du SRD 2024, posés pour le scénario — le moteur épargne les alliés du lanceur (vu le 2026-11-14 :
+    // avec les personnages de l'Arène de test pour cibles, aucune sauvegarde).
+    const names = [1, 2, 3, 4, 5].map(n => `Cible du cordon ${n}`);
+    const cast = await ctx.cast(Object.fromEntries(names.map(n => [n, "mmBandit00000000"])), { near: caster.name, disposition: -1 });
+    const others = names.map(n => cast[n]).filter(Boolean);
+    if ( others.length < 5 ) { ctx.log("pas de fiche de Bandit pour les cinq cibles : non applicable"); return; }
     const grid = await ctx.gridSize();
     const at = await ctx.position(caster);
     const center = { x: at.x + (grid / 2), y: at.y + (grid / 2) };

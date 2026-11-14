@@ -300,7 +300,7 @@ la sélection sans rien jouer.
 | `roublard-choix` |  | §223 | Attaque sournoise au choix, activité de l'item |
 | `roublard` |  | §20 | Attaque sournoise, Frappe malicieuse, Ruse, Visée appliquée, Esquive totale, Insaisissable, Assassinat |
 | `sanctuaire` |  | §16 | le Zombi doit réussir une sauvegarde pour attaquer le Magicien |
-| `sans-charge` |  | §77 | Nuage fétide du Dretch, le MJ lance quand même |
+| `sans-charge` |  | §77 §410 | Nuage fétide du Dretch, le MJ lance quand même |
 | `sans-opportunite` |  | §18.15 | Agile, Rôder |
 | `saut` |  | §208 | longueur avec et sans élan, Bottes, atterrissage, chute automatique |
 | `sauvegarde-repetee` |  | §16 §16.8 | Immobilisation de personne, fin de tour du Guerrier |

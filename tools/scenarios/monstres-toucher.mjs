@@ -13,6 +13,8 @@ export default {
   name: "attaques de monstre — porte de taille (M3) et sauvegarde sœur (M2)",
 
   async run(ctx) {
+    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    await ctx.cast({ "Loup": "mmWolf0000000000", "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Loup", "Zombi", "Ours brun"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Loup, Zombi ou Ours brun absent : non applicable"); return; }
     const wolf = await ctx.token("Loup");

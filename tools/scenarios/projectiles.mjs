@@ -6,15 +6,17 @@
  * Monde `ravenloft` (Bramo, Kaalisti, Rahadin) ; ailleurs, non applicable.
  */
 const MODULE_ID = "dnd5e-combat";
-const VICTIM = "Rahadin, chambellan du château";
+// La victime : un humanoïde du SRD 2024 posé pour le scénario (le monde `ravenloft` avait un PNJ de campagne).
+const VICTIM = "Cible humanoïde";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 export default {
   name: "projectiles — Projectile magique, Rayon ardent, Décharge occulte",
 
   async run(ctx) {
+    await ctx.cast({ [VICTIM]: "mmBanditCaptain0" }, { near: "Kaalisti" });
     const { tokens } = await ctx.scene();
-    if ( !["Bramo", "Kaalisti", VICTIM].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Bramo, Kaalisti ou Rahadin absent : non applicable"); return; }
+    if ( !["Bramo", "Kaalisti", VICTIM].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Bramo, Kaalisti ou la cible absent : non applicable"); return; }
     const bramo = await ctx.token("Bramo");
     const kaalisti = await ctx.token("Kaalisti");
     const victim = await ctx.token(VICTIM);
