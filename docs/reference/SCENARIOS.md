@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-344 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+346 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -148,6 +148,7 @@ la sélection sans rien jouer.
 | `lame-assoiffee` |  | §16.25 | Lame assoiffée |
 | `lancer-main-secondaire` |  | §240 §241 | au menu, action Bonus |
 | `lenteur-attaque` |  | §267 | une seule attaque par action Attaquer |
+| `lot-c12-ravenloft` |  | §446 | Forme ombrale, Toucher de la mort, Courroux sauvage (aura, Représailles, fin), Seconde peau |
 | `lumieres-duree` |  | §121 | durée, extinction, huile, torche consumée |
 | `lumieres` |  | §52 §121 | lampe, lanterne sourde, torche par la boîte à amadou |
 | `lutte` |  | §15.2 | repoussé, agrippé, choix fait d'avance |
@@ -173,6 +174,7 @@ la sélection sans rien jouer.
 | `niveaux-automatisation` |  | §117 §416 | attaque, sauvegarde, attaque d'opportunité, contenu, au niveau du monde |
 | `niveaux` | keep | §14.2 | un plancher arrête la zone et l'attaque |
 | `occultiste` |  | §29 | Décharge répulsive, Buveuse de vie, Âme radieuse, Défenses envoûtantes |
+| `ombre-ravenloft` |  | §446 | voir normalement à travers ses propres Ténèbres (Arène de la vision) |
 | `opportunite-mains-nues` |  | §428 | un personnage sans arme de mêlée en main |
 | `orbe` |  | §16.27 | type choisi, rebond (interactif : choisir un type, puis cliquer la seconde cible) |
 | `ouie` |  | §62 | invisible ou dans la brume : entendu ; assourdi ou caché : rien ; cible cachée refusée |
