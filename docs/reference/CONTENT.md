@@ -65,7 +65,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `curesAll` | 7 | `elixir-of-health`, `hand-of-ultimate-mercy`, `heal`, `keoghtoms-ointment`, `mass-heal`, `potion-of-vitality`, … |
 | `curesOn` | 5 | `dispel-evil-and-good`, `hand-of-healing`, `lay-on-hands`, `physicians-touch`, `restoring-touch` |
 | `damageShield` | 2 | `resistance`, `ring-of-warmth` |
-| `dataFixes` | 63 | `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `bead-of-force`, `belt-of-dwarvenkind`, … |
+| `dataFixes` | 64 | `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `bead-of-force`, `belt-of-dwarvenkind`, … |
 | `devours` | 1 | `blackrazor` |
 | `difficultTerrain` | 16 | `black-tentacles`, `blade-barrier`, `conjure-minor-elementals`, `earthquake`, `entangle`, `evards-black-tentacles`, … |
 | `discharge` | 1 | `path-to-the-grave` |
@@ -79,7 +79,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `duringRage` | 4 | `mindless-rage`, `primal-knowledge`, `rage-of-the-wilds`, `vitality-of-the-tree` |
 | `effectChanges` | 22 | `brutal-strike`, `caltrops`, `contagion`, `elemental-epitome`, `fool`, `gaseous-form`, … |
 | `effectDurations` | 6 | `blessing-of-the-trickster`, `clairvoyant-combatant`, `dust-of-disappearance`, `intimidating-presence`, `scroll-of-protection`, `wand-of-paralysis` |
-| `effectEnds` | 45 | `aberrant-anatomy`, `brutal-strike`, `celestial-revelation`, `chill-touch`, `defensive-duelist`, `devour-intellect`, … |
+| `effectEnds` | 46 | `aberrant-anatomy`, `brutal-strike`, `celestial-revelation`, `chill-touch`, `defensive-duelist`, `devour-intellect`, … |
 | `effectsExpire` | 2 | `blessing-of-the-trickster`, `prayer-of-healing` |
 | `effectsFirst` | 1 | `aid` |
 | `effectsIf` | 6 | `esoteric-ward`, `hammer-of-thunderbolts-enchanted`, `mm-wereboar-gore`, `psychic-skewer`, `silver-needle`, `umbral-dagger` |
@@ -119,8 +119,8 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `gmAlert` | 50 | `abjure-foes`, `antilife-shell`, `antimagic-field`, `boon-of-fate`, `compulsion`, `conjure-elemental`, … |
 | `grants` | 1 | `dragons-breath` |
 | `grantsAction` | 1 | `action-surge` |
-| `grantsConditionImmunities` | 2 | `natures-ward`, `ring-of-free-action` |
-| `grantsResistances` | 1 | `avatar-of-battle` |
+| `grantsConditionImmunities` | 3 | `ancient-might`, `natures-ward`, `ring-of-free-action` |
+| `grantsResistances` | 2 | `avatar-of-battle`, `necrotic-husk` |
 | `grantsSpeeds` | 5 | `athlete`, `cloak-of-arachnida`, `gloves-of-swimming-and-climbing`, `ring-of-elemental-command-air`, `slippers-of-spider-climbing` |
 | `grappleDamage` | 1 | `unarmed-fighting` |
 | `greatWeaponFighting` | 1 | `great-weapon-fighting` |
