@@ -20,6 +20,10 @@
  *  - « makes as many Bite attacks as it has heads » (Hydre) : sans borne (le nombre de têtes n'est pas une donnée)
  * Coquilles du MM tolérées : « makes » absent (Tigre-garou), « attacks » absent (Ancien dragon de bronze), point collé.
  *
+ * Sans texte anglais lisible (fiche écrite en français ou en portugais, prose anglaise aux noms en minuscules), la lecture en
+ * clair (`parseTranslated`) : les noms de la fiche reconnus dans le texte, une attaque sans nom valant n'importe quelle attaque
+ * (`ANY_ATTACK`). Sans elle, le plan était nul et le nombre d'attaques n'était plus limité (§442).
+ *
  * Pur : des chaînes et des objets simples.
  */
 
@@ -110,7 +114,12 @@ function groupsOf(option, refs) {
   }
   // « makes three Rend. » : le mot « attacks » manque (Ancien dragon de bronze).
   const bare = !groups.length && option.match(new RegExp(`^\\s*${NUM}\\s+(${REF})\\s*$`, "i"));
-  if ( bare ) groups.push({ n: count(bare[1]), refs: refsOf(bare[2], refs) });
+  if ( bare ) {
+    const keys = refsOf(bare[2], refs);
+    // « makes two attacks » : « attacks » n'est pas un nom — n'importe quelle attaque. Avant, un groupe sans clé : rien n'y tenait.
+    if ( keys.length ) groups.push({ n: count(bare[1]), refs: keys });
+    else if ( /^attacks?$/i.test(bare[2].trim()) ) groups.push({ n: count(bare[1]), refs: [ANY_ATTACK] });
+  }
   return groups.length ? groups : null;
 }
 
@@ -120,7 +129,18 @@ function groupsOf(option, refs) {
  * @returns {{options: Array<Array<{n: number, refs: string[]}>>, replace: Array<{n: number, refs: string[], of: string[]|null}>,
  *   extra: Array<{refs: string[]}>}|null}
  */
-export function parseMultiattack(html) {
+export function parseMultiattack(html, { names=[] }={}) {
+  const english = parseEnglish(html);
+  const plain = parseTranslated(html, names);
+  if ( !english ) return plain;
+  // Le texte anglais garde la main ; un remplacement ou un usage en plus qu'il n'a pas su lire (« replace one of those attacks
+  // with ray of light », nom en minuscules) se prend dans la lecture en clair.
+  if ( plain && !english.replace.length ) english.replace = plain.replace;
+  if ( plain && !english.extra.length ) english.extra = plain.extra;
+  return english;
+}
+
+function parseEnglish(html) {
   const { text, refs } = tokenize(html);
   const sentences = text.split(/(?<=\.)\s+/);
   let options = null;
@@ -152,6 +172,105 @@ export function parseMultiattack(html) {
     if ( parsed.every(Boolean) ) options = parsed;
   }
   return options ? { options, replace, extra } : null;
+}
+
+/* -------------------------------------------- */
+/*  Texte traduit (français, portugais du Brésil) */
+/* -------------------------------------------- */
+
+/**
+ * Clé d'une utilisation qui est une attaque, quelle qu'elle soit : « effectue deux attaques », sans dire lesquelles.
+ * L'adaptateur la donne à toute activité d'attaque (`useKeysOf`).
+ */
+export const ANY_ATTACK = "kind:attack";
+
+const TR_NUMBERS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8,
+  um: 1, uma: 1, dois: 2, duas: 2, "três": 3, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8 };
+const TR_NUM = `(?:${Object.keys(TR_NUMBERS).join("|")}|\\d+)`;
+/** Lettres avant / après un mot (accents compris) : `\b` ne connaît pas « é ». */
+const NOT_L = "(?<![\\p{L}\\d«])";   // « : un jeton de référence (`«2»`) n'est pas un nombre
+const NOT_R = "(?![\\p{L}\\d])";
+const trCount = word => TR_NUMBERS[word.toLowerCase()] ?? Number(word);
+const tokensOf = (phrase, refs) => [...new Set([...phrase.matchAll(/«(\d+)»/g)].map(m => refs[Number(m[1])]).filter(k => k && (k !== "unknown:")))];
+const escape = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Attaques multiples d'une fiche écrite en français ou en portugais (pas de texte anglais d'origine : module de créatures,
+ * fiche faite à la main), ou d'un texte anglais en prose que `parseEnglish` ne lit pas (« makes three attacks with his blades
+ * A and/or B », noms en minuscules). Les références `[[/item …]]` et `@UUID[…]` se lisent comme en anglais ; les capacités nommées en clair
+ * se reconnaissent par les noms de la fiche (`names` : `[nom affiché, clé]`). Une attaque sans nom vaut n'importe quelle attaque
+ * (`ANY_ATTACK`). Formes :
+ *  - « effectue / réalise / fait / porte deux attaques », « … trois attaques avec ses lames A et/ou B »,
+ *    « … deux attaques, réparties à sa guise entre A et B », « … une attaque de A, une attaque de B et une de C »,
+ *    « … trois attaques de A ou deux attaques de B » (options) ;
+ *  - « Il peut remplacer une attaque / l'une de ces attaques / n'importe quelle attaque / l'attaque de A par (une utilisation
+ *    de) X » ;
+ *  - « … et utilise / recourt à X » (usage en plus) ;
+ *  - portugais : « realiza / faz / executa dois ataques », « pode substituir um ataque por X ».
+ */
+function parseTranslated(html, names=[]) {
+  let { text, refs } = tokenize(html);
+  text = text.replace(/[’]/g, "'");
+  // Les noms en clair, les plus longs d'abord (« Lame d'épouvante » avant « Lame »).
+  for ( const [name, key] of [...names].filter(([n]) => n && (n.length > 1)).sort((a, b) => b[0].length - a[0].length) ) {
+    const re = new RegExp(`${NOT_L}${escape(name.replace(/[’]/g, "'"))}${NOT_R}`, "giu");
+    text = text.replace(re, () => { refs.push(key); return ` «${refs.length - 1}» `; });
+  }
+  const sentences = text.replace(/\s+/g, " ").split(/(?<=\.)\s+/);
+  let options = null;
+  const replace = [];
+  const extra = [];
+  for ( let sentence of sentences ) {
+    sentence = sentence.replace(/\.$/, "").trim();
+    const rep = sentence.match(/\b(?:remplacer|substituir|replace)\s+(.*?)\s+(?:par|por|with)\s+(.*)$/iu);
+    if ( rep ) {
+      const keys = tokensOf(rep[2], refs);
+      if ( !keys.length ) continue;
+      const what = rep[1];
+      const named = /\battaque de\b|\bataque de\b|\bthe\s+«\d+»\s+attack\b/i.test(what) ? tokensOf(what, refs) : [];
+      let n = 1;
+      if ( /n'importe quel|chacune|toutes|qualquer|cada|\bany\b/i.test(what) ) n = ANY;
+      else {
+        const m = what.match(new RegExp(`${NOT_L}(${TR_NUM})${NOT_R}`, "iu"));
+        if ( m && !/l'une|um dos|uma das|one of/i.test(what) ) n = trCount(m[1]);
+      }
+      replace.push({ n, refs: keys, of: named.length ? named : null });
+      continue;
+    }
+    if ( options ) continue;
+    const start = sentence.search(new RegExp(`${NOT_L}(?:effectue|réalise|fait|porte|exécute|mène|realiza|faz|executa|efetua|makes)${NOT_R}`, "iu"));
+    if ( start < 0 ) continue;
+    let body = sentence.slice(start).replace(/^\S+\s*/u, "");
+    if ( !new RegExp(`^${TR_NUM}${NOT_R}`, "iu").test(body) ) continue;
+    // Usage en plus : « et utilise X », « puis recourt à X », « e usa X ».
+    const plus = body.match(/,?\s*(?:et|puis|e|and)\s+(?:il\s+|elle\s+|ele\s+|ela\s+|it\s+)?(?:peut\s+|pode\s+|can\s+)?(?:utilise[rz]?|recourt à|recourir à|usa|usar|utiliza|uses?)\s+(.*)$/iu);
+    if ( plus ) {
+      const keys = tokensOf(plus[1], refs);
+      if ( keys.length ) extra.push({ refs: keys });
+      body = body.slice(0, plus.index);
+    }
+    // Options : « trois attaques de A ou deux attaques de B », « …, ou il effectue deux attaques de C ».
+    const parts = body.split(new RegExp(`,?\\s+(?:ou|or)\\s+(?:il\\s+|elle\\s+|ele\\s+|ela\\s+|it\\s+)?(?:effectue\\s+|réalise\\s+|realiza\\s+|faz\\s+|makes\\s+)?(?=${TR_NUM}${NOT_R})`, "iu"));
+    const parsed = parts.map(p => translatedGroups(p, refs));
+    if ( parsed.length && parsed.every(Boolean) ) options = parsed;
+  }
+  return options ? { options, replace, extra } : null;
+}
+
+/** Les groupes d'une option : chaque nombre ouvre un groupe, les références qui le suivent sont les siennes. */
+function translatedGroups(option, refs) {
+  // « makes three melee attacks: two with A and one with B » : le total annoncé, puis le détail — seul le détail compte.
+  const detail = option.replace(new RegExp(`^${TR_NUM}\\s+(?:(?:melee|ranged|weapon)\\s+)?(?:attacks?|attaques?(?:\\s+(?:au corps à corps|à distance))?|ataques?)\\s*:\\s*`, "iu"), "");
+  if ( (detail !== option) && new RegExp(`^${TR_NUM}${NOT_R}`, "iu").test(detail) ) option = detail;
+  const head = new RegExp(`${NOT_L}(${TR_NUM})(?=\\s+(?:attaques?|ataques?|attacks?|de|d'|do|da|with)${NOT_R}|\\s*d')`, "giu");
+  const starts = [...option.matchAll(head)];
+  if ( !starts.length || (starts[0].index > 0) ) return null;
+  const groups = starts.map((m, i) => {
+    const chunk = option.slice(m.index + m[0].length, starts[i + 1]?.index ?? option.length);
+    const keys = tokensOf(chunk, refs);
+    return { n: trCount(m[1]), refs: keys.length ? keys : [ANY_ATTACK] };
+  });
+  return groups.every(g => Number.isInteger(g.n) && (g.n > 0)) ? groups : null;
 }
 
 /**
