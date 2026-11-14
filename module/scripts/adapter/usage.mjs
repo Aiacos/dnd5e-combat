@@ -194,16 +194,29 @@ function chainedSave(activity) {
  * @param {string} moment   "hit" | "failedSave"
  * @param {string} when     "always" | "failedSave"
  */
+/**
+ * Les items dont les déclarations valent pour une utilisation de cet item, chacun une seule fois (§445) : l'item ; l'item qui a lancé
+ * cette copie de sort (`castItemOf`) — les dégâts « en plus » d'une créature qui lance un sort valent pour sa copie, pas pour le sort de
+ * tout le monde ; C12-h, les items qui l'enchantent (Décharge répulsive posée sur n'importe quel tour de magie de l'occultiste).
+ * dnd5e pose sur la copie d'un sort lancé par une activité « cast » un enchantement (« Spell Changes », activity/cast.mjs) dont l'origine
+ * est cette activité (`system.origin.activity`) : sans la règle « une fois », la capacité qui lance le sort comptait deux fois — lanceur
+ * et enchanteur — et ses dégâts en plus tombaient deux fois. Deux enchantements d'un même item ne le comptent pas deux fois non plus.
+ * @param {Item5e} item
+ * @returns {Item5e[]}
+ */
+export function outcomeSourcesOf(item) {
+  if ( !item ) return [];
+  const enchanters = Array.from(item.effects?.values?.() ?? []).filter(e => !e.disabled && (e.isAppliedEnchantment ?? (e.type === "enchantment")))
+    .map(e => originItemOf(e)).filter(i => i?.documentName === "Item");   // l'origine d'un enchantement est l'activité
+  const out = [];
+  for ( const source of [item, castItemOf(item), ...enchanters] ) if ( source && !out.includes(source) ) out.push(source);
+  return out;
+}
+
 function outcomeStepsOf(item, moment, when) {
   if ( !item ) return [];
   const out = [];
-  // Une copie de sort porte aussi ce que déclare la capacité qui l'a lancée (`castItemOf`) : les dégâts « en plus » des
-  // créatures d'un module tiers (un sort lancé avec des dégâts en plus) valent pour leur copie, pas pour le sort de tout le monde.
-  const cast = castItemOf(item);
-  // C12-h : et ce que déclare l'item qui l'enchante (Décharge répulsive posée sur n'importe quel tour de magie de l'occultiste).
-  const enchanters = Array.from(item.effects?.values?.() ?? []).filter(e => !e.disabled && (e.isAppliedEnchantment ?? (e.type === "enchantment")))
-    .map(e => originItemOf(e)).filter(i => (i?.documentName === "Item") && (i !== item));   // l'origine d'un enchantement est l'activité
-  for ( const d of [...declarationsOfItem(item), ...(cast ? declarationsOfItem(cast) : []), ...enchanters.flatMap(i => declarationsOfItem(i))] ) {
+  for ( const d of outcomeSourcesOf(item).flatMap(i => declarationsOfItem(i)) ) {
     if ( !d.on.includes(moment) ) continue;
     // La condition voyage en JSON : écrite telle quelle dans un flag, Foundry éclaterait ses clés à points
     // (`"target.sizeAtMost"` → `{ target: { sizeAtMost } }`), vu en jeu le 2026-09-24 (scénario `traction`).
