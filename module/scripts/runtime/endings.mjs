@@ -22,13 +22,14 @@ import { contentOf } from "../adapter/content.mjs";
 import { placeItemEffect } from "../adapter/effects.mjs";
 import { originItemOf } from "../adapter/facts.mjs";
 import { potionOfCast } from "../adapter/potions.mjs";
+import { risingAtZero } from "../adapter/rise.mjs";
 import { concentrationOn } from "../adapter/summons.mjs";
 import { comesFromItemEffect } from "../adapter/triggers.mjs";
 import { distanceBetween } from "../adapter/turn.mjs";
 import { lengthIn } from "../adapter/units.mjs";
 import { route } from "./router.mjs";
 import { enqueue } from "./queue.mjs";
-import { log, locEsc, notice, say } from "./shared.mjs";
+import { log, locEsc, notice, say, sleep } from "./shared.mjs";
 
 export const END_UNAFFECTED_SETTING = "endUnaffected";
 
@@ -207,6 +208,12 @@ async function onIncapacitated(effect) {
   });
   if ( !entries.length ) return;
   return enqueue(`endsWhen:${actor.uuid}`, async () => {
+    // §446 : tombé à 0 PV avec de quoi se relever (`atZero` : Courroux persistant, qui exige justement le Courroux sauvage) — la fin
+    // attend la décision ; relevé, l'état qui neutralisait est parti et rien ne prend fin (« vos PV changent à la place »).
+    if ( ((actor.system.attributes?.hp?.value ?? 1) <= 0) && risingAtZero(actor) ) {
+      for ( let n = 0; (n < 240) && risingAtZero(actor); n++ ) await sleep(500);
+      if ( !actor.effects.has(effect.id) ) { log(`${actor.name}: rose at 0 Hit Points, nothing ends`); return; }
+    }
     const done = new Set();
     for ( const e of entries ) await endEntry(e, "incapacitated", scene, done);
   });

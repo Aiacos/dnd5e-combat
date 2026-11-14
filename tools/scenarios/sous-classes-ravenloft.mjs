@@ -207,6 +207,8 @@ export default {
     for ( const [t, v] of [[bandit, 20], [ranger, 10]] ) await ctx.call("set-initiative", { combatantId: combat.combatants.find(x => x.tokenId === t.id).id, value: v, combatId: ctx.ownCombat });
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
     for ( let i = 0; (i < 3) && ((await current()) !== bandit.id); i++ ) { await ctx.call("previous-turn", { combatId: ctx.ownCombat }); await pause(1500); }
+    // §446 : l'Aura troublante agit aussi à la transformation (`atStart`) ; son Effrayé est retiré pour juger celle du début de tour seule.
+    await ctx.removeEffectsNamed(bandit, /Frightened|Effrayé/i);
     const since4 = await ctx.lastMessageId();
     await ctx.nextTurn(); await pause(4500);   // début du tour du Rôdeur
     const aura = (await ctx.messagesSince(since4)).find(m => (m.type === "usage") && (m.flags?.[MODULE_ID]?.areaTick?.moment === "ownTurnStart"));
