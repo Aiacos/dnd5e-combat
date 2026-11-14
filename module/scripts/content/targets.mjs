@@ -31,7 +31,9 @@ export const TARGETS = Object.freeze({
   // Sommeil 2024 : « les créatures qui ne dorment pas, comme les elfes, ou qui ont l'immunité à l'état Épuisement
   // réussissent automatiquement leurs sauvegardes contre ce sort ». L'immunité se lit ; « ne dort pas » (elfes) non.
   // §302 : les elfes (Transe, Elfe éternel) se lisent par leur trait.
-  "sleep": { unaffectedIf: { any: [{ "target.immuneTo": "exhaustion" }, { "target.hasFeature": "trance" }] } },
+  // §446 : Ravenloft — « la magie ne peut pas vous endormir » (Marqué par la tombe, Impérissable du Né-de-nouveau).
+  "sleep": { unaffectedIf: { any: [{ "target.immuneTo": "exhaustion" }, { "target.hasFeature": "trance" },
+    { "target.hasFeature": "grave-touched" }, { "target.hasFeature": "everlasting" }] } },
   // §302 : Motif hypnotique — « chaque créature dans le cube qui voit le motif » : une créature Aveuglée n'est pas affectée.
   "hypnotic-pattern": { unaffectedIf: { "target.hasStatus": "blinded" } },
   // §16.47 : Stabilisation — « une créature à 0 point de vie et qui n'est pas morte ».

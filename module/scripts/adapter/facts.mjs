@@ -472,6 +472,8 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "self.seesTarget": want => ((seesBetween(self, target) ?? true) === want),
     // §34 : l'attaquant à portée du réacteur (Éclat protecteur : une créature visible à 9 m au plus).
     "source.nearSelf": range => within(tokenOf(self, selfToken), tokenOf(source, sourceToken), range ?? {}) === true,
-    "self.seesSource": want => ((seesBetween(self, source) ?? true) === want)
+    "self.seesSource": want => ((seesBetween(self, source) ?? true) === want),
+    // §446 : le réacteur porte un effet de l'item (Représailles rôdeuses : seulement transformé par le Courroux sauvage).
+    "self.hasEffect": id => hasEffectFrom(self, id)
   };
 }

@@ -110,6 +110,16 @@ function endingEffects(actors) {
       const rule = rulesOf(item);
       if ( rule ) out.push({ actor, effect, item, rule });
     }
+    // §446 : un enchantement posé sur un de ses items (Courroux sauvage : « transformé » par un enchantement de l'aptitude elle-même) —
+    // le porteur est le propriétaire de l'item enchanté ; le retirer retire ses effets compagnons (dnd5e).
+    for ( const enchanted of actor?.items ?? [] ) {
+      for ( const effect of enchanted.effects ?? [] ) {
+        if ( (effect.type !== "enchantment") || effect.disabled ) continue;
+        const item = originItemOf(effect);
+        const rule = rulesOf(item);
+        if ( rule ) out.push({ actor, effect, item, rule });
+      }
+    }
   }
   return out;
 }
@@ -136,13 +146,13 @@ async function endEntry({ actor, effect, item, rule }, reason, scene, done) {
     if ( concentration ) await concentration.delete();
     else {
       for ( const other of endingEffects(actorsOf(scene)).filter(e => e.item === item) ) {
-        if ( other.actor.effects.has(other.effect.id) ) await other.effect.delete();
+        if ( other.effect.parent?.effects?.has(other.effect.id) ) await other.effect.delete();
       }
     }
   }
   else {
     done.add(effect.uuid);
-    if ( !actor.effects.has(effect.id) ) return;
+    if ( !effect.parent?.effects?.has(effect.id) ) return;
     await effect.delete();
   }
   log(`${item.name}: ends${rule.spell ? "" : ` on ${actor.name}`} (${reason})`);

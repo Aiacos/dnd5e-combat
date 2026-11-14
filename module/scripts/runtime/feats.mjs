@@ -11,7 +11,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { twiceKeepHighest, rerollOnesOnce, oneMoreKeepBest } from "../core/feats.mjs";
+import { twiceKeepHighest, rerollOnesOnce, oneMoreKeepBest, resistanceRuleCovers } from "../core/feats.mjs";
 import { ownConditionsRule, pickOwnCondition } from "../core/self-care.mjs";
 import { STEPS } from "../core/action.mjs";
 import { attackDamageTypes } from "../adapter/smite.mjs";
@@ -19,6 +19,8 @@ import { inflict } from "../adapter/retaliation.mjs";
 import { victimsOf } from "../adapter/grapple.mjs";
 import { enqueue } from "./queue.mjs";
 import { contentOf, identifierOf } from "../adapter/content.mjs";
+import { factsFor } from "../adapter/facts.mjs";
+import { holds } from "../core/triggers.mjs";
 import { combatantFor, readBudget, writeBudget, movementOf } from "../adapter/turn.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
 import { askChoice } from "../adapter/choices.mjs";
@@ -255,9 +257,24 @@ function elementalTypes(actor) {
 export function resistanceIgnoredBy(actor, activity) {
   if ( !actor ) return [];
   const out = new Set();
-  for ( const i of actor.items ) for ( const t of contentOf(i).entry?.ignoresResistance?.types ?? [] ) out.add(t);
+  for ( const i of actor.items ) {
+    const rule = contentOf(i).entry?.ignoresResistance;
+    if ( !rule || !ignoresFor(rule, i, actor, activity) ) continue;
+    for ( const t of rule.types ?? [] ) out.add(t);
+  }
   if ( activity?.item?.type === "spell" ) for ( const t of elementalTypes(actor) ) out.add(t);
   return Array.from(out);
+}
+
+/**
+ * §446 : la règle `ignoresResistance` de cet item vaut-elle pour cette activité ? `from` : une de ses activités, ou une copie de sort
+ * qu'une d'elles a fait lancer (`flags.dnd5e.cachedFor` = « …Item.<item>.Activity.<activité> », activity/cast.mjs) — Toucher de la mort,
+ * « ce sort seulement » ; `if` : la condition, l'auteur en `source`.
+ */
+function ignoresFor(rule, item, actor, activity) {
+  if ( rule.from && !resistanceRuleCovers(rule.from, { itemId: item.id, activityItemId: activity?.item?.id, activityId: activity?.id,
+    cachedFor: activity?.item?.flags?.dnd5e?.cachedFor }) ) return false;
+  return !rule.if || holds(rule.if, factsFor({ source: actor, activity }));
 }
 
 /**

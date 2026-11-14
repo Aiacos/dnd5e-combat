@@ -235,6 +235,8 @@ export function spellRetypes(activity) {
   for ( const i of actor.items ) {
     const rule = contentOf(i).entry?.spellDamageTypes;
     if ( !rule ) continue;
+    // §446 : sans classe, tout sort (Marqué par la tombe).
+    if ( !rule.class ) { for ( const t of rule.types ) out.add(t); continue; }
     const cls = spellClassOf(item) || (actor.classes?.[rule.class] ? rule.class : null);
     if ( cls === rule.class ) for ( const t of rule.types ) out.add(t);
   }

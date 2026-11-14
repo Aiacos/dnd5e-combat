@@ -282,7 +282,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       && (!("activities" in k) || (Array.isArray(k.activities) && k.activities.length && k.activities.every(isId)));
     if ( !ok ) errors.push(`${at}killsAtZero: true or { types?, sizeAtMost?, activities? }`);
   }
-  for ( const key of ["singleAttack", "noAttacksOrSpells", "noSpells", "knownToOrigin", "upkeep", "keepsProne", "wardsAtZero", "stableAtZero", "dispel", "zoneEffects", "advantageIfFighting", "regeneration", "fortitude", "drain", "swallow", "ignoresCloseCombat", "sharedHp", "forOneAttack", "evasion", "avoidance", "elusive", "holdsStill", "grantsAction", "studiedAttacks", "heroicWarrior", "greatWeaponFighting", "persistentRage", "reckless", "oneAttack", "martialArts", "supremeHealing", "discipleOfLife", "blessedHealer", "potentCantrip", "sculptSpells", "stabilizes", "kindles", "castTargets", "halfOnMiss", "seesInvisible", "scatter", "climbsCeilings", "climbsOnTurn", "slippery", "notOnSlippery", "encloses", "willingFails", "critMove", "combatInspiration", "quietPose", "zoneBound", "effectsFirst", "hitDefense", "enterOnPose", "summonEffectsOnCaster", "sniper", "checkPoses", "magicEvasion", "compels", "keepsSpeed", "windward", "formLock", "magical", "antimagicZone"] ) if ( (key in entry) && (entry[key] !== true) ) errors.push(`${at}${key}: true or absent`);
+  for ( const key of ["singleAttack", "noAttacksOrSpells", "noSpells", "knownToOrigin", "upkeep", "keepsProne", "wardsAtZero", "stableAtZero", "dispel", "zoneEffects", "advantageIfFighting", "regeneration", "fortitude", "drain", "swallow", "ignoresCloseCombat", "sharedHp", "forOneAttack", "evasion", "avoidance", "elusive", "holdsStill", "grantsAction", "studiedAttacks", "heroicWarrior", "greatWeaponFighting", "persistentRage", "reckless", "oneAttack", "martialArts", "supremeHealing", "discipleOfLife", "blessedHealer", "potentCantrip", "sculptSpells", "stabilizes", "kindles", "castTargets", "halfOnMiss", "seesInvisible", "scatter", "climbsCeilings", "climbsOnTurn", "slippery", "notOnSlippery", "encloses", "willingFails", "critMove", "combatInspiration", "quietPose", "zoneBound", "effectsFirst", "hitDefense", "enterOnPose", "summonEffectsOnCaster", "sniper", "checkPoses", "magicEvasion", "compels", "keepsSpeed", "windward", "formLock", "magical", "antimagicZone", "seesThroughOwnDarkness"] ) if ( (key in entry) && (entry[key] !== true) ) errors.push(`${at}${key}: true or absent`);
   // §225, lot 4 : passer du plan matériel à l'Éthéré ou inversement (Saut éthéré) ; `others` : les cibles désignées suivent (Foulée éthérée).
   if ( ("etherealShift" in entry) && !((entry.etherealShift === true) || (isObject(entry.etherealShift)
     && Object.keys(entry.etherealShift).every(k => k === "others") && (entry.etherealShift.others === true))) ) {
@@ -320,9 +320,9 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   // Relevé des trous : les sorts de cette classe qui infligent des dégâts peuvent prendre ces types (Sorts psychiques : psychique).
   if ( "spellDamageTypes" in entry ) {
     const d = entry.spellDamageTypes;
-    if ( !isObject(d) || (typeof d.class !== "string") || !d.class || !Array.isArray(d.types) || !d.types.length
+    if ( !isObject(d) || (("class" in d) && ((typeof d.class !== "string") || !d.class)) || !Array.isArray(d.types) || !d.types.length
       || !d.types.every(t => (typeof t === "string") && t) || !Object.keys(d).every(k => ["class", "types"].includes(k)) ) {
-      errors.push(`${at}spellDamageTypes: { class, types } (class identifier, damage types)`);
+      errors.push(`${at}spellDamageTypes: { class?, types } (class identifier — absent: any spell —, damage types)`);
     }
   }
   // Relevé des trous, §236 : listes de chaînes (états retirés en fin de tour, types de résistance, caractéristiques plancher).
@@ -706,9 +706,16 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     && !(isObject(entry.opportunityDisadvantage) && isId(entry.opportunityDisadvantage.whileEffect) && (Object.keys(entry.opportunityDisadvantage).length === 1)) ) {
     errors.push(`${at}opportunityDisadvantage: true or { whileEffect: effect id }`);
   }
-  if ( ("ignoresResistance" in entry) && !(isObject(entry.ignoresResistance) && Array.isArray(entry.ignoresResistance.types) && entry.ignoresResistance.types.length
-    && entry.ignoresResistance.types.every(t => (typeof t === "string") && t) && Object.keys(entry.ignoresResistance).every(k => k === "types")) ) {
-    errors.push(`${at}ignoresResistance: { types: [damage types] }`);
+  if ( "ignoresResistance" in entry ) {
+    // §446 : `from` (ces activités de l'item, ou le sort qu'elles font lancer), `if` (une condition sur l'auteur et l'activité).
+    const r = entry.ignoresResistance;
+    if ( !(isObject(r) && Array.isArray(r.types) && r.types.length && r.types.every(t => (typeof t === "string") && t)
+      && (!("from" in r) || (Array.isArray(r.from) && r.from.length && r.from.every(isId)))
+      && (!("if" in r) || isObject(r.if))
+      && Object.keys(r).every(k => ["types", "from", "if"].includes(k))) ) {
+      errors.push(`${at}ignoresResistance: { types: [damage types], from?: [activity ids], if?: condition }`);
+    }
+    else if ( r.if ) for ( const key of unknownFacts(r.if, facts) ) errors.push(`${at}ignoresResistance.if: unknown fact "${key}"`);
   }
   if ( ("quickStand" in entry) && !(isObject(entry.quickStand) && Number.isFinite(entry.quickStand.value) && (entry.quickStand.value > 0)
     && (typeof entry.quickStand.units === "string") && entry.quickStand.units && Object.keys(entry.quickStand).every(k => ["value", "units"].includes(k))) ) {

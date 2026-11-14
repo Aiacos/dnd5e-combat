@@ -40,6 +40,6 @@ export const GM_ALERTS = Object.freeze({
   "symbiotic-being": { key: "Symbiote" },
   "mist-walker": { key: "MarcheBrumes" },
   "feral-pounce": { key: "BondFeroce" },
-  "ghost-walk": { key: "MarcheFantome" },
-  "wrath-of-the-wild": { key: "CourrouxSauvage" }
+  "ghost-walk": { key: "MarcheFantome" }
+  // §446 : Courroux sauvage n'a plus d'alerte — la transformation (enchantement de la donnée) et les Représailles rôdeuses sont jouées.
 });
