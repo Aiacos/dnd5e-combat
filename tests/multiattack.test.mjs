@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseMultiattack, fitMultiattack, attackCount, expandPlan, multiattackStatus, ANY, isMultiattackId } from "../module/scripts/core/multiattack.mjs";
+import { parseMultiattack, fitMultiattack, attackCount, expandPlan, multiattackStatus, ANY, ANY_ATTACK, isMultiattackId } from "../module/scripts/core/multiattack.mjs";
 import { freshBudget, checkUse, spendUse, refundUse } from "../module/scripts/core/turn.mjs";
 
 // Textes anglais de la forme de ceux du Monster Manual 2024 : créatures du SRD 5.2, ou textes synthétiques de même
@@ -65,14 +65,79 @@ describe("lecture du texte anglais", () => {
     expect(parseMultiattack(TEXT.youngBronze)?.replace).toHaveLength(1);
   });
 
-  it("rien de lisible : null (texte traduit, vide)", () => {
-    expect(parseMultiattack("<p>La goule effectue deux attaques de [[/item .mmClaw0000000000]].</p>")).toBeNull();
+  it("rien de lisible : null (autre langue, sans nombre, vide)", () => {
+    expect(parseMultiattack("<p>Die Kreatur greift zweimal an.</p>")).toBeNull();
+    expect(parseMultiattack("<p>La créature effectue plusieurs attaques.</p>")).toBeNull();
     expect(parseMultiattack("")).toBeNull();
   });
 
   it("nombre d'attaques affiché : l'option la plus longue", () => {
     expect(attackCount(parseMultiattack(TEXT.barbed))).toBe(2);
     expect(attackCount(parseMultiattack(TEXT.stoneSpirit))).toBe(3);
+  });
+});
+
+// Phrases inventées, de la forme des traductions (Manuel des monstres en français, fiches écrites à la main) : aucun texte de livre.
+describe("lecture d'un texte traduit (français, portugais)", () => {
+  const NAMES = [["Lame grise", "id:lameGrise000000a"], ["Lame", "id:lame000000000000"], ["Croc d'ombre", "id:crocOmbre0000000"],
+    ["Hurlement", "id:hurlement0000000"], ["Morsure", "id:morsure000000000"]];
+  const read = (html, names=NAMES) => parseMultiattack(html, { names });
+
+  it("sans nom : n'importe quelle attaque, en chiffres ou en lettres", () => {
+    expect(read("<p>Le golem effectue deux attaques.</p>").options).toEqual([[{ n: 2, refs: [ANY_ATTACK] }]]);
+    expect(read("<p>Le golem réalise 3 attaques.</p>").options).toEqual([[{ n: 3, refs: [ANY_ATTACK] }]]);
+    expect(read("<p>O golem realiza duas ataques.</p>").options).toEqual([[{ n: 2, refs: [ANY_ATTACK] }]]);
+  });
+
+  it("noms en clair reconnus par la fiche, le plus long d'abord ; et/ou ; remplacement par une capacité", () => {
+    const plan = read("<p>Le chevalier effectue trois attaques avec ses armes Lame grise et/ou Croc d’ombre. Il peut remplacer une attaque par sa capacité Hurlement.</p>");
+    expect(plan.options).toEqual([[{ n: 3, refs: ["id:lameGrise000000a", "id:crocOmbre0000000"] }]]);
+    expect(plan.replace).toEqual([{ n: 1, refs: ["id:hurlement0000000"], of: null }]);
+  });
+
+  it("enrichers, groupes successifs, « réparties entre », options, usage en plus", () => {
+    expect(read("<p>Le [[lookup @name lowercase]] effectue une attaque de [[/item .aaaaaaaaaaaaaaaa]], une attaque de [[/item .bbbbbbbbbbbbbbbb]] et une de [[/item .cccccccccccccccc]].</p>").options)
+      .toEqual([[{ n: 1, refs: ["id:aaaaaaaaaaaaaaaa"] }, { n: 1, refs: ["id:bbbbbbbbbbbbbbbb"] }, { n: 1, refs: ["id:cccccccccccccccc"] }]]);
+    expect(read("<p>Il effectue deux attaques, réparties à sa guise entre [[/item .aaaaaaaaaaaaaaaa]] et [[/item .bbbbbbbbbbbbbbbb]].</p>").options)
+      .toEqual([[{ n: 2, refs: ["id:aaaaaaaaaaaaaaaa", "id:bbbbbbbbbbbbbbbb"] }]]);
+    expect(read("<p>Il effectue trois attaques de Morsure ou deux attaques de Lame.</p>").options)
+      .toEqual([[{ n: 3, refs: ["id:morsure000000000"] }], [{ n: 2, refs: ["id:lame000000000000"] }]]);
+    expect(read("<p>Il effectue deux attaques de Morsure et recourt à Hurlement.</p>").extra).toEqual([{ refs: ["id:hurlement0000000"] }]);
+  });
+
+  it("remplacement : l'une de ces attaques, n'importe laquelle, une attaque désignée ; portugais", () => {
+    expect(read("<p>Il effectue deux attaques de Morsure. Il peut remplacer l'une de ces attaques par une utilisation de Hurlement.</p>").replace)
+      .toEqual([{ n: 1, refs: ["id:hurlement0000000"], of: null }]);
+    expect(read("<p>Il effectue deux attaques de Morsure. Il peut remplacer n'importe quelle attaque par Hurlement.</p>").replace[0].n).toBe(ANY);
+    expect(read("<p>Il effectue une attaque de Morsure et une attaque de Lame. Il peut remplacer l'attaque de Lame par Hurlement.</p>").replace)
+      .toEqual([{ n: 1, refs: ["id:hurlement0000000"], of: ["id:lame000000000000"] }]);
+    expect(read("<p>Ele faz dois ataques de Morsure. Ele pode substituir um ataque por Hurlement.</p>"))
+      .toEqual({ options: [[{ n: 2, refs: ["id:morsure000000000"] }]], replace: [{ n: 1, refs: ["id:hurlement0000000"], of: null }], extra: [] });
+  });
+
+  it("anglais en prose : « makes two attacks », noms en minuscules, total puis détail, remplacement lu en clair", () => {
+    expect(parseMultiattack("<p>The knight makes two attacks.</p>").options).toEqual([[{ n: 2, refs: [ANY_ATTACK] }]]);
+    const names = [["Grey Blade", "id:lameGrise000000a"], ["Shadow Fang", "id:crocOmbre0000000"], ["Howl", "id:hurlement0000000"]];
+    expect(parseMultiattack("<p>The knight makes three attacks with his blades grey blade and/or shadow fang. He can replace one attack with his howl.</p>", { names }))
+      .toEqual({ options: [[{ n: 3, refs: ["id:lameGrise000000a", "id:crocOmbre0000000"] }]], replace: [{ n: 1, refs: ["id:hurlement0000000"], of: null }], extra: [] });
+    expect(parseMultiattack("<p>The knight makes three melee attacks: two with her [[/item .aaaaaaaaaaaaaaaa]] and one with her [[/item .bbbbbbbbbbbbbbbb]].</p>").options)
+      .toEqual([[{ n: 2, refs: ["id:aaaaaaaaaaaaaaaa"] }, { n: 1, refs: ["id:bbbbbbbbbbbbbbbb"] }]]);
+    expect(parseMultiattack("<p>The knight makes two attacks. He can replace one of those attacks with his howl.</p>", { names }).replace)
+      .toEqual([{ n: 1, refs: ["id:hurlement0000000"], of: null }]);
+  });
+
+  it("le texte anglais garde la priorité", () => {
+    expect(read(TEXT.ghoul)).toEqual(parseMultiattack(TEXT.ghoul));
+  });
+
+  it("le plan tient : deux attaques quelconques, pas trois ; Hurlement à la place d'une", () => {
+    const plan = read("<p>Le chevalier effectue deux attaques. Il peut remplacer une attaque par Hurlement.</p>");
+    const lame = ["id:lame000000000000", ANY_ATTACK], croc = ["id:crocOmbre0000000", ANY_ATTACK], cri = ["id:hurlement0000000"];
+    expect(fitMultiattack(plan, [lame, croc])).toEqual({ attacks: 2 });
+    expect(fitMultiattack(plan, [lame, croc, lame])).toBeNull();
+    expect(fitMultiattack(plan, [cri, lame])).toEqual({ attacks: 2 });
+    expect(fitMultiattack(plan, [cri, cri])).toBeNull();
+    expect(fitMultiattack(plan, [["id:soin000000000000"]])).toBeNull();
   });
 });
 
