@@ -23,6 +23,8 @@ export default {
   name: "sorts couverts par dnd5e — bonus, CA, vitesse, soins, dégâts, cibles",
 
   async run(ctx) {
+    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    await ctx.cast({ "Loup": "mmWolf0000000000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     const needed = ["Clerc", "Guerrier", "Zombi", "Magicien", "Loup"];
     if ( !needed.every(n => tokens.some(t => t.name === n)) ) { ctx.log(`${needed.join(", ")} : l'un manque, non applicable`); return; }

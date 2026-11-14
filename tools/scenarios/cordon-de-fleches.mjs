@@ -5,6 +5,7 @@
  * déplacés un à un dans la zone, puis remis (filet du lanceur).
  */
 const MODULE_ID = "dnd5e-combat";
+const CORDON = "Compendium.dnd-players-handbook.spells.Item.phbsplCordonofAr";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 export default {
@@ -18,7 +19,14 @@ export default {
       const i = (a?.items ?? []).find(x => x.system?.identifier === "cordon-of-arrows");
       if ( i ) { caster = t; itemId = i._id; break; }
     }
-    if ( !caster ) { ctx.log("aucun lanceur du Cordon de flèches sur la scène : non applicable"); return; }
+    // Personne ne le connaît dans `dnd-6` : prêté au Rôdeur le temps du scénario, depuis le Player's Handbook 2024 (le sort n'est pas dans
+    // le SRD) ; sans ce module, non applicable.
+    if ( !caster && tokens.some(t => t.name === "Rôdeur") ) {
+      const ranger = await ctx.token("Rôdeur");
+      const lent = await ctx.ensureItem(ranger, CORDON).catch(() => null);
+      if ( lent ) { caster = ranger; itemId = lent; }
+    }
+    if ( !caster ) { ctx.log("aucun lanceur du Cordon de flèches sur la scène, ni Player's Handbook pour le prêter : non applicable"); return; }
     const others = tokens.filter(t => t.id !== caster.id).slice(0, 5);
     if ( others.length < 5 ) { ctx.log("il faut cinq autres tokens sur la scène : non applicable"); return; }
     const grid = await ctx.gridSize();

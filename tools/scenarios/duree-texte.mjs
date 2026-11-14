@@ -12,6 +12,8 @@ export default {
   name: "durée écrite — Empoisonné jusqu'au début du prochain tour de l'attaquant",
 
   async run(ctx) {
+    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    await ctx.cast({ "Loup": "mmWolf0000000000", "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Loup", "Ours brun"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Loup ou Ours brun absent : non applicable"); return; }
     const wolf = await ctx.token("Loup");

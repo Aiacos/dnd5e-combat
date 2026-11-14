@@ -17,6 +17,8 @@ export default {
   name: "sans charge — Nuage fétide du Dretch, le MJ lance quand même",
 
   async run(ctx) {
+    // Absent de `dnd-6` : importé sous l'id de sa fiche (Monster Manual 2024, sinon SRD 2024), retiré à la fin.
+    await ctx.ensureActor(DRETCH);
     const dretch = await ctx.call("get-actor", { actorId: DRETCH }).catch(() => null);
     if ( !dretch?.items?.some(i => i._id === ITEM) ) { ctx.log("pas de Dretch du Monster Manual dans le monde : non applicable"); return; }
     const { tokens } = await ctx.scene();

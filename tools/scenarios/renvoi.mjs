@@ -2,11 +2,12 @@
  * Renvoi des morts-vivants par la Calcination (SPEC §16.25) : seuls les morts-vivants sont affectés (un humanoïde hostile
  * dans la zone ne l'est pas) ; un mort-vivant qui rate sa sauvegarde est Renvoyé (Effrayé, Neutralisé) et subit les
  * dégâts radiants, qui ne mettent pas fin au renvoi ; des dégâts subis ensuite y mettent fin.
- * Monde `ravenloft` : Alara, un « Zombie Plague Spreader » posé pour l'occasion, Rahadin amené dans la zone.
- * Ailleurs : non applicable (pas d'Alara).
+ * Alara (la clerc de `dnd-6`, qui a la Calcination), un Zombi et un humanoïde du SRD 2024 posés pour l'occasion (`ctx.cast` ;
+ * le monde `ravenloft` avait un « Zombie Plague Spreader » de Ravenloft et un PNJ de campagne), le Guerrier pour les dégâts
+ * qui mettent fin au renvoi. Sans Alara : non applicable.
  */
-const UNDEAD = "Zombie Plague Spreader";
-const HUMANOID = "Rahadin, chambellan du château";
+const UNDEAD = "Zombi du renvoi";
+const HUMANOID = "Cible humanoïde";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export default {
@@ -16,21 +17,18 @@ export default {
     const { tokens } = await ctx.scene();
     if ( !tokens.some(t => t.name === "Alara") ) { ctx.log("pas d'Alara sur la scène : non applicable"); return; }
     const alara = await ctx.token("Alara");
-    const { actors } = await ctx.call("list-actors", {}).then(r => ({ actors: r.actors ?? r }));
-    const undeadActor = actors.find(a => a.name === UNDEAD);
-    if ( !undeadActor ) { ctx.log(`pas d'acteur « ${UNDEAD} » : non applicable`); return; }
+    const cast = await ctx.cast({ [UNDEAD]: "mmZombie00000000", [HUMANOID]: "mmBanditCaptain0" }, { near: "Alara", disposition: -1 });
+    const undeadToken = cast[UNDEAD];
+    if ( !undeadToken ) { ctx.log("pas de fiche de Zombi (SRD 2024) : non applicable"); return; }
 
     const grid = await ctx.gridSize();
     const at = await ctx.position(alara);
-    const placed = await ctx.call("place-token", { actorId: undeadActor.id, x: at.x + (2 * grid), y: at.y });
-    const zombieId = placed.tokenId ?? placed.id ?? placed.token?._id ?? placed.data?._id;
-    ctx.expect(!!zombieId, `${UNDEAD} posé à 10 ft d'Alara`);
-    if ( !zombieId ) return;
-    ctx.restore(() => ctx.call("delete-scene-object", { type: "Token", objectId: zombieId }).catch(() => {}));
-    const { data: aTok } = await ctx.call("get-scene-object", { type: "Token", objectId: alara.id });
-    await ctx.call("update-scene-object", { type: "Token", objectId: zombieId, data: { disposition: -1, ...(aTok.level ? { level: aTok.level } : {}) } });
-    const zombie = { id: zombieId, name: UNDEAD, actorId: undeadActor.id };
-    const humanoid = tokens.some(t => t.name === HUMANOID) ? await ctx.token(HUMANOID) : null;
+    const zombieId = undeadToken.id;
+    await ctx.call("move-token", { tokenId: zombieId, x: at.x + (2 * grid), y: at.y, elevation: at.elevation });
+    ctx.expect((await ctx.position(undeadToken)).x === at.x + (2 * grid), `${UNDEAD} posé à 10 ft d'Alara`);
+    const zombie = { id: zombieId, name: UNDEAD, actorId: undeadToken.actorId };
+    const undeadActor = { id: undeadToken.actorId };
+    const humanoid = cast[HUMANOID] ? await ctx.token(HUMANOID) : null;
     if ( humanoid ) await ctx.call("move-token", { tokenId: humanoid.id, x: at.x - (2 * grid), y: at.y });
 
     // La Calcination, lancée jusqu'à ce que le mort-vivant rate sa sauvegarde (Sagesse 5 : presque toujours).
@@ -56,16 +54,16 @@ export default {
     const turned = async () => (await ctx.effects(zombie)).some(e => (e.statuses ?? []).includes("frightened"));
     ctx.expect(await turned(), "Renvoyé : l'effet tient malgré les dégâts de la Calcination");
 
-    // Des dégâts ensuite : le renvoi cesse.
-    const kaalisti = tokens.some(t => t.name === "Kaalisti") ? await ctx.token("Kaalisti") : null;
-    if ( !kaalisti ) return;
-    await ctx.call("move-token", { tokenId: kaalisti.id, x: at.x + (3 * grid), y: at.y });
+    // Des dégâts ensuite : le renvoi cesse (le Guerrier et son épée à deux mains, au contact).
+    const fighter = tokens.some(t => t.name === "Guerrier") ? await ctx.token("Guerrier") : null;
+    if ( !fighter ) return;
+    await ctx.call("move-token", { tokenId: fighter.id, x: at.x + (3 * grid), y: at.y });
     for ( let n = 1; n <= 8; n++ ) {
-      const used = await ctx.use({ tokenId: kaalisti.id, identifier: "greatsword", activityType: "attack", targetTokenIds: [zombieId] });
+      const used = await ctx.use({ tokenId: fighter.id, identifier: "greatsword", activityType: "attack", targetTokenIds: [zombieId] });
       const hit = await ctx.settle(used.usageMessageId);
       if ( hit.targets[0]?.hit ) break;
     }
     await pause(2000);
-    ctx.expect(!(await turned()), "touché par Kaalisti : le renvoi cesse");
+    ctx.expect(!(await turned()), "touché par le Guerrier : le renvoi cesse");
   }
 };

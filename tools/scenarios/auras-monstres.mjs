@@ -15,6 +15,8 @@ export default {
   name: "auras de monstre — Aura de feu (fin de tour), Puanteur (début de tour)",
 
   async run(ctx) {
+    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    await ctx.cast({ "Ours brun": "mmBrownBear00000", "Loup": "mmWolf0000000000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Ours brun", "Loup", "Bramo", "Zombi"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Ours brun, Loup, Bramo ou Zombi absent : non applicable"); return; }
     const bear = await ctx.token("Ours brun");

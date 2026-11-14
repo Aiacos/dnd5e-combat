@@ -15,6 +15,8 @@ export default {
 
   async run(ctx) {
     const { tokens } = await ctx.scene();
+    // Absent de `dnd-6` : importé sous l'id de sa fiche (Monster Manual 2024, sinon SRD 2024), retiré à la fin.
+    await ctx.ensureActor(FAMILIAR);
     const familiar = await ctx.call("get-actor", { actorId: FAMILIAR }).catch(() => null);
     if ( !familiar ) { ctx.log("Familier de vampire (mmVampireFamilia) absent du monde : non applicable"); return; }
     // La cible PNJ : le premier PNJ ordinaire de la scène qui n'est pas un familier (le moteur le tuerait d'office à 0 PV).

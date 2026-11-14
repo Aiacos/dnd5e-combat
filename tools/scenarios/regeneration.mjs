@@ -13,6 +13,8 @@ export default {
   name: "régénération — soin au début du tour, coupée par le feu, troll à 0 PV",
 
   async run(ctx) {
+    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    await ctx.cast({ "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Ours brun", "Kaalisti"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Ours brun ou Kaalisti absent : non applicable"); return; }
     const bear = await ctx.token("Ours brun");

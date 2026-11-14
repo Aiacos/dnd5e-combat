@@ -43,9 +43,72 @@ async function callEngine(mcp, fn, args={}) {
   return r.result;
 }
 
+/** Une fiche de créature : Monster Manual 2024 (premium) et SRD 2024 de dnd5e portent les mêmes identifiants (`mmWolf0000000000`). */
+const MM = id => `Compendium.dnd-monster-manual.actors.Actor.${id}`;
+const SRD = id => `Compendium.dnd5e.actors24.Actor.${id}`;
+
+/**
+ * `ctx.cast` (exécuté chez le MJ par `run-script`, réglage « Outils de test ») : la première fiche trouvée, importée sous le nom voulu,
+ * son token non lié posé sur la première case libre en anneaux autour de `near` (ou du centre des tokens), au niveau de `near`.
+ */
+const CAST_SCRIPT = `
+const { uuids, name, near, disposition } = args;
+let src = null, from = null;
+for ( const u of uuids ) { const d = await fromUuid(u).catch(() => null); if ( d ) { src = d; from = u; break; } }
+if ( !src ) return { error: "fiche absente" };
+const data = game.actors.fromCompendium(src);
+data.name = name;
+data.prototypeToken = { ...(data.prototypeToken ?? {}), name, actorLink: false, ...((disposition === null) || (disposition === undefined) ? {} : { disposition }) };
+const actor = await Actor.implementation.create(data);
+const scene = canvas.scene;
+const g = scene.grid.size;
+const w = Math.max(1, Math.round(actor.prototypeToken.width ?? 1)), h = Math.max(1, Math.round(actor.prototypeToken.height ?? 1));
+const toks = scene.tokens.contents;
+const busy = (x, y) => toks.some(t => (x < t.x + t.width * g) && (x + w * g > t.x) && (y < t.y + t.height * g) && (y + h * g > t.y));
+const rect = scene.dimensions.sceneRect;
+const inside = (x, y) => (x >= rect.x) && (y >= rect.y) && (x + w * g <= rect.x + rect.width) && (y + h * g <= rect.y + rect.height);
+const anchor = near ?? (toks.length ? { x: toks.reduce((s, t) => s + t.x, 0) / toks.length, y: toks.reduce((s, t) => s + t.y, 0) / toks.length } : { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+const ax = rect.x + Math.round((anchor.x - rect.x) / g) * g, ay = rect.y + Math.round((anchor.y - rect.y) / g) * g;
+let at = null;
+for ( let r = 1; (r < 40) && !at; r++ ) {
+  for ( let dx = -r; (dx <= r) && !at; dx++ ) for ( let dy = -r; (dy <= r) && !at; dy++ ) {
+    if ( Math.max(Math.abs(dx), Math.abs(dy)) !== r ) continue;
+    const x = ax + dx * g, y = ay + dy * g;
+    if ( inside(x, y) && !busy(x, y) ) at = { x, y };
+  }
+}
+if ( !at ) { await actor.delete(); return { error: "aucune case libre" }; }
+const nearTok = near ? toks.find(t => (t.x === near.x) && (t.y === near.y)) : null;
+const td = await actor.getTokenDocument({ ...at, name, actorLink: false, ...(nearTok?.level ? { level: nearTok.level } : {}) });
+const [tok] = await scene.createEmbeddedDocuments("Token", [td.toObject()]);
+return { tokenId: tok.id, actorId: actor.id, createdActor: true, from };
+`;
+/** Remise en état de `ctx.cast` / `ctx.ensureActor` : le token (ou tous ceux de l'acteur), puis l'acteur importé. */
+const UNCAST_SCRIPT = `
+const { tokenId, actorId, createdActor, allTokens } = args;
+for ( const s of game.scenes ) {
+  const ids = s.tokens.filter(t => (t.id === tokenId) || (allTokens && (t.actorId === actorId))).map(t => t.id);
+  if ( ids.length ) await s.deleteEmbeddedDocuments("Token", ids);
+}
+if ( createdActor ) await game.actors.get(actorId)?.delete();
+return true;
+`;
+/** `ctx.ensureActor` : l'acteur du monde sous l'id de sa fiche, importé (keepId) s'il manque. */
+const ACTOR_SCRIPT = `
+if ( game.actors.get(args.id) ) return { actorId: args.id, created: false };
+for ( const u of args.uuids ) {
+  const d = await fromUuid(u).catch(() => null);
+  if ( !d ) continue;
+  const a = await Actor.implementation.create(game.actors.fromCompendium(d, { keepId: true }), { keepId: true });
+  return { actorId: a.id, created: true, from: u };
+}
+return {};
+`;
+
 /** Ce qu'un scénario reçoit. */
 function makeContext(mcp) {
   const failures = [];
+  let checks = 0;
   const restorations = [];
   let scene = null;
   const healed = new Set();   // tokens déjà remis à leurs PV max dans ce scénario (ctx.token)
@@ -92,10 +155,57 @@ function makeContext(mcp) {
     /** Une vérification : consignée, jamais bloquante — on lit tout le scénario. */
     expect(condition, label) {
       console.log(`    ${condition ? "✓" : "✗"} ${label}`);
+      checks++;
       if ( !condition ) failures.push(label);
       return !!condition;
     },
     get failures() { return failures; },
+    /** Le nombre de vérifications jouées (`expect`) : 0 à la fin du scénario, il n'a rien vérifié (« non applicable »). */
+    get checks() { return checks; },
+
+    /**
+     * 2026-11-14 : une créature de compendium sur la scène, le temps du scénario. `roles` : nom du token attendu → identifiant de la
+     * fiche (16 caractères : cherchée dans le Monster Manual 2024 s'il est installé, sinon dans le SRD 2024 de dnd5e, `actors24`, aux
+     * mêmes identifiants) ou uuid complet, ou liste d'uuids (le premier trouvé). Un token de ce nom déjà sur la scène est gardé tel
+     * quel ; sinon l'acteur est importé dans le monde sous ce nom, son token (non lié) posé sur une case libre près de `near` (nom
+     * d'un token de la scène, ou {x, y}) ou du centre des tokens, et les deux sont retirés à la remise en état. Rend nom → token
+     * ({ id, actorId, name }) ou null si aucune fiche n'est trouvée : le scénario dit alors honnêtement « non applicable ».
+     * Plusieurs scénarios écrits dans le monde `ravenloft` (Loup, Ours brun…) ne jouaient plus dans `dnd-6` sans cela.
+     */
+    async cast(roles, { near=null, disposition=null }={}) {
+      const out = {};
+      const present = new Set((await ctx.liveTokens()).map(t => t.name));
+      for ( const [name, source] of Object.entries(roles) ) {
+        if ( present.has(name) ) { out[name] = (await ctx.liveTokens()).find(t => t.name === name) ?? null; continue; }
+        const uuids = [source].flat().flatMap(s => /^[A-Za-z0-9]{16}$/.test(s) ? [MM(s), SRD(s)] : [s]);
+        const anchor = (typeof near === "string") ? (await ctx.liveTokens()).find(t => t.name === near) ?? null : near;
+        const r = await mcp.call("run-script", { code: CAST_SCRIPT, args: { uuids, name, near: anchor ? { x: anchor.x, y: anchor.y } : null, disposition }, waitMs: 20000 });
+        const res = r?.result;
+        if ( !res?.tokenId ) { out[name] = null; console.log(`    · ${name} : aucune fiche parmi ${uuids.join(", ")}${res?.error ? ` (${res.error})` : ""}`); continue; }
+        ctx.restore(() => mcp.call("run-script", { code: UNCAST_SCRIPT, args: res, waitMs: 10000 }).catch(() => {}));
+        console.log(`    + ${name} posé pour le scénario (${res.from})`);
+        out[name] = { id: res.tokenId, actorId: res.actorId, name };
+        present.add(name);
+      }
+      scene = null;   // la liste de `ctx.scene()` est relue avec eux
+      await sleep(800);   // le canevas du MJ dessine les nouveaux tokens
+      return out;
+    },
+
+    /**
+     * Un acteur du monde sous l'identifiant de sa fiche (`keepId`), pour un scénario qui le cherche par son id (le Dretch, le Familier de
+     * vampire) : importé du Monster Manual ou du SRD 2024 s'il manque, retiré (avec ses tokens) à la remise en état. Rend l'id ou null.
+     */
+    async ensureActor(id) {
+      const r = await mcp.call("run-script", { code: ACTOR_SCRIPT, args: { id, uuids: [MM(id), SRD(id)] }, waitMs: 20000 });
+      const res = r?.result;
+      if ( !res?.actorId ) return null;
+      if ( res.created ) {
+        ctx.restore(() => mcp.call("run-script", { code: UNCAST_SCRIPT, args: { actorId: res.actorId, createdActor: true, allTokens: true }, waitMs: 10000 }).catch(() => {}));
+        console.log(`    + acteur ${id} importé pour le scénario (${res.from})`);
+      }
+      return res.actorId;
+    },
 
     /** À défaire en fin de scénario, quoi qu'il arrive (du dernier au premier). */
     restore(fn) { restorations.push(fn); },
@@ -765,6 +875,10 @@ async function arrangeArena(layout=ARENA) {
 }
 
 let failed = 0;
+// 2026-11-14 : les scénarios tenus sans AUCUNE vérification propre (`ctx.expect`, hors « aucune erreur dans la console ») — d'ordinaire
+// un « non applicable » : un token, une scène, un module manque. Ils restent « ✓ scénario tenu » pour que le banc et la comparaison des
+// passes les lisent comme avant, mais la ligne le dit (« rien vérifié … non applicable », que le banc liste à part) et le total les compte.
+const empty = [];
 let skipped = 0;
 // L'état laissé par le scénario précédent, une fois remis en place : un token qui a bougé ENTRE deux scénarios (un déplacement
 // retardé du moteur, après le filet de sécurité) est signalé en nommant ce scénario, et remis. Le Magicien et le Roublard se
@@ -858,6 +972,7 @@ for ( const file of files ) {
     }
   }
   const ctx = makeContext(mcp);
+  let ownChecks = 0;
   if ( previous ) {
     const now = await snapshotScene(mcp).catch(() => null);
     const moved = (now?.tokens ?? []).filter(t => {
@@ -880,6 +995,7 @@ for ( const file of files ) {
   try {
     await ctx.clientErrors();   // vide le tampon
     await scenario.run(ctx);
+    ownChecks = ctx.checks;
     if ( ctx.failures.length ) for ( const line of await ctx.engineLog() ) console.log(`      · ${line.slice(0, 200)}`);
     const errors = await ctx.clientErrors();
     ctx.expect(!errors.length, `aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(describeError).join(" | ").slice(0, 1500)}` : ""}`);
@@ -902,7 +1018,10 @@ for ( const file of files ) {
     previous = { name: scenario.name ?? basename(file), snap };
   }
   if ( ctx.failures.length ) failed++;
-  console.log(ctx.failures.length ? `  ✗ ${ctx.failures.length} vérification(s) en défaut` : "  ✓ scénario tenu");
+  if ( !ctx.failures.length && !ownChecks ) empty.push(basename(file, ".mjs"));
+  console.log(ctx.failures.length ? `  ✗ ${ctx.failures.length} vérification(s) en défaut`
+    : ownChecks ? `  ✓ scénario tenu (${ownChecks} vérification${ownChecks > 1 ? "s" : ""})`
+    : "  ✓ scénario tenu — rien vérifié (0 vérification jouée : non applicable)");
 }
 if ( activeAtStart && (activeNow !== activeAtStart) ) await useScene(activeAtStart);
 if ( stealthRules !== undefined ) await mcp.call("call-module-api", { moduleId: "dnd5e-combat", fn: "setting", args: { key: "stealthRules", value: stealthRules }, waitMs: 8000 }).catch(() => null);

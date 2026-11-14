@@ -12,6 +12,8 @@ export default {
   name: "Attaques multiples — Ours brun : une Morsure et une Griffe",
 
   async run(ctx) {
+    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    await ctx.cast({ "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Ours brun", "Zombi"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Ours brun ou Zombi absent : non applicable"); return; }
     const bear = await ctx.token("Ours brun");

@@ -6,15 +6,17 @@
  * Ailleurs : non applicable.
  */
 const MODULE_ID = "dnd5e-combat";
-const VICTIM = "Rahadin, chambellan du château";
+// La victime : un humanoïde du SRD 2024 posé pour le scénario (le monde `ravenloft` avait un PNJ de campagne).
+const VICTIM = "Cible humanoïde";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 export default {
   name: "attaque en action Bonus — Taille",
 
   async run(ctx) {
+    await ctx.cast({ [VICTIM]: "mmBanditCaptain0" }, { near: "Kaalisti" });
     const { tokens } = await ctx.scene();
-    if ( !tokens.some(t => t.name === "Kaalisti") || !tokens.some(t => t.name === VICTIM) ) { ctx.log("Kaalisti ou Rahadin absent : non applicable"); return; }
+    if ( !tokens.some(t => t.name === "Kaalisti") || !tokens.some(t => t.name === VICTIM) ) { ctx.log("Kaalisti ou la cible absent : non applicable"); return; }
     const kaalisti = await ctx.token("Kaalisti");
     const victim = await ctx.token(VICTIM);
     const grid = await ctx.gridSize();
