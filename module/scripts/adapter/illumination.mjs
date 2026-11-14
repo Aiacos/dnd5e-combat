@@ -19,7 +19,7 @@
 import { tokenCenter } from "./turn.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { globalLightLevel, lightLevel, perceivedLight, obscurement } from "../core/illumination.mjs";
-import { devilsSightRange } from "./vision.mjs";
+import { devilsSightRange, inOwnDarkness } from "./vision.mjs";
 import { lengthIn } from "./units.mjs";
 
 /**
@@ -143,7 +143,8 @@ export function sensesToward(observer, point) {
   return {
     darkvision: reaches(senseRange(observer.actor, "darkvision", grid)),
     truesight: reaches(senseRange(observer.actor, "truesight", grid)),
-    devilsSight: reaches(devilsSightRange(observer))
+    // §447 : dans les Ténèbres de son propre sort (`seesThroughOwnDarkness`), il voit normalement, comme la Vision du diable.
+    devilsSight: reaches(devilsSightRange(observer)) || inOwnDarkness(observer, point)
   };
 }
 

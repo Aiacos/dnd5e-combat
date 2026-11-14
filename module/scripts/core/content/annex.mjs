@@ -183,5 +183,7 @@ export function validateEmanation(e, at, errors) {
   if ( ("radiusFormula" in e) && ((typeof e.radiusFormula !== "string") || !e.radiusFormula) ) errors.push(`${at}.radiusFormula: a formula`);
   if ( ("whileActive" in e) && (e.whileActive !== true) ) errors.push(`${at}.whileActive: true or absent`);
   if ( ("activity" in e) && !isId(e.activity) ) errors.push(`${at}.activity: activity id (16 characters)`);
-  for ( const key of Object.keys(e) ) if ( !["on", "affects", "sees", "radius", "radiusFormula", "units", "activity", "whileActive"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
+  // §447 : `atStart` — aussi au moment où l'effet de l'item arrive sur le porteur (avec `whileActive`).
+  if ( ("atStart" in e) && ((e.atStart !== true) || (e.whileActive !== true)) ) errors.push(`${at}.atStart: true, with whileActive`);
+  for ( const key of Object.keys(e) ) if ( !["on", "affects", "sees", "radius", "radiusFormula", "units", "activity", "whileActive", "atStart"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
 }

@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-871 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+875 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -28,7 +28,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `basicActions` | 11 | `adrenaline-rush`, `boon-of-speed`, `conjure-woodland-beings`, `cunning-action`, `deathless-agility`, `evasive-footwork`, … |
 | `blessedHealer` | 1 | `blessed-healer` |
 | `blink` | 1 | `blink` |
-| `blocksHealing` | 3 | `chill-touch`, `mm-beholder-eye-rays`, `pale-tincture` |
+| `blocksHealing` | 4 | `chill-touch`, `mm-beholder-eye-rays`, `pale-tincture`, `wrath-of-the-wild` |
 | `bolt` | 1 | `call-lightning` |
 | `bonusAttack` | 1 | `great-weapon-master` |
 | `breaksOn` | 12 | `boon-of-the-night-spirit`, `dust-of-disappearance`, `invisibility`, `mind-sliver`, `mislead`, `misty-escape`, … |
@@ -66,7 +66,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `curesAll` | 7 | `elixir-of-health`, `hand-of-ultimate-mercy`, `heal`, `keoghtoms-ointment`, `mass-heal`, `potion-of-vitality`, … |
 | `curesOn` | 5 | `dispel-evil-and-good`, `hand-of-healing`, `lay-on-hands`, `physicians-touch`, `restoring-touch` |
 | `damageShield` | 2 | `resistance`, `ring-of-warmth` |
-| `dataFixes` | 64 | `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `bead-of-force`, `belt-of-dwarvenkind`, … |
+| `dataFixes` | 65 | `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `bead-of-force`, `belt-of-dwarvenkind`, … |
 | `devours` | 1 | `blackrazor` |
 | `difficultTerrain` | 16 | `black-tentacles`, `blade-barrier`, `conjure-minor-elementals`, `earthquake`, `entangle`, `evards-black-tentacles`, … |
 | `discharge` | 1 | `path-to-the-grave` |
@@ -97,7 +97,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `endsCurses` | 2 | `greater-restoration`, `remove-curse` |
 | `endsOnUse` | 1 | `dispel-evil-and-good` |
 | `endsOwnConditions` | 1 | `self-restoration` |
-| `endsWhen` | 30 | `banishment`, `bestow-curse`, `channel-divinity`, `channel-divinity-cleric`, `compelled-duel`, `compulsion`, … |
+| `endsWhen` | 31 | `banishment`, `bestow-curse`, `channel-divinity`, `channel-divinity-cleric`, `compelled-duel`, `compulsion`, … |
 | `endurance` | 1 | `relentless-endurance` |
 | `enterOnPose` | 2 | `conjure-celestial`, `spirit-guardians` |
 | `etherealShift` | 2 | `ethereal-jaunt`, `ethereal-stride` |
@@ -117,7 +117,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `fortitude` | 1 | `undead-fortitude` |
 | `freeSomatic` | 1 | `war-caster` |
 | `globe` | 2 | `antimagic-field`, `globe-of-invulnerability` |
-| `gmAlert` | 50 | `abjure-foes`, `antilife-shell`, `antimagic-field`, `boon-of-fate`, `compulsion`, `conjure-elemental`, … |
+| `gmAlert` | 49 | `abjure-foes`, `antilife-shell`, `antimagic-field`, `boon-of-fate`, `compulsion`, `conjure-elemental`, … |
 | `grants` | 1 | `dragons-breath` |
 | `grantsAction` | 1 | `action-surge` |
 | `grantsConditionImmunities` | 3 | `ancient-might`, `natures-ward`, `ring-of-free-action` |
@@ -138,7 +138,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `hitRider` | 20 | `charger`, `crusher`, `disarming-attack`, `distracting-strike`, `eldritch-smite`, `feral-pounce`, … |
 | `holdsStill` | 1 | `steady-aim` |
 | `hpTiers` | 3 | `divine-word`, `power-word-kill`, `power-word-stun` |
-| `ignoresResistance` | 2 | `boon-of-irresistible-offense`, `poisoner` |
+| `ignoresResistance` | 4 | `boon-of-irresistible-offense`, `grave-touched`, `poisoner`, `touch-of-death` |
 | `includesOrigin` | 3 | `bag-of-beans`, `dust-of-disappearance`, `dust-of-sneezing-and-choking` |
 | `initiativeSwap` | 1 | `alert` |
 | `interposeShield` | 1 | `shield-master` |
@@ -171,7 +171,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `noOpportunity` | 18 | `agile`, `blazing-movement`, `bubble-dash`, `charging-horn`, `engulf`, `entangling-trail`, … |
 | `noOpportunityAttacks` | 4 | `brutal-strike`, `improved-brutal-strike`, `open-hand-technique`, `shocking-grasp` |
 | `noRangedWeapons` | 1 | `storm-of-vengeance` |
-| `noReactions` | 5 | `arms-of-hadar`, `confusion`, `fetid-cloud`, `mm-beholder-eye-rays`, `slow` |
+| `noReactions` | 6 | `arms-of-hadar`, `confusion`, `fetid-cloud`, `mm-beholder-eye-rays`, `slow`, `wrath-of-the-wild` |
 | `noSpells` | 1 | `befuddlement` |
 | `notOnSlippery` | 1 | `slippers-of-spider-climbing` |
 | `obscures` | 9 | `cloudkill`, `eversmoking-bottle`, `fog-cloud`, `grenade-smoke`, `incendiary-cloud`, `sleet-storm`, … |
@@ -210,7 +210,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `recast` | 6 | `alter-self`, `call-lightning`, `expeditious-retreat`, `swift-quiver`, `telekinesis`, `vampiric-touch` |
 | `recastCost` | 1 | `swift-quiver` |
 | `reckless` | 1 | `reckless-attack` |
-| `regainOnInitiative` | 4 | `boon-of-fate`, `perfect-focus`, `persistent-rage`, `superior-inspiration` |
+| `regainOnInitiative` | 5 | `boon-of-fate`, `deaths-friend`, `perfect-focus`, `persistent-rage`, `superior-inspiration` |
 | `regainOnShortRest` | 2 | `font-of-inspiration`, `improved-warding-flare` |
 | `regeneration` | 1 | `regeneration` |
 | `relentless` | 1 | `relentless-rage` |
@@ -236,6 +236,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `sculptSpells` | 1 | `sculpt-spells` |
 | `searchBonus` | 2 | `sharp-eye-ravenloft`, `watchers` |
 | `seesInvisible` | 1 | `see-invisibility` |
+| `seesThroughOwnDarkness` | 1 | `power-of-shadow` |
 | `selfZone` | 4 | `conjure-minor-elementals`, `conjure-woodland-beings`, `forbiddance`, `yolandes-regal-presence` |
 | `sharesSpace` | 7 | `air-form`, `fire-form`, `gaseous-form`, `misty-form`, `swarm`, `water-form`, … |
 | `silences` | 1 | `silence` |
@@ -246,7 +247,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `sneakAttack` | 1 | `sneak-attack` |
 | `sneakBonus` | 1 | `assassinate` |
 | `sniper` | 1 | `skulker` |
-| `spellDamageTypes` | 1 | `psychic-spells` |
+| `spellDamageTypes` | 2 | `grave-touched`, `psychic-spells` |
 | `spellFailure` | 1 | `slow` |
 | `spellRecall` | 1 | `boon-of-spell-recall` |
 | `spellsInAttack` | 3 | `improved-war-magic`, `valor-extra-attack`, `war-magic` |
@@ -272,7 +273,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `thrownDamage` | 1 | `thrown-weapon-fighting` |
 | `trace` | 7 | `armor-of-agathys`, `blade-ward`, `dispel-evil-and-good`, `flame-blade`, `moonlight-step`, `produce-flame`, … |
 | `transpose` | 1 | `tricksters-transposition` |
-| `triggers` | 267 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
+| `triggers` | 269 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
 | `untypedDamage` | 2 | `mm-wight-life-drain`, `otilukes-freezing-sphere` |
 | `upkeep` | 1 | `crown-of-madness` |
 | `usageLimits` | 11 | `action-surge`, `flame-blade`, `indomitable`, `pact-of-the-chain`, `plant-growth`, `produce-flame`, … |
@@ -304,7 +305,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `allyIsHit → penalty` | 1 | `cutting-words` |
 | `allyIsHit → reduce` | 2 | `interception`, `psionic-power` |
 | `allyIsHit → uncrit` | 1 | `sentinel-at-deaths-door` |
-| `allyIsHit → use` | 5 | `cutting-words`, `interception`, `psionic-power`, `sentinel`, `sentinel-at-deaths-door` |
+| `allyIsHit → use` | 6 | `cutting-words`, `interception`, `psionic-power`, `sentinel`, `sentinel-at-deaths-door`, `wrath-of-the-wild` |
 | `castsSpell → use` | 3 | `absorption-ioun-stone`, `counterspell`, `greater-absorption-ioun-stone` |
 | `endOfTurn → damage` | 5 | `acid-arrow`, `melfs-acid-arrow`, `phantasmal-killer`, `vitriolic-sphere`, `weird` |
 | `endOfTurn → remove` | 6 | `acid-arrow`, `command`, `melfs-acid-arrow`, `moonlight-step`, `steady-aim`, `vitriolic-sphere` |
@@ -339,7 +340,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `isDamaged → damage` | 1 | `warding-bond` |
 | `isDamaged → remove` | 26 | `abjure-foes`, `animal-friendship`, `armor-of-agathys`, `avenging-angel`, `calm-emotions`, `channel-divinity`, … |
 | `isDamaged → resave` | 6 | `dominate-beast`, `dominate-monster`, `dominate-person`, `hideous-laughter`, `symbiotic-being`, `tashas-hideous-laughter` |
-| `isDamaged → use` | 9 | `absorb-elements`, `boon-of-energy-resistance`, `fount-of-moonlight`, `hellish-rebuke`, `mist-walker`, `misty-escape`, … |
+| `isDamaged → use` | 10 | `absorb-elements`, `boon-of-energy-resistance`, `fount-of-moonlight`, `hellish-rebuke`, `mist-walker`, `misty-escape`, … |
 | `isHit → damage` | 4 | `armor-of-agathys`, `avenger-spirit`, `corrosive-form`, `fire-shield` |
 | `isHit → halve` | 4 | `beguiling-defenses`, `sentinel-at-deaths-door`, `toxic-escape`, `uncanny-dodge` |
 | `isHit → miss` | 1 | `illusory-self` |
@@ -352,7 +353,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `isTargeted → cancel` | 2 | `rod-of-absorption`, `staff-of-the-magi` |
 | `isTargeted → use` | 3 | `rod-of-absorption`, `shield`, `staff-of-the-magi` |
 | `moves → replay` | 1 | `spike-growth` |
-| `preAttackRoll → advantage` | 26 | `assassinate`, `avenging-angel`, `clairvoyant-combatant`, `distracting-strike`, `faerie-fire`, `feinting-attack`, … |
+| `preAttackRoll → advantage` | 27 | `assassinate`, `avenging-angel`, `clairvoyant-combatant`, `distracting-strike`, `faerie-fire`, `feinting-attack`, … |
 | `preAttackRoll → attackBonus` | 3 | `blade-ward`, `brutal-strike`, `improved-brutal-strike` |
 | `preAttackRoll → consume` | 10 | `brutal-strike`, `distracting-strike`, `feinting-attack`, `guiding-bolt`, `improved-brutal-strike`, `moonlight-step`, … |
 | `preAttackRoll → disadvantage` | 29 | `bestow-curse`, `blur`, `clairvoyant-combatant`, `cloak-of-displacement`, `compelled-duel`, `dispel-evil-and-good`, … |

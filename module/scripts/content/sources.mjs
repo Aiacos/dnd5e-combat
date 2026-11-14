@@ -68,6 +68,11 @@ export const SOURCE_IDENTIFIERS = Object.freeze({
   rhwPRGhostWalkKY: "ghost-walk",
   rhwSSPowerofShNG: "power-of-shadow",
   rhwSSShadowWalqT: "shadow-walk",
+  rhwSSUmbralForQw: "umbral-form",   // §447
+  rhwUPGraveToucq1: "grave-touched",   // §447
+  rhwRERefinedRebY: "refined-reanimation",   // §447
+  rhwEverlasting7o: "everlasting",   // §447
+  rhwPRDeathsFriHo: "deaths-friend",   // §447
   rhwHWWrathofth3C: "wrath-of-the-wild",
   rhwHWAncientMibA: "ancient-might",
   // §96 : Collège des esprits.

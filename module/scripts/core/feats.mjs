@@ -135,3 +135,16 @@ export function coverLeft(cover, ignores) {
   if ( !cover || !ignores ) return cover;
   return (cover.degree === "total") ? cover : null;
 }
+
+/**
+ * §447 : `ignoresResistance.from` — l'activité qui inflige les dégâts est-elle une de ces activités de l'item, ou une copie de sort qu'une
+ * d'elles a fait lancer (`cachedFor` = « …Item.<item>.Activity.<activité> », dnd5e activity/cast.mjs) ? Sans `from` : toutes.
+ * @param {string[]|undefined} from
+ * @param {{itemId: string, activityItemId?: string, activityId?: string, cachedFor?: string}} at
+ */
+export function resistanceRuleCovers(from, { itemId, activityItemId=null, activityId=null, cachedFor=null }={}) {
+  if ( !from ) return true;
+  if ( (activityItemId === itemId) && from.includes(activityId) ) return true;
+  const m = (typeof cachedFor === "string") ? cachedFor.match(/Item\.([A-Za-z0-9]{16})\.Activity\.([A-Za-z0-9]{16})$/) : null;
+  return !!m && (m[1] === itemId) && from.includes(m[2]);
+}

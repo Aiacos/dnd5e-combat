@@ -209,6 +209,17 @@ function hasEffectFrom(actor, spec, source=null) {
     if ( !item || (identifierOf(item).id !== identifier) ) continue;
     if ( !source || (item.actor?.uuid === source.uuid) ) return true;
   }
+  // §447 : un enchantement actif sur un item de l'acteur compte aussi (Courroux sauvage : le profil de transformation, activé sur l'item
+  // lui-même, runtime/enchant.mjs — dnd5e ne transfère jamais un effet cité par une activité, il n'est pas dans `appliedEffects`).
+  for ( const owned of actor?.items ?? [] ) {
+    for ( const effect of owned.effects ?? [] ) {
+      if ( (effect.type !== "enchantment") || effect.disabled ) continue;
+      if ( effectId && !comesFromItemEffect(effect, effectId) ) continue;
+      const item = originItemOf(effect) ?? owned;
+      if ( identifierOf(item).id !== identifier ) continue;
+      if ( !source || (item.actor?.uuid === source.uuid) ) return true;
+    }
+  }
   return false;
 }
 
@@ -472,6 +483,8 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "self.seesTarget": want => ((seesBetween(self, target) ?? true) === want),
     // §34 : l'attaquant à portée du réacteur (Éclat protecteur : une créature visible à 9 m au plus).
     "source.nearSelf": range => within(tokenOf(self, selfToken), tokenOf(source, sourceToken), range ?? {}) === true,
-    "self.seesSource": want => ((seesBetween(self, source) ?? true) === want)
+    "self.seesSource": want => ((seesBetween(self, source) ?? true) === want),
+    // §447 : le réacteur porte un effet de l'item (Représailles rôdeuses : seulement transformé par le Courroux sauvage).
+    "self.hasEffect": id => hasEffectFrom(self, id)
   };
 }

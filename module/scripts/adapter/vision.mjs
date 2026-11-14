@@ -188,6 +188,8 @@ export function canSee(observer, target, { ignoreHidden=false }={}) {
   // la Vision du diable.
   const blocked = blockedBetween(observer, target);
   if ( blocked.fog || blocked.darkness ) return seesThroughBlock(observer, target, source, config, blocked);
+  // §447 : seules des Ténèbres lancées par l'observateur, qui voit à travers (`seesThroughOwnDarkness`) : « il voit normalement ».
+  if ( blocked.ownDarkness && devilsSightSeesToken(observer, target, blocked) ) return true;
 
   // Lumières qui donnent la vue (le cœur les teste en premier, pour tout le monde).
   for ( const light of canvas.effects.lightSources ) {
@@ -224,7 +226,8 @@ function umbralTo(target) {
 /**
  * Les régions de la scène qui bloquent la vue : brume (`obscures`, §16.24) ou ténèbres magiques (`light.darkness`,
  * §16.31), posées par l'activité d'un item (`flags.dnd5e.activity`) — et celles qui bloquent le son (Silence, `silences`, issue #42).
- * @returns {Array<{region: RegionDocument, kind: "fog"|"darkness"|"silence"}>}
+ * §447 : `caster` — l'acteur dont un SORT a posé des ténèbres (`seesThroughOwnDarkness`), sinon null.
+ * @returns {Array<{region: RegionDocument, kind: "fog"|"darkness"|"silence", caster?: Actor|null}>}
  */
 export function blockingRegions(scene) {
   const out = [];
@@ -234,7 +237,7 @@ export function blockingRegions(scene) {
     if ( !activity?.item ) continue;
     const entry = contentOf(activity.item).entry;
     if ( entry?.obscures === true ) out.push({ region, kind: "fog" });
-    else if ( entry?.light?.darkness === true ) out.push({ region, kind: "darkness" });
+    else if ( entry?.light?.darkness === true ) out.push({ region, kind: "darkness", caster: (activity.item.type === "spell") ? (activity.item.actor ?? null) : null });
     if ( entry?.silences === true ) out.push({ region, kind: "silence" });   // issue #42 : ne bloque pas la vue, le son (adapter/hearing.mjs)
   }
   return out;
@@ -243,11 +246,15 @@ export function blockingRegions(scene) {
 /**
  * Ce qui bloque la vue le long d'un trait (échantillonné tous les demi-carreaux), extrémités comprises : une brume, des
  * ténèbres, les deux ou rien.
- * @returns {{fog: boolean, darkness: boolean}}
+ * §447 : `observer` — s'il voit à travers les ténèbres de ses propres sorts : elles comptent en `ownDarkness`, pas en `darkness`.
+ * @returns {{fog: boolean, darkness: boolean, silence: boolean, ownDarkness: boolean}}
  */
-function blockedAlong(scene, from, to) {
-  const out = { fog: false, darkness: false, silence: false };
-  const regions = blockingRegions(scene);
+function blockedAlong(scene, from, to, observer=null) {
+  const out = { fog: false, darkness: false, silence: false, ownDarkness: false };
+  let regions = blockingRegions(scene);
+  // Ses items ne sont lus que si l'observateur a lui-même posé des Ténèbres (ce test court à chaque rafraîchissement de la vue).
+  const mine = r => (r.kind === "darkness") && observer?.actor && (r.caster?.uuid === observer.actor.uuid);
+  if ( regions.some(mine) && ownDarknessSight(observer) ) regions = regions.map(r => mine(r) ? { ...r, kind: "ownDarkness" } : r);
   if ( !regions.length ) return out;
   const grid = scene.grid;
   const steps = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / (grid.size / 2)));
@@ -256,7 +263,7 @@ function blockedAlong(scene, from, to) {
     const point = { x: from.x + ((to.x - from.x) * t), y: from.y + ((to.y - from.y) * t),
       elevation: (from.elevation ?? 0) + (((to.elevation ?? 0) - (from.elevation ?? 0)) * t) };
     for ( const { region, kind } of regions ) if ( !out[kind] && region.testPoint?.(point) ) out[kind] = true;
-    if ( out.fog && out.darkness && out.silence ) break;
+    if ( out.fog && out.darkness && out.silence && out.ownDarkness ) break;
   }
   return out;
 }
@@ -266,7 +273,26 @@ function blockedAlong(scene, from, to) {
  * traversant ? Positions validées. `{ fog, darkness }`.
  */
 export function blockedBetween(a, b) {
-  return blockedAlong(a.parent, tokenCenter(a), tokenCenter(b));
+  return blockedAlong(a.parent, tokenCenter(a), tokenCenter(b), a);
+}
+
+/**
+ * §447 : l'observateur voit-il normalement à travers les Ténèbres de ses propres sorts (`seesThroughOwnDarkness` : Pouvoir de l'ombre) ?
+ * Son acteur, ou null.
+ * @param {TokenDocument} observer
+ */
+export function ownDarknessSight(observer) {
+  const actor = observer?.actor;
+  if ( !actor ) return null;
+  return Array.from(actor.items ?? []).some(i => contentOf(i).entry?.seesThroughOwnDarkness === true) ? actor : null;
+}
+
+/** §447 : ce point est-il dans des Ténèbres qu'un sort de l'observateur a posées, et l'observateur y voit-il (`seesThroughOwnDarkness`) ? */
+export function inOwnDarkness(observer, point) {
+  const actor = observer?.actor;
+  if ( !actor || !point ) return false;
+  const here = blockingRegions(observer.parent).some(r => (r.kind === "darkness") && (r.caster?.uuid === actor.uuid) && r.region.testPoint?.(point));
+  return here && !!ownDarknessSight(observer);
 }
 
 /** Un rayon lu dans l'unité d'une règle, ramené à celle de la grille (la valeur telle quelle si l'unité est inconnue). */
@@ -336,9 +362,12 @@ function lineOfSightThrough(observer, target) {
  * @param {{fog: boolean}} [blocked]  Ce qui coupe la vue entre les deux, s'il est déjà connu.
  */
 export function devilsSightSeesToken(observer, target, blocked=null) {
-  const range = devilsSightRange(observer);
-  if ( !range || !observer || !target ) return false;
-  const fog = (blocked ?? blockedBetween(observer, target)).fog;
+  if ( !observer || !target ) return false;
+  blocked ??= blockedBetween(observer, target);
+  // §447 : seules ses propres Ténèbres entre les deux (`seesThroughOwnDarkness`) — « voit normalement », sans limite de portée.
+  const range = (blocked.ownDarkness && !blocked.darkness) ? Infinity : devilsSightRange(observer);
+  if ( !range ) return false;
+  const fog = blocked.fog;
   const invisible = !!target.hasStatusEffect?.(CONFIG.specialStatusEffects.INVISIBLE)
     && !revealedInvisible(target.actor, observer.actor) && !seesInvisible(observer.actor);
   const blind = isBlind(observer);
@@ -371,7 +400,13 @@ export function canSeePoint(observer, point) {
   const level = canvas.scene.levels?.get?.(observer.level) ?? canvas.level;
   const config = { object: null, level, tests: [{ point: { x: point.x, y: point.y, elevation: point.elevation ?? 0 }, level, los: new Map() }] };
   // §16.31 : un point dans une brume ou des ténèbres, ou vu à travers, ne se voit pas — sauf par les sens qui les percent.
-  const blocked = blockedAlong(observer.parent, tokenCenter(observer), point);
+  const blocked = blockedAlong(observer.parent, tokenCenter(observer), point, observer);
+  // §447 : seules ses propres Ténèbres (`seesThroughOwnDarkness`) : la vue normale, sans leurs bords.
+  if ( blocked.ownDarkness && !blocked.fog && !blocked.darkness ) {
+    const eye = observer.getVisionOrigin?.(committedPosition(observer)) ?? tokenCenter(observer);
+    return CONFIG.Canvas.polygonBackends.sight.testCollision(eye, { x: point.x, y: point.y, elevation: point.elevation ?? eye.elevation },
+      { type: "sight", mode: "any", level: level ?? undefined, edgeTypes: { source: false } }) !== true;
+  }
   if ( blocked.fog || blocked.darkness ) {
     const own = detectionModesOf(observer);
     const grid = observer.parent.grid;

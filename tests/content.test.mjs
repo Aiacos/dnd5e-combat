@@ -6,7 +6,7 @@ import { effectHolds } from "../module/scripts/core/feats.mjs";
 const facts = Object.fromEntries(["activity.type", "activity.isAttack", "activity.isSpell", "activity.isWeapon", "activity.weaponKind", "activity.identifier", "activity.id",
   "activity.hasProperty", "source.hasStatus", "source.hasEffect", "source.creatureType", "source.allyNearTarget", "source.summonNearTarget", "source.seesTarget",
   "target.hasStatus", "target.hasMark", "target.hasEffect", "target.hasEffectFrom", "hit.stoppableBy", "hit.critical", "damage.resisted", "target.grappledBySource", "target.wieldsProperty", "target.isSelf", "self.hasShield", "self.wieldsWeapon", "target.hasFeature", "activity.ability", "target.sizeAtMost", "target.within", "target.seesSource", "target.creatureType", "target.immuneTo", "activity.isMelee", "target.hasTempHp", "target.atZero", "target.isDead", "damage.hasType", "target.hpAtMost", "condition.gained",
-  "target.wounded", "target.bloodied", "source.classLevelAtLeast", "target.nearSelf", "self.seesTarget", "target.hasNotActed", "source.onOwnTurn", "activity.dealsType", "source.hasFeature", "source.hasClassFeature", "activity.cantripOf", "activity.school", "activity.enchantedBy", "source.wildShaped", "activity.classSpell", "source.resists", "source.nearSelf", "self.seesSource", "source.hasEffectFromTarget", "source.hasSense", "target.allied"].map(k => [k, true]));
+  "target.wounded", "target.bloodied", "source.classLevelAtLeast", "target.nearSelf", "self.seesTarget", "target.hasNotActed", "source.onOwnTurn", "activity.dealsType", "source.hasFeature", "source.hasClassFeature", "activity.cantripOf", "activity.school", "activity.enchantedBy", "source.wildShaped", "activity.classSpell", "source.resists", "source.nearSelf", "self.seesSource", "self.hasEffect", "source.hasEffectFromTarget", "source.hasSense", "target.allied"].map(k => [k, true]));
 const MOMENTS_LIST = "isHit, isDamaged, leavesReach, enemyDisengages, enter, turnStart, turnEnd, moves, preDamageRoll, hit, failedSave, savedSave, startOfTurn, endOfTurn, originTurnStart, preAttackRoll, castsSpell, isMissed, enemyTurnEnd, isTargeted, isAttacked, enemyAttacks, allyAttacks, gainsCondition, allyIsHit, allyIsDamaged, enemyAttacked, falls, allyFalls";
 
 describe("validation d'une entrée", () => {
@@ -181,7 +181,7 @@ describe("contenu livré", () => {
       "counterspell", "coward-spirit", "create-undead", "crossbow-expert", "crown-of-madness", "crusaders-mantle", "crusher",
       "cunning-action", "cunning-strike", "cutting-words", "dagger-of-venom", "dancing-lights", "dark-ones-blessing",
       "dark-ones-own-luck", "darkness", "darkness-aura", "daylight", "death-burst", "death-curse", "death-throes", "death-ward",
-      "deathless-agility", "deathly-stench", "deathly-teleport", "decanter-of-endless-water", "defense", "defensive-duelist",
+      "deathless-agility", "deathly-stench", "deathly-teleport", "deaths-friend", "decanter-of-endless-water", "defense", "defensive-duelist",
       "defensive-tactics", "deflect-attacks", "deflect-blow", "delayed-blast-fireball", "demiplane", "demonomicon-of-iggwilv",
       "destructive-wave", "devious-strikes", "devour-intellect", "dimension-door", "disarming-attack", "disciple-of-life",
       "disciplined-survivor", "disintegrate", "dispel-evil-and-good", "dispel-magic", "dissonant-whispers", "distant-spell",
@@ -204,7 +204,7 @@ describe("contenu livré", () => {
       "frenzy", "friends", "frosts-chill", "full-of-stars", "gaseous-form", "gate", "gathered-whispers", "geas", "gem-of-brightness",
       "gem-of-seeing", "ghost-walk", "giant-insect", "giant-slayer-enchanted", "gibbering", "globe-of-invulnerability",
       "gloves-of-missile-snaring", "gloves-of-swimming-and-climbing", "goading-attack", "golden-lions-rare", "grant-save-advantage",
-      "grappler", "grasping-hand", "grasping-vine", "grave-dust-flight", "grease", "great-weapon-fighting", "great-weapon-master",
+      "grappler", "grasping-hand", "grasping-vine", "grave-dust-flight", "grave-touched", "grease", "great-weapon-fighting", "great-weapon-master",
       "greater-absorption-ioun-stone", "greater-portent", "greater-restoration", "grenade-smoke", "guardian-of-faith", "guidance",
       "guiding-bolt", "gust-of-wind", "hail-of-thorns", "hammer-of-thunderbolts-enchanted", "hand-of-healing",
       "hand-of-ultimate-mercy", "harkons-bite", "haste", "heal", "healer", "healers-kit", "heat-aura", "heat-metal",
@@ -279,9 +279,9 @@ describe("contenu livré", () => {
       "symbiotic-being", "symbol", "synaptic-static", "tactical-assessment", "tactical-charge", "tactical-mind", "tactical-shift",
       "talisman-of-pure-good", "talisman-of-ultimate-evil", "tashas-hideous-laughter", "tavern-brawler", "telekinesis", "telekinetic",
       "telekinetic-thrust", "teleport", "tentacle-rod", "terrifying-aura", "thiefs-reflexes", "thorn-whip", "thrown-weapon-fighting",
-      "thunderous-smite", "thunderwave", "tinderbox", "toll-the-dead", "torch", "torpor", "toxic-escape", "trampling-charge",
+      "thunderous-smite", "thunderwave", "tinderbox", "toll-the-dead", "torch", "torpor", "touch-of-death", "toxic-escape", "trampling-charge",
       "travel-along-the-tree", "trebuchet", "tricksters-transposition", "trip-attack", "true-resurrection", "true-strike", "tsunami",
-      "twinned-spell", "umbral-dagger", "unarmed-fighting", "unarmed-strike", "uncanny-dodge", "undead-fortitude", "unraveling-flesh",
+      "twinned-spell", "umbral-dagger", "umbral-form", "unarmed-fighting", "unarmed-strike", "uncanny-dodge", "undead-fortitude", "unraveling-flesh",
       "unseen-servant", "valor-extra-attack", "vampiric-bite", "vampiric-touch", "vanish", "vicious-mockery", "vile-appearance",
       "vine-attack", "viral-aura", "vitality-of-the-tree", "vitriolic-sphere", "vow-of-enmity", "wails-from-the-grave", "wall-of-fire",
       "wall-of-force", "wall-of-ice", "wall-of-stone", "wall-of-thorns", "wand-of-paralysis", "wand-of-polymorph", "wand-of-web",

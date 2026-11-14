@@ -14,6 +14,7 @@ import { hasLineOfEffect } from "../adapter/cover.mjs";
 import { emanationsOf, carriesEmanation, isImmuneTo, grantImmunity } from "../adapter/emanations.mjs";
 import { regenerationOf } from "../adapter/regeneration.mjs";
 import { actorOfEffect } from "../adapter/grapple.mjs";
+import { originItemOf } from "../adapter/facts.mjs";
 import { distanceBetween, turnKeyAt } from "../adapter/turn.mjs";
 import { canSee } from "../adapter/vision.mjs";
 import { route } from "./router.mjs";
@@ -97,6 +98,7 @@ async function onTurnChange(combat, prior, current) {
  */
 const exploded = new Set();
 async function onCreateEffect(effect) {
+  await startedEmanation(effect);
   const actor = actorOfEffect(effect);   // un token non lié : l'effet est dans son ActorDelta
   if ( !actor || !effect.statuses?.has("dead") ) return;
   if ( effect.getFlag("dnd5e", "autoDowned") && regenerationOf(actor)?.survivesZero ) return;
@@ -109,6 +111,30 @@ async function onCreateEffect(effect) {
     const targets = reached(source, emanation, source.parent.tokens.contents, { dying: true });
     log(`emanation ${emanation.item.name} (${source.name}), on its death: ${targets.map(t => t.name).join(", ") || "nobody"}`);
     if ( targets.length ) await emanationAgainst(emanation.activity, source, targets, "death");
+  }
+}
+
+/**
+ * §447 : une émanation `atStart` agit aussi quand l'effet de son item arrive sur le porteur — Courroux sauvage, « quand vous vous
+ * transformez et au début de chacun de vos tours suivants ». L'effet peut être sur l'acteur ou, transféré, sur un de ses items (l'enchantement
+ * et ses effets compagnons : plusieurs effets arrivent ensemble, l'émanation n'agit qu'une fois en quelques secondes).
+ */
+const started = new Map();
+async function startedEmanation(effect) {
+  const parent = effect?.parent;
+  const actor = (parent?.documentName === "Item") ? parent.actor : actorOfEffect(effect);
+  if ( !actor ) return;
+  const item = originItemOf(effect);
+  if ( !item ) return;
+  const source = actor.token ?? actor.getActiveTokens?.(false, true)?.[0] ?? null;
+  if ( !source?.parent || outOfPlay(source) ) return;
+  for ( const emanation of emanationsOf(actor).filter(e => e.atStart && (e.item.uuid === item.uuid)) ) {
+    const key = `${source.uuid}|${emanation.key}`;
+    if ( (Date.now() - (started.get(key) ?? 0)) < 5000 ) continue;
+    started.set(key, Date.now());
+    const targets = reached(source, emanation, source.parent.tokens.contents);
+    log(`emanation ${emanation.item.name} (${source.name}), as it starts: ${targets.map(t => t.name).join(", ") || "nobody"}`);
+    if ( targets.length ) await emanationAgainst(emanation.activity, source, targets, "atStart");
   }
 }
 

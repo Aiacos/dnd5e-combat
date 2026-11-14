@@ -58,7 +58,7 @@ export function emanationsOf(actor) {
       console.warn(`${MODULE_ID} | emanation "${item.name}" of ${actor.name} ignored: ${activity ? "unknown radius" : "no activity that acts"}`);
       continue;
     }
-    out.push({ item, activity, key: item.system.identifier || item.id, on: rule.on, affects: rule.affects ?? "any",
+    out.push({ item, activity, key: item.system.identifier || item.id, on: rule.on, affects: rule.affects ?? "any", atStart: rule.atStart === true,
       sees: rule.sees === true, ...reach, ...readEmanationText(englishDescription(item)) });
   }
   return out;

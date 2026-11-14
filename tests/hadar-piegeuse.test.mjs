@@ -271,7 +271,7 @@ describe("dons et espèces de Ravenloft (§94)", () => {
 describe("sous-classes de Ravenloft (§95)", () => {
   it("contenu valide", () => {
     for ( const id of ["form-of-dread", "necrotic-husk", "wails-from-the-grave", "ghost-walk", "power-of-shadow", "shadow-walk", "wrath-of-the-wild", "ancient-might"] ) {
-      expect(validateEntry(CONTENT[id], { facts: { "target.hasEffect": true, "target.hasStatus": true, "activity.isAttack": true } }), id).toEqual([]);
+      expect(validateEntry(CONTENT[id], { facts: { "target.hasEffect": true, "target.hasStatus": true, "activity.isAttack": true, "target.within": true, "target.seesSource": true, "self.hasEffect": true, "source.nearSelf": true, "self.seesSource": true } }), id).toEqual([]);
     }
     expect(CONTENT["power-of-shadow"].atZero).toEqual({ activity: "EmL9RVBiEFBPk2Cf", save: { ability: "cha", dc: "5 + @damage" } });
     expect(CONTENT["wrath-of-the-wild"].emanation.on).toBe("ownTurnStart");

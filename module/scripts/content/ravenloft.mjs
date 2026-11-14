@@ -86,6 +86,9 @@ export const RAVENLOFT = Object.freeze({
     drawsOnEnd: { MmYLSlBTwu1FC8UR: "Compendium.dnd-ravenloft-horrors-within.tables.RollTable.rhwShadowsWillqh" } },
   // §289 : Seconde peau, Changement involontaire — le catalyseur déclaré par le MJ (menu du token), la sauvegarde de Charisme au début du
   // tour suivant ; ratée : Forme alternative lancée sans emplacement, ou, déjà dépensée, Étourdi jusqu'au début du tour suivant.
+  // §447 : Toucher de la mort, Contact de la mort — « les dégâts nécrotiques que vous infligez avec CE sort ignorent la Résistance » :
+  // le Contact glacial lancé par l'activité « cast » du don (sa copie), pas un autre sort ni une autre attaque.
+  "touch-of-death": { ignoresResistance: { types: ["necrotic"], from: ["UZVFEmVZMhLRl5vD"] } },
   "second-skin": { catalyst: { save: "tJwaLWFWyZvq9y0r", cast: "ZrjtFFSbJZTj8Cfm", effect: "9HmJl0qrUIVbJQUA" },
     effectEnds: { "9HmJl0qrUIVbJQUA": "bearerTurnStart" } },
   // Être symbiotique, Dessein symbiotique : Charisme ou Charmé 1d12 heures ; « chaque fois que vous subissez des dégâts, vous pouvez
@@ -172,20 +175,55 @@ export const RAVENLOFT = Object.freeze({
   // d'Épuisement » — l'activité de la donnée, dont les consommations fixent les PV et l'Épuisement.
   // §441 : Résilience nécrotique — la Résistance nécrotique hors de la Forme (la donnée ne donne que l'Immunité, sous la Forme).
   "necrotic-husk": { atZero: { activity: "TC2Yiws12Xp7kSbm" }, zoneAffects: "enemy", grantsResistances: ["necrotic"] },
+  // §447 : Marqué par la tombe, Nécrose arcanique — « les dégâts nécrotiques de vos attaques, de vos sorts et aptitudes d'Occultiste
+  // ignorent la Résistance au nécrotique » (aptitudes : la Cosse nécrotique, seule qui en inflige) ; « une fois par tour, un sort qui inflige
+  // des dégâts peut les changer en nécrotiques » (proposé avant le jet ; la limite d'une fois par tour : au joueur). La magie ne l'endort
+  // pas : Sommeil (content/targets.mjs). Nécrose effroyable (un dé de plus sous la Forme d'effroi) : au MJ.
+  "grave-touched": {
+    ignoresResistance: { types: ["necrotic"], if: { any: [{ "activity.isAttack": true }, { "activity.classSpell": "warlock" }, { "activity.identifier": "necrotic-husk" }] } },
+    spellDamageTypes: { types: ["necrotic"] }
+  },
   // Fantôme, Lamentations d'outre-tombe : après une Attaque sournoise à votre tour, une seconde créature à 9 m de la première.
   "wails-from-the-grave": { afterSneak: { activity: "UxZzzGtEv93Yfs6H", radius: 30, units: "ft" } },
+  // §447 : Ami de la mort, Attrait de la mort — « quand vous lancez l'initiative, vous gagnez une babiole d'âme si vous n'en avez plus » (la
+  // récupération « initiative » de la donnée est un type spécial que dnd5e ne joue pas seul). Lamentation de la mort (les deux cibles) : au joueur.
+  "deaths-friend": { regainOnInitiative: { item: "soul-trinkets", upTo: 1 } },
   // Fantôme, Marche fantôme — Forme brumeuse : « les jets d'attaque contre vous ont le Désavantage » (le vol : l'effet de la donnée ;
   // traverser les créatures et objets : au MJ).
   "ghost-walk": { triggers: [{ on: "preAttackRoll", via: "effect", fromEffect: "9NkA3EngQDOc2ONY", if: { "target.hasEffect": "ghost-walk" }, do: [{ type: "disadvantage" }] }] },
   // Sorcellerie de l'ombre, Puissance de l'ombre — Force du tombeau : à 0 PV sans mourir, JS de Charisme (DD 5 + les dégâts subis) ;
   // réussi, PV = Charisme + niveau d'Ensorceleur (le soin « Heal on Success » de la donnée, sur vous). Une fois par repos long.
-  "power-of-shadow": { atZero: { activity: "EmL9RVBiEFBPk2Cf", save: { ability: "cha", dc: "5 + @damage" } } },
+  // §447 : Yeux des ténèbres — « vous voyez normalement à travers les Ténèbres d'un sort que vous lancez » (`seesThroughOwnDarkness`).
+  "power-of-shadow": { atZero: { activity: "EmL9RVBiEFBPk2Cf", save: { ability: "cha", dc: "5 + @damage" } }, seesThroughOwnDarkness: true },
+  // §447 : Forme ombrale — l'activité « Sorcellerie innée en Forme ombrale » dépense la Sorcellerie innée et la forme, sans poser l'effet
+  // que l'item porte (DD +1, Résistances, `transformed`, 1 minute) : la donnée le lui rattache. L'Avantage aux attaques des sorts
+  // d'Ensorceleur de la Sorcellerie innée, tant que cet effet est porté (la règle de `innate-sorcery` ne voit que son propre effet).
+  // Mouvement incorporel (traverser créatures et objets, 1d10 de force en y finissant son tour) : au MJ.
+  "umbral-form": {
+    dataFixes: [{ path: "system.activities.kkoILNOHSzVHTCZX.effects", from: [], value: [{ _id: "vAfLEL8A1fNW5JWb", level: { min: null, max: null } }] }],
+    triggers: [{ on: "preAttackRoll", if: { "source.hasEffect": "umbral-form", "activity.classSpell": "sorcerer" }, do: [{ type: "advantage" }] }]
+  },
   // Marche dans l'ombre : téléportation de 36 m, « en Pénombre ou dans les Ténèbres, vers un tel espace » (§367 : `maxLight`).
   "shadow-walk": { teleport: { distance: 120, units: "ft", activity: "XZKq03VYLlOcRzj2", maxLight: "dim" } },
   // Gardien creux, Courroux sauvage — Aura troublante : « au début de chacun de vos tours suivants, chaque créature de votre choix dans
-  // une émanation de 3 m fait un JS de Sagesse ou est Effrayée » — tant que vous êtes transformé (l'effet de la donnée). À la
-  // transformation elle-même : au MJ. Représailles rôdeuses (attaque d'opportunité) : au MJ.
-  "wrath-of-the-wild": { emanation: { on: "ownTurnStart", affects: "enemy", activity: "Lz2jHFS3S8PB3Yyy", radius: 10, units: "ft", whileActive: true } },
+  // une émanation de 3 m fait un JS de Sagesse ou est Effrayée » — tant que vous êtes transformé (l'effet de la donnée).
+  // §447 : l'aura agit aussi « quand vous vous transformez » (`atStart`) ; la forme cesse si le Rôdeur est Neutralisé (l'enchantement que
+  // l'aptitude pose sur elle-même, `endsWhen`) ; Représailles rôdeuses — « juste après qu'une créature que vous voyez à 1,50 m vous blesse, ou
+  // blesse un de vos alliés, une attaque d'opportunité contre elle » (pour un allié : quand elle le touche, la fenêtre d'avant les dégâts).
+  "wrath-of-the-wild": {
+    emanation: { on: "ownTurnStart", affects: "enemy", activity: "Lz2jHFS3S8PB3Yyy", radius: 10, units: "ft", whileActive: true, atStart: true },
+    endsWhen: { incapacitated: "bearer" },
+    // §447 : Pourriture et violence (niveau 11), Aura menaçante — la créature qui rate sa sauvegarde contre l'Aura troublante « ne peut ni
+    // regagner de PV ni prendre de Réaction jusqu'au début de votre prochain tour » : l'effet que la donnée pose à partir du niveau 11
+    // (FU4Sq…, « Frightened (Menacing Aura) », sans changement). Racines étrangleuses (une seconde botte d'arme) : au joueur.
+    noReactions: ["FU4SqQwhN1i0chUR"], blocksHealing: ["FU4SqQwhN1i0chUR"],
+    triggers: [
+      { on: "isDamaged", if: { "target.hasEffect": "wrath-of-the-wild", "target.within": { distance: 5, units: "ft" }, "target.seesSource": true },
+        do: [{ type: "use", target: "source", weapon: true }] },
+      { on: "allyIsHit", if: { "self.hasEffect": "wrath-of-the-wild", "source.nearSelf": { distance: 5, units: "ft" }, "self.seesSource": true },
+        do: [{ type: "use", target: "source", weapon: true }] }
+    ]
+  },
   // Puissance ancestrale — Frappes menaçantes : contre une créature Effrayée, + modificateur de Sagesse aux dégâts (du type de l'arme) ; Courroux persistant : à 0 PV sans mourir sous Courroux sauvage, PV = 2 × niveau de Rôdeur.
   /* §96 : Collège des esprits — les Esprits d'outre-tombe (« Unleash » : une créature visible à 9 m). Incendiaire, Bien-aimé, Tireur
      d'élite, Farceur, Voyageur : la donnée suffit. */
