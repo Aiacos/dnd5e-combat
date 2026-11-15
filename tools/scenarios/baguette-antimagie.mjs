@@ -8,13 +8,15 @@
  *     statut toujours là après.
  *  C. Double clic sur une case refusée par le champ (Trait de feu) : une seule fenêtre « le faire quand même », une seule carte.
  *  D. Rejeu du statut resté collé (vu une fois le 2026-11-14) : le Bandit entre dans le champ, force la baguette, ressort — le statut part.
+ *     Rejoué le 2026-11-15 : le statut part dès que le token sort vraiment ; le « collé » était un déplacement refusé (le token resté dans
+ *     le champ). Chaque déplacement du Bandit est donc vérifié.
  * Remet positions, effets, PV ; la baguette et le Trait de feu prêtés sont retirés.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const WAND = "Compendium.dnd5e.equipment24.Item.dmgWandOfMagicMi";
 const VICTIM = "Cible humanoïde";
-const FIELD_REASON = /no spell can be cast|aucun sort|magic item|objet magique/i;
+const FIELD_REASON = /no spell can be cast|aucun sort|no power inside|aucun pouvoir|magic item|objet magique/i;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /** Sur le client du MJ : la visée multiple du moteur est-elle ouverte (et pour combien de projectiles) ? */
@@ -59,9 +61,11 @@ export default {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: t.id });
       return data.actorLink ? { documentType: "Actor", id: data.actorId } : { uuid: `Scene.${sceneId}.Token.${t.id}.Actor.${data.actorId}` };
     };
-    const dialogs = async () => ((await ctx.call("list-dialogs", { dialogsOnly: true, waitMs: 600 }).catch(() => null))?.windows ?? []);
+    // Pas `dialogsOnly` : la fenêtre de niveau de dnd5e (« Magic Missile », bouton « use ») est une application, pas un dialogue.
+    const dialogs = async () => ((await ctx.call("list-dialogs", { waitMs: 600 }).catch(() => null))?.windows ?? []);
+    const ours = w => (w.title ?? "").endsWith(` — ${mage.name}`) || (w.title ?? "").endsWith(` — ${bandit.name}`) || (w.buttons ?? []).some(b => b.action === "use");
     ctx.restore(async () => {
-      for ( const d of await dialogs() ) await ctx.call("answer-dialog", { id: d.id, button: "cancel" }).catch(() => {});
+      for ( const d of (await dialogs()).filter(ours) ) await ctx.call("answer-dialog", { id: d.id, button: (d.buttons ?? []).some(b => b.action === "cancel") ? "cancel" : "close" }).catch(() => {});
       for ( const t of [mage, bandit] ) {
         const h = homes.get(t.id);
         const target = await targetOf(t);
@@ -76,7 +80,14 @@ export default {
     const grid = await ctx.gridSize();
     const m = homes.get(mage.id).pos;
     await ctx.call("move-token", { tokenId: victim.id, x: m.x + 6 * grid, y: m.y, elevation: 0 });
-    await ctx.call("move-token", { tokenId: bandit.id, x: m.x, y: m.y + 6 * grid, elevation: 0 });
+    // Le Bandit attend hors du champ, sur un trajet dégagé (un déplacement refusé laisse le token dans le champ : vu le 2026-11-15, la
+    // sortie vers le bas passait par une case refusée, `moved: false` — c'était le « statut collé » de la vérification du 2026-11-14).
+    const outside = { x: m.x + 7 * grid, y: m.y + 2 * grid };
+    const moveBandit = async (to, label) => {
+      const r = await ctx.call("move-token", { tokenId: bandit.id, ...to, elevation: 0 });
+      return ctx.expect(r?.moved !== false, `${label} : le Bandit s'est déplacé (${JSON.stringify(r?.after ?? r)})`);
+    };
+    await ctx.call("move-token", { tokenId: bandit.id, ...outside, elevation: 0 });
     await pause(1200);
     await ctx.setHp(victim, 200);
 
@@ -178,16 +189,15 @@ export default {
     ctx.expect(alerts(twice).length === 1, `C. double clic : une seule alerte au MJ (${alerts(twice).length})`);
     for ( const c of usages(twice) ) await ctx.settle(c._id ?? c.id, { timeoutMs: 30000 }).catch(() => null);
 
-    // D. Rejeu du statut resté collé : le Bandit entre, force la baguette, ressort.
-    await ctx.call("move-token", { tokenId: bandit.id, x: m.x + grid, y: m.y, elevation: 0 });
+    // D. Le Bandit entre, force la baguette, ressort : le statut part.
+    await moveBandit({ x: m.x + grid, y: m.y }, "D. entrée dans le champ");
     await pause(2500);
     const bWand = await ctx.ensureItem(bandit, WAND, { byUuid: true, ready: true });
     await ctx.refill(bandit, bWand);
     if ( ctx.expect((await state(bandit)).antimagic.length > 0, "D. le Bandit entré dans le champ porte le statut") ) {
       run = await fireWand(bandit, bWand);
       ctx.expect(usages(run.messages).length === 3, `D. le Bandit, forcé : 3 cartes (${usages(run.messages).length})`);
-      await ctx.call("move-token", { tokenId: bandit.id, x: m.x, y: m.y + 6 * grid, elevation: 0 });
-      await pause(3000);
+      if ( await moveBandit(outside, "D. sortie du champ") ) await pause(3000);
       const left = await state(bandit);
       ctx.expect(!left.antimagic.length, `D. le Bandit sorti du champ : plus de statut (${JSON.stringify(left.antimagic)})`);
     }
