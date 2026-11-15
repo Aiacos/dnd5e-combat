@@ -85,6 +85,35 @@ export function dataFixPlan(source, fixes) {
 /** Le plan change-t-il quelque chose ? */
 export const planIsEmpty = plan => !plan || (!Object.keys(plan.item).length && !plan.effects.length && !plan.create.length);
 
+/** Écrit une valeur à un chemin à points d'un objet simple, en créant les objets intermédiaires. */
+function setPath(object, path, value) {
+  const keys = String(path).split(".");
+  const last = keys.pop();
+  let o = object;
+  for ( const k of keys ) o = (o[k] && (typeof o[k] === "object")) ? o[k] : (o[k] = {});
+  o[last] = value;
+}
+
+/**
+ * §456 : la donnée telle que le moteur la rend — une copie de `source` (`system`, `effects` en tableau) où le plan de ses corrections
+ * est appliqué (champs, effets corrigés, effets créés). Sert à comparer à la référence corrigée (diagnostic `phb3-items`, qui sinon
+ * verrait chaque objet corrigé « différent du Manuel » et le remplacerait sans fin) et à l'ATLAS. `fields` : ce qui a changé.
+ * @returns {{ data: object, fields: string[] }}
+ */
+export function withDataFixes(source, fixes) {
+  const plan = dataFixPlan(source, fixes);
+  if ( !plan.fields.length ) return { data: source, fields: [] };
+  const data = structuredClone(source);
+  for ( const [path, value] of Object.entries(plan.item) ) setPath(data, path, value);
+  data.effects = (data.effects ?? []).map(e => ({ ...e }));
+  for ( const { _id, ...update } of plan.effects ) {
+    const effect = data.effects.find(e => e._id === _id);
+    if ( effect ) for ( const [path, value] of Object.entries(update) ) setPath(effect, path, value);
+  }
+  data.effects.push(...plan.create);
+  return { data, fields: plan.fields };
+}
+
 /** Validation de la clé `dataFixes` d'une entrée : un message par défaut trouvé. */
 export function validateDataFixes(fixes, at="") {
   const ok = Array.isArray(fixes) && fixes.length && fixes.every(f => {

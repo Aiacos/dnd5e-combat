@@ -86,7 +86,7 @@ la sélection sans rien jouer.
 | `diagnostic-traduction` |  | §203 | textes restés en anglais, traduction du compendium reprise |
 | `diagnostic` |  | §177 | analyse, réparation sauvegardée, restauration exacte |
 | `dissipation` |  | §37.2 | d'office, par un test, par l'emplacement |
-| `donnees-sanctuaire-nature` |  | §454 | Sanctuaire de dame Nature (effets perdus recréés) |
+| `donnees-sanctuaire-nature` |  | §454 §456 | Sanctuaire de dame Nature (effets perdus recréés) |
 | `dons-lot-7` |  | §289 | fins des dons sombres de Ravenloft, Seconde peau, Faveur de vigueur |
 | `dons-ravenloft` |  | §94 | Cri surnaturel, Symbiose, Survivant, Savoir d'une vie passée, Hurlement, Bond féroce, Chercher |
 | `dons-sombres` |  | §93 | 1 naturel (Anatomie aberrante, Guetteurs, Être symbiotique) |

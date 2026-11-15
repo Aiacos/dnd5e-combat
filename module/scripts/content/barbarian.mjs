@@ -41,6 +41,10 @@ export const BARBARIAN = Object.freeze({
   // (`Q0ou16II1WEcCdyW`) y sont des effets de Coup brutal, et non plus de Coup brutal amélioré : leurs règles sont redites ici sous ces
   // identifiants. Les options, elles, restent données par Coup brutal amélioré (niveau 13).
   "brutal-strike": {
+    // §456 : l'activité « Sundering Blow » cite aussi `tUyuyTQGmpUqMcFe`, absent de l'item — l'id du même effet chez le prétiré du SRD
+    // (`actors24`), recopié dans le compendium du SRD 6.1 et du Manuel 3.0.0. Seul « Sundered » (`Q0ou16II1WEcCdyW`) reste.
+    dataFixes: [{ path: "system.activities.MP1qQsApCj19F2M5.effects", from: [{ _id: "tUyuyTQGmpUqMcFe" }, { _id: "Q0ou16II1WEcCdyW" }],
+      value: [{ _id: "Q0ou16II1WEcCdyW" }] }],
     brutalStrike: { options: { forceful: { push: { distance: 15, units: "ft" } }, hamstring: { effect: "bg9jWpPRIJ0Q2vPY" } } },
     effectEnds: { bg9jWpPRIJ0Q2vPY: "casterTurnStart", uacly0JAXLVwAS6y: "casterTurnStart", Q0ou16II1WEcCdyW: "casterTurnStart" },
     // « Hamstrung » écrit sur `movement.speed`, valeur dérivée que dnd5e réécrit : la Vitesse au sol. §433 : pas quand l'effet retire

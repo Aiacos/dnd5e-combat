@@ -15,6 +15,7 @@ import { referenceReader, retranslationOf, applyRetranslation } from "../../adap
 import { contentOf } from "../../adapter/content.mjs";
 import { dataFixPlanOf, applyDataFixes } from "../../adapter/data-fixes.mjs";
 import { sourceKind } from "../../core/item-sources.mjs";
+import { withDataFixes } from "../../core/data-fixes.mjs";
 import { unmarkedItemEffects, unmarkedAppliedEffects, markEffects } from "../../adapter/antimagic.mjs";
 import { phbDifferences, phbShape, renamedSourceItem, citesSubclass } from "../../core/phb-update.mjs";
 import { spellDuplicates } from "../../core/spell-duplicates.mjs";
@@ -44,6 +45,12 @@ const tr = prefix => (key, data) => loc(`Macro.${prefix}.${key}`, data);
 
 /** §456 : un objet supprimé pour être recréé aussitôt (remplacement) — `leavesEffects` ne doit pas jouer (runtime/leaves.mjs). */
 const replacing = () => ({ [MODULE_ID]: { replacing: true } });
+
+/**
+ * §456 : la référence du compendium telle que le moteur la rend (ses `dataFixes` appliqués). Comparée brute, un objet corrigé sur la fiche
+ * (Sanctuaire de dame Nature, Coup brutal) paraissait « différent du Manuel » : `phb3-items` le remplaçait, la correction le refaisait.
+ */
+const fixedReference = doc => withDataFixes(doc.toObject(), contentOf(doc).entry?.dataFixes).data;
 
 /**
  * Les objets propres à un token non lié : ceux de la SOURCE de son delta. Côté client, `token.delta.items` énumère l'inventaire
@@ -243,7 +250,7 @@ const phbEffects = {
       if ( !reference?.effects?.size ) continue;
       // §438 : un objet d'une ancienne version dont l'identifiant ou les activités ont changé (Manuel 3.0.0) se remplace (`phb3-items`) ;
       // y recopier les effets neufs mélangerait les deux formes.
-      if ( phbDifferences(phbShape(item.toObject()), phbShape(reference.toObject())).some(r => ["identifier", "activities"].includes(r)) ) continue;
+      if ( phbDifferences(phbShape(item.toObject()), phbShape(fixedReference(reference))).some(r => ["identifier", "activities"].includes(r)) ) continue;
       const missing = reference.effects.filter(e => !item.effects.has(e.id));
       if ( !missing.length ) continue;
       const copies = effectsOf(reference, missing);
@@ -732,7 +739,7 @@ async function phb3Outdated(actor) {
     if ( !["feat", "spell"].includes(item.type) || !PHB_ITEM.test(sourceOf(item)) ) continue;
     const reference = await fromUuid(sourceOf(item)).catch(() => null);
     if ( !reference ) { out.push({ item, reference: null, reasons: [] }); continue; }
-    const reasons = phbDifferences(phbShape(item.toObject()), phbShape(reference.toObject()));
+    const reasons = phbDifferences(phbShape(item.toObject()), phbShape(fixedReference(reference)));
     if ( reasons.length ) out.push({ item, reference, reasons });
   }
   return out;

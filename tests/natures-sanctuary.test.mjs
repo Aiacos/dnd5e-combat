@@ -47,3 +47,35 @@ describe("Sanctuaire de dame Nature : effets perdus du compendium (dataFixes)", 
     expect(again.fields).toEqual([]);
   });
 });
+
+describe("§456 : la donnée corrigée, et la référence comparée corrigée (pas de remplacement sans fin)", () => {
+  it("withDataFixes rend la donnée corrigée, sans toucher la source", async () => {
+    const { withDataFixes } = await import("../module/scripts/core/data-fixes.mjs");
+    const source = broken();
+    const { data, fields } = withDataFixes(source, ITEM_FIXES["natures-sanctuary"].dataFixes);
+    expect(fields.length).toBe(8);
+    expect(data.effects.map(e => e._id)).toEqual(LANDS.map(([, e]) => e));
+    expect(data.system.activities.dnd5eactivity000.effects).toEqual([{ _id: "h0xW0mOYF8frKgHf" }]);
+    expect(source.effects).toEqual([]);
+    expect(source.system.activities.dnd5eactivity000.effects).toHaveLength(4);
+    expect(withDataFixes(source, undefined).data).toBe(source);
+  });
+
+  it("un objet corrigé sur la fiche ne paraît plus différent de sa référence corrigée", async () => {
+    const { withDataFixes } = await import("../module/scripts/core/data-fixes.mjs");
+    const { phbDifferences, phbShape } = await import("../module/scripts/core/phb-update.mjs");
+    const fixes = ITEM_FIXES["natures-sanctuary"].dataFixes;
+    const onSheet = withDataFixes(broken(), fixes).data;
+    expect(phbDifferences(phbShape(onSheet), phbShape(broken())).length).toBeGreaterThan(0);
+    expect(phbDifferences(phbShape(onSheet), phbShape(withDataFixes(broken(), fixes).data))).toEqual([]);
+  });
+
+  it("Coup brutal : l'id orphelin de « Sundering Blow » est retiré, « Sundered » reste", async () => {
+    const { BARBARIAN } = await import("../module/scripts/content/barbarian.mjs");
+    const { dataFixPlan } = await import("../module/scripts/core/data-fixes.mjs");
+    const item = { effects: [{ _id: "Q0ou16II1WEcCdyW" }], system: { activities: { MP1qQsApCj19F2M5: { _id: "MP1qQsApCj19F2M5",
+      effects: [{ _id: "tUyuyTQGmpUqMcFe", level: {} }, { _id: "Q0ou16II1WEcCdyW", level: {} }] } } } };
+    const plan = dataFixPlan(item, BARBARIAN["brutal-strike"].dataFixes);
+    expect(plan.item["system.activities.MP1qQsApCj19F2M5.effects"]).toEqual([{ _id: "Q0ou16II1WEcCdyW" }]);
+  });
+});

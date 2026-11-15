@@ -24,7 +24,7 @@ import { ClassicLevel } from "classic-level";
 import { CONTENT, SOURCES } from "../module/scripts/content/index.mjs";
 import { ENTRY_KEYS, STEP_TYPES } from "../module/scripts/core/content/enums.mjs";
 import { MOMENTS } from "../module/scripts/core/triggers.mjs";
-import { dataFixPlan } from "../module/scripts/core/data-fixes.mjs";
+import { withDataFixes } from "../module/scripts/core/data-fixes.mjs";
 
 const [out, data = "F:/Foundry V14/Data"] = process.argv.slice(2);
 if ( !out ) { console.error("usage : node tools/atlas.mjs <dossier de sortie> [Data]"); process.exit(1); }
@@ -334,38 +334,21 @@ function identOf(item, actorId) {
   return (actorId ? SOURCES[`${actorId}.${item._id}`] : null) ?? SOURCES[item._id] ?? (item.system?.identifier || kebab(item.name));
 }
 
-/** Écrit une valeur à un chemin à points, en créant les objets intermédiaires. */
-function setPath(object, path, value) {
-  const keys = String(path).split(".");
-  const last = keys.pop();
-  let o = object;
-  for ( const k of keys ) o = (o[k] && (typeof o[k] === "object")) ? o[k] : (o[k] = {});
-  o[last] = value;
-}
-
 /**
- * §455 : la donnée telle que le Core la rend, `dataFixes` appliqués (core/data-fixes.mjs : à la création de l'objet et par le diagnostic).
- * L'empreinte de l'historique (`h`) reste celle de la donnée premium brute.
+ * §455 : la donnée telle que le Core la rend, `dataFixes` appliqués (core/data-fixes.mjs `withDataFixes`, comme à la création de l'objet et
+ * par le diagnostic). L'empreinte de l'historique (`h`) reste celle de la donnée premium brute.
  */
-function withDataFixes(item, effects, fixes) {
-  if ( !fixes ) return { item, effects, fixed: [] };
-  const plan = dataFixPlan({ ...item, effects }, fixes);
-  if ( !plan.fields.length ) return { item, effects, fixed: [] };
-  const out = structuredClone(item);
-  for ( const [path, value] of Object.entries(plan.item) ) setPath(out, path, value);
-  const fixedEffects = effects.map(e => structuredClone(e));
-  for ( const { _id, ...update } of plan.effects ) {
-    const effect = fixedEffects.find(e => e._id === _id);
-    if ( effect ) for ( const [path, value] of Object.entries(update) ) setPath(effect, path, value);
-  }
-  fixedEffects.push(...plan.create);
-  return { item: out, effects: fixedEffects, fixed: plan.fields };
+function fixedForAtlas(item, effects, fixes) {
+  const { data, fields } = withDataFixes({ ...item, effects }, fixes);
+  if ( !fields.length ) return { item, effects, fixed: [] };
+  const { effects: fixedEffects, ...fixedItem } = data;
+  return { item: fixedItem, effects: fixedEffects, fixed: fields };
 }
 
 function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEntry, effects: rawEffects }) {
   const ident = identOf(rawItem, actorId);
   const entry = CONTENT[ident];
-  const { item, effects, fixed } = withDataFixes(rawItem, rawEffects, entry?.dataFixes);
+  const { item, effects, fixed } = fixedForAtlas(rawItem, rawEffects, entry?.dataFixes);
   const s = item.system ?? {};
   const rawS = rawItem.system ?? {};
   const acts = Object.values(s.activities ?? {});
