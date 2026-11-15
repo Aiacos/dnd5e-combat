@@ -15,7 +15,7 @@ import { requestSaves, applyEffectsToToken, applyStatusToToken, applyMarkToToken
 import { holds } from "../core/triggers.mjs";
 import { creatureTypeOf, factsFor, originItemOf } from "../adapter/facts.mjs";
 import { isSpellCast } from "../adapter/scrolls.mjs";
-import { removeTransientRegions } from "../adapter/areas.mjs";
+import { removeTransientRegions, zoneCenter } from "../adapter/areas.mjs";
 import { askChoice } from "../adapter/choices.mjs";
 import { lengthIn } from "../adapter/units.mjs";
 import { askAllocation } from "../adapter/projectiles.mjs";
@@ -290,7 +290,7 @@ export const COMMANDS = {
           log(`${step.name ?? step.type}: condition not met for ${target?.name ?? entry.token}, step "${step.type}" skipped`);
           continue;
         }
-        if ( step.type === "move" ) await forcedMove(source, target, step);
+        if ( step.type === "move" ) await forcedMove(source, target, { ...step, activity });
         else if ( step.type === "disarm" ) {
           // §19.6 : « l'ennemi lâche l'objet » — son arme de corps à corps équipée (la première), dés-équipée.
           // §304 : Lien occulte — « on ne peut vous désarmer de l'arme liée tant que vous n'êtes pas Neutralisé ».
@@ -530,8 +530,15 @@ export const COMMANDS = {
 };
 
 /** Déplacement forcé d'une cible par rapport à l'auteur (étape `move`, et « repoussé » de la Bousculade). */
-async function forcedMove(source, target, { mode, distance, units, follow=false, upTo=false }) {
+async function forcedMove(source, target, { mode, distance, units, follow=false, upTo=false, toward=null, activity=null }) {
   if ( !source || !target ) return;
+  // §466 : vers le centre de la zone de l'activité (Implosion) — la dernière région posée par elle sur la scène de la cible.
+  let point = null;
+  if ( toward === "area" ) {
+    const regions = (target.parent?.regions ?? []).filter(r => activity && (r.getFlag("dnd5e", "activity") === activity.uuid));
+    point = regions.length ? zoneCenter(regions.at(-1)) : null;
+    if ( !point ) return log(`pull: no area of ${activity?.item?.name ?? "the activity"} on the scene, ${target.name} not moved`);
+  }
   // §401 : « jusqu'à » — l'auteur choisit, par cases, de 0 à la distance permise.
   if ( upTo && Number.isFinite(distance) ) {
     const chosen = await askDistance(source, target, { mode, distance, units });
@@ -547,7 +554,7 @@ async function forcedMove(source, target, { mode, distance, units, follow=false,
     catch(err) { return log(`push: distance "${distance}" unreadable (${err.message})`); }
     if ( !(value > 0) ) return log(`push: distance "${distance}" = ${value}, nothing`);
   }
-  const { cells, wanted } = await pushAway(source, target, { distance: value, units }, readUnitFactors(), { towards, follow });
+  const { cells, wanted } = await pushAway(source, target, { distance: value, units }, readUnitFactors(), { towards, follow, point });
   log(`${towards ? "pull" : "push"}: ${target.name} ${towards ? "pulled" : "pushed"} ${cells} square(s) out of ${wanted}${cells < wanted ? " (stopped)" : ""}`);
 }
 

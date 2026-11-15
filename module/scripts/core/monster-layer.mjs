@@ -41,7 +41,8 @@ export function monsterTextLayer({ html, identifier=null, activities=[], effects
   const recurring = monsterRecurring(html, fx, activities.map(a => ({ id: a.id, type: a.type })));
   if ( swallow ) delete recurring.triggers;
   // K8 (§329) : poussées et tractions lues dans le texte.
-  const pushes = monsterPushes(html, { save: activities.some(a => a.type === "save"), attack: activities.some(a => a.type === "attack") });
+  const pushes = monsterPushes(html, { save: activities.some(a => a.type === "save"), attack: activities.some(a => a.type === "attack"),
+    area: activities.some(a => a.template) });
   // K10 (§331) : Avantage conditionnel lu dans le texte ; §334 : celui que donne la condition d'activation d'une attaque.
   const advantage = monsterAdvantage(html, identifier);
   advantage.push(...monsterActivationAdvantage(activities.filter(a => a.type === "attack").map(a => a.activation?.condition ?? ""), identifier));

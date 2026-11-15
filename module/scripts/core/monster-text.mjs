@@ -264,30 +264,42 @@ export function monsterRecurring(html, effects=[], activities=[]) {
  * « pulled up to 15 feet straight toward the X » → `{ on: failedSave|hit, do: [{ type: "move", mode, distance, units: "ft" }] }` ; « If the
  * target is a Huge or smaller creature » / « Large or smaller » → `if: { "target.sizeAtMost" }`. Sur une sauvegarde : après « Failure » ;
  * sinon sur une attaque : au toucher. Pas une distance renvoyée à une valeur calculée (« pushed up to … »), ni « into the X's space ».
+ * §466 : aussi « the target is pushed 5 feet straight away » (sans « up to ») ; après « Success: » → sur une sauvegarde RÉUSSIE (`savedSave` :
+ * Saut mortel de la Bulette) ; « the X can pull the target up to 10 feet » → l'auteur choisit la distance (`upTo` : Tentacule du Calmar
+ * géant) ; « pulled up to 20 feet straight toward the Sphere's center » sur une zone → vers le centre de la zone (`toward: "area"` :
+ * Implosion). Toujours pas : « pushed or pulled » (au choix), « into the X's space ».
  * @param {string} html
- * @param {{save?: boolean, attack?: boolean}} [kinds]  les activités de l'item
+ * @param {{save?: boolean, attack?: boolean, area?: boolean}} [kinds]  les activités de l'item (`area` : l'une a un gabarit)
  * @returns {object[]} déclarations `triggers`
  */
-export function monsterPushes(html, { save=false, attack=false }={}) {
+export function monsterPushes(html, { save=false, attack=false, area=false }={}) {
   const text = plainText(html);
   if ( !text || (segments(text).length > 1) ) return [];
   const out = [];
   for ( const sentence of text.split(/(?<=\.)\s+/) ) {
     // §334 : aussi « the hook horror pulls (pushes, moves) the target up to 15 feet straight toward (away from) itself ».
-    const active = sentence.match(/\b(pulls|pushes|moves) the target (?:up to )?(\d+) feet(?: straight)? (toward|away from) (?:itself|it|him|her)\b/i);
-    const m = sentence.match(/\b(pushed|pulled) up to (\d+) feet(?: straight)? (?:away from|toward)\b/i)
-      ?? (active ? [active[0], (/^push/i.test(active[1]) || /^away/i.test(active[3])) ? "pushed" : "pulled", active[2]] : null);
-    // Ni « pushed or pulled » / « toward or away » (au choix), ni une traction vers le centre d'une zone (Implosion) : pas vers la créature.
-    if ( !m || /\bor (?:pushed|pulled)\b|\btoward or away\b/i.test(sentence) || /\bcenter\b/i.test(sentence) ) continue;
+    // §466 : « the squid can pull the target up to 10 feet straight toward itself » — `can`, « up to » : l'auteur choisit.
+    const active = sentence.match(/\b(can )?(pulls?|push(?:es)?|moves?) the target (up to )?(\d+) feet(?: straight)? (toward|away from) (?:itself|it|him|her)\b/i);
+    const passive = sentence.match(/\b(pushed|pulled) (?:up to )?(\d+) feet(?: straight)? (?:away from|toward)\b/i);
+    const m = passive ?? (active ? [active[0], (/^push/i.test(active[2]) || /^away/i.test(active[5])) ? "pushed" : "pulled", active[4]] : null);
+    const upTo = !passive && !!active?.[1] && !!active?.[3];
+    // Ni « pushed or pulled » / « toward or away » (au choix). §466 : vers le centre d'une zone (Implosion) — seulement une traction, sur une
+    // capacité à gabarit.
+    if ( !m || /\bor (?:pushed|pulled)\b|\btoward or away\b/i.test(sentence) ) continue;
+    const toArea = /\bcenter\b/i.test(sentence);
+    if ( toArea && !(area && /^pulled$/i.test(m[1]) && /\btoward the [^.]*?\bcenter\b/i.test(sentence)) ) continue;
     const before = text.slice(0, text.indexOf(sentence));
     const failure = /\bFailure\s*:/i.test(sentence) || (/\bFailure\s*:[^]*$/i.test(before) && !/\bSuccess\s*:[^]*$/i.test(before.split(/\bFailure\s*:/i).at(-1)));
-    const on = (save && failure) ? "failedSave" : (attack ? "hit" : null);
+    // §466 : « Success: Half damage, and the target is pushed 5 feet » — la poussée de la réussite (pas « Failure or Success »).
+    const success = /(?:^|[^r]\s)Success\s*:/i.test(sentence) && !/\bFailure or Success\s*:/i.test(sentence);
+    const on = (save && success) ? "savedSave" : (save && failure) ? "failedSave" : (attack ? "hit" : null);
     if ( !on ) continue;
     const size = sentence.match(/\bIf the target is (?:an? )?(Tiny|Small|Medium|Large|Huge|Gargantuan) or smaller\b/i)?.[1]
       ?? before.split(/(?<=\.)\s+/).at(-1)?.match(/\bIf the target is (?:an? )?(Tiny|Small|Medium|Large|Huge) or smaller\b/i)?.[1];
     const sizeAtMost = size ? { tiny: "tiny", small: "sm", medium: "med", large: "lg", huge: "huge", gargantuan: "grg" }[size.toLowerCase()] : null;
     out.push({ on, ...(sizeAtMost ? { if: { "target.sizeAtMost": sizeAtMost } } : {}),
-      do: [{ type: "move", mode: /^pushed$/i.test(m[1]) ? "push" : "pull", distance: Number(m[2]), units: "ft" }] });
+      do: [{ type: "move", mode: /^pushed$/i.test(m[1]) ? "push" : "pull", distance: Number(m[2]), units: "ft", ...(upTo ? { upTo: true } : {}),
+        ...(toArea ? { toward: "area" } : {}) }] });
   }
   return out;
 }

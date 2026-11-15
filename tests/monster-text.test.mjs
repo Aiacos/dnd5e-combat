@@ -409,3 +409,43 @@ describe("§465 : téléportation de soi à destination contrainte", () => {
     expect(validateEntry({ teleport: { activity: ID, destination: { near: "creature", within: 0, units: "ft" } } }).join()).toMatch(/destination/);
   });
 });
+
+describe("§466 : poussées et tractions que K8 ne lisait pas", () => {
+  it("« Success: Half damage, and the target is pushed 5 feet straight away » : sur une sauvegarde réussie", async () => {
+    const { monsterPushes } = await import("../module/scripts/core/monster-text.mjs");
+    const html = "<p>Dexterity Saving Throw: DC 15, each creature in the beast's destination space. Failure: 10 damage, and the target has the Prone "
+      + "condition. Success: Half damage, and the target is pushed 5 feet straight away from the beast.</p>";
+    const out = monsterPushes(html, { save: true });
+    expect(out).toEqual([{ on: "savedSave", do: [{ type: "move", mode: "push", distance: 5, units: "ft" }] }]);
+    expect(validateEntry({ triggers: out })).toEqual([]);
+  });
+
+  it("« the X can pull the target up to 10 feet straight toward itself » : au toucher, l'auteur choisit la distance", async () => {
+    const { monsterPushes } = await import("../module/scripts/core/monster-text.mjs");
+    const html = "<p>Hit: 12 damage. If the target is a Huge or smaller creature, it has the Grappled condition, and the kraken can pull the target "
+      + "up to 10 feet straight toward itself.</p>";
+    const out = monsterPushes(html, { attack: true });
+    expect(out).toEqual([{ on: "hit", if: { "target.sizeAtMost": "huge" }, do: [{ type: "move", mode: "pull", distance: 10, units: "ft", upTo: true }] }]);
+  });
+
+  it("« pulled up to 20 feet straight toward the Sphere's center » : vers le centre de la zone, seulement sur une capacité à gabarit", async () => {
+    const { monsterPushes } = await import("../module/scripts/core/monster-text.mjs");
+    const html = "<p>Dexterity Saving Throw: DC 15, each creature in a 20-foot-radius Sphere. Failure: 10 damage, and the target has the Prone "
+      + "condition and is pulled up to 20 feet straight toward the Sphere's center. Success: Half damage only.</p>";
+    const out = monsterPushes(html, { save: true, area: true });
+    expect(out).toEqual([{ on: "failedSave", do: [{ type: "move", mode: "pull", distance: 20, units: "ft", toward: "area" }] }]);
+    expect(validateEntry({ triggers: out })).toEqual([]);
+    expect(monsterPushes(html, { save: true })).toEqual([]);
+  });
+
+  it("toujours pas : « pushed or pulled » au choix, « Failure or Success », poussée vers un centre", async () => {
+    const { monsterPushes } = await import("../module/scripts/core/monster-text.mjs");
+    expect(monsterPushes("<p>Failure: 9 damage, and the target is pushed or pulled up to 20 feet straight away or toward the mummy.</p>", { save: true })).toEqual([]);
+    expect(monsterPushes("<p>Failure or Success: the target is pushed 10 feet straight away from the giant.</p>", { save: true })).toEqual([]);
+    expect(monsterPushes("<p>Failure: the target is pushed up to 20 feet straight away from the Sphere's center.</p>", { save: true, area: true })).toEqual([]);
+  });
+
+  it("le schéma : `toward` vaut \"area\" avec une traction", () => {
+    expect(validateEntry({ triggers: [{ on: "failedSave", do: [{ type: "move", mode: "push", distance: 5, units: "ft", toward: "area" }] }] }).join()).toMatch(/toward/);
+  });
+});

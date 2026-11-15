@@ -47,6 +47,8 @@ function validateStep(step, at, errors) {
     if ( ("follow" in step) && (typeof step.follow !== "boolean") ) errors.push(`${at}.follow: boolean`);
     // §401 : « jusqu'à » — l'auteur choisit la distance (Fouet épineux : « vous pouvez la tirer jusqu'à 3 m »).
     if ( ("upTo" in step) && (step.upTo !== true) ) errors.push(`${at}.upTo: true or absent`);
+    // §466 : `toward: "area"` — une traction vers le centre de la zone de l'activité (Implosion), pas vers l'auteur.
+    if ( ("toward" in step) && !((step.toward === "area") && (step.mode === "pull")) ) errors.push(`${at}.toward: "area" (with mode "pull") or absent`);
   }
   if ( (step.type === "status") && ((typeof step.status !== "string") || !step.status) ) errors.push(`${at}.status: condition required`);
   // §345 : `save` — l'état seulement si la cible rate cette sauvegarde (Tueuse de géants : Force DD 15 ou À terre).

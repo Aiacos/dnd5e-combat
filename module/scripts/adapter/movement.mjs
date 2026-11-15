@@ -450,7 +450,7 @@ async function walkMoves(token, plan, options, state) {
  * @param {{towards?: boolean}} [options]
  * @returns {Promise<{cells: number, wanted: number}>}  Cases parcourues, cases voulues.
  */
-export async function pushAway(source, target, { distance, units }, factors, { towards=false, follow=false }={}) {
+export async function pushAway(source, target, { distance, units }, factors, { towards=false, follow=false, point=null }={}) {
   const grid = target.parent.grid;
   let value = lengthIn(distance, units, grid.units, factors);
   const wanted = Math.max(1, Math.round((value / grid.distance) + 1e-6));
@@ -461,7 +461,8 @@ export async function pushAway(source, target, { distance, units }, factors, { t
     const { w, h } = sizeOf(doc);
     return { x: pos.x + ((w * grid.sizeX) / 2), y: pos.y + ((h * grid.sizeY) / 2) };
   };
-  const away = pushDirection(centerOf(source), centerOf(target));
+  // §466 : `point` — vers (ou loin de) ce point plutôt que l'auteur : le centre d'une zone (Implosion).
+  const away = pushDirection(point ?? centerOf(source), centerOf(target));
   const dir = away && towards ? { di: -away.di, dj: -away.dj } : away;
   if ( !dir ) return { cells: 0, wanted };
   const world = worldFor(target);
@@ -469,17 +470,20 @@ export async function pushAway(source, target, { distance, units }, factors, { t
   let cells = 0;
   // §403 : tirée vers la source, la créature s'arrête à son contact — la source peut ne pas occuper son espace (Liane avide), rien ne
   // l'arrêtait alors : elle passait au travers et finissait de l'autre côté.
-  const from = towards ? footprintOf(source) : null;
+  const from = (towards && !point) ? footprintOf(source) : null;
+  // §466 : tirée vers un point, la créature s'arrête quand son espace le couvre.
+  const at = point ? grid.getOffset(point) : null;
   const size = sizeOf(target);
   for ( ; cells < wanted; cells++ ) {
     if ( from && (footprintGap({ i: cell.i, j: cell.j, ...size }, from) <= 1) ) break;
+    if ( at && towards && (footprintGap({ i: cell.i, j: cell.j, ...size }, { i: at.i, j: at.j, w: 1, h: 1 }) === 0) ) break;
     const next = { i: cell.i + dir.di, j: cell.j + dir.dj, level: cell.level };
     if ( !world.canStep(cell, next) || !world.canEnd(next) ) break;
     cell = next;
   }
   if ( !cells ) return { cells, wanted };
-  const point = grid.getTopLeftPoint(cell);
-  await target.move([{ x: point.x, y: point.y, snapped: true, action: "displace" }], { [MODULE_ID]: { cleared: true } });
+  const landing = grid.getTopLeftPoint(cell);
+  await target.move([{ x: landing.x, y: landing.y, snapped: true, action: "displace" }], { [MODULE_ID]: { cleared: true } });
   // « La main se déplace avec la cible, en restant à 1,50 m d'elle » (Main puissante, §16.15) : même décalage.
   if ( follow && source.object ) {
     const from = committedPosition(source);

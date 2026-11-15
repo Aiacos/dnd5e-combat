@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-358 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+359 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -267,6 +267,7 @@ la sélection sans rien jouer.
 | `repasse-k7c` |  | §334 | En feu au toucher, Réactions perdues lues dans le texte (Arène des sorts) |
 | `repasse-k8` |  | §329 | poussées des monstres lues dans le texte (Arène des sorts) |
 | `repasse-k8b` |  | §334 | poussées « pushes the target … away from itself » (Arène des sorts) |
+| `repasse-k8c` |  | §466 §329 | poussées que K8 ne lisait pas : Tentacule, Saut mortel, Implosion (Arène des sorts) |
 | `repasse-k9` |  | §330 | portes de taille (sauvegarde) et de type lues dans le texte (Arène des sorts) |
 | `repasse-marteau` |  | §352 | Marteau de tonnerre : coup de tonnerre autour de la cible touchée |
 | `repasse-mj` |  | §366 | Amitié rompue par le lanceur, Avantage aux attaques du Bouffon |
