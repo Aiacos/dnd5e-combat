@@ -24,8 +24,10 @@ export default {
     const mage = await ctx.token("Magicien");
     const actorId = mage.actorId;
     const effectsOf = async () => (await ctx.call("get-actor", { actorId })).effects ?? [];
-    const ability = async key => (await ctx.call("get-actor", { actorId, preparedPaths: [`system.abilities.${key}.value`] }).catch(() => null))
-      ?.prepared?.[`system.abilities.${key}.value`] ?? null;
+    // Chemins relatifs à `system` (connecteur : `prepared.system[<chemin>]`).
+    const ability = async key => (await ctx.call("get-actor", { actorId, preparedPaths: [`abilities.${key}.value`] }).catch(() => null))
+      ?.prepared?.system?.[`abilities.${key}.value`] ?? null;
+    const spentOf = async itemId => ((await ctx.call("get-actor", { actorId })).items ?? []).find(i => i._id === itemId)?.system?.uses?.spent ?? null;
     const before = await effectsOf();
     ctx.restore(async () => {
       const added = (await effectsOf()).filter(e => !before.some(b => b._id === e._id) && e.flags?.[MODULE_ID]?.usesSpent);
@@ -38,13 +40,16 @@ export default {
       await ctx.call("upsert-actor-item", { actorId, itemData: { "system.uses.spent": 46 }, match: { path: "_id", value: itemId } });
       const marked = async () => (await effectsOf()).filter(e => e.flags?.[MODULE_ID]?.usesSpent?.source === book.uuid);
 
-      await ctx.use({ tokenId: mage.id, itemId, activityId: book.read });
+      // `consume: true` : l'outil du connecteur ne décompte rien par défaut ; c'est la case cochée qui compte ici.
+      await ctx.use({ tokenId: mage.id, itemId, activityId: book.read, consume: true });
       await pause(1500);
+      ctx.expect(await spentOf(itemId) === 47, `${book.label} : une heure de plus cochée (${await spentOf(itemId)} / 48)`);
       ctx.expect(!(await marked()).length, `${book.label} : 47 heures lues, aucun effet`);
       ctx.expect(!(await effectsOf()).some(e => (e.name === book.effect) && !before.some(b => b._id === e._id)),
         `${book.label} : « Read » ne pose plus d'effet à chaque heure`);
 
-      await ctx.use({ tokenId: mage.id, itemId, activityId: book.read });
+      // `consume: true` : l'outil du connecteur ne décompte rien par défaut ; c'est la case cochée qui compte ici.
+      await ctx.use({ tokenId: mage.id, itemId, activityId: book.read, consume: true });
       let got = [];
       for ( let i = 0; i < 20 && !got.length; i++ ) { await pause(300); got = await marked(); }
       ctx.log(`${book.label} : ${got.map(e => `${e.name} ${JSON.stringify(e.system?.changes ?? e.changes)}`).join(" | ") || "rien"}`);
