@@ -57,7 +57,25 @@ const WONDER_ACTIVITIES = ["Z62czXwABB7SN1lP", "4h4Aazi3L1MmByOt", "76MvwJBXwm1G
 /** Chapelet mystique : « lancer un sort de perle prend une action Bonus » — les activités suivent l'action du sort. */
 const PRAYER_BEADS = ["SEwmmaZFABa5L61F", "i1xNzPeIb7VkHrh6", "yiGuTjneUv0F9NnC", "xjMwMrJpNfh3HZyP", "FGwlSZAUgTaknnt1", "VBwVZg8g1vPZ1xep"];
 
+/**
+ * §454 : Sanctuaire de dame Nature (Druide, Cercle de la Terre, niveau 14 ; SRD 5.2). Dans le compendium du SRD de dnd5e 6.1
+ * (`classes24`), et dans sa copie du Manuel des joueurs 3.0.0, l'aptitude a perdu ses quatre effets : ses activités « Place Sanctuary
+ * (Arid / Polar / Temperate / Tropical) » pointent vers des ids absents de l'item, et dnd5e ne pose rien (ni abri partiel, ni Résistance).
+ * Le prétiré du SRD (`actors24`, Druide niveau 17) les a encore : ils sont recréés tels quels, avec leurs ids, et chaque activité ne pointe
+ * plus que vers l'effet de son terrain (la donnée lui donnait les quatre).
+ */
+const SANCTUARY = [["dnd5eactivity000", "h0xW0mOYF8frKgHf", "Arid", "fire"], ["aNIM3GrB97GSNZHG", "7YVMASgXswIFXNs2", "Polar", "cold"],
+  ["G1htmQaxEZ0kwRK0", "Gqgjm2NswU6f7qVL", "Temperate", "lightning"], ["0FT3EzkaLnht95Eo", "LKxwXqkEIXJR2XAa", "Tropical", "poison"]];
+const SANCTUARY_FIXES = [
+  ...SANCTUARY.map(([, effect, land, type]) => ({ effect, create: { name: `Nature's Ward: ${land}`, type: "base", transfer: false,
+    disabled: false, img: "icons/magic/nature/vines-thorned-curled-glow-green.webp", statuses: ["coverHalf"],
+    duration: { value: null, units: "seconds" }, system: { changes: [change("system.traits.dr.value", "add", type)] } } })),
+  ...SANCTUARY.map(([activity, effect]) => ({ path: `system.activities.${activity}.effects`,
+    from: SANCTUARY.map(([, id]) => ({ _id: id })), value: [{ _id: effect }] }))
+];
+
 export const ITEM_FIXES = Object.freeze({
+  "natures-sanctuary": { dataFixes: SANCTUARY_FIXES },
   // Anneaux de maîtrise élémentaire (un identifiant pour les quatre : content/sources.mjs les sépare). Air : « une Vitesse de vol égale à
   // votre Vitesse » — l'effet ne donne que le vol stationnaire. Terre : Mur de pierre au DD 18 de l'anneau, pas à celui du porteur.
   // Eau : « Aquatique, une Vitesse de nage de 18 m » — aucun effet dans la donnée.
