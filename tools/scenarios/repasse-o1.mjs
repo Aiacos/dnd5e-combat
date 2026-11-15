@@ -2,6 +2,8 @@
  * §335, lot O1 de la repasse des objets : la donnée fautive des objets premium corrigée par identifiant (`dataFixes`).
  *  1. Un acteur de test créé avec une douzaine d'objets du Guide et du Manuel : le MJ actif corrige chacun à la création (coût,
  *     charges, DD fixe, dégâts, effets portés, effet manquant, activité ajoutée) ; l'Attaque à mains nues du Manuel, juste, ne bouge pas.
+ *     §457 : Fers du zéphyr (effet recréé, lien juste), Manuel de vitalité et Traité de perspicacité (lien vers l'effet d'un autre
+ *     livre retiré), Bâton de tonnerre et de foudre (part de dégâts vide retirée).
  *  2. Correction coupée (réglage `dataFixes`), un second acteur avec la Baguette des toiles : le diagnostic « Donnée premium à corriger »
  *     la trouve, la répare après sauvegarde, et ne la trouve plus.
  *  3. Bâton de surpuissance équipé et harmonisé sur le premier acteur : sa CA monte de 2.
@@ -26,7 +28,12 @@ const CHECKS = [
   [`${DMG}.dmgRodOfLordlyMi`, "Sceptre de puissance seigneuriale", { "system.activities.apuqiDlUPRWfQkhf.damage.parts.0.bonus": "@mod" }],
   [`${DMG}.dmgLaserPistol00`, "Pistolet laser", { "system.activities.dasReloadAction0.consumption.targets.0.value": "-50" }],
   [`${DMG}.dmgUnarmedStrike`, "Attaque à mains nues (Guide)", { "system.damage.base.bonus": "1 + @mod", "system.damage.base.custom.enabled": false }],
-  [`${PHB}.phbUnarmedStrike`, "Attaque à mains nues (Manuel, déjà juste)", { "system.damage.base.bonus": "1 + @mod" }]
+  [`${PHB}.phbUnarmedStrike`, "Attaque à mains nues (Manuel, déjà juste)", { "system.damage.base.bonus": "1 + @mod" }],
+  // §457 : liens d'effet recopiés d'un autre objet, part de dégâts vide.
+  [`${DMG}.dmgHorseshoesOfA`, "Fers du zéphyr", { "effect:AYtAkgcEHRws0Qeo:system.changes.0.key": "system.attributes.movement.ignoredDifficultTerrain", "system.activities.Bm8dAa2MyA5NhcPU.effects.0._id": "AYtAkgcEHRws0Qeo" }],
+  [`${DMG}.dmgManualOfBodil`, "Manuel de vitalité", { "system.activities.L5OnUjZIn27NHd2E.effects.length": 0 }],
+  [`${DMG}.dmgTomeOfClearTh`, "Traité de perspicacité", { "system.activities.OCFufJcLGbTJqDqS.effects.length": 0 }],
+  [`${DMG}.dmgStaffOfThunde`, "Bâton de tonnerre et de foudre", { "system.activities.EtOETCHaEK0mcw03.damage.parts.length": 1 }]
 ];
 
 const read = (item, path) => {

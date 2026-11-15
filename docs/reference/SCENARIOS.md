@@ -269,7 +269,7 @@ la sélection sans rien jouer.
 | `repasse-k9` |  | §330 | portes de taille (sauvegarde) et de type lues dans le texte (Arène des sorts) |
 | `repasse-marteau` |  | §352 | Marteau de tonnerre : coup de tonnerre autour de la cible touchée |
 | `repasse-mj` |  | §366 | Amitié rompue par le lanceur, Avantage aux attaques du Bouffon |
-| `repasse-o1` |  | §335 | donnée premium des objets corrigée à la création et par le diagnostic |
+| `repasse-o1` |  | §335 §457 | donnée premium des objets corrigée à la création et par le diagnostic |
 | `repasse-o2` |  | §336 | sauvegardes et défenses d'objets (porté et harmonisé, Antidote, Broche de défense) |
 | `repasse-o3` |  | §337 | Baguette de paralysie (durée, sauvegarde répétée), Huile de taggit (réveil) |
 | `repasse-o4` |  | §338 | lancers qui remplacent une attaque, zone qui prend son origine, invocation d'objet au combat |
