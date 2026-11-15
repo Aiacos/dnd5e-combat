@@ -279,7 +279,7 @@ describe("contenu livré", () => {
       "symbiotic-being", "symbol", "synaptic-static", "tactical-assessment", "tactical-charge", "tactical-mind", "tactical-shift",
       "talisman-of-pure-good", "talisman-of-ultimate-evil", "tashas-hideous-laughter", "tavern-brawler", "telekinesis", "telekinetic",
       "telekinetic-thrust", "teleport", "tentacle-rod", "terrifying-aura", "thiefs-reflexes", "thorn-whip", "thrown-weapon-fighting",
-      "thunderous-smite", "thunderwave", "tinderbox", "toll-the-dead", "tome-of-clear-thought", "torch", "torpor", "touch-of-death", "toxic-escape", "trampling-charge",
+      "thunderous-smite", "thunderwave", "tinderbox", "toll-the-dead", "tome-of-clear-thought", "tome-of-leadership-and-influence", "tome-of-understanding", "torch", "torpor", "touch-of-death", "toxic-escape", "trampling-charge",
       "travel-along-the-tree", "trebuchet", "tricksters-transposition", "trip-attack", "true-resurrection", "true-strike", "tsunami",
       "twinned-spell", "umbral-dagger", "umbral-form", "unarmed-fighting", "unarmed-strike", "uncanny-dodge", "undead-fortitude", "unraveling-flesh",
       "unseen-servant", "valor-extra-attack", "vampiric-bite", "vampiric-touch", "vanish", "vicious-mockery", "vile-appearance",

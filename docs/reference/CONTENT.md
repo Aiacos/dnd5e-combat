@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-881 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+883 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -66,7 +66,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `curesAll` | 7 | `elixir-of-health`, `hand-of-ultimate-mercy`, `heal`, `keoghtoms-ointment`, `mass-heal`, `potion-of-vitality`, … |
 | `curesOn` | 5 | `dispel-evil-and-good`, `hand-of-healing`, `lay-on-hands`, `physicians-touch`, `restoring-touch` |
 | `damageShield` | 2 | `resistance`, `ring-of-warmth` |
-| `dataFixes` | 72 | `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `bead-of-force`, `belt-of-dwarvenkind`, … |
+| `dataFixes` | 74 | `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `bead-of-force`, `belt-of-dwarvenkind`, … |
 | `devours` | 1 | `blackrazor` |
 | `difficultTerrain` | 16 | `black-tentacles`, `blade-barrier`, `conjure-minor-elementals`, `earthquake`, `entangle`, `evards-black-tentacles`, … |
 | `discharge` | 1 | `path-to-the-grave` |
@@ -117,7 +117,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `fortitude` | 1 | `undead-fortitude` |
 | `freeSomatic` | 1 | `war-caster` |
 | `globe` | 2 | `antimagic-field`, `globe-of-invulnerability` |
-| `gmAlert` | 52 | `abjure-foes`, `antilife-shell`, `antimagic-field`, `boon-of-fate`, `compulsion`, `conjure-elemental`, … |
+| `gmAlert` | 48 | `abjure-foes`, `antilife-shell`, `antimagic-field`, `boon-of-fate`, `compulsion`, `conjure-elemental`, … |
 | `grants` | 1 | `dragons-breath` |
 | `grantsAction` | 1 | `action-surge` |
 | `grantsConditionImmunities` | 3 | `ancient-might`, `natures-ward`, `ring-of-free-action` |
@@ -180,6 +180,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `onFell` | 1 | `dark-ones-blessing` |
 | `onHit` | 1 | `dagger-of-venom` |
 | `onNatural1` | 6 | `aberrant-anatomy`, `echoing-soul`, `gathered-whispers`, `living-shadow`, `symbiotic-being`, `watchers` |
+| `onUsesSpent` | 6 | `manual-of-bodily-health`, `manual-of-gainful-exercise`, `manual-of-quickness-of-action`, `tome-of-clear-thought`, `tome-of-leadership-and-influence`, `tome-of-understanding` |
 | `openHand` | 1 | `open-hand-technique` |
 | `opportunityDisadvantage` | 2 | `boots-of-speed`, `speedy` |
 | `orders` | 1 | `command` |

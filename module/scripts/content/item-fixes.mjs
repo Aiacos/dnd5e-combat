@@ -279,14 +279,22 @@ export const ITEM_FIXES = Object.freeze({
   },
   // Robe aux étoiles : « +1 aux jets de sauvegarde » — aucun effet.
   "robe-of-stars": { dataFixes: [{ effect: "dasRobeOfStars00", create: worn("Robe of Stars", [change("system.bonuses.abilities.save", "add", "+1")]) }] },
-  // Manuel de vivacité : « Lire » renvoie à un effet qui n'est pas celui de l'item ; le bénéfice vient au bout de 48 heures de lecture (au MJ).
-  "manual-of-quickness-of-action": { gmAlert: { key: "ManuelVivacite" }, dataFixes: [{ path: "system.activities.MeBH48FuUmQFEhUM.effects", from: [{ _id: "9npFjYvEL3twc99F" }], value: [] }] },
-  // §457 : même copier-coller du Guide 2.0.0 (le SRD 6.1 n'a pas ce lien) — « Read » des trois autres livres à 48 heures de lecture
-  // renvoie à l'effet d'un autre livre (« Leader », Charisme, du Traité d'autorité ; « Understanding », Sagesse, du Traité de
-  // compréhension) : retiré, et le MJ prévenu comme pour le Manuel de vivacité.
-  "manual-of-gainful-exercise": { gmAlert: { key: "ManuelVivacite" }, dataFixes: [{ path: "system.activities.QoMjlu00wQebXPDg.effects", from: [{ _id: "9npFjYvEL3twc99F" }], value: [] }] },
-  "manual-of-bodily-health": { gmAlert: { key: "ManuelVivacite" }, dataFixes: [{ path: "system.activities.L5OnUjZIn27NHd2E.effects", from: [{ _id: "9npFjYvEL3twc99F" }], value: [] }] },
-  "tome-of-clear-thought": { gmAlert: { key: "ManuelVivacite" }, dataFixes: [{ path: "system.activities.OCFufJcLGbTJqDqS.effects", from: [{ _id: "jXvtCEBoDCydH8fa" }], value: [] }] },
+  // §457–§458 : les six livres « 48 heures de lecture en 6 jours » du Guide (+2 à une caractéristique, maximum 30). « Read » coche une
+  // heure (48 utilisations). Sa donnée posait l'effet d'un autre livre (copier-coller du Guide 2.0.0 : Vivacité, Exercices physiques,
+  // Vitalité, Perspicacité) ou le sien à chaque heure (Autorité, Compréhension) : retiré ; le +2 est posé une fois, quand la dernière
+  // heure épuise le livre (`onUsesSpent`, runtime/uses-spent.mjs). Il remplace l'alerte au MJ des §366 et §457.
+  "manual-of-quickness-of-action": { onUsesSpent: { activity: "MeBH48FuUmQFEhUM", effects: ["yjQAL2g65jahNoBP"] },  // Dextérité
+    dataFixes: [{ path: "system.activities.MeBH48FuUmQFEhUM.effects", from: [{ _id: "9npFjYvEL3twc99F" }], value: [] }] },
+  "manual-of-gainful-exercise": { onUsesSpent: { activity: "QoMjlu00wQebXPDg", effects: ["ME2J4WX5cDLqGWDW"] },  // Force
+    dataFixes: [{ path: "system.activities.QoMjlu00wQebXPDg.effects", from: [{ _id: "9npFjYvEL3twc99F" }], value: [] }] },
+  "manual-of-bodily-health": { onUsesSpent: { activity: "L5OnUjZIn27NHd2E", effects: ["7W1n7zchV0g7BKyq"] },  // Constitution
+    dataFixes: [{ path: "system.activities.L5OnUjZIn27NHd2E.effects", from: [{ _id: "9npFjYvEL3twc99F" }], value: [] }] },
+  "tome-of-clear-thought": { onUsesSpent: { activity: "OCFufJcLGbTJqDqS", effects: ["nDtcdGVAy36CP4Wn"] },  // Intelligence
+    dataFixes: [{ path: "system.activities.OCFufJcLGbTJqDqS.effects", from: [{ _id: "jXvtCEBoDCydH8fa" }], value: [] }] },
+  "tome-of-leadership-and-influence": { onUsesSpent: { activity: "3dQNGt7ALqZaPgkD", effects: ["9npFjYvEL3twc99F"] },  // Charisme
+    dataFixes: [{ path: "system.activities.3dQNGt7ALqZaPgkD.effects", from: [{ _id: "9npFjYvEL3twc99F" }], value: [] }] },
+  "tome-of-understanding": { onUsesSpent: { activity: "5cPQGohyjYHSemQF", effects: ["jXvtCEBoDCydH8fa"] },  // Sagesse
+    dataFixes: [{ path: "system.activities.5cPQGohyjYHSemQF.effects", from: [{ _id: "jXvtCEBoDCydH8fa" }], value: [] }] },
   // §457 : Fers du zéphyr — « Attach Horseshoes » pose l'effet « Faster » des Fers de rapidité (`9lS2…`, absent de l'item), et l'item a
   // perdu le sien. Recréé d'après le SRD 6.1 (`equipment24`) : ignorer le terrain difficile.
   "horseshoes-of-a-zephyr": { dataFixes: [

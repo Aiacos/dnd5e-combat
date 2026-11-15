@@ -9,10 +9,11 @@ const book = (activity, wrong) => ({ effects: [{ _id: "ownBookEffect000" }], sys
 describe("objets du Guide : liens d'effet recopiés d'un autre objet, part de dégâts vide (dataFixes)", () => {
   for ( const [ident, activity, wrong] of [["manual-of-gainful-exercise", "QoMjlu00wQebXPDg", "9npFjYvEL3twc99F"],
     ["manual-of-bodily-health", "L5OnUjZIn27NHd2E", "9npFjYvEL3twc99F"], ["tome-of-clear-thought", "OCFufJcLGbTJqDqS", "jXvtCEBoDCydH8fa"]] ) {
-    it(`${ident} : « Read » ne pose plus l'effet d'un autre livre, et le MJ est prévenu`, () => {
+    it(`${ident} : « Read » ne pose plus l'effet d'un autre livre ; le +2 vient quand la lecture épuise le livre`, () => {
       const plan = dataFixPlan(book(activity, wrong), ITEM_FIXES[ident].dataFixes);
       expect(plan.item[`system.activities.${activity}.effects`]).toEqual([]);
-      expect(ITEM_FIXES[ident].gmAlert?.key).toBe("ManuelVivacite");
+      expect(ITEM_FIXES[ident].onUsesSpent?.activity).toBe(activity);
+      expect(ITEM_FIXES[ident].gmAlert).toBeUndefined();
     });
   }
 
@@ -35,5 +36,27 @@ describe("objets du Guide : liens d'effet recopiés d'un autre objet, part de d�
     const parts = plan.item["system.activities.EtOETCHaEK0mcw03.damage.parts"];
     expect(parts).toHaveLength(1);
     expect(parts[0]).toMatchObject({ number: 2, denomination: 6, types: ["lightning"] });
+  });
+
+  it("§458 : les six livres posent leur +2 à la fin de la lecture, jamais à chaque heure", async () => {
+    const { validateEntry } = await import("../module/scripts/core/content/entry.mjs").catch(() => ({}));
+    for ( const ident of ["manual-of-quickness-of-action", "manual-of-gainful-exercise", "manual-of-bodily-health", "tome-of-clear-thought",
+      "tome-of-leadership-and-influence", "tome-of-understanding"] ) {
+      const { activity, effects } = ITEM_FIXES[ident].onUsesSpent;
+      expect(effects).toHaveLength(1);
+      const fix = ITEM_FIXES[ident].dataFixes.find(d => d.path === `system.activities.${activity}.effects`);
+      expect(fix.value).toEqual([]);
+      if ( validateEntry ) expect(validateEntry(ITEM_FIXES[ident], { at: ident })).toEqual([]);
+    }
+  });
+});
+
+describe("§458 : la clé onUsesSpent est validée", () => {
+  it("refuse une forme fausse", async () => {
+    const { validateEntry } = await import("../module/scripts/core/content/entry.mjs");
+    expect(validateEntry({ onUsesSpent: { activity: "MeBH48FuUmQFEhUM", effects: ["yjQAL2g65jahNoBP"] } })).toEqual([]);
+    expect(validateEntry({ onUsesSpent: { activity: "court", effects: ["yjQAL2g65jahNoBP"] } }).length).toBe(1);
+    expect(validateEntry({ onUsesSpent: { activity: "MeBH48FuUmQFEhUM", effects: [] } }).length).toBe(1);
+    expect(validateEntry({ onUsesSpent: { activity: "MeBH48FuUmQFEhUM", effects: ["yjQAL2g65jahNoBP"], extra: 1 } }).length).toBe(1);
   });
 });

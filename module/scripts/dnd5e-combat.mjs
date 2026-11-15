@@ -25,6 +25,7 @@ import { registerGates } from "./runtime/gates.mjs";
 import { registerPortent } from "./runtime/portent.mjs";
 import { registerGrimoire } from "./runtime/grimoire.mjs";
 import { registerLeaves } from "./runtime/leaves.mjs";
+import { registerUsesSpent } from "./runtime/uses-spent.mjs";
 import { registerFlee } from "./runtime/flee.mjs";
 import { registerDispel } from "./runtime/dispel.mjs";
 import { registerTriggers } from "./runtime/triggers.mjs";
@@ -390,6 +391,7 @@ Hooks.once("init", () => {
   gated(registerPortent);   // §36 : Présage (Repos long, requête du devin)
   gated(registerGrimoire);   // §139 : rituels sans emplacement, Restauration magique
   gated(registerLeaves);   // §456 : un objet retiré de la fiche y laisse ses effets déclarés (Marque du sacrifice)
+  gated(registerUsesSpent);   // §458 : un objet aux utilisations épuisées (livre lu 48 heures) pose ses effets déclarés
   gated(registerFlee);   // §147 : Murmures dissonants, la fuite par la Réaction
   gated(registerDispel);   // §37.2 : Dissipation de la magie
   gated(registerTriggers);

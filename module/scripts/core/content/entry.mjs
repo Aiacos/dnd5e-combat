@@ -198,6 +198,12 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   if ( ("fadesOnLongRest" in entry) && (!Array.isArray(entry.fadesOnLongRest) || !entry.fadesOnLongRest.length || !entry.fadesOnLongRest.every(isId)) ) {
     errors.push(`${at}fadesOnLongRest: list of effect ids (16 characters)`);
   }
+  if ( ("onUsesSpent" in entry) ) {
+    const u = entry.onUsesSpent;
+    const ok = u && (typeof u === "object") && !Array.isArray(u) && isId(u.activity) && Array.isArray(u.effects) && u.effects.length
+      && u.effects.every(isId) && Object.keys(u).every(k => ["activity", "effects"].includes(k));
+    if ( !ok ) errors.push(`${at}onUsesSpent: { activity: activity id, effects: [effect ids] }`);
+  }
   if ( ("leavesEffects" in entry) && (!Array.isArray(entry.leavesEffects) || !entry.leavesEffects.length || !entry.leavesEffects.every(isId)) ) {
     errors.push(`${at}leavesEffects: list of effect ids (16 characters)`);
   }
