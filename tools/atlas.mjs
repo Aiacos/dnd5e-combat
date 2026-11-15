@@ -24,6 +24,7 @@ import { ClassicLevel } from "classic-level";
 import { CONTENT, SOURCES } from "../module/scripts/content/index.mjs";
 import { ENTRY_KEYS, STEP_TYPES } from "../module/scripts/core/content/enums.mjs";
 import { MOMENTS } from "../module/scripts/core/triggers.mjs";
+import { dataFixPlan } from "../module/scripts/core/data-fixes.mjs";
 
 const [out, data = "F:/Foundry V14/Data"] = process.argv.slice(2);
 if ( !out ) { console.error("usage : node tools/atlas.mjs <dossier de sortie> [Data]"); process.exit(1); }
@@ -112,6 +113,8 @@ const END_EVENTS = [
     re: /\buntil the (start|end) of (your|its) turn\b/i }
 ];
 const END_STATUS = { das: "DAS", sys: "système", man: "manuel" };
+/** Clés de contenu qui ne portent pas de règle de jeu (correction de donnée, alerte au MJ, source). */
+const NOT_A_RULE = new Set(["source", "dataFixes", "gmAlert"]);
 // Passages qui nomment ce qu'un champ cherche sans l'annoncer (§450, §451) : retirés du texte avant le test de ce champ. Relevé sur
 // tous les modules premium : un filtre général (« not », « no », « isn't » avant la correspondance) ôterait de vrais dégâts et de vraies
 // sauvegardes (« isn't cast into the fissure but takes 4d6 Psychic damage ») ; chaque champ a donc ses formulations, précises.
@@ -331,12 +334,45 @@ function identOf(item, actorId) {
   return (actorId ? SOURCES[`${actorId}.${item._id}`] : null) ?? SOURCES[item._id] ?? (item.system?.identifier || kebab(item.name));
 }
 
-function describe({ item, tab, mod, version, pack, owner, actorId, frEntry, effects }) {
-  const s = item.system ?? {};
-  const acts = Object.values(s.activities ?? {});
-  const ident = identOf(item, actorId);
+/** Écrit une valeur à un chemin à points, en créant les objets intermédiaires. */
+function setPath(object, path, value) {
+  const keys = String(path).split(".");
+  const last = keys.pop();
+  let o = object;
+  for ( const k of keys ) o = (o[k] && (typeof o[k] === "object")) ? o[k] : (o[k] = {});
+  o[last] = value;
+}
+
+/**
+ * §455 : la donnée telle que le Core la rend, `dataFixes` appliqués (core/data-fixes.mjs : à la création de l'objet et par le diagnostic).
+ * L'empreinte de l'historique (`h`) reste celle de la donnée premium brute.
+ */
+function withDataFixes(item, effects, fixes) {
+  if ( !fixes ) return { item, effects, fixed: [] };
+  const plan = dataFixPlan({ ...item, effects }, fixes);
+  if ( !plan.fields.length ) return { item, effects, fixed: [] };
+  const out = structuredClone(item);
+  for ( const [path, value] of Object.entries(plan.item) ) setPath(out, path, value);
+  const fixedEffects = effects.map(e => structuredClone(e));
+  for ( const { _id, ...update } of plan.effects ) {
+    const effect = fixedEffects.find(e => e._id === _id);
+    if ( effect ) for ( const [path, value] of Object.entries(update) ) setPath(effect, path, value);
+  }
+  fixedEffects.push(...plan.create);
+  return { item: out, effects: fixedEffects, fixed: plan.fields };
+}
+
+function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEntry, effects: rawEffects }) {
+  const ident = identOf(rawItem, actorId);
   const entry = CONTENT[ident];
+  const { item, effects, fixed } = withDataFixes(rawItem, rawEffects, entry?.dataFixes);
+  const s = item.system ?? {};
+  const rawS = rawItem.system ?? {};
+  const acts = Object.values(s.activities ?? {});
   const engine = entry ? Object.keys(entry).filter(k => k !== "source") : [];
+  const inCode = !entry && codeRefs.has(ident);
+  // Le Core porte-t-il une règle pour cet item (entrée de contenu autre qu'une correction de donnée, ou code du moteur) ?
+  const coversRule = inCode || engine.some(k => !NOT_A_RULE.has(k));
   const desc = text(s.description?.value);
   const effectIds = new Set(effects.map(e => e._id));
   const first = acts[0] ?? {};
@@ -396,11 +432,16 @@ function describe({ item, tab, mod, version, pack, owner, actorId, frEntry, effe
   // §438 : un « effet distant » de dnd5e 6.1 (`uuid` vers un compendium d'effets, Manuel 3.0.0) n'est pas sur l'item : pas un défaut.
   for ( const a of acts ) for ( const e of a.effects ?? [] ) if ( !e.uuid && !effectIds.has(e._id) ) bad.push(`effet lié absent (${a.name || a.type})`);
   const entryText = entry ? JSON.stringify(entry) : "";
+  // §455 : un effet de la donnée que rien ne pose, sur un item dont le Core porte la règle par son propre mécanisme (Témérité, Aura de
+  // dévotion, Fragilisation occulte), n'est pas un défaut : une note.
+  const notes = [];
   for ( const e of effects ) {
     if ( e.transfer || posed.has(e._id) || entryText.includes(e._id) || entryText.includes(JSON.stringify(e.name)) ) continue;
     if ( (e.type === "enchantment") && acts.some(a => a.type === "enchant") ) continue;
-    bad.push(`effet jamais posé : ${e.name}`);
+    if ( coversRule ) notes.push(`effet de la donnée inutilisé, règle portée par le moteur : ${e.name}`);
+    else bad.push(`effet jamais posé : ${e.name}`);
   }
+  if ( fixed.length ) notes.push(`donnée corrigée par le moteur (dataFixes) : ${fixed.length} champ${fixed.length > 1 ? "s" : ""}`);
 
   // Ce que le texte annonce, chaque champ testé sur le texte privé de ses passages niés (`NEGATED`). Soins (§450) : une interdiction
   // (« can't regain Hit Points or gain Temporary Hit Points ») ou une condition (« until it regains any Hit Points ») n'annonce aucun
@@ -460,7 +501,6 @@ function describe({ item, tab, mod, version, pack, owner, actorId, frEntry, effe
   S.fi = endList.some(e => e.s === "man") ? "man" : endList.some(e => e.s === "sys") ? "sys" : endList.length ? "das"
     : effectEnd.length ? "sys" : "";
   const script = engine.filter(k => !CAT_OF.has(k));
-  const inCode = !entry && codeRefs.has(ident);
   S.sp = (script.length || inCode) ? "das" : "";
   // Progressions dnd5e (caractéristiques, maîtrises, sorts accordés) : ce que le système applique seul à l'ajout de l'item.
   const advancements = [...new Set(Object.values(s.advancement ?? {}).map(a => ADVANCEMENT[a.type] ?? a.type))];
@@ -486,8 +526,8 @@ function describe({ item, tab, mod, version, pack, owner, actorId, frEntry, effe
   const sweep = sweeps.get(ident);
   const scen = ident ? scenariosOf(ident) : [];
   const commits = commitsOf.get(ident) ?? [];
-  const dataHash = hash({ s: { activities: s.activities, damage: s.damage, duration: s.duration, target: s.target, range: s.range, uses: s.uses,
-    properties: s.properties, level: s.level }, e: effects.map(e => ({ c: e.changes ?? e.system?.changes, st: e.statuses, t: e.transfer })) });
+  const dataHash = hash({ s: { activities: rawS.activities, damage: rawS.damage, duration: rawS.duration, target: rawS.target, range: rawS.range, uses: rawS.uses,
+    properties: rawS.properties, level: rawS.level }, e: rawEffects.map(e => ({ c: e.changes ?? e.system?.changes, st: e.statuses, t: e.transfer })) });
 
   return {
     k: uid, t: tab, n: item.name, f: frName, i: ident,
@@ -505,7 +545,7 @@ function describe({ item, tab, mod, version, pack, owner, actorId, frEntry, effe
     pg: advancements.join(" · "),
     fi: [...effectEnd.map(x => `effet ${x}`), ...endList.map(e => `${e.label} (${END_STATUS[e.s]})`)].join(" · "), fe: endList.map(e => `${e.id}:${e.s}`),
     eng: inCode ? ["code du moteur"] : engine, ej: entry ? JSON.stringify(entry).slice(0, 1200) : "",
-    S, g, bad,
+    S, g, bad, nb: notes,
     rd: rd ? rd.status : "", rdm: rd?.missing ?? "",
     sw: sweep ? `${sweep.ok ? "✓" : "✗"} ${sweep.at}${sweep.note ? ` — ${sweep.note}` : ""}` : "",
     sn: scen.length, sl: scen.slice(0, 8).join(", "),
