@@ -338,3 +338,38 @@ describe("§463 : téléportation de soi avec une zone à l'arrivée", () => {
     expect(validateEntry(layer)).toEqual([]);
   });
 });
+
+describe("§464 : téléportation de soi offerte après l'attaque", () => {
+  const ATK = "eeeeeeeeeeeeeeee";
+  const DMG = "ffffffffffffffff";
+
+  it("« Immediately after the attack hits or misses, … can teleport up to 30 feet » : `after: \"attack\"`, la distance du texte", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const html = "<p>Melee Attack Roll: +6, reach 5 ft. Hit: 8 Slashing damage. Immediately after the attack hits or misses, the spirit can teleport "
+      + "up to 30 feet to an unoccupied space it can see.</p>";
+    const rule = monsterSelfTeleport(html, [{ id: ATK, type: "attack", range: { units: "self" } }]);
+    expect(rule).toEqual({ activity: ATK, distance: 30, units: "ft", after: "attack" });
+    expect(validateEntry({ teleport: rule })).toEqual([]);
+  });
+
+  it("« Hit or Miss: The X can teleport up to 60 feet », une activité de dégâts en plus (critique) : de même", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const html = "<p>Hit: 9 Slashing damage. Critical Hit: 4 extra damage. Hit or Miss: The knight can teleport up to 60 feet to an unoccupied space it can see.</p>";
+    expect(monsterSelfTeleport(html, [{ id: ATK, type: "attack" }, { id: DMG, type: "damage" }]))
+      .toEqual({ activity: ATK, distance: 60, units: "ft", after: "attack" });
+  });
+
+  it("pas lu : deux attaques, une sauvegarde à côté, une téléportation sans « après l'attaque »", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const html = "<p>Hit: 8 damage. Hit or Miss: The knight can teleport up to 60 feet to an unoccupied space it can see.</p>";
+    expect(monsterSelfTeleport(html, [{ id: ATK, type: "attack" }, { id: DMG, type: "attack" }])).toBeNull();
+    expect(monsterSelfTeleport(html, [{ id: ATK, type: "attack" }, { id: DMG, type: "save" }])).toBeNull();
+    expect(monsterSelfTeleport("<p>Hit: 8 damage. The knight can teleport up to 60 feet to an unoccupied space it can see.</p>",
+      [{ id: ATK, type: "attack" }])).toBeNull();
+  });
+
+  it("le schéma : `after` vaut \"attack\" ou rien", () => {
+    expect(validateEntry({ teleport: { distance: 30, units: "ft", activity: ATK, after: "attack" } })).toEqual([]);
+    expect(validateEntry({ teleport: { distance: 30, units: "ft", after: "save" } }).join()).toMatch(/after/);
+  });
+});

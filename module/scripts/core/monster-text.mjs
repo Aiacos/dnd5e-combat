@@ -693,9 +693,17 @@ function resolveLookups(html, activity) {
  * @param {Array<{id: string, type?: string, range?: {value?: *, units?: string, special?: string},
  *   template?: boolean|{type?: string, size?: *, units?: string, count?: *},
  *   target?: {type?: string, count?: *, special?: string}}>} [activities]
- * @returns {{activity: string, distance?: number, units?: string, passengers?: object, area?: "left"|"arrival"}|null}
+ * @returns {{activity: string, distance?: number, units?: string, passengers?: object, area?: "left"|"arrival", after?: "attack"}|null}
  */
 export function monsterSelfTeleport(html, activities=[]) {
+  // §464 : « Immediately after the attack hits or misses, the spirit can teleport up to 30 feet… », « Hit or Miss: The X can teleport up
+  // to 60 feet… » — une seule activité d'attaque (d'autres, de dégâts seuls, peuvent l'accompagner : un supplément sur un critique) ; la
+  // distance est celle du texte (la portée de l'attaque est son allonge).
+  const attacks = activities.filter(a => a.type === "attack");
+  if ( (attacks.length === 1) && activities.every(a => ["attack", "damage"].includes(a.type)) ) {
+    const after = monsterTeleportAfterAttack(html);
+    return after ? { activity: attacks[0].id, distance: after, units: "ft", after: "attack" } : null;
+  }
   if ( activities.length !== 1 ) return null;
   const [activity] = activities;
   const text = plainText(resolveLookups(html, activity));
@@ -731,6 +739,17 @@ export function monsterSelfTeleport(html, activities=[]) {
   }
   if ( area ) rule.area = area;
   return rule;
+}
+
+/**
+ * §464 : la distance (pieds) d'une téléportation que le texte offre une fois l'attaque jugée, touchée ou ratée, ou null.
+ * @param {string} html
+ * @returns {number|null}
+ */
+function monsterTeleportAfterAttack(html) {
+  const text = plainText(html);
+  const m = text.match(/\b(?:Immediately after the attack hits or misses,|Hit or Miss\s*:)\s*(?:the [^.]*?|…) can teleport up to (\d+) (?:feet|ft)\.? to an unoccupied space (?:it|he|she|they) can see\b/i);
+  return m ? Number(m[1]) : null;
 }
 
 /**

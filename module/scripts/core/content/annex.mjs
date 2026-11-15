@@ -110,7 +110,9 @@ export function validateTeleport(teleport, at, errors) {
   // §462 : `area: "left"` — la zone de l'activité se pose d'office sur l'espace quitté (avant le saut), sans son auteur ; §463 : `"arrival"`,
   // autour de lui après le saut.
   if ( ("area" in teleport) && !["left", "arrival"].includes(teleport.area) ) errors.push(`${at}.area: "left", "arrival" or absent`);
-  for ( const key of Object.keys(teleport) ) if ( !["distance", "units", "activity", "then", "passengers", "unseen", "maxLight", "area"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
+  // §464 : `after: "attack"` — la téléportation s'offre une fois l'attaque de l'activité jugée (touchée ou ratée), pas à l'utilisation.
+  if ( ("after" in teleport) && (teleport.after !== "attack") ) errors.push(`${at}.after: "attack" or absent`);
+  for ( const key of Object.keys(teleport) ) if ( !["distance", "units", "activity", "then", "passengers", "unseen", "maxLight", "area", "after"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
 }
 
 export function validateTargets(targets, at, facts, errors) {

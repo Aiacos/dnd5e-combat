@@ -193,6 +193,7 @@
   "DND5ECOMBAT.Teleport.CaseOccupee": "Téléportation : il faut un espace inoccupé.",
   "DND5ECOMBAT.Teleport.Antimagie": "Téléportation : impossible vers ou depuis {item}.",
   "DND5ECOMBAT.Teleport.NonVue": "Téléportation : il faut un espace que vous voyez.",
+  "DND5ECOMBAT.Teleport.Apres": "{item} : {name} peut se téléporter jusqu'à {distance} {units} — choisissez la case (Échap : rester).",
   "DND5ECOMBAT.Ruee.Choisir": "{item} : cliquez la case d’arrivée, en ligne droite et à votre Vitesse au plus (clic droit ou Échap pour renoncer).",
   "DND5ECOMBAT.Ruee.Personne": "personne sur le trajet",
   "DND5ECOMBAT.Ruee.SurPlace": "Ruée : choisissez une autre case que la vôtre.",

@@ -145,7 +145,7 @@ export function selfTeleportOf(activity) {
   const reach = teleportReach(rule, activity.range);
   if ( !reach ) return null;
   return { native: false, distance: reach.distance, units: reach.units, then: rule.then ?? null, passengers: rule.passengers ?? null,
-    area: rule.area ?? null };
+    area: rule.area ?? null, after: rule.after ?? null };
 }
 
 /**

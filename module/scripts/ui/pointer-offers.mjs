@@ -14,6 +14,7 @@ import { masteryOf, cleaveCandidates, cleaveSpent } from "../adapter/mastery.mjs
 import { originItemOf } from "../adapter/facts.mjs";
 import { rollerFor } from "../adapter/concentration.mjs";
 import { loc, log } from "../runtime/shared.mjs";
+import { lengthIn } from "../adapter/units.mjs";
 import { openTargeting, reticle, setting, stormAfterUse } from "./pointer.mjs";
 import { offerChainedPick } from "./pick-targets.mjs";
 
@@ -64,6 +65,26 @@ export function onResolutionSettled(message) {
   if ( resolution.step === "done" ) offerCleave(message, resolution);
   if ( message.getFlag(MODULE_ID, "flurry") ) offerFlurry(message.getAssociatedActor?.());
   if ( resolution.step === "done" ) offerLeap(message, resolution);
+  offerTeleportAfterAttack(message, resolution);
+}
+
+/**
+ * §464 : « aussitôt après que l'attaque touche ou rate, l'esprit peut se téléporter jusqu'à 9 m » (Griffes de l'esprit yugoloth) — l'attaque
+ * jugée, la visée de la téléportation s'ouvre chez son auteur (Échap : rester). La validation, le refus forçable et le retour pour la table
+ * sont ceux de toute téléportation de soi (runtime/teleport.mjs).
+ */
+function offerTeleportAfterAttack(message, resolution) {
+  if ( !resolution.plan?.attack || !setting("teleportPlanning") ) return;
+  const activity = message.getAssociatedActivity?.();
+  const rule = (activity?.type === "attack") ? selfTeleportOf(activity) : null;
+  if ( rule?.after !== "attack" ) return;
+  const token = activity.getUsageToken?.() ?? null;
+  if ( !token?.object ) return;
+  const units = token.parent.grid.units;
+  const distance = Math.round(lengthIn(rule.distance, rule.units, units) * 10) / 10;
+  ui.notifications.info(loc("Teleport.Apres", { name: token.name, item: activity.item.name, distance, units }));
+  log(`${activity.item.name}: teleport offered after the attack (${distance} ${units})`);
+  teleportSelf(activity).catch(err => console.error(`${MODULE_ID} | teleport after attack`, err));
 }
 
 /**
@@ -217,7 +238,8 @@ export function onPostUseActivity(activity, usageConfig, results) {
   // §438 : la sauvegarde qui suit une manifestation (Courroux des mers 3.0.0), sous la même action.
   if ( results ) offerChainedPick(activity, results).catch(err => console.error(`${MODULE_ID} | chained choice`, err));
   if ( results && stormOf(activity?.item) ) return void stormAfterUse(activity, usageConfig).catch(err => console.error(`${MODULE_ID} | storm`, err));
-  if ( !results || !setting("teleportPlanning") || !selfTeleportOf(activity) ) return;
+  // §464 : une téléportation « après l'attaque » attend que l'attaque soit jugée (`offerTeleportAfterAttack`).
+  if ( !results || !setting("teleportPlanning") || !selfTeleportOf(activity) || selfTeleportOf(activity).after ) return;
   if ( usageConfig?.subsequentActions === false ) return;   // un appelant qui enchaîne lui-même (connecteur, scénarios)
   teleportSelf(activity).catch(err => console.error(`${MODULE_ID} | teleportation`, err));
 }

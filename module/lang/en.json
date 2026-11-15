@@ -193,6 +193,7 @@
   "DND5ECOMBAT.Teleport.CaseOccupee": "Teleport: the space must be unoccupied.",
   "DND5ECOMBAT.Teleport.Antimagie": "Teleport: no one can teleport into or out of {item}.",
   "DND5ECOMBAT.Teleport.NonVue": "Teleport: you must be able to see the space.",
+  "DND5ECOMBAT.Teleport.Apres": "{item}: {name} can teleport up to {distance} {units} — pick the space (Esc: stay).",
   "DND5ECOMBAT.Ruee.Choisir": "{item}: click the destination, in a straight line and within your Speed (right-click or Esc to cancel).",
   "DND5ECOMBAT.Ruee.Personne": "no one along the path",
   "DND5ECOMBAT.Ruee.SurPlace": "Rush: pick a space other than your own.",
