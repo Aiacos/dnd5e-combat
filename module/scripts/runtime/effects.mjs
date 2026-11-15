@@ -21,8 +21,10 @@ function freshStart(effect) {
   if ( !(effect.parent instanceof Actor) ) return;
   const start = Number(effect._source.start?.time);
   const d = effect._source.duration ?? {};
+  // Les unités de temps seulement : une durée en rounds ou en tours ne se compare pas à l'horloge du monde. Ne pas lire
+  // `duration.seconds` : en V14 c'est un raccourci déprécié du cœur (avertissement de compatibilité), nul hors de l'unité « seconds ».
   const seconds = (d.units === "seconds") ? Number(d.value) : (d.units === "minutes") ? Number(d.value) * 60
-    : (d.units === "hours") ? Number(d.value) * 3600 : (d.units === "days") ? Number(d.value) * 86400 : Number(d.seconds);
+    : (d.units === "hours") ? Number(d.value) * 3600 : (d.units === "days") ? Number(d.value) * 86400 : NaN;
   if ( !Number.isFinite(start) || !(seconds > 0) || (start + seconds > game.time.worldTime) ) return;
   effect.updateSource({ start: CONFIG.ActiveEffect.documentClass.getEffectStart?.() ?? { time: game.time.worldTime } });
   log(`${effect.parent.name}: ${effect.name} was created already expired (start ${start} s) — starts now`);
