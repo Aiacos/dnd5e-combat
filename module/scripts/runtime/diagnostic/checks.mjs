@@ -781,7 +781,12 @@ function spellSourceLabel(spell) {
   const source = sourceOf(spell);
   if ( !source.startsWith("Compendium.") ) return loc("Macro.SpellDuplicates.NoSource");
   const id = source.split(".").slice(1, 3).join(".");
-  return game.packs.get(id)?.title ?? id;
+  const pack = game.packs.get(id);
+  if ( !pack ) return id;
+  // Deux compendiums peuvent porter le même titre (« Spells » du Manuel et du SRD) : le paquet qui le livre les distingue.
+  const { packageType, packageName } = pack.metadata;
+  const owner = (packageType === "system") ? game.system?.title : (packageType === "module") ? game.modules.get(packageName)?.title : null;
+  return owner ? `${owner} · ${pack.title}` : pack.title;
 }
 
 /** Les groupes de doublons d'une fiche, avec leurs documents. */
