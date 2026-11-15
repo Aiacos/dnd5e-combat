@@ -8,7 +8,7 @@
 
 import { monsterChoice, monsterDeaths, monsterEndings, monsterPushes, monsterReactions, monsterRecurring, monsterTypeGate, monsterAdvantage,
   monsterSaveDamage, monsterMissingStatus, monsterNoOpportunity, monsterBasicActions, monsterSightGate, monsterImmunity, monsterEffectDurations,
-  monsterReactionWindow, monsterActivationAdvantage, monsterDefense, monsterChargeGate, monsterLightSensitivity } from "./monster-text.mjs";
+  monsterReactionWindow, monsterActivationAdvantage, monsterDefense, monsterChargeGate, monsterLightSensitivity, monsterSelfTeleport } from "./monster-text.mjs";
 import { readDrain, drains } from "./drain.mjs";
 
 /**
@@ -17,7 +17,8 @@ import { readDrain, drains } from "./drain.mjs";
  * @param {string} input.html                 Le texte anglais d'origine (HTML brut, enrichers compris).
  * @param {string|null} [input.identifier]    L'identifiant du moteur.
  * @param {Array<{id: string, name?: string, type?: string, activation?: {type?: string, condition?: string}, effects?: string[],
- *   onSave?: string|null}>} [input.activities]  Les activités, dans l'ordre de l'item.
+ *   onSave?: string|null, range?: {value?: *, units?: string, special?: string}, template?: boolean,
+ *   target?: {type?: string, count?: *, special?: string}}>} [input.activities]  Les activités, dans l'ordre de l'item.
  * @param {Array<{id: string, statuses?: string[], changes?: Array<{key: string, value: *}>}>} [input.effects]  Les effets de l'item.
  * @param {boolean} [input.swallow]           Le contenu livré déclare la brique Avaler (ses dégâts récurrents ne se relisent pas ici).
  * @returns {object|null}
@@ -84,6 +85,9 @@ export function monsterTextLayer({ html, identifier=null, activities=[], effects
   const sight = monsterSightGate(html, acts);
   const gates = [typeGate?.unaffectedIf, sight, immunity?.gate].filter(Boolean);
   const gate = gates.length ? { unaffectedIf: (gates.length > 1) ? { any: gates } : gates[0] } : null;
+  // §461 : la téléportation de soi, à la portée de l'activité (Téléportation des démons, Foulée féerique des esprits…).
+  const teleport = monsterSelfTeleport(html, activities);
+  if ( teleport ) recurringRest.teleport = teleport;
   return (allTriggers.length || Object.keys(deaths).length || choice || Object.keys(restrictions).length || Object.keys(recurringRest).length || gate)
     ? { ...(allTriggers.length ? { triggers: allTriggers } : {}), ...deaths, ...restrictions, ...recurringRest, ...(choice ? { choice } : {}), ...(gate ? { targets: gate } : {}) } : null;
 }

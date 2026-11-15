@@ -11,6 +11,7 @@ import { cellUnder } from "../adapter/movement.mjs";
 import { canSeePoint, isVisionAvailable } from "../adapter/vision.mjs";
 import { lightAt, lightOnToken } from "../adapter/illumination.mjs";
 import { LIGHT } from "../core/illumination.mjs";
+import { teleportReach } from "../core/movement.mjs";
 import { afterTeleportOptions } from "./teleport-options.mjs";
 import { carryPassengers, choosePassengers } from "./passengers.mjs";
 import { loc, notice, log } from "./shared.mjs";
@@ -30,11 +31,12 @@ const refusedTeleports = new Map();   // §411 : uuid du token → `{ to, lines 
 
 /**
  * La portée d'une téléportation, dans l'unité de la scène : celle de l'activité native (`teleport.value`, préparée par
- * dnd5e, teleport-data.mjs), sinon celle que le contenu déclare (`teleport`). null : sans limite.
+ * dnd5e, teleport-data.mjs), sinon celle que le contenu déclare (`teleport`) — §461 : ou, sans distance déclarée, la portée de
+ * l'activité utilisée (capacités de monstres). null : sans limite.
  */
 function teleportLimit(activity, scene) {
   const rule = (activity?.type === "teleport") ? { distance: activity.teleport?.value, units: activity.teleport?.units }
-    : (activity?.item ? contentOf(activity.item).entry?.teleport : null);
+    : (activity?.item ? teleportReach(contentOf(activity.item).entry?.teleport ?? null, activity.range) : null);
   if ( !rule || !Number.isFinite(Number(rule.distance)) ) return null;
   return lengthIn(Number(rule.distance), rule.units, scene.grid.units);
 }
@@ -138,7 +140,10 @@ export function selfTeleportOf(activity) {
   // §264 : les passagers que le contenu déclare valent aussi pour l'activité native (Porte dimensionnelle du SRD).
   if ( (activity?.type === "teleport") && (activity.range?.units === "self") && activity.canPlanTeleport ) return { native: true, passengers: rule?.passengers ?? null };
   if ( !rule || (rule.activity && (rule.activity !== activity.id)) ) return null;
-  return { native: false, distance: rule.distance, units: rule.units, then: rule.then ?? null, passengers: rule.passengers ?? null };
+  // §461 : sans distance déclarée, la portée de l'activité (« teleports up to [portée] ») ; illisible (« soi », spéciale) : pas de téléportation.
+  const reach = teleportReach(rule, activity.range);
+  if ( !reach ) return null;
+  return { native: false, distance: reach.distance, units: reach.units, then: rule.then ?? null, passengers: rule.passengers ?? null };
 }
 
 /**
@@ -214,6 +219,8 @@ export async function teleportSelf(activity) {
   // §264 : qui part avec lui (Porte dimensionnelle), choisi avant le saut ; posé à côté de lui à l'arrivée.
   const passengers = await choosePassengers(token, rule.passengers);
   const done = async () => {
+    // §461 : la table voit et entend la téléportation (règle DAS : retour visible et son chez tous les clients).
+    notice(token, { key: "Retour.Teleporte" }, "gain", { all: true, action: "teleport", outcome: "success" });
     await carryPassengers(token, passengers);
     await afterTeleport(activity, rule); await afterTeleportOptions(activity, token, from); return true;
   };

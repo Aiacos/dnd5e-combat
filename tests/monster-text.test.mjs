@@ -201,3 +201,61 @@ describe("K11 : la moitié des dégâts sur une réussite quand le texte la donn
     expect(monsterSaveDamage("Failure: 9 damage. Success: The target is pushed.", acts)).toBe(null);
   });
 });
+
+describe("§461 : téléportation de soi d'une capacité de monstre, à la portée de son activité", () => {
+  const ID = "aaaaaaaaaaaaaaaa";
+  const utility = (range, extra={}) => [{ id: ID, type: "utility", range, ...extra }];
+  const lookup = p => `[[lookup @range.${p} activity=${ID}]]`;
+
+  it("« teleports up to [portée] » : la portée de l'activité fait la distance (pas de distance écrite)", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const html = `<p>The [[lookup @name lowercase]] teleports up to ${lookup("value")} ${lookup("units")}. to an unoccupied space it can see.</p>`;
+    const rule = monsterSelfTeleport(html, utility({ value: "40", units: "ft" }));
+    expect(rule).toEqual({ activity: ID });
+    expect(validateEntry({ teleport: rule })).toEqual([]);
+    // « can teleport », destination puis portée : de même.
+    expect(monsterSelfTeleport(`<p>The beast can teleport to an unoccupied space it can see within ${lookup("value")} feet, and it bites.</p>`,
+      utility({ value: "30", units: "ft" }))).toEqual({ activity: ID });
+  });
+
+  it("portée « soi » : la distance que le texte donne", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const rule = monsterSelfTeleport("<p>The herald teleports up to 30 feet to an unoccupied space it can see and makes one Bite attack.</p>",
+      utility({ units: "self" }));
+    expect(rule).toEqual({ activity: ID, distance: 30, units: "ft" });
+    expect(validateEntry({ teleport: rule })).toEqual([]);
+    // Ni distance écrite ni portée lisible : rien.
+    expect(monsterSelfTeleport("<p>The herald teleports to an unoccupied space it can see.</p>", utility({ units: "self" }))).toBeNull();
+  });
+
+  it("« along with one willing creature of its choice within 5 feet » : un passager", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const html = `<p>The wolf teleports, along with one willing creature of its choice within [[lookup @target.affects.special activity=${ID}]] of it, up to ${lookup("value")} feet ${lookup("special")}.</p>`;
+    const rule = monsterSelfTeleport(html, utility({ value: "30", units: "ft", special: "to an unoccupied space it can see" },
+      { target: { type: "willing", count: "1", special: "within 5 feet" } }));
+    expect(rule).toEqual({ activity: ID, passengers: { count: 1, within: 5, units: "ft" } });
+    expect(validateEntry({ teleport: rule })).toEqual([]);
+  });
+
+  it("pas lu : sauvegarde ou attaque, gabarit, destination contrainte, autre créature, choix du maître", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const plain = "<p>The fiend teleports up to 60 feet to an unoccupied space it can see.</p>";
+    expect(monsterSelfTeleport(plain, [{ id: ID, type: "save", range: { value: "60", units: "ft" } }])).toBeNull();
+    expect(monsterSelfTeleport(plain, utility({ value: "60", units: "ft" }, { template: true }))).toBeNull();
+    expect(monsterSelfTeleport(plain, [...utility({ value: "60", units: "ft" }), { id: "bbbbbbbbbbbbbbbb", type: "attack" }])).toBeNull();
+    const ft = utility({ value: "60", units: "ft" });
+    expect(monsterSelfTeleport("<p>The fiend teleports to an unoccupied space within 5 feet of a creature it can see.</p>", ft)).toBeNull();
+    expect(monsterSelfTeleport("<p>The tree spirit teleports to an unoccupied space within 5 feet of a second tree.</p>", ft)).toBeNull();
+    expect(monsterSelfTeleport("<p>The demon teleports itself or a willing demon within 10 feet of itself up to 60 feet to an unoccupied space the demon can see.</p>", ft)).toBeNull();
+    expect(monsterSelfTeleport("<p>The steed teleports, along with its rider, to an unoccupied space of your choice up to 60 feet away from itself.</p>", ft)).toBeNull();
+    expect(monsterSelfTeleport("<p>This spell instantly transports you and up to eight willing creatures to a destination you select.</p>", ft)).toBeNull();
+  });
+
+  it("la couche texte porte la téléportation (`teleport`), validée par le schéma", async () => {
+    const { monsterTextLayer } = await import("../module/scripts/core/monster-layer.mjs");
+    const layer = monsterTextLayer({ html: "<p>The fiend teleports up to 60 feet to an unoccupied space it can see.</p>",
+      activities: [{ id: ID, type: "utility", range: { value: "60", units: "ft" } }] });
+    expect(layer?.teleport).toEqual({ activity: ID });
+    expect(validateEntry(layer)).toEqual([]);
+  });
+});

@@ -200,6 +200,12 @@ export function contentOf(item) {
  * personnage. Mise en cache par item et texte.
  */
 const textCache = new Map();
+
+/** §461 : portée, gabarit et cible d'une activité, tels que la donnée les écrit (la source : pas de portée préparée ni de formule). */
+const activityShape = a => ({ range: { value: a.range?.value ?? null, units: a.range?.units ?? "", special: a.range?.special ?? "" },
+  template: !!a.target?.template?.type,
+  target: { type: a.target?.affects?.type ?? "", count: a.target?.affects?.count ?? "", special: a.target?.affects?.special ?? "" } });
+
 function textLayer(item) {
   if ( (item?.actor?.type !== "npc") || (item.type === "spell") ) return null;
   const html = item.flags?.babele?.originalPayload?.description ?? item.system?.description?.value ?? "";
@@ -211,7 +217,7 @@ function textLayer(item) {
     effects: (item.effects?.contents ?? []).map(e => ({ id: e.id, statuses: [...(e.statuses ?? [])], changes: e.changes ?? [] })),
     activities: Array.from(item.system?.activities ?? []).map(a => ({ id: a.id, name: a.name ?? "", type: a.type,
       activation: { type: a.activation?.type, condition: a.activation?.condition ?? "" }, effects: (a.effects ?? []).map(e => e._id ?? e.id),
-      onSave: a.damage?.onSave ?? null })) });
+      onSave: a.damage?.onSave ?? null, ...activityShape(a._source ?? a) })) });
   if ( textCache.size > 2000 ) textCache.clear();
   textCache.set(key, layer);
   return layer;

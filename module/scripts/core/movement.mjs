@@ -122,3 +122,21 @@ export function actionSpeed(speeds, action, types={}) {
   const own = Number(speeds?.[action]) || 0;
   return (types[action]?.walkFallback || !types[action]) ? Math.max(own, walk) : own;
 }
+
+/**
+ * §461 : la distance d'une téléportation déclarée (`teleport` du contenu) — `{ distance, units }` si l'entrée la donne, sinon la portée de
+ * son activité quand c'est une longueur (`range.value` / `range.units` de dnd5e : « teleports up to [portée] »). null : rien de lisible
+ * (portée « soi », « contact », spéciale ou vide) — pas de téléportation sans limite.
+ * @param {{distance?: number, units?: string}|null} rule
+ * @param {{value?: *, units?: string}|null} [range]  La portée de l'activité utilisée.
+ * @returns {{distance: number, units: string}|null}
+ */
+export function teleportReach(rule, range=null) {
+  if ( !rule ) return null;
+  if ( ("distance" in rule) || ("units" in rule) ) {
+    const distance = Number(rule.distance);
+    return (Number.isFinite(distance) && (distance > 0) && rule.units) ? { distance, units: rule.units } : null;
+  }
+  const value = Number(range?.value);
+  return (["ft", "m", "mi", "km"].includes(range?.units) && Number.isFinite(value) && (value > 0)) ? { distance: value, units: range.units } : null;
+}

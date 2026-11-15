@@ -49,7 +49,9 @@ const DEFAULTS = Object.freeze({
   // §408 : une règle passée outre par un joueur (la table l'entend).
   overridden: { success: CORE_SOUNDS.nextHorn, failure: null },
   // Issue #32 : le succès à un prix accepté (refusé : rien).
-  atCost: { success: CORE_SOUNDS.atCost, failure: null }
+  atCost: { success: CORE_SOUNDS.atCost, failure: null },
+  // §461 : une téléportation de soi faite (Foulée brumeuse, Téléportation d'un démon).
+  teleport: { success: CORE_SOUNDS.chime, failure: null }
 });
 
 /** Le son par défaut de cette action et de cette issue (null : aucun). */

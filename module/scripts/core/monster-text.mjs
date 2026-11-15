@@ -658,3 +658,56 @@ export function monsterLightSensitivity(html) {
   const fact = /^sunlight$/i.test(m[1]) ? "source.inSunlight" : "source.inBrightLight";
   return [{ on: "preAttackRoll", if: { [fact]: true }, do: [{ type: "disadvantage" }] }];
 }
+
+/** Les unités de longueur d'une portée d'activité (dnd5e `CONFIG.DND5E.movementUnits`) : une portée lisible comme distance. */
+const LENGTH_UNITS = new Set(["ft", "m", "mi", "km"]);
+
+/** Les `[[lookup @range.…]]` et `[[lookup @target.affects.special]]` d'un texte, remplacés par la valeur de l'activité (comme dnd5e les affiche). */
+function resolveLookups(html, activity) {
+  const read = { "range.value": activity.range?.value, "range.units": activity.range?.units, "range.special": activity.range?.special,
+    "target.affects.special": activity.target?.special };
+  return String(html ?? "").replace(/\[\[lookup @(range\.(?:value|units|special)|target\.affects\.special)\b[^\]]*\]\]/g,
+    (whole, path) => ((read[path] ?? "") !== "" ? String(read[path]) : whole));
+}
+
+/**
+ * §461 : la téléportation de soi qu'une capacité de monstre décrit — « the X (magically) teleports (up to 30 feet) to an unoccupied space it
+ * can see (within 60 feet) », « can teleport… », la distance en clair ou renvoyée à la portée de l'activité (`[[lookup @range.value]]` :
+ * Téléportation des démons et yugoloths, Rôde arcanique des sphinx) → `teleport` du contenu : `{ activity }` quand la portée de l'activité
+ * est une longueur (elle fait la distance, runtime/teleport.mjs), sinon `{ activity, distance, units }` d'après le texte (portée « soi »).
+ * « Along with one willing creature of its choice within 5 feet of it » → `passengers`, d'après la cible de l'activité.
+ *
+ * Seulement ce qui est sûr : la capacité n'a qu'une activité, « utility », sans gabarit — la téléportation est tout ce qu'elle fait (une
+ * attaque citée est un autre objet) —, et sa destination est libre. Ne sont PAS lus : une capacité qui a aussi une sauvegarde, une attaque ou
+ * des dégâts (zone au départ ou à l'arrivée, téléportation après l'attaque : l'ordre n'est pas celui de l'utilisation), une destination
+ * contrainte (« within 5 feet of a creature », « of a second tree »), « of your choice » (monture et cavalier), « itself or a willing
+ * demon » (une autre créature), le sort Téléportation.
+ * @param {string} html
+ * @param {Array<{id: string, type?: string, range?: {value?: *, units?: string, special?: string}, template?: boolean,
+ *   target?: {type?: string, count?: *, special?: string}}>} [activities]
+ * @returns {{activity: string, distance?: number, units?: string, passengers?: object}|null}
+ */
+export function monsterSelfTeleport(html, activities=[]) {
+  if ( activities.length !== 1 ) return null;
+  const [activity] = activities;
+  if ( (activity.type !== "utility") || activity.template ) return null;
+  const text = plainText(resolveLookups(html, activity));
+  if ( !text || (segments(text).length > 1) ) return null;
+  const m = text.match(/\b(?:magically )?teleports?(, along with [^,.]*? of its choice within [^,.]*? of it,)? (?:up to (\d+) (?:feet|ft)\.? )?to an unoccupied space (?:it|he|she|they) can see(?: within (\d+) (?:feet|ft))?(?: of (?:itself|himself|herself))?(?=[ ,.]|$)/i);
+  if ( !m ) return null;
+  const range = activity.range ?? {};
+  const value = Number(range.value);
+  const said = m[2] ?? m[3] ?? null;
+  const rule = { activity: activity.id };
+  if ( !(LENGTH_UNITS.has(range.units) && Number.isFinite(value) && (value > 0)) ) {
+    if ( !said ) return null;
+    Object.assign(rule, { distance: Number(said), units: "ft" });
+  }
+  if ( m[1] ) {
+    const within = Number(String(activity.target?.special ?? "").match(/\bwithin (\d+) (?:feet|ft)\b/i)?.[1]
+      ?? m[1].match(/\bwithin (\d+) (?:feet|ft)\b/i)?.[1]);
+    if ( !(within > 0) ) return null;
+    rule.passengers = { count: Math.max(1, Number(activity.target?.count) || 1), within, units: "ft" };
+  }
+  return rule;
+}

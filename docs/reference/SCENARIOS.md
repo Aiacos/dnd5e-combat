@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-353 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+354 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -299,6 +299,7 @@ la sélection sans rien jouer.
 | `repasse-o9h` |  | §363 | Poison, othur, pugilistes, résistance, perle, cor, parchemin, poussière, huile, dynamite |
 | `repasse-rayons` |  | §334 | rayons oculaires du Tyrannœil (Arène des sorts) |
 | `repasse-soins-jiangshi` |  | §460 | Absorption d'énergie du Jiangshi : soin égal aux dégâts nécrotiques (Arène des sorts) |
+| `repasse-teleport-creatures` |  | §461 | téléportation de soi des créatures à la portée de leur action (Arène des sorts) |
 | `repliques` |  | §16.25 | Rahadin, chambellan du château |
 | `resistances` |  | §18.9 | à la magie, légendaire |
 | `ressources-forcees` | Arène des refus | §410 | emplacement, préparation, utilisations |

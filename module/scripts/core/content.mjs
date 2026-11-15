@@ -21,6 +21,8 @@
  *     teleport?: { distance, units, activity? } l'utilisation téléporte l'utilisateur (§16.10, B11) : la destination se
  *                                               choisit aussitôt, à `distance` au plus — pour un item sans activité
  *                                               « teleport » de dnd5e (tout le PHB : Foulée brumeuse y est utilitaire) ;
+ *                                               §461 : sans `distance` ni `units`, la portée de `activity` (en longueur)
+ *                                               fait la distance (capacités de monstres, lues dans leur texte) ;
  *                                               `then` : id d'une activité de l'item utilisée à l'arrivée (§67 quater) ;
  *                                               `passengers: { count, within?, units? }` (§264) : jusqu'à `count` créatures non
  *                                               hostiles à `within` (5 ft) partent avec lui, posées à son contact (Porte dimensionnelle) ;

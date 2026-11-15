@@ -210,3 +210,16 @@ describe("vitesse de l'action de déplacement (§229)", () => {
     expect(actionSpeed({ walk: 30 }, "ethereal", types)).toBe(30);
   });
 });
+
+describe("§461 : distance d'une téléportation déclarée", () => {
+  it("la distance de l'entrée, sinon la portée de l'activité en longueur, sinon rien", async () => {
+    const { teleportReach } = await import("../module/scripts/core/movement.mjs");
+    expect(teleportReach({ distance: 30, units: "ft" }, { value: 60, units: "ft" })).toEqual({ distance: 30, units: "ft" });
+    expect(teleportReach({ activity: "aaaaaaaaaaaaaaaa" }, { value: "40", units: "ft" })).toEqual({ distance: 40, units: "ft" });
+    expect(teleportReach({ activity: "aaaaaaaaaaaaaaaa" }, { value: 12, units: "m" })).toEqual({ distance: 12, units: "m" });
+    expect(teleportReach({ activity: "aaaaaaaaaaaaaaaa" }, { units: "self" })).toBeNull();
+    expect(teleportReach({ activity: "aaaaaaaaaaaaaaaa" }, { value: "", units: "ft" })).toBeNull();
+    expect(teleportReach({ activity: "aaaaaaaaaaaaaaaa" }, null)).toBeNull();
+    expect(teleportReach(null, { value: 30, units: "ft" })).toBeNull();
+  });
+});

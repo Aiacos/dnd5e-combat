@@ -362,7 +362,9 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
     effects: effects.map(e => ({ id: e._id, statuses: e.statuses ?? [], changes: e.changes ?? e.system?.changes ?? [] })),
     activities: Object.entries(item.system?.activities ?? {}).map(([id, a]) => ({ id: a._id ?? id, name: a.name ?? "", type: a.type,
       activation: { type: a.activation?.type, condition: a.activation?.condition ?? "" }, effects: (a.effects ?? []).map(e => e._id ?? e.id),
-      onSave: a.damage?.onSave ?? null })) }) : null;
+      onSave: a.damage?.onSave ?? null, range: { value: a.range?.value ?? null, units: a.range?.units ?? "", special: a.range?.special ?? "" },
+      template: !!a.target?.template?.type, target: { type: a.target?.affects?.type ?? "", count: a.target?.affects?.count ?? "",
+        special: a.target?.affects?.special ?? "" } })) }) : null;
   const entry = textEntry ? mergeEntries([textEntry, shipped ?? null]) : shipped;
   const textKeys = textEntry ? Object.keys(textEntry).filter(k => !shipped || !(k in shipped)) : [];
   const s = item.system ?? {};

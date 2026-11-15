@@ -87,8 +87,14 @@ export function validateAbsorb(absorb, at, errors) {
 
 export function validateTeleport(teleport, at, errors) {
   if ( !isObject(teleport) ) return errors.push(`${at}: an object`);
-  if ( !(Number.isFinite(teleport.distance) && (teleport.distance > 0)) ) errors.push(`${at}.distance: positive number`);
-  if ( (typeof teleport.units !== "string") || !teleport.units ) errors.push(`${at}.units: unit required`);
+  // §461 : sans `distance` ni `units`, la portée de l'activité nommée fait la distance (capacités de monstres : « up to [portée] »).
+  const fromRange = !("distance" in teleport) && !("units" in teleport);
+  if ( fromRange ) {
+    if ( !("activity" in teleport) ) errors.push(`${at}.activity: required without distance (the activity's range is the distance)`);
+  } else {
+    if ( !(Number.isFinite(teleport.distance) && (teleport.distance > 0)) ) errors.push(`${at}.distance: positive number`);
+    if ( (typeof teleport.units !== "string") || !teleport.units ) errors.push(`${at}.units: unit required`);
+  }
   if ( ("activity" in teleport) && !isId(teleport.activity) ) errors.push(`${at}.activity: activity id (16 characters) expected`);
   if ( ("then" in teleport) && !isId(teleport.then) ) errors.push(`${at}.then: activity id (16 characters) expected`);
   if ( "passengers" in teleport ) {
