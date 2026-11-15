@@ -173,7 +173,8 @@ for ( const f of readdirSync("module/scripts", { recursive: true }).map(String).
   for ( const m of readFileSync(join("module/scripts", f), "utf8").matchAll(/["'`]([a-z][a-z0-9]*(?:-[a-z0-9]+)+)["'`]/g) ) codeRefs.add(m[1]);
 }
 const ADVANCEMENT = { AbilityScoreImprovement: "caractéristiques", Trait: "maîtrises", ItemGrant: "objets ou sorts accordés",
-  ItemChoice: "choix d'objets ou de sorts", ScaleValue: "valeur d'échelle", HitPoints: "points de vie", Size: "taille", Subclass: "sous-classe" };
+  ItemChoice: "choix d'objets ou de sorts", ScaleValue: "valeur d'échelle", HitPoints: "points de vie", Size: "taille", Subclass: "sous-classe",
+  ModifyItem: "enchantement d'un autre objet" };
 const sweeps = new Map();
 if ( existsSync("prive/balayages") ) {
   for ( const f of readdirSync("prive/balayages").filter(f => f.endsWith(".json")).sort() ) {
@@ -387,6 +388,11 @@ function describe({ item, tab, mod, version, pack, owner, actorId, frEntry, effe
   const bad = [];
   if ( emptyDamage ) bad.push("part de dégâts vide");
   const posed = new Set(acts.flatMap(a => (a.effects ?? []).map(e => e._id)));
+  // §452 : la progression « ModifyItem » de dnd5e 6.1 (Manuel 3.0.0) pose un enchantement de l'item sur un autre item du personnage
+  // (Frappes renforcées → attaque à mains nues, Armes empoisonnées → Frappe rusée…) : cet effet est posé, sans activité.
+  for ( const adv of Object.values(s.advancement ?? {}) ) {
+    if ( adv.type === "ModifyItem" ) for ( const c of adv.configuration?.changes ?? [] ) if ( c._id ) posed.add(c._id);
+  }
   // §438 : un « effet distant » de dnd5e 6.1 (`uuid` vers un compendium d'effets, Manuel 3.0.0) n'est pas sur l'item : pas un défaut.
   for ( const a of acts ) for ( const e of a.effects ?? [] ) if ( !e.uuid && !effectIds.has(e._id) ) bad.push(`effet lié absent (${a.name || a.type})`);
   const entryText = entry ? JSON.stringify(entry) : "";
