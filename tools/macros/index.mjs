@@ -20,6 +20,8 @@ export const MACROS = [
     img: "icons/sundries/documents/document-sealed-signatures-red.webp" },
   { file: "phb3-objets.js", name: "8. Update features and spells to Player's Handbook 3.0.0 (preview)",
     img: "icons/sundries/books/book-red-exclamation.webp" },
+  { file: "doublons-sorts.js", name: "9. Repair duplicate spells",
+    img: "icons/magic/symbols/runes-star-blue.webp" },
   { file: "basculer-ethere.js", name: "Toggle Ethereal Plane (selected tokens)",
     img: "systems/dnd5e/icons/svg/statuses/ethereal.svg" },
   { file: "lancer-combat.js", name: "Start a combat",

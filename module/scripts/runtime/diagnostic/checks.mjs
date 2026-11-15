@@ -17,6 +17,7 @@ import { dataFixPlanOf, applyDataFixes } from "../../adapter/data-fixes.mjs";
 import { sourceKind } from "../../core/item-sources.mjs";
 import { unmarkedItemEffects, unmarkedAppliedEffects, markEffects } from "../../adapter/antimagic.mjs";
 import { phbDifferences, phbShape, renamedSourceItem, citesSubclass } from "../../core/phb-update.mjs";
+import { spellDuplicates } from "../../core/spell-duplicates.mjs";
 
 /**
  * §202 : les effets d'une référence du compendium, prêts à recopier — un effet au nom d'origine (anglais) de l'objet prend le nom
@@ -764,6 +765,77 @@ const phb3Items = {
   }
 };
 
+/* -------------------------------------------- */
+/*  Sorts en double (doublons-sorts.js)          */
+/* -------------------------------------------- */
+
+/**
+ * Les sorts en double d'une fiche (core/spell-duplicates.mjs) : un module de préparation des sorts qui reconnaît un sort par l'uuid de
+ * son compendium d'origine ajoute une seconde copie d'un sort venu d'un autre compendium (SRD contre Manuel). Le sort gardé : celui du
+ * Manuel des joueurs (les listes de sorts de classe du Manuel citent ses sorts), sinon du SRD 5.2. Une tâche par fiche.
+ */
+const PREFERRED_SPELL_PACKS = Object.freeze(["Compendium.dnd-players-handbook.spells.", "Compendium.dnd5e.spells24."]);
+
+/** Le nom lisible du compendium d'où vient un sort, ou « créé à la main ». */
+function spellSourceLabel(spell) {
+  const source = sourceOf(spell);
+  if ( !source.startsWith("Compendium.") ) return loc("Macro.SpellDuplicates.NoSource");
+  const id = source.split(".").slice(1, 3).join(".");
+  return game.packs.get(id)?.title ?? id;
+}
+
+/** Les groupes de doublons d'une fiche, avec leurs documents. */
+function spellDuplicatesOf(actor) {
+  const spells = actor.itemTypes?.spell ?? [];
+  const described = spells.map(s => ({
+    id: s.id, name: s.name, identifier: s.system.identifier, method: s.system.method, prepared: Number(s.system.prepared) || 0,
+    classIdentifier: s._source.system?.classIdentifier ?? "", sourceItem: s._source.system?.sourceItem ?? "", source: sourceOf(s),
+    cachedFor: s.flags?.dnd5e?.cachedFor ?? null, flagScopes: Object.keys(s._source.flags ?? {}), sort: s.sort ?? 0
+  }));
+  const casterClasses = Object.keys(actor.spellcastingClasses ?? {});
+  return spellDuplicates(described, { casterClasses, preferred: PREFERRED_SPELL_PACKS });
+}
+
+const spellDuplicatesCheck = {
+  id: "spell-duplicates", icon: "fa-solid fa-clone",
+  async scan() {
+    const t = tr("SpellDuplicates");
+    const state = p => t(`Prepared.${Number(p) || 0}`);
+    const tasks = [];
+    for ( const actor of game.actors ) {
+      const groups = spellDuplicatesOf(actor);
+      if ( !groups.length ) continue;
+      const item = id => actor.items.get(id);
+      const lines = groups.map(g => {
+        const keep = item(g.keep.id);
+        const raised = g.raisePrepared ? ` → ${state(g.prepared)}` : "";
+        return `♊ ${t("Keep", { name: esc(keep.name), source: esc(spellSourceLabel(keep)), state: state(g.keep.prepared) + raised })}`
+          + g.remove.map(r => ` ; ${t("Remove", { name: esc(item(r.id).name), source: esc(spellSourceLabel(item(r.id))), state: state(r.prepared) })}`).join("");
+      });
+      const text = lines.join("<br>");
+      tasks.push({ root: rootOf(actor), where: `<b>${esc(actor.name)}</b>`, text, preselect: actor.hasPlayerOwner,
+        apply: async () => {
+          const sheet = fresh(actor);
+          for ( const g of groups ) {
+            const keep = sheet.items.get(g.keep.id);
+            if ( !keep ) continue;
+            const update = {};
+            if ( g.raisePrepared ) update["system.prepared"] = g.prepared;
+            for ( const { scope, from } of g.flagScopes ) {
+              const value = sheet.items.get(from)?._source.flags?.[scope];
+              if ( value !== undefined ) update[`flags.${scope}`] = foundry.utils.deepClone(value);
+            }
+            if ( Object.keys(update).length ) await keep.update(update);
+            const ids = g.remove.map(r => r.id).filter(id => sheet.items.has(id));
+            if ( ids.length ) await sheet.deleteEmbeddedDocuments("Item", ids);
+          }
+          return text;
+        } });
+    }
+    return tasks;
+  }
+};
+
 /** Les vérifications, dans l'ordre où les macros les proposaient. */
 export const CHECKS = Object.freeze([cleanMidi, phbEffects, lostEffects, scrolls, ddb, pileBasics, creatures, retranslate, dataFixes,
-  magicalEffects, phb3Subclasses, phb3Items]);
+  magicalEffects, phb3Subclasses, phb3Items, spellDuplicatesCheck]);
