@@ -18,6 +18,7 @@ import { summonOwnership } from "../core/summon.mjs";
 import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
 import { contentOf } from "../adapter/content.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 /**
  * Les invocations reprises en cours, par uuid d'activité (l'activité remise à l'échelle garde son id) : `{ takers, at }`. Une
@@ -122,7 +123,7 @@ export function castWithForm(activity, [config, dialog, message], choice) {
     ...(slot ? { spell: { ...(config?.spell ?? {}), slot } } : {}),
     [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), summonForm: true, ...(count ? { summonCount: count } : {}) } };
   log(`${activity.item?.name}: form chosen (${activity.profiles?.find(p => p._id === choice.profile)?.name || choice.profile})`);
-  return activity.use(use, { ...(dialog ?? {}), configure: false }, message);
+  return relaunchUse(activity, use, { ...(dialog ?? {}), configure: false }, message);
 }
 
 /**
@@ -132,5 +133,5 @@ export function castWithForm(activity, [config, dialog, message], choice) {
 export function castWithProfile(activity, [config, dialog, message], choice) {
   const use = { ...config, ...choice, [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), summonForm: true } };
   log(`${activity.item?.name}: profile chosen (${choice?.enchantmentProfile ?? choice?.transform?.profile})`);
-  return activity.use(use, { ...(dialog ?? {}), configure: false }, message);
+  return relaunchUse(activity, use, { ...(dialog ?? {}), configure: false }, message);
 }

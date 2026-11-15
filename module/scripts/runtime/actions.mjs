@@ -790,7 +790,8 @@ export async function engage(token, target, activity, { mode=null, fast=false, u
     ...(lines.length ? { issues: mergeIssues(usageConfig?.[MODULE_ID]?.issues ?? [], lines), issuesCoverRange: coverRange || !!usageConfig?.[MODULE_ID]?.issuesCoverRange } : {}) } };
   if ( event && !config.event ) config.event = event;
   // §436 : sous le statut `antimagic`, dnd5e refuserait sèchement un sort — la fenêtre du moteur d'abord, forçable.
-  await useDespiteAntimagic(activity, extra => activity.use({ ...config, [MODULE_ID]: { ...config[MODULE_ID], ...extra } }, dialogConfig, messageConfig));
+  await useDespiteAntimagic(activity, extra => activity.use({ ...config, [MODULE_ID]: { ...config[MODULE_ID], ...extra } }, dialogConfig, messageConfig),
+    { forced: !!config[MODULE_ID].antimagicForced });
 }
 
 /**
@@ -807,7 +808,7 @@ export async function castOnTargets(activity, [config, dialog, message], picks) 
   const messageConfig = foundry.utils.deepClone(message ?? {});
   if ( messageConfig.data?.system ) delete messageConfig.data.system.targets;
   await useDespiteAntimagic(activity, extra => activity.use({ ...config, [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), engaged: true, ...extra } },
-    dialog, messageConfig));
+    dialog, messageConfig), { forced: !!config?.[MODULE_ID]?.antimagicForced });
 }
 
 /* -------------------------------------------- */

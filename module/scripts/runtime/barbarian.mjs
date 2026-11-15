@@ -29,6 +29,7 @@ import { spendItemUses } from "../adapter/uses.mjs";
 import { pushAway } from "../adapter/movement.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
 import { STEPS } from "../core/action.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 /** Une des cibles du message est-elle hostile à ce token ? */
 function hostileTarget(message, token) {
@@ -160,7 +161,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     await record(reckless);
     if ( !game.user.targets.size ) for ( const t of targets ) t.setTarget(true, { releaseOthers: false });
     const config = { ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), reckless } };
-    activity.use(config, dialogConfig, messageConfig);
+    relaunchUse(activity, config, dialogConfig, messageConfig);
   }).catch(err => console.error(`${MODULE_ID} | Reckless Attack`, err));
   return false;
 }
@@ -246,7 +247,7 @@ function askBrutal(activity, token, reckless, usageConfig, dialogConfig, message
     if ( picked.length ) await markBrutal(actor, activity, picked);
     if ( !game.user.targets.size ) for ( const t of targets ) t.setTarget(true, { releaseOthers: false });
     const config = { ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), reckless, brutal: picked.length ? "marked" : false } };
-    activity.use(config, dialogConfig, messageConfig);
+    relaunchUse(activity, config, dialogConfig, messageConfig);
   }).catch(err => console.error(`${MODULE_ID} | Brutal Strike`, err));
   return false;
 }

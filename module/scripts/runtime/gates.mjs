@@ -44,6 +44,7 @@ import { attractorOf } from "../core/defenses.mjs";
 import { rangedDefensesOf } from "../adapter/defenses.mjs";
 import { isRangedWeaponAttack } from "../adapter/cover.mjs";
 import { isObjectToken } from "../adapter/bodies.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 
 /** Une carte de chat qui dit ce que la porte a décidé (lue par les scénarios : flag `gate`) ; `details` : lignes de plus. */
@@ -425,7 +426,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     // `subsequentActions: false` est le réglage d'un appelant qui comptait enchaîner lui-même le jet (connecteur,
     // use-activity) : l'annulation lui a retiré la main, la relance laisse dnd5e enchaîner (sans dialogue, ci-dessus).
     const { subsequentActions, ...rest } = usageConfig;
-    await activity.use({ ...rest, [MODULE_ID]: { ...(usageConfig[MODULE_ID] ?? {}), confirmed: true, gated: true } }, dialogConfig, messageConfig);
+    await relaunchUse(activity, { ...rest, [MODULE_ID]: { ...(usageConfig[MODULE_ID] ?? {}), confirmed: true, gated: true } }, dialogConfig, messageConfig);
   })().catch(err => console.error(`${MODULE_ID} | gate interrupted`, err));
   return false;
 }

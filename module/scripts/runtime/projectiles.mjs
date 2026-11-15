@@ -20,6 +20,8 @@ import { log, loc, notice } from "./shared.mjs";
 import { lengthIn } from "../adapter/units.mjs";
 import { settledResolution } from "../adapter/messages.mjs";
 import { handleNearSpace } from "./teleport.mjs";
+import { relaunchUse } from "./relaunch.mjs";
+import { antimagicBlocks } from "../adapter/antimagic.mjs";
 
 const started = new Set();
 
@@ -103,6 +105,18 @@ async function remainingShots(activity, usage, resolution, count) {
   return queue;
 }
 
+/**
+ * §448 : un projectile enchaîné ne dépense rien — ni emplacement, ni ressource du sort, ni celle de l'objet qui l'a lancé. Un sort lancé
+ * par un objet (activité « cast » : Baguette de projectiles magiques) est un sort mis en cache (`cachedFor`) ; dnd5e y consomme les
+ * cibles de l'activité liée (`config.cause`, dnd5e.mjs:19203, :19300) — une charge de la baguette par projectile, vu sur le banc le
+ * 2026-11-14 (3 charges pour un lancement de 3 projectiles).
+ * @param {Activity} activity
+ */
+export function chainedConsumption(activity) {
+  const cached = !!activity?.item?.getFlag?.("dnd5e", "cachedFor");
+  return { consume: { action: false, resources: false, spellSlot: false }, ...(cached ? { cause: { resources: false } } : {}) };
+}
+
 async function chain(usage, resolution) {
   const scaled = usage.getAssociatedActivity?.({ scaled: true });
   const base = usage.getAssociatedActivity?.();
@@ -118,13 +132,14 @@ async function chain(usage, resolution) {
     if ( !token ) continue;
     token.setTarget(true, { releaseOthers: true });
     const config = {
-      consume: { spellSlot: false },
+      ...chainedConsumption(base),
       concentration: { begin: false },
       subsequentActions: false,
       ...(level > 0 ? { scaling, spell: { slot: `spell${level + scaling}` } } : {}),
-      [MODULE_ID]: { confirmed: true, cost: "free", projectileOf: usage.id }
+      // §448 : le premier a été forcé dans un champ antimagie (sinon il ne serait pas parti) — les suivants aussi, sans nouvelle fenêtre.
+      [MODULE_ID]: { confirmed: true, cost: "free", projectileOf: usage.id, ...(antimagicBlocks(base) ? { antimagicForced: true } : {}) }
     };
-    const used = await base.use(config, { configure: false }, { data: { flags: { [MODULE_ID]: { projectileOf: usage.id } } } });
+    const used = await relaunchUse(base, config, { configure: false }, { data: { flags: { [MODULE_ID]: { projectileOf: usage.id } } } });
     if ( !used?.message ) break;
     if ( projectilesOf(base.item)?.attack ) await base.rollAttack({}, { configure: false }, { data: { system: { origin: used.message.id } } });
     await settledResolution(used.message.id, { timeout: 30000, every: 300 });
@@ -161,7 +176,7 @@ export function castWithPicks(activity, [config, dialog, message], picks) {
   // qui a été suspendue pour la visée, sans cible : on les laisse se relire (comme runtime/actions.mjs, `engage`).
   const messageConfig = foundry.utils.deepClone(message ?? {});
   if ( messageConfig.data?.system ) delete messageConfig.data.system.targets;
-  return activity.use({ ...config, [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), picks } }, dialog, messageConfig);
+  return relaunchUse(activity, { ...config, [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), picks } }, dialog, messageConfig);
 }
 
 /** À inscrire après la souris (la visée a désigné les cibles) et avant la légalité. */

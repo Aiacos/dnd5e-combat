@@ -16,6 +16,7 @@ import { veilOnCreate, veilExisting, unveil, isRevealEffect } from "../adapter/r
 import { route } from "./router.mjs";
 import { enqueue } from "./queue.mjs";
 import { log, loc, notice, viaActiveGM, say, locEsc } from "./shared.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 export const EXTINGUISH_QUERY = `${MODULE_ID}.extinguish`;
 
@@ -60,7 +61,7 @@ export async function castLight(activity, [config, dialog, message], { where, co
   const cantrip = (activity.item.system.level ?? 0) === 0;
   // « Sur moi » : le lanceur brille une fois l'utilisation faite (`dnd5e.postUseActivity`, ci-dessous) — même si la
   // légalité l'a suspendue puis relancée.
-  return activity.use(use, cantrip ? { ...(dialog ?? {}), configure: false } : dialog, message);
+  return relaunchUse(activity, use, cantrip ? { ...(dialog ?? {}), configure: false } : dialog, message);
 }
 
 /** §121 : un temps restant lisible (« 5 h 20 », « 45 min »). */

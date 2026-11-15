@@ -72,12 +72,16 @@ async function onTurnChange(combat, prior, current) {
  * d'appeler `use`, la fenêtre de légalité du moteur (`askAnyway` : alerte au MJ, « Forcé » vu de tous) ; forcé, les effets du statut
  * sont désactivés le temps de l'utilisation puis rétablis, et la carte est marquée `overridden`. `use(extra)` reçoit les clés à fusionner
  * dans la configuration du moteur. Hors de ce cas, `use({})` tel quel.
+ * §448 : une relance d'une utilisation déjà forcée (`forced`, visée de groupe après la fenêtre) ne redemande pas : le champ est levé.
  * @param {Activity} activity
  * @param {(extra: object) => Promise<any>} use
+ * @param {object} [options]
+ * @param {boolean} [options.forced]  L'utilisation relancée a déjà été forcée (`antimagicForced` dans sa configuration).
  */
-export async function useDespiteAntimagic(activity, use) {
+export async function useDespiteAntimagic(activity, use, { forced=false }={}) {
   const actor = activity?.actor;
   if ( !antimagicBlocks(activity) ) return use({});
+  if ( forced ) return withAntimagicLifted(actor, activity.item, () => use({}));
   const item = activity.item;
   const token = usageTokenOf(activity);
   const line = loc(isSpellCast(item) ? "Souci.antimagic" : "Souci.antimagicItem", { item: antimagicSourceName(actor), use: item.name });

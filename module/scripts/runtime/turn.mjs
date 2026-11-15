@@ -28,11 +28,10 @@ import { pilotUsage, refundCommand, spellCommandUsage } from "./pilot.mjs";
 import { route } from "./router.mjs";
 import { log, loc, sleep, viaActiveGM } from "./shared.mjs";
 import { isSpellCast } from "../adapter/scrolls.mjs";
-import { forcedReasons as passedReasons, mergeIssues } from "../core/forced.mjs";
+import { forcedReasons as passedReasons, mergeIssues, askKey } from "../core/forced.mjs";
 import { somaticBlockOf, registerSomaticHandsSetting } from "../adapter/hands.mjs";
 import { missingResources } from "../adapter/resources.mjs";
 import { reportForced, overriddenFlag, refusal } from "./forced.mjs";
-import { withAntimagicLifted } from "./antimagic.mjs";
 
 /** §417 : les raisons passées outre — aucune quand le réglage « Action impossible » coupe le contrôle (ni alerte, ni carte marquée). */
 const forcedReasons = choice => (refusal().report ? passedReasons(choice) : []);
@@ -44,6 +43,7 @@ import { selfTeleportOf, tooBrightFor } from "./teleport.mjs";
 import { windowDisengaged } from "./reactions.mjs";
 import { samePlane } from "../adapter/plane.mjs";
 import { chainOf, chainLimit, chainOutliers } from "../adapter/chain.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 /* -------------------------------------------- */
 /*  Légalité, sur le client de celui qui agit   */
@@ -150,15 +150,31 @@ function confirmDialog(title, lines, buttons, actor=null) {
     { awaiting: actor ? { actor, kind: "choice" } : null, aside: true });
 }
 
+/** §448 : les questions « le faire quand même » ouvertes sur ce poste (`askKey`). */
+const asking = new Set();
+
 /**
  * Mode souple (§6) pour un geste qui n'est pas une utilisation (déplacer une zone, §16.14) : « faire quand même » ? §408 : forcé, le MJ et
  * la table sont prévenus (`forced` : `{ actor, item, token }` de qui agit).
  */
 export async function askAnyway(title, lines, forced={}) {
-  const choice = await confirmDialog(title, lines, [
-    { action: "go", label: loc("UtiliserQuandMeme"), default: true },
-    { action: "cancel", label: loc("Renoncer") }
-  ], forced.actor ?? null);
+  // §448 : la même question déjà ouverte sur ce poste (double clic sur une case refusée) — la seconde est ignorée, sans fenêtre : sinon
+  // deux fenêtres s'empilent, et deux « Utiliser quand même » feraient deux utilisations.
+  const key = askKey(title, lines);
+  if ( asking.has(key) ) {
+    log(`${title}: same question already open, ignored`);
+    return false;
+  }
+  asking.add(key);
+  let choice;
+  try {
+    choice = await confirmDialog(title, lines, [
+      { action: "go", label: loc("UtiliserQuandMeme"), default: true },
+      { action: "cancel", label: loc("Renoncer") }
+    ], forced.actor ?? null);
+  } finally {
+    asking.delete(key);
+  }
   if ( choice !== "go" ) return false;
   reportForced({ ...forced, reasons: forcedReasons({ lines, action: choice }) }).catch(err => console.error(`${MODULE_ID} | forced: alert`, err));
   return true;
@@ -399,7 +415,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
       rejectClose: false
     }).then(kind => {
       if ( !choices.includes(kind) ) return;
-      activity.use({ ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), basicChoice: kind } }, dialogConfig, messageConfig);
+      relaunchUse(activity, { ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), basicChoice: kind } }, dialogConfig, messageConfig);
     });
     return false;
   }
@@ -493,11 +509,9 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     // dans celles du moteur (ui/pointer.mjs, `forced`).
     const forcedUse = use.missing.keys.some(k => ["noSlot", "noUses", "noQuantity"].includes(k));
     if ( forcedUse ) config[MODULE_ID].forced = true;
-    const relaunch = () => activity.use(config, forcedUse ? { ...(dialogConfig ?? {}), configure: false } : dialogConfig, message);
-    // §436 : déjà forcé dans un champ antimagie — la relance lève encore le champ, sinon dnd5e la refuse sans carte.
-    if ( usageConfig?.[MODULE_ID]?.antimagicForced ) withAntimagicLifted(activity.actor, activity.item, relaunch)
-      .catch(err => console.error(`${MODULE_ID} | antimagic: relaunch`, err));
-    else relaunch();
+    // §436, §448 : déjà forcé dans un champ antimagie — la relance lève encore le champ (runtime/relaunch.mjs), sinon dnd5e la refuse sans carte.
+    Promise.resolve(relaunchUse(activity, config, forcedUse ? { ...(dialogConfig ?? {}), configure: false } : dialogConfig, message))
+      .catch(err => console.error(`${MODULE_ID} | relaunch after the legality window`, err));
   });
   return false;
 }

@@ -14,6 +14,7 @@ import { concentrationOn } from "../adapter/summons.mjs";
 import { stormOf, cloudOf } from "../adapter/storm.mjs";
 import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 /** Le niveau d'emplacement au-dessus du niveau du sort, lu sur le dernier lancement « vrai » de l'item. */
 function castScaling(item) {
@@ -44,7 +45,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
   // §70 : un sort à orage dont le nuage est là — pas de nouvelle zone à poser : l'éclair se vise dessous (ui/pointer.mjs).
   if ( stormOf(activity.item) && cloudOf(activity.item) ) config.create = { ...(usageConfig.create ?? {}), measuredTemplate: false };
   log(`${activity.item.name}: recast without a spell slot (concentration ongoing)`);
-  activity.use(config, { ...(dialogConfig ?? {}), configure: false }, messageConfig);
+  relaunchUse(activity, config, { ...(dialogConfig ?? {}), configure: false }, messageConfig);
   return false;
 }
 

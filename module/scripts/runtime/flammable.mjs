@@ -22,6 +22,7 @@ import { levelAtLeast } from "./levels.mjs";
 import { log, loc, say, viaActiveGM, waitForDice } from "./shared.mjs";
 import { groundTile } from "./scatter.mjs";
 import { catchFireFromZone } from "./burning.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 export const IGNITE_QUERY = `${MODULE_ID}.ignite`;
 /** Lumière d'une flaque en feu : celle d'un feu de camp (vive 3 m, faible 6 m de plus), vacillante. */
@@ -288,7 +289,7 @@ export async function igniteWithActivity(token, activity, usage, zone) {
   const [config={}, dialog={}, message={}] = usage ?? [];
   // Aucune créature ciblée : l'action part sur la zone seule.
   for ( const t of [...(game.user.targets ?? [])] ) t.setTarget(false, { releaseOthers: false });
-  const results = await activity.use({ ...config, subsequentActions: false, [MODULE_ID]: { ...(config[MODULE_ID] ?? {}), igniteZone: zone.uuid } },
+  const results = await relaunchUse(activity, { ...config, subsequentActions: false, [MODULE_ID]: { ...(config[MODULE_ID] ?? {}), igniteZone: zone.uuid } },
     { ...dialog, configure: false }, message);
   if ( !results ) return false;
   log(`${activity.item?.name}: aimed at ${zone.name}`);

@@ -2554,6 +2554,8 @@
   "DND5ECOMBAT.Nouveautes.Point.dnd61": "dnd5e 6.1.0 est pris en charge : DAS · Core lit les sorts, aptitudes et objets tels que le système les livre désormais (zones, invocations, identifiants), et lit toujours ceux des versions 6.0.",
   "DND5ECOMBAT.Nouveautes.Point.antimagie": "Champ antimagie : DAS · Core suit le statut « antimagie » de dnd5e 6.1. Dans le champ, les effets magiques sont suspendus, un sort ou un objet magique est refusé (avec « utiliser quand même »), et rien de magique n'atteint qui s'y trouve.",
   "DND5ECOMBAT.Nouveautes.Point.phb3": "Manuel des joueurs premium 3.0.0 : ses aptitudes et ses sorts refaits sont automatisés comme avant ; les fiches créées avec une version antérieure continuent de fonctionner.",
+  "DND5ECOMBAT.Nouveautes.Point.ravenloft": "Ravenloft : The Horrors Within 2.0.0 (module premium) : ses options de personnage (sous-classes, espèces, historiques, dons et Dons sombres) sont relues sous dnd5e 6.1, et plusieurs aptitudes de sous-classe et Dons sombres sont désormais automatisés.",
+  "DND5ECOMBAT.Nouveautes.Point.multiattaque": "Attaques multiples : le nombre d'attaques se lit aussi dans un texte en français, en portugais ou en prose anglaise ; les attaques d'une créature restent limitées à ce que permettent ses Attaques multiples.",
   "DND5ECOMBAT.Nouveautes.Point.tokensVideo": "Tokens animés (.webm) : les fenêtres de DAS · Core montrent une image fixe au lieu d'une image cassée.",
   "DND5ECOMBAT.Nouveautes.Point.ptBR": "Portugais du Brésil : tous les textes de DAS · Core sont traduits (traduction à relire par un lusophone).",
   "DND5ECOMBAT.Nouveautes.Point.niveauDeLancement": "Sorts lancés à un niveau supérieur : dés en plus, zones et durées suivent le niveau de lancement.",

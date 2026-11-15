@@ -25,6 +25,7 @@ import { carriedLightOf } from "../adapter/carried-lights.mjs";
 import { suppliesTemplate, withTemplate } from "../adapter/template.mjs";
 import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 function place(activity, area) {
   placeSelfArea(activity, area).then(created => {
@@ -70,7 +71,7 @@ function onPreUse(activity, usageConfig, dialogConfig) {
 export async function castAimed(activity, [config, dialog, message]=[], shapeData) {
   const use = { ...(config ?? {}), create: { ...(config?.create ?? {}), measuredTemplate: false },
     [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), aimed: shapeData } };
-  return !!(await activity.use(use, { ...(dialog ?? {}), configure: false }, message));
+  return !!(await relaunchUse(activity, use, { ...(dialog ?? {}), configure: false }, message));
 }
 
 /**

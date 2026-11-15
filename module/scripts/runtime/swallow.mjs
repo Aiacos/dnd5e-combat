@@ -29,6 +29,7 @@ import { route } from "./router.mjs";
 import { log, loc } from "./shared.mjs";
 import { askAnyway } from "./turn.mjs";
 import { isObjectToken } from "../adapter/bodies.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 
 const turnKey = combat => (combat?.started ? `${combat.id}.${combat.round}.${combat.turn}` : "hors-combat");
 
@@ -110,7 +111,7 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
   // §412 (issue #44, lot 5) : la fenêtre de légalité ; forcée, la même utilisation repart (le MJ prévenu).
   askAnyway(`${activity.item.name} — ${token.name}`, [loc("Avale.Interdit", { source: token.name, item: activity.item.name })],
     { actor, item: activity.item, token }).then(go => {
-    if ( go ) activity.use({ ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), swallowForced: true } }, dialogConfig, messageConfig);
+    if ( go ) relaunchUse(activity, { ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), swallowForced: true } }, dialogConfig, messageConfig);
   }).catch(err => console.error(`${MODULE_ID} | swallow: forced use`, err));
   return false;
 }
