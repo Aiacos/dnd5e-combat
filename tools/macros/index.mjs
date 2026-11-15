@@ -22,6 +22,8 @@ export const MACROS = [
     img: "icons/sundries/books/book-red-exclamation.webp" },
   { file: "doublons-sorts.js", name: "9. Repair duplicate spells",
     img: "icons/magic/symbols/runes-star-blue.webp" },
+  { file: "enchantements-aptitudes.js", name: "10. Repair feature enchantments (dnd5e 6.1)",
+    img: "icons/magic/symbols/rune-sigil-black-pink.webp" },
   { file: "basculer-ethere.js", name: "Toggle Ethereal Plane (selected tokens)",
     img: "systems/dnd5e/icons/svg/statuses/ethereal.svg" },
   { file: "lancer-combat.js", name: "Start a combat",

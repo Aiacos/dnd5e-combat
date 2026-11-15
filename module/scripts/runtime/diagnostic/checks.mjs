@@ -18,6 +18,7 @@ import { sourceKind } from "../../core/item-sources.mjs";
 import { unmarkedItemEffects, unmarkedAppliedEffects, markEffects } from "../../adapter/antimagic.mjs";
 import { phbDifferences, phbShape, renamedSourceItem, citesSubclass } from "../../core/phb-update.mjs";
 import { spellDuplicates } from "../../core/spell-duplicates.mjs";
+import { missingModifications, modifyOrigin } from "../../core/modify-item.mjs";
 
 /**
  * §202 : les effets d'une référence du compendium, prêts à recopier — un effet au nom d'origine (anglais) de l'objet prend le nom
@@ -841,6 +842,102 @@ const spellDuplicatesCheck = {
   }
 };
 
+/* -------------------------------------------- */
+/*  Enchantements « ModifyItem » (enchantements-aptitudes.js) */
+/* -------------------------------------------- */
+
+/**
+ * §453 : la progression « ModifyItem » de dnd5e 6.1 pose un enchantement de l'aptitude sur un autre objet de la fiche, seulement quand
+ * elle s'applique et seulement sur les objets déjà là (dnd5e.mjs `ModifyItemAdvancement#apply`). Un sort appris après, ou une aptitude
+ * remplacée par sa version du Manuel 3.0.0 (`phb3-items`), reste sans enchantement (core/modify-item.mjs). La réparation le pose comme
+ * dnd5e : copie de l'effet de l'aptitude, `transfer`, marques `advancementOrigin` / `sourceId`, origine = l'aptitude (dnd5e crée alors
+ * ses riders à la création de l'effet, `_onCreateOperation` → `collectRiders`), et l'inscrit dans `value.modified` de la progression,
+ * riders compris, pour qu'une redescente de niveau le retire.
+ */
+async function modifyItemFeatures(actor) {
+  const features = [];
+  for ( const item of actor.items ) {
+    const advancements = [];
+    for ( const [id, adv] of Object.entries(item._source.system?.advancement ?? {}) ) {
+      if ( adv?.type !== "ModifyItem" ) continue;
+      const changes = [];
+      for ( const c of adv.configuration?.changes ?? [] ) {
+        const effect = c.uuid ? await fromUuid(c.uuid).catch(() => null) : item.effects.get(c._id);
+        changes.push({ _id: c._id, uuid: c.uuid ?? null, identifiers: c.identifiers ?? [], effectName: effect?.name ?? "", exists: !!effect });
+      }
+      advancements.push({ id: adv._id ?? id, changes, modified: adv.value?.modified ?? [] });
+    }
+    if ( advancements.length ) features.push({ id: item.id, name: item.name, advancements });
+  }
+  return features;
+}
+
+async function missingEnchantmentsOf(actor) {
+  const features = await modifyItemFeatures(actor);
+  if ( !features.length ) return [];
+  const targetsOf = key => [...(actor.identifiedItems?.get(key) ?? [])]
+    .map(i => ({ id: i.id, name: i.name, dependent: !!i.flags?.dnd5e?.dependentOn }));
+  const effectsOf = id => (actor.items.get(id)?.effects ?? []).map(e => ({ id: e.id, name: e.name, type: e.type,
+    advancementOrigin: e.flags?.dnd5e?.advancementOrigin, sourceId: e.flags?.dnd5e?.sourceId }));
+  return missingModifications(features, targetsOf, effectsOf);
+}
+
+/** Pose l'enchantement d'un changement sur l'objet visé, comme dnd5e, et l'inscrit dans la progression. */
+async function applyModification(actor, { feature, advancement, change, target }) {
+  const own = actor.items.get(feature.id);
+  const item = actor.items.get(target.id);
+  const effect = change.uuid ? await fromUuid(change.uuid) : own?.effects.get(change._id);
+  if ( !own || !item || !effect ) return false;
+  const data = effect.toObject();
+  data._id = foundry.utils.randomID();
+  data._stats = { ...(data._stats ?? {}), [effect.inCompendium ? "compendiumSource" : "duplicateSource"]: effect.uuid,
+    [effect.inCompendium ? "duplicateSource" : "compendiumSource"]: null };
+  foundry.utils.setProperty(data, "flags.dnd5e.advancementOrigin", modifyOrigin(own.id, advancement.id));
+  foundry.utils.setProperty(data, "flags.dnd5e.sourceId", effect.uuid);
+  foundry.utils.setProperty(data, "system.origin.item", own.uuid);
+  data.transfer = true;
+  const [created] = await item.createEmbeddedDocuments("ActiveEffect", [data], { keepId: true });
+  if ( !created ) return false;
+  // Les riders que dnd5e vient de créer (activités et effets de l'objet, objets de la fiche) dépendent de cet effet.
+  const updated = actor.items.get(item.id);
+  const rel = doc => foundry.utils.buildRelativeUuid(doc, actor);
+  const riders = [
+    ...(updated?.system.activities ?? []).filter(a => a.flags?.dnd5e?.dependentOn === created.id).map(a => `${rel(updated)}.Activity.${a.id}`),
+    ...(updated?.effects ?? []).filter(e => e.flags?.dnd5e?.dependentOn === created.id).map(rel),
+    ...actor.items.filter(i => i.flags?.dnd5e?.dependentOn === created.uuid).map(rel)
+  ];
+  const modified = foundry.utils.deepClone(own._source.system.advancement?.[advancement.id]?.value?.modified ?? []);
+  modified.push({ change: change._id, effect: created.id, item: item.id, riders });
+  await own.update({ [`system.advancement.${advancement.id}.value.modified`]: modified });
+  return true;
+}
+
+const modifyItemCheck = {
+  id: "modify-item", icon: "fa-solid fa-wand-sparkles",
+  async scan() {
+    const t = tr("ModifyItem");
+    const tasks = [];
+    for ( const actor of game.actors ) {
+      const missing = await missingEnchantmentsOf(actor);
+      if ( !missing.length ) continue;
+      const text = missing.map(m => `✨ ${t("Line", { feature: esc(m.feature.name), target: esc(m.target.name),
+        effect: esc(m.change.effectName || m.feature.name) })}`).join("<br>");
+      tasks.push({ root: rootOf(actor), where: `<b>${esc(actor.name)}</b>`, text, preselect: actor.hasPlayerOwner,
+        apply: async () => {
+          const sheet = fresh(actor);
+          const done = [];
+          // Relu au moment de réparer : une autre tâche, ou une montée de niveau, a pu le poser entre-temps.
+          for ( const m of await missingEnchantmentsOf(sheet) ) {
+            if ( await applyModification(sheet, m) ) done.push(`✨ ${t("Line", { feature: esc(m.feature.name), target: esc(m.target.name),
+              effect: esc(m.change.effectName || m.feature.name) })}`);
+          }
+          return done.join("<br>");
+        } });
+    }
+    return tasks;
+  }
+};
+
 /** Les vérifications, dans l'ordre où les macros les proposaient. */
 export const CHECKS = Object.freeze([cleanMidi, phbEffects, lostEffects, scrolls, ddb, pileBasics, creatures, retranslate, dataFixes,
-  magicalEffects, phb3Subclasses, phb3Items, spellDuplicatesCheck]);
+  magicalEffects, phb3Subclasses, phb3Items, spellDuplicatesCheck, modifyItemCheck]);
