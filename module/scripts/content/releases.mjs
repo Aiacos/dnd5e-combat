@@ -21,7 +21,7 @@ const PHB = "dnd-players-handbook";
 export const RELEASES = Object.freeze([
   {
     version: "0.283.0",
-    highlights: ["dnd61", "antimagie", "phb3", "ravenloft", "multiattaque", "tokensVideo", "ptBR"],
+    highlights: ["dnd61", "antimagie", "phb3", "ravenloft", "multiattaque", "tokensVideo", "doublonsSorts", "ptBR"],
     tested: {
       foundry: "14.370",
       system: "6.1.0",
@@ -35,7 +35,8 @@ export const RELEASES = Object.freeze([
     checks: [
       { id: "phb3-subclasses", when: { module: PHB, min: "3.0.0" } },
       { id: "phb3-items", when: { module: PHB, min: "3.0.0" } },
-      { id: "magical-effects", when: { system: "6.1.0" } }
+      { id: "magical-effects", when: { system: "6.1.0" } },
+      { id: "spell-duplicates" }
     ]
   },
   {

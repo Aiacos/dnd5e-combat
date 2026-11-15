@@ -2565,6 +2565,7 @@
   "DND5ECOMBAT.Nouveautes.Point.ravenloft": "Ravenloft: The Horrors Within 2.0.0 (módulo premium): suas opções de personagem (subclasses, espécies, antecedentes, talentos e Dons Sombrios) foram revisadas no dnd5e 6.1, e várias características de subclasse e Dons Sombrios agora são automatizadas.",
   "DND5ECOMBAT.Nouveautes.Point.multiattaque": "Ataques Múltiplos: o número de ataques também é lido em textos em francês, em português e na prosa em inglês, e os ataques de uma criatura continuam limitados ao que seus Ataques Múltiplos permitem.",
   "DND5ECOMBAT.Nouveautes.Point.tokensVideo": "Tokens animados (.webm): as janelas do DAS · Core mostram uma imagem fixa em vez de uma imagem quebrada.",
+  "DND5ECOMBAT.Nouveautes.Point.doublonsSorts": "Magias duplicadas: uma nova verificação do diagnóstico do mundo (e a macro \"9. Repair duplicate spells\" das Ferramentas do Mestre) encontra uma magia presente duas vezes numa ficha, como um módulo de preparação de magias pode deixar, e mantém uma só cópia.",
   "DND5ECOMBAT.Nouveautes.Point.ptBR": "Português do Brasil: todos os textos do DAS · Core estão traduzidos (tradução ainda a ser revisada por um falante nativo).",
   "DND5ECOMBAT.Nouveautes.Point.niveauDeLancement": "Magias conjuradas em um nível superior: dados extras, áreas e durações seguem o nível de conjuração.",
   "DND5ECOMBAT.Nouveautes.Point.visionDuDiable": "Visão do Diabo: o alvo visto dentro da Escuridão mágica aparece tingido de vermelho em vez de uma silhueta negra.",

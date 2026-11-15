@@ -2565,6 +2565,7 @@
   "DND5ECOMBAT.Nouveautes.Point.ravenloft": "Ravenloft : The Horrors Within 2.0.0 (module premium) : ses options de personnage (sous-classes, espèces, historiques, dons et Dons sombres) sont relues sous dnd5e 6.1, et plusieurs aptitudes de sous-classe et Dons sombres sont désormais automatisés.",
   "DND5ECOMBAT.Nouveautes.Point.multiattaque": "Attaques multiples : le nombre d'attaques se lit aussi dans un texte en français, en portugais ou en prose anglaise ; les attaques d'une créature restent limitées à ce que permettent ses Attaques multiples.",
   "DND5ECOMBAT.Nouveautes.Point.tokensVideo": "Tokens animés (.webm) : les fenêtres de DAS · Core montrent une image fixe au lieu d'une image cassée.",
+  "DND5ECOMBAT.Nouveautes.Point.doublonsSorts": "Sorts en double : une nouvelle vérification du diagnostic du monde (et la macro « 9. Repair duplicate spells » des Outils du MJ) trouve un sort présent deux fois sur une fiche, comme peut en laisser un module de préparation des sorts, et n'en garde qu'une copie.",
   "DND5ECOMBAT.Nouveautes.Point.ptBR": "Portugais du Brésil : tous les textes de DAS · Core sont traduits (traduction à relire par un lusophone).",
   "DND5ECOMBAT.Nouveautes.Point.niveauDeLancement": "Sorts lancés à un niveau supérieur : dés en plus, zones et durées suivent le niveau de lancement.",
   "DND5ECOMBAT.Nouveautes.Point.visionDuDiable": "Vision du diable : la cible vue dans les Ténèbres magiques apparaît teintée de rouge au lieu d'une silhouette noire.",

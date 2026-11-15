@@ -145,7 +145,7 @@ describe("règles du message de mise à jour", () => {
     const report = releaseReport(RELEASES, { seen: RELEASES[1]?.version ?? "0.0.1", current: next.version, installed });
     if ( next.version === "0.283.0" ) {
       expect(report.risks.map(r => r.id)).toEqual(["phb3Fiches"]);
-      expect(report.checks.map(c => c.id)).toEqual(["phb3-subclasses", "phb3-items", "magical-effects"]);
+      expect(report.checks.map(c => c.id)).toEqual(["phb3-subclasses", "phb3-items", "magical-effects", "spell-duplicates"]);
       expect(report.compatibility).toEqual([]);
     }
   });

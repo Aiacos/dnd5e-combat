@@ -2565,6 +2565,7 @@
   "DND5ECOMBAT.Nouveautes.Point.ravenloft": "Ravenloft: The Horrors Within 2.0.0 (premium module): its character options (subclasses, species, backgrounds, feats and Dark Gifts) were reviewed under dnd5e 6.1, and several subclass features and Dark Gifts are now automated.",
   "DND5ECOMBAT.Nouveautes.Point.multiattaque": "Multiattack: the number of attacks is also read from French and Portuguese texts and from English prose, so a creature's attacks stay limited to what its Multiattack allows.",
   "DND5ECOMBAT.Nouveautes.Point.tokensVideo": "Animated tokens (.webm): DAS · Core windows show a still image instead of a broken one.",
+  "DND5ECOMBAT.Nouveautes.Point.doublonsSorts": "Duplicate spells: a new world diagnostic check (and the GM Tools macro \"9. Repair duplicate spells\") finds a spell present twice on a sheet, as a spell-preparation module can leave, and keeps a single copy.",
   "DND5ECOMBAT.Nouveautes.Point.ptBR": "Brazilian Portuguese: every DAS · Core text is translated (still to be reviewed by a native speaker).",
   "DND5ECOMBAT.Nouveautes.Point.niveauDeLancement": "Spells cast at a higher level: extra dice, areas and durations follow the casting level.",
   "DND5ECOMBAT.Nouveautes.Point.visionDuDiable": "Devil's Sight: a target seen inside magical Darkness shows tinted red instead of a black silhouette.",
