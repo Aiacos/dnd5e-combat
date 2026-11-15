@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-357 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+358 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -301,6 +301,7 @@ la sélection sans rien jouer.
 | `repasse-soins-jiangshi` |  | §460 | Absorption d'énergie du Jiangshi : soin égal aux dégâts nécrotiques (Arène des sorts) |
 | `repasse-teleport-apres-attaque` |  | §464 | Griffes de l'Esprit yugoloth : téléportation offerte après l'attaque (Arène des sorts) |
 | `repasse-teleport-arrivee` |  | §463 | téléportation avec zone à l'arrivée : Téléportation radieuse (Arène des sorts) |
+| `repasse-teleport-contrainte` |  | §465 | destination contrainte : Poursuite, Marche des arbres (Arène des sorts) |
 | `repasse-teleport-creatures` |  | §461 | téléportation de soi des créatures à la portée de leur action (Arène des sorts) |
 | `repasse-teleport-depart` |  | §462 | téléportation avec zone sur l'espace quitté : Téléportation mortelle (Arène des sorts) |
 | `repliques` |  | §16.25 | Rahadin, chambellan du château |

@@ -193,6 +193,8 @@
   "DND5ECOMBAT.Teleport.CaseOccupee": "Teleport: the space must be unoccupied.",
   "DND5ECOMBAT.Teleport.Antimagie": "Teleport: no one can teleport into or out of {item}.",
   "DND5ECOMBAT.Teleport.NonVue": "Teleport: you must be able to see the space.",
+  "DND5ECOMBAT.Teleport.LoinCreature": "Teleport: the space must be within {distance} {units} of a creature you can see.",
+  "DND5ECOMBAT.Teleport.Plante": "{item}: start within {distance} {units} of a large plant and arrive within {distance} {units} of another — the GM decides.",
   "DND5ECOMBAT.Teleport.Apres": "{item}: {name} can teleport up to {distance} {units} — pick the space (Esc: stay).",
   "DND5ECOMBAT.Ruee.Choisir": "{item}: click the destination, in a straight line and within your Speed (right-click or Esc to cancel).",
   "DND5ECOMBAT.Ruee.Personne": "no one along the path",

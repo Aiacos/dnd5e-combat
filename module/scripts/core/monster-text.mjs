@@ -708,6 +708,11 @@ export function monsterSelfTeleport(html, activities=[]) {
   const [activity] = activities;
   const text = plainText(resolveLookups(html, activity));
   if ( !text || (segments(text).length > 1) ) return null;
+  // §465 : une destination contrainte — une seule activité utilitaire sans gabarit.
+  if ( (activity.type === "utility") && !activity.template ) {
+    const constrained = constrainedTeleport(text, activity);
+    if ( constrained ) return constrained;
+  }
   let area = null;
   if ( activity.template ) {
     // §462 : la zone frappe l'espace quitté ; §463 : ou l'espace d'arrivée — une seule des deux, de la taille du gabarit, sans agrippés
@@ -739,6 +744,31 @@ export function monsterSelfTeleport(html, activities=[]) {
   }
   if ( area ) rule.area = area;
   return rule;
+}
+
+/**
+ * §465 : une téléportation de soi dont la destination est contrainte —
+ *  - « teleports to an unoccupied space within 5 feet of a creature it can see » (Rêve éveillé) : près d'une créature, sans autre limite ;
+ *  - « uses Teleport, but its destination space must be within 10 feet of the triggering creature » (Poursuite) : près de la créature qui
+ *    l'a déclenchée (la cible désignée, sinon toute créature vue), à la portée de l'activité ;
+ *  - « teleports to an unoccupied space within 5 feet of a second tree that is within 60 feet of the previous tree » (Marche des arbres) :
+ *    au plus 60 + 2 × 5 ft ; les plantes ne sont pas des objets de la scène — le MJ en juge (`near: "plant"`, rappelé à la visée).
+ * @returns {object|null}  La règle `teleport`, ou null.
+ */
+function constrainedTeleport(text, activity) {
+  const range = activity.range ?? {};
+  const value = Number(range.value);
+  const fromActivity = ["ft", "m", "mi", "km"].includes(range.units) && Number.isFinite(value) && (value > 0);
+  const tree = text.match(/\bteleports to an unoccupied space within (\d+) (?:feet|ft)\.? of a second [^.]*? that is within (\d+) (?:feet|ft)\.? of the (?:previous|first) (?:tree|plant)\b/i);
+  if ( tree ) {
+    const within = Number(tree[1]);
+    return { activity: activity.id, distance: Number(tree[2]) + (2 * within), units: "ft", destination: { near: "plant", within, units: "ft" } };
+  }
+  const pursuit = text.match(/\buses Teleport, but its destination space must be within (\d+) (?:feet|ft)\.? of the triggering creature\b/i);
+  if ( pursuit && fromActivity ) return { activity: activity.id, destination: { near: "creature", within: Number(pursuit[1]), units: "ft", trigger: true } };
+  const near = text.match(/\bteleports to an unoccupied space within (\d+) (?:feet|ft)\.? of a creature (?:it|he|she|they) can see\b/i);
+  if ( near ) return { activity: activity.id, destination: { near: "creature", within: Number(near[1]), units: "ft" } };
+  return null;
 }
 
 /**

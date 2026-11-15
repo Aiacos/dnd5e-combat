@@ -110,9 +110,18 @@ export function validateTeleport(teleport, at, errors) {
   // §462 : `area: "left"` — la zone de l'activité se pose d'office sur l'espace quitté (avant le saut), sans son auteur ; §463 : `"arrival"`,
   // autour de lui après le saut.
   if ( ("area" in teleport) && !["left", "arrival"].includes(teleport.area) ) errors.push(`${at}.area: "left", "arrival" or absent`);
+  // §465 : `destination: { near: "creature"|"plant", within, units, trigger? }` — l'arrivée à `within` d'une créature vue (la cible
+  // désignée si `trigger`), ou d'une plante (le MJ en juge).
+  if ( "destination" in teleport ) {
+    const d = teleport.destination;
+    if ( !isObject(d) || !["creature", "plant"].includes(d.near) || !(Number.isFinite(d.within) && (d.within > 0)) || (typeof d.units !== "string")
+      || (("trigger" in d) && (d.trigger !== true)) || Object.keys(d).some(k => !["near", "within", "units", "trigger"].includes(k)) ) {
+      errors.push(`${at}.destination: { near: "creature"|"plant", within, units, trigger? }`);
+    }
+  }
   // §464 : `after: "attack"` — la téléportation s'offre une fois l'attaque de l'activité jugée (touchée ou ratée), pas à l'utilisation.
   if ( ("after" in teleport) && (teleport.after !== "attack") ) errors.push(`${at}.after: "attack" or absent`);
-  for ( const key of Object.keys(teleport) ) if ( !["distance", "units", "activity", "then", "passengers", "unseen", "maxLight", "area", "after"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
+  for ( const key of Object.keys(teleport) ) if ( !["distance", "units", "activity", "then", "passengers", "unseen", "maxLight", "area", "after", "destination"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
 }
 
 export function validateTargets(targets, at, facts, errors) {

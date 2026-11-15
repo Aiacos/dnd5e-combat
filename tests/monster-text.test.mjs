@@ -237,14 +237,14 @@ describe("§461 : téléportation de soi d'une capacité de monstre, à la port�
     expect(validateEntry({ teleport: rule })).toEqual([]);
   });
 
-  it("pas lu : sauvegarde ou attaque, gabarit, destination contrainte, autre créature, choix du maître", async () => {
+  it("pas lu : sauvegarde ou attaque, gabarit, arbre sans distance, autre créature, choix du maître", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const plain = "<p>The fiend teleports up to 60 feet to an unoccupied space it can see.</p>";
     expect(monsterSelfTeleport(plain, [{ id: ID, type: "save", range: { value: "60", units: "ft" } }])).toBeNull();
     expect(monsterSelfTeleport(plain, utility({ value: "60", units: "ft" }, { template: true }))).toBeNull();
     expect(monsterSelfTeleport(plain, [...utility({ value: "60", units: "ft" }), { id: "bbbbbbbbbbbbbbbb", type: "attack" }])).toBeNull();
     const ft = utility({ value: "60", units: "ft" });
-    expect(monsterSelfTeleport("<p>The fiend teleports to an unoccupied space within 5 feet of a creature it can see.</p>", ft)).toBeNull();
+    // §465 : « within 5 feet of a creature it can see » est désormais lu (destination contrainte) ; un second arbre sans distance, non.
     expect(monsterSelfTeleport("<p>The tree spirit teleports to an unoccupied space within 5 feet of a second tree.</p>", ft)).toBeNull();
     expect(monsterSelfTeleport("<p>The demon teleports itself or a willing demon within 10 feet of itself up to 60 feet to an unoccupied space the demon can see.</p>", ft)).toBeNull();
     expect(monsterSelfTeleport("<p>The steed teleports, along with its rider, to an unoccupied space of your choice up to 60 feet away from itself.</p>", ft)).toBeNull();
@@ -371,5 +371,41 @@ describe("§464 : téléportation de soi offerte après l'attaque", () => {
   it("le schéma : `after` vaut \"attack\" ou rien", () => {
     expect(validateEntry({ teleport: { distance: 30, units: "ft", activity: ATK, after: "attack" } })).toEqual([]);
     expect(validateEntry({ teleport: { distance: 30, units: "ft", after: "save" } }).join()).toMatch(/after/);
+  });
+});
+
+describe("§465 : téléportation de soi à destination contrainte", () => {
+  const ID = "gggggggggggggggg";
+
+  it("« within 5 feet of a creature it can see » : près d'une créature, sans distance (Rêve éveillé)", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const rule = monsterSelfTeleport("<p>The horror teleports to an unoccupied space within 5 feet of a creature it can see, then makes a Spear attack.</p>",
+      [{ id: ID, type: "utility", range: { units: "self" } }]);
+    expect(rule).toEqual({ activity: ID, destination: { near: "creature", within: 5, units: "ft" } });
+    expect(validateEntry({ teleport: rule })).toEqual([]);
+  });
+
+  it("« uses Teleport, but its destination space must be within 10 feet of the triggering creature » : la portée de l'activité, près de la créature", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const html = `<p>Trigger: Another creature ends its move nearby. Response: The demon uses Teleport, but its destination space must be [[lookup @target.affects.special activity=${ID}]].</p>`;
+    const rule = monsterSelfTeleport(html, [{ id: ID, type: "utility", range: { value: "120", units: "ft" },
+      target: { type: "creature", count: "1", special: "within 10 feet of the triggering creature" } }]);
+    expect(rule).toEqual({ activity: ID, destination: { near: "creature", within: 10, units: "ft", trigger: true } });
+    expect(validateEntry({ teleport: rule })).toEqual([]);
+  });
+
+  it("« within 5 feet of a second tree that is within 60 feet of the previous tree » : 70 ft au plus, plante laissée au MJ", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const html = `<p>If within [[lookup @range.value activity=${ID}]] feet of a [[lookup @range.special activity=${ID}]], the spirit teleports to an unoccupied `
+      + `space within [[lookup @range.value activity=${ID}]] feet of a second [[lookup @target.affects.special activity=${ID}]] that is within 60 feet of the previous tree.</p>`;
+    const rule = monsterSelfTeleport(html, [{ id: ID, type: "utility", range: { value: "5", units: "ft", special: "Large or bigger tree" } }]);
+    expect(rule).toEqual({ activity: ID, distance: 70, units: "ft", destination: { near: "plant", within: 5, units: "ft" } });
+    expect(validateEntry({ teleport: rule })).toEqual([]);
+  });
+
+  it("le schéma de `destination`", () => {
+    expect(validateEntry({ teleport: { activity: ID, destination: { near: "creature", within: 5, units: "ft" } } })).toEqual([]);
+    expect(validateEntry({ teleport: { activity: ID, destination: { near: "wall", within: 5, units: "ft" } } }).join()).toMatch(/destination/);
+    expect(validateEntry({ teleport: { activity: ID, destination: { near: "creature", within: 0, units: "ft" } } }).join()).toMatch(/destination/);
   });
 });

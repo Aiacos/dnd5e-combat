@@ -4,7 +4,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { distanceBetween } from "../adapter/turn.mjs";
+import { distanceBetween, tokenCenter } from "../adapter/turn.mjs";
 import { lengthIn } from "../adapter/units.mjs";
 import { contentOf } from "../adapter/content.mjs";
 import { cellUnder } from "../adapter/movement.mjs";
@@ -79,6 +79,12 @@ export function teleportIssues(activity, doc, to) {
     issues.push({ line: loc("Teleport.TropLoin", { distance: limit, units: doc.parent.grid.units }), notice: "Retour.TropLoin" });
   }
   if ( occupiedAt(doc, to) ) issues.push({ line: loc("Teleport.CaseOccupee"), notice: "Retour.CaseOccupee" });
+  // §465 : « à 1,50 m d'une créature qu'il voit » (Rêve éveillé), « à 3 m de la créature qui l'a déclenchée » (Poursuite).
+  const destination = activity?.item ? contentOf(activity.item).entry?.teleport?.destination : null;
+  if ( (destination?.near === "creature") && !nearCreature(doc, to, destination) ) {
+    const within = Math.round(lengthIn(destination.within, destination.units, doc.parent.grid.units) * 10) / 10;
+    issues.push({ line: loc("Teleport.LoinCreature", { distance: within, units: doc.parent.grid.units }), notice: "Retour.TropLoin" });
+  }
   // §436 : Champ antimagie — ni vers lui, ni depuis lui (statut `antimagic` de dnd5e 6.1 au départ, région `dnd5e.antimagic` ou globe
   // du §163 à l'arrivée).
   const position = { x: to.x, y: to.y, elevation: to.elevation ?? doc._source.elevation ?? 0 };
@@ -93,6 +99,24 @@ export function teleportIssues(activity, doc, to) {
     issues.push({ line: loc("Teleport.NonVue"), notice: "Retour.NonVue" });
   }
   return issues;
+}
+
+/**
+ * §465 : la case d'arrivée est-elle à `within` d'une créature que le token voit ? `trigger` : d'abord les cibles désignées (la créature
+ * qui a déclenché la réaction), sinon toute créature de la scène, lui excepté.
+ */
+function nearCreature(doc, to, { within, units, trigger=false }) {
+  const scene = doc.parent;
+  const reach = lengthIn(within, units, scene.grid.units);
+  const at = { x: to.x, y: to.y, elevation: to.elevation ?? doc._source.elevation ?? 0 };
+  const targeted = trigger ? Array.from(game.user.targets ?? []).map(t => t.document).filter(t => t && (t !== doc) && (t.parent === scene)) : [];
+  const pool = targeted.length ? targeted : scene.tokens.filter(t => (t !== doc) && t.actor && !t.hidden);
+  return pool.some(t => {
+    if ( distanceBetween(doc, t, { posA: at }).value > reach + 1e-6 ) return false;
+    if ( !isVisionAvailable() ) return true;
+    const c = tokenCenter(t);
+    return !c || (canSeePoint(doc, { ...c, elevation: t._source.elevation ?? 0 }) !== false);
+  });
 }
 
 /**
@@ -142,10 +166,11 @@ export function selfTeleportOf(activity) {
   if ( (activity?.type === "teleport") && (activity.range?.units === "self") && activity.canPlanTeleport ) return { native: true, passengers: rule?.passengers ?? null };
   if ( !rule || (rule.activity && (rule.activity !== activity.id)) ) return null;
   // §461 : sans distance déclarée, la portée de l'activité (« teleports up to [portée] ») ; illisible (« soi », spéciale) : pas de téléportation.
-  const reach = teleportReach(rule, activity.range);
+  // §465 : sauf une arrivée « près d'une créature qu'il voit » (Rêve éveillé), qui borne seule la destination.
+  const reach = teleportReach(rule, activity.range) ?? ((rule.destination?.near === "creature") ? { distance: null, units: null } : null);
   if ( !reach ) return null;
   return { native: false, distance: reach.distance, units: reach.units, then: rule.then ?? null, passengers: rule.passengers ?? null,
-    area: rule.area ?? null, after: rule.after ?? null };
+    area: rule.area ?? null, after: rule.after ?? null, destination: rule.destination ?? null };
 }
 
 /**
@@ -169,8 +194,9 @@ export async function afterTeleport(activity, rule) {
 
 /** Planifie une téléportation déclarée, comme le fait l'activité native (dnd5e teleport.mjs, `planTeleport`). */
 async function planDeclaredTeleport(activity, object, { distance, units }) {
-  let maxDistance = lengthIn(distance, units, canvas.grid.units);
-  const plan = await object.planMovement({ allowedActions: ["blink"], direct: true, maxDistance, preventDrop: true });
+  // §465 : sans distance (Rêve éveillé), la planification n'est pas bornée — la validation exige une créature près de l'arrivée.
+  const bounded = Number.isFinite(distance) ? { maxDistance: lengthIn(distance, units, canvas.grid.units) } : {};
+  const plan = await object.planMovement({ allowedActions: ["blink"], direct: true, ...bounded, preventDrop: true });
   if ( !plan ) return null;
   const plans = [{ token: object, plan }];
   // Le même point de contrôle que la téléportation native : notre validation, et quiconque l'écoute.
@@ -222,6 +248,11 @@ export async function teleportSelf(activity) {
   const object = token?.object ?? null;
   if ( !rule || !object ) return false;
   teleporting = { token, limit: teleportLimit(activity, token.parent) };
+  // §465 : une arrivée près d'une plante (Marche des arbres) — les arbres ne sont pas des objets de la scène : le rappel, le MJ en juge.
+  if ( rule.destination?.near === "plant" ) {
+    const within = Math.round(lengthIn(rule.destination.within, rule.destination.units, token.parent.grid.units) * 10) / 10;
+    ui.notifications.info(loc("Teleport.Plante", { item: activity.item.name, distance: within, units: token.parent.grid.units }));
+  }
   // §92 : la case quittée, pour les options de la Foulée des fées (créatures à 1,50 m de l'espace quitté).
   const from = { x: token._source.x, y: token._source.y, elevation: token._source.elevation ?? 0, level: token._source.level ?? null };
   // §264 : qui part avec lui (Porte dimensionnelle), choisi avant le saut ; posé à côté de lui à l'arrivée.

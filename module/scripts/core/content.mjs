@@ -31,7 +31,11 @@
  *                                               quitté, avant le saut, et ne prend pas son auteur (Téléportation mortelle) ;
  *                                               `"arrival"` (§463) : autour de lui, une fois arrivé (Téléportation radieuse) ;
  *                                               `after: "attack"` (§464) : offerte une fois l'attaque jugée, touchée ou
- *                                               ratée, pas à l'utilisation (Griffes de l'esprit yugoloth)
+ *                                               ratée, pas à l'utilisation (Griffes de l'esprit yugoloth) ;
+ *                                               `destination: { near, within, units, trigger? }` (§465) : l'arrivée à
+ *                                               `within` d'une créature vue (`trigger` : la cible désignée d'abord ;
+ *                                               Poursuite, Rêve éveillé) ou d'une plante (`"plant"`, rappel au MJ ;
+ *                                               Marche des arbres) ; sans distance ni portée, près d'une créature suffit
  *     lineDash?: { reach, units, activity? }    ruée en ligne droite (§57) : à l'utilisation, la case
  *                                               d'arrivée se choisit (jusqu'à la Vitesse, inoccupée, en vue, en ligne droite à
  *                                               travers les créatures, sans attaque d'opportunité) ; l'activité (défaut : celle
