@@ -112,6 +112,13 @@ const END_EVENTS = [
     re: /\buntil the (start|end) of (your|its) turn\b/i }
 ];
 const END_STATUS = { das: "DAS", sys: "système", man: "manuel" };
+// Passages qui parlent de points de vie sans en rendre : interdiction (« can't regain… or gain Temporary Hit Points »), absence
+// (« no Temporary Hit Points [left / gained / required] »), condition d'attente (« until it regains any Hit Points »).
+const HEAL_NEGATED = new RegExp([
+  "\\b(?:can['’]?t|cannot|can not|doesn['’]t|don['’]t|won['’]t|unable to|no longer)\\s+(?:\\w+\\s+){0,2}?(?:regain|gain|receive)\\b[^.;]{0,40}?hit points(?:,? (?:or|and) (?:gain|receive) temporary hit points)?",
+  "\\bno (?:\\w+ or )?temporary hit points\\b",
+  "\\buntil (?:it|they|the \\w+) regains? any hit points\\b"
+].join("|"), "gi");
 const CAT_OF = new Map();
 for ( const [cat, keys] of Object.entries(CATS) ) for ( const k of keys ) if ( !CAT_OF.has(k) ) CAT_OF.set(k, cat);
 
@@ -169,7 +176,19 @@ if ( existsSync("prive/repasse/verdicts.json") ) {
 const REVIEW_LABEL = { conforme: "conforme", "corrigé": "corrigé", partiel: "partiel", faux: "faux", mj: "MJ", "hors-combat": "hors combat", progression: "progression" };
 const scenarioFiles = readdirSync("tools/scenarios", { recursive: true }).filter(f => f.endsWith(".mjs"));
 const scenarioText = scenarioFiles.map(f => [f.replace(/\.mjs$/, "").replace(/\\/g, "/"), readFileSync(join("tools/scenarios", f), "utf8")]);
-const scenariosOf = ident => scenarioText.filter(([, t]) => t.includes(`"${ident}"`)).map(([n]) => n);
+// Index construit une fois (2026-11-15) : chercher `"ident"` dans chaque scénario pour chaque ligne prenait 4 s sur 11. Un identifiant
+// n'a pas de guillemet : `"ident"` apparaît dans un texte exactement quand ident est le texte entre deux guillemets consécutifs.
+const scenarioIndex = new Map();
+for ( const [name, t] of scenarioText ) {
+  let prev = t.indexOf("\"");
+  for ( let next = t.indexOf("\"", prev + 1); next !== -1; prev = next, next = t.indexOf("\"", prev + 1) ) {
+    const between = t.slice(prev + 1, next);
+    if ( !scenarioIndex.has(between) ) scenarioIndex.set(between, []);
+    const list = scenarioIndex.get(between);
+    if ( list.at(-1) !== name ) list.push(name);
+  }
+}
+const scenariosOf = ident => scenarioIndex.get(ident) ?? [];
 const log = execFileSync("git", ["log", "-p", "--no-color", "--format=@@@%h %ad %s", "--date=short", "--", "module/scripts/content"],
   { encoding: "utf8", maxBuffer: 1 << 30 });
 const commitsOf = new Map();
@@ -359,10 +378,15 @@ function describe({ item, tab, mod, version, pack, owner, actorId, frEntry, effe
   }
 
   // Ce que le texte annonce.
+  // Soins : une interdiction (« can't regain Hit Points or gain Temporary Hit Points », la nuée, un poison, une malédiction) ou une
+  // condition (« if you have no Temporary Hit Points left », « until it regains any Hit Points ») n'annonce aucun soin (2026-11-15) :
+  // ces passages sont retirés avant le test, sinon 49 capacités de créatures sur 82 comptaient comme « soin que rien ne porte » (la
+  // nuée ×15, la note d'Incantation sur Changement de forme ×12, poisons et malédictions). « regains 1 Hit Point » (singulier) compte.
+  const healText = desc.replace(HEAL_NEGATED, " ");
   const says = {
     at: /\b(melee|ranged) (weapon |spell )?attack roll|\bmake (a|an|one) (melee|ranged) (spell )?attack|\bspell attack\b/i.test(desc),
     dm: /\b\d+d\d+\b[^.]{0,60}\bdamage\b|\bdamage equal to\b/i.test(desc),
-    he: /\bregains? [^.]{0,40}hit points|\bTemporary Hit Points\b/i.test(desc),
+    he: /\bregains? [^.]{0,40}hit points?\b(?! maximum)|\bTemporary Hit Points\b/i.test(healText),
     sv: /\b(make|makes|succeed on|must succeed on) (a|an) \w+ saving throw|\b\w+ Saving Throw:/i.test(desc),
     ar: /\b\d+-foot(-radius|-long|-wide)?[- ](Emanation|Sphere|Cone|Cube|Line|Cylinder|radius)/i.test(desc),
     mv: /\bteleport|\bpush(ed|es)? [^.]{0,30}\b\d+ feet|\bpull(ed|s)? [^.]{0,30}\b\d+ feet/i.test(desc),
