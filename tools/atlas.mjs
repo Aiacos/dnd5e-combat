@@ -112,13 +112,32 @@ const END_EVENTS = [
     re: /\buntil the (start|end) of (your|its) turn\b/i }
 ];
 const END_STATUS = { das: "DAS", sys: "système", man: "manuel" };
-// Passages qui parlent de points de vie sans en rendre : interdiction (« can't regain… or gain Temporary Hit Points »), absence
-// (« no Temporary Hit Points [left / gained / required] »), condition d'attente (« until it regains any Hit Points »).
-const HEAL_NEGATED = new RegExp([
-  "\\b(?:can['’]?t|cannot|can not|doesn['’]t|don['’]t|won['’]t|unable to|no longer)\\s+(?:\\w+\\s+){0,2}?(?:regain|gain|receive)\\b[^.;]{0,40}?hit points(?:,? (?:or|and) (?:gain|receive) temporary hit points)?",
-  "\\bno (?:\\w+ or )?temporary hit points\\b",
-  "\\buntil (?:it|they|the \\w+) regains? any hit points\\b"
-].join("|"), "gi");
+// Passages qui nomment ce qu'un champ cherche sans l'annoncer (§450, §451) : retirés du texte avant le test de ce champ. Relevé sur
+// tous les modules premium : un filtre général (« not », « no », « isn't » avant la correspondance) ôterait de vrais dégâts et de vraies
+// sauvegardes (« isn't cast into the fissure but takes 4d6 Psychic damage ») ; chaque champ a donc ses formulations, précises.
+const CANT = "(?:can['’]?t|cannot|can not|doesn['’]t|don['’]t|won['’]t|unable to|no longer)";
+const negated = parts => new RegExp(parts.join("|"), "gi");
+const NEGATED = {
+  // Interdiction (« can't regain… or gain Temporary Hit Points »), absence (« no [Concentration or] Temporary Hit Points »),
+  // condition d'attente (« until it regains any Hit Points »).
+  he: negated([
+    `\\b${CANT}\\s+(?:\\w+\\s+){0,2}?(?:regain|gain|receive)\\b[^.;]{0,40}?hit points(?:,? (?:or|and) (?:gain|receive) temporary hit points)?`,
+    "\\bno (?:\\w+ or )?temporary hit points\\b",
+    "\\buntil (?:it|they|the \\w+) regains? any hit points\\b"]),
+  // « until you can't reach the creature to make a melee attack », « you can forgo making a ranged attack roll ».
+  at: negated([`\\b(?:${CANT}|forgo)\\s+(?:[\\w’']+\\s+){0,4}?(?:make|making) (?:a|an|one) (?:melee|ranged) (?:weapon |spell )?attack(?: roll)?`]),
+  // Une limite de taille n'est pas une zone : « no larger than a 10-foot Cube », « can't exceed 50 contiguous 10-foot Cubes ».
+  ar: negated(["\\b(?:no|not) (?:larger|bigger) than [^.;]{0,30}?\\d+-foot(?:-\\w+)?[- ]\\w+",
+    `\\b${CANT}\\s+exceed\\s+\\d+\\s+contiguous\\s+\\d+-foot[- ]\\w+`]),
+  // « creatures can't teleport », « no one can teleport », « can't enter or exit the area using teleportation ».
+  mv: negated([`\\b(?:${CANT}|no one can)\\s+(?:[\\w’']+\\s+){0,6}?teleport\\w*`]),
+  // « it can't be summoned again ».
+  su: negated([`\\b${CANT}\\s+be\\s+(?:summon|conjur)\\w*`])
+};
+// Un délai avant de refaire une action (« can't take this action again until the start of its next turn », actions légendaires) n'est
+// pas la fin d'un effet ; « can't make Opportunity Attacks until the start of its next turn » en est une, et reste.
+const END_NEGATED = negated([`\\b${CANT}\\s+(?:take|use|do)\\s+(?:this action|this benefit|it|so|that)\\s+again\\s+until the (?:start|end) of (?:your|its|the \\w+['’]s) next turn`]);
+const notSaid = (desc, f) => (NEGATED[f] ? desc.replace(NEGATED[f], " ") : desc);
 const CAT_OF = new Map();
 for ( const [cat, keys] of Object.entries(CATS) ) for ( const k of keys ) if ( !CAT_OF.has(k) ) CAT_OF.set(k, cat);
 
@@ -377,20 +396,18 @@ function describe({ item, tab, mod, version, pack, owner, actorId, frEntry, effe
     bad.push(`effet jamais posé : ${e.name}`);
   }
 
-  // Ce que le texte annonce.
-  // Soins : une interdiction (« can't regain Hit Points or gain Temporary Hit Points », la nuée, un poison, une malédiction) ou une
-  // condition (« if you have no Temporary Hit Points left », « until it regains any Hit Points ») n'annonce aucun soin (2026-11-15) :
-  // ces passages sont retirés avant le test, sinon 49 capacités de créatures sur 82 comptaient comme « soin que rien ne porte » (la
-  // nuée ×15, la note d'Incantation sur Changement de forme ×12, poisons et malédictions). « regains 1 Hit Point » (singulier) compte.
-  const healText = desc.replace(HEAL_NEGATED, " ");
+  // Ce que le texte annonce, chaque champ testé sur le texte privé de ses passages niés (`NEGATED`). Soins (§450) : une interdiction
+  // (« can't regain Hit Points or gain Temporary Hit Points ») ou une condition (« until it regains any Hit Points ») n'annonce aucun
+  // soin — 49 capacités de créatures sur 82 comptaient ainsi (la nuée ×15, la note d'Incantation sur Changement de forme ×12, poisons
+  // et malédictions) ; « regains 1 Hit Point » (singulier) compte. Les autres champs (§451) : voir `NEGATED`.
   const says = {
-    at: /\b(melee|ranged) (weapon |spell )?attack roll|\bmake (a|an|one) (melee|ranged) (spell )?attack|\bspell attack\b/i.test(desc),
+    at: /\b(melee|ranged) (weapon |spell )?attack roll|\bmake (a|an|one) (melee|ranged) (spell )?attack|\bspell attack\b/i.test(notSaid(desc, "at")),
     dm: /\b\d+d\d+\b[^.]{0,60}\bdamage\b|\bdamage equal to\b/i.test(desc),
-    he: /\bregains? [^.]{0,40}hit points?\b(?! maximum)|\bTemporary Hit Points\b/i.test(healText),
+    he: /\bregains? [^.]{0,40}hit points?\b(?! maximum)|\bTemporary Hit Points\b/i.test(notSaid(desc, "he")),
     sv: /\b(make|makes|succeed on|must succeed on) (a|an) \w+ saving throw|\b\w+ Saving Throw:/i.test(desc),
-    ar: /\b\d+-foot(-radius|-long|-wide)?[- ](Emanation|Sphere|Cone|Cube|Line|Cylinder|radius)/i.test(desc),
-    mv: /\bteleport|\bpush(ed|es)? [^.]{0,30}\b\d+ feet|\bpull(ed|s)? [^.]{0,30}\b\d+ feet/i.test(desc),
-    su: /\bsummon|\bconjure|\bcreate[sd]? [^.]{0,30}\b(creature|spirit|servant)/i.test(desc)
+    ar: /\b\d+-foot(-radius|-long|-wide)?[- ](Emanation|Sphere|Cone|Cube|Line|Cylinder|radius)/i.test(notSaid(desc, "ar")),
+    mv: /\bteleport|\bpush(ed|es)? [^.]{0,30}\b\d+ feet|\bpull(ed|s)? [^.]{0,30}\b\d+ feet/i.test(notSaid(desc, "mv")),
+    su: /\bsummon|\bconjure|\bcreate[sd]? [^.]{0,30}\b(creature|spirit|servant)/i.test(notSaid(desc, "su"))
   };
   const announced = [];
   for ( const [name, id] of Object.entries(CONDITIONS) ) {
@@ -412,7 +429,8 @@ function describe({ item, tab, mod, version, pack, owner, actorId, frEntry, effe
   };
   const effectEnd = [...new Set(effects.filter(e => !e.transfer).map(e => span(e.duration)).filter(Boolean))];
   const turnBound = effects.some(e => !e.transfer && ["rounds", "turns"].includes(e.duration?.units));
-  const ends = END_EVENTS.filter(e => e.re.test(desc)).map(e => ({ id: e.id, label: e.label,
+  const endText = desc.replace(END_NEGATED, " ");
+  const ends = END_EVENTS.filter(e => e.re.test(endText)).map(e => ({ id: e.id, label: e.label,
     s: e.engine.test(entryText) ? "das" : (e.fixed && turnBound) ? "sys" : "man" }));
   // Une fin anticipée déjà comptée sous un type précis ne compte pas deux fois.
   const endList = ends.filter(e => (e.id !== "early") || !ends.some(o => ["damage", "acts", "distance"].includes(o.id)));
