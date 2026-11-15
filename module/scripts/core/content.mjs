@@ -238,7 +238,7 @@
  *     saveAutoSuccess?: { types?, fighting? }  §402 : réussite d'office — ces types de créature (Pétrification), ou une créature
  *                                               que le lanceur combat (`fighting` : Discours captivant, Faux amis)
  *     fadesOnLongRest?: [ids d'effets]   §402 : un de ces effets tombe à chaque Repos long (Rappel à la vie : −4 qui diminue)
- *     onUsesSpent?: { activity, effects }    §458 : quand cette activité épuise les utilisations de l'item, ces effets de l'item sont posés
+ *     onUsesSpent?: { activity?, effects }   §458 : quand les utilisations de l'item sont épuisées, ces effets de l'item sont posés
  *                                               sur son porteur, une fois (les livres à 48 heures de lecture : +2 à une caractéristique)
  *     leavesEffects?: [ids d'effets]     §456 : quand l'item quitte la fiche, ces effets de l'item sont posés sur l'ancien porteur (Marque
  *                                               du sacrifice retirée : Désavantage aux sauvegardes de Sagesse 24 h) ; pas lors d'un

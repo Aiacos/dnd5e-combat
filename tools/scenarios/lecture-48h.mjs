@@ -38,7 +38,8 @@ export default {
       const itemId = await ctx.ensureItem(mage, book.uuid);
       const base = await ability(book.ability);
       await ctx.call("upsert-actor-item", { actorId, itemData: { "system.uses.spent": 46 }, match: { path: "_id", value: itemId } });
-      const marked = async () => (await effectsOf()).filter(e => e.flags?.[MODULE_ID]?.usesSpent?.source === book.uuid);
+      // Le livre prêté par le scénario ne garde pas toujours son uuid de compendium : l'effet se reconnaît à sa marque et à son nom.
+      const marked = async () => (await effectsOf()).filter(e => e.flags?.[MODULE_ID]?.usesSpent && (e.name === book.effect));
 
       // `consume: true` : l'outil du connecteur ne décompte rien par défaut ; c'est la case cochée qui compte ici.
       await ctx.use({ tokenId: mage.id, itemId, activityId: book.read, consume: true });
@@ -50,6 +51,7 @@ export default {
 
       // `consume: true` : l'outil du connecteur ne décompte rien par défaut ; c'est la case cochée qui compte ici.
       await ctx.use({ tokenId: mage.id, itemId, activityId: book.read, consume: true });
+      ctx.log(`${book.label} : après la 2e lecture, ${await spentOf(itemId)} / 48 cochées`);
       let got = [];
       for ( let i = 0; i < 20 && !got.length; i++ ) { await pause(300); got = await marked(); }
       ctx.log(`${book.label} : ${got.map(e => `${e.name} ${JSON.stringify(e.system?.changes ?? e.changes)}`).join(" | ") || "rien"}`);

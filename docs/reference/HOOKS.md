@@ -599,31 +599,30 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 8. "once per turn" limit not recorded
 9. legendary action not spent
 10. summon on targets: neighbour summons
-11. effect of a completed item not applied
-12. contest not played
-13. self area: automatic placement
-14. coating: weapon not coated
-15. Boon of Spell Recall
-16. maneuver: promised die or AC not applied
-17. spell ended by a special function: not ended
-18. escape
-19. jump: Step of the Wind doubling not noted
-20. Ready: readied action not chosen
-21. improvised weapon: not requested
-22. effect ending on spell or damage not removed
-23. potion: conditions not removed
-24. healer's kit: stabilization
-25. hide
-26. search
-27. light object: the caster does not shed light
-28. caster light: not lit
-29. light source: not lit
-30. Wild Shape: transformation not done
-31. enchantment: weapon not enchanted
-32. ethereal: Ethereal Jaunt / Stride not applied
-33. Arcane Vigor: Hit Point Dice not spent
-34. restoration: condition not removed
-35. tinderbox: nothing lit
+11. contest not played
+12. self area: automatic placement
+13. coating: weapon not coated
+14. Boon of Spell Recall
+15. maneuver: promised die or AC not applied
+16. spell ended by a special function: not ended
+17. escape
+18. jump: Step of the Wind doubling not noted
+19. Ready: readied action not chosen
+20. improvised weapon: not requested
+21. effect ending on spell or damage not removed
+22. potion: conditions not removed
+23. healer's kit: stabilization
+24. hide
+25. search
+26. light object: the caster does not shed light
+27. caster light: not lit
+28. light source: not lit
+29. Wild Shape: transformation not done
+30. enchantment: weapon not enchanted
+31. ethereal: Ethereal Jaunt / Stride not applied
+32. Arcane Vigor: Hit Point Dice not spent
+33. restoration: condition not removed
+34. tinderbox: nothing lit
 
 ### `dnd5e.preActivityConsumption`
 
@@ -1098,11 +1097,12 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `updateItem`
 
 1. ammunition choice announced
-2. feat effect not synced _(MJ)_
-3. effect end on armor: not played _(MJ)_
-4. armor training: shield AC not updated _(MJ)_
-5. granted speed not synced _(MJ)_
-6. perception: Devil's Sight or blind hearing not granted after an update
+2. effect of a completed item not applied _(MJ)_
+3. feat effect not synced _(MJ)_
+4. effect end on armor: not played _(MJ)_
+5. armor training: shield AC not updated _(MJ)_
+6. granted speed not synced _(MJ)_
+7. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `updateRegion`
 
