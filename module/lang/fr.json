@@ -2182,6 +2182,8 @@
   "DND5ECOMBAT.Passagers.SansMJ": "Pas de MJ actif : le passager reste sur place.",
   "DND5ECOMBAT.Retour.Teleporte": "Téléporté",
   "DND5ECOMBAT.Retour.Estompe": "{item} : le malus diminue (Repos long)",
+  "DND5ECOMBAT.Retour.Laisse": "{item} retiré : {effect}",
+  "DND5ECOMBAT.Retour.LaisseCarte": "<b>{actor}</b> perd <b>{item}</b> : {effect} posé.",
   "DND5ECOMBAT.Retour.Banni": "Banni",
   "DND5ECOMBAT.Retour.Revenu": "De retour",
   "DND5ECOMBAT.Souci.noSpells": "Sous {item}, vous ne pouvez ni lancer de sorts ni prendre l'action Magie.",

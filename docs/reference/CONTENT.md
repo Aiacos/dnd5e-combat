@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-876 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+877 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -152,6 +152,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `lastStandHeal` | 1 | `boon-of-recovery` |
 | `leap` | 1 | `chromatic-orb` |
 | `leash` | 1 | `compelled-duel` |
+| `leavesEffects` | 1 | `mark-of-sacrifice` |
 | `levitate` | 1 | `levitate` |
 | `lifesteal` | 1 | `vampiric-touch` |
 | `light` | 14 | `continual-flame`, `darkness`, `daylight`, `faerie-fire`, `fire-shield`, `flame-blade`, … |

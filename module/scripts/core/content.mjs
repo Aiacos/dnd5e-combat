@@ -238,6 +238,9 @@
  *     saveAutoSuccess?: { types?, fighting? }  §402 : réussite d'office — ces types de créature (Pétrification), ou une créature
  *                                               que le lanceur combat (`fighting` : Discours captivant, Faux amis)
  *     fadesOnLongRest?: [ids d'effets]   §402 : un de ces effets tombe à chaque Repos long (Rappel à la vie : −4 qui diminue)
+ *     leavesEffects?: [ids d'effets]     §456 : quand l'item quitte la fiche, ces effets de l'item sont posés sur l'ancien porteur (Marque
+ *                                               du sacrifice retirée : Désavantage aux sauvegardes de Sagesse 24 h) ; pas lors d'un
+ *                                               remplacement par le diagnostic (option `replacing`)
  *     magicEvasion?: true                  §402 : l'effet porté du sort annule la moitié des dégâts d'une sauvegarde réussie contre la magie (Cercle de pouvoir)
  *     saveAdvantageFrom?: { types, statuses }  §402 : Avantage aux sauvegardes contre ces états posés par ces types (Protection contre le mal et le bien)
  *     leash?: { distance, units }        §402 : la créature qui porte un effet de l'item ne s'éloigne pas volontairement du lanceur au-delà (Duel forcé)

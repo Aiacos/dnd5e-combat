@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-350 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+351 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -162,6 +162,7 @@ la sélection sans rien jouer.
 | `maitre-de-guerre` |  | §87 | Croc-en-jambe, Attaque provocante (dé de supériorité, sauvegarde) |
 | `malediction` |  | §37 | caractéristique, attaques, actions, résilience |
 | `marche-interrompue` |  | §99 §166 | clic ailleurs, pause |
+| `marque-du-sacrifice` |  | §456 | retirée, elle laisse son Désavantage de Sagesse (leavesEffects) |
 | `marque` |  | §16.12 | Rayon traçant consommé par l'attaque suivante, Moquerie cruelle par la sienne |
 | `metres` | metres | §5.7 | une scène à 1,5 m par case : Vitesse, portée, allonge |
 | `meute-invisible` |  | §368 | la meute épargne une créature que le lanceur ne voit pas |

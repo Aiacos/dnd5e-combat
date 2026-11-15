@@ -1994,6 +1994,8 @@
   "DND5ECOMBAT.Passagers.SansMJ": "Nenhum mestre ativo: o passageiro fica para trás.",
   "DND5ECOMBAT.Retour.Teleporte": "Teleportado",
   "DND5ECOMBAT.Retour.Estompe": "{item}: a penalidade diminui (Descanso Longo)",
+  "DND5ECOMBAT.Retour.Laisse": "{item} removido: {effect}",
+  "DND5ECOMBAT.Retour.LaisseCarte": "<b>{actor}</b> perde <b>{item}</b>: {effect} aplicado.",
   "DND5ECOMBAT.Retour.Banni": "Banido",
   "DND5ECOMBAT.Retour.Revenu": "Retorna",
   "DND5ECOMBAT.Souci.noAttacksOrSpells": "Sob o efeito de {item}, você não pode atacar nem conjurar magias.",

@@ -26,6 +26,12 @@ const pullOfDeath = (formula, atLeast11) => ({
 const sentinel = [{ type: "use" }, { type: "halve" }, { type: "uncrit" }];
 
 export const RAVENLOFT = Object.freeze({
+  /* Dons ténébreux */
+
+  // §456 : Marque du sacrifice (Bénédiction) — retirée, elle laisse au porteur le Désavantage aux sauvegardes de Sagesse pendant 24 h :
+  // l'effet « (Removed) » de la donnée, que sa note demande de poser à la main.
+  "mark-of-sacrifice": { leavesEffects: ["UUWLKOeXgMGOPoFB"] },
+
   /* Artificier réanimateur */
 
   // C12-b : Choc de vie — « touchez une créature à 0 PV » : le soin (portée personnelle dans la donnée) se donne au contact ; puis la

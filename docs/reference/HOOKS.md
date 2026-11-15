@@ -389,13 +389,14 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 ### `deleteItem`
 
-1. auras: recalculation requested
-2. feat effect not synced _(MJ)_
-3. features held by Rage not synced _(MJ)_
-4. armor training: shield AC not updated _(MJ)_
-5. granted speed not synced _(MJ)_
-6. light source: not extinguished _(MJ)_
-7. perception: Devil's Sight or blind hearing not granted after an update
+1. effect left by a removed item not applied _(MJ)_
+2. auras: recalculation requested
+3. feat effect not synced _(MJ)_
+4. features held by Rage not synced _(MJ)_
+5. armor training: shield AC not updated _(MJ)_
+6. granted speed not synced _(MJ)_
+7. light source: not extinguished _(MJ)_
+8. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `deleteRegion`
 

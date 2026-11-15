@@ -223,7 +223,7 @@ describe("contenu livré", () => {
       "lolths-sting", "lordly-presence", "luck-blade-enchanted", "lucky", "lunar-form", "lunging-attack", "lupin-howl", "luring-song",
       "mace-of-disruption", "mace-of-terror", "mage-armor", "mage-hand", "mage-slayer", "magic-missile", "magic-resistance",
       "magic-weapon", "magnificent-mansion", "manacles", "maneuvering-attack", "mangonel", "mantle-of-spell-resistance",
-      "manual-of-quickness-of-action", "marble-elephant-rare", "marshal-undead", "martial-arts", "mass-cure-wounds", "mass-heal",
+      "manual-of-quickness-of-action", "marble-elephant-rare", "mark-of-sacrifice", "marshal-undead", "martial-arts", "mass-cure-wounds", "mass-heal",
       "mass-suggestion", "maze", "medium-armor-master", "melfs-acid-arrow", "menacing-attack", "mind-corrosion", "mind-sliver",
       "mind-spike", "mindless-rage", "minor-illusion", "mirror-image", "mislead", "mist-walker", "misty-escape", "misty-form",
       "misty-step", "mm-beholder-eye-rays", "mm-homunculus-bite", "mm-pseudodragon-sting", "mm-wereboar-gore", "mm-wight-life-drain",

@@ -42,6 +42,9 @@ function fresh(doc) {
 }
 const tr = prefix => (key, data) => loc(`Macro.${prefix}.${key}`, data);
 
+/** §456 : un objet supprimé pour être recréé aussitôt (remplacement) — `leavesEffects` ne doit pas jouer (runtime/leaves.mjs). */
+const replacing = () => ({ [MODULE_ID]: { replacing: true } });
+
 /**
  * Les objets propres à un token non lié : ceux de la SOURCE de son delta. Côté client, `token.delta.items` énumère l'inventaire
  * fusionné (base + delta) : les anciennes macros traitaient ainsi aussi, à travers chaque token, les objets de l'acteur de base (vu en
@@ -165,7 +168,7 @@ async function cleanActor(actor, dry) {
       lines.push(`♻ ${esc(item.name)} ← ${esc(doc.name)} (${esc(doc.uuid.replace("Compendium.", ""))})`);
       if ( !dry ) {
         const data = midiReplacement(item, doc);
-        await actor.deleteEmbeddedDocuments("Item", [item.id]);
+        await actor.deleteEmbeddedDocuments("Item", [item.id], replacing());
         await actor.createEmbeddedDocuments("Item", [data], { keepId: true });
       }
       continue;
@@ -484,7 +487,7 @@ const ddb = {
           const data = ddbReplacement(current, official, { lock });
           const parent = current.parent;
           if ( parent ) {
-            await parent.deleteEmbeddedDocuments("Item", [current.id]);
+            await parent.deleteEmbeddedDocuments("Item", [current.id], replacing());
             await parent.createEmbeddedDocuments("Item", [data], { keepId: true });
           } else {
             await current.delete();
@@ -755,7 +758,7 @@ const phb3Items = {
             const current = sheet.items.get(item.id);
             if ( !current ) continue;
             const data = phb3Replacement(current, reference);
-            await sheet.deleteEmbeddedDocuments("Item", [current.id]);
+            await sheet.deleteEmbeddedDocuments("Item", [current.id], replacing());
             await sheet.createEmbeddedDocuments("Item", [data], { keepId: true });
             done.push(`♻ ${esc(current.name)} ← ${esc(reference.name)}`);
           }

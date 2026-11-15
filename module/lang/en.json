@@ -2182,6 +2182,8 @@
   "DND5ECOMBAT.Passagers.SansMJ": "No active GM: the passenger stays behind.",
   "DND5ECOMBAT.Retour.Teleporte": "Teleported",
   "DND5ECOMBAT.Retour.Estompe": "{item}: the penalty decreases (Long Rest)",
+  "DND5ECOMBAT.Retour.Laisse": "{item} removed: {effect}",
+  "DND5ECOMBAT.Retour.LaisseCarte": "<b>{actor}</b> loses <b>{item}</b>: {effect} applied.",
   "DND5ECOMBAT.Retour.Banni": "Banished",
   "DND5ECOMBAT.Retour.Revenu": "Returns",
   "DND5ECOMBAT.Souci.noSpells": "Under {item}, you can't cast spells or take the Magic action.",

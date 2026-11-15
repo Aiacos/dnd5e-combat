@@ -198,6 +198,9 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   if ( ("fadesOnLongRest" in entry) && (!Array.isArray(entry.fadesOnLongRest) || !entry.fadesOnLongRest.length || !entry.fadesOnLongRest.every(isId)) ) {
     errors.push(`${at}fadesOnLongRest: list of effect ids (16 characters)`);
   }
+  if ( ("leavesEffects" in entry) && (!Array.isArray(entry.leavesEffects) || !entry.leavesEffects.length || !entry.leavesEffects.every(isId)) ) {
+    errors.push(`${at}leavesEffects: list of effect ids (16 characters)`);
+  }
   if ( ("banishes" in entry) && (!Array.isArray(entry.banishes) || !entry.banishes.length || !entry.banishes.every(isId)) ) {
     errors.push(`${at}banishes: list of effect ids (16 characters)`);
   }
