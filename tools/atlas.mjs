@@ -25,6 +25,9 @@ import { CONTENT, SOURCES } from "../module/scripts/content/index.mjs";
 import { ENTRY_KEYS, STEP_TYPES } from "../module/scripts/core/content/enums.mjs";
 import { MOMENTS } from "../module/scripts/core/triggers.mjs";
 import { withDataFixes } from "../module/scripts/core/data-fixes.mjs";
+import { monsterTextLayer } from "../module/scripts/core/monster-layer.mjs";
+import { mergeEntries } from "../module/scripts/core/content.mjs";
+import { readDrain } from "../module/scripts/core/drain.mjs";
 
 const [out, data = "F:/Foundry V14/Data"] = process.argv.slice(2);
 if ( !out ) { console.error("usage : node tools/atlas.mjs <dossier de sortie> [Data]"); process.exit(1); }
@@ -72,7 +75,7 @@ const CATS = {
     "byWounds", "absorb", "thrownDamage", "rage", "persistentRage", "swallow"],
   he: ["cures", "curesAll", "healMax", "healsDownedMax", "supremeHealing", "revivesFull", "regeneration", "hitDiceHeal", "healingRerolls",
     "fortifiedHealing", "lastStandHeal", "discipleOfLife", "blessedHealer", "tempHpPool", "stabilizes", "blocksHealing", "wardsAtZero",
-    "stableAtZero", "atZero", "relentless", "endurance"],
+    "stableAtZero", "atZero", "relentless", "endurance", "absorbsDamage"],
   sv: ["saveAdvantage", "savedEffects", "saveDisadvantageFor", "willingFails", "saveAdvantageSize", "fleeOnFailedSave", "evasion",
     "fortitude", "pendingDie", "portent", "rollBonus", "elusive"],
   ar: ["emanation", "aura", "walls", "thinWall", "pointWall", "cellWall", "zoneAffects", "selfZone", "obscures", "difficultTerrain",
@@ -133,7 +136,9 @@ const NEGATED = {
   ar: negated(["\\b(?:no|not) (?:larger|bigger) than [^.;]{0,30}?\\d+-foot(?:-\\w+)?[- ]\\w+",
     `\\b${CANT}\\s+exceed\\s+\\d+\\s+contiguous\\s+\\d+-foot[- ]\\w+`]),
   // « creatures can't teleport », « no one can teleport », « can't enter or exit the area using teleportation ».
-  mv: negated([`\\b(?:${CANT}|no one can)\\s+(?:[\\w’']+\\s+){0,6}?teleport\\w*`]),
+  // §460 : un sort nommé par son lien (« @UUID[…]{Teleport} » dans une liste d'Incantation) est la ligne de ce sort, pas un déplacement de
+  // la capacité.
+  mv: negated([`\\b(?:${CANT}|no one can)\\s+(?:[\\w’']+\\s+){0,6}?teleport\\w*`, "@UUID\\[[^\\]]*\\]\\{[^}]*\\}"]),
   // « it can't be summoned again ».
   su: negated([`\\b${CANT}\\s+be\\s+(?:summon|conjur)\\w*`])
 };
@@ -347,8 +352,19 @@ function fixedForAtlas(item, effects, fixes) {
 
 function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEntry, effects: rawEffects }) {
   const ident = identOf(rawItem, actorId);
-  const entry = CONTENT[ident];
-  const { item, effects, fixed } = fixedForAtlas(rawItem, rawEffects, entry?.dataFixes);
+  const shipped = CONTENT[ident];
+  const { item, effects, fixed } = fixedForAtlas(rawItem, rawEffects, shipped?.dataFixes);
+  // §460 : sur une capacité de créature, le moteur joue aussi la couche « texte » (K1–K12, core/monster-layer.mjs) — fins, poussées,
+  // drains, absorptions lus dans le texte anglais —, sous le contenu livré (adapter/content.mjs, `contentOf`). L'atlas ne la lisait pas :
+  // ce qu'elle porte paraissait « porté par personne ».
+  const html = owner ? String(item.system?.description?.value ?? "") : "";
+  const textEntry = owner ? monsterTextLayer({ html, identifier: ident, swallow: !!shipped?.swallow,
+    effects: effects.map(e => ({ id: e._id, statuses: e.statuses ?? [], changes: e.changes ?? e.system?.changes ?? [] })),
+    activities: Object.entries(item.system?.activities ?? {}).map(([id, a]) => ({ id: a._id ?? id, name: a.name ?? "", type: a.type,
+      activation: { type: a.activation?.type, condition: a.activation?.condition ?? "" }, effects: (a.effects ?? []).map(e => e._id ?? e.id),
+      onSave: a.damage?.onSave ?? null })) }) : null;
+  const entry = textEntry ? mergeEntries([textEntry, shipped ?? null]) : shipped;
+  const textKeys = textEntry ? Object.keys(textEntry).filter(k => !shipped || !(k in shipped)) : [];
   const s = item.system ?? {};
   const rawS = rawItem.system ?? {};
   const acts = Object.values(s.activities ?? {});
@@ -473,7 +489,11 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   const field = (key, sys, man, isBad=false) => { S[key] = isBad ? "bad" : das(key) ? "das" : sys ? "sys" : man ? "man" : ""; };
   field("at", attacks.length, says.at);
   field("dm", damages.length, says.dm && !damages.length, emptyDamage);
-  field("he", heals.length, says.he);
+  // §460 : un drain que le texte dit rendre au drainer (« regains Hit Points equal to that amount », runtime/drain.mjs) est un soin porté.
+  // `lifesteal` (runtime/lifesteal.mjs) rend aussi des PV à l'auteur.
+  const healsBack = !!entry?.lifesteal || (!!entry?.drain && readDrain(owner ? html : (s.description?.value ?? "")).regains);
+  S.he = healsBack ? "das" : null;
+  if ( !healsBack ) field("he", heals.length, says.he);
   field("sv", saves.length, says.sv);
   field("ar", area, says.ar);
   field("tg", targets, false);
@@ -481,7 +501,9 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   field("ef", effects.length, announced.length, bad.some(b => b.startsWith("effet")));
   field("su", summons.length, says.su && !summons.length && (tab !== "creatures"));
   field("us", uses.length, false);
+  // §460 : une poussée ou une traction déclarée (étape `move` d'un déclencheur, contenu ou texte K8) est un déplacement porté.
   field("mv", false, says.mv);
+  if ( (S.mv === "man") && /"type":"move"/.test(entryText) ) S.mv = "das";
   // Fin : le pire des événements annoncés ; sans événement, la durée d'un effet suffit (système).
   S.fi = endList.some(e => e.s === "man") ? "man" : endList.some(e => e.s === "sys") ? "sys" : endList.length ? "das"
     : effectEnd.length ? "sys" : "";
@@ -529,14 +551,14 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
     ot: others.join(", "), mvt: says.mv ? "annoncé" : "",
     pg: advancements.join(" · "),
     fi: [...effectEnd.map(x => `effet ${x}`), ...endList.map(e => `${e.label} (${END_STATUS[e.s]})`)].join(" · "), fe: endList.map(e => `${e.id}:${e.s}`),
-    eng: inCode ? ["code du moteur"] : engine, ej: entry ? JSON.stringify(entry).slice(0, 1200) : "",
+    eng: inCode ? ["code du moteur"] : engine.map(k => textKeys.includes(k) ? `${k} (texte)` : k), ej: entry ? JSON.stringify(entry).slice(0, 1200) : "",
     S, g, bad, nb: notes,
     rd: rd ? rd.status : "", rdm: rd?.missing ?? "",
     sw: sweep ? `${sweep.ok ? "✓" : "✗"} ${sweep.at}${sweep.note ? ` — ${sweep.note}` : ""}` : "",
     sn: scen.length, sl: scen.slice(0, 8).join(", "),
     ...reviewFields(review.get(actorId ? `Compendium.${mod.id}.${pack}.Actor.${actorId}.Item.${item._id}` : `Compendium.${mod.id}.${pack}.Item.${item._id}`)),
     cm: commits[0] ?? "", cn: commits.length,
-    h: dataHash, eh: entry ? hash(entryText) : "",
+    h: dataHash, eh: shipped ? hash(JSON.stringify(shipped)) : "",
     d: (frDesc || desc).slice(0, 2500), dl: frDesc ? "fr" : "en"
   };
 }

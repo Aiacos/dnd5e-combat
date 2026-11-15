@@ -80,5 +80,8 @@ export const MONSTERS = Object.freeze({
   // Forme tourbillonnante (Porte-parole du gibet) : entre dans la case d'une créature et s'y arrête.
   "whirling-form": { sharesSpace: "enter" },
   // Chair qui se défait (Désossé) : se déplace ensuite sans provoquer d'attaque d'opportunité.
-  "unraveling-flesh": { noOpportunity: "afterUse" }
+  "unraveling-flesh": { noOpportunity: "afterUse" },
+  // §460, Ravenloft. Absorption d'énergie (Jiangshi) : sur un échec comme sur une réussite, il regagne autant de PV que les dégâts
+  // nécrotiques subis par la cible (runtime/lifesteal.mjs). Le gain de Vitesse de vol et l'action Bonus offerte restent au MJ.
+  "consume-energy": { lifesteal: { damageType: "necrotic" } }
 });

@@ -17,9 +17,7 @@ import { BASIC_ACTIONS } from "../content/actions.mjs";
 import { factsFor } from "./facts.mjs";
 import { scrollSpellOf } from "./scrolls.mjs";
 import { isObjectToken } from "./bodies.mjs";
-import { monsterChoice, monsterDeaths, monsterEndings, monsterPushes, monsterReactions, monsterRecurring, monsterTypeGate, monsterAdvantage, monsterSaveDamage, monsterMissingStatus, monsterNoOpportunity,
-  monsterBasicActions, monsterSightGate, monsterImmunity, monsterEffectDurations, monsterReactionWindow, monsterActivationAdvantage, monsterDefense, monsterChargeGate, monsterLightSensitivity } from "../core/monster-text.mjs";
-import { readDrain, drains } from "../core/drain.mjs";
+import { monsterTextLayer } from "../core/monster-layer.mjs";
 
 export const OVERRIDES_SETTING = "contentOverrides";
 
@@ -208,71 +206,12 @@ function textLayer(item) {
   if ( !html ) return null;
   const key = `${item.uuid}|${html.length}|${item.effects?.size ?? 0}`;
   if ( textCache.has(key) ) return textCache.get(key);
-  const effects = (item.effects?.contents ?? []).map(e => ({ id: e.id, statuses: [...(e.statuses ?? [])] }));
-  const activities = Array.from(item.system?.activities ?? []).map(a => ({ id: a.id, name: a.name ?? "" }));
-  const triggers = monsterEndings(html, effects);
-  // K2 (§323) : la mort à 0 PV et les paliers de PV que le texte promet.
-  const deaths = monsterDeaths(html, { activities, effects });
-  // K3 (§324) : un seul des effets — tiré au dé ou au choix de la créature.
-  const choice = monsterChoice(html, effects);
-  // K6 (§327) : parade (« adds N to its AC »), Réactions perdues, action OU action Bonus.
-  const acEffect = (item.effects?.contents ?? []).flatMap(e => e.changes ?? []).find(c => c.key === "system.attributes.ac.bonus" && /^\+?\d+$/.test(String(c.value).trim()));
-  const reacts = monsterReactions(html, { reaction: activities.some(a => item.system.activities.get(a.id)?.activation?.type === "reaction"),
-    acEffect: acEffect ? Number(String(acEffect.value).replace("+", "")) : null });
-  // K7 (§328) : dégâts récurrents au porteur, soins bloqués, absorption — pas pour une capacité que la brique Avaler joue déjà.
-  const recurring = monsterRecurring(html, effects, Array.from(item.system?.activities ?? []).map(a => ({ id: a.id, type: a.type })));
-  if ( CONTENT[identifierOf(item).id]?.swallow ) delete recurring.triggers;
-  // K8 (§329) : poussées et tractions lues dans le texte.
-  const kinds = { save: activities.some(a => item.system.activities.get(a.id)?.type === "save"), attack: activities.some(a => item.system.activities.get(a.id)?.type === "attack") };
-  const pushes = monsterPushes(html, kinds);
-  // K10 (§331) : Avantage conditionnel lu dans le texte.
-  const advantage = monsterAdvantage(html, identifierOf(item).id);
-  // §334 : l'Avantage que donne la condition d'activation d'une attaque.
-  advantage.push(...monsterActivationAdvantage(Array.from(item.system?.activities ?? []).filter(a => a.type === "attack").map(a => a.activation?.condition ?? ""), identifierOf(item).id));
-  // K12 (§333) : l'état que la donnée oublie de poser.
-  const acts = Array.from(item.system?.activities ?? []).map(a => ({ id: a.id, type: a.type, effects: (a.effects ?? []).map(e => e._id ?? e.id) }));
-  // §334 : un état lu avec sa durée d'un tour la reçoit par `effectEnds` « status:<état> ».
-  const missing = monsterMissingStatus(html, { activities: acts, effects }).map(({ ends, ...t }) => {
-    if ( ends ) (recurring.effectEnds ??= {})[`status:${t.do[0].status}`] = ends;
-    return t;
-  });
-  // K1 (§334) : immunité temporaire après une réussite.
-  const immunity = monsterImmunity(html, identifierOf(item).id, acts);
-  if ( immunity ) missing.push(immunity.trigger);
-  // §334 : la fenêtre d'une Réaction de monstre d'après son déclencheur, quand la parade de K6 n'en donne pas.
-  const reactionConditions = Array.from(item.system?.activities ?? []).filter(a => a.activation?.type === "reaction").map(a => a.activation?.condition ?? "");
-  const outward = Array.from(item.system?.activities ?? []).some(a => (a.activation?.type === "reaction") && ["save", "attack", "damage"].includes(a.type));
-  const window = (reactionConditions.length && !reacts.triggers?.length) ? monsterReactionWindow(html, reactionConditions, outward,
-    Array.from(item.system?.activities ?? []).find(a => a.activation?.type === "reaction")?.id ?? null) : [];
-  const allTriggers = [...triggers, ...monsterDefense(html), ...monsterLightSensitivity(html), ...(reacts.triggers ?? []), ...window, ...(recurring.triggers ?? []), ...pushes, ...advantage, ...missing];
-  // §334 : les durées en tours que le texte donne aux effets, Réactions perdues et soins bloqués par effet.
-  const durations = monsterEffectDurations(html, { activities: acts, effects });
-  if ( durations.effectEnds ) recurring.effectEnds = { ...durations.effectEnds, ...(recurring.effectEnds ?? {}) };
-  if ( durations.noReactions && !reacts.noReactions ) recurring.noReactions = durations.noReactions;
-  if ( durations.blocksHealing && !recurring.blocksHealing ) recurring.blocksHealing = durations.blocksHealing;
-  const { triggers: _r, ...recurringRest } = recurring;
-  const { triggers: _t, ...restrictions } = reacts;
-  // K11 (§332) : pas de moitié des dégâts sur une réussite quand le texte n'en donne pas.
-  const saveDamage = monsterSaveDamage(html, Array.from(item.system?.activities ?? []).map(a => ({ id: a.id, type: a.type, onSave: a.damage?.onSave ?? null })));
-  if ( saveDamage ) recurringRest.saveDamage = saveDamage;
-  // §334 : l'état de l'attaque ne vient qu'après une charge (« moved 20+ feet straight toward it immediately before the hit »).
-  const charge = monsterChargeGate(html, acts);
-  if ( charge ) recurringRest.effectsIf = charge;
-  // K12 (§333) : plus d'attaque d'opportunité, Foncer / Se désengager / Se cacher, drain du maximum de PV dit par le texte.
-  if ( monsterNoOpportunity(html, effects) ) recurringRest.noOpportunityAttacks = true;
-  // §334 : « moves up to (half) its Speed without provoking Opportunity Attacks » — le reste du tour sans attaque d'opportunité.
-  if ( /\bmoves? up to (?:half )?its (?:\w+ )?Speed without provoking\b/i.test(html.replace(/<[^>]+>/g, " ").replace(/&Reference\[([^\]]*)\]/g, "$1")) ) recurringRest.noOpportunity = "afterUse";
-  const basics = monsterBasicActions(html, acts);
-  if ( basics ) recurringRest.basicActions = basics;
-  if ( drains(readDrain(html)) ) recurringRest.drain = true;
-  // K9 (§330) : porte de type (« Constructs and Undead succeed automatically »).
-  const typeGate = monsterTypeGate(html);
-  // K12 (§333) : « that can see the X » — une créature qui ne voit pas la source n'est pas affectée.
-  const sight = monsterSightGate(html, acts);
-  const gates = [typeGate?.unaffectedIf, sight, immunity?.gate].filter(Boolean);
-  const gate = gates.length ? { unaffectedIf: (gates.length > 1) ? { any: gates } : gates[0] } : null;
-  const layer = (allTriggers.length || Object.keys(deaths).length || choice || Object.keys(restrictions).length || Object.keys(recurringRest).length || gate)
-    ? { ...(allTriggers.length ? { triggers: allTriggers } : {}), ...deaths, ...restrictions, ...recurringRest, ...(choice ? { choice } : {}), ...(gate ? { targets: gate } : {}) } : null;
+  // §460 : le calcul est pur (core/monster-layer.mjs), partagé avec l'ATLAS.
+  const layer = monsterTextLayer({ html, identifier: identifierOf(item).id, swallow: !!CONTENT[identifierOf(item).id]?.swallow,
+    effects: (item.effects?.contents ?? []).map(e => ({ id: e.id, statuses: [...(e.statuses ?? [])], changes: e.changes ?? [] })),
+    activities: Array.from(item.system?.activities ?? []).map(a => ({ id: a.id, name: a.name ?? "", type: a.type,
+      activation: { type: a.activation?.type, condition: a.activation?.condition ?? "" }, effects: (a.effects ?? []).map(e => e._id ?? e.id),
+      onSave: a.damage?.onSave ?? null })) });
   if ( textCache.size > 2000 ) textCache.clear();
   textCache.set(key, layer);
   return layer;

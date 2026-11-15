@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-883 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+884 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -154,7 +154,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `leash` | 1 | `compelled-duel` |
 | `leavesEffects` | 1 | `mark-of-sacrifice` |
 | `levitate` | 1 | `levitate` |
-| `lifesteal` | 1 | `vampiric-touch` |
+| `lifesteal` | 2 | `consume-energy`, `vampiric-touch` |
 | `light` | 14 | `continual-flame`, `darkness`, `daylight`, `faerie-fire`, `fire-shield`, `flame-blade`, … |
 | `limitedAction` | 1 | `haste` |
 | `magical` | 22 | `animate-trees`, `captains-charm`, `darkness-aura`, `deathly-teleport`, `ethereal-jaunt`, `ethereal-stride`, … |

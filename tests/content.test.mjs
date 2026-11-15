@@ -176,7 +176,7 @@ describe("contenu livré", () => {
       "clairvoyant-combatant", "cloak-of-arachnida", "cloak-of-displacement", "cloak-of-elvenkind", "cloak-of-the-bat",
       "clockwork-cavalcade", "cloud-of-daggers", "cloudkill", "clouds-jaunt", "combat-inspiration", "command", "commanders-strike",
       "commanding-presence", "compelled-duel", "compulsion", "confusion", "conjure-animals", "conjure-barrage", "conjure-celestial",
-      "conjure-elemental", "conjure-fey", "conjure-minor-elementals", "conjure-volley", "conjure-woodland-beings", "consume-life",
+      "conjure-elemental", "conjure-fey", "conjure-minor-elementals", "conjure-volley", "conjure-woodland-beings", "consume-energy", "consume-life",
       "contact-other-plane", "contagion", "continual-flame", "cordon-of-arrows", "corrosive-form", "cosmic-omen", "countercharm",
       "counterspell", "coward-spirit", "create-undead", "crossbow-expert", "crown-of-madness", "crusaders-mantle", "crusher",
       "cunning-action", "cunning-strike", "cutting-words", "dagger-of-venom", "dancing-lights", "dark-ones-blessing",
