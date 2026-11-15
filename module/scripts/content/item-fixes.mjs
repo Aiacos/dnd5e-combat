@@ -281,6 +281,20 @@ export const ITEM_FIXES = Object.freeze({
   "robe-of-stars": { dataFixes: [{ effect: "dasRobeOfStars00", create: worn("Robe of Stars", [change("system.bonuses.abilities.save", "add", "+1")]) }] },
   // Manuel de vivacité : « Lire » renvoie à un effet qui n'est pas celui de l'item ; le bénéfice vient au bout de 48 heures de lecture (au MJ).
   "manual-of-quickness-of-action": { gmAlert: { key: "ManuelVivacite" }, dataFixes: [{ path: "system.activities.MeBH48FuUmQFEhUM.effects", from: [{ _id: "9npFjYvEL3twc99F" }], value: [] }] },
+  // §457 : même copier-coller du Guide 2.0.0 (le SRD 6.1 n'a pas ce lien) — « Read » des trois autres livres à 48 heures de lecture
+  // renvoie à l'effet d'un autre livre (« Leader », Charisme, du Traité d'autorité ; « Understanding », Sagesse, du Traité de
+  // compréhension) : retiré, et le MJ prévenu comme pour le Manuel de vivacité.
+  "manual-of-gainful-exercise": { gmAlert: { key: "ManuelVivacite" }, dataFixes: [{ path: "system.activities.QoMjlu00wQebXPDg.effects", from: [{ _id: "9npFjYvEL3twc99F" }], value: [] }] },
+  "manual-of-bodily-health": { gmAlert: { key: "ManuelVivacite" }, dataFixes: [{ path: "system.activities.L5OnUjZIn27NHd2E.effects", from: [{ _id: "9npFjYvEL3twc99F" }], value: [] }] },
+  "tome-of-clear-thought": { gmAlert: { key: "ManuelVivacite" }, dataFixes: [{ path: "system.activities.OCFufJcLGbTJqDqS.effects", from: [{ _id: "jXvtCEBoDCydH8fa" }], value: [] }] },
+  // §457 : Fers du zéphyr — « Attach Horseshoes » pose l'effet « Faster » des Fers de rapidité (`9lS2…`, absent de l'item), et l'item a
+  // perdu le sien. Recréé d'après le SRD 6.1 (`equipment24`) : ignorer le terrain difficile.
+  "horseshoes-of-a-zephyr": { dataFixes: [
+    { effect: "AYtAkgcEHRws0Qeo", create: { name: "Ignore Difficult Terrain", type: "base", transfer: false, disabled: false, statuses: [],
+      img: "icons/tools/smithing/horsehoe-worn-steel-grey.webp", duration: { value: null, units: "seconds" },
+      system: { magical: true, changes: [change("system.attributes.movement.ignoredDifficultTerrain", "add", "all")] } } },
+    { path: "system.activities.Bm8dAa2MyA5NhcPU.effects", from: [{ _id: "9lS2LxCve4hPYGMn" }], value: [{ _id: "AYtAkgcEHRws0Qeo" }] }
+  ] },
   // Épée acérée : « 14 dégâts tranchants de plus » sur un 20 — la donnée les met en nécrotique.
   "sword-of-sharpness": {
     dataFixes: [{ effect: "nxid1s2CZrB06HH8", path: "system.changes", from: SHARPNESS("14d1[necrotic]"), value: SHARPNESS("14[slashing]") }]
@@ -376,7 +390,13 @@ export const ITEM_FIXES = Object.freeze({
   // Robe prismatique : « Étourdi jusqu'à la fin de l'effet », la fin de votre prochain tour ; Bâton de tonnerre et de foudre : « jusqu'à la
   // fin de votre prochain tour ».
   "robe-of-scintillating-colors": { effectEnds: { yQoovzqIXdUiUcU4: "casterTurnEnd" } },
-  "staff-of-thunder-and-lightning": { effectEnds: { UTstWNbk0NXrKgS6: "casterTurnEnd" } },
+  // §457 : « Tonnerre et foudre » = la Foudre (2d6) et le Tonnerre (sauvegarde ou Étourdi) ensemble ; la donnée (comme le SRD 6.1) y ajoute
+  // une part de dégâts vide, retirée.
+  "staff-of-thunder-and-lightning": {
+    effectEnds: { UTstWNbk0NXrKgS6: "casterTurnEnd" },
+    dataFixes: [{ path: "system.activities.EtOETCHaEK0mcw03.damage.parts",
+      from: [{ number: 2, denomination: 6, types: ["lightning"] }, { number: null, types: [] }], value: [part(2, 6, ["lightning"])] }]
+  },
   // Poussière de disparition : « juste après une attaque, des dégâts ou un sort, l'état Invisible prend fin pour cette créature ». O9h (§363) :
   // « vous et chaque créature et objet dans une Émanation de 3 m » — le lanceur compris ; « pendant 2d4 minutes », la même durée pour tous.
   "dust-of-disappearance": { breaksOn: ["attack", "damage", "spell"], includesOrigin: true,

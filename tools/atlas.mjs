@@ -416,12 +416,14 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   for ( const a of acts ) for ( const e of a.effects ?? [] ) if ( !e.uuid && !effectIds.has(e._id) ) bad.push(`effet lié absent (${a.name || a.type})`);
   const entryText = entry ? JSON.stringify(entry) : "";
   // §455 : un effet de la donnée que rien ne pose, sur un item dont le Core porte la règle par son propre mécanisme (Témérité, Aura de
-  // dévotion, Fragilisation occulte), n'est pas un défaut : une note.
+  // dévotion, Fragilisation occulte), n'est pas un défaut : une note. §457 : de même un effet que le moteur confie au MJ par une alerte
+  // (`gmAlert` : le +2 d'un livre au bout de 48 heures de lecture).
   const notes = [];
   for ( const e of effects ) {
     if ( e.transfer || posed.has(e._id) || entryText.includes(e._id) || entryText.includes(JSON.stringify(e.name)) ) continue;
     if ( (e.type === "enchantment") && acts.some(a => a.type === "enchant") ) continue;
     if ( coversRule ) notes.push(`effet de la donnée inutilisé, règle portée par le moteur : ${e.name}`);
+    else if ( entry?.gmAlert ) notes.push(`effet laissé au MJ (alerte du moteur) : ${e.name}`);
     else bad.push(`effet jamais posé : ${e.name}`);
   }
   if ( fixed.length ) notes.push(`donnée corrigée par le moteur (dataFixes) : ${fixed.length} champ${fixed.length > 1 ? "s" : ""}`);
