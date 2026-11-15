@@ -913,7 +913,7 @@ async function applyModification(actor, { feature, advancement, change, target }
 }
 
 const modifyItemCheck = {
-  id: "modify-item", icon: "fa-solid fa-wand-sparkles",
+  id: "modify-item", icon: "fa-solid fa-gem",
   async scan() {
     const t = tr("ModifyItem");
     const tasks = [];

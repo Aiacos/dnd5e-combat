@@ -35,6 +35,8 @@ export const RELEASES = Object.freeze([
     checks: [
       { id: "phb3-subclasses", when: { module: PHB, min: "3.0.0" } },
       { id: "phb3-items", when: { module: PHB, min: "3.0.0" } },
+      { id: "modify-item", when: { system: "6.1.0" } },
+      { id: "data-fixes" },
       { id: "magical-effects", when: { system: "6.1.0" } },
       { id: "spell-duplicates" }
     ]
