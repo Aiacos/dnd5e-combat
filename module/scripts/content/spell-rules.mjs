@@ -517,13 +517,20 @@ export const SPELL_RULES = Object.freeze({
     blast: { activity: "dnd5eactivity200", radius: 10, units: "ft", ability: "dex" } } },
   // §288 : Dissipation du mal et du bien — l'effet de « Cast » (RMeb9TUrFdhXMTzz) manque à la donnée : une trace sur le lanceur porte le
   // Désavantage (content/triggers.mjs) ; Renvoi et Rupture d'enchantement mettent fin au sort ; Rupture fait cesser Charmé ou Effrayé.
+  // §459 : « Cast » cite toujours cet effet absent (Manuel 3.0.0 ; le SRD 6.1 l'a, vide) — le lien est retiré, la trace du moteur suffit.
   "dispel-evil-and-good": { trace: { activity: "0vS3We98acymzUXC" }, endsOnUse: ["dnd5eactivity000", "eBbyE0du7mEJWDbZ"],
-    cures: ["charmed", "frightened"], curesOn: "eBbyE0du7mEJWDbZ" },
+    cures: ["charmed", "frightened"], curesOn: "eBbyE0du7mEJWDbZ",
+    dataFixes: [{ path: "system.activities.0vS3We98acymzUXC.effects", from: [{ _id: "RMeb9TUrFdhXMTzz" }], value: [] }] },
   // §288 : Dédale — l'effet « Banished » (vide) transporte la cible (§265) ; « elle peut entreprendre l'action Étude pour tenter de
   // s'évader : test d'Intelligence (Investigation) DD 20 ; réussi, elle s'évade et le sort prend fin » — proposé au début de son tour.
   "maze": { checkPoses: true, banishes: ["y7cYsJ0DCzXt4Tvy"], actionEnds: { y7cYsJ0DCzXt4Tvy: { by: "bearer", roll: "check", spell: true, turnStart: true } } },
   "antimagic-field": { globe: { radius: 10, units: "ft", maxLevel: 9, everywhere: true } },
-  "antilife-shell": { barrier: { radius: 10, units: "ft", exceptTypes: ["construct", "undead"] } },
+  // §459 : le Manuel 3.0.0 a perdu l'effet « Antilife Shell » que son activité pose (le SRD 6.1 l'a : marque d'une heure sur le lanceur) —
+  // recréé ; la barrière tient aussi par la concentration (adapter/barriers.mjs, tout effet venu du sort).
+  "antilife-shell": { barrier: { radius: 10, units: "ft", exceptTypes: ["construct", "undead"] },
+    dataFixes: [{ effect: "IrE5td3goSQtcc0U", create: { name: "Antilife Shell", type: "base", transfer: false, disabled: false, statuses: [],
+      img: "icons/magic/control/silhouette-hold-beam-blue.webp", duration: { value: 3600, units: "seconds", expiry: "turnStart" },
+      system: { magical: true, changes: [] } } }] },
   "arcane-gate": { pointWall: false },
   "gate": { pointWall: false },
   "demiplane": { pointWall: false },

@@ -60,3 +60,15 @@ describe("§458 : la clé onUsesSpent est validée", () => {
     expect(validateEntry({ onUsesSpent: { activity: "MeBH48FuUmQFEhUM", effects: ["yjQAL2g65jahNoBP"], extra: 1 } }).length).toBe(1);
   });
 });
+
+describe("§459 : sorts du Manuel 3.0.0 dont l'effet a disparu", () => {
+  it("Coquille antivie : l'effet recréé ; Dissipation du mal et du bien : le lien orphelin retiré", async () => {
+    const { SPELL_RULES } = await import("../module/scripts/content/spell-rules.mjs");
+    const shell = withDataFixes({ effects: [], system: { activities: { dnd5eactivity000: { effects: [{ _id: "IrE5td3goSQtcc0U" }] } } } },
+      SPELL_RULES["antilife-shell"].dataFixes).data;
+    expect(shell.effects.map(e => e._id)).toEqual(["IrE5td3goSQtcc0U"]);
+    const dispel = withDataFixes({ effects: [], system: { activities: { "0vS3We98acymzUXC": { effects: [{ _id: "RMeb9TUrFdhXMTzz" }] } } } },
+      SPELL_RULES["dispel-evil-and-good"].dataFixes).data;
+    expect(dispel.system.activities["0vS3We98acymzUXC"].effects).toEqual([]);
+  });
+});

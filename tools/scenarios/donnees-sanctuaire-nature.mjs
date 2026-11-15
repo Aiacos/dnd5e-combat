@@ -10,6 +10,7 @@ const MODULE_ID = "dnd5e-combat";
 const SOURCES = ["Compendium.dnd-players-handbook.classes.Item.phbdrdNaturesSan", "Compendium.dnd5e.classes24.Item.phbdrdNaturesSan"];
 const LANDS = { dnd5eactivity000: ["h0xW0mOYF8frKgHf", "fire"], aNIM3GrB97GSNZHG: ["7YVMASgXswIFXNs2", "cold"],
   G1htmQaxEZ0kwRK0: ["Gqgjm2NswU6f7qVL", "lightning"], "0FT3EzkaLnht95Eo": ["LKxwXqkEIXJR2XAa", "poison"] };
+const SPELLS = "Compendium.dnd-players-handbook.spells.Item.";
 const BRUTAL = "Compendium.dnd-players-handbook.classes.Item.phbbrbBrutalStri";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -40,6 +41,14 @@ export default {
       const { _id: bid, folder: bf, ownership: bo, _stats: bs, ...b } = JSON.parse(JSON.stringify(brutal.data));
       b._stats = { compendiumSource: BRUTAL };
       items.push(b);
+    }
+    // §459 : deux sorts du Manuel dont l'effet a disparu.
+    for ( const id of ["phbsplAntilifeSh", "phbsplDispelEvil"] ) {
+      const s = await ctx.call("get-compendium-entry", { uuid: SPELLS + id }).catch(() => null);
+      if ( !s?.data ) continue;
+      const { _id: sid, folder: sf, ownership: so, _stats: ss, ...d } = JSON.parse(JSON.stringify(s.data));
+      d._stats = { compendiumSource: SPELLS + id };
+      items.push(d);
     }
     const created = await ctx.call("create-actor", { actorData: { name: "Sanctuaire (donnée)", type: "character",
       flags: { [MODULE_ID]: { scenario: "donnees-sanctuaire-nature" } }, items } });
@@ -72,6 +81,19 @@ export default {
       }
       const ids = (strike?.system?.activities?.MP1qQsApCj19F2M5?.effects ?? []).map(e => e._id);
       ctx.expect((ids.length === 1) && (ids[0] === "Q0ou16II1WEcCdyW"), `Coup brutal : « Sundering Blow » ne cite plus que « Sundered » (${ids.join(", ")})`);
+    }
+    {
+      let all = [];
+      for ( let i = 0; i < 20; i++ ) {
+        all = (await ctx.call("get-actor", { actorId })).items ?? [];
+        const shell = all.find(it => it.system?.identifier === "antilife-shell");
+        if ( !shell || (shell.effects ?? []).length ) break;
+        await pause(500);
+      }
+      const shell = all.find(it => it.system?.identifier === "antilife-shell");
+      const dispel = all.find(it => it.system?.identifier === "dispel-evil-and-good");
+      if ( shell ) ctx.expect((shell.effects ?? []).some(e => e._id === "IrE5td3goSQtcc0U"), "Coquille antivie : son effet recréé");
+      if ( dispel ) ctx.expect(!(dispel.system?.activities?.["0vS3We98acymzUXC"]?.effects ?? []).length, "Dissipation du mal et du bien : « Cast » ne cite plus d'effet absent");
     }
     if ( uuid.includes("dnd-players-handbook") ) {
       const scan = await api("diagnosticScan", { checks: ["phb3-items"] });
