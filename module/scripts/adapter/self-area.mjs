@@ -12,7 +12,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { selfAreaShape, aimedAreaShape, aimFrom, cubeBeside } from "../core/self-area.mjs";
+import { selfAreaShape, aimedAreaShape, aimFrom, cubeBeside, departureAreaShape } from "../core/self-area.mjs";
 import { committedPosition, usageTokenOf, tokenCenter } from "./turn.mjs";
 import { templateOf } from "./template.mjs";
 import { contentOf } from "./content.mjs";
@@ -33,12 +33,49 @@ export function selfAreaOf(activity) {
   // sur le token (§121) — pas une zone : la région suivait le porteur partout.
   if ( carriedLightOf(activity?.item) ) return null;
   const template = templateOf(activity);   // §86 : ou celui que le contenu fournit
-  const shape = selfAreaShape({ rangeUnits: activity?.range?.units, type: template?.type, count: template?.count, size: template?.size });
+  // §462 : une téléportation dont la zone frappe l'espace quitté — émanation fixe autour du lanceur, posée avant qu'il ne parte.
+  const left = leavesArea(activity);
+  const shape = left ? departureAreaShape({ type: template?.type, count: template?.count, size: template?.size })
+    : selfAreaShape({ rangeUnits: activity?.range?.units, type: template?.type, count: template?.count, size: template?.size });
   if ( !shape ) return null;
   const token = usageTokenOf(activity);
   if ( !token?.parent || (token.parent !== canvas?.scene) ) return null;
   if ( !game.user.can("REGION_CREATE") ) return null;
-  return { shape, token };
+  return left ? { shape, token, stationary: true } : { shape, token };
+}
+
+/**
+ * §462 : l'activité téléporte son utilisateur et sa zone frappe l'espace qu'il quitte (`teleport.area: "left"`, contenu ou couche texte
+ * des créatures : Téléportation arcanique, Téléportation mortelle, Pas glaçant).
+ * @param {Activity} activity
+ */
+export function leavesArea(activity) {
+  return teleportAreaOf(activity) === "left";
+}
+
+/**
+ * §462 / §463 : où frappe la zone d'une téléportation de soi déclarée — `"left"` (l'espace quitté), `"arrival"` (l'espace d'arrivée),
+ * ou null.
+ * @param {Activity} activity
+ * @returns {"left"|"arrival"|null}
+ */
+export function teleportAreaOf(activity) {
+  const rule = activity?.item ? contentOf(activity.item).entry?.teleport : null;
+  if ( !rule?.area || (rule.activity && (rule.activity !== activity.id)) ) return null;
+  return rule.area;
+}
+
+/**
+ * §463 : pose la zone d'une téléportation « à l'arrivée » autour du token, là où il est (après le saut) — émanation fixe, comme celle du
+ * départ. Rend les régions créées, ou null (forme illisible, pas le droit de créer une région).
+ * @param {Activity} activity
+ * @param {TokenDocument} token
+ */
+export function placeArrivalArea(activity, token) {
+  const template = templateOf(activity);
+  const shape = departureAreaShape({ type: template?.type, count: template?.count, size: template?.size });
+  if ( !shape || !token?.parent || !game.user.can("REGION_CREATE") ) return Promise.resolve(null);
+  return createAreaRegions(activity, token, [selfAreaRegionData(activity, token, shape, { stationary: true })]);
 }
 
 /** Une longueur de l'activité, dans l'unité de la grille (undefined si absente). */
@@ -108,11 +145,11 @@ async function createAreaRegions(activity, token, data) {
  * @param {"emanation"|"circle"} shape
  * @returns {object}
  */
-export function selfAreaRegionData(activity, token, shape) {
+export function selfAreaRegionData(activity, token, shape, { stationary=false }={}) {
   const scene = token.parent;
   const radius = dimensionsOf(activity, scene).size * (scene.grid.size / scene.grid.distance);
   const pos = committedPosition(token);
-  const attached = (shape === "emanation") && !templateOf(activity)?.stationary;
+  const attached = (shape === "emanation") && !stationary && !templateOf(activity)?.stationary;
   const shapeData = (shape === "emanation")
     ? { type: "emanation", radius,
       base: { type: "token", x: pos.x, y: pos.y, width: pos.width, height: pos.height, shape: pos.shape ?? token._source.shape } }
@@ -141,8 +178,8 @@ export function placeAreaAt(activity, token, point) {
  * @param {{shape: "emanation"|"circle", token: TokenDocument}} area  Ce que `selfAreaOf` a rendu.
  * @returns {Promise<RegionDocument[]|null>}
  */
-export function placeSelfArea(activity, { shape, token }) {
-  return createAreaRegions(activity, token, [selfAreaRegionData(activity, token, shape)]);
+export function placeSelfArea(activity, { shape, token, stationary=false }) {
+  return createAreaRegions(activity, token, [selfAreaRegionData(activity, token, shape, { stationary })]);
 }
 
 /* -------------------------------------------- */

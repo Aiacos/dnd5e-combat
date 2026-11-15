@@ -107,7 +107,10 @@ export function validateTeleport(teleport, at, errors) {
   }
   if ( ("unseen" in teleport) && (teleport.unseen !== true) ) errors.push(`${at}.unseen: true or absent`);
   if ( ("maxLight" in teleport) && !["dim", "dark"].includes(teleport.maxLight) ) errors.push(`${at}.maxLight: "dim" or "dark"`);
-  for ( const key of Object.keys(teleport) ) if ( !["distance", "units", "activity", "then", "passengers", "unseen", "maxLight"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
+  // §462 : `area: "left"` — la zone de l'activité se pose d'office sur l'espace quitté (avant le saut), sans son auteur ; §463 : `"arrival"`,
+  // autour de lui après le saut.
+  if ( ("area" in teleport) && !["left", "arrival"].includes(teleport.area) ) errors.push(`${at}.area: "left", "arrival" or absent`);
+  for ( const key of Object.keys(teleport) ) if ( !["distance", "units", "activity", "then", "passengers", "unseen", "maxLight", "area"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
 }
 
 export function validateTargets(targets, at, facts, errors) {

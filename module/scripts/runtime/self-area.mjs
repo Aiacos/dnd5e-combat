@@ -20,7 +20,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { selfAreaOf, placeSelfArea, aimedAreaOf, placeAimedArea, wallAreaOf, placeWallArea } from "../adapter/self-area.mjs";
+import { selfAreaOf, placeSelfArea, aimedAreaOf, placeAimedArea, wallAreaOf, placeWallArea, teleportAreaOf, placeArrivalArea } from "../adapter/self-area.mjs";
 import { carriedLightOf } from "../adapter/carried-lights.mjs";
 import { suppliesTemplate, withTemplate } from "../adapter/template.mjs";
 import { route } from "./router.mjs";
@@ -37,6 +37,16 @@ function place(activity, area) {
 }
 
 function onPreUse(activity, usageConfig, dialogConfig) {
+  // §463 : la zone d'une téléportation « à l'arrivée » ne se pose pas à l'utilisation : après le saut (runtime/teleport.mjs,
+  // `afterTeleport`), autour de la créature arrivée.
+  if ( teleportAreaOf(activity) === "arrival" ) {
+    usageConfig.create = { ...(usageConfig.create ?? {}), measuredTemplate: false };
+    if ( dialogConfig ) {
+      dialogConfig.options ??= {};
+      dialogConfig.options.display = foundry.utils.mergeObject(dialogConfig.options.display ?? {}, { create: false }, { inplace: false });
+    }
+    return;
+  }
   // §86 : un gabarit fourni par le contenu — dnd5e n'a rien prévu de poser (pas de type de zone dans la donnée).
   const supplied = suppliesTemplate(activity);
   // §91 : fourni, et pas sur soi (portée de contact ou à distance : Interdiction) — posé à la souris après l'utilisation, comme dnd5e
@@ -131,6 +141,13 @@ function onPreTemplate(activity) {
   // §254 : une source de lumière portée n'a pas de zone — sa lumière est sur le token (§121). Le bouton « Placer le gabarit » de sa carte
   // ferait poser à dnd5e une émanation rattachée au porteur.
   if ( carriedLightOf(activity?.item) ) return false;
+  // §463 : le bouton « Placer la zone » d'une téléportation à zone d'arrivée (visée coupée, saut fait à la main) : autour du token, là où
+  // il est.
+  if ( teleportAreaOf(activity) === "arrival" ) {
+    const token = activity.getUsageToken?.() ?? null;
+    if ( token ) placeArrivalArea(activity, token).catch(err => console.error(`${MODULE_ID} | arrival area not placed`, err));
+    return false;
+  }
   const area = selfAreaOf(activity);
   if ( !area ) return;
   place(activity, area);

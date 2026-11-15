@@ -82,7 +82,9 @@ export async function readActivityRegion(region) {
     originDisposition: originToken?.disposition ?? null,
     originSide: originToken ? sideOf(originToken) : null,   // §181
     // O4 (§338) : `includesOrigin` — une zone sur soi qui prend aussi son origine (Poudre à éternuer, Sac de haricots magiques).
-    excludeOrigin: (activity?.range?.units === "self") && !(activity?.item && contentOf(activity.item).entry?.includesOrigin),
+    // §462 / §463 : la zone d'une téléportation, au départ (son auteur est parti) ou à l'arrivée (émanation autour de lui) : pas lui.
+    excludeOrigin: ((activity?.range?.units === "self") || !!(activity?.item && contentOf(activity.item).entry?.teleport?.area))
+      && !(activity?.item && contentOf(activity.item).entry?.includesOrigin),
     // « Vous pouvez désigner des créatures qui ne sont pas affectées » (`affects.choice`, Esprits gardiens) : par défaut,
     // les alliés du lanceur sont épargnés — le moteur ne pose pas la question (§16.23).
     affects: areaAffects(activity),

@@ -26,7 +26,10 @@
  *                                               `then` : id d'une activité de l'item utilisée à l'arrivée (§67 quater) ;
  *                                               `passengers: { count, within?, units? }` (§264) : jusqu'à `count` créatures non
  *                                               hostiles à `within` (5 ft) partent avec lui, posées à son contact (Porte dimensionnelle) ;
- *                                               `maxLight: "dim"|"dark"` (§367) : départ et arrivée pas plus éclairés (Marche dans l'ombre)
+ *                                               `maxLight: "dim"|"dark"` (§367) : départ et arrivée pas plus éclairés (Marche dans l'ombre) ;
+ *                                               `area: "left"` (§462) : la zone de l'activité se pose d'office autour de l'espace
+ *                                               quitté, avant le saut, et ne prend pas son auteur (Téléportation mortelle) ;
+ *                                               `"arrival"` (§463) : autour de lui, une fois arrivé (Téléportation radieuse)
  *     lineDash?: { reach, units, activity? }    ruée en ligne droite (§57) : à l'utilisation, la case
  *                                               d'arrivée se choisit (jusqu'à la Vitesse, inoccupée, en vue, en ligne droite à
  *                                               travers les créatures, sans attaque d'opportunité) ; l'activité (défaut : celle

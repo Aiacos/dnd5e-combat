@@ -21,6 +21,7 @@ import { timedWait } from "../adapter/dialogs.mjs";
 import { whileAwaiting } from "../adapter/awaiting.mjs";
 import { antimagicAround, antimagicGlobeAt } from "../adapter/barriers.mjs";
 import { antimagicRegionAt } from "../adapter/antimagic.mjs";
+import { placeArrivalArea } from "../adapter/self-area.mjs";
 
 /* -------------------------------------------- */
 /*  Téléportation (§16.10)                      */
@@ -143,7 +144,8 @@ export function selfTeleportOf(activity) {
   // §461 : sans distance déclarée, la portée de l'activité (« teleports up to [portée] ») ; illisible (« soi », spéciale) : pas de téléportation.
   const reach = teleportReach(rule, activity.range);
   if ( !reach ) return null;
-  return { native: false, distance: reach.distance, units: reach.units, then: rule.then ?? null, passengers: rule.passengers ?? null };
+  return { native: false, distance: reach.distance, units: reach.units, then: rule.then ?? null, passengers: rule.passengers ?? null,
+    area: rule.area ?? null };
 }
 
 /**
@@ -152,7 +154,13 @@ export function selfTeleportOf(activity) {
  * d'office (runtime/self-area.mjs).
  */
 export async function afterTeleport(activity, rule) {
-  const next = rule.then ? activity.item?.system.activities?.get(rule.then) : null;
+  // §463 : la zone « à l'arrivée » (Téléportation radieuse) — posée autour de la créature arrivée ; sa résolution suit la région.
+  if ( rule?.area === "arrival" ) {
+    const token = activity.getUsageToken?.() ?? activity.actor?.getActiveTokens?.(false, true)?.[0] ?? null;
+    const created = token ? await placeArrivalArea(activity, token).catch(err => { console.error(`${MODULE_ID} | arrival area`, err); return null; }) : null;
+    if ( created?.length ) log(`${activity.item.name}: area placed around ${token.name} on arrival`);
+  }
+  const next = rule?.then ? activity.item?.system.activities?.get(rule.then) : null;
   if ( !next ) return;
   log(`${activity.item.name}: on arrival, ${next.name || next.item.name}`);
   await next.use({ [MODULE_ID]: { confirmed: true }, create: { measuredTemplate: true } }, { configure: false })

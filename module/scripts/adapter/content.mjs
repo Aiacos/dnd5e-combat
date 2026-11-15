@@ -203,7 +203,8 @@ const textCache = new Map();
 
 /** §461 : portée, gabarit et cible d'une activité, tels que la donnée les écrit (la source : pas de portée préparée ni de formule). */
 const activityShape = a => ({ range: { value: a.range?.value ?? null, units: a.range?.units ?? "", special: a.range?.special ?? "" },
-  template: !!a.target?.template?.type,
+  template: a.target?.template?.type ? { type: a.target.template.type, size: a.target.template.size ?? "", units: a.target.template.units ?? "",
+    count: a.target.template.count ?? "" } : false,
   target: { type: a.target?.affects?.type ?? "", count: a.target?.affects?.count ?? "", special: a.target?.affects?.special ?? "" } });
 
 function textLayer(item) {

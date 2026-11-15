@@ -662,11 +662,13 @@ export function monsterLightSensitivity(html) {
 /** Les unités de longueur d'une portée d'activité (dnd5e `CONFIG.DND5E.movementUnits`) : une portée lisible comme distance. */
 const LENGTH_UNITS = new Set(["ft", "m", "mi", "km"]);
 
-/** Les `[[lookup @range.…]]` et `[[lookup @target.affects.special]]` d'un texte, remplacés par la valeur de l'activité (comme dnd5e les affiche). */
+/** Les `[[lookup @range.…]]`, `@target.affects.special|type` et `@target.template.size|units` d'un texte, remplacés par la valeur de l'activité (comme dnd5e les affiche). */
 function resolveLookups(html, activity) {
+  const template = (typeof activity.template === "object") ? activity.template : {};
   const read = { "range.value": activity.range?.value, "range.units": activity.range?.units, "range.special": activity.range?.special,
-    "target.affects.special": activity.target?.special };
-  return String(html ?? "").replace(/\[\[lookup @(range\.(?:value|units|special)|target\.affects\.special)\b[^\]]*\]\]/g,
+    "target.affects.special": activity.target?.special, "target.affects.type": activity.target?.type,
+    "target.template.size": template?.size, "target.template.units": template?.units };
+  return String(html ?? "").replace(/\[\[lookup @(range\.(?:value|units|special)|target\.affects\.(?:special|type)|target\.template\.(?:size|units))\b[^\]]*\]\]/g,
     (whole, path) => ((read[path] ?? "") !== "" ? String(read[path]) : whole));
 }
 
@@ -678,21 +680,39 @@ function resolveLookups(html, activity) {
  * « Along with one willing creature of its choice within 5 feet of it » → `passengers`, d'après la cible de l'activité.
  *
  * Seulement ce qui est sûr : la capacité n'a qu'une activité, « utility », sans gabarit — la téléportation est tout ce qu'elle fait (une
- * attaque citée est un autre objet) —, et sa destination est libre. Ne sont PAS lus : une capacité qui a aussi une sauvegarde, une attaque ou
- * des dégâts (zone au départ ou à l'arrivée, téléportation après l'attaque : l'ordre n'est pas celui de l'utilisation), une destination
- * contrainte (« within 5 feet of a creature », « of a second tree »), « of your choice » (monture et cavalier), « itself or a willing
- * demon » (une autre créature), le sort Téléportation.
+ * attaque citée est un autre objet) —, et sa destination est libre. §462 : ou une activité (utilitaire, dégâts, sauvegarde) dont le gabarit
+ * frappe l'espace QUITTÉ — « each creature within 10 feet of the space it left » (Téléportation mortelle de la Liche, Pas glaçant), la
+ * taille du gabarit égale à celle du texte → `area: "left"` (runtime : zone posée d'office autour du lanceur avant le saut, sans lui) ;
+ * §463 : ou l'espace d'ARRIVÉE (« in a 10-foot Emanation originating from it at its destination space », « within 5 feet of its
+ * destination space ») → `area: "arrival"` (zone posée après le saut). Ne sont PAS lus : une attaque (l'ordre n'est pas celui de
+ * l'utilisation), « taking
+ * creatures it is grappling with it » (qui subit la zone, des agrippés emportés ?), une destination contrainte (« within 5 feet of a
+ * creature », « of a second tree »), « of your choice » (monture et cavalier), « itself or a willing demon » (une autre créature), le sort
+ * Téléportation.
  * @param {string} html
- * @param {Array<{id: string, type?: string, range?: {value?: *, units?: string, special?: string}, template?: boolean,
+ * @param {Array<{id: string, type?: string, range?: {value?: *, units?: string, special?: string},
+ *   template?: boolean|{type?: string, size?: *, units?: string, count?: *},
  *   target?: {type?: string, count?: *, special?: string}}>} [activities]
- * @returns {{activity: string, distance?: number, units?: string, passengers?: object}|null}
+ * @returns {{activity: string, distance?: number, units?: string, passengers?: object, area?: "left"|"arrival"}|null}
  */
 export function monsterSelfTeleport(html, activities=[]) {
   if ( activities.length !== 1 ) return null;
   const [activity] = activities;
-  if ( (activity.type !== "utility") || activity.template ) return null;
   const text = plainText(resolveLookups(html, activity));
   if ( !text || (segments(text).length > 1) ) return null;
+  let area = null;
+  if ( activity.template ) {
+    // §462 : la zone frappe l'espace quitté ; §463 : ou l'espace d'arrivée — une seule des deux, de la taille du gabarit, sans agrippés
+    // emportés.
+    const size = Number(activity.template?.size);
+    const left = text.match(/\beach (?:creature|…)\s+within (\d+) (?:feet|ft)\.? of the space (?:it|he|she|they) (?:left|leaves)\b/i);
+    const arrival = text.match(/\beach (?:creature|…) in an? (\d+)-foot Emanation originating from [^.]*? at (?:its|his|her|their) destination space\b/i)
+      ?? text.match(/\beach (?:creature|…)(?: of its choice)?(?: that it can see)?\s+within (\d+) (?:feet|ft)\.? of (?:its|his|her|their|the [^.]*?['’]s) destination space\b/i);
+    const said = (left && !arrival) ? left : (arrival && !left) ? arrival : null;
+    if ( !said || !(size > 0) || (Number(said[1]) !== size) ) return null;
+    if ( !["utility", "damage", "save"].includes(activity.type) || /\btaking (?:the )?creatures? (?:it|he|she) is grappling\b/i.test(text) ) return null;
+    area = left ? "left" : "arrival";
+  } else if ( activity.type !== "utility" ) return null;
   const m = text.match(/\b(?:magically )?teleports?(, along with [^,.]*? of its choice within [^,.]*? of it,)? (?:up to (\d+) (?:feet|ft)\.? )?to an unoccupied space (?:it|he|she|they) can see(?: within (\d+) (?:feet|ft))?(?: of (?:itself|himself|herself))?(?=[ ,.]|$)/i);
   if ( !m ) return null;
   const range = activity.range ?? {};
@@ -709,5 +729,16 @@ export function monsterSelfTeleport(html, activities=[]) {
     if ( !(within > 0) ) return null;
     rule.passengers = { count: Math.max(1, Number(activity.target?.count) || 1), within, units: "ft" };
   }
+  if ( area ) rule.area = area;
   return rule;
+}
+
+/**
+ * §463 : « each creature OF ITS CHOICE … within 5 feet of its destination space » (Tourbillon de sable du Seigneur momie) — la zone d'une
+ * téléportation que la créature répartit : `zoneAffects: "enemy"` (le choix est proposé, les ennemis cochés d'avance, §401).
+ * @param {string} html
+ * @returns {boolean}
+ */
+export function monsterTeleportChoice(html) {
+  return /\beach creature of its choice\b[^.]*\bdestination space\b/i.test(plainText(html).replace(/\bft\./g, "ft"));
 }

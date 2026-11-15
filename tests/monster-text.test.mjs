@@ -259,3 +259,82 @@ describe("§461 : téléportation de soi d'une capacité de monstre, à la port�
     expect(validateEntry(layer)).toEqual([]);
   });
 });
+
+describe("§462 : téléportation de soi avec une zone sur l'espace quitté", () => {
+  const ID = "cccccccccccccccc";
+  const act = (type, template) => [{ id: ID, type, range: { value: "60", units: "ft" }, template }];
+  const circle = { type: "circle", size: "10", units: "ft", count: "" };
+
+  it("« each creature within 10 feet of the space it left » : `area: \"left\"`, la portée de l'activité fait la distance", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const html = "<p>The wraith teleports up to 60 feet to an unoccupied space it can see, and each creature within "
+      + `[[lookup @target.template.size activity=${ID}]] [[lookup @target.template.units activity=${ID}]]. of the space it leaves takes 7 Cold damage.</p>`;
+    for ( const type of ["damage", "save", "utility"] ) {
+      const rule = monsterSelfTeleport(html, act(type, circle));
+      expect(rule).toEqual({ activity: ID, area: "left" });
+      expect(validateEntry({ teleport: rule })).toEqual([]);
+    }
+  });
+
+  it("pas lu : taille différente, agrippés emportés, attaque, pas de clause de zone", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const go = "The wraith teleports up to 60 feet to an unoccupied space it can see";
+    expect(monsterSelfTeleport(`<p>${go}, and each creature within 10 feet of the space it left takes 7 damage.</p>`,
+      act("damage", { ...circle, size: "20" }))).toBeNull();
+    expect(monsterSelfTeleport("<p>The horror teleports to an unoccupied space it can see within 120 feet, taking creatures it is grappling with it. "
+      + "Then each creature within 10 feet of the space it left makes a save.</p>", act("save", circle))).toBeNull();
+    expect(monsterSelfTeleport(`<p>${go}, and each creature within 10 feet of the space it left takes 7 damage.</p>`, act("attack", circle))).toBeNull();
+    expect(monsterSelfTeleport(`<p>${go}.</p>`, act("damage", circle))).toBeNull();
+  });
+
+  it("le schéma : `area` vaut \"left\", \"arrival\" ou rien", () => {
+    expect(validateEntry({ teleport: { activity: ID, area: "left" } })).toEqual([]);
+    expect(validateEntry({ teleport: { activity: ID, area: "arrival" } })).toEqual([]);
+    expect(validateEntry({ teleport: { activity: ID, area: "middle" } }).join()).toMatch(/area/);
+  });
+
+  it("la forme de la zone au départ : une émanation, quelle que soit la portée", async () => {
+    const { departureAreaShape } = await import("../module/scripts/core/self-area.mjs");
+    expect(departureAreaShape({ type: "circle", size: "10" })).toBe("emanation");
+    expect(departureAreaShape({ type: "radius", size: 10 })).toBe("emanation");
+    expect(departureAreaShape({ type: "cone", size: 10 })).toBeNull();
+    expect(departureAreaShape({ type: "circle", size: 10, count: 2 })).toBeNull();
+    expect(departureAreaShape({ type: "circle", size: "" })).toBeNull();
+  });
+});
+
+describe("§463 : téléportation de soi avec une zone à l'arrivée", () => {
+  const ID = "dddddddddddddddd";
+  const act = (type, template) => [{ id: ID, type, range: { value: "60", units: "ft" }, template }];
+
+  it("« each creature in a 10-foot Emanation originating from it at its destination space » : `area: \"arrival\"`", async () => {
+    const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
+    const html = "<p>The angel teleports up to 60 feet to an unoccupied space it can see. Dexterity Saving Throw: DC 15, each creature in a "
+      + `[[lookup @target.template.size activity=${ID}]]-foot Emanation originating from the [[lookup @name lowercase]] at its destination space. Failure: 9 damage.</p>`;
+    const rule = monsterSelfTeleport(html, act("save", { type: "radius", size: "10", units: "ft" }));
+    expect(rule).toEqual({ activity: ID, area: "arrival" });
+    expect(validateEntry({ teleport: rule })).toEqual([]);
+  });
+
+  it("« within 5 feet of the X's destination space », « of its choice » : la zone au choix de la créature", async () => {
+    const { monsterSelfTeleport, monsterTeleportChoice } = await import("../module/scripts/core/monster-text.mjs");
+    const toxic = "<p>The fiend halves the damage, and it teleports to an unoccupied space it can see within 30 feet of itself. Constitution "
+      + "Saving Throw: DC 14, each creature within 5 feet of the [[lookup @name lowercase]]'s destination space.</p>";
+    expect(monsterSelfTeleport(toxic, act("save", { type: "circle", size: "5", units: "ft" }))).toEqual({ activity: ID, area: "arrival" });
+    expect(monsterTeleportChoice(toxic)).toBe(false);
+    const sand = "<p>The mummy teleports up to 60 ft. to an unoccupied space it can see. Each creature of its choice that it can see within 5 ft. "
+      + "of its destination space has the Blinded condition until the end of the mummy's next turn.</p>";
+    expect(monsterSelfTeleport(sand, act("utility", { type: "circle", size: "5", units: "ft" }))).toEqual({ activity: ID, area: "arrival" });
+    expect(monsterTeleportChoice(sand)).toBe(true);
+  });
+
+  it("la couche texte : `teleport.area` et, « of its choice », `zoneAffects: \"enemy\"`", async () => {
+    const { monsterTextLayer } = await import("../module/scripts/core/monster-layer.mjs");
+    const layer = monsterTextLayer({ html: "<p>The mummy teleports up to 60 feet to an unoccupied space it can see. Each creature of its choice "
+      + "that it can see within 5 feet of its destination space has the Blinded condition.</p>",
+    activities: [{ id: ID, type: "utility", range: { value: "60", units: "ft" }, template: { type: "circle", size: "5", units: "ft" } }] });
+    expect(layer?.teleport).toEqual({ activity: ID, area: "arrival" });
+    expect(layer?.zoneAffects).toBe("enemy");
+    expect(validateEntry(layer)).toEqual([]);
+  });
+});

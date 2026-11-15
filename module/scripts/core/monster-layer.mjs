@@ -8,7 +8,8 @@
 
 import { monsterChoice, monsterDeaths, monsterEndings, monsterPushes, monsterReactions, monsterRecurring, monsterTypeGate, monsterAdvantage,
   monsterSaveDamage, monsterMissingStatus, monsterNoOpportunity, monsterBasicActions, monsterSightGate, monsterImmunity, monsterEffectDurations,
-  monsterReactionWindow, monsterActivationAdvantage, monsterDefense, monsterChargeGate, monsterLightSensitivity, monsterSelfTeleport } from "./monster-text.mjs";
+  monsterReactionWindow, monsterActivationAdvantage, monsterDefense, monsterChargeGate, monsterLightSensitivity, monsterSelfTeleport,
+  monsterTeleportChoice } from "./monster-text.mjs";
 import { readDrain, drains } from "./drain.mjs";
 
 /**
@@ -88,6 +89,8 @@ export function monsterTextLayer({ html, identifier=null, activities=[], effects
   // §461 : la téléportation de soi, à la portée de l'activité (Téléportation des démons, Foulée féerique des esprits…).
   const teleport = monsterSelfTeleport(html, activities);
   if ( teleport ) recurringRest.teleport = teleport;
+  // §463 : une zone d'arrivée « de son choix » — la créature épargne qui elle veut (ennemis cochés d'avance).
+  if ( (teleport?.area === "arrival") && monsterTeleportChoice(html) ) recurringRest.zoneAffects = "enemy";
   return (allTriggers.length || Object.keys(deaths).length || choice || Object.keys(restrictions).length || Object.keys(recurringRest).length || gate)
     ? { ...(allTriggers.length ? { triggers: allTriggers } : {}), ...deaths, ...restrictions, ...recurringRest, ...(choice ? { choice } : {}), ...(gate ? { targets: gate } : {}) } : null;
 }

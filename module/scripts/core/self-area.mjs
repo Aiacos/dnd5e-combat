@@ -29,6 +29,19 @@ export function selfAreaShape({ rangeUnits, type, count, size }={}) {
   return shape;
 }
 
+/**
+ * §462 : la zone d'une téléportation « au départ » (`teleport.area: "left"` — « chaque créature à 3 m de l'espace qu'il a quitté » :
+ * Téléportation mortelle de la Liche) se pose d'office en émanation fixe autour de l'espace quitté, quelle que soit la portée de
+ * l'activité (celle de la téléportation). Un rayon, une sphère ou un cercle, une seule zone, de taille connue.
+ * @param {{type?: string, count?: number|string, size?: number|string}} [query]
+ * @returns {"emanation"|null}
+ */
+export function departureAreaShape({ type, count, size }={}) {
+  if ( !SELF_TYPES[type] ) return null;
+  if ( (Number(count) || 1) !== 1 ) return null;
+  return (Number(size) > 0) ? "emanation" : null;
+}
+
 /* -------------------------------------------- */
 /*  Cônes et lignes partant du lanceur (§59)    */
 /* -------------------------------------------- */
