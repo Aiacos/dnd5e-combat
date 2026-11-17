@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-128 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
+129 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
 `client` = ce poste, `user` = ce joueur. **Onglet** : celui de la fenêtre de réglages DAS (`core/settings-layout.mjs`) ; sans onglet,
 le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêtre dédiée). Le libellé est celui de `lang/fr.json`.
 
@@ -114,6 +114,7 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 | `chatLight` | Journal de chat allégé | world | Boolean | `true` |  | `runtime/engine.mjs` |
 | `chatPurgeKeep` | Purge du journal : messages gardés | world | Number | `150` |  | `runtime/purge.mjs` |
 | `chatPurgeMax` | Purge du journal : au-delà de | world | Number | `300` |  | `runtime/purge.mjs` |
+| `chatRows` | Une rangée par cible | world | Boolean | `true` |  | `ui/chat.mjs` |
 | `forcedAlerts` | Prévenir quand un joueur passe outre une règle | world | Boolean | `true` |  | `runtime/forced.mjs` |
 | `gmAlertBanner` | Alertes MJ : bandeau | client | Boolean | `true` |  | `ui/gm-alert.mjs` |
 | `gmAlerts` | Alertes MJ | world | Boolean | `true` |  | `runtime/gm-alert.mjs` |
