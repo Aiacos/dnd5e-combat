@@ -90,7 +90,10 @@ async function heroicAttack(message, roll, targets, actor) {
     needed: acs.length ? Math.min(...acs) : null, failed: missed.length > 0 });
   if ( !after ) return roll;
   log(`${actor.name}: Heroic Inspiration, attack ${roll.total} → ${after.total}`);
-  return { ...roll, total: after.total, isCritical: after.critical, isFumble: after.fumble, heroic: { old: after.old, kept: after.kept } };
+  // Le d20 gardé a changé : sans lui (`natural` retiré), un critique vaut un 20 naturel, comme avant.
+  const { natural: _old, ...rest } = roll;
+  return { ...rest, total: after.total, isCritical: after.critical, isFumble: after.fumble,
+    ...(Number.isFinite(after.kept) ? { natural: after.kept } : {}), heroic: { old: after.old, kept: after.kept } };
 }
 
 export async function onAttackMessage(message) {

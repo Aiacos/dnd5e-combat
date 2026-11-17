@@ -68,7 +68,9 @@ export function readAttackMessage(message) {
     origin: originOf(message),
     activity,
     source: message.getAssociatedActor?.()?.uuid ?? null,
-    roll: { total: roll.total, isCritical: roll.isCritical === true, isFumble: roll.isFumble === true, ...(d20Mode(roll) ? { mode: d20Mode(roll) } : {}) },
+    // `natural` : le d20 gardé — un seuil de critique abaissé ne fait pas toucher, seul le 20 naturel (core/attack.mjs).
+    roll: { total: roll.total, isCritical: roll.isCritical === true, isFumble: roll.isFumble === true,
+      ...(Number.isFinite(roll.d20?.total) ? { natural: roll.d20.total } : {}), ...(d20Mode(roll) ? { mode: d20Mode(roll) } : {}) },
     targets: (message.system.targets ?? []).map(t => ({ token: t.token, actor: t.actor, name: t.name, ac: t.ac ?? null }))
   };
 }

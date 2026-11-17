@@ -1,12 +1,14 @@
 /**
  * Résolution d'un jet d'attaque contre des cibles. Règles 2024 : un 20 naturel touche toujours
- * et c'est un coup critique, un 1 naturel rate toujours. Aucune dépendance à Foundry.
+ * et c'est un coup critique, un 1 naturel rate toujours. Un seuil de critique abaissé (Critique amélioré : 19) ne fait pas
+ * toucher : un 19 naturel n'est un coup critique que si le total atteint la CA. Aucune dépendance à Foundry.
  */
 
 /**
  * @typedef {object} AttackRoll
  * @property {number} total        Total du jet, modificateurs compris.
  * @property {boolean} isCritical  Le d20 atteint le seuil de critique de l'attaquant.
+ * @property {number} [natural]    Le d20 gardé. Absent (jet d'un ancien message) : tenu pour un 20 quand `isCritical`.
  * @property {boolean} isFumble    Le d20 est un échec automatique (1 naturel).
  */
 
@@ -28,8 +30,8 @@ export function resolveAttack(roll, targets) {
     let reason;
     if ( target.ac === null || target.ac === undefined ) { hit = false; reason = "cover"; }
     else if ( roll.isFumble ) { hit = false; reason = "fumble"; }
-    else if ( roll.isCritical ) { hit = true; reason = "critical"; }
-    else { hit = roll.total >= target.ac; reason = hit ? "ac" : "miss"; }
+    else if ( roll.isCritical && ((roll.natural ?? 20) === 20) ) { hit = true; reason = "critical"; }
+    else { hit = roll.total >= target.ac; reason = hit ? (roll.isCritical ? "critical" : "ac") : "miss"; }
     return { ...target, hit, critical: hit && roll.isCritical, reason };
   });
 }

@@ -16,6 +16,18 @@ describe("resolveAttack", () => {
     const [r] = resolveAttack(roll(21, { isCritical: true }), [{ ...gobelin, ac: 30 }]);
     expect(r).toMatchObject({ hit: true, critical: true, reason: "critical" });
   });
+  it("un seuil de critique abaissé ne fait pas toucher : un 19 naturel rate une CA hors d'atteinte", () => {
+    const champion = roll(24, { isCritical: true, natural: 19 });   // 19 + 5
+    expect(resolveAttack(champion, [{ ...gobelin, ac: 25 }])[0]).toMatchObject({ hit: false, critical: false, reason: "miss" });
+  });
+  it("le même 19 est un coup critique quand le total atteint la CA", () => {
+    const champion = roll(24, { isCritical: true, natural: 19 });
+    expect(resolveAttack(champion, [{ ...gobelin, ac: 24 }])[0]).toMatchObject({ hit: true, critical: true, reason: "critical" });
+  });
+  it("un 20 naturel noté touche toujours ; un critique sans d20 noté (ancien message) aussi", () => {
+    expect(resolveAttack(roll(21, { isCritical: true, natural: 20 }), [{ ...gobelin, ac: 30 }])[0]).toMatchObject({ hit: true, critical: true });
+    expect(resolveAttack(roll(21, { isCritical: true }), [{ ...gobelin, ac: 30 }])[0]).toMatchObject({ hit: true, critical: true });
+  });
   it("un 1 naturel rate même si le total suffit", () => {
     expect(resolveAttack(roll(16, { isFumble: true }), [gobelin])[0]).toMatchObject({ hit: false, reason: "fumble" });
   });
