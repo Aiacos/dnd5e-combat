@@ -1,7 +1,8 @@
 /**
  * §98 : relevé des temps du moteur, sur chaque client (le MJ actif résout presque tout ; un joueur, ses propres gestes).
  *  - Le routeur chronomètre chaque inscrit (runtime/router.mjs → `recordTiming`) : au-delà du seuil (réglage CLIENT `perfWarnMs`,
- *    50 ms par défaut, 0 = muet), un avertissement en console — au plus un par inscrit toutes les 10 s.
+ *    50 ms par défaut, 0 = muet), une ligne en console — au plus une par inscrit toutes les 10 s. Écrite avec `console.info` : une
+ *    mesure n'est pas une erreur, et le débogueur relève tout `console.warn` du module (runtime/debug.mjs, issue #49).
  *  - Les « tâches longues » du navigateur (PerformanceObserver `longtask`, Chromium : tout blocage de plus de 50 ms, rendu du cœur et
  *    des autres modules compris) sont comptées, pour situer le moteur dans le tout.
  *  - `game.modules.get("dnd5e-combat").api.perf` : `report()` (lignes triées, les plus coûteuses d'abord), `table()` (en console),
@@ -22,7 +23,7 @@ const perf = createPerf({
     const now = Date.now();
     if ( (now - (warned.get(key) ?? 0)) < 10000 ) return;
     warned.set(key, now);
-    console.warn(`${MODULE_ID} | slow: ${row.hook} "${row.label}" ${Math.round(ms)} ms (threshold ${perf.threshold} ms; ${row.slow} times out of ${row.calls})`);
+    console.info(`${MODULE_ID} | slow: ${row.hook} "${row.label}" ${Math.round(ms)} ms (threshold ${perf.threshold} ms; ${row.slow} times out of ${row.calls})`);
   }
 });
 
