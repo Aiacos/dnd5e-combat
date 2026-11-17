@@ -109,6 +109,7 @@ export function pullBack(centre, corner, hit, margin) {
  * @param {Rect[]} [context.bodies]                   Espaces des autres créatures (ni l'attaquant, ni la cible).
  * @param {(a: {x,y}, b: {x,y}) => boolean|string} [context.blocked]  Un obstacle (mur, surface) coupe-t-il la ligne ? Une chaîne
  *                                                    (« wall », « surface ») dit lequel (#33 : sources de l'abri) ; `true` vaut « wall ».
+ *                                                    « grate » (§468) : seulement une grille — jamais plus qu'un abri supérieur.
  * @param {number} [context.inset]                    Retrait des coins et des corps, en pixels.
  * @param {(centre: {x,y}, corner: {x,y}) => {x,y}} [context.clipAttacker]  §239 : ramène un coin de l'attaquant du côté des murs
  *                                                    où se trouve son centre (un coin dans la roche n'est pas son espace).
@@ -124,14 +125,19 @@ export function coverBetween({ attacker, target, bodies=[], blocked=() => false,
   let best = null;
   for ( const a of from ) {
     let walls = 0;
+    let grates = 0;
     let creatures = 0;
     const kinds = new Set();
     for ( const b of to ) {
       const hit = blocked(a, b);
-      if ( hit ) { walls++; kinds.add((typeof hit === "string") ? hit : "wall"); }
+      // §468 : une grille (barreaux, herse) coupe la ligne sans être un abri total — elle compte comme un mur pour le degré, plafonné
+      // à l'abri supérieur ; sa source reste « wall ».
+      if ( hit === "grate" ) { walls++; grates++; kinds.add("wall"); }
+      else if ( hit ) { walls++; kinds.add((typeof hit === "string") ? hit : "wall"); }
       else if ( solids.some(r => segmentCrossesRect(a, b, r)) ) creatures++;
     }
     let degree = DEGREES[walls];
+    if ( (degree === "total") && grates ) degree = "threeQuarters";
     let byCreature = false;
     if ( (degree === "none") && creatures ) { degree = "half"; byCreature = true; }
     const rank = DEGREES.indexOf(degree);
