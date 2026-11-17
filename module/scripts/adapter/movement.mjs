@@ -35,7 +35,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { findPath, turningPoints } from "../core/pathfind.mjs";
-import { approach, pushDirection, footprintGap } from "../core/movement.mjs";
+import { approach, pushDirection, footprintGap, ownsPlannedMovement } from "../core/movement.mjs";
 import { committedPosition, combatantFor, readBudget, writeBudget } from "./turn.mjs";
 import { isIntangible } from "./pilot.mjs";
 import { hasLineOfSight } from "./vision.mjs";
@@ -242,13 +242,24 @@ export function planPath(token, to, { maxCost=Infinity, throughDoors=false }={})
 /*  Aperçu                                      */
 /* -------------------------------------------- */
 
-/** Dessine le chemin prévu avec la règle native du token. `plan` null : efface. */
+/** L'aperçu que le moteur a posé sur chaque token : l'entrée de `_plannedMovement` qui est la sienne. */
+const shown = new WeakMap();
+
+/**
+ * Dessine le chemin prévu avec la règle native du token. `plan` null : efface.
+ * `_plannedMovement[userId]` est aussi l'entrée du glisser du cœur (Token#_initializeDragLeft), où un module de recherche de
+ * chemin pose sa route (`findMovementPath`) : l'aperçu n'efface et ne remplace que la sienne. Le survol est différé (throttle) ;
+ * son dernier appel tombe parfois après le début d'un glisser, et effaçait le chemin que le cœur venait de planifier.
+ */
 export function previewPath(token, plan) {
   const object = token.object;
   if ( !object ) return;
   const mine = game.user.id;
+  const current = object._plannedMovement[mine];
+  if ( !ownsPlannedMovement(current, shown.get(object)) ) return;
   if ( !plan || !(plan.waypoints.length || plan.beyond.length) ) {
-    if ( !(mine in object._plannedMovement) ) return;
+    shown.delete(object);
+    if ( !current ) return;
     delete object._plannedMovement[mine];
     object.renderFlags.set({ refreshRuler: true, refreshState: true });
     return;
@@ -266,6 +277,7 @@ export function previewPath(token, plan) {
   Object.assign(foundPath[0], { terrain: null, snapped: false, explicit: false, checkpoint: true, cost: 0,
     action: history.at(-1)?.action ?? foundPath[0].action });
   object._plannedMovement[mine] = { foundPath, unreachableWaypoints, history, hidden: true, searching: false };
+  shown.set(object, object._plannedMovement[mine]);
   object.renderFlags.set({ refreshRuler: true, refreshState: true });
 }
 
