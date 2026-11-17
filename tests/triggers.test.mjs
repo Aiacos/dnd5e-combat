@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalize, holds, unknownFacts, select, stepsOf, MOMENTS } from "../module/scripts/core/triggers.mjs";
+import { normalize, holds, unknownFacts, select, stepsOf, MOMENTS, spareBearer } from "../module/scripts/core/triggers.mjs";
 import { STEP_TYPES } from "../module/scripts/core/content.mjs";
 import { TRIGGERS } from "../module/scripts/content/triggers.mjs";
 import { eligibleReactions } from "../module/scripts/core/reaction.mjs";
@@ -148,5 +148,18 @@ describe("briques (SPEC §16) : moments d'issue et de tour, via", () => {
     expect(select([d], "endOfTurn", facts)).toEqual([d]);
     expect(select([d], "turnEnd", facts)).toEqual([]);
     expect(stepsOf(d, "resave")).toEqual([{ type: "resave" }]);
+  });
+});
+
+describe("dégâts du porteur à son tour (issue #40)", () => {
+  it("une créature morte ne les subit plus", () => {
+    expect(spareBearer({ dead: true, heals: false })).toBe(true);
+  });
+  it("une créature vivante, ou à 0 PV qui fait ses jets contre la mort (pas morte), les subit", () => {
+    expect(spareBearer({ dead: false, heals: false })).toBe(false);
+  });
+  it("un soin porté par le même chemin n'est pas écarté", () => {
+    expect(spareBearer({ dead: true, heals: true })).toBe(false);
+    expect(spareBearer({ dead: false, heals: true })).toBe(false);
   });
 });
