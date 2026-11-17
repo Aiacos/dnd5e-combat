@@ -17,10 +17,13 @@ const ENRICHER = /\[\[\/(check|skill)\s+([^\]]*)\]\]/i;
 /**
  * Le premier test d'un texte, ou null.
  * @param {string} text
- * @param {{abilities: string[], skills: string[]}} known  clés de `CONFIG.DND5E.abilities` / `.skills`
+ * @param {{abilities: string[], skills: string[], defaultDc?: string|null}} known  clés de `CONFIG.DND5E.abilities` / `.skills` ;
+ *   `defaultDc` : le DD d'un test écrit sans DD — celui des sorts du lanceur pour un sort (« contre votre DD de sauvegarde des
+ *   sorts »), que les textes importés (DDB Importer : `[[/check str format=long]]`) ne mettent pas dans l'enrichisseur. Sans lui,
+ *   un test sans DD reste illisible.
  * @returns {{ability: string|null, skill: string|null, dc: string}|null}  `dc` : nombre ou formule (`@attributes.spell.dc`)
  */
-export function parseEscapeCheck(text, { abilities=[], skills=[] }={}) {
+export function parseEscapeCheck(text, { abilities=[], skills=[], defaultDc=null }={}) {
   const m = String(text ?? "").match(ENRICHER);
   if ( !m ) return null;
   const out = { ability: null, skill: null, dc: null };
@@ -35,6 +38,7 @@ export function parseEscapeCheck(text, { abilities=[], skills=[] }={}) {
     else if ( skills.includes(v) ) out.skill = v;
     else if ( abilities.includes(v) ) out.ability = v;
   }
+  out.dc ??= defaultDc;
   if ( !out.dc || (!out.ability && !out.skill) ) return null;
   return out;
 }
