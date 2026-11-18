@@ -21,6 +21,14 @@
 
 import { factionRelation } from "./factions.mjs";
 
+/**
+ * Issue #40 : les dégâts qu'un effet inflige à son porteur à un moment de tour (Frappe piégeuse : « au début de chacun de ses
+ * tours ») ne valent plus pour une créature morte. Une créature à 0 PV qui fait des jets contre la mort n'est pas morte : elle les
+ * subit (un échec au jet contre la mort). Un soin porté par le même chemin (Héroïsme) n'est pas écarté ici.
+ * @param {{dead: boolean, heals: boolean}} state
+ */
+export const spareBearer = ({ dead, heals }) => !!dead && !heals;
+
 /** Les moments connus. Un moment de réaction ouvre une fenêtre ; les autres agissent d'eux-mêmes. */
 export const MOMENTS = Object.freeze({
   isHit: "an attack just hit the creature (Shield: before damage; riposte, B9: on application)",
