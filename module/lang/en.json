@@ -26,6 +26,8 @@
   "DND5ECOMBAT.DegatsBonusDivergents": "Bonus damage not added, not every target qualifies: {names}",
   "DND5ECOMBAT.ReactionEnAttente": "Waiting for a Reaction…",
   "DND5ECOMBAT.ReactionReprise": "reaction",
+  "DND5ECOMBAT.Rangees.Sauvegarde": "{ability} Saving Throw",
+  "DND5ECOMBAT.Rangees.Sauvegardes": "{ability} Saving Throws",
   "DND5ECOMBAT.Annuler": "Undo",
   "DND5ECOMBAT.Annule": "Undone: HP restored.",
   "DND5ECOMBAT.DegatsManuels": "Combat engine: the automatic damage roll failed, roll it from the card.",

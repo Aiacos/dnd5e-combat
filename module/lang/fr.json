@@ -26,6 +26,8 @@
   "DND5ECOMBAT.DegatsBonusDivergents": "Dégâts bonus non ajoutés, toutes les cibles ne les justifient pas : {names}",
   "DND5ECOMBAT.ReactionEnAttente": "Réaction en attente…",
   "DND5ECOMBAT.ReactionReprise": "réaction",
+  "DND5ECOMBAT.Rangees.Sauvegarde": "Jet de sauvegarde de {ability}",
+  "DND5ECOMBAT.Rangees.Sauvegardes": "Jets de sauvegarde de {ability}",
   "DND5ECOMBAT.Annuler": "Annuler",
   "DND5ECOMBAT.Annule": "Annulé : PV restaurés.",
   "DND5ECOMBAT.DegatsManuels": "Moteur de combat : le jet de dégâts automatique a échoué, lancez-le depuis la carte.",

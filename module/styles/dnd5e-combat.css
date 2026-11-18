@@ -80,6 +80,10 @@
 .dnd5e-combat-result:has(> .midi-results) { padding: 0; border-left: 0; margin-top: 0; }
 .message-content:has(.midi-qol-saves-display.midi-qol-section-filled) > .card-summary { display: none; }
 .dnd5e-combat-rows .dnd5e-combat-undone .name-stacked { text-decoration: line-through; }
+.dnd5e-combat-actions { display: flex; gap: 0.2rem; margin-top: 0.2rem; }
+.dnd5e-combat-actions button, .dnd5e-combat-result:has(> .midi-results) > button {
+  flex: 1; height: 1.75rem; margin: 0; line-height: 1; font-size: var(--font-size-12);
+}
 
 /* Journal allégé (réglage chatLight, ui/chat.mjs) : une carte hors de la zone visible du journal n'est ni mise en page
    ni dessinée ; sa hauteur réelle est retenue une fois vue (auto), 120px en attendant. */

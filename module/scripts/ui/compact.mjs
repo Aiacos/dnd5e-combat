@@ -18,6 +18,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { route } from "../runtime/router.mjs";
 import { loc, waitForDice } from "../runtime/shared.mjs";
 import { attackMark } from "../core/attack.mjs";
+import { STEPS } from "../core/action.mjs";
 import { modifierLines, bonusLines, d20Nodes, fillLine, rowsEnabled } from "./chat.mjs";
 
 export const CHAT_COMPACT_SETTING = "chatCompact";
@@ -105,10 +106,14 @@ const midiBlocks = new Map();
 
 const escapeHTML = text => foundry.utils.escapeHTML(String(text ?? ""));
 
-/** Le détail des dés d'un jet, dans l'enveloppe repliable de dnd5e. */
+/** Le détail des dés d'un jet, dans l'enveloppe repliable de dnd5e (que son gabarit fournit déjà, ou non selon la version). */
 async function breakdownOf(rolls) {
   const parts = await Promise.all(rolls.map(roll => roll.getTooltip().catch(() => "")));
-  return `<div class="dice-tooltip-collapser">${parts.join("")}</div>`;
+  const template = document.createElement("template");
+  template.innerHTML = parts.join("");
+  const tips = Array.from(template.content.querySelectorAll(".dice-tooltip"));
+  const merged = tips.length ? tips.map(tip => tip.innerHTML).join("") : template.innerHTML;
+  return `<div class="dice-tooltip-collapser"><div class="dice-tooltip">${merged}</div></div>`;
 }
 
 /** L'étiquette d'un jet d'attaque : son mode. */
@@ -117,14 +122,18 @@ function attackLabel(roll) {
   return game.i18n.localize((mode > 0) ? "DND5E.Advantage" : (mode < 0) ? "DND5E.Disadvantage" : "DND5E.Attack");
 }
 
-/** Le verdict d'un jet d'attaque sur la carte : critique, échec critique, sinon touché (une cible au moins) ou raté. */
+/**
+ * Le verdict d'un jet d'attaque sur la carte, comme Midi-QOL le marque : `success` ou `failure` selon qu'une cible est touchée,
+ * plus `critical` (coche double) ou `fumble` (deux croix).
+ */
 function attackOutcome(roll, carrier) {
-  if ( roll.isCritical ) return { css: "critical", icon: "fa-check-double" };
-  if ( roll.isFumble ) return { css: "fumble", icon: "fa-xmark" };
   const resolution = carrier?.getFlag(MODULE_ID, "resolution");
-  if ( !resolution?.attack ) return null;
-  const hit = (resolution.targets ?? []).some(t => t.hit);
-  return hit ? { css: "success", icon: "fa-check" } : { css: "failure", icon: "fa-xmark" };
+  const judged = !!resolution?.attack && ![STEPS.AWAITING_ATTACK, STEPS.AWAITING_REACTION].includes(resolution.step);
+  const hit = judged && (resolution.targets ?? []).some(t => t.hit);
+  if ( roll.isCritical ) return { css: "critical success", icons: ["fa-check-double"] };
+  if ( roll.isFumble ) return { css: "fumble failure", icons: ["fa-xmark", "fa-xmark"] };
+  if ( !judged ) return null;
+  return hit ? { css: "success", icons: ["fa-check"] } : { css: "failure", icons: ["fa-xmark"] };
 }
 
 /** Les icônes des types d'un jet de dégâts ou de soins, celles de dnd5e. */
@@ -153,15 +162,16 @@ async function midiBlockOf(message, carrier) {
   const breakdown = await breakdownOf(rolls);
   let html;
   if ( attack ) {
-    const icons = outcome ? `<div class="icons"><i class="fas ${outcome.icon}" inert></i></div>` : "";
+    const marks = (outcome?.icons ?? []).map(icon => `<i class="fas ${icon}" inert></i>`).join("");
+    const icons = marks ? `<div class="icons">${marks}</div>` : "";
     html = `<div class="midi-qol-attack-roll midi-qol-section-filled">`
       + `<div class="midi-roll-label">${escapeHTML(attackLabel(rolls[0]))}</div>`
       + `<div class="midi-attack-roll midi-dice-roll dice-roll"><div class="dice-result"><div class="dice-formula">${formula}</div>`
       + `${breakdown}<h4 class="dice-total ${outcome?.css ?? ""}">${icons}<span class="total">${total}</span></h4>`
       + `</div></div></div>`;
   } else {
-    const healing = CONFIG.DND5E?.healingTypes?.[rolls[0].options?.type];
-    const label = escapeHTML(healing?.label ?? game.i18n.localize("DND5E.Damage"));
+    const healing = !!CONFIG.DND5E?.healingTypes?.[rolls[0].options?.type];
+    const label = escapeHTML(game.i18n.localize(healing ? "DND5E.HEAL.FIELDS.healing.label" : "DND5E.Damage"));
     html = `<div class="midi-qol-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${label}</div>`
       + `<div class="dice-roll midi-damage-roll"><div class="dice-result"><div class="dice-formula">${formula}</div>`
       + `<h4 class="dice-total">${damageIcons(rolls)}<span class="total">${total}</span></h4>${breakdown}</div></div></div>`;
@@ -182,9 +192,25 @@ async function fillMidiBlocks(host, messages, carrier) {
   const damage = document.createElement("template");
   damage.innerHTML = blocks.filter(b => !b.attack).map(b => b.html).join("");
   host.replaceChildren(template.content);
-  const hits = host.closest(".message-content")?.querySelector(".dnd5e-combat-rows > .midi-qol-hits-display");
+  const rows = host.closest(".message-content")?.querySelector(".dnd5e-combat-rows");
+  const hits = rows?.querySelector(":scope > .midi-qol-hits-display");
   if ( hits ) host.append(hits);
   host.append(damage.content);
+  // La section des sauvegardes ferme la zone, vide s'il n'y en a pas (elle y a son retrait, comme sur la carte de Midi-QOL).
+  const saves = rows?.querySelector(":scope > .midi-qol-saves-display") ?? document.createElement("div");
+  saves.classList.add("midi-qol-saves-display");
+  host.append(saves);
+  gatherActions(host.closest(".message-content"));
+}
+
+/** Les boutons du moteur (détails des jets, annulation) sur une seule ligne, sous la zone de résultats. */
+function gatherActions(content) {
+  const buttons = Array.from(content?.querySelectorAll(":scope > .dnd5e-combat-result > button") ?? []);
+  if ( !buttons.length ) return;
+  const bar = document.createElement("div");
+  bar.classList.add("dnd5e-combat-actions");
+  bar.append(...buttons);
+  content.append(bar);
 }
 
 function onBlockClick(event) {

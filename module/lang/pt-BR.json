@@ -26,6 +26,8 @@
   "DND5ECOMBAT.DegatsBonusDivergents": "Dano adicional não aplicado: nem todos os alvos cumprem os requisitos: {names}",
   "DND5ECOMBAT.ReactionEnAttente": "Aguardando uma Reação…",
   "DND5ECOMBAT.ReactionReprise": "reação",
+  "DND5ECOMBAT.Rangees.Sauvegarde": "Salvaguarda de {ability}",
+  "DND5ECOMBAT.Rangees.Sauvegardes": "Salvaguardas de {ability}",
   "DND5ECOMBAT.Annuler": "Desfazer",
   "DND5ECOMBAT.Annule": "Desfeito: PV restaurados.",
   "DND5ECOMBAT.DegatsManuels": "Sistema de combate: a rolagem automática de dano falhou. Role o dano pelo cartão.",
