@@ -290,7 +290,7 @@ export function validateExtras(entry, at, errors) {
   const rerollOk = (reroll === undefined) || (isObject(reroll) && Object.keys(reroll).every(k => ["bonus", "during"].includes(k))
     && (!("bonus" in reroll) || ((typeof reroll.bonus === "string") && !!reroll.bonus.trim()))
     && (paid ? !("during" in reroll) : ((typeof reroll.bonus === "string") && (typeof reroll.during === "string") && !!reroll.during)));
-  const refundOk = !("failRefund" in (entry.rollBonus ?? {})) || ((entry.rollBonus.failRefund === true) && paid && !reroll && !entry.rollBonus.luck);
+  const refundOk = !isObject(entry.rollBonus) || !("failRefund" in entry.rollBonus) || ((entry.rollBonus.failRefund === true) && paid && !reroll && !entry.rollBonus.luck);
   if ( ("rollBonus" in entry) && !(isObject(entry.rollBonus) && (paid || (!!reroll && !("activity" in entry.rollBonus)))
     && rerollOk && refundOk && Array.isArray(entry.rollBonus.on)
     && entry.rollBonus.on.length && entry.rollBonus.on.every(k => ROLL_BONUS_ON.includes(k))

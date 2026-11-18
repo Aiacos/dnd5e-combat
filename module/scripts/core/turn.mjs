@@ -22,6 +22,20 @@ export function initiativeAfter(summoner, others) {
 }
 
 /**
+ * Le combat vient-il de reculer (« tour précédent », « round précédent ») ? `combatTurnChange` passe dans les deux sens : en
+ * arrière, `prior` est le tour qu'on quitte et `current` celui où l'on revient — aucun tour ne finit ni ne commence, le MJ
+ * corrige un passage fait trop tôt. Au lancement du combat (`prior` sans round), rien n'a reculé.
+ * @param {{round: number|null, turn: number|null}|null} prior
+ * @param {{round: number|null, turn: number|null}|null} current
+ * @returns {boolean}
+ */
+export function turnWentBack(prior, current) {
+  if ( !Number.isFinite(prior?.round) || !Number.isFinite(current?.round) ) return false;
+  if ( current.round !== prior.round ) return current.round < prior.round;
+  return Number.isFinite(prior.turn) && Number.isFinite(current.turn) && (current.turn < prior.turn);
+}
+
+/**
  * @param {{reactions?: number}} [options]  §19.6 : réactions par round (« jusqu'à trois réactions par round, mais pas plus d'une
  *                                          par tour ») ; au-delà d'une, une seule par tour de jeu (`reactedAt`).
  */
@@ -208,6 +222,9 @@ export function refundUse(current, before, after) {
   for ( const key of ["action", "bonus", "reaction", "limited"] ) {
     next[key] = Math.max(0, (current[key] ?? 0) + ((before[key] ?? 0) - (after[key] ?? 0)));
   }
+  // §19.6 : la réaction rendue ne compte plus pour son tour de jeu — sauf si une autre a été prise depuis (elle a posé sa marque).
+  const reactionBack = (before.reaction ?? 0) > (after.reaction ?? 0);
+  if ( reactionBack && (current.reactedAt === after.reactedAt) ) next.reactedAt = before.reactedAt ?? null;
   const usedDelta = (after.attacks?.used ?? 0) - (before.attacks?.used ?? 0);
   next.attacks.used = Math.max(0, next.attacks.used - usedDelta);
   // La première attaque avait ouvert l'action Attaquer : si plus rien n'en est utilisé, on la referme.

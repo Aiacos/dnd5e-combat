@@ -193,6 +193,27 @@ export function contentOf(item) {
   };
 }
 
+/** Une couche (objet) porte-t-elle cette clé ? Le test de `mergeEntries` (core/content/merge.mjs). */
+const carries = (layer, key) => !!layer && (typeof layer === "object") && (key in layer);
+
+/**
+ * Une des couches de l'item porte-t-elle la clé `key` ? Les mêmes couches que `contentOf`, sans les fusionner : l'entrée composée
+ * n'a que des clés qu'une couche porte, donc « non » ici veut dire `contentOf(item).entry?.[key] === undefined`. Pour qui cherche
+ * une clé rare sur tous les objets d'une fiche (la vue, à chaque rafraîchissement) : la fusion n'est faite que pour l'objet qui la
+ * déclare. Rien n'est gardé : l'item, ses effets, la surcouche et les tables sont relus à chaque appel.
+ * @param {Item} item
+ * @param {string} key                 Une clé d'entrée (`ENTRY_KEYS`).
+ * @param {object} [overrides]         `worldOverrides()` déjà lu par l'appelant, pour une suite d'items.
+ * @returns {boolean}
+ */
+export function declaresKey(item, key, overrides=worldOverrides()) {
+  const { id } = identifierOf(item);
+  if ( id && (carries(CONTENT[id], key) || carries(overrides[id], key)) ) return true;
+  if ( carries(item?.flags?.[MODULE_ID], key) ) return true;
+  if ( enchantmentSourcesOf(item).some(source => carries(CONTENT[`${source}-enchanted`], key)) ) return true;
+  return carries(textLayer(item), key);
+}
+
 /**
  * K1 (SPEC §322) : la couche la plus basse, lue dans le texte anglais d'origine d'une capacité de PNJ (`core/monster-text.mjs`) —
  * sauvegarde répétée à la fin de ses tours, second échec, fin sur dégâts ; K2 (§323) : mort à 0 PV, paliers de PV ; K3 (§324) : un seul effet. Le contenu livré, la surcouche du monde ou le flag de

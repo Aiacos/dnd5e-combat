@@ -124,7 +124,7 @@ async function confused(combatant, token, { item }) {
     const d8 = await new Roll("1d8").evaluate();
     const shown = await d8.toMessage({ speaker: ChatMessage.getSpeaker({ token }), flavor: loc("Controle.ConfusionDirection", { name: token.name }) });
     await waitForDice(shown);
-    const speed = speedOf(token.actor, readUnitFactors(), token._source?.movementAction ?? null)?.speed ?? 0;
+    const speed = speedOf(token.actor, readUnitFactors(), token._source?.movementAction ?? null, token.parent)?.speed ?? 0;
     const cells = Math.floor(speed / (token.parent.grid.distance || 5));
     const grid = token.parent.grid;
     const { sceneX, sceneY, sceneWidth, sceneHeight } = token.parent.dimensions;

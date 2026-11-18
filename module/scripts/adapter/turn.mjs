@@ -445,19 +445,21 @@ export function movementOf(combatant, factors) {
   // §17.2 : plus le déplacement dépensé pour se relever.
   const budget = readBudget(combatant);
   const spent = historyCosts(token).spent + (Number(budget.climbed) || 0) + (Number(budget.stood) || 0) - (Number(budget.jumped) || 0);
-  return { spent, ...speedOf(combatant.actor, factors, token._source?.movementAction ?? null) };
+  return { spent, ...speedOf(combatant.actor, factors, token._source?.movementAction ?? null, token.parent) };
 }
 
 /**
  * Vitesse d'un acteur, dans l'unité de la grille (hors combat aussi : §67, la réaction qui rejoint l'attaquant) : la marche, ou celle
  * de l'action de déplacement `mode` (§229 : vol, nage, fouissement — `actionSpeed`, core/movement.mjs).
  * §192 : en escalade (`mode` = `climb`), la vitesse d'escalade si la fiche en a une, sinon la marche (le ×2 est dans le coût de dnd5e).
+ * `scene` : la scène du token — le déplacement dépensé se compte dans son unité, pas dans celle de la scène que ce client regarde
+ * (un MJ sur une autre scène, en mètres, comparait 9 de vitesse à des pieds dépensés). Sans token, la scène affichée.
  * @returns {{speed: number, units: string}|null}
  */
-export function speedOf(actor, factors, mode=null) {
+export function speedOf(actor, factors, mode=null, scene=canvas.scene) {
   const movement = actor?.system.attributes?.movement;
   if ( !movement ) return null;
-  const gridUnits = canvas.scene?.grid.units ?? movement.units;
+  const gridUnits = scene?.grid.units ?? movement.units;
   const speeds = movement.speeds ?? movement;
   const value = (mode === "climb") ? climbSpeed(speeds).speed : actionSpeed(speeds, mode, CONFIG.DND5E?.movementTypes ?? {});
   let speed = lengthIn(value, movement.units, gridUnits, factors);

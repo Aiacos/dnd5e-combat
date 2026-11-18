@@ -13,6 +13,7 @@ import { usageTokenOf, speakerTokenOf, turnKeyAt } from "../adapter/turn.mjs";
 import { resaveAgainst } from "../adapter/areas.mjs";
 import { seesBetween } from "../adapter/vision.mjs";
 import { tallySettled } from "../core/tally.mjs";
+import { turnWentBack } from "../core/turn.mjs";
 import { leaveTrace } from "../adapter/traces.mjs";
 import { foreignDamageShare, disarmForeignDamageShare } from "../adapter/interop.mjs";
 import { inflict } from "../adapter/retaliation.mjs";
@@ -158,6 +159,15 @@ function onPreRollDamage(config, dialog, message) {
 /* -------------------------------------------- */
 
 /**
+ * Une déclaration du tour, à part des autres : une étape qui échoue (effet déjà supprimé, jet refusé) est consignée sous le nom de
+ * la déclaration, et les autres effets de la créature jouent quand même leur tour.
+ */
+async function apart(d, token, moment, play) {
+  try { await play(); }
+  catch(err) { console.error(`${MODULE_ID} | ${d.name}: turn trigger failed on ${token.name} (${moment})`, err); }
+}
+
+/**
  * Le tour d'une créature commence ou finit, où qu'elle soit : les déclarations portées par ses effets
  * (Immobilisation de personne : « réitère le JS à la fin de chacun de ses tours ») rejouent la sauvegarde
  * de l'activité d'origine (adapter/areas.mjs, resaveAgainst). §19 : elles lui infligent aussi des dégâts
@@ -169,10 +179,11 @@ function turnMoment(moment, combatant, turnKey=null) {
   const actor = token?.actor;
   if ( !actor ) return;
   return enqueue(`turn:${token.uuid}`, async () => {
-    for ( const d of fire(moment, { actor, target: actor, source: null, targetToken: token }) ) {
+    const declarations = fire(moment, { actor, target: actor, source: null, targetToken: token });
+    for ( const d of declarations ) await apart(d, token, moment, async () => {
       // §42.2 : « à la fin de son PROCHAIN tour » — un effet que le moteur fait tomber lui-même (`remove`) et qui a été posé
       // pendant ce tour-ci attend le suivant (`placedOn`, noté à la pose : runtime/cantrips.mjs).
-      if ( turnKey && stepsOf(d, "remove").length && ((await fromUuid(d.effect ?? ""))?.getFlag?.(MODULE_ID, "placedOn") === turnKey) ) continue;
+      if ( turnKey && stepsOf(d, "remove").length && ((await fromUuid(d.effect ?? ""))?.getFlag?.(MODULE_ID, "placedOn") === turnKey) ) return;
       // Sauvegarde répétée et dégâts du porteur ensemble : les dégâts ne valent que si la sauvegarde est ratée (Épine de
       // Par exemple : une sauvegarde à chaque début de tour, 1d6 dégâts si elle échoue ; §19.6) — ils
       // voyagent avec la carte de sauvegarde, que la résolution applique (runtime/engine.mjs, `resave.onFail`).
@@ -206,7 +217,7 @@ function turnMoment(moment, combatant, turnKey=null) {
         // §37 : `keep` (réussie, l'effet reste) et `onFail: "dodge"` (ratée, l'action Esquiver) — Malédiction, « Cursed Actions ».
         await resaveAgainst(effect, activity, token, moment, { onFail, keep: step.keep === true, dodge: step.onFail === "dodge", tally: step.tally ?? null, save: declared });
       }
-      if ( resaves.length && bearerDamage.length ) continue;
+      if ( resaves.length && bearerDamage.length ) return;
       for ( const step of bearerDamage ) {
         const effect = await fromUuid(d.effect ?? "");
         if ( !effect ) continue;
@@ -228,7 +239,7 @@ function turnMoment(moment, combatant, turnKey=null) {
         const effect = await fromUuid(d.effect ?? "");
         if ( effect ) { await effect.delete(); log(`${d.name}: the effect ends on ${token.name} (${moment})`); }
       }
-    }
+    });
   });
 }
 
@@ -240,15 +251,17 @@ function originTurnMoment(combatant) {
   const origin = combatant?.actor;
   const scene = combatant?.token?.parent;
   if ( !origin || !scene ) return;
+  const tasks = [];
   for ( const token of scene.tokens ) {
     const actor = token.actor;
     if ( !actor || (actor === origin) || !actor.effects?.size ) continue;
-    enqueue(`turn:${token.uuid}`, async () => {
-      for ( const d of fire("originTurnStart", { actor, target: actor, source: origin, targetToken: token }) ) {
+    tasks.push(enqueue(`turn:${token.uuid}`, async () => {
+      const declarations = fire("originTurnStart", { actor, target: actor, source: origin, targetToken: token });
+      for ( const d of declarations ) await apart(d, token, "originTurnStart", async () => {
         const item = await fromUuid(d.item ?? "");
-        if ( !item?.actor || (item.actor.uuid !== origin.uuid) ) continue;
+        if ( !item?.actor || (item.actor.uuid !== origin.uuid) ) return;
         const effect = await fromUuid(d.effect ?? "");
-        if ( !effect ) continue;
+        if ( !effect ) return;
         for ( const step of stepsOf(d, "damage").filter(s => s.to === "bearer") ) {
           // Issue #40 : ni ceux du tour de la créature qui a posé l'effet.
           if ( spareBearer({ dead: isDeadActor(actor), heals: false }) ) { log(`${d.name}: ${token.name} is dead, no damage (start of ${origin.name}'s turn)`); continue; }
@@ -260,15 +273,21 @@ function originTurnMoment(combatant) {
           });
           log(`${d.name}: ${token.name} takes its damage (start of ${origin.name}'s turn)`);
         }
-      }
-    });
+      });
+    }));
   }
+  return Promise.all(tasks);
 }
 
 function onTurnChange(combat, prior, current) {
-  turnMoment("endOfTurn", combat.combatants.get(prior?.combatantId), turnKeyAt(combat, prior));
-  turnMoment("startOfTurn", combat.combatants.get(current?.combatantId));
-  originTurnMoment(combat.combatants.get(current?.combatantId));
+  // « Tour précédent » : le tour quitté ne finit pas, celui où l'on revient ne recommence pas — ni dégâts ni sauvegarde rejoués.
+  if ( turnWentBack(prior, current) ) return;
+  // Les tâches reviennent au routeur : une file qui échoue est consignée sous le libellé de l'inscription, au lieu de se perdre.
+  return Promise.all([
+    turnMoment("endOfTurn", combat.combatants.get(prior?.combatantId), turnKeyAt(combat, prior)),
+    turnMoment("startOfTurn", combat.combatants.get(current?.combatantId)),
+    originTurnMoment(combat.combatants.get(current?.combatantId))
+  ]);
 }
 
 /* -------------------------------------------- */

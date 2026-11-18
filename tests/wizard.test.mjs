@@ -23,6 +23,23 @@ describe("§28 Magicien : ce que le cœur en fait", () => {
     ({ resolution } = advance(resolution, { type: "attackRolled", roll: roll(5), messageId: "a", targets: [T(1)] }));
     expect(resolution.step).toBe(STEPS.MISSED);
   });
+  it("Sort mineur appuyé : un coup pris par une réplique (Image miroir) n'est pas un raté — rien", () => {
+    let { resolution } = open({ ...base, plan: { attack: true, damage: "author", potent: true, effects: [effect] }, targets: [] });
+    const targets = [T(1, { duplicates: 3 })];
+    ({ resolution } = advance(resolution, { type: "attackRolled", roll: roll(18), messageId: "a", targets }));
+    ({ resolution } = advance(resolution, { type: "duplicatesRolled", token: "T1", dice: [5, 1, 1] }));
+    expect(resolution.targets[0]).toMatchObject({ hit: false, reason: "duplicate" });
+    expect(resolution.step).toBe(STEPS.MISSED);
+    expect(applicationPlan(resolution)).toEqual([]);
+  });
+  it("Sort mineur appuyé : une cible derrière un abri total ne subit rien, la cible manquée à côté la moitié", () => {
+    let { resolution } = open({ ...base, plan: { attack: true, damage: "author", potent: true, effects: [effect] }, targets: [] });
+    const targets = [T(1, { ac: null }), T(2)];
+    ({ resolution } = advance(resolution, { type: "attackRolled", roll: roll(5), messageId: "a", targets }));
+    expect(resolution.targets.map(t => t.reason)).toEqual(["cover", "miss"]);
+    ({ resolution } = advance(resolution, { type: "damageRolled", messageId: "d", damages }));
+    expect(applicationPlan(resolution).map(e => [e.token, e.multiplier])).toEqual([["T2", 0.5]]);
+  });
   it("Sort mineur appuyé, sauvegarde « none » réussie : la moitié, sans effet", () => {
     let { resolution } = open({ ...base, plan: { damage: "author", potent: true, save: { ability: "dex", dc: 13, onSave: "none" }, effects: [effect] },
       targets: [T(1)] });

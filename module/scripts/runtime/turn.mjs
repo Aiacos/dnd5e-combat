@@ -13,6 +13,7 @@ import { contentOf, identifierOf } from "../adapter/content.mjs";
 import { originItemOf } from "../adapter/facts.mjs";
 import { isRaging } from "../adapter/rage.mjs";
 import { enemiesSeeing } from "../adapter/hide.mjs";
+import { stealthRules } from "../adapter/stealth.mjs";
 import { verbalBlockOf, charmersOf, hostileToCharmer, sightRequired } from "../adapter/conditions.mjs";
 import { untrainedArmor } from "../adapter/armor-training.mjs";
 import { reactionsBlocked, actionOrBonusOnly } from "../adapter/reactions.mjs";
@@ -440,8 +441,9 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
   const { combatant, budget, own, request } = use;
   const legend = legendaryIssues(activity, combatant, own);
   const range = assessRange(activity);
-  // Furtivité : il faut être hors du champ de vision de tout ennemi (règle 2024, adapter/hide.mjs).
-  const seenBy = (basicActionOfActivity(activity, usageConfig[MODULE_ID]?.basicChoice) === "hide") ? (enemiesSeeing(usageToken(activity)) ?? []) : [];
+  // Furtivité : il faut être hors du champ de vision de tout ennemi (règle 2024, adapter/hide.mjs) — sauf Furtivité non gérée (issue #65).
+  const seenBy = ((basicActionOfActivity(activity, usageConfig[MODULE_ID]?.basicChoice) === "hide") && (stealthRules() !== "off"))
+    ? (enemiesSeeing(usageToken(activity)) ?? []) : [];
   // §16.8 : « choisissez un Humanoïde » — les cibles désignées d'un autre type ne seront pas affectées.
   const origin = usageToken(activity);
   const wrongType = Array.from(game.user.targets).filter(t => (t.document !== origin) && t.actor)
