@@ -145,7 +145,9 @@ function opportunityFirst(token, movement, operation) {
  */
 function approachesFear(token, movement) {
   if ( !token.actor?.statuses?.has("frightened") ) return null;
-  const steps = movement.pending.waypoints.filter(w => !CONFIG.Token.movement.actions[w.action]?.teleport && (w.action !== "displace"));
+  // Tout le trajet, comme pour les barrières (§225) : un glisser ou un pas au clavier n'a rien dans `pending`, tout est dans `passed`.
+  const steps = [...movement.passed.waypoints, ...movement.pending.waypoints]
+    .filter(w => !CONFIG.Token.movement.actions[w.action]?.teleport && (w.action !== "displace"));
   if ( !steps.length ) return null;
   for ( const source of fearSources(token) ) {
     const start = distanceBetween(token, source).value;
