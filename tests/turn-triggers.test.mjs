@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
  * Le tour d'une créature commence ou finit : chacun des effets qu'elle porte joue ses étapes (sauvegarde rejouée, dégâts, fin de
- * l'effet). Un effet dont une étape échoue (document déjà supprimé, jet refusé) ne prive pas les autres effets de leur tour.
+ * l'effet). Un effet dont une étape échoue (document déjà supprimé, jet refusé) ne prive pas les autres effets de leur tour ; une
+ * tâche de tour qui échoue en entier revient au routeur, qui la consigne sous son libellé.
  */
 const routes = new Map();
 const inflict = vi.fn(async () => null);
@@ -96,5 +97,31 @@ describe("tour d'une créature : un effet qui échoue n'arrête pas les autres",
     failOn("submersion");
     await routes.get("combatTurnChange")(combat, turn(0, "porteur"), turn(1, "lanceur"));
     await vi.waitFor(() => expect(inflicted()).toEqual(["submersion", "tourbillon"]));
+  });
+});
+
+describe("tour d'une créature : une tâche qui échoue revient au routeur", () => {
+  /** Une créature dont la lecture des déclarations échoue : la tâche de son tour échoue avant toute déclaration. */
+  const unreadable = combat => Object.defineProperty(combat.combatants.get("porteur").actor, "declarations", {
+    get() { throw new Error("déclarations illisibles"); }
+  });
+
+  it("début de tour : la promesse rendue à l'inscription porte l'erreur", async () => {
+    const combat = fight([]);
+    unreadable(combat);
+    await expect(routes.get("combatTurnChange")(combat, turn(0, "lanceur"), turn(1, "porteur"))).rejects.toThrow("déclarations illisibles");
+  });
+
+  it("début du tour du lanceur, effets posés sur une autre créature : de même", async () => {
+    const combat = fight([]);
+    combat.combatants.get("porteur").actor.effects.size = 1;
+    unreadable(combat);
+    await expect(routes.get("combatTurnChange")(combat, turn(0, "porteur"), turn(1, "lanceur"))).rejects.toThrow("déclarations illisibles");
+  });
+
+  it("tout se passe bien : la promesse se résout une fois les tâches finies", async () => {
+    const combat = fight([bearerDamage("epine")]);
+    await routes.get("combatTurnChange")(combat, turn(0, "lanceur"), turn(1, "porteur"));
+    expect(inflicted()).toEqual(["epine"]);
   });
 });

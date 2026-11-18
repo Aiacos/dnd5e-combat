@@ -251,10 +251,11 @@ function originTurnMoment(combatant) {
   const origin = combatant?.actor;
   const scene = combatant?.token?.parent;
   if ( !origin || !scene ) return;
+  const tasks = [];
   for ( const token of scene.tokens ) {
     const actor = token.actor;
     if ( !actor || (actor === origin) || !actor.effects?.size ) continue;
-    enqueue(`turn:${token.uuid}`, async () => {
+    tasks.push(enqueue(`turn:${token.uuid}`, async () => {
       const declarations = fire("originTurnStart", { actor, target: actor, source: origin, targetToken: token });
       for ( const d of declarations ) await apart(d, token, "originTurnStart", async () => {
         const item = await fromUuid(d.item ?? "");
@@ -273,16 +274,20 @@ function originTurnMoment(combatant) {
           log(`${d.name}: ${token.name} takes its damage (start of ${origin.name}'s turn)`);
         }
       });
-    });
+    }));
   }
+  return Promise.all(tasks);
 }
 
 function onTurnChange(combat, prior, current) {
   // « Tour précédent » : le tour quitté ne finit pas, celui où l'on revient ne recommence pas — ni dégâts ni sauvegarde rejoués.
   if ( turnWentBack(prior, current) ) return;
-  turnMoment("endOfTurn", combat.combatants.get(prior?.combatantId), turnKeyAt(combat, prior));
-  turnMoment("startOfTurn", combat.combatants.get(current?.combatantId));
-  originTurnMoment(combat.combatants.get(current?.combatantId));
+  // Les tâches reviennent au routeur : une file qui échoue est consignée sous le libellé de l'inscription, au lieu de se perdre.
+  return Promise.all([
+    turnMoment("endOfTurn", combat.combatants.get(prior?.combatantId), turnKeyAt(combat, prior)),
+    turnMoment("startOfTurn", combat.combatants.get(current?.combatantId)),
+    originTurnMoment(combat.combatants.get(current?.combatantId))
+  ]);
 }
 
 /* -------------------------------------------- */
