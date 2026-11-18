@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateEntry, validateTable, validateSources, mergeEntries, CONTENT_VERSION } from "../module/scripts/core/content.mjs";
+import { validateEntry, validateTable, validateSources, mergeEntries, CONTENT_VERSION, ENTRY_KEYS } from "../module/scripts/core/content.mjs";
 import { CONTENT, SHIPPED, SOURCES, registerTable, unregisterTable, registeredTables, registerSources, registeredSources } from "../module/scripts/content/index.mjs";
 import { effectHolds } from "../module/scripts/core/feats.mjs";
 
@@ -111,6 +111,38 @@ describe("validation d'une entrée", () => {
     ]);
     expect(validateEntry({ targets: { types: [] } }, { facts })).toEqual(["targets.types: non-empty list of creature types"]);
     expect(mergeEntries([{ targets: { types: ["humanoid"] } }, { targets: { unaffectedIf: true } }])).toEqual({ targets: { types: ["humanoid"], unaffectedIf: true } });
+  });
+
+  it("une valeur mal formée est refusée, jamais une exception", () => {
+    expect(validateEntry({ rollBonus: 1 }, { facts })[0]).toMatch(/^rollBonus:/);
+    expect(validateEntry({ targets: { unaffectedIf: { any: true } } }, { facts })).toEqual(["targets.unaffectedIf: unknown fact \"any\""]);
+    expect(validateEntry({ ignoresResistance: { types: ["necrotic"], if: { all: "x" } } }, { facts }))
+      .toEqual(["ignoresResistance.if: unknown fact \"all\""]);
+    // Chaque clé du schéma, avec des primitives puis avec les valeurs livrées dont une feuille ou une branche est remplacée.
+    const samples = {};
+    for ( const entry of Object.values(SHIPPED) ) for ( const [key, value] of Object.entries(entry) ) {
+      if ( (samples[key] ??= []).length < 6 ) samples[key].push(value);
+    }
+    const primitives = [null, true, false, 0, 1, 12.5, "", "x", [], [1], [null], [{}], {}, { a: null }];
+    function* variants(value, depth=0) {
+      yield* primitives;
+      if ( (depth > 3) || (value === null) || (typeof value !== "object") ) return;
+      for ( const key of Object.keys(value) ) for ( const sub of variants(value[key], depth + 1) ) {
+        const copy = Array.isArray(value) ? [...value] : { ...value };
+        copy[key] = sub;
+        yield copy;
+      }
+    }
+    const thrown = new Set();
+    const attempt = (key, value) => {
+      try { validateEntry({ [key]: value }, { facts }); }
+      catch(err) { thrown.add(`${key}: ${err.message}`); }
+    };
+    for ( const key of ENTRY_KEYS ) {
+      for ( const value of primitives ) attempt(key, value);
+      for ( const sample of samples[key] ?? [] ) for ( const value of variants(sample) ) attempt(key, value);
+    }
+    expect([...thrown]).toEqual([]);
   });
 
   it("une table entière est validée entrée par entrée, préfixée par l'identifiant", () => {

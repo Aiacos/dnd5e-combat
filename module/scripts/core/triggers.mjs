@@ -172,7 +172,11 @@ export function unknownFacts(condition, facts={}) {
     if ( !c || (typeof c !== "object") ) return;
     if ( Array.isArray(c) ) return c.forEach(walk);
     for ( const [key, arg] of Object.entries(c) ) {
-      if ( ["all", "any"].includes(key) ) (arg ?? []).forEach(walk);
+      // `all` / `any` sans liste : la condition est mal formée, la clé est signalée plutôt que de lever une exception.
+      if ( ["all", "any"].includes(key) ) {
+        if ( Array.isArray(arg) ) arg.forEach(walk);
+        else if ( (arg !== null) && (arg !== undefined) ) out.add(key);
+      }
       else if ( key === "not" ) walk(arg);
       else if ( !(key in facts) ) out.add(key);
     }
