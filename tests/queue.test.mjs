@@ -37,4 +37,13 @@ describe("file par clé", () => {
     const out = execFileSync(process.execPath, ["--input-type=module", "-e", script], { encoding: "utf8" }).trim();
     expect(JSON.parse(out)).toEqual({ unhandled: ["effet introuvable"], after: "suite" });
   });
+  it("qui attend sa tâche reprend avant que la suivante de la même clé ne commence", async () => {
+    const log = [];
+    const first = enqueue("ordre", async () => { log.push("A"); });
+    const second = enqueue("ordre", async () => { log.push("B"); });
+    await first;
+    log.push("après");
+    await second;
+    expect(log).toEqual(["A", "après", "B"]);
+  });
 });

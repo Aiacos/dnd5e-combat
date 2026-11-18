@@ -7,9 +7,11 @@ const queues = new Map();
 
 export function enqueue(key, task) {
   const run = (queues.get(key) ?? Promise.resolve()).then(task, task);
+  // Le maillon de l'appelant, créé AVANT celui de la file : `await enqueue(k, A); suite()` reprend ainsi avant que la tâche
+  // suivante de la même clé ne commence, comme toujours. Rendre `run` lui-même ferait passer pour traitée (par le maillon de la
+  // file) l'erreur d'une tâche dont personne n'attend la promesse, et elle disparaîtrait sans trace.
+  const out = run.then(value => value);
   // Le maillon de la file ne se rejette jamais : une tâche qui échoue ne bloque pas les suivantes.
   queues.set(key, run.then(() => {}, () => {}));
-  // Ce maillon traite le rejet de `run` : rendre `run` lui-même ferait passer pour traitée l'erreur d'une tâche dont personne
-  // n'attend la promesse, et elle disparaîtrait sans trace. La promesse rendue n'a pas d'autre abonné que l'appelant.
-  return run.then(value => value);
+  return out;
 }
