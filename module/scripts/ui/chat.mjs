@@ -15,7 +15,7 @@ import { keptAndDropped } from "../core/d20.mjs";
  */
 export const CHAT_ROWS_SETTING = "chatRows";
 
-const rowsEnabled = () => { try { return !!game.settings.get(MODULE_ID, CHAT_ROWS_SETTING); } catch { return false; } };
+export const rowsEnabled = () => { try { return !!game.settings.get(MODULE_ID, CHAT_ROWS_SETTING); } catch { return false; } };
 
 /** L'icône du verdict d'une rangée, par classe de ligne (celles de Midi-QOL : coche, coche double au critique, croix). */
 const ROW_ICONS = Object.freeze({ hit: "fa-check", critical: "fa-check-double", miss: "fa-xmark", pending: "fa-hourglass-half",
