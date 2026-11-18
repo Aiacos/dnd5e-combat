@@ -303,6 +303,29 @@ describe("modules hors de la suite et dépréciations", () => {
     expect(g).toMatchObject({ kind: "warn", thirdParty: true, deprecation: true });
   });
 
+  // §467 : vu en jeu — « Roll All » de la frise appelle dnd5e, qu'un module tiers enveloppe avec une option dépréciée.
+  const deprecatedVia = (owner, below) => {
+    const err = new Error("The rollMode option of Combat#rollInitiative messageOptions is deprecated\nDeprecated since Version 14");
+    err.stack = "Error: deprecated\n    at Object.logCompatibilityWarning (http://localhost:30000/scripts/foundry.mjs:1554:17)\n"
+      + `    at Combat.rollInitiative (http://localhost:30000/modules/${owner}/scripts/a.js:251:20)\n`
+      + "    at Combat5e.rollAll (http://localhost:30000/systems/dnd5e/dnd5e.mjs:92484:17)\n"
+      + `    at #onClick (http://localhost:30000/modules/${below}/scripts/apps/frieze.mjs:332:37)`;
+    return err;
+  };
+
+  it("une dépréciation d'un module tiers n'est pas DAS, même si un module DAS est plus bas dans la pile", () => {
+    target.console.warn(deprecatedVia("third-dep-mod", "darsh-loot"));
+    expect(debugApi.errors()).toHaveLength(0);          // sans « tous les modules » : pas gardée, donc pas d'avis
+    debug.setCaptureAll(true);
+    target.console.warn(deprecatedVia("third-dep-mod", "darsh-loot"));
+    expect(debugApi.errors()[0]).toMatchObject({ module: "third-dep-mod", thirdParty: true, deprecation: true });
+  });
+
+  it("une dépréciation appelée par un module DAS reste DAS", () => {
+    target.console.warn(deprecatedVia("darsh-loot", "darsh-loot"));
+    expect(debugApi.errors()[0]).toMatchObject({ module: "darsh-loot", thirdParty: false, deprecation: true });
+  });
+
   it("une erreur de la suite n'est pas hors suite ; le groupe fermé ne colore plus les lignes suivantes", () => {
     debug.setCaptureAll(true);
     target.console.group("Something");

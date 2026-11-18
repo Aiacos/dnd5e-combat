@@ -159,7 +159,9 @@ export const SPELL_RULES = Object.freeze({
   // d'épines (4 m de déplacement par mètre) ne sont pas du terrain difficile ordinaire : non repris.
   // §70 : Appel de la foudre — le nuage (cylindre de 18 m) reste ; chaque lancement vise un éclair de 1,50 m dessous ; « dehors, par
   // temps d'orage » : +1d10 (question à l'incantation). La relance sans emplacement (`recast`) et l'éclair (`bolt`) : content/bursts.mjs.
-  "call-lightning": { storm: { bonus: "1d10" } },
+  // §469 : Manuel 3.0.0 — « Cast Spell » (utilitaire) ne fait que poser le nuage ; l'éclair est « Lightning Strike » (3d10), et
+  // « Lightning Strike (Storm) » (4d10) sa variante quand l'orage était déjà là.
+  "call-lightning": { storm: { bonus: "1d10", strike: "dnd5eactivity000", stormStrike: "8DvTC5lYcdKn1Q3r" } },
   // §120 : Caresse du vampire (niveau 3) — « vous regagnez des PV égaux à la moitié des dégâts nécrotiques infligés » (runtime/lifesteal.mjs) ;
   // « tant que le sort dure, vous pouvez refaire l’attaque à chacun de vos tours par une action Magie » : la relance sans emplacement (content/bursts.mjs).
   "vampiric-touch": { lifesteal: { damageType: "necrotic", fraction: 0.5 } },

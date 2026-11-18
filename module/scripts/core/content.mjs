@@ -756,7 +756,10 @@
  *                                               jugée après les dégâts (§71 : `{ "target.atZero": true }`)
  *     storm?: { bonus? }                        orage (§70, Appel de la foudre) : la zone de l'item est un nuage qui
  *                                               reste (concentration) ; chaque lancement vise un éclair (`bolt`) dessous ;
- *                                               `bonus` : dés ajoutés quand l'orage était déjà là (question à l'incantation)
+ *                                               `bonus` : dés ajoutés quand l'orage était déjà là (question à l'incantation) ;
+ *                                               `strike` (§469) : l'activité de l'éclair quand celle de l'incantation ne
+ *                                               fait que poser le nuage (Manuel 3.0.0) ; `stormStrike` : sa variante « orage
+ *                                               déjà là », qui porte déjà le dé en plus (pas de `bonus` ajouté)
  *     difficultTerrain?: { types?, cost? }      la zone du sort est un terrain difficile (§69) — `cost` (§172) : un autre
  *                                               multiplicateur que ×2 (Mur d'épines : ×4), par le comportement « coût de
  *                                               déplacement » du cœur V14 à la place de celui de dnd5e ; sinon comportement

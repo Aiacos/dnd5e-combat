@@ -20,6 +20,18 @@ describe("se libérer par un test (§16.54)", () => {
     expect(parseEscapeCheck("[[/damage 2d6 fire]]", known)).toBe(null);
     expect(parseEscapeCheck("", known)).toBe(null);
   });
+  it("un test écrit sans DD prend le DD par défaut qu'on lui donne (sort importé : celui des sorts du lanceur)", () => {
+    const spell = { ...known, defaultDc: "@attributes.spell.dc" };
+    // DDB Importer, Poigne de terre de Maximilien : « make a Strength check against your spell save DC ».
+    expect(parseEscapeCheck("make a [[/check str format=long]] against your spell save DC", spell))
+      .toEqual({ ability: "str", skill: null, dc: "@attributes.spell.dc" });
+    expect(parseEscapeCheck("[[/check ath]]", spell)).toEqual({ ability: null, skill: "ath", dc: "@attributes.spell.dc" });
+    // Un DD écrit l'emporte ; sans test, toujours rien ; la sauvegarde qui précède dans le texte n'est pas un test.
+    expect(parseEscapeCheck("[[/check str 15]]", spell)).toEqual({ ability: "str", skill: null, dc: "15" });
+    expect(parseEscapeCheck("[[/damage 2d6 fire]]", spell)).toBe(null);
+    expect(parseEscapeCheck("[[/save str format=long]] puis [[/check dex format=long]]", spell))
+      .toEqual({ ability: "dex", skill: null, dc: "@attributes.spell.dc" });
+  });
   it("Entravé sans Agrippé seulement (l'empoignade a son propre S'échapper)", () => {
     expect(escapableStatuses(["restrained"])).toBe(true);
     expect(escapableStatuses(["grappled", "restrained"])).toBe(false);

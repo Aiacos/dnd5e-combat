@@ -11,7 +11,9 @@ import { englishDescription } from "./multiattack.mjs";
 /** Le test d'évasion qu'écrit un item, ou null. */
 export function escapeCheckOf(item) {
   if ( !item ) return null;
-  const known = { abilities: Object.keys(CONFIG.DND5E?.abilities ?? {}), skills: Object.keys(CONFIG.DND5E?.skills ?? {}) };
+  // Un sort écrit son test « contre votre DD de sauvegarde des sorts » : à défaut de DD dans l'enrichisseur (textes importés), celui-là.
+  const known = { abilities: Object.keys(CONFIG.DND5E?.abilities ?? {}), skills: Object.keys(CONFIG.DND5E?.skills ?? {}),
+    defaultDc: (item.type === "spell") ? "@attributes.spell.dc" : null };
   return parseEscapeCheck(englishDescription(item), known) ?? parseEscapeCheck(item.system?.description?.value, known);
 }
 

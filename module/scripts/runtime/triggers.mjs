@@ -5,7 +5,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { select, stepsOf, BEARER_MOMENTS, damagedByOriginSide, sameActivity } from "../core/triggers.mjs";
+import { select, stepsOf, BEARER_MOMENTS, damagedByOriginSide, sameActivity, spareBearer } from "../core/triggers.mjs";
 import { declarationsOf, declarationsOfEffects, factsFor, tokenOf, consumedMarks, bonusTurnKey, bonusSpent, bonusKeyOf } from "../adapter/triggers.mjs";
 import { identifierOf } from "../adapter/content.mjs";
 import { comesFromItemEffect, originItemOf } from "../adapter/facts.mjs";
@@ -16,6 +16,7 @@ import { tallySettled } from "../core/tally.mjs";
 import { leaveTrace } from "../adapter/traces.mjs";
 import { foreignDamageShare, disarmForeignDamageShare } from "../adapter/interop.mjs";
 import { inflict } from "../adapter/retaliation.mjs";
+import { isDeadActor } from "../adapter/death.mjs";
 import { enqueue } from "./queue.mjs";
 import { route } from "./router.mjs";
 import { log, loc, say, locEsc } from "./shared.mjs";
@@ -213,6 +214,8 @@ function turnMoment(moment, combatant, turnKey=null) {
         // §157 : une activité de soin (Héroïsme : PV temporaires au début de chaque tour) passe par le même chemin — ses dés ont le
         // type « temphp » ou « healing », que dnd5e applique comme un soin.
         const heals = (item?.system?.activities?.get?.(step.activity ?? "")?.type === "heal") || ["healing", "temphp"].includes(step.damageType);
+        // Issue #40 : une créature morte ne subit plus les dégâts de son tour.
+        if ( spareBearer({ dead: isDeadActor(actor), heals }) ) { log(`${d.name}: ${token.name} is dead, no damage (${moment})`); continue; }
         await inflict({
           step, item, scaling: effect.getFlag?.("dnd5e", "scaling") ?? 0, targetUuid: token.uuid,
           speaker: ChatMessage.implementation.getSpeaker({ token }),
@@ -247,6 +250,8 @@ function originTurnMoment(combatant) {
         const effect = await fromUuid(d.effect ?? "");
         if ( !effect ) continue;
         for ( const step of stepsOf(d, "damage").filter(s => s.to === "bearer") ) {
+          // Issue #40 : ni ceux du tour de la créature qui a posé l'effet.
+          if ( spareBearer({ dead: isDeadActor(actor), heals: false }) ) { log(`${d.name}: ${token.name} is dead, no damage (start of ${origin.name}'s turn)`); continue; }
           await inflict({
             step, item, scaling: effect.getFlag?.("dnd5e", "scaling") ?? 0, targetUuid: token.uuid,
             speaker: ChatMessage.implementation.getSpeaker({ token }),

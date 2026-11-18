@@ -39,6 +39,11 @@
         "reason": "DAS · Core already applies Advantage and Disadvantage from conditions, cover and range; with both active, their verdicts can contradict each other."
       },
       {
+        "id": "wm5e",
+        "type": "module",
+        "reason": "DAS · Core already applies the eight Weapon Masteries, which Automated Masteries 5e also automates; it also requires Automated Conditions 5e."
+      },
+      {
         "id": "enhancedcombathud",
         "type": "module",
         "reason": "Argon is a second action HUD: use the DAS · Combat UI bar, or Argon without it, not both."

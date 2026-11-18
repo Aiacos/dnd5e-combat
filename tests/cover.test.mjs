@@ -132,3 +132,22 @@ describe("§239 : case coupée par un mur qui ne suit pas la grille (issue #14)"
     expect(pullBack({ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 5, y: 0 }, 10)).toEqual({ x: 0, y: 0 });
   });
 });
+
+describe("§468 : une grille (barreaux, herse) n'est pas un abri total", () => {
+  const grate = (x, y0, y1) => (a, b) => (wall(x, y0, y1)(a, b) ? "grate" : false);
+
+  it("une grille qui coupe toutes les lignes : abri supérieur (+5), pas total", () => {
+    const cover = coverBetween({ attacker, target, blocked: grate(200, -1000, 1000), inset: 10 });
+    expect(cover).toMatchObject({ degree: "threeQuarters", bonus: 5, blockedLines: 4, byCreature: false, sources: ["wall"] });
+  });
+
+  it("une grille qui ne coupe que les lignes basses : demi-abri, comme un muret", () => {
+    const cover = coverBetween({ attacker, target, blocked: grate(200, 40, 1000), inset: 10 });
+    expect(cover.degree).toBe("half");
+  });
+
+  it("un mur plein derrière la grille : l'abri total revient", () => {
+    const both = (a, b) => (wall(250, -1000, 1000)(a, b) ? "wall" : grate(200, -1000, 1000)(a, b));
+    expect(coverBetween({ attacker, target, blocked: both, inset: 10 }).degree).toBe("total");
+  });
+});

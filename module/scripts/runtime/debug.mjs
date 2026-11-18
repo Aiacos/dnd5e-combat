@@ -106,11 +106,15 @@ export function recordError(entry) {
     stack = String(stack ?? "").split("\n").filter(l => !l.includes(SELF_FILE)).join("\n");
     const modules = packagesOfStack(stack);
     const owner = module ?? attribute(stack, { ignore: IGNORE }) ?? prefixed(message);
-    const suite = concernsSuite(owner ? [owner, ...modules] : modules, message);
+    // §467 : une dépréciation est la faute du module qui appelle l'ancienne API (`owner`). Si ce n'est pas la suite, un module DAS
+    // plus bas dans la pile (le bouton qui a lancé l'action) ne la fait pas compter comme DAS — vu avec Monk's Combat Details.
+    const deprecation = isDeprecation(message);
+    const suite = (deprecation && owner && !isSuitePackage(owner)) ? false
+      : concernsSuite(owner ? [owner, ...modules] : modules, message);
     if ( !state.all && !suite ) return null;
     // Hors de la suite (gardée parce que « tous les modules » est coché) : rangée à part dans le rapport, décochée par défaut.
     const { group, isNew } = errors.add({ kind, message, stack, label, hook, module: owner, modules, client: userId(),
-      thirdParty: !suite, deprecation: isDeprecation(message), trail: trailRing.last(10) });
+      thirdParty: !suite, deprecation, trail: trailRing.last(10) });
     for ( const fn of listeners ) {
       try { fn(group, isNew); } catch { /* un écouteur fautif ne casse pas le relevé */ }
     }

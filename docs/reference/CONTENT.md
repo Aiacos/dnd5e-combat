@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-884 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+888 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -11,7 +11,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | Clé | Entrées | Exemples |
 |---|---|---|
 | `absorb` | 1 | `arcane-ward` |
-| `actionEnds` | 19 | `black-tentacles`, `earthquake`, `ensnaring-strike`, `essence-of-ether`, `evards-black-tentacles`, `eyebite`, … |
+| `actionEnds` | 21 | `black-tentacles`, `earthquake`, `ensnaring-strike`, `essence-of-ether`, `evards-black-tentacles`, `eyebite`, … |
 | `actionOrBonus` | 5 | `abjure-foes`, `coward-spirit`, `fetid-cloud`, `mm-beholder-eye-rays`, `slow` |
 | `advantageIfFighting` | 6 | `charm-monster`, `charm-person`, `dominate-beast`, `dominate-monster`, `dominate-person`, `modify-memory` |
 | `afterSmite` | 1 | `smite-of-protection` |
@@ -66,7 +66,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `curesAll` | 7 | `elixir-of-health`, `hand-of-ultimate-mercy`, `heal`, `keoghtoms-ointment`, `mass-heal`, `potion-of-vitality`, … |
 | `curesOn` | 5 | `dispel-evil-and-good`, `hand-of-healing`, `lay-on-hands`, `physicians-touch`, `restoring-touch` |
 | `damageShield` | 2 | `resistance`, `ring-of-warmth` |
-| `dataFixes` | 76 | `antilife-shell`, `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `bead-of-force`, … |
+| `dataFixes` | 78 | `antilife-shell`, `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `bead-of-force`, … |
 | `devours` | 1 | `blackrazor` |
 | `difficultTerrain` | 16 | `black-tentacles`, `blade-barrier`, `conjure-minor-elementals`, `earthquake`, `entangle`, `evards-black-tentacles`, … |
 | `discharge` | 1 | `path-to-the-grave` |
@@ -105,7 +105,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `exclusiveWeapon` | 3 | `berserker-axe-enchanted`, `oathbow-enchanted`, `sword-of-vengeance-enchanted` |
 | `extraFirstTurn` | 1 | `thiefs-reflexes` |
 | `fadesOnLongRest` | 2 | `raise-dead`, `resurrection` |
-| `failMargins` | 2 | `lolths-sting`, `mm-homunculus-bite` |
+| `failMargins` | 3 | `lolths-sting`, `mm-homunculus-bite`, `spiders-sting` |
 | `flammable` | 2 | `oil`, `web` |
 | `fleeOnFailedSave` | 1 | `dissonant-whispers` |
 | `fleetStep` | 1 | `fleet-step` |
@@ -275,8 +275,8 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `thrownDamage` | 1 | `thrown-weapon-fighting` |
 | `trace` | 7 | `armor-of-agathys`, `blade-ward`, `dispel-evil-and-good`, `flame-blade`, `moonlight-step`, `produce-flame`, … |
 | `transpose` | 1 | `tricksters-transposition` |
-| `triggers` | 269 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
-| `untypedDamage` | 2 | `mm-wight-life-drain`, `otilukes-freezing-sphere` |
+| `triggers` | 271 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
+| `untypedDamage` | 3 | `freezing-sphere`, `mm-wight-life-drain`, `otilukes-freezing-sphere` |
 | `upkeep` | 1 | `crown-of-madness` |
 | `usageLimits` | 11 | `action-surge`, `flame-blade`, `indomitable`, `pact-of-the-chain`, `plant-growth`, `produce-flame`, … |
 | `wallAura` | 1 | `prismatic-wall` |
@@ -311,7 +311,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `castsSpell → use` | 3 | `absorption-ioun-stone`, `counterspell`, `greater-absorption-ioun-stone` |
 | `endOfTurn → damage` | 5 | `acid-arrow`, `melfs-acid-arrow`, `phantasmal-killer`, `vitriolic-sphere`, `weird` |
 | `endOfTurn → remove` | 6 | `acid-arrow`, `command`, `melfs-acid-arrow`, `moonlight-step`, `steady-aim`, `vitriolic-sphere` |
-| `endOfTurn → resave` | 40 | `beguiling-magic`, `blinding-smite`, `blindness-deafness`, `carrion-crawler-mucus`, `cause-fear`, `compulsion`, … |
+| `endOfTurn → resave` | 41 | `beguiling-magic`, `blinding-smite`, `blindness-deafness`, `carrion-crawler-mucus`, `cause-fear`, `compulsion`, … |
 | `enemyAttacked → use` | 1 | `soul-of-vengeance` |
 | `enemyAttacks → disadvantage` | 2 | `protection`, `warding-flare` |
 | `enemyAttacks → intercept` | 1 | `arrow-catching-shield` |
@@ -340,7 +340,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `isAttacked → use` | 3 | `limited-foresight`, `lucky`, `shadowy-dodge` |
 | `isAttacked → ward` | 1 | `sanctuary` |
 | `isDamaged → damage` | 1 | `warding-bond` |
-| `isDamaged → remove` | 26 | `abjure-foes`, `animal-friendship`, `armor-of-agathys`, `avenging-angel`, `calm-emotions`, `channel-divinity`, … |
+| `isDamaged → remove` | 27 | `abjure-foes`, `animal-friendship`, `armor-of-agathys`, `avenging-angel`, `calm-emotions`, `channel-divinity`, … |
 | `isDamaged → resave` | 6 | `dominate-beast`, `dominate-monster`, `dominate-person`, `hideous-laughter`, `symbiotic-being`, `tashas-hideous-laughter` |
 | `isDamaged → use` | 10 | `absorb-elements`, `boon-of-energy-resistance`, `fount-of-moonlight`, `hellish-rebuke`, `mist-walker`, `misty-escape`, … |
 | `isHit → damage` | 4 | `armor-of-agathys`, `avenger-spirit`, `corrosive-form`, `fire-shield` |
