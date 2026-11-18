@@ -8,7 +8,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { hardToPerceive } from "./defenses.mjs";
 import { LIGHT } from "../core/illumination.mjs";
 import { hiddenEffectsOf, OUT_OF_ACTION } from "./hide.mjs";
-import { canSee, blockedBetween, hasLineOfSight } from "./vision.mjs";
+import { canLocate, blockedBetween, hasLineOfSight } from "./vision.mjs";
 import { perceivedOnToken, sensesToward, tokenPoint } from "./illumination.mjs";
 import { committedPosition } from "./turn.mjs";
 import { isObjectToken } from "./bodies.mjs";
@@ -50,7 +50,7 @@ export function searchCandidates(searcher) {
  * @returns {{sensed: boolean, seeable: boolean, disadvantage: boolean}}
  */
 export function sightingOf(observer, target) {
-  const sensed = canSee(observer, target) === true;
+  const sensed = canLocate(observer, target) === true;
   if ( sensed || observer.actor?.statuses?.has("blinded") ) return { sensed, seeable: false, disadvantage: false };
   const eye = observer.getVisionOrigin?.(committedPosition(observer)) ?? tokenPoint(observer);
   const blocked = blockedBetween(observer, target);

@@ -19,7 +19,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { classify, initiativeGroups, allRolled } from "../core/combat-launch.mjs";
 import { initiativeAfter } from "../core/turn.mjs";
-import { canSee } from "../adapter/vision.mjs";
+import { canLocate } from "../adapter/vision.mjs";
 import { summonItemOf } from "../adapter/summons.mjs";
 import { contentOf } from "../adapter/content.mjs";
 import { requestGroupRoll } from "./group-roll.mjs";
@@ -74,7 +74,7 @@ export function launchCandidates(scene=canvas.scene) {
     const player = !!actor.hasPlayerOwner;
     const online = player && ownersOnline(actor);
     const seen = !player && observers.some(o => {
-      const verdict = canSee(o, token);
+      const verdict = canLocate(o, token);
       return (verdict === null) ? !token.hidden : verdict;
     });
     const summon = summonRule(token);
@@ -152,7 +152,7 @@ export async function launchCombat({ participants=[], npcAuto=true, grouped=fals
   const tokens = participants.map(p => ({ token: fromUuidSync(p.uuid, { strict: false }), surprised: !!p.surprised })).filter(p => p.token?.actor);
   if ( !scene || !tokens.length ) { ui.notifications.warn(loc("Lancement.Personne")); return null; }
   const observers = playerTokens(scene);
-  const unseen = token => !token.actor.hasPlayerOwner && !observers.some(o => canSee(o, token) === true);
+  const unseen = token => !token.actor.hasPlayerOwner && !observers.some(o => canLocate(o, token) === true);
 
   let combat = game.combats.find(c => !c.started && (c.scene?.id === scene.id)) ?? null;
   combat ??= await Combat.implementation.create({ scene: scene.id, active: true });
@@ -236,7 +236,7 @@ async function revealSeen(combat) {
   if ( !combat?.scene || (state().combat !== combat.id) ) return;
   const observers = playerTokens(combat.scene);
   const updates = combat.combatants.filter(c => c.hidden && c.getFlag(MODULE_ID, HIDDEN_FLAG) && c.token && !c.token.hidden
-    && observers.some(o => canSee(o, c.token) === true)).map(c => ({ _id: c.id, hidden: false, [`flags.${MODULE_ID}.${HIDDEN_FLAG}`]: null }));
+    && observers.some(o => canLocate(o, c.token) === true)).map(c => ({ _id: c.id, hidden: false, [`flags.${MODULE_ID}.${HIDDEN_FLAG}`]: null }));
   if ( updates.length ) {
     await combat.updateEmbeddedDocuments("Combatant", updates);
     log(`combat launch: ${updates.length} creature(s) now seen, shown in the initiative`);

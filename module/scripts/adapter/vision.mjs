@@ -27,7 +27,8 @@
 
 import { committedPosition, distanceBetween, tokenCenter } from "./turn.mjs";
 import { contentOf, identifierOf, declaresKey, worldOverrides } from "./content.mjs";
-import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, devilsSightSees, senseReaches, senseless } from "../core/light.mjs";
+import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, devilsSightSees, senseReaches, senseless, countsAsSight }
+  from "../core/light.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { revealedInvisible, seesInvisible } from "./facts.mjs";
 import { outsideCone } from "./cone.mjs";
@@ -168,10 +169,11 @@ function unveiled(token) {
  * compris, aux positions validées.
  * @param {TokenDocument} observer
  * @param {TokenDocument} target
- * @param {{ignoreHidden?: boolean}} [options]  §185 : juger comme si la cible n'était pas cachée (la détection elle-même).
+ * @param {{ignoreHidden?: boolean, locating?: boolean}} [options]  §185 : juger comme si la cible n'était pas cachée (la détection
+ *   elle-même). `locating` : compter aussi les sens qui localisent sans voir (`canLocate`).
  * @returns {boolean|null}  null : impossible à dire ici (canevas absent, token non dessiné).
  */
-export function canSee(observer, target, { ignoreHidden=false }={}) {
+export function canSee(observer, target, { ignoreHidden=false, locating=false }={}) {
   if ( !canvas?.ready || !observer || !target ) return null;
   if ( observer === target ) return true;
   if ( isSenseless(observer) ) return false;   // réglage `unconsciousSenses` : Inconscient, ni vue ni ouïe
@@ -187,7 +189,7 @@ export function canSee(observer, target, { ignoreHidden=false }={}) {
   // d'eux : la vue ne passe pas — seuls jugent les sens qui ne voient pas, et, dans des ténèbres, la vision véritable et
   // la Vision du diable.
   const blocked = blockedBetween(observer, target);
-  if ( blocked.fog || blocked.darkness ) return seesThroughBlock(observer, target, source, config, blocked);
+  if ( blocked.fog || blocked.darkness ) return seesThroughBlock(observer, target, source, config, blocked, locating);
   // §447 : seules des Ténèbres lancées par l'observateur, qui voit à travers (`seesThroughOwnDarkness`) : « il voit normalement ».
   if ( blocked.ownDarkness && devilsSightSeesToken(observer, target, blocked) ) return true;
 
@@ -211,9 +213,22 @@ export function canSee(observer, target, { ignoreHidden=false }={}) {
   }
   for ( const [id, mode] of Object.entries(own) ) {
     if ( (id === "basicSight") || (id === "lightPerception") ) continue;
+    if ( !locating && !countsAsSight(id) ) continue;   // la perception des vibrations localise, elle ne voit pas
     if ( modes[id]?.testVisibility(source, mode, config) === true ) return true;
   }
   return false;
+}
+
+/**
+ * L'observateur sait-il où est la cible : il la voit, ou un sens qui n'est pas une vue la localise (perception des vibrations) ?
+ * Pour ce qui demande une position connue et non une vue : se cacher, chercher, viser une case. Mêmes garde-fous que `canSee`.
+ * @param {TokenDocument} observer
+ * @param {TokenDocument} target
+ * @param {{ignoreHidden?: boolean}} [options]
+ * @returns {boolean|null}
+ */
+export function canLocate(observer, target, { ignoreHidden=false }={}) {
+  return canSee(observer, target, { ignoreHidden, locating: true });
 }
 
 /** C12-e : la cible porte Vision ombreuse et se tient dans les ténèbres. */
@@ -319,7 +334,7 @@ export function devilsSightRange(observer) {
  * qui ignore les murs et l'aveuglement, reste jugée par le cœur. La Vision du diable « voit normalement » : pas un
  * Invisible.
  */
-function seesThroughBlock(observer, target, source, config, blocked) {
+function seesThroughBlock(observer, target, source, config, blocked, locating=false) {
   const own = detectionModesOf(observer);
   const distance = distanceBetween(observer, target).value;
   for ( const id of sensesThrough(blocked) ) {
@@ -327,6 +342,7 @@ function seesThroughBlock(observer, target, source, config, blocked) {
     const mode = own[id];
     if ( !mode || (mode.enabled === false) ) continue;
     if ( CORE_JUDGED.includes(id) ) {
+      if ( !locating && !countsAsSight(id) ) continue;
       if ( CONFIG.Canvas.detectionModes[id]?.testVisibility(source, mode, config) === true ) return true;
       continue;
     }

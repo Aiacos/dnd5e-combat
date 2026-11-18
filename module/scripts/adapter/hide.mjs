@@ -8,7 +8,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { canSee, isVisionAvailable } from "./vision.mjs";
+import { canLocate, isVisionAvailable } from "./vision.mjs";
 import { isObjectToken } from "./bodies.mjs";
 import { areEnemies } from "./factions.mjs";
 
@@ -25,7 +25,7 @@ export function enemiesSeeing(token) {
   return token.parent.tokens.filter(other => (other !== token) && other.actor && !other.hidden && !isObjectToken(other)
     && areEnemies(token, other)
     && !OUT_OF_ACTION.some(s => other.actor.statuses.has(s)) && !other.actor.statuses.has(defeated)
-    && (canSee(other, token) === true));
+    && (canLocate(other, token) === true));
 }
 
 /** Les effets de Furtivité d'un acteur. */
