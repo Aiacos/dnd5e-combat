@@ -854,6 +854,7 @@
   "DND5ECOMBAT.Forme.Ajouter": "Ajouter une forme…",
   "DND5ECOMBAT.Forme.Prendre": "Prendre cette forme",
   "DND5ECOMBAT.Forme.Oublier": "Oublier cette forme",
+  "DND5ECOMBAT.Forme.FP": "FP {cr}",
   "DND5ECOMBAT.Forme.SansMJ": "Forme sauvage : aucun MJ connecté pour vous transformer.",
   "DND5ECOMBAT.Forme.Refus.cr": "FP trop élevé à votre niveau",
   "DND5ECOMBAT.Forme.Refus.type": "Pas une Bête",

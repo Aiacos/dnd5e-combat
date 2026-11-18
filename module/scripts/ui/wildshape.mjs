@@ -14,7 +14,7 @@ function cardsHtml(activity, infos) {
     <div class="dnd5e-combat-form${refusal ? " refused" : ""}" data-uuid="${esc(info.uuid)}" title="${esc(refusal ? loc(`Forme.Refus.${refusal}`) : info.name)}">
       <img src="${esc(info.img)}" alt="">
       <span class="name">${esc(info.name)}</span>
-      <span class="cr">FP ${esc(crText(info.cr))}</span>
+      <span class="cr">${esc(loc("Forme.FP", { cr: crText(info.cr) }))}</span>
       <a class="forget" data-forget="${esc(info.uuid)}" title="${esc(loc("Forme.Oublier"))}"><i class="fa-solid fa-xmark"></i></a>
     </div>`).join("");
 }
