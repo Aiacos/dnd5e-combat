@@ -855,6 +855,7 @@
   "DND5ECOMBAT.Forme.Ajouter": "Add a form…",
   "DND5ECOMBAT.Forme.Prendre": "Take this form",
   "DND5ECOMBAT.Forme.Oublier": "Forget this form",
+  "DND5ECOMBAT.Forme.FP": "CR {cr}",
   "DND5ECOMBAT.Forme.SansMJ": "Wild Shape: no GM connected to transform you.",
   "DND5ECOMBAT.Forme.Refus.cr": "CR too high for your level",
   "DND5ECOMBAT.Forme.Refus.type": "Not a Beast",

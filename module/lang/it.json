@@ -852,6 +852,7 @@
   "DND5ECOMBAT.Forme.Ajouter": "Aggiungi una forma…",
   "DND5ECOMBAT.Forme.Prendre": "Assumi questa forma",
   "DND5ECOMBAT.Forme.Oublier": "Dimentica questa forma",
+  "DND5ECOMBAT.Forme.FP": "GS {cr}",
   "DND5ECOMBAT.Forme.SansMJ": "Forma Selvatica: nessun GM connesso per trasformarti.",
   "DND5ECOMBAT.Forme.Refus.cr": "GS troppo alto per il tuo livello",
   "DND5ECOMBAT.Forme.Refus.type": "Non è una Bestia",

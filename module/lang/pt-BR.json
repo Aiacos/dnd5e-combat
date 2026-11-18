@@ -735,6 +735,7 @@
   "DND5ECOMBAT.Forme.Ajouter": "Adicionar forma…",
   "DND5ECOMBAT.Forme.Prendre": "Assumir esta forma",
   "DND5ECOMBAT.Forme.Oublier": "Esquecer esta forma",
+  "DND5ECOMBAT.Forme.FP": "ND {cr}",
   "DND5ECOMBAT.Forme.SansMJ": "Forma Selvagem: nenhum mestre conectado para realizar a transformação.",
   "DND5ECOMBAT.Forme.Refus.cr": "ND alto demais para seu nível",
   "DND5ECOMBAT.Forme.Refus.type": "Não é uma Fera",
