@@ -524,6 +524,7 @@ const TRANSITIONS = Object.freeze({
  * @returns {{resolution: object, commands: object[]}}  `resolution` est le MÊME objet si l'évènement ne change rien.
  */
 export function advance(resolution, event) {
-  const transition = TRANSITIONS[event.type];
-  return transition ? transition(resolution, event) : same(resolution);
+  // Seules les clés propres de la table sont des transitions : `constructor`, `toString`… s'y lisent par héritage.
+  if ( !Object.hasOwn(TRANSITIONS, event?.type) ) return same(resolution);
+  return TRANSITIONS[event.type](resolution, event);
 }
