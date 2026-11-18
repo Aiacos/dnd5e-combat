@@ -374,9 +374,13 @@ function dropMark(id) {
   if ( !mark.root.destroyed ) mark.root.destroy({ children: true });
 }
 
-/** Le token est-il affiché parce qu'on l'entend (le contour de l'ouïe), sur ce client ? */
+/**
+ * Le token est-il affiché parce qu'on l'entend (le contour de l'ouïe), sur ce client ? Le filtre d'abord : tant que rien n'a été
+ * entendu il n'existe pas, et `Token#isVisible` relance le test de visibilité entier du cœur à chaque lecture — or on passe ici à
+ * chaque `refreshToken` et `hoverToken` de chaque token.
+ */
 function isHeard(token) {
-  return !!token && !token.destroyed && (token.isVisible === true) && !!hearingFilter && (token.detectionFilter === hearingFilter);
+  return !!hearingFilter && !!token && !token.destroyed && (token.isVisible === true) && (token.detectionFilter === hearingFilter);
 }
 
 function refreshMark(token) {
