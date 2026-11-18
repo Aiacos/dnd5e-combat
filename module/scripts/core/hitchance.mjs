@@ -66,11 +66,12 @@ export function hitChance({ ac, bonus=0, dice=[], mode=0, critical=20, autoCriti
   for ( let n = 1; n <= 20; n++ ) {
     const p = d20[n];
     if ( n === 1 ) continue;
-    if ( n >= threshold ) { hit += p; crit += p; continue; }
+    // Le 20 naturel touche toujours ; un seuil abaissé (19) n'est un critique que si le total atteint la CA (core/attack.mjs).
+    if ( n === 20 ) { hit += p; crit += p; continue; }
     for ( const [value, q] of extra ) {
       if ( n + value < ac ) continue;
       hit += p * q;
-      if ( (margin > 0) && (n + value >= ac + margin) ) crit += p * q;
+      if ( (n >= threshold) || ((margin > 0) && (n + value >= ac + margin)) ) crit += p * q;
     }
   }
   if ( autoCritical ) crit = hit;

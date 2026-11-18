@@ -43,10 +43,17 @@ describe("chance de toucher", () => {
     expect(hitChance({ ac: 15, bonus: 5, mode: 1 }).hit).toBeCloseTo(1 - ((1 - p) ** 2), 12);
     expect(hitChance({ ac: 15, bonus: 5, mode: -1 }).hit).toBeCloseTo(p * p, 12);
   });
-  it("seuil de critique abaissé (Champion, 19)", () => {
-    const r = hitChance({ ac: 40, bonus: 0, critical: 19 });
-    expect(r.hit).toBeCloseTo(0.10, 12);
-    expect(r.critical).toBeCloseTo(0.10, 12);
+  it("seuil de critique abaissé (Champion, 19) : le 19 ne touche pas d'office, il est critique s'il touche", () => {
+    // CA hors d'atteinte : seul le 20 naturel touche.
+    const far = hitChance({ ac: 40, bonus: 0, critical: 19 });
+    expect(far.hit).toBeCloseTo(0.05, 12);
+    expect(far.critical).toBeCloseTo(0.05, 12);
+    // +5 contre CA 25 : le 19 donne 24, raté ; le 20 seul touche.
+    expect(hitChance({ ac: 25, bonus: 5, critical: 19 })).toEqual({ hit: 0.05, critical: 0.05 });
+    // +5 contre CA 15 : touche sur 10 et plus (55 %), critique sur 19 et 20 (10 %).
+    const near = hitChance({ ac: 15, bonus: 5, critical: 19 });
+    expect(near.hit).toBeCloseTo(0.55, 12);
+    expect(near.critical).toBeCloseTo(0.10, 12);
   });
   it("Bénédiction : +5 +1d4 contre CA 15 → 55 % + 2,5 × 5 %", () => {
     expect(hitChance({ ac: 15, bonus: 5, dice: [{ number: 1, faces: 4 }] }).hit).toBeCloseTo(0.675, 12);

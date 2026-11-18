@@ -17,6 +17,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { route } from "../runtime/router.mjs";
 import { loc, waitForDice } from "../runtime/shared.mjs";
+import { attackMark } from "../core/attack.mjs";
 import { modifierLines, bonusLines, d20Nodes, fillLine } from "./chat.mjs";
 
 export const CHAT_COMPACT_SETTING = "chatCompact";
@@ -54,16 +55,21 @@ function foldedIn(carrier) {
 const damageLabel = type => game.i18n.localize(CONFIG.DND5E.damageTypes[type]?.label ?? CONFIG.DND5E.healingTypes?.[type]?.label ?? type ?? "");
 
 /** « Attaque : 17 (d20 : 12, critique) » ; avec deux d20 (issue #47) : « Attaque : 9 (Désavantage : 4, 17) », le dé écarté barré. */
-function attackLine(message) {
+function attackLine(message, carrier=null) {
   const roll = message.rolls?.[0];
   if ( !roll ) return null;
   const d20 = roll.dice?.[0]?.total ?? null;
   const notes = [];
   const twoDice = d20Nodes(roll);
   if ( !twoDice && (d20 !== null) ) notes.push(loc("LabelValue", { label: "d20", value: d20 }));
-  if ( roll.isCritical ) notes.push(loc("Compact.Critique"));
-  else if ( roll.isFumble ) notes.push(loc("Compact.Echec"));
-  const css = roll.isCritical ? "hit" : (roll.isFumble ? "miss" : "note");
+  // Un 19 au seuil de critique abaissé qui rate n'est ni « critique » ni vert : le verdict jugé sur ce jet tranche.
+  const resolution = carrier?.getFlag(MODULE_ID, "resolution");
+  const natural = roll.d20?.total ?? d20;
+  const mark = attackMark({ isCritical: roll.isCritical === true, isFumble: roll.isFumble === true,
+    ...(Number.isFinite(natural) ? { natural } : {}) }, (resolution?.attack?.messageId === message.id) ? resolution.targets : null);
+  if ( mark === "critical" ) notes.push(loc("Compact.Critique"));
+  else if ( mark === "fumble" ) notes.push(loc("Compact.Echec"));
+  const css = (mark === "critical") ? "hit" : ((mark === "fumble") ? "miss" : "note");
   const head = loc("LabelValue", { label: loc("Compact.Attaque"), value: roll.total });
   // Deux d20 : « Attaque : 9 (Désavantage : 4, 17, critique) », le 17 barré.
   if ( twoDice ) return { css, title: roll.formula, nodes: [`${head} (`, ...twoDice, `${notes.map(n => `, ${n}`).join("")})`] };
@@ -95,7 +101,7 @@ function renderSummary(carrier, html) {
   const lines = [];
   for ( const m of folded ) {
     if ( rolling.has(m.id) ) continue;
-    const line = (m.type === "attack") ? attackLine(m) : damageLine(m);
+    const line = (m.type === "attack") ? attackLine(m, carrier) : damageLine(m);
     if ( line ) lines.push(line);
     // Ce que le moteur écrit sous ces jets (raisons d'Avantage, dégâts ajoutés) : sur la carte, puisqu'ils sont repliés.
     const modifiers = m.getFlag(MODULE_ID, "modifiers");

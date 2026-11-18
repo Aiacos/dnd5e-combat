@@ -7,7 +7,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { STEPS } from "../core/action.mjs";
 import { readAttackMessage, readDamageMessage } from "../adapter/messages.mjs";
 import { readSaveMessage, repairSaveAbility } from "../adapter/saves.mjs";
-import { resolveAttack } from "../core/attack.mjs";
+import { resolveAttack, hitsRegardless } from "../core/attack.mjs";
 import { offerInspiration, offerRollBonus, keptD20 } from "../adapter/inspiration.mjs";
 import { readUsage } from "../adapter/usage.mjs";
 import { canResistSave, askLegendary, resistSave, legendaryLeft } from "../adapter/legendary.mjs";
@@ -59,7 +59,8 @@ async function inspiredAttack(message, roll, targets) {
       return { ...roll, isFumble: false, total: Math.max(roll.total, needed), inspired: Math.max(0, needed - roll.total) };
     }
   }
-  if ( roll.isFumble || roll.isCritical ) return roll;
+  // Un 19 au seuil de critique abaissé qui rate reste rattrapable : seul le jet qui touche d'office (20 naturel) passe.
+  if ( roll.isFumble || hitsRegardless(roll) ) return roll;
   const missed = resolveAttack(roll, targets.filter(t => !t.unaffected)).filter(t => t.reason === "miss");
   if ( !missed.length ) return roll;
   if ( !actor ) return roll;
@@ -90,7 +91,10 @@ async function heroicAttack(message, roll, targets, actor) {
     needed: acs.length ? Math.min(...acs) : null, failed: missed.length > 0 });
   if ( !after ) return roll;
   log(`${actor.name}: Heroic Inspiration, attack ${roll.total} → ${after.total}`);
-  return { ...roll, total: after.total, isCritical: after.critical, isFumble: after.fumble, heroic: { old: after.old, kept: after.kept } };
+  // Le d20 gardé a changé : sans lui (`natural` retiré), un critique vaut un 20 naturel, comme avant.
+  const { natural: _old, ...rest } = roll;
+  return { ...rest, total: after.total, isCritical: after.critical, isFumble: after.fumble,
+    ...(Number.isFinite(after.kept) ? { natural: after.kept } : {}), heroic: { old: after.old, kept: after.kept } };
 }
 
 export async function onAttackMessage(message) {

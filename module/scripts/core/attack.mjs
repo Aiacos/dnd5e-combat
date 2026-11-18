@@ -1,12 +1,14 @@
 /**
  * Résolution d'un jet d'attaque contre des cibles. Règles 2024 : un 20 naturel touche toujours
- * et c'est un coup critique, un 1 naturel rate toujours. Aucune dépendance à Foundry.
+ * et c'est un coup critique, un 1 naturel rate toujours. Un seuil de critique abaissé (Critique amélioré : 19) ne fait pas
+ * toucher : un 19 naturel n'est un coup critique que si le total atteint la CA. Aucune dépendance à Foundry.
  */
 
 /**
  * @typedef {object} AttackRoll
  * @property {number} total        Total du jet, modificateurs compris.
  * @property {boolean} isCritical  Le d20 atteint le seuil de critique de l'attaquant.
+ * @property {number} [natural]    Le d20 gardé. Absent (jet d'un ancien message) : tenu pour un 20 quand `isCritical`.
  * @property {boolean} isFumble    Le d20 est un échec automatique (1 naturel).
  */
 
@@ -28,8 +30,8 @@ export function resolveAttack(roll, targets) {
     let reason;
     if ( target.ac === null || target.ac === undefined ) { hit = false; reason = "cover"; }
     else if ( roll.isFumble ) { hit = false; reason = "fumble"; }
-    else if ( roll.isCritical ) { hit = true; reason = "critical"; }
-    else { hit = roll.total >= target.ac; reason = hit ? "ac" : "miss"; }
+    else if ( hitsRegardless(roll) ) { hit = true; reason = "critical"; }
+    else { hit = roll.total >= target.ac; reason = hit ? (roll.isCritical ? "critical" : "ac") : "miss"; }
     return { ...target, hit, critical: hit && roll.isCritical, reason };
   });
 }
@@ -101,4 +103,28 @@ export function throwableAttackMode({ requested, remembered, byDefault, hasTarge
 export function exclusiveWeaponHindrances(rules, attacking) {
   if ( !attacking ) return [];
   return (rules ?? []).filter(r => r.active && (r.item !== attacking)).map(r => r.name);
+}
+
+/**
+ * Ce jet touche-t-il quelle que soit la CA ? Seul le 20 naturel : un d20 au seuil de critique abaissé (19) doit encore atteindre
+ * la CA — raté, il reste un raté comme un autre (l'Inspiration s'y propose, la carte ne l'annonce pas « critique »).
+ * @param {AttackRoll} roll
+ * @returns {boolean}
+ */
+export function hitsRegardless(roll) {
+  return (roll.isCritical === true) && !roll.isFumble && ((roll.natural ?? 20) === 20);
+}
+
+/**
+ * Ce que la carte annonce d'un jet d'attaque : « critique », « échec », ou rien. Un d20 au seuil abaissé n'est annoncé critique
+ * que si le verdict rendu compte un coup critique ; verdict inconnu (carte sans résolution) : annoncé, comme le fait le système.
+ * @param {AttackRoll} roll
+ * @param {{hit: boolean, critical: boolean}[]|null} [verdicts]  Les cibles jugées sur ce jet, ou null.
+ * @returns {"critical"|"fumble"|null}
+ */
+export function attackMark(roll, verdicts=null) {
+  if ( roll.isFumble ) return "fumble";
+  if ( !roll.isCritical ) return null;
+  if ( hitsRegardless(roll) || !verdicts ) return "critical";
+  return verdicts.some(t => t.hit && t.critical) ? "critical" : null;
 }
