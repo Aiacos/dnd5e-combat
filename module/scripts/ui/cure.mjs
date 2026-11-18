@@ -10,7 +10,7 @@ import { cureStatus } from "../runtime/cure.mjs";
 import { route } from "../runtime/router.mjs";
 import { loc, notice } from "../runtime/shared.mjs";
 
-async function onPostUse(activity) {
+async function onPostUse(activity, usageConfig, results) {
   const entry = contentOf(activity?.item).entry;
   const cures = entry?.cures;
   if ( !cures?.length || !activity.actor?.isOwner ) return;
@@ -30,7 +30,8 @@ async function onPostUse(activity) {
       rejectClose: false
     }).catch(() => null);
   }
-  if ( status ) await cureStatus(target, status);
+  // La carte d'utilisation : la preuve que lit le MJ quand la cible est à un autre (runtime/cure.mjs, §471).
+  if ( status ) await cureStatus(target, status, { usage: results?.message?.id ?? null });
 }
 
 export function registerCureUi() {

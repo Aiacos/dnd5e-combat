@@ -18,7 +18,8 @@
     "pure": { "folders": ["core"] },
     "router": "runtime/router.mjs",
     "forbid": [{ "name": "un-seul-chemin", "pattern": "\\.(?:use|rollAttack|rollDamage|consume)\\(", "in": ["ui/"], "why": "l'interface ne lance jamais une activité elle-même : elle passe par runtime/, qui finit dans activity.use() (SPEC §15.1)" },
-      { "name": "relance-forcee", "pattern": "\\.use\\(\\s*(?:\\{\\s*\\.\\.\\.(?:config|usageConfig|rest|usage|use)\\b|(?:config|use|usage|usageConfig)\\s*,)", "in": ["runtime/", "adapter/"], "why": "une utilisation suspendue se relance par relaunchUse (runtime/relaunch.mjs) : forcée dans un champ antimagie, dnd5e la refuserait sans carte (§448)" }],
+      { "name": "relance-forcee", "pattern": "\\.use\\(\\s*(?:\\{\\s*\\.\\.\\.(?:config|usageConfig|rest|usage|use)\\b|(?:config|use|usage|usageConfig)\\s*,)", "in": ["runtime/", "adapter/"], "why": "une utilisation suspendue se relance par relaunchUse (runtime/relaunch.mjs) : forcée dans un champ antimagie, dnd5e la refuserait sans carte (§448)" },
+      { "name": "texte-inerte", "pattern": "createElement\\(\\s*[\"']div[\"']\\s*\\)", "in": ["runtime/", "adapter/"], "why": "le texte d'un HTML qu'on n'a pas écrit se lit par htmlText (adapter/dialogs.mjs, document inerte, §471), jamais par un div.innerHTML" }],
     "except": {
       "forbid:relance-forcee:runtime/relaunch.mjs": "relaunchUse lui-même",
       "forbid:relance-forcee:runtime/actions.mjs": "relances passées par useDespiteAntimagic (option forced), qui lève le champ",

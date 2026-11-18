@@ -31,6 +31,7 @@ import { polearmFits } from "../core/feats.mjs";
 import { spendItemUses } from "./uses.mjs";
 import { victimsOf } from "./grapple.mjs";
 import { isSpellCast } from "./scrolls.mjs";
+import { needsCheck, plainReaction } from "../core/requests.mjs";
 
 export const REACTION_QUERY = `${MODULE_ID}.reaction`;
 
@@ -303,8 +304,17 @@ export function setReactionApproach(fn) { approachSource = fn; }
 let reactionSpellGate = null;
 export function setReactionSpellGate(fn) { reactionSpellGate = fn; }
 
-export async function handleReactionQuery({ actor: actorUuid, prompt, options, target, auto=false, castLevel=null }) {
+export async function handleReactionQuery(payload, { user=null }={}) {
+  // §471 : d'un autre client qu'un MJ, ce client ne répond que pour
+  // une créature qu'il contrôle et que l'expéditeur ne contrôle pas (sinon celui-ci se serait posé la question lui-même, `askReaction`),
+  // la fenêtre est toujours posée, et l'utilisation ne garde que les formes légitimes (core/requests.mjs). Refus de sécurité : non forçable.
+  const untrusted = needsCheck(user);
+  const { actor: actorUuid, prompt, options, target, auto=false, castLevel=null } = untrusted ? plainReaction(payload) : payload;
   const actor = await fromUuid(actorUuid);
+  if ( untrusted && (!actor?.isOwner || actor.testUserPermission?.(user, "OWNER")) ) {
+    console.warn(`${MODULE_ID} | reaction query from ${user.name} refused: ${actor?.name ?? actorUuid} is not answered here`);
+    return null;
+  }
   const buttons = options.map((o, i) => ({ action: `use${i}`, label: o.name, icon: "fa-solid fa-bolt", default: i === 0 }));
   buttons.push({ action: "none", label: game.i18n.localize("DND5ECOMBAT.NePasReagir") });
   // Sans réponse dans le délai : pas de réaction (elle n'est pas dépensée sans consentement).
@@ -327,6 +337,11 @@ export async function handleReactionQuery({ actor: actorUuid, prompt, options, t
     token?.setTarget(true, { releaseOthers: true });
   }
   let activity = option.activity ? await fromUuid(option.activity) : null;
+  // §471 : l'activité est celle du réacteur (ses ressources, ses dés), d'où que vienne la question.
+  if ( activity && (activity.actor?.uuid !== actor?.uuid) ) {
+    console.warn(`${MODULE_ID} | reaction of ${actor?.name}: activity ${option.activity} is not theirs, refused`);
+    return null;
+  }
   // §88 : Riposte — l'activité de l'item paie (ses consommations : un dé de supériorité) et donne le dé ; l'attaque est celle d'une arme
   // de corps à corps de l'acteur (la première équipée, `meleeAttacksOf`), contre la source, et le dé s'ajoute à ses dégâts si elle touche.
   // §133 : sans activité de l'item (Sentinelle), l'attaque d'arme seule, payée par la Réaction.
@@ -360,7 +375,12 @@ export async function handleReactionQuery({ actor: actorUuid, prompt, options, t
   const aimed = (activity?.type === "attack") ? targetDescriptors(target ? await fromUuid(target) : null) : null;
   // §211 : une action préparée (Se tenir prêt) — l'effet de concentration qui retenait le sort tombe avant qu'il parte ; le sort part
   // sans emplacement, au niveau dépensé (`usage`), et sa zone se pose (`template` : la fenêtre n'attend pas de résolution).
-  for ( const uuid of option.drop ?? [] ) await (await fromUuid(uuid))?.delete?.();
+  // §471 : seulement un effet du réacteur lui-même (l'effet de concentration qui retenait le sort), jamais un autre document.
+  for ( const uuid of option.drop ?? [] ) {
+    const held = await fromUuid(uuid);
+    if ( (held?.documentName === "ActiveEffect") && actor && (held.parent?.uuid === actor.uuid) ) await held.delete();
+    else console.warn(`${MODULE_ID} | reaction of ${actor?.name}: ${uuid} is not one of their effects, not removed`);
+  }
   // §403 : un sort lancé en réaction (Contresort, Bouclier) peut lui-même être contré — la porte consulte les ennemis qui le voient ; contré,
   // il ne part pas (la Réaction est perdue, l'emplacement non) et la fenêtre qui l'a ouvert continue comme sans réaction.
   if ( reactionSpellGate && isSpellCast(activity.item) ) {

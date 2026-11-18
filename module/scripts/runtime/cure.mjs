@@ -14,6 +14,7 @@ import { askAllocation } from "../adapter/projectiles.mjs";
 import { askChoice } from "../adapter/choices.mjs";
 import { budgetIssues, spendBudget } from "./neighbours.mjs";
 import { log, loc, notice, viaOwnerOrGM } from "./shared.mjs";
+import { needsCheck, cureAllowed, healedHp, grantedTempHp } from "../core/requests.mjs";
 
 export const CURE_QUERY = `${MODULE_ID}.cure`;
 
@@ -26,7 +27,45 @@ async function removeStatus(targetUuid, status) {
   return ids.length;
 }
 
-async function handleCure({ target, status, value=null }) {
+/**
+ * §471 : la requête d'un autre client qu'un MJ ne vaut que sur preuve — la carte d'utilisation (`usage`) qu'il a créée
+ * pour une créature qu'il contrôle, dont l'objet porte la règle de cet acte et qui vise cette cible (ou son propre lanceur) — et dans
+ * des bornes : un soin ne blesse pas et ne dépasse pas le maximum, des PV temporaires pas plus que la réserve ou le jet de la carte.
+ * Rend les données à appliquer, ou null (refus de sécurité : non forçable).
+ * @returns {Promise<object|null>}
+ */
+async function vetCure({ target, status, value=null, usage=null }, user) {
+  const card = game.messages.get(String(usage ?? ""));
+  const caster = card?.getAssociatedActor?.() ?? null;
+  const item = card?.getAssociatedItem?.() ?? null;
+  const sent = !!card && ((card.author?.id === user.id) || !!caster?.testUserPermission(user, "OWNER"));
+  const aimed = (card?.system?.targets ?? []).some(t => t.token === target)
+    || (!!caster && ((await fromUuid(target))?.actor?.uuid === caster.uuid));
+  const entry = item ? contentOf(item).entry : null;
+  if ( !sent || !aimed || !cureAllowed(entry, status, value) ) return null;
+  if ( status === "hp" ) {
+    const hp = (await fromUuid(target))?.actor?.system?.attributes?.hp ?? {};
+    return { target, status, value: healedHp(value, { current: Number(hp.value) || 0, max: Number(hp.effectiveMax ?? hp.max) || 0 }) };
+  }
+  if ( status === "temphp" ) {
+    const rolled = game.messages.contents.filter(m => ["healing", "damage"].includes(m.type) && (m._source.system?.origin === card.id))
+      .flatMap(m => m.rolls ?? []).reduce((sum, r) => sum + (r.total ?? 0), 0);
+    const ceiling = entry.tempHpPool || rolled || Infinity;
+    return { target, status, value: grantedTempHp(value, ceiling) };
+  }
+  return { target, status, value };
+}
+
+async function handleCure(payload, { user=null }={}) {
+  if ( needsCheck(user) ) {
+    const vetted = await vetCure(payload ?? {}, user);
+    if ( !vetted ) {
+      console.warn(`${MODULE_ID} | cure query from ${user.name} refused: ${payload?.status} on ${payload?.target} without a usage card that allows it`);
+      return 0;
+    }
+    payload = vetted;
+  }
+  const { target, status, value=null } = payload;
   // §160 : « réduit d'un niveau l'Épuisement » (Restauration suprême).
   if ( status === "exhaustion-1" ) {
     const actor = (await fromUuid(target))?.actor;
@@ -77,13 +116,13 @@ async function standWithReaction(targetUuid, item) {
 }
 
 /** Un acte sur la cible : ici si on la possède, sinon par le MJ actif. */
-const onTarget = (target, status, value=null) =>
-  viaOwnerOrGM(!!target.actor?.isOwner, CURE_QUERY, handleCure, { target: target.uuid, status, value }, { fallback: 0 });
+const onTarget = (target, status, value=null, usage=null) =>
+  viaOwnerOrGM(!!target.actor?.isOwner, CURE_QUERY, handleCure, { target: target.uuid, status, value, usage }, { fallback: 0 });
 
 /** Fait cesser `status` sur le token `target` (TokenDocument). Épuisement : un niveau de moins (§160, Restauration suprême). */
-export async function cureStatus(target, status) {
-  // Sans MJ actif pour une cible d'un autre, la requête ne rend rien : rien n'a cessé.
-  const n = Number(await onTarget(target, (status === "exhaustion") ? "exhaustion-1" : status)) || 0;
+export async function cureStatus(target, status, { usage=null }={}) {
+  // Sans MJ actif pour une cible d'un autre, la requête ne rend rien : rien n'a cessé. `usage` : la carte d'utilisation, preuve pour le MJ.
+  const n = Number(await onTarget(target, (status === "exhaustion") ? "exhaustion-1" : status, null, usage)) || 0;
   const label = game.i18n.localize(CONFIG.DND5E.conditionTypes[status]?.name ?? status);
   log(`${target.name}: ${label} ends (${n} effect(s))`);
   if ( n > 0 ) notice(target, label, "effectOff");
@@ -119,8 +158,8 @@ async function sharePool(activity, pool, targets, results) {
   if ( pool.choose && (targets.length > 1) ) shares = await chosenShares(activity, total, targets, shares, caps);
   for ( const [i, target] of targets.entries() ) {
     if ( !shares[i] ) continue;
-    if ( pool.temp ) await onTarget(target, "temphp", shares[i]);
-    else await onTarget(target, "hp", (target.actor.system.attributes.hp.value ?? 0) + shares[i]);
+    if ( pool.temp ) await onTarget(target, "temphp", shares[i], usage);
+    else await onTarget(target, "hp", (target.actor.system.attributes.hp.value ?? 0) + shares[i], usage);
   }
   const detail = targets.map((t, i) => `${t.name} ${shares[i]}`).join(", ");
   log(`${activity.item.name}: pool of ${total} — ${detail}`);
@@ -154,13 +193,14 @@ async function chosenShares(activity, total, targets, shares, caps) {
 async function onPostUseAll(activity, usageConfig, results) {
   const entry = contentOf(activity?.item).entry;
   if ( !activity?.actor?.isOwner || !entry ) return;
+  const usage = results?.message?.id ?? null;
   // §160 : toutes les cibles du message (Guérison de groupe), sinon l'utilisateur (une potion bue).
   const listed = await Promise.all((results?.message?.system?.targets ?? []).map(t => fromUuid(t.token)));
   const targets = listed.filter(t => t?.actor);
   if ( !targets.length && usageTokenOf(activity)?.actor ) targets.push(usageTokenOf(activity));
   // §160 : Délivrance des malédictions — les effets des sorts de malédiction cessent.
   if ( entry.endsCurses?.length ) for ( const target of targets ) {
-    const n = await onTarget(target, "curses", entry.endsCurses);
+    const n = await onTarget(target, "curses", entry.endsCurses, usage);
     log(`${activity.item.name}: ${n} curse effect(s) end on ${target.name}`);
   }
   // §296 : une réserve à répartir (`healPool` : Survivance, Guérison de groupe, Cavalcade mécanique, Châtiment exaltant).
@@ -172,18 +212,18 @@ async function onPostUseAll(activity, usageConfig, results) {
     const total = entry.tempHpPool;
     let shares = targets.map(() => Math.floor(total / targets.length));
     if ( targets.length > 1 ) shares = await chosenShares(activity, total, targets, shares, targets.map(() => Infinity));
-    for ( const [i, target] of targets.entries() ) if ( shares[i] ) await onTarget(target, "temphp", shares[i]);
+    for ( const [i, target] of targets.entries() ) if ( shares[i] ) await onTarget(target, "temphp", shares[i], usage);
     log(`${activity.item.name}: temporary HP — ${targets.map((t, i) => `${t.name} ${shares[i]}`).join(", ")}`);
   }
   // §401 : se relever par sa Réaction (Mot de pouvoir guérisseur) — toujours par le MJ actif (le budget est un drapeau du combattant).
   if ( entry.standsWithReaction ) for ( const target of targets ) {
     if ( target.actor.statuses?.has("prone") ) await viaOwnerOrGM(game.users.activeGM?.isSelf === true, CURE_QUERY, handleCure,
-      { target: target.uuid, status: "standReaction", value: activity.item.name }, { fallback: 0, timeout: 45000 });
+      { target: target.uuid, status: "standReaction", value: activity.item.name, usage }, { fallback: 0, timeout: 45000 });
   }
   // §160 : Résurrection — « revient à la vie avec tous ses PV ».
   if ( entry.revivesFull ) for ( const target of targets ) {
     const hp = target.actor.system.attributes.hp;
-    await onTarget(target, "hp", hp.effectiveMax ?? hp.max);
+    await onTarget(target, "hp", hp.effectiveMax ?? hp.max, usage);
     log(`${activity.item.name}: ${target.name} back to ${hp.effectiveMax ?? hp.max} HP`);
   }
   const list = entry.curesAll;
@@ -192,12 +232,12 @@ async function onPostUseAll(activity, usageConfig, results) {
     if ( status === "exhaustion" ) {
       const level = target.actor.system?.attributes?.exhaustion ?? 0;
       if ( level > 0 ) {
-        await onTarget(target, "exhaustion");
+        await onTarget(target, "exhaustion", null, usage);
         log(`${target.name}: Exhaustion ${level} → 0`);
       }
       continue;
     }
-    if ( target.actor.statuses?.has(status) ) await cureStatus(target, status);
+    if ( target.actor.statuses?.has(status) ) await cureStatus(target, status, { usage });
   }
 }
 

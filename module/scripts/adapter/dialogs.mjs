@@ -83,12 +83,21 @@ export function answerPrompt(id, action) {
   return prompts.get(id)?.choose(action) ?? false;
 }
 
+/**
+ * Le texte d'un fragment HTML, lu dans un document **inerte** (`DOMParser`) : rien n'y charge ni ne s'y exécute (§471). Toute lecture de
+ * texte d'un HTML qu'on n'a pas écrit soi-même passe par ici (gardien `texte-inerte`, tests/das-tests.json).
+ * @param {string} html
+ * @returns {string}
+ */
+export function htmlText(html) {
+  const body = new DOMParser().parseFromString(String(html ?? ""), "text/html").body;
+  return (body?.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
 function trackPrompt(dialog, config, { awaitingId=null, actor=null }={}) {
   const id = awaitingId ?? foundry.utils.randomID();
-  const text = document.createElement("div");
-  text.innerHTML = config.content ?? "";
   prompts.set(id, {
-    id, awaitingId, actor: actor?.uuid ?? null, title: config.window?.title ?? "", text: text.textContent.replace(/\s+/g, " ").trim(),
+    id, awaitingId, actor: actor?.uuid ?? null, title: config.window?.title ?? "", text: htmlText(config.content),
     buttons: (config.buttons ?? []).map(b => ({ action: b.action, label: b.label ?? b.action, icon: b.icon ?? null })), since: Date.now(),
     choose: action => {
       const button = [...(dialog.element?.querySelectorAll("button[data-action]") ?? [])].find(b => b.dataset.action === action);

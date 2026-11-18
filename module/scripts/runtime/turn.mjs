@@ -7,7 +7,7 @@ import {
   distanceBetween, usageTokenOf as usageToken, currentTurnKey, freshBudgetFor, movementOf } from "../adapter/turn.mjs";
 import { usageLimitProblems, markUsedThisTurn, applyLowestSlot } from "../adapter/limits.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
-import { promptWait } from "../adapter/dialogs.mjs";
+import { promptWait, htmlText } from "../adapter/dialogs.mjs";
 import { basicActionOf, basicActionOfActivity, basicChoiceOf } from "../adapter/basics.mjs";
 import { contentOf, identifierOf } from "../adapter/content.mjs";
 import { originItemOf } from "../adapter/facts.mjs";
@@ -134,9 +134,7 @@ function confirmDialog(title, lines, buttons, actor=null) {
   const outcome = refusal();
   if ( !outcome.window ) {
     if ( outcome.warn ) {
-      const text = document.createElement("div");
-      text.innerHTML = lines.join(" · ");
-      ui.notifications.warn(`${title} : ${text.textContent}`);
+      ui.notifications.warn(`${title} : ${htmlText(lines.join(" · "))}`);
     }
     const go = buttons.find(b => b.default && (b.action !== "cancel")) ?? buttons.find(b => b.action !== "cancel");
     return Promise.resolve(go?.action ?? "go");
