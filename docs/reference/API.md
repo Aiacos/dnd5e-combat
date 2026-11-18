@@ -470,7 +470,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 |---|---|---|---|
 | `api.sneak.check` | `()` | `runtime/stealth.mjs` | Règles `bg3` : juge tout de suite la scène affichée (qui entre dans la vue de qui, tests de Discrétion, repérages). À lancer chez le MJ actif. |
 | `api.sneak.is` | `(token)` | `adapter/stealth.mjs` | Le token (ou l'acteur) est-il caché ? |
-| `api.sneak.rules` | `()` | `runtime/stealth.mjs` | Les règles de furtivité du monde (réglage `stealthRules`) : `"2024"` ou `"bg3"`. |
+| `api.sneak.rules` | `()` | `runtime/stealth.mjs` | Les règles de furtivité du monde (réglage `stealthRules`) : `"2024"`, `"bg3"` ou `"off"` (non gérée, issue #65). |
 | `api.sneak.set` | `(token, on=undefined)` | `runtime/stealth.mjs` | Se cacher ou ne plus l'être (`on` absent : basculer). |
 | `api.sneak.spottedBy` | `(token)` | `adapter/stealth.mjs` | Les tokens qui ont repéré ce token caché (ids, règles BG3). |
 | `api.sneak.toggle` | `(token)` | `runtime/stealth.mjs` | Bascule l'action Furtivité du token (caché ↔ visible), comme le raccourci Alt+C → `{ hidden, … }` (le résultat de `set`). |

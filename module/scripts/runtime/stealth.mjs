@@ -139,7 +139,7 @@ export const stealthApi = Object.freeze({
   /** Bascule l'action Furtivité du token (caché ↔ visible), comme le raccourci Alt+C → `{ hidden, … }` (le résultat de `set`). */
   toggle: token => setHidden(token),
   spottedBy,
-  /** Les règles de furtivité du monde (réglage `stealthRules`) : `"2024"` ou `"bg3"`. */
+  /** Les règles de furtivité du monde (réglage `stealthRules`) : `"2024"`, `"bg3"` ou `"off"` (non gérée, issue #65). */
   rules: () => stealthRules(),
   /**
    * Règles `bg3` : juge tout de suite la scène affichée (qui entre dans la vue de qui, tests de Discrétion, repérages). À lancer chez le MJ
@@ -151,7 +151,8 @@ export const stealthApi = Object.freeze({
 export function registerStealthMode() {
   game.settings.register(MODULE_ID, RULES_SETTING, {
     name: `DND5ECOMBAT.Reglage.${RULES_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${RULES_SETTING}.Aide`, scope: "world", config: true,
-    type: String, choices: { 2024: `DND5ECOMBAT.Reglage.${RULES_SETTING}.2024`, bg3: `DND5ECOMBAT.Reglage.${RULES_SETTING}.bg3` }, default: "2024",
+    type: String, choices: { 2024: `DND5ECOMBAT.Reglage.${RULES_SETTING}.2024`, bg3: `DND5ECOMBAT.Reglage.${RULES_SETTING}.bg3`,
+      off: `DND5ECOMBAT.Reglage.${RULES_SETTING}.off` }, default: "2024",
     onChange: () => { views.clear(); schedule(); }
   });
   route("preMoveToken", onPreMove, { label: "hidden: half speed" });

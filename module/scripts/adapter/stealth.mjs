@@ -2,7 +2,9 @@
  * §184–§185 : être caché, lu dans Foundry. Un seul état (décision de l'utilisateur, 2026-10-14) : l'effet de Furtivité (action Se
  * cacher, `flags.dnd5e-combat.hidden = { dc }`, adapter/hide.mjs), dans les deux règles du réglage `stealthRules` :
  *  - `2024` : posé par un test de Discrétion DD 15 réussi ; le DD pour le trouver est le total ;
- *  - `bg3`  : posé sans jet quand aucun ennemi ne le voit ; chaque ennemi doit le **repérer** (runtime/stealth.mjs).
+ *  - `bg3`  : posé sans jet quand aucun ennemi ne le voit ; chaque ennemi doit le **repérer** (runtime/stealth.mjs) ;
+ *  - `off`  : le moteur ne gère pas la Furtivité (issue #65, table narrative) — Se cacher prend son action et le MJ juge ; aucun token
+ *    n'est caché pour le moteur, même s'il porte encore un effet de Furtivité posé avant.
  * Un token caché est **invisible pour ses ennemis** (`hiddenFrom`, branché dans `canSee`) — pas pour ses alliés : l'effet ne porte
  * plus l'état Invisible du cœur, qui le cachait aussi au groupe. En BG3, ceux qui l'ont repéré le voient : flag du token
  * `stealth.spottedBy` (ids de tokens), lisible de tous les clients.
@@ -15,14 +17,17 @@ import { knownTo } from "./facts.mjs";
 
 export const RULES_SETTING = "stealthRules";
 
+/** Les règles de Furtivité du monde : `"2024"`, `"bg3"` ou `"off"` (non gérée par le moteur). */
 export function stealthRules() {
-  return settingOr(RULES_SETTING, "2024") === "bg3" ? "bg3" : "2024";
+  const value = settingOr(RULES_SETTING, "2024");
+  return ["bg3", "off"].includes(value) ? value : "2024";
 }
 
 const doc = t => t?.document ?? t ?? null;
 
 /** Le token (ou l'acteur) est-il caché ? */
 export function isHidden(token) {
+  if ( stealthRules() === "off" ) return false;
   const actor = doc(token)?.actor ?? token?.actor ?? (token?.documentName === "Actor" ? token : null);
   return !!actor?.effects?.some?.(e => !e.disabled && e.getFlag?.(MODULE_ID, "hidden"));
 }
