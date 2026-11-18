@@ -282,7 +282,7 @@ describe("contenu livré", () => {
       "rally", "ray-of-enfeeblement", "ray-of-frost", "reactive", "reanimated-companion", "reckless-attack", "red-elemental-gem",
       "regenerate", "regeneration", "relentless-endurance", "relentless-hunter", "relentless-rage", "remarkable-athlete",
       "remove-curse", "rend-mind", "repelling-blast", "resilient-sphere", "resistance", "restoring-touch", "resurrection",
-      "retaliation", "revelation-in-flesh", "reverse-gravity", "revivify", "ring-of-elemental-command-air",
+      "retaliation", "revelation-in-flesh", "reverse-gravity", "revivify", "revolver", "ring-of-elemental-command-air",
       "ring-of-elemental-command-earth", "ring-of-elemental-command-fire", "ring-of-elemental-command-water", "ring-of-evasion",
       "ring-of-feather-falling", "ring-of-free-action", "ring-of-invisibility", "ring-of-spell-turning", "ring-of-the-ram",
       "ring-of-warmth", "ring-of-x-ray-vision", "riposte", "ritual-adept", "roar", "robe-of-scintillating-colors", "robe-of-stars",
