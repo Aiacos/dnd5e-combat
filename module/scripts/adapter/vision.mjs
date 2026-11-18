@@ -26,7 +26,7 @@
  */
 
 import { committedPosition, distanceBetween, tokenCenter } from "./turn.mjs";
-import { contentOf, identifierOf } from "./content.mjs";
+import { contentOf, identifierOf, declaresKey, worldOverrides } from "./content.mjs";
 import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, devilsSightSees, senseReaches, senseless } from "../core/light.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { revealedInvisible, seesInvisible } from "./facts.mjs";
@@ -284,7 +284,12 @@ export function blockedBetween(a, b) {
 export function ownDarknessSight(observer) {
   const actor = observer?.actor;
   if ( !actor ) return null;
-  return Array.from(actor.items ?? []).some(i => contentOf(i).entry?.seesThroughOwnDarkness === true) ? actor : null;
+  // Appelé pour chaque token doté de la vue à chaque rafraîchissement de la vue (ui/perception.mjs, `grantAll`) : presque aucun
+  // objet ne déclare cette clé — on ne compose l'entrée (`contentOf`) que de celui dont une couche la porte.
+  const overrides = worldOverrides();
+  const key = "seesThroughOwnDarkness";
+  const sees = item => declaresKey(item, key, overrides) && (contentOf(item).entry?.[key] === true);
+  return Array.from(actor.items ?? []).some(sees) ? actor : null;
 }
 
 /** §447 : ce point est-il dans des Ténèbres qu'un sort de l'observateur a posées, et l'observateur y voit-il (`seesThroughOwnDarkness`) ? */
