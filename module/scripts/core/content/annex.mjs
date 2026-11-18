@@ -12,6 +12,7 @@ import { isId, isObject } from "./shared.mjs";
 export function validateSummon(summon, at, errors) {
   if ( !isObject(summon) || !["after", "own", "none"].includes(summon.initiative) ) return errors.push(`${at}.initiative: "after", "own" or "none"`);
   if ( ("endsSpell" in summon) && (summon.endsSpell !== true) ) errors.push(`${at}.endsSpell: true or absent`);
+  // `untargeted` : accepté pour les tables déjà écrites, lu nulle part (§394 : une invocation ne se vise que sur `targetedSummon`).
   for ( const flag of ["endsAtZero", "vanishesAtZero", "mimic", "endsIfIncapacitated", "castFrom", "familiar", "replaces", "vanishesWithCaster", "endsOnLongRest", "hostile", "untargeted"] ) {
     if ( (flag in summon) && (summon[flag] !== true) ) errors.push(`${at}.${flag}: true or absent`);
   }

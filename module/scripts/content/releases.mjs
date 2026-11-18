@@ -21,7 +21,7 @@ const PHB = "dnd-players-handbook";
 export const RELEASES = Object.freeze([
   {
     version: "0.284.0",
-    highlights: ["phb3Fiches", "grille", "teleportations", "avisDebogueur"],
+    highlights: ["phb3Fiches", "grille", "furtiviteOff", "teleportations", "mortSansDegats", "avisDebogueur", "italien"],
     tested: {
       foundry: "14.370",
       system: "6.1.1",

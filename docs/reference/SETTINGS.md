@@ -79,7 +79,7 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 | `factionRules` | Factions : règles par type de créature | world | Boolean | `true` |  | `runtime/factions.mjs` |
 | `lightIndicator` | Indicateur de lumière | client | Boolean | `true` |  | `ui/illumination.mjs` |
 | `passivePerception` | Perception passive contre la Furtivité | world | String | `"auto"` | auto, gm, off | `runtime/passive.mjs` |
-| `stealthRules` | Règles de Furtivité | world | String | `"2024"` | 2024, bg3 | `runtime/stealth.mjs` |
+| `stealthRules` | Règles de Furtivité | world | String | `"2024"` | 2024, bg3, off | `runtime/stealth.mjs` |
 | `surpriseFromStealth` | Surprise par un ennemi caché | world | Boolean | `true` |  | `runtime/knockout.mjs` |
 | `twilightDarkness` | Crépuscule : seuil d'obscurité | world | Number | `0.6` |  | `runtime/illumination.mjs` |
 | `unconsciousSenses` | Inconscient : ni vue ni ouïe | world | Boolean | `false` |  | `runtime/illumination.mjs` |

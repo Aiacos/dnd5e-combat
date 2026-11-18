@@ -391,3 +391,11 @@ export function strikeProgress(ms, { delay=350, length=450 }={}) {
   const t = Math.min(1, Math.max(0, ((Number(ms) || 0) - delay) / length));
   return 1 - ((1 - t) ** 3);
 }
+
+/**
+ * §400 : le nom nu d'une fin d'effet, pour reconnaître deux annonces de la même fin — le retrait non barré s'écrit « −(Nom) ».
+ * @returns {string}  En minuscules.
+ */
+export function floatEndName(text) {
+  return String(text).replace(/^[−+]\((.*)\)$/, "$1").toLocaleLowerCase();
+}

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import { knownFormsMax, formRefusal, formMustEnd, moonLevelsFormula, moonSpellLists } from "../module/scripts/core/wildshape.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
@@ -66,5 +67,17 @@ describe("§432 : Cercle de la Lune sous ses deux identifiants (Manuel des joueu
     expect(moonSpellLists(["subclass:moon", "class:druid"]).sort()).toEqual(["class:druid", "subclass:circle-moon", "subclass:moon"]);
     expect(moonSpellLists(["class:druid"])).toEqual(["class:druid"]);
     expect(moonSpellLists(undefined)).toEqual([]);
+  });
+});
+
+describe("fenêtre des formes : le facteur de puissance", () => {
+  // La fenêtre touche à Foundry, on ne l'importe pas ici : on lit sa source et les fichiers de langue.
+  it("s'écrit dans la langue de la table, pas en dur", () => {
+    const source = readFileSync(new URL("../module/scripts/ui/wildshape.mjs", import.meta.url), "utf8");
+    expect(source).not.toMatch(/class="cr">\s*FP\b/);
+    expect(source).toContain('loc("Forme.FP", { cr: crText(info.cr) })');
+    const texts = ["en", "fr", "it", "pt-BR"].map(lang =>
+      JSON.parse(readFileSync(new URL(`../module/lang/${lang}.json`, import.meta.url), "utf8"))["DND5ECOMBAT.Forme.FP"]);
+    expect(texts).toEqual(["CR {cr}", "FP {cr}", "GS {cr}", "ND {cr}"]);
   });
 });

@@ -116,6 +116,13 @@ async function forgetKeptHiding(combat, prior) {
 export async function attemptHide(actor, token=null) {
   const rules = stealthRules();
   const t = token ?? tokensOf(actor)[0] ?? null;
+  // Issue #65 : Furtivité non gérée — l'action est prise, le MJ juge ; un avis chez tous, aucun jet, aucun effet.
+  if ( rules === "off" ) {
+    log(`hide: ${actor.name} hides (stealth rules off: the GM decides)`);
+    if ( t ) notice(t, { key: "Retour.Action.CacheMJ" }, "gain", { all: true, action: "hide" });
+    ui.notifications.info(loc("Furtivite.MJ", { name: actor.name }));
+    return { hidden: false, reason: "off" };
+  }
   if ( (rules === "2024") && t && !fighting(t) ) {
     const retry = Number(t.getFlag(MODULE_ID, "hideRetryAt")) || 0;
     if ( Date.now() < retry ) {
@@ -159,6 +166,7 @@ export async function toggleHidden(token) {
   if ( !actor || !doc.isOwner ) return { hidden: false, reason: "notOwner" };
   if ( hiddenEffectsOf(actor).length ) { await endHiding(actor, "by hand"); return { hidden: false }; }
   if ( fighting(doc) ) return { hidden: false, reason: "inCombat" };
+  if ( stealthRules() === "off" ) return attemptHide(actor, doc);
   const seen = enemiesSeeing(doc) ?? [];
   if ( seen.length ) {
     ui.notifications.info(loc("Furtivite.Vu", { name: actor.name, by: seen.map(s => s.name).join(", ") }));

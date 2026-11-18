@@ -17,6 +17,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { basicActionData, missingBasicActions } from "../adapter/basics.mjs";
 import { rangedFeatsOf } from "../adapter/conditions.mjs";
 import { isFamiliarActor, isFamiliarToken } from "../adapter/familiar.mjs";
+import { enqueue } from "./queue.mjs";
 import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
 import { identifierOf } from "../adapter/content.mjs";
@@ -32,10 +33,15 @@ async function provide(actors) {
     const familiar = (actor.type !== "character") && (actor.isToken || actor.prototypeToken?.actorLink === true) && isFamiliarActor(actor);
     if ( (actor.type !== "character") && !familiar ) continue;
     seen.add(actor.uuid);
-    const missing = missingBasicActions(actor, { familiar });
-    if ( !missing.length ) continue;
-    await actor.createEmbeddedDocuments("Item", missing.map(basicActionData));
-    log(`basic actions added to ${actor.name}: ${missing.join(", ")}`);
+    // Lire ce qui manque puis le créer, en série par acteur : deux passages qui se chevauchent (deux combattants du même
+    // personnage, le début du combat pendant qu'un combattant s'ajoute) lisaient tous deux « manquantes » et créaient les items
+    // en double.
+    await enqueue(`basics:${actor.uuid}`, async () => {
+      const missing = missingBasicActions(actor, { familiar });
+      if ( !missing.length ) return;
+      await actor.createEmbeddedDocuments("Item", missing.map(basicActionData));
+      log(`basic actions added to ${actor.name}: ${missing.join(", ")}`);
+    });
   }
 }
 

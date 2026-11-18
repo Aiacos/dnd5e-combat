@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { FLOAT_CATEGORIES, FLOAT_CATEGORY_DEFAULTS, floatLine, floatLabel, floatFrame, floatDelays } from "../module/scripts/core/float-text.mjs";
+import { FLOAT_CATEGORIES, FLOAT_CATEGORY_DEFAULTS, floatLine, floatLabel, floatFrame, floatDelays, floatEndName } from "../module/scripts/core/float-text.mjs";
 
 describe("textes flottants (§228)", () => {
   it("chaque sorte a une catégorie qui a une valeur par défaut", () => {
@@ -64,5 +64,13 @@ describe("§292 : tests de caractéristique et de compétence", async () => {
     expect(floatLabel(floatLine({ kind: "check", roll: 8 }, "Force", { modeText }), modeText)).toBe("8 · Force");
     expect(floatLine({ kind: "check", roll: 8 }, "Force", { show: { floatChecks: false } })).toBeNull();
     expect(floatLabel(floatLine({ kind: "checkFail", roll: 4 }, "Discrétion · Échec", { dice: false }))).toBe("Discrétion · Échec");
+  });
+});
+
+describe("§400 : une fin d'effet annoncée deux fois", () => {
+  it("le retrait non barré « −(Nom) » se compare par son seul nom", () => {
+    expect(floatEndName("−(Sommeil)")).toBe("sommeil");
+    expect(floatEndName("Sommeil")).toBe("sommeil");
+    expect(floatEndName("Fin : Sommeil")).toContain(floatEndName("−(Sommeil)"));
   });
 });

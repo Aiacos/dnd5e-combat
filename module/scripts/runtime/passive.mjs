@@ -31,8 +31,9 @@ function recipients(actor, withOwners) {
 async function judge(hidden) {
   const mode = game.settings.get(MODULE_ID, SETTING);
   const actor = hidden?.actor;
-  // §185 : en règles BG3, la détection est celle de runtime/stealth.mjs (un test à chaque entrée dans un champ de vision).
-  if ( (mode === "off") || !actor || (stealthRules() === "bg3") ) return [];
+  // §185 : en règles BG3, la détection est celle de runtime/stealth.mjs (un test à chaque entrée dans un champ de vision) ; Furtivité
+  // non gérée (issue #65) : personne n'est caché, rien à juger.
+  if ( (mode === "off") || !actor || (stealthRules() !== "2024") ) return [];
   const dc = hiddenDcOf(actor);
   if ( dc === null ) return [];
   const effects = hiddenEffectsOf(actor);

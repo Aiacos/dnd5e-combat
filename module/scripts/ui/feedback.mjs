@@ -19,7 +19,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { feedbackBetween } from "../core/feedback.mjs";
 import { FLOAT_CATEGORY_DEFAULTS, FLOAT_DEFAULTS, FLOAT_ICONS, floatLine, floatLabel, floatFrame, floatDelays, checkKind, floatStyleOf, floatOffset,
-  floatEntrance, hpFloat, floatOutcome, floatRolled, spinPhase, damageParts, damageKind, saveKind, strikeProgress } from "../core/float-text.mjs";
+  floatEntrance, hpFloat, floatOutcome, floatRolled, spinPhase, damageParts, damageKind, saveKind, strikeProgress, floatEndName } from "../core/float-text.mjs";
 import { route } from "../runtime/router.mjs";
 import { loc, NOTICE_QUERY, receiveNotice, waitForDice, isExecutor } from "../runtime/shared.mjs";
 import { resourceChangesOf } from "../adapter/limits.mjs";
@@ -439,7 +439,7 @@ function duplicateEnd(f) {
   if ( !["ended", "effectOff"].includes(f.kind) || !f.text ) return false;
   const now = Date.now();
   while ( recentEnds.length && ((now - recentEnds[0].at) > END_WINDOW) ) recentEnds.shift();
-  const plain = String(f.text).replace(/^[−+](|)$/g, "").toLocaleLowerCase();
+  const plain = floatEndName(f.text);
   // Deux annonces de la même fin (l'avis du moteur et le retrait de l'effet), quelle que soit leur sorte.
   const twin = recentEnds.find(e => (e.token === f.token) && (e.plain.includes(plain) || plain.includes(e.plain)));
   recentEnds.push({ token: f.token, kind: f.kind, plain, at: now });

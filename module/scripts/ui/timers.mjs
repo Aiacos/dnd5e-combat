@@ -85,6 +85,10 @@ function build(timer) {
 function tick(ticker) {
   const now = Date.now();
   for ( const timer of [...timers.values()] ) {
+    // Le temps écoulé termine la minuterie même sans son token (supprimé, ou d'une scène que ce client ne regarde pas) : sinon `done`
+    // ne se résout jamais et le ticker tourne jusqu'au prochain changement de scène.
+    const state = timerState(timer, now);
+    if ( state.done ) { finish(timer.id); continue; }
     const token = canvas.tokens?.get(timer.tokenId);
     if ( !token || token.destroyed || (token.document.parent !== canvas.scene) ) { if ( timer.view ) timer.view.root.visible = false; continue; }
     timer.view ??= build(timer);
@@ -93,10 +97,8 @@ function tick(ticker) {
     view.root.visible = token.isVisible === true;
     view.root.position.set(token.center.x, token.y - (TIMER_LAYOUT.gap * canvas.grid.size) - view.height);
     view.icon.rotation += 0.06 * (ticker?.deltaTime ?? 1);
-    const state = timerState(timer, now);
     view.fill.width = view.width * state.pct;
     view.seconds.text = timerSecondsText(state.left, { hideSeconds: hideSeconds(), unit: loc("Minuterie.Secondes") });
-    if ( state.done ) finish(timer.id);
   }
   if ( !timers.size ) stopTicking();
 }

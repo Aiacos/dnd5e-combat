@@ -394,7 +394,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.mcp.waits` | `()` | `runtime/testing.mjs` | §290 : les attentes du MJ (fenêtres du combat sans délai) — `{ waits: [...], window: bool }`. |
 | `api.mcp.wall` | `({ tokenId, itemId, activityId=null, points })` | `runtime/testing-areas.mjs` | §162 : un mur posé par points, comme la visée de l'interface le ferait après les clics (ui/pointer.mjs, `aimWall`) : l'activité est utilisée avec les points (`aimed: { type: "wall", points }`), la région et ses murs sui… |
 | `api.mcp.wallSide` | `({ regionId, flip=false })` | `runtime/testing-areas.mjs` | §169 : l'état d'un mur à face brûlante — son côté, sa face brûlante (id, formes), ses murs du cœur ; `flip: true` la retourne d'abord (comme l'entrée du menu du lanceur). |
-| `api.mcp.windows` | `()` | `runtime/testing-shared.mjs` | Les fenêtres ouvertes chez le MJ (ApplicationV2) : pour retrouver un dialogue qu'un déplacement bloqué attend. |
+| `api.mcp.windows` | `()` | `runtime/testing-shared.mjs` | Les fenêtres ouvertes chez le MJ (ApplicationV2) : pour retrouver un dialogue qu'un déplacement bloqué attend. L'interface fixe du cœur (barre latérale, journal de discussion, onglet des tokens, barre de macros…) est au… |
 
 ## `api.nonLethal`
 
@@ -470,7 +470,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 |---|---|---|---|
 | `api.sneak.check` | `()` | `runtime/stealth.mjs` | Règles `bg3` : juge tout de suite la scène affichée (qui entre dans la vue de qui, tests de Discrétion, repérages). À lancer chez le MJ actif. |
 | `api.sneak.is` | `(token)` | `adapter/stealth.mjs` | Le token (ou l'acteur) est-il caché ? |
-| `api.sneak.rules` | `()` | `runtime/stealth.mjs` | Les règles de furtivité du monde (réglage `stealthRules`) : `"2024"` ou `"bg3"`. |
+| `api.sneak.rules` | `()` | `runtime/stealth.mjs` | Les règles de furtivité du monde (réglage `stealthRules`) : `"2024"`, `"bg3"` ou `"off"` (non gérée, issue #65). |
 | `api.sneak.set` | `(token, on=undefined)` | `runtime/stealth.mjs` | Se cacher ou ne plus l'être (`on` absent : basculer). |
 | `api.sneak.spottedBy` | `(token)` | `adapter/stealth.mjs` | Les tokens qui ont repéré ce token caché (ids, règles BG3). |
 | `api.sneak.toggle` | `(token)` | `runtime/stealth.mjs` | Bascule l'action Furtivité du token (caché ↔ visible), comme le raccourci Alt+C → `{ hidden, … }` (le résultat de `set`). |

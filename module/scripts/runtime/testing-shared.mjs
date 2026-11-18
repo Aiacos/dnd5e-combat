@@ -39,8 +39,13 @@ export function positionJson(token) {
 export const waypointOf = ({ x, y, elevation, level, action, climb }) =>
   ({ x, y, elevation: finite(elevation), level: level ?? null, action: action ?? null, climb: finite(climb) });
 
-/** Les fenêtres ouvertes chez le MJ (ApplicationV2) : pour retrouver un dialogue qu'un déplacement bloqué attend. */
+/**
+ * Les fenêtres ouvertes chez le MJ (ApplicationV2) : pour retrouver un dialogue qu'un déplacement bloqué attend. L'interface fixe
+ * du cœur (barre latérale, journal de discussion, onglet des tokens, barre de macros…) est aussi une ApplicationV2, sans cadre :
+ * pas une fenêtre. Un balayage qui « ferme les fenêtres » fermait la barre latérale, et `ui.chat.element` restait nul jusqu'au F5.
+ */
 export function windows() {
   gmOnly();
-  return [...foundry.applications.instances.entries()].map(([id, app]) => ({ id, title: app.title ?? null, className: app.constructor?.name ?? null }));
+  return [...foundry.applications.instances.entries()].filter(([, app]) => app.hasFrame !== false)
+    .map(([id, app]) => ({ id, title: app.title ?? null, className: app.constructor?.name ?? null }));
 }

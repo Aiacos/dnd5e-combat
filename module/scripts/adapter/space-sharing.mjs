@@ -25,9 +25,16 @@ export function shareKindOf(actor) {
   return kind;
 }
 
-/** Le token qui bouge peut-il traverser la case de l'autre et s'y arrêter ? Documents de token. */
-export function sharesSpaceWith(mover, occupant) {
+/**
+ * Le token qui bouge peut-il traverser la case de l'autre et s'y arrêter ? Documents de token.
+ * @param {TokenDocument} mover
+ * @param {TokenDocument} occupant
+ * @param {object} [options]
+ * @param {"enter"|"mutual"|null} [options.moverKind]  `shareKindOf(mover.actor)` déjà lu par l'appelant, qui compare le même
+ *   token à tous ceux d'une scène (adapter/path-world.mjs) : ses objets ne sont pas relus pour chaque occupant.
+ */
+export function sharesSpaceWith(mover, occupant, { moverKind }={}) {
   if ( !mover?.actor || !occupant?.actor ) return false;
   if ( !samePlane(mover, occupant) ) return true;   // §225 : d'un plan à l'autre, on ne se gêne pas
-  return mayShareSpace(shareKindOf(mover.actor), shareKindOf(occupant.actor));
+  return mayShareSpace((moverKind !== undefined) ? moverKind : shareKindOf(mover.actor), shareKindOf(occupant.actor));
 }

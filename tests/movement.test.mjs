@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { findPath, turningPoints, cellDistance } from "../module/scripts/core/pathfind.mjs";
 import {
-  footprintGap, approach, chooseBasicAttack, spentMovement, actionSpeed
-} from "../module/scripts/core/movement.mjs";
+  footprintGap, approach, chooseBasicAttack, spentMovement, actionSpeed, ownsPlannedMovement } from "../module/scripts/core/movement.mjs";
 
 const key = c => `${c.i},${c.j}`;
 
@@ -182,6 +181,87 @@ describe("findPath — niveaux (P2)", () => {
   });
 });
 
+describe("findPath — voisines déjà atteintes", () => {
+  /** Générateur pseudo-aléatoire à graine : les mêmes grilles à chaque passe. */
+  const rng = seed => () => (seed = ((seed * 1664525) + 1013904223) >>> 0) / 2 ** 32;
+  const SIZE = 14;
+  const inside = c => (c.i >= 0) && (c.j >= 0) && (c.i < SIZE) && (c.j < SIZE);
+
+  /** Une grille tirée au sort : des murs (cases interdites), du terrain difficile (2), des cloisons entre deux cases voisines. */
+  function randomWorld(seed) {
+    const r = rng(seed);
+    const wall = new Set(), slow = new Set(), fence = new Set();
+    for ( let i = 0; i < SIZE; i++ ) for ( let j = 0; j < SIZE; j++ ) {
+      const x = r();
+      if ( x < 0.22 ) wall.add(`${i},${j}`);
+      else if ( x < 0.37 ) slow.add(`${i},${j}`);
+      if ( r() < 0.1 ) fence.add(`${i},${j}>${i},${j + 1}`);
+    }
+    const start = { i: Math.floor(r() * SIZE), j: Math.floor(r() * SIZE) };
+    const goal = { i: Math.floor(r() * SIZE), j: Math.floor(r() * SIZE) };
+    wall.delete(key(start));
+    wall.delete(key(goal));
+    const fenced = (a, b) => fence.has(`${key(a)}>${key(b)}`) || fence.has(`${key(b)}>${key(a)}`);
+    const canStep = (from, to) => inside(to) && !wall.has(key(to)) && !fenced(from, to);
+    const stepCost = (from, to) => slow.has(key(to)) ? 2 : 1;
+    return { start, goal, canStep, stepCost };
+  }
+
+  /** Le coût le plus bas par une recherche sans ruse (Dijkstra sur une liste), mêmes coûts que `findPath`. */
+  function cheapest({ start, goal, canStep, stepCost }) {
+    const dist = new Map([[key(start), 0]]);
+    const todo = [start];
+    while ( todo.length ) {
+      todo.sort((a, b) => dist.get(key(a)) - dist.get(key(b)));
+      const cell = todo.shift();
+      if ( key(cell) === key(goal) ) return Math.round(dist.get(key(cell)));
+      for ( let di = -1; di <= 1; di++ ) for ( let dj = -1; dj <= 1; dj++ ) {
+        const next = { i: cell.i + di, j: cell.j + dj };
+        if ( (!di && !dj) || !canStep(cell, next) ) continue;
+        const d = dist.get(key(cell)) + stepCost(cell, next) + ((di && dj) ? 0.001 : 0);
+        if ( d >= (dist.get(key(next)) ?? Infinity) ) continue;
+        dist.set(key(next), d);
+        if ( !todo.some(c => key(c) === key(next)) ) todo.push(next);
+      }
+    }
+    return null;
+  }
+
+  it("300 grilles tirées au sort : le coût reste le plus bas, le chemin se suit pas à pas", () => {
+    let found = 0;
+    for ( let seed = 1; seed <= 300; seed++ ) {
+      const w = randomWorld(seed);
+      const r = findPath({ start: w.start, goals: [w.goal], canStep: w.canStep, stepCost: w.stepCost });
+      const expected = cheapest(w);
+      expect(r?.cost ?? null, `grille ${seed}`).toBe(expected);
+      if ( !r ) continue;
+      found++;
+      expect(r.path[0], `grille ${seed}`).toEqual(w.start);
+      expect(r.path.at(-1), `grille ${seed}`).toEqual(w.goal);
+      let cost = 0;
+      for ( let n = 1; n < r.path.length; n++ ) {
+        expect(cellDistance(r.path[n - 1], r.path[n]), `grille ${seed}, pas ${n}`).toBe(1);
+        expect(w.canStep(r.path[n - 1], r.path[n]), `grille ${seed}, pas ${n}`).toBe(true);
+        cost += w.stepCost(r.path[n - 1], r.path[n]);
+      }
+      expect(cost, `grille ${seed}`).toBe(r.cost);
+    }
+    expect(found).toBeGreaterThan(100);   // le tirage laisse bien des chemins à trouver
+  });
+
+  it("ne redemande pas un pas vers une case déjà atteinte à meilleur compte (un `canStep` = un lancer de rayon)", () => {
+    // Une salle fermée de 12 × 12, l'arrivée dehors : toutes les cases sont explorées avant de renoncer.
+    const room = c => (c.i >= 0) && (c.j >= 0) && (c.i < 12) && (c.j < 12);
+    const asked = [];
+    const canStep = (from, to) => { asked.push(to); return room(to); };
+    expect(findPath({ start: { i: 6, j: 6 }, goals: [{ i: 40, j: 40 }], canStep })).toBeNull();
+    // La case de départ est atteinte à coût nul : aucune voisine n'a à y revenir.
+    expect(asked.filter(c => (c.i === 6) && (c.j === 6))).toHaveLength(0);
+    // Sans le raccourci : 8 demandes par case explorée (1152). Chaque case n'est plus demandée que tant qu'un pas peut l'améliorer.
+    expect(asked.length).toBeLessThan(144 * 4);
+  });
+});
+
 describe("déplacement dépensé (§16.10)", () => {
   it("une téléportation ou un déplacement forcé ne consomme pas de déplacement", () => {
     const history = [{ cost: 10 }, { cost: 30, teleport: true }, { cost: 5 }, { cost: 10, teleport: true }, { cost: NaN }];
@@ -221,5 +301,20 @@ describe("§461 : distance d'une téléportation déclarée", () => {
     expect(teleportReach({ activity: "aaaaaaaaaaaaaaaa" }, { value: "", units: "ft" })).toBeNull();
     expect(teleportReach({ activity: "aaaaaaaaaaaaaaaa" }, null)).toBeNull();
     expect(teleportReach(null, { value: 30, units: "ft" })).toBeNull();
+  });
+});
+
+describe("aperçu du chemin et glisser du cœur", () => {
+  const own = { foundPath: [], hidden: true };
+  const drag = { foundPath: [], hidden: false };
+  it("entrée vide ou la sienne : l'aperçu peut la poser, la remplacer, l'effacer", () => {
+    expect(ownsPlannedMovement(undefined, null)).toBe(true);
+    expect(ownsPlannedMovement(null, own)).toBe(true);
+    expect(ownsPlannedMovement(own, own)).toBe(true);
+  });
+  it("entrée d'un glisser (cœur, recherche de chemin) : l'aperçu n'y touche pas", () => {
+    expect(ownsPlannedMovement(drag, own)).toBe(false);
+    expect(ownsPlannedMovement(drag, undefined)).toBe(false);
+    expect(ownsPlannedMovement({ ...own }, own)).toBe(false);
   });
 });
