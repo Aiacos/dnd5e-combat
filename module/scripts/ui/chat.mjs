@@ -9,7 +9,10 @@ import { readUnitFactors } from "../adapter/units.mjs";
 import { convertLength } from "../core/units.mjs";
 import { keptAndDropped } from "../core/d20.mjs";
 
-/** Réglage de monde (activé par défaut) : une rangée par cible — icône du verdict, portrait, nom, détail —, comme la carte de Midi-QOL. */
+/**
+ * Réglage de monde (éteint par défaut : au MJ de l'activer) : une rangée par cible — icône du verdict, portrait, nom, détail —,
+ * comme la carte de Midi-QOL.
+ */
 export const CHAT_ROWS_SETTING = "chatRows";
 
 const rowsEnabled = () => { try { return !!game.settings.get(MODULE_ID, CHAT_ROWS_SETTING); } catch { return false; } };
@@ -292,7 +295,7 @@ function applyChatLight() {
 export function registerChat() {
   game.settings.register(MODULE_ID, CHAT_ROWS_SETTING, {
     name: `DND5ECOMBAT.Reglage.${CHAT_ROWS_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${CHAT_ROWS_SETTING}.Aide`,
-    scope: "world", config: true, type: Boolean, default: true,
+    scope: "world", config: true, type: Boolean, default: false,
     onChange: () => ui.chat?.render?.()
   });
   route("ready", applyChatLight, { label: "light chat log" });
