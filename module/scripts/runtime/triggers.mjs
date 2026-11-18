@@ -13,6 +13,7 @@ import { usageTokenOf, speakerTokenOf, turnKeyAt } from "../adapter/turn.mjs";
 import { resaveAgainst } from "../adapter/areas.mjs";
 import { seesBetween } from "../adapter/vision.mjs";
 import { tallySettled } from "../core/tally.mjs";
+import { turnWentBack } from "../core/turn.mjs";
 import { leaveTrace } from "../adapter/traces.mjs";
 import { foreignDamageShare, disarmForeignDamageShare } from "../adapter/interop.mjs";
 import { inflict } from "../adapter/retaliation.mjs";
@@ -266,6 +267,8 @@ function originTurnMoment(combatant) {
 }
 
 function onTurnChange(combat, prior, current) {
+  // « Tour précédent » : le tour quitté ne finit pas, celui où l'on revient ne recommence pas — ni dégâts ni sauvegarde rejoués.
+  if ( turnWentBack(prior, current) ) return;
   turnMoment("endOfTurn", combat.combatants.get(prior?.combatantId), turnKeyAt(combat, prior));
   turnMoment("startOfTurn", combat.combatants.get(current?.combatantId));
   originTurnMoment(combat.combatants.get(current?.combatantId));

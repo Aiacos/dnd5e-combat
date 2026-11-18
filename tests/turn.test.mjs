@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  freshBudget, costOf, checkUse, spendUse, dash, disengage, dodge, toggleResource, movementAllowance, basicAction, refundUse
+  freshBudget, costOf, checkUse, spendUse, dash, disengage, dodge, toggleResource, movementAllowance, basicAction, refundUse,
+  turnWentBack
 } from "../module/scripts/core/turn.mjs";
 import { rangeIssue } from "../module/scripts/core/range.mjs";
 
@@ -265,5 +266,24 @@ describe("§402 : chaque Foncer ajoute la Vitesse", () => {
   it("un budget d'avant le compte (drapeau seul) vaut un Foncer", async () => {
     const { movementAllowance, freshBudget } = await import("../module/scripts/core/turn.mjs");
     expect(movementAllowance({ ...freshBudget(), dashed: true }, 30)).toBe(60);
+  });
+});
+
+describe("sens du passage de tour", () => {
+  const at = (round, turn) => ({ round, turn, combatantId: "x" });
+  it("tour suivant, round suivant : le combat avance", () => {
+    expect(turnWentBack(at(1, 0), at(1, 1))).toBe(false);
+    expect(turnWentBack(at(1, 2), at(2, 0))).toBe(false);
+  });
+  it("tour précédent, round précédent : le combat recule", () => {
+    expect(turnWentBack(at(1, 2), at(1, 1))).toBe(true);
+    expect(turnWentBack(at(2, 0), at(1, 2))).toBe(true);
+  });
+  it("lancement du combat, même tour, données absentes : rien n'a reculé", () => {
+    expect(turnWentBack({ round: null, turn: null }, at(1, 0))).toBe(false);
+    expect(turnWentBack({ round: 0, turn: null }, at(1, 0))).toBe(false);
+    expect(turnWentBack(at(1, 1), at(1, 1))).toBe(false);
+    expect(turnWentBack(null, at(1, 0))).toBe(false);
+    expect(turnWentBack(at(1, 0), null)).toBe(false);
   });
 });

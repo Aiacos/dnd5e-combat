@@ -22,6 +22,20 @@ export function initiativeAfter(summoner, others) {
 }
 
 /**
+ * Le combat vient-il de reculer (« tour précédent », « round précédent ») ? `combatTurnChange` passe dans les deux sens : en
+ * arrière, `prior` est le tour qu'on quitte et `current` celui où l'on revient — aucun tour ne finit ni ne commence, le MJ
+ * corrige un passage fait trop tôt. Au lancement du combat (`prior` sans round), rien n'a reculé.
+ * @param {{round: number|null, turn: number|null}|null} prior
+ * @param {{round: number|null, turn: number|null}|null} current
+ * @returns {boolean}
+ */
+export function turnWentBack(prior, current) {
+  if ( !Number.isFinite(prior?.round) || !Number.isFinite(current?.round) ) return false;
+  if ( current.round !== prior.round ) return current.round < prior.round;
+  return Number.isFinite(prior.turn) && Number.isFinite(current.turn) && (current.turn < prior.turn);
+}
+
+/**
  * @param {{reactions?: number}} [options]  §19.6 : réactions par round (« jusqu'à trois réactions par round, mais pas plus d'une
  *                                          par tour ») ; au-delà d'une, une seule par tour de jeu (`reactedAt`).
  */
