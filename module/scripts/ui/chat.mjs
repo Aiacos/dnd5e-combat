@@ -28,55 +28,189 @@ function tokenImage(uuid) {
 }
 
 /**
- * Les lignes d'un résultat en rangées : une par cible, avec l'icône du verdict, le portrait du token, le nom et le détail.
- * Ni la CA ni le DD, comme en lignes.
- *
- * Le balisage est celui de dnd5e pour ses propres listes de cibles (`ul.evaluation` > `li.target.hit|miss` > icône, puis
- * `.name-stacked` > `.title` / `.subtitle`), que Midi-QOL reprend tel quel pour sa carte : couleurs, polices et espacements
- * viennent donc du système et du thème du monde, pas de ce module. Seul le portrait (que dnd5e n'a pas) reçoit une taille.
+ * Les lignes d'un résultat en rangées, dans le balisage de la carte de Midi-QOL (ses gabarits `hits.html` et `saves.html`, MIT) :
+ * une liste de cibles de dnd5e (`ul.evaluation` > `li.target.success|failure`) avec le symbole du verdict, le portrait du token
+ * et le nom ; pour une attaque, la CA de la cible à droite (MJ seulement) ; pour une sauvegarde, un titre (caractéristique, et DD
+ * si dnd5e le montre à ce joueur) et le total de chaque jet à droite, son détail au survol. Ce que le moteur a fait à la cible
+ * (PV perdus, effets) est l'infobulle de sa rangée.
  */
-function rows(lines) {
+function rows(lines, save=null) {
+  const saves = lines.some(line => line.save) && !lines.some(line => line.attack);
+  const results = document.createElement("div");
+  results.classList.add("midi-results", "dnd5e-combat-rows");
+  const section = document.createElement("div");
+  section.classList.add(saves ? "midi-qol-saves-display" : "midi-qol-hits-display", "midi-qol-section-filled");
   const list = document.createElement("ul");
-  list.classList.add("dnd5e2", "unlist", "evaluation", "wrapper", "dnd5e-combat-rows");
-  for ( const line of lines ) {
-    const li = document.createElement("li");
-    li.classList.add("target");
-    // `hit` et `miss` sont les classes de dnd5e (vert, rouge) ; une attente ou une annulation restent neutres.
-    li.classList.add(["hit", "miss"].includes(line.css) ? line.css : `dnd5e-combat-${line.css}`);
-    const icon = document.createElement("i");
-    icon.className = `fas ${ROW_ICONS[line.critical ? "critical" : line.css] ?? ROW_ICONS.hit}`;
-    icon.inert = true;
-    li.append(icon);
-    const src = tokenImage(line.token);
-    if ( src ) {
-      const img = document.createElement("img");
-      img.src = src;
-      img.alt = "";
-      li.append(img);
-    }
-    const stacked = document.createElement("div");
-    stacked.classList.add("name-stacked");
-    const name = document.createElement("span");
-    name.classList.add("title");
-    name.textContent = line.name;
-    stacked.append(name);
-    if ( line.detail ) {
-      const detail = document.createElement("span");
-      detail.classList.add("subtitle");
-      detail.textContent = line.detail;
-      stacked.append(detail);
-    }
-    li.append(stacked);
-    list.append(li);
+  list.classList.add("unlist", "evaluation", "wrapper");
+  for ( const line of lines ) list.append(saves ? saveRow(line) : hitRow(line));
+  list.addEventListener("pointerover", event => hoverTarget(event, true));
+  list.addEventListener("pointerout", event => hoverTarget(event, false));
+  list.addEventListener("click", selectTarget);
+  if ( saves ) {
+    const holder = document.createElement("div");
+    if ( save ) holder.append(saveHeading(save));
+    holder.append(list);
+    section.append(holder);
+  } else {
+    const card = document.createElement("div");
+    card.classList.add("midi-qol-single-hit-card");
+    const evaluation = document.createElement("div");
+    evaluation.classList.add("evaluation");
+    evaluation.append(list);
+    card.append(evaluation);
+    section.append(card);
   }
-  return list;
+  results.append(section);
+  return results;
 }
 
-function block(lines) {
+/** Le titre des sauvegardes : « DD 14 Sauvegarde de Charisme », sans le DD pour qui dnd5e ne le montre pas. */
+function saveHeading({ ability, dc }) {
+  const heading = document.createElement("div");
+  heading.classList.add("midi-qol-save-heading");
+  const strong = document.createElement("strong");
+  const name = CONFIG.DND5E?.abilities?.[ability]?.label ?? ability ?? "";
+  let seen = game.user.isGM;
+  try { seen ||= game.settings.get("dnd5e", "challengeVisibility") === "all"; } catch { /* réglage absent */ }
+  strong.textContent = (seen && Number.isFinite(dc)) ? game.i18n.format("DND5E.SavingThrowDC", { dc, ability: name })
+    : game.i18n.format("DND5E.SavePromptTitle", { ability: name });
+  heading.append(strong);
+  return heading;
+}
+
+/** Le token d'une rangée, s'il est sur la scène affichée. */
+function rowToken(event) {
+  const uuid = event.target.closest?.("li.target")?.dataset.uuid;
+  const document = uuid ? fromUuidSync(uuid, { strict: false }) : null;
+  return (document?.parent === canvas?.scene) ? document.object : null;
+}
+
+/** Survol d'une rangée : le token est mis en évidence, comme au survol sur le canevas. */
+function hoverTarget(event, over) {
+  const token = rowToken(event);
+  if ( !token?.visible ) return;
+  if ( over ) token._onHoverIn?.(event, { hoverOutOthers: true }); else token._onHoverOut?.(event);
+}
+
+/** Clic sur une rangée : le token est sélectionné s'il est à l'utilisateur, et la vue s'y porte. */
+function selectTarget(event) {
+  const token = rowToken(event);
+  if ( !token?.visible ) return;
+  if ( token.document.isOwner ) token.control({ releaseOthers: !event.shiftKey });
+  canvas.animatePan({ x: token.center.x, y: token.center.y, duration: 250 });
+}
+
+/** Le nom d'une cible. */
+function stackedName(line) {
+  const stacked = document.createElement("div");
+  stacked.classList.add("name-stacked");
+  const name = document.createElement("span");
+  name.classList.add("midi-qol-target-name", "title");
+  name.textContent = line.name;
+  stacked.append(name);
+  return stacked;
+}
+
+function symbol(name, ...classes) {
+  const icon = document.createElement("i");
+  icon.className = ["fas", name, ...classes].join(" ");
+  icon.inert = true;
+  return icon;
+}
+
+function portrait(line, css) {
+  const img = document.createElement("img");
+  img.classList.add(css);
+  img.src = tokenImage(line.token) ?? "icons/svg/mystery-man.svg";
+  img.alt = "";
+  return img;
+}
+
+/** La rangée d'une cible : ses classes, son token, et ce que le moteur lui a fait en infobulle. */
+function targetRow(line, ...classes) {
+  const li = document.createElement("li");
+  li.classList.add("target", "midi-qol", "midi-qol-target-select", ...classes);
+  if ( line.token ) li.dataset.uuid = line.token;
+  if ( line.detail ) { li.dataset.tooltip = line.detail; li.dataset.tooltipDirection = "LEFT"; }
+  return li;
+}
+
+/** Une cible d'attaque : `li.target.success|failure` — coche, coche double au critique, croix — et sa CA pour le MJ. */
+function hitRow(line) {
+  const outcome = { hit: "success", miss: "failure" }[line.css] ?? `dnd5e-combat-${line.css}`;
+  const li = targetRow(line, "midi-qol-hit-class", outcome);
+  li.append(symbol(ROW_ICONS[line.critical ? "critical" : line.css] ?? ROW_ICONS.hit, "midi-qol-hit-symbol"));
+  li.append(portrait(line, "midi-qol-target-img"), stackedName(line));
+  if ( game.user.isGM && Number.isFinite(line.ac) ) {
+    const ac = document.createElement("div");
+    ac.classList.add("midi-qol-ac");
+    const value = document.createElement("span");
+    value.classList.add("midi-qol-ac-value");
+    value.textContent = line.ac;
+    const inner = document.createElement("span");
+    inner.append(symbol("fa-shield-halved"), " ", value);
+    ac.append(inner);
+    li.append(ac);
+  }
+  return li;
+}
+
+/** Une cible de sauvegarde : `li.target.success|failure` (celle de la cible), le total de son jet à droite, détaillé au survol. */
+function saveRow(line) {
+  const outcome = line.save ? (line.save.success ? "success" : "failure") : null;
+  const li = targetRow(line, "midi-qol-save-class", outcome ?? `dnd5e-combat-${line.css}`);
+  li.append(symbol(outcome ? (line.save.success ? "fa-check" : "fa-xmark") : (ROW_ICONS[line.css] ?? ROW_ICONS.pending),
+    "midi-qol-save-symbol"));
+  li.append(portrait(line, "midi-qol-save-img"));
+  const name = document.createElement("div");
+  name.classList.add("midi-qol-target-name", "midi-qol-save-name");
+  name.append(stackedName(line));
+  li.append(name);
+  if ( Number.isFinite(line.save?.total) ) {
+    const indicators = document.createElement("div");
+    indicators.classList.add("midi-qol-save-indicators");
+    const total = document.createElement("span");
+    total.classList.add("midi-qol-tooltip", "midi-qol-save-total");
+    total.append(String(line.save.total));
+    const roll = game.messages.get(line.save.messageId)?.rolls?.[0];
+    if ( roll ) total.append(saveTooltip(roll, line.save, outcome));
+    indicators.append(total);
+    li.append(indicators);
+  }
+  return li;
+}
+
+/** Le jet de sauvegarde d'une cible, montré au survol de son total : formule, puis total teinté. */
+function saveTooltip(roll, save, outcome) {
+  const tip = document.createElement("span");
+  tip.classList.add("midi-qol-tooltiptext", "midi-qol-save-tooltip");
+  const block = document.createElement("div");
+  block.classList.add("dice-roll");
+  const result = document.createElement("div");
+  result.classList.add("dice-result");
+  const formula = document.createElement("div");
+  formula.classList.add("dice-formula");
+  formula.textContent = roll.formula;
+  const total = document.createElement("h4");
+  total.classList.add("dice-total", outcome);
+  const icons = document.createElement("div");
+  icons.classList.add("icons");
+  icons.append(symbol(save.success ? "fa-check" : "fa-xmark"));
+  const value = document.createElement("span");
+  value.classList.add("total");
+  value.textContent = save.total;
+  total.append(icons, value);
+  result.append(formula, total);
+  block.append(result);
+  tip.append(block);
+  return tip;
+}
+
+function block(lines, save=null) {
   const div = document.createElement("div");
   div.classList.add("dnd5e-combat-result");
   // En rangées, seulement un résultat par cible : les raisons d'avantage, les bonus et les attentes restent des lignes.
-  if ( rowsEnabled() && lines.length && lines.every(line => line.name) ) { div.append(rows(lines)); return div; }
+  if ( rowsEnabled() && lines.length && lines.every(line => line.name) ) { div.append(rows(lines, save)); return div; }
   for ( const line of lines ) {
     const p = document.createElement("p");
     p.classList.add(line.css);
@@ -219,7 +353,7 @@ function verdictText(t) {
 function renderVerdict(html, resolution) {
   if ( !resolution.attack || [STEPS.AWAITING_ATTACK, STEPS.AWAITING_REACTION].includes(resolution.step) ) return;
   const lines = resolution.targets.map(t => ({ css: t.hit ? "hit" : "miss", text: `${t.name} — ${verdictText(t)}`,
-    name: t.name, token: t.token, detail: verdictText(t), critical: !!(t.hit && t.critical) }));
+    name: t.name, token: t.token, detail: verdictText(t), critical: !!(t.hit && t.critical), attack: true, ac: t.ac }));
   html.querySelector(".message-content")?.append(block(lines));
 }
 
@@ -288,10 +422,14 @@ function renderResolution(message, html, resolution) {
     }
     if ( t.damage ) parts.push(lostOrHealed(t.damage.applied));
     if ( t.effects?.length ) parts.push(loc("EffetsAppliques", { n: t.effects.length }));
+    // En rangées : le jet de sauvegarde de la cible (total, réussite) a sa place à droite ; une sauvegarde d'office n'en a pas.
+    const rolled = (plan.save && reached && t.save && !t.save.auto)
+      ? { total: t.save.total, success: !!t.save.success, messageId: t.save.messageId } : null;
     return { css: undone ? "undone" : css, text: `${t.name} — ${parts.join(", ")}`,
-      name: t.name, token: t.token, detail: parts.join(", "), critical: !!(plan.attack && t.hit && t.critical) };
+      name: t.name, token: t.token, detail: parts.join(", "), critical: !!(plan.attack && t.hit && t.critical),
+      attack: !!plan.attack, ac: plan.attack ? t.ac : null, ...(rolled ? { save: rolled } : {}) };
   });
-  const div = block(lines);
+  const div = block(lines, plan.save);
   if ( (step === STEPS.DONE) || undone ) appendUndo(div, message, undone);
   content.append(div);
 }

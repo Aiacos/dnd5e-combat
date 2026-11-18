@@ -12,15 +12,73 @@
 .dnd5e-combat-result button { margin-top: 4px; line-height: 1.6; }
 .dnd5e-combat-result .pending { font-style: italic; opacity: 0.7; }
 
-/* Résultat en rangées (réglage `chatRows`, ui/chat.mjs) : la liste de cibles de dnd5e (`.evaluation .target`), comme la carte de
-   Midi-QOL — couleurs, polices et espacements sont ceux du système. Ici seulement ce que dnd5e n'a pas : le portrait du token
-   (taille et cadre repris de Midi-QOL, aux couleurs du système), et le nom barré d'un résultat annulé. */
-.dnd5e-combat-rows .target { cursor: default; }
-.dnd5e-combat-rows .target > img {
-  flex: 0 0 22px; width: 22px; height: 22px; object-fit: cover; object-position: top; border-radius: 100%;
-  border: 1px solid var(--dnd5e-color-gold); box-shadow: 0 0 2px var(--dnd5e-shadow-45);
-  background: var(--dnd5e-color-light-gray);
+/* Carte en rangées (réglage `chatRows`, ui/chat.mjs et ui/compact.mjs) : la carte de Midi-QOL. Les blocs de dés et les listes de
+   cibles portent ses classes ; les règles ci-dessous sont celles de sa feuille de style pour ces classes (midi-qol 14.7.0,
+   css/styles.css, © 2020 Tim Posney, licence MIT), le reste vient de dnd5e (`.dice-roll`, `.evaluation .target`). */
+.midi-results .dice-result .dice-tooltip-collapser { margin-top: 0.1rem; }
+.midi-results .dice-result .dice-total {
+  font-weight: bold; font-size: var(--font-size-20); padding: 0.125rem; margin-top: 0; font-family: var(--font-primary);
+  position: relative;
 }
+.midi-results .dice-roll .dice-result { margin-bottom: 0.2rem; }
+:is(.chat-popout, #chat-log, .chat-log) .midi-results { gap: 0.15rem; margin-bottom: 0.25rem; }
+:is(.chat-popout, #chat-log, .chat-log) .midi-results .midi-qol.target > img {
+  width: 22px !important; height: 22px !important; object-fit: cover; object-position: top; margin: 0 !important;
+  border-radius: 100%; border: 1px solid var(--dnd5e-color-gold) !important;
+  box-shadow: 0 0 2px var(--dnd5e-shadow-45) !important; background: var(--dnd5e-color-light-gray);
+}
+:is(.chat-popout, #chat-log, .chat-log) .midi-results .target { padding: 0.2rem 0.3rem; }
+:is(.chat-popout, #chat-log, .chat-log) .midi-results .target .name-stacked { min-height: auto; }
+:is(.chat-popout, #chat-log, .chat-log) .midi-results .target .name-stacked .title {
+  font-size: var(--font-size-14); margin-bottom: 0.1rem;
+}
+.midi-results .target.failure { border-color: rgba(110, 0, 0, 0.4); background-color: var(--dnd5e-color-failure-background); }
+.midi-results .target.success { border-color: rgba(0, 108, 0, 0.4); background-color: var(--dnd5e-color-success-background); }
+.theme-dark .midi-results .target.failure { background-color: rgba(110, 0, 0, 0.35); }
+.theme-dark .midi-results .target.success { background-color: rgba(0, 108, 0, 0.3); }
+.theme-dark :is(.midi-attack-roll, .midi-qol-save-tooltip) .dice-total:is(.success:not(.fumble), .critical) {
+  background: rgba(0, 108, 0, 0.3);
+}
+.theme-dark :is(.midi-attack-roll, .midi-qol-save-tooltip) .dice-total:is(.failure:not(.critical), .fumble) {
+  background: rgba(110, 0, 0, 0.35);
+}
+:is(.midi-attack-roll, .midi-qol-save-tooltip) .dice-total > .icons { color: var(--color-text-primary); opacity: 1; }
+.midi-qol-tooltip { position: relative; display: inline-block; border: 0; padding: 0; white-space: nowrap; }
+.midi-qol-tooltip .midi-qol-tooltiptext {
+  visibility: hidden; width: max-content; background-color: var(--dnd5e-background-card); text-align: center;
+  border-radius: 6px; padding: 3px; position: absolute; z-index: 2; font-size: 14px; bottom: 100%;
+}
+.midi-qol-tooltip:hover .midi-qol-tooltiptext { visibility: visible; }
+.midi-qol-tooltiptext.midi-qol-save-tooltip { width: max-content; min-width: 200px; right: 0; text-align: left; }
+.midi-qol-save-heading { text-align: center; }
+.midi-qol-save-img { background-color: var(--dnd5e-background-10); width: 30px; height: 30px; }
+.midi-qol-saves-display { padding-top: 0.2rem; font-size: 12px; }
+.midi-qol-save-name { flex: 1; min-width: 0; overflow: hidden; }
+.midi-qol-save-name .name-stacked .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.midi-qol-save-indicators { display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0; margin-left: auto; }
+.midi-qol-save-total { white-space: nowrap; font-weight: bold; }
+.midi-qol-attack-roll, .midi-qol-damage-roll { white-space: nowrap; }
+.midi-roll-label { text-align: center; text-transform: uppercase; font-size: 10px; font-weight: bold; }
+.midi-qol-ac {
+  display: inline-flex; align-items: center; gap: 0.15rem; padding: 0.1rem 0.3rem; border-radius: 3px;
+  background: var(--dnd5e-background-5, rgba(0, 0, 0, 0.06)); font-size: var(--font-size-11); white-space: nowrap;
+  flex-shrink: 0; margin-left: auto;
+}
+.midi-qol-ac .fa-shield-halved { font-size: 10px; opacity: 0.7; }
+.midi-qol-ac-value { font-weight: bold; }
+.dice-result .dice-total > .midi-damage-icons {
+  position: absolute; inset: 0 auto 0 8px; display: flex; align-items: center; gap: 2px; opacity: 0.6;
+}
+.midi-damage-type-icon {
+  display: inline-block; --icon-fill: #777; --icon-size: 16px; vertical-align: text-bottom; margin-left: 0.25em;
+}
+.midi-results > .midi-qol-section-filled ~ :is(.midi-qol-damage-roll, .midi-qol-saves-display).midi-qol-section-filled {
+  border-top: var(--dnd5e-border-dotted); padding-top: 0.15rem;
+}
+/* De ce module. Le bloc du résultat n'a ni filet ni retrait quand il porte la carte en rangées ; les résumés de sauvegarde de
+   dnd5e sont masqués, les rangées les donnant ; un résultat annulé a son nom barré. */
+.dnd5e-combat-result:has(> .midi-results) { padding: 0; border-left: 0; margin-top: 0; }
+.message-content:has(.midi-qol-saves-display.midi-qol-section-filled) > .card-summary { display: none; }
 .dnd5e-combat-rows .dnd5e-combat-undone .name-stacked { text-decoration: line-through; }
 
 /* Journal allégé (réglage chatLight, ui/chat.mjs) : une carte hors de la zone visible du journal n'est ni mise en page
