@@ -140,3 +140,15 @@ export function teleportReach(rule, range=null) {
   const value = Number(range?.value);
   return (["ft", "m", "mi", "km"].includes(range?.units) && Number.isFinite(value) && (value > 0)) ? { distance: value, units: range.units } : null;
 }
+
+/**
+ * L'aperçu du chemin peut-il toucher à l'entrée de déplacement prévu d'un token ? Oui si elle est vide ou si c'est la sienne
+ * (`own` : celle qu'il a posée) ; non si c'est celle d'un autre — le glisser du cœur, avec la route d'un module de recherche
+ * de chemin.
+ * @param {object|null|undefined} current  L'entrée en place.
+ * @param {object|null|undefined} own      La dernière entrée posée par l'aperçu.
+ * @returns {boolean}
+ */
+export function ownsPlannedMovement(current, own) {
+  return !current || (current === own);
+}

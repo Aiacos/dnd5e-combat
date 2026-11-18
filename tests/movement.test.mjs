@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { findPath, turningPoints, cellDistance } from "../module/scripts/core/pathfind.mjs";
 import {
-  footprintGap, approach, chooseBasicAttack, spentMovement, actionSpeed
-} from "../module/scripts/core/movement.mjs";
+  footprintGap, approach, chooseBasicAttack, spentMovement, actionSpeed, ownsPlannedMovement } from "../module/scripts/core/movement.mjs";
 
 const key = c => `${c.i},${c.j}`;
 
@@ -221,5 +220,20 @@ describe("§461 : distance d'une téléportation déclarée", () => {
     expect(teleportReach({ activity: "aaaaaaaaaaaaaaaa" }, { value: "", units: "ft" })).toBeNull();
     expect(teleportReach({ activity: "aaaaaaaaaaaaaaaa" }, null)).toBeNull();
     expect(teleportReach(null, { value: 30, units: "ft" })).toBeNull();
+  });
+});
+
+describe("aperçu du chemin et glisser du cœur", () => {
+  const own = { foundPath: [], hidden: true };
+  const drag = { foundPath: [], hidden: false };
+  it("entrée vide ou la sienne : l'aperçu peut la poser, la remplacer, l'effacer", () => {
+    expect(ownsPlannedMovement(undefined, null)).toBe(true);
+    expect(ownsPlannedMovement(null, own)).toBe(true);
+    expect(ownsPlannedMovement(own, own)).toBe(true);
+  });
+  it("entrée d'un glisser (cœur, recherche de chemin) : l'aperçu n'y touche pas", () => {
+    expect(ownsPlannedMovement(drag, own)).toBe(false);
+    expect(ownsPlannedMovement(drag, undefined)).toBe(false);
+    expect(ownsPlannedMovement({ ...own }, own)).toBe(false);
   });
 });
