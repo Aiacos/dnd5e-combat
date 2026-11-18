@@ -8,7 +8,7 @@ import { cellDistance } from "../core/pathfind.mjs";
 import { committedPosition, positionOf } from "./turn.mjs";
 import { overlapsVertically } from "../core/space.mjs";
 import { isIntangible } from "./pilot.mjs";
-import { sharesSpaceWith } from "./space-sharing.mjs";
+import { sharesSpaceWith, shareKindOf } from "./space-sharing.mjs";
 import { placementOf, coherentElevation, groundStepAllowed } from "../core/altitude.mjs";
 import { groundAt, ceilingAt, clearanceOf, effectiveMode } from "./altitude.mjs";
 import { isOnCeiling, isClimbing, wallsNear } from "./climb.mjs";
@@ -185,9 +185,12 @@ export function worldFor(token, { throughDoors=false }={}) {
   // tokens qui l'occupent — un grimpeur au-dessus d'une case occupée peut s'y arrêter.
   const intangible = isIntangible(token);
   const taken = new Map();
+  // Ce que le token sait partager ne dépend pas de l'autre : lu une fois pour toute la scène (tous ses objets y passent).
+  const moverKind = intangible ? null : shareKindOf(token.actor);
   for ( const other of scene.tokens ) {
     if ( intangible ) break;
-    if ( (other === token) || other.hidden || isDefeated(other) || isIntangible(other) || sharesSpaceWith(token, other) ) continue;
+    if ( (other === token) || other.hidden || isDefeated(other) || isIntangible(other) ) continue;
+    if ( sharesSpaceWith(token, other, { moverKind }) ) continue;
     if ( preview && other.object && !other.object.visible ) continue;   // ne pas révéler un token invisible
     const o = footprintOf(other);
     const slice = positionOf(other._source);
