@@ -485,6 +485,16 @@ export const SPELL_RULES = Object.freeze({
     { on: ["enter", "turnEnd"], if: { "target.allied": true }, do: [{ type: "replay", activity: "ke8eykrnAdAq5nfZ" }] },
     { on: ["enter", "turnEnd"], if: { "target.allied": false }, do: [{ type: "replay", activity: "naMU3mLP7jLZu1IG" }] }
   ] },
+  // Suites d'un sort déjà lancé, que la donnée (PHB 3.0.0) fait payer d'un second emplacement — `consumption.spellSlot` resté à vrai,
+  // alors que les suites des autres sorts (Tempête vengeresse, Embruns prismatiques, Ennemi subconscient) l'ont à faux.
+  // Détection des pensées : « par une action Magie à votre tour suivant, vous pouvez tenter de sonder plus profondément » (« Probe
+  // Deeper »). Invocation de fée : « par une action Bonus à vos tours suivants, vous pouvez téléporter l'esprit » (« Teleport and
+  // Attack »). Gardien de la foi, Sphère de feu : la sauvegarde de l'ennemi qui approche le gardien, que la sphère percute ou qui finit
+  // son tour près d'elle — le moteur la joue par l'invocation (content/summons.mjs) ; cliquée sur la fiche, elle prenait un emplacement.
+  "detect-thoughts": { dataFixes: [{ path: "system.activities.dnd5eactivity000.consumption.spellSlot", from: true, value: false }] },
+  "conjure-fey": { dataFixes: [{ path: "system.activities.sKmRcy0IDp9aOuAt.consumption.spellSlot", from: true, value: false }] },
+  "guardian-of-faith": { dataFixes: [{ path: "system.activities.dnd5eactivity100.consumption.spellSlot", from: true, value: false }] },
+  "flaming-sphere": { dataFixes: [{ path: "system.activities.dnd5eactivity100.consumption.spellSlot", from: true, value: false }] },
   // Vif carquois : « quand vous lancez le sort, et par une action Bonus à chacun de vos tours suivants, deux attaques avec une arme à
   // munitions » — deux attaques gratuites ouvertes (comme le Déluge de coups), la relance à l'action Bonus. (Seulement une arme à
   // munitions : au joueur.)
