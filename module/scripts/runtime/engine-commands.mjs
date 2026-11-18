@@ -502,7 +502,7 @@ export const COMMANDS = {
     if ( !damageMessage || (damageMessage.id === carrier.id) ) return;
     await damageMessage.setFlag(MODULE_ID, "applied", {
       carrier: carrier.id,
-      lines: resolution.targets.filter(t => t.damage).map(t => ({ name: t.name, applied: t.damage.applied })),
+      lines: resolution.targets.filter(t => t.damage).map(t => ({ name: t.name, token: t.token, applied: t.damage.applied })),
       undone: resolution.step === STEPS.UNDONE
     });
   },

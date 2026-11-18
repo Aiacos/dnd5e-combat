@@ -9,9 +9,65 @@ import { readUnitFactors } from "../adapter/units.mjs";
 import { convertLength } from "../core/units.mjs";
 import { keptAndDropped } from "../core/d20.mjs";
 
+/**
+ * Réglage de monde (éteint par défaut : au MJ de l'activer) : une rangée par cible — icône du verdict, portrait, nom, détail —,
+ * comme la carte de Midi-QOL.
+ */
+export const CHAT_ROWS_SETTING = "chatRows";
+
+const rowsEnabled = () => { try { return !!game.settings.get(MODULE_ID, CHAT_ROWS_SETTING); } catch { return false; } };
+
+/** L'icône du verdict d'une rangée, par classe de ligne (celles de Midi-QOL : coche, coche double au critique, croix). */
+const ROW_ICONS = Object.freeze({ hit: "fa-check", critical: "fa-check-double", miss: "fa-xmark", pending: "fa-hourglass-half",
+  undone: "fa-rotate-left" });
+
+/** L'image du token d'une cible, ou null (token parti, ancienne carte sans uuid). */
+function tokenImage(uuid) {
+  const token = uuid ? fromUuidSync(uuid, { strict: false }) : null;
+  return token?.texture?.src ?? token?.actor?.img ?? null;
+}
+
+/**
+ * Les lignes d'un résultat en rangées : une par cible, avec l'icône du verdict, le portrait du token, le nom et le détail.
+ * Ni la CA ni le DD, comme en lignes.
+ */
+function rows(lines) {
+  const list = document.createElement("ul");
+  list.classList.add("dnd5e-combat-rows", "unlist");
+  for ( const line of lines ) {
+    const li = document.createElement("li");
+    li.classList.add(line.css);
+    const icon = document.createElement("i");
+    icon.className = `fa-solid ${ROW_ICONS[line.critical ? "critical" : line.css] ?? ROW_ICONS.hit}`;
+    icon.inert = true;
+    li.append(icon);
+    const src = tokenImage(line.token);
+    if ( src ) {
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = "";
+      li.append(img);
+    }
+    const name = document.createElement("span");
+    name.classList.add("name");
+    name.textContent = line.name;
+    li.append(name);
+    if ( line.detail ) {
+      const detail = document.createElement("span");
+      detail.classList.add("detail");
+      detail.textContent = line.detail;
+      li.append(detail);
+    }
+    list.append(li);
+  }
+  return list;
+}
+
 function block(lines) {
   const div = document.createElement("div");
   div.classList.add("dnd5e-combat-result");
+  // En rangées, seulement un résultat par cible : les raisons d'avantage, les bonus et les attentes restent des lignes.
+  if ( rowsEnabled() && lines.length && lines.every(line => line.name) ) { div.append(rows(lines)); return div; }
   for ( const line of lines ) {
     const p = document.createElement("p");
     p.classList.add(line.css);
@@ -153,7 +209,8 @@ function verdictText(t) {
 /** Toucher / raté par cible sous le jet d'attaque, visible de tous, quand le porteur est un autre message. */
 function renderVerdict(html, resolution) {
   if ( !resolution.attack || [STEPS.AWAITING_ATTACK, STEPS.AWAITING_REACTION].includes(resolution.step) ) return;
-  const lines = resolution.targets.map(t => ({ css: t.hit ? "hit" : "miss", text: `${t.name} — ${verdictText(t)}` }));
+  const lines = resolution.targets.map(t => ({ css: t.hit ? "hit" : "miss", text: `${t.name} — ${verdictText(t)}`,
+    name: t.name, token: t.token, detail: verdictText(t), critical: !!(t.hit && t.critical) }));
   html.querySelector(".message-content")?.append(block(lines));
 }
 
@@ -177,7 +234,8 @@ function appendUndo(div, message, undone) {
 function renderDamage(message, html, applied) {
   const lines = applied.lines.map(l => ({
     css: applied.undone ? "undone" : "hit",
-    text: `${l.name} — ${lostOrHealed(l.applied)}`
+    text: `${l.name} — ${lostOrHealed(l.applied)}`,
+    name: l.name, token: l.token ?? null, detail: lostOrHealed(l.applied)
   }));
   const div = block(lines);
   appendUndo(div, message, applied.undone);
@@ -202,7 +260,8 @@ function renderResolution(message, html, resolution) {
   const undone = step === STEPS.UNDONE;
   const lines = resolution.targets.map(t => {
     // §16.8 : hors d'atteinte de l'action (type de créature, règle du contenu, immunité) — rien d'autre à dire.
-    if ( t.unaffected ) return { css: undone ? "undone" : "miss", text: `${t.name} — ${unaffectedText(t.unaffected)}` };
+    if ( t.unaffected ) return { css: undone ? "undone" : "miss", text: `${t.name} — ${unaffectedText(t.unaffected)}`,
+      name: t.name, token: t.token, detail: unaffectedText(t.unaffected) };
     const parts = [];
     let css = "hit";
     if ( plan.attack ) { parts.push(verdictText(t)); if ( !t.hit ) css = "miss"; }
@@ -220,7 +279,8 @@ function renderResolution(message, html, resolution) {
     }
     if ( t.damage ) parts.push(lostOrHealed(t.damage.applied));
     if ( t.effects?.length ) parts.push(loc("EffetsAppliques", { n: t.effects.length }));
-    return { css: undone ? "undone" : css, text: `${t.name} — ${parts.join(", ")}` };
+    return { css: undone ? "undone" : css, text: `${t.name} — ${parts.join(", ")}`,
+      name: t.name, token: t.token, detail: parts.join(", "), critical: !!(plan.attack && t.hit && t.critical) };
   });
   const div = block(lines);
   if ( (step === STEPS.DONE) || undone ) appendUndo(div, message, undone);
@@ -233,6 +293,11 @@ function applyChatLight() {
 }
 
 export function registerChat() {
+  game.settings.register(MODULE_ID, CHAT_ROWS_SETTING, {
+    name: `DND5ECOMBAT.Reglage.${CHAT_ROWS_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${CHAT_ROWS_SETTING}.Aide`,
+    scope: "world", config: true, type: Boolean, default: false,
+    onChange: () => ui.chat?.render?.()
+  });
   route("ready", applyChatLight, { label: "light chat log" });
   route("updateSetting", setting => { if ( setting.key === `${MODULE_ID}.${CHAT_LIGHT_SETTING}` ) applyChatLight(); },
     { label: "light chat log: setting changed" });

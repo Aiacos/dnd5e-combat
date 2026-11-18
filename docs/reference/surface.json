@@ -450,6 +450,7 @@
     "chatLight",
     "chatPurgeKeep",
     "chatPurgeMax",
+    "chatRows",
     "clickToAttack",
     "clickToMove",
     "climbRules",
