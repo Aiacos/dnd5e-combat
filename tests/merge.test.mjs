@@ -19,4 +19,17 @@ describe("fusion des couches", () => {
     ]);
     expect(out).toEqual({ triggers: [{ on: "isHit" }], aura: { radius: 30, units: "ft" }, recast: false, reactions: { perRound: 2 } });
   });
+  it("les clés d'une couche sortent dans l'ordre de la table, quel que soit l'ordre où la couche les écrit", () => {
+    const [a, b, c] = Object.keys(MERGE);
+    expect(Object.keys(mergeEntries([{ [c]: 1, [a]: 2, [b]: 3 }]))).toEqual([a, b, c]);
+    // Une couche plus spécifique ajoute ses clés à la suite, et remplace celles qu'elle reprend sans les déplacer.
+    const last = Object.keys(MERGE).at(-1);
+    expect(Object.keys(mergeEntries([{ [last]: {}, [b]: 1 }, { [a]: 2, [b]: 4 }]))).toEqual([b, last, a]);
+  });
+  it("une clé hors schéma, ou du nom d'un membre d'Object, est ignorée ; aucune couche parlante : null", () => {
+    const a = "halfOnMiss";
+    expect(mergeEntries([{ inconnue: 1, toString: 2, constructor: 3, __proto__: null, [a]: 5 }])).toEqual({ [a]: 5 });
+    expect(mergeEntries([{ inconnue: 1 }])).toEqual({});
+    expect(mergeEntries([null, undefined, {}, [], "x"])).toBe(null);
+  });
 });
