@@ -30,15 +30,21 @@ function tokenImage(uuid) {
 /**
  * Les lignes d'un résultat en rangées : une par cible, avec l'icône du verdict, le portrait du token, le nom et le détail.
  * Ni la CA ni le DD, comme en lignes.
+ *
+ * Le balisage est celui de dnd5e pour ses propres listes de cibles (`ul.evaluation` > `li.target.hit|miss` > icône, puis
+ * `.name-stacked` > `.title` / `.subtitle`), que Midi-QOL reprend tel quel pour sa carte : couleurs, polices et espacements
+ * viennent donc du système et du thème du monde, pas de ce module. Seul le portrait (que dnd5e n'a pas) reçoit une taille.
  */
 function rows(lines) {
   const list = document.createElement("ul");
-  list.classList.add("dnd5e-combat-rows", "unlist");
+  list.classList.add("dnd5e2", "unlist", "evaluation", "wrapper", "dnd5e-combat-rows");
   for ( const line of lines ) {
     const li = document.createElement("li");
-    li.classList.add(line.css);
+    li.classList.add("target");
+    // `hit` et `miss` sont les classes de dnd5e (vert, rouge) ; une attente ou une annulation restent neutres.
+    li.classList.add(["hit", "miss"].includes(line.css) ? line.css : `dnd5e-combat-${line.css}`);
     const icon = document.createElement("i");
-    icon.className = `fa-solid ${ROW_ICONS[line.critical ? "critical" : line.css] ?? ROW_ICONS.hit}`;
+    icon.className = `fas ${ROW_ICONS[line.critical ? "critical" : line.css] ?? ROW_ICONS.hit}`;
     icon.inert = true;
     li.append(icon);
     const src = tokenImage(line.token);
@@ -48,16 +54,19 @@ function rows(lines) {
       img.alt = "";
       li.append(img);
     }
+    const stacked = document.createElement("div");
+    stacked.classList.add("name-stacked");
     const name = document.createElement("span");
-    name.classList.add("name");
+    name.classList.add("title");
     name.textContent = line.name;
-    li.append(name);
+    stacked.append(name);
     if ( line.detail ) {
       const detail = document.createElement("span");
-      detail.classList.add("detail");
+      detail.classList.add("subtitle");
       detail.textContent = line.detail;
-      li.append(detail);
+      stacked.append(detail);
     }
+    li.append(stacked);
     list.append(li);
   }
   return list;
