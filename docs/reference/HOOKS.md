@@ -954,12 +954,13 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 21. armor training: shield AC not updated _(MJ)_
 22. granted speed not synced _(MJ)_
 23. combat launch: pause message not shown
-24. single card
-25. light chat log
-26. chat log purge on load _(MJ)_
-27. floating texts: system texts muted
-28. debug report: errors raised during loading not shown
-29. settings window: late settings taken from Foundry's list
+24. combat launch: pending launch not cleared
+25. single card
+26. light chat log
+27. chat log purge on load _(MJ)_
+28. floating texts: system texts muted
+29. debug report: errors raised during loading not shown
+30. settings window: late settings taken from Foundry's list
 
 ### `refreshToken`
 
