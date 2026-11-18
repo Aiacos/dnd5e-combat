@@ -18,7 +18,7 @@ import { theaterActive } from "../runtime/theater-state.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { stopWalking, forgetAllWalks, stopDeadMovements } from "../adapter/movement.mjs";
 import { stormOf, cloudOf, cloudCircle, boltRadiusPx } from "../adapter/storm.mjs";
-import { dressStorm, strike, setBoltAim, freshCloudOf, castStorm } from "../runtime/storm.mjs";
+import { dressStorm, strike, setBoltAim, freshCloudOf, castStorm, strikeActivityOf, launchStrike } from "../runtime/storm.mjs";
 import { clampToCircle } from "../core/storm.mjs";
 import { askStorm } from "./storm.mjs";
 import { contentOf, rangeUnitsOf, identifierOf } from "../adapter/content.mjs";
@@ -686,6 +686,9 @@ export async function stormAfterUse(activity, usageConfig) {
     if ( !cloud ) return;
     await dressStorm(activity, cloud, { stormy: ours.stormy === true });
   }
+  // §469 : l'incantation n'a posé que le nuage (Manuel 3.0.0) — l'éclair vient de son activité, utilisée à la suite, qui revient ici.
+  const bolt = strikeActivityOf(activity);
+  if ( bolt && (bolt !== activity) ) return void await launchStrike(activity, bolt, usageConfig);
   await aimBolt(activity, cloud);
 }
 

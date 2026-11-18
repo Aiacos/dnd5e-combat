@@ -1002,6 +1002,7 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `renderWallConfig`
 
 1. door lock: wall configuration section
+2. wall grate: wall configuration section
 
 ### `setup`
 

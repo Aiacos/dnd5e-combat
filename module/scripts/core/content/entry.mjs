@@ -542,7 +542,10 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     if ( !isObject(t) ) errors.push(`${at}storm: an object`);
     else {
       if ( ("bonus" in t) && ((typeof t.bonus !== "string") || !/^\d*d\d+$/.test(t.bonus)) ) errors.push(`${at}storm.bonus: dice ("1d10")`);
-      for ( const key of Object.keys(t) ) if ( key !== "bonus" ) errors.push(`${at}storm.${key}: unknown key`);
+      for ( const key of ["strike", "stormStrike"] ) {
+        if ( (key in t) && ((typeof t[key] !== "string") || !t[key]) ) errors.push(`${at}storm.${key}: an activity id`);
+      }
+      for ( const key of Object.keys(t) ) if ( !["bonus", "strike", "stormStrike"].includes(key) ) errors.push(`${at}storm.${key}: unknown key`);
     }
   }
   if ( "difficultTerrain" in entry ) {

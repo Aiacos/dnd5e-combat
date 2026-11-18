@@ -63,6 +63,28 @@ export function eyeElevation(doc, pos=committedPosition(doc)) {
   return (pos.elevation ?? 0) + ((pos.depth ?? 1) * doc.parent.grid.distance / 2);
 }
 
+/** §468 : le drapeau d'un mur « grille » (barreaux, herse, grillage) — il arrête le déplacement, pas les sorts ni les projectiles. */
+export const GRATE_FLAG = "grate";
+
+/** §468 : ce mur est-il une grille ? (un WallDocument, ou le Wall dessiné) */
+export function isGrate(wall) {
+  const doc = wall?.document ?? wall;
+  return doc?.getFlag?.(MODULE_ID, GRATE_FLAG) === true;
+}
+
+/**
+ * §468 : ce qui coupe le segment `from` → `to` dans le polygone de déplacement : `"wall"` (au moins un obstacle plein), `"grate"`
+ * (seulement des grilles), ou false. Le mode « all » du cœur rend chaque point de contact avec ses arêtes
+ * (clockwise-sweep.mjs:759-787) ; l'objet d'une arête de mur est son WallDocument (documents/wall.mjs:166). Une arête qui n'est
+ * pas un mur (bord de scène…) compte comme pleine.
+ */
+export function wallKindBetween(from, to, level) {
+  const hits = CONFIG.Canvas.polygonBackends.move.testCollision(from, to, { type: "move", mode: "all", level }) ?? [];
+  if ( !Array.isArray(hits) || !hits.length ) return false;
+  const solid = hits.some(v => !(v.edges?.size) || [...v.edges].some(e => !isGrate(e.object)));
+  return solid ? "wall" : "grate";
+}
+
 /**
  * Le prédicat « la ligne de a à b est coupée » entre deux tokens : murs du niveau de `from`, à sa
  * hauteur d'yeux, et surfaces entre les hauteurs d'yeux des deux.
@@ -78,12 +100,12 @@ export function rayBlocker(from, to, { posA, posB }={}) {
   const eyeA = eyeElevation(from, pa);
   const eyeB = eyeElevation(to, pb);
   const level = scene.levels?.get?.(pa.level ?? from._source.level) ?? undefined;
-  const backend = CONFIG.Canvas.polygonBackends.move;
   const surfaces = typeof scene.testSurfaceCollision === "function";
   return (a, b) => {
-    if ( backend.testCollision({ x: a.x, y: a.y, elevation: eyeA }, { x: b.x, y: b.y, elevation: eyeA }, { type: "move", mode: "any", level }) === true ) return "wall";
+    const wall = wallKindBetween({ x: a.x, y: a.y, elevation: eyeA }, { x: b.x, y: b.y, elevation: eyeA }, level);
+    if ( wall === "wall" ) return "wall";
     if ( surfaces && (scene.testSurfaceCollision({ x: a.x, y: a.y, elevation: eyeA }, { x: b.x, y: b.y, elevation: eyeB }, { type: "move", mode: "any" }) === true) ) return "surface";
-    return false;
+    return wall;   // §468 : "grate" ou false
   };
 }
 
@@ -216,6 +238,7 @@ export function manualCoverOf(target) {
  * §200 : « Chemin dégagé vers la cible » (Manuel des joueurs 2024) — le point d'origine d'un sort ne peut pas être derrière un abri
  * total. Vrai si, depuis le centre ou un coin (rentré) de l'espace du lanceur, la ligne jusqu'au point ne traverse aucun mur qui
  * arrête le mouvement (une fenêtre fermée aussi : abri total) dans son niveau, à hauteur de ses yeux, ni plancher ou plafond (Surface).
+ * §468 : un mur coché « grille » (barreaux, herse) n'arrête pas ce chemin — il n'est pas un abri total (retour de Fanarie, 2026-11-17).
  * null : impossible à dire (canevas absent ou sur une autre scène).
  * @param {TokenDocument} token
  * @param {{x: number, y: number}} point
@@ -227,7 +250,6 @@ export function clearPathTo(token, point) {
   const pos = committedPosition(token);
   const eye = eyeElevation(token, pos);
   const level = scene.levels?.get?.(pos.level ?? token._source.level) ?? undefined;
-  const backend = CONFIG.Canvas.polygonBackends.move;
   const surfaces = typeof scene.testSurfaceCollision === "function";
   const rect = rectOf(token, pos);
   const inset = scene.grid.size * INSET_FRACTION;
@@ -239,7 +261,7 @@ export function clearPathTo(token, point) {
   const to = { x: point.x, y: point.y, elevation: eye };
   return starts.some(a => {
     const from = { x: a.x, y: a.y, elevation: eye };
-    if ( backend.testCollision(from, to, { type: "move", mode: "any", level }) === true ) return false;
+    if ( wallKindBetween(from, to, level) === "wall" ) return false;
     return !(surfaces && (scene.testSurfaceCollision(from, to, { type: "move", mode: "any" }) === true));
   });
 }

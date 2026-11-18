@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createPerf } from "../module/scripts/core/perf.mjs";
 import { createRouter } from "../module/scripts/runtime/router.mjs";
 
@@ -46,5 +46,50 @@ describe("relevé des temps (§98)", () => {
     router.on("h", () => { throw new Error("x"); }, { label: "boum" });
     handlers.h();
     expect(seen).toEqual([["boum", "sync"]]);
+  });
+});
+
+/**
+ * Issue #49 : la ligne « slow: » est une mesure, pas une erreur. Le débogueur (runtime/debug.mjs) relève tout `console.warn`
+ * préfixé par l'identifiant du module : écrite en avertissement, la ligne levait l'avis « DAS a relevé une erreur » à chaque
+ * chargement, chez le MJ comme chez les joueurs.
+ */
+describe("ligne « slow: » et débogueur (issue #49)", () => {
+  let debug, perf, info;
+  beforeEach(async () => {
+    debug = await import("../module/scripts/runtime/debug.mjs");
+    perf = await import("../module/scripts/runtime/perf.mjs");
+    const modules = [{ id: "dnd5e-combat", title: "DAS · Core", active: true }];
+    globalThis.game = { user: { id: "u-joueur" }, modules: Object.assign(modules, { get: id => modules.find(m => m.id === id) }) };
+    info = vi.spyOn(console, "info").mockImplementation(() => {});
+    debug.uninstallCapture();
+    debug.installCapture({ console: globalThis.console, addEventListener() {}, removeEventListener() {} });
+    debug.debugApi.clear();
+  });
+  afterEach(() => {
+    debug.uninstallCapture();
+    info.mockRestore();
+    delete globalThis.game;
+  });
+
+  it("un inscrit lent écrit sa ligne en console sans être relevé comme une erreur", () => {
+    const heard = [];
+    const off = debug.debugApi.onError((group, isNew) => heard.push([group.kind, group.message, isNew]));
+    perf.recordTiming("ready", "issue 49 : audit du contenu", "sync", 52);   // seuil par défaut : 50 ms
+    off();
+    expect(info).toHaveBeenCalledTimes(1);
+    expect(info.mock.calls[0][0]).toMatch(/^dnd5e-combat \| slow: ready "issue 49 : audit du contenu" 52 ms/);
+    expect(heard).toEqual([]);
+    expect(debug.debugApi.total("suite")).toBe(0);
+  });
+
+  it("un vrai avertissement du module reste relevé", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    debug.uninstallCapture();
+    debug.installCapture({ console: globalThis.console, addEventListener() {}, removeEventListener() {} });
+    console.warn("dnd5e-combat | quelque chose a échoué");
+    expect(debug.debugApi.total("suite")).toBe(1);
+    debug.uninstallCapture();
+    warn.mockRestore();
   });
 });

@@ -729,7 +729,32 @@ function phb3Replacement(item, reference) {
   const data = midiReplacement(item, reference);
   const old = item.toObject().system ?? {};
   if ( old.classIdentifier && !data.system.classIdentifier ) data.system.classIdentifier = old.classIdentifier;
+  const grant = spellGrantOf(item);
+  if ( grant ) {
+    // §469 : un sort accordé par un avancement (Châtiment divin du Paladin, sort gratuit d'un don…) reçoit à l'octroi les réglages de cet
+    // avancement — utilisations gratuites, récupération, activité « lancer gratuitement » (dnd5e, spell-config.mjs:78-118, appelé par
+    // item-grant.mjs:119). La référence du compendium ne les a pas : on les réapplique comme dnd5e, l'usage dépensé gardé.
+    grant.configuration.spell.applySpellChanges(data, { ability: grant.value?.ability });
+    if ( old.uses?.spent !== undefined ) foundry.utils.setProperty(data, "system.uses.spent", old.uses.spent);
+  }
   return data;
+}
+
+/**
+ * §469 : l'avancement qui a accordé ce sort, s'il lui donne des réglages (`configuration.spell`) — retrouvé par le drapeau
+ * `dnd5e.advancementOrigin` (« idObjet.idAvancement », advancement.mjs:385-391) sur la fiche du sort. Null sinon.
+ */
+function spellGrantOf(item) {
+  if ( item.type !== "spell" ) return null;
+  const [itemId, advancementId] = String(item.getFlag("dnd5e", "advancementOrigin") ?? "").split(".");
+  const grant = item.parent?.items?.get(itemId)?.advancement?.byId?.[advancementId];
+  return grant?.configuration?.spell?.applySpellChanges ? grant : null;
+}
+
+/** §469 : ce sort a-t-il perdu les utilisations gratuites que son avancement lui donne (remplacement d'avant le correctif) ? */
+function lostSpellGrant(item) {
+  const uses = spellGrantOf(item)?.configuration.spell.uses;
+  return !!(uses?.max && uses?.per && !item._source.system?.uses?.max);
 }
 
 /** Les objets du Manuel d'une fiche à revoir : `{ item, reference, reasons }` (référence null : elle n'existe plus). */
@@ -740,6 +765,7 @@ async function phb3Outdated(actor) {
     const reference = await fromUuid(sourceOf(item)).catch(() => null);
     if ( !reference ) { out.push({ item, reference: null, reasons: [] }); continue; }
     const reasons = phbDifferences(phbShape(item.toObject()), phbShape(fixedReference(reference)));
+    if ( lostSpellGrant(item) ) reasons.push("grant");
     if ( reasons.length ) out.push({ item, reference, reasons });
   }
   return out;
