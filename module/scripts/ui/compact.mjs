@@ -211,6 +211,10 @@ function gatherActions(content) {
   bar.classList.add("dnd5e-combat-actions");
   bar.append(...buttons);
   content.append(bar);
+  // Les blocs vidés de leurs rangées et de leur bouton ne gardent pas leur place.
+  for ( const div of content.querySelectorAll(":scope > .dnd5e-combat-result") ) {
+    if ( !div.querySelector(":scope > :not(.midi-results:empty)") ) div.remove();
+  }
 }
 
 function onBlockClick(event) {
