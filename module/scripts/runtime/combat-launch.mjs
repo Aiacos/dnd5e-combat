@@ -3,7 +3,8 @@
  * ui/combat-launch.mjs.
  *
  *  1. `beginLaunch` : le jeu se met en pause pour toute la table, avec « Un combat commence, tenez-vous prêts » sous l'icône de pause
- *     (`renderGamePause`, le bandeau du cœur : client/applications/ui/game-pause.mjs) ; la fenêtre s'ouvre chez le MJ.
+ *     (le bandeau du cœur, client/applications/ui/game-pause.mjs, réécrit après son rendu : `showLaunchCaption`) ; la fenêtre
+ *     s'ouvre chez le MJ.
  *  2. `launchCandidates` : les tokens de la scène, rangés (joueurs connectés, vus par les joueurs, reste de la carte).
  *  3. `launchCombat` : le combat de la scène (créé au besoin), ses combattants — un PNJ que les joueurs ne voient pas entre caché dans
  *     la frise (`hidden`) et apparaît dès qu'un token des joueurs le voit ; l'état Surpris de dnd5e sur les surpris (Désavantage à
@@ -232,22 +233,36 @@ async function revealSeen(combat) {
   }
 }
 
-/** Le bandeau de pause : le message du lancement pendant le choix des participants. */
-function onRenderPause(_app, element) {
+/**
+ * Le bandeau de pause : le message du lancement pendant le choix des participants. Écrit après le rendu du bandeau, sans
+ * s'inscrire à `renderGamePause` : dnd5e n'habille le bandeau (son emblème, sa police) que s'il est le seul inscrit à ce hook
+ * (`if ( Hooks.events.renderGamePause.length > 1 ) return;`) — un inscrit de plus, et toute la table voyait en permanence le
+ * bandeau nu du cœur.
+ */
+function showLaunchCaption() {
   if ( !state().pending || !game.paused ) return;
-  const caption = (element instanceof HTMLElement ? element : element?.[0])?.querySelector?.("figcaption");
+  const caption = ui.pause?.element?.querySelector?.("figcaption");
   if ( caption ) caption.innerText = loc("Lancement.Pause");
+}
+
+/** Redessine le bandeau de pause (le texte du système revient), puis y remet le message du lancement s'il y a lieu. */
+async function refreshPause() {
+  try { await ui.pause?.render?.(); } catch { /* pas de bandeau sur ce client */ }
+  showLaunchCaption();
 }
 
 export function registerCombatLaunch() {
   game.settings.register(MODULE_ID, LAUNCH_STATE, { scope: "world", config: false, type: Object, default: {},
-    onChange: () => ui.pause?.render?.() });
+    onChange: () => refreshPause() });
   game.settings.register(MODULE_ID, LAUNCH_BUTTON, {
     name: `DND5ECOMBAT.Reglage.${LAUNCH_BUTTON}.Nom`, hint: `DND5ECOMBAT.Reglage.${LAUNCH_BUTTON}.Aide`,
     scope: "world", config: true, type: Boolean, default: true, onChange: () => ui.controls?.render?.({ reset: true })
   });
   game.settings.register(MODULE_ID, LAUNCH_PLAYLIST, { scope: "client", config: false, type: String, default: "" });
-  route("renderGamePause", onRenderPause, { always: true, label: "combat launch: pause message not shown" });
+  // La pause mise ou levée, et le client qui (re)charge pendant le choix : le bandeau vient d'être redessiné par le cœur.
+  for ( const hook of ["pauseGame", "ready"] ) {
+    route(hook, () => { refreshPause(); }, { always: true, label: "combat launch: pause message not shown" });
+  }
   route("updateCombatant", (combatant, changes) => {
     if ( !("initiative" in changes) ) return;
     const combat = combatant.combat;

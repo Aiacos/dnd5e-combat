@@ -98,7 +98,7 @@ contexte du moment) et sert de clé `on` aux déclarations de contenu.
 
 ## Hooks écoutés, dans l'ordre d'appel
 
-133 hooks, relevés par `api.routes()` sur le module chargé au niveau d'automatisation « full ». Un seul écouteur par hook
+132 hooks, relevés par `api.routes()` sur le module chargé au niveau d'automatisation « full ». Un seul écouteur par hook
 (`runtime/router.mjs`) appelle les inscrits dans cet ordre, qui est celui des `register…()` de `dnd5e-combat.mjs`. **MJ** : l'inscrit
 ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendant `false`.
 
@@ -864,6 +864,7 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `pauseGame`
 
 1. pause: walks stopped
+2. combat launch: pause message not shown
 
 ### `preCreateActiveEffect`
 
@@ -952,12 +953,13 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 20. climbing: out-of-combat checks
 21. armor training: shield AC not updated _(MJ)_
 22. granted speed not synced _(MJ)_
-23. single card
-24. light chat log
-25. chat log purge on load _(MJ)_
-26. floating texts: system texts muted
-27. debug report: errors raised during loading not shown
-28. settings window: late settings taken from Foundry's list
+23. combat launch: pause message not shown
+24. single card
+25. light chat log
+26. chat log purge on load _(MJ)_
+27. floating texts: system texts muted
+28. debug report: errors raised during loading not shown
+29. settings window: late settings taken from Foundry's list
 
 ### `refreshToken`
 
@@ -977,10 +979,6 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `renderCombatTracker`
 
 1. budget in the tracker
-
-### `renderGamePause`
-
-1. combat launch: pause message not shown
 
 ### `renderSceneControls`
 
