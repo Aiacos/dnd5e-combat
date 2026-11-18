@@ -72,3 +72,35 @@ describe("§459 : sorts du Manuel 3.0.0 dont l'effet a disparu", () => {
     expect(dispel.system.activities["0vS3We98acymzUXC"].effects).toEqual([]);
   });
 });
+
+// Guide du maître 2.0.0 : la donnée contredit le texte de l'objet lui-même (DD, lien, charges rendues).
+describe("objets du Guide : DD, lien et recharge que le texte de l'objet donne (dataFixes)", () => {
+  it("Sérum de vérité : la sauvegarde passe de DD 10 à DD 11", () => {
+    const item = { effects: [], system: { activities: { gZRykfpoTDxT6cqO: { save: { ability: ["con"], dc: { calculation: "", formula: "10" } } } } } };
+    expect(dataFixPlan(item, ITEM_FIXES["truth-serum"].dataFixes).item).toEqual({ "system.activities.gZRykfpoTDxT6cqO.save.dc.formula": "11" });
+    item.system.activities.gZRykfpoTDxT6cqO.save.dc.formula = "11";
+    expect(dataFixPlan(item, ITEM_FIXES["truth-serum"].dataFixes).fields).toEqual([]);
+  });
+
+  it("Boule de cristal de vision véritable : lien requis, Scrutation à DD 17", () => {
+    const item = { effects: [], system: { attunement: "", activities: { EsEZwTpUoGAXQskP: { spell: { challenge: { attack: null, save: null, override: false } } } } } };
+    expect(dataFixPlan(item, ITEM_FIXES["true-seeing-crystal-ball-of"].dataFixes).item).toEqual({
+      "system.attunement": "required",
+      "system.activities.EsEZwTpUoGAXQskP.spell.challenge": { attack: null, save: 17, override: true }
+    });
+  });
+
+  it("Bâton du grand essaim : 1d6 + 4 charges à l'aube ; la fumée reste déclarée", () => {
+    const item = { effects: [], system: { uses: { spent: 0, max: "10", recovery: [{ period: "dawn", type: "formula", formula: "1d6" }] } } };
+    expect(dataFixPlan(item, ITEM_FIXES["staff-of-swarming-insects"].dataFixes).item)
+      .toEqual({ "system.uses.recovery": [{ period: "dawn", type: "formula", formula: "1d6 + 4" }] });
+    expect(ITEM_FIXES["staff-of-swarming-insects"].obscures).toBe(true);
+  });
+
+  it("Balai dansant de Baba Yaga : lien requis ; il agit toujours juste après son maître", () => {
+    const item = { effects: [], system: { attunement: "" } };
+    expect(dataFixPlan(item, ITEM_FIXES["baba-yagas-dancing-broom"].dataFixes).item).toEqual({ "system.attunement": "required" });
+    expect(ITEM_FIXES["baba-yagas-dancing-broom"].summon).toEqual({ initiative: "after" });
+  });
+});
+

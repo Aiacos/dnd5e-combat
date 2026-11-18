@@ -421,16 +421,28 @@ export const ITEM_FIXES = Object.freeze({
   "alchemists-fire": { replacesAttack: ["NVclbplLi9uFhKQE"] },
   // Invocations d'objets : la créature « agit juste après vous » (partage votre initiative) — elles n'entraient pas au combat.
   ...Object.fromEntries(["elemental-gem", "blue-elemental-gem", "emerald-elemental-gem", "red-elemental-gem", "yellow-elemental-gem",
-    "baba-yagas-dancing-broom", "bowl-of-commanding-water-elementals", "brazier-of-commanding-fire-elementals",
+    "bowl-of-commanding-water-elementals", "brazier-of-commanding-fire-elementals",
     "censer-of-controlling-air-elementals", "stone-of-controlling-earth-elementals", "bag-of-tricks", "bronze-griffon-rare", "ebony-fly-rare",
     "golden-lions-rare", "ivory-goats", "marble-elephant-rare", "obsidian-steed-very-rare", "serpentine-owl-rare",
     "silver-raven-uncommon"].map(id => [id, { summon: { initiative: "after" } }])),
+  // Balai dansant de Baba Yaga : l'objet exige un lien selon son texte — l'item du Guide n'en exige aucun.
+  "baba-yagas-dancing-broom": { summon: { initiative: "after" }, dataFixes: [{ path: "system.attunement", from: "", value: "required" }] },
   // Cor du Valhalla : les guerriers « lancent leur initiative » et agissent à leur tour.
   "silver-horn-of-valhalla": { summon: { initiative: "own" } },
   // Fumées : « la zone est fortement obscurcie » — Grenade fumigène, Urne fumigène, nuée du Bâton du grand essaim.
   "grenade-smoke": { obscures: true },
   "eversmoking-bottle": { obscures: true },
-  "staff-of-swarming-insects": { obscures: true },
+  // Bâton de nuée d'insectes : son texte rend 1d6 + 4 charges à l'aube — l'item du Guide n'en rend que 1d6.
+  "staff-of-swarming-insects": { obscures: true, dataFixes: [{ path: "system.uses.recovery",
+    from: [{ period: "dawn", type: "formula", formula: "1d6" }], value: [{ period: "dawn", type: "formula", formula: "1d6 + 4" }] }] },
+  // Sérum de vérité : son texte donne un DD de 11 — la sauvegarde de l'item est à 10.
+  "truth-serum": { dataFixes: [{ path: "system.activities.gZRykfpoTDxT6cqO.save.dc.formula", from: "10", value: "11" }] },
+  // Boule de cristal de vision véritable : son texte exige un lien et donne un DD de 17 à sa Scrutation — ni lien ni DD dans
+  // l'item, alors que les trois autres boules de cristal du Guide les ont.
+  "true-seeing-crystal-ball-of": { dataFixes: [
+    { path: "system.attunement", from: "", value: "required" },
+    { path: "system.activities.EsEZwTpUoGAXQskP.spell.challenge", from: { attack: null, save: null, override: false }, value: { attack: null, save: 17, override: true } }
+  ] },
   // Masse terrifiante : « chaque créature de votre choix à 9 m de vous » — centrée sur le porteur, alliés épargnés.
   // (O3 : « refait le jet à la fin de chacun de ses tours ».)
   "mace-of-terror": { ranges: { owojSA2KZWmv61Nj: { units: "self" } }, zoneAffects: "enemy",
