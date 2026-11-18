@@ -25,7 +25,8 @@ import { MODULE_ID } from "../constants.mjs";
 import { validateEntry, validateTable, validateSources, CONTENT_VERSION, ENTRY_KEYS } from "../core/content.mjs";
 import { RECIPES, RECIPES_VERSION, FACTS, FACT_ARG_OPTIONS, FIELD_KINDS, PUBLIC_KEYS, buildEntry, buildCondition } from "../core/recipes.mjs";
 import { CONTENT, SHIPPED, registerTable, unregisterTable, registeredTables, registerSources, registeredSources } from "../content/index.mjs";
-import { OVERRIDES_SETTING, KNOWN_FACTS, worldOverrides, setWorldOverride, contentOf, inspect, identifierOf } from "../adapter/content.mjs";
+import { OVERRIDES_SETTING, KNOWN_FACTS, worldOverrides, forgetWorldOverrides, setWorldOverride, contentOf, inspect,
+  identifierOf } from "../adapter/content.mjs";
 import { buildSpellIndex, stampScroll } from "../adapter/scrolls.mjs";
 import { route } from "./router.mjs";
 import { log, loc } from "./shared.mjs";
@@ -140,7 +141,9 @@ export const contentApi = Object.freeze({
 });
 
 export function registerContent() {
-  game.settings.register(MODULE_ID, OVERRIDES_SETTING, { scope: "world", config: false, type: Object, default: {} });
+  // `onChange` : sur chaque client, quand le MJ écrit la surcouche — ce qui en a été lu est oublié (adapter/content.mjs).
+  game.settings.register(MODULE_ID, OVERRIDES_SETTING, { scope: "world", config: false, type: Object, default: {},
+    onChange: () => forgetWorldOverrides() });
   route("preCreateItem", (item, data) => checkItemFlags(item, data), { cancellable: true, label: "content: flags on creation" });
   route("preUpdateItem", (item, changes) => checkItemFlags(item, changes), { cancellable: true, label: "content: flags on update" });
   route("setup", collectExternal, { label: "content: other modules' tables" });

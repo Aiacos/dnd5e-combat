@@ -10,7 +10,10 @@ import { CONTENT, registerTable, unregisterTable } from "../module/scripts/conte
 import { CONTENT_VERSION } from "../module/scripts/core/content.mjs";
 
 const MODULE_ID = "dnd5e-combat";
-let contentOf, declaresKey, ownDarknessSight;
+let contentOf, declaresKey, ownDarknessSight, forgetWorldOverrides;
+
+/** Le MJ écrit la surcouche du monde : le réglage change, son `onChange` fait oublier ce qui en avait été lu. */
+const writeOverrides = entries => { overrides = entries; forgetWorldOverrides(); };
 let overrides = {};
 let settingReads = 0;
 
@@ -37,11 +40,11 @@ beforeAll(async () => {
   globalThis.foundry = { utils: { throttle: fn => fn, debounce: fn => fn, isNewerVersion: () => false } };
   globalThis.fromUuidSync = () => null;
   globalThis.CONFIG = { DND5E: {}, specialStatusEffects: {}, queries: {} };
-  ({ contentOf, declaresKey } = await import("../module/scripts/adapter/content.mjs"));
+  ({ contentOf, declaresKey, forgetWorldOverrides } = await import("../module/scripts/adapter/content.mjs"));
   ({ ownDarknessSight } = await import("../module/scripts/adapter/vision.mjs"));
 }, 60000);
 
-beforeEach(() => { overrides = {}; settingReads = 0; });
+beforeEach(() => { writeOverrides({}); settingReads = 0; });
 
 describe("declaresKey : jamais « non » pour une clé que l'entrée composée porte", () => {
   it("contenu livré : chaque identifiant × chaque clé du schéma, comme `contentOf`", () => {
@@ -70,10 +73,10 @@ describe("declaresKey : jamais « non » pour une clé que l'entrée composée p
     expect(declaresKey(flagged, "seesThroughOwnDarkness")).toBe(true);
     expect(contentOf(flagged).entry.seesThroughOwnDarkness).toBe(true);
 
-    overrides = { "plain-feature": { seesThroughOwnDarkness: true } };
+    writeOverrides({ "plain-feature": { seesThroughOwnDarkness: true } });
     expect(declaresKey(plain, "seesThroughOwnDarkness")).toBe(true);
     expect(contentOf(plain).entry.seesThroughOwnDarkness).toBe(true);
-    overrides = {};
+    writeOverrides({});
 
     // L'enchantement de la Langue de feu (`flame-tongue-enchanted`), reconnu par l'objet qui l'a posé.
     const source = itemOf(actor, "flame-tongue", { documentName: "Item" });
@@ -117,9 +120,9 @@ describe("§447 : voir à travers ses propres Ténèbres, relu à chaque demande
   it("la surcouche du monde et la table d'un autre module comptent dès qu'elles changent", () => {
     const actor = actorOf(plain);
     const token = tokenOf(actor);
-    overrides = { "plain-feature-7": { seesThroughOwnDarkness: true } };
+    writeOverrides({ "plain-feature-7": { seesThroughOwnDarkness: true } });
     expect(ownDarknessSight(token)).toBe(actor);
-    overrides = {};
+    writeOverrides({});
     expect(ownDarknessSight(token)).toBeNull();
     registerTable("test-module", { "plain-feature-3": { seesThroughOwnDarkness: true } });
     expect(ownDarknessSight(token)).toBe(actor);
@@ -171,6 +174,29 @@ describe("les clés d'entrée des flags d'un item", () => {
       expect(entryKeysOf(flags)).toEqual(ENTRY_KEYS.filter(key => key in flags));
     }
     expect(entryKeysOf({})).toEqual([]);
+  });
+});
+
+describe("la surcouche du monde n'est lue qu'une fois, jusqu'à ce que le réglage change", () => {
+  it("cent demandes, une lecture du réglage ; le réglage change : une de plus, et la nouvelle valeur", async () => {
+    const { worldOverrides } = await import("../module/scripts/adapter/content.mjs");
+    writeOverrides({ "plain-feature": { seesThroughOwnDarkness: true } });
+    settingReads = 0;
+    for ( let n = 0; n < 100; n++ ) worldOverrides();
+    expect(settingReads).toBe(1);
+    expect(worldOverrides()).toEqual({ "plain-feature": { seesThroughOwnDarkness: true } });
+    writeOverrides({ "autre": { seesThroughOwnDarkness: true } });
+    expect(worldOverrides()).toEqual({ "autre": { seesThroughOwnDarkness: true } });
+    expect(settingReads).toBe(2);
+  });
+
+  it("un autre `game.settings` (un autre monde) : ce qui avait été lu ne vaut plus", async () => {
+    const { worldOverrides } = await import("../module/scripts/adapter/content.mjs");
+    worldOverrides();
+    const before = globalThis.game.settings;
+    globalThis.game.settings = { ...before, get: () => ({ v: CONTENT_VERSION, entries: { ailleurs: { seesThroughOwnDarkness: true } } }) };
+    try { expect(Object.keys(worldOverrides())).toEqual(["ailleurs"]); }
+    finally { globalThis.game.settings = before; forgetWorldOverrides(); }
   });
 });
 

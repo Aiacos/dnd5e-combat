@@ -130,7 +130,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.content.validate` | `(entry)` | `runtime/content.mjs` | Les erreurs d'une entrée de contenu (`string[]`, vide = valide), contre le schéma `core/content/entry.mjs`. Ne change rien. |
 | `api.content.validateSources` | `(sources)` | `core/content/entry.mjs` | §277 : les erreurs d'une table de sources `{ id de document: identifiant }` — les correspondances qu'un module enregistre avec sa table (`api.content.register(source, table, { sources })`) pour des items qui n'ont pas d… |
 | `api.content.version` | _number_ |  |  |
-| `api.content.world` | `()` | `adapter/content.mjs` | La surcouche du monde : `{ identifiant: entrée }`, tenue par le MJ. |
+| `api.content.world` | `()` | `adapter/content.mjs` | La surcouche du monde : `{ identifiant: entrée }`, tenue par le MJ. Ne pas modifier l'objet rendu : il est partagé. |
 
 ## `api.correction`
 
