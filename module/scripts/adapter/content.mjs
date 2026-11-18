@@ -159,12 +159,31 @@ export async function setWorldOverride(identifier, entry) {
   return entries[identifier] ?? null;
 }
 
+/** Le rang de chaque clé d'entrée dans le schéma : l'ordre des clés de la couche d'un item. */
+const KEY_RANK = new Map(ENTRY_KEYS.map((key, rank) => [key, rank]));
+
+/**
+ * Les clés d'entrée que portent les flags d'un item, dans l'ordre du schéma. On parcourt les flags (une poignée, souvent aucun),
+ * pas les centaines de clés du schéma : `contentOf` passe ici pour chaque item, et la Barre le demande pour chaque objet de la
+ * fiche, plusieurs fois par case (mesuré en jeu sur une fiche de 129 objets : 1 160 ms pour dix sélections, tout dans cette
+ * boucle).
+ * @param {object} flags
+ * @returns {string[]}
+ */
+export function entryKeysOf(flags) {
+  const keys = [];
+  for ( const key in flags ) if ( KEY_RANK.has(key) ) keys.push(key);
+  return (keys.length > 1) ? keys.sort((a, b) => KEY_RANK.get(a) - KEY_RANK.get(b)) : keys;
+}
+
 /** Ce qu'un item porte lui-même, validé ; une entrée fausse est ignorée (et signalée). */
 function itemLayer(item) {
-  const flags = item?.flags?.[MODULE_ID] ?? {};
+  const flags = item?.flags?.[MODULE_ID];
+  if ( !flags || (typeof flags !== "object") ) return null;
+  const keys = entryKeysOf(flags);
+  if ( !keys.length ) return null;
   const layer = {};
-  for ( const key of ENTRY_KEYS ) if ( key in flags ) layer[key] = flags[key];
-  if ( !Object.keys(layer).length ) return null;
+  for ( const key of keys ) layer[key] = flags[key];
   const errors = validateEntry(layer, { facts: KNOWN_FACTS });
   if ( errors.length ) {
     console.warn(`${MODULE_ID} | ${item.name}: flags ignored — ${errors.join("; ")}`);
