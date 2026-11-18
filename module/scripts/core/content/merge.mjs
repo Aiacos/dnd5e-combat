@@ -66,6 +66,9 @@ export const MERGE = Object.freeze({
   cunningStrikes: "shallow"
 });
 
+/** Le rang de chaque clé dans `MERGE` : l'ordre des clés d'une entrée fusionnée. */
+const RANK = new Map(Object.keys(MERGE).map((key, rank) => [key, rank]));
+
 /**
  * Combine les couches, de la moins à la plus spécifique (module → monde → item), clé par clé selon `MERGE`.
  * @param {Array<object|null|undefined>} layers
@@ -74,9 +77,15 @@ export const MERGE = Object.freeze({
 export function mergeEntries(layers) {
   let out = null;
   for ( const layer of layers ) {
-    if ( !isObject(layer) || !Object.keys(layer).length ) continue;
+    if ( !isObject(layer) ) continue;
+    const own = Object.keys(layer);
+    if ( !own.length ) continue;
     out ??= {};
-    for ( const [key, how] of Object.entries(MERGE) ) if ( key in layer ) out[key] = STRATEGIES[how](out[key], layer[key]);
+    // Les clés de la couche (une poignée), pas les centaines de `MERGE` : appelée pour chaque item de chaque acteur (`contentOf`).
+    // Rangées dans l'ordre de `MERGE`, comme avant — l'ordre des clés de l'entrée fusionnée ne change pas.
+    const keys = own.filter(key => RANK.has(key));
+    if ( keys.length > 1 ) keys.sort((a, b) => RANK.get(a) - RANK.get(b));
+    for ( const key of keys ) out[key] = STRATEGIES[MERGE[key]](out[key], layer[key]);
   }
   return out;
 }
