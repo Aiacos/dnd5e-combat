@@ -65,8 +65,10 @@ export function current(resolution) {
 /** Ceux que l'action atteint : les cibles touchées s'il y a un jet d'attaque, toutes sinon — hors celles qu'elle ne peut pas affecter. */
 export function affectedTargets(resolution) {
   const reachable = resolution.targets.filter(t => !t.unaffected);
-  // §28 : Sort mineur appuyé — une cible manquée par le tour de magie subit quand même la moitié des dégâts.
-  return resolution.plan.attack ? reachable.filter(t => (t.hit === true) || (resolution.plan.potent && (t.hit === false))) : reachable;
+  // §28 : Sort mineur appuyé — une cible manquée par le tour de magie subit quand même la moitié des dégâts. Un coup pris par une
+  // réplique (§16.25) ou arrêté par un abri total n'est pas un jet raté : rien pour cette cible.
+  const missed = t => (t.hit === false) && (t.reason !== "duplicate") && (t.reason !== "cover");
+  return resolution.plan.attack ? reachable.filter(t => (t.hit === true) || (resolution.plan.potent && missed(t))) : reachable;
 }
 
 /** Les cibles atteintes dont on attend encore la sauvegarde. */
