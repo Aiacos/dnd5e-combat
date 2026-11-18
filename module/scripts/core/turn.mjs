@@ -222,6 +222,9 @@ export function refundUse(current, before, after) {
   for ( const key of ["action", "bonus", "reaction", "limited"] ) {
     next[key] = Math.max(0, (current[key] ?? 0) + ((before[key] ?? 0) - (after[key] ?? 0)));
   }
+  // §19.6 : la réaction rendue ne compte plus pour son tour de jeu — sauf si une autre a été prise depuis (elle a posé sa marque).
+  const reactionBack = (before.reaction ?? 0) > (after.reaction ?? 0);
+  if ( reactionBack && (current.reactedAt === after.reactedAt) ) next.reactedAt = before.reactedAt ?? null;
   const usedDelta = (after.attacks?.used ?? 0) - (before.attacks?.used ?? 0);
   next.attacks.used = Math.max(0, next.attacks.used - usedDelta);
   // La première attaque avait ouvert l'action Attaquer : si plus rien n'en est utilisé, on la referme.
