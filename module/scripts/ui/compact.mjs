@@ -106,14 +106,72 @@ const midiBlocks = new Map();
 
 const escapeHTML = text => foundry.utils.escapeHTML(String(text ?? ""));
 
-/** Le détail des dés d'un jet, dans l'enveloppe repliable de dnd5e (que son gabarit fournit déjà, ou non selon la version). */
-async function breakdownOf(rolls) {
+/**
+ * Le détail des dés d'un jet, dans l'enveloppe repliable de dnd5e (que son gabarit fournit déjà, ou non selon la version), annoté
+ * comme sur la carte de Midi-QOL : le nom de ce que vaut chaque terme constant d'une attaque, le type sous le total des dégâts.
+ */
+async function breakdownOf(rolls, message) {
   const parts = await Promise.all(rolls.map(roll => roll.getTooltip().catch(() => "")));
-  const template = document.createElement("template");
-  template.innerHTML = parts.join("");
-  const tips = Array.from(template.content.querySelectorAll(".dice-tooltip"));
-  const merged = tips.length ? tips.map(tip => tip.innerHTML).join("") : template.innerHTML;
-  return `<div class="dice-tooltip-collapser"><div class="dice-tooltip">${merged}</div></div>`;
+  const holder = document.createElement("div");
+  const attack = message.type === "attack";
+  rolls.forEach((roll, index) => {
+    const template = document.createElement("template");
+    template.innerHTML = parts[index];
+    const tip = template.content.querySelector(".dice-tooltip") ?? template.content;
+    if ( attack ) nameConstants(tip, roll, message);
+    else nameDamage(tip, roll);
+    holder.append(...tip.childNodes);
+  });
+  return `<div class="dice-tooltip-collapser"><div class="dice-tooltip">${holder.innerHTML}</div></div>`;
+}
+
+/**
+ * Les termes constants d'un jet d'attaque sans nom : le modificateur de la caractéristique du jet, puis le bonus de maîtrise, quand
+ * leurs valeurs sont celles de l'acteur — sinon le terme reste sans nom (un bonus de situation n'est pas deviné).
+ */
+function nameConstants(tip, roll, message) {
+  const actor = message.speakerActor ?? ChatMessage.getSpeakerActor?.(message.speaker);
+  if ( !actor ) return;
+  const ability = roll.options?.ability;
+  const known = [
+    { value: actor.system?.abilities?.[ability]?.mod, label: CONFIG.DND5E?.abilities?.[ability]?.label },
+    { value: actor.system?.attributes?.prof, label: game.i18n.localize("DND5E.Proficiency") }
+  ].filter(k => Number.isFinite(k.value) && k.label);
+  for ( const part of tip.querySelectorAll(".tooltip-part.constant-term") ) {
+    const flavor = part.querySelector(".flavor");
+    if ( !flavor || flavor.textContent.trim() ) continue;
+    const value = Number(part.querySelector(".value")?.textContent.replace(/\s+/g, "").replace("−", "-"));
+    const at = known.findIndex(k => k.value === value);
+    if ( at < 0 ) continue;
+    flavor.textContent = known[at].label;
+    known.splice(0, at + 1);
+  }
+}
+
+/**
+ * Le détail d'un jet de dégâts ou de soins, comme Midi-QOL le montre : quand il n'a qu'un groupe de dés, ses termes constants
+ * rejoignent les dés et le total est celui du jet ; le type est écrit sous le total quand dnd5e ne l'a pas fait.
+ */
+function nameDamage(tip, roll) {
+  const dice = Array.from(tip.querySelectorAll(".tooltip-part:not(.constant-term)"));
+  const constants = Array.from(tip.querySelectorAll(".tooltip-part.constant-term"));
+  const list = dice[0]?.querySelector(".dice-rolls");
+  const unnamed = constants.every(part => !part.querySelector(".flavor")?.textContent.trim());
+  if ( (dice.length === 1) && list && constants.length && unnamed ) {
+    for ( const part of constants ) {
+      const li = document.createElement("li");
+      li.classList.add("constant");
+      li.append(...(part.querySelector(".value")?.childNodes ?? []));
+      list.append(li);
+      part.remove();
+    }
+    const value = dice[0].querySelector(".total .value");
+    if ( value && Number.isFinite(roll.total) ) value.textContent = roll.total;
+  }
+  const type = roll.options?.type;
+  const label = (CONFIG.DND5E?.damageTypes?.[type] ?? CONFIG.DND5E?.healingTypes?.[type])?.label;
+  if ( !label ) return;
+  for ( const total of tip.querySelectorAll(".total .label") ) if ( !total.textContent.trim() ) total.textContent = label;
 }
 
 /** L'étiquette d'un jet d'attaque : son mode. */
@@ -159,7 +217,7 @@ async function midiBlockOf(message, carrier) {
   if ( kept?.key === key ) return kept.block;
   const formula = escapeHTML(rolls.map(roll => roll.formula).join(" + "));
   const total = rolls.reduce((sum, roll) => sum + (roll.total ?? 0), 0);
-  const breakdown = await breakdownOf(rolls);
+  const breakdown = await breakdownOf(rolls, message);
   let html;
   if ( attack ) {
     const marks = (outcome?.icons ?? []).map(icon => `<i class="fas ${icon}" inert></i>`).join("");
