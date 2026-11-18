@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-359 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+360 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -13,6 +13,7 @@ la sélection sans rien jouer.
 | Scénario | Scène | § | Ce qu'il vérifie |
 |---|---|---|---|
 | `a-terre` |  | §17.1 | Mort / Inconscient à 0 PV, même hors combat |
+| `abri-grille` |  | §468 §200 | un sort et une attaque passent à travers des barreaux (§468) |
 | `abri-grotte` |  | §239 | case coupée par un mur de grotte : pas d'abri derrière soi |
 | `abri` |  |  | créature interposée, abri partiel +2 |
 | `actions-tour` |  | §15.2 | Pointe, Dague, Dague en main secondaire |

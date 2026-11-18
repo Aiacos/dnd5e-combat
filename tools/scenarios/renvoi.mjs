@@ -32,6 +32,21 @@ export default {
     if ( humanoid ) await ctx.call("move-token", { tokenId: humanoid.id, x: at.x - (2 * grid), y: at.y });
 
     // La Calcination, lancée jusqu'à ce que le mort-vivant rate sa sauvegarde (Sagesse 5 : presque toujours).
+    // §469 : sur une fiche au Manuel 3.0.0 (ou au SRD 6.1), l'item Calcination n'a plus d'activité : « Sear Undead » est sur le Conduit
+    // divin (content/cleric.mjs, SEAR_UNDEAD_61).
+    const items = (await ctx.call("get-actor", { actorId: alara.actorId })).items ?? [];
+    const searItem = items.find(i => i.system?.identifier === "sear-undead");
+    const oldForm = Object.keys(searItem?.system?.activities ?? {}).length > 0;
+    const channel = items.find(i => i.system?.identifier === "channel-divinity-cleric");
+    // Nouvelle forme : sans zone (« les morts-vivants de votre choix à 9 m ») — le Renvoi du Conduit divin, la Calcination cochée à la
+    // place (comme renvoi-choix), le Zombi et l'humanoïde désignés.
+    ctx.log(`Calcination : ${oldForm ? "activité de l'item Calcination (ancienne forme)" : "« Sear Undead » du Conduit divin, à la place du Renvoi"}`);
+    const searUse = async () => {
+      if ( oldForm ) return ctx.use({ tokenId: alara.id, identifier: "sear-undead", activityType: "save", consume: false,
+        area: { shape: "circle", ...center, radius: 6.5 * grid } });
+      const targetIds = [zombieId, ...(humanoid ? [humanoid.id] : [])];
+      return ctx.engine("castPicked", { tokenId: alara.id, itemId: channel?._id, activityId: "aOptL5pMaj3WtR8S", targetIds, upgrade: true });
+    };
     const center = { x: at.x + grid / 2, y: at.y + grid / 2 };
     let r = null;
     for ( let n = 1; n <= 6; n++ ) {
@@ -41,8 +56,7 @@ export default {
       for ( const e of await ctx.effects(zombie) ) {
         await ctx.call("remove-embedded-effect", { uuid: `Scene.${(await ctx.scene()).sceneId}.Token.${zombieId}.Actor.${undeadActor.id}`, effectId: e._id }).catch(() => {});
       }
-      const used = await ctx.use({ tokenId: alara.id, identifier: "sear-undead", activityType: "save", consume: false,
-        area: { shape: "circle", ...center, radius: 6.5 * grid } });
+      const used = await searUse();
       if ( used.regionId ) ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: used.regionId }).catch(() => {}));
       r = await ctx.settle(used.usageMessageId);
       if ( r.targets.find(t => t.token.endsWith(zombieId))?.save?.success === false ) break;
