@@ -14,11 +14,8 @@
 
 /* Résultat en rangées (réglage `chatRows`, ui/chat.mjs) : la liste de cibles de dnd5e (`.evaluation .target`), comme la carte de
    Midi-QOL — couleurs, polices et espacements sont ceux du système. Ici seulement ce que dnd5e n'a pas : le portrait du token
-   (taille et cadre repris de Midi-QOL, aux couleurs du système), le corps du nom ramené à celui de Midi-QOL, et le nom barré d'un
-   résultat annulé. */
+   (taille et cadre repris de Midi-QOL, aux couleurs du système), et le nom barré d'un résultat annulé. */
 .dnd5e-combat-rows .target { cursor: default; }
-.dnd5e-combat-rows .target .name-stacked { min-height: auto; }
-.dnd5e-combat-rows .target .name-stacked .title { font-size: var(--font-size-14); }
 .dnd5e-combat-rows .target > img {
   flex: 0 0 22px; width: 22px; height: 22px; object-fit: cover; object-position: top; border-radius: 100%;
   border: 1px solid var(--dnd5e-color-gold); box-shadow: 0 0 2px var(--dnd5e-shadow-45);
