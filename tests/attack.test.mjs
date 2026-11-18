@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveAttack } from "../module/scripts/core/attack.mjs";
+import { resolveAttack, hitsRegardless, attackMark } from "../module/scripts/core/attack.mjs";
 
 const gobelin = { token: "Scene.s.Token.g", name: "Gobelin", ac: 15 };
 const ogre = { token: "Scene.s.Token.o", name: "Ogre", ac: 11 };
@@ -103,5 +103,38 @@ describe("O8e (§348) : Désavantage avec les autres armes", () => {
     expect(validateEntry({ exclusiveWeapon: { whileEffect: "EWoLqkPJeK9dwYhn" } })).toEqual([]);
     expect(validateEntry({ exclusiveWeapon: { whileEffect: "x" } }).length).toBe(1);
     expect(validateEntry({ exclusiveWeapon: false }).length).toBe(1);
+  });
+});
+
+describe("hitsRegardless : le jet que l'Inspiration ne peut plus rattraper", () => {
+  it("un 19 au seuil abaissé ne touche pas d'office : raté, l'Inspiration reste proposée", () => {
+    const champion = roll(24, { isCritical: true, natural: 19 });
+    expect(hitsRegardless(champion)).toBe(false);
+    // Ce que lit `inspiredAttack` (runtime/engine-messages.mjs) ensuite : la cible ratée, donc l'offre.
+    expect(resolveAttack(champion, [{ ...gobelin, ac: 25 }]).filter(t => t.reason === "miss")).toHaveLength(1);
+    // Le dé d'Inspiration ajouté (+2) : le même 19 devient un coup critique.
+    expect(resolveAttack({ ...champion, total: 26 }, [{ ...gobelin, ac: 25 }])[0]).toMatchObject({ hit: true, critical: true });
+  });
+  it("un 20 naturel, ou un critique sans d20 noté, touche d'office ; un jet ordinaire ou un 1 naturel, non", () => {
+    expect(hitsRegardless(roll(21, { isCritical: true, natural: 20 }))).toBe(true);
+    expect(hitsRegardless(roll(21, { isCritical: true }))).toBe(true);
+    expect(hitsRegardless(roll(21))).toBe(false);
+    expect(hitsRegardless(roll(6, { isFumble: true }))).toBe(false);
+  });
+});
+
+describe("attackMark : ce que la carte annonce du jet", () => {
+  const champion = roll(24, { isCritical: true, natural: 19 });
+  it("un 19 au seuil abaissé qui rate n'est pas annoncé critique ; le même qui touche, si", () => {
+    expect(attackMark(champion, resolveAttack(champion, [{ ...gobelin, ac: 25 }]))).toBe(null);
+    expect(attackMark(champion, resolveAttack(champion, [{ ...gobelin, ac: 25 }, { ...ogre }]))).toBe("critical");
+  });
+  it("sans verdict (carte sans résolution) : annoncé, comme le fait le système", () => {
+    expect(attackMark(champion)).toBe("critical");
+  });
+  it("20 naturel : critique même si le verdict manque ou l'écarte ; 1 naturel : échec ; jet ordinaire : rien", () => {
+    expect(attackMark(roll(21, { isCritical: true, natural: 20 }), [])).toBe("critical");
+    expect(attackMark(roll(6, { isFumble: true, natural: 1 }))).toBe("fumble");
+    expect(attackMark(roll(17, { natural: 12 }), [])).toBe(null);
   });
 });

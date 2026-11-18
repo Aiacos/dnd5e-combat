@@ -7,7 +7,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { STEPS } from "../core/action.mjs";
 import { readAttackMessage, readDamageMessage } from "../adapter/messages.mjs";
 import { readSaveMessage, repairSaveAbility } from "../adapter/saves.mjs";
-import { resolveAttack } from "../core/attack.mjs";
+import { resolveAttack, hitsRegardless } from "../core/attack.mjs";
 import { offerInspiration, offerRollBonus, keptD20 } from "../adapter/inspiration.mjs";
 import { readUsage } from "../adapter/usage.mjs";
 import { canResistSave, askLegendary, resistSave, legendaryLeft } from "../adapter/legendary.mjs";
@@ -59,7 +59,8 @@ async function inspiredAttack(message, roll, targets) {
       return { ...roll, isFumble: false, total: Math.max(roll.total, needed), inspired: Math.max(0, needed - roll.total) };
     }
   }
-  if ( roll.isFumble || roll.isCritical ) return roll;
+  // Un 19 au seuil de critique abaissé qui rate reste rattrapable : seul le jet qui touche d'office (20 naturel) passe.
+  if ( roll.isFumble || hitsRegardless(roll) ) return roll;
   const missed = resolveAttack(roll, targets.filter(t => !t.unaffected)).filter(t => t.reason === "miss");
   if ( !missed.length ) return roll;
   if ( !actor ) return roll;
