@@ -32,6 +32,14 @@ export default {
     const druid = await ctx.token("Druide");
     const homes = new Map();
     for ( const t of [fighter, bandit, cleric, druid] ) homes.set(t.id, { pos: await ctx.position(t), hp: await ctx.hp(t) });
+    // Debout le temps du scénario : un Guerrier laissé À terre dans le monde (vu le 2026-11-18, depuis le 11/11) donne l'Avantage au Bandit,
+    // qui annule le Désavantage de la réaction — le jet restait « 1d20 » selon l'ordre de la passe. Remis comme trouvé à la fin.
+    for ( const t of [fighter, bandit] ) {
+      if ( !(await ctx.effects(t)).some(e => (e.statuses ?? []).includes("prone")) ) continue;
+      await ctx.removeStatusEffects(t, "prone");
+      ctx.restore(() => ctx.call("set-status", { tokenId: t.id, statusId: "prone", active: true }).catch(() => {}));
+      ctx.log(`${t.name} relevé le temps du scénario (À terre dans le monde)`);
+    }
     // Restored Keep, colonne x = 3080 : le Clerc et le Druide en 4760 et 4900 (à 9 m du Bandit), le Guerrier en 5040, le Bandit en 5180.
     const spot = { cleric: { x: 3080, y: 4760 }, druid: { x: 3080, y: 4900 }, fighter: { x: 3080, y: 5040 }, bandit: { x: 3080, y: 5180 } };
     const place = async (t, p) => { await ctx.call("move-token", { tokenId: t.id, x: p.x, y: p.y, elevation: 0 }); await pause(600); };
