@@ -454,6 +454,10 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
     expect(validateEntry({ summon: { initiative: "after" } }, { facts })).toEqual([]);
     expect(validateEntry({ summon: { initiative: "first", count: 2 } }, { facts })).toEqual(["summon.initiative: \"after\", \"own\" or \"none\""]);
     expect(validateEntry({ summon: { initiative: "own", count: 2 } }, { facts })).toEqual(["summon.count: unknown key"]);
+    // §394 : une invocation ne se vise que si `targetedSummon` le demande ; `untargeted` ne se lit plus nulle part — le contenu livré
+    // ne le déclare plus, une table déjà écrite qui le porte reste valide.
+    expect(Object.keys(SHIPPED).filter(id => "untargeted" in (SHIPPED[id].summon ?? {}))).toEqual([]);
+    expect(validateEntry({ summon: { initiative: "own", untargeted: true } }, { facts })).toEqual([]);
   });
 
   it("marque consommée (B10) : un côté, au moment preAttackRoll, portée par un effet", () => {

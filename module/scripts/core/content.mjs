@@ -46,8 +46,9 @@
  *                                               quand sa zone est déjà là la déplace vers la case cliquée, au prix de
  *                                               l'activation de l'activité, sans emplacement
  *     summon?: { initiative: "after"|"own"|"none", pilot?, endsSpell?, untargeted?, chooseCount? }
- *                                               §385 : `untargeted` — l'activité d'invocation se lance sans viser (pas de corps à
- *                                               désigner) ; `chooseCount` — « jusqu'à N » créatures : le lanceur choisit combien
+ *                                               §385 : `untargeted` — accepté, sans effet : depuis §394 une invocation ne se vise
+ *                                               que sur demande (`targetedSummon`) ; `chooseCount` — « jusqu'à N » créatures :
+ *                                               le lanceur choisit combien
  *                                               dans la fenêtre « Choisir la forme » (avec le niveau), N selon le niveau du sort :
  *                                               true = le `count` du profil, ou une formule (§387, Animation des morts).
  *                                               les créatures invoquées entrent au combat (§16.13, B12) : `after` =
