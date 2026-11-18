@@ -1,5 +1,5 @@
 /** §272 : minuteries au-dessus des tokens — ce qui se calcule sans Foundry. */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { TIMER_GRADIENT, timerSecondsText, timerState } from "../module/scripts/core/timers.mjs";
 
 describe("minuteries", () => {
@@ -15,5 +15,55 @@ describe("minuteries", () => {
   });
   it("le dégradé du logo DAS", () => {
     expect(TIMER_GRADIENT).toEqual(["#e005f4", "#ee0388", "#fc0016"]);
+  });
+});
+
+/** Le strict nécessaire de Foundry et de PIXI pour faire tourner `ui/timers.mjs` : un token, un ticker, des dessins inertes. */
+function fakeCanvas() {
+  const state = { tick: null, present: true };
+  const scene = {};
+  const document = { id: "tok1", uuid: "Scene.s.Token.tok1", parent: scene };
+  const token = { destroyed: false, document, isVisible: true, center: { x: 0, y: 0 }, y: 0 };
+  class Node {
+    position = { set() {} }; anchor = { set() {} }; width = 10; height = 10; rotation = 0;
+    addChild(...children) { return children[0]; }
+    destroy() {}
+    beginFill() { return this; }
+    endFill() { return this; }
+    drawRoundedRect() { return this; }
+    lineStyle() { return this; }
+  }
+  const gradient = { addColorStop() {} };
+  vi.stubGlobal("PIXI", { Container: Node, Graphics: Node, Text: Node, Sprite: Node, Texture: { from: () => ({}) } });
+  vi.stubGlobal("document", { createElement: () => ({ getContext: () => ({ createLinearGradient: () => gradient, fillRect() {} }) }) });
+  const canvas = { ready: true, scene, grid: { size: 100 },
+    app: { ticker: { add: fn => { state.tick = fn; }, remove: () => { state.tick = null; } } },
+    tokens: { get: id => ((state.present && (id === "tok1")) ? token : null) } };
+  canvas.interface = { addChild: child => { child.parent = canvas.interface; return child; } };
+  vi.stubGlobal("canvas", canvas);
+  vi.stubGlobal("game", { users: [], settings: { get: () => false }, i18n: { localize: k => k, format: k => k } });
+  vi.stubGlobal("CONFIG", { queries: {} });
+  vi.stubGlobal("foundry", { utils: { randomID: () => "id1" } });
+  vi.stubGlobal("fromUuidSync", uuid => ((uuid === document.uuid) ? document : null));
+  return { state, uuid: document.uuid };
+}
+
+describe("minuterie dessinée (ui)", () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+
+  it("se termine à l'heure même si son token n'est plus là", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { state, uuid } = fakeCanvas();
+    const { startTimer } = await import("../module/scripts/ui/timers.mjs");
+    const timer = startTimer({ token: uuid, seconds: 2 });
+    let done = false;
+    timer.done.then(() => { done = true; });
+    state.tick({ deltaTime: 1 });
+    state.present = false;                 // le token est supprimé (ou ce client change de scène)
+    vi.advanceTimersByTime(60_000);
+    state.tick?.({ deltaTime: 1 });
+    await Promise.resolve();
+    expect(done).toBe(true);
+    expect(state.tick).toBe(null);         // plus rien à animer : le ticker est rendu
   });
 });
