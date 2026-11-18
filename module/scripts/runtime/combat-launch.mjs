@@ -212,11 +212,20 @@ async function followSummons(combat) {
   if ( updates.length ) await combat.updateEmbeddedDocuments("Combatant", updates);
 }
 
-/** Le premier round, dès que tout le monde a lancé. */
+/** Les combats dont le premier round est demandé au serveur, pas encore confirmé. */
+const starting = new Set();
+
+/**
+ * Le premier round, dès que tout le monde a lancé. `combat.started` ne change qu'à la réponse du serveur, et une réponse qui porte
+ * plusieurs initiatives (PNJ groupés, invocations qui suivent leur maître) passe ici une fois par combattant : le départ en cours
+ * est noté, pour ne pas commencer le combat plusieurs fois.
+ */
 async function startWhenReady(combat) {
-  if ( !combat || combat.started || (state().combat !== combat.id) ) return;
+  if ( !combat || combat.started || starting.has(combat.id) || (state().combat !== combat.id) ) return;
   if ( !allRolled(combat.combatants.map(c => c.initiative)) ) return;
-  await combat.startCombat();
+  starting.add(combat.id);
+  try { await combat.startCombat(); }
+  finally { starting.delete(combat.id); }
   log("combat launch: everyone rolled, round 1 starts");
 }
 
