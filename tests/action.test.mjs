@@ -658,3 +658,12 @@ describe("§402 : réussite d'office par type", () => {
     expect(r.commands.find(c => c.type === "requestSaves")?.targets.map(t => t.token)).toEqual(["t2"]);
   });
 });
+
+describe("évènement inconnu", () => {
+  it("un type hérité de Object.prototype n'est pas une transition : la résolution revient telle quelle", () => {
+    const { resolution } = open({ ...base, plan: { attack: true }, targets: [T(1)] });
+    for ( const type of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__", "inconnu", undefined] ) {
+      expect(advance(resolution, { type })).toEqual({ resolution, commands: [] });
+    }
+  });
+});
