@@ -92,7 +92,11 @@ export const SRD_ALIASES = Object.freeze({
   "arcane-sword": "mordenkainens-sword", "faithful-hound": "mordenkainens-faithful-hound",
   "magnificent-mansion": "mordenkainens-magnificent-mansion",
   // §438 : le Manuel des joueurs 3.0.0 prend aussi ces identifiants du SRD.
-  "storm-of-radiance": "jallarzis-storm-of-radiance"
+  "storm-of-radiance": "jallarzis-storm-of-radiance",
+  // Même trou, hors des sorts de mage déjà relevés : un sort et trois objets que le SRD 2024 renomme en gardant l'id de document et les
+  // ids d'activité et d'effet du livre (vérifié dans `dnd5e.spells24` et `dnd5e.equipment24`, dnd5e 6.1.0).
+  "freezing-sphere": "otilukes-freezing-sphere", "iron-bands": "iron-bands-of-bilarro", "crawler-mucus": "carrion-crawler-mucus",
+  "spiders-sting": "lolths-sting"
 });
 
 function build() {
