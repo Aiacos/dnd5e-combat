@@ -394,7 +394,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.mcp.waits` | `()` | `runtime/testing.mjs` | §290 : les attentes du MJ (fenêtres du combat sans délai) — `{ waits: [...], window: bool }`. |
 | `api.mcp.wall` | `({ tokenId, itemId, activityId=null, points })` | `runtime/testing-areas.mjs` | §162 : un mur posé par points, comme la visée de l'interface le ferait après les clics (ui/pointer.mjs, `aimWall`) : l'activité est utilisée avec les points (`aimed: { type: "wall", points }`), la région et ses murs sui… |
 | `api.mcp.wallSide` | `({ regionId, flip=false })` | `runtime/testing-areas.mjs` | §169 : l'état d'un mur à face brûlante — son côté, sa face brûlante (id, formes), ses murs du cœur ; `flip: true` la retourne d'abord (comme l'entrée du menu du lanceur). |
-| `api.mcp.windows` | `()` | `runtime/testing-shared.mjs` | Les fenêtres ouvertes chez le MJ (ApplicationV2) : pour retrouver un dialogue qu'un déplacement bloqué attend. |
+| `api.mcp.windows` | `()` | `runtime/testing-shared.mjs` | Les fenêtres ouvertes chez le MJ (ApplicationV2) : pour retrouver un dialogue qu'un déplacement bloqué attend. L'interface fixe du cœur (barre latérale, journal de discussion, onglet des tokens, barre de macros…) est au… |
 
 ## `api.nonLethal`
 
