@@ -28,6 +28,12 @@ jobs:
           echo "tag=${GITHUB_REF_NAME} module.json=${VER}"
           test "${GITHUB_REF_NAME}" = "v${VER}"
 
+      # Avant de publier : un tag posé sur un commit dont les tests échouent partirait sinon chez toutes les tables.
+      - name: Tests
+        run: |
+          npm ci
+          npm test
+
       - name: Compendiums
         run: |
           if node -e "process.exit(require('./package.json').scripts?.packs ? 0 : 1)"; then
