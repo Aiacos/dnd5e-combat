@@ -183,22 +183,25 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false }=
   if ( outsideCone(observer, target) ) return false;   // §182 : hors combat, une créature du MJ ne voit que devant elle
   if ( !ignoreHidden && hiddenFrom(observer, target) ) return false;   // §185 : caché, pour un ennemi qui ne l'a pas repéré
   if ( !perceivesPlane(observer, target) ) return false;   // §225 : d'un plan à l'autre, seulement avec une vue de l'Éthéré
-  // Un sens déclaré par du contenu (`sense`) : il localise sans voir — ni la brume ni les ténèbres ne l'arrêtent —, ou compte comme
-  // une vue, jugée plus bas comme les autres vues.
-  const declared = sensedBy(observer, target, sceneBetween(observer, target));
-  if ( locating && ((declared === "locate") || (declared === "sight")) ) return true;
+  // §16.24 et §16.31 : une zone qui bloque la vue (Nappe de brouillard, Ténèbres) entre les deux, ou autour de l'un d'eux. Lue une
+  // fois, et seulement si quelqu'un la demande (une vue déclarée, puis les vues de la fiche).
+  let zone = null;
+  const between = () => (zone ??= blockedBetween(observer, target));
+  // Un sens déclaré par du contenu (`sense`) : il localise sans voir — ni la brume ni les ténèbres ne l'arrêtent —, ou il compte
+  // comme une vue : pas d'une cible Invisible, pas à travers une brume, et à travers des ténèbres seulement s'il les perce.
+  const declared = sensedBy(observer, target, sceneBetween(observer, target, between));
+  if ( declared === "sight" ) return true;
+  if ( locating && (declared === "locate") ) return true;
   const source = sourceFor(observer);
   if ( !source ) return null;
   const config = testsFor(target, observer);
 
-  // §16.24 et §16.31 : une zone qui bloque la vue (Nappe de brouillard, Ténèbres) entre les deux, ou autour de l'un
-  // d'eux : la vue ne passe pas — seuls jugent les sens qui ne voient pas, et, dans des ténèbres, la vision véritable et
-  // la Vision du diable.
-  const blocked = blockedBetween(observer, target);
+  // La vue ne passe pas la zone — seuls jugent les sens qui ne voient pas, et, dans des ténèbres, la vision véritable et la
+  // Vision du diable.
+  const blocked = between();
   if ( blocked.fog || blocked.darkness ) return seesThroughBlock(observer, target, source, config, blocked, locating);
   // §447 : seules des Ténèbres lancées par l'observateur, qui voit à travers (`seesThroughOwnDarkness`) : « il voit normalement ».
   if ( blocked.ownDarkness && devilsSightSeesToken(observer, target, blocked) ) return true;
-  if ( declared === "sight" ) return true;
 
   // Lumières qui donnent la vue (le cœur les teste en premier, pour tout le monde).
   for ( const light of canvas.effects.lightSources ) {
@@ -248,9 +251,25 @@ export function sensedThrough(observer, target) {
   return sensedBy(observer, target, sceneBetween(observer, target));
 }
 
-/** Ce que `sensedBy` lit de la scène entre deux tokens : la distance, et s'il y a un mur de vue (ténèbres écartées). */
-function sceneBetween(observer, target) {
-  return { distance: () => distanceBetween(observer, target).value, walled: () => !lineOfSightThrough(observer, target) };
+/**
+ * Ce que `sensedBy` lit de la scène entre deux tokens : la distance, un mur de vue (ténèbres écartées), l'observateur Aveuglé ou
+ * Assourdi, la cible Invisible pour lui, la zone qui bloque la vue entre eux (`blocked` : celle que l'appelant a déjà lue).
+ */
+function sceneBetween(observer, target, blocked=() => blockedBetween(observer, target)) {
+  return {
+    distance: () => distanceBetween(observer, target).value,
+    walled: () => !lineOfSightThrough(observer, target),
+    blind: () => isBlind(observer),
+    deaf: () => observer.actor?.statuses?.has?.("deafened") ?? false,
+    invisible: () => invisibleTo(observer, target),
+    blocked
+  };
+}
+
+/** La cible est-elle Invisible pour cet observateur : elle porte l'état, il ne voit pas l'Invisible, rien ne la révèle ? */
+function invisibleTo(observer, target) {
+  if ( !target.hasStatusEffect?.(CONFIG.specialStatusEffects.INVISIBLE) ) return false;
+  return !(revealedInvisible(target.actor, observer?.actor) || seesInvisible(observer?.actor));
 }
 
 /** C12-e : la cible porte Vision ombreuse et se tient dans les ténèbres. */
