@@ -19,6 +19,12 @@
  * joue que nommé. `scene` : "keep" (Restored Keep), un nom de scène (« metres », « Redbrand Hideout [30x20] » : la scène de ce
  * nom, le scénario sauté si elle manque), ou rien (l'arène de test).
  *
+ * Un scénario marqué `players: true` a besoin d'un vrai client joueur : le banc de test (`Dev Foundry/banc-de-test`) en ouvre un
+ * (« claude player », Chrome à part) pour ce scénario seul, le lui prête comme `ctx.asPlayer(code, args)` — `code` est le corps
+ * d'une fonction async exécutée dans la page du joueur, qui rend un résultat JSON — puis le ferme. Le lanceur le trouve par la
+ * variable BANC_JOUEUR (le pilote du banc, `lib/joueur.mjs`) ; sans elle (le Foundry de l'utilisateur), le scénario est non
+ * applicable. Jamais pour toute la passe : les autres scénarios supposent qu'aucun joueur n'est connecté.
+ *
  * Prérequis : serveur du connecteur lancé, monde de test ouvert chez le MJ (réglage « Outils de
  * test » activé), scène affichée avec les tokens que le scénario nomme, et **F5 du client du MJ
  * après tout changement du moteur** (c'est lui qui l'exécute). Un scénario remet en état ce qu'il
@@ -118,6 +124,8 @@ function makeContext(mcp) {
   const ctx = {
     call: (tool, args) => mcp.call(tool, args),
     log: (...args) => console.log("   ", ...args),
+    /** Du code dans la page du client joueur (`players: true` seulement ; remplacé par le lanceur). */
+    asPlayer: async () => { throw new Error("ctx.asPlayer : le scénario ne déclare pas players: true"); },
 
     /**
      * Une fonction de test du moteur (`api.mcp`, runtime/testing.mjs) par `call-module-api` (connecteur ≥ 0.28.0). Une
@@ -670,6 +678,22 @@ let mcp;
 try { mcp = await connect(); }
 catch(err) { console.error(err.message); process.exit(2); }
 
+// Le pilote du client joueur du banc (`players: true`) : `ouvrir()`, `evaluer(code, args)`, `fermer()`. Absent hors du banc.
+const playerDriver = process.env.BANC_JOUEUR
+  ? await import(pathToFileURL(process.env.BANC_JOUEUR).href).catch(err => { console.log(`⚠ client joueur du banc indisponible : ${err.message}`); return null; })
+  : null;
+
+/** Après la fermeture du client joueur : le MJ ne voit plus aucun joueur connecté (10 s au plus), comme les scénarios suivants le supposent. */
+async function playerGone() {
+  for ( let i = 0; i < 20; i++ ) {
+    const players = await callEngine(mcp, "status").then(r => r?.players).catch(() => null);
+    if ( players === 0 ) return true;
+    await sleep(500);
+  }
+  console.log("    ⚠ un joueur paraît encore connecté après la fermeture du client joueur");
+  return false;
+}
+
 /** Message et début de pile d'une erreur du client, pour situer le fautif (moteur, système, autre module). */
 const describeError = e => (e.message ?? e.text ?? "")
   + (e.stack ? "\n        " + String(e.stack).split("\n").filter(l => /\bat\b/.test(l)).slice(0, 12).join("\n        ") : "");
@@ -961,6 +985,7 @@ for ( const file of files ) {
   // le scénario n'est pas applicable.
   const own = (scenario.scene && (scenario.scene !== "keep")) ? namedScene(scenario.scene) : null;
   if ( scenario.scene && (scenario.scene !== "keep") && !own ) { console.log(`    scène « ${scenario.scene} » absente : non applicable`); skipped++; continue; }
+  if ( scenario.players && !playerDriver ) { console.log("    client joueur absent (seul le banc de test en ouvre un) : non applicable"); skipped++; continue; }
   if ( own ) {
     if ( own.id !== activeNow ) previous = null;
     await useScene(own.id);
@@ -977,6 +1002,7 @@ for ( const file of files ) {
     }
   }
   const ctx = makeContext(mcp);
+  if ( scenario.players ) ctx.asPlayer = (code, args=null) => playerDriver.evaluer(code, args);
   let ownChecks = 0;
   if ( previous ) {
     const now = await snapshotScene(mcp).catch(() => null);
@@ -999,6 +1025,11 @@ for ( const file of files ) {
   const seq0 = await ctx.engine("sequencer").catch(() => null);
   try {
     await ctx.clientErrors();   // vide le tampon
+    if ( scenario.players ) {
+      const t0 = Date.now();
+      await playerDriver.ouvrir();
+      console.log(`    client joueur ouvert (${Math.round((Date.now() - t0) / 1000)} s)`);
+    }
     await scenario.run(ctx);
     ownChecks = ctx.checks;
     if ( ctx.failures.length ) for ( const line of await ctx.engineLog() ) console.log(`      · ${line.slice(0, 200)}`);
@@ -1008,6 +1039,10 @@ for ( const file of files ) {
     console.log(`    ✗ interrompu : ${err.message}`);
     ctx.failures.push(err.message);
   } finally {
+    if ( scenario.players ) {
+      await playerDriver.fermer().catch(err => console.log(`    ! client joueur : ${err.message}`));
+      if ( await playerGone() ) console.log("    client joueur fermé");
+    }
     await ctx.undoAll();
     await sleep(1500);   // les suppressions de la remise en état (auras, états) se propagent
     await restoreScene(mcp, snap).catch(err => console.log(`    ! filet de sécurité : ${err.message}`));
