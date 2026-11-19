@@ -106,6 +106,17 @@ export function dragAllowance(cap, spent, multiplier) {
 }
 
 /**
+ * La Vitesse de la créature est-elle 0 — aucun mode de déplacement ne lui reste (Agrippé, Entravé, Paralysé, Inconscient… : dnd5e
+ * met alors toutes ses vitesses à 0) ? Le saut n'est pas une Vitesse. Sans données de déplacement : non.
+ * @param {Record<string, number>|null|undefined} speeds  `system.attributes.movement.speeds` (ou `movement` avant dnd5e 6).
+ * @returns {boolean}
+ */
+export function speedIsZero(speeds) {
+  if ( !speeds || (typeof speeds !== "object") ) return false;
+  return !["walk", "burrow", "climb", "fly", "swim"].some(mode => (Number(speeds[mode]) || 0) > 0);
+}
+
+/**
  * §229 : la vitesse qui borne un déplacement selon l'action de déplacement du token (marche, vol, nage…), comme la règle de dnd5e
  * la colore (canvas/ruler.mjs, `#getSpeedBasedStyle`) : la vitesse de cette action ; pour une action qui retombe sur la marche
  * (`walkFallback` : escalade, nage) ou qui n'est pas un mode de dnd5e (`ethereal`, ramper…), la plus grande des deux. Avant, le moteur
