@@ -35,7 +35,8 @@ beforeAll(async () => {
     canvas: { perception: { DetectionMode }, placeables: { Token: class {} },
       rendering: { filters: { OutlineOverlayFilter: { create: ({ outlineColor }) => ((outlineColor[0] > 0.7) ? sensing : hearing) } } } } };
   globalThis.fromUuidSync = () => null;
-  globalThis.CONFIG = { DND5E: {}, specialStatusEffects: {}, queries: {}, Canvas: { detectionModes: {} } };
+  globalThis.CONFIG = { DND5E: {}, specialStatusEffects: {}, queries: {}, Canvas: { detectionModes: {} },
+    Token: { documentClass: { DEFAULT_ICON: "icons/svg/mystery-man.svg" } } };
   // Ce que `buildMark` dessine : des conteneurs PIXI sans rendu.
   class Node {
     constructor() {
@@ -57,7 +58,7 @@ beforeAll(async () => {
     endFill() { return this; }
     lineStyle() { return this; }
   }
-  globalThis.PIXI = { Container: Node, Graphics, Text: Node };
+  globalThis.PIXI = { Container: Node, Graphics, Text: Node, Sprite: Node, Texture: { from: path => ({ path }) } };
   globalThis.canvas = { ready: true, scene: {}, grid: { size: 100 }, interface: layer, tokens: { placeables: [] } };
   const { registerPerception } = await import("../module/scripts/ui/perception.mjs");
   registerPerception();
@@ -112,7 +113,7 @@ describe("issue #42 : l'oreille des créatures entendues", () => {
     const heard = tokenOf("anon", { detectionFilter: hearing });
     heard.visible = true;
     Object.assign(heard, { w: 100, h: 100, mesh: { visible: true }, nameplate: { visible: true }, bars: { visible: true },
-      effects: { visible: true }, renderFlags: { set: f => flags.push(f) } });
+      effects: { visible: true }, border: { visible: true }, renderFlags: { set: f => flags.push(f) } });
     heard.constructor = { RENDER_FLAGS: { refreshState: {}, refreshBars: {}, refreshNameplate: {} } };
     // Éteint : rien n'est touché.
     fire("refreshToken", heard, {});
@@ -123,6 +124,12 @@ describe("issue #42 : l'oreille des créatures entendues", () => {
     fire("refreshToken", heard, {});
     expect(heard.mesh.visible).toBe(false);
     expect([heard.nameplate.visible, heard.bars.visible, heard.effects.visible]).toEqual([false, false, false]);
+    expect(heard.border.visible).toBe(false);
+    // La silhouette par défaut du cœur, à la taille du token, sous le contour de l'ouïe.
+    const stand = layer.children[0].children.at(-1).children.find(child => child.filters);
+    expect(stand.visible).toBe(true);
+    expect([stand.width, stand.height]).toEqual([100, 100]);
+    expect(stand.filters).toEqual([hearing]);
     heard.mesh.visible = true;
     fire("refreshToken", heard, {});
     expect(heard.mesh.visible).toBe(false);

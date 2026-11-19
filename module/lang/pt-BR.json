@@ -625,7 +625,7 @@
   "DND5ECOMBAT.Reglage.hearingRange.Nom": "Alcance da audição (regra da casa)",
   "DND5ECOMBAT.Reglage.hearingRange.Aide": "As regras não dão alcance à audição: uma criatura que não está escondida é ouvida onde nenhuma parede detenha o som. Deixe vazio para manter essa regra. Caso contrário, uma fórmula em pés lida em cada criatura, além da qual ela não ouve nada: por exemplo 15 + 2.5 * (@skills.prc.passive - 10).",
   "DND5ECOMBAT.Reglage.anonymousLocated.Nom": "Localizado, mas não visto: marcador anônimo",
-  "DND5ECOMBAT.Reglage.anonymousLocated.Aide": "Uma criatura ouvida ou localizada por um sentido sem ser vista normalmente mantém sua imagem, com um contorno. Marcada: ela é mostrada por um marcador anônimo — sem imagem, nome, barras ou ícones de condição: sua posição é conhecida, não sua identidade.",
+  "DND5ECOMBAT.Reglage.anonymousLocated.Aide": "Uma criatura ouvida ou localizada por um sentido sem ser vista normalmente mantém sua imagem, com um contorno. Marcada: ela é mostrada pela silhueta padrão de token, sob o mesmo contorno — sem imagem, nome, barras, ícones de condição ou borda colorida: sua posição é conhecida, não sua identidade.",
   "DND5ECOMBAT.Reglage.twilightDarkness.Nom": "Crepúsculo: limiar de escuridão",
   "DND5ECOMBAT.Reglage.twilightDarkness.Aide": "Acima deste nível de escuridão da cena, uma luz global plena conta como Penumbra para o sistema (amanhecer e entardecer), até acabar seu alcance. Útil com módulos de tempo que alteram a escuridão (Simple Timekeeping). 1: nunca. A exibição do Foundry não muda.",
   "DND5ECOMBAT.ChoixSauvegarde.Titre": "{name}: qual salvaguarda?",
