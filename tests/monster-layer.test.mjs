@@ -17,6 +17,20 @@ describe("§460 : monsterTextLayer", () => {
       activities: [{ id: "aaaaaaaaaaaaaaaa", type: "attack" }] });
     expect(layer.drain).toBe(true);
   });
+  // Vu en jeu : deux monstres portent la même Disparition (même identifiant, mêmes ids) ; déclarée par identifiant, la fin « après
+  // un jet d'attaque » du Feu follet faisait aussi tomber l'Invisible de l'autre, dont le texte ne la prévoit pas. Exemples
+  // synthétiques, de même tournure.
+  it("un effet qui cesse après un jet d'attaque : lu dans le texte, pas dans l'identifiant", () => {
+    const effects = [{ id: "cccccccccccccccc", statuses: ["invisible"] }];
+    const activities = [{ id: "dddddddddddddddd", type: "utility", effects: ["cccccccccccccccc"] }];
+    const untilAttack = "<p>The beast has the &Reference[Invisible] condition until its Concentration ends on this effect, "
+      + "which ends early immediately after the beast makes an attack roll or uses Drain.</p>";
+    const atWill = "<p>The beast gives itself the &Reference[Invisible] condition or ends that condition on itself.</p>";
+    expect(monsterTextLayer({ html: untilAttack, identifier: "vanish", activities, effects }).breaksOn).toEqual(["attack"]);
+    expect(monsterTextLayer({ html: atWill, identifier: "vanish", activities, effects })?.breaksOn).toBeUndefined();
+    // Sans effet à faire tomber : rien à déclarer.
+    expect(monsterTextLayer({ html: untilAttack, identifier: "vanish", activities: [], effects: [] })?.breaksOn).toBeUndefined();
+  });
   it("la brique Avaler écarte les dégâts récurrents lus dans le texte", () => {
     const html = "<p>The target takes [[/damage 10 activity=bbbbbbbbbbbbbbbb]] Acid damage at the start of each of its turns.</p>";
     const acts = [{ id: "bbbbbbbbbbbbbbbb", type: "damage" }];

@@ -671,6 +671,20 @@ export function monsterLightSensitivity(html) {
   return [{ on: "preAttackRoll", if: { [fact]: true }, do: [{ type: "disadvantage" }] }];
 }
 
+/**
+ * Les effets qu'une capacité pose sur son porteur et qui cessent dès qu'il attaque : « ends early immediately after the X makes
+ * an attack roll » (Disparition du Feu follet, SRD 5.2) → `breaksOn: ["attack"]`. Lu dans le texte, pas déclaré par identifiant :
+ * un autre monstre porte le même item — même identifiant, mêmes ids d'activité et d'effet — sans cette fin dans son texte.
+ * L'autre fin que le texte du Feu follet nomme (l'emploi d'une autre capacité) reste au MJ.
+ * @param {string} html
+ * @returns {string[]|null}
+ */
+export function monsterBreaksOn(html) {
+  const text = plainText(html);
+  if ( !text ) return null;
+  return /\bends? early immediately after\b[^.]*\bmakes an attack roll\b/i.test(text) ? ["attack"] : null;
+}
+
 /** Les unités de longueur d'une portée d'activité (dnd5e `CONFIG.DND5E.movementUnits`) : une portée lisible comme distance. */
 const LENGTH_UNITS = new Set(["ft", "m", "mi", "km"]);
 
