@@ -11,6 +11,9 @@
 const marked = { "activity.isAttack": true, "target.hasEffectFrom": "hunters-mark" };
 
 export const RANGER = Object.freeze({
+  // Voile de la nature (niveau 14) — « par une action Bonus, vous vous donnez l'état Invisible jusqu'à la fin de votre prochain
+  // tour » : l'effet de l'item n'a pas de durée dans la donnée et ne cessait jamais.
+  "natures-veil": { effectEnds: { NOSQczI2MCQ5Ha8F: "casterTurnEnd" } },
   // Chasseur implacable (niveau 13) : « subir des dégâts ne peut pas rompre votre concentration sur la Marque du chasseur ».
   "relentless-hunter": { keepsConcentration: ["hunters-mark"] },
   // Esquive des ombres (Traqueur des ténèbres 11) : en Réaction, le rôdeur donne le Désavantage à un jet d'attaque qui le vise
