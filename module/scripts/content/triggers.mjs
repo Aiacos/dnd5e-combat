@@ -104,10 +104,12 @@ export const TRIGGERS = Object.freeze({
     do: [{ type: "damage", formula: "1d8", damageType: "necrotic" }]
   }],
   // Grand maître d'armes 2024 (PHB, feats) : un coup porté avec une arme Lourde ajoute le bonus de maîtrise aux
-  // dégâts, du type de l'arme.
+  // dégâts, du type de l'arme — à son tour seulement : pas une attaque d'opportunité ni une autre attaque faite au tour d'un
+  // autre (`source.onOwnTurn`, comme les dégâts bonus du Barbare). Une attaque en action Bonus faite à son tour le reçoit
+  // encore : le moteur ne distingue pas l'action d'où vient une attaque.
   "great-weapon-master": [{
     on: "preDamageRoll",
-    if: { "activity.isAttack": true, "activity.isWeapon": true, "activity.hasProperty": "hvy" },
+    if: { "activity.isAttack": true, "activity.isWeapon": true, "activity.hasProperty": "hvy", "source.onOwnTurn": true },
     do: [{ type: "damage", formula: "@prof", damageType: "weapon" }]
   }],
 

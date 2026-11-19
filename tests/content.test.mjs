@@ -527,6 +527,9 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
     expect(CONTENT["sleet-storm"].triggers.map(t => t.do[0].type)).toEqual(["replay", "status"]);
     expect(CONTENT["hold-person"].triggers[0]).toMatchObject({ on: "endOfTurn", via: "effect" });
     expect(CONTENT["great-weapon-master"].triggers[0].do[0].damageType).toBe("weapon");
+    // Vu en jeu : une attaque faite au tour d'un autre recevait aussi le bonus de maîtrise.
+    expect(CONTENT["great-weapon-master"].triggers[0].if)
+      .toMatchObject({ "activity.hasProperty": "hvy", "source.onOwnTurn": true });
     expect(CONTENT["faerie-fire"].triggers[0]).toMatchObject({ on: "preAttackRoll", via: "effect" });
     expect(CONTENT["pack-tactics"].triggers[0].do[0].type).toBe("advantage");
     expect(CONTENT["protection-from-evil-and-good"].triggers[0].do[0].type).toBe("disadvantage");
