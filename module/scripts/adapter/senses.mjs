@@ -5,6 +5,7 @@
 
 import { sensesIn, senseVerdict, bestVerdict } from "../core/senses.mjs";
 import { holds } from "../core/triggers.mjs";
+import { tablesStamp } from "../content/index.mjs";
 import { contentOf, declaresKey, worldOverrides } from "./content.mjs";
 import { originItemOf, comesFromItemEffect, factsFor } from "./facts.mjs";
 import { lengthIn, readUnitFactors } from "./units.mjs";
@@ -19,15 +20,44 @@ function* effectOrigins(actor) {
 }
 
 /**
+ * Ce qui a été lu d'un acteur, gardé tant que rien n'a changé : `canSee` le demande pour chaque paire de tokens (boucle de
+ * Discrétion, légalité, IA des PNJ), et presque aucun acteur n'a de sens déclaré. Oublié pour un acteur quand un de ses items ou
+ * de ses effets change (`forgetSenses(actor)`, runtime/vision.mjs), pour tous quand le tour ou l'heure du monde avance (un effet
+ * peut se suspendre sans être modifié) ; relu de lui-même si une table du contenu ou la surcouche du monde a changé.
+ */
+const read = new WeakMap();
+let epoch = 0;
+
+/** Ce qui a été lu de cet acteur ne vaut plus ; sans acteur : de tous. */
+export function forgetSenses(actor=null) {
+  if ( actor ) read.delete(actor);
+  else epoch++;
+}
+
+function readOf(actor) {
+  const overrides = worldOverrides();
+  const tables = tablesStamp();
+  const kept = read.get(actor);
+  if ( kept && (kept.epoch === epoch) && (kept.tables === tables) && (kept.overrides === overrides) ) return kept;
+  const fresh = { epoch, tables, overrides, senses: Object.freeze(readSenses(actor, overrides)),
+    wards: Object.freeze(readWards(actor, overrides)) };
+  read.set(actor, fresh);
+  return fresh;
+}
+
+/**
  * Les sens déclarés que l'acteur a en ce moment : ceux des items qu'il possède, et ceux que lui donnent les effets qu'il porte
  * (`via: "effect"`, d'un effet précis de l'item si `fromEffect`). Presque aucun item ne déclare cette clé : on ne compose l'entrée
- * (`contentOf`) que de celui dont une couche la porte (`declaresKey`), comme pour `seesThroughOwnDarkness`.
+ * (`contentOf`) que de celui dont une couche la porte (`declaresKey`), comme pour `seesThroughOwnDarkness`. Tableau gardé et
+ * partagé (`readOf`) : ne pas le modifier.
  * @param {Actor} actor
- * @returns {object[]}
+ * @returns {readonly object[]}
  */
 export function declaredSensesOf(actor) {
-  if ( !actor ) return [];
-  const overrides = worldOverrides();
+  return actor ? readOf(actor).senses : [];
+}
+
+function readSenses(actor, overrides) {
   const out = [];
   for ( const item of actor.items ?? [] ) {
     if ( !declaresKey(item, "sense", overrides) ) continue;
@@ -42,9 +72,17 @@ export function declaredSensesOf(actor) {
   return out;
 }
 
-/** Ce dont les effets que porte l'acteur le protègent (`wardsDetection` de l'item qui les a posés) : `magic`, des écoles. */
+/**
+ * Ce dont les effets que porte l'acteur le protègent (`wardsDetection` de l'item qui les a posés) : `magic`, des écoles. Tableau
+ * gardé et partagé : ne pas le modifier.
+ * @param {Actor} actor
+ * @returns {readonly string[]}
+ */
 export function detectionWardsOf(actor) {
-  const overrides = worldOverrides();
+  return actor ? readOf(actor).wards : [];
+}
+
+function readWards(actor, overrides) {
   const wards = new Set();
   for ( const { item } of effectOrigins(actor) ) {
     if ( !declaresKey(item, "wardsDetection", overrides) ) continue;

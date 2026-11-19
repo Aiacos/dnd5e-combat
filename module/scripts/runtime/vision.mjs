@@ -8,6 +8,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { checkVisionApi, invalidateVision, disposeVision, setVisionAvailable } from "../adapter/vision.mjs";
+import { forgetSenses } from "../adapter/senses.mjs";
 import { checkCoverApi, setCoverAvailable } from "../adapter/cover.mjs";
 import { CONES_SETTING, ANGLES_SETTING, DEFAULT_ANGLES_TEXT } from "../adapter/cone.mjs";
 import { route } from "./router.mjs";
@@ -39,6 +40,16 @@ export function registerVision() {
     "deleteAmbientLight", "updateScene", "updateActor", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect"] ) {
     route(hook, () => invalidateVision(), stale);
   }
+  // Les sens déclarés lus sur un acteur (adapter/senses.mjs) : à relire quand un de ses items ou de ses effets change — l'effet
+  // d'un item (un enchantement) compte pour l'acteur qui porte l'item. Le tour et l'heure du monde peuvent suspendre un effet sans
+  // le modifier : tout est alors à relire.
+  const owner = doc => ((doc?.parent?.documentName === "Item") ? doc.parent.parent : doc?.parent) ?? null;
+  const senses = { label: "vision: declared senses to read again" };
+  const changed = ["createItem", "updateItem", "deleteItem", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect"];
+  for ( const hook of changed ) {
+    route(hook, doc => { const actor = owner(doc); if ( actor?.documentName === "Actor" ) forgetSenses(actor); }, senses);
+  }
+  for ( const hook of ["updateCombat", "deleteCombat", "updateWorldTime"] ) route(hook, () => forgetSenses(), senses);
   route("canvasTearDown", () => disposeVision(), { label: "vision: sources destroyed" });
   route("canvasReady", () => disposeVision(), { label: "vision: sources destroyed" });
 

@@ -200,33 +200,34 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 6. "suffers a condition" window not opened _(MJ)_
 7. Warding Bond: foreign damage sharing not disarmed _(MJ)_
 8. vision: sources to rebuild
-9. banishment: target not removed from the scene _(MJ)_
-10. auras: recalculation requested
-11. emanation on death _(MJ)_
-12. regeneration: automatic Dead removed _(MJ)_
-13. feat effect not synced _(MJ)_
-14. effect end when Incapacitated: not played _(MJ)_
-15. features held by Rage not synced _(MJ)_
-16. Rage: end on condition not evaluated _(MJ)_
-17. swallow: effect not tracked _(MJ)_
-18. grapple: does it still hold? _(MJ)_
-19. grapple: grappler's mark _(MJ)_
-20. Prone: crawl mode not set or not removed _(MJ)_
-21. climbing: fall not triggered _(MJ)_
-22. fall: not triggered automatically _(MJ)_
-23. burning: flammable zone not ignited on catching fire _(MJ)_
-24. Exhaustion: level not raised by an item effect _(MJ)_
-25. Blink: permanent Ethereal not removed _(MJ)_
-26. Levitate: not lifted _(MJ)_
-27. passive perception _(MJ)_
-28. enchanted weapon: light not updated _(MJ)_
-29. invisibility: not suspended _(MJ)_
-30. Wild Shape: end if Incapacitated _(MJ)_
-31. floating texts: effect
-32. perception: display not refreshed
-33. ethereal: view not updated
-34. ethereal: movement action not switched _(MJ)_
-35. sneak: cones redrawn
+9. vision: declared senses to read again
+10. banishment: target not removed from the scene _(MJ)_
+11. auras: recalculation requested
+12. emanation on death _(MJ)_
+13. regeneration: automatic Dead removed _(MJ)_
+14. feat effect not synced _(MJ)_
+15. effect end when Incapacitated: not played _(MJ)_
+16. features held by Rage not synced _(MJ)_
+17. Rage: end on condition not evaluated _(MJ)_
+18. swallow: effect not tracked _(MJ)_
+19. grapple: does it still hold? _(MJ)_
+20. grapple: grappler's mark _(MJ)_
+21. Prone: crawl mode not set or not removed _(MJ)_
+22. climbing: fall not triggered _(MJ)_
+23. fall: not triggered automatically _(MJ)_
+24. burning: flammable zone not ignited on catching fire _(MJ)_
+25. Exhaustion: level not raised by an item effect _(MJ)_
+26. Blink: permanent Ethereal not removed _(MJ)_
+27. Levitate: not lifted _(MJ)_
+28. passive perception _(MJ)_
+29. enchanted weapon: light not updated _(MJ)_
+30. invisibility: not suspended _(MJ)_
+31. Wild Shape: end if Incapacitated _(MJ)_
+32. floating texts: effect
+33. perception: display not refreshed
+34. ethereal: view not updated
+35. ethereal: movement action not switched _(MJ)_
+36. sneak: cones redrawn
 
 ### `createActor`
 
@@ -289,13 +290,14 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. translation on creation: item left in the original language _(MJ)_
 2. premium data: item not fixed on creation _(MJ)_
-3. auras: recalculation requested
-4. Elemental Adept: type not asked _(MJ)_
-5. feat effect not synced _(MJ)_
-6. features held by Rage not synced _(MJ)_
-7. armor training: shield AC not updated _(MJ)_
-8. granted speed not synced _(MJ)_
-9. perception: Devil's Sight or blind hearing not granted after an update
+3. vision: declared senses to read again
+4. auras: recalculation requested
+5. Elemental Adept: type not asked _(MJ)_
+6. feat effect not synced _(MJ)_
+7. features held by Rage not synced _(MJ)_
+8. armor training: shield AC not updated _(MJ)_
+9. granted speed not synced _(MJ)_
+10. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `createNote`
 
@@ -351,30 +353,31 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 3. concentration: areas not removed _(MJ)_
 4. cover preview: not refreshed after a cover status
 5. vision: sources to rebuild
-6. banishment: target not returned _(MJ)_
-7. granted activity not removed _(MJ)_
-8. auras: recalculation requested
-9. feat effect not synced _(MJ)_
-10. effect end: next effect not applied _(MJ)_
-11. features held by Rage not synced _(MJ)_
-12. swallow: the swallowed creature doesn't leave _(MJ)_
-13. grapple: does it still hold? _(MJ)_
-14. grapple: grappler's mark _(MJ)_
-15. Prone: crawl mode not set or not removed _(MJ)_
-16. climbing: fall not triggered _(MJ)_
-17. fall: not triggered automatically _(MJ)_
-18. Ready: broken concentration not noted _(MJ)_
-19. Levitate: not brought down _(MJ)_
-20. passive perception _(MJ)_
-21. enchanted weapon: light not updated _(MJ)_
-22. invisibility: not restored _(MJ)_
-23. light source: remaining time not kept _(MJ)_
-24. tether: not forgotten _(MJ)_
-25. floating texts: effect
-26. perception: display not refreshed
-27. ethereal: view not updated
-28. ethereal: movement action not switched _(MJ)_
-29. sneak: cones redrawn
+6. vision: declared senses to read again
+7. banishment: target not returned _(MJ)_
+8. granted activity not removed _(MJ)_
+9. auras: recalculation requested
+10. feat effect not synced _(MJ)_
+11. effect end: next effect not applied _(MJ)_
+12. features held by Rage not synced _(MJ)_
+13. swallow: the swallowed creature doesn't leave _(MJ)_
+14. grapple: does it still hold? _(MJ)_
+15. grapple: grappler's mark _(MJ)_
+16. Prone: crawl mode not set or not removed _(MJ)_
+17. climbing: fall not triggered _(MJ)_
+18. fall: not triggered automatically _(MJ)_
+19. Ready: broken concentration not noted _(MJ)_
+20. Levitate: not brought down _(MJ)_
+21. passive perception _(MJ)_
+22. enchanted weapon: light not updated _(MJ)_
+23. invisibility: not restored _(MJ)_
+24. light source: remaining time not kept _(MJ)_
+25. tether: not forgotten _(MJ)_
+26. floating texts: effect
+27. perception: display not refreshed
+28. ethereal: view not updated
+29. ethereal: movement action not switched _(MJ)_
+30. sneak: cones redrawn
 
 ### `deleteAmbientLight`
 
@@ -398,16 +401,17 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. stealth: detection not scheduled
 2. deleteCombat
-3. turn statuses not synchronized _(MJ)_
-4. lingering terrain not removed with the combat _(MJ)_
-5. auras: recalculation requested
-6. critical marks not removed _(MJ)_
-7. feat effect not synced _(MJ)_
-8. improvised weapon: not removed with the combat _(MJ)_
-9. flammable: fire not put out with the combat _(MJ)_
-10. help: end of combat _(MJ)_
-11. combat launch: music not restored _(MJ)_
-12. sneak: cones redrawn
+3. vision: declared senses to read again
+4. turn statuses not synchronized _(MJ)_
+5. lingering terrain not removed with the combat _(MJ)_
+6. auras: recalculation requested
+7. critical marks not removed _(MJ)_
+8. feat effect not synced _(MJ)_
+9. improvised weapon: not removed with the combat _(MJ)_
+10. flammable: fire not put out with the combat _(MJ)_
+11. help: end of combat _(MJ)_
+12. combat launch: music not restored _(MJ)_
+13. sneak: cones redrawn
 
 ### `deleteCombatant`
 
@@ -420,13 +424,14 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `deleteItem`
 
 1. effect left by a removed item not applied _(MJ)_
-2. auras: recalculation requested
-3. feat effect not synced _(MJ)_
-4. features held by Rage not synced _(MJ)_
-5. armor training: shield AC not updated _(MJ)_
-6. granted speed not synced _(MJ)_
-7. light source: not extinguished _(MJ)_
-8. perception: Devil's Sight or blind hearing not granted after an update
+2. vision: declared senses to read again
+3. auras: recalculation requested
+4. feat effect not synced _(MJ)_
+5. features held by Rage not synced _(MJ)_
+6. armor training: shield AC not updated _(MJ)_
+7. granted speed not synced _(MJ)_
+8. light source: not extinguished _(MJ)_
+9. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `deleteNote`
 
@@ -1071,20 +1076,21 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 2. summon: ends on Incapacitated _(MJ)_
 3. Warding Bond: foreign damage sharing not disarmed _(MJ)_
 4. vision: sources to rebuild
-5. feat effect not synced _(MJ)_
-6. features held by Rage not synced _(MJ)_
-7. grapple: does it still hold? _(MJ)_
-8. Prone: crawl mode not set or not removed _(MJ)_
-9. climbing: fall not triggered _(MJ)_
-10. fall: not triggered automatically _(MJ)_
-11. enchanted weapon: light not updated _(MJ)_
-12. invisibility: not restored _(MJ)_
-13. light source: not burnt out _(MJ)_
-14. floating texts: effect
-15. perception: display not refreshed
-16. ethereal: view not updated
-17. ethereal: movement action not switched _(MJ)_
-18. sneak: cones redrawn
+5. vision: declared senses to read again
+6. feat effect not synced _(MJ)_
+7. features held by Rage not synced _(MJ)_
+8. grapple: does it still hold? _(MJ)_
+9. Prone: crawl mode not set or not removed _(MJ)_
+10. climbing: fall not triggered _(MJ)_
+11. fall: not triggered automatically _(MJ)_
+12. enchanted weapon: light not updated _(MJ)_
+13. invisibility: not restored _(MJ)_
+14. light source: not burnt out _(MJ)_
+15. floating texts: effect
+16. perception: display not refreshed
+17. ethereal: view not updated
+18. ethereal: movement action not switched _(MJ)_
+19. sneak: cones redrawn
 
 ### `updateActor`
 
@@ -1130,9 +1136,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `updateCombat`
 
 1. debug: turn
-2. feat effect not synced _(MJ)_
-3. second turn not removed _(MJ)_
-4. sneak: cones redrawn
+2. vision: declared senses to read again
+3. feat effect not synced _(MJ)_
+4. second turn not removed _(MJ)_
+5. sneak: cones redrawn
 
 ### `updateCombatant`
 
@@ -1150,11 +1157,12 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. ammunition choice announced
 2. effect of a completed item not applied _(MJ)_
-3. feat effect not synced _(MJ)_
-4. effect end on armor: not played _(MJ)_
-5. armor training: shield AC not updated _(MJ)_
-6. granted speed not synced _(MJ)_
-7. perception: Devil's Sight or blind hearing not granted after an update
+3. vision: declared senses to read again
+4. feat effect not synced _(MJ)_
+5. effect end on armor: not played _(MJ)_
+6. armor training: shield AC not updated _(MJ)_
+7. granted speed not synced _(MJ)_
+8. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `updateNote`
 
@@ -1214,8 +1222,9 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 ### `updateWorldTime`
 
-1. area: duration elapsed, not removed _(MJ)_
-2. Wild Shape: end of duration _(MJ)_
+1. vision: declared senses to read again
+2. area: duration elapsed, not removed _(MJ)_
+3. Wild Shape: end of duration _(MJ)_
 
 ### `userConnected`
 

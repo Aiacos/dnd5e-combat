@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import { CONTENT_VERSION } from "../module/scripts/core/content.mjs";
 import { registerTable, unregisterTable } from "../module/scripts/content/index.mjs";
 
-let declaredSensesOf, detectionWardsOf, sensedBy;
+let declaredSensesOf, detectionWardsOf, sensedBy, forgetSenses;
 const uuids = new Map();
 
 function itemOf(actor, identifier, extra={}) {
@@ -37,7 +37,7 @@ beforeAll(async () => {
   globalThis.fromUuidSync = uuid => uuids.get(uuid) ?? null;
   const movementUnits = { ft: { conversion: 1 }, m: { conversion: 3.28084 } };
   globalThis.CONFIG = { DND5E: { movementUnits }, specialStatusEffects: {}, queries: {} };
-  ({ declaredSensesOf, detectionWardsOf, sensedBy } = await import("../module/scripts/adapter/senses.mjs"));
+  ({ declaredSensesOf, detectionWardsOf, sensedBy, forgetSenses } = await import("../module/scripts/adapter/senses.mjs"));
 }, 60000);
 
 const PACK = "test-pack";
@@ -60,9 +60,12 @@ describe("sens déclarés d'un acteur", () => {
     registerTable(PACK, TABLE);
     const caster = actorOf("c", ["spell-sense"]);
     expect(declaredSensesOf(caster)).toEqual([]);
+    // Comme en jeu : l'effet créé, puis modifié, fait oublier ce qui a été lu de l'acteur (runtime/vision.mjs).
     caster.effects = [effectFrom(caster.items[0], "bbbbbbbbbbbbbbbb")];
+    forgetSenses(caster);
     expect(declaredSensesOf(caster)).toEqual([TABLE["spell-sense"].sense]);
     caster.effects[0].disabled = true;
+    forgetSenses(caster);
     expect(declaredSensesOf(caster)).toEqual([]);
   });
   it("`fromEffect` : cet effet-là de l'item, pas un autre", () => {
@@ -71,7 +74,75 @@ describe("sens déclarés d'un acteur", () => {
     actor.effects = [effectFrom(actor.items[0], "cccccccccccccccc")];
     expect(declaredSensesOf(actor)).toEqual([]);
     actor.effects = [effectFrom(actor.items[0], "aaaaaaaaaaaaaaaa")];
+    forgetSenses(actor);
     expect(declaredSensesOf(actor)).toEqual([TABLE["two-effects"].sense]);
+  });
+});
+
+// Revue de #119 : `canSee` demande ces lectures pour chaque paire de tokens — elles sont gardées par acteur.
+describe("ce qui a été lu d'un acteur est gardé, jusqu'à ce que quelque chose change", () => {
+  /** Compte les items d'origine cherchés (`fromUuidSync`) pendant `fn`. */
+  const lookups = fn => {
+    const real = globalThis.fromUuidSync;
+    let count = 0;
+    globalThis.fromUuidSync = (...args) => { count++; return real(...args); };
+    try { fn(); } finally { globalThis.fromUuidSync = real; }
+    return count;
+  };
+  const warded = () => {
+    const warder = actorOf("w", ["ward-school"]);
+    const actor = actorOf("t", ["multiattack", "claw", "bite"]);
+    actor.effects = [effectFrom(warder.items[0], "dddddddddddddddd"), effectFrom(warder.items[0], "eeeeeeeeeeeeeeee")];
+    return actor;
+  };
+
+  it("cent demandes : les items d'origine des effets ne sont cherchés qu'à la première", () => {
+    registerTable(PACK, TABLE);
+    const actor = warded();
+    const first = lookups(() => { declaredSensesOf(actor); detectionWardsOf(actor); });
+    expect(first).toBeGreaterThan(0);
+    const again = lookups(() => { for ( let n = 0; n < 100; n++ ) { declaredSensesOf(actor); detectionWardsOf(actor); } });
+    expect(again).toBe(0);
+    expect(detectionWardsOf(actor)).toEqual(["div"]);
+    expect(declaredSensesOf(actor)).toBe(declaredSensesOf(actor));
+  });
+
+  it("oublié pour l'acteur dont un item ou un effet change, pas pour les autres", () => {
+    registerTable(PACK, TABLE);
+    const [one, other] = [warded(), warded()];
+    detectionWardsOf(one);
+    detectionWardsOf(other);
+    one.effects = [];
+    expect(detectionWardsOf(one)).toEqual(["div"]);   // rien ne l'a dit : la lecture gardée
+    forgetSenses(one);
+    expect(detectionWardsOf(one)).toEqual([]);
+    expect(lookups(() => detectionWardsOf(other))).toBe(0);
+  });
+
+  it("oublié pour tous quand le tour ou l'heure avance (`forgetSenses()`)", () => {
+    registerTable(PACK, TABLE);
+    const actor = warded();
+    detectionWardsOf(actor);
+    actor.effects[0].isSuppressed = true;
+    actor.effects[1].isSuppressed = true;
+    forgetSenses();
+    expect(detectionWardsOf(actor)).toEqual([]);
+  });
+
+  it("relu de lui-même quand une table du contenu est enregistrée ou retirée", () => {
+    const actor = actorOf("a", ["trait-sense"]);
+    expect(declaredSensesOf(actor)).toEqual([]);
+    registerTable(PACK, TABLE);
+    expect(declaredSensesOf(actor)).toEqual([TABLE["trait-sense"].sense]);
+    unregisterTable(PACK);
+    expect(declaredSensesOf(actor)).toEqual([]);
+  });
+
+  it("le tableau rendu est partagé : il ne se modifie pas", () => {
+    registerTable(PACK, TABLE);
+    const senses = declaredSensesOf(actorOf("a", ["trait-sense"]));
+    expect(Object.isFrozen(senses)).toBe(true);
+    expect(() => senses.push({})).toThrow();
   });
 });
 
