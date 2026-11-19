@@ -35,7 +35,7 @@ import { outsideCone } from "./cone.mjs";
 import { hiddenFrom } from "./stealth.mjs";
 import { lengthIn } from "./units.mjs";
 import { perceivesPlane } from "./plane.mjs";
-import { sensedBy } from "./senses.mjs";
+import { sensedBy, mutedSensesOf } from "./senses.mjs";
 import { lightOnToken } from "./illumination.mjs";
 import { LIGHT } from "../core/illumination.mjs";
 
@@ -125,6 +125,8 @@ function detectionModesOf(doc) {
     modes.lightPerception ??= { enabled: true, range: Infinity };
     modes.basicSight ??= { enabled: true, range: doc.sight.range };
   }
+  // `senseNeeds` : un sens de la fiche qui dépend de l'ouïe ou de la vue de son porteur, Assourdi ou Aveuglé — éteint.
+  for ( const id of mutedSensesOf(doc) ) delete modes[id];
   return modes;
 }
 

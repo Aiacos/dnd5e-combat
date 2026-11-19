@@ -3,7 +3,8 @@
  * comme une vue — et `wardsDetection`, ce qui en protège. Règle pure : portée, murs, cible détectée ou non, protection.
  */
 import { describe, it, expect } from "vitest";
-import { senseVerdict, bestVerdict, wardedAgainst, sensesIn, SENSE_VERDICTS } from "../module/scripts/core/senses.mjs";
+import { senseVerdict, bestVerdict, wardedAgainst, sensesIn, SENSE_VERDICTS, detectsTarget, mutedSenses }
+  from "../module/scripts/core/senses.mjs";
 import { validateEntry } from "../module/scripts/core/content/entry.mjs";
 import { ENTRY_KEYS } from "../module/scripts/core/content.mjs";
 
@@ -82,8 +83,46 @@ describe("protection contre la détection (`wardsDetection`)", () => {
   });
 });
 
+describe("`detectedAs` : perçue aussi comme d'autres types", () => {
+  const undead = { "target.creatureType": ["undead"] };
+  const living = { not: { "target.creatureType": ["construct", "undead"] } };
+  const humanoid = { "target.creatureType": "humanoid" };
+  it("sans la clé, seul son type compte", () => {
+    expect(detectsTarget(undead, humanoid)).toBe(false);
+    expect(detectsTarget(living, humanoid)).toBe(true);
+    expect(detectsTarget(null, humanoid)).toBe(true);
+  });
+  it("avec, le sens qui cherche ce type la trouve ; celui qui la trouvait déjà la trouve toujours", () => {
+    expect(detectsTarget(undead, humanoid, ["undead"])).toBe(true);
+    expect(detectsTarget(living, humanoid, ["undead"])).toBe(true);
+    expect(detectsTarget({ "target.creatureType": ["fiend"] }, humanoid, ["undead"])).toBe(false);
+  });
+  it("les autres faits de la condition tiennent toujours", () => {
+    const facts = { ...humanoid, "target.hasStatus": id => id === "poisoned" };
+    expect(detectsTarget({ ...undead, "target.hasStatus": "poisoned" }, facts, ["undead"])).toBe(true);
+    expect(detectsTarget({ ...undead, "target.hasStatus": "diseased" }, facts, ["undead"])).toBe(false);
+  });
+});
+
+describe("`senseNeeds` : un sens de la fiche qui dépend de l'ouïe ou de la vue", () => {
+  const echo = [{ blindsight: "hearing" }];
+  it("éteint tant que son porteur est Assourdi, pas autrement", () => {
+    expect(mutedSenses(echo, { deaf: true })).toEqual(["blindsight"]);
+    expect(mutedSenses(echo, { blind: true })).toEqual([]);
+    expect(mutedSenses(echo, {})).toEqual([]);
+    expect(mutedSenses([], { deaf: true, blind: true })).toEqual([]);
+  });
+  it("plusieurs items, plusieurs sens", () => {
+    const needs = [{ blindsight: "hearing" }, { seeAll: "sight", blindsight: "hearing" }, undefined];
+    expect(mutedSenses(needs, { deaf: true, blind: true }).sort()).toEqual(["blindsight", "seeAll"]);
+    expect(mutedSenses(needs, { blind: true })).toEqual(["seeAll"]);
+  });
+});
+
 describe("déclaration dans le contenu", () => {
-  it("les deux clés sont au schéma", () => {
+  it("les clés sont au schéma", () => {
+    expect(ENTRY_KEYS).toContain("detectedAs");
+    expect(ENTRY_KEYS).toContain("senseNeeds");
     expect(ENTRY_KEYS).toContain("sense");
     expect(ENTRY_KEYS).toContain("wardsDetection");
   });
@@ -103,6 +142,8 @@ describe("déclaration dans le contenu", () => {
       { kind: "locate", range: 60, magic: true, needs: "hearing" }] };
     expect(validateEntry(two, { facts })).toEqual([]);
     expect(validateEntry({ wardsDetection: ["div", "magic"] }, { facts })).toEqual([]);
+    expect(validateEntry({ detectedAs: ["undead"] }, { facts })).toEqual([]);
+    expect(validateEntry({ senseNeeds: { blindsight: "hearing", seeAll: "sight" } }, { facts })).toEqual([]);
   });
   it("refuse : genre inconnu, portée absente, option ou fait inconnus, protection vide", () => {
     const facts = { "target.creatureType": null };
@@ -113,7 +154,9 @@ describe("déclaration dans le contenu", () => {
       { sense: { kind: "locate", range: 30, through: ["darkness"] } }, { sense: { kind: "sight", range: 30, through: ["fog"] } },
       { sense: { kind: "sight", range: 30, through: [] } }, { sense: { kind: "sight", range: 30, needs: "smell" } },
       { sense: { kind: "locate", range: 30, detects: { "target.unknownFact": true } } }, { sense: [] },
-      { wardsDetection: [] }, { wardsDetection: "div" }, { wardsDetection: [""] }];
+      { wardsDetection: [] }, { wardsDetection: "div" }, { wardsDetection: [""] },
+      { detectedAs: [] }, { detectedAs: "undead" }, { senseNeeds: {} }, { senseNeeds: { blindsight: "smell" } },
+      { senseNeeds: ["blindsight"] }];
     for ( const entry of bad ) expect(validateEntry(entry, { facts }).length, JSON.stringify(entry)).toBeGreaterThan(0);
   });
 });
