@@ -4,12 +4,14 @@
  * Surfaces du cœur, niveaux). Positions validées (`_source`). La règle est dans core/hearing.mjs.
  */
 
-import { hears } from "../core/hearing.mjs";
-import { tokenCenter } from "./turn.mjs";
+import { MODULE_ID } from "../constants.mjs";
+import { hears, hearingRange, beyondHearing } from "../core/hearing.mjs";
+import { tokenCenter, distanceBetween } from "./turn.mjs";
 import { hiddenDcOf } from "./search.mjs";
 import { isObjectToken } from "./bodies.mjs";
 import { trapLike } from "./content.mjs";
 import { blockedBetween, isSenseless } from "./vision.mjs";
+import { lengthIn, readUnitFactors } from "./units.mjs";
 
 /**
  * Un mur ou un plancher qui arrête le son sépare-t-il les deux tokens ? Comme la vue du cœur (detection-mode.mjs:211-259), les
@@ -35,6 +37,37 @@ function soundBlocked(observer, target) {
   return false;
 }
 
+/** Réglage `hearingRange` : la portée de chaque acteur, en pieds, pour la formule en cours (lue une fois, pas à chaque paire). */
+let ranges = new WeakMap();
+
+/** La fiche, ses effets ou ses objets ont changé, ou le réglage : les portées se relisent. */
+export function clearHearingRanges() {
+  ranges = new WeakMap();
+}
+
+/**
+ * Réglage `hearingRange` : la portée d'ouïe de l'observateur, dans l'unité de sa scène ; null — sans portée — quand le réglage est
+ * vide (la règle officielle). La formule est évaluée avec les données de jet de l'acteur (`@skills.prc.passive`…), en pieds.
+ * @param {TokenDocument} observer
+ * @returns {number|null}
+ */
+export function hearingRangeOf(observer) {
+  let formula = "";
+  try { formula = String(game.settings.get(MODULE_ID, "hearingRange") ?? "").trim(); } catch { formula = ""; }
+  const actor = observer?.actor;
+  if ( !formula || !actor ) return null;
+  let known = ranges.get(actor);
+  if ( known?.formula !== formula ) {
+    let value = null;
+    try { value = Roll.safeEval(Roll.replaceFormulaData(formula, actor.getRollData?.() ?? {}, { missing: "0" })); }
+    catch { value = null; }
+    known = { formula, feet: hearingRange(value) };
+    ranges.set(actor, known);
+  }
+  if ( known.feet === null ) return null;
+  return lengthIn(known.feet, "ft", observer.parent?.grid?.units ?? "ft", readUnitFactors());
+}
+
 /**
  * L'observateur entend-il la cible ?
  * @param {TokenDocument} observer
@@ -53,6 +86,13 @@ export function canHear(observer, target) {
     silent: statuses("dead") || isObjectToken(target) || trapLike(target.actor),
     // Issue #42 : Silence — « aucun son ne peut naître dans la Sphère ni la traverser » : la cible dedans, ou le trait qui les relie
     // la traversant (l'observateur dedans est déjà Assourdi par la zone, §37.4).
-    soundBlocked: soundBlocked(observer, target) || blockedBetween(observer, target).silence
+    soundBlocked: soundBlocked(observer, target) || blockedBetween(observer, target).silence,
+    outOfRange: outOfHearing(observer, target)
   });
+}
+
+/** La cible est-elle au-delà de la portée d'ouïe de l'observateur ? Sans portée, la distance n'est pas lue. */
+function outOfHearing(observer, target) {
+  const range = hearingRangeOf(observer);
+  return (range !== null) && beyondHearing(distanceBetween(observer, target).value, range);
 }

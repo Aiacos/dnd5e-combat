@@ -1,6 +1,6 @@
 /** §62 : l'ouïe — on sait où est une créature qu'on ne voit pas, sauf si elle est cachée. */
 import { describe, it, expect } from "vitest";
-import { hears, locationUnknown } from "../module/scripts/core/hearing.mjs";
+import { hears, locationUnknown, hearingRange, beyondHearing } from "../module/scripts/core/hearing.mjs";
 
 describe("hears", () => {
   it("par défaut, on entend", () => {
@@ -11,6 +11,25 @@ describe("hears", () => {
     expect(hears({ hidden: true })).toBe(false);
     expect(hears({ silent: true })).toBe(false);
     expect(hears({ soundBlocked: true })).toBe(false);
+  });
+});
+
+describe("portée d'ouïe (réglage `hearingRange`, règle maison)", () => {
+  it("sans réglage, ou une formule qui ne donne pas un nombre : pas de portée", () => {
+    for ( const value of [null, undefined, NaN, Infinity, -5, "30", {}] ) expect(hearingRange(value), String(value)).toBe(null);
+    expect(hearingRange(30)).toBe(30);
+    expect(hearingRange(0)).toBe(0);
+  });
+  it("sans portée, rien n'est trop loin ; avec, la limite est comprise", () => {
+    expect(beyondHearing(1000, null)).toBe(false);
+    expect(beyondHearing(1000, undefined)).toBe(false);
+    expect(beyondHearing(30, 30)).toBe(false);
+    expect(beyondHearing(35, 30)).toBe(true);
+    expect(beyondHearing(5, 0)).toBe(true);
+  });
+  it("au-delà de la portée, on n'entend pas", () => {
+    expect(hears({ outOfRange: true })).toBe(false);
+    expect(hears({ outOfRange: false })).toBe(true);
   });
 });
 
