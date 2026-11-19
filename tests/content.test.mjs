@@ -229,7 +229,7 @@ describe("contenu livré", () => {
       "elixir-of-health", "elusive", "emerald-elemental-gem", "empowered-channeling", "empowered-evocation", "energy-drain", "engulf",
       "enhance-ability", "enlarge-reduce", "ensnaring-strike", "entangle", "entangling-trail", "enthrall", "esoteric-ward",
       "essence-of-ether", "ethereal-jaunt", "ethereal-stride", "etherealness", "evards-black-tentacles", "evasion", "evasive-footwork",
-      "eversmoking-bottle", "executioners-axe-enchanted", "expeditious-retreat", "eye-and-hand-of-vecna", "eye-rays", "eyebite",
+      "eversmoking-bottle", "executioners-axe-enchanted", "expeditious-retreat", "extended-spell", "eye-and-hand-of-vecna", "eye-rays", "eyebite",
       "faerie-fire", "faithful-hound", "fanatical-focus", "fear", "fear-aura", "feather-fall", "feign-death", "feinting-attack",
       "fell-word", "feral-pounce", "feral-strike", "fetid-aura", "fetid-cloud", "fey-ancestry", "find-familiar", "find-steed",
       "finger-of-death", "fire-aura", "fire-element", "fire-form", "fire-shield", "fires-burn", "flame-aura", "flame-blade",
