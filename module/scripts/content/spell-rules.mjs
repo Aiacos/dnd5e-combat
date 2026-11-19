@@ -426,6 +426,11 @@ export const SPELL_RULES = Object.freeze({
   // effets que le moteur ne suit pas).
   "detect-poison-and-disease": { sense: { kind: "locate", range: 30, units: "ft", via: "effect", magic: "div",
     detects: { "target.poisonous": true } } },
+  // Détection de la magie : une aura autour de toute créature visible à 9 m qui porte de la magie (`reveals: "aura"` — rien n'est
+  // localisé ni vu de plus). Le sort demande une action Magie pour voir l'aura : elle est montrée tant que l'effet dure. L'école
+  // de la magie perçue reste au MJ.
+  "detect-magic": { sense: { kind: "locate", range: 30, units: "ft", via: "effect", magic: "div", reveals: "aura",
+    detects: { "target.carriesMagic": true } } },
   // Ce qui protège de la détection (`wardsDetection`). Antidétection : la cible ne peut être visée par un sort de Divination.
   // Esprit impénétrable : rien ne détecte magiquement son emplacement. Dissimulation : ni Divination, ni détection magique.
   "nondetection": { wardsDetection: ["div"] },

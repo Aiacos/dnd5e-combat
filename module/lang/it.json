@@ -101,6 +101,7 @@
   "DND5ECOMBAT.Vision.Ouie": "Udito",
   "DND5ECOMBAT.Vision.Sens": "Senso speciale",
   "DND5ECOMBAT.Vision.Localise": "Localizzato, non visto (Svantaggio)",
+  "DND5ECOMBAT.Vision.Aura": "Porta magia (aura percepita)",
   "DND5ECOMBAT.Reglage.volumes.Nom": "Elevazione e volumi",
   "DND5ECOMBAT.Reglage.volumes.Aide": "Le aree degli incantesimi ricevono un'altezza in base alla forma (sfera centrata sull'incantatore, cubo e cilindro appoggiati al suolo, cono e linea piatti): una creatura in volo sopra una Palla di Fuoco non viene più colpita. Un pavimento o un soffitto (una regione «Superficie» che blocca il movimento) interrompe la linea d'effetto di aree, aure e Attacchi di Opportunità, e conta come Copertura Totale. Le distanze si misurano in tre dimensioni a prescindere da questa impostazione.",
   "DND5ECOMBAT.Reglage.altitude.Nom": "Modalità di movimento ed elevazione",

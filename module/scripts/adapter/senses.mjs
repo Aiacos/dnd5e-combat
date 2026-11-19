@@ -121,7 +121,8 @@ export function mutedSensesOf(observer) {
 }
 
 /**
- * Ce que les sens déclarés de l'observateur disent de la cible : `"sight"`, `"locate"`, `"presence"`, ou null. Tokens (documents).
+ * Ce que les sens déclarés de l'observateur disent de la cible : `"sight"`, `"locate"`, `"presence"`, `"aura"`, ou null. Tokens
+ * (documents).
  * @param {TokenDocument} observer
  * @param {TokenDocument} target
  * @param {{distance: () => number, walled: () => boolean, blind?: () => boolean, deaf?: () => boolean,
@@ -151,7 +152,7 @@ export function sensedBy(observer, target, scene) {
     if ( (sense.needs === "sight") && scene.blind?.() ) return null;
     if ( (sense.needs === "hearing") && scene.deaf?.() ) return null;
     if ( sense.walls !== false ) walled ??= scene.walled();
-    const sight = (sense.kind === "sight") && (sense.reveals !== "presence");
+    const sight = (sense.kind === "sight") && !sense.reveals;
     const blocked = sight ? (scene.blocked?.() ?? {}) : {};
     return senseVerdict({ ...sense, range }, { distance, walled: walled === true, matches: true, wards,
       invisible: sight && !!scene.invisible?.(), fog: !!blocked.fog, darkness: !!blocked.darkness });

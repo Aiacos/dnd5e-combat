@@ -108,8 +108,8 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 
 | Chemin | Signature | Fichier | Description |
 |---|---|---|---|
-| `api.content.builtin` | _données (899 clés)_ |  |  |
-| `api.content.facts` | _liste (68)_ |  |  |
+| `api.content.builtin` | _données (900 clés)_ |  |  |
+| `api.content.facts` | _liste (69)_ |  |  |
 | `api.content.identifierOf` | `(item)` | `adapter/content.mjs` | L'identifiant sous lequel un item est reconnu, et d'où il vient. §19.9 : un item premium sans identifiant (Ravenloft) en reçoit un à sa création sur une fiche — dnd5e 6 l'écrit d'après le nom (documents/item.mjs:1146, `… |
 | `api.content.inspect` | `(actor)` | `adapter/content.mjs` | Pour l'inspection en jeu : ce que chaque item d'un acteur déclare, et d'où. |
 | `api.content.of` | `(item)` | `adapter/content.mjs` | L'entrée effective d'un item, couches combinées. `null` si rien n'est déclaré nulle part. @returns {{entry: object\|null, identifier: string\|null, layers: {module: boolean, world: boolean, item: boolean}}} |
@@ -124,7 +124,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.content.register` | `(source, table, { sources={} }={})` | `runtime/content.mjs` | Enregistre la table de contenu d'un autre module (voir l'en-tête). Validée entrée par entrée comme le contenu livré. @param {string} source L'id du module qui l'apporte. @param {Record<string, object>} table `{ identifi… |
 | `api.content.registered` | `()` | `content/index.mjs` | Ce qui est enregistré : `{ source: [identifiants] }`. |
 | `api.content.set` | `(identifier, entry)` | `adapter/content.mjs` | Écrit (ou retire, avec `null`) l'entrée d'un identifiant dans la surcouche du monde. MJ uniquement. |
-| `api.content.shipped` | _données (899 clés)_ |  |  |
+| `api.content.shipped` | _données (900 clés)_ |  |  |
 | `api.content.sources` | `()` | `content/index.mjs` | Les sources enregistrées : `{ source: { id de document: identifiant } }`. |
 | `api.content.unregister` | `(source)` | `content/index.mjs` | Retire la table d'un module (et ses sources, §277). @returns {boolean} Si elle était enregistrée. |
 | `api.content.validate` | `(entry)` | `runtime/content.mjs` | Les erreurs d'une entrée de contenu (`string[]`, vide = valide), contre le schéma `core/content/entry.mjs`. Ne change rien. |
@@ -523,7 +523,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.vision.canSee` | `(observer, target)` | `dnd5e-combat.mjs` | §178 : la vision du moteur pour un voisin (lecture seule) — null quand la vision simulée est coupée ou ne peut pas juger. |
 | `api.vision.cone` | `(token)` | `dnd5e-combat.mjs` | §182 : le cône de vision d'une créature (`{ angle, rotation }`, convention du cœur), ou null quand elle voit à 360°. |
 | `api.vision.locates` | `(observer, target)` | `dnd5e-combat.mjs` | La position de la cible est-elle connue de l'observateur : il la voit, ou un sens qui n'est pas une vue la localise (perception des vibrations) ? Lecture seule ; null quand la vision simulée est coupée ou ne peut pas ju… |
-| `api.vision.sensed` | `(observer, target)` | `dnd5e-combat.mjs` | Ce qu'un sens déclaré par du contenu (`sense`) dit de la cible à l'observateur : `"sight"`, `"locate"`, `"presence"`, ou null. Lecture seule ; null aussi quand la vision simulée est coupée. |
+| `api.vision.sensed` | `(observer, target)` | `dnd5e-combat.mjs` | Ce qu'un sens déclaré par du contenu (`sense`) dit de la cible à l'observateur : `"sight"` (vue), `"locate"` (position connue, pas vue), `"presence"` (présence sue, pas la position), `"aura"` (une aura sur la créature,… |
 
 ## `api.waits`
 
