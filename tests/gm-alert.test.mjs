@@ -34,6 +34,10 @@ describe("§366 : breaksOnOrigin et repasse des parts laissées au MJ", () => {
     expect(CONTENT.friends.breaksOnOrigin).toEqual(["attack", "damage", "forcesSave"]);
     expect(CONTENT["tentacle-rod"].endsWhen.apart).toEqual({ distance: 15, units: "ft" });
     expect(CONTENT.jester.triggers[0].do).toEqual([{ type: "advantage" }]);
+    // Le Fou, son pendant : « Tests d'un d20 » comprend les jets d'attaque — vu en jeu, eux seuls restaient sans Désavantage.
+    expect(CONTENT.fool.triggers).toEqual([{ on: "preAttackRoll", via: "effect", fromEffect: "BkChhqAw5emn7aQp",
+      if: { "source.hasEffect": "fool" }, do: [{ type: "disadvantage" }] }]);
+    expect(CONTENT.fool.effectChanges.BkChhqAw5emn7aQp).toHaveLength(12);
     expect(CONTENT["greater-restoration"].endsCurses).toEqual(["bestow-curse", "hex"]);
     expect(CONTENT["cordon-of-arrows"].zoneAffects).toBe("enemy");
     for ( const id of ["friends", "fear", "crown-of-madness", "eyebite", "death-ward", "tentacle-rod", "jester"] ) expect(CONTENT[id]?.gmAlert, id).toBeUndefined();
