@@ -247,7 +247,9 @@ export async function teleportSelf(activity) {
   const token = activity?.getUsageToken?.() ?? activity?.actor?.getActiveTokens?.(false, true)?.[0] ?? null;
   const object = token?.object ?? null;
   if ( !rule || !object ) return false;
-  teleporting = { token, limit: teleportLimit(activity, token.parent) };
+  // Sa propre visée, gardée ici : une autre téléportation lancée pendant celle-ci remplace `teleporting`, et la fin de la première
+  // le remettait à null sous la seconde (issue #108 : « Cannot read properties of null (reading 'chosen') »).
+  const own = teleporting = { token, limit: teleportLimit(activity, token.parent) };
   // §465 : une arrivée près d'une plante (Marche des arbres) — les arbres ne sont pas des objets de la scène : le rappel, le MJ en juge.
   if ( rule.destination?.near === "plant" ) {
     const within = Math.round(lengthIn(rule.destination.within, rule.destination.units, token.parent.grid.units) * 10) / 10;
@@ -270,9 +272,9 @@ export async function teleportSelf(activity) {
       const results = rule.native ? await activity.planTeleport() : await planDeclaredTeleport(activity, object, rule);
       if ( results?.some(r => r.moved) ) return done();
       // §67 ter : une destination choisie d'un clic (`teleportClick`) — la planification du cœur, elle, s'est fermée sans rien.
-      const chosen = teleporting.chosen;
+      const chosen = own.chosen;
       if ( chosen ) {
-        teleporting.chosen = null;
+        own.chosen = null;
         if ( await teleportTo(activity, token, chosen) ) return done();
       }
       if ( !refusedTeleports.has(token.uuid) ) {
@@ -283,7 +285,7 @@ export async function teleportSelf(activity) {
       if ( await forceRefusedTeleport(activity, token) ) return done();
     }
     return false;
-  } finally { teleporting = null; }
+  } finally { if ( teleporting === own ) teleporting = null; }
 }
 
 /* -------------------------------------------- */
@@ -322,7 +324,7 @@ export async function handleNearSpace({ token: uuid, distance, units, mustMove=f
     if ( answer !== "move" ) return null;
   } else ui.notifications.info(loc("EspaceProche.Occupe", { name: doc.name, distance: label }));
   return whileAwaiting(doc.actor, "choice", async () => {
-    teleporting = { token: doc, limit };
+    const own = teleporting = { token: doc, limit };
     try {
       for ( let attempt = 0; attempt < 5; attempt++ ) {
         object.control({ releaseOthers: true });
@@ -330,8 +332,8 @@ export async function handleNearSpace({ token: uuid, distance, units, mustMove=f
         const timeout = new Promise(resolve => { timer = setTimeout(() => { canvas.tokens._cancelMovementPlanning?.(); resolve(null); }, NEAR_SPACE_MS); });
         const plan = await Promise.race([object.planMovement({ allowedActions: ["blink"], direct: true, ...(Number.isFinite(limit) ? { maxDistance: limit } : {}), preventDrop: true }), timeout]);
         clearTimeout(timer);
-        const chosen = teleporting.chosen;
-        teleporting.chosen = null;
+        const chosen = own.chosen;
+        own.chosen = null;
         const to = plan?.destination ?? (chosen ? { ...chosen, elevation: doc._source.elevation ?? 0 } : null);
         if ( !to ) return null;
         // Un clic n'est pas borné par la planification du cœur : la portée se relit ici.
@@ -351,6 +353,6 @@ export async function handleNearSpace({ token: uuid, distance, units, mustMove=f
         return { x: to.x, y: to.y };
       }
       return null;
-    } finally { teleporting = null; }
+    } finally { if ( teleporting === own ) teleporting = null; }
   });
 }
