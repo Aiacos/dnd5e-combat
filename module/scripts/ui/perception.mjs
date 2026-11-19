@@ -32,7 +32,7 @@ import { hiddenFrom } from "../adapter/stealth.mjs";
 import { canHear } from "../adapter/hearing.mjs";
 import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, DEVILS_SIGHT_OUTLINE, HEARING_MODE, SENSE_MODE, SENSE_OUTLINE,
   grantInMemoryModes, tintOutlineShader, FIELD_MODES, fieldOfView } from "../core/light.mjs";
-import { hidesIdentity } from "../core/senses.mjs";
+import { hidesIdentity, onlyLocated } from "../core/senses.mjs";
 import { route } from "../runtime/router.mjs";
 import { theaterActive } from "../runtime/theater-state.mjs";
 import { perceivesPlane } from "../adapter/plane.mjs";
@@ -258,7 +258,9 @@ function grantOn(doc) {
  */
 function grantField(doc) {
   const modes = doc.detectionModes;
-  const enabled = id => ((modes[id]?.enabled ?? true) && (modes[id]?.range > 0)) ? modes[id].range : 0;
+  // Un sens éteint (`senseNeeds` : une vision aveugle par l'ouïe, son porteur Assourdi) ne fait pas de champ de vue non plus.
+  const muted = mutedSensesOf(doc);
+  const enabled = id => (!muted.includes(id) && (modes[id]?.enabled ?? true) && (modes[id]?.range > 0)) ? modes[id].range : 0;
   const field = fieldOfView({ darkvision: enabled("basicSight"), seeAll: enabled("seeAll"), blindsight: enabled("blindsight"),
     devilsSight: CONFIG.Canvas.visionModes?.[FIELD_MODES.devilsSight.id] ? devilsSightRange(doc) : 0 });
   if ( !field || !CONFIG.Canvas.visionModes?.[field.visionMode] ) {
@@ -514,7 +516,11 @@ function perceivedAs(token) {
   const watchers = auraWatchers();
   if ( (!hearingFilter && !senseFilter && !watchers.length) || (token.isVisible !== true) ) return null;
   if ( hearingFilter && (token.detectionFilter === hearingFilter) ) return "heard";
-  if ( senseFilter && (token.detectionFilter === senseFilter) ) return "located";
+  // Vue à travers un mur par une vue déclarée (`kind: "sight"`) : le contour, pas la marque « pas vue ».
+  if ( senseFilter && (token.detectionFilter === senseFilter) ) {
+    const verdicts = viewers().map(doc => (doc === token.document) ? null : sensedThrough(doc, token.document));
+    return onlyLocated(verdicts) ? "located" : null;
+  }
   // Une aura ne se pose que sur ce qui est vu : pas sur un token affiché par un mode spécial (son filtre), pas sur l'observateur.
   if ( !watchers.length || token.detectionFilter ) return null;
   return watchers.some(doc => (doc !== token.document) && (sensedThrough(doc, token.document) === "aura")) ? "aura" : null;
@@ -527,17 +533,23 @@ function perceivedAs(token) {
  */
 let watchers = null;
 function auraWatchers() {
-  if ( watchers ) return watchers;
-  watchers = [];
+  return watchers ??= viewers().filter(doc => declaredSensesOf(doc.actor).some(sense => sense.reveals === "aura"));
+}
+
+/** Les tokens par lesquels ce client voit (ses sources de vision, sans les sources jetables des règles). */
+let viewing = null;
+function viewers() {
+  if ( viewing ) return viewing;
+  viewing = [];
   for ( const source of canvas.effects?.visionSources ?? [] ) {
     const doc = source.object?.document;
-    if ( !doc?.actor || String(source.sourceId ?? "").startsWith(SIMULATED) || watchers.includes(doc) ) continue;
-    if ( declaredSensesOf(doc.actor).some(sense => sense.reveals === "aura") ) watchers.push(doc);
+    if ( doc?.actor && !String(source.sourceId ?? "").startsWith(SIMULATED) && !viewing.includes(doc) ) viewing.push(doc);
   }
-  return watchers;
+  return viewing;
 }
 function forgetAuraWatchers() {
   watchers = null;
+  viewing = null;
 }
 
 /** Réglage `anonymousLocated` du monde ; faux tant qu'il n'est pas lisible. */

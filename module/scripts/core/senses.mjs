@@ -121,3 +121,13 @@ export function mutedSenses(needs, { blind=false, deaf=false }={}) {
 export function hidesIdentity(kind, rule) {
   return !!rule && ((kind === "heard") || (kind === "located"));
 }
+
+/**
+ * Une créature affichée par un sens déclaré porte-t-elle la marque « localisée, pas vue » ? Oui si aucun des observateurs de ce
+ * client ne la VOIT par un sens déclaré (`sight` : une vue à travers les murs) — vue, elle garde le contour, sans la marque ni
+ * le Désavantage qu'elle annonce.
+ * @param {Array<"sight"|"locate"|"presence"|"aura"|null>} verdicts  Ce que les sens déclarés de chaque observateur disent d'elle.
+ */
+export function onlyLocated(verdicts) {
+  return !(verdicts ?? []).includes("sight");
+}
