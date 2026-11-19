@@ -28,6 +28,10 @@ export const BARD = Object.freeze({
   // Inspiration de combat (Vaillance 3) : la créature inspirée par ce barde ajoute le dé aux dégâts d'un coup, ou à sa CA par sa Réaction
   // quand elle est touchée (adapter/inspiration.mjs) — à la place de l'ajouter à un jet raté, qui reste possible.
   "combat-inspiration": { combatInspiration: true },
+  // Talent hors pair (Savoir 14) — « quand vous ratez un test de caractéristique ou un jet d'attaque, vous pouvez dépenser une Inspiration
+  // bardique, lancer le dé et l'ajouter au d20 ; sur un échec, l'Inspiration n'est pas dépensée » (`failRefund`). Sur un test sans DD
+  // connu, la question est posée sitôt le jet lancé et rien n'est rendu : le moteur ne sait pas s'il est raté.
+  "peerless-skill": { rollBonus: { activity: "dnd5eactivity000", on: ["attack", "check"], failRefund: true } },
   // §236 : Inspiration supérieure (niveau 18) — « quand vous jouez l'initiative, vous regagnez des utilisations d'Inspiration bardique
   // jusqu'à en avoir deux ».
   // C12-j : Source d'inspiration (Barde 5) — « vous regagnez toutes vos Inspirations bardiques dépensées après un Repos court ou long ».
