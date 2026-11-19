@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-900 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+901 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -80,7 +80,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `duringRage` | 4 | `mindless-rage`, `primal-knowledge`, `rage-of-the-wilds`, `vitality-of-the-tree` |
 | `effectChanges` | 22 | `brutal-strike`, `caltrops`, `contagion`, `elemental-epitome`, `fool`, `gaseous-form`, … |
 | `effectDurations` | 6 | `blessing-of-the-trickster`, `clairvoyant-combatant`, `dust-of-disappearance`, `intimidating-presence`, `scroll-of-protection`, `wand-of-paralysis` |
-| `effectEnds` | 46 | `aberrant-anatomy`, `brutal-strike`, `celestial-revelation`, `chill-touch`, `defensive-duelist`, `devour-intellect`, … |
+| `effectEnds` | 47 | `aberrant-anatomy`, `brutal-strike`, `celestial-revelation`, `chill-touch`, `defensive-duelist`, `devour-intellect`, … |
 | `effectsExpire` | 2 | `blessing-of-the-trickster`, `prayer-of-healing` |
 | `effectsFirst` | 1 | `aid` |
 | `effectsIf` | 6 | `esoteric-ward`, `hammer-of-thunderbolts-enchanted`, `mm-wereboar-gore`, `psychic-skewer`, `silver-needle`, `umbral-dagger` |
@@ -135,7 +135,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `heroicWarrior` | 1 | `heroic-warrior` |
 | `hitDefense` | 1 | `defensive-tactics` |
 | `hitDiceHeal` | 1 | `arcane-vigor` |
-| `hitRider` | 20 | `charger`, `crusher`, `disarming-attack`, `distracting-strike`, `eldritch-smite`, `feral-pounce`, … |
+| `hitRider` | 21 | `charger`, `crusher`, `disarming-attack`, `distracting-strike`, `eldritch-smite`, `feral-pounce`, … |
 | `holdsStill` | 1 | `steady-aim` |
 | `hpTiers` | 3 | `divine-word`, `power-word-kill`, `power-word-stun` |
 | `ignoresResistance` | 4 | `boon-of-irresistible-offense`, `grave-touched`, `poisoner`, `touch-of-death` |
