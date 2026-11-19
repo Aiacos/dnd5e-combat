@@ -12,6 +12,7 @@ import { readUnitFactors } from "../adapter/units.mjs";
 import { multiattackLeft } from "../adapter/multiattack.mjs";
 import { movementCap } from "../runtime/actions.mjs";
 import { useIssues } from "../runtime/turn.mjs";
+import { refusal } from "../runtime/forced.mjs";
 import { lightState, globalLightState } from "./illumination.mjs";
 import { menuEntriesFor, doorMenuFor, groundMenuFor, pendingTargeting } from "./pointer.mjs";
 import { poolsOf } from "../adapter/absorb.mjs";
@@ -111,8 +112,10 @@ function cell(activity) {
   let result;
   try { result = useIssues(activity); } catch { return { issues: issues(activity), cost: null }; }
   // §410 : `resources` — le moteur juge aussi emplacements, utilisations, quantité et préparation (une interface n'a plus à les juger) ;
-  // `forceable` — toutes ces raisons s'ouvrent dans la fenêtre « Utiliser quand même » (§408).
-  return { issues: result.lines, cost: result.request?.cost ?? costFor(activity) ?? null, resources: true, forceable: true };
+  // `forceable` — toutes ces raisons s'ouvrent dans la fenêtre « Utiliser quand même » (§408). Issue #46 : faux quand ce client ne peut
+  // pas passer outre (réglage « Action impossible » en refus strict, chez un joueur) — une interface peut montrer un cadenas.
+  return { issues: result.lines, cost: result.request?.cost ?? costFor(activity) ?? null, resources: true,
+    forceable: refusal().proceed !== false };
 }
 
 /**
