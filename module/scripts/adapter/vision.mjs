@@ -244,7 +244,7 @@ export function canLocate(observer, target, { ignoreHidden=false }={}) {
 
 /**
  * Ce que les sens déclarés par du contenu disent de la cible, avec les garde-fous de `canSee` (sens éteints, token caché par le MJ,
- * plan) : `"sight"`, `"locate"`, `"presence"`, ou null. Pour l'affichage et pour un voisin (`api.vision.sensed`).
+ * plan) : `"sight"`, `"locate"`, `"presence"`, `"aura"`, ou null. Pour l'affichage et pour un voisin (`api.vision.sensed`).
  */
 export function sensedThrough(observer, target) {
   if ( !canvas?.ready || !observer || !target || (observer === target) ) return null;

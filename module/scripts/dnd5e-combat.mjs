@@ -329,8 +329,9 @@ function publicLocates(observer, target) {
 }
 
 /**
- * Ce qu'un sens déclaré par du contenu (`sense`) dit de la cible à l'observateur : `"sight"`, `"locate"`, `"presence"`, ou null.
- * Lecture seule ; null aussi quand la vision simulée est coupée.
+ * Ce qu'un sens déclaré par du contenu (`sense`) dit de la cible à l'observateur : `"sight"` (vue), `"locate"` (position connue,
+ * pas vue), `"presence"` (présence sue, pas la position), `"aura"` (une aura sur la créature, qu'un autre sens doit déjà faire
+ * voir : `reveals: "aura"`), ou null. Lecture seule ; null aussi quand la vision simulée est coupée.
  */
 function publicSensed(observer, target) {
   if ( !isVisionAvailable() ) return null;

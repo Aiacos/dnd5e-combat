@@ -121,7 +121,8 @@ export function mutedSensesOf(observer) {
 }
 
 /**
- * Ce que les sens déclarés de l'observateur disent de la cible : `"sight"`, `"locate"`, `"presence"`, ou null. Tokens (documents).
+ * Ce que les sens déclarés de l'observateur disent de la cible : `"sight"`, `"locate"`, `"presence"`, `"aura"`, ou null. Tokens
+ * (documents).
  * @param {TokenDocument} observer
  * @param {TokenDocument} target
  * @param {{distance: () => number, walled: () => boolean, blind?: () => boolean, deaf?: () => boolean,

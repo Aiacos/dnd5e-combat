@@ -523,7 +523,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.vision.canSee` | `(observer, target)` | `dnd5e-combat.mjs` | §178 : la vision du moteur pour un voisin (lecture seule) — null quand la vision simulée est coupée ou ne peut pas juger. |
 | `api.vision.cone` | `(token)` | `dnd5e-combat.mjs` | §182 : le cône de vision d'une créature (`{ angle, rotation }`, convention du cœur), ou null quand elle voit à 360°. |
 | `api.vision.locates` | `(observer, target)` | `dnd5e-combat.mjs` | La position de la cible est-elle connue de l'observateur : il la voit, ou un sens qui n'est pas une vue la localise (perception des vibrations) ? Lecture seule ; null quand la vision simulée est coupée ou ne peut pas ju… |
-| `api.vision.sensed` | `(observer, target)` | `dnd5e-combat.mjs` | Ce qu'un sens déclaré par du contenu (`sense`) dit de la cible à l'observateur : `"sight"`, `"locate"`, `"presence"`, ou null. Lecture seule ; null aussi quand la vision simulée est coupée. |
+| `api.vision.sensed` | `(observer, target)` | `dnd5e-combat.mjs` | Ce qu'un sens déclaré par du contenu (`sense`) dit de la cible à l'observateur : `"sight"` (vue), `"locate"` (position connue, pas vue), `"presence"` (présence sue, pas la position), `"aura"` (une aura sur la créature,… |
 
 ## `api.waits`
 
