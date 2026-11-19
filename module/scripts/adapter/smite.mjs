@@ -9,6 +9,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
+import { unpreparedSpell } from "./resources.mjs";
 import { combatantFor, readBudget } from "./turn.mjs";
 import { creatureTypeOf, originItemOf, carriesEffectFrom, weaponKind } from "./facts.mjs";
 import { timedWait } from "./dialogs.mjs";
@@ -62,6 +63,9 @@ export function smiteOptions(actor, { ranged=false }={}) {
   const out = [];
   for ( const item of actor?.items ?? [] ) {
     const rule = isSpellCast(item) ? smiteRuleOf(item, contentOf(item).entry?.smite) : null;
+    // Un châtiment qui n'est pas préparé ne se propose pas (issue #144) — la même règle qu'au lancement (`unprepared`), sauf pour
+    // la copie qu'un objet lance (`cachedFor`).
+    if ( rule && unpreparedSpell(item) && !item.getFlag?.("dnd5e", "cachedFor") ) continue;
     // §206 : `any` — après toute attaque d'arme, au corps à corps comme à distance (Frappe piégeuse).
     if ( !rule || (!rule.any && (!!rule.ranged !== ranged)) ) continue;
     const base = Number(item.system.level) || 1;
