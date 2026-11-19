@@ -888,6 +888,10 @@
  *       needs?: "sight" | "hearing"             éteint tant que le porteur est Aveuglé (`sight`) ou Assourdi (`hearing`)
  *     wardsDetection?: ["magic" | "<école>"…]   le porteur d'un effet de l'item n'est pas trouvé par les sens magiques (`magic`),
  *                                               ou par ceux des sorts de ces écoles
+ *     detectedAs?: ["<type de créature>"…]      pour les sens (`sense.detects`), le possesseur de l'item compte aussi comme ces
+ *                                               types — jamais pour l'attaque ni la sauvegarde
+ *     senseNeeds?: { <mode>: "sight"|"hearing" }  ce sens de la fiche du possesseur (mode de détection : `blindsight`…) est éteint
+ *                                               tant qu'il est Aveuglé (`sight`) ou Assourdi (`hearing`)
  *     hpTiers?: [{ atMost?, damage?: false, effects?, statuses? }]
  *                                               §160 : l'issue selon les PV de la cible AVANT les dégâts — le premier palier qui tient
  *                                               (`atMost` absent : tous) ; aucun : ni dégâts ni effet. `damage: false` : pas de dégâts ;

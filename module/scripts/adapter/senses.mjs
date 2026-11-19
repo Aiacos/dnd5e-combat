@@ -3,8 +3,7 @@
  * cœur (core/senses.mjs) ; la scène — distance, mur — est lue ici et par l'appelant (adapter/vision.mjs).
  */
 
-import { sensesIn, senseVerdict, bestVerdict } from "../core/senses.mjs";
-import { holds } from "../core/triggers.mjs";
+import { sensesIn, senseVerdict, bestVerdict, detectsTarget, mutedSenses } from "../core/senses.mjs";
 import { contentOf, declaresKey, worldOverrides } from "./content.mjs";
 import { originItemOf, comesFromItemEffect, factsFor } from "./facts.mjs";
 import { lengthIn, readUnitFactors } from "./units.mjs";
@@ -53,6 +52,36 @@ export function detectionWardsOf(actor) {
   return Array.from(wards);
 }
 
+/** Les types de créature sous lesquels les sens perçoivent aussi cet acteur (`detectedAs` des items qu'il possède). */
+export function detectedTypesOf(actor) {
+  const overrides = worldOverrides();
+  const types = new Set();
+  for ( const item of actor?.items ?? [] ) {
+    if ( !declaresKey(item, "detectedAs", overrides) ) continue;
+    for ( const type of contentOf(item).entry?.detectedAs ?? [] ) types.add(type);
+  }
+  return Array.from(types);
+}
+
+/**
+ * Les sens de la fiche de ce token (ids de modes de détection) éteints en ce moment : ceux qu'un item qu'il possède dit dépendre de
+ * la vue ou de l'ouïe (`senseNeeds`), quand il est Aveuglé ou Assourdi. Les items ne sont lus que dans l'un de ces deux états.
+ * @param {TokenDocument} observer
+ * @returns {string[]}
+ */
+export function mutedSensesOf(observer) {
+  const actor = observer?.actor;
+  const blind = !!observer?.hasStatusEffect?.(CONFIG.specialStatusEffects.BLIND);
+  const deaf = actor?.statuses?.has?.("deafened") ?? false;
+  if ( !actor || (!blind && !deaf) ) return [];
+  const overrides = worldOverrides();
+  const needs = [];
+  for ( const item of actor.items ?? [] ) {
+    if ( declaresKey(item, "senseNeeds", overrides) ) needs.push(contentOf(item).entry?.senseNeeds);
+  }
+  return needs.length ? mutedSenses(needs, { blind, deaf }) : [];
+}
+
 /**
  * Ce que les sens déclarés de l'observateur disent de la cible : `"sight"`, `"locate"`, `"presence"`, ou null. Tokens (documents).
  * @param {TokenDocument} observer
@@ -71,13 +100,15 @@ export function sensedBy(observer, target, scene) {
   const factors = readUnitFactors();
   const wards = detectionWardsOf(target.actor);
   let facts = null;
+  let alsoTypes = null;
   let walled = null;
   return bestVerdict(senses.map(sense => {
     const range = lengthIn(sense.range, sense.units ?? "ft", units, factors);
     if ( !(distance <= range) ) return null;
     if ( sense.detects ) {
       facts ??= factsFor({ source: observer.actor, target: target.actor, sourceToken: observer, targetToken: target });
-      if ( !holds(sense.detects, facts) ) return null;
+      alsoTypes ??= detectedTypesOf(target.actor);
+      if ( !detectsTarget(sense.detects, facts, alsoTypes) ) return null;
     }
     if ( (sense.needs === "sight") && scene.blind?.() ) return null;
     if ( (sense.needs === "hearing") && scene.deaf?.() ) return null;

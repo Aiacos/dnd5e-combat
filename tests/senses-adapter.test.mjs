@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import { CONTENT_VERSION } from "../module/scripts/core/content.mjs";
 import { registerTable, unregisterTable } from "../module/scripts/content/index.mjs";
 
-let declaredSensesOf, detectionWardsOf, sensedBy;
+let declaredSensesOf, detectionWardsOf, sensedBy, detectedTypesOf, mutedSensesOf;
 const uuids = new Map();
 
 function itemOf(actor, identifier, extra={}) {
@@ -38,7 +38,8 @@ beforeAll(async () => {
   globalThis.fromUuidSync = uuid => uuids.get(uuid) ?? null;
   const movementUnits = { ft: { conversion: 1 }, m: { conversion: 3.28084 } };
   globalThis.CONFIG = { DND5E: { movementUnits }, specialStatusEffects: {}, queries: {} };
-  ({ declaredSensesOf, detectionWardsOf, sensedBy } = await import("../module/scripts/adapter/senses.mjs"));
+  ({ declaredSensesOf, detectionWardsOf, sensedBy, detectedTypesOf, mutedSensesOf }
+    = await import("../module/scripts/adapter/senses.mjs"));
 }, 60000);
 
 const PACK = "test-pack";
@@ -49,6 +50,8 @@ const TABLE = {
   "trait-sight": { sense: { kind: "sight", range: 30, walls: false, needs: "sight" } },
   "trait-dark-sight": { sense: { kind: "sight", range: 60, through: ["darkness"] } },
   "trait-echo": { sense: { kind: "locate", range: 30, needs: "hearing" } },
+  "gift-as-undead": { detectedAs: ["undead"] },
+  "trait-echolocation": { senseNeeds: { blindsight: "hearing" } },
   "ward-school": { wardsDetection: ["div"] },
   "ward-magic": { wardsDetection: ["magic"] }
 };
@@ -137,6 +140,27 @@ describe("ce que ces sens disent d'une cible", () => {
     const scene = extra => ({ ...between(observer, target, () => false), invisible: unread, blocked: unread, ...extra });
     expect(sensedBy(observer, target, scene({}))).toBe("locate");
     expect(sensedBy(observer, target, scene({ deaf: () => true }))).toBe(null);
+  });
+  it("`detectedAs` : le sens qui cherche des morts-vivants trouve aussi qui est perçu comme tel", () => {
+    registerTable(PACK, TABLE);
+    const observer = tokenOf(actorOf("o", ["trait-sense"]), 0);
+    const plain = tokenOf(actorOf("h", [], { creatureType: "humanoid" }), 30);
+    const gifted = tokenOf(actorOf("g", ["gift-as-undead"], { creatureType: "humanoid" }), 30);
+    expect(detectedTypesOf(plain.actor)).toEqual([]);
+    expect(detectedTypesOf(gifted.actor)).toEqual(["undead"]);
+    expect(sensedBy(observer, plain, between(observer, plain, () => false))).toBe(null);
+    expect(sensedBy(observer, gifted, between(observer, gifted, () => false))).toBe("locate");
+  });
+  it("`senseNeeds` : la vision aveugle par écholocalisation s'éteint pour un porteur Assourdi", () => {
+    registerTable(PACK, TABLE);
+    const actor = actorOf("b", ["trait-echolocation"]);
+    const token = { ...tokenOf(actor, 0), hasStatusEffect: () => false };
+    expect(mutedSensesOf(token)).toEqual([]);
+    actor.statuses.add("deafened");
+    expect(mutedSensesOf(token)).toEqual(["blindsight"]);
+    const other = actorOf("p", []);
+    other.statuses.add("deafened");
+    expect(mutedSensesOf({ ...tokenOf(other, 0), hasStatusEffect: () => false })).toEqual([]);
   });
   it("sans sens déclaré : rien, et la scène n'est même pas lue", () => {
     let asked = 0;

@@ -8,6 +8,8 @@
  * L'adaptateur (adapter/senses.mjs) lit la scène : distance, mur entre les deux, faits sur la cible, protections qu'elle porte.
  */
 
+import { holds } from "./triggers.mjs";
+
 /** Les verdicts d'un sens, du plus faible au plus fort. */
 export const SENSE_VERDICTS = Object.freeze(["presence", "locate", "sight"]);
 
@@ -71,4 +73,34 @@ export function bestVerdict(verdicts) {
   let best = -1;
   for ( const verdict of verdicts ) best = Math.max(best, SENSE_VERDICTS.indexOf(verdict));
   return (best < 0) ? null : SENSE_VERDICTS[best];
+}
+
+/**
+ * `detectedAs` : pour les sens, une créature peut compter aussi comme d'autres types que le sien (elle « est perçue comme » un
+ * mort-vivant). Ce que le sens détecte (`detects`) tient-il pour la cible telle qu'elle est, ou comme l'un de ces types ? Jamais
+ * pour autre chose que les sens : ni l'attaque ni la sauvegarde ne lisent ces types.
+ * @param {object|null} detects  La condition du sens (core/triggers.mjs `holds`) ; absente : toute créature.
+ * @param {object} facts  Les faits sur la cible.
+ * @param {string[]} [alsoTypes]  Les types sous lesquels elle est aussi perçue.
+ */
+export function detectsTarget(detects, facts, alsoTypes=[]) {
+  if ( holds(detects, facts) ) return true;
+  return alsoTypes.some(type => holds(detects, { ...facts, "target.creatureType": type }));
+}
+
+/**
+ * `senseNeeds` : les sens de la fiche (modes de détection : `blindsight`…) éteints en ce moment, parce qu'ils dépendent de la vue
+ * ou de l'ouïe de leur porteur et qu'il est Aveuglé ou Assourdi — une vision aveugle par écholocalisation.
+ * @param {Array<Record<string, "sight"|"hearing">>} needs  Les `senseNeeds` des items du porteur.
+ * @param {{blind?: boolean, deaf?: boolean}} state
+ * @returns {string[]}  Les ids des modes éteints.
+ */
+export function mutedSenses(needs, { blind=false, deaf=false }={}) {
+  const muted = new Set();
+  for ( const declared of needs ?? [] ) {
+    for ( const [mode, need] of Object.entries(declared ?? {}) ) {
+      if ( ((need === "sight") && blind) || ((need === "hearing") && deaf) ) muted.add(mode);
+    }
+  }
+  return Array.from(muted);
 }
