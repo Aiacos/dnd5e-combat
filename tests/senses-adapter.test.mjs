@@ -30,7 +30,8 @@ const between = (a, b, walled) => ({ distance: () => Math.abs(a.x - b.x), walled
 
 beforeAll(async () => {
   globalThis.Hooks ??= { on() {}, once() {}, callAll() {}, call: () => true };
-  const settings = { register() {}, get: (scope, key) => (key === "contentOverrides") ? { v: CONTENT_VERSION, entries: {} } : undefined };
+  const stored = { v: CONTENT_VERSION, entries: {} };
+  const settings = { register() {}, get: (scope, key) => (key === "contentOverrides") ? stored : undefined };
   globalThis.game = { user: { isGM: true }, users: {}, modules: { get: () => null }, settings,
     i18n: { localize: k => k, format: k => k, lang: "en" } };
   globalThis.foundry = { utils: { throttle: fn => fn, debounce: fn => fn, isNewerVersion: () => false } };
@@ -111,5 +112,55 @@ describe("ce que ces sens disent d'une cible", () => {
     const scene = { distance: () => { asked++; return 5; }, walled: () => { asked++; return false; } };
     expect(sensedBy(tokenOf(actorOf("o", ["multiattack"]), 0), tokenOf(actorOf("t", []), 5), scene)).toBe(null);
     expect(asked).toBe(0);
+  });
+});
+
+describe("contenu livré : sorts et pouvoirs qui déclarent un sens ou une protection", () => {
+  let CONTENT, factsFor, validateEntry, KNOWN_FACTS;
+  beforeAll(async () => {
+    ({ CONTENT } = await import("../module/scripts/content/index.mjs"));
+    ({ factsFor } = await import("../module/scripts/adapter/facts.mjs"));
+    ({ validateEntry } = await import("../module/scripts/core/content/entry.mjs"));
+    ({ KNOWN_FACTS } = await import("../module/scripts/adapter/content.mjs"));
+  });
+  const SENSES = ["detect-evil-and-good", "detect-poison-and-disease", "detect-thoughts", "channel-divinity-paladin",
+    "channel-divinity"];
+  const WARDS = { nondetection: ["div"], "mind-blank": ["magic"], sequester: ["div", "magic"] };
+
+  it("chaque entrée est valide, et son sens localise sans voir", () => {
+    for ( const id of SENSES ) {
+      expect(validateEntry(CONTENT[id], { facts: KNOWN_FACTS }), id).toEqual([]);
+      expect(CONTENT[id].sense.kind, id).toBe("locate");
+      expect(CONTENT[id].sense.via, id).toBe("effect");
+    }
+    for ( const [id, wards] of Object.entries(WARDS) ) expect(CONTENT[id].wardsDetection, id).toEqual(wards);
+  });
+  it("portées et cibles : six types à 30 ft, trois à 60 ft à travers les murs, la présence seule de qui pense", () => {
+    const types = id => CONTENT[id].sense.detects["target.creatureType"];
+    expect(CONTENT["detect-evil-and-good"].sense.range).toBe(30);
+    expect([...types("detect-evil-and-good")].sort()).toEqual(["aberration", "celestial", "elemental", "fey", "fiend", "undead"]);
+    expect(CONTENT["channel-divinity-paladin"].sense).toMatchObject({ range: 60, walls: false, fromEffect: "hr8wnlgs3uXphCnI" });
+    expect([...types("channel-divinity-paladin")].sort()).toEqual(["celestial", "fiend", "undead"]);
+    expect(CONTENT["detect-thoughts"].sense.reveals).toBe("presence");
+    expect(CONTENT["detect-thoughts"].dataFixes).toHaveLength(1);
+  });
+  it("faits : une créature qui connaît une langue ou est télépathe ; une créature venimeuse", () => {
+    const languages = (value, custom="", telepathy=0) => ({ value: new Set(value), custom,
+      communication: { telepathy: { value: telepathy } } });
+    const targetWith = traits => ({ system: { traits: { languages: traits } }, items: [] });
+    const speaks = traits => factsFor({ target: targetWith(traits) })["target.speaksLanguage"](true);
+    expect(speaks(languages(["common"]))).toBe(true);
+    expect(speaks(languages([], "Deep Speech"))).toBe(true);
+    expect(speaks(languages([], "", 60))).toBe(true);
+    expect(speaks(languages([]))).toBe(false);
+    const weapon = (kind, types, parts=[]) => ({ type: "weapon", system: { type: { value: kind },
+      damage: { base: { types: new Set(types) } },
+      activities: [{ type: "attack", damage: { parts: parts.map(t => ({ types: new Set([t]) })) } }] } });
+    const natural = (types, parts) => weapon("natural", types, parts);
+    const poisonous = items => factsFor({ target: { system: {}, items } })["target.poisonous"](true);
+    expect(poisonous([natural(["piercing"], ["poison"])])).toBe(true);
+    expect(poisonous([natural(["poison"])])).toBe(true);
+    expect(poisonous([natural(["piercing"])])).toBe(false);
+    expect(poisonous([weapon("simpleM", ["poison"])])).toBe(false);
   });
 });

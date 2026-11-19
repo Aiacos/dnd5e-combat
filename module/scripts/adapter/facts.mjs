@@ -302,6 +302,22 @@ const isBloodied = actor => { const hp = hpOf(actor); return !!hp && (hp.max > 0
 /** Le type de créature d'un acteur (« undead », « fiend »…), tel que dnd5e le range dans `details.type.value`. */
 export const creatureTypeOf = actor => actor?.system?.details?.type?.value ?? null;
 
+/** L'acteur connaît-il une langue, ou est-il télépathe (`traits.languages` de dnd5e : langues, texte libre, télépathie) ? */
+export function speaksLanguage(actor) {
+  const languages = actor?.system?.traits?.languages;
+  if ( !languages ) return false;
+  return ((languages.value?.size ?? 0) > 0) || !!languages.custom || (Number(languages.communication?.telepathy?.value ?? 0) > 0);
+}
+
+/** Une attaque naturelle de l'acteur inflige-t-elle des dégâts de poison (créature venimeuse) ? L'arme, et ses attaques. */
+export function isPoisonous(actor) {
+  const poison = types => (types?.has?.("poison") ?? types?.includes?.("poison")) === true;
+  const attacksWithPoison = item => Array.from(item.system.activities ?? [])
+    .some(a => (a.type === "attack") && (a.damage?.parts ?? []).some(p => poison(p.types)));
+  return Array.from(actor?.items ?? []).some(item => (item.type === "weapon") && (item.system?.type?.value === "natural")
+    && (poison(item.system.damage?.base?.types) || attacksWithPoison(item)));
+}
+
 /** Les états contre lesquels un acteur est immunisé (`traits.ci` de dnd5e : « charmed », « exhaustion »…). */
 export const conditionImmunitiesOf = actor => Array.from(actor?.system?.traits?.ci?.value ?? []);
 
@@ -438,6 +454,9 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "source.hasSense": names => [names].flat().some(n => Number(source?.system?.attributes?.senses?.ranges?.[n]) > 0),
     // §16.8 : le type de la cible (« humanoid »…) et ses immunités aux états (Sommeil : immunité à l'Épuisement).
     "target.creatureType": creatureTypeOf(target),
+    // Sens déclarés (`sense.detects`) : la cible connaît une langue ou est télépathe ; elle est venimeuse.
+    "target.speaksLanguage": want => (speaksLanguage(target) === want),
+    "target.poisonous": want => (isPoisonous(target) === want),
     "target.immuneTo": id => conditionImmunitiesOf(target).includes(id),
     // Armure d'Agathys : « tant que vous avez ces PV temporaires ». { "target.hasTempHp": true | false }.
     "target.hasTempHp": want => (((target?.system?.attributes?.hp?.temp ?? 0) > 0) === want),

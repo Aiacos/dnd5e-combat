@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-893 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+899 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -240,6 +240,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `seesInvisible` | 1 | `see-invisibility` |
 | `seesThroughOwnDarkness` | 1 | `power-of-shadow` |
 | `selfZone` | 4 | `conjure-minor-elementals`, `conjure-woodland-beings`, `forbiddance`, `yolandes-regal-presence` |
+| `sense` | 5 | `channel-divinity`, `channel-divinity-paladin`, `detect-evil-and-good`, `detect-poison-and-disease`, `detect-thoughts` |
 | `sharesSpace` | 7 | `air-form`, `fire-form`, `gaseous-form`, `misty-form`, `swarm`, `water-form`, … |
 | `silences` | 1 | `silence` |
 | `singleAttack` | 1 | `slow` |
@@ -284,6 +285,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `wallSide` | 1 | `wall-of-fire` |
 | `wardsAtZero` | 1 | `death-ward` |
 | `wardsConditions` | 1 | `protection-from-evil-and-good` |
+| `wardsDetection` | 3 | `mind-blank`, `nondetection`, `sequester` |
 | `willingFails` | 4 | `enlarge-reduce`, `levitate`, `otilukes-resilient-sphere`, `resilient-sphere` |
 | `windward` | 1 | `gust-of-wind` |
 | `wrath` | 2 | `berserker-axe-enchanted`, `sword-of-vengeance-enchanted` |
