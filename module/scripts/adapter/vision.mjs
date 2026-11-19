@@ -27,7 +27,7 @@
 
 import { committedPosition, distanceBetween, tokenCenter } from "./turn.mjs";
 import { contentOf, identifierOf, declaresKey, worldOverrides } from "./content.mjs";
-import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, devilsSightSees, senseReaches, senseless, countsAsSight }
+import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, devilsSightSees, senseReaches, senseless, countsAsSight, judgedModes }
   from "../core/light.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { revealedInvisible, seesInvisible } from "./facts.mjs";
@@ -113,10 +113,11 @@ function sourceFor(doc) {
  * sans vue activée. Normalisés comme le fait `TokenDocument#_prepareDetectionModes` (`enabled`
  * vrai par défaut, `range` null = illimité) : lus sur le document, un `range: null` traverse
  * jusqu'au test de portée du cœur, qui le prend pour « hors de portée » (`null <= 0`). Vu en jeu.
+ * Issue #104 : seulement les modes que le moteur juge (`judgedModes`) — pas celui qu'un autre module a inscrit sur le token.
  */
 function detectionModesOf(doc) {
   const modes = {};
-  for ( const [id, mode] of Object.entries(doc.detectionModes ?? {}) ) {
+  for ( const [id, mode] of Object.entries(judgedModes(doc.detectionModes)) ) {
     modes[id] = { ...mode, enabled: mode.enabled ?? true, range: (mode.range === null || mode.range === undefined) ? Infinity : mode.range };
   }
   if ( !doc.sight.enabled ) {

@@ -101,6 +101,21 @@ export const DEVILS_SIGHT_MODE = "devilsSight";
 export const DEVILS_SIGHT = Object.freeze({ identifier: "devils-sight", range: 120, units: "ft", mode: DEVILS_SIGHT_MODE });
 
 /**
+ * Les modes de détection que le moteur connaît et juge pour « voit-il ? » : la vue de base, la perception de la lumière et « See
+ * Invisibility » du cœur (un mode de vue, avec murs, qu'un MJ coche à la main : il fait voir une cible Invisible), la vision
+ * véritable et la vision aveugle de dnd5e, la Vision du diable du moteur, et les modes sans murs du cœur (`CORE_JUDGED`).
+ * Un mode inscrit par un autre module — une « ouïe » à portée, un sens maison — n'en est pas : le moteur ne sait pas s'il fait
+ * voir ou s'il ne fait que localiser, et le compter rendait « vue » une créature Invisible seulement entendue (issue #104).
+ */
+export const JUDGED_MODES = Object.freeze(["basicSight", "lightPerception", "seeInvisibility", "seeAll", "blindsight",
+  DEVILS_SIGHT_MODE, ...CORE_JUDGED]);
+
+/** Ces modes d'un token, sans ceux que le moteur ne juge pas (`JUDGED_MODES`). Même forme : `{ id: mode }`. */
+export function judgedModes(modes) {
+  return Object.fromEntries(Object.entries(modes ?? {}).filter(([id]) => JUDGED_MODES.includes(id)));
+}
+
+/**
  * Issue #42, suite (0.281.1) : le filtre d'une créature vue par la Vision du diable (ui/perception.mjs) : token teinté de rouge, liseré rouge
  * sombre. Un mode spécial SANS filtre n'est dessiné que sous le voile de vision du cœur : dans des Ténèbres vues de l'extérieur,
  * le token « visible » restait une silhouette noire. Avec un filtre, le cœur le redessine au-dessus du voile (placeables/token.mjs,
