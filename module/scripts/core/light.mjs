@@ -157,7 +157,31 @@ export const SENSE_OUTLINE = Object.freeze({ outlineColor: Object.freeze([0.78, 
 /**
  * Les modes de vision que le moteur enregistre pour le champ de vue d'un sens (ui/perception.mjs) : la carte se voit jusqu'à sa
  * portée, à sa façon — en couleur pour la vision véritable et la Vision du diable (« voit normalement »), sans couleur pour la
- * vision aveugle. Réglages d'image repris du module Vision 5e (MIT, © dev7355608), `scripts/vision-modes/`.
+ * vision aveugle. Les réglages d'image de ces trois modes (contraste, saturation, luminosité, et pour la vision aveugle l'image
+ * sans couleur qui demande un fond éclairé) sont ceux du module Vision 5e, `scripts/vision-modes/` ; ui/perception.mjs
+ * (`fieldModes`) en fait les modes de vision. Leur notice :
+ *
+ * MIT License
+ *
+ * Copyright (c) 2023 dev7355608
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 export const FIELD_MODES = Object.freeze({
   seeAll: Object.freeze({ id: "dasTruesight", label: "DND5E.SenseTruesight", contrast: 0, saturation: 0, brightness: 1 }),

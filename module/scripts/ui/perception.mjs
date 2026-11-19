@@ -250,14 +250,6 @@ function grantOn(doc) {
 }
 
 /**
- * Issue #42, suite (Archibald, 0.281.0) : la préparation des données d'un token (`TokenDocument#reset`) refait `detectionModes` depuis la
- * source — les modes en mémoire disparaissent, et rien ne refait la vue avant le prochain `sightRefresh` (une cible qui bouge ne le
- * déclenche pas) : la cible dans les Ténèbres passait au contour de l'ouïe. Un effet qui vise le token (`token.…`, celui du joueur sur
- * `token.detectionModes.devilsSight.range`) fait refaire le token à CHAQUE mise à jour de l'acteur (`_onRelatedUpdate`,
- * documents/token.mjs:3810) et laissait `{ range }` sans `enabled`. Le hook de la mise à jour vient après cette préparation : on redonne
- * les modes aux tokens touchés, et, s'il en manquait, la vue se refait.
- */
-/**
  * Le champ de vue d'un sens (core/light.mjs `fieldOfView`), posé en mémoire sur la vue PRÉPARÉE du token — portée, mode de vision,
  * image — comme dnd5e y projette la vision dans le noir : la carte se voit jusqu'à la portée de la vision véritable, de la vision
  * aveugle ou de la Vision du diable. Rien n'est écrit ; la préparation des données du token efface tout, ce hook le remet. Changé,
@@ -302,6 +294,14 @@ function fieldModes() {
   return out;
 }
 
+/**
+ * Issue #42, suite (Archibald, 0.281.0) : la préparation des données d'un token (`TokenDocument#reset`) refait `detectionModes` depuis la
+ * source — les modes en mémoire disparaissent, et rien ne refait la vue avant le prochain `sightRefresh` (une cible qui bouge ne le
+ * déclenche pas) : la cible dans les Ténèbres passait au contour de l'ouïe. Un effet qui vise le token (`token.…`, celui du joueur sur
+ * `token.detectionModes.devilsSight.range`) fait refaire le token à CHAQUE mise à jour de l'acteur (`_onRelatedUpdate`,
+ * documents/token.mjs:3810) et laissait `{ range }` sans `enabled`. Le hook de la mise à jour vient après cette préparation : on redonne
+ * les modes aux tokens touchés, et, s'il en manquait, la vue se refait.
+ */
 function regrant(docs) {
   if ( !canvas?.ready ) return;
   let changed = false;
