@@ -2606,5 +2606,6 @@
   "DND5ECOMBAT.Accueil.Nouveautes": "Novidades",
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Nom": "Novidades",
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Aide": "A mensagem de atualização: o que as últimas versões trazem, os módulos DAS a atualizar, a compatibilidade com Foundry, dnd5e e seus livros, as verificações recomendadas.",
-  "DND5ECOMBAT.Reglages.Outil.releaseNotes.Bouton": "Abrir a mensagem"
+  "DND5ECOMBAT.Reglages.Outil.releaseNotes.Bouton": "Abrir a mensagem",
+  "DND5ECOMBAT.Interop.DdbEgide": "DAS · Core desativou a automação da Proteção Arcana e do Vínculo Protetor do DDB Importer: ela absorvia o dano uma segunda vez. Recarregue o mundo (F5) para que a mudança tenha efeito."
 }

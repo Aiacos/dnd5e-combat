@@ -979,28 +979,29 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 6. factions: table refreshed
 7. status icons: existing effects _(MJ)_
 8. resuming pending resolutions _(MJ)_
-9. movement modes: Better Levels setting
-10. mouse: listeners not attached
-11. real-time clock: not started
-12. vision: API check
-13. space: API check
-14. weapon index not read
-15. Elemental Adept: type not asked _(MJ)_
-16. feat effect not synced _(MJ)_
-17. basic actions added _(MJ)_
-18. awaiting: not synchronised
-19. familiar: vision not enabled _(MJ)_
-20. climbing: out-of-combat checks
-21. armor training: shield AC not updated _(MJ)_
-22. granted speed not synced _(MJ)_
-23. combat launch: pause message not shown
-24. combat launch: pending launch not cleared
-25. single card
-26. light chat log
-27. chat log purge on load _(MJ)_
-28. floating texts: system texts muted
-29. debug report: errors raised during loading not shown
-30. settings window: late settings taken from Foundry's list
+9. DDB Importer: Arcane Ward automation not turned off _(MJ)_
+10. movement modes: Better Levels setting
+11. mouse: listeners not attached
+12. real-time clock: not started
+13. vision: API check
+14. space: API check
+15. weapon index not read
+16. Elemental Adept: type not asked _(MJ)_
+17. feat effect not synced _(MJ)_
+18. basic actions added _(MJ)_
+19. awaiting: not synchronised
+20. familiar: vision not enabled _(MJ)_
+21. climbing: out-of-combat checks
+22. armor training: shield AC not updated _(MJ)_
+23. granted speed not synced _(MJ)_
+24. combat launch: pause message not shown
+25. combat launch: pending launch not cleared
+26. single card
+27. light chat log
+28. chat log purge on load _(MJ)_
+29. floating texts: system texts muted
+30. debug report: errors raised during loading not shown
+31. settings window: late settings taken from Foundry's list
 
 ### `refreshToken`
 

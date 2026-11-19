@@ -113,6 +113,19 @@ export default {
       ctx.expect(hit.msgs.some(m => m.flags?.[MODULE_ID]?.absorbed || /absorb/i.test(`${m.content ?? ""} ${m.text ?? ""}`)), "une carte dit ce que l'égide a absorbé");
     }
 
+    // 2 bis (§474). Le reste au-delà de l'égide, sans dépendre du dé de l'Ogre (6 à 20 : il ne dépasse 16 qu'une fois sur six) :
+    // égide à 5, 9 dégâts contondants — l'égide en prend 5, l'Abjurateur perd 4. DDB Importer actif refaisait l'égide et rendait ces 4 PV.
+    {
+      await set({ abjHp: s0.abj.max, spent: s1.ward.max - 5 });
+      const b = await live();
+      await ctx.call("run-script", { waitMs: 8000, args: { abj: abj.id }, code: `
+        await canvas.tokens.get(args.abj).actor.applyDamage([{ value: 9, type: "bludgeoning" }], { isDelta: true }); return true;` });
+      await pause(1500);
+      const a = await live();
+      ctx.expect(b.ward.value === 5 && a.ward.value === 0, `reste : l'égide (5) prend 5 (${b.ward.value} → ${a.ward.value})`);
+      ctx.expect(b.abj.value - a.abj.value === 4, `reste : 9 dégâts, l'Abjurateur perd les 4 qui passent l'égide (${b.abj.value} → ${a.abj.value})`);
+    }
+
     // 3. Recharge par un sort d'abjuration lancé avec un emplacement.
     const recharge = async (level, label) => {
       await set({ spent: 10 });

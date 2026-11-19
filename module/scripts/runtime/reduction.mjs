@@ -7,8 +7,9 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { absorbDamage, spendPools, rechargePools } from "../adapter/absorb.mjs";
+import { disarmForeignEnhancers } from "../adapter/interop.mjs";
 import { route } from "./router.mjs";
-import { log } from "./shared.mjs";
+import { log, loc } from "./shared.mjs";
 
 export function registerReduction() {
   route("dnd5e.preApplyDamage", absorbDamage, { label: "pool: damage not absorbed" });
@@ -20,4 +21,11 @@ export function registerReduction() {
     if ( (message.type !== "usage") || message.getFlag(MODULE_ID, "areaTick") || message.getFlag(MODULE_ID, "resave") ) return;
     for ( const r of await rechargePools(message) ) log(`${r.name}: +${r.gained}`);
   }, { executor: true, label: "pool: recharge not written" });
+  // §474 : l'égide de DDB Importer absorbait une seconde fois ce qui passait celle du moteur — ses automatismes coupés, le MJ prévenu.
+  route("ready", async () => {
+    const keys = await disarmForeignEnhancers();
+    if ( !keys.length ) return;
+    log(`DDB Importer: ${keys.join(", ")} turned off (the engine automates Arcane Ward and Warding Bond)`);
+    ui.notifications.warn(loc("Interop.DdbEgide"), { permanent: true });
+  }, { executor: true, label: "DDB Importer: Arcane Ward automation not turned off" });
 }

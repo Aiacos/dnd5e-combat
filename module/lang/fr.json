@@ -2606,5 +2606,6 @@
   "DND5ECOMBAT.Accueil.Nouveautes": "Nouveautés",
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Nom": "Nouveautés",
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Aide": "Le message de mise à jour : ce qu'apportent les dernières versions, les modules DAS à mettre à jour, la compatibilité avec Foundry, dnd5e et vos livres, les vérifications conseillées.",
-  "DND5ECOMBAT.Reglages.Outil.releaseNotes.Bouton": "Ouvrir le message"
+  "DND5ECOMBAT.Reglages.Outil.releaseNotes.Bouton": "Ouvrir le message",
+  "DND5ECOMBAT.Interop.DdbEgide": "DAS · Core a coupé l'automatisation de l'Égide arcanique et du Lien protecteur de DDB Importer : elle absorbait les dégâts une seconde fois. Rechargez le monde (F5) pour que ce soit pris en compte."
 }
