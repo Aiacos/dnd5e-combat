@@ -77,5 +77,7 @@ describe("awaitsPreparation — un sort qui attend d'être préparé", () => {
     const read = path => readFileSync(new URL(`../module/scripts/adapter/${path}`, import.meta.url), "utf8");
     expect(read("smite.mjs")).toMatch(/if \( rule && unpreparedSpell\(item\) && [^\n]*cachedFor[^\n]* \) continue;/);
     expect(read("resources.mjs")).toContain("const unprepared = spell && !linked && unpreparedSpell(item) && !ritual;");
+    // Issue #145 : et ce que la fiche déclare — la Réaction d'un Bouclier non préparé était proposée.
+    expect(read("triggers.mjs")).toMatch(/if \( wornOrNotEquipment\(item\) && preparedOrNotSpell\(item\) \) out\.push\(/);
   });
 });
