@@ -876,7 +876,10 @@
  *     sense?: {…} | [{…}]                       un sens que l'item donne à son porteur, hors de ceux de sa fiche (core/senses.mjs)
  *       kind: "locate" | "sight"                `locate` — la position de la cible est connue sans qu'elle soit vue (elle reste
  *                                               « non vue » pour l'attaque) ; `sight` — compte comme une vue : pas d'une cible
- *                                               Invisible, ni à travers une brume ou des ténèbres
+ *                                               Invisible, ni à travers une brume ou une zone de ténèbres. Une vue déclarée
+ *                                               IGNORE LA LUMIÈRE : elle voit dans le noir ordinaire jusqu'à sa portée, et, sans
+ *                                               `needs: "sight"`, même quand son porteur est Aveuglé — plus proche d'une vision
+ *                                               aveugle que de la vue ; ajouter `needs: "sight"` pour qu'elle s'éteigne Aveuglé
  *       range: 30, units?: "ft"                 portée de règle, convertie à la grille
  *       via?: "effect", fromEffect?: "<id>"     porté par un effet de l'item sur son porteur (un sort, un pouvoir activé), celui-là
  *                                               seulement si `fromEffect` ; sans `via` : par la possession de l'item
