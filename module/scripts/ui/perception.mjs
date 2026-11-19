@@ -438,7 +438,8 @@ function buildMark(kind) {
   const ring = look.ring ? new PIXI.Graphics() : null;
   if ( ring ) root.addChild(ring);
   // Réglage `anonymousLocated` : la silhouette qui tient lieu d'image à une créature perçue sans être vue — l'icône de token par
-  // défaut du cœur, à la taille du token, sous le contour du sens (comme le module Vision 5e montre une détection imprécise).
+  // défaut du cœur, à la taille du token, sous le contour du sens : qui la perçoit sans la voir sait où elle est, pas ce qu'elle
+  // est.
   const stand = look.ring ? null : new PIXI.Sprite(PIXI.Texture.from(CONFIG.Token.documentClass.DEFAULT_ICON));
   if ( stand ) { stand.anchor.set(0.5); stand.visible = false; root.addChild(stand); }
   root.addChild(back, ear, label);
