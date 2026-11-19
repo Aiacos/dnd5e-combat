@@ -106,6 +106,8 @@ function potionCost(activity) {
  */
 function cost(activity) {
   if ( !activity?.actor ) return null;
+  // Une zone déplaçable déjà posée que sa règle déplace sans rien coûter (`movable.cost: "none"`).
+  if ( movableZoneOf(activity)?.rule.cost === "none" ) return null;
   // §145 : le coût après les règles du tour (Arts martiaux : la frappe à mains nues en action Bonus une fois l'action prise), sinon
   // celui de la donnée et des règles fixes (Observateur).
   try { return useIssues(activity, potionCost(activity)).request?.cost ?? costFor(activity) ?? null; } catch { return null; }
@@ -122,7 +124,7 @@ function cost(activity) {
 function cell(activity) {
   if ( !activity?.actor ) return { issues: [], cost: null };
   const zone = movableZoneOf(activity);
-  if ( zone ) return { issues: issues(activity), cost: (zone.rule.cost === "none") ? null : cost(activity) };
+  if ( zone ) return { issues: issues(activity), cost: cost(activity) };
   let result;
   try { result = useIssues(activity, potionCost(activity)); } catch { return { issues: issues(activity), cost: null }; }
   // §410 : `resources` — le moteur juge aussi emplacements, utilisations, quantité et préparation (une interface n'a plus à les juger) ;
