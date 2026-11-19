@@ -109,6 +109,8 @@ export const ITEM_FIXES = Object.freeze({
     minRange: { value: 60, units: "ft" },
     dataFixes: [{ path: "system.activities.GkViNDrZd4rImGoq.consumption.targets", from: [{ type: "activityUses", value: "2", scaling: {} }], value: [spend("itemUses", 2)] }]
   },
+  // Revolver : la table des armes à feu du Guide lui donne 2d8 perforants — l'item du Guide lance 2d6.
+  "revolver": { dataFixes: [{ path: "system.damage.base.denomination", from: 6, value: 8 }] },
   // Attaque à mains nues du Guide : « 1 + modificateur de Force » (celle du Manuel), pas « modificateur + maîtrise ».
   "unarmed-strike": {
     dataFixes: [{
