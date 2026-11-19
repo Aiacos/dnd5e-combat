@@ -48,6 +48,14 @@ export const STEPS = Object.freeze({
   UNDONE: "undone"
 });
 
+/**
+ * L'action est-elle réglée pour de bon : terminée ou manquée ? Pas une action annulée — sa carte peut resservir (le MJ relance),
+ * elle garde donc ce qu'une carte réglée n'a plus à montrer (ui/chat.mjs, carte en rangées).
+ */
+export function settled(step) {
+  return (step === STEPS.DONE) || (step === STEPS.MISSED);
+}
+
 /** Part des dégâts subie sur une sauvegarde réussie, selon `damage.onSave` de l'activité. */
 const ON_SAVE_MULTIPLIER = Object.freeze({ half: 0.5, none: 0, full: 1 });
 

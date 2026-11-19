@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../constants.mjs";
 import { critMargin } from "../adapter/criticals.mjs";
-import { current, pendingChoice, STEPS } from "../core/action.mjs";
+import { current, pendingChoice, settled, STEPS } from "../core/action.mjs";
 import { undo, CHAT_LIGHT_SETTING } from "../runtime/engine.mjs";
 import { route } from "../runtime/router.mjs";
 import { loc } from "../runtime/shared.mjs";
@@ -28,7 +28,8 @@ function tokenImage(uuid) {
 }
 
 /**
- * Les lignes d'un résultat en rangées, dans le balisage de la carte de Midi-QOL (ses gabarits `hits.html` et `saves.html`, MIT) :
+ * Les lignes d'un résultat en rangées, dans le balisage de la carte de Midi-QOL (ses gabarits `hits.html` et `saves.html`, MIT —
+ * la notice est dans styles/dnd5e-combat.css) :
  * une liste de cibles de dnd5e (`ul.evaluation` > `li.target.success|failure`) avec le symbole du verdict, le portrait du token
  * et le nom ; pour une attaque, la CA de la cible à droite (MJ seulement) ; pour une sauvegarde, un titre (caractéristique, et DD
  * si dnd5e le montre à ce joueur) et le total de chaque jet à droite, son détail au survol. Ce que le moteur a fait à la cible
@@ -178,7 +179,8 @@ function targetRow(line, ...classes) {
   const li = document.createElement("li");
   li.classList.add("target", "midi-qol", "midi-qol-target-select", ...classes);
   if ( line.token ) { li.dataset.uuid = line.token; li.dataset.id = line.token.split(".").at(-1); }
-  if ( line.detail ) { li.dataset.tooltip = line.detail; li.dataset.tooltipDirection = "LEFT"; }
+  // `tooltipText` : du texte, jamais relu comme du HTML (un nom, le détail d'un jet).
+  if ( line.detail ) { li.dataset.tooltipText = line.detail; li.dataset.tooltipDirection = "LEFT"; }
   return li;
 }
 
@@ -228,7 +230,7 @@ function saveRow(line, { save=null, caster=null }={}) {
       // Comme Midi-QOL : le calcul en infobulle (avec le DD pour qui le voit), le jet au survol.
       const versus = (Number.isFinite(save?.dc) && challengeVisible(caster))
         ? ` vs ${game.i18n.localize("DND5E.AbbreviationDC")} ${save.dc}` : "";
-      total.dataset.tooltip = `${line.save.total} = ${roll.result}${versus}`;
+      total.dataset.tooltipText = `${line.save.total} = ${roll.result}${versus}`;
       total.append(saveTooltip(roll, line.save, outcome));
     }
     indicators.append(total);
@@ -458,7 +460,8 @@ const lostOrHealed = applied => (applied < 0) ? loc("PvRendus", { n: -applied })
 /**
  * En rangées, une fois l'action réglée, la carte perd ce que la carte de Midi-QOL n'a plus à ce stade : les boutons de jet
  * d'attaque, de dégâts et de sauvegarde de dnd5e (les jets sont faits), la rangée du DD (il est dans le titre des sauvegardes),
- * les résumés de sauvegarde de dnd5e (les rangées les donnent) et le tiroir des effets que le moteur a déjà posés.
+ * les résumés de sauvegarde de dnd5e (les rangées les donnent) et le tiroir des effets que le moteur a déjà posés. Pas la carte
+ * d'une action annulée (`settled`).
  */
 function trimCard(content, plan) {
   const spent = ["rollAttack", "rollDamage", "rollSave"].map(action => `.chat-card button[data-action="${action}"]`).join(", ");
@@ -487,7 +490,8 @@ function renderResolution(message, html, resolution) {
   if ( !content ) return console.warn(`${MODULE_ID} | card without .message-content, resolution not shown`, html);
   if ( step === STEPS.AWAITING_REACTION ) return content.append(block([{ css: "pending", text: loc("ReactionEnAttente") }]));
   if ( pendingChoice(resolution) ) return content.append(block([{ css: "pending", text: loc("ChoixEnAttente") }]));
-  if ( rowsEnabled() && [STEPS.DONE, STEPS.MISSED, STEPS.UNDONE].includes(step) ) trimCard(content, plan);
+  // Pas une carte annulée : le MJ peut vouloir relancer, elle garde les boutons de dnd5e et son tiroir d'effets.
+  if ( rowsEnabled() && settled(step) ) trimCard(content, plan);
 
   const undone = step === STEPS.UNDONE;
   const lines = resolution.targets.map(t => {
