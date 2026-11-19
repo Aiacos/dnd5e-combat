@@ -16,3 +16,15 @@ describe("Talent hors pair", () => {
     expect(CONTENT["peerless-skill"].rollBonus.on).not.toContain("save");
   });
 });
+
+describe("formulaShown — la formule montrée au joueur", () => {
+  it("une référence que les données donnent est remplacée ; les autres restent", async () => {
+    const { formulaShown } = await import("../module/scripts/core/formula-text.mjs");
+    const die = { toString: () => "1d10" };
+    expect(formulaShown("@scale.bard.inspiration", { scale: { bard: { inspiration: die } } })).toBe("1d10");
+    expect(formulaShown("1d4 + @abilities.cha.mod", { abilities: { cha: { mod: 3 } } })).toBe("1d4 + 3");
+    expect(formulaShown("@scale.bard.inspiration", {})).toBe("@scale.bard.inspiration");
+    expect(formulaShown("@scale.bard", { scale: { bard: {} } })).toBe("@scale.bard");
+    expect(formulaShown("1d10", null)).toBe("1d10");
+  });
+});

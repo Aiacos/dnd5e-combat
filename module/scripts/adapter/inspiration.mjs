@@ -8,6 +8,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { formulaShown } from "../core/formula-text.mjs";
 import { originItemOf } from "./facts.mjs";
 import { identifierOf, contentOf } from "./content.mjs";
 import { askChoice } from "./choices.mjs";
@@ -284,7 +285,9 @@ export async function offerRollBonus(actor, { kind, what, total, needed=null, sk
     if ( rule.luck && !Number.isInteger(d20) ) continue;
     // §280 : un dé « quand vous ratez » (Fanfaronnade) n'est pas proposé sur un test déjà réussi, quand le DD est connu.
     if ( rule.failRefund && Number.isFinite(needed) && (total >= needed) ) continue;
-    const formula = rule.luck ? "1d20" : rollFormulaOf(activity);
+    // La formule de l'activité, ses références résolues : la question montre « 1d10 », pas « @scale.bard.inspiration ».
+    const raw = rule.luck ? "1d20" : rollFormulaOf(activity);
+    const formula = raw ? formulaShown(raw, activity?.getRollData?.() ?? actor.getRollData()) : raw;
     const left = usesLeftFor(activity);
     if ( !activity || !formula || !(left > 0) ) continue;
     // §94 : une activité de Réaction (Symbiose, Se ressaisir) n'est proposée que si la Réaction est libre ; elle est dépensée.
