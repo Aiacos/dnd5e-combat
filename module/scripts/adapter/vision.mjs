@@ -27,9 +27,8 @@
 
 import { committedPosition, distanceBetween, tokenCenter } from "./turn.mjs";
 import { contentOf, identifierOf, declaresKey, worldOverrides } from "./content.mjs";
-import { isPlainDarkness, sensesThrough, CORE_JUDGED, DEVILS_SIGHT, devilsSightSees,
-  senseReaches, senseless, countsAsSight, judgedModes }
-  from "../core/light.mjs";
+import { isPlainDarkness, discNearSegment, sensesThrough, CORE_JUDGED, DEVILS_SIGHT,
+  devilsSightSees, senseReaches, senseless, countsAsSight, judgedModes } from "../core/light.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { revealedInvisible, seesInvisible } from "./facts.mjs";
 import { outsideCone } from "./cone.mjs";
@@ -306,14 +305,31 @@ export function blockingRegions(scene) {
  * Les sources de ténèbres de la scène affichée qui ne viennent pas d'une zone du moteur : une lumière de ténèbres posée à la main,
  * un token qui en émet (`isPlainDarkness`). Celles des zones du moteur portent `flags.<module>.region` (adapter/lights.mjs).
  */
-function plainDarknessSources(scene) {
+function plainDarknessSources(scene, observer=null, from=null, to=null) {
   if ( !canvas?.ready || (scene !== canvas.scene) ) return [];
   const out = [];
   for ( const source of canvas.effects?.darknessSources ?? [] ) {
     const engineZone = !!source.object?.document?.flags?.[MODULE_ID]?.region;
-    if ( isPlainDarkness({ active: source.active, preview: source.isPreview, engineZone }) ) out.push(source);
+    const onLevel = sourceOnLevel(source, observer?.level ?? null);
+    if ( !isPlainDarkness({ active: source.active, preview: source.isPreview, engineZone, onLevel }) ) continue;
+    // Une source dont le cercle est loin du trait n'a pas à être échantillonnée.
+    if ( from && to && !discNearSegment({ x: source.x, y: source.y, radius: source.radius }, from, to) ) continue;
+    out.push(source);
   }
   return out;
+}
+
+/**
+ * La source de ténèbres est-elle du niveau de l'observateur (scènes à niveaux de la V14) ? Son document le dit (`includedInLevel` :
+ * une lumière sans niveaux cochés est de tous, un token est du sien) ; à défaut, le niveau que porte la source. Sans niveau
+ * d'observateur, ou sans rien qui le dise : oui.
+ */
+function sourceOnLevel(source, levelId) {
+  if ( !levelId ) return true;
+  const doc = source.object?.document;
+  if ( typeof doc?.includedInLevel === "function" ) return doc.includedInLevel(levelId) !== false;
+  const own = source.data?.level ?? null;
+  return !own || (own === levelId);
 }
 
 /**
@@ -328,7 +344,7 @@ function blockedAlong(scene, from, to, observer=null) {
   // Ses items ne sont lus que si l'observateur a lui-même posé des Ténèbres (ce test court à chaque rafraîchissement de la vue).
   const mine = r => (r.kind === "darkness") && observer?.actor && (r.caster?.uuid === observer.actor.uuid);
   if ( regions.some(mine) && ownDarknessSight(observer) ) regions = regions.map(r => mine(r) ? { ...r, kind: "ownDarkness" } : r);
-  const plain = plainDarknessSources(scene);
+  const plain = plainDarknessSources(scene, observer, from, to);
   if ( !regions.length && !plain.length ) return out;
   const grid = scene.grid;
   const steps = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / (grid.size / 2)));
