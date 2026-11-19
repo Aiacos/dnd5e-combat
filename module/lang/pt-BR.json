@@ -621,6 +621,8 @@
   "DND5ECOMBAT.Reglage.lightIndicator.Aide": "No retrato da barra de ações (Darsh UI DnD5), um ícone (sol, meia-lua, lua) mostra a iluminação onde o token está e, ao passar o mouse, seu significado: Desvantagem em Percepção para enxergar você em Penumbra; invisível para criaturas sem Visão no Escuro na Escuridão.",
   "DND5ECOMBAT.Reglage.unconsciousSenses.Nom": "Inconsciente: sem visão nem audição",
   "DND5ECOMBAT.Reglage.unconsciousSenses.Aide": "Uma criatura Inconsciente não percebe o que acontece ao seu redor (regras de 2024): quando esta opção está marcada, ela não vê nem ouve nada, tanto para o sistema de combate quanto na tela do jogador, até despertar. Desmarcada: ela mantém seus sentidos.",
+  "DND5ECOMBAT.Reglage.hearingRange.Nom": "Alcance da audição (regra da casa)",
+  "DND5ECOMBAT.Reglage.hearingRange.Aide": "As regras não dão alcance à audição: uma criatura que não está escondida é ouvida onde nenhuma parede detenha o som. Deixe vazio para manter essa regra. Caso contrário, uma fórmula em pés lida em cada criatura, além da qual ela não ouve nada: por exemplo 15 + 2.5 * (@skills.prc.passive - 10).",
   "DND5ECOMBAT.Reglage.twilightDarkness.Nom": "Crepúsculo: limiar de escuridão",
   "DND5ECOMBAT.Reglage.twilightDarkness.Aide": "Acima deste nível de escuridão da cena, uma luz global plena conta como Penumbra para o sistema (amanhecer e entardecer), até acabar seu alcance. Útil com módulos de tempo que alteram a escuridão (Simple Timekeeping). 1: nunca. A exibição do Foundry não muda.",
   "DND5ECOMBAT.ChoixSauvegarde.Titre": "{name}: qual salvaguarda?",

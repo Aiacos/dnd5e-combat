@@ -220,14 +220,15 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 26. Blink: permanent Ethereal not removed _(MJ)_
 27. Levitate: not lifted _(MJ)_
 28. passive perception _(MJ)_
-29. enchanted weapon: light not updated _(MJ)_
-30. invisibility: not suspended _(MJ)_
-31. Wild Shape: end if Incapacitated _(MJ)_
-32. floating texts: effect
-33. perception: display not refreshed
-34. ethereal: view not updated
-35. ethereal: movement action not switched _(MJ)_
-36. sneak: cones redrawn
+29. hearing: ranges to read again
+30. enchanted weapon: light not updated _(MJ)_
+31. invisibility: not suspended _(MJ)_
+32. Wild Shape: end if Incapacitated _(MJ)_
+33. floating texts: effect
+34. perception: display not refreshed
+35. ethereal: view not updated
+36. ethereal: movement action not switched _(MJ)_
+37. sneak: cones redrawn
 
 ### `createActor`
 
@@ -297,7 +298,8 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 7. features held by Rage not synced _(MJ)_
 8. armor training: shield AC not updated _(MJ)_
 9. granted speed not synced _(MJ)_
-10. perception: Devil's Sight or blind hearing not granted after an update
+10. hearing: ranges to read again
+11. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `createNote`
 
@@ -369,15 +371,16 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 19. Ready: broken concentration not noted _(MJ)_
 20. Levitate: not brought down _(MJ)_
 21. passive perception _(MJ)_
-22. enchanted weapon: light not updated _(MJ)_
-23. invisibility: not restored _(MJ)_
-24. light source: remaining time not kept _(MJ)_
-25. tether: not forgotten _(MJ)_
-26. floating texts: effect
-27. perception: display not refreshed
-28. ethereal: view not updated
-29. ethereal: movement action not switched _(MJ)_
-30. sneak: cones redrawn
+22. hearing: ranges to read again
+23. enchanted weapon: light not updated _(MJ)_
+24. invisibility: not restored _(MJ)_
+25. light source: remaining time not kept _(MJ)_
+26. tether: not forgotten _(MJ)_
+27. floating texts: effect
+28. perception: display not refreshed
+29. ethereal: view not updated
+30. ethereal: movement action not switched _(MJ)_
+31. sneak: cones redrawn
 
 ### `deleteAmbientLight`
 
@@ -430,8 +433,9 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 5. features held by Rage not synced _(MJ)_
 6. armor training: shield AC not updated _(MJ)_
 7. granted speed not synced _(MJ)_
-8. light source: not extinguished _(MJ)_
-9. perception: Devil's Sight or blind hearing not granted after an update
+8. hearing: ranges to read again
+9. light source: not extinguished _(MJ)_
+10. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `deleteNote`
 
@@ -1083,14 +1087,15 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 9. Prone: crawl mode not set or not removed _(MJ)_
 10. climbing: fall not triggered _(MJ)_
 11. fall: not triggered automatically _(MJ)_
-12. enchanted weapon: light not updated _(MJ)_
-13. invisibility: not restored _(MJ)_
-14. light source: not burnt out _(MJ)_
-15. floating texts: effect
-16. perception: display not refreshed
-17. ethereal: view not updated
-18. ethereal: movement action not switched _(MJ)_
-19. sneak: cones redrawn
+12. hearing: ranges to read again
+13. enchanted weapon: light not updated _(MJ)_
+14. invisibility: not restored _(MJ)_
+15. light source: not burnt out _(MJ)_
+16. floating texts: effect
+17. perception: display not refreshed
+18. ethereal: view not updated
+19. ethereal: movement action not switched _(MJ)_
+20. sneak: cones redrawn
 
 ### `updateActor`
 
@@ -1107,10 +1112,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 11. knocked out: not woken up _(MJ)_
 12. armor training: shield AC not updated _(MJ)_
 13. granted speed not synced _(MJ)_
-14. Wild Shape: end at 0 Hit Points _(MJ)_
-15. perception: Devil's Sight or blind hearing not granted after an update
-16. weapon mastery window not refreshed
-17. sneak: cones redrawn
+14. hearing: ranges to read again
+15. Wild Shape: end at 0 Hit Points _(MJ)_
+16. perception: Devil's Sight or blind hearing not granted after an update
+17. weapon mastery window not refreshed
+18. sneak: cones redrawn
 
 ### `updateAmbientLight`
 
@@ -1162,7 +1168,8 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 5. effect end on armor: not played _(MJ)_
 6. armor training: shield AC not updated _(MJ)_
 7. granted speed not synced _(MJ)_
-8. perception: Devil's Sight or blind hearing not granted after an update
+8. hearing: ranges to read again
+9. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `updateNote`
 

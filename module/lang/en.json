@@ -690,6 +690,8 @@
   "DND5ECOMBAT.Reglage.lightIndicator.Aide": "On the action bar portrait (Darsh UI DnD5), a badge (sun, half moon, moon) shows the light your token stands in and, on hover, what it means: Disadvantage on Perception to see you in Dim Light, unseen by creatures without Darkvision in Darkness.",
   "DND5ECOMBAT.Reglage.unconsciousSenses.Nom": "Unconscious: no sight or hearing",
   "DND5ECOMBAT.Reglage.unconsciousSenses.Aide": "An Unconscious creature is unaware of its surroundings (2024 rules): when ticked, it sees and hears nothing, for the engine and on its player's screen, until it wakes up. Unticked, it keeps its senses.",
+  "DND5ECOMBAT.Reglage.hearingRange.Nom": "Hearing range (house rule)",
+  "DND5ECOMBAT.Reglage.hearingRange.Aide": "The rules give hearing no range: a creature that is not hidden is heard wherever no wall stops the sound. Leave empty to keep that rule. Otherwise, a formula in feet read on each creature, beyond which it hears nothing: for example 15 + 2.5 * (@skills.prc.passive - 10).",
   "DND5ECOMBAT.Reglage.twilightDarkness.Nom": "Twilight: darkness threshold",
   "DND5ECOMBAT.Reglage.twilightDarkness.Aide": "Above this scene darkness level, a bright global light counts as Dim Light for the engine (dawn and dusk), until it goes out at the end of its range. Useful with a time module that changes darkness (Simple Timekeeping). 1: never. Foundry's display does not change.",
   "DND5ECOMBAT.ChoixSauvegarde.Titre": "{name}: which saving throw?",

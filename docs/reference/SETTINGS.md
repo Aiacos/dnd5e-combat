@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-129 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
+130 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
 `client` = ce poste, `user` = ce joueur. **Onglet** : celui de la fenêtre de réglages DAS (`core/settings-layout.mjs`) ; sans onglet,
 le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêtre dédiée). Le libellé est celui de `lang/fr.json`.
 
@@ -77,6 +77,7 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 | `coneAngles` | Angle des cônes de vision | world | String | `"120; beast 150; ooze 360; plant 360"` |  | `runtime/vision.mjs` |
 | `factionIcons` | Factions : icônes sur les tokens et la barre d'outils | world | Boolean | `false` |  | `ui/factions.mjs` |
 | `factionRules` | Factions : règles par type de créature | world | Boolean | `true` |  | `runtime/factions.mjs` |
+| `hearingRange` | Portée de l'ouïe (règle maison) | world | String | `""` |  | `runtime/illumination.mjs` |
 | `lightIndicator` | Indicateur de lumière | client | Boolean | `true` |  | `ui/illumination.mjs` |
 | `passivePerception` | Perception passive contre la Furtivité | world | String | `"auto"` | auto, gm, off | `runtime/passive.mjs` |
 | `stealthRules` | Règles de Furtivité | world | String | `"2024"` | 2024, bg3, off | `runtime/stealth.mjs` |

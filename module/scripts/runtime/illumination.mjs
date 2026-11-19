@@ -10,6 +10,8 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { route } from "./router.mjs";
+import { clearHearingRanges } from "../adapter/hearing.mjs";
 
 export function registerIllumination() {
   game.settings.register(MODULE_ID, "twilightDarkness", {
@@ -26,4 +28,18 @@ export function registerIllumination() {
       for ( const token of canvas.tokens.placeables ) token.renderFlags.set({ refreshVisibility: true });
     }
   });
+  // Portée d'ouïe : une règle maison (les règles n'en donnent aucune). Vide par défaut : sans portée. Une formule en pieds, avec
+  // les données de jet de l'acteur — `15 + 2.5 * (@skills.prc.passive - 10)` est celle d'un autre module de vision.
+  game.settings.register(MODULE_ID, "hearingRange", {
+    name: "DND5ECOMBAT.Reglage.hearingRange.Nom", hint: "DND5ECOMBAT.Reglage.hearingRange.Aide",
+    scope: "world", config: true, type: String, default: "",
+    onChange: () => {
+      clearHearingRanges();
+      if ( canvas?.ready ) canvas.perception.update({ refreshVision: true });
+    }
+  });
+  // La fiche, ses effets ou ses objets changent : la portée d'ouïe se relit (la Perception passive entre dans la formule).
+  const stale = { label: "hearing: ranges to read again" };
+  for ( const hook of ["updateActor", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect", "createItem", "updateItem",
+    "deleteItem"] ) route(hook, () => clearHearingRanges(), stale);
 }
