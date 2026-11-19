@@ -317,7 +317,7 @@ describe("contenu livré", () => {
       "thunderous-smite", "thunderwave", "tinderbox", "toll-the-dead", "tome-of-clear-thought", "tome-of-leadership-and-influence", "tome-of-understanding", "torch", "torpor", "touch-of-death", "toxic-escape", "trampling-charge",
       "travel-along-the-tree", "trebuchet", "tricksters-transposition", "trip-attack", "true-resurrection",
       "true-seeing-crystal-ball-of", "true-strike", "truth-serum", "tsunami",
-      "twinned-spell", "umbral-dagger", "umbral-form", "unarmed-fighting", "unarmed-strike", "uncanny-dodge", "undead-fortitude", "unraveling-flesh",
+      "twinned-spell", "umbral-dagger", "umbral-form", "unarmed-fighting", "unarmed-strike", "uncanny-dodge", "uncanny-metabolism", "undead-fortitude", "unraveling-flesh",
       "unseen-servant", "valor-extra-attack", "vampiric-bite", "vampiric-touch", "vanish", "vicious-mockery", "vile-appearance",
       "vine-attack", "viral-aura", "vitality-of-the-tree", "vitriolic-sphere", "vow-of-enmity", "wails-from-the-grave", "wall-of-fire",
       "wall-of-force", "wall-of-ice", "wall-of-stone", "wall-of-thorns", "wand-of-paralysis", "wand-of-polymorph", "wand-of-web",
