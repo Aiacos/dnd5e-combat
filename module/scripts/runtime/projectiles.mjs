@@ -19,6 +19,7 @@ import { route } from "./router.mjs";
 import { log, loc, notice } from "./shared.mjs";
 import { lengthIn } from "../adapter/units.mjs";
 import { settledResolution } from "../adapter/messages.mjs";
+import { suspendedUse } from "./suspended-uses.mjs";
 import { handleNearSpace } from "./teleport.mjs";
 import { relaunchUse } from "./relaunch.mjs";
 import { antimagicBlocks } from "../adapter/antimagic.mjs";
@@ -139,9 +140,16 @@ async function chain(usage, resolution) {
       // §448 : le premier a été forcé dans un champ antimagie (sinon il ne serait pas parti) — les suivants aussi, sans nouvelle fenêtre.
       [MODULE_ID]: { confirmed: true, cost: "free", projectileOf: usage.id, ...(antimagicBlocks(base) ? { antimagicForced: true } : {}) }
     };
-    const used = await relaunchUse(base, config, { configure: false }, { data: { flags: { [MODULE_ID]: { projectileOf: usage.id } } } });
+    const flags = { data: { flags: { [MODULE_ID]: { projectileOf: usage.id } } } };
+    let used = await relaunchUse(base, config, { configure: false }, flags);
+    // Une porte a suspendu ce projectile pour poser sa question (Présage, réaction d'avant l'attaque) : elle le relance elle-même,
+    // jet d'attaque compris. On attend sa relance ; sans elle, le troisième rayon ne partait jamais.
+    const gated = !used?.message ? suspendedUse(base.uuid) : null;
+    if ( gated ) used = await gated;
     if ( !used?.message ) break;
-    if ( projectilesOf(base.item)?.attack ) await base.rollAttack({}, { configure: false }, { data: { system: { origin: used.message.id } } });
+    if ( !gated && projectilesOf(base.item)?.attack ) {
+      await base.rollAttack({}, { configure: false }, { data: { system: { origin: used.message.id } } });
+    }
     await settledResolution(used.message.id, { timeout: 30000, every: 300 });
   }
   // §402 : « vous pouvez ensuite vous téléporter… à 1,50 m de l'une des cibles » (Frappe du vent d'acier) — sur ce client, l'auteur.
