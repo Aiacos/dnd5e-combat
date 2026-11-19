@@ -272,11 +272,12 @@ export const TRIGGERS = Object.freeze({
     { on: "isHit", via: "effect", if: { "activity.isMelee": true, "target.hasTempHp": true }, do: [{ type: "damage", to: "source", activity: "dnd5eactivity200" }] },
     { on: "isDamaged", via: "effect", if: { "target.hasTempHp": false }, do: [{ type: "remove" }] }
   ],
-  // Forme corrosive (pouding noir, MM 2024) : « une créature qui touche le pouding avec une attaque au corps à corps
-  // en étant à 1,50 m ou moins subit 1d8 dégâts d'acide » — l'activité de dégâts du trait (OzlTY1z1gup4C2Qq), portée
-  // par l'item du monstre lui-même. La corrosion des armes n'est pas reprise.
+  // Forme corrosive (pouding noir, Manuel des Monstres 2025 p. 42) : « une créature qui touche le pouding avec un jet d'attaque
+  // au corps à corps subit 1d8 dégâts d'acide » — l'activité de dégâts du trait (OzlTY1z1gup4C2Qq), portée par l'item du monstre
+  // lui-même. Sans condition de distance : le « à 1,50 m ou moins » est celui du trait de 2014, dont l'activité porte un autre id ;
+  // un coup d'arme à allonge porté à 3 m compte. La corrosion des armes n'est pas reprise.
   "corrosive-form": [
-    { on: "isHit", if: { "activity.isMelee": true, "target.within": { distance: 5, units: "ft" } }, do: [{ type: "damage", to: "source", activity: "OzlTY1z1gup4C2Qq" }] }
+    { on: "isHit", if: { "activity.isMelee": true }, do: [{ type: "damage", to: "source", activity: "OzlTY1z1gup4C2Qq" }] }
   ],
   "blindness-deafness": [{ on: "endOfTurn", via: "effect", do: [{ type: "resave" }] }],
   // Injonction (§16.59) : l'ordre vaut pour le prochain tour de la cible — l'effet tombe à la fin de ce tour.
