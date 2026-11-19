@@ -27,7 +27,8 @@
 
 import { committedPosition, distanceBetween, tokenCenter } from "./turn.mjs";
 import { contentOf, identifierOf, declaresKey, worldOverrides } from "./content.mjs";
-import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, devilsSightSees, senseReaches, senseless, countsAsSight, judgedModes }
+import { isPlainDarkness, sensesThrough, CORE_JUDGED, DEVILS_SIGHT, devilsSightSees,
+  senseReaches, senseless, countsAsSight, judgedModes }
   from "../core/light.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { revealedInvisible, seesInvisible } from "./facts.mjs";
@@ -302,6 +303,20 @@ export function blockingRegions(scene) {
 }
 
 /**
+ * Les sources de ténèbres de la scène affichée qui ne viennent pas d'une zone du moteur : une lumière de ténèbres posée à la main,
+ * un token qui en émet (`isPlainDarkness`). Celles des zones du moteur portent `flags.<module>.region` (adapter/lights.mjs).
+ */
+function plainDarknessSources(scene) {
+  if ( !canvas?.ready || (scene !== canvas.scene) ) return [];
+  const out = [];
+  for ( const source of canvas.effects?.darknessSources ?? [] ) {
+    const engineZone = !!source.object?.document?.flags?.[MODULE_ID]?.region;
+    if ( isPlainDarkness({ active: source.active, preview: source.isPreview, engineZone }) ) out.push(source);
+  }
+  return out;
+}
+
+/**
  * Ce qui bloque la vue le long d'un trait (échantillonné tous les demi-carreaux), extrémités comprises : une brume, des
  * ténèbres, les deux ou rien.
  * §447 : `observer` — s'il voit à travers les ténèbres de ses propres sorts : elles comptent en `ownDarkness`, pas en `darkness`.
@@ -313,7 +328,8 @@ function blockedAlong(scene, from, to, observer=null) {
   // Ses items ne sont lus que si l'observateur a lui-même posé des Ténèbres (ce test court à chaque rafraîchissement de la vue).
   const mine = r => (r.kind === "darkness") && observer?.actor && (r.caster?.uuid === observer.actor.uuid);
   if ( regions.some(mine) && ownDarknessSight(observer) ) regions = regions.map(r => mine(r) ? { ...r, kind: "ownDarkness" } : r);
-  if ( !regions.length ) return out;
+  const plain = plainDarknessSources(scene);
+  if ( !regions.length && !plain.length ) return out;
   const grid = scene.grid;
   const steps = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / (grid.size / 2)));
   for ( let k = 0; k <= steps; k++ ) {
@@ -321,6 +337,7 @@ function blockedAlong(scene, from, to, observer=null) {
     const point = { x: from.x + ((to.x - from.x) * t), y: from.y + ((to.y - from.y) * t),
       elevation: (from.elevation ?? 0) + (((to.elevation ?? 0) - (from.elevation ?? 0)) * t) };
     for ( const { region, kind } of regions ) if ( !out[kind] && region.testPoint?.(point) ) out[kind] = true;
+    if ( !out.darkness && plain.some(source => source.testPoint(point)) ) out.darkness = true;
     if ( out.fog && out.darkness && out.silence && out.ownDarkness ) break;
   }
   return out;

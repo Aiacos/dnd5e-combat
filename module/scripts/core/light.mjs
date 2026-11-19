@@ -63,6 +63,17 @@ export function dispelledBy(light, maxLevel, darkness) {
 }
 
 /**
+ * Une source de ténèbres de la scène compte-t-elle comme des ténèbres pour les règles ? Oui pour celle qu'un MJ a posée à la main
+ * (ou qu'un token émet) : le cœur l'oppose déjà à la vision dans le noir, et ses bords arrêtent tous ses modes de détection — la
+ * vision aveugle et la vision véritable, que des ténèbres n'arrêtent pas, doivent donc être jugées par le moteur. Pas pour la
+ * lumière d'une zone du moteur (`engineZone`) : sa région la représente déjà, et sait qui l'a lancée.
+ * @param {{active: boolean, preview?: boolean, engineZone?: boolean}} source
+ */
+export function isPlainDarkness({ active, preview=false, engineZone=false }) {
+  return !!active && !preview && !engineZone;
+}
+
+/**
  * Les sens qui percent une zone qui bloque la vue. Brume (`obscures`) : ceux qui ne voient pas (vision aveugle, et les modes du cœur sans
  * murs : `CORE_JUDGED`). Ténèbres magiques : ceux-là, plus la vision véritable (`seeAll` de dnd5e) et la Vision du diable — la vision
  * dans le noir, elle, n'y voit rien (PHB 2024, Ténèbres).
