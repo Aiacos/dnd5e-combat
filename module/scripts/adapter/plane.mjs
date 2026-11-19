@@ -45,15 +45,15 @@ export function etherealSightOf(actor, gridUnits, factors=readUnitFactors()) {
   let range = null;
   const truesight = Number(senses.ranges?.truesight ?? 0);
   if ( truesight > 0 ) range = lengthIn(truesight, senses.units ?? "ft", gridUnits, factors);
-  if ( actor.items?.some(i => identifierOf(i) === "ethereal-sight") ) {
+  if ( actor.items?.some(i => identifierOf(i).id === "ethereal-sight") ) {
     range = Math.max(range ?? 0, lengthIn(ETHEREAL_SIGHT_FT, "ft", gridUnits, factors));
   }
   return range;
 }
 
 /** Le fantôme du MM : sa Forme éthérée le laisse « visible sur le plan matériel … et inversement ». */
-function visibleAcross(actor) {
-  return !!actor?.items?.some(i => (i.type === "feat") && (identifierOf(i) === "etherealness"));
+export function seenAcrossPlanes(actor) {
+  return !!actor?.items?.some(i => (i.type === "feat") && (identifierOf(i).id === "etherealness"));
 }
 
 /**
@@ -72,7 +72,7 @@ export function perceivesPlane(observer, target) {
     distance: distanceBetween(observer, target).value,
     etherealSight: etherealSightOf(observer.actor, units, factors),
     limit: lengthIn(BORDER_VIEW_FT, "ft", units, factors),
-    visibleAcross: visibleAcross(target.actor)
+    visibleAcross: seenAcrossPlanes(target.actor)
   });
 }
 
