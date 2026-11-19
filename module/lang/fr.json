@@ -1602,6 +1602,7 @@
   "DND5ECOMBAT.Diagnostic.SauvegardeFaite": "Sauvegarde : {name}",
   "DND5ECOMBAT.Diagnostic.SauvegardeEchec": "La sauvegarde a échoué, rien n'a été modifié : {error}",
   "DND5ECOMBAT.Diagnostic.ReparationEchec": "échec : {error}",
+  "DND5ECOMBAT.Diagnostic.ReparationDisparu": "ignoré : ce document n'existe plus (une réparation précédente l'a remplacé)",
   "DND5ECOMBAT.Diagnostic.AnalyseEchec": "Cette vérification n'a pas pu tourner : {error}",
   "DND5ECOMBAT.Diagnostic.Occupe": "Le diagnostic est déjà en cours.",
   "DND5ECOMBAT.Diagnostic.Monde": "Monde",
