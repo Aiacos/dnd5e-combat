@@ -11,7 +11,7 @@ import { resolveAttack, hitsRegardless } from "../core/attack.mjs";
 import { offerInspiration, offerRollBonus, keptD20 } from "../adapter/inspiration.mjs";
 import { readUsage } from "../adapter/usage.mjs";
 import { canResistSave, askLegendary, resistSave, legendaryLeft } from "../adapter/legendary.mjs";
-import { offerInterpose, offerPeerlessAim, offerSpellDamageRerolls } from "./feats.mjs";
+import { offerInterpose, offerPeerlessAim, offerSpellDamageRerolls, offerOverchannel } from "./feats.mjs";
 import { offerHeroicD20, offerHeroicDamage } from "./heroic.mjs";
 import { hasHeroic } from "../adapter/heroic.mjs";
 import { rerolledDamage } from "../core/heroic.mjs";
@@ -158,7 +158,9 @@ export async function onDamageMessage(message) {
     if ( part ) part.value = rerolledDamage(part.value, heroic.old, heroic.now);
   }
   // Sort renforcé (Métamagie) : des dés de dégâts d'un sort relancés contre 1 point de sorcellerie ; mêmes parts de l'agrégat.
-  for ( const delta of (actor ? await offerSpellDamageRerolls(actor, message) : []) ) {
+  // Surcharge (Évocateur 14) d'abord : des dés au maximum n'ont plus rien à relancer.
+  const maxed = actor ? await offerOverchannel(actor, message, game.messages.get(damage.origin ?? "") ?? null) : [];
+  for ( const delta of [...maxed, ...((actor && !maxed.length) ? await offerSpellDamageRerolls(actor, message) : [])] ) {
     const sameProps = d => (d.properties.size === delta.properties.length) && delta.properties.every(p => d.properties.has(p));
     const part = damage.damages.find(d => (d.type === delta.type) && sameProps(d))
       ?? damage.damages.find(d => d.type === delta.type);
