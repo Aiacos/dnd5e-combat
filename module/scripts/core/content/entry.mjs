@@ -12,6 +12,7 @@ import { SPELL_COMPONENTS } from "../spell-failure.mjs";
 import { isId, isObject } from "./shared.mjs";
 import { validateDataFixes } from "../data-fixes.mjs";
 import { validateAura, validateTrigger } from "./steps.mjs";
+import { SENSE_KINDS } from "../senses.mjs";
 /**
  * Les erreurs d'une entrée. Vide = valide.
  * @param {object} entry
@@ -297,6 +298,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     && Object.keys(entry.etherealShift).every(k => k === "others") && (entry.etherealShift.others === true))) ) {
     errors.push(`${at}etherealShift: true or { others: true }`);
   }
+  validateSenses(entry, at, facts, errors);
   validateExtras(entry, at, errors);
   // §367 : la fin d'un effet de l'item fait utiliser une activité de l'item autour de son porteur (Esprit de l'ombre).
   if ( "endActivity" in entry ) {
@@ -818,6 +820,44 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
 }
 
 /** Les erreurs d'une table entière `{ identifiant: entrée }`. */
+/**
+ * `sense` : un sens que l'item donne (ou une liste) ; `wardsDetection` : ce dont les effets de l'item protègent leur porteur.
+ * Schéma : core/content.mjs.
+ */
+function validateSenses(entry, at, facts, errors) {
+  if ( "sense" in entry ) {
+    const list = Array.isArray(entry.sense) ? entry.sense : [entry.sense];
+    if ( !list.length ) errors.push(`${at}sense: a sense or a non-empty list of senses`);
+    list.forEach((sense, i) => {
+      const here = `${at}sense${Array.isArray(entry.sense) ? `[${i}]` : ""}`;
+      if ( !isObject(sense) ) return errors.push(`${here}: { kind, range, … }`);
+      const known = ["kind", "range", "units", "via", "fromEffect", "walls", "detects", "magic", "reveals"];
+      for ( const key of Object.keys(sense) ) if ( !known.includes(key) ) errors.push(`${here}: unknown key "${key}"`);
+      if ( !SENSE_KINDS.includes(sense.kind) ) errors.push(`${here}.kind: ${SENSE_KINDS.join(" | ")}`);
+      if ( !(Number.isFinite(sense.range) && (sense.range > 0)) ) errors.push(`${here}.range: a positive number`);
+      if ( ("units" in sense) && !((typeof sense.units === "string") && sense.units) ) {
+        errors.push(`${here}.units: a unit of length`);
+      }
+      if ( ("via" in sense) && (sense.via !== "effect") ) errors.push(`${here}.via: "effect"`);
+      if ( ("fromEffect" in sense) && !(isId(sense.fromEffect) && (sense.via === "effect")) ) {
+        errors.push(`${here}.fromEffect: an effect id, with via: "effect"`);
+      }
+      if ( ("walls" in sense) && (sense.walls !== false) ) errors.push(`${here}.walls: false`);
+      if ( ("magic" in sense) && !((sense.magic === true) || ((typeof sense.magic === "string") && sense.magic)) ) {
+        errors.push(`${here}.magic: true or a school of magic`);
+      }
+      if ( ("reveals" in sense) && (sense.reveals !== "presence") ) errors.push(`${here}.reveals: "presence"`);
+      for ( const key of unknownFacts(sense.detects ?? null, facts) ) errors.push(`${here}.detects: unknown fact "${key}"`);
+    });
+  }
+  if ( "wardsDetection" in entry ) {
+    const wards = entry.wardsDetection;
+    if ( !(Array.isArray(wards) && wards.length && wards.every(w => (typeof w === "string") && w)) ) {
+      errors.push(`${at}wardsDetection: a non-empty list of "magic" or schools of magic`);
+    }
+  }
+}
+
 export function validateTable(table, { facts={} }={}) {
   if ( !isObject(table) ) return ["the table is an object { identifier: entry }"];
   return Object.entries(table).flatMap(([id, entry]) => validateEntry(entry, { facts, at: `${id}.` }));

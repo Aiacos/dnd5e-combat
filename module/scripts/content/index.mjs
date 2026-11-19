@@ -125,7 +125,12 @@ export const CONTENT = { ...SHIPPED };
 const REGISTERED = new Map();
 
 /** Recompose `CONTENT` sur place : le contenu livré, puis chaque table enregistrée fusionnée par-dessus. */
+/** Combien de fois le contenu composé a été refait : une table enregistrée ou retirée. Pour qui garde une lecture du contenu. */
+let stamp = 0;
+export const tablesStamp = () => stamp;
+
 function rebuild() {
+  stamp++;
   for ( const id of Object.keys(CONTENT) ) delete CONTENT[id];
   Object.assign(CONTENT, SHIPPED);
   for ( const table of REGISTERED.values() ) {

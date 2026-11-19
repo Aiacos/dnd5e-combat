@@ -35,6 +35,7 @@ import { outsideCone } from "./cone.mjs";
 import { hiddenFrom } from "./stealth.mjs";
 import { lengthIn } from "./units.mjs";
 import { perceivesPlane } from "./plane.mjs";
+import { sensedBy } from "./senses.mjs";
 import { lightOnToken } from "./illumination.mjs";
 import { LIGHT } from "../core/illumination.mjs";
 
@@ -182,6 +183,10 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false }=
   if ( outsideCone(observer, target) ) return false;   // §182 : hors combat, une créature du MJ ne voit que devant elle
   if ( !ignoreHidden && hiddenFrom(observer, target) ) return false;   // §185 : caché, pour un ennemi qui ne l'a pas repéré
   if ( !perceivesPlane(observer, target) ) return false;   // §225 : d'un plan à l'autre, seulement avec une vue de l'Éthéré
+  // Un sens déclaré par du contenu (`sense`) : il localise sans voir — ni la brume ni les ténèbres ne l'arrêtent —, ou compte comme
+  // une vue, jugée plus bas comme les autres vues.
+  const declared = sensedBy(observer, target, sceneBetween(observer, target));
+  if ( locating && ((declared === "locate") || (declared === "sight")) ) return true;
   const source = sourceFor(observer);
   if ( !source ) return null;
   const config = testsFor(target, observer);
@@ -193,6 +198,7 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false }=
   if ( blocked.fog || blocked.darkness ) return seesThroughBlock(observer, target, source, config, blocked, locating);
   // §447 : seules des Ténèbres lancées par l'observateur, qui voit à travers (`seesThroughOwnDarkness`) : « il voit normalement ».
   if ( blocked.ownDarkness && devilsSightSeesToken(observer, target, blocked) ) return true;
+  if ( declared === "sight" ) return true;
 
   // Lumières qui donnent la vue (le cœur les teste en premier, pour tout le monde).
   for ( const light of canvas.effects.lightSources ) {
@@ -230,6 +236,21 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false }=
  */
 export function canLocate(observer, target, { ignoreHidden=false }={}) {
   return canSee(observer, target, { ignoreHidden, locating: true });
+}
+
+/**
+ * Ce que les sens déclarés par du contenu disent de la cible, avec les garde-fous de `canSee` (sens éteints, token caché par le MJ,
+ * plan) : `"sight"`, `"locate"`, `"presence"`, ou null. Pour l'affichage et pour un voisin (`api.vision.sensed`).
+ */
+export function sensedThrough(observer, target) {
+  if ( !canvas?.ready || !observer || !target || (observer === target) ) return null;
+  if ( isSenseless(observer) || !target.object || target.hidden || !perceivesPlane(observer, target) ) return null;
+  return sensedBy(observer, target, sceneBetween(observer, target));
+}
+
+/** Ce que `sensedBy` lit de la scène entre deux tokens : la distance, et s'il y a un mur de vue (ténèbres écartées). */
+function sceneBetween(observer, target) {
+  return { distance: () => distanceBetween(observer, target).value, walled: () => !lineOfSightThrough(observer, target) };
 }
 
 /** C12-e : la cible porte Vision ombreuse et se tient dans les ténèbres. */
