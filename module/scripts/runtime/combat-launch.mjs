@@ -95,7 +95,8 @@ export async function beginLaunch() {
   if ( !canvas.scene ) { ui.notifications.warn(loc("Lancement.SansScene")); return false; }
   const running = game.combats.find(c => c.started && (c.scene?.id === canvas.scene.id));
   if ( running ) { ui.notifications.warn(loc("Lancement.DejaEnCours")); return false; }
-  await setState({ pending: true, wasPaused: game.paused });
+  // `by` : le MJ qui a ouvert la fenêtre — s'il recharge sa page, c'est son client qui lève l'attente (`ready`).
+  await setState({ pending: true, wasPaused: game.paused, by: game.user.id });
   game.togglePause(true, { broadcast: true });
   log("combat launch: game paused, choosing the participants");
   return true;
@@ -272,6 +273,12 @@ export function registerCombatLaunch() {
   for ( const hook of ["pauseGame", "ready"] ) {
     route(hook, () => { refreshPause(); }, { always: true, label: "combat launch: pause message not shown" });
   }
+  // L'attente ne se lève qu'à la fermeture de la fenêtre : un MJ qui recharge fenêtre ouverte n'en a plus, la pause et son message
+  // resteraient jusqu'au prochain lancement. Un état d'avant `by` : le MJ actif s'en charge.
+  route("ready", () => {
+    const { pending, by } = state();
+    if ( pending && (by ? by === game.user.id : isExecutor()) ) return cancelLaunch();
+  }, { label: "combat launch: pending launch not cleared" });
   route("updateCombatant", (combatant, changes) => {
     if ( !("initiative" in changes) ) return;
     const combat = combatant.combat;
