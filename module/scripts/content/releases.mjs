@@ -20,6 +20,25 @@ const PHB = "dnd-players-handbook";
 
 export const RELEASES = Object.freeze([
   {
+    version: "0.286.0",
+    highlights: ["securiteToutes", "cartesMidi", "egideDdb", "vibrations", "ethere", "correctifs2", "italienComplet"],
+    tested: {
+      foundry: "14.370",
+      system: "6.1.1",
+      books: { [PHB]: "3.0.0", "dnd-monster-manual": "1.4.0", "dnd-dungeon-masters-guide": "2.0.0", "dnd-ravenloft-horrors-within": "2.0.0" },
+      modules: {
+        "darsh-dnd-ui": "0.36.1", "darsh-loot": "0.22.2", "dnd5e-lumiere": "0.15.1", "darsh-animations": "0.16.1",
+        "darsh-homebrew": "0.3.2", "darsh-npc": "0.8.0", "darsh-controller": "0.1.0"
+      }
+    },
+    risks: [
+      { id: "lootSecurite2", when: { module: "darsh-loot", below: "0.22.2" } },
+      { id: "ddbEgide", when: { module: "ddb-importer" } },
+      { id: "vibrations" }
+    ],
+    checks: [{ id: "data-fixes" }]
+  },
+  {
     version: "0.285.0",
     highlights: ["securiteRequetes", "lignesParCible", "critiqueAmeliore", "suiteDeSort", "correctifsAiacos"],
     tested: {

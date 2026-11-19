@@ -30,7 +30,7 @@ const EXPECTED = Object.fromEntries(Object.entries({
   "Occultiste du diable": [true,  true,  true, true,  false],   // Vision du diable 120 ft : « voit normalement », pas l'invisible
   "Vision véritable":     [true,  true,  true, true,  true],
   "Vision aveugle":       [true,  false, true, true,  true],    // 30 ft : la cible derrière les Ténèbres est à 55 ft
-  "Vibrations":           [true,  true,  true, true,  true],    // 60 ft, ni murs ni lumière
+  "Vibrations":           [false, false, true, false, false],   // la perception des vibrations localise, elle ne voit pas (#118) : seule sa vue compte
   "Sens tout":            [true,  true,  true, true,  true],    // mode générique du cœur, 120 ft, ni murs ni lumière
   "Voir l'invisible":     [false, false, true, false, true]     // une vue : ni Ténèbres ni noir, mais l'invisible en pleine lumière
 }).map(([name, row]) => [name, Object.fromEntries(TARGETS.map((t, i) => [t, row[i]]))]));
@@ -86,6 +86,8 @@ export default {
       const want = EXPECTED[r.observer]?.[r.target];
       if ( want === undefined ) continue;
       ctx.expect(r.rules.sees === want, `${r.observer} ${want ? "voit" : "ne voit pas"} ${r.target} (règles)`);
+      // #118 : la perception des vibrations ne voit pas, mais elle localise (60 ft, ni murs ni lumière) — chaque cible a une position connue.
+      if ( r.observer === "Vibrations" ) ctx.expect(r.rules.locates === true, `Vibrations localise ${r.target} (règles)`);
       // Vue : nette, ou par le contour de son propre sens (vision aveugle, vision véritable : le filtre de dnd5e) — jamais l'ouïe.
       if ( r.rules.sees ) ctx.expect(["seen", "outline"].includes(r.screen), `${r.observer} : ${r.target} vue par les règles, affichée par sa vue ou son sens (écran : ${r.screen})`);
       else ctx.expect(r.screen !== "seen", `${r.observer} : ${r.target} non vue par les règles, jamais nette à l'écran (écran : ${r.screen})`);

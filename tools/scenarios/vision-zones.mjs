@@ -46,7 +46,9 @@ export default {
     const check = (r, sees, hears, label) => {
       ctx.expect(r.rules.sees === sees, `${label} : ${r.observer} ${sees ? "voit" : "ne voit pas"} ${r.target} (règles)`);
       if ( hears !== null ) ctx.expect(r.rules.hears === hears, `${label} : ${r.observer} ${hears ? "entend" : "n'entend pas"} ${r.target}`);
-      const screen = r.rules.sees ? ["seen", "outline"] : [r.rules.hears ? "heard" : "hidden"];
+      // #118 : une cible localisée sans être vue (perception des vibrations) garde le contour de son sens à l'écran.
+      const screen = r.rules.sees ? ["seen", "outline"] : (r.rules.locates ? ["outline"] : [r.rules.hears ? "heard" : "hidden"]);
+      if ( r.observer === "Vibrations" && !r.rules.sees ) ctx.expect(r.rules.locates === (label !== "en vol"), `${label} : Vibrations ${label !== "en vol" ? "localise" : "ne localise pas"} ${r.target} (règles)`);
       ctx.expect(screen.includes(r.screen), `${label} : ${r.observer} → ${r.target} à l'écran ${screen.join(" ou ")} (écran : ${r.screen})`);
     };
     const box = await ctx.box(tokens["Cible dans les ténèbres"]);
@@ -67,7 +69,7 @@ export default {
     if ( fog ) {
       // [dans, derrière] : la vue les atteint-elle à travers la brume ?
       const FOG_SEES = { "Humain": [false, false], "Occultiste du diable": [false, false], "Rôdeur elfe": [false, false],
-        "Vision véritable": [false, false], "Vision aveugle": [true, false], "Vibrations": [true, true], "Sens tout": [true, true],
+        "Vision véritable": [false, false], "Vision aveugle": [true, false], "Vibrations": [false, false], "Sens tout": [true, true],
         "Voir l'invisible": [false, false] };
       const rows = await matrix(OBSERVERS, [IN, BEHIND, FAR]);
       ctx.log("Nappe de brouillard :"); show(rows);
@@ -115,7 +117,7 @@ export default {
       await pause(1000);
     }
 
-    // 4. En vol dans le noir : la vision dans le noir la voit, les vibrations non.
+    // 4. En vol dans le noir : la vision dans le noir la voit ; les vibrations la localisent au sol (sans la voir, #118), plus en vol.
     const [dx, dy, dw, dh] = ARENE_VISION.dark;
     const night = await ctx.call("create-region", { sceneId, name: "Obscurité (essai)", color: "#000000",
       shapes: [{ type: "rectangle", x: dx * grid, y: dy * grid, width: dw * grid, height: dh * grid }],
@@ -128,7 +130,7 @@ export default {
     await pause(1500);
     let rows = await matrix(["Vibrations", "Rôdeur elfe"], ["Cible dans le noir"]);
     ctx.log("dans le noir, au sol :"); show(rows);
-    for ( const r of rows ) check(r, true, true, "au sol");
+    for ( const r of rows ) check(r, r.observer === "Rôdeur elfe", true, "au sol");
     await fly(true);
     await pause(1500);
     rows = await matrix(["Vibrations", "Rôdeur elfe"], ["Cible dans le noir"]);

@@ -97,7 +97,8 @@ export default {
       const heat = await lend(caster, `${PHB}.spells.Item.phbsplHeatMetal0`, { "system.method": "atwill" });
       const club = await lend(target, `${PHB}.equipment.Item.phbwepClub000000`, { "system.equipped": true, "system.proficient": 1 });
       let seen = { failed: false, saved: false };
-      for ( let i = 0; (i < 8) && !(seen.failed && seen.saved); i++ ) {
+      // Cible : Constitution +0 contre DD 17 — 20 % de réussite par essai ; 8 essais ratés de suite arrivaient une passe sur six (banc du 2026-11-19), 20 : une sur cent.
+      for ( let i = 0; (i < 20) && !(seen.failed && seen.saved); i++ ) {
         await ctx.call("upsert-actor-item", { actorId: target.actorId, itemData: { "system.equipped": true }, match: { path: "_id", value: club } });
         for ( const e of await ctx.effects(target) ) await ctx.call("remove-embedded-effect", { documentType: "Actor", id: target.actorId, effectId: e._id ?? e.id }).catch(() => {});
         await pause(600);
