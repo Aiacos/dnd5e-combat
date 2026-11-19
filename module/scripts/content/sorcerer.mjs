@@ -16,9 +16,6 @@ const affinity = type => ({ on: "preDamageRoll", if: { "activity.isSpell": true,
   do: [{ type: "damage", formula: "@abilities.cha.mod", damageType: type }] });
 
 export const SORCERER = Object.freeze({
-  // Sort étendu (Métamagie) — « un sort d'au moins 1 minute : sa durée doublée, 24 heures au plus ; s'il demande la Concentration,
-  // l'Avantage aux sauvegardes pour la maintenir » (runtime/cantrips.mjs à la pose des effets, runtime/feats.mjs au jet).
-  "extended-spell": meta("WGQHGHweOlSpZDHp", "extended"),
   // C12-h : Révélation charnelle (Aberrant 14), Envol scintillant — « une Vitesse de vol égale à votre Vitesse » (la donnée : le double).
   "revelation-in-flesh": { effectChanges: { CxuVthyUWdT2ARMn: [{ key: "system.attributes.movement.fly", type: "upgrade", value: "@walk", replace: true }] } },
   // §124 : Bastion de la loi (Magie de l'horloge) — « vous ou une autre créature que vous voyez à 9 m ou moins » ; « personnelle »
@@ -39,6 +36,9 @@ export const SORCERER = Object.freeze({
     healPool: { activities: ["hcsPW0N4FkiDoaIy", "gVIgwimuEujzofWA"], choose: true } },
   // §296 : Sort jumeau — « le niveau effectif du sort augmente de 1 » : une cible de plus à la visée de groupe (ui/pointer.mjs).
   "twinned-spell": meta("WsG9JmGU7gRGiTRq", "twinned"),
+  // Sort étendu (Métamagie) — « un sort d'au moins 1 minute : sa durée doublée, 24 heures au plus ; s'il demande la Concentration,
+  // l'Avantage aux sauvegardes pour la maintenir » (runtime/cantrips.mjs à la pose des effets, runtime/feats.mjs au jet).
+  "extended-spell": meta("WGQHGHweOlSpZDHp", "extended"),
   // Affinité élémentaire (Draconique 6) : « + votre modificateur de Charisme à un jet de dégâts » d'un sort du type choisi.
   "elemental-affinity": { triggers: ["acid", "cold", "fire", "lightning", "poison"].map(affinity) },
   // Défenses psychiques (Aberrante 6) : Avantage aux sauvegardes contre Charmé et Effrayé.
