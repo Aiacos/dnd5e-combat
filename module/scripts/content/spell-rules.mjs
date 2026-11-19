@@ -88,7 +88,10 @@ export const SPELL_RULES = Object.freeze({
   // créature désignée qui entre dans la zone pour la première fois d'un tour ou y termine son tour subit 5d10 dégâts nécrotiques ou
   // radiants » — rejeu de « Dégâts créature interdite » ; désignées : les six types que le sort permet (le choix d'un sous-ensemble, le
   // type de dégâts — demandé au jet —, le mot de passe, le voyage planaire et la téléportation : au MJ).
+  // Interdiction : le sort peut se lancer en rituel selon son texte — la donnée n'en a pas la propriété.
   "forbiddance": {
+    dataFixes: [{ path: "system.properties", from: ["vocal", "somatic", "material"],
+      value: ["vocal", "somatic", "material", "ritual"] }],
     selfZone: { T2XK004SAb09LvvP: { type: "cube", size: 200, units: "ft" } },
     targets: { types: ["aberration", "celestial", "elemental", "fey", "fiend", "undead"] },
     triggers: [{ on: ["enter", "turnEnd"], do: [{ type: "replay", activity: "9IBiOeIf2PC1wcLp" }] }]
@@ -365,7 +368,11 @@ export const SPELL_RULES = Object.freeze({
   "power-word-fortify": { tempHpPool: 120 },
   // Résurrection, Résurrection suprême : « revient à la vie avec tous ses PV » (l'état Mort cesse : content/spells.mjs, `cures`).
   // §402 : « le malus diminue de 1 à chaque Repos long » — les quatre effets de −1 de la donnée tombent un par un (jour 4 d'abord).
-  "raise-dead": { fadesOnLongRest: ["vyf4vVVoGkZPyAqa", "0EAyGy8YaKbvgvkm", "QUWVMgg2HidYsUxy", "etY0sDrXe6DcFEzc"] },
+  // Rappel à la vie : le texte du sort donne une portée de contact ; la donnée dit « soi-même ».
+  "raise-dead": {
+    dataFixes: [{ path: "system.range.units", from: "self", value: "touch" }],
+    fadesOnLongRest: ["vyf4vVVoGkZPyAqa", "0EAyGy8YaKbvgvkm", "QUWVMgg2HidYsUxy", "etY0sDrXe6DcFEzc"]
+  },
   "resurrection": { revivesFull: true, fadesOnLongRest: ["xHPAupRPOI8N2VkA", "PO5KOrBEorm2xGGz", "NvAysJa5PCR83GRb", "yC37XvN0jzIDyHTr"] },
   "true-resurrection": { revivesFull: true },
   // Mot de pouvoir mortel : « 100 PV ou moins : elle meurt ; sinon, 12d12 dégâts psychiques ».
@@ -481,7 +488,10 @@ export const SPELL_RULES = Object.freeze({
   // Invocation de céleste : le Cylindre rejoue, une fois par tour, quand une créature y entre ou y finit son tour — Lumière guérisseuse
   // pour un allié, Lumière brûlante pour un ennemi (déplaçable : content/movables.mjs). C12-b : aussi sur celles qu'il recouvre en
   // apparaissant (`enterOnPose`).
-  "conjure-celestial": { enterOnPose: true, triggers: [
+  "conjure-celestial": { enterOnPose: true,
+    // « Lumière curative » : le texte ajoute le modificateur d'incantation aux 4d12 — la donnée n'a que les dés.
+    dataFixes: [{ path: "system.activities.ke8eykrnAdAq5nfZ.healing.bonus", from: "", value: "@mod" }],
+    triggers: [
     { on: ["enter", "turnEnd"], if: { "target.allied": true }, do: [{ type: "replay", activity: "ke8eykrnAdAq5nfZ" }] },
     { on: ["enter", "turnEnd"], if: { "target.allied": false }, do: [{ type: "replay", activity: "naMU3mLP7jLZu1IG" }] }
   ] },
@@ -574,5 +584,10 @@ export const SPELL_RULES = Object.freeze({
   // Contact avec les plans : 6d6 psychiques « sur un échec » seulement (la donnée : la moitié sur une réussite).
   "contact-other-plane": { saveDamage: { dnd5eactivity000: "none" } },
   // Quête : les 5d10 ne tombent que si la cible désobéit (au MJ, dégâts de l'effet) — pas au lancement.
-  "geas": { noDamage: ["dnd5eactivity000"] }
+  "geas": { noDamage: ["dnd5eactivity000"] },
+  // Invocation d'animaux, Songe : les dégâts ne tombent que sur une sauvegarde ratée, mais l'activité de la donnée porte
+  // `onSave: "half"`. Pour la meute, l'objet « Pack Damage » de la créature invoquée (que le moteur joue : content/summons.mjs)
+  // dit déjà « none » ; l'activité du sort, cliquée sur la fiche, infligeait la moitié sur une réussite.
+  "conjure-animals": { dataFixes: [{ path: "system.activities.dnd5eactivity100.damage.onSave", from: "half", value: "none" }] },
+  "dream": { dataFixes: [{ path: "system.activities.dnd5eactivity000.damage.onSave", from: "half", value: "none" }] }
 });
