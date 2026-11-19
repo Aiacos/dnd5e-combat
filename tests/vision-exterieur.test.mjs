@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { grantInMemoryModes, DEVILS_SIGHT_MODE, HEARING_MODE } from "../module/scripts/core/light.mjs";
+import { grantInMemoryModes, DEVILS_SIGHT_MODE, HEARING_MODE, SENSE_MODE } from "../module/scripts/core/light.mjs";
 
 /**
  * Issue #42, suite (Archibald, 0.281.0) : depuis l'EXTÉRIEUR des Ténèbres, l'occultiste à Vision du diable ne voyait que le contour de l'ouïe
@@ -29,6 +29,16 @@ describe("issue #42 : modes donnés en mémoire après une préparation du token
     const modes = { [HEARING_MODE]: { enabled: true, range: Infinity }, basicSight: { enabled: true } };
     expect(grantInMemoryModes(modes, { devilsSight: 36, hearing: true })).toBe(true);
     expect(Object.keys(modes).at(-1)).toBe(HEARING_MODE);
+  });
+
+  it("le mode des sens déclarés : donné à qui en a un, avant l'ouïe, retiré quand il n'en a plus", () => {
+    const modes = { basicSight: { enabled: true }, [HEARING_MODE]: { enabled: true, range: Infinity } };
+    expect(grantInMemoryModes(modes, { sense: true, hearing: true })).toBe(true);
+    expect(modes[SENSE_MODE]).toEqual({ enabled: true, range: Infinity });
+    expect(Object.keys(modes).at(-1)).toBe(HEARING_MODE);
+    expect(grantInMemoryModes(modes, { sense: true, hearing: true })).toBe(false);
+    expect(grantInMemoryModes(modes, { hearing: true })).toBe(true);
+    expect(modes[SENSE_MODE]).toBeUndefined();
   });
 
   it("retire la Vision du diable quand l'invocation n'y est plus", () => {
