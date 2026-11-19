@@ -246,6 +246,23 @@ function regrant(docs) {
   if ( changed ) refreshVisibility();
 }
 
+/**
+ * Les documents que porte une scène. Le client refait la scène entière (`Scene#reset`, donc les données préparées de TOUS ses
+ * tokens) après la création, la mise à jour ou la suppression de l'un d'eux — un dessin déplacé, un autre token qui bouge —, sans
+ * toujours refaire la vue : les modes en mémoire de chaque token disparaissaient jusqu'au `sightRefresh` suivant, et la créature
+ * entendue n'était plus dessinée (vu le 2026-11-19 : un token déplacé, un dessin créé).
+ */
+function sceneDocumentNames() {
+  const embedded = Object.keys(CONFIG.Scene?.documentClass?.metadata?.embedded ?? {});
+  return embedded.length ? embedded : ["AmbientLight", "AmbientSound", "Drawing", "Note", "Region", "Tile", "Token", "Wall"];
+}
+
+/** Les modes en mémoire de tous les tokens de la scène affichée, redonnés sans refaire la vue : le hook précède le rendu. */
+function regrantScene(doc) {
+  if ( !canvas?.ready || (doc?.parent !== canvas.scene) ) return;
+  for ( const token of canvas.scene.tokens ?? [] ) if ( token !== doc ) grantOn(token);
+}
+
 function tokensOfActor(actor) {
   return actor?.getActiveTokens?.(false, true) ?? [];
 }
@@ -320,6 +337,9 @@ export function registerPerception() {
   route("updateActor", actor => regrant(tokensOfActor(actor)), again);
   route("updateToken", doc => regrant([doc]), again);
   for ( const hook of ["createItem", "updateItem", "deleteItem"] ) route(hook, item => regrant(tokensOfActor(item?.parent)), again);
+  for ( const name of sceneDocumentNames() ) {
+    for ( const action of ["create", "update", "delete"] ) route(`${action}${name}`, regrantScene, again);
+  }
   registerHeardMarks();
   const refresh = { label: "perception: display not refreshed" };
   for ( const hook of ["createRegion", "updateRegion", "deleteRegion", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect"] ) {
