@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { planeOf, samePlane, perceivesAcross, crossesEtherealWall, etherealStepCost, nearestFreeCell, shuntDamage, etherealPlaneOn, setEtherealPlaneState, ETHEREAL } from "../module/scripts/core/plane.mjs";
+import { etherealLight, planeOf, samePlane, perceivesAcross, crossesEtherealWall, etherealStepCost, nearestFreeCell, shuntDamage, etherealPlaneOn, setEtherealPlaneState, ETHEREAL } from "../module/scripts/core/plane.mjs";
 import { selectAreaTargets } from "../module/scripts/core/area.mjs";
 
 describe("§225 : plan Éthéré (statut `ethereal`)", () => {
@@ -76,5 +76,28 @@ describe("§225 : plan Éthéré (statut `ethereal`)", () => {
     }
     finally { setEtherealPlaneState(true); }
     expect(planeOf(ethereal)).toBe("ethereal");
+  });
+});
+
+describe("un token Éthéré n'éclaire pas", () => {
+  const torch = { dim: 40, bright: 20 };
+  it("Éthéré et il émet : ses rayons sont mis à zéro", () => {
+    expect(etherealLight({ ethereal: true, ...torch })).toBe("shade");
+    expect(etherealLight({ ethereal: true, dim: 10, bright: 0 })).toBe("shade");
+    expect(etherealLight({ ethereal: true, ...torch, shaded: true })).toBe("shade");   // la préparation les avait remis
+  });
+  it("Éthéré et déjà éteint, ou sans lumière : rien", () => {
+    expect(etherealLight({ ethereal: true, dim: 0, bright: 0, shaded: true })).toBe(null);
+    expect(etherealLight({ ethereal: true })).toBe(null);
+  });
+  it("de retour, rayons encore à zéro : ses données sont repréparées — jamais les rayons d'avant remis tels quels", () => {
+    expect(etherealLight({ ethereal: false, dim: 0, bright: 0, shaded: true })).toBe("reprepare");
+  });
+  it("de retour, la préparation du token a déjà remis ses rayons : seule la source est à refaire", () => {
+    expect(etherealLight({ ethereal: false, ...torch, shaded: true })).toBe("refresh");
+  });
+  it("jamais éteint par nous : rien, qu'il émette ou non", () => {
+    expect(etherealLight({ ethereal: false, ...torch })).toBe(null);
+    expect(etherealLight({ ethereal: false, dim: 0, bright: 0 })).toBe(null);
   });
 });

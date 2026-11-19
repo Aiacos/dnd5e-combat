@@ -93,3 +93,22 @@ export function nearestFreeCell(start, isFree, maxRings=10) {
 export function shuntDamage(feet) {
   return Math.max(0, Math.round(2 * feet));
 }
+
+/**
+ * La lumière qu'un token porte (torche, sort) n'éclaire pas le plan matériel tant qu'il est dans l'Éthéré : rien de ce qu'il porte
+ * n'y agit. Les règles ne le disent pas en toutes lettres — « n'affecter et n'être affecté que par ce qui est dans l'Éthéré »
+ * (Forme éthérée) ; c'est aussi ce que fait le module Vision 5e. Ce qu'il faut faire des rayons PRÉPARÉS du token, en mémoire :
+ *  - `shade` : il est Éthéré et émet — mettre ses rayons à zéro ;
+ *  - `reprepare` : il ne l'est plus et ses rayons sont encore à zéro — faire repréparer ses données (ses vrais rayons, tels qu'ils
+ *    sont maintenant : on ne remet pas ceux d'avant, la torche a pu s'éteindre entre-temps) ;
+ *  - `refresh` : il ne l'est plus et la préparation de ses données a déjà remis ses rayons — seule sa source est à refaire ;
+ *  - null : rien.
+ * @param {{ethereal: boolean, dim: number, bright: number, shaded?: boolean}} state  `shaded` : on l'avait éteint.
+ * @returns {"shade"|"reprepare"|"refresh"|null}
+ */
+export function etherealLight({ ethereal, dim=0, bright=0, shaded=false }) {
+  const emits = (dim > 0) || (bright > 0);
+  if ( ethereal ) return emits ? "shade" : null;
+  if ( !shaded ) return null;
+  return emits ? "refresh" : "reprepare";
+}
