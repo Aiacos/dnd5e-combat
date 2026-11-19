@@ -12,6 +12,7 @@ import { fresh } from "./fresh.mjs";
 import { basicActionData } from "../../adapter/basics.mjs";
 import { scrollSpellOf } from "../../adapter/scrolls.mjs";
 import { localizeEffectNames } from "../../core/localize.mjs";
+import { importerOf } from "../../core/importer.mjs";
 import { referenceReader, retranslationOf, applyRetranslation } from "../../adapter/retranslate.mjs";
 import { contentOf } from "../../adapter/content.mjs";
 import { dataFixPlanOf, applyDataFixes } from "../../adapter/data-fixes.mjs";
@@ -415,10 +416,20 @@ const scrolls = {
  * caractères, au moins un chiffre).
  * @returns {Promise<Array<{item: Item, official: Item|null, viaMidi: boolean}>>}
  */
-export async function ddbItemsAtRisk() {
+export const ddbItemsAtRisk = () => importedItemsAtRisk(item => importerOf(item.flags) === "ddb");
+
+/**
+ * Les mêmes objets à risque, importés par Plutonium (`flags.plutonium`) : ses activités s'appellent `dnd5eactivity000`…, ses effets
+ * d'après le nom de l'objet — jamais les ids de l'objet officiel. Un objet passé par les deux importeurs reste à la vérification
+ * « ddb ».
+ */
+export const plutoniumItemsAtRisk = () => importedItemsAtRisk(item => importerOf(item.flags) === "plutonium");
+
+/** @param {(item: Item) => boolean} imported  l'objet vient-il de l'importeur examiné ? */
+async function importedItemsAtRisk(imported) {
   const out = [];
   for ( const item of allItems() ) {
-    if ( !item.flags?.ddbimporter ) continue;
+    if ( !imported(item) ) continue;
     const { entry } = contentOf(item);
     if ( !entry ) continue;
     const cited = new Set(JSON.stringify(entry).match(/[A-Za-z0-9]{16}/g) ?? []);
@@ -491,6 +502,46 @@ const ddb = {
             await Item.implementation.create(data, { keepId: true });
           }
           return lock ? `${text} ${t("Locked")}` : text;
+        } };
+    });
+  }
+};
+
+/* -------------------------------------------- */
+/*  4 ter. Objets importés par Plutonium          */
+/* -------------------------------------------- */
+
+/**
+ * Comme « ddb », sans verrou : Plutonium n'a pas de synchronisation qui recréerait l'objet. `flags.plutonium` reste
+ * (`midiReplacement` garde les flags de l'objet) ; un objet du monde garde son dossier.
+ */
+const plutonium = {
+  id: "plutonium", icon: "fa-solid fa-file-import",
+  async scan() {
+    const t = tr("Ddb");
+    return (await plutoniumItemsAtRisk()).map(({ item, official, viaMidi }) => {
+      const name = esc(item.name);
+      const where = whereOf(item);
+      const root = rootOf(item);
+      if ( viaMidi ) return { root, where, text: t("LineMidi", { name, official: esc(official.name) }) };
+      if ( !official ) return { root, where, text: t("LineNone", { name }) };
+      const target = { name, official: esc(official.name), pack: esc(official.pack ?? "") };
+      if ( !ddbRepairable(official) ) return { root, where, text: t("LineByHand", target) };
+      const text = t("LineRepair", target);
+      return { root, where, text, preselect: true,
+        apply: async () => {
+          const current = fresh(item);
+          const data = midiReplacement(current, official);
+          const parent = current.parent;
+          if ( parent ) {
+            await parent.deleteEmbeddedDocuments("Item", [current.id], replacing());
+            await parent.createEmbeddedDocuments("Item", [data], { keepId: true });
+          } else {
+            data.folder = current._source.folder ?? null;
+            await current.delete();
+            await Item.implementation.create(data, { keepId: true });
+          }
+          return text;
         } };
     });
   }
@@ -965,5 +1016,5 @@ const modifyItemCheck = {
 };
 
 /** Les vérifications, dans l'ordre où les macros les proposaient. */
-export const CHECKS = Object.freeze([cleanMidi, phbEffects, lostEffects, scrolls, ddb, pileBasics, creatures, retranslate, dataFixes,
-  magicalEffects, phb3Subclasses, phb3Items, spellDuplicatesCheck, modifyItemCheck]);
+export const CHECKS = Object.freeze([cleanMidi, phbEffects, lostEffects, scrolls, ddb, plutonium, pileBasics, creatures,
+  retranslate, dataFixes, magicalEffects, phb3Subclasses, phb3Items, spellDuplicatesCheck, modifyItemCheck]);
