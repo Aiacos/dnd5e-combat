@@ -101,6 +101,24 @@ export function pullBack(centre, corner, hit, margin) {
   return { x: centre.x + ((corner.x - centre.x) * k), y: centre.y + ((corner.y - centre.y) * k) };
 }
 
+/** §476 : les choix « grille » d'un mur (configuration du mur, section « DAS · Grille »). */
+export const GRATE_MODES = Object.freeze(["auto", "grate", "solid"]);
+
+/**
+ * §476 (retour de Fanarie, 2026-11-18) : ce mur qui arrête le déplacement est-il une grille (§468) ?
+ *  - le choix du mur l'emporte : « grate » (grille), « solid » (mur plein) ;
+ *  - sinon (« auto ») : le réglage de monde `grateWalls` — tout mur qui ne bloque pas la vue est une grille, sauf un mur posé par
+ *    un sort (Mur de force : drapeau `zone`) ou marqué éthéré (§225), qui reste plein.
+ * Une fenêtre (vue « proximité ») ou un mur de terrain (vue « limitée ») bloquent la vue : jamais grille d'office.
+ * @param {{mode?: string, auto?: boolean, blocksSight?: boolean, spellWall?: boolean}} wall
+ * @returns {boolean}
+ */
+export function grateOf({ mode="auto", auto=false, blocksSight=true, spellWall=false }={}) {
+  if ( mode === "grate" ) return true;
+  if ( mode === "solid" ) return false;
+  return !!auto && !blocksSight && !spellWall;
+}
+
 /**
  * L'abri dont une cible bénéficie contre un attaquant.
  * @param {object} context

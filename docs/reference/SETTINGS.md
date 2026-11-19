@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-131 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
+132 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
 `client` = ce poste, `user` = ce joueur. **Onglet** : celui de la fenêtre de réglages DAS (`core/settings-layout.mjs`) ; sans onglet,
 le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêtre dédiée). Le libellé est celui de `lang/fr.json`.
 
@@ -64,6 +64,7 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 | `climbSystem` | Système d'escalade et de chute | world | Boolean | `true` |  | `runtime/climb-system.mjs` |
 | `climbSystemButton` | Bouton « Escalade et chutes » dans la barre du MJ | world | Boolean | `true` |  | `runtime/climb-system.mjs` |
 | `fireSpread` | Propagation des flammes (règle maison) | world | Boolean | `false` |  | `runtime/burning.mjs` |
+| `grateWalls` | Murs grilles : tout mur qui laisse voir | world | Boolean | `false` |  | `runtime/doors.mjs` |
 | `highJumpMenu` | « Sauter en hauteur ici » dans le menu (bêta) | world | Boolean | `false` |  | `ui/pointer.mjs` |
 | `lockFailure` | Serrures : après un échec | world | String | `"free"` | free, once | `runtime/doors.mjs` |
 | `pathPreview` | Aperçu du chemin en combat | client | Boolean | `true` |  | `ui/pointer.mjs` |

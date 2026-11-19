@@ -49,14 +49,14 @@ export const SETTINGS_TABS = Object.freeze([
     ] },
   { id: "movement", icon: "fa-solid fa-shoe-prints",
     keys: ["climbSystem", "climbSystemButton", "altitude", "climbRules", "autoFall", "highJumpMenu", "fireSpread", "volumes", "clickToMove",
-      "pathPreview", "teleportPlanning", "lockFailure"],
+      "pathPreview", "teleportPlanning", "lockFailure", "grateWalls"],
     groups: [
       g("climb", "fa-solid fa-person-hiking", ["climbSystem", "climbSystemButton", "climbRules", "autoFall", "highJumpMenu"],
         { sub: { climbRules: offIf("climbSystem", false), autoFall: offIf("climbSystem", false), highJumpMenu: offIf("climbSystem", false) } }),
       g("height", "fa-solid fa-arrows-up-down", ["altitude", "volumes"]),
       g("mouseMove", "fa-solid fa-route", ["clickToMove", "pathPreview", "teleportPlanning"]),
       g("fire", "fa-solid fa-fire", ["fireSpread"], { tag: "house" }),
-      g("doors", "fa-solid fa-door-closed", ["lockFailure"])
+      g("doors", "fa-solid fa-door-closed", ["lockFailure", "grateWalls"])   // §476 : murs grilles
     ] },
   { id: "vision", icon: "fa-solid fa-eye",
     keys: ["vision", "passivePerception", "twilightDarkness", "unconsciousSenses", "hearingRange", "anonymousLocated", "visionCones", "coneAngles", "stealthRules", "surpriseFromStealth", "factionRules", "factionIcons",

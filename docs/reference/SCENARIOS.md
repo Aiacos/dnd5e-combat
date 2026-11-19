@@ -13,7 +13,7 @@ la sélection sans rien jouer.
 | Scénario | Scène | § | Ce qu'il vérifie |
 |---|---|---|---|
 | `a-terre` |  | §17.1 | Mort / Inconscient à 0 PV, même hors combat |
-| `abri-grille` |  | §468 §200 | un sort et une attaque passent à travers des barreaux (§468) |
+| `abri-grille` |  | §468 §200 §476 | un sort et une attaque passent à travers des barreaux (§468, §476) |
 | `abri-grotte` |  | §239 | case coupée par un mur de grotte : pas d'abri derrière soi |
 | `abri` |  |  | créature interposée, abri partiel +2 |
 | `actions-tour` |  | §15.2 | Pointe, Dague, Dague en main secondaire |

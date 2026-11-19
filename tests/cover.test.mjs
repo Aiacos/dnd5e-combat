@@ -151,3 +151,35 @@ describe("§468 : une grille (barreaux, herse) n'est pas un abri total", () => {
     expect(coverBetween({ attacker, target, blocked: both, inset: 10 }).degree).toBe("total");
   });
 });
+
+import { grateOf, GRATE_MODES } from "../module/scripts/core/cover.mjs";
+
+describe("§476 : murs grilles d'office (réglage de monde) et choix du mur", () => {
+  it("trois choix, « auto » d'abord", () => {
+    expect(GRATE_MODES).toEqual(["auto", "grate", "solid"]);
+  });
+
+  it("réglage éteint : seul un mur choisi « grille » en est une", () => {
+    expect(grateOf({ mode: "auto", auto: false, blocksSight: false })).toBe(false);
+    expect(grateOf({ mode: "grate", auto: false, blocksSight: true })).toBe(true);
+    expect(grateOf({})).toBe(false);
+  });
+
+  it("réglage allumé : un mur qui laisse voir est une grille, un mur qui bloque la vue (fenêtre, terrain, plein) non", () => {
+    expect(grateOf({ mode: "auto", auto: true, blocksSight: false })).toBe(true);
+    expect(grateOf({ mode: "auto", auto: true, blocksSight: true })).toBe(false);
+  });
+
+  it("réglage allumé : un mur posé par un sort (Mur de force) ou éthéré reste plein", () => {
+    expect(grateOf({ mode: "auto", auto: true, blocksSight: false, spellWall: true })).toBe(false);
+  });
+
+  it("le choix « mur plein » l'emporte sur le réglage (une vitre)", () => {
+    expect(grateOf({ mode: "solid", auto: true, blocksSight: false })).toBe(false);
+  });
+
+  it("un choix inconnu vaut « auto »", () => {
+    expect(grateOf({ mode: "bizarre", auto: true, blocksSight: false })).toBe(true);
+    expect(grateOf({ mode: "bizarre", auto: false, blocksSight: false })).toBe(false);
+  });
+});

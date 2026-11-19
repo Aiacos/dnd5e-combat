@@ -16,6 +16,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { LOCK_FAILURE_MODES, judgeAttempt, alreadyTried, recordTry, lockChoices, stateAfter, triesKey, attemptReport } from "../core/locks.mjs";
 import { LOCK_TRIES_FLAG, lockOf, triesOf, keyItemFor, doorPoint } from "../adapter/locks.mjs";
 import { identifierOf } from "../adapter/content.mjs";
+import { GRATE_SETTING } from "../adapter/cover.mjs";
 import { payAction } from "./action-end.mjs";
 import { approachDoor } from "./actions.mjs";
 import { log, loc, notice, say, esc, viaActiveGM, rolledAndShown } from "./shared.mjs";
@@ -242,6 +243,11 @@ export function registerDoors() {
     name: `DND5ECOMBAT.Reglage.${LOCK_FAILURE_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${LOCK_FAILURE_SETTING}.Aide`,
     scope: "world", config: true, type: String, default: "free",
     choices: Object.fromEntries(LOCK_FAILURE_MODES.map(m => [m, `DND5ECOMBAT.Reglage.${LOCK_FAILURE_SETTING}.${m}`]))
+  });
+  // §476 : murs grilles d'office (retour de Fanarie) — lu par adapter/cover.mjs, `isGrate`. Pas de rechargement : lu à chaque rayon.
+  game.settings.register(MODULE_ID, GRATE_SETTING, {
+    name: `DND5ECOMBAT.Reglage.${GRATE_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${GRATE_SETTING}.Aide`,
+    scope: "world", config: true, type: Boolean, default: false
   });
   CONFIG.queries[LOCK_QUERY] = handleLockQuery;
 }

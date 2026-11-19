@@ -18,7 +18,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { coverBetween, bodyGivesCover, strongerCover, pullBack, COVER } from "../core/cover.mjs";
+import { coverBetween, bodyGivesCover, strongerCover, pullBack, COVER, GRATE_MODES, grateOf } from "../core/cover.mjs";
 import { crossesWall } from "../core/wall.mjs";
 import { contentOf } from "./content.mjs";
 import { grappleRulesOf } from "./grapple-rules.mjs";
@@ -63,13 +63,36 @@ export function eyeElevation(doc, pos=committedPosition(doc)) {
   return (pos.elevation ?? 0) + ((pos.depth ?? 1) * doc.parent.grid.distance / 2);
 }
 
-/** §468 : le drapeau d'un mur « grille » (barreaux, herse, grillage) — il arrête le déplacement, pas les sorts ni les projectiles. */
+/** §468 : l'ancien drapeau d'un mur « grille » (case cochée en 0.284–0.286) — `true` vaut le choix « grate ». */
 export const GRATE_FLAG = "grate";
+/** §476 : le choix du mur — « auto » (selon le réglage de monde), « grate » (grille), « solid » (mur plein). */
+export const GRATE_MODE_FLAG = "grateMode";
+/** §476 : réglage de monde — tout mur qui arrête le déplacement sans bloquer la vue est une grille (éteint par défaut). */
+export const GRATE_SETTING = "grateWalls";
 
-/** §468 : ce mur est-il une grille ? (un WallDocument, ou le Wall dessiné) */
-export function isGrate(wall) {
+/** §476 : le choix « grille » de ce WallDocument ; un mur coché avant la §476 (`grate: true`) reste une grille. */
+export function grateModeOf(doc) {
+  const mode = doc?.getFlag?.(MODULE_ID, GRATE_MODE_FLAG);
+  if ( GRATE_MODES.includes(mode) ) return mode;
+  return (doc?.getFlag?.(MODULE_ID, GRATE_FLAG) === true) ? "grate" : "auto";
+}
+
+/** §476 : le réglage de monde « Murs grilles ». */
+export function grateWallsAuto() {
+  try { return game.settings.get(MODULE_ID, GRATE_SETTING) === true; } catch { return false; }
+}
+
+/**
+ * §468, §476 : ce mur est-il une grille ? (un WallDocument, ou le Wall dessiné ; autre chose — bord de scène — : non)
+ * @param {object} wall
+ * @param {{auto?: boolean, mode?: string}} [opts]  `auto` : la valeur du réglage de monde (lue sinon) ; `mode` : un choix à essayer.
+ */
+export function isGrate(wall, { auto=grateWallsAuto(), mode }={}) {
   const doc = wall?.document ?? wall;
-  return doc?.getFlag?.(MODULE_ID, GRATE_FLAG) === true;
+  if ( typeof doc?.getFlag !== "function" ) return false;
+  const none = CONST.EDGE_SENSE_TYPES?.NONE ?? 0;
+  return grateOf({ mode: mode ?? grateModeOf(doc), auto, blocksSight: (doc.sight ?? none) !== none,
+    spellWall: !!(doc.getFlag(MODULE_ID, "zone") || doc.getFlag(MODULE_ID, "ethereal")) });
 }
 
 /**
@@ -81,7 +104,8 @@ export function isGrate(wall) {
 export function wallKindBetween(from, to, level) {
   const hits = CONFIG.Canvas.polygonBackends.move.testCollision(from, to, { type: "move", mode: "all", level }) ?? [];
   if ( !Array.isArray(hits) || !hits.length ) return false;
-  const solid = hits.some(v => !(v.edges?.size) || [...v.edges].some(e => !isGrate(e.object)));
+  const auto = grateWallsAuto();
+  const solid = hits.some(v => !(v.edges?.size) || [...v.edges].some(e => !isGrate(e.object, { auto })));
   return solid ? "wall" : "grate";
 }
 

@@ -3,14 +3,16 @@
  * pas le chemin d'un sort ni une attaque. Arène : l'Ensorceleur, le Zombi à 4 cases à l'est, un mur nord-sud entre les deux.
  *  - mur plein : la pose d'une Boule de feu sur le Zombi est refusée (« hidden », §200), abri total ;
  *  - le même mur coché grille : la pose est acceptée, abri supérieur (threeQuarters), ligne d'effet présente ;
- *  - la configuration du mur montre la section « DAS · Grille », sa case cochée.
- * Remet la position du Zombi et retire le mur.
+ *  - la configuration du mur montre la section « DAS · Grille », sur « grille » (choix de la §476) ;
+ *  - §476 : réglage de monde `grateWalls` — éteint, un mur qui laisse voir reste plein ; allumé, il devient une grille (pose acceptée,
+ *    abri supérieur) ; un mur qui bloque la vue reste plein ; le choix « mur plein » du mur l'emporte.
+ * Remet la position du Zombi, le réglage, et retire le mur.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export default {
-  name: "grille — un sort et une attaque passent à travers des barreaux (§468)",
+  name: "grille — un sort et une attaque passent à travers des barreaux (§468, §476)",
 
   async run(ctx) {
     const { tokens } = await ctx.scene();
@@ -50,16 +52,51 @@ export default {
     const grateCover = await cover();
     ctx.expect(grateCover?.degree === "threeQuarters", `grille : abri supérieur (${grateCover?.degree ?? "aucun"})`);
 
-    // La section de la configuration du mur (MJ), case cochée.
-    const ui = (await ctx.call("run-script", { code: `
+    // La section de la configuration du mur (MJ) : un mur coché avant la §476 s'ouvre sur « grille ».
+    const sheet = async () => (await ctx.call("run-script", { code: `
       const wall = canvas.scene.walls.get("${wallId}");
       const app = wall.sheet; await app.render({ force: true });
       await new Promise(r => setTimeout(r, 400));
-      const box = app.element?.querySelector('.dnd5e-combat-wall-grate input[name="flags.dnd5e-combat.grate"]');
-      const out = { found: !!box, checked: !!box?.checked, legend: app.element?.querySelector('.dnd5e-combat-wall-grate legend')?.textContent ?? null };
+      const select = app.element?.querySelector('.dnd5e-combat-wall-grate select[name="flags.dnd5e-combat.grateMode"]');
+      const out = { found: !!select, value: select?.value ?? null, options: [...(select?.options ?? [])].map(o => o.value),
+        hint: app.element?.querySelector('.dnd5e-combat-wall-grate .hint')?.textContent ?? null };
       await app.close();
       return out;` }))?.result;
-    ctx.expect(ui?.found && ui?.checked, `la configuration du mur montre la case « grille », cochée (${JSON.stringify(ui)})`);
+    const ui = await sheet();
+    ctx.expect(ui?.found && (ui.value === "grate") && (ui.options?.join() === "auto,grate,solid"),
+      `la configuration du mur montre le choix « grille » (auto / grille / mur plein), sur « grille » (${JSON.stringify(ui)})`);
+
+    // §476 (retour de Fanarie) : le réglage de monde « Murs grilles » — tout mur qui ne bloque pas la vue est une grille.
+    const setting = value => ctx.call("run-script", { code: value === undefined
+      ? `return game.settings.get("dnd5e-combat", "grateWalls");`
+      : `await game.settings.set("dnd5e-combat", "grateWalls", ${JSON.stringify(value)}); return game.settings.get("dnd5e-combat", "grateWalls");` });
+    const before = (await setting())?.result === true;
+    ctx.restore(() => setting(before).catch(() => {}));
+    const wallData = data => ctx.call("update-scene-object", { type: "Wall", objectId: wallId, data }).then(() => pause(800));
+
+    await setting(false);
+    await wallData({ "flags.dnd5e-combat.grateMode": "auto", sight: 0, light: 0 });
+    const offPlace = await place();
+    ctx.expect(offPlace.problem === "hidden", `réglage éteint, mur « selon le réglage » qui laisse voir : refusé (${offPlace.problem})`);
+
+    await setting(true);
+    await pause(300);
+    const onPlace = await place();
+    ctx.expect(onPlace.problem === null, `réglage allumé, mur qui laisse voir : la Boule de feu derrière est acceptée (${onPlace.problem})`);
+    const onCover = await cover();
+    ctx.expect(onCover?.degree === "threeQuarters", `réglage allumé : abri supérieur (${onCover?.degree ?? "aucun"})`);
+    const onUi = await sheet();
+    ctx.expect(onUi?.value === "auto" && /grille|grate/i.test(onUi?.hint ?? ""), `la configuration du mur dit ce que vaut « selon le réglage » (${JSON.stringify(onUi)})`);
+
+    await wallData({ sight: 20, light: 20 });
+    const sightPlace = await place();
+    ctx.expect(sightPlace.problem === "hidden", `réglage allumé, mur qui bloque la vue : refusé (${sightPlace.problem})`);
+
+    await wallData({ sight: 0, light: 0, "flags.dnd5e-combat.grateMode": "solid" });
+    const solidMode = await place();
+    ctx.expect(solidMode.problem === "hidden", `réglage allumé, mur choisi « mur plein » (une vitre) : refusé (${solidMode.problem})`);
+    const solidModeCover = await cover();
+    ctx.expect(solidModeCover?.degree === "total", `mur choisi « mur plein » : abri total (${solidModeCover?.degree ?? "aucun"})`);
 
     const errors = await ctx.clientErrors();
     ctx.expect(!errors.length, `aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
