@@ -170,6 +170,63 @@ export const SENSE_MODE = "dasSense";
 export const SENSE_OUTLINE = Object.freeze({ outlineColor: Object.freeze([0.78, 0.6, 1, 1]), knockout: true, wave: true });
 
 /**
+ * Les modes de vision que le moteur enregistre pour le champ de vue d'un sens (ui/perception.mjs) : la carte se voit jusqu'à sa
+ * portée, à sa façon — en couleur pour la vision véritable et la Vision du diable (« voit normalement »), sans couleur pour la
+ * vision aveugle. Les réglages d'image de ces trois modes (contraste, saturation, luminosité, et pour la vision aveugle l'image
+ * sans couleur qui demande un fond éclairé) sont ceux du module Vision 5e, `scripts/vision-modes/` ; ui/perception.mjs
+ * (`fieldModes`) en fait les modes de vision. Leur notice :
+ *
+ * MIT License
+ *
+ * Copyright (c) 2023 dev7355608
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+export const FIELD_MODES = Object.freeze({
+  seeAll: Object.freeze({ id: "dasTruesight", label: "DND5E.SenseTruesight", contrast: 0, saturation: 0, brightness: 1 }),
+  blindsight: Object.freeze({ id: "dasBlindsight", label: "DND5E.SenseBlindsight", contrast: 0.3, saturation: -1, brightness: 0,
+    grey: true }),
+  devilsSight: Object.freeze({ id: "dasDevilsSight", label: "DND5ECOMBAT.Vision.DevilsSight", contrast: 0, saturation: 0,
+    brightness: 1 })
+});
+
+/**
+ * Le champ de vue d'un token d'après ses sens : celui de plus grande portée, entre la vision dans le noir (ce que dnd5e a déjà
+ * projeté sur le token) et la vision véritable, la vision aveugle, la Vision du diable — à portée égale, dans cet ordre. null :
+ * rien à changer (aucun de ces trois sens, ou la vision dans le noir porte plus loin). dnd5e projette la vision véritable comme
+ * une vision dans le noir (sans couleur) et ne projette pas la vision aveugle : la carte restait noire pour qui « voit » pourtant
+ * jusque-là.
+ * @param {{darkvision?: number, seeAll?: number, blindsight?: number, devilsSight?: number}} ranges  Unité de la grille ; 0 ou
+ *   absent : sans ce sens.
+ * @returns {{sense: string, range: number, visionMode: string, contrast: number, saturation: number, brightness: number}|null}
+ */
+export function fieldOfView({ darkvision=0, seeAll=0, blindsight=0, devilsSight=0 }={}) {
+  let best = null;
+  for ( const [sense, range] of [["seeAll", seeAll], ["blindsight", blindsight], ["devilsSight", devilsSight]] ) {
+    if ( (range > 0) && (range > (best?.range ?? 0)) ) best = { sense, range };
+  }
+  if ( !best || !(best.range >= (darkvision || 0)) ) return null;
+  const { id, contrast, saturation, brightness } = FIELD_MODES[best.sense];
+  return { ...best, visionMode: id, contrast, saturation, brightness };
+}
+
+/**
  * Issue #42 : pose sur les modes de détection PRÉPARÉS d'un token (objet ordinaire, jamais la source) ceux que le moteur donne en mémoire —
  * la Vision du diable (portée, unité de la grille ; 0 = pas d'invocation : retirée) et l'ouïe d'un Aveuglé, posée en dernier (le cœur
  * essaie les modes spéciaux dans l'ordre : un vrai sens passe avant). Rend true si quelque chose manquait ou différait : la préparation
