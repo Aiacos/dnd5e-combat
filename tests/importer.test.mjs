@@ -1,40 +1,63 @@
 /**
- * Diagnostic du monde : les objets importés par Plutonium portent, comme ceux de DDB Importer, leurs activités et leurs effets sous
- * d'autres ids que l'objet officiel (`dnd5eactivity000`, un effet nommé d'après l'objet) — les règles du contenu qui citent les ids
- * officiels ne les trouvent pas. Vu sur un monde d'essai : 152 objets Plutonium dans ce cas. Chaque importeur a sa vérification.
+ * Diagnostic du monde : les objets d'un importeur peuvent porter leurs activités et leurs effets sous d'autres ids que l'objet
+ * officiel (§245) — vrai de DDB Importer, que le moteur connaît, et d'autres importeurs, qu'un module compagnon déclare
+ * (`api.diagnostic.registerImporter`). Le moteur n'en nomme aucun autre.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { importerOf } from "../module/scripts/core/importer.mjs";
+import { DDB_IMPORTER, importerErrors, importerOf } from "../module/scripts/core/importer.mjs";
 
 const read = path => readFileSync(new URL(`../module/${path}`, import.meta.url), "utf8");
+const other = { id: "other-importer", flag: "otherimporter", name: "Items imported by Other" };
 
 describe("importerOf — l'importeur d'un objet d'après ses flags", () => {
-  it("DDB Importer, Plutonium, ni l'un ni l'autre", () => {
+  it("DDB Importer sans rien déclarer ; un importeur déclaré ; ni l'un ni l'autre", () => {
     expect(importerOf({ ddbimporter: { id: 1 } })).toBe("ddb");
-    expect(importerOf({ plutonium: { page: "spells.html", source: "XPHB" } })).toBe("plutonium");
-    expect(importerOf({ "dnd5e-combat": {} })).toBeNull();
-    expect(importerOf({})).toBeNull();
-    expect(importerOf(null)).toBeNull();
+    expect(importerOf({ otherimporter: { page: "spells" } })).toBeNull();
+    expect(importerOf({ otherimporter: { page: "spells" } }, [other])).toBe("other-importer");
+    expect(importerOf({ "dnd5e-combat": {} }, [other])).toBeNull();
+    expect(importerOf({}, [other])).toBeNull();
+    expect(importerOf(null, [other])).toBeNull();
     expect(importerOf(undefined)).toBeNull();
   });
-  it("un objet passé par les deux reste à DDB Importer : jamais compté deux fois", () => {
-    expect(importerOf({ plutonium: { page: "items.html" }, ddbimporter: { id: 2 } })).toBe("ddb");
+  it("un objet passé par deux importeurs n'est compté qu'une fois : par DDB Importer, puis dans l'ordre des déclarations", () => {
+    expect(importerOf({ otherimporter: {}, ddbimporter: { id: 2 } }, [other])).toBe("ddb");
+    const second = { id: "second", flag: "second" };
+    expect(importerOf({ otherimporter: {}, second: {} }, [other, second])).toBe("other-importer");
+    expect(importerOf({ otherimporter: {}, second: {} }, [second, other])).toBe("second");
   });
 });
 
-describe("la vérification « plutonium » du diagnostic", () => {
-  const checks = read("scripts/runtime/diagnostic/checks.mjs");
-  it("est déclarée, et dans la liste des vérifications", () => {
-    expect(checks).toMatch(/const plutonium = \{\s*id: "plutonium"/);
-    expect(checks.slice(checks.indexOf("export const CHECKS"))).toMatch(/\bddb, plutonium,/);
-    expect(checks).toContain('importedItemsAtRisk(item => importerOf(item.flags) === "plutonium")');
+describe("importerErrors — la déclaration d'un importeur", () => {
+  it("une bonne déclaration : rien", () => {
+    expect(importerErrors(other)).toEqual([]);
+    expect(importerErrors({ ...other, hint: "Help", icon: "fa-solid fa-file-import" })).toEqual([]);
   });
-  it("a son nom et son aide en anglais, en français et en italien", () => {
-    for ( const lang of ["en", "fr", "it"] ) {
-      const table = JSON.parse(read(`lang/${lang}.json`));
-      expect(table["DND5ECOMBAT.Diagnostic.Verif.plutonium.Nom"], lang).toBeTruthy();
-      expect(table["DND5ECOMBAT.Diagnostic.Verif.plutonium.Aide"], lang).toBeTruthy();
-    }
+  it("id, flag et nom sont requis, à la bonne forme", () => {
+    expect(importerErrors(null).length).toBe(1);
+    expect(importerErrors({ ...other, id: "Other Importer" }).join()).toMatch(/^id:/);
+    expect(importerErrors({ ...other, flag: "" }).join()).toMatch(/^flag:/);
+    expect(importerErrors({ ...other, name: "  " }).join()).toMatch(/^name:/);
+    expect(importerErrors({ ...other, hint: 3 }).join()).toMatch(/^hint:/);
+  });
+  it("ni l'id ni le flag de DDB Importer, ni ceux d'un importeur déjà déclaré", () => {
+    expect(importerErrors({ ...other, id: DDB_IMPORTER.id }).join()).toMatch(/already taken/);
+    expect(importerErrors({ ...other, flag: DDB_IMPORTER.flag }).join()).toMatch(/already belongs to "ddb"/);
+    expect(importerErrors({ ...other, id: "again" }, [other]).join()).toMatch(/already belongs to "other-importer"/);
+    expect(importerErrors({ ...other, flag: "again" }, [other]).join()).toMatch(/already taken/);
+  });
+});
+
+describe("le moteur ne nomme que DDB Importer", () => {
+  it("aucun autre importeur dans le code du diagnostic, ses traductions, ni l'API", () => {
+    const sources = ["scripts/core/importer.mjs", "scripts/runtime/diagnostic/checks.mjs", "scripts/runtime/diagnostic/index.mjs",
+      "scripts/ui/diagnostic.mjs", "lang/en.json", "lang/fr.json", "lang/it.json"].map(read).join("\n");
+    expect(sources).not.toMatch(/plutonium/i);
+  });
+  it("la vérification d'un importeur déclaré porte son propre nom et sa propre aide", () => {
+    const ui = read("scripts/ui/diagnostic.mjs");
+    expect(ui).toContain("check.name ?? loc(`Diagnostic.Verif.${check.id}.Nom`)");
+    expect(ui).toContain("check.hint ?? loc(`Diagnostic.Verif.${check.id}.Aide`)");
+    expect(read("scripts/dnd5e-combat.mjs")).toContain("registerImporter, unregisterImporter })");
   });
 });
