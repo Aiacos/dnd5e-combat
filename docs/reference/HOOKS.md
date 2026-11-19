@@ -390,8 +390,9 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. budget: spending refunded on cancel _(MJ)_
 2. group roll: cancellation not announced
-3. visual feedback: forget
-4. group roll: tracker not refreshed
+3. single card: dice blocks kept
+4. visual feedback: forget
+5. group roll: tracker not refreshed
 
 ### `deleteCombat`
 
