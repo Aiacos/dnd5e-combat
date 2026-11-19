@@ -21,7 +21,7 @@ import { route } from "./router.mjs";
 import { theaterActive } from "./theater-state.mjs";
 import { log, loc, isExecutor, say, esc } from "./shared.mjs";
 import { isHidden, spottedBy, stealthRules, RULES_SETTING } from "../adapter/stealth.mjs";
-import { canSee } from "../adapter/vision.mjs";
+import { canLocate } from "../adapter/vision.mjs";
 import { areEnemies } from "../adapter/factions.mjs";
 import { lightAt, tokenPoint } from "../adapter/illumination.mjs";
 import { LIGHT } from "../core/illumination.mjs";
@@ -73,7 +73,7 @@ export async function check(scene) {
         if ( spottedBy(target).includes(obs.id) ) continue;
         const key = `${obs.id}|${target.id}`;
         const state = views.get(key) ?? { inView: false, fails: 0 };
-        const sees = canSee(obs, target, { ignoreHidden: true }) === true;
+        const sees = canLocate(obs, target, { ignoreHidden: true }) === true;
         if ( sees && !state.inView ) {
           state.inView = true;
           views.set(key, state);

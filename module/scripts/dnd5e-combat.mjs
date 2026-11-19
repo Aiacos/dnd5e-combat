@@ -34,7 +34,7 @@ import { registerContent, contentApi } from "./runtime/content.mjs";
 import { registerIcons } from "./runtime/icons.mjs";
 import { registerConditions } from "./runtime/conditions.mjs";
 import { registerVision } from "./runtime/vision.mjs";
-import { canSee as visionCanSee, isVisionAvailable } from "./adapter/vision.mjs";
+import { canSee as visionCanSee, canLocate as visionCanLocate, isVisionAvailable } from "./adapter/vision.mjs";
 import { registerSpace } from "./runtime/space.mjs";
 import { registerSelfAreas } from "./runtime/self-area.mjs";
 import { registerAreas } from "./runtime/areas.mjs";
@@ -255,7 +255,7 @@ const state = {
   stopWalks: stopAllWalks, budget: { issues: budgetIssues, spend: spendBudget },
   level: automationLevel, levelAtLeast, skippedRoutes,
   welcome: { open: openWelcome }, releaseNotes: { open: openReleaseNotes }, diagnostic: { open: openDiagnostic }, debug: Object.freeze({ ...debugApi, open: openDebugReport, testConnection, openConnectionTest }), settings: { open: openSettings, registerWindow },
-  vision: { canSee: publicCanSee, cone: publicCone, canHear: publicCanHear },
+  vision: { canSee: publicCanSee, locates: publicLocates, cone: publicCone, canHear: publicCanHear },
   factions: { ...factionsApi,
     /** Ouvre (ou ramène devant) la fenêtre des factions sur ce client. */
     open: () => openFactions() },
@@ -317,6 +317,15 @@ function publicGap(a, b) {
 function publicCanSee(observer, target) {
   if ( !isVisionAvailable() ) return null;
   return visionCanSee(observer?.document ?? observer, target?.document ?? target);
+}
+
+/**
+ * La position de la cible est-elle connue de l'observateur : il la voit, ou un sens qui n'est pas une vue la localise
+ * (perception des vibrations) ? Lecture seule ; null quand la vision simulée est coupée ou ne peut pas juger.
+ */
+function publicLocates(observer, target) {
+  if ( !isVisionAvailable() ) return null;
+  return visionCanLocate(observer?.document ?? observer, target?.document ?? target);
 }
 
 /** §186 : l'ouïe du moteur pour un voisin (lecture seule) — murs et planchers qui arrêtent le son, Assourdi, cible cachée ; sans portée. */

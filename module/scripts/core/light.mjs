@@ -84,6 +84,16 @@ export function sensesThrough({ fog, darkness }) {
 export const CORE_JUDGED = Object.freeze(["feelTremor", "senseAll", "senseInvisibility"]);
 
 /**
+ * Les modes qui localisent sans voir. La perception des vibrations donne la position d'une créature au contact de la même
+ * surface, mais n'est pas une vue (PHB 2024, glossaire) : la cible reste « non vue » — Désavantage pour l'attaquer, Avantage pour
+ * elle, et ce qui exige de voir sa cible ne la prend pas. Sa position, elle, est connue.
+ */
+export const LOCATING = Object.freeze(["feelTremor"]);
+
+/** Ce mode de détection compte-t-il comme une vue ? */
+export const countsAsSight = id => !LOCATING.includes(id);
+
+/**
  * Portée de la Vision du diable (« dans un rayon de 36 m »), en pieds. `mode` : l'id du mode de détection que le moteur enregistre
  * (issue #42, ui/perception.mjs) et donne en mémoire aux tokens dont l'acteur a l'invocation.
  */

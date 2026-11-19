@@ -352,6 +352,7 @@
     "vision.canHear",
     "vision.canSee",
     "vision.cone",
+    "vision.locates",
     "waits.force",
     "waits.list",
     "waits.open",

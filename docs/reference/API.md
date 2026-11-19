@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-340 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
+341 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
 commentaire de la fonction dans le code (début seulement) ; le fichier est relatif à `module/scripts/`. Les valeurs non
 fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de test du connecteur, MJ seulement.
 
@@ -522,6 +522,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.vision.canHear` | `(observer, target)` | `dnd5e-combat.mjs` | §186 : l'ouïe du moteur pour un voisin (lecture seule) — murs et planchers qui arrêtent le son, Assourdi, cible cachée ; sans portée. |
 | `api.vision.canSee` | `(observer, target)` | `dnd5e-combat.mjs` | §178 : la vision du moteur pour un voisin (lecture seule) — null quand la vision simulée est coupée ou ne peut pas juger. |
 | `api.vision.cone` | `(token)` | `dnd5e-combat.mjs` | §182 : le cône de vision d'une créature (`{ angle, rotation }`, convention du cœur), ou null quand elle voit à 360°. |
+| `api.vision.locates` | `(observer, target)` | `dnd5e-combat.mjs` | La position de la cible est-elle connue de l'observateur : il la voit, ou un sens qui n'est pas une vue la localise (perception des vibrations) ? Lecture seule ; null quand la vision simulée est coupée ou ne peut pas ju… |
 
 ## `api.waits`
 

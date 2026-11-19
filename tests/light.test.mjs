@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { areaLightRadii, tokenLightChanges, dispelledBy, sensesThrough, devilsSightSees, senseReaches, DEVILS_SIGHT, CORE_JUDGED, WORKS_BLIND, senseless } from "../module/scripts/core/light.mjs";
+import { areaLightRadii, tokenLightChanges, dispelledBy, sensesThrough, devilsSightSees, senseReaches, DEVILS_SIGHT, CORE_JUDGED, WORKS_BLIND, senseless, countsAsSight, LOCATING } from "../module/scripts/core/light.mjs";
 import { validateEntry, mergeEntries } from "../module/scripts/core/content.mjs";
 
 describe("lumière des zones", () => {
@@ -157,5 +157,21 @@ describe("Inconscient : ni vue ni ouïe (réglage unconsciousSenses)", () => {
     expect(senseless({ unconscious: true, rule: false })).toBe(false);
     expect(senseless({ unconscious: false, rule: true })).toBe(false);
     expect(senseless()).toBe(false);
+  });
+});
+
+describe("sens qui localisent sans voir", () => {
+  it("la perception des vibrations donne une position, pas une vue ; les autres modes comptent comme une vue", () => {
+    expect(countsAsSight("feelTremor")).toBe(false);
+    const sight = ["basicSight", "lightPerception", "blindsight", "seeAll", "senseAll", "senseInvisibility", DEVILS_SIGHT.mode];
+    for ( const id of sight ) {
+      expect(countsAsSight(id)).toBe(true);
+    }
+  });
+  it("elle perce toujours brume et ténèbres : c'est son verdict qui change, pas sa portée", () => {
+    for ( const blocked of [{ fog: true, darkness: false }, { fog: false, darkness: true }] ) {
+      expect(sensesThrough(blocked)).toContain("feelTremor");
+    }
+    expect(LOCATING).toEqual(["feelTremor"]);
   });
 });
