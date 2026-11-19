@@ -7,6 +7,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { normalize, select, stepsOf, holds } from "../core/triggers.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
+import { unpreparedSpell } from "./resources.mjs";
 import { originItemOf, factsFor, comesFromItemEffect, weaponKind, swornEnemyOf, tokenOf } from "./facts.mjs";
 import { hasReactionAdvantage, takeReactionAdvantage, hasReactionDisadvantage, takeReactionDisadvantage } from "./marks.mjs";
 import { markModifiers } from "./mastery.mjs";
@@ -63,10 +64,21 @@ export function declaredRollDisadvantage(actor, kind, token=null) {
   return out;
 }
 
+/**
+ * Issue #145 : un sort qui attend d'être préparé ne déclare rien — Bouclier non préparé ne propose pas sa Réaction. La même règle
+ * qu'au lancement (adapter/resources.mjs, `unpreparedSpell`) ; la copie d'un sort qu'un objet lance (`cachedFor`) n'est pas
+ * concernée.
+ */
+export function preparedOrNotSpell(item) {
+  return !unpreparedSpell(item) || !!item.getFlag?.("dnd5e", "cachedFor");
+}
+
 /** Ce que tous les items d'un acteur déclarent (pour lui-même). */
 export function declarationsOf(actor) {
   const out = [];
-  for ( const item of actor?.items ?? [] ) if ( wornOrNotEquipment(item) ) out.push(...declarationsOfItem(item));
+  for ( const item of actor?.items ?? [] ) {
+    if ( wornOrNotEquipment(item) && preparedOrNotSpell(item) ) out.push(...declarationsOfItem(item));
+  }
   return out;
 }
 
