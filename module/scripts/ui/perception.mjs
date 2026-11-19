@@ -27,7 +27,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { blockedBetween, isVisionAvailable, devilsSightRange, ownDarknessSight, devilsSightSeesToken, senseReachesToken, asSeenBy,
   isSenseless, sensedThrough } from "../adapter/vision.mjs";
-import { declaredSensesOf } from "../adapter/senses.mjs";
+import { declaredSensesOf, mutedSensesOf } from "../adapter/senses.mjs";
 import { hiddenFrom } from "../adapter/stealth.mjs";
 import { canHear } from "../adapter/hearing.mjs";
 import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, DEVILS_SIGHT_OUTLINE, HEARING_MODE, SENSE_MODE, SENSE_OUTLINE,
@@ -128,6 +128,9 @@ function extend(id, mode) {
       catch(err) { reportOnce(err); }
       // Réglage `unconsciousSenses` : un observateur Inconscient ne perçoit plus rien, par aucun mode.
       try { if ( isSenseless(visionSource?.object?.document) ) return false; }
+      catch(err) { reportOnce(err); }
+      // `senseNeeds` : ce sens de la fiche dépend de l'ouïe ou de la vue de son porteur, Assourdi ou Aveuglé — éteint.
+      try { if ( mutedSensesOf(visionSource?.object?.document).includes(id) ) return false; }
       catch(err) { reportOnce(err); }
       // Ce que le moteur ajoute ne doit jamais casser l'affichage du cœur : une erreur → le test du cœur seul, et la pile une fois.
       let block = null;

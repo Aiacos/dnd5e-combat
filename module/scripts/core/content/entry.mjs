@@ -861,6 +861,18 @@ function validateSenses(entry, at, facts, errors) {
       errors.push(`${at}wardsDetection: a non-empty list of "magic" or schools of magic`);
     }
   }
+  if ( "detectedAs" in entry ) {
+    const types = entry.detectedAs;
+    if ( !(Array.isArray(types) && types.length && types.every(t => (typeof t === "string") && t)) ) {
+      errors.push(`${at}detectedAs: a non-empty list of creature types`);
+    }
+  }
+  if ( "senseNeeds" in entry ) {
+    const needs = entry.senseNeeds;
+    if ( !(isObject(needs) && Object.keys(needs).length && Object.values(needs).every(n => SENSE_NEEDS.includes(n))) ) {
+      errors.push(`${at}senseNeeds: { <detection mode>: ${SENSE_NEEDS.join(" | ")} }`);
+    }
+  }
 }
 
 export function validateTable(table, { facts={} }={}) {
