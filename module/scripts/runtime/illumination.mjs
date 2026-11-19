@@ -38,6 +38,16 @@ export function registerIllumination() {
       if ( canvas?.ready ) canvas.perception.update({ refreshVision: true });
     }
   });
+  // Une créature entendue ou localisée sans être vue : avec ce réglage, un marqueur anonyme à la place de son image, de son nom, de
+  // ses barres et de ses états (ui/perception.mjs). Éteint par défaut : elle garde son image, avec le contour.
+  game.settings.register(MODULE_ID, "anonymousLocated", {
+    name: "DND5ECOMBAT.Reglage.anonymousLocated.Nom", hint: "DND5ECOMBAT.Reglage.anonymousLocated.Aide",
+    scope: "world", config: true, type: Boolean, default: false,
+    onChange: () => {
+      if ( !canvas?.ready ) return;
+      for ( const token of canvas.tokens.placeables ) token.renderFlags.set({ refreshState: true });
+    }
+  });
   // La fiche, ses effets ou ses objets changent : la portée d'ouïe se relit (la Perception passive entre dans la formule).
   const stale = { label: "hearing: ranges to read again" };
   for ( const hook of ["updateActor", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect", "createItem", "updateItem",

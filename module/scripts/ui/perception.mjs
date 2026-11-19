@@ -32,6 +32,7 @@ import { hiddenFrom } from "../adapter/stealth.mjs";
 import { canHear } from "../adapter/hearing.mjs";
 import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, DEVILS_SIGHT_OUTLINE, HEARING_MODE, SENSE_MODE, SENSE_OUTLINE,
   grantInMemoryModes, tintOutlineShader } from "../core/light.mjs";
+import { hidesIdentity } from "../core/senses.mjs";
 import { route } from "../runtime/router.mjs";
 import { theaterActive } from "../runtime/theater-state.mjs";
 import { perceivesPlane } from "../adapter/plane.mjs";
@@ -436,8 +437,11 @@ function buildMark(kind) {
   // Une aura : un halo pâle autour du token, tracé à sa taille à chaque rafraîchissement (`refreshMark`).
   const ring = look.ring ? new PIXI.Graphics() : null;
   if ( ring ) root.addChild(ring);
+  // Réglage `anonymousLocated` : le disque qui tient lieu d'image à une créature perçue sans être vue, tracé de même.
+  const disc = look.ring ? null : new PIXI.Graphics();
+  if ( disc ) { disc.visible = false; root.addChild(disc); }
   root.addChild(back, ear, label);
-  return { root, label, r, kind, ring, ringSize: null };
+  return { root, label, r, kind, ring, ringSize: null, disc, discSize: null };
 }
 
 function dropMark(id) {
@@ -483,10 +487,39 @@ function forgetAuraWatchers() {
   watchers = null;
 }
 
+/** Réglage `anonymousLocated` du monde ; faux tant qu'il n'est pas lisible. */
+function anonymousRule() {
+  try { return game.settings.get(MODULE_ID, "anonymousLocated") === true; } catch { return false; }
+}
+
+/**
+ * Réglage `anonymousLocated` : l'image, le nom, les barres et les icônes d'état d'un token perçu sans être vu sont retirés de
+ * l'affichage de ce client, à chaque rafraîchissement (le cœur en remet une partie à chaque `refreshState`). Rien n'est écrit,
+ * la classe du token n'est pas remplacée ; dès qu'il n'est plus anonyme, on demande au cœur de tout redessiner.
+ */
+const veiled = new Set();
+const VEILED_PARTS = ["nameplate", "bars", "effects"];
+function veil(token, on) {
+  if ( on ) {
+    veiled.add(token.id);
+    // Pas son alpha : le maillage du cœur le recalcule à chaque image (occlusion).
+    if ( token.mesh ) token.mesh.visible = false;
+    for ( const part of VEILED_PARTS ) if ( token[part] ) token[part].visible = false;
+    return;
+  }
+  if ( !veiled.delete(token.id) || token.destroyed ) return;
+  if ( token.mesh ) token.mesh.visible = token.visible;   // comme `Token#_refreshVisibility`
+  for ( const part of VEILED_PARTS ) if ( token[part] ) token[part].visible = true;
+  const known = token.constructor.RENDER_FLAGS ?? {};
+  const flags = Object.fromEntries(["refreshState", "refreshNameplate", "refreshBars", "refreshEffects"]
+    .filter(flag => flag in known).map(flag => [flag, true]));
+  token.renderFlags?.set(flags);
+}
+
 function refreshMark(token) {
   if ( !canvas?.ready || !token?.document ) return;
   const kind = perceivedAs(token);
-  if ( !kind ) { dropMark(token.id); return; }
+  if ( !kind ) { veil(token, false); dropMark(token.id); return; }
   let mark = marks.get(token.id);
   if ( mark && (mark.kind !== kind) ) { dropMark(token.id); mark = null; }
   if ( !mark ) marks.set(token.id, mark = buildMark(kind));
@@ -494,6 +527,18 @@ function refreshMark(token) {
   // Coin haut gauche du token (le sablier prend le haut droit, les minuteries le dessus).
   mark.root.position.set(token.x + (mark.r * 0.6), token.y + (mark.r * 0.6));
   mark.label.visible = !!token.hover;
+  const anonymous = hidesIdentity(kind, anonymousRule());
+  veil(token, anonymous);
+  if ( mark.disc ) {
+    mark.disc.visible = anonymous;
+    const size = Math.max(token.w ?? 0, token.h ?? 0);
+    if ( anonymous && (size !== mark.discSize) ) {
+      mark.discSize = size;
+      mark.disc.clear().beginFill(0x000000, 0.45).drawCircle(0, 0, size * 0.42).endFill()
+        .lineStyle(Math.max(3, size * 0.04), MARKS[kind].line, 0.9).drawCircle(0, 0, size * 0.42);
+    }
+    mark.disc.position.set(((token.w ?? 0) / 2) - (mark.r * 0.6), ((token.h ?? 0) / 2) - (mark.r * 0.6));
+  }
   if ( mark.ring ) {
     const size = Math.max(token.w ?? 0, token.h ?? 0);
     if ( size !== mark.ringSize ) {
