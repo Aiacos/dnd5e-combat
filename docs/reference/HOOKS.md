@@ -100,7 +100,7 @@ contexte du moment) et sert de clé `on` aux déclarations de contenu.
 
 ## Hooks écoutés, dans l'ordre d'appel
 
-145 hooks, relevés par `api.routes()` sur le module chargé au niveau d'automatisation « full ». Un seul écouteur par hook
+146 hooks, relevés par `api.routes()` sur le module chargé au niveau d'automatisation « full ». Un seul écouteur par hook
 (`runtime/router.mjs`) appelle les inscrits dans cet ordre, qui est celui des `register…()` de `dnd5e-combat.mjs`. **MJ** : l'inscrit
 ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendant `false`.
 
@@ -775,6 +775,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 15. maneuver: promised die _(stop)_
 16. Toll the Dead: target's dice _(stop)_
 17. off hand: Two-Weapon Fighting _(stop)_
+
+### `dnd5e.preRollDeathSaveV2`
+
+1. Survivor: death saves _(stop)_
 
 ### `dnd5e.preRollSavingThrowV2`
 
