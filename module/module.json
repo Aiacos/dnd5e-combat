@@ -44,6 +44,11 @@
         "reason": "DAS · Core already applies the eight Weapon Masteries, which Automated Masteries 5e also automates; it also requires Automated Conditions 5e."
       },
       {
+        "id": "vision-5e",
+        "type": "module",
+        "reason": "DAS · Core already decides who sees whom (special senses, Invisible, Blinded, darkness); Vision 5e replaces the detection modes that verdict reads, so with both active the rules and the canvas can contradict each other."
+      },
+      {
         "id": "enhancedcombathud",
         "type": "module",
         "reason": "Argon is a second action HUD: use the DAS · Combat UI bar, or Argon without it, not both."
