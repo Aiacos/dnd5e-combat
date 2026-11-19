@@ -111,8 +111,9 @@ describe("§438 : effets du compendium de dnd5e à la place des effets de l'item
     expect(from).toEqual(expect.arrayContaining(["isDamaged:ucmM8P37dhbuz8eK", "preAttackRoll:ucmM8P37dhbuz8eK",
       "isDamaged:OpCz3oGBfDZfxAlt", "preAttackRoll:OpCz3oGBfDZfxAlt"]));
   });
-  it("Vengeance ardente : l'Aveuglé commun tombe à la fin du tour", () => {
-    expect(CONTENT["searing-vengeance"].effectEnds).toEqual({ KOXCayzftTFF9Kam: "casterTurnEnd", "4odkdDU1wBQrCMJ1": "casterTurnEnd" });
+  it("Vengeance ardente : l'Aveuglé commun tombe à la fin du tour en cours", () => {
+    expect(CONTENT["searing-vengeance"].effectEnds)
+      .toEqual({ KOXCayzftTFF9Kam: "currentTurnEnd", "4odkdDU1wBQrCMJ1": "currentTurnEnd" });
   });
 });
 

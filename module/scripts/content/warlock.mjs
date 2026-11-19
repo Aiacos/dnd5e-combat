@@ -34,7 +34,8 @@ export const WARLOCK = Object.freeze({
   // deux et soumettre l'attaquant à une sauvegarde de Sagesse — l'activité vise l'attaquant.
   // C12-g : Vengeance ardente (Céleste 14) — les créatures Aveuglées le sont « jusqu'à la fin du tour en cours » (le tour de l'occultiste).
   // §438 : Manuel 3.0.0 — l'Aveuglé commun du compendium `dnd5e.effects` (`4odkdDU1wBQrCMJ1`), posé par l'activité de l'item.
-  "searing-vengeance": { effectEnds: { KOXCayzftTFF9Kam: "casterTurnEnd", "4odkdDU1wBQrCMJ1": "casterTurnEnd" } },
+  // `currentTurnEnd` : la fin du tour où l'effet est posé — `casterTurnEnd` le gardait jusqu'à la fin du tour suivant.
+  "searing-vengeance": { effectEnds: { KOXCayzftTFF9Kam: "currentTurnEnd", "4odkdDU1wBQrCMJ1": "currentTurnEnd" } },
   // C12-f : « sur un échec, l'attaquant subit des dégâts psychiques égaux aux dégâts que vous avez subis » (`retort`).
   "beguiling-defenses": { retort: { damageType: "psychic" }, triggers: [{ on: "isHit", if: { "target.seesSource": true },
     do: [{ type: "use", activity: "Y2cMdoDnGTyEqs0l", target: "source" }, { type: "halve" }] }] },

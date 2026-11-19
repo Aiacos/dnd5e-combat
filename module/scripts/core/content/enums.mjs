@@ -34,7 +34,8 @@ export const AURA_AFFECTS = Object.freeze(["ally", "enemy", "any", "summoner"]);
 /** §16.47 : ce que fait le porteur d'un effet `breaksOn` pour le faire cesser. */
 export const BREAK_MOMENTS = Object.freeze(["attack", "damage", "spell", "save", "forcesSave"]);
 /** Quand un effet d'item prend fin (`effectEnds`, §23) : au début ou à la fin du prochain tour du lanceur, au début ou à la fin du prochain tour du porteur. */
-export const EFFECT_ENDS = Object.freeze(["casterTurnStart", "casterTurnEnd", "bearerTurnStart", "bearerTurnEnd"]);
+export const EFFECT_ENDS = Object.freeze(["casterTurnStart", "casterTurnEnd", "bearerTurnStart", "bearerTurnEnd",
+  "currentTurnEnd"]);
 /** §258 : fins génériques (`endsWhen`) — l'armure enfilée, le moment où la distance au lanceur se juge, ce qui compte comme « personne
  * d'affecté ». */
 export const ENDS_ARMOR = Object.freeze(["any", "heavy"]);

@@ -606,7 +606,8 @@
  *     heroicWarrior?: true                      en combat, l'Inspiration héroïque au début de son tour s'il ne l'a pas (§21)
  *     greatWeaponFighting?: true                dés de dégâts d'une arme de corps à corps à deux mains : 1 et 2 comptent 3 (§21)
  *     thrownDamage?: number                     bonus aux dégâts d'une attaque à distance avec une arme de lancer (§21)
- *     effectEnds?: { <id d'effet> | "status:<état>": "casterTurnStart"|"casterTurnEnd"|"bearerTurnStart"|"bearerTurnEnd" }
+ *     effectEnds?: { <id d'effet> | "status:<état>": "casterTurnStart"|"casterTurnEnd"|"bearerTurnStart"|"bearerTurnEnd"
+ *                    |"currentTurnEnd" }
  *                                               (`status:stunned` : l'état posé par une étape `status` de l'item, §157)
  *                                               l'effet de l'item tombe au début du prochain tour du lanceur, à la fin de son prochain
  *                                               tour, au début ou à la fin du prochain tour du porteur (Rayon de givre, Contact
