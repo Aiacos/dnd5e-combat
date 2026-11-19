@@ -37,6 +37,7 @@ import { absorbPlan } from "../core/counter.mjs";
 import { wasteUse } from "./turn.mjs";
 import { areEnemies } from "../adapter/factions.mjs";
 import { settledResolution } from "../adapter/messages.mjs";
+import { suspendUse } from "./suspended-uses.mjs";
 import { identifierOf, contentOf } from "../adapter/content.mjs";
 import { originItemOf } from "../adapter/facts.mjs";
 import { failureFor, spellFailed } from "../core/spell-failure.mjs";
@@ -386,7 +387,8 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
   // Les cibles du lanceur, à remettre avant la relance : une réaction jouée sur ce même client (le MJ qui contrôle
   // les deux) les a remplacées par les siennes (vu le 2026-09-24 : le Rayon relancé sans cible, ou sur le lanceur).
   const chosen = Array.from(game.user.targets).map(t => t.id);
-  (async () => {
+  // La relance est inscrite : qui enchaîne des utilisations (les projectiles d'un sort) l'attend au lieu de croire au refus.
+  suspendUse(activity.uuid, (async () => {
     if ( scrollCheck && !(await passScrollCheck(activity, origin, scrollCheck)) ) return;
     // §298 : le sort raté (Lenteur) ou contré ne part pas, mais son action est perdue.
     if ( failure && !(await passFailure(activity, origin, failure)) ) return wasteUse(activity);
@@ -426,8 +428,8 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     // `subsequentActions: false` est le réglage d'un appelant qui comptait enchaîner lui-même le jet (connecteur,
     // use-activity) : l'annulation lui a retiré la main, la relance laisse dnd5e enchaîner (sans dialogue, ci-dessus).
     const { subsequentActions, ...rest } = usageConfig;
-    await relaunchUse(activity, { ...rest, [MODULE_ID]: { ...(usageConfig[MODULE_ID] ?? {}), confirmed: true, gated: true } }, dialogConfig, messageConfig);
-  })().catch(err => console.error(`${MODULE_ID} | gate interrupted`, err));
+    return relaunchUse(activity, { ...rest, [MODULE_ID]: { ...(usageConfig[MODULE_ID] ?? {}), confirmed: true, gated: true } }, dialogConfig, messageConfig);
+  })().catch(err => { console.error(`${MODULE_ID} | gate interrupted`, err); return null; }));
   return false;
 }
 
