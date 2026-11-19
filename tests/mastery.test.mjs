@@ -112,7 +112,8 @@ describe("§23 tours de magie : schéma et contenu", () => {
   it("les clés nouvelles", () => {
     expect(validateEntry({ effectEnds: { zwks0mAqBHGZC1Pk: "casterTurnEnd" }, blocksHealing: true, noOpportunityAttacks: true, oneAttack: true,
       byWounds: { healthy: "LFXYm5sLg6D3ZilN", wounded: "w9KUTNVoj3K8XSlv" }, breaksOn: ["save"] })).toEqual([]);
-    expect(validateEntry({ effectEnds: { zwks0mAqBHGZC1Pk: "nextWeek" } })).toEqual(["effectEnds.zwks0mAqBHGZC1Pk: casterTurnStart, casterTurnEnd, bearerTurnStart, bearerTurnEnd"]);
+    expect(validateEntry({ effectEnds: { zwks0mAqBHGZC1Pk: "nextWeek" } }))
+      .toEqual(["effectEnds.zwks0mAqBHGZC1Pk: casterTurnStart, casterTurnEnd, bearerTurnStart, bearerTurnEnd, currentTurnEnd"]);
     expect(validateEntry({ byWounds: { healthy: "LFXYm5sLg6D3ZilN" } })).toEqual(["byWounds: { healthy, wounded } (activity ids)"]);
   });
   it("le contenu livré", () => {

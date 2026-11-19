@@ -17,6 +17,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { STEPS } from "../core/action.mjs";
+import { effectEndsNow } from "../core/effect-ends.mjs";
 import { contentOf, entryOfIdentifier } from "../adapter/content.mjs";
 import { potionOfCast } from "../adapter/potions.mjs";
 import { durationSeconds } from "../core/rolled-duration.mjs";
@@ -122,12 +123,15 @@ async function expire(combat, prior, current) {
       const rule = endRuleOf(effect);
       if ( !rule ) return false;
       const caster = rule.caster?.uuid ?? null;
-      if ( rule.when === "casterTurnStart" ) return !!currentActor && (currentActor.uuid === caster);
-      if ( rule.when === "bearerTurnStart" ) return !!currentActor && (currentActor.uuid === actor.uuid);
-      // §42.2 : « jusqu'à la fin de son prochain tour » (léthargie de Hâte) : pas la fin du tour où l'effet a été posé.
-      if ( rule.when === "bearerTurnEnd" ) return !!priorActor && (priorActor.uuid === actor.uuid) && (effect.getFlag(MODULE_ID, "placedOn") !== priorKey);
-      // « Jusqu'à la fin de votre prochain tour » : pas la fin du tour où il a été posé.
-      return !!priorActor && (priorActor.uuid === caster) && (effect.getFlag(MODULE_ID, "placedOn") !== priorKey);
+      const placedOn = effect.getFlag(MODULE_ID, "placedOn");
+      // §42.2 : « jusqu'à la fin de son prochain tour » (léthargie de Hâte) n'est pas la fin du tour où l'effet a été posé ;
+      // « jusqu'à la fin du tour en cours » (`currentTurnEnd`) l'est (core/effect-ends.mjs).
+      return effectEndsNow(rule.when, {
+        casterStarts: !!currentActor && (currentActor.uuid === caster),
+        bearerStarts: !!currentActor && (currentActor.uuid === actor.uuid),
+        casterEnded: !!priorActor && (priorActor.uuid === caster),
+        bearerEnded: !!priorActor && (priorActor.uuid === actor.uuid),
+        placedInEnded: !!priorKey && (placedOn === priorKey) });
     });
     const ids = gone.map(e => e.id).filter(id => actor.effects.has(id));
     if ( !ids.length ) continue;
