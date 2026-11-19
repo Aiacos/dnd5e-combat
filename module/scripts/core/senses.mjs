@@ -11,7 +11,13 @@
 import { holds } from "./triggers.mjs";
 
 /** Les verdicts d'un sens, du plus faible au plus fort. */
-export const SENSE_VERDICTS = Object.freeze(["presence", "locate", "sight"]);
+export const SENSE_VERDICTS = Object.freeze(["aura", "presence", "locate", "sight"]);
+
+/**
+ * Ce qu'un sens peut révéler au lieu de la position (`reveals`) : `presence` — la présence est sue, pas la position ; `aura` — rien
+ * de plus que ce qui est déjà vu : la créature visible qui porte ce que le sens détecte est marquée (Détection de la magie).
+ */
+export const SENSE_REVEALS = Object.freeze(["presence", "aura"]);
 
 /** Les genres de sens : `locate` — position connue, pas une vue ; `sight` — compte comme une vue. */
 export const SENSE_KINDS = Object.freeze(["locate", "sight"]);
@@ -42,7 +48,7 @@ export const SENSE_THROUGH = Object.freeze(["darkness"]);
 export const SENSE_NEEDS = Object.freeze(["sight", "hearing"]);
 
 /**
- * Ce qu'un sens dit d'une cible : `"sight"`, `"locate"`, `"presence"`, ou null.
+ * Ce qu'un sens dit d'une cible : `"sight"`, `"locate"`, `"presence"`, `"aura"`, ou null.
  *
  * Un sens qui localise ne dépend ni de la lumière ni de l'état Invisible. Une vue (`kind: "sight"`), si : elle ne voit pas une
  * cible Invisible, une brume l'arrête toujours, et des ténèbres aussi, sauf si elle les perce (`through: ["darkness"]`).
@@ -60,7 +66,7 @@ export function senseVerdict(sense, { distance, walled, matches, wards, blind=fa
   if ( ((sense.needs === "sight") && blind) || ((sense.needs === "hearing") && deaf) ) return null;
   if ( walled && (sense.walls !== false) ) return null;
   if ( wardedAgainst(sense, wards) ) return null;
-  if ( sense.reveals === "presence" ) return "presence";
+  if ( SENSE_REVEALS.includes(sense.reveals) ) return sense.reveals;
   if ( sense.kind === "sight" ) {
     if ( invisible || fog ) return null;
     if ( darkness && !sense.through?.includes("darkness") ) return null;

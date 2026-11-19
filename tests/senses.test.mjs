@@ -57,8 +57,18 @@ describe("sens déclaré : le verdict sur une cible", () => {
     const presence = { kind: "sight", range: 30, reveals: "presence" };
     expect(senseVerdict(presence, { ...near, invisible: true, fog: true })).toBe("presence");
   });
+  it("`reveals: \"aura\"` : une aura sur ce qui est déjà vu — ni position ni vue ; les murs et les protections l'arrêtent", () => {
+    const aura = { kind: "locate", range: 30, reveals: "aura", magic: "div" };
+    expect(senseVerdict(aura, near)).toBe("aura");
+    expect(senseVerdict(aura, { ...near, distance: 35 })).toBe(null);
+    expect(senseVerdict(aura, { ...near, walled: true })).toBe(null);
+    expect(senseVerdict(aura, { ...near, matches: false })).toBe(null);
+    expect(senseVerdict(aura, { ...near, wards: ["div"] })).toBe(null);
+  });
   it("le meilleur verdict de plusieurs sens l'emporte", () => {
-    expect(SENSE_VERDICTS).toEqual(["presence", "locate", "sight"]);
+    expect(SENSE_VERDICTS).toEqual(["aura", "presence", "locate", "sight"]);
+    expect(bestVerdict(["aura", null])).toBe("aura");
+    expect(bestVerdict(["aura", "locate"])).toBe("locate");
     expect(bestVerdict(["presence", null, "locate"])).toBe("locate");
     expect(bestVerdict([null, "sight", "locate"])).toBe("sight");
     expect(bestVerdict([null, undefined])).toBe(null);
@@ -142,6 +152,7 @@ describe("déclaration dans le contenu", () => {
       { kind: "locate", range: 60, magic: true, needs: "hearing" }] };
     expect(validateEntry(two, { facts })).toEqual([]);
     expect(validateEntry({ wardsDetection: ["div", "magic"] }, { facts })).toEqual([]);
+    expect(validateEntry({ sense: { kind: "locate", range: 30, reveals: "aura" } }, { facts })).toEqual([]);
     expect(validateEntry({ detectedAs: ["undead"] }, { facts })).toEqual([]);
     expect(validateEntry({ senseNeeds: { blindsight: "hearing", seeAll: "sight" } }, { facts })).toEqual([]);
   });

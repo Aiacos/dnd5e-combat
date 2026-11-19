@@ -318,6 +318,18 @@ export function isPoisonous(actor) {
     && (poison(item.system.damage?.base?.types) || attacksWithPoison(item)));
 }
 
+/**
+ * L'acteur porte-t-il de la magie : un effet actif magique (la marque `system.magical` de dnd5e 6.1, que le moteur pose aussi),
+ * ou un objet magique (propriété `mgc`) qu'il porte équipé ? Ce que montre une Détection de la magie sur une créature visible.
+ */
+export function carriesMagic(actor) {
+  for ( const effect of actor?.appliedEffects ?? actor?.effects ?? [] ) {
+    if ( !effect.disabled && !effect.isSuppressed && (effect.system?.magical === true) ) return true;
+  }
+  const magic = properties => (properties?.has?.("mgc") ?? properties?.includes?.("mgc")) === true;
+  return Array.from(actor?.items ?? []).some(item => (item.system?.equipped === true) && magic(item.system.properties));
+}
+
 /** Les états contre lesquels un acteur est immunisé (`traits.ci` de dnd5e : « charmed », « exhaustion »…). */
 export const conditionImmunitiesOf = actor => Array.from(actor?.system?.traits?.ci?.value ?? []);
 
@@ -457,6 +469,7 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     // Sens déclarés (`sense.detects`) : la cible connaît une langue ou est télépathe ; elle est venimeuse.
     "target.speaksLanguage": want => (speaksLanguage(target) === want),
     "target.poisonous": want => (isPoisonous(target) === want),
+    "target.carriesMagic": want => (carriesMagic(target) === want),
     "target.immuneTo": id => conditionImmunitiesOf(target).includes(id),
     // Armure d'Agathys : « tant que vous avez ces PV temporaires ». { "target.hasTempHp": true | false }.
     "target.hasTempHp": want => (((target?.system?.attributes?.hp?.temp ?? 0) > 0) === want),

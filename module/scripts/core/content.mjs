@@ -883,7 +883,8 @@
  *       walls?: false                           false — traverse les murs ; absent — un mur de vue l'arrête
  *       detects?: <condition>                   faits sur la cible (`target.*`) ; absent — toute créature
  *       magic?: true | "<école>"                sens magique, d'un sort de cette école : `wardsDetection` peut l'arrêter
- *       reveals?: "presence"                    la présence est sue, pas la position
+ *       reveals?: "presence" | "aura"           `presence` — la présence est sue, pas la position ; `aura` — la créature déjà vue
+ *                                               qui porte ce que le sens détecte est marquée, rien de plus
  *       through?: ["darkness"]                  pour `sight` : cette vue perce les ténèbres (jamais une brume)
  *       needs?: "sight" | "hearing"             éteint tant que le porteur est Aveuglé (`sight`) ou Assourdi (`hearing`)
  *     wardsDetection?: ["magic" | "<école>"…]   le porteur d'un effet de l'item n'est pas trouvé par les sens magiques (`magic`),

@@ -124,8 +124,9 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 4. awaiting: hourglass not cleared with the canvas
 5. timers: not cleared with the canvas
 6. perception: hearing mark not drawn
-7. ethereal: gray filter removed
-8. sneak: layer removed
+7. perception: hearing mark not drawn
+8. ethereal: gray filter removed
+9. sneak: layer removed
 
 ### `combatRound`
 
@@ -224,10 +225,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 30. invisibility: not suspended _(MJ)_
 31. Wild Shape: end if Incapacitated _(MJ)_
 32. floating texts: effect
-33. perception: display not refreshed
-34. ethereal: view not updated
-35. ethereal: movement action not switched _(MJ)_
-36. sneak: cones redrawn
+33. perception: hearing mark not drawn
+34. perception: display not refreshed
+35. ethereal: view not updated
+36. ethereal: movement action not switched _(MJ)_
+37. sneak: cones redrawn
 
 ### `createActor`
 
@@ -298,6 +300,7 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 8. granted speed not synced _(MJ)_
 9. hearing: ranges to read again
 10. perception: Devil's Sight or blind hearing not granted after an update
+11. perception: hearing mark not drawn
 
 ### `createNote`
 
@@ -374,10 +377,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 24. light source: remaining time not kept _(MJ)_
 25. tether: not forgotten _(MJ)_
 26. floating texts: effect
-27. perception: display not refreshed
-28. ethereal: view not updated
-29. ethereal: movement action not switched _(MJ)_
-30. sneak: cones redrawn
+27. perception: hearing mark not drawn
+28. perception: display not refreshed
+29. ethereal: view not updated
+30. ethereal: movement action not switched _(MJ)_
+31. sneak: cones redrawn
 
 ### `deleteAmbientLight`
 
@@ -431,6 +435,7 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 7. hearing: ranges to read again
 8. light source: not extinguished _(MJ)_
 9. perception: Devil's Sight or blind hearing not granted after an update
+10. perception: hearing mark not drawn
 
 ### `deleteNote`
 
@@ -890,6 +895,7 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `initializeVisionSources`
 
 1. perception: Devil's Sight or blind hearing not granted
+2. perception: hearing mark not drawn
 
 ### `moveToken`
 
@@ -1062,7 +1068,8 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `sightRefresh`
 
 1. perception: Devil's Sight or blind hearing not granted again
-2. sneak: cones redrawn
+2. perception: hearing mark not drawn
+3. sneak: cones redrawn
 
 ### `stopToken`
 
@@ -1085,10 +1092,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 13. invisibility: not restored _(MJ)_
 14. light source: not burnt out _(MJ)_
 15. floating texts: effect
-16. perception: display not refreshed
-17. ethereal: view not updated
-18. ethereal: movement action not switched _(MJ)_
-19. sneak: cones redrawn
+16. perception: hearing mark not drawn
+17. perception: display not refreshed
+18. ethereal: view not updated
+19. ethereal: movement action not switched _(MJ)_
+20. sneak: cones redrawn
 
 ### `updateActor`
 
@@ -1161,6 +1169,7 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 6. granted speed not synced _(MJ)_
 7. hearing: ranges to read again
 8. perception: Devil's Sight or blind hearing not granted after an update
+9. perception: hearing mark not drawn
 
 ### `updateNote`
 
