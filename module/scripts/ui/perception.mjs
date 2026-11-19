@@ -32,6 +32,7 @@ import { hiddenFrom } from "../adapter/stealth.mjs";
 import { canHear } from "../adapter/hearing.mjs";
 import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, DEVILS_SIGHT_OUTLINE, HEARING_MODE, SENSE_MODE, SENSE_OUTLINE,
   grantInMemoryModes, tintOutlineShader } from "../core/light.mjs";
+import { hidesIdentity } from "../core/senses.mjs";
 import { route } from "../runtime/router.mjs";
 import { theaterActive } from "../runtime/theater-state.mjs";
 import { perceivesPlane } from "../adapter/plane.mjs";
@@ -436,8 +437,13 @@ function buildMark(kind) {
   // Une aura : un halo pâle autour du token, tracé à sa taille à chaque rafraîchissement (`refreshMark`).
   const ring = look.ring ? new PIXI.Graphics() : null;
   if ( ring ) root.addChild(ring);
+  // Réglage `anonymousLocated` : la silhouette qui tient lieu d'image à une créature perçue sans être vue — l'icône de token par
+  // défaut du cœur, à la taille du token, sous le contour du sens : qui la perçoit sans la voir sait où elle est, pas ce qu'elle
+  // est.
+  const stand = look.ring ? null : new PIXI.Sprite(PIXI.Texture.from(CONFIG.Token.documentClass.DEFAULT_ICON));
+  if ( stand ) { stand.anchor.set(0.5); stand.visible = false; root.addChild(stand); }
   root.addChild(back, ear, label);
-  return { root, label, r, kind, ring, ringSize: null };
+  return { root, label, r, kind, ring, ringSize: null, stand };
 }
 
 function dropMark(id) {
@@ -483,10 +489,39 @@ function forgetAuraWatchers() {
   watchers = null;
 }
 
+/** Réglage `anonymousLocated` du monde ; faux tant qu'il n'est pas lisible. */
+function anonymousRule() {
+  try { return game.settings.get(MODULE_ID, "anonymousLocated") === true; } catch { return false; }
+}
+
+/**
+ * Réglage `anonymousLocated` : l'image, le nom, les barres, les icônes d'état et le bord d'un token perçu sans être vu sont retirés
+ * de l'affichage de ce client, à chaque rafraîchissement (le cœur en remet une partie à chaque `refreshState`). Rien n'est écrit,
+ * la classe du token n'est pas remplacée ; dès qu'il n'est plus anonyme, on demande au cœur de tout redessiner.
+ */
+const veiled = new Set();
+const VEILED_PARTS = ["nameplate", "bars", "effects", "border"];   // le bord : sa couleur dit l'attitude de la créature
+function veil(token, on) {
+  if ( on ) {
+    veiled.add(token.id);
+    // Pas son alpha : le maillage du cœur le recalcule à chaque image (occlusion).
+    if ( token.mesh ) token.mesh.visible = false;
+    for ( const part of VEILED_PARTS ) if ( token[part] ) token[part].visible = false;
+    return;
+  }
+  if ( !veiled.delete(token.id) || token.destroyed ) return;
+  if ( token.mesh ) token.mesh.visible = token.visible;   // comme `Token#_refreshVisibility`
+  for ( const part of VEILED_PARTS ) if ( token[part] ) token[part].visible = true;
+  const known = token.constructor.RENDER_FLAGS ?? {};
+  const flags = Object.fromEntries(["refreshState", "refreshNameplate", "refreshBars", "refreshEffects", "refreshBorder"]
+    .filter(flag => flag in known).map(flag => [flag, true]));
+  token.renderFlags?.set(flags);
+}
+
 function refreshMark(token) {
   if ( !canvas?.ready || !token?.document ) return;
   const kind = perceivedAs(token);
-  if ( !kind ) { dropMark(token.id); return; }
+  if ( !kind ) { veil(token, false); dropMark(token.id); return; }
   let mark = marks.get(token.id);
   if ( mark && (mark.kind !== kind) ) { dropMark(token.id); mark = null; }
   if ( !mark ) marks.set(token.id, mark = buildMark(kind));
@@ -494,6 +529,19 @@ function refreshMark(token) {
   // Coin haut gauche du token (le sablier prend le haut droit, les minuteries le dessus).
   mark.root.position.set(token.x + (mark.r * 0.6), token.y + (mark.r * 0.6));
   mark.label.visible = !!token.hover;
+  const anonymous = hidesIdentity(kind, anonymousRule());
+  veil(token, anonymous);
+  if ( mark.stand ) {
+    mark.stand.visible = anonymous;
+    if ( anonymous ) {
+      mark.stand.width = token.w ?? 0;
+      mark.stand.height = token.h ?? 0;
+      mark.stand.position.set(((token.w ?? 0) / 2) - (mark.r * 0.6), ((token.h ?? 0) / 2) - (mark.r * 0.6));
+      // Le contour par lequel le cœur dessine ce token (ouïe, sens déclaré) : le même, sur la silhouette.
+      const outline = token.detectionFilter ?? null;
+      if ( mark.stand.filters?.[0] !== outline ) mark.stand.filters = outline ? [outline] : null;
+    }
+  }
   if ( mark.ring ) {
     const size = Math.max(token.w ?? 0, token.h ?? 0);
     if ( size !== mark.ringSize ) {

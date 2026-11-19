@@ -11,6 +11,7 @@ const fire = (hook, ...args) => hooks[hook].forEach(fn => fn(...args));
 const layer = { children: [], addChild(child) { child.parent = layer; layer.children.push(child); return child; } };
 const hearing = { name: "le filtre de l'ouïe" };
 const sensing = { name: "le filtre des sens déclarés" };
+let anonymous = false;   // le réglage `anonymousLocated` du monde
 
 /** Un token du canevas ; `tests` compte les lectures de `isVisible` (un test de visibilité du cœur chacune). */
 function tokenOf(id, { visible=true, detectionFilter=null }={}) {
@@ -22,7 +23,8 @@ function tokenOf(id, { visible=true, detectionFilter=null }={}) {
 beforeAll(async () => {
   globalThis.Hooks = { on: (hook, fn) => (hooks[hook] ??= []).push(fn), once() {}, callAll() {}, call: () => true };
   globalThis.game = { user: { isGM: false }, users: {}, modules: { get: () => null },
-    settings: { register() {}, get: () => undefined }, i18n: { localize: k => k, format: k => k, lang: "en" } };
+    settings: { register() {}, get: (scope, key) => (key === "anonymousLocated") ? anonymous : undefined },
+    i18n: { localize: k => k, format: k => k, lang: "en" } };
   class DetectionMode {
     static DETECTION_TYPES = { SIGHT: 0, SOUND: 1 };
     constructor(data) { Object.assign(this, data); this.data = data; }
@@ -33,7 +35,8 @@ beforeAll(async () => {
     canvas: { perception: { DetectionMode }, placeables: { Token: class {} },
       rendering: { filters: { OutlineOverlayFilter: { create: ({ outlineColor }) => ((outlineColor[0] > 0.7) ? sensing : hearing) } } } } };
   globalThis.fromUuidSync = () => null;
-  globalThis.CONFIG = { DND5E: {}, specialStatusEffects: {}, queries: {}, Canvas: { detectionModes: {} } };
+  globalThis.CONFIG = { DND5E: {}, specialStatusEffects: {}, queries: {}, Canvas: { detectionModes: {} },
+    Token: { documentClass: { DEFAULT_ICON: "icons/svg/mystery-man.svg" } } };
   // Ce que `buildMark` dessine : des conteneurs PIXI sans rendu.
   class Node {
     constructor() {
@@ -49,12 +52,13 @@ beforeAll(async () => {
     destroy() { this.destroyed = true; }
   }
   class Graphics extends Node {
+    clear() { return this; }
     beginFill() { return this; }
     drawCircle() { return this; }
     endFill() { return this; }
     lineStyle() { return this; }
   }
-  globalThis.PIXI = { Container: Node, Graphics, Text: Node };
+  globalThis.PIXI = { Container: Node, Graphics, Text: Node, Sprite: Node, Texture: { from: path => ({ path }) } };
   globalThis.canvas = { ready: true, scene: {}, grid: { size: 100 }, interface: layer, tokens: { placeables: [] } };
   const { registerPerception } = await import("../module/scripts/ui/perception.mjs");
   registerPerception();
@@ -103,5 +107,44 @@ describe("issue #42 : l'oreille des créatures entendues", () => {
     located.detectionFilter = null;
     fire("refreshToken", located, {});
     expect(marks.at(-1).destroyed).toBe(true);
+  });
+  it("réglage `anonymousLocated` : l'image, le nom, les barres et les états d'un token entendu sont retirés, puis rendus", () => {
+    const flags = [];
+    const heard = tokenOf("anon", { detectionFilter: hearing });
+    heard.visible = true;
+    Object.assign(heard, { w: 100, h: 100, mesh: { visible: true }, nameplate: { visible: true }, bars: { visible: true },
+      effects: { visible: true }, border: { visible: true }, renderFlags: { set: f => flags.push(f) } });
+    heard.constructor = { RENDER_FLAGS: { refreshState: {}, refreshBars: {}, refreshNameplate: {} } };
+    // Éteint : rien n'est touché.
+    fire("refreshToken", heard, {});
+    expect(heard.mesh.visible).toBe(true);
+    expect(heard.nameplate.visible).toBe(true);
+    // Allumé : anonyme à chaque rafraîchissement (le cœur remet l'image entre-temps).
+    anonymous = true;
+    fire("refreshToken", heard, {});
+    expect(heard.mesh.visible).toBe(false);
+    expect([heard.nameplate.visible, heard.bars.visible, heard.effects.visible]).toEqual([false, false, false]);
+    expect(heard.border.visible).toBe(false);
+    // La silhouette par défaut du cœur, à la taille du token, sous le contour de l'ouïe.
+    const stand = layer.children[0].children.at(-1).children.find(child => child.filters);
+    expect(stand.visible).toBe(true);
+    expect([stand.width, stand.height]).toEqual([100, 100]);
+    expect(stand.filters).toEqual([hearing]);
+    heard.mesh.visible = true;
+    fire("refreshToken", heard, {});
+    expect(heard.mesh.visible).toBe(false);
+    expect(flags).toHaveLength(0);
+    // Il est vu normalement : le cœur redessine tout, par les drapeaux qu'il connaît.
+    heard.detectionFilter = null;
+    fire("refreshToken", heard, {});
+    expect(flags).toEqual([{ refreshState: true, refreshNameplate: true, refreshBars: true }]);
+    expect([heard.nameplate.visible, heard.bars.visible, heard.effects.visible]).toEqual([true, true, true]);
+    expect(heard.mesh.visible).toBe(true);
+    // Un token vu, jamais anonyme : aucun drapeau demandé.
+    const seen = tokenOf("plain");
+    seen.renderFlags = { set: f => flags.push(f) };
+    fire("refreshToken", seen, {});
+    expect(flags).toHaveLength(1);
+    anonymous = false;
   });
 });

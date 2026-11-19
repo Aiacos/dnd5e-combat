@@ -693,6 +693,8 @@
   "DND5ECOMBAT.Reglage.unconsciousSenses.Aide": "An Unconscious creature is unaware of its surroundings (2024 rules): when ticked, it sees and hears nothing, for the engine and on its player's screen, until it wakes up. Unticked, it keeps its senses.",
   "DND5ECOMBAT.Reglage.hearingRange.Nom": "Hearing range (house rule)",
   "DND5ECOMBAT.Reglage.hearingRange.Aide": "The rules give hearing no range: a creature that is not hidden is heard wherever no wall stops the sound. Leave empty to keep that rule. Otherwise, a formula in feet read on each creature, beyond which it hears nothing: for example 15 + 2.5 * (@skills.prc.passive - 10).",
+  "DND5ECOMBAT.Reglage.anonymousLocated.Nom": "Located, not seen: anonymous marker",
+  "DND5ECOMBAT.Reglage.anonymousLocated.Aide": "A creature that is heard or located by a sense without being seen normally keeps its own image, with an outline. When ticked, it is shown as the default token silhouette instead, under the same outline — no image, name, bars, status icons or coloured border: its position is known, not its identity.",
   "DND5ECOMBAT.Reglage.twilightDarkness.Nom": "Twilight: darkness threshold",
   "DND5ECOMBAT.Reglage.twilightDarkness.Aide": "Above this scene darkness level, a bright global light counts as Dim Light for the engine (dawn and dusk), until it goes out at the end of its range. Useful with a time module that changes darkness (Simple Timekeeping). 1: never. Foundry's display does not change.",
   "DND5ECOMBAT.ChoixSauvegarde.Titre": "{name}: which saving throw?",
