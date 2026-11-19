@@ -98,7 +98,7 @@ contexte du moment) et sert de clé `on` aux déclarations de contenu.
 
 ## Hooks écoutés, dans l'ordre d'appel
 
-132 hooks, relevés par `api.routes()` sur le module chargé au niveau d'automatisation « full ». Un seul écouteur par hook
+144 hooks, relevés par `api.routes()` sur le module chargé au niveau d'automatisation « full ». Un seul écouteur par hook
 (`runtime/router.mjs`) appelle les inscrits dans cet ordre, qui est celui des `register…()` de `dnd5e-combat.mjs`. **MJ** : l'inscrit
 ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendant `false`.
 
@@ -238,6 +238,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. stealth: detection not scheduled
 2. vision: sources to rebuild
+3. perception: Devil's Sight or blind hearing not granted after an update
+
+### `createAmbientSound`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `createChatMessage`
 
@@ -276,6 +281,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 1. feat effect not synced _(MJ)_
 2. basic actions added _(MJ)_
 
+### `createDrawing`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
+
 ### `createItem`
 
 1. translation on creation: item left in the original language _(MJ)_
@@ -287,6 +296,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 7. armor training: shield AC not updated _(MJ)_
 8. granted speed not synced _(MJ)_
 9. perception: Devil's Sight or blind hearing not granted after an update
+
+### `createNote`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `createRegion`
 
@@ -300,12 +313,17 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 8. zone light not placed _(MJ)_
 9. vision: sources to rebuild
 10. antimagic: region behavior not added _(MJ)_
-11. perception: display not refreshed
-12. wall: ring side not asked
+11. perception: Devil's Sight or blind hearing not granted after an update
+12. perception: display not refreshed
+13. wall: ring side not asked
 
 ### `createSequencerEffect`
 
 1. animations: start (Sequencer)
+
+### `createTile`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `createToken`
 
@@ -318,11 +336,13 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 7. basic actions added _(MJ)_
 8. familiar: pocket not emptied _(MJ)_
 9. light object not handled _(MJ)_
-10. sneak: cones redrawn
+10. perception: Devil's Sight or blind hearing not granted after an update
+11. sneak: cones redrawn
 
 ### `createWall`
 
 1. vision: sources to rebuild
+2. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `deleteActiveEffect`
 
@@ -360,6 +380,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. stealth: detection not scheduled
 2. vision: sources to rebuild
+3. perception: Devil's Sight or blind hearing not granted after an update
+
+### `deleteAmbientSound`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `deleteChatMessage`
 
@@ -387,6 +412,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. turn statuses not synchronized _(MJ)_
 
+### `deleteDrawing`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
+
 ### `deleteItem`
 
 1. effect left by a removed item not applied _(MJ)_
@@ -397,6 +426,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 6. granted speed not synced _(MJ)_
 7. light source: not extinguished _(MJ)_
 8. perception: Devil's Sight or blind hearing not granted after an update
+
+### `deleteNote`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `deleteRegion`
 
@@ -409,18 +442,25 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 7. flammable: light or held creatures left behind _(MJ)_
 8. zone light not extinguished _(MJ)_
 9. vision: sources to rebuild
-10. perception: display not refreshed
+10. perception: Devil's Sight or blind hearing not granted after an update
+11. perception: display not refreshed
+
+### `deleteTile`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `deleteToken`
 
 1. piloted object: spell not ended _(MJ)_
 2. follow: the leader is gone
 3. auras: recalculation requested
-4. sneak: cones redrawn
+4. perception: Devil's Sight or blind hearing not granted after an update
+5. sneak: cones redrawn
 
 ### `deleteWall`
 
 1. vision: sources to rebuild
+2. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `destroyToken`
 
@@ -1066,6 +1106,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. stealth: detection not scheduled
 2. vision: sources to rebuild
+3. perception: Devil's Sight or blind hearing not granted after an update
+
+### `updateAmbientSound`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `updateChatMessage`
 
@@ -1093,6 +1138,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 4. combat launch: initiative not followed _(MJ)_
 5. tracker: budget
 
+### `updateDrawing`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
+
 ### `updateItem`
 
 1. ammunition choice announced
@@ -1103,6 +1152,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 6. granted speed not synced _(MJ)_
 7. perception: Devil's Sight or blind hearing not granted after an update
 
+### `updateNote`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
+
 ### `updateRegion`
 
 1. regions: polygons not prepared
@@ -1111,7 +1164,8 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 4. wall: burning side not placed _(MJ)_
 5. zone light not moved _(MJ)_
 6. vision: sources to rebuild
-7. perception: display not refreshed
+7. perception: Devil's Sight or blind hearing not granted after an update
+8. perception: display not refreshed
 
 ### `updateScene`
 
@@ -1121,6 +1175,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `updateSetting`
 
 1. light chat log: setting changed
+
+### `updateTile`
+
+1. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `updateToken`
 
@@ -1142,11 +1200,13 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 16. passive perception _(MJ)_
 17. tracker: movement
 18. perception: Devil's Sight or blind hearing not granted after an update
-19. sneak: cones redrawn
+19. perception: Devil's Sight or blind hearing not granted after an update
+20. sneak: cones redrawn
 
 ### `updateWall`
 
 1. vision: sources to rebuild
+2. perception: Devil's Sight or blind hearing not granted after an update
 
 ### `updateWorldTime`
 
