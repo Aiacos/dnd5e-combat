@@ -205,6 +205,33 @@ describe("contenu livré : Détection de la magie", () => {
   });
 });
 
+describe("contenu livré : sens de livres sans module officiel", () => {
+  let CONTENT, validateEntry, KNOWN_FACTS, senseVerdict;
+  beforeAll(async () => {
+    ({ CONTENT } = await import("../module/scripts/content/index.mjs"));
+    ({ validateEntry } = await import("../module/scripts/core/content/entry.mjs"));
+    ({ KNOWN_FACTS } = await import("../module/scripts/adapter/content.mjs"));
+    ({ senseVerdict } = await import("../module/scripts/core/senses.mjs"));
+  });
+  const at = (distance, extra={}) => ({ distance, walled: true, matches: true, wards: ["magic"], ...extra });
+  it("un sens de la vie : la position à 60 ft, à travers les murs, sauf Artificiels et Morts-vivants ; rien n'en protège", () => {
+    const entry = CONTENT["life-sense"];
+    expect(validateEntry(entry, { facts: KNOWN_FACTS })).toEqual([]);
+    expect(senseVerdict(entry.sense, at(60))).toBe("locate");
+    expect(senseVerdict(entry.sense, at(65))).toBe(null);
+    expect(entry.sense.detects).toEqual({ not: { "target.creatureType": ["construct", "undead"] } });
+  });
+  it("un regard à travers les murs : une vue à 30 ft, par l'effet, pas d'un Invisible, pas pour un Aveuglé", () => {
+    const entry = CONTENT["ghostly-gaze"];
+    expect(validateEntry(entry, { facts: KNOWN_FACTS })).toEqual([]);
+    expect(entry.sense.via).toBe("effect");
+    expect(senseVerdict(entry.sense, at(30))).toBe("sight");
+    expect(senseVerdict(entry.sense, at(35))).toBe(null);
+    expect(senseVerdict(entry.sense, at(20, { invisible: true }))).toBe(null);
+    expect(senseVerdict(entry.sense, at(20, { blind: true }))).toBe(null);
+  });
+});
+
 describe("contenu livré : sorts et pouvoirs qui déclarent un sens ou une protection", () => {
   let CONTENT, factsFor, validateEntry, KNOWN_FACTS;
   beforeAll(async () => {
