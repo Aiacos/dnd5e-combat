@@ -34,7 +34,7 @@ import { registerContent, contentApi } from "./runtime/content.mjs";
 import { registerIcons } from "./runtime/icons.mjs";
 import { registerConditions } from "./runtime/conditions.mjs";
 import { registerVision } from "./runtime/vision.mjs";
-import { canSee as visionCanSee, canLocate as visionCanLocate, isVisionAvailable } from "./adapter/vision.mjs";
+import { canSee as visionCanSee, canLocate as visionCanLocate, sensedThrough, isVisionAvailable } from "./adapter/vision.mjs";
 import { registerSpace } from "./runtime/space.mjs";
 import { registerSelfAreas } from "./runtime/self-area.mjs";
 import { registerAreas } from "./runtime/areas.mjs";
@@ -255,7 +255,7 @@ const state = {
   stopWalks: stopAllWalks, budget: { issues: budgetIssues, spend: spendBudget },
   level: automationLevel, levelAtLeast, skippedRoutes,
   welcome: { open: openWelcome }, releaseNotes: { open: openReleaseNotes }, diagnostic: { open: openDiagnostic }, debug: Object.freeze({ ...debugApi, open: openDebugReport, testConnection, openConnectionTest }), settings: { open: openSettings, registerWindow },
-  vision: { canSee: publicCanSee, locates: publicLocates, cone: publicCone, canHear: publicCanHear },
+  vision: { canSee: publicCanSee, locates: publicLocates, sensed: publicSensed, cone: publicCone, canHear: publicCanHear },
   factions: { ...factionsApi,
     /** Ouvre (ou ramène devant) la fenêtre des factions sur ce client. */
     open: () => openFactions() },
@@ -326,6 +326,15 @@ function publicCanSee(observer, target) {
 function publicLocates(observer, target) {
   if ( !isVisionAvailable() ) return null;
   return visionCanLocate(observer?.document ?? observer, target?.document ?? target);
+}
+
+/**
+ * Ce qu'un sens déclaré par du contenu (`sense`) dit de la cible à l'observateur : `"sight"`, `"locate"`, `"presence"`, ou null.
+ * Lecture seule ; null aussi quand la vision simulée est coupée.
+ */
+function publicSensed(observer, target) {
+  if ( !isVisionAvailable() ) return null;
+  return sensedThrough(observer?.document ?? observer, target?.document ?? target);
 }
 
 /** §186 : l'ouïe du moteur pour un voisin (lecture seule) — murs et planchers qui arrêtent le son, Assourdi, cible cachée ; sans portée. */
