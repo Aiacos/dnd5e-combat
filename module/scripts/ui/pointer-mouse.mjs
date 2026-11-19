@@ -4,6 +4,7 @@
  */
 
 import { forwardsIssue } from "../core/forced.mjs";
+import { typingIn } from "../core/typing.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { footprintGap } from "../core/movement.mjs";
 import { positionOf, distanceBetween } from "../adapter/turn.mjs";
@@ -602,6 +603,8 @@ export function onModifierKey(event) {
 
 export function onKeyDown(event) {
   onModifierKey(event);
+  // Une touche frappée dans un champ de saisie (le chat, une fiche) est au champ : ni Entrée ni Échap ne pilotent la visée de là.
+  if ( typingIn(event.target) ) return;
   // §16.33 : Entrée lance un sort de groupe avec les créatures déjà choisies (« jusqu'à cinq créatures »).
   if ( (event.key === "Enter") && (picking?.group || picking?.unique) && picking.picks.length ) { swallow(event); return finishGroup(); }
   if ( event.key !== "Escape" ) return;
