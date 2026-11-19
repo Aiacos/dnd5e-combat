@@ -276,7 +276,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `thrownDamage` | 1 | `thrown-weapon-fighting` |
 | `trace` | 7 | `armor-of-agathys`, `blade-ward`, `dispel-evil-and-good`, `flame-blade`, `moonlight-step`, `produce-flame`, … |
 | `transpose` | 1 | `tricksters-transposition` |
-| `triggers` | 271 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
+| `triggers` | 272 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
 | `untypedDamage` | 3 | `freezing-sphere`, `mm-wight-life-drain`, `otilukes-freezing-sphere` |
 | `upkeep` | 1 | `crown-of-madness` |
 | `usageLimits` | 11 | `action-surge`, `flame-blade`, `indomitable`, `pact-of-the-chain`, `plant-growth`, `produce-flame`, … |
@@ -360,7 +360,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `preAttackRoll → advantage` | 27 | `assassinate`, `avenging-angel`, `clairvoyant-combatant`, `distracting-strike`, `faerie-fire`, `feinting-attack`, … |
 | `preAttackRoll → attackBonus` | 3 | `blade-ward`, `brutal-strike`, `improved-brutal-strike` |
 | `preAttackRoll → consume` | 10 | `brutal-strike`, `distracting-strike`, `feinting-attack`, `guiding-bolt`, `improved-brutal-strike`, `moonlight-step`, … |
-| `preAttackRoll → disadvantage` | 29 | `bestow-curse`, `blur`, `clairvoyant-combatant`, `cloak-of-displacement`, `compelled-duel`, `dispel-evil-and-good`, … |
+| `preAttackRoll → disadvantage` | 30 | `bestow-curse`, `blur`, `clairvoyant-combatant`, `cloak-of-displacement`, `compelled-duel`, `dispel-evil-and-good`, … |
 | `preDamageRoll → damage` | 35 | `ancient-might`, `bestow-curse`, `blessed-strikes`, `blessed-strikes-potent-spellcasting`, `brutal-strike`, `celestial-revelation`, … |
 | `savedSave → mark` | 1 | `eyebite` |
 | `savedSave → move` | 1 | `bead-of-force` |

@@ -664,9 +664,16 @@ export const ITEM_FIXES = Object.freeze({
   "caltrops": { effectChanges: { HsbtDDdiWhk4d7WB: [{ key: "system.attributes.movement.walk", type: "override", value: 0, replace: true }] } },
   // Aiguille empoisonnée : l'effet posé n'a pas l'état Empoisonné.
   "poisoned-needle": { effectStatuses: { waWQ0QcVncE6pU5B: ["poisoned"] } },
-  // Le Fou (Jeu de cartes merveilleux) : « Désavantage aux jets de sauvegarde et aux tests pendant 72 heures » — l'effet est vide.
-  "fool": { effectChanges: { BkChhqAw5emn7aQp: ["str", "dex", "con", "int", "wis", "cha"].flatMap(a => [
-    { key: `system.abilities.${a}.save.roll.mode`, type: "add", value: "-1" }, { key: `system.abilities.${a}.check.roll.mode`, type: "add", value: "-1" }]) } },
+  // Le Fou (Jeu de cartes merveilleux) : « Désavantage aux Tests d'un d20 pendant 72 heures » — l'effet est vide. Les tests de
+  // caractéristique (dont les compétences et l'Initiative, que dnd5e en déduit) et les sauvegardes par les clés de l'effet ; les
+  // jets d'attaque par un déclencheur, comme pour Le Bouffon (dnd5e n'a pas de clé d'effet pour leur mode).
+  "fool": {
+    triggers: [{ on: "preAttackRoll", via: "effect", fromEffect: "BkChhqAw5emn7aQp", if: { "source.hasEffect": "fool" },
+      do: [{ type: "disadvantage" }] }],
+    effectChanges: { BkChhqAw5emn7aQp: ["str", "dex", "con", "int", "wis", "cha"].flatMap(a => [
+      { key: `system.abilities.${a}.save.roll.mode`, type: "add", value: "-1" },
+      { key: `system.abilities.${a}.check.roll.mode`, type: "add", value: "-1" }]) }
+  },
 
   // O9h (§363) — Poison standard : « une action Bonus pour enduire une arme ou jusqu'à trois munitions ; une créature qui subit des dégâts
   // perforants ou tranchants de l'arme ou des munitions empoisonnées subit 1d4 dégâts de poison en plus ; le poison garde son efficacité
