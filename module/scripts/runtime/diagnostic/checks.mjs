@@ -8,6 +8,7 @@
 import { MODULE_ID } from "../../constants.mjs";
 import { loc, esc } from "../shared.mjs";
 import { rootOf } from "./backup.mjs";
+import { fresh } from "./fresh.mjs";
 import { basicActionData } from "../../adapter/basics.mjs";
 import { scrollSpellOf } from "../../adapter/scrolls.mjs";
 import { localizeEffectNames } from "../../core/localize.mjs";
@@ -28,19 +29,6 @@ import { missingModifications, modifyOrigin } from "../../core/modify-item.mjs";
 const effectsOf = (reference, effects=reference.effects) =>
   localizeEffectNames(effects.map(e => (e.toObject ? e.toObject() : e)), reference.flags?.babele?.originalName ?? null, reference.name);
 
-/**
- * Le document tel qu'il est au moment de réparer. Une tâche garde le document de l'analyse ; entre-temps, une autre réparation a pu
- * faire recréer par le cœur l'acteur propre d'un token (vu : réparer l'acteur de base, puis son token non lié, échouait).
- */
-function fresh(doc) {
-  // L'acteur propre d'un token se relit par son token (son uuid seul ne rend pas l'acteur propre, vu en jeu) ; ses objets, par lui.
-  if ( (doc?.documentName === "Actor") && doc.isToken ) return fromUuidSync(doc.token.uuid, { strict: false })?.actor ?? doc;
-  if ( (doc?.parent?.documentName === "Actor") && doc.parent.isToken ) {
-    const actor = fresh(doc.parent);
-    return actor?.[doc.collectionName]?.get(doc.id) ?? doc;
-  }
-  return fromUuidSync(doc.uuid, { strict: false }) ?? doc;
-}
 const tr = prefix => (key, data) => loc(`Macro.${prefix}.${key}`, data);
 
 /** §456 : un objet supprimé pour être recréé aussitôt (remplacement) — `leavesEffects` ne doit pas jouer (runtime/leaves.mjs). */
@@ -153,11 +141,13 @@ function midiReplacement(item, doc) {
 }
 
 /** Le nettoyage d'une fiche, tel que la macro le fait : `dry` n'écrit rien. Rend les lignes du compte rendu. */
-async function cleanActor(actor, dry) {
+export async function cleanActor(actor, dry) {
   const t = tr("CleanMidi");
   const lines = [];
   const ids = identifier => actor.items.filter(i => i.system.identifier === identifier);
   for ( const item of [...actor.items] ) {
+    // Un sort donné par un objet remplacé plus haut dans la boucle : dnd5e l'a retiré avec lui et recréé sous un autre id (#111).
+    if ( !actor.items.has(item.id) ) continue;
     const id = item.system.identifier;
     const src = item._stats?.compendiumSource ?? "";
     const duplicate = (id === "dark-ones-blessing" && src.startsWith("Compendium.chris-premades") && ids(id).length > 1)

@@ -1356,6 +1356,7 @@
   "DND5ECOMBAT.Diagnostic.SauvegardeFaite": "Cópia de segurança: {name}",
   "DND5ECOMBAT.Diagnostic.SauvegardeEchec": "A cópia de segurança falhou, nada foi alterado: {error}",
   "DND5ECOMBAT.Diagnostic.ReparationEchec": "falha: {error}",
+  "DND5ECOMBAT.Diagnostic.ReparationDisparu": "ignorado: este documento não existe mais (um reparo anterior o substituiu)",
   "DND5ECOMBAT.Diagnostic.AnalyseEchec": "Não foi possível executar esta verificação: {error}",
   "DND5ECOMBAT.Diagnostic.Occupe": "O diagnóstico já está em andamento.",
   "DND5ECOMBAT.Diagnostic.Monde": "Mundo",

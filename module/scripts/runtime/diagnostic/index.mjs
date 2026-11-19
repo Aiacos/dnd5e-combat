@@ -45,6 +45,8 @@ export async function repairTasks(tasks, options={}) {
       try {
         results.push({ task, ok: true, line: await task.apply(options[task.check] ?? {}) });
       } catch(err) {
+        // Le document de la tâche a été retiré par une réparation précédente de cette passe (fresh.mjs) : pas un échec.
+        if ( err?.vanished ) { results.push({ task, ok: true, line: loc("Diagnostic.ReparationDisparu") }); continue; }
         console.error(`${MODULE_ID} | repair ${task.id}`, err);
         results.push({ task, ok: false, line: loc("Diagnostic.ReparationEchec", { error: foundry.utils.escapeHTML(err.message) }) });
       }
