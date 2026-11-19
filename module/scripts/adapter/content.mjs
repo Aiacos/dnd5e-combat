@@ -138,12 +138,27 @@ function enchantmentLayer(item) {
   return entries.length ? mergeEntries(entries) : null;
 }
 
-/** La surcouche du monde : `{ identifiant: entrée }`, tenue par le MJ. */
+/**
+ * La surcouche du monde déjà lue, et le `game.settings` où elle l'a été. `contentOf` la demande pour chaque item (des centaines de
+ * sites, dont des balayages de tous les objets d'une fiche), et lire un réglage de monde n'est pas gratuit : le cœur le cherche
+ * parmi tous les réglages du monde à chaque lecture. Elle n'est donc lue qu'une fois, jusqu'à ce que le réglage change
+ * (`forgetWorldOverrides`, à son `onChange` : runtime/content.mjs).
+ */
+let read = null;
+
+/** Le réglage a changé : la surcouche sera relue à la prochaine demande. */
+export function forgetWorldOverrides() {
+  read = null;
+}
+
+/** La surcouche du monde : `{ identifiant: entrée }`, tenue par le MJ. Ne pas modifier l'objet rendu : il est partagé. */
 export function worldOverrides() {
+  // `game.settings` est le même objet toute la session ; s'il a changé (un autre monde simulé), ce qui a été lu ne vaut plus.
+  if ( read && (read.settings === game.settings) ) return read.entries;
   const stored = game.settings.get(MODULE_ID, OVERRIDES_SETTING);
-  if ( !stored || (typeof stored !== "object") ) return {};
-  if ( stored.v !== CONTENT_VERSION ) return {};
-  return stored.entries ?? {};
+  const valid = stored && (typeof stored === "object") && (stored.v === CONTENT_VERSION);
+  read = { settings: game.settings, entries: (valid ? stored.entries : null) ?? {} };
+  return read.entries;
 }
 
 /** Écrit (ou retire, avec `null`) l'entrée d'un identifiant dans la surcouche du monde. MJ uniquement. */
@@ -156,6 +171,7 @@ export async function setWorldOverride(identifier, entry) {
     entries[identifier] = entry;
   }
   await game.settings.set(MODULE_ID, OVERRIDES_SETTING, { v: CONTENT_VERSION, entries });
+  forgetWorldOverrides();   // l'`onChange` du réglage le fait aussi ; ici pour qui lit juste après l'écriture
   return entries[identifier] ?? null;
 }
 
