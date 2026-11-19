@@ -77,6 +77,18 @@ export function costOf(activationType) {
 }
 
 /**
+ * Ce que coûte le déplacement d'une zone déplaçable (`movable`, §16.14) : l'activation de l'activité du sort (Rayon de lune : une
+ * action Magie), ou rien quand la règle la fait suivre le déplacement du lanceur (`cost: "none"`, Invocation de céleste : « quand
+ * vous vous déplacez à votre tour, vous pouvez aussi déplacer le Cylindre »).
+ * @param {{cost?: "none"}|null} rule  la déclaration `movable`
+ * @param {string} activationType      l'activation de l'activité
+ * @returns {"action"|"bonus"|"reaction"|null}
+ */
+export function zoneMoveCost(rule, activationType) {
+  return (rule?.cost === "none") ? null : costOf(activationType);
+}
+
+/**
  * @typedef {object} UseRequest
  * @property {"action"|"bonus"|"reaction"|"free"|null} cost   `free` : un geste que l'intention déclare gratuit (§16.27).
  * @property {boolean} weaponAttack   Attaque d'arme ou à mains nues : relève de l'action Attaquer (attaques multiples).

@@ -630,7 +630,10 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     else {
       if ( !(Number.isFinite(m.distance) && (m.distance > 0)) ) errors.push(`${at}movable.distance: positive number`);
       if ( (typeof m.units !== "string") || !m.units ) errors.push(`${at}movable.units: unit required`);
-      for ( const key of Object.keys(m) ) if ( !["distance", "units"].includes(key) ) errors.push(`${at}movable.${key}: unknown key`);
+      if ( ("cost" in m) && (m.cost !== "none") ) errors.push(`${at}movable.cost: "none"`);
+      for ( const key of Object.keys(m) ) {
+        if ( !["distance", "units", "cost"].includes(key) ) errors.push(`${at}movable.${key}: unknown key`);
+      }
     }
   }
   if ( "summon" in entry ) validateSummon(entry.summon, `${at}summon`, errors);

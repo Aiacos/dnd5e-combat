@@ -44,10 +44,12 @@
  *                                               travers les créatures, sans attaque d'opportunité) ; l'activité (défaut : celle
  *                                               utilisée) joue sur chaque créature à `reach` ou moins d'un espace traversé — sans
  *                                               gabarit (core/dash.mjs)
- *     movable?: { distance, units }             la zone du sort se déplace (§16.14, B18 : Rayon de lune, « une action
+ *     movable?: { distance, units, cost? }      la zone du sort se déplace (§16.14, B18 : Rayon de lune, « une action
  *                                               Magie lors de vos tours suivants, 18 m au plus ») : relancer le sort
  *                                               quand sa zone est déjà là la déplace vers la case cliquée, au prix de
- *                                               l'activation de l'activité, sans emplacement
+ *                                               l'activation de l'activité, sans emplacement ; `cost: "none"` — sans rien
+ *                                               coûter, à son tour, dès le tour de la pose (la zone suit le déplacement du
+ *                                               lanceur : Invocation de céleste)
  *     summon?: { initiative: "after"|"own"|"none", pilot?, endsSpell?, untargeted?, chooseCount? }
  *                                               §385 : `untargeted` — accepté, sans effet : depuis §394 une invocation ne se vise
  *                                               que sur demande (`targetedSummon`) ; `chooseCount` — « jusqu'à N » créatures :

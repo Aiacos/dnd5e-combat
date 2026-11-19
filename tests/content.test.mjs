@@ -450,6 +450,8 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
 
   it("zone déplaçable (B18) : distance positive, unité", () => {
     expect(validateEntry({ movable: { distance: 60, units: "ft" } }, { facts })).toEqual([]);
+    expect(validateEntry({ movable: { distance: 30, units: "ft", cost: "none" } }, { facts })).toEqual([]);
+    expect(validateEntry({ movable: { distance: 30, units: "ft", cost: "bonus" } }, { facts })).toEqual(['movable.cost: "none"']);
     expect(validateEntry({ movable: { distance: 0, units: "", speed: 1 } }, { facts }))
       .toEqual(["movable.distance: positive number", "movable.units: unit required", "movable.speed: unknown key"]);
   });

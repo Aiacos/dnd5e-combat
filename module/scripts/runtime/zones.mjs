@@ -8,7 +8,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { canMoveArea, turnKeyOf } from "../core/area.mjs";
-import { checkUse, spendUse, costOf } from "../core/turn.mjs";
+import { checkUse, spendUse, zoneMoveCost } from "../core/turn.mjs";
 import { activeZoneOf, zoneCenter, moveZoneTo, readAreaState } from "../adapter/areas.mjs";
 import { combatantFor, isOwnTurn, readBudget, writeBudget } from "../adapter/turn.mjs";
 import { contentOf } from "../adapter/content.mjs";
@@ -24,7 +24,7 @@ export function movableZoneOf(activity) {
   const rule = activity?.item ? contentOf(activity.item).entry?.movable : null;
   if ( !rule ) return null;
   const region = activeZoneOf(activity.item);
-  return region ? { region, rule, cost: costOf(activity.activation?.type) } : null;
+  return region ? { region, rule, cost: zoneMoveCost(rule, activity.activation?.type) } : null;
 }
 
 /** La distance dont la zone peut bouger, dans l'unité de la grille. */
@@ -54,8 +54,12 @@ export async function moveZone(activity, point) {
   const lines = [];
   const far = tooFarForZone(zone, point);
   if ( far ) lines.push(loc("Zone.TropLoin", { item: activity.item.name, max: rule.distance, units: rule.units }));
-  if ( !canMoveArea(readAreaState(region), currentTurnKey()) ) lines.push(loc("Zone.MemeTour", { item: activity.item.name }));
+  // `cost: "none"` : la zone suit le déplacement du lanceur — dès le tour de la pose, mais à son tour seulement.
+  const free = rule.cost === "none";
+  const sameTurn = !free && !canMoveArea(readAreaState(region), currentTurnKey());
+  if ( sameTurn ) lines.push(loc("Zone.MemeTour", { item: activity.item.name }));
   const combatant = combatantFor(activity.actor);
+  if ( free && combatant && !isOwnTurn(combatant) ) lines.push(loc("Souci.notYourTurn"));
   if ( combatant && cost ) {
     for ( const issue of checkUse(readBudget(combatant), { cost, weaponAttack: false, usesSpellSlot: false }, { isOwnTurn: isOwnTurn(combatant) }) ) {
       lines.push(loc(`Souci.${issue}`));

@@ -82,8 +82,11 @@ function movement(token) {
 function issues(activity, options={}) {
   if ( !activity?.actor ) return [];
   options = { ...potionCost(activity), ...options };
-  // §111 : une zone déplaçable déjà posée (Rayon de lune) — l'utiliser la déplace, sans emplacement.
-  return useIssues(activity, movableZoneOf(activity) ? { ...options, recast: true } : options).lines;
+  // §111 : une zone déplaçable déjà posée (Rayon de lune) — l'utiliser la déplace, sans emplacement ; sans rien coûter si sa
+  // règle le dit (`movable.cost: "none"`).
+  const zone = movableZoneOf(activity);
+  if ( !zone ) return useIssues(activity, options).lines;
+  return useIssues(activity, { ...options, recast: true, ...(zone.rule.cost === "none" ? { cost: "free" } : {}) }).lines;
 }
 
 /**
@@ -118,7 +121,8 @@ function cost(activity) {
  */
 function cell(activity) {
   if ( !activity?.actor ) return { issues: [], cost: null };
-  if ( movableZoneOf(activity) ) return { issues: issues(activity), cost: cost(activity) };
+  const zone = movableZoneOf(activity);
+  if ( zone ) return { issues: issues(activity), cost: (zone.rule.cost === "none") ? null : cost(activity) };
   let result;
   try { result = useIssues(activity, potionCost(activity)); } catch { return { issues: issues(activity), cost: null }; }
   // §410 : `resources` — le moteur juge aussi emplacements, utilisations, quantité et préparation (une interface n'a plus à les juger) ;

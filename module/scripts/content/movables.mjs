@@ -9,6 +9,7 @@ export const MOVABLES = Object.freeze({
   "moonbeam": { distance: 60, units: "ft" },
   // §158 : Nuée de dagues — « par une action Magie lors de vos tours suivants, vous pouvez téléporter le Cube de 9 m au maximum ».
   "cloud-of-daggers": { distance: 30, units: "ft" },
-  // §164 : Invocation de céleste — « par une action Magie, vous pouvez déplacer le Cylindre de 9 m ».
-  "conjure-celestial": { distance: 30, units: "ft" }
+  // §164 : Invocation de céleste — « quand vous vous déplacez à votre tour, vous pouvez aussi déplacer le Cylindre de 9 m au
+  // maximum » (SRD 5.2 ; le texte de l'item le dit aussi) : pas d'action Magie, à la différence des deux sorts ci-dessus.
+  "conjure-celestial": { distance: 30, units: "ft", cost: "none" }
 });
