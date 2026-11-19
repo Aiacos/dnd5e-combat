@@ -353,6 +353,7 @@
     "vision.canSee",
     "vision.cone",
     "vision.locates",
+    "vision.sensed",
     "waits.force",
     "waits.list",
     "waits.open",
