@@ -95,8 +95,11 @@ function readWards(actor, overrides) {
  * Ce que les sens déclarés de l'observateur disent de la cible : `"sight"`, `"locate"`, `"presence"`, ou null. Tokens (documents).
  * @param {TokenDocument} observer
  * @param {TokenDocument} target
- * @param {{distance: () => number, walled: () => boolean}} scene  Lus par l'appelant, et seulement si un sens est en jeu : la
- *   distance qui les sépare (unité de la grille) ; un mur de vue entre eux (pour un sens que les murs arrêtent).
+ * @param {{distance: () => number, walled: () => boolean, blind?: () => boolean, deaf?: () => boolean,
+ *   invisible?: () => boolean, blocked?: () => {fog: boolean, darkness: boolean}}} scene  Lus par l'appelant, et seulement si un
+ *   sens en a besoin : la distance qui les sépare (unité de la grille) ; un mur de vue entre eux (pour un sens que les murs
+ *   arrêtent) ; l'observateur Aveuglé, Assourdi (`needs`) ; pour une vue, la cible Invisible pour lui, et la zone qui bloque la
+ *   vue entre eux.
  */
 export function sensedBy(observer, target, scene) {
   const senses = declaredSensesOf(observer?.actor);
@@ -114,7 +117,12 @@ export function sensedBy(observer, target, scene) {
       facts ??= factsFor({ source: observer.actor, target: target.actor, sourceToken: observer, targetToken: target });
       if ( !holds(sense.detects, facts) ) return null;
     }
+    if ( (sense.needs === "sight") && scene.blind?.() ) return null;
+    if ( (sense.needs === "hearing") && scene.deaf?.() ) return null;
     if ( sense.walls !== false ) walled ??= scene.walled();
-    return senseVerdict({ ...sense, range }, { distance, walled: walled === true, matches: true, wards });
+    const sight = (sense.kind === "sight") && (sense.reveals !== "presence");
+    const blocked = sight ? (scene.blocked?.() ?? {}) : {};
+    return senseVerdict({ ...sense, range }, { distance, walled: walled === true, matches: true, wards,
+      invisible: sight && !!scene.invisible?.(), fog: !!blocked.fog, darkness: !!blocked.darkness });
   }));
 }

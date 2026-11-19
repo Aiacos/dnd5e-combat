@@ -875,7 +875,8 @@
  *                                               (le mode « Vision du diable », sans limite dans ces ténèbres) — Pouvoir de l'ombre
  *     sense?: {…} | [{…}]                       un sens que l'item donne à son porteur, hors de ceux de sa fiche (core/senses.mjs)
  *       kind: "locate" | "sight"                `locate` — la position de la cible est connue sans qu'elle soit vue (elle reste
- *                                               « non vue » pour l'attaque) ; `sight` — compte comme une vue
+ *                                               « non vue » pour l'attaque) ; `sight` — compte comme une vue : pas d'une cible
+ *                                               Invisible, ni à travers une brume ou des ténèbres
  *       range: 30, units?: "ft"                 portée de règle, convertie à la grille
  *       via?: "effect", fromEffect?: "<id>"     porté par un effet de l'item sur son porteur (un sort, un pouvoir activé), celui-là
  *                                               seulement si `fromEffect` ; sans `via` : par la possession de l'item
@@ -883,6 +884,8 @@
  *       detects?: <condition>                   faits sur la cible (`target.*`) ; absent — toute créature
  *       magic?: true | "<école>"                sens magique, d'un sort de cette école : `wardsDetection` peut l'arrêter
  *       reveals?: "presence"                    la présence est sue, pas la position
+ *       through?: ["darkness"]                  pour `sight` : cette vue perce les ténèbres (jamais une brume)
+ *       needs?: "sight" | "hearing"             éteint tant que le porteur est Aveuglé (`sight`) ou Assourdi (`hearing`)
  *     wardsDetection?: ["magic" | "<école>"…]   le porteur d'un effet de l'item n'est pas trouvé par les sens magiques (`magic`),
  *                                               ou par ceux des sorts de ces écoles
  *     hpTiers?: [{ atMost?, damage?: false, effects?, statuses? }]

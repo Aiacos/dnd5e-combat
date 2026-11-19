@@ -33,19 +33,37 @@ export function wardedAgainst(sense, wards) {
   return wards.includes("magic") || ((typeof sense.magic === "string") && wards.includes(sense.magic));
 }
 
+/** Ce qu'une vue déclarée peut percer (`through`) : des ténèbres. Jamais une brume, qui arrête toute vue. */
+export const SENSE_THROUGH = Object.freeze(["darkness"]);
+
+/** Ce dont un sens peut dépendre (`needs`) : il s'éteint tant que son porteur est Aveuglé (`sight`) ou Assourdi (`hearing`). */
+export const SENSE_NEEDS = Object.freeze(["sight", "hearing"]);
+
 /**
  * Ce qu'un sens dit d'une cible : `"sight"`, `"locate"`, `"presence"`, ou null.
- * @param {{kind: string, range: number, walls?: false, reveals?: "presence", magic?: string|true}} sense  `range` : dans l'unité de
- *   `distance`.
- * @param {{distance: number, walled: boolean, matches: boolean, wards: string[]}} facts  `walled` : un mur les sépare ; `matches` :
- *   la cible est de celles que le sens détecte ; `wards` : ce dont la cible est protégée.
+ *
+ * Un sens qui localise ne dépend ni de la lumière ni de l'état Invisible. Une vue (`kind: "sight"`), si : elle ne voit pas une
+ * cible Invisible, une brume l'arrête toujours, et des ténèbres aussi, sauf si elle les perce (`through: ["darkness"]`).
+ * @param {{kind: string, range: number, walls?: false, reveals?: "presence", magic?: string|true, through?: string[],
+ *   needs?: "sight"|"hearing"}} sense  `range` : dans l'unité de `distance`.
+ * @param {{distance: number, walled: boolean, matches: boolean, wards: string[], blind?: boolean, deaf?: boolean,
+ *   invisible?: boolean, fog?: boolean, darkness?: boolean}} facts  `walled` : un mur les sépare ; `matches` : la cible est de
+ *   celles que le sens détecte ; `wards` : ce dont la cible est protégée ; `blind`, `deaf` : le porteur est Aveuglé, Assourdi ;
+ *   `invisible` : la cible est Invisible pour lui ; `fog`, `darkness` : une zone qui bloque la vue entre eux, ou autour de l'un.
  */
-export function senseVerdict(sense, { distance, walled, matches, wards }) {
+export function senseVerdict(sense, { distance, walled, matches, wards, blind=false, deaf=false, invisible=false, fog=false,
+  darkness=false }) {
   if ( !sense || !matches ) return null;
   if ( !(distance <= sense.range) ) return null;
+  if ( ((sense.needs === "sight") && blind) || ((sense.needs === "hearing") && deaf) ) return null;
   if ( walled && (sense.walls !== false) ) return null;
   if ( wardedAgainst(sense, wards) ) return null;
-  return (sense.reveals === "presence") ? "presence" : sense.kind;
+  if ( sense.reveals === "presence" ) return "presence";
+  if ( sense.kind === "sight" ) {
+    if ( invisible || fog ) return null;
+    if ( darkness && !sense.through?.includes("darkness") ) return null;
+  }
+  return sense.kind;
 }
 
 /** Le plus fort de plusieurs verdicts, ou null. */
