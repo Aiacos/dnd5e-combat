@@ -12,6 +12,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { route } from "../runtime/router.mjs";
 import { theaterActive } from "../runtime/theater-state.mjs";
 import { isEthereal } from "../adapter/plane.mjs";
+import { etherealLight } from "../core/plane.mjs";
 
 const GHOST_ALPHA = 0.45;
 
@@ -31,6 +32,7 @@ let ghost = null;
  * recalcule et qu'un voisin réécrit après nous (DAS · Shadows & Ambience, perspective d'élévation : vu en jeu).
  */
 function onRefresh(token) {
+  shadeLight(token);
   const mesh = token?.mesh;
   if ( !mesh || mesh.destroyed ) return;
   const want = !theaterActive() && isEthereal(token.document) && !viewpointEthereal();
@@ -40,6 +42,31 @@ function onRefresh(token) {
   const filters = (mesh.filters ?? []).filter(f => f !== ghost);
   if ( want ) filters.push(ghost);
   mesh.filters = filters.length ? filters : null;
+}
+
+/**
+ * Un token Éthéré n'éclaire pas (core/plane.mjs `etherealLight`) : ses rayons préparés sont mis à zéro en mémoire, sur chaque
+ * client, et sa source de lumière refaite — rien n'est écrit, la torche reste sur la fiche et se rallume au retour. La préparation
+ * des données du token remet ses rayons à chaque mise à jour : on repasse ici à chaque rafraîchissement du token.
+ */
+const shaded = new Set();   // ids des tokens éteints par nous
+function shadeLight(token) {
+  const doc = token?.document;
+  const light = doc?.light;
+  if ( !light || token.destroyed ) return;
+  const action = etherealLight({ ethereal: !theaterActive() && isEthereal(doc), dim: light.dim, bright: light.bright,
+    shaded: shaded.has(doc.id) });
+  if ( !action ) return;
+  if ( action === "shade" ) {
+    shaded.add(doc.id);
+    light.dim = 0;
+    light.bright = 0;
+  }
+  else {
+    shaded.delete(doc.id);
+    if ( action === "reprepare" ) doc.reset();
+  }
+  token.initializeLightSource();
 }
 
 /** Le point de vue de ce client est-il dans l'Éthéré ? */
@@ -88,6 +115,7 @@ export function registerEtherealUI() {
   };
   for ( const hook of ["canvasReady", "controlToken", `${MODULE_ID}.etherealPlane`] ) route(hook, viewChanged, label);
   for ( const hook of ["createActiveEffect", "updateActiveEffect", "deleteActiveEffect"] ) route(hook, refreshAll, label);
+  route("destroyToken", token => shaded.delete(token?.document?.id), { label: "ethereal: kept light forgotten" });
   route("canvasTearDown", () => { if ( canvas?.stage?.filters ) canvas.stage.filters = canvas.stage.filters.filter(f => f !== gray); },
     { label: "ethereal: gray filter removed" });
 }

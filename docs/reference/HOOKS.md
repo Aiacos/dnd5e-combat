@@ -465,6 +465,7 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `destroyToken`
 
 1. perception: hearing mark not drawn
+2. ethereal: kept light forgotten
 
 ### `dnd5e-combat.awaiting`
 
