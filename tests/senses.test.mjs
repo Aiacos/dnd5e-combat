@@ -3,7 +3,7 @@
  * comme une vue — et `wardsDetection`, ce qui en protège. Règle pure : portée, murs, cible détectée ou non, protection.
  */
 import { describe, it, expect } from "vitest";
-import { senseVerdict, bestVerdict, wardedAgainst, sensesIn, SENSE_VERDICTS, detectsTarget, mutedSenses }
+import { senseVerdict, bestVerdict, wardedAgainst, sensesIn, SENSE_VERDICTS, detectsTarget, mutedSenses, hidesIdentity }
   from "../module/scripts/core/senses.mjs";
 import { validateEntry } from "../module/scripts/core/content/entry.mjs";
 import { ENTRY_KEYS } from "../module/scripts/core/content.mjs";
@@ -126,6 +126,18 @@ describe("`senseNeeds` : un sens de la fiche qui dépend de l'ouïe ou de la vue
     const needs = [{ blindsight: "hearing" }, { seeAll: "sight", blindsight: "hearing" }, undefined];
     expect(mutedSenses(needs, { deaf: true, blind: true }).sort()).toEqual(["blindsight", "seeAll"]);
     expect(mutedSenses(needs, { blind: true })).toEqual(["seeAll"]);
+  });
+});
+
+describe("réglage `anonymousLocated` : l'identité d'une créature perçue sans être vue", () => {
+  it("éteint : jamais cachée", () => {
+    for ( const kind of ["heard", "located", "aura", null] ) expect(hidesIdentity(kind, false), String(kind)).toBe(false);
+  });
+  it("allumé : cachée pour une créature entendue ou localisée ; pas pour une aura, posée sur ce qui est vu", () => {
+    expect(hidesIdentity("heard", true)).toBe(true);
+    expect(hidesIdentity("located", true)).toBe(true);
+    expect(hidesIdentity("aura", true)).toBe(false);
+    expect(hidesIdentity(null, true)).toBe(false);
   });
 });
 

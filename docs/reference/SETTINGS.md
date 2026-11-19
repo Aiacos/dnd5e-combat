@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-130 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
+131 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
 `client` = ce poste, `user` = ce joueur. **Onglet** : celui de la fenêtre de réglages DAS (`core/settings-layout.mjs`) ; sans onglet,
 le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêtre dédiée). Le libellé est celui de `lang/fr.json`.
 
@@ -74,6 +74,7 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 
 | Clé | Libellé | Portée | Type | Défaut | Choix | Fichier |
 |---|---|---|---|---|---|---|
+| `anonymousLocated` | Localisé, pas vu : marqueur anonyme | world | Boolean | `false` |  | `runtime/illumination.mjs` |
 | `coneAngles` | Angle des cônes de vision | world | String | `"120; beast 150; ooze 360; plant 360"` |  | `runtime/vision.mjs` |
 | `factionIcons` | Factions : icônes sur les tokens et la barre d'outils | world | Boolean | `false` |  | `ui/factions.mjs` |
 | `factionRules` | Factions : règles par type de créature | world | Boolean | `true` |  | `runtime/factions.mjs` |

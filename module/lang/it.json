@@ -691,6 +691,8 @@
   "DND5ECOMBAT.Reglage.unconsciousSenses.Aide": "Una creatura Priva di Sensi non è consapevole di ciò che la circonda (regole 2024): se l'opzione è attiva, non vede e non sente nulla, sia per il motore sia sullo schermo del suo giocatore, finché non si risveglia. Se non è attiva, conserva i suoi sensi.",
   "DND5ECOMBAT.Reglage.hearingRange.Nom": "Gittata dell'udito (regola della casa)",
   "DND5ECOMBAT.Reglage.hearingRange.Aide": "Le regole non danno alcuna gittata all'udito: una creatura che non è nascosta si sente ovunque nessun muro fermi il suono. Lascia vuoto per mantenere questa regola. Altrimenti, una formula in piedi letta su ogni creatura, oltre la quale non sente nulla: per esempio 15 + 2.5 * (@skills.prc.passive - 10).",
+  "DND5ECOMBAT.Reglage.anonymousLocated.Nom": "Localizzato, non visto: segnalino anonimo",
+  "DND5ECOMBAT.Reglage.anonymousLocated.Aide": "Una creatura sentita o localizzata da un senso senza essere vista conserva normalmente la propria immagine, con un contorno. Se attiva: è mostrata con un segnalino anonimo — né immagine, né nome, né barre, né icone di stato: se ne conosce la posizione, non l'identità.",
   "DND5ECOMBAT.Reglage.twilightDarkness.Nom": "Crepuscolo: soglia di oscurità",
   "DND5ECOMBAT.Reglage.twilightDarkness.Aide": "Oltre questo livello di oscurità della scena, una luce globale intensa conta come Luce Fioca per il motore (alba e crepuscolo), finché non si spegne alla fine del suo intervallo. Utile con un modulo di gestione del tempo che fa variare l'oscurità (Simple Timekeeping). 1: mai. La visualizzazione di Foundry non cambia.",
   "DND5ECOMBAT.ChoixSauvegarde.Titre": "{name}: quale tiro salvezza?",

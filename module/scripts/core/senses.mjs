@@ -110,3 +110,14 @@ export function mutedSenses(needs, { blind=false, deaf=false }={}) {
   }
   return Array.from(muted);
 }
+
+/**
+ * Réglage `anonymousLocated` : une créature perçue sans être vue — entendue (`heard`) ou localisée par un sens (`located`) —
+ * est-elle montrée sans son image ni son nom ? Sa position est connue, pas son identité. Une aura (`aura`) se pose sur ce qui
+ * est vu : jamais.
+ * @param {"heard"|"located"|"aura"|null} kind  Ce pour quoi le token est affiché sur ce client.
+ * @param {boolean} rule  Le réglage du monde.
+ */
+export function hidesIdentity(kind, rule) {
+  return !!rule && ((kind === "heard") || (kind === "located"));
+}

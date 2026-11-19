@@ -693,6 +693,8 @@
   "DND5ECOMBAT.Reglage.unconsciousSenses.Aide": "Une créature Inconsciente est inconsciente de ce qui l'entoure (règles 2024) : cochée, elle ne voit et n'entend plus rien, pour le moteur comme à l'écran de son joueur, jusqu'à son réveil. Décochée, elle garde ses sens.",
   "DND5ECOMBAT.Reglage.hearingRange.Nom": "Portée de l'ouïe (règle maison)",
   "DND5ECOMBAT.Reglage.hearingRange.Aide": "Les règles ne donnent aucune portée à l'ouïe : une créature qui n'est pas cachée s'entend partout où aucun mur n'arrête le son. Laissez vide pour garder cette règle. Sinon, une formule en pieds lue sur chaque créature, au-delà de laquelle elle n'entend rien : par exemple 15 + 2.5 * (@skills.prc.passive - 10).",
+  "DND5ECOMBAT.Reglage.anonymousLocated.Nom": "Localisé, pas vu : marqueur anonyme",
+  "DND5ECOMBAT.Reglage.anonymousLocated.Aide": "Une créature entendue ou localisée par un sens sans être vue garde normalement son image, avec un contour. Cochée : elle est montrée par un marqueur anonyme — ni image, ni nom, ni barres, ni icônes d'état : sa position est connue, pas son identité.",
   "DND5ECOMBAT.Reglage.twilightDarkness.Nom": "Crépuscule : seuil d'obscurité",
   "DND5ECOMBAT.Reglage.twilightDarkness.Aide": "Au-delà de cette obscurité de la scène, une lumière globale vive compte comme de la lumière faible pour le moteur (aube et crépuscule), jusqu'à ce qu'elle s'éteigne à la fin de sa plage. Utile avec un module d'heure qui fait varier l'obscurité (Simple Timekeeping). 1 : jamais. L'affichage de Foundry ne change pas.",
   "DND5ECOMBAT.ChoixSauvegarde.Titre": "{name} : quelle sauvegarde ?",
