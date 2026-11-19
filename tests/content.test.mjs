@@ -189,7 +189,7 @@ describe("contenu livré", () => {
       "action-surge", "adrenaline-rush", "agile", "aid", "air-element", "air-form", "alchemists-fire", "alert", "alter-self", "ambush",
       "ancient-might", "animal-friendship", "animate-dead", "animate-objects", "animate-trees", "antilife-shell", "antimagic-cone",
       "antimagic-field", "antimatter-rifle", "antitoxin", "arcane-eye", "arcane-gate", "arcane-hand", "arcane-recovery",
-      "arcane-sword", "arcane-vigor", "arcane-ward", "armor-of-agathys", "armor-of-vulnerability", "arms-of-hadar",
+      "arcane-sword", "arcane-vigor", "arcane-ward", "archdruid", "armor-of-agathys", "armor-of-vulnerability", "arms-of-hadar",
       "arrow-catching-shield", "aspect-of-the-wilds", "assassinate", "athlete", "aura-of-alacrity", "aura-of-authority",
       "aura-of-bravery", "aura-of-courage", "aura-of-devotion", "aura-of-life", "aura-of-protection", "aura-of-purity",
       "aura-of-vitality", "aura-of-warding", "avatar-of-battle", "avenger-spirit", "avenging-angel", "avoidance",

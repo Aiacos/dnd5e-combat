@@ -37,6 +37,10 @@ export const potentSpellcasting = cls => ({ triggers: [{ on: "preDamageRoll", if
 const seaPush = { triggers: [{ on: "failedSave", if: { "target.sizeAtMost": "lg" }, do: [{ type: "move", mode: "push", distance: 15, units: "ft" }] }] };
 
 export const DRUID = Object.freeze({
+  // Archidruide (niveau 20), Forme sauvage persistante — « quand vous jouez l'initiative et n'avez plus d'utilisation de Forme
+  // sauvage, vous en regagnez une » : comme l'Inspiration supérieure, sans rien demander. L'autre moitié (Magicien de la nature :
+  // des utilisations converties en emplacement de sort) reste l'activité de l'item.
+  "archdruid": { regainOnInitiative: { item: "wild-shape", upTo: 1 } },
   // C12-c : Formes du cercle améliorées (Lune 6) — « sous une Forme sauvage, ajoutez votre modificateur de Sagesse à vos sauvegardes de
   // Constitution » : l'effet de la donnée, éteint, n'est allumé que sous la Forme sauvage.
   "improved-circle-forms": { effectWhile: { yvjaO9R5qoRxtDKY: { if: { wildShaped: true } } } },
