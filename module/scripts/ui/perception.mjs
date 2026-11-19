@@ -327,8 +327,9 @@ function hearingMode() {
  * Les sens déclarés par du contenu (clé `sense` : Détection du mal et du bien, Perception divine…). Leur règle est celle du moteur
  * (`sensedThrough` : portée, ce que le sens détecte, mur s'il en tient compte, protections de la cible) : la créature dont la
  * position est connue se dessine avec un contour, où qu'elle soit — ces sens ne sont pas une vue, ni brume ni ténèbres ne les
- * arrêtent. Une simple présence (`reveals: "presence"`) ne dessine rien : la position n'est pas connue. Comme pour les règles (`canSee`), une
- * créature cachée de l'observateur n'est pas montrée. Jamais pour les sources jetables des règles, qui lisent `sensedBy`
+ * arrêtent. Une simple présence (`reveals: "presence"`) ne dessine rien : la position n'est pas connue ; une aura
+ * (`reveals: "aura"`) marque la créature déjà vue (`refreshMark`). Comme pour les règles (`canSee`), une créature cachée de
+ * l'observateur n'est pas montrée. Jamais pour les sources jetables des règles, qui lisent `sensedBy`
  * elles-mêmes.
  */
 function senseMode() {
@@ -395,9 +396,11 @@ export function registerPerception() {
 /** L'oreille de Font Awesome 6 (`ear-listen`) ; la cible d'une créature localisée par un sens déclaré (`location-crosshairs`). */
 const EAR = "\uf2a2";
 const LOCATED = "\uf601";
+const MAGIC = "\uf0d0";   // `wand-magic` : l'aura d'une créature vue qui porte de la magie (`reveals: "aura"`)
 const MARKS = Object.freeze({
   heard: Object.freeze({ glyph: EAR, label: "Vision.Entendu", line: 0x8ccdff, fill: 0xd6ecff }),
-  located: Object.freeze({ glyph: LOCATED, label: "Vision.Localise", line: 0xc79bff, fill: 0xe8d9ff })
+  located: Object.freeze({ glyph: LOCATED, label: "Vision.Localise", line: 0xc79bff, fill: 0xe8d9ff }),
+  aura: Object.freeze({ glyph: MAGIC, label: "Vision.Aura", line: 0xff7ad9, fill: 0xffd6f3, ring: true })
 });
 const marks = new Map();   // id du token → { root, label, r, kind }
 let markLayer = null;
@@ -430,8 +433,11 @@ function buildMark(kind) {
   label.anchor.set(0, 0.5);
   label.position.set(r + 4, 0);
   label.visible = false;
+  // Une aura : un halo pâle autour du token, tracé à sa taille à chaque rafraîchissement (`refreshMark`).
+  const ring = look.ring ? new PIXI.Graphics() : null;
+  if ( ring ) root.addChild(ring);
   root.addChild(back, ear, label);
-  return { root, label, r, kind };
+  return { root, label, r, kind, ring, ringSize: null };
 }
 
 function dropMark(id) {
@@ -447,9 +453,34 @@ function dropMark(id) {
  * visibilité entier du cœur à chaque lecture — or on passe ici à chaque `refreshToken` et `hoverToken` de chaque token.
  */
 function perceivedAs(token) {
-  if ( (!hearingFilter && !senseFilter) || !token || token.destroyed || (token.isVisible !== true) ) return null;
+  if ( !token || token.destroyed ) return null;
+  const watchers = auraWatchers();
+  if ( (!hearingFilter && !senseFilter && !watchers.length) || (token.isVisible !== true) ) return null;
   if ( hearingFilter && (token.detectionFilter === hearingFilter) ) return "heard";
-  return (senseFilter && (token.detectionFilter === senseFilter)) ? "located" : null;
+  if ( senseFilter && (token.detectionFilter === senseFilter) ) return "located";
+  // Une aura ne se pose que sur ce qui est vu : pas sur un token affiché par un mode spécial (son filtre), pas sur l'observateur.
+  if ( !watchers.length || token.detectionFilter ) return null;
+  return watchers.some(doc => (doc !== token.document) && (sensedThrough(doc, token.document) === "aura")) ? "aura" : null;
+}
+
+/**
+ * Les tokens par lesquels ce client voit et dont l'acteur a un sens qui montre une aura (`reveals: "aura"`, Détection de la magie).
+ * Relus quand la vue, un effet ou un objet change (`forgetAuraWatchers`) : `refreshMark` passe ici pour chaque token à chaque
+ * rafraîchissement, et presque aucun acteur n'a un tel sens.
+ */
+let watchers = null;
+function auraWatchers() {
+  if ( watchers ) return watchers;
+  watchers = [];
+  for ( const source of canvas.effects?.visionSources ?? [] ) {
+    const doc = source.object?.document;
+    if ( !doc?.actor || String(source.sourceId ?? "").startsWith(SIMULATED) || watchers.includes(doc) ) continue;
+    if ( declaredSensesOf(doc.actor).some(sense => sense.reveals === "aura") ) watchers.push(doc);
+  }
+  return watchers;
+}
+function forgetAuraWatchers() {
+  watchers = null;
 }
 
 function refreshMark(token) {
@@ -463,6 +494,14 @@ function refreshMark(token) {
   // Coin haut gauche du token (le sablier prend le haut droit, les minuteries le dessus).
   mark.root.position.set(token.x + (mark.r * 0.6), token.y + (mark.r * 0.6));
   mark.label.visible = !!token.hover;
+  if ( mark.ring ) {
+    const size = Math.max(token.w ?? 0, token.h ?? 0);
+    if ( size !== mark.ringSize ) {
+      mark.ringSize = size;
+      mark.ring.clear().lineStyle(Math.max(3, size * 0.04), MARKS.aura.line, 0.45).drawCircle(0, 0, size * 0.56);
+    }
+    mark.ring.position.set(((token.w ?? 0) / 2) - (mark.r * 0.6), ((token.h ?? 0) / 2) - (mark.r * 0.6));
+  }
 }
 
 function clearMarks() {
@@ -477,4 +516,6 @@ function registerHeardMarks() {
   route("hoverToken", token => refreshMark(token), opts);
   route("destroyToken", token => dropMark(token.id), opts);
   route("canvasTearDown", clearMarks, opts);
+  for ( const hook of ["sightRefresh", "initializeVisionSources", "canvasTearDown", "createActiveEffect", "updateActiveEffect",
+    "deleteActiveEffect", "createItem", "updateItem", "deleteItem"] ) route(hook, forgetAuraWatchers, opts);
 }

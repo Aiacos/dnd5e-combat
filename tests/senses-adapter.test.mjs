@@ -241,6 +241,41 @@ describe("ce que ces sens disent d'une cible", () => {
   });
 });
 
+describe("contenu livré : Détection de la magie", () => {
+  let CONTENT, validateEntry, KNOWN_FACTS, senseVerdict, carriesMagic;
+  beforeAll(async () => {
+    ({ CONTENT } = await import("../module/scripts/content/index.mjs"));
+    ({ validateEntry } = await import("../module/scripts/core/content/entry.mjs"));
+    ({ KNOWN_FACTS } = await import("../module/scripts/adapter/content.mjs"));
+    ({ senseVerdict } = await import("../module/scripts/core/senses.mjs"));
+    ({ carriesMagic } = await import("../module/scripts/adapter/facts.mjs"));
+  });
+  it("l'entrée : une aura à 30 ft, par l'effet du sort, une divination, sur qui porte de la magie", () => {
+    const entry = CONTENT["detect-magic"];
+    expect(validateEntry(entry, { facts: KNOWN_FACTS })).toEqual([]);
+    expect(entry.sense).toMatchObject({ range: 30, via: "effect", magic: "div", reveals: "aura" });
+    expect(entry.sense.detects).toEqual({ "target.carriesMagic": true });
+    const at = (distance, extra={}) => ({ distance, walled: false, matches: true, wards: [], ...extra });
+    expect(senseVerdict(entry.sense, at(30))).toBe("aura");
+    expect(senseVerdict(entry.sense, at(35))).toBe(null);
+    expect(senseVerdict(entry.sense, at(10, { walled: true }))).toBe(null);
+    expect(senseVerdict(entry.sense, at(10, { wards: ["div"] }))).toBe(null);
+  });
+  it("porter de la magie : un effet magique actif, ou un objet magique équipé — pas un objet rangé, pas un effet coupé", () => {
+    const effect = extra => ({ disabled: false, isSuppressed: false, system: { magical: true }, ...extra });
+    const item = (equipped, properties) => ({ system: { equipped, properties: new Set(properties) } });
+    expect(carriesMagic({ effects: [], items: [] })).toBe(false);
+    expect(carriesMagic({ effects: [effect()], items: [] })).toBe(true);
+    expect(carriesMagic({ effects: [effect({ disabled: true })], items: [] })).toBe(false);
+    expect(carriesMagic({ effects: [effect({ isSuppressed: true })], items: [] })).toBe(false);
+    expect(carriesMagic({ effects: [effect({ system: { magical: false } })], items: [] })).toBe(false);
+    expect(carriesMagic({ effects: [], items: [item(true, ["mgc"])] })).toBe(true);
+    expect(carriesMagic({ effects: [], items: [item(false, ["mgc"])] })).toBe(false);
+    expect(carriesMagic({ effects: [], items: [item(true, ["fin"])] })).toBe(false);
+    expect(carriesMagic(null)).toBe(false);
+  });
+});
+
 describe("contenu livré : sorts et pouvoirs qui déclarent un sens ou une protection", () => {
   let CONTENT, factsFor, validateEntry, KNOWN_FACTS;
   beforeAll(async () => {

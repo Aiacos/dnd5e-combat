@@ -12,7 +12,7 @@ import { SPELL_COMPONENTS } from "../spell-failure.mjs";
 import { isId, isObject } from "./shared.mjs";
 import { validateDataFixes } from "../data-fixes.mjs";
 import { validateAura, validateTrigger } from "./steps.mjs";
-import { SENSE_KINDS, SENSE_THROUGH, SENSE_NEEDS } from "../senses.mjs";
+import { SENSE_KINDS, SENSE_THROUGH, SENSE_NEEDS, SENSE_REVEALS } from "../senses.mjs";
 /**
  * Les erreurs d'une entrée. Vide = valide.
  * @param {object} entry
@@ -846,7 +846,9 @@ function validateSenses(entry, at, facts, errors) {
       if ( ("magic" in sense) && !((sense.magic === true) || ((typeof sense.magic === "string") && sense.magic)) ) {
         errors.push(`${here}.magic: true or a school of magic`);
       }
-      if ( ("reveals" in sense) && (sense.reveals !== "presence") ) errors.push(`${here}.reveals: "presence"`);
+      if ( ("reveals" in sense) && !SENSE_REVEALS.includes(sense.reveals) ) {
+        errors.push(`${here}.reveals: ${SENSE_REVEALS.join(" | ")}`);
+      }
       if ( ("through" in sense) && !((sense.kind === "sight") && Array.isArray(sense.through) && sense.through.length
         && sense.through.every(t => SENSE_THROUGH.includes(t))) ) {
         errors.push(`${here}.through: a non-empty list of ${SENSE_THROUGH.join(" | ")}, with kind: "sight"`);
