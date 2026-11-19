@@ -319,7 +319,7 @@ describe("contenu livré", () => {
       "travel-along-the-tree", "trebuchet", "tricksters-transposition", "trip-attack", "true-resurrection",
       "true-seeing-crystal-ball-of", "true-strike", "truth-serum", "tsunami",
       "twinned-spell", "umbral-dagger", "umbral-form", "unarmed-fighting", "unarmed-strike", "uncanny-dodge", "undead-fortitude", "unraveling-flesh",
-      "unseen-servant", "valor-extra-attack", "vampiric-bite", "vampiric-touch", "vanish", "vicious-mockery", "vile-appearance",
+      "unseen-servant", "use-magic-device", "valor-extra-attack", "vampiric-bite", "vampiric-touch", "vanish", "vicious-mockery", "vile-appearance",
       "vine-attack", "viral-aura", "vitality-of-the-tree", "vitriolic-sphere", "vow-of-enmity", "wails-from-the-grave", "wall-of-fire",
       "wall-of-force", "wall-of-ice", "wall-of-stone", "wall-of-thorns", "wand-of-paralysis", "wand-of-polymorph", "wand-of-web",
       "wand-of-wonder", "war-caster", "war-magic", "war-priest", "warding-bond", "warding-charm", "warding-flare", "warp-body",
