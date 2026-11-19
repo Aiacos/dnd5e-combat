@@ -22,6 +22,11 @@ describe("judgedModes — les modes d'un token que le moteur juge", () => {
     }
   });
 
+  it("« See Invisibility » du cœur, coché à la main par le MJ, est jugé : à l'écran comme aux règles", () => {
+    expect(JUDGED_MODES).toContain("seeInvisibility");
+    expect(Object.keys(judgedModes({ seeInvisibility: { range: 60 }, hearing: { range: 15 } }))).toEqual(["seeInvisibility"]);
+  });
+
   it("sans modes : un objet vide", () => {
     expect(judgedModes(null)).toEqual({});
     expect(judgedModes(undefined)).toEqual({});
