@@ -19,7 +19,14 @@ const auraImmunity = status => ({ includeSelf: true, affects: "ally", radiusForm
 /** Les activités d'Imposition des mains du Manuel des joueurs : Soin, Retrait du poison. */
 const LAY_ON_HANDS = ["gXZh9aGHcywV9huC", "K6UeXQwTyDHWvis8"];
 
+/** Perception divine : l'emplacement des Célestes, Fiélons et Morts-vivants à 18 m — tant que dure l'effet du Conduit divin. */
+const DIVINE_SENSE = { sense: { kind: "locate", range: 60, units: "ft", via: "effect", fromEffect: "hr8wnlgs3uXphCnI", walls: false,
+  magic: true, detects: { "target.creatureType": ["celestial", "fiend", "undead"] } } };
+
 export const PALADIN = Object.freeze({
+  // Le Conduit divin du paladin : `channel-divinity-paladin` (SRD de dnd5e 6.1), `channel-divinity` (Manuel des joueurs).
+  "channel-divinity-paladin": DIVINE_SENSE,
+  "channel-divinity": DIVINE_SENSE,
   // §123 : Imposition des mains — « touchez une créature (vous y compris) » ; les données du Manuel des joueurs disent « personnelle »,
   // et le moteur soignait toujours le paladin. Au contact : la visée s'ouvre, on clique la créature (soi compris).
   // §296 : Châtiment exaltant — « 2d8 + niveau de Paladin PV temporaires répartis entre des créatures de votre choix à 9 m, vous compris ».

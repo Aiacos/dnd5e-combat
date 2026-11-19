@@ -417,6 +417,20 @@ export const SPELL_RULES = Object.freeze({
   // §161 (relevé des sorts, lot 5a). Détection de l'invisibilité : « vous voyez les créatures et objets Invisibles comme s'ils étaient
   // visibles » (le plan Éthéré : non repris).
   "see-invisibility": { seesInvisible: true },
+  // Sens déclarés (`sense`, core/senses.mjs) — sorts de Divination du lanceur, tant que leur effet dure ; arrêtés par les murs
+  // (une épaisseur de pierre, de terre, de bois, de métal ou de plomb : le moteur ne lit que « un mur »).
+  // Détection du mal et du bien : l'emplacement des créatures de six types, à 9 m.
+  "detect-evil-and-good": { sense: { kind: "locate", range: 30, units: "ft", via: "effect", magic: "div",
+    detects: { "target.creatureType": ["aberration", "celestial", "elemental", "fey", "fiend", "undead"] } } },
+  // Détection du poison et des maladies : l'emplacement des créatures venimeuses, à 9 m (poisons et contagions : des objets et des
+  // effets que le moteur ne suit pas).
+  "detect-poison-and-disease": { sense: { kind: "locate", range: 30, units: "ft", via: "effect", magic: "div",
+    detects: { "target.poisonous": true } } },
+  // Ce qui protège de la détection (`wardsDetection`). Antidétection : la cible ne peut être visée par un sort de Divination.
+  // Esprit impénétrable : rien ne détecte magiquement son emplacement. Dissimulation : ni Divination, ni détection magique.
+  "nondetection": { wardsDetection: ["div"] },
+  "mind-blank": { wardsDetection: ["magic"] },
+  "sequester": { wardsDetection: ["div", "magic"] },
   // §225, lot 4 : traits du Bestiaire 2024 — « se téléporte du plan matériel au plan Éthéré ou inversement » (araignée de phase) ;
   // Foulée éthérée emmène aussi les créatures désignées.
   "ethereal-jaunt": { etherealShift: true },
@@ -501,7 +515,11 @@ export const SPELL_RULES = Object.freeze({
   // Deeper »). Invocation de fée : « par une action Bonus à vos tours suivants, vous pouvez téléporter l'esprit » (« Teleport and
   // Attack »). Gardien de la foi, Sphère de feu : la sauvegarde de l'ennemi qui approche le gardien, que la sphère percute ou qui finit
   // son tour près d'elle — le moteur la joue par l'invocation (content/summons.mjs) ; cliquée sur la fiche, elle prenait un emplacement.
-  "detect-thoughts": { dataFixes: [{ path: "system.activities.dnd5eactivity000.consumption.spellSlot", from: true, value: false }] },
+  // Détection des pensées, option de perception : la présence — pas l'emplacement — des créatures qui connaissent une langue ou
+  // sont télépathes, à 9 m, tant que la concentration dure.
+  "detect-thoughts": { dataFixes: [{ path: "system.activities.dnd5eactivity000.consumption.spellSlot", from: true, value: false }],
+    sense: { kind: "locate", range: 30, units: "ft", via: "effect", magic: "div", reveals: "presence",
+      detects: { "target.speaksLanguage": true } } },
   "conjure-fey": { dataFixes: [{ path: "system.activities.sKmRcy0IDp9aOuAt.consumption.spellSlot", from: true, value: false }] },
   "guardian-of-faith": { dataFixes: [{ path: "system.activities.dnd5eactivity100.consumption.spellSlot", from: true, value: false }] },
   "flaming-sphere": { dataFixes: [{ path: "system.activities.dnd5eactivity100.consumption.spellSlot", from: true, value: false }] },
