@@ -219,7 +219,7 @@ describe("contenu livré", () => {
       "destructive-wave", "detect-evil-and-good", "detect-magic", "detect-poison-and-disease", "detect-thoughts", "devious-strikes", "devour-intellect", "dimension-door", "disarming-attack",
       "disciple-of-life",
       "disciplined-survivor", "disintegrate", "dispel-evil-and-good", "dispel-magic", "dissonant-whispers", "distant-spell",
-      "distracting-strike", "divine-fury", "divine-smite", "divine-word", "dominate-beast", "dominate-mind", "dominate-monster",
+      "distracting-strike", "divine-fury", "divine-intervention", "divine-smite", "divine-word", "dominate-beast", "dominate-mind", "dominate-monster",
       "dominate-person", "draconic-flight", "draconic-strike", "dragon-slayer-enchanted", "dragons-breath", "draining-kiss",
       "draining-swipe", "dread-ambusher", "dreadful-strikes", "dream", "dueling", "dust-of-disappearance",
       "dust-of-sneezing-and-choking",
