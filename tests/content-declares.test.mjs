@@ -155,3 +155,22 @@ describe("§447 : voir à travers ses propres Ténèbres, relu à chaque demande
     expect(ownDarknessSight(null)).toBeNull();
   });
 });
+
+describe("les clés d'entrée des flags d'un item", () => {
+  it("les mêmes clés, dans le même ordre, que le parcours du schéma entier — flags tirés au hasard", async () => {
+    const { entryKeysOf } = await import("../module/scripts/adapter/content.mjs");
+    let seed = 7;
+    const random = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+    for ( let n = 0; n < 500; n++ ) {
+      const flags = {};
+      const count = Math.floor(random() * 6);
+      // Des clés du schéma dans un ordre quelconque, mêlées à des flags qui ne sont pas des clés d'entrée.
+      for ( let k = 0; k < count; k++ ) flags[ENTRY_KEYS[Math.floor(random() * ENTRY_KEYS.length)]] = k;
+      if ( random() < 0.5 ) flags.resolution = { step: "done" };
+      if ( random() < 0.3 ) flags.toString = "x";
+      expect(entryKeysOf(flags)).toEqual(ENTRY_KEYS.filter(key => key in flags));
+    }
+    expect(entryKeysOf({})).toEqual([]);
+  });
+});
+
