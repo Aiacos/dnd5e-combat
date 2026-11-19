@@ -81,5 +81,12 @@ export const WARLOCK = Object.freeze({
   // en psychique » — proposé avec les types du sort avant le jet (adapter/messages.mjs). La seconde moitié (Enchantement ou Illusion
   // sans composante verbale ni somatique) reste à la fiche.
   "psychic-spells": { spellDamageTypes: { class: "warlock", types: ["psychic"] } },
+  // Projection à travers l'enfer (Fiélon 14) — « une fois par tour, quand vous touchez une créature avec un jet d'attaque » : la
+  // sauvegarde de Charisme de l'item (8d10 psychiques et Neutralisé sur un échec) proposée sur le coup, son utilisation dépensée.
+  // « Neutralisé jusqu'à la fin de votre prochain tour » : l'effet vient du pack d'effets commun (pas un effet de l'item), sans
+  // durée — suivi par son état (`status:`). Restent au joueur : pas de dégâts
+  // contre un Fiélon, la cible qui disparaît puis revient, et l'emplacement de pacte qui rend l'utilisation (l'autre activité).
+  "hurl-through-hell": { hitRider: { save: "vIY5Deb2vCh5POdP", oncePerTurn: true },
+    effectEnds: { "status:incapacitated": "casterTurnEnd" } },
   "dark-ones-own-luck": { rollBonus: { activity: "4A1lkH3i3azHU1YQ", on: ["save", "check"] } }
 });

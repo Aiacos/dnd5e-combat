@@ -246,7 +246,7 @@ describe("contenu livré", () => {
       "heavy-armor-master", "heightened-focus", "heightened-spell", "hellish-rebuke", "helm-of-brilliance",
       "helm-of-brilliance-enchanted", "helm-of-telepathy", "heroic-warrior", "heroism", "hex", "hideous-laughter", "hills-tumble",
       "hold-monster", "hold-person", "holy-aura", "holy-avenger-enchanted", "holy-nimbus", "holy-water", "hooded-lantern",
-      "horn-of-blasting", "horseshoes-of-a-zephyr", "hunger-of-hadar", "hunger-of-yeenoghu", "hunters-mark", "hunters-prey", "hypnotic-pattern", "ice-knife",
+      "horn-of-blasting", "horseshoes-of-a-zephyr", "hunger-of-hadar", "hunger-of-yeenoghu", "hunters-mark", "hunters-prey", "hurl-through-hell", "hypnotic-pattern", "ice-knife",
       "ice-spear", "ice-storm", "illusory-self", "imprisonment", "improved-brutal-strike", "improved-brutal-strike-2",
       "improved-circle-forms", "improved-cunning-strike", "improved-elemental-fury", "improved-illusions", "improved-war-magic",
       "improved-warding-flare", "incendiary-cloud", "indomitable", "indomitable-might", "innate-sorcery", "insect-plague",
