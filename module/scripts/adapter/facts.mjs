@@ -21,6 +21,7 @@ import { distanceBetween } from "./turn.mjs";
 import { readUnitFactors } from "./units.mjs";
 import { isWithinRange } from "../core/units.mjs";
 import { INCAPACITATING } from "../core/conditions.mjs";
+import { speedIsZero } from "../core/movement.mjs";
 import { isDeadActor } from "./death.mjs";
 import { spellClassOf } from "./spell-class.mjs";
 import { isObjectToken } from "./bodies.mjs";
@@ -334,6 +335,12 @@ function damageTypesOf(activity) {
   return Array.from(out);
 }
 
+/** Les vitesses préparées d'un acteur (`movement.speeds` de dnd5e 6, `movement` avant), ou null. */
+function movementSpeedsOf(actor) {
+  const movement = actor?.system?.attributes?.movement;
+  return movement ? (movement.speeds ?? movement) : null;
+}
+
 /** Est-ce le tour de cet acteur dans le combat en cours ? Hors combat : non. */
 function ownTurn(actor) {
   const current = game.combat?.started ? game.combat.combatant?.actor : null;
@@ -590,6 +597,8 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "target.immuneTo": id => conditionImmunitiesOf(target).includes(id),
     // Armure d'Agathys : « tant que vous avez ces PV temporaires ». { "target.hasTempHp": true | false }.
     "target.hasTempHp": want => (((target?.system?.attributes?.hp?.temp ?? 0) > 0) === want),
+    // Cape de déplacement : « tant que votre Vitesse est de 0 ». { "target.speedZero": true | false }.
+    "target.speedZero": want => (speedIsZero(movementSpeedsOf(target)) === want),
     // §16.47 : Stabilisation — « à 0 point de vie et qui n'est pas morte ».
     "target.atZero": want => ((((target?.system?.attributes?.hp?.value ?? 1) <= 0)) === want),
     "target.isDead": want => (isDeadActor(target) === want),

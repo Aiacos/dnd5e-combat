@@ -645,9 +645,12 @@ export const ITEM_FIXES = Object.freeze({
   /* ---- O7 (§343) : défenses passives ---- */
 
   // Cape de déplacement : « les jets d'attaque contre vous ont le Désavantage » — sauf quand l'effet « Displacement Suppressed » est
-  // activé (après des dégâts, jusqu'au début de votre prochain tour : bascule du joueur) ou que vous êtes Neutralisé.
+  // activé (après des dégâts, jusqu'au début de votre prochain tour : bascule du joueur), que votre Vitesse est de 0 (texte de
+  // 2024 : Agrippé, Entravé…) ou que vous êtes Neutralisé (texte de 2014, qui porte le même identifiant).
   "cloak-of-displacement": {
-    triggers: [{ on: "preAttackRoll", defends: true, if: { not: { any: [{ "target.hasEffect": "cloak-of-displacement" }, { "target.hasStatus": "incapacitated" }] } },
+    triggers: [{ on: "preAttackRoll", defends: true,
+      if: { not: { any: [{ "target.hasEffect": "cloak-of-displacement" }, { "target.speedZero": true },
+        { "target.hasStatus": "incapacitated" }] } },
       do: [{ type: "disadvantage" }] }]
   },
   // Bracelets de défense : « +2 à la CA si vous ne portez ni armure ni bouclier » — l'effet restait actif avec une armure.
