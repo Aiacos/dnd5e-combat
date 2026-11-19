@@ -461,7 +461,11 @@ export const SPELL_RULES = Object.freeze({
   // §283 : Sphère glacée d'Otiluke, `phbsplOtilukesFr` — « 10d6 Cold damage » ; la donnée (« Cast and Fire », « Throw Held Globe »)
   // laisse ses dégâts sans type.
   "otilukes-freezing-sphere": { untypedDamage: "cold" },
-  "otilukes-resilient-sphere": { encloses: true, willingFails: true, effectChanges: { U5UciD171a5jcc7s: ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"].map(t => ({ key: "system.traits.di.value", type: "add", value: t })) } },
+  // La donnée du SRD (« Resilient Sphere ») n'a pas la propriété Concentration, que le texte du sort demande (« Concentration,
+  // jusqu'à 1 minute ») ; celle du Manuel des joueurs l'a, et n'est pas touchée (`from` ne lui correspond pas).
+  "otilukes-resilient-sphere": { dataFixes: [{ path: "system.properties", from: ["vocal", "somatic", "material"],
+    value: ["vocal", "somatic", "material", "concentration"] }],
+    encloses: true, willingFails: true, effectChanges: { U5UciD171a5jcc7s: ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"].map(t => ({ key: "system.traits.di.value", type: "add", value: t })) } },
   // Globe d'invulnérabilité : « un sort de niveau 5 ou moins lancé de l'extérieur ne peut affecter quoi que ce soit dans l'Émanation de
   // 3 m » (la montée d'emplacement du globe : non reprise).
   "globe-of-invulnerability": { globe: { radius: 10, units: "ft", maxLevel: 5 } },

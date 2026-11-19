@@ -28,6 +28,15 @@ describe("données de sorts du Manuel des joueurs corrigées (dataFixes)", () =>
     // Une liste déjà modifiée (un sort rendu sans composante matérielle, par exemple) reste telle quelle.
     expect(planIsEmpty(plan("forbiddance", { properties: ["vocal", "somatic"] }))).toBe(true);
   });
+  // Vu en jeu : la « Resilient Sphere » du SRD se lançait sans Concentration (sa donnée n'en a pas la propriété ; celle du
+  // Manuel des joueurs l'a).
+  it("Sphère résiliente : la propriété « concentration », pour la donnée du SRD seulement", () => {
+    for ( const ident of ["otilukes-resilient-sphere", "resilient-sphere"] ) {
+      expect(plan(ident, { properties: ["vocal", "somatic", "material"] }).item, ident)
+        .toEqual({ "system.properties": ["vocal", "somatic", "material", "concentration"] });
+      expect(planIsEmpty(plan(ident, { properties: ["vocal", "somatic", "material", "concentration"] })), ident).toBe(true);
+    }
+  });
   /** Une activité de sauvegarde à dégâts, comme la donnée la porte : `damage.onSave` et ses parts. */
   const save = (id, onSave) => ({ activities: {
     [id]: { _id: id, type: "save", damage: { onSave, parts: [{ number: 3, denomination: 6 }] } } } });
