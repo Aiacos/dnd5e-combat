@@ -100,6 +100,8 @@
   "DND5ECOMBAT.Vision.Entendu": "Ouvido, mas não visto (Desvantagem)",
   "DND5ECOMBAT.Vision.DevilsSight": "Visão Diabólica",
   "DND5ECOMBAT.Vision.Ouie": "Audição",
+  "DND5ECOMBAT.Vision.Sens": "Sentido especial",
+  "DND5ECOMBAT.Vision.Localise": "Localizado, mas não visto (Desvantagem)",
   "DND5ECOMBAT.Reglage.volumes.Nom": "Elevação e volumes",
   "DND5ECOMBAT.Reglage.volumes.Aide": "Áreas de magias recebem altura conforme a forma (esfera centrada no conjurador, cubo e cilindro no chão, cone e linha planos): criaturas voando acima de uma Bola de Fogo não são atingidas. Pisos e tetos (regiões Superfície que bloqueiam movimento) interrompem a linha de efeito de áreas, auras e Ataques de Oportunidade, contando como Cobertura Total. As distâncias são medidas em três dimensões independentemente desta configuração.",
   "DND5ECOMBAT.Reglage.altitude.Nom": "Modos de deslocamento e elevação",

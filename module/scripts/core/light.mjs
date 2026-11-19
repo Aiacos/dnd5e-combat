@@ -146,15 +146,25 @@ export function drawnUnderVeil({ visible, filtered, ownVision=false, inSight }) 
 export const HEARING_MODE = "dasHearing";
 
 /**
+ * Le mode spécial des sens déclarés par du contenu (clé `sense` : détections, Perception divine), donné en mémoire aux tokens dont
+ * l'acteur en a un (ui/perception.mjs) : la créature localisée se dessine avec un contour, comme celle qu'on entend.
+ */
+export const SENSE_MODE = "dasSense";
+
+/** Le contour d'une créature localisée par un sens déclaré : violet pâle, ondulant (l'ouïe est bleu pâle). */
+export const SENSE_OUTLINE = Object.freeze({ outlineColor: Object.freeze([0.78, 0.6, 1, 1]), knockout: true, wave: true });
+
+/**
  * Issue #42 : pose sur les modes de détection PRÉPARÉS d'un token (objet ordinaire, jamais la source) ceux que le moteur donne en mémoire —
  * la Vision du diable (portée, unité de la grille ; 0 = pas d'invocation : retirée) et l'ouïe d'un Aveuglé, posée en dernier (le cœur
  * essaie les modes spéciaux dans l'ordre : un vrai sens passe avant). Rend true si quelque chose manquait ou différait : la préparation
  * des données du token (`TokenDocument#reset`) les avait effacés, ou un effet `token.detectionModes.devilsSight.range` avait laissé un mode
  * sans `enabled` — la vue doit alors se refaire.
  * @param {Record<string, {enabled?: boolean, range?: number|null}>} modes
- * @param {{devilsSight?: number, hearing?: boolean}} wanted
+ * `sense` : l'acteur a un sens déclaré par du contenu — son mode, sans portée propre (chaque sens a la sienne), retiré sinon.
+ * @param {{devilsSight?: number, sense?: boolean, hearing?: boolean}} wanted
  */
-export function grantInMemoryModes(modes, { devilsSight=0, hearing=false }={}) {
+export function grantInMemoryModes(modes, { devilsSight=0, sense=false, hearing=false }={}) {
   let changed = false;
   const had = modes[DEVILS_SIGHT_MODE];
   if ( devilsSight > 0 ) {
@@ -162,6 +172,11 @@ export function grantInMemoryModes(modes, { devilsSight=0, hearing=false }={}) {
     modes[DEVILS_SIGHT_MODE] = { enabled: true, range: devilsSight };
   }
   else if ( had ) { changed = true; delete modes[DEVILS_SIGHT_MODE]; }
+  if ( sense ) {
+    changed ||= modes[SENSE_MODE]?.enabled !== true;
+    modes[SENSE_MODE] = { enabled: true, range: Infinity };
+  }
+  else if ( modes[SENSE_MODE] ) { changed = true; delete modes[SENSE_MODE]; }
   if ( hearing ) {
     const keys = Object.keys(modes);
     changed ||= (modes[HEARING_MODE]?.enabled !== true) || (keys.at(-1) !== HEARING_MODE);

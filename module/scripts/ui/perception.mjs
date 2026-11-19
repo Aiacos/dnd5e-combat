@@ -25,9 +25,13 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { blockedBetween, isVisionAvailable, devilsSightRange, ownDarknessSight, devilsSightSeesToken, senseReachesToken, asSeenBy, isSenseless } from "../adapter/vision.mjs";
+import { blockedBetween, isVisionAvailable, devilsSightRange, ownDarknessSight, devilsSightSeesToken, senseReachesToken, asSeenBy,
+  isSenseless, sensedThrough } from "../adapter/vision.mjs";
+import { declaredSensesOf } from "../adapter/senses.mjs";
+import { hiddenFrom } from "../adapter/stealth.mjs";
 import { canHear } from "../adapter/hearing.mjs";
-import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, DEVILS_SIGHT_OUTLINE, HEARING_MODE, grantInMemoryModes, tintOutlineShader } from "../core/light.mjs";
+import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, DEVILS_SIGHT_OUTLINE, HEARING_MODE, SENSE_MODE, SENSE_OUTLINE,
+  grantInMemoryModes, tintOutlineShader } from "../core/light.mjs";
 import { route } from "../runtime/router.mjs";
 import { theaterActive } from "../runtime/theater-state.mjs";
 import { perceivesPlane } from "../adapter/plane.mjs";
@@ -41,6 +45,13 @@ let hearingFilter = null;
 function filter() {
   return hearingFilter ??= foundry.canvas.rendering.filters.OutlineOverlayFilter.create({
     outlineColor: [0.55, 0.8, 1, 1], knockout: true, wave: true
+  });
+}
+
+let senseFilter = null;
+function sensedFilter() {
+  return senseFilter ??= foundry.canvas.rendering.filters.OutlineOverlayFilter.create({
+    outlineColor: [...SENSE_OUTLINE.outlineColor], knockout: SENSE_OUTLINE.knockout, wave: SENSE_OUTLINE.wave
   });
 }
 
@@ -227,6 +238,7 @@ function grantOn(doc) {
   return grantInMemoryModes(doc.detectionModes, {
     // §447 : qui voit à travers ses propres Ténèbres reçoit aussi ce mode (sa règle, `devilsSightSeesToken`, n'y met pas de limite).
     devilsSight: modes[DEVILS_SIGHT.mode] ? (devilsSightRange(doc) || (ownDarknessSight(doc) ? OWN_DARKNESS_RANGE : 0)) : 0,
+    sense: !!modes[SENSE_MODE] && (declaredSensesOf(doc.actor).length > 0),
     hearing: !!modes[HEARING_MODE]
   });
 }
@@ -308,10 +320,36 @@ function hearingMode() {
     type: DetectionMode.DETECTION_TYPES.SOUND, walls: false, angle: false });
 }
 
+/**
+ * Les sens déclarés par du contenu (clé `sense` : Détection du mal et du bien, Perception divine…). Leur règle est celle du moteur
+ * (`sensedThrough` : portée, ce que le sens détecte, mur s'il en tient compte, protections de la cible) : la créature dont la
+ * position est connue se dessine avec un contour, où qu'elle soit — ces sens ne sont pas une vue, ni brume ni ténèbres ne les
+ * arrêtent. Une simple présence (`reveals: "presence"`) ne dessine rien : la position n'est pas connue. Comme pour les règles (`canSee`), une
+ * créature cachée de l'observateur n'est pas montrée. Jamais pour les sources jetables des règles, qui lisent `sensedBy`
+ * elles-mêmes.
+ */
+function senseMode() {
+  const DetectionMode = foundry.canvas.perception.DetectionMode;
+  class DetectionModeDeclaredSense extends DetectionMode {
+    static getDetectionFilter() { return sensedFilter(); }
+    testVisibility(visionSource, mode, config) {
+      if ( !mode?.enabled || !isVisionAvailable() ) return false;
+      if ( String(visionSource?.sourceId ?? "").startsWith(SIMULATED) ) return false;
+      const p = pair(visionSource, config.object);
+      if ( !p || hiddenFrom(p.observer, p.target) ) return false;
+      const verdict = sensedThrough(p.observer, p.target);
+      return (verdict === "locate") || (verdict === "sight");
+    }
+  }
+  return new DetectionModeDeclaredSense({ id: SENSE_MODE, label: "DND5ECOMBAT.Vision.Sens", tokenConfig: false,
+    type: DetectionMode.DETECTION_TYPES.OTHER, walls: false, angle: false });
+}
+
 /** À `setup` : après le cœur et le système (dnd5e ajoute ses modes à `init`). */
 function installModes() {
   const modes = CONFIG.Canvas.detectionModes;
   modes[DEVILS_SIGHT.mode] ??= devilsSightMode();
+  modes[SENSE_MODE] ??= senseMode();
   modes[HEARING_MODE] ??= hearingMode();
   for ( const [id, mode] of Object.entries(modes) ) {
     const extended = mode ? extend(id, mode) : null;
@@ -351,9 +389,14 @@ export function registerPerception() {
 /*  Issue #42 : l'oreille des créatures entendues */
 /* -------------------------------------------- */
 
-/** L'oreille de Font Awesome 6 (`ear-listen`). */
+/** L'oreille de Font Awesome 6 (`ear-listen`) ; la cible d'une créature localisée par un sens déclaré (`location-crosshairs`). */
 const EAR = "\uf2a2";
-const marks = new Map();   // id du token → { root, label, r }
+const LOCATED = "\uf601";
+const MARKS = Object.freeze({
+  heard: Object.freeze({ glyph: EAR, label: "Vision.Entendu", line: 0x8ccdff, fill: 0xd6ecff }),
+  located: Object.freeze({ glyph: LOCATED, label: "Vision.Localise", line: 0xc79bff, fill: 0xe8d9ff })
+});
+const marks = new Map();   // id du token → { root, label, r, kind }
 let markLayer = null;
 
 function markLayerOf() {
@@ -365,18 +408,19 @@ function markLayerOf() {
   return markLayer;
 }
 
-/** Une pastille sombre au filet bleu pâle (la couleur du contour de l'ouïe), une oreille ; au survol, « Entendu, pas vu ». */
-function buildMark() {
+/** Une pastille sombre au filet de la couleur du contour (ouïe, sens déclaré), son signe ; au survol, « Entendu, pas vu ». */
+function buildMark(kind) {
+  const look = MARKS[kind];
   const r = Math.max(9, canvas.grid.size * 0.13);
   const root = new PIXI.Container();
   const back = new PIXI.Graphics().beginFill(0x000000, 0.6).drawCircle(0, 0, r).endFill()
-    .lineStyle(2, 0x8ccdff, 0.95).drawCircle(0, 0, r);
-  const ear = new PIXI.Text(EAR, {
+    .lineStyle(2, look.line, 0.95).drawCircle(0, 0, r);
+  const ear = new PIXI.Text(look.glyph, {
     fontFamily: ["Font Awesome 6 Pro", "Font Awesome 6 Free", "FontAwesome"], fontWeight: "900", fontSize: Math.round(r * 1.1),
-    fill: 0xd6ecff, stroke: 0x000000, strokeThickness: 2
+    fill: look.fill, stroke: 0x000000, strokeThickness: 2
   });
   ear.anchor.set(0.5);
-  const label = new PIXI.Text(loc("Vision.Entendu"), {
+  const label = new PIXI.Text(loc(look.label), {
     fontFamily: "Signika", fontSize: Math.round(Math.max(12, r * 1.05)), fill: 0xffffff, stroke: 0x000000, strokeThickness: 4,
     align: "left"
   });
@@ -384,7 +428,7 @@ function buildMark() {
   label.position.set(r + 4, 0);
   label.visible = false;
   root.addChild(back, ear, label);
-  return { root, label, r };
+  return { root, label, r, kind };
 }
 
 function dropMark(id) {
@@ -395,19 +439,23 @@ function dropMark(id) {
 }
 
 /**
- * Le token est-il affiché parce qu'on l'entend (le contour de l'ouïe), sur ce client ? Le filtre d'abord : tant que rien n'a été
- * entendu il n'existe pas, et `Token#isVisible` relance le test de visibilité entier du cœur à chaque lecture — or on passe ici à
- * chaque `refreshToken` et `hoverToken` de chaque token.
+ * Le token est-il affiché parce qu'on l'entend (le contour de l'ouïe) ou parce qu'un sens déclaré le localise (son contour), sur ce
+ * client ? Le filtre d'abord : tant que rien n'a été entendu ni localisé il n'existe pas, et `Token#isVisible` relance le test de
+ * visibilité entier du cœur à chaque lecture — or on passe ici à chaque `refreshToken` et `hoverToken` de chaque token.
  */
-function isHeard(token) {
-  return !!hearingFilter && !!token && !token.destroyed && (token.isVisible === true) && (token.detectionFilter === hearingFilter);
+function perceivedAs(token) {
+  if ( (!hearingFilter && !senseFilter) || !token || token.destroyed || (token.isVisible !== true) ) return null;
+  if ( hearingFilter && (token.detectionFilter === hearingFilter) ) return "heard";
+  return (senseFilter && (token.detectionFilter === senseFilter)) ? "located" : null;
 }
 
 function refreshMark(token) {
   if ( !canvas?.ready || !token?.document ) return;
-  if ( !isHeard(token) ) { dropMark(token.id); return; }
+  const kind = perceivedAs(token);
+  if ( !kind ) { dropMark(token.id); return; }
   let mark = marks.get(token.id);
-  if ( !mark ) marks.set(token.id, mark = buildMark());
+  if ( mark && (mark.kind !== kind) ) { dropMark(token.id); mark = null; }
+  if ( !mark ) marks.set(token.id, mark = buildMark(kind));
   if ( mark.root.parent !== markLayerOf() ) markLayerOf().addChild(mark.root);
   // Coin haut gauche du token (le sablier prend le haut droit, les minuteries le dessus).
   mark.root.position.set(token.x + (mark.r * 0.6), token.y + (mark.r * 0.6));

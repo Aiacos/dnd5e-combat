@@ -10,6 +10,7 @@ const hooks = {};
 const fire = (hook, ...args) => hooks[hook].forEach(fn => fn(...args));
 const layer = { children: [], addChild(child) { child.parent = layer; layer.children.push(child); return child; } };
 const hearing = { name: "le filtre de l'ouïe" };
+const sensing = { name: "le filtre des sens déclarés" };
 
 /** Un token du canevas ; `tests` compte les lectures de `isVisible` (un test de visibilité du cœur chacune). */
 function tokenOf(id, { visible=true, detectionFilter=null }={}) {
@@ -30,7 +31,7 @@ beforeAll(async () => {
   }
   globalThis.foundry = { utils: { throttle: fn => fn, debounce: fn => fn, isNewerVersion: () => false },
     canvas: { perception: { DetectionMode }, placeables: { Token: class {} },
-      rendering: { filters: { OutlineOverlayFilter: { create: () => hearing } } } } };
+      rendering: { filters: { OutlineOverlayFilter: { create: ({ outlineColor }) => ((outlineColor[0] > 0.7) ? sensing : hearing) } } } } };
   globalThis.fromUuidSync = () => null;
   globalThis.CONFIG = { DND5E: {}, specialStatusEffects: {}, queries: {}, Canvas: { detectionModes: {} } };
   // Ce que `buildMark` dessine : des conteneurs PIXI sans rendu.
@@ -86,5 +87,21 @@ describe("issue #42 : l'oreille des créatures entendues", () => {
     heard.detectionFilter = null;
     fire("refreshToken", heard, {});
     expect(marks[0].destroyed).toBe(true);
+  });
+
+  it("une créature localisée par un sens déclaré : sa propre marque, remplacée si elle n'est plus qu'entendue", () => {
+    expect(CONFIG.Canvas.detectionModes.dasSense.constructor.getDetectionFilter()).toBe(sensing);
+    const located = tokenOf("located", { detectionFilter: sensing });
+    fire("refreshToken", located, {});
+    const marks = layer.children[0].children;
+    const first = marks.at(-1);
+    expect(first.destroyed).toBeUndefined();
+    located.detectionFilter = hearing;
+    fire("refreshToken", located, {});
+    expect(first.destroyed).toBe(true);
+    expect(marks.at(-1)).not.toBe(first);
+    located.detectionFilter = null;
+    fire("refreshToken", located, {});
+    expect(marks.at(-1).destroyed).toBe(true);
   });
 });

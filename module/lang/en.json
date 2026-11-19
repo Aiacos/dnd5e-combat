@@ -101,6 +101,8 @@
   "DND5ECOMBAT.Vision.Entendu": "Heard, not seen (Disadvantage)",
   "DND5ECOMBAT.Vision.DevilsSight": "Devil's Sight",
   "DND5ECOMBAT.Vision.Ouie": "Hearing",
+  "DND5ECOMBAT.Vision.Sens": "Special sense",
+  "DND5ECOMBAT.Vision.Localise": "Located, not seen (Disadvantage)",
   "DND5ECOMBAT.Reglage.volumes.Nom": "Elevation and volumes",
   "DND5ECOMBAT.Reglage.volumes.Aide": "Spell areas get a height from their shape (sphere centered on the caster, cube and cylinder resting on the ground, cone and line flat): a creature flying above a Fireball is no longer hit. A floor or ceiling (a Surface region that blocks movement) cuts the line of effect of areas, auras and Opportunity Attacks, and counts as Total Cover. Distances are measured in three dimensions regardless of this setting.",
   "DND5ECOMBAT.Reglage.altitude.Nom": "Movement modes and elevation",
