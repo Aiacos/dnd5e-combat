@@ -111,7 +111,8 @@ export async function handlePortentQuery({ actor: actorUuid, subject, kind, item
   buttons.push({ action: "none", label: game.i18n.localize("DND5ECOMBAT.Presage.Non") });
   const picked = await timedWait({
     window: { title: game.i18n.format("DND5ECOMBAT.Presage.Titre", { name: actor.name }) },
-    content: `<p>${game.i18n.format(`DND5ECOMBAT.Presage.${kind === "save" ? "Sauvegarde" : "Attaque"}`, { subject, item })}</p>`,
+    content: `<p>${game.i18n.format(`DND5ECOMBAT.Presage.${kind === "save" ? "Sauvegarde" : "Attaque"}`,
+      { subject: foundry.utils.escapeHTML(String(subject ?? "")), item: foundry.utils.escapeHTML(String(item ?? "")) })}</p>`,
     buttons
   }, { fallback: "none", awaiting: { actor, kind: "choice" } });
   const value = Number(String(picked ?? "").replace(/^v/, ""));

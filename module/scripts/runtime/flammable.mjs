@@ -9,6 +9,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor, needsCheck } from "../core/requests.mjs";
 import { contentOf } from "../adapter/content.mjs";
 import { readAreaState, writeAreaState, lastingRegions, isInside } from "../adapter/areas.mjs";
 import { committedPosition, tokenCenter } from "../adapter/turn.mjs";
@@ -108,8 +109,13 @@ export function igniteViaGM(region, cause="") {
   return viaActiveGM(IGNITE_QUERY, handleIgnite, { region: region.uuid, cause }, { noGm: "Embrase.SansMJ", fallback: false, label: "flammable: ignite" });
 }
 
-async function handleIgnite({ region: uuid, cause }) {
+async function handleIgnite({ region: uuid, cause }, { user=null }={}) {
   const region = await fromUuid(uuid);
+  // §472 : d'un joueur, il lui faut une créature sur la scène de la zone (contact, flamme portée, sort de feu à portée).
+  if ( region && needsCheck(user) && !region.parent?.tokens.some(t => t.actor && actsFor(user, t.actor)) ) {
+    console.warn(`${MODULE_ID} | ignite query from ${user.name} refused: no creature of theirs on the scene of ${region.name}`);
+    return false;
+  }
   return region ? ignite(region, cause) : false;
 }
 

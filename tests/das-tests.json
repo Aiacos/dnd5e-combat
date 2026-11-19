@@ -5,6 +5,23 @@
     "fileHelpers": [{ "define": "const t = \\(key, data\\) => game\\.i18n\\.format\\(`DND5ECOMBAT\\.([A-Za-z0-9_.]+)\\.\\$\\{key\\}`", "call": "t", "prefix": "DND5ECOMBAT." }],
     "minKeys": 1000
   },
+  "requests": {
+    "noSender": {
+      "CONTEST_QUERY": "le destinataire lance un vrai dé pour son acteur ; le total ne revient qu'à l'expéditeur, qui juge (pas d'écriture)",
+      "ALLOCATION_QUERY": "fenêtre de répartition chez le destinataire, qui décide ; la réponse ne revient qu'à l'expéditeur",
+      "ZONE_CHOICE_QUERY": "fenêtre de choix des créatures chez le destinataire, qui décide ; textes échappés ; réponse à l'expéditeur seul",
+      "NEAR_SPACE_QUERY": "le destinataire choisit lui-même une case pour un token qu'il contrôle ; rien sans son clic",
+      "GM_ALERT_QUERY": "un message privé aux MJ, entièrement échappé ; au pire du bruit",
+      "HEROIC_QUERY": "fenêtre d'Inspiration héroïque chez le joueur, qui décide ; l'en-tête est fixé ici, pas pris des données",
+      "PORTENT_QUERY": "fenêtre du devin, qui décide de dépenser son propre jet ; textes échappés",
+      "SKILL_AID_QUERY": "fenêtre chez l'aidant, qui accepte ou refuse ; rien sans son accord",
+      "AT_COST_QUERY": "fenêtre « réussite à un prix » chez le joueur, qui décide ; textes échappés, réponse à l'expéditeur seul",
+      "NOTICE_QUERY": "un texte flottant (PIXI, pas de HTML) au-dessus d'un token ; au pire une fausse annonce",
+      "DAMAGE_QUERY": "le détail des dégâts par type affiché en texte flottant ; valeurs filtrées (nombres, 14 au plus)",
+      "MASTERY_WINDOW_QUERY": "ouvre la fenêtre des bottes d'armes d'un acteur que le destinataire possède déjà",
+      "TIMER_QUERY": "une minuterie dessinée (PIXI) au-dessus d'un token ; rien n'est écrit"
+    }
+  },
   "manifest": {
     "packSources": { "outils": "tools/macros" }
   },

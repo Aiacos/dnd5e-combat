@@ -10,6 +10,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { forceOpenWindows, windowsUnlimited } from "./dialogs.mjs";
 
 export const FORCE_WINDOWS_QUERY = `${MODULE_ID}.forceWindows`;
@@ -79,7 +80,9 @@ export async function forcePlayerWait(id) {
 }
 
 /** Chez le joueur : le MJ force (requête `FORCE_WINDOWS_QUERY`). Rend le nombre de fenêtres résolues. */
-export function handleForceWindows() {
+export function handleForceWindows(data, { user=null }={}) {
+  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | forceWindows query from ${user.name} refused: only a GM sends it`); return 0; }
   return forceOpenWindows();
 }
 

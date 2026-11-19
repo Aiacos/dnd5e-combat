@@ -3,6 +3,7 @@
  * qui fait tirer une table de critiques du monde par le MJ actif quand c'est un joueur qui a touché.
  */
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor, needsCheck } from "../core/requests.mjs";
 import { CRIT_MARGIN_SETTING, CRITICAL_MODE_SETTING, CRITICAL_TABLE_SETTING, CRITICAL_NPC_SETTING, CRITICAL_MODES, CRITICAL_TABLE_QUERY, drawHere }
   from "../adapter/criticals.mjs";
 
@@ -15,6 +16,23 @@ function onPreRollDamage(config, dialog, message) {
   const kind = config?.[MODULE_ID]?.criticalHit;
   if ( kind ) foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.criticalHit`, kind);
   return true;
+}
+
+/**
+ * MJ actif : le tirage demandé par un joueur. §472 : d'un joueur, au nom de son propre acteur seulement (le locuteur est refait sur sa
+ * fiche, pas repris des données).
+ */
+async function handleCriticalTable({ speaker=null }={}, { user=null }={}) {
+  if ( !game.user.isGM ) return null;
+  if ( needsCheck(user) ) {
+    const actor = game.actors.get(speaker?.actor ?? "");
+    const scene = game.scenes.get(speaker?.scene ?? "");
+    const token = scene?.tokens.get(speaker?.token ?? "") ?? null;
+    const who = token?.actor ?? actor;
+    if ( !who || !actsFor(user, who) ) { console.warn(`${MODULE_ID} | criticalTable query from ${user.name} refused: the speaker is not theirs`); return null; }
+    speaker = ChatMessage.implementation.getSpeaker(token ? { token } : { actor: who });
+  }
+  return drawHere(null, speaker);
 }
 
 export function registerCriticals() {
@@ -34,5 +52,5 @@ export function registerCriticals() {
   });
   // Un joueur ne peut pas marquer tiré le résultat d'une table du monde : le MJ actif tire à sa place, au nom de l'attaquant.
   route("dnd5e.preRollDamageV2", onPreRollDamage, { cancellable: true, label: "critical hit: noted on the damage card" });
-  CONFIG.queries[CRITICAL_TABLE_QUERY] = async ({ speaker=null }={}) => (game.user.isGM ? drawHere(null, speaker) : null);
+  CONFIG.queries[CRITICAL_TABLE_QUERY] = handleCriticalTable;
 }

@@ -5,7 +5,8 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { isWildShape, transformActor, revertForm, isWildShaped, formShouldEnd, expiredForms } from "../adapter/wildshape.mjs";
+import { needsCheck } from "../core/requests.mjs";
+import { isWildShape, transformActor, revertForm, isWildShaped, formShouldEnd, expiredForms, knownForms, formInfo, formRefusedBy } from "../adapter/wildshape.mjs";
 import { route } from "./router.mjs";
 import { log, viaActiveGM } from "./shared.mjs";
 import { relaunchUse } from "./relaunch.mjs";
@@ -19,6 +20,15 @@ async function handleTransform({ actor: actorUuid, source: sourceUuid, activity:
   const source = await fromUuid(sourceUuid);
   const activity = await fromUuid(activityUuid);
   if ( !actor || !source || !activity || (user && !actor.testUserPermission(user, "OWNER")) ) return false;
+  // §472 : d'un joueur, l'activité de Forme sauvage est celle de l'acteur, la forme l'une de ses formes connues, et son profil la permet.
+  if ( needsCheck(user) ) {
+    const info = await formInfo(sourceUuid);
+    if ( !isWildShape(activity) || (activity.actor?.uuid !== actor.uuid) || !knownForms(actor).forms.includes(sourceUuid)
+      || !info || formRefusedBy(activity, info) ) {
+      console.warn(`${MODULE_ID} | transform query from ${user.name} refused: ${source.name} is not a form ${actor.name} may take`);
+      return false;
+    }
+  }
   const shaped = await transformActor(actor, source, activity);
   if ( shaped ) log(`${actor.name} takes the form of ${source.name}`);
   return !!shaped;

@@ -10,6 +10,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor } from "../core/requests.mjs";
 import { contentOf, identifierOf } from "../adapter/content.mjs";
 import { readAreaState, lastingRegions, isInside } from "../adapter/areas.mjs";
 import { positionOf, committedPosition } from "../adapter/turn.mjs";
@@ -179,8 +180,10 @@ async function giveBack(actor, data) {
   return actor.createEmbeddedDocuments("Item", [copy]);
 }
 
-export async function handlePickUp({ token: tokenUuid, region: regionUuid, forced=false }) {
+export async function handlePickUp({ token: tokenUuid, region: regionUuid, forced=false }, { user=null }={}) {
   const token = await fromUuid(tokenUuid);
+  // §472 : d'un joueur, seulement son propre token (refus de sécurité, non forçable ; `forced` reste le refus forçable du jeu).
+  if ( !actsFor(user, token?.actor) ) { console.warn(`${MODULE_ID} | pickUp query from ${user.name} refused: ${token?.name ?? tokenUuid} is not theirs`); return false; }
   const region = await fromUuid(regionUuid);
   const scatter = region ? readAreaState(region)?.scatter : null;
   if ( !token?.actor || !scatter?.item ) return false;

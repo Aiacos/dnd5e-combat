@@ -11,6 +11,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { apiShape, browserFamily, browserName, diagnose, fingerprint, pingStats } from "../core/connection.mjs";
 import { safeSettings } from "../core/debug.mjs";
 import { addReportSection, debugApi, isSuitePackage, roles } from "./debug.mjs";
@@ -28,7 +29,7 @@ export const PING_COUNT = 10;
 export const FPS_MS = 2000;
 
 const results = new Map();   // userId → dernier résultat
-const consent = { until: 0, prompt: null, pending: null };
+const consent = { until: 0, prompt: null, pending: null, by: null };
 
 /** Le test est-il permis dans ce monde ? */
 export function connectionTestEnabled() {
@@ -41,18 +42,22 @@ export function setConsentPrompt(fn) {
 }
 
 /** Chez le joueur : demander son accord (une seule fenêtre à la fois). Accordé, les mesures sont permises pendant `CONSENT_VALID_MS`. */
-async function askConsent({ gm=null }={}) {
+async function askConsent({ gm=null }={}, { user=null }={}) {
   if ( !connectionTestEnabled() ) return { answer: "disabled" };
+  // §472 : seul un MJ demande l'accord, sous son vrai nom ; l'accord ne vaut que pour lui.
+  if ( !fromTrusted(user) ) return { answer: "refused" };
+  if ( user && !user.isSelf ) gm = user.name;
   if ( !consent.prompt ) return { answer: "refused" };
   consent.pending ??= Promise.resolve(consent.prompt({ gm })).catch(() => "refused").finally(() => { consent.pending = null; });
   const answer = await consent.pending;
-  if ( answer === "allowed" ) consent.until = Date.now() + CONSENT_VALID_MS;
+  if ( answer === "allowed" ) { consent.until = Date.now() + CONSENT_VALID_MS; consent.by = user?.id ?? null; }
   return { answer };
 }
 
 /** Les mesures ne partent que pendant un accord en cours (une requête envoyée sans passer par la fenêtre est refusée). */
-function requireConsent() {
+function requireConsent(user=null) {
   if ( !connectionTestEnabled() || (Date.now() > consent.until) ) throw new Error("connection test not allowed by this player");
+  if ( user && !user.isSelf && (consent.by !== user.id) ) throw new Error("connection test allowed to another user");
 }
 
 /** L'empreinte du code chargé d'un module de la suite : pour le moteur, ses inscriptions au routeur et ses requêtes ; pour un voisin,
@@ -235,8 +240,8 @@ export function registerConnection() {
     name: "DND5ECOMBAT.Reglage.connectionTest.Nom", hint: "DND5ECOMBAT.Reglage.connectionTest.Aide",
     scope: "world", config: true, type: Boolean, default: false
   });
-  CONFIG.queries[CONNECTION_CONSENT_QUERY] = data => askConsent(data);
-  CONFIG.queries[CONNECTION_PING_QUERY] = () => { requireConsent(); return { now: Date.now() }; };
-  CONFIG.queries[CONNECTION_PROBE_QUERY] = () => { requireConsent(); return probeClient(); };
+  CONFIG.queries[CONNECTION_CONSENT_QUERY] = (data, options) => askConsent(data, options);
+  CONFIG.queries[CONNECTION_PING_QUERY] = (data, { user=null }={}) => { requireConsent(user); return { now: Date.now() }; };
+  CONFIG.queries[CONNECTION_PROBE_QUERY] = (data, { user=null }={}) => { requireConsent(user); return probeClient(); };
   addReportSection("connection tests", lastConnectionTests);
 }

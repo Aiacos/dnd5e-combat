@@ -16,6 +16,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { contentOf } from "./content.mjs";
 import { makesDeathSaves, damageAtZero, needsDeathSave, statusAfterDeathSave, downedStatus, isDead, canStabilize } from "../core/death.mjs";
 import { rollerFor } from "./concentration.mjs";
@@ -309,7 +310,9 @@ export function deathSaveDue(actor) {
  * Côté joueur : la fenêtre du jet contre la mort s'ouvre sur SON écran, ce sont ses dés. Le jet n'est pas
  * facultatif : fenêtre fermée ou délai écoulé, il part sans fenêtre, toujours sur son client.
  */
-export async function handleDeathSaveQuery({ actor: actorUuid }) {
+export async function handleDeathSaveQuery({ actor: actorUuid }, { user=null }={}) {
+  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | deathSave query from ${user.name} refused: only a GM sends it`); return false; }
   const actor = await fromUuid(actorUuid);
   if ( !actor?.isOwner || !deathSaveDue(actor) ) return false;
   ui.notifications.info(t("DemandeJoueur", { name: actor.name }));

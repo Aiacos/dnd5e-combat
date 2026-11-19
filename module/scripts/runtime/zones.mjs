@@ -13,6 +13,7 @@ import { activeZoneOf, zoneCenter, moveZoneTo, readAreaState } from "../adapter/
 import { combatantFor, isOwnTurn, readBudget, writeBudget } from "../adapter/turn.mjs";
 import { contentOf } from "../adapter/content.mjs";
 import { askAnyway } from "./turn.mjs";
+import { actsFor, needsCheck } from "../core/requests.mjs";
 import { log, loc, viaActiveGM } from "./shared.mjs";
 import { lengthIn } from "../adapter/units.mjs";
 
@@ -62,13 +63,27 @@ export async function moveZone(activity, point) {
   }
   if ( lines.length && !(await askAnyway(`${activity.item.name} — ${activity.actor?.name ?? ""}`, lines,
     { actor: activity.actor, item: activity.item })) ) return !far;   // renoncé : trop loin, un autre point se choisit
-  const payload = { region: region.uuid, point: { x: point.x, y: point.y }, actor: activity.actor?.uuid ?? null, cost };
+  const payload = { region: region.uuid, point: { x: point.x, y: point.y }, actor: activity.actor?.uuid ?? null, cost, activity: activity.uuid };
   await viaActiveGM(MOVE_ZONE_QUERY, handleMoveZone, payload, { noGm: "Zone.SansMJ", label: "area move" });
   return true;
 }
 
 /** Côté MJ actif : la région se déplace, l'action est décomptée, le chat le dit. */
-export async function handleMoveZone({ region: regionUuid, point, actor: actorUuid, cost }) {
+export async function handleMoveZone(payload, { user=null }={}) {
+  let { region: regionUuid, point, actor: actorUuid, cost } = payload ?? {};
+  // §472 : d'un joueur, seulement la zone de son activité (pas une région du MJ), au coût de l'activité. Refus de sécurité : non forçable.
+  if ( needsCheck(user) ) {
+    const activity = await fromUuid(payload?.activity ?? "");
+    const zone = activity ? movableZoneOf(activity) : null;
+    if ( !zone || (zone.region.uuid !== regionUuid) || !actsFor(user, activity.actor)
+      || !Number.isFinite(point?.x) || !Number.isFinite(point?.y) ) {
+      console.warn(`${MODULE_ID} | moveZone query from ${user.name} refused: ${regionUuid} is not a zone of their activity`);
+      return false;
+    }
+    actorUuid = activity.actor?.uuid ?? null;
+    cost = zone.cost;
+    point = { x: point.x, y: point.y };
+  }
   const region = await fromUuid(regionUuid);
   if ( !region ) return false;
   await moveZoneTo(region, point);

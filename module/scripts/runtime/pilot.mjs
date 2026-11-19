@@ -14,6 +14,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor } from "../core/requests.mjs";
 import { spendUse } from "../core/turn.mjs";
 import { castCommand, nextPlayableTurn } from "../core/pilot.mjs";
 import { INCAPACITATING } from "../core/conditions.mjs";
@@ -414,8 +415,10 @@ async function onCasterDead(actor) {
 export const REST_QUERY = `${MODULE_ID}.restSummons`;
 
 /** §305 : côté MJ actif — au Repos long de l'acteur, ses invocations `endsOnLongRest` partent (Compagnon sauvage). */
-async function handleRestSummons({ actor: actorUuid }) {
+async function handleRestSummons({ actor: actorUuid }, { user=null }={}) {
   const actor = await fromUuid(actorUuid ?? "");
+  // §472 : d'un joueur, seulement les invocations de son propre acteur.
+  if ( !actor || !actsFor(user, actor) ) { if ( actor ) console.warn(`${MODULE_ID} | restSummons query from ${user.name} refused: ${actor.name} is not theirs`); return false; }
   for ( const token of summonsOfWith(actor, "endsOnLongRest") ) {
     log(`${token.name}: ${actor.name} finished a Long Rest, the summon leaves`);
     await vanish(token);

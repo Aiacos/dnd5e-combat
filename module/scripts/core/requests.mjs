@@ -12,6 +12,19 @@
 export const needsCheck = user => !!user && !user.isSelf && !user.isGM;
 
 /**
+ * Une requête que seul le MJ envoie dans le jeu (sauvegarde, concentration, jet contre la mort…) : d'un joueur, elle tombe.
+ * @param {{isGM?: boolean, isSelf?: boolean}|null|undefined} user
+ */
+export const fromTrusted = user => !needsCheck(user);
+
+/**
+ * L'expéditeur peut-il agir pour ce document (il le possède) ? Toujours oui pour un appel local, soi-même ou un MJ.
+ * @param {{isGM?: boolean, isSelf?: boolean}|null|undefined} user
+ * @param {{testUserPermission?: Function}|null|undefined} doc  un acteur, un token, un objet…
+ */
+export const actsFor = (user, doc) => !needsCheck(user) || !!doc?.testUserPermission?.(user, "OWNER");
+
+/**
  * La requête `cure` : la règle de contenu de l'objet utilisé permet-elle cet acte sur la cible ?
  * @param {object|null} entry  le contenu de l'objet de la carte d'utilisation (`contentOf(item).entry`)
  * @param {string} status      l'acte demandé (`hp`, `temphp`, `curses`, `exhaustion`, `exhaustion-1`, `standReaction`, ou un état)

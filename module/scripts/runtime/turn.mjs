@@ -1,4 +1,5 @@
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor } from "../core/requests.mjs";
 import { checkUse, spendUse, refundUse, basicAction, BASIC_ACTION_FLAGS, effectiveCost, addDash } from "../core/turn.mjs";
 import { rangeIssue, tooClose } from "../core/range.mjs";
 import { throwableAttackMode, versatileGrip } from "../core/attack.mjs";
@@ -652,8 +653,10 @@ const WASTE_QUERY = `${MODULE_ID}.wasteUse`;
  * l'action Bonus ou la Réaction utilisée pour le lancer est perdue ; l'emplacement n'est pas dépensé »), un sort raté sous Lenteur.
  * Le coût de l'activité est débité au budget de son lanceur (sans emplacement, sans « un sort à emplacement par tour »). MJ actif.
  */
-async function handleWasteUse({ activity: uuid }) {
+async function handleWasteUse({ activity: uuid }, { user=null }={}) {
   const activity = await fromUuid(uuid ?? "");
+  // §472 : d'un joueur, seulement sa propre activité (refus de sécurité, non forçable).
+  if ( !actsFor(user, activity?.actor) ) { console.warn(`${MODULE_ID} | wasteUse query from ${user.name} refused: ${activity?.actor?.name ?? uuid} is not theirs`); return false; }
   const combatant = combatantFor(activity?.actor);
   if ( !activity || !combatant || !game.combat?.started ) return false;
   const before = readBudget(combatant);

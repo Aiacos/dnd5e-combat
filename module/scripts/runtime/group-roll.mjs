@@ -22,6 +22,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { normalizeRequest, visibleTo } from "../core/group-roll.mjs";
 import {
   GROUP_FLAG, GROUP_HANDLER, rollArguments, rollMethodOf, canRoll, testTitle, keyLabel, breakdownOf, requestOf, viewOf, systemModeOf
@@ -362,7 +363,9 @@ async function promptGroupRollNow(message, actor, { onRolled=null }={}) {
 }
 
 /** La requête, chez le joueur. */
-async function handleGroupRollQuery({ request: id, actor: uuid }) {
+async function handleGroupRollQuery({ request: id, actor: uuid }, { user=null }={}) {
+  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | groupRoll query from ${user.name} refused: only a GM sends it`); return "cancelled"; }
   const message = game.messages.get(id);
   const actor = await fromUuid(uuid);
   if ( !message || !actor ) return "cancelled";

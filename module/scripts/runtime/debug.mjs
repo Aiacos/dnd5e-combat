@@ -13,6 +13,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { attribute, buildReport, createErrorLog, createRing, createScrubber, errorIn, formatArgs, githubRepo, isBareStack, isBrowserNoise, isDeprecation,
   packagesOfStack, pickRepo, reportMarkdown, roleLabels, safeSettings } from "../core/debug.mjs";
 import { isSuiteTitle } from "../core/settings-layout.mjs";
@@ -255,8 +256,10 @@ export async function flush() {
 }
 
 /** Chez le MJ actif : ce qu'un autre client a relevé. */
-export function receive({ userId: from, items }={}) {
+export function receive({ userId: from, items }={}, { user=null }={}) {
   if ( !Array.isArray(items) ) return false;
+  // §472 : le client qui signale est celui qui envoie, pas celui que disent les données.
+  if ( user && !user.isSelf ) from = user.id;
   errors.merge(items.slice(0, 200), from ?? null);
   for ( const fn of listeners ) {
     try { fn(null, true); } catch { /* idem */ }
@@ -525,8 +528,9 @@ export function registerDebug() {
   } catch { /* réglages illisibles : valeurs par défaut */ }
   replayEarly();
 
-  CONFIG.queries[DEBUG_QUERY] = data => receive(data);
-  CONFIG.queries[DEBUG_VERBOSE_QUERY] = ({ on }={}) => setVerbose(on);
+  CONFIG.queries[DEBUG_QUERY] = (data, options) => receive(data, options);
+  // §472 : seul un MJ allume le mode détaillé chez les autres.
+  CONFIG.queries[DEBUG_VERBOSE_QUERY] = ({ on }={}, { user=null }={}) => (fromTrusted(user) ? setVerbose(on) : state.verbose);
 
   const opts = label => ({ label: `debug: ${label}`, always: true });
   route("dnd5e.postUseActivity", onUseActivity, opts("use"));

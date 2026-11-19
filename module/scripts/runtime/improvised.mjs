@@ -59,7 +59,9 @@ function weaponChoices() {
 }
 
 /** MJ actif : la demande d'un joueur — refuser, ou accepter (arme improvisée, ou comme une arme du jeu). */
-async function handleRequest({ actor: actorUuid, object, mode, user }) {
+async function handleRequest({ actor: actorUuid, object, mode, user }, { user: sender=null }={}) {
+  // §472 : le nom affiché au MJ est celui de l'expéditeur réel.
+  if ( sender && !sender.isSelf ) user = sender.id;
   const actor = await fromUuid(actorUuid ?? "");
   if ( !actor ) return { accepted: false };
   const opt = (value, label) => `<option value="${esc(value)}">${esc(label)}</option>`;

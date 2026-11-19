@@ -1,4 +1,5 @@
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor, needsCheck } from "../core/requests.mjs";
 import { opportunityAttackers, entersAt, reachStrikers } from "../core/reaction.mjs";
 import {
   REACTION_QUERY, handleReactionQuery, setReactionApproach, reactionOptions, reactionState, meleeAttacksOf, reactiveStrikesOf, reactiveSpellsOf, askReaction, currentAc, opportunityBlocked
@@ -614,8 +615,13 @@ async function attackSettled(usageId) {
 }
 
 /** Côté MJ actif : propose chaque attaque d'opportunité, l'une après l'autre, et attend son issue. */
-async function handleOpportunityQuery({ token: tokenUuid, attackers }) {
+async function handleOpportunityQuery({ token: tokenUuid, attackers }, { user=null }={}) {
   const token = await fromUuid(tokenUuid);
+  // §472 : d'un joueur, seulement pour son propre token qui bouge, et des attaquants de la même scène.
+  if ( needsCheck(user) ) {
+    if ( !actsFor(user, token?.actor) || !Array.isArray(attackers) ) { console.warn(`${MODULE_ID} | opportunity query from ${user.name} refused: ${token?.name ?? tokenUuid} is not theirs`); return false; }
+    attackers = attackers.filter(e => fromUuidSync((typeof e === "string") ? e : (e?.token ?? ""), { strict: false })?.parent === token.parent);
+  }
   let asked = false;
   for ( const entry of attackers ) {
     const { token: uuid, enters=false } = (typeof entry === "string") ? { token: entry } : entry;

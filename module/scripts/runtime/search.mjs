@@ -9,9 +9,11 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor, needsCheck } from "../core/requests.mjs";
 import { basicActionOf } from "../adapter/basics.mjs";
 import { hiddenEffectsOf } from "../adapter/hide.mjs";
-import { searchCandidates, perceptionRollParts } from "../adapter/search.mjs";
+import { searchCandidates, perceptionRollParts, hiddenDcOf } from "../adapter/search.mjs";
+import { areEnemies } from "../adapter/factions.mjs";
 import { usageTokenOf } from "../adapter/turn.mjs";
 import { searchRollMode, searchVerdicts } from "../core/search.mjs";
 import { contentOf } from "../adapter/content.mjs";
@@ -21,15 +23,26 @@ import { spendItemUses } from "../adapter/uses.mjs";
 
 export const SEARCH_QUERY = `${MODULE_ID}.search`;
 
-async function removeHiding(targetUuid) {
-  const actor = (await fromUuid(targetUuid))?.actor;
+async function removeHiding(targetUuid, searcherUuid=null, user=null) {
+  const target = await fromUuid(targetUuid);
+  // §472 : d'un joueur, seulement un ennemi caché de son propre fouilleur, sur la même scène (refus de sécurité, non forçable).
+  if ( needsCheck(user) ) {
+    const searcher = searcherUuid ? await fromUuid(searcherUuid) : null;
+    if ( !searcher?.actor || !target?.actor || !actsFor(user, searcher.actor) || (searcher.parent !== target.parent)
+      || !areEnemies(searcher, target) || (hiddenDcOf(target.actor) === null) ) {
+      console.warn(`${MODULE_ID} | search query from ${user.name} refused: ${target?.name ?? targetUuid} is not a hidden enemy of their searcher`);
+      return 0;
+    }
+  }
+  const actor = target?.actor;
   const ids = hiddenEffectsOf(actor).map(e => e.id);
   if ( ids.length ) await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
   return ids.length;
 }
 
-async function reveal(token) {
-  return viaOwnerOrGM(!!token.actor?.isOwner, SEARCH_QUERY, ({ target }) => removeHiding(target), { target: token.uuid }, { fallback: 0 });
+async function reveal(token, searcher) {
+  return viaOwnerOrGM(!!token.actor?.isOwner, SEARCH_QUERY, ({ target, searcher: by }) => removeHiding(target, by),
+    { target: token.uuid, searcher: searcher?.uuid ?? null }, { fallback: 0 });
 }
 
 async function onPostUse(activity) {
@@ -57,7 +70,7 @@ async function onPostUse(activity) {
   if ( keen && found.length && Number(keen.item.system.uses?.max) ) await spendItemUses(keen.item);
   if ( parts.length || keen ) log(`search: ${[...parts, ...(keen ? [`Advantage (${keen.item.name})`] : [])].join(", ")}`);
   for ( const token of found ) {
-    await reveal(token);
+    await reveal(token, searcher);
     notice(token, { key: "Chercher.Trouve" }, "ended", { all: true, sound: null });
   }
   notice(searcher, { key: found.length ? "Retour.Action.Trouve" : "Retour.Action.Rien" }, found.length ? "gain" : "ended",
@@ -67,7 +80,7 @@ async function onPostUse(activity) {
 }
 
 export function registerSearch() {
-  CONFIG.queries[SEARCH_QUERY] = ({ target }) => removeHiding(target);
+  CONFIG.queries[SEARCH_QUERY] = ({ target, searcher=null }={}, { user=null }={}) => removeHiding(target, searcher, user);
   route("dnd5e.postUseActivity", activity => { onPostUse(activity).catch(err => console.error(`${MODULE_ID} | search`, err)); },
     { label: "search" });
 }

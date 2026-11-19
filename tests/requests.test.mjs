@@ -2,7 +2,7 @@
  * Les requêtes reçues d'un autre client (§471) : ce qu'un joueur peut demander, et ce qui tombe du reste. Règles pures de core/requests.mjs.
  */
 import { describe, it, expect } from "vitest";
-import { needsCheck, cureAllowed, healedHp, grantedTempHp, plainReaction } from "../module/scripts/core/requests.mjs";
+import { needsCheck, fromTrusted, actsFor, cureAllowed, healedHp, grantedTempHp, plainReaction } from "../module/scripts/core/requests.mjs";
 
 describe("qui faut-il vérifier", () => {
   it("un joueur, oui ; un appel local, soi-même ou un MJ, non", () => {
@@ -11,6 +11,27 @@ describe("qui faut-il vérifier", () => {
     expect(needsCheck(undefined)).toBe(false);
     expect(needsCheck({ isGM: false, isSelf: true })).toBe(false);
     expect(needsCheck({ isGM: true, isSelf: false })).toBe(false);
+  });
+});
+
+describe("seulement du MJ, seulement ce qu'il possède (§472)", () => {
+  const player = { isGM: false, isSelf: false, id: "p" };
+  const gm = { isGM: true, isSelf: false, id: "g" };
+  const mine = { testUserPermission: (user, level) => (user.id === "p") && (level === "OWNER") };
+  const theirs = { testUserPermission: () => false };
+
+  it("une requête du MJ : du MJ, de soi-même ou locale passe ; d'un joueur, non", () => {
+    expect(fromTrusted(gm)).toBe(true);
+    expect(fromTrusted(null)).toBe(true);
+    expect(fromTrusted({ isGM: false, isSelf: true })).toBe(true);
+    expect(fromTrusted(player)).toBe(false);
+  });
+  it("un joueur n'agit que pour ce qu'il possède ; le MJ et l'appel local pour tout", () => {
+    expect(actsFor(player, mine)).toBe(true);
+    expect(actsFor(player, theirs)).toBe(false);
+    expect(actsFor(player, null)).toBe(false);
+    expect(actsFor(gm, theirs)).toBe(true);
+    expect(actsFor(null, theirs)).toBe(true);
   });
 });
 

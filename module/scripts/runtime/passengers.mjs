@@ -15,8 +15,11 @@ import { dragDestination } from "../adapter/movement.mjs";
 import { distanceBetween } from "../adapter/turn.mjs";
 import { lengthIn } from "../adapter/units.mjs";
 import { loc, log, notice, viaActiveGM } from "./shared.mjs";
+import { actsFor, needsCheck } from "../core/requests.mjs";
 
 export const PASSENGERS_QUERY = `${MODULE_ID}.teleportPassengers`;
+/** §472 : au plus autant de passagers demandés par un joueur (Porte dimensionnelle en emmène un). */
+const MAX_PASSENGERS = 8;
 
 /** Les créatures qu'une téléportation peut emmener : non hostiles, vivantes, à portée du lanceur. */
 function candidates(token, rule) {
@@ -50,13 +53,26 @@ export async function choosePassengers(token, rule) {
 }
 
 /** MJ actif : pose chaque passager au contact du lanceur arrivé. */
-async function handleCarry({ caster, passengers }) {
+async function handleCarry({ caster, passengers }, { user=null }={}) {
   const casterDoc = fromUuidSync(caster ?? "", { strict: false });
   if ( !casterDoc ) return 0;
+  // §472 : d'un joueur, seulement son propre lanceur, et des passagers que la règle permet (non hostiles, vivants, partis d'à côté de lui).
+  const untrusted = needsCheck(user);
+  if ( untrusted && !actsFor(user, casterDoc.actor) ) {
+    console.warn(`${MODULE_ID} | teleportPassengers query from ${user.name} refused: ${casterDoc.name} is not theirs`);
+    return 0;
+  }
+  const near = 2 * (casterDoc.parent?.grid?.size ?? 100);
   let moved = 0;
-  for ( const p of passengers ?? [] ) {
+  for ( const p of (Array.isArray(passengers) ? passengers : []).slice(0, untrusted ? MAX_PASSENGERS : Infinity) ) {
     const doc = fromUuidSync(p.token ?? "", { strict: false });
     if ( !doc || (doc.parent !== casterDoc.parent) ) continue;
+    if ( !Number.isFinite(p.dx) || !Number.isFinite(p.dy) ) continue;
+    if ( untrusted && ((doc === casterDoc) || !doc.actor || isObjectToken(doc) || areEnemies(casterDoc, doc)
+      || ((doc.actor.system?.attributes?.hp?.value ?? 1) <= 0) || (Math.abs(p.dx) > near) || (Math.abs(p.dy) > near)) ) {
+      console.warn(`${MODULE_ID} | teleportPassengers query from ${user.name}: ${doc.name} cannot be carried, stays`);
+      continue;
+    }
     const at = dragDestination(doc, casterDoc, { x: casterDoc._source.x + p.dx, y: casterDoc._source.y + p.dy });
     if ( !at ) { log(`${doc.name}: no free space next to ${casterDoc.name}, stays`); continue; }
     await doc.move([{ x: at.x, y: at.y, elevation: casterDoc._source.elevation ?? 0, action: "blink", snapped: true }], { [MODULE_ID]: { cleared: true } });

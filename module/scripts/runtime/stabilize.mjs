@@ -5,6 +5,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor } from "../core/requests.mjs";
 import { contentOf } from "../adapter/content.mjs";
 import { stabilize } from "../adapter/death.mjs";
 import { route } from "./router.mjs";
@@ -13,9 +14,11 @@ import { log, loc, notice, viaOwnerOrGM } from "./shared.mjs";
 export const STABILIZE_QUERY = `${MODULE_ID}.stabilize`;
 
 /** MJ actif (ou propriétaire) : la règle est relue — un client ne stabilise pas n'importe qui avec n'importe quoi. */
-async function handleStabilize({ target, activity: activityUuid }) {
+async function handleStabilize({ target, activity: activityUuid }, { user=null }={}) {
   const token = await fromUuid(target ?? "");
   const activity = await fromUuid(activityUuid ?? "");
+  // §472 : d'un joueur, seulement avec sa propre activité.
+  if ( !actsFor(user, activity?.actor) ) { console.warn(`${MODULE_ID} | stabilize query from ${user.name} refused: the activity is not theirs`); return false; }
   if ( !token?.actor || !contentOf(activity?.item).entry?.stabilizes ) return false;
   return stabilize(token.actor, { by: activity.actor?.name ?? "", with: activity.item.name });
 }

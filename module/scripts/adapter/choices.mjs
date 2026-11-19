@@ -6,6 +6,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { needsCheck } from "../core/requests.mjs";
 import { timedWait, inLine } from "./dialogs.mjs";
 import { whileAwaiting } from "./awaiting.mjs";
 import { queryPlayer, waitLabel } from "./player-wait.mjs";
@@ -31,7 +32,13 @@ const LIST_ABOVE = 6;
  *   (icône du titre), `classes` : l'habillage d'une question qui doit se reconnaître d'un coup d'œil (§282).
  * @returns {Promise<{id: string}|null>}  null si la fenêtre est fermée sans choisir.
  */
-export async function handleChoiceQuery({ actor: actorUuid, item, prompt, options, untimed=false, seconds=null, front=false, heading=null, icon=null, classes=[] }) {
+export async function handleChoiceQuery({ actor: actorUuid, item, prompt, options, untimed=false, seconds=null, front=false, heading=null, icon=null, classes=[] }, { user=null }={}) {
+  // §472 : d'un joueur, pas d'en-tête ni d'habillage (réservés aux questions du moteur posées par le MJ) ; Foundry nettoie la fenêtre.
+  if ( needsCheck(user) ) {
+    heading = null;
+    classes = [];
+    if ( !Array.isArray(options) ) options = [];
+  }
   const actor = await fromUuid(actorUuid);
   const question = `${heading ?? ""}<p>${prompt ?? game.i18n.localize("DND5ECOMBAT.ChoixEffet")}</p>`;
   // §113 : au-delà de quelques options (Assistance : 18 compétences), une liste déroulante — un bouton par option faisait une

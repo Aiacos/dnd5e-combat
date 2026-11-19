@@ -17,6 +17,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { atCostMarginFor, cleanCost, holdSeconds, nearMiss, AT_COST_HOLD, AT_COST_MARGIN } from "../core/success-at-cost.mjs";
 import { AT_COST_QUERY, askCost, askPlayerAtCost, handleAtCostQuery } from "../adapter/success-at-cost.mjs";
 import { whileAwaiting } from "../adapter/awaiting.mjs";
@@ -213,7 +214,9 @@ export async function offerOnMessage(messageId, { what, cost }={}) {
 }
 
 /** MJ actif : le jet est marqué réussi à un prix (une seule fois). */
-async function markMessage({ message: id, cost=null }) {
+async function markMessage({ message: id, cost=null }, { user=null }={}) {
+  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | successAtCostMark query from ${user.name} refused: only a GM sends it`); return false; }
   const message = game.messages.get(id);
   if ( !message || message.getFlag(MODULE_ID, "atCost") ) return false;
   await message.setFlag(MODULE_ID, "atCost", { cost: cost ?? null });

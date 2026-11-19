@@ -15,6 +15,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { STEPS } from "../core/action.mjs";
 import { masteryEffect, grazeDamage, toppleDC, cleaveModifier, markExpires } from "../core/mastery.mjs";
 import { masteryOf, attackModOf, marksOn, markData, markModifiers } from "../adapter/mastery.mjs";
@@ -92,7 +93,9 @@ async function push(source, target, weapon) {
  * La sauvegarde de Constitution du Renversement, sur ce client : fenêtre du jet (`configure`, fermée au délai des fenêtres de combat,
  * puis lancée seule) ou sans fenêtre. Rend le total, ou null sans jet.
  */
-async function rollToppleSave({ token: uuid, dc, weapon, configure=false }) {
+async function rollToppleSave({ token: uuid, dc, weapon, configure=false }, { user=null }={}) {
+  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | topple query from ${user.name} refused: only a GM sends it`); return null; }
   const target = await fromUuid(uuid);
   const actor = target?.actor;
   if ( !actor ) return null;

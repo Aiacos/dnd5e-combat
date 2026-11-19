@@ -14,6 +14,7 @@
 
 import { isThinWall, touchesWallRegion } from "./wall-side.mjs";
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { rollerFor } from "./concentration.mjs";
 import { committedPosition, usageTokenOf, tokenCenter } from "./turn.mjs";
 import { areaOriginOf, reachesFromPoint, sphereOf, insideSphere, shapesReach } from "./space.mjs";
@@ -324,7 +325,9 @@ export async function chooseSaveAbility(actor, abilities, { dc, item }) {
  * n'est jamais lancé à sa place ; fenêtre fermée → false, et le MJ actif lui laisse la carte de
  * demande du système pour qu'il lance quand il veut. Plusieurs caractéristiques au choix : il choisit d'abord.
  */
-export async function handleSaveQuery({ usage, token: tokenUuid, ability, abilities=null, ask=true, dc, item, activity: activityUuid=null, advantage=false, disadvantage=false, foretold=null }) {
+export async function handleSaveQuery({ usage, token: tokenUuid, ability, abilities=null, ask=true, dc, item, activity: activityUuid=null, advantage=false, disadvantage=false, foretold=null }, { user=null }={}) {
+  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | save query from ${user.name} refused: only a GM sends it`); return false; }
   const usageMessage = game.messages.get(usage);
   const token = await fromUuid(tokenUuid);
   const actor = token?.actor;

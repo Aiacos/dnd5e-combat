@@ -21,6 +21,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { chooseRoller } from "../core/roller.mjs";
 import { closeRollDialogAfter, inLine } from "./dialogs.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
@@ -81,7 +82,9 @@ export async function rollConcentration({ actor, dc, ability }, promptId) {
  * jet est fait (la carte de demande est alors retirée par le MJ actif, `concentrationPrompt`), false sinon : la carte reste.
  * @param {{actor: string, dc: number, ability?: string, prompt: string}} payload
  */
-export async function handleConcentrationQuery({ actor: actorUuid, dc, ability=null, prompt }) {
+export async function handleConcentrationQuery({ actor: actorUuid, dc, ability=null, prompt }, { user=null }={}) {
+  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | concentration query from ${user.name} refused: only a GM sends it`); return false; }
   const actor = await fromUuid(actorUuid);
   if ( !actor ) return false;
   ui.notifications.info(game.i18n.format("DND5ECOMBAT.DemandeConcentrationJoueur", { name: actor.name, dc }));

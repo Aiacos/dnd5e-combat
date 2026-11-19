@@ -11,6 +11,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor, needsCheck } from "../core/requests.mjs";
 import { checkUse, spendUse } from "../core/turn.mjs";
 import { actionEndingsOf } from "../adapter/action-end.mjs";
 import { resaveAgainst } from "../adapter/areas.mjs";
@@ -29,12 +30,20 @@ import { enqueue } from "./queue.mjs";
 export const ACTION_END_QUERY = `${MODULE_ID}.actionEnd`;
 
 /** MJ actif : l'effet tombe, ou sa sauvegarde est rejouée. La règle est relue ici — un client ne fait pas tomber n'importe quoi. */
-async function handleActionEnd({ effect: uuid }) {
+async function handleActionEnd({ effect: uuid }, { user=null }={}) {
   const effect = await fromUuid(uuid ?? "");
   const actor = effect?.parent;
   if ( actor?.documentName !== "Actor" ) return false;
-  const ending = [...actionEndingsOf(actor, "bearer"), ...actionEndingsOf(actor, "other")].find(e => e.effect === effect);
+  const own = actionEndingsOf(actor, "bearer").find(e => e.effect === effect);
+  const ending = own ?? actionEndingsOf(actor, "other").find(e => e.effect === effect);
   if ( !ending ) return false;
+  // §472 : d'un joueur, le porteur met fin à son propre effet ; un autre doit avoir une créature à lui sur la même scène.
+  if ( needsCheck(user) ) {
+    const scene = tokenOf(actor)?.parent ?? null;
+    const allowed = (own && actsFor(user, actor))
+      || (!own && !!scene && scene.tokens.some(t => t.actor && (t.actor !== actor) && actsFor(user, t.actor)));
+    if ( !allowed ) { console.warn(`${MODULE_ID} | actionEnd query from ${user.name} refused: ${effect.name} on ${actor.name} is not theirs to end`); return false; }
+  }
   const token = tokenOf(actor);
   if ( ending.rule.roll === "save" ) {
     const origin = await fromUuid(effect.system?.origin?.activity ?? "");

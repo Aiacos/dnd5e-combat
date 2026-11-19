@@ -6,6 +6,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor, needsCheck } from "../core/requests.mjs";
 import { readAreaState } from "../adapter/areas.mjs";
 import { wallSideRuleOf, wallGeometryOf, sideDepthOf, sideRegionOf, isCellWall, isThinWall, wallAuraRuleOf, auraRegionOf } from "../adapter/wall-side.mjs";
 import { defaultSide, sideShapes, ringShapes, innerRingShapes, auraShapes } from "../core/wall.mjs";
@@ -139,9 +140,14 @@ async function onDelete(region) {
  * Côté MJ actif : retourner la face brûlante, ou la mettre d'un côté donné (`side` : +1 à gauche du tracé ou à l'intérieur de l'anneau,
  * -1 de l'autre côté). À la file avec la pose de la face : un choix fait pendant qu'elle se pose ne se perd pas.
  */
-export function handleFlipWallSide({ region: uuid, side: wanted=null }) {
+export function handleFlipWallSide({ region: uuid, side: wanted=null }, { user=null }={}) {
   const wall = fromUuidSync(uuid, { strict: false });
   if ( !wall || !wallSideRuleOf(wall) ) return false;
+  // §472 : d'un joueur, seulement le mur qu'il a posé (l'activité du sort est la sienne).
+  if ( needsCheck(user) && !actsFor(user, fromUuidSync(wall.getFlag("dnd5e", "activity") ?? "", { strict: false })?.actor) ) {
+    console.warn(`${MODULE_ID} | flipWallSide query from ${user.name} refused: ${wall.name} is not theirs`);
+    return false;
+  }
   return enqueue(`wallSide:${wall.id}`, async () => {
     const current = wall.getFlag(MODULE_ID, "wallSide")?.side ?? 1;
     const side = [1, -1].includes(wanted) ? wanted : -current;

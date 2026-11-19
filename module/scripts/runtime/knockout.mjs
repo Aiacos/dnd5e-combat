@@ -10,6 +10,7 @@
  *    initiative avec le Désavantage — « un embusqué caché qui commence le combat surprend qui ne se doute de rien ».
  */
 import { MODULE_ID } from "../constants.mjs";
+import { actsFor, needsCheck } from "../core/requests.mjs";
 import { KNOCKED_OUT_FLAG, FIRST_AID_DC, isKnockedOut } from "../adapter/knockout.mjs";
 import { hiddenFrom } from "../adapter/stealth.mjs";
 import { route } from "./router.mjs";
@@ -33,8 +34,14 @@ async function wake(actor, { reason="hp", by="" }={}) {
 }
 
 /** MJ actif (ou propriétaire) : réveiller la créature visée par des premiers soins réussis. La règle est relue ici. */
-async function handleWake({ target, by="" }) {
+async function handleWake({ target, by="", helper=null }, { user=null }={}) {
   const token = await fromUuid(target ?? "");
+  // §472 : d'un joueur, l'aidant est le sien et se tient sur la même scène ; son nom vient de sa fiche, pas des données.
+  if ( needsCheck(user) ) {
+    const aid = helper ? await fromUuid(helper) : null;
+    if ( !aid?.actor || !actsFor(user, aid.actor) || (aid.parent !== token?.parent) ) { console.warn(`${MODULE_ID} | wake query from ${user.name} refused: no helper of theirs next to ${token?.name ?? target}`); return false; }
+    by = aid.name;
+  }
   return token?.actor ? wake(token.actor, { reason: "aid", by }) : false;
 }
 
@@ -60,7 +67,7 @@ export async function firstAid(token, target) {
     return false;
   }
   notice(target, { key: "Retour.Action.SoinsReussis" }, "gain", { all: true, action: "firstAid", outcome: "success" });
-  return viaOwnerOrGM(!!target.actor.isOwner, WAKE_QUERY, handleWake, { target: target.uuid, by: actor.name }, { fallback: false });
+  return viaOwnerOrGM(!!target.actor.isOwner, WAKE_QUERY, handleWake, { target: target.uuid, by: actor.name, helper: token.uuid }, { fallback: false });
 }
 
 /* -------------------------------------------- */

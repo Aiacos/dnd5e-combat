@@ -4,11 +4,14 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 
 export const TARGETS_QUERY = `${MODULE_ID}.setTargets`;
 
 /** Côté de celui qui a lancé le sort : ses cibles deviennent celles que la zone recouvre. */
-export function handleTargetsQuery({ tokens }) {
+export function handleTargetsQuery({ tokens }, { user=null }={}) {
+  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | showTargets query from ${user.name} refused: only a GM sends it`); return false; }
   for ( const t of Array.from(game.user.targets) ) t.setTarget(false, { releaseOthers: false });
   for ( const uuid of tokens ) fromUuidSync(uuid)?.object?.setTarget(true, { releaseOthers: false });
   return true;

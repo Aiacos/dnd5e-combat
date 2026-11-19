@@ -24,6 +24,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { CLIMB_DC, CEILING_DC, CLIMB_CHECK_SECONDS, climbableCells, climbCheckDue, flippedScale, acrobaticFallDue, ledgeCost, climbGauge, fallDice } from "../core/climb.mjs";
 import { placementOf } from "../core/altitude.mjs";
 import {
@@ -814,7 +815,9 @@ async function onFallCard(message) {
  * Côté de celui qui grimpe : le test de Force (Athlétisme) — DD 15 au mur, DD 20 au plafond —, dans la fenêtre de jet de dnd5e (où
  * l'interface propose ses aides, §113) ; fermée ou au délai, lancé sans fenêtre. Rend `{ total, success }`, ou null sans jet.
  */
-export async function handleClimbQuery({ token: uuid, configure=true, dc=CLIMB_DC }) {
+export async function handleClimbQuery({ token: uuid, configure=true, dc=CLIMB_DC }, { user=null }={}) {
+  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | climb query from ${user.name} refused: only a GM sends it`); return null; }
   const token = await fromUuid(uuid);
   const actor = token?.actor;
   if ( !actor ) return null;

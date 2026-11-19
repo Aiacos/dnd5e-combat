@@ -8,6 +8,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { fromTrusted } from "../core/requests.mjs";
 import { contentOf } from "../adapter/content.mjs";
 import { placeItemEffect } from "../adapter/effects.mjs";
 import { tokenOf } from "../adapter/facts.mjs";
@@ -69,7 +70,9 @@ async function resolveCatalyst(actor) {
 }
 
 /** MJ actif : le catalyseur noté ; hors combat, la sauvegarde aussitôt. */
-async function handleCatalyst({ actor: uuid }) {
+async function handleCatalyst({ actor: uuid }, { user=null }={}) {
+  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | catalyst query from ${user.name} refused: only a GM sends it`); return null; }
   const actor = await fromUuid(uuid ?? "");
   if ( !actor || !catalystOf(actor) ) return null;
   if ( combatantFor(actor)?.parent?.started ) {
