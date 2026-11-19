@@ -46,6 +46,9 @@ const TABLE = {
   "trait-sense": { sense: { kind: "locate", range: 60, walls: false, detects: { "target.creatureType": ["undead", "fiend"] } } },
   "spell-sense": { sense: { kind: "locate", range: 30, via: "effect", magic: "div" } },
   "two-effects": { sense: { kind: "locate", range: 60, via: "effect", fromEffect: "aaaaaaaaaaaaaaaa", magic: true } },
+  "trait-sight": { sense: { kind: "sight", range: 30, walls: false, needs: "sight" } },
+  "trait-dark-sight": { sense: { kind: "sight", range: 60, through: ["darkness"] } },
+  "trait-echo": { sense: { kind: "locate", range: 30, needs: "hearing" } },
   "ward-school": { wardsDetection: ["div"] },
   "ward-magic": { wardsDetection: ["magic"] }
 };
@@ -106,6 +109,34 @@ describe("ce que ces sens disent d'une cible", () => {
     const [spell, natural, target] = [tokenOf(caster, 0), tokenOf(actorOf("o", ["trait-sense"]), 0), tokenOf(hidden, 20)];
     expect(sensedBy(spell, target, between(spell, target, () => false))).toBe(null);
     expect(sensedBy(natural, target, between(natural, target, () => false))).toBe("locate");
+  });
+  it("une vue déclarée : à travers un mur si elle les traverse, pas une cible Invisible, pas si son porteur est Aveuglé", () => {
+    registerTable(PACK, TABLE);
+    const observer = tokenOf(actorOf("o", ["trait-sight"]), 0);
+    const target = tokenOf(actorOf("t", []), 20);
+    const scene = extra => ({ ...between(observer, target, walled), ...extra });
+    expect(sensedBy(observer, target, scene({}))).toBe("sight");
+    expect(sensedBy(observer, target, scene({ invisible: () => true }))).toBe(null);
+    expect(sensedBy(observer, target, scene({ blind: () => true }))).toBe(null);
+    expect(sensedBy(observer, target, scene({ deaf: () => true }))).toBe("sight");
+    expect(sensedBy(observer, target, scene({ blocked: () => ({ fog: false, darkness: true }) }))).toBe(null);
+  });
+  it("des ténèbres n'arrêtent pas la vue qui les perce ; une brume, si", () => {
+    registerTable(PACK, TABLE);
+    const observer = tokenOf(actorOf("o", ["trait-dark-sight"]), 0);
+    const target = tokenOf(actorOf("t", []), 40);
+    const scene = blocked => ({ ...between(observer, target, () => false), blocked: () => blocked });
+    expect(sensedBy(observer, target, scene({ fog: false, darkness: true }))).toBe("sight");
+    expect(sensedBy(observer, target, scene({ fog: true, darkness: true }))).toBe(null);
+  });
+  it("un sens qui localise ne lit ni la zone ni l'état Invisible ; `needs: \"hearing\"` l'éteint pour un porteur Assourdi", () => {
+    registerTable(PACK, TABLE);
+    const observer = tokenOf(actorOf("o", ["trait-echo"]), 0);
+    const target = tokenOf(actorOf("t", []), 20);
+    const unread = () => { throw new Error("read"); };
+    const scene = extra => ({ ...between(observer, target, () => false), invisible: unread, blocked: unread, ...extra });
+    expect(sensedBy(observer, target, scene({}))).toBe("locate");
+    expect(sensedBy(observer, target, scene({ deaf: () => true }))).toBe(null);
   });
   it("sans sens déclaré : rien, et la scène n'est même pas lue", () => {
     let asked = 0;

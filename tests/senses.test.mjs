@@ -27,6 +27,35 @@ describe("sens déclaré : le verdict sur une cible", () => {
   it("`reveals: \"presence\"` : la présence est sue, pas la position", () => {
     expect(senseVerdict({ ...locate, reveals: "presence" }, near)).toBe("presence");
   });
+  it("une vue ne voit pas une cible Invisible ; un sens qui localise, si", () => {
+    expect(senseVerdict({ kind: "sight", range: 30 }, { ...near, invisible: true })).toBe(null);
+    expect(senseVerdict(locate, { ...near, invisible: true })).toBe("locate");
+  });
+  it("une brume arrête toute vue ; des ténèbres aussi, sauf la vue qui les perce (`through`)", () => {
+    const sight = { kind: "sight", range: 30 };
+    const piercing = { ...sight, through: ["darkness"] };
+    expect(senseVerdict(sight, { ...near, darkness: true })).toBe(null);
+    expect(senseVerdict(piercing, { ...near, darkness: true })).toBe("sight");
+    expect(senseVerdict(sight, { ...near, fog: true })).toBe(null);
+    expect(senseVerdict(piercing, { ...near, fog: true })).toBe(null);
+    expect(senseVerdict(piercing, { ...near, darkness: true, invisible: true })).toBe(null);
+    // Ni la brume ni les ténèbres n'arrêtent un sens qui localise.
+    expect(senseVerdict(locate, { ...near, fog: true, darkness: true })).toBe("locate");
+  });
+  it("`needs` : éteint tant que le porteur est Aveuglé (`sight`) ou Assourdi (`hearing`)", () => {
+    const eyes = { kind: "sight", range: 30, needs: "sight" };
+    const ears = { kind: "locate", range: 30, needs: "hearing" };
+    expect(senseVerdict(eyes, { ...near, blind: true })).toBe(null);
+    expect(senseVerdict(eyes, { ...near, deaf: true })).toBe("sight");
+    expect(senseVerdict(ears, { ...near, deaf: true })).toBe(null);
+    expect(senseVerdict(ears, { ...near, blind: true })).toBe("locate");
+    // Sans `needs`, ni l'un ni l'autre ne l'éteint (une vue qui ne passe pas par les yeux).
+    expect(senseVerdict({ kind: "sight", range: 30 }, { ...near, blind: true, deaf: true })).toBe("sight");
+  });
+  it("la présence seule ne dépend pas de la vue, même pour un sens de genre « sight »", () => {
+    const presence = { kind: "sight", range: 30, reveals: "presence" };
+    expect(senseVerdict(presence, { ...near, invisible: true, fog: true })).toBe("presence");
+  });
   it("le meilleur verdict de plusieurs sens l'emporte", () => {
     expect(SENSE_VERDICTS).toEqual(["presence", "locate", "sight"]);
     expect(bestVerdict(["presence", null, "locate"])).toBe("locate");
@@ -70,7 +99,8 @@ describe("déclaration dans le contenu", () => {
     const ok = { sense: { kind: "locate", range: 30, units: "ft", via: "effect", fromEffect: "abcdefghij012345", walls: false,
       magic: "div", reveals: "presence", detects: { "target.creatureType": ["undead"] } } };
     expect(validateEntry(ok, { facts })).toEqual([]);
-    const two = { sense: [{ kind: "sight", range: 10 }, { kind: "locate", range: 60, magic: true }] };
+    const two = { sense: [{ kind: "sight", range: 10, through: ["darkness"], needs: "sight" },
+      { kind: "locate", range: 60, magic: true, needs: "hearing" }] };
     expect(validateEntry(two, { facts })).toEqual([]);
     expect(validateEntry({ wardsDetection: ["div", "magic"] }, { facts })).toEqual([]);
   });
@@ -80,6 +110,8 @@ describe("déclaration dans le contenu", () => {
       { sense: { kind: "locate", range: 30, colour: "red" } }, { sense: { kind: "locate", range: 30, walls: true } },
       { sense: { kind: "locate", range: 30, fromEffect: "abcdefghij012345" } },
       { sense: { kind: "locate", range: 30, reveals: "name" } },
+      { sense: { kind: "locate", range: 30, through: ["darkness"] } }, { sense: { kind: "sight", range: 30, through: ["fog"] } },
+      { sense: { kind: "sight", range: 30, through: [] } }, { sense: { kind: "sight", range: 30, needs: "smell" } },
       { sense: { kind: "locate", range: 30, detects: { "target.unknownFact": true } } }, { sense: [] },
       { wardsDetection: [] }, { wardsDetection: "div" }, { wardsDetection: [""] }];
     for ( const entry of bad ) expect(validateEntry(entry, { facts }).length, JSON.stringify(entry)).toBeGreaterThan(0);

@@ -12,7 +12,7 @@ import { SPELL_COMPONENTS } from "../spell-failure.mjs";
 import { isId, isObject } from "./shared.mjs";
 import { validateDataFixes } from "../data-fixes.mjs";
 import { validateAura, validateTrigger } from "./steps.mjs";
-import { SENSE_KINDS } from "../senses.mjs";
+import { SENSE_KINDS, SENSE_THROUGH, SENSE_NEEDS } from "../senses.mjs";
 /**
  * Les erreurs d'une entrée. Vide = valide.
  * @param {object} entry
@@ -831,7 +831,7 @@ function validateSenses(entry, at, facts, errors) {
     list.forEach((sense, i) => {
       const here = `${at}sense${Array.isArray(entry.sense) ? `[${i}]` : ""}`;
       if ( !isObject(sense) ) return errors.push(`${here}: { kind, range, … }`);
-      const known = ["kind", "range", "units", "via", "fromEffect", "walls", "detects", "magic", "reveals"];
+      const known = ["kind", "range", "units", "via", "fromEffect", "walls", "detects", "magic", "reveals", "through", "needs"];
       for ( const key of Object.keys(sense) ) if ( !known.includes(key) ) errors.push(`${here}: unknown key "${key}"`);
       if ( !SENSE_KINDS.includes(sense.kind) ) errors.push(`${here}.kind: ${SENSE_KINDS.join(" | ")}`);
       if ( !(Number.isFinite(sense.range) && (sense.range > 0)) ) errors.push(`${here}.range: a positive number`);
@@ -847,6 +847,11 @@ function validateSenses(entry, at, facts, errors) {
         errors.push(`${here}.magic: true or a school of magic`);
       }
       if ( ("reveals" in sense) && (sense.reveals !== "presence") ) errors.push(`${here}.reveals: "presence"`);
+      if ( ("through" in sense) && !((sense.kind === "sight") && Array.isArray(sense.through) && sense.through.length
+        && sense.through.every(t => SENSE_THROUGH.includes(t))) ) {
+        errors.push(`${here}.through: a non-empty list of ${SENSE_THROUGH.join(" | ")}, with kind: "sight"`);
+      }
+      if ( ("needs" in sense) && !SENSE_NEEDS.includes(sense.needs) ) errors.push(`${here}.needs: ${SENSE_NEEDS.join(" | ")}`);
       for ( const key of unknownFacts(sense.detects ?? null, facts) ) errors.push(`${here}.detects: unknown fact "${key}"`);
     });
   }
