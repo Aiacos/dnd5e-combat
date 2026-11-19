@@ -31,7 +31,7 @@ import { declaredSensesOf, mutedSensesOf } from "../adapter/senses.mjs";
 import { hiddenFrom } from "../adapter/stealth.mjs";
 import { canHear } from "../adapter/hearing.mjs";
 import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, DEVILS_SIGHT_OUTLINE, HEARING_MODE, SENSE_MODE, SENSE_OUTLINE,
-  grantInMemoryModes, tintOutlineShader } from "../core/light.mjs";
+  grantInMemoryModes, tintOutlineShader, FIELD_MODES, fieldOfView } from "../core/light.mjs";
 import { hidesIdentity } from "../core/senses.mjs";
 import { route } from "../runtime/router.mjs";
 import { theaterActive } from "../runtime/theater-state.mjs";
@@ -238,6 +238,8 @@ function grantOn(doc) {
   const modes = CONFIG.Canvas.detectionModes;
   if ( !doc?.detectionModes || !doc.sight?.enabled ) return false;
   blindIfSenseless(doc.object);
+  // Avant les modes en mémoire : il lit ceux que dnd5e a projetés de la fiche.
+  grantField(doc);
   // L'ouïe d'un Aveuglé en DERNIER (core/light.mjs `grantInMemoryModes`) : le cœur essaie les modes spéciaux dans l'ordre.
   return grantInMemoryModes(doc.detectionModes, {
     // §447 : qui voit à travers ses propres Ténèbres reçoit aussi ce mode (sa règle, `devilsSightSeesToken`, n'y met pas de limite).
@@ -255,6 +257,51 @@ function grantOn(doc) {
  * documents/token.mjs:3810) et laissait `{ range }` sans `enabled`. Le hook de la mise à jour vient après cette préparation : on redonne
  * les modes aux tokens touchés, et, s'il en manquait, la vue se refait.
  */
+/**
+ * Le champ de vue d'un sens (core/light.mjs `fieldOfView`), posé en mémoire sur la vue PRÉPARÉE du token — portée, mode de vision,
+ * image — comme dnd5e y projette la vision dans le noir : la carte se voit jusqu'à la portée de la vision véritable, de la vision
+ * aveugle ou de la Vision du diable. Rien n'est écrit ; la préparation des données du token efface tout, ce hook le remet. Changé,
+ * la source de vision de ce token est refaite (elle seule). Ce que ce champ ne fait pas, faute de remplacer la source de vision du
+ * cœur : percer une source de ténèbres, ou servir à un observateur Aveuglé — là, seuls les tokens sont montrés, comme avant.
+ */
+function grantField(doc) {
+  const modes = doc.detectionModes;
+  const enabled = id => ((modes[id]?.enabled ?? true) && (modes[id]?.range > 0)) ? modes[id].range : 0;
+  const field = fieldOfView({ darkvision: enabled("basicSight"), seeAll: enabled("seeAll"), blindsight: enabled("blindsight"),
+    devilsSight: CONFIG.Canvas.visionModes?.[FIELD_MODES.devilsSight.id] ? devilsSightRange(doc) : 0 });
+  if ( !field || !CONFIG.Canvas.visionModes?.[field.visionMode] ) {
+    // Le sens n'est plus là (la préparation du token a remis la vue de la fiche) : la source qui porte encore son champ
+    // est refaite.
+    const stale = doc.object?.vision?.visionMode?.id;
+    if ( stale && FIELD_IDS.includes(stale) && !doc.object.destroyed ) doc.object.initializeVisionSource();
+    return;
+  }
+  const sight = doc.sight;
+  const range = Number.isFinite(field.range) ? field.range : (canvas.dimensions?.maxR ?? sight.range);
+  if ( (sight.visionMode === field.visionMode) && (sight.range === range) ) return;
+  Object.assign(sight, { range, visionMode: field.visionMode, contrast: field.contrast, saturation: field.saturation,
+    brightness: field.brightness });
+  if ( doc.object?.vision && !doc.object.destroyed ) doc.object.initializeVisionSource();
+}
+
+const FIELD_IDS = Object.values(FIELD_MODES).map(mode => mode.id);
+
+/** Les modes de vision des champs de vue (`FIELD_MODES`), absents de la configuration des tokens : le moteur les choisit. */
+function fieldModes() {
+  const VisionMode = foundry.canvas.perception.VisionMode;
+  const shader = foundry.canvas.rendering.shaders.ColorAdjustmentsSamplerShader;
+  const out = {};
+  for ( const { id, label, contrast, saturation, brightness, grey } of Object.values(FIELD_MODES) ) {
+    out[id] = new VisionMode({
+      id, label, tokenConfig: false,
+      ...(grey ? { canvas: { shader, uniforms: { contrast: 0, saturation: -1, exposure: 0 } },
+        lighting: { background: { visibility: VisionMode.LIGHTING_VISIBILITY.REQUIRED } } } : {}),
+      vision: { darkness: { adaptive: false }, defaults: { contrast, saturation, brightness } }
+    });
+  }
+  return out;
+}
+
 function regrant(docs) {
   if ( !canvas?.ready ) return;
   let changed = false;
@@ -356,6 +403,10 @@ function installModes() {
   modes[DEVILS_SIGHT.mode] ??= devilsSightMode();
   modes[SENSE_MODE] ??= senseMode();
   modes[HEARING_MODE] ??= hearingMode();
+  const visionModes = CONFIG.Canvas.visionModes;
+  if ( visionModes && foundry.canvas.perception.VisionMode ) {
+    for ( const [id, mode] of Object.entries(fieldModes()) ) visionModes[id] ??= mode;
+  }
   for ( const [id, mode] of Object.entries(modes) ) {
     const extended = mode ? extend(id, mode) : null;
     if ( extended ) modes[id] = extended;
