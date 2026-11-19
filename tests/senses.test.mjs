@@ -3,7 +3,8 @@
  * comme une vue — et `wardsDetection`, ce qui en protège. Règle pure : portée, murs, cible détectée ou non, protection.
  */
 import { describe, it, expect } from "vitest";
-import { senseVerdict, bestVerdict, wardedAgainst, sensesIn, SENSE_VERDICTS, detectsTarget, mutedSenses, hidesIdentity }
+import { senseVerdict, bestVerdict, wardedAgainst, sensesIn, SENSE_VERDICTS, detectsTarget, mutedSenses, hidesIdentity,
+  onlyLocated }
   from "../module/scripts/core/senses.mjs";
 import { validateEntry } from "../module/scripts/core/content/entry.mjs";
 import { ENTRY_KEYS } from "../module/scripts/core/content.mjs";
@@ -138,6 +139,18 @@ describe("réglage `anonymousLocated` : l'identité d'une créature perçue sans
     expect(hidesIdentity("located", true)).toBe(true);
     expect(hidesIdentity("aura", true)).toBe(false);
     expect(hidesIdentity(null, true)).toBe(false);
+  });
+});
+
+describe("la marque « localisée, pas vue » d'une créature affichée par un sens déclaré", () => {
+  it("localisée seulement : la marque", () => {
+    expect(onlyLocated(["locate"])).toBe(true);
+    expect(onlyLocated([null, "locate", "presence"])).toBe(true);
+    expect(onlyLocated([])).toBe(true);
+  });
+  it("vue par une vue déclarée, fût-ce par un seul observateur : pas de marque", () => {
+    expect(onlyLocated(["sight"])).toBe(false);
+    expect(onlyLocated(["locate", "sight"])).toBe(false);
   });
 });
 
