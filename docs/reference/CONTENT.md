@@ -251,6 +251,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `sneakAttack` | 1 | `sneak-attack` |
 | `sneakBonus` | 1 | `assassinate` |
 | `sniper` | 1 | `skulker` |
+| `spellDamageRerolls` | 1 | `empowered-spell` |
 | `spellDamageTypes` | 2 | `grave-touched`, `psychic-spells` |
 | `spellFailure` | 1 | `slow` |
 | `spellRecall` | 1 | `boon-of-spell-recall` |
