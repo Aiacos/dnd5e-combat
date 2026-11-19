@@ -63,6 +63,37 @@ export function dispelledBy(light, maxLevel, darkness) {
 }
 
 /**
+ * Une source de ténèbres de la scène compte-t-elle comme des ténèbres pour les règles ? Oui pour celle qu'un MJ a posée à la main
+ * (ou qu'un token émet) : le cœur l'oppose déjà à la vision dans le noir, et ses bords arrêtent tous ses modes de détection — la
+ * vision aveugle et la vision véritable, que des ténèbres n'arrêtent pas, doivent donc être jugées par le moteur. Pas pour la
+ * lumière d'une zone du moteur (`engineZone`) : sa région la représente déjà, et sait qui l'a lancée. Ni pour une source d'un autre
+ * niveau de la scène que celui de l'observateur (`onLevel: false`) : le test du cœur (`PointDarknessSource#testPoint`) ignore
+ * l'élévation — une lumière de ténèbres du rez-de-chaussée couvrirait sinon deux tokens de l'étage.
+ * @param {{active: boolean, preview?: boolean, engineZone?: boolean, onLevel?: boolean}} source
+ */
+export function isPlainDarkness({ active, preview=false, engineZone=false, onLevel=true }) {
+  return !!active && !preview && !engineZone && (onLevel !== false);
+}
+
+/**
+ * Un disque peut-il toucher un segment ? Pour écarter, avant d'échantillonner le trait de vue, une source dont le cercle en est
+ * loin. `margin` : la tolérance (le cœur teste un point à ±1 px, et le polygone d'une source ne déborde jamais de son rayon).
+ * Sans rayon connu : oui (on échantillonne).
+ * @param {{x: number, y: number, radius?: number}} disc
+ * @param {{x: number, y: number}} from
+ * @param {{x: number, y: number}} to
+ * @param {number} [margin]
+ */
+export function discNearSegment(disc, from, to, margin=2) {
+  if ( !Number.isFinite(disc?.radius) || !Number.isFinite(disc?.x) || !Number.isFinite(disc?.y) ) return true;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length2 = (dx * dx) + (dy * dy);
+  const t = length2 ? Math.max(0, Math.min(1, (((disc.x - from.x) * dx) + ((disc.y - from.y) * dy)) / length2)) : 0;
+  return Math.hypot(disc.x - (from.x + (dx * t)), disc.y - (from.y + (dy * t))) <= (disc.radius + margin);
+}
+
+/**
  * Les sens qui percent une zone qui bloque la vue. Brume (`obscures`) : ceux qui ne voient pas (vision aveugle, et les modes du cœur sans
  * murs : `CORE_JUDGED`). Ténèbres magiques : ceux-là, plus la vision véritable (`seeAll` de dnd5e) et la Vision du diable — la vision
  * dans le noir, elle, n'y voit rien (PHB 2024, Ténèbres).
