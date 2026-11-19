@@ -69,8 +69,8 @@ export const MONSTERS = Object.freeze({
   "deflect-blow": { triggers: [{ on: "isHit", do: [{ type: "use", activity: "qvWn7DuBd5mmvZ1M" }, { type: "reduce" }] }] },
   // Réactif (Marilith) : une Réaction à chaque tour du combat.
   "reactive": { reactions: { perRound: 20 } },
-  // Disparition (Feu follet, Esprit frappeur) : l'Invisibilité tombe après un jet d'attaque.
-  "vanish": { breaksOn: ["attack"] },
+  // Disparition : rien ici. Plusieurs monstres portent le même item (identifiant, ids) sans la même règle ; celle du Feu follet
+  // tombe après un jet d'attaque — lu dans son texte (core/monster-text.mjs, `monsterBreaksOn`).
   // Ravenloft. Protection ésotérique (Gennifer) : Étourdi seulement pour un Mort-vivant.
   "esoteric-ward": { effectsIf: { "target.creatureType": "undead" } },
   // Déformation du corps (Émissaire stellaire inférieur) : Étourdi « jusqu'au début de son prochain tour » — celui de la cible.

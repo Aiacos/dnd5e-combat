@@ -9,6 +9,7 @@
 import { monsterChoice, monsterDeaths, monsterEndings, monsterPushes, monsterReactions, monsterRecurring, monsterTypeGate, monsterAdvantage,
   monsterSaveDamage, monsterMissingStatus, monsterNoOpportunity, monsterBasicActions, monsterSightGate, monsterImmunity, monsterEffectDurations,
   monsterReactionWindow, monsterActivationAdvantage, monsterDefense, monsterChargeGate, monsterLightSensitivity, monsterSelfTeleport,
+  monsterBreaksOn,
   monsterTeleportChoice } from "./monster-text.mjs";
 import { readDrain, drains } from "./drain.mjs";
 
@@ -79,6 +80,9 @@ export function monsterTextLayer({ html, identifier=null, activities=[], effects
   if ( monsterNoOpportunity(html, fx) ) recurringRest.noOpportunityAttacks = true;
   // §334 : « moves up to (half) its Speed without provoking Opportunity Attacks » — le reste du tour sans attaque d'opportunité.
   if ( /\bmoves? up to (?:half )?its (?:\w+ )?Speed without provoking\b/i.test(html.replace(/<[^>]+>/g, " ").replace(/&Reference\[([^\]]*)\]/g, "$1")) ) recurringRest.noOpportunity = "afterUse";
+  // Les effets de la capacité cessent quand son porteur fait un jet d'attaque, si son texte le dit (Disparition du Feu follet).
+  const breaks = monsterBreaksOn(html);
+  if ( breaks && fx.length ) recurringRest.breaksOn = breaks;
   const basics = monsterBasicActions(html, acts);
   if ( basics ) recurringRest.basicActions = basics;
   if ( drains(readDrain(html)) ) recurringRest.drain = true;
