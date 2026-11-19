@@ -6,7 +6,7 @@
  * runtime/usage.mjs).
  */
 
-import { isShort, plainCost, resourceIssues, slotLeft } from "../core/resources.mjs";
+import { isShort, plainCost, resourceIssues, slotLeft, awaitsPreparation } from "../core/resources.mjs";
 import { ritualModeOf } from "./grimoire.mjs";
 
 /** Le niveau d'un emplacement consommé par une cible « spellSlots » (sa cible, plus la montée par niveau). */
@@ -46,6 +46,17 @@ function spentTargets(activity, usageConfig) {
 }
 
 /**
+ * Ce sort de la fiche attend-il d'être préparé (core/resources.mjs, `awaitsPreparation`) ? Lu sur l'item ; pas pour autre chose
+ * qu'un sort (un parchemin se lance sans préparation).
+ * @param {Item} item
+ */
+export function unpreparedSpell(item) {
+  if ( item?.type !== "spell" ) return false;
+  return awaitsPreparation({ level: item.system.level, prepared: item.system.prepared,
+    prepares: !!CONFIG.DND5E?.spellcasting?.[item.system.method]?.prepares });
+}
+
+/**
  * Ce qui manque à cette utilisation. `keys` : les raisons (`noSlot`, `noUses`, `noQuantity`, `unprepared`) ; `skip` : ce qu'un joueur
  * qui force ne dépense pas (`spellSlot`, indexes de `resources`).
  * @param {Activity} activity
@@ -71,9 +82,8 @@ export function missingResources(activity, usageConfig=null, { recast=false }={}
   const short = targets.filter(isShort);
   // Préparé : une méthode qui se prépare (CONFIG.DND5E.spellcasting[…].prepares) demande `prepared` ; un rituel non préparé d'un Adepte
   // des rituels passe par le mode rituel.
-  const prepares = spell && !linked && !!CONFIG.DND5E?.spellcasting?.[item.system.method]?.prepares;
-  // Un sort mineur ne se prépare pas.
-  const unprepared = prepares && ((Number(item.system.level) || 0) > 0) && !item.system.prepared && !ritual;
+  // Un sort mineur ne se prépare pas (`awaitsPreparation`).
+  const unprepared = spell && !linked && unpreparedSpell(item) && !ritual;
   // Un objet physique épuisé (la dernière javeline lancée, laissée sur la fiche à 0).
   const empty = ["weapon", "consumable", "equipment", "tool"].includes(item.type) && (item.system.quantity !== undefined)
     && (Number(item.system.quantity) <= 0);

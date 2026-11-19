@@ -28,6 +28,17 @@ export function plainCost(value) {
 }
 
 /**
+ * Un sort qui attend d'être préparé : sa méthode se prépare (`CONFIG.DND5E.spellcasting[…].prepares` : « spell », « pact »), il
+ * n'est pas mineur, et il n'est pas préparé (`prepared` : 0 non, 1 oui, 2 toujours). Un sort lancé par un objet ou une activité
+ * liée n'est pas concerné : l'appelant ne le soumet pas.
+ * @param {{level?: number, prepares?: boolean, prepared?: number|boolean}} spell
+ * @returns {boolean}
+ */
+export function awaitsPreparation({ level=0, prepares=false, prepared=0 }={}) {
+  return !!prepares && ((Number(level) || 0) > 0) && !prepared;
+}
+
+/**
  * Les raisons « ressource » d'une utilisation, dans l'ordre : `noSlot`, `noUses`, `noQuantity`, `unprepared`.
  * @param {object} use
  * @param {boolean} [use.slotMissing]    Un emplacement à dépenser (lancement ou consommation) manque.

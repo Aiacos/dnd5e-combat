@@ -55,3 +55,27 @@ describe("resourceIssues", () => {
     expect(resourceIssues({})).toEqual([]);
   });
 });
+
+// Issue #144 : les châtiments non préparés étaient proposés après un coup — la liste (`smiteOptions`) ne regardait pas la
+// préparation, que le moteur ne vérifiait qu'au lancement. Une seule règle pour les deux.
+describe("awaitsPreparation — un sort qui attend d'être préparé", () => {
+  it("méthode qui se prépare, niveau 1 ou plus, pas préparé : oui", async () => {
+    const { awaitsPreparation } = await import("../module/scripts/core/resources.mjs");
+    expect(awaitsPreparation({ level: 1, prepares: true, prepared: 0 })).toBe(true);
+    expect(awaitsPreparation({ level: 3, prepares: true, prepared: false })).toBe(true);
+  });
+  it("préparé (1), toujours préparé (2), sort mineur, méthode qui ne se prépare pas : non", async () => {
+    const { awaitsPreparation } = await import("../module/scripts/core/resources.mjs");
+    expect(awaitsPreparation({ level: 1, prepares: true, prepared: 1 })).toBe(false);
+    expect(awaitsPreparation({ level: 1, prepares: true, prepared: 2 })).toBe(false);
+    expect(awaitsPreparation({ level: 0, prepares: true, prepared: 0 })).toBe(false);
+    expect(awaitsPreparation({ level: 1, prepares: false, prepared: 0 })).toBe(false);
+    expect(awaitsPreparation()).toBe(false);
+  });
+  it("la liste des châtiments et le lancement emploient la même règle", async () => {
+    const { readFileSync } = await import("node:fs");
+    const read = path => readFileSync(new URL(`../module/scripts/adapter/${path}`, import.meta.url), "utf8");
+    expect(read("smite.mjs")).toMatch(/if \( rule && unpreparedSpell\(item\) && [^\n]*cachedFor[^\n]* \) continue;/);
+    expect(read("resources.mjs")).toContain("const unprepared = spell && !linked && unpreparedSpell(item) && !ritual;");
+  });
+});
