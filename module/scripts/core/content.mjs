@@ -150,6 +150,8 @@
  *     saveAdvantage?: string[]                  le porteur de l'item a l'avantage aux sauvegardes contre une activité qui
  *                                               pose l'un de ces états (Ascendance féerique : `charmed`, §16.25) ;
  *                                               `"magic"` : contre un sort ou un effet magique (Résistance à la magie, §18.9)
+ *     saveIgnoresCover?: true                   la sauvegarde de Dextérité de l'item ne reçoit pas le bonus d'abri de la cible
+ *                                               (Flamme sacrée ; core/save-cover.mjs)
  *     onFell?: { activity?, radius, units }     quand un ennemi tombe à 0 PV sous les coups du porteur, ou à `radius` de
  *                                               lui, l'activité (défaut : le premier soin de l'item) joue (Bénédiction du
  *                                               Ténébreux, §16.25)

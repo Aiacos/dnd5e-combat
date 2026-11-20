@@ -35,6 +35,8 @@ import { isSpellCast } from "./scrolls.mjs";
 import { normalizeTargetModes, saveModeFor } from "../core/target-modes.mjs";
 import { areEnemies, sideOf, factionOf } from "./factions.mjs";
 import { samePlane } from "./plane.mjs";
+import { coverFor } from "./cover.mjs";
+import { dexSaveTakesCover, coverSaveBonus } from "../core/save-cover.mjs";
 export { applyEffectsToToken, applyMarkToToken, applyStatusToToken, removeEffects, splitPushes } from "./apply-effects.mjs";
 export { TARGETS_QUERY, handleTargetsQuery, showTargetsTo } from "./show-targets.mjs";
 
@@ -129,9 +131,25 @@ export function readSaveMessage(message) {
 export const SAVE_QUERY = `${MODULE_ID}.rollSave`;
 const SAVE_TIMEOUT = 40000;   // deux fenêtres possibles (choix, jet), chacune bornée par adapter/dialogs.mjs
 
+/** Le bonus d'abri à la sauvegarde de Dextérité de `token` contre cette activité (0 : aucun), jugé depuis le token de l'auteur. */
+function coverBonusForSave(activity, token, ability) {
+  const area = !!activity?.target?.template?.type;
+  const ignores = contentOf(activity?.item).entry?.saveIgnoresCover === true;
+  if ( !dexSaveTakesCover({ ability, area, ignores }) ) return 0;
+  const caster = usageTokenOf(activity);
+  const target = token?.document ?? token;
+  if ( !caster || !target || (caster === target) ) return 0;
+  return coverSaveBonus(coverFor(caster.document ?? caster, target, { activity, quiet: true }));
+}
+
 /** Paramètres du jet, les mêmes que le bouton « Sauvegarde » de la carte (save.mjs:122-134). */
 function saveRollArguments(activity, actor, token, usageMessage, { ability, dc, advantage=false, disadvantage=false, foretold=null }) {
-  const bonus = CONFIG.Dice.BasicRoll.constructParts({ activityBonus: activity.save?.bonus }, activity.getRollData());
+  // Issue #183 : l'abri vaut aussi pour les sauvegardes de Dextérité (« +2 / +5 à la CA et aux jets de sauvegarde de Dextérité »).
+  // Ici pour une sauvegarde qui vise sa cible, sans zone : l'abri se juge depuis l'auteur, comme pour une attaque.
+  const cover = coverBonusForSave(activity, token, ability);
+  if ( cover ) console.log(`${MODULE_ID} | ${actor?.name}: cover, +${cover} to the Dexterity saving throw`);
+  const bonus = CONFIG.Dice.BasicRoll.constructParts({ activityBonus: activity.save?.bonus, cover: cover ? String(cover) : null },
+    activity.getRollData());
   const rollConfig = { ability, target: dc };
   // §16.25 : Ascendance féerique — l'avantage contre une activité qui pose un état que l'un de ses items désigne.
   if ( saveAdvantageAgainst(actor, activity) || fightingAdvantageFor(activity, token) || sizeAdvantageFor(actor, activity) ) rollConfig.advantage = true;
