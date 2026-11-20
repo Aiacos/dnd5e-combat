@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { dataFixPlan, withDataFixes } from "../module/scripts/core/data-fixes.mjs";
 import { ITEM_FIXES } from "../module/scripts/content/item-fixes.mjs";
+import { validateEntry } from "../module/scripts/core/content.mjs";
+import { holds } from "../module/scripts/core/triggers.mjs";
 
 // §457 : copier-coller du Guide du maître 2.0.0 (ids publics du SRD 5.2), sur des formes synthétiques.
 const book = (activity, wrong) => ({ effects: [{ _id: "ownBookEffect000" }], system: { activities: {
@@ -138,5 +140,22 @@ describe("objets du SRD 5.2 : effet porté vide, durée qui n'est pas celle du t
     // Une durée déjà changée à la main reste.
     item.effects[0].duration.value = 3600;
     expect(dataFixPlan(item, ITEM_FIXES["potion-of-invulnerability"].dataFixes).effects).toEqual([]);
+  });
+});
+
+describe("Épée vorpale (SRD 5.2) : l'arme ignore la Résistance aux dégâts tranchants", () => {
+  const rule = ITEM_FIXES["vorpal-sword-enchanted"].ignoresResistance;
+  const by = source => ({ "activity.enchantedBy": id => id === source });
+
+  it("les dégâts tranchants, pour l'arme qui porte l'enchantement seulement", () => {
+    expect(rule.types).toEqual(["slashing"]);
+    expect(holds(rule.if, by("vorpal-sword"))).toBe(true);
+    // Une autre arme du même porteur (une épée longue ordinaire, une Langue de feu) n'en profite pas.
+    expect(holds(rule.if, by(null))).toBe(false);
+    expect(holds(rule.if, by("flame-tongue"))).toBe(false);
+  });
+
+  it("l'entrée se valide", () => {
+    expect(validateEntry(ITEM_FIXES["vorpal-sword-enchanted"], { facts: { "activity.enchantedBy": true } })).toEqual([]);
   });
 });
