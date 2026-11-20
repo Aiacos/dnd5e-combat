@@ -18,7 +18,7 @@ import { dismissFamiliar, recallFamiliar, recallRefusal, canPocket, canRecall } 
 import { pocketOf, isFamiliarToken, emptyPocket } from "../adapter/familiar.mjs";
 import { basicActionOf } from "../adapter/basics.mjs";
 import { leaderOf, followersOf, follow as followIntent, unfollow as unfollowIntent } from "./follow.mjs";
-import { dismount, mountState, mountUp } from "./mount.mjs";
+import { dismount, mountIssues, mountState, mountUp } from "./mount.mjs";
 import { opportunityThreats, lastOpportunityMisses } from "./reactions.mjs";
 import { sleep } from "./shared.mjs";
 import { cellArg, finite, gmOnly, positionJson, viewedToken, waypointOf, windows } from "./testing-shared.mjs";
@@ -151,16 +151,19 @@ export function followState({ tokenId }) {
 
 /**
  * §490 (B08) : monture et ordre à un compagnon. `action` : « state » (lecture), « mount » (`tokenId` monte `targetId`), « dismount »
- * (`tokenId` descend). Les refus forçables ouvrent la fenêtre de légalité : un scénario monte sans souci. Rend l'état des deux tokens.
+ * (`tokenId` descend). `issues` : ce qui refuserait de monter, lu AVANT le geste (clés `Monture.Souci.*`). Un refus forçable ouvrirait la
+ * fenêtre de légalité, à laquelle un scénario ne répond pas : le geste passe outre sans fenêtre (`force`, défaut vrai). Rend l'état des
+ * deux tokens.
  */
-export async function mount({ action="state", tokenId, targetId=null }) {
+export async function mount({ action="state", tokenId, targetId=null, force=true }) {
   gmOnly();
   const token = viewedToken({ tokenId });
   const target = targetId ? viewedToken({ tokenId: targetId }) : null;
+  const issues = target ? mountIssues(token, target) : [];
   let done = null;
-  if ( action === "mount" ) done = await mountUp(token, target);
-  else if ( action === "dismount" ) done = await dismount(token);
-  return { done, token: { ...mountState(token), position: positionJson(token) },
+  if ( action === "mount" ) done = await mountUp(token, target, { force });
+  else if ( action === "dismount" ) done = await dismount(token, { force });
+  return { done, issues, token: { ...mountState(token), position: positionJson(token) },
     target: target ? { ...mountState(target), position: positionJson(target) } : null };
 }
 

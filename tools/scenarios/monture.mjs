@@ -49,8 +49,14 @@ export default {
     // --- 1. Monter -------------------------------------------------------------------------------------------------------
     const m0 = (await state()).target.position.cell;
     await ctx.engine("move", { tokenId: rider.id, cell: { i: m0.i + 1, j: m0.j } }, { timeoutMs: 60000 });
-    const { labels } = await ctx.engine("menu", { tokenId: rider.id, targetId: mount.id });
-    ctx.expect(labels.some(l => l.includes(mount.name) && /Monter|Mount|Montar|Montare/.test(l)), `le menu du Zombi offre « Monter » (${labels.join(" | ")})`);
+    const { labels, refused } = await ctx.engine("menu", { tokenId: rider.id, targetId: mount.id });
+    const entry = labels.find(l => l.includes(mount.name) && /Monter|Mount|Montar|Montare/.test(l));
+    ctx.expect(!!entry, `le menu du Zombi offre « Monter » (${labels.join(" | ")})`);
+    // Avant le geste : rien ne doit refuser (son cavalier, au contact, hors combat). Un refus serait une fenêtre « forcer ? » en jeu ;
+    // l'API de test passe outre sans fenêtre (`force`) pour que la suite se joue, mais le refus est compté ici, avec sa raison.
+    const pre = await state();
+    ctx.expect(!pre.issues.length && !refused?.[entry], `rien ne refuse de monter (${[...pre.issues, refused?.[entry]].filter(Boolean).join(" | ") || "—"} ; `
+      + `Guerrier ${pre.token.position.cell.i},${pre.token.position.cell.j}, Zombi ${pre.target.position.cell.i},${pre.target.position.cell.j})`);
     const up = await ctx.engine("mount", { action: "mount", tokenId: rider.id, targetId: mount.id }, { timeoutMs: 60000 });
     await pause(1000);
     let s = await state();

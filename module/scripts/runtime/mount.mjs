@@ -71,14 +71,23 @@ export function mountEntry(token, target) {
     ...(problem ? { refused: loc(`Monture.Souci.${problem}`, { name: other.name }) } : {}), run: () => mountUp(rider, other) };
 }
 
-/** Monter `mount` (sur le client de qui possède le cavalier). Rend true si le cavalier est en selle. */
-export async function mountUp(riderToken, mountToken) {
+/** Les raisons (clés `Monture.Souci.*`) qui refusent à `rider` de monter `mount` maintenant (vide : rien ne cloche). */
+export function mountIssues(riderToken, mountToken) {
+  const rider = tokenDoc(riderToken), mount = tokenDoc(mountToken);
+  return [mountProblemFor(rider, mount), halfSpeedCost(rider).issue].filter(Boolean);
+}
+
+/**
+ * Monter `mount` (sur le client de qui possède le cavalier). Rend true si le cavalier est en selle. `force` : passer outre sans fenêtre
+ * (l'API de test, qui ne répond pas aux fenêtres).
+ */
+export async function mountUp(riderToken, mountToken, { force=false }={}) {
   const rider = tokenDoc(riderToken), mount = tokenDoc(mountToken);
   const problem = mountProblemFor(rider, mount);
   if ( HARD.includes(problem) ) { notice(rider, loc(`Monture.Souci.${problem}`, { name: mount?.name ?? "" })); return false; }
   const { combatant, cost, issue } = halfSpeedCost(rider);
   const lines = [problem, issue].filter(Boolean).map(k => loc(`Monture.Souci.${k}`, { name: mount.name }));
-  if ( lines.length && !(await askAnyway(loc("Monture.Titre", { name: rider.name }), lines, { actor: rider.actor, token: rider })) ) return false;
+  if ( lines.length && !force && !(await askAnyway(loc("Monture.Titre", { name: rider.name }), lines, { actor: rider.actor, token: rider })) ) return false;
   if ( combatant && cost ) { const b = readBudget(combatant); await writeBudget(combatant, { ...b, stood: (Number(b.stood) || 0) + cost }); }
   const done = await viaActiveGM(MOUNT_QUERY, handleMountQuery, { action: "mount", rider: rider.uuid, mount: mount.uuid },
     { noGm: "Monture.SansMJ", fallback: false, label: "mount: request" });
@@ -86,12 +95,12 @@ export async function mountUp(riderToken, mountToken) {
 }
 
 /** Descendre de sa monture (sur le client de qui possède le cavalier). */
-export async function dismount(riderToken) {
+export async function dismount(riderToken, { force=false }={}) {
   const rider = tokenDoc(riderToken);
   const mount = mountOf(rider);
   if ( !mount ) return false;
   const { combatant, cost, issue } = halfSpeedCost(rider);
-  if ( issue && !(await askAnyway(loc("Monture.Titre", { name: rider.name }), [loc(`Monture.Souci.${issue}`, { name: mount.name })],
+  if ( issue && !force && !(await askAnyway(loc("Monture.Titre", { name: rider.name }), [loc(`Monture.Souci.${issue}`, { name: mount.name })],
     { actor: rider.actor, token: rider })) ) return false;
   if ( combatant && cost ) { const b = readBudget(combatant); await writeBudget(combatant, { ...b, stood: (Number(b.stood) || 0) + cost }); }
   const done = await viaActiveGM(MOUNT_QUERY, handleMountQuery, { action: "dismount", rider: rider.uuid },
