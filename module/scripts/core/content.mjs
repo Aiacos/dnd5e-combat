@@ -258,6 +258,7 @@
  *                                               Nature : Empoisonné) — dans l'effet tenu de `grantsSpeeds` (runtime/speed-grants.mjs)
  *     saveAutoSuccess?: { types?, fighting? }  §402 : réussite d'office — ces types de créature (Pétrification), ou une créature
  *                                               que le lanceur combat (`fighting` : Discours captivant, Faux amis)
+ *     saveAutoFail?: { types }                 échec d'office — ces types de créature (Flétrissement : une Plante), sans jet
  *     fadesOnLongRest?: [ids d'effets]   §402 : un de ces effets tombe à chaque Repos long (Rappel à la vie : −4 qui diminue)
  *     onUsesSpent?: { activity?, effects }   §458 : quand les utilisations de l'item sont épuisées, ces effets de l'item sont posés
  *                                               sur son porteur, une fois (les livres à 48 heures de lecture : +2 à une caractéristique)

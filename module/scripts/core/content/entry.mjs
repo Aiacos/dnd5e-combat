@@ -184,6 +184,13 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       && (!("fighting" in a) || (a.fighting === true));
     if ( !ok ) errors.push(`${at}saveAutoSuccess: { types?: [creature types], fighting?: true }`);
   }
+  // L'inverse : ces types de créature ratent d'office (Flétrissement : « une Plante rate automatiquement la sauvegarde »).
+  if ( "saveAutoFail" in entry ) {
+    const a = entry.saveAutoFail;
+    const ok = isObject(a) && (Object.keys(a).length === 1) && Array.isArray(a.types) && a.types.length
+      && a.types.every(t => CREATURE_TYPES.includes(t));
+    if ( !ok ) errors.push(`${at}saveAutoFail: { types: [creature types] }`);
+  }
   if ( ("leash" in entry) && !(isObject(entry.leash) && Number.isFinite(entry.leash.distance) && (entry.leash.distance > 0)
     && (typeof entry.leash.units === "string") && (Object.keys(entry.leash).length === 2)) ) errors.push(`${at}leash: { distance, units }`);
   if ( "saveAdvantageFrom" in entry ) {

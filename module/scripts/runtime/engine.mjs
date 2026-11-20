@@ -10,7 +10,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { current, undoPlan, wantsDamageRoll, isCriticalHit, pendingChoice, pendingAllocation, STEPS } from "../core/action.mjs";
-import { isAutoCritical, autoFailSave } from "../core/conditions.mjs";
+import { isAutoCritical, autoFailSave, typeAutoSave } from "../core/conditions.mjs";
 import { maximizeDice } from "../core/max-dice.mjs";
 import { spellCastLevel } from "../core/usage.mjs";
 import { unaffectedBy } from "../adapter/eligibility.mjs";
@@ -310,12 +310,15 @@ export async function openingFor(message, usage, extra={}) {
     // Un combat commencé (pas forcément celui qu'affiche ce client) où les deux se trouvent, ennemis l'un de l'autre.
     const fighting = token => !!(caster && token && areEnemies(caster, token) && game.combats.some(c => c.started
       && c.combatants.some(k => k.tokenId === token.id) && c.combatants.some(k => k.tokenId === caster.id)));
-    if ( rule ) targets = targets.map(t => {
+    // `saveAutoFail` — ces types ratent d'office (Flétrissement : une Plante).
+    const failRule = contentOf(activity?.item).entry?.saveAutoFail ?? null;
+    if ( rule || failRule ) targets = targets.map(t => {
       if ( t.autoFail ) return t;
       const token = fromUuidSync(t.token, { strict: false });
       const type = (token?.actor ?? fromUuidSync(t.actor, { strict: false }))?.system?.details?.type?.value;
-      if ( rule.types?.includes(type) ) return { ...t, autoSucceed: `type:${type}` };
-      return fighting(token) ? { ...t, autoSucceed: "fighting" } : t;
+      const byType = typeAutoSave({ success: rule?.types, fail: failRule?.types }, type);
+      if ( byType ) return { ...t, ...byType };
+      return (rule && fighting(token)) ? { ...t, autoSucceed: "fighting" } : t;
     });
   }
   return { id: foundry.utils.randomID(), ...data, choice, allocation, targets, ...extra };
