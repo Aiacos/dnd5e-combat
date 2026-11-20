@@ -930,6 +930,8 @@
   "DND5ECOMBAT.FormeVerrouillee.Degats": "{item}: {name} tenta di cambiare forma",
   "DND5ECOMBAT.SoinsPorteur": "{item}: {name} recupera Punti Ferita",
   "DND5ECOMBAT.SecondePhase": "{item}: {from} diventa {to}.",
+  "DND5ECOMBAT.RenvoiDegats.Carte": "{item}: {name} subisce {n} danni di ritorno ({types}).",
+  "DND5ECOMBAT.RenvoiDegats.Avis": "{n} danni restituiti",
   "DND5ECOMBAT.FormeRetour.Change": "{name}: nuova forma",
   "DND5ECOMBAT.FormeRetour.Avis": "{name}: torna alla forma originale",
   "DND5ECOMBAT.FormeRetour.Carte": "{item}: {from} torna alla sua forma originale, {to}.",

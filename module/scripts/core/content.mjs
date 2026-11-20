@@ -1002,6 +1002,13 @@
  *                                                        riposte (§16.9, B9 : moment isHit) : l'attaquant subit ces
  *                                                        dégâts — une formule et son type, ou l'activité de dégâts
  *                                                        de l'item (id), au niveau où le sort a été lancé
+ *   { type: "damage", to: "source", same: true | "resisted", damageType? }
+ *                                                        §499 (B19) : riposte du même montant — au seul moment isDamaged,
+ *                                                        `via: "effect"` : l'auteur des dégâts subis (noté à l'application)
+ *                                                        en subit autant, par type (ou sous `damageType`) ; "resisted" : les
+ *                                                        seules parts que le porteur a réduites de moitié. Les faits
+ *                                                        `activity.*` et `damage.hasType` du moment isDamaged d'un effet porté
+ *                                                        lisent l'activité et les types de ces dégâts
  *   { type: "save", to: "source", activity }             §86, riposte par une sauvegarde (moment isHit) : l'attaquant fait
  *                                                        la sauvegarde de cette activité de l'item, ses effets s'il la
  *                                                        rate (Aura sacrée : Aveuglé)

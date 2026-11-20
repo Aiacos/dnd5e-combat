@@ -6,6 +6,7 @@ import { CREATURE_TYPES } from "../eligibility.mjs";
 import { MOMENTS, OUTCOME_MOMENTS, RESAVE_MOMENTS, BEARER_MOMENTS, BEARER_DAMAGE_MOMENTS, TURN_MOMENTS, unknownFacts, normalize, PRE_ATTACK_WINDOWS, DAMAGED_BY } from "../triggers.mjs";
 import { ABILITIES, ATTACK_STEPS, AURA_AFFECTS, DAMAGE_ON_SAVE, DAMAGE_TO, FALL_WINDOWS, HIT_WINDOWS, MOVE_DIRECTIONS, MOVE_IF_BLOCKED, MOVE_MODES, OUTCOME_STEPS, RESAVE_ON_FAIL, STEP_TYPES, VIA } from "./enums.mjs";
 import { isId, isObject } from "./shared.mjs";
+import { SAME_DAMAGE } from "../damage-return.mjs";
 
 /** §485 : `resave.own` — la sauvegarde d'un effet porté par le réacteur, que son joueur choisit (Indomptable). */
 export const RESAVE_OWN = Object.freeze(["choose"]);
@@ -22,7 +23,15 @@ function validateStep(step, at, errors) {
     // formule reprend le montant subi.
     const fromActivity = ["source", "bearer", "self"].includes(step.to) && ("activity" in step);
     const same = (step.to === "origin") && !("formula" in step);
-    if ( !fromActivity && !same ) {
+    // §499 (B19) : `same` — la riposte renvoie le montant subi (au moment isDamaged), du type reçu ou de `damageType`.
+    const returned = (step.to === "source") && ("same" in step);
+    if ( "same" in step ) {
+      if ( step.to !== "source" ) errors.push(`${at}.same: only for a riposte (to: "source")`);
+      if ( !SAME_DAMAGE.includes(step.same) ) errors.push(`${at}.same: true or "resisted"`);
+      if ( ("formula" in step) || ("activity" in step) ) errors.push(`${at}.same: without formula or activity`);
+      if ( ("damageType" in step) && ((typeof step.damageType !== "string") || !step.damageType) ) errors.push(`${at}.damageType: a damage type`);
+    }
+    if ( !fromActivity && !same && !returned ) {
       if ( (typeof step.formula !== "string") || !step.formula.trim() ) errors.push(`${at}.formula: formula required`);
       // §161 : une liste de types au choix pour des dégâts bonus (`preDamageRoll`).
       const typeOk = t => (typeof t === "string") && !!t;
@@ -194,7 +203,9 @@ export function validateTrigger(declaration, at, facts, errors) {
       if ( isObject(s) && ATTACK_STEPS.includes(s.type) && !d.on.includes("preAttackRoll") && !((s.type === "disadvantage") && preAttackReaction) ) errors.push(`${at}.do: "${s.type}" requires the preAttackRoll moment`);
       if ( isObject(s) && (s.type === "consume") && (!d.on.includes("preAttackRoll") || (d.via !== "effect")) ) errors.push(`${at}.do: "consume" requires the preAttackRoll moment and via: "effect"`);
       if ( isObject(s) && (s.type === "ward") && (!d.on.includes("isAttacked") || (d.via !== "effect")) ) errors.push(`${at}.do: "ward" requires the isAttacked moment and via: "effect"`);
-      if ( isObject(s) && (s.type === "damage") && (s.to === "source") && ((d.on.length !== 1) || (d.on[0] !== "isHit")) ) errors.push(`${at}.do: a riposte (to: "source") requires isHit as the only moment`);
+      if ( isObject(s) && (s.type === "damage") && (s.to === "source") && !("same" in s) && ((d.on.length !== 1) || (d.on[0] !== "isHit")) ) errors.push(`${at}.do: a riposte (to: "source") requires isHit as the only moment`);
+      // §499 : le montant subi n'est connu qu'une fois les dégâts appliqués — isDamaged, sur un effet porté.
+      if ( isObject(s) && (s.type === "damage") && (s.to === "source") && ("same" in s) && ((d.on.length !== 1) || (d.on[0] !== "isDamaged") || (d.via !== "effect")) ) errors.push(`${at}.do: a riposte of the same amount (same) requires isDamaged as the only moment and via: "effect"`);
       if ( isObject(s) && (s.type === "damage") && (s.to === "origin") && ((d.on.length !== 1) || (d.on[0] !== "isDamaged") || (d.via !== "effect")) ) errors.push(`${at}.do: a damage share (to: "origin") requires isDamaged as the only moment and via: "effect"`);
       if ( isObject(s) && (s.type === "damage") && (s.to === "bearer") && (!d.on.length || !d.on.every(m => BEARER_DAMAGE_MOMENTS.includes(m)) || (d.via !== "effect")) ) errors.push(`${at}.do: the bearer's damage (to: "bearer") requires moments among ${BEARER_DAMAGE_MOMENTS.join(", ")} and via: "effect"`);
       // §484 : les dégâts d'un trait à son porteur (`to: "self"`, Hypersensibilité au soleil) — à son tour, porté par l'item lui-même.

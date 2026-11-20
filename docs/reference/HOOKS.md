@@ -597,14 +597,15 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 ### `dnd5e.calculateDamage`
 
-1. regeneration: damage types not read
-2. Undead Fortitude: damage types not read
-3. drain: drained portion not read
-4. bite: amount not read
-5. life steal: amount not read
-6. oil: fire damage not noted
-7. flammable: fire damage not noted
-8. floating texts: damage by type
+1. damage taken: parts not noted
+2. regeneration: damage types not read
+3. Undead Fortitude: damage types not read
+4. drain: drained portion not read
+5. bite: amount not read
+6. life steal: amount not read
+7. oil: fire damage not noted
+8. flammable: fire damage not noted
+9. floating texts: damage by type
 
 ### `dnd5e.createMeasuredTemplate`
 

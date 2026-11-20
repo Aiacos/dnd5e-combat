@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-383 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+384 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -241,6 +241,7 @@ la sélection sans rien jouer.
 | `releve-sorts-8` |  | §163 | Champ antimagie, Coquille antivie |
 | `releve-sorts-9` |  | §164 §309 | Lévitation, Inversion de la gravité, Embruns, Vif carquois, élémentaire, céleste, Grêle d'épines |
 | `renvoi-choix` |  | §293 §438 | Renvoi des morts-vivants : liste des créatures à 9 m, Calcination à la place |
+| `renvoi-degats` |  | §499 | linceul : l'attaquant au corps à corps subit le même montant de dégâts résistés, rien à distance ni sans auteur, effet dissipé par des dégâts radiants (§499, brique B19) |
 | `renvoi` |  | §16.25 | Calcination des morts-vivants |
 | `repasse-arc` |  | §353 | Arc du serment : Avantage, abri et longue portée contre l'ennemi juré |
 | `repasse-c1` |  | §295 | corrections déclaratives de la repasse (Arène des sorts) |

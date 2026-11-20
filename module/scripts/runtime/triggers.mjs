@@ -20,7 +20,8 @@ import { inflict } from "../adapter/retaliation.mjs";
 import { isDeadActor } from "../adapter/death.mjs";
 import { enqueue } from "./queue.mjs";
 import { route } from "./router.mjs";
-import { log, loc, say, locEsc } from "./shared.mjs";
+import { log, loc, say, locEsc, notice } from "./shared.mjs";
+import { takenParts, returnedDamage } from "../core/damage-return.mjs";
 import { sideOf } from "../adapter/factions.mjs";
 import { samePlane } from "../adapter/plane.mjs";
 import { shownActivityOf, usesHolderOf } from "../adapter/uses.mjs";
@@ -371,7 +372,45 @@ function recordDamager(actor, amount, updates, options) {
   const damager = message?.getAssociatedActor?.() ?? null;
   // §294 : l'activité d'où viennent les dégâts, pour `by: "otherActivity"`.
   const activity = message?.getAssociatedActivity?.()?.uuid ?? null;
-  updates[`flags.${MODULE_ID}.damagedBy`] = { uuid: damager?.uuid ?? null, activity, at: Date.now() };
+  // §499 : les parts subies (type, montant, multiplicateur), notées au calcul de ces mêmes dégâts (même objet `options`).
+  const parts = options ? (CALCULATED.get(options) ?? null) : null;
+  updates[`flags.${MODULE_ID}.damagedBy`] = { uuid: damager?.uuid ?? null, activity, at: Date.now(), parts };
+}
+
+/** §499 : les parts calculées par dnd5e pour une application en cours, par son objet `options` (calcul puis application, même appel). */
+const CALCULATED = new WeakMap();
+
+/** §499 : `dnd5e.calculateDamage` (actor.mjs, après résistances) — les parts, gardées pour `recordDamager`. Un aperçu ne s'applique pas. */
+function noteCalculated(actor, damages, options) {
+  if ( options && (typeof options === "object") ) CALCULATED.set(options, takenParts(damages));
+}
+
+/** §499 : l'auteur noté des derniers dégâts, s'il est frais : `{ uuid, activity, parts }`, ou null. */
+function freshDamager(actor) {
+  const noted = actor?.getFlag?.(MODULE_ID, "damagedBy");
+  return (noted && ((Date.now() - (noted.at ?? 0)) <= DAMAGER_FRESH_MS)) ? noted : null;
+}
+
+/**
+ * §499 (B19) : la riposte du même montant (`damage { to: "source", same }`) — l'auteur des dégâts que le porteur vient de subir les
+ * subit à son tour (ses propres résistances comptent), carte et avis pour toute la table.
+ */
+async function returnDamage(actor, d, step, noted) {
+  const attacker = noted?.uuid ? fromUuidSync(noted.uuid, { strict: false }) : null;
+  if ( !attacker || (attacker === actor) || (attacker.uuid === actor.uuid) || !((attacker.system?.attributes?.hp?.value ?? 0) > 0) ) {
+    log(`${d.name}: no attacker to return the damage to`);
+    return;
+  }
+  const damages = returnedDamage(noted.parts ?? [], { same: step.same, damageType: step.damageType ?? null });
+  if ( !damages.length ) { log(`${d.name}: nothing to return (${noted.parts ? "no part kept" : "damage parts unknown"})`); return; }
+  const n = damages.reduce((sum, p) => sum + p.value, 0);
+  await attacker.applyDamage(damages.map(p => ({ value: p.value, type: p.type })));
+  const types = damages.map(p => CONFIG.DND5E.damageTypes?.[p.type]?.label ?? p.type).join(", ");
+  log(`${d.name}: ${attacker.name} takes ${n} damage back (${damages.map(p => `${p.value} ${p.type}`).join(", ")})`);
+  const attackerToken = tokenOf(attacker);
+  await say({ actor }, locEsc("RenvoiDegats.Carte", { item: d.name, name: attacker.name, n, types }),
+    { returned: { item: d.identifier, from: actor.uuid, to: attacker.uuid, amount: n, damages } });
+  if ( attackerToken ) notice(attackerToken, { key: "RenvoiDegats.Avis", data: { n } }, "info", { all: true, action: "damageReturned", outcome: "success" });
 }
 
 /** La disposition du token d'un acteur sur la scène affichée, ou null. */
@@ -408,7 +447,11 @@ function onDamaged(actor, changes) {
   if ( !(changes?.total < 0) || !actor ) return;
   const token = tokenOf(actor);
   const tokenDocument = token?.document ?? token ?? null;
-  const declarations = matching("isDamaged", { actor, target: actor, source: null, targetToken: tokenDocument })
+  // §499 : l'activité et les types des dégâts subis, s'ils sont connus et frais (`activity.isMelee`, `damage.hasType`).
+  const noted = freshDamager(actor);
+  const hurtBy = noted?.activity ? fromUuidSync(noted.activity, { strict: false }) : null;
+  const damageTypes = noted?.parts ? [...new Set(noted.parts.map(p => p.type))] : null;
+  const declarations = matching("isDamaged", { actor, target: actor, source: null, targetToken: tokenDocument, activity: hurtBy, damageTypes })
     .filter(d => (d.via === "effect") && d.effect)
     // §65 : « si vous ou vos alliés lui infligez des dégâts » (Suggestion) — les autres dégâts ne comptent pas.
     .filter(d => (d.by !== "originSide") || byOriginSide(actor, d))
@@ -439,6 +482,8 @@ function onDamaged(actor, changes) {
         await say({ actor: origin }, locEsc("PartageDegats", { name: origin.name, item: d.name, n: amount, bearer: actor.name }),
           { shared: { item: d.identifier, from: actor.uuid, to: origin.uuid, amount } });
       }
+      // §499 (B19) : la riposte du même montant.
+      for ( const step of stepsOf(d, "damage").filter(s => (s.to === "source") && ("same" in s)) ) await returnDamage(actor, d, step, noted);
       const resave = stepsOf(d, "resave")[0];
       if ( !resave ) continue;
       const activity = saveActivityOf(await fromUuid(d.activity ?? ""));
@@ -486,6 +531,7 @@ export function registerTriggers() {
   route("updateActiveEffect", onEffectMarked, { executor: true, label: "Warding Bond: foreign damage sharing not disarmed" });
   route("dnd5e.preRollDamageV2", onPreRollDamage, { cancellable: true, label: "trigger bonus damage" });
   route("combatTurnChange", onTurnChange, { executor: true, label: "creature's turn: triggers interrupted" });
+  route("dnd5e.calculateDamage", noteCalculated, { label: "damage taken: parts not noted" });
   route("dnd5e.preApplyDamage", recordDamager, { label: "damage taken: source not recorded" });
   route("dnd5e.damageActor", onDamaged, { executor: true, label: "damage taken: bearer's effects not handled" });
   // Trace d'une utilisation (§16.9, contenu `trace: true`) : pas pour un rejeu de zone ni une sauvegarde répétée.

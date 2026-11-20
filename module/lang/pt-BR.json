@@ -791,6 +791,8 @@
   "DND5ECOMBAT.FormeVerrouillee.Degats": "{item}: {name} tenta mudar de forma",
   "DND5ECOMBAT.SoinsPorteur": "{item}: {name} recupera Pontos de Vida",
   "DND5ECOMBAT.SecondePhase": "{item}: {from} se torna {to}.",
+  "DND5ECOMBAT.RenvoiDegats.Carte": "{item}: {name} sofre {n} de dano de volta ({types}).",
+  "DND5ECOMBAT.RenvoiDegats.Avis": "{n} de dano devolvido",
   "DND5ECOMBAT.FormeRetour.Change": "{name}: nova forma",
   "DND5ECOMBAT.FormeRetour.Avis": "{name}: de volta à forma original",
   "DND5ECOMBAT.FormeRetour.Carte": "{item}: {from} retorna à forma original, {to}.",
