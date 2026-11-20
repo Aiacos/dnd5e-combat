@@ -107,8 +107,8 @@ export function originItemOf(effect) {
     const owner = copied?.parent;
     if ( owner?.documentName === "Item" && !owner.pack ) return owner;
   }
-  // Un effet posé par la zone d'une activité (`zoneEffects`) a pour origine le comportement de sa région : la région porte l'activité
-  // qui l'a posée (`flags.dnd5e.activity`), d'où l'item (Cercle magique : la marque de qui se tient dans le cercle).
+  // Un effet posé par la zone d'une activité (`zoneEffects`) a pour origine le comportement de sa région : la région porte
+  // l'activité qui l'a posée (`flags.dnd5e.activity`), d'où l'item (Cercle magique : la marque de qui se tient dans le cercle).
   if ( ["Region", "RegionBehavior"].includes(doc?.documentName) ) {
     const region = (doc.documentName === "Region") ? doc : doc.parent;
     const placed = fromUuidSync(region?.getFlag?.("dnd5e", "activity") ?? "", { strict: false });
