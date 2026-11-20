@@ -501,6 +501,9 @@ export const ITEM_FIXES = Object.freeze({
   // répandent une Lumière vive sur 12 m et faible sur 12 m de plus », tant que l'enchantement « Ablaze » est sur l'arme ; flammes du
   // Heaume scintillant (« Burst Into Flames ») : vive sur 3 m, faible sur 3 m de plus.
   "moon-touched-sword": { carriedLight: MOONLIGHT },
+  // Baguette du mage de guerre (SRD 5.2) : « vous ignorez l'abri partiel lorsque vous effectuez un jet d'attaque de sort » —
+  // l'objet de la donnée ne porte que le bonus aux jets d'attaque de sort.
+  "1-wand-of-the-war-mage-enchanted": { rangedFeat: { kind: "spell", cover: "half" } },
   "moon-touched-sword-enchanted": { carriedLight: MOONLIGHT },
   "flame-tongue-enchanted": { carriedLight: { bright: 40, dim: 80, units: "ft", animation: FLAMES, whileEnchanted: "MHnAqxEXBhUbnjPq" } },
   "helm-of-brilliance-enchanted": { carriedLight: { bright: 10, dim: 20, units: "ft", animation: FLAMES, whileEnchanted: "oZBFpi117yOXca3k" } },

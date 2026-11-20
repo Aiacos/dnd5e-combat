@@ -227,3 +227,23 @@ describe("§136 : Maître d'hast, Attaque réactive", () => {
     expect(SHIPPED["polearm-master"].reactiveStrike).toBe(true);
   });
 });
+
+describe("rangedFeat.cover « half » : seul l'abri partiel est ignoré (Baguette du mage de guerre)", () => {
+  const wand = { kind: "spell", cover: "half" };
+  const bolt = { weapon: false, ranged: true, crossbow: false, spell: true };
+  it("jet d'attaque de sort : « half » ; attaque d'arme : rien", () => {
+    expect(rangedFeatsFor([wand], bolt).cover).toBe("half");
+    expect(rangedFeatsFor([wand], { weapon: true, ranged: true, crossbow: false, spell: false }).cover).toBe(false);
+  });
+  it("un don qui ignore aussi l'abri aux trois quarts l'emporte, dans les deux ordres", () => {
+    const sniper = { kind: "spell", cover: true };
+    expect(rangedFeatsFor([wand, sniper], bolt).cover).toBe(true);
+    expect(rangedFeatsFor([sniper, wand], bolt).cover).toBe(true);
+  });
+  it("l'abri partiel tombe, l'abri aux trois quarts et l'abri total restent", () => {
+    expect(coverLeft({ degree: "half", bonus: 2 }, "half")).toBeNull();
+    expect(coverLeft({ degree: "threeQuarters", bonus: 5 }, "half")).toEqual({ degree: "threeQuarters", bonus: 5 });
+    expect(coverLeft({ degree: "total", bonus: null }, "half")).toEqual({ degree: "total", bonus: null });
+    expect(coverLeft({ degree: "threeQuarters", bonus: 5 }, true)).toBeNull();
+  });
+});

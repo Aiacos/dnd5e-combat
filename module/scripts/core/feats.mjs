@@ -125,14 +125,20 @@ export function rangedFeatsFor(rules, attack) {
       : (r.kind === "spell") ? attack.spell : false;
     if ( !fits ) continue;
     for ( const k of ["cover", "closeCombat", "longRange", "offhandModifier", "loading"] ) if ( r[k] === true ) out[k] = true;
+    // `cover: "half"` : seul l'abri partiel est ignoré (Baguette du mage de guerre) — un autre don qui les ignore tous l'emporte.
+    if ( (r.cover === "half") && !out.cover ) out.cover = "half";
     if ( r.spellRange ) out.spellRange = r.spellRange;
   }
   return out;
 }
 
-/** §131 : l'abri que la règle laisse : un abri partiel ou aux trois quarts ignoré ; l'abri total reste. */
+/**
+ * §131 : l'abri que la règle laisse : un abri partiel ou aux trois quarts ignoré ; l'abri total reste. `ignores` vaut "half" quand
+ * seul l'abri partiel est ignoré : l'abri aux trois quarts reste alors aussi.
+ */
 export function coverLeft(cover, ignores) {
   if ( !cover || !ignores ) return cover;
+  if ( ignores === "half" ) return (cover.degree === "half") ? null : cover;
   return (cover.degree === "total") ? cover : null;
 }
 

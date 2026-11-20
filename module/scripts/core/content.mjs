@@ -222,6 +222,7 @@
  *                                               avec une arme, "crossbow" = arbalète, "spell" = jet d'attaque d'un sort) : l'abri partiel
  *                                               et aux trois quarts ignoré, pas de Désavantage au contact d'un ennemi ni à longue portée,
  *                                               le modificateur aux dégâts de l'attaque Légère, la portée du sort allongée (`spellRange`)
+ *                                               `cover: "half"` : seul l'abri partiel est ignoré (Baguette du mage de guerre)
  *     peerlessAim?: true                        §135 : une attaque ratée touche à la place, une fois jusqu'au prochain tour (Prouesse martiale)
  *     fortifiedHealing?: true                   §135 : + Con aux PV regagnés, une fois par tour (Faveur de vigueur)
  *     overwhelmingStrike?: true                 §135 : sur un critique, des dégâts égaux à la valeur de la caractéristique augmentée par

@@ -225,12 +225,14 @@ function rangedAttackShape(activity, attackMode) {
  * #33 : le nom de ce qui fait ignorer l'abri partiel ou aux trois quarts à cette attaque (Tireur d'élite, Sniper de sorts,
  * l'arme de l'Arc du serment contre son ennemi juré), ou null — le même jugement que `coverAgainst`, nommé pour l'aperçu.
  */
-export function coverIgnoredBy(origin, target, activity, attackMode=null) {
+export function coverIgnoredBy(origin, target, activity, attackMode=null, degree=null) {
   if ( activity?.type !== "attack" ) return null;
   const shape = rangedAttackShape(activity, attackMode);
   const feat = Array.from(origin?.actor?.items ?? []).find(i => {
     const rule = contentOf(i).entry?.rangedFeat;
-    return rule && rangedFeatsFor([rule], shape).cover;
+    const ignores = rule ? rangedFeatsFor([rule], shape).cover : false;
+    // Un objet qui n'ignore que l'abri partiel n'est pas nommé devant un abri aux trois quarts.
+    return (ignores === "half") ? (degree !== "threeQuarters") : ignores;
   });
   return feat?.name ?? swornEnemyOf(activity, target, attackMode) ?? null;
 }

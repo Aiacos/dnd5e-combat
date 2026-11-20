@@ -126,4 +126,6 @@ export const ENCHANTMENT_SOURCES = Object.freeze({
   CzJMRNHYWlVNvnJN: "vicious-weapon",
   mxrAgEyDsV2h5jla: "vorpal-sword",
   "5rHVxAXfNzLO5zxx": "weapon-of-warning",
+  UaQkN55ZMKSt9LGT: "1-wand-of-the-war-mage", jqNFw2MJ4B1HG257: "1-wand-of-the-war-mage",
+  kejXxpJFzlSWcpm1: "1-wand-of-the-war-mage",
 });

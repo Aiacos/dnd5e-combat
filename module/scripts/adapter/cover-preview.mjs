@@ -41,7 +41,7 @@ export function coverPreviewOf(attacker, target, activity, { posA, attackMode=nu
   if ( manual ) return { ...base, degree: manual, bonus: COVER[manual].bonus, sources: ["manual"], manual: true };
   const cover = coverFor(attacker, target, { posA, quiet: true, activity, attackMode, seenOnly: !game.user?.isGM });
   if ( !cover ) return base;
-  const by = (cover.degree !== "total") ? coverIgnoredBy(attacker, target, activity, attackMode) : null;
+  const by = (cover.degree !== "total") ? coverIgnoredBy(attacker, target, activity, attackMode, cover.degree) : null;
   if ( by ) return { ...base, ignored: { degree: cover.degree, by } };
   return { ...base, degree: cover.degree, bonus: cover.bonus, sources: cover.sources, zone: cover.zone };
 }
