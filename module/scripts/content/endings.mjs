@@ -12,7 +12,10 @@ export const BANISHES = Object.freeze({
 
 /** §268 : « la cible ne peut être Charmée, Effrayée ni possédée par elles » (Protection contre le Mal et le Bien). */
 export const WARDS_CONDITIONS = Object.freeze({
-  "protection-from-evil-and-good": { types: ["aberration", "celestial", "elemental", "fey", "fiend", "undead"], statuses: ["charmed", "frightened"] }
+  "protection-from-evil-and-good": { types: ["aberration", "celestial", "elemental", "fey", "fiend", "undead"], statuses: ["charmed", "frightened"] },
+  // Cercle magique (SRD 5.2) : « les cibles situées dans le Cylindre ne peuvent pas être […] Charmées ou Effrayées par la
+  // créature ».
+  "magic-circle": { types: ["celestial", "elemental", "fey", "fiend", "undead"], statuses: ["charmed", "frightened"] }
 });
 
 export const ENDS_WHEN = Object.freeze({

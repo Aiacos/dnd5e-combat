@@ -208,6 +208,13 @@ export const SPELL_RULES = Object.freeze({
   "sleet-storm": { difficultTerrain: {}, quietPose: true },
   // Flamme sacrée (SRD 5.2) : « la cible ne bénéficie pas d'un abri partiel ni d'un abri aux trois quarts pour cette sauvegarde ».
   "sacred-flame": { saveIgnoresCover: true },
+  // Cercle magique (SRD 5.2) : la donnée n'a qu'une sauvegarde de Charisme (celle d'une téléportation vers l'intérieur). La zone
+  // pose une marque sur qui s'y tient, sans sauvegarde ni rien à la pose : c'est elle que lisent le Désavantage des attaquants
+  // (content/triggers.mjs) et l'immunité à Charmé et Effrayé (content/endings.mjs).
+  "magic-circle": { quietPose: true, zoneEffects: true,
+    dataFixes: [{ effect: "dasMagicCircle00", create: { name: "Inside the Magic Circle", type: "base", transfer: false,
+      disabled: false, statuses: [], system: { changes: [] } } },
+    { path: "system.activities.dnd5eactivity000.effects", from: [], value: [{ _id: "dasMagicCircle00" }] }] },
   // §300 : « Croissance » — la zone devient un terrain où chaque mètre coûte 4 mètres de déplacement ; elle reste (durée instantanée).
   // Embroussaillement : « temps d'incantation : action » — la donnée laisse l'activation « spéciale » (rien n'était dépensé).
   "plant-growth": { difficultTerrain: { cost: 4 }, usageLimits: { dnd5eactivity000: { cost: "action" } } },

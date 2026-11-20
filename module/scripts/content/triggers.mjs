@@ -386,6 +386,13 @@ export const TRIGGERS = Object.freeze({
   // scène et du combat), au lieu de rester ciblable.
   { on: "failedSave", if: { any: ["celestial", "elemental", "fey", "fiend", "undead"].map(t => ({ "target.creatureType": t })) },
     do: [{ type: "banish" }] }],
+  // Cercle magique (SRD 5.2) : « la créature a le Désavantage aux jets d'attaque contre les cibles situées dans le Cylindre » —
+  // porté par l'effet que la zone pose sur qui s'y tient. Les types « choisis » sont ici les cinq du texte, tous à la fois.
+  "magic-circle": [{
+    on: "preAttackRoll", via: "effect",
+    if: { "target.hasEffect": "magic-circle", "source.creatureType": ["celestial", "elemental", "fey", "fiend", "undead"] },
+    do: [{ type: "disadvantage" }]
+  }],
   "protection-from-evil-and-good": [{
     on: "preAttackRoll", via: "effect",
     if: { "target.hasEffect": "protection-from-evil-and-good", "source.creatureType": ["aberration", "celestial", "elemental", "fey", "fiend", "undead"] },
