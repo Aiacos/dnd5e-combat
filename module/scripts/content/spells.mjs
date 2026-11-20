@@ -27,7 +27,9 @@ export const SINGLE_ATTACK = Object.freeze(["slow"]);
 /** §283 : « si elle lance un sort avec une composante somatique, il y a 25 % de chances que le sort échoue » (Lenteur). */
 export const SPELL_FAILURES = Object.freeze({ "slow": { chance: 25, component: "somatic" } });
 /** §269 : « la cible ne peut ni attaquer ni lancer de sorts » (Forme gazeuse). */
-export const NO_ATTACKS_OR_SPELLS = Object.freeze(["gaseous-form"]);
+// Marche sur le vent (SRD 5.2) : « sous cette forme de nuage, les seules actions possibles sont l'action Foncer ou une action Magie
+// pour reprendre sa forme normale » — ni attaque ni sort.
+export const NO_ATTACKS_OR_SPELLS = Object.freeze(["gaseous-form", "wind-walk"]);
 /** §284 : « ne peut pas lancer de sorts ni prendre l'action Magie » (Aliénation). */
 export const NO_SPELLS = Object.freeze(["befuddlement"]);
 /**

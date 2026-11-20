@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-935 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+936 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -166,7 +166,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `movable` | 3 | `cloud-of-daggers`, `conjure-celestial`, `moonbeam` |
 | `movesAfter` | 2 | `instinctive-pounce`, `tactical-shift` |
 | `noActions` | 1 | `stinking-cloud` |
-| `noAttacksOrSpells` | 1 | `gaseous-form` |
+| `noAttacksOrSpells` | 2 | `gaseous-form`, `wind-walk` |
 | `noBonus` | 2 | `confusion`, `ice-spear` |
 | `noDamage` | 10 | `avenger-spirit`, `bestow-curse`, `commanders-strike`, `ensnaring-strike`, `feinting-attack`, `geas`, … |
 | `noOpportunity` | 18 | `agile`, `blazing-movement`, `bubble-dash`, `charging-horn`, `engulf`, `entangling-trail`, … |
