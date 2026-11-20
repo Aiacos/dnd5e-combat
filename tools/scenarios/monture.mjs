@@ -3,7 +3,7 @@
  * monde (`api.mcp.overrideContent`) :
  *   - sur le Zombi (la monture) : `mount: { rider: <acteur du Guerrier> }` (contrôlée) ;
  *   - sur le Guerrier (le cavalier) : `commands: { actor: <acteur du Zombi>, distance: 60, units: "ft" }`, action Bonus.
- *  1. le Guerrier au contact : le menu du Zombi offre « Monter » ; il monte — lien noté des deux côtés, assis sur le Zombi ;
+ *  1. ni l'un ni l'autre À terre ou Neutralisé (mise en place), le Guerrier au contact : le menu du Zombi offre « Monter » ; il monte — lien noté des deux côtés, assis sur le Zombi ;
  *  2. le Zombi marche deux cases : le Guerrier suit, toujours en selle ;
  *  3. en combat, initiative du Guerrier 15, du Zombi 3 : le Zombi passe juste après lui ; son attaque demande l'ordre (souci de
  *     légalité), l'ordre donné (« Commander », action Bonus) le lève pour ce round ;
@@ -47,6 +47,11 @@ export default {
     });
 
     // --- 1. Monter -------------------------------------------------------------------------------------------------------
+    // Mise en place : ni l'un ni l'autre À terre ou Neutralisé (on ne monte pas À terre). Le Guerrier de `dnd-6` garde un effet
+    // « Prone » d'un ancien passage (vu au banc le 2026-11-20) ; le filet du lanceur remet ses effets après le scénario.
+    const BREAKERS = ["prone", "incapacitated", "paralyzed", "petrified", "stunned", "unconscious", "dead"];
+    for ( const t of [rider, mount] ) for ( const status of BREAKERS ) await ctx.removeStatusEffects(t, status).catch(() => {});
+    await pause(500);
     const m0 = (await state()).target.position.cell;
     await ctx.engine("move", { tokenId: rider.id, cell: { i: m0.i + 1, j: m0.j } }, { timeoutMs: 60000 });
     const { labels, refused } = await ctx.engine("menu", { tokenId: rider.id, targetId: mount.id });
@@ -56,7 +61,8 @@ export default {
     // l'API de test passe outre sans fenêtre (`force`) pour que la suite se joue, mais le refus est compté ici, avec sa raison.
     const pre = await state();
     ctx.expect(!pre.issues.length && !refused?.[entry], `rien ne refuse de monter (${[...pre.issues, refused?.[entry]].filter(Boolean).join(" | ") || "—"} ; `
-      + `Guerrier ${pre.token.position.cell.i},${pre.token.position.cell.j}, Zombi ${pre.target.position.cell.i},${pre.target.position.cell.j})`);
+      + `Guerrier ${pre.token.position.cell.i},${pre.token.position.cell.j} [${pre.token.statuses.join(", ")}], `
+      + `Zombi ${pre.target.position.cell.i},${pre.target.position.cell.j} [${pre.target.statuses.join(", ")}])`);
     const up = await ctx.engine("mount", { action: "mount", tokenId: rider.id, targetId: mount.id }, { timeoutMs: 60000 });
     await pause(1000);
     let s = await state();
