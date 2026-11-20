@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-946 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+947 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -67,7 +67,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `curesAll` | 7 | `elixir-of-health`, `hand-of-ultimate-mercy`, `heal`, `keoghtoms-ointment`, `mass-heal`, `potion-of-vitality`, … |
 | `curesOn` | 5 | `dispel-evil-and-good`, `hand-of-healing`, `lay-on-hands`, `physicians-touch`, `restoring-touch` |
 | `damageShield` | 2 | `resistance`, `ring-of-warmth` |
-| `dataFixes` | 107 | `antilife-shell`, `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `baba-yagas-dancing-broom`, … |
+| `dataFixes` | 108 | `antilife-shell`, `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `baba-yagas-dancing-broom`, … |
 | `devours` | 1 | `blackrazor` |
 | `difficultTerrain` | 16 | `black-tentacles`, `blade-barrier`, `conjure-minor-elementals`, `earthquake`, `entangle`, `evards-black-tentacles`, … |
 | `discharge` | 1 | `path-to-the-grave` |
@@ -204,7 +204,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `projectiles` | 4 | `eldritch-blast`, `magic-missile`, `scorching-ray`, `steel-wind-strike` |
 | `quickSearch` | 1 | `observant` |
 | `quickStand` | 1 | `athlete` |
-| `quietPose` | 2 | `sleet-storm`, `stinking-cloud` |
+| `quietPose` | 3 | `magic-circle`, `sleet-storm`, `stinking-cloud` |
 | `rage` | 1 | `rage` |
 | `rangedDefense` | 2 | `arrow-catching-shield`, `shield-of-missile-attraction` |
 | `rangedFeat` | 5 | `1-wand-of-the-war-mage-enchanted`, `crossbow-expert`, `improved-illusions`, `sharpshooter`, `spell-sniper` |
@@ -285,7 +285,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `thrownDamage` | 1 | `thrown-weapon-fighting` |
 | `trace` | 7 | `armor-of-agathys`, `blade-ward`, `dispel-evil-and-good`, `flame-blade`, `moonlight-step`, `produce-flame`, … |
 | `transpose` | 1 | `tricksters-transposition` |
-| `triggers` | 277 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
+| `triggers` | 278 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
 | `untypedDamage` | 3 | `freezing-sphere`, `mm-wight-life-drain`, `otilukes-freezing-sphere` |
 | `upkeep` | 1 | `crown-of-madness` |
 | `usageLimits` | 11 | `action-surge`, `flame-blade`, `indomitable`, `pact-of-the-chain`, `plant-growth`, `produce-flame`, … |
@@ -293,7 +293,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `walls` | 7 | `forcecage`, `prismatic-wall`, `wall-of-fire`, `wall-of-force`, `wall-of-ice`, `wall-of-stone`, … |
 | `wallSide` | 1 | `wall-of-fire` |
 | `wardsAtZero` | 1 | `death-ward` |
-| `wardsConditions` | 1 | `protection-from-evil-and-good` |
+| `wardsConditions` | 2 | `magic-circle`, `protection-from-evil-and-good` |
 | `wardsDetection` | 3 | `mind-blank`, `nondetection`, `sequester` |
 | `willingFails` | 4 | `enlarge-reduce`, `levitate`, `otilukes-resilient-sphere`, `resilient-sphere` |
 | `windward` | 1 | `gust-of-wind` |
@@ -301,7 +301,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `zoneAffects` | 16 | `brute-spirit`, `conjure-barrage`, `conjure-volley`, `conjure-woodland-beings`, `cordon-of-arrows`, `coward-spirit`, … |
 | `zoneBound` | 1 | `spirit-guardians` |
 | `zoneCharges` | 1 | `cordon-of-arrows` |
-| `zoneEffects` | 3 | `jallarzis-storm-of-radiance`, `silence`, `storm-of-radiance` |
+| `zoneEffects` | 4 | `jallarzis-storm-of-radiance`, `magic-circle`, `silence`, `storm-of-radiance` |
 | `zoneEnd` | 1 | `delayed-blast-fireball` |
 | `zoneLasts` | 2 | `antimagic-cone`, `symbol` |
 | `zoneMax` | 2 | `decanter-of-endless-water`, `slow` |
@@ -369,7 +369,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `preAttackRoll → advantage` | 27 | `assassinate`, `avenging-angel`, `clairvoyant-combatant`, `distracting-strike`, `faerie-fire`, `feinting-attack`, … |
 | `preAttackRoll → attackBonus` | 3 | `blade-ward`, `brutal-strike`, `improved-brutal-strike` |
 | `preAttackRoll → consume` | 10 | `brutal-strike`, `distracting-strike`, `feinting-attack`, `guiding-bolt`, `improved-brutal-strike`, `moonlight-step`, … |
-| `preAttackRoll → disadvantage` | 31 | `bestow-curse`, `blur`, `clairvoyant-combatant`, `cloak-of-displacement`, `compelled-duel`, `dispel-evil-and-good`, … |
+| `preAttackRoll → disadvantage` | 32 | `bestow-curse`, `blur`, `clairvoyant-combatant`, `cloak-of-displacement`, `compelled-duel`, `dispel-evil-and-good`, … |
 | `preDamageRoll → damage` | 37 | `ancient-might`, `bestow-curse`, `blessed-strikes`, `blessed-strikes-potent-spellcasting`, `bracers-of-archery`, `brutal-strike`, … |
 | `savedSave → mark` | 1 | `eyebite` |
 | `savedSave → move` | 1 | `bead-of-force` |
