@@ -280,6 +280,17 @@ export const ITEM_FIXES = Object.freeze({
   "orb-of-dragonkind": {
     dataFixes: [{ path: "system.uses.max", from: "", value: "7" }, { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]
   },
+  // Orbe des dragons du SRD 5.2 (`dragon-orb`) : même défaut que l'orbe du Guide — « l'orbe a 7 charges et en regagne 1d4 + 3
+  // chaque jour à l'aube », l'item n'en a aucune.
+  "dragon-orb": {
+    dataFixes: [{ path: "system.uses.max", from: "", value: "7" },
+      { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]
+  },
+  // Philtre d'amour (SRD 5.2) : « vous avez l'état Charmé pendant 1 heure » — l'effet de la donnée dure 10 minutes (le délai pour
+  // voir une créature après avoir bu).
+  "philter-of-love": { dataFixes: [{ effect: "MLhvjPiSXOX1tkUr", path: "duration.value", from: 600, value: 3600 }] },
+  // Miroir d'emprisonnement (SRD 5.2) : « les Créatures artificielles réussissent automatiquement la sauvegarde ».
+  "mirror-of-life-trapping": { saveAutoSuccess: { types: ["construct"] } },
   // Amulette de cicatrisation : « un jet de 9 ou moins aux jets contre la mort devient 10 » — aucun effet.
   "periapt-of-wound-closure": {
     dataFixes: [{ effect: "dasPeriaptWound0", create: worn("Periapt of Wound Closure", [change("system.attributes.death.roll.min", "upgrade", 10)]) }]
