@@ -276,6 +276,15 @@ export const ITEM_FIXES = Object.freeze({
   // Chien d'onyx : l'effet du molosse est transféré au porteur de la figurine (vision aveugle de 18 m).
   // O4 : comme les autres figurines, le molosse agit juste après son maître.
   "onyx-dog-rare": { summon: { initiative: "after" }, dataFixes: [{ effect: "fMC3o8l8D2GamPbU", path: "transfer", from: true, value: false }] },
+  // Comète (SRD 5.2) : « vous avez l'Avantage aux jets de sauvegarde contre la mort pendant 1 an » — l'effet « Death Save
+  // Advantage » ne porte aucun changement.
+  comet: { dataFixes: [{ effect: "asqZlVwoKSS1ckCU", path: "system.changes", from: [],
+    value: [change("system.attributes.death.roll.mode", "add", 1)] }] },
+  // Piège de chasse (SRD 5.2) : « sa Vitesse est réduite à 0 jusqu'au début de son prochain tour ; ensuite, tant qu'elle ne s'est
+  // pas libérée, son déplacement est limité par la longueur de la chaîne (1 m en général) » — l'effet « Trapped » est vide. La
+  // Vitesse reste à 0 tant que l'effet est porté : 1 m de chaîne ne laisse pas quitter sa case (lecture, pas le texte).
+  "hunting-trap": { dataFixes: [{ effect: "9jl46RZ5GOjs9QlJ", path: "system.changes", from: [],
+    value: [change("system.attributes.movement.multiplier", "override", "0")] }] },
   // Orbe des dragons : « 7 charges, 1d4 + 3 à l'aube » — l'item n'en a aucune, ses sorts payants étaient refusés.
   "orb-of-dragonkind": {
     dataFixes: [{ path: "system.uses.max", from: "", value: "7" }, { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]
