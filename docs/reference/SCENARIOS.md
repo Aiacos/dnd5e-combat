@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-370 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+371 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -17,6 +17,7 @@ la sélection sans rien jouer.
 | `abri-grotte` |  | §239 | case coupée par un mur de grotte : pas d'abri derrière soi |
 | `abri` |  |  | créature interposée, abri partiel +2 |
 | `actions-tour` |  | §15.2 | Pointe, Dague, Dague en main secondaire |
+| `activite-sous-effet` |  | §486 | §486 (brique B07) — `usageLimits.<activité>.whileEffect` / `unlessEffect` : une activité permise seulement sous un effet, ou seulement hors de lui (« Griffes (requiert Modificatio… |
 | `agrandissement` |  | §16.58 | Agrandissement (token 2×2), Rapetissement, retour à la taille d'origine |
 | `alerte-mj` |  | §364 §366 §365 | bandeau, carte chuchotée, filtre d'activité, réglage |
 | `antimagie-cone` |  | §436 | Cône antimagie du tyrannœil, en combat jusqu'au début de son tour suivant |

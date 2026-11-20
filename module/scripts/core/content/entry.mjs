@@ -611,7 +611,14 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       if ( ("whenEmpty" in rule) && ((typeof rule.whenEmpty !== "string") || !rule.whenEmpty) ) errors.push(`${at}usageLimits.${id}.whenEmpty: item identifier`);
       // §298 : « free » — l'utilisation ne coûte rien au budget (Arme sacrée : « lorsque vous prenez l'action Attaque »).
       if ( ("cost" in rule) && !["action", "bonus", "reaction", "free"].includes(rule.cost) ) errors.push(`${at}usageLimits.${id}.cost: action, bonus, reaction, free`);
-      for ( const key of Object.keys(rule) ) if ( !["oncePerTurn", "whenEmpty", "lowestSlot", "noDialog", "cost", "unmoved"].includes(key) ) errors.push(`${at}usageLimits.${id}.${key}: unknown key`);
+      // §486 : seulement sous un effet, ou hors de lui — identifiant d'item ou id d'effet, seul ou en liste non vide.
+      for ( const key of ["whileEffect", "unlessEffect"] ) {
+        if ( !(key in rule) ) continue;
+        const v = rule[key];
+        const ok = ((typeof v === "string") && v) || (Array.isArray(v) && v.length && v.every(x => (typeof x === "string") && x));
+        if ( !ok ) errors.push(`${at}usageLimits.${id}.${key}: item identifier or effect id, or a non-empty list of them`);
+      }
+      for ( const key of Object.keys(rule) ) if ( !["oncePerTurn", "whenEmpty", "lowestSlot", "noDialog", "cost", "unmoved", "whileEffect", "unlessEffect"].includes(key) ) errors.push(`${at}usageLimits.${id}.${key}: unknown key`);
     }
   }
   if ( ("effectsExpire" in entry) && !EFFECT_EXPIRIES.includes(entry.effectsExpire) ) errors.push(`${at}effectsExpire: ${EFFECT_EXPIRIES.join(", ")}`);

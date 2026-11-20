@@ -5,9 +5,10 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { usageLimitIssues, lowestSlotLevel } from "../core/limits.mjs";
+import { usageLimitIssues, lowestSlotLevel, effectRefs } from "../core/limits.mjs";
 import { resourceFeedback } from "../core/feedback.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
+import { carriesEffectFrom, comesFromItemEffect } from "./facts.mjs";
 import { combatantFor, movementOf, currentTurnKey } from "./turn.mjs";
 import { readUnitFactors } from "./units.mjs";
 
@@ -24,13 +25,31 @@ function remainingUses(actor, identifier) {
 }
 
 /**
- * Ce qui cloche pour cette utilisation (`notOwnTurn`, `oncePerTurn`, `notEmpty`), et l'item vide attendu.
+ * §486 : l'acteur porte-t-il cet effet ? `ref` : l'identifiant d'un item dont un effet actif est porté (Modification d'apparence),
+ * ou l'id d'un effet (celui d'un item de l'acteur activé, ou sa copie posée par le plateau d'effets de dnd5e).
+ */
+function carriesRef(actor, ref) {
+  if ( carriesEffectFrom(actor, ref) ) return true;
+  return Array.from(actor?.appliedEffects ?? actor?.effects ?? []).some(e => !e.disabled && !e.isSuppressed && comesFromItemEffect(e, ref));
+}
+
+/** §486 : le nom à montrer pour cet effet — celui de l'effet de l'acteur ou de ses items, sinon de l'item, sinon la référence. */
+function refName(actor, ref) {
+  const effects = [...(actor?.effects ?? []), ...Array.from(actor?.items ?? []).flatMap(i => Array.from(i.effects ?? []))];
+  const effect = effects.find(e => comesFromItemEffect(e, ref));
+  if ( effect?.name ) return effect.name;
+  return actor?.items?.find(i => identifierOf(i).id === ref)?.name ?? ref;
+}
+
+/**
+ * Ce qui cloche pour cette utilisation (`notOwnTurn`, `oncePerTurn`, `notEmpty`, `moved`, `needsEffect`, `barredByEffect`),
+ * l'item vide attendu et, §486, le nom de l'effet requis ou qui empêche.
  * @param {Activity} activity
  * @param {{inCombat: boolean, ownTurn: boolean}} turn
  */
 export function usageLimitProblems(activity, { inCombat, ownTurn }) {
   const rule = usageLimitOf(activity);
-  if ( !rule ) return { issues: [], item: null };
+  if ( !rule ) return { issues: [], item: null, effect: null };
   const key = currentTurnKey();
   const usedThisTurn = !!key && (activity.actor?.getFlag(MODULE_ID, `usedOnTurn.${activity.id}`) === key);
   const remaining = rule.whenEmpty ? remainingUses(activity.actor, rule.whenEmpty) : null;
@@ -38,7 +57,16 @@ export function usageLimitProblems(activity, { inCombat, ownTurn }) {
   // §20 : « si vous ne vous êtes pas déplacé pendant ce tour » (Visée stable) — le déplacement dépensé ce tour, hors téléportation.
   const combatant = (rule.unmoved && inCombat) ? combatantFor(activity.actor) : null;
   const moved = !!combatant && ((movementOf(combatant, readUnitFactors())?.spent ?? 0) > 0);
-  return { issues: usageLimitIssues(rule, { inCombat, ownTurn, usedThisTurn, remaining, moved }), item };
+  // §486 : seulement sous un effet (l'un de la liste), ou hors de ceux-là.
+  const needed = effectRefs(rule.whileEffect);
+  const barring = effectRefs(rule.unlessEffect);
+  const underEffect = needed.length ? needed.some(r => carriesRef(activity.actor, r)) : null;
+  const barredBy = barring.find(r => carriesRef(activity.actor, r)) ?? null;
+  const issues = usageLimitIssues(rule, { inCombat, ownTurn, usedThisTurn, remaining, moved, underEffect,
+    barredByEffect: barring.length ? !!barredBy : null });
+  const effect = issues.includes("needsEffect") ? needed.map(r => refName(activity.actor, r)).join(" / ")
+    : (barredBy ? refName(activity.actor, barredBy) : null);
+  return { issues, item, effect };
 }
 
 /**

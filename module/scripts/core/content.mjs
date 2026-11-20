@@ -111,7 +111,7 @@
  *     silences?: true                           la zone posée par l'item fait le silence (Silence, issue #42) : aucun son n'y
  *                                               naît ni ne la traverse — on n'entend ni ce qui est dedans, ni à travers
  *                                               (adapter/hearing.mjs)
- *     usageLimits?: { <id d'activité>: { oncePerTurn?, whenEmpty?, lowestSlot?, noDialog?, cost?, unmoved? } }
+ *     usageLimits?: { <id d'activité>: { oncePerTurn?, whenEmpty?, lowestSlot?, noDialog?, cost?, unmoved?, whileEffect?, unlessEffect? } }
  *                                               limites d'utilisation que dnd5e ne contrôle pas (§16.40, core/limits.mjs) :
  *                                               une fois à chacun de vos tours ; seulement si l'item `whenEmpty` n'a plus
  *                                               d'utilisation ; `lowestSlot` : l'emplacement le plus bas, sans fenêtre ;
@@ -119,7 +119,9 @@
  *                                               aucun, §298 : Arme sacrée)
  *                                               quand les données de dnd5e disent autre chose (Flammes : action Bonus)
  *                                               (Regain sauvage) ; `unmoved` : seulement sans s'être déplacé ce tour (Visée
- *                                               stable, §20)
+ *                                               stable, §20) ; `whileEffect` (§486) : seulement sous l'effet d'un item de cet
+ *                                               identifiant, ou d'un effet de cet id (une liste = l'un d'eux), refus forçable
+ *                                               sinon ; `unlessEffect` : seulement hors de ces effets
  *     effectsExpire?: "longRest"|"shortRest"    les effets que l'item pose prennent fin à ce repos du porteur (expiration
  *                                               native de dnd5e, `duration.expiry`) — Prière de guérison, §16.38
  *     revealsInvisible?: true                   le porteur d'un effet de l'item « ne peut pas bénéficier de l'état

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { usageLimitIssues, lowestSlotLevel } from "../module/scripts/core/limits.mjs";
+import { usageLimitIssues, lowestSlotLevel, effectRefs } from "../module/scripts/core/limits.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { resourceFeedback } from "../module/scripts/core/feedback.mjs";
 
@@ -39,5 +39,35 @@ describe("Regain sauvage : limites d'utilisation", () => {
     expect(validateEntry({ usageLimits: { "7nAgPNN2dth7SR0D": { cost: "gratis" } } })).toEqual(["usageLimits.7nAgPNN2dth7SR0D.cost: action, bonus, reaction, free"]);
     expect(validateEntry({ usageLimits: { court: { oncePerTurn: 1 } } }))
       .toEqual(["usageLimits.court: activity id (16 characters) expected", "usageLimits.court.oncePerTurn: true or absent"]);
+  });
+});
+
+describe("§486 : activité permise seulement sous un effet (whileEffect / unlessEffect)", () => {
+  const off = { inCombat: false, ownTurn: false, usedThisTurn: false, remaining: null };
+  it("sans l'effet requis : refusé, en combat ou non ; avec : permis", () => {
+    expect(usageLimitIssues({ whileEffect: "alter-self" }, { ...off, underEffect: false })).toEqual(["needsEffect"]);
+    expect(usageLimitIssues({ whileEffect: "alter-self" }, { ...base, underEffect: false })).toEqual(["needsEffect"]);
+    expect(usageLimitIssues({ whileEffect: "alter-self" }, { ...off, underEffect: true })).toEqual([]);
+  });
+  it("sous un effet qui l'interdit : refusé ; hors de lui : permis", () => {
+    expect(usageLimitIssues({ unlessEffect: ["aaaaaaaaaaaaaaaa"] }, { ...off, barredByEffect: true })).toEqual(["barredByEffect"]);
+    expect(usageLimitIssues({ unlessEffect: ["aaaaaaaaaaaaaaaa"] }, { ...off, barredByEffect: false })).toEqual([]);
+  });
+  it("état inconnu (non calculé) : rien", () => {
+    expect(usageLimitIssues({ whileEffect: "alter-self", unlessEffect: "x" }, off)).toEqual([]);
+  });
+  it("références : chaîne seule ou liste", () => {
+    expect(effectRefs("alter-self")).toEqual(["alter-self"]);
+    expect(effectRefs(["aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbb"])).toEqual(["aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbb"]);
+    expect(effectRefs(undefined)).toEqual([]);
+  });
+  it("schéma", () => {
+    expect(validateEntry({ usageLimits: { "7nAgPNN2dth7SR0D": { whileEffect: "alter-self" } } })).toEqual([]);
+    expect(validateEntry({ usageLimits: { "7nAgPNN2dth7SR0D": { whileEffect: ["aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbb"], oncePerTurn: true } } })).toEqual([]);
+    expect(validateEntry({ usageLimits: { "7nAgPNN2dth7SR0D": { unlessEffect: "some-form" } } })).toEqual([]);
+    for ( const bad of [[], "", 3, [""], [1]] ) {
+      expect(validateEntry({ usageLimits: { "7nAgPNN2dth7SR0D": { whileEffect: bad } } }))
+        .toEqual(["usageLimits.7nAgPNN2dth7SR0D.whileEffect: item identifier or effect id, or a non-empty list of them"]);
+    }
   });
 });
