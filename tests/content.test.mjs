@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { validateEntry, validateTable, validateSources, mergeEntries, CONTENT_VERSION, ENTRY_KEYS } from "../module/scripts/core/content.mjs";
 import { CONTENT, SHIPPED, SOURCES, registerTable, unregisterTable, registeredTables, registerSources, registeredSources } from "../module/scripts/content/index.mjs";
 import { effectHolds } from "../module/scripts/core/feats.mjs";
+import { formExpired, revertSeconds, sharedSlotUpdates } from "../module/scripts/core/form-revert.mjs";
 
 const facts = Object.fromEntries(["activity.type", "activity.isAttack", "activity.isSpell", "activity.isWeapon", "activity.weaponKind", "activity.identifier", "activity.id",
   "activity.hasProperty", "source.hasStatus", "source.hasEffect", "source.creatureType", "source.allyNearTarget", "source.summonNearTarget", "source.seesTarget",
@@ -783,6 +784,36 @@ describe("§76 : changesForm", () => {
     expect(validateEntry({ changesForm: { activity: "court" } })).toEqual([expect.stringContaining("changesForm.activity")]);
     expect(validateEntry({ changesForm: { activity: "aaaaaaaaaaaaaaaa", quand: 1 } })).toEqual([expect.stringContaining("unknown key")]);
     expect(mergeEntries([null, { changesForm: { activity: "aaaaaaaaaaaaaaaa" } }]).changesForm.activity).toBe("aaaaaaaaaaaaaaaa");
+  });
+});
+
+describe("§498 (B18) : changesForm.revertAfter, shareSpellSlots", () => {
+  const A = "aaaaaaaaaaaaaaaa";
+  it("durée en rounds ou en secondes, retour automatique ou non, partage des emplacements", () => {
+    expect(validateEntry({ changesForm: { activity: A, keepHp: true, revertAfter: { rounds: 10 }, shareSpellSlots: true } })).toEqual([]);
+    expect(validateEntry({ changesForm: { activity: A, revertAfter: { seconds: 60, auto: false } } })).toEqual([]);
+    expect(validateEntry({ changesForm: { activity: A, revertAfter: { rounds: 10, seconds: 60 } } })).toEqual([expect.stringContaining("exactly one")]);
+    expect(validateEntry({ changesForm: { activity: A, revertAfter: { rounds: 0 } } })).toEqual([expect.stringContaining("revertAfter.rounds")]);
+    expect(validateEntry({ changesForm: { activity: A, revertAfter: { minutes: 1 } } })).toEqual(expect.arrayContaining([expect.stringContaining("revertAfter.minutes")]));
+    expect(validateEntry({ changesForm: { activity: A, revertAfter: 10 } })).toEqual([expect.stringContaining("revertAfter")]);
+    expect(validateEntry({ changesForm: { activity: A, revertAfter: { rounds: 2, auto: "non" } } })).toEqual([expect.stringContaining("auto")]);
+    expect(validateEntry({ changesForm: { activity: A, shareSpellSlots: 1 } })).toEqual([expect.stringContaining("shareSpellSlots")]);
+  });
+  it("durée en secondes du temps du monde", () => {
+    expect(revertSeconds({ rounds: 10 })).toBe(60);
+    expect(revertSeconds({ rounds: 2 }, 10)).toBe(20);
+    expect(revertSeconds({ seconds: 45 })).toBe(45);
+    expect(revertSeconds(null)).toBe(null);
+    expect(formExpired(100, 99)).toBe(false);
+    expect(formExpired(100, 100)).toBe(true);
+    expect(formExpired(null, 1e9)).toBe(false);
+  });
+  it("les emplacements dépensés passent d'une forme à l'autre, dans la limite de ses maximums", () => {
+    const from = { spell1: { value: 1, max: 3 }, spell2: { value: 2, max: 2 }, spell3: { value: 0, max: 1 }, pact: { value: 0, max: 0 } };
+    const to = { spell1: { value: 4, max: 4 }, spell2: { value: 0, max: 1 }, spell3: { value: 0, max: 0 }, spell4: { value: 1, max: 1 }, pact: { value: 2, max: 2 } };
+    expect(sharedSlotUpdates(from, to)).toEqual({ "system.spells.spell1.value": 2, "system.spells.spell2.value": 1 });
+    expect(sharedSlotUpdates({ spell1: { value: 0, max: 5 } }, { spell1: { value: 3, max: 3 } })).toEqual({ "system.spells.spell1.value": 0 });
+    expect(sharedSlotUpdates({}, { spell1: { value: 0, max: 2 }, spellcasting: { value: 1 } })).toEqual({ "system.spells.spell1.value": 2 });
   });
 });
 

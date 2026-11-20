@@ -68,7 +68,10 @@ const DEFAULTS = Object.freeze({
   // §495 (B15) : une échelle d'états — la créature se remet d'un palier (carillon), ou s'enfonce d'un palier (bruit sourd).
   stage: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull },
   // §496 (B16) : un sort gardé contre une dissipation, par la Réaction et un emplacement.
-  dispelKept: { success: CORE_SOUNDS.chime, failure: null }
+  dispelKept: { success: CORE_SOUNDS.chime, failure: null },
+  // §498 (B18) : un changement de forme à volonté (carillon), et le retour à la forme d'origine (le son qui s'éteint).
+  formChange: { success: CORE_SOUNDS.chime, failure: null },
+  formRevert: { success: CORE_SOUNDS.fade, failure: null }
 });
 
 /** Le son par défaut de cette action et de cette issue (null : aucun). */

@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-382 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+383 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -143,6 +143,7 @@ la sélection sans rien jouer.
 | `fins-et-durees` |  | §79 | Charme-monstre cesse sur les dégâts du lanceur, marque du Rayon traçant jusqu'à la fin de son tour |
 | `fins-generiques` |  | §258 | armure enfilée, personne d'affecté, lien trop loin |
 | `forme-gazeuse` |  | §269 | ni attaque ni sort |
+| `forme-limitee` |  | §498 | forme prise pour 10 rounds : retour automatique avec PV gardés et emplacements dépensés partagés, ou retour à la main par le menu (§498, brique B18) |
 | `forme-sauvage` |  | §16.39 | prendre une forme, la quitter, la perdre à 0 PV |
 | `frappe-occulte` |  | §47 | proposée au toucher, emplacement de pacte, À terre, une fois par tour |
 | `frappe-piegeuse` |  | §206 | proposée après un coup d'arme, jet de Force, Avantage des créatures Grandes |

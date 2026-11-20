@@ -12,6 +12,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { sharedValue } from "../core/coven.mjs";
+import { formExpired, revertSeconds, sharedSlotUpdates } from "../core/form-revert.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
 import { tokenOf } from "./facts.mjs";
 import { spendItemUses } from "./uses.mjs";
@@ -42,7 +43,8 @@ export function formChangeOf(activity) {
   const rule = contentOf(item).entry?.changesForm;
   if ( !rule || (rule.activity !== activity.id) || (activity.type !== "transform") ) return null;
   const uuid = activity.profiles?.[0]?.uuid;
-  return uuid ? { item, activity, uuid, keepConditions: rule.keepConditions !== false, keepHp: rule.keepHp === true } : null;
+  return uuid ? { item, activity, uuid, keepConditions: rule.keepConditions !== false, keepHp: rule.keepHp === true,
+    declared: true, revertAfter: rule.revertAfter ?? null, shareSpellSlots: rule.shareSpellSlots === true } : null;
 }
 
 /** À 0 PV, la créature change-t-elle de forme au lieu de tomber ? */
@@ -140,6 +142,18 @@ export async function changeForm(activity) {
   return phase ? swapForm(activity.actor, phase) : null;
 }
 
+/** §498 : le drapeau du token qui garde sa forme d'origine, le temps d'un changement de forme limité (`changesForm.revertAfter`). */
+export const FORM_REVERT = "formRevert";
+
+/** §498 : ce qu'un token changé de forme pour un temps garde de sa forme d'origine (drapeau `formRevert`), ou null. */
+export const formRevertOf = token => (token?.document ?? token)?.getFlag?.(MODULE_ID, FORM_REVERT) ?? null;
+
+/** Les emplacements de sort d'un acteur, en données simples (`{ spell1: { value, max }, … }`) : lus avant que le token change d'acteur. */
+function slotsOf(actor) {
+  return Object.fromEntries(Object.entries(actor?.system?.spells ?? {})
+    .map(([key, slot]) => [key, { value: Number(slot?.value) || 0, max: Number(slot?.max) || 0 }]));
+}
+
 /** Le token de `actor` change d'acteur pour la forme `phase.uuid` (seconde phase ou changement à volonté). */
 async function swapForm(actor, phase) {
   const target = await worldActorFor(phase.uuid);
@@ -149,47 +163,118 @@ async function swapForm(actor, phase) {
     console.warn(`${MODULE_ID} | ${actor.name}: shape change impossible (${target ? "no token" : `form not found: ${phase.uuid}`})`);
     return null;
   }
+  const proto = target.prototypeToken.toObject();
+  const look = { actorLink: proto.actorLink, name: proto.name || target.name, texture: proto.texture, width: proto.width, height: proto.height, ring: proto.ring };
+  // §498 : une forme limitée dans le temps garde sur le token sa forme d'origine (acteur, apparence, delta, PV) pour y revenir. Déjà
+  // changé pour un temps : l'origine reste la première ; revenu à elle par une autre activité : le retour n'a plus lieu d'être.
+  let revert;
+  const pending = formRevertOf(document);
+  if ( pending && (pending.actorId === target.id) ) revert = null;
+  else if ( pending ) revert = undefined;
+  else if ( phase.declared && phase.revertAfter ) {
+    const seconds = revertSeconds(phase.revertAfter, CONFIG.time?.roundTime);
+    const src = document._source;
+    revert = { actorId: document.actorId, actorLink: !!src.actorLink, name: src.name, texture: foundry.utils.deepClone(src.texture),
+      width: src.width, height: src.height, ring: foundry.utils.deepClone(src.ring),
+      delta: (!src.actorLink && src.delta) ? foundry.utils.deepClone(src.delta) : null,
+      hp: Math.max(0, Number(actor.system.attributes?.hp?.value) || 0),
+      expiresAt: (seconds === null) ? null : game.time.worldTime + seconds, auto: phase.revertAfter.auto !== false,
+      keepHp: phase.keepHp, keepConditions: phase.keepConditions, shareSpellSlots: phase.shareSpellSlots,
+      item: phase.item.name, form: target.name };
+  }
+  const done = await retoken(actor, document, target, look, { keepHp: phase.keepHp, keepConditions: phase.keepConditions,
+    shareSpellSlots: phase.shareSpellSlots, revert });
+  await ChatMessage.implementation.create({
+    speaker: ChatMessage.implementation.getSpeaker({ token: document }),
+    content: `<p>${game.i18n.format("DND5ECOMBAT.SecondePhase", { from: done.from, to: target.name, item: phase.item.name })}</p>`,
+    flags: { [MODULE_ID]: { secondPhase: { from: actor.uuid, to: target.uuid, token: document.uuid,
+      ...(revert ? { until: revert.expiresAt } : {}), ...(done.slots ? { slots: done.slots } : {}) } } }
+  });
+  return { from: done.from, to: target.name, token: document, declared: !!phase.declared };
+}
+
+/**
+ * Le token `document` de `actor` passe à l'acteur `target`, avec l'apparence `look` : PV (gardés si `keepHp`, sinon `hp` donné ou le
+ * maximum), états gardés (`keepConditions`), concentration de l'ancienne forme finie, emplacements dépensés partagés (`shareSpellSlots`,
+ * §498). `revert` : le drapeau `formRevert` à écrire (objet), à retirer (null) ou à laisser (undefined). `delta` : le delta d'origine à
+ * remettre (retour d'un token non lié). MJ actif.
+ */
+async function retoken(actor, document, target, look, { keepHp=false, keepConditions=true, shareSpellSlots=false, hp=null, delta=null, revert=undefined }={}) {
   const from = actor.name;
   // §78 : `keepHp` — les PV de la forme quittée (lus avant l'échange), dans la limite du maximum de la nouvelle.
-  const kept = phase.keepHp ? Math.max(0, Number(actor.system.attributes?.hp?.value) || 0) : null;
+  const kept = keepHp ? Math.max(0, Number(actor.system.attributes?.hp?.value) || 0) : (Number.isFinite(hp) ? hp : null);
+  const slots = shareSpellSlots ? slotsOf(actor) : null;
   // `keepConditions: false` : la nouvelle forme ne reprend aucun état de l'ancienne.
-  const conditions = phase.keepConditions ? keptConditions(actor) : [];
+  const conditions = keepConditions ? keptConditions(actor) : [];
   // La concentration de l'ancienne forme prend fin (ses effets sur les autres avec elle, par dnd5e).
   // Mort ou Inconscient que dnd5e a pu poser sur l'ancienne forme (`updateDowned`) : elle ne tombe pas, elle change.
   const fallen = actor.effects.filter(e => e.statuses?.has?.("concentrating") || e.statuses?.has?.("dead") || e.statuses?.has?.("unconscious")).map(e => e.id);
   if ( fallen.length ) await actor.deleteEmbeddedDocuments("ActiveEffect", fallen);
 
-  const proto = target.prototypeToken.toObject();
   // Un token lié n'a pas de delta à réécrire ; un token non lié repart d'un delta vierge — complet : le cœur refuse `delta: {}`
   // (« _id, system, items, effects, flags may not be undefined », vu en jeu le 2026-09-26). §78 : un token LIÉ qui devient non lié
   // n'a pas de delta (null) — on n'en écrit pas, le cœur refuse ce delta-là comme mise à jour partielle ; il part de la fiche.
-  const blank = (proto.actorLink || !document._source?.delta) ? {}
-    : { delta: { _id: document.delta?.id ?? document.id, system: {}, items: [], effects: [], flags: {} } };
-  await document.update({
-    actorId: target.id, actorLink: proto.actorLink, name: proto.name || target.name,
-    texture: proto.texture, width: proto.width, height: proto.height, ring: proto.ring, ...blank
-  });
+  // §498 : au retour, un token non lié retrouve le delta qu'il avait avant le changement.
+  const blank = (look.actorLink || !document._source?.delta) ? {}
+    : { delta: delta ? { system: {}, items: [], effects: [], flags: {}, ...foundry.utils.deepClone(delta), _id: document.delta?.id ?? document.id }
+      : { _id: document.delta?.id ?? document.id, system: {}, items: [], effects: [], flags: {} } };
+  await document.update({ actorId: target.id, ...look, ...blank, ...(revert ? { [`flags.${MODULE_ID}.${FORM_REVERT}`]: revert } : {}) });
+  if ( revert === null ) await document.unsetFlag(MODULE_ID, FORM_REVERT);
   for ( const combatant of game.combats.contents.flatMap(c => c.combatants.filter(x => x.tokenId === document.id)) ) {
     await combatant.update({ actorId: target.id });
   }
   const shaped = document.actor;
+  let shared = null;
   if ( shaped ) {
     const max = Number(shaped.system.attributes.hp.max) || 0;
-    const hp = (kept === null) ? max : Math.min(kept, max);
-    await shaped.update({ "system.attributes.hp.value": hp, [`flags.${MODULE_ID}.${SYNC}`]: foundry.utils.randomID() },
+    const value = (kept === null) ? max : Math.min(kept, max);
+    // §498 : les emplacements dépensés sous l'ancienne forme le restent sous celle-ci.
+    shared = slots ? sharedSlotUpdates(slots, slotsOf(shaped)) : null;
+    await shaped.update({ "system.attributes.hp.value": value, ...(shared ?? {}), [`flags.${MODULE_ID}.${SYNC}`]: foundry.utils.randomID() },
       { dnd5e: { concentrationCheck: false } });
     // À 0 PV gardés (§78 : la forme qui meurt reprend sa forme véritable), la chute reste : la Régénération ou la mort en décident.
-    const downed = (hp > 0) ? shaped.effects.filter(e => ["dead", "unconscious"].some(id => e.statuses?.has?.(id))).map(e => e.id) : [];
+    const downed = (value > 0) ? shaped.effects.filter(e => ["dead", "unconscious"].some(id => e.statuses?.has?.(id))).map(e => e.id) : [];
     if ( downed.length ) await shaped.deleteEmbeddedDocuments("ActiveEffect", downed);
     if ( conditions.length ) await shaped.createEmbeddedDocuments("ActiveEffect", conditions);
   }
+  return { from, slots: shared };
+}
+
+/**
+ * §498 : le token reprend la forme d'origine que garde son drapeau `formRevert` — acteur, apparence, delta d'un token non lié ; PV de la
+ * forme quittée si `keepHp` (dans la limite du maximum), sinon ceux qu'il avait en partant ; états gardés ; emplacements partagés. Carte
+ * de chat `formReverted`. MJ actif.
+ * @param {TokenDocument} document
+ * @returns {Promise<{from: string, to: string, item: string}|null>}
+ */
+export async function revertToOrigin(document) {
+  const snap = formRevertOf(document);
+  const actor = document?.actor;
+  if ( !snap || !actor ) return null;
+  const target = game.actors.get(snap.actorId);
+  if ( !target ) {
+    console.warn(`${MODULE_ID} | ${document.name}: original form not found (${snap.actorId}), return dropped`);
+    await document.unsetFlag(MODULE_ID, FORM_REVERT);
+    return null;
+  }
+  const look = { actorLink: snap.actorLink, name: snap.name, texture: snap.texture, width: snap.width, height: snap.height, ring: snap.ring };
+  const done = await retoken(actor, document, target, look, { keepHp: snap.keepHp, keepConditions: snap.keepConditions,
+    shareSpellSlots: snap.shareSpellSlots, hp: snap.hp, delta: snap.delta, revert: null });
   await ChatMessage.implementation.create({
     speaker: ChatMessage.implementation.getSpeaker({ token: document }),
-    content: `<p>${game.i18n.format("DND5ECOMBAT.SecondePhase", { from, to: target.name, item: phase.item.name })}</p>`,
-    flags: { [MODULE_ID]: { secondPhase: { from: actor.uuid, to: target.uuid, token: document.uuid } } }
+    content: `<p>${game.i18n.format("DND5ECOMBAT.FormeRetour.Carte", { from: foundry.utils.escapeHTML(done.from), to: foundry.utils.escapeHTML(document.name), item: foundry.utils.escapeHTML(snap.item ?? "") })}</p>`,
+    flags: { [MODULE_ID]: { formReverted: { from: done.from, to: target.uuid, token: document.uuid, slots: done.slots ?? null } } }
   });
-  return { from, to: target.name };
+  return { from: done.from, to: document.name, item: snap.item ?? "" };
 }
+
+/** §498 : les tokens (toutes scènes) dont la forme limitée a dépassé sa durée au temps du monde `now`. */
+export function expiredFormTokens(now=game.time.worldTime) {
+  return game.scenes.contents.flatMap(scene => scene.tokens.filter(t => formExpired(formRevertOf(t)?.expiresAt, now)));
+}
+
+/** §498 : `auto: false` — le rappel au MJ est fait, la forme reste jusqu'au retour à la main. */
+export const markReminded = document => document.setFlag(MODULE_ID, FORM_REVERT, { ...formRevertOf(document), expiresAt: null, reminded: true });
 
 /* -------------------------------------------- */
 /*  Dernier rempart (§19.6)                     */

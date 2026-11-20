@@ -4,9 +4,11 @@
  */
 
 import { sharedHpItemOf, shareHp, isSharedWrite, transformsAtZero, enterSecondPhase, covenMembers, standsAtZero, standAtOne,
-  purgeEffects, formChangeOf, changeForm } from "../adapter/coven.mjs";
+  purgeEffects, formChangeOf, changeForm, formRevertOf, revertToOrigin, expiredFormTokens, markReminded } from "../adapter/coven.mjs";
 import { contentOf } from "../adapter/content.mjs";
-import { log, sleep, say, locEsc } from "./shared.mjs";
+import { MODULE_ID } from "../constants.mjs";
+import { actsFor } from "../core/requests.mjs";
+import { log, sleep, say, locEsc, notice, viaActiveGM } from "./shared.mjs";
 import { burstAtZero } from "./emanations.mjs";
 import { enqueue } from "./queue.mjs";
 import { route } from "./router.mjs";
@@ -64,13 +66,59 @@ function onFormChange(activity) {
   return enqueue(QUEUE, async () => {
     try {
       const done = await changeForm(activity);
-      if ( done ) log(`shape change: ${done.from} → ${done.to}`);
+      if ( !done ) return;
+      log(`shape change: ${done.from} → ${done.to}`);
+      // §498 : le changement de forme vu et entendu de toute la table.
+      notice(done.token, { key: "FormeRetour.Change", data: { name: done.to } }, "info", { all: true, action: "formChange", outcome: "success" });
     } finally { shifting.delete(actor.uuid); }
   });
 }
 
+/** §498 : la requête « reprendre sa forme d'origine » (menu du token, joueur propriétaire) vers le MJ actif. */
+export const REVERT_FORM_QUERY = `${MODULE_ID}.revertShape`;
+
+/** §498 : côté MJ actif — le token reprend sa forme d'origine (durée écoulée, ou à la demande de son propriétaire). */
+function handleRevertShape({ token: tokenUuid, reason="asked" }={}, { user }={}) {
+  const document = fromUuidSync(tokenUuid ?? "", { strict: false });
+  if ( !document || !formRevertOf(document) || !actsFor(user, document) ) return false;
+  const key = document.actor?.uuid ?? tokenUuid;
+  if ( shifting.has(key) ) return false;
+  shifting.add(key);
+  return enqueue(QUEUE, async () => {
+    try {
+      if ( !formRevertOf(document) ) return false;
+      const done = await revertToOrigin(document);
+      if ( !done ) return false;
+      log(`shape change ends (${reason}): ${done.from} → ${done.to}`);
+      notice(document, { key: "FormeRetour.Avis", data: { name: done.to } }, "info", { all: true, action: "formRevert", outcome: "success" });
+      return true;
+    } finally { shifting.delete(key); }
+  });
+}
+
+/** §498 : intention « reprendre sa forme » (menu du clic droit sur son propre token) — par le MJ actif. */
+export function revertShape(token) {
+  const document = token?.document ?? token;
+  return viaActiveGM(REVERT_FORM_QUERY, handleRevertShape, { token: document?.uuid, reason: "asked" },
+    { timeout: 20000, noGm: "FormeRetour.SansMJ", fallback: false, label: "shape change: return" });
+}
+
+/** §498 : le temps du monde a avancé (un round de combat, le temps qui passe) — les formes limitées arrivées à leur terme. */
+async function onWorldTime(worldTime) {
+  for ( const document of expiredFormTokens(worldTime) ) {
+    const snap = formRevertOf(document);
+    if ( snap.auto !== false ) { await handleRevertShape({ token: document.uuid, reason: "duration elapsed" }); continue; }
+    // `auto: false` : le MJ décide — un rappel, une fois ; l'entrée « Reprendre sa forme » du menu reste.
+    await markReminded(document);
+    await say({ token: document }, locEsc("FormeRetour.Rappel", { name: document.name, item: snap.item ?? "" }),
+      { formRevertDue: { token: document.uuid } }, { whisper: game.users.filter(u => u.isGM).map(u => u.id) });
+  }
+}
+
 export function registerCoven() {
   route("dnd5e.postUseActivity", onFormChange, { executor: true, label: "shape change not played" });
+  route("updateWorldTime", onWorldTime, { executor: true, label: "shape change: return at end of duration not played" });
+  CONFIG.queries[REVERT_FORM_QUERY] = handleRevertShape;
   route("dnd5e.postUseActivity", onLastStandUsed, { executor: true, label: "last stand: effects not removed" });
   route("dnd5e.damageActor", onHpChanged, { executor: true, label: "coven: HP not shared" });
   route("dnd5e.healActor", onHpChanged, { executor: true, label: "coven: healing not shared" });

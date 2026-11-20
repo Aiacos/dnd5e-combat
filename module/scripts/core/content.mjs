@@ -551,6 +551,11 @@
  *                                               `keepConditions: false`) — une vraie forme révélée à volonté (§76) ; `keepHp` (§78, ici et dans
  *                                               `secondPhase`) : la forme garde les PV actuels (« son profil reste le même
  *                                               dans chaque forme » : un lycanthrope), à 0 PV compris
+ *                                               §498 (B18) : `revertAfter: { rounds | seconds, auto? }` — la forme dure ce temps (temps
+ *                                               du monde, un round = 6 s), puis le token reprend sa forme d'origine (acteur, apparence,
+ *                                               PV gardés si `keepHp`, sinon ceux d'avant) avec avis et son ; `auto: false` : seulement un
+ *                                               rappel au MJ, retour par « Reprendre sa forme » (menu du token, toujours offert) ;
+ *                                               `shareSpellSlots: true` : les emplacements dépensés sous une forme le restent sous l'autre
  *     failMargins?: { <id d'effet>: { min?, max? } }
  *                                               l'effet de l'activité de sauvegarde ne va qu'à qui l'a ratée de `min` ou plus (et de
  *                                               `max` au plus) : « si une créature rate le jet de 5 ou plus, elle est aussi

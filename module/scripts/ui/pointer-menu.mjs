@@ -19,6 +19,8 @@ import { leaderOf, canFollow, follow, unfollow } from "../runtime/follow.mjs";
 import { canDismiss, dismissPilot, useCommand } from "../runtime/pilot.mjs";
 import { canPocket, canRecall, pocketedFamiliar, dismissFamiliar } from "../runtime/familiar.mjs";
 import { revertActivityOf } from "../adapter/wildshape.mjs";
+import { formRevertOf } from "../adapter/coven.mjs";
+import { revertShape } from "../runtime/coven.mjs";
 import { traceAttacks } from "../adapter/traces.mjs";
 import { tetheredToken, tetherItems, tetherRuleOf } from "../adapter/tether.mjs";
 import { leaveForm } from "../runtime/wildshape.mjs";
@@ -348,6 +350,9 @@ export function selfEntries(token) {
   // §16.39 : quitter la Forme sauvage (action Bonus).
   const revert = revertActivityOf(token.actor);
   if ( revert ) entries.push({ icon: "fa-solid fa-paw", label: loc("Forme.Reprendre"), run: event => leaveForm(revert, event) });
+  // §498 : une forme prise pour un temps (`changesForm.revertAfter`) — le retour à la main, avant la fin de la durée ou quand elle
+  // n'est pas automatique (`auto: false`).
+  else if ( token.isOwner && formRevertOf(token) ) entries.push({ icon: "fa-solid fa-rotate-left", label: loc("Forme.Reprendre"), run: () => revertShape(token) });
   // §16.15 : les commandes qui ne visent que l'objet (Main interposée).
   const pilot = pilotOf(token);
   for ( const activity of pilot ? commandActivities(pilot, { self: true }) : [] ) {

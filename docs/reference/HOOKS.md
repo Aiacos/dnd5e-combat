@@ -1257,9 +1257,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 ### `updateWorldTime`
 
-1. vision: declared senses to read again
-2. area: duration elapsed, not removed _(MJ)_
-3. Wild Shape: end of duration _(MJ)_
+1. shape change: return at end of duration not played _(MJ)_
+2. vision: declared senses to read again
+3. area: duration elapsed, not removed _(MJ)_
+4. Wild Shape: end of duration _(MJ)_
 
 ### `userConnected`
 

@@ -14,6 +14,7 @@ import { isId, isObject } from "./shared.mjs";
 import { validateDataFixes } from "../data-fixes.mjs";
 import { validateRegeneration } from "../regeneration.mjs";
 import { validateFormLock, validateSuspends } from "../form-lock.mjs";
+import { revertAfterErrors } from "../form-revert.mjs";
 import { validateCommands, validateMount } from "../mount.mjs";
 import { validateAura, validateTrigger } from "./steps.mjs";
 import { SENSE_KINDS, SENSE_THROUGH, SENSE_NEEDS, SENSE_REVEALS } from "../senses.mjs";
@@ -238,7 +239,10 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     else {
       if ( ("keepConditions" in p) && (typeof p.keepConditions !== "boolean") ) errors.push(`${at}changesForm.keepConditions: boolean`);
       if ( ("keepHp" in p) && (typeof p.keepHp !== "boolean") ) errors.push(`${at}changesForm.keepHp: boolean`);
-      for ( const key of Object.keys(p) ) if ( !["activity", "keepConditions", "keepHp"].includes(key) ) errors.push(`${at}changesForm.${key}: unknown key`);
+      // §498 (B18) : retour à la forme d'origine au bout d'une durée, emplacements de sort partagés entre les deux formes.
+      if ( "revertAfter" in p ) for ( const e of revertAfterErrors(p.revertAfter) ) errors.push(`${at}changesForm.revertAfter${e}`);
+      if ( ("shareSpellSlots" in p) && (typeof p.shareSpellSlots !== "boolean") ) errors.push(`${at}changesForm.shareSpellSlots: boolean`);
+      for ( const key of Object.keys(p) ) if ( !["activity", "keepConditions", "keepHp", "revertAfter", "shareSpellSlots"].includes(key) ) errors.push(`${at}changesForm.${key}: unknown key`);
     }
   }
   const isMargin = mg => isObject(mg) && Object.keys(mg).length && Object.entries(mg).every(([k, v]) => ["min", "max"].includes(k) && Number.isFinite(v) && (v >= 0));
