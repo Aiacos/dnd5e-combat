@@ -17,6 +17,7 @@ import { validateSaveDisadvantageAgainst } from "../eligibility.mjs";
 import { validateOnDamageTaken } from "../damage-traits.mjs";
 import { validateReducesForcedMove } from "../forced-move.mjs";
 import { validateSaveResist } from "../save-resist.mjs";
+import { validateDamageByCount } from "../damage-by-count.mjs";
 import { validateRegeneration } from "../regeneration.mjs";
 import { validateFormLock, validateSuspends } from "../form-lock.mjs";
 import { revertAfterErrors } from "../form-revert.mjs";
@@ -117,6 +118,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   if ( "reducesForcedMove" in entry ) errors.push(...validateReducesForcedMove(entry.reducesForcedMove, at));
   if ( "saveResist" in entry ) errors.push(...validateSaveResist(entry.saveResist, at, isId));
   if ( "saveReflect" in entry ) errors.push(...validateSaveResist(entry.saveReflect, at, isId, "saveReflect"));
+  if ( "damageByCount" in entry ) errors.push(...validateDamageByCount(entry.damageByCount, at, isId));
   if ( "trace" in entry ) {
     const t = entry.trace;
     if ( isObject(t) ) {

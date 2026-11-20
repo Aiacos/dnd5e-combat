@@ -577,6 +577,9 @@
  *                                               Réaction ni question (Gel, Aversion au feu ; core/damage-traits.mjs)
  *     reducesForcedMove?: { distance, units }   le porteur peut prendre sa Réaction pour raccourcir d'autant un déplacement subi
  *                                               (poussée, traction) — Harnois nain ; demandé, jamais d'office
+ *     damageByCount?: { <id d'activité>: { from: <id d'activité>, formulas: [formule, …] } }
+ *                                               les dégâts de l'activité selon le nombre créé à l'activité `from` (1 + sa montée),
+ *                                               noté sur l'item (Anneau des étoiles filantes ; core/damage-by-count.mjs)
  *     targetedSummon?: true                      §394 : l'activité d'invocation se vise d'un clic (Doigt de mort : le cadavre) ;
  *                                               sans elle, une invocation ne vise jamais, quoi que disent ses données
  *     placesSummons?: true                       §109 : l'invocation se place toujours, même quand l'activité dit le contraire

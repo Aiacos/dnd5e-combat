@@ -60,6 +60,7 @@ import { registerEmanations } from "./runtime/emanations.mjs";
 import { registerRegeneration } from "./runtime/regeneration.mjs";
 import { registerFortitude } from "./runtime/fortitude.mjs";
 import { registerDamageTraits } from "./runtime/damage-traits.mjs";
+import { registerDamageByCount } from "./runtime/damage-by-count.mjs";
 import { registerDrain } from "./runtime/drain.mjs";
 import { registerSpaceSharing, registerObjectPassage } from "./runtime/space-sharing.mjs";
 import { registerEmpower } from "./runtime/empower.mjs";
@@ -457,6 +458,7 @@ Hooks.once("init", () => {
   gated(registerRegeneration);
   gated(registerFortitude);   // §61 : Robustesse de la non-vie (la sauvegarde due part avec les PV, adapter/death.mjs)
   gated(registerDamageTraits);   // trait qui répond à un type de dégâts subi (Gel, Aversion au feu)
+  gated(registerDamageByCount);   // dégâts selon le nombre créé (Anneau des étoiles filantes)
   gated(registerDrain);
   gated(registerSpaceSharing);
   gated(registerObjectPassage);   // §255
