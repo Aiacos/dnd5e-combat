@@ -185,6 +185,7 @@ describe("contenu livré", () => {
 
   it("réunit déclencheurs et auras par identifiant", () => {
     expect(Object.keys(CONTENT).sort()).toEqual([
+      "1-wand-of-the-war-mage-enchanted",
       "aberrant-anatomy", "abjure-foes", "absorb-elements", "absorption-ioun-stone", "acid", "acid-arrow", "acrobatic-movement",
       "action-surge", "adrenaline-rush", "agile", "aid", "air-element", "air-form", "alchemists-fire", "alert", "alter-self", "ambush",
       "ancient-might", "animal-friendship", "animate-dead", "animate-objects", "animate-trees", "antilife-shell", "antimagic-cone",

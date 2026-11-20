@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-900 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+901 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -204,7 +204,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `quietPose` | 2 | `sleet-storm`, `stinking-cloud` |
 | `rage` | 1 | `rage` |
 | `rangedDefense` | 2 | `arrow-catching-shield`, `shield-of-missile-attraction` |
-| `rangedFeat` | 4 | `crossbow-expert`, `improved-illusions`, `sharpshooter`, `spell-sniper` |
+| `rangedFeat` | 5 | `1-wand-of-the-war-mage-enchanted`, `crossbow-expert`, `improved-illusions`, `sharpshooter`, `spell-sniper` |
 | `ranges` | 19 | `bastion-of-law`, `dragons-breath`, `dynamite-stick`, `elder-champion`, `hand-of-healing`, `hand-of-ultimate-mercy`, … |
 | `reactions` | 1 | `reactive` |
 | `reactiveSpell` | 1 | `war-caster` |
