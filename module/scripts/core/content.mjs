@@ -577,6 +577,8 @@
  *                                               Réaction ni question (Gel, Aversion au feu ; core/damage-traits.mjs)
  *     reducesForcedMove?: { distance, units }   le porteur peut prendre sa Réaction pour raccourcir d'autant un déplacement subi
  *                                               (poussée, traction) — Harnois nain ; demandé, jamais d'office
+ *     castFromBearer?: { distance, units }      la portée des sorts du lanceur se mesure aussi depuis la créature qui porte un
+ *                                               effet de l'item, à cette distance de lui ou moins (Regard de deux esprits)
  *     targetedSummon?: true                      §394 : l'activité d'invocation se vise d'un clic (Doigt de mort : le cadavre) ;
  *                                               sans elle, une invocation ne vise jamais, quoi que disent ses données
  *     placesSummons?: true                       §109 : l'invocation se place toujours, même quand l'activité dit le contraire
