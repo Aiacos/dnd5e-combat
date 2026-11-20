@@ -325,8 +325,10 @@ export function registerGrapple() {
   const marks = { executor: true, label: "grapple: grappler's mark" };
   route("createActiveEffect", effect => markGrappler(effect), marks);
   // §504 : un état posé par le moteur (étape `status` : empoignade au lieu des dégâts, Main agrippante) reçoit son origine APRÈS sa création
-  // (adapter/apply-effects.mjs `applyStatusToToken`, le modèle `condition` n'en a pas) : la marque se pose à ce moment-là.
-  route("updateActiveEffect", (effect, changes) => ("origin" in (changes ?? {})) ? markGrappler(effect) : null, marks);
+  // (adapter/apply-effects.mjs `applyStatusToToken`, le modèle `condition` n'en a pas) : la marque se pose à ce moment-là. Le diff que
+  // reçoit le hook ne porte pas la clé `origin` pour un effet `condition` (vu au banc, dnd5e 6.1.1 : seulement `flags`, `_stats`) : on
+  // regarde tout Agrippé mis à jour — `markGrappler` ne fait rien sans agrippeur connu ni si la marque existe déjà.
+  route("updateActiveEffect", effect => (effect.statuses?.has?.("grappled") ? markGrappler(effect) : null), marks);
   route("createActiveEffect", effect => onlyOneGrappled(effect), { executor: true, label: "grapple: only one creature at a time not enforced" });
   route("deleteActiveEffect", effect => unlink(effect), marks);
   route("moveToken", (token, movement, operation) => dragVictims(token, movement, operation),
