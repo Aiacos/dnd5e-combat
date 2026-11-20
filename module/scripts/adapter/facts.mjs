@@ -106,6 +106,13 @@ export function originItemOf(effect) {
     const owner = copied?.parent;
     if ( owner?.documentName === "Item" && !owner.pack ) return owner;
   }
+  // Un effet posé par la zone d'une activité (`zoneEffects`) a pour origine le comportement de sa région : la région porte l'activité
+  // qui l'a posée (`flags.dnd5e.activity`), d'où l'item (Cercle magique : la marque de qui se tient dans le cercle).
+  if ( ["Region", "RegionBehavior"].includes(doc?.documentName) ) {
+    const region = (doc.documentName === "Region") ? doc : doc.parent;
+    const placed = fromUuidSync(region?.getFlag?.("dnd5e", "activity") ?? "", { strict: false });
+    return placed?.item ?? null;
+  }
   if ( doc ) return doc.documentName === "Item" ? doc : (doc.item ?? null);
   // §53 : l'item n'existe plus (une potion bue, dernière de sa pile) — dnd5e garde une copie de l'item détruit dans le message
   // d'utilisation (`deltas.deleted`, documents/chat-message.mjs `getAssociatedItem`), que l'effet référence.
