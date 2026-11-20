@@ -1,16 +1,17 @@
 /**
- * §495 (B15) — échelle d'états sur sauvegardes répétées, fin sur soin magique. Arène de test : Magicien (token lié), Clerc, Zombi.
+ * §495 (B15) — échelle d'états sur sauvegardes répétées, fin sur soin magique. Arène de test : Magicien (token lié), Clerc, Bandit (Humanoïde : le Zombi est immunisé à Empoisonné, la pose
+ * l'épargnait — passe du banc du 2026-11-20).
  * Un trait d'essai est prêté au Magicien : une activité de sauvegarde (Con) qui pose « Essai : empoisonné » (Empoisonné), et un second
  * effet « Essai : ralenti » (palier 1). Sa règle est posée dans la surcouche du monde (`overrideContent`, jamais en drapeau d'item) :
  *   triggers: [{ on: "endOfTurn", via: "effect", fromEffect: <empoisonné>,
  *     do: [{ type: "resave", stages: [{ effect: <ralenti> }, { status: "paralyzed" }], critEnds: true }] }],
  *   endsWhen: { healedByMagic: true }
- *  1. DD 30 : le Zombi rate la pose, puis chaque sauvegarde de fin de tour — palier 1 (« Essai : ralenti » posé, dépendant de
+ *  1. DD 30 : le Bandit rate la pose, puis chaque sauvegarde de fin de tour — palier 1 (« Essai : ralenti » posé, dépendant de
  *     l'effet), palier 2 (le ralenti retiré, Paralysé ajouté à l'effet), puis il reste au palier 2. Un 20 naturel fait tomber l'effet
  *     (`critEnds`) : vu dans le journal, le poison est reposé et la montée reprend.
  *  2. DD 1 : une réussite redescend au palier 1 (Paralysé retiré, ralenti reposé).
- *  3. Mot de guérison du Clerc sur le Zombi (soin magique) : l'effet tombe, le ralenti avec lui (dnd5e, `dependentOn`).
- * États et effets d'essai restés sur le Zombi (acteur synthétique, token non lié) retirés d'abord ; PV, trait, sort, surcouche, combat
+ *  3. Mot de guérison du Clerc sur le Bandit (soin magique) : l'effet tombe, le ralenti avec lui (dnd5e, `dependentOn`).
+ * États et effets d'essai restés sur le Bandit (acteur synthétique, token non lié) retirés d'abord ; PV, trait, sort, surcouche, combat
  * remis. Toute fenêtre « le faire quand même » ouverte chez le MJ est acceptée (« go »), toute autre fermée.
  */
 const MODULE_ID = "dnd5e-combat";
@@ -38,11 +39,16 @@ export default {
 
   async run(ctx) {
     const { tokens } = await ctx.scene();
-    const need = ["Magicien", "Clerc", "Zombi"];
+    const need = ["Magicien", "Clerc", "Bandit"];
     if ( need.some(n => !tokens.some(t => t.name === n)) ) { ctx.log(`${need.join(", ")} requis : non applicable`); return; }
     const mage = await ctx.token("Magicien");
     const clerc = await ctx.token("Clerc");
-    const zombi = await ctx.token("Zombi");
+    const bandit = await ctx.token("Bandit");
+    // La cible doit pouvoir être Empoisonnée et Paralysée (immunités aux états de sa fiche de base).
+    const { data: target } = await ctx.call("get-scene-object", { type: "Token", objectId: bandit.id });
+    const immune = (await ctx.call("get-actor", { actorId: target.actorId }))?.system?.traits?.ci?.value ?? [];
+    const blocked = ["poisoned", "paralyzed"].filter(s => immune.includes(s));
+    if ( blocked.length ) { ctx.log(`Bandit immunisé à ${blocked.join(", ")} : non applicable`); return; }
     const { data: tok } = await ctx.call("get-scene-object", { type: "Token", objectId: mage.id });
     if ( !tok.actorLink ) { ctx.log("Magicien non lié : non applicable (le trait prêté irait à l'acteur de base)"); return; }
     const actorId = tok.actorId;
@@ -60,15 +66,15 @@ export default {
       }
     };
 
-    // --- Zombi propre (acteur synthétique) ------------------------------------------------------------------------------
-    const clearZombi = async () => {
-      await ctx.removeEffectsNamed(zombi, /^Essai :/);
-      for ( const s of ["poisoned", "paralyzed", "incapacitated", "prone", "unconscious", "dead"] ) await ctx.removeStatusEffects(zombi, s).catch(() => {});
+    // --- Bandit propre (acteur synthétique) ------------------------------------------------------------------------------
+    const clearBandit = async () => {
+      await ctx.removeEffectsNamed(bandit, /^Essai :/);
+      for ( const s of ["poisoned", "paralyzed", "incapacitated", "prone", "unconscious", "dead"] ) await ctx.removeStatusEffects(bandit, s).catch(() => {});
     };
-    await clearZombi();
-    ctx.restore(clearZombi);
-    const hp0 = await ctx.hp(zombi);
-    ctx.restore(() => ctx.setHp(zombi, hp0));
+    await clearBandit();
+    ctx.restore(clearBandit);
+    const hp0 = await ctx.hp(bandit);
+    ctx.restore(() => ctx.setHp(bandit, hp0));
 
     // --- Trait prêté, puis règle --------------------------------------------------------------------------------------------
     const match = { path: "system.identifier", value: IDENTIFIER };
@@ -87,8 +93,8 @@ export default {
     ctx.restore(() => ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: before }).catch(() => {}));
     const healingWord = await ctx.ensureItem(clerc, `${SRD}phbsplHealingWor`, { system: { method: "atwill" } });
 
-    // --- Ce que porte le Zombi --------------------------------------------------------------------------------------------
-    const ours = async () => (await ctx.effects(zombi)).filter(e => /^Essai :/.test(e.name ?? ""));
+    // --- Ce que porte le Bandit --------------------------------------------------------------------------------------------
+    const ours = async () => (await ctx.effects(bandit)).filter(e => /^Essai :/.test(e.name ?? ""));
     const look = async () => {
       const all = await ours();
       const base = all.find(e => e.name === "Essai : empoisonné") ?? null;
@@ -97,12 +103,12 @@ export default {
         dependent: String(slow?.flags?.dnd5e?.dependentOn ?? "") };
     };
 
-    // --- Combat : Magicien (20), Zombi (10) ----------------------------------------------------------------------------------
+    // --- Combat : Magicien (20), Bandit (10) ----------------------------------------------------------------------------------
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
-    await ctx.startCombat([mage, zombi]);
+    await ctx.startCombat([mage, bandit]);
     const combat = await state();
-    for ( const [t, v] of [[mage, 20], [zombi, 10]] ) {
+    for ( const [t, v] of [[mage, 20], [bandit, 10]] ) {
       await ctx.call("set-initiative", { combatantId: combat.combatants.find(x => x.tokenId === t.id).id, value: v, combatId: ctx.ownCombat });
     }
     for ( let i = 0; (i < 3) && ((await current()) !== mage.id); i++ ) { await ctx.call("previous-turn", { combatId: ctx.ownCombat }); await pause(1500); }
@@ -111,15 +117,15 @@ export default {
     /** Le poison posé (DD 30 : la sauvegarde rate toujours, sauf un 20 naturel qui ne compte pas ici). 5 essais. */
     const poison = async () => {
       for ( let i = 0; (i < 5) && !(await look()).base; i++ ) {
-        const used = await ctx.use({ tokenId: mage.id, itemId: lent, activityType: "save", targetTokenIds: [zombi.id], consume: false });
+        const used = await ctx.use({ tokenId: mage.id, itemId: lent, activityType: "save", targetTokenIds: [bandit.id], consume: false });
         await sweep();
         await ctx.settle(used.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
         await pause(1500);
       }
       return (await look()).base;
     };
-    /** Le Zombi joue son tour et le finit (au tour du Magicien avant et après) : rend la sauvegarde rejouée et le journal d'après. */
-    const zombiTurn = async () => {
+    /** Le Bandit joue son tour et le finit (au tour du Magicien avant et après) : rend la sauvegarde rejouée et le journal d'après. */
+    const banditTurn = async () => {
       const since = await ctx.lastMessageId();
       await ctx.nextTurn(); await pause(2000); await sweep(500);
       await ctx.nextTurn(); await pause(2500); await sweep(500);
@@ -131,21 +137,21 @@ export default {
       ctx.expect(!!card.flags[MODULE_ID].resave.stages, "la carte de sauvegarde répétée porte l'échelle (`resave.stages`)");
       const r = await ctx.settle(card.id, { timeoutMs: 45000 }).catch(() => null);
       await pause(2000);
-      const save = r?.targets?.find(t => t.name === "Zombi")?.save ?? null;
+      const save = r?.targets?.find(t => t.name === "Bandit")?.save ?? null;
       const log = await ctx.engineLog();
       const nat20 = log.some(l => /stages: .* rolls a natural 20/.test(l)) && !(await look()).base;
       return { save, nat20 };
     };
 
     // 1. Montée : DD 30.
-    if ( !ctx.expect(!!(await poison()), "le Zombi rate la pose : « Essai : empoisonné » (Empoisonné)") ) return;
+    if ( !ctx.expect(!!(await poison()), "le Bandit rate la pose : « Essai : empoisonné » (Empoisonné)") ) return;
     let s = await look();
     ctx.expect(s.statuses.includes("poisoned") && (s.level === 0) && !s.slow, `palier 0 : Empoisonné, pas de ralenti (palier ${s.level})`);
     const climbed = { one: false, two: false, same: false };
     for ( let turn = 0; (turn < 8) && !climbed.same; turn++ ) {
       const prior = s.level;
-      const res = await zombiTurn();
-      if ( !ctx.expect(!!res?.save, `tour ${turn + 1} : le Zombi rejoue sa sauvegarde en fin de tour`) ) return;
+      const res = await banditTurn();
+      if ( !ctx.expect(!!res?.save, `tour ${turn + 1} : le Bandit rejoue sa sauvegarde en fin de tour`) ) return;
       s = await look();
       if ( res.nat20 ) {
         ctx.log(`20 naturel au palier ${prior} : l'effet tombe (critEnds) — le poison est reposé`);
@@ -175,7 +181,7 @@ export default {
     // 2. Recul : DD 1.
     await lend(1);
     await pause(800);
-    const res = await zombiTurn();
+    const res = await banditTurn();
     s = await look();
     if ( res?.nat20 ) ctx.log("20 naturel pendant le recul : l'effet est tombé (critEnds)");
     else if ( ctx.expect(res?.save?.success === true, `DD 1 : sauvegarde réussie (${res?.save?.total ?? "aucune"})`) ) {
@@ -185,17 +191,17 @@ export default {
     if ( !s.base ) {
       await lend(30);
       if ( !ctx.expect(!!(await poison()), "le poison reposé pour le soin") ) return;
-      await zombiTurn();
+      await banditTurn();
       s = await look();
     }
 
     // 3. Soin magique : Mot de guérison du Clerc.
     if ( !ctx.expect(!!s.base, "l'effet est porté avant le soin") ) return;
-    const max = (await ctx.engine("stats", { tokenId: zombi.id }).catch(() => null))?.hp?.max ?? hp0;
-    await ctx.setHp(zombi, Math.max(1, max - 6));
+    const max = (await ctx.engine("stats", { tokenId: bandit.id }).catch(() => null))?.hp?.max ?? hp0;
+    await ctx.setHp(bandit, Math.max(1, max - 6));
     await pause(800);
     ctx.expect(!!(await look()).base, "des PV changés à la main ne sont pas un soin magique : l'effet reste");
-    const used = await ctx.use({ tokenId: clerc.id, itemId: healingWord, consume: false, targetTokenIds: [zombi.id] });
+    const used = await ctx.use({ tokenId: clerc.id, itemId: healingWord, consume: false, targetTokenIds: [bandit.id] });
     await sweep();
     await pause(1200);
     await ctx.engine("rollCard", { messageId: used.usageMessageId }).catch(() => null);
