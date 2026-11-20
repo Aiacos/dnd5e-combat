@@ -58,6 +58,28 @@ export function reactionsPerRound(actor) {
   return n;
 }
 
+/**
+ * §503 (B23) : la restriction qu'une utilisation pose pour le reste du tour (`afterUse.onlyCantrips` de son item) — `{ castTime, item }`,
+ * ou null. Un sort lancé par une activité « cast » d'une capacité (copie marquée `cachedFor` = l'activité, documents/activity/cast.mjs:140)
+ * lit la règle de la capacité ; `afterUse.activity` la réserve à une de ses activités.
+ */
+export function afterUseRestrictionOf(activity) {
+  const item = activity?.item;
+  if ( !item ) return null;
+  let owner = item;
+  let activityId = activity.id;
+  const cached = item.getFlag?.("dnd5e", "cachedFor");
+  if ( cached ) {
+    const m = String(cached).match(/Item\.([^.]+)\.Activity\.([^.]+)/);
+    const host = m ? item.actor?.items?.get(m[1]) : null;
+    if ( host ) { owner = host; activityId = m[2]; }
+  }
+  const rule = contentOf(owner).entry?.afterUse;
+  if ( !rule?.onlyCantrips || (rule.activity && (rule.activity !== activityId)) ) return null;
+  const castTime = (typeof rule.onlyCantrips === "object") ? (rule.onlyCantrips.castTime ?? null) : null;
+  return { castTime, item: owner.name };
+}
+
 /** §501 : un item de l'acteur déclare-t-il `reactions.loseOne` (« elle ne perd qu'une réaction ») ? */
 export function losesOnlyOneReaction(actor) {
   return (actor?.items ?? []).some(item => contentOf(item).entry?.reactions?.loseOne === true);
@@ -184,6 +206,8 @@ export function requestFor(activity, costOverride=null, { attackMode=null }={}) 
     weaponAttack: ((activity.type === "attack") && ["weapon", "unarmed"].includes(activity.attack?.type?.classification)) || replaces
       || isUnarmedOption(activity),
     usesSpellSlot: spellSlot,
+    // §503 (B23) : le sort utilisé (niveau), pour « plus de sort ce tour, sauf un sort mineur ».
+    spell: (item?.type === "spell") ? { level: Number(item.system.level) || 0 } : null,
     lightWeapon: weapon && (item.system.properties?.has("lgt") === true),
     // O5a (§339) : propriété Chargement, sauf si un don la lève (Expert des arbalètes).
     loading: weapon && (activity.type === "attack") && (item.system.properties?.has("lod") === true) && !rangedFeatsOf(activity.actor, activity, attackMode).loading,

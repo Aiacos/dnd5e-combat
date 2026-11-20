@@ -4,7 +4,7 @@ import { checkUse, spendUse, refundUse, basicAction, BASIC_ACTION_FLAGS, effecti
 import { rangeIssue, tooClose } from "../core/range.mjs";
 import { throwableAttackMode, versatileGrip } from "../core/attack.mjs";
 import {
-  combatantFor, isOwnTurn, readBudget, writeBudget, requestFor, attacksPerAction, rangeOf, reachOf, canBeThrown,
+  combatantFor, isOwnTurn, readBudget, writeBudget, requestFor, afterUseRestrictionOf, attacksPerAction, rangeOf, reachOf, canBeThrown,
   distanceBetween, usageTokenOf as usageToken, currentTurnKey, freshBudgetFor, movementOf } from "../adapter/turn.mjs";
 import { usageLimitProblems, markUsedThisTurn, applyLowestSlot } from "../adapter/limits.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
@@ -759,6 +759,12 @@ async function onUsageMessage(message) {
   }
   // §18.15 : « se déplace … sans provoquer d'attaque d'opportunité » — le reste du tour, comme après Se désengager.
   if ( !after.disengaged && freesMovement(activity.item) ) after = { ...after, disengaged: true };
+  // §503 (B23) : « aucun autre sort ce tour, sauf un sort mineur » — posé après cette utilisation, à son propre tour.
+  const restriction = afterUseRestrictionOf(activity);
+  if ( restriction && isOwnTurn(combatant) ) {
+    after = { ...after, onlyCantrips: restriction };
+    log(`${combatant.name}: ${restriction.item} — no other spell this turn, except a cantrip${restriction.castTime ? ` (${restriction.castTime})` : ""}`);
+  }
   await writeBudget(combatant, after);
   // §133 : l'action Se désengager prise (pas celle qu'une aptitude donne en marchant) — Sentinelle peut réagir.
   if ( ((kind === "disengage") || [declared].flat().includes("disengage")) && combatant.token ) windowDisengaged(combatant.token);

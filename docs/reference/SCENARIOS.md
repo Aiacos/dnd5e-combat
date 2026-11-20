@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-387 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+388 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -360,6 +360,7 @@ la sélection sans rien jouer.
 | `sorts-lot-4` |  | §286 | Nuée de météores, Tempête de feu, Chaîne d'éclairs (zones multiples, cibles choisies) |
 | `sorts-lot-5` |  | §287 | Rayon de soleil, Ténèbres qui dissipent les lumières de sort (lumières) |
 | `sorts-lot-6` |  | §288 | Flèche de foudre, Dissipation du mal et du bien, Dédale, Coup au but (données du PHB) |
+| `sorts-mineurs-seuls` |  | §503 | après une capacité, plus de sort ce tour sauf un sort mineur d'une action : Bénédiction refusée, Trait de feu permis (§503, brique B23) |
 | `sorts-restants` |  |  | Représailles infernales, Vigueur arcanique, Foulée brumeuse |
 | `sous-classes-ravenloft` |  | §95 §441 | Patron Mort-vivant, Sorcellerie de l'ombre, Fantôme, Gardien creux |
 | `soutien-intention` |  | §15.2 | avantage d'un allié, action préparée |

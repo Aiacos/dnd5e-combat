@@ -546,6 +546,10 @@
  *     secondPhase?: { activity }                à 0 PV, pas de Mort : l'activité « transform » de l'item (id) change la créature dans
  *                                               la forme de son profil, à ses PV max, même token (même initiative), états gardés
  *                                               (§19.5 : seconde phase)
+ *     afterUse?: { onlyCantrips: true | { castTime: "action"|"bonus" }, activity? }
+ *                                               §503 (B23) : après l'utilisation de cet item (ou de l'activité `activity`,
+ *                                               un sort lancé par une activité « cast » compris), à son tour : plus de sort ce
+ *                                               tour, sauf un sort mineur (de ce temps d'incantation) — refus forçable
  *     grapples?: { one?: true, by?: "summon" }  §502 (B22) : `one` — une seule créature agrippée à la fois par les effets de cet item (une
  *                                               nouvelle empoignade relâche l'ancienne, avec un avis) ; `by: "summon"` — l'empoignade est
  *                                               tenue par l'invocation de l'agrippeur (la liane) : elle tient tant que celle-ci est sur la

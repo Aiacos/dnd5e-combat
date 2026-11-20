@@ -44,6 +44,7 @@ export function freshBudget({ reactions=1 }={}) {
     action: 1, bonus: 1, reaction: reactions, attacks: { granted: 0, used: 0 },
     perTurnReaction: reactions > 1,   // plusieurs réactions par round : pas deux dans le même tour de jeu
     reactedAt: null,                  // le tour de jeu (combat.round.turn) de la dernière réaction
+    onlyCantrips: null,   // §503 (B23) : après une capacité `afterUse.onlyCantrips` — { castTime, item } : plus de sort ce tour, sauf un sort mineur
     dashed: false, dashes: 0, disengaged: false, dodging: false, slotCast: false,   // §402 : `dashes`, les Foncer du tour
     lightAttack: false,
     loadedFired: false,   // O5a (§339) : une arme à Chargement a tiré dans l'action Attaquer en cours (« un seul projectile par action »)   // §15.2 : une attaque d'arme Légère faite dans l'action Attaquer ouvre l'attaque de la main secondaire
@@ -152,7 +153,24 @@ export function checkUse(budget, request, { isOwnTurn, turnKey=null }) {
   if ( (cost === "bonus") && (budget.bonus < 1) ) issues.push("noBonus");
   if ( (cost === "reaction") && !reactionAvailable(budget, turnKey) ) issues.push("noReaction");
   if ( request.usesSpellSlot && isOwnTurn && budget.slotCast ) issues.push("slotAlreadyCast");
+  // §503 (B23) : « aucun autre sort ce tour, sauf un sort mineur d'une action » (après une capacité qui le dit).
+  const only = (isOwnTurn && budget.onlyCantrips) ? onlyCantripsIssue(budget.onlyCantrips, request.spell, cost) : null;
+  if ( only ) issues.push(only);
   return issues;
+}
+
+/**
+ * §503 (B23) : le refus d'un sort après une capacité qui ne laisse que les sorts mineurs (`afterUse.onlyCantrips`), ou null. `spell` :
+ * `{ level }` du sort utilisé (null : pas un sort) ; `cost` : son temps d'incantation (action, bonus, reaction), après Métamagie.
+ * @param {{castTime?: "action"|"bonus"|null}} rule
+ * @returns {"onlyCantrips"|"onlyCantripsAction"|"onlyCantripsBonus"|null}
+ */
+export function onlyCantripsIssue(rule, spell, cost) {
+  if ( !rule || !spell ) return null;
+  const key = rule.castTime ? `onlyCantrips${rule.castTime[0].toUpperCase()}${rule.castTime.slice(1)}` : "onlyCantrips";
+  if ( (Number(spell.level) || 0) > 0 ) return key;
+  if ( rule.castTime && (cost !== rule.castTime) ) return key;
+  return null;
 }
 
 /**

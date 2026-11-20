@@ -235,6 +235,20 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   }
   // §502 (B22) : `grapples: { one?: true, by?: "summon" }` — une seule créature agrippée à la fois par cet item ; l'empoignade tenue par
   // l'invocation de l'agrippeur (sa distance se juge depuis elle).
+  // §503 (B23) : `afterUse: { onlyCantrips: true | { castTime: "action" | "bonus" }, activity? }` — après cette utilisation, plus de sort
+  // ce tour sauf un sort mineur (de ce temps d'incantation).
+  if ( "afterUse" in entry ) {
+    const a = entry.afterUse;
+    const oc = a?.onlyCantrips;
+    if ( !isObject(a) || !("onlyCantrips" in a) ) errors.push(`${at}afterUse: { onlyCantrips, activity? }`);
+    else {
+      if ( !((oc === true) || (isObject(oc) && Object.keys(oc).every(k => k === "castTime") && (!("castTime" in oc) || ["action", "bonus"].includes(oc.castTime)))) ) {
+        errors.push(`${at}afterUse.onlyCantrips: true or { castTime: "action" | "bonus" }`);
+      }
+      if ( ("activity" in a) && !isId(a.activity) ) errors.push(`${at}afterUse.activity: activity id (16 characters) expected`);
+      for ( const key of Object.keys(a) ) if ( !["onlyCantrips", "activity"].includes(key) ) errors.push(`${at}afterUse.${key}: unknown key`);
+    }
+  }
   if ( "grapples" in entry ) {
     const g = entry.grapples;
     if ( !isObject(g) || !Object.keys(g).length ) errors.push(`${at}grapples: { one?: true, by?: "summon" }`);
