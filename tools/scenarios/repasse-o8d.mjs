@@ -82,8 +82,13 @@ export default {
       const { t, used } = await shoot(cleric, "none");
       if ( i === 0 ) ctx.expect(t?.name === "Guerrier", `Bouclier d'attraction : le carreau tiré sur le Clerc vise le Guerrier (${t?.name ?? "?"})`);
       if ( !t?.hit ) continue;
-      await pause(1500);
-      const damage = (await ctx.messagesSince(used.usageMessageId)).find(m => m.type === "damage");
+      // La carte de dégâts suit le jet et ses animations : en fin de longue passe, elle peut tarder plusieurs secondes.
+      let damage = null;
+      for ( let w = 0; !damage && (w < 10); w++ ) {
+        await pause(1000);
+        damage = (await ctx.messagesSince(used.usageMessageId)).find(m => m.type === "damage");
+      }
+      await pause(500);
       const total = (damage?.rolls ?? []).reduce((s, roll) => s + (roll.total ?? 0), 0);
       const lost = hp0 - await ctx.hp(fighter);
       if ( total > 0 ) halved = { total, lost };
