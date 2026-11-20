@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-940 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+941 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -174,6 +174,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `noRangedWeapons` | 1 | `storm-of-vengeance` |
 | `noReactions` | 6 | `arms-of-hadar`, `confusion`, `fetid-cloud`, `mm-beholder-eye-rays`, `slow`, `wrath-of-the-wild` |
 | `noSpells` | 1 | `befuddlement` |
+| `noTeleport` | 1 | `dimensional-shackles` |
 | `notOnSlippery` | 1 | `slippers-of-spider-climbing` |
 | `obscures` | 9 | `cloudkill`, `eversmoking-bottle`, `fog-cloud`, `grenade-smoke`, `incendiary-cloud`, `sleet-storm`, … |
 | `oneAttack` | 1 | `true-strike` |

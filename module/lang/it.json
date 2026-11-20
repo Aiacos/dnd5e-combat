@@ -2307,6 +2307,7 @@
   "DND5ECOMBAT.Souci.noSpells": "Sotto l'effetto di {item}, non puoi lanciare incantesimi né effettuare l'azione di Magia.",
   "DND5ECOMBAT.Souci.chainTooFar": "{name} è troppo lontano dal primo bersaglio, {first}: al massimo {distance} {units}.",
   "DND5ECOMBAT.Souci.noAttacksOrSpells": "Sotto l'effetto di {item}, non puoi attaccare né lanciare incantesimi.",
+  "DND5ECOMBAT.Souci.noTeleport": "Vincolato da {item}, non puoi teletrasportarti.",
   "DND5ECOMBAT.FinGenerique.casterTargetsOther": "{item} termina: l'incantatore si è rivolto contro un'altra creatura.",
   "DND5ECOMBAT.FinGenerique.incapacitated": "{item} termina: {name} o la sua fonte è Incapacitato.",
   "DND5ECOMBAT.FinGenerique.healedByMagic": "{item} termina per {name}, curato dalla magia.",

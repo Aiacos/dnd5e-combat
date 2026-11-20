@@ -2316,6 +2316,7 @@
   "DND5ECOMBAT.Souci.noSpells": "Under {item}, you can't cast spells or take the Magic action.",
   "DND5ECOMBAT.Souci.chainTooFar": "{name} is too far from the first target, {first}: {distance} {units} at most.",
   "DND5ECOMBAT.Souci.noAttacksOrSpells": "Under {item}, you can't attack or cast spells.",
+  "DND5ECOMBAT.Souci.noTeleport": "Bound by {item}, you can't teleport.",
   "DND5ECOMBAT.FinGenerique.casterTargetsOther": "{item} ends: the caster turned on another creature.",
   "DND5ECOMBAT.FinGenerique.incapacitated": "{item} ends: {name} or its source is Incapacitated.",
   "DND5ECOMBAT.FinGenerique.healedByMagic": "{item} ends for {name}, healed by magic.",

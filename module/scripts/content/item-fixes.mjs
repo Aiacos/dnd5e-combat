@@ -317,6 +317,9 @@ export const ITEM_FIXES = Object.freeze({
   "shield-of-the-cavalier": { effectsIf: { "target.sizeAtMost": "source" },
     triggers: [{ on: "hit", if: { "activity.id": "ABPaLpY5mrKpB4ou" },
       do: [{ type: "move", mode: "push", distance: 10, units: "ft" }] }] },
+  // Entraves dimensionnelles (SRD 5.2) : « les entraves empêchent la créature qu'elles lient d'user de tout moyen de déplacement
+  // extradimensionnel, téléportation comprise » — l'effet « Dimensionally Bound » de la donnée est vide.
+  "dimensional-shackles": { noTeleport: true },
   // Orbe des dragons : « 7 charges, 1d4 + 3 à l'aube » — l'item n'en a aucune, ses sorts payants étaient refusés.
   "orb-of-dragonkind": {
     dataFixes: [{ path: "system.uses.max", from: "", value: "7" }, { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]

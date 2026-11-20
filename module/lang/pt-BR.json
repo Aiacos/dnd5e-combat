@@ -2088,6 +2088,7 @@
   "DND5ECOMBAT.Retour.Banni": "Banido",
   "DND5ECOMBAT.Retour.Revenu": "Retorna",
   "DND5ECOMBAT.Souci.noAttacksOrSpells": "Sob o efeito de {item}, você não pode atacar nem conjurar magias.",
+  "DND5ECOMBAT.Souci.noTeleport": "Preso por {item}, você não pode se teletransportar.",
   "DND5ECOMBAT.FinGenerique.casterTargetsOther": "{item} termina: o conjurador se voltou contra outra criatura.",
   "DND5ECOMBAT.FinGenerique.allyDamages": "{item} termina: um aliado do conjurador feriu {name}.",
   "DND5ECOMBAT.Minuterie.Secondes": "s",
