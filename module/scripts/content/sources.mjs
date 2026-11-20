@@ -125,4 +125,5 @@ export const ENCHANTMENT_SOURCES = Object.freeze({
   tuFnPbghL64ioL04: "sword-of-wounding",
   CzJMRNHYWlVNvnJN: "vicious-weapon",
   mxrAgEyDsV2h5jla: "vorpal-sword",
+  jQnQ2ghbt7j3nWke: "energy-bow",
 });
