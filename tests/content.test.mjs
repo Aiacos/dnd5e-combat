@@ -322,7 +322,8 @@ describe("contenu livré", () => {
       "vine-attack", "viral-aura", "vitality-of-the-tree", "vitriolic-sphere", "vow-of-enmity", "wails-from-the-grave", "wall-of-fire",
       "wall-of-force", "wall-of-ice", "wall-of-stone", "wall-of-thorns", "wand-of-paralysis", "wand-of-polymorph", "wand-of-web",
       "wand-of-wonder", "war-caster", "war-magic", "war-priest", "warding-bond", "warding-charm", "warding-flare", "warp-body",
-      "watchers", "water-element", "water-form", "watery-rush", "weakening-breath", "web", "weird", "weird-insight", "whelm",
+      "watchers", "water-element", "water-form", "watery-rush", "weakening-breath",
+      "weapon-of-warning-enchanted", "web", "weird", "weird-insight", "whelm",
       "whirling-form", "wild-companion", "wild-resurgence", "wind-wall", "witch-bolt", "word-of-radiance", "wrath-of-the-sea",
       "wrath-of-the-wild", "wrathful-smite", "yellow-elemental-gem", "yolandes-regal-presence", "zealous-presence"
     ]);

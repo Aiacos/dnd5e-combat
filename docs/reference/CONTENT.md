@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-900 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+901 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -20,7 +20,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `antimagicZone` | 2 | `antimagic-cone`, `antimagic-field` |
 | `atTurnStart` | 3 | `aura-of-vitality`, `phantasmal-force`, `witch-bolt` |
 | `atZero` | 3 | `ancient-might`, `necrotic-husk`, `power-of-shadow` |
-| `aura` | 16 | `aura-of-alacrity`, `aura-of-authority`, `aura-of-bravery`, `aura-of-courage`, `aura-of-devotion`, `aura-of-life`, … |
+| `aura` | 17 | `aura-of-alacrity`, `aura-of-authority`, `aura-of-bravery`, `aura-of-courage`, `aura-of-devotion`, `aura-of-life`, … |
 | `avoidance` | 1 | `avoidance` |
 | `backfire` | 1 | `horn-of-blasting` |
 | `banishes` | 3 | `banishing-smite`, `banishment`, `maze` |
