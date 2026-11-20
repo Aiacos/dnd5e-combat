@@ -209,9 +209,8 @@ export const SPELL_RULES = Object.freeze({
   // Flamme sacrée (SRD 5.2) : « la cible ne bénéficie pas d'un abri partiel ni d'un abri aux trois quarts pour cette sauvegarde ».
   "sacred-flame": { saveIgnoresCover: true },
   // Zone de vérité, tourbillon de Contrôle de l'eau (SRD 5.2) : rien à la pose — la sauvegarde vient à l'entrée et au tour de
-  // chacun (content/triggers.mjs) ; « ne peut pas mentir tant qu'elle est dans le rayon » : l'effet tombe en sortant
-  // (`zoneEffects`).
-  "zone-of-truth": { quietPose: true, zoneEffects: true },
+  // chacun (content/triggers.mjs).
+  "zone-of-truth": { quietPose: true },
   "control-water": { quietPose: true },
   // §300 : « Croissance » — la zone devient un terrain où chaque mètre coûte 4 mètres de déplacement ; elle reste (durée instantanée).
   // Embroussaillement : « temps d'incantation : action » — la donnée laisse l'activation « spéciale » (rien n'était dépensé).
