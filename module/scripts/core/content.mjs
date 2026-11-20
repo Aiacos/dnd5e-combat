@@ -478,9 +478,15 @@
  *                                               supplémentaire au choix de la créature (Foulée des fées) — l'activité utilisée sur
  *                                               elle, ou (`around: "left"|"arrival"`) sur les créatures à 1,50 m de la case
  *                                               quittée ou d'arrivée
- *     regeneration?: true                       Régénération d'un monstre (§18.13) : l'activité de soin de l'item joue au début
+ *     regeneration?: true|{ amount?, needsHp?, stoppedBy?, silveredBy?, stoppedByItems?, stoppedWhile?, survivesZero?, critical? }
+ *                                               Régénération d'un monstre (§18.13) : l'activité de soin de l'item joue au début
  *                                               du tour ; ce qui la coupe et « ne meurt qu'à 0 PV sans régénérer » se lisent
- *                                               dans le texte anglais (core/regeneration.mjs)
+ *                                               dans le texte anglais (core/regeneration.mjs). B04 : la forme déclarée l'emporte,
+ *                                               clé par clé, sur cette lecture — `amount` (nombre ou formule, à la place de celle de
+ *                                               l'activité), `needsHp` (au moins 1 PV), `stoppedBy` / `silveredBy` (types de dégâts ;
+ *                                               d'une arme argentée), `stoppedByItems` (identifiants des objets dont les dégâts la
+ *                                               coupent : "holy-water"), `stoppedWhile` ("sunlight", "runningWater" : ne fonctionne
+ *                                               pas tant que la créature y est), `survivesZero`, `critical` (un coup critique la coupe)
  *     fortitude?: true                          Robustesse de la non-vie (MM 2024, §61) : des dégâts qui font tomber le porteur à
  *                                               0 PV lui font jeter une sauvegarde de Constitution (DD 5 + dégâts subis), sauf
  *                                               dégâts radiants ou coup critique ; réussie, il reste à 1 PV (core/fortitude.mjs)

@@ -7,7 +7,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { regenerationAtTurnStart, stopsRegeneration } from "../core/regeneration.mjs";
 import { setDeathStatus, dropAutoDead, ensureDowned } from "../adapter/death.mjs";
-import { regenerationOf, isStopped, markStopped, clearStopped, regenerate } from "../adapter/regeneration.mjs";
+import { regenerationOf, isStopped, markStopped, clearStopped, regenerate, heldBy, damageItemIdentifier } from "../adapter/regeneration.mjs";
 import { actorOfEffect } from "../adapter/grapple.mjs";
 import { enqueue } from "./queue.mjs";
 import { contentOf } from "../adapter/content.mjs";
@@ -17,14 +17,16 @@ import { log } from "./shared.mjs";
 /** Sur le client qui applique les dégâts : les types réellement subis, gardés pour après l'écriture. */
 function onCalculateDamage(actor, damages, options) {
   const regeneration = regenerationOf(actor);
-  if ( !regeneration?.stoppedBy.length && !regeneration?.silveredBy?.length && !regeneration?.critical ) return;
+  if ( !regeneration?.stoppedBy.length && !regeneration?.silveredBy?.length && !regeneration?.critical && !regeneration?.stoppedByItems?.length ) return;
   const hurt = damages.filter(d => (d.value > 0) && d.type);
   const types = hurt.map(d => d.type);
   // §78 : une arme argentée (propriété « sil » du jet, dnd5e : DamageDescription.properties).
   const silvered = hurt.filter(d => d.properties?.has?.("sil")).map(d => d.type);
   // K2 (§323) : un coup critique — le jet de dégâts du message d'origine l'est.
   const critical = (options?.origin?.rolls ?? []).some(r => r?.isCritical === true || r?.options?.isCritical === true);
-  if ( types.length ) Object.assign((options[MODULE_ID] ??= {}), { damageTypes: types, silveredTypes: silvered, critical });
+  // B04 : l'objet des dégâts (eau bénite), par son identifiant.
+  const item = regeneration.stoppedByItems?.length ? damageItemIdentifier(options) : null;
+  if ( types.length ) Object.assign((options[MODULE_ID] ??= {}), { damageTypes: types, silveredTypes: silvered, critical, damageItem: item });
 }
 
 async function onApplyDamage(actor, amount, options) {
@@ -32,7 +34,9 @@ async function onApplyDamage(actor, amount, options) {
   const types = options?.[MODULE_ID]?.damageTypes ?? [];
   const silvered = options?.[MODULE_ID]?.silveredTypes ?? [];
   const critical = options?.[MODULE_ID]?.critical === true;
-  if ( !regeneration || !stopsRegeneration(regeneration.stoppedBy, types, regeneration.silveredBy ?? [], silvered, { byCritical: regeneration.critical === true, critical }) ) return;
+  const item = options?.[MODULE_ID]?.damageItem ?? null;
+  if ( !regeneration || !stopsRegeneration(regeneration.stoppedBy, types, regeneration.silveredBy ?? [], silvered,
+    { byCritical: regeneration.critical === true, critical, byItems: regeneration.stoppedByItems ?? [], item }) ) return;
   await markStopped(actor, types);
   log(`${actor.name}: ${regeneration.item.name} stopped for their next turn (${types.join(", ")})`);
 }
@@ -47,7 +51,9 @@ function onTurnChange(combat, prior, current) {
     await dropAutoDead(actor);
     const hp = actor.system.attributes?.hp?.value ?? 0;
     const stopped = isStopped(actor);
-    const what = regenerationAtTurnStart({ hp, stopped, dead: actor.statuses.has("dead"), ...regeneration });
+    // B04 : au soleil, dans une eau courante (`stoppedWhile`) — le trait ne fonctionne pas ce tour-ci.
+    const held = heldBy(token, regeneration);
+    const what = regenerationAtTurnStart({ hp, stopped, held: held.length > 0, dead: actor.statuses.has("dead"), ...regeneration });
     if ( stopped ) await clearStopped(actor);
     if ( what === "dies" ) {
       await setDeathStatus(actor, "dead");
@@ -55,7 +61,7 @@ function onTurnChange(combat, prior, current) {
     } else if ( what === "heal" ) {
       const n = await regenerate(actor, regeneration);
       log(`${actor.name}: ${regeneration.item.name} +${n} Hit Points`);
-    } else if ( stopped ) log(`${actor.name}: ${regeneration.item.name} doesn't function this turn`);
+    } else if ( stopped || held.length ) log(`${actor.name}: ${regeneration.item.name} doesn't function this turn${held.length ? ` (${held.join(", ")})` : ""}`);
   });
 }
 

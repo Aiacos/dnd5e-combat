@@ -11,6 +11,7 @@ import { validateExtras } from "./extras.mjs";
 import { SPELL_COMPONENTS } from "../spell-failure.mjs";
 import { isId, isObject } from "./shared.mjs";
 import { validateDataFixes } from "../data-fixes.mjs";
+import { validateRegeneration } from "../regeneration.mjs";
 import { validateAura, validateTrigger } from "./steps.mjs";
 import { SENSE_KINDS, SENSE_THROUGH, SENSE_NEEDS, SENSE_REVEALS } from "../senses.mjs";
 /**
@@ -283,6 +284,8 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       if ( !kinds.length || !kinds.every(k => BASIC_ACTION_KINDS.includes(k)) ) errors.push(`${at}basicActions.${id}: ${BASIC_ACTION_KINDS.join(", ")} (or a list)`);
     }
   }
+  // B04 : `regeneration` — true (lecture du texte anglais) ou la forme déclarée (core/regeneration.mjs).
+  if ( "regeneration" in entry ) errors.push(...validateRegeneration(entry.regeneration, DAMAGE_TYPES).map(e => `${at}${e}`));
   // K2 (§323) : `killsAtZero` — true, ou réservé à des types de créature, une taille au plus, des activités de l'item.
   if ( ("killsAtZero" in entry) && (entry.killsAtZero !== true) ) {
     const k = entry.killsAtZero;
@@ -292,7 +295,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       && (!("activities" in k) || (Array.isArray(k.activities) && k.activities.length && k.activities.every(isId)));
     if ( !ok ) errors.push(`${at}killsAtZero: true or { types?, sizeAtMost?, activities? }`);
   }
-  for ( const key of ["singleAttack", "noAttacksOrSpells", "noSpells", "knownToOrigin", "upkeep", "keepsProne", "wardsAtZero", "stableAtZero", "dispel", "zoneEffects", "advantageIfFighting", "regeneration", "fortitude", "drain", "swallow", "ignoresCloseCombat", "sharedHp", "forOneAttack", "evasion", "avoidance", "elusive", "holdsStill", "grantsAction", "studiedAttacks", "heroicWarrior", "greatWeaponFighting", "persistentRage", "reckless", "oneAttack", "martialArts", "supremeHealing", "discipleOfLife", "blessedHealer", "potentCantrip", "sculptSpells", "stabilizes", "kindles", "castTargets", "halfOnMiss", "seesInvisible", "scatter", "climbsCeilings", "climbsOnTurn", "slippery", "notOnSlippery", "encloses", "willingFails", "critMove", "combatInspiration", "quietPose", "zoneBound", "effectsFirst", "hitDefense", "enterOnPose", "summonEffectsOnCaster", "sniper", "checkPoses", "magicEvasion", "compels", "keepsSpeed", "windward", "formLock", "magical", "antimagicZone", "seesThroughOwnDarkness"] ) if ( (key in entry) && (entry[key] !== true) ) errors.push(`${at}${key}: true or absent`);
+  for ( const key of ["singleAttack", "noAttacksOrSpells", "noSpells", "knownToOrigin", "upkeep", "keepsProne", "wardsAtZero", "stableAtZero", "dispel", "zoneEffects", "advantageIfFighting", "fortitude", "drain", "swallow", "ignoresCloseCombat", "sharedHp", "forOneAttack", "evasion", "avoidance", "elusive", "holdsStill", "grantsAction", "studiedAttacks", "heroicWarrior", "greatWeaponFighting", "persistentRage", "reckless", "oneAttack", "martialArts", "supremeHealing", "discipleOfLife", "blessedHealer", "potentCantrip", "sculptSpells", "stabilizes", "kindles", "castTargets", "halfOnMiss", "seesInvisible", "scatter", "climbsCeilings", "climbsOnTurn", "slippery", "notOnSlippery", "encloses", "willingFails", "critMove", "combatInspiration", "quietPose", "zoneBound", "effectsFirst", "hitDefense", "enterOnPose", "summonEffectsOnCaster", "sniper", "checkPoses", "magicEvasion", "compels", "keepsSpeed", "windward", "formLock", "magical", "antimagicZone", "seesThroughOwnDarkness"] ) if ( (key in entry) && (entry[key] !== true) ) errors.push(`${at}${key}: true or absent`);
   // §225, lot 4 : passer du plan matériel à l'Éthéré ou inversement (Saut éthéré) ; `others` : les cibles désignées suivent (Foulée éthérée).
   if ( ("etherealShift" in entry) && !((entry.etherealShift === true) || (isObject(entry.etherealShift)
     && Object.keys(entry.etherealShift).every(k => k === "others") && (entry.etherealShift.others === true))) ) {
