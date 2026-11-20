@@ -370,14 +370,17 @@ export function isPoisonous(actor) {
 
 /**
  * L'acteur porte-t-il de la magie : un effet actif magique (la marque `system.magical` de dnd5e 6.1, que le moteur pose aussi),
- * ou un objet magique (propriété `mgc`) qu'il porte équipé ? Ce que montre une Détection de la magie sur une créature visible.
+ * ou un objet magique (propriété `mgc`) qu'il porte sur lui — équipé, ou simplement porté hors d'un contenant (une potion à la
+ * ceinture, une baguette, un anneau pas encore passé au doigt) ? Ce que montre une Détection de la magie sur une créature visible.
+ * Un objet magique rangé dans un sac, lui, ne se voit pas : pas d'aura pour lui.
  */
 export function carriesMagic(actor) {
   for ( const effect of actor?.appliedEffects ?? actor?.effects ?? [] ) {
     if ( !effect.disabled && !effect.isSuppressed && (effect.system?.magical === true) ) return true;
   }
   const magic = properties => (properties?.has?.("mgc") ?? properties?.includes?.("mgc")) === true;
-  return Array.from(actor?.items ?? []).some(item => (item.system?.equipped === true) && magic(item.system.properties));
+  return Array.from(actor?.items ?? []).some(item => magic(item.system?.properties)
+    && ((item.system?.equipped === true) || !item.system?.container));
 }
 
 /** Les états contre lesquels un acteur est immunisé (`traits.ci` de dnd5e : « charmed », « exhaustion »…). */
