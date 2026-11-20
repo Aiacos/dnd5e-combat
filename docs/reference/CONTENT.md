@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-901 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+903 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -201,7 +201,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `projectiles` | 4 | `eldritch-blast`, `magic-missile`, `scorching-ray`, `steel-wind-strike` |
 | `quickSearch` | 1 | `observant` |
 | `quickStand` | 1 | `athlete` |
-| `quietPose` | 2 | `sleet-storm`, `stinking-cloud` |
+| `quietPose` | 4 | `control-water`, `sleet-storm`, `stinking-cloud`, `zone-of-truth` |
 | `rage` | 1 | `rage` |
 | `rangedDefense` | 2 | `arrow-catching-shield`, `shield-of-missile-attraction` |
 | `rangedFeat` | 4 | `crossbow-expert`, `improved-illusions`, `sharpshooter`, `spell-sniper` |
@@ -277,7 +277,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `thrownDamage` | 1 | `thrown-weapon-fighting` |
 | `trace` | 7 | `armor-of-agathys`, `blade-ward`, `dispel-evil-and-good`, `flame-blade`, `moonlight-step`, `produce-flame`, … |
 | `transpose` | 1 | `tricksters-transposition` |
-| `triggers` | 271 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
+| `triggers` | 273 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
 | `untypedDamage` | 3 | `freezing-sphere`, `mm-wight-life-drain`, `otilukes-freezing-sphere` |
 | `upkeep` | 1 | `crown-of-madness` |
 | `usageLimits` | 11 | `action-surge`, `flame-blade`, `indomitable`, `pact-of-the-chain`, `plant-growth`, `produce-flame`, … |
@@ -293,7 +293,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `zoneAffects` | 16 | `brute-spirit`, `conjure-barrage`, `conjure-volley`, `conjure-woodland-beings`, `cordon-of-arrows`, `coward-spirit`, … |
 | `zoneBound` | 1 | `spirit-guardians` |
 | `zoneCharges` | 1 | `cordon-of-arrows` |
-| `zoneEffects` | 3 | `jallarzis-storm-of-radiance`, `silence`, `storm-of-radiance` |
+| `zoneEffects` | 4 | `jallarzis-storm-of-radiance`, `silence`, `storm-of-radiance`, `zone-of-truth` |
 | `zoneEnd` | 1 | `delayed-blast-fireball` |
 | `zoneLasts` | 2 | `antimagic-cone`, `symbol` |
 | `zoneMax` | 2 | `decanter-of-endless-water`, `slow` |
@@ -322,8 +322,8 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `enemyAttacks → use` | 4 | `arrow-catching-shield`, `cosmic-omen`, `protection`, `warding-flare` |
 | `enemyDisengages → use` | 1 | `sentinel` |
 | `enter → replay` | 3 | `ball-bearings`, `caltrops`, `prismatic-wall` |
-| `enter,turnEnd → replay` | 20 | `black-tentacles`, `blade-barrier`, `cloud-of-daggers`, `cloudkill`, `conjure-celestial`, `conjure-woodland-beings`, … |
-| `enter,turnStart → replay` | 2 | `sleet-storm`, `web` |
+| `enter,turnEnd → replay` | 21 | `black-tentacles`, `blade-barrier`, `cloud-of-daggers`, `cloudkill`, `conjure-celestial`, `conjure-woodland-beings`, … |
+| `enter,turnStart → replay` | 3 | `sleet-storm`, `web`, `zone-of-truth` |
 | `failedSave → banish` | 2 | `dispel-evil-and-good`, `divine-word` |
 | `failedSave → breakConcentration` | 2 | `earthquake`, `sleet-storm` |
 | `failedSave → disarm` | 2 | `disarming-attack`, `heat-metal` |
