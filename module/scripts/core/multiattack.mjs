@@ -46,6 +46,12 @@ export const ANY = 99;
 const PLAIN_NAME = "[A-Z][A-Za-z'’-]*(?:\\s+(?:of\\s+)?[A-Z(][A-Za-z'’()-]*)*";
 const REF = `(?:«\\d+»|${PLAIN_NAME})`;
 const NUM = "(one|two|three|four|five|six|seven|eight|\\d+)";
+/** Le même, sans le drapeau `i` : une expression qui lit des noms en clair doit garder la casse (« one Claws attack and one Root attack »). */
+const NUM_CS = `(${Object.keys(NUMBERS).map(w => `[${w[0]}${w[0].toUpperCase()}]${w.slice(1)}`).join("|")}|\\d+)`;
+/** Clés d'une attaque au corps à corps, à distance (« makes two melee attacks ») ; l'adaptateur les donne à l'activité d'attaque. */
+export const MELEE_ATTACK = "kind:melee";
+export const RANGED_ATTACK = "kind:ranged";
+const KIND_KEYS = { melee: MELEE_ATTACK, ranged: RANGED_ATTACK };
 
 /**
  * Remplace les références par des jetons `«n»` et nettoie le HTML. Les jetons évitent qu'un point d'uuid coupe une phrase.
@@ -106,8 +112,19 @@ function groupsOf(option, refs) {
   if ( heads ) return [{ n: ANY, refs: refsOf(heads[1], refs) }];
   const times = option.match(new RegExp(`^\\s*uses? (${REF}) (twice|thrice|${NUM} times)`, "i"));
   if ( times ) return [{ n: { twice: 2, thrice: 3 }[times[2].toLowerCase()] ?? count(times[3]), refs: refsOf(times[1], refs) }];
+  // « two melee attacks », « two ranged weapon attacks », « two weapon attacks » : une sorte d'attaque, pas un nom (B01).
+  const kind = option.match(new RegExp(`^\\s*${NUM}\\s+(?:(melee|ranged)\\s+)?(?:weapon\\s+)?attacks?\\s*$`, "i"));
+  if ( kind && (kind[2] || /weapon/i.test(option)) ) return [{ n: count(kind[1]), refs: [kind[2] ? KIND_KEYS[kind[2].toLowerCase()] : ANY_ATTACK] }];
+  // « two attacks: one with its Claws and one with its Root » : le total annoncé, puis le détail — seul le détail compte (B01).
+  const detail = option.match(new RegExp(`^\\s*${NUM}\\s+(?:(?:melee|ranged|weapon)\\s+)*attacks?\\s*:\\s*(.*)$`, "i"));
+  if ( detail ) {
+    const parts = [...detail[2].matchAll(new RegExp(`${NUM_CS}\\s+(?:attacks?\\s+)?with\\s+(?:its|his|her|their|an?|the)?\\s*(${REF}(?:\\s*(?:,\\s*or|,|or)\\s+${REF})*)`, "g"))];
+    const groups = parts.map(m => ({ n: count(m[1]), refs: refsOf(m[2], refs) })).filter(g => g.refs.length);
+    if ( groups.length && (groups.length === parts.length) ) return groups;
+  }
   const groups = [];
-  const re = new RegExp(`${NUM}\\s+(${REF}(?:\\s*(?:,\\s*or|,|or)\\s+${REF})*)\\s+attacks?\\b`, "gi");
+  // Sans `i` : un nom en clair commence par une majuscule, sinon « Bite attack and two Rend » passerait pour un seul nom (B01).
+  const re = new RegExp(`${NUM_CS}\\s+(${REF}(?:\\s*(?:,\\s*or|,|or)\\s+${REF})*)\\s+attacks?\\b`, "g");
   for ( const m of option.matchAll(re) ) {
     const keys = refsOf(m[2], refs);
     if ( keys.length ) groups.push({ n: count(m[1]), refs: keys });
@@ -140,6 +157,16 @@ export function parseMultiattack(html, { names=[] }={}) {
   return english;
 }
 
+/**
+ * « two melee attacks, only one of which can be a Bite attack » : un groupe de 2 devient 1 attaque quelconque du groupe + 1 qui
+ * n'est pas une Morsure (`except`) — la Morsure ne tient qu'une fois. Seulement pour une option d'un seul groupe.
+ */
+function capGroups(groups, cap) {
+  if ( (groups.length !== 1) || (cap.n >= groups[0].n) ) return groups;
+  const [g] = groups;
+  return [{ ...g, n: cap.n }, { ...g, n: g.n - cap.n, except: [...new Set([...(g.except ?? []), ...cap.refs])] }];
+}
+
 function parseEnglish(html) {
   const { text, refs } = tokenize(html);
   const sentences = text.split(/(?<=\.)\s+/);
@@ -166,9 +193,20 @@ function parseEnglish(html) {
       if ( keys.length ) extra.push({ refs: keys });
       body = body.slice(0, plus.index);
     }
-    // Options : « three A attacks or two B attacks », « one A attack and one B attack, or it makes two C attacks ».
-    const parts = body.replace(new RegExp(`\\battacks?,?\\s+or\\s+(?:it makes\\s+)?(?=${NUM}\\b)`, "gi"), "attacks|").split("|");
-    const parsed = parts.map(p => groupsOf(p, refs));
+    // « two melee attacks, only one of which can be a bite attack » : au plus tant d'attaques de celle-là (B01).
+    let cap = null;
+    const only = body.match(new RegExp(`,?\\s*(?:but\\s+)?only\\s+${NUM}\\s+of\\s+(?:which|them|these|those)\\s+can\\s+be\\s+(?:an?\\s+|with\\s+(?:its\\s+)?)?(.*?)(?:\\s+attacks?)?$`, "i"));
+    if ( only ) {
+      const keys = refsOf(only[2], refs);
+      const name = only[2].trim().toLowerCase();
+      cap = { n: count(only[1]), refs: keys.length ? keys : (/^[a-z][a-z' -]*$/.test(name) ? [`name:${name}`] : []) };
+      body = body.slice(0, only.index);
+    }
+    // Options : « three A attacks or two B attacks », « one A attack and one B attack, or it makes two C attacks »,
+    // « two melee attacks or uses Shocking Bolt twice » (B01).
+    const parts = body.replace(new RegExp(`\\battacks?,?\\s+or\\s+(?:it makes\\s+)?(?=${NUM}\\b|uses?\\s)`, "gi"), "attacks|").split("|");
+    let parsed = parts.map(p => groupsOf(p, refs));
+    if ( cap?.refs.length && parsed.every(Boolean) ) parsed = parsed.map(groups => capGroups(groups, cap));
     if ( parsed.every(Boolean) ) options = parsed;
   }
   return options ? { options, replace, extra } : null;
@@ -283,9 +321,74 @@ export function expandPlan(plan, catalog) {
   if ( !plan ) return null;
   const widen = refs => [...new Set((refs ?? []).flatMap(k => [k, ...catalog.filter(keys => keys.includes(k)).flat()]))];
   return {
-    options: plan.options.map(groups => groups.map(g => ({ ...g, refs: widen(g.refs) }))),
+    options: plan.options.map(groups => groups.map(g => ({ ...g, refs: widen(g.refs), ...(g.except ? { except: widen(g.except) } : {}) }))),
     replace: plan.replace.map(r => ({ ...r, refs: widen(r.refs), of: r.of ? widen(r.of) : null })),
     extra: plan.extra.map(e => ({ ...e, refs: widen(e.refs) }))
+  };
+}
+
+/* -------------------------------------------- */
+/*  Plan déclaré (clé de contenu `multiattackPlan`, B01) */
+/* -------------------------------------------- */
+
+/**
+ * Une clé de plan déclarée : `id:<id>`, `name:<nom anglais en minuscules>`, `identifier:<identifiant dnd5e>`, `activity:<id>`,
+ * `spell:<uuid>`, ou une sorte d'attaque `kind:attack` / `kind:melee` / `kind:ranged`.
+ */
+const PLAN_KEY = /^(?:(?:id|name|identifier|activity|spell):.+|kind:(?:attack|melee|ranged))$/;
+const isCount = n => Number.isInteger(n) && (n > 0) && (n <= ANY);
+const isKeys = (list, empty=false) => Array.isArray(list) && (empty || list.length) && list.every(k => (typeof k === "string") && PLAN_KEY.test(k));
+
+/**
+ * Les erreurs d'un `multiattackPlan` déclaré : `{ options: [[{ n, refs, except? }]], replace?: [{ n, refs, of? }], extra?: [{ refs }] }`.
+ * Un groupe est un maximum : `n` attaques au plus qui citent l'une de ses `refs` et aucune de ses `except`.
+ * @returns {string[]}
+ */
+export function validatePlan(plan, at="") {
+  const errors = [];
+  const err = msg => errors.push(`${at}multiattackPlan${msg}`);
+  if ( !plan || (typeof plan !== "object") || Array.isArray(plan) ) return [`${at}multiattackPlan: object`];
+  for ( const k of Object.keys(plan) ) if ( !["options", "replace", "extra"].includes(k) ) err(`.${k}: unknown key`);
+  if ( !Array.isArray(plan.options) || !plan.options.length ) err(".options: non-empty array of options");
+  else plan.options.forEach((groups, o) => {
+    if ( !Array.isArray(groups) || !groups.length ) return err(`.options[${o}]: non-empty array of groups`);
+    groups.forEach((g, i) => {
+      const where = `.options[${o}][${i}]`;
+      if ( !g || (typeof g !== "object") ) return err(`${where}: object`);
+      for ( const k of Object.keys(g) ) if ( !["n", "refs", "except"].includes(k) ) err(`${where}.${k}: unknown key`);
+      if ( !isCount(g.n) ) err(`${where}.n: positive integer`);
+      if ( !isKeys(g.refs) ) err(`${where}.refs: non-empty array of plan keys`);
+      if ( ("except" in g) && !isKeys(g.except) ) err(`${where}.except: non-empty array of plan keys`);
+    });
+  });
+  if ( ("replace" in plan) ) {
+    if ( !Array.isArray(plan.replace) ) err(".replace: array");
+    else plan.replace.forEach((r, i) => {
+      if ( !r || (typeof r !== "object") ) return err(`.replace[${i}]: object`);
+      for ( const k of Object.keys(r) ) if ( !["n", "refs", "of"].includes(k) ) err(`.replace[${i}].${k}: unknown key`);
+      if ( !isCount(r.n) ) err(`.replace[${i}].n: positive integer`);
+      if ( !isKeys(r.refs) ) err(`.replace[${i}].refs: non-empty array of plan keys`);
+      if ( (r.of != null) && !isKeys(r.of) ) err(`.replace[${i}].of: non-empty array of plan keys`);
+    });
+  }
+  if ( ("extra" in plan) ) {
+    if ( !Array.isArray(plan.extra) ) err(".extra: array");
+    else plan.extra.forEach((e, i) => {
+      if ( !e || (typeof e !== "object") ) return err(`.extra[${i}]: object`);
+      for ( const k of Object.keys(e) ) if ( k !== "refs" ) err(`.extra[${i}].${k}: unknown key`);
+      if ( !isKeys(e.refs) ) err(`.extra[${i}].refs: non-empty array of plan keys`);
+    });
+  }
+  return errors;
+}
+
+/** Le plan déclaré, complété (`replace`, `extra` vides par défaut) et copié ; null s'il est invalide. */
+export function declaredPlan(plan) {
+  if ( !plan || validatePlan(plan).length ) return null;
+  return {
+    options: plan.options.map(groups => groups.map(g => ({ n: g.n, refs: [...g.refs], ...(g.except ? { except: [...g.except] } : {}) }))),
+    replace: (plan.replace ?? []).map(r => ({ n: r.n, refs: [...r.refs], of: r.of ? [...r.of] : null })),
+    extra: (plan.extra ?? []).map(e => ({ refs: [...e.refs] }))
   };
 }
 
@@ -305,6 +408,8 @@ export function attackCount(plan) {
 export function fitMultiattack(plan, uses) {
   if ( !plan ) return null;
   const has = (keys, list) => keys.some(k => list.includes(k));
+  // Un groupe accepte l'utilisation qui cite l'une de ses clés et aucune de ses exclusions (« only one of which can be a Bite »).
+  const fits = (keys, group) => has(keys, group.refs) && !(group.except && has(keys, group.except));
   for ( const groups of plan.options ) {
     const free = groups.map(g => g.n);
     const replaced = plan.replace.map(() => 0);
@@ -314,7 +419,7 @@ export function fitMultiattack(plan, uses) {
       if ( i === uses.length ) return true;
       const keys = uses[i];
       for ( const [g, group] of groups.entries() ) {
-        if ( (free[g] < 1) || !has(keys, group.refs) ) continue;
+        if ( (free[g] < 1) || !fits(keys, group) ) continue;
         free[g]--; attacks++;
         if ( place(i + 1) ) return true;
         free[g]++; attacks--;

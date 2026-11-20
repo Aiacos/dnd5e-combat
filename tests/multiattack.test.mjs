@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { parseMultiattack, fitMultiattack, attackCount, expandPlan, multiattackStatus, ANY, ANY_ATTACK, isMultiattackId } from "../module/scripts/core/multiattack.mjs";
+import { parseMultiattack, fitMultiattack, attackCount, expandPlan, multiattackStatus, ANY, ANY_ATTACK, MELEE_ATTACK, isMultiattackId, validatePlan, declaredPlan } from "../module/scripts/core/multiattack.mjs";
 import { freshBudget, checkUse, spendUse, refundUse } from "../module/scripts/core/turn.mjs";
+import { validateEntry } from "../module/scripts/core/content.mjs";
 
 // Textes anglais de la forme de ceux du Monster Manual 2024 : créatures du SRD 5.2, ou textes synthétiques de même
 // grammaire (noms de créatures et d'attaques inventés) pour les créatures hors SRD.
@@ -289,5 +290,78 @@ describe("isMultiattackId : les Attaques multiples de toute fiche", () => {
   });
   it("pas une autre capacité", () => {
     for ( const id of ["multiattacker", "attaque", "bite", "", null, undefined] ) expect(isMultiattackId(id)).toBe(false);
+  });
+});
+
+// B01 : formes que la lecture perdait (phrases inventées, de la grammaire du Monster Manual ; noms en clair).
+describe("B01 : formes en noms clairs, « or uses X twice », « only one of which »", () => {
+  const read = html => parseMultiattack(`<p>The [[lookup @name lowercase]] ${html}</p>`);
+
+  it("« two melee attacks or uses X twice » : deux options, la mêlée n'est plus perdue", () => {
+    expect(read("makes two melee attacks or uses Arc Bolt twice.").options).toEqual([[{ n: 2, refs: [MELEE_ATTACK] }], [{ n: 2, refs: ["name:arc bolt"] }]]);
+    // Forme du MM (enrichers) : l'option « uses … twice » s'ajoute à la première.
+    expect(parseMultiattack("<p>The [[lookup @name lowercase]] makes three [[/item Glow Blade]] attacks or uses [[/item Glow Burst]] twice.</p>").options)
+      .toEqual([[{ n: 3, refs: ["name:glow blade"] }], [{ n: 2, refs: ["name:glow burst"] }]]);
+  });
+
+  it("« one A attack and one B attack » en noms clairs : deux groupes, pas un seul", () => {
+    expect(read("makes one Claws attack and one Root attack.").options).toEqual([[{ n: 1, refs: ["name:claws"] }, { n: 1, refs: ["name:root"] }]]);
+    expect(read("makes one Bite attack and two Rend attacks.").options).toEqual([[{ n: 1, refs: ["name:bite"] }, { n: 2, refs: ["name:rend"] }]]);
+  });
+
+  it("« two attacks: one with its A and one with its B » : le détail, pas deux attaques quelconques", () => {
+    expect(read("makes two attacks: one with its Claws and one with its Root.").options).toEqual([[{ n: 1, refs: ["name:claws"] }, { n: 1, refs: ["name:root"] }]]);
+  });
+
+  it("« two melee attacks, only one of which can be a bite attack » : au plus une Morsure", () => {
+    const plan = read("makes two melee attacks, only one of which can be a bite attack.");
+    expect(plan.options).toEqual([[{ n: 1, refs: [MELEE_ATTACK] }, { n: 1, refs: [MELEE_ATTACK], except: ["name:bite"] }]]);
+    const bite = ["name:bite", MELEE_ATTACK], claw = ["name:claw", MELEE_ATTACK], bolt = ["name:bolt", "kind:ranged"];
+    expect(fitMultiattack(plan, [bite, claw])).toEqual({ attacks: 2 });
+    expect(fitMultiattack(plan, [claw, bite])).toEqual({ attacks: 2 });
+    expect(fitMultiattack(plan, [claw, claw])).toEqual({ attacks: 2 });
+    expect(fitMultiattack(plan, [bite, bite])).toBeNull();
+    expect(fitMultiattack(plan, [bolt])).toBeNull();
+    expect(attackCount(plan)).toBe(2);
+  });
+
+  it("l'exclusion s'élargit comme les clés (nom ↔ id)", () => {
+    const plan = expandPlan(read("makes two attacks, only one of which can be a Bite attack."), [["id:bbbbbbbbbbbbbbbb", "name:bite"]]);
+    expect(plan.options[0][1].except).toEqual(["name:bite", "id:bbbbbbbbbbbbbbbb"]);
+    expect(fitMultiattack(plan, [["id:bbbbbbbbbbbbbbbb", ANY_ATTACK], ["id:bbbbbbbbbbbbbbbb", ANY_ATTACK]])).toBeNull();
+  });
+});
+
+describe("B01 : plan déclaré (`multiattackPlan`)", () => {
+  const plan = { options: [[{ n: 2, refs: [MELEE_ATTACK] }], [{ n: 2, refs: ["identifier:arc-bolt"] }]] };
+
+  it("valide : options, groupes, remplacement, usage en plus", () => {
+    expect(validatePlan(plan)).toEqual([]);
+    expect(validatePlan({ options: [[{ n: 1, refs: ["identifier:claws"] }, { n: 1, refs: ["identifier:root"], except: ["name:bite"] }]],
+      replace: [{ n: 1, refs: ["id:aaaaaaaaaaaaaaaa"], of: ["identifier:claws"] }], extra: [{ refs: ["kind:attack"] }] })).toEqual([]);
+  });
+
+  it("refusé : forme, nombre, clé inconnue, sorte d'attaque inconnue", () => {
+    expect(validatePlan(null)).toHaveLength(1);
+    expect(validatePlan({ options: [] })).toHaveLength(1);
+    expect(validatePlan({ options: [[{ n: 0, refs: ["kind:melee"] }]] })).toHaveLength(1);
+    expect(validatePlan({ options: [[{ n: 1, refs: ["claws"] }]] })).toHaveLength(1);
+    expect(validatePlan({ options: [[{ n: 1, refs: ["kind:spell"] }]] })).toHaveLength(1);
+    expect(validatePlan({ options: [[{ n: 1, refs: ["kind:melee"], upTo: true }]] })).toHaveLength(1);
+    expect(validatePlan({ options: [[{ n: 1, refs: ["kind:melee"] }]], extras: [] })).toHaveLength(1);
+  });
+
+  it("clé de contenu : acceptée par `validateEntry`, refusée mal formée", () => {
+    expect(validateEntry({ multiattackPlan: plan })).toEqual([]);
+    expect(validateEntry({ multiattackPlan: { options: [[{ n: 2, refs: ["melee"] }]] } })).toHaveLength(1);
+  });
+
+  it("complété et joué comme un plan lu", () => {
+    const p = declaredPlan(plan);
+    expect(p).toEqual({ options: plan.options, replace: [], extra: [] });
+    expect(fitMultiattack(p, [["identifier:arc-bolt"], ["identifier:arc-bolt"]])).toEqual({ attacks: 2 });
+    expect(fitMultiattack(p, [[MELEE_ATTACK], ["identifier:arc-bolt"]])).toBeNull();
+    expect(declaredPlan({ options: "x" })).toBeNull();
+    expect(declaredPlan(undefined)).toBeNull();
   });
 });

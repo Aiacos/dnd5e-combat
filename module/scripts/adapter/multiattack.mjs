@@ -5,14 +5,19 @@
  *
  * Les clés d'une utilisation (core/multiattack.mjs) :
  *  - l'item : `id:<id>`, `name:<nom anglais>` (`flags.babele.originalName`, sinon le nom) ;
- *  - l'activité : `activity:<id>` ; une activité d'attaque porte aussi `kind:attack` (`ANY_ATTACK`, « effectue deux attaques ») ;
+ *  - l'identifiant dnd5e : `identifier:<id>` (un plan déclaré par `multiattackPlan` cite ainsi les capacités d'un module de créatures) ;
+ *  - l'activité : `activity:<id>` ; une activité d'attaque porte aussi `kind:attack` (`ANY_ATTACK`, « effectue deux attaques »), et
+ *    `kind:melee` ou `kind:ranged` selon `attack.type.value` (« makes two melee attacks », B01) ;
  *  - un sort lancé par « Incantation » : dnd5e en crée une copie sur l'acteur, marquée `flags.dnd5e.cachedFor` =
  *    uuid relatif de l'activité d'incantation, et `_stats.compendiumSource` = le sort d'origine (activity/cast.mjs:118-145).
  *    On y lit l'item parent (`id:`), l'activité d'incantation (`activity:`) et le sort (`spell:`).
  */
 
-import { parseMultiattack, expandPlan, multiattackStatus, isMultiattackId, ANY_ATTACK } from "../core/multiattack.mjs";
-import { identifierOf } from "./content.mjs";
+import { parseMultiattack, expandPlan, multiattackStatus, isMultiattackId, declaredPlan, ANY_ATTACK, MELEE_ATTACK, RANGED_ATTACK } from "../core/multiattack.mjs";
+import { identifierOf, contentOf } from "./content.mjs";
+
+/** L'identifiant résolu de l'item, en clé de plan (`identifier:<id>`), ou rien. */
+const identifierKey = item => { const { id } = identifierOf(item); return id ? [`identifier:${id}`] : []; };
 
 const englishName = item => String(item?.flags?.babele?.originalName ?? item?.name ?? "").toLowerCase();
 
@@ -27,13 +32,17 @@ function castOrigin(item) {
 export function useKeysOf(activity) {
   const item = activity?.item;
   if ( !item ) return null;
-  const keys = [`id:${item.id}`, `name:${englishName(item)}`, `activity:${activity.id}`];
+  const keys = [`id:${item.id}`, `name:${englishName(item)}`, ...identifierKey(item), `activity:${activity.id}`];
   const origin = castOrigin(item);
   if ( origin ) keys.push(`id:${origin.item}`, `activity:${origin.activity}`);
   const source = item._stats?.compendiumSource;
   if ( (item.type === "spell") && source ) keys.push(`spell:${source}`);
   // Une attaque, quelle qu'elle soit : « effectue deux attaques » d'un texte traduit qui ne dit pas lesquelles.
   if ( activity.type === "attack" ) keys.push(ANY_ATTACK);
+  // « makes two melee attacks » : la sorte d'attaque de l'activité (dnd5e 6 : `attack.type.value`, « melee » ou « ranged »).
+  const reach = (activity.type === "attack") ? activity.attack?.type?.value : null;
+  if ( reach === "melee" ) keys.push(MELEE_ATTACK);
+  else if ( reach === "ranged" ) keys.push(RANGED_ATTACK);
   return [...new Set(keys)];
 }
 
@@ -44,7 +53,7 @@ export function useKeysOf(activity) {
 function catalogOf(actor) {
   const catalog = [];
   for ( const item of actor.items ) {
-    catalog.push([`id:${item.id}`, `name:${englishName(item)}`]);
+    catalog.push([`id:${item.id}`, `name:${englishName(item)}`, ...identifierKey(item)]);
     for ( const activity of item.system.activities?.values?.() ?? [] ) {
       if ( (activity.type === "cast") && activity.spell?.uuid ) catalog.push([`activity:${activity.id}`, `spell:${activity.spell.uuid}`]);
     }
@@ -71,6 +80,9 @@ export function multiattackOf(actor) {
   // L'identifiant résolu (source, nom anglais d'origine, nom) : une fiche importée sans identifiant ou traduite compte aussi.
   const item = actor.items.find(isMultiattackItem);
   if ( !item ) return null;
+  // B01 : un plan déclaré dans le contenu (`multiattackPlan`, module de créatures, surcouche du monde) l'emporte sur la lecture du texte.
+  const declared = declaredPlan(contentOf(item).entry?.multiattackPlan);
+  if ( declared ) return expandPlan(declared, catalogOf(actor));
   // Les noms de la fiche : un texte traduit sans [[/item]] cite ses capacités en clair (« trois attaques avec ses lames A et/ou B »).
   // Le nom affiché et, sous Babele, le nom anglais d'origine (le texte d'origine dit « Thorn », la fiche « Épine »).
   const names = actor.items.filter(i => i !== item).flatMap(i => [[i.name, `id:${i.id}`],

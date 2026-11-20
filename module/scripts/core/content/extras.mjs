@@ -5,11 +5,14 @@
 import { CREATURE_TYPES } from "../eligibility.mjs";
 import { ACTION_END_BY, ACTION_END_ROLLS, ACTION_END_STATUSES, ACTION_END_VERBS, EFFECT_ENDS, METAMAGIC_KINDS, ROLL_BONUS_ON, SIZES, WEAPON_KINDS } from "./enums.mjs";
 import { isId, isObject } from "./shared.mjs";
+import { validatePlan } from "../multiattack.mjs";
 /**
  * Les clés validées hors de `validateEntry` : d'abord celles du Roublard (§20 : parts de plus de l'Attaque sournoise, Frappes
  * rusées), puis toutes celles ajoutées depuis (murs, globes, paliers de PV, rappel de sort…).
  */
 export function validateExtras(entry, at, errors) {
+  // B01 : le plan d'Attaques multiples déclaré, qui remplace la lecture du texte (core/multiattack.mjs).
+  if ( "multiattackPlan" in entry ) errors.push(...validatePlan(entry.multiattackPlan, at));
   // §293 : « chaque créature de votre choix dans un rayon de… » — la liste des créatures à portée, cochées par le joueur, devient les cibles
   // de l'activité ; `upgrade` : une autre activité (d'un autre item du lanceur) qui peut la remplacer, proposée par une case.
   // §295 : le Déluge de coups ouvre plus de frappes (Credo accru) ; la durée d'un effet de l'item (la donnée se trompe) ; des

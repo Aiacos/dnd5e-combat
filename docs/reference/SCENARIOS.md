@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-367 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+368 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -34,6 +34,7 @@ la sélection sans rien jouer.
 | `assommer` |  | §210 | coups non létaux, réveil, surprise à l'initiative |
 | `attaque-puis-lutte` |  |  | Attaque supplémentaire, la Bousculade remplace une attaque |
 | `attaque` |  |  | Trait de feu → Zombi |
+| `attaques-multiples-plan` |  | §483 | plan déclaré : deux attaques de mêlée, une seule Morsure |
 | `attaques-multiples` |  | §18.6 | Ours brun : une Morsure et une Griffe |
 | `attente-sablier` |  | §381 | sablier : publiée à l'ouverture, retirée à la réponse, au délai, à l'annulation |
 | `audit-pj` |  |  | audit d'une fiche de PJ (Arène des sorts, copie de la fiche) |

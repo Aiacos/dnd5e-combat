@@ -318,6 +318,10 @@
  *                                               §296 : le jet de soin de ces activités est une réserve répartie à parts égales entre les
  *                                               cibles choisies (Survivance : plafond à la moitié des PV max ; `temp` : en PV temporaires,
  *                                               Châtiment exaltant) — runtime/cure.mjs, core/pools.mjs
+ *     multiattackPlan?: { options: [[{ n, refs, except? }]], replace?: [{ n, refs, of? }], extra?: [{ refs }] }
+ *                                               B01 : sur l'item Attaques multiples, le plan déclaré remplace la lecture du texte —
+ *                                               options exclusives, groupes de `n` attaques au plus citant une clé de `refs` et aucune
+ *                                               d'`except` (`identifier:<id>`, `id:`, `name:`, `kind:attack|melee|ranged`…) — core/multiattack.mjs
  *     flurryStrikes?: number                    §295 : le porteur de l'item frappe ce nombre de fois au Déluge de coups (Credo accru : 3)
  *     effectDurations?: { <id d'effet>: { seconds } | { formula, units } }  §295 : la durée d'un effet de l'item à sa pose, quand la donnée se trompe
  *                                               (Présence intimidante : une minute, pas un round) ; O9h : `{ formula, units }` — tirée une fois par
