@@ -322,7 +322,7 @@ describe("contenu livré", () => {
       "scroll-of-protection-monstrosity-enchanted", "scroll-of-protection-ooze-enchanted", "scroll-of-protection-plant-enchanted",
       "scroll-of-protection-undead-enchanted", "scroll-of-titan-summoning", "scrying", "sculpt-spells", "sear-undead",
       "searing-smite", "searing-vengeance", "second-skin", "second-story-work", "secret-chest", "see-invisibility",
-      "seeking-spell", "self-restoration", "sentinel",
+      "seeking-spell", "self-restoration", "sense-magic", "sentinel",
       "sentinel-at-deaths-door", "sentinel-shield", "sequester", "serpentine-owl-rare", "shade-spirit", "shadow-stealth", "shadow-veil",
       "shadow-walk", "shadowy-dodge", "shadowy-teleport", "shape-shift", "sharp-eye-ravenloft", "sharpshooter", "shatter", "shield", "shield-master",
       "shield-of-missile-attraction", "shield-of-the-cavalier", "shillelagh", "shining-smite", "shocking-grasp",

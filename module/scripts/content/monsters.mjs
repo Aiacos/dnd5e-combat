@@ -31,6 +31,9 @@ export const MONSTERS = Object.freeze({
   // jets d'attaque, tests de caractéristique et jets de sauvegarde. La lecture du texte ne connaît que « … aux jets d'attaque ».
   "sunlight-weakness": { rollDisadvantage: { on: ["check", "save"], if: { "self.inSunlight": true } },
     triggers: [{ on: "preAttackRoll", if: { "source.inSunlight": true }, do: [{ type: "disadvantage" }] }] },
+  // Perception de la magie (Chuul, SRD 5.2) : « le chuul perçoit la magie dans un rayon de 36 m ; ce trait fonctionne par ailleurs
+  // comme le sort Détection de la magie, sans être lui-même magique » — permanent, sans effet à porter.
+  "sense-magic": { sense: { kind: "locate", range: 120, units: "ft", reveals: "aura", detects: { "target.carriesMagic": true } } },
   // Défense (Sanglier-garou) : la malédiction ne vise qu'un Humanoïde.
   "mm-wereboar-gore": { effectsIf: { "target.creatureType": "humanoid" } },
   // Ravenloft. Brochette psychique (Ancien) : Épuisement et Étourdi seulement pour une cible Charmée.
