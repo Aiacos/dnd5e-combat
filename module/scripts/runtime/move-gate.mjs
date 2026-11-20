@@ -114,7 +114,7 @@ function opportunityFirst(token, movement, operation) {
   // §99 : un morceau de marche du moteur que le cœur enchaîne lui-même n'a plus les options du moteur — il est déjà contrôlé.
   if ( (operation?.[MODULE_ID] ?? continuedFlags(token, movement))?.cleared ) return true;
   const waypoints = [...movement.passed.waypoints, ...movement.pending.waypoints];
-  const threats = opportunityThreats(token, waypoints);
+  const threats = opportunityThreats(token, waypoints, { explain: true });
   if ( !threats.length ) return true;
   (async () => {
     // §211 : une action préparée déclenchée en route — le token va jusqu'à la case où il arrive à portée, l'action est proposée, puis

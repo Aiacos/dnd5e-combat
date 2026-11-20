@@ -212,6 +212,7 @@
     "mcp.makeScroll",
     "mcp.masteries",
     "mcp.menu",
+    "mcp.missedOpportunities",
     "mcp.move",
     "mcp.movement",
     "mcp.naturalOne",

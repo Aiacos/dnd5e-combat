@@ -8,7 +8,7 @@
  *  - "leavesReach"  une créature hostile quitte l'allonge (attaque d'opportunité)
  */
 
-import { hostileSides } from "./factions.mjs";
+import { hostileSides, neutralFacing } from "./factions.mjs";
 
 /** Deux camps sont-ils opposés ? (défini avec les factions, §181 ; réexporté ici pour les appelants d'avant) */
 export { areHostile } from "./factions.mjs";
@@ -76,4 +76,27 @@ export function opportunityAttackers(mover, others) {
     && hostileSides(mover, o)
     && (o.before <= o.reach + 1e-6) && (o.after > o.reach + 1e-6)
   ).map(o => o.token);
+}
+
+/**
+ * §479 : pourquoi une créature dont ce déplacement quitte l'allonge n'a PAS d'attaque d'opportunité — la première raison, dans l'ordre
+ * des conditions d'`opportunityAttackers` (mêmes entrées). Rien pour celles qui ne quittent pas l'allonge ou qui peuvent attaquer.
+ * `notice` : la raison mérite d'être dite au MJ (elle surprend) — un camp Neutre face à un camp Amical ou Hostile sans relation de faction
+ * (un monstre resté Neutre ne provoque rien), une créature hostile sans attaque de corps à corps utilisable, ou qui ne voit pas
+ * celle qui part. Deux alliés, une Réaction déjà prise, un Désengagement : la règle se lit d'elle-même, rien n'est dit.
+ * @returns {Array<{token: string, reason: string, notice: boolean}>}
+ */
+export function opportunityMisses(mover, others) {
+  const out = [];
+  for ( const o of others ) {
+    if ( !((o.before <= o.reach + 1e-6) && (o.after > o.reach + 1e-6)) ) continue;
+    const reason = mover.teleported ? "teleported" : mover.disengaged ? "disengaged"
+      : !hostileSides(mover, o) ? "notHostile" : !o.hasMeleeAttack ? "noMelee"
+      : o.incapacitated ? "incapacitated" : !o.reactionAvailable ? "noReaction"
+      : (o.seesMover === false) ? "cantSee" : (o.hasLineOfEffect === false) ? "noLineOfEffect" : null;
+    if ( !reason ) continue;
+    const notice = (reason === "notHostile") ? neutralFacing(mover, o) : ((reason === "noMelee") || (reason === "cantSee"));
+    out.push({ token: o.token, reason, notice });
+  }
+  return out;
 }

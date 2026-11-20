@@ -1,6 +1,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { actsFor, needsCheck } from "../core/requests.mjs";
-import { opportunityAttackers, entersAt, reachStrikers } from "../core/reaction.mjs";
+import { opportunityAttackers, opportunityMisses, entersAt, reachStrikers } from "../core/reaction.mjs";
+import { alertGM } from "./gm-alert.mjs";
 import {
   REACTION_QUERY, handleReactionQuery, setReactionApproach, reactionOptions, reactionState, meleeAttacksOf, reactiveStrikesOf, reactiveSpellsOf, askReaction, currentAc, opportunityBlocked
 } from "../adapter/reactions.mjs";
@@ -509,9 +510,11 @@ function onEnemyTurnEnd(combat, prior) {
  * @param {object[]} waypoints  Le chemin prévu, départ exclu.
  * §136 : aussi les Attaques réactives (Maître d'hast) contre une créature qui ENTRE dans l'allonge, rendues comme
  * `{ token, enters: true }` ; l'ensemble est rangé dans l'ordre du chemin (entrer puis sortir : l'Attaque réactive d'abord).
+ * §479 : `explain` (un vrai déplacement, pas un aperçu ni un scénario qui interroge) — chaque créature dont le chemin quitte l'allonge
+ * sans attaque d'opportunité est dite au journal du débogueur, et une raison qui surprend l'est au MJ (`explainMisses`).
  * @returns {Array<string|{token: string, enters: true}>}  UUID des tokens qui peuvent réagir.
  */
-export function opportunityThreats(token, waypoints) {
+export function opportunityThreats(token, waypoints, { explain=false }={}) {
   // §117, §416 : règle générale — niveau Assisté et au-dessus. Au niveau Essentiel, aucun chemin ne la juge (ni `preMoveToken`,
   // ni la marche au clic de runtime/actions.mjs, qui passait encore par ici).
   if ( !levelAtLeast("assisted") ) return [];
@@ -572,11 +575,14 @@ export function opportunityThreats(token, waypoints) {
       ...reactionState(other.actor)
     });
   }
-  const attacks = opportunityAttackers({
+  const moverSide = {
     // §18.15 : Agile, Vol rasant — comme un Désengagement, pour ce déplacement.
     ...sideOf(token), teleported,
     disengaged: (readBudget(mover).disengaged === true) || avoidsOpportunity(token.actor, token, waypoints)
-  }, others).map(uuid => ({ uuid, at: others.find(o => o.token === uuid)?.leaves ?? 0 }));
+  };
+  const attacks = opportunityAttackers(moverSide, others).map(uuid => ({ uuid, at: others.find(o => o.token === uuid)?.leaves ?? 0 }));
+  lastMisses = opportunityMisses(moverSide, others);
+  if ( explain ) explainMisses(token, lastMisses);
   const strikes = reachStrikers({ ...sideOf(token), teleported }, strikers)
     .map(uuid => ({ uuid, enters: true, at: strikers.find(o => o.token === uuid).enters - 1 }));
   if ( !strikes.length && !readied.length ) return attacks.map(a => a.uuid);
@@ -584,6 +590,32 @@ export function opportunityThreats(token, waypoints) {
   // (`splitForReady`) ; elle passe après ce qui vient avant sur le chemin.
   return [...strikes, ...attacks, ...readied.map(r => ({ ...r, uuid: r.token, at: r.at - 0.5 }))].sort((a, b) => a.at - b.at)
     .map(a => (a.ready ? { token: a.uuid, ready: true, at: a.at + 0.5 } : a.enters ? { token: a.uuid, enters: true } : a.uuid));
+}
+
+/** §479 : les raisons du dernier chemin jugé (scénarios : `api.mcp.missedOpportunities`). */
+let lastMisses = [];
+export function lastOpportunityMisses() { return lastMisses; }
+
+/** §479 : ce qui a déjà été dit au MJ — une fois par combat, par créature et par raison (pas à chaque pas). */
+const missesTold = new Set();
+
+/**
+ * §479 : dire pourquoi une créature ne porte pas d'attaque d'opportunité quand ce déplacement quitte son allonge — au journal du
+ * débogueur toujours, au MJ (alerte MJ, réglage `gmAlerts`) quand la raison surprend : un monstre resté Neutre, une créature sans
+ * attaque de corps à corps utilisable, ou qui ne voit pas celle qui part (Discord, 2026-11-19 : « les attaques d'opportunité ne partent pas »).
+ */
+function explainMisses(token, misses) {
+  for ( const { token: uuid, reason, notice } of misses ) {
+    const other = fromUuidSync(uuid, { strict: false });
+    if ( !other ) continue;
+    log(`${token.name} leaves ${other.name}'s reach: no Opportunity Attack (${reason})`);
+    if ( !notice ) continue;
+    const key = `${game.combat?.id ?? ""}|${uuid}|${reason}`;
+    if ( missesTold.has(key) ) continue;
+    missesTold.add(key);
+    alertGM({ text: loc(`OpportuniteRatee.${reason}`, { mover: token.name, attacker: other.name }), actor: other.actor })
+      .catch(err => console.error(`${MODULE_ID} | opportunity attack: GM notice`, err));
+  }
 }
 
 /**

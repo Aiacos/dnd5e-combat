@@ -163,6 +163,16 @@ export function hostileSides(a, b) {
   return r ? r === "hostile" : areHostile(a?.disposition, b?.disposition);
 }
 
+/**
+ * §479 : l'un Neutre (0), l'autre Amical ou Hostile, sans relation de faction entre eux — le cas où une règle « entre camps opposés »
+ * (attaque d'opportunité) ne se déclenche pas et surprend : un monstre resté Neutre.
+ */
+export function neutralFacing(a, b) {
+  if ( factionRelation(a, b) ) return false;
+  const da = a?.disposition, db = b?.disposition;
+  return ((da === 0) && (Math.abs(db) === 1)) || ((db === 0) && (Math.abs(da) === 1));
+}
+
 /** Même camp ? Sans relation de faction : même disposition. */
 export function alliedSides(a, b) {
   const r = factionRelation(a, b);

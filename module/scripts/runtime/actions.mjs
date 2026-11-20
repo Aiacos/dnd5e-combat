@@ -206,7 +206,7 @@ export function planeRefusal(token, target) {
 async function walkSafely(token, plan, flags={}) {
   if ( plan.waypoints.length ) {
     previewPath(token, null);
-    const threats = opportunityThreats(token, plan.waypoints);
+    const threats = opportunityThreats(token, plan.waypoints, { explain: true });
     // §211 : une action préparée déclenchée en route — marcher jusqu'à la case où l'on arrive à portée, la laisser jouer, repartir
     // (la suite revue comme une nouvelle marche). Pas à travers un escalier : là, elle se joue avant, comme une attaque d'opportunité.
     const split = plan.waypoints.some(w => w.action === "displace") ? null : splitForReady(token, plan.waypoints, threats);

@@ -18,7 +18,7 @@ import { dismissFamiliar, recallFamiliar, recallRefusal, canPocket, canRecall } 
 import { pocketOf, isFamiliarToken, emptyPocket } from "../adapter/familiar.mjs";
 import { basicActionOf } from "../adapter/basics.mjs";
 import { leaderOf, followersOf, follow as followIntent, unfollow as unfollowIntent } from "./follow.mjs";
-import { opportunityThreats } from "./reactions.mjs";
+import { opportunityThreats, lastOpportunityMisses } from "./reactions.mjs";
 import { sleep } from "./shared.mjs";
 import { cellArg, finite, gmOnly, positionJson, viewedToken, waypointOf, windows } from "./testing-shared.mjs";
 import { budget } from "./testing-rules.mjs";
@@ -221,6 +221,17 @@ export function threats({ tokenId, point }) {
   const waypoints = [{ x: at.x, y: at.y, elevation: token._source.elevation, action: "walk" }];
   return opportunityThreats(token, waypoints).map(e => (typeof e === "string")
     ? (fromUuidSync(e, { strict: false })?.name ?? e) : `${fromUuidSync(e.token, { strict: false })?.name ?? e.token} (reactive strike)`);
+}
+
+/**
+ * §479 : pourquoi les créatures dont l'allonge serait quittée par ce déplacement en ligne droite n'ont pas d'attaque d'opportunité —
+ * `[{ name, reason, notice }]`. `explain` : comme un vrai déplacement (journal du débogueur, alerte MJ une fois par combat).
+ */
+export function missedOpportunities({ tokenId, point, explain=false }) {
+  const token = viewedToken({ tokenId });
+  const at = token.parent.grid.getTopLeftPoint(token.parent.grid.getOffset(point));
+  opportunityThreats(token, [{ x: at.x, y: at.y, elevation: token._source.elevation, action: "walk" }], { explain });
+  return lastOpportunityMisses().map(m => ({ name: fromUuidSync(m.token, { strict: false })?.name ?? m.token, reason: m.reason, notice: m.notice }));
 }
 
 /** §38.2 : l'échange de place du Troc du filou, comme l'entrée du menu (depuis l'illusion ou son lanceur) ; positions avant / après. */
