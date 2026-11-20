@@ -478,6 +478,11 @@ export const ITEM_FIXES = Object.freeze({
     { on: "hit", if: { "target.creatureType": "giant" }, do: [{ type: "status", status: "prone", save: { ability: "str", dc: 15 } }] }] },
   "holy-avenger-enchanted": BANE("holy-avenger", ["fiend", "undead"], "2d10", "radiant", true),
   "executioners-axe-enchanted": BANE("executioners-axe", ["humanoid"], "2d6", "slashing", true),
+  // Masse de châtiment (SRD 5.2) : « sur un 20 au jet d'attaque […], si une Créature artificielle a 25 points de vie ou moins après
+  // avoir subi ces dégâts, elle est détruite ». Les bonus et les dégâts du 20 sont dans la donnée ; l'état est posé après les dégâts.
+  "mace-of-smiting": { triggers: [{ on: "hit",
+    if: { "hit.critical": true, "target.creatureType": "construct", "target.hpAtMost": 25 },
+    do: [{ type: "status", status: "dead" }] }] },
   // Armes qui portent leur propre identifiant — Masse d'anéantissement : « 2d6 radiants » contre un Fiélon ou un Mort-vivant ; Épée
   // radieuse : « 1d8 radiants » contre un Mort-vivant ; Épée de Kas : « 2d10 tranchants » contre un Mort-vivant.
   // O9a (§354) : « à 25 PV ou moins après ces dégâts, sauvegarde de Sagesse DD 15 ou détruite ; sur une réussite, Effrayée » — la donnée
