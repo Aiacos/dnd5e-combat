@@ -603,6 +603,15 @@ export const ITEM_FIXES = Object.freeze({
   // (la donnée) et vous gagnez autant de PV temporaires ». Demonomicon d'Iggwilv — « les dégâts de vos sorts contre un Fiélon : le maximum ».
   "blackrazor": { devours: true },
   "sword-of-life-stealing-enchanted": { critFeeds: { amount: 15 } },
+  // Marteau de lancer nain (SRD 5.2) : « quand vous touchez avec une attaque à distance effectuée avec cette arme, elle inflige 1d8
+  // dégâts de force de plus, ou 2d8 si la cible est un Géant ». La donnée met le 1d8 aussi sur l'attaque de corps à corps
+  // (« Attack »), et « Throw » n'a rien pour le Géant.
+  "dwarven-thrower": {
+    dataFixes: [{ path: "system.activities.bd1kKOncfoLha8CT.damage.parts",
+      from: [{ number: 1, denomination: 8, types: ["force"] }], value: [] }],
+    triggers: [{ on: "preDamageRoll", if: { "activity.id": "w3ATyMSroDLch6Re", "target.creatureType": "giant" },
+      do: [{ type: "damage", formula: "1d8", damageType: "force" }] }]
+  },
   "demonomicon-of-iggwilv": { maxSpellDamageVs: ["fiend"] },
   // O9a (§354) : poisons et pièges — Torpeur : « la Vitesse est divisée par deux tant qu'elle est Empoisonnée ainsi » ; Pierre roulante :
   // « sur un échec, À terre ».
