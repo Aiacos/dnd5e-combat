@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { searchRollMode, normalTotal, searchVerdicts, passiveNotice } from "../module/scripts/core/search.mjs";
+import { searchRollMode, normalTotal, searchVerdicts, passiveNotice, searchBonuses } from "../module/scripts/core/search.mjs";
+import { wornOrNotEquipment } from "../module/scripts/adapter/triggers.mjs";
+import { validateEntry } from "../module/scripts/core/content.mjs";
+import { CONTENT } from "../module/scripts/content/index.mjs";
 
 describe("mode du test de Chercher", () => {
   it("Désavantage dès qu'une cachette à juger au jet est en lumière faible perçue", () => {
@@ -62,5 +65,38 @@ describe("Perception passive", () => {
   });
   it("sans valeur passive, rien", () => {
     expect(passiveNotice({ passive: undefined, seeable: true }, 5).notices).toBe(false);
+  });
+});
+
+describe("ce qui s'ajoute au test de Chercher (searchBonus)", () => {
+  const eyes = { rule: { advantage: true } };
+  it("un objet porté donne l'Avantage ; dans le sac, ou non harmonisé quand il l'exige, rien", () => {
+    const worn = { type: "equipment", system: { equipped: true, attunement: "" } };
+    const packed = { type: "equipment", system: { equipped: false, attunement: "" } };
+    const unattuned = { type: "equipment", system: { equipped: true, attunement: "required", attuned: false } };
+    const attuned = { type: "equipment", system: { equipped: true, attunement: "required", attuned: true } };
+    const keenOf = item => searchBonuses([{ ...eyes, item, counts: wornOrNotEquipment(item) }]).keen?.item ?? null;
+    expect(keenOf(worn)).toBe(worn);
+    expect(keenOf(packed)).toBeNull();
+    expect(keenOf(unattuned)).toBeNull();
+    expect(keenOf(attuned)).toBe(attuned);
+  });
+  it("un trait compte toujours ; son Avantage à utilisations demande qu'il en reste une", () => {
+    const feat = { type: "feat", system: {} };
+    expect(searchBonuses([{ ...eyes, counts: wornOrNotEquipment(feat) }]).keen).not.toBeNull();
+    expect(searchBonuses([{ ...eyes, counts: true, usesMax: 2, usesLeft: 0 }]).keen).toBeNull();
+    expect(searchBonuses([{ ...eyes, counts: true, usesMax: 2, usesLeft: 1 }]).keen).not.toBeNull();
+  });
+  it("les dés s'additionnent, sans ceux d'un objet rangé", () => {
+    const sources = [{ rule: { formula: "1d4" }, counts: true }, { rule: { formula: "1d6" }, counts: false },
+      { rule: null, counts: true }];
+    expect(searchBonuses(sources)).toEqual({ parts: ["1d4"], keen: null });
+    expect(searchBonuses([])).toEqual({ parts: [], keen: null });
+  });
+  it("contenu : Yeux de l'aigle et Robe aux yeux", () => {
+    for ( const id of ["eyes-of-the-eagle", "robe-of-eyes"] ) {
+      expect(CONTENT[id].searchBonus, id).toEqual({ advantage: true });
+      expect(validateEntry(CONTENT[id]), id).toEqual([]);
+    }
   });
 });

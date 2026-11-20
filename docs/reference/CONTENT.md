@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-906 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+908 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -237,7 +237,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `scatter` | 2 | `ball-bearings`, `caltrops` |
 | `scoreFloor` | 1 | `indomitable-might` |
 | `sculptSpells` | 1 | `sculpt-spells` |
-| `searchBonus` | 2 | `sharp-eye-ravenloft`, `watchers` |
+| `searchBonus` | 4 | `eyes-of-the-eagle`, `robe-of-eyes`, `sharp-eye-ravenloft`, `watchers` |
 | `seesInvisible` | 1 | `see-invisibility` |
 | `seesThroughOwnDarkness` | 1 | `power-of-shadow` |
 | `selfZone` | 4 | `conjure-minor-elementals`, `conjure-woodland-beings`, `forbiddance`, `yolandes-regal-presence` |
