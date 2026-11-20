@@ -469,6 +469,14 @@ export const ITEM_FIXES = Object.freeze({
   // répandent une Lumière vive sur 12 m et faible sur 12 m de plus », tant que l'enchantement « Ablaze » est sur l'arme ; flammes du
   // Heaume scintillant (« Burst Into Flames ») : vive sur 3 m, faible sur 3 m de plus.
   "moon-touched-sword": { carriedLight: MOONLIGHT },
+  // Anneau des étoiles filantes (SRD 5.2), Sphères de foudre : « en cas d'échec, la créature subit des dégâts de foudre selon le
+  // nombre de sphères que vous avez créées » — 1 : 4d12, 2 : 5d4, 3 : 2d6, 4 : 2d4 ; la moitié en cas de réussite. La sauvegarde
+  // de la donnée n'a aucun dégât : la ligne d'une sphère lui est donnée, et `damageByCount` prend celle du nombre créé.
+  "ring-of-shooting-stars": {
+    damageByCount: { GLyk6XaqTk5JOVQ8: { from: "sZwpvVE0OpUNXe2B", formulas: ["4d12", "5d4", "2d6", "2d4"] } },
+    dataFixes: [{ path: "system.activities.GLyk6XaqTk5JOVQ8.damage.parts", from: [],
+      value: [{ number: 4, denomination: 12, bonus: "", types: ["lightning"], custom: { enabled: false, formula: "" },
+        scaling: { mode: "", number: 1 } }] }] },
   "moon-touched-sword-enchanted": { carriedLight: MOONLIGHT },
   "flame-tongue-enchanted": { carriedLight: { bright: 40, dim: 80, units: "ft", animation: FLAMES, whileEnchanted: "MHnAqxEXBhUbnjPq" } },
   "helm-of-brilliance-enchanted": { carriedLight: { bright: 10, dim: 20, units: "ft", animation: FLAMES, whileEnchanted: "oZBFpi117yOXca3k" } },
