@@ -5,7 +5,8 @@
  * utilitaire de portée « soi-même » qui vise une créature ; sa règle est dans la surcouche du monde (`overrideContent`).
  *  1. PV temporaires : 10 PV temporaires appliqués au Zombi (comme la carte d'un soin « temphp ») — il n'en reçoit aucun ; la règle
  *     retirée, il les reçoit (témoin).
- *  2. Le trait sur le Guerrier (dans l'espace du Zombi) : aucune fenêtre de légalité, la carte d'utilisation est créée.
+ *  2. Le trait sur le Guerrier (posé dans l'espace du Zombi — la règle porte aussi `sharesSpace: "mutual"`, comme la vraie nuée, sans
+ *     quoi la collision des tokens l'arrête au contact) : aucune fenêtre de légalité, la carte d'utilisation est créée.
  *  3. Le trait sur le Bandit (hors de son espace) : la fenêtre de légalité s'ouvre et nomme le Bandit ; on renonce, aucune carte.
  * La légalité est demandée (`confirmed: false`) ; toute autre fenêtre est fermée. PV temporaires, positions, trait, surcouche remis.
  */
@@ -16,7 +17,9 @@ const IDENTIFIER = "das-essai-nuee-espace";
 const ACTIVITY = "dasEssaiNueeEsp0";
 // Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
 const ITEM_NAME = "Essai : nuée qui griffe";
-const RULE = { blocksTempHp: true, targets: { requires: { "target.sharesSpaceWithSource": true } } };
+// `sharesSpace` comme la vraie nuée : sans lui, le déplacement du Guerrier sur la scène affichée s'arrête au contact du Zombi (collision
+// des tokens) et il n'est jamais dans son espace — échec du banc du 2026-11-20.
+const RULE = { sharesSpace: "mutual", blocksTempHp: true, targets: { requires: { "target.sharesSpaceWithSource": true } } };
 
 const LEND = `
 const actor = canvas.scene.tokens.get(args.attacker).actor;
@@ -37,7 +40,8 @@ return Number(actor.system.attributes.hp.temp) || 0;
 const PLACE = `
 const t = canvas.scene.tokens.get(args.tokenId);
 await t.update({ x: args.x, y: args.y }, { animate: false });
-return true;
+await new Promise(r => setTimeout(r, 500));
+return { x: t._source.x, y: t._source.y };
 `;
 
 export default {
@@ -83,7 +87,7 @@ export default {
     await script(TEMP, { tokenId: zombie.id, reset: true });
     const blocked = await script(TEMP, { tokenId: zombie.id, value: 10 });
     ctx.expect(blocked === 0, `la nuée ne reçoit pas de PV temporaires (${blocked})`);
-    await ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: { targets: RULE.targets } });
+    await ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: { sharesSpace: RULE.sharesSpace, targets: RULE.targets } });
     await pause(500);
     const witness = await script(TEMP, { tokenId: zombie.id, value: 10 });
     ctx.expect(witness === 10, `témoin, sans la règle : 10 PV temporaires reçus (${witness})`);
@@ -92,8 +96,9 @@ export default {
     await pause(500);
 
     // 2 et 3. La cible dans l'espace de la nuée, puis hors de lui.
-    await script(PLACE, { tokenId: fighter.id, x: zombie.x, y: zombie.y });
+    const placed = await script(PLACE, { tokenId: fighter.id, x: zombie.x, y: zombie.y });
     await pause(800);
+    if ( !ctx.expect((placed?.x === zombie.x) && (placed?.y === zombie.y), `le Guerrier est dans la case du Zombi (${JSON.stringify(placed)} ; Zombi ${zombie.x},${zombie.y})`) ) return;
     const use = target => ctx.use({ tokenId: zombie.id, itemId: lent.itemId, activityType: "utility", consume: false, targetTokenIds: [target.id],
       usageConfig: { [MODULE_ID]: { confirmed: false } } });
     const usages = async since => (await ctx.messagesSince(since)).filter(m => (m.type === "usage") || m.flags?.dnd5e?.activity);
