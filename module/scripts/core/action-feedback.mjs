@@ -62,7 +62,9 @@ const DEFAULTS = Object.freeze({
   thrown: { success: null, failure: CORE_SOUNDS.thud },
   command: { success: CORE_SOUNDS.chime, failure: null },
   // §493 (B13) : une réaction contre une zone (Bouclier d'insectes) — la créature épargnée (carillon), ou les dégâts qui passent.
-  areaShield: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull }
+  areaShield: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull },
+  // §494 (B14) : plusieurs concentrations perdues d'un coup (jet raté, Neutralisé).
+  concentrationLost: { success: null, failure: CORE_SOUNDS.fade }
 });
 
 /** Le son par défaut de cette action et de cette issue (null : aucun). */

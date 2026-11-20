@@ -1,13 +1,36 @@
 import {
   rollerFor, readConcentrationPrompt, concentrationKeptBy, rollConcentration, readConcentrationSave, breakConcentration, removeRegionsOf,
-  isConcentrationEffect, concentrationDisabled, CONCENTRATION_QUERY, CONCENTRATION_TIMEOUT, handleConcentrationQuery
+  isConcentrationEffect, concentrationDisabled, CONCENTRATION_QUERY, CONCENTRATION_TIMEOUT, handleConcentrationQuery,
+  concentrationRuleFor, loseRemainingConcentration, concentrationLabel
 } from "../adapter/concentration.mjs";
 import { tieSummonToConcentration, removeSummonsOf, joinSummonerCombat, summonItemOf, makeSummonHostile } from "../adapter/summons.mjs";
 
 import { MODULE_ID } from "../constants.mjs";
 import { route } from "./router.mjs";
-import { log, waitForDice } from "./shared.mjs";
+import { log, notice, tokenOfActor, waitForDice } from "./shared.mjs";
 import { queryPlayer, waitLabel } from "../adapter/player-wait.mjs";
+
+/**
+ * §494 (brique B14) : la concentration est perdue (jet raté, Neutralisé). dnd5e met fin à toutes (`endConcentration()`) ; une créature
+ * qui déclare `concentration.loseAll` n'en garde aucune, même si un module a refusé la fin de l'une d'elles. Quand plusieurs sorts tombent
+ * ensemble, toute la table le voit et l'entend (avis au-dessus du token, son « fin de sort »). Rend les effets retirés.
+ */
+async function loseConcentration(actor, saveMessage=null) {
+  const ended = [...await breakConcentration(actor, saveMessage)];
+  if ( concentrationRuleFor(actor)?.loseAll ) {
+    const rest = await loseRemainingConcentration(actor);
+    if ( rest.length ) log(`${actor.name}: loses all concentration, ${rest.length} more removed`);
+    ended.push(...rest);
+  }
+  if ( ended.length > 1 ) {
+    const spells = ended.map(concentrationLabel).join(", ");
+    log(`${actor.name}: all ${ended.length} concentrations lost (${spells})`);
+    const token = tokenOfActor(actor);
+    if ( token ) notice(token, { key: "ConcentrationsPerdues", data: { name: actor.name, count: ended.length, spells } }, "refused",
+      { all: true, action: "concentrationLost", outcome: "failure" });
+  }
+  return ended;
+}
 
 /**
  * Le système vient de demander une sauvegarde de concentration, ou de proposer d'y mettre fin.
@@ -19,7 +42,7 @@ async function onPrompt(message) {
   if ( !prompt ) return;
   if ( prompt.kind === "end" ) {
     // Mort ou neutralisé : la règle ne prévoit aucun jet, la concentration tombe.
-    const ended = await breakConcentration(prompt.actor);
+    const ended = await loseConcentration(prompt.actor);
     if ( ended.length ) log(`${prompt.actor.name}: Incapacitated, concentration ended`);
     await message.delete();
     return;
@@ -60,7 +83,7 @@ async function onSave(message) {
   if ( !save ) return;
   await waitForDice(message);
   if ( save.failed ) {
-    const ended = await breakConcentration(save.actor, message);
+    const ended = await loseConcentration(save.actor, message);
     log(`${save.actor.name}: concentration saving throw failed${ended.length ? `, ${ended.map(e => e.name).join(", ")} ended` : ""}`);
   } else log(`${save.actor.name}: concentration maintained`);
   // La carte de demande que le moteur a servie lui-même n'a plus d'objet.

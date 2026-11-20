@@ -361,6 +361,9 @@
  *     keepsConcentration?: string[]             relevé des trous : subir des dégâts ne rompt pas la concentration sur ces items
  *                                               (identifiants) — pas de jet de concentration quand toute la concentration du porteur
  *                                               vient d'eux (Chasseur implacable : Marque du chasseur)
+ *     concentration?: { limit, loseAll?: true } §494 (B14) : la créature tient jusqu'à `limit` concentrations à la fois (effet tenu sur
+ *                                               l'acteur, runtime/speed-grants.mjs) ; `loseAll` : un jet raté, Neutralisé, 0 PV les font
+ *                                               toutes tomber (déjà la règle de dnd5e et du moteur : la clé le déclare, la perte est annoncée)
  *     concentrationBreaker?: true               §133 : la créature concentrée que le porteur blesse a le Désavantage à son prochain
  *                                               jet de concentration (Tueur de mages)
  *     interposeShield?: true                    §133 : sauvegarde de Dextérité réussie contre des dégâts réduits de moitié, bouclier

@@ -161,6 +161,8 @@ export function stats({ tokenId }) {
     prof: a.prof ?? null,
     mods: Object.fromEntries(Object.entries(actor?.system?.abilities ?? {}).map(([k, v]) => [k, v.mod ?? null])),
     statuses: Array.from(actor?.statuses ?? []),
+    // §494 (B14) : la limite de concentrations (préparée : effet tenu compris) et les sorts tenus.
+    concentration: { limit: a.concentration?.limit ?? null, held: Array.from(actor?.concentration?.effects ?? []).map(e => e.id) },
     // K6 (§327) : Réactions perdues, action OU action Bonus (effets `noReactions`, `actionOrBonus`).
     reactionBlocked: reactionsBlocked(actor), actionOrBonus: actionOrBonusOnly(actor),
     // §52 : la lumière du token telle que le cœur la rend (données préparées : effets `token.light.*` compris).

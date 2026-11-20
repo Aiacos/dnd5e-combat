@@ -10,6 +10,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { replacesConcentration } from "../core/concentration.mjs";
 import { rollerFor } from "../adapter/concentration.mjs";
 import { timedWait, combatWindowSeconds, windowsUnlimited } from "../adapter/dialogs.mjs";
 import { queryPlayer, waitLabel } from "../adapter/player-wait.mjs";
@@ -71,8 +72,10 @@ export async function handleSkillAidQuery(payload) {
   const target = await fromUuid(payload.tester);
   if ( !actor || !target ) return false;
   const what = testLabel(payload);
-  // Lancer Assistance met fin à la concentration en cours (dnd5e la remplace sans fenêtre) : on le dit.
-  const current = payload.kind === "guidance" ? Array.from(actor.concentration?.effects ?? [])[0] : null;
+  // Lancer Assistance met fin à la concentration en cours (dnd5e la remplace sans fenêtre) : on le dit. §494 : seulement si la créature
+  // en tient déjà autant que sa limite (plusieurs concentrations à la fois : rien ne tombe en dessous).
+  const held = Array.from(actor.concentration?.effects ?? []);
+  const current = ((payload.kind === "guidance") && replacesConcentration(held.length, actor.system?.attributes?.concentration?.limit)) ? held[0] : null;
   const source = payload.kind === "inspiration" ? inspirationSourceOf(actor) : null;
   const ask = { guidance: "DemandeAssistance", inspiration: "DemandeInspiration", help: "DemandeSoutien" }[payload.kind];
   const lines = [loc(`AideTest.${ask}`, { name: target.name, test: what, formula: source?.formula ?? "",

@@ -8,6 +8,7 @@ import { unknownFacts } from "../triggers.mjs";
 import { validateAbsorb, validateCarriedLight, validateChoice, validateEmanation, validateLight, validateSummon, validateTargets, validateTeleport } from "./annex.mjs";
 import { BASIC_ACTION_KINDS, BONUS_ATTACK_AFTER, BREAK_MOMENTS, EFFECT_EXPIRIES, ENDS_APART_AT, ENDS_ARMOR, ENDS_UNAFFECTED, ENTRY_KEYS, SIZES, WEAPON_KINDS, DAMAGE_TYPES, ROLL_DISADVANTAGE_ON } from "./enums.mjs";
 import { validateExtras } from "./extras.mjs";
+import { validateConcentrationRule } from "../concentration.mjs";
 import { SPELL_COMPONENTS } from "../spell-failure.mjs";
 import { isId, isObject } from "./shared.mjs";
 import { validateDataFixes } from "../data-fixes.mjs";
@@ -336,6 +337,8 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   // Relevé des trous (2026-10-22) : les sorts dont les dégâts ne rompent pas la concentration (Chasseur implacable : Marque du chasseur).
   if ( ("keepsConcentration" in entry) && (!Array.isArray(entry.keepsConcentration) || !entry.keepsConcentration.length
     || !entry.keepsConcentration.every(s => (typeof s === "string") && s)) ) errors.push(`${at}keepsConcentration: list of item identifiers`);
+  // §494 (brique B14) : plusieurs concentrations à la fois, perdues ensemble.
+  if ( "concentration" in entry ) errors.push(...validateConcentrationRule(entry.concentration).map(e => `${at}${e}`));
   // Relevé des trous : les sorts de cette classe qui infligent des dégâts peuvent prendre ces types (Sorts psychiques : psychique).
   if ( "spellDamageTypes" in entry ) {
     const d = entry.spellDamageTypes;

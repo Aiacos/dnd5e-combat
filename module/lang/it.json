@@ -1356,6 +1356,7 @@
   "DND5ECOMBAT.AideTest.GainAvantage": "Vantaggio",
   "DND5ECOMBAT.AideTest.Etat.pending": "Richiesta inviata…",
   "DND5ECOMBAT.DemandeConcentrationJoueur": "{name}: tiro salvezza di Concentrazione (CD {dc})",
+  "DND5ECOMBAT.ConcentrationsPerdues": "{name} perde tutte le {count} concentrazioni: {spells}",
   "DND5ECOMBAT.AideTest.Attente": "Un aiuto è in arrivo: il tiro attende la risposta",
   "DND5ECOMBAT.AideTest.Etat.granted": "Concesso",
   "DND5ECOMBAT.AideTest.Etat.refused": "Rifiutato",

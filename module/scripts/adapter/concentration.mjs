@@ -26,6 +26,7 @@ import { chooseRoller } from "../core/roller.mjs";
 import { closeRollDialogAfter, inLine } from "./dialogs.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
 import { originItemOf } from "./facts.mjs";
+import { concentrationRuleOf } from "../core/concentration.mjs";
 
 /** §141 : la requête « sauvegarde de concentration » envoyée au joueur connecté ; sa réponse. */
 export const CONCENTRATION_QUERY = `${MODULE_ID}.concentration`;
@@ -44,6 +45,30 @@ export function concentrationKeptBy(actor) {
     const kept = contentOf(i).entry?.keepsConcentration;
     return Array.isArray(kept) && from.every(id => id && kept.includes(id));
   }) ?? null;
+}
+
+/** §494 (B14) : la règle de concentration que portent les items de l'acteur (`concentration: { limit, loseAll }`), ou null. */
+export function concentrationRuleFor(actor) {
+  return concentrationRuleOf(Array.from(actor?.items ?? []).map(i => contentOf(i).entry));
+}
+
+/**
+ * §494 (B14) : « si elle perd sa concentration, elle les perd toutes » — après la rupture, ce qui en reste (un module qui aurait refusé
+ * la fin d'une d'elles par `dnd5e.preEndConcentration`) est retiré sans passer par ce hook. Rend les effets retirés.
+ */
+export async function loseRemainingConcentration(actor) {
+  const left = Array.from(actor?.concentration?.effects ?? []).filter(e => !e.isDeleted);
+  if ( !left.length ) return [];
+  await actor.deleteEmbeddedDocuments("ActiveEffect", left.map(e => e.id)).catch(err => {
+    if ( !/does not exist/i.test(String(err?.message ?? err)) ) throw err;
+  });
+  return left;
+}
+
+/** Le nom du sort que tenait un effet de concentration (l'item d'origine, sinon l'effet). */
+export function concentrationLabel(effect) {
+  const item = effect?.getFlag?.("dnd5e", "item");
+  return item?.data?.name ?? effect?.parent?.items?.get?.(item?.id)?.name ?? effect?.name ?? "?";
 }
 
 /** Le joueur connecté qui doit lancer pour cet acteur, ou null si c'est au moteur. */

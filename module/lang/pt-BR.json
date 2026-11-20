@@ -1075,6 +1075,7 @@
   "DND5ECOMBAT.AideTest.GainAvantage": "Vantagem",
   "DND5ECOMBAT.AideTest.Etat.pending": "Solicitação enviada…",
   "DND5ECOMBAT.DemandeConcentrationJoueur": "{name}: salvaguarda de Concentração (CD {dc})",
+  "DND5ECOMBAT.ConcentrationsPerdues": "{name} perde suas {count} concentrações: {spells}",
   "DND5ECOMBAT.AideTest.Attente": "Auxílio a caminho: a rolagem aguarda a resposta",
   "DND5ECOMBAT.AideTest.Etat.granted": "Concedido",
   "DND5ECOMBAT.AideTest.Etat.refused": "Recusado",

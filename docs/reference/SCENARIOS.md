@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-378 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+379 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -73,6 +73,7 @@ la sélection sans rien jouer.
 | `college-esprits` |  | §96 | Esprits vengeur, brute, couard, diseur de bonne aventure, prêtre, de l'ombre ; Canalisation renforcée |
 | `compteur-action-fin` |  | §43 | Pétrification, Danse irrésistible d'Otto, Sommeil |
 | `concentration-zero` |  | §303 | 0 PV = fin de la Concentration (Mur de feu, Rayon de lune, mort sur le coup) |
+| `concentrations-multiples` |  | §494 | trois concentrations tenues ensemble, toutes perdues sur un jet raté ou Neutralisé (§494, brique B14) |
 | `cones` |  | §182 | hors combat, une créature du MJ ne voit que devant elle |
 | `contresort` |  | §16 | un hostile contre le Rayon de givre du Magicien |
 | `cordon-de-fleches` |  | §75 | une sauvegarde à chaque entrée, quatre projectiles puis la fin |
