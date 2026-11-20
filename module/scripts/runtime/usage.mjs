@@ -22,6 +22,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { pickSpellSlot, misplacedSelfUses, canCastHigher, forcedSpellSlot, followUpScaling } from "../core/usage.mjs";
 import { contentOf } from "../adapter/content.mjs";
+import { formChangeOf } from "../adapter/coven.mjs";
 import { movableZoneOf } from "./zones.mjs";
 import { route } from "./router.mjs";
 import { log, loc } from "./shared.mjs";
@@ -108,6 +109,11 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
   // à choisir ou à corriger, ni « plus de charge » chez le MJ. Un appelant qui confirme d'office lance vraiment (même règle).
   if ( !usageConfig[MODULE_ID]?.confirmed && movableZoneOf(activity) ) return;
   activity = repairSelfUses(activity);
+  // §498 : un changement de forme déclaré (`changesForm`) — le moteur fait l'échange après l'utilisation. Sans cela, une activité
+  // « transform » de dnd5e en mode `cr` (le défaut, data/activity/transform-data.mjs:41) ouvre à la fin de l'utilisation le compendium
+  // pour choisir la créature (`_finalizeUsage` → `queryActor`, documents/activity/transform.mjs:114-117) et l'attend : un profil
+  // qu'il ne connaît pas l'en empêche (comme la Forme sauvage, runtime/wildshape.mjs `takeForm`).
+  if ( (activity.type === "transform") && formChangeOf(activity) ) usageConfig.transform = { ...(usageConfig.transform ?? {}), profile: MODULE_ID };
   // §386 : une créature du SRD 2014 invoquée par celle du Monster Manual 2024 quand il est là.
   if ( activity.type === "summon" ) activity = applyPreferredActors(activity);
   // §385 : « jusqu'à N » créatures — le nombre choisi dans la fenêtre « Choisir la forme », sur la copie de l'item.

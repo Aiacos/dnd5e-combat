@@ -10,6 +10,8 @@
  *     le druide — nom d'origine, 15 PV gardés, 0 emplacement (3 dépensés), drapeau retiré, carte `formReverted`.
  *  2. Retour à la main (`revertAfter: { seconds: 12, auto: false }`) : après 12 s, le token reste tertre, le MJ reçoit le rappel
  *     (`formRevertDue`) ; l'entrée « Reprendre sa forme » du menu de son propre token le rend au druide.
+ * L'activité garde le mode `cr` de dnd5e : le moteur doit empêcher la fenêtre du compendium qu'il ouvrirait (sinon l'utilisation ne
+ * rend jamais la main — échec au banc du 2026-11-20).
  * Le temps du monde avancé par le scénario est rendu ; token, acteurs, surcouche retirés. Aucune fenêtre n'est attendue : toute fenêtre
  * ouverte chez le MJ est fermée (ou acceptée si c'est « le faire quand même »).
  */
@@ -65,7 +67,9 @@ return true;
 const ITEM = { name: ITEM_NAME, type: "feat", img: "icons/magic/nature/root-vine-entangled-humanoid.webp",
   system: { identifier: IDENTIFIER, type: { value: "monster" }, description: { value: "<p>Essai §498.</p>" },
     activities: { [ACTIVITY]: { _id: ACTIVITY, type: "transform", activation: { type: "action", value: 1 },
-      range: { units: "self" }, target: { affects: { type: "self" } }, profiles: [] } } } };
+      range: { units: "self" }, target: { affects: { type: "self" } }, profiles: [],
+      // Mode `cr` (défaut de dnd5e, celui des fiches de campagne) : sans le moteur, la fin de l'utilisation ouvrirait le compendium.
+      transform: { mode: "cr", customize: true } } } } };
 const RULE_AUTO = { changesForm: { activity: ACTIVITY, keepHp: true, revertAfter: { rounds: 10 }, shareSpellSlots: true } };
 const RULE_MANUAL = { changesForm: { activity: ACTIVITY, keepHp: true, revertAfter: { seconds: 12, auto: false }, shareSpellSlots: true } };
 
