@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { initiativeAfter } from "../module/scripts/core/turn.mjs";
+import { validateEntry } from "../module/scripts/core/content.mjs";
+import { CONTENT } from "../module/scripts/content/index.mjs";
 import { summonOwnership, summonChoices, asksSummonForm, profilesAtLevel, countChoices, mmActorId, srdMonsterId, asksProfile, actorIdOf } from "../module/scripts/core/summon.mjs";
 
 describe("initiative d'une créature invoquée (§16.13)", () => {
@@ -235,5 +237,33 @@ describe("§394 : invocations visées", () => {
     const { CONTENT } = await import("../module/scripts/content/index.mjs");
     expect(CONTENT["finger-of-death"]?.targetedSummon).toBe(true);
     for ( const id of ["create-undead", "animate-dead", "animate-objects", "summon-celestial"] ) expect(CONTENT[id]?.targetedSummon).toBeUndefined();
+  });
+});
+
+describe("invocations d'objets magiques du SRD 5.2 : leur place au combat", () => {
+  const rule = id => CONTENT[id]?.summon?.initiative;
+  it("les quatre autres Cors du Valhalla, comme celui d'argent : leur propre initiative", () => {
+    for ( const id of ["brass-horn-of-valhalla", "bronze-horn-of-valhalla", "iron-horn-of-valhalla", "horn-of-valhalla"] ) {
+      expect(rule(id), id).toBe(rule("silver-horn-of-valhalla"));
+    }
+    expect(rule("silver-horn-of-valhalla")).toBe("own");
+  });
+  it("djinn, éfrit, créature de la Flasque, nuées de la Flûte : leur propre initiative", () => {
+    for ( const id of ["ring-of-djinni-summoning", "efreeti-bottle", "iron-flask", "pipes-of-the-sewers"] ) {
+      expect(rule(id), id).toBe("own");
+    }
+  });
+  it("le serpent du Bâton du python : juste après son maître", () => {
+    expect(rule("staff-of-the-python")).toBe("after");
+  });
+  it("fouet, épée dansante, image, tapis : hors du combat", () => {
+    for ( const id of ["whip-feather-token", "dancing-sword", "deck-of-illusions", "carpet-of-flying"] ) {
+      expect(rule(id), id).toBe("none");
+    }
+  });
+  it("chaque entrée se valide", () => {
+    for ( const id of ["brass-horn-of-valhalla", "staff-of-the-python", "dancing-sword", "efreeti-bottle"] ) {
+      expect(validateEntry({ summon: CONTENT[id].summon }), id).toEqual([]);
+    }
   });
 });
