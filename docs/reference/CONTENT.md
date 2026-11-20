@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-926 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+927 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -229,7 +229,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `saveAdvantage` | 20 | `aura-of-purity`, `beguiling-twist`, `belt-of-dwarvenkind`, `brave`, `circle-of-power`, `dwarven-resilience`, … |
 | `saveAdvantageFrom` | 1 | `protection-from-evil-and-good` |
 | `saveAdvantageSize` | 1 | `ensnaring-strike` |
-| `saveAutoSuccess` | 4 | `enthrall`, `flesh-to-stone`, `friends`, `mirror-of-life-trapping` |
+| `saveAutoSuccess` | 5 | `enthrall`, `falling-net`, `flesh-to-stone`, `friends`, `mirror-of-life-trapping` |
 | `saveDamage` | 8 | `black-tentacles`, `contact-other-plane`, `evards-black-tentacles`, `holy-water`, `misty-escape`, `pale-tincture`, … |
 | `savedEffects` | 6 | `flesh-to-stone`, `heat-metal`, `mace-of-disruption`, `ottos-irresistible-dance`, `ray-of-enfeeblement`, `stunning-strike` |
 | `saveDisadvantageFor` | 3 | `shatter`, `talisman-of-pure-good`, `talisman-of-ultimate-evil` |

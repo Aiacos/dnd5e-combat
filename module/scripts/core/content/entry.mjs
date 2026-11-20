@@ -179,10 +179,12 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   }
   if ( "saveAutoSuccess" in entry ) {
     const a = entry.saveAutoSuccess;
-    const ok = isObject(a) && (("types" in a) || ("fighting" in a)) && Object.keys(a).every(k => ["types", "fighting"].includes(k))
+    const keys = ["types", "fighting", "sizeAtLeast"];
+    const ok = isObject(a) && keys.some(k => k in a) && Object.keys(a).every(k => keys.includes(k))
       && (!("types" in a) || (Array.isArray(a.types) && a.types.length && a.types.every(t => CREATURE_TYPES.includes(t))))
-      && (!("fighting" in a) || (a.fighting === true));
-    if ( !ok ) errors.push(`${at}saveAutoSuccess: { types?: [creature types], fighting?: true }`);
+      && (!("fighting" in a) || (a.fighting === true))
+      && (!("sizeAtLeast" in a) || SIZES.includes(a.sizeAtLeast));
+    if ( !ok ) errors.push(`${at}saveAutoSuccess: { types?: [creature types], fighting?: true, sizeAtLeast?: size }`);
   }
   if ( ("leash" in entry) && !(isObject(entry.leash) && Number.isFinite(entry.leash.distance) && (entry.leash.distance > 0)
     && (typeof entry.leash.units === "string") && (Object.keys(entry.leash).length === 2)) ) errors.push(`${at}leash: { distance, units }`);

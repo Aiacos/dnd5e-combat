@@ -285,6 +285,9 @@ export const ITEM_FIXES = Object.freeze({
   // Vitesse reste à 0 tant que l'effet est porté : 1 m de chaîne ne laisse pas quitter sa case (lecture, pas le texte).
   "hunting-trap": { dataFixes: [{ effect: "9jl46RZ5GOjs9QlJ", path: "system.changes", from: [],
     value: [change("system.attributes.movement.multiplier", "override", "0")] }] },
+  // Filet tombant (SRD 5.2, piège) : « la cible réussit automatiquement si elle est de taille TG ou supérieure » — les quatre
+  // déclencheurs de la donnée font tirer la sauvegarde à toute créature.
+  "falling-net": { saveAutoSuccess: { sizeAtLeast: "huge" } },
   // Orbe des dragons : « 7 charges, 1d4 + 3 à l'aube » — l'item n'en a aucune, ses sorts payants étaient refusés.
   "orb-of-dragonkind": {
     dataFixes: [{ path: "system.uses.max", from: "", value: "7" }, { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]
