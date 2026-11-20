@@ -261,16 +261,22 @@ describe("contenu livré : Détection de la magie", () => {
     expect(senseVerdict(entry.sense, at(10, { walled: true }))).toBe(null);
     expect(senseVerdict(entry.sense, at(10, { wards: ["div"] }))).toBe(null);
   });
-  it("porter de la magie : un effet magique actif, ou un objet magique équipé — pas un objet rangé, pas un effet coupé", () => {
+  it("porter de la magie : un effet magique actif, ou un objet magique sur soi — ni rangé dans un sac, ni un effet coupé", () => {
     const effect = extra => ({ disabled: false, isSuppressed: false, system: { magical: true }, ...extra });
-    const item = (equipped, properties) => ({ system: { equipped, properties: new Set(properties) } });
+    const item = (equipped, properties, container=null) => ({ system: { equipped, properties: new Set(properties), container } });
     expect(carriesMagic({ effects: [], items: [] })).toBe(false);
     expect(carriesMagic({ effects: [effect()], items: [] })).toBe(true);
     expect(carriesMagic({ effects: [effect({ disabled: true })], items: [] })).toBe(false);
     expect(carriesMagic({ effects: [effect({ isSuppressed: true })], items: [] })).toBe(false);
     expect(carriesMagic({ effects: [effect({ system: { magical: false } })], items: [] })).toBe(false);
     expect(carriesMagic({ effects: [], items: [item(true, ["mgc"])] })).toBe(true);
-    expect(carriesMagic({ effects: [], items: [item(false, ["mgc"])] })).toBe(false);
+    // Porté sans être équipé (une potion, une baguette, un anneau au fond d'une poche) : il se voit.
+    expect(carriesMagic({ effects: [], items: [item(false, ["mgc"])] })).toBe(true);
+    expect(carriesMagic({ effects: [], items: [item(undefined, ["mgc"])] })).toBe(true);
+    // Rangé dans un contenant : pas d'aura ; équipé, il se voit même si la donnée le dit dans un contenant.
+    expect(carriesMagic({ effects: [], items: [item(false, ["mgc"], "sacAdosAdosAdos0")] })).toBe(false);
+    expect(carriesMagic({ effects: [], items: [item(true, ["mgc"], "sacAdosAdosAdos0")] })).toBe(true);
+    expect(carriesMagic({ effects: [], items: [item(false, ["fin"])] })).toBe(false);
     expect(carriesMagic({ effects: [], items: [item(true, ["fin"])] })).toBe(false);
     expect(carriesMagic(null)).toBe(false);
   });
