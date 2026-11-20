@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-936 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+937 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -83,7 +83,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `effectEnds` | 48 | `aberrant-anatomy`, `brutal-strike`, `celestial-revelation`, `chill-touch`, `defensive-duelist`, `devour-intellect`, … |
 | `effectsExpire` | 2 | `blessing-of-the-trickster`, `prayer-of-healing` |
 | `effectsFirst` | 1 | `aid` |
-| `effectsIf` | 6 | `esoteric-ward`, `hammer-of-thunderbolts-enchanted`, `mm-wereboar-gore`, `psychic-skewer`, `silver-needle`, `umbral-dagger` |
+| `effectsIf` | 7 | `esoteric-ward`, `hammer-of-thunderbolts-enchanted`, `mm-wereboar-gore`, `psychic-skewer`, `shield-of-the-cavalier`, `silver-needle`, … |
 | `effectStatuses` | 6 | `coward-spirit`, `death-curse`, `divine-word`, `mm-beholder-eye-rays`, `mm-pseudodragon-sting`, `poisoned-needle` |
 | `effectThen` | 1 | `haste` |
 | `effectWhile` | 10 | `aspect-of-the-wilds`, `boon-of-the-night-spirit`, `bracers-of-defense`, `defense`, `dueling`, `full-of-stars`, … |
@@ -278,7 +278,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `thrownDamage` | 1 | `thrown-weapon-fighting` |
 | `trace` | 7 | `armor-of-agathys`, `blade-ward`, `dispel-evil-and-good`, `flame-blade`, `moonlight-step`, `produce-flame`, … |
 | `transpose` | 1 | `tricksters-transposition` |
-| `triggers` | 274 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
+| `triggers` | 275 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
 | `untypedDamage` | 3 | `freezing-sphere`, `mm-wight-life-drain`, `otilukes-freezing-sphere` |
 | `upkeep` | 1 | `crown-of-madness` |
 | `usageLimits` | 11 | `action-surge`, `flame-blade`, `indomitable`, `pact-of-the-chain`, `plant-growth`, `produce-flame`, … |
@@ -338,7 +338,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `falls → use` | 2 | `ring-of-feather-falling`, `slow-fall` |
 | `falls,allyFalls → cancel` | 1 | `feather-fall` |
 | `falls,allyFalls → use` | 1 | `feather-fall` |
-| `hit → move` | 4 | `repelling-blast`, `ring-of-the-ram`, `thorn-whip`, `vine-attack` |
+| `hit → move` | 5 | `repelling-blast`, `ring-of-the-ram`, `shield-of-the-cavalier`, `thorn-whip`, `vine-attack` |
 | `hit → status` | 5 | `eldritch-smite`, `giant-slayer-enchanted`, `hammer-of-thunderbolts-enchanted`, `sword-of-sharpness-enchanted`, `vine-attack` |
 | `isAttacked → disadvantage` | 3 | `limited-foresight`, `lucky`, `shadowy-dodge` |
 | `isAttacked → use` | 3 | `limited-foresight`, `lucky`, `shadowy-dodge` |

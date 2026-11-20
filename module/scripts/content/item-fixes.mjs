@@ -311,6 +311,12 @@ export const ITEM_FIXES = Object.freeze({
   // aux jets d'Initiative » — la donnée ne porte que l'effet de l'aura protectrice.
   "rod-of-alertness": { dataFixes: [{ effect: "dasRodAlertness0", create: worn("Alertness", [
     change("system.skills.prc.roll.mode", "add", 1), change("system.attributes.init.roll.mode", "add", 1)]) }] },
+  // Bouclier du cavalier (SRD 5.2), Coup violent : « si la cible est une créature, vous pouvez la pousser de 3 m au plus ; si elle
+  // est de votre taille ou plus petite, vous pouvez aussi la jeter À terre » — la donnée pose « Knocked Down » sur toute cible
+  // touchée et ne pousse personne. La poussée, facultative dans la règle, est toujours appliquée.
+  "shield-of-the-cavalier": { effectsIf: { "target.sizeAtMost": "source" },
+    triggers: [{ on: "hit", if: { "activity.id": "ABPaLpY5mrKpB4ou" },
+      do: [{ type: "move", mode: "push", distance: 10, units: "ft" }] }] },
   // Orbe des dragons : « 7 charges, 1d4 + 3 à l'aube » — l'item n'en a aucune, ses sorts payants étaient refusés.
   "orb-of-dragonkind": {
     dataFixes: [{ path: "system.uses.max", from: "", value: "7" }, { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]
