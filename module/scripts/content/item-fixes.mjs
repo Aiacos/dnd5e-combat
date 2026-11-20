@@ -536,6 +536,9 @@ export const ITEM_FIXES = Object.freeze({
   // Baguette du mage de guerre (SRD 5.2) : « vous ignorez l'abri partiel lorsque vous effectuez un jet d'attaque de sort » —
   // l'objet de la donnée ne porte que le bonus aux jets d'attaque de sort.
   "1-wand-of-the-war-mage-enchanted": { rangedFeat: { kind: "spell", cover: "half" } },
+  // Armure d'écailles de dragon (SRD 5.2) : « vous avez l'Avantage aux jets de sauvegarde contre le souffle des Dragons » — le +1
+  // à la CA et la Résistance selon le dragon sont dans la donnée.
+  "dragon-scale-mail-enchanted": { breathAdvantage: { types: ["dragon"] } },
   "moon-touched-sword-enchanted": { carriedLight: MOONLIGHT },
   "flame-tongue-enchanted": { carriedLight: { bright: 40, dim: 80, units: "ft", animation: FLAMES, whileEnchanted: "MHnAqxEXBhUbnjPq" } },
   "helm-of-brilliance-enchanted": { carriedLight: { bright: 10, dim: 20, units: "ft", animation: FLAMES, whileEnchanted: "oZBFpi117yOXca3k" } },
