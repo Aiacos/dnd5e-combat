@@ -462,6 +462,9 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "activity.isMelee": isMelee,
     // §279 : le genre d'arme (`weaponKind` : "unarmed", "simpleM", "martialM", "improv"…), null hors arme — { "activity.weaponKind": ["unarmed", "simpleM"] }.
     "activity.weaponKind": weaponKind(activity),
+    // L'arme de base (`system.type.baseItem` : "longbow", "shortbow"…), null hors arme ou sans base — une arme magique garde la
+    // sienne, quel que soit son nom : { "activity.baseItem": ["longbow", "shortbow"] } (Brassards d'archer).
+    "activity.baseItem": ((activity?.item?.type === "weapon") && activity.item.system?.type?.baseItem) || null,
     "activity.identifier": activity?.item ? identifierOf(activity.item).id : null,
     "activity.id": activity?.id ?? null,
     // §493 (B13) : la forme de la zone de l'activité (« cone », « line », « sphere »…), null sans zone — { "activity.areaShape": ["cone", "line"] }.
