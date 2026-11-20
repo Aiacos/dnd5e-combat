@@ -1,7 +1,7 @@
 /**
  * §481 : le fait « niveau du sort lancé » dans la porte `castsSpell`. Le Zombi reçoit un Contresort à volonté (sauvegarde de
- * Constitution du lanceur, 2024) dont l'item déclare, le temps du scénario, une réaction réservée aux sorts de niveau 1 ou moins
- * (`spell.castLevelAtMost: 1`, flag de l'item). Le Magicien lance Projectile magique :
+ * Constitution du lanceur, 2024) dont la déclaration est remplacée, le temps du scénario, par une réaction réservée aux sorts de niveau 1
+ * ou moins (`spell.castLevelAtMost: 1`, surcouche du monde). Le Magicien lance Projectile magique :
  *  1. au niveau 1 → le Zombi réagit (carte de porte `counterspell`, sauvegarde du lanceur, l'une ou l'autre issue) ;
  *  2. au niveau 2 (emplacement choisi à l'utilisation) → aucune réaction : le niveau vient de la configuration d'utilisation, pas
  *     du niveau de base du sort.
@@ -27,13 +27,13 @@ export default {
       ctx.log(`${other.name} caché le temps du scénario`);
     }
 
-    // La réaction de niveau borné : Contresort à volonté, sa déclaration remplacée par le flag de l'item (couche la plus spécifique).
-    const itemId = await ctx.ensureItem(zombi, "Compendium.dnd5e.spells24.Item.phbsplCounterspe", { system: { method: "atwill" } });
-    const { data: zTok } = await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id });
-    const match = { path: "_id", value: itemId };
-    const triggers = [{ on: "castsSpell", if: { "target.seesSource": true, "spell.castLevelAtMost": 1 }, do: [{ type: "use", target: "source" }] }];
-    await ctx.call("upsert-actor-item", { actorId: zTok.actorId, itemData: { [`flags.${MODULE_ID}.triggers`]: triggers }, match });
-    ctx.restore(() => ctx.call("upsert-actor-item", { actorId: zTok.actorId, itemData: { [`flags.${MODULE_ID}.-=triggers`]: null }, match }).catch(() => {}));
+    // La réaction de niveau borné : Contresort à volonté, sa déclaration remplacée dans la surcouche du monde le temps du scénario.
+    // Pas par un flag d'item : une mise à jour Foundry déplie les clés pointées des conditions (`"spell.castLevelAtMost"` devient
+    // `{ spell: { castLevelAtMost } }`), que la validation refuse (« unknown fact "spell" », banc du 2026-11-20).
+    await ctx.ensureItem(zombi, "Compendium.dnd5e.spells24.Item.phbsplCounterspe", { system: { method: "atwill" } });
+    const RULE = { triggers: [{ on: "castsSpell", if: { "target.seesSource": true, "spell.castLevelAtMost": 1 }, do: [{ type: "use", target: "source" }] }] };
+    const { before: rule0 } = await ctx.engine("overrideContent", { identifier: "counterspell", entry: RULE });
+    ctx.restore(() => ctx.engine("overrideContent", { identifier: "counterspell", entry: rule0 }).catch(() => {}));
 
     // Des emplacements de niveau 1 et 2 pour le Magicien, rendus à la fin.
     const { data: mTok } = await ctx.call("get-scene-object", { type: "Token", objectId: mage.id });
