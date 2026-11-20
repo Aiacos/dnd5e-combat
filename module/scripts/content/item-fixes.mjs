@@ -469,6 +469,10 @@ export const ITEM_FIXES = Object.freeze({
   // répandent une Lumière vive sur 12 m et faible sur 12 m de plus », tant que l'enchantement « Ablaze » est sur l'arme ; flammes du
   // Heaume scintillant (« Burst Into Flames ») : vive sur 3 m, faible sur 3 m de plus.
   "moon-touched-sword": { carriedLight: MOONLIGHT },
+  // Armure démoniaque (SRD 5.2), malédiction : « tant que vous portez l'armure, vous avez le Désavantage aux jets d'attaque contre
+  // les démons » — rien dans la donnée. Le Désavantage aux sauvegardes contre leurs sorts et capacités reste au MJ.
+  "demon-armor-enchanted": { triggers: [{ on: "preAttackRoll", if: { "target.creatureSubtype": "demon" },
+    do: [{ type: "disadvantage" }] }] },
   "moon-touched-sword-enchanted": { carriedLight: MOONLIGHT },
   "flame-tongue-enchanted": { carriedLight: { bright: 40, dim: 80, units: "ft", animation: FLAMES, whileEnchanted: "MHnAqxEXBhUbnjPq" } },
   "helm-of-brilliance-enchanted": { carriedLight: { bright: 10, dim: 20, units: "ft", animation: FLAMES, whileEnchanted: "oZBFpi117yOXca3k" } },
