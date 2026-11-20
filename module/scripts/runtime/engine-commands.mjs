@@ -21,7 +21,9 @@ import { lengthIn } from "../adapter/units.mjs";
 import { askAllocation } from "../adapter/projectiles.mjs";
 import { pushAway } from "../adapter/movement.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
-import { combatantFor, readBudget, writeBudget, distanceBetween } from "../adapter/turn.mjs";
+import { combatantFor, readBudget, writeBudget, distanceBetween, speedOf } from "../adapter/turn.mjs";
+import { randomDirection, randomDie } from "../core/control.mjs";
+import { MOVE_DIRECTIONS } from "../core/content.mjs";
 import { rangeIssue } from "../core/range.mjs";
 import { isObjectToken } from "../adapter/bodies.mjs";
 import { dodge as takeDodge } from "../core/turn.mjs";
@@ -566,8 +568,9 @@ export const COMMANDS = {
 };
 
 /** Déplacement forcé d'une cible par rapport à l'auteur (étape `move`, et « repoussé » de la Bousculade). */
-async function forcedMove(source, target, { mode, distance, units, follow=false, upTo=false, toward=null, activity=null }) {
+async function forcedMove(source, target, { mode, distance, units, follow=false, upTo=false, toward=null, activity=null, directions=null, ifBlocked="stop", minSpeed=null }) {
   if ( !source || !target ) return;
+  if ( mode === "random" ) return randomMove(source, target, { distance, units, directions, ifBlocked, minSpeed, activity });
   // §466 : vers le centre de la zone de l'activité (Implosion) — la dernière région posée par elle sur la scène de la cible.
   let point = null;
   if ( toward === "area" ) {
@@ -592,6 +595,49 @@ async function forcedMove(source, target, { mode, distance, units, follow=false,
   }
   const { cells, wanted } = await pushAway(source, target, { distance: value, units }, readUnitFactors(), { towards, follow, point });
   log(`${towards ? "pull" : "push"}: ${target.name} ${towards ? "pulled" : "pushed"} ${cells} square(s) out of ${wanted}${cells < wanted ? " (stopped)" : ""}`);
+}
+
+/**
+ * §497 : déplacement aléatoire (étape `move`, mode `random` : Infestation, « la cible se déplace de 1,50 m dans une direction
+ * aléatoire »). Rien si la Vitesse de marche de la cible est sous `minSpeed` ; sinon un 1dN visible (N = nombre de `directions`),
+ * attendu jusqu'à la fin des dés 3D, choisit la direction ; le déplacement est subi (`pushAway`, un pas `displace` : ni attaque
+ * d'opportunité ni coût) ; `ifBlocked: "stay"` : tout ou rien. Le résultat est noté sur le message du jet
+ * (`flags.dnd5e-combat.randomMove` : token, face, direction, cases, bloqué) et dit à toute la table (texte et son).
+ */
+async function randomMove(source, target, { distance, units, directions, ifBlocked, minSpeed, activity }) {
+  const actor = target.actor;
+  if ( !actor ) return;
+  const factors = readUnitFactors();
+  const itemName = activity?.item?.name ?? "";
+  if ( Number.isFinite(minSpeed) ) {
+    const speed = speedOf(actor, factors, null, target.parent);
+    const needed = speed ? lengthIn(minSpeed, units, speed.units, factors) : Infinity;
+    if ( !speed || ((speed.speed + 1e-6) < needed) ) {
+      notice(target, { key: "Retour.AleatoireLent" }, "refused", { all: true, action: "control", outcome: "failure" });
+      return log(`random: ${target.name} not moved — speed ${speed?.speed ?? 0} ${speed?.units ?? ""} under ${minSpeed} ${units} (${itemName})`);
+    }
+  }
+  let value = distance;
+  if ( typeof distance === "string" ) {
+    try { value = new Roll(distance, source.actor?.getRollData() ?? {}).evaluateSync({ strict: false }).total; }
+    catch(err) { return log(`random: distance "${distance}" unreadable (${err.message})`); }
+    if ( !(value > 0) ) return log(`random: distance "${distance}" = ${value}, nothing`);
+  }
+  const faces = randomDie(directions);
+  const keys = (Array.isArray(directions) && directions.length) ? directions : MOVE_DIRECTIONS;
+  const legend = keys.map((k, i) => `${i + 1} ${loc(`Deplacement.Direction.${k}`)}`).join(", ");
+  const roll = await new Roll(`1d${faces}`).evaluate();
+  const message = await roll.toMessage({ speaker: ChatMessage.getSpeaker({ token: target }),
+    flavor: loc("Deplacement.AleatoireJet", { name: target.name, item: itemName, legend }) });
+  await waitForDice(message);
+  const direction = randomDirection(directions, roll.total);
+  if ( !direction ) return log(`random: face ${roll.total} has no direction (${keys.join(", ")})`);
+  const { cells, wanted, blocked = false } = await pushAway(source, target, { distance: value, units }, factors, { direction, whole: ifBlocked === "stay" });
+  const label = loc(`Deplacement.Direction.${direction.key}`);
+  if ( cells ) notice(target, { key: "Retour.Aleatoire", data: { direction: label } }, "gain", { all: true, action: "control", outcome: "success" });
+  else notice(target, { key: "Retour.AleatoireBloque" }, "refused", { all: true, action: "control", outcome: "failure" });
+  await message?.setFlag?.(MODULE_ID, "randomMove", { token: target.uuid, face: roll.total, direction: direction.key, cells, wanted, blocked: !cells });
+  log(`random: ${target.name} rolls ${roll.total} (${direction.key}) — ${cells} square(s) out of ${wanted}${blocked || !cells ? " (blocked, stays)" : (cells < wanted ? " (stopped)" : "")}`);
 }
 
 /**

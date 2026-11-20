@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-381 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+382 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -83,6 +83,7 @@ la sélection sans rien jouer.
 | `debogueur` |  | §380 | erreurs regroupées, piste, rapport sans noms |
 | `defenses` |  | §16.46 | Voile défensif, Résistance |
 | `degats-bonus` |  | §16 | Maître d'armes lourdes (+ maîtrise), Voile spirituel (+1d8 nécrotique à 10 ft) |
+| `deplacement-aleatoire` |  | §497 | Infestation : 1d4 visible, déplacement subi dans la direction tirée, rien si bloqué ou trop lent (§497, brique B17) |
 | `deplacements-forces` | Arène des refus | §412 | saut trop long, Agrippé |
 | `deroulement-degats` |  | §419 | au clic de l'auteur, validés par le MJ, les deux, d'office |
 | `deroulement-reactions` | Arène des refus | §418 | demander à chacun, aux joueurs seulement, jamais |

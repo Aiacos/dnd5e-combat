@@ -21,7 +21,12 @@ export const DAMAGE_TYPES = Object.freeze(["acid", "bludgeoning", "cold", "fire"
 export const sizeAtLeast = (size, min) => SIZES.indexOf(SIZES.includes(size) ? size : "med") >= SIZES.indexOf(min);
 /** Les étapes qui ne valent qu'avant un jet d'attaque (moment preAttackRoll). */
 export const ATTACK_STEPS = Object.freeze(["advantage", "disadvantage", "attackBonus"]);
-export const MOVE_MODES = Object.freeze(["push", "pull"]);
+/** §497 : `random` — dans une direction tirée au dé parmi `directions` (Infestation). */
+export const MOVE_MODES = Object.freeze(["push", "pull", "random"]);
+/** §497 : les directions d'un déplacement aléatoire, dans l'ordre d'un 1d8 de Confusion (nord, puis dans le sens des aiguilles d'une montre). */
+export const MOVE_DIRECTIONS = Object.freeze(["n", "ne", "e", "se", "s", "sw", "w", "nw"]);
+/** §497 : une case d'arrivée bloquée — rester sur place (`stay`), ou aller aussi loin que possible (`stop`, par défaut). */
+export const MOVE_IF_BLOCKED = Object.freeze(["stay", "stop"]);
 /** Les destinataires d'une étape `damage` : l'attaquant (riposte), le lanceur de l'effet (partage), le porteur (son tour). */
 export const DAMAGE_TO = Object.freeze(["source", "origin", "bearer", "self"]);
 /** La part des dégâts d'issue sur une sauvegarde réussie (`damage` au moment failedSave). */

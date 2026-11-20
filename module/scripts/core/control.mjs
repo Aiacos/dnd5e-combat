@@ -21,11 +21,33 @@ export function confusionBehavior(d10) {
   return { kind: "free", move: true, action: true };
 }
 
+import { MOVE_DIRECTIONS as COMPASS } from "./content/enums.mjs";
+
 /** Les huit directions de la grille, dans l'ordre d'un 1d8 (nord, puis dans le sens des aiguilles d'une montre). `di` : ligne. */
 export const DIRECTIONS = Object.freeze([
   { di: -1, dj: 0 }, { di: -1, dj: 1 }, { di: 0, dj: 1 }, { di: 1, dj: 1 },
   { di: 1, dj: 0 }, { di: 1, dj: -1 }, { di: 0, dj: -1 }, { di: -1, dj: -1 }
 ]);
+
+/**
+ * §497 : la direction d'un déplacement aléatoire (étape `move`, mode `random` : Infestation). `directions` : les directions permises
+ * (`MOVE_DIRECTIONS`, n, ne, e, se, s, sw, w, nw ; les huit par défaut), dans l'ordre du dé ; `face` : le résultat du 1dN, N = leur nombre.
+ * @param {string[]|null|undefined} directions
+ * @param {number} face
+ * @returns {{key: string, di: number, dj: number}|null}  null si la face ou une direction est inconnue.
+ */
+export function randomDirection(directions, face) {
+  const keys = (Array.isArray(directions) && directions.length) ? directions : COMPASS;
+  const key = keys[Math.round(face) - 1];
+  const index = COMPASS.indexOf(key);
+  if ( index < 0 ) return null;
+  return { key, ...DIRECTIONS[index] };
+}
+
+/** §497 : le nombre de faces du dé d'un déplacement aléatoire. */
+export function randomDie(directions) {
+  return (Array.isArray(directions) && directions.length) ? directions.length : COMPASS.length;
+}
 
 /**
  * Les cases visées par l'errance : de la plus lointaine (`cells` pas dans la direction du d8) à la plus proche, bornées par la

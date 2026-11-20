@@ -1004,6 +1004,13 @@
  *                                                        `distance` : un nombre, ou une formule lue sur la source
  *                                                        (« 5 + 5 * @flags.dnd5e.summon.mod », Main puissante) ;
  *                                                        `follow: true` : la source suit la cible (même décalage)
+ *   { type: "move", mode: "random", distance, units, directions?, ifBlocked?, minSpeed? }
+ *                                                        §497 : dans une direction tirée au dé (1dN visible, N = nombre de
+ *                                                        `directions` parmi n, ne, e, se, s, sw, w, nw ; les huit par défaut),
+ *                                                        sans attaque d'opportunité (Infestation) ; `ifBlocked: "stay"` : rien
+ *                                                        si la distance entière n'est pas libre (par défaut `stop` : aussi loin
+ *                                                        que possible) ; `minSpeed` (en `units`) : rien si la Vitesse de la
+ *                                                        cible est plus faible
  *   { type: "status", status }                           état natif posé sur la cible (moments hit, failedSave)
  *   { type: "breakConcentration" }                       §91 : la concentration de la cible est rompue (moments hit, failedSave ;
  *                                                        Tremblement de terre)

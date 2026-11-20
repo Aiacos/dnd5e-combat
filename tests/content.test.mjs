@@ -383,7 +383,7 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
     expect(validateEntry({ triggers: [{ on: "failedSave", do: [{ type: "move", mode: "push", distance: 10, units: "ft" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "hit", do: [{ type: "move", mode: "pull", distance: 10, units: "ft" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "failedSave", do: [{ type: "move", mode: "throw", distance: 0, units: 5 }] }] }, { facts })).toEqual([
-      "triggers[0].do[0].mode: push, pull", "triggers[0].do[0].distance: positive number or formula", "triggers[0].do[0].units: unit required"
+      "triggers[0].do[0].mode: push, pull, random", "triggers[0].do[0].distance: positive number or formula", "triggers[0].do[0].units: unit required"
     ]);
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "move", mode: "push", distance: 5, units: "ft" }] }] }, { facts }))
       .toEqual(["triggers[0].do: \"move\" requires an outcome moment (hit, failedSave, savedSave)"]);

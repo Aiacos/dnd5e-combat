@@ -4,7 +4,7 @@
 
 import { CREATURE_TYPES } from "../eligibility.mjs";
 import { MOMENTS, OUTCOME_MOMENTS, RESAVE_MOMENTS, BEARER_MOMENTS, BEARER_DAMAGE_MOMENTS, TURN_MOMENTS, unknownFacts, normalize, PRE_ATTACK_WINDOWS, DAMAGED_BY } from "../triggers.mjs";
-import { ABILITIES, ATTACK_STEPS, AURA_AFFECTS, DAMAGE_ON_SAVE, DAMAGE_TO, FALL_WINDOWS, HIT_WINDOWS, MOVE_MODES, OUTCOME_STEPS, RESAVE_ON_FAIL, STEP_TYPES, VIA } from "./enums.mjs";
+import { ABILITIES, ATTACK_STEPS, AURA_AFFECTS, DAMAGE_ON_SAVE, DAMAGE_TO, FALL_WINDOWS, HIT_WINDOWS, MOVE_DIRECTIONS, MOVE_IF_BLOCKED, MOVE_MODES, OUTCOME_STEPS, RESAVE_ON_FAIL, STEP_TYPES, VIA } from "./enums.mjs";
 import { isId, isObject } from "./shared.mjs";
 
 /** §485 : `resave.own` — la sauvegarde d'un effet porté par le réacteur, que son joueur choisit (Indomptable). */
@@ -59,6 +59,15 @@ function validateStep(step, at, errors) {
     if ( ("upTo" in step) && (step.upTo !== true) ) errors.push(`${at}.upTo: true or absent`);
     // §466 : `toward: "area"` — une traction vers le centre de la zone de l'activité (Implosion), pas vers l'auteur.
     if ( ("toward" in step) && !((step.toward === "area") && (step.mode === "pull")) ) errors.push(`${at}.toward: "area" (with mode "pull") or absent`);
+    // §497 : déplacement aléatoire (Infestation) — directions tirées au dé, case bloquée, Vitesse minimale.
+    const random = step.mode === "random";
+    if ( ("directions" in step) && !(random && Array.isArray(step.directions) && step.directions.length
+      && step.directions.every(d => MOVE_DIRECTIONS.includes(d)) && (new Set(step.directions).size === step.directions.length)) ) {
+      errors.push(`${at}.directions: distinct directions among ${MOVE_DIRECTIONS.join(", ")} (with mode "random")`);
+    }
+    if ( ("ifBlocked" in step) && !(random && MOVE_IF_BLOCKED.includes(step.ifBlocked)) ) errors.push(`${at}.ifBlocked: ${MOVE_IF_BLOCKED.join(", ")} (with mode "random")`);
+    if ( ("minSpeed" in step) && !(random && Number.isFinite(step.minSpeed) && (step.minSpeed > 0)) ) errors.push(`${at}.minSpeed: positive number, in units (with mode "random")`);
+    if ( random && (("upTo" in step) || ("follow" in step)) ) errors.push(`${at}: mode "random" takes neither upTo nor follow`);
   }
   if ( (step.type === "status") && ((typeof step.status !== "string") || !step.status) ) errors.push(`${at}.status: condition required`);
   // §345 : `save` — l'état seulement si la cible rate cette sauvegarde (Tueuse de géants : Force DD 15 ou À terre).

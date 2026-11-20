@@ -459,10 +459,12 @@ async function walkMoves(token, plan, options, state) {
  * @param {TokenDocument} target
  * @param {{distance: number, units: string}} push
  * @param {object} factors  Facteurs de conversion des unités (adapter/units.mjs).
- * @param {{towards?: boolean}} [options]
- * @returns {Promise<{cells: number, wanted: number}>}  Cases parcourues, cases voulues.
+ * §497 : `direction` ({ di, dj }) impose la direction (déplacement aléatoire) ; `whole` : tout ou rien, la cible reste sur place si
+ * la distance entière n'est pas libre.
+ * @param {{towards?: boolean, follow?: boolean, point?: object, direction?: {di: number, dj: number}, whole?: boolean}} [options]
+ * @returns {Promise<{cells: number, wanted: number, blocked?: boolean}>}  Cases parcourues, cases voulues ; `blocked` : rien parcouru.
  */
-export async function pushAway(source, target, { distance, units }, factors, { towards=false, follow=false, point=null }={}) {
+export async function pushAway(source, target, { distance, units }, factors, { towards=false, follow=false, point=null, direction=null, whole=false }={}) {
   const grid = target.parent.grid;
   let value = lengthIn(distance, units, grid.units, factors);
   const wanted = Math.max(1, Math.round((value / grid.distance) + 1e-6));
@@ -474,8 +476,9 @@ export async function pushAway(source, target, { distance, units }, factors, { t
     return { x: pos.x + ((w * grid.sizeX) / 2), y: pos.y + ((h * grid.sizeY) / 2) };
   };
   // §466 : `point` — vers (ou loin de) ce point plutôt que l'auteur : le centre d'une zone (Implosion).
-  const away = pushDirection(point ?? centerOf(source), centerOf(target));
-  const dir = away && towards ? { di: -away.di, dj: -away.dj } : away;
+  // §497 : `direction` ({ di, dj }) — une direction imposée (tirée au dé : Infestation), ni vers ni loin de la source.
+  const away = direction ? { di: direction.di, dj: direction.dj } : pushDirection(point ?? centerOf(source), centerOf(target));
+  const dir = away && towards && !direction ? { di: -away.di, dj: -away.dj } : away;
   if ( !dir ) return { cells: 0, wanted };
   const world = worldFor(target);
   let cell = { ...cellOf(target), level: world.ownLevel };
@@ -493,7 +496,9 @@ export async function pushAway(source, target, { distance, units }, factors, { t
     if ( !world.canStep(cell, next) || !world.canEnd(next) ) break;
     cell = next;
   }
-  if ( !cells ) return { cells, wanted };
+  // §497 : `whole` — tout ou rien (« la créature ne bouge pas si l'espace est occupé »).
+  if ( whole && (cells < wanted) ) return { cells: 0, wanted, blocked: true };
+  if ( !cells ) return { cells, wanted, blocked: wanted > 0 };
   const landing = grid.getTopLeftPoint(cell);
   await target.move([{ x: landing.x, y: landing.y, snapped: true, action: "displace" }], { [MODULE_ID]: { cleared: true } });
   // « La main se déplace avec la cible, en restant à 1,50 m d'elle » (Main puissante, §16.15) : même décalage.
