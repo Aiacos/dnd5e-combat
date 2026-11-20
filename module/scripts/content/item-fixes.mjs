@@ -7,6 +7,12 @@
 
 /** Un changement d'effet, au format des effets de dnd5e 6 (V14 : `system.changes`). */
 const change = (key, type, value) => ({ key, value, priority: null, type });
+
+/** « Avantage aux Tests de d20 » : jets d'attaque, jets de sauvegarde (contre la mort aussi) et tests de caractéristique. */
+const D20_TEST_ADVANTAGE = Object.freeze([
+  ...["str", "dex", "con", "int", "wis", "cha"].flatMap(a => ["attack", "save", "check"]
+    .map(roll => change(`system.abilities.${a}.${roll}.roll.mode`, "add", 1))),
+  change("system.attributes.death.roll.mode", "add", 1)]);
 /** Une part de dégâts d'activité. */
 const part = (number, denomination, types, bonus="") => ({ custom: { enabled: false, formula: "" }, number, denomination, bonus, types, scaling: { number: 1 } });
 const formulaPart = (formula, types) => ({ custom: { enabled: true, formula }, number: null, denomination: 0, bonus: "", types, scaling: { number: 1 } });
@@ -271,6 +277,12 @@ export const ITEM_FIXES = Object.freeze({
   // Chien d'onyx : l'effet du molosse est transféré au porteur de la figurine (vision aveugle de 18 m).
   // O4 : comme les autres figurines, le molosse agit juste après son maître.
   "onyx-dog-rare": { summon: { initiative: "after" }, dataFixes: [{ effect: "fMC3o8l8D2GamPbU", path: "transfer", from: true, value: false }] },
+  // Bougie d'invocation (SRD 5.2) : « tant que vous vous trouvez dans cette lumière, vous avez l'Avantage aux Tests de d20 » —
+  // « Light Candle » relie l'effet « Lit Candle » sans désigner de cible, et l'effet est vide : rien n'était posé. La cible devient
+  // l'utilisateur ; l'effet reçoit l'Avantage aux jets d'attaque, de sauvegarde (mort comprise) et aux tests de caractéristique.
+  "candle-of-invocation": { dataFixes: [
+    { path: "system.activities.hG1Iplp3uG2fd39N.target.affects.type", from: "", value: "self" },
+    { effect: "gN0PgSLPlbsD8T2g", path: "system.changes", from: [], value: D20_TEST_ADVANTAGE }] },
   // Orbe des dragons : « 7 charges, 1d4 + 3 à l'aube » — l'item n'en a aucune, ses sorts payants étaient refusés.
   "orb-of-dragonkind": {
     dataFixes: [{ path: "system.uses.max", from: "", value: "7" }, { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]

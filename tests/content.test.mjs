@@ -203,6 +203,7 @@ describe("contenu livré", () => {
       "boon-of-the-night-spirit", "boots-of-speed", "boots-of-striding-and-springing", "bowl-of-commanding-water-elementals",
       "bracers-of-defense", "brave", "brazier-of-commanding-fire-elementals", "breath-weapon", "bronze-griffon-rare", "brutal-strike",
       "brute-spirit", "bubble-dash", "bullseye-lantern", "burnt-othur-fumes", "call-lightning", "calm-emotions", "caltrops", "candle",
+      "candle-of-invocation",
       "cape-of-the-mountebank", "captains-charm", "careful-spell", "carrion-crawler-mucus", "cause-fear", "celestial-revelation",
       "censer-of-controlling-air-elementals", "chain-lightning", "channel-divinity", "channel-divinity-cleric", "channel-divinity-paladin", "charger",
       "charging-horn", "charm-monster", "charm-person", "chill-touch", "chromatic-orb", "circle-of-mortality", "circle-of-power",
