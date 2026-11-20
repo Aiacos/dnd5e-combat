@@ -308,7 +308,7 @@ describe("contenu livré", () => {
       "stone-of-controlling-earth-elementals", "stones-endurance", "storm-of-radiance", "storm-of-vengeance", "stormborn", "storms-thunder",
       "studied-attacks", "stunning-strike", "subtle-spell", "suggestion", "summon-aberration", "summon-beast", "summon-celestial",
       "summon-construct", "summon-dragon", "summon-elemental", "summon-fey", "summon-fiend", "summon-undead", "sun-blade", "sunbeam",
-      "sunburst", "superior-inspiration", "superior-potion-of-healing", "supreme-healing", "supreme-potion-of-healing",
+      "sunburst", "superior-hunters-prey", "superior-inspiration", "superior-potion-of-healing", "supreme-healing", "supreme-potion-of-healing",
       "supreme-sneak", "survivor-ravenloft", "swallow", "swarm", "sweeping-attack", "swift-quiver", "swoop", "sword-of-kas",
       "sword-of-life-stealing-enchanted", "sword-of-sharpness", "sword-of-sharpness-enchanted", "sword-of-vengeance-enchanted",
       "symbiotic-being", "symbol", "synaptic-static", "tactical-assessment", "tactical-charge", "tactical-mind", "tactical-shift",
