@@ -28,6 +28,7 @@ import { isSpellCast, spellSchoolOf, scrollSpellOf } from "./scrolls.mjs";
 import { knownCastLevel, castLevelAtMost, castLevelAtLeast } from "../core/counter.mjs";
 import { grapplerOf } from "./grapple.mjs";
 import { areEnemies, areAllies } from "./factions.mjs";
+import { isVanilla } from "./vanilla-state.mjs";
 
 /** §484 : ce token se tient-il en lumière vive (torche, sort, jour) ? Sans token : non. */
 const isBright = doc => !!doc && (lightOnToken(doc)?.level === LIGHT.BRIGHT);
@@ -98,6 +99,33 @@ export function originItemOf(effect) {
   }
   // Un effet transféré par un item de l'acteur (don, objet équipé) vit sur l'item lui-même.
   return effect.parent?.documentName === "Item" ? effect.parent : null;
+}
+
+/**
+ * §485 : les effets que l'acteur porte et dont il peut rejouer la sauvegarde (Indomptable : « un effet ou un état qui l'affecte […] sans
+ * effet si cet effet ou cet état ne découlait pas d'un jet de sauvegarde raté »). Un effet actif posé par une activité de sauvegarde
+ * (`system.origin.activity` ; pour un effet posé par une attaque à sauvegarde enchaînée, la sauvegarde de son item, comme
+ * `saveActivityOf` de runtime/triggers.mjs), venu d'un AUTRE acteur — ni sa propre concentration, ni ses propres effets, ni un effet que
+ * l'activité pose sur une sauvegarde réussie (`onSave`), ni un effet laissé à dnd5e (§395).
+ * @returns {Array<{effect: ActiveEffect, activity: Activity}>}
+ */
+export function savableEffectsOf(actor) {
+  const out = [];
+  for ( const effect of actor?.effects ?? [] ) {
+    if ( effect.disabled || effect.isSuppressed || isVanilla(effect) ) continue;
+    if ( effect.statuses?.has?.("concentrating") || (effect.getFlag?.("dnd5e", "type") === "concentration") ) continue;
+    const uuid = effect.system?.origin?.activity ?? null;
+    const origin = uuid ? fromUuidSync(uuid, { strict: false }) : null;
+    const item = origin?.item ?? originItemOf(effect);
+    if ( !item || (item.actor === actor) ) continue;
+    const activity = (origin?.type === "save") ? origin
+      : (Array.from(item.system?.activities ?? []).find(a => a.type === "save") ?? null);
+    if ( !activity ) continue;
+    const applied = (activity.effects ?? []).find(e => comesFromItemEffect(effect, e._id ?? e.id));
+    if ( applied?.onSave === true ) continue;
+    out.push({ effect, activity });
+  }
+  return out;
 }
 
 /**
@@ -553,6 +581,8 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "source.nearSelf": range => within(tokenOf(self, selfToken), tokenOf(source, sourceToken), range ?? {}) === true,
     "self.seesSource": want => ((seesBetween(self, source) ?? true) === want),
     // §447 : le réacteur porte un effet de l'item (Représailles rôdeuses : seulement transformé par le Courroux sauvage).
-    "self.hasEffect": id => hasEffectFrom(self, id)
+    "self.hasEffect": id => hasEffectFrom(self, id),
+    // §485 : le réacteur porte un effet dont il peut rejouer la sauvegarde (Indomptable) — `savableEffectsOf`.
+    "self.hasSavableEffect": want => ((savableEffectsOf(self).length > 0) === want)
   };
 }

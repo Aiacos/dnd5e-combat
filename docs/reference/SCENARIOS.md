@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-369 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+370 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -146,6 +146,7 @@ la sélection sans rien jouer.
 | `heroique` |  | §282 | Inspiration héroïque (attaque, dégâts) |
 | `huile-au-sol` |  | §188 | lancer, flaque, embrasement, toile qui brûle |
 | `huile` |  | §54 | couvert d'huile, puis le feu l'enflamme |
+| `indomptable` |  | §485 | rejouer en réaction la sauvegarde d'un effet porté, au choix du MJ (§485) |
 | `injonction-monstre` | keep | §16.59 §40.3 | Lâche sur un monstre : l'équipement tombe, ses attaques non |
 | `injonction` |  | §16.59 §40.3 | Rampe, Halte, Approche, Fuis, Lâche |
 | `invocations-ciblees` | Arène des invocations | §393 §118 §388 | cadavre relevé par Doigt de mort et Animation des morts, bête morte refusée (Arène des invocations) |

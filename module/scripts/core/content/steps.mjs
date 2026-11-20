@@ -6,6 +6,12 @@ import { CREATURE_TYPES } from "../eligibility.mjs";
 import { MOMENTS, OUTCOME_MOMENTS, RESAVE_MOMENTS, BEARER_MOMENTS, BEARER_DAMAGE_MOMENTS, TURN_MOMENTS, unknownFacts, normalize, PRE_ATTACK_WINDOWS, DAMAGED_BY } from "../triggers.mjs";
 import { ABILITIES, ATTACK_STEPS, AURA_AFFECTS, DAMAGE_ON_SAVE, DAMAGE_TO, FALL_WINDOWS, HIT_WINDOWS, MOVE_MODES, OUTCOME_STEPS, RESAVE_ON_FAIL, STEP_TYPES, VIA } from "./enums.mjs";
 import { isId, isObject } from "./shared.mjs";
+
+/** §485 : `resave.own` — la sauvegarde d'un effet porté par le réacteur, que son joueur choisit (Indomptable). */
+export const RESAVE_OWN = Object.freeze(["choose"]);
+/** §485 : les fenêtres où `resave.own` se joue (runtime/resave-choice.mjs). */
+export const RESAVE_OWN_MOMENTS = Object.freeze(["enemyTurnEnd"]);
+
 function validateStep(step, at, errors) {
   if ( !isObject(step) ) return errors.push(`${at}: a step is an object`);
   if ( !STEP_TYPES.includes(step.type) ) return errors.push(`${at}.type: unknown "${step.type}" (${STEP_TYPES.join(", ")})`);
@@ -86,6 +92,13 @@ function validateStep(step, at, errors) {
   // sorts du lanceur.
   if ( (step.type === "resave") && ("ability" in step) && !ABILITIES.includes(step.ability) ) errors.push(`${at}.ability: ${ABILITIES.join(", ")}`);
   if ( (step.type === "resave") && ("onFail" in step) && !RESAVE_ON_FAIL.includes(step.onFail) ) errors.push(`${at}.onFail: ${RESAVE_ON_FAIL.join(", ")}`);
+  // §485 : `own: "choose"` — le réacteur rejoue la sauvegarde d'un effet qu'il porte, choisi par son joueur (Indomptable). Seule
+  // `advantage` l'accompagne : le reste (compteur, caractéristique déclarée, issue) appartient à l'effet, pas à la réaction.
+  if ( (step.type === "resave") && ("own" in step) ) {
+    if ( !RESAVE_OWN.includes(step.own) ) errors.push(`${at}.own: ${RESAVE_OWN.join(", ")}`);
+    const extra = Object.keys(step).filter(k => !["type", "own", "advantage"].includes(k));
+    if ( extra.length ) errors.push(`${at}.own: no ${extra.join(", ")} with own (advantage only)`);
+  }
   if ( (step.type === "attackBonus") && ((typeof step.formula !== "string") || !step.formula.trim()) ) errors.push(`${at}.formula: formula required`);
   // §31 : ce qui s'ajoute au jet de l'activité de réduction (Endurance de la pierre : « ajoutez votre modificateur de Constitution »).
   // §33 : un dé retiré au jet d'attaque (Mots cinglants : « soustrayez le résultat du jet ») — l'attaque est rejugée.
@@ -137,6 +150,13 @@ export function validateTrigger(declaration, at, facts, errors) {
     const bearer = d.on.length && d.on.every(m => BEARER_MOMENTS.includes(m));
     for ( const s of d.do ) {
       if ( isObject(s) && OUTCOME_STEPS.includes(s.type) && !outcome ) errors.push(`${at}.do: "${s.type}" requires an outcome moment (${OUTCOME_MOMENTS.join(", ")})`);
+      // §485 : `own` — une réaction de l'item lui-même (pas `via`), à la fin du tour d'un ennemi, avec son étape `use`.
+      if ( isObject(s) && (s.type === "resave") && ("own" in s) ) {
+        if ( (d.on.length !== 1) || !RESAVE_OWN_MOMENTS.includes(d.on[0]) || (d.via !== null) || !d.do.some(x => isObject(x) && (x.type === "use")) ) {
+          errors.push(`${at}.do: "resave" with own requires ${RESAVE_OWN_MOMENTS.join(", ")} as the only moment, no via, and a "use" reaction`);
+        }
+        continue;
+      }
       if ( isObject(s) && (s.type === "resave") && (!resave || (d.via !== "effect")) ) errors.push(`${at}.do: "resave" requires moments among ${RESAVE_MOMENTS.join(", ")} and via: "effect"`);
       if ( isObject(s) && (s.type === "remove") && (!bearer || (d.via !== "effect")) ) errors.push(`${at}.do: "remove" requires bearer moments (${BEARER_MOMENTS.join(", ")}) and via: "effect"`);
       // §34 : le Désavantage peut aussi venir d'une réaction avant le jet (Esquive des ombres, Éclat protecteur).

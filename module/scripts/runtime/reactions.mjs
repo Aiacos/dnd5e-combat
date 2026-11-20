@@ -31,6 +31,7 @@ import { samePlane } from "../adapter/plane.mjs";
 import { offerCombatInspirationDefense, hasCombatInspiration } from "../adapter/inspiration.mjs";
 import { targetDescriptorsOf } from "../adapter/pick-targets.mjs";
 import { askChoice } from "../adapter/choices.mjs";
+import { resaveChosen } from "./resave-choice.mjs";
 
 /** §134 : Rapide — le nom de l'item qui donne le Désavantage aux attaques d'opportunité contre cet acteur, ou null. */
 export function hamperedBy(actor) {
@@ -485,8 +486,9 @@ function onEnemyTurnEnd(combat, prior) {
     const actor = other.actor;
     if ( !actor || (other === ended) || isObjectToken(other) || !areEnemies(other, ended) ) continue;
     if ( (actor.system.attributes?.hp?.value ?? 0) <= 0 ) continue;
+    // §485 : `self` — le réacteur, pour ce qu'il porte (`self.hasSavableEffect` : Indomptable).
     const options = reactionsOf(actor, "enemyTurnEnd",
-      { source: ended.actor, target: actor, sourceToken: ended, targetToken: other }, { publish: true });
+      { source: ended.actor, target: actor, sourceToken: ended, targetToken: other, self: actor, selfToken: other }, { publish: true });
     if ( !options.length ) continue;
     log(`${ended.name} ends their turn: ${actor.name} can react (${options.map(o => o.name).join(", ")})`);
     askReaction(actor, {
@@ -494,6 +496,10 @@ function onEnemyTurnEnd(combat, prior) {
       prompt: { key: "ReactionFinDeTour", data: { attacker: ended.name } },
       options,
       target: options.some(o => o.targetSource) ? ended.uuid : null
+    }).then(result => {
+      // §485 : la réaction prise rejoue la sauvegarde d'un effet porté — la règle relue dans les options envoyées, pas dans la réponse.
+      const taken = result ? options.find(o => o.resave && (o.activity === result.used)) : null;
+      return taken ? resaveChosen(actor, other, taken.resave, taken.name) : null;
     }).catch(err => console.error(`${MODULE_ID} | "enemy's end of turn" window interrupted`, err));
   }
 }

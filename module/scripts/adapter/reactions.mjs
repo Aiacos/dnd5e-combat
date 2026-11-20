@@ -96,6 +96,8 @@ export function reactionOptions(actor, window, declarations) {
     absorb: stepsOf(d, "absorb").length > 0,
     interpose: stepsOf(d, "interpose").length > 0,
     redirect: stepsOf(d, "redirect").length > 0,   // §375 : Bouclier de chair
+    // §485 : Indomptable — après la réaction, la sauvegarde d'un effet porté, au choix (runtime/resave-choice.mjs).
+    resave: ownResave(d),
     consume: step.consume !== false,
     approach: step.approach === true,
     advantage: step.advantage === true,
@@ -105,6 +107,12 @@ export function reactionOptions(actor, window, declarations) {
   })).filter(o => (o.activity || o.weapon) && (!o.activity || affordable(o.activity)) && (!o.weapon || meleeAttacksOf(actor).options.length)
     // §375 : une attaque à détourner vers… personne — seulement si le réacteur agrippe une créature.
     && (!o.redirect || victimsOf(actor.token ?? actor.getActiveTokens?.(false, true)?.[0] ?? null).length)));
+}
+
+/** §485 : l'étape `resave` à `own` d'une déclaration, réduite à ce que la fenêtre transporte ; null sans elle. */
+function ownResave(d) {
+  const step = stepsOf(d, "resave").find(s => "own" in s);
+  return step ? { own: step.own, advantage: step.advantage === true } : null;
 }
 
 /**

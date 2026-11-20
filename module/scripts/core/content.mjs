@@ -996,6 +996,10 @@
  *                                                        (Terreur : « termine son tour sans ligne de vue sur vous », §42.2) ;
  *                                                        `ifCompelled: true` : seulement après la marche imposée (§403, Compulsion)
  *                                                        (moments startOfTurn, endOfTurn, isDamaged, avec `via: "effect"`)
+ *   { type: "resave", own: "choose", advantage? }        §485 : réaction de l'item (pas de `via`, avec son étape `use`, moment
+ *                                                        enemyTurnEnd seul) — le réacteur rejoue la sauvegarde d'un effet qu'il
+ *                                                        porte, choisi par son joueur (Indomptable) ; à conditionner par
+ *                                                        { "self.hasSavableEffect": true }
  *   { type: "consume", side: "target"|"source" }         la marque tombe au premier jet d'attaque qu'elle concerne (§16.12,
  *                                                        B10) : `target` = celle que porte la cible (Rayon traçant : « la
  *                                                        prochaine attaque contre elle ») ; `source` = celle que porte
