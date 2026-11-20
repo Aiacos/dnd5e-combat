@@ -104,3 +104,22 @@ describe("objets du Guide : DD, lien et recharge que le texte de l'objet donne (
   });
 });
 
+
+describe("objets du SRD 5.2 : effets vides que le texte remplit (Comète, Piège de chasse)", () => {
+  const empty = _id => ({ effects: [{ _id, system: { changes: [] } }], system: {} });
+  it("Comète : l'Avantage aux sauvegardes contre la mort", () => {
+    const plan = dataFixPlan(empty("asqZlVwoKSS1ckCU"), ITEM_FIXES.comet.dataFixes);
+    expect(plan.effects).toHaveLength(1);
+    expect(plan.effects[0]["system.changes"]).toMatchObject([{ key: "system.attributes.death.roll.mode", type: "add", value: 1 }]);
+  });
+  it("Piège de chasse : Vitesse 0 tant que l'effet « Trapped » est porté", () => {
+    const plan = dataFixPlan(empty("9jl46RZ5GOjs9QlJ"), ITEM_FIXES["hunting-trap"].dataFixes);
+    expect(plan.effects[0]["system.changes"])
+      .toMatchObject([{ key: "system.attributes.movement.multiplier", type: "override", value: "0" }]);
+  });
+  it("un effet déjà rempli par dnd5e n'est pas réécrit", () => {
+    const changes = [{ key: "x", type: "add", value: 1 }];
+    const filled = { effects: [{ _id: "asqZlVwoKSS1ckCU", system: { changes } }], system: {} };
+    expect(dataFixPlan(filled, ITEM_FIXES.comet.dataFixes).effects).toEqual([]);
+  });
+});
