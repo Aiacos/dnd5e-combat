@@ -142,14 +142,23 @@ function coverBonusForSave(activity, token, ability) {
   return coverSaveBonus(coverFor(caster.document ?? caster, target, { activity, quiet: true }));
 }
 
+/** La part « abri » ajoutée aux parts d'un jet de sauvegarde, sous sa propre clé de donnée. */
+function withCoverPart(bonus, cover) {
+  const part = `@${MODULE_ID.replace(/[^a-zA-Z]/g, "")}Cover`;
+  const data = { [part.slice(1)]: cover };
+  return bonus.parts.length ? { ...bonus, parts: [...bonus.parts, part], data: { ...bonus.data, ...data } } : { parts: [part], data };
+}
+
 /** Paramètres du jet, les mêmes que le bouton « Sauvegarde » de la carte (save.mjs:122-134). */
 function saveRollArguments(activity, actor, token, usageMessage, { ability, dc, advantage=false, disadvantage=false, foretold=null }) {
   // Issue #183 : l'abri vaut aussi pour les sauvegardes de Dextérité (« +2 / +5 à la CA et aux jets de sauvegarde de Dextérité »).
   // Ici pour une sauvegarde qui vise sa cible, sans zone : l'abri se juge depuis l'auteur, comme pour une attaque.
   const cover = coverBonusForSave(activity, token, ability);
   if ( cover ) console.log(`${MODULE_ID} | ${actor?.name}: cover, +${cover} to the Dexterity saving throw`);
-  const bonus = CONFIG.Dice.BasicRoll.constructParts({ activityBonus: activity.save?.bonus, cover: cover ? String(cover) : null },
-    activity.getRollData());
+  let bonus = CONFIG.Dice.BasicRoll.constructParts({ activityBonus: activity.save?.bonus }, activity.getRollData());
+  // L'abri entre seul, avec sa propre donnée : les données de jet de l'activité sont celles de l'AUTEUR (son `@mod`, son `@prof`) et
+  // ne doivent pas remplacer celles de la créature qui sauvegarde.
+  if ( cover ) bonus = withCoverPart(bonus, cover);
   const rollConfig = { ability, target: dc };
   // §16.25 : Ascendance féerique — l'avantage contre une activité qui pose un état que l'un de ses items désigne.
   if ( saveAdvantageAgainst(actor, activity) || fightingAdvantageFor(activity, token) || sizeAdvantageFor(actor, activity) ) rollConfig.advantage = true;
