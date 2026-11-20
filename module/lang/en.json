@@ -2701,5 +2701,11 @@
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Bouton": "Open the update message",
   "DND5ECOMBAT.Interop.DdbEgide": "DAS · Core turned off the Arcane Ward and Warding Bond automation of DDB Importer: it absorbed the damage a second time. Reload the world (F5) for it to take effect.",
   "DND5ECOMBAT.LumiereVive.Case": "Bright light (daylight)",
-  "DND5ECOMBAT.LumiereVive.Aide": "DAS · Core: the global illumination lights the whole Scene in bright light, like daylight. Unchecked, it is dim light: beyond darkvision, creatures see as in dim light (Lightly Obscured). Foundry V14 no longer shows this option; DAS adds it back here."
+  "DND5ECOMBAT.LumiereVive.Aide": "DAS · Core: the global illumination lights the whole Scene in bright light, like daylight. Unchecked, it is dim light: beyond darkvision, creatures see as in dim light (Lightly Obscured). Foundry V14 no longer shows this option; DAS adds it back here.",
+  "DND5ECOMBAT.ReactionZone": "{caster}'s {spell} catches you in its area. React?",
+  "DND5ECOMBAT.ZoneEpargne": "{item}: {name} takes no damage from {spell}.",
+  "DND5ECOMBAT.ZoneEpargneSauvegarde": "{item}: {caster} fails the saving throw ({total} vs DC {dc}); {name} takes no damage from {spell}.",
+  "DND5ECOMBAT.ZoneSubie": "{item}: {caster} succeeds on the saving throw ({total} vs DC {dc}); {spell} deals its damage to {name}.",
+  "DND5ECOMBAT.Retour.ZoneEpargne": "{item}: no damage",
+  "DND5ECOMBAT.Retour.ZoneSubie": "{item}: the damage goes through"
 }

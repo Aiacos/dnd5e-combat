@@ -18,7 +18,7 @@ import { originItemOf, tokenOf, comesFromItemEffect } from "../adapter/facts.mjs
 import { duplicatesAgainst } from "../adapter/duplicates.mjs";
 import { announce, matching } from "./triggers.mjs";
 import { route } from "./router.mjs";
-import { log, loc, sleep } from "./shared.mjs";
+import { log, loc, sleep, notice, say } from "./shared.mjs";
 import { levelAtLeast } from "./levels.mjs";
 import { reactionApproach } from "./actions.mjs";
 import { isObjectToken } from "../adapter/bodies.mjs";
@@ -33,6 +33,8 @@ import { targetDescriptorsOf } from "../adapter/pick-targets.mjs";
 import { askChoice } from "../adapter/choices.mjs";
 import { resaveChosen } from "./resave-choice.mjs";
 import { forceReroll } from "./forced-reroll.mjs";
+import { settledResolution } from "../adapter/messages.mjs";
+import { areaShapeOf, sparedFromArea } from "../core/area-shield.mjs";
 
 /** §134 : Rapide — le nom de l'item qui donne le Désavantage aux attaques d'opportunité contre cet acteur, ou null. */
 export function hamperedBy(actor) {
@@ -222,6 +224,56 @@ export async function askDamageGuardians(targetUuid, sourceUuid, activity, { aut
     if ( answer?.interpose ) return { interpose: other.uuid, reactor: other.name };
   }
   return null;
+}
+
+/**
+ * §493 (B13) : fenêtre « prise dans une zone » (`inArea`, Bouclier d'insectes) — avant l'application, pour une créature qui va perdre des
+ * PV par l'activité à zone (`activity.areaShape`) d'une AUTRE créature. La créature elle-même réagit (une fois, vivante) ; une réaction
+ * `cancelForSelf` l'épargne seule : d'office, ou (`ifSourceFails`) quand l'auteur rate la sauvegarde que la réaction lui impose — la
+ * résolution de la réaction est attendue, comme celle du Contresort (runtime/gates.mjs). La carte de chat dit l'issue à tous ; un
+ * retour flottant et un son l'accompagnent. MJ actif ; `auto` : l'outil de scénario `autoReact`.
+ * @returns {Promise<{spared: boolean, by: string}|null>}  null : pas de réaction.
+ */
+export async function askAreaReactions(targetUuid, sourceUuid, activity, { auto=null }={}) {
+  if ( (auto === "none") || !areaShapeOf(activity) ) return null;
+  const caught = await fromUuid(targetUuid ?? "");
+  const target = caught?.actor;
+  if ( !target || ((target.system.attributes?.hp?.value ?? 0) <= 0) ) return null;
+  const author = sourceUuid ? await fromUuid(sourceUuid) : null;
+  const authorActor = author?.actor ?? activity?.actor ?? null;
+  if ( !authorActor || (authorActor === target) ) return null;
+  const options = reactionsOf(target, "inArea", { source: authorActor, target, activity, self: target, selfToken: caught,
+    sourceToken: author, targetToken: caught }, { publish: true }).filter(o => o.cancelForSelf);
+  if ( !options.length ) return null;
+  const spell = activity?.item?.name ?? "";
+  log(`${caught.name} is caught in ${authorActor.name}'s ${spell}: reaction window (${options.map(o => o.name).join(", ")})`);
+  const answer = await askReaction(target, {
+    actor: target.uuid,
+    prompt: { key: "ReactionZone", data: { caster: author?.name ?? authorActor.name, spell } },
+    options,
+    target: author?.uuid ?? null,
+    auto: auto === "first"
+  });
+  if ( !answer?.cancelForSelf ) return null;
+  const ifSourceFails = answer.cancelForSelf.ifSourceFails === true;
+  let sourceSave = null;
+  if ( ifSourceFails ) {
+    const reaction = answer.message ? await settledResolution(answer.message) : null;
+    const entry = reaction?.targets?.find(t => t.token === author?.uuid) ?? reaction?.targets?.[0] ?? null;
+    sourceSave = entry?.save ?? null;
+  }
+  const spared = sparedFromArea({ taken: true, ifSourceFails, sourceSave });
+  const data = { name: caught.name, item: answer.name ?? "", caster: author?.name ?? authorActor.name, spell,
+    total: sourceSave?.total ?? "—", dc: (await fromUuid(answer.used ?? ""))?.save?.dc?.value ?? "—" };
+  log(`${caught.name} reacts (${answer.name}): ${ifSourceFails ? `${data.caster}'s saving throw ${data.total} vs DC ${data.dc} -> ` : ""}`
+    + `${spared ? "no damage from the area" : "the area deals its damage"}`);
+  await say({ token: caught }, loc(spared ? (ifSourceFails ? "ZoneEpargneSauvegarde" : "ZoneEpargne") : "ZoneSubie", data), {
+    areaShield: { item: answer.name ?? null, reactor: caught.uuid, source: author?.uuid ?? null, activity: activity?.uuid ?? null,
+      reaction: answer.message ?? null, ifSourceFails, save: sourceSave ? { total: sourceSave.total ?? null, success: sourceSave.success ?? null } : null, spared }
+  });
+  notice(caught, spared ? { key: "Retour.ZoneEpargne", data: { item: answer.name ?? "" } } : { key: "Retour.ZoneSubie", data: { item: answer.name ?? "" } },
+    spared ? "gain" : "refused", { all: true, action: "areaShield", outcome: spared ? "success" : "failure" });
+  return { spared, by: answer.name ?? "" };
 }
 
 /**

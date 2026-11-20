@@ -27,7 +27,7 @@ import { isObjectToken } from "../adapter/bodies.mjs";
 import { dodge as takeDodge } from "../core/turn.mjs";
 import { tallyAfter } from "../core/tally.mjs";
 import { noteAttack } from "../adapter/attacked-this-turn.mjs";
-import { askHitReactions, windowIsDamaged, windowIsMissed, windowEnemyAttacked, windowSavesAgainst, askDamageGuardians } from "./reactions.mjs";
+import { askHitReactions, windowIsDamaged, windowIsMissed, windowEnemyAttacked, windowSavesAgainst, askDamageGuardians, askAreaReactions } from "./reactions.mjs";
 import { markConcentrationBreaker, resistanceIgnoredBy, fortifiedExtra } from "./feats.mjs";
 import { liftToken } from "./elevation-spells.mjs";
 import { requestSave } from "./neighbours.mjs";
@@ -232,7 +232,10 @@ export const COMMANDS = {
       if ( resolution.plan.heal && (entry.multiplier > 0) && patient && (patient !== (source?.actor ?? activity?.actor)) ) healedOther = true;
       // §38 : Égide projetée — avant l'application, un allié peut faire absorber ces dégâts par sa réserve.
       const hurting = (entry.multiplier > 0) && !resolution.plan.heal && rolled.some(d => !["healing", "temphp"].includes(d.type) && (d.value > 0));
-      const ward = hurting ? await askDamageGuardians(entry.token, source?.uuid ?? null, activity, { auto: autoReactOf(carrier, resolution) }) : null;
+      // §493 (B13) : prise dans une zone, la créature peut réagir (Bouclier d'insectes) — épargnée, elle seule ne subit pas les dégâts.
+      const shielded = hurting ? await askAreaReactions(entry.token, source?.uuid ?? null, activity, { auto: autoReactOf(carrier, resolution) }) : null;
+      if ( shielded?.spared ) rolled = [];
+      const ward = (hurting && !shielded?.spared) ? await askDamageGuardians(entry.token, source?.uuid ?? null, activity, { auto: autoReactOf(carrier, resolution) }) : null;
       if ( ward?.item ) log(`${ward.reactor}: Projected Ward, their Arcane Ward takes ${entry.token}'s damage`);
       // §78 : Interposition — les dégâts passent sur le réacteur ; les effets restent à la cible.
       if ( ward?.interpose ) log(`${ward.reactor} interposes: takes ${entry.token}'s damage`);
@@ -240,7 +243,7 @@ export const COMMANDS = {
       // et une cible à pleins PV ne gagnait rien (`effectsFirst`). Les effets sans condition seulement.
       const first = (entry.multiplier > 0) && (contentOf(activity?.item).entry?.effectsFirst === true) && (entry.effects ?? []).some(e => !e.if);
       const early = first ? await applyEffectsToToken(carrier, entry.token, entry.effects.filter(e => !e.if)) : [];
-      const hp = (entry.multiplier > 0)
+      const hp = ((entry.multiplier > 0) && !shielded?.spared)
         ? await applyDamageToToken(ward?.interpose ?? entry.token, rolled, damageMessage, { multiplier: entry.multiplier, reduction: entry.reduction ?? 0, absorbInto: ward?.item ?? null,
           ignoreResistance: resistanceIgnoredBy(source?.actor ?? activity?.actor, activity),   // §134
           rangedWeapon: !!resolution.plan.attack && isRangedWeaponAttack(activity, attackMode) })   // O8d (§347)

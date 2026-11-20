@@ -93,7 +93,11 @@ export const MOMENTS = Object.freeze({
   // « contre un sort » se filtre par `activity.isSpell`). Les faits voient le réacteur en `target`, l'auteur en `source`. Fenêtre sans
   // attente, comme « raté » ; une Résistance légendaire compte comme une réussite. À ne pas confondre avec `savedSave` (issue de la
   // sauvegarde de l'item lui-même, à l'application, sans réaction).
-  savesAgainst: "the creature just succeeded on a saving throw against a hostile creature's activity (Mage's Retaliation: reaction window; it is the source)"
+  savesAgainst: "the creature just succeeded on a saving throw against a hostile creature's activity (Mage's Retaliation: reaction window; it is the source)",
+  // §493 (B13) : la créature, prise dans la zone d'une activité d'une AUTRE créature (cône, ligne… : `activity.areaShape`), va en subir
+  // les dégâts, montant connu, avant leur application. Les faits voient le réacteur en `target` et `self`, l'auteur en `source`. Une
+  // réaction peut alors les annuler pour elle seule (`cancelForSelf`), au besoin seulement si l'auteur rate la sauvegarde qu'elle impose.
+  inArea: "the creature, caught in another creature's area activity, is about to take its damage (Insect Shield: reaction window, before application; the author is the source)"
 });
 
 /** Les moments dont les déclarations sont portées par les EFFETS de la créature concernée (`via: "effect"`). */

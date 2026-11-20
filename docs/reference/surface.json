@@ -421,6 +421,7 @@
     "falls",
     "gainsCondition",
     "hit",
+    "inArea",
     "isAttacked",
     "isDamaged",
     "isHit",

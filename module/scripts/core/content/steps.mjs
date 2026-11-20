@@ -108,6 +108,13 @@ function validateStep(step, at, errors) {
   // §33 : un dé retiré au jet d'attaque (Mots cinglants : « soustrayez le résultat du jet ») — l'attaque est rejugée.
   if ( ["penalty", "bonus"].includes(step.type) && ((typeof step.formula !== "string") || !step.formula.trim()) ) errors.push(`${at}.formula: formula required`);
   if ( (step.type === "reduce") && ("bonus" in step) && ((typeof step.bonus !== "string") || !step.bonus.trim()) ) errors.push(`${at}.bonus: formula`);
+  // §493 (B13) : `cancelForSelf` — les dégâts de la zone ne sont pas appliqués au réacteur ; `ifSourceFails` : seulement si l'auteur
+  // rate la sauvegarde que la réaction lui impose.
+  if ( step.type === "cancelForSelf" ) {
+    if ( ("ifSourceFails" in step) && (step.ifSourceFails !== true) ) errors.push(`${at}.ifSourceFails: true or absent`);
+    const extra = Object.keys(step).filter(k => !["type", "ifSourceFails"].includes(k));
+    if ( extra.length ) errors.push(`${at}: unknown key ${extra.join(", ")} (ifSourceFails only)`);
+  }
 }
 
 export function validateTrigger(declaration, at, facts, errors) {
@@ -180,6 +187,13 @@ export function validateTrigger(declaration, at, facts, errors) {
       // §344 : `cancel` aussi à la fenêtre `isTargeted` (Sceptre d'absorption : le sort qui vise le porteur est annulé).
       const targetedReaction = d.on.includes("isTargeted") && d.do.some(x => isObject(x) && (x.type === "use"));
       if ( isObject(s) && (s.type === "cancel") && !fallReaction && !targetedReaction ) errors.push(`${at}.do: "cancel" requires the falls, allyFalls or isTargeted moment and a "use" reaction`);
+      // §493 (B13) : `cancelForSelf` — à la fenêtre `inArea`, avec sa réaction `use` ; `ifSourceFails` veut une réaction qui vise la source
+      // (l'activité dont la sauvegarde, imposée à l'auteur, décide).
+      if ( isObject(s) && (s.type === "cancelForSelf") ) {
+        const uses = d.do.filter(x => isObject(x) && (x.type === "use"));
+        if ( !d.on.includes("inArea") || !uses.length ) errors.push(`${at}.do: "cancelForSelf" requires the inArea moment and a "use" reaction`);
+        else if ( (s.ifSourceFails === true) && !uses.some(x => x.target === "source") ) errors.push(`${at}.do: "cancelForSelf" with ifSourceFails requires a "use" reaction with target: "source"`);
+      }
       // O8d (§347) : `intercept` — le réacteur devient la cible de l'attaque (Bouclier antiprojectiles), avant le jet.
       if ( isObject(s) && (s.type === "intercept") && !(d.on.includes("enemyAttacks") && preAttackReaction) ) errors.push(`${at}.do: "intercept" requires the enemyAttacks moment and a "use" reaction`);
       if ( isObject(s) && (s.type === "absorb") && !(d.on.includes("allyIsDamaged") && d.do.some(x => isObject(x) && (x.type === "use"))) ) errors.push(`${at}.do: "absorb" requires the allyIsDamaged moment and a "use" reaction`);

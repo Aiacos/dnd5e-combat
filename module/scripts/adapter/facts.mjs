@@ -10,6 +10,7 @@
  *    effet, donc son identifiant et son acteur.
  */
 
+import { areaShapeOf } from "../core/area-shield.mjs";
 import { seesBetween, canSee } from "./vision.mjs";
 import { chargedFeet } from "./variants.mjs";
 import { lightOnToken, inSunlight } from "./illumination.mjs";
@@ -447,6 +448,8 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "activity.weaponKind": weaponKind(activity),
     "activity.identifier": activity?.item ? identifierOf(activity.item).id : null,
     "activity.id": activity?.id ?? null,
+    // §493 (B13) : la forme de la zone de l'activité (« cone », « line », « sphere »…), null sans zone — { "activity.areaShape": ["cone", "line"] }.
+    "activity.areaShape": areaShapeOf(activity),
     // §32 : un sort de cette classe (Sorcellerie innée : « sorts d'Ensorceleur ») — la classe du sort (`spellClassOf`), ou celle de l'acteur.
     "activity.classSpell": cls => (activity?.item?.type === "spell")
       && ((spellClassOf(activity.item) || (activity.item.actor?.classes?.[cls] ? cls : null)) === cls),

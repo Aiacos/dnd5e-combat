@@ -2701,5 +2701,11 @@
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Bouton": "Ouvrir le message",
   "DND5ECOMBAT.Interop.DdbEgide": "DAS · Core a coupé l'automatisation de l'Égide arcanique et du Lien protecteur de DDB Importer : elle absorbait les dégâts une seconde fois. Rechargez le monde (F5) pour que ce soit pris en compte.",
   "DND5ECOMBAT.LumiereVive.Case": "Lumière vive (plein jour)",
-  "DND5ECOMBAT.LumiereVive.Aide": "DAS · Core : l'illumination globale éclaire toute la scène en lumière vive, comme en plein jour. Décochée, c'est une lumière faible : au-delà de la vision dans le noir, les créatures voient comme en lumière faible (visibilité réduite). Foundry V14 n'affiche plus cette option ; DAS la remet ici."
+  "DND5ECOMBAT.LumiereVive.Aide": "DAS · Core : l'illumination globale éclaire toute la scène en lumière vive, comme en plein jour. Décochée, c'est une lumière faible : au-delà de la vision dans le noir, les créatures voient comme en lumière faible (visibilité réduite). Foundry V14 n'affiche plus cette option ; DAS la remet ici.",
+  "DND5ECOMBAT.ReactionZone": "{spell} de {caster} vous prend dans sa zone. Réagir ?",
+  "DND5ECOMBAT.ZoneEpargne": "{item} : {name} ne subit aucun dégât de {spell}.",
+  "DND5ECOMBAT.ZoneEpargneSauvegarde": "{item} : {caster} rate sa sauvegarde ({total} contre DD {dc}) ; {name} ne subit aucun dégât de {spell}.",
+  "DND5ECOMBAT.ZoneSubie": "{item} : {caster} réussit sa sauvegarde ({total} contre DD {dc}) ; {spell} inflige ses dégâts à {name}.",
+  "DND5ECOMBAT.Retour.ZoneEpargne": "{item} : aucun dégât",
+  "DND5ECOMBAT.Retour.ZoneSubie": "{item} : les dégâts passent"
 }

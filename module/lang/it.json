@@ -2672,5 +2672,11 @@
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Nom": "Novità",
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Aide": "Il messaggio di aggiornamento: che cosa portano le versioni recenti, i moduli DAS da aggiornare, la compatibilità con Foundry, dnd5e e i tuoi manuali, le verifiche consigliate.",
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Bouton": "Apri il messaggio di aggiornamento",
-  "DND5ECOMBAT.Interop.DdbEgide": "DAS · Core ha disattivato l'automazione di Protezione arcana e Legame protettivo di DDB Importer: assorbiva i danni una seconda volta. Ricarica il mondo (F5) perché la modifica abbia effetto."
+  "DND5ECOMBAT.Interop.DdbEgide": "DAS · Core ha disattivato l'automazione di Protezione arcana e Legame protettivo di DDB Importer: assorbiva i danni una seconda volta. Ricarica il mondo (F5) perché la modifica abbia effetto.",
+  "DND5ECOMBAT.ReactionZone": "{spell} di {caster} ti coglie nella sua area. Reagire?",
+  "DND5ECOMBAT.ZoneEpargne": "{item}: {name} non subisce danni da {spell}.",
+  "DND5ECOMBAT.ZoneEpargneSauvegarde": "{item}: {caster} fallisce il tiro salvezza ({total} contro CD {dc}); {name} non subisce danni da {spell}.",
+  "DND5ECOMBAT.ZoneSubie": "{item}: {caster} supera il tiro salvezza ({total} contro CD {dc}); {spell} infligge i suoi danni a {name}.",
+  "DND5ECOMBAT.Retour.ZoneEpargne": "{item}: nessun danno",
+  "DND5ECOMBAT.Retour.ZoneSubie": "{item}: il danno passa"
 }

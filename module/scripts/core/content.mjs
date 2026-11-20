@@ -1069,6 +1069,11 @@
  *   { type: "redirect" }                                 §375 : avec une réaction `use` au moment isMissed : l'attaquant refait la même
  *                                                        attaque, gratuite, contre une créature que le réacteur agrippe (Bouclier de
  *                                                        chair) ; proposée seulement s'il en agrippe une
+ *   { type: "cancelForSelf", ifSourceFails? }          §493 (B13) : avec une réaction `use` au moment inArea : les dégâts de la zone
+ *                                                        ne sont pas appliqués au réacteur (lui seul ; les autres créatures de la zone
+ *                                                        les subissent) ; `ifSourceFails: true` — seulement si l'auteur rate la
+ *                                                        sauvegarde de l'activité de réaction, qui doit viser la source (`target:
+ *                                                        "source"` : Bouclier d'insectes, DD de la créature, Int / Sag / Cha au choix)
  *   { type: "absorb" }                                   avec une réaction `use` au moment allyIsDamaged : la réserve du réacteur (clé
  *                                                        `absorb`, Égide arcanique) prend les dégâts de la créature (§38, Égide projetée)
  *   { type: "use", target: "self", activity }          §72 : la réaction vise le réacteur lui-même (Protection contre la mort

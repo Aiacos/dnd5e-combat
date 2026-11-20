@@ -88,6 +88,7 @@ contexte du moment) et sert de clé `on` aux déclarations de contenu.
 | `falls` | the creature is about to take falling damage (Slow Fall: reaction window, before application) |
 | `allyFalls` | another creature is about to take falling damage (Feather Fall: reaction window, before application) |
 | `savesAgainst` | the creature just succeeded on a saving throw against a hostile creature's activity (Mage's Retaliation: reaction window; it is the source) |
+| `inArea` | the creature, caught in another creature's area activity, is about to take its damage (Insect Shield: reaction window, before application; the author is the source) |
 
 ## Hooks d'autres espaces émis par le moteur
 

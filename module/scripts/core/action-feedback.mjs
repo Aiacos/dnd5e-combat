@@ -60,7 +60,9 @@ const DEFAULTS = Object.freeze({
   mount: { success: CORE_SOUNDS.dull, failure: null },
   dismount: { success: CORE_SOUNDS.dull, failure: null },
   thrown: { success: null, failure: CORE_SOUNDS.thud },
-  command: { success: CORE_SOUNDS.chime, failure: null }
+  command: { success: CORE_SOUNDS.chime, failure: null },
+  // §493 (B13) : une réaction contre une zone (Bouclier d'insectes) — la créature épargnée (carillon), ou les dégâts qui passent.
+  areaShield: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull }
 });
 
 /** Le son par défaut de cette action et de cette issue (null : aucun). */
