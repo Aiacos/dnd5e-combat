@@ -112,6 +112,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   }
   if ( "saveDisadvantageAgainst" in entry ) errors.push(...validateSaveDisadvantageAgainst(entry.saveDisadvantageAgainst, at));
   if ( "saveResist" in entry ) errors.push(...validateSaveResist(entry.saveResist, at, isId));
+  if ( "saveReflect" in entry ) errors.push(...validateSaveResist(entry.saveReflect, at, isId, "saveReflect"));
   if ( "trace" in entry ) {
     const t = entry.trace;
     if ( isObject(t) ) {
