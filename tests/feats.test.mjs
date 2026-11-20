@@ -38,6 +38,14 @@ describe("§129 : schéma", () => {
     expect(validateEntry({ hitRider: { push: { distance: 5, units: "ft" }, unarmed: true } })).toEqual([]);
     expect(validateEntry({ hitRider: { push: { distance: 0, units: "ft" } } }).length).toBe(1);
   });
+  it("rollBonus.spellAttack : vrai, et seulement pour un jet d'attaque ; Sort chercheur le déclare", () => {
+    const seeking = { activity: "vudKvHh2PbAiDXSE", on: ["attack"], reroll: {}, spellAttack: true };
+    expect(validateEntry({ rollBonus: seeking })).toEqual([]);
+    expect(SHIPPED["seeking-spell"].rollBonus).toEqual(seeking);
+    expect(validateEntry({ rollBonus: { ...seeking, on: ["save"] } }).length).toBeGreaterThan(0);
+    expect(validateEntry({ rollBonus: { ...seeking, spellAttack: "oui" } }).length).toBeGreaterThan(0);
+  });
+
   it("rollBonus.luck, et les clés vraies", () => {
     expect(validateEntry({ rollBonus: { activity: "DEX2YgxfqdMse2bT", on: ["attack"], luck: true } })).toEqual([]);
     expect(validateEntry({ savageAttacker: "oui" }).length).toBe(1);
