@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { auraRecipients, wantedAuraEffects, planAuraChanges } from "../module/scripts/core/aura.mjs";
 import { AURAS } from "../module/scripts/content/auras.mjs";
+import { validateEntry } from "../module/scripts/core/content.mjs";
 
 const paladin = over => ({
   token: "T.pal", key: "aura-of-protection", disposition: 1, inactive: false,

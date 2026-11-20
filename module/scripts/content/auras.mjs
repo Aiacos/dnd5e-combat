@@ -15,7 +15,8 @@ const ADVANTAGE_SAVES = ["str", "dex", "con", "int", "wis", "cha"].map(a => ({ k
 
 export const AURAS = Object.freeze({
   // Arme d'alerte (SRD 5.2) : « vous et les alliés situés dans un rayon de 9 m bénéficiez […] de l'Avantage aux jets
-  // d'Initiative » — l'enchantement de la donnée ne le donne qu'au porteur de l'arme (effet transféré) ; l'aura le porte aux alliés.
+  // d'Initiative » — l'enchantement de la donnée ne le donne qu'au porteur de l'arme (effet transféré) ; l'aura le porte aux
+  // alliés.
   "weapon-of-warning-enchanted": { includeSelf: false, affects: "ally", radius: 30, units: "ft",
     changes: [{ key: "system.attributes.init.roll.mode", value: "1", type: "add" }] },
   // §403 : Invocation d'animaux — « vous avez l'Avantage aux jets de sauvegarde de Force tant que vous êtes à 1,50 m de la meute » :
