@@ -577,6 +577,8 @@
  *                                               Réaction ni question (Gel, Aversion au feu ; core/damage-traits.mjs)
  *     reducesForcedMove?: { distance, units }   le porteur peut prendre sa Réaction pour raccourcir d'autant un déplacement subi
  *                                               (poussée, traction) — Harnois nain ; demandé, jamais d'office
+ *     extraTurns?: { formula }                  en combat, l'utilisation donne à son auteur ce nombre de tours d'affilée : le
+ *                                               combat revient à lui à la fin de chacun (Arrêt du temps ; core/extra-turns.mjs)
  *     targetedSummon?: true                      §394 : l'activité d'invocation se vise d'un clic (Doigt de mort : le cadavre) ;
  *                                               sans elle, une invocation ne vise jamais, quoi que disent ses données
  *     placesSummons?: true                       §109 : l'invocation se place toujours, même quand l'activité dit le contraire
