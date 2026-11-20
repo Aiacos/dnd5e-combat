@@ -94,6 +94,13 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   }
   if ( "choice" in entry ) validateChoice(entry.choice, `${at}choice`, errors);
   if ( "targets" in entry ) validateTargets(entry.targets, `${at}targets`, facts, errors);
+  if ( "spellTargets" in entry ) {
+    if ( !isObject(entry.spellTargets) ) errors.push(`${at}spellTargets: { cast activity id: { types?, unaffectedIf? } }`);
+    else for ( const [id, rule] of Object.entries(entry.spellTargets) ) {
+      if ( !isId(id) ) errors.push(`${at}spellTargets.${id}: activity id (16 characters) expected`);
+      validateTargets(rule, `${at}spellTargets.${id}`, facts, errors);
+    }
+  }
   if ( "trace" in entry ) {
     const t = entry.trace;
     if ( isObject(t) ) {

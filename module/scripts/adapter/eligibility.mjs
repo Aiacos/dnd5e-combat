@@ -6,7 +6,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { typeAllowed, immuneToAll } from "../core/eligibility.mjs";
+import { typeAllowed, immuneToAll, castTargetRule } from "../core/eligibility.mjs";
 import { holds } from "../core/triggers.mjs";
 import { contentOf } from "./content.mjs";
 import { factsFor, creatureTypeOf, conditionImmunitiesAgainst, originItemOf, enclosureBetween } from "./facts.mjs";
@@ -44,7 +44,13 @@ const effectKey = e => e._id ?? e.uuid;
 
 /** Ce que le contenu dit des cibles de cette activité (`targets`), ou null. */
 export function targetRuleOf(activity) {
-  return activity?.item ? (contentOf(activity.item).entry?.targets ?? null) : null;
+  if ( !activity?.item ) return null;
+  const own = contentOf(activity.item).entry?.targets ?? null;
+  // La copie d'un sort qu'une activité « cast » a lancée (`flags.dnd5e.cachedFor`) : ce que l'item d'origine dit de ses cibles.
+  const cached = activity.item.flags?.dnd5e?.cachedFor;
+  const m = (typeof cached === "string") ? cached.match(/Item\.([A-Za-z0-9]{16})\.Activity\.([A-Za-z0-9]{16})$/) : null;
+  const caster = m ? activity.item.actor?.items?.get(m[1]) : null;
+  return caster ? castTargetRule(own, contentOf(caster).entry?.spellTargets, m[2]) : own;
 }
 
 /** Les types permis, si la créature n'en est pas ; sinon null. */
