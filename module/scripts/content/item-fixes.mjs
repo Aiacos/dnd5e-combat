@@ -76,6 +76,8 @@ const SANCTUARY_FIXES = [
 
 export const ITEM_FIXES = Object.freeze({
   "natures-sanctuary": { dataFixes: SANCTUARY_FIXES },
+  // Anneau d'influence animale (SRD 5.2) : « Terreur (n'affecte que les Bêtes) » — l'activité de la donnée lance le sort tel quel.
+  "ring-of-animal-influence": { spellTargets: { kn4eCuLZrcps7ujc: { types: ["beast"] } } },
   // Anneaux de maîtrise élémentaire (un identifiant pour les quatre : content/sources.mjs les sépare). Air : « une Vitesse de vol égale à
   // votre Vitesse » — l'effet ne donne que le vol stationnaire. Terre : Mur de pierre au DD 18 de l'anneau, pas à celui du porteur.
   // Eau : « Aquatique, une Vitesse de nage de 18 m » — aucun effet dans la donnée.

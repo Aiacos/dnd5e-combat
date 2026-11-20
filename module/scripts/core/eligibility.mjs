@@ -34,6 +34,21 @@ export function typeAllowed(types, creatureType) {
   return types.includes(creatureType);
 }
 
+/**
+ * La règle de cibles d'une copie de sort lancée par l'activité « cast » d'un item : celle du sort, complétée par ce que l'item
+ * qui le lance en dit pour cette activité (`spellTargets` : Anneau d'influence animale — « Terreur (n'affecte que les Bêtes) »).
+ * Ce que l'item déclare l'emporte, clé par clé.
+ * @param {object|null} own  `targets` de l'entrée du sort.
+ * @param {Record<string, object>|null|undefined} spellTargets  `spellTargets` de l'item qui lance.
+ * @param {string|null} activityId  L'activité « cast » d'origine.
+ * @returns {object|null}
+ */
+export function castTargetRule(own, spellTargets, activityId) {
+  const added = activityId ? (spellTargets?.[activityId] ?? null) : null;
+  if ( !added ) return own ?? null;
+  return { ...(own ?? {}), ...added };
+}
+
 /** Les états d'un effet contre lesquels la créature est immunisée (vide : l'effet peut être posé). */
 export function blockedStatuses(statuses, immunities) {
   const immune = new Set(immunities ?? []);

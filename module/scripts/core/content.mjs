@@ -1018,6 +1018,9 @@
  *                                               (« un Humanoïde ») ; `unaffectedIf` = condition (faits du moment, la
  *                                               cible en `target`) qui la laisse hors d'atteinte (Sommeil : immunité
  *                                               à l'Épuisement) — ni sauvegarde, ni dégâts, ni effet
+ *     spellTargets?: { <id d'activité « cast »>: { types?, unaffectedIf? } }
+ *                                               ce que l'item dit des cibles du sort que cette activité lance (Anneau d'influence
+ *                                               animale : « Terreur (n'affecte que les Bêtes) ») — s'ajoute à `targets` du sort
  *   }
  *
  * Les ÉTAPES d'une déclaration (SPEC §16, une brique chacune) :
