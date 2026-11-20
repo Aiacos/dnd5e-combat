@@ -79,6 +79,10 @@ export const MONSTERS = Object.freeze({
   "deflect-blow": { triggers: [{ on: "isHit", do: [{ type: "use", activity: "qvWn7DuBd5mmvZ1M" }, { type: "reduce" }] }] },
   // Réactif (Marilith) : une Réaction à chaque tour du combat.
   "reactive": { reactions: { perRound: 20 } },
+  // Têtes réactives (Hydre, SRD 5.2) : « pour chaque tête au-delà de la première, l'hydre dispose d'une Réaction supplémentaire,
+  // qui ne sert qu'aux attaques d'opportunité » — cinq têtes : cinq Réactions par round (elle n'a pas d'autre Réaction). Le compte
+  // suit les cinq têtes du bloc de statistiques ; les têtes mortes ou repoussées restent au MJ.
+  "reactive-heads": { reactions: { perRound: 5 } },
   // Disparition : rien ici. Plusieurs monstres portent le même item (identifiant, ids) sans la même règle ; celle du Feu follet
   // tombe après un jet d'attaque — lu dans son texte (core/monster-text.mjs, `monsterBreaksOn`).
   // Ravenloft. Protection ésotérique (Gennifer) : Étourdi seulement pour un Mort-vivant.
