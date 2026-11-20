@@ -104,3 +104,23 @@ describe("objets du Guide : DD, lien et recharge que le texte de l'objet donne (
   });
 });
 
+
+describe("objets du SRD 5.2 : charges, durée et réussite d'office que le texte donne", () => {
+  it("Orbe des dragons : 7 charges, 1d4 + 3 à l'aube — comme l'orbe du Guide", () => {
+    const item = { effects: [], system: { uses: { spent: 0, max: "", recovery: [] } } };
+    expect(dataFixPlan(item, ITEM_FIXES["dragon-orb"].dataFixes).item).toEqual({
+      "system.uses.max": "7", "system.uses.recovery": [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] });
+    expect(ITEM_FIXES["dragon-orb"].dataFixes).toEqual(ITEM_FIXES["orb-of-dragonkind"].dataFixes);
+    // Des charges déjà réglées à la main ne bougent pas.
+    const set = { effects: [], system: { uses: { spent: 0, max: "5", recovery: [{ period: "dawn", type: "recoverAll" }] } } };
+    expect(dataFixPlan(set, ITEM_FIXES["dragon-orb"].dataFixes).fields).toEqual([]);
+  });
+  it("Philtre d'amour : Charmé 1 heure, pas 10 minutes", () => {
+    const item = { effects: [{ _id: "MLhvjPiSXOX1tkUr", duration: { value: 600, units: "seconds" } }], system: {} };
+    expect(dataFixPlan(item, ITEM_FIXES["philter-of-love"].dataFixes).effects)
+      .toEqual([{ _id: "MLhvjPiSXOX1tkUr", "duration.value": 3600 }]);
+  });
+  it("Miroir d'emprisonnement : une Créature artificielle réussit d'office", () => {
+    expect(ITEM_FIXES["mirror-of-life-trapping"].saveAutoSuccess).toEqual({ types: ["construct"] });
+  });
+});
