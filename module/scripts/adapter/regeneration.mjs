@@ -8,9 +8,8 @@ import { readRegeneration, resolveRegeneration } from "../core/regeneration.mjs"
 import { contentOf } from "./content.mjs";
 import { englishDescription } from "./multiattack.mjs";
 import { inSunlight } from "./illumination.mjs";
-
-/** B04 : l'eau courante — à brancher sur le fait de B05 (adapter/running-water.mjs) dès qu'il est sur main ; d'ici là, jamais. */
-const inRunningWater = () => false;
+// §484 : l'eau courante — une région ou une scène marquée (B05).
+import { inRunningWater } from "./running-water.mjs";
 
 /**
  * B04 : `regeneration: true` (le texte anglais seul) ou la forme déclarée, qui l'emporte clé par clé (core/regeneration.mjs). Sans
@@ -32,7 +31,7 @@ export function regenerationOf(actor) {
 
 /**
  * B04 : la créature est-elle là où son trait ne fonctionne pas (`stoppedWhile`) ? `sunlight` : la lumière du jour l'éclaire
- * (adapter/illumination.mjs, `inSunlight`) ; `runningWater` : le fait d'eau courante de l'environnement, s'il existe.
+ * (adapter/illumination.mjs, `inSunlight`) ; `runningWater` : une région ou une scène marquée « eau courante » (adapter/running-water.mjs, §484).
  * @returns {string[]}  Les lieux qui la retiennent.
  */
 export function heldBy(token, regeneration) {

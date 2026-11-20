@@ -23,7 +23,7 @@ export const sizeAtLeast = (size, min) => SIZES.indexOf(SIZES.includes(size) ? s
 export const ATTACK_STEPS = Object.freeze(["advantage", "disadvantage", "attackBonus"]);
 export const MOVE_MODES = Object.freeze(["push", "pull"]);
 /** Les destinataires d'une étape `damage` : l'attaquant (riposte), le lanceur de l'effet (partage), le porteur (son tour). */
-export const DAMAGE_TO = Object.freeze(["source", "origin", "bearer"]);
+export const DAMAGE_TO = Object.freeze(["source", "origin", "bearer", "self"]);
 /** La part des dégâts d'issue sur une sauvegarde réussie (`damage` au moment failedSave). */
 export const DAMAGE_ON_SAVE = Object.freeze(["half", "none"]);
 /** Les étapes qui ne s'exécutent qu'à l'application d'une résolution (moments hit, failedSave). */
@@ -49,6 +49,8 @@ export const ENTRY_KEYS = Object.freeze(["smite", "multiattackPlan", "metamagic"
 export const CHOICE_EFFECTS = Object.freeze(["one"]);
 /** §38, §90 : les jets auxquels un `rollBonus` s'ajoute. */
 export const ROLL_BONUS_ON = Object.freeze(["save", "check", "attack", "initiative"]);
+/** §484 : les jets qu'un `rollDisadvantage` frappe — tests de caractéristique (compétences et initiative comprises), sauvegardes. */
+export const ROLL_DISADVANTAGE_ON = Object.freeze(["check", "save"]);
 /** §37 : ce qu'une sauvegarde répétée ratée impose en plus (`resave.onFail`) : l'action Esquiver (Malédiction). */
 export const RESAVE_ON_FAIL = Object.freeze(["dodge"]);
 /** §43.2 : qui fait cesser l'effet par une action, par quel jet, sous quel libellé. */
