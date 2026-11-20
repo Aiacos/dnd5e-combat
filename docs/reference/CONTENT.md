@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-900 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+901 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -138,7 +138,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `hitRider` | 20 | `charger`, `crusher`, `disarming-attack`, `distracting-strike`, `eldritch-smite`, `feral-pounce`, … |
 | `holdsStill` | 1 | `steady-aim` |
 | `hpTiers` | 3 | `divine-word`, `power-word-kill`, `power-word-stun` |
-| `ignoresResistance` | 4 | `boon-of-irresistible-offense`, `grave-touched`, `poisoner`, `touch-of-death` |
+| `ignoresResistance` | 5 | `boon-of-irresistible-offense`, `grave-touched`, `poisoner`, `touch-of-death`, `vorpal-sword-enchanted` |
 | `includesOrigin` | 3 | `bag-of-beans`, `dust-of-disappearance`, `dust-of-sneezing-and-choking` |
 | `initiativeSwap` | 1 | `alert` |
 | `interposeShield` | 1 | `shield-master` |

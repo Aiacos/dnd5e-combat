@@ -603,6 +603,9 @@ export const ITEM_FIXES = Object.freeze({
   // (la donnée) et vous gagnez autant de PV temporaires ». Demonomicon d'Iggwilv — « les dégâts de vos sorts contre un Fiélon : le maximum ».
   "blackrazor": { devours: true },
   "sword-of-life-stealing-enchanted": { critFeeds: { amount: 15 } },
+  // Épée vorpale (SRD 5.2) : « l'arme ignore la Résistance aux dégâts tranchants » — rien ne le portait. Les 30 dégâts du 20
+  // naturel sont dans la donnée (bonus de critique) ; la tête coupée reste au MJ.
+  "vorpal-sword-enchanted": { ignoresResistance: { types: ["slashing"], if: { "activity.enchantedBy": "vorpal-sword" } } },
   "demonomicon-of-iggwilv": { maxSpellDamageVs: ["fiend"] },
   // O9a (§354) : poisons et pièges — Torpeur : « la Vitesse est divisée par deux tant qu'elle est Empoisonnée ainsi » ; Pierre roulante :
   // « sur un échec, À terre ».
