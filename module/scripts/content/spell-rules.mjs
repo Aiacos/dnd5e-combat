@@ -208,6 +208,14 @@ export const SPELL_RULES = Object.freeze({
   "sleet-storm": { difficultTerrain: {}, quietPose: true },
   // Flamme sacrée (SRD 5.2) : « la cible ne bénéficie pas d'un abri partiel ni d'un abri aux trois quarts pour cette sauvegarde ».
   "sacred-flame": { saveIgnoresCover: true },
+  // Glyphe de protection, rune explosive (SRD 5.2) : « le glyphe libère une énergie magique dans une Sphère de 6 m de rayon
+  // centrée sur lui ; chaque créature dans la zone effectue un jet de sauvegarde de Dextérité » — l'activité « Explosive Rune »
+  // de la donnée n'a pas de zone (elle hérite de la cible du sort, un objet) : elle ne touchait personne.
+  "glyph-of-warding": { dataFixes: [
+    { path: "system.activities.dnd5eactivity100.target.override", from: false, value: true },
+    { path: "system.activities.dnd5eactivity100.target.template.type", from: null, value: "sphere" },
+    { path: "system.activities.dnd5eactivity100.target.template.size", from: null, value: "20" },
+    { path: "system.activities.dnd5eactivity100.target.affects.type", from: null, value: "creature" }] },
   // §300 : « Croissance » — la zone devient un terrain où chaque mètre coûte 4 mètres de déplacement ; elle reste (durée instantanée).
   // Embroussaillement : « temps d'incantation : action » — la donnée laisse l'activation « spéciale » (rien n'était dépensé).
   "plant-growth": { difficultTerrain: { cost: 4 }, usageLimits: { dnd5eactivity000: { cost: "action" } } },
