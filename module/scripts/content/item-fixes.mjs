@@ -320,6 +320,8 @@ export const ITEM_FIXES = Object.freeze({
   // Entraves dimensionnelles (SRD 5.2) : « les entraves empêchent la créature qu'elles lient d'user de tout moyen de déplacement
   // extradimensionnel, téléportation comprise » — l'effet « Dimensionally Bound » de la donnée est vide.
   "dimensional-shackles": { noTeleport: true },
+  // Baguette de terreur (SRD 5.2) : « Terreur (cône de 18 m) » — l'activité de la donnée lance le sort tel quel, cône de 9 m.
+  "wand-of-fear": { spellFixes: { "9c7SNgBZU2KJjgFg": [{ path: "system.target.template.size", from: "30", value: "60" }] } },
   // Orbe des dragons : « 7 charges, 1d4 + 3 à l'aube » — l'item n'en a aucune, ses sorts payants étaient refusés.
   "orb-of-dragonkind": {
     dataFixes: [{ path: "system.uses.max", from: "", value: "7" }, { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]

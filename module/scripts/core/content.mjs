@@ -314,6 +314,9 @@
  *                                               portés, effet manquant), écrites par le MJ actif à la création et par le diagnostic — core/data-fixes.mjs
  *                                               `unless` : l'effet n'est pas créé si la donnée porte déjà cet autre effet (une
  *                                               version du module qui l'a ajouté depuis : Guide 3.0.0)
+ *     spellFixes?: { <id d'activité « cast »>: [corrections] }
+ *                                               les mêmes corrections, pour la copie du sort que cette activité de l'item lance
+ *                                               (Baguette de terreur : « Terreur (cône de 18 m) »)
  *     includesOrigin?: true                     O4 (§338) : la zone « personnelle » de l'item prend aussi son origine (Poudre à éternuer)
  *     absorbsDamage?: string[]                  K7 (§328) : le porteur de l'item change ces types de dégâts en soin, avant résistances et
  *                                               immunités (Absorption de l'acide, du feu, de la foudre des golems)
