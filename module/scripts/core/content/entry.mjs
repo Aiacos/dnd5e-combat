@@ -96,6 +96,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   if ( "choice" in entry ) validateChoice(entry.choice, `${at}choice`, errors);
   if ( "targets" in entry ) validateTargets(entry.targets, `${at}targets`, facts, errors);
   if ( "saveResist" in entry ) errors.push(...validateSaveResist(entry.saveResist, at, isId));
+  if ( "saveReflect" in entry ) errors.push(...validateSaveResist(entry.saveReflect, at, isId, "saveReflect"));
   if ( "trace" in entry ) {
     const t = entry.trace;
     if ( isObject(t) ) {
