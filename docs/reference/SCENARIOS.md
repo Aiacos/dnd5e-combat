@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-380 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+381 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -94,6 +94,7 @@ la sélection sans rien jouer.
 | `diagnostic-phb3` |  | §438 | sous-classes et objets du Manuel des joueurs 3.0.0 |
 | `diagnostic-traduction` |  | §203 | textes restés en anglais, traduction du compendium reprise |
 | `diagnostic` |  | §177 | analyse, réparation sauvegardée, restauration exacte |
+| `dissipation-bornee` |  | §496 | rien au-delà du niveau 3 (pas de test), la créature concentrée garde son sort par sa Réaction et un emplacement (§496, brique B16) |
 | `dissipation` |  | §37.2 | d'office, par un test, par l'emplacement |
 | `donnees-sanctuaire-nature` |  | §454 §456 | Sanctuaire de dame Nature (effets perdus recréés) |
 | `dons-lot-7` |  | §289 | fins des dons sombres de Ravenloft, Seconde peau, Faveur de vigueur |

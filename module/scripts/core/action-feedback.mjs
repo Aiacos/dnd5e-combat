@@ -66,7 +66,9 @@ const DEFAULTS = Object.freeze({
   // §494 (B14) : plusieurs concentrations perdues d'un coup (jet raté, Neutralisé).
   concentrationLost: { success: null, failure: CORE_SOUNDS.fade },
   // §495 (B15) : une échelle d'états — la créature se remet d'un palier (carillon), ou s'enfonce d'un palier (bruit sourd).
-  stage: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull }
+  stage: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull },
+  // §496 (B16) : un sort gardé contre une dissipation, par la Réaction et un emplacement.
+  dispelKept: { success: CORE_SOUNDS.chime, failure: null }
 });
 
 /** Le son par défaut de cette action et de cette issue (null : aucun). */

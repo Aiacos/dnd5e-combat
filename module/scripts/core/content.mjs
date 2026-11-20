@@ -730,6 +730,10 @@
  *     dispel?: true                             Dissipation de la magie (§37.2) : les sorts en cours sur les cibles cessent —
  *                                               d'office jusqu'au niveau 3 ou à celui de l'emplacement, sinon par un test de
  *                                               la caractéristique d'incantation contre DD 10 + niveau (core/dispel.mjs)
+ *     dispel?: { upTo, beyond?, keepBySlot? }   §496 : dissipation bornée — d'office jusqu'au niveau `upTo` (quel que soit
+ *                                               l'emplacement) ; au-delà, `beyond: "none"` : rien, sans test, `"check"` (défaut) :
+ *                                               le test ci-dessus ; `keepBySlot: true` : la créature concentrée sur un sort qui
+ *                                               cesserait peut, par sa Réaction, dépenser un emplacement de niveau 1+ pour le garder
  *     counter?: { level? }                      contresort à la manière de 2014 (§66, SRD 5.1) : l'item, utilisé en réaction à la
  *                                               porte `castsSpell`, fait échouer d'office un sort de niveau `level` ou moins (défaut :
  *                                               le niveau de l'item) ; au-delà, test de la caractéristique d'incantation de celui
