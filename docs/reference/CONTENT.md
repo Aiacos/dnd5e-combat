@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-941 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+942 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -232,6 +232,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `saveAdvantageFrom` | 1 | `protection-from-evil-and-good` |
 | `saveAdvantageSize` | 1 | `ensnaring-strike` |
 | `saveAutoSuccess` | 5 | `enthrall`, `falling-net`, `flesh-to-stone`, `friends`, `mirror-of-life-trapping` |
+| `saveAutoSuccessAgainst` | 1 | `greater-magic-resistance` |
 | `saveDamage` | 8 | `black-tentacles`, `contact-other-plane`, `evards-black-tentacles`, `holy-water`, `misty-escape`, `pale-tincture`, … |
 | `savedEffects` | 6 | `flesh-to-stone`, `heat-metal`, `mace-of-disruption`, `ottos-irresistible-dance`, `ray-of-enfeeblement`, `stunning-strike` |
 | `saveDisadvantageFor` | 3 | `shatter`, `talisman-of-pure-good`, `talisman-of-ultimate-evil` |
@@ -253,6 +254,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `sneakAttack` | 1 | `sneak-attack` |
 | `sneakBonus` | 1 | `assassinate` |
 | `sniper` | 1 | `skulker` |
+| `spellAttacksMiss` | 1 | `greater-magic-resistance` |
 | `spellDamageTypes` | 2 | `grave-touched`, `psychic-spells` |
 | `spellFailure` | 1 | `slow` |
 | `spellRecall` | 1 | `boon-of-spell-recall` |

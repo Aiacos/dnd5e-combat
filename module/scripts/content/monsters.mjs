@@ -34,6 +34,9 @@ export const MONSTERS = Object.freeze({
   // Perception de la magie (Chuul, SRD 5.2) : « le chuul perçoit la magie dans un rayon de 36 m ; ce trait fonctionne par ailleurs
   // comme le sort Détection de la magie, sans être lui-même magique » — permanent, sans effet à porter.
   "sense-magic": { sense: { kind: "locate", range: 120, units: "ft", reveals: "aura", detects: { "target.carriesMagic": true } } },
+  // Résistance supérieure à la magie (Rakshasa, SRD 5.2) : « le rakshasa réussit automatiquement ses jets de sauvegarde contre
+  // les sorts et autres effets magiques, et les jets d'attaque des sorts le ratent automatiquement ».
+  "greater-magic-resistance": { saveAutoSuccessAgainst: ["magic"], spellAttacksMiss: true },
   // Défense (Sanglier-garou) : la malédiction ne vise qu'un Humanoïde.
   "mm-wereboar-gore": { effectsIf: { "target.creatureType": "humanoid" } },
   // Ravenloft. Brochette psychique (Ancien) : Épuisement et Étourdi seulement pour une cible Charmée.

@@ -270,6 +270,19 @@ export function isMagical(activity) {
   return (item.type === "spell") || (item.system?.properties?.has?.("mgc") === true);
 }
 
+/**
+ * L'acteur réussit-il d'office la sauvegarde de cette activité (`saveAutoSuccessAgainst`) ? « magic » : contre un sort ou un effet
+ * magique (Résistance supérieure à la magie). Rend l'identifiant du trait qui le donne, ou null.
+ */
+export function autoSaveAgainst(actor, activity) {
+  if ( !actor || !isMagical(activity) ) return null;
+  for ( const item of actor.items ?? [] ) {
+    const content = contentOf(item);
+    if ( (content.entry?.saveAutoSuccessAgainst ?? []).includes("magic") ) return content.identifier ?? item.name;
+  }
+  return null;
+}
+
 /** Les types d'objets que l'on porte (pas les aptitudes ni les sorts). */
 const GEAR = new Set(["equipment", "weapon", "consumable", "tool", "loot", "container"]);
 /** Équipé, et harmonisé s'il exige une harmonisation. */
