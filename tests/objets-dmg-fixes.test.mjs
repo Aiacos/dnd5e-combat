@@ -159,3 +159,31 @@ describe("Épée vorpale (SRD 5.2) : l'arme ignore la Résistance aux dégâts t
     expect(validateEntry(ITEM_FIXES["vorpal-sword-enchanted"], { facts: { "activity.enchantedBy": true } })).toEqual([]);
   });
 });
+
+describe("Marteau de lancer nain (SRD 5.2) : le 1d8 de force au lancer seulement, 2d8 contre un Géant", () => {
+  const entry = ITEM_FIXES["dwarven-thrower"];
+  const force = { number: 1, denomination: 8, bonus: "", types: ["force"], modifiers: [], scaling: { number: 1 } };
+  const attack = _id => ({ _id, type: "attack", damage: { includeBase: true, parts: [structuredClone(force)] } });
+  const item = () => ({ effects: [], system: { activities: {
+    bd1kKOncfoLha8CT: attack("bd1kKOncfoLha8CT"), w3ATyMSroDLch6Re: attack("w3ATyMSroDLch6Re") } } });
+
+  it("l'attaque de corps à corps perd sa part de force ; « Throw » garde la sienne", () => {
+    const plan = dataFixPlan(item(), entry.dataFixes);
+    expect(plan.item).toEqual({ "system.activities.bd1kKOncfoLha8CT.damage.parts": [] });
+  });
+
+  it("une part changée à la main (2d8, un autre type) ne bouge pas", () => {
+    const edited = item();
+    edited.system.activities.bd1kKOncfoLha8CT.damage.parts[0].number = 2;
+    expect(dataFixPlan(edited, entry.dataFixes).fields).toEqual([]);
+  });
+
+  it("le second d8 : au lancer, contre un Géant seulement", () => {
+    const [rule] = entry.triggers;
+    expect(rule.do).toEqual([{ type: "damage", formula: "1d8", damageType: "force" }]);
+    expect(holds(rule.if, { "activity.id": "w3ATyMSroDLch6Re", "target.creatureType": "giant" })).toBe(true);
+    expect(holds(rule.if, { "activity.id": "w3ATyMSroDLch6Re", "target.creatureType": "undead" })).toBe(false);
+    expect(holds(rule.if, { "activity.id": "bd1kKOncfoLha8CT", "target.creatureType": "giant" })).toBe(false);
+    expect(validateEntry(entry, { facts: { "activity.id": true, "target.creatureType": true } })).toEqual([]);
+  });
+});
