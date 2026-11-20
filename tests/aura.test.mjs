@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { auraRecipients, wantedAuraEffects, planAuraChanges } from "../module/scripts/core/aura.mjs";
+import { AURAS } from "../module/scripts/content/auras.mjs";
 
 const paladin = over => ({
   token: "T.pal", key: "aura-of-protection", disposition: 1, inactive: false,
@@ -108,5 +109,16 @@ describe("auras à bonus du Monster Manual (§18.12)", () => {
     expect(CONTENT["aura-of-authority"].aura.changes[0]).toEqual({ key: "system.abilities.str.attack.roll.mode", value: "1", type: "add" });
     expect(validateEntry({ aura: { changes: [{ key: "x", value: 1, type: "add" }] } })).toHaveLength(1);   // valeur en chaîne
     expect(validateEntry({ aura: { types: ["mort-vivant"] } })).toHaveLength(1);
+  });
+});
+
+describe("Arme d'alerte (SRD 5.2) : l'Avantage à l'Initiative va aussi aux alliés à 9 m", () => {
+  const aura = AURAS["weapon-of-warning-enchanted"];
+  it("aura de 9 m sur les alliés, sans le porteur (l'enchantement le lui donne déjà)", () => {
+    expect(aura).toMatchObject({ includeSelf: false, affects: "ally", radius: 30, units: "ft" });
+    expect(aura.changes).toEqual([{ key: "system.attributes.init.roll.mode", value: "1", type: "add" }]);
+  });
+  it("l'entrée est valide", () => {
+    expect(validateEntry({ aura })).toEqual([]);
   });
 });
