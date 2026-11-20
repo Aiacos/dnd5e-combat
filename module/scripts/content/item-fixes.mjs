@@ -542,8 +542,9 @@ export const ITEM_FIXES = Object.freeze({
     { on: "hit", if: { "target.creatureType": "giant" }, do: [{ type: "status", status: "prone", save: { ability: "str", dc: 15 } }] }] },
   "holy-avenger-enchanted": BANE("holy-avenger", ["fiend", "undead"], "2d10", "radiant", true),
   "executioners-axe-enchanted": BANE("executioners-axe", ["humanoid"], "2d6", "slashing", true),
-  // Masse de châtiment (SRD 5.2) : « sur un 20 au jet d'attaque […], si une Créature artificielle a 25 points de vie ou moins après
-  // avoir subi ces dégâts, elle est détruite ». Les bonus et les dégâts du 20 sont dans la donnée ; l'état est posé après les dégâts.
+  // Masse de châtiment (SRD 5.2) : « sur un 20 au jet d'attaque […], si une Créature artificielle a 25 points de vie ou moins
+  // après avoir subi ces dégâts, elle est détruite ». Les bonus et les dégâts du 20 sont dans la donnée ; l'état est posé après
+  // les dégâts.
   "mace-of-smiting": { triggers: [{ on: "hit",
     if: { "hit.critical": true, "target.creatureType": "construct", "target.hpAtMost": 25 },
     do: [{ type: "status", status: "dead" }] }] },
