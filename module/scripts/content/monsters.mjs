@@ -27,6 +27,10 @@ export const MONSTERS = Object.freeze({
   // Morsure (Homoncule) : Empoisonné jusqu'à la fin de son prochain tour ; raté de 5 ou plus, Inconscient, réveillé par des dégâts.
   "mm-homunculus-bite": { effectEnds: { V1AmhFqcodun54W7: "casterTurnEnd" }, failMargins: { "1xPlmvipGrfrNiPY": { min: 5 } },
     triggers: [{ on: "isDamaged", via: "effect", fromEffect: "1xPlmvipGrfrNiPY", do: [{ type: "remove" }] }] },
+  // Faiblesse au soleil (Ombre, SRD 5.2) : « tant qu'elle est à la lumière du soleil, l'ombre a le Désavantage aux Tests de d20 » —
+  // jets d'attaque, tests de caractéristique et jets de sauvegarde. La lecture du texte ne connaît que « … aux jets d'attaque ».
+  "sunlight-weakness": { rollDisadvantage: { on: ["check", "save"], if: { "self.inSunlight": true } },
+    triggers: [{ on: "preAttackRoll", if: { "source.inSunlight": true }, do: [{ type: "disadvantage" }] }] },
   // Défense (Sanglier-garou) : la malédiction ne vise qu'un Humanoïde.
   "mm-wereboar-gore": { effectsIf: { "target.creatureType": "humanoid" } },
   // Ravenloft. Brochette psychique (Ancien) : Épuisement et Étourdi seulement pour une cible Charmée.

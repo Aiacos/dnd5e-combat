@@ -6,8 +6,16 @@ import { formExpired, revertSeconds, sharedSlotUpdates } from "../module/scripts
 
 const facts = Object.fromEntries(["activity.type", "activity.isAttack", "activity.isSpell", "activity.isWeapon", "activity.weaponKind", "activity.baseItem", "activity.identifier", "activity.id",
   "activity.hasProperty", "source.hasStatus", "source.hasEffect", "source.creatureType", "source.allyNearTarget", "source.summonNearTarget", "source.seesTarget",
-  "target.hasStatus", "target.speaksLanguage", "target.poisonous", "target.carriesMagic", "target.hasMark", "target.hasEffect", "target.hasEffectFrom", "hit.stoppableBy", "hit.critical", "damage.resisted", "target.grappledBySource", "target.wieldsProperty", "target.isSelf", "self.hasShield", "self.wieldsWeapon", "target.hasFeature", "activity.ability", "target.sizeAtMost", "target.within", "target.seesSource", "target.creatureType", "target.immuneTo", "activity.isMelee", "target.hasTempHp", "target.speedZero", "target.atZero", "target.isDead", "damage.hasType", "target.hpAtMost", "condition.gained",
-  "target.wounded", "target.bloodied", "source.classLevelAtLeast", "target.nearSelf", "self.seesTarget", "target.hasNotActed", "source.onOwnTurn", "activity.dealsType", "source.hasFeature", "source.hasClassFeature", "activity.cantripOf", "activity.school", "activity.enchantedBy", "source.wildShaped", "activity.classSpell", "source.resists", "source.nearSelf", "self.seesSource", "self.hasEffect", "source.hasEffectFromTarget", "source.hasSense", "target.allied"].map(k => [k, true]));
+  "target.hasStatus", "target.speaksLanguage", "target.poisonous", "target.carriesMagic", "target.hasMark", "target.hasEffect",
+  "target.hasEffectFrom", "hit.stoppableBy", "hit.critical", "damage.resisted", "target.grappledBySource",
+  "target.wieldsProperty", "target.isSelf", "self.hasShield", "self.wieldsWeapon", "target.hasFeature", "activity.ability",
+  "target.sizeAtMost", "target.within", "target.seesSource", "target.creatureType", "target.immuneTo", "activity.isMelee",
+  "target.hasTempHp", "target.speedZero", "target.atZero", "target.isDead", "damage.hasType", "target.hpAtMost",
+  "condition.gained", "target.wounded", "target.bloodied", "source.classLevelAtLeast", "target.nearSelf", "self.seesTarget",
+  "target.hasNotActed", "source.onOwnTurn", "activity.dealsType", "source.hasFeature", "source.hasClassFeature",
+  "activity.cantripOf", "activity.school", "activity.enchantedBy", "source.wildShaped", "activity.classSpell", "source.resists",
+  "source.nearSelf", "self.seesSource", "self.hasEffect", "source.hasEffectFromTarget", "source.hasSense", "target.allied",
+  "source.inSunlight", "self.inSunlight"].map(k => [k, true]));
 const MOMENTS_LIST = "isHit, isDamaged, leavesReach, enemyDisengages, enter, turnStart, turnEnd, moves, preDamageRoll, hit, failedSave, savedSave, startOfTurn, endOfTurn, originTurnStart, preAttackRoll, castsSpell, isMissed, enemyTurnEnd, isTargeted, isAttacked, enemyAttacks, allyAttacks, gainsCondition, allyIsHit, allyIsDamaged, enemyAttacked, falls, allyFalls, savesAgainst, inArea";
 
 describe("validation d'une entrée", () => {
@@ -328,8 +336,8 @@ describe("contenu livré", () => {
       "stone-of-controlling-earth-elementals", "stones-endurance", "storm-of-radiance", "storm-of-vengeance", "stormborn", "storms-thunder",
       "studied-attacks", "stunning-strike", "subtle-spell", "suggestion", "summon-aberration", "summon-beast", "summon-celestial",
       "summon-construct", "summon-dragon", "summon-elemental", "summon-fey", "summon-fiend", "summon-undead", "sun-blade", "sunbeam",
-      "sunburst",
-      "superior-defense", "superior-inspiration", "superior-potion-of-healing", "supreme-healing", "supreme-potion-of-healing",
+      "sunburst", "sunlight-weakness", "superior-defense", "superior-inspiration", "superior-potion-of-healing",
+      "supreme-healing", "supreme-potion-of-healing",
       "supreme-sneak", "survivor-ravenloft", "swallow", "swarm", "sweeping-attack", "swift-quiver", "swoop", "sword-of-kas",
       "sword-of-life-stealing-enchanted", "sword-of-sharpness", "sword-of-sharpness-enchanted", "sword-of-vengeance-enchanted",
       "symbiotic-being", "symbol", "synaptic-static", "tactical-assessment", "tactical-charge", "tactical-mind", "tactical-shift",
