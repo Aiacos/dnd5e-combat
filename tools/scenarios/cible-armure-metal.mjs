@@ -22,10 +22,15 @@ export default {
     const bandit = await ctx.token("Bandit");
     const items = async actorId => (await ctx.call("get-actor", { actorId })).items ?? [];
 
-    // Le trait d'essai, sur le Guerrier.
-    const r = await ctx.call("upsert-actor-item", { actorId: fighter.actorId, itemData: SHOCK, match: { path: "system.identifier", value: SHOCK.system.identifier } });
-    const traitId = r.itemId ?? r.id ?? r.item?._id ?? (await ctx.itemId(fighter.id, SHOCK.system.identifier));
+    // Le trait d'essai, sur le Guerrier ; sa déclaration dans la surcouche du monde le temps du scénario. Pas en drapeau d'item :
+    // Foundry déplie les clés pointées des conditions à la création (`"target.wearsArmor"` devient `{ target: { wearsArmor } }`), la
+    // validation refuse le drapeau (« unknown fact "target" ») et la création est annulée (banc du 2026-11-20).
+    const { rule, ...shock } = SHOCK;
+    const r = await ctx.call("upsert-actor-item", { actorId: fighter.actorId, itemData: shock, match: { path: "system.identifier", value: shock.system.identifier } });
+    const traitId = r.itemId ?? r.id ?? r.item?._id ?? (await ctx.itemId(fighter.id, shock.system.identifier));
     ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: fighter.actorId, itemId: traitId }).catch(() => {}));
+    const { before } = await ctx.engine("overrideContent", { identifier: shock.system.identifier, entry: rule });
+    ctx.restore(() => ctx.engine("overrideContent", { identifier: shock.system.identifier, entry: before }).catch(() => {}));
     const weapon = (await items(fighter.actorId)).find(i => (i.type === "weapon") && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack")
       && !i.flags?.[MODULE_ID]?.basicAction);
     if ( !ctx.expect(!!weapon, "le Guerrier a une arme d'attaque") ) return;
@@ -74,11 +79,11 @@ export default {
   }
 };
 
-/* Le trait d'essai (déclaré après le scénario : son titre est le premier `name`). */
+/* Le trait d'essai et sa déclaration (`rule`, posée dans la surcouche du monde), après le scénario : son titre est le premier `name`. */
 const SHOCK = {
   name: "Décharge contre le métal (essai)", type: "feat", img: "icons/magic/lightning/bolt-forked-blue.webp",
   system: { identifier: "das-test-shock-vs-metal", type: { value: "monster" }, description: { value: "<p>Essai §491.</p>" } },
-  flags: { [MODULE_ID]: {
+  rule: {
     triggers: [{ on: "preAttackRoll", if: { "target.wearsArmor": { material: "metal" } }, do: [{ type: "advantage" }] }]
-  } }
+  }
 };
