@@ -29,9 +29,23 @@ import { knownCastLevel, castLevelAtMost, castLevelAtLeast } from "../core/count
 import { grapplerOf } from "./grapple.mjs";
 import { areEnemies, areAllies } from "./factions.mjs";
 import { isVanilla } from "./vanilla-state.mjs";
+import { wearsArmor } from "../core/armor.mjs";
 
 /** §484 : ce token se tient-il en lumière vive (torche, sort, jour) ? Sans token : non. */
 const isBright = doc => !!doc && (lightOnToken(doc)?.level === LIGHT.BRIGHT);
+
+/**
+ * §491 : les pièces d'armure que l'acteur porte (items `equipment` équipés de type light / medium / heavy / shield ; dnd5e config.mjs
+ * `armorTypes`), décrites pour `wearsArmor` (core/armor.mjs) : catégorie, armure de base (`system.type.baseItem`, clé de `armorIds`),
+ * identifiant, et la matière imposée par l'item (`flags["dnd5e-combat"].metal`).
+ */
+export function armorPieces(actor) {
+  return (actor?.items ?? []).filter(i => (i.type === "equipment") && i.system?.equipped).map(i => {
+    const metal = i.flags?.["dnd5e-combat"]?.metal;
+    return { category: i.system.type?.value ?? null, base: i.system.type?.baseItem || null, identifier: i.system.identifier ?? null,
+      ...(typeof metal === "boolean" ? { metal } : {}) };
+  });
+}
 
 /** Rangs de taille de dnd5e (config.mjs, `actorSizes`), pour « de taille G ou inférieure ». */
 const SIZE_RANK = Object.freeze({ tiny: 0, sm: 1, med: 2, lg: 3, huge: 4, grg: 5 });
@@ -508,6 +522,9 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "target.isSelf": want => (!!self && !!target && (self === target)) === want,
     // §301 : une arme (pas une arme naturelle) en main — Interception : « vous maniez un bouclier ou une arme courante ou de guerre ».
     "self.wieldsWeapon": want => (self?.items ?? []).some(i => (i.type === "weapon") && i.system.equipped && ["simpleM", "simpleR", "martialM", "martialR"].includes(i.system.type?.value)) === want,
+    // §491 : la cible porte une armure — true / false (armure de corps), une catégorie ("heavy", ["medium", "heavy"], "shield"), ou
+    // { material: "metal", category? } (Poigne électrique, Métal brûlant). Table des armures de métal : core/armor.mjs.
+    "target.wearsArmor": want => wearsArmor(armorPieces(target), want),
     "self.hasShield": want => (self?.items ?? []).some(i => (i.type === "equipment") && (i.system.type?.value === "shield") && i.system.equipped) === want,
     // §132 : la cible est Agrippée par l'attaquant (Lutteur : « l'Avantage aux jets d'attaque contre une créature que vous agrippez »).
     // §334 : l'attaquant a chargé la cible d'au moins tant de pieds en ligne droite juste avant (Défenses de l'Éléphant).

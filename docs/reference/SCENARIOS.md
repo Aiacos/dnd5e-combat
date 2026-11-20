@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-375 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+376 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -66,6 +66,7 @@ la sélection sans rien jouer.
 | `chausse-trapes` |  | §187 | la zone reste, on s'arrête dessus, on la ramasse |
 | `choix-sorts` |  | §401 | choix laissés au lanceur par le texte des sorts (§401) |
 | `chute-niveaux` | keep | §218 | après un saut, ou en bougeant un token en chute |
+| `cible-armure-metal` |  | §491 | fait target.wearsArmor, Avantage déclaré |
 | `clerc` |  | §27 | Impact divin, Incantation puissante, Prêtre de guerre, Disciple de la Vie, Guérisseur béni, Guérison suprême |
 | `college-esprits` |  | §96 | Esprits vengeur, brute, couard, diseur de bonne aventure, prêtre, de l'ombre ; Canalisation renforcée |
 | `compteur-action-fin` |  | §43 | Pétrification, Danse irrésistible d'Otto, Sommeil |
