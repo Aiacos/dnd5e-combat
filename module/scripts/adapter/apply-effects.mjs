@@ -108,7 +108,9 @@ export async function splitPushes(usageMessage, refs) {
  * déjà porté n'est pas doublé. Rend l'UUID de l'effet créé, ou null.
  */
 export async function applyStatusToToken(usageMessage, tokenUuid, status, { escapeDc=null }={}) {
-  const actor = (await fromUuid(tokenUuid))?.actor;
+  const tokenDoc = await fromUuid(tokenUuid);
+  const actor = tokenDoc?.actor;
+  const tokenScene = tokenDoc?.parent?.documentName === "Scene" ? tokenDoc.parent.id : null;
   if ( !actor || !CONFIG.statusEffects.some(s => s.id === status) ) return null;
   if ( actor.statuses.has(status) ) return null;
   const activity = usageMessage.getAssociatedActivity?.();
@@ -121,7 +123,9 @@ export async function applyStatusToToken(usageMessage, tokenUuid, status, { esca
   // §157 : le tour de la pose noté, comme pour un effet d'item (runtime/cantrips.mjs) — « jusqu'à la fin de votre prochain tour ».
   if ( activity ) await effect.update({ origin: activity.uuid, ...(game.combat?.started ? { [`flags.${MODULE_ID}.placedOn`]: currentTurnKey() } : {}),
     // §504 (B24) : le DD d'évasion que la règle déclare (« DD 11 pour s'échapper »), lu par `escapeDcOf`.
-    ...(escapeDc ? { [`flags.${MODULE_ID}.escapeDc`]: escapeDc } : {}) });
+    ...(escapeDc ? { [`flags.${MODULE_ID}.escapeDc`]: escapeDc } : {}),
+    // La scène du token visé : un acteur lié a des tokens sur plusieurs scènes (adapter/grapple.mjs `grappleSceneOf`).
+    ...(tokenScene ? { [`flags.${MODULE_ID}.scene`]: tokenScene } : {}) });
   return effect.uuid;
 }
 

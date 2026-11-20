@@ -61,6 +61,9 @@ export function grappledElsewhere(attackerToken, targetToken) {
  * aussi des tokens sur une autre scène, à 20 ft l'un de l'autre, et l'empoignade y était « rompue »).
  */
 export function grappleSceneOf(effect) {
+  // §504 : un état posé par le moteur (étape `status`) n'a pas de message d'origine ; sa scène est notée sur l'effet.
+  const noted = effect?.getFlag?.(MODULE_ID, "scene");
+  if ( noted ) return noted;
   const messageUuid = effect?.system?.origin?.message;
   if ( !messageUuid ) return null;
   try { return fromUuidSync(messageUuid)?.speaker?.scene ?? null; }
@@ -185,7 +188,10 @@ export function grappledTokenOf(effect) {
   if ( !actor ) return null;
   if ( actor.isToken ) return actor.token;
   const sceneId = grappleSceneOf(effect);
-  const scene = (sceneId && game.scenes.get(sceneId)) || null;
+  // §504 : sinon, la scène du token de l'agrippeur — un acteur lié a des tokens sur plusieurs scènes (le premier n'est pas le bon).
+  const grappler = sceneId ? null : grapplerOf(effect);
+  const scene = (sceneId && game.scenes.get(sceneId)) || (grappler?.isToken ? grappler.token?.parent : null)
+    || (grappler ? (game.scenes.find(s => s.tokens.some(t => t.actorLink && (t.actorId === grappler.id) && s.tokens.some(v => v.actorLink && (v.actorId === actor.id)))) ?? null) : null);
   if ( scene ) return tokenIn(scene, actor);
   return actor.getDependentTokens?.({ concreteOnly: true })[0] ?? null;
 }

@@ -40,8 +40,9 @@ const token = canvas.scene.tokens.get(args.target);
 const actor = token.actor;
 const grapple = actor.effects.find(e => !e.disabled && e.statuses?.has("grappled"));
 const zombie = canvas.scene.tokens.get(args.attacker)?.actor;
-const mark = (zombie?.effects ?? []).some(e => e.getFlag("${MODULE_ID}", "grappling")?.target === token.uuid);
-return { hp: actor.system.attributes.hp.value, grappled: !!grapple, escapeDc: grapple?.getFlag("${MODULE_ID}", "escapeDc") ?? null, mark };
+const marks = (zombie?.effects ?? []).map(e => e.getFlag("${MODULE_ID}", "grappling")?.target).filter(Boolean);
+return { hp: actor.system.attributes.hp.value, grappled: !!grapple, escapeDc: grapple?.getFlag("${MODULE_ID}", "escapeDc") ?? null,
+  mark: marks.includes(token.uuid), marks };
 `;
 
 export default {
@@ -109,7 +110,7 @@ export default {
       ctx.expect(r1.choice === GRAPPLE, `la résolution note l'empoignade (${JSON.stringify(r1.choice)})`);
       ctx.expect(s1.hp === s0.hp, `aucun dégât : PV ${s0.hp} → ${s1.hp}`);
       ctx.expect(s1.grappled && (s1.escapeDc === 11), `Agrippé, DD d'évasion 11 (${JSON.stringify(s1)})`);
-      ctx.expect(s1.mark, "la marque « Agrippe : Guerrier » est sur le Zombi");
+      ctx.expect(s1.mark, `la marque « Agrippe : Guerrier » est sur le Zombi (marques : ${JSON.stringify(s1.marks)})`);
       if ( !s1.grappled ) ctx.log((await ctx.engineLog().catch(() => [])).filter(l => /grapple|grappled|condition/.test(l)).slice(-4).join(" | "));
 
       await clear();
