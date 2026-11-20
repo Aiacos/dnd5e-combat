@@ -70,6 +70,7 @@ import { holdForAtCost } from "./success-at-cost.mjs";
 import { waitForAnimations } from "./animations.mjs";
 import { isRangedWeaponAttack } from "../adapter/cover.mjs";
 import { TRANSIENT_LINGER_MS, deserializeDamages, dispatcher, healsDownedToMax, healsMax, hpTierFor, prismaticFor, slotHealBonus, speakerTokenUuid } from "./engine.mjs";
+import { healingTotal, withMaxRaise } from "../core/heal-raises-max.mjs";
 
 /* -------------------------------------------- */
 /*  Commandes de la machine d'action            */
@@ -246,6 +247,16 @@ export const COMMANDS = {
       // et une cible à pleins PV ne gagnait rien (`effectsFirst`). Les effets sans condition seulement.
       const first = (entry.multiplier > 0) && (contentOf(activity?.item).entry?.effectsFirst === true) && (entry.effects ?? []).some(e => !e.if);
       const early = first ? await applyEffectsToToken(carrier, entry.token, entry.effects.filter(e => !e.if)) : [];
+      // Festin des héros : « ses PV maximum augmentent de 2d10, et elle gagne autant de PV » (`healRaisesMax`) — le soin tiré
+      // relève d'abord le maximum, dans l'effet qui vient d'être posé ; il tombe donc avec lui.
+      const raise = (early.length && (contentOf(activity?.item).entry?.healRaisesMax === true)) ? healingTotal(rolled) : 0;
+      if ( raise > 0 ) {
+        for ( const uuid of early ) {
+          const effect = await fromUuid(uuid);
+          if ( effect ) await effect.update({ "system.changes": withMaxRaise(effect.toObject().system?.changes ?? [], raise) });
+        }
+        log(`${activity?.item?.name}: hit point maximum raised by ${raise}`);
+      }
       const hp = ((entry.multiplier > 0) && !shielded?.spared)
         ? await applyDamageToToken(ward?.interpose ?? entry.token, rolled, damageMessage, { multiplier: entry.multiplier, reduction: entry.reduction ?? 0, absorbInto: ward?.item ?? null,
           ignoreResistance: resistanceIgnoredBy(source?.actor ?? activity?.actor, activity),   // §134

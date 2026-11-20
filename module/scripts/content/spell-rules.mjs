@@ -173,6 +173,9 @@ export const SPELL_RULES = Object.freeze({
   "death-ward": { wardsAtZero: true },
   // §303 : Aide — les PV maximum relevés avant le soin des PV actuels.
   "aid": { effectsFirst: true },
+  // Festin des héros (SRD 5.2) : « ses PV maximum augmentent de 2d10, et elle gagne autant de PV » — « Consume Feast » soigne de
+  // 2d10 et pose les bienfaits, mais le maximum ne bougeait pas.
+  "heroes-feast": { effectsFirst: true, healRaisesMax: true },
   // §75 : Cordon de flèches — quatre projectiles, puis le sort prend fin (content/triggers.mjs).
   // §303 : « quatre munitions », « deux de plus par niveau d'emplacement au-dessus du 2e » — 2 × le niveau de lancement.
   // §366 : « vous pouvez désigner des créatures, que le sort ignore » — les alliés du lanceur.

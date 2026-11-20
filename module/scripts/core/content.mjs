@@ -326,6 +326,8 @@
  *                                               contre lui pendant ce tour (Tactiques défensives : Défense multiattaque)
  *     effectsFirst?: true                       §303 : les effets de l'activité posés avant ses dégâts ou son soin (Aide : PV max relevés
  *                                               d'abord, sinon le soin est plafonné aux PV max d'avant)
+ *     healRaisesMax?: true                      avec `effectsFirst` : le soin tiré relève aussi les PV maximum d'autant, dans
+ *                                               l'effet posé avant lui (Festin des héros)
  *     zoneBound?: true                          §300 : les effets de l'item ne tiennent que dans une de ses zones (Esprits gardiens : la
  *                                               Vitesse divisée par deux tombe à la sortie de l'émanation ; runtime/areas.mjs)
  *     duringRage?: { enable?, post?, disable?, copiesEnd?, oneOption?, cures?, onStart? }  §299 : effets de l'item tenus par la Rage du porteur —
