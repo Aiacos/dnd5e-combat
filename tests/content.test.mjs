@@ -289,7 +289,7 @@ describe("contenu livré", () => {
       "misty-step", "mm-beholder-eye-rays", "mm-homunculus-bite", "mm-pseudodragon-sting", "mm-wereboar-gore", "mm-wight-life-drain",
       "modify-memory", "monks-focus", "moon-touched-sword", "moon-touched-sword-enchanted", "moonbeam", "moonlight-step",
       "mordenkainens-faithful-hound", "mordenkainens-magnificent-mansion", "mordenkainens-sword", "natural-recovery",
-      "natures-sanctuary", "natures-veil", "natures-ward", "natures-wrath",
+      "naturally-stealthy", "natures-sanctuary", "natures-veil", "natures-ward", "natures-wrath",
       "necklace-of-adaptation", "necklace-of-prayer-beads", "necrotic-husk", "negative-energy-cone", "net", "nimble-escape",
       "nine-lives-stealer-enchanted", "nondetection", "noxious-miasma", "oathbow-enchanted", "observant", "obsidian-steed-very-rare", "oil",
       "oil-of-sharpness", "oil-of-slipperiness", "oil-of-taggit", "onyx-dog-rare", "open-hand-technique", "orb-of-dragonkind",
