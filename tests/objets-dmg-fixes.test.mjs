@@ -260,3 +260,18 @@ describe("Balai volant (SRD 5.2) : l'activation vise son utilisateur, qui choisi
     expect(entry.choice).toEqual({ effects: "one" });
   });
 });
+describe("Bougie d'invocation (SRD 5.2) : l'Avantage aux Tests de d20 posé sur qui l'allume", () => {
+  const fixes = ITEM_FIXES["candle-of-invocation"].dataFixes;
+  const item = { effects: [{ _id: "gN0PgSLPlbsD8T2g", system: { changes: [] } }],
+    system: { activities: { hG1Iplp3uG2fd39N: { target: { affects: { type: "" } } } } } };
+  it("l'activité vise son utilisateur", () => {
+    expect(dataFixPlan(item, fixes).item).toEqual({ "system.activities.hG1Iplp3uG2fd39N.target.affects.type": "self" });
+  });
+  it("l'effet vide reçoit 19 changements : attaque, sauvegarde et test pour chaque caractéristique, et la mort", () => {
+    const changes = dataFixPlan(item, fixes).effects[0]["system.changes"];
+    expect(changes).toHaveLength(19);
+    expect(changes.every(c => (c.type === "add") && (c.value === 1) && c.key.endsWith(".roll.mode"))).toBe(true);
+    expect(changes.map(c => c.key)).toEqual(expect.arrayContaining(["system.abilities.str.attack.roll.mode",
+      "system.abilities.wis.save.roll.mode", "system.abilities.cha.check.roll.mode", "system.attributes.death.roll.mode"]));
+  });
+});

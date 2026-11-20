@@ -206,6 +206,7 @@ describe("contenu livré", () => {
       "bowl-of-commanding-water-elementals", "bracers-of-archery", "bracers-of-defense", "brave",
       "brazier-of-commanding-fire-elementals", "breath-weapon", "bronze-griffon-rare", "broom-of-flying", "brutal-strike",
       "brute-spirit", "bubble-dash", "bullseye-lantern", "burnt-othur-fumes", "call-lightning", "calm-emotions", "caltrops", "candle",
+      "candle-of-invocation",
       "cape-of-the-mountebank", "captains-charm", "careful-spell", "carrion-crawler-mucus", "cause-fear", "celestial-revelation",
       "censer-of-controlling-air-elementals", "chain-lightning", "channel-divinity", "channel-divinity-cleric", "channel-divinity-paladin", "charger",
       "charging-horn", "charm-monster", "charm-person", "chill-touch", "chromatic-orb", "circle-of-mortality", "circle-of-power",
