@@ -11,6 +11,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
 import { combatantFor, readBudget } from "./turn.mjs";
 import { creatureTypeOf, originItemOf, carriesEffectFrom, weaponKind } from "./facts.mjs";
+import { riderAffordable } from "../core/held-effect.mjs";
 import { timedWait } from "./dialogs.mjs";
 import { isSpellCast } from "./scrolls.mjs";
 import { spendItemUses } from "./uses.mjs";
@@ -152,7 +153,8 @@ export function riderOptions(actor, target, activity=null, attackMode=null) {
         const uses = item.system.uses ?? {};
         left = Number.isFinite(Number(uses.value)) ? Number(uses.value) : (Number(uses.max) || 0) - (Number(uses.spent) || 0);
       }
-      if ( !(left > 0) ) continue;
+      // Paume vibratoire : une faveur qui coûte plusieurs utilisations de l'item qui la paie (`cost` : 4 points de crédo).
+      if ( !riderAffordable(left, rule.cost) ) continue;
       // §95 : seulement tant qu'un effet de l'item est sur le porteur (Avatar terrifiant : sous la Forme d'effroi).
       if ( rule.whileActive && !carriesEffectFrom(actor, identifierOf(item).id) ) continue;
       if ( rule.weapon && !(meleeWeaponHit(activity, attackMode) && wieldsBound(activity, actor, rule.weapon)) ) continue;
@@ -249,7 +251,7 @@ export async function spendSmite(actor, option) {
   }
   if ( option.unlimited ) return;
   if ( option.payer ) {   // §87
-    await spendItemUses(option.payer);
+    await spendItemUses(option.payer, Math.max(1, Number(option.rule?.cost) || 1));
     return;
   }
   if ( option.free || option.rider ) {

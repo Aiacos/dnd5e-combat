@@ -279,7 +279,7 @@ describe("contenu livré", () => {
       "primal-companion", "primal-knowledge", "prismatic-spray", "prismatic-wall", "proboscis", "produce-flame", "project-image",
       "projected-ward", "protection", "protection-from-energy", "protection-from-evil-and-good", "protection-from-poison", "prowl",
       "psionic-power", "psychic-defenses", "psychic-skewer", "psychic-spells", "psychic-veil", "pushing-attack",
-      "quarterstaff-of-the-acrobat", "quickened-spell", "radiant-soul", "radiant-teleport", "rage", "rage-of-the-wilds", "raise-dead",
+      "quarterstaff-of-the-acrobat", "quickened-spell", "quivering-palm", "radiant-soul", "radiant-teleport", "rage", "rage-of-the-wilds", "raise-dead",
       "rally", "ray-of-enfeeblement", "ray-of-frost", "reactive", "reanimated-companion", "reckless-attack", "red-elemental-gem",
       "regenerate", "regeneration", "relentless-endurance", "relentless-hunter", "relentless-rage", "remarkable-athlete",
       "remove-curse", "rend-mind", "repelling-blast", "resilient-sphere", "resistance", "restoring-touch", "resurrection",
