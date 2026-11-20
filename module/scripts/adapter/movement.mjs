@@ -489,10 +489,19 @@ export async function pushAway(source, target, { distance, units }, factors, { t
   // §466 : tirée vers un point, la créature s'arrête quand son espace le couvre.
   const at = point ? grid.getOffset(point) : null;
   const size = sizeOf(target);
+  // La direction du pas, du centre de l'espace (coin `c`, taille `sz`) vers le point.
+  const stepToward = (c, sz, p) => {
+    const origin = grid.getTopLeftPoint(c);
+    const d = pushDirection({ x: origin.x + ((sz.w * grid.sizeX) / 2), y: origin.y + ((sz.h * grid.sizeY) / 2) }, p);
+    return d ? { di: d.di, dj: d.dj } : null;
+  };
   for ( ; cells < wanted; cells++ ) {
     if ( from && (footprintGap({ i: cell.i, j: cell.j, ...size }, from) <= 1) ) break;
     if ( at && towards && (footprintGap({ i: cell.i, j: cell.j, ...size }, { i: at.i, j: at.j, w: 1, h: 1 }) === 0) ) break;
-    const next = { i: cell.i + dir.di, j: cell.j + dir.dj, level: cell.level };
+    // §502 : tirée vers un point, la direction se reprend à chaque pas (une direction arrondie une fois pour toutes passait à côté du
+    // point sans jamais le couvrir, et la créature finissait plus loin qu'au départ — banc du 2026-11-20, Liane avide).
+    const step = (point && towards && !direction) ? (stepToward(cell, size, point) ?? dir) : dir;
+    const next = { i: cell.i + step.di, j: cell.j + step.dj, level: cell.level };
     if ( !world.canStep(cell, next) || !world.canEnd(next) ) break;
     cell = next;
   }
