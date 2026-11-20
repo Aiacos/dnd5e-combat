@@ -208,6 +208,8 @@ export const SPELL_RULES = Object.freeze({
   "sleet-storm": { difficultTerrain: {}, quietPose: true },
   // Flamme sacrée (SRD 5.2) : « la cible ne bénéficie pas d'un abri partiel ni d'un abri aux trois quarts pour cette sauvegarde ».
   "sacred-flame": { saveIgnoresCover: true },
+  // Arrêt du temps (SRD 5.2) : « vous jouez 1d4 + 1 tours d'affilée ». La donnée porte le jet ; rien ne donnait les tours.
+  "time-stop": { extraTurns: { formula: "1d4 + 1" } },
   // §300 : « Croissance » — la zone devient un terrain où chaque mètre coûte 4 mètres de déplacement ; elle reste (durée instantanée).
   // Embroussaillement : « temps d'incantation : action » — la donnée laisse l'activation « spéciale » (rien n'était dépensé).
   "plant-growth": { difficultTerrain: { cost: 4 }, usageLimits: { dnd5eactivity000: { cost: "action" } } },
