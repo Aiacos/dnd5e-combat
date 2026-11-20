@@ -719,6 +719,14 @@ export const ITEM_FIXES = Object.freeze({
     triggers: [{ on: "startOfTurn", via: "effect", fromEffect: "dasOthurFumes000",
       do: [{ type: "resave", tally: { successes: 3, failures: 99 } }, { type: "damage", to: "bearer", activity: "6o0JLH0kvEJ1n6D8" }] }]
   },
+  // Brassards d'archer (SRD 5.2) : « +2 aux jets de dégâts effectués avec ces armes » (Arc long, Arc court). L'effet de la donnée
+  // l'ajoutait aux dégâts de toute attaque d'arme à distance : il est vidé, et le +2 vient au jet de dégâts d'un arc.
+  "bracers-of-archery": {
+    dataFixes: [{ effect: "PSGGfFEy4CjBVzyX", path: "system.changes", from: [change("system.bonuses.rwak.damage", "add", 2)],
+      value: [] }],
+    triggers: [{ on: "preDamageRoll", if: { "activity.isAttack": true, "activity.baseItem": ["longbow", "shortbow"] },
+      do: [{ type: "damage", formula: "2", damageType: "weapon" }] }]
+  },
   // O9h (§363) — Potion des pugilistes : « chaque Frappe à mains nues inflige 1d6 dégâts de force en plus sur un coup ; l'effet dure 10
   // minutes ». La donnée n'a pas d'effet : il est créé, posé par « Drink », et porte les dés (la potion bue n'existe plus).
   "potion-of-pugilism": {

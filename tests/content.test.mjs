@@ -4,7 +4,7 @@ import { CONTENT, SHIPPED, SOURCES, registerTable, unregisterTable, registeredTa
 import { effectHolds } from "../module/scripts/core/feats.mjs";
 import { formExpired, revertSeconds, sharedSlotUpdates } from "../module/scripts/core/form-revert.mjs";
 
-const facts = Object.fromEntries(["activity.type", "activity.isAttack", "activity.isSpell", "activity.isWeapon", "activity.weaponKind", "activity.identifier", "activity.id",
+const facts = Object.fromEntries(["activity.type", "activity.isAttack", "activity.isSpell", "activity.isWeapon", "activity.weaponKind", "activity.baseItem", "activity.identifier", "activity.id",
   "activity.hasProperty", "source.hasStatus", "source.hasEffect", "source.creatureType", "source.allyNearTarget", "source.summonNearTarget", "source.seesTarget",
   "target.hasStatus", "target.speaksLanguage", "target.poisonous", "target.carriesMagic", "target.hasMark", "target.hasEffect", "target.hasEffectFrom", "hit.stoppableBy", "hit.critical", "damage.resisted", "target.grappledBySource", "target.wieldsProperty", "target.isSelf", "self.hasShield", "self.wieldsWeapon", "target.hasFeature", "activity.ability", "target.sizeAtMost", "target.within", "target.seesSource", "target.creatureType", "target.immuneTo", "activity.isMelee", "target.hasTempHp", "target.speedZero", "target.atZero", "target.isDead", "damage.hasType", "target.hpAtMost", "condition.gained",
   "target.wounded", "target.bloodied", "source.classLevelAtLeast", "target.nearSelf", "self.seesTarget", "target.hasNotActed", "source.onOwnTurn", "activity.dealsType", "source.hasFeature", "source.hasClassFeature", "activity.cantripOf", "activity.school", "activity.enchantedBy", "source.wildShaped", "activity.classSpell", "source.resists", "source.nearSelf", "self.seesSource", "self.hasEffect", "source.hasEffectFromTarget", "source.hasSense", "target.allied"].map(k => [k, true]));
@@ -201,8 +201,8 @@ describe("contenu livré", () => {
       "blue-elemental-gem", "blur", "boon-of-combat-prowess", "boon-of-dimensional-travel", "boon-of-energy-resistance",
       "boon-of-fate", "boon-of-fortitude", "boon-of-irresistible-offense", "boon-of-recovery", "boon-of-speed", "boon-of-spell-recall",
       "boon-of-the-night-spirit", "boots-of-elvenkind", "boots-of-speed", "boots-of-striding-and-springing",
-      "bowl-of-commanding-water-elementals",
-      "bracers-of-defense", "brave", "brazier-of-commanding-fire-elementals", "breath-weapon", "bronze-griffon-rare", "brutal-strike",
+      "bowl-of-commanding-water-elementals", "bracers-of-archery", "bracers-of-defense", "brave",
+      "brazier-of-commanding-fire-elementals", "breath-weapon", "bronze-griffon-rare", "brutal-strike",
       "brute-spirit", "bubble-dash", "bullseye-lantern", "burnt-othur-fumes", "call-lightning", "calm-emotions", "caltrops", "candle",
       "cape-of-the-mountebank", "captains-charm", "careful-spell", "carrion-crawler-mucus", "cause-fear", "celestial-revelation",
       "censer-of-controlling-air-elementals", "chain-lightning", "channel-divinity", "channel-divinity-cleric", "channel-divinity-paladin", "charger",
