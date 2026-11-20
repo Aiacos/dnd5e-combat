@@ -209,12 +209,15 @@ async function refundFailed(activity, item) {
   console.log(`${MODULE_ID} | ${item.name}: still failed, cost refunded and the feature is spent`);
 }
 
-export async function offerRollBonus(actor, { kind, what, total, needed=null, skill=null, statuses=[], d20=null, ability=null, seconds=null }) {
+export async function offerRollBonus(actor, { kind, what, total, needed=null, skill=null, statuses=[], d20=null, ability=null,
+  seconds=null, spell=false }) {
   for ( const item of actor?.items ?? [] ) {
     const rule = contentOf(item).entry?.rollBonus;
     if ( !rule || !(rule.on ?? []).includes(kind) ) continue;
     // O6 (§342) : un anneau ou un objet merveilleux ne joue que porté, et harmonisé s'il l'exige.
     if ( (item.type === "equipment") && ((item.system?.equipped === false) || ((item.system?.attunement === "required") && !item.system?.attuned)) ) continue;
+    // Sort chercheur : « si vous faites un jet d'attaque pour un sort et ratez » — pas une attaque d'arme.
+    if ( rule.spellAttack && !((kind === "attack") && spell) ) continue;
     if ( (kind === "check") && rule.skills && !rule.skills.includes(skill) ) continue;
     if ( rule.statuses && !rule.statuses.some(s => statuses.includes(s)) ) continue;
     // §133 : seulement une sauvegarde de ces caractéristiques (Tueur de mages, Esprit gardé : Intelligence, Sagesse, Charisme).

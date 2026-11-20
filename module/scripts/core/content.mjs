@@ -849,6 +849,7 @@
  *                                               nouveau imposé (Inébranlable) ; `failRefund: true` — le dé ajouté à un test qui reste raté
  *                                               (DD connu) : ce que l'activité a coûté revient, l'item perd une utilisation (Fanfaronnade) ;
  *                                               `abilities` vaut aussi pour les tests (caractéristique du test)
+ *                                               `spellAttack: true` — seulement le jet d'attaque d'un sort (Sort chercheur)
  *     transpose?: { summon }                    échanger sa place avec l'invocation pilotée de l'item `summon` (identifiant),
  *                                               quand l'action Bonus la crée ou la déplace (§38.2, Troc du filou ; core/pilot.mjs)
  *     portent?: { dice }                        Présage (§36) : `dice` d20 notés à chaque Repos long (Présage : 2 ; Présage

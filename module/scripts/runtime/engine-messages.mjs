@@ -70,7 +70,9 @@ async function inspiredAttack(message, roll, targets) {
   // §90 : Attaque précise — encore ratée, l'attaquant peut ajouter son propre dé (`rollBonus` sur "attack").
   const total = roll.total + bonus;
   const rules = actor.items.some(i => contentOf(i).entry?.rollBonus?.on?.includes("attack"));
-  const precise = (rules && (total < needed)) ? await offerRollBonus(actor, { kind: "attack", what: loc("Inspiration.Attaque"), total, needed, d20: roll.heroic?.kept ?? keptD20(message.rolls?.[0]) }) : 0;
+  const precise = (rules && (total < needed))
+    ? await offerRollBonus(actor, { kind: "attack", what: loc("Inspiration.Attaque"), total, needed,
+      d20: roll.heroic?.kept ?? keptD20(message.rolls?.[0]), spell: message.getAssociatedActivity?.()?.item?.type === "spell" }) : 0;
   if ( precise ) log(`${actor.name}: die added to their attack, ${total} + ${precise} = ${total + precise}`);
   // §135 : Faveur de prouesse martiale, Visée sans pareille — encore ratée : « vous pouvez toucher à la place ».
   const peerless = ((total + precise) < needed) && await offerPeerlessAim(actor, { total: total + precise, needed }) ? needed - (total + precise) : 0;

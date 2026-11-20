@@ -288,6 +288,11 @@ export function validateExtras(entry, at, errors) {
   // Relevé des trous : `reroll` — sans activité, le d20 relancé avec ce bonus, le nouveau jet imposé, une fois par effet de `during`.
   // §280 : ou, avec une activité qui le paie, le d20 relancé (bonus facultatif), le nouveau jet imposé (Inébranlable) ; `failRefund` : le
   // test encore raté rend ce que l'activité a coûté, et l'item perd une utilisation (Fanfaronnade).
+  // `spellAttack: true` — seulement le jet d'attaque d'un sort (Sort chercheur) ; ne vaut qu'avec `on: ["attack"]`.
+  if ( isObject(entry.rollBonus) && ("spellAttack" in entry.rollBonus)
+    && !((entry.rollBonus.spellAttack === true) && Array.isArray(entry.rollBonus.on) && entry.rollBonus.on.includes("attack")) ) {
+    errors.push(`${at}rollBonus.spellAttack: true, with on: ["attack"]`);
+  }
   const reroll = entry.rollBonus?.reroll;
   const paid = isId(entry.rollBonus?.activity);
   const rerollOk = (reroll === undefined) || (isObject(reroll) && Object.keys(reroll).every(k => ["bonus", "during"].includes(k))
@@ -301,7 +306,7 @@ export function validateExtras(entry, at, errors) {
     && (!("luck" in entry.rollBonus) || (entry.rollBonus.luck === true))
     && (!("succeed" in entry.rollBonus) || (entry.rollBonus.succeed === true))
     && (!("abilities" in entry.rollBonus) || (Array.isArray(entry.rollBonus.abilities) && entry.rollBonus.abilities.length && entry.rollBonus.abilities.every(a => (typeof a === "string") && a)))
-    && Object.keys(entry.rollBonus).every(k => ["activity", "on", "skills", "statuses", "luck", "succeed", "abilities", "reroll", "failRefund"].includes(k))) ) errors.push(`${at}rollBonus: { activity (or reroll: { bonus, during }), on: [${ROLL_BONUS_ON.join(" | ")}], skills?, statuses?, luck?: true, succeed?: true, abilities?, reroll?: { bonus? }, failRefund?: true }`);
+    && Object.keys(entry.rollBonus).every(k => ["activity", "on", "skills", "statuses", "luck", "succeed", "abilities", "reroll", "failRefund", "spellAttack"].includes(k))) ) errors.push(`${at}rollBonus: { activity (or reroll: { bonus, during }), on: [${ROLL_BONUS_ON.join(" | ")}], skills?, statuses?, luck?: true, succeed?: true, abilities?, reroll?: { bonus? }, failRefund?: true }`);
   if ( ("transpose" in entry) && !(isObject(entry.transpose) && (typeof entry.transpose.summon === "string") && entry.transpose.summon
     && Object.keys(entry.transpose).every(k => k === "summon")) ) errors.push(`${at}transpose: { summon } (identifier of the summoning item)`);
   if ( ("portent" in entry) && !(isObject(entry.portent) && Number.isInteger(entry.portent.dice) && (entry.portent.dice > 0)

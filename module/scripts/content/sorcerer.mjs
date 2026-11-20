@@ -36,6 +36,10 @@ export const SORCERER = Object.freeze({
     healPool: { activities: ["hcsPW0N4FkiDoaIy", "gVIgwimuEujzofWA"], choose: true } },
   // §296 : Sort jumeau — « le niveau effectif du sort augmente de 1 » : une cible de plus à la visée de groupe (ui/pointer.mjs).
   "twinned-spell": meta("WsG9JmGU7gRGiTRq", "twinned"),
+  // Sort chercheur (SRD 5.2) : « si vous faites un jet d'attaque pour un sort et ratez, vous pouvez dépenser 1 point de sorcellerie
+  // pour relancer le d20, et devez utiliser le nouveau jet ». Proposé après le jet raté (il n'est pas choisi au lancement, et vaut
+  // même si une autre option de Métamagie a servi) ; l'activité de l'item paie le point.
+  "seeking-spell": { rollBonus: { activity: "vudKvHh2PbAiDXSE", on: ["attack"], reroll: {}, spellAttack: true } },
   // Affinité élémentaire (Draconique 6) : « + votre modificateur de Charisme à un jet de dégâts » d'un sort du type choisi.
   "elemental-affinity": { triggers: ["acid", "cold", "fire", "lightning", "poison"].map(affinity) },
   // Défenses psychiques (Aberrante 6) : Avantage aux sauvegardes contre Charmé et Effrayé.
