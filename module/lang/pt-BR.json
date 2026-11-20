@@ -2302,6 +2302,7 @@
   "DND5ECOMBAT.RenvoyerSort.Oui": "Devolver ({item})",
   "DND5ECOMBAT.RenvoyerSort.Copie": "{spell} (devolvida)",
   "DND5ECOMBAT.RenvoyerSort.Carte": "Magia devolvida contra {name}",
+  "DND5ECOMBAT.ToursAffilee.Jet": "{item}: {n} turnos seguidos",
   "DND5ECOMBAT.Tirer": "Puxar",
   "DND5ECOMBAT.Repousser": "Empurrar",
   "DND5ECOMBAT.SeRelever.Question": "Você está Caído: usar sua Reação para se levantar?",

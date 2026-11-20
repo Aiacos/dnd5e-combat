@@ -109,6 +109,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `evasion` | 2 | `evasion`, `leading-evasion` |
 | `exclusiveWeapon` | 3 | `berserker-axe-enchanted`, `oathbow-enchanted`, `sword-of-vengeance-enchanted` |
 | `extraFirstTurn` | 1 | `thiefs-reflexes` |
+| `extraTurns` | 1 | `time-stop` |
 | `fadesOnLongRest` | 2 | `raise-dead`, `resurrection` |
 | `failMargins` | 3 | `lolths-sting`, `mm-homunculus-bite`, `spiders-sting` |
 | `flammable` | 2 | `oil`, `web` |

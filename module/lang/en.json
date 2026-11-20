@@ -1092,6 +1092,7 @@
   "DND5ECOMBAT.RenvoyerSort.Oui": "Turn it back ({item})",
   "DND5ECOMBAT.RenvoyerSort.Copie": "{spell} (reflected)",
   "DND5ECOMBAT.RenvoyerSort.Carte": "Spell turned back on {name}",
+  "DND5ECOMBAT.ToursAffilee.Jet": "{item}: {n} turns in a row",
   "DND5ECOMBAT.Tirer": "Pull",
   "DND5ECOMBAT.Repousser": "Push",
   "DND5ECOMBAT.SeRelever.Question": "You are Prone: use your Reaction to stand up?",

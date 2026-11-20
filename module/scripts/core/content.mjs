@@ -579,6 +579,8 @@
  *                                               (poussée, traction) — Harnois nain ; demandé, jamais d'office
  *     castFromBearer?: { distance, units }      the caster's spell range is also measured from a creature carrying an effect
  *                                               of the item, when within that distance of the caster (Gaze of Two Minds)
+ *     extraTurns?: { formula }                  en combat, l'utilisation donne à son auteur ce nombre de tours d'affilée : le
+ *                                               combat revient à lui à la fin de chacun (Arrêt du temps ; core/extra-turns.mjs)
  *     targetedSummon?: true                      §394 : l'activité d'invocation se vise d'un clic (Doigt de mort : le cadavre) ;
  *                                               sans elle, une invocation ne vise jamais, quoi que disent ses données
  *     placesSummons?: true                       §109 : l'invocation se place toujours, même quand l'activité dit le contraire
