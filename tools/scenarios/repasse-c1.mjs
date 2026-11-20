@@ -58,6 +58,8 @@ export default {
       if ( ctx.ownCombat ) await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {});
       ctx.ownCombat = null;
       await unlend();
+      // Retirer un sort retire aussi, juste après, l'effet qu'il a posé : attendre, sinon l'effet relu ici n'existe plus quand on le supprime.
+      await pause(800);
       await clearEffects();
       for ( const t of all ) {
         const h = homes.get(t.id);
