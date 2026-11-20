@@ -8,6 +8,7 @@ import { typesLabel } from "../adapter/eligibility.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
 import { convertLength } from "../core/units.mjs";
 import { keptAndDropped } from "../core/d20.mjs";
+import { manualModeOverride } from "../core/conditions.mjs";
 
 /**
  * Réglage de monde (éteint par défaut : au MJ de l'activer) : une rangée par cible — icône du verdict, portrait, nom, détail —,
@@ -325,14 +326,19 @@ export function describeReason(r) {
   return game.i18n.format(`DND5ECOMBAT.Raison.${r.who}`, { status: r.key === "proneFar" ? loc("Raison.proneFar") : statusName(r.key) });
 }
 
-/** « Avantage : cible À terre, attaquant Invisible » : les lignes, sous le jet d'attaque ou sur la carte unique (ui/compact.mjs). */
-export function modifierLines(modifiers) {
+/**
+ * « Avantage : cible À terre, attaquant Invisible » : les lignes, sous le jet d'attaque ou sur la carte unique (ui/compact.mjs). §480 : avec
+ * le jet lancé (`roll`), une ligne de plus quand un Désavantage du moteur a été écarté à la main (`manualModeOverride`).
+ */
+export function modifierLines(modifiers, roll=null) {
   const describe = describeReason;
   const lines = [];
   if ( !modifiers.agreed ) lines.push({ css: "pending", text: loc("CiblesDivergentes") });
   if ( modifiers.advantage?.length ) lines.push({ css: "hit", text: loc("LabelValue", { label: loc("Avantage"), value: modifiers.advantage.map(describe).join(", ") }) });
   if ( modifiers.disadvantage?.length ) lines.push({ css: "miss", text: loc("LabelValue", { label: loc("Desavantage"), value: modifiers.disadvantage.map(describe).join(", ") }) });
   if ( modifiers.advantage?.length && modifiers.disadvantage?.length ) lines.push({ css: "pending", text: loc("SAnnulent") });
+  const manual = roll ? manualModeOverride(modifiers, roll.options) : null;
+  if ( manual ) lines.push({ css: "pending", text: loc(`ModeManuel.${manual}`) });
   return lines;
 }
 
@@ -355,8 +361,8 @@ function renderD20(message, html) {
   if ( nodes ) html.querySelector(".message-content")?.append(block([{ css: "note", nodes }]));
 }
 
-function renderModifiers(html, modifiers) {
-  const lines = modifierLines(modifiers);
+function renderModifiers(html, modifiers, roll=null) {
+  const lines = modifierLines(modifiers, roll);
   if ( lines.length ) html.querySelector(".message-content")?.append(block(lines));
 }
 
@@ -550,7 +556,7 @@ export function registerChat() {
     if ( overridden?.length ) renderOverridden(html, overridden);
     if ( message.isContentVisible !== false ) renderD20(message, html);   // un jet secret garde ses dés
     const modifiers = message.getFlag(MODULE_ID, "modifiers");
-    if ( modifiers ) renderModifiers(html, modifiers);
+    if ( modifiers ) renderModifiers(html, modifiers, (message.type === "attack") ? message.rolls?.[0] : null);
     const bonuses = message.getFlag(MODULE_ID, "bonuses");
     if ( bonuses?.length ) renderBonuses(html, bonuses);
     // Une résolution d'un ancien schéma (avant la 0.9.0) n'est plus affichée.

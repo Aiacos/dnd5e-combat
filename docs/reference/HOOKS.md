@@ -258,27 +258,28 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 6. budget: spending not recorded _(MJ)_
 7. Dispel Magic: nothing dispelled _(MJ)_
 8. trace or mark not handled _(MJ)_
-9. granted activity not given _(MJ)_
-10. backfire: explosion chance not rolled _(MJ)_
-11. weapon mastery: mark not used up _(MJ)_
-12. maneuver: Bait and Switch or Commander's Strike not played _(MJ)_
-13. Heroic Inspiration not offered on Initiative _(MJ)_
-14. Initiative d20 not rerolled _(MJ)_
-15. effect end when the caster targets another creature: not judged _(MJ)_
-16. Rage: upkeep not recorded _(MJ)_
-17. swallow / engulf: action not tracked _(MJ)_
-18. fall damage not applied _(MJ)_
-19. Ready: "attacks / casts a spell" trigger not checked _(MJ)_
-20. effect ending on the caster's action not removed _(MJ)_
-21. help _(MJ)_
-22. group roll: result not processed
-23. tether: not recorded _(MJ)_
-24. single card: roll not folded
-25. GM alert: not posted _(MJ)_
-26. GM alert: banner not shown
-27. chat log purge _(MJ)_
-28. visual feedback: effect ending
-29. group roll: tracker not opened
+9. manual roll mode: GM not told _(MJ)_
+10. granted activity not given _(MJ)_
+11. backfire: explosion chance not rolled _(MJ)_
+12. weapon mastery: mark not used up _(MJ)_
+13. maneuver: Bait and Switch or Commander's Strike not played _(MJ)_
+14. Heroic Inspiration not offered on Initiative _(MJ)_
+15. Initiative d20 not rerolled _(MJ)_
+16. effect end when the caster targets another creature: not judged _(MJ)_
+17. Rage: upkeep not recorded _(MJ)_
+18. swallow / engulf: action not tracked _(MJ)_
+19. fall damage not applied _(MJ)_
+20. Ready: "attacks / casts a spell" trigger not checked _(MJ)_
+21. effect ending on the caster's action not removed _(MJ)_
+22. help _(MJ)_
+23. group roll: result not processed
+24. tether: not recorded _(MJ)_
+25. single card: roll not folded
+26. GM alert: not posted _(MJ)_
+27. GM alert: banner not shown
+28. chat log purge _(MJ)_
+29. visual feedback: effect ending
+30. group roll: tracker not opened
 
 ### `createCombatant`
 

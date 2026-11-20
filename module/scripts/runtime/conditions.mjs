@@ -1,5 +1,6 @@
 import { MODULE_ID } from "../constants.mjs";
-import { attackModifiers, combineTargets } from "../core/conditions.mjs";
+import { attackModifiers, combineTargets, manualModeOverride } from "../core/conditions.mjs";
+import { alertGM } from "./gm-alert.mjs";
 import { attackContext, registerTurnStatuses, setStatus, TURN_STATUSES, frightenedSourceSeen } from "../adapter/conditions.mjs";
 import { tokenOnViewedScene } from "../adapter/vision.mjs";
 import { declaredAttackBonuses } from "../adapter/triggers.mjs";
@@ -8,7 +9,7 @@ import { readUnitFactors } from "../adapter/units.mjs";
 import { route } from "./router.mjs";
 import { takeAttackMods } from "./reactions.mjs";
 import { foretoldRange } from "../core/portent.mjs";
-import { log } from "./shared.mjs";
+import { log, loc } from "./shared.mjs";
 import { enqueue } from "./queue.mjs";
 import { normalizeTargetModes, attackModeAgainst } from "../core/target-modes.mjs";
 
@@ -163,9 +164,26 @@ function onGivenTargetModes(config, dialogConfig, messageConfig) {
   return true;
 }
 
+/**
+ * §480 : chez le MJ actif, à la création d'un jet d'attaque — un Désavantage décidé par le moteur, écarté à la main (touche d'Avantage ou
+ * bouton de la fenêtre de jet de dnd5e) : la règle permet au MJ de trancher, rien n'est refusé, mais le MJ le sait (alerte MJ, réglage
+ * `gmAlerts`). La carte le dit aussi à tous (ui/chat.mjs, `modifierLines`).
+ */
+function onAttackMessage(message) {
+  if ( message.type !== "attack" ) return;
+  const manual = manualModeOverride(message.getFlag(MODULE_ID, "modifiers"), message.rolls?.[0]?.options);
+  if ( !manual ) return;
+  const actor = message.getAssociatedActor?.() ?? null;
+  const item = message.getAssociatedItem?.() ?? null;
+  log(`attack: Disadvantage set aside by hand (${manual}) — ${actor?.name ?? "?"}, ${item?.name ?? "?"}`);
+  alertGM({ text: loc(`ModeManuel.Alerte.${manual}`, { actor: actor?.name ?? message.alias ?? "", item: item?.name ?? "" }), item, actor })
+    .catch(err => console.error(`${MODULE_ID} | manual roll mode: GM notice`, err));
+}
+
 /* -------------------------------------------- */
 
 export function registerConditions() {
+  route("createChatMessage", onAttackMessage, { executor: true, label: "manual roll mode: GM not told" });
   registerTurnStatuses();
   route("dnd5e.preRollAttackV2", onPreRollAttack, { cancellable: true, label: "condition advantage and disadvantage" });
   route("dnd5e.preRollAttackV2", onGivenTargetModes, { cancellable: true, label: "advantage and disadvantage given per target" });

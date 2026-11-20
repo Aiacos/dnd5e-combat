@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-364 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+365 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -44,6 +44,7 @@ la sélection sans rien jouer.
 | `avaler` |  | §18.17 | Béhir : avalé, abri total, emporté, dégâts, régurgité, libéré |
 | `avant-attaque` |  | §34 §36 | Esquive des ombres, Éclat protecteur, Présage cosmique (Péril, Fortune) |
 | `avantage-declare` |  | §16 | Tactique de meute (allié au contact), Lueurs féeriques (effet sur la cible) |
+| `avantage-manuel` |  | §480 | la carte et le MJ le savent |
 | `baguette-antimagie` |  | §448 | projectiles d'un objet : une charge, forçables dans le champ jusqu'au bout, un seul double clic |
 | `balayage-aptitudes` |  |  | balayage des dons et aptitudes du Manuel des joueurs (Arène des sorts) |
 | `balayage-enchantements` |  | §391 §77 §16.39 | balayage des enchantements et transformations à plusieurs profils (barre, sans emplacement) |

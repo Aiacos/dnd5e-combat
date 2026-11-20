@@ -295,7 +295,7 @@ function renderSummary(carrier, html) {
     if ( line ) lines.push(line);
     // Ce que le moteur écrit sous ces jets (raisons d'Avantage, dégâts ajoutés) : sur la carte, puisqu'ils sont repliés.
     const modifiers = m.getFlag(MODULE_ID, "modifiers");
-    if ( modifiers ) lines.push(...modifierLines(modifiers));
+    if ( modifiers ) lines.push(...modifierLines(modifiers, (m.type === "attack") ? m.rolls?.[0] : null));
     const bonuses = m.getFlag(MODULE_ID, "bonuses");
     if ( bonuses?.length ) lines.push(...bonusLines(bonuses));
   }

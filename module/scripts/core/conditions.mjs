@@ -123,6 +123,23 @@ export function combineTargets(perTarget) {
   return { mode: 0, agreed: false };
 }
 
+/**
+ * §480 : le Désavantage décidé par le moteur, écarté à la main au moment du jet (Discord, Archibald, 2026-11-13). dnd5e laisse le joueur
+ * choisir : la touche d'Avantage (Alt) le combine au Désavantage (les deux : jet normal, D20Roll.applyKeybindings), le bouton « Avantage »
+ * ou « Normal » de la fenêtre de jet le remplace (D20RollConfigurationDialog#_finalizeConfig). Ni l'un ni l'autre ne pose
+ * `options.advantage` : une vraie source d'Avantage (un effet, le moteur) le pose, et alors le jet normal est la règle.
+ * @param {{agreed?: boolean, advantage?: object[], disadvantage?: object[]}|null} modifiers  Les raisons du moteur (flag `modifiers`).
+ * @param {{advantage?: boolean, advantageMode?: number}|null} options  Les options du jet lancé.
+ * @returns {"cancelled"|"replaced"|null}  Jet normal ou à l'Avantage malgré le Désavantage ; null sinon.
+ */
+export function manualModeOverride(modifiers, options) {
+  if ( !modifiers?.agreed || !modifiers.disadvantage?.length || modifiers.advantage?.length ) return null;
+  if ( !options || options.advantage ) return null;
+  if ( options.advantageMode === 1 ) return "replaced";
+  if ( options.advantageMode === 0 ) return "cancelled";
+  return null;
+}
+
 /** Une attaque qui touche cette cible est-elle d'office un coup critique ? */
 export function isAutoCritical(targetStatuses, adjacent) {
   return adjacent && AUTO_CRITICAL.some(s => targetStatuses.includes(s));
