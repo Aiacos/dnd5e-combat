@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-900 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+901 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -47,7 +47,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `cellWall` | 2 | `blade-barrier`, `wall-of-thorns` |
 | `chain` | 1 | `chain-lightning` |
 | `checkPoses` | 1 | `maze` |
-| `choice` | 22 | `beguiling-magic`, `bestow-curse`, `blindness-deafness`, `blur`, `calm-emotions`, `contagion`, … |
+| `choice` | 23 | `beguiling-magic`, `bestow-curse`, `blindness-deafness`, `blur`, `broom-of-flying`, `calm-emotions`, … |
 | `climbsOnTurn` | 1 | `acrobatic-movement` |
 | `coats` | 1 | `poison-basic` |
 | `combatInspiration` | 1 | `combat-inspiration` |
@@ -66,7 +66,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `curesAll` | 7 | `elixir-of-health`, `hand-of-ultimate-mercy`, `heal`, `keoghtoms-ointment`, `mass-heal`, `potion-of-vitality`, … |
 | `curesOn` | 5 | `dispel-evil-and-good`, `hand-of-healing`, `lay-on-hands`, `physicians-touch`, `restoring-touch` |
 | `damageShield` | 2 | `resistance`, `ring-of-warmth` |
-| `dataFixes` | 92 | `antilife-shell`, `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `baba-yagas-dancing-broom`, … |
+| `dataFixes` | 93 | `antilife-shell`, `antimatter-rifle`, `antitoxin`, `armor-of-vulnerability`, `awareness-ioun-stone`, `baba-yagas-dancing-broom`, … |
 | `devours` | 1 | `blackrazor` |
 | `difficultTerrain` | 16 | `black-tentacles`, `blade-barrier`, `conjure-minor-elementals`, `earthquake`, `entangle`, `evards-black-tentacles`, … |
 | `discharge` | 1 | `path-to-the-grave` |

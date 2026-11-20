@@ -271,6 +271,11 @@ export const ITEM_FIXES = Object.freeze({
   // Chien d'onyx : l'effet du molosse est transféré au porteur de la figurine (vision aveugle de 18 m).
   // O4 : comme les autres figurines, le molosse agit juste après son maître.
   "onyx-dog-rare": { summon: { initiative: "after" }, dataFixes: [{ effect: "fMC3o8l8D2GamPbU", path: "transfer", from: true, value: false }] },
+  // Balai volant (SRD 5.2) : « Vitesse de vol de 15 m […] qui passe à 9 m s'il porte plus de 100 kg » — l'activité « Activate
+  // Broom » relie les deux effets (charge légère, charge lourde) sans cible : rien n'était posé. Elle vise son utilisateur, qui
+  // choisit l'un des deux.
+  "broom-of-flying": { choice: { effects: "one" },
+    dataFixes: [{ path: "system.activities.2wrq53BtZk3dUEuW.target.affects.type", from: "", value: "self" }] },
   // Orbe des dragons : « 7 charges, 1d4 + 3 à l'aube » — l'item n'en a aucune, ses sorts payants étaient refusés.
   "orb-of-dragonkind": {
     dataFixes: [{ path: "system.uses.max", from: "", value: "7" }, { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]
