@@ -204,7 +204,7 @@ describe("contenu livré", () => {
       "boon-of-fate", "boon-of-fortitude", "boon-of-irresistible-offense", "boon-of-recovery", "boon-of-speed", "boon-of-spell-recall",
       "boon-of-the-night-spirit", "boots-of-elvenkind", "boots-of-speed", "boots-of-striding-and-springing",
       "bowl-of-commanding-water-elementals", "bracers-of-archery", "bracers-of-defense", "brave",
-      "brazier-of-commanding-fire-elementals", "breath-weapon", "bronze-griffon-rare", "brutal-strike",
+      "brazier-of-commanding-fire-elementals", "breath-weapon", "bronze-griffon-rare", "broom-of-flying", "brutal-strike",
       "brute-spirit", "bubble-dash", "bullseye-lantern", "burnt-othur-fumes", "call-lightning", "calm-emotions", "caltrops", "candle",
       "cape-of-the-mountebank", "captains-charm", "careful-spell", "carrion-crawler-mucus", "cause-fear", "celestial-revelation",
       "censer-of-controlling-air-elementals", "chain-lightning", "channel-divinity", "channel-divinity-cleric", "channel-divinity-paladin", "charger",

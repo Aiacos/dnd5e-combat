@@ -290,6 +290,11 @@ export const ITEM_FIXES = Object.freeze({
   // Filet tombant (SRD 5.2, piège) : « la cible réussit automatiquement si elle est de taille TG ou supérieure » — les quatre
   // déclencheurs de la donnée font tirer la sauvegarde à toute créature.
   "falling-net": { saveAutoSuccess: { sizeAtLeast: "huge" } },
+  // Balai volant (SRD 5.2) : « Vitesse de vol de 15 m […] qui passe à 9 m s'il porte plus de 100 kg » — l'activité « Activate
+  // Broom » relie les deux effets (charge légère, charge lourde) sans cible : rien n'était posé. Elle vise son utilisateur, qui
+  // choisit l'un des deux.
+  "broom-of-flying": { choice: { effects: "one" },
+    dataFixes: [{ path: "system.activities.2wrq53BtZk3dUEuW.target.affects.type", from: "", value: "self" }] },
   // Orbe des dragons : « 7 charges, 1d4 + 3 à l'aube » — l'item n'en a aucune, ses sorts payants étaient refusés.
   "orb-of-dragonkind": {
     dataFixes: [{ path: "system.uses.max", from: "", value: "7" }, { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]

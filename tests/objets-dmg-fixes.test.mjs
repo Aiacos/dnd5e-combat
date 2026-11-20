@@ -248,3 +248,15 @@ describe("Filet tombant (SRD 5.2) : une créature de taille TG ou plus réussit 
     expect(validateEntry({ saveAutoSuccess: {} })).not.toEqual([]);
   });
 });
+describe("Balai volant (SRD 5.2) : l'activation vise son utilisateur, qui choisit sa charge", () => {
+  const entry = ITEM_FIXES["broom-of-flying"];
+  it("la cible vide de l'activité devient l'utilisateur ; une cible déjà renseignée ne bouge pas", () => {
+    const item = type => ({ effects: [], system: { activities: { "2wrq53BtZk3dUEuW": { target: { affects: { type } } } } } });
+    expect(dataFixPlan(item(""), entry.dataFixes).item)
+      .toEqual({ "system.activities.2wrq53BtZk3dUEuW.target.affects.type": "self" });
+    expect(dataFixPlan(item("creature"), entry.dataFixes).fields).toEqual([]);
+  });
+  it("les deux effets (charge légère, charge lourde) s'excluent", () => {
+    expect(entry.choice).toEqual({ effects: "one" });
+  });
+});
