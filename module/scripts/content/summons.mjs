@@ -123,6 +123,11 @@ export const SUMMONS = Object.freeze({
   "guardian-of-faith": { initiative: "none", vanishesAfterDamage: 60, pulse: { item: "guarded-area", radius: 10, units: "ft", on: ["enter", "turnStart"], affects: "enemy" } },
   "mordenkainens-faithful-hound": { initiative: "none", pulse: { item: "bite", radius: 5, units: "ft", on: ["casterTurnStart"], affects: "enemy" } },
   "arcane-eye": { initiative: "none", endsSpell: true, pilot: { cost: "bonus", distance: 30, units: "ft", occupies: false } },
+  // SRD 5.2 : ce que ces sorts posent n'est pas une créature qui agit — une image (Image silencieuse, Image majeure, Illusion
+  // programmée, Image projetée, le double de Double illusoire), un capteur (Clairvoyance, Scrutation), un disque, un coffre, une
+  // lumière. Sans déclaration, la fenêtre « Lancer le combat » les inscrivait avec leur propre initiative.
+  ...Object.fromEntries(["silent-image", "major-image", "programmed-illusion", "project-image", "mislead", "clairvoyance",
+    "scrying", "tensers-floating-disk", "secret-chest", "light", "continual-flame"].map(id => [id, { initiative: "none" }])),
   "dancing-lights": { initiative: "none", endsSpell: true, pilot: {
     cost: "bonus", distance: 60, units: "ft", occupies: false, shared: true, cluster: { distance: 20, units: "ft" }, leash: true
   } }

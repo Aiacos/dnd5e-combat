@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { initiativeAfter } from "../module/scripts/core/turn.mjs";
+import { classify } from "../module/scripts/core/combat-launch.mjs";
+import { validateEntry } from "../module/scripts/core/content.mjs";
+import { CONTENT } from "../module/scripts/content/index.mjs";
 import { summonOwnership, summonChoices, asksSummonForm, profilesAtLevel, countChoices, mmActorId, srdMonsterId, asksProfile, actorIdOf } from "../module/scripts/core/summon.mjs";
 
 describe("initiative d'une créature invoquée (§16.13)", () => {
@@ -235,5 +238,26 @@ describe("§394 : invocations visées", () => {
     const { CONTENT } = await import("../module/scripts/content/index.mjs");
     expect(CONTENT["finger-of-death"]?.targetedSummon).toBe(true);
     for ( const id of ["create-undead", "animate-dead", "animate-objects", "summon-celestial"] ) expect(CONTENT[id]?.targetedSummon).toBeUndefined();
+  });
+});
+
+describe("images, capteurs et objets posés par un sort : hors du combat (SRD 5.2)", () => {
+  const still = ["silent-image", "major-image", "programmed-illusion", "project-image", "mislead", "clairvoyance", "scrying",
+    "tensers-floating-disk", "secret-chest", "light", "continual-flame"];
+
+  it("chacun déclare qu'il n'entre pas au combat, et l'entrée se valide", () => {
+    for ( const id of still ) {
+      expect(CONTENT[id]?.summon?.initiative, id).toBe("none");
+      expect(validateEntry({ summon: CONTENT[id].summon }), id).toEqual([]);
+    }
+  });
+
+  it("la fenêtre de lancement ne propose pas une invocation « none » ; sans déclaration, elle la proposait", () => {
+    const token = summon => ({ id: "t", uuid: "Scene.s.Token.t", name: "Image", img: "", actorKey: "a", player: false,
+      online: false, creature: true, alive: true, sameLevel: true, notCombatant: false, summon, master: null, seen: false,
+      hiddenToken: false });
+    const listed = summon => Object.values(classify([token(summon)])).flat().length;
+    expect(listed("none")).toBe(0);
+    expect(listed("own")).toBe(1);
   });
 });
