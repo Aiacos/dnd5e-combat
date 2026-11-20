@@ -152,6 +152,10 @@
  *                                               `"magic"` : contre un sort ou un effet magique (Résistance à la magie, §18.9)
  *     saveIgnoresCover?: true                   la sauvegarde de Dextérité de l'item ne reçoit pas le bonus d'abri de la cible
  *                                               (Flamme sacrée ; core/save-cover.mjs)
+ *     saveResist?: { activity, schools?, singleTarget? }
+ *                                               le porteur de l'objet peut changer en réussite une sauvegarde ratée contre un
+ *                                               sort (de ces écoles ; qui ne cible que lui), sur les utilisations de cette
+ *                                               activité de l'objet — demandé, jamais d'office (Bâton d'envoûtement)
  *     onFell?: { activity?, radius, units }     quand un ennemi tombe à 0 PV sous les coups du porteur, ou à `radius` de
  *                                               lui, l'activité (défaut : le premier soin de l'item) joue (Bénédiction du
  *                                               Ténébreux, §16.25)
