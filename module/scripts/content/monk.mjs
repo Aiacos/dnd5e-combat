@@ -10,6 +10,8 @@
 export const MONK = Object.freeze({
   // §301 : Chute ralentie (niveau 4) — « votre Réaction quand vous tombez : réduisez les dégâts de chute de cinq fois votre niveau » —
   // avant leur application (l'activité « soin » donne le montant retiré).
+  // Défense supérieure (Moine 18, SRD 5.2) : « pendant 1 minute ou jusqu'à ce que vous ayez l'état Neutralisé ».
+  "superior-defense": { endsWhen: { incapacitated: "bearer" } },
   "slow-fall": { triggers: [{ on: "falls", do: [{ type: "use", activity: "cWpSb7kUmzdpFoc4" }, { type: "reduce" }] }] },
   // §123 : « touchez une créature » — Main guérisseuse (Guerrier de la miséricorde), Toucher du médecin (sa Main guérisseuse),
   // Ultime miséricorde (« touchez le cadavre ») : « personnelles » dans les données du Manuel des joueurs, au contact en vrai.

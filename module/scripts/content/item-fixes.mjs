@@ -431,6 +431,8 @@ export const ITEM_FIXES = Object.freeze({
   "baba-yagas-dancing-broom": { summon: { initiative: "after" }, dataFixes: [{ path: "system.attunement", from: "", value: "required" }] },
   // Cor du Valhalla : les guerriers « lancent leur initiative » et agissent à leur tour.
   "silver-horn-of-valhalla": { summon: { initiative: "own" } },
+  // Bouclier animé (SRD 5.2) : « reste animé 1 minute, […] ou jusqu'à ce que vous mouriez ou ayez l'état Neutralisé ».
+  "animated-shield": { endsWhen: { incapacitated: "bearer" } },
   // Fumées : « la zone est fortement obscurcie » — Grenade fumigène, Urne fumigène, nuée du Bâton du grand essaim.
   "grenade-smoke": { obscures: true },
   "eversmoking-bottle": { obscures: true },
