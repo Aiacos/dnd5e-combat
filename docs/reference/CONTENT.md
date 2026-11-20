@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-933 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+934 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -47,7 +47,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `cellWall` | 2 | `blade-barrier`, `wall-of-thorns` |
 | `chain` | 1 | `chain-lightning` |
 | `checkPoses` | 1 | `maze` |
-| `choice` | 23 | `beguiling-magic`, `bestow-curse`, `blindness-deafness`, `blur`, `broom-of-flying`, `calm-emotions`, … |
+| `choice` | 24 | `antipathy-sympathy`, `beguiling-magic`, `bestow-curse`, `blindness-deafness`, `blur`, `broom-of-flying`, … |
 | `climbsOnTurn` | 1 | `acrobatic-movement` |
 | `coats` | 1 | `poison-basic` |
 | `combatInspiration` | 1 | `combat-inspiration` |
