@@ -143,3 +143,13 @@ describe("§54 : marque posée à l'issue (Huile)", () => {
     expect(validateEntry({ triggers: [{ on: "startOfTurn", via: "effect", do: [mark] }] }).length).toBeGreaterThan(0);
   });
 });
+
+describe("effets qui cessent quand leur porteur est Neutralisé (SRD 5.2)", () => {
+  it("Défense supérieure et Bouclier animé le déclarent, comme Vol draconique", () => {
+    for ( const id of ["superior-defense", "animated-shield"] ) {
+      expect(CONTENT[id].endsWhen, id).toEqual({ incapacitated: "bearer" });
+      expect(validateEntry(CONTENT[id]), id).toEqual([]);
+    }
+    expect(CONTENT["draconic-flight"].endsWhen.incapacitated).toBe("bearer");
+  });
+});

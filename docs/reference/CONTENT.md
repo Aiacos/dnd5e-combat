@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-919 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+921 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -97,7 +97,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `endsCurses` | 2 | `greater-restoration`, `remove-curse` |
 | `endsOnUse` | 1 | `dispel-evil-and-good` |
 | `endsOwnConditions` | 1 | `self-restoration` |
-| `endsWhen` | 31 | `banishment`, `bestow-curse`, `channel-divinity`, `channel-divinity-cleric`, `compelled-duel`, `compulsion`, … |
+| `endsWhen` | 33 | `animated-shield`, `banishment`, `bestow-curse`, `channel-divinity`, `channel-divinity-cleric`, `compelled-duel`, … |
 | `endurance` | 1 | `relentless-endurance` |
 | `enterOnPose` | 2 | `conjure-celestial`, `spirit-guardians` |
 | `etherealShift` | 2 | `ethereal-jaunt`, `ethereal-stride` |
