@@ -270,13 +270,15 @@ export function windowIsDamaged(tokenUuids, sourceToken, sourceName, { activity=
  * Une fenêtre ouverte à chaque cible d'un coup (« blessé », « raté ») : sans attente, chacune de son côté ; une créature à 0 PV ne
  * réagit pas. `extra` : ce que la fenêtre ajoute aux faits (les types de dégâts) ; `what` : le mot du journal.
  */
-function fireTargetWindow(window, tokenUuids, sourceToken, sourceName, { activity=null, auto=null, extra={}, promptKey, what }) {
+function fireTargetWindow(window, tokenUuids, sourceToken, sourceName, { activity=null, auto=null, extra={}, promptKey, what, hostile=false }) {
   if ( auto === "none" ) return;
   for ( const uuid of tokenUuids ) (async () => {
     const tokenDocument = await fromUuid(uuid);
     const actor = tokenDocument?.actor;
     if ( !actor || ((actor.system.attributes?.hp?.value ?? 0) <= 0) ) return;
     const attackerToken = await fromUuid(sourceToken ?? "");
+    // §487 : `hostile` — seulement contre une autre créature qui lui est hostile (la sauvegarde imposée par un allié n'ouvre rien).
+    if ( hostile && (!attackerToken || (attackerToken === tokenDocument) || !areEnemies(tokenDocument, attackerToken)) ) return;
     const used = activity ? await fromUuid(activity) : null;
     const options = reactionsOf(actor, window,
       { source: attackerToken?.actor ?? null, target: actor, activity: used, sourceToken: attackerToken, targetToken: tokenDocument, ...extra },
@@ -469,6 +471,14 @@ export function windowEnemyAttacked(sourceToken, sourceName, { activity=null, au
   if ( !attacker?.parent ) return;
   const reactors = attacker.parent.tokens.filter(t => (t !== attacker) && t.actor && !isObjectToken(t) && areEnemies(t, attacker)).map(t => t.uuid);
   fireTargetWindow("enemyAttacked", reactors, sourceToken, sourceName, { activity, auto, promptKey: "ReactionEnnemiAttaque", what: "seeing an enemy attack" });
+}
+
+/**
+ * §487 : fenêtre « réussit une sauvegarde contre » — chaque créature qui vient de réussir la sauvegarde imposée par l'activité d'une
+ * créature hostile (Représailles du mage ; « contre un sort » : `activity.isSpell`). Sans attente, comme « raté ».
+ */
+export function windowSavesAgainst(tokenUuids, sourceToken, sourceName, { activity=null, auto=null }={}) {
+  fireTargetWindow("savesAgainst", tokenUuids, sourceToken, sourceName, { activity, auto, promptKey: "ReactionSauvegarde", what: "saving against", hostile: true });
 }
 
 export function windowIsMissed(tokenUuids, sourceToken, sourceName, { activity=null, auto=null }={}) {

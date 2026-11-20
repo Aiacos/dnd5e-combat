@@ -929,6 +929,7 @@
   "DND5ECOMBAT.Retour.Desarme": "Désarmé : {item}",
   "DND5ECOMBAT.ReactionEnnemiAttaque": "{attacker} vient d'attaquer. Réagir ?",
   "DND5ECOMBAT.ReactionRate": "{attacker} vous rate. Réagir ?",
+  "DND5ECOMBAT.ReactionSauvegarde": "{attacker} : vous réussissez votre jet de sauvegarde. Réagir ?",
   "DND5ECOMBAT.ReactionFinDeTour": "{attacker} termine son tour. Réagir ?",
   "DND5ECOMBAT.DernierRempart": "{item} : {name} reste debout à 1 point de vie, et tout ce qui l'affectait prend fin.",
   "DND5ECOMBAT.EffetsPurges": "{item} : tout ce qui affectait {name} prend fin.",

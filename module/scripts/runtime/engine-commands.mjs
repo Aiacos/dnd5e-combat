@@ -26,7 +26,7 @@ import { rangeIssue } from "../core/range.mjs";
 import { isObjectToken } from "../adapter/bodies.mjs";
 import { dodge as takeDodge } from "../core/turn.mjs";
 import { tallyAfter } from "../core/tally.mjs";
-import { askHitReactions, windowIsDamaged, windowIsMissed, windowEnemyAttacked, askDamageGuardians } from "./reactions.mjs";
+import { askHitReactions, windowIsDamaged, windowIsMissed, windowEnemyAttacked, windowSavesAgainst, askDamageGuardians } from "./reactions.mjs";
 import { markConcentrationBreaker, resistanceIgnoredBy, fortifiedExtra } from "./feats.mjs";
 import { liftToken } from "./elevation-spells.mjs";
 import { requestSave } from "./neighbours.mjs";
@@ -513,6 +513,9 @@ export const COMMANDS = {
     const damageTypes = [...new Set((resolution?.damageRoll?.damages ?? []).map(d => d.type).filter(Boolean))];
     if ( command.window === "isDamaged" ) windowIsDamaged(command.tokens, speakerTokenUuid(carrier), carrier.speaker?.alias ?? "",
       { activity: resolution?.activity ?? null, damageTypes, auto: autoReactOf(carrier, resolution) });
+    // §487 : « réussit une sauvegarde contre » (Représailles du mage).
+    if ( command.window === "savesAgainst" ) windowSavesAgainst(command.tokens, speakerTokenUuid(carrier), carrier.speaker?.alias ?? "",
+      { activity: resolution?.activity ?? null, auto: autoReactOf(carrier, resolution) });
   },
 
   /**

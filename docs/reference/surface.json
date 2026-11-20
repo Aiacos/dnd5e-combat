@@ -430,6 +430,7 @@
     "preAttackRoll",
     "preDamageRoll",
     "savedSave",
+    "savesAgainst",
     "startOfTurn",
     "turnEnd",
     "turnStart"

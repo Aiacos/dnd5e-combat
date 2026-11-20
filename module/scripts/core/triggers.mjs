@@ -88,7 +88,12 @@ export const MOMENTS = Object.freeze({
   // est la créature qui tombe (`self` = `target`). `allyFalls` : une AUTRE créature non hostile tombe (Feuille morte) — le réacteur en
   // `self`, celle qui tombe en `target`.
   falls: "the creature is about to take falling damage (Slow Fall: reaction window, before application)",
-  allyFalls: "another creature is about to take falling damage (Feather Fall: reaction window, before application)"
+  allyFalls: "another creature is about to take falling damage (Feather Fall: reaction window, before application)",
+  // §487 : la créature vient de RÉUSSIR la sauvegarde imposée par l'activité d'une créature qui lui est hostile (Représailles du mage :
+  // « contre un sort » se filtre par `activity.isSpell`). Les faits voient le réacteur en `target`, l'auteur en `source`. Fenêtre sans
+  // attente, comme « raté » ; une Résistance légendaire compte comme une réussite. À ne pas confondre avec `savedSave` (issue de la
+  // sauvegarde de l'item lui-même, à l'application, sans réaction).
+  savesAgainst: "the creature just succeeded on a saving throw against a hostile creature's activity (Mage's Retaliation: reaction window; it is the source)"
 });
 
 /** Les moments dont les déclarations sont portées par les EFFETS de la créature concernée (`via: "effect"`). */

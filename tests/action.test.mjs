@@ -252,6 +252,16 @@ describe("sauvegarde", () => {
     expect(commands.at(-1).entries.map(e => e.multiplier)).toEqual([0.5, 1]);
   });
 
+  it("§487 : une réussite ouvre la fenêtre « réussit une sauvegarde contre », sur ce seul token, un échec non", () => {
+    const ok = advance(opened().resolution, { type: "saveRolled", actor: "A1", total: 15, messageId: "s1" });
+    expect(ok.commands).toEqual([{ type: "window", window: "savesAgainst", tokens: ["T1"] }]);
+    const ko = advance(opened().resolution, { type: "saveRolled", actor: "A2", total: 14, messageId: "s2" });
+    expect(ko.commands.filter(c => c.type === "window")).toEqual([]);
+    // Résistance légendaire : la créature réussit, la fenêtre s'ouvre aussi.
+    const lr = advance(opened().resolution, { type: "saveRolled", actor: "A2", total: 3, messageId: "s3", resisted: true });
+    expect(lr.commands).toEqual([{ type: "window", window: "savesAgainst", tokens: ["T2"] }]);
+  });
+
   it("sert deux tokens du même acteur l'un après l'autre", () => {
     const twins = [T(1), { ...T(2), actor: "A1" }];
     const { resolution } = play(open({ ...base, plan, targets: twins }),
@@ -261,9 +271,9 @@ describe("sauvegarde", () => {
 
   it("attend toutes les sauvegardes ET le jet de dégâts, dans n'importe quel ordre, et n'applique qu'une fois", () => {
     const a = play(opened(), { type: "damageRolled", messageId: "D", damages: FIRE }, { type: "saveRolled", actor: "A1", total: 20, messageId: "s1" });
-    expect(types(a.commands)).toEqual(["requestSaves"]);
+    expect(types(a.commands)).toEqual(["requestSaves", "window"]);
     const b = play(a, { type: "saveRolled", actor: "A2", total: 3, messageId: "s2" });
-    expect(types(b.commands)).toEqual(["requestSaves", "apply"]);
+    expect(types(b.commands)).toEqual(["requestSaves", "window", "apply"]);
     expect(b.resolution.applying).toBe(true);
     expect(advance(b.resolution, { type: "damageRolled", messageId: "D2", damages: FIRE }).resolution).toBe(b.resolution);
   });
@@ -539,7 +549,7 @@ describe("choix d'effet (effets exclusifs, Maléfice)", () => {
     const per = { effects: effects.map(e => ({ ...e, when: "fail" })), save: { ability: "cha", dc: 13, onSave: "none" }, choice: { prompt: null, options, perTarget: true } };
     const opened = open({ ...base, plan: per, targets: [T(1)] });
     const step = advance(opened.resolution, { type: "saveRolled", actor: "A1", total: 20, messageId: "s1" });
-    expect(types(step.commands)).toEqual(["apply"]);
+    expect(types(step.commands)).toEqual(["window", "apply"]);
   });
 
   it("§401 : un choix par cible — la question nomme chaque cible, chacune reçoit le sien", () => {

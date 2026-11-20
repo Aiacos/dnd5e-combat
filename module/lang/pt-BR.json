@@ -787,6 +787,7 @@
   "DND5ECOMBAT.SecondePhase": "{item}: {from} se torna {to}.",
   "DND5ECOMBAT.Retour.Desarme": "Desarmado: {item}",
   "DND5ECOMBAT.ReactionRate": "{attacker} erra o ataque contra você. Reagir?",
+  "DND5ECOMBAT.ReactionSauvegarde": "{attacker}: você passa no teste de resistência. Reagir?",
   "DND5ECOMBAT.ReactionFinDeTour": "{attacker} encerra o turno. Reagir?",
   "DND5ECOMBAT.DernierRempart": "{item}: {name} permanece de pé com 1 Ponto de Vida e todos os efeitos que o afetavam terminam.",
   "DND5ECOMBAT.EffetsPurges": "{item}: todos os efeitos sobre {name} terminam.",

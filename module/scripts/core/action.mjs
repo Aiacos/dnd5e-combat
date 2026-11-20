@@ -462,7 +462,8 @@ function saveRolled(resolution, { actor, total, messageId, mode=null, resisted=f
   // Issue #32 : `atCost` — le succès à un prix accepté (`{ cost }`) change l'échec en réussite, le total restant celui du jet.
   const save = { total, success: resisted || !!atCost || (total >= resolution.plan.save.dc), messageId, ...(mode ? { mode } : {}), ...(resisted ? { resisted: true } : {}),
     ...(interposed ? { interposed: true } : {}), ...(atCost ? { atCost: { cost: atCost.cost ?? null } } : {}) };
-  const commands = [];
+  // §487 : une réussite ouvre la fenêtre « réussit une sauvegarde contre » (Représailles du mage), sans attente.
+  const commands = save.success ? [{ type: "window", window: "savesAgainst", tokens: [waiting.token] }] : [];
   // §401 : la dernière sauvegarde arrivée, le choix par cible peut être demandé.
   const next = askChoiceWhenDue({ ...resolution, targets: resolution.targets.map(t => t === waiting ? { ...t, save } : t) }, commands);
   return settle(next, commands);

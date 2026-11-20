@@ -87,6 +87,7 @@ contexte du moment) et sert de clé `on` aux déclarations de contenu.
 | `enemyAttacked` | a hostile creature just made an attack roll, hit or miss, against anyone (Soul of Vengeance: reaction window; it is the source) |
 | `falls` | the creature is about to take falling damage (Slow Fall: reaction window, before application) |
 | `allyFalls` | another creature is about to take falling damage (Feather Fall: reaction window, before application) |
+| `savesAgainst` | the creature just succeeded on a saving throw against a hostile creature's activity (Mage's Retaliation: reaction window; it is the source) |
 
 ## Hooks d'autres espaces émis par le moteur
 

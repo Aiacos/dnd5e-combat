@@ -929,6 +929,7 @@
   "DND5ECOMBAT.Retour.Desarme": "Disarmed: {item}",
   "DND5ECOMBAT.ReactionEnnemiAttaque": "{attacker} just attacked. React?",
   "DND5ECOMBAT.ReactionRate": "{attacker} misses you. React?",
+  "DND5ECOMBAT.ReactionSauvegarde": "{attacker}: you succeed on your saving throw. React?",
   "DND5ECOMBAT.ReactionFinDeTour": "{attacker} ends their turn. React?",
   "DND5ECOMBAT.DernierRempart": "{item}: {name} stays up with 1 Hit Point, and everything affecting them ends.",
   "DND5ECOMBAT.EffetsPurges": "{item}: everything affecting {name} ends.",

@@ -927,6 +927,7 @@
   "DND5ECOMBAT.Retour.Desarme": "Disarmato: {item}",
   "DND5ECOMBAT.ReactionEnnemiAttaque": "{attacker} ha appena attaccato. Reagire?",
   "DND5ECOMBAT.ReactionRate": "{attacker} ti manca. Reagire?",
+  "DND5ECOMBAT.ReactionSauvegarde": "{attacker}: superi il tiro salvezza. Reagire?",
   "DND5ECOMBAT.ReactionFinDeTour": "{attacker} termina il suo turno. Reagire?",
   "DND5ECOMBAT.DernierRempart": "{item}: {name} resta in piedi con 1 Punto Ferita, e tutto ciò che lo influenzava termina.",
   "DND5ECOMBAT.EffetsPurges": "{item}: tutto ciò che influenzava {name} termina.",
