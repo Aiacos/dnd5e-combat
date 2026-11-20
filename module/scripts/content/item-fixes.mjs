@@ -603,6 +603,14 @@ export const ITEM_FIXES = Object.freeze({
   // (la donnée) et vous gagnez autant de PV temporaires ». Demonomicon d'Iggwilv — « les dégâts de vos sorts contre un Fiélon : le maximum ».
   "blackrazor": { devours: true },
   "sword-of-life-stealing-enchanted": { critFeeds: { amount: 15 } },
+  // Épée de blessure (SRD 5.2) : « quand vous touchez une créature […], la cible subit 2d6 dégâts nécrotiques de plus et doit
+  // réussir une sauvegarde de Constitution DD 15, sans quoi elle ne peut plus regagner de PV pendant 1 heure. Elle répète la
+  // sauvegarde à la fin de chacun de ses tours, et y met fin sur une réussite. » La sauvegarde de la donnée (« Sword of Wounding
+  // Save ») n'était jouée par rien, et son effet « Wounded and Cannot Heal » est vide.
+  "sword-of-wounding-enchanted": {
+    onHit: { save: "sole" }, blocksHealing: true,
+    triggers: [{ on: "endOfTurn", via: "effect", fromEffect: "UeuDQeM3fRIB0aMN", do: [{ type: "resave" }] }]
+  },
   "demonomicon-of-iggwilv": { maxSpellDamageVs: ["fiend"] },
   // O9a (§354) : poisons et pièges — Torpeur : « la Vitesse est divisée par deux tant qu'elle est Empoisonnée ainsi » ; Pierre roulante :
   // « sur un échec, À terre ».
