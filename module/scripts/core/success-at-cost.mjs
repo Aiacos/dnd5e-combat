@@ -40,7 +40,8 @@ export function nearMissTargets(roll, targets, margin) {
   if ( !(margin > 0) || !roll ) return [];
   return (targets ?? [])
     .filter(t => (t.hit === false) && (t.reason === "miss") && !t.unaffected)
-    .map(t => ({ token: t.token, by: nearMiss(roll.total, t.ac, margin) }))
+    // §489 : une cible contre qui l'attaquant a dû relancer (Parade) se juge sur le nouveau jet.
+    .map(t => ({ token: t.token, by: nearMiss((t.rerolled?.total ?? roll.total), t.ac, margin) }))
     .filter(t => t.by > 0);
 }
 

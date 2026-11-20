@@ -90,6 +90,8 @@ export function reactionOptions(actor, window, declarations) {
     intercept: stepsOf(d, "intercept").length > 0,   // O8d (§347) : Bouclier antiprojectiles
     reduceBonus: stepsOf(d, "reduce")[0]?.bonus ?? null,
     miss: stepsOf(d, "miss").length > 0,
+    reroll: stepsOf(d, "reroll").length > 0,   // §489 : Parade d'un monstre — l'attaquant relance son jet
+    free: step.free === true,   // §489 : la riposte d'une Parade ne coûte rien au budget
     penalty: stepsOf(d, "penalty")[0]?.formula ?? null,
     bonus: stepsOf(d, "bonus")[0]?.formula ?? null,
     disadvantage: stepsOf(d, "disadvantage").length > 0,
@@ -398,7 +400,7 @@ export async function handleReactionQuery(payload, { user=null }={}) {
   const results = await activity.use({ [MODULE_ID]: { confirmed: true }, ...(option.template ? {} : { create: { measuredTemplate: false } }),
     ...(option.consume === false ? { consume: false } : {}), ...(option.usage ?? {}),
     ...(aimed ? { subsequentActions: false } : {}) }, { configure: false }, {
-    data: { flags: { [MODULE_ID]: { cost: "reaction", reaction: true, ...(option.reduce ? { reduceOnly: true } : {}), ...(option.flags ?? {}) } } }
+    data: { flags: { [MODULE_ID]: { cost: option.free ? "free" : "reaction", reaction: true, ...(option.reduce ? { reduceOnly: true } : {}), ...(option.flags ?? {}) } } }
   });
   if ( results && aimed ) activity.rollAttack({}, {}, { data: { system: { origin: results.message?.id, targets: aimed } } });
   // §24 : Parade — le jet de l'activité (un soin dans les données, que le moteur n'applique pas : `reduceOnly`) est le montant retiré
@@ -425,7 +427,7 @@ export async function handleReactionQuery(payload, { user=null }={}) {
   // (runtime/gates.mjs) lit la réponse au lieu d'attendre une sauvegarde du lanceur.
   const counter = (results && (castLevel !== null)) ? await resolveCounter(actor, activity.item, castLevel) : null;
   return results ? { counter, reduce, penalty, bonus, disadvantage: option.disadvantage === true, used: option.activity, name: option.name, message: results.message?.id ?? null, halve: option.halve === true,
-    uncrit: option.uncrit === true, miss: option.miss === true, absorb: option.absorb === true, interpose: option.interpose === true,
+    uncrit: option.uncrit === true, miss: option.miss === true, reroll: option.reroll === true, absorb: option.absorb === true, interpose: option.interpose === true,
     endCondition: option.endCondition === true, cancel: option.cancel === true, intercept: option.intercept === true, redirect: option.redirect === true } : null;
 }
 

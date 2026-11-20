@@ -53,7 +53,9 @@ const DEFAULTS = Object.freeze({
   // §461 : une téléportation de soi faite (Foulée brumeuse, Téléportation d'un démon).
   teleport: { success: CORE_SOUNDS.chime, failure: null },
   // B09 (§488) : une tentative de changer de forme qu'un objet porté interdit (le collier se serre).
-  formLock: { success: null, failure: CORE_SOUNDS.rattle }
+  formLock: { success: null, failure: CORE_SOUNDS.rattle },
+  // §489 : une Parade qui force la relance de l'attaque — le métal qui bloque (le coup rate), le bruit sourd (il passe quand même).
+  reroll: { success: CORE_SOUNDS.tools, failure: CORE_SOUNDS.dull }
 });
 
 /** Le son par défaut de cette action et de cette issue (null : aucun). */

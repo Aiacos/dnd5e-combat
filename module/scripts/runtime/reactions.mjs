@@ -32,6 +32,7 @@ import { offerCombatInspirationDefense, hasCombatInspiration } from "../adapter/
 import { targetDescriptorsOf } from "../adapter/pick-targets.mjs";
 import { askChoice } from "../adapter/choices.mjs";
 import { resaveChosen } from "./resave-choice.mjs";
+import { forceReroll } from "./forced-reroll.mjs";
 
 /** §134 : Rapide — le nom de l'item qui donne le Désavantage aux attaques d'opportunité contre cet acteur, ou null. */
 export function hamperedBy(actor) {
@@ -122,6 +123,7 @@ export async function askHitReactions(resolution, tokens, drained, { auto=null }
     // `auto` (scénarios : `autoReact` de l'attaque) : "none" = personne ne réagit ; "first" = la première réaction, sans fenêtre.
     const options = (actor && (auto !== "none")) ? reactionsOf(actor, "isHit", { source, target: actor, activity, resolution }, { publish: true }) : [];
     let answer = null;
+    let reactor = actor;   // §489 : celui qui a réagi (la cible, ou l'allié qui l'a fait pour elle)
     if ( options.length ) {
       log(`${target?.name} is hit: reaction window (${options.map(o => o.name).join(", ")})`);
       answer = await askReaction(actor, {
@@ -154,8 +156,9 @@ export async function askHitReactions(resolution, tokens, drained, { auto=null }
         });
         if ( help?.message ) await drained(help.message);
         // §301 : ou réduit (Interception, Champ protecteur).
-        if ( !help?.halve && !help?.penalty && !help?.reduce ) continue;
+        if ( !help?.halve && !help?.penalty && !help?.reduce && !help?.reroll ) continue;
         answer = help;
+        reactor = guardian.token.actor;
         break;
       }
     }
@@ -175,10 +178,12 @@ export async function askHitReactions(resolution, tokens, drained, { auto=null }
     if ( answer?.uncrit && target?.critical ) log(`${target?.name}: ${answer.name}, the Critical Hit becomes a normal hit`);
     if ( answer?.reduce ) log(`${target?.name}: ${answer.name}, the attack's damage is reduced by ${answer.reduce}`);
     if ( answer?.miss ) log(`${target?.name}: ${answer.name}, the attack automatically misses`);
+    // §489 : Parade d'un monstre — l'attaquant relance son jet et garde le nouveau ; le cœur rejuge ce coup avec lui.
+    const roll = (answer?.reroll && !answer?.miss) ? await forceReroll(resolution, target, reactor, answer.name, ac) : null;
     events.push({ type: "reactionResolved", token: tokenUuid, used: answer?.name ?? null, ac, halve: answer?.halve === true,
       miss: answer?.miss === true,
       reduce: Number(answer?.reduce) || 0,
-      uncrit: answer?.uncrit === true, duplicates });
+      uncrit: answer?.uncrit === true, duplicates, ...(roll ? { roll } : {}) });
   }
   return events;
 }
@@ -481,8 +486,10 @@ export function windowSavesAgainst(tokenUuids, sourceToken, sourceName, { activi
   fireTargetWindow("savesAgainst", tokenUuids, sourceToken, sourceName, { activity, auto, promptKey: "ReactionSauvegarde", what: "saving against", hostile: true });
 }
 
-export function windowIsMissed(tokenUuids, sourceToken, sourceName, { activity=null, auto=null }={}) {
-  fireTargetWindow("isMissed", tokenUuids, sourceToken, sourceName, { activity, auto, promptKey: "ReactionRate", what: "missed" });
+export function windowIsMissed(tokenUuids, sourceToken, sourceName, { activity=null, auto=null, resolution=null }={}) {
+  // §489 : avec la résolution — les faits `attack.fumble` / `attack.rerolled` (riposte d'une Parade sur un échec critique) la lisent.
+  fireTargetWindow("isMissed", tokenUuids, sourceToken, sourceName, { activity, auto, promptKey: "ReactionRate", what: "missed",
+    extra: resolution ? { resolution } : {} });
 }
 
 /**

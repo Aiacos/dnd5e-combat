@@ -1016,6 +1016,14 @@
  *                                                        moment preAttackRoll, `via: "effect"`
  *   { type: "uncrit" }                                   avec une réaction `use` (isHit, allyIsHit) : si elle est prise, un coup
  *                                                        critique n'est plus qu'un coup (Sentinelle au seuil de la mort, §19.9)
+ *   { type: "reroll" }                                   §489 : avec une réaction `use` (isHit, allyIsHit) : si elle est prise,
+ *                                                        l'attaquant relance son jet d'attaque et garde le nouveau — le
+ *                                                        coup est rejugé (Parade d'un monstre) ; « sans effet contre un
+ *                                                        coup critique » : { "hit.critical": false }. La riposte sur un
+ *                                                        échec critique du nouveau jet : isMissed, `free`, faits
+ *                                                        { "attack.rerolled": true, "attack.fumble": true }
+ *   { type: "use", …, free: true }                       §489 : l'utilisation ne coûte rien au budget (la riposte qui fait
+ *                                                        partie d'une réaction déjà prise)
  *   { type: "endCondition" }                             avec une réaction `use` au moment gainsCondition : si elle est
  *                                                        prise, l'état subi cesse (§19.8)
  *   { type: "halve" }                                    avec une réaction `use` au moment isHit : si elle est prise, la

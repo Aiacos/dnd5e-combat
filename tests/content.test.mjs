@@ -27,7 +27,7 @@ describe("validation d'une entrée", () => {
     const errors = validateEntry({ triggers: [{ on: "onHit", if: { "moon.phase": "full" }, do: [{ type: "smite" }] }] }, { facts });
     expect(errors).toEqual([
       `triggers[0].on: unknown moment "onHit" (${MOMENTS_LIST})`,
-      "triggers[0].do[0].type: unknown \"smite\" (lift, disarm, use, replay, damage, move, status, resave, remove, halve, uncrit, consume, advantage, disadvantage, ward, attackBonus, endCondition, reduce, miss, penalty, bonus, absorb, interpose, mark, save, breakConcentration, cancel, intercept, redirect, banish, revertForm)",
+      "triggers[0].do[0].type: unknown \"smite\" (lift, disarm, use, replay, damage, move, status, resave, remove, halve, uncrit, consume, advantage, disadvantage, ward, attackBonus, endCondition, reduce, miss, penalty, bonus, absorb, interpose, mark, save, breakConcentration, cancel, intercept, redirect, banish, revertForm, reroll)",
       "triggers[0].if: unknown fact \"moon.phase\""
     ]);
     expect(validateEntry({ triggers: [{ on: "isHit" }] }, { facts })).toEqual(["triggers[0].do: at least one step"]);

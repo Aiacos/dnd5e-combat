@@ -492,6 +492,17 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
       const hit = (resolution?.targets ?? []).find(t => fromUuidSync(t.token, { strict: false })?.actor === target);
       return !!hit?.critical === want;
     },
+    // §489 : le jet d'attaque qui vient de rater `target` est un 1 naturel (échec critique) — le jet relancé par une Parade s'il y en a eu
+    // un (`rerolled` de la cible), sinon celui de l'attaque. Riposte « si le nouveau jet est un échec critique ».
+    "attack.fumble": want => {
+      const hit = (resolution?.targets ?? []).find(t => fromUuidSync(t.token, { strict: false })?.actor === target);
+      return ((hit?.rerolled ?? resolution?.attack?.roll)?.isFumble === true) === want;
+    },
+    // §489 : l'attaquant a dû relancer son jet contre `target` (étape `reroll` d'une réaction de la cible).
+    "attack.rerolled": want => {
+      const hit = (resolution?.targets ?? []).find(t => fromUuidSync(t.token, { strict: false })?.actor === target);
+      return !!hit?.rerolled === want;
+    },
     "damage.resisted": want => ((damageTypes ?? []).some(t => target?.system?.traits?.dr?.value?.has?.(t) === true) === want),
     "target.wieldsProperty": prop => (target?.items ?? []).some(i => (i.type === "weapon") && i.system.equipped && i.system.properties?.has?.(prop)),
     "target.isSelf": want => (!!self && !!target && (self === target)) === want,

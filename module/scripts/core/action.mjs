@@ -286,24 +286,27 @@ function judge(resolution, { roll, messageId, targets, critMargin=0, atCost=0 })
  * Une cible consultée a répondu : rejugée contre sa nouvelle CA si elle a réagi. `halve` : sa réaction divise les dégâts
  * de l'attaque par deux (Esquive instinctive, §16.11) — elle reste touchée.
  */
-function reactionResolved(resolution, { token, used=null, ac, halve=false, uncrit=false, duplicates=null, reduce=0, miss=false }) {
+function reactionResolved(resolution, { token, used=null, ac, halve=false, uncrit=false, duplicates=null, reduce=0, miss=false, roll=null }) {
   if ( resolution.step !== STEPS.AWAITING_REACTION ) return same(resolution);
   if ( !resolution.pending.some(p => (p.kind === "reaction") && (p.token === token)) ) return same(resolution);
   const targets = resolution.targets.map(t => {
     if ( (t.token !== token) || !used ) return t;
     // §28 : Calque illusoire — l'attaque est changée en échec, sans autre jet.
-    const [judged] = miss ? [{ ...t, hit: false, critical: false, reason: "reaction" }] : resolveAttack(resolution.attack.roll, [{ ...t, ac }]);
+    // §489 : Parade d'un monstre — l'attaquant a relancé son jet (`roll`) : ce coup se rejuge avec le nouveau, pour cette cible seule.
+    const attackRoll = roll ?? resolution.attack.roll;
+    const [judged] = miss ? [{ ...t, hit: false, critical: false, reason: "reaction" }] : resolveAttack(attackRoll, [{ ...t, ac }]);
     // Le critique d'office (Paralysée à 5 ft) survit au rejugement, comme au premier verdict (judge).
     const auto = (judged.hit && !judged.critical && t.defenceless) ? { ...judged, critical: true, reason: "autoCritical" } : judged;
     // §207 : l'écart à la CA se rejuge contre la nouvelle CA (un Bouclier peut le faire tomber sous 10).
-    const again = beatsAcBy(auto, resolution.attack.roll, resolution.attack.critMargin) ? { ...auto, critical: true, reason: "beatsAc" } : auto;
+    const again = beatsAcBy(auto, attackRoll, resolution.attack.critMargin) ? { ...auto, critical: true, reason: "beatsAc" } : auto;
     // §19 : une réaction peut faire naître des répliques pour ce coup (Ombres spectrales) — leur nombre est relu après elle.
     const count = Number.isInteger(duplicates) ? { duplicates } : {};
     // §19.9 : un Coup critique perd ses effets de critique (Sentinelle au seuil de la mort).
     const plain = (uncrit && again.critical) ? { critical: false, uncritted: true } : {};
     // §24 : Parade — un montant retiré aux dégâts de l'attaque.
     const reduced = ((reduce > 0) && (again.hit === true)) ? { reduced: reduce } : {};
-    return plainHit({ ...again, ...count, ...plain, ...reduced, reaction: used, halved: !!halve && again.hit === true });
+    const rerolled = roll ? { rerolled: roll } : {};
+    return plainHit({ ...again, ...count, ...plain, ...reduced, ...rerolled, reaction: used, halved: !!halve && again.hit === true });
   });
   const next = { ...resolution, targets, pending: resolution.pending.filter(p => (p.kind !== "reaction") || (p.token !== token)) };
   return next.pending.length ? same(next) : afterReactions(next);

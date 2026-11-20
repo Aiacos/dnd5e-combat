@@ -493,7 +493,7 @@ export const COMMANDS = {
       // §19.6 : fenêtre « raté » (Riposte, Désarmement) — pour chaque cible que l'attaque n'a pas touchée.
       const missed = resolution.targets.filter(t => (t.hit === false) && !t.unaffected).map(t => t.token);
       if ( missed.length ) windowIsMissed(missed, speakerTokenUuid(carrier), carrier.speaker?.alias ?? "",
-        { activity: resolution.activity, auto: autoReactOf(carrier, resolution) });
+        { activity: resolution.activity, auto: autoReactOf(carrier, resolution), resolution });
       // §236 : « une créature hostile vient d'attaquer » (Âme de la vengeance), touché ou raté.
       windowEnemyAttacked(speakerTokenUuid(carrier), carrier.speaker?.alias ?? "", { activity: resolution.activity, auto: autoReactOf(carrier, resolution) });
       return;
