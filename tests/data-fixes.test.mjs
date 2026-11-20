@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { dataFixPlan, planIsEmpty, matchesFrom, validateDataFixes } from "../module/scripts/core/data-fixes.mjs";
+import { ITEM_FIXES } from "../module/scripts/content/item-fixes.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 
 const ACT = "aaaaaaaaaaaaaaa1";
@@ -97,5 +98,30 @@ describe("table des corrections d'objets (§335–§338)", () => {
     const src = readFileSync(new URL("../module/scripts/content/item-fixes.mjs", import.meta.url), "utf8");
     const keys = [...src.matchAll(/^  "([a-z0-9-]+)": /gm)].map(m => m[1]);
     expect(keys.filter((k, i) => keys.indexOf(k) !== i)).toEqual([]);
+  });
+});
+
+describe("dataFixes : un effet que le module a ajouté depuis (`unless`)", () => {
+  const BOOK = "RcwWrY6u4OPM5qZl";
+  const fix = ITEM_FIXES["robe-of-stars"].dataFixes;
+  it("Robe étoilée : créé quand l'objet n'a pas le sien, pas quand il l'a déjà", () => {
+    expect(dataFixPlan({ effects: [], system: {} }, fix).create).toHaveLength(1);
+    expect(dataFixPlan({ effects: [{ _id: BOOK }], system: {} }, fix).create).toEqual([]);
+  });
+  it("Bâton de puissance : de même", () => {
+    const staff = ITEM_FIXES["staff-of-power"].dataFixes;
+    expect(dataFixPlan({ effects: [], system: {} }, staff).create).toHaveLength(1);
+    expect(dataFixPlan({ effects: [{ _id: "3qnJecDB1SMFTNLw" }], system: {} }, staff).create).toEqual([]);
+  });
+  it("Anneau de vision aux rayons X : la sauvegarde qui ne désigne plus rien reçoit l'Épuisement", () => {
+    const ring = ITEM_FIXES["ring-of-x-ray-vision"].dataFixes;
+    const v3 = { effects: [], system: { activities: { v41FhJBMoCPTochw: { effects: [] } } } };
+    const v2 = { effects: [], system: { activities: { v41FhJBMoCPTochw: { effects: [{ _id: "InZzuugyN8PbtKGR" }] } } } };
+    expect(dataFixPlan(v3, ring).item).toEqual({ "system.activities.v41FhJBMoCPTochw.effects": [{ _id: "InZzuugyN8PbtKGR" }] });
+    expect(dataFixPlan(v2, ring).item).toEqual({});
+  });
+  it("`unless` est un id d'effet", () => {
+    expect(validateDataFixes(fix)).toEqual([]);
+    expect(validateDataFixes([{ effect: "dasRobeOfStars00", create: {}, unless: "short" }])).toHaveLength(1);
   });
 });

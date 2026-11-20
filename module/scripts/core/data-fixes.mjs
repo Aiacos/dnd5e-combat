@@ -60,7 +60,8 @@ export function dataFixPlan(source, fixes) {
     if ( fix.effect ) {
       const effect = effects.get(fix.effect);
       if ( fix.create ) {
-        if ( !effect && !plan.create.some(e => e._id === fix.effect) ) {
+        // `unless` : l'effet n'est pas créé si la donnée porte déjà celui-là — une version du module qui l'a ajouté depuis.
+        if ( !effect && !effects.has(fix.unless) && !plan.create.some(e => e._id === fix.effect) ) {
           plan.create.push({ ...structuredClone(fix.create), _id: fix.effect });
           plan.fields.push(`effect ${fix.effect} (created)`);
         }
@@ -121,11 +122,12 @@ export function validateDataFixes(fixes, at="") {
     const keys = Object.keys(f);
     if ( "create" in f ) {
       return (typeof f.effect === "string") && /^[A-Za-z0-9]{16}$/.test(f.effect) && f.create && (typeof f.create === "object")
-        && !Array.isArray(f.create) && keys.every(k => ["effect", "create"].includes(k));
+        && !Array.isArray(f.create) && (!("unless" in f) || ((typeof f.unless === "string") && /^[A-Za-z0-9]{16}$/.test(f.unless)))
+        && keys.every(k => ["effect", "create", "unless"].includes(k));
     }
     if ( ("effect" in f) && !((typeof f.effect === "string") && /^[A-Za-z0-9]{16}$/.test(f.effect)) ) return false;
     return (typeof f.path === "string") && /^[\w.]+$/.test(f.path) && ("value" in f) && (f.effect || /^(system|name)\b/.test(f.path))
       && keys.every(k => ["effect", "path", "value", "from"].includes(k));
   });
-  return ok ? [] : [`${at}dataFixes: [{ path, value, from? } | { effect, path, value, from? } | { effect, create }]`];
+  return ok ? [] : [`${at}dataFixes: [{ path, value, from? } | { effect, path, value, from? } | { effect, create, unless? }]`];
 }

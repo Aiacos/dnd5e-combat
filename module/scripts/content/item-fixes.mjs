@@ -92,7 +92,10 @@ export const ITEM_FIXES = Object.freeze({
   },
   // Anneau de rayons X : la sauvegarde ratée vise un effet absent ; « vous subissez un niveau d'Épuisement » (runtime/cure.mjs le monte).
   "ring-of-x-ray-vision": {
-    dataFixes: [{ effect: "InZzuugyN8PbtKGR", create: { name: "Exhaustion", type: "base", transfer: false, disabled: false, statuses: ["exhaustion"], system: { changes: [] } } }]
+    dataFixes: [{ effect: "InZzuugyN8PbtKGR", create: { name: "Exhaustion", type: "base", transfer: false, disabled: false, statuses: ["exhaustion"], system: { changes: [] } } },
+      // Guide 3.0.0 : la sauvegarde ne désigne plus aucun effet (le 2.0.0 désignait celui-ci, absent) — l'Épuisement
+      // n'était plus posé.
+      { path: "system.activities.v41FhJBMoCPTochw.effects", from: [], value: [{ _id: "InZzuugyN8PbtKGR" }] }]
   },
   // Baguettes de métamorphose et des toiles : « dépenser 1 charge » — leurs activités ne consomment rien.
   "wand-of-polymorph": { dataFixes: [{ path: "system.activities.dJ9lbA7B6ysE0Md8.consumption.targets", from: [], value: [spend("itemUses", 1)] }] },
@@ -148,7 +151,9 @@ export const ITEM_FIXES = Object.freeze({
   },
   // Bâton de surpuissance : « +2 à la CA, aux jets de sauvegarde et aux jets d'attaque de sort » — aucun effet porté dans la donnée.
   "staff-of-power": {
-    dataFixes: [{ effect: "dasStaffOfPower0", create: worn("Staff of Power", [change("system.attributes.ac.bonus", "add", "+2"),
+    // Guide 3.0.0 : l'objet porte désormais ces bonus (effet « Staff of Power ») — le nôtre les doublait (`unless`).
+    dataFixes: [{ effect: "dasStaffOfPower0", unless: "3qnJecDB1SMFTNLw",
+      create: worn("Staff of Power", [change("system.attributes.ac.bonus", "add", "+2"),
       change("system.bonuses.abilities.save", "add", "+2"), change("system.bonuses.msak.attack", "add", "+2"), change("system.bonuses.rsak.attack", "add", "+2")]) }]
   },
   // Bâton de flétrissement : « Désavantage aux tests et sauvegardes de Force et de Constitution » — l'effet Flétri est vide.
@@ -280,7 +285,9 @@ export const ITEM_FIXES = Object.freeze({
     dataFixes: [{ effect: "dasPeriaptWound0", create: worn("Periapt of Wound Closure", [change("system.attributes.death.roll.min", "upgrade", 10)]) }]
   },
   // Robe aux étoiles : « +1 aux jets de sauvegarde » — aucun effet.
-  "robe-of-stars": { dataFixes: [{ effect: "dasRobeOfStars00", create: worn("Robe of Stars", [change("system.bonuses.abilities.save", "add", "+1")]) }] },
+  // Guide 3.0.0 : l'objet porte désormais son +1 aux sauvegardes (effet « Saving Throw Bonus ») — le nôtre le doublait (`unless`).
+  "robe-of-stars": { dataFixes: [{ effect: "dasRobeOfStars00", unless: "RcwWrY6u4OPM5qZl",
+    create: worn("Robe of Stars", [change("system.bonuses.abilities.save", "add", "+1")]) }] },
   // §457–§458 : les six livres « 48 heures de lecture en 6 jours » du Guide (+2 à une caractéristique, maximum 30). « Read » coche une
   // heure (48 utilisations). Sa donnée posait l'effet d'un autre livre (copier-coller du Guide 2.0.0 : Vivacité, Exercices physiques,
   // Vitalité, Perspicacité) ou le sien à chaque heure (Autorité, Compréhension) : retiré ; le +2 est posé une fois, quand la dernière

@@ -299,9 +299,11 @@
  *     brutalStrike?: { options?, count? }       C12-e : Coup brutal — options offertes avec Témérité (`push` : poussée ; `effect` :
  *                                               effet de l'item posé sur la cible touchée, ou liste d'identifiants — §433 : le premier qu'un
  *                                               item de Coup brutal de l'acteur porte), nombre d'options par coup (runtime/barbarian.mjs)
- *     dataFixes?: [{ path, value, from? } | { effect, path, value, from? } | { effect, create }]
+ *     dataFixes?: [{ path, value, from? } | { effect, path, value, from? } | { effect, create, unless? }]
  *                                               O1 (§335) : corrections de la donnée premium de l'objet (coût, charges, DD, dégâts, effets
  *                                               portés, effet manquant), écrites par le MJ actif à la création et par le diagnostic — core/data-fixes.mjs
+ *                                               `unless` : l'effet n'est pas créé si la donnée porte déjà cet autre effet (une
+ *                                               version du module qui l'a ajouté depuis : Guide 3.0.0)
  *     includesOrigin?: true                     O4 (§338) : la zone « personnelle » de l'item prend aussi son origine (Poudre à éternuer)
  *     absorbsDamage?: string[]                  K7 (§328) : le porteur de l'item change ces types de dégâts en soin, avant résistances et
  *                                               immunités (Absorption de l'acide, du feu, de la foudre des golems)
