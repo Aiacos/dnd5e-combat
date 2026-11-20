@@ -47,6 +47,7 @@ import { setHeroic } from "../runtime/heroic.mjs";
 import { atCostMenuEntry } from "./success-at-cost.mjs";
 import { armCatalyst, catalystArmed, catalystOf } from "../runtime/catalyst.mjs";
 import { forceWait, waitsOf } from "../runtime/player-waits.mjs";
+import { commandActivitiesFor, mountEntry } from "../runtime/mount.mjs";
 
 /* -------------------------------------------- */
 /*  Menu contextuel                             */
@@ -378,6 +379,8 @@ export function selfEntries(token) {
   if ( canDismiss(token) ) entries.push({ icon: "fa-solid fa-xmark", label: loc("Menu.Renvoyer", { name: token.name }), run: () => dismissPilot(token) });
   // §107 : le familier part dans sa poche dimensionnelle (depuis son token) ; son maître l'en rappelle (depuis le sien).
   entries.push(...familiarEntries(token, token));
+  // §490 (B08) : descendre de sa monture.
+  entries.push(...mountEntries(token, token));
   // §41.3 : ce token suit quelqu'un.
   const leader = leaderOf(token);
   if ( leader ) entries.push({ icon: "fa-solid fa-person-walking-arrow-right", label: loc("Menu.NePlusSuivre", { name: leader.name }), run: () => unfollow(token) });
@@ -400,6 +403,22 @@ function familiarEntries(token, target) {
   }
   if ( (token === target) && canRecall(token) ) {
     entries.push({ icon: "fa-solid fa-dove", label: loc("Familier.Rappeler", { name: pocketedFamiliar(token).name }), run: () => startRecall(token) });
+  }
+  return entries;
+}
+
+/**
+ * §490 (B08) : monter sur cette créature (ou en descendre), et l'ordre à un compagnon — le geste de son maître, `commands`.
+ */
+function mountEntries(token, target) {
+  const entries = [];
+  const mount = mountEntry(token, target);
+  if ( mount ) entries.push(mount);
+  if ( token !== target ) {
+    for ( const activity of commandActivitiesFor(token, target) ) {
+      entries.push({ icon: "fa-solid fa-bullhorn", label: loc("Monture.Commander", { name: target.name, item: activity.item.name }),
+        run: event => engageWith(token, target, activity, { event }) });
+    }
   }
   return entries;
 }
@@ -462,6 +481,7 @@ function tokenEntries(token, target, { aggressive=true }={}) {
     entries.push(...endingEntries(token, target));
     entries.push(...followEntries(token, target));
     entries.push(...familiarEntries(token, target));
+    entries.push(...mountEntries(token, target));
     entries.push({ icon: "fa-solid fa-eye", label: loc("Menu.Observer"), run: () => observe(target) });
     if ( game.user.isGM ) entries.push({ icon: "fa-solid fa-gear", label: loc("Menu.Hud"), run: () => canvas.hud.token.bind(target.object) });
     pushGroupRoll(entries, target);
@@ -533,6 +553,7 @@ function tokenEntries(token, target, { aggressive=true }={}) {
   entries.push(...endingEntries(token, target));
   entries.push(...followEntries(token, target));
   entries.push(...familiarEntries(token, target));
+  entries.push(...mountEntries(token, target));
   entries.push({ icon: "fa-solid fa-eye", label: loc("Menu.Observer"), run: () => observe(target) });
   if ( game.user.isGM ) entries.push({ icon: "fa-solid fa-gear", label: loc("Menu.Hud"), run: () => canvas.hud.token.bind(target.object) });
   pushGroupRoll(entries, target);

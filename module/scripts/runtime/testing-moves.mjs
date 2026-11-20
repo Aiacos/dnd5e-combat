@@ -18,6 +18,7 @@ import { dismissFamiliar, recallFamiliar, recallRefusal, canPocket, canRecall } 
 import { pocketOf, isFamiliarToken, emptyPocket } from "../adapter/familiar.mjs";
 import { basicActionOf } from "../adapter/basics.mjs";
 import { leaderOf, followersOf, follow as followIntent, unfollow as unfollowIntent } from "./follow.mjs";
+import { dismount, mountState, mountUp } from "./mount.mjs";
 import { opportunityThreats, lastOpportunityMisses } from "./reactions.mjs";
 import { sleep } from "./shared.mjs";
 import { cellArg, finite, gmOnly, positionJson, viewedToken, waypointOf, windows } from "./testing-shared.mjs";
@@ -146,6 +147,21 @@ export async function unfollow({ tokenId }) {
 export function followState({ tokenId }) {
   const token = viewedToken({ tokenId });
   return { leader: leaderOf(token)?.id ?? null, followers: followersOf(token).map(t => t.id), position: positionJson(token) };
+}
+
+/**
+ * §490 (B08) : monture et ordre à un compagnon. `action` : « state » (lecture), « mount » (`tokenId` monte `targetId`), « dismount »
+ * (`tokenId` descend). Les refus forçables ouvrent la fenêtre de légalité : un scénario monte sans souci. Rend l'état des deux tokens.
+ */
+export async function mount({ action="state", tokenId, targetId=null }) {
+  gmOnly();
+  const token = viewedToken({ tokenId });
+  const target = targetId ? viewedToken({ tokenId: targetId }) : null;
+  let done = null;
+  if ( action === "mount" ) done = await mountUp(token, target);
+  else if ( action === "dismount" ) done = await dismount(token);
+  return { done, token: { ...mountState(token), position: positionJson(token) },
+    target: target ? { ...mountState(target), position: positionJson(target) } : null };
 }
 
 /**

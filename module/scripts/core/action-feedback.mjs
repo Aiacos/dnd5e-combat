@@ -55,7 +55,12 @@ const DEFAULTS = Object.freeze({
   // B09 (§488) : une tentative de changer de forme qu'un objet porté interdit (le collier se serre).
   formLock: { success: null, failure: CORE_SOUNDS.rattle },
   // §489 : une Parade qui force la relance de l'attaque — le métal qui bloque (le coup rate), le bruit sourd (il passe quand même).
-  reroll: { success: CORE_SOUNDS.tools, failure: CORE_SOUNDS.dull }
+  reroll: { success: CORE_SOUNDS.tools, failure: CORE_SOUNDS.dull },
+  // §490 (B08) : monter, descendre, être jeté à bas de sa monture, l'ordre à un compagnon.
+  mount: { success: CORE_SOUNDS.dull, failure: null },
+  dismount: { success: CORE_SOUNDS.dull, failure: null },
+  thrown: { success: null, failure: CORE_SOUNDS.thud },
+  command: { success: CORE_SOUNDS.chime, failure: null }
 });
 
 /** Le son par défaut de cette action et de cette issue (null : aucun). */

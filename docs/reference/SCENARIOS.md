@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-374 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+375 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -178,6 +178,7 @@ la sélection sans rien jouer.
 | `modes` | keep | §17.4 | vol, marche, fouissement : élévation cohérente |
 | `moine` |  | §24 | Arts martiaux, Déluge de coups, main ouverte, Frappe étourdissante, Défense patiente, Pas du vent, Parade |
 | `monstres-toucher` |  | §18.4 | porte de taille (M3) et sauvegarde sœur (M2) |
+| `monture` |  | §490 | monter, déplacement commun, monture contrôlée et ordre, chute (§490, B08) |
 | `mort-explosive` |  | §18.14 | le Méphite explose en mourant |
 | `mur-de-feu` |  | §169 §170 §171 | sans diagonale, opaque, face brûlante, traversée, anneau |
 | `murmures-fuite` |  | §147 §152 | Murmures dissonants : la fuite par la Réaction |

@@ -37,6 +37,7 @@ export const MERGE = Object.freeze({
   fortitude: "replace", noOpportunity: "replace", sharesSpace: "replace", placesSummons: "replace", targetedSummon: "replace", drain: "replace",
   swallow: "replace", savedEffects: "list", ignoresCloseCombat: "replace", sharedHp: "replace", failMargins: "shallow",
   multiattackPlan: "replace",
+  mount: "copy", commands: "copy",
   resize: "shallow", orders: "list", reactions: "copy", lastStand: "copy", counter: "copy", difficultTerrain: "copy",
   storm: "copy", stableAtZero: "replace", wardsAtZero: "replace", zoneCharges: "replace", noDamage: "list", dropsEffects: "list",
   selfZone: "deep", zoneAffects: "replace", pendingDie: "copy", maxDamage: "copy", maxNextHit: "replace", weaponDamageTypes: "copy", grappleSize: "copy", inescapable: "replace", grappleCover: "replace", rolledAc: "copy", swapPlaces: "copy", sweep: "copy",

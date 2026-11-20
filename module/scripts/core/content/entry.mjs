@@ -13,6 +13,7 @@ import { isId, isObject } from "./shared.mjs";
 import { validateDataFixes } from "../data-fixes.mjs";
 import { validateRegeneration } from "../regeneration.mjs";
 import { validateFormLock, validateSuspends } from "../form-lock.mjs";
+import { validateCommands, validateMount } from "../mount.mjs";
 import { validateAura, validateTrigger } from "./steps.mjs";
 import { SENSE_KINDS, SENSE_THROUGH, SENSE_NEEDS, SENSE_REVEALS } from "../senses.mjs";
 /**
@@ -589,6 +590,9 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     }
   }
   if ( "summon" in entry ) validateSummon(entry.summon, `${at}summon`, errors);
+  // §490 (B08) : monture et ordre à un compagnon.
+  if ( "mount" in entry ) errors.push(...validateMount(entry.mount, `${at}mount`));
+  if ( "commands" in entry ) errors.push(...validateCommands(entry.commands, `${at}commands`));
   if ( "burst" in entry ) {
     const b = entry.burst;
     if ( !isObject(b) ) errors.push(`${at}burst: an object`);

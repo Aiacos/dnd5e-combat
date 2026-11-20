@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-344 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
+345 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
 commentaire de la fonction dans le code (début seulement) ; le fichier est relatif à `module/scripts/`. Les valeurs non
 fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de test du connecteur, MJ seulement.
 
@@ -325,6 +325,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.mcp.masteries` | `({ actorId, keys=null })` | `runtime/testing-rules.mjs` | §222 : les bottes choisies d'un acteur — sources, places, choix enregistré, ce que le Repos long laisse changer, et le verdict de la règle pour `keys` s'il est donné. |
 | `api.mcp.menu` | `({ tokenId, targetId, run=null })` | `runtime/testing.mjs` | §240 : les entrées du menu contextuel de `targetId` pour `tokenId` (pris en main le temps de la lecture), lues par l'API publique `api.ui.tokenMenu` — `runtime/` n'importe pas `ui/`. `run` : lance l'entrée de ce libellé… |
 | `api.mcp.missedOpportunities` | `({ tokenId, point, explain=false })` | `runtime/testing-moves.mjs` | §479 : pourquoi les créatures dont l'allonge serait quittée par ce déplacement en ligne droite n'ont pas d'attaque d'opportunité — `[{ name, reason, notice }]`. `explain` : comme un vrai déplacement (journal du débogueu… |
+| `api.mcp.mount` | `({ action="state", tokenId, targetId=null })` | `runtime/testing-moves.mjs` | §490 (B08) : monture et ordre à un compagnon. `action` : « state » (lecture), « mount » (`tokenId` monte `targetId`), « dismount » (`tokenId` descend). Les refus forçables ouvrent la fenêtre de légalité : un scénario mo… |
 | `api.mcp.move` | `({ tokenId, cell, point, levelId, action, stopAfterMs, pauseAfterMs })` | `runtime/testing-moves.mjs` | Déplace le token comme un clic de déplacement (`moveTo` : A*, portes, escaliers, attaques d'opportunité, budget), et attend qu'il soit arrivé. Rend les positions avant / après et les fenêtres ouvertes pendant le déplace… |
 | `api.mcp.movement` | `({ tokenId })` | `runtime/testing-moves.mjs` | Le budget de déplacement du token dans le combat en cours (null hors combat). |
 | `api.mcp.naturalOne` | `({ tokenId })` | `runtime/testing-rules.mjs` | §93 : ce qu'un 1 naturel déclenche chez la créature (le jet lui-même ne se force pas) — sans l'attendre : le scénario répond. |

@@ -262,6 +262,12 @@
  *     magicEvasion?: true                  §402 : l'effet porté du sort annule la moitié des dégâts d'une sauvegarde réussie contre la magie (Cercle de pouvoir)
  *     saveAdvantageFrom?: { types, statuses }  §402 : Avantage aux sauvegardes contre ces états posés par ces types (Protection contre le mal et le bien)
  *     leash?: { distance, units }        §402 : la créature qui porte un effet de l'item ne s'éloigne pas volontairement du lanceur au-delà (Duel forcé)
+ *     mount?: { rider?, controlled? }    §490 (B08) : la créature qui porte l'item peut être montée — par l'acteur `rider` seul (id), sinon
+ *                                               par une créature alliée plus petite ; contrôlée (défaut) : elle agit juste après son
+ *                                               cavalier et ne prend que Foncer / Se désengager / Esquiver sans ordre ; `controlled: false` :
+ *                                               monture indépendante. Déplacement commun, chute du cavalier (runtime/mount.mjs)
+ *     commands?: { actor | identifier, distance, units, cost? }  §490 (B08) : l'item ordonne à un compagnon non invoqué (id d'acteur,
+ *                                               ou identifiant d'un item qu'il porte) à portée — commandé pour ce round
  *     durationByLevel?: [{ from, seconds?, concentration? }]  §403 : durée des effets et de la concentration selon l'emplacement ;
  *                                               sans `seconds` : jusqu'à dissipation ; `concentration: false` : dnd5e ne la commence pas
  *                                               (Malédiction : 10 min au niveau 4, 8 h sans Concentration au niveau 5…) — runtime/cantrips.mjs

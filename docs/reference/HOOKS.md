@@ -137,11 +137,12 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. stealth: detection not scheduled
 2. piloted object: turn skipped (start)
-3. initiative event not announced _(MJ)_
-4. budget: combat reset _(MJ)_
-5. auras: recalculation requested
-6. weapon mastery: Long Rest change not closed _(MJ)_
-7. basic actions added _(MJ)_
+3. mount: controlled mount initiative not set _(MJ)_
+4. initiative event not announced _(MJ)_
+5. budget: combat reset _(MJ)_
+6. auras: recalculation requested
+7. weapon mastery: Long Rest change not closed _(MJ)_
+8. basic actions added _(MJ)_
 
 ### `combatTurn`
 
@@ -197,41 +198,42 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 1. stealth: detection not scheduled
 2. summon: ends on Incapacitated _(MJ)_
 3. summon: not removed with its dead caster _(MJ)_
-4. True Strike: attack not offered
-5. cover preview: not refreshed after a cover status
-6. "suffers a condition" window not opened _(MJ)_
-7. Warding Bond: foreign damage sharing not disarmed _(MJ)_
-8. vision: sources to rebuild
-9. vision: declared senses to read again
-10. banishment: target not removed from the scene _(MJ)_
-11. auras: recalculation requested
-12. emanation on death _(MJ)_
-13. regeneration: automatic Dead removed _(MJ)_
-14. feat effect not synced _(MJ)_
-15. effect end when Incapacitated: not played _(MJ)_
-16. features held by Rage not synced _(MJ)_
-17. Rage: end on condition not evaluated _(MJ)_
-18. swallow: effect not tracked _(MJ)_
-19. grapple: does it still hold? _(MJ)_
-20. grapple: grappler's mark _(MJ)_
-21. Prone: crawl mode not set or not removed _(MJ)_
-22. climbing: fall not triggered _(MJ)_
-23. fall: not triggered automatically _(MJ)_
-24. burning: flammable zone not ignited on catching fire _(MJ)_
-25. Exhaustion: level not raised by an item effect _(MJ)_
-26. Blink: permanent Ethereal not removed _(MJ)_
-27. Levitate: not lifted _(MJ)_
-28. passive perception _(MJ)_
-29. hearing: ranges to read again
-30. enchanted weapon: light not updated _(MJ)_
-31. invisibility: not suspended _(MJ)_
-32. Wild Shape: end if Incapacitated _(MJ)_
-33. floating texts: effect
-34. perception: hearing mark not drawn
-35. perception: display not refreshed
-36. ethereal: view not updated
-37. ethereal: movement action not switched _(MJ)_
-38. sneak: cones redrawn
+4. mount: fall on a condition not checked _(MJ)_
+5. True Strike: attack not offered
+6. cover preview: not refreshed after a cover status
+7. "suffers a condition" window not opened _(MJ)_
+8. Warding Bond: foreign damage sharing not disarmed _(MJ)_
+9. vision: sources to rebuild
+10. vision: declared senses to read again
+11. banishment: target not removed from the scene _(MJ)_
+12. auras: recalculation requested
+13. emanation on death _(MJ)_
+14. regeneration: automatic Dead removed _(MJ)_
+15. feat effect not synced _(MJ)_
+16. effect end when Incapacitated: not played _(MJ)_
+17. features held by Rage not synced _(MJ)_
+18. Rage: end on condition not evaluated _(MJ)_
+19. swallow: effect not tracked _(MJ)_
+20. grapple: does it still hold? _(MJ)_
+21. grapple: grappler's mark _(MJ)_
+22. Prone: crawl mode not set or not removed _(MJ)_
+23. climbing: fall not triggered _(MJ)_
+24. fall: not triggered automatically _(MJ)_
+25. burning: flammable zone not ignited on catching fire _(MJ)_
+26. Exhaustion: level not raised by an item effect _(MJ)_
+27. Blink: permanent Ethereal not removed _(MJ)_
+28. Levitate: not lifted _(MJ)_
+29. passive perception _(MJ)_
+30. hearing: ranges to read again
+31. enchanted weapon: light not updated _(MJ)_
+32. invisibility: not suspended _(MJ)_
+33. Wild Shape: end if Incapacitated _(MJ)_
+34. floating texts: effect
+35. perception: hearing mark not drawn
+36. perception: display not refreshed
+37. ethereal: view not updated
+38. ethereal: movement action not switched _(MJ)_
+39. sneak: cones redrawn
 
 ### `createActor`
 
@@ -470,9 +472,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. piloted object: spell not ended _(MJ)_
 2. follow: the leader is gone
-3. auras: recalculation requested
-4. perception: Devil's Sight or blind hearing not granted after an update
-5. sneak: cones redrawn
+3. mount: bond not cleared _(MJ)_
+4. auras: recalculation requested
+5. perception: Devil's Sight or blind hearing not granted after an update
+6. sneak: cones redrawn
 
 ### `deleteWall`
 
@@ -651,36 +654,37 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 2. shape change not played _(MJ)_
 3. last stand: effects not removed _(MJ)_
 4. straight-line dash: movement
-5. teleportation: targeting not opened
-6. metamagic not held
-7. summon command not recorded
-8. "once per turn" limit not recorded
-9. legendary action not spent
-10. summon on targets: neighbour summons
-11. contest not played
-12. self area: automatic placement
-13. coating: weapon not coated
-14. Boon of Spell Recall
-15. maneuver: promised die or AC not applied
-16. spell ended by a special function: not ended
-17. escape
-18. jump: Step of the Wind doubling not noted
-19. Ready: readied action not chosen
-20. improvised weapon: not requested
-21. effect ending on spell or damage not removed
-22. potion: conditions not removed
-23. healer's kit: stabilization
-24. hide
-25. search
-26. light object: the caster does not shed light
-27. caster light: not lit
-28. light source: not lit
-29. Wild Shape: transformation not done
-30. enchantment: weapon not enchanted
-31. ethereal: Ethereal Jaunt / Stride not applied
-32. Arcane Vigor: Hit Point Dice not spent
-33. restoration: condition not removed
-34. tinderbox: nothing lit
+5. command: companion not commanded
+6. teleportation: targeting not opened
+7. metamagic not held
+8. summon command not recorded
+9. "once per turn" limit not recorded
+10. legendary action not spent
+11. summon on targets: neighbour summons
+12. contest not played
+13. self area: automatic placement
+14. coating: weapon not coated
+15. Boon of Spell Recall
+16. maneuver: promised die or AC not applied
+17. spell ended by a special function: not ended
+18. escape
+19. jump: Step of the Wind doubling not noted
+20. Ready: readied action not chosen
+21. improvised weapon: not requested
+22. effect ending on spell or damage not removed
+23. potion: conditions not removed
+24. healer's kit: stabilization
+25. hide
+26. search
+27. light object: the caster does not shed light
+28. caster light: not lit
+29. light source: not lit
+30. Wild Shape: transformation not done
+31. enchantment: weapon not enchanted
+32. ethereal: Ethereal Jaunt / Stride not applied
+33. Arcane Vigor: Hit Point Dice not spent
+34. restoration: condition not removed
+35. tinderbox: nothing lit
 
 ### `dnd5e.preActivityConsumption`
 
@@ -914,14 +918,15 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 2. summoned object: arriving within range _(MJ)_
 3. Gust of Wind: extra cost not counted _(MJ)_
 4. follow: the leader's path
-5. area: bound effects not removed _(MJ)_
-6. area: trigger interrupted _(MJ)_
-7. area: carried effects not realigned _(MJ)_
-8. auras: recalculation requested
-9. effect end by distance: not judged _(MJ)_
-10. swallow: the swallowed creatures don't follow _(MJ)_
-11. grapple: the victim follows the grappler _(MJ)_
-12. tether: break not judged _(MJ)_
+5. mount: rider and mount don't move together _(MJ)_
+6. area: bound effects not removed _(MJ)_
+7. area: trigger interrupted _(MJ)_
+8. area: carried effects not realigned _(MJ)_
+9. auras: recalculation requested
+10. effect end by distance: not judged _(MJ)_
+11. swallow: the swallowed creatures don't follow _(MJ)_
+12. grapple: the victim follows the grappler _(MJ)_
+13. tether: break not judged _(MJ)_
 
 ### `pauseGame`
 
@@ -1120,21 +1125,22 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 1. piloted object: spell ends at 0 HP _(MJ)_
 2. Dead / Unconscious / Stable not applied or not removed _(MJ)_
 3. second phase not played _(MJ)_
-4. vision: sources to rebuild
-5. auras: recalculation requested
-6. Undead Fortitude: saving throw not rolled _(MJ)_
-7. feat effect not synced _(MJ)_
-8. rise at 0 Hit Points not played _(MJ)_
-9. effect end at 0 HP: not played _(MJ)_
-10. Relentless Rage not played _(MJ)_
-11. knocked out: not woken up _(MJ)_
-12. armor training: shield AC not updated _(MJ)_
-13. granted speed not synced _(MJ)_
-14. hearing: ranges to read again
-15. Wild Shape: end at 0 Hit Points _(MJ)_
-16. perception: Devil's Sight or blind hearing not granted after an update
-17. weapon mastery window not refreshed
-18. sneak: cones redrawn
+4. mount: fall at 0 HP not checked _(MJ)_
+5. vision: sources to rebuild
+6. auras: recalculation requested
+7. Undead Fortitude: saving throw not rolled _(MJ)_
+8. feat effect not synced _(MJ)_
+9. rise at 0 Hit Points not played _(MJ)_
+10. effect end at 0 HP: not played _(MJ)_
+11. Relentless Rage not played _(MJ)_
+12. knocked out: not woken up _(MJ)_
+13. armor training: shield AC not updated _(MJ)_
+14. granted speed not synced _(MJ)_
+15. hearing: ranges to read again
+16. Wild Shape: end at 0 Hit Points _(MJ)_
+17. perception: Devil's Sight or blind hearing not granted after an update
+18. weapon mastery window not refreshed
+19. sneak: cones redrawn
 
 ### `updateAmbientLight`
 
@@ -1167,11 +1173,12 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 ### `updateCombatant`
 
-1. turn statuses not synchronized _(MJ)_
-2. Initiative die not offered _(MJ)_
-3. surprise: Surprised not removed _(MJ)_
-4. combat launch: initiative not followed _(MJ)_
-5. tracker: budget
+1. mount: controlled mount initiative not set _(MJ)_
+2. turn statuses not synchronized _(MJ)_
+3. Initiative die not offered _(MJ)_
+4. surprise: Surprised not removed _(MJ)_
+5. combat launch: initiative not followed _(MJ)_
+6. tracker: budget
 
 ### `updateDrawing`
 

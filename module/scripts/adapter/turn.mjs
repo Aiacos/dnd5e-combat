@@ -132,7 +132,9 @@ export function costFor(activity) {
   const quickSearch = (item?.system?.identifier === "dnd5e-combat-search")
     && Array.from(activity.actor?.items ?? []).some(i => contentOf(i).entry?.quickSearch === true);
   const searchCost = quickSearch ? (((() => { const c = combatantFor(activity.actor); return c ? (readBudget(c).bonus ?? 1) : 1; })() >= 1) ? "bonus" : "action") : null;
-  return searchCost ?? costOf(activity.activation?.type) ?? (replaces ? "action" : null);
+  // §490 (B08) : un ordre à un compagnon (`commands`) sans activation dans la donnée se paie au coût de sa règle (action Bonus par défaut).
+  const commanding = contentOf(item)?.entry?.commands ?? null;
+  return searchCost ?? costOf(activity.activation?.type) ?? (commanding ? (commanding.cost ?? "bonus") : null) ?? (replaces ? "action" : null);
 }
 
 /**

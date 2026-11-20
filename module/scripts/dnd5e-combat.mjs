@@ -15,6 +15,7 @@ import { registerZones } from "./runtime/zones.mjs";
 import { registerAltitude } from "./runtime/altitude.mjs";
 import { registerActions, approach, pathTo, fleeFrom, gapCells, verticalGapCells } from "./runtime/actions.mjs";
 import { registerFollow } from "./runtime/follow.mjs";
+import { registerMount } from "./runtime/mount.mjs";
 import { registerDoors } from "./runtime/doors.mjs";
 import { registerDoorLockUi } from "./ui/door-lock.mjs";
 import { registerWallGrateUi } from "./ui/wall-grate.mjs";
@@ -392,6 +393,7 @@ Hooks.once("init", () => {
   gated(registerAltitude);   // avant le plafond du tour et les attaques d'opportunité : ils jugent le chemin aligné sur le sol
   gated(registerActions);
   gated(registerFollow);   // §41.3 : après les actions — le suivi marche par `approach`
+  gated(registerMount);    // §490 (B08) : monture (déplacement commun, chute, initiative) et ordre à un compagnon
   gated(registerDoors);   // §244 : serrures des portes (réglage, requête au MJ actif)
   gated(registerDoorLockUi);   // §244 : section « DAS · Serrure » de la configuration du mur
   gated(registerWallGrateUi);   // §468 : section « DAS · Grille » de la configuration du mur
