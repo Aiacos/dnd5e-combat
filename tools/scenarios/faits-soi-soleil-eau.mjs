@@ -23,10 +23,17 @@ export default {
       const hp = await ctx.hp(t);
       ctx.restore(() => ctx.setHp(t, hp));
     }
-    for ( const itemData of [SUN, WATER] ) {
-      const r = await ctx.call("upsert-actor-item", { actorId: fighter.actorId, itemData, match: { path: "system.identifier", value: itemData.system.identifier } });
-      const itemId = r.itemId ?? r.id ?? r.item?._id ?? (await ctx.itemId(fighter.id, itemData.system.identifier));
-      ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: fighter.actorId, itemId }).catch(() => {}));
+    // Les traits d'essai, puis leurs déclarations dans la surcouche du monde le temps du scénario. Pas en drapeaux d'item : Foundry
+    // déplie les clés pointées des conditions à la création (`"self.inSunlight"` devient `{ self: { inSunlight } }`), la validation
+    // refuse le drapeau (« unknown fact "self" ») et la création est annulée (banc du 2026-11-20, comme niveau-sort-reaction).
+    const { data: fTok } = await ctx.call("get-scene-object", { type: "Token", objectId: fighter.id });
+    for ( const { rule, ...itemData } of [SUN, WATER] ) {
+      const identifier = itemData.system.identifier;
+      const r = await ctx.call("upsert-actor-item", { actorId: fTok.actorId, itemData, match: { path: "system.identifier", value: identifier } });
+      const itemId = r.itemId ?? r.id ?? r.item?._id ?? (await ctx.itemId(fighter.id, identifier));
+      ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: fTok.actorId, itemId }).catch(() => {}));
+      const { before } = await ctx.engine("overrideContent", { identifier, entry: rule });
+      ctx.restore(() => ctx.engine("overrideContent", { identifier, entry: before }).catch(() => {}));
     }
     await pause(800);
 
@@ -92,19 +99,19 @@ export default {
   }
 };
 
-/* Les traits d'essai (déclarés après le scénario : son titre est le premier `name`). */
+/* Les traits d'essai et leurs déclarations (`rule`, posée dans la surcouche du monde), après le scénario : son titre est le premier `name`. */
 const SUN = {
   name: "Brûle au soleil (essai)", type: "feat", img: "icons/magic/light/explosion-star-glow-orange.webp",
   system: { identifier: "das-test-burns-in-sunlight", type: { value: "monster" }, description: { value: "<p>Essai §484.</p>" } },
-  flags: { "dnd5e-combat": {
+  rule: {
     triggers: [{ on: "startOfTurn", if: { "self.inSunlight": true }, do: [{ type: "damage", to: "self", formula: "20", damageType: "radiant" }] }],
     rollDisadvantage: { on: ["check"], if: { "self.inSunlight": true } }
-  } }
+  }
 };
 const WATER = {
   name: "Craint l'eau courante (essai)", type: "feat", img: "icons/magic/water/wave-water-blue.webp",
   system: { identifier: "das-test-fears-running-water", type: { value: "monster" }, description: { value: "<p>Essai §484.</p>" } },
-  flags: { "dnd5e-combat": {
+  rule: {
     triggers: [{ on: "startOfTurn", if: { "self.inRunningWater": true }, do: [{ type: "damage", to: "self", formula: "5", damageType: "cold" }] }]
-  } }
+  }
 };
