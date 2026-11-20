@@ -3,7 +3,7 @@
  * tour (`to: "self"`, sans effet posé). Arène de test (en plein jour). Deux traits d'essai prêtés au Guerrier :
  *  - « Brûle au soleil » : 20 radiants au début de son tour au soleil, Désavantage aux tests de caractéristique au soleil ;
  *  - « Craint l'eau courante » : 5 dégâts de froid au début de son tour dans une région marquée « eau courante ».
- * Au soleil et dans l'eau : test avec Désavantage, puis 25 dégâts au début de son tour. Dans une région d'obscurité, hors de l'eau : test
+ * Au soleil et dans l'eau : test avec Désavantage (« kl » ou « dis » dans la formule), puis 25 dégâts au début de son tour. Dans une région d'obscurité, hors de l'eau : test
  * sans Désavantage, plus aucun dégât au tour suivant.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -37,13 +37,13 @@ export default {
     }
     await pause(800);
 
-    // 1. Au soleil : Désavantage au test (un jet « kl »).
+    // 1. Au soleil : Désavantage au test (« 2d20kl » ou « 2d20dis » selon dnd5e).
     const light = (await ctx.engine("stealth", { tokenId: fighter.id }))?.light;
     if ( light !== 2 ) ctx.log(`lumière au départ : ${light} (l'arène n'est pas en plein jour ?)`);
     const sunny = await ctx.engine("rollCheck", { tokenId: fighter.id, skill: "ath" });
-    ctx.expect(/kl/.test(sunny?.formula ?? ""), `au soleil : test d'Athlétisme avec Désavantage (« ${sunny?.formula} »)`);
+    ctx.expect(/kl|dis/.test(sunny?.formula ?? ""), `au soleil : test d'Athlétisme avec Désavantage (« ${sunny?.formula} »)`);
     const save = await ctx.engine("rollSave", { tokenId: fighter.id, ability: "dex" });
-    ctx.expect(!/kl/.test(save?.formula ?? ""), `au soleil : la sauvegarde, elle, sans Désavantage (« ${save?.formula} »)`);
+    ctx.expect(!/kl|dis/.test(save?.formula ?? ""), `au soleil : la sauvegarde, elle, sans Désavantage (« ${save?.formula} »)`);
 
     // 2. Une région « eau courante » sous le Guerrier.
     const p = await ctx.position(fighter);
@@ -88,7 +88,7 @@ export default {
     await pause(1500);
     ctx.log(`lumière à l'ombre : ${(await ctx.engine("stealth", { tokenId: fighter.id }))?.light}`);
     const shaded = await ctx.engine("rollCheck", { tokenId: fighter.id, skill: "ath" });
-    ctx.expect(!/kl/.test(shaded?.formula ?? ""), `à l'ombre : test sans Désavantage (« ${shaded?.formula} »)`);
+    ctx.expect(!/kl|dis/.test(shaded?.formula ?? ""), `à l'ombre : test sans Désavantage (« ${shaded?.formula} »)`);
     await ctx.setHp(fighter, 60);
     mark = await ctx.lastMessageId();
     for ( let i = 0; i < 2; i++ ) { await ctx.nextTurn(); await pause(2000); }
