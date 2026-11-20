@@ -20,10 +20,8 @@ const PHB = "dnd-players-handbook";
 
 export const RELEASES = Object.freeze([
   {
-    // EN PRÉPARATION (module.json n'est pas encore à cette version : cette note n'est montrée à personne avant le changement de version).
-    // À la release : compléter `highlights`, recopier `tested` du dernier résumé du banc, revoir `risks` et `checks`.
     version: "0.288.0",
-    highlights: ["grillesMonde"],
+    highlights: ["bottesPlaces", "lumiereVive", "grillesMonde"],
     tested: {
       foundry: "14.370",
       system: "6.1.1",
