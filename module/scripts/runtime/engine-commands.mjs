@@ -278,8 +278,8 @@ export const COMMANDS = {
       }
       // Un effet sous condition (M3, §18.4 : « si la cible est de taille G ou inférieure ») ne passe que si elle tient.
       // La résolution accompagne les faits : `hit.critical` s'y lit (Masse de châtiment : « sur un 20 […] après ces dégâts »).
-      const facts = factsFor({ source: source?.actor ?? null, target: target?.actor ?? null, activity, sourceToken: source, targetToken: target,
-        resolution });
+      const facts = factsFor({ source: source?.actor ?? null, target: target?.actor ?? null, activity, sourceToken: source,
+        targetToken: target, resolution });
       const allowed = (entry.effects ?? []).filter(e => {
         if ( !e.if ) return !first;
         const ok = holds((typeof e.if === "string") ? JSON.parse(e.if) : e.if, facts);
