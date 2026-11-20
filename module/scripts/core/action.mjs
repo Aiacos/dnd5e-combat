@@ -35,6 +35,7 @@
 
 import { resolveAttack, beatsAcBy } from "./attack.mjs";
 import { nearMissTargets } from "./success-at-cost.mjs";
+import { SIZES, sizeAtLeast } from "./content/enums.mjs";
 
 /** Version du schéma écrit dans les flags. Une résolution d'une autre version est ignorée. */
 export const RESOLUTION_VERSION = 2;
@@ -68,6 +69,19 @@ const same = resolution => ({ resolution, commands: [] });
 /** Une résolution de ce schéma, ou null. */
 export function current(resolution) {
   return resolution?.v === RESOLUTION_VERSION ? resolution : null;
+}
+
+/**
+ * §402 : la raison d'une réussite d'office tenant à la créature elle-même — son type (`types`), ou sa taille (`sizeAtLeast` : Filet
+ * tombant, « réussit automatiquement si elle est de taille TG ou supérieure »). Une taille inconnue ne donne rien.
+ * @param {{types?: string[], sizeAtLeast?: string}|null} rule  `saveAutoSuccess` de l'entrée.
+ * @param {{type?: string, size?: string}} creature
+ * @returns {string|null}  « type:<type> », « size:<taille> », ou null.
+ */
+export function creatureAutoSuccess(rule, { type, size }={}) {
+  if ( rule?.types?.includes(type) ) return `type:${type}`;
+  if ( rule?.sizeAtLeast && SIZES.includes(size) && sizeAtLeast(size, rule.sizeAtLeast) ) return `size:${size}`;
+  return null;
 }
 
 /** Ceux que l'action atteint : les cibles touchées s'il y a un jet d'attaque, toutes sinon — hors celles qu'elle ne peut pas affecter. */

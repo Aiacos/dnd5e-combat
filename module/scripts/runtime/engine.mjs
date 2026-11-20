@@ -9,7 +9,8 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { current, undoPlan, wantsDamageRoll, isCriticalHit, pendingChoice, pendingAllocation, STEPS } from "../core/action.mjs";
+import { current, undoPlan, wantsDamageRoll, isCriticalHit, pendingChoice, pendingAllocation, STEPS, creatureAutoSuccess }
+  from "../core/action.mjs";
 import { isAutoCritical, autoFailSave } from "../core/conditions.mjs";
 import { maximizeDice } from "../core/max-dice.mjs";
 import { spellCastLevel } from "../core/usage.mjs";
@@ -303,6 +304,7 @@ export async function openingFor(message, usage, extra={}) {
       ?? activity?.actor?.getActiveTokens?.(false, true)?.[0] ?? null);
     // §402 : `saveAutoSuccess` — `types` : ces types de créature réussissent d'office (Pétrification : Créatures artificielles) ;
     // `fighting` : une créature que le lanceur combat aussi (en combat, ennemie : Discours captivant, Faux amis).
+    // `sizeAtLeast` : une créature au moins de cette taille (Filet tombant).
     const rule = contentOf(activity?.item).entry?.saveAutoSuccess ?? null;
     // Le token qui parle (un PNJ non lié n'a pas de token « actif » par son acteur synthétique).
     const caster = rule?.fighting ? (fromUuidSync(speakerTokenUuid(message) ?? "", { strict: false })
@@ -313,8 +315,9 @@ export async function openingFor(message, usage, extra={}) {
     if ( rule ) targets = targets.map(t => {
       if ( t.autoFail ) return t;
       const token = fromUuidSync(t.token, { strict: false });
-      const type = (token?.actor ?? fromUuidSync(t.actor, { strict: false }))?.system?.details?.type?.value;
-      if ( rule.types?.includes(type) ) return { ...t, autoSucceed: `type:${type}` };
+      const actor = token?.actor ?? fromUuidSync(t.actor, { strict: false });
+      const own = creatureAutoSuccess(rule, { type: actor?.system?.details?.type?.value, size: actor?.system?.traits?.size });
+      if ( own ) return { ...t, autoSucceed: own };
       return fighting(token) ? { ...t, autoSucceed: "fighting" } : t;
     });
   }

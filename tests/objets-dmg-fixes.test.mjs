@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { dataFixPlan, withDataFixes } from "../module/scripts/core/data-fixes.mjs";
 import { ITEM_FIXES } from "../module/scripts/content/item-fixes.mjs";
+import { creatureAutoSuccess } from "../module/scripts/core/action.mjs";
+import { validateEntry } from "../module/scripts/core/content.mjs";
 
 // §457 : copier-coller du Guide du maître 2.0.0 (ids publics du SRD 5.2), sur des formes synthétiques.
 const book = (activity, wrong) => ({ effects: [{ _id: "ownBookEffect000" }], system: { activities: {
@@ -104,3 +106,23 @@ describe("objets du Guide : DD, lien et recharge que le texte de l'objet donne (
   });
 });
 
+
+describe("Filet tombant (SRD 5.2) : une créature de taille TG ou plus réussit d'office (saveAutoSuccess.sizeAtLeast)", () => {
+  const rule = ITEM_FIXES["falling-net"].saveAutoSuccess;
+  it("TG et Gig : réussite d'office ; G et moins : la sauvegarde se tire", () => {
+    expect(creatureAutoSuccess(rule, { type: "giant", size: "huge" })).toBe("size:huge");
+    expect(creatureAutoSuccess(rule, { size: "grg" })).toBe("size:grg");
+    expect(creatureAutoSuccess(rule, { size: "lg" })).toBeNull();
+    expect(creatureAutoSuccess(rule, { size: "med" })).toBeNull();
+  });
+  it("taille inconnue : rien ; le type garde sa règle", () => {
+    expect(creatureAutoSuccess(rule, {})).toBeNull();
+    expect(creatureAutoSuccess({ types: ["construct"] }, { type: "construct", size: "tiny" })).toBe("type:construct");
+    expect(creatureAutoSuccess(null, { type: "construct", size: "huge" })).toBeNull();
+  });
+  it("la clé est validée", () => {
+    expect(validateEntry({ saveAutoSuccess: { sizeAtLeast: "huge" } })).toEqual([]);
+    expect(validateEntry({ saveAutoSuccess: { sizeAtLeast: "enormous" } })).not.toEqual([]);
+    expect(validateEntry({ saveAutoSuccess: {} })).not.toEqual([]);
+  });
+});
