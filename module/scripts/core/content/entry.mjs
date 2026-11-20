@@ -14,6 +14,7 @@ import { SPELL_COMPONENTS } from "../spell-failure.mjs";
 import { isId, isObject } from "./shared.mjs";
 import { validateDataFixes } from "../data-fixes.mjs";
 import { validateSaveDisadvantageAgainst } from "../eligibility.mjs";
+import { validateSaveResist } from "../save-resist.mjs";
 import { validateRegeneration } from "../regeneration.mjs";
 import { validateFormLock, validateSuspends } from "../form-lock.mjs";
 import { revertAfterErrors } from "../form-revert.mjs";
@@ -110,6 +111,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     if ( !Array.isArray(v) || !v.length || !v.every(x => x === "magic") ) errors.push(`${at}saveAutoSuccessAgainst: ["magic"]`);
   }
   if ( "saveDisadvantageAgainst" in entry ) errors.push(...validateSaveDisadvantageAgainst(entry.saveDisadvantageAgainst, at));
+  if ( "saveResist" in entry ) errors.push(...validateSaveResist(entry.saveResist, at, isId));
   if ( "trace" in entry ) {
     const t = entry.trace;
     if ( isObject(t) ) {
