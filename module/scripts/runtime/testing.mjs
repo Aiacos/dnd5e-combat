@@ -575,4 +575,24 @@ async function atCost({ action="list", id=null, cost, card=null, tokenId=null, m
   throw new Error(`unknown action: ${action}`);
 }
 
-export const testApi = Object.freeze({ gmQueue: gmQueueState, gmQueueForce, gmQueueRoll, gmQueueAnswer, atCost, barrier, gmAlerts, controls, menu, wall, wallSide, cover, coverPreview, issues, planning, stormStrike, storm, placeRegionAt, effectOrigins, enchant, overrideContent, heal, hurt, rollSave, rollCheck, range, rangeCheck, naturalOne, perf, threats, attackReasons, perceived, inventory, budget, identify, itemData, stairs, plan, movement, move, windows, closeWindow, view, reports, rollCard, status, reload, clickCard, summonAt, castFromBar, summonCaptured, owners, makeScroll, scrollReading, hampered, stats, teleport, teleportPick, restoreItem, runMacro, saveChance, portent, transpose, dash, chatCards, setting, foreignSetting, viewScene, sequencer, stairsAt, takeStairs, follow, unfollow, followState, endings, actionEnd, use, sheetUse, familiar, familiarPocket, familiarRecall, skillAids, skillAid, animations: animationState, toggleLight, hood, removeItemEffect, lightState, advanceTime, longRest, shortRest, clock, door, lock, diagnosticScan, diagnosticRepair, diagnosticBackups, diagnosticRestore, diagnosticForget, factions, sees, stealth, scatter, flammable, climb, climbState, climbHolds, climbToward, climbCeiling, climbDown, reachCheck, dropDown, rawMove, jump, hoist, grab, ready, burning, masteries, etherealWalls, flight, groupRoll, groupRollState, groupRollBreakdown, groupRollForce, groupRollMode, placeMenu, settingsChanged, placeItemEffect, concentrate, upkeep, stand, rangedPlacement, chainCheck, tokenLight, damageTypes, fortified, catalyst, grappleState, waits, awaiting, forcePlayerWait, pickTargets, castPicked , debugThrow, debugReport, debugClear, debugVerbose, connectionTest, visionMatrix, screenHere, setOwners, sightIssues, screenAfterUpdate, controlToken });
+/**
+ * Discord (Fanarie, 2026-11-18) : la case « Lumière vive » remise dans la configuration de la scène affichée (ui/scene-bright.mjs).
+ * Ouvre la fenêtre, lit la case ; `check` : la coche ou la décoche et enregistre le formulaire. Rend la case et la valeur enregistrée.
+ */
+async function sceneBright({ check=null }={}) {
+  gmOnly();
+  const scene = canvas.scene;
+  const app = scene.sheet;
+  await app.render({ force: true });
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const input = app.element?.querySelector('[name="environment.globalLight.bright"]');
+  const shown = { present: !!input, checked: input?.checked ?? null };
+  if ( input && (check !== null) ) {
+    input.checked = !!check;
+    await app.submit();
+  }
+  await app.close();
+  return { ...shown, saved: scene._source.environment.globalLight.bright };
+}
+
+export const testApi = Object.freeze({ gmQueue: gmQueueState, gmQueueForce, gmQueueRoll, gmQueueAnswer, atCost, barrier, gmAlerts, controls, menu, wall, wallSide, cover, coverPreview, issues, planning, stormStrike, storm, placeRegionAt, effectOrigins, enchant, overrideContent, heal, hurt, rollSave, rollCheck, range, rangeCheck, naturalOne, perf, threats, attackReasons, perceived, inventory, budget, identify, itemData, stairs, plan, movement, move, windows, closeWindow, view, reports, rollCard, status, reload, clickCard, summonAt, castFromBar, summonCaptured, owners, makeScroll, scrollReading, hampered, stats, teleport, teleportPick, restoreItem, runMacro, saveChance, portent, transpose, dash, chatCards, setting, foreignSetting, viewScene, sequencer, stairsAt, takeStairs, follow, unfollow, followState, endings, actionEnd, use, sheetUse, familiar, familiarPocket, familiarRecall, skillAids, skillAid, animations: animationState, toggleLight, hood, removeItemEffect, lightState, advanceTime, longRest, shortRest, clock, door, lock, diagnosticScan, diagnosticRepair, diagnosticBackups, diagnosticRestore, diagnosticForget, factions, sees, stealth, scatter, flammable, climb, climbState, climbHolds, climbToward, climbCeiling, climbDown, reachCheck, dropDown, rawMove, jump, hoist, grab, ready, burning, masteries, etherealWalls, flight, groupRoll, groupRollState, groupRollBreakdown, groupRollForce, groupRollMode, placeMenu, settingsChanged, placeItemEffect, concentrate, upkeep, stand, rangedPlacement, chainCheck, tokenLight, damageTypes, fortified, catalyst, grappleState, waits, awaiting, forcePlayerWait, pickTargets, castPicked , debugThrow, debugReport, debugClear, debugVerbose, connectionTest, visionMatrix, screenHere, setOwners, sightIssues, screenAfterUpdate, controlToken, sceneBright });

@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-342 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
+343 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
 commentaire de la fonction dans le code (début seulement) ; le fichier est relatif à `module/scripts/`. Les valeurs non
 fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de test du connecteur, MJ seulement.
 
@@ -354,6 +354,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.mcp.runMacro` | `({ uuid }={})` | `runtime/testing.mjs` | MJ : exécute la macro `uuid` sans l'attendre (une erreur part en console) → `{ started }` (son nom). |
 | `api.mcp.saveChance` | `({ casterId, targetId, itemId, activityId=null })` | `runtime/testing-rules.mjs` | La chance d'échec de la sauvegarde que la pastille afficherait (§15.3), pour la comparer au vrai jet. |
 | `api.mcp.scatter` | `({ tokenId, pickUp: take=false })` | `runtime/testing-rules.mjs` | §187 : les objets répandus de la scène (chausse-trapes, billes) et ceux que ce token peut ramasser ; `pickUp` : ramasse le premier, comme l'entrée « Ramasser » du menu. |
+| `api.mcp.sceneBright` | `({ check=null }={})` | `runtime/testing.mjs` | Discord (Fanarie, 2026-11-18) : la case « Lumière vive » remise dans la configuration de la scène affichée (ui/scene-bright.mjs). Ouvre la fenêtre, lit la case ; `check` : la coche ou la décoche et enregistre le formula… |
 | `api.mcp.screenAfterUpdate` | `({ observerId, targetIds=[] })` | `runtime/testing-vision.mjs` | Issue #42, suite (Archibald) : l'écran de l'observateur APRÈS une mise à jour de son acteur, sans remise en place de toutes les sources — la préparation des données du token effaçait les modes en mémoire (Vision du diab… |
 | `api.mcp.screenHere` | `({ targetIds=[] }={})` | `runtime/testing-vision.mjs` | Ce que CE client montre des tokens de la scène affichée, avec les tokens qu'il contrôle (ou tous ceux qu'il possède quand il n'en contrôle aucun : la vue d'un joueur). Sans MJ requis, pour un client joueur. `targetIds`… |
 | `api.mcp.scrollReading` | `({ tokenId, itemId })` | `runtime/testing.mjs` | O8g (§350) : ce que le moteur juge d'un parchemin pour son porteur (`scrollReadingFor`), activité par activité. |

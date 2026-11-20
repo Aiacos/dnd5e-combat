@@ -2648,5 +2648,7 @@
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Nom": "Nouveautés",
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Aide": "Le message de mise à jour : ce qu'apportent les dernières versions, les modules DAS à mettre à jour, la compatibilité avec Foundry, dnd5e et vos livres, les vérifications conseillées.",
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Bouton": "Ouvrir le message",
-  "DND5ECOMBAT.Interop.DdbEgide": "DAS · Core a coupé l'automatisation de l'Égide arcanique et du Lien protecteur de DDB Importer : elle absorbait les dégâts une seconde fois. Rechargez le monde (F5) pour que ce soit pris en compte."
+  "DND5ECOMBAT.Interop.DdbEgide": "DAS · Core a coupé l'automatisation de l'Égide arcanique et du Lien protecteur de DDB Importer : elle absorbait les dégâts une seconde fois. Rechargez le monde (F5) pour que ce soit pris en compte.",
+  "DND5ECOMBAT.LumiereVive.Case": "Lumière vive (plein jour)",
+  "DND5ECOMBAT.LumiereVive.Aide": "DAS · Core : l'illumination globale éclaire toute la scène en lumière vive, comme en plein jour. Décochée, c'est une lumière faible : au-delà de la vision dans le noir, les créatures voient comme en lumière faible (visibilité réduite). Foundry V14 n'affiche plus cette option ; DAS la remet ici."
 }

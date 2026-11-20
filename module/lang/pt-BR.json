@@ -2648,5 +2648,7 @@
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Nom": "Novidades",
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Aide": "A mensagem de atualização: o que as últimas versões trazem, os módulos DAS a atualizar, a compatibilidade com Foundry, dnd5e e seus livros, as verificações recomendadas.",
   "DND5ECOMBAT.Reglages.Outil.releaseNotes.Bouton": "Abrir a mensagem",
-  "DND5ECOMBAT.Interop.DdbEgide": "DAS · Core desativou a automação da Proteção Arcana e do Vínculo Protetor do DDB Importer: ela absorvia o dano uma segunda vez. Recarregue o mundo (F5) para que a mudança tenha efeito."
+  "DND5ECOMBAT.Interop.DdbEgide": "DAS · Core desativou a automação da Proteção Arcana e do Vínculo Protetor do DDB Importer: ela absorvia o dano uma segunda vez. Recarregue o mundo (F5) para que a mudança tenha efeito.",
+  "DND5ECOMBAT.LumiereVive.Case": "Luz plena (luz do dia)",
+  "DND5ECOMBAT.LumiereVive.Aide": "DAS · Core: a iluminação global ilumina toda a cena com luz plena, como a luz do dia. Desmarcada, é luz fraca: além da visão no escuro, as criaturas enxergam como em luz fraca (área levemente obscurecida). O Foundry V14 não mostra mais esta opção; o DAS a traz de volta aqui."
 }

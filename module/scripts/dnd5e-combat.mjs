@@ -18,6 +18,7 @@ import { registerFollow } from "./runtime/follow.mjs";
 import { registerDoors } from "./runtime/doors.mjs";
 import { registerDoorLockUi } from "./ui/door-lock.mjs";
 import { registerWallGrateUi } from "./ui/wall-grate.mjs";
+import { registerSceneBrightUi } from "./ui/scene-bright.mjs";
 import { registerCombatEvents, combatApi } from "./runtime/combat-events.mjs";
 import { registerTurn } from "./runtime/turn.mjs";
 import { registerMetamagic } from "./runtime/metamagic.mjs";
@@ -393,6 +394,7 @@ Hooks.once("init", () => {
   gated(registerDoors);   // §244 : serrures des portes (réglage, requête au MJ actif)
   gated(registerDoorLockUi);   // §244 : section « DAS · Serrure » de la configuration du mur
   gated(registerWallGrateUi);   // §468 : section « DAS · Grille » de la configuration du mur
+  gated(registerSceneBrightUi);   // Discord (Fanarie, 2026-11-18) : case « Lumière vive » de l'illumination globale, cachée par V14
   gated(registerCombatEvents);   // §250 : évènements dans l'initiative (un piège à son initiative)
   gated(registerRecast);   // avant la souris : une relance repasse par la visée et la légalité
   gated(registerPointer);

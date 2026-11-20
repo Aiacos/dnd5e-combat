@@ -242,6 +242,7 @@
     "mcp.runMacro",
     "mcp.saveChance",
     "mcp.scatter",
+    "mcp.sceneBright",
     "mcp.screenAfterUpdate",
     "mcp.screenHere",
     "mcp.scrollReading",

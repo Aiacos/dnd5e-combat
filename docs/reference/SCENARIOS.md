@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-362 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+363 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -156,6 +156,7 @@ la sélection sans rien jouer.
 | `lecture-48h` |  | §458 | le +2 à la fin de la lecture, une fois (onUsesSpent) |
 | `lenteur-attaque` |  | §267 | une seule attaque par action Attaquer |
 | `lot-c12-ravenloft` |  | §447 | Forme ombrale, Toucher de la mort, Courroux sauvage (aura, Représailles, fin), Seconde peau |
+| `lumiere-vive-scene` |  |  | la case de l'illumination globale dans la configuration de scène |
 | `lumieres-duree` |  | §121 | durée, extinction, huile, torche consumée |
 | `lumieres` |  | §52 §121 | lampe, lanterne sourde, torche par la boîte à amadou |
 | `lutte` |  | §15.2 | repoussé, agrippé, choix fait d'avance |
