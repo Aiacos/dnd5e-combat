@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-386 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+387 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -169,6 +169,7 @@ la sélection sans rien jouer.
 | `lancer-main-secondaire` |  | §240 §241 | au menu, action Bonus |
 | `lecture-48h` |  | §458 | le +2 à la fin de la lecture, une fois (onUsesSpent) |
 | `lenteur-attaque` |  | §267 | une seule attaque par action Attaquer |
+| `liane-traction` |  | §502 | Liane avide : la cible touchée est tirée vers la liane invoquée et agrippée par elle ; une seule à la fois, l'ancienne relâchée (§502, brique B22) |
 | `lot-c12-ravenloft` |  | §447 | Forme ombrale, Toucher de la mort, Courroux sauvage (aura, Représailles, fin), Seconde peau |
 | `lumiere-vive-scene` |  |  | la case de l'illumination globale dans la configuration de scène |
 | `lumieres-duree` |  | §121 | durée, extinction, huile, torche consumée |

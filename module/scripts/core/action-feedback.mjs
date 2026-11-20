@@ -69,6 +69,8 @@ const DEFAULTS = Object.freeze({
   stage: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull },
   // §496 (B16) : un sort gardé contre une dissipation, par la Réaction et un emplacement.
   dispelKept: { success: CORE_SOUNDS.chime, failure: null },
+  // §502 (B22) : une créature relâchée parce que l'item n'en agrippe qu'une à la fois (le cliquetis de l'évasion).
+  grappleReleased: { success: CORE_SOUNDS.rattle, failure: null },
   // §501 (B21) : une seule réaction perdue au lieu de toutes (« elle ne perd qu'une réaction »).
   reactionLost: { success: null, failure: CORE_SOUNDS.dull },
   // §500 (B20) : une créature tuée par un drain (maximum de PV ou caractéristique ramené à 0) — le coup sourd.

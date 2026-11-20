@@ -166,6 +166,28 @@ export function spellCommandOf(activity) {
   return null;
 }
 
+/**
+ * §502 (B22) : le token d'une invocation de `actor` sur la scène `scene`, vers laquelle tirer (`move { toward: "summon" }`) ou qui tient
+ * une empoignade (`grapples.by: "summon"`) : de préférence une invocation de cet item (`flags.dnd5e.summon.origin` = son uuid), sinon
+ * n'importe laquelle de l'acteur (la Liane avide d'un monstre est lancée par la copie du sort, l'attaque vient d'un autre item) ; la plus
+ * proche de `near` s'il y en a plusieurs. null sans invocation.
+ */
+export function summonTokenFor(actor, item, scene, near=null) {
+  if ( !actor || !scene ) return null;
+  const mine = scene.tokens.filter(t => {
+    const origin = t.actor?.getFlag?.("dnd5e", "summon.origin");
+    if ( !origin ) return false;
+    const from = fromUuidSync(origin, { strict: false });
+    return (from?.actor === actor) || (from?.actor?.uuid === actor.uuid) || String(origin).startsWith(`${actor.uuid}.`);
+  });
+  const own = item ? mine.filter(t => t.actor?.getFlag?.("dnd5e", "summon.origin") === item.uuid) : [];
+  const pool = own.length ? own : mine;
+  if ( (pool.length < 2) || !near ) return pool[0] ?? null;
+  const at = t => ({ x: t._source.x, y: t._source.y });
+  const d = t => Math.hypot(at(t).x - near._source.x, at(t).y - near._source.y);
+  return pool.slice().sort((a, b) => d(a) - d(b))[0];
+}
+
 /** Les tokens des invocations de cet acteur dont la règle dit `key` (`castFrom`, `endsIfIncapacitated`…), toutes scènes. */
 export function summonsOfWith(actor, key) {
   const out = [];

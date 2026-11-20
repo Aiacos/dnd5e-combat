@@ -930,6 +930,7 @@
   "DND5ECOMBAT.FormeVerrouillee.Degats": "{item}: {name} tenta di cambiare forma",
   "DND5ECOMBAT.SoinsPorteur": "{item}: {name} recupera Punti Ferita",
   "DND5ECOMBAT.SecondePhase": "{item}: {from} diventa {to}.",
+  "DND5ECOMBAT.Empoignade.UneSeule": "{name}: liberato ({item} afferra una sola creatura)",
   "DND5ECOMBAT.Reaction.PerdUne": "{name} perde solo una reazione (ne restano {n})",
   "DND5ECOMBAT.RenvoiDegats.Carte": "{item}: {name} subisce {n} danni di ritorno ({types}).",
   "DND5ECOMBAT.RenvoiDegats.Avis": "{n} danni restituiti",

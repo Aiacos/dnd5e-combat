@@ -21,8 +21,9 @@ import { grappleHolds } from "../core/conditions.mjs";
 import { spendUse } from "../core/turn.mjs";
 import {
   grappleEffectsOf, grappleFacts, escapeDcOf, grapplerOf, grappleSceneOf,
-  grapplingMarksOf, grapplingMarkData, grappledTokenOf, victimsOf, actorOfEffect
+  grapplingMarksOf, grapplingMarkData, grappledTokenOf, victimsOf, actorOfEffect, grapplesRuleOf
 } from "../adapter/grapple.mjs";
+import { originItemOf } from "../adapter/facts.mjs";
 import { basicActionOf } from "../adapter/basics.mjs";
 import { inescapableFor } from "../adapter/grapple-rules.mjs";
 import { swallowerOf } from "../adapter/swallow.mjs";
@@ -104,6 +105,33 @@ async function markGrappler(effect) {
   if ( grapplingMarksOf(grappler).some(m => m.getFlag(MODULE_ID, "grappling").effect === effect.uuid) ) return;
   await grappler.createEmbeddedDocuments("ActiveEffect", [grapplingMarkData(loc("Empoignade.Marque", { name: victim.name }), victim, effect)]);
   log(`grapple: ${grappler.name} grapples ${victim.name} (mark placed)`);
+}
+
+/**
+ * §502 (B22) : `grapples.one` — l'item n'agrippe qu'une créature à la fois. Un nouvel Agrippé venu de cet item relâche les autres
+ * créatures qu'il tenait (leur effet Agrippé de cet item est retiré, la marque de l'agrippeur suit par `unlink`), avec un avis et un son
+ * pour toute la table.
+ */
+async function onlyOneGrappled(effect) {
+  if ( !effect.statuses?.has("grappled") ) return;
+  const item = originItemOf(effect);
+  if ( !grapplesRuleOf(item)?.one ) return;
+  const victim = actorOfEffect(effect);
+  const victimToken = grappledTokenOf(effect);
+  const scene = victimToken?.parent ?? null;
+  if ( !scene ) return;
+  for ( const token of scene.tokens ) {
+    const actor = token.actor;
+    if ( !actor || (actor === victim) || (actor.uuid === victim?.uuid) ) continue;
+    for ( const old of grappleEffectsOf(actor).filter(e => (e !== effect) && (originItemOf(e)?.uuid === item.uuid)) ) {
+      if ( old._destroyed ) continue;
+      try { await old.delete(); }
+      catch(err) { if ( actor.effects.has(old.id) ) throw err; }
+      log(`grapple: ${item.name} holds only one creature — ${token.name} released for ${victimToken.name}`);
+      notice(token, { key: "Empoignade.UneSeule", data: { name: token.name, item: item.name } }, "info",
+        { all: true, action: "grappleReleased", outcome: "success" });
+    }
+  }
 }
 
 /** Un effet supprimé : l'Agrippé emporte la marque ; la marque (lâcher prise) emporte l'Agrippé. */
@@ -286,6 +314,8 @@ export function registerGrapple() {
   route("updateToken", (token, changes) => {
     if ( ["x", "y", "elevation", "level"].some(k => k in changes) ) scheduleCheck([token.parent]);
   }, check);
+  // §502 : un token retiré (la liane invoquée qui tenait une empoignade, `grapples.by: "summon"`) — l'empoignade se rejuge.
+  route("deleteToken", token => scheduleCheck([token.parent]), check);
   for ( const hook of ["createActiveEffect", "updateActiveEffect", "deleteActiveEffect"] ) {
     route(hook, effect => {
       const actor = actorOfEffect(effect);   // un token non lié : l'effet est dans son ActorDelta
@@ -294,6 +324,7 @@ export function registerGrapple() {
   }
   const marks = { executor: true, label: "grapple: grappler's mark" };
   route("createActiveEffect", effect => markGrappler(effect), marks);
+  route("createActiveEffect", effect => onlyOneGrappled(effect), { executor: true, label: "grapple: only one creature at a time not enforced" });
   route("deleteActiveEffect", effect => unlink(effect), marks);
   route("moveToken", (token, movement, operation) => dragVictims(token, movement, operation),
     { executor: true, label: "grapple: the victim follows the grappler" });

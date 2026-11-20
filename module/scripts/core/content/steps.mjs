@@ -67,7 +67,8 @@ function validateStep(step, at, errors) {
     // §401 : « jusqu'à » — l'auteur choisit la distance (Fouet épineux : « vous pouvez la tirer jusqu'à 3 m »).
     if ( ("upTo" in step) && (step.upTo !== true) ) errors.push(`${at}.upTo: true or absent`);
     // §466 : `toward: "area"` — une traction vers le centre de la zone de l'activité (Implosion), pas vers l'auteur.
-    if ( ("toward" in step) && !((step.toward === "area") && (step.mode === "pull")) ) errors.push(`${at}.toward: "area" (with mode "pull") or absent`);
+    // §502 (B22) : `toward: "summon"` — vers l'invocation de l'auteur (la liane de Liane avide).
+    if ( ("toward" in step) && !(["area", "summon"].includes(step.toward) && (step.mode === "pull")) ) errors.push(`${at}.toward: "area" or "summon" (with mode "pull") or absent`);
     // §497 : déplacement aléatoire (Infestation) — directions tirées au dé, case bloquée, Vitesse minimale.
     const random = step.mode === "random";
     if ( ("directions" in step) && !(random && Array.isArray(step.directions) && step.directions.length

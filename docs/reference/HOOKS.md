@@ -218,24 +218,25 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 20. swallow: effect not tracked _(MJ)_
 21. grapple: does it still hold? _(MJ)_
 22. grapple: grappler's mark _(MJ)_
-23. Prone: crawl mode not set or not removed _(MJ)_
-24. climbing: fall not triggered _(MJ)_
-25. fall: not triggered automatically _(MJ)_
-26. burning: flammable zone not ignited on catching fire _(MJ)_
-27. Exhaustion: level not raised by an item effect _(MJ)_
-28. Blink: permanent Ethereal not removed _(MJ)_
-29. Levitate: not lifted _(MJ)_
-30. passive perception _(MJ)_
-31. hearing: ranges to read again
-32. enchanted weapon: light not updated _(MJ)_
-33. invisibility: not suspended _(MJ)_
-34. Wild Shape: end if Incapacitated _(MJ)_
-35. floating texts: effect
-36. perception: hearing mark not drawn
-37. perception: display not refreshed
-38. ethereal: view not updated
-39. ethereal: movement action not switched _(MJ)_
-40. sneak: cones redrawn
+23. grapple: only one creature at a time not enforced _(MJ)_
+24. Prone: crawl mode not set or not removed _(MJ)_
+25. climbing: fall not triggered _(MJ)_
+26. fall: not triggered automatically _(MJ)_
+27. burning: flammable zone not ignited on catching fire _(MJ)_
+28. Exhaustion: level not raised by an item effect _(MJ)_
+29. Blink: permanent Ethereal not removed _(MJ)_
+30. Levitate: not lifted _(MJ)_
+31. passive perception _(MJ)_
+32. hearing: ranges to read again
+33. enchanted weapon: light not updated _(MJ)_
+34. invisibility: not suspended _(MJ)_
+35. Wild Shape: end if Incapacitated _(MJ)_
+36. floating texts: effect
+37. perception: hearing mark not drawn
+38. perception: display not refreshed
+39. ethereal: view not updated
+40. ethereal: movement action not switched _(MJ)_
+41. sneak: cones redrawn
 
 ### `createActor`
 
@@ -476,8 +477,9 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 2. follow: the leader is gone
 3. mount: bond not cleared _(MJ)_
 4. auras: recalculation requested
-5. perception: Devil's Sight or blind hearing not granted after an update
-6. sneak: cones redrawn
+5. grapple: does it still hold? _(MJ)_
+6. perception: Devil's Sight or blind hearing not granted after an update
+7. sneak: cones redrawn
 
 ### `deleteWall`
 

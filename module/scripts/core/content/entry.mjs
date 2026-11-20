@@ -233,6 +233,17 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       for ( const key of Object.keys(p) ) if ( !["activity", "keepConditions", "keepHp"].includes(key) ) errors.push(`${at}secondPhase.${key}: unknown key`);
     }
   }
+  // §502 (B22) : `grapples: { one?: true, by?: "summon" }` — une seule créature agrippée à la fois par cet item ; l'empoignade tenue par
+  // l'invocation de l'agrippeur (sa distance se juge depuis elle).
+  if ( "grapples" in entry ) {
+    const g = entry.grapples;
+    if ( !isObject(g) || !Object.keys(g).length ) errors.push(`${at}grapples: { one?: true, by?: "summon" }`);
+    else {
+      if ( ("one" in g) && (g.one !== true) ) errors.push(`${at}grapples.one: true or absent`);
+      if ( ("by" in g) && (g.by !== "summon") ) errors.push(`${at}grapples.by: "summon" or absent`);
+      for ( const key of Object.keys(g) ) if ( !["one", "by"].includes(key) ) errors.push(`${at}grapples.${key}: unknown key`);
+    }
+  }
   if ( "changesForm" in entry ) {
     const p = entry.changesForm;
     if ( !isObject(p) || !isId(p.activity) ) errors.push(`${at}changesForm.activity: activity id (16 characters) expected`);

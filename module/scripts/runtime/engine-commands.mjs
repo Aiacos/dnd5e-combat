@@ -21,7 +21,8 @@ import { lengthIn } from "../adapter/units.mjs";
 import { askAllocation } from "../adapter/projectiles.mjs";
 import { pushAway } from "../adapter/movement.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
-import { combatantFor, readBudget, writeBudget, distanceBetween, speedOf } from "../adapter/turn.mjs";
+import { combatantFor, readBudget, writeBudget, distanceBetween, speedOf, tokenCenter } from "../adapter/turn.mjs";
+import { summonTokenFor } from "../adapter/pilot.mjs";
 import { randomDirection, randomDie } from "../core/control.mjs";
 import { MOVE_DIRECTIONS } from "../core/content.mjs";
 import { rangeIssue } from "../core/range.mjs";
@@ -577,6 +578,13 @@ async function forcedMove(source, target, { mode, distance, units, follow=false,
     const regions = (target.parent?.regions ?? []).filter(r => activity && (r.getFlag("dnd5e", "activity") === activity.uuid));
     point = regions.length ? zoneCenter(regions.at(-1)) : null;
     if ( !point ) return log(`pull: no area of ${activity?.item?.name ?? "the activity"} on the scene, ${target.name} not moved`);
+  }
+  // §502 (B22) : vers l'invocation de l'auteur (la liane de Liane avide), pas vers l'auteur.
+  if ( toward === "summon" ) {
+    const anchor = summonTokenFor(source.actor, activity?.item ?? null, target.parent, target);
+    if ( !anchor ) return log(`pull: no creature summoned by ${source.name} on the scene, ${target.name} not moved`);
+    point = tokenCenter(anchor);
+    log(`pull: toward ${anchor.name} (summoned by ${source.name})`);
   }
   // §401 : « jusqu'à » — l'auteur choisit, par cases, de 0 à la distance permise.
   if ( upTo && Number.isFinite(distance) ) {

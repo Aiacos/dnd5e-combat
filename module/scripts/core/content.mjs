@@ -546,6 +546,10 @@
  *     secondPhase?: { activity }                à 0 PV, pas de Mort : l'activité « transform » de l'item (id) change la créature dans
  *                                               la forme de son profil, à ses PV max, même token (même initiative), états gardés
  *                                               (§19.5 : seconde phase)
+ *     grapples?: { one?: true, by?: "summon" }  §502 (B22) : `one` — une seule créature agrippée à la fois par les effets de cet item (une
+ *                                               nouvelle empoignade relâche l'ancienne, avec un avis) ; `by: "summon"` — l'empoignade est
+ *                                               tenue par l'invocation de l'agrippeur (la liane) : elle tient tant que celle-ci est sur la
+ *                                               scène et n'est pas neutralisée, quelle que soit la distance à l'agrippeur
  *     changesForm?: { activity, keepHp? }       à l'utilisation de cette activité « transform » (id), la créature prend la forme de son
  *                                               profil comme une seconde phase (même token, PV max de la forme, états gardés sauf
  *                                               `keepConditions: false`) — une vraie forme révélée à volonté (§76) ; `keepHp` (§78, ici et dans

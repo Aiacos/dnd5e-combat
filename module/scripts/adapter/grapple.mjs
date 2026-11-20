@@ -10,8 +10,12 @@ import { MODULE_ID } from "../constants.mjs";
 import { rangeIssue } from "../core/range.mjs";
 import { distanceBetween } from "./turn.mjs";
 import { unarmedAttackOf } from "./basics.mjs";
-import { pilotOfActor } from "./pilot.mjs";
+import { pilotOfActor, summonTokenFor } from "./pilot.mjs";
+import { contentOf } from "./content.mjs";
 import { originItemOf } from "./facts.mjs";
+
+/** §502 : la règle `grapples` de l'item d'où vient un effet Agrippé, ou null. */
+export const grapplesRuleOf = item => (item ? (contentOf(item).entry?.grapples ?? null) : null);
 
 /** Les effets actifs qui rendent cet acteur Agrippé. */
 export function grappleEffectsOf(actor) {
@@ -126,6 +130,14 @@ function tokenIn(scene, actor) {
  */
 export function grappleFacts(effect, grappledToken, factors) {
   const grappler = grapplerOf(effect);
+  // §502 (B22) : `grapples.by: "summon"` — l'empoignade est tenue par l'invocation de l'agrippeur (la liane) : elle tient tant que
+  // celle-ci est sur la scène et n'est pas neutralisée, à toute distance de l'agrippeur.
+  const item = originItemOf(effect);
+  if ( grappler && (grapplesRuleOf(item)?.by === "summon") ) {
+    const anchor = summonTokenFor(grappler, item, grappledToken.parent, grappledToken);
+    if ( !anchor ) return { grapplerStatuses: [], withinReach: false, grappler, grapplerToken: grappledToken, distance: null, reach: null, by: "summon" };
+    return { grapplerStatuses: Array.from(anchor.actor?.statuses ?? []), withinReach: true, grappler, grapplerToken: anchor, distance: null, reach: null, by: "summon" };
+  }
   const grapplerToken = grappler ? tokenIn(grappledToken.parent, grappler) : null;
   if ( !grapplerToken ) return null;
   const distance = distanceBetween(grapplerToken, grappledToken);
