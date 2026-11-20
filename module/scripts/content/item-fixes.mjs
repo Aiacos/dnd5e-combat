@@ -307,6 +307,10 @@ export const ITEM_FIXES = Object.freeze({
   "candle-of-invocation": { dataFixes: [
     { path: "system.activities.hG1Iplp3uG2fd39N.target.affects.type", from: "", value: "self" },
     { effect: "gN0PgSLPlbsD8T2g", path: "system.changes", from: [], value: D20_TEST_ADVANTAGE }] },
+  // Sceptre de vigilance (SRD 5.2) : « tant que vous tenez le sceptre, vous avez l'Avantage aux tests de Sagesse (Perception) et
+  // aux jets d'Initiative » — la donnée ne porte que l'effet de l'aura protectrice.
+  "rod-of-alertness": { dataFixes: [{ effect: "dasRodAlertness0", create: worn("Alertness", [
+    change("system.skills.prc.roll.mode", "add", 1), change("system.attributes.init.roll.mode", "add", 1)]) }] },
   // Orbe des dragons : « 7 charges, 1d4 + 3 à l'aube » — l'item n'en a aucune, ses sorts payants étaient refusés.
   "orb-of-dragonkind": {
     dataFixes: [{ path: "system.uses.max", from: "", value: "7" }, { path: "system.uses.recovery", from: [], value: [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] }]
