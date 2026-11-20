@@ -67,6 +67,10 @@ export const GEAR = Object.freeze({
   // d'araignée ; l'effet est transféré par l'item (pas créé sur l'acteur) : la Vitesse lui est accordée à côté, et l'`upgrade` garde la
   // plus grande des deux.
   "cloak-of-arachnida": { grantsSpeeds: { climb: "walk" } },
+  // Yeux de l'aigle, Robe aux yeux (SRD 5.2) : « vous avez l'Avantage aux tests de Sagesse (Perception) qui reposent sur la vue » —
+  // la donnée n'en porte rien. À l'action Chercher, qui ne trouve que ce que le chercheur peut voir (core/search.mjs).
+  "eyes-of-the-eagle": { searchBonus: { advantage: true } },
+  "robe-of-eyes": { searchBonus: { advantage: true } },
   // §53 : Élixir de santé — « les états suivants prennent fin : Aveuglé, Assourdi, Paralysé et Empoisonné » ; Potion de vitalité —
   // « supprime tout niveau d'Épuisement et met fin à l'état Empoisonné » (les dés de vie au maximum pendant 24 h : au MJ).
   "elixir-of-health": { curesAll: ["blinded", "deafened", "paralyzed", "poisoned"] },

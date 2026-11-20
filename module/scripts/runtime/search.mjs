@@ -15,7 +15,8 @@ import { hiddenEffectsOf } from "../adapter/hide.mjs";
 import { searchCandidates, perceptionRollParts, hiddenDcOf } from "../adapter/search.mjs";
 import { areEnemies } from "../adapter/factions.mjs";
 import { usageTokenOf } from "../adapter/turn.mjs";
-import { searchRollMode, searchVerdicts } from "../core/search.mjs";
+import { searchRollMode, searchVerdicts, searchBonuses } from "../core/search.mjs";
+import { wornOrNotEquipment } from "../adapter/triggers.mjs";
 import { contentOf } from "../adapter/content.mjs";
 import { route } from "./router.mjs";
 import { log, loc, notice, viaOwnerOrGM, rolledAndShown } from "./shared.mjs";
@@ -53,9 +54,9 @@ async function onPostUse(activity) {
   const candidates = searchCandidates(searcher);
   const mode = searchRollMode(candidates);
   // §94 : ce que les traits ajoutent à la fouille — un dé (Guetteurs), l'Avantage (Œil vif, une utilisation de l'item s'il en reste).
-  const bonuses = actor.items.map(i => ({ item: i, rule: contentOf(i).entry?.searchBonus })).filter(b => b.rule);
-  const parts = bonuses.map(b => b.rule.formula).filter(Boolean);
-  const keen = bonuses.find(b => b.rule.advantage && (!Number(b.item.system.uses?.max) || (Number(b.item.system.uses.value) > 0)));
+  // Un objet (Yeux de l'aigle, Robe aux yeux) ne compte que porté, et harmonisé s'il l'exige.
+  const { parts, keen } = searchBonuses(actor.items.map(i => ({ item: i, rule: contentOf(i).entry?.searchBonus ?? null,
+    counts: wornOrNotEquipment(i), usesMax: i.system.uses?.max, usesLeft: i.system.uses?.value })));
   // §252 : le verdict attend la fin des dés 3D, puis se voit et s'entend chez tous.
   const rolls = await rolledAndShown(() => actor.rollSkill({ skill: "prc", disadvantage: mode === "disadvantage",
     ...(keen ? { advantage: true } : {}), ...(parts.length ? { rolls: [{ parts }] } : {}) }, { configure: false }));

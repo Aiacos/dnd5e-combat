@@ -23,6 +23,19 @@ export function searchRollMode(candidates) {
 }
 
 /**
+ * Ce que les traits et les objets ajoutent au test (clé `searchBonus`) : les dés, et l'item qui donne l'Avantage. Un équipement
+ * qui n'est pas porté — ou pas harmonisé quand il l'exige — n'ajoute rien ; l'Avantage d'un item à utilisations demande qu'il en
+ * reste une.
+ * @param {Array<{rule: {formula?: string, advantage?: true}|null, counts: boolean, usesMax?: number, usesLeft?: number}>} sources
+ * @returns {{parts: string[], keen: object|null}}  `keen` : la source retenue pour l'Avantage (telle que passée)
+ */
+export function searchBonuses(sources) {
+  const active = (sources ?? []).filter(s => s.rule && s.counts);
+  return { parts: active.map(s => s.rule.formula).filter(Boolean),
+    keen: active.find(s => s.rule.advantage && (!Number(s.usesMax) || (Number(s.usesLeft) > 0))) ?? null };
+}
+
+/**
  * Le total sans Désavantage tiré d'un test lancé avec : le total, moins le d20 gardé, plus le premier d20.
  * @param {{total: number, d20: number[], kept: number|null}} roll   `d20` : les d20 lancés, dans l'ordre (hors relances) ;
  *                                                                  `kept` : celui qui compte dans `total`.
