@@ -932,6 +932,7 @@
   "DND5ECOMBAT.FormeVerrouillee.Degats": "{item} : {name} tente de changer de forme",
   "DND5ECOMBAT.SoinsPorteur": "{item} : {name} regagne des points de vie",
   "DND5ECOMBAT.SecondePhase": "{item} : {from} devient {to}.",
+  "DND5ECOMBAT.Reaction.PerdUne": "{name} ne perd qu'une réaction (reste {n})",
   "DND5ECOMBAT.RenvoiDegats.Carte": "{item} : {name} subit {n} dégâts en retour ({types}).",
   "DND5ECOMBAT.RenvoiDegats.Avis": "{n} dégâts renvoyés",
   "DND5ECOMBAT.FormeRetour.Change": "{name} : nouvelle forme",

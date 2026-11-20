@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-385 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+386 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -227,6 +227,7 @@ la sélection sans rien jouer.
 | `protection-mal-bien` |  | §268 | ni Charmé ni Effrayé par un fiélon |
 | `rampe` |  | §17.2 | À terre : mode ramper posé et retiré |
 | `ravenloft-options` |  | §19.9 | Morsure vampirique, Attraction de la mort, Retour à la vie, Chemin vers la tombe, Sentinelle au seuil de la mort |
+| `reaction-perdue` |  | §501 | réactions multiples : Neutralisé ou Étourdi ne lui ôtent qu'une réaction chacun, avec un avis ; sans la règle, il ne réagit plus (§501, brique B21) |
 | `reduction` |  | §16.11 §156 §414 §415 | Égide arcanique, Esquive instinctive |
 | `refus-clics` | Arène des refus | §411 | attaque, menu, zone hors de portée, téléportation |
 | `regeneration-declaree` |  | §18.13 | montant, types de dégâts déclarés, arrêtée au soleil |

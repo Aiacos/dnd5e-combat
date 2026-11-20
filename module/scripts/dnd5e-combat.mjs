@@ -31,6 +31,7 @@ import { registerGrimoire } from "./runtime/grimoire.mjs";
 import { registerLeaves } from "./runtime/leaves.mjs";
 import { registerUsesSpent } from "./runtime/uses-spent.mjs";
 import { registerFlee } from "./runtime/flee.mjs";
+import { registerReactionLoss } from "./runtime/reaction-loss.mjs";
 import { registerDispel } from "./runtime/dispel.mjs";
 import { registerTriggers } from "./runtime/triggers.mjs";
 import { registerContent, contentApi } from "./runtime/content.mjs";
@@ -420,6 +421,7 @@ Hooks.once("init", () => {
   gated(registerLeaves);   // §456 : un objet retiré de la fiche y laisse ses effets déclarés (Marque du sacrifice)
   gated(registerUsesSpent);   // §458 : un objet aux utilisations épuisées (livre lu 48 heures) pose ses effets déclarés
   gated(registerFlee);   // §147 : Murmures dissonants, la fuite par la Réaction
+  gated(registerReactionLoss);   // §501 (B21) : « elle ne perd qu'une réaction »
   gated(registerDispel);   // §37.2 : Dissipation de la magie
   gated(registerTriggers);
   gated(registerVision);

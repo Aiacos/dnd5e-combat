@@ -265,8 +265,10 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       if ( !Number.isInteger(steps) || !steps || (Math.abs(steps) > 5) ) errors.push(`${at}resize.${id}: non-zero integer, from -5 to 5`);
     }
   }
-  if ( ("reactions" in entry) && !(isObject(entry.reactions) && Number.isInteger(entry.reactions.perRound) && (entry.reactions.perRound >= 1) && (Object.keys(entry.reactions).length === 1)) ) {
-    errors.push(`${at}reactions: { perRound } (integer ≥ 1)`);
+  // §501 (B21) : `loseOne` — ce qui retirerait ses réactions ne lui en ôte qu'une.
+  if ( ("reactions" in entry) && !(isObject(entry.reactions) && Number.isInteger(entry.reactions.perRound) && (entry.reactions.perRound >= 1)
+    && Object.keys(entry.reactions).every(k => ["perRound", "loseOne"].includes(k)) && (!("loseOne" in entry.reactions) || (entry.reactions.loseOne === true))) ) {
+    errors.push(`${at}reactions: { perRound, loseOne? } (integer ≥ 1, loseOne: true)`);
   }
   // §496 (B16) : `true` (Dissipation de 2024), ou une dissipation bornée { upTo, beyond: "none" | "check", keepBySlot? }.
   if ( ("dispel" in entry) && (entry.dispel !== true) ) {

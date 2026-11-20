@@ -564,7 +564,9 @@
  *                                               (Injonction : approach, drop, flee, grovel, halt — core/orders.mjs, §16.59)
  *     resize?: { <id d'effet>: <crans> }        l'effet change la taille de celui qui le reçoit de ce nombre de catégories
  *                                               (+1 : Agrandissement, -1 : Rapetissement, §16.58) ; dnd5e redimensionne le token
- *     reactions?: { perRound }                  réactions par round, pas plus d'une par tour de jeu (par exemple trois)
+ *     reactions?: { perRound, loseOne? }        réactions par round, pas plus d'une par tour de jeu (par exemple trois) ;
+ *                                               §501 `loseOne: true` : Neutralisé ou un effet `noReactions` ne lui en ôte qu'une
+ *                                               (à la pose de l'effet), au lieu de toutes
  *     lastStand?: { threshold }                 réaction quand les PV tombent à `threshold` ou moins (fait `target.hpAtMost`) : ses
  *                                               effets tombent ; à 0 PV, jouée d'office, la créature reste à 1 PV (Amulette de
  *                                               Ravenloft) — l'item a des utilisations, une par fois

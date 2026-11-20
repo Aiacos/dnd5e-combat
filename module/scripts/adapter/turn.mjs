@@ -58,6 +58,11 @@ export function reactionsPerRound(actor) {
   return n;
 }
 
+/** §501 : un item de l'acteur déclare-t-il `reactions.loseOne` (« elle ne perd qu'une réaction ») ? */
+export function losesOnlyOneReaction(actor) {
+  return (actor?.items ?? []).some(item => contentOf(item).entry?.reactions?.loseOne === true);
+}
+
 /** Budget neuf d'un combattant, à ses réactions par round. */
 export function freshBudgetFor(combatant) {
   return { ...freshBudget({ reactions: reactionsPerRound(combatant?.actor) }), limited: carriesRuleEffect(combatant?.actor, "limitedAction") ? 1 : 0 };

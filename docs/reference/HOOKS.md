@@ -203,38 +203,39 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 5. True Strike: attack not offered
 6. cover preview: not refreshed after a cover status
 7. "suffers a condition" window not opened _(MJ)_
-8. Warding Bond: foreign damage sharing not disarmed _(MJ)_
-9. vision: sources to rebuild
-10. vision: declared senses to read again
-11. banishment: target not removed from the scene _(MJ)_
-12. auras: recalculation requested
-13. emanation on death _(MJ)_
-14. regeneration: automatic Dead removed _(MJ)_
-15. feat effect not synced _(MJ)_
-16. effect end when Incapacitated: not played _(MJ)_
-17. features held by Rage not synced _(MJ)_
-18. Rage: end on condition not evaluated _(MJ)_
-19. swallow: effect not tracked _(MJ)_
-20. grapple: does it still hold? _(MJ)_
-21. grapple: grappler's mark _(MJ)_
-22. Prone: crawl mode not set or not removed _(MJ)_
-23. climbing: fall not triggered _(MJ)_
-24. fall: not triggered automatically _(MJ)_
-25. burning: flammable zone not ignited on catching fire _(MJ)_
-26. Exhaustion: level not raised by an item effect _(MJ)_
-27. Blink: permanent Ethereal not removed _(MJ)_
-28. Levitate: not lifted _(MJ)_
-29. passive perception _(MJ)_
-30. hearing: ranges to read again
-31. enchanted weapon: light not updated _(MJ)_
-32. invisibility: not suspended _(MJ)_
-33. Wild Shape: end if Incapacitated _(MJ)_
-34. floating texts: effect
-35. perception: hearing mark not drawn
-36. perception: display not refreshed
-37. ethereal: view not updated
-38. ethereal: movement action not switched _(MJ)_
-39. sneak: cones redrawn
+8. lose one reaction: budget not reduced _(MJ)_
+9. Warding Bond: foreign damage sharing not disarmed _(MJ)_
+10. vision: sources to rebuild
+11. vision: declared senses to read again
+12. banishment: target not removed from the scene _(MJ)_
+13. auras: recalculation requested
+14. emanation on death _(MJ)_
+15. regeneration: automatic Dead removed _(MJ)_
+16. feat effect not synced _(MJ)_
+17. effect end when Incapacitated: not played _(MJ)_
+18. features held by Rage not synced _(MJ)_
+19. Rage: end on condition not evaluated _(MJ)_
+20. swallow: effect not tracked _(MJ)_
+21. grapple: does it still hold? _(MJ)_
+22. grapple: grappler's mark _(MJ)_
+23. Prone: crawl mode not set or not removed _(MJ)_
+24. climbing: fall not triggered _(MJ)_
+25. fall: not triggered automatically _(MJ)_
+26. burning: flammable zone not ignited on catching fire _(MJ)_
+27. Exhaustion: level not raised by an item effect _(MJ)_
+28. Blink: permanent Ethereal not removed _(MJ)_
+29. Levitate: not lifted _(MJ)_
+30. passive perception _(MJ)_
+31. hearing: ranges to read again
+32. enchanted weapon: light not updated _(MJ)_
+33. invisibility: not suspended _(MJ)_
+34. Wild Shape: end if Incapacitated _(MJ)_
+35. floating texts: effect
+36. perception: hearing mark not drawn
+37. perception: display not refreshed
+38. ethereal: view not updated
+39. ethereal: movement action not switched _(MJ)_
+40. sneak: cones redrawn
 
 ### `createActor`
 

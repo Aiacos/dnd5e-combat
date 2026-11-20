@@ -932,6 +932,7 @@
   "DND5ECOMBAT.FormeVerrouillee.Degats": "{item}: {name} tries to change form",
   "DND5ECOMBAT.SoinsPorteur": "{item}: {name} regains Hit Points",
   "DND5ECOMBAT.SecondePhase": "{item}: {from} becomes {to}.",
+  "DND5ECOMBAT.Reaction.PerdUne": "{name} loses only one Reaction ({n} left)",
   "DND5ECOMBAT.RenvoiDegats.Carte": "{item}: {name} takes {n} damage back ({types}).",
   "DND5ECOMBAT.RenvoiDegats.Avis": "{n} damage returned",
   "DND5ECOMBAT.FormeRetour.Change": "{name}: new form",

@@ -24,7 +24,8 @@ import { timedWait } from "./dialogs.mjs";
 import { queryPlayer, waitLabel } from "./player-wait.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
 import { markReactionAdvantage, markReactionDamage, markReactionDisadvantage } from "./marks.mjs";
-import { combatantFor, readBudget, currentTurnKey } from "./turn.mjs";
+import { combatantFor, readBudget, currentTurnKey, losesOnlyOneReaction } from "./turn.mjs";
+import { cannotReact } from "../core/reaction-loss.mjs";
 import { originItemOf, comesFromItemEffect } from "./facts.mjs";
 import { resolveCounter } from "./counter.mjs";
 import { polearmFits } from "../core/feats.mjs";
@@ -40,7 +41,12 @@ const REACTION_TIMEOUT = 20000;   // au-delà du délai de la fenêtre (adapter/
 
 /** §16.47 : l'acteur porte-t-il un effet d'un sort qui interdit les Réactions (`noReactions` : Tentacules de Hadar) ? */
 export function reactionsBlocked(actor) {
-  return (actor?.effects ?? []).some(e => !e.disabled && !e.isSuppressed && effectRule(e, contentOf(originItemOf(e))?.entry?.noReactions));
+  return (actor?.effects ?? []).some(blocksReactions);
+}
+
+/** §501 : cet effet actif interdit-il les Réactions (`noReactions` de son item d'origine) ? */
+export function blocksReactions(e) {
+  return !!e && !e.disabled && !e.isSuppressed && effectRule(e, contentOf(originItemOf(e))?.entry?.noReactions);
 }
 
 /** §334 : une règle d'effet vraie pour tous les effets de l'item (`true`), ou pour ceux de la liste (Rayon ralentissant). */
@@ -66,8 +72,9 @@ export function reactionState(actor) {
   const combatant = combatantFor(actor);
   return {
     reactionAvailable: combatant ? reactionAvailable(readBudget(combatant), currentTurnKey()) : true,
-    // « Ne peut pas réagir » : Neutralisé, mort, ou un effet qui l'interdit.
-    incapacitated: actor.statuses?.has("incapacitated") || actor.statuses?.has("dead") || reactionsBlocked(actor) || false
+    // « Ne peut pas réagir » : Neutralisé, mort, ou un effet qui l'interdit. §501 : `reactions.loseOne` — Neutralisé ou l'effet ne lui
+    // ont ôté qu'une réaction (runtime/reaction-loss.mjs) ; morte, inconsciente ou pétrifiée, elle ne réagit pas.
+    incapacitated: cannotReact({ statuses: Array.from(actor.statuses ?? []), blocked: reactionsBlocked(actor), loseOne: losesOnlyOneReaction(actor) })
   };
 }
 

@@ -69,6 +69,8 @@ const DEFAULTS = Object.freeze({
   stage: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull },
   // §496 (B16) : un sort gardé contre une dissipation, par la Réaction et un emplacement.
   dispelKept: { success: CORE_SOUNDS.chime, failure: null },
+  // §501 (B21) : une seule réaction perdue au lieu de toutes (« elle ne perd qu'une réaction »).
+  reactionLost: { success: null, failure: CORE_SOUNDS.dull },
   // §500 (B20) : une créature tuée par un drain (maximum de PV ou caractéristique ramené à 0) — le coup sourd.
   drainDeath: { success: CORE_SOUNDS.thud, failure: null },
   // §499 (B19) : des dégâts renvoyés à l'attaquant (le coup sourd).

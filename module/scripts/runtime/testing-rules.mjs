@@ -17,7 +17,7 @@ import { movementCap } from "./actions.mjs";
 import { ownEndingsOf, endingsOn, endFor } from "./action-end.mjs";
 import { escapeGrapple } from "./grapple.mjs";
 import { escapeDcOf, grappleEffectsOf, grappleFacts } from "../adapter/grapple.mjs";
-import { reactionsBlocked, actionOrBonusOnly } from "../adapter/reactions.mjs";
+import { reactionsBlocked, actionOrBonusOnly, reactionState } from "../adapter/reactions.mjs";
 import { saveChanceOf } from "../adapter/hitchance.mjs";
 import { identifierOf, contentOf, worldOverrides, setWorldOverride } from "../adapter/content.mjs";
 import { originItemOf } from "../adapter/facts.mjs";
@@ -165,6 +165,8 @@ export function stats({ tokenId }) {
     concentration: { limit: a.concentration?.limit ?? null, held: Array.from(actor?.concentration?.effects ?? []).map(e => e.id) },
     // K6 (§327) : Réactions perdues, action OU action Bonus (effets `noReactions`, `actionOrBonus`).
     reactionBlocked: reactionsBlocked(actor), actionOrBonus: actionOrBonusOnly(actor),
+    // §501 (B21) : peut-elle réagir maintenant (budget du round, Neutralisé ou effet qui l'interdit, `reactions.loseOne`) ?
+    reaction: actor ? reactionState(actor) : null,
     // §52 : la lumière du token telle que le cœur la rend (données préparées : effets `token.light.*` compris).
     light: (() => { const l = (tok?.document ?? tok)?.light ?? {}; return { bright: l.bright ?? 0, dim: l.dim ?? 0, angle: l.angle ?? 360,
       animation: l.animation?.type ?? null }; })()
