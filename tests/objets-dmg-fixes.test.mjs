@@ -104,3 +104,17 @@ describe("objets du Guide : DD, lien et recharge que le texte de l'objet donne (
   });
 });
 
+describe("Sceptre de vigilance (SRD 5.2) : l'Avantage en Perception et à l'Initiative, porté par l'objet", () => {
+  const fixes = ITEM_FIXES["rod-of-alertness"].dataFixes;
+  it("l'effet « Alertness » est créé, transféré au porteur", () => {
+    const plan = dataFixPlan({ effects: [{ _id: "fHNlrUKZ6KWRNTmy" }], system: {} }, fixes);
+    expect(plan.create).toHaveLength(1);
+    expect(plan.create[0]).toMatchObject({ _id: "dasRodAlertness0", name: "Alertness", transfer: true });
+    expect(plan.create[0].system.changes.map(c => c.key))
+      .toEqual(["system.skills.prc.roll.mode", "system.attributes.init.roll.mode"]);
+  });
+  it("déjà créé : rien à refaire", () => {
+    const plan = dataFixPlan({ effects: [{ _id: "fHNlrUKZ6KWRNTmy" }, { _id: "dasRodAlertness0" }], system: {} }, fixes);
+    expect(plan.create).toEqual([]);
+  });
+});
