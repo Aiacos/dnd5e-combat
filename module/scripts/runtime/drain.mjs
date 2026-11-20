@@ -12,8 +12,9 @@ import { STEPS } from "../core/action.mjs";
 import { drainedAmount, flooredDrain } from "../core/drain.mjs";
 import { setDeathStatus } from "../adapter/death.mjs";
 import { drainOf, damageSourceItem, damageSourceMessage, applyDrainEffect, effectiveMax } from "../adapter/drain.mjs";
+import { tokenOf } from "../adapter/facts.mjs";
 import { route } from "./router.mjs";
-import { loc, log } from "./shared.mjs";
+import { loc, log, locEsc, notice, say } from "./shared.mjs";
 
 /** Le libellé de l'effet, total compris. */
 function effectName(item, kind) {
@@ -47,17 +48,32 @@ async function drain(actor, kind, n, { item, source=null, regains=false, floor=n
   // §283 : Contamination — le maximum ne descend pas sous son plancher.
   if ( kind === "hp" ) n = flooredDrain(n, effectiveMax(actor), floor);
   if ( n <= 0 ) return;
+  // §500 : vivante avant le drain — la mort qu'il cause s'annonce (une seule fois : les PV ramenés à 0 par l'effet peuvent aussi la poser).
+  const alive = !actor.statuses?.has?.("dead");
   const left = await applyDrainEffect(actor, { kind, n, item, name: effectName(item, kind) });
   log(`${actor.name}: ${item.name} — ${kind === "hp" ? "Hit Point maximum" : kind} -${n} (${left})`);
   if ( left <= 0 ) {
     await setDeathStatus(actor, "dead");
     log(`${actor.name}: ${kind === "hp" ? "Hit Point maximum" : kind} at 0 → Dead`);
+    if ( alive ) await announceDrainDeath(actor, kind, item);
   }
   if ( !regains || !source ) return;
   const drinker = fromUuidSync(source, { strict: false });
   if ( !drinker?.isOwner ) return;
   await drinker.applyDamage([{ value: n, type: "healing" }]);
   log(`${drinker.name}: ${item.name} — regains ${n} HP`);
+}
+
+/**
+ * §500 (B20) : la mort par drain, vue et entendue de toute la table (règle DAS : un retour pour chaque action) — carte de chat
+ * (drapeau `drainDeath`) et avis au-dessus du token avec son, chez chaque client.
+ */
+async function announceDrainDeath(actor, kind, item) {
+  const what = (kind === "hp") ? loc("Drain.MaxPV") : (CONFIG.DND5E.abilities[kind]?.label ?? kind);
+  await say({ actor }, locEsc("Drain.Mort", { name: actor.name, item: item.name, what }),
+    { drainDeath: { actor: actor.uuid, item: item.uuid ?? null, kind } });
+  const token = tokenOf(actor);
+  if ( token ) notice(token, { key: "Drain.MortAvis", data: { name: actor.name } }, "info", { all: true, action: "drainDeath", outcome: "success" });
 }
 
 async function onApplyDamage(actor, amount, options) {

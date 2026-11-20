@@ -69,6 +69,8 @@ const DEFAULTS = Object.freeze({
   stage: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull },
   // §496 (B16) : un sort gardé contre une dissipation, par la Réaction et un emplacement.
   dispelKept: { success: CORE_SOUNDS.chime, failure: null },
+  // §500 (B20) : une créature tuée par un drain (maximum de PV ou caractéristique ramené à 0) — le coup sourd.
+  drainDeath: { success: CORE_SOUNDS.thud, failure: null },
   // §499 (B19) : des dégâts renvoyés à l'attaquant (le coup sourd).
   damageReturned: { success: CORE_SOUNDS.thud, failure: null },
   // §498 (B18) : un changement de forme à volonté (carillon), et le retour à la forme d'origine (le son qui s'éteint).

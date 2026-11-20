@@ -8,6 +8,8 @@ describe("§252 retour d'action pour toute la table", () => {
     expect(actionSound("land", "success")).toBeNull();
     expect(actionSound("inconnue", "success")).toBeNull();
     expect(actionSound("hide", undefined)).toBeNull();
+    // §500 (B20) : la mort par drain s'entend de toute la table.
+    expect(actionSound("drainDeath", "success")).toBe(CORE_SOUNDS.thud);
     for ( const src of Object.values(CORE_SOUNDS) ) expect(src).toMatch(/^sounds\/.+\.ogg$/);
   });
 

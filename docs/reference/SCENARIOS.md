@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-384 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+385 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -101,6 +101,7 @@ la sélection sans rien jouer.
 | `dons-lot-7` |  | §289 | fins des dons sombres de Ravenloft, Seconde peau, Faveur de vigueur |
 | `dons-ravenloft` |  | §94 | Cri surnaturel, Symbiose, Survivant, Savoir d'une vie passée, Hurlement, Bond féroce, Chercher |
 | `dons-sombres` |  | §93 | 1 naturel (Anatomie aberrante, Guetteurs, Être symbiotique) |
+| `drain-mort` |  | §500 | maximum de PV drainé à 0 : la cible meurt et la table le voit (carte de chat, avis, son) ; pas de carte avant (§500, brique B20) |
 | `druide` |  | §30 §438 | Attaques primitives, Foulée sélène, Courroux des mers |
 | `duel-force` |  | §270 | fin quand le lanceur attaque un autre, ou qu'un allié blesse la cible |
 | `duree-texte` |  | §18.7 | Empoisonné jusqu'au début du prochain tour de l'attaquant |
