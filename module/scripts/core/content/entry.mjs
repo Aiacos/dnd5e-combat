@@ -435,6 +435,13 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   }
   // O1 (§335) : corrections de la donnée premium d'un objet (core/data-fixes.mjs).
   if ( "dataFixes" in entry ) errors.push(...validateDataFixes(entry.dataFixes, at));
+  if ( "spellFixes" in entry ) {
+    if ( !isObject(entry.spellFixes) ) errors.push(`${at}spellFixes: { cast activity id: [fixes] }`);
+    else for ( const [id, fixes] of Object.entries(entry.spellFixes) ) {
+      if ( !isId(id) ) errors.push(`${at}spellFixes.${id}: activity id (16 characters) expected`);
+      errors.push(...validateDataFixes(fixes, `${at}spellFixes.${id}.`));
+    }
+  }
   if ( ("includesOrigin" in entry) && (entry.includesOrigin !== true) ) errors.push(`${at}includesOrigin: true or absent`);
   // K7 (§328) : `absorbsDamage` — types de dégâts que le porteur change en soin (Absorption de l'acide du Golem d'argile).
   if ( ("absorbsDamage" in entry) && !(Array.isArray(entry.absorbsDamage) && entry.absorbsDamage.length

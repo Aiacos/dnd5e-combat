@@ -47,6 +47,15 @@ function wanted(current, fix) {
 }
 
 /**
+ * Les corrections d'une copie de sort : celles du sort, puis celles que l'item qui la lance déclare pour son activité
+ * (`spellFixes`). Rien des deux : null.
+ */
+export function castFixes(own, fromCaster) {
+  const all = [...(own ?? []), ...(fromCaster ?? [])];
+  return all.length ? all : null;
+}
+
+/**
  * Le plan de correction d'un item, d'après sa donnée source (`item.toObject()` : `system`, `effects` en tableau) et ses corrections.
  * @returns {{ item: object, effects: object[], create: object[], fields: string[] }}  `item` : mise à jour à points ; `effects` :
  *   mises à jour d'effets (`{ _id, <chemin>: valeur }`) ; `create` : effets à créer (avec `_id`) ; `fields` : ce qui change, lisible.
