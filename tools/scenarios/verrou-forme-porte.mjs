@@ -2,13 +2,14 @@
  * B09 (§488) — Objet porté qui verrouille la forme et suspend un trait. Exemples synthétiques, prêtés à l'Ours brun :
  * - la Régénération du Troll (Monster Manual) ;
  * - « Forme d'essai » (identifiant `das-essai-forme`) : une activité utilitaire et un effet transféré éteint, la forme d'une fiche ;
- * - « Collier d'essai » (identifiant `das-essai-collier`, capacité : porté tant qu'il est sur la fiche), en drapeaux :
+ * - « Collier d'essai » (identifiant `das-essai-collier`, capacité : porté tant qu'il est sur la fiche), déclaré dans la surcouche du
+ *   monde (`overrideContent`, comme les autres scénarios de brique ; pas de drapeau d'item) :
  *   `formLock: { worn: true, forms: ["das-essai-forme"], onAttempt: [1 dégât perforant au porteur] }`, `suspends: ["regeneration"]`.
  *  1. Au début de son tour, l'Ours ne se régénère pas (trait suspendu).
  *  2. Activité de la forme, depuis la fiche (sans confirmation) : la fenêtre de légalité donne la raison du collier ; l'Ours perd 1 PV ;
  *     « Renoncer » : pas de carte d'utilisation.
- *  3. Effet de la forme allumé à la main : refusé (l'effet reste éteint), 1 PV de moins, fenêtre ; « Utiliser quand même » : l'effet
- *     s'allume, alerte au MJ.
+ *  3. Effet de la forme allumé à la main sur l'acteur du token (celui que la fiche du token montre) : refusé (l'effet reste éteint),
+ *     1 PV de moins, fenêtre ; « Utiliser quand même » : l'effet s'allume, alerte au MJ.
  *  4. Le collier retiré : au début de son tour, l'Ours se régénère de nouveau.
  * Initiative imposée : Kaalisti, puis l'Ours. Items, PV et effets remis comme avant.
  */
@@ -17,25 +18,28 @@ const TROLL = "Compendium.dnd-monster-manual.actors.Actor.mmTroll000000000";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const LOCK_REASON = /Collier d'essai|change (its )?form|changer de forme/i;
 
-const SHAPE = {
-  name: "Forme d'essai", type: "feat", img: "icons/creatures/mammals/wolf-howl-moon-gray.webp",
+// Noms d'items en constantes : le banc et la référence prennent le premier « name: \"…\" » du fichier pour le titre du scénario.
+const SHAPE_NAME = "Forme d'essai";
+const COLLAR_NAME = "Collier d'essai";
+const ACTIVITY_NAME = "Changer de forme";
+const SHAPE = { name: SHAPE_NAME, type: "feat", img: "icons/creatures/mammals/wolf-howl-moon-gray.webp",
   system: {
     identifier: "das-essai-forme", type: { value: "monster" },
-    activities: { dasEssaiFormeAc0: { _id: "dasEssaiFormeAc0", type: "utility", name: "Changer de forme", activation: { type: "bonus", value: null },
+    activities: { dasEssaiFormeAc0: { _id: "dasEssaiFormeAc0", type: "utility", name: ACTIVITY_NAME, activation: { type: "bonus", value: null },
       range: { units: "self" }, target: { affects: { type: "self" } } } }
   },
-  effects: [{ _id: "dasEssaiFormeEf0", name: "Forme d'essai", img: "icons/creatures/mammals/wolf-shadow-black.webp", transfer: true, disabled: true, changes: [] }]
+  effects: [{ _id: "dasEssaiFormeEf0", name: SHAPE_NAME, img: "icons/creatures/mammals/wolf-shadow-black.webp", transfer: true, disabled: true, changes: [] }]
 };
-const COLLAR = {
-  name: "Collier d'essai", type: "feat", img: "icons/equipment/neck/choker-chain-thick-silver.webp",
-  system: { identifier: "das-essai-collier", type: { value: "monster" } },
-  flags: { [MODULE_ID]: {
-    formLock: { worn: true, forms: ["das-essai-forme"], onAttempt: [{ type: "damage", to: "bearer", formula: "1", damageType: "piercing" }] },
-    suspends: ["regeneration"] } }
+const COLLAR = { name: COLLAR_NAME, type: "feat", img: "icons/equipment/neck/choker-chain-thick-silver.webp",
+  system: { identifier: "das-essai-collier", type: { value: "monster" } }
+};
+const COLLAR_RULE = {
+  formLock: { worn: true, forms: ["das-essai-forme"], onAttempt: [{ type: "damage", to: "bearer", formula: "1", damageType: "piercing" }] },
+  suspends: ["regeneration"]
 };
 
 export default {
-  name: "verrou de forme porté — tentative punie et refusée, Régénération suspendue (B09)",
+  name: "verrou forme porté — tentative punie et refusée, Régénération suspendue (§488, brique B09)",
 
   async run(ctx) {
     await ctx.cast({ "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
@@ -74,6 +78,8 @@ export default {
     await lend(regen, "regeneration");
     const shapeId = await lend(SHAPE, "das-essai-forme");
     const collarId = await lend(COLLAR, "das-essai-collier");
+    const { before: rule0 } = await ctx.engine("overrideContent", { identifier: "das-essai-collier", entry: COLLAR_RULE });
+    ctx.restore(() => ctx.engine("overrideContent", { identifier: "das-essai-collier", entry: rule0 }).catch(() => {}));
 
     await ctx.startCombat([warlock, bear]);
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
@@ -107,12 +113,19 @@ export default {
     ctx.expect(after.some(m => m.flags?.[MODULE_ID]?.formLock), "activité : la carte de dégâts du collier est dans le chat");
 
     // 3. L'effet de la forme allumé à la main.
-    // Les items prêtés le sont à l'acteur de base (`upsert-actor-item`, comme `regeneration-declaree`) : l'effet s'allume là.
-    const shapeUuid = `Actor.${tok.actorId}.Item.${shapeId}`;
+    // L'effet s'allume sur l'acteur du token, comme depuis la fiche du token : pour un token non lié, l'acteur synthétique (l'item
+    // prêté à l'acteur de base y est hérité). Sur l'acteur de base, le moteur ne trouverait aucun token à blesser (banc du 2026-11-20).
+    const sceneId = (await ctx.scene()).sceneId;
+    const shapeUuid = `${tok.actorLink ? `Actor.${tok.actorId}` : `Scene.${sceneId}.Token.${bear.id}.Actor.${tok.actorId}`}.Item.${shapeId}`;
+    // L'état de l'effet : l'item du delta du token s'il a été modifié, sinon celui de l'acteur.
     const effectState = async () => {
-      const { data } = await ctx.call("get-item", { uuid: shapeUuid }).catch(() => ({ data: null }));
-      return (data?.effects ?? []).find(e => e._id === "dasEssaiFormeEf0")?.disabled;
+      const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: bear.id });
+      const own = tok.actorLink ? null : (data.delta?.items ?? []).find(i => i._id === shapeId);
+      const item = own ?? ((await ctx.call("get-actor", { actorId: tok.actorId })).items ?? []).find(i => i._id === shapeId);
+      return (item?.effects ?? []).find(e => e._id === "dasEssaiFormeEf0")?.disabled;
     };
+    ctx.restore(() => ctx.call("upsert-embedded-effect", { uuid: shapeUuid, effectData: { disabled: true }, match: { path: "_id", value: "dasEssaiFormeEf0" } }).catch(() => {}));
+    ctx.expect((await effectState()) === true, "effet : éteint au départ");
     await ctx.call("upsert-embedded-effect", { uuid: shapeUuid, effectData: { disabled: false }, match: { path: "_id", value: "dasEssaiFormeEf0" } }).catch(() => null);
     const refused = await legality();
     ctx.expect(!!refused, "effet allumé à la main : la fenêtre « Utiliser quand même » s'ouvre");

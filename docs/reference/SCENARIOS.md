@@ -375,7 +375,7 @@ la sélection sans rien jouer.
 | `types-immunites` |  | §16.8 | pas un humanoïde, immunisé contre l'Épuisement, contre Empoisonné |
 | `vague-destructrice` |  | §263 | les alliés du lanceur sont épargnés |
 | `variantes-attaque` |  | §18.8 | charge, En sang, avantage |
-| `verrou-forme-porte` |  | §488 | Forme d'essai |
+| `verrou-forme-porte` |  | §488 | tentative punie et refusée, Régénération suspendue (§488, brique B09) |
 | `vision-tenebres` |  | §62 | Ténèbres, Vision du diable, vision dans le noir, vision véritable, vision aveugle (Arène de la vision) |
 | `vision-zones` |  |  | brume, Silence, murs (vue, son), vibrations et vol (Arène de la vision) |
 | `vision` |  |  | non vu, invisible, aveuglé |
