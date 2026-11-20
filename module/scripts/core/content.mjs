@@ -152,6 +152,10 @@
  *                                               `"magic"` : contre un sort ou un effet magique (Résistance à la magie, §18.9)
  *     saveIgnoresCover?: true                   la sauvegarde de Dextérité de l'item ne reçoit pas le bonus d'abri de la cible
  *                                               (Flamme sacrée ; core/save-cover.mjs)
+ *     saveAutoSuccessAgainst?: ["magic"]        le porteur de l'item réussit d'office ses sauvegardes contre un sort ou un effet
+ *                                               magique (Résistance supérieure à la magie)
+ *     spellAttacksMiss?: true                   les jets d'attaque des sorts ratent d'office le porteur de l'item : il est hors
+ *                                               d'atteinte d'un sort à jet d'attaque (Résistance supérieure à la magie)
  *     onFell?: { activity?, radius, units }     quand un ennemi tombe à 0 PV sous les coups du porteur, ou à `radius` de
  *                                               lui, l'activité (défaut : le premier soin de l'item) joue (Bénédiction du
  *                                               Ténébreux, §16.25)

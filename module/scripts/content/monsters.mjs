@@ -27,6 +27,9 @@ export const MONSTERS = Object.freeze({
   // Morsure (Homoncule) : Empoisonné jusqu'à la fin de son prochain tour ; raté de 5 ou plus, Inconscient, réveillé par des dégâts.
   "mm-homunculus-bite": { effectEnds: { V1AmhFqcodun54W7: "casterTurnEnd" }, failMargins: { "1xPlmvipGrfrNiPY": { min: 5 } },
     triggers: [{ on: "isDamaged", via: "effect", fromEffect: "1xPlmvipGrfrNiPY", do: [{ type: "remove" }] }] },
+  // Résistance supérieure à la magie (Rakshasa, SRD 5.2) : « le rakshasa réussit automatiquement ses jets de sauvegarde contre
+  // les sorts et autres effets magiques, et les jets d'attaque des sorts le ratent automatiquement ».
+  "greater-magic-resistance": { saveAutoSuccessAgainst: ["magic"], spellAttacksMiss: true },
   // Défense (Sanglier-garou) : la malédiction ne vise qu'un Humanoïde.
   "mm-wereboar-gore": { effectsIf: { "target.creatureType": "humanoid" } },
   // Ravenloft. Brochette psychique (Ancien) : Épuisement et Étourdi seulement pour une cible Charmée.

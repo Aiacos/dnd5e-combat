@@ -15,7 +15,8 @@ import { maximizeDice } from "../core/max-dice.mjs";
 import { spellCastLevel } from "../core/usage.mjs";
 import { unaffectedBy } from "../adapter/eligibility.mjs";
 import { restoreHp, rollDamageFor } from "../adapter/messages.mjs";
-import { removeEffects, TARGETS_QUERY, handleTargetsQuery, SAVE_QUERY, handleSaveQuery, magicEvasionAgainst } from "../adapter/saves.mjs";
+import { removeEffects, TARGETS_QUERY, handleTargetsQuery, SAVE_QUERY, handleSaveQuery, magicEvasionAgainst,
+  autoSaveAgainst } from "../adapter/saves.mjs";
 import { statusesOf, areAdjacent, evades, avoids, coverAgainst, isRangedAttack } from "../adapter/conditions.mjs";
 import { rangedAcBonus, wearsAdamantine } from "../adapter/defenses.mjs";
 import { currentAc } from "../adapter/reactions.mjs";
@@ -301,6 +302,13 @@ export async function openingFor(message, usage, extra={}) {
     // §402 : le token qui parle d'abord — un PNJ non lié n'a pas de token « actif » par son acteur synthétique.
     targets = await askWilling(activity, targets, fromUuidSync(speakerTokenUuid(message) ?? "", { strict: false })
       ?? activity?.actor?.getActiveTokens?.(false, true)?.[0] ?? null);
+    // Résistance supérieure à la magie (`saveAutoSuccessAgainst`) : le porteur réussit d'office contre un sort ou un effet magique.
+    targets = targets.map(t => {
+      if ( t.autoFail || t.autoSucceed ) return t;
+      const bearer = fromUuidSync(t.token, { strict: false })?.actor ?? fromUuidSync(t.actor, { strict: false });
+      const trait = autoSaveAgainst(bearer, activity);
+      return trait ? { ...t, autoSucceed: `trait:${trait}` } : t;
+    });
     // §402 : `saveAutoSuccess` — `types` : ces types de créature réussissent d'office (Pétrification : Créatures artificielles) ;
     // `fighting` : une créature que le lanceur combat aussi (en combat, ennemie : Discours captivant, Faux amis).
     const rule = contentOf(activity?.item).entry?.saveAutoSuccess ?? null;
