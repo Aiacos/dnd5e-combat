@@ -5,9 +5,9 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { normalize, select, stepsOf } from "../core/triggers.mjs";
+import { normalize, select, stepsOf, holds } from "../core/triggers.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
-import { originItemOf, factsFor, comesFromItemEffect, weaponKind, swornEnemyOf } from "./facts.mjs";
+import { originItemOf, factsFor, comesFromItemEffect, weaponKind, swornEnemyOf, tokenOf } from "./facts.mjs";
 import { hasReactionAdvantage, takeReactionAdvantage, hasReactionDisadvantage, takeReactionDisadvantage } from "./marks.mjs";
 import { markModifiers } from "./mastery.mjs";
 import { exclusiveWeaponHindrances } from "../core/attack.mjs";
@@ -41,6 +41,26 @@ export function wornOrNotEquipment(item) {
   if ( item?.type !== "equipment" ) return true;
   if ( item.system?.equipped === false ) return false;
   return (item.system?.attunement !== "required") || (item.system?.attuned === true);
+}
+
+/**
+ * §484 : les items de l'acteur dont le `rollDisadvantage` frappe ce jet (`kind` : "check" ou "save") — la condition regarde l'acteur
+ * lui-même (`self.*` : au soleil, en lumière vive, dans l'eau courante). Rend leurs noms.
+ * @param {Actor} actor
+ * @param {"check"|"save"} kind
+ * @param {TokenDocument|null} [token]
+ * @returns {string[]}
+ */
+export function declaredRollDisadvantage(actor, kind, token=null) {
+  const out = [];
+  let facts = null;
+  for ( const item of actor?.items ?? [] ) {
+    const rule = contentOf(item).entry?.rollDisadvantage;
+    if ( !rule?.on?.includes?.(kind) || !wornOrNotEquipment(item) ) continue;
+    facts ??= factsFor({ self: actor, selfToken: tokenOf(actor, token) });
+    if ( holds(rule.if ?? null, facts) ) out.push(item.name);
+  }
+  return out;
 }
 
 /** Ce que tous les items d'un acteur déclarent (pour lui-même). */

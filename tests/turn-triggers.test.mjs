@@ -13,9 +13,11 @@ vi.mock("../module/scripts/adapter/areas.mjs", () => ({ resaveAgainst: vi.fn(asy
 vi.mock("../module/scripts/adapter/plane.mjs", () => ({ samePlane: () => true }));
 vi.mock("../module/scripts/adapter/death.mjs", () => ({ isDeadActor: () => false }));
 vi.mock("../module/scripts/adapter/triggers.mjs", () => ({
-  declarationsOf: () => [], declarationsOfEffects: actor => actor.declarations ?? [], factsFor: () => ({}), tokenOf: () => null,
-  consumedMarks: () => [], bonusTurnKey: () => null, bonusSpent: () => false, bonusKeyOf: () => null
+  declarationsOf: actor => actor.own ?? [], declarationsOfEffects: actor => actor.declarations ?? [], factsFor: context => { contexts.push(context); return {}; },
+  tokenOf: () => null, consumedMarks: () => [], bonusTurnKey: () => null, bonusSpent: () => false, bonusKeyOf: () => null,
+  declaredRollDisadvantage: actor => actor.disadvantaged ?? []
 }));
+const contexts = [];
 
 const { registerTriggers } = await import("../module/scripts/runtime/triggers.mjs");
 
@@ -25,6 +27,7 @@ let errors;
 beforeEach(() => {
   routes.clear();
   documents.clear();
+  contexts.length = 0;
   inflict.mockReset();
   inflict.mockResolvedValue(null);
   globalThis.Hooks = { callAll: () => {} };
@@ -123,5 +126,41 @@ describe("tour d'une créature : une tâche qui échoue revient au routeur", () 
     const combat = fight([bearerDamage("epine")]);
     await routes.get("combatTurnChange")(combat, turn(0, "lanceur"), turn(1, "porteur"));
     expect(inflicted()).toEqual(["epine"]);
+  });
+});
+
+/* -------------------------------------------- */
+
+describe("§484 : un trait inflige ses dégâts à son porteur (sans effet posé)", () => {
+  /** Un trait de la créature : `to: "self"`, porté par l'item lui-même (`via: null`). */
+  function selfDamage(name) {
+    documents.set(`item-${name}`, { uuid: `item-${name}`, name, system: { activities: new Map() } });
+    return { name, identifier: name, on: ["startOfTurn"], via: null, if: null,
+      do: [{ type: "damage", to: "self", formula: "20", damageType: "radiant" }], item: `item-${name}` };
+  }
+  it("début de tour : la créature subit les dégâts de son trait, et les faits la connaissent comme `self`", async () => {
+    const combat = fight([]);
+    const bearer = combat.combatants.get("porteur");
+    bearer.actor.own = [selfDamage("brule-au-soleil")];
+    await routes.get("combatTurnChange")(combat, turn(0, "lanceur"), turn(1, "porteur"));
+    await vi.waitFor(() => expect(inflict).toHaveBeenCalledTimes(1));
+    const [{ step, targetUuid, flags }] = inflict.mock.calls[0];
+    expect(step).toMatchObject({ to: "self", formula: "20", damageType: "radiant" });
+    expect(targetUuid).toBe("token-porteur");
+    expect(flags.selfDamage).toEqual({ item: "brule-au-soleil", moment: "startOfTurn" });
+    expect(contexts.some(c => (c.self === bearer.actor) && (c.selfToken === bearer.token))).toBe(true);
+  });
+});
+
+describe("§484 : Désavantage déclaré aux tests et aux sauvegardes", () => {
+  const rollOf = (hook, actor) => {
+    const config = { subject: { documentName: "Actor", name: "créature", ...actor }, ability: "dex", rolls: [{ options: {} }] };
+    routes.get(hook)(config);
+    return config.rolls[0].options;
+  };
+  it("un trait qui le déclare : Désavantage ; sinon rien", () => {
+    expect(rollOf("dnd5e.preRollAbilityCheckV2", { disadvantaged: ["Brûle au soleil"] }).disadvantage).toBe(true);
+    expect(rollOf("dnd5e.preRollAbilityCheckV2", {}).disadvantage).toBeUndefined();
+    expect(rollOf("dnd5e.preRollSavingThrowV2", { disadvantaged: ["Brûle au soleil"] }).disadvantage).toBe(true);
   });
 });

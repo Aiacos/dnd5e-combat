@@ -727,9 +727,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 ### `dnd5e.preRollAbilityCheckV2`
 
-1. Frightened: disadvantage on checks
-2. Indomitable Might _(stop)_
-3. armor training: ability check Disadvantage
+1. declared Disadvantage on ability checks
+2. Frightened: disadvantage on checks
+3. Indomitable Might _(stop)_
+4. armor training: ability check Disadvantage
 
 ### `dnd5e.preRollAttackV2`
 
@@ -766,8 +767,9 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 ### `dnd5e.preRollSavingThrowV2`
 
-1. Indomitable Might _(stop)_
-2. armor training: saving throw Disadvantage
+1. declared Disadvantage on saving throws
+2. Indomitable Might _(stop)_
+3. armor training: saving throw Disadvantage
 
 ### `dnd5e.preSummon`
 

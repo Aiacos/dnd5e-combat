@@ -13,6 +13,7 @@
 import { seesBetween, canSee } from "./vision.mjs";
 import { chargedFeet } from "./variants.mjs";
 import { lightOnToken, inSunlight } from "./illumination.mjs";
+import { inRunningWater } from "./running-water.mjs";
 import { LIGHT } from "../core/illumination.mjs";
 import { contentOf, identifierOf, enchantmentSourcesOf, hasClassFeature } from "./content.mjs";
 import { distanceBetween } from "./turn.mjs";
@@ -27,6 +28,9 @@ import { isSpellCast, spellSchoolOf, scrollSpellOf } from "./scrolls.mjs";
 import { knownCastLevel, castLevelAtMost, castLevelAtLeast } from "../core/counter.mjs";
 import { grapplerOf } from "./grapple.mjs";
 import { areEnemies, areAllies } from "./factions.mjs";
+
+/** §484 : ce token se tient-il en lumière vive (torche, sort, jour) ? Sans token : non. */
+const isBright = doc => !!doc && (lightOnToken(doc)?.level === LIGHT.BRIGHT);
 
 /** Rangs de taille de dnd5e (config.mjs, `actorSizes`), pour « de taille G ou inférieure ». */
 const SIZE_RANK = Object.freeze({ tiny: 0, sm: 1, med: 2, lg: 3, huge: 4, grg: 5 });
@@ -471,6 +475,15 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     // §334 : l'attaquant se tient en lumière vive (Sensibilité au soleil, à la lumière).
     "source.inBrightLight": want => ((!!sourceToken && (lightOnToken(sourceToken)?.level === LIGHT.BRIGHT)) === want),
     "source.inSunlight": want => ((!!sourceToken && inSunlight(sourceToken)) === want),
+    // §484 : les mêmes faits sur la créature elle-même (`self` : le porteur du trait au début de son tour, celui qui lance un test) et sur
+    // la cible — au soleil, en lumière vive, dans de l'eau courante (région ou scène marquée, adapter/running-water.mjs). Sans token : faux.
+    "source.inRunningWater": want => (inRunningWater(tokenOf(source, sourceToken)) === want),
+    "self.inSunlight": want => ((!!tokenOf(self, selfToken) && inSunlight(tokenOf(self, selfToken))) === want),
+    "self.inBrightLight": want => (isBright(tokenOf(self, selfToken)) === want),
+    "self.inRunningWater": want => (inRunningWater(tokenOf(self, selfToken)) === want),
+    "target.inSunlight": want => ((!!tokenOf(target, targetToken) && inSunlight(tokenOf(target, targetToken))) === want),
+    "target.inBrightLight": want => (isBright(tokenOf(target, targetToken)) === want),
+    "target.inRunningWater": want => (inRunningWater(tokenOf(target, targetToken)) === want),
     "source.chargedFeet": feet => !!sourceToken && !!targetToken && (chargedFeet(sourceToken, targetToken) >= (Number(feet) || 0)),
     "target.grappledBySource": want => ((target?.effects ?? []).some(e => e.statuses?.has?.("grappled") && (grapplerOf(e) === source)) === want),
     // §281 : l'inverse — la source est Agrippée par la cible (un ennemi agrippé par le réacteur finit son tour : Prise finale).

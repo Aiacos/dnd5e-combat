@@ -223,6 +223,8 @@
  *     ignoresResistance?: { types, from?, if? } §134 : les dégâts de ces types que le porteur inflige ignorent la résistance (Empoisonneur) ;
  *                                               §447 `from` : seulement ceux de ces activités de l'item, ou du sort qu'elles font lancer
  *                                               (Toucher de la mort) ; `if` : une condition sur l'auteur (`source`) et l'activité
+ *     rollDisadvantage?: { on, if? }            §484 : le porteur fait ces jets (`on` : "check" — tests, compétences et initiative
+ *                                               comprises —, "save") avec le Désavantage quand `if` tient sur lui (`self.inSunlight`)
  *     fleeOnFailedSave?: true                   §147 : sauvegarde ratée → la cible fuit le lanceur par sa Réaction (Murmures dissonants)
  *     ritualAdept?: {class: string}           §139 : Savoir rituel — les sorts rituels de ce grimoire, non préparés, en rituel hors combat
  *     slotRecovery?: {class: string, maxLevel?: number}   §139 : Restauration magique au Repos court (moitié du niveau de la classe)
@@ -1019,6 +1021,10 @@
  *                                                        il subit ces dégâts — une formule et son type, ou l'activité de dégâts
  *                                                        de l'item, au niveau de lancement (Flèche acide de Melf : « 2d4 dégâts
  *                                                        d'acide à la fin de son prochain tour »)
+ *   { type: "damage", to: "self", formula?, damageType?, activity? }
+ *                                                        §484 : au tour du porteur d'un TRAIT (startOfTurn, endOfTurn, sans via) : il
+ *                                                        subit ces dégâts, quand `if` tient sur lui (`self.inSunlight` :
+ *                                                        Hypersensibilité au soleil, 20 radiants au début de son tour au soleil)
  *   { type: "lift", height, units }                   §164 : à une issue (failedSave) — la cible monte à `height` d'élévation ; quand
  *                                                        la zone de l'item tombe, elle chute (1d6 contondants par 3 m, 20d6 au plus, À terre)
  *   { type: "disarm" }                                   à une issue (failedSave) : la cible lâche son arme de corps à corps

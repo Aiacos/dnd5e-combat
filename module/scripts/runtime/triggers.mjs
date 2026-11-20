@@ -6,7 +6,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { select, stepsOf, BEARER_MOMENTS, damagedByOriginSide, sameActivity, spareBearer } from "../core/triggers.mjs";
-import { declarationsOf, declarationsOfEffects, factsFor, tokenOf, consumedMarks, bonusTurnKey, bonusSpent, bonusKeyOf } from "../adapter/triggers.mjs";
+import { declarationsOf, declarationsOfEffects, factsFor, tokenOf, consumedMarks, bonusTurnKey, bonusSpent, bonusKeyOf, declaredRollDisadvantage } from "../adapter/triggers.mjs";
 import { identifierOf } from "../adapter/content.mjs";
 import { comesFromItemEffect, originItemOf } from "../adapter/facts.mjs";
 import { usageTokenOf, speakerTokenOf, turnKeyAt } from "../adapter/turn.mjs";
@@ -179,8 +179,11 @@ function turnMoment(moment, combatant, turnKey=null) {
   const actor = token?.actor;
   if ( !actor ) return;
   return enqueue(`turn:${token.uuid}`, async () => {
-    const declarations = fire(moment, { actor, target: actor, source: null, targetToken: token });
+    // §484 : la créature est aussi `self` — un trait qui la regarde elle-même (`self.inSunlight`).
+    const declarations = fire(moment, { actor, target: actor, source: null, targetToken: token, self: actor, selfToken: token });
     for ( const d of declarations ) await apart(d, token, moment, async () => {
+      // §484 : un trait de la créature (sans effet posé) lui inflige des dégâts à son tour (Hypersensibilité au soleil).
+      if ( d.via === null ) return selfDamage(d, token, moment);
       // §42.2 : « à la fin de son PROCHAIN tour » — un effet que le moteur fait tomber lui-même (`remove`) et qui a été posé
       // pendant ce tour-ci attend le suivant (`placedOn`, noté à la pose : runtime/cantrips.mjs).
       if ( turnKey && stepsOf(d, "remove").length && ((await fromUuid(d.effect ?? ""))?.getFlag?.(MODULE_ID, "placedOn") === turnKey) ) return;
@@ -241,6 +244,28 @@ function turnMoment(moment, combatant, turnKey=null) {
       }
     });
   });
+}
+
+/**
+ * §484 : les dégâts qu'un trait inflige à son porteur à son tour (`to: "self"`, sans effet posé) — « au début de son tour au soleil, elle
+ * subit 20 dégâts radiants » ; la condition (`if`) a déjà été tenue par `fire`. Une créature morte n'en subit plus (issue #40).
+ */
+async function selfDamage(d, token, moment) {
+  const actor = token.actor;
+  const steps = stepsOf(d, "damage").filter(s => s.to === "self");
+  if ( !steps.length ) return;
+  const item = await fromUuid(d.item ?? "");
+  for ( const step of steps ) {
+    const heals = (item?.system?.activities?.get?.(step.activity ?? "")?.type === "heal") || ["healing", "temphp"].includes(step.damageType);
+    if ( spareBearer({ dead: isDeadActor(actor), heals }) ) { log(`${d.name}: ${token.name} is dead, no damage (${moment})`); continue; }
+    await inflict({
+      step, item, targetUuid: token.uuid,
+      speaker: ChatMessage.implementation.getSpeaker({ token }),
+      flavor: loc(heals ? "SoinsPorteur" : "DegatsPorteur", { item: d.name, name: token.name }),
+      flags: { selfDamage: { item: d.identifier, moment } }
+    });
+    log(`${d.name}: ${token.name} takes its own trait's damage (${moment})`);
+  }
 }
 
 /**
@@ -435,7 +460,26 @@ async function onEffectMarked(effect) {
   if ( owner ) log(`${effect.name}: damage sharing by ${owner} disarmed, the engine shares`);
 }
 
+/**
+ * §484 : sur le client qui lance, un test de caractéristique (compétences, initiative) ou une sauvegarde avec le Désavantage qu'un trait
+ * déclare sous condition (`rollDisadvantage` : « au soleil, Désavantage aux tests de caractéristique »). La fenêtre de jet de dnd5e le
+ * montre ; le MJ peut l'écarter à la main.
+ */
+const onPreRollDisadvantage = kind => config => {
+  const actor = config?.subject;
+  const roll = config?.rolls?.[0];
+  if ( (actor?.documentName !== "Actor") || !roll ) return true;
+  const names = declaredRollDisadvantage(actor, kind);
+  if ( !names.length ) return true;
+  roll.options ??= {};
+  roll.options.disadvantage = true;
+  log(`${actor.name}: ${kind} (${config.ability ?? config.skill ?? "?"}) with Disadvantage (${names.join(", ")})`);
+  return true;
+};
+
 export function registerTriggers() {
+  route("dnd5e.preRollAbilityCheckV2", onPreRollDisadvantage("check"), { label: "declared Disadvantage on ability checks" });
+  route("dnd5e.preRollSavingThrowV2", onPreRollDisadvantage("save"), { label: "declared Disadvantage on saving throws" });
   route("createActiveEffect", onEffectMarked, { executor: true, label: "Warding Bond: foreign damage sharing not disarmed" });
   route("updateActiveEffect", onEffectMarked, { executor: true, label: "Warding Bond: foreign damage sharing not disarmed" });
   route("dnd5e.preRollDamageV2", onPreRollDamage, { cancellable: true, label: "trigger bonus damage" });

@@ -421,8 +421,8 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
       .toEqual(["triggers[0].do[0].formula: formula required", "triggers[0].do[0].damageType: damage type required"]);
     expect(validateEntry({ triggers: [{ on: ["isHit", "isDamaged"], do: [{ type: "damage", to: "source", formula: "1d8", damageType: "acid" }] }] }, { facts }))
       .toEqual(["triggers[0].do: a riposte (to: \"source\") requires isHit as the only moment"]);
-    expect(validateEntry({ triggers: [{ on: "preDamageRoll", do: [{ type: "damage", to: "self", activity: "OzlTY1z1gup4C2Qq", formula: "1", damageType: "fire" }] }] }, { facts }))
-      .toEqual(["triggers[0].do[0].to: source, origin, bearer", "triggers[0].do[0].activity: only for a riposte (to: \"source\") or the bearer (to: \"bearer\")"]);
+    expect(validateEntry({ triggers: [{ on: "preDamageRoll", do: [{ type: "damage", to: "nobody", activity: "OzlTY1z1gup4C2Qq", formula: "1", damageType: "fire" }] }] }, { facts }))
+      .toEqual(["triggers[0].do[0].to: source, origin, bearer, self", "triggers[0].do[0].activity: only for a riposte (to: \"source\") or the bearer (to: \"bearer\", \"self\")"]);
   });
 
   it("§19 : dégâts d'issue (moitié sur réussite) et dégâts du porteur à son tour", () => {

@@ -6,7 +6,7 @@ import { CREATURE_TYPES } from "../eligibility.mjs";
 import { ORDERS } from "../orders.mjs";
 import { unknownFacts } from "../triggers.mjs";
 import { validateAbsorb, validateCarriedLight, validateChoice, validateEmanation, validateLight, validateSummon, validateTargets, validateTeleport } from "./annex.mjs";
-import { BASIC_ACTION_KINDS, BONUS_ATTACK_AFTER, BREAK_MOMENTS, EFFECT_EXPIRIES, ENDS_APART_AT, ENDS_ARMOR, ENDS_UNAFFECTED, ENTRY_KEYS, SIZES, WEAPON_KINDS, DAMAGE_TYPES } from "./enums.mjs";
+import { BASIC_ACTION_KINDS, BONUS_ATTACK_AFTER, BREAK_MOMENTS, EFFECT_EXPIRIES, ENDS_APART_AT, ENDS_ARMOR, ENDS_UNAFFECTED, ENTRY_KEYS, SIZES, WEAPON_KINDS, DAMAGE_TYPES, ROLL_DISADVANTAGE_ON } from "./enums.mjs";
 import { validateExtras } from "./extras.mjs";
 import { SPELL_COMPONENTS } from "../spell-failure.mjs";
 import { isId, isObject } from "./shared.mjs";
@@ -733,6 +733,15 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       errors.push(`${at}ignoresResistance: { types: [damage types], from?: [activity ids], if?: condition }`);
     }
     else if ( r.if ) for ( const key of unknownFacts(r.if, facts) ) errors.push(`${at}ignoresResistance.if: unknown fact "${key}"`);
+  }
+  if ( "rollDisadvantage" in entry ) {
+    // §484 : le porteur fait ces jets avec le Désavantage, quand la condition tient sur lui (`self.*` : Hypersensibilité au soleil).
+    const r = entry.rollDisadvantage;
+    if ( !(isObject(r) && Array.isArray(r.on) && r.on.length && r.on.every(o => ROLL_DISADVANTAGE_ON.includes(o))
+      && (!("if" in r) || isObject(r.if)) && Object.keys(r).every(k => ["on", "if"].includes(k))) ) {
+      errors.push(`${at}rollDisadvantage: { on: [${ROLL_DISADVANTAGE_ON.join(", ")}], if?: condition }`);
+    }
+    else if ( r.if ) for ( const key of unknownFacts(r.if, facts) ) errors.push(`${at}rollDisadvantage.if: unknown fact "${key}"`);
   }
   if ( ("quickStand" in entry) && !(isObject(entry.quickStand) && Number.isFinite(entry.quickStand.value) && (entry.quickStand.value > 0)
     && (typeof entry.quickStand.units === "string") && entry.quickStand.units && Object.keys(entry.quickStand).every(k => ["value", "units"].includes(k))) ) {
