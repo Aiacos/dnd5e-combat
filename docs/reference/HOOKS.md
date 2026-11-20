@@ -789,18 +789,19 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 5. projectiles: one per target, the rest chained _(stop)_
 6. use without dialog _(stop)_
 7. metamagic: spell not modified _(stop)_
-8. use legality _(stop)_
-9. gates: Sanctuary, Counterspell, pre-attack reactions, Portent _(stop)_
-10. summon on targets: neighbours asked
-11. Ritual: cast without a spell slot _(stop)_
-12. self area: without the "Place Template" box _(stop)_
-13. Sneak Attack: item activity not redirected _(stop)_
-14. Reckless Attack: prompt _(stop)_
-15. swallow: Bite not refused _(stop)_
-16. potion: concentration not removed
-17. ground item: area placed on use, copy kept
-18. light object: placed on cast _(stop)_
-19. light source: dnd5e consumption not skipped
+8. worn form lock: attempt not punished
+9. use legality _(stop)_
+10. gates: Sanctuary, Counterspell, pre-attack reactions, Portent _(stop)_
+11. summon on targets: neighbours asked
+12. Ritual: cast without a spell slot _(stop)_
+13. self area: without the "Place Template" box _(stop)_
+14. Sneak Attack: item activity not redirected _(stop)_
+15. Reckless Attack: prompt _(stop)_
+16. swallow: Bite not refused _(stop)_
+17. potion: concentration not removed
+18. ground item: area placed on use, copy kept
+19. light object: placed on cast _(stop)_
+20. light source: dnd5e consumption not skipped
 
 ### `dnd5e.preUseLinkedSpell`
 
@@ -968,7 +969,8 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `preUpdateActiveEffect`
 
 1. status icon always visible
-2. True Strike: enchantment expired too early _(stop)_
+2. worn form lock: form effect not refused _(stop)_
+3. True Strike: enchantment expired too early _(stop)_
 
 ### `preUpdateActor`
 

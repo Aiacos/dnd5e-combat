@@ -269,6 +269,13 @@
  *                                               rejoue ce que ses déclencheurs disent (Symbole : la sphère de 18 m, 10 minutes)
  *     formLock?: true                      §403 : dans la zone qui dure, pas d'activité « transform » (Rayon de lune : « ne peut pas
  *                                               prendre une autre forme » — souci de légalité, runtime/turn.mjs)
+ *     formLock?: { worn: true, onAttempt?, forms? }  B09 (§488) : tant que l'objet est porté (équipé, ou sur la fiche s'il ne s'équipe
+ *                                               pas), son porteur ne change pas de forme : chaque tentative (activité « transform »,
+ *                                               `changesForm`, activité d'un item nommé dans `forms`, effet d'un tel item allumé à la
+ *                                               main) est refusée, forçable, et lui inflige `onAttempt` (étapes `damage`, `to: "bearer"`,
+ *                                               formule ou activité de l'objet) — core/form-lock.mjs, runtime/form-lock.mjs
+ *     suspends?: ["regeneration"]          B09 (§488) : tant que l'objet est porté, ces traits de son porteur ne fonctionnent pas
+ *                                               (collier qui empêche de se régénérer) — adapter/form-lock.mjs `suspendedBy`
  *     windward?: true                      §403 : dans la zone qui dure, chaque mètre vers le lanceur en coûte deux (Bourrasque ;
  *                                               core/windward.mjs, refus avant le pas, surcoût noté au budget : `windward`)
  *     keepsSpeed?: true                    §403 : le porteur d'un effet de l'item ne voit pas sa Vitesse réduite par un effet magique posé

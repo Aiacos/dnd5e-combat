@@ -21,6 +21,7 @@ import { registerWallGrateUi } from "./ui/wall-grate.mjs";
 import { registerSceneBrightUi } from "./ui/scene-bright.mjs";
 import { registerCombatEvents, combatApi } from "./runtime/combat-events.mjs";
 import { registerTurn } from "./runtime/turn.mjs";
+import { registerFormLock } from "./runtime/form-lock.mjs";
 import { registerMetamagic } from "./runtime/metamagic.mjs";
 import { registerReactions } from "./runtime/reactions.mjs";
 import { registerGates } from "./runtime/gates.mjs";
@@ -401,6 +402,7 @@ Hooks.once("init", () => {
   gated(registerProjectiles);   // après la visée (les cibles sont désignées), avant la légalité
   gated(registerUsage);   // §68 : avant la métamagie et la légalité — l'emplacement choisi est celui qu'elles liront
   gated(registerMetamagic);   // §32 : avant registerTurn — le Sort accéléré change le coût que la légalité lit
+  gated(registerFormLock);   // B09 (§488) : juste avant la légalité — la tentative de changer de forme punie une fois, puis refusée
   gated(registerTurn);
   gated(registerAmmo);   // §274 : après la légalité — le mode d'attaque et la confirmation sont posés quand la munition se choisit
   gated(registerGates);   // après la légalité : une porte ne s'ouvre que pour une utilisation confirmée

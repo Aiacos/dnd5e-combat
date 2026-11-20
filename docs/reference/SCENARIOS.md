@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-372 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+373 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -371,6 +371,7 @@ la sélection sans rien jouer.
 | `types-immunites` |  | §16.8 | pas un humanoïde, immunisé contre l'Épuisement, contre Empoisonné |
 | `vague-destructrice` |  | §263 | les alliés du lanceur sont épargnés |
 | `variantes-attaque` |  | §18.8 | charge, En sang, avantage |
+| `verrou-forme-porte` |  | §488 | Forme d'essai |
 | `vision-tenebres` |  | §62 | Ténèbres, Vision du diable, vision dans le noir, vision véritable, vision aveugle (Arène de la vision) |
 | `vision-zones` |  |  | brume, Silence, murs (vue, son), vibrations et vol (Arène de la vision) |
 | `vision` |  |  | non vu, invisible, aveuglé |

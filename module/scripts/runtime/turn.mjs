@@ -40,6 +40,7 @@ const forcedReasons = choice => (refusal().report ? passedReasons(choice) : []);
 import { antimagicAround, barrierBetween } from "../adapter/barriers.mjs";
 import { magicalUse } from "../adapter/antimagic.mjs";
 import { rangedBanAround, formLockAround } from "../adapter/areas.mjs";
+import { formAttemptLock } from "../adapter/form-lock.mjs";
 import { isRangedWeaponAttack } from "../adapter/cover.mjs";
 import { selfTeleportOf, tooBrightFor } from "./teleport.mjs";
 import { windowDisengaged } from "./reactions.mjs";
@@ -270,12 +271,15 @@ export function useIssues(activity, { cost: forcedCost=null, attackMode=null, re
   const storm = (!pilot && isRangedWeaponAttack(activity, attackMode)) ? rangedBanAround(usageToken(activity)) : null;
   // §403 : Rayon de lune — pas d'autre forme dans la lumière (une activité « transform » de dnd5e : Forme sauvage, Métamorphose sur soi).
   const formLocked = ((activity.type === "transform") && usageToken(activity)) ? formLockAround(usageToken(activity)) : null;
+  // B09 (§488) : un objet porté verrouille la forme (collier) — les étapes de la tentative : runtime/form-lock.mjs.
+  const wornLock = formAttemptLock(activity);
   const bright = (!pilot && usageToken(activity) && selfTeleportOf(activity)) ? (tooBrightFor(activity, usageToken(activity)) === "from") : false;
   const budgetLines = issues.map(i => loc(`Souci.${i}`));
   const lines = [
     ...budgetLines,
     ...(storm ? [loc("Souci.noRangedWeapons", { item: storm.name })] : []),
     ...(formLocked ? [loc("Souci.formLocked", { item: formLocked.name })] : []),
+    ...(wornLock ? [loc("Souci.formLockedWorn", { item: wornLock.item.name })] : []),
     ...(bright ? [loc("Souci.tooBright", { item: activity.item.name })] : []),
     ...(outOfAmmunition(activity, attackMode) ? [loc("Souci.noAmmunition", { item: activity.item.name })] : []),
     ...(silenced ? [loc("Souci.silenced")] : []),

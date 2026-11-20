@@ -51,7 +51,9 @@ const DEFAULTS = Object.freeze({
   // Issue #32 : le succès à un prix accepté (refusé : rien).
   atCost: { success: CORE_SOUNDS.atCost, failure: null },
   // §461 : une téléportation de soi faite (Foulée brumeuse, Téléportation d'un démon).
-  teleport: { success: CORE_SOUNDS.chime, failure: null }
+  teleport: { success: CORE_SOUNDS.chime, failure: null },
+  // B09 (§488) : une tentative de changer de forme qu'un objet porté interdit (le collier se serre).
+  formLock: { success: null, failure: CORE_SOUNDS.rattle }
 });
 
 /** Le son par défaut de cette action et de cette issue (null : aucun). */

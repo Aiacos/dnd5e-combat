@@ -10,10 +10,12 @@ import { englishDescription } from "./multiattack.mjs";
 import { inSunlight } from "./illumination.mjs";
 // §484 : l'eau courante — une région ou une scène marquée (B05).
 import { inRunningWater } from "./running-water.mjs";
+// B09 (§488) : un objet porté qui suspend la Régénération (collier).
+import { suspendedBy } from "./form-lock.mjs";
 
 /**
  * B04 : `regeneration: true` (le texte anglais seul) ou la forme déclarée, qui l'emporte clé par clé (core/regeneration.mjs). Sans
- * activité de soin, `amount` déclaré suffit.
+ * activité de soin, `amount` déclaré suffit. B09 : null tant qu'un objet porté la suspend.
  * @returns {{item: Item5e, activity: Activity|null, amount: string|null, needsHp: boolean, stoppedBy: string[], silveredBy: string[],
  *   stoppedByItems: string[], stoppedWhile: string[], survivesZero: boolean, critical: boolean}|null}
  */
@@ -24,6 +26,8 @@ export function regenerationOf(actor) {
     const activity = item.system.activities?.find(a => (a.type === "heal") && a.healing?.formula) ?? null;
     const regeneration = resolveRegeneration(declared, readRegeneration(englishDescription(item)));
     if ( !activity && !regeneration.amount ) continue;
+    // B09 (§488) : tant qu'un objet porté la suspend (`suspends: ["regeneration"]`), la créature ne se régénère pas — et meurt à 0 PV.
+    if ( suspendedBy(actor, "regeneration") ) return null;
     return { item, activity, ...regeneration };
   }
   return null;
