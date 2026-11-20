@@ -206,6 +206,8 @@ export const SPELL_RULES = Object.freeze({
   },
   // §300 : « pénètre dans le Cylindre pour la première fois d'un tour ou y commence son tour » — rien à l'incantation.
   "sleet-storm": { difficultTerrain: {}, quietPose: true },
+  // Flamme sacrée (SRD 5.2) : « la cible ne bénéficie pas d'un abri partiel ni d'un abri aux trois quarts pour cette sauvegarde ».
+  "sacred-flame": { saveIgnoresCover: true },
   // §300 : « Croissance » — la zone devient un terrain où chaque mètre coûte 4 mètres de déplacement ; elle reste (durée instantanée).
   // Embroussaillement : « temps d'incantation : action » — la donnée laisse l'activation « spéciale » (rien n'était dépensé).
   "plant-growth": { difficultTerrain: { cost: 4 }, usageLimits: { dnd5eactivity000: { cost: "action" } } },
