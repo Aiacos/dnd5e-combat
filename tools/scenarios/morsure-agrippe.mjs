@@ -6,7 +6,9 @@
  * comme l'entrée du menu) : aucune fenêtre n'attend.
  *  1. Empoignade choisie : le Guerrier ne perd aucun PV, il est Agrippé, l'effet porte le DD d'évasion 11 ; la résolution note le choix.
  *  2. Dégâts choisis : le Guerrier perd 3 PV, il n'est pas agrippé.
- * Un 1 naturel rate : chaque attaque est rejouée jusqu'à trois fois. Agrippé, trait, surcouche, PV remis. Toute fenêtre « le faire quand
+ * Le Guerrier est d'abord posé au contact du Zombi (dans l'Arène il en est à deux cases : l'empoignade, jugée à l'allonge, serait rompue
+ * aussitôt — échec du banc du 2026-11-20). La marque « Agrippe : … » de l'agrippeur est vérifiée aussi.
+ * Un 1 naturel rate : chaque attaque est rejouée jusqu'à trois fois. Agrippé, trait, surcouche, PV, position remis. Toute fenêtre « le faire quand
  * même » est acceptée (« go »), toute autre fermée.
  */
 const MODULE_ID = "dnd5e-combat";
@@ -32,11 +34,14 @@ const [item] = await actor.createEmbeddedDocuments("Item", [{ name: args.name, t
       damage: { includeBase: false, parts: [{ number: null, denomination: null, bonus: "3", types: ["bludgeoning"], custom: { enabled: true, formula: "3" } }] } } } } }]);
 return { itemId: item.id };
 `;
-/** L'état du Guerrier : PV, Agrippé de cette attaque et son DD d'évasion. */
+/** L'état du Guerrier : PV, Agrippé de cette attaque et son DD d'évasion ; la marque de l'agrippeur sur le Zombi. */
 const READ = `
-const actor = canvas.scene.tokens.get(args.target).actor;
+const token = canvas.scene.tokens.get(args.target);
+const actor = token.actor;
 const grapple = actor.effects.find(e => !e.disabled && e.statuses?.has("grappled"));
-return { hp: actor.system.attributes.hp.value, grappled: !!grapple, escapeDc: grapple?.getFlag("${MODULE_ID}", "escapeDc") ?? null };
+const zombie = canvas.scene.tokens.get(args.attacker)?.actor;
+const mark = (zombie?.effects ?? []).some(e => e.getFlag("${MODULE_ID}", "grappling")?.target === token.uuid);
+return { hp: actor.system.attributes.hp.value, grappled: !!grapple, escapeDc: grapple?.getFlag("${MODULE_ID}", "escapeDc") ?? null, mark };
 `;
 
 export default {
@@ -63,6 +68,11 @@ export default {
       }
     };
 
+    // Au contact : l'empoignade se juge à l'allonge de l'agrippeur.
+    const size = await ctx.gridSize();
+    ctx.restore(() => ctx.call("move-token", { tokenId: fighter.id, x: fighter.x, y: fighter.y }).catch(() => {}));
+    await ctx.call("move-token", { tokenId: fighter.id, x: zombie.x + size, y: zombie.y });
+    await pause(800);
     const clear = () => ctx.removeStatusEffects(fighter, "grappled").catch(() => {});
     await clear();
     ctx.restore(clear);
@@ -92,19 +102,21 @@ export default {
 
     try {
       await ctx.setHp(fighter, hp0);
-      const s0 = await script(READ, { target: fighter.id });
+      const s0 = await script(READ, { target: fighter.id, attacker: zombie.id });
       const r1 = await bite(GRAPPLE);
       if ( !ctx.expect(!!r1, "le Zombi touche le Guerrier (empoignade choisie)") ) return;
-      const s1 = await script(READ, { target: fighter.id });
+      const s1 = await script(READ, { target: fighter.id, attacker: zombie.id });
       ctx.expect(r1.choice === GRAPPLE, `la résolution note l'empoignade (${JSON.stringify(r1.choice)})`);
       ctx.expect(s1.hp === s0.hp, `aucun dégât : PV ${s0.hp} → ${s1.hp}`);
       ctx.expect(s1.grappled && (s1.escapeDc === 11), `Agrippé, DD d'évasion 11 (${JSON.stringify(s1)})`);
+      ctx.expect(s1.mark, "la marque « Agrippe : Guerrier » est sur le Zombi");
+      if ( !s1.grappled ) ctx.log((await ctx.engineLog().catch(() => [])).filter(l => /grapple|grappled|condition/.test(l)).slice(-4).join(" | "));
 
       await clear();
       await pause(800);
       const r2 = await bite(DAMAGE);
       if ( !ctx.expect(!!r2, "le Zombi touche le Guerrier (dégâts choisis)") ) return;
-      const s2 = await script(READ, { target: fighter.id });
+      const s2 = await script(READ, { target: fighter.id, attacker: zombie.id });
       ctx.expect(s1.hp - s2.hp === 3, `3 dégâts : PV ${s1.hp} → ${s2.hp}`);
       ctx.expect(!s2.grappled, "pas d'empoignade");
     } finally {

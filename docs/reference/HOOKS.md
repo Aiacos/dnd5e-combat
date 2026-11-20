@@ -1112,19 +1112,20 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 6. feat effect not synced _(MJ)_
 7. features held by Rage not synced _(MJ)_
 8. grapple: does it still hold? _(MJ)_
-9. Prone: crawl mode not set or not removed _(MJ)_
-10. climbing: fall not triggered _(MJ)_
-11. fall: not triggered automatically _(MJ)_
-12. hearing: ranges to read again
-13. enchanted weapon: light not updated _(MJ)_
-14. invisibility: not restored _(MJ)_
-15. light source: not burnt out _(MJ)_
-16. floating texts: effect
-17. perception: hearing mark not drawn
-18. perception: display not refreshed
-19. ethereal: view not updated
-20. ethereal: movement action not switched _(MJ)_
-21. sneak: cones redrawn
+9. grapple: grappler's mark _(MJ)_
+10. Prone: crawl mode not set or not removed _(MJ)_
+11. climbing: fall not triggered _(MJ)_
+12. fall: not triggered automatically _(MJ)_
+13. hearing: ranges to read again
+14. enchanted weapon: light not updated _(MJ)_
+15. invisibility: not restored _(MJ)_
+16. light source: not burnt out _(MJ)_
+17. floating texts: effect
+18. perception: hearing mark not drawn
+19. perception: display not refreshed
+20. ethereal: view not updated
+21. ethereal: movement action not switched _(MJ)_
+22. sneak: cones redrawn
 
 ### `updateActor`
 
