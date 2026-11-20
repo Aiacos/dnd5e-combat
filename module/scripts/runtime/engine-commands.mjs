@@ -365,7 +365,7 @@ export const COMMANDS = {
               log(`${step.name ?? "condition"}: ${victim.name} ${step.save.ability} saving throw ${saved?.total ?? "?"} vs DC ${step.save.dc}: ${saved?.success ? "succeeded" : "failed"}`);
               if ( saved?.success !== false ) continue;
             }
-            const uuid = await applyStatusToToken(carrier, victim.uuid, step.status);
+            const uuid = await applyStatusToToken(carrier, victim.uuid, step.status, { escapeDc: step.escapeDc ?? null });
             if ( uuid ) { effects.push(uuid); log(`${step.name ?? "condition"}: ${victim.name} receives "${step.status}"`); }
             // O9a (§354) : « détruite », « tuée sur le coup » — Morte, et ses PV à 0 (comme les paliers de PV, plus bas).
             if ( uuid && (step.status === "dead") ) await victim.actor?.update({ "system.attributes.hp.value": 0 });

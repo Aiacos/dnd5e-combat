@@ -72,6 +72,9 @@ export function grappleSceneOf(effect) {
  * formule (« @skills.ath.passive »), sur l'item qui a posé l'empoignade. null s'il n'y en a pas.
  */
 function declaredEscapeDc(effect) {
+  // §504 (B24) : un DD écrit sur l'effet par la règle qui l'a posé (empoignade au lieu des dégâts).
+  const own = Number(effect?.getFlag?.(MODULE_ID, "escapeDc"));
+  if ( Number.isFinite(own) && (own > 0) ) return own;
   const item = originItemOf(effect);
   const check = Array.from(item?.system?.activities ?? []).find(a => (a.type === "check") && /escape|évasion|evasion/i.test(a.name ?? ""))
     ?? Array.from(item?.system?.activities ?? []).find(a => a.type === "check");

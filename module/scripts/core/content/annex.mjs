@@ -138,7 +138,19 @@ export function validateTargets(targets, at, facts, errors) {
 export function validateChoice(choice, at, errors) {
   if ( !isObject(choice) ) return errors.push(`${at}: an object`);
   // §53 : `pool` seul relie des effets de l'item à une activité, sans rien à choisir (Héroïsme : la Bénédiction).
-  if ( (!("pool" in choice) || ("effects" in choice)) && !CHOICE_EFFECTS.includes(choice.effects) ) errors.push(`${at}.effects: ${CHOICE_EFFECTS.join(", ")}`);
+  // §504 (B24) : `outcome` — le choix porte sur l'issue du coup (les dégâts, ou une empoignade à leur place), pas sur des effets.
+  const outcome = "outcome" in choice;
+  if ( outcome ) {
+    const o = choice.outcome;
+    if ( !(Array.isArray(o) && (o.length === 2) && o.includes("damage") && o.includes("grapple")) ) errors.push(`${at}.outcome: ["damage", "grapple"]`);
+    if ( ("effects" in choice) || ("pool" in choice) || ("roll" in choice) || ("perTarget" in choice) ) errors.push(`${at}.outcome: alone (no effects, pool, roll, perTarget)`);
+    const g = choice.grapple;
+    if ( ("grapple" in choice) && !(isObject(g) && Object.keys(g).every(k => k === "escapeDc") && (!("escapeDc" in g) || (Number.isInteger(g.escapeDc) && (g.escapeDc >= 1)))) ) {
+      errors.push(`${at}.grapple: { escapeDc? } (integer ≥ 1)`);
+    }
+  }
+  else if ( "grapple" in choice ) errors.push(`${at}.grapple: only with outcome`);
+  if ( !outcome && (!("pool" in choice) || ("effects" in choice)) && !CHOICE_EFFECTS.includes(choice.effects) ) errors.push(`${at}.effects: ${CHOICE_EFFECTS.join(", ")}`);
   if ( ("prompt" in choice) && (typeof choice.prompt !== "string") ) errors.push(`${at}.prompt: string`);
   if ( ("pool" in choice) && !(isObject(choice.pool) && Object.entries(choice.pool).every(([a, ids]) => isId(a) && Array.isArray(ids) && ids.length && ids.every(isId))) ) {
     errors.push(`${at}.pool: { <activity id>: [effect ids] } (16 characters)`);
@@ -148,7 +160,7 @@ export function validateChoice(choice, at, errors) {
   if ( ("order" in choice) && !(Array.isArray(choice.order) && choice.order.length && choice.order.every(isId)) ) errors.push(`${at}.order: effect ids`);
   // §401 : `perTarget` — un choix par cible (Apaisement des émotions, Amélioration de caractéristique).
   if ( ("perTarget" in choice) && (choice.perTarget !== true) ) errors.push(`${at}.perTarget: true or absent`);
-  for ( const key of Object.keys(choice) ) if ( !["effects", "prompt", "pool", "roll", "order", "perTarget"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
+  for ( const key of Object.keys(choice) ) if ( !["effects", "prompt", "pool", "roll", "order", "perTarget", "outcome", "grapple"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
 }
 
 export function validateLight(l, at, errors) {

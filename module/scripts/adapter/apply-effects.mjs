@@ -107,7 +107,7 @@ export async function splitPushes(usageMessage, refs) {
  * un effet de l'activité. `Actor#toggleStatusEffect` du cœur (client/documents/actor.mjs:547) ; un état
  * déjà porté n'est pas doublé. Rend l'UUID de l'effet créé, ou null.
  */
-export async function applyStatusToToken(usageMessage, tokenUuid, status) {
+export async function applyStatusToToken(usageMessage, tokenUuid, status, { escapeDc=null }={}) {
   const actor = (await fromUuid(tokenUuid))?.actor;
   if ( !actor || !CONFIG.statusEffects.some(s => s.id === status) ) return null;
   if ( actor.statuses.has(status) ) return null;
@@ -119,7 +119,9 @@ export async function applyStatusToToken(usageMessage, tokenUuid, status) {
   // Un état est un effet `condition`, dont le modèle de dnd5e retire `system.origin` (data/active-effect/
   // condition.mjs:12) : l'origine va dans le champ `origin` du cœur, que `originItemOf` lit en repli.
   // §157 : le tour de la pose noté, comme pour un effet d'item (runtime/cantrips.mjs) — « jusqu'à la fin de votre prochain tour ».
-  if ( activity ) await effect.update({ origin: activity.uuid, ...(game.combat?.started ? { [`flags.${MODULE_ID}.placedOn`]: currentTurnKey() } : {}) });
+  if ( activity ) await effect.update({ origin: activity.uuid, ...(game.combat?.started ? { [`flags.${MODULE_ID}.placedOn`]: currentTurnKey() } : {}),
+    // §504 (B24) : le DD d'évasion que la règle déclare (« DD 11 pour s'échapper »), lu par `escapeDcOf`.
+    ...(escapeDc ? { [`flags.${MODULE_ID}.escapeDc`]: escapeDc } : {}) });
   return effect.uuid;
 }
 

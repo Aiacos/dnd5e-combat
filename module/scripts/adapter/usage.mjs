@@ -23,6 +23,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { usageMetamagic } from "./metamagic.mjs";
 import { OUTCOME_STEPS } from "../core/content.mjs";
+import { OUTCOME_DAMAGE, OUTCOME_GRAPPLE } from "../core/action.mjs";
 import { siblingSaveOf, sizeGateOf } from "../core/riders.mjs";
 import { chargeOnlyEffects } from "../core/variants.mjs";
 import { variantPlanOf, useTimeVariant, advantageVariantOf } from "./variants.mjs";
@@ -276,6 +277,13 @@ function withChoice(activity, plan) {
   // L'effet est donné, pas subi : pas de sauvegarde (celle d'Agrandissement/rapetissement vaut pour une cible non consentante).
   if ( imposed ) return { ...plan, save: null, effects: (plan.effects ?? []).filter(e => e.id === imposed).map(e => ({ ...e, when: "always" })) };
   const choice = activity.item ? contentOf(activity.item).entry?.choice : null;
+  // §504 (B24) : « au lieu d'infliger des dégâts, la créature peut agripper la cible » — sur une attaque qui fait des dégâts.
+  if ( choice?.outcome && plan.attack && plan.damage ) {
+    const escapeDc = choice.grapple?.escapeDc ?? null;
+    return { ...plan, choice: { prompt: choice.prompt ?? game.i18n.localize("DND5ECOMBAT.ChoixIssue.Question"), outcome: { escapeDc },
+      options: [{ id: OUTCOME_DAMAGE, label: game.i18n.localize("DND5ECOMBAT.ChoixIssue.Degats") },
+        { id: OUTCOME_GRAPPLE, label: escapeDc ? game.i18n.format("DND5ECOMBAT.ChoixIssue.AgripperDD", { dc: escapeDc }) : game.i18n.localize("DND5ECOMBAT.ChoixIssue.Agripper") }] } };
+  }
   if ( choice?.effects !== "one" ) return plan;   // `pool` seul : effets reliés, rien à choisir (§53)
   // Une attaque qui enchaîne sa sauvegarde sœur (§19.8 : poussée ou Agrippée) : les effets de la sœur.
   const chained = plan.save?.chained ? activity.item.system.activities?.get(plan.save.activity?.split(".").pop()) : null;

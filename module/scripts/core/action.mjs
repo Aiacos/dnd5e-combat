@@ -114,6 +114,10 @@ export function allocateDarts(count, tokens, wanted={}) {
   return out;
 }
 
+/** §504 (B24) : les deux issues d'un choix `outcome` — les dégâts, ou une empoignade à leur place. */
+export const OUTCOME_DAMAGE = "outcome.damage";
+export const OUTCOME_GRAPPLE = "outcome.grapple";
+
 /** L'auteur doit-il encore choisir l'effet à appliquer ? */
 export function pendingChoice(resolution) {
   return !!resolution.plan.choice && (resolution.choice === null) && (resolution.step === STEPS.AWAITING_ROLLS)
@@ -175,6 +179,10 @@ export function applicationPlan(resolution) {
     if ( saved && (t.save?.interposed === true) && plan.damage ) multiplier = 0;   // §133 : Interposer le bouclier
     if ( t.halved ) multiplier *= 0.5;   // Esquive instinctive (§16.11) : la moitié des dégâts de l'attaque, arrondie par dnd5e
     multiplier *= (t.times ?? 1);         // Projectile magique (§16.27) : autant de fois les dégâts que de projectiles reçus
+    // §504 (B24) : l'empoignade choisie à la place des dégâts — aucun dégât, l'état Agrippé (DD d'évasion déclaré).
+    const grapples = !!plan.choice?.outcome && (chosenFor(t.token) === OUTCOME_GRAPPLE);
+    if ( grapples ) multiplier = 0;
+    const grappleStep = grapples ? [{ type: "status", status: "grappled", ...(plan.choice.outcome.escapeDc ? { escapeDc: plan.choice.outcome.escapeDc } : {}) }] : [];
     return {
       token: t.token,
       actor: t.actor,
@@ -185,7 +193,7 @@ export function applicationPlan(resolution) {
         .filter(e => !exclusive.has(e.id) || (e.id === chosenFor(t.token)))
         // Une condition sur la cible (M3 : porte de taille) voyage avec l'effet ; l'application la juge.
         .map(({ id, activity, if: condition }) => (condition ? { id, activity, if: condition } : { id, activity })),
-      steps: spared ? [] : (plan.steps ?? []).filter(s => passes(s.when, saved) && withinMargin(s.margin, failed)).map(({ when, ...step }) => (("onSave" in step) ? { ...step, saved } : step))
+      steps: spared ? [] : [...(plan.steps ?? []).filter(s => passes(s.when, saved) && withinMargin(s.margin, failed)).map(({ when, ...step }) => (("onSave" in step) ? { ...step, saved } : step)), ...grappleStep]
     };
   });
 }
