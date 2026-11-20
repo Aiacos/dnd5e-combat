@@ -557,6 +557,10 @@ export const ITEM_FIXES = Object.freeze({
   // les démons et aux jets de sauvegarde contre leurs sorts et capacités spéciales » — rien dans la donnée.
   "demon-armor-enchanted": { saveDisadvantageAgainst: { subtypes: ["demon"] },
     triggers: [{ on: "preAttackRoll", if: { "target.creatureSubtype": "demon" }, do: [{ type: "disadvantage" }] }] },
+  // Harnois nain (SRD 5.2) : « si un effet vous déplace contre votre gré sur le sol, vous pouvez utiliser votre Réaction pour
+  // réduire la distance de 3 m au plus » — l'activité « Reduce Unwilling Movement » de la donnée ne touche pas aux poussées du
+  // moteur.
+  "dwarven-plate-enchanted": { reducesForcedMove: { distance: 10, units: "ft" } },
   "moon-touched-sword-enchanted": { carriedLight: MOONLIGHT },
   "flame-tongue-enchanted": { carriedLight: { bright: 40, dim: 80, units: "ft", animation: FLAMES, whileEnchanted: "MHnAqxEXBhUbnjPq" } },
   "helm-of-brilliance-enchanted": { carriedLight: { bright: 10, dim: 20, units: "ft", animation: FLAMES, whileEnchanted: "oZBFpi117yOXca3k" } },
