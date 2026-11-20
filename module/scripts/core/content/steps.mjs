@@ -92,6 +92,16 @@ function validateStep(step, at, errors) {
       || !Object.keys(t).every(k => ["successes", "failures", "status"].includes(k)) ) errors.push(`${at}.tally: { successes, failures, status? } (positive integers, condition)`);
     if ( step.keep === true ) errors.push(`${at}.tally: not applicable with keep`);
   }
+  // §495 (brique B15) : échelle d'états — `stages: [{ effect?, status? }]`, `onSuccess`, `critEnds`.
+  if ( (step.type === "resave") && ("stages" in step) ) {
+    const s = step.stages;
+    const stageOk = x => isObject(x) && (("effect" in x) || ("status" in x)) && Object.keys(x).every(k => ["effect", "status"].includes(k))
+      && (!("effect" in x) || isId(x.effect)) && (!("status" in x) || ((typeof x.status === "string") && !!x.status));
+    if ( !Array.isArray(s) || !s.length || (s.length > 5) || !s.every(stageOk) ) errors.push(`${at}.stages: [{ effect?: effect id, status?: condition }] (1 to 5 stages)`);
+    if ( ("tally" in step) || (step.keep === true) ) errors.push(`${at}.stages: not applicable with tally or keep`);
+  }
+  if ( (step.type === "resave") && ("onSuccess" in step) && (!("stages" in step) || !["down", "end"].includes(step.onSuccess)) ) errors.push(`${at}.onSuccess: "down" or "end", with stages`);
+  if ( (step.type === "resave") && ("critEnds" in step) && (!("stages" in step) || (step.critEnds !== true)) ) errors.push(`${at}.critEnds: true or absent, with stages`);
   // C12-e : une sauvegarde que la donnée n'a pas (Mot de pouvoir étourdissant : activité utilitaire) — sa caractéristique, au DD de
   // sorts du lanceur.
   if ( (step.type === "resave") && ("ability" in step) && !ABILITIES.includes(step.ability) ) errors.push(`${at}.ability: ${ABILITIES.join(", ")}`);

@@ -685,7 +685,8 @@
  *                                               combattant cachés tant qu'ils durent, retour à l'espace quitté (ou au plus proche
  *                                               libre) quand ils tombent (Bannissement, Châtiment bannissant)
  *     endsWhen?: { armor?: "any"|"heavy", apart?: { distance, units, at?: "move"|"casterTurnEnd" }, zeroHp?: true,
- *                  unaffected?: "failedSave"|"noHits"|"noTargets", spell?: true, casterTargetsOther?: true, allyDamages?: true }
+ *                  unaffected?: "failedSave"|"noHits"|"noTargets", spell?: true, casterTargetsOther?: true, allyDamages?: true,
+ *                  healedByMagic?: true }
  *                                               §258 : fins génériques (core/endings.mjs, runtime/endings.mjs) — l'effet de l'item
  *                                               cesse quand son porteur enfile une armure (`heavy` : lourde ; Armure du mage, Rage),
  *                                               quand porteur et lanceur sont séparés de plus de `apart` (à chaque déplacement, ou
@@ -694,7 +695,9 @@
  *                                               concentration tombe (réglage `endUnaffected`) ; `spell` : la fin vaut pour tout le
  *                                               sort (sa concentration, ou ses effets sur chaque créature), pas pour ce seul porteur ;
  *                                               §270 `casterTargetsOther` : le lanceur attaque une autre créature, ou lance un sort sur
- *                                               un autre ennemi ; `allyDamages` : un allié du lanceur blesse le porteur (Duel forcé)
+ *                                               un autre ennemi ; `allyDamages` : un allié du lanceur blesse le porteur (Duel forcé) ;
+ *                                               §495 `healedByMagic` : le porteur reçoit un soin magique (sort, objet magique, potion,
+ *                                               capacité dite `magical`)
  *     effectThen?: { <id d'effet>: <id d'effet> }
  *                                               quand le premier effet de l'item cesse sur une créature, le second y est posé
  *                                               (Hâte : « quand le sort prend fin, la cible est Neutralisée… », §42.2)
@@ -1007,6 +1010,12 @@
  *                                                        §43.1 : compteur — l'effet ne tombe qu'à `successes` réussites ; à
  *                                                        `failures` échecs plus aucune sauvegarde n'est rejouée, l'effet reste
  *                                                        et reçoit l'état `status` (Pétrification : « petrified »)
+ *   { type: "resave", …, stages: [{ effect?, status? }, …], onSuccess?: "down"|"end", critEnds?: true }
+ *                                                        §495 : échelle d'états — chaque échec monte d'un palier (un effet de
+ *                                                        l'item `effect`, posé à part et retiré avec l'effet, et/ou un état
+ *                                                        `status` ajouté à l'effet) ; chaque réussite redescend d'un palier et,
+ *                                                        au palier 0, l'effet tombe (`onSuccess: "end"` : il tombe d'un coup) ;
+ *                                                        `critEnds` : un 20 naturel le fait tomber
  *   { type: "resave", keep?, onFail?, unlessSeesOrigin?, advantage? } la créature rejoue la sauvegarde ; réussie, l'effet tombe (`keep:
  *                                                        true` : il reste) ; `onFail: "dodge"` : ratée, elle prend l'action
  *                                                        Esquiver (§37, Malédiction : « Cursed Actions ») ;

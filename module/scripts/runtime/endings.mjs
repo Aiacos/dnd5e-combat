@@ -14,9 +14,10 @@
 import { MODULE_ID } from "../constants.mjs";
 import { STEPS } from "../core/action.mjs";
 import { damagedByOriginSide } from "../core/triggers.mjs";
+import { itemFacts } from "../adapter/antimagic.mjs";
 import { areEnemies, sideOf } from "../adapter/factions.mjs";
 import { isSpellCast } from "../adapter/scrolls.mjs";
-import { ARMOR_WEIGHTS, armorEnds, isReplayUsage, nobodyAffected, tooFarApart } from "../core/endings.mjs";
+import { ARMOR_WEIGHTS, armorEnds, healsMagically, isReplayUsage, nobodyAffected, tooFarApart } from "../core/endings.mjs";
 import { INCAPACITATING } from "../core/conditions.mjs";
 import { contentOf } from "../adapter/content.mjs";
 import { placeItemEffect } from "../adapter/effects.mjs";
@@ -340,6 +341,30 @@ async function onUsedEnding(activity) {
   log(`${activity.item.name}: ${activity.name || activity.id} used, the spell ends`);
 }
 
+/**
+ * §495 (brique B15) : un soin magique reçu — les effets dont la règle `endsWhen.healedByMagic` vise ce porteur prennent fin.
+ * `dnd5e.applyDamage` ne tourne que chez le client qui applique, lequel possède l'acteur (dnd5e l'exige pour écrire ses PV) :
+ * la fin est jouée là. La source : la carte d'origine que le moteur passe (`origin`, adapter/messages.mjs) ou celle du bouton
+ * « Appliquer » de dnd5e (`originatingMessage`).
+ */
+async function onHealed(actor, amount, options) {
+  if ( !(amount < 0) || !actor?.isOwner ) return;
+  const entries = endingEffects([actor]).filter(e => e.rule.healedByMagic);
+  if ( !entries.length ) return;
+  const message = [options?.originatingMessage, options?.origin].find(m => m?.getAssociatedActivity) ?? null;
+  const activity = message?.getAssociatedActivity?.() ?? null;
+  const use = activity?.item ? { spellCast: isSpellCast(activity.item), item: itemFacts(activity.item), activityType: activity.type } : null;
+  if ( !healsMagically(amount, use) ) {
+    log(`${actor.name}: healed (${-amount}) without magic${activity ? ` (${activity.item.name})` : ""}, ${entries.map(e => e.effect.name).join(", ")} remains`);
+    return;
+  }
+  const scene = actor.isToken ? actor.token?.parent : (actor.getActiveTokens?.(false, true)?.[0]?.parent ?? canvas?.scene);
+  return enqueue(`endsWhen:${actor.uuid}`, async () => {
+    const done = new Set();
+    for ( const e of entries ) await endEntry(e, "healedByMagic", scene, done);
+  });
+}
+
 export function registerEndings() {
   game.settings.register(MODULE_ID, END_UNAFFECTED_SETTING, {
     name: `DND5ECOMBAT.Reglage.${END_UNAFFECTED_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${END_UNAFFECTED_SETTING}.Aide`,
@@ -348,6 +373,7 @@ export function registerEndings() {
   route("deleteActiveEffect", onDeleteEffect, { executor: true, label: "effect end: next effect not applied" });
   route("updateItem", onUpdateItem, { executor: true, label: "effect end on armor: not played" });
   route("updateActor", onUpdateActor, { executor: true, label: "effect end at 0 HP: not played" });
+  route("dnd5e.applyDamage", onHealed, { label: "effect end on magical healing: not played" });
   route("createActiveEffect", onIncapacitated, { executor: true, label: "effect end when Incapacitated: not played" });
   route("createChatMessage", onUsage, { executor: true, label: "effect end when the caster targets another creature: not judged" });
   route("moveToken", onMoveToken, { executor: true, label: "effect end by distance: not judged" });

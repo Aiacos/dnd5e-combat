@@ -252,23 +252,26 @@ export function cardScaling(activity, effect=null) {
  * @param {Activity} activity        L'activité de sauvegarde qui l'a posé.
  * @param {TokenDocument} token      La créature.
  * @param {string} moment            "startOfTurn" | "endOfTurn" | "isDamaged"
+ * @param {object} [options.stages]  §495 : l'échelle d'états `{ item, stages, onSuccess, critEnds }` (runtime/engine-commands.mjs).
  */
-export async function resaveAgainst(effect, activity, token, moment, { onFail=null, keep=false, dodge=false, tally=null, advantage=false, save=null }={}) {
+export async function resaveAgainst(effect, activity, token, moment, { onFail=null, keep=false, dodge=false, tally=null, advantage=false, save=null, stages=null }={}) {
   const caster = activity.item?.actor ?? null;
   const card = await activity.item.system.getCardData({ activity });
   // §43.1 : le compteur d'avant ce jet, dit sur la carte.
   const count = effect.getFlag?.(MODULE_ID, "tally") ?? {};
   const counted = tally ? ` — ${game.i18n.format("DND5ECOMBAT.Resave.tally", { successes: count.successes ?? 0, successesMax: tally.successes, failures: count.failures ?? 0, failuresMax: tally.failures })}` : "";
+  // §495 : le palier atteint, dit sur la carte (palier 0 : l'effet seul).
+  const staged = stages ? ` — ${game.i18n.format("DND5ECOMBAT.Resave.stage", { level: effect.getFlag?.(MODULE_ID, "stage")?.level ?? 0, count: stages.stages.length })}` : "";
   return ChatMessage.implementation.create({
     type: "usage",
     speaker: ChatMessage.implementation.getSpeaker({ actor: caster }),
-    flavor: game.i18n.format(`DND5ECOMBAT.Resave.${moment}`, { name: token.name, item: activity.item.name }) + counted,
+    flavor: game.i18n.format(`DND5ECOMBAT.Resave.${moment}`, { name: token.name, item: activity.item.name }) + counted + staged,
     system: { ...card, ...cardScaling(activity, effect), targets: [describeTarget(token)] },
     flags: {
       core: { canPopout: true },
       // §19.6 : `onFail` — des dégâts du porteur qui ne valent que si la sauvegarde est ratée (saignement d'Épine).
       // §37 : `keep` — réussie, l'effet reste ; `dodge` — ratée, la créature prend l'action Esquiver (Malédiction).
-      [MODULE_ID]: { resave: { effect: effect.uuid, token: token.uuid, moment, ...(onFail ? { onFail } : {}), ...(keep ? { keep } : {}), ...(dodge ? { dodge } : {}), ...(tally ? { tally } : {}), ...(save ? { save } : {}) },
+      [MODULE_ID]: { resave: { effect: effect.uuid, token: token.uuid, moment, ...(onFail ? { onFail } : {}), ...(keep ? { keep } : {}), ...(dodge ? { dodge } : {}), ...(tally ? { tally } : {}), ...(stages ? { stages } : {}), ...(save ? { save } : {}) },
         // §285 : Fou rire de Tasha — « l'Avantage à la sauvegarde quand elle est déclenchée par des dégâts » (mode par cible, §249).
         ...(advantage ? { targetModes: [{ token: token.uuid, mode: "advantage" }] } : {}) }
     }

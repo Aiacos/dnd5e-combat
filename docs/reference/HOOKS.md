@@ -590,9 +590,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 5. bite: empowerment not offered
 6. life steal: HP not regained
 7. rise: damage not recorded
-8. swallow: damage from inside not counted _(MJ)_
-9. oil: not ignited
-10. flammable: not ignited by fire damage
+8. effect end on magical healing: not played
+9. swallow: damage from inside not counted _(MJ)_
+10. oil: not ignited
+11. flammable: not ignited by fire damage
 
 ### `dnd5e.calculateDamage`
 

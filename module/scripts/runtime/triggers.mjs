@@ -218,7 +218,9 @@ function turnMoment(moment, combatant, turnKey=null) {
             steps: bearerDamage.map(({ formula, damageType, activity: id }) => ({ formula, damageType, activity: id })) }
           : null;
         // §37 : `keep` (réussie, l'effet reste) et `onFail: "dodge"` (ratée, l'action Esquiver) — Malédiction, « Cursed Actions ».
-        await resaveAgainst(effect, activity, token, moment, { onFail, keep: step.keep === true, dodge: step.onFail === "dodge", tally: step.tally ?? null, save: declared });
+        await resaveAgainst(effect, activity, token, moment, { onFail, keep: step.keep === true, dodge: step.onFail === "dodge", tally: step.tally ?? null, save: declared,
+          // §495 (brique B15) : l'échelle d'états — ses paliers sont des effets de l'item qui porte la règle.
+          stages: step.stages ? { item: d.item ?? null, stages: step.stages, onSuccess: step.onSuccess ?? "down", critEnds: step.critEnds === true } : null });
       }
       if ( resaves.length && bearerDamage.length ) return;
       for ( const step of bearerDamage ) {

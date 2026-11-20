@@ -7,8 +7,12 @@
  *  - `unaffected` : l'utilisation n'a affecté personne (toutes les sauvegardes réussies, aucun coup au but) — la concentration tombe,
  *    le sort n'a plus rien à tenir (Immobilisation de personne, Bannissement…). Confort de table, réglage de monde.
  *
+ *  - §495 `healedByMagic` : le porteur reçoit un soin magique (« jusqu'à ce qu'elle reçoive des soins magiques »).
+ *
  * Pur : aucune dépendance à Foundry.
  */
+
+import { isMagicalUse } from "./antimagic.mjs";
 
 /** Les poids d'armure de dnd5e (`system.type.value` d'un équipement), du plus léger au plus lourd. */
 export const ARMOR_WEIGHTS = Object.freeze(["light", "medium", "heavy"]);
@@ -55,4 +59,17 @@ export function nobodyAffected(resolution, condition) {
  */
 export function isReplayUsage(flags) {
   return !!(flags?.resave || flags?.areaTick || flags?.recast);
+}
+
+/**
+ * §495 : ces PV appliqués sont-ils un soin magique ? Un soin (montant négatif) venu d'une utilisation magique — un sort lancé, une
+ * activité d'objet magique, une capacité que le contenu dit `magical` (core/antimagic.mjs `isMagicalUse`) — ou d'une potion. Un soin
+ * dont on ne connaît pas la source (PV changés à la main, dé de vie, repos) n'en est pas un.
+ * @param {number} amount   Le montant appliqué par dnd5e (négatif : un soin).
+ * @param {{spellCast?: boolean, item?: object, activityType?: string, magical?: boolean}|null} use   comme pour isMagicalUse.
+ */
+export function healsMagically(amount, use) {
+  if ( !(Number(amount) < 0) || !use ) return false;
+  if ( isMagicalUse(use) ) return true;
+  return (use.item?.type === "consumable") && (use.item?.subtype === "potion");
 }

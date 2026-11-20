@@ -25,7 +25,7 @@ import { combatantFor, readBudget, writeBudget, distanceBetween } from "../adapt
 import { rangeIssue } from "../core/range.mjs";
 import { isObjectToken } from "../adapter/bodies.mjs";
 import { dodge as takeDodge } from "../core/turn.mjs";
-import { tallyAfter } from "../core/tally.mjs";
+import { tallyAfter, stageAfter } from "../core/tally.mjs";
 import { noteAttack } from "../adapter/attacked-this-turn.mjs";
 import { askHitReactions, windowIsDamaged, windowIsMissed, windowEnemyAttacked, windowSavesAgainst, askDamageGuardians, askAreaReactions } from "./reactions.mjs";
 import { markConcentrationBreaker, resistanceIgnoredBy, fortifiedExtra } from "./feats.mjs";
@@ -420,6 +420,30 @@ export const COMMANDS = {
         }
       };
       for ( const t of resolution.targets ) {
+        // §495 (brique B15) : échelle d'états — un échec monte d'un palier, une réussite en redescend ; au palier 0, l'effet tombe.
+        if ( resave.stages && t.save ) {
+          const effect = await fromUuid(resave.effect);
+          if ( !effect ) continue;
+          const rule = resave.stages;
+          const prior = effect.getFlag(MODULE_ID, "stage") ?? {};
+          const natural20 = isNatural20(t.save);
+          const after = stageAfter(prior.level, t.save.success === true, { count: rule.stages.length, onSuccess: rule.onSuccess, natural20, critEnds: rule.critEnds });
+          if ( after.outcome === "ended" ) {
+            // Les effets de palier dépendent de l'effet (`dependentOn`) : dnd5e les retire avec lui.
+            log(`stages: ${t.name} ${(natural20 && rule.critEnds) ? "rolls a natural 20" : "succeeds"}, "${effect.name}" removed`);
+            notice(t.token, effect.name, "effectOff", { all: true, action: "stage", outcome: "success" });
+            await effect.delete();
+            continue;
+          }
+          if ( after.outcome !== "same" ) await moveStage(effect, prior, after.level, rule);
+          const label = await stageLabel(effect, after.level, rule);
+          const key = (after.outcome === "down") ? "Palier.Recule" : ((after.outcome === "up") ? "Palier.Monte" : "Palier.Reste");
+          log(`stages: ${t.name} — "${effect.name}" ${after.outcome} to stage ${after.level}/${rule.stages.length} (${label})`);
+          notice(t.token, { key: `DND5ECOMBAT.${key}`, data: { item: effect.name, stage: label } }, (after.outcome === "down") ? "prompt" : "refused",
+            { all: true, action: "stage", outcome: (after.outcome === "down") ? "success" : "failure" });
+          await failDamage(t);
+          continue;
+        }
         // §43.1 : compteur — l'effet ne tombe qu'au seuil de réussites ; au seuil d'échecs, il reste et plus rien n'est rejoué.
         if ( resave.tally && t.save ) {
           const effect = await fromUuid(resave.effect);
@@ -608,4 +632,45 @@ function spellDamageMaxed(actor, activity, target) {
   if ( !actor || !target || !isSpellCast(activity?.item) ) return false;
   const type = creatureTypeOf(target);
   return !!type && Array.from(actor.items ?? []).some(i => (contentOf(i).entry?.maxSpellDamageVs ?? []).includes(type));
+}
+
+/** §495 : la sauvegarde est-elle un 20 naturel ? Lu sur son message de jet (`D20Roll#isCritical`, au seuil de critique du jet). */
+function isNatural20(save) {
+  const roll = game.messages.get(save?.messageId ?? "")?.rolls?.[0];
+  return roll?.isCritical === true;
+}
+
+/**
+ * §495 : l'effet passe d'un palier à l'autre. Le palier quitté est défait — son effet (posé à part) retiré, son état retiré de l'effet
+ * s'il l'y avait ajouté —, puis le nouveau est posé : son effet de l'item, dépendant de l'effet (dnd5e le retire avec lui), et son état
+ * ajouté aux états de l'effet. Le palier atteint est noté sur l'effet (`flags.dnd5e-combat.stage`).
+ */
+async function moveStage(effect, prior, level, rule) {
+  const statuses = new Set(effect.statuses ?? []);
+  if ( prior.effect ) {
+    const old = await fromUuid(prior.effect);
+    if ( old && old.parent?.effects?.has(old.id) ) await old.delete();
+  }
+  if ( prior.status ) statuses.delete(prior.status);
+  const stage = rule.stages[level - 1] ?? null;
+  let placed = null;
+  let added = null;
+  if ( stage?.effect ) {
+    const item = await fromUuid(rule.item ?? "");
+    placed = item ? await placeItemEffect(item, stage.effect, effect.parent, { dependentOn: effect.uuid }) : null;
+    if ( !placed ) log(`stages: effect ${stage.effect} not found on ${item?.name ?? rule.item}, stage ${level} without its effect`);
+  }
+  if ( stage?.status && !statuses.has(stage.status) ) { statuses.add(stage.status); added = stage.status; }
+  await effect.update({ statuses: Array.from(statuses),
+    [`flags.${MODULE_ID}.stage`]: { level, effect: placed?.uuid ?? null, status: added } });
+}
+
+/** §495 : le nom d'un palier, pour l'avis — l'effet seul au palier 0, sinon l'effet de palier posé ou le nom de l'état. */
+async function stageLabel(effect, level, rule) {
+  if ( !level ) return effect.name;
+  const stage = rule.stages[level - 1] ?? {};
+  const placed = await fromUuid(effect.getFlag(MODULE_ID, "stage")?.effect ?? "");
+  if ( placed?.name ) return placed.name;
+  const status = CONFIG.statusEffects.find(s => s.id === stage.status);
+  return status ? game.i18n.localize(status.name) : (stage.status ?? String(level));
 }
