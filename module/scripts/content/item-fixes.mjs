@@ -469,6 +469,9 @@ export const ITEM_FIXES = Object.freeze({
   // répandent une Lumière vive sur 12 m et faible sur 12 m de plus », tant que l'enchantement « Ablaze » est sur l'arme ; flammes du
   // Heaume scintillant (« Burst Into Flames ») : vive sur 3 m, faible sur 3 m de plus.
   "moon-touched-sword": { carriedLight: MOONLIGHT },
+  // Armure d'écailles de dragon (SRD 5.2) : « vous avez l'Avantage aux jets de sauvegarde contre le souffle des Dragons » — le +1
+  // à la CA et la Résistance selon le dragon sont dans la donnée.
+  "dragon-scale-mail-enchanted": { breathAdvantage: { types: ["dragon"] } },
   "moon-touched-sword-enchanted": { carriedLight: MOONLIGHT },
   "flame-tongue-enchanted": { carriedLight: { bright: 40, dim: 80, units: "ft", animation: FLAMES, whileEnchanted: "MHnAqxEXBhUbnjPq" } },
   "helm-of-brilliance-enchanted": { carriedLight: { bright: 10, dim: 20, units: "ft", animation: FLAMES, whileEnchanted: "oZBFpi117yOXca3k" } },

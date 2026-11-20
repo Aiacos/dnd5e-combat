@@ -37,6 +37,7 @@ import { areEnemies, sideOf, factionOf } from "./factions.mjs";
 import { samePlane } from "./plane.mjs";
 import { coverFor } from "./cover.mjs";
 import { dexSaveTakesCover, coverSaveBonus } from "../core/save-cover.mjs";
+import { isBreathWeapon, breathAdvantageHolds } from "../core/breath.mjs";
 export { applyEffectsToToken, applyMarkToToken, applyStatusToToken, removeEffects, splitPushes } from "./apply-effects.mjs";
 export { TARGETS_QUERY, handleTargetsQuery, showTargetsTo } from "./show-targets.mjs";
 
@@ -275,12 +276,23 @@ const GEAR = new Set(["equipment", "weapon", "consumable", "tool", "loot", "cont
 /** Équipé, et harmonisé s'il exige une harmonisation. */
 const worn = item => (item.system?.equipped !== false) && ((item.system?.attunement !== "required") || (item.system?.attuned === true));
 
+/** `breathAdvantage` : un objet porté donne l'Avantage contre le souffle (identifiant « …-breath ») d'une créature de ces types. */
+function breathAdvantageFor(actor, activity) {
+  if ( !isBreathWeapon(identifierOf(activity?.item).id) ) return false;
+  const type = creatureTypeOf(activity?.actor);
+  return (actor?.items ?? []).some(item => (!GEAR.has(item.type) || worn(item))
+    && breathAdvantageHolds(contentOf(item).entry?.breathAdvantage, type));
+}
+
 /**
  * L'acteur a-t-il l'avantage à la sauvegarde de cette activité (`saveAdvantage`) ? Ce qui le donne : un item qu'il porte
  * (Ascendance féerique, Résistance à la magie), ou, pour un sort, un effet de ce sort posé sur lui (Protection contre le
  * poison) — le lanceur, qui a le sort sur sa fiche, n'en profite pas pour autant.
  */
 export function saveAdvantageAgainst(actor, activity) {
+  // Armure d'écailles de dragon : « l'Avantage aux jets de sauvegarde contre le souffle des Dragons » (`breathAdvantage`) — un
+  // souffle n'est ni magique ni forcément porteur d'un état : jugé avant le reste.
+  if ( breathAdvantageFor(actor, activity) ) return true;
   const posed = statusesPosedBy(activity);
   const magical = isMagical(activity);
   if ( !posed.size && !magical ) return false;

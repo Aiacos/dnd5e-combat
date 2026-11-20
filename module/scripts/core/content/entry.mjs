@@ -186,6 +186,12 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   }
   if ( ("leash" in entry) && !(isObject(entry.leash) && Number.isFinite(entry.leash.distance) && (entry.leash.distance > 0)
     && (typeof entry.leash.units === "string") && (Object.keys(entry.leash).length === 2)) ) errors.push(`${at}leash: { distance, units }`);
+  if ( "breathAdvantage" in entry ) {
+    const r = entry.breathAdvantage;
+    const ok = isObject(r) && Array.isArray(r.types) && r.types.length && r.types.every(t => CREATURE_TYPES.includes(t))
+      && (Object.keys(r).length === 1);
+    if ( !ok ) errors.push(`${at}breathAdvantage: { types: [creature types] }`);
+  }
   if ( "saveAdvantageFrom" in entry ) {
     const r = entry.saveAdvantageFrom;
     const ok = isObject(r) && Array.isArray(r.types) && r.types.length && r.types.every(t => CREATURE_TYPES.includes(t))

@@ -266,6 +266,8 @@
  *                                               remplacement par le diagnostic (option `replacing`)
  *     magicEvasion?: true                  §402 : l'effet porté du sort annule la moitié des dégâts d'une sauvegarde réussie contre la magie (Cercle de pouvoir)
  *     saveAdvantageFrom?: { types, statuses }  §402 : Avantage aux sauvegardes contre ces états posés par ces types (Protection contre le mal et le bien)
+ *     breathAdvantage?: { types }               Avantage aux sauvegardes contre le souffle (capacité « …-breath ») d'une créature
+ *                                               de ces types, pour qui porte l'objet (Armure d'écailles de dragon)
  *     leash?: { distance, units }        §402 : la créature qui porte un effet de l'item ne s'éloigne pas volontairement du lanceur au-delà (Duel forcé)
  *     mount?: { rider?, controlled? }    §490 (B08) : la créature qui porte l'item peut être montée — par l'acteur `rider` seul (id), sinon
  *                                               par une créature alliée plus petite ; contrôlée (défaut) : elle agit juste après son
