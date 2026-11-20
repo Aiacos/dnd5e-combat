@@ -104,3 +104,39 @@ describe("objets du Guide : DD, lien et recharge que le texte de l'objet donne (
   });
 });
 
+
+// Compendium du SRD 5.2 (dnd5e 6.1) : donnée relevée telle quelle, changement vide et durée comprises.
+describe("objets du SRD 5.2 : effet porté vide, durée qui n'est pas celle du texte (dataFixes)", () => {
+  const emptyChange = { key: "", value: "", type: "add", phase: "initial", _id: "RHoNEHxHTNzZMBHD", conditions: "{}",
+    replacement: "" };
+
+  for ( const [ident, effect] of [["boots-of-elvenkind", "gHyJQGFKkZJ2rbUe"], ["cloak-of-elvenkind", "hyU6mHq6YNhLZlTY"]] ) {
+    it(`${ident} : le changement vide de l'effet porté devient l'Avantage en Discrétion`, () => {
+      const item = { effects: [{ _id: effect, transfer: true, system: { changes: [emptyChange] } }], system: {} };
+      const plan = dataFixPlan(item, ITEM_FIXES[ident].dataFixes);
+      expect(plan.effects).toEqual([{ _id: effect,
+        "system.changes": [{ key: "system.skills.ste.roll.mode", value: 1, priority: null, type: "add" }] }]);
+    });
+
+    it(`${ident} : un effet déjà rempli (à la main, ou par une autre donnée) ne bouge pas`, () => {
+      const filled = { ...emptyChange, key: "system.skills.ste.roll.mode", value: "1" };
+      const item = { effects: [{ _id: effect, transfer: true, system: { changes: [filled] } }], system: {} };
+      expect(dataFixPlan(item, ITEM_FIXES[ident].dataFixes).fields).toEqual([]);
+    });
+  }
+
+  it("Cape elfique : la Perception pour repérer le porteur garde son Désavantage", () => {
+    expect(ITEM_FIXES["cloak-of-elvenkind"].hardToPerceive).toBe(true);
+  });
+
+  it("Potion d'invulnérabilité : 1 minute, sur l'effet et sur l'activité, au lieu de 10", () => {
+    const item = { effects: [{ _id: "ojfKVnyWWyc5EPA2", duration: { value: 600, units: "seconds", expiry: "turnStart" } }],
+      system: { activities: { WGHHrNkceMYEl8as: { duration: { units: "minute", value: "10" } } } } };
+    const plan = dataFixPlan(item, ITEM_FIXES["potion-of-invulnerability"].dataFixes);
+    expect(plan.effects).toEqual([{ _id: "ojfKVnyWWyc5EPA2", "duration.value": 60 }]);
+    expect(plan.item).toEqual({ "system.activities.WGHHrNkceMYEl8as.duration.value": "1" });
+    // Une durée déjà changée à la main reste.
+    item.effects[0].duration.value = 3600;
+    expect(dataFixPlan(item, ITEM_FIXES["potion-of-invulnerability"].dataFixes).effects).toEqual([]);
+  });
+});

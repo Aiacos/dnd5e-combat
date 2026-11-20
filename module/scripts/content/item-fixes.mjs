@@ -559,9 +559,18 @@ export const ITEM_FIXES = Object.freeze({
     dataFixes: [{ path: "system.activities.ffXywPJdVzwe6NId.target.affects.type", from: "", value: "self" }],
     opportunityDisadvantage: { whileEffect: "XP45fDHAojcVjDc0" }
   },
-  // O9g (§361) : Cape elfique — « les tests de Sagesse (Perception) pour vous percevoir ont le Désavantage » (l'Avantage en Discrétion est
-  // déjà dans la donnée).
-  "cloak-of-elvenkind": { hardToPerceive: true },
+  // O9g (§361) : Cape elfique — « les tests de Sagesse (Perception) pour vous percevoir ont le Désavantage ». « Vous avez
+  // l'Avantage aux tests de Dextérité (Discrétion) » : dans le compendium du SRD 5.2, l'effet porté n'a qu'un changement vide — il
+  // reçoit sa clé.
+  "cloak-of-elvenkind": { hardToPerceive: true, dataFixes: [STEALTH_ADVANTAGE("hyU6mHq6YNhLZlTY")] },
+  // Bottes elfiques (SRD 5.2) : « vous avez l'Avantage aux tests de Dextérité (Discrétion) » — même changement vide.
+  "boots-of-elvenkind": { dataFixes: [STEALTH_ADVANTAGE("gHyJQGFKkZJ2rbUe")] },
+  // Potion d'invulnérabilité (SRD 5.2) : « pendant 1 minute après l'avoir bue, vous avez la Résistance à tous les dégâts » — la
+  // donnée dit 10 minutes, sur l'activité comme sur l'effet.
+  "potion-of-invulnerability": {
+    dataFixes: [{ effect: "ojfKVnyWWyc5EPA2", path: "duration.value", from: 600, value: 60 },
+      { path: "system.activities.WGHHrNkceMYEl8as.duration.value", from: "10", value: "1" }]
+  },
   // O9g (§360) : Le Bouffon (Jeu des merveilles) — « Avantage aux Tests d'un d20 pendant 72 h » : l'activité « Card Effect: Advantage » ne
   // posait rien ; un effet de 72 h lui est ajouté (tests de caractéristique, sauvegardes, compétences ; les jets d'attaque : §366).
   "jester": {
@@ -743,6 +752,12 @@ export const ITEM_FIXES = Object.freeze({
  * O5b (§340) : des dégâts en plus quand l'arme touche une créature de ces types — l'arme elle-même (`activity.identifier`), ou l'arme
  * qui porte l'enchantement de cet objet (`activity.enchantedBy`).
  */
+/** L'effet porté dont le seul changement est vide reçoit l'Avantage aux tests de Dextérité (Discrétion). */
+function STEALTH_ADVANTAGE(effect) {
+  return { effect, path: "system.changes", from: [change("", "add", "")],
+    value: [change("system.skills.ste.roll.mode", "add", 1)] };
+}
+
 function BANE(identifier, types, formula, damageType, enchanted=false) {
   const weapon = enchanted ? { "activity.enchantedBy": identifier } : { "activity.identifier": identifier };
   const target = (types.length > 1) ? { any: types.map(t => ({ "target.creatureType": t })) } : { "target.creatureType": types[0] };
