@@ -10,7 +10,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { STEPS } from "../core/action.mjs";
 import { drainedAmount, flooredDrain } from "../core/drain.mjs";
-import { setDeathStatus } from "../adapter/death.mjs";
+import { setDeathStatus, AFTER_ZERO_HP_MS } from "../adapter/death.mjs";
 import { drainOf, damageSourceItem, damageSourceMessage, applyDrainEffect, effectiveMax } from "../adapter/drain.mjs";
 import { tokenOf } from "../adapter/facts.mjs";
 import { route } from "./router.mjs";
@@ -53,7 +53,11 @@ async function drain(actor, kind, n, { item, source=null, regains=false, floor=n
   const left = await applyDrainEffect(actor, { kind, n, item, name: effectName(item, kind) });
   log(`${actor.name}: ${item.name} — ${kind === "hp" ? "Hit Point maximum" : kind} -${n} (${left})`);
   if ( left <= 0 ) {
-    await setDeathStatus(actor, "dead");
+    // §500 : l'effet vient de ramener les PV à 0 — dnd5e pose Mort lui-même, avec le même id (`updateDowned`, `keepId`), sur le client
+    // qui a écrit. Les deux créations se croisaient (« _id dnd5edead0000000 already exists » dans la console, banc du 2026-11-20) :
+    // comme `ensureDowned` (adapter/death.mjs), on lui laisse un instant et on ne pose l'état que s'il manque encore.
+    if ( (kind === "hp") && !actor.statuses?.has?.("dead") ) await new Promise(resolve => setTimeout(resolve, AFTER_ZERO_HP_MS));
+    if ( !actor.statuses?.has?.("dead") ) await setDeathStatus(actor, "dead");
     log(`${actor.name}: ${kind === "hp" ? "Hit Point maximum" : kind} at 0 → Dead`);
     if ( alive ) await announceDrainDeath(actor, kind, item);
   }
