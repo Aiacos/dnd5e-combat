@@ -252,6 +252,12 @@ export function useIssues(activity, { cost: forcedCost=null, attackMode=null, re
     ? (activity.actor?.effects ?? []).map(e => (!e.disabled && !e.isSuppressed) ? originItemOf(e) : null)
       .find(item => item && (item !== activity.item) && (contentOf(item).entry?.noAttacksOrSpells === true)) ?? null
     : null;
+  // Entraves dimensionnelles : le porteur d'un effet de l'item ne se téléporte pas (`noTeleport`) — les téléportations que le
+  // moteur connaît (activité « teleport » de dnd5e, `teleport` du contenu).
+  const shackled = selfTeleportOf(activity)
+    ? (activity.actor?.effects ?? []).map(e => (!e.disabled && !e.isSuppressed) ? originItemOf(e) : null)
+      .find(item => item && (contentOf(item).entry?.noTeleport === true)) ?? null
+    : null;
   // §284 : Aliénation — « ne peut pas lancer de sorts ni prendre l'action Magie » (sorts, parchemins, objets magiques).
   const magicUse = isSpellCast(activity.item) || (activity.item?.system?.properties?.has?.("mgc") && (activity.activation?.type === "action"));
   const befuddled = magicUse
@@ -303,6 +309,7 @@ export function useIssues(activity, { cost: forcedCost=null, attackMode=null, re
     ...(mountUncommanded ? [loc("Souci.mountNotCommanded")] : []),
     ...(commandFar ? [loc("Souci.commandFar", commandFar)] : []),
     ...(shapeless ? [loc("Souci.noAttacksOrSpells", { item: shapeless.name })] : []),
+    ...(shackled ? [loc("Souci.noTeleport", { item: shackled.name })] : []),
     ...(befuddled ? [loc("Souci.noSpells", { item: befuddled.name })] : []),
     ...(unarmored ? [loc("Souci.untrainedArmor", { item: unarmored.name })] : []),
     ...(antimagic ? [loc(isSpellCast(activity.item) ? "Souci.antimagic" : "Souci.antimagicItem",

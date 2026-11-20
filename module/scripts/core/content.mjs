@@ -680,6 +680,8 @@
  *                                               d'une créature de ces types (Protection contre le Mal et le Bien : Charmé, Effrayé)
  *     noAttacksOrSpells?: true                  §269 : le porteur d'un effet de l'item ne peut ni attaquer ni lancer de sorts (Forme
  *                                               gazeuse) — un souci de légalité, l'item lui-même excepté
+ *     noTeleport?: true                         le porteur d'un effet de l'item ne peut pas se téléporter (Entraves
+ *                                               dimensionnelles) : refus forçable des téléportations que le moteur connaît
  *     noSpells?: true                           §284 : le porteur d'un effet de l'item ne peut ni lancer de sorts ni prendre l'action
  *                                               Magie (Aliénation) — un souci de légalité sur les sorts et les objets magiques
  *     panic?: { effect?, drop?, endsAt? }      §285 : le porteur d'un effet de l'item (`effect` : celui-là) prend l'action Foncer et
