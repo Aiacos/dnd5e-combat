@@ -431,6 +431,19 @@ function castLevelKnown(activity, castLevel) {
  * `turnKey` : le tour dont parlent les faits « ce tour » (§492 : le tour qui vient de finir, à `enemyTurnEnd`) ; sinon le tour en cours.
  * Une clé absente ici est inconnue du cœur, et une condition qui l'emploie ne tient jamais.
  */
+/** §505 : deux tokens se recouvrent-ils (au moins une case commune), sur la même scène ? */
+export function sharesSpace(a, b) {
+  const A = a?.document ?? a;
+  const B = b?.document ?? b;
+  if ( !A || !B || (A === B) || (A.parent !== B.parent) || !A.parent?.grid ) return false;
+  const grid = A.parent.grid;
+  const box = t => ({ x: t._source.x, y: t._source.y, w: (t._source.width ?? 1) * grid.sizeX, h: (t._source.height ?? 1) * grid.sizeY });
+  const p = box(A);
+  const q = box(B);
+  const eps = 1;
+  return (p.x < q.x + q.w - eps) && (q.x < p.x + p.w - eps) && (p.y < q.y + q.h - eps) && (q.y < p.y + p.h - eps);
+}
+
 export function factsFor({ source=null, target=null, activity=null, sourceToken=null, targetToken=null, attackMode=null, damageTypes=null, condition=null, self=null, selfToken=null, resolution=null, castLevel=null, turnKey=null }={}) {
   const properties = activity?.item?.system?.properties;
   const spellLevel = castLevelKnown(activity, castLevel);
@@ -547,6 +560,9 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "target.inBrightLight": want => (isBright(tokenOf(target, targetToken)) === want),
     "target.inRunningWater": want => (inRunningWater(tokenOf(target, targetToken)) === want),
     "source.chargedFeet": feet => !!sourceToken && !!targetToken && (chargedFeet(sourceToken, targetToken) >= (Number(feet) || 0)),
+    // §505 (B25) : la cible est-elle dans l'espace de la source (une nuée qui partage les cases de ses victimes) — les deux tokens se
+    // recouvrent sur la même scène, positions validées (`_source`).
+    "target.sharesSpaceWithSource": want => (sharesSpace(tokenOf(source, sourceToken), tokenOf(target, targetToken)) === want),
     "target.grappledBySource": want => ((target?.effects ?? []).some(e => e.statuses?.has?.("grappled") && (grapplerOf(e) === source)) === want),
     // §281 : l'inverse — la source est Agrippée par la cible (un ennemi agrippé par le réacteur finit son tour : Prise finale).
     "source.grappledByTarget": want => ((source?.effects ?? []).some(e => e.statuses?.has?.("grappled") && (grapplerOf(e) === target)) === want),

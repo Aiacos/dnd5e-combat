@@ -450,7 +450,8 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     errors.push(`${at}retort: { damageType }`);
   }
   // §334 : `noReactions`, `actionOrBonus` — de même, tous les effets ou ceux-là (Rayon ralentissant).
-  for ( const key of ["noReactions", "actionOrBonus", "blocksHealing"] ) {
+  // §505 (B25) : `blocksTempHp` — de même (un trait porté par la créature, ou les effets de l'item).
+  for ( const key of ["noReactions", "actionOrBonus", "blocksHealing", "blocksTempHp"] ) {
     if ( (key in entry) && (entry[key] !== true) && !(Array.isArray(entry[key]) && entry[key].length && entry[key].every(isId)) ) errors.push(`${at}${key}: true or list of effect ids`);
   }
   // C12-e : `noOpportunityAttacks` — tous les effets de l'item, ou ceux-là (Coup chancelant).

@@ -720,6 +720,8 @@
  *                                               quand le premier effet de l'item cesse sur une créature, le second y est posé
  *                                               (Hâte : « quand le sort prend fin, la cible est Neutralisée… », §42.2)
  *     blocksHealing?: true                      le porteur d'un effet de l'item ne regagne pas de PV (Contact glacial, §23)
+ *     blocksTempHp?: true | [ids d'effets]     §505 (B25) : ne reçoit pas de PV temporaires — la créature qui porte le trait, ou le porteur
+ *                                               d'un effet de l'item (nuées : « can't gain Temporary Hit Points »)
  *     noOpportunityAttacks?: true|string[]      le porteur d'un effet de l'item (ou de ces effets : Coup chancelant) ne fait pas
  *                                               d'attaque d'opportunité (Poigne électrique)
  *     byWounds?: { healthy, wounded }           deux activités (ids) : les dégâts sont ceux de `wounded` contre une cible blessée,

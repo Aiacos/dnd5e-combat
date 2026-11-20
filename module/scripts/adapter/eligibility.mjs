@@ -65,6 +65,16 @@ export function excludedByRule(activity, token) {
   return !!(rule?.unaffectedIf && holds(rule.unaffectedIf, factsFor({ source: activity.actor ?? null, target: actor, activity, targetToken: token })));
 }
 
+/**
+ * §505 (B25) : la condition que le contenu exige de chaque cible (`targets.requires` : « une créature dans l'espace de la nuée ») est-elle
+ * manquée pour ce token ? `origin` : le token de l'auteur.
+ */
+export function missesTargetRequirement(activity, token, origin=null) {
+  const rule = targetRuleOf(activity)?.requires;
+  if ( !rule || !token?.actor || !activity ) return false;
+  return !holds(rule, factsFor({ source: activity.actor ?? null, target: token.actor, activity, sourceToken: origin, targetToken: token }));
+}
+
 /** « un humanoïde », « une bête ou un humanoïde » : les types en clair, par les libellés de dnd5e. */
 export function typesLabel(types) {
   return (types ?? []).map(t => game.i18n.localize(CONFIG.DND5E.creatureTypes?.[t]?.label ?? t).toLowerCase())

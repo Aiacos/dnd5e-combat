@@ -22,7 +22,7 @@ import { conditionUseIssues } from "../core/conditions.mjs";
 import { canSee, canLocate } from "../adapter/vision.mjs";
 import { hiddenDcOf } from "../adapter/search.mjs";
 import { locationUnknown } from "../core/hearing.mjs";
-import { wrongTypeFor, typesLabel } from "../adapter/eligibility.mjs";
+import { wrongTypeFor, typesLabel, missesTargetRequirement } from "../adapter/eligibility.mjs";
 import { pilotOfActor, summonerCombatant, commandPlan, spellCommandOf, summonsOfWith } from "../adapter/pilot.mjs";
 import { freesMovement } from "../adapter/opportunity.mjs";
 import { takePendingAttack } from "./actions.mjs";
@@ -460,6 +460,8 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     .map(t => ({ name: t.name, types: wrongTypeFor(activity, t.actor) })).filter(t => t.types);
   // §17.3 : Charmé (pas contre qui nous a charmé) ; « une créature que vous pouvez voir ».
   const aimed = Array.from(game.user.targets).filter(t => (t.document !== origin) && t.actor);
+  // §505 (B25) : la condition du contenu sur chaque cible (`targets.requires` : dans l'espace de la nuée).
+  const unmet = aimed.filter(t => missesTargetRequirement(activity, t.document, origin));
   const charmers = hostileToCharmer(activity) ? charmersOf(activity.actor) : new Set();
   const charmed = aimed.filter(t => charmers.has(t.actor.uuid));
   const offPlane = origin ? aimed.filter(t => !samePlane(origin, t.document)) : [];   // §225 : pas d'un plan à l'autre
@@ -478,7 +480,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
   // lien, Enchaînement, rebond) — `issues` : des raisons traduites ; `issuesCoverRange` : elles disent déjà la portée.
   const extra = (usageConfig[MODULE_ID]?.issues ?? []).filter(l => typeof l === "string" && l);
   if ( extra.length && usageConfig[MODULE_ID]?.issuesCoverRange ) range.blocking = [];
-  if ( !extra.length && !use.lines.length && !legend.length && !range.blocking.length && !seenBy.length && !wrongType.length && !charmed.length && !unseen.length && !lost.length && !fenced.length && !stormed.length && !offPlane.length && !chained.length ) return true;
+  if ( !extra.length && !use.lines.length && !legend.length && !range.blocking.length && !seenBy.length && !wrongType.length && !charmed.length && !unseen.length && !lost.length && !fenced.length && !stormed.length && !offPlane.length && !chained.length && !unmet.length ) return true;
 
   const lines = mergeIssues(
     extra,
@@ -487,6 +489,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     ...range.blocking.map(r => loc((r.issue === "tooClose") ? "Souci.tooClose" : "Souci.outOfRange", { name: r.name })),
     ...(seenBy.length ? [loc("Souci.hideSeen", { names: seenBy.map(t => t.name).join(", ") })] : []),
     ...wrongType.map(t => loc("Souci.wrongType", { name: t.name, types: typesLabel(t.types), item: activity.item.name })),
+    ...unmet.map(t => loc("Souci.targetRequirement", { name: t.name, item: activity.item.name })),
     ...charmed.map(t => loc("Souci.charmed", { name: t.name })),
     ...offPlane.map(t => loc("Souci.otherPlane", { name: t.name })),
     ...unseen.map(t => loc("Souci.notSeen", { name: t.name })),

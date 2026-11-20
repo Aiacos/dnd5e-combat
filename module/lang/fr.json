@@ -42,6 +42,7 @@
   "DND5ECOMBAT.Souci.noBonus": "Vous avez déjà utilisé votre action bonus ce tour-ci.",
   "DND5ECOMBAT.Souci.noReaction": "Vous avez déjà utilisé votre réaction.",
   "DND5ECOMBAT.Souci.slotAlreadyCast": "Vous avez déjà lancé un sort avec un emplacement ce tour-ci (règle 2024 : un seul par tour).",
+  "DND5ECOMBAT.Souci.targetRequirement": "{name} : {item} ne peut pas viser cette créature (la condition sur ses cibles n'est pas remplie).",
   "DND5ECOMBAT.Souci.onlyCantrips": "Aucun autre sort ce tour, sauf un sort mineur (une capacité utilisée ce tour l'interdit).",
   "DND5ECOMBAT.Souci.onlyCantripsAction": "Aucun autre sort ce tour, sauf un sort mineur dont le temps d'incantation est d'une action (une capacité utilisée ce tour l'interdit).",
   "DND5ECOMBAT.Souci.onlyCantripsBonus": "Aucun autre sort ce tour, sauf un sort mineur dont le temps d'incantation est d'une action Bonus (une capacité utilisée ce tour l'interdit).",

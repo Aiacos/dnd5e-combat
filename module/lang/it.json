@@ -40,6 +40,7 @@
   "DND5ECOMBAT.Souci.noBonus": "Hai già usato la tua Azione Bonus in questo turno.",
   "DND5ECOMBAT.Souci.noReaction": "Hai già usato la tua Reazione.",
   "DND5ECOMBAT.Souci.slotAlreadyCast": "Hai già lanciato un incantesimo con uno slot in questo turno (regola 2024: uno solo per turno).",
+  "DND5ECOMBAT.Souci.targetRequirement": "{name}: {item} non può bersagliare questa creatura (la condizione sui bersagli non è soddisfatta).",
   "DND5ECOMBAT.Souci.onlyCantrips": "Nessun altro incantesimo in questo turno, salvo un trucchetto (una capacità usata in questo turno lo vieta).",
   "DND5ECOMBAT.Souci.onlyCantripsAction": "Nessun altro incantesimo in questo turno, salvo un trucchetto con tempo di lancio di un'azione (una capacità usata in questo turno lo vieta).",
   "DND5ECOMBAT.Souci.onlyCantripsBonus": "Nessun altro incantesimo in questo turno, salvo un trucchetto con tempo di lancio di un'azione bonus (una capacità usata in questo turno lo vieta).",

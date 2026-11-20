@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-389 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+390 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -200,6 +200,7 @@ la sélection sans rien jouer.
 | `niveau-superieur-zones` |  | §406 | Boule de feu à retardement (§406) |
 | `niveaux-automatisation` |  | §117 §416 | attaque, sauvegarde, attaque d'opportunité, contenu, au niveau du monde |
 | `niveaux` | keep | §14.2 | un plancher arrête la zone et l'attaque |
+| `nuee-espace` |  | §505 | nuée : aucun PV temporaire reçu ; une capacité réservée aux créatures dans son espace, refusée (forçable) hors de lui (§505, brique B25) |
 | `occultiste` |  | §29 | Décharge répulsive, Buveuse de vie, Âme radieuse, Défenses envoûtantes |
 | `ombre-ravenloft` |  | §447 | voir normalement à travers ses propres Ténèbres (Arène de la vision) |
 | `opportunite-mains-nues` |  | §428 | un personnage sans arme de mêlée en main |

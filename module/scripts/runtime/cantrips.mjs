@@ -169,6 +169,14 @@ function onPreActivityConsumption(activity, usageConfig) {
 
 /** Contact glacial : pas de PV regagnés tant que l'effet tient. */
 function onPreApplyDamage(actor, amount, updates) {
+  // §505 (B25) : `blocksTempHp` — les PV temporaires ne montent pas (un sort, une potion, la carte d'un soin « temphp »).
+  if ( actor && blocksTempHp(actor) ) {
+    const temp = Number(actor.system.attributes?.hp?.temp) || 0;
+    if ( Number(updates["system.attributes.hp.temp"]) > temp ) {
+      updates["system.attributes.hp.temp"] = temp;
+      log(`${actor.name}: cannot gain Temporary Hit Points`);
+    }
+  }
   if ( !(amount < 0) || !actor?.effects ) return true;
   // §334 : `blocksHealing` — tous les effets de l'item, ou ceux de la liste (Rayon énervant : son Empoisonné seul).
   const blocked = actor.effects.some(e => {
@@ -183,6 +191,19 @@ function onPreApplyDamage(actor, amount, updates) {
     log(`${actor.name}: cannot regain Hit Points`);
   }
   return true;
+}
+
+/**
+ * §505 (B25) : la créature ne peut-elle pas recevoir de PV temporaires ? Un trait qu'elle porte (`blocksTempHp: true` sur l'item), ou un
+ * effet d'un item qui le déclare (tous ses effets, ou ceux de la liste).
+ */
+function blocksTempHp(actor) {
+  if ( (actor.items ?? []).some(i => contentOf(i).entry?.blocksTempHp === true) ) return true;
+  return (actor.effects ?? []).some(e => {
+    if ( e.disabled || e.isSuppressed ) return false;
+    const rule = contentOf(originItemOf(e)).entry?.blocksTempHp;
+    return (rule === true) || (Array.isArray(rule) && rule.some(id => comesFromItemEffect(e, id)));
+  });
 }
 
 /** Glas : les dés de l'activité qui convient à la cible (blessée : `wounded`, indemne : `healthy`). Client de l'auteur. */

@@ -48,7 +48,7 @@ export const MERGE = Object.freeze({
   sneakAttack: "replace", evasion: "replace", avoidance: "replace", elusive: "replace", holdsStill: "replace", cunningStrikeMax: "replace",
   grantsAction: "replace", movesAfter: "replace", studiedAttacks: "replace", heroicWarrior: "replace",
   greatWeaponFighting: "replace", thrownDamage: "replace", rage: "replace", persistentRage: "replace", reckless: "replace",
-  relentless: "replace", blocksHealing: "replace", noOpportunityAttacks: "replace", byWounds: "replace",
+  relentless: "replace", blocksHealing: "replace", blocksTempHp: "replace", noOpportunityAttacks: "replace", byWounds: "replace",
   oneAttack: "replace", martialArts: "replace", flurry: "replace", stunningStrike: "replace", openHand: "replace",
   smite: "replace", supremeHealing: "replace", discipleOfLife: "replace", blessedHealer: "replace",
   potentCantrip: "replace", sculptSpells: "replace", endurance: "replace", replacesAttack: "replace", hitRider: "replace",

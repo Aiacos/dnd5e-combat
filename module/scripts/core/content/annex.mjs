@@ -132,7 +132,12 @@ export function validateTargets(targets, at, facts, errors) {
     else for ( const t of targets.types ) if ( !CREATURE_TYPES.includes(t) ) errors.push(`${at}.types: unknown "${t}" (${CREATURE_TYPES.join(", ")})`);
   }
   if ( "unaffectedIf" in targets ) for ( const key of unknownFacts(targets.unaffectedIf, facts) ) errors.push(`${at}.unaffectedIf: unknown fact "${key}"`);
-  for ( const key of Object.keys(targets) ) if ( !["types", "unaffectedIf"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
+  // §505 (B25) : `requires` — une condition que chaque cible désignée doit remplir, sinon la fenêtre de légalité refuse (forçable).
+  if ( "requires" in targets ) {
+    if ( !isObject(targets.requires) || !Object.keys(targets.requires).length ) errors.push(`${at}.requires: a condition (facts)`);
+    else for ( const key of unknownFacts(targets.requires, facts) ) errors.push(`${at}.requires: unknown fact "${key}"`);
+  }
+  for ( const key of Object.keys(targets) ) if ( !["types", "unaffectedIf", "requires"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
 }
 
 export function validateChoice(choice, at, errors) {
