@@ -112,8 +112,8 @@ export async function unaffectedBy(activity, plan, token, { castLevel=null }={})
   if ( inAntimagic(actor) && magicalUse(activity) ) return { reason: "antimagic", detail: antimagicSourceName(actor) };
   const globe = globeAgainst(activity, token, castLevel ?? Number(activity.item?.system?.level ?? 0));
   if ( globe ) return { reason: "globe", detail: globe.name };
-  // Résistance supérieure à la magie : « les jets d'attaque des sorts la ratent automatiquement » (`spellAttacksMiss`) — la cible est
-  // hors d'atteinte du sort, sous le nom du trait qui la protège.
+  // Résistance supérieure à la magie : « les jets d'attaque des sorts la ratent automatiquement » (`spellAttacksMiss`) — la cible
+  // est hors d'atteinte du sort, sous le nom du trait qui la protège.
   if ( plan.attack && (activity.item?.type === "spell") ) {
     const proof = Array.from(actor.items ?? []).find(i => contentOf(i).entry?.spellAttacksMiss === true);
     if ( proof ) return { reason: "globe", detail: proof.name };
