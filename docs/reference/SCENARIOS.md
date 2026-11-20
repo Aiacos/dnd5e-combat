@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-361 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+362 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -52,6 +52,7 @@ la sélection sans rien jouer.
 | `bannissement` |  | §265 | la cible disparaît, puis revient (au plus proche si sa case est prise) |
 | `barbare` |  | §22 | Rage (entretien, fin), Bond instinctif, Témérité, Frénésie, Fureur divine, Rage implacable |
 | `barde` |  | §33 | Inspiration bardique (attaque, sauvegarde), Mots cinglants |
+| `bottes-places` |  | §222 | places selon la classe d'origine de l'aptitude (dnd5e 6.1, PHB 3.0) |
 | `bottes` |  | §21 | Écorchure, Sape, Ouverture, Ralentissement, Renversement, Poussée, Enchaînement |
 | `bouclier-de-feu` |  | §266 | l'effet fait briller le lanceur |
 | `bourrasque` |  | §37.3 | poussée à la pose, rejeu en fin de tour |

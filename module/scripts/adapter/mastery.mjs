@@ -147,13 +147,26 @@ export function masterySourcesOf(actor) {
       .map(a => ({ level: Number(a.level) || 0,
         count: (a.configuration?.grants?.length ?? 0) + (a.configuration?.choices ?? []).reduce((n, c) => n + (Number(c.count) || 0), 0) }));
     if ( !advancements.length ) continue;
-    const classLevel = (item.type === "class") ? Number(item.system.levels)
-      : (item.type === "subclass") ? Number(item.class?.system?.levels ?? NaN) : null;
-    items.push({ item: item.id, label: (item.type === "class") ? `${item.name} ${classLevel}` : item.name,
-      identifier: (item.type === "subclass") ? (item.system.classIdentifier ?? "") : (item.system.identifier ?? ""),
-      kind: item.type, classLevel, advancements });
+    const owner = classOwnerOf(item);
+    const classLevel = (owner.type === "class") ? Number(owner.system.levels)
+      : (owner.type === "subclass") ? Number(owner.class?.system?.levels ?? NaN) : null;
+    items.push({ item: item.id, label: (owner.type === "class") ? `${owner.name} ${classLevel}` : owner.name,
+      identifier: (owner.type === "subclass") ? (owner.system.classIdentifier ?? "") : (owner.system.identifier ?? ""),
+      kind: owner.type, classLevel, advancements });
   }
   return masterySources(items);
+}
+
+/**
+ * La classe (ou sous-classe) dont un item tient ses avancements de bottes : lui-même s'il en est une ; sinon la racine de son
+ * attribution quand dnd5e l'y lie (dnd5e 6.1 / PHB 3.0 : l'aptitude « Weapon Mastery » donnée par la classe porte les paliers,
+ * `system.advancementRootItem` + `advancementClassLinked`, data/abstract/item-data-model) ; sinon l'item (un don : tout compte).
+ */
+function classOwnerOf(item) {
+  if ( (item.type === "class") || (item.type === "subclass") ) return item;
+  if ( item.system?.advancementClassLinked === false ) return item;
+  const root = item.system?.advancementRootItem;
+  return ((root?.type === "class") || (root?.type === "subclass")) ? root : item;
 }
 
 /** L'aptitude ou le don qui ouvre la fenêtre des bottes : « Bottes d'arme » d'une classe, « Maître d'armes ». */
