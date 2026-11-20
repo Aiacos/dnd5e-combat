@@ -607,9 +607,11 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "source.summonNearTarget": rule => summonNear(source, tokenOf(target, targetToken), rule ?? {}) === true,
     "source.allyNearTarget": range => allyNear(tokenOf(source, sourceToken), tokenOf(target, targetToken), range ?? {}) === true,
     // « De taille G ou inférieure » : rang de dnd5e (tiny < sm < med < lg < huge < grg).
+    // `"source"` : « de votre taille ou plus petite » (Bouclier du cavalier) — la taille de l'auteur de l'action.
     "target.sizeAtMost": size => {
       const rank = SIZE_RANK[target?.system?.traits?.size];
-      return (rank !== undefined) && (SIZE_RANK[size] !== undefined) && (rank <= SIZE_RANK[size]);
+      const limit = SIZE_RANK[(size === "source") ? source?.system?.traits?.size : size];
+      return (rank !== undefined) && (limit !== undefined) && (rank <= limit);
     },
     // « Une créature située à 10 ft ou moins de vous » : { distance, units }, en 3D (P2). Sans tokens : on ne sait pas, faux.
     "target.within": range => within(tokenOf(source, sourceToken), tokenOf(target, targetToken), range ?? {}) === true,
