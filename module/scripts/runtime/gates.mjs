@@ -116,15 +116,15 @@ async function passWards(activity, origin, wards) {
  * §157 : les créatures visées par une utilisation sans jet d'attaque, hostiles à l'utilisateur, qui ont une réaction `isTargeted`
  * pour elle (Bouclier contre Projectile magique), avec leurs options.
  */
-function targetedCandidates(activity, origin, targets, { isSpell=false, castLevel=0 }={}) {
+function targetedCandidates(activity, origin, targets, { isSpell=false, castLevel=null }={}) {
   const out = [];
   for ( const token of targets ) {
     if ( !token.actor || !areEnemies(token, origin) ) continue;
     if ( token.actor.statuses.has(CONFIG.specialStatusEffects.DEFEATED) ) continue;
     const actor = token.actor;
     const options = reactionOptions(actor, "isTargeted",
-      matching("isTargeted", { actor, target: actor, source: origin.actor, activity, sourceToken: origin, targetToken: token }))
-      .flatMap(o => o.cancel ? absorbOption(o, activity, targets, { isSpell, castLevel }) : (activity.type === "attack") ? [] : [o]);
+      matching("isTargeted", { actor, target: actor, source: origin.actor, activity, sourceToken: origin, targetToken: token, castLevel }))
+      .flatMap(o => o.cancel ? absorbOption(o, activity, targets, { isSpell, castLevel: castLevel ?? 0 }) : (activity.type === "attack") ? [] : [o]);
     if ( options.length ) out.push({ token, actor, options });
   }
   return out;
@@ -202,8 +202,8 @@ async function passFailure(activity, origin, rule) {
   return !failed;
 }
 
-/** Qui peut réagir au lancement de ce sort, avec quoi. */
-function counterCandidates(activity, origin) {
+/** Qui peut réagir au lancement de ce sort, avec quoi. `castLevel` : son niveau de lancement (faits `spell.castLevel…`, §481). */
+function counterCandidates(activity, origin, castLevel=null) {
   const out = [];
   const factors = readUnitFactors();
   for ( const token of origin.parent?.tokens ?? [] ) {
@@ -211,7 +211,7 @@ function counterCandidates(activity, origin) {
     if ( token.actor.statuses.has(CONFIG.specialStatusEffects.DEFEATED) ) continue;
     const actor = token.actor;
     const options = reactionOptions(actor, "castsSpell",
-      matching("castsSpell", { actor, target: actor, source: origin.actor, activity, sourceToken: origin, targetToken: token }));
+      matching("castsSpell", { actor, target: actor, source: origin.actor, activity, sourceToken: origin, targetToken: token, castLevel }));
     // À portée de SA réaction (60 ft pour Contresort), mesurée en 3D.
     const inRange = options.filter(o => {
       const reaction = fromUuidSync(o.activity, { strict: false });
@@ -362,7 +362,9 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
   // §32 : Sort subtil — « sans composante verbale, somatique ni matérielle » : personne ne voit le sort se lancer, pas de Contresort.
   const subtle = (usageConfig[MODULE_ID]?.metamagic ?? []).includes("subtle");
   if ( isSpell && subtle ) log(`${origin.name} casts ${activity.item.name} with Subtle Spell: no Counterspell possible`);
-  let candidates = (isSpell && !subtle) ? counterCandidates(activity, origin) : [];
+  // §481 : le niveau de lancement, d'après la configuration d'utilisation — connu des conditions des réactions (`spell.castLevelAtMost`).
+  const castLevel = isSpell ? castLevelFor(activity, usageConfig) : null;
+  let candidates = (isSpell && !subtle) ? counterCandidates(activity, origin, castLevel) : [];
   const failure = isSpell ? failureAgainst(activity, origin.actor) : null;
   // `autoReact: "none"` (scénarios) : personne ne réagit — et l'utilisation n'est pas suspendue du tout, sinon
   // l'appelant (connecteur) perd la main avant la relance (zone jamais posée, message jamais suivi).
@@ -380,7 +382,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
   // §157 : une utilisation sans jet d'attaque qui vise des créatures (un projectile de Projectile magique) — leur fenêtre `isTargeted`.
   // §344 : aussi un sort à jet d'attaque, pour les seules réactions qui l'annulent (Sceptre d'absorption).
   const targeted = (((activity.type !== "attack") || isSpell) && (auto !== "none") && targets.length)
-    ? targetedCandidates(activity, origin, targets, { isSpell, castLevel: isSpell ? castLevelFor(activity, usageConfig) : 0 }) : [];
+    ? targetedCandidates(activity, origin, targets, { isSpell, castLevel }) : [];
   if ( !scrollCheck && !failure && !wards.length && !candidates.length && !reactors.length && !seers.length && !targeted.length ) return true;
 
   // Les cibles du lanceur, à remettre avant la relance : une réaction jouée sur ce même client (le MJ qui contrôle
@@ -391,7 +393,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     // §298 : le sort raté (Lenteur) ou contré ne part pas, mais son action est perdue.
     if ( failure && !(await passFailure(activity, origin, failure)) ) return wasteUse(activity);
     if ( wards.length && !(await passWards(activity, origin, wards)) ) return;
-    if ( candidates.length && !(await passCounters(activity, origin, candidates, { auto, castLevel: castLevelFor(activity, usageConfig) })) ) return wasteUse(activity);
+    if ( candidates.length && !(await passCounters(activity, origin, candidates, { auto, castLevel })) ) return wasteUse(activity);
     // §344 : le sort absorbé se dissipe ; les ressources engagées sont perdues.
     if ( targeted.length && !(await passTargeted(activity, origin, targeted, { auto })) ) return wasteUse(activity);
     let mods = reactors.length ? await askAttackReactions(activity, origin, reactors, { auto }) : null;
@@ -439,9 +441,11 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
 async function passReactionSpell(activity, actor) {
   const origin = usageToken(activity) ?? actor?.token ?? actor?.getActiveTokens?.(false, true)?.[0] ?? null;
   if ( !origin?.parent || !canvas?.ready ) return true;
-  const candidates = counterCandidates(activity, origin);
+  // §481 : le niveau du sort de réaction (celui de l'item, ou de la capacité qui le lance), connu des conditions `spell.castLevel…`.
+  const castLevel = castLevelFor(activity);
+  const candidates = counterCandidates(activity, origin, castLevel);
   if ( !candidates.length ) return true;
-  const passed = await passCounters(activity, origin, candidates, { auto: false, castLevel: Number(activity.item.system?.level) || 0 });
+  const passed = await passCounters(activity, origin, candidates, { auto: false, castLevel });
   if ( !passed ) await wasteUse(activity);
   return passed;
 }

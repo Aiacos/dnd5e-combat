@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-365 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+366 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -179,6 +179,7 @@ la sélection sans rien jouer.
 | `murmures-fuite` |  | §147 §152 | Murmures dissonants : la fuite par la Réaction |
 | `murs-epais` |  | §172 | Mur d'épines, Barrière de lames : sur les cases, ×4, traversée, anneau, abri |
 | `murs-fins` |  | §173 | vent, glace, pierre, force, prismatique : sans diagonale, apparition, abri, anneau, couches |
+| `niveau-sort-reaction` |  | §481 | réaction réservée aux sorts de niveau 1 ou moins (§481) |
 | `niveau-superieur-attaques` |  | §404 | dés en plus (§404) |
 | `niveau-superieur-zones` |  | §406 | Boule de feu à retardement (§406) |
 | `niveaux-automatisation` |  | §117 §416 | attaque, sauvegarde, attaque d'opportunité, contenu, au niveau du monde |

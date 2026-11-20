@@ -23,7 +23,8 @@ import { isDeadActor } from "./death.mjs";
 import { spellClassOf } from "./spell-class.mjs";
 import { isObjectToken } from "./bodies.mjs";
 import { hasNotActedYet } from "../core/sneak.mjs";
-import { isSpellCast, spellSchoolOf } from "./scrolls.mjs";
+import { isSpellCast, spellSchoolOf, scrollSpellOf } from "./scrolls.mjs";
+import { knownCastLevel, castLevelAtMost, castLevelAtLeast } from "../core/counter.mjs";
 import { grapplerOf } from "./grapple.mjs";
 import { areEnemies, areAllies } from "./factions.mjs";
 
@@ -359,12 +360,30 @@ export function weaponKind(activity) {
 }
 
 /**
+ * §481 : le niveau de lancement d'un sort pour les faits `spell.*` — celui que le moment connaît (`castLevel`), sinon celui que porte
+ * l'item : dnd5e met à l'échelle la copie du sort d'un message (`getAssociatedItem({ scaled: true })`,
+ * documents/chat-message.mjs:719, `scaledClone` → `flags.dnd5e.scaling`, documents/item.mjs:531), un sort lancé par une activité « cast » prend son niveau (`linkedActivity.spell.level`), un parchemin le sien.
+ */
+function castLevelKnown(activity, castLevel) {
+  const item = activity?.item;
+  const scroll = (item && (item.type !== "spell")) ? scrollSpellOf(item) : null;
+  return knownCastLevel({
+    castLevel, isSpell: (item?.type === "spell") || !!scroll,
+    level: scroll ? scroll.level : item?.system?.level,
+    scaling: Number(item?.flags?.dnd5e?.scaling) || 0,
+    linkedLevel: item?.system?.linkedActivity?.spell?.level ?? null
+  });
+}
+
+/**
  * Les faits d'un moment. `source` : qui agit ; `target` : qui subit ; `activity` : ce qui est utilisé ;
  * `sourceToken` / `targetToken` : leurs tokens quand le moment les connaît (sinon retrouvés par l'acteur).
+ * `castLevel` : le niveau auquel le sort est lancé, quand le moment le connaît (porte `castsSpell`, §481).
  * Une clé absente ici est inconnue du cœur, et une condition qui l'emploie ne tient jamais.
  */
-export function factsFor({ source=null, target=null, activity=null, sourceToken=null, targetToken=null, attackMode=null, damageTypes=null, condition=null, self=null, selfToken=null, resolution=null }={}) {
+export function factsFor({ source=null, target=null, activity=null, sourceToken=null, targetToken=null, attackMode=null, damageTypes=null, condition=null, self=null, selfToken=null, resolution=null, castLevel=null }={}) {
   const properties = activity?.item?.system?.properties;
+  const spellLevel = castLevelKnown(activity, castLevel);
   // « Une attaque au corps à corps » : activité d'attaque de type mêlée, sauf un jet en mode lancé ou à distance
   // (même règle que dnd5e, data/activity/attack-data.mjs, `getRollData` : `roll.attack.type`).
   const ranged = !!attackMode && (attackMode.includes("thrown") || (attackMode === "ranged"));
@@ -391,6 +410,10 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
       && (identifierOf(originItemOf(e) ?? {}).id === id)) || enchantmentSourcesOf(activity?.item).includes(id),
     // §28 : l'école d'un sort (`system.school` : "evo" Évocation, "abj" Abjuration…) — Évocation améliorée.
     "activity.school": spellSchoolOf(activity?.item),   // §48 : celle du sort d'un parchemin
+    // §481 : le niveau auquel le sort est lancé (null hors d'un sort) — « un sort de niveau 3 ou moins » : { "spell.castLevelAtMost": 3 }.
+    "spell.castLevel": spellLevel,
+    "spell.castLevelAtMost": n => castLevelAtMost(spellLevel, n),
+    "spell.castLevelAtLeast": n => castLevelAtLeast(spellLevel, n),
     // §27 : « tout sort mineur de Clerc » (Incantation puissante) — un tour de magie rangé sous cette classe (`spellClassOf`) ;
     // un sort ajouté à la main n'en a pas : il compte si l'acteur a cette classe.
     "activity.cantripOf": cls => (activity?.item?.type === "spell") && (Number(activity.item.system.level) === 0)

@@ -24,6 +24,33 @@ export function castLevelOf({ level: base=0, scaling=0, slotLevel=null, linkedLe
 }
 
 /**
+ * §481 : le niveau de lancement d'un sort, tel que les conditions des déclarations le lisent (`spell.castLevel`,
+ * `spell.castLevelAtMost`, `spell.castLevelAtLeast`). `castLevel` quand le moment le connaît (porte `castsSpell` : d'après la
+ * configuration d'utilisation, emplacement choisi compris) ; sinon celui que porte l'item (sort mis à l'échelle par dnd5e, sort
+ * lancé par une activité « cast », parchemin). null hors d'un sort : une condition de niveau ne tient alors jamais.
+ * @param {{castLevel?: number|null, isSpell?: boolean, level?: number|null, scaling?: number, linkedLevel?: number|null}} data
+ * @returns {number|null}
+ */
+export function knownCastLevel({ castLevel=null, isSpell=false, level: base=null, scaling=0, linkedLevel=null }={}) {
+  const given = level(castLevel);
+  if ( given !== null ) return given;
+  if ( !isSpell || ((level(base) === null) && (level(linkedLevel) === null)) ) return null;
+  return castLevelOf({ level: base ?? 0, scaling, linkedLevel });
+}
+
+/** §481 : le sort est-il lancé au niveau `n` ou moins (« un sort de niveau 3 ou moins ») ? Faux quand le niveau est inconnu. */
+export function castLevelAtMost(castLevel, n) {
+  const cast = level(castLevel), max = level(n);
+  return (cast !== null) && (max !== null) && (cast <= max);
+}
+
+/** §481 : le sort est-il lancé au niveau `n` ou plus ? Faux quand le niveau est inconnu. */
+export function castLevelAtLeast(castLevel, n) {
+  const cast = level(castLevel), min = level(n);
+  return (cast !== null) && (min !== null) && (cast >= min);
+}
+
+/**
  * Ce qui arrive au sort contré : `auto` (il échoue sans jet) ou un test contre `dc`.
  * @param {number} castLevel     Niveau de lancement du sort contré.
  * @param {number} counterLevel  Niveau du contresort.
