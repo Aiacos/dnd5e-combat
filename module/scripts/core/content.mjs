@@ -17,7 +17,10 @@
  *                                               { <id d'activité> : [ids d'effets de l'item] } — des effets de l'item
  *                                               qu'une activité propose sans les relier (§37, Malédiction : « Curse
  *                                               Ability » et ses six caractéristiques) ; K3 (§324) : `roll: true` — tiré au dé,
- *                                               une face par effet, dans l'ordre de `order` (Lame du chaos : 1d4)
+ *                                               une face par effet, dans l'ordre de `order` (Lame du chaos : 1d4) ;
+ *                                               §504 (B24) : `{ outcome: ["damage", "grapple"], grapple?: { escapeDc } }` — sur une
+ *                                               attaque qui touche, l'auteur choisit les dégâts, ou une empoignade à leur place (aucun
+ *                                               dégât, Agrippé au DD d'évasion dit) ; `choice` d'avance à l'utilisation : pas de question
  *     teleport?: { distance, units, activity? } l'utilisation téléporte l'utilisateur (§16.10, B11) : la destination se
  *                                               choisit aussitôt, à `distance` au plus — pour un item sans activité
  *                                               « teleport » de dnd5e (tout le PHB : Foulée brumeuse y est utilitaire) ;
