@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-345 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
+346 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
 commentaire de la fonction dans le code (début seulement) ; le fichier est relatif à `module/scripts/`. Les valeurs non
 fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de test du connecteur, MJ seulement.
 
@@ -109,7 +109,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | Chemin | Signature | Fichier | Description |
 |---|---|---|---|
 | `api.content.builtin` | _données (900 clés)_ |  |  |
-| `api.content.facts` | _liste (83)_ |  |  |
+| `api.content.facts` | _liste (84)_ |  |  |
 | `api.content.identifierOf` | `(item)` | `adapter/content.mjs` | L'identifiant sous lequel un item est reconnu, et d'où il vient. §19.9 : un item premium sans identifiant (Ravenloft) en reçoit un à sa création sur une fiche — dnd5e 6 l'écrit d'après le nom (documents/item.mjs:1146, `… |
 | `api.content.inspect` | `(actor)` | `adapter/content.mjs` | Pour l'inspection en jeu : ce que chaque item d'un acteur déclare, et d'où. |
 | `api.content.of` | `(item)` | `adapter/content.mjs` | L'entrée effective d'un item, couches combinées. `null` si rien n'est déclaré nulle part. @returns {{entry: object\|null, identifier: string\|null, layers: {module: boolean, world: boolean, item: boolean}}} |
@@ -244,6 +244,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.mcp.animations` | `()` | `runtime/animations.mjs` | Les animations suivies et le relevé récent (test). |
 | `api.mcp.atCost` | `({ action="list", id=null, cost, card=null, tokenId=null, message=null }={})` | `runtime/testing.mjs` | Issue #32 : succès à un prix, pour les scénarios — `list` (les pauses ouvertes chez le MJ actif), `offer` (une pause prise ; `cost` donné : sans la fenêtre du MJ), `dismiss`, `row` (une ligne d'un jet demandé, `card` +… |
 | `api.mcp.attackReasons` | `({ attackerId, targetId, itemId, attackMode=null })` | `runtime/testing-rules.mjs` | Les raisons d'Avantage et de Désavantage que le moteur donnerait à cette attaque (core/conditions.mjs), et les créatures hostiles au contact de l'attaquant — pour comprendre un jet « normal » inattendu. |
+| `api.mcp.attacksThisTurn` | `({ sourceId=null, targetId=null }={})` | `runtime/testing-rules.mjs` | §492 : le registre « qui a attaqué qui ce tour » du combat en cours, et, entre deux tokens, les genres d'attaque de `sourceId` contre `targetId` pendant ce tour. |
 | `api.mcp.awaiting` | `({ action="list", tokenId=null, kind="reaction", seconds=null }={})` | `runtime/testing.mjs` | §381 : `action` « list » (les attentes connues de ce client), « open » (une fenêtre sonde marquée pour `tokenId`) ou « result » (sa réponse). |
 | `api.mcp.barrier` | `({ attackerId, targetId, itemId, activityType=null })` | `runtime/testing.mjs` | O9h (§363) : la barrière qui empêche cette action d'atteindre sa cible (Coquille antivie, Parchemin de protection), ou null. |
 | `api.mcp.budget` | `({ tokenId })` | `runtime/testing-rules.mjs` | §20 : le budget du tour d'un combattant (action, action Bonus, Foncer, Se désengager, Vitesse à 0, déplacement en plus). |

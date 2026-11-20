@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-376 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+377 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -33,6 +33,7 @@ la sélection sans rien jouer.
 | `armure-sans-formation` |  | §214 | Désavantage Force/Dextérité, pas de sorts, bouclier sans bonus |
 | `ascendance` |  | §16.25 | Ascendance féerique |
 | `assommer` |  | §210 | coups non létaux, réveil, surprise à l'initiative |
+| `attaque-ce-tour` |  | §492 | réaction quand un ennemi finit son tour après l'avoir attaqué au corps à corps |
 | `attaque-puis-lutte` |  |  | Attaque supplémentaire, la Bousculade remplace une attaque |
 | `attaque` |  |  | Trait de feu → Zombi |
 | `attaques-multiples-plan` |  | §483 | plan déclaré : deux attaques de mêlée, une seule Morsure |

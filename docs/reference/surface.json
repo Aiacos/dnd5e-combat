@@ -132,6 +132,7 @@
     "mcp.animations",
     "mcp.atCost",
     "mcp.attackReasons",
+    "mcp.attacksThisTurn",
     "mcp.awaiting",
     "mcp.barrier",
     "mcp.budget",

@@ -26,6 +26,7 @@ import { rangeIssue } from "../core/range.mjs";
 import { isObjectToken } from "../adapter/bodies.mjs";
 import { dodge as takeDodge } from "../core/turn.mjs";
 import { tallyAfter } from "../core/tally.mjs";
+import { noteAttack } from "../adapter/attacked-this-turn.mjs";
 import { askHitReactions, windowIsDamaged, windowIsMissed, windowEnemyAttacked, windowSavesAgainst, askDamageGuardians } from "./reactions.mjs";
 import { markConcentrationBreaker, resistanceIgnoredBy, fortifiedExtra } from "./feats.mjs";
 import { liftToken } from "./elevation-spells.mjs";
@@ -496,6 +497,11 @@ export const COMMANDS = {
         { activity: resolution.activity, auto: autoReactOf(carrier, resolution), resolution });
       // §236 : « une créature hostile vient d'attaquer » (Âme de la vengeance), touché ou raté.
       windowEnemyAttacked(speakerTokenUuid(carrier), carrier.speaker?.alias ?? "", { activity: resolution.activity, auto: autoReactOf(carrier, resolution) });
+      // §492 : qui a attaqué qui ce tour (fait `source.attackedSelfThisTurn`), touché ou raté.
+      const attacker = fromUuidSync(resolution.source ?? "", { strict: false });
+      const attacked = resolution.targets.filter(t => !t.unaffected).map(t => fromUuidSync(t.token, { strict: false })?.actor).filter(Boolean);
+      const activity = fromUuidSync(resolution.activity ?? "", { strict: false });
+      await noteAttack(attacker, attacked, activity, { attackMode: attackMessage?.rolls?.[0]?.options?.attackMode ?? null });
       return;
     }
     const damageMessage = game.messages.get(resolution.damageRoll?.messageId);

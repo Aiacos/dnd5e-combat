@@ -9,7 +9,8 @@ import { judgeMasteries } from "./mastery-choices.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { selfSwitchOf } from "./enchant.mjs";
 import { naturalOneFor } from "./natural-one.mjs";
-import { combatantFor, readBudget, rangeOf } from "../adapter/turn.mjs";
+import { combatantFor, readBudget, rangeOf, currentTurnKey } from "../adapter/turn.mjs";
+import { attacksLog, attackedDuring } from "../adapter/attacked-this-turn.mjs";
 import { useIssues, legendaryIssues, rangeProblems } from "./turn.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
 import { movementCap } from "./actions.mjs";
@@ -316,6 +317,16 @@ export function budget({ tokenId }) {
   const token = viewedToken({ tokenId });
   const combatant = token.actor ? combatantFor(token.actor) : null;
   return combatant ? { ...readBudget(combatant), combatantId: combatant.id, cap: finite(movementCap(token)) } : null;
+}
+
+/**
+ * §492 : le registre « qui a attaqué qui ce tour » du combat en cours, et, entre deux tokens, les genres d'attaque de `sourceId` contre
+ * `targetId` pendant ce tour.
+ */
+export function attacksThisTurn({ sourceId=null, targetId=null }={}) {
+  const source = sourceId ? viewedToken({ tokenId: sourceId }).actor : null;
+  const target = targetId ? viewedToken({ tokenId: targetId }).actor : null;
+  return { turn: currentTurnKey(), log: attacksLog(), kinds: (source && target) ? attackedDuring(source, target) : null };
 }
 
 /**

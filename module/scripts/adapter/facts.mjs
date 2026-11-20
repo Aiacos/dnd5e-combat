@@ -30,6 +30,8 @@ import { grapplerOf } from "./grapple.mjs";
 import { areEnemies, areAllies } from "./factions.mjs";
 import { isVanilla } from "./vanilla-state.mjs";
 import { wearsArmor } from "../core/armor.mjs";
+import { attackedMatches } from "../core/attacked-this-turn.mjs";
+import { attackedDuring } from "./attacked-this-turn.mjs";
 
 /** §484 : ce token se tient-il en lumière vive (torche, sort, jour) ? Sans token : non. */
 const isBright = doc => !!doc && (lightOnToken(doc)?.level === LIGHT.BRIGHT);
@@ -425,9 +427,10 @@ function castLevelKnown(activity, castLevel) {
  * Les faits d'un moment. `source` : qui agit ; `target` : qui subit ; `activity` : ce qui est utilisé ;
  * `sourceToken` / `targetToken` : leurs tokens quand le moment les connaît (sinon retrouvés par l'acteur).
  * `castLevel` : le niveau auquel le sort est lancé, quand le moment le connaît (porte `castsSpell`, §481).
+ * `turnKey` : le tour dont parlent les faits « ce tour » (§492 : le tour qui vient de finir, à `enemyTurnEnd`) ; sinon le tour en cours.
  * Une clé absente ici est inconnue du cœur, et une condition qui l'emploie ne tient jamais.
  */
-export function factsFor({ source=null, target=null, activity=null, sourceToken=null, targetToken=null, attackMode=null, damageTypes=null, condition=null, self=null, selfToken=null, resolution=null, castLevel=null }={}) {
+export function factsFor({ source=null, target=null, activity=null, sourceToken=null, targetToken=null, attackMode=null, damageTypes=null, condition=null, self=null, selfToken=null, resolution=null, castLevel=null, turnKey=null }={}) {
   const properties = activity?.item?.system?.properties;
   const spellLevel = castLevelKnown(activity, castLevel);
   // « Une attaque au corps à corps » : activité d'attaque de type mêlée, sauf un jet en mode lancé ou à distance
@@ -611,6 +614,9 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     // §447 : le réacteur porte un effet de l'item (Représailles rôdeuses : seulement transformé par le Courroux sauvage).
     "self.hasEffect": id => hasEffectFrom(self, id),
     // §485 : le réacteur porte un effet dont il peut rejouer la sauvegarde (Indomptable) — `savableEffectsOf`.
-    "self.hasSavableEffect": want => ((savableEffectsOf(self).length > 0) === want)
+    "self.hasSavableEffect": want => ((savableEffectsOf(self).length > 0) === want),
+    // §492 : la source a attaqué la créature (`self`, sinon `target`) pendant ce tour — true / false, "melee", "ranged" ou une liste.
+    // « Quand une créature hostile termine son tour après l'avoir attaquée au corps à corps » : { "source.attackedSelfThisTurn": "melee" }.
+    "source.attackedSelfThisTurn": want => attackedMatches(attackedDuring(source, self ?? target, { turn: turnKey }), want)
   };
 }

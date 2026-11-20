@@ -35,7 +35,7 @@ describe("chargement du module", () => {
   });
 
   it("expose ses fonctions de test au connecteur sous api.mcp (call-module-api), et elles seules", () => {
-    expect(Object.keys(api.api.mcp).sort()).toEqual(["actionEnd", "advanceTime", "animations", "atCost", "attackReasons", "awaiting", "barrier", "budget", "burning", "castFromBar", "castPicked", "catalyst",
+    expect(Object.keys(api.api.mcp).sort()).toEqual(["actionEnd", "advanceTime", "animations", "atCost", "attackReasons", "attacksThisTurn", "awaiting", "barrier", "budget", "burning", "castFromBar", "castPicked", "catalyst",
       "chainCheck", "chatCards", "clickCard", "climb", "climbCeiling", "climbDown", "climbHolds", "climbState", "climbToward", "clock", "closeWindow", "concentrate", "connectionTest", "controlToken", "controls",
       "cover", "coverPreview", "damageTypes", "dash", "debugClear", "debugReport", "debugThrow", "debugVerbose", "diagnosticBackups", "diagnosticForget", "diagnosticRepair", "diagnosticRestore", "diagnosticScan",
       "door", "dropDown", "effectOrigins", "enchant", "endings", "etherealWalls", "factions", "familiar", "familiarPocket", "familiarRecall",

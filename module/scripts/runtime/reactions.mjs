@@ -5,7 +5,7 @@ import { alertGM } from "./gm-alert.mjs";
 import {
   REACTION_QUERY, handleReactionQuery, setReactionApproach, reactionOptions, reactionState, meleeAttacksOf, reactiveStrikesOf, reactiveSpellsOf, askReaction, currentAc, opportunityBlocked
 } from "../adapter/reactions.mjs";
-import { combatantFor, readBudget, distanceBetween, positionOf as position } from "../adapter/turn.mjs";
+import { combatantFor, readBudget, distanceBetween, positionOf as position, turnKeyAt } from "../adapter/turn.mjs";
 import { readUnitFactors, lengthIn } from "../adapter/units.mjs";
 import { hasLineOfEffect } from "../adapter/cover.mjs";
 import { canSee } from "../adapter/vision.mjs";
@@ -499,13 +499,16 @@ export function windowIsMissed(tokenUuids, sourceToken, sourceName, { activity=n
 function onEnemyTurnEnd(combat, prior) {
   const ended = combat.combatants.get(prior?.combatantId)?.token;
   if ( !ended?.actor || !ended.parent ) return;
+  // §492 : les faits « ce tour » (`source.attackedSelfThisTurn`) parlent du tour qui vient de finir, pas de celui qui commence.
+  const endedKey = turnKeyAt(combat, prior);
   for ( const other of ended.parent.tokens ) {
     const actor = other.actor;
     if ( !actor || (other === ended) || isObjectToken(other) || !areEnemies(other, ended) ) continue;
     if ( (actor.system.attributes?.hp?.value ?? 0) <= 0 ) continue;
     // §485 : `self` — le réacteur, pour ce qu'il porte (`self.hasSavableEffect` : Indomptable).
     const options = reactionsOf(actor, "enemyTurnEnd",
-      { source: ended.actor, target: actor, sourceToken: ended, targetToken: other, self: actor, selfToken: other }, { publish: true });
+      { source: ended.actor, target: actor, sourceToken: ended, targetToken: other, self: actor, selfToken: other, turnKey: endedKey },
+      { publish: true });
     if ( !options.length ) continue;
     log(`${ended.name} ends their turn: ${actor.name} can react (${options.map(o => o.name).join(", ")})`);
     askReaction(actor, {
