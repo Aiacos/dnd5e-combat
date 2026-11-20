@@ -223,6 +223,7 @@ describe("contenu livré", () => {
       "dominate-person", "draconic-flight", "draconic-strike", "dragon-slayer-enchanted", "dragons-breath", "draining-kiss",
       "draining-swipe", "dread-ambusher", "dreadful-strikes", "dream", "dueling", "dust-of-disappearance",
       "dust-of-sneezing-and-choking",
+      "dwarven-plate-enchanted",
       "dwarven-resilience", "dynamite-stick", "earth-element", "earthquake", "ebonbane", "ebony-fly-rare", "echoing-soul",
       "elder-champion", "eldritch-blast", "eldritch-smite", "elemental-adept", "elemental-affinity", "elemental-attunement",
       "elemental-epitome", "elemental-fury", "elemental-fury-potent-spellcasting", "elemental-gem", "elemental-weapon",

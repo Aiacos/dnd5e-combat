@@ -469,6 +469,10 @@ export const ITEM_FIXES = Object.freeze({
   // répandent une Lumière vive sur 12 m et faible sur 12 m de plus », tant que l'enchantement « Ablaze » est sur l'arme ; flammes du
   // Heaume scintillant (« Burst Into Flames ») : vive sur 3 m, faible sur 3 m de plus.
   "moon-touched-sword": { carriedLight: MOONLIGHT },
+  // Harnois nain (SRD 5.2) : « si un effet vous déplace contre votre gré sur le sol, vous pouvez utiliser votre Réaction pour
+  // réduire la distance de 3 m au plus » — l'activité « Reduce Unwilling Movement » de la donnée ne touche pas aux poussées du
+  // moteur.
+  "dwarven-plate-enchanted": { reducesForcedMove: { distance: 10, units: "ft" } },
   "moon-touched-sword-enchanted": { carriedLight: MOONLIGHT },
   "flame-tongue-enchanted": { carriedLight: { bright: 40, dim: 80, units: "ft", animation: FLAMES, whileEnchanted: "MHnAqxEXBhUbnjPq" } },
   "helm-of-brilliance-enchanted": { carriedLight: { bright: 10, dim: 20, units: "ft", animation: FLAMES, whileEnchanted: "oZBFpi117yOXca3k" } },
