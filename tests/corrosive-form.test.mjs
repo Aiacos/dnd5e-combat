@@ -1,5 +1,5 @@
 /**
- * Forme corrosive du Pouding noir (Manuel des Monstres 2025, p. 42) : qui le touche avec un jet d'attaque au corps à corps subit
+ * Forme corrosive du Pouding noir (SRD 5.2) : qui le touche avec un jet d'attaque au corps à corps subit
  * 1d8 dégâts d'acide — sans clause de distance (celle de 2014, « à 1,50 m ou moins », n'est plus dans le texte). Vu en jeu : un
  * coup de Coutille (allonge) porté à 3 m ne déclenchait rien, le même coup porté au contact oui.
  */

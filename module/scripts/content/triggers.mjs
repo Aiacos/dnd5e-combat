@@ -274,7 +274,7 @@ export const TRIGGERS = Object.freeze({
     { on: "isHit", via: "effect", if: { "activity.isMelee": true, "target.hasTempHp": true }, do: [{ type: "damage", to: "source", activity: "dnd5eactivity200" }] },
     { on: "isDamaged", via: "effect", if: { "target.hasTempHp": false }, do: [{ type: "remove" }] }
   ],
-  // Forme corrosive (pouding noir, Manuel des Monstres 2025 p. 42) : « une créature qui touche le pouding avec un jet d'attaque
+  // Forme corrosive (pouding noir, SRD 5.2) : « une créature qui touche le pouding avec un jet d'attaque
   // au corps à corps subit 1d8 dégâts d'acide » — l'activité de dégâts du trait (OzlTY1z1gup4C2Qq), portée par l'item du monstre
   // lui-même. Sans condition de distance : le « à 1,50 m ou moins » est celui du trait de 2014, dont l'activité porte un autre id ;
   // un coup d'arme à allonge porté à 3 m compte. La corrosion des armes n'est pas reprise.
