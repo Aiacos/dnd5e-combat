@@ -314,7 +314,8 @@ export function useIssues(activity, { cost: forcedCost=null, attackMode=null, re
     ...(unarmored ? [loc("Souci.untrainedArmor", { item: unarmored.name })] : []),
     ...(antimagic ? [loc(isSpellCast(activity.item) ? "Souci.antimagic" : "Souci.antimagicItem",
       { item: antimagic.name, use: activity.item.name })] : []),
-    ...limits.issues.map(i => loc(`Souci.${i}`, { item: limits.item ?? "", effect: limits.effect ?? "", use: activity.item?.name ?? "" })),
+    ...limits.issues.map(i => loc(`Souci.${i}`, { item: limits.item ?? "", effect: limits.effect ?? "", use: activity.item?.name ?? "",
+      activity: activity.name || activity.item?.name || "" })),
     ...incapacitated.map(i => loc(`Souci.${i}`))
   ];
   return { combatant, budget, own, request, cost, lines, budgetLines, missing };

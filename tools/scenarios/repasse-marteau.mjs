@@ -4,6 +4,8 @@
  *  1. « Hurl Hammer » qui touche le Zombi : le Zombi et le Clerc font chacun une sauvegarde de Constitution DD 17, pas le Guerrier ;
  *     une sauvegarde réussie ne laisse pas d'Étourdi (celui, sans sauvegarde, des données ne passe pas), une ratée en pose un.
  *  2. Un coup de Maillet au corps à corps qui touche : aucune sauvegarde.
+ *  3. Guide 3.0.0 : l'activité « Thunderclap » du livre (la même sauvegarde, à la main) est refusée, forçable — le moteur l'a déjà jouée
+ *     au toucher (une seule sauvegarde). Absente du Guide 2.0.0 : non applicable.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -36,6 +38,11 @@ export default {
     const done = await ctx.engine("enchant", { tokenId: fighter.id, itemId: hammer, activityId: "sOG5DXs2HNhx1U5m", targetItemId: maul,
       profile: "RSpASIW4HbToM7yC" }).catch(err => ({ error: err.message }));
     if ( !ctx.expect(!!done?.effectId && (done.riders > 0), `le Marteau de tonnerre est posé sur le Maillet (${done?.error ?? `${done?.riders} ajout(s)`})`) ) return;
+    // Guide 3.0.0 : le lancer n'est visible qu'harmonisé (`visibility.requireAttunement`) — le Maillet enchanté est équipé et harmonisé.
+    const { data: tokData } = await ctx.call("get-scene-object", { type: "Token", objectId: fighter.id });
+    await ctx.call("upsert-actor-item", { actorId: tokData.actorId, itemData: { "system.equipped": true, "system.attuned": true },
+      match: { path: "_id", value: maul } });
+    await pause(500);
     const data = await ctx.engine("itemData", { tokenId: fighter.id, itemId: maul, paths: ["system.activities"] });
     const activities = Object.values(data?.["system.activities"] ?? {});
     const hurl = activities.find(a => (a.type === "attack") && (a.attack?.type?.value === "ranged"))?._id;
@@ -78,6 +85,16 @@ export default {
     const melee = await hit(swing);
     if ( ctx.expect(!!melee, "le Maillet touche le Zombi au corps à corps") ) {
       ctx.expect(!melee.some(l => /con saving throw/.test(l)), "au corps à corps : aucune sauvegarde");
+    }
+
+    // 3. « Thunderclap » (Guide 3.0.0) lancé à la main : refusé, forçable.
+    // L'activité ajoutée par l'enchantement reçoit un id neuf (dnd5e) : retrouvée par son nom (client en anglais sur le banc).
+    const clap = activities.find(a => (a.type === "save") && (a.name === "Thunderclap"));
+    if ( !clap ) ctx.log("« Thunderclap » absent (Guide 2.0.0) : étape 3 non applicable");
+    else {
+      const lines3 = await ctx.engine("issues", { tokenId: fighter.id, itemId: maul, activityId: clap._id });
+      ctx.expect(lines3.some(l => /DAS/.test(l) && /Thunderclap/.test(l)),
+        `« Thunderclap » à la main : refusé, forçable (${lines3.join(" ; ") || "aucun souci"})`);
     }
   }
 };

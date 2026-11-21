@@ -1111,6 +1111,7 @@
   "DND5ECOMBAT.Souci.moved": "You have already moved this turn: this is only possible before any movement.",
   "DND5ECOMBAT.Souci.needsEffect": "{use} is only possible under {effect}.",
   "DND5ECOMBAT.Souci.barredByEffect": "{use} is not possible under {effect}.",
+  "DND5ECOMBAT.Souci.automatic": "{activity}: DAS already rolls this on its own (on a hit). Using it by hand as well would roll it a second time.",
   "DND5ECOMBAT.Sournoise.Titre": "Cunning Strike — {name}",
   "DND5ECOMBAT.Sournoise.Question": "Sneak Attack: {n}d{faces} against {name}. Forgo dice for Cunning Strike effects (up to {max})?",
   "DND5ECOMBAT.Sournoise.Frapper": "Confirm",

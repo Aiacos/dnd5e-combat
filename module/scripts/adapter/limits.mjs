@@ -12,9 +12,31 @@ import { carriesEffectFrom, comesFromItemEffect } from "./facts.mjs";
 import { combatantFor, movementOf, currentTurnKey } from "./turn.mjs";
 import { readUnitFactors } from "./units.mjs";
 
-/** La règle de limite de cette activité, ou null. */
+/**
+ * Guide 3.0.0 : une activité qu'un enchantement ajoute à l'arme (« rider ») y reçoit un id tiré au hasard (dnd5e, `EnchantmentData`,
+ * `randomID`) et `flags.dnd5e.dependentOn` = l'id de l'effet d'enchantement. Son id d'origine : l'activité de même type et de même nom de
+ * l'objet qui a posé l'enchantement (`system.origin.activity` de l'effet), quand il est encore là (sur la fiche, en général). Sinon null.
+ */
+export function riderOriginId(activity) {
+  const effectId = activity?.flags?.dnd5e?.dependentOn;
+  const effect = effectId ? activity.item?.effects?.get?.(effectId) : null;
+  const origin = effect?.system?.origin?.activity ?? null;
+  if ( (typeof origin !== "string") || !origin ) return null;
+  let source = null;
+  try { source = fromUuidSync(origin.replace(/\.Activity\.[^.]+$/, ""), { strict: false }); } catch { source = null; }
+  if ( !source || (source === activity.item) || (source.documentName !== "Item") ) return null;
+  const match = source.system?.activities?.find?.(a => (a.type === activity.type) && (a.name === activity.name));
+  return match?.id ?? null;
+}
+
+/** La règle de limite de cette activité, ou null — sous son id, ou, pour une activité ajoutée par un enchantement, sous son id d'origine. */
 export function usageLimitOf(activity) {
-  return activity?.item ? (contentOf(activity.item).entry?.usageLimits?.[activity.id] ?? null) : null;
+  if ( !activity?.item ) return null;
+  const rules = contentOf(activity.item).entry?.usageLimits;
+  if ( !rules ) return null;
+  if ( rules[activity.id] ) return rules[activity.id];
+  const originId = riderOriginId(activity);
+  return originId ? (rules[originId] ?? null) : null;
 }
 
 /** Les utilisations restantes de l'item de cet identifiant chez l'acteur, ou null s'il n'en a pas. */

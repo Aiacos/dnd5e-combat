@@ -42,6 +42,18 @@ describe("Regain sauvage : limites d'utilisation", () => {
   });
 });
 
+describe("automatic : activité déjà jouée par le moteur (Marteau de tonnerre, Guide 3.0.0)", () => {
+  const off = { inCombat: false, ownTurn: false, usedThisTurn: false, remaining: null };
+  it("refusée (forçable) en combat comme hors combat", () => {
+    expect(usageLimitIssues({ automatic: true }, off)).toEqual(["automatic"]);
+    expect(usageLimitIssues({ automatic: true }, { ...off, inCombat: true, ownTurn: true })).toEqual(["automatic"]);
+  });
+  it("validée : true ou absente", () => {
+    expect(validateEntry({ usageLimits: { xChnR5QIa3RWxr7K: { automatic: true } } })).toEqual([]);
+    expect(validateEntry({ usageLimits: { xChnR5QIa3RWxr7K: { automatic: 1 } } })).toEqual(["usageLimits.xChnR5QIa3RWxr7K.automatic: true or absent"]);
+  });
+});
+
 describe("§486 : activité permise seulement sous un effet (whileEffect / unlessEffect)", () => {
   const off = { inCombat: false, ownTurn: false, usedThisTurn: false, remaining: null };
   it("sans l'effet requis : refusé, en combat ou non ; avec : permis", () => {

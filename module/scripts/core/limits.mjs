@@ -29,6 +29,9 @@ export function usageLimitIssues(rule, { inCombat, ownTurn, usedThisTurn, remain
   if ( rule?.unmoved && inCombat && moved ) issues.push("moved");
   if ( rule?.whileEffect && (underEffect === false) ) issues.push("needsEffect");
   if ( rule?.unlessEffect && (barredByEffect === true) ) issues.push("barredByEffect");
+  // `automatic` : le moteur joue déjà cette activité de lui-même (un déclencheur du même item) ; la lancer en plus à la main la jouerait
+  // deux fois (Marteau de tonnerre, Guide 3.0.0 : « Thunderclap »). Refus forçable, en combat ou non.
+  if ( rule?.automatic ) issues.push("automatic");
   return issues;
 }
 

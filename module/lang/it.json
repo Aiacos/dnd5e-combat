@@ -1109,6 +1109,7 @@
   "DND5ECOMBAT.Souci.moved": "Ti sei già mosso in questo turno: è possibile solo prima di qualsiasi movimento.",
   "DND5ECOMBAT.Souci.needsEffect": "{use} è possibile solo sotto l'effetto di {effect}.",
   "DND5ECOMBAT.Souci.barredByEffect": "{use} non è possibile sotto l'effetto di {effect}.",
+  "DND5ECOMBAT.Souci.automatic": "{activity}: DAS lo fa già da solo (quando colpisce). Usarlo anche a mano lo farebbe una seconda volta.",
   "DND5ECOMBAT.Sournoise.Titre": "Colpo Astuto — {name}",
   "DND5ECOMBAT.Sournoise.Question": "Attacco Furtivo: {n}d{faces} contro {name}. Rinunciare a dei dadi per effetti di Colpo Astuto (al massimo {max})?",
   "DND5ECOMBAT.Sournoise.Frapper": "Conferma",

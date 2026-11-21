@@ -292,9 +292,10 @@ export async function skillAid({ tokenId, helperTokenId, kind, skill=null, tool=
 }
 
 /** Ce qui cloche dans une utilisation (légalité du tour, états), sans l'utiliser ; `cost` force le coût (« bonus », « reaction »). */
-export function issues({ tokenId, itemId, activityType=null, cost=null }) {
+export function issues({ tokenId, itemId, activityType=null, activityId=null, cost=null }) {
   const item = viewedToken({ tokenId }).actor?.items.get(itemId);
-  const activity = item?.system.activities.find(a => !activityType || (a.type === activityType));
+  const activity = activityId ? item?.system.activities.get(activityId)
+    : item?.system.activities.find(a => !activityType || (a.type === activityType));
   if ( !activity ) throw new Error("activity not found");
   const use = useIssues(activity, { cost });
   // K5 (§326) : les soucis d'une action légendaire (son tour, plus d'action, une par tour).

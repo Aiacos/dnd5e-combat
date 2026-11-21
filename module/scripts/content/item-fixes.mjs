@@ -718,8 +718,12 @@ export const ITEM_FIXES = Object.freeze({
   // créature à 9 m d'elle autre que vous font une sauvegarde de Constitution DD 17 ou sont Étourdies jusqu'à la fin de votre prochain
   // tour ». L'Étourdi sans sauvegarde des données (« Hurl Hammer ») ne passe jamais (`effectsIf` faux : la cible n'est pas l'auteur) ;
   // le Fléau des géants reste au MJ.
+  // Guide 3.0.0 : le livre ajoute l'activité « Thunderclap » (la même sauvegarde, lancée à la main après un lancer qui touche). Le moteur
+  // la joue déjà au toucher (choix de l'utilisateur, 2026-11-21) : la lancer en plus est refusé, forçable (`automatic`), pour qu'il n'y ait
+  // qu'une sauvegarde. Le marteau 2.0.0 n'a pas cette activité : rien ne change pour lui.
   "hammer-of-thunderbolts-enchanted": {
     effectsIf: { "target.isSelf": true },
+    usageLimits: { xChnR5QIa3RWxr7K: { automatic: true } },
     triggers: [{ on: "hit", if: { "activity.isMelee": false }, do: [{ type: "status", status: "stunned", save: { ability: "con", dc: 17 }, around: { radius: 30, units: "ft" } }] }],
     effectEnds: { "status:stunned": "casterTurnEnd" }
   },
