@@ -84,7 +84,8 @@ export const ENTRY_TABLES = Object.freeze([
 /**
  * Relevé des trous (2026-10-22) : les sorts que le SRD 2024 de dnd5e renomme (sans le nom du mage) gardent l'id de document et les ids
  * d'activité et d'effet du Manuel des joueurs (vérifié dans `packs/spells24`), mais pas son identifiant. Sans le Manuel premium, ces
- * sorts n'avaient aucune règle. Identifiant du SRD → identifiant du Manuel ; une entrée propre au SRD, s'il y en a une, l'emporte.
+ * sorts n'avaient aucune règle. Identifiant du SRD → identifiant du Manuel ; l'entrée écrite sous l'un vaut pour l'autre, et une
+ * entrée propre à chacun, s'il y en a une, l'emporte.
  * (La Main de Bigby, `arcane-hand`, a la sienne : content/summons.mjs.)
  */
 export const SRD_ALIASES = Object.freeze({
@@ -96,7 +97,10 @@ export const SRD_ALIASES = Object.freeze({
   // Même trou, hors des sorts de mage déjà relevés : un sort et trois objets que le SRD 2024 renomme en gardant l'id de document et les
   // ids d'activité et d'effet du livre (vérifié dans `dnd5e.spells24` et `dnd5e.equipment24`, dnd5e 6.1.0).
   "freezing-sphere": "otilukes-freezing-sphere", "iron-bands": "iron-bands-of-bilarro", "crawler-mucus": "carrion-crawler-mucus",
-  "spiders-sting": "lolths-sting"
+  "spiders-sting": "lolths-sting",
+  // Coffre secret : l'entrée est écrite sous l'identifiant du SRD ; le Manuel des joueurs garde le nom du mage (même id de document,
+  // mêmes ids d'activité, vérifié dans `dnd5e.spells24` et le module du Manuel).
+  "secret-chest": "leomunds-secret-chest"
 });
 
 function build() {
@@ -111,7 +115,11 @@ function build() {
   for ( const source of ENTRY_TABLES ) {
     for ( const [id, entry] of Object.entries(source) ) table[id] = mergeEntries([table[id] ?? null, entry]);
   }
-  for ( const [srd, phb] of Object.entries(SRD_ALIASES) ) if ( table[phb] && !table[srd] ) table[srd] = table[phb];
+  // Dans les deux sens : l'entrée écrite sous l'un des deux identifiants vaut pour l'autre, qui n'en a pas (une entrée propre l'emporte).
+  for ( const [srd, phb] of Object.entries(SRD_ALIASES) ) {
+    if ( table[phb] && !table[srd] ) table[srd] = table[phb];
+    else if ( table[srd] && !table[phb] ) table[phb] = table[srd];
+  }
   return Object.freeze(table);
 }
 
