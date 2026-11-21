@@ -57,6 +57,8 @@ export default {
       const { data } = await ctx.call("get-compendium-entry", { uuid });
       const { _id, folder, ownership, _stats, ...itemData } = data;
       setPath(itemData, "flags.dnd5e.sourceId", uuid);
+      // Préparé, comme sur la fiche d'un paladin : un sort non préparé ne se propose pas en châtiment (issue #144).
+      setPath(itemData, "system.prepared", 1);
       const r = await ctx.call("upsert-actor-item", { actorId: pal.actorId, itemData, match: { path: "flags.dnd5e.sourceId", value: uuid } });
       ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: pal.actorId, itemId: r.id }).catch(() => {}));
       return r.id;
