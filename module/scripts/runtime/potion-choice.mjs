@@ -14,6 +14,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { relaunchUse } from "./relaunch.mjs";
 import { potionChoice, chosenPotionMode, costForPotionMode } from "../core/potion-choice.mjs";
 import { maximizeDice } from "../core/max-dice.mjs";
 import { offersPotionChoice, healingFormulaOf } from "../adapter/potions.mjs";
@@ -79,7 +80,7 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
       askMode(activity).then(picked => {
         if ( !chosenPotionMode(picked) ) return;
         if ( !game.user.targets.size ) for ( const t of targets ) t.setTarget(true, { releaseOthers: false });
-        activity.use({ ...usageConfig, [MODULE_ID]: { ...ours, potionMode: picked } }, dialogConfig, messageConfig);
+        relaunchUse(activity, { ...usageConfig, [MODULE_ID]: { ...ours, potionMode: picked } }, dialogConfig, messageConfig);
       }).catch(err => console.error(`${MODULE_ID} | healing potion choice`, err));
       return false;
     }

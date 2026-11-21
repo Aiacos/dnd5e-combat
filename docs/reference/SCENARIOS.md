@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-390 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+391 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -218,6 +218,7 @@ la sélection sans rien jouer.
 | `porte-passager` |  | §264 | le passager suit le lanceur |
 | `porte-serrure` |  | §244 §247 §243 | crocheter, forcer, clé, DD caché |
 | `porte` |  | §18.24 §152 §147 | ouvrir et fermer une porte à distance |
+| `potions-action` |  |  | issue #31 |
 | `potions-audit` |  | §53 | ce que chacune fait vraiment |
 | `potions-dmg` |  | §53 | bues et consommées |
 | `potions` |  | §51 | boire, donner, relever, version du Guide |

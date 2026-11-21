@@ -663,34 +663,35 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 5. command: companion not commanded
 6. teleportation: targeting not opened
 7. metamagic not held
-8. summon command not recorded
-9. "once per turn" limit not recorded
-10. legendary action not spent
-11. summon on targets: neighbour summons
-12. contest not played
-13. self area: automatic placement
-14. coating: weapon not coated
-15. Boon of Spell Recall
-16. maneuver: promised die or AC not applied
-17. spell ended by a special function: not ended
-18. escape
-19. jump: Step of the Wind doubling not noted
-20. Ready: readied action not chosen
-21. improvised weapon: not requested
-22. effect ending on spell or damage not removed
-23. potion: conditions not removed
-24. healer's kit: stabilization
-25. hide
-26. search
-27. light object: the caster does not shed light
-28. caster light: not lit
-29. light source: not lit
-30. Wild Shape: transformation not done
-31. enchantment: weapon not enchanted
-32. ethereal: Ethereal Jaunt / Stride not applied
-33. Arcane Vigor: Hit Point Dice not spent
-34. restoration: condition not removed
-35. tinderbox: nothing lit
+8. healing potion: maximum healing not noted
+9. summon command not recorded
+10. "once per turn" limit not recorded
+11. legendary action not spent
+12. summon on targets: neighbour summons
+13. contest not played
+14. self area: automatic placement
+15. coating: weapon not coated
+16. Boon of Spell Recall
+17. maneuver: promised die or AC not applied
+18. spell ended by a special function: not ended
+19. escape
+20. jump: Step of the Wind doubling not noted
+21. Ready: readied action not chosen
+22. improvised weapon: not requested
+23. effect ending on spell or damage not removed
+24. potion: conditions not removed
+25. healer's kit: stabilization
+26. hide
+27. search
+28. light object: the caster does not shed light
+29. caster light: not lit
+30. light source: not lit
+31. Wild Shape: transformation not done
+32. enchantment: weapon not enchanted
+33. ethereal: Ethereal Jaunt / Stride not applied
+34. Arcane Vigor: Hit Point Dice not spent
+35. restoration: condition not removed
+36. tinderbox: nothing lit
 
 ### `dnd5e.preActivityConsumption`
 
@@ -760,21 +761,22 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 1. healing dice at their maximum _(stop)_
 2. damage and healing without dialog _(stop)_
-3. critical hit: noted on the damage card _(stop)_
-4. riposte: superiority die _(stop)_
-5. trigger bonus damage _(stop)_
-6. damage: dice multiplied (area), type chosen _(stop)_
-7. storm: extra die not added _(stop)_
-8. coating: poison damage not added _(stop)_
-9. Cleave: modifier _(stop)_
-10. Sneak Attack _(stop)_
-11. Fighter fighting styles _(stop)_
-12. origin feats (damage) _(stop)_
-13. Martial Arts: Dexterity with a Monk weapon (damage) _(stop)_
-14. smite _(stop)_
-15. maneuver: promised die _(stop)_
-16. Toll the Dead: target's dice _(stop)_
-17. off hand: Two-Weapon Fighting _(stop)_
+3. healing potion: dice not at their maximum _(stop)_
+4. critical hit: noted on the damage card _(stop)_
+5. riposte: superiority die _(stop)_
+6. trigger bonus damage _(stop)_
+7. damage: dice multiplied (area), type chosen _(stop)_
+8. storm: extra die not added _(stop)_
+9. coating: poison damage not added _(stop)_
+10. Cleave: modifier _(stop)_
+11. Sneak Attack _(stop)_
+12. Fighter fighting styles _(stop)_
+13. origin feats (damage) _(stop)_
+14. Martial Arts: Dexterity with a Monk weapon (damage) _(stop)_
+15. smite _(stop)_
+16. maneuver: promised die _(stop)_
+17. Toll the Dead: target's dice _(stop)_
+18. off hand: Two-Weapon Fighting _(stop)_
 
 ### `dnd5e.preRollSavingThrowV2`
 
@@ -799,19 +801,20 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 5. projectiles: one per target, the rest chained _(stop)_
 6. use without dialog _(stop)_
 7. metamagic: spell not modified _(stop)_
-8. worn form lock: attempt not punished
-9. use legality _(stop)_
-10. gates: Sanctuary, Counterspell, pre-attack reactions, Portent _(stop)_
-11. summon on targets: neighbours asked
-12. Ritual: cast without a spell slot _(stop)_
-13. self area: without the "Place Template" box _(stop)_
-14. Sneak Attack: item activity not redirected _(stop)_
-15. Reckless Attack: prompt _(stop)_
-16. swallow: Bite not refused _(stop)_
-17. potion: concentration not removed
-18. ground item: area placed on use, copy kept
-19. light object: placed on cast _(stop)_
-20. light source: dnd5e consumption not skipped
+8. healing potion: Bonus Action or action not chosen _(stop)_
+9. worn form lock: attempt not punished
+10. use legality _(stop)_
+11. gates: Sanctuary, Counterspell, pre-attack reactions, Portent _(stop)_
+12. summon on targets: neighbours asked
+13. Ritual: cast without a spell slot _(stop)_
+14. self area: without the "Place Template" box _(stop)_
+15. Sneak Attack: item activity not redirected _(stop)_
+16. Reckless Attack: prompt _(stop)_
+17. swallow: Bite not refused _(stop)_
+18. potion: concentration not removed
+19. ground item: area placed on use, copy kept
+20. light object: placed on cast _(stop)_
+21. light source: dnd5e consumption not skipped
 
 ### `dnd5e.preUseLinkedSpell`
 

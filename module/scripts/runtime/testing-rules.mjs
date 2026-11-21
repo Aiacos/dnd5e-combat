@@ -318,7 +318,6 @@ export function rangeCheck({ tokenId, itemId, targetIds=[], activityType=null })
   return problems;
 }
 
-/** §20 : le budget du tour d'un combattant (action, action Bonus, Foncer, Se désengager, Vitesse à 0, déplacement en plus). */
 /** Issue #31 : ce que la Combat UI lirait pour la potion `itemId` du token (`api.ui.potion`), ou null. */
 export function potionOptionsOf({ tokenId, itemId }) {
   const token = viewedToken({ tokenId });
@@ -326,6 +325,7 @@ export function potionOptionsOf({ tokenId, itemId }) {
   return potionOptions(potionChoiceActivity(item));
 }
 
+/** §20 : le budget du tour d'un combattant (action, action Bonus, Foncer, Se désengager, Vitesse à 0, déplacement en plus). */
 export function budget({ tokenId }) {
   const token = viewedToken({ tokenId });
   const combatant = token.actor ? combatantFor(token.actor) : null;

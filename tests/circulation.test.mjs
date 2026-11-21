@@ -34,6 +34,7 @@ const CAST_LEVEL = /atCastLevel\(|scaledClone\(|scaled:\s*true|followUpScaling\(
 
 const CAST_LEVEL_EXCEPTIONS = {
   "adapter/defenses.mjs#spendHitDiceToHeal": "dés de vie dépensés (Résilience…) : le nombre est choisi, rien ne monte avec un emplacement",
+  "adapter/potions.mjs#healingFormulaOf": "potion de soins (issue #31) : un consommable, jamais lancé avec un emplacement ; ne lance rien, lit la formule et son maximum",
   "adapter/inspiration.mjs#offerRollBonus": "dé ajouté à un jet (Inspiration, Chanceux, Se ressaisir) : formule de la règle, pas de montée",
   "adapter/regeneration.mjs#regenerate": "Régénération d'un monstre : une aptitude, jamais lancée avec un emplacement",
   "adapter/usage.mjs#hasDamageParts": "ne lance rien : regarde seulement si l'activité a des dés de dégâts",

@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-346 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
+348 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
 commentaire de la fonction dans le code (début seulement) ; le fichier est relatif à `module/scripts/`. Les valeurs non
 fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de test du connecteur, MJ seulement.
 
@@ -341,6 +341,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.mcp.plan` | `({ tokenId, cell, point, levelId, maxCost })` | `runtime/testing-moves.mjs` | Le chemin que prendrait le moteur, sans bouger. `maxCost` : plafond de coût (unité de la grille), sinon celui du tour. |
 | `api.mcp.planning` | `()` | `runtime/testing-areas.mjs` | La visée d'une téléportation en cours sur ce client : celle du moteur, et la planification du cœur (`_movementPlanningContext`). |
 | `api.mcp.portent` | `({ tokenId, roll=false, rolls=null, clear=false })` | `runtime/testing-rules.mjs` | §36 : les jets notés du Présage d'un token — `roll: true` les lance comme au Repos long ; `rolls: [n…]` les fixe (scénario : des valeurs connues) ; `clear: true` les efface. Rend le nombre de d20 du devin et son état. |
+| `api.mcp.potionOptions` | `({ tokenId, itemId })` | `runtime/testing-rules.mjs` | Issue #31 : ce que la Combat UI lirait pour la potion `itemId` du token (`api.ui.potion`), ou null. |
 | `api.mcp.range` | `({ tokenId, itemId, activityType=null })` | `runtime/testing-rules.mjs` | §236 : la portée que le moteur applique à une activité (règles de contenu comprises : Sniper de sorts, Fureur élémentaire améliorée). |
 | `api.mcp.rangeCheck` | `({ tokenId, itemId, targetIds=[], activityType=null })` | `runtime/testing-rules.mjs` | O8h (§351) : les soucis de portée (hors de portée, portée longue, trop près) d'une activité contre ces cibles, désignées ici. |
 | `api.mcp.rangedPlacement` | `({ tokenId, itemId, shapes })` | `runtime/testing-areas.mjs` | §286 : ce que la pose refuserait pour ces formes de l'activité de zone de l'item (`far`, `hidden`, `apart` — cubes non contigus), ou null ; sans ouvrir la pose de dnd5e. `shapes` : formes de région en pixels (`circle` {… |
@@ -505,6 +506,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.ui.movableZone` | `(activity)` | `ui/api.mjs` | §111 : l'activité a-t-elle une zone déplaçable déjà posée (Rayon de lune) ? L'utiliser la déplace alors (ui/pointer.mjs, §16.14) : rien n'est lancé, aucun emplacement n'est dépensé — une interface ne doit ni la griser f… |
 | `api.ui.movement` | `(token)` | `ui/api.mjs` | Le déplacement du tour d'un token en combat, dans l'unité de la grille : dépensé (escaliers et relevé compris, téléportations exclues), permis (vitesse, Foncer, déplacement ouvert par un effet), et ce qui reste **réelle… |
 | `api.ui.multiattackLeft` | `(actor)` | `ui/api.mjs` | §18.19 : ce qui reste des Attaques multiples ouvertes ce tour par cet acteur — uuids des items encore jouables (`left`), de ceux du plan qui n'ont plus rien (`spent`), noms des premiers. null sans plan ouvert. @param {A… |
+| `api.ui.potion` | `(activity)` | `ui/api.mjs` | Issue #31 : `potion(activity)` — la règle maison des potions de soins (réglage `potionHealing`) : null si elle ne s'applique pas (réglage coupé, autre chose qu'une potion de soins en action Bonus) ; sinon `{ ask, mode,… |
 | `api.ui.ritual` | `(activity)` | `ui/api.mjs` | §139 : comment ce sort se lancerait maintenant — « ritual » : en rituel d'office (sans emplacement, même non préparé avec Savoir rituel) ; « ask » : le joueur choisira rituel ou emplacement ; « none » : comme d'habitude… |
 | `api.ui.targeting` | `()` | `ui/pointer.mjs` | §118 : la visée que ce client attend, pour les modules voisins (`api.ui.targeting()`) — tant qu'elle est ouverte, le clic gauche est au moteur, quel que soit ce qu'il y a sous la souris (cadavre, coffre, marchand). `{ t… |
 | `api.ui.timer` | `({ token, seconds, label="", icon="gear", id=null }={})` | `ui/timers.mjs` | Lance une minuterie au-dessus d'un token, chez tous les clients connectés. @param {{token: TokenDocument\|Token\|string, seconds: number, label?: string, icon?: string, id?: string}} options @returns {{id: string, done: P… |
