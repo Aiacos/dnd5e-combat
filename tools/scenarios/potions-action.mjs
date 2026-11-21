@@ -102,6 +102,17 @@ export default {
       const spot = await ctx.position(guerrier);
       const grid = await ctx.gridSize();
       await ctx.call("move-token", { tokenId: clerc.id, x: spot.x + grid, y: spot.y, elevation: spot.elevation ?? 0 });
+      // Un Clerc de niveau 1 n'a pas toujours 10 PV de marge (vu au banc le 2026-11-21 : +9, plafonné) : des PV maximum
+      // temporaires le temps de l'étape, pour qu'un soin lancé (4 à 10) et le maximum (10) se distinguent.
+      const cMax = (await ctx.engine("stats", { tokenId: clerc.id }).catch(() => null))?.hp ?? {};
+      if ( Number.isFinite(cMax.max) && (cMax.max < 11) ) {
+        const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: clerc.id });
+        const put = async v => data.actorLink
+          ? ctx.call("update-actor", { actorId: data.actorId, actorData: { "system.attributes.hp.tempmax": v } })
+          : ctx.call("update-scene-object", { type: "Token", objectId: clerc.id, data: { "delta.system.attributes.hp.tempmax": v } });
+        await put((cMax.tempmax || 0) + 20);
+        ctx.restore(() => put(cMax.tempmax || 0).catch(() => {}));
+      }
       await ctx.setHp(clerc, 1);
       await pause(1500);
       const g0 = await ctx.hp(guerrier), c0 = await ctx.hp(clerc);
