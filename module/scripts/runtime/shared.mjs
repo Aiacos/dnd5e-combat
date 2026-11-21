@@ -29,18 +29,19 @@ export const NOTICE_QUERY = `${MODULE_ID}.notice`;
  * est appelé sur ce client seulement (`Hooks.call`) : un module voisin qui joue lui-même son animation et son son rend `false`, et le
  * moteur se tait. Les refus et les invites restent locaux (`all` faux).
  */
-export function notice(token, text, kind="refused", { all=false, action=null, outcome=null, sound=undefined }={}) {
+export function notice(token, text, kind="refused", { all=false, gmOnly=false, action=null, outcome=null, sound=undefined }={}) {
   const uuid = token?.uuid ?? token?.document?.uuid ?? token ?? null;
   if ( !uuid ) return;
   Hooks.callAll(NOTICE_HOOK, { token: uuid, text: noticeText(text, loc), kind });
   if ( !all ) return;
+  // Issue #178 : `gmOnly` — le texte part chez les MJ seulement, et le son reste sur ce poste.
   for ( const user of game.users ) {
-    if ( !user.active || user.isSelf ) continue;
+    if ( !user.active || user.isSelf || (gmOnly && !user.isGM) ) continue;
     user.query(NOTICE_QUERY, { token: uuid, text, kind }, { timeout: 5000 }).catch(() => {});
   }
   const src = (sound === undefined) ? actionSound(action, outcome) : sound;
   const allowed = Hooks.call(FEEDBACK_HOOK, { token: uuid, action, outcome, kind, text: noticeText(text, loc), sound: src });
-  if ( (allowed !== false) && src ) foundry.audio.AudioHelper.play({ src, volume: 0.8, loop: false }, true)?.catch?.(() => {});
+  if ( (allowed !== false) && src ) foundry.audio.AudioHelper.play({ src, volume: 0.8, loop: false }, !gmOnly)?.catch?.(() => {});
 }
 
 /** §252 : chez un autre client, l'avis qu'une action de la table lui fait voir (requête `NOTICE_QUERY`). */

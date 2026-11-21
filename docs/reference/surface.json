@@ -542,6 +542,7 @@
     "masteryRules",
     "nonLethalMenu",
     "npcSaveChoice",
+    "overrideVisibility",
     "passivePerception",
     "pathPreview",
     "perfWarnMs",

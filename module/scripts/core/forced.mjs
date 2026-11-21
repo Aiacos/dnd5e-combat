@@ -67,3 +67,30 @@ export function refusalOutcome(mode, { isGM=false }={}) {
 export function askKey(title, lines=[]) {
   return [String(title ?? ""), ...(lines ?? []).map(String)].join("\n");
 }
+
+/**
+ * Issue #178 : qui voit qu'une règle a été passée outre (le texte flottant « Forcé », le bandeau de la carte). Réglage de monde
+ * `overrideVisibility` : `all` (toute la table, le défaut, comme avant), `hideGM` (celles du MJ restent discrètes, celles des joueurs
+ * publiques), `gmOnly` (aucune n'est montrée aux joueurs). Le MJ voit toujours tout, et celui qui a forcé voit sa propre marque.
+ */
+export const OVERRIDE_VISIBILITY_MODES = Object.freeze(["all", "hideGM", "gmOnly"]);
+
+/**
+ * Issue #178 : la marque d'une dérogation est-elle publique (vue de toute la table) ?
+ * @param {string} mode  `overrideVisibility` ; une valeur inconnue vaut `all`.
+ * @param {{byGM?: boolean}} [who]  `byGM` : c'est un MJ qui a forcé.
+ */
+export function overridePublic(mode, { byGM=false }={}) {
+  if ( mode === "gmOnly" ) return false;
+  if ( mode === "hideGM" ) return !byGM;
+  return true;
+}
+
+/**
+ * Issue #178 : ce client montre-t-il la marque ? Un MJ et celui qui a forcé, toujours ; les autres selon `overridePublic`.
+ * @param {string} mode
+ * @param {{byGM?: boolean, viewerIsGM?: boolean, viewerIsAuthor?: boolean}} [who]
+ */
+export function overrideShown(mode, { byGM=false, viewerIsGM=false, viewerIsAuthor=false }={}) {
+  return viewerIsGM || viewerIsAuthor || overridePublic(mode, { byGM });
+}

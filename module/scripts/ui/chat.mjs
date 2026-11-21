@@ -4,6 +4,7 @@ import { current, pendingChoice, settled, STEPS } from "../core/action.mjs";
 import { undo, CHAT_LIGHT_SETTING } from "../runtime/engine.mjs";
 import { route } from "../runtime/router.mjs";
 import { loc } from "../runtime/shared.mjs";
+import { overriddenShownOn } from "../runtime/forced.mjs";
 import { typesLabel } from "../adapter/eligibility.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
 import { convertLength } from "../core/units.mjs";
@@ -375,7 +376,8 @@ export function bonusLines(bonuses) {
 
 /**
  * §408 : la carte d'une action dont une règle a été passée outre — un bandeau « Règle passée outre » en tête, les raisons en infobulle et
- * en dessous, visible de toute la table (règle de l'utilisateur : le joueur décide, la table est prévenue).
+ * en dessous, visible de toute la table (règle de l'utilisateur : le joueur décide, la table est prévenue) — sauf réglage
+ * `overrideVisibility` (issue #178) : alors le MJ et celui qui a forcé seulement.
  */
 function renderOverridden(html, reasons) {
   const content = html.querySelector(".message-content");
@@ -553,7 +555,7 @@ export function registerChat() {
   // notre bloc. `dnd5e.renderChatMessage` est émis après (documents/chat-message.mjs:168).
   route("dnd5e.renderChatMessage", (message, html) => {
     const overridden = message.getFlag(MODULE_ID, "overridden");
-    if ( overridden?.length ) renderOverridden(html, overridden);
+    if ( overridden?.length && overriddenShownOn(message) ) renderOverridden(html, overridden);   // issue #178
     if ( message.isContentVisible !== false ) renderD20(message, html);   // un jet secret garde ses dés
     const modifiers = message.getFlag(MODULE_ID, "modifiers");
     if ( modifiers ) renderModifiers(html, modifiers, (message.type === "attack") ? message.rolls?.[0] : null);

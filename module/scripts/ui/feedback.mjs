@@ -803,7 +803,7 @@ export function registerFeedback() {
     if ( n.kind === "heroic" ) heroicBurst(n.token).catch(() => {});
     // Issue #32 : le succès à un prix accepté — le même éclat, ambré, avec la balance.
     if ( n.kind === "atCost" ) heroicBurst(n.token, { color: 0xe0a050, icon: "icons/svg/aura.svg" }).catch(() => {});
-    if ( n.kind === "forced" ) heroicBurst(n.token, { color: 0xff9a3c, icon: "icons/svg/cancel.svg" }).catch(() => {});   // §408
+    // §408 : « Forcé » n'a plus d'éclat (issue #178, demande de l'utilisateur 2026-11-21 : trop présent) — le texte seul, discret.
   }, { label: "visual feedback: engine notice" });
   // §252 : l'avis d'une action d'un autre client (runtime/shared.mjs, `notice(…, { all: true })`), dessiné ici.
   CONFIG.queries[NOTICE_QUERY] = receiveNotice;

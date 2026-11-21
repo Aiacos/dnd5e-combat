@@ -2,8 +2,10 @@
  * §408 (issue #44, lot 1) : une règle passée outre. Règle de l'utilisateur (2026-11-11) : tout refus du moteur ouvre une fenêtre qui dit
  * pourquoi, propose de faire quand même, et c'est **le joueur** qui décide ; s'il force, le MJ et la table sont **prévenus**, rien de plus
  * (aucun accord à demander).
+ *  - issue #178 : réglage de monde `overrideVisibility` (core/forced.mjs `overridePublic`) — quand la dérogation n'est pas publique, le
+ *    texte flottant ne part que chez celui qui force et chez les MJ, et le bandeau de la carte n'est montré qu'à eux ;
  *  - le MJ : l'alerte §364 (carte chuchotée aux MJ + bandeau), texte `DND5ECOMBAT.Force.Alerte` — réglage de monde `forcedAlerts` ;
- *  - la table : un texte flottant « Forcé » au-dessus du token, vu et entendu de tous (`notice`, sorte `forced`) ;
+ *  - la table : un texte flottant « Forcé » au-dessus du token, discret, sans son (`notice`, sorte `forced`) ;
  *  - la carte : le drapeau `flags.dnd5e-combat.overridden` (les raisons), posé par l'appelant sur la carte d'utilisation ou de jet et
  *    montré par ui/chat.mjs ;
  *  - hook public `dnd5e-combat.forced` `({ actor, item, reasons, targets, user })`, appelé avant tout : un voisin qui rend `false` prend
@@ -13,7 +15,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { alertGM, gmAlertsOn } from "./gm-alert.mjs";
-import { REFUSAL_MODES, refusalOutcome } from "../core/forced.mjs";
+import { REFUSAL_MODES, refusalOutcome, OVERRIDE_VISIBILITY_MODES, overridePublic, overrideShown } from "../core/forced.mjs";
 import { log, loc, notice } from "./shared.mjs";
 
 /**
@@ -23,6 +25,23 @@ import { log, loc, notice } from "./shared.mjs";
 export const FORCED_HOOK = `${MODULE_ID}.forced`;
 /** Réglage de monde : prévenir le MJ quand un joueur passe outre (la table voit toujours le texte flottant). */
 export const FORCED_ALERTS_SETTING = "forcedAlerts";
+
+/** Issue #178 : réglage de monde « Dérogations visibles par » — toute la table, pas celles du MJ, MJ seulement. */
+export const OVERRIDE_VISIBILITY_SETTING = "overrideVisibility";
+
+function visibility() {
+  try { return game.settings.get(MODULE_ID, OVERRIDE_VISIBILITY_SETTING) ?? "all"; } catch { return "all"; }
+}
+
+/**
+ * Issue #178 : ce client montre-t-il le bandeau « Règle passée outre » de cette carte ? Qui a forcé : l'auteur de la carte (elle est créée
+ * sur le poste de celui qui agit).
+ * @param {ChatMessage} message
+ */
+export function overriddenShownOn(message) {
+  return overrideShown(visibility(), { byGM: message?.author?.isGM === true, viewerIsGM: game.user?.isGM === true,
+    viewerIsAuthor: !!message?.author && (message.author.id === game.user?.id) });
+}
 
 /** §417 : réglage de monde « Action impossible » — fenêtre, simple avertissement, refus strict pour les joueurs, aucun contrôle. */
 export const REFUSAL_SETTING = "refusalMode";
@@ -60,7 +79,10 @@ export async function reportForced({ actor, item=null, reasons, targets=[], toke
   if ( Hooks.call(FORCED_HOOK, { actor, item, reasons, targets, user: game.user }) === false ) return false;
   log(`rule overridden by ${game.user.name}: ${itemName || "?"} (${actor?.name ?? "?"}) — ${reasons.join(" | ")}`);
   const where = tokenOf(actor, token);
-  if ( where ) notice(where, { key: "Retour.Force" }, "forced", { all: true, action: "overridden", outcome: "success" });
+  // Issue #178 : publique, toute la table la voit ; sinon celui qui force et les MJ seulement. Un texte discret, sans son ni éclat
+  // (demande de l'utilisateur, 2026-11-21 : le retour sur le token était trop présent).
+  const open = overridePublic(visibility(), { byGM: game.user?.isGM === true });
+  if ( where ) notice(where, { key: "Retour.Force" }, "forced", { all: true, gmOnly: !open, action: "overridden", outcome: "success", sound: null });
   if ( forcedAlertsOn() && gmAlertsOn() ) {
     // §412 : un geste sans objet (un déplacement, une escalade) — « … pour {actor} : {reasons} », sans « — » vide.
     const key = itemName ? (targets.length ? "Force.AlerteCibles" : "Force.Alerte") : "Force.AlerteSansObjet";
@@ -80,6 +102,10 @@ export function registerForced() {
   game.settings.register(MODULE_ID, REFUSAL_SETTING, { scope: "world", config: true, type: String, default: "level",
     name: `DND5ECOMBAT.Reglage.${REFUSAL_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${REFUSAL_SETTING}.Aide`,
     choices: Object.fromEntries(REFUSAL_MODES.map(m => [m, `DND5ECOMBAT.Reglage.${REFUSAL_SETTING}.${m}`])) });
+  game.settings.register(MODULE_ID, OVERRIDE_VISIBILITY_SETTING, { scope: "world", config: true, type: String, default: "all",
+    name: `DND5ECOMBAT.Reglage.${OVERRIDE_VISIBILITY_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${OVERRIDE_VISIBILITY_SETTING}.Aide`,
+    choices: Object.fromEntries(OVERRIDE_VISIBILITY_MODES.map(m => [m, `DND5ECOMBAT.Reglage.${OVERRIDE_VISIBILITY_SETTING}.${m}`])),
+    onChange: () => ui.chat?.render?.() });
   game.settings.register(MODULE_ID, FORCED_ALERTS_SETTING, { scope: "world", config: true, type: Boolean, default: true,
     name: `DND5ECOMBAT.Reglage.${FORCED_ALERTS_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${FORCED_ALERTS_SETTING}.Aide` });
 }

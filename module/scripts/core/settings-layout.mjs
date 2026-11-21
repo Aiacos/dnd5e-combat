@@ -79,12 +79,12 @@ export const SETTINGS_TABS = Object.freeze([
       g("sheet", "fa-solid fa-id-card", ["closeSheetOnUse"])
     ] },
   { id: "chat", icon: "fa-solid fa-comments",
-    keys: ["chatLight", "chatCompact", "chatRows", "chatPurgeMax", "chatPurgeKeep", "syncAnimations", "animationWait", "gmAlerts", "gmAlertBanner", "gmAlertSeconds", "forcedAlerts"],
+    keys: ["chatLight", "chatCompact", "chatRows", "chatPurgeMax", "chatPurgeKeep", "syncAnimations", "animationWait", "gmAlerts", "gmAlertBanner", "gmAlertSeconds", "forcedAlerts", "overrideVisibility"],
     groups: [
       g("cards", "fa-solid fa-message", ["chatLight", "chatCompact", "chatRows"]),
       g("purge", "fa-solid fa-broom", ["chatPurgeMax", "chatPurgeKeep"]),
       g("animations", "fa-solid fa-wand-sparkles", ["syncAnimations", "animationWait"], { sub: { animationWait: offIf("syncAnimations", false) } }),
-      g("gmAlerts", "fa-solid fa-triangle-exclamation", ["gmAlerts", "gmAlertBanner", "gmAlertSeconds", "forcedAlerts"],
+      g("gmAlerts", "fa-solid fa-triangle-exclamation", ["gmAlerts", "gmAlertBanner", "gmAlertSeconds", "forcedAlerts", "overrideVisibility"],
         { sub: { gmAlertBanner: offIf("gmAlerts", false), gmAlertSeconds: offIf("gmAlertBanner", false), forcedAlerts: offIf("gmAlerts", false) } })
     ] },
   // §228 : les textes qui défilent sur les tokens — rythme, puis ce qui s'affiche.

@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-392 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+393 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -237,6 +237,7 @@ la sélection sans rien jouer.
 | `refus-clics` | Arène des refus | §411 | attaque, menu, zone hors de portée, téléportation |
 | `regeneration-declaree` |  | §18.13 | montant, types de dégâts déclarés, arrêtée au soleil |
 | `regeneration` |  | §18.13 | soin au début du tour, coupée par le feu, troll à 0 PV |
+| `regle-forcee-discrete` | Arène des refus |  | dérogations visibles par toute la table, pas celles du MJ, MJ seulement (issue #178) |
 | `regle-forcee` | Arène des refus | §408 | fenêtre de légalité, alerte au MJ, carte marquée |
 | `releve-sorts-1` |  | §157 | Flou, Assassin imaginaire, Duel forcé, État cadavérique, châtiments, Repli expéditif |
 | `releve-sorts-2` |  | §157 | Melf, Fracassement, Héroïsme, Sommeil, Hâte, Bouclier |

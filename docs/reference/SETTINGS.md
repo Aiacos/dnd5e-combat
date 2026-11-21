@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-133 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
+134 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
 `client` = ce poste, `user` = ce joueur. **Onglet** : celui de la fenêtre de réglages DAS (`core/settings-layout.mjs`) ; sans onglet,
 le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêtre dédiée). Le libellé est celui de `lang/fr.json`.
 
@@ -123,6 +123,7 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 | `gmAlertBanner` | Alertes MJ : bandeau | client | Boolean | `true` |  | `ui/gm-alert.mjs` |
 | `gmAlerts` | Alertes MJ | world | Boolean | `true` |  | `runtime/gm-alert.mjs` |
 | `gmAlertSeconds` | Alertes MJ : secondes à l'écran | client | Number | `15` |  | `ui/gm-alert.mjs` |
+| `overrideVisibility` | Dérogations visibles par | world | String | `"all"` | all, hideGM, gmOnly | `runtime/forced.mjs` |
 | `syncAnimations` | Synchroniser avec les animations | world | Boolean | `true` |  | `runtime/animations.mjs` |
 
 ## Onglet `float`
