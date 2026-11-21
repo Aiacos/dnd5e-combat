@@ -14,12 +14,16 @@
  *   4. le sort part au moins à son niveau ;
  *   5. pas de créature du SRD 2014 quand le Monster Manual 2024 ou le SRD 2024 l'a (§386) ;
  *   6. aucune erreur dans la console du MJ.
+ * Un rituel préparé, des emplacements restants (Disque flottant, Serviteur invisible, Destrier fantôme) : le moteur demande « en rituel
+ * ou avec un emplacement » (§139) ; la barre et la fiche répondent « avec un emplacement » (le sort part à son niveau), sans emplacement
+ * il part d'office en rituel.
  * Sautés (dit dans le rapport) : invocations « par FP » (dnd5e ouvre le navigateur de compendium : Appel de familier), Lumière et
  * Flamme éternelle (leur propre fenêtre, §16.35), invocations qui visent un objet ou une créature (Animation des objets, Doigt de mort). Ne se joue que nommé : `node tools/scenario.mjs balayage-invocations`. Variables :
  * `SORTS=summon-celestial,create-undead` (identifiants), `CHEMINS=barre,fiche` (par défaut les trois).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 import { CONTENT } from "../../module/scripts/content/index.mjs";
+import { readFileSync } from "node:fs";
 
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const only = (process.env.SORTS ?? "").split(",").filter(Boolean);
@@ -31,6 +35,8 @@ const PATHS = (process.env.CHEMINS ?? (process.env.OBJETS ? "fiche" : "barre,fic
 const FULL = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`spell${i + 1}`, { value: 9, override: 9 }]));
 const EMPTY = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`spell${i + 1}`, { value: 0, override: 0 }]));
 const OWN_WINDOW = new Set(["light", "continual-flame"]);
+// §139 : la question du rituel se reconnaît à son bouton « avec un emplacement », dans la langue du client.
+const WITH_SLOT = new Set(["en", "fr", "it", "pt-BR"].map(l => JSON.parse(readFileSync(new URL(`../../module/lang/${l}.json`, import.meta.url), "utf-8"))["DND5ECOMBAT.Rituel.AvecEmplacement"]).filter(Boolean));
 
 export default {
   name: process.env.OBJETS ? "balayage des invocations des objets magiques (DMG, SRD 2024)" : "balayage des invocations par les vrais chemins (barre, fiche, sans emplacement)",
@@ -112,6 +118,7 @@ export default {
         let wanted = null;
         let sawChoice = false;
         let captured = null;
+        let ritualAsked = false;
         for ( let i = 0; i < 24; i++ ) {
           captured = await ctx.engine("summonCaptured", {});
           if ( captured?.tokens ) break;
@@ -134,6 +141,9 @@ export default {
               sawChoice = sawChoice || ((select.options ?? []).length > 1);
               chose = (select.options ?? []).at(-1)?.value ?? null;
               await ctx.call("answer-dialog", { id: w.id, fields: { "summons.profile": chose }, button: "use" }).catch(() => {});
+            } else if ( (w.buttons ?? []).some(b => WITH_SLOT.has(b.label)) ) {
+              ritualAsked = true;
+              await ctx.call("answer-dialog", { id: w.id, button: w.buttons.find(b => WITH_SLOT.has(b.label)).action }).catch(() => {});
             } else if ( (w.buttons ?? []).some(b => ["yes", "go"].includes(b.action)) ) {
               await ctx.call("answer-dialog", { id: w.id, button: (w.buttons ?? []).some(b => b.action === "go") ? "go" : "yes" }).catch(() => {});
             } else if ( /UsageDialog/.test(w.className ?? "") ) {
@@ -149,6 +159,7 @@ export default {
         if ( chose && captured?.summoned?.profile && (captured.summoned.profile !== chose) ) problems.push(`forme invoquée ${captured.summoned.name || captured.summoned.profile}, pas celle choisie`);
         if ( !tokensOut.length ) problems.push("aucune créature posée");
         // §392 : la créature réellement invoquée existe (lien du DMG réparé) — dnd5e l'a posée sous ce nom.
+        if ( ritualAsked ) ctx.log(`${label} : rituel préparé — « avec un emplacement » choisi`);
         if ( tokensOut.length ) ctx.log(`${label} : ${tokensOut.map(t => t.name).join(", ")} (${String(captured?.summoned?.uuid ?? "").split(".").slice(1, 3).join(".")})`);
         const expected = Number(captured?.summoned?.count) || null;
         if ( wanted && expected && (expected !== wanted) ) problems.push(`${wanted} créature(s) choisie(s), dnd5e en compte ${expected}`);
