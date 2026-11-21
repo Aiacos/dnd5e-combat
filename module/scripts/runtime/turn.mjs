@@ -12,7 +12,8 @@ import { promptWait, htmlText } from "../adapter/dialogs.mjs";
 import { basicActionOf, basicActionOfActivity, basicChoiceOf } from "../adapter/basics.mjs";
 import { contentOf, identifierOf } from "../adapter/content.mjs";
 import { originItemOf } from "../adapter/facts.mjs";
-import { isRaging } from "../adapter/rage.mjs";
+import { isRaging, rageOptionsTaken } from "../adapter/rage.mjs";
+import { secondRageOption } from "../core/limits.mjs";
 import { enemiesSeeing } from "../adapter/hide.mjs";
 import { stealthRules } from "../adapter/stealth.mjs";
 import { verbalBlockOf, charmersOf, hostileToCharmer, sightRequired } from "../adapter/conditions.mjs";
@@ -270,6 +271,10 @@ export function useIssues(activity, { cost: forcedCost=null, attackMode=null, re
   // C12-b : « vous ne pouvez pas entrer en Rage si vous portez une armure lourde » (la fin à l'enfilage : runtime/endings.mjs).
   const heavyRage = !!contentOf(activity.item).entry?.rage
     && (activity.actor?.items ?? []).some(i => (i.type === "equipment") && i.system?.equipped && (i.system?.type?.value === "heavy"));
+  // §509 (Core#98) : Rage du prédateur — une option par Rage ; une seconde pendant la même Rage est un souci (forçable : la fenêtre de légalité).
+  const optionRule = contentOf(activity.item).entry?.duringRage;
+  const optionsTaken = optionRule?.oneOption ? rageOptionsTaken(activity.item) : [];
+  const secondOption = secondRageOption({ oneOption: optionRule?.oneOption, raging: !!optionRule?.oneOption && isRaging(activity.actor), taken: optionsTaken.length });
   // §214 : armure portée sans formation — pas de sorts.
   const unarmored = isSpellCast(activity.item) ? untrainedArmor(activity.actor) : null;
   // §367 : Tempête de vengeance — pas d'attaque à distance avec une arme depuis la zone ; Marche dans l'ombre — pas depuis un lieu éclairé.
@@ -292,6 +297,7 @@ export function useIssues(activity, { cost: forcedCost=null, attackMode=null, re
     ...missing.keys.map(k => loc(`Souci.${k}`, { item: activity.item.name })),
     ...(raging ? [loc("Souci.rage")] : []),
     ...(heavyRage ? [loc("Souci.rageHeavyArmor")] : []),
+    ...(secondOption ? [loc("Souci.rageOneOption", { item: activity.item.name, effect: optionsTaken.map(e => e.name).join(", ") })] : []),
     ...(familiarAttack ? [loc("Souci.familiarAttack")] : []),
     ...(uncommanded ? [loc("Souci.notCommanded")] : []),
     ...(mountUncommanded ? [loc("Souci.mountNotCommanded")] : []),

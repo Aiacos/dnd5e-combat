@@ -16,7 +16,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { route } from "../runtime/router.mjs";
 import { loc, esc, log } from "../runtime/shared.mjs";
 import { judgeMasteries, masteryRulesOn } from "../runtime/mastery-choices.mjs";
-import { masterySlots } from "../core/mastery.mjs";
+import { masterySlots, allowanceLeft } from "../core/mastery.mjs";
 import { MASTERY_FEATURES, chosenMasteries, masterySourcesOf, restAllowanceOf, baseWeapons, proficientWith } from "../adapter/mastery.mjs";
 import { identifierOf } from "../adapter/content.mjs";
 import { playerOwnerOf } from "../adapter/contest.mjs";
@@ -74,7 +74,11 @@ const MasteryApp = () => MasteryClass ??= class MasteryApp extends foundry.appli
       ? sources.map(s => esc(loc(s.melee ? "Bottes.SourceMelee" : "Bottes.Source", { label: s.label, count: s.count }))).join(" · ")
       : esc(loc("Bottes.AucuneSource"));
     const notes = [];
-    if ( rules && allowance ) notes.push(`<p class="das-mastery__rest"><i class="fa-solid fa-campground"></i> ${esc(loc("Bottes.Repos", { count: allowance }))}</p>`);
+    // §510 : les changements de la sélection en cours sont décomptés ; plus rien à changer, plus de ligne.
+    const left = allowanceLeft(allowance, chosenMasteries(actor), [...this.selection]);
+    if ( rules && allowance ) {
+      if ( left ) notes.push(`<p class="das-mastery__rest"><i class="fa-solid fa-campground"></i> ${esc(loc("Bottes.Repos", { count: left }))}</p>`);
+    }
     else if ( rules && !game.user.isGM ) notes.push(`<p class="das-muted"><i class="fa-solid fa-campground"></i> ${esc(loc("Bottes.HorsRepos"))}</p>`);
     if ( verdict.ok && (chosen < slots) ) notes.push(`<p class="das-muted">${esc(loc("Bottes.Reste", { count: slots - chosen }))}</p>`);
     if ( !verdict.ok ) notes.push(`<p class="das-mastery__ko"><i class="fa-solid fa-triangle-exclamation"></i> ${esc(loc(`Bottes.Refus.${verdict.reason}`,

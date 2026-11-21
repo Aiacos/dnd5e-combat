@@ -36,10 +36,10 @@ export function validateExtras(entry, at, errors) {
   if ( "duringRage" in entry ) {
     const d = entry.duringRage;
     const ids = k => !(k in d) || (Array.isArray(d[k]) && d[k].length && d[k].every(isId));
-    if ( !isObject(d) || !ids("enable") || !ids("post") || !ids("disable") || (("copiesEnd" in d) && (d.copiesEnd !== true))
+    if ( !isObject(d) || !ids("enable") || !ids("post") || !ids("disable") || (("copiesEnd" in d) && (d.copiesEnd !== true)) || (("oneOption" in d) && (d.oneOption !== true))
       || (("cures" in d) && !(Array.isArray(d.cures) && d.cures.every(s => typeof s === "string"))) || (("onStart" in d) && !isId(d.onStart))
-      || !Object.keys(d).every(k => ["enable", "post", "disable", "copiesEnd", "cures", "onStart"].includes(k)) ) {
-      errors.push(`${at}duringRage: { enable?, post?, disable?, copiesEnd?: true, cures?, onStart? }`);
+      || !Object.keys(d).every(k => ["enable", "post", "disable", "copiesEnd", "oneOption", "cures", "onStart"].includes(k)) ) {
+      errors.push(`${at}duringRage: { enable?, post?, disable?, copiesEnd?: true, oneOption?: true, cures?, onStart? }`);
     }
   }
   // §298 : un sort lancé à la place d'attaques de l'action Attaquer (Magie de guerre).

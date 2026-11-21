@@ -6,7 +6,9 @@
  *  - Guerrier 1 → 3 places (et non 6), une seule botte changée au Repos long, étiquette de la classe ; Guerrier 4 → 4 ;
  *  - Barbare 1 → 2 places, corps à corps seulement ;
  *  - un don Maître d'armes rattaché à la classe (palier de don) reste compté en entier, sans la règle du Guerrier ;
- *  - une aptitude sans classe d'origine ne plante pas et compte tous ses paliers.
+ *  - une aptitude sans classe d'origine ne plante pas et compte tous ses paliers ;
+ *  - §510 (Discord, Fanarie) : fenêtre des bottes du Guerrier 4 après un Repos long (une botte à changer) — la ligne verte l'annonce ;
+ *    une botte remplacée dans la sélection, la ligne disparaît (le changement permis est déjà pris).
  * Acteurs retirés.
  */
 const MODULE_ID = "dnd5e-combat";
@@ -49,6 +51,17 @@ export default {
     await ctx.call("upsert-actor-item", { actorId: fighter, itemData: { "system.levels": 4 }, match: { path: "_id", value: "bottesFighter001" } });
     m = await masteries(fighter);
     ctx.expect(m.slots === 4, `Guerrier 4 : 4 places (vu ${m.slots})`);
+
+    // §510 : la ligne verte du Repos long décompte le changement en cours.
+    const chosen = ["greatsword", "flail", "javelin", "longsword"];
+    await ctx.call("update-actor", { actorId: fighter, actorData: { "system.traits.weaponProf.mastery.value": chosen,
+      [`flags.${MODULE_ID}.masteryRest`]: { allowance: 1 } } });
+    m = await masteries(fighter);
+    ctx.expect((m.allowance === 1) && (m.chosen.length === 4), `Guerrier 4 : 4 bottes choisies, une à changer (vu ${m.chosen.length}, ${m.allowance})`);
+    const before = await api("masteryWindow", { actorId: fighter });
+    ctx.expect(/1/.test(before.rest ?? ""), `fenêtre : la ligne verte annonce une botte à changer (« ${before.rest} »)`);
+    const after = await api("masteryWindow", { actorId: fighter, keys: ["greatsword", "flail", "javelin", "shortsword"] });
+    ctx.expect(after.rest === null, `fenêtre : une botte remplacée, plus de ligne verte (« ${after.rest} »)`);
 
     // Barbare niveau 1.
     const barbarian = await create("Bottes (Barbare)", [classItem("bottesBarbarian1", "Barbarian", "barbarian", 1),

@@ -4,7 +4,8 @@
  * pré-tiré) garde ses propres items intacts.
  * Chaque partie prête ses items et remet tout.
  *  - Rage aveugle : le Héros Effrayé entre en Rage → l'état cesse, l'immunité s'active ; la Rage finie, l'immunité se désactive ;
- *  - Rage du prédateur : posée pendant la Rage, la copie de l'Ours tombe avec elle ;
+ *  - Rage du prédateur : posée pendant la Rage, la copie de l'Ours tombe avec elle ; §509 (Core#98) : une option prise, une seconde
+ *    pendant la même Rage est un souci (forçable) ; avant l'option et après la Rage, aucun ;
  *  - Vitalité de l'Arbre : l'entrée en Rage donne des PV temporaires ;
  *  - Renvoi des morts-vivants : le Mort-vivant Renvoyé ne l'est plus quand le Lanceur devient Neutralisé ;
  *  - Vol draconique : l'Allié perd son vol quand il devient Neutralisé.
@@ -119,13 +120,19 @@ export default {
     await part("Rage du prédateur", async () => {
       const item = await lend(hero, `${PHB}.classes.Item.phbbrbRageOfTheW`);
       await pause(1500);
+      // §509 (Core#98) : le souci « une seule option par Rage », lu par la légalité (api.mcp.issues).
+      const second = async () => (await ctx.engine("issues", { tokenId: hero.id, itemId: item })).filter(l => /One option per Rage|Une seule option par Rage/i.test(l));
       await enrage();
+      ctx.expect(!(await second()).length, "en Rage, avant toute option : pas de souci d'option");
       await ctx.use({ tokenId: hero.id, itemId: item, activityId: "vbZbZ5Hcu5SfsYnd", targetTokenIds: [hero.id] });
       await pause(2500);
       const bearCopies = async () => ((await actorOf(hero)).effects ?? []).filter(e => /Bear|Ours/i.test(e.name ?? "") && !e.disabled).length;
       ctx.expect(await until(async () => (await bearCopies()) >= 1), "en Rage, l'Ours choisi : sa copie est sur le Héros");
+      const lines = await second();
+      ctx.expect(lines.length === 1, `même Rage, une seconde option : le souci est relevé (${lines.join(" | ") || "aucun"})`);
       await calm();
       ctx.expect(await until(async () => (await bearCopies()) === 0), "la Rage finie, la copie de l'Ours tombe");
+      ctx.expect(!(await second()).length, "la Rage finie : plus de souci d'option");
     });
 
     await part("Vitalité de l'Arbre", async () => {

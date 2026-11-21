@@ -114,6 +114,12 @@ export const restChanges = sources => (sources ?? []).reduce((n, s) => n + s.cha
 export const removedCount = (before, after) => (before ?? []).filter(k => !(after ?? []).includes(k)).length;
 
 /**
+ * §510 (Discord, Fanarie) : ce que le Repos long laisse encore changer une fois le choix en cours compté — le drapeau (`allowance`,
+ * déjà diminué des changements enregistrés) moins les bottes que la sélection retire. Jamais négatif.
+ */
+export const allowanceLeft = (allowance, before, after) => Math.max(0, (Math.max(0, Number(allowance) || 0)) - removedCount(before, after));
+
+/**
  * Le choix `after` respecte-t-il les règles ? Raisons, dans l'ordre :
  *  - `notProficient` : une arme que l'acteur ne maîtrise pas (« with which you have proficiency ») ;
  *  - `tooMany` : plus de bottes que ses sources n'en donnent ;

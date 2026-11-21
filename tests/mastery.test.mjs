@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { masteryEffect, grazeDamage, toppleDC, cleaveModifier, markExpires, MASTERIES, masterySources, masterySlots, restChanges, removedCount,
-  masteryVerdict } from "../module/scripts/core/mastery.mjs";
+  masteryVerdict, allowanceLeft } from "../module/scripts/core/mastery.mjs";
 import { RESOLUTION_BASE } from "./helpers.mjs";
 
 const hit = { hit: true, damaged: true, melee: true, size: "med", down: false };
@@ -211,5 +211,18 @@ describe("§222 bottes choisies : places, changements au Repos long", () => {
     expect(masteryVerdict({ before, after: ["greatsword", "longbow", "shortbow"], weapons, sources, allowance: 1 }).reason).toBe("changes");
     // Ajouter dans une place libre, toujours permis.
     expect(masteryVerdict({ before, after: [...before, "longbow"], weapons, sources }).ok).toBe(true);
+  });
+});
+
+describe("§510 fenêtre des bottes : ce que le Repos long laisse encore changer (Discord, Fanarie)", () => {
+  it("le choix en cours est décompté du droit restant", () => {
+    expect(allowanceLeft(1, ["greatsword", "flail", "javelin"], ["greatsword", "flail", "javelin"])).toBe(1);
+    expect(allowanceLeft(1, ["greatsword", "flail", "javelin"], ["greatsword", "flail", "longbow"])).toBe(0);
+    expect(allowanceLeft(3, ["a", "b", "c"], ["a", "d", "e"])).toBe(1);
+  });
+  it("ajouter une botte sur une place libre ne dépense rien ; jamais négatif ; droit absent = 0", () => {
+    expect(allowanceLeft(1, ["a"], ["a", "b"])).toBe(1);
+    expect(allowanceLeft(1, ["a", "b"], [])).toBe(0);
+    expect(allowanceLeft(undefined, ["a"], ["b"])).toBe(0);
   });
 });

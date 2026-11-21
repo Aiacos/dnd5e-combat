@@ -326,9 +326,11 @@
  *                                               d'abord, sinon le soin est plafonné aux PV max d'avant)
  *     zoneBound?: true                          §300 : les effets de l'item ne tiennent que dans une de ses zones (Esprits gardiens : la
  *                                               Vitesse divisée par deux tombe à la sortie de l'émanation ; runtime/areas.mjs)
- *     duringRage?: { enable?, post?, disable?, copiesEnd?, cures?, onStart? }  §299 : effets de l'item tenus par la Rage du porteur —
+ *     duringRage?: { enable?, post?, disable?, copiesEnd?, oneOption?, cures?, onStart? }  §299 : effets de l'item tenus par la Rage du porteur —
  *                                               activés / posés à l'entrée, retirés à la fin, états guéris, activité jouée à l'entrée
- *                                               (Rage aveugle, Rage du prédateur, Savoir primal, Vitalité de l'Arbre) — runtime/barbarian.mjs
+ *                                               (Rage aveugle, Rage du prédateur, Savoir primal, Vitalité de l'Arbre) — runtime/barbarian.mjs ;
+ *                                               `oneOption` (Core#98) : une seule option de l'item par Rage, une seconde est un souci
+ *                                               forçable (runtime/turn.mjs `useIssues`, core/limits.mjs `secondRageOption`)
  *     spellsInAttack?: { maxLevel, class?, attacks? }  §298 : un sort d'une action, de niveau `maxLevel` au plus (et de cette classe),
  *                                               se lance à la place de `attacks` attaques (1 par défaut) de l'action Attaquer (Magie
  *                                               de guerre, Attaque supplémentaire de la Vaillance, Magie de guerre améliorée : 2)

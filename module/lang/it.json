@@ -1233,6 +1233,7 @@
   "DND5ECOMBAT.Monture.Etat.dead": "Morto",
   "DND5ECOMBAT.Monture.Etat.zeroHp": "0 punti ferita",
   "DND5ECOMBAT.Souci.rageHeavyArmor": "Non puoi entrare in Ira se indossi un'armatura pesante.",
+  "DND5ECOMBAT.Souci.rageOneOption": "Una sola opzione per Ira: {item} conferisce già {effect}. L'opzione si sceglie quando entri in Ira.",
   "DND5ECOMBAT.Prisme.1": "Rosso (fuoco)",
   "DND5ECOMBAT.Prisme.2": "Arancione (acido)",
   "DND5ECOMBAT.Prisme.3": "Giallo (fulmine)",

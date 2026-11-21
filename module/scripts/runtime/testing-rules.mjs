@@ -587,6 +587,22 @@ export async function masteries({ actorId, keys=null }) {
     verdict: keys ? judgeMasteries(actor, keys) : null };
 }
 
+/**
+ * §510 : la fenêtre des bottes de l'acteur, ouverte sur ce client (MJ) par l'API publique (`api.mastery.open`), le choix en cours
+ * remplacé par `keys` s'il est donné (rien n'est enregistré) → `{ rest }` : le texte de la ligne verte du Repos long, ou null. Refermée.
+ */
+export async function masteryWindow({ actorId, keys=null }) {
+  gmOnly();
+  const actor = game.actors.get(actorId);
+  if ( !actor ) throw new Error(`no actor ${actorId}`);
+  const app = await game.modules.get(MODULE_ID).api.mastery.open(actor);
+  try {
+    if ( keys ) { app.selection = new Set(keys); await app.render(); }
+    await sleep(300);
+    return { rest: app.element?.querySelector(".das-mastery__rest")?.textContent?.trim() ?? null };
+  } finally { await app.close(); }
+}
+
 /** §225, lot 3 : les murs qui arrêtent le voyage éthéré, vus du token, et si un pas de son centre à `point` en franchit un. */
 export function etherealWalls({ tokenId, point }) {
   const token = viewedToken({ tokenId });

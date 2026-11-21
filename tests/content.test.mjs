@@ -1035,7 +1035,7 @@ describe("§298 : repasse, lot C3 (coût d'action et budget du tour)", async () 
 describe("§299 : repasse, lot C4 (aptitudes tenues par la Rage, fins sur Neutralisé)", () => {
   it("les déclarations du lot", () => {
     expect(CONTENT["mindless-rage"].duringRage).toEqual({ enable: ["Y9LOXK6Q4vot2cxi"], cures: ["charmed", "frightened"] });
-    expect(CONTENT["rage-of-the-wilds"].duringRage).toEqual({ copiesEnd: true });
+    expect(CONTENT["rage-of-the-wilds"].duringRage).toEqual({ copiesEnd: true, oneOption: true });
     expect(CONTENT["primal-knowledge"].duringRage.post).toEqual(["ufbJRsGGW3REMmJm"]);
     expect(CONTENT["vitality-of-the-tree"].duringRage.onStart).toBe("HA6qXLiCmMuEq6r1");
     for ( const id of ["channel-divinity", "channel-divinity-cleric", "sear-undead"] ) expect(CONTENT[id].endsWhen.incapacitated).toBe("caster");

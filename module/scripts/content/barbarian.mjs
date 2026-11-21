@@ -91,7 +91,8 @@ export const BARBARIAN = Object.freeze({
   "mindless-rage": { duringRage: { enable: ["Y9LOXK6Q4vot2cxi"], cures: ["charmed", "frightened"] } },
   // Rage du prédateur (Cœur sauvage) : l'option choisie ne vaut que pendant la Rage — les copies que ses activités posent tombent avec elle.
   // (L'effet « Rage of the Bear » de l'item est un effet d'activité : dnd5e 6.0.6 ne le transfère jamais, malgré la donnée active.)
-  "rage-of-the-wilds": { duringRage: { copiesEnd: true } },
+  // Core#98 : « choisissez l'une des options suivantes » en entrant en Rage — une seconde option pendant la même Rage est refusée (forçable).
+  "rage-of-the-wilds": { duringRage: { copiesEnd: true, oneOption: true } },
   // Savoir primal : « en Rage, ces tests se font avec la Force ».
   "primal-knowledge": { duringRage: { post: ["ufbJRsGGW3REMmJm"] } },
   // Vitalité de l'Arbre (Arbre-monde) : « quand vous entrez en Rage, vous gagnez des PV temporaires égaux à votre niveau de Barbare ».

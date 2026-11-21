@@ -2276,6 +2276,7 @@
   "DND5ECOMBAT.Monture.Etat.dead": "Morto",
   "DND5ECOMBAT.Monture.Etat.zeroHp": "0 pontos de vida",
   "DND5ECOMBAT.Souci.rageHeavyArmor": "Você não pode entrar em Fúria enquanto estiver usando armadura Pesada.",
+  "DND5ECOMBAT.Souci.rageOneOption": "Uma opção por Fúria: {item} já concede {effect}. A opção é escolhida ao entrar em Fúria.",
   "DND5ECOMBAT.ReactionChute": "Você está prestes a sofrer {damage} de dano de queda. Usar uma Reação?",
   "DND5ECOMBAT.ReactionAllieChute": "{name} está prestes a sofrer {damage} de dano de queda. Usar uma Reação?",
   "DND5ECOMBAT.Choisir.Aide": "Criaturas que você pode ver a até {radius} {units}: marque as afetadas.",

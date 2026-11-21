@@ -212,6 +212,7 @@
     "mcp.longRest",
     "mcp.makeScroll",
     "mcp.masteries",
+    "mcp.masteryWindow",
     "mcp.menu",
     "mcp.missedOpportunities",
     "mcp.mount",

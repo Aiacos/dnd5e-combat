@@ -44,3 +44,11 @@ export function lowestSlotLevel(available) {
 
 /** §486 : `whileEffect` / `unlessEffect` en liste (une chaîne seule = une liste d'un). */
 export const effectRefs = value => (value == null) ? [] : [value].flat().filter(v => (typeof v === "string") && v);
+
+/**
+ * Core#98 : une aptitude dont on ne prend qu'une option par Rage (Rage du prédateur : « quand vous activez votre Rage, choisissez
+ * l'une des options suivantes ») — en Rage, une option déjà prise (une copie d'effet de l'item sur le barbare) refuse la suivante.
+ * Hors Rage, rien à refuser ici (l'option n'aurait pas d'effet : `duringRage`).
+ * @param {{oneOption?: boolean, raging: boolean, taken: number}} state  `taken` : les effets d'option de l'item déjà portés.
+ */
+export const secondRageOption = ({ oneOption=false, raging=false, taken=0 }={}) => (oneOption === true) && !!raging && (Number(taken) > 0);

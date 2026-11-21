@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { usageLimitIssues, lowestSlotLevel, effectRefs } from "../module/scripts/core/limits.mjs";
+import { usageLimitIssues, lowestSlotLevel, effectRefs, secondRageOption } from "../module/scripts/core/limits.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { resourceFeedback } from "../module/scripts/core/feedback.mjs";
 
@@ -69,5 +69,21 @@ describe("§486 : activité permise seulement sous un effet (whileEffect / unles
       expect(validateEntry({ usageLimits: { "7nAgPNN2dth7SR0D": { whileEffect: bad } } }))
         .toEqual(["usageLimits.7nAgPNN2dth7SR0D.whileEffect: item identifier or effect id, or a non-empty list of them"]);
     }
+  });
+});
+
+describe("§509 (Core#98) : Rage du prédateur, une option par Rage", () => {
+  it("en Rage, une option déjà prise refuse la suivante (souci forçable)", () => {
+    expect(secondRageOption({ oneOption: true, raging: true, taken: 1 })).toBe(true);
+    expect(secondRageOption({ oneOption: true, raging: true, taken: 0 })).toBe(false);
+  });
+  it("hors Rage, ou sans la règle, rien à refuser", () => {
+    expect(secondRageOption({ oneOption: true, raging: false, taken: 1 })).toBe(false);
+    expect(secondRageOption({ oneOption: false, raging: true, taken: 1 })).toBe(false);
+    expect(secondRageOption()).toBe(false);
+  });
+  it("la clé est validée", () => {
+    expect(validateEntry({ duringRage: { copiesEnd: true, oneOption: true } })).toEqual([]);
+    expect(validateEntry({ duringRage: { oneOption: 1 } })).toHaveLength(1);
   });
 });

@@ -95,3 +95,14 @@ export function recklessChoice(actor) {
   const c = actor?.getFlag(MODULE_ID, "recklessTurn");
   return (c && (c.key === currentTurnKey())) ? c.reckless : null;
 }
+
+/**
+ * Core#98 : les options déjà prises d'une aptitude à une option par Rage — les effets actifs que ses activités ont posés sur le
+ * porteur (copies, non transférées, d'origine l'item ; elles tombent avec la Rage : `duringRage.copiesEnd`).
+ * @returns {ActiveEffect[]}
+ */
+export function rageOptionsTaken(item) {
+  const actor = item?.actor;
+  if ( !actor ) return [];
+  return Array.from(actor.effects ?? []).filter(e => !e.transfer && !e.disabled && (originItemOf(e) === item));
+}

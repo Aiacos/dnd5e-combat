@@ -56,7 +56,7 @@ la sélection sans rien jouer.
 | `bannissement` |  | §265 | la cible disparaît, puis revient (au plus proche si sa case est prise) |
 | `barbare` |  | §22 | Rage (entretien, fin), Bond instinctif, Témérité, Frénésie, Fureur divine, Rage implacable |
 | `barde` |  | §33 | Inspiration bardique (attaque, sauvegarde), Mots cinglants |
-| `bottes-places` |  | §222 | places selon la classe d'origine de l'aptitude (dnd5e 6.1, PHB 3.0) |
+| `bottes-places` |  | §222 §510 | places selon la classe d'origine de l'aptitude (dnd5e 6.1, PHB 3.0) |
 | `bottes` |  | §21 | Écorchure, Sape, Ouverture, Ralentissement, Renversement, Poussée, Enchaînement |
 | `bouclier-de-feu` |  | §266 | l'effet fait briller le lanceur |
 | `bouclier-zone` |  | §493 | réaction contre un cône : la sauvegarde ratée du lanceur épargne la créature seule (§493, brique B13) |
@@ -267,7 +267,7 @@ la sélection sans rien jouer.
 | `repasse-c12j` |  | §317 | Source d'inspiration au Repos court (Arène des sorts) |
 | `repasse-c2` |  | §296 | créatures de votre choix, plafond, réserve à répartir (Arène des sorts) |
 | `repasse-c3` |  | §298 | coût d'action : Magie de guerre, Arme sacrée (Arène des sorts) |
-| `repasse-c4` |  | §299 | Rage (aptitudes tenues), fins sur Neutralisé (Arène des sorts) |
+| `repasse-c4` |  | §299 §509 | Rage (aptitudes tenues), fins sur Neutralisé (Arène des sorts) |
 | `repasse-c5` |  | §300 | zones, émanations, entrées (Arène des sorts) |
 | `repasse-c6` |  | §301 | réactions : Interception, Représailles, Chute ralentie, Feuille morte (Arène des sorts) |
 | `repasse-c7` |  | §302 | Avantage et Désavantage oubliés (Arène des sorts) |

@@ -1235,6 +1235,7 @@
   "DND5ECOMBAT.Monture.Etat.dead": "Mort",
   "DND5ECOMBAT.Monture.Etat.zeroHp": "0 point de vie",
   "DND5ECOMBAT.Souci.rageHeavyArmor": "Pas de Rage en armure lourde.",
+  "DND5ECOMBAT.Souci.rageOneOption": "Une seule option par Rage : {item} donne déjà {effect}. L'option se choisit en entrant en Rage.",
   "DND5ECOMBAT.Prisme.1": "Rouge (feu)",
   "DND5ECOMBAT.Prisme.2": "Orange (acide)",
   "DND5ECOMBAT.Prisme.3": "Jaune (foudre)",
