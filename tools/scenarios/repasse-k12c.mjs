@@ -2,7 +2,8 @@
  * §333, lot K12 de la repasse des créatures (suite). Arène des sorts : le Lanceur (PNJ), la Cible (999 PV), le Mort-vivant.
  *  - Protection ésotérique de Gennifer (Ravenloft, « If the target is an Undead creature, it has the Stunned condition ») : sur un
  *    échec, la Cible n'est pas Étourdie, le Mort-vivant l'est (`effectsIf` sur les effets d'une sauvegarde) ;
- *  - Disparition de l'Esprit frappeur : l'Invisibilité tombe après un jet d'attaque (`breaksOn`).
+ *  - Disparition du Feu follet : l'Invisibilité tombe après un jet d'attaque (`breaksOn`, lu dans son texte ; celle de l'Esprit frappeur,
+ *    même item, ne le dit pas).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -79,7 +80,7 @@ export default {
     await ctx.call("move-token", { tokenId: caster.id, x: t0.x - grid, y: t0.y, elevation: 0 });
     await pause(800);
     await clear();
-    const vanish = await lend("Compendium.dnd-monster-manual.actors.Actor.mmPoltergeist000.Item.mmVanish00000000");
+    const vanish = await lend("Compendium.dnd-monster-manual.actors.Actor.mmWillowisp00000.Item.mmVanish00000000");
     const club = await lend(`${PHB}.equipment.Item.phbwepClub000000`, { "system.equipped": true, "system.proficient": 1 });
     await ctx.use({ tokenId: caster.id, itemId: vanish, activityId: "RYoAjqR06oGKDiVC", activityType: "utility", targetTokenIds: [caster.id] });
     await pause(2000);
