@@ -59,7 +59,7 @@ export default {
     m = await masteries(fighter);
     ctx.expect((m.allowance === 1) && (m.chosen.length === 4), `Guerrier 4 : 4 bottes choisies, une à changer (vu ${m.chosen.length}, ${m.allowance})`);
     const before = await api("masteryWindow", { actorId: fighter });
-    ctx.expect(/1/.test(before.rest ?? ""), `fenêtre : la ligne verte annonce une botte à changer (« ${before.rest} »)`);
+    ctx.expect(/\b1\b/.test(before.rest ?? ""), `fenêtre : la ligne verte annonce une botte à changer (« ${before.rest} »)`);
     const after = await api("masteryWindow", { actorId: fighter, keys: ["greatsword", "flail", "javelin", "shortsword"] });
     ctx.expect(after.rest === null, `fenêtre : une botte remplacée, plus de ligne verte (« ${after.rest} »)`);
 
