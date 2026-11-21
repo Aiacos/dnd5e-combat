@@ -49,6 +49,8 @@ export default {
       const { data } = await ctx.call("get-compendium-entry", { uuid });
       const { _id, folder, ownership, _stats, ...itemData } = data;
       setPath(itemData, "flags.dnd5e.sourceId", uuid);
+      // Issue #145 : un sort non préparé ne déclare plus rien (la Marque perdait son 1d6 de force) — le sort prêté est préparé.
+      if ( itemData.type === "spell" ) setPath(itemData, "system.prepared", 1);
       const r = await ctx.call("upsert-actor-item", { actorId: hero.actorId, itemData, match: { path: "flags.dnd5e.sourceId", value: uuid } });
       ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: hero.actorId, itemId: r.id }).catch(() => {}));
       return r.id;

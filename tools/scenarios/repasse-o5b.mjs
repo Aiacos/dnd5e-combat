@@ -43,7 +43,9 @@ export default {
 
     // 1. Vengeresse sacrée enchantant une Épée longue.
     const sword = await ctx.ensureItem(fighter, `${PHB}phbwepLongsword0`);
-    const avenger = await ctx.ensureItem(fighter, `${DMG}dmgHolyAvenger00`);
+    // Guide 3.0.0 : les activités des objets à harmonisation sont cachées tant que l'objet n'est pas harmonisé (`visibility.requireMagic`,
+    // dnd5e refuse « Using this activity isn't currently possible ») — objets prêtés équipés et harmonisés (`ready`).
+    const avenger = await ctx.ensureItem(fighter, `${DMG}dmgHolyAvenger00`, { ready: true });
     const { effectId } = await ctx.engine("enchant", { tokenId: fighter.id, itemId: avenger, activityId: "IMVUc41lxWG8Hyq3", targetItemId: sword });
     if ( !ctx.expect(!!effectId, "la Vengeresse sacrée enchante l'Épée longue") ) return;
     const enchanted = await hitFormula(sword);
@@ -59,7 +61,7 @@ export default {
     ctx.expect(plain !== null && !/2d10/.test(plain), `sans l'enchantement, rien de plus (${plain})`);
 
     // 2. Épée radieuse.
-    const sun = await ctx.ensureItem(fighter, `${DMG}dmgSunBlade00000`);
+    const sun = await ctx.ensureItem(fighter, `${DMG}dmgSunBlade00000`, { ready: true });
     const radiant = await hitFormula(sun);
     // 1d8 de plus, doublé en 2d8 sur un critique.
     ctx.expect(/\+ [12]d8$/.test(radiant ?? ""), `Épée radieuse : 1d8 radiant de plus (${radiant})`);

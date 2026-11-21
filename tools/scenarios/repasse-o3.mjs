@@ -30,7 +30,8 @@ export default {
     };
     ctx.restore(clear);
     ctx.restore(() => ctx.setHp(fighter, hp0));
-    const wand = await ctx.ensureItem(cleric, `${DMG}dmgWandOfParalys`);
+    // Guide 3.0.0 : l'activité de la baguette n'est visible qu'harmonisée (`visibility.requireMagic`) — prêtée équipée et harmonisée.
+    const wand = await ctx.ensureItem(cleric, `${DMG}dmgWandOfParalys`, { ready: true });
     const oil = await ctx.ensureItem(cleric, `${DMG}dmgOilOfTaggit00`);
 
     /** L'activité de sauvegarde de l'objet sur la cible jusqu'à un échec ; rend la résolution ou null. */

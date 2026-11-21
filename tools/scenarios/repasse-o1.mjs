@@ -18,7 +18,9 @@ const CHECKS = [
   [`${DMG}.dmgGemOfSeeing00`, "Gemme de vision", { "effect:z8fm5PbP5qz4iJuP:system.changes.0.key": "system.attributes.senses.ranges.truesight" }],
   [`${DMG}.dmgWandOfWeb0000`, "Baguette des toiles", { "system.activities.P7PnWcum8exAm2EG.consumption.targets.0.type": "itemUses" }],
   [`${DMG}.dmgScimitarOfSpe`, "Cimeterre de célérité", { "system.activities.bV5R1UvwSlRZ3Ffi.activation.type": "action", "system.activities.dasSpeedBonusAtk.activation.type": "bonus" }],
-  [`${DMG}.dmgStaffOfPower0`, "Bâton de surpuissance", { "effect:dasStaffOfPower0:transfer": true, "effect:dasStaffOfPower0:system.changes.0.key": "system.attributes.ac.bonus" }],
+  // §511 : Guide 3.0.0, le livre porte son propre effet de bonus (3qnJecDB1SMFTNLw) et le Core ne crée plus le sien ; 2.0.0, celui du Core.
+  // Dans les deux cas, un seul effet de bonus.
+  [`${DMG}.dmgStaffOfPower0`, "Bâton de surpuissance", { "bonusEffects:dasStaffOfPower0,3qnJecDB1SMFTNLw": 1 }],
   [`${DMG}.dmgFortitudeIoun`, "Pierre de Ioun de vigueur", { "effect:hOigjfupZtZR2cy9:system.changes.0.key": "system.abilities.con.value" }],
   [`${DMG}.dmgArmorOfVulner`, "Armure de vulnérabilité", { "effect:4JvSdW6SAx9uNYFH:system.changes.0.value": "bludgeoning" }],
   [`${DMG}.dmgSuperiorPotio`, "Potion de soins supérieurs", { "system.activities.eT46ucSUynLRTs6N.range.units": "touch" }],
@@ -37,6 +39,8 @@ const CHECKS = [
 ];
 
 const read = (item, path) => {
+  const any = path.match(/^bonusEffects:(.*)$/);
+  if ( any ) return any[1].split(",").filter(id => (item.effects ?? []).some(e => e._id === id)).length;
   const m = path.match(/^effect:([^:]+):(.*)$/);
   const at = (o, p) => p.split(".").reduce((x, k) => ((x === null) || (x === undefined)) ? undefined : x[k], o);
   if ( !m ) return at(item, path);

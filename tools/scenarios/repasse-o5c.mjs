@@ -26,7 +26,7 @@ export default {
     ctx.restore(() => ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => null));
 
     // 1. Anneau du bélier.
-    const ram = await ctx.ensureItem(fighter, `${DMG}dmgRingOfTheRam0`);
+    const ram = await ctx.ensureItem(fighter, `${DMG}dmgRingOfTheRam0`, { ready: true });   // Guide 3.0.0 : activités visibles harmonisé
     let pushed = null;
     for ( let i = 0; (i < 20) && (pushed === null); i++ ) {
       await ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => null);
@@ -44,7 +44,7 @@ export default {
     ctx.expect((pushed !== null) && (Math.abs(pushed - grid) < grid / 2), `Anneau du bélier : touché, le Zombi recule d'une case (${pushed} px, case ${grid} px)`);
 
     // 2. Règles attachées.
-    await ctx.ensureItem(fighter, `${DMG}dmgStaffOfStriki`);
+    await ctx.ensureItem(fighter, `${DMG}dmgStaffOfStriki`, { ready: true });
     const sword = await ctx.ensureItem(fighter, `${PHB}phbwepLongsword0`);
     const sharp = await ctx.ensureItem(fighter, `${DMG}dmgSwordOfSharpn`);
     const { effectId } = await ctx.engine("enchant", { tokenId: fighter.id, itemId: sharp, activityId: "ximpnpVgz8dZ2q9R", targetItemId: sword }).catch(err => ({ error: err.message }));

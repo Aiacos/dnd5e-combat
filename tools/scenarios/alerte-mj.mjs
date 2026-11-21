@@ -39,7 +39,7 @@ export default {
 
     // 2. Bâton du thaumaturge : le filtre d'activité
     if ( JSON.stringify((await ctx.call("list-compendiums", {}).catch(() => null)) ?? "").includes("dnd-dungeon-masters-guide.equipment") ) {
-      const staff = await ctx.ensureItem(mage, `${DMG}dmgStaffOfTheMag`);
+      const staff = await ctx.ensureItem(mage, `${DMG}dmgStaffOfTheMag`, { ready: true });   // Guide 3.0.0 : activités visibles harmonisé
       const absorb = await ctx.use({ tokenId: mage.id, itemId: staff, activityId: "QcfPhLX9LBvOnShu", consume: false, targetTokenIds: [] });
       await pause(2500);
       ctx.expect((await alertsSince(absorb.usageMessageId)).length === 1, "Bâton : « Spell Absorption » alerte");
@@ -52,7 +52,7 @@ export default {
     // 3. Réglage éteint (Bâton : « Spell Absorption »)
     const on = await ctx.engine("setting", { key: "gmAlerts", value: false });
     ctx.restore(() => ctx.engine("setting", { key: "gmAlerts", value: on.before }));
-    const staff = await ctx.ensureItem(mage, `${DMG}dmgStaffOfTheMag`);
+    const staff = await ctx.ensureItem(mage, `${DMG}dmgStaffOfTheMag`, { ready: true });   // Guide 3.0.0 : activités visibles harmonisé
     const off = await ctx.use({ tokenId: mage.id, itemId: staff, activityId: "QcfPhLX9LBvOnShu", consume: false, targetTokenIds: [] });
     await pause(2500);
     const silent = await alertsSince(off.usageMessageId);

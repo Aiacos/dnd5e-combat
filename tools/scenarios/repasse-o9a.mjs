@@ -97,17 +97,21 @@ export default {
     await clean();
 
     // 4. Talisman du mal absolu.
-    const evil = await ctx.ensureItem(fighter, `${DMG}dmgTalismanOfUlt`);
+    // Guide 3.0.0 : les activités des objets à harmonisation ne sont visibles qu'harmonisés (`ready` : prêtés équipés et harmonisés).
+    const evil = await ctx.ensureItem(fighter, `${DMG}dmgTalismanOfUlt`, { ready: true });
     t = await untilFail(evil, "zknPGzuSFtET9BIe", zombi, clean);
     ctx.expect(!!t && (await has(zombi, "dead")) && ((await ctx.hp(zombi)) === 0), `Fin ultime ratée : Mort, 0 PV (${await ctx.hp(zombi)})`);
     await clean();
 
     // 5. Voleuse de vie, posée sur une Dague prêtée au Guerrier (enchantement retiré à la fin).
-    const stealerSource = await ctx.ensureItem(fighter, `${DMG}dmgNineLivesStea`);
+    const stealerSource = await ctx.ensureItem(fighter, `${DMG}dmgNineLivesStea`, { ready: true });
     const stealer = await ctx.ensureItem(fighter, `${PHB}phbwepDagger0000`);
     const { data: ftok } = await ctx.call("get-scene-object", { type: "Token", objectId: fighter.id });
     const nine = await ctx.engine("enchant", { tokenId: fighter.id, itemId: stealerSource, activityId: "9rvsI8e3iaHSuv1k", targetItemId: stealer }).catch(err => ({ error: err.message }));
     if ( nine?.effectId ) ctx.restore(() => ctx.engine("removeItemEffect", { actorId: ftok.actorId, itemId: stealer, effectId: nine.effectId }).catch(() => {}));
+    // La Dague enchantée demande l'harmonisation : équipée et harmonisée (son « Life Stealing » en dépend, Guide 3.0.0).
+    await ctx.call("upsert-actor-item", { actorId: ftok.actorId, itemData: { "system.equipped": true, "system.attuned": true }, match: { path: "_id", value: stealer } });
+    await pause(500);
     const acts = Object.values((await ctx.engine("itemData", { tokenId: fighter.id, itemId: stealer, paths: ["system.activities"] }))?.["system.activities"] ?? {});
     const life = acts.find(a => a.type === "save")?._id;
     ctx.expect(!!life, `la Voleuse de vie est posée sur la Dague (${nine?.error ?? `« Life Stealing » ${life ?? "absente"}`})`);
@@ -119,7 +123,7 @@ export default {
     await clean();
 
     // 6. Sceptre de suzeraineté.
-    const rod = await ctx.ensureItem(fighter, `${DMG}dmgRodOfRulershi`);
+    const rod = await ctx.ensureItem(fighter, `${DMG}dmgRodOfRulershi`, { ready: true });
     t = await untilFail(rod, "DowAEvSCeMqJMEoR", zombi, clean);
     if ( ctx.expect(!!t && (await has(zombi, "charmed")), "Sceptre : le Zombi est Charmé") ) {
       const sword = await ctx.ensureItem(fighter, `${PHB}phbwepLongsword0`);
@@ -132,7 +136,7 @@ export default {
     await clean();
 
     // 7. Masse d'anéantissement.
-    const mace = await ctx.ensureItem(fighter, `${DMG}dmgMaceOfDisrupt`);
+    const mace = await ctx.ensureItem(fighter, `${DMG}dmgMaceOfDisrupt`, { ready: true });
     let dead = false, scared = false;
     for ( let i = 0; (i < 12) && !(dead && scared); i++ ) {
       await clean();
