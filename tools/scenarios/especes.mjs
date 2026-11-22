@@ -96,6 +96,14 @@ export default {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...ids, ...seen.map(d => d.id)], waitMs: 1500, details: true }).catch(() => null);
         for ( const d of r?.windows ?? [] ) {
           const text = `${d.title ?? ""} ${d.content ?? d.text ?? ""}`;
+          // §516 : la fenêtre « Au toucher » (Sauvagerie martiale du Guerrier, cochée d'avance) vient avant les faveurs — validée telle
+          // quelle, sans compter comme la réponse attendue.
+          const before = /Savage Attacker|Sauvagerie martiale/i.test(text) ? (d.buttons ?? []).find(x => /Confirm|Frapper|Valider/i.test(x.label ?? "")) : null;
+          if ( before ) {
+            await ctx.call("answer-dialog", { id: d.id, button: before.action ?? before.label }).catch(() => {});
+            seen.push({ id: d.id, text, answered: null, before: before.label, buttons: (d.buttons ?? []).map(x => x.label) });
+            continue;
+          }
           const rule = answers.find(([re]) => re.test(text));
           const b = rule ? (d.buttons ?? []).find(x => rule[1].test(x.label ?? "")) : null;
           if ( b ) await ctx.call("answer-dialog", { id: d.id, button: b.action ?? b.label }).catch(() => {});
@@ -112,7 +120,7 @@ export default {
         const ids = await known();
         const since = await ctx.lastMessageId();
         const u = await ctx.use({ tokenId: hero.id, itemId: sword, activityType: "attack", targetTokenIds: [bandit.id], usageConfig: { [MODULE_ID]: { confirmed: true } } });
-        const asked = button ? await answerAll(ids, [[/toucher|On hit|gigante|Giant|Châtiment|Smite/i, button]], 7000) : [];
+        const asked = button ? await answerAll(ids, [[/toucher|On hit|gigante|Giant|Châtiment|Smite/i, button]], 12000) : [];
         const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
         if ( r?.targets?.find(t => t.name === "Bandit")?.hit !== true ) continue;
         await pause(1500);
@@ -169,7 +177,7 @@ export default {
       await tough(); await place(bandit, g.x + grid, g.y);
       const res = await heroHits(/Brûlure|Fire's Burn/i);
       if ( !ctx.expect(!!res, "l'épée touche le Bandit (10 essais au plus)") ) return;
-      ctx.expect(res.asked.some(d => d.answered), `la question des faveurs (${res.asked.map(d => d.buttons.join(" / ")).join(" ; ")})`);
+      ctx.expect(res.asked.some(d => d.answered), `la question des faveurs (${res.asked.filter(d => !d.before).map(d => d.buttons.join(" / ")).join(" ; ")})`);
       const smite = res.damage?.flags?.[MODULE_ID]?.smite;
       ctx.expect(smite?.kind === "rider" && smite?.formula === "1d10" && smite?.type === "fire", `Brûlure ignée : ${JSON.stringify(smite)}`);
       ctx.expect((await spentOf(burn)) === 1, `une utilisation dépensée (${await spentOf(burn)})`);
