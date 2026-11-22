@@ -673,26 +673,27 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 15. self area: automatic placement
 16. coating: weapon not coated
 17. Boon of Spell Recall
-18. maneuver: promised die or AC not applied
-19. spell ended by a special function: not ended
-20. escape
-21. jump: Step of the Wind doubling not noted
-22. Ready: readied action not chosen
-23. improvised weapon: not requested
-24. effect ending on spell or damage not removed
-25. potion: conditions not removed
-26. healer's kit: stabilization
-27. hide
-28. search
-29. light object: the caster does not shed light
-30. caster light: not lit
-31. light source: not lit
-32. Wild Shape: transformation not done
-33. enchantment: weapon not enchanted
-34. ethereal: Ethereal Jaunt / Stride not applied
-35. Arcane Vigor: Hit Point Dice not spent
-36. restoration: condition not removed
-37. tinderbox: nothing lit
+18. Use Magic Device: charges
+19. maneuver: promised die or AC not applied
+20. spell ended by a special function: not ended
+21. escape
+22. jump: Step of the Wind doubling not noted
+23. Ready: readied action not chosen
+24. improvised weapon: not requested
+25. effect ending on spell or damage not removed
+26. potion: conditions not removed
+27. healer's kit: stabilization
+28. hide
+29. search
+30. light object: the caster does not shed light
+31. caster light: not lit
+32. light source: not lit
+33. Wild Shape: transformation not done
+34. enchantment: weapon not enchanted
+35. ethereal: Ethereal Jaunt / Stride not applied
+36. Arcane Vigor: Hit Point Dice not spent
+37. restoration: condition not removed
+38. tinderbox: nothing lit
 
 ### `dnd5e.preActivityConsumption`
 
@@ -815,12 +816,13 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 14. Ritual: cast without a spell slot _(stop)_
 15. self area: without the "Place Template" box _(stop)_
 16. Sneak Attack: item activity not redirected _(stop)_
-17. Reckless Attack: prompt _(stop)_
-18. swallow: Bite not refused _(stop)_
-19. potion: concentration not removed
-20. ground item: area placed on use, copy kept
-21. light object: placed on cast _(stop)_
-22. light source: dnd5e consumption not skipped
+17. Use Magic Device: charges not noted _(stop)_
+18. Reckless Attack: prompt _(stop)_
+19. swallow: Bite not refused _(stop)_
+20. potion: concentration not removed
+21. ground item: area placed on use, copy kept
+22. light object: placed on cast _(stop)_
+23. light source: dnd5e consumption not skipped
 
 ### `dnd5e.preUseLinkedSpell`
 
