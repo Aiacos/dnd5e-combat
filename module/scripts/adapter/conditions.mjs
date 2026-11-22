@@ -27,6 +27,7 @@ import { isObjectToken } from "./bodies.mjs";
 import { isSpellCast } from "./scrolls.mjs";
 import { pendingMetamagic } from "./metamagic.mjs";
 import { rangedFeatsFor, coverLeft, CROSSBOWS } from "../core/feats.mjs";
+import { forcedCover } from "../core/cover.mjs";
 import { coverFor } from "./cover.mjs";
 import { areEnemies } from "./factions.mjs";
 
@@ -237,9 +238,14 @@ export function coverIgnoredBy(origin, target, activity, attackMode=null, degree
   return feat?.name ?? swornEnemyOf(activity, target, attackMode) ?? null;
 }
 
-/** §131 : l'abri de la cible contre cette attaque — un don de tir peut ignorer l'abri partiel ou aux trois quarts. */
-export function coverAgainst(origin, target, activity, attackMode, options={}) {
-  const cover = coverFor(origin, target, { ...options, activity, attackMode });
+/**
+ * §131 : l'abri de la cible contre cette attaque — un don de tir peut ignorer l'abri partiel ou aux trois quarts.
+ * §518 : `options.forced` — l'attaque est passée outre un refus : un abri total y vaut trois quarts (core/cover.mjs, `forcedCover`).
+ */
+export function coverAgainst(origin, target, activity, attackMode, { forced=false, ...options }={}) {
+  const found = coverFor(origin, target, { ...options, activity, attackMode });
+  const cover = forced ? forcedCover(found) : found;
+  if ( forced && cover?.forced ) console.log(`dnd5e-combat | cover: ${target.name} — total cover, attack forced: three-quarters instead`);
   // §353 : l'ennemi juré de l'Arc du serment ne profite pas de l'abri partiel ou aux trois quarts.
   return coverLeft(cover, activity ? (rangedFeatsOf(origin?.actor, activity, attackMode).cover || !!swornEnemyOf(activity, target, attackMode)) : false);
 }

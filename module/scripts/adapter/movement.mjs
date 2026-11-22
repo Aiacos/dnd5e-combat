@@ -152,7 +152,8 @@ export function planPath(token, to, { maxCost=Infinity, throughDoors=false }={})
         if ( !within(cell) ) return false;
         const topLeft = grid.getTopLeftPoint(cell);
         const level = token.parent.levels?.get?.(cell.level ?? world.ownLevel);   // P2 : les murs de ce niveau-là
-        return hasLineOfSight({ x: topLeft.x + (w * grid.sizeX) / 2, y: topLeft.y + (h * grid.sizeY) / 2, elevation }, to.target, level, { throughDarkness: true });
+        return hasLineOfSight({ x: topLeft.x + (w * grid.sizeX) / 2, y: topLeft.y + (h * grid.sizeY) / 2, elevation }, to.target, level, { throughDarkness: true,
+          externalRadius: Math.min(w * grid.sizeX, h * grid.sizeY) / 2 });   // §518 : le seuil des fenêtres, comme la vision du token
       };
     }
   }

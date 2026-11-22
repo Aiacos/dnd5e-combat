@@ -448,7 +448,7 @@ function isBlind(observer) {
 /** Issue #42 : depuis les yeux de l'observateur, la ligne de vue sur la cible, sans les bords des sources de ténèbres. */
 function lineOfSightThrough(observer, target) {
   const eye = observer.getVisionOrigin?.(committedPosition(observer)) ?? tokenCenter(observer);
-  return hasLineOfSight(eye, target, canvas.scene.levels?.get?.(observer.level), { throughDarkness: true });
+  return hasLineOfSight(eye, target, canvas.scene.levels?.get?.(observer.level), { throughDarkness: true, externalRadius: observer.object?.externalRadius ?? 0 });
 }
 
 /**
@@ -569,9 +569,10 @@ export function seesBetween(observerActor, targetActor) {
  * @param {{x: number, y: number, elevation?: number}} point
  * @param {TokenDocument} target
  * @param {Level} [level]  Niveau dont on prend les murs (celui de l'observateur) ; à défaut, le niveau affiché.
- * @param {{throughDarkness?: boolean}} [options]  Issue #42 : sans les bords des sources de ténèbres.
+ * @param {{throughDarkness?: boolean, externalRadius?: number}} [options]  Issue #42 : sans les bords des sources de ténèbres.
+ *        `externalRadius` (§518) : le rayon de l'observateur, pour le seuil des fenêtres (`Token#externalRadius`, token.mjs:3928).
  */
-export function hasLineOfSight(point, target, level=undefined, { throughDarkness=false }={}) {
+export function hasLineOfSight(point, target, level=undefined, { throughDarkness=false, externalRadius=0 }={}) {
   if ( !canvas?.ready || !target?.object ) return true;
   const backend = CONFIG.Canvas.polygonBackends.sight;
   const origin = { x: point.x, y: point.y, elevation: point.elevation ?? committedPosition(target).elevation ?? 0 };
@@ -580,7 +581,11 @@ export function hasLineOfSight(point, target, level=undefined, { throughDarkness
   // de point-darkness-source.mjs:98-107) — tout rayon qui entre dans des Ténèbres était coupé. Pour un sens qui les perce (Vision du
   // diable, vision véritable, vision aveugle), `throughDarkness` les écarte (`edgeTypes`, clockwise-sweep.mjs:116-124) : murs et
   // planchers comptent toujours.
-  const config = { type: "sight", mode: "any", level: level ?? undefined, ...(throughDarkness ? { edgeTypes: { source: false } } : {}) };
+  // §518 (Discord, SpitFire) : le seuil des murs « proximité » (fenêtres) comme la vision d'un token (`useThreshold`,
+  // sources/point-vision-source.mjs:293 ; `Edge#applyThreshold`, edges/edge.mjs:220) — sans lui, une fenêtre coupait la vue même collé à
+  // la vitre, et un archer à sa fenêtre était refusé « hors de vue ».
+  const config = { type: "sight", mode: "any", level: level ?? undefined, useThreshold: true, externalRadius,
+    ...(throughDarkness ? { edgeTypes: { source: false } } : {}) };
   // P2 : un plancher ou un plafond (Surface `sight`) coupe la ligne de vue comme un mur — entre la hauteur
   // du point et celle des yeux de la cible (Scene#testSurfaceCollision, un lancer de rayon 3D).
   const scene = target.parent;

@@ -19,7 +19,7 @@ import { contentOf } from "../adapter/content.mjs";
 import { critMargin } from "../adapter/criticals.mjs";
 import { log, loc, waitForDice } from "./shared.mjs";
 import { atCostMarginOf, holdForAtCost } from "./success-at-cost.mjs";
-import { LOOKBACK, castLevelOfMessage, dispatcher, enrich, openingFor, resolutionOn, serializeDamages, speakerTokenUuid } from "./engine.mjs";
+import { LOOKBACK, castLevelOfMessage, dispatcher, enrich, forcedThrough, openingFor, resolutionOn, serializeDamages, speakerTokenUuid } from "./engine.mjs";
 
 /* -------------------------------------------- */
 /*  Messages du système → évènements            */
@@ -109,7 +109,9 @@ export async function onAttackMessage(message) {
   const rolled = async plan => {
     const targets = await enrich(attack.targets, plan, speakerTokenUuid(message), attack.activity, message.rolls?.[0]?.options?.attackMode ?? message.system?.mode ?? null,
       // §406 : l'id de la carte d'origine (`_source`) — `system.origin` est un ForeignDocumentField, sa lecture rend le message lui-même.
-      castLevelOfMessage(game.messages.get(message._source?.system?.origin ?? "") ?? message));
+      castLevelOfMessage(game.messages.get(message._source?.system?.origin ?? "") ?? message),
+      // §518 : une attaque passée outre un refus (hors de vue, portée…) — un abri total ne la rend plus nulle.
+      { forced: forcedThrough(message) || forcedThrough(game.messages.get(attack.origin ?? "")) });
     // Issue #32 : l'écart du succès à un prix pour ce jet (0 : éteint, ou pas un personnage joueur) — jugé par le cœur après les réactions.
     const attacker = (await fromUuid(speakerTokenUuid(message) ?? ""))?.actor ?? message.getAssociatedActor?.() ?? null;
     return { type: "attackRolled", roll: await inspiredAttack(message, attack.roll, targets), messageId: message.id, targets, critMargin: critMargin(),

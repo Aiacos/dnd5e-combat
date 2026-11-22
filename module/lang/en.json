@@ -796,7 +796,7 @@
   "DND5ECOMBAT.Reglage.lockFailure.free": "No cost, try again",
   "DND5ECOMBAT.Reglage.lockFailure.once": "One attempt per character",
   "DND5ECOMBAT.Reglage.grateWalls.Nom": "Grate walls: every wall you can see through",
-  "DND5ECOMBAT.Reglage.grateWalls.Aide": "On: every wall that stops movement without blocking sight (bars, grate, grille, portcullis, invisible wall) is a grate — an area spell can be placed on the other side, and an attack through it grants three-quarters cover (+5 AC) instead of total cover. Windows, terrain walls and walls created by a spell (Wall of Force) stay solid. Each wall can be an exception: wall configuration, \"DAS · Grate\" section (grate or solid wall, e.g. a glass pane).",
+  "DND5ECOMBAT.Reglage.grateWalls.Aide": "On: every wall that stops movement without blocking sight (bars, grate, grille, portcullis, invisible wall) is a grate — an area spell can be placed on the other side, and an attack through it grants three-quarters cover (+5 AC) instead of total cover. Terrain walls and walls created by a spell (Wall of Force) stay solid; a window stays solid for spells, but a creature close enough to see through it (the window's sight threshold) attacks through it as through an opening, without cover from it. Each wall can be an exception: wall configuration, \"DAS · Grate\" section (grate or solid wall, e.g. a glass pane).",
   "DND5ECOMBAT.Empoignade.Relache": "{name} releases {target}.",
   "DND5ECOMBAT.Delai.Auto": "Resolves automatically in {n} s",
   "DND5ECOMBAT.Reglage.combatWindowSeconds.Nom": "Combat window delay (seconds)",

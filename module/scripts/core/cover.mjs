@@ -120,6 +120,31 @@ export function grateOf({ mode="auto", auto=false, blocksSight=true, spellWall=f
 }
 
 /**
+ * §518 (Discord, SpitFire, 2026-11-22) : l'abri d'une attaque passée outre un refus (« attaquer quand même »). Un abri total vaut d'ordinaire
+ * un échec d'office (CA `null`, core/attack.mjs) : forcée, l'attaque aurait été lancée pour rien, sans dégâts. Le refus forcé va jusqu'au
+ * bout : l'obstacle protège encore, au plus fort des abris qui laissent attaquer — trois quarts (+5). Les autres degrés ne changent pas.
+ * @param {{degree: string, bonus: number|null}|null} cover
+ * @returns {object|null}
+ */
+export function forcedCover(cover) {
+  if ( cover?.degree !== "total" ) return cover ?? null;
+  return { ...cover, degree: "threeQuarters", bonus: COVER.threeQuarters.bonus, forced: true };
+}
+
+/**
+ * §518 (Discord, SpitFire, 2026-11-22 : Restored Keep de Baileywiki) : une fenêtre est-elle ouverte pour CET attaquant ? Une fenêtre
+ * Foundry arrête le déplacement et laisse passer la vue de qui est près d'elle (vue « proximité », seuil : `canvas/layers/walls.mjs:474`,
+ * `Edge#applyThreshold`). Quand la vue de l'attaquant la traverse (seuil atteint), il tire par l'ouverture : elle ne coupe pas ses lignes
+ * d'abri. Le choix du mur l'emporte (« grille », « mur plein » : une vitre fermée) ; un mur de sort ne s'ouvre jamais.
+ * @param {{mode?: string, spellWall?: boolean, seenThrough?: boolean}} wall  `seenThrough` : seuil de vue atteint depuis l'attaquant.
+ * @returns {boolean}
+ */
+export function windowOpen({ mode="auto", spellWall=false, seenThrough=false }={}) {
+  if ( (mode === "grate") || (mode === "solid") || spellWall ) return false;
+  return !!seenThrough;
+}
+
+/**
  * L'abri dont une cible bénéficie contre un attaquant.
  * @param {object} context
  * @param {Rect} context.attacker                     Espace de l'attaquant.

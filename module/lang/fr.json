@@ -796,7 +796,7 @@
   "DND5ECOMBAT.Reglage.lockFailure.free": "Sans coût, on peut réessayer",
   "DND5ECOMBAT.Reglage.lockFailure.once": "Un essai par personnage",
   "DND5ECOMBAT.Reglage.grateWalls.Nom": "Murs grilles : tout mur qui laisse voir",
-  "DND5ECOMBAT.Reglage.grateWalls.Aide": "Allumé : tout mur qui arrête le déplacement sans bloquer la vue (barreaux, grille, herse, mur invisible) est une grille — un sort de zone peut être posé de l’autre côté, une attaque à travers donne un abri supérieur (+5 CA) au lieu d’un abri total. Une fenêtre, un mur de terrain et un mur posé par un sort (Mur de force) restent pleins. Chaque mur peut faire exception : configuration du mur, section « DAS · Grille » (grille ou mur plein, par exemple une vitre).",
+  "DND5ECOMBAT.Reglage.grateWalls.Aide": "Allumé : tout mur qui arrête le déplacement sans bloquer la vue (barreaux, grille, herse, mur invisible) est une grille — un sort de zone peut être posé de l’autre côté, une attaque à travers donne un abri supérieur (+5 CA) au lieu d’un abri total. Un mur de terrain et un mur posé par un sort (Mur de force) restent pleins ; une fenêtre reste pleine pour les sorts, mais une créature assez proche pour voir au travers (seuil de vue de la fenêtre) attaque par elle comme par une ouverture, sans abri dû à la fenêtre. Chaque mur peut faire exception : configuration du mur, section « DAS · Grille » (grille ou mur plein, par exemple une vitre).",
   "DND5ECOMBAT.Empoignade.Relache": "{name} relâche {target}.",
   "DND5ECOMBAT.Delai.Auto": "Résolution automatique dans {n} s",
   "DND5ECOMBAT.Reglage.combatWindowSeconds.Nom": "Délai des fenêtres du combat (secondes)",

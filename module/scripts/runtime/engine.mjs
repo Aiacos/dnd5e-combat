@@ -205,10 +205,20 @@ export const dispatcher = createDispatcher({
 /* -------------------------------------------- */
 
 /**
+ * §518 : cette carte (ou la carte d'utilisation dont elle vient) est-elle passée outre un refus du moteur ? `forcedThrough` (fenêtre de
+ * légalité, runtime/turn.mjs) ou `overridden` (raisons portées sur la carte, §408).
+ * @param {ChatMessage} message
+ */
+export function forcedThrough(message) {
+  const origin = game.messages.get(message?._source?.system?.origin ?? "") ?? null;
+  return [message, origin].some(m => !!m && ((m.getFlag(MODULE_ID, "forcedThrough") === true) || !!m.getFlag(MODULE_ID, "overridden")?.length));
+}
+
+/**
  * Complète des cibles avec ce qui dépend des états et de la situation (core/conditions.mjs) :
  * échec d'office à la sauvegarde du plan, coup critique d'office, réaction possible si touchée.
  */
-export async function enrich(targets, plan, originUuid, activityUuid=null, attackMode=null, castLevel=null) {
+export async function enrich(targets, plan, originUuid, activityUuid=null, attackMode=null, castLevel=null, { forced=false }={}) {
   const activity = activityUuid ? await fromUuid(activityUuid) : null;
   const origin = plan.attack && originUuid ? await fromUuid(originUuid) : null;
   const factors = origin ? readUnitFactors() : null;
@@ -231,7 +241,7 @@ export async function enrich(targets, plan, originUuid, activityUuid=null, attac
     const statuses = statusesOf(token);
     // P1 (b) : l'abri corrige la CA avant le verdict — rien n'est posé sur la cible (SPEC §14.1, tranché).
     // §131 : un don de tir (Tireur d'élite, Sniper de sorts) ignore l'abri partiel ou aux trois quarts.
-    const cover = (origin && token && (target.ac !== null) && (target.ac !== undefined)) ? coverAgainst(origin, token, activity, attackMode) : null;
+    const cover = (origin && token && (target.ac !== null) && (target.ac !== undefined)) ? coverAgainst(origin, token, activity, attackMode, { forced }) : null;
     // O8d (§347) : un bonus de CA contre les seules attaques à distance (Bouclier antiprojectiles).
     const shield = (origin && activity && token && isRangedAttack(activity, attackMode)) ? rangedAcBonus(token.actor) : 0;
     let ac = cover ? ((cover.bonus === null) ? null : target.ac + cover.bonus) : target.ac;
@@ -295,7 +305,8 @@ export async function openingFor(message, usage, extra={}) {
   // §16.27 : la répartition des projectiles faite à la visée multiple (Projectile magique).
   const pairs = game.messages.get(usage.origin ?? message.id)?.getFlag(MODULE_ID, "allocation");   // [[token, nombre], …]
   const allocation = Array.isArray(pairs) ? Object.fromEntries(pairs) : null;
-  let targets = await enrich(usage.targets, usage.plan, speakerTokenUuid(message), usage.activity, null, castLevelOfMessage(message));
+  let targets = await enrich(usage.targets, usage.plan, speakerTokenUuid(message), usage.activity, null, castLevelOfMessage(message),
+    { forced: forcedThrough(message) });
   // §169 : un rejeu sans sauvegarde (Mur de feu traversé, fin de tour du côté brûlant) — les dégâts pleins, d'office.
   if ( usage.plan.save && message.getFlag(MODULE_ID, "areaTick")?.noSave ) targets = targets.map(t => ({ ...t, autoFail: "noSave" }));
   if ( usage.plan.save ) {

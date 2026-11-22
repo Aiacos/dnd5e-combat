@@ -18,7 +18,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { coverBetween, bodyGivesCover, strongerCover, pullBack, COVER, GRATE_MODES, grateOf } from "../core/cover.mjs";
+import { coverBetween, bodyGivesCover, strongerCover, pullBack, COVER, GRATE_MODES, grateOf, windowOpen } from "../core/cover.mjs";
 import { crossesWall } from "../core/wall.mjs";
 import { contentOf } from "./content.mjs";
 import { grappleRulesOf } from "./grapple-rules.mjs";
@@ -101,12 +101,35 @@ export function isGrate(wall, { auto=grateWallsAuto(), mode }={}) {
  * (clockwise-sweep.mjs:759-787) ; l'objet d'une arête de mur est son WallDocument (documents/wall.mjs:166). Une arête qui n'est
  * pas un mur (bord de scène…) compte comme pleine.
  */
-export function wallKindBetween(from, to, level) {
+export function wallKindBetween(from, to, level, { observer=null }={}) {
   const hits = CONFIG.Canvas.polygonBackends.move.testCollision(from, to, { type: "move", mode: "all", level }) ?? [];
   if ( !Array.isArray(hits) || !hits.length ) return false;
   const auto = grateWallsAuto();
-  const solid = hits.some(v => !(v.edges?.size) || [...v.edges].some(e => !isGrate(e.object, { auto })));
-  return solid ? "wall" : "grate";
+  // §518 : vu de `observer` (l'attaquant), une fenêtre dont il est assez près pour voir au travers est ouverte : elle ne coupe rien.
+  const edges = hits.map(v => (v.edges?.size ? [...v.edges].filter(e => !(observer && isOpenWindow(e, observer))) : null));
+  if ( edges.every(list => list && !list.length) ) return false;
+  const solid = edges.some(list => !list || list.some(e => !isGrate(e.object, { auto })));
+  return solid ? "wall" : (edges.some(list => list.length) ? "grate" : false);
+}
+
+/**
+ * §518 : cette arête (de mur) est-elle une fenêtre ouverte pour cet observateur ? Le seuil de vue du cœur (`Edge#applyThreshold`,
+ * canvas/geometry/edges/edge.mjs:220 : vue « proximité » à moins du seuil, ou « distance » au-delà), mesuré comme la vision d'un token
+ * (`useThreshold`, sources/point-vision-source.mjs:293) : depuis son centre, moins son rayon (`Token#externalRadius`, token.mjs:3928).
+ * @param {Edge} edge
+ * @param {{x: number, y: number, externalRadius?: number}} observer
+ */
+export function isOpenWindow(edge, observer) {
+  const doc = edge?.object?.document ?? edge?.object;
+  if ( (typeof doc?.getFlag !== "function") || (typeof edge.applyThreshold !== "function") ) return false;
+  return windowOpen({ mode: grateModeOf(doc), spellWall: !!(doc.getFlag(MODULE_ID, "zone") || doc.getFlag(MODULE_ID, "ethereal")),
+    seenThrough: edge.applyThreshold("sight", observer, observer.externalRadius ?? 0) === true });
+}
+
+/** §518 : le point d'où un token voit, pour le seuil des fenêtres — le centre de son espace et son rayon (`Token#externalRadius`). */
+export function observerOf(doc, pos=committedPosition(doc)) {
+  const r = rectOf(doc, pos);
+  return { x: r.x + (r.width / 2), y: r.y + (r.height / 2), externalRadius: Math.min(r.width, r.height) / 2 };
 }
 
 /**
@@ -114,10 +137,11 @@ export function wallKindBetween(from, to, level) {
  * hauteur d'yeux, et surfaces entre les hauteurs d'yeux des deux.
  * @param {TokenDocument} from
  * @param {TokenDocument} to
- * @param {object} [positions]  `posA`, `posB` : positions hypothétiques.
+ * @param {object} [positions]  `posA`, `posB` : positions hypothétiques ; `windows` (§518) : une fenêtre que `from` voit au travers
+ *                              (seuil de vue atteint) ne coupe pas la ligne — l'abri d'une attaque, pas la ligne d'effet.
  * @returns {(a: {x: number, y: number}, b: {x: number, y: number}) => false|"wall"|"surface"}  #33 : ce qui coupe la ligne.
  */
-export function rayBlocker(from, to, { posA, posB }={}) {
+export function rayBlocker(from, to, { posA, posB, windows=false }={}) {
   const scene = from.parent;
   const pa = posA ? { ...committedPosition(from), ...posA } : committedPosition(from);
   const pb = posB ? { ...committedPosition(to), ...posB } : committedPosition(to);
@@ -125,8 +149,9 @@ export function rayBlocker(from, to, { posA, posB }={}) {
   const eyeB = eyeElevation(to, pb);
   const level = scene.levels?.get?.(pa.level ?? from._source.level) ?? undefined;
   const surfaces = typeof scene.testSurfaceCollision === "function";
+  const observer = windows ? observerOf(from, pa) : null;   // §518 : l'attaquant tire par une fenêtre ouverte pour lui
   return (a, b) => {
-    const wall = wallKindBetween({ x: a.x, y: a.y, elevation: eyeA }, { x: b.x, y: b.y, elevation: eyeA }, level);
+    const wall = wallKindBetween({ x: a.x, y: a.y, elevation: eyeA }, { x: b.x, y: b.y, elevation: eyeA }, level, { observer });
     if ( wall === "wall" ) return "wall";
     if ( surfaces && (scene.testSurfaceCollision({ x: a.x, y: a.y, elevation: eyeA }, { x: b.x, y: b.y, elevation: eyeB }, { type: "move", mode: "any" }) === true) ) return "surface";
     return wall;   // §468 : "grate" ou false
@@ -225,7 +250,7 @@ export function coverFor(attacker, target, { posA, quiet=false, activity=null, a
   const pa = posA ? { ...committedPosition(attacker), ...posA } : undefined;
   const cover = coverBetween({
     attacker: rectOf(attacker, pa), target: rectOf(target), bodies: bodiesAround(attacker, target, seenOnly),
-    blocked: rayBlocker(attacker, target, { posA }), inset,
+    blocked: rayBlocker(attacker, target, { posA, windows: true }), inset,
     clipAttacker: spaceClipper(attacker, pa, inset), clipTarget: spaceClipper(target, undefined, inset)
   });
   // §172 : une zone qui donne un abri à qui est derrière (Barrière de lames) — la ligne entre les deux la traverse.

@@ -183,3 +183,45 @@ describe("§476 : murs grilles d'office (réglage de monde) et choix du mur", ()
     expect(grateOf({ mode: "bizarre", auto: false, blocksSight: false })).toBe(false);
   });
 });
+
+import { windowOpen, forcedCover } from "../module/scripts/core/cover.mjs";
+
+describe("§518 : fenêtres (Discord, SpitFire) — ouvertes pour qui voit au travers ; attaque forcée malgré un abri total", () => {
+  it("une fenêtre dont l'attaquant atteint le seuil de vue est ouverte", () => {
+    expect(windowOpen({ seenThrough: true })).toBe(true);
+    expect(windowOpen({ mode: "auto", seenThrough: true })).toBe(true);
+  });
+
+  it("au-delà du seuil, la fenêtre reste un mur", () => {
+    expect(windowOpen({ seenThrough: false })).toBe(false);
+    expect(windowOpen({})).toBe(false);
+  });
+
+  it("le choix du mur l'emporte (« mur plein » : une vitre fermée ; « grille » : jamais plus qu'un abri aux trois quarts)", () => {
+    expect(windowOpen({ mode: "solid", seenThrough: true })).toBe(false);
+    expect(windowOpen({ mode: "grate", seenThrough: true })).toBe(false);
+  });
+
+  it("un mur de sort ne s'ouvre jamais", () => {
+    expect(windowOpen({ spellWall: true, seenThrough: true })).toBe(false);
+  });
+
+  it("une fenêtre ouverte ne coupe aucune ligne : aucun abri", () => {
+    const attacker = { x: 0, y: 0, width: 100, height: 100 };
+    const target = { x: 500, y: 0, width: 100, height: 100 };
+    // La fenêtre entre les deux, ouverte pour l'attaquant : `blocked` ne la rend pas (adapter/cover.mjs, `wallKindBetween`).
+    expect(coverBetween({ attacker, target, blocked: () => false, inset: 10 }).degree).toBe("none");
+  });
+
+  it("forcée, un abri total devient trois quarts (+5) : l'attaque peut toucher", () => {
+    const cover = forcedCover({ degree: "total", bonus: null, sources: ["wall"] });
+    expect(cover).toMatchObject({ degree: "threeQuarters", bonus: 5, forced: true, sources: ["wall"] });
+  });
+
+  it("forcée, les autres abris ne changent pas", () => {
+    const half = { degree: "half", bonus: 2 };
+    expect(forcedCover(half)).toBe(half);
+    expect(forcedCover(null)).toBe(null);
+    expect(forcedCover(undefined)).toBe(null);
+  });
+});

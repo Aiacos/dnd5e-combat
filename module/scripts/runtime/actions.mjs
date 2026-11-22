@@ -697,7 +697,7 @@ export function rangeStatus(token, target, activity, mode=null) {
   if ( !reach ) return null;
   const gap = gapCells(token, target);   // §192 : en trois dimensions (une cible au plafond est hors d'allonge)
   const out = gap > reach.long;
-  const blind = !out && (reach.normal > 1) && !hasLineOfSight(tokenCenter(token), target, undefined, { throughDarkness: true });
+  const blind = !out && (reach.normal > 1) && !hasLineOfSight(tokenCenter(token), target, undefined, { throughDarkness: true, externalRadius: token.object?.externalRadius ?? 0 });
   return { out, blind, gap, reach };
 }
 
@@ -762,7 +762,7 @@ export async function engage(token, target, activity, { mode=null, fast=false, u
     // déjà à portée sans la voir, on cherche une telle case.
     const ranged = reach.normal > 1;
     const seeing = ranged;
-    const blind = ranged && (gap <= reach.normal) && !hasLineOfSight(tokenCenter(token), target, undefined, { throughDarkness: true });   // issue #42 : comme `rangeStatus`
+    const blind = ranged && (gap <= reach.normal) && !hasLineOfSight(tokenCenter(token), target, undefined, { throughDarkness: true, externalRadius: token.object?.externalRadius ?? 0 });   // issue #42 : comme `rangeStatus`
     if ( (gap > reach.normal) || blind ) {
       const plan = planPath(token, { target, reachCells: reach.normal, seeing }, { maxCost: movementCap(token) });
       const withinLong = !blind && (gap <= reach.long);

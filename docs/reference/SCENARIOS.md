@@ -137,6 +137,7 @@ la sélection sans rien jouer.
 | `faits-soi-soleil-eau` |  | §484 | soleil, eau courante, dégâts d'un trait au début du tour |
 | `familier` |  | §107 | actions de base, vision, poche dimensionnelle |
 | `fee-ange` |  | §92 §438 | Foulée des fées, Échappatoire brumeuse, Ange vengeur |
+| `fenetre-tir` | Arène des refus |  | tirer par une fenêtre, attaque forcée malgré un abri total (§FEN) |
 | `fenetres-sans-delai` |  | §290 | le MJ voit qui il attend, et force |
 | `feu-gregeois` |  | §49 | En feu, dégâts au début du tour, s'éteindre à terre |
 | `fin-sur-degats` |  | §16.7 | Motif hypnotique cesse, Fou rire rejoue sa sauvegarde |

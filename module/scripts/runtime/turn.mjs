@@ -444,7 +444,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     });
     return false;
   }
-  for ( const key of ["choice", "attackMode", "saveChoice", "legendary", "autoReact", "recast", "cost", "damageType", "order", "cleave", "metamagic", "basicChoice", "ammunition", "overridden", "potionMode", "administer"] ) {
+  for ( const key of ["choice", "attackMode", "saveChoice", "legendary", "autoReact", "recast", "cost", "damageType", "order", "cleave", "metamagic", "basicChoice", "ammunition", "overridden", "forcedThrough", "potionMode", "administer"] ) {
     const value = usageConfig[MODULE_ID]?.[key];
     if ( value && messageConfig ) foundry.utils.setProperty(messageConfig, `data.flags.${MODULE_ID}.${key}`, value);
   }
@@ -528,7 +528,9 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     if ( reasons.length ) reportForced({ actor: activity.actor, item: activity.item, reasons, targets: aimed.map(t => t.name), token: origin })
       .catch(err => console.error(`${MODULE_ID} | forced: alert`, err));
     // Les options du moteur déjà posées (choix de la lumière, cibles désignées…) repartent avec la confirmation.
-    const config = { ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), confirmed: true,
+    // §518 : la carte sait qu'on est passé outre (quel que soit le réglage « Action impossible ») — un abri total n'y est plus un échec
+    // d'office (runtime/engine.mjs, `enrich`).
+    const config = { ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), confirmed: true, forcedThrough: true,
       // §436 : une raison déjà passée outre avant `use` (antimagie, runtime/antimagic.mjs) reste sur la carte.
       ...(reasons.length ? { overridden: overriddenFlag([...(usageConfig?.[MODULE_ID]?.overridden ?? []), ...reasons]) } : {}) } };
     const message = foundry.utils.mergeObject(messageConfig ?? {}, choice === "reaction"
