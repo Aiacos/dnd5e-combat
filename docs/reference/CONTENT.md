@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-984 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+985 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -247,6 +247,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `saveAutoSuccessAgainst` | 1 | `greater-magic-resistance` |
 | `saveDamage` | 8 | `black-tentacles`, `contact-other-plane`, `evards-black-tentacles`, `holy-water`, `misty-escape`, `pale-tincture`, … |
 | `savedEffects` | 6 | `flesh-to-stone`, `heat-metal`, `mace-of-disruption`, `ottos-irresistible-dance`, `ray-of-enfeeblement`, `stunning-strike` |
+| `saveDisadvantageAgainst` | 1 | `demon-armor-enchanted` |
 | `saveDisadvantageFor` | 3 | `shatter`, `talisman-of-pure-good`, `talisman-of-ultimate-evil` |
 | `saveIgnoresCover` | 1 | `sacred-flame` |
 | `savesCharges` | 1 | `use-magic-device` |
@@ -297,7 +298,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `thrownDamage` | 1 | `thrown-weapon-fighting` |
 | `trace` | 7 | `armor-of-agathys`, `blade-ward`, `dispel-evil-and-good`, `flame-blade`, `moonlight-step`, `produce-flame`, … |
 | `transpose` | 1 | `tricksters-transposition` |
-| `triggers` | 280 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
+| `triggers` | 281 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
 | `turnStartHeal` | 1 | `survivor` |
 | `untypedDamage` | 3 | `freezing-sphere`, `mm-wight-life-drain`, `otilukes-freezing-sphere` |
 | `upkeep` | 1 | `crown-of-madness` |
@@ -383,7 +384,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `preAttackRoll → advantage` | 27 | `assassinate`, `avenging-angel`, `clairvoyant-combatant`, `distracting-strike`, `faerie-fire`, `feinting-attack`, … |
 | `preAttackRoll → attackBonus` | 3 | `blade-ward`, `brutal-strike`, `improved-brutal-strike` |
 | `preAttackRoll → consume` | 10 | `brutal-strike`, `distracting-strike`, `feinting-attack`, `guiding-bolt`, `improved-brutal-strike`, `moonlight-step`, … |
-| `preAttackRoll → disadvantage` | 32 | `bestow-curse`, `blur`, `clairvoyant-combatant`, `cloak-of-displacement`, `compelled-duel`, `dispel-evil-and-good`, … |
+| `preAttackRoll → disadvantage` | 33 | `bestow-curse`, `blur`, `clairvoyant-combatant`, `cloak-of-displacement`, `compelled-duel`, `demon-armor-enchanted`, … |
 | `preDamageRoll → damage` | 37 | `ancient-might`, `bestow-curse`, `blessed-strikes`, `blessed-strikes-potent-spellcasting`, `bracers-of-archery`, `brutal-strike`, … |
 | `savedSave → mark` | 1 | `eyebite` |
 | `savedSave → move` | 1 | `bead-of-force` |
