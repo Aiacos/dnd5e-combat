@@ -63,11 +63,29 @@ export default {
       ctx.expect(!errors.length, `${name} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
 
+    // §516 : la fenêtre « Au toucher » de la Sauvagerie martiale du Guerrier (cochée d'avance) s'ouvre avant toute autre question ;
+    // validée telle quelle, elle ne compte pas comme une réponse du scénario.
+    const savageDialog = d => /Savage Attacker|Sauvagerie martiale/i.test(`${d.title ?? ""} ${d.content ?? d.text ?? ""}`);
+    const confirmSavage = async d => {
+      const b = (d.buttons ?? []).find(x => /Confirm|Frapper|Valider/i.test(x.label ?? ""));
+      await ctx.call("answer-dialog", { id: d.id, button: b?.action ?? b?.label }).catch(() => {});
+    };
+
     /** Une attaque ; rend la résolution, les messages, le mode et le verdict. */
     const attack = async (attacker, itemId, target, usage={}) => {
       const since = await ctx.lastMessageId();
+      const known = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
       const u = await ctx.use({ tokenId: attacker.id, itemId, activityType: "attack", targetTokenIds: [target.id], usageConfig: { [MODULE_ID]: usage } });
+      let done = false;
+      const watch = (async () => {
+        while ( !done ) {
+          const w = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: known, waitMs: 1500, details: true }).catch(() => null);
+          for ( const d of (w?.windows ?? []).filter(savageDialog) ) { await confirmSavage(d); known.push(d.id); }
+        }
+      })();
       const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
+      done = true;
+      await watch;
       await pause(1500);
       const msgs = await ctx.messagesSince(since);
       const att = msgs.find(m => m.type === "attack");
@@ -144,10 +162,11 @@ export default {
       let answered = false;
       for ( let i = 0; (i < 20) && !answered; i++ ) {
         const u = await ctx.use({ tokenId: fighter.id, itemId: sword, activityType: "attack", targetTokenIds: [bandit.id] });
-        for ( const stop = Date.now() + 12000; Date.now() < stop; ) {
+        for ( const stop = Date.now() + 15000; Date.now() < stop; ) {
           const r = await ctx.resolution(u.usageMessageId);
           if ( r?.step === "missed" ) break;
-          const d = (await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: known, waitMs: 2000 }).catch(() => null))?.windows?.[0];
+          const d = (await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: known, waitMs: 2000, details: true }).catch(() => null))?.windows?.[0];
+          if ( d && savageDialog(d) ) { await confirmSavage(d); known.push(d.id); continue; }
           if ( d ) {
             const b = (d.buttons ?? []).find(x => /Repousser|Push 10/i.test(x.label ?? ""));
             await ctx.call("answer-dialog", { id: d.id, button: b?.action ?? b?.label });

@@ -57,10 +57,18 @@ export default {
     const sword = await ctx.itemId(fighter.id, "greatsword");
 
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
-    const answer = async (ids, re, ms=9000) => {
+    const answer = async (ids, re, ms=15000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
         for ( const d of r?.windows ?? [] ) {
+          // §516 : la fenêtre « Au toucher » de la Sauvagerie martiale du Guerrier (cochée d'avance) vient avant celle des manœuvres ;
+          // validée telle quelle, elle ne compte pas comme la réponse attendue.
+          if ( /Savage Attacker|Sauvagerie martiale/i.test(`${d.title ?? ""} ${d.content ?? d.text ?? ""}`) ) {
+            const s = (d.buttons ?? []).find(x => /Confirm|Frapper|Valider/i.test(x.label ?? ""));
+            await ctx.call("answer-dialog", { id: d.id, button: s?.action ?? s?.label }).catch(() => {});
+            ids.push(d.id);
+            continue;
+          }
           const b = (d.buttons ?? []).find(x => re.test(x.label ?? ""));
           if ( b ) { await ctx.call("answer-dialog", { id: d.id, button: b.action ?? b.label }); return { labels: (d.buttons ?? []).map(x => x.label) }; }
           // Beaucoup d'options : une liste déroulante (adapter/choices.mjs, §113) et un bouton « Valider ».
