@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-134 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
+135 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
 `client` = ce poste, `user` = ce joueur. **Onglet** : celui de la fenêtre de réglages DAS (`core/settings-layout.mjs`) ; sans onglet,
 le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêtre dédiée). Le libellé est celui de `lang/fr.json`.
 
@@ -48,6 +48,7 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 | `npcSaveChoice` | Sauvegarde au choix de la cible (PNJ) | world | String | `"ask"` | ask, best | `runtime/basics.mjs` |
 | `portent` | Présage du Devin | world | Boolean | `true` |  | `runtime/portent.mjs` |
 | `potionHealing` | Potions de soins : action Bonus ou action (règle maison) | world | Boolean | `false` |  | `runtime/potion-choice.mjs` |
+| `savageAttackerMode` | Sauvagerie martiale | world | String | `"ask"` | ask, auto | `runtime/feats.mjs` |
 | `sneakAttackMode` | Attaque sournoise | world | String | `"auto"` | auto, ask | `runtime/sneak.mjs` |
 | `somaticHands` | Main libre pour les composantes somatiques | world | String | `"pc"` | pc, all, off | `adapter/hands.mjs` |
 | `successAtCost` | Succès à un prix | world | Boolean | `false` |  | `runtime/success-at-cost.mjs` |

@@ -15,7 +15,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { fromTrusted } from "../core/requests.mjs";
 import { attribute, buildReport, createErrorLog, createRing, createScrubber, errorIn, formatArgs, githubRepo, isBareStack, isBrowserNoise, isDeprecation,
-  packagesOfStack, pickRepo, reportMarkdown, roleLabels, safeSettings } from "../core/debug.mjs";
+  noticeMatcher, translationTexts, packagesOfStack, pickRepo, reportMarkdown, roleLabels, safeSettings } from "../core/debug.mjs";
 import { isSuiteTitle } from "../core/settings-layout.mjs";
 import { identifierOf } from "../adapter/content.mjs";
 import { reports as itemReports } from "../adapter/automation.mjs";
@@ -135,6 +135,20 @@ export function noteRefused(entry) {
   trail("refused", `${entry.hook} ← ${entry.label}`);
 }
 
+/** Les textes du moteur (sa langue et l'anglais de repli), lus une fois les traductions chargées. */
+let noticeTest = null;
+function ownNotice(text) {
+  if ( !noticeTest ) {
+    const i18n = globalThis.game?.i18n;
+    const prefix = "DND5ECOMBAT";
+    const subtree = tree => tree?.[prefix] ?? Object.fromEntries(Object.entries(tree ?? {}).filter(([k]) => k.startsWith(`${prefix}.`)));
+    const texts = [...translationTexts(subtree(i18n?.translations)), ...translationTexts(subtree(i18n?._fallback))];
+    if ( !texts.length ) return false;   // avant le chargement des traductions : rien à reconnaître, on réessaiera
+    noticeTest = noticeMatcher(texts);
+  }
+  return noticeTest(text);
+}
+
 /** Une ligne de console enveloppée. */
 function fromConsole(kind, args) {
   const err = errorIn(args);
@@ -143,6 +157,8 @@ function fromConsole(kind, args) {
   // Une notification de l'interface (« hors de portée »…) : Foundry la répète en console, ce n'est pas une erreur.
   if ( NOTIFICATION.test(here) ) return;
   let message = formatArgs(args);
+  // Issue #238 : un avis du moteur dont un autre module a remplacé l'affichage (la pile ne passe plus par Notifications), reconnu à son texte.
+  if ( !err && ownNotice(message) ) return;
   let stack = err?.stack ?? here;
   // Dans un groupe de console, le texte est souvent dans le libellé du groupe : PixiJS y met son avertissement de dépréciation et
   // n'écrit que la pile dans `console.warn` (pixi.min.js, `deprecation`). Le libellé passe devant ; une pile seule devient la pile.

@@ -3,7 +3,7 @@
  *
  *  - Sauvagerie martiale (`savageAttacker`) : une fois par tour, au jet de dégâts d'une arme (pas une attaque à mains nues), ses dés
  *    sont lancés deux fois et le meilleur gardé (core/feats.mjs, `twiceKeepHighest`). Le choix « l'un ou l'autre » est toujours le
- *    meilleur : pas de question. Hors combat, chaque coup.
+ *    meilleur. §516 : le coup se choisit (case de la fenêtre « au toucher », réglage `savageAttackerMode`). Hors combat, chaque coup.
  *  - Guérisseur (`healingRerolls`) : aux dés de soins d'un sort, un 1 relancé une fois (`rerollOnesOnce`). Les Soins de combat du don
  *    portent déjà la relance dans leurs données.
  * Ailleurs : Bagarreur de tavernes (faveur `hitRider`, adapter/smite.mjs), Chanceux (`rollBonus.luck`, adapter/inspiration.mjs ; sa
@@ -24,6 +24,7 @@ import { holds } from "../core/triggers.mjs";
 import { combatantFor, readBudget, writeBudget, movementOf } from "../adapter/turn.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
 import { askChoice } from "../adapter/choices.mjs";
+import { savageApplies, savageSpent, savageTurnOf, SAVAGE_MODE_SETTING, SAVAGE_MODES } from "../adapter/savage.mjs";
 import { route } from "./router.mjs";
 import { log, loc, say, locEsc } from "./shared.mjs";
 
@@ -62,11 +63,13 @@ function onPreRollDamage(config, dialog, message) {
     for ( const roll of config.rolls ) roll.parts = (roll.parts ?? []).map(rerollOnesOnce);
     log(`Healer: 1s rerolled once on ${activity.item.name}'s healing dice`);
   }
-  // Sauvagerie martiale : la part de l'arme d'un coup d'arme, une fois par tour.
-  const weapon = (activity.type === "attack") && (activity.item?.type === "weapon") && (activity.attack?.type?.classification !== "unarmed");
-  if ( weapon && hasRule(actor, "savageAttacker") ) {
-    const turn = turnOf(actor);
-    if ( turn && (actor.getFlag(MODULE_ID, "savageAttacker") === turn) ) return true;
+  // Sauvagerie martiale : la part de l'arme d'un coup d'arme, une fois par tour. §516 : refusée dans la fenêtre « au toucher »
+  // (`savageAttacker: false`, adapter/savage.mjs), elle reste pour un autre coup du tour ; sans réponse (jet du bouton de la carte,
+  // mode « auto »), elle se met d'office au premier coup du tour.
+  const savage = config[MODULE_ID]?.savageAttacker;
+  if ( (savage === false) && savageApplies(activity) ) log(`Savage Attacker: kept for another hit (${actor.name})`);
+  else if ( savageApplies(activity) && !savageSpent(actor) ) {
+    const turn = savageTurnOf(actor);
     const base = config.rolls.find(r => r.base) ?? config.rolls[0];
     base.parts = (base.parts ?? []).map((p, i) => (i === 0 ? twiceKeepHighest(p) : p));
     foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.savageAttacker`, true);
@@ -498,6 +501,11 @@ function onTurnChange(combat, prior, current) {
 }
 
 export function registerFeats() {
+  // §516 : Sauvagerie martiale demandée au coup (défaut) ou d'office au premier coup d'arme du tour.
+  game.settings.register(MODULE_ID, SAVAGE_MODE_SETTING, {
+    name: `DND5ECOMBAT.Reglage.${SAVAGE_MODE_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${SAVAGE_MODE_SETTING}.Aide`, scope: "world", config: true,
+    type: String, choices: Object.fromEntries(SAVAGE_MODES.map(m => [m, `DND5ECOMBAT.Reglage.${SAVAGE_MODE_SETTING}.${m}`])), default: "ask"
+  });
   route("dnd5e.preRollDamageV2", onPreRollDamage, { cancellable: true, label: "origin feats (damage)" });
   route(`${MODULE_ID}.resolution`, resolution => enqueue(`critMark:${resolution?.id}`, () => onResolution(resolution)), { executor: true, label: "critical mark not placed" });
   route("combatTurnChange", onTurnChange, { executor: true, label: "feat turn start" });

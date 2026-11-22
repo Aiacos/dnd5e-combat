@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   stackFrames, packagesOfStack, attribute, formatArgs, errorIn, signature, createRing, createErrorLog, roleLabels,
   createScrubber, scrubDeep, safeSettings, buildReport, reportMarkdown, reportJson, githubRepo, pickRepo, truncateForUrl,
-  issueUrl, MAX_FRAMES, MAX_MESSAGE, formatAgo, errorTitle, isBareStack, isDeprecation, isBrowserNoise
+  issueUrl, MAX_FRAMES, MAX_MESSAGE, formatAgo, errorTitle, isBareStack, isDeprecation, isBrowserNoise, noticeMatcher, translationTexts
 } from "../module/scripts/core/debug.mjs";
 
 const CHROME = `TypeError: Cannot read properties of undefined (reading 'x')
@@ -321,5 +321,26 @@ describe("bruit du navigateur et totaux par origine", () => {
     log.add({ kind: "warn", message: "b", stack: "", module: "tokenmagic", thirdParty: true });
     log.add({ kind: "warn", message: "b", stack: "", module: "tokenmagic", thirdParty: true });
     expect([log.total(), log.total("suite"), log.total("others")]).toEqual([3, 1, 2]);
+  });
+});
+
+describe("avis du moteur répétés en console (issue #238)", () => {
+  const templates = translationTexts({ DND5ECOMBAT: { Diagnostic: { DdbAvis: "DAS: {count} item(s) imported from D&D Beyond may not be automated." },
+    Court: "Oui", Nom: "{name}", Portee: "<b>Hors</b> de portée de {name} pour cette attaque", Fixe: "Le combat n'a pas commencé." } });
+  const own = noticeMatcher(templates);
+  it("reconnaît un avis rempli, même préfixé par un module qui réécrit les notifications", () => {
+    expect(own("DAS: 5 item(s) imported from D&D Beyond may not be automated.")).toBe(true);
+    expect(own("[autre-module] DAS: 5 item(s) imported from D&D Beyond may not be automated.")).toBe(true);
+    expect(own("Hors de portée de Gobelin pour cette attaque")).toBe(true);
+    expect(own("Le combat n'a pas commencé.")).toBe(true);
+  });
+  it("ne prend pas une vraie erreur, ni un modèle trop court pour être sûr", () => {
+    expect(own("TypeError: Cannot read properties of undefined (reading 'x')")).toBe(false);
+    expect(own("Oui")).toBe(false);
+    expect(own("Gobelin")).toBe(false);
+    expect(own("")).toBe(false);
+  });
+  it("lit les feuilles d'un arbre de traductions", () => {
+    expect(translationTexts({ A: { B: "x", C: { D: "y" } }, E: 3 })).toEqual(["x", "y"]);
   });
 });

@@ -182,27 +182,32 @@ export async function armSneak(actor, armed=true) {
  * §223 : sur le client de l'auteur, avant ses dégâts, une seule fenêtre pour ce qui se décide « au toucher » :
  *  - l'Attaque sournoise elle-même, en mode « ask » (case cochée d'avance), sauf si l'auteur l'a réservée par l'activité de l'item ;
  *  - les Frappes rusées qu'il peut payer (elles retirent des dés à l'Attaque sournoise ; sans elle, ignorées) ;
- *  - les dégâts bonus au choix (`ask` : Frappe effroyable), décochés d'avance.
- * Sans réponse dans le délai : ce que la fenêtre propose par défaut (l'Attaque sournoise, rien d'autre). Sans rien à demander, pas de
- * fenêtre.
+ *  - les dégâts bonus au choix (`ask` : Frappe effroyable), décochés d'avance ;
+ *  - §516 : la Sauvagerie martiale (`savage`, adapter/savage.mjs), cochée d'avance.
+ * Sans réponse dans le délai : ce que la fenêtre propose par défaut (l'Attaque sournoise et la Sauvagerie martiale, rien d'autre). Sans
+ * rien à demander, pas de fenêtre.
  * @param {Actor} actor
  * @param {TokenDocument} target
  * @param {{dice: {number: number, faces: number}, issue: string|null}|null} sneak   sneakAttackFor (null : pas d'Attaque sournoise).
  * @param {Array<{key: string, name: string, formula: string, damageType: string|null, left: number}>} bonuses   optionalBonusesFor.
- * @returns {Promise<{sneak: boolean|null, strikes: string[], bonuses: string[]}>}  `sneak` : null sans Attaque sournoise possible.
+ * @param {{savage?: boolean}} [options]   `savage` : demander la Sauvagerie martiale pour ce coup.
+ * @returns {Promise<{sneak: boolean|null, strikes: string[], bonuses: string[], savage: boolean|null}>}  `sneak` : null sans Attaque
+ *   sournoise possible ; `savage` : null sans question de Sauvagerie martiale.
  */
-export async function askHitOptions(actor, target, sneak, bonuses=[]) {
+export async function askHitOptions(actor, target, sneak, bonuses=[], { savage=false }={}) {
   const eligible = !!sneak && !sneak.issue;
   const ask = eligible && (sneakMode() === "ask") && !sneakArmed(actor);
   const options = eligible ? affordableStrikes(strikeOptionsOf(actor, target), sneak.dice.number) : [];
-  const fallback = { sneak: eligible ? true : null, strikes: [], bonuses: [] };
-  if ( !ask && !options.length && !bonuses.length ) return fallback;
+  const fallback = { sneak: eligible ? true : null, strikes: [], bonuses: [], savage: savage ? true : null };
+  if ( !ask && !options.length && !bonuses.length && !savage ) return fallback;
   const t = (key, data={}) => game.i18n.format(`DND5ECOMBAT.Sournoise.${key}`, data);
   // Une ligne par case : la case, le libellé, puis les dés à droite (sans `.form-group`, qui empilait le libellé mot à mot).
   const box = (name, label, hint, checked=false) => `<label class="das-hit-option"><input type="checkbox" name="${name}"${checked ? " checked" : ""}>
     <span class="das-hit-option__label">${label}</span>${hint ? `<span class="das-hit-option__hint">${hint}</span>` : ""}</label>`;
   const list = rows => `<div class="das-hit-options">${rows.join("")}</div>`;
   const parts = [];
+  if ( savage ) parts.push(list([box("savage", game.i18n.localize("DND5ECOMBAT.Sauvagerie.Utiliser"),
+    game.i18n.localize("DND5ECOMBAT.Sauvagerie.Aide"), true)]));
   if ( ask ) parts.push(list([box("sneak", t("Utiliser", { name: target.name }), `+${sneak.dice.number}d${sneak.dice.faces}`, true)]));
   if ( options.length ) {
     const max = strikeMaxOf(actor);
@@ -216,7 +221,7 @@ export async function askHitOptions(actor, target, sneak, bonuses=[]) {
   }
   const checked = (dialog, button, name) => !!(dialog.element ?? button.form)?.querySelector(`input[name="${name}"]`)?.checked;
   const picked = await timedWait({
-    window: { title: t(options.length && !ask && !bonuses.length ? "Titre" : "TitreCoup", { name: actor.name }) },
+    window: { title: t(options.length && !ask && !bonuses.length && !savage ? "Titre" : "TitreCoup", { name: actor.name }) },
     position: { width: 400 },
     content: parts.join(""),
     buttons: [
@@ -226,11 +231,14 @@ export async function askHitOptions(actor, target, sneak, bonuses=[]) {
           return {
             sneak: eligible ? sneakOn : null,
             strikes: sneakOn ? options.filter(o => checked(dialog, button, o.key)).map(o => o.key) : [],
-            bonuses: bonuses.filter(b => checked(dialog, button, `bonus-${b.key}`)).map(b => b.key)
+            bonuses: bonuses.filter(b => checked(dialog, button, `bonus-${b.key}`)).map(b => b.key),
+            savage: savage ? checked(dialog, button, "savage") : null
           };
         } },
       // « Rien » : ni Frappe ni dégâts au choix ; l'Attaque sournoise reste si elle est automatique, et se garde si on la demandait.
-      { action: "none", label: t((ask || bonuses.length) ? "Rien" : "Aucune"), callback: () => ({ sneak: eligible ? !ask : null, strikes: [], bonuses: [] }) }
+      // §516 : la Sauvagerie martiale se garde aussi pour un autre coup.
+      { action: "none", label: t((ask || bonuses.length || savage) ? "Rien" : "Aucune"),
+        callback: () => ({ sneak: eligible ? !ask : null, strikes: [], bonuses: [], savage: savage ? false : null }) }
     ]
   }, { fallback, awaiting: { actor, kind: "choice" } });
   return (picked && (typeof picked === "object")) ? picked : fallback;

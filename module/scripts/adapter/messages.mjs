@@ -15,6 +15,7 @@ import { timedWait } from "./dialogs.mjs";
 import { applyDamageShields, resistRangedWeapon } from "./defenses.mjs";
 import { damageVariant } from "./variants.mjs";
 import { sneakAttackFor, askHitOptions } from "./sneak.mjs";
+import { savageToAsk } from "./savage.mjs";
 import { optionalBonusesFor } from "./triggers.mjs";
 import { speakerTokenOf } from "./turn.mjs";
 import { chooseSmite } from "./smite.mjs";
@@ -178,7 +179,8 @@ export async function rollDamageForAttack(attackMessage, { critical, variant=nul
   const target = sneak?.target ?? fromUuidSync(attackMessage.system?.targets?.[0]?.token ?? "", { strict: false });
   const optional = ((attackMessage.system?.targets ?? []).length === 1)
     ? optionalBonusesFor({ actor: used.actor, activity, sourceToken: sneak?.source ?? speakerTokenOf(attackMessage), targetToken: target }) : [];
-  const hitOptions = await askHitOptions(used.actor, target, sneak, optional);
+  // §516 : la Sauvagerie martiale au choix (réglage « ask »), dans la même fenêtre.
+  const hitOptions = await askHitOptions(used.actor, target, sneak, optional, { savage: savageToAsk(used) });
   const strikes = hitOptions.strikes;
   // Relevé des trous : Inspiration de combat, Attaque — le dé du barde de la vaillance, ajouté aux dégâts (runtime/feats.mjs).
   const inspired = await offerCombatInspirationDamage(used.actor);
@@ -186,7 +188,8 @@ export async function rollDamageForAttack(attackMessage, { critical, variant=nul
   const smite = await chooseSmite(used, attackMessage);
   const ours = { ...(damageType ? { damageType } : {}), ...(strikes.length ? { strikes } : {}), ...(smite ? { smite } : {}),
     ...(typeof hitOptions.sneak === "boolean" ? { sneak: hitOptions.sneak } : {}), ...(hitOptions.bonuses.length ? { acceptedBonuses: hitOptions.bonuses } : {}),
-    ...(criticalTable ? { criticalHit: criticalTable } : {}), ...(inspired ? { combatInspiration: inspired } : {}) };
+    ...(criticalTable ? { criticalHit: criticalTable } : {}), ...(inspired ? { combatInspiration: inspired } : {}),
+    ...(typeof hitOptions.savage === "boolean" ? { savageAttacker: hitOptions.savage } : {}) };
   // §373 : les cibles de l'attaque sur la carte de dégâts — dnd5e les lirait dans la sélection de l'utilisateur au moment du jet
   // (`TargetsField.getDescriptors()`), qu'une autre résolution (une prise après le coup) a pu relâcher entre-temps.
   const targets = attackMessage?.system?.targets?.length ? attackMessage.system.targets : null;

@@ -57,6 +57,50 @@ export function attribute(stack, { ignore=[] }={}) {
 }
 
 /* -------------------------------------------- */
+/*  Avis de la suite (issue #238, §517)         */
+/* -------------------------------------------- */
+
+/** Les feuilles texte d'un arbre de traductions (`{ A: { B: "texte" } }` ou clés plates). */
+export function translationTexts(tree, out=[]) {
+  if ( typeof tree === "string" ) out.push(tree);
+  else if ( tree && (typeof tree === "object") ) for ( const value of Object.values(tree) ) translationTexts(value, out);
+  return out;
+}
+
+const stripTags = text => text.replace(/<[^>]*>/g, "");
+/** Un modèle trop court ou sans mots (« {name} », « Oui ») reconnaîtrait n'importe quoi : écarté. */
+const MIN_LITERAL = 12;
+
+/**
+ * Issue #238 : reconnaître un avis de la suite (une notification de l'interface) que la console répète. Foundry écrit le texte d'une
+ * notification en console (Notifications#notify, `console: true`) ; si un autre module remplace l'affichage des notifications, la pile
+ * de cette ligne ne passe plus par `Notifications.*` et l'avis prenait l'allure d'un avertissement de ce module. Les textes de la suite
+ * (ses fichiers de langue, balises retirées, `{x}` = n'importe quoi) le reconnaissent quelle que soit la pile.
+ * @param {string[]} templates  Les textes traduits.
+ * @returns {(text: string) => boolean}  Le texte contient-il l'un de ces modèles rempli ? (Contient : un module qui réécrit les
+ *   notifications peut ajouter son préfixe à la ligne de console.)
+ */
+export function noticeMatcher(templates) {
+  const exact = new Set();
+  const patterns = [];
+  for ( const raw of new Set(templates.filter(t => typeof t === "string")) ) {
+    const template = stripTags(raw).trim();
+    const literal = template.replace(/\{[^{}]+\}/g, "").trim();
+    if ( literal.length < MIN_LITERAL ) continue;
+    if ( !/\{[^{}]+\}/.test(template) ) { exact.add(template); continue; }
+    const source = template.split(/\{[^{}]+\}/).map(escapeRegExp).join("[\\s\\S]*?");
+    try { patterns.push(new RegExp(source)); } catch { /* modèle illisible : ignoré */ }
+  }
+  return text => {
+    const line = stripTags(String(text ?? "")).trim();
+    if ( !line ) return false;
+    if ( exact.has(line) ) return true;
+    for ( const template of exact ) if ( line.includes(template) ) return true;
+    return patterns.some(p => p.test(line));
+  };
+}
+
+/* -------------------------------------------- */
 /*  Messages                                    */
 /* -------------------------------------------- */
 
