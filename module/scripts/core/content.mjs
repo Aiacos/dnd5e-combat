@@ -117,7 +117,8 @@
  *     silences?: true                           la zone posée par l'item fait le silence (Silence, issue #42) : aucun son n'y
  *                                               naît ni ne la traverse — on n'entend ni ce qui est dedans, ni à travers
  *                                               (adapter/hearing.mjs)
- *     usageLimits?: { <id d'activité>: { oncePerTurn?, whenEmpty?, lowestSlot?, noDialog?, cost?, unmoved?, whileEffect?, unlessEffect?, automatic? } }
+ *     usageLimits?: { <id d'activité>: { oncePerTurn?, whenEmpty?, lowestSlot?, noDialog?, cost?, unmoved?, whileEffect?, unlessEffect?,
+ *                                               automatic?, light? } }
  *                                               limites d'utilisation que dnd5e ne contrôle pas (§16.40, core/limits.mjs) :
  *                                               une fois à chacun de vos tours ; seulement si l'item `whenEmpty` n'a plus
  *                                               d'utilisation ; `lowestSlot` : l'emplacement le plus bas, sans fenêtre ;
@@ -130,7 +131,9 @@
  *                                               sinon ; `unlessEffect` : seulement hors de ces effets ; `automatic` : le
  *                                               moteur joue déjà cette activité de lui-même, la lancer à la main est refusé
  *                                               (forçable). Une activité ajoutée par un enchantement (id tiré au hasard) se
- *                                               lit sous l'id de l'activité d'origine (adapter/limits.mjs, `riderOriginId`)
+ *                                               lit sous l'id de l'activité d'origine (adapter/limits.mjs, `riderOriginId`) ;
+ *                                               `light` : ["dim", "dark"]… — seulement dans l'une de ces lumières (Ne faire
+ *                                               qu'un avec les ombres)
  *     effectsExpire?: "longRest"|"shortRest"    les effets que l'item pose prennent fin à ce repos du porteur (expiration
  *                                               native de dnd5e, `duration.expiry`) — Prière de guérison, §16.38
  *     revealsInvisible?: true                   le porteur d'un effet de l'item « ne peut pas bénéficier de l'état

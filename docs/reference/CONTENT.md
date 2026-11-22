@@ -300,7 +300,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `turnStartHeal` | 1 | `survivor` |
 | `untypedDamage` | 3 | `freezing-sphere`, `mm-wight-life-drain`, `otilukes-freezing-sphere` |
 | `upkeep` | 1 | `crown-of-madness` |
-| `usageLimits` | 12 | `action-surge`, `flame-blade`, `hammer-of-thunderbolts-enchanted`, `indomitable`, `pact-of-the-chain`, `plant-growth`, … |
+| `usageLimits` | 13 | `action-surge`, `flame-blade`, `hammer-of-thunderbolts-enchanted`, `indomitable`, `one-with-shadows`, `pact-of-the-chain`, … |
 | `wallAura` | 1 | `prismatic-wall` |
 | `walls` | 7 | `forcecage`, `prismatic-wall`, `wall-of-fire`, `wall-of-force`, `wall-of-ice`, `wall-of-stone`, … |
 | `wallSide` | 1 | `wall-of-fire` |

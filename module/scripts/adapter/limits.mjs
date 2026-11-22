@@ -11,6 +11,7 @@ import { contentOf, identifierOf } from "./content.mjs";
 import { carriesEffectFrom, comesFromItemEffect } from "./facts.mjs";
 import { combatantFor, movementOf, currentTurnKey } from "./turn.mjs";
 import { readUnitFactors } from "./units.mjs";
+import { lightOfActor } from "./effect-while.mjs";
 
 /**
  * Guide 3.0.0 : une activité qu'un enchantement ajoute à l'arme (« rider ») y reçoit un id tiré au hasard (dnd5e, `EnchantmentData`,
@@ -29,14 +30,27 @@ export function riderOriginId(activity) {
   return match?.id ?? null;
 }
 
-/** La règle de limite de cette activité, ou null — sous son id, ou, pour une activité ajoutée par un enchantement, sous son id d'origine. */
+/**
+ * La règle de limite de cette activité, ou null — sous son id, ou, pour une activité ajoutée par un enchantement, sous son id
+ * d'origine. Pour la copie d'un sort qu'une activité « cast » a lancée (`flags.dnd5e.cachedFor`, dnd5e activity/cast.mjs), la
+ * condition de lumière de cette activité-là vaut aussi : c'est la copie que dnd5e utilise, pas l'activité de l'aptitude (Ne faire
+ * qu'un avec les ombres). Les autres limites restent celles de l'activité utilisée.
+ */
 export function usageLimitOf(activity) {
   if ( !activity?.item ) return null;
   const rules = contentOf(activity.item).entry?.usageLimits;
-  if ( !rules ) return null;
-  if ( rules[activity.id] ) return rules[activity.id];
-  const originId = riderOriginId(activity);
-  return originId ? (rules[originId] ?? null) : null;
+  const originId = (rules && !rules[activity.id]) ? riderOriginId(activity) : null;
+  const own = rules?.[activity.id] ?? (originId ? (rules[originId] ?? null) : null);
+  const light = castLightOf(activity.item);
+  return light ? { ...(own ?? {}), light } : own;
+}
+
+/** `usageLimits.<activité>.light` de l'activité « cast » qui a lancé cette copie de sort, ou null. */
+function castLightOf(item) {
+  const cached = item?.flags?.dnd5e?.cachedFor;
+  const m = (typeof cached === "string") ? cached.match(/Item\.([A-Za-z0-9]{16})\.Activity\.([A-Za-z0-9]{16})$/) : null;
+  const caster = m ? item.actor?.items?.get(m[1]) : null;
+  return caster ? (contentOf(caster).entry?.usageLimits?.[m[2]]?.light ?? null) : null;
 }
 
 /** Les utilisations restantes de l'item de cet identifiant chez l'acteur, ou null s'il n'en a pas. */
@@ -84,8 +98,10 @@ export function usageLimitProblems(activity, { inCombat, ownTurn }) {
   const barring = effectRefs(rule.unlessEffect);
   const underEffect = needed.length ? needed.some(r => carriesRef(activity.actor, r)) : null;
   const barredBy = barring.find(r => carriesRef(activity.actor, r)) ?? null;
+  // La lumière là où se tient l'utilisateur, pour une activité qui n'est permise que dans la pénombre ou les ténèbres.
+  const light = rule.light ? lightOfActor(activity.actor) : null;
   const issues = usageLimitIssues(rule, { inCombat, ownTurn, usedThisTurn, remaining, moved, underEffect,
-    barredByEffect: barring.length ? !!barredBy : null });
+    barredByEffect: barring.length ? !!barredBy : null, light });
   const effect = issues.includes("needsEffect") ? needed.map(r => refName(activity.actor, r)).join(" / ")
     : (barredBy ? refName(activity.actor, barredBy) : null);
   return { issues, item, effect };
