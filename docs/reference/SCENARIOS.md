@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-394 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+395 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -137,7 +137,7 @@ la sélection sans rien jouer.
 | `faits-soi-soleil-eau` |  | §484 | soleil, eau courante, dégâts d'un trait au début du tour |
 | `familier` |  | §107 | actions de base, vision, poche dimensionnelle |
 | `fee-ange` |  | §92 §438 | Foulée des fées, Échappatoire brumeuse, Ange vengeur |
-| `fenetre-tir` | Arène des refus |  | tirer par une fenêtre, attaque forcée malgré un abri total (§FEN) |
+| `fenetre-tir` | Arène des refus | §518 | tirer par une fenêtre, attaque forcée malgré un abri total (§518) |
 | `fenetres-sans-delai` |  | §290 | le MJ voit qui il attend, et force |
 | `feu-gregeois` |  | §49 | En feu, dégâts au début du tour, s'éteindre à terre |
 | `fin-sur-degats` |  | §16.7 | Motif hypnotique cesse, Fou rire rejoue sa sauvegarde |
