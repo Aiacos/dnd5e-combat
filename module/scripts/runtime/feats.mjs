@@ -338,7 +338,8 @@ export async function markConcentrationBreaker(source, target, activity=null) {
   if ( !source || !target || (source === target) ) return;
   // `"item"` : l'objet dont l'activité a blessé, s'il est à ce porteur, équipé et harmonisé au besoin
   // (core/concentration-breaker.mjs).
-  const item = (activity?.item?.actor === source) ? activity.item : null;
+  // L'objet est relu sur la fiche du porteur par son id : l'activité d'une résolution peut venir d'un clone de l'item.
+  const item = activity?.item?.id ? (source.items?.get?.(activity.item.id) ?? null) : null;
   const itemReady = !!item && (item.system?.equipped !== false)
     && ((item.system?.attunement !== "required") || (item.system?.attuned === true));
   const applies = breaksConcentration({ owned: (source.items ?? []).map(i => contentOf(i).entry?.concentrationBreaker),
