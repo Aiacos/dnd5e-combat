@@ -18,6 +18,7 @@ import { factsFor } from "./facts.mjs";
 import { scrollSpellOf } from "./scrolls.mjs";
 import { isObjectToken } from "./bodies.mjs";
 import { monsterTextLayer } from "../core/monster-layer.mjs";
+import { sourceKeys } from "../core/source-keys.mjs";
 
 export const OVERRIDES_SETTING = "contentOverrides";
 
@@ -52,9 +53,12 @@ export function identifierOf(item) {
   const sourceUuid = item?._stats?.compendiumSource ?? item?.flags?.dnd5e?.sourceId ?? null;
   // §277 : les sources livrées (content/sources.mjs) et celles qu'un autre module enregistre avec sa table.
   // §334 : d'abord « acteur.item » — un id d'item du Monster Manual est partagé entre créatures (« mmBite0000000000 ») ; la clé
-  // « mmHomunculus0000.mmBite0000000000 » vise la morsure de l'Homoncule seule.
-  const parts = String(sourceUuid ?? "").split(".");
-  const known = ((parts.length > 3) ? SOURCES[`${parts.at(-3)}.${parts.at(-1)}`] : null) ?? SOURCES[parts.at(-1)] ?? SOURCES[item?.id ?? ""];
+  // « mmHomunculus0000.mmBite0000000000 » vise la morsure de l'Homoncule seule. La source d'un item embarqué désigne le compendium
+  // des capacités, pas la créature : l'acteur se lit alors dans celui qui porte l'item (core/source-keys.mjs).
+  const owner = item?.actor ?? ((item?.parent?.documentName === "Actor") ? item.parent : null);
+  const key = sourceKeys({ itemSource: sourceUuid, itemId: item?.id ?? null, actorId: owner?.id ?? null,
+    actorSource: owner?._stats?.compendiumSource ?? owner?.flags?.dnd5e?.sourceId ?? null }).find(k => k in SOURCES);
+  const known = key ? SOURCES[key] : null;
   if ( known ) return { id: known, from: "source" };
   const own = item?.system?.identifier;
   const original = item?.flags?.babele?.originalName;
