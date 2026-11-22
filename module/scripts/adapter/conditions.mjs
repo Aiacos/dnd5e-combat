@@ -26,7 +26,7 @@ import { contentOf } from "./content.mjs";
 import { isObjectToken } from "./bodies.mjs";
 import { isSpellCast } from "./scrolls.mjs";
 import { pendingMetamagic } from "./metamagic.mjs";
-import { rangedFeatsFor, coverLeft, CROSSBOWS } from "../core/feats.mjs";
+import { rangedFeatsFor, coverLeft, coverIgnoreOf, CROSSBOWS } from "../core/feats.mjs";
 import { forcedCover } from "../core/cover.mjs";
 import { coverFor } from "./cover.mjs";
 import { areEnemies } from "./factions.mjs";
@@ -235,7 +235,17 @@ export function coverIgnoredBy(origin, target, activity, attackMode=null, degree
     // Un objet qui n'ignore que l'abri partiel n'est pas nommé devant un abri aux trois quarts.
     return (ignores === "half") ? (degree !== "threeQuarters") : ignores;
   });
-  return feat?.name ?? swornEnemyOf(activity, target, attackMode) ?? null;
+  if ( feat ) return feat.name;
+  // L'item lui-même (`attackIgnoresCover`), avec la même réserve : `"half"` n'est pas nommé devant un abri aux trois quarts.
+  const own = itemIgnoresCover(activity);
+  if ( own && ((own !== "half") || (degree !== "threeQuarters")) ) return activity.item.name;
+  return swornEnemyOf(activity, target, attackMode) ?? null;
+}
+
+/** `attackIgnoresCover` de l'item de cette attaque : `true`, `"half"` ou `false`. */
+function itemIgnoresCover(activity) {
+  const own = (activity?.type === "attack") ? contentOf(activity.item).entry?.attackIgnoresCover : null;
+  return ((own === true) || (own === "half")) ? own : false;
 }
 
 /**
@@ -247,7 +257,8 @@ export function coverAgainst(origin, target, activity, attackMode, { forced=fals
   const cover = forced ? forcedCover(found) : found;
   if ( forced && cover?.forced ) console.log(`dnd5e-combat | cover: ${target.name} — total cover, attack forced: three-quarters instead`);
   // §353 : l'ennemi juré de l'Arc du serment ne profite pas de l'abri partiel ou aux trois quarts.
-  return coverLeft(cover, activity ? (rangedFeatsOf(origin?.actor, activity, attackMode).cover || !!swornEnemyOf(activity, target, attackMode)) : false);
+  return coverLeft(cover, activity ? coverIgnoreOf(rangedFeatsOf(origin?.actor, activity, attackMode).cover,
+    !!swornEnemyOf(activity, target, attackMode), itemIgnoresCover(activity)) : false);
 }
 
 /** Un item de l'attaquant lui retire-t-il le Désavantage du tir au contact d'un ennemi ? */

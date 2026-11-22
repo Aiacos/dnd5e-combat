@@ -163,6 +163,9 @@
  *                                               `"magic"` : contre un sort ou un effet magique (Résistance à la magie, §18.9)
  *     saveIgnoresCover?: true                   la sauvegarde de Dextérité de l'item ne reçoit pas le bonus d'abri de la cible
  *                                               (Flamme sacrée ; core/save-cover.mjs)
+ *     attackIgnoresCover?: true | "half"        les attaques de l'item ignorent l'abri partiel et aux trois quarts de leur cible
+ *                                               (`"half"` : le partiel seul) ; l'abri total reste. `rangedFeat.cover` vaut pour le
+ *                                               porteur et toutes ses attaques d'un genre, cette clé pour l'item seul
  *     saveAutoSuccessAgainst?: ["magic"]        le porteur de l'item réussit d'office ses sauvegardes contre un sort ou un effet
  *                                               magique (Résistance supérieure à la magie)
  *     spellAttacksMiss?: true                   les jets d'attaque des sorts ratent d'office le porteur de l'item : il est hors
