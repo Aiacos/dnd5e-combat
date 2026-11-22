@@ -986,14 +986,18 @@ export function validateTable(table, { facts={} }={}) {
 /**
  * §277 : les erreurs d'une table de sources `{ id de document: identifiant }` — les correspondances qu'un module enregistre avec sa
  * table (`api.content.register(source, table, { sources })`) pour des items qui n'ont pas d'identifiant utilisable, comme
- * content/sources.mjs. Clé : l'id du document (16 caractères) ; valeur : un identifiant en kebab-case.
+ * content/sources.mjs. Clé : l'id du document (16 caractères), ou « id d'acteur.id d'item » quand l'id d'item est partagé entre
+ * créatures (§334 : `identifierOf` lit cette clé d'abord) ; valeur : un identifiant en kebab-case.
  * @returns {string[]}
  */
 export function validateSources(sources) {
   if ( !isObject(sources) ) return ["sources: an object { document id: identifier } expected"];
   const errors = [];
   for ( const [docId, identifier] of Object.entries(sources) ) {
-    if ( !isId(docId) ) errors.push(`sources.${docId}: document id (16 characters) expected`);
+    const parts = docId.split(".");
+    if ( (parts.length > 2) || !parts.every(isId) ) {
+      errors.push(`sources.${docId}: document id (16 characters), or actor id.item id, expected`);
+    }
     if ( (typeof identifier !== "string") || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(identifier) ) errors.push(`sources.${docId}: kebab-case identifier expected`);
   }
   return errors;

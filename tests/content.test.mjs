@@ -894,9 +894,21 @@ describe("§277 : sources enregistrées avec une table", () => {
   it("validateSources : id de document de 16 caractères → identifiant en kebab-case", () => {
     expect(validateSources({ tiersDocument001: "exemple-poing" })).toEqual([]);
     expect(validateSources({ court: "exemple", tiersDocument001: "Pas Bon" })).toEqual([
-      "sources.court: document id (16 characters) expected", "sources.tiersDocument001: kebab-case identifier expected"
+      "sources.court: document id (16 characters), or actor id.item id, expected",
+      "sources.tiersDocument001: kebab-case identifier expected"
     ]);
     expect(validateSources([])).toEqual(["sources: an object { document id: identifier } expected"]);
+  });
+
+  // §334 : un id d'item partagé entre créatures ne désigne pas une capacité ; la clé « acteur.item » la vise seule, comme dans
+  // content/sources.mjs. Un module tiers doit pouvoir l'enregistrer aussi.
+  it("validateSources : une clé « acteur.item » (deux ids de 16 caractères) est acceptée", () => {
+    expect(validateSources({ "tiersActeur00001.tiersItem0000001": "exemple-morsure" })).toEqual([]);
+    expect(validateSources({ "tiersActeur00001.court": "exemple", "a.b.c": "exemple", "tiersActeur00001.": "exemple" })).toEqual([
+      "sources.tiersActeur00001.court: document id (16 characters), or actor id.item id, expected",
+      "sources.a.b.c: document id (16 characters), or actor id.item id, expected",
+      "sources.tiersActeur00001.: document id (16 characters), or actor id.item id, expected"
+    ]);
   });
 
   it("s'ajoutent aux sources livrées, la dernière l'emporte, et se retirent avec la table", () => {
@@ -912,6 +924,21 @@ describe("§277 : sources enregistrées avec une table", () => {
     expect(SOURCES.exempleDocument1).toBe("exemple-un");
     unregisterTable("premier");
     expect(registeredSources()).toEqual({});
+    expect(SOURCES).toEqual(shipped);
+  });
+});
+
+describe("§334 : un module tiers enregistre une clé « acteur.item »", () => {
+  it("elle rejoint les sources sous cette clé, celle qu'identifierOf lit d'abord, et se retire avec la table", () => {
+    const shipped = { ...SOURCES };
+    const key = "tiersActeur00001.tiersItem0000001";
+    expect(validateSources({ [key]: "exemple-morsure" })).toEqual([]);
+    registerSources("tiers", { [key]: "exemple-morsure" });
+    registerTable("tiers", {});
+    expect(SOURCES[key]).toBe("exemple-morsure");
+    // L'id d'item seul, partagé entre créatures, ne désigne toujours rien.
+    expect(SOURCES.tiersItem0000001).toBeUndefined();
+    unregisterTable("tiers");
     expect(SOURCES).toEqual(shipped);
   });
 });
