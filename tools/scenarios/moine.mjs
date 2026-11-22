@@ -6,7 +6,7 @@
  *  - Déluge de coups : un point, deux frappes à mains nues gratuites (l'action reste), cartes marquées « Déluge » ;
  *    Technique de la main ouverte au premier coup (Renverser : À terre ⇔ sauvegarde ratée) ;
  *  - Frappe étourdissante : la question, un point, la sauvegarde (Étourdi ⇔ ratée), pas de seconde question dans le tour ;
- *  - Défense patiente (1 point) : Se désengager et Esquiver ; Pas du vent : Foncer et Se désengager ;
+ *  - Défense patiente (1 point) : Se désengager et Esquiver ; Pas du vent : sans point Foncer seul, d'un point Foncer et Se désengager ;
  *  - Parade : le Bandit touche le moine → la réaction réduit les dégâts du montant de son jet, sans soigner.
  * Remet positions, PV, états ; retire les items prêtés.
  */
@@ -200,10 +200,22 @@ export default {
       ctx.expect(await dodging(), "au tour du Bandit, le moine esquive toujours");
       await ctx.nextTurn(); await pause(2000);
       ctx.expect(!(await dodging()), "au prochain tour du moine, l'Esquive est tombée");
-      await ctx.use({ tokenId: monk.id, itemId: focus, activityId: "0MuRZ0Ur95xQTKFq", consume: true });
+      // DF #151 : `0MuRZ0Ur95xQTKFq` est le Pas du vent payé dans le Manuel 2.2.0, le GRATUIT (Foncer seul) dans le SRD 5.2 et le
+      // Manuel 3.0.0, où le payé est `Iv2YrISquTZWEjjN`.
+      const { data: fdata } = await ctx.call("get-compendium-entry", { uuid: `Compendium.${PHB}.Item.phbmnkMonksFocus` });
+      const paidApart = !!fdata?.system?.activities?.Iv2YrISquTZWEjjN;
+      if ( paidApart ) {
+        await ctx.use({ tokenId: monk.id, itemId: focus, activityId: "0MuRZ0Ur95xQTKFq", consume: true });
+        await pause(2000);
+        const f = await budget();
+        ctx.expect(f?.dashed === true && f?.disengaged !== true && f?.bonus === 0, `Pas du vent gratuit : Foncer ${f?.dashed}, désengagé ${f?.disengaged}`);
+        await ctx.nextTurn(); await pause(1500);
+        await ctx.nextTurn(); await pause(2000);
+      }
+      await ctx.use({ tokenId: monk.id, itemId: focus, activityId: paidApart ? "Iv2YrISquTZWEjjN" : "0MuRZ0Ur95xQTKFq", consume: true });
       await pause(2000);
       const c = await budget();
-      ctx.expect(c?.dashed === true && c?.disengaged === true && c?.bonus === 0, `Pas du vent : Foncer ${c?.dashed}, désengagé ${c?.disengaged}`);
+      ctx.expect(c?.dashed === true && c?.disengaged === true && c?.bonus === 0, `Pas du vent (1 point) : Foncer ${c?.dashed}, désengagé ${c?.disengaged}`);
     });
 
     await part("Parade", async () => {
