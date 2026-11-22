@@ -36,6 +36,11 @@ export const RANGER = Object.freeze({
   // C12-e : Tactiques défensives (Chasseur 7), option Défense multiattaque — celle dont l'item porte l'activité : « quand une créature
   // vous touche avec un jet d'attaque, elle a le Désavantage à tous ses autres jets d'attaque contre vous pendant ce tour ». (Cauchemar
   // de la horde, l'autre option, reste au joueur : rien dans les données ne dit laquelle est retenue.)
+  // Proie supérieure du chasseur (Chasseur 11) — « une fois par tour, quand vous infligez des dégâts à une créature marquée par
+  // votre Marque du chasseur, vous pouvez aussi infliger les dégâts supplémentaires de ce sort à une autre créature que vous voyez
+  // à 9 m ou moins de la première ». Le d6 du sort ; le d10 avec le Pourfendeur d'ennemis.
+  "superior-hunters-prey": { markSplash: { mark: "hunters-mark", formula: "1d6", damageType: "force",
+    range: { value: 30, units: "ft" }, upgrades: [{ feature: "foe-slayer", formula: "1d10" }] } },
   "defensive-tactics": { hitDefense: true },
   // Défense supérieure du chasseur (Chasseur 15) — « quand vous subissez des dégâts, votre Réaction vous donne la Résistance à ces
   // dégâts et à tout autre dégât du même type jusqu'à la fin du tour en cours ». Proposée quand une attaque touche ; des dégâts
