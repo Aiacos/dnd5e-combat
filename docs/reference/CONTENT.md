@@ -163,7 +163,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `magicEvasion` | 1 | `circle-of-power` |
 | `martialArts` | 1 | `martial-arts` |
 | `maxSpellDamageVs` | 1 | `demonomicon-of-iggwilv` |
-| `metamagic` | 6 | `careful-spell`, `distant-spell`, `heightened-spell`, `quickened-spell`, `subtle-spell`, `twinned-spell` |
+| `metamagic` | 7 | `careful-spell`, `distant-spell`, `extended-spell`, `heightened-spell`, `quickened-spell`, `subtle-spell`, … |
 | `minRange` | 2 | `mangonel`, `trebuchet` |
 | `movable` | 3 | `cloud-of-daggers`, `conjure-celestial`, `moonbeam` |
 | `movesAfter` | 2 | `instinctive-pounce`, `tactical-shift` |
