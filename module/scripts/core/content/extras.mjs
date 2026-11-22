@@ -300,6 +300,14 @@ export function validateExtras(entry, at, errors) {
     && Object.keys(entry.overchannel).every(k => ["maxLevel", "die", "class"].includes(k))) ) {
     errors.push(`${at}overchannel: { maxLevel: integer ≥ 1, die: faces, class?: identifier }`);
   }
+  // Intervention divine : l'activité retient un lancement sans emplacement, « dans la même action », pour le sort suivant de
+  // niveau `maxLevel` au plus (`class` : seulement un sort de cette classe) — core/free-cast.mjs.
+  if ( ("freeCast" in entry) && !(isObject(entry.freeCast) && isId(entry.freeCast.activity)
+    && Number.isInteger(entry.freeCast.maxLevel) && (entry.freeCast.maxLevel >= 1)
+    && (!("class" in entry.freeCast) || ((typeof entry.freeCast.class === "string") && !!entry.freeCast.class))
+    && Object.keys(entry.freeCast).every(k => ["activity", "maxLevel", "class"].includes(k))) ) {
+    errors.push(`${at}freeCast: { activity, maxLevel: integer ≥ 1, class?: identifier }`);
+  }
   if ( ("metamagic" in entry) && !(isObject(entry.metamagic) && isId(entry.metamagic.activity) && METAMAGIC_KINDS.includes(entry.metamagic.kind)
     && Object.keys(entry.metamagic).every(k => ["activity", "kind"].includes(k))) ) errors.push(`${at}metamagic: { activity, kind: ${METAMAGIC_KINDS.join(" | ")} }`);
   // Relevé des trous : `reroll` — sans activité, le d20 relancé avec ce bonus, le nouveau jet imposé, une fois par effet de `during`.
