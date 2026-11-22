@@ -292,6 +292,14 @@ export function validateExtras(entry, at, errors) {
     && Object.keys(entry.metamagicRules).every(k => ["whileEffect", "limit", "freePerTurn"].includes(k))) ) {
     errors.push(`${at}metamagicRules: { whileEffect: identifier, limit?: integer ≥ 2, freePerTurn?: true }`);
   }
+  // Surcharge : les dégâts maximaux d'un sort lancé avec un emplacement de niveau `maxLevel` au plus (`class` : seulement un sort
+  // de cette classe), et le contrecoup en d`die` (core/overchannel.mjs).
+  if ( ("overchannel" in entry) && !(isObject(entry.overchannel) && Number.isInteger(entry.overchannel.maxLevel)
+    && (entry.overchannel.maxLevel >= 1) && Number.isInteger(entry.overchannel.die) && (entry.overchannel.die >= 2)
+    && (!("class" in entry.overchannel) || ((typeof entry.overchannel.class === "string") && !!entry.overchannel.class))
+    && Object.keys(entry.overchannel).every(k => ["maxLevel", "die", "class"].includes(k))) ) {
+    errors.push(`${at}overchannel: { maxLevel: integer ≥ 1, die: faces, class?: identifier }`);
+  }
   if ( ("metamagic" in entry) && !(isObject(entry.metamagic) && isId(entry.metamagic.activity) && METAMAGIC_KINDS.includes(entry.metamagic.kind)
     && Object.keys(entry.metamagic).every(k => ["activity", "kind"].includes(k))) ) errors.push(`${at}metamagic: { activity, kind: ${METAMAGIC_KINDS.join(" | ")} }`);
   // Relevé des trous : `reroll` — sans activité, le d20 relancé avec ce bonus, le nouveau jet imposé, une fois par effet de `during`.

@@ -28,6 +28,8 @@ import { savageApplies, savageSpent, savageTurnOf, SAVAGE_MODE_SETTING, SAVAGE_M
 import { route } from "./router.mjs";
 import { log, loc, say, locEsc, waitForDice } from "./shared.mjs";
 import { empoweredPicks, empoweredDeltas } from "../core/empowered.mjs";
+import { overchannelApplies, maximizedDeltas, backlashDice } from "../core/overchannel.mjs";
+import { currentTurnKey } from "../adapter/turn.mjs";
 import { damageDice } from "../adapter/heroic.mjs";
 import { usesLeftFor } from "../adapter/inspiration.mjs";
 
@@ -514,6 +516,57 @@ export async function offerSpellDamageRerolls(actor, message) {
     return deltas;
   }
   return [];
+}
+
+/**
+ * Surcharge (Évocateur 14, `overchannel`) : après le jet de dégâts d'un sort de magicien lancé avec un emplacement de niveau 1 à 5,
+ * la question — les dégâts maximaux, avec le contrecoup annoncé. Acceptée, elle vaut pour tous les jets de dégâts de ce sort à ce
+ * tour (les rayons d'un même lancement) ; le contrecoup, une fois, ignore la Résistance et l'Immunité. Rend ce qui change à
+ * l'agrégat.
+ * @param {Actor} actor
+ * @param {ChatMessage} message  la carte du jet de dégâts
+ * @param {ChatMessage|null} usage  la carte d'utilisation du sort (son niveau de lancement)
+ */
+export async function offerOverchannel(actor, message, usage) {
+  const spell = message.getAssociatedActivity?.()?.item;
+  const rolls = message.rolls?.filter(r => r instanceof CONFIG.Dice.DamageRoll) ?? [];
+  if ( !spell || !rolls.length ) return [];
+  const item = actor.items.find(i => contentOf(i).entry?.overchannel);
+  const rule = item ? contentOf(item).entry.overchannel : null;
+  const castLevel = (Number(spell.system?.level) || 0) + (Number((usage ?? message).system?.scaling) || 0);
+  if ( !overchannelApplies(rule, { isSpell: spell.type === "spell", baseLevel: Number(spell.system?.level) || 0, castLevel,
+    sourceClass: spell.system?.sourceClass || null }) ) return [];
+  const dice = damageDice(rolls);
+  const deltas = maximizedDeltas(dice);
+  const turn = currentTurnKey();
+  const held = actor.getFlag(MODULE_ID, "overchannel");
+  // Déjà accepté pour ce sort à ce tour : les autres jets du même lancement, sans nouvelle question ni nouveau contrecoup.
+  if ( held && (held.spell === spell.uuid) && (held.turn === turn) && turn ) return deltas;
+  if ( !deltas.length ) return [];
+  const uses = item.system.uses ?? {};
+  const use = (Number(uses.max) || 0) - (Number(uses.spent) || 0) + 1;
+  const backlash = backlashDice(use, castLevel);
+  const answer = await askChoice(actor, { actor: actor.uuid, item: item.name,
+    prompt: game.i18n.format(`DND5ECOMBAT.Surcharge.${backlash ? "QuestionContrecoup" : "Question"}`,
+      { item: item.name, spell: spell.name, level: castLevel, dice: backlash, die: rule.die }),
+    // « Garder » d'abord : sans réponse dans le délai, askChoice retient la première option.
+    options: [{ id: "no", label: game.i18n.localize("DND5ECOMBAT.Surcharge.Non") },
+      { id: "yes", label: game.i18n.localize("DND5ECOMBAT.Surcharge.Oui") }] });
+  if ( answer?.id !== "yes" ) return [];
+  await item.update({ "system.uses.spent": Math.max(0, (Number(uses.spent) || 0) - 1) });
+  await actor.setFlag(MODULE_ID, "overchannel", { spell: spell.uuid, turn });
+  log(`${actor.name}: ${item.name}, maximum damage with ${spell.name} (use ${use}, level ${castLevel})`);
+  if ( backlash ) {
+    const roll = await new Roll(`${backlash}d${rule.die}`).evaluate();
+    const card = await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor }),
+      flavor: game.i18n.format("DND5ECOMBAT.Surcharge.Carte", { item: item.name, name: actor.name, total: roll.total }),
+      flags: { [MODULE_ID]: { overchannel: { use, level: castLevel, backlash: roll.total } } } });
+    if ( card ) await waitForDice(card);
+    // « Ces dégâts ignorent la Résistance et l'Immunité. »
+    await actor.applyDamage([{ value: roll.total, type: "necrotic" }],
+      { ignore: { resistance: new Set(["necrotic"]), immunity: new Set(["necrotic"]) } });
+  }
+  return deltas;
 }
 
 /**

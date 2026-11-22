@@ -20,6 +20,11 @@ export const WIZARD = Object.freeze({
   // Sort mineur appuyé (Évocateur 6) : « ratez votre jet d'attaque ou la cible réussit son jet de sauvegarde : la moitié des
   // dégâts, mais aucun effet supplémentaire ».
   "potent-cantrip": { potentCantrip: true },
+  // Surcharge (Évocateur 14) — « un sort de magicien lancé avec un emplacement de niveau 1 à 5 qui inflige des dégâts : les dégâts
+  // maximaux au tour où vous le lancez ; dès la deuxième fois avant un Repos long, 2d12 dégâts nécrotiques par niveau de
+  // l'emplacement (+1d12 par niveau à chaque fois), qui ignorent la Résistance et l'Immunité ». Proposée après le jet de dégâts ;
+  // le compteur est celui de l'item (ses utilisations, remises à zéro au Repos long). Un sort sans classe notée est admis.
+  "overchannel": { overchannel: { class: "wizard", maxLevel: 5, die: 12 } },
   // Évocation améliorée (Évocateur 10) : « ajoutez votre modificateur d'Intelligence à un jet de dégâts » d'un sort d'Évocation.
   "empowered-evocation": { triggers: [{ on: "preDamageRoll", if: { "activity.isSpell": true, "activity.school": "evo" },
     do: [{ type: "damage", formula: "@abilities.int.mod", damageType: "weapon" }] }] },
