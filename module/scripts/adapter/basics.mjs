@@ -17,10 +17,6 @@ export function basicActionOf(item) {
   return kind && BASIC_ACTIONS[kind] ? kind : null;
 }
 
-/**
- * L'action de base que prend une activité : celle de son item d'action de base, sinon celle que le contenu déclare pour elle
- * (`basicActions` : Ruse du Roublard, « Se cacher » par une action Bonus — §20).
- */
 /** L'activité dépense-t-elle une ressource (utilisations, point de crédo…) selon sa donnée ? */
 const spendsResource = activity => (activity?.consumption?.targets ?? []).length > 0;
 
@@ -39,6 +35,10 @@ export function isFreeForm(activity) {
   return hasPaidForm(contentOf(activity.item).entry?.basicActions?.[activity.id]) && !spendsResource(activity);
 }
 
+/**
+ * L'action de base que prend une activité : celle de son item d'action de base, sinon celle que le contenu déclare pour elle
+ * (`basicActions` : Ruse du Roublard, « Se cacher » par une action Bonus — §20).
+ */
 export function basicActionOfActivity(activity, chosen=null) {
   if ( !activity?.item ) return null;
   const declared = declaredBasicsOf(activity);
