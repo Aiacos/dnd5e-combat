@@ -6,12 +6,36 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { metamagicKindOf, pendingMetamagic, addMetamagic, clearMetamagic } from "../adapter/metamagic.mjs";
+import { metamagicKindOf, pendingMetamagic, addMetamagic, clearMetamagic, metamagicRulesOf } from "../adapter/metamagic.mjs";
+import { freeOption } from "../core/metamagic-rules.mjs";
+import { currentTurnKey } from "../adapter/turn.mjs";
 import { route } from "./router.mjs";
 import { log, loc, notice } from "./shared.mjs";
 
+/** Les options prises sans dépense (Apothéose arcanique), le temps de leur utilisation : l'activité → le tour. */
+const free = new Map();
+
+/**
+ * Une option de Métamagie qu'on s'apprête à retenir : sans dépense si l'Apothéose arcanique le permet à ce tour. Au-delà de ce qu'un sort
+ * peut porter (une ; deux sous la Sorcellerie incarnée), c'est un souci de la fenêtre de légalité (runtime/turn.mjs `useIssues`,
+ * `Souci.metamagicLimit`) : forçable, le MJ prévenu ; forcée, l'option est retenue comme les autres.
+ */
+function onPreUseOption(activity, usageConfig) {
+  const actor = activity.actor;
+  const rules = metamagicRulesOf(actor);
+  const turn = currentTurnKey();
+  if ( freeOption(rules, { usedTurn: actor.getFlag(MODULE_ID, "metamagicFree") ?? null, turn }) ) {
+    usageConfig.consume = { ...((typeof usageConfig.consume === "object") ? usageConfig.consume : {}), resources: false };
+    free.set(activity.uuid, turn);
+    log(`${actor.name}: ${activity.item.name} without Sorcery Points (once on each turn)`);
+  }
+  return true;
+}
+
 function onPreUse(activity, usageConfig) {
   const actor = activity?.actor;
+  const kind = actor ? metamagicKindOf(activity) : null;
+  if ( kind ) return onPreUseOption(activity, usageConfig);
   if ( (activity?.item?.type !== "spell") || !actor ) return true;
   const kinds = pendingMetamagic(actor);
   if ( !kinds.length ) return true;
@@ -27,6 +51,11 @@ async function onPostUse(activity) {
   if ( !actor?.isOwner ) return;
   const kind = metamagicKindOf(activity);
   if ( kind ) {
+    if ( free.has(activity.uuid) ) {
+      const turn = free.get(activity.uuid);
+      free.delete(activity.uuid);
+      if ( turn ) await actor.setFlag(MODULE_ID, "metamagicFree", turn);
+    }
     const kinds = await addMetamagic(actor, kind);
     const token = actor.getActiveTokens?.(false, true)?.[0];
     if ( token ) notice(token, loc("Metamagie.Retenue", { item: activity.item.name }), "gain");

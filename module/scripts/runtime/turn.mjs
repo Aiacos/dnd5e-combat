@@ -14,6 +14,8 @@ import { contentOf, identifierOf } from "../adapter/content.mjs";
 import { originItemOf } from "../adapter/facts.mjs";
 import { isRaging, rageOptionsTaken } from "../adapter/rage.mjs";
 import { secondRageOption } from "../core/limits.mjs";
+import { metamagicLimit, mayHold } from "../core/metamagic-rules.mjs";
+import { metamagicKindOf, pendingMetamagic, metamagicRulesOf } from "../adapter/metamagic.mjs";
 import { enemiesSeeing } from "../adapter/hide.mjs";
 import { stealthRules } from "../adapter/stealth.mjs";
 import { verbalBlockOf, charmersOf, hostileToCharmer, sightRequired } from "../adapter/conditions.mjs";
@@ -281,6 +283,11 @@ export function useIssues(activity, { cost: forcedCost=null, attackMode=null, re
   const optionRule = contentOf(activity.item).entry?.duringRage;
   const optionsTaken = optionRule?.oneOption ? rageOptionsTaken(activity.item) : [];
   const secondOption = secondRageOption({ oneOption: optionRule?.oneOption, raging: !!optionRule?.oneOption && isRaging(activity.actor), taken: optionsTaken.length });
+  // §519 (DF #164) : une option de Métamagie de plus que ce qu'un sort peut porter (une ; deux sous la Sorcellerie incarnée) — un souci,
+  // forçable par la fenêtre de légalité comme tout refus de règle.
+  const metaKind = metamagicKindOf(activity);
+  const metaLimit = metaKind ? metamagicLimit(metamagicRulesOf(activity.actor)) : 0;
+  const metaFull = !!metaKind && !mayHold(pendingMetamagic(activity.actor), metaKind, metaLimit);
   // §214 : armure portée sans formation — pas de sorts.
   const unarmored = isSpellCast(activity.item) ? untrainedArmor(activity.actor) : null;
   // §367 : Tempête de vengeance — pas d'attaque à distance avec une arme depuis la zone ; Marche dans l'ombre — pas depuis un lieu éclairé.
@@ -303,6 +310,7 @@ export function useIssues(activity, { cost: forcedCost=null, attackMode=null, re
     ...missing.keys.map(k => loc(`Souci.${k}`, { item: activity.item.name })),
     ...(raging ? [loc("Souci.rage")] : []),
     ...(heavyRage ? [loc("Souci.rageHeavyArmor")] : []),
+    ...(metaFull ? [loc("Souci.metamagicLimit", { item: activity.item.name, n: metaLimit })] : []),
     ...(secondOption ? [loc("Souci.rageOneOption", { item: activity.item.name, effect: optionsTaken.map(e => e.name).join(", ") })] : []),
     ...(familiarAttack ? [loc("Souci.familiarAttack")] : []),
     ...(uncommanded ? [loc("Souci.notCommanded")] : []),
