@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-393 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+394 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -349,6 +349,7 @@ la sélection sans rien jouer.
 | `sans-charge` |  | §77 §410 | Nuage fétide du Dretch, le MJ lance quand même |
 | `sans-opportunite` |  | §18.15 | Agile, Rôder |
 | `saut` |  | §208 | longueur avec et sans élan, Bottes, atterrissage, chute automatique |
+| `sauvagerie-choix` |  | §516 | Sauvagerie martiale au choix, réglage automatique |
 | `sauvegarde-repetee` |  | §16 §16.8 | Immobilisation de personne, fin de tour du Guerrier |
 | `sauvegarde-zone` |  |  | Mains brûlantes sur un Zombi |
 | `securite-requetes` |  | §471 | seulement ce qu'il a le droit de demander (§471) |
