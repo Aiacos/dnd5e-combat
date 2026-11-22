@@ -261,6 +261,9 @@
  *                                               changement, proposé tant qu'il reste de quoi (Sort transmuté)
  *     spellDamageRerolls?: { activity, count }  Sort renforcé : après le jet de dégâts d'un sort du porteur, cette activité (qui
  *                                               paie) relance jusqu'à `count` dés (formule), les plus bas ; les nouveaux comptent
+ *     turnStartHeal?: { activity, bloodied? }   Survivant : au début de chacun de ses tours, le porteur qui a au moins 1 PV (et,
+ *                                               avec `bloodied`, la moitié de ses PV ou moins) utilise cette activité de soins
+ *     deathSaveCritical?: number                Survivant : le d20 à partir duquel une sauvegarde contre la mort vaut un 20 naturel
  *     endsOwnConditions?: string[] | { statuses?, at?, exhaustion?, uses? }
  *                                               §236 : à la fin de chacun de ses tours, le porteur met fin à l'un de ces états
  *                                               (Auto-restauration : Charmé, Effrayé, Empoisonné) ; §278 : `at: "turnStart"` (au début),
