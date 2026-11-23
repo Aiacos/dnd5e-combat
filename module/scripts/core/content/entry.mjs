@@ -387,6 +387,11 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     if ( !ok ) errors.push(`${at}killsAtZero: true or { types?, sizeAtMost?, activities? }`);
   }
   for ( const key of ["singleAttack", "noAttacksOrSpells", "healRaisesMax", "spellAttacksMiss", "noTeleport", "saveIgnoresCover", "noSpells", "knownToOrigin", "upkeep", "keepsProne", "wardsAtZero", "stableAtZero", "zoneEffects", "advantageIfFighting", "fortitude", "drain", "swallow", "ignoresCloseCombat", "sharedHp", "forOneAttack", "evasion", "avoidance", "elusive", "holdsStill", "grantsAction", "studiedAttacks", "heroicWarrior", "greatWeaponFighting", "persistentRage", "reckless", "oneAttack", "martialArts", "supremeHealing", "discipleOfLife", "blessedHealer", "potentCantrip", "sculptSpells", "stabilizes", "kindles", "castTargets", "halfOnMiss", "seesInvisible", "scatter", "climbsCeilings", "climbsOnTurn", "slippery", "notOnSlippery", "encloses", "willingFails", "critMove", "combatInspiration", "quietPose", "zoneBound", "effectsFirst", "hitDefense", "enterOnPose", "summonEffectsOnCaster", "sniper", "hidesBehindLarger", "checkPoses", "magicEvasion", "compels", "keepsSpeed", "windward", "magical", "antimagicZone", "seesThroughOwnDarkness"] ) if ( (key in entry) && (entry[key] !== true) ) errors.push(`${at}${key}: true or absent`);
+  // Comme `saveIgnoresCover` pour une sauvegarde : les attaques de l'item ignorent l'abri partiel et aux trois quarts (`"half"` : le
+  // partiel seul).
+  if ( ("attackIgnoresCover" in entry) && ![true, "half"].includes(entry.attackIgnoresCover) ) {
+    errors.push(`${at}attackIgnoresCover: true, "half" or absent`);
+  }
   // §225, lot 4 : passer du plan matériel à l'Éthéré ou inversement (Saut éthéré) ; `others` : les cibles désignées suivent (Foulée éthérée).
   if ( ("etherealShift" in entry) && !((entry.etherealShift === true) || (isObject(entry.etherealShift)
     && Object.keys(entry.etherealShift).every(k => k === "others") && (entry.etherealShift.others === true))) ) {

@@ -136,6 +136,17 @@ export function rangedFeatsFor(rules, attack) {
 }
 
 /**
+ * Ce qui fait ignorer l'abri à une attaque, réuni : un don de tir du porteur, l'ennemi juré, l'item lui-même
+ * (`attackIgnoresCover`). Le plus fort l'emporte — `true` (partiel et trois quarts), puis `"half"` (partiel seul), sinon `false`.
+ * @param {...(boolean|"half"|null|undefined)} values
+ * @returns {true|"half"|false}
+ */
+export function coverIgnoreOf(...values) {
+  if ( values.some(v => v === true) ) return true;
+  return values.some(v => v === "half") ? "half" : false;
+}
+
+/**
  * §131 : l'abri que la règle laisse : un abri partiel ou aux trois quarts ignoré ; l'abri total reste. `ignores` vaut "half" quand
  * seul l'abri partiel est ignoré : l'abri aux trois quarts reste alors aussi.
  */
