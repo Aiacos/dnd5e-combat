@@ -5,9 +5,13 @@
  */
 
 export const EMANATIONS = Object.freeze({
-  // « À la fin de chacun de ses tours, chaque créature de son choix dans l'émanation subit … » : Balor, Salamandres,
-  // Élémentaire du feu, Azers (ceux-ci : « sauf s'il est Neutralisé »).
+  // « À la fin de chacun de ses tours, chaque créature de son choix dans l'émanation subit … » : Salamandres, Azers (ceux-ci :
+  // « sauf s'il est Neutralisé »).
   "fire-aura": { on: "ownTurnEnd", affects: "enemy" },
+  // Même identifiant « fire-aura », mais « chaque créature » (SRD 5.2) : l'Élémentaire du feu et le Balor brûlent aussi leurs
+  // alliés. Le Balor : une émanation de 1,50 m (5 ft), alors que le gabarit de son activité dit 10 (content/sources.mjs).
+  "mm-fire-aura-each": { on: "ownTurnEnd" },
+  "mm-balor-fire-aura": { on: "ownTurnEnd", radius: 5, units: "ft" },
   // Même forme, chaque créature : Rémorhaz, Gorgone d'airain.
   "heat-aura": { on: "ownTurnEnd" },
   "flame-aura": { on: "ownTurnEnd" },
