@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-395 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+396 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -65,6 +65,7 @@ la sélection sans rien jouer.
 | `caresse-survivant` |  | §120 | Alara |
 | `chance-sauvegarde` |  | §15.3 | calcul = vrai jet, Bénédiction, échec d'office |
 | `chance-tenebreux` |  | §38 | 1d10 ajouté à une sauvegarde ratée |
+| `chance-toucher-joueurs` | Arène des refus |  | pourcentage et CA, pourcentage, avantage et désavantage seuls, rien (#247) |
 | `chausse-trapes` |  | §187 | la zone reste, on s'arrête dessus, on la ramasse |
 | `choix-sorts` |  | §401 | choix laissés au lanceur par le texte des sorts (§401) |
 | `chute-niveaux` | keep | §218 | après un saut, ou en bougeant un token en chute |
