@@ -53,10 +53,19 @@ export function wornOrNotEquipment(item) {
  * @returns {string[]}
  */
 export function declaredRollDisadvantage(actor, kind, token=null) {
+  return declaredRollMode(actor, kind, token, "rollDisadvantage");
+}
+
+/** Le pendant, pour l'Avantage (`rollAdvantage` : Fureur du péril, « tant qu'il est En sang, Avantage aux sauvegardes »). */
+export function declaredRollAdvantage(actor, kind, token=null) {
+  return declaredRollMode(actor, kind, token, "rollAdvantage");
+}
+
+function declaredRollMode(actor, kind, token, key) {
   const out = [];
   let facts = null;
   for ( const item of actor?.items ?? [] ) {
-    const rule = contentOf(item).entry?.rollDisadvantage;
+    const rule = contentOf(item).entry?.[key];
     if ( !rule?.on?.includes?.(kind) || !wornOrNotEquipment(item) ) continue;
     facts ??= factsFor({ self: actor, selfToken: tokenOf(actor, token) });
     if ( holds(rule.if ?? null, facts) ) out.push(item.name);

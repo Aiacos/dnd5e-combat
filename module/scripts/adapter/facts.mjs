@@ -663,6 +663,8 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "self.seesSource": want => ((seesBetween(self, source) ?? true) === want),
     // §447 : le réacteur porte un effet de l'item (Représailles rôdeuses : seulement transformé par le Courroux sauvage).
     "self.hasEffect": id => hasEffectFrom(self, id),
+    // Le porteur a cet état, ou l'un d'une liste (`rollAdvantage` : « tant qu'il est En sang »).
+    "self.hasStatus": id => [id].flat().some(s => self?.statuses?.has(s) === true),
     // §485 : le réacteur porte un effet dont il peut rejouer la sauvegarde (Indomptable) — `savableEffectsOf`.
     "self.hasSavableEffect": want => ((savableEffectsOf(self).length > 0) === want),
     // §492 : la source a attaqué la créature (`self`, sinon `target`) pendant ce tour — true / false, "melee", "ranged" ou une liste.

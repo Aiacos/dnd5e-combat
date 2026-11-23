@@ -6,7 +6,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { select, stepsOf, BEARER_MOMENTS, damagedByOriginSide, sameActivity, spareBearer } from "../core/triggers.mjs";
-import { declarationsOf, declarationsOfEffects, factsFor, tokenOf, consumedMarks, bonusTurnKey, bonusSpent, bonusKeyOf, declaredRollDisadvantage } from "../adapter/triggers.mjs";
+import { declarationsOf, declarationsOfEffects, factsFor, tokenOf, consumedMarks, bonusTurnKey, bonusSpent, bonusKeyOf, declaredRollDisadvantage, declaredRollAdvantage } from "../adapter/triggers.mjs";
 import { identifierOf } from "../adapter/content.mjs";
 import { comesFromItemEffect, originItemOf } from "../adapter/facts.mjs";
 import { usageTokenOf, speakerTokenOf, turnKeyAt } from "../adapter/turn.mjs";
@@ -517,10 +517,15 @@ const onPreRollDisadvantage = kind => config => {
   const roll = config?.rolls?.[0];
   if ( (actor?.documentName !== "Actor") || !roll ) return true;
   const names = declaredRollDisadvantage(actor, kind);
-  if ( !names.length ) return true;
+  // Le pendant (`rollAdvantage`) : dnd5e combine lui-même les deux quand le jet a l'un et l'autre.
+  const favoured = declaredRollAdvantage(actor, kind);
+  if ( !names.length && !favoured.length ) return true;
   roll.options ??= {};
-  roll.options.disadvantage = true;
-  log(`${actor.name}: ${kind} (${config.ability ?? config.skill ?? "?"}) with Disadvantage (${names.join(", ")})`);
+  if ( names.length ) roll.options.disadvantage = true;
+  if ( favoured.length ) roll.options.advantage = true;
+  const what = `${actor.name}: ${kind} (${config.ability ?? config.skill ?? "?"})`;
+  if ( names.length ) log(`${what} with Disadvantage (${names.join(", ")})`);
+  if ( favoured.length ) log(`${what} with Advantage (${favoured.join(", ")})`);
   return true;
 };
 

@@ -57,7 +57,7 @@ export const MERGE = Object.freeze({
   transpose: "replace", stabilizes: "replace", carriedLight: "replace", kindles: "replace", scatter: "replace", flammable: "replace", climbsCeilings: "replace", grantsSpeeds: "replace", climbsOnTurn: "replace", slippery: "replace", notOnSlippery: "replace", saveAdvantageSize: "replace", jump: "replace", burns: "replace", savageAttacker: "replace",
   initiativeSwap: "replace", healingRerolls: "replace", effectWhile: "replace", rangedFeat: "replace", piercer: "replace",
   critMark: "replace", grappleDamage: "replace", haltOnReaction: "replace", concentrationBreaker: "replace",
-  interposeShield: "replace", elementalAdept: "replace", ignoresResistance: "replace", rollDisadvantage: "replace", quickStand: "replace",
+  interposeShield: "replace", elementalAdept: "replace", ignoresResistance: "replace", rollDisadvantage: "replace", rollAdvantage: "replace", quickStand: "replace",
   quickSearch: "replace", opportunityDisadvantage: "replace", peerlessAim: "replace", fortifiedHealing: "replace",
   overwhelmingStrike: "replace", spellRecall: "replace", savesCharges: "replace", lastStandHeal: "replace", reactiveStrike: "replace",
   ritualAdept: "replace", slotRecovery: "replace", fleeOnFailedSave: "replace", halfOnMiss: "replace",

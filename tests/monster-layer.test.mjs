@@ -65,6 +65,27 @@ describe("§484 : sensibilité à la lumière — les tests de caractéristique 
   });
 });
 
+describe("Fureur du péril : En sang, l'Avantage aux sauvegardes aussi", () => {
+  const FRENZY = "<p>While Bloodied, the berserker has Advantage on attack rolls and saving throws.</p>";
+  it("jets d'attaque (déclencheur) et sauvegardes (rollAdvantage)", () => {
+    expect(monsterTextLayer({ html: FRENZY })).toEqual({
+      triggers: [{ on: "preAttackRoll", if: { "source.hasStatus": "bloodied" }, do: [{ type: "advantage" }] }],
+      rollAdvantage: { on: ["save"], if: { "self.hasStatus": "bloodied" } }
+    });
+  });
+  it("une phrase qui ne nomme que les jets d'attaque : pas d'Avantage aux sauvegardes", () => {
+    const layer = monsterTextLayer({ html: "<p>While Bloodied, the brute has Advantage on attack rolls.</p>" });
+    expect(layer.triggers).toHaveLength(1);
+    expect(layer.rollAdvantage).toBeUndefined();
+  });
+  it("l'entrée lue passe le validateur ; une forme fausse est refusée", () => {
+    const facts = { "source.hasStatus": () => true, "self.hasStatus": () => true };
+    expect(validateEntry(monsterTextLayer({ html: FRENZY }), { facts })).toEqual([]);
+    expect(validateEntry({ rollAdvantage: { on: ["attack"] } }, { facts })).toHaveLength(1);
+    expect(validateEntry({ rollAdvantage: { on: ["save"], if: { "self.nope": true } } }, { facts })).toHaveLength(1);
+  });
+});
+
 // Exemples synthétiques, réduits aux tournures lues (aucun texte de livre).
 describe("§334 : la durée en tours d'un effet sans état, dite de la cible", () => {
   const data = { activities: [{ type: "save", effects: ["aaaaaaaaaaaaaaaa"] }],

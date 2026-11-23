@@ -707,6 +707,20 @@ export function monsterLightChecks(html) {
 }
 
 /**
+ * L'autre moitié de « While Bloodied, the X has Advantage on attack rolls and saving throws » (Fureur du péril du Berserker,
+ * SRD 5.2) : l'Avantage aux sauvegardes de la créature tant qu'elle est En sang (`rollAdvantage`, « save »). Les jets
+ * d'attaque : `monsterAdvantage`.
+ * @param {string} html
+ * @returns {{on: string[], if: object}|null}
+ */
+export function monsterBloodiedSaves(html) {
+  const text = plainText(html);
+  if ( !text || (segments(text).length > 1) ) return null;
+  if ( !/\bWhile (?:it is )?Bloodied\b[^.]*\bAdvantage on (?:[^.]*\b)?saving throws\b/i.test(text) ) return null;
+  return { on: ["save"], if: { "self.hasStatus": "bloodied" } };
+}
+
+/**
  * Les effets qu'une capacité pose sur son porteur et qui cessent dès qu'il attaque : « ends early immediately after the X makes
  * an attack roll » (Disparition du Feu follet, SRD 5.2) → `breaksOn: ["attack"]`. Lu dans le texte, pas déclaré par identifiant :
  * un autre monstre porte le même item — même identifiant, mêmes ids d'activité et d'effet — sans cette fin dans son texte.
