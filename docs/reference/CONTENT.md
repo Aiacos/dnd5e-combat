@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-997 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+1000 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -89,7 +89,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `effectEnds` | 52 | `aberrant-anatomy`, `aversion-to-fire`, `brutal-strike`, `celestial-revelation`, `chill-touch`, `defensive-duelist`, … |
 | `effectsExpire` | 2 | `blessing-of-the-trickster`, `prayer-of-healing` |
 | `effectsFirst` | 2 | `aid`, `heroes-feast` |
-| `effectsIf` | 8 | `esoteric-ward`, `hammer-of-thunderbolts-enchanted`, `mm-lycanthrope-bite`, `mm-wereboar-gore`, `psychic-skewer`, `shield-of-the-cavalier`, … |
+| `effectsIf` | 11 | `esoteric-ward`, `hammer-of-thunderbolts-enchanted`, `mm-werebear-bite`, `mm-wereboar-gore`, `mm-wererat-bite`, `mm-weretiger-bite`, … |
 | `effectStatuses` | 6 | `coward-spirit`, `death-curse`, `divine-word`, `mm-beholder-eye-rays`, `mm-pseudodragon-sting`, `poisoned-needle` |
 | `effectThen` | 1 | `haste` |
 | `effectWhile` | 13 | `aspect-of-the-wilds`, `boon-of-the-night-spirit`, `bracers-of-defense`, `defense`, `dueling`, `fast-movement`, … |
@@ -306,7 +306,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `thrownDamage` | 1 | `thrown-weapon-fighting` |
 | `trace` | 7 | `armor-of-agathys`, `blade-ward`, `dispel-evil-and-good`, `flame-blade`, `moonlight-step`, `produce-flame`, … |
 | `transpose` | 1 | `tricksters-transposition` |
-| `triggers` | 282 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
+| `triggers` | 287 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
 | `turnStartHeal` | 1 | `survivor` |
 | `untypedDamage` | 3 | `freezing-sphere`, `mm-wight-life-drain`, `otilukes-freezing-sphere` |
 | `upkeep` | 1 | `crown-of-madness` |
@@ -394,7 +394,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `preAttackRoll → consume` | 10 | `brutal-strike`, `distracting-strike`, `feinting-attack`, `guiding-bolt`, `improved-brutal-strike`, `moonlight-step`, … |
 | `preAttackRoll → disadvantage` | 34 | `bestow-curse`, `blur`, `clairvoyant-combatant`, `cloak-of-displacement`, `compelled-duel`, `demon-armor-enchanted`, … |
 | `preDamageRoll → damage` | 37 | `ancient-might`, `bestow-curse`, `blessed-strikes`, `blessed-strikes-potent-spellcasting`, `bracers-of-archery`, `brutal-strike`, … |
-| `savedSave → mark` | 1 | `eyebite` |
+| `savedSave → mark` | 6 | `eyebite`, `mm-werebear-bite`, `mm-wereboar-gore`, `mm-wererat-bite`, `mm-weretiger-bite`, `mm-werewolf-bite` |
 | `savedSave → move` | 1 | `bead-of-force` |
 | `startOfTurn → damage` | 12 | `air-element`, `aura-of-life`, `burnt-othur-fumes`, `earth-element`, `ensnaring-strike`, `fire-element`, … |
 | `startOfTurn → resave` | 7 | `air-element`, `bestow-curse`, `burnt-othur-fumes`, `earth-element`, `fire-element`, `searing-smite`, … |
