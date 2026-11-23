@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { monsterTextLayer } from "../module/scripts/core/monster-layer.mjs";
+import { validateEntry } from "../module/scripts/core/content.mjs";
 
 // §460 : la couche texte des capacités de PNJ, sortie de l'adaptateur pour que l'ATLAS calcule ce que joue le moteur. Exemples synthétiques.
 describe("§460 : monsterTextLayer", () => {
@@ -38,3 +39,28 @@ describe("§460 : monsterTextLayer", () => {
     expect(monsterTextLayer({ html, activities: acts, swallow: true })?.triggers).toBeUndefined();
   });
 });
+
+describe("§484 : sensibilité à la lumière — les tests de caractéristique aussi", () => {
+  const SUN = "<p>While in sunlight, the drider has Disadvantage on ability checks and attack rolls.</p>";
+  it("au soleil : Désavantage aux jets d'attaque (déclencheur) et aux tests (rollDisadvantage)", () => {
+    expect(monsterTextLayer({ html: SUN })).toEqual({
+      triggers: [{ on: "preAttackRoll", if: { "source.inSunlight": true }, do: [{ type: "disadvantage" }] }],
+      rollDisadvantage: { on: ["check"], if: { "self.inSunlight": true } }
+    });
+  });
+  it("en lumière vive : le fait de lumière vive", () => {
+    const html = "<p>While in Bright Light, the beast has Disadvantage on ability checks and attack rolls.</p>";
+    const layer = monsterTextLayer({ html });
+    expect(layer.rollDisadvantage).toEqual({ on: ["check"], if: { "self.inBrightLight": true } });
+  });
+  it("une phrase qui ne nomme que les jets d'attaque : pas de Désavantage aux tests", () => {
+    const layer = monsterTextLayer({ html: "<p>While in Bright Light, the cloaker has Disadvantage on attack rolls.</p>" });
+    expect(layer.triggers).toHaveLength(1);
+    expect(layer.rollDisadvantage).toBeUndefined();
+  });
+  it("l'entrée lue passe le validateur", () => {
+    const facts = { "source.inSunlight": () => true, "self.inSunlight": () => true };
+    expect(validateEntry(monsterTextLayer({ html: SUN }), { facts })).toEqual([]);
+  });
+});
+

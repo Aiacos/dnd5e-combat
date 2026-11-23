@@ -9,7 +9,7 @@
 import { monsterChoice, monsterDeaths, monsterEndings, monsterPushes, monsterReactions, monsterRecurring, monsterTypeGate, monsterAdvantage,
   monsterSaveDamage, monsterMissingStatus, monsterNoOpportunity, monsterBasicActions, monsterSightGate, monsterImmunity, monsterEffectDurations,
   monsterReactionWindow, monsterActivationAdvantage, monsterDefense, monsterChargeGate, monsterLightSensitivity, monsterSelfTeleport,
-  monsterBreaksOn,
+  monsterBreaksOn, monsterLightChecks,
   monsterTeleportChoice } from "./monster-text.mjs";
 import { readDrain, drains } from "./drain.mjs";
 
@@ -83,6 +83,9 @@ export function monsterTextLayer({ html, identifier=null, activities=[], effects
   // Les effets de la capacité cessent quand son porteur fait un jet d'attaque, si son texte le dit (Disparition du Feu follet).
   const breaks = monsterBreaksOn(html);
   if ( breaks && fx.length ) recurringRest.breaksOn = breaks;
+  // §484 : « au soleil, Désavantage aux tests de caractéristique » — la moitié de la phrase que les déclencheurs ne portent pas.
+  const lightChecks = monsterLightChecks(html);
+  if ( lightChecks ) recurringRest.rollDisadvantage = lightChecks;
   const basics = monsterBasicActions(html, acts);
   if ( basics ) recurringRest.basicActions = basics;
   if ( drains(readDrain(html)) ) recurringRest.drain = true;

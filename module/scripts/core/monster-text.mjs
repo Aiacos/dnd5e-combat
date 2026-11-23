@@ -658,7 +658,7 @@ export function monsterChargeGate(html, activities=[]) {
 /**
  * §334 : « While in sunlight, the drider has Disadvantage on ability checks and attack rolls », « While in Bright Light, the cloaker has
  * Disadvantage on attack rolls » → Désavantage aux jets d'attaque de la créature au soleil (`source.inSunlight` : la lumière globale de
- * la scène, pas une torche) ou en lumière vive (`source.inBrightLight`). Les tests de caractéristique restent au MJ.
+ * la scène, pas une torche) ou en lumière vive (`source.inBrightLight`). Les tests de caractéristique : `monsterLightChecks`.
  * @param {string} html
  * @returns {object[]} déclarations `triggers`
  */
@@ -669,6 +669,21 @@ export function monsterLightSensitivity(html) {
   if ( !m ) return [];
   const fact = /^sunlight$/i.test(m[1]) ? "source.inSunlight" : "source.inBrightLight";
   return [{ on: "preAttackRoll", if: { [fact]: true }, do: [{ type: "disadvantage" }] }];
+}
+
+/**
+ * §334, §484 : l'autre moitié de la même phrase — « Disadvantage on ability checks and attack rolls » → Désavantage aux tests de
+ * caractéristique de la créature (`rollDisadvantage`, « check » : tests, compétences et initiative) tant qu'elle est au soleil
+ * (`self.inSunlight`) ou en lumière vive (`self.inBrightLight`). Une phrase qui ne nomme que les jets d'attaque n'en dit rien.
+ * @param {string} html
+ * @returns {{on: string[], if: object}|null}
+ */
+export function monsterLightChecks(html) {
+  const text = plainText(html);
+  if ( !text || (segments(text).length > 1) ) return null;
+  const m = text.match(/\bWhile (?:it is )?in (sunlight|Bright Light)\b[^.]*\bDisadvantage on (?:[^.]*\b)?ability checks\b/i);
+  if ( !m ) return null;
+  return { on: ["check"], if: { [/^sunlight$/i.test(m[1]) ? "self.inSunlight" : "self.inBrightLight"]: true } };
 }
 
 /**
