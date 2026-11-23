@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-402 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+403 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -138,6 +138,7 @@ la sélection sans rien jouer.
 | `ethere-retour` |  | §225 | retour sur une case occupée (repoussé, dégâts de force), chute au retour, Saut éthéré |
 | `ethere` |  | §225 | ni cible, ni zone, ni attaque d'opportunité, ni case bloquée d'un plan à l'autre |
 | `factions` |  | §181 | bandit et zombi ennemis par la matrice, rancune, disposition déduite |
+| `faits-etat-liste` |  |  | target.hasStatus [Entravé, Empoigné] (#253) |
 | `faits-soi-soleil-eau` |  | §484 | soleil, eau courante, dégâts d'un trait au début du tour |
 | `familier` |  | §107 | actions de base, vision, poche dimensionnelle |
 | `fee-ange` |  | §92 §438 | Foulée des fées, Échappatoire brumeuse, Ange vengeur |
