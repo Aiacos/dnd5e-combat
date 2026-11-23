@@ -28,7 +28,8 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `basicActions` | 11 | `adrenaline-rush`, `boon-of-speed`, `conjure-woodland-beings`, `cunning-action`, `deathless-agility`, `evasive-footwork`, … |
 | `blessedHealer` | 1 | `blessed-healer` |
 | `blink` | 1 | `blink` |
-| `blocksHealing` | 5 | `chill-touch`, `mm-beholder-eye-rays`, `pale-tincture`, `sword-of-wounding-enchanted`, `wrath-of-the-wild` |
+| `blocksHealing` | 6 | `chill-touch`, `mm-beholder-eye-rays`, `pale-tincture`, `swarm`, `sword-of-wounding-enchanted`, `wrath-of-the-wild` |
+| `blocksTempHp` | 1 | `swarm` |
 | `bolt` | 1 | `call-lightning` |
 | `bonusAttack` | 1 | `great-weapon-master` |
 | `breaksOn` | 11 | `boon-of-the-night-spirit`, `dust-of-disappearance`, `invisibility`, `mind-sliver`, `mislead`, `misty-escape`, … |

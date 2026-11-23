@@ -18,6 +18,7 @@
 import { MODULE_ID } from "../constants.mjs";
 import { STEPS } from "../core/action.mjs";
 import { effectEndsNow } from "../core/effect-ends.mjs";
+import { traitBlocksHealing } from "../core/healing-block.mjs";
 import { extendedSeconds } from "../core/extended.mjs";
 import { usageMetamagic, pendingMetamagic } from "../adapter/metamagic.mjs";
 import { contentOf, entryOfIdentifier } from "../adapter/content.mjs";
@@ -197,7 +198,10 @@ function onPreApplyDamage(actor, amount, updates) {
   }
   if ( !(amount < 0) || !actor?.effects ) return true;
   // §334 : `blocksHealing` — tous les effets de l'item, ou ceux de la liste (Rayon énervant : son Empoisonné seul).
-  const blocked = actor.effects.some(e => {
+  // §505 : un trait sans effet qui le déclare vaut pour la créature qui le porte (Nuée : « can't regain Hit Points »).
+  const byTrait = (actor.items ?? [])
+    .some(i => traitBlocksHealing({ rule: contentOf(i).entry?.blocksHealing, effects: i.effects?.size ?? 0 }));
+  const blocked = byTrait || actor.effects.some(e => {
     if ( e.disabled || e.isSuppressed ) return false;
     const rule = contentOf(originItemOf(e)).entry?.blocksHealing;
     return (rule === true) || (Array.isArray(rule) && rule.some(id => comesFromItemEffect(e, id)));
