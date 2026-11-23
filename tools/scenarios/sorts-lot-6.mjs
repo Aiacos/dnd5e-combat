@@ -66,8 +66,9 @@ export default {
       return r.id;
     };
     const arrow = await lend("phbsplLightningA");
-    // La Flèche de foudre se paie d'un emplacement (offerte comme un châtiment) : pas « à volonté ».
-    await ctx.call("upsert-actor-item", { actorId: pal.actorId, itemData: { "system.method": "spell" }, match: { path: "_id", value: arrow } });
+    // La Flèche de foudre se paie d'un emplacement (offerte comme un châtiment) : pas « à volonté » — et préparée, sans quoi elle
+    // n'est pas proposée après un coup (issue #144).
+    await ctx.call("upsert-actor-item", { actorId: pal.actorId, itemData: { "system.method": "spell", "system.prepared": 1 }, match: { path: "_id", value: arrow } });
     const dispel = await lend("phbsplDispelEvil");
     const maze = await lend("phbsplMaze000000");
     const trueStrike = await lend("phbsplTrueStrike");

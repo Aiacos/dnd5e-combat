@@ -33,7 +33,9 @@ export default {
     const legality = async (name, ms=6000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, waitMs: 1000 }).catch(() => null);
-        const d = (r?.windows ?? []).find(w => (w.title ?? "").endsWith(` — ${name}`));
+        // La fenêtre du refus, pas celle « Au toucher » (§516, Sauvagerie martiale), qui porte le même nom en titre.
+        const d = (r?.windows ?? []).find(w => (w.title ?? "").endsWith(` — ${name}`)
+          && (w.buttons ?? []).some(x => ["go", "cancel"].includes(x.action)));
         if ( d ) return d;
       }
       return null;
@@ -75,7 +77,13 @@ export default {
       const d = await legality(fighter.name, 3000);
       ctx.expect(!d, "notice : aucune fenêtre");
       if ( d ) await ctx.call("answer-dialog", { id: d.id, button: "cancel" });
-      await pause(5000);
+      // Un coup qui touche ouvre la fenêtre « Au toucher » (Sauvagerie martiale, §516) : validée, pour que les dégâts partent.
+      for ( const stop = Date.now() + 5000; Date.now() < stop; ) {
+        const r = await ctx.call("list-dialogs", { dialogsOnly: true, waitMs: 1000 }).catch(() => null);
+        const hit = (r?.windows ?? []).find(w => (w.buttons ?? []).some(x => x.action === "strike"));
+        if ( hit ) { await ctx.call("answer-dialog", { id: hit.id, button: "strike" }).catch(() => {}); break; }
+      }
+      await pause(2000);
       const after = await ctx.messagesSince(since);
       ctx.expect(after.some(m => m.type === "attack"), `notice : l'attaque part (${types(after)})`);
       ctx.expect(marked(after).length > 0, "notice : la carte est marquée « forcé »");

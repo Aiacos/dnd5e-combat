@@ -41,7 +41,22 @@ export default {
     const wPos = await ctx.position(warrior);
     await ctx.call("move-token", { tokenId: zombi.id, x: wPos.x + grid, y: wPos.y, elevation: wPos.elevation });
     const prof = (await ctx.call("get-actor", { actorId: warrior.actorId })).system?.attributes?.prof ?? 2;
+    // Le bonus ne vaut qu'à son tour (`source.onOwnTurn`, content/triggers.mjs) : un combat, au tour du Guerrier.
+    const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
+    const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
+    await ctx.startCombat([warrior, zombi]);
+    const combat = await state();
+    for ( const [t, v] of [[warrior, 20], [zombi, 1]] ) {
+      await ctx.call("set-initiative", { combatantId: combat.combatants.find(x => x.tokenId === t.id).id, value: v, combatId: ctx.ownCombat });
+    }
+    for ( let i = 0; (i < 3) && ((await current()) !== warrior.id); i++ ) {
+      await ctx.call("previous-turn", { combatId: ctx.ownCombat });
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    ctx.expect((await current()) === warrior.id, "combat : au tour du Guerrier");
     const gwm = await hitWith(warrior, "greatsword", "attack");
+    await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {});
+    ctx.ownCombat = null;
     if ( !gwm ) ctx.expect(false, "Maître d'armes lourdes : aucun toucher en 20 essais");
     else ctx.expect(gwm.formula.split(" | ").slice(1).some(f => f.trim() === String(prof)),
       `Maître d'armes lourdes : un jet de + ${prof} (bonus de maîtrise) s'ajoute — « ${gwm.formula} »`);
