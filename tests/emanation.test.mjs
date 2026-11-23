@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { readEmanationText, emanationTargets } from "../module/scripts/core/emanation.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
+import { SOURCE_IDENTIFIERS } from "../module/scripts/content/sources.mjs";
 
 // Textes de la forme de ceux du Monster Manual 2024, enrichers compris : créatures du SRD 5.2 (Blême, Diantrefosse, Azer,
 // Balor), ou texte synthétique de même grammaire (créature inventée) hors SRD.
@@ -46,6 +47,13 @@ describe("émanations de monstre (M7)", () => {
       expect(CONTENT[id]?.emanation).toBeTruthy();
       expect(validateEntry(CONTENT[id], { at: `${id}.` })).toEqual([]);
     }
+    // « Chaque créature » (Élémentaire du feu, Balor) : pas de « de son choix », et le rayon du texte pour le Balor.
+    expect(CONTENT["fire-aura"].emanation.affects).toBe("enemy");
+    expect(CONTENT["mm-fire-aura-each"].emanation).toEqual({ on: "ownTurnEnd" });
+    expect(CONTENT["mm-balor-fire-aura"].emanation).toEqual({ on: "ownTurnEnd", radius: 5, units: "ft" });
+    for ( const id of ["mm-fire-aura-each", "mm-balor-fire-aura"] ) expect(validateEntry(CONTENT[id], { at: `${id}.` })).toEqual([]);
+    expect(SOURCE_IDENTIFIERS["mmFireElemental0.mmFireAura000000"]).toBe("mm-fire-aura-each");
+    expect(SOURCE_IDENTIFIERS["mmBalor000000000.mmFireAura000000"]).toBe("mm-balor-fire-aura");
     expect(validateEntry({ emanation: { on: "whenever" } })).toHaveLength(1);
     expect(validateEntry({ emanation: { on: "turnStart", radius: 10 } })).toHaveLength(1);   // un rayon sans unité
   });
