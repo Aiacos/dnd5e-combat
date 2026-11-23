@@ -22,6 +22,9 @@ export const MONSTERS = Object.freeze({
     { key: "system.abilities.str.save.roll.mode", type: "add", value: "-1" },
     ...["mwak", "rwak", "msak", "rsak"].map(k => ({ key: `system.bonuses.${k}.damage`, type: "add", value: "-3" }))
   ] } },
+  // Nuée (§505) : « The swarm can't regain Hit Points or gain Temporary Hit Points » — le trait, sans effet, vaut pour la nuée.
+  // (Son espace partagé : content/emanations.mjs, `SPACE_SHARERS`.)
+  "swarm": { blocksHealing: true, blocksTempHp: true },
   // Absorption de vie (Feu follet) : seulement une créature à 0 PV.
   "consume-life": { targets: { unaffectedIf: { "target.atZero": false } } },
   // Identifiants propres (content/sources.mjs, clé « acteur.item ») : « sting » et « bite » sont partagés.
