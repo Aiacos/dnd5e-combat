@@ -7,7 +7,8 @@ import { formExpired, revertSeconds, sharedSlotUpdates } from "../module/scripts
 const facts = Object.fromEntries(["activity.type", "activity.isAttack", "activity.isSpell", "activity.isWeapon", "activity.weaponKind", "activity.baseItem", "activity.identifier", "activity.id",
   "activity.hasProperty", "source.hasStatus", "source.hasEffect", "source.creatureType", "source.allyNearTarget", "source.summonNearTarget", "source.seesTarget",
   "target.hasStatus", "target.speaksLanguage", "target.poisonous", "target.carriesMagic", "target.hasMark", "target.hasEffect", "target.hasEffectFrom", "hit.stoppableBy", "hit.critical", "damage.resisted", "target.grappledBySource", "target.wieldsProperty", "target.isSelf", "self.hasShield", "self.wieldsWeapon", "target.hasFeature", "activity.ability", "target.sizeAtMost", "target.within", "target.seesSource", "target.creatureType", "target.creatureSubtype", "target.immuneTo", "activity.isMelee", "target.hasTempHp", "target.speedZero", "target.atZero", "target.isDead", "damage.hasType", "target.hpAtMost", "condition.gained",
-  "target.wounded", "target.bloodied", "source.classLevelAtLeast", "target.nearSelf", "self.seesTarget", "target.hasNotActed", "source.onOwnTurn", "activity.dealsType", "source.hasFeature", "source.hasClassFeature", "activity.cantripOf", "activity.school", "activity.enchantedBy", "source.wildShaped", "activity.classSpell", "source.resists", "source.nearSelf", "self.seesSource", "self.hasEffect", "source.hasEffectFromTarget", "source.hasSense", "target.allied", "source.inSunlight", "self.inSunlight"].map(k => [k, true]));
+  "target.wounded", "target.bloodied", "source.classLevelAtLeast", "target.nearSelf", "self.seesTarget", "target.hasNotActed", "source.onOwnTurn", "activity.dealsType", "source.hasFeature", "source.hasClassFeature", "activity.cantripOf", "activity.school", "activity.enchantedBy", "source.wildShaped", "activity.classSpell", "source.resists", "source.nearSelf", "self.seesSource", "self.hasEffect", "source.hasEffectFromTarget", "source.hasSense", "target.allied", "source.inSunlight", "self.inSunlight",
+  "self.inRunningWater"].map(k => [k, true]));
 const MOMENTS_LIST = "isHit, isDamaged, leavesReach, enemyDisengages, enter, turnStart, turnEnd, moves, preDamageRoll, hit, failedSave, savedSave, startOfTurn, endOfTurn, originTurnStart, preAttackRoll, castsSpell, isMissed, enemyTurnEnd, isTargeted, isAttacked, enemyAttacks, allyAttacks, gainsCondition, allyIsHit, allyIsDamaged, enemyAttacked, falls, allyFalls, savesAgainst, inArea";
 
 describe("validation d'une entrée", () => {
@@ -360,7 +361,8 @@ describe("contenu livré", () => {
       "true-seeing-crystal-ball-of", "true-strike", "truth-serum", "tsunami",
       "twinned-spell", "umbral-dagger", "umbral-form", "unarmed-fighting", "unarmed-strike", "unarmored-movement",
       "uncanny-dodge", "uncanny-metabolism", "undead-fortitude", "unraveling-flesh", "unseen-servant", "use-magic-device",
-      "valor-extra-attack", "vampiric-bite", "vampiric-touch", "vicious-mockery", "vile-appearance", "vine-attack", "viral-aura",
+      "valor-extra-attack", "vampire-weakness", "vampiric-bite", "vampiric-touch", "vicious-mockery", "vile-appearance",
+      "vine-attack", "viral-aura",
       "vitality-of-the-tree", "vitriolic-sphere", "vorpal-sword-enchanted", "vow-of-enmity", "wails-from-the-grave",
       "wall-of-fire", "wall-of-force", "wall-of-ice", "wall-of-stone", "wall-of-thorns", "wand-of-fear", "wand-of-paralysis",
       "wand-of-polymorph", "wand-of-web",

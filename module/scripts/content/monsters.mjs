@@ -38,6 +38,15 @@ export const MONSTERS = Object.freeze({
   // jets d'attaque, tests de caractéristique et jets de sauvegarde. La lecture du texte ne connaît que « … aux jets d'attaque ».
   "sunlight-weakness": { rollDisadvantage: { on: ["check", "save"], if: { "self.inSunlight": true } },
     triggers: [{ on: "preAttackRoll", if: { "source.inSunlight": true }, do: [{ type: "disadvantage" }] }] },
+  // Faiblesses du vampire (Vampire, Vampirien ; SRD 5.2) : 20 dégâts radiants s'il commence son tour au soleil, le Désavantage aux
+  // jets d'attaque et aux tests de caractéristique tant qu'il y est, 20 dégâts d'acide s'il finit son tour dans l'eau courante. Le
+  // trait a plusieurs rubriques : la lecture du texte n'en tirait que les jets d'attaque. L'interdit et le pieu restent au MJ.
+  "vampire-weakness": { rollDisadvantage: { on: ["check"], if: { "self.inSunlight": true } },
+    triggers: [{ on: "preAttackRoll", if: { "source.inSunlight": true }, do: [{ type: "disadvantage" }] },
+      { on: "startOfTurn", if: { "self.inSunlight": true },
+        do: [{ type: "damage", to: "self", formula: "20", damageType: "radiant" }] },
+      { on: "endOfTurn", if: { "self.inRunningWater": true },
+        do: [{ type: "damage", to: "self", formula: "20", damageType: "acid" }] }] },
   // Perception de la magie (Chuul, SRD 5.2) : « le chuul perçoit la magie dans un rayon de 36 m ; ce trait fonctionne par ailleurs
   // comme le sort Détection de la magie, sans être lui-même magique » — permanent, sans effet à porter.
   "sense-magic": { sense: { kind: "locate", range: 120, units: "ft", reveals: "aura", detects: { "target.carriesMagic": true } } },
