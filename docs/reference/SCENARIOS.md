@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-404 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+405 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -84,6 +84,7 @@ la sélection sans rien jouer.
 | `crapaud` |  | §45 | Engloutissement posé par le moteur, acide en fin de tour, libéré à la mort |
 | `critiques` |  | §207 | écart à la CA, table de critiques, choix de l'attaquant |
 | `dague-des-ombres` |  | §71 | stabilisée, empoisonnée et paralysée seulement à 0 PV |
+| `dard-pseudodragon` |  | §526 | plus Inconscient une fois l'effet fini (#255) |
 | `debogueur` |  | §380 | erreurs regroupées, piste, rapport sans noms |
 | `defenses` |  | §16.46 | Voile défensif, Résistance |
 | `degats-bonus` |  | §16 | Maître d'armes lourdes (+ maîtrise), Voile spirituel (+1d8 nécrotique à 10 ft) |

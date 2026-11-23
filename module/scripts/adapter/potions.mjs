@@ -12,6 +12,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
+import { foldRiderStatuses } from "../core/effect-riders.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
 import { originItemOf, comesFromItemEffect } from "./facts.mjs";
 
@@ -78,6 +79,24 @@ export function completeEffectStatuses(effect) {
   const added = rules[key].filter(s => !current.includes(s));
   if ( added.length ) effect.updateSource({ statuses: [...current, ...added] });
   return added.length;
+}
+
+/**
+ * §526 (issue #255) : un effet d'item posé sur une créature — les conditions qu'il demande en cavaliers deviennent ses propres états
+ * (core/effect-riders.mjs), pour finir avec lui ; À terre reste à part. Rend les états repris.
+ */
+export function foldEffectRiders(effect) {
+  if ( (effect.parent?.documentName !== "Actor") || effect.transfer || !originItemOf(effect) ) return [];
+  const src = effect._source;
+  const riders = src.system?.rider?.statuses ?? src.flags?.dnd5e?.riders?.statuses ?? [];
+  if ( !riders.length ) return [];
+  const conditions = Object.keys(CONFIG.DND5E?.conditionTypes ?? {});
+  const implied = Object.fromEntries(riders.map(r => [r, CONFIG.statusEffects?.find?.(e => e.id === r)?.statuses ?? []]));
+  const out = foldRiderStatuses({ statuses: Array.from(src.statuses ?? []), riders, conditions, implied });
+  if ( !out.folded.length ) return [];
+  effect.updateSource({ statuses: out.statuses, "system.rider.statuses": out.riders,
+    ...(src.flags?.dnd5e?.riders?.statuses ? { "flags.dnd5e.riders.statuses": out.riders } : {}) });
+  return out.folded;
 }
 
 export function completeEffectChanges(effect) {
