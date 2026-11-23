@@ -17,7 +17,9 @@ import { damagedByOriginSide } from "../core/triggers.mjs";
 import { itemFacts } from "../adapter/antimagic.mjs";
 import { areEnemies, sideOf } from "../adapter/factions.mjs";
 import { isSpellCast } from "../adapter/scrolls.mjs";
-import { ARMOR_WEIGHTS, armorEnds, healsMagically, isReplayUsage, nobodyAffected, tooFarApart } from "../core/endings.mjs";
+import {
+  ARMOR_WEIGHTS, armorEnds, healsMagically, isEndableEnchantment, isReplayUsage, nobodyAffected, tooFarApart
+} from "../core/endings.mjs";
 import { INCAPACITATING } from "../core/conditions.mjs";
 import { contentOf } from "../adapter/content.mjs";
 import { placeItemEffect } from "../adapter/effects.mjs";
@@ -113,10 +115,12 @@ function endingEffects(actors) {
       if ( rule ) out.push({ actor, effect, item, rule });
     }
     // §447 : un enchantement posé sur un de ses items (Courroux sauvage : « transformé » par un enchantement de l'aptitude elle-même) —
-    // le porteur est le propriétaire de l'item enchanté ; le retirer retire ses effets compagnons (dnd5e).
+    // le porteur est le propriétaire de l'item enchanté ; le retirer retire ses effets compagnons (dnd5e). Seulement l'enchantement
+    // posé : la définition que l'item porte pour son activité « enchant » n'est pas un effet en cours.
     for ( const enchanted of actor?.items ?? [] ) {
       for ( const effect of enchanted.effects ?? [] ) {
-        if ( (effect.type !== "enchantment") || effect.disabled ) continue;
+        const { type, disabled, isAppliedEnchantment: applied } = effect;
+        if ( !isEndableEnchantment({ type, disabled, applied }) ) continue;
         const item = originItemOf(effect);
         const rule = rulesOf(item);
         if ( rule ) out.push({ actor, effect, item, rule });

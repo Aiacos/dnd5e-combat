@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { validateEntry, mergeEntries } from "../module/scripts/core/content.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
+import { isEndableEnchantment } from "../module/scripts/core/endings.mjs";
 
 /** Fins de sorts (SPEC §42.2) : ce que le schéma accepte, et ce que le contenu livré déclare. */
 describe("fins de sorts — schéma", () => {
@@ -153,3 +154,26 @@ describe("effets qui cessent quand leur porteur est Neutralisé (SRD 5.2)", () =
     expect(CONTENT["draconic-flight"].endsWhen.incapacitated).toBe("bearer");
   });
 });
+
+/** §447 : une fin générique retire l'enchantement posé, pas la définition que l'item porte pour l'enchanter. */
+describe("fins génériques — l'enchantement posé, pas sa définition", () => {
+  it("un enchantement posé et actif peut prendre fin", () => {
+    expect(isEndableEnchantment({ type: "enchantment", disabled: false, applied: true })).toBe(true);
+  });
+
+  it("la définition portée par l'item (non posée) reste", () => {
+    expect(isEndableEnchantment({ type: "enchantment", disabled: false, applied: false })).toBe(false);
+  });
+
+  it("un enchantement désactivé, ou un effet d'un autre type, n'est pas concerné", () => {
+    expect(isEndableEnchantment({ type: "enchantment", disabled: true, applied: true })).toBe(false);
+    expect(isEndableEnchantment({ type: "base", disabled: false, applied: true })).toBe(false);
+    expect(isEndableEnchantment()).toBe(false);
+  });
+
+  it("sans le drapeau de dnd5e, tout enchantement actif compte (comportement d'avant)", () => {
+    expect(isEndableEnchantment({ type: "enchantment", disabled: false })).toBe(true);
+    expect(isEndableEnchantment({ type: "enchantment", disabled: false, applied: undefined })).toBe(true);
+  });
+});
+

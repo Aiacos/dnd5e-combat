@@ -73,3 +73,14 @@ export function healsMagically(amount, use) {
   if ( isMagicalUse(use) ) return true;
   return (use.item?.type === "consumable") && (use.item?.subtype === "potion");
 }
+
+/**
+ * §447 : l'enchantement qu'une fin générique peut retirer — une copie posée sur un item (`isAppliedEnchantment` de dnd5e), jamais la
+ * définition que l'item porte pour son activité « enchant » (Gourdin magique : ses quatre profils) : la retirer viderait l'item, qui
+ * ne pourrait plus rien enchanter. `applied` absent (un dnd5e sans ce drapeau) : tout enchantement actif compte, comme avant.
+ * @param {{type?: string, disabled?: boolean, applied?: boolean|null}} effect
+ * @returns {boolean}
+ */
+export function isEndableEnchantment({ type, disabled = false, applied = null } = {}) {
+  return (type === "enchantment") && !disabled && (applied ?? true);
+}
