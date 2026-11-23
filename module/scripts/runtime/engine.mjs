@@ -385,8 +385,10 @@ function onResolutionFlag(message, changes) {
   damageRolling.add(resolution.id);
   // §419 : réglage « Dégâts », au clic — l'auteur lance lui-même. La fenêtre n'a qu'une issue : fermée ou restée sans réponse (délai des
   // fenêtres du combat), le jet part quand même — un coup qui a touché a des dégâts.
-  const ready = damageFlow().click ? askToRollDamage(message, resolution) : Promise.resolve();
-  log(damageFlow().click ? "damage roll: waiting for the author's click" : "chained damage roll");
+  // §524 : « au clic pour les joueurs » — ce client est celui de l'auteur (`message.isAuthor`) : un joueur clique, le MJ enchaîne.
+  const click = damageFlow({ playerAuthor: !game.user.isGM }).click;
+  const ready = click ? askToRollDamage(message, resolution) : Promise.resolve();
+  log(click ? "damage roll: waiting for the author's click" : "chained damage roll");
   ready.then(() => rollDamageFor(message, resolution, isCriticalHit(resolution))).catch(err => {
     damageRolling.delete(resolution.id);
     console.error(`${MODULE_ID} | automatic damage roll failed`, err);

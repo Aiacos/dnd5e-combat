@@ -34,7 +34,19 @@ describe("damageSteps", async () => {
     expect(damageSteps("validate")).toEqual({ click: false, validate: true });
     expect(damageSteps("clickValidate")).toEqual({ click: true, validate: true });
   });
-  it("cinq modes, « level » en tête (le défaut)", () => {
-    expect(DAMAGE_MODES).toEqual(["level", "auto", "click", "validate", "clickValidate"]);
+  it("§524 (#173) : au clic pour les joueurs — un joueur clique, les créatures du MJ restent automatiques", () => {
+    expect(damageSteps("clickPlayers", { playerAuthor: true })).toEqual({ click: true, validate: false });
+    expect(damageSteps("clickPlayers", { playerAuthor: false })).toEqual({ click: false, validate: false });
+    expect(damageSteps("clickPlayers")).toEqual({ click: false, validate: false });
+  });
+  it("§524 : la même chose validée par le MJ — la validation vaut pour tous", () => {
+    expect(damageSteps("clickPlayersValidate", { playerAuthor: true })).toEqual({ click: true, validate: true });
+    expect(damageSteps("clickPlayersValidate", { playerAuthor: false })).toEqual({ click: false, validate: true });
+  });
+  it("« au clic » pour tous ne dépend pas de l'auteur", () => {
+    expect(damageSteps("click", { playerAuthor: false })).toEqual({ click: true, validate: false });
+  });
+  it("sept modes, « level » en tête (le défaut)", () => {
+    expect(DAMAGE_MODES).toEqual(["level", "auto", "click", "validate", "clickValidate", "clickPlayers", "clickPlayersValidate"]);
   });
 });

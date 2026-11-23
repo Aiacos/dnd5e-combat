@@ -23,15 +23,22 @@ export function offersReaction(mode, { playerOwned=false }={}) {
  * Réglage « Dégâts » (§419). `level` : selon le niveau d'automatisation — aujourd'hui lancés et appliqués d'office, dès que le niveau
  * résout les actions.
  */
-export const DAMAGE_MODES = Object.freeze(["level", "auto", "click", "validate", "clickValidate"]);
+export const DAMAGE_MODES = Object.freeze(["level", "auto", "click", "validate", "clickValidate", "clickPlayers", "clickPlayersValidate"]);
 
 /**
  * Les deux gestes que le réglage peut demander autour d'un jet de dégâts ou de soins : `click` — l'auteur lance lui-même ses dés (une
  * fenêtre, un bouton) au lieu du jet enchaîné ; `validate` — le MJ confirme avant que le résultat ne soit appliqué.
+ * §524 (issue #173) : `clickPlayers` / `clickPlayersValidate` — au clic seulement quand l'auteur est un joueur ; les créatures que joue le
+ * MJ restent automatiques. La validation, elle, vaut pour tous.
  * @param {string} mode
+ * @param {{playerAuthor?: boolean}} [who]  L'auteur de l'action est-il un joueur (pas un MJ) ?
  * @returns {{click: boolean, validate: boolean}}
  */
-export function damageSteps(mode) {
+export function damageSteps(mode, { playerAuthor=false }={}) {
   const m = (!DAMAGE_MODES.includes(mode) || (mode === "level")) ? "auto" : mode;
-  return { click: (m === "click") || (m === "clickValidate"), validate: (m === "validate") || (m === "clickValidate") };
+  const players = (m === "clickPlayers") || (m === "clickPlayersValidate");
+  return {
+    click: (m === "click") || (m === "clickValidate") || (players && (playerAuthor === true)),
+    validate: (m === "validate") || (m === "clickValidate") || (m === "clickPlayersValidate")
+  };
 }

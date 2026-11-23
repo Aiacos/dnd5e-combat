@@ -12,11 +12,15 @@ export const REACTION_SETTING = "reactionPrompts";
 /** §419 : réglage de monde « Dégâts » — lancés d'office ou au clic de l'auteur, appliqués d'office ou validés par le MJ. */
 export const DAMAGE_SETTING = "damageFlow";
 
-/** §419 : ce que le réglage « Dégâts » demande (core/flow.mjs, `damageSteps`). */
-export function damageFlow() {
+/**
+ * §419 : ce que le réglage « Dégâts » demande (core/flow.mjs, `damageSteps`). §524 : `playerAuthor` — l'auteur de l'action est un
+ * joueur ; lu sur le client de l'auteur, c'est l'utilisateur de ce client quand il n'est pas MJ.
+ * @param {{playerAuthor?: boolean}} [who]
+ */
+export function damageFlow({ playerAuthor=false }={}) {
   let mode = "level";
   try { mode = game.settings.get(MODULE_ID, DAMAGE_SETTING); } catch { /* réglage pas encore déclaré */ }
-  return damageSteps(mode);
+  return damageSteps(mode, { playerAuthor });
 }
 
 export function registerFlow() {
