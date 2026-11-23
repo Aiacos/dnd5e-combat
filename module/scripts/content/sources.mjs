@@ -22,6 +22,10 @@ export const SOURCE_IDENTIFIERS = Object.freeze({
   // oracle pas celui du Devin, l'Échappatoire brumeuse du Vampire pas l'invocation de l'Occultiste, la Toile de l'Araignée géante pas le
   // sort, le Ralliement de l'Amiral pirate pas l'aptitude du Chevalier occulte. Un identifiant propre : seule la couche texte s'y applique.
   mmRiposte0000000: "mm-riposte",
+  // Présence imposante des dragons rouges (SRD 5.2) : l'action légendaire lance Injonction ; elle n'a rien de la
+  // « commanding-presence » du Guerrier (un bonus aux tests de Charisme), dont elle portait l'entrée par homonymie.
+  "mmAdultRedDragon.mmCommandingPres": "mm-commanding-presence",
+  "mmAncientRedDrag.mmCommandingPres": "mm-commanding-presence",
   mmProtection0000: "mm-protection",
   mmPortent0000000: "mm-portent",
   mmMistyEscape000: "mm-misty-escape",
