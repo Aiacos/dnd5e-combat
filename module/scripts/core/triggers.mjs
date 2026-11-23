@@ -13,7 +13,8 @@
  * l'adaptateur : une valeur (comparée strictement) ou une fonction (appelée avec l'argument).
  *   { "activity.isAttack": true }                      fait = valeur
  *   { "target.hasEffectFrom": "hex" }                  fait = fonction, appelée avec "hex"
- *   { "target.hasStatus": ["prone", "restrained"] }    valeur dans une liste
+ *   { "activity.type": ["attack", "save"] }            valeur dans une liste
+ *   { "target.hasStatus": ["prone", "restrained"] }    fait = fonction qui accepte une liste : l'un de ces états
  *   { all: [...] } · { any: [...] } · { not: ... }     combinaisons ; un objet à plusieurs clés = all
  *
  * Fonctions pures, aucune dépendance à Foundry.
