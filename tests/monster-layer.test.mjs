@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { monsterTextLayer } from "../module/scripts/core/monster-layer.mjs";
+import { monsterEffectDurations } from "../module/scripts/core/monster-text.mjs";
 
 // §460 : la couche texte des capacités de PNJ, sortie de l'adaptateur pour que l'ATLAS calcule ce que joue le moteur. Exemples synthétiques.
 describe("§460 : monsterTextLayer", () => {
@@ -38,3 +39,48 @@ describe("§460 : monsterTextLayer", () => {
     expect(monsterTextLayer({ html, activities: acts, swallow: true })?.triggers).toBeUndefined();
   });
 });
+
+// Exemples synthétiques, réduits aux tournures lues (aucun texte de livre).
+describe("§334 : la durée en tours d'un effet sans état, dite de la cible", () => {
+  const data = { activities: [{ type: "save", effects: ["aaaaaaaaaaaaaaaa"] }],
+    effects: [{ id: "aaaaaaaaaaaaaaaa", statuses: [] }] };
+  it("« the target's Speed is halved until the end of its next turn » : la fin du tour du porteur", () => {
+    const html = "<p>Failure: 10 Fire damage, and the target's Speed is halved until the end of its next turn.</p>";
+    expect(monsterEffectDurations(html, data)).toEqual({ effectEnds: { aaaaaaaaaaaaaaaa: "bearerTurnEnd" } });
+  });
+  it("la phrase qui parle de la créature (« can't take this action again ») ne change pas la durée lue", () => {
+    const html = "<p>Failure: 10 Fire damage, and the target's Speed is halved until the end of its next turn. "
+      + "Failure or Success: The beast can't take this action again until the start of its next turn.</p>";
+    expect(monsterEffectDurations(html, data)).toEqual({ effectEnds: { aaaaaaaaaaaaaaaa: "bearerTurnEnd" } });
+    const alone = "<p>Failure or Success: The beast can't take this action again until the start of its next turn.</p>";
+    expect(monsterEffectDurations(alone, data)).toEqual({});
+  });
+  it("« This effect lasts until the end of its next turn », dans une phrase à part", () => {
+    const html = "<p>Failure: The target's Speed is halved. This effect lasts until the end of its next turn.</p>";
+    expect(monsterEffectDurations(html, data)).toEqual({ effectEnds: { aaaaaaaaaaaaaaaa: "bearerTurnEnd" } });
+  });
+  it("« the target's next turn » est le tour du porteur ; « the beast's next turn », celui de la créature", () => {
+    const own = "<p>Failure: The target's Speed is 0 until the end of the target's next turn.</p>";
+    expect(monsterEffectDurations(own, data)).toEqual({ effectEnds: { aaaaaaaaaaaaaaaa: "bearerTurnEnd" } });
+    const user = "<p>Hit: 5 damage, and the target can't climb until the start of the beast's next turn.</p>";
+    expect(monsterEffectDurations(user, data)).toEqual({ effectEnds: { aaaaaaaaaaaaaaaa: "casterTurnStart" } });
+  });
+  it("deux effets sans état : on ne devine pas lequel", () => {
+    const two = { activities: [{ type: "save", effects: ["aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbb"] }],
+      effects: [{ id: "aaaaaaaaaaaaaaaa", statuses: [] }, { id: "bbbbbbbbbbbbbbbb", statuses: [] }] };
+    const html = "<p>Failure: The target's Speed is halved until the end of its next turn.</p>";
+    expect(monsterEffectDurations(html, two)).toEqual({});
+  });
+  it("deux phrases, deux durées différentes : rien n'est lu pour l'effet sans état", () => {
+    const html = "<p>The beast has Advantage on attack rolls against the target until the start of the beast's next turn. "
+      + "The target has Disadvantage on attack rolls until the end of its next turn.</p>";
+    expect(monsterEffectDurations(html, data)).toEqual({});
+  });
+  it("un état nommé garde sa lecture (l'effet qui porte l'état)", () => {
+    const named = { activities: [{ type: "save", effects: ["cccccccccccccccc"] }],
+      effects: [{ id: "cccccccccccccccc", statuses: ["prone"] }] };
+    const html = "<p>Failure: The target has the Prone condition until the end of the target's next turn.</p>";
+    expect(monsterEffectDurations(html, named)).toEqual({ effectEnds: { cccccccccccccccc: "bearerTurnEnd" } });
+  });
+});
+

@@ -527,6 +527,10 @@ export function monsterImmunity(html, identifier, activities=[]) {
  *  - « the target has the Restrained condition until the end of its next turn » → `effectEnds` de l'effet qui porte cet état :
  *    `bearerTurnEnd` (« its ») ou `casterTurnEnd` (« the spy master's ») ; de même « start » ;
  *  - « the target can't take Reactions until … » sur un effet sans état → `noReactions` de cet effet, et sa durée ;
+ *  - une durée en tours dite de la cible sans nommer d'état (« the target's Speed is halved until the end of its next turn »,
+ *    « This effect lasts until the end of its next turn ») → `effectEnds` de l'unique effet sans état que l'activité cite. La
+ *    phrase qui parle de la créature elle-même (« The dragon can't take this action again until the start of its next turn »)
+ *    n'en dit rien ; deux phrases qui donnent deux durées différentes non plus ;
  *  - « the creature can't regain Hit Points » sur un effet sans état → `blocksHealing` de cet effet.
  * Un texte à plusieurs segments (rayons numérotés) est laissé.
  * @param {string} html
@@ -540,7 +544,10 @@ export function monsterEffectDurations(html, { activities=[], effects=[] }={}) {
   const cited = new Set(activities.flatMap(a => a.effects ?? []));
   const own = effects.filter(e => cited.has(e.id));
   const bare = own.filter(e => !(e.statuses ?? []).length);
-  const endOf = m => `${/^its$/i.test(m[2]) ? "bearer" : "caster"}Turn${(m[1].toLowerCase() === "start") ? "Start" : "End"}`;
+  // « its next turn » et « the target's next turn » : le tour du porteur ; « the kuo-toa's next turn » : celui de la créature.
+  const whose = m => (/^(?:its|the target['’]s)$/i.test(m[2]) ? "bearer" : "caster");
+  const endOf = m => `${whose(m)}Turn${(m[1].toLowerCase() === "start") ? "Start" : "End"}`;
+  const loose = new Set();
   for ( const sentence of text.split(/(?<=\.)\s+/) ) {
     const turn = sentence.match(/\buntil the (start|end) of (its|the [^.]*?['’]s|his|her) next turn\b/i);
     if ( !turn || /^(?:his|her)$/i.test(turn[2]) ) continue;
@@ -552,8 +559,17 @@ export function monsterEffectDurations(html, { activities=[], effects=[] }={}) {
     if ( /\bcan[’']t take (?:a Bonus Action or )?Reactions?\b|\bcan[’']t take a Bonus or Reaction\b/i.test(sentence) && (bare.length === 1) ) {
       out.noReactions = [bare[0].id];
       (out.effectEnds ??= {})[bare[0].id] = endOf(turn);
+      continue;
     }
+    // Une durée dite de la cible, sans état nommé : celle de l'unique effet sans état (jugée plus bas, toutes phrases lues).
+    const aboutTarget = /\bthe target\b|\bThis effect lasts\b/i.test(sentence)
+      && !/\bcan[’']t take this action again\b/i.test(sentence);
+    if ( aboutTarget ) loose.add(endOf(turn));
   }
+  // Deux phrases qui donnent deux durées différentes (deux effets, dont un seul sans état) : on ne devine pas laquelle est la
+  // sienne.
+  const [only] = bare;
+  if ( (bare.length === 1) && (loose.size === 1) && !out.effectEnds?.[only.id] ) (out.effectEnds ??= {})[only.id] = [...loose][0];
   if ( (bare.length === 1) && /\b(?:the creature|the target) can[’']t regain Hit Points\b/i.test(text) ) out.blocksHealing = [bare[0].id];
   return out;
 }
