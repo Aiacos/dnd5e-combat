@@ -8,7 +8,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { asPercent } from "../core/hitchance.mjs";
+import { asPercent, hitChanceShows } from "../core/hitchance.mjs";
 import { hitChanceOf, saveChanceOf } from "../adapter/hitchance.mjs";
 import { coverPreviewOf } from "../adapter/cover-preview.mjs";
 import { coverPreviewText } from "../core/cover-preview.mjs";
@@ -30,7 +30,7 @@ function element() {
   return badge;
 }
 
-/** Ce que ce client a le droit de voir : "full", "percent" ou "off". */
+/** Ce que ce client a le droit de voir : "full", "percent", "advantage" (#247 : les raisons d'avantage seules) ou "off". */
 function reveal() {
   if ( !game.settings.get(MODULE_ID, "hitChance") ) return "off";
   return game.user.isGM ? "full" : game.settings.get(MODULE_ID, "hitChancePlayers");
@@ -138,22 +138,27 @@ export function showHitChance(event, attacker, target, activity, { posA, outOfRe
   const el = element();
   el.replaceChildren();
   el.classList.remove("good", "fair", "poor", "cover-only");
+  const shows = hitChanceShows(level);
   if ( (level === "off") || (!outOfReach && !info) ) el.classList.add("cover-only");
   else if ( outOfReach ) {
     el.classList.add("poor");
     el.append(line("percent", loc("Toucher.HorsDatteinte")));
   }
   else {
-    const percent = asPercent(info.hit);
-    el.classList.add(percent >= 60 ? "good" : percent >= 35 ? "fair" : "poor");
-    el.append(line("percent", `${percent} %`));
-    const crit = (info.critical > 0) && (info.critical < 0.005) ? "< 1" : asPercent(info.critical);
-    if ( info.hit > 0 ) el.append(line("detail", loc("Toucher.Critique", { percent: crit })));
-    // CA et abri : la CA seulement si le MJ la révèle aux joueurs. #33 : avec l'aperçu, l'abri a sa propre ligne.
-    const coverNote = cover ? null : coverText(info.cover);
-    if ( info.ac === null ) { if ( coverNote ) el.append(line("detail", coverNote)); }
-    else if ( level === "full" ) el.append(line("detail", `${loc("Toucher.CA")} ${info.ac}${coverNote ? ` — ${coverNote}` : ""}`));
-    else if ( coverNote ) el.append(line("detail", coverNote));
+    if ( shows.percent ) {
+      const percent = asPercent(info.hit);
+      el.classList.add(percent >= 60 ? "good" : percent >= 35 ? "fair" : "poor");
+      el.append(line("percent", `${percent} %`));
+      const crit = (info.critical > 0) && (info.critical < 0.005) ? "< 1" : asPercent(info.critical);
+      if ( info.hit > 0 ) el.append(line("detail", loc("Toucher.Critique", { percent: crit })));
+      // CA et abri : la CA seulement si le MJ la révèle aux joueurs. #33 : avec l'aperçu, l'abri a sa propre ligne.
+      const coverNote = cover ? null : coverText(info.cover);
+      if ( info.ac === null ) { if ( coverNote ) el.append(line("detail", coverNote)); }
+      else if ( shows.ac ) el.append(line("detail", `${loc("Toucher.CA")} ${info.ac}${coverNote ? ` — ${coverNote}` : ""}`));
+      else if ( coverNote ) el.append(line("detail", coverNote));
+    }
+    // #247 : les raisons seules — ni pourcentage ni couleur ; sans raison (et sans aperçu de l'abri), rien à montrer.
+    else el.classList.add("cover-only");
     if ( cover ) el.append(...cover);
     const advantage = info.advantage.map(describeReason);
     const disadvantage = info.disadvantage.map(describeReason);
@@ -164,6 +169,7 @@ export function showHitChance(event, attacker, target, activity, { posA, outOfRe
     if ( advantage.length ) el.append(line("advantage", loc("LabelValue", { label: loc("Avantage"), value: advantage.join(", ") })));
     if ( disadvantage.length ) el.append(line("disadvantage", loc("LabelValue", { label: loc("Desavantage"), value: disadvantage.join(", ") })));
     if ( advantage.length && disadvantage.length ) el.append(line("detail", loc("Toucher.SAnnulent")));
+    if ( !shows.percent && !cover && !advantage.length && !disadvantage.length ) return hideHitChance();
   }
   if ( cover && !info ) el.append(...cover);
   anchor = at;
@@ -178,7 +184,9 @@ export function showHitChance(event, attacker, target, activity, { posA, outOfRe
  */
 export function showSaveChance(event, caster, target, activity, { outOfReach=false }={}) {
   const level = reveal();
-  if ( (level === "off") || (activity?.type !== "save") ) return hideHitChance();
+  // #247 : « advantage » ne montre rien d'une sauvegarde — ses raisons parlent de la cible (une résistance, un état), pas du
+  // lanceur.
+  if ( !hitChanceShows(level).percent || (activity?.type !== "save") ) return hideHitChance();
   let info = null;
   if ( !outOfReach ) {
     try { info = saveChanceOf(caster, target, activity); }
@@ -225,6 +233,7 @@ export function registerHitChance() {
     choices: {
       full: "DND5ECOMBAT.Reglage.hitChancePlayers.full",
       percent: "DND5ECOMBAT.Reglage.hitChancePlayers.percent",
+      advantage: "DND5ECOMBAT.Reglage.hitChancePlayers.advantage",
       off: "DND5ECOMBAT.Reglage.hitChancePlayers.off"
     } });
 }
