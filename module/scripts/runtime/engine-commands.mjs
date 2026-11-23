@@ -259,14 +259,19 @@ export const COMMANDS = {
         }
         log(`${activity?.item?.name}: hit point maximum raised by ${raise}`);
       }
+      // §133, §523 : Tueur de mages — la créature concentrée que l'auteur blesse a le Désavantage à son jet de concentration. La marque
+      // se pose AVANT les dégâts : dnd5e demande la sauvegarde dès qu'ils sont appliqués, et le moteur la lance aussitôt
+      // (runtime/concentration.mjs) — posée après, elle tombait sur la sauvegarde suivante. Rien sur une cible épargnée ou interposée.
+      const breaking = hurting && !shielded?.spared && !ward?.interpose
+        && await markConcentrationBreaker(source?.actor ?? activity?.actor, patient, activity);
       const hp = ((entry.multiplier > 0) && !shielded?.spared)
         ? await applyDamageToToken(ward?.interpose ?? entry.token, rolled, damageMessage, { multiplier: entry.multiplier, reduction: entry.reduction ?? 0, absorbInto: ward?.item ?? null,
           ignoreResistance: resistanceIgnoredBy(source?.actor ?? activity?.actor, activity),   // §134
           rangedWeapon: !!resolution.plan.attack && isRangedWeaponAttack(activity, attackMode) })   // O8d (§347)
         : null;
-      // §133 : Tueur de mages — la créature concentrée que l'auteur vient de blesser aura le Désavantage à son jet de concentration.
-      // `hp.actor` est un uuid (adapter/messages.mjs) : la marque se pose sur l'acteur blessé lui-même.
-      if ( hp && hurting ) await markConcentrationBreaker(source?.actor ?? activity?.actor, patient, activity);
+      // §523 : aucun dégât appliqué au bout du compte — pas de sauvegarde, la marque ne doit pas attendre la suivante. (Pas d'après les PV
+      // relus : l'acteur d'un token non lié est recréé par sa mise à jour, ses PV « après » restaient ceux d'avant — vu sur le banc.)
+      if ( breaking && !hp ) await patient.unsetFlag(MODULE_ID, "concentrationBreaker").catch(() => null);
       // C12-f : Défenses envoûtantes — l'attaquant qui a raté la sauvegarde subit les dégâts que le porteur vient de subir.
       const retort = hp ? patient?.getFlag?.(MODULE_ID, "retort") : null;
       if ( retort && (retort.resolution === resolution.id) ) {

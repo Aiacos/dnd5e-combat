@@ -333,9 +333,20 @@ export async function offerInterpose(actor) {
   return true;
 }
 
-/** Tueur de mages, Briseur de concentration — l'auteur blesse une créature concentrée : son prochain jet de concentration a le Désavantage. */
+/**
+ * §523 : les marques que ce client vient de poser, lues sans attendre leur écriture. La sauvegarde de concentration du PNJ est lancée par
+ * le MJ actif — celui qui pose la marque — pendant que le drapeau s'écrit encore (vu sur le banc : la sauvegarde partait avant la fin de
+ * `setFlag`, sans le Désavantage). Le drapeau reste pour la sauvegarde lancée par un autre client (le joueur d'un personnage concentré).
+ * @type {Map<string, {source: string, at: number}>}
+ */
+const freshBreakers = new Map();
+
+/**
+ * Tueur de mages, Briseur de concentration — l'auteur blesse une créature concentrée : son prochain jet de concentration a le Désavantage.
+ * @returns {Promise<boolean>}  La marque est-elle posée ?
+ */
 export async function markConcentrationBreaker(source, target, activity=null) {
-  if ( !source || !target || (source === target) ) return;
+  if ( !source || !target || (source === target) ) return false;
   // `"item"` : l'objet dont l'activité a blessé, s'il est à ce porteur, équipé et harmonisé au besoin
   // (core/concentration-breaker.mjs).
   // L'objet est relu sur la fiche du porteur par son id : l'activité d'une résolution peut venir d'un clone de l'item.
@@ -344,10 +355,13 @@ export async function markConcentrationBreaker(source, target, activity=null) {
     && ((item.system?.attunement !== "required") || (item.system?.attuned === true));
   const applies = breaksConcentration({ owned: (source.items ?? []).map(i => contentOf(i).entry?.concentrationBreaker),
     item: item ? contentOf(item).entry?.concentrationBreaker : undefined, itemReady });
-  if ( !applies ) return;
-  if ( !(target.concentration?.effects?.size > 0) ) return;
-  await target.setFlag(MODULE_ID, "concentrationBreaker", { source: source.name, at: Date.now() });
+  if ( !applies ) return false;
+  if ( !(target.concentration?.effects?.size > 0) ) return false;
+  const mark = { source: source.name, at: Date.now() };
+  freshBreakers.set(target.uuid, mark);
+  await target.setFlag(MODULE_ID, "concentrationBreaker", mark);
   log(`Concentration breaker: ${target.name}'s next Concentration saving throw has Disadvantage (${source.name})`);
+  return true;
 }
 
 /** Le jet de concentration, sur le client qui le lance : le Désavantage s'il y a une marque récente (moins d'une minute), qui tombe. */
@@ -358,13 +372,19 @@ function onPreRollConcentration(config) {
     config.advantage = true;
     log(`Extended Spell: Advantage on ${actor.name}'s Concentration saving throw`);
   }
-  const mark = actor?.getFlag?.(MODULE_ID, "concentrationBreaker");
+  const fresh = actor?.uuid ? freshBreakers.get(actor.uuid) : null;
+  if ( fresh ) freshBreakers.delete(actor.uuid);
+  const mark = fresh ?? actor?.getFlag?.(MODULE_ID, "concentrationBreaker");
   if ( !mark ) return true;
   if ( (Date.now() - (mark.at ?? 0)) <= 60000 ) {
     config.disadvantage = true;
     log(`Concentration breaker: Disadvantage on ${actor.name}'s Concentration saving throw (${mark.source})`);
   }
-  if ( actor.isOwner ) actor.unsetFlag(MODULE_ID, "concentrationBreaker").catch(() => null);
+  if ( actor.isOwner ) {
+    actor.unsetFlag(MODULE_ID, "concentrationBreaker").catch(() => null);
+    // Lue en mémoire : le drapeau s'écrit peut-être encore — retiré aussi une fois écrit, pour ne pas valoir à la sauvegarde suivante.
+    if ( fresh ) setTimeout(() => actor.unsetFlag(MODULE_ID, "concentrationBreaker").catch(() => null), 3000);
+  }
   return true;
 }
 
