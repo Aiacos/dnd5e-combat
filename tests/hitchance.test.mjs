@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { d20Law, bonusLaw, hitChance, asPercent } from "../module/scripts/core/hitchance.mjs";
+import { d20Law, bonusLaw, hitChance, asPercent, hitChanceShows, HIT_CHANCE_LEVELS } from "../module/scripts/core/hitchance.mjs";
 
 const sum = law => law.reduce((a, b) => a + b, 0);
 
@@ -97,3 +97,22 @@ describe("chance d'échec d'une sauvegarde (§15.3)", () => {
     expect(saveFailChance({ dc: 30, bonus: 0, immune: true })).toBe(0);
   });
 });
+
+describe("ce que les joueurs voient de la pastille (#247)", () => {
+  it("« full » : tout ; « percent » : sans la CA", () => {
+    expect(hitChanceShows("full")).toEqual({ percent: true, ac: true, reasons: true });
+    expect(hitChanceShows("percent")).toEqual({ percent: true, ac: false, reasons: true });
+  });
+  it("« advantage » : les raisons d'avantage et de désavantage seules — ni pourcentage, ni CA", () => {
+    expect(hitChanceShows("advantage")).toEqual({ percent: false, ac: false, reasons: true });
+  });
+  it("« off », ou un niveau inconnu : rien", () => {
+    expect(hitChanceShows("off")).toEqual({ percent: false, ac: false, reasons: false });
+    expect(hitChanceShows("autre")).toEqual({ percent: false, ac: false, reasons: false });
+    expect(hitChanceShows(undefined)).toEqual({ percent: false, ac: false, reasons: false });
+  });
+  it("les niveaux du réglage, du plus au moins bavard", () => {
+    expect(HIT_CHANCE_LEVELS).toEqual(["full", "percent", "advantage", "off"]);
+  });
+});
+

@@ -111,3 +111,19 @@ export function asPercent(p) {
   if ( p >= 1 ) return 100;
   return Math.min(99, Math.max(1, Math.round(p * 100)));
 }
+
+/** Ce que les joueurs peuvent voir de la pastille (réglage `hitChancePlayers`) ; le MJ voit tout (« full »). */
+export const HIT_CHANCE_LEVELS = Object.freeze(["full", "percent", "advantage", "off"]);
+
+/**
+ * Ce qu'un niveau montre d'une attaque : le pourcentage (et le critique), la CA de la cible, les raisons d'avantage et de
+ * désavantage. « advantage » (#247) : les raisons seules — le joueur sait que son jet aura l'avantage, et pourquoi, sans rien
+ * apprendre de la défense de la cible. Un niveau inconnu ne montre rien.
+ * @param {string} level
+ * @returns {{percent: boolean, ac: boolean, reasons: boolean}}
+ */
+export function hitChanceShows(level) {
+  return { percent: (level === "full") || (level === "percent"), ac: level === "full",
+    reasons: (level === "full") || (level === "percent") || (level === "advantage") };
+}
+

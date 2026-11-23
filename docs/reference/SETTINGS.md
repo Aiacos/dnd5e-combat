@@ -103,7 +103,7 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 | `coverPreview` | Aperçu de l'abri | world | Boolean | `false` |  | `ui/hitchance.mjs` |
 | `fastAttack` | Attaque à la souris sans dialogue | client | Boolean | `true` |  | `ui/pointer.mjs` |
 | `hitChance` | Chance de toucher au survol | client | Boolean | `true` |  | `ui/hitchance.mjs` |
-| `hitChancePlayers` | Chance de toucher : ce que voient les joueurs | world | String | `"full"` | full, percent, off | `ui/hitchance.mjs` |
+| `hitChancePlayers` | Chance de toucher : ce que voient les joueurs | world | String | `"full"` | full, percent, advantage, off | `ui/hitchance.mjs` |
 | `quickRolls` | Jets sans fenêtre (attaque, dégâts, soins) | client | Boolean | `true` |  | `ui/pointer.mjs` |
 | `releaseTargets` | Relâcher les cibles automatiquement | client | Boolean | `true` |  | `ui/pointer.mjs` |
 | `situationalCursor` | Curseur selon la situation | client | Boolean | `true` |  | `ui/pointer.mjs` |
