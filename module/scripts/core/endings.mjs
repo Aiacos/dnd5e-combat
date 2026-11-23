@@ -78,9 +78,11 @@ export function healsMagically(amount, use) {
  * §447 : l'enchantement qu'une fin générique peut retirer — une copie posée sur un item (`isAppliedEnchantment` de dnd5e), jamais la
  * définition que l'item porte pour son activité « enchant » (Gourdin magique : ses quatre profils) : la retirer viderait l'item, qui
  * ne pourrait plus rien enchanter. `applied` absent (un dnd5e sans ce drapeau) : tout enchantement actif compte, comme avant.
- * @param {{type?: string, disabled?: boolean, applied?: boolean|null}} effect
+ * §525 : sauf le profil de l'objet activé à la place d'un enchantement de soi (`ownProfile`, Courroux sauvage : runtime/enchant.mjs) —
+ * dnd5e ne le compte pas comme posé, mais c'est l'effet en cours ; sa fin l'éteint (`switchesOff`) sans le retirer.
+ * @param {{type?: string, disabled?: boolean, applied?: boolean|null, ownProfile?: boolean}} effect
  * @returns {boolean}
  */
-export function isEndableEnchantment({ type, disabled = false, applied = null } = {}) {
-  return (type === "enchantment") && !disabled && (applied ?? true);
+export function isEndableEnchantment({ type, disabled = false, applied = null, ownProfile = false } = {}) {
+  return (type === "enchantment") && !disabled && ((applied ?? true) || (ownProfile === true));
 }

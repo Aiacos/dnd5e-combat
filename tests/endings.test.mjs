@@ -165,6 +165,11 @@ describe("fins génériques — l'enchantement posé, pas sa définition", () =>
     expect(isEndableEnchantment({ type: "enchantment", disabled: false, applied: false })).toBe(false);
   });
 
+  it("§525 : le profil de l'objet activé à sa place (Courroux sauvage) peut prendre fin", () => {
+    expect(isEndableEnchantment({ type: "enchantment", disabled: false, applied: false, ownProfile: true })).toBe(true);
+    expect(isEndableEnchantment({ type: "enchantment", disabled: true, applied: false, ownProfile: true })).toBe(false);
+  });
+
   it("un enchantement désactivé, ou un effet d'un autre type, n'est pas concerné", () => {
     expect(isEndableEnchantment({ type: "enchantment", disabled: true, applied: true })).toBe(false);
     expect(isEndableEnchantment({ type: "base", disabled: false, applied: true })).toBe(false);

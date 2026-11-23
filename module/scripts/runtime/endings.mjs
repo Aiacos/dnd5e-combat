@@ -120,7 +120,9 @@ function endingEffects(actors) {
     for ( const enchanted of actor?.items ?? [] ) {
       for ( const effect of enchanted.effects ?? [] ) {
         const { type, disabled, isAppliedEnchantment: applied } = effect;
-        if ( !isEndableEnchantment({ type, disabled, applied }) ) continue;
+        // §525 : le profil de l'objet activé à sa place (Courroux sauvage) porte sa propre marque de profil (adapter/content.mjs).
+        const ownProfile = effect.flags?.dnd5e?.enchantmentProfile === effect.id;
+        if ( !isEndableEnchantment({ type, disabled, applied, ownProfile }) ) continue;
         const item = originItemOf(effect);
         const rule = rulesOf(item);
         if ( rule ) out.push({ actor, effect, item, rule });
@@ -135,6 +137,22 @@ function tokenIn(actor, scene) {
   if ( !actor || !scene ) return null;
   if ( actor.isToken ) return (actor.token?.parent === scene) ? actor.token : null;
   return scene.tokens.find(t => t.actorLink && (t.actorId === actor.id)) ?? null;
+}
+
+/**
+ * §525 : éteint un profil de l'objet activé à la place d'un enchantement de soi (runtime/enchant.mjs) — ce qu'il a ajouté (ses « riders »,
+ * `flags.dnd5e.dependents`) est retiré comme dnd5e le ferait à la suppression d'un enchantement, puis le profil est désactivé et perd sa
+ * marque : il redevient une définition que l'activité peut rallumer.
+ * @param {ActiveEffect} effect
+ */
+async function switchOffProfile(effect) {
+  for ( const dependent of effect.getDependents?.() ?? [] ) {
+    if ( dependent instanceof foundry.abstract.Document ) await dependent.delete().catch(() => null);
+    else await dependent.item?.system?.activities?.get?.(dependent.id)?.delete?.().catch?.(() => null);
+  }
+  await effect.update({ disabled: true });
+  await effect.unsetFlag("dnd5e", "enchantmentProfile");
+  await effect.unsetFlag("dnd5e", "dependents");
 }
 
 /**
@@ -159,7 +177,9 @@ async function endEntry({ actor, effect, item, rule }, reason, scene, done) {
   else {
     done.add(effect.uuid);
     if ( !effect.parent?.effects?.has(effect.id) ) return;
-    await effect.delete();
+    // §525 : un profil de l'objet activé à sa place s'éteint — le retirer viderait l'objet de ce profil pour toujours.
+    if ( effect.flags?.dnd5e?.enchantmentProfile === effect.id ) await switchOffProfile(effect);
+    else await effect.delete();
   }
   log(`${item.name}: ends${rule.spell ? "" : ` on ${actor.name}`} (${reason})`);
   // §252 : un texte flottant chez chaque client, et un son.
