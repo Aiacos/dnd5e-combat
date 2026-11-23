@@ -265,7 +265,8 @@ export const COMMANDS = {
           rangedWeapon: !!resolution.plan.attack && isRangedWeaponAttack(activity, attackMode) })   // O8d (§347)
         : null;
       // §133 : Tueur de mages — la créature concentrée que l'auteur vient de blesser aura le Désavantage à son jet de concentration.
-      if ( hp && hurting ) await markConcentrationBreaker(source?.actor ?? activity?.actor, hp.actor);
+      // `hp.actor` est un uuid (adapter/messages.mjs) : la marque se pose sur l'acteur blessé lui-même.
+      if ( hp && hurting ) await markConcentrationBreaker(source?.actor ?? activity?.actor, patient, activity);
       // C12-f : Défenses envoûtantes — l'attaquant qui a raté la sauvegarde subit les dégâts que le porteur vient de subir.
       const retort = hp ? patient?.getFlag?.(MODULE_ID, "retort") : null;
       if ( retort && (retort.resolution === resolution.id) ) {

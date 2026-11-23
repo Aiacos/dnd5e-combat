@@ -29,6 +29,7 @@ import { combatantFor, readBudget, writeBudget, movementOf } from "../adapter/tu
 import { readUnitFactors } from "../adapter/units.mjs";
 import { askChoice } from "../adapter/choices.mjs";
 import { savageApplies, savageSpent, savageTurnOf, SAVAGE_MODE_SETTING, SAVAGE_MODES } from "../adapter/savage.mjs";
+import { breaksConcentration } from "../core/concentration-breaker.mjs";
 import { route } from "./router.mjs";
 import { log, loc, say, locEsc, waitForDice } from "./shared.mjs";
 import { empoweredPicks, empoweredDeltas } from "../core/empowered.mjs";
@@ -333,12 +334,20 @@ export async function offerInterpose(actor) {
 }
 
 /** Tueur de mages, Briseur de concentration — l'auteur blesse une créature concentrée : son prochain jet de concentration a le Désavantage. */
-export async function markConcentrationBreaker(source, target) {
+export async function markConcentrationBreaker(source, target, activity=null) {
   if ( !source || !target || (source === target) ) return;
-  if ( !(source.items ?? []).some(i => contentOf(i).entry?.concentrationBreaker === true) ) return;
+  // `"item"` : l'objet dont l'activité a blessé, s'il est à ce porteur, équipé et harmonisé au besoin
+  // (core/concentration-breaker.mjs).
+  // L'objet est relu sur la fiche du porteur par son id : l'activité d'une résolution peut venir d'un clone de l'item.
+  const item = activity?.item?.id ? (source.items?.get?.(activity.item.id) ?? null) : null;
+  const itemReady = !!item && (item.system?.equipped !== false)
+    && ((item.system?.attunement !== "required") || (item.system?.attuned === true));
+  const applies = breaksConcentration({ owned: (source.items ?? []).map(i => contentOf(i).entry?.concentrationBreaker),
+    item: item ? contentOf(item).entry?.concentrationBreaker : undefined, itemReady });
+  if ( !applies ) return;
   if ( !(target.concentration?.effects?.size > 0) ) return;
   await target.setFlag(MODULE_ID, "concentrationBreaker", { source: source.name, at: Date.now() });
-  log(`Mage Slayer: ${target.name}'s next Concentration saving throw has Disadvantage (${source.name})`);
+  log(`Concentration breaker: ${target.name}'s next Concentration saving throw has Disadvantage (${source.name})`);
 }
 
 /** Le jet de concentration, sur le client qui le lance : le Désavantage s'il y a une marque récente (moins d'une minute), qui tombe. */
@@ -353,7 +362,7 @@ function onPreRollConcentration(config) {
   if ( !mark ) return true;
   if ( (Date.now() - (mark.at ?? 0)) <= 60000 ) {
     config.disadvantage = true;
-    log(`Mage Slayer: Disadvantage on ${actor.name}'s Concentration saving throw (${mark.source})`);
+    log(`Concentration breaker: Disadvantage on ${actor.name}'s Concentration saving throw (${mark.source})`);
   }
   if ( actor.isOwner ) actor.unsetFlag(MODULE_ID, "concentrationBreaker").catch(() => null);
   return true;

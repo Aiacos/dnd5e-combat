@@ -909,7 +909,10 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   // §133 : réactions de don.
   if ( ("haltOnReaction" in entry) && !(isObject(entry.haltOnReaction) && isId(entry.haltOnReaction.effect)
     && Object.keys(entry.haltOnReaction).every(k => k === "effect")) ) errors.push(`${at}haltOnReaction: { effect } (effect id)`);
-  for ( const key of ["concentrationBreaker", "interposeShield"] ) if ( (key in entry) && (entry[key] !== true) ) errors.push(`${at}${key}: true or absent`);
+  if ( ("concentrationBreaker" in entry) && ![true, "item"].includes(entry.concentrationBreaker) ) {
+    errors.push(`${at}concentrationBreaker: true, "item" or absent`);
+  }
+  if ( ("interposeShield" in entry) && (entry.interposeShield !== true) ) errors.push(`${at}interposeShield: true or absent`);
   // §132 : coups.
   if ( ("piercer" in entry) && (entry.piercer !== true) ) errors.push(`${at}piercer: true or absent`);
   if ( ("critMark" in entry) && !(isObject(entry.critMark) && (typeof entry.critMark.damageType === "string") && entry.critMark.damageType

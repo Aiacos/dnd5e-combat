@@ -419,8 +419,9 @@
  *     concentration?: { limit, loseAll?: true } §494 (B14) : la créature tient jusqu'à `limit` concentrations à la fois (effet tenu sur
  *                                               l'acteur, runtime/speed-grants.mjs) ; `loseAll` : un jet raté, Neutralisé, 0 PV les font
  *                                               toutes tomber (déjà la règle de dnd5e et du moteur : la clé le déclare, la perte est annoncée)
- *     concentrationBreaker?: true               §133 : la créature concentrée que le porteur blesse a le Désavantage à son prochain
- *                                               jet de concentration (Tueur de mages)
+ *     concentrationBreaker?: true | "item"      §133 : la créature concentrée que le porteur blesse a le Désavantage à son prochain
+ *                                               jet de concentration (Tueur de mages) ; `"item"` : seulement quand le dégât vient
+ *                                               d'une activité de cet objet, équipé et harmonisé s'il le demande (une arme magique)
  *     interposeShield?: true                    §133 : sauvegarde de Dextérité réussie contre des dégâts réduits de moitié, bouclier
  *                                               tenu : la Réaction pour n'en subir aucun (Maître des boucliers)
  *     piercer?: true                            §132 : Perforeur — une fois par tour, un dé d'une attaque perforante relancé (le plus
