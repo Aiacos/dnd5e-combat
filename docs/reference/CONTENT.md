@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-989 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
+990 identifiants dnd5e ont une entrée dans le contenu livré (`content/`, schéma `core/content.mjs`). Cette page
 répond à « quels items utilisent telle clé » ; ce qu'une clé veut dire est dans le schéma (`core/content/entry.mjs`). Pour un item
 précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 
@@ -86,7 +86,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `effectEnds` | 49 | `aberrant-anatomy`, `brutal-strike`, `celestial-revelation`, `chill-touch`, `defensive-duelist`, `devious-strikes`, … |
 | `effectsExpire` | 2 | `blessing-of-the-trickster`, `prayer-of-healing` |
 | `effectsFirst` | 2 | `aid`, `heroes-feast` |
-| `effectsIf` | 7 | `esoteric-ward`, `hammer-of-thunderbolts-enchanted`, `mm-wereboar-gore`, `psychic-skewer`, `shield-of-the-cavalier`, `silver-needle`, … |
+| `effectsIf` | 8 | `esoteric-ward`, `hammer-of-thunderbolts-enchanted`, `mm-lycanthrope-bite`, `mm-wereboar-gore`, `psychic-skewer`, `shield-of-the-cavalier`, … |
 | `effectStatuses` | 6 | `coward-spirit`, `death-curse`, `divine-word`, `mm-beholder-eye-rays`, `mm-pseudodragon-sting`, `poisoned-needle` |
 | `effectThen` | 1 | `haste` |
 | `effectWhile` | 13 | `aspect-of-the-wilds`, `boon-of-the-night-spirit`, `bracers-of-defense`, `defense`, `dueling`, `fast-movement`, … |
