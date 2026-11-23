@@ -50,6 +50,9 @@ export const MONSTERS = Object.freeze({
     dataFixes: [{ effect: "kJYNjmfI0RpvF7CQ", path: "system.changes", from: [], value: ATTACK_AND_CHECK_DISADVANTAGE }] },
   // Défense (Sanglier-garou) : la malédiction ne vise qu'un Humanoïde.
   "mm-wereboar-gore": { effectsIf: { "target.creatureType": "humanoid" } },
+  // Morsure (Ours-garou, Rat-garou, Tigre-garou, Loup-garou) : « If the target is a Humanoid, it is subjected to the following
+  // effect » — la malédiction ne vise qu'un Humanoïde ; une Bête mordue la recevait.
+  "mm-lycanthrope-bite": { effectsIf: { "target.creatureType": "humanoid" } },
   // Ravenloft. Brochette psychique (Ancien) : Épuisement et Étourdi seulement pour une cible Charmée.
   "psychic-skewer": { effectsIf: { "target.hasStatus": "charmed" } },
   // Voile d'ombre (Saidra) : Invisible jusqu'au début de son prochain tour, tombe dès qu'elle inflige des dégâts.
