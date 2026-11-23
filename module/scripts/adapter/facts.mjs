@@ -626,6 +626,9 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "target.wounded": want => (isWounded(target) === want),
     // §22 : « à chacun de vos tours » (Fureur divine, Frénésie) — c'est le tour de la source dans le combat en cours.
     "source.onOwnTurn": want => (ownTurn(source) === want),
+    // Le combat en cours en est à son premier round (Coup du Doppelgänger : « with Advantage during the first round of each
+    // combat »).
+    "combat.firstRound": want => ((!!game.combat?.started && (game.combat.round === 1)) === want),
     // Assassinat (§20) : une créature qui n'a pas encore agi, au premier round du combat.
     "target.hasNotActed": want => (notActedYet(tokenOf(target, targetToken)) === want),
     "target.bloodied": want => (isBloodied(target) === want),

@@ -625,8 +625,8 @@ export function monsterReactionWindow(html, conditions=[], outward=false, activi
 
 /**
  * §334 : l'Avantage que la condition d'activation d'une attaque donne (« with Advantage if the target doesn't have all its Hit Points »,
- * « … if the target is Grappled by the bugbear ») — le texte du bloc ne le dit que par `[[lookup @activation.condition]]`. Pour les
- * attaques de l'item seulement.
+ * « … if the target is Grappled by the bugbear », « with Advantage during the first round of each combat ») — le texte du bloc
+ * ne le dit que par `[[lookup @activation.condition]]`. Pour les attaques de l'item seulement.
  * @param {string[]} conditions   conditions d'activation des activités d'attaque
  * @param {string|null} identifier
  * @returns {object[]} déclarations `triggers`
@@ -635,9 +635,10 @@ export function monsterActivationAdvantage(conditions=[], identifier=null) {
   if ( !identifier ) return [];
   for ( const raw of conditions ) {
     const c = plainText(raw ?? "");
-    if ( !/\bwith Advantage if\b/i.test(c) ) continue;
+    if ( !/\bwith Advantage (?:if|during)\b/i.test(c) ) continue;
     let condition = null;
-    if ( /\bdoesn['’]t have all (?:of )?its Hit Points?\b/i.test(c) ) condition = { "target.wounded": true };
+    if ( /\bduring the first round of (?:each|the|a) combat\b/i.test(c) ) condition = { "combat.firstRound": true };
+    else if ( /\bdoesn['’]t have all (?:of )?its Hit Points?\b/i.test(c) ) condition = { "target.wounded": true };
     else if ( /\bis Grappled by (?:the \S+|it|him|her)\b/i.test(c) ) condition = { "target.grappledBySource": true };
     if ( condition ) return [{ on: "preAttackRoll", if: { all: [condition, { "activity.identifier": identifier }] }, do: [{ type: "advantage" }] }];
   }
