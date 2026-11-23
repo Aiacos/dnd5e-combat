@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-396 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+401 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -15,6 +15,7 @@ la sélection sans rien jouer.
 | `a-terre` |  | §17.1 | Mort / Inconscient à 0 PV, même hors combat |
 | `abri-grille` |  | §468 §200 §476 | un sort et une attaque passent à travers des barreaux (§468, §476) |
 | `abri-grotte` |  | §239 | case coupée par un mur de grotte : pas d'abri derrière soi |
+| `abri-ignore-objet` |  | §521 | attackIgnoresCover (#245) |
 | `abri` |  |  | créature interposée, abri partiel +2 |
 | `actions-tour` |  | §15.2 | Pointe, Dague, Dague en main secondaire |
 | `activite-sous-effet` |  | §486 | §486 (brique B07) — `usageLimits.<activité>.whileEffect` / `unlessEffect` : une activité permise seulement sous un effet, ou seulement hors de lui (« Griffes (requiert Modificatio… |
@@ -62,6 +63,7 @@ la sélection sans rien jouer.
 | `bouclier-zone` |  | §493 | réaction contre un cône : la sauvegarde ratée du lanceur épargne la créature seule (§493, brique B13) |
 | `bourrasque` |  | §37.3 | poussée à la pose, rejeu en fin de tour |
 | `briques-367` |  | §367 | Marche dans l'ombre selon la lumière, Tempête de vengeance sans tir |
+| `briseur-concentration` |  | §133 §521 §523 | Tueur de mages, forme limitée à l'arme (#244, #240) |
 | `caresse-survivant` |  | §120 | Alara |
 | `chance-sauvegarde` |  | §15.3 | calcul = vrai jet, Bénédiction, échec d'office |
 | `chance-tenebreux` |  | §38 | 1d10 ajouté à une sauvegarde ratée |
@@ -141,6 +143,7 @@ la sélection sans rien jouer.
 | `fenetre-tir` | Arène des refus | §518 | tirer par une fenêtre, attaque forcée malgré un abri total (§518) |
 | `fenetres-sans-delai` |  | §290 | le MJ voit qui il attend, et force |
 | `feu-gregeois` |  | §49 | En feu, dégâts au début du tour, s'éteindre à terre |
+| `fin-generique-enchantement` |  | §521 | les profils de Gourdin magique restent (#246) |
 | `fin-sur-degats` |  | §16.7 | Motif hypnotique cesse, Fou rire rejoue sa sauvegarde |
 | `fins-de-sorts-suite` |  | §42.2 | Assassin imaginaire, Sphère de vitriol, léthargie de Hâte, Châtiment de fournaise |
 | `fins-de-sorts` |  | §42.2 | Fou rire de Tasha (PHB), Lenteur, Sanctuaire |
@@ -178,6 +181,7 @@ la sélection sans rien jouer.
 | `lumieres-duree` |  | §121 | durée, extinction, huile, torche consumée |
 | `lumieres` |  | §52 §121 | lampe, lanterne sourde, torche par la boîte à amadou |
 | `lutte` |  | §15.2 | repoussé, agrippé, choix fait d'avance |
+| `lycanthropes-nuee` |  | §521 | #252, #248 |
 | `magicien` |  | §28 | Sort mineur appuyé, Façonneur de sorts, Évocation améliorée, Calque illusoire |
 | `main-libre` | Arène des refus | §409 | composante somatique, Mage de guerre, Neutralisé et sort long |
 | `maitre-de-guerre-2` |  | §90 | Attaque précise, Embuscade, Frappe commandée, Chassé-croisé, Balayage |
@@ -384,6 +388,7 @@ la sélection sans rien jouer.
 | `tenebres` |  | §16.31 | Ténèbres, Poussière d'étoile, Lumière du jour |
 | `tentacules-reussite` |  |  | rien sur une sauvegarde réussie (Manuel et SRD) |
 | `terrain-grele` |  | §261 | le terrain difficile reste jusqu'à la fin du prochain tour du lanceur |
+| `texte-monstres-soleil-durees` |  | §322 §521 | Sensibilité au soleil aux tests, durée d'un effet sans état (#250, #251) |
 | `theatre` |  | §220 | automatisations en pause, puis rétablies |
 | `tours-de-magie` |  | §23 | Rayon de givre, Contact glacial, Éclat mental, Poigne électrique, Glas, Amitié, Frappe assurée |
 | `traction` |  |  | Fouet d'épines attire le Zombi de 10 ft au toucher |
