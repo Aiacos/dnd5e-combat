@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { castTargetRule, typeAllowed } from "../module/scripts/core/eligibility.mjs";
 import { ITEM_FIXES } from "../module/scripts/content/item-fixes.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
+import { holds } from "../module/scripts/core/triggers.mjs";
 
 describe("spellTargets : ce que l'item qui lance un sort dit de ses cibles (Anneau d'influence animale)", () => {
   const ring = ITEM_FIXES["ring-of-animal-influence"].spellTargets;
@@ -27,3 +28,19 @@ describe("spellTargets : ce que l'item qui lance un sort dit de ses cibles (Anne
     expect(validateEntry({ spellTargets: { kn4eCuLZrcps7ujc: { types: ["animal"] } } })).not.toEqual([]);
   });
 });
+
+describe("spellTargets : le Trident de domination aquatique, une Bête qui a une Vitesse de nage", () => {
+  const trident = ITEM_FIXES["trident-of-fish-command"].spellTargets;
+  it("la règle s'ajoute à celle du sort : hors d'atteinte sans Vitesse de nage", () => {
+    const rule = castTargetRule({ types: ["beast"] }, trident, "ANM9wvqTFJSH2o11");
+    expect(rule).toEqual({ types: ["beast"], unaffectedIf: { not: { "target.hasSpeed": "swim" } } });
+    const swims = { "target.hasSpeed": mode => mode === "swim" };
+    const walks = { "target.hasSpeed": () => false };
+    expect(holds(rule.unaffectedIf, swims)).toBe(false);
+    expect(holds(rule.unaffectedIf, walks)).toBe(true);
+  });
+  it("l'entrée est valide, le fait connu du moteur", () => {
+    expect(validateEntry({ spellTargets: trident }, { facts: { "target.hasSpeed": () => true } })).toEqual([]);
+  });
+});
+
