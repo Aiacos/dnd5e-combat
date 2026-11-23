@@ -512,7 +512,8 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "activity.dealsType": types => !activity || damageTypesOf(activity).some(t => [types].flat().includes(t)),
     // Propriété de l'item (clés de dnd5e : "hvy" Lourde, "two" Deux mains, "fin" Finesse, "sil" Argentée…).
     "activity.hasProperty": id => (properties?.has?.(id) ?? properties?.includes?.(id)) === true,
-    "source.hasStatus": id => source?.statuses?.has(id) === true,
+    // Un état, ou l'un d'une liste (`["grappled", "restrained"]`) : la forme que donne l'en-tête de core/triggers.mjs.
+    "source.hasStatus": id => [id].flat().some(s => source?.statuses?.has(s) === true),
     "source.hasEffect": id => hasEffectFrom(source, id),
     // §30 : sous une Forme sauvage (dnd5e : l'acteur métamorphosé, `isPolymorphed`) — Attaques primitives, Forme lunaire.
     "source.wildShaped": want => (!!source?.isPolymorphed === want),
@@ -525,7 +526,7 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "target.hasFeature": id => (target?.items ?? []).some(i => identifierOf(i).id === id),
     // §302 : la caractéristique de l'attaque (dnd5e : `activity.ability`, la meilleure pour une arme de Finesse) — Rayon affaiblissant.
     "activity.ability": id => [id].flat().includes(activity?.ability ?? null),
-    "target.hasStatus": id => target?.statuses?.has(id) === true,
+    "target.hasStatus": id => [id].flat().some(s => target?.statuses?.has(s) === true),
     "target.hasEffect": id => hasEffectFrom(target, id),
     "target.hasEffectFrom": id => hasEffectFrom(target, id, source),
     // K1 (§334) : la cible porte cette marque (immunité temporaire après une réussite : `immune:<identifiant>`).
