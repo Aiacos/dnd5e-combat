@@ -242,10 +242,11 @@ async function onCleaveUsed(message) {
 /**
  * §537 : on every attack roll (`dnd5e.preRollAttackV2`, before the configuration window, which dnd5e skips with fast attacks), the
  * weapon's standing choice becomes `config.mastery`; dnd5e reads it in `_buildAttackConfig` (documents/activity/attack.mjs) and records
- * it on the attack message (`system.mastery`), which the rest of this file plays. A mastery already given by the caller is kept.
+ * it on the attack message (`system.mastery`), which the rest of this file plays. dnd5e has already set `config.mastery` to its default
+ * (the weapon's own, or the last one used) before this hook, so the standing choice always replaces it. With fast attacks off, dnd5e's
+ * window still shows its mastery list (decided before the hook): a one-attack change stays possible there (not played in game).
  */
 function onPreRollAttack(config) {
-  if ( config?.mastery ) return true;
   const item = config?.subject?.item;
   const mastery = standingMasteryOf(item);
   if ( !mastery ) return true;
