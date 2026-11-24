@@ -235,18 +235,38 @@ function grantModes(sources) {
  * ces modes disparaissaient jusqu'à la mise en place suivante (vu le 2026-11-08 : un Rôdeur Aveuglé à la main n'entendait rien).
  */
 function grantOn(doc) {
-  const modes = CONFIG.Canvas.detectionModes;
   if ( !doc?.detectionModes || !doc.sight?.enabled ) return false;
   blindIfSenseless(doc.object);
   // Avant les modes en mémoire : il lit ceux que dnd5e a projetés de la fiche.
   grantField(doc);
   // L'ouïe d'un Aveuglé en DERNIER (core/light.mjs `grantInMemoryModes`) : le cœur essaie les modes spéciaux dans l'ordre.
-  return grantInMemoryModes(doc.detectionModes, {
+  return grantInMemoryModes(doc.detectionModes, grantedSenses(doc));
+}
+
+/**
+ * §527 (baileywiki's report, 2026-11-24): what a token's in-memory modes need from its sheet (Devil's Sight, Shadow's own darkness,
+ * declared senses) — read once per preparation of the token's data, not on every vision refresh: while a token walks,
+ * `sightRefresh` comes every frame, for ALL tokens, and re-reading every item of every sheet took over 2 s of a 6 s walk on the bench.
+ * Preparing the token's data rebuilds `detectionModes` (a new object): that is the sign to read again. A changed item, effect or
+ * actor (`regrant`) also drops what was read.
+ */
+const sensesRead = new WeakMap();
+
+function grantedSenses(doc) {
+  const memo = sensesRead.get(doc);
+  if ( memo && (memo.modes === doc.detectionModes) ) return memo.senses;
+  const modes = CONFIG.Canvas.detectionModes;
+  const devilsRange = devilsSightRange(doc);
+  const senses = {
     // §447 : qui voit à travers ses propres Ténèbres reçoit aussi ce mode (sa règle, `devilsSightSeesToken`, n'y met pas de limite).
-    devilsSight: modes[DEVILS_SIGHT.mode] ? (devilsSightRange(doc) || (ownDarknessSight(doc) ? OWN_DARKNESS_RANGE : 0)) : 0,
+    devilsSight: modes[DEVILS_SIGHT.mode] ? (devilsRange || (ownDarknessSight(doc) ? OWN_DARKNESS_RANGE : 0)) : 0,
     sense: !!modes[SENSE_MODE] && (declaredSensesOf(doc.actor).length > 0),
-    hearing: !!modes[HEARING_MODE]
-  });
+    hearing: !!modes[HEARING_MODE],
+    // Devil's Sight range for the field of view (`grantField`), even when its detection mode is missing.
+    devilsRange
+  };
+  sensesRead.set(doc, { modes: doc.detectionModes, senses });
+  return senses;
 }
 
 /**
@@ -262,7 +282,7 @@ function grantField(doc) {
   const muted = mutedSensesOf(doc);
   const enabled = id => (!muted.includes(id) && (modes[id]?.enabled ?? true) && (modes[id]?.range > 0)) ? modes[id].range : 0;
   const field = fieldOfView({ darkvision: enabled("basicSight"), seeAll: enabled("seeAll"), blindsight: enabled("blindsight"),
-    devilsSight: CONFIG.Canvas.visionModes?.[FIELD_MODES.devilsSight.id] ? devilsSightRange(doc) : 0 });
+    devilsSight: CONFIG.Canvas.visionModes?.[FIELD_MODES.devilsSight.id] ? grantedSenses(doc).devilsRange : 0 });
   if ( !field || !CONFIG.Canvas.visionModes?.[field.visionMode] ) {
     // Le sens n'est plus là (la préparation du token a remis la vue de la fiche) : la source qui porte encore son champ
     // est refaite.
@@ -306,6 +326,7 @@ function fieldModes() {
  */
 function regrant(docs) {
   if ( !canvas?.ready ) return;
+  for ( const doc of docs ) if ( doc ) sensesRead.delete(doc);
   let changed = false;
   for ( const doc of docs ) if ( doc?.parent === canvas.scene ) changed = grantOn(doc) || changed;
   if ( changed ) refreshVisibility();
@@ -433,6 +454,10 @@ export function registerPerception() {
   route("updateActor", actor => regrant(tokensOfActor(actor)), again);
   route("updateToken", doc => regrant([doc]), again);
   for ( const hook of ["createItem", "updateItem", "deleteItem"] ) route(hook, item => regrant(tokensOfActor(item?.parent)), again);
+  // §527: an effect changes what the sheet grants (an item switched on or off) — its tokens read their senses again.
+  for ( const hook of ["createActiveEffect", "updateActiveEffect", "deleteActiveEffect"] ) {
+    route(hook, effect => regrant(tokensOfActor(effect?.parent?.documentName === "Actor" ? effect.parent : effect?.parent?.parent)), again);
+  }
   for ( const name of sceneDocumentNames() ) {
     for ( const action of ["create", "update", "delete"] ) route(`${action}${name}`, regrantScene, again);
   }

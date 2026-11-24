@@ -101,6 +101,13 @@ const rulesOf = item => (item ? contentOf(item).entry?.endsWhen ?? null : null);
 const actorsOf = scene => new Set([...game.actors, ...(scene?.tokens ?? []).filter(t => !t.actorLink && t.actor).map(t => t.actor)]);
 
 /**
+ * §527: only the actors with a token on the scene — for distance links (`apart`), judged only when bearer and caster are both there
+ * (`apartTooFar`). Read on every step of a token: walking through every actor of the world cost for nothing (baileywiki's report,
+ * 2026-11-24).
+ */
+const sceneActorsOf = scene => new Set((scene?.tokens ?? []).map(t => t.actor).filter(Boolean));
+
+/**
  * Les effets portés qu'une règle `endsWhen` de leur item d'origine peut faire cesser (la concentration du lanceur exceptée : elle tombe
  * par le sort, pas comme un effet porté).
  * @returns {{actor: Actor, effect: ActiveEffect, item: Item, rule: object}[]}
@@ -309,7 +316,7 @@ async function onMoveToken(tokenDoc) {
   const scene = tokenDoc.parent;
   const moved = tokenDoc.actor;
   if ( !moved ) return;
-  const entries = endingEffects(actorsOf(scene)).filter(e => e.rule.apart && ((e.rule.apart.at ?? "move") === "move")
+  const entries = endingEffects(sceneActorsOf(scene)).filter(e => e.rule.apart && ((e.rule.apart.at ?? "move") === "move")
     && ((e.actor === moved) || (e.item.actor === moved)));
   if ( !entries.length ) return;
   return enqueue(`endsWhen:apart:${scene.id}`, async () => {
@@ -323,7 +330,7 @@ async function onTurnChange(combat, prior) {
   const caster = combat.combatants.get(prior?.combatantId)?.actor;
   const scene = combat.scene ?? canvas?.scene;
   if ( !caster || !scene ) return;
-  const entries = endingEffects(actorsOf(scene)).filter(e => (e.rule.apart?.at === "casterTurnEnd") && (e.item.actor === caster));
+  const entries = endingEffects(sceneActorsOf(scene)).filter(e => (e.rule.apart?.at === "casterTurnEnd") && (e.item.actor === caster));
   if ( !entries.length ) return;
   return enqueue(`endsWhen:apart:${scene.id}`, async () => {
     const done = new Set();

@@ -47,6 +47,35 @@ const kebab = name => String(name ?? "").replaceAll(/(\w+)([\\|/])(\w+)/g, "$1-$
  * l'id de sa source (content/sources.mjs), sinon par son nom anglais, que Babele garde (`flags.babele.originalName`, 2.9.1).
  */
 export function identifierOf(item) {
+  if ( !item || (typeof item !== "object") ) return computeIdentifier(item);
+  const sig = identifierSignature(item);
+  const now = Date.now();
+  const hit = identifiers.get(item);
+  if ( hit && (hit.sig === sig) && ((now - hit.at) < IDENTIFIER_TTL_MS) ) return hit.value;
+  const value = computeIdentifier(item);
+  identifiers.set(item, { sig, at: now, value });
+  return value;
+}
+
+/**
+ * §527 (baileywiki's report, 2026-11-24): `identifierOf` runs for every item of every token on each vision refresh — several times
+ * per frame while a token walks (`sightRefresh` → `grantAll` → `ownDarknessSight`, `devilsSightRange`). Computing it (name
+ * `slugify`, source keys, scroll) took 1.8 s out of a 6 s walk on the bench. The result is kept per item as long as the fields it
+ * reads are unchanged (signature); what it reads outside the item (sources registered by a module, a compendium index loaded later,
+ * the spells scrolls know) is read again after one second at most.
+ */
+const IDENTIFIER_TTL_MS = 1000;
+const identifiers = new WeakMap();
+
+function identifierSignature(item) {
+  const owner = item.actor ?? ((item.parent?.documentName === "Actor") ? item.parent : null);
+  const flags = item.flags ?? {};
+  return [item.id, item.type, item.name, item.system?.identifier, item._stats?.compendiumSource, flags.dnd5e?.sourceId,
+    flags.babele?.originalName, flags.ddbimporter?.originalName, flags.dnd5e?.spellLevel?.value, item.system?.activities?.size,
+    JSON.stringify(flags[MODULE_ID]?.scroll ?? null), owner?.id, owner?._stats?.compendiumSource, owner?.flags?.dnd5e?.sourceId].join("\u0001");
+}
+
+function computeIdentifier(item) {
   // §48 : un parchemin est reconnu sous l'identifiant du sort qu'il contient.
   const scroll = scrollSpellOf(item);
   if ( scroll ) return { id: scroll.identifier, from: "scroll" };

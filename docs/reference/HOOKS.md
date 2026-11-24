@@ -233,11 +233,12 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 35. invisibility: not suspended _(MJ)_
 36. Wild Shape: end if Incapacitated _(MJ)_
 37. floating texts: effect
-38. perception: hearing mark not drawn
-39. perception: display not refreshed
-40. ethereal: view not updated
-41. ethereal: movement action not switched _(MJ)_
-42. sneak: cones redrawn
+38. perception: Devil's Sight or blind hearing not granted after an update
+39. perception: hearing mark not drawn
+40. perception: display not refreshed
+41. ethereal: view not updated
+42. ethereal: movement action not switched _(MJ)_
+43. sneak: cones redrawn
 
 ### `createActor`
 
@@ -388,11 +389,12 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 25. light source: remaining time not kept _(MJ)_
 26. tether: not forgotten _(MJ)_
 27. floating texts: effect
-28. perception: hearing mark not drawn
-29. perception: display not refreshed
-30. ethereal: view not updated
-31. ethereal: movement action not switched _(MJ)_
-32. sneak: cones redrawn
+28. perception: Devil's Sight or blind hearing not granted after an update
+29. perception: hearing mark not drawn
+30. perception: display not refreshed
+31. ethereal: view not updated
+32. ethereal: movement action not switched _(MJ)_
+33. sneak: cones redrawn
 
 ### `deleteAmbientLight`
 
@@ -1138,11 +1140,12 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 15. invisibility: not restored _(MJ)_
 16. light source: not burnt out _(MJ)_
 17. floating texts: effect
-18. perception: hearing mark not drawn
-19. perception: display not refreshed
-20. ethereal: view not updated
-21. ethereal: movement action not switched _(MJ)_
-22. sneak: cones redrawn
+18. perception: Devil's Sight or blind hearing not granted after an update
+19. perception: hearing mark not drawn
+20. perception: display not refreshed
+21. ethereal: view not updated
+22. ethereal: movement action not switched _(MJ)_
+23. sneak: cones redrawn
 
 ### `updateActor`
 
