@@ -38,6 +38,8 @@ import { attackedDuring } from "./attacked-this-turn.mjs";
 
 /** §484 : ce token se tient-il en lumière vive (torche, sort, jour) ? Sans token : non. */
 const isBright = doc => !!doc && (lightOnToken(doc)?.level === LIGHT.BRIGHT);
+/** Issue #69, bloc 6 : la lumière là où se tient le token vaut ce niveau (faible, ténèbres). Sans token ni scène prête : faux. */
+const isLit = (doc, level) => !!doc && (lightOnToken(doc)?.level === level);
 
 /**
  * §491 : les pièces d'armure que l'acteur porte (items `equipment` équipés de type light / medium / heavy / shield ; dnd5e config.mjs
@@ -583,6 +585,15 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "target.inSunlight": want => ((!!tokenOf(target, targetToken) && inSunlight(tokenOf(target, targetToken))) === want),
     "target.inBrightLight": want => (isBright(tokenOf(target, targetToken)) === want),
     "target.inRunningWater": want => (inRunningWater(tokenOf(target, targetToken)) === want),
+    // Issue #69, bloc 6 : la lumière là où se tient l'attaquant, la créature elle-même ou la cible — faible, ou ténèbres (des
+    // Ténèbres magiques comprises). La lumière du lieu, pas ce que quiconque en perçoit : « l'Avantage contre une cible en
+    // lumière faible ou dans les ténèbres » s'écrit `any: [{ "target.inDimLight": true }, { "target.inDarkness": true }]`.
+    "source.inDimLight": want => (isLit(tokenOf(source, sourceToken), LIGHT.DIM) === want),
+    "source.inDarkness": want => (isLit(tokenOf(source, sourceToken), LIGHT.DARK) === want),
+    "self.inDimLight": want => (isLit(tokenOf(self, selfToken), LIGHT.DIM) === want),
+    "self.inDarkness": want => (isLit(tokenOf(self, selfToken), LIGHT.DARK) === want),
+    "target.inDimLight": want => (isLit(tokenOf(target, targetToken), LIGHT.DIM) === want),
+    "target.inDarkness": want => (isLit(tokenOf(target, targetToken), LIGHT.DARK) === want),
     "source.chargedFeet": feet => !!sourceToken && !!targetToken && (chargedFeet(sourceToken, targetToken) >= (Number(feet) || 0)),
     // §505 (B25) : la cible est-elle dans l'espace de la source (une nuée qui partage les cases de ses victimes) — les deux tokens se
     // recouvrent sur la même scène, positions validées (`_source`).
