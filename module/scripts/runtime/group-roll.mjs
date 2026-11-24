@@ -86,6 +86,22 @@ export async function requestGroupRoll({ actors, ...input }={}) {
   const list = actorsOf(actors).filter(a => canRoll(a, request));
   if ( !list.length ) throw new Error(`${MODULE_ID} | group roll: no character can make this roll`);
 
+  const { message, targets, promise } = await postRequestCard(list, request);
+
+  // Les joueurs en parallèle ; ce client lance pour les autres, sans fenêtre.
+  for ( const [i, actor] of list.entries() ) {
+    const userId = targets[i].user;
+    if ( userId ) askPlayer(userId, message, actor);
+    else await rollFor(message, actor, { configure: false }).catch(err => console.error(`${MODULE_ID} | group roll: ${actor.name} not rolled`, err));
+  }
+  return promise;
+}
+
+/**
+ * Posts dnd5e's request card for these actors and keeps its final-tally promise on this client.
+ * @returns {Promise<{message: ChatMessage, targets: object[], promise: Promise<object>}>}
+ */
+async function postRequestCard(list, request) {
   const targets = list.map(actor => ({ actor: actor.uuid, user: rollerFor(actor) }));
   const title = testTitle(request);
   const message = await ChatMessage.implementation.create({
@@ -99,12 +115,25 @@ export async function requestGroupRoll({ actors, ...input }={}) {
   pending.set(message.id, resolve);
   log(`group roll: ${title}${request.label ? ` (${request.label})` : ""}${request.dc !== null ? `, DC ${request.dc}${request.hideDc ? " hidden" : ""}` : ""}`
     + ` — ${list.map(a => a.name).join(", ")}`);
+  return { message, targets, promise };
+}
 
-  // Les joueurs en parallèle ; ce client lance pour les autres, sans fenêtre.
-  for ( const [i, actor] of list.entries() ) {
-    const userId = targets[i].user;
-    if ( userId ) askPlayer(userId, message, actor);
-    else await rollFor(message, actor, { configure: false }).catch(err => console.error(`${MODULE_ID} | group roll: ${actor.name} not rolled`, err));
+/**
+ * §536: a player starts the requested-roll flow for their own characters (an inline check clicked in a journal): the same request
+ * card, then the same roll window on this client (a neighbour's window through `groupRollPrompt`, else dnd5e's with the Aids
+ * section). The active GM links each roll to its line, as for a GM request.
+ * @param {object} options        The request (core/group-roll.mjs `normalizeRequest`) and:
+ * @param {Array<Actor|Token|TokenDocument|string>} options.actors  Only those this user owns are kept.
+ * @returns {Promise<object|null>}  The final tally, or null when none of these characters can roll.
+ */
+export async function requestOwnRoll({ actors, ...input }={}) {
+  const { request, error } = normalizeRequest(input);
+  if ( error ) throw new Error(`${MODULE_ID} | own roll: ${error}`);
+  const list = actorsOf(actors).filter(a => a.isOwner && canRoll(a, request));
+  if ( !list.length ) return null;
+  const { message, promise } = await postRequestCard(list, request);
+  for ( const actor of list ) {
+    promptGroupRoll(message, actor).catch(err => console.error(`${MODULE_ID} | own roll: ${actor.name} not rolled`, err));
   }
   return promise;
 }

@@ -113,6 +113,7 @@ import { registerSkillAid } from "./runtime/skill-aid.mjs";
 import { registerSkillAidUi } from "./ui/skill-aid.mjs";
 import { registerGroupRoll, rollsApi } from "./runtime/group-roll.mjs";
 import { registerGroupRollUI, openGroupRoll } from "./ui/group-roll.mjs";
+import { registerInlineChecks } from "./ui/inline-check.mjs";
 import { registerGroupRollTracker, openTracker } from "./ui/group-roll-tracker.mjs";
 import { registerPlayerWaits, forceWait } from "./runtime/player-waits.mjs";
 import { registerGmQueue, queue, forceLine, rollBlocked, answerLine } from "./runtime/gm-queue.mjs";
@@ -434,6 +435,7 @@ Hooks.once("init", () => {
   gated(registerFlee);   // §147 : Murmures dissonants, la fuite par la Réaction
   gated(registerReactionLoss);   // §501 (B21) : « elle ne perd qu'une réaction »
   gated(registerDispel);   // §37.2 : Dissipation de la magie
+  gated(registerInlineChecks);   // §536: inline journal checks to the requested-roll flow — before every other pre-roll listener
   gated(registerTriggers);
   gated(registerVision);
   gated(registerSpace);

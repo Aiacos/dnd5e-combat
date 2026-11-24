@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-136 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
+137 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
 `client` = ce poste, `user` = ce joueur. **Onglet** : celui de la fenêtre de réglages DAS (`core/settings-layout.mjs`) ; sans onglet,
 le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêtre dédiée). Le libellé est celui de `lang/fr.json`.
 
@@ -18,6 +18,7 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 | `dataFixes` | Corriger la donnée premium à la création | world | Boolean | `true` |  | `runtime/data-fixes.mjs` |
 | `etherealPlane` | Plan Éthéré automatisé | world | Boolean | `true` |  | `runtime/ethereal.mjs` |
 | `groupRollSeconds` | Jets demandés : délai des joueurs (s) | world | Number | `60` |  | `runtime/group-roll.mjs` |
+| `inlineChecksEngine` | Jets demandés : jets des textes de journal | world | Boolean | `false` |  | `ui/inline-check.mjs` |
 | `provideBasicActions` | Actions de base sur les personnages | world | Boolean | `true` |  | `runtime/basics.mjs` |
 | `reactionPrompts` | Réactions | world | String | `"level"` | level, ask, players, off | `runtime/flow.mjs` |
 | `realTimeClock` | Horloge en temps réel hors combat | world | Boolean | `false` |  | `runtime/clock.mjs` |

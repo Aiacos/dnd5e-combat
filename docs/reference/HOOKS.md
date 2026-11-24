@@ -102,7 +102,7 @@ contexte du moment) et sert de clé `on` aux déclarations de contenu.
 
 ## Hooks écoutés, dans l'ordre d'appel
 
-146 hooks, relevés par `api.routes()` sur le module chargé au niveau d'automatisation « full ». Un seul écouteur par hook
+148 hooks, relevés par `api.routes()` sur le module chargé au niveau d'automatisation « full ». Un seul écouteur par hook
 (`runtime/router.mjs`) appelle les inscrits dans cet ordre, qui est celui des `register…()` de `dnd5e-combat.mjs`. **MJ** : l'inscrit
 ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendant `false`.
 
@@ -752,10 +752,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 ### `dnd5e.preRollAbilityCheckV2`
 
-1. declared Disadvantage on ability checks
-2. Frightened: disadvantage on checks
-3. Indomitable Might _(stop)_
-4. armor training: ability check Disadvantage
+1. inline check: check link _(stop)_
+2. declared Disadvantage on ability checks
+3. Frightened: disadvantage on checks
+4. Indomitable Might _(stop)_
+5. armor training: ability check Disadvantage
 
 ### `dnd5e.preRollAttackV2`
 
@@ -798,9 +799,18 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 
 ### `dnd5e.preRollSavingThrowV2`
 
-1. declared Disadvantage on saving throws
-2. Indomitable Might _(stop)_
-3. armor training: saving throw Disadvantage
+1. inline check: save link _(stop)_
+2. declared Disadvantage on saving throws
+3. Indomitable Might _(stop)_
+4. armor training: saving throw Disadvantage
+
+### `dnd5e.preRollSkillV2`
+
+1. inline check: skill link _(stop)_
+
+### `dnd5e.preRollToolCheckV2`
+
+1. inline check: tool link _(stop)_
 
 ### `dnd5e.preSummon`
 

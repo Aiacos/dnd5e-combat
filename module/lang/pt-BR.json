@@ -1980,6 +1980,8 @@
   "DND5ECOMBAT.Menu.Atterrir": "Pousar",
   "DND5ECOMBAT.Reglage.groupRollSeconds.Nom": "Rolagens solicitadas: tempo limite do jogador (s)",
   "DND5ECOMBAT.Reglage.groupRollSeconds.Aide": "Quando o mestre solicita uma rolagem, a janela de rolagem se abre na tela do jogador que controla o personagem. Após esse prazo, ela se fecha e a rolagem é feita automaticamente. 0: sem limite.",
+  "DND5ECOMBAT.Reglage.inlineChecksEngine.Nom": "Rolagens solicitadas: rolagens dos textos de diário",
+  "DND5ECOMBAT.Reglage.inlineChecksEngine.Aide": "Ativado, clicar em um link de teste, perícia, ferramenta ou salvaguarda em um diário ([[/check wis prc 11]]) abre a rolagem solicitada do motor com a perícia e a CD do link: a janela de solicitação para o mestre (tokens selecionados marcados), a janela de rolagem e o cartão de solicitação para um jogador. Desativado: a janela de rolagem do dnd5e.",
   "DND5ECOMBAT.JetGroupe.Titre": "Solicitar rolagem",
   "DND5ECOMBAT.JetGroupe.Menu": "Solicitar rolagem",
   "DND5ECOMBAT.JetGroupe.Demande": "O mestre solicita uma rolagem de {name}: {test}",

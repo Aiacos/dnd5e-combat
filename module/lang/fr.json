@@ -2283,6 +2283,8 @@
   "DND5ECOMBAT.Consentant.Carte": "consentante : sauvegarde ratée d'office",
   "DND5ECOMBAT.Reglage.groupRollSeconds.Nom": "Jets demandés : délai des joueurs (s)",
   "DND5ECOMBAT.Reglage.groupRollSeconds.Aide": "Quand le MJ demande un jet, la fenêtre s'ouvre chez le joueur du personnage. Passé ce délai, elle se ferme et le jet part tout seul. 0 : sans limite.",
+  "DND5ECOMBAT.Reglage.inlineChecksEngine.Nom": "Jets demandés : jets des textes de journal",
+  "DND5ECOMBAT.Reglage.inlineChecksEngine.Aide": "Activé, un clic sur un lien de test, de compétence, d'outil ou de sauvegarde dans un journal ([[/check wis prc 11]]) ouvre le jet demandé du moteur avec la compétence et le DD du lien : la fenêtre de demande pour le MJ (tokens sélectionnés cochés), la fenêtre de jet et la carte de demande pour un joueur. Désactivé : la fenêtre de jet de dnd5e.",
   "DND5ECOMBAT.JetGroupe.Titre": "Demander un jet",
   "DND5ECOMBAT.JetGroupe.Menu": "Demander un jet",
   "DND5ECOMBAT.JetGroupe.Demande": "Le MJ demande un jet à {name} : {test}",

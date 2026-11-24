@@ -2274,6 +2274,8 @@
   "DND5ECOMBAT.Consentant.Carte": "consenziente: tiro salvezza fallito automaticamente",
   "DND5ECOMBAT.Reglage.groupRollSeconds.Nom": "Tiri richiesti: tempo limite dei giocatori (s)",
   "DND5ECOMBAT.Reglage.groupRollSeconds.Aide": "Quando il GM richiede un tiro, la finestra del tiro si apre sullo schermo del giocatore del personaggio. Trascorso questo tempo, si chiude e il tiro viene effettuato automaticamente. 0: nessun limite.",
+  "DND5ECOMBAT.Reglage.inlineChecksEngine.Nom": "Tiri richiesti: tiri dei testi del diario",
+  "DND5ECOMBAT.Reglage.inlineChecksEngine.Aide": "Se attivo, cliccare su un link di prova, abilità, strumento o tiro salvezza in un diario ([[/check wis prc 11]]) apre il tiro richiesto del motore con l'abilità e la CD del link: la finestra di richiesta per il GM (token selezionati spuntati), la finestra del tiro e la scheda di richiesta per un giocatore. Disattivato: la finestra di tiro di dnd5e.",
   "DND5ECOMBAT.JetGroupe.Titre": "Richiedi un tiro",
   "DND5ECOMBAT.JetGroupe.Menu": "Richiedi un tiro",
   "DND5ECOMBAT.JetGroupe.Demande": "Il GM richiede un tiro a {name}: {test}",

@@ -2283,6 +2283,8 @@
   "DND5ECOMBAT.Consentant.Carte": "willing: saving throw failed automatically",
   "DND5ECOMBAT.Reglage.groupRollSeconds.Nom": "Requested rolls: player time limit (s)",
   "DND5ECOMBAT.Reglage.groupRollSeconds.Aide": "When the GM requests a roll, the roll window opens on the character's player's screen. After this delay it closes and the roll is made automatically. 0: no limit.",
+  "DND5ECOMBAT.Reglage.inlineChecksEngine.Nom": "Requested rolls: inline checks of journals",
+  "DND5ECOMBAT.Reglage.inlineChecksEngine.Aide": "When on, clicking a check, skill, tool or saving throw link in a journal ([[/check wis prc 11]]) opens the engine's requested roll with the link's skill and DC: the request window for the GM (selected tokens ticked), the roll window and request card for a player. Off: dnd5e's roll dialog.",
   "DND5ECOMBAT.JetGroupe.Titre": "Request a roll",
   "DND5ECOMBAT.JetGroupe.Menu": "Request a roll",
   "DND5ECOMBAT.JetGroupe.Demande": "The GM requests a roll from {name}: {test}",

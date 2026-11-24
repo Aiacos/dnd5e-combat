@@ -60,7 +60,10 @@ const GroupRollApp = () => GroupRollClass ??= class GroupRollApp extends foundry
   constructor(preset={}, options={}) {
     super({ ...options, id: windowId });
     this.preset = preset.actors ?? [];
-    this.values = { label: "", ...remembered, ...(preset.values ?? {}) };
+    const { ability=null, ...values } = preset.values ?? {};
+    this.values = { label: "", ...remembered, ...values };
+    // §536: a non-default ability (`[[/check int ath]]`) is kept while the test stays the one that came with it.
+    this.ability = ability ? { type: values.type, key: values.key, ability } : null;
     const list = candidates(this.preset);
     const online = list.filter(a => ownersOf(a).some(u => u.active));
     const start = this.preset.length ? this.preset : (online.length ? online : list);
@@ -211,7 +214,8 @@ const GroupRollApp = () => GroupRollClass ??= class GroupRollApp extends foundry
     remembered = kept;
     this.close();
     try {
-      await requestGroupRoll({ actors, type: v.type, key: v.key, dc: v.dc, hideDc: v.hideDc, bonus: v.bonus, label: v.label, group: v.group,
+      const ability = ((this.ability?.type === v.type) && (this.ability?.key === v.key)) ? this.ability.ability : null;
+      await requestGroupRoll({ actors, type: v.type, key: v.key, ability, dc: v.dc, hideDc: v.hideDc, bonus: v.bonus, label: v.label, group: v.group,
         advantage: v.mode === "advantage", disadvantage: v.mode === "disadvantage" });
     } catch(err) {
       console.error(err);
@@ -222,7 +226,7 @@ const GroupRollApp = () => GroupRollClass ??= class GroupRollApp extends foundry
 
 /**
  * Ouvre la fenêtre de demande (MJ). `actors` : acteurs, tokens ou uuid cochés d'office ; `values` : les champs pré-remplis
- * (`type`, `key`, `dc`, `hideDc`, `mode`, `bonus`, `label`, `group`).
+ * (`type`, `key`, `dc`, `hideDc`, `mode`, `bonus`, `label`, `group`, and `ability` for a skill or tool with another ability).
  */
 export function openGroupRoll({ actors=[], values={} }={}) {
   if ( !game.user.isGM ) return null;
