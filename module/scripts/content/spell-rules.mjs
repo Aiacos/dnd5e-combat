@@ -265,9 +265,11 @@ export const SPELL_RULES = Object.freeze({
   // §300 : seule une créature qui COMMENCE son tour dans le nuage sauvegarde — rien à l'incantation.
   "stinking-cloud": { noActions: "gFid0DG5HydORpr3", quietPose: true },
   // §300 : « la Vitesse d'une créature est divisée par deux dans l'émanation » — l'effet tombe à sa sortie.
-  // §438 : `enterOnPose` — forme 3.0.0, posée par « Cast Spell » : ceux qu'elle recouvre en apparaissant sauvegardent (comme quand la
-  // sauvegarde posait elle-même la zone ; sur l'ancienne forme rien ne change, runtime/engine-areas.mjs).
-  "spirit-guardians": { zoneBound: true, enterOnPose: true },
+  // §531 (issue #142): SRD 5.2 — "whenever the Emanation enters a creature's space and whenever a creature enters the Emanation or
+  // ends its turn there". Unlike Moonbeam ("When the Cylinder appears, each creature in it…"), nothing happens when it appears:
+  // creatures already inside at the cast save at the end of their turn, or when the moving Emanation reaches them (`quietPose`,
+  // on both the 3.0.0 form and the older form whose save activity places the zone; replaces §438's `enterOnPose`).
+  "spirit-guardians": { zoneBound: true, quietPose: true },
   // §302 : Contagion — « Désavantage aux sauvegardes de la caractéristique choisie » (les effets de la donnée ne posent qu'Empoisonné).
   "contagion": { effectChanges: {
     S8jxTZQbT8KKSg5V: [{ key: "system.abilities.str.save.roll.mode", type: "add", value: "-1" }],

@@ -103,7 +103,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `endsOwnConditions` | 1 | `self-restoration` |
 | `endsWhen` | 33 | `animated-shield`, `banishment`, `bestow-curse`, `channel-divinity`, `channel-divinity-cleric`, `compelled-duel`, … |
 | `endurance` | 1 | `relentless-endurance` |
-| `enterOnPose` | 2 | `conjure-celestial`, `spirit-guardians` |
+| `enterOnPose` | 1 | `conjure-celestial` |
 | `etherealShift` | 2 | `ethereal-jaunt`, `ethereal-stride` |
 | `evasion` | 2 | `evasion`, `leading-evasion` |
 | `exclusiveWeapon` | 3 | `berserker-axe-enchanted`, `oathbow-enchanted`, `sword-of-vengeance-enchanted` |
@@ -215,7 +215,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `projectiles` | 4 | `eldritch-blast`, `magic-missile`, `scorching-ray`, `steel-wind-strike` |
 | `quickSearch` | 1 | `observant` |
 | `quickStand` | 1 | `athlete` |
-| `quietPose` | 3 | `magic-circle`, `sleet-storm`, `stinking-cloud` |
+| `quietPose` | 4 | `magic-circle`, `sleet-storm`, `spirit-guardians`, `stinking-cloud` |
 | `rage` | 1 | `rage` |
 | `rangedDefense` | 2 | `arrow-catching-shield`, `shield-of-missile-attraction` |
 | `rangedFeat` | 5 | `1-wand-of-the-war-mage-enchanted`, `crossbow-expert`, `improved-illusions`, `sharpshooter`, `spell-sniper` |

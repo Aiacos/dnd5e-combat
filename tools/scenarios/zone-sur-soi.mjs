@@ -2,10 +2,10 @@
  * Zone « sur soi » posée d'office (§47) : Esprits gardiens (PHB), prêté au lanceur (Alara dans `ravenloft`, sinon le Magicien),
  * utilisé comme au clic — pose de dnd5e comprise (`api.mcp.use`, pas `use-activity` du connecteur qui la coupe). dnd5e ouvre sa
  * fenêtre pour le niveau du sort, mais sans la case « Placer le gabarit ». Sans le moteur, dnd5e attendrait un clic sur un token ;
- * ici l'émanation naît d'elle-même, rattachée au lanceur, et la résolution suit (le Zombi, déplacé à côté, sauvegarde).
+ * ici l'émanation naît d'elle-même, rattachée au lanceur (le Zombi, déplacé à côté, ne sauvegarde pas à la pose : §531).
  * Le même geste pour une capacité de créature (émanation sans emplacement) se joue dans le dépôt du module qui la livre.
- * §438 : Manuel 3.0.0 — l'émanation est posée par « Cast Spell » (`tevaatMC9LZxVPLS`) ; la sauvegarde du Zombi est le rejeu « enter » de
- * l'activité sœur (`enterOnPose`).
+ * §438 : Manuel 3.0.0 — l'émanation est posée par « Cast Spell » (`tevaatMC9LZxVPLS`).
+ * §531 (issue #142): SRD 5.2 — nothing happens when the Emanation appears: the Zombie, already inside, makes no save at the cast.
  */
 export default {
   name: "zone sur soi — émanation posée sur le lanceur sans clic (Esprits gardiens)",
@@ -46,17 +46,10 @@ export default {
     ctx.expect(Number.isFinite(region.elevation.bottom) && Number.isFinite(region.elevation.top),
       `tranche d'élévation posée (${region.elevation.bottom} → ${region.elevation.top})`);
 
-    if ( !used.messageId ) return;
-    let cast = v3 ? { targets: [] } : await ctx.settle(used.messageId);
-    if ( v3 ) {
-      await new Promise(r => setTimeout(r, 3000));
-      const ticks = (await ctx.messagesSince(since)).filter(m => (m.type === "usage") && (m.flags?.["dnd5e-combat"]?.areaTick?.event === "enter"));
-      const targets = [];
-      for ( const m of ticks ) targets.push(...((await ctx.settle(m.id).catch(() => null))?.targets ?? []));
-      cast = { targets };
-    }
-    const z = cast.targets.find(t => t.name === "Zombi");
-    ctx.expect(!!z?.save, `le Zombi, à deux cases, sauvegarde (${z?.save?.total ?? "—"}, ${z?.damage?.applied ?? 0} dégâts)`);
-    ctx.expect(!cast.targets.some(t => t.name === caster.name), "le lanceur n'est pas affecté");
+    // §531 (issue #142): SRD 5.2 — no save when the Emanation appears (only on entering it, its entering a space, or a turn end).
+    await new Promise(r => setTimeout(r, 3000));
+    const ticks = (await ctx.messagesSince(since)).filter(m => (m.type === "usage") && (m.flags?.["dnd5e-combat"]?.areaTick?.event === "enter"));
+    ctx.expect(!ticks.length, `no "enter" replay when the Emanation appears (${ticks.length})`);
+    ctx.expect((await ctx.hp(zombi)) === 100, `the Zombie, two squares away, takes nothing at the cast (${await ctx.hp(zombi)} HP)`);
   }
 };

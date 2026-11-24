@@ -1133,6 +1133,9 @@ describe("§300 : repasse, lot C5 (zones, émanations, entrées)", () => {
   it("les déclarations du lot", () => {
     expect(CONTENT["spirit-guardians"].zoneBound).toBe(true);
     for ( const id of ["sleet-storm", "stinking-cloud"] ) expect(CONTENT[id].quietPose).toBe(true);
+    // §531 (issue #142): SRD 5.2 — Spirit Guardians does nothing when it appears, only on entering / turn end.
+    expect(CONTENT["spirit-guardians"].quietPose).toBe(true);
+    expect(CONTENT["spirit-guardians"].enterOnPose).toBeUndefined();
     expect(CONTENT["plant-growth"].difficultTerrain).toEqual({ cost: 4 });
     expect(CONTENT["plant-growth"].usageLimits.dnd5eactivity000.cost).toBe("action");
     for ( const id of ["wrath-of-the-sea", "stormborn"] ) {
