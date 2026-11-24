@@ -23,8 +23,9 @@ export const ENDS_WHEN = Object.freeze({
   "mage-armor": { armor: "any" },
   // Rage (PHB 2024) : « elle prend fin plus tôt si vous enfilez une armure lourde ».
   "rage": { armor: "heavy" },
-  // Lien de garde : « le sort prend fin si l'un de vous tombe à 0 point de vie, ou si vous êtes séparés de plus de 18 mètres ».
-  "warding-bond": { apart: { distance: 60, units: "ft" }, zeroHp: true, spell: true },
+  // Warding Bond (SRD 5.2): "The spell ends if you drop to 0 Hit Points or if you and the target become separated by more than
+  // 60 feet" — the caster only: a warded creature at 0 HP stays warded (issue #150).
+  "warding-bond": { apart: { distance: 60, units: "ft" }, zeroHp: "caster", spell: true },
   // Duel forcé : « le sort prend fin si vous effectuez un jet d'attaque contre une créature autre que la cible, si vous lancez un sort
   // sur un ennemi autre que la cible, si un de vos alliés inflige des dégâts à la cible ou si vous terminez votre tour à plus de 9 m
   // d'elle » (§270 pour les trois premières).

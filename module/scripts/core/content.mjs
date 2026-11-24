@@ -764,14 +764,14 @@
  *     banishes?: [ids d'effet]                  §265 : ces effets de l'item transportent leur porteur dans un demi-plan — token et
  *                                               combattant cachés tant qu'ils durent, retour à l'espace quitté (ou au plus proche
  *                                               libre) quand ils tombent (Bannissement, Châtiment bannissant)
- *     endsWhen?: { armor?: "any"|"heavy", apart?: { distance, units, at?: "move"|"casterTurnEnd" }, zeroHp?: true,
+ *     endsWhen?: { armor?: "any"|"heavy", apart?: { distance, units, at?: "move"|"casterTurnEnd" }, zeroHp?: true|"bearer"|"caster"|"either",
  *                  unaffected?: "failedSave"|"noHits"|"noTargets", spell?: true, casterTargetsOther?: true, allyDamages?: true,
  *                  healedByMagic?: true }
  *                                               §258 : fins génériques (core/endings.mjs, runtime/endings.mjs) — l'effet de l'item
  *                                               cesse quand son porteur enfile une armure (`heavy` : lourde ; Armure du mage, Rage),
  *                                               quand porteur et lanceur sont séparés de plus de `apart` (à chaque déplacement, ou
  *                                               à la fin du tour du lanceur : Lien de garde, Duel forcé), quand l'un des deux tombe à
- *                                               0 PV (`zeroHp`) ; `unaffected` : l'utilisation n'a affecté personne, la
+ *                                               0 PV (`zeroHp` ; `"caster"` : the caster only, Warding Bond) ; `unaffected` : l'utilisation n'a affecté personne, la
  *                                               concentration tombe (réglage `endUnaffected`) ; `spell` : la fin vaut pour tout le
  *                                               sort (sa concentration, ou ses effets sur chaque créature), pas pour ce seul porteur ;
  *                                               §270 `casterTargetsOther` : le lanceur attaque une autre créature, ou lance un sort sur

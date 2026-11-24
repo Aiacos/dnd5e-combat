@@ -4,10 +4,13 @@
  *  2. Immobilisation de personne sur le Guerrier jusqu'à une sauvegarde réussie : la concentration du Magicien tombe aussitôt
  *     (`unaffected`, réglage `endUnaffected`) ; sur un échec, elle reste.
  *  3. Lien de garde du Magicien sur le Guerrier, puis le Guerrier emmené à plus de 18 m : le lien tombe (`apart`, `spell`).
+ *  4. Issue #150 — Warding Bond again: the warded Fighter drops to 0 HP and stays warded (SRD 5.2: "if you drop to 0 Hit Points",
+ *     the caster only); then the Wizard drops to 0 HP and the bond ends (`zeroHp: "caster"`).
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+const DOWNED = ["unconscious", "prone", "dead"];
 
 export default {
   name: "fins génériques — armure enfilée, personne d'affecté, lien trop loin",
@@ -92,5 +95,36 @@ export default {
     await pause(2500);
     ctx.expect(!(await ctx.effectsFrom(guerrier, "warding-bond")).length, "à plus de 18 m : le Lien de garde tombe");
     ctx.expect((await endedSince(since, "apart")).length > 0, "une carte de chat le dit à la table");
+
+    // 4. Issue #150: only the caster dropping to 0 HP ends Warding Bond.
+    await ctx.call("move-token", { tokenId: guerrier.id, x: home.x, y: home.y, elevation: home.elevation });
+    await pause(1000);
+    for ( const token of [mage, guerrier] ) {
+      const hp0 = await ctx.hp(token);
+      ctx.restore(async () => {
+        await ctx.setHp(token, hp0);
+        await pause(500);
+        for ( const s of DOWNED ) await ctx.removeStatusEffects(token, s);
+      });
+      ctx.restore(() => ctx.call("update-actor", { actorId: token.actorId, actorData: {
+        "system.attributes.death.success": 0, "system.attributes.death.failure": 0 } }));
+    }
+    await ctx.use({ tokenId: mage.id, identifier: "warding-bond", targetTokenIds: [guerrier.id] });
+    await pause(2000);
+    ctx.expect((await ctx.effectsFrom(guerrier, "warding-bond")).length > 0, "Warding Bond on the Fighter again");
+    const fighterHp = await ctx.hp(guerrier);
+    since = await ctx.lastMessageId();
+    await ctx.setHp(guerrier, 0);
+    await pause(2500);
+    ctx.expect((await ctx.effectsFrom(guerrier, "warding-bond")).length > 0, "warded Fighter at 0 HP: Warding Bond stays (issue #150)");
+    ctx.expect(!(await endedSince(since, "zeroHp")).length, "no ending card for the warded creature's 0 HP");
+    await ctx.setHp(guerrier, fighterHp);
+    await pause(500);
+    for ( const s of DOWNED ) await ctx.removeStatusEffects(guerrier, s);
+    since = await ctx.lastMessageId();
+    await ctx.setHp(mage, 0);
+    await pause(2500);
+    ctx.expect(!(await ctx.effectsFrom(guerrier, "warding-bond")).length, "Wizard at 0 HP: Warding Bond ends");
+    ctx.expect((await endedSince(since, "zeroHp")).length > 0, "a chat card tells the table");
   }
 };

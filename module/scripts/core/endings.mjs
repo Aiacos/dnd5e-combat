@@ -3,7 +3,7 @@
  *  - `armor` : le porteur enfile une armure (« any » : Armure du mage) ou une armure lourde (« heavy » : Rage) ;
  *  - `apart` : le porteur et le lanceur sont séparés de plus de la distance (Lien de garde : 18 m ; Duel forcé : 9 m à la fin du tour
  *    du lanceur) ;
- *  - `zeroHp` : le porteur ou le lanceur tombe à 0 PV (Lien de garde) ;
+ *  - `zeroHp` : the bearer and/or the caster drops to 0 HP (`true` = either; `"caster"`: Warding Bond, issue #150) ;
  *  - `unaffected` : l'utilisation n'a affecté personne (toutes les sauvegardes réussies, aucun coup au but) — la concentration tombe,
  *    le sort n'a plus rien à tenir (Immobilisation de personne, Bannissement…). Confort de table, réglage de monde.
  *
@@ -22,6 +22,20 @@ export function armorEnds(rule, weight) {
   if ( !ARMOR_WEIGHTS.includes(weight) ) return false;
   if ( rule === "any" ) return true;
   return (rule === "heavy") && (weight === "heavy");
+}
+
+/** Who a `zeroHp` rule watches: `true` (legacy) or "either", "bearer", "caster". */
+export const ZERO_HP_WHO = Object.freeze(["bearer", "caster", "either"]);
+
+/**
+ * Does dropping to 0 HP end the effect? `rule`: the `zeroHp` value; `isBearer` / `isCaster`: the creature at 0 HP is the effect's
+ * bearer / the caster of its item. Warding Bond (SRD 5.2): "if you drop to 0 Hit Points" — the caster only (issue #150).
+ */
+export function zeroHpEnds(rule, { isBearer = false, isCaster = false } = {}) {
+  if ( !rule ) return false;
+  const who = (rule === true) ? "either" : rule;
+  if ( !ZERO_HP_WHO.includes(who) ) return false;
+  return (isBearer && ["bearer", "either"].includes(who)) || (isCaster && ["caster", "either"].includes(who));
 }
 
 /** Deux créatures séparées de `distance` (dans l'unité de la limite) le sont-elles de plus que `limit` ? Inconnue : non. */

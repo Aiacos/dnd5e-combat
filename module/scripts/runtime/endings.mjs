@@ -18,7 +18,7 @@ import { itemFacts } from "../adapter/antimagic.mjs";
 import { areEnemies, sideOf } from "../adapter/factions.mjs";
 import { isSpellCast } from "../adapter/scrolls.mjs";
 import {
-  ARMOR_WEIGHTS, armorEnds, healsMagically, isEndableEnchantment, isReplayUsage, nobodyAffected, tooFarApart
+  ARMOR_WEIGHTS, armorEnds, healsMagically, isEndableEnchantment, isReplayUsage, nobodyAffected, tooFarApart, zeroHpEnds
 } from "../core/endings.mjs";
 import { INCAPACITATING } from "../core/conditions.mjs";
 import { contentOf } from "../adapter/content.mjs";
@@ -251,13 +251,13 @@ async function onIncapacitated(effect) {
   });
 }
 
-/** 0 PV : le porteur, ou le lanceur dont les effets courent sur d'autres (Lien de garde) ; §270 : blessé par un allié du lanceur. */
+/** 0 HP: the bearer and/or the caster whose effects run on others, as `zeroHp` says (Warding Bond: the caster only, issue #150) ; §270 : blessé par un allié du lanceur. */
 async function onUpdateActor(actor, changes) {
   const hp = foundry.utils.getProperty(changes, "system.attributes.hp.value");
   if ( hp === undefined ) return;
   if ( hp > 0 ) return onHurt(actor);
   const scene = actor.isToken ? actor.token?.parent : (actor.getActiveTokens?.(false, true)?.[0]?.parent ?? canvas?.scene);
-  const entries = endingEffects(actorsOf(scene)).filter(e => e.rule.zeroHp && ((e.actor === actor) || (e.item.actor === actor)));
+  const entries = endingEffects(actorsOf(scene)).filter(e => zeroHpEnds(e.rule.zeroHp, { isBearer: e.actor === actor, isCaster: e.item.actor === actor }));
   if ( !entries.length ) return;
   return enqueue(`endsWhen:${actor.uuid}`, async () => {
     const done = new Set();

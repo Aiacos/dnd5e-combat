@@ -1096,7 +1096,7 @@ function validateEndsWhen(w, at, errors) {
       for ( const key of Object.keys(a) ) if ( !["distance", "units", "at"].includes(key) ) errors.push(`${at}.apart.${key}: unknown key`);
     }
   }
-  if ( ("zeroHp" in w) && (w.zeroHp !== true) ) errors.push(`${at}.zeroHp: true or absent`);
+  if ( ("zeroHp" in w) && (w.zeroHp !== true) && !["bearer", "caster", "either"].includes(w.zeroHp) ) errors.push(`${at}.zeroHp: true, bearer, caster, either`);
   // §299 : Neutralisé (ou mort) — le porteur, le lanceur, ou l'un ou l'autre.
   if ( ("incapacitated" in w) && !["bearer", "caster", "either"].includes(w.incapacitated) ) errors.push(`${at}.incapacitated: bearer, caster, either`);
   if ( ("unaffected" in w) && !ENDS_UNAFFECTED.includes(w.unaffected) ) errors.push(`${at}.unaffected: ${ENDS_UNAFFECTED.join(", ")}`);

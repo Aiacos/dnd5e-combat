@@ -1,6 +1,6 @@
 /** §258 : fins génériques (`endsWhen`) relevées par l'audit CAT / CPR — décisions pures, schéma, contenu livré. */
 import { describe, it, expect } from "vitest";
-import { armorEnds, isReplayUsage, tooFarApart, nobodyAffected } from "../module/scripts/core/endings.mjs";
+import { armorEnds, isReplayUsage, tooFarApart, nobodyAffected, zeroHpEnds } from "../module/scripts/core/endings.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 
@@ -48,11 +48,34 @@ describe("fins génériques — décisions", () => {
   });
 });
 
+describe("zeroHp — who drops to 0 HP (issue #150)", () => {
+  it("true and either: the bearer or the caster", () => {
+    for ( const rule of [true, "either"] ) {
+      expect(zeroHpEnds(rule, { isBearer: true })).toBe(true);
+      expect(zeroHpEnds(rule, { isCaster: true })).toBe(true);
+      expect(zeroHpEnds(rule, {})).toBe(false);
+    }
+  });
+  it("caster: a warded creature at 0 HP stays warded (Warding Bond)", () => {
+    expect(zeroHpEnds("caster", { isCaster: true })).toBe(true);
+    expect(zeroHpEnds("caster", { isBearer: true })).toBe(false);
+  });
+  it("bearer: only the bearer", () => {
+    expect(zeroHpEnds("bearer", { isBearer: true })).toBe(true);
+    expect(zeroHpEnds("bearer", { isCaster: true })).toBe(false);
+  });
+  it("absent or unknown: never", () => {
+    expect(zeroHpEnds(undefined, { isBearer: true, isCaster: true })).toBe(false);
+    expect(zeroHpEnds("nobody", { isBearer: true, isCaster: true })).toBe(false);
+  });
+});
+
 describe("fins génériques — schéma", () => {
   it("accepte les quatre fins et `spell`", () => {
     expect(validateEntry({ endsWhen: { armor: "any" } })).toEqual([]);
     expect(validateEntry({ endsWhen: { apart: { distance: 30, units: "ft", at: "casterTurnEnd" }, zeroHp: true, spell: true } })).toEqual([]);
     expect(validateEntry({ endsWhen: { unaffected: "noHits" } })).toEqual([]);
+    for ( const who of ["bearer", "caster", "either"] ) expect(validateEntry({ endsWhen: { zeroHp: who } })).toEqual([]);
   });
   it("refuse le reste", () => {
     expect(validateEntry({ endsWhen: {} })).toHaveLength(1);
@@ -61,6 +84,7 @@ describe("fins génériques — schéma", () => {
     expect(validateEntry({ endsWhen: { apart: { distance: 30, units: "ft", at: "never" } } })).toHaveLength(1);
     expect(validateEntry({ endsWhen: { unaffected: "nobody" } })).toHaveLength(1);
     expect(validateEntry({ endsWhen: { later: true } })).toHaveLength(1);
+    expect(validateEntry({ endsWhen: { zeroHp: "nobody" } })).toHaveLength(1);
   });
 });
 
@@ -69,7 +93,7 @@ describe("fins génériques — contenu livré", () => {
     expect(CONTENT["mage-armor"].endsWhen).toEqual({ armor: "any" });
     expect(CONTENT["rage"].endsWhen).toEqual({ armor: "heavy" });
     expect(CONTENT["rage"].rage).toBeTruthy();
-    expect(CONTENT["warding-bond"].endsWhen).toEqual({ apart: { distance: 60, units: "ft" }, zeroHp: true, spell: true });
+    expect(CONTENT["warding-bond"].endsWhen).toEqual({ apart: { distance: 60, units: "ft" }, zeroHp: "caster", spell: true });
     expect(CONTENT["warding-bond"].triggers).toBeTruthy();
     expect(CONTENT["compelled-duel"].endsWhen.apart.at).toBe("casterTurnEnd");
     expect(CONTENT["compelled-duel"].endsWhen.casterTargetsOther).toBe(true);
