@@ -1,15 +1,15 @@
 /**
- * Lancer ses sorts depuis l'espace d'une créature liée (clé de contenu `castFromBearer`) : Regard de deux esprits — « vous pouvez
- * lancer des sorts comme si vous étiez dans votre espace ou dans celui de l'autre créature si vous êtes tous deux à 18 m ou moins
- * l'un de l'autre ». Le lien est l'effet de l'item porté par la créature touchée. Fonctions pures.
+ * Casting spells from a linked creature's space (content key `castFromBearer`): Gaze of Two Minds — the caster may cast as if in
+ * their own space or the other creature's while the two are within the stated distance. The link is the item's effect carried by
+ * the touched creature. Pure functions.
  */
 
-/** Le lien vaut-il ? La créature porte l'effet, sur la même scène, à cette distance ou moins du lanceur (mêmes unités). */
+/** Does the link hold? The creature carries the effect, on the same scene, at this distance or less from the caster (same units). */
 export function linkHolds(measured, limit) {
   return Number.isFinite(measured) && Number.isFinite(limit) && (measured <= limit + 1e-6);
 }
 
-/** Les erreurs de la clé. Vide = valide. */
+/** The key's errors. Empty = valid. */
 export function validateCastFromBearer(rule, at) {
   const ok = rule && (typeof rule === "object") && !Array.isArray(rule) && Number.isFinite(rule.distance) && (rule.distance > 0)
     && (typeof rule.units === "string") && rule.units && Object.keys(rule).every(k => ["distance", "units"].includes(k));

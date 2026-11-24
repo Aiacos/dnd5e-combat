@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-413 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+414 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -252,6 +252,7 @@ la sélection sans rien jouer.
 | `reaction-perdue` |  | §501 | réactions multiples : Neutralisé ou Étourdi ne lui ôtent qu'une réaction chacun, avec un avis ; sans la règle, il ne réagit plus (§501, brique B21) |
 | `reduction` |  | §16.11 §156 §414 §415 | Égide arcanique, Esquive instinctive |
 | `refus-clics` | Arène des refus | §411 | attaque, menu, zone hors de portée, téléportation |
+| `regard-deux-esprits` |  |  | Gaze of Two Minds: spell range measured from the linked creature |
 | `regeneration-declaree` |  | §18.13 | montant, types de dégâts déclarés, arrêtée au soleil |
 | `regeneration` |  | §18.13 | soin au début du tour, coupée par le feu, troll à 0 PV |
 | `regle-forcee-discrete` | Arène des refus |  | dérogations visibles par toute la table, pas celles du MJ, MJ seulement (issue #178) |

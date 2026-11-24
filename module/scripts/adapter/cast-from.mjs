@@ -1,6 +1,6 @@
 /**
- * `castFromBearer` (core/cast-from-bearer.mjs) : les tokens d'où un acteur peut aussi mesurer la portée de ses sorts — ceux qui
- * portent un effet d'un de ses items déclarant la clé, à la distance dite (Regard de deux esprits).
+ * `castFromBearer` (core/cast-from-bearer.mjs): the tokens an actor may also measure their spell range from — those carrying an
+ * effect of one of their items that declares the key, within the stated distance (Gaze of Two Minds).
  */
 
 import { linkHolds } from "../core/cast-from-bearer.mjs";
@@ -9,7 +9,7 @@ import { originItemOf } from "./facts.mjs";
 import { distanceBetween } from "./turn.mjs";
 import { lengthIn } from "./units.mjs";
 
-/** Les tokens de la scène de `origin` liés à `actor` par un effet `castFromBearer`, assez près de lui. */
+/** The tokens on `origin`'s scene linked to `actor` by a `castFromBearer` effect, close enough to it. */
 export function linkedBearers(actor, origin, factors) {
   const out = [];
   if ( !actor || !origin?.parent ) return out;

@@ -9,13 +9,14 @@
  */
 
 export const WARLOCK = Object.freeze({
-  // Regard de deux esprits (SRD 5.2) : « vous pouvez lancer des sorts comme si vous étiez dans votre espace ou dans celui de
-  // l'autre créature si vous êtes tous deux à 18 m ou moins l'un de l'autre », « jusqu'à la fin de votre prochain tour ». La donnée
-  // n'a aucun effet : une marque créée et reliée à l'activité se pose sur la créature touchée ; elle tient le lien.
+  // Gaze of Two Minds (SRD 5.2): the warlock touches a willing creature and, until the end of their next turn, may cast spells
+  // as if in that creature's space while the two are within 60 ft. The data has no effect: a marker created and linked to the
+  // activity lands on the touched creature and holds the link. The activity says 60 ft; the feature is a touch (PR #234 follow-up).
   "gaze-of-two-minds": { castFromBearer: { distance: 60, units: "ft" }, effectEnds: { dasGazeTwoMinds0: "casterTurnEnd" },
     dataFixes: [{ effect: "dasGazeTwoMinds0", create: { name: "Gaze of Two Minds", type: "base", transfer: false, disabled: false,
       statuses: [], system: { changes: [] } } },
-    { path: "system.activities.TqjZeWzJpT25ZX8s.effects", from: [], value: [{ _id: "dasGazeTwoMinds0" }] }] },
+    { path: "system.activities.TqjZeWzJpT25ZX8s.effects", from: [], value: [{ _id: "dasGazeTwoMinds0" }] },
+    { path: "system.activities.TqjZeWzJpT25ZX8s.range.units", from: "ft", value: "touch" }] },
   // §298 (repasse C3) : Pacte de la chaîne — « vous pouvez lancer Appel de familier par une action Magie » (la donnée dit « 1 heure » :
   // en combat, l'invocation ne coûtait rien).
   // Ne faire qu'un avec les ombres (SRD 5.2) : « tant que vous êtes dans une zone de Lumière faible ou de Ténèbres, vous pouvez

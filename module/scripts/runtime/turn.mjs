@@ -69,7 +69,7 @@ export function rangeProblems(activity, attackMode=null) {
   // mesure depuis le lanceur ou depuis l'une de ses invocations `castFrom`, la plus favorable.
   const from = [origin];
   if ( activity.item?.type === "spell" ) from.push(...summonsOfWith(activity.actor, "castFrom").filter(t => t.parent === origin.parent));
-  // Regard de deux esprits : ou depuis l'espace de la créature liée (`castFromBearer`), à la distance dite.
+  // Gaze of Two Minds: or from the linked creature's space (`castFromBearer`), within the stated distance.
   if ( activity.item?.type === "spell" ) from.push(...linkedBearers(activity.actor, origin, factors));
   const rank = issue => ({ longRange: 1, outOfRange: 2, tooClose: 3 })[issue] ?? 0;
   // O8h (§351) : une portée minimale (armes de siège) — trop près est aussi bloquant.
