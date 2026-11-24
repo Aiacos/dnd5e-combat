@@ -1,7 +1,7 @@
 /**
  * Tactical Master (Fighter 9, PHB 2024; Core journal §537, issue #160), world `dnd-6`. The Fighter receives Tactical Master, lent
  * from the Player's Handbook compendium (its effect adds Push, Sap and Slow to `weaponProf.mastery.bonus`); the Bandit gets 300 HP.
- * Checks, with fast attacks (no dnd5e attack window):
+ * Checks, with fast attacks (no dnd5e attack window; the mastery used is read from dnd5e's per-weapon memo):
  *  - the Fighter's own token menu offers « Mastery: <greatsword> (Graze) »; the choice window, answered « Sap », stores Sap on the
  *    weapon and the menu now reads Sap;
  *  - a hit with the greatsword then uses Sap (attack card, Sap mark on the Bandit), without any question;
@@ -43,6 +43,13 @@ export default {
     const setStanding = value => ctx.call("upsert-actor-item", { actorId: fighter.actorId, match: { path: "_id", value: sword },
       itemData: value ? { [`flags.${MODULE_ID}.standingMastery`]: value } : { [`flags.${MODULE_ID}.-=standingMastery`]: null } });
     ctx.restore(() => setStanding(null).catch(() => {}));
+    // The connector does not show an attack card's mastery: dnd5e writes it on the weapon after each attack
+    // (`flags.dnd5e.last.<activity>.mastery`, documents/activity/attack.mjs), cleared before each attack and put back at the end.
+    const last0 = (await swordItem())?.flags?.dnd5e?.last ?? null;
+    const setLast = value => ctx.call("upsert-actor-item", { actorId: fighter.actorId, match: { path: "_id", value: sword },
+      itemData: value ? { "flags.dnd5e.last": value } : { "flags.dnd5e.-=last": null } });
+    ctx.restore(() => setLast(null).then(() => (last0 ? setLast(last0) : null)).catch(() => {}));
+    const lastMastery = async () => Object.values((await swordItem())?.flags?.dnd5e?.last ?? {}).map(l => l?.mastery).find(Boolean) ?? null;
 
     const { data: bdata } = await ctx.call("get-scene-object", { type: "Token", objectId: bandit.id });
     const max0 = bdata.delta?.system?.attributes?.hp?.max ?? null;
@@ -81,7 +88,7 @@ export default {
     // §516: the Fighter's Savage Attacker "On hit" window, confirmed as is.
     const savageDialog = d => /Savage Attacker|Sauvagerie martiale/i.test(`${d.title ?? ""} ${d.content ?? d.text ?? ""}`);
     const attack = async target => {
-      const since = await ctx.lastMessageId();
+      await setLast(null);
       const known = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
       const asked = [];
       const u = await ctx.use({ tokenId: fighter.id, itemId: sword, activityType: "attack", targetTokenIds: [target.id] });
@@ -101,9 +108,7 @@ export default {
       done = true;
       await watch;
       await pause(1500);
-      const att = (await ctx.messagesSince(since)).find(m => m.type === "attack");
-      return { hit: r?.targets?.find(t => t.name === target.name)?.hit ?? null, asked,
-        mastery: att?.system?.mastery ?? att?.flags?.dnd5e?.mastery ?? null };
+      return { hit: r?.targets?.find(t => t.name === target.name)?.hit ?? null, asked, mastery: await lastMastery() };
     };
     const until = async (want, fn, tries=20) => { for ( let i = 0; i < tries; i++ ) { const a = await fn(); if ( a.hit === want ) return a; } return null; };
     const sapped = async () => (await ctx.effects(bandit)).some(e => e.flags?.[MODULE_ID]?.mastery?.kind === "sap");
