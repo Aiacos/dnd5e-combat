@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-135 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
+136 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
 `client` = ce poste, `user` = ce joueur. **Onglet** : celui de la fenêtre de réglages DAS (`core/settings-layout.mjs`) ; sans onglet,
 le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêtre dédiée). Le libellé est celui de `lang/fr.json`.
 
@@ -29,6 +29,7 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 
 | Clé | Libellé | Portée | Type | Défaut | Choix | Fichier |
 |---|---|---|---|---|---|---|
+| `areaVisibility` | Zones de sort visibles par | world | String | `"all"` | all, gm, layer | `adapter/area-visibility.mjs` |
 | `aurasOnlyInCombat` | Auras : seulement en combat | world | Boolean | `false` |  | `runtime/auras.mjs` |
 | `combatWindowSeconds` | Délai des fenêtres du combat (secondes) | world | Number | `10` |  | `runtime/basics.mjs` |
 | `combatWindowUnlimited` | Fenêtres du combat sans délai | world | Boolean | `false` |  | `runtime/player-waits.mjs` |

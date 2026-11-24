@@ -984,6 +984,7 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `preCreateRegion`
 
 1. without DAS: region not marked
+2. area: visibility setting not applied
 
 ### `preCreateToken`
 

@@ -18,6 +18,7 @@ import { log } from "./shared.mjs";
 import { isObjectToken } from "../adapter/bodies.mjs";
 import { sideOf, areEnemies } from "../adapter/factions.mjs";
 import { zoneChoiceMode, askZoneChoice } from "../adapter/zone-choice.mjs";
+import { registerAreaVisibilitySetting, applyAreaVisibility } from "../adapter/area-visibility.mjs";
 import { alliedSides } from "../core/factions.mjs";
 import { castLevelUsage } from "../core/usage.mjs";
 import { lengthIn } from "../adapter/units.mjs";
@@ -388,6 +389,9 @@ async function onWorldTime(worldTime) {
 
 export function registerAreas() {
   const trigger = { executor: true, label: "area: trigger interrupted" };
+  // §530: who sees an area placed from an activity (world setting), set on the client that creates it.
+  registerAreaVisibilitySetting();
+  route("preCreateRegion", (region, data) => { applyAreaVisibility(region, data); }, { label: "area: visibility setting not applied" });
   route("createRegion", async region => {
     const at = await noteExpiry(region);
     if ( at !== null ) log(`area "${region.name}": ends at world time ${at} (in ${at - game.time.worldTime} s)`);
