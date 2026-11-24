@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-408 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+410 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -226,6 +226,8 @@ la sélection sans rien jouer.
 | `passifs-releve-2` |  | §236 | aptitudes passives du relevé des trous, niveaux 9 à 20 (Arène des sorts) |
 | `passifs-releve` |  | §235 | aptitudes passives du relevé des trous (Arène des sorts) |
 | `perf-deplacement` |  |  | a walking token: requests to the server and engine hook time, step by step (baileywiki's report) |
+| `perf-planpath-murs` | keep |  | walls and doors: the core is only skipped where it would find nothing (issue #92) |
+| `perf-planpath` |  |  | what planPath costs on open ground, same answers without asking dnd5e or the core (issue #92) |
 | `phb3` |  | §438 | Manuel des joueurs 3.0.0 : dés du Coup brutal, Affinité élémentaire comptée une fois |
 | `plafond` | Escalade | §192 | Pattes d'araignée, marche au plafond, hors d'allonge, retournement, descente, chute, DD 20 maison |
 | `porte-passager` |  | §264 | le passager suit le lanceur |

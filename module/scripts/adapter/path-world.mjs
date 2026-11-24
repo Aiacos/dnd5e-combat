@@ -250,22 +250,36 @@ export function worldFor(token, { throughDoors=false }={}) {
   // Bigby, §16.15) ne gêne personne et n'est gêné par personne. §192 : par case, les tranches verticales (pieds-tête) des
   // tokens qui l'occupent — un grimpeur au-dessus d'une case occupée peut s'y arrêter.
   const intangible = isIntangible(token);
-  const taken = new Map();
-  // Ce que le token sait partager ne dépend pas de l'autre : lu une fois pour toute la scène (tous ses objets y passent).
-  const moverKind = intangible ? null : shareKindOf(token.actor);
-  for ( const other of scene.tokens ) {
-    if ( intangible ) break;
-    if ( (other === token) || other.hidden || isDefeated(other) || isIntangible(other) ) continue;
-    if ( sharesSpaceWith(token, other, { moverKind }) ) continue;
-    if ( preview && other.object && !other.object.visible ) continue;   // ne pas révéler un token invisible
+  // Issue #92: who stands where is indexed first, from positions alone. Whether a token found there really takes its cells (hidden,
+  // defeated, an object that does not occupy its space, sharing — which reads every item of both sheets —, visible to a previewing
+  // player) is asked only when the search wants to end on one of its cells, once per token: on open ground no other sheet is read.
+  // Same answers as asking for every token up front: this world lives for one synchronous search.
+  const standing = new Map();
+  if ( !intangible ) for ( const other of scene.tokens ) {
+    if ( other === token ) continue;
     const o = footprintOf(other);
-    const slice = positionOf(other._source);
     for ( let di = 0; di < o.h; di++ ) for ( let dj = 0; dj < o.w; dj++ ) {
       const key = `${cellKey({ i: o.i + di, j: o.j + dj })}@${other._source.level}`;
-      if ( !taken.has(key) ) taken.set(key, []);
-      taken.get(key).push(slice);
+      if ( !standing.has(key) ) standing.set(key, []);
+      standing.get(key).push(other);
     }
   }
+  // What the mover can share does not depend on the other token: read once for the whole scene (all its items), when first needed.
+  let moverKind;
+  const slices = new Map();
+  /** The vertical slice (feet to head) this other token takes, or null if it does not take its cells for the mover. */
+  const sliceOf = other => {
+    if ( !slices.has(other) ) {
+      let slice = null;
+      if ( !other.hidden && !isDefeated(other) && !isIntangible(other) ) {
+        if ( moverKind === undefined ) moverKind = shareKindOf(token.actor);
+        const shown = !(preview && other.object && !other.object.visible);   // ne pas révéler un token invisible
+        if ( !sharesSpaceWith(token, other, { moverKind }) && shown ) slice = positionOf(other._source);
+      }
+      slices.set(other, slice);
+    }
+    return slices.get(other);
+  };
 
   const layer = canvas.tokens;
   const backend = CONFIG.Canvas.polygonBackends.move;
@@ -494,9 +508,13 @@ export function worldFor(token, { throughDoors=false }={}) {
       return !wallBetween(from, to);
     },
     canEnd: cell => {
-      if ( !taken.size ) return true;
+      if ( !standing.size ) return true;
       const level = cell.level ?? ownLevel;
-      const occupants = cellsOf(cell).flatMap(c => taken.get(`${cellKey(c)}@${level}`) ?? []);
+      const occupants = [];
+      for ( const c of cellsOf(cell) ) for ( const other of standing.get(`${cellKey(c)}@${level}`) ?? [] ) {
+        const slice = sliceOf(other);
+        if ( slice ) occupants.push(slice);
+      }
       if ( !occupants.length ) return true;
       const mine = { elevation: altitude(cell).elevation ?? elevationOf(cell), depth };
       return !occupants.some(o => overlapsVertically(mine, o, grid.distance));

@@ -82,9 +82,50 @@ describe("partage de case dans le chemin du moteur (§105)", () => {
     const mover = tokenOf(scene, actorOf(["longsword", "second-wind"]), { i: 0, j: 0 });
     for ( let n = 0; n < 39; n++ ) tokenOf(scene, actorOf(["claws"]), { i: 2 + (n % 7), j: 2 + Math.floor(n / 7) });
     const world = worldFor(mover);
-    expect(mover.actor.reads.items).toBe(1);
     expect(world.canEnd({ i: 2, j: 2 })).toBe(false);   // la case d'un autre
     expect(world.canEnd({ i: 1, j: 1 })).toBe(true);
+    for ( let n = 0; n < 39; n++ ) expect(world.canEnd({ i: 2 + (n % 7), j: 2 + Math.floor(n / 7) })).toBe(false);
+    expect(mover.actor.reads.items).toBe(1);
+  });
+
+  it("issue #92: another token's sheet is read only when the search wants to end on its cell, and once", () => {
+    const scene = sceneOf();
+    const mover = tokenOf(scene, actorOf(["longsword"]), { i: 0, j: 0 });
+    const near = tokenOf(scene, actorOf(["claws"]), { i: 0, j: 3 });
+    const far = tokenOf(scene, actorOf(["claws"]), { i: 9, j: 9 });
+    const world = worldFor(mover);
+    expect([mover, near, far].map(t => t.actor.reads.items)).toEqual([0, 0, 0]);   // nothing read to set the world up
+    expect(world.canEnd({ i: 0, j: 1 })).toBe(true);    // open ground: still nothing read
+    expect([mover, near, far].map(t => t.actor.reads.items)).toEqual([0, 0, 0]);
+    expect(world.canEnd({ i: 0, j: 3 })).toBe(false);
+    expect(world.canEnd({ i: 0, j: 3 })).toBe(false);
+    expect([mover, near, far].map(t => t.actor.reads.items)).toEqual([1, 1, 0]);
+  });
+
+  it("issue #92: asked late or not, the same tokens take their cells — hidden, defeated, sharing, unseen by a previewing player", () => {
+    const scene = sceneOf();
+    const mover = tokenOf(scene, actorOf(["longsword"]), { i: 0, j: 0 });
+    const plain = tokenOf(scene, actorOf(["claws"]), { i: 1, j: 1 });
+    const hidden = tokenOf(scene, actorOf(["claws"]), { i: 1, j: 2 });
+    hidden.hidden = true;
+    const dead = tokenOf(scene, actorOf(["claws"]), { i: 1, j: 3 });
+    dead.actor.statuses.add("dead");
+    const swarm = tokenOf(scene, actorOf(["swarm"]), { i: 1, j: 4 });
+    const unseen = tokenOf(scene, actorOf(["claws"]), { i: 1, j: 5 });
+    unseen.object.visible = false;
+    const cellOfToken = t => ({ i: 1, j: scene.tokens.indexOf(t) });
+    const before = CONFIG.specialStatusEffects.DEFEATED;
+    CONFIG.specialStatusEffects.DEFEATED = "dead";
+    try {
+      // As GM: an unseen token still takes its cell.
+      const gm = worldFor(mover);
+      expect([plain, hidden, dead, swarm, unseen].map(t => gm.canEnd(cellOfToken(t)))).toEqual([false, true, true, true, false]);
+      // As a previewing player: it does not (its cell must not be revealed).
+      game.user.isGM = false;
+      const player = worldFor(mover);
+      expect([plain, hidden, dead, swarm, unseen].map(t => player.canEnd(cellOfToken(t)))).toEqual([false, true, true, true, true]);
+    }
+    finally { game.user.isGM = true; CONFIG.specialStatusEffects.DEFEATED = before; }
   });
 
   it("mêmes cases interdites qu'en demandant token par token (`sharesSpaceWith`)", () => {
