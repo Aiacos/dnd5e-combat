@@ -107,6 +107,10 @@ export default {
       { scene: (await ctx.scene()).sceneId, mage: mageUuid });
     ctx.log(`player client: ${JSON.stringify(who)}`);
     if ( !ctx.expect(!who.gm && who.owner && who.activeGM && who.on, "a player client owning the Mage, an active GM, the setting seen on") ) return;
+    // The roll window of the requested roll is offered through `dnd5e-combat.groupRollPrompt` (a neighbour's window, else dnd5e's).
+    await ctx.asPlayer(`window.__dasPrompt = null;
+      Hooks.once("${MODULE_ID}.groupRollPrompt", prompt => { window.__dasPrompt = { title: prompt.title, actor: prompt.actor?.name, dc: prompt.request?.dc }; });
+      return true;`);
     const since = await ctx.lastMessageId();
     const clicked = await ctx.asPlayer(CLICK, { journal, n: 0, token: mage.id });
     ctx.log(`player click: ${JSON.stringify(clicked)}`);
@@ -121,12 +125,12 @@ export default {
     const cardId = card.id ?? card._id;
     ctx.restore(() => script(`await game.messages.get(args.id)?.delete(); return true;`, { id: cardId }).catch(() => {}));
     const first = await ctx.engine("groupRollState", { id: cardId });
-    ctx.expect((first?.entries ?? []).some(e => e.uuid === mageUuid) && (first?.entries?.length === 1), `the Mage has the only line of the card: ${JSON.stringify(first?.entries)}`);
+    ctx.expect((first?.entries?.length === 1) && (first.entries[0].name === "Mage des refus") && (first.entries[0].status === "waiting"),
+      `the Mage has the only line of the card, waiting for his roll: ${JSON.stringify(first?.entries)}`);
     await pause(1500);
-    const shown = await ctx.asPlayer(`return [...foundry.applications.instances.values()].filter(a => a.rendered
-      && (a.constructor?.name?.includes("RollConfigurationDialog") || a.id?.includes("roll"))).map(a => a.constructor.name);`);
-    ctx.log(`player's open roll windows: ${JSON.stringify(shown)}`);
-    ctx.expect((shown ?? []).length > 0, "a roll window is open on the player's screen");
+    const prompted = await ctx.asPlayer(`return window.__dasPrompt;`);
+    ctx.expect((prompted?.actor === "Mage des refus") && (prompted?.dc === 11),
+      `the requested roll's window is offered on the player's screen: ${JSON.stringify(prompted)}`);
     const forced = await ctx.engine("groupRollForce", { id: cardId, tokenId: mage.id });
     let view = null;
     for ( const stop = Date.now() + 15000; Date.now() < stop; await pause(500) ) {
