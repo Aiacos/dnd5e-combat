@@ -39,7 +39,7 @@ import { registerContent, contentApi } from "./runtime/content.mjs";
 import { registerIcons } from "./runtime/icons.mjs";
 import { registerConditions } from "./runtime/conditions.mjs";
 import { registerVision } from "./runtime/vision.mjs";
-import { canSee as visionCanSee, canLocate as visionCanLocate, sensedThrough, isVisionAvailable } from "./adapter/vision.mjs";
+import { canSee as visionCanSee, pinpointsTarget, sensedThrough, isVisionAvailable } from "./adapter/vision.mjs";
 import { registerSpace } from "./runtime/space.mjs";
 import { registerSelfAreas } from "./runtime/self-area.mjs";
 import { registerAreas } from "./runtime/areas.mjs";
@@ -332,11 +332,12 @@ function publicCanSee(observer, target) {
 
 /**
  * La position de la cible est-elle connue de l'observateur : il la voit, ou un sens qui n'est pas une vue la localise
- * (perception des vibrations) ? Lecture seule ; null quand la vision simulée est coupée ou ne peut pas juger.
+ * (perception des vibrations) ? Issue #107: such a sense also pinpoints a creature Hidden from the observer, which stays unseen
+ * (`canSee` false) and Hidden. Lecture seule ; null quand la vision simulée est coupée ou ne peut pas juger.
  */
 function publicLocates(observer, target) {
   if ( !isVisionAvailable() ) return null;
-  return visionCanLocate(observer?.document ?? observer, target?.document ?? target);
+  return pinpointsTarget(observer?.document ?? observer, target?.document ?? target);
 }
 
 /**

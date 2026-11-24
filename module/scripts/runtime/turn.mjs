@@ -22,7 +22,7 @@ import { verbalBlockOf, charmersOf, hostileToCharmer, sightRequired } from "../a
 import { untrainedArmor } from "../adapter/armor-training.mjs";
 import { reactionsBlocked, actionOrBonusOnly } from "../adapter/reactions.mjs";
 import { conditionUseIssues } from "../core/conditions.mjs";
-import { canSee, canLocate } from "../adapter/vision.mjs";
+import { canSee, pinpointsTarget } from "../adapter/vision.mjs";
 import { hiddenDcOf } from "../adapter/search.mjs";
 import { locationUnknown } from "../core/hearing.mjs";
 import { wrongTypeFor, typesLabel, missesTargetRequirement } from "../adapter/eligibility.mjs";
@@ -497,7 +497,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
   // §286 : Chaîne d'éclairs — les cibles secondaires à 9 m de la première.
   const chained = chainOutliers(activity, aimed.map(t => t.document));
   const lost = (origin && !activity.target?.template?.type) ? aimed.filter(t => !unseen.includes(t)
-    && locationUnknown({ hidden: hiddenDcOf(t.actor) !== null, sees: canLocate(origin, t.document) })) : [];
+    && locationUnknown({ hidden: hiddenDcOf(t.actor) !== null, sees: pinpointsTarget(origin, t.document) })) : [];
   // §411 : ce que le clic a déjà relevé et que la légalité ne voit pas (contact, ligne de vue, approche impossible, type de cible,
   // lien, Enchaînement, rebond) — `issues` : des raisons traduites ; `issuesCoverRange` : elles disent déjà la portée.
   const extra = (usageConfig[MODULE_ID]?.issues ?? []).filter(l => typeof l === "string" && l);

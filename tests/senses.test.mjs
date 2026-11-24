@@ -3,7 +3,7 @@
  * comme une vue — et `wardsDetection`, ce qui en protège. Règle pure : portée, murs, cible détectée ou non, protection.
  */
 import { describe, it, expect } from "vitest";
-import { senseVerdict, bestVerdict, wardedAgainst, sensesIn, SENSE_VERDICTS, detectsTarget, mutedSenses, hidesIdentity,
+import { senseVerdict, bestVerdict, wardedAgainst, sensesIn, SENSE_VERDICTS, detectsTarget, mutedSenses, hidesIdentity, pinpoints, drawsSensed,
   onlyLocated }
   from "../module/scripts/core/senses.mjs";
 import { validateEntry } from "../module/scripts/core/content/entry.mjs";
@@ -194,5 +194,32 @@ describe("déclaration dans le contenu", () => {
       { detectedAs: [] }, { detectedAs: "undead" }, { senseNeeds: {} }, { senseNeeds: { blindsight: "smell" } },
       { senseNeeds: ["blindsight"] }];
     for ( const entry of bad ) expect(validateEntry(entry, { facts }).length, JSON.stringify(entry)).toBeGreaterThan(0);
+  });
+});
+
+describe("issue #107: a locating sense pinpoints a Hidden creature", () => {
+  it("seen or located: the square is known, Hidden or not", () => {
+    expect(pinpoints({ located: true, hidden: false, sensed: false })).toBe(true);
+    expect(pinpoints({ located: true, hidden: true, sensed: false })).toBe(true);
+  });
+  it("Hidden, not located, but a sense that does not see reaches it: the square is known", () => {
+    expect(pinpoints({ located: false, hidden: true, sensed: true })).toBe(true);
+  });
+  it("Hidden, and no locating sense reaches it: unknown", () => {
+    expect(pinpoints({ located: false, hidden: true, sensed: false })).toBe(false);
+  });
+  it("not Hidden and not located: the locating sense is not asked again", () => {
+    expect(pinpoints({ located: false, hidden: false, sensed: true })).toBe(false);
+  });
+  it("the vision cannot tell: null passes through", () => {
+    expect(pinpoints({ located: null, hidden: true, sensed: true })).toBe(null);
+    expect(pinpoints({ located: false, hidden: true, sensed: null })).toBe(null);
+  });
+  it("a declared sense draws a Hidden creature only when it locates", () => {
+    expect(drawsSensed("locate", true)).toBe(true);
+    expect(drawsSensed("sight", true)).toBe(false);
+    expect(drawsSensed("sight", false)).toBe(true);
+    expect(drawsSensed("presence", false)).toBe(false);
+    expect(drawsSensed(null, true)).toBe(false);
   });
 });

@@ -11,7 +11,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { canSee, canLocate, blockedBetween, devilsSightRange, isVisionAvailable, hasLineOfSight } from "../adapter/vision.mjs";
+import { canSee, canLocate, pinpointsTarget, blockedBetween, devilsSightRange, isVisionAvailable, hasLineOfSight } from "../adapter/vision.mjs";
 import { canHear } from "../adapter/hearing.mjs";
 import { perceivedOnToken } from "../adapter/illumination.mjs";
 import { sightRequired } from "../adapter/conditions.mjs";
@@ -84,6 +84,7 @@ function rulesFor(observer, target) {
   return {
     sees: canSee(observer, target),
     locates: canLocate(observer, target),   // position connue : vue, ou localisée (perception des vibrations, #118)
+    pinpoints: pinpointsTarget(observer, target),   // issue #107: the same, and a locating sense also finds a Hidden creature's square
     blocked: Object.keys(blocked).filter(k => blocked[k]),   // brume, ténèbres, silence
     distance: Math.round(distanceBetween(observer, target).value * 10) / 10,
     units: observer.parent?.grid?.units ?? null,

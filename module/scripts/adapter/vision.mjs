@@ -34,6 +34,7 @@ import { fromPulseReached } from "../core/area.mjs";
 import { revealedInvisible, seesInvisible } from "./facts.mjs";
 import { outsideCone } from "./cone.mjs";
 import { hiddenFrom } from "./stealth.mjs";
+import { pinpoints } from "../core/senses.mjs";
 import { lengthIn } from "./units.mjs";
 import { perceivesPlane } from "./plane.mjs";
 import { sensedBy, mutedSensesOf } from "./senses.mjs";
@@ -174,11 +175,12 @@ function unveiled(token) {
  * compris, aux positions validées.
  * @param {TokenDocument} observer
  * @param {TokenDocument} target
- * @param {{ignoreHidden?: boolean, locating?: boolean}} [options]  §185 : juger comme si la cible n'était pas cachée (la détection
- *   elle-même). `locating` : compter aussi les sens qui localisent sans voir (`canLocate`).
+ * @param {{ignoreHidden?: boolean, locating?: boolean, senseOnly?: boolean}} [options]  §185 : juger comme si la cible n'était pas
+ *   cachée (la détection elle-même). `locating` : compter aussi les sens qui localisent sans voir (`canLocate`). `senseOnly`
+ *   (issue #107, with `locating`): ONLY those senses — no light, no sight mode, no declared sight (`pinpointsTarget`).
  * @returns {boolean|null}  null : impossible à dire ici (canevas absent, token non dessiné).
  */
-export function canSee(observer, target, { ignoreHidden=false, locating=false }={}) {
+export function canSee(observer, target, { ignoreHidden=false, locating=false, senseOnly=false }={}) {
   if ( !canvas?.ready || !observer || !target ) return null;
   if ( observer === target ) return true;
   if ( isSenseless(observer) ) return false;   // réglage `unconsciousSenses` : Inconscient, ni vue ni ouïe
@@ -193,7 +195,7 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false }=
   // Un sens déclaré par du contenu (`sense`) : il localise sans voir — ni la brume ni les ténèbres ne l'arrêtent —, ou il compte
   // comme une vue : pas d'une cible Invisible, pas à travers une brume, et à travers des ténèbres seulement s'il les perce.
   const declared = sensedBy(observer, target, sceneBetween(observer, target, between));
-  if ( declared === "sight" ) return true;
+  if ( (declared === "sight") && !senseOnly ) return true;
   if ( locating && (declared === "locate") ) return true;
   const source = sourceFor(observer);
   if ( !source ) return null;
@@ -202,12 +204,12 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false }=
   // La vue ne passe pas la zone — seuls jugent les sens qui ne voient pas, et, dans des ténèbres, la vision véritable et la
   // Vision du diable.
   const blocked = between();
-  if ( blocked.fog || blocked.darkness ) return seesThroughBlock(observer, target, source, config, blocked, locating);
+  if ( blocked.fog || blocked.darkness ) return seesThroughBlock(observer, target, source, config, blocked, locating, senseOnly);
   // §447 : seules des Ténèbres lancées par l'observateur, qui voit à travers (`seesThroughOwnDarkness`) : « il voit normalement ».
-  if ( blocked.ownDarkness && devilsSightSeesToken(observer, target, blocked) ) return true;
+  if ( !senseOnly && blocked.ownDarkness && devilsSightSeesToken(observer, target, blocked) ) return true;
 
   // Lumières qui donnent la vue (le cœur les teste en premier, pour tout le monde).
-  for ( const light of canvas.effects.lightSources ) {
+  for ( const light of senseOnly ? [] : canvas.effects.lightSources ) {
     if ( !light.data.vision || !light.active ) continue;
     if ( light.testVisibility(config) === true ) return true;
   }
@@ -218,7 +220,7 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false }=
   // voir » : la vue de base (la vision dans le noir de dnd5e) ne la trouve pas ; la lumière, la vision aveugle, la vision véritable si.
   const umbral = umbralTo(target);
   if ( umbral ) delete own.basicSight;
-  if ( !source.isBlinded ) {
+  if ( !source.isBlinded && !senseOnly ) {
     for ( const id of ["basicSight", "lightPerception"] ) {
       const mode = own[id];
       if ( mode && (modes[id]?.testVisibility(source, mode, config) === true) ) return true;
@@ -227,6 +229,7 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false }=
   for ( const [id, mode] of Object.entries(own) ) {
     if ( (id === "basicSight") || (id === "lightPerception") ) continue;
     if ( !locating && !countsAsSight(id) ) continue;   // la perception des vibrations localise, elle ne voit pas
+    if ( senseOnly && countsAsSight(id) ) continue;    // issue #107: only the senses that locate without sight
     if ( modes[id]?.testVisibility(source, mode, config) === true ) return true;
   }
   return false;
@@ -242,6 +245,22 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false }=
  */
 export function canLocate(observer, target, { ignoreHidden=false }={}) {
   return canSee(observer, target, { ignoreHidden, locating: true });
+}
+
+/**
+ * Issue #107: does the observer know the target's square? As `canLocate`, except that a sense which locates without sight
+ * (Tremorsense, a declared `locate` sense) also pinpoints a creature Hidden from it (core/senses.mjs `pinpoints`). The creature
+ * stays unseen (`canSee`) and Hidden: this is only for what needs a known position — aiming at its square, drawing it.
+ * Hiding, Search and passive Perception keep `canLocate`.
+ * @param {TokenDocument} observer
+ * @param {TokenDocument} target
+ * @returns {boolean|null}
+ */
+export function pinpointsTarget(observer, target) {
+  const located = canLocate(observer, target);
+  const hidden = (located === false) && hiddenFrom(observer, target);
+  const sensed = hidden ? canSee(observer, target, { ignoreHidden: true, locating: true, senseOnly: true }) : false;
+  return pinpoints({ located, hidden, sensed });
 }
 
 /**
@@ -411,11 +430,12 @@ export function devilsSightRange(observer) {
  * qui ignore les murs et l'aveuglement, reste jugée par le cœur. La Vision du diable « voit normalement » : pas un
  * Invisible.
  */
-function seesThroughBlock(observer, target, source, config, blocked, locating=false) {
+function seesThroughBlock(observer, target, source, config, blocked, locating=false, senseOnly=false) {
   const own = detectionModesOf(observer);
   const distance = distanceBetween(observer, target).value;
   for ( const id of sensesThrough(blocked) ) {
     if ( id === DEVILS_SIGHT.mode ) continue;   // jugée par l'invocation elle-même, ci-dessous (un PNJ n'a pas forcément le mode)
+    if ( senseOnly && countsAsSight(id) ) continue;   // issue #107: only the senses that locate without sight
     const mode = own[id];
     if ( !mode || (mode.enabled === false) ) continue;
     if ( CORE_JUDGED.includes(id) ) {
@@ -426,7 +446,7 @@ function seesThroughBlock(observer, target, source, config, blocked, locating=fa
     // Issue #42 : la ligne de vue sans les bords des ténèbres — sinon ni la vision aveugle ni la vision véritable n'y voyaient.
     if ( senseReaches({ distance, range: mode.range, lineOfSight: lineOfSightThrough(observer, target), sense: id, blind: isBlind(observer) }) ) return true;
   }
-  return devilsSightSeesToken(observer, target, blocked);
+  return !senseOnly && devilsSightSeesToken(observer, target, blocked);
 }
 
 /**

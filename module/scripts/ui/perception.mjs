@@ -32,7 +32,7 @@ import { hiddenFrom } from "../adapter/stealth.mjs";
 import { canHear } from "../adapter/hearing.mjs";
 import { sensesThrough, CORE_JUDGED, DEVILS_SIGHT, DEVILS_SIGHT_OUTLINE, HEARING_MODE, SENSE_MODE, SENSE_OUTLINE,
   grantInMemoryModes, tintOutlineShader, FIELD_MODES, fieldOfView } from "../core/light.mjs";
-import { hidesIdentity, onlyLocated } from "../core/senses.mjs";
+import { hidesIdentity, onlyLocated, drawsSensed } from "../core/senses.mjs";
 import { route } from "../runtime/router.mjs";
 import { theaterActive } from "../runtime/theater-state.mjs";
 import { perceivesPlane } from "../adapter/plane.mjs";
@@ -399,8 +399,8 @@ function hearingMode() {
  * (`sensedThrough` : portée, ce que le sens détecte, mur s'il en tient compte, protections de la cible) : la créature dont la
  * position est connue se dessine avec un contour, où qu'elle soit — ces sens ne sont pas une vue, ni brume ni ténèbres ne les
  * arrêtent. Une simple présence (`reveals: "presence"`) ne dessine rien : la position n'est pas connue ; une aura
- * (`reveals: "aura"`) marque la créature déjà vue (`refreshMark`). Comme pour les règles (`canSee`), une créature cachée de
- * l'observateur n'est pas montrée. Jamais pour les sources jetables des règles, qui lisent `sensedBy`
+ * (`reveals: "aura"`) marque la créature déjà vue (`refreshMark`). Une créature cachée de l'observateur n'est montrée que par un
+ * sens qui la localise (issue #107 : sa case est connue, elle reste non vue et Cachée), jamais par une vue déclarée. Jamais pour les sources jetables des règles, qui lisent `sensedBy`
  * elles-mêmes.
  */
 function senseMode() {
@@ -411,9 +411,9 @@ function senseMode() {
       if ( !mode?.enabled || !isVisionAvailable() ) return false;
       if ( String(visionSource?.sourceId ?? "").startsWith(SIMULATED) ) return false;
       const p = pair(visionSource, config.object);
-      if ( !p || hiddenFrom(p.observer, p.target) ) return false;
-      const verdict = sensedThrough(p.observer, p.target);
-      return (verdict === "locate") || (verdict === "sight");
+      if ( !p ) return false;
+      // Issue #107: a sense that locates still draws a Hidden creature (its square is known); a declared sight does not.
+      return drawsSensed(sensedThrough(p.observer, p.target), hiddenFrom(p.observer, p.target));
     }
   }
   return new DetectionModeDeclaredSense({ id: SENSE_MODE, label: "DND5ECOMBAT.Vision.Sens", tokenConfig: false,

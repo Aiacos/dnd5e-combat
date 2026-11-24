@@ -131,3 +131,26 @@ export function hidesIdentity(kind, rule) {
 export function onlyLocated(verdicts) {
   return !(verdicts ?? []).includes("sight");
 }
+
+/**
+ * Issue #107: does the observer know where the target is? `located`: it sees the target or locates it (`canLocate`, which rules
+ * out a creature Hidden from it). A sense that locates without sight (Tremorsense, a declared `locate` sense) still pinpoints a
+ * Hidden creature's square (`sensed`): the creature stays unseen and keeps its Hidden state — attacks against it keep the
+ * Disadvantage of an unseen target, and nothing reveals it. Sight never finds a Hidden creature here: that is the Search action.
+ * @param {{located: boolean|null, hidden: boolean, sensed: boolean|null}} facts  `hidden`: Hidden from this observer.
+ * @returns {boolean|null}  null: the vision cannot tell.
+ */
+export function pinpoints({ located, hidden, sensed }) {
+  if ( (located !== false) || !hidden ) return located;
+  return sensed;
+}
+
+/**
+ * Issue #107: is a creature drawn for a declared sense's verdict? A sense that locates draws it, Hidden or not (its square is
+ * known); a declared sight draws it unless it is Hidden from the observer.
+ * @param {"sight"|"locate"|"presence"|"aura"|null} verdict
+ * @param {boolean} hidden  Hidden from this observer.
+ */
+export function drawsSensed(verdict, hidden) {
+  return (verdict === "locate") || ((verdict === "sight") && !hidden);
+}
