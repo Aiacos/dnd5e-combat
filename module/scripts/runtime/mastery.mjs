@@ -236,11 +236,11 @@ async function onCleaveUsed(message) {
 }
 
 /* -------------------------------------------- */
-/*  Standing mastery per weapon (§536, #160)    */
+/*  Standing mastery per weapon (§537, #160)    */
 /* -------------------------------------------- */
 
 /**
- * §536 : on every attack roll (`dnd5e.preRollAttackV2`, before the configuration window, which dnd5e skips with fast attacks), the
+ * §537 : on every attack roll (`dnd5e.preRollAttackV2`, before the configuration window, which dnd5e skips with fast attacks), the
  * weapon's standing choice becomes `config.mastery`; dnd5e reads it in `_buildAttackConfig` (documents/activity/attack.mjs) and records
  * it on the attack message (`system.mastery`), which the rest of this file plays. A mastery already given by the caller is kept.
  */
@@ -255,7 +255,7 @@ function onPreRollAttack(config) {
 }
 
 /**
- * §536 : store the standing mastery of a weapon (menu of the token or of the sheet), with feedback for the whole table. Returns the
+ * §537 : store the standing mastery of a weapon (menu of the token or of the sheet), with feedback for the whole table. Returns the
  * mastery now used, or null when the weapon does not offer `choice`.
  * @param {Item5e} item
  * @param {string} choice   A mastery key among the weapon's options.

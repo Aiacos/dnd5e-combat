@@ -217,7 +217,7 @@ export function weaponFacts(actor) {
 }
 
 /* -------------------------------------------- */
-/*  Standing mastery per weapon (§536, #160)    */
+/*  Standing mastery per weapon (§537, #160)    */
 /* -------------------------------------------- */
 
 /** The weapon flag holding the standing choice (`flags["dnd5e-combat"].standingMastery`): a mastery key; absent = the weapon's own. */

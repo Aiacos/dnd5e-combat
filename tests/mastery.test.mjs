@@ -228,7 +228,7 @@ describe("§510 fenêtre des bottes : ce que le Repos long laisse encore changer
   });
 });
 
-describe("§536 standing mastery per weapon (Tactical Master, issue #160)", () => {
+describe("§537 standing mastery per weapon (Tactical Master, issue #160)", () => {
   const options = ["sap", "push", "slow"];   // the weapon's own first, as dnd5e orders them
   it("uses the stored choice while the weapon offers it", () => {
     expect(standingMastery(options, "push")).toBe("push");

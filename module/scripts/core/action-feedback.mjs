@@ -82,7 +82,7 @@ const DEFAULTS = Object.freeze({
   formRevert: { success: CORE_SOUNDS.fade, failure: null },
   // Issue #31 : une potion de soins bue par une action — soin maximal.
   potionMax: { success: CORE_SOUNDS.chime, failure: null },
-  // §536 : a standing weapon mastery chosen (Tactical Master).
+  // §537 : a standing weapon mastery chosen (Tactical Master).
   standingMastery: { success: CORE_SOUNDS.tools, failure: null }
 });
 

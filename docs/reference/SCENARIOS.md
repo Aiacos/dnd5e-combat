@@ -191,7 +191,7 @@ la sélection sans rien jouer.
 | `main-libre` | Arène des refus | §409 | composante somatique, Mage de guerre, Neutralisé et sort long |
 | `maitre-de-guerre-2` |  | §90 | Attaque précise, Embuscade, Frappe commandée, Chassé-croisé, Balayage |
 | `maitre-de-guerre` |  | §87 | Croc-en-jambe, Attaque provocante (dé de supériorité, sauvegarde) |
-| `maitre-tacticien` |  | §536 | standing mastery per weapon, chosen from the token menu (issue #160) |
+| `maitre-tacticien` |  | §537 | standing mastery per weapon, chosen from the token menu (issue #160) |
 | `malediction` |  | §37 | caractéristique, attaques, actions, résilience |
 | `marche-interrompue` |  | §99 §166 | clic ailleurs, pause |
 | `marque-du-sacrifice` |  | §456 | retirée, elle laisse son Désavantage de Sagesse (leavesEffects) |

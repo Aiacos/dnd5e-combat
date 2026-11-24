@@ -1,5 +1,5 @@
 /**
- * §536 (issue #160) : the standing mastery of a weapon — Tactical Master (Fighter 9, PHB 2024) and any other source of bonus
+ * §537 (issue #160) : the standing mastery of a weapon — Tactical Master (Fighter 9, PHB 2024) and any other source of bonus
  * masteries let a weapon use Push, Sap or Slow instead of its own. The player chooses once per weapon, from the right-click menu of
  * their own token (GM side and player side) or of the weapon in the sheet's inventory (`dnd5e.getItemContextOptions`,
  * applications/components/inventory.mjs); the engine applies it at every attack (runtime/mastery.mjs) until it is changed.
@@ -40,13 +40,13 @@ export async function chooseStanding(item) {
   if ( choice ) await setStandingMastery(item, choice);
 }
 
-/** §536 : the entries of one's own token — one per weapon that offers a choice of mastery (only for an owner). */
+/** §537 : the entries of one's own token — one per weapon that offers a choice of mastery (only for an owner). */
 export function standingMasteryEntries(token) {
   if ( !token?.isOwner || !token.actor ) return [];
   return weaponsWithChoice(token.actor).map(item => ({ icon: "fa-solid fa-chess-knight", label: entryLabel(item), run: () => chooseStanding(item) }));
 }
 
-/** §536 : the same choice in the weapon's menu in the sheet's inventory. */
+/** §537 : the same choice in the weapon's menu in the sheet's inventory. */
 function onItemContext(item, options) {
   if ( !item?.isOwner || !Array.isArray(options) || (masteryChoicesOf(item).length < 2) ) return;
   options.push({ label: entryLabel(item), icon: "fa-solid fa-chess-knight", group: "action", onClick: () => chooseStanding(item) });

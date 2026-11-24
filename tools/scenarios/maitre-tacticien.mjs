@@ -1,5 +1,5 @@
 /**
- * Tactical Master (Fighter 9, PHB 2024; Core journal §536, issue #160), world `dnd-6`. The Fighter receives Tactical Master, lent
+ * Tactical Master (Fighter 9, PHB 2024; Core journal §537, issue #160), world `dnd-6`. The Fighter receives Tactical Master, lent
  * from the Player's Handbook compendium (its effect adds Push, Sap and Slow to `weaponProf.mastery.bonus`); the Bandit gets 300 HP.
  * Checks, with fast attacks (no dnd5e attack window):
  *  - the Fighter's own token menu offers « Mastery: <greatsword> (Graze) »; the choice window, answered « Sap », stores Sap on the

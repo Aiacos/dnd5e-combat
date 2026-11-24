@@ -144,7 +144,7 @@ export function masteryVerdict({ before=[], after=[], weapons={}, sources=[], al
 }
 
 /* -------------------------------------------- */
-/*  Standing mastery per weapon (§536, #160)    */
+/*  Standing mastery per weapon (§537, #160)    */
 /* -------------------------------------------- */
 
 /**
