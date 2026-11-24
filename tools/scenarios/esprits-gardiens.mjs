@@ -7,11 +7,11 @@
  * §438 : Manuel 3.0.0 — l'émanation est posée par l'activité utilitaire « Cast Spell » (`tevaatMC9LZxVPLS`), la sauvegarde est une activité
  * sœur sans zone, rejouée par la zone.
  * §531 (issue #142): SRD 5.2 — nothing when the Emanation appears (unlike Moonbeam's "When the Cylinder appears"): the Zombie two
- * squares away makes no save at the cast, saves at the end of its turn inside, then saves again when the caster's move brings the
- * Emanation into its space ("whenever the Emanation enters a creature's space").
+ * squares away makes no save at the cast, then saves at the end of its turn inside. (The zone here is a circle placed by the
+ * connector, not attached to the caster: the "Emanation enters a creature's space" case is played by `zone-sur-soi`.)
  */
 export default {
-  name: "esprits gardiens — rien à la pose, fin de tour du Zombi dans l'émanation, puis l'émanation entre dans son espace",
+  name: "esprits gardiens — rien à la pose, puis fin de tour du Zombi dans l'émanation",
 
   async run(ctx) {
     const mage = await ctx.token("Magicien");
@@ -63,21 +63,5 @@ export default {
     ctx.expect(!r.targets.some(x => (x.name === "Magicien") || ["Guerrier", "Paladin", "Clerc", "Roublard", "Occultiste", "Ensorceleur"].includes(x.name)),
       `neither the caster nor an ally is affected (${r.targets.map(x => x.name).join(", ")})`);
 
-    // §531: "whenever the Emanation enters a creature's space" — the Zombie steps out, a new turn starts, the caster walks up to it.
-    await ctx.call("move-token", { tokenId: zombi.id, x: mPos.x - 6 * grid, y: mPos.y, elevation: mPos.elevation });
-    await ctx.nextTurn();
-    await new Promise(r => setTimeout(r, 1500));
-    ctx.restore(() => ctx.call("move-token", { tokenId: mage.id, x: mPos.x, y: mPos.y, elevation: mPos.elevation }).catch(() => {}));
-    const beforeMove = await ctx.lastMessageId();
-    await ctx.call("move-token", { tokenId: mage.id, x: mPos.x - 3 * grid, y: mPos.y, elevation: mPos.elevation });
-    let entered = null;
-    for ( let i = 0; i < 6 && !entered; i++ ) {
-      await new Promise(r => setTimeout(r, 1000));
-      entered = (await ctx.messagesSince(beforeMove)).find(m => (m.type === "usage") && (m.flags?.["dnd5e-combat"]?.areaTick?.event === "enter"));
-    }
-    ctx.expect(!!entered, "the caster moves: the Emanation enters the Zombie's space and the save replays");
-    if ( !entered ) return;
-    const e = (await ctx.settle(entered.id)).targets.find(x => x.name === "Zombi");
-    ctx.expect(!!e?.save, `the Zombie saves when the Emanation reaches it (${e?.save?.total ?? "—"}, ${e?.damage?.applied ?? 0} damage)`);
   }
 };

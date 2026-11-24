@@ -5,7 +5,8 @@
  * ici l'émanation naît d'elle-même, rattachée au lanceur (le Zombi, déplacé à côté, ne sauvegarde pas à la pose : §531).
  * Le même geste pour une capacité de créature (émanation sans emplacement) se joue dans le dépôt du module qui la livre.
  * §438 : Manuel 3.0.0 — l'émanation est posée par « Cast Spell » (`tevaatMC9LZxVPLS`).
- * §531 (issue #142): SRD 5.2 — nothing happens when the Emanation appears: the Zombie, already inside, makes no save at the cast.
+ * §531 (issue #142): SRD 5.2 — nothing happens when the Emanation appears: the Zombie, already inside, makes no save at the cast;
+ * it saves when the caster walks up and the attached Emanation enters its space ("whenever the Emanation enters a creature's space").
  */
 export default {
   name: "zone sur soi — émanation posée sur le lanceur sans clic (Esprits gardiens)",
@@ -51,5 +52,23 @@ export default {
     const ticks = (await ctx.messagesSince(since)).filter(m => (m.type === "usage") && (m.flags?.["dnd5e-combat"]?.areaTick?.event === "enter"));
     ctx.expect(!ticks.length, `no "enter" replay when the Emanation appears (${ticks.length})`);
     ctx.expect((await ctx.hp(zombi)) === 100, `the Zombie, two squares away, takes nothing at the cast (${await ctx.hp(zombi)} HP)`);
+
+    // §531: the Zombie steps out of the Emanation, then the caster walks up to it — the attached Emanation enters its space.
+    await ctx.call("move-token", { tokenId: zombi.id, x: cPos.x - 6 * grid, y: cPos.y, elevation: cPos.elevation });
+    await new Promise(r => setTimeout(r, 1500));
+    ctx.restore(() => ctx.call("move-token", { tokenId: caster.id, x: cPos.x, y: cPos.y, elevation: cPos.elevation }).catch(() => {}));
+    const beforeMove = await ctx.lastMessageId();
+    await ctx.call("move-token", { tokenId: caster.id, x: cPos.x - 3 * grid, y: cPos.y, elevation: cPos.elevation });
+    let entered = null;
+    for ( let i = 0; i < 8 && !entered; i++ ) {
+      await new Promise(r => setTimeout(r, 1000));
+      entered = (await ctx.messagesSince(beforeMove)).find(m => (m.type === "usage") && (m.flags?.["dnd5e-combat"]?.areaTick?.event === "enter"));
+    }
+    ctx.expect(!!entered, `${caster.name} moves: the Emanation enters the Zombie's space and the save replays`);
+    if ( !entered ) return;
+    const r = await ctx.settle(entered.id);
+    const e = r.targets.find(x => x.name === "Zombi");
+    ctx.expect(!!e?.save, `the Zombie saves when the Emanation reaches it (${e?.save?.total ?? "—"}, ${e?.damage?.applied ?? 0} damage)`);
+    ctx.expect(!r.targets.some(t => t.name === caster.name), "the caster is not affected");
   }
 };
