@@ -59,16 +59,17 @@ export default {
     ctx.restore(() => ctx.call("move-token", { tokenId: caster.id, x: cPos.x, y: cPos.y, elevation: cPos.elevation }).catch(() => {}));
     const beforeMove = await ctx.lastMessageId();
     await ctx.call("move-token", { tokenId: caster.id, x: cPos.x - 3 * grid, y: cPos.y, elevation: cPos.elevation });
-    let entered = null;
-    for ( let i = 0; i < 8 && !entered; i++ ) {
+    // Other creatures on the way may be reached too: one "enter" replay per creature, find the Zombie's.
+    let e = null, replays = [];
+    for ( let i = 0; i < 8 && !e; i++ ) {
       await new Promise(r => setTimeout(r, 1000));
-      entered = (await ctx.messagesSince(beforeMove)).find(m => (m.type === "usage") && (m.flags?.["dnd5e-combat"]?.areaTick?.event === "enter"));
+      replays = (await ctx.messagesSince(beforeMove)).filter(m => (m.type === "usage") && (m.flags?.["dnd5e-combat"]?.areaTick?.event === "enter"));
+      for ( const m of replays ) {
+        const r = await ctx.settle(m.id).catch(() => null);
+        e = r?.targets?.find(x => x.name === "Zombi") ?? null;
+        if ( e ) { ctx.expect(!r.targets.some(t => t.name === caster.name), "the caster is not affected"); break; }
+      }
     }
-    ctx.expect(!!entered, `${caster.name} moves: the Emanation enters the Zombie's space and the save replays`);
-    if ( !entered ) return;
-    const r = await ctx.settle(entered.id);
-    const e = r.targets.find(x => x.name === "Zombi");
-    ctx.expect(!!e?.save, `the Zombie saves when the Emanation reaches it (${e?.save?.total ?? "—"}, ${e?.damage?.applied ?? 0} damage)`);
-    ctx.expect(!r.targets.some(t => t.name === caster.name), "the caster is not affected");
+    ctx.expect(!!e?.save, `${caster.name} moves: the Emanation enters the Zombie's space and it saves (${e?.save?.total ?? "—"}, ${e?.damage?.applied ?? 0} damage; ${replays.length} "enter" replay(s))`);
   }
 };
