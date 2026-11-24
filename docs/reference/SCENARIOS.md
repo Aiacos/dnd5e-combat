@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-410 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+411 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -159,6 +159,7 @@ la sélection sans rien jouer.
 | `frappe-occulte` |  | §47 | proposée au toucher, emplacement de pacte, À terre, une fois par tour |
 | `frappe-piegeuse` |  | §206 | proposée après un coup d'arme, jet de Force, Avantage des créatures Grandes |
 | `furtivite-bg3` |  | §184 | BG3 : repéré en pleine lumière, tests à l'entrée dans le noir, doute puis repéré |
+| `furtivite-localisee` | Arène de la vision |  | vibrations : case connue d'une créature cachée, non vue, toujours cachée (#107) |
 | `furtivite-repaire` | Redbrand Hideout [30x20] | §184 §186 | BG3 dans le repaire : pièce sombre, doute puis repéré, pièce éclairée |
 | `furtivite` |  | §15.2 §185 | caché (DD, invisible pour les ennemis seuls), fin à l'attaque et au sort verbal |
 | `guerrier` |  | §21 | Fougue, Décalage tactique, Attaques avisées, Héros du champ d'honneur, Armes à deux mains, Armes de jet |
