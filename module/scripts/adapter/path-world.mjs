@@ -137,6 +137,72 @@ const SEARCH_RADIUS = 80;   // cases : au-delà, on ne cherche pas
 const CLIMB_RADIUS = 12;
 
 /**
+ * Issue #92 : où dnd5e peut-il trouver un occupant ? `TokenLayer5e` cherche dans le quadtree des tokens ceux dont le rectangle
+ * touche la case, puis ne garde que ceux dont les cases occupées (`TokenDocument#getOccupiedGridSpaceOffsets`, position
+ * enregistrée) contiennent la case demandée. Les rectangles sont relevés une fois (un pixel de marge) ; les cases occupées
+ * d'un token ne sont calculées que si l'on demande une case que son rectangle touche.
+ * @param {TokenLayer} layer
+ * @param {Token} self        Le token qui se déplace (dnd5e l'écarte lui-même).
+ * @param {SquareGrid} grid
+ * @returns {((cell: {i: number, j: number}) => boolean)|null}  « un autre token occupe peut-être cette case » ; null : la
+ *   couche ne se lit pas, on ne sait rien et l'on demande tout à dnd5e.
+ */
+export function occupancyIndex(layer, self, grid) {
+  const near = new Map();
+  for ( const other of layer?.placeables ?? [] ) {
+    if ( other === self ) continue;
+    const b = other.bounds;
+    if ( !b || ![b.x, b.y, b.width, b.height].every(Number.isFinite) ) return null;
+    const first = grid.getOffset({ x: b.x - 1, y: b.y - 1 });
+    const last = grid.getOffset({ x: b.x + b.width + 1, y: b.y + b.height + 1 });
+    for ( let i = first.i; i <= last.i; i++ ) for ( let j = first.j; j <= last.j; j++ ) {
+      const key = cellKey({ i, j });
+      if ( !near.has(key) ) near.set(key, []);
+      near.get(key).push(other);
+    }
+  }
+  const occupied = new Map();
+  const occupies = (other, key) => {
+    if ( !occupied.has(other) ) {
+      let cells = null;   // null : ce token ne se lit pas — dnd5e répondra
+      try {
+        const offsets = other.document.getOccupiedGridSpaceOffsets(other.document._source);
+        cells = new Set(offsets.map(c => cellKey({ i: c.i, j: c.j })));
+      }
+      catch { cells = null; }
+      occupied.set(other, cells);
+    }
+    const cells = occupied.get(other);
+    return !cells || cells.has(key);
+  };
+  return cell => {
+    const key = cellKey(cell);
+    return (near.get(key) ?? []).some(other => occupies(other, key));
+  };
+}
+
+/**
+ * Issue #92 : aucune arête (mur, bord de source) du niveau dans le rectangle d'un pas — le test de collision du cœur n'y
+ * trouverait rien. Deux pixels de marge (le cœur arrondit l'origine et l'arrivée). Les bords de la scène ne sont pas dans le
+ * quadtree des arêtes : le pas doit tenir tout entier dans le rectangle de la scène (un pas qui en sort ou y rentre les
+ * percute). Sans le quadtree des arêtes : false.
+ * @param {CanvasEdges|null} edges   Les arêtes du niveau (`Level#edges`).
+ * @param {{x: number, y: number}} from
+ * @param {{x: number, y: number}} to
+ * @param {PIXI.Rectangle} within    Le rectangle de la scène (`canvas.dimensions.sceneRect`).
+ */
+export function noEdgeBetween(edges, from, to, within) {
+  if ( typeof edges?.getEdges !== "function" ) return false;
+  if ( !within?.contains(from.x, from.y) || !within.contains(to.x, to.y) ) return false;
+  const x = Math.min(from.x, to.x) - 2;
+  const y = Math.min(from.y, to.y) - 2;
+  try {
+    const rect = new PIXI.Rectangle(x, y, Math.abs(from.x - to.x) + 4, Math.abs(from.y - to.y) + 4);
+    return edges.getEdges(rect, { includeInnerBounds: false, includeOuterBounds: false }).size === 0;
+  } catch { return false; }
+}
+
+/**
  * §18.25 : une porte que le chemin peut franchir en l'ouvrant — fermée, non verrouillée, et pour un joueur ni secrète (il
  * ne la voit pas) ni hors de son droit « WALL_DOORS » ou en pause (door-control.mjs, `_onMouseDown`). Le mur (placeable) ou
  * son document : en V14 l'arête d'un mur porte le DOCUMENT (`Edge#object`, client/documents/wall.mjs:164-166).
@@ -203,13 +269,32 @@ export function worldFor(token, { throughDoors=false }={}) {
 
   const layer = canvas.tokens;
   const backend = CONFIG.Canvas.polygonBackends.move;
+  // Issue #92 : sur terrain dégagé, le coût fixe d'un chemin était celui des questions posées à dnd5e pour chaque case
+  // (`isOccupiedGridSpaceBlocking`, `isOccupiedGridSpaceDifficult` : une recherche dans le quadtree des tokens, puis le hook).
+  // Là où aucun autre token n'occupe la case, dnd5e ne trouverait personne et sa réponse se réduit à son hook, appelé ici avec
+  // le même ensemble vide (un autre module peut toujours y ajouter un occupant).
+  const mayHold = occupancyIndex(layer, object, grid);
+  const occupiedBlocking = (cell, k) => {
+    const space = { ...cell, k };
+    if ( !mayHold || mayHold(cell) ) return layer.isOccupiedGridSpaceBlocking?.(space, object, { preview }) === true;
+    const found = new Set();
+    Hooks.callAll("dnd5e.determineOccupiedGridSpaceBlocking", space, object, { preview }, found);
+    return found.size > 0;
+  };
+  const occupiedDifficult = (cell, k) => {
+    const space = { ...cell, k };
+    if ( !mayHold || mayHold(cell) ) return layer.isOccupiedGridSpaceDifficult?.(space, object, { preview }) === true;
+    const found = new Set();
+    Hooks.callAll("dnd5e.determineOccupiedGridSpaceDifficult", space, object, { preview }, found);
+    return found.size > 0;
+  };
   const blockedCache = new Map();
   const blocked = cell => {
     if ( intangible ) return false;
     const id = `${cellKey(cell)}@${cell.level ?? ownLevel}`;
     if ( !blockedCache.has(id) ) {
       const k = kOf(cell);
-      blockedCache.set(id, cellsOf(cell).some(c => layer.isOccupiedGridSpaceBlocking?.({ ...c, k }, object, { preview }) === true));
+      blockedCache.set(id, cellsOf(cell).some(c => occupiedBlocking(c, k)));
     }
     return blockedCache.get(id);
   };
@@ -218,6 +303,7 @@ export function worldFor(token, { throughDoors=false }={}) {
   // resté en bas quand la vue du MJ a suivi le meneur à l'étage — est donc jugé sur les murs de son niveau à lui, par le
   // polygone de ce niveau, comme une case d'un autre niveau ; sans ouvrir de porte (le test de porte est celui du token).
   const ownViewed = (canvas.level?.id ?? ownLevel) === ownLevel;
+  const ownEdges = scene.levels?.get?.(ownLevel)?.edges ?? null;
   // §225, lot 3 : dans le plan Éthéré, seuls les murs qui arrêtent le voyage éthéré (Mur de force, Cage de force) comptent.
   const ethereal = isEthereal(token);
   /** Un mur entre deux cases voisines ? Dans le niveau du token par le test du token ; ailleurs par le polygone du niveau. */
@@ -225,6 +311,8 @@ export function worldFor(token, { throughDoors=false }={}) {
     const c = center(to);
     if ( ethereal ) return etherealWallBetween(scene, center(from), c, to.level ?? ownLevel);
     if ( isOwn(to) && ownViewed ) {
+      // Issue #92 : aucune arête du niveau dans le rectangle du pas — rien à percuter, sans construire le polygone du cœur.
+      if ( noEdgeBetween(ownEdges, center(from), c, rect) ) return false;
       if ( !object.checkCollision(c, { origin: center(from), type: "move", mode: "any" }) ) return false;
       return !(throughDoors && doorBetween(from, to));
     }
@@ -419,7 +507,8 @@ export function worldFor(token, { throughDoors=false }={}) {
     wallFree: (from, to) => !wallBetween(from, to),
     doorBetween: (from, to) => (throughDoors && isOwn(to) && ownViewed ? doorBetween(from, to) : null),
     // Une porte à ouvrir coûte une case de plus à l'A* : on ne la préfère qu'au détour qu'elle évite.
-    stepCost: (from, to) => (throughDoors && isOwn(to) && ownViewed && doorBetween(from, to) ? 1 : 0) + ((difficultAt(to) || cellsOf(to).some(c => layer.isOccupiedGridSpaceDifficult?.({ ...c, k: kOf(to) }, object, { preview }))) ? 2 : 1)
+    stepCost: (from, to) => (throughDoors && isOwn(to) && ownViewed && doorBetween(from, to) ? 1 : 0)
+      + ((difficultAt(to) || cellsOf(to).some(c => occupiedDifficult(c, kOf(to)))) ? 2 : 1)
       + (avoidAt(to) ? AVOID_COST : 0),
     transitions,
     waypoint: cell => ({ ...grid.getTopLeftPoint(cell), snapped: true, ...altitude(cell) }),
