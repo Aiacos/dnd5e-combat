@@ -584,6 +584,7 @@
   "DND5ECOMBAT.Action.disengage.Texte": "Action: until the end of the turn, your movement doesn't provoke Opportunity Attacks.",
   "DND5ECOMBAT.Action.dodge.Nom": "Dodge",
   "DND5ECOMBAT.Action.dodge.Texte": "Action: until the start of your next turn, attack rolls against you have Disadvantage if you can see the attacker, and you have Advantage on Dexterity saving throws. The effect ends if you have the Incapacitated condition or your Speed drops to 0.",
+  "DND5ECOMBAT.Souci.lightExtraUsed": "Off-hand attack: the Light property's extra attack was already made this turn (with Nick, it is part of the Attack action, not an extra one).",
   "DND5ECOMBAT.Souci.noLightAttack": "Off-hand attack: you must first attack with a Light weapon as part of the Attack action this turn.",
   "DND5ECOMBAT.Souci.loading": "Loading: this weapon fires only one piece of ammunition per action, whatever the number of attacks you can make.",
   "DND5ECOMBAT.Menu.MainSecondaire": "Attack (off hand): {name}",

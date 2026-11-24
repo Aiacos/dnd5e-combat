@@ -582,6 +582,7 @@
   "DND5ECOMBAT.Action.disengage.Texte": "Azione: fino alla fine del turno, il tuo movimento non provoca Attacchi di Opportunità.",
   "DND5ECOMBAT.Action.dodge.Nom": "Schivata",
   "DND5ECOMBAT.Action.dodge.Texte": "Azione: fino all'inizio del tuo turno successivo, i tiri per colpire contro di te hanno Svantaggio se puoi vedere l'attaccante, e hai Vantaggio ai tiri salvezza su Destrezza. L'effetto termina se hai la condizione Incapacitato o se la tua Velocità scende a 0.",
+  "DND5ECOMBAT.Souci.lightExtraUsed": "Attacco con la mano secondaria: l'attacco extra della proprietà Leggera è già stato effettuato in questo turno (con la maestria Nick fa parte dell'azione Attacco, non se ne aggiunge un altro).",
   "DND5ECOMBAT.Souci.noLightAttack": "Attacco con la mano secondaria: devi prima attaccare con un'arma Leggera come parte dell'azione Attacco in questo turno.",
   "DND5ECOMBAT.Souci.loading": "Ricarica: quest'arma tira una sola munizione per azione, a prescindere dal numero di attacchi che puoi effettuare.",
   "DND5ECOMBAT.Menu.MainSecondaire": "Attacca (mano secondaria): {name}",

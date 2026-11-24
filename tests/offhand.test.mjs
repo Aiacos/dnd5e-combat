@@ -22,17 +22,37 @@ describe("attaque de la main secondaire (§15.2, propriété Légère)", () => {
     expect(after.bonus).toBe(0);
     expect(after.action).toBe(b.action);
     expect(after.attacks).toEqual(b.attacks);
-    expect(checkUse(after, offhand, mine)).toEqual(["noBonus"]);
+    expect(checkUse(after, offhand, mine)).toEqual(["lightExtraUsed", "noBonus"]);
   });
 
-  it("Coup double : gratuite une fois par tour, puis l'action Bonus", () => {
+  it("Nick: the Light extra attack is free once, then a second off-hand attack is refused (forceable, Bonus Action) — §532", () => {
     const b = spendUse(freshBudget(), dagger, mine);
     expect(effectiveCost(b, offhandNick)).toBe(null);
+    expect(checkUse(b, offhandNick, mine)).toEqual([]);
     const once = spendUse(b, offhandNick, mine);
     expect(once.bonus).toBe(1);
     expect(once.nickUsed).toBe(true);
+    expect(once.offhandUsed).toBe(true);
+    // SRD 5.2: Nick moves the one extra attack into the Attack action; it does not add another.
+    expect(checkUse(once, offhandNick, mine)).toEqual(["lightExtraUsed"]);
+    expect(checkUse(once, offhand, mine)).toEqual(["lightExtraUsed"]);
+    // Forced anyway: it costs the Bonus Action.
     expect(effectiveCost(once, offhandNick)).toBe("bonus");
     expect(spendUse(once, offhandNick, mine).bonus).toBe(0);
+  });
+
+  it("Bonus Action off-hand attack first: Nick does not open a second, free one — §532", () => {
+    const b = spendUse(freshBudget(), dagger, mine);
+    const bonus = spendUse(b, offhand, mine);
+    expect(bonus.offhandUsed).toBe(true);
+    expect(effectiveCost(bonus, offhandNick)).toBe("bonus");
+    expect(checkUse(bonus, offhandNick, mine)).toEqual(["lightExtraUsed", "noBonus"]);
+  });
+
+  it("budget stored before §532 (nickUsed without offhandUsed): still refused", () => {
+    const legacy = { ...spendUse(freshBudget(), dagger, mine), nickUsed: true };
+    delete legacy.offhandUsed;
+    expect(checkUse(legacy, offhandNick, mine)).toEqual(["lightExtraUsed"]);
   });
 
   it("hors de son tour : signalée", () => {

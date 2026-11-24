@@ -291,13 +291,16 @@ export async function skillAid({ tokenId, helperTokenId, kind, skill=null, tool=
   return { granted, guided };
 }
 
-/** Ce qui cloche dans une utilisation (légalité du tour, états), sans l'utiliser ; `cost` force le coût (« bonus », « reaction »). */
-export function issues({ tokenId, itemId, activityType=null, activityId=null, cost=null }) {
+/**
+ * Ce qui cloche dans une utilisation (légalité du tour, états), sans l'utiliser ; `cost` force le coût (« bonus », « reaction »).
+ * `attackMode`: dnd5e's attack mode, as chosen by the click (§532: `offhand`, the Light extra attack).
+ */
+export function issues({ tokenId, itemId, activityType=null, activityId=null, cost=null, attackMode=null }) {
   const item = viewedToken({ tokenId }).actor?.items.get(itemId);
   const activity = activityId ? item?.system.activities.get(activityId)
     : item?.system.activities.find(a => !activityType || (a.type === activityType));
   if ( !activity ) throw new Error("activity not found");
-  const use = useIssues(activity, { cost });
+  const use = useIssues(activity, { cost, attackMode });
   // K5 (§326) : les soucis d'une action légendaire (son tour, plus d'action, une par tour).
   return [...use.lines, ...legendaryIssues(activity, use.combatant, use.own)];
 }

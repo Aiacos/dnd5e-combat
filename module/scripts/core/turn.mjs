@@ -49,6 +49,7 @@ export function freshBudget({ reactions=1 }={}) {
     lightAttack: false,
     loadedFired: false,   // O5a (§339) : une arme à Chargement a tiré dans l'action Attaquer en cours (« un seul projectile par action »)   // §15.2 : une attaque d'arme Légère faite dans l'action Attaquer ouvre l'attaque de la main secondaire
     nickUsed: false,      // Coup double : l'attaque de la main secondaire, sans action Bonus, une fois par tour
+    offhandUsed: false,   // §532: the Light property's extra attack (off-hand) was made this turn, with Nick or with the Bonus Action
     readied: false,       // Intention (Ready) : une action préparée, jouée plus tard par la réaction
     multi: null,  // M1 (§18.6) : Attaques multiples ouvertes ce tour — { plan, used: [clés de chaque utilisation] }
     climbed: 0,  // P2 : hauteur franchie par un escalier ou une échelle, en unités de la grille (le cœur ne la retient pas : « displace »)
@@ -109,7 +110,8 @@ export function zoneMoveCost(rule, activationType) {
  * avec Coup double se fait dans l'action Attaquer (gratuite), une fois par tour ; sinon l'action Bonus.
  */
 export function effectiveCost(budget, request) {
-  if ( request.offhand ) return (request.nick && !budget.nickUsed) ? null : "bonus";
+  // §532: Nick moves the single Light extra attack into the Attack action; once made (either way), any further one costs the Bonus Action.
+  if ( request.offhand ) return (request.nick && !budget.nickUsed && !budget.offhandUsed) ? null : "bonus";
   // §236 : Pas véloce — Pas du vent offert par une action Bonus prise plus tôt ce tour-ci.
   if ( (request.fleetStep === "free") && budget.fleetStep ) return null;
   return request.cost;
@@ -147,12 +149,15 @@ function coveredByMultiattack(budget, request) {
  * @param {object} budget
  * @param {UseRequest} request
  * @param {{isOwnTurn: boolean}} context
- * @returns {Array<"notYourTurn"|"noAction"|"noBonus"|"noReaction"|"slotAlreadyCast"|"noLightAttack"|"loading">}
+ * @returns {Array<"notYourTurn"|"noAction"|"noBonus"|"noReaction"|"slotAlreadyCast"|"noLightAttack"|"lightExtraUsed"|"loading">}
  */
 export function checkUse(budget, request, { isOwnTurn, turnKey=null }) {
   const issues = [];
   // Règle 2024 (propriété Légère) : il faut avoir attaqué avec une arme Légère dans l'action Attaquer ce tour-ci.
   if ( request.offhand && !budget.lightAttack ) issues.push("noLightAttack");
+  // §532 (SRD 5.2, Light and Nick): one extra attack per turn — Nick only moves it into the Attack action, it does not add one.
+  // Forceable like every budget issue (a feature granting a separate Bonus Action attack, e.g. Dual Wielder, is not modelled).
+  if ( request.offhand && (budget.offhandUsed || budget.nickUsed) ) issues.push("lightExtraUsed");
   // O5a (§339) : Chargement — « un seul projectile quand vous utilisez une action […] pour tirer, quel que soit le nombre d'attaques ».
   if ( request.loading && budget.loadedFired && coveredByAttackAction(budget, request) ) issues.push("loading");
   // Un geste que l'intention déclare gratuit (§16.27 : un rayon enchaîné, un rebond) ne demande rien — ni action, ni tour, ni emplacement.
@@ -195,7 +200,7 @@ export function onlyCantripsIssue(rule, spell, cost) {
 export function spendUse(budget, request, { isOwnTurn, attacksPerAction, turnKey=null }) {
   if ( request.offhand ) {
     const cost = effectiveCost(budget, request);
-    return cost ? { ...budget, bonus: Math.max(0, budget.bonus - 1) } : { ...budget, nickUsed: true };
+    return cost ? { ...budget, bonus: Math.max(0, budget.bonus - 1), offhandUsed: true } : { ...budget, nickUsed: true, offhandUsed: true };
   }
   if ( !request.cost ) return budget;
   if ( (request.fleetStep === "free") && budget.fleetStep ) return { ...budget, fleetStep: false };
@@ -259,7 +264,7 @@ export function refundUse(current, before, after) {
   next.attacks.used = Math.max(0, next.attacks.used - usedDelta);
   // La première attaque avait ouvert l'action Attaquer : si plus rien n'en est utilisé, on la referme.
   if ( (after.attacks?.granted !== before.attacks?.granted) && (next.attacks.used === 0) ) next.attacks.granted = before.attacks?.granted ?? 0;
-  for ( const flag of ["slotCast", "nickUsed", "lightAttack", "fleetStep"] ) if ( !before[flag] && after[flag] ) next[flag] = false;
+  for ( const flag of ["slotCast", "nickUsed", "offhandUsed", "lightAttack", "fleetStep"] ) if ( !before[flag] && after[flag] ) next[flag] = false;
   if ( before.fleetStep && !after.fleetStep ) next.fleetStep = true;   // §236 : le Pas du vent offert est rendu
   // M1 : l'utilisation rendue sort des Attaques multiples ; si c'est elle qui les avait ouvertes et qu'il n'en reste rien, on les referme.
   if ( after.multi && (JSON.stringify(after.multi) !== JSON.stringify(before.multi)) && current.multi ) {

@@ -532,6 +532,7 @@
   "DND5ECOMBAT.Action.disengage.Texte": "Ação: até o fim do turno, seu deslocamento não provoca Ataques de Oportunidade.",
   "DND5ECOMBAT.Action.dodge.Nom": "Esquivar",
   "DND5ECOMBAT.Action.dodge.Texte": "Ação: até o início do seu próximo turno, jogadas de ataque contra você têm Desvantagem se você puder ver o atacante, e você tem Vantagem em salvaguardas de Destreza. O efeito termina se você ficar Incapacitado ou seu Deslocamento chegar a 0.",
+  "DND5ECOMBAT.Souci.lightExtraUsed": "Ataque com a mão secundária: o ataque extra da propriedade Leve já foi feito neste turno (com a maestria Nick, ele faz parte da ação Atacar, não é um ataque a mais).",
   "DND5ECOMBAT.Souci.noLightAttack": "Ataque com a mão secundária: você precisa primeiro atacar com uma arma Leve usando a ação Atacar neste turno.",
   "DND5ECOMBAT.Menu.MainSecondaire": "Atacar (mão secundária): {name}",
   "DND5ECOMBAT.Reglage.provideBasicActions.Nom": "Adicionar ações básicas aos personagens",
