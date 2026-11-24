@@ -142,3 +142,36 @@ export function masteryVerdict({ before=[], after=[], weapons={}, sources=[], al
   if ( removed > Math.max(0, Number(allowance) || 0) ) return verdict("changes");
   return verdict(null);
 }
+
+/* -------------------------------------------- */
+/*  Standing mastery per weapon (§536, #160)    */
+/* -------------------------------------------- */
+
+/**
+ * Tactical Master (Fighter 9, PHB 2024) and any other source of bonus masteries (dnd5e `weaponProf.mastery.bonus`): when the
+ * weapon offers more than one mastery, the player picks one once per weapon and the engine uses it at every attack, until they change
+ * it (user's choice on issue #160, option 3: no question at each attack).
+ *
+ * The mastery an attack with this weapon uses: the stored choice when the weapon still offers it, otherwise the weapon's own (the
+ * first option, as dnd5e orders them). Null when there is nothing to choose (no option, or only the weapon's own): dnd5e keeps its
+ * default.
+ * @param {string[]|null} options   The weapon's mastery options, its own first (dnd5e `masteryOptions` values).
+ * @param {string|null} chosen      The stored choice.
+ * @returns {string|null}
+ */
+export function standingMastery(options, chosen) {
+  if ( !Array.isArray(options) || (options.length < 2) ) return null;
+  return options.includes(chosen) ? chosen : options[0];
+}
+
+/**
+ * The value to store for a new choice: null when it is the weapon's own mastery (nothing to remember), the choice otherwise. An
+ * option the weapon does not offer is refused (`undefined`).
+ * @param {string[]|null} options
+ * @param {string|null} choice
+ * @returns {string|null|undefined}
+ */
+export function standingChoiceToStore(options, choice) {
+  if ( !Array.isArray(options) || !options.includes(choice) ) return undefined;
+  return (choice === options[0]) ? null : choice;
+}

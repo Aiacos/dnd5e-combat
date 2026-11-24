@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { masteryEffect, grazeDamage, toppleDC, cleaveModifier, markExpires, MASTERIES, masterySources, masterySlots, restChanges, removedCount,
-  masteryVerdict, allowanceLeft } from "../module/scripts/core/mastery.mjs";
+  masteryVerdict, allowanceLeft, standingMastery, standingChoiceToStore } from "../module/scripts/core/mastery.mjs";
 import { RESOLUTION_BASE } from "./helpers.mjs";
 
 const hit = { hit: true, damaged: true, melee: true, size: "med", down: false };
@@ -225,5 +225,29 @@ describe("§510 fenêtre des bottes : ce que le Repos long laisse encore changer
     expect(allowanceLeft(1, ["a"], ["a", "b"])).toBe(1);
     expect(allowanceLeft(1, ["a", "b"], [])).toBe(0);
     expect(allowanceLeft(undefined, ["a"], ["b"])).toBe(0);
+  });
+});
+
+describe("§536 standing mastery per weapon (Tactical Master, issue #160)", () => {
+  const options = ["sap", "push", "slow"];   // the weapon's own first, as dnd5e orders them
+  it("uses the stored choice while the weapon offers it", () => {
+    expect(standingMastery(options, "push")).toBe("push");
+    expect(standingMastery(options, "slow")).toBe("slow");
+  });
+  it("falls back to the weapon's own mastery without a choice, or when the choice is no longer offered", () => {
+    expect(standingMastery(options, null)).toBe("sap");
+    expect(standingMastery(["sap"], "push")).toBe(null);
+    expect(standingMastery(["graze", "push"], "slow")).toBe("graze");
+  });
+  it("nothing to choose: leaves dnd5e's default", () => {
+    expect(standingMastery(null, "push")).toBe(null);
+    expect(standingMastery([], "push")).toBe(null);
+    expect(standingMastery(["sap"], null)).toBe(null);
+  });
+  it("stores nothing for the weapon's own mastery, refuses an option the weapon lacks", () => {
+    expect(standingChoiceToStore(options, "sap")).toBe(null);
+    expect(standingChoiceToStore(options, "push")).toBe("push");
+    expect(standingChoiceToStore(options, "topple")).toBe(undefined);
+    expect(standingChoiceToStore(null, "push")).toBe(undefined);
   });
 });

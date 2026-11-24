@@ -18,7 +18,8 @@ import { MODULE_ID } from "../constants.mjs";
 import { fromTrusted } from "../core/requests.mjs";
 import { STEPS } from "../core/action.mjs";
 import { masteryEffect, grazeDamage, toppleDC, cleaveModifier, markExpires } from "../core/mastery.mjs";
-import { masteryOf, attackModOf, marksOn, markData, markModifiers } from "../adapter/mastery.mjs";
+import { masteryOf, attackModOf, marksOn, markData, markModifiers, standingMasteryOf, storeStanding, masteryLabel } from "../adapter/mastery.mjs";
+import { tokenOf } from "../adapter/facts.mjs";
 import { currentTurnKey, combatSceneActors, speakerTokenOf, turnKeyAt } from "../adapter/turn.mjs";
 import { pushAway } from "../adapter/movement.mjs";
 import { readUnitFactors } from "../adapter/units.mjs";
@@ -234,6 +235,45 @@ async function onCleaveUsed(message) {
   if ( actor && key ) await actor.setFlag(MODULE_ID, "cleaveTurn", key);
 }
 
+/* -------------------------------------------- */
+/*  Standing mastery per weapon (§536, #160)    */
+/* -------------------------------------------- */
+
+/**
+ * §536 : on every attack roll (`dnd5e.preRollAttackV2`, before the configuration window, which dnd5e skips with fast attacks), the
+ * weapon's standing choice becomes `config.mastery`; dnd5e reads it in `_buildAttackConfig` (documents/activity/attack.mjs) and records
+ * it on the attack message (`system.mastery`), which the rest of this file plays. A mastery already given by the caller is kept.
+ */
+function onPreRollAttack(config) {
+  if ( config?.mastery ) return true;
+  const item = config?.subject?.item;
+  const mastery = standingMasteryOf(item);
+  if ( !mastery ) return true;
+  config.mastery = mastery;
+  log(`standing mastery: ${item.name} attacks with ${mastery}`);
+  return true;
+}
+
+/**
+ * §536 : store the standing mastery of a weapon (menu of the token or of the sheet), with feedback for the whole table. Returns the
+ * mastery now used, or null when the weapon does not offer `choice`.
+ * @param {Item5e} item
+ * @param {string} choice   A mastery key among the weapon's options.
+ */
+export async function setStandingMastery(item, choice) {
+  if ( !item?.isOwner ) return null;
+  const used = await storeStanding(item, choice);
+  const token = tokenOf(item.actor);
+  if ( used === undefined ) {
+    if ( token ) notice(token, loc("Botte.Permanente.Refus", { weapon: item.name }));
+    return null;
+  }
+  if ( token ) notice(token, { key: "Botte.Permanente.Retour", data: { weapon: item.name, mastery: masteryLabel(used) } }, "gain",
+    { all: true, action: "standingMastery", outcome: "success" });
+  log(`standing mastery: ${item.actor?.name} - ${item.name} now uses ${used}`);
+  return used;
+}
+
 export function registerMastery() {
   // Sur tous les clients : c'est celui du joueur de la cible qui lance sa sauvegarde.
   CONFIG.queries[TOPPLE_QUERY] = rollToppleSave;
@@ -245,4 +285,5 @@ export function registerMastery() {
   }, { executor: true, label: "weapon mastery: mark not used up" });
   route("combatTurnChange", onTurnChange, { executor: true, label: "weapon mastery: mark not removed" });
   route("dnd5e.preRollDamageV2", onPreRollDamage, { cancellable: true, label: "Cleave: modifier" });
+  route("dnd5e.preRollAttackV2", onPreRollAttack, { cancellable: true, label: "standing mastery not applied" });
 }

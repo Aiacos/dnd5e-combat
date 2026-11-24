@@ -108,6 +108,7 @@ import { registerElevationSpells } from "./runtime/elevation-spells.mjs";
 import { registerCureUi } from "./ui/cure.mjs";
 import { registerWallSideUi } from "./ui/wall-side.mjs";
 import { registerKindleUi } from "./ui/kindle.mjs";
+import { registerStandingMasteryUi } from "./ui/standing-mastery.mjs";
 import { registerSkillAid } from "./runtime/skill-aid.mjs";
 import { registerSkillAidUi } from "./ui/skill-aid.mjs";
 import { registerGroupRoll, rollsApi } from "./runtime/group-roll.mjs";
@@ -551,6 +552,7 @@ Hooks.once("init", () => {
   gated(registerCureUi);
   gated(registerWallSideUi);   // §171 : anneau de feu — vers l'intérieur ou vers l'extérieur
   gated(registerKindleUi);   // §52 : boîte à amadou
+  gated(registerStandingMasteryUi);   // §536 : standing weapon mastery (Tactical Master)
   gated(registerSkillAidUi);   // §113 : section « Aides » de la fenêtre de jet d'un test
   gated(registerGroupRollUI);   // §242 : fenêtre de demande, dé de la barre d'outils, HUD du token, carte
   gated(registerSuccessAtCostUI);   // issue #32 : pastille du MJ, boutons et marques des cartes

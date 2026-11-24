@@ -648,7 +648,8 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `dnd5e.getItemContextOptions`
 
 1. light source: no menu entry
-2. correction / without DAS: no menu entry
+2. standing mastery: no menu entry
+3. correction / without DAS: no menu entry
 
 ### `dnd5e.healActor`
 
@@ -763,7 +764,8 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 3. ammunition chosen _(stop)_
 4. condition advantage and disadvantage _(stop)_
 5. advantage and disadvantage given per target _(stop)_
-6. Martial Arts: Dexterity with a Monk weapon (attack) _(stop)_
+6. standing mastery not applied _(stop)_
+7. Martial Arts: Dexterity with a Monk weapon (attack) _(stop)_
 
 ### `dnd5e.preRollConcentrationV2`
 

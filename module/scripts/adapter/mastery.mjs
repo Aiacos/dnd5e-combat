@@ -17,7 +17,7 @@ import { distanceBetween, reachOf, combatantFor, currentTurnKey } from "./turn.m
 import { isObjectToken } from "./bodies.mjs";
 import { isDeadActor } from "./death.mjs";
 import { areEnemies } from "./factions.mjs";
-import { masterySources } from "../core/mastery.mjs";
+import { masterySources, standingMastery, standingChoiceToStore } from "../core/mastery.mjs";
 
 const loc = (key, data) => game.i18n.format(`DND5ECOMBAT.Botte.${key}`, data ?? {});
 
@@ -214,4 +214,46 @@ export function proficientWith(actor, weapon) {
  */
 export function weaponFacts(actor) {
   return Object.fromEntries((weaponIndex ?? []).map(w => [w.key, { melee: w.melee, proficient: proficientWith(actor, w) }]));
+}
+
+/* -------------------------------------------- */
+/*  Standing mastery per weapon (§536, #160)    */
+/* -------------------------------------------- */
+
+/** The weapon flag holding the standing choice (`flags["dnd5e-combat"].standingMastery`): a mastery key; absent = the weapon's own. */
+export const STANDING_FLAG = "standingMastery";
+
+/**
+ * The masteries an attack with this weapon may use, its own first: dnd5e `system.masteryOptions` (data/item/weapon.mjs:331 — null
+ * unless the actor has mastery of the base weapon; extras from `weaponProf.mastery.bonus`, which Tactical Master's effect fills).
+ * @returns {string[]}
+ */
+export const masteryChoicesOf = item => (item?.system?.masteryOptions ?? []).map(o => o.value).filter(Boolean);
+
+/** The stored choice, as written (may no longer be offered). */
+export const storedStandingOf = item => item?.getFlag?.(MODULE_ID, STANDING_FLAG) ?? null;
+
+/** The mastery the next attack with this weapon uses, or null when there is nothing to choose (core `standingMastery`). */
+export const standingMasteryOf = item => standingMastery(masteryChoicesOf(item), storedStandingOf(item));
+
+/** The actor's weapons that offer a choice of mastery: equipped first, then the others. */
+export function weaponsWithChoice(actor) {
+  const weapons = Array.from(actor?.items ?? []).filter(i => (i.type === "weapon") && (masteryChoicesOf(i).length > 1));
+  return weapons.sort((a, b) => Number(!!b.system?.equipped) - Number(!!a.system?.equipped));
+}
+
+/** The translated label of a mastery key (dnd5e `CONFIG.DND5E.weaponMasteries`). */
+export const masteryLabel = key => game.i18n.localize(CONFIG.DND5E.weaponMasteries?.[key]?.label ?? key);
+
+/**
+ * Store a new standing choice on the weapon: unset for its own mastery. Returns the mastery now used, or undefined when the weapon
+ * does not offer `choice`.
+ */
+export async function storeStanding(item, choice) {
+  const options = masteryChoicesOf(item);
+  const value = standingChoiceToStore(options, choice);
+  if ( value === undefined ) return undefined;
+  if ( value === null ) await item.unsetFlag(MODULE_ID, STANDING_FLAG);
+  else await item.setFlag(MODULE_ID, STANDING_FLAG, value);
+  return standingMastery(options, value);
 }
