@@ -18,15 +18,6 @@
 const NOT_RESTORED = /non restaur|not restored|não restaur/i;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Checks whose tasks are known to come back after their own repair, by check id, with the reason. Logged, not counted; remove the
- * line with the fix. Found by this scenario on its first run (2026-11-25, §546).
- */
-const KNOWN_LEFT = Object.freeze({
-  "phb3-items": "a spell granted by a feature gets its free-cast activity at replacement (§469), so its activities never match "
-    + "the Handbook's again and it is listed after every repair"
-});
-
 const LANGUAGE_SCRIPT = `
   const before = game.settings.get("core", "language");
   if ( before !== args.lang ) await game.settings.set("core", "language", args.lang);
@@ -113,9 +104,8 @@ export default {
 
     const after = await api("diagnosticScan");
     const describe = tasks => tasks.slice(0, 3).map(t => `${t.where}: ${t.text}`.slice(0, 160)).join(" | ");
-    const known = fixable(after).filter(t => KNOWN_LEFT[t.check]);
-    if ( known.length ) ctx.log(`⚠ known, not counted: ${countByCheck(known)} — ${KNOWN_LEFT[known[0].check]} — ${describe(known)}`);
-    const left = fixable(after).filter(t => !KNOWN_LEFT[t.check]);
+    // §547: before its fix, `phb3-items` listed granted spells again after every repair (their free-cast activity).
+    const left = fixable(after);
     ctx.expect(!left.length, `new analysis: nothing fixable left (${countByCheck(left)})${left.length ? ` — ${describe(left)}` : ""}`);
 
     // 4. The repair is undone from its own backup (the restorations registered above then finish the job).

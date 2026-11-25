@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { CONTENT, SHIPPED, SRD_ALIASES } from "../module/scripts/content/index.mjs";
 import { hiddenAtLevel } from "../module/scripts/core/level-gate.mjs";
-import { phbDifferences, phbShape, renamedSourceItem, citesSubclass } from "../module/scripts/core/phb-update.mjs";
+import { phbDifferences, phbShape, renamedSourceItem, citesSubclass, grantedForwards, withoutGrantedForwards } from "../module/scripts/core/phb-update.mjs";
 
 /** Une formule de dés évaluée sans Foundry : les données remplacées, `NdF` rendu « N|F » pour lire le nombre et les faces. */
 function dice(formula, levels) {
@@ -355,5 +355,34 @@ describe("§438 : Courroux des mers 3.0.0 — la sauvegarde suit la manifestatio
     expect(withinCenters([{ distance: 12, radius: 10 }, { distance: 5, radius: 10 }])).toBe(5);
     expect(withinCenters([{ distance: 7, radius: 5 }, { distance: 10, radius: 10 }])).toBe(10);
     expect(withinCenters([{ distance: 15, radius: 10 }])).toBeNull();
+  });
+});
+
+describe("§547: a granted spell's free-cast activity is not a difference from the Handbook", () => {
+  const smite = { system: { identifier: "divine-smite", activities: { dnd5eactivity000: { type: "damage", damage: { parts: [{ number: 2, denomination: 8 }] } } } } };
+  const granted = structuredClone(smite);
+  granted.system.activities.r4nd0mF0rward001 = { type: "forward", activity: { id: "dnd5eactivity000" } };
+
+  it("the forward activity is found and dropped: no reason left", () => {
+    const own = phbShape(granted), ref = phbShape(smite);
+    expect(grantedForwards(own, ref)).toEqual(["r4nd0mF0rward001"]);
+    expect(phbDifferences(own, ref)).toEqual(["activities"]);
+    expect(phbDifferences(withoutGrantedForwards(own, ref), ref)).toEqual([]);
+  });
+
+  it("a forward activity to nothing the Handbook has, or another added activity, still counts", () => {
+    const odd = structuredClone(granted);
+    odd.system.activities.r4nd0mF0rward001.activity.id = "notInHandbook00";
+    odd.system.activities.extraActivity001 = { type: "utility" };
+    const own = phbShape(odd), ref = phbShape(smite);
+    expect(grantedForwards(own, ref)).toEqual([]);
+    expect(phbDifferences(withoutGrantedForwards(own, ref), ref)).toEqual(["activities"]);
+  });
+
+  it("an activity the Handbook changed is still seen through the grant", () => {
+    const newer = structuredClone(smite);
+    newer.system.activities.dnd5eactivity000.damage.parts[0].number = 3;
+    const own = phbShape(granted), ref = phbShape(newer);
+    expect(phbDifferences(withoutGrantedForwards(own, ref), ref)).toEqual(["content"]);
   });
 });

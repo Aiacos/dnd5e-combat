@@ -41,7 +41,9 @@ export function phbShape(data) {
       type: a?.type ?? null,
       effects: (a?.effects ?? []).map(e => e?.uuid ?? e?._id ?? null).sort(),
       damage: (a?.damage?.parts ?? []).map(p => (p?.custom?.enabled ? p.custom.formula : `${p?.number ?? ""}d${p?.denomination ?? ""}${p?.bonus ? `+${p.bonus}` : ""}`)),
-      level: `${a?.visibility?.level?.min ?? ""}-${a?.visibility?.level?.max ?? ""}`
+      level: `${a?.visibility?.level?.min ?? ""}-${a?.visibility?.level?.max ?? ""}`,
+      // A "forward" activity: the activity it casts (undefined otherwise, so absent from the comparison).
+      forwardTo: (a?.type === "forward") ? (a?.activity?.id ?? null) : undefined
     };
   }
   const effects = {};
@@ -49,6 +51,28 @@ export function phbShape(data) {
     effects[e._id] = (e.system?.changes ?? e.changes ?? []).map(c => `${c.key}|${c.type ?? c.mode ?? ""}|${c.value}`).sort();
   }
   return { identifier: system.identifier ?? "", activities, effects, advancement: Object.keys(system.advancement ?? {}).length };
+}
+
+/**
+ * §547: the activities a spell grant added to the sheet's copy — dnd5e gives a spell granted with free uses a "forward" activity
+ * casting each slot-consuming activity, under a random id (`SpellConfigurationData#applySpellChanges`, spell-config.mjs:101-117). The
+ * Handbook's reference never has it: compared as is, a granted spell (Divine Smite, Darkness of a drow…) was listed again after every
+ * replacement. Returns the ids of the own forward activities absent from the reference whose target is an activity of the reference.
+ * @param {ReturnType<typeof phbShape>} own
+ * @param {ReturnType<typeof phbShape>} reference
+ */
+export function grantedForwards(own, reference) {
+  const refIds = Object.keys(reference.activities ?? {});
+  return Object.entries(own.activities ?? {})
+    .filter(([id, a]) => !refIds.includes(id) && (a.type === "forward") && refIds.includes(a.forwardTo))
+    .map(([id]) => id);
+}
+
+/** The own shape without the activities its spell grant added (`grantedForwards`), to compare with the reference. */
+export function withoutGrantedForwards(own, reference) {
+  const drop = grantedForwards(own, reference);
+  if ( !drop.length ) return own;
+  return { ...own, activities: Object.fromEntries(Object.entries(own.activities).filter(([id]) => !drop.includes(id))) };
 }
 
 /** Le `sourceItem` d'un sort donné par une sous-classe renommée (`subclass:<ancien>` → `subclass:<nouveau>`), sinon null. */

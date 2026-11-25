@@ -19,7 +19,7 @@ import { dataFixPlanOf, applyDataFixes } from "../../adapter/data-fixes.mjs";
 import { sourceKind } from "../../core/item-sources.mjs";
 import { withDataFixes } from "../../core/data-fixes.mjs";
 import { unmarkedItemEffects, unmarkedAppliedEffects, markEffects } from "../../adapter/antimagic.mjs";
-import { phbDifferences, phbShape, renamedSourceItem, citesSubclass } from "../../core/phb-update.mjs";
+import { phbDifferences, phbShape, renamedSourceItem, citesSubclass, withoutGrantedForwards } from "../../core/phb-update.mjs";
 import { spellDuplicates } from "../../core/spell-duplicates.mjs";
 import { missingModifications, modifyOrigin } from "../../core/modify-item.mjs";
 import { summonGaps } from "../../core/summon-permissions.mjs";
@@ -832,7 +832,10 @@ async function phb3Outdated(actor) {
     if ( !["feat", "spell"].includes(item.type) || !PHB_ITEM.test(sourceOf(item)) ) continue;
     const reference = await fromUuid(sourceOf(item)).catch(() => null);
     if ( !reference ) { out.push({ item, reference: null, reasons: [] }); continue; }
-    const reasons = phbDifferences(phbShape(item.toObject()), phbShape(fixedReference(reference)));
+    const ref = phbShape(fixedReference(reference));
+    // §547: a granted spell's free-cast activity (added at the grant and at our replacement) is not a difference from the Handbook.
+    const own = spellGrantOf(item) ? withoutGrantedForwards(phbShape(item.toObject()), ref) : phbShape(item.toObject());
+    const reasons = phbDifferences(own, ref);
     if ( lostSpellGrant(item) ) reasons.push("grant");
     if ( reasons.length ) out.push({ item, reference, reasons });
   }
