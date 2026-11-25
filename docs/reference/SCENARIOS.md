@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-421 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+422 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -82,6 +82,7 @@ la sélection sans rien jouer.
 | `contresort` |  | §16 | un hostile contre le Rayon de givre du Magicien |
 | `cordon-de-fleches` |  | §75 | une sauvegarde à chaque entrée, quatre projectiles puis la fin |
 | `crapaud` |  | §45 | Engloutissement posé par le moteur, acide en fin de tour, libéré à la mort |
+| `critique-par-cible` |  | §545 | deux cibles touchées, une seule Paralysée : seule elle prend les dés du critique |
 | `critiques` |  | §207 | écart à la CA, table de critiques, choix de l'attaquant |
 | `dague-des-ombres` |  | §71 | stabilisée, empoisonnée et paralysée seulement à 0 PV |
 | `dard-pseudodragon` |  | §526 | plus Inconscient une fois l'effet fini (#255) |
