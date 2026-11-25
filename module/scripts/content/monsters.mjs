@@ -64,6 +64,9 @@ export const MONSTERS = Object.freeze({
   "silver-needle": { effectsIf: { "target.creatureType": "humanoid" } },
   // Esquive (Bête éclipsante) : rien sur une réussite, la moitié sur un échec, pour toute sauvegarde à moitié des dégâts.
   "avoidance": { avoidance: true },
+  // Peau barbelée (Diable barbelé, SRD 5.2) : au début de chacun de ses tours, 1d10 perforants à toute créature qu'il agrippe ou qui
+  // l'agrippe.
+  "barbed-hide": { grappleDamage: { formula: "1d10", damageType: "piercing", grapplers: true } },
   // Absorption de vie (Nécrophage) : la donnée laisse les dégâts sans type ; nécrotiques.
   "mm-wight-life-drain": { untypedDamage: "necrotic" },
   // Rayons oculaires (Tyrannœil, Tyran de la mort ; identifiant propre, content/sources.mjs) : chaque rayon par son effet ou son

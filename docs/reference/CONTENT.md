@@ -129,7 +129,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `grantsConditionImmunities` | 3 | `ancient-might`, `natures-ward`, `ring-of-free-action` |
 | `grantsResistances` | 2 | `avatar-of-battle`, `necrotic-husk` |
 | `grantsSpeeds` | 5 | `athlete`, `cloak-of-arachnida`, `gloves-of-swimming-and-climbing`, `ring-of-elemental-command-air`, `slippers-of-spider-climbing` |
-| `grappleDamage` | 1 | `unarmed-fighting` |
+| `grappleDamage` | 2 | `barbed-hide`, `unarmed-fighting` |
 | `greatWeaponFighting` | 1 | `great-weapon-fighting` |
 | `halfOnMiss` | 2 | `acid-arrow`, `melfs-acid-arrow` |
 | `haltOnReaction` | 1 | `sentinel` |

@@ -19,7 +19,7 @@ import { onVitalityResolution } from "./vitality.mjs";
 import { attackDamageTypes } from "../adapter/smite.mjs";
 import { inflict } from "../adapter/retaliation.mjs";
 import { onMarkSplashResolution } from "./mark-splash.mjs";
-import { victimsOf } from "../adapter/grapple.mjs";
+import { victimsOf, grappleEffectsOf, grapplerOf } from "../adapter/grapple.mjs";
 import { onHeldEffectCreated, onHeldEffectEnded } from "./held-effect.mjs";
 import { enqueue } from "./queue.mjs";
 import { contentOf, identifierOf } from "../adapter/content.mjs";
@@ -475,7 +475,17 @@ async function grappleDamage(actor, token) {
   const item = actor.items.find(i => contentOf(i).entry?.grappleDamage);
   if ( !item || !token ) return;
   const rule = contentOf(item).entry.grappleDamage;
-  for ( const victim of victimsOf(token) ) {
+  // `grapplers: true` : celles qui l'agrippent aussi (l'acteur lu à l'origine de chaque état Agrippé qu'il porte), une fois
+  // chacune.
+  const struck = new Map(victimsOf(token).map(t => [t.uuid, t]));
+  if ( rule.grapplers === true ) {
+    for ( const effect of grappleEffectsOf(actor) ) {
+      const holder = grapplerOf(effect);
+      const holderToken = holder?.token ?? holder?.getActiveTokens?.(false, true)?.find(t => t.parent === token.parent) ?? null;
+      if ( holderToken && (holderToken.uuid !== token.uuid) ) struck.set(holderToken.uuid, holderToken);
+    }
+  }
+  for ( const victim of struck.values() ) {
     const logged = await inflict({ step: { formula: rule.formula, damageType: rule.damageType }, item, targetUuid: victim.uuid, properties: [],
       speaker: ChatMessage.implementation.getSpeaker({ token }), flavor: loc("CoupCritique.Empoignade", { item: item.name, name: victim.name }),
       flags: { grappleDamage: { item: item.uuid, target: victim.uuid } } });

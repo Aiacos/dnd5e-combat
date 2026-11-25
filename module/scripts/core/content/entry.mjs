@@ -930,7 +930,10 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   }
   if ( ("grappleDamage" in entry) && !(isObject(entry.grappleDamage) && (typeof entry.grappleDamage.formula === "string") && entry.grappleDamage.formula
     && (typeof entry.grappleDamage.damageType === "string") && entry.grappleDamage.damageType
-    && Object.keys(entry.grappleDamage).every(k => ["formula", "damageType"].includes(k))) ) errors.push(`${at}grappleDamage: { formula, damageType }`);
+    && Object.keys(entry.grappleDamage).every(k => ["formula", "damageType", "grapplers"].includes(k))
+    && (!("grapplers" in entry.grappleDamage) || (entry.grappleDamage.grapplers === true))) ) {
+    errors.push(`${at}grappleDamage: { formula, damageType, grapplers?: true }`);
+  }
   // §131 : dons de tir.
   if ( "rangedFeat" in entry ) {
     const r = entry.rangedFeat;

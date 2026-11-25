@@ -432,8 +432,10 @@
  *     critMark?: { damageType, side }           §132 : un coup critique de ce type pose une marque sur la cible jusqu'au début du
  *                                               prochain tour de l'auteur : "against" = Avantage contre elle (Cogneur), "by" =
  *                                               Désavantage à ses attaques (Trancheur)
- *     grappleDamage?: { formula, damageType }   §132 : au début de chaque tour de l'auteur, ces dégâts à chaque créature qu'il agrippe
- *                                               (Combat à mains nues)
+ *     grappleDamage?: { formula, damageType, grapplers? }
+ *                                               §132 : au début de chaque tour de l'auteur, ces dégâts à chaque créature qu'il agrippe
+ *                                               (Combat à mains nues) ; `grapplers: true` : à celles qui l'agrippent aussi (Peau
+ *                                               barbelée du Diable barbelé)
  *     rerollInitiative?: { atMost }             §120 : à chaque jet d'initiative, un d20 de `atMost` ou moins peut être relancé (question), le nouveau
  *                                               gardé (Survivant, Hypervigilance : 9) — runtime/roll-bonus.mjs
  *     onNatural1?: { activity }                 §93 : juste après un Test d20 de la créature dont le d20 fait 1, elle utilise
