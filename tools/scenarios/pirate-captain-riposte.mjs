@@ -47,9 +47,10 @@ export default {
       return r?.targets?.find(t => t.token?.endsWith(pirate.id) || (t.name === "Capitaine pirate")) ?? null;
     };
 
-    // 1. Strike until the Riposte is taken (only offered when +3 can turn the hit into a miss).
+    // 1. Strike until the Riposte is taken. It is only offered when +3 can turn the hit into a miss (a total of 17 to 19): about one try
+    // in seven, so 30 tries were not always enough (bench of 2026-11-25).
     let reacted = null;
-    for ( let i = 0; (i < 30) && !reacted; i++ ) {
+    for ( let i = 0; (i < 50) && !reacted; i++ ) {
       const t = await strike("first");
       if ( t?.reaction ) reacted = t;
       else if ( Number.isFinite(t?.ac) ) baseAc ??= t.ac;
@@ -57,7 +58,7 @@ export default {
     // Monster Manual 2024: AC 17 — used if every try opened the Riposte.
     baseAc ??= 17;
     ctx.log(`Pirate Captain's base AC: ${baseAc}`);
-    if ( !ctx.expect(!!reacted, "the Fighter hits the Captain and the Riposte is taken (30 tries at most)") ) return;
+    if ( !ctx.expect(!!reacted, "the Fighter hits the Captain and the Riposte is taken (50 tries at most)") ) return;
     ctx.expect(/riposte/i.test(String(reacted.reaction)), `reaction named in the resolution (${reacted.reaction})`);
     ctx.expect(reacted.ac === baseAc + 3, `the attack is judged against AC ${baseAc} + 3 (${reacted.ac})`);
     const line = (await ctx.engineLog()).filter(l => /only applied to this attack|ne valait que pour cette attaque/.test(l)).at(-1);
