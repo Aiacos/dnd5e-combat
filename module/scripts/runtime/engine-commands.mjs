@@ -8,7 +8,7 @@ import { deathWardOf } from "../adapter/ward.mjs";
 import { banishToken } from "./banish.mjs";
 import { contentOf, identifierOf } from "../adapter/content.mjs";
 import { MODULE_ID } from "../constants.mjs";
-import { STEPS } from "../core/action.mjs";
+import { STEPS, damageFor } from "../core/action.mjs";
 import { retaliationsFor, retaliate, inflict, saveRetaliation } from "../adapter/retaliation.mjs";
 import { applyDamageToToken, maximizedHealing } from "../adapter/messages.mjs";
 import { requestSaves, applyEffectsToToken, applyStatusToToken, applyMarkToToken, splitPushes } from "../adapter/saves.mjs";
@@ -216,10 +216,12 @@ export const COMMANDS = {
         ? await maximizedHealing(damageMessage) : null;
       if ( healed ) log(`maximum healing for ${entry.token} (${healed.map(d => d.value).join(" + ")})`);
       // Rien à lire sans jet (sauvegarde ou effet seuls : `multiplier` 0, pas de `damageRoll`).
-      let rolled = (entry.multiplier > 0) ? (healed ?? deserializeDamages(resolution.damageRoll?.damages ?? [])) : [];
+      // #269 (§545): the critical dice rolled apart go to the Critical Hit targets only (`damageFor`).
+      const struckCritical = !!(resolution.plan.attack && (resolution.targets ?? []).find(t => t.token === entry.token && t.hit && t.critical));
+      let rolled = (entry.multiplier > 0) ? (healed ?? deserializeDamages(damageFor(resolution, entry.token))) : [];
       // §355 : Demonomicon d'Iggwilv — les dégâts d'un sort du porteur contre un Fiélon sont maximisés.
       if ( rolled.length && !resolution.plan.heal && spellDamageMaxed(source?.actor ?? activity?.actor, activity, patient) ) {
-        rolled = (await maximizedHealing(damageMessage)) ?? rolled;
+        rolled = (await maximizedHealing(damageMessage, { critical: struckCritical })) ?? rolled;
         log(`${activity.item.name}: maximum damage against ${patient?.name}`);
       }
       // §164 : le type de chaque rayon d'Embruns prismatiques ; deux rayons de dégâts, deux fois les dégâts.
@@ -267,7 +269,8 @@ export const COMMANDS = {
       const hp = ((entry.multiplier > 0) && !shielded?.spared)
         ? await applyDamageToToken(ward?.interpose ?? entry.token, rolled, damageMessage, { multiplier: entry.multiplier, reduction: entry.reduction ?? 0, absorbInto: ward?.item ?? null,
           ignoreResistance: resistanceIgnoredBy(source?.actor ?? activity?.actor, activity),   // §134
-          rangedWeapon: !!resolution.plan.attack && isRangedWeaponAttack(activity, attackMode) })   // O8d (§347)
+          rangedWeapon: !!resolution.plan.attack && isRangedWeaponAttack(activity, attackMode),   // O8d (§347)
+          ...(resolution.plan.attack ? { critical: struckCritical } : {}) })   // #269: THIS target's critical (death saves, regeneration)
         : null;
       // §523 : aucun dégât appliqué au bout du compte — pas de sauvegarde, la marque ne doit pas attendre la suivante. (Pas d'après les PV
       // relus : l'acteur d'un token non lié est recréé par sa mise à jour, ses PV « après » restaient ceux d'avant — vu sur le banc.)

@@ -102,7 +102,7 @@ contexte du moment) et sert de clé `on` aux déclarations de contenu.
 
 ## Hooks écoutés, dans l'ordre d'appel
 
-148 hooks, relevés par `api.routes()` sur le module chargé au niveau d'automatisation « full ». Un seul écouteur par hook
+149 hooks, relevés par `api.routes()` sur le module chargé au niveau d'automatisation « full ». Un seul écouteur par hook
 (`runtime/router.mjs`) appelle les inscrits dans cet ordre, qui est celui des `register…()` de `dnd5e-combat.mjs`. **MJ** : l'inscrit
 ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendant `false`.
 
@@ -660,6 +660,10 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `dnd5e.postAttackRollConfiguration`
 
 1. attack roll range _(stop)_
+
+### `dnd5e.postDamageRollConfiguration`
+
+1. critical hit: extra dice apart for the critical targets (#269) _(stop)_
 
 ### `dnd5e.postSummon`
 

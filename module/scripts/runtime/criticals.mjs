@@ -6,6 +6,8 @@ import { MODULE_ID } from "../constants.mjs";
 import { actsFor, needsCheck } from "../core/requests.mjs";
 import { CRIT_MARGIN_SETTING, CRITICAL_MODE_SETTING, CRITICAL_TABLE_SETTING, CRITICAL_NPC_SETTING, CRITICAL_MODES, CRITICAL_TABLE_QUERY, drawHere }
   from "../adapter/criticals.mjs";
+import { criticalExtraRolls } from "../adapter/messages.mjs";
+import { loc, log } from "./shared.mjs";
 
 import { route } from "./router.mjs";
 
@@ -15,6 +17,23 @@ const key = (setting, part) => `DND5ECOMBAT.Reglage.${setting}.${part}`;
 function onPreRollDamage(config, dialog, message) {
   const kind = config?.[MODULE_ID]?.criticalHit;
   if ( kind ) foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.criticalHit`, kind);
+  return true;
+}
+
+/**
+ * #269 (§545): one attack, several hit targets, only some of them Critical Hits (`rollDamageForAttack` set `criticalExtra`). The
+ * damage rolls are normal; the extra critical dice join them here, after dnd5e configured the rolls (bonus dice, Piercer…) and
+ * before they are evaluated: one message, one Dice So Nice animation. Marked apart, they are added to the critical targets only
+ * (`readDamageMessage` → `damageRoll.critical` → `damageFor`).
+ */
+function onPostDamageConfiguration(rolls, config, dialog, message) {
+  const extra = config?.[MODULE_ID]?.criticalExtra;
+  if ( !extra?.tokens?.length || !Array.isArray(rolls) ) return true;
+  const label = loc("CoupCritique.PartCritique", { names: (extra.names ?? []).join(", ") });
+  const added = criticalExtraRolls(rolls, label);
+  rolls.push(...added);
+  if ( message ) foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.criticalFor`, extra.tokens);
+  log(`critical dice apart for ${(extra.names ?? []).join(", ")}: ${added.map(r => r.formula).join(" + ") || "none"}`);
   return true;
 }
 
@@ -52,5 +71,7 @@ export function registerCriticals() {
   });
   // Un joueur ne peut pas marquer tiré le résultat d'une table du monde : le MJ actif tire à sa place, au nom de l'attaquant.
   route("dnd5e.preRollDamageV2", onPreRollDamage, { cancellable: true, label: "critical hit: noted on the damage card" });
+  route("dnd5e.postDamageRollConfiguration", onPostDamageConfiguration,
+    { cancellable: true, label: "critical hit: extra dice apart for the critical targets (#269)" });
   CONFIG.queries[CRITICAL_TABLE_QUERY] = handleCriticalTable;
 }

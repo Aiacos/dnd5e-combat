@@ -5,7 +5,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { STEPS } from "../core/action.mjs";
-import { readAttackMessage, readDamageMessage } from "../adapter/messages.mjs";
+import { readAttackMessage, readDamageMessage, isCriticalExtra } from "../adapter/messages.mjs";
 import { readSaveMessage, repairSaveAbility } from "../adapter/saves.mjs";
 import { resolveAttack, hitsRegardless } from "../core/attack.mjs";
 import { offerInspiration, offerRollBonus, keptD20 } from "../adapter/inspiration.mjs";
@@ -157,7 +157,7 @@ export async function onDamageMessage(message) {
   await waitForDice(message);
   // §282 : Inspiration héroïque — un dé de dégâts ou de soin relancé au choix ; sa part de l'agrégat bouge de la différence.
   const actor = (await fromUuid(speakerTokenUuid(message) ?? ""))?.actor ?? message.getAssociatedActor?.() ?? null;
-  const heroic = hasHeroic(actor) ? await offerHeroicDamage(actor, message.rolls?.filter(r => r instanceof CONFIG.Dice.DamageRoll) ?? []) : null;
+  const heroic = hasHeroic(actor) ? await offerHeroicDamage(actor, message.rolls?.filter(r => (r instanceof CONFIG.Dice.DamageRoll) && !isCriticalExtra(r)) ?? []) : null;
   if ( heroic ) {
     const sameProps = d => (d.properties.size === heroic.properties.length) && heroic.properties.every(p => d.properties.has(p));
     const part = damage.damages.find(d => (d.type === heroic.type) && sameProps(d)) ?? damage.damages.find(d => d.type === heroic.type);
@@ -172,7 +172,9 @@ export async function onDamageMessage(message) {
       ?? damage.damages.find(d => d.type === delta.type);
     if ( part ) part.value = rerolledDamage(part.value, delta.old, delta.now);
   }
-  const event = { type: "damageRolled", messageId: message.id, damages: serializeDamages(damage.damages) };
+  // #269 (§545): the extra critical dice rolled apart, for the Critical Hit targets only.
+  const event = { type: "damageRolled", messageId: message.id, damages: serializeDamages(damage.damages),
+    ...(damage.critical ? { critical: serializeDamages(damage.critical) } : {}) };
   const accepts = resolution => damageFits(resolution, damage) ? event : null;
   if ( damage.origin && await dispatcher.send(damage.origin, accepts) ) return;
   const carrier = findAwaitingDamage(damage);

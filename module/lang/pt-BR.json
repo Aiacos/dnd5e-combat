@@ -928,6 +928,8 @@
   "DND5ECOMBAT.CoupCritique.against": "{item}: Vantagem contra ele",
   "DND5ECOMBAT.CoupCritique.by": "{item}: Desvantagem em seus ataques",
   "DND5ECOMBAT.CoupCritique.Empoignade": "{item}: dano em {name}, Agarrado",
+  "DND5ECOMBAT.CoupCritique.PartCritique": "Dados do acerto crítico (somente para {names})",
+  "DND5ECOMBAT.CoupCritique.DesCritiques": "dados do crítico incluídos",
   "DND5ECOMBAT.ReactionDesengage": "{mover} Desengaja perto de você. Reagir?",
   "DND5ECOMBAT.EspritGarde.Question": "{what}: {total} contra {needed}. Obter sucesso na salvaguarda em vez disso ({item}, restam {left})?",
   "DND5ECOMBAT.EspritGarde.Oui": "Obter sucesso",

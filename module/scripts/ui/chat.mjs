@@ -525,6 +525,8 @@ function renderResolution(message, html, resolution) {
       }
     }
     if ( t.damage ) parts.push(lostOrHealed(t.damage.applied));
+    // #269 (§545): only some targets were Critical Hits — say which ones took the critical dice rolled apart.
+    if ( t.damage && plan.attack && t.hit && t.critical && resolution.damageRoll?.critical?.length ) parts.push(loc("CoupCritique.DesCritiques"));
     if ( t.effects?.length ) parts.push(loc("EffetsAppliques", { n: t.effects.length }));
     // En rangées : le jet de sauvegarde de la cible (total, réussite) a sa place à droite ; une sauvegarde d'office n'en a pas.
     const rolled = (plan.save && reached && t.save && !t.save.auto)

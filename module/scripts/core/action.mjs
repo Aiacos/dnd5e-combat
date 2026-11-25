@@ -35,6 +35,7 @@
 
 import { resolveAttack, beatsAcBy } from "./attack.mjs";
 import { nearMissTargets } from "./success-at-cost.mjs";
+import { criticalSplit } from "./critical-dice.mjs";
 import { SIZES, sizeAtLeast } from "./content/enums.mjs";
 
 /** Version du schéma écrit dans les flags. Une résolution d'une autre version est ignorée. */
@@ -107,6 +108,28 @@ export function wantsDamageRoll(resolution) {
 /** Un coup critique à reporter sur le jet de dégâts. */
 export function isCriticalHit(resolution) {
   return resolution.targets.some(t => t.hit && t.critical);
+}
+
+/**
+ * #269 (§545): the hit targets that are Critical Hits, when not all of them are — the damage is then rolled normally and the
+ * critical dice apart, for these tokens only. [] when the critical (or its absence) is the same for every hit target.
+ * @returns {string[]}  Token uuids.
+ */
+export function mixedCriticalTokens(resolution) {
+  if ( criticalSplit(resolution.targets) !== "mixed" ) return [];
+  return resolution.targets.filter(t => t.hit && t.critical).map(t => t.token);
+}
+
+/**
+ * #269 (§545): the damage one target takes from the resolution's roll — the normal damage, plus the extra critical dice
+ * rolled apart (`damageRoll.critical`) when this target is a Critical Hit. Serialized damages in, serialized damages out.
+ */
+export function damageFor(resolution, token) {
+  const roll = resolution.damageRoll;
+  if ( !roll ) return [];
+  const target = resolution.targets.find(t => t.token === token);
+  const critical = (roll.critical?.length && target?.hit && target.critical) ? roll.critical : [];
+  return [...(roll.damages ?? []), ...critical];
 }
 
 /** L'auteur doit-il encore répartir ses projectiles (Projectile magique, plusieurs cibles) ? */
@@ -494,9 +517,13 @@ function saveRolled(resolution, { actor, total, messageId, mode=null, resisted=f
   return settle(next, commands);
 }
 
-function damageRolled(resolution, { messageId, damages }) {
+/**
+ * `critical` (#269, §545): the extra critical dice, rolled apart when only some hit targets are Critical Hits — added at
+ * application to those targets only (`damageFor`).
+ */
+function damageRolled(resolution, { messageId, damages, critical=null }) {
   if ( (resolution.step !== STEPS.AWAITING_ROLLS) || !resolution.plan.damage || resolution.damageRoll ) return same(resolution);
-  return settle({ ...resolution, damageRoll: { messageId, damages } });
+  return settle({ ...resolution, damageRoll: { messageId, damages, ...(critical?.length ? { critical } : {}) } });
 }
 
 /**

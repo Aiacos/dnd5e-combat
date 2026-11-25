@@ -9,7 +9,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { current, undoPlan, wantsDamageRoll, isCriticalHit, pendingChoice, pendingAllocation, STEPS, creatureAutoSuccess }
+import { current, undoPlan, wantsDamageRoll, isCriticalHit, mixedCriticalTokens, pendingChoice, pendingAllocation, STEPS, creatureAutoSuccess }
   from "../core/action.mjs";
 import { isAutoCritical, autoFailSave, typeAutoSave } from "../core/conditions.mjs";
 import { maximizeDice } from "../core/max-dice.mjs";
@@ -389,7 +389,7 @@ function onResolutionFlag(message, changes) {
   const click = damageFlow({ playerAuthor: !game.user.isGM }).click;
   const ready = click ? askToRollDamage(message, resolution) : Promise.resolve();
   log(click ? "damage roll: waiting for the author's click" : "chained damage roll");
-  ready.then(() => rollDamageFor(message, resolution, isCriticalHit(resolution))).catch(err => {
+  ready.then(() => rollDamageFor(message, resolution, isCriticalHit(resolution), mixedCriticalTokens(resolution))).catch(err => {
     damageRolling.delete(resolution.id);
     console.error(`${MODULE_ID} | automatic damage roll failed`, err);
     ui.notifications.warn("DND5ECOMBAT.DegatsManuels", { localize: true });
@@ -441,7 +441,7 @@ export async function rollForAbsent(messageId) {
   if ( !resolution || !wantsDamageRoll(resolution) || (message.author?.active !== false) || damageRolling.has(resolution.id) ) return false;
   damageRolling.add(resolution.id);
   log(`damage roll for ${message.author?.name ?? "an absent author"}, by the GM`);
-  try { await rollDamageFor(message, resolution, isCriticalHit(resolution)); return true; }
+  try { await rollDamageFor(message, resolution, isCriticalHit(resolution), mixedCriticalTokens(resolution)); return true; }
   catch(err) {
     damageRolling.delete(resolution.id);
     console.error(`${MODULE_ID} | damage roll for an absent author failed`, err);

@@ -22,6 +22,7 @@ import { chooseSmite } from "./smite.mjs";
 import { criticalChoice, drawCriticalTable } from "./criticals.mjs";
 import { current, STEPS } from "../core/action.mjs";
 import { atCastLevel } from "../core/usage.mjs";
+import { criticalExtraFormula } from "../core/critical-dice.mjs";
 import { contentOf } from "./content.mjs";
 import { spellClassOf } from "./spell-class.mjs";
 import { weaponKind } from "./facts.mjs";
@@ -83,15 +84,62 @@ export function readAttackMessage(message) {
  */
 export function readDamageMessage(message) {
   const activity = message.system?.activity?.uuid;
-  const rolls = message.rolls?.filter(r => r instanceof CONFIG.Dice.DamageRoll) ?? [];
+  const all = message.rolls?.filter(r => r instanceof CONFIG.Dice.DamageRoll) ?? [];
+  // #269 (§545): the extra critical dice rolled apart for some targets only, read on their own.
+  const rolls = all.filter(r => !isCriticalExtra(r));
   if ( !activity || !rolls.length ) return null;
   // Même agrégation que le plateau de dégâts du système (applications/components/damage-application.mjs:271).
-  const damages = dnd5e.dice.aggregateDamageRolls(rolls, { respectProperties: true }).map(roll => ({
+  const aggregate = list => dnd5e.dice.aggregateDamageRolls(list, { respectProperties: true }).map(roll => ({
     properties: new Set(roll.options.properties ?? []),
     type: roll.options.type,
     value: Math.max(0, roll.total)
   }));
-  return { origin: originOf(message), activity, damages };
+  const extra = all.filter(isCriticalExtra);
+  return { origin: originOf(message), activity, damages: aggregate(rolls), ...(extra.length ? { critical: aggregate(extra) } : {}) };
+}
+
+/** #269 (§545): a roll of extra critical dice, added to the damage message for the Critical Hit targets only. */
+export const isCriticalExtra = roll => roll?.options?.[MODULE_ID]?.criticalExtra === true;
+
+/**
+ * #269 (§545): the terms of a configured, not yet evaluated, damage roll, as `core/critical-dice.mjs` reads them.
+ * @param {DamageRoll} roll
+ */
+function termsOf(roll) {
+  const { OperatorTerm, NumericTerm, DiceTerm } = foundry.dice.terms;
+  return roll.terms.map(term => {
+    const flavor = term.options?.flavor || undefined;
+    if ( term instanceof OperatorTerm ) return { operator: term.operator };
+    if ( term instanceof NumericTerm ) return { number: term.number, flavor };
+    if ( (term instanceof DiceTerm) && Number.isFinite(term._number ?? term.number) && !(term._number instanceof Roll) ) {
+      return { number: term.number, faces: term.faces, modifiers: [...(term.modifiers ?? [])], flavor };
+    }
+    let max = null;
+    try { max = Roll.create(term.formula).evaluateSync({ maximize: true }).total; } catch { max = null; }
+    return { formula: term.formula, deterministic: term.isDeterministic === true, max };
+  });
+}
+
+/**
+ * #269 (§545): the rolls of extra critical dice for these damage rolls (configured, not evaluated, not critical), in the same
+ * damage type and properties — dnd5e's critical settings of each roll (`options.critical`: multiplier, bonus dice, modifiers,
+ * maximized dice, bonus damage). Each is marked `criticalExtra`, and named for the targets it is for.
+ * @param {DamageRoll[]} rolls
+ * @param {string} flavor  The roll's label on the card.
+ * @returns {DamageRoll[]}
+ */
+export function criticalExtraRolls(rolls, flavor) {
+  const out = [];
+  for ( const roll of rolls ) {
+    if ( isCriticalExtra(roll) ) continue;
+    const formula = criticalExtraFormula(termsOf(roll), roll.options?.critical ?? {});
+    if ( !formula ) continue;
+    const { type, types, properties } = roll.options;
+    out.push(new CONFIG.Dice.DamageRoll(formula, roll.data, {
+      type, types, properties, isCritical: false, flavor, [MODULE_ID]: { criticalExtra: true }
+    }));
+  }
+  return out;
 }
 
 /**
@@ -101,11 +149,14 @@ export function readDamageMessage(message) {
  * @param {ChatMessage} carrier   Le message qui porte la résolution.
  * @param {object} resolution
  * @param {boolean} critical      Verdict du moteur (core/action.mjs, isCriticalHit).
+ * @param {string[]} [criticalFor]  #269 (§545): only these hit targets are Critical Hits (core/action.mjs, `mixedCriticalTokens`) —
+ *                                 the damage is rolled normally, the critical dice apart for them.
  */
-export async function rollDamageFor(carrier, resolution, critical) {
+export async function rollDamageFor(carrier, resolution, critical, criticalFor=[]) {
   if ( resolution.attack ) {
     const attackMessage = game.messages.get(resolution.attack.messageId);
-    return attackMessage ? rollDamageForAttack(attackMessage, { critical, variant: resolution.plan.variant?.activity ?? null }) : null;
+    return attackMessage ? rollDamageForAttack(attackMessage, { critical, criticalFor, variant: resolution.plan.variant?.activity ?? null,
+      names: resolution.targets.filter(t => criticalFor.includes(t.token)).map(t => t.name) }) : null;
   }
   const activity = carrier.getAssociatedActivity?.({ scaled: true });
   if ( !activity?.rollDamage ) return null;
@@ -148,7 +199,7 @@ export function targetResolution(uuids) {
  * critique que le jet d'attaque. À appeler sur le client de l'auteur de l'attaque : ce sont ses dés.
  * @param {ChatMessage} attackMessage
  */
-export async function rollDamageForAttack(attackMessage, { critical, variant=null }={}) {
+export async function rollDamageForAttack(attackMessage, { critical, variant=null, criticalFor=[], names=[] }={}) {
   const used = await fromUuid(attackMessage.system.activity.uuid);
   // M5 (§18.8) : les dégâts de la variante choisie au plan (charge, En sang), sinon ceux de la variante « Attack with
   // Advantage » si le jet avait l'avantage (« plus 1d4 if the attack roll had Advantage »).
@@ -164,13 +215,19 @@ export async function rollDamageForAttack(attackMessage, { critical, variant=nul
   // §207 : critique standard, table de critiques (dégâts normaux) ou un voisin qui s'en charge — avant les châtiments, dont les dés
   // ne sont doublés que sur un critique standard. Le coup reste un critique (jets de mort : `criticalHit` sur les dégâts).
   let criticalTable = null;
+  // #269 (§545): only some hit targets are Critical Hits — the roll is normal, the critical dice are added apart for them.
+  let criticalExtra = null;
   if ( isCritical ) {
-    const target = fromUuidSync(attackMessage.system?.targets?.[0]?.token ?? "", { strict: false });
+    const target = fromUuidSync(criticalFor[0] ?? attackMessage.system?.targets?.[0]?.token ?? "", { strict: false });
     const choice = await criticalChoice(used, target);
     if ( choice !== "standard" ) {
       isCritical = false;
       criticalTable = choice;
       if ( choice === "table" ) await drawCriticalTable({ speaker: ChatMessage.implementation.getSpeaker({ actor: used.actor }) });
+    }
+    else if ( criticalFor.length ) {
+      isCritical = false;
+      criticalExtra = { tokens: criticalFor, names };
     }
   }
   const damageType = await chosenDamageType(game.messages.get(origin ?? "") ?? attackMessage, activity);
@@ -190,7 +247,8 @@ export async function rollDamageForAttack(attackMessage, { critical, variant=nul
   const ours = { ...(damageType ? { damageType } : {}), ...(strikes.length ? { strikes } : {}), ...(smite ? { smite } : {}),
     ...(typeof hitOptions.sneak === "boolean" ? { sneak: hitOptions.sneak } : {}), ...(hitOptions.bonuses.length ? { acceptedBonuses: hitOptions.bonuses } : {}),
     ...(criticalTable ? { criticalHit: criticalTable } : {}), ...(inspired ? { combatInspiration: inspired } : {}),
-    ...(typeof hitOptions.savage === "boolean" ? { savageAttacker: hitOptions.savage } : {}) };
+    ...(typeof hitOptions.savage === "boolean" ? { savageAttacker: hitOptions.savage } : {}),
+    ...(criticalExtra ? { criticalExtra } : {}) };
   // §373 : les cibles de l'attaque sur la carte de dégâts — dnd5e les lirait dans la sélection de l'utilisateur au moment du jet
   // (`TargetsField.getDescriptors()`), qu'une autre résolution (une prise après le coup) a pu relâcher entre-temps.
   const targets = attackMessage?.system?.targets?.length ? attackMessage.system.targets : null;
@@ -315,7 +373,7 @@ function readHp(actor) {
  * immunités, vulnérabilités et PV temporaires. À n'appeler que sur le client du MJ actif.
  * @returns {Promise<object|null>}  Entrée de journal pour recordDamage(), ou null si la cible a disparu.
  */
-export async function applyDamageToToken(tokenUuid, raw, originMessage, { multiplier=1, reduction=0, absorbInto=null, ignoreResistance=[], rangedWeapon=false }={}) {
+export async function applyDamageToToken(tokenUuid, raw, originMessage, { multiplier=1, reduction=0, absorbInto=null, ignoreResistance=[], rangedWeapon=false, critical=null }={}) {
   const actor = (await fromUuid(tokenUuid))?.actor;
   if ( !actor ) return null;
   const before = readHp(actor);
@@ -337,7 +395,10 @@ export async function applyDamageToToken(tokenUuid, raw, originMessage, { multip
   // §134 : `ignoreResistance` — les types dont la résistance est ignorée (Expert élémentaire, Empoisonneur) : l'option `ignore` de dnd5e
   // (documents/actor/actor.mjs, `#changeIsIgnored`).
   const ignore = ignoreResistance.length ? { ignore: { resistance: new Set(ignoreResistance) } } : {};
-  await actor.applyDamage(damages, { isDelta: true, origin: originMessage, multiplier, ...ignore, ...(absorbInto ? { [MODULE_ID]: { absorbInto } } : {}) });
+  // #269 (§545): `critical` is the engine's verdict for THIS target (an attack on several targets is not critical for all of them);
+  // death saves (adapter/death.mjs) and regeneration read it before the message's roll.
+  const ours = { ...(absorbInto ? { absorbInto } : {}), ...((typeof critical === "boolean") ? { criticalHit: critical } : {}) };
+  await actor.applyDamage(damages, { isDelta: true, origin: originMessage, multiplier, ...ignore, ...(Object.keys(ours).length ? { [MODULE_ID]: ours } : {}) });
   return {
     token: tokenUuid,
     actor: actor.uuid,
@@ -352,8 +413,9 @@ export async function applyDamageToToken(tokenUuid, raw, originMessage, { multip
  * Le maximum d'un jet de soin (Lueur d'espoir, §16.24) : chaque jet du message relancé au maximum (`maximize` du cœur),
  * rendu dans la forme des dégâts sérialisés (un par type). null si le message manque.
  */
-export async function maximizedHealing(damageMessage) {
-  const rolls = damageMessage?.rolls ?? [];
+export async function maximizedHealing(damageMessage, { critical=false }={}) {
+  // #269 (§545): the critical dice rolled apart count only for a Critical Hit target.
+  const rolls = (damageMessage?.rolls ?? []).filter(r => critical || !isCriticalExtra(r));
   if ( !rolls.length ) return null;
   const out = [];
   for ( const roll of rolls ) {

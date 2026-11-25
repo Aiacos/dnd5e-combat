@@ -23,7 +23,10 @@ function onCalculateDamage(actor, damages, options) {
   // §78 : une arme argentée (propriété « sil » du jet, dnd5e : DamageDescription.properties).
   const silvered = hurt.filter(d => d.properties?.has?.("sil")).map(d => d.type);
   // K2 (§323) : un coup critique — le jet de dégâts du message d'origine l'est.
-  const critical = (options?.origin?.rolls ?? []).some(r => r?.isCritical === true || r?.options?.isCritical === true);
+  // #269 (§545): the engine's verdict for this target first (an attack on several targets is not critical for all of them).
+  const own = options?.[MODULE_ID]?.criticalHit;
+  const critical = (typeof own === "boolean") ? own
+    : (options?.origin?.rolls ?? []).some(r => r?.isCritical === true || r?.options?.isCritical === true);
   // B04 : l'objet des dégâts (eau bénite), par son identifiant.
   const item = regeneration.stoppedByItems?.length ? damageItemIdentifier(options) : null;
   if ( types.length ) Object.assign((options[MODULE_ID] ??= {}), { damageTypes: types, silveredTypes: silvered, critical, damageItem: item });

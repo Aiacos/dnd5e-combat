@@ -1110,6 +1110,8 @@
   "DND5ECOMBAT.CoupCritique.against": "{item} : Avantage contre elle",
   "DND5ECOMBAT.CoupCritique.by": "{item} : Désavantage à ses attaques",
   "DND5ECOMBAT.CoupCritique.Empoignade": "{item} : dégâts à {name}, agrippé(e)",
+  "DND5ECOMBAT.CoupCritique.PartCritique": "Dés du coup critique (seulement pour {names})",
+  "DND5ECOMBAT.CoupCritique.DesCritiques": "dés du critique compris",
   "DND5ECOMBAT.ReactionDesengage": "{mover} se désengage à côté de vous. Réagir ?",
   "DND5ECOMBAT.Relance.Question": "{what} : {total} contre {needed} (d20 : {d20}). Relancer la sauvegarde avec +{bonus} ({item}, une fois par Rage) ? Le nouveau jet compte, même plus bas.",
   "DND5ECOMBAT.Relance.QuestionPayee": "{what} : {total} contre {needed} (d20 : {d20}). Relancer avec +{bonus} ({item}) ? Le nouveau jet compte, même plus bas.",

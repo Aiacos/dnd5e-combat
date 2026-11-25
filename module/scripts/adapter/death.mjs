@@ -74,6 +74,9 @@ export function isDeadActor(actor) {
 
 /** Le message de dégâts est-il un coup critique ? */
 function isCriticalDamage(options) {
+  // #269 (§545): the engine's verdict for this target, when the engine applies (adapter/messages.mjs, `applyDamageToToken`).
+  const own = options?.[MODULE_ID]?.criticalHit;
+  if ( typeof own === "boolean" ) return own;
   const message = options?.originatingMessage ?? options?.origin;
   // §207 : un critique traité par la table (dégâts normaux) reste un coup critique.
   return !!message?.rolls?.some?.(r => r.isCritical || r.options?.isCritical) || !!message?.getFlag?.(MODULE_ID, "criticalHit");
