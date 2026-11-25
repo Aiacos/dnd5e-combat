@@ -58,8 +58,7 @@ export default {
     await ctx.call("set-status", { tokenId: zombi.id, statusId: "paralyzed", active: true });
     await pause(500);
 
-    const extraOf = roll => roll?.options?.[MODULE_ID]?.criticalExtra === true;
-    const sum = rolls => rolls.reduce((s, r) => s + (Number(r.total) || 0), 0);
+    const sum = list => (list ?? []).reduce((acc, d) => acc + (Number(d.value ?? d.total) || 0), 0);
 
     // Up to 8 swings: a natural 20 makes both targets critical, a miss proves nothing — swing again from 300 HP.
     let found = null;
@@ -87,18 +86,20 @@ export default {
 
     const { r, z, b, damage } = found;
     ctx.expect(z.reason === "autoCritical", `Zombi: automatic Critical Hit, Paralyzed within 5 ft (${z.reason})`);
+    // The connector passes only a few roll options: the split is read on the engine's resolution (`damageRoll`), the rolls on the card.
     const rolls = damage?.rolls ?? [];
-    const normal = rolls.filter(x => !extraOf(x));
-    const extra = rolls.filter(extraOf);
     ctx.expect(!!damage, "one damage message");
-    ctx.expect(normal.length > 0 && normal.every(x => x.options?.isCritical !== true),
-      `the damage roll itself is normal (${normal.map(x => x.formula).join(" + ")})`);
-    ctx.expect(extra.length > 0, `the critical dice are rolled apart, in the same message (${extra.map(x => x.formula).join(" + ") || "none"})`);
+    ctx.expect(rolls.length > 0 && rolls.every(x => x.options?.isCritical !== true),
+      `no roll of the message is a critical roll (${rolls.map(x => x.formula).join(" | ")})`);
+    const split = r.damageRoll ?? {};
+    ctx.expect((split.critical ?? []).length > 0, `the critical dice are rolled apart (${JSON.stringify(split.critical ?? null)})`);
+    ctx.expect(sum(rolls) === sum(split.damages) + sum(split.critical),
+      `the card's rolls are the normal damage plus the critical dice (${sum(rolls)} = ${sum(split.damages)} + ${sum(split.critical)})`);
     ctx.expect((damage?.flags?.[MODULE_ID]?.criticalFor ?? []).some(u => String(u).endsWith(zombi.id))
       && !(damage?.flags?.[MODULE_ID]?.criticalFor ?? []).some(u => String(u).endsWith(bandit.id)), "the message names the Zombi alone as critical");
 
-    const normalTotal = sum(normal);
-    const extraTotal = sum(extra);
+    const normalTotal = sum(split.damages);
+    const extraTotal = sum(split.critical);
     const lostZ = 300 - (await ctx.hp(zombi));
     const lostB = 300 - (await ctx.hp(bandit));
     ctx.expect(lostB === normalTotal, `Bandit: loses the normal damage only (${lostB}, roll ${normalTotal})`);
