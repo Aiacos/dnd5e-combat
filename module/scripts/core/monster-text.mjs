@@ -583,6 +583,7 @@ const DAMAGE_TYPES = ["acid", "bludgeoning", "cold", "fire", "force", "lightning
  *  - « hits it with an attack roll », « An attack roll hits the … », « is hit by an attack roll » → `isHit` ;
  *  - « makes an attack roll against it » → `isAttacked` ;
  *  - « takes Piercing or Slashing damage », « is subjected to Cold damage », « deals damage to it » → `isDamaged` (types gardés) ;
+ *    « is hit by a ranged attack roll and takes … damage from it » : seulement pour une attaque à distance ;
  *  - « within 30 feet … casts a spell » → `castsSpell`.
  * Le sujet doit être la créature elle-même (pas « A Bloodied creature … takes damage »). Rien pour les autres déclencheurs.
  * @param {string} html
@@ -609,7 +610,10 @@ export function monsterReactionWindow(html, conditions=[], outward=false, activi
       const dmg = t.match(/\b(?:takes|is subjected to) ((?:[A-Za-z]+, )*[A-Za-z]+(?:,? or [A-Za-z]+)?) damage\b/i);
       if ( dmg ) {
         const types = DAMAGE_TYPES.filter(k => new RegExp(`\\b${k}\\b`, "i").test(dmg[1]));
-        return [{ on: "isDamaged", ...(types.length ? { if: { "damage.hasType": types } } : {}), do: use }];
+        // « hit by a ranged attack roll » (Parade de projectiles du Géant des pierres) : un coup au corps à corps n'ouvre rien.
+        const ranged = /\bhit by a ranged attack roll\b/i.test(t) ? { "activity.isAttack": true, "activity.isMelee": false } : {};
+        const when = { ...(types.length ? { "damage.hasType": types } : {}), ...ranged };
+        return [{ on: "isDamaged", ...(Object.keys(when).length ? { if: when } : {}), do: use }];
       }
       if ( /\btakes damage\b/i.test(t) ) return [{ on: "isDamaged", do: use }];
     }
