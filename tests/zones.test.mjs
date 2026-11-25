@@ -17,6 +17,12 @@ describe("zone déplaçable (§16.14)", () => {
     expect(shapeCenter({ type: "rectangle", x: 0, y: 0, width: 140, height: 280 })).toEqual({ x: 70, y: 140 });
     expect(shapeCenter({ type: "polygon", points: [0, 0, 20, 0, 20, 20, 0, 20] })).toEqual({ x: 10, y: 10 });
   });
+  it("§540: an Emanation is placed by its base", () => {
+    const emanation = { type: "emanation", radius: 3, base: { type: "token", x: 700, y: 350, width: 1, height: 1, shape: 4 } };
+    expect(shapeCenter(emanation)).toEqual({ x: 700, y: 350 });
+    expect(shapeCenter({ ...emanation, base: { type: "circle", x: 70, y: 140, radius: 35 } })).toEqual({ x: 70, y: 140 });
+    expect(translateShapes([emanation], 140, -70)[0].base).toEqual({ type: "token", x: 840, y: 280, width: 1, height: 1, shape: 4 });
+  });
 });
 
 import { stepsInside, actsOnPose, shouldTrigger as trig } from "../module/scripts/core/area.mjs";

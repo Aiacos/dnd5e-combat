@@ -5,7 +5,7 @@
  *    (« 22 (Désavantage : 16, 19) », le 19 barré ; sans le dé écarté, « 22 (d20 : 16) » se lit comme un jet normal, ou comme deux dés dont le plus haut est pris).
  *  - Zombi Invisible et Aveuglé : Avantage et Désavantage s'annulent — un seul d20, les deux raisons et « s'annulent » sur la carte.
  *  - Zombi Aveuglé : Avantage seul — deux d20, le plus haut gardé, les deux dés sur la carte.
- * Les états sont retirés en fin de scénario.
+ * Les états sont retirés en fin de scénario. The card's dice rows (`chatRows`) are off for the run.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -21,6 +21,10 @@ export default {
     const status = (id, active) => ctx.call("set-status", { tokenId: zombi.id, statusId: id, active });
     ctx.restore(() => status("invisible", false));
     ctx.restore(() => status("blinded", false));
+    // The text summary under test: with `chatRows` on (a world choice), the card shows Midi-style dice blocks instead of the
+    // « Attack: 22 (Disadvantage: 16, 19) » line.
+    const rows = await ctx.engine("setting", { key: "chatRows", value: false });
+    ctx.restore(() => ctx.engine("setting", { key: "chatRows", value: rows.before }));
 
     async function shoot() {
       const used = await ctx.use({ tokenId: sorc.id, identifier: "fire-bolt", activityType: "attack", targetTokenIds: [zombi.id] });

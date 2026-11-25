@@ -286,7 +286,7 @@ la sélection sans rien jouer.
 | `repasse-c2` |  | §296 | créatures de votre choix, plafond, réserve à répartir (Arène des sorts) |
 | `repasse-c3` |  | §298 | coût d'action : Magie de guerre, Arme sacrée (Arène des sorts) |
 | `repasse-c4` |  | §299 §509 | Rage (aptitudes tenues), fins sur Neutralisé (Arène des sorts) |
-| `repasse-c5` |  | §300 | zones, émanations, entrées (Arène des sorts) |
+| `repasse-c5` |  | §300 §531 §540 | zones, émanations, entrées (Arène des sorts) |
 | `repasse-c6` |  | §301 | réactions : Interception, Représailles, Chute ralentie, Feuille morte (Arène des sorts) |
 | `repasse-c7` |  | §302 | Avantage et Désavantage oubliés (Arène des sorts) |
 | `repasse-c8` |  | §303 | Protection contre la mort contre Mot de pouvoir mortel, Aide à pleins PV (Arène des sorts) |

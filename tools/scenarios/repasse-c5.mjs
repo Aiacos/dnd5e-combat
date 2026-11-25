@@ -1,8 +1,8 @@
 /**
  * §300, lot C5 de la repasse terme par terme : zones, émanations, entrées. Arène des sorts (Lanceur, Allié, Cible, Cible voisine).
  * Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source) et remet tout.
- *  - Esprits gardiens : la zone avance d'une case, la Cible déjà dedans ne resauvegarde pas ; sortie de l'émanation, sa Vitesse divisée
- *    par deux tombe ; au round suivant, elle y revient et resauvegarde ;
+ *  - Esprits gardiens : rien à la pose (§531, SRD 5.2) ; la zone avance d'une case, la Cible déjà dedans ne sauvegarde pas (§540) ;
+ *    sortie de l'émanation, sa Vitesse divisée par deux tombe ; au round suivant, elle y revient et sauvegarde ;
  *  - Tempête de neige : rien à l'incantation, la sauvegarde vient au début du tour de la Cible ;
  *  - Croissance végétale : la zone reste, terrain ×4 ; l'incantation coûte l'action ;
  *  - Aura de vitalité, Soins de groupe : une créature au choix (resp. six) — seules les cochées sont soignées ;
@@ -108,7 +108,7 @@ export default {
       await moveTo(target, c.x - 2 * grid, c.y);
       // §438 : Manuel 3.0.0 — l'émanation est posée par « Cast Spell » avec le comportement de dnd5e (Vitesse divisée par deux) ; le
       // connecteur pose sa zone sans ce comportement : le sort est lancé comme au clic (dnd5e pose l'émanation, rattachée au lanceur), la
-      // sauvegarde de la pose est le rejeu « enter » de la sœur, et la zone « avance » quand le lanceur fait un pas.
+      // sœur est rejouée par la zone (« enter », fin de tour), qui « avance » quand le lanceur fait un pas.
       const v3 = !!((await ctx.call("get-actor", { actorId: caster.actorId })).items ?? []).find(i => i._id === spell)?.system?.activities?.tevaatMC9LZxVPLS;
       let used, r, since;
       if ( v3 ) {
@@ -127,13 +127,17 @@ export default {
         since = used.usageMessageId;
       }
       if ( used?.regionId ) regions.push(used.regionId);
-      ctx.expect(named(r).includes("Cible"), `à la pose, la Cible sauvegarde (${named(r).join(", ")})`);
+      // §531 (issue #142): SRD 5.2 — nothing when the Emanation appears; the Target inside saves at the end of its turn, or when the
+      // moving Emanation enters its space.
+      ctx.expect(!named(r).includes("Cible"), `no save for the Target when the Emanation appears (${named(r).join(", ") || "none"})`);
       let speedHalved = false;
       for ( let i = 0; (i < 6) && !speedHalved; i++ ) { speedHalved = await has(target, "spirit-guardians"); if ( !speedHalved ) await pause(500); }
       ctx.expect(speedHalved, "la Cible a la Vitesse divisée par deux");
       const posed = (await ticks(since, "enter")).length;
       if ( v3 ) { await moveTo(caster, c.x - grid, c.y); await pause(3000); } else await shiftRegion(used.regionId, grid);
-      ctx.expect((await ticks(since, "enter")).length === posed, "la zone avance d'une case : la Cible, déjà dedans, ne resauvegarde pas");
+      // §540: dnd5e's Emanation is attached to the caster — a step moves it, but whoever it already covered does not "enter" it.
+      const stepped = await ticks(since, "enter");
+      ctx.expect(stepped.length === posed, `the area moves one square: the Target, already inside, makes no save (${stepped.length - posed} "enter" replay(s))`);
       await moveTo(target, c.x - 2 * grid, c.y + 7 * grid);
       await pause(1500);
       ctx.expect(!await has(target, "spirit-guardians"), "sortie de l'émanation, la Vitesse divisée par deux tombe");
@@ -144,7 +148,7 @@ export default {
       await moveTo(target, c.x - (v3 ? 2 : 1) * grid, c.y);
       let n = before;
       for ( let i = 0; (i < 10) && (n <= before); i++ ) { await pause(1000); n = (await ticks(since, "enter")).length; }
-      ctx.expect(n > before, "au round suivant, la Cible revient dans l'émanation : elle « entre » et resauvegarde");
+      ctx.expect(n > before, "au round suivant, la Cible revient dans l'émanation : elle « entre » et sauvegarde");
     });
 
     await part("Tempête de neige", async () => {

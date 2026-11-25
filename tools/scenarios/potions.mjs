@@ -4,7 +4,7 @@
  *  2. Hors combat : il la donne au Clerc blessé, au contact — c'est le Clerc qui est soigné.
  *  3. Hors combat : le Clerc à 0 PV (Inconscient) — la potion le relève (plus Inconscient).
  *  4. La potion du Guide du maître (portée « personnelle »), sans cible désignée : c'est celui qui la boit qui est soigné.
- * Remet PV, états, positions (filet de sécurité) ; retire les potions prêtées.
+ * Remet PV, états, positions (filet de sécurité) ; retire les potions prêtées. The `potionHealing` house rule is off for the run.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -28,8 +28,12 @@ export default {
     const gActor = await actorOf(guerrier);
     const statuses = async t => (await ctx.effects(t)).flatMap(e => e.statuses ?? []);
     const potions = new Set();
+    // Issue #31: the 2024 rule, whatever the world's house rule says — with `potionHealing` on, the engine would ask « Bonus Action or
+    // action? » in combat and hold the use until answered (no card to roll). Its own scenario: potions-action.
+    const rule = await ctx.engine("setting", { key: "potionHealing", value: false });
     ctx.restore(async () => {
       if ( ctx.ownCombat ) { await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {}); ctx.ownCombat = null; }
+      await ctx.engine("setting", { key: "potionHealing", value: rule.before });
       for ( const t of [guerrier, clerc] ) for ( const s of ["stable", "unconscious", "prone"] ) await ctx.removeStatusEffects(t, s);
       if ( before.g !== null ) await ctx.setHp(guerrier, before.g);
       if ( before.c !== null ) await ctx.setHp(clerc, before.c);

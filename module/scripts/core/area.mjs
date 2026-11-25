@@ -150,6 +150,8 @@ export function translateShapes(shapes, dx, dy) {
     if ( Number.isFinite(out.x) ) out.x += dx;
     if ( Number.isFinite(out.y) ) out.y += dy;
     if ( Array.isArray(out.points) ) out.points = out.points.map((v, i) => v + ((i % 2) ? dy : dx));
+    // §540: an Emanation keeps its position in its base shape (a token, a circle…).
+    if ( out.base && (typeof out.base === "object") ) out.base = translateShapes([out.base], dx, dy)[0];
     return out;
   });
 }
@@ -157,6 +159,9 @@ export function translateShapes(shapes, dx, dy) {
 /** Le centre d'une forme (celui dont on mesure le déplacement), ou null. */
 export function shapeCenter(shape) {
   if ( !shape ) return null;
+  // §540: the core Emanation (dnd5e's Spirit Guardians, attached to its caster) has no position of its own, only its base's; a token
+  // base's x/y is its corner, which moves exactly as its centre does — only the shift between two centres is ever used.
+  if ( (shape.type === "emanation") && shape.base ) return shapeCenter(shape.base);
   if ( Array.isArray(shape.points) && shape.points.length >= 2 ) {
     const xs = shape.points.filter((_, i) => !(i % 2));
     const ys = shape.points.filter((_, i) => i % 2);
