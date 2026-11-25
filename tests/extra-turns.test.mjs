@@ -19,8 +19,8 @@ describe("extraTurns : des tours d'affilée (Arrêt du temps)", () => {
     expect(takesAnotherTurn({ combat: "c1", left: 0 }, { combat: "c1", forward: true })).toBe(false);
     expect(takesAnotherTurn(null, { combat: "c1", forward: true })).toBe(false);
   });
-  it("Arrêt du temps : 1d4 + 1 ; la clé est validée", () => {
-    expect(CONTENT["time-stop"].extraTurns).toEqual({ formula: "1d4 + 1" });
+  it("the key is validated; Time Stop does not use it until issue #274", () => {
+    expect(CONTENT["time-stop"]?.extraTurns).toBeUndefined();
     expect(validateExtraTurns({ formula: "1d4 + 1" }, "")).toEqual([]);
     expect(validateExtraTurns({ formula: "" }, "")).toHaveLength(1);
     expect(validateEntry({ extraTurns: { formula: "1d4 + 1", free: true } })).not.toEqual([]);

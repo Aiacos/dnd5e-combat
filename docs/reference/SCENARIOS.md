@@ -404,7 +404,6 @@ la sélection sans rien jouer.
 | `terrain-grele` |  | §261 | le terrain difficile reste jusqu'à la fin du prochain tour du lanceur |
 | `texte-monstres-soleil-durees` |  | §322 §521 | Sensibilité au soleil aux tests, durée d'un effet sans état (#250, #251) |
 | `theatre` |  | §220 | automatisations en pause, puis rétablies |
-| `time-stop-player` | Arène des refus |  | cast and played by a player, the GM gives the turns back |
 | `tours-de-magie` |  | §23 | Rayon de givre, Contact glacial, Éclat mental, Poigne électrique, Glas, Amitié, Frappe assurée |
 | `traction` |  |  | Fouet d'épines attire le Zombi de 10 ft au toucher |
 | `traduction-creation` |  | §204 | objets et créatures restés en anglais |
@@ -440,5 +439,6 @@ la sélection sans rien jouer.
 | Scénario | Scène | § | Ce qu'il vérifie |
 |---|---|---|---|
 | `time-stop-edits` |  |  | previous turn, removed combatants, death and end of combat during the turns in a row |
+| `time-stop-player` | Arène des refus |  | cast and played by a player, the GM gives the turns back |
 | `time-stop-round` |  |  | the caster last in the round: the round does not end for the others |
 | `time-stop` |  |  | turns in a row, the others frozen meanwhile |

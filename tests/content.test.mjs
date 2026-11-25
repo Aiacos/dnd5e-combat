@@ -353,7 +353,7 @@ describe("contenu livré", () => {
       "symbiotic-being", "symbol", "synaptic-static", "tactical-assessment", "tactical-charge", "tactical-mind", "tactical-shift",
       "talisman-of-pure-good", "talisman-of-ultimate-evil", "tashas-hideous-laughter", "tavern-brawler", "telekinesis", "telekinetic",
       "telekinetic-thrust", "teleport", "tensers-floating-disk", "tentacle-rod", "terrifying-aura", "thiefs-reflexes",
-      "thorn-whip", "thrown-weapon-fighting", "thunderous-smite", "thunderwave", "time-stop", "tinderbox", "tiny-hut",
+      "thorn-whip", "thrown-weapon-fighting", "thunderous-smite", "thunderwave", "tinderbox", "tiny-hut",
       "toll-the-dead", "tome-of-clear-thought", "tome-of-leadership-and-influence", "tome-of-understanding", "torch", "torpor",
       "touch-of-death", "toxic-escape", "trampling-charge", "transmuted-spell",
       "travel-along-the-tree", "trebuchet", "tricksters-transposition", "trip-attack", "true-resurrection",
