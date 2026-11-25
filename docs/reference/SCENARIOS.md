@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-416 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+420 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -404,6 +404,7 @@ la sélection sans rien jouer.
 | `terrain-grele` |  | §261 | le terrain difficile reste jusqu'à la fin du prochain tour du lanceur |
 | `texte-monstres-soleil-durees` |  | §322 §521 | Sensibilité au soleil aux tests, durée d'un effet sans état (#250, #251) |
 | `theatre` |  | §220 | automatisations en pause, puis rétablies |
+| `time-stop-player` | Arène des refus |  | cast and played by a player, the GM gives the turns back |
 | `tours-de-magie` |  | §23 | Rayon de givre, Contact glacial, Éclat mental, Poigne électrique, Glas, Amitié, Frappe assurée |
 | `traction` |  |  | Fouet d'épines attire le Zombi de 10 ft au toucher |
 | `traduction-creation` |  | §204 | objets et créatures restés en anglais |
@@ -433,3 +434,11 @@ la sélection sans rien jouer.
 | `drain` |  | §18.16 §105 | Absorption de vie, Morsure du Vampire, Drain d'énergie |
 | `fiches-2014` |  |  | Attaques multiples sans identifiant ou traduites, sauvegarde au toucher |
 | `pj-quatre` |  | §65 | Échappée agile au choix, Eau bénite, Suggestion, Anneau de chaleur maudit |
+
+## `to-fix/`
+
+| Scénario | Scène | § | Ce qu'il vérifie |
+|---|---|---|---|
+| `time-stop-edits` |  |  | previous turn, removed combatants, death and end of combat during the turns in a row |
+| `time-stop-round` |  |  | the caster last in the round: the round does not end for the others |
+| `time-stop` |  |  | turns in a row, the others frozen meanwhile |
