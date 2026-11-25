@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-137 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
+138 réglages, relevés sur chaque `game.settings.register` du module chargé. **Portée** : `world` = la table (MJ),
 `client` = ce poste, `user` = ce joueur. **Onglet** : celui de la fenêtre de réglages DAS (`core/settings-layout.mjs`) ; sans onglet,
 le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêtre dédiée). Le libellé est celui de `lang/fr.json`.
 
@@ -186,4 +186,5 @@ le réglage est une mémoire interne ou se règle ailleurs (interrupteur, fenêt
 | `floatCoreMuted` |  | world | Boolean | `false` |  | `ui/feedback.mjs` |
 | `floatTheme` |  | world | Object | `{}` |  | `ui/feedback.mjs` |
 | `itemReports` |  | world | Object | `{}` |  | `ui/automation.mjs` |
+| `summonPermissionsSeen` |  | world | String | `""` |  | `ui/summon-permissions.mjs` |
 | `welcomeSeen` |  | world | String | `""` |  | `ui/welcome.mjs` |

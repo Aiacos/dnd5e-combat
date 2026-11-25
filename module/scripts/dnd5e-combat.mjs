@@ -140,6 +140,8 @@ import { registerCompulsion } from "./runtime/compulsion.mjs";
 import { registerControl } from "./runtime/control.mjs";
 import { registerCatalyst } from "./runtime/catalyst.mjs";
 import { registerSummonHandover } from "./runtime/summon-handover.mjs";
+import { registerSummonPermissions } from "./runtime/summon-permissions.mjs";
+import { registerSummonPermissionsUi, checkSummonPermissions, SUMMON_WINDOW_ID } from "./ui/summon-permissions.mjs";
 import { registerAutoTranslate } from "./runtime/auto-translate.mjs";
 import { registerDataFixes } from "./runtime/data-fixes.mjs";
 import { registerClock } from "./runtime/clock.mjs";
@@ -263,7 +265,9 @@ const state = {
   // §272 : la minuterie se lance aussi par le connecteur (`timer` : token de la scène affichée, secondes, libellé) — elle vit dans ui/.
   mcp: Object.freeze({ ...testApi,
     /** Lance chez tous les clients une minuterie de `seconds` s au-dessus du token `tokenId` de la scène affichée → `{ id }`. */
-    timer: ({ tokenId, seconds=5, label="" }={}) => ({ id: startTimer({ token: canvas.tokens.get(tokenId)?.document, seconds, label }).id }) }), perf: perfApi,
+    timer: ({ tokenId, seconds=5, label="" }={}) => ({ id: startTimer({ token: canvas.tokens.get(tokenId)?.document, seconds, label }).id }),
+    /** §542: the load-time summon permissions check, as at `ready` → `{ gaps, opened, windowId }` (the window opened, or not). */
+    summonAlert: async () => ({ ...(await checkSummonPermissions()), windowId: SUMMON_WINDOW_ID }) }), perf: perfApi,
   ui: uiApi, light: lightState, approach, nonLethal: { get: isNonLethal, set: setNonLethal, knockedOut: isKnockedOut }, scrolls: { spellOf: scrollSpellOf }, basics: { data: basicActionData, take: takeBasicAction }, path: pathTo,
   flee: fleeFrom, save: requestSave, drop: dropHeldBy,
   stopWalks: stopAllWalks, budget: { issues: budgetIssues, spend: spendBudget },
@@ -543,6 +547,8 @@ Hooks.once("init", () => {
   gated(registerGmAlert);   // §364 : alerte MJ — la carte chuchotée
   gated(registerForced);   // §408 : une règle passée outre — le MJ et la table prévenus
   gated(registerGmAlertUi);   // §364 : son bandeau chez le MJ
+  gated(registerSummonPermissions);   // §542 (issue #43): a player who cannot summon is told why, and so is the GM
+  gated(registerSummonPermissionsUi);   // §542: at load, the GM is told when players cannot summon
   gated(registerPurge);
   gated(registerFeedback);
   gated(registerAwaitingUI);   // §381 : le sablier au-dessus du token qu'on attend, le bandeau « Le MJ décide… »

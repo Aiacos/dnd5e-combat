@@ -29,6 +29,7 @@ import { carriedLightState } from "../adapter/lights.mjs";
 import { toggleCarriedLight, toggleHood } from "./lights.mjs";
 import { listBackups as diagBackups, repairTasks, restore as diagRestore, scanWorld } from "./diagnostic/index.mjs";
 import { gmOnly, windows, viewedToken } from "./testing-shared.mjs";
+import { blockerFor, tellGM } from "./summon-permissions.mjs";
 import { debugThrow, debugReport, debugClear, debugVerbose, connectionTest } from "./testing-debug.mjs";
 import { barrierBetween } from "../adapter/barriers.mjs";
 import { climbEntries } from "./climb.mjs";
@@ -218,6 +219,23 @@ function barrier({ attackerId, targetId, itemId, activityType=null }) {
 /** §364 : les alertes MJ affichées dans le bandeau de ce client (textes). */
 function gmAlerts() {
   return Array.from(document.querySelectorAll(".das-gm-alerts__line:not(.closing) .das-gm-alerts__text")).map(e => e.textContent);
+}
+
+/**
+ * §542: what would happen if the user `userId` (a player) used this summon activity — the bench has no player client. Rights are read
+ * for that user (`User#can` reads the role table for any user); with `tell: true` (default) the GM alert is posted as the player's
+ * client would post it, whatever was told before. → `{ blocker, messageId }` (`blocker` null: nothing missing).
+ */
+async function summonBlocked({ userId, tokenId, itemId, activityId=null, tell=true }={}) {
+  gmOnly();
+  const user = game.users.get(userId);
+  if ( !user ) throw new Error(`user ${userId} not found`);
+  const item = canvas.scene?.tokens.get(tokenId)?.actor?.items.get(itemId);
+  const activity = item?.system.activities.get(activityId) ?? item?.system.activities.find(a => a.type === "summon");
+  if ( activity?.type !== "summon" ) throw new Error(`no summon activity on item ${itemId}`);
+  const blocker = blockerFor(activity, user);
+  const messageId = (blocker && tell) ? await tellGM(activity, user, blocker, { once: false }) : null;
+  return { blocker, messageId };
 }
 
 /** §134 : Rapide — le nom de l'item qui donne le Désavantage aux attaques d'opportunité contre l'acteur du token `tokenId`, ou null. */
@@ -595,4 +613,4 @@ async function sceneBright({ check=null }={}) {
   return { ...shown, saved: scene._source.environment.globalLight.bright };
 }
 
-export const testApi = Object.freeze({ gmQueue: gmQueueState, gmQueueForce, gmQueueRoll, gmQueueAnswer, atCost, barrier, gmAlerts, controls, menu, wall, wallSide, cover, coverPreview, issues, planning, stormStrike, storm, placeRegionAt, effectOrigins, enchant, overrideContent, heal, hurt, rollSave, rollCheck, range, rangeCheck, naturalOne, perf, threats, missedOpportunities, attackReasons, perceived, inventory, budget, potionOptions: potionOptionsOf, identify, itemData, stairs, plan, movement, move, windows, closeWindow, view, reports, rollCard, status, reload, clickCard, summonAt, castFromBar, summonCaptured, owners, makeScroll, scrollReading, hampered, stats, teleport, teleportPick, restoreItem, runMacro, saveChance, portent, transpose, dash, chatCards, setting, foreignSetting, viewScene, sequencer, stairsAt, takeStairs, follow, unfollow, followState, mount, endings, actionEnd, use, sheetUse, familiar, familiarPocket, familiarRecall, skillAids, skillAid, animations: animationState, toggleLight, hood, removeItemEffect, lightState, advanceTime, longRest, shortRest, clock, door, lock, diagnosticScan, diagnosticRepair, diagnosticBackups, diagnosticRestore, diagnosticForget, factions, sees, stealth, scatter, flammable, climb, climbState, climbHolds, climbToward, climbCeiling, climbDown, reachCheck, dropDown, rawMove, jump, hoist, grab, ready, burning, masteries, masteryWindow, etherealWalls, flight, groupRoll, groupRollState, groupRollBreakdown, groupRollForce, groupRollMode, placeMenu, settingsChanged, placeItemEffect, concentrate, upkeep, stand, rangedPlacement, chainCheck, tokenLight, damageTypes, fortified, catalyst, grappleState, attacksThisTurn, waits, awaiting, forcePlayerWait, pickTargets, castPicked , debugThrow, debugReport, debugClear, debugVerbose, connectionTest, visionMatrix, screenHere, setOwners, sightIssues, screenAfterUpdate, controlToken, sceneBright });
+export const testApi = Object.freeze({ summonBlocked, gmQueue: gmQueueState, gmQueueForce, gmQueueRoll, gmQueueAnswer, atCost, barrier, gmAlerts, controls, menu, wall, wallSide, cover, coverPreview, issues, planning, stormStrike, storm, placeRegionAt, effectOrigins, enchant, overrideContent, heal, hurt, rollSave, rollCheck, range, rangeCheck, naturalOne, perf, threats, missedOpportunities, attackReasons, perceived, inventory, budget, potionOptions: potionOptionsOf, identify, itemData, stairs, plan, movement, move, windows, closeWindow, view, reports, rollCard, status, reload, clickCard, summonAt, castFromBar, summonCaptured, owners, makeScroll, scrollReading, hampered, stats, teleport, teleportPick, restoreItem, runMacro, saveChance, portent, transpose, dash, chatCards, setting, foreignSetting, viewScene, sequencer, stairsAt, takeStairs, follow, unfollow, followState, mount, endings, actionEnd, use, sheetUse, familiar, familiarPocket, familiarRecall, skillAids, skillAid, animations: animationState, toggleLight, hood, removeItemEffect, lightState, advanceTime, longRest, shortRest, clock, door, lock, diagnosticScan, diagnosticRepair, diagnosticBackups, diagnosticRestore, diagnosticForget, factions, sees, stealth, scatter, flammable, climb, climbState, climbHolds, climbToward, climbCeiling, climbDown, reachCheck, dropDown, rawMove, jump, hoist, grab, ready, burning, masteries, masteryWindow, etherealWalls, flight, groupRoll, groupRollState, groupRollBreakdown, groupRollForce, groupRollMode, placeMenu, settingsChanged, placeItemEffect, concentrate, upkeep, stand, rangedPlacement, chainCheck, tokenLight, damageTypes, fortified, catalyst, grappleState, attacksThisTurn, waits, awaiting, forcePlayerWait, pickTargets, castPicked , debugThrow, debugReport, debugClear, debugVerbose, connectionTest, visionMatrix, screenHere, setOwners, sightIssues, screenAfterUpdate, controlToken, sceneBright });

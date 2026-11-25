@@ -703,10 +703,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 33. light source: not lit
 34. Wild Shape: transformation not done
 35. enchantment: weapon not enchanted
-36. ethereal: Ethereal Jaunt / Stride not applied
-37. Arcane Vigor: Hit Point Dice not spent
-38. restoration: condition not removed
-39. tinderbox: nothing lit
+36. summon permissions: player not told
+37. ethereal: Ethereal Jaunt / Stride not applied
+38. Arcane Vigor: Hit Point Dice not spent
+39. restoration: condition not removed
+40. tinderbox: nothing lit
 
 ### `dnd5e.preActivityConsumption`
 
@@ -1068,10 +1069,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 25. combat launch: pending launch not cleared
 26. single card
 27. light chat log
-28. chat log purge on load _(MJ)_
-29. floating texts: system texts muted
-30. debug report: errors raised during loading not shown
-31. settings window: late settings taken from Foundry's list
+28. summon permissions: GM alert
+29. chat log purge on load _(MJ)_
+30. floating texts: system texts muted
+31. debug report: errors raised during loading not shown
+32. settings window: late settings taken from Foundry's list
 
 ### `refreshToken`
 

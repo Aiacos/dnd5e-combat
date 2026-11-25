@@ -171,6 +171,7 @@ la sélection sans rien jouer.
 | `indomptable` |  | §485 | rejouer en réaction la sauvegarde d'un effet porté, au choix du MJ (§485) |
 | `injonction-monstre` | keep | §16.59 §40.3 | Lâche sur un monstre : l'équipement tombe, ses attaques non |
 | `injonction` |  | §16.59 §40.3 | Rampe, Halte, Approche, Fuis, Lâche |
+| `invocation-droits` |  | §542 | alerte au chargement, alerte MJ, diagnostic (issue #43) |
 | `invocations-ciblees` | Arène des invocations | §393 §118 §388 | cadavre relevé par Doigt de mort et Animation des morts, bête morte refusée (Arène des invocations) |
 | `invocations-duree` |  | §198 | la Main du mage disparaît à la fin de sa durée, la monture reste |
 | `invocations-forme` |  | §383 | la forme se choisit quand la barre saute la fenêtre de dnd5e (Céleste, Élémentaire) |

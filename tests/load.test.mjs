@@ -43,7 +43,7 @@ describe("chargement du module", () => {
       "lightState", "lock", "longRest", "makeScroll", "masteries", "masteryWindow", "menu", "missedOpportunities", "mount", "move", "movement", "naturalOne", "overrideContent", "owners", "perceived", "perf", "pickTargets", "placeItemEffect", "placeMenu", "placeRegionAt",
       "plan", "planning", "portent", "potionOptions", "range", "rangeCheck", "rangedPlacement", "rawMove", "reachCheck", "ready", "reload", "removeItemEffect", "reports", "restoreItem", "rollCard",
       "rollCheck", "rollSave", "runMacro", "saveChance", "scatter", "sceneBright", "screenAfterUpdate", "screenHere", "scrollReading", "sees", "sequencer", "setOwners", "setting", "settingsChanged", "sheetUse", "shortRest", "sightIssues", "skillAid", "skillAids",
-      "stairs", "stairsAt", "stand", "stats", "status", "stealth", "storm", "stormStrike", "summonAt", "summonCaptured", "takeStairs", "teleport",
+      "stairs", "stairsAt", "stand", "stats", "status", "stealth", "storm", "stormStrike", "summonAlert", "summonAt", "summonBlocked", "summonCaptured", "takeStairs", "teleport",
       "teleportPick", "threats", "timer", "toggleLight", "tokenLight", "transpose", "unfollow", "upkeep", "use", "view", "viewScene", "visionMatrix", "waits", "wall", "wallSide", "windows"]);
     expect(Object.isFrozen(api.api.mcp)).toBe(true);
   });

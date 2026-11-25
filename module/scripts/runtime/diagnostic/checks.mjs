@@ -22,6 +22,8 @@ import { unmarkedItemEffects, unmarkedAppliedEffects, markEffects } from "../../
 import { phbDifferences, phbShape, renamedSourceItem, citesSubclass } from "../../core/phb-update.mjs";
 import { spellDuplicates } from "../../core/spell-duplicates.mjs";
 import { missingModifications, modifyOrigin } from "../../core/modify-item.mjs";
+import { summonGaps } from "../../core/summon-permissions.mjs";
+import { summonFacts } from "../../adapter/summon-permissions.mjs";
 
 /**
  * §202 : les effets d'une référence du compendium, prêts à recopier — un effet au nom d'origine (anglais) de l'objet prend le nom
@@ -1040,9 +1042,29 @@ const modifyItemCheck = {
   }
 };
 
+/* -------------------------------------------- */
+/*  Summon permissions (§542, issue #43)          */
+/* -------------------------------------------- */
+
+/**
+ * Read-only: what stops the players from summoning (core/summon-permissions.mjs). Settings and role permissions are not documents:
+ * nothing to back up, so the tasks are only reported — the fix is the GM's (load window, ui/summon-permissions.mjs, or Foundry's
+ * own configuration).
+ */
+const summonPermissions = {
+  id: "summon-permissions", icon: "fa-solid fa-user-shield",
+  async scan() {
+    return summonGaps(summonFacts()).map(g => ({
+      root: null,
+      where: `<b>${esc(loc(`Invocation.Droits.Alerte.${g.key}.Nom`))}</b>`,
+      text: esc(loc(`Invocation.Droits.Alerte.${g.key}.Texte`, { players: (g.players ?? []).join(", ") }))
+    }));
+  }
+};
+
 /** Les vérifications, dans l'ordre où les macros les proposaient. */
 export const CHECKS = Object.freeze([cleanMidi, phbEffects, lostEffects, scrolls, ddb, pileBasics, creatures,
-  retranslate, dataFixes, magicalEffects, phb3Subclasses, phb3Items, spellDuplicatesCheck, modifyItemCheck]);
+  retranslate, dataFixes, magicalEffects, phb3Subclasses, phb3Items, spellDuplicatesCheck, modifyItemCheck, summonPermissions]);
 
 /** Les vérifications du moment : celles du moteur, et, après « ddb », celle de chaque importeur déclaré par un autre module. */
 export function allChecks() {

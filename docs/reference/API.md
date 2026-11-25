@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-351 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
+353 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
 commentaire de la fonction dans le code (début seulement) ; le fichier est relatif à `module/scripts/`. Les valeurs non
 fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de test du connecteur, MJ seulement.
 
@@ -383,7 +383,9 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.mcp.stealth` | `({ op="state", tokenId, on=true }={})` | `runtime/testing-rules.mjs` | §184 : la Furtivité BG3, pour un scénario. `op` : `state` \| `set` ({ on }) \| `check` \| `forget`. |
 | `api.mcp.storm` | `({ tokenId, itemId })` | `runtime/testing-areas.mjs` | §70 : l'orage d'un item sur la scène (nuage, « déjà là », visée en cours). |
 | `api.mcp.stormStrike` | `({ x, y })` | `runtime/testing-areas.mjs` | §70 : le clic de la visée de l'éclair (un point de la scène) : la pose du cœur est fermée, l'éclair posé au point. |
+| `api.mcp.summonAlert` | `()` | `dnd5e-combat.mjs` | §542: the load-time summon permissions check, as at `ready` → `{ gaps, opened, windowId }` (the window opened, or not). |
 | `api.mcp.summonAt` | `({ tokenId, itemId, activityId=null, profile=null, actorUuid=null, x, y })` | `runtime/testing-areas.mjs` | MJ : utilise l'activité d'invocation de l'item (`activityId`, sinon la première) sans rien consommer, puis pose les créatures du profil (`profile`, sinon le premier) à la case `x`, `y` → `{ messageId, tokens: [{ id, nam… |
+| `api.mcp.summonBlocked` | `({ userId, tokenId, itemId, activityId=null, tell=true }={})` | `runtime/testing.mjs` | §542: what would happen if the user `userId` (a player) used this summon activity — the bench has no player client. Rights are read for that user (`User#can` reads the role table for any user); with `tell: true` (defaul… |
 | `api.mcp.summonCaptured` | `()` | `runtime/testing-areas.mjs` | §383 : ce que la dernière `castFromBar` a invoqué (profil reçu par dnd5e, tokens posés), ou null tant que rien n'est parti. |
 | `api.mcp.takeStairs` | `({ tokenId, point, levelId })` | `runtime/testing-moves.mjs` | §41.2 : prendre l'escalier sous ce point jusqu'à `levelId`, comme un clic dessus (sans le dialogue du cœur). |
 | `api.mcp.teleport` | `({ tokenId, itemId, x, y, passengers=[] })` | `runtime/testing-moves.mjs` | Une destination de téléportation de soi (Foulée brumeuse), comme la rendrait le clic de la planification du cœur : le plan passe par le même point de contrôle (`dnd5e.teleport`, que le moteur tient : portée, case occupé… |
