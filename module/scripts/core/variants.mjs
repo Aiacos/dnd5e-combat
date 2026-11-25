@@ -12,6 +12,14 @@
  * Pur : des objets simples.
  */
 
+import { sizeLimitIn } from "./riders.mjs";
+
+/** Rangs de taille de dnd5e, pour « de taille M ou inférieure ». */
+const SIZE_RANK = Object.freeze({ tiny: 0, sm: 1, med: 2, lg: 3, huge: 4, grg: 5 });
+
+/** La phrase de la charge quand elle borne la taille : « If the target is a Medium or smaller creature and … moved 20+ feet ». */
+const CHARGE_SIZE = /If the target is ([^.]*?)\bmoved \d+/i;
+
 /** Genre d'une activité d'attaque d'après son nom anglais, ou null pour l'attaque de base. */
 function kindOf(name) {
   const n = String(name ?? "");
@@ -24,8 +32,9 @@ function kindOf(name) {
 
 /**
  * Les variantes d'un item, ou null s'il n'en a pas.
- * @param {Array<{id: string, type: string, name: string, condition?: string, effects?: string[]}>} activities
- *   `name` : nom anglais d'origine ; `effects` : ids des effets de l'activité.
+ * @param {Array<{id: string, type: string, name: string, condition?: string, effects?: string[], sizeAtMost?: string}>}
+ *   activities  `name` : nom anglais d'origine ; `effects` : ids des effets de l'activité ; `sizeAtMost` : la taille maximale
+ *   de la cible que dit l'activité (`target.affects.special`, clé de taille de dnd5e).
  * @param {string} [description]  description anglaise de l'item (texte à plat ou HTML)
  * @returns {{base: string, baseEffects: string[], variants: Array<{id: string, kind: string, feet?: number, subject?: string, effects: string[]}>}|null}
  */
@@ -42,6 +51,9 @@ export function variantsOf(activities, description="") {
     if ( kind === "charge" ) {
       const m = String(a.condition ?? "").match(/(\d+)\+?\s*(?:feet|ft)/i) ?? text.match(/moved (\d+)\+?\s*(?:feet|ft)/i);
       v.feet = m ? Number(m[1]) : 20;
+      // La charge ne vaut que contre une cible d'au plus cette taille : l'activité le dit, sinon la phrase de la description.
+      const size = a.sizeAtMost ?? sizeLimitIn(text.match(CHARGE_SIZE)?.[1] ?? "");
+      if ( size ) v.sizeAtMost = size;
     }
     if ( kind === "bloodied" ) v.subject = /if the target is (?:&Reference\[)?Bloodied/i.test(text) ? "target" : "self";
     variants.push(v);
@@ -53,12 +65,16 @@ export function variantsOf(activities, description="") {
 /**
  * La variante à utiliser avant le jet, ou null (l'attaque de base). L'avantage ne se juge pas ici.
  * @param {object} plan  rendu par `variantsOf`
- * @param {{selfBloodied?: boolean, targetBloodied?: boolean, chargedFeet?: number, grappledBySelf?: boolean}} facts
+ * @param {{selfBloodied?: boolean, targetBloodied?: boolean, chargedFeet?: number, grappledBySelf?: boolean,
+ *   targetSize?: string}} facts
+ *   `targetSize` : la taille de la cible (clé de dnd5e) ; inconnue, la borne de taille d'une charge ne retient rien.
  * @returns {string|null}  id de l'activité
  */
 export function chooseVariant(plan, facts={}) {
   for ( const v of plan?.variants ?? [] ) {
-    if ( (v.kind === "charge") && ((facts.chargedFeet ?? 0) >= v.feet) ) return v.id;
+    const tooBig = !!v.sizeAtMost && (facts.targetSize in SIZE_RANK)
+      && (SIZE_RANK[facts.targetSize] > SIZE_RANK[v.sizeAtMost]);
+    if ( (v.kind === "charge") && ((facts.chargedFeet ?? 0) >= v.feet) && !tooBig ) return v.id;
     if ( (v.kind === "bloodied") && (v.subject === "self") && facts.selfBloodied ) return v.id;
     if ( (v.kind === "bloodied") && (v.subject === "target") && facts.targetBloodied ) return v.id;
     if ( (v.kind === "grappled") && facts.grappledBySelf ) return v.id;

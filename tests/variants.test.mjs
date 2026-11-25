@@ -14,6 +14,27 @@ describe("variantes d'attaque (M5)", () => {
     expect(chooseVariant(plan, { chargedFeet: 20 })).toBe("moving0000000000");
   });
 
+  it("la charge ne vaut que contre une cible d'au plus la taille dite (activité, sinon phrase de la description)", () => {
+    const acts = (extra={}) => [atk("base000000000000", "Attack"),
+      atk("moving0000000000", "Moving Attack", { condition: "moved 20+ feet", ...extra })];
+    const said = variantsOf(acts({ sizeAtMost: "med" }));
+    expect(said.variants[0].sizeAtMost).toBe("med");
+    expect(chooseVariant(said, { chargedFeet: 25, targetSize: "med" })).toBe("moving0000000000");
+    expect(chooseVariant(said, { chargedFeet: 25, targetSize: "sm" })).toBe("moving0000000000");
+    expect(chooseVariant(said, { chargedFeet: 25, targetSize: "lg" })).toBeNull();
+    // Taille de la cible inconnue : la borne ne retient rien (comme avant).
+    expect(chooseVariant(said, { chargedFeet: 25 })).toBe("moving0000000000");
+    const written = variantsOf(acts(), "<p>Hit: 4 damage. If the target is a Large or smaller creature and the elk moved 20+ feet"
+      + " straight toward it immediately before the hit, the target takes extra damage.</p>");
+    expect(written.variants[0].sizeAtMost).toBe("lg");
+    expect(chooseVariant(written, { chargedFeet: 25, targetSize: "huge" })).toBeNull();
+    expect(chooseVariant(written, { chargedFeet: 25, targetSize: "lg" })).toBe("moving0000000000");
+    // Une taille dite pour autre chose que la charge (une empoignade) ne borne pas la charge.
+    const other = variantsOf(acts(), "<p>If the target is a Medium or smaller creature, it has the Grappled condition."
+      + " If the bull moved 20+ feet straight toward the target, extra damage.</p>");
+    expect(other.variants[0].sizeAtMost).toBeUndefined();
+  });
+
   it("distance lue dans le texte quand l'activité ne la dit pas (créature inventée, 30 ft)", () => {
     const plan = variantsOf([atk("a", ""), atk("b", "Moving Attack")], "<p>If the skyhorn moved 30+ feet straight toward the target…</p>");
     expect(plan.variants[0].feet).toBe(30);

@@ -5,6 +5,7 @@
  */
 
 import { variantsOf, chooseVariant, advantageVariant, straightChargeFeet } from "../core/variants.mjs";
+import { sizeLimitIn } from "../core/riders.mjs";
 import { englishDescription } from "./multiattack.mjs";
 import { originItemOf } from "./facts.mjs";
 import { committedPosition } from "./turn.mjs";
@@ -21,7 +22,9 @@ export function variantPlanOf(item) {
   const activities = Array.from(item.system.activities.values?.() ?? []).map(a => ({
     id: a.id, type: a.type, name: englishName(item, a),
     condition: item.flags?.babele?.originalPayload?.activities?.[a.id]?.condition ?? a.activation?.condition ?? "",
-    effects: (a.effects ?? []).map(e => e._id ?? e.uuid)
+    effects: (a.effects ?? []).map(e => e._id ?? e.uuid),
+    sizeAtMost: sizeLimitIn(item.flags?.babele?.originalPayload?.activities?.[a.id]?.target?.affects?.special
+      ?? a.target?.affects?.special ?? "") ?? undefined
   }));
   return variantsOf(activities, englishDescription(item));
 }
@@ -76,7 +79,8 @@ export function useTimeVariant(activity, attackerToken, targetToken) {
     selfBloodied: bloodied(attacker),
     targetBloodied: bloodied(target),
     chargedFeet: target ? chargedFeet(attackerToken, targetToken) : 0,
-    grappledBySelf: target ? grappledBy(target, attacker) : false
+    grappledBySelf: target ? grappledBy(target, attacker) : false,
+    targetSize: target?.system?.traits?.size ?? undefined
   });
   const chosen = id ? activity.item.system.activities.get(id) : null;
   return chosen ? { activity: chosen, kind: plan.variants.find(v => v.id === id).kind } : null;
