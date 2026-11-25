@@ -240,7 +240,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `revivesFull` | 2 | `resurrection`, `true-resurrection` |
 | `ritualAdept` | 1 | `ritual-adept` |
 | `rollBonus` | 21 | `ambush`, `boon-of-fate`, `commanding-presence`, `countercharm`, `dark-ones-own-luck`, `disciplined-survivor`, … |
-| `rollDisadvantage` | 1 | `sunlight-weakness` |
+| `rollDisadvantage` | 2 | `sunlight-weakness`, `vampire-weakness` |
 | `rolledAc` | 2 | `bait-and-switch`, `evasive-footwork` |
 | `savageAttacker` | 2 | `savage-attacker`, `soldier-feature` |
 | `saveAdvantage` | 20 | `aura-of-purity`, `beguiling-twist`, `belt-of-dwarvenkind`, `brave`, `circle-of-power`, `dwarven-resilience`, … |
@@ -304,7 +304,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `thrownDamage` | 1 | `thrown-weapon-fighting` |
 | `trace` | 7 | `armor-of-agathys`, `blade-ward`, `dispel-evil-and-good`, `flame-blade`, `moonlight-step`, `produce-flame`, … |
 | `transpose` | 1 | `tricksters-transposition` |
-| `triggers` | 281 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
+| `triggers` | 282 | `abjure-foes`, `absorb-elements`, `absorption-ioun-stone`, `acid-arrow`, `air-element`, `ancient-might`, … |
 | `turnStartHeal` | 1 | `survivor` |
 | `untypedDamage` | 3 | `freezing-sphere`, `mm-wight-life-drain`, `otilukes-freezing-sphere` |
 | `upkeep` | 1 | `crown-of-madness` |
@@ -340,7 +340,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `allyIsHit → uncrit` | 1 | `sentinel-at-deaths-door` |
 | `allyIsHit → use` | 6 | `cutting-words`, `interception`, `psionic-power`, `sentinel`, `sentinel-at-deaths-door`, `wrath-of-the-wild` |
 | `castsSpell → use` | 3 | `absorption-ioun-stone`, `counterspell`, `greater-absorption-ioun-stone` |
-| `endOfTurn → damage` | 5 | `acid-arrow`, `melfs-acid-arrow`, `phantasmal-killer`, `vitriolic-sphere`, `weird` |
+| `endOfTurn → damage` | 6 | `acid-arrow`, `melfs-acid-arrow`, `phantasmal-killer`, `vampire-weakness`, `vitriolic-sphere`, `weird` |
 | `endOfTurn → remove` | 6 | `acid-arrow`, `command`, `melfs-acid-arrow`, `moonlight-step`, `steady-aim`, `vitriolic-sphere` |
 | `endOfTurn → resave` | 42 | `beguiling-magic`, `blinding-smite`, `blindness-deafness`, `carrion-crawler-mucus`, `cause-fear`, `compulsion`, … |
 | `enemyAttacked → use` | 1 | `soul-of-vengeance` |
@@ -390,11 +390,11 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `preAttackRoll → advantage` | 27 | `assassinate`, `avenging-angel`, `clairvoyant-combatant`, `distracting-strike`, `faerie-fire`, `feinting-attack`, … |
 | `preAttackRoll → attackBonus` | 3 | `blade-ward`, `brutal-strike`, `improved-brutal-strike` |
 | `preAttackRoll → consume` | 10 | `brutal-strike`, `distracting-strike`, `feinting-attack`, `guiding-bolt`, `improved-brutal-strike`, `moonlight-step`, … |
-| `preAttackRoll → disadvantage` | 33 | `bestow-curse`, `blur`, `clairvoyant-combatant`, `cloak-of-displacement`, `compelled-duel`, `demon-armor-enchanted`, … |
+| `preAttackRoll → disadvantage` | 34 | `bestow-curse`, `blur`, `clairvoyant-combatant`, `cloak-of-displacement`, `compelled-duel`, `demon-armor-enchanted`, … |
 | `preDamageRoll → damage` | 37 | `ancient-might`, `bestow-curse`, `blessed-strikes`, `blessed-strikes-potent-spellcasting`, `bracers-of-archery`, `brutal-strike`, … |
 | `savedSave → mark` | 1 | `eyebite` |
 | `savedSave → move` | 1 | `bead-of-force` |
-| `startOfTurn → damage` | 11 | `air-element`, `aura-of-life`, `burnt-othur-fumes`, `earth-element`, `ensnaring-strike`, `fire-element`, … |
+| `startOfTurn → damage` | 12 | `air-element`, `aura-of-life`, `burnt-othur-fumes`, `earth-element`, `ensnaring-strike`, `fire-element`, … |
 | `startOfTurn → resave` | 7 | `air-element`, `bestow-curse`, `burnt-othur-fumes`, `earth-element`, `fire-element`, `searing-smite`, … |
 | `turnEnd → replay` | 2 | `gust-of-wind`, `hunger-of-hadar` |
 | `turnStart → replay` | 2 | `hunger-of-hadar`, `stinking-cloud` |
