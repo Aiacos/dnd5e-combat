@@ -1,6 +1,7 @@
 /**
+ * In to-fix/ until PR #268 is fixed and merged (it adds a second identifier; the entry belongs under `mm-riposte`).
  * PR #268 — Pirate Captain's Riposte (Monster Manual 2024 / SRD 5.2): "The pirate adds 3 to its AC against that attack, possibly
- * causing it to miss." The item's "+3 AC" effect lasts a round in its data; the entry `mm-pirate-captain-riposte` holds it for the
+ * causing it to miss." The item's "+3 AC" effect lasts a round in its data; the entry `mm-riposte` holds it for the
  * triggering attack only (`forOneAttack`, as the Shield-like Parry of §19.6).
  * The Fighter strikes a Pirate Captain in melee until the Riposte is taken (reaction taken at once, `autoReact: "first"`):
  *  1. the resolution names the reaction, and the attack was judged against AC + 3;
@@ -28,7 +29,7 @@ export default {
     await ctx.call("move-token", { tokenId: pirate.id, x: at.x + grid, y: at.y, elevation: at.elevation });
     await pause(800);
 
-    const riposteEffects = async () => (await ctx.effectsFrom(pirate, "riposte", "mm-pirate-captain-riposte")).filter(e => !e.disabled);
+    const riposteEffects = async () => (await ctx.effectsFrom(pirate, "riposte", "mm-riposte", "mm-pirate-captain-riposte")).filter(e => !e.disabled);
     // The base AC is the one an attack without reaction is judged against (the unlinked token's synthetic actor is not readable
     // through `get-actor`, bench of 2026-11-25).
     let baseAc = null;

@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-422 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+426 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -69,6 +69,7 @@ la sélection sans rien jouer.
 | `chance-sauvegarde` |  | §15.3 | calcul = vrai jet, Bénédiction, échec d'office |
 | `chance-tenebreux` |  | §38 | 1d10 ajouté à une sauvegarde ratée |
 | `chance-toucher-joueurs` | Arène des refus |  | pourcentage et CA, pourcentage, avantage et désavantage seuls, rien (#247) |
+| `charge-size-limit` |  | §18.8 | Boar's Gore: no charge variant against a Large target (PR #260) |
 | `chausse-trapes` |  | §187 | la zone reste, on s'arrête dessus, on la ramasse |
 | `choix-sorts` |  | §401 | choix laissés au lanceur par le texte des sorts (§401) |
 | `chute-niveaux` | keep | §218 | après un saut, ou en bougeant un token en chute |
@@ -414,6 +415,7 @@ la sélection sans rien jouer.
 | `trousse-de-soins` |  | §50 | stabiliser une créature à 0 PV |
 | `types-immunites` |  | §16.8 | pas un humanoïde, immunisé contre l'Épuisement, contre Empoisonné |
 | `vague-destructrice` |  | §263 | les alliés du lanceur sont épargnés |
+| `vampire-weakness` |  | §484 | sunlight at turn start, running water at turn end, Disadvantage on checks (PR #265) |
 | `variantes-attaque` |  | §18.8 | charge, En sang, avantage |
 | `verrou-forme-porte` |  | §488 | tentative punie et refusée, Régénération suspendue (§488, brique B09) |
 | `vision-tenebres` |  | §62 | Ténèbres, Vision du diable, vision dans le noir, vision véritable, vision aveugle (Arène de la vision) |
@@ -440,6 +442,8 @@ la sélection sans rien jouer.
 
 | Scénario | Scène | § | Ce qu'il vérifie |
 |---|---|---|---|
+| `damage-trait-effect-ends` |  |  | Aversion to Fire, Freeze: until the end of the bearer's next turn (PR #264) |
+| `pirate-captain-riposte` |  | §19.6 | +3 AC against the triggering attack only (PR #268) |
 | `time-stop-edits` |  |  | previous turn, removed combatants, death and end of combat during the turns in a row |
 | `time-stop-player` | Arène des refus |  | cast and played by a player, the GM gives the turns back |
 | `time-stop-round` |  |  | the caster last in the round: the round does not end for the others |
