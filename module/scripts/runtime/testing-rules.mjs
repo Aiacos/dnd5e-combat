@@ -455,9 +455,11 @@ export function effectOrigins({ tokenId }) {
 /**
  * §181 : les factions, pour un scénario. `op` : `state` (réglage, rancunes, factions des tokens donnés), `snapshot` / `restore`
  * (le réglage entier, `value`), `add` ({ name } → id), `relation` ({ a, b } faction ids, `relation` ou null), `assign`
- * ({ tokenIds, faction|null, actor }), `between` ({ aId, bId } tokens → relation), `grudges` ({ clear }), `stance`.
+ * ({ tokenIds, faction|null, actor }), `between` ({ aId, bId } tokens → relation), `grudges` ({ clear }), `stance`,
+ * `window` (#275: the Factions window opened through the public API, its edit table unfolded and scrolled to the bottom → its
+ * size against the viewport and whether the Save button can be reached; closed again unless `keepOpen`).
  */
-export async function factions({ op="state", tokenIds=[], faction=null, actor=false, a, b, relation=null, aId, bId, name, value, clear=false, stance=null }={}) {
+export async function factions({ op="state", tokenIds=[], faction=null, actor=false, a, b, relation=null, aId, bId, name, value, clear=false, stance=null, keepOpen=false }={}) {
   const scene = canvas.scene;
   const tokens = tokenIds.map(id => viewedToken({ tokenId: id }));
   switch ( op ) {
@@ -472,11 +474,40 @@ export async function factions({ op="state", tokenIds=[], faction=null, actor=fa
     case "between": return { relation: factionsApi.relation(viewedToken({ tokenId: aId }), viewedToken({ tokenId: bId })) };
     case "grudges": if ( clear ) await factionsApi.grudge(null, null, { clear: true, scene }); return { grudges: factionsApi.grudges(scene) };
     case "stance": for ( const t of tokens ) await factionsApi.stance(t, stance); return { stances: tokens.map(t => t.getFlag(MODULE_ID, "stance") ?? null) };
+    case "window": return factionsWindow({ keepOpen });
     default: return {
       relations: factionsApi.relations(), grudges: factionsApi.grudges(scene),
       tokens: tokens.map(t => ({ name: t.name, faction: factionsApi.of(t), disposition: t.disposition }))
     };
   }
+}
+
+/** #275: the Factions window's layout — see `factions({ op: "window" })`. */
+async function factionsWindow({ keepOpen=false }={}) {
+  gmOnly();
+  const app = await game.modules.get(MODULE_ID).api.factions.open();
+  try {
+    await sleep(300);
+    const root = app.element;
+    const details = root.querySelector(".das-factions__edit");
+    if ( details ) details.open = true;
+    await sleep(200);
+    const content = root.querySelector(".window-content");
+    const header = root.querySelector(".window-header");
+    const save = root.querySelector("[data-action=save]");
+    const box = el => { const r = el.getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), height: Math.round(r.height) }; };
+    const before = { scrollHeight: content.scrollHeight, clientHeight: content.clientHeight };
+    content.scrollTop = content.scrollHeight;
+    await sleep(150);
+    const contentBox = box(content);
+    const saveBox = box(save);
+    return {
+      viewport: window.innerHeight, window: box(root), header: box(header), content: contentBox, save: saveBox, ...before,
+      overflowY: getComputedStyle(content).overflowY, scrollTop: Math.round(content.scrollTop),
+      rows: root.querySelectorAll("tr.das-faction-row").length, editRows: root.querySelectorAll("tr[data-edit]").length,
+      saveReachable: (saveBox.height > 0) && (saveBox.top >= contentBox.top - 1) && (saveBox.bottom <= contentBox.bottom + 1)
+    };
+  } finally { if ( !keepOpen ) await app.close(); }
 }
 
 /** §182 : l'observateur voit-il la cible (vision du moteur), et son cône. */

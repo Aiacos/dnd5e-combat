@@ -431,7 +431,9 @@ body[data-dnd5e-combat-cursor="invalid"] #board { cursor: url("../assets/cursors
 .das-backup > div { flex: 1; }
 
 /* §181 : la fenêtre des factions */
-.das-factions__body { padding: 0.8em 1em 1em; display: flex; flex-direction: column; gap: 0.7em; }
+/* §541 (#275): the core caps .application at the viewport height with overflow hidden; the window scrolls instead of clipping. */
+.das-factions .window-content { overflow-y: auto; }
+.das-factions__body { padding: 0.8em 1em 1em; display: flex; flex-direction: column; gap: 0.7em; flex: none; }
 .das-factions__matrix { overflow-x: auto; }
 .das-factions table { border-collapse: collapse; width: 100%; }
 .das-factions th, .das-factions td { border: 1px solid var(--das-line); padding: 0.25em 0.35em; text-align: center; }

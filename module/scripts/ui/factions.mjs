@@ -67,7 +67,7 @@ export const FactionsApp = () => FactionsClass ??= class FactionsApp extends fou
           ${value ? `<i class="${ICON[value]}"></i>` : "="}</td>`;
       }).join("");
       return `<tr class="das-faction-row" data-faction="${esc(a.id)}">
-        <th class="das-faction-head">${chip(a)} <span class="das-muted">${counts.get(a.id) ?? 0}</span>
+        <th class="das-faction-head">${chip(a)} <span class="das-muted das-faction-count" data-tooltip="${esc(loc("Factions.Compte"))}">${counts.get(a.id) ?? 0}</span>
           <button type="button" class="das-icon" data-assign="${esc(a.id)}" data-tooltip="${esc(loc("Factions.AffecterSelection"))}"><i class="fa-solid fa-crosshairs"></i></button>
         </th>${cells}</tr>`;
     }).join("");
@@ -170,12 +170,20 @@ export const FactionsApp = () => FactionsClass ??= class FactionsApp extends fou
         zone.classList.remove("drop");
         const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(ev);
         const id = zone.dataset.faction === NONE ? null : zone.dataset.faction;
+        let count = 0;
         if ( data?.type === "Actor" ) {
           const actor = await fromUuid(data.uuid);
-          if ( actor?.documentName === "Actor" ) await assignFaction([actor], id);
+          if ( actor?.documentName === "Actor" ) count = await assignFaction([actor], id);
         } else if ( data?.type === "Folder" ) {
           const folder = await fromUuid(data.uuid);
-          if ( folder?.type === "Actor" ) await assignFaction(folder.contents, id);
+          if ( folder?.type === "Actor" ) count = await assignFaction(folder.contents, id);
+        }
+        // #275: the row count only shows tokens on this scene, so an actor without a token here leaves it unchanged —
+        // say what the drop did.
+        if ( count ) {
+          const faction = factionSettings().factions.find(f => f.id === id);
+          ui.notifications.info(id ? loc("Factions.Affecte", { count, name: faction ? factionName(faction) : id })
+            : loc("Factions.Retire", { count }));
         }
         rerender();
       });
