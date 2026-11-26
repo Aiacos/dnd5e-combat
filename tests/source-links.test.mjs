@@ -35,6 +35,15 @@ describe("broken source links (§553)", () => {
     expect(clean.items[1].effects[0]._stats.duplicateSource).toBeNull();
     expect(clean.items[0]._stats.compendiumSource).toBe(GOOD);
     expect(data.items[1]._stats.compendiumSource).toBe(BAD);
+    // A link the document still holds as is: left out of the write (its `_stats` dropped), not reported.
+    const kept = withoutBrokenLinks(data, isValid, actor());
+    expect(kept.removed).toEqual([]);
+    expect(kept.data.items[1]._stats).toBeUndefined();
+    expect(kept.data.items[1].effects[0]._stats).toBeUndefined();
+    expect(kept.data.items[0]._stats.compendiumSource).toBe(GOOD);
+    const changed = actor();
+    changed.items[1]._stats.compendiumSource = null;
+    expect(withoutBrokenLinks(data, isValid, changed).removed.map(l => l.field)).toEqual(["compendiumSource"]);
     const fine = { name: "y", items: [] };
     expect(withoutBrokenLinks(fine, isValid).data).toBe(fine);
   });

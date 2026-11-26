@@ -38,18 +38,31 @@ export function brokenSourceLinks(data, isValid) {
   return out;
 }
 
+/** The document at this embedded path of some data (`[]`: the data itself). */
+function atPath(data, path) {
+  let doc = data;
+  for ( let i = 0; i < path.length; i += 2 ) doc = (Array.isArray(doc?.[path[i]]) ? doc[path[i]] : []).find(d => d?._id === path[i + 1]);
+  return doc ?? null;
+}
+
 /**
- * A copy of this data with every broken link set to null (what Foundry accepts), and the links removed.
+ * A copy of this data that Foundry will accept to write. A broken link the document still holds as is (`current`) is left alone: its
+ * `_stats` is dropped from the write, so the stored value stays exactly. Any other broken link is set to null and reported in `removed`.
+ * @param {object} data                         The data to write.
+ * @param {(value: string) => boolean} isValid
+ * @param {object|null} [current]               The document's data as it is now (same root as `data`).
  * @returns {{ data: object, removed: { path: string[], name: string, field: string, value: string }[] }}
  */
-export function withoutBrokenLinks(data, isValid) {
-  const removed = brokenSourceLinks(data, isValid);
-  if ( !removed.length ) return { data, removed };
+export function withoutBrokenLinks(data, isValid, current=null) {
+  const links = brokenSourceLinks(data, isValid);
+  if ( !links.length ) return { data, removed: [] };
   const copy = structuredClone(data);
-  for ( const link of removed ) {
-    let doc = copy;
-    for ( let i = 0; i < link.path.length; i += 2 ) doc = (doc?.[link.path[i]] ?? []).find(d => d?._id === link.path[i + 1]);
-    if ( doc?._stats ) doc._stats[link.field] = null;
+  const removed = [];
+  for ( const link of links ) {
+    const doc = atPath(copy, link.path);
+    if ( !doc?._stats ) continue;
+    if ( current && (atPath(current, link.path)?._stats?.[link.field] === link.value) ) delete doc._stats;
+    else { doc._stats[link.field] = null; removed.push(link); }
   }
   return { data: copy, removed };
 }

@@ -203,8 +203,8 @@ export async function listBackups() {
  * §553: data Foundry will agree to write. A source link Foundry refuses cannot be written back (the whole update would be refused):
  * it is set to null and noted for the report. The backup itself keeps it exactly.
  */
-function acceptable(data, notes) {
-  const { data: clean, removed } = withoutBrokenLinks(data, validSourceUuid);
+function acceptable(data, notes, current=null) {
+  const { data: clean, removed } = withoutBrokenLinks(data, validSourceUuid, current);
   for ( const link of removed ) notes.push(loc("Diagnostic.LienNonRestaure", {
     name: foundry.utils.escapeHTML(link.name || data?.name || "?"), value: foundry.utils.escapeHTML(link.value)
   }));
@@ -221,7 +221,9 @@ async function restoreDocument(doc, type, saved, notes=[]) {
     const plan = restorePlan(current, saved[field] ?? []);
     const now = new Map(current.map(d => [d._id, d]));
     // What has not changed since the backup is not rewritten (a damaged item the repair did not touch is left as it is).
-    const update = plan.update.filter(d => !sameData(now.get(d._id), d)).map(d => acceptable(d, notes));
+    // Compared as stored (JSON): a copy read back from the flags has lost its `undefined` keys.
+    const plain = d => JSON.parse(JSON.stringify(d ?? null));
+    const update = plan.update.filter(d => !sameData(plain(now.get(d._id)), plain(d))).map(d => acceptable(d, notes, now.get(d._id)));
     const create = plan.create.map(d => acceptable(d, notes));
     if ( plan.remove.length ) await doc.deleteEmbeddedDocuments(name, plan.remove);
     if ( create.length ) await doc.createEmbeddedDocuments(name, create, { keepId: true });
@@ -260,7 +262,8 @@ export async function restoreBackup(uuid) {
       }
       const notes = [];
       if ( root.type === "Token" ) {
-        await fromUuidSync(root.uuid).update({ delta: acceptable(root.data, notes) }, { diff: false, recursive: false });
+        const token = fromUuidSync(root.uuid);
+        await token.update({ delta: acceptable(root.data, notes, token._source?.delta ?? null) }, { diff: false, recursive: false });
       } else await restoreDocument(doc, root.type, root.data, notes);
       lines.push(loc("Diagnostic.Restaure", { name: foundry.utils.escapeHTML(root.name) }), ...notes);
     } catch(err) {
