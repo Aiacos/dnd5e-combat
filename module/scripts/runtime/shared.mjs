@@ -147,7 +147,7 @@ export const whenCanvasReady = createCanvasWait({
 export const DICE_WAIT_MAX_MS = 8000;
 
 /**
- * Principe 2 : rien ne s'applique avant que les dés se soient arrêtés. Dice So Nice reste optionnel,
+ * Principe 2 : rien ne s'applique avant que les dés se soient arrêtés. Les dés 3D (Dice So Nice, Dicer…) restent optionnels,
  * et son attente est bornée (SPEC §12, blocage vu le 2026-09-22) : `waitFor3DAnimationByMessageID`
  * ne rend la main qu'au hook `diceSoNiceRollComplete` du message (main.js, 6.2.9), qui ne vient
  * jamais si le rendu est suspendu — fenêtre en arrière-plan, onglet masqué. Sans global : testable.
@@ -168,8 +168,17 @@ export function createDiceWait({ animation, isHidden, sleep, report=() => {} }, 
   };
 }
 
+/**
+ * #286: the wait for one message's 3D dice, from whatever module provides Dice So Nice's API (`game.dice3d`): Dice So Nice, Dicer…
+ * Recognised by the function, not by the module id (Dicer cannot run beside Dice So Nice, so a `dice-so-nice` check never waited
+ * for it). null when no such API is there: no 3D dice, no wait.
+ * @param {object|undefined} dice3d  `game.dice3d`, read at call time.
+ * @returns {(id: string) => Promise|null}
+ */
+export const dice3dAnimation = dice3d => id => dice3d?.waitFor3DAnimationByMessageID?.(id) ?? null;
+
 export const waitForDice = createDiceWait({
-  animation: id => (game.modules.get("dice-so-nice")?.active && game.dice3d) ? game.dice3d.waitFor3DAnimationByMessageID(id) : null,
+  animation: id => dice3dAnimation(game.dice3d)(id),
   isHidden: () => document.hidden === true,
   sleep,
   report: why => log(`3D dice: continuing without waiting (${why})`)

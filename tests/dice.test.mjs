@@ -3,7 +3,7 @@
  * arrière-plan, rendu suspendu — ne doit jamais retenir une résolution.
  */
 import { describe, it, expect } from "vitest";
-import { createDiceWait } from "../module/scripts/runtime/shared.mjs";
+import { createDiceWait, dice3dAnimation } from "../module/scripts/runtime/shared.mjs";
 
 const never = () => new Promise(() => {});
 const message = { id: "msg0000000000001" };
@@ -57,5 +57,31 @@ describe("attente des dés 3D", () => {
     const { wait, calls } = setup({ animation: () => Promise.resolve() });
     await wait(message);
     expect(calls).toEqual(["msg0000000000001"]);
+  });
+});
+
+// #286: Dicer provides Dice So Nice's `game.dice3d` API while the `dice-so-nice` module is off. The wait follows the API, not the id.
+describe("3D dice API, whichever module provides it", () => {
+  it("waits through game.dice3d with no dice-so-nice module (Dicer)", async () => {
+    let finish;
+    const asked = [];
+    const dice3d = { waitFor3DAnimationByMessageID: id => { asked.push(id); return new Promise(resolve => { finish = resolve; }); } };
+    const wait = createDiceWait({ animation: dice3dAnimation(dice3d), isHidden: () => false, sleep: never });
+    let done = false;
+    const waiting = wait(message).then(() => { done = true; });
+    await Promise.resolve();
+    expect(asked).toEqual(["msg0000000000001"]);
+    expect(done).toBe(false);
+    finish();
+    await waiting;
+    expect(done).toBe(true);
+  });
+
+  it("does not wait when there is no game.dice3d", () => {
+    expect(dice3dAnimation(undefined)(message.id)).toBeNull();
+  });
+
+  it("does not wait when game.dice3d lacks the wait function", () => {
+    expect(dice3dAnimation({})(message.id)).toBeNull();
   });
 });
