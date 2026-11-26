@@ -708,7 +708,7 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 34. light source: not lit
 35. Wild Shape: transformation not done
 36. enchantment: weapon not enchanted
-37. summon permissions: player not told
+37. summon permissions / data: caster not told
 38. ethereal: Ethereal Jaunt / Stride not applied
 39. Arcane Vigor: Hit Point Dice not spent
 40. restoration: condition not removed

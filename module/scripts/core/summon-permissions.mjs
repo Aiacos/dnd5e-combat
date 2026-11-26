@@ -52,3 +52,34 @@ export function summonBlocker({ isGM=false, tokenCreate=false, actorCreate=false
   if ( needsImport && !actorCreate ) return "actorCreate";
   return null;
 }
+
+/**
+ * The data problems that make a summon place nothing without a word (Discord "Summon spells", 2026-11-26): dnd5e skips the creature
+ * part silently when the activity has no profile, or none allowed at this cast level (`availableProfiles` empty: `create.summons`
+ * false, dnd5e 6.1.1 dnd5e.mjs:41342), and `placeSummons` returns without a message when the chosen profile names no creature
+ * (`if ( !summonUuid ) return`, dnd5e 6.0.3 documents/activity/summon.mjs:141-142) or when no scene is viewed (:122).
+ */
+export const SUMMON_DATA_PROBLEMS = Object.freeze(["noProfile", "noProfileAtLevel", "noScene", "noCreature"]);
+
+/**
+ * Why this use of a summon activity placed nothing, when no right is missing (see `summonBlocker`), or null.
+ * @param {{ profiles?: number, available?: number, meantToPlace?: boolean, placing?: boolean, crMode?: boolean,
+ *   chosenHasCreature?: boolean, scene?: boolean, placed?: number }} facts
+ *   `profiles`: profiles on the activity; `available`: those allowed at the cast level; `meantToPlace`: the activity places its
+ *   creature on use (`summon.prompt`, or content `placesSummons`); `placing`: dnd5e was told to place it (`create.summons`);
+ *   `crMode`: the creature is picked in the compendium browser (`summon.mode` "cr"), not named by the profile;
+ *   `chosenHasCreature`: the chosen profile names a creature (`uuid`); `placed`: tokens dnd5e placed.
+ * @returns {"noProfile"|"noProfileAtLevel"|"noScene"|"noCreature"|null}
+ */
+export function summonDataProblem({ profiles=0, available=0, meantToPlace=false, placing=false, crMode=false, chosenHasCreature=true,
+  scene=true, placed=0 }={}) {
+  if ( placed > 0 ) return null;
+  // No creature at all: never anything to summon, the chat card has no Summon button either.
+  if ( profiles <= 0 ) return meantToPlace ? "noProfile" : null;
+  if ( available <= 0 ) return meantToPlace ? "noProfileAtLevel" : null;
+  // The user unticked "Place Summons" in dnd5e's window (or the activity never places): their choice.
+  if ( !placing ) return (meantToPlace && !scene) ? "noScene" : null;
+  if ( !scene ) return "noScene";
+  if ( !crMode && !chosenHasCreature ) return "noCreature";
+  return null;
+}

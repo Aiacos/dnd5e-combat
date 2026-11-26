@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-428 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+429 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -178,6 +178,7 @@ la sélection sans rien jouer.
 | `injonction-monstre` | keep | §16.59 §40.3 | Lâche sur un monstre : l'équipement tombe, ses attaques non |
 | `injonction` |  | §16.59 §40.3 | Rampe, Halte, Approche, Fuis, Lâche |
 | `invocation-droits` |  | §542 | alerte au chargement, alerte MJ, diagnostic (issue #43) |
+| `invocation-silencieuse` |  | §552 | Appel de familier va jusqu'au choix de la créature, une invocation impossible le dit (§552) |
 | `invocations-ciblees` | Arène des invocations | §393 §118 §388 | cadavre relevé par Doigt de mort et Animation des morts, bête morte refusée (Arène des invocations) |
 | `invocations-duree` |  | §198 | la Main du mage disparaît à la fin de sa durée, la monture reste |
 | `invocations-forme` |  | §383 | la forme se choisit quand la barre saute la fenêtre de dnd5e (Céleste, Élémentaire) |

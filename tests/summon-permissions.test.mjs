@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { summonGaps, gapSignature, hasNewGap, summonBlocker, SUMMON_GAPS } from "../module/scripts/core/summon-permissions.mjs";
+import { summonGaps, gapSignature, hasNewGap, summonBlocker, SUMMON_GAPS, summonDataProblem, SUMMON_DATA_PROBLEMS } from "../module/scripts/core/summon-permissions.mjs";
 
 const player = (name, tokenCreate=false, actorCreate=false) => ({ name, tokenCreate, actorCreate });
 
@@ -78,5 +78,50 @@ describe("summonBlocker (a use without the right)", () => {
 
   it("all rights: null", () => {
     expect(summonBlocker({ isGM: false, tokenCreate: true, actorCreate: true, allowSummoning: true, needsImport: true })).toBe(null);
+  });
+});
+
+describe("summonDataProblem (§552, Discord \"Summon spells\")", () => {
+  // Find Familiar 2024: one CR-mode profile, placed on use.
+  const familiar = { profiles: 1, available: 1, meantToPlace: true, placing: true, crMode: true, chosenHasCreature: true, scene: true };
+
+  it("a summon that works has no problem, placed or waiting for the compendium browser", () => {
+    expect(summonDataProblem(familiar)).toBe(null);
+    expect(summonDataProblem({ ...familiar, placed: 1 })).toBe(null);
+  });
+
+  it("no profile at all: nothing to summon", () => {
+    expect(summonDataProblem({ ...familiar, profiles: 0, available: 0, placing: false })).toBe("noProfile");
+  });
+
+  it("profiles, but none at this cast level", () => {
+    expect(summonDataProblem({ ...familiar, profiles: 2, available: 0, placing: false })).toBe("noProfileAtLevel");
+  });
+
+  it("an activity that does not place on use is left alone when it has no profile (the card button is the way)", () => {
+    expect(summonDataProblem({ ...familiar, meantToPlace: false, profiles: 0, available: 0, placing: false })).toBe(null);
+    expect(summonDataProblem({ ...familiar, meantToPlace: false, placing: false })).toBe(null);
+  });
+
+  it("\"Place Summons\" unticked in dnd5e's window: the user's choice", () => {
+    expect(summonDataProblem({ ...familiar, placing: false })).toBe(null);
+  });
+
+  it("no scene viewed: dnd5e does not place (create.summons false)", () => {
+    expect(summonDataProblem({ ...familiar, placing: false, scene: false })).toBe("noScene");
+  });
+
+  it("a named-creature profile without a creature (SRD 2014 Animate Dead, Simulacrum)", () => {
+    expect(summonDataProblem({ ...familiar, crMode: false, chosenHasCreature: false })).toBe("noCreature");
+    // In CR mode the creature is picked later in the compendium browser: no uuid is expected on the profile.
+    expect(summonDataProblem({ ...familiar, crMode: true, chosenHasCreature: false })).toBe(null);
+  });
+
+  it("every problem it returns is listed", () => {
+    const cases = [
+      { ...familiar, profiles: 0, available: 0 }, { ...familiar, available: 0 },
+      { ...familiar, scene: false }, { ...familiar, crMode: false, chosenHasCreature: false }
+    ];
+    for ( const c of cases ) expect(SUMMON_DATA_PROBLEMS).toContain(summonDataProblem(c));
   });
 });
