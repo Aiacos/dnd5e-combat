@@ -5,7 +5,9 @@
  *      the Emanation enters its space: one "enter" save;
  *  (a) 10 ft up, the Zombie (feet 0, head 5) stays inside the slice: no new "enter", and its turn end replays the save;
  *  (b) 30 ft up, the Zombie is out of reach (15 ft emanation from the caster's body): its turn end replays nothing;
- *  (d) 10 ft up, the caster flies horizontally over a Zombie standing outside: the Emanation enters its space: one "enter" save.
+ *  (d) 10 ft up, the caster flies horizontally over a Zombie standing outside: the Emanation enters its space: one "enter" save;
+ *  (e) on the ground, the caster steps two squares towards a Zombie just outside the Emanation (§550: the area's own move was
+ *      counted the wrong way round, a creature at the leading edge read as "already inside").
  * The climbing and falling system is turned off for the scenario (the caster has no Fly Speed: it would fall).
  */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -118,5 +120,16 @@ export default {
     await sleep(2000);
     const over = await zombieTicks(since, "enter");
     ctx.expect(over.length === 1, `(d) flying 10 ft over the Zombie: the Emanation enters its space, one save (${over.length})`);
+
+    // (e) A new turn, on the ground: the Zombie five squares away (outside), the caster steps two squares towards it.
+    await passZombieTurn();
+    await ctx.call("move-token", { tokenId: zombi.id, x: cPos.x - 5 * grid, y: cPos.y, elevation: ground });
+    await fly(0, { x: cPos.x, y: cPos.y });
+    await sleep(1000);
+    since = await ctx.lastMessageId();
+    await fly(0, { x: cPos.x - 2 * grid, y: cPos.y });
+    await sleep(2000);
+    const step = await zombieTicks(since, "enter");
+    ctx.expect(step.length === 1, `(e) a two-square step towards the Zombie at the edge: the Emanation enters its space, one save (${step.length})`);
   }
 };

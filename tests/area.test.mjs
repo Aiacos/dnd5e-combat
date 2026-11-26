@@ -170,27 +170,48 @@ describe("sliceOf — the elevation slice noted in an area's state", () => {
   it("nothing given", () => expect(sliceOf(undefined)).toBe(null));
 });
 
-describe("positionBeforeAreaMove — where a token stood relative to the area before it moved", () => {
+describe("positionBeforeAreaMove — the token as seen from the area before it moved", () => {
   const zombie = { x: 100, y: 200, elevation: 0 };
-  it("a horizontal move shifts the token back by the area's own move (§300)", () => {
-    expect(positionBeforeAreaMove(zombie, { at: { x: 0, y: 0 }, now: { x: 50, y: 0 } })).toEqual({ x: 50, y: 200, elevation: 0 });
+  // A disc of radius 30 centred on `c`, and a slice: the area as the core would test it.
+  const inside = (p, c, slice=null) => (Math.hypot(p.x - c.x, p.y - c.y) <= 30)
+    && (!slice || ((p.elevation + 5 > slice.bottom) && (p.elevation < slice.top)));
+  it("a horizontal move shifts the token by the area's own move (§300)", () => {
+    expect(positionBeforeAreaMove(zombie, { at: { x: 0, y: 0 }, now: { x: 50, y: 0 } })).toEqual({ x: 150, y: 200, elevation: 0 });
   });
-  it("the caster comes down 30 ft: the slice went down 30 ft, the Zombie stood 30 ft higher relative to it", () => {
-    const before = positionBeforeAreaMove(zombie, { at: { x: 0, y: 0 }, now: { x: 0, y: 0 }, sliceBefore: { bottom: 15, top: 50 }, sliceNow: { bottom: -15, top: 20 } });
-    expect(before).toEqual({ x: 100, y: 200, elevation: 30 });
+  it("the caster steps towards a creature at the edge: it was outside, it enters", () => {
+    const p = { x: 25, y: 0, elevation: 0 };
+    const move = { at: { x: -10, y: 0 }, now: { x: 0, y: 0 } };
+    expect(inside(p, move.now)).toBe(true);
+    expect(inside(positionBeforeAreaMove(p, move), move.now)).toBe(false);   // = inside(p, move.at)
   });
-  it("the caster rises 10 ft: the Zombie stood 10 ft lower relative to the slice", () => {
-    const before = positionBeforeAreaMove(zombie, { at: { x: 0, y: 0 }, now: { x: 0, y: 0 }, sliceBefore: { bottom: -15, top: 20 }, sliceNow: { bottom: -5, top: 30 } });
-    expect(before.elevation).toBe(-10);
+  it("a creature trailing behind, inside before and after: already inside", () => {
+    const p = { x: -15, y: 0, elevation: 0 };
+    const move = { at: { x: -10, y: 0 }, now: { x: 0, y: 0 } };
+    expect(inside(p, move.at) && inside(p, move.now)).toBe(true);
+    expect(inside(positionBeforeAreaMove(p, move), move.now)).toBe(true);
+  });
+  it("the caster comes down 30 ft onto the Zombie: it was out of the slice, it enters", () => {
+    const move = { at: { x: 0, y: 0 }, now: { x: 0, y: 0 }, sliceBefore: { bottom: 15, top: 50 }, sliceNow: { bottom: -15, top: 20 } };
+    const p = { x: 10, y: 0, elevation: 0 };
+    const before = positionBeforeAreaMove(p, move);
+    expect(before.elevation).toBe(-30);
+    expect(inside(before, move.now, move.sliceNow)).toBe(false);
+    expect(inside(p, move.now, move.sliceNow)).toBe(true);
+  });
+  it("the caster rises 10 ft above the Zombie: it was inside, no new entry", () => {
+    const move = { at: { x: 0, y: 0 }, now: { x: 0, y: 0 }, sliceBefore: { bottom: -15, top: 20 }, sliceNow: { bottom: -5, top: 30 } };
+    const before = positionBeforeAreaMove({ x: 10, y: 0, elevation: 0 }, move);
+    expect(before.elevation).toBe(10);
+    expect(inside(before, move.now, move.sliceNow)).toBe(true);
   });
   it("only the top is finite: the shift reads the top", () => {
-    expect(positionBeforeAreaMove(zombie, { sliceBefore: { bottom: null, top: 20 }, sliceNow: { bottom: null, top: 50 } }).elevation).toBe(-30);
+    expect(positionBeforeAreaMove(zombie, { sliceBefore: { bottom: null, top: 20 }, sliceNow: { bottom: null, top: 50 } }).elevation).toBe(30);
   });
   it("no slice noted (a column, or an area from before §550): horizontal shift only", () => {
     expect(positionBeforeAreaMove(zombie, { at: { x: 0, y: 0 }, now: { x: 0, y: 0 }, sliceBefore: null, sliceNow: { bottom: -15, top: 20 } })).toEqual(zombie);
   });
   it("nothing known about the move (an area from before §300): null", () => expect(positionBeforeAreaMove(zombie, {})).toBe(null));
   it("vertical only, no centre noted: still known", () => {
-    expect(positionBeforeAreaMove(zombie, { sliceBefore: { bottom: 0, top: 10 }, sliceNow: { bottom: 5, top: 15 } })).toEqual({ x: 100, y: 200, elevation: -5 });
+    expect(positionBeforeAreaMove(zombie, { sliceBefore: { bottom: 0, top: 10 }, sliceNow: { bottom: 5, top: 15 } })).toEqual({ x: 100, y: 200, elevation: 5 });
   });
 });

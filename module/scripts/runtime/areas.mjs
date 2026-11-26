@@ -310,6 +310,8 @@ function onPreRollDamage(config) {
  * §300 (repasse C5) : pas sur ceux qu'elle recouvrait déjà — Esprits gardiens suit son lanceur : à chaque pas, toute créature restée dans
  * l'émanation refaisait sa sauvegarde (« quand l'émanation entre dans l'espace d'une créature »). Le centre de la zone est noté dans son
  * état (`at`) ; un token qui, ramené du même déplacement, était déjà dedans n'y entre pas. Sans centre noté (zone d'avant), comme avant.
+ * §550: the elevation slice is noted too (`slice`), and the shift is `positionBeforeAreaMove` (core/area.mjs), which also fixes its
+ * direction (a step towards a creature at the edge now makes it enter).
  */
 function onUpdateRegion(region, changes) {
   const state = readAreaState(region);

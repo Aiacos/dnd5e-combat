@@ -307,10 +307,14 @@ export function sliceOf(elevation) {
 }
 
 /**
- * §300, §550: when the area itself moves (an Emanation following its caster), where a token stood relative to the area BEFORE
- * the move — its position shifted back by the area's own move: horizontally (centre `at`), and vertically (elevation slice).
- * A token inside the area at this shifted position was already inside: the move does not make it "enter". A vertical move
- * (the caster flies up or down) shifts the slice only, and is counted the same way. Unknown before/now: no shift on that axis.
+ * §300, §550: when the area itself moves (an Emanation following its caster), the token's position as seen from the area
+ * BEFORE the move: shifted by the area's own move, horizontally (centre `at`) and vertically (elevation slice). Testing the area
+ * as it is now at this shifted position is testing the area as it was at the token's real position (the area moved by d: it was
+ * the current area minus d, so the token was inside it iff token + d is inside the current one). Inside: the token was already
+ * there, the move does not make it "enter". A vertical move (the caster flies up or down) shifts the slice only, and counts the
+ * same way. Unknown before/now: no shift on that axis.
+ * §550: before, the shift went the other way (token − d): a step of the caster towards a creature at the Emanation's edge was
+ * read as "already inside" (no save), and a creature trailing behind as "entering".
  * @param {{x: number, y: number, elevation?: number}} position  The token's position now.
  * @param {object} move
  * @param {{x: number, y: number}|null} [move.at]       The area's centre before.
@@ -323,8 +327,8 @@ export function positionBeforeAreaMove(position, { at=null, now=null, sliceBefor
   const shifted = { ...position };
   let known = false;
   if ( at && now ) {
-    shifted.x = position.x - (now.x - at.x);
-    shifted.y = position.y - (now.y - at.y);
+    shifted.x = position.x + (now.x - at.x);
+    shifted.y = position.y + (now.y - at.y);
     known = true;
   }
   const delta = (sliceBefore && sliceNow)
@@ -332,7 +336,7 @@ export function positionBeforeAreaMove(position, { at=null, now=null, sliceBefor
       : (((sliceBefore.top !== null) && (sliceNow.top !== null)) ? sliceNow.top - sliceBefore.top : null))
     : null;
   if ( delta !== null ) {
-    shifted.elevation = (Number(position.elevation) || 0) - delta;
+    shifted.elevation = (Number(position.elevation) || 0) + delta;
     known = true;
   }
   return known ? shifted : null;
