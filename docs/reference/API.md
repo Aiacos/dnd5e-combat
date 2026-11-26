@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-353 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
+354 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
 commentaire de la fonction dans le code (début seulement) ; le fichier est relatif à `module/scripts/`. Les valeurs non
 fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de test du connecteur, MJ seulement.
 
@@ -513,6 +513,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.ui.multiattackLeft` | `(actor)` | `ui/api.mjs` | §18.19 : ce qui reste des Attaques multiples ouvertes ce tour par cet acteur — uuids des items encore jouables (`left`), de ceux du plan qui n'ont plus rien (`spent`), noms des premiers. null sans plan ouvert. @param {A… |
 | `api.ui.potion` | `(activity)` | `ui/api.mjs` | Issue #31 : `potion(activity)` — la règle maison des potions de soins (réglage `potionHealing`) : null si elle ne s'applique pas (réglage coupé, autre chose qu'une potion de soins en action Bonus) ; sinon `{ ask, mode,… |
 | `api.ui.ritual` | `(activity)` | `ui/api.mjs` | §139 : comment ce sort se lancerait maintenant — « ritual » : en rituel d'office (sans emplacement, même non préparé avec Savoir rituel) ; « ask » : le joueur choisira rituel ou emplacement ; « none » : comme d'habitude… |
+| `api.ui.spellWeapons` | `(actor)` | `ui/api.mjs` | §554: the actor's active spell weapons (a spell that puts an attack in hand while it lasts: Flame Blade, Produce Flame) — `[{ uuid, item, itemId, activityId, effect, name, img, level, favorite }]`, `uuid` the attack act… |
 | `api.ui.targeting` | `()` | `ui/pointer.mjs` | §118 : la visée que ce client attend, pour les modules voisins (`api.ui.targeting()`) — tant qu'elle est ouverte, le clic gauche est au moteur, quel que soit ce qu'il y a sous la souris (cadavre, coffre, marchand). `{ t… |
 | `api.ui.timer` | `({ token, seconds, label="", icon="gear", id=null }={})` | `ui/timers.mjs` | Lance une minuterie au-dessus d'un token, chez tous les clients connectés. @param {{token: TokenDocument\|Token\|string, seconds: number, label?: string, icon?: string, id?: string}} options @returns {{id: string, done: P… |
 | `api.ui.toggleLight` | `(item, on=null)` | `ui/api.mjs` | §121 : allume ou éteint une source portée (item ou uuid ; `on` absent : l'inverse), sur le client du porteur → `{ changed, lit?, left?, refilled?, reason? }`. |

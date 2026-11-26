@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-429 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+431 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -187,6 +187,8 @@ la sélection sans rien jouer.
 | `jets-de-journal` | Arène des refus | §536 | inline journal checks → engine's requested roll (§536) |
 | `jets-demandes` |  | §242 | test de groupe, DD caché, un jet par ligne, mode du système |
 | `lame-assoiffee` |  | §16.25 | Lame assoiffée |
+| `lame-de-feu-joueur` |  | §554 §106 | Flame Blade cast by a player: the slot level window opens (§554) |
+| `lame-de-feu` |  | §554 §106 §405 | Flame Blade ready to use: slot level window, favorite, damage at the cast level, removal (§554) |
 | `lancer-main-secondaire` |  | §240 §241 | au menu, action Bonus |
 | `lecture-48h` |  | §458 | le +2 à la fin de la lecture, une fois (onUsesSpent) |
 | `lenteur-attaque` |  | §267 | une seule attaque par action Attaquer |

@@ -18,6 +18,7 @@ import { menuEntriesFor, doorMenuFor, groundMenuFor, pendingTargeting } from "./
 import { poolsOf } from "../adapter/absorb.mjs";
 import { movableZoneOf } from "../runtime/zones.mjs";
 import { carriedLightsOf, carriedLightState } from "../adapter/lights.mjs";
+import { spellWeapons } from "../adapter/traces.mjs";
 import { toggleCarriedLight } from "../runtime/lights.mjs";
 import { ritualModeOf } from "../adapter/grimoire.mjs";
 import { potionOptions } from "../runtime/potion-choice.mjs";
@@ -237,6 +238,12 @@ export const uiApi = {
    * (item ou uuid ; `on` absent : l'inverse), sur le client du porteur ; rend `{ changed, lit?, left?, refilled?, reason? }`.
    */
   carriedLights: actor => carriedLightsOf(actor).map(carriedLightState),
+  /**
+   * §554: the actor's active spell weapons (a spell that puts an attack in hand while it lasts: Flame Blade, Produce Flame) —
+   * `[{ uuid, item, itemId, activityId, effect, name, img, level, favorite }]`, `uuid` the attack activity. Hook
+   * `dnd5e-combat.spellWeapon` when one appears or goes.
+   */
+  spellWeapons: actor => spellWeapons(actor),
   /**
    * L'état d'une source de lumière portée (item ou uuid) : `{ uuid, name, img, lit, left, full, fuel }`, ou null si l'item n'en est pas
    * une.

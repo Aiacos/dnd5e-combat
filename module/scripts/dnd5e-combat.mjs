@@ -7,6 +7,7 @@ import { registerUsage } from "./runtime/usage.mjs";
 import { registerStorm } from "./runtime/storm.mjs";
 import { registerContest } from "./runtime/contest.mjs";
 import { registerConcentration } from "./runtime/concentration.mjs";
+import { registerSpellWeapons } from "./runtime/spell-weapons.mjs";
 import { registerPilot } from "./runtime/pilot.mjs";
 import { registerDeath } from "./runtime/death.mjs";
 import { registerCoven } from "./runtime/coven.mjs";
@@ -403,6 +404,7 @@ Hooks.once("init", () => {
   gated(registerIcons);
   gated(registerEngine);
   gated(registerConcentration);
+  gated(registerSpellWeapons);   // §554: spell weapons in the favorites, hook for neighbours (after concentration removes the traces)
   gated(registerPilot);   // après la concentration : l'objet créé y est d'abord rattaché
   gated(registerReduction);   // avant les 0 PV : ce que la réserve absorbe n'atteint pas la créature
   gated(registerDeath);

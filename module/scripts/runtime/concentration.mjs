@@ -6,6 +6,7 @@ import {
 import { tieSummonToConcentration, removeSummonsOf, joinSummonerCombat, summonItemOf, makeSummonHostile } from "../adapter/summons.mjs";
 
 import { MODULE_ID } from "../constants.mjs";
+import { expiresByItself } from "../adapter/traces.mjs";
 import { route } from "./router.mjs";
 import { log, notice, tokenOfActor, waitForDice } from "./shared.mjs";
 import { queryPlayer, waitLabel } from "../adapter/player-wait.mjs";
@@ -109,7 +110,8 @@ export function registerConcentration() {
     if ( gone ) log(`${effect.parent?.name ?? "?"}: ${gone} summoned creature(s) removed with concentration`);
     // §16.41 : la trace d'un sort à concentration (Lame de feu).
     const actor = effect.parent;
-    const traces = (actor?.effects ?? []).filter(e => e.getFlag("dnd5e-combat", "traceConcentration") === effect.uuid).map(e => e.id);
+    // §554: an expired trace out of combat is being deleted by dnd5e at the same moment.
+    const traces = (actor?.effects ?? []).filter(e => (e.getFlag("dnd5e-combat", "traceConcentration") === effect.uuid) && !expiresByItself(e)).map(e => e.id);
     if ( traces.length ) {
       // Déjà retirée ailleurs entre-temps (à la main, par un scénario) : rien à dire.
       const still = traces.filter(id => actor.effects.has(id));
