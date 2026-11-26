@@ -25,3 +25,18 @@ export function validateOnDamageTaken(rule, at, damageTypes, isId) {
   for ( const key of Object.keys(rule) ) if ( !["types", "effect"].includes(key) ) errors.push(`${at}onDamageTaken.${key}: unknown key`);
   return errors;
 }
+
+/**
+ * Les données de l'effet du trait à poser sur son porteur : la copie de l'effet d'item, sans son id, qui garde sa source
+ * (`_stats.duplicateSource`) comme le fait le plateau d'effets de dnd5e — c'est par elle que le moteur reconnaît l'effet
+ * d'item (`comesFromItemEffect`) et lui applique ce que l'entrée en dit (`effectEnds`).
+ * @param {object} data        `effect.toObject()` de l'effet d'item
+ * @param {string} sourceUuid  uuid de l'effet d'item
+ * @param {string} itemUuid    uuid de l'item, origine de l'effet posé
+ */
+export function traitEffectData(data, sourceUuid, itemUuid) {
+  const { _id, ...rest } = data ?? {};
+  return { ...rest, origin: itemUuid, transfer: false, disabled: false,
+    _stats: { ...(rest._stats ?? {}), duplicateSource: sourceUuid } };
+}
+

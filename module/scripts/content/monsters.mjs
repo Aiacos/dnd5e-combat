@@ -54,11 +54,14 @@ export const MONSTERS = Object.freeze({
   // les sorts et autres effets magiques, et les jets d'attaque des sorts le ratent automatiquement ».
   "greater-magic-resistance": { saveAutoSuccessAgainst: ["magic"], spellAttacksMiss: true },
   // Gel (Élémentaire de l'eau, SRD 5.2) : « s'il subit des dégâts de froid, sa Vitesse diminue de 6 m jusqu'à la fin de son
-  // prochain tour » — l'effet est dans la donnée, rien ne le posait.
-  "freeze": { onDamageTaken: { types: ["cold"], effect: "B3otZdkyUcUlgrmk" } },
+  // prochain tour » — l'effet est dans la donnée, rien ne le posait. Sa durée de donnée (un tour, au début du tour) le ferait
+  // tomber un tour trop tôt : `effectEnds` le tient jusqu'à la fin du prochain tour du porteur.
+  "freeze": { onDamageTaken: { types: ["cold"], effect: "B3otZdkyUcUlgrmk" },
+    effectEnds: { B3otZdkyUcUlgrmk: "bearerTurnEnd" } },
   // Aversion au feu (Golem de chair, SRD 5.2) : « s'il subit des dégâts de feu, il a le Désavantage aux jets d'attaque et aux tests
   // de caractéristique jusqu'à la fin de son prochain tour » — l'effet « Averse » de la donnée est vide.
   "aversion-to-fire": { onDamageTaken: { types: ["fire"], effect: "kJYNjmfI0RpvF7CQ" },
+    effectEnds: { kJYNjmfI0RpvF7CQ: "bearerTurnEnd" },
     dataFixes: [{ effect: "kJYNjmfI0RpvF7CQ", path: "system.changes", from: [], value: ATTACK_AND_CHECK_DISADVANTAGE }] },
   // Défense (Sanglier-garou) : la malédiction ne vise qu'un Humanoïde.
   "mm-wereboar-gore": { effectsIf: { "target.creatureType": "humanoid" } },

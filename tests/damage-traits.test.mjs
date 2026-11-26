@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { damageTraitHits, validateOnDamageTaken } from "../module/scripts/core/damage-traits.mjs";
+import { damageTraitHits, validateOnDamageTaken, traitEffectData } from "../module/scripts/core/damage-traits.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { dataFixPlan } from "../module/scripts/core/data-fixes.mjs";
@@ -41,3 +41,19 @@ describe("monstres du SRD 5.2 qui la déclarent", () => {
     expect(changes.every(c => (c.value === -1) && /\.(attack|check)\.roll\.mode$/.test(c.key))).toBe(true);
   });
 });
+
+describe("onDamageTaken : l'effet posé garde sa source, et tombe à la fin du prochain tour du porteur", () => {
+  it("la copie n'a plus d'id, porte l'item en origine et l'effet d'item en source", () => {
+    const item = { _id: "kJYNjmfI0RpvF7CQ", name: "Averse", disabled: true, transfer: true, _stats: { coreVersion: "14" } };
+    const data = traitEffectData(item, "Actor.a.Item.i.ActiveEffect.kJYNjmfI0RpvF7CQ", "Actor.a.Item.i");
+    expect(data._id).toBeUndefined();
+    expect(data).toMatchObject({ name: "Averse", origin: "Actor.a.Item.i", transfer: false, disabled: false });
+    expect(data._stats).toEqual({ coreVersion: "14", duplicateSource: "Actor.a.Item.i.ActiveEffect.kJYNjmfI0RpvF7CQ" });
+  });
+  it("Gel et Aversion au feu : « jusqu'à la fin de son prochain tour »", () => {
+    expect(CONTENT.freeze.effectEnds).toEqual({ B3otZdkyUcUlgrmk: "bearerTurnEnd" });
+    expect(CONTENT["aversion-to-fire"].effectEnds).toEqual({ kJYNjmfI0RpvF7CQ: "bearerTurnEnd" });
+    for ( const id of ["freeze", "aversion-to-fire"] ) expect(validateEntry(CONTENT[id], { at: `${id}.` })).toEqual([]);
+  });
+});
+

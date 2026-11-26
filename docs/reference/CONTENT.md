@@ -85,7 +85,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `duringRage` | 4 | `mindless-rage`, `primal-knowledge`, `rage-of-the-wilds`, `vitality-of-the-tree` |
 | `effectChanges` | 22 | `brutal-strike`, `caltrops`, `contagion`, `elemental-epitome`, `fool`, `gaseous-form`, … |
 | `effectDurations` | 6 | `blessing-of-the-trickster`, `clairvoyant-combatant`, `dust-of-disappearance`, `intimidating-presence`, `scroll-of-protection`, `wand-of-paralysis` |
-| `effectEnds` | 50 | `aberrant-anatomy`, `brutal-strike`, `celestial-revelation`, `chill-touch`, `defensive-duelist`, `devious-strikes`, … |
+| `effectEnds` | 52 | `aberrant-anatomy`, `aversion-to-fire`, `brutal-strike`, `celestial-revelation`, `chill-touch`, `defensive-duelist`, … |
 | `effectsExpire` | 2 | `blessing-of-the-trickster`, `prayer-of-healing` |
 | `effectsFirst` | 2 | `aid`, `heroes-feast` |
 | `effectsIf` | 8 | `esoteric-ward`, `hammer-of-thunderbolts-enchanted`, `mm-lycanthrope-bite`, `mm-wereboar-gore`, `psychic-skewer`, `shield-of-the-cavalier`, … |

@@ -6,7 +6,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { damageTraitHits } from "../core/damage-traits.mjs";
+import { damageTraitHits, traitEffectData } from "../core/damage-traits.mjs";
 import { contentOf } from "../adapter/content.mjs";
 import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
@@ -29,9 +29,7 @@ async function onApplyDamage(actor, amount, options) {
     if ( !source ) continue;
     const worn = actor.effects.filter(e => (e.origin === item.uuid) && (e.name === source.name)).map(e => e.id);
     if ( worn.length ) await actor.deleteEmbeddedDocuments("ActiveEffect", worn);
-    const data = source.toObject();
-    delete data._id;
-    await actor.createEmbeddedDocuments("ActiveEffect", [{ ...data, origin: item.uuid, transfer: false, disabled: false }]);
+    await actor.createEmbeddedDocuments("ActiveEffect", [traitEffectData(source.toObject(), source.uuid, item.uuid)]);
     log(`${item.name}: ${actor.name} took ${taken.join(", ")} damage — "${source.name}" applied`);
   }
 }
