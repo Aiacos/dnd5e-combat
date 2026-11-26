@@ -7,7 +7,7 @@
  */
 import { MODULE_ID } from "../../constants.mjs";
 import { loc, esc } from "../shared.mjs";
-import { rootOf } from "./backup.mjs";
+import { rootOf, validSourceUuid } from "./backup.mjs";
 import { fresh } from "./fresh.mjs";
 import { basicActionData } from "../../adapter/basics.mjs";
 import { scrollSpellOf } from "../../adapter/scrolls.mjs";
@@ -24,6 +24,7 @@ import { spellDuplicates } from "../../core/spell-duplicates.mjs";
 import { missingModifications, modifyOrigin } from "../../core/modify-item.mjs";
 import { summonGaps } from "../../core/summon-permissions.mjs";
 import { summonFacts } from "../../adapter/summon-permissions.mjs";
+import { brokenSourceLinks } from "../../core/source-links.mjs";
 
 /**
  * §202 : les effets d'une référence du compendium, prêts à recopier — un effet au nom d'origine (anglais) de l'objet prend le nom
@@ -1065,9 +1066,63 @@ const summonPermissions = {
   }
 };
 
+/* -------------------------------------------- */
+/*  Broken source links (§553)                  */
+/* -------------------------------------------- */
+
+/**
+ * `_stats.compendiumSource` / `duplicateSource` values Foundry refuses (core/source-links.mjs). Read from the SOURCE (`_source`): an
+ * item Foundry could not load because of such a value is not in `actor.items` (common/abstract/embedded-collection.mjs:204,
+ * `invalidDocumentIds`), yet it is in the database and in every copy. The repair sets the link to null; Foundry accepts the update
+ * of an invalid embedded document (client/data/client-backend.mjs:228, `get(id, { invalid: true })`).
+ */
+const sourceLinks = {
+  id: "source-links", icon: "fa-solid fa-link-slash",
+  async scan() {
+    const tasks = [];
+    const add = (doc, data) => {
+      const links = brokenSourceLinks(data, validSourceUuid);
+      if ( !links.length ) return;
+      const root = rootOf(doc);
+      if ( !root ) return;
+      const names = links.map(l => `${l.name || doc.name} (${l.value})`);
+      tasks.push({ root, where: `<b>${esc(root.name)}</b>`, text: esc(names.join(", ")), preselect: true,
+        apply: async () => {
+          const now = fresh(doc);
+          const byTarget = new Map();
+          for ( const link of links ) {
+            const key = link.path.join(".");
+            if ( !byTarget.has(key) ) byTarget.set(key, { path: link.path, change: {} });
+            byTarget.get(key).change[`_stats.${link.field}`] = null;
+          }
+          for ( const { path, change } of byTarget.values() ) {
+            if ( !path.length ) { await now.update(change); continue; }
+            if ( path.length === 2 ) {
+              const name = (path[0] === "items") ? "Item" : "ActiveEffect";
+              await now.updateEmbeddedDocuments(name, [{ _id: path[1], ...change }]);
+              continue;
+            }
+            // An item's effect: through its item (a valid one; an item Foundry could not load is fixed by its own link first).
+            const item = now.items.get(path[1]);
+            if ( !item ) throw new Error(`item ${path[1]} not loaded: reload the world and run the diagnostic again`);
+            await item.updateEmbeddedDocuments("ActiveEffect", [{ _id: path[3], ...change }]);
+          }
+          return esc(names.join(", "));
+        } });
+    };
+    for ( const actor of game.actors ) add(actor, actor._source);
+    for ( const item of game.items ) add(item, item._source);
+    for ( const scene of game.scenes ) for ( const token of scene.tokens ) {
+      if ( token.actorLink || !token.actor ) continue;
+      add(token.actor, { items: token._source?.delta?.items ?? [], effects: token._source?.delta?.effects ?? [] });
+    }
+    return tasks;
+  }
+};
+
 /** Les vérifications, dans l'ordre où les macros les proposaient. */
 export const CHECKS = Object.freeze([cleanMidi, phbEffects, lostEffects, scrolls, ddb, pileBasics, creatures,
-  retranslate, dataFixes, magicalEffects, phb3Subclasses, phb3Items, spellDuplicatesCheck, modifyItemCheck, summonPermissions]);
+  retranslate, dataFixes, magicalEffects, phb3Subclasses, phb3Items, spellDuplicatesCheck, modifyItemCheck, sourceLinks, summonPermissions]);
 
 /** Les vérifications du moment : celles du moteur, et, après « ddb », celle de chaque importeur déclaré par un autre module. */
 export function allChecks() {

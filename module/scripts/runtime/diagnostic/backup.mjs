@@ -11,6 +11,7 @@
  */
 import { MODULE_ID } from "../../constants.mjs";
 import { EMBEDDED, backupName, restorePlan, rootFields, rootKey, verifyBackup } from "../../core/backup.mjs";
+import { failurePlace, sameData, withoutBrokenLinks } from "../../core/source-links.mjs";
 import { log, loc } from "../shared.mjs";
 
 export const PACK_NAME = "das-backups";
@@ -80,6 +81,44 @@ function storable({ type, data }) {
   return false;
 }
 
+/** §553: does Foundry accept this value as a source UUID? (common/data/fields.mjs:3545, `DocumentUUIDField#_validateType`) */
+export function validSourceUuid(value) {
+  if ( (value === null) || (value === undefined) ) return true;
+  const field = foundry.documents.BaseItem.schema.getField("_stats.compendiumSource");
+  try { return !field.validate(value, { strict: false }); } catch { return false; }
+}
+
+/** The failures of a validation error, as `{ path, message }` (DataModelValidationError#getAllFailures). */
+function failuresOf(err) {
+  const all = (typeof err?.getAllFailures === "function") ? err.getAllFailures() : {};
+  return Object.entries(all ?? {}).map(([path, f]) => ({ path, message: f?.message ?? String(f) }));
+}
+
+/**
+ * §553: would the Adventure's validation accept this copy? A trial Adventure in memory holding this copy alone runs the same
+ * validation as `Adventure.create` (one source UUID Foundry refuses made the whole entry refused). Returns the refusals (empty: fine).
+ */
+function adventureRefusals({ type, data }) {
+  const key = (type === "Actor") ? "actors" : "items";
+  try {
+    new Adventure.implementation({ name: "check", [key]: [foundry.utils.deepClone(data)] }, { strict: true });
+    return [];
+  } catch(err) {
+    const failures = failuresOf(err);
+    return failures.length ? failures : [{ path: "", message: err?.message ?? String(err) }];
+  }
+}
+
+/** "Actor — item: field: reason" for each refusal, names taken from the refused data. */
+function placesOf(failures, data) {
+  return failures.map(({ path, message }) => {
+    const p = failurePlace(path, data);
+    return loc("Diagnostic.SauvegardeRefus", {
+      root: p.root ?? "?", embedded: p.embedded ? ` — ${p.embedded}` : "", field: p.field || "?", error: message
+    });
+  });
+}
+
 /** Ce que rend une entrée relue : les racines et leurs données. */
 function readEntry(entry) {
   const meta = entry.getFlag(MODULE_ID, "backup") ?? {};
@@ -107,21 +146,39 @@ export async function createBackup(roots, { label, checks=[] }) {
   if ( !roots.length ) throw new Error("nothing to back up");
   const pack = await ensureBackupPack();
   const copies = roots.map(snapshot);
+  // §553: a copy the Adventure's validation would refuse (a broken source link…) goes as is into the flags, like a token's delta:
+  // the entry stays exact, and one damaged sheet no longer makes the whole backup fail.
+  const raw = new Set();
+  for ( const c of copies ) {
+    if ( (c.type === "Token") || !storable(c) ) continue;
+    const refusals = adventureRefusals(c);
+    if ( !refusals.length ) continue;
+    raw.add(c);
+    log(`backup: ${c.name} kept as raw data (${placesOf(refusals, { [c.type === "Actor" ? "actors" : "items"]: [c.data] }).join("; ")})`);
+  }
+  const inAdventure = c => (c.type !== "Token") && storable(c) && !raw.has(c);
   const name = backupName(label, Date.now(), copies.length);
   const list = copies.map(c => `<li>${foundry.utils.escapeHTML(loc(`Diagnostic.Racine.${c.type}`))} — ${foundry.utils.escapeHTML(c.name)}</li>`).join("");
   const data = {
     name, img: LOGO,
     description: `<p>${foundry.utils.escapeHTML(loc("Diagnostic.SauvegardeAide"))}</p><ul>${list}</ul>`,
-    actors: copies.filter(c => (c.type === "Actor") && storable(c)).map(c => c.data),
-    items: copies.filter(c => (c.type === "Item") && storable(c)).map(c => c.data),
+    actors: copies.filter(c => (c.type === "Actor") && inAdventure(c)).map(c => c.data),
+    items: copies.filter(c => (c.type === "Item") && inAdventure(c)).map(c => c.data),
     flags: { [MODULE_ID]: { backup: {
       version: 1, label, date: Date.now(), checks, user: game.user.name,
       roots: copies.map(({ type, uuid, name }) => ({ type, uuid, name })),
       tokens: copies.filter(c => c.type === "Token").map(c => ({ uuid: c.uuid, data: c.data })),
-      raw: copies.filter(c => (c.type !== "Token") && !storable(c)).map(c => ({ uuid: c.uuid, data: c.data }))
+      raw: copies.filter(c => (c.type !== "Token") && !inAdventure(c)).map(c => ({ uuid: c.uuid, data: c.data }))
     } } }
   };
-  const created = await Adventure.implementation.create(data, { pack: pack.collection });
+  let created;
+  try {
+    created = await Adventure.implementation.create(data, { pack: pack.collection });
+  } catch(err) {
+    // §553: tell the GM which sheet and which item are refused, not only "entry not created".
+    const places = placesOf(failuresOf(err), data);
+    throw new Error(places.length ? `${loc("Diagnostic.SauvegardeRefusee")} ${places.join(" ; ")}` : (err?.message ?? String(err)), { cause: err });
+  }
   if ( !created ) throw new Error("backup entry not created");
   // Relire depuis la base, pas depuis l'objet en mémoire.
   const entry = await pack.getDocument(created.id);
@@ -142,15 +199,33 @@ export async function listBackups() {
   }).sort((a, b) => b.date - a.date);
 }
 
+/**
+ * §553: data Foundry will agree to write. A source link Foundry refuses cannot be written back (the whole update would be refused):
+ * it is set to null and noted for the report. The backup itself keeps it exactly.
+ */
+function acceptable(data, notes) {
+  const { data: clean, removed } = withoutBrokenLinks(data, validSourceUuid);
+  for ( const link of removed ) notes.push(loc("Diagnostic.LienNonRestaure", {
+    name: foundry.utils.escapeHTML(link.name || data?.name || "?"), value: foundry.utils.escapeHTML(link.value)
+  }));
+  return clean;
+}
+
 /** Remet un document dans l'état de sa copie : collections incluses (supprimer, recréer, remettre), puis ses champs. */
-async function restoreDocument(doc, type, saved) {
+async function restoreDocument(doc, type, saved, notes=[]) {
   for ( const field of EMBEDDED[type] ?? [] ) {
     const name = (field === "items") ? "Item" : "ActiveEffect";
-    const current = doc[field].map(d => d.toObject());
+    // §553: the source, not the collection: an embedded document Foundry could not load (invalid) is missing from `doc.items` but
+    // is in the database, and recreating it would fail.
+    const current = foundry.utils.deepClone(doc._source?.[field] ?? doc[field].map(d => d.toObject()));
     const plan = restorePlan(current, saved[field] ?? []);
+    const now = new Map(current.map(d => [d._id, d]));
+    // What has not changed since the backup is not rewritten (a damaged item the repair did not touch is left as it is).
+    const update = plan.update.filter(d => !sameData(now.get(d._id), d)).map(d => acceptable(d, notes));
+    const create = plan.create.map(d => acceptable(d, notes));
     if ( plan.remove.length ) await doc.deleteEmbeddedDocuments(name, plan.remove);
-    if ( plan.create.length ) await doc.createEmbeddedDocuments(name, plan.create, { keepId: true });
-    if ( plan.update.length ) await doc.updateEmbeddedDocuments(name, plan.update, { diff: false, recursive: false });
+    if ( create.length ) await doc.createEmbeddedDocuments(name, create, { keepId: true });
+    if ( update.length ) await doc.updateEmbeddedDocuments(name, update, { diff: false, recursive: false });
   }
   const fields = rootFields(type, saved);
   delete fields.type;
@@ -178,14 +253,16 @@ export async function restoreBackup(uuid) {
         // Un acteur ou un objet du monde supprimé depuis : recréé avec son id (les tokens liés le retrouvent).
         if ( root.type === "Token" ) throw new Error(loc("Diagnostic.TokenDisparu"));
         const cls = CONFIG[root.type].documentClass;
-        await cls.create(root.data, { keepId: true });
-        lines.push(loc("Diagnostic.Recree", { name: foundry.utils.escapeHTML(root.name) }));
+        const notes = [];
+        await cls.create(acceptable(root.data, notes), { keepId: true });
+        lines.push(loc("Diagnostic.Recree", { name: foundry.utils.escapeHTML(root.name) }), ...notes);
         continue;
       }
+      const notes = [];
       if ( root.type === "Token" ) {
-        await fromUuidSync(root.uuid).update({ delta: root.data }, { diff: false, recursive: false });
-      } else await restoreDocument(doc, root.type, root.data);
-      lines.push(loc("Diagnostic.Restaure", { name: foundry.utils.escapeHTML(root.name) }));
+        await fromUuidSync(root.uuid).update({ delta: acceptable(root.data, notes) }, { diff: false, recursive: false });
+      } else await restoreDocument(doc, root.type, root.data, notes);
+      lines.push(loc("Diagnostic.Restaure", { name: foundry.utils.escapeHTML(root.name) }), ...notes);
     } catch(err) {
       console.error(`${MODULE_ID} | restore`, root, err);
       lines.push(loc("Diagnostic.RestaurationEchec", { name: foundry.utils.escapeHTML(root.name), error: foundry.utils.escapeHTML(err.message) }));

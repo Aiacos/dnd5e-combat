@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-431 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+432 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -103,6 +103,7 @@ la sélection sans rien jouer.
 | `diagnostic-doublons-sorts` |  | §449 | sorts en double |
 | `diagnostic-effets` |  | §202 | enchantement perdu rétabli, au nom de l'objet traduit |
 | `diagnostic-enchantements-aptitudes` |  | §453 | enchantements des aptitudes (ModifyItem) |
+| `diagnostic-liens-origine` |  | §553 | trial |
 | `diagnostic-monde` |  | §177 §203 | whole world in French: analysis, repair, new analysis empty, exact restore |
 | `diagnostic-phb3` |  | §438 | sous-classes et objets du Manuel des joueurs 3.0.0 |
 | `diagnostic-traduction` |  | §203 | textes restés en anglais, traduction du compendium reprise |
