@@ -1,4 +1,4 @@
-import { turnKeyOf, shouldTrigger, markHit, entersArea, stepsInside, siblingFor, hitKey, pulseFor, pulseTargets, pickedAtPose } from "../core/area.mjs";
+import { turnKeyOf, shouldTrigger, markHit, entersArea, positionBeforeAreaMove, sliceOf, stepsInside, siblingFor, hitKey, pulseFor, pulseTargets, pickedAtPose } from "../core/area.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { spellRetypes } from "../adapter/messages.mjs";
 import { contentOf } from "../adapter/content.mjs";
@@ -313,21 +313,21 @@ function onPreRollDamage(config) {
  */
 function onUpdateRegion(region, changes) {
   const state = readAreaState(region);
-  if ( !state?.usage || !(("shapes" in changes) || ("attachment" in changes)) ) return;
+  // §550: the core moves an attached Emanation's elevation slice with its token (client/documents/token.mjs:2525-2545) — a vertical
+  // move of the caster is a move of the area too.
+  if ( !state?.usage || !(("shapes" in changes) || ("attachment" in changes) || ("elevation" in changes)) ) return;
   const now = zoneCenter(region);
-  const before = state.at ?? null;
+  const sliceNow = sliceOf(region._source.elevation);
+  const move = { at: state.at ?? null, now, sliceBefore: ("slice" in state) ? state.slice : null, sliceNow };
   for ( const token of region.parent.tokens ) {
     if ( !isInside(token, region) ) continue;
-    if ( before && now ) {
-      const p = committedPosition(token);
-      const shifted = { ...p, x: p.x - (now.x - before.x), y: p.y - (now.y - before.y) };
-      if ( isInside(token, region, shifted) ) continue;   // déjà dedans avant le déplacement de la zone
-    }
+    const before = positionBeforeAreaMove(committedPosition(token), move);
+    if ( before && isInside(token, region, before) ) continue;   // already inside before the area moved
     tick(region, token, "enter");
   }
-  if ( now ) enqueue(`area:${region.id}`, async () => {
+  enqueue(`area:${region.id}`, async () => {
     const current = readAreaState(region);
-    if ( current?.usage ) await writeAreaState(region, { ...current, at: now });
+    if ( current?.usage ) await writeAreaState(region, { ...current, ...(now ? { at: now } : {}), slice: sliceNow });
   });
   releaseZoneBound(region.parent);
 }

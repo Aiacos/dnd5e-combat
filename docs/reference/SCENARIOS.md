@@ -139,6 +139,7 @@ la sélection sans rien jouer.
 | `escalier-direct` | keep | §41.2 | un clic sur l'escalier change de niveau, sans dialogue |
 | `escaliers` | keep | §14.2 §18.26 | l'A* du moteur change de niveau par un escalier |
 | `especes` |  | §31 §295 | Acharnement, Ascendance gigante, Révélation céleste, Poussée d'adrénaline, Forme de géant |
+| `esprits-gardiens-vol` |  |  | l'émanation suit l'élévation du lanceur |
 | `esprits-gardiens` |  | §438 §531 | rien à la pose, puis fin de tour du Zombi dans l'émanation |
 | `ethere-interrupteur` |  | §225 | l'interrupteur du MJ coupe toute la gestion, sans rien déplacer |
 | `ethere-murs` |  | §225 | les murs se traversent, sauf les murs de force ; pas de chute |

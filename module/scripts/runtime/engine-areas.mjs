@@ -4,7 +4,7 @@
  */
 
 import { MODULE_ID } from "../constants.mjs";
-import { selectAreaTargets, eligibleAreaTargets, zoneChoiceNeeded, openArea, turnKeyOf, actsOnPose } from "../core/area.mjs";
+import { selectAreaTargets, eligibleAreaTargets, zoneChoiceNeeded, openArea, turnKeyOf, actsOnPose, sliceOf } from "../core/area.mjs";
 import { isChoiceZone, zoneChoiceMode, askZoneChoice } from "../adapter/zone-choice.mjs";
 import { areEnemies } from "../adapter/factions.mjs";
 import { readActivityRegion, repairSaveAbility, showTargetsTo } from "../adapter/saves.mjs";
@@ -109,6 +109,8 @@ export async function onRegionCreated(region) {
         usage: message.id,
         // §300 : son centre à la pose — un déplacement de la zone ne fait « entrer » que ceux qu'elle recouvre en plus (runtime/areas.mjs).
         at: zoneCenter(region),
+        // §550: and its elevation slice — a vertical move of the area (its caster flies) only makes "enter" those it now covers.
+        slice: sliceOf(region._source.elevation),
         activity: rules.activity ?? null,
         ...(rules.activities ? { activities: rules.activities } : {}),
         exclude: area.excludeOrigin ? area.origin : null,

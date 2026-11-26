@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  selectAreaTargets, turnKeyOf, openArea, shouldTrigger, markHit, entersArea, firstEntry, burnedOut, eligibleAreaTargets, zoneChoiceNeeded, pickedAtPose
+  selectAreaTargets, turnKeyOf, openArea, shouldTrigger, markHit, entersArea, firstEntry, burnedOut, eligibleAreaTargets, zoneChoiceNeeded, pickedAtPose, positionBeforeAreaMove, sliceOf
 } from "../module/scripts/core/area.mjs";
 
 const c = (name, disposition, extra = {}) => ({ token: `T.${name}`, actor: `A.${name}`, name, disposition, ...extra });
@@ -159,5 +159,38 @@ describe("§401 : zones « créatures de votre choix »", () => {
     expect(pickedAtPose(state, "ami")).toBe(false);
     expect(pickedAtPose(state, "nouveau")).toBe(null);
     expect(pickedAtPose({}, "orc")).toBe(null);
+  });
+});
+
+// §550: an Emanation that follows its caster up or down (Spirit Guardians, a flying Cleric).
+describe("sliceOf — the elevation slice noted in an area's state", () => {
+  it("finite bounds kept", () => expect(sliceOf({ bottom: -15, top: 20 })).toEqual({ bottom: -15, top: 20 }));
+  it("a column without a slice is null", () => expect(sliceOf({ bottom: null, top: null })).toBe(null));
+  it("one open bound stays null", () => expect(sliceOf({ bottom: 0, top: null })).toEqual({ bottom: 0, top: null }));
+  it("nothing given", () => expect(sliceOf(undefined)).toBe(null));
+});
+
+describe("positionBeforeAreaMove — where a token stood relative to the area before it moved", () => {
+  const zombie = { x: 100, y: 200, elevation: 0 };
+  it("a horizontal move shifts the token back by the area's own move (§300)", () => {
+    expect(positionBeforeAreaMove(zombie, { at: { x: 0, y: 0 }, now: { x: 50, y: 0 } })).toEqual({ x: 50, y: 200, elevation: 0 });
+  });
+  it("the caster comes down 30 ft: the slice went down 30 ft, the Zombie stood 30 ft higher relative to it", () => {
+    const before = positionBeforeAreaMove(zombie, { at: { x: 0, y: 0 }, now: { x: 0, y: 0 }, sliceBefore: { bottom: 15, top: 50 }, sliceNow: { bottom: -15, top: 20 } });
+    expect(before).toEqual({ x: 100, y: 200, elevation: 30 });
+  });
+  it("the caster rises 10 ft: the Zombie stood 10 ft lower relative to the slice", () => {
+    const before = positionBeforeAreaMove(zombie, { at: { x: 0, y: 0 }, now: { x: 0, y: 0 }, sliceBefore: { bottom: -15, top: 20 }, sliceNow: { bottom: -5, top: 30 } });
+    expect(before.elevation).toBe(-10);
+  });
+  it("only the top is finite: the shift reads the top", () => {
+    expect(positionBeforeAreaMove(zombie, { sliceBefore: { bottom: null, top: 20 }, sliceNow: { bottom: null, top: 50 } }).elevation).toBe(-30);
+  });
+  it("no slice noted (a column, or an area from before §550): horizontal shift only", () => {
+    expect(positionBeforeAreaMove(zombie, { at: { x: 0, y: 0 }, now: { x: 0, y: 0 }, sliceBefore: null, sliceNow: { bottom: -15, top: 20 } })).toEqual(zombie);
+  });
+  it("nothing known about the move (an area from before §300): null", () => expect(positionBeforeAreaMove(zombie, {})).toBe(null));
+  it("vertical only, no centre noted: still known", () => {
+    expect(positionBeforeAreaMove(zombie, { sliceBefore: { bottom: 0, top: 10 }, sliceNow: { bottom: 5, top: 15 } })).toEqual({ x: 100, y: 200, elevation: -5 });
   });
 });

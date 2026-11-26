@@ -295,6 +295,50 @@ export function entersArea(insideAtOrigin, insideAtWaypoints) {
 }
 
 /**
+ * §550: the elevation slice of an area, as noted in its state (`slice`) — finite bounds only, null for a column without a slice.
+ * @param {{bottom?: number|null, top?: number|null}|null|undefined} elevation  `region._source.elevation`.
+ * @returns {{bottom: number|null, top: number|null}|null}
+ */
+export function sliceOf(elevation) {
+  const finite = v => ((v === null) || (v === undefined) || !Number.isFinite(Number(v))) ? null : Number(v);
+  const bottom = finite(elevation?.bottom);
+  const top = finite(elevation?.top);
+  return ((bottom === null) && (top === null)) ? null : { bottom, top };
+}
+
+/**
+ * §300, §550: when the area itself moves (an Emanation following its caster), where a token stood relative to the area BEFORE
+ * the move — its position shifted back by the area's own move: horizontally (centre `at`), and vertically (elevation slice).
+ * A token inside the area at this shifted position was already inside: the move does not make it "enter". A vertical move
+ * (the caster flies up or down) shifts the slice only, and is counted the same way. Unknown before/now: no shift on that axis.
+ * @param {{x: number, y: number, elevation?: number}} position  The token's position now.
+ * @param {object} move
+ * @param {{x: number, y: number}|null} [move.at]       The area's centre before.
+ * @param {{x: number, y: number}|null} [move.now]      The area's centre now.
+ * @param {{bottom: number|null, top: number|null}|null} [move.sliceBefore]
+ * @param {{bottom: number|null, top: number|null}|null} [move.sliceNow]
+ * @returns {{x: number, y: number, elevation?: number}|null}  null: nothing known about the move (an area noted before §300).
+ */
+export function positionBeforeAreaMove(position, { at=null, now=null, sliceBefore=null, sliceNow=null }={}) {
+  const shifted = { ...position };
+  let known = false;
+  if ( at && now ) {
+    shifted.x = position.x - (now.x - at.x);
+    shifted.y = position.y - (now.y - at.y);
+    known = true;
+  }
+  const delta = (sliceBefore && sliceNow)
+    ? (((sliceBefore.bottom !== null) && (sliceNow.bottom !== null)) ? sliceNow.bottom - sliceBefore.bottom
+      : (((sliceBefore.top !== null) && (sliceNow.top !== null)) ? sliceNow.top - sliceBefore.top : null))
+    : null;
+  if ( delta !== null ) {
+    shifted.elevation = (Number(position.elevation) || 0) - delta;
+    known = true;
+  }
+  return known ? shifted : null;
+}
+
+/**
  * §16.37 : l'heure du monde (secondes) où finit une zone qui dure sans concentration (Lumière du jour : 1 heure), ou null si
  * sa durée ne se compte pas (instantanée, permanente, spéciale, inconnue).
  * @param {number} now                         Heure du monde, en secondes.
