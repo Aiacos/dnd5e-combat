@@ -689,29 +689,30 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 15. self area: automatic placement
 16. coating: weapon not coated
 17. turns in a row: number not rolled
-18. Boon of Spell Recall
-19. Use Magic Device: charges
-20. maneuver: promised die or AC not applied
-21. spell ended by a special function: not ended
-22. escape
-23. jump: Step of the Wind doubling not noted
-24. Ready: readied action not chosen
-25. improvised weapon: not requested
-26. effect ending on spell or damage not removed
-27. potion: conditions not removed
-28. healer's kit: stabilization
-29. hide
-30. search
-31. light object: the caster does not shed light
-32. caster light: not lit
-33. light source: not lit
-34. Wild Shape: transformation not done
-35. enchantment: weapon not enchanted
-36. summon permissions: player not told
-37. ethereal: Ethereal Jaunt / Stride not applied
-38. Arcane Vigor: Hit Point Dice not spent
-39. restoration: condition not removed
-40. tinderbox: nothing lit
+18. damage by count: number not noted
+19. Boon of Spell Recall
+20. Use Magic Device: charges
+21. maneuver: promised die or AC not applied
+22. spell ended by a special function: not ended
+23. escape
+24. jump: Step of the Wind doubling not noted
+25. Ready: readied action not chosen
+26. improvised weapon: not requested
+27. effect ending on spell or damage not removed
+28. potion: conditions not removed
+29. healer's kit: stabilization
+30. hide
+31. search
+32. light object: the caster does not shed light
+33. caster light: not lit
+34. light source: not lit
+35. Wild Shape: transformation not done
+36. enchantment: weapon not enchanted
+37. summon permissions: player not told
+38. ethereal: Ethereal Jaunt / Stride not applied
+39. Arcane Vigor: Hit Point Dice not spent
+40. restoration: condition not removed
+41. tinderbox: nothing lit
 
 ### `dnd5e.preActivityConsumption`
 
@@ -790,15 +791,16 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 7. damage: dice multiplied (area), type chosen _(stop)_
 8. storm: extra die not added _(stop)_
 9. coating: poison damage not added _(stop)_
-10. Cleave: modifier _(stop)_
-11. Sneak Attack _(stop)_
-12. Fighter fighting styles _(stop)_
-13. origin feats (damage) _(stop)_
-14. Martial Arts: Dexterity with a Monk weapon (damage) _(stop)_
-15. smite _(stop)_
-16. maneuver: promised die _(stop)_
-17. Toll the Dead: target's dice _(stop)_
-18. off hand: Two-Weapon Fighting _(stop)_
+10. damage by count: formula not set _(stop)_
+11. Cleave: modifier _(stop)_
+12. Sneak Attack _(stop)_
+13. Fighter fighting styles _(stop)_
+14. origin feats (damage) _(stop)_
+15. Martial Arts: Dexterity with a Monk weapon (damage) _(stop)_
+16. smite _(stop)_
+17. maneuver: promised die _(stop)_
+18. Toll the Dead: target's dice _(stop)_
+19. off hand: Two-Weapon Fighting _(stop)_
 
 ### `dnd5e.preRollDeathSaveV2`
 

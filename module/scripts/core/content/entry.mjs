@@ -19,6 +19,7 @@ import { validateReducesForcedMove } from "../forced-move.mjs";
 import { validateSaveResist } from "../save-resist.mjs";
 import { validateCastFromBearer } from "../cast-from-bearer.mjs";
 import { validateExtraTurns } from "../extra-turns.mjs";
+import { validateDamageByCount } from "../damage-by-count.mjs";
 import { validateRegeneration } from "../regeneration.mjs";
 import { validateFormLock, validateSuspends } from "../form-lock.mjs";
 import { revertAfterErrors } from "../form-revert.mjs";
@@ -121,6 +122,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   if ( "saveReflect" in entry ) errors.push(...validateSaveResist(entry.saveReflect, at, isId, "saveReflect"));
   if ( "castFromBearer" in entry ) errors.push(...validateCastFromBearer(entry.castFromBearer, at));
   if ( "extraTurns" in entry ) errors.push(...validateExtraTurns(entry.extraTurns, at));
+  if ( "damageByCount" in entry ) errors.push(...validateDamageByCount(entry.damageByCount, at, isId));
   if ( "trace" in entry ) {
     const t = entry.trace;
     if ( isObject(t) ) {
