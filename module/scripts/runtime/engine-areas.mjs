@@ -109,7 +109,7 @@ export async function onRegionCreated(region) {
         usage: message.id,
         // §300 : son centre à la pose — un déplacement de la zone ne fait « entrer » que ceux qu'elle recouvre en plus (runtime/areas.mjs).
         at: zoneCenter(region),
-        // §550: and its elevation slice — a vertical move of the area (its caster flies) only makes "enter" those it now covers.
+        // §551: and its elevation slice — a vertical move of the area (its caster flies) only makes "enter" those it now covers.
         slice: sliceOf(region._source.elevation),
         activity: rules.activity ?? null,
         ...(rules.activities ? { activities: rules.activities } : {}),

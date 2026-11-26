@@ -6,7 +6,7 @@
  *  (a) 10 ft up, the Zombie (feet 0, head 5) stays inside the slice: no new "enter", and its turn end replays the save;
  *  (b) 30 ft up, the Zombie is out of reach (15 ft emanation from the caster's body): its turn end replays nothing;
  *  (d) 10 ft up, the caster flies horizontally over a Zombie standing outside: the Emanation enters its space: one "enter" save;
- *  (e) on the ground, the caster steps two squares towards a Zombie just outside the Emanation (§550: the area's own move was
+ *  (e) on the ground, the caster steps two squares towards a Zombie just outside the Emanation (§551: the area's own move was
  *      counted the wrong way round, a creature at the leading edge read as "already inside").
  * The climbing and falling system is turned off for the scenario (the caster has no Fly Speed: it would fall).
  */

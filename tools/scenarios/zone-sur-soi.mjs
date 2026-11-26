@@ -54,8 +54,18 @@ export default {
     ctx.expect((await ctx.hp(zombi)) === 100, `the Zombie, two squares away, takes nothing at the cast (${await ctx.hp(zombi)} HP)`);
 
     // §531: the Zombie steps out of the Emanation, then the caster walks up to it — the attached Emanation enters its space.
-    await ctx.call("move-token", { tokenId: zombi.id, x: cPos.x - 6 * grid, y: cPos.y, elevation: cPos.elevation });
-    await new Promise(r => setTimeout(r, 1500));
+    // §551: a free square — dnd5e refuses to end a move on another creature (the Fighter stands six squares left in `dnd-6`): the
+    // Zombie then stayed inside, and only the inverted §300 shift made the caster's move look like an "enter".
+    let away = null;
+    for ( const dy of [0, 1, -1, 2, -2] ) {
+      const target = { x: cPos.x - 6 * grid, y: cPos.y + dy * grid };
+      await ctx.call("move-token", { tokenId: zombi.id, ...target, elevation: cPos.elevation }).catch(() => null);
+      await new Promise(r => setTimeout(r, 1500));
+      const at = await ctx.position(zombi);
+      if ( (at.x === target.x) && (at.y === target.y) ) { away = target; break; }
+    }
+    ctx.expect(!!away, `the Zombie steps out of the Emanation (${away ? `${away.x}, ${away.y}` : "no free square"})`);
+    if ( !away ) return;
     ctx.restore(() => ctx.call("move-token", { tokenId: caster.id, x: cPos.x, y: cPos.y, elevation: cPos.elevation }).catch(() => {}));
     const beforeMove = await ctx.lastMessageId();
     await ctx.call("move-token", { tokenId: caster.id, x: cPos.x - 3 * grid, y: cPos.y, elevation: cPos.elevation });

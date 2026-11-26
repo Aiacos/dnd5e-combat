@@ -162,7 +162,7 @@ describe("§401 : zones « créatures de votre choix »", () => {
   });
 });
 
-// §550: an Emanation that follows its caster up or down (Spirit Guardians, a flying Cleric).
+// §551: an Emanation that follows its caster up or down (Spirit Guardians, a flying Cleric).
 describe("sliceOf — the elevation slice noted in an area's state", () => {
   it("finite bounds kept", () => expect(sliceOf({ bottom: -15, top: 20 })).toEqual({ bottom: -15, top: 20 }));
   it("a column without a slice is null", () => expect(sliceOf({ bottom: null, top: null })).toBe(null));
@@ -207,7 +207,7 @@ describe("positionBeforeAreaMove — the token as seen from the area before it m
   it("only the top is finite: the shift reads the top", () => {
     expect(positionBeforeAreaMove(zombie, { sliceBefore: { bottom: null, top: 20 }, sliceNow: { bottom: null, top: 50 } }).elevation).toBe(30);
   });
-  it("no slice noted (a column, or an area from before §550): horizontal shift only", () => {
+  it("no slice noted (a column, or an area from before §551): horizontal shift only", () => {
     expect(positionBeforeAreaMove(zombie, { at: { x: 0, y: 0 }, now: { x: 0, y: 0 }, sliceBefore: null, sliceNow: { bottom: -15, top: 20 } })).toEqual(zombie);
   });
   it("nothing known about the move (an area from before §300): null", () => expect(positionBeforeAreaMove(zombie, {})).toBe(null));

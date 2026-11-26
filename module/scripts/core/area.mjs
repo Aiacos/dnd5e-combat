@@ -295,7 +295,7 @@ export function entersArea(insideAtOrigin, insideAtWaypoints) {
 }
 
 /**
- * §550: the elevation slice of an area, as noted in its state (`slice`) — finite bounds only, null for a column without a slice.
+ * §551: the elevation slice of an area, as noted in its state (`slice`) — finite bounds only, null for a column without a slice.
  * @param {{bottom?: number|null, top?: number|null}|null|undefined} elevation  `region._source.elevation`.
  * @returns {{bottom: number|null, top: number|null}|null}
  */
@@ -307,13 +307,13 @@ export function sliceOf(elevation) {
 }
 
 /**
- * §300, §550: when the area itself moves (an Emanation following its caster), the token's position as seen from the area
+ * §300, §551: when the area itself moves (an Emanation following its caster), the token's position as seen from the area
  * BEFORE the move: shifted by the area's own move, horizontally (centre `at`) and vertically (elevation slice). Testing the area
  * as it is now at this shifted position is testing the area as it was at the token's real position (the area moved by d: it was
  * the current area minus d, so the token was inside it iff token + d is inside the current one). Inside: the token was already
  * there, the move does not make it "enter". A vertical move (the caster flies up or down) shifts the slice only, and counts the
  * same way. Unknown before/now: no shift on that axis.
- * §550: before, the shift went the other way (token − d): a step of the caster towards a creature at the Emanation's edge was
+ * §551: before, the shift went the other way (token − d): a step of the caster towards a creature at the Emanation's edge was
  * read as "already inside" (no save), and a creature trailing behind as "entering".
  * @param {{x: number, y: number, elevation?: number}} position  The token's position now.
  * @param {object} move
