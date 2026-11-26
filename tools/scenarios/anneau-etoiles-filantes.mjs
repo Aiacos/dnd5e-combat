@@ -54,11 +54,13 @@ export default {
       const saveRoll = msgs.filter(m => m.type === "save").flatMap(m => m.rolls ?? [])[0];
       const damage = msgs.filter(m => m.type === "damage").flatMap(m => m.rolls ?? [])[0];
       const formula = String(damage?.formula ?? "");
-      const lost = 200 - (await ctx.hp(zombie));
+      // dnd5e applies damage to the prepared HP (capped at the maximum), so the check reads the engine's applied amount.
+      const applied = r?.targets?.[0]?.damage?.applied;
+      const after = await ctx.hp(zombie);
       ctx.expect(!!saveRoll && (Number(saveRoll.total) < 15), `${spheres} sphere(s): the Zombie fails its DC 15 save (${saveRoll?.total ?? "no save roll"})`);
       ctx.expect(formula.replace(/\s/g, "").startsWith(expected), `${spheres} sphere(s): damage ${expected} (${formula || "no damage roll"})`);
-      ctx.expect((r?.step === "done") && (lost > 0) && (lost === Number(damage?.total)),
-        `${spheres} sphere(s): full damage applied (${lost} HP lost, roll ${damage?.total ?? "?"}, step ${r?.step ?? "?"})`);
+      ctx.expect((r?.step === "done") && (applied > 0) && (applied === Number(damage?.total)) && (after < 200),
+        `${spheres} sphere(s): full damage applied (${applied} HP, roll ${damage?.total ?? "?"}, ${after} HP left, step ${r?.step ?? "?"})`);
     }
   }
 };
