@@ -31,6 +31,11 @@ export default {
     ctx.restore(() => ctx.engine("setting", { key: "damageFlow", value: before }));
     const set = await ctx.engine("setting", { key: "damageFlow", value: "clickPlayers" });
     ctx.log(`réglage chez le MJ : ${JSON.stringify(set)}`);
+    // Success at a Cost holds a near miss for the GM (20 s, `successAtCostHold`), as long as this scenario waits for the player's
+    // window: a miss by 1 or 2 then read as "no window". Off for the scenario, a miss is a miss.
+    const atCost = (await ctx.engine("setting", { key: "successAtCost" }))?.now ?? false;
+    ctx.restore(() => ctx.engine("setting", { key: "successAtCost", value: atCost }));
+    await ctx.engine("setting", { key: "successAtCost", value: false });
     await pause(1500);
 
     const who = await ctx.asPlayer(`

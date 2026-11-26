@@ -149,7 +149,9 @@ export default {
       // (« oui / yes / fail… ») n'en reconnaissait aucun : le premier, « pas consentant », était cliqué, et un Allié qui réussissait sa
       // sauvegarde ne portait rien (une passe sur deux). Le bouton est choisi par son id : `^willing`.
       const spell = await lend(caster, `${PHB}.spells.Item.phbsplEnlargeRed`, { "system.method": "atwill" });
-      const { seen } = await answering([[/consent|willing/i, /^willing\b/i]],
+      // The buttons are `pick0` "Unwilling (saving throw)" then `pick1` "Willing (no roll)" (adapter/choices.mjs): the rule reads
+      // "<action> <label>", so `^willing` never matched and the first button was clicked — the Allié rolled, and held one pass in two.
+      const { seen } = await answering([[/consent|willing/i, /(^|\s)willing\b/i]],
         async () => settled(await ctx.use({ tokenId: caster.id, itemId: spell, activityType: "save", targetTokenIds: [ally.id] })));
       const effects = await ctx.effectsFrom(ally, "enlarge-reduce");
       ctx.expect(effects.length === 1, `Agrandissement : l'Allié porte un seul effet (${effects.map(e => e.effect).join(", ")} ; fenêtres : ${seen.map(s => s.text).join(" | ")})`);
