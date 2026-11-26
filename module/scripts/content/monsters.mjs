@@ -47,9 +47,10 @@ export const MONSTERS = Object.freeze({
         do: [{ type: "damage", to: "self", formula: "20", damageType: "radiant" }] },
       { on: "endOfTurn", if: { "self.inRunningWater": true },
         do: [{ type: "damage", to: "self", formula: "20", damageType: "acid" }] }] },
-  // Riposte (Capitaine pirate, SRD 5.2) : « the pirate adds 3 to its AC against that attack » — l'effet « +3 CA » de la donnée dure
-  // un round : il ne vaut que pour l'attaque qui a ouvert la Réaction.
-  "mm-pirate-captain-riposte": { forOneAttack: true },
+  // Pirate Captain's Riposte (SRD 5.2): "the pirate adds 3 to its AC against that attack". The item's "+3 AC" effect lasts a round
+  // in its data: it holds for the triggering attack only. `mm-riposte` is its own identifier (sources.mjs, K6 §327), apart from the
+  // Battle Master's `riposte`.
+  "mm-riposte": { forOneAttack: true },
   // Perception de la magie (Chuul, SRD 5.2) : « le chuul perçoit la magie dans un rayon de 36 m ; ce trait fonctionne par ailleurs
   // comme le sort Détection de la magie, sans être lui-même magique » — permanent, sans effet à porter.
   "sense-magic": { sense: { kind: "locate", range: 120, units: "ft", reveals: "aura", detects: { "target.carriesMagic": true } } },

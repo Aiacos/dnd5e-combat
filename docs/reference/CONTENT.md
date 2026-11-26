@@ -118,7 +118,7 @@ précis en jeu : `api.content.of(item)`, `api.content.inspect(actor)`.
 | `flurryStrikes` | 1 | `heightened-focus` |
 | `forcedAttack` | 1 | `crown-of-madness` |
 | `formLock` | 1 | `moonbeam` |
-| `forOneAttack` | 1 | `mm-pirate-captain-riposte` |
+| `forOneAttack` | 1 | `mm-riposte` |
 | `fortifiedHealing` | 1 | `boon-of-fortitude` |
 | `fortitude` | 1 | `undead-fortitude` |
 | `freeCast` | 1 | `divine-intervention` |

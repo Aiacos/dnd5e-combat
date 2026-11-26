@@ -48,8 +48,6 @@ export const SOURCE_IDENTIFIERS = Object.freeze({
   "mmWeretiger00000.mmBite0000000000": "mm-lycanthrope-bite",
   "mmWerewolf000000.mmBite0000000000": "mm-lycanthrope-bite",
   "mmWight000000000.mmLifeDrain00000": "mm-wight-life-drain",
-  // Riposte du Capitaine pirate (SRD 5.2) : « riposte » est la manœuvre du Maître de bataille (content/fighter.mjs).
-  "mmPirateCaptain0.mmRiposte0000000": "mm-pirate-captain-riposte",
   "mmBeholder000000.mmEyeRays0000000": "mm-beholder-eye-rays",
   "mmDeathTyrant000.mmEyeRays0000000": "mm-beholder-eye-rays",
   // Espèce Dhampir (Ravenloft: The Horrors Within).

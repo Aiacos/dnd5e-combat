@@ -288,7 +288,7 @@ describe("contenu livré", () => {
       "mind-spike", "mindless-rage", "minor-illusion", "mirror-image",
       "mirror-of-life-trapping", "mislead", "mist-walker", "misty-escape", "misty-form",
       "misty-step", "mm-balor-fire-aura", "mm-beholder-eye-rays", "mm-fire-aura-each", "mm-homunculus-bite", "mm-lycanthrope-bite",
-      "mm-pirate-captain-riposte", "mm-pseudodragon-sting", "mm-wereboar-gore",
+      "mm-pseudodragon-sting", "mm-riposte", "mm-wereboar-gore",
       "mm-wight-life-drain",
       "modify-memory", "monks-focus", "moon-touched-sword", "moon-touched-sword-enchanted", "moonbeam", "moonlight-step",
       "mordenkainens-faithful-hound", "mordenkainens-magnificent-mansion", "mordenkainens-sword", "natural-recovery",

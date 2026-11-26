@@ -1,5 +1,4 @@
 /**
- * In to-fix/ until PR #264 is rebased and merged: on main the effect never ends.
  * PR #264 — Flesh Golem's Aversion to Fire and Water Elemental's Freeze (Monster Manual 2024 / SRD 5.2): the effect placed when the
  * creature takes Fire (Cold) damage lasts "until the end of its next turn". The copy the engine places keeps its source
  * (`_stats.duplicateSource`), so the entries' `effectEnds: bearerTurnEnd` applies to it.

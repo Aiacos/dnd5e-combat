@@ -86,6 +86,7 @@ la sélection sans rien jouer.
 | `critique-par-cible` |  | §545 | deux cibles touchées, une seule Paralysée : seule elle prend les dés du critique |
 | `critiques` |  | §207 | écart à la CA, table de critiques, choix de l'attaquant |
 | `dague-des-ombres` |  | §71 | stabilisée, empoisonnée et paralysée seulement à 0 PV |
+| `damage-trait-effect-ends` |  |  | Aversion to Fire, Freeze: until the end of the bearer's next turn (PR #264) |
 | `dard-pseudodragon` |  | §526 | plus Inconscient une fois l'effet fini (#255) |
 | `debogueur` |  | §380 | erreurs regroupées, piste, rapport sans noms |
 | `defenses` |  | §16.46 | Voile défensif, Résistance |
@@ -237,6 +238,7 @@ la sélection sans rien jouer.
 | `perf-planpath-murs` | keep |  | walls and doors: the core is only skipped where it would find nothing (issue #92) |
 | `perf-planpath` |  |  | what planPath costs on open ground, same answers without asking dnd5e or the core (issue #92) |
 | `phb3` |  | §438 | Manuel des joueurs 3.0.0 : dés du Coup brutal, Affinité élémentaire comptée une fois |
+| `pirate-captain-riposte` |  | §19.6 | +3 AC against the triggering attack only (PR #268) |
 | `plafond` | Escalade | §192 | Pattes d'araignée, marche au plafond, hors d'allonge, retournement, descente, chute, DD 20 maison |
 | `porte-passager` |  | §264 | le passager suit le lanceur |
 | `porte-serrure` |  | §244 §247 §243 | crocheter, forcer, clé, DD caché |
@@ -442,8 +444,6 @@ la sélection sans rien jouer.
 
 | Scénario | Scène | § | Ce qu'il vérifie |
 |---|---|---|---|
-| `damage-trait-effect-ends` |  |  | Aversion to Fire, Freeze: until the end of the bearer's next turn (PR #264) |
-| `pirate-captain-riposte` |  | §19.6 | +3 AC against the triggering attack only (PR #268) |
 | `time-stop-edits` |  |  | previous turn, removed combatants, death and end of combat during the turns in a row |
 | `time-stop-player` | Arène des refus |  | cast and played by a player, the GM gives the turns back |
 | `time-stop-round` |  |  | the caster last in the round: the round does not end for the others |
