@@ -567,9 +567,9 @@ export const ITEM_FIXES = Object.freeze({
   // réduire la distance de 3 m au plus » — l'activité « Reduce Unwilling Movement » de la donnée ne touche pas aux poussées du
   // moteur.
   "dwarven-plate-enchanted": { reducesForcedMove: { distance: 10, units: "ft" } },
-  // Anneau des étoiles filantes (SRD 5.2), Sphères de foudre : « en cas d'échec, la créature subit des dégâts de foudre selon le
-  // nombre de sphères que vous avez créées » — 1 : 4d12, 2 : 5d4, 3 : 2d6, 4 : 2d4 ; la moitié en cas de réussite. La sauvegarde
-  // de la donnée n'a aucun dégât : la ligne d'une sphère lui est donnée, et `damageByCount` prend celle du nombre créé.
+  // Ring of Shooting Stars (SRD 5.2), Lightning Spheres: "On a failed save, the creature takes Lightning damage based on the
+  // number of spheres you created" — 1: 4d12, 2: 5d4, 3: 2d6, 4: 2d4; half on a success (the data's `onSave: "half"`). The data's
+  // save has no damage part: it is given the one-sphere row, and `damageByCount` takes the row of the number created.
   "ring-of-shooting-stars": {
     damageByCount: { GLyk6XaqTk5JOVQ8: { from: "sZwpvVE0OpUNXe2B", formulas: ["4d12", "5d4", "2d6", "2d4"] } },
     dataFixes: [{ path: "system.activities.GLyk6XaqTk5JOVQ8.damage.parts", from: [],

@@ -468,7 +468,7 @@ Hooks.once("init", () => {
   gated(registerFortitude);   // §61 : Robustesse de la non-vie (la sauvegarde due part avec les PV, adapter/death.mjs)
   gated(registerDamageTraits);   // trait qui répond à un type de dégâts subi (Gel, Aversion au feu)
   gated(registerExtraTurns);   // des tours d'affilée (Arrêt du temps)
-  gated(registerDamageByCount);   // dégâts selon le nombre créé (Anneau des étoiles filantes)
+  gated(registerDamageByCount);   // damage by the number created (Ring of Shooting Stars)
   gated(registerDrain);
   gated(registerSpaceSharing);
   gated(registerObjectPassage);   // §255

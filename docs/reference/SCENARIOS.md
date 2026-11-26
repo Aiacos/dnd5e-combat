@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-426 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+427 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -21,6 +21,7 @@ la sélection sans rien jouer.
 | `activite-sous-effet` |  | §486 | §486 (brique B07) — `usageLimits.<activité>.whileEffect` / `unlessEffect` : une activité permise seulement sous un effet, ou seulement hors de lui (« Griffes (requiert Modificatio… |
 | `agrandissement` |  | §16.58 | Agrandissement (token 2×2), Rapetissement, retour à la taille d'origine |
 | `alerte-mj` |  | §364 §366 §365 | bandeau, carte chuchotée, filtre d'activité, réglage |
+| `anneau-etoiles-filantes` |  | §550 | a lightning sphere's damage by the number created (4d12 for 1, 2d6 for 3) |
 | `antimagie-cone` |  | §436 | Cône antimagie du tyrannœil, en combat jusqu'au début de son tour suivant |
 | `antimagie-diagnostic` |  | §436 | diagnostic des effets magiques non marqués |
 | `antimagie-forcage` |  | §436 | sort forcé depuis la Barre de Combat UI et depuis la fiche |

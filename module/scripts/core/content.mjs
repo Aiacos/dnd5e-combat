@@ -583,9 +583,9 @@
  *                                               of the item, when within that distance of the caster (Gaze of Two Minds)
  *     extraTurns?: { formula }                  en combat, l'utilisation donne à son auteur ce nombre de tours d'affilée : le
  *                                               combat revient à lui à la fin de chacun (Arrêt du temps ; core/extra-turns.mjs)
- *     damageByCount?: { <id d'activité>: { from: <id d'activité>, formulas: [formule, …] } }
- *                                               les dégâts de l'activité selon le nombre créé à l'activité `from` (1 + sa montée),
- *                                               noté sur l'item (Anneau des étoiles filantes ; core/damage-by-count.mjs)
+ *     damageByCount?: { <activity id>: { from: <activity id>, formulas: [formula, …] } }
+ *                                               the activity's damage by the number created at the `from` activity (1 + its
+ *                                               scaling), noted on the item (Ring of Shooting Stars; core/damage-by-count.mjs)
  *     targetedSummon?: true                      §394 : l'activité d'invocation se vise d'un clic (Doigt de mort : le cadavre) ;
  *                                               sans elle, une invocation ne vise jamais, quoi que disent ses données
  *     placesSummons?: true                       §109 : l'invocation se place toujours, même quand l'activité dit le contraire

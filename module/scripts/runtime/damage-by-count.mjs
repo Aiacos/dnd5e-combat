@@ -1,6 +1,7 @@
 /**
- * `damageByCount` (core/damage-by-count.mjs) : Anneau des étoiles filantes. L'utilisation de l'activité `from` note sur l'item le
- * nombre créé ; le jet de dégâts de l'activité déclarée prend la formule de ce nombre. Rien de noté : la donnée reste telle quelle.
+ * `damageByCount` (core/damage-by-count.mjs): Ring of Shooting Stars. Using the `from` activity notes on the item the number
+ * created; the damage roll of the declared activity takes that number's formula. Nothing noted: the data stays as it is.
+ * The number is the last one created with this item; it is not cleared when the spheres end (a later creation overwrites it).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -9,7 +10,7 @@ import { contentOf } from "../adapter/content.mjs";
 import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
 
-// Pas le nom de la clé : `flags.dnd5e-combat.<clé de contenu>` d'un item est lu comme du contenu par objet.
+// Not the key's name: an item's `flags.dnd5e-combat.<content key>` is read as per-item content.
 const FLAG = "countCreated";
 
 async function onPostUse(activity, usageConfig, results) {
