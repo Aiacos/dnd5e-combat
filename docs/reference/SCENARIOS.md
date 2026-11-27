@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-434 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+435 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -153,6 +153,7 @@ la sélection sans rien jouer.
 | `familier` |  | §107 | actions de base, vision, poche dimensionnelle |
 | `fee-ange` |  | §92 §438 | Foulée des fées, Échappatoire brumeuse, Ange vengeur |
 | `fenetre-degats-dnd5e` |  | §556 | dnd5e's damage dialog for the engine's damage (#173): bonus, forced critical, closed, per client |
+| `fenetre-degats-roublard` |  | §556 §558 | Rogue's damage in dnd5e's damage dialog (#173): Sneak Attack row, forced critical, the « ask » question first |
 | `fenetre-tir` | Arène des refus | §518 | tirer par une fenêtre, attaque forcée malgré un abri total (§518) |
 | `fenetres-sans-delai` |  | §290 | le MJ voit qui il attend, et force |
 | `feu-gregeois` |  | §49 | En feu, dégâts au début du tour, s'éteindre à terre |
