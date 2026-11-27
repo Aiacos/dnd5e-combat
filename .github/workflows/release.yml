@@ -34,6 +34,13 @@ jobs:
           npm ci
           npm test
 
+      # Issue #257: the body of the GitHub release is this version's note (releases.mjs, English texts), as Markdown.
+      # Fails when the version has no note or one of its texts is missing.
+      - name: Release note
+        run: |
+          node tools/release-notes.mjs "${GITHUB_REF_NAME}" --out release-notes.md
+          cat release-notes.md
+
       - name: Compendiums
         run: |
           if node -e "process.exit(require('./package.json').scripts?.packs ? 0 : 1)"; then
@@ -63,6 +70,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
+          body_path: release-notes.md
           files: |
             module.json
             module.zip
