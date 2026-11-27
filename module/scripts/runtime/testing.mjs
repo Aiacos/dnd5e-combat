@@ -19,6 +19,7 @@ import { pickCandidates, upgradeOf } from "../adapter/pick-targets.mjs";
 import { castOnPicked } from "./pick-targets.mjs";
 import { clockState } from "./clock.mjs";
 import { MODULE_ID } from "../constants.mjs";
+import { COMBAT_ENDED_HOOK, CREATURE_DEFEATED_HOOK } from "./combat-outcome.mjs";
 import { perfApi } from "./perf.mjs";
 import { reports as itemReports } from "../adapter/automation.mjs";
 import { rollDamageFor } from "../adapter/messages.mjs";
@@ -613,4 +614,45 @@ async function sceneBright({ check=null }={}) {
   return { ...shown, saved: scene._source.environment.globalLight.bright };
 }
 
-export const testApi = Object.freeze({ summonBlocked, gmQueue: gmQueueState, gmQueueForce, gmQueueRoll, gmQueueAnswer, atCost, barrier, gmAlerts, controls, menu, wall, wallSide, cover, coverPreview, issues, planning, stormStrike, storm, placeRegionAt, effectOrigins, enchant, overrideContent, heal, hurt, rollSave, rollCheck, range, rangeCheck, naturalOne, perf, threats, missedOpportunities, attackReasons, perceived, inventory, budget, potionOptions: potionOptionsOf, identify, itemData, stairs, plan, movement, move, windows, closeWindow, view, reports, rollCard, status, reload, clickCard, summonAt, castFromBar, summonCaptured, owners, makeScroll, scrollReading, hampered, stats, teleport, teleportPick, restoreItem, runMacro, saveChance, portent, transpose, dash, chatCards, setting, foreignSetting, viewScene, sequencer, stairsAt, takeStairs, follow, unfollow, followState, mount, endings, actionEnd, use, sheetUse, familiar, familiarPocket, familiarRecall, skillAids, skillAid, animations: animationState, toggleLight, hood, removeItemEffect, lightState, advanceTime, longRest, shortRest, clock, door, lock, diagnosticScan, diagnosticRepair, diagnosticBackups, diagnosticRestore, diagnosticForget, factions, sees, stealth, scatter, flammable, climb, climbState, climbHolds, climbToward, climbCeiling, climbDown, reachCheck, dropDown, rawMove, jump, hoist, grab, ready, burning, masteries, masteryWindow, etherealWalls, flight, groupRoll, groupRollState, groupRollBreakdown, groupRollForce, groupRollMode, placeMenu, settingsChanged, placeItemEffect, concentrate, upkeep, stand, rangedPlacement, chainCheck, tokenLight, damageTypes, fortified, catalyst, grappleState, attacksThisTurn, waits, awaiting, forcePlayerWait, pickTargets, castPicked , debugThrow, debugReport, debugClear, debugVerbose, connectionTest, visionMatrix, screenHere, setOwners, sightIssues, screenAfterUpdate, controlToken, sceneBright });
+const outcomeWatch = { ids: null, heard: [] };
+/**
+ * §555: records the `combatEnded` / `creatureDefeated` hooks on this client. `action`: « watch » (starts, clears), « read » (what was
+ * heard), « stop » (stops, returns what was heard), « tracker » (ticks « defeated » for `tokenId` in `combatId`), « unstarted » (a combat
+ * with `tokenId`, deleted before it began).
+ */
+async function combatOutcome({ action="read", combatId=null, tokenId=null }={}) {
+  if ( action === "tracker" ) {
+    gmOnly();
+    const combatant = game.combats.get(combatId)?.combatants.find(c => c.tokenId === tokenId);
+    if ( !combatant ) throw new Error(`no combatant for token ${tokenId} in combat ${combatId}`);
+    await combatant.update({ defeated: true });
+    return { defeated: combatant.defeated };
+  }
+  if ( action === "unstarted" ) {
+    gmOnly();
+    const [combat] = await Combat.implementation.createDocuments([{ scene: canvas.scene.id }]);
+    await combat.createEmbeddedDocuments("Combatant", [{ tokenId, sceneId: canvas.scene.id }]);
+    await combat.delete();
+    return { id: combat.id };
+  }
+  if ( action === "watch" ) {
+    if ( !outcomeWatch.ids ) outcomeWatch.ids = [
+      [COMBAT_ENDED_HOOK, Hooks.on(COMBAT_ENDED_HOOK, ({ combat, round, combatants, defeated }) => outcomeWatch.heard.push({ hook: "combatEnded",
+        combat: combat?.id ?? null, round, combatants: combatants.map(c => ({ token: c.token?.id ?? null, defeated: c.defeated })),
+        defeated: defeated.map(t => t.id) }))],
+      [CREATURE_DEFEATED_HOOK, Hooks.on(CREATURE_DEFEATED_HOOK, ({ token, combat, cause }) => outcomeWatch.heard.push({ hook: "creatureDefeated",
+        token: token?.id ?? null, combat: combat?.id ?? null, cause }))]
+    ];
+    outcomeWatch.heard = [];
+    return { watching: true };
+  }
+  const heard = [...outcomeWatch.heard];
+  if ( action === "stop" ) {
+    for ( const [name, id] of outcomeWatch.ids ?? [] ) Hooks.off(name, id);
+    outcomeWatch.ids = null;
+    outcomeWatch.heard = [];
+  }
+  return { heard };
+}
+
+export const testApi = Object.freeze({ combatOutcome, summonBlocked, gmQueue: gmQueueState, gmQueueForce, gmQueueRoll, gmQueueAnswer, atCost, barrier, gmAlerts, controls, menu, wall, wallSide, cover, coverPreview, issues, planning, stormStrike, storm, placeRegionAt, effectOrigins, enchant, overrideContent, heal, hurt, rollSave, rollCheck, range, rangeCheck, naturalOne, perf, threats, missedOpportunities, attackReasons, perceived, inventory, budget, potionOptions: potionOptionsOf, identify, itemData, stairs, plan, movement, move, windows, closeWindow, view, reports, rollCard, status, reload, clickCard, summonAt, castFromBar, summonCaptured, owners, makeScroll, scrollReading, hampered, stats, teleport, teleportPick, restoreItem, runMacro, saveChance, portent, transpose, dash, chatCards, setting, foreignSetting, viewScene, sequencer, stairsAt, takeStairs, follow, unfollow, followState, mount, endings, actionEnd, use, sheetUse, familiar, familiarPocket, familiarRecall, skillAids, skillAid, animations: animationState, toggleLight, hood, removeItemEffect, lightState, advanceTime, longRest, shortRest, clock, door, lock, diagnosticScan, diagnosticRepair, diagnosticBackups, diagnosticRestore, diagnosticForget, factions, sees, stealth, scatter, flammable, climb, climbState, climbHolds, climbToward, climbCeiling, climbDown, reachCheck, dropDown, rawMove, jump, hoist, grab, ready, burning, masteries, masteryWindow, etherealWalls, flight, groupRoll, groupRollState, groupRollBreakdown, groupRollForce, groupRollMode, placeMenu, settingsChanged, placeItemEffect, concentrate, upkeep, stand, rangedPlacement, chainCheck, tokenLight, damageTypes, fortified, catalyst, grappleState, attacksThisTurn, waits, awaiting, forcePlayerWait, pickTargets, castPicked , debugThrow, debugReport, debugClear, debugVerbose, connectionTest, visionMatrix, screenHere, setOwners, sightIssues, screenAfterUpdate, controlToken, sceneBright });

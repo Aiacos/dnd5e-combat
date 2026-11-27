@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-354 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
+355 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
 commentaire de la fonction dans le code (début seulement) ; le fichier est relatif à `module/scripts/`. Les valeurs non
 fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de test du connecteur, MJ seulement.
 
@@ -265,6 +265,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.mcp.climbToward` | `({ tokenId, targetId, reachCells=1 })` | `runtime/testing-moves.mjs` | §196 : `api.climb.toward` — grimper jusqu'à l'allonge d'une cible ; rend son résultat, les positions et l'écart (3D) avant / après. |
 | `api.mcp.clock` | `()` | `runtime/testing.mjs` | §251 : l'état de l'horloge en temps réel du moteur (null : elle tourne) et le temps du monde. |
 | `api.mcp.closeWindow` | `({ id })` | `runtime/testing.mjs` | Ferme une fenêtre (un dialogue fermé vaut « non » : le déplacement mis en pause par le cœur se termine). |
+| `api.mcp.combatOutcome` | `({ action="read", combatId=null, tokenId=null }={})` | `runtime/testing.mjs` | §555: records the `combatEnded` / `creatureDefeated` hooks on this client. `action`: « watch » (starts, clears), « read » (what was heard), « stop » (stops, returns what was heard), « tracker » (ticks « defeated » for `… |
 | `api.mcp.concentrate` | `({ tokenId, itemId })` | `runtime/testing-rules.mjs` | §285 : le lanceur se concentre sur la première activité de l'item (l'effet de concentration de dnd5e), sans rien lancer. |
 | `api.mcp.connectionTest` | `({ userId, count=5 }={})` | `runtime/testing-debug.mjs` | §388 : le test de connexion d'un joueur connecté, comme l'entrée du menu de la liste des joueurs le lance (sans la fenêtre). |
 | `api.mcp.controls` | `({ tokenId=null }={})` | `runtime/testing.mjs` | §220, §224 : les boutons du moteur dans la barre d'outils des jetons (`present`, `active`) et, pour un token, ce que l'escalade propose dans son menu (libellés) — l'interrupteur de l'escalade lu par le scénario `escalad… |
