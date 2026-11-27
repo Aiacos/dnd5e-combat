@@ -173,6 +173,51 @@ export function timedWait(config, { fallback=null, seconds=null, front=false, aw
  */
 export const inLine = createWindowLine({ capMs: () => (windowsUnlimited() ? 30000 : (combatWindowSeconds() + 3) * 1000) });
 
+/** The countdown bar of a timed window (styles: `.dnd5e-combat-countdown`). */
+const countdownMarkup = left => `<div class="dnd5e-combat-countdown" data-level="high">
+    <div class="track"><div class="bar"></div></div><span class="label">${countdownText(left)}</span></div>`;
+
+/** Paints the countdown bar found in `element` for `left` seconds out of `seconds`. */
+function paintCountdown(element, left, seconds) {
+  const root = element?.querySelector(".dnd5e-combat-countdown");
+  if ( !root ) return;
+  const ratio = Math.max(0, left - 1) / seconds;
+  root.querySelector(".bar")?.style.setProperty("transform", `scaleX(${ratio})`);
+  root.dataset.level = ratio > 0.6 ? "high" : ratio > 0.3 ? "mid" : "low";
+  const label = root.querySelector(".label");
+  if ( label ) label.textContent = countdownText(left);
+}
+
+/**
+ * #173 (§557): the same countdown bar in a window DAS did not build (dnd5e's damage dialog), for the combat window delay — the window
+ * itself is closed by `closeRollDialogAfter`, armed at the same moment. Inserted before `before` (a selector, else at the end of the
+ * window's content); put back if a render removed it. Nothing when the windows have no delay. Returns the function that stops it.
+ * @param {ApplicationV2} app
+ * @param {{before?: string}} [options]
+ */
+export function showCountdown(app, { before=null }={}) {
+  if ( windowsUnlimited() ) return () => {};
+  const seconds = combatWindowSeconds();
+  if ( !(seconds > 0) ) return () => {};
+  let left = seconds;
+  const mount = () => {
+    const host = app.element?.querySelector(".window-content") ?? app.element;
+    if ( !host || host.querySelector(".dnd5e-combat-countdown") ) return;
+    const anchor = before ? host.querySelector(before) : null;
+    if ( anchor ) anchor.insertAdjacentHTML("beforebegin", countdownMarkup(left));
+    else host.insertAdjacentHTML("beforeend", countdownMarkup(left));
+  };
+  mount();
+  requestAnimationFrame(() => paintCountdown(app.element, left, seconds));   // after the first paint, for the transition
+  const timer = setInterval(() => {
+    left = Math.max(0, left - 1);
+    mount();
+    paintCountdown(app.element, left, seconds);
+    if ( left <= 0 ) clearInterval(timer);
+  }, 1000);
+  return () => clearInterval(timer);
+}
+
 /** Une fenêtre à compte à rebours : `fallback` au bout de `seconds`. */
 function countdownWait(config, { fallback, seconds, front, track={} }) {
   let left = seconds;
@@ -183,17 +228,8 @@ function countdownWait(config, { fallback, seconds, front, track={} }) {
   // Barre de progression menée par le même minuteur que la fermeture (une animation CSS sur la durée
   // dérive d'avec lui dans un onglet en arrière-plan) : à chaque seconde, elle part vers la valeur de la
   // seconde suivante, avec une transition d'une seconde — fluide, et vide au moment où la fenêtre se ferme.
-  const update = dialog => {
-    const root = dialog.element?.querySelector(".dnd5e-combat-countdown");
-    if ( !root ) return;
-    const ratio = Math.max(0, left - 1) / seconds;
-    root.querySelector(".bar")?.style.setProperty("transform", `scaleX(${ratio})`);
-    root.dataset.level = ratio > 0.6 ? "high" : ratio > 0.3 ? "mid" : "low";
-    const label = root.querySelector(".label");
-    if ( label ) label.textContent = countdownText(left);
-  };
-  const countdown = `<div class="dnd5e-combat-countdown" data-level="high">
-    <div class="track"><div class="bar"></div></div><span class="label">${countdownText(left)}</span></div>`;
+  const update = dialog => paintCountdown(dialog.element, left, seconds);
+  const countdown = countdownMarkup(left);
   return foundry.applications.api.DialogV2.wait({
     ...config,
     classes: [...(config.classes ?? []), "dnd5e-combat-timed"],

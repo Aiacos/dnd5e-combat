@@ -7,12 +7,13 @@
  *  - closing the dialog (header X, Escape, the combat window delay) rolls with what the form holds and the default button, instead of
  *    rolling nothing: the `dnd5e.preRollDamageV2` handlers already ran (once-per-turn marks, a coating's charge, a promised die), a hit
  *    has damage (§419), and the resolution would wait for a roll forever;
- *  - the combat window delay and the table's hourglass (`closeRollDialogAfter`, §290 / §381), armed when the dialog first shows;
+ *  - the combat window delay and the table's hourglass (`closeRollDialogAfter`, §290 / §381), armed when the dialog first shows, with
+ *    its countdown bar (`showCountdown`, §557);
  *  - no "Critical Hit" button when the engine settled the critical otherwise (`core/flow.mjs`, `criticalButtonLocked`).
  */
 import { MODULE_ID } from "../constants.mjs";
 import { criticalButtonLocked } from "../core/flow.mjs";
-import { closeRollDialogAfter } from "./dialogs.mjs";
+import { closeRollDialogAfter, showCountdown } from "./dialogs.mjs";
 
 let EngineDamageDialog = null;
 
@@ -57,7 +58,11 @@ export function engineDamageDialog() {
     async _onFirstRender(context, options) {
       await super._onFirstRender(context, options);
       const actor = this.config?.subject?.actor;
-      if ( actor ) this.#disarm = closeRollDialogAfter(actor, () => {}, null, { awaiting: "roll" });
+      if ( !actor ) return;
+      const close = closeRollDialogAfter(actor, () => {}, null, { awaiting: "roll" });
+      // §557: the countdown bar the old "Roll damage" window had, above dnd5e's buttons.
+      const stop = showCountdown(this, { before: ".dialog-buttons" });
+      this.#disarm = () => { close(); stop(); };
     }
 
     /** @inheritDoc */

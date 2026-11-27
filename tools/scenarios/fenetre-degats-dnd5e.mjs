@@ -19,7 +19,8 @@ const DIALOG = `
   if ( !app ) return { open: false };
   const buttons = [...app.element.querySelectorAll('button[type="submit"][data-action]')].map(b => b.dataset.action);
   const out = { open: true, cls: app.constructor.name, mode: app.config["${MODULE_ID}"].dialog, buttons,
-    situational: !!app.element.querySelector('input[name="roll.0.situational"]') };
+    situational: !!app.element.querySelector('input[name="roll.0.situational"]'),
+    countdown: app.element.querySelector(".dnd5e-combat-countdown .label")?.textContent ?? null };
   if ( opts.situational ) {
     const input = app.element.querySelector('input[name="roll.0.situational"]');
     input.value = opts.situational;
@@ -90,6 +91,7 @@ export default {
       ctx.expect(shot.seen?.open && (shot.seen.mode === "required"), `click: dnd5e's damage dialog opens for the author (${JSON.stringify(shot.seen)})`);
       ctx.expect(shot.seen?.situational && shot.seen?.buttons?.includes("critical") && shot.seen?.buttons?.includes("normal"),
         `click: it has the situational bonus field and the Critical Hit / Normal buttons (${shot.seen?.buttons?.join("/")})`);
+      ctx.expect(!!shot.seen?.countdown, `click: it shows the combat window countdown (§557: ${shot.seen?.countdown})`);
       ctx.expect(shot.seen?.cardsAtOpen === 0, `click: no damage roll while it is open (${shot.seen?.cardsAtOpen})`);
       ctx.expect(shot.cards.length === 1, `click: one damage card (${shot.cards.length})`);
       ctx.expect(/\b7\b/.test(formulas(shot.cards[0])), `click: the +7 is in the roll (${formulas(shot.cards[0])})`);
