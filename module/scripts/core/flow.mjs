@@ -42,3 +42,24 @@ export function damageSteps(mode, { playerAuthor=false }={}) {
     validate: (m === "validate") || (m === "clickValidate") || (m === "clickPlayersValidate")
   };
 }
+
+/**
+ * #173 (§556): dnd5e's damage dialog for a roll the engine makes on the author's client. "required" — the setting asks the author to
+ * roll (`click`): the dialog shows, whatever the client's "Rolls without dialog"; "offered" — it shows only on a client that turned
+ * "Rolls without dialog" off (ui/pointer-offers.mjs).
+ * @param {{click: boolean}} steps  `damageSteps(…)`.
+ * @returns {"required"|"offered"}
+ */
+export function damageDialog(steps) {
+  return steps?.click ? "required" : "offered";
+}
+
+/**
+ * #173 (§556): no "Critical Hit" button in that dialog when the engine settled the critical another way — extra critical dice for some
+ * targets only (#269, `criticalExtra`), a critical table or a neighbour (§207, `criticalHit`), a hit target that cannot be critically
+ * hit (`noCritical`). Pressing it would double the dice twice, or past the rule.
+ * @param {{criticalExtra?: object, criticalHit?: string, noCritical?: boolean}} ours  The roll's `config["dnd5e-combat"]`.
+ */
+export function criticalButtonLocked(ours={}) {
+  return !!(ours?.criticalExtra || ours?.criticalHit || ours?.noCritical);
+}

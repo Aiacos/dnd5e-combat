@@ -1,8 +1,8 @@
 /**
  * §419 : le réglage « Dégâts et soins » (`damageFlow`, cadre « Déroulement ») — qui lance les dés et qui décide de les appliquer, sur un
  * Trait de feu de l'Ensorceleur contre le Zombi (Arène de test), tiré jusqu'à toucher :
- *  1. `click` : après le coup, la fenêtre « Lancer les dégâts » de l'auteur ; aucun jet tant qu'elle est ouverte ; cliquée, les dégâts
- *     sont lancés et appliqués.
+ *  1. `click` : après le coup, la fenêtre de dégâts de dnd5e chez l'auteur (#173, §556 — avant : « Lancer les dégâts » de DAS) ; aucun
+ *     jet tant qu'elle est ouverte ; « Normal » cliqué, les dégâts sont lancés et appliqués.
  *  2. `validate` : les dégâts sont lancés d'office, la fenêtre du MJ « Appliquer ? » s'ouvre, les PV n'ont pas bougé ; refusé, rien n'est
  *     appliqué et la résolution se clôt ; rejoué et accepté, les PV tombent.
  *  3. `clickValidate` : les deux fenêtres, dans l'ordre.
@@ -26,16 +26,22 @@ export default {
     ctx.restore(() => mode(before));
 
     /** La fenêtre de l'auteur (bouton `roll`) ou celle du MJ (boutons `apply` / `refuse`), s'il y en a une. */
+    // §556: the author's window is dnd5e's damage dialog (its "Normal" button), found and pressed on the GM client.
+    const rollDialog = (press=false) => ctx.call("run-script", { code: `
+      const app = [...foundry.applications.instances.values()].find(a => a.rendered && a.config?.["${MODULE_ID}"]?.dialog);
+      if ( app && ${press} ) app.element.querySelector('button[data-action="normal"]')?.click();
+      return !!app;` }).then(r => r?.result === true).catch(() => false);
+    const answer = (w, validate) => (w.kind === "roll") ? rollDialog(true) : ctx.call("answer-dialog", { id: w.id, button: validate });
     const flowWindow = async () => {
+      if ( await rollDialog() ) return { id: null, kind: "roll" };
       const r = await ctx.call("list-dialogs", { dialogsOnly: true, waitMs: 400 }).catch(() => null);
       for ( const w of (r?.windows ?? []) ) {
         const actions = (w.buttons ?? []).map(b => b.action);
-        if ( actions.includes("roll") ) return { id: w.id, kind: "roll" };
         if ( actions.includes("apply") && actions.includes("refuse") ) return { id: w.id, kind: "validate", text: [w.content, w.text].filter(Boolean).join(" ") };
       }
       return null;
     };
-    ctx.restore(async () => { for ( let w; (w = await flowWindow()); ) await ctx.call("answer-dialog", { id: w.id, button: (w.kind === "roll") ? "roll" : "refuse" }).catch(() => {}); });
+    ctx.restore(async () => { for ( let w, i = 0; (i < 6) && (w = await flowWindow()); i++ ) await answer(w, "refuse").catch(() => {}); });
 
     /**
      * Tire jusqu'à toucher (huit essais). `answers` : la réponse à la fenêtre du MJ (« apply » ou « refuse »). Rend ce qui s'est passé :
@@ -56,7 +62,7 @@ export default {
             await pause(1200);   // le temps qu'un jet enchaîné à tort arrive
             const damageRolls = (await ctx.messagesSince(since)).filter(m => m.type === "damage").length;
             seen.push({ kind: w.kind, damageRolls, hp: await ctx.hp(zombi), text: w.text ?? "" });
-            await ctx.call("answer-dialog", { id: w.id, button: (w.kind === "roll") ? "roll" : validate });
+            await answer(w, validate);
           }
           await pause(300);
         }
@@ -73,7 +79,7 @@ export default {
     await mode("click");
     let shot = await shoot();
     if ( ctx.expect(!!shot, "click : le Trait de feu touche (huit essais au plus)") ) {
-      ctx.expect(kinds(shot) === "roll", `click : la fenêtre « Lancer les dégâts » de l'auteur, et elle seule (${kinds(shot)})`);
+      ctx.expect(kinds(shot) === "roll", `click : la fenêtre de dégâts de dnd5e chez l'auteur, et elle seule (${kinds(shot)})`);
       ctx.expect(shot.seen[0]?.damageRolls === 0, `click : aucun jet de dégâts tant qu'elle est ouverte (${shot.seen[0]?.damageRolls})`);
       ctx.expect((shot.r.step === "done") && (shot.damageRolls === 1) && (shot.hpAfter < hp0), `click : cliquée, un jet, dégâts appliqués (${hp0} → ${shot.hpAfter})`);
     }

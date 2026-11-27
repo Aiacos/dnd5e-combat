@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { offersReaction, REACTION_MODES } from "../module/scripts/core/flow.mjs";
+import { offersReaction, REACTION_MODES, damageDialog, criticalButtonLocked, damageSteps as steps } from "../module/scripts/core/flow.mjs";
 
 // §418 : le réglage « Réactions » du cadre « Déroulement ».
 describe("offersReaction", () => {
@@ -48,5 +48,30 @@ describe("damageSteps", async () => {
   });
   it("sept modes, « level » en tête (le défaut)", () => {
     expect(DAMAGE_MODES).toEqual(["level", "auto", "click", "validate", "clickValidate", "clickPlayers", "clickPlayersValidate"]);
+  });
+});
+
+// #173 (§556): dnd5e's damage dialog for the damage the engine rolls.
+describe("damageDialog", () => {
+  it("required when the setting asks the author to roll, offered otherwise", () => {
+    expect(damageDialog(steps("click"))).toBe("required");
+    expect(damageDialog(steps("clickPlayers", { playerAuthor: true }))).toBe("required");
+    expect(damageDialog(steps("clickPlayers", { playerAuthor: false }))).toBe("offered");
+    expect(damageDialog(steps("level"))).toBe("offered");
+    expect(damageDialog(steps("validate"))).toBe("offered");
+    expect(damageDialog(undefined)).toBe("offered");
+  });
+});
+
+describe("criticalButtonLocked", () => {
+  it("free when the engine settled nothing else", () => {
+    expect(criticalButtonLocked({})).toBe(false);
+    expect(criticalButtonLocked()).toBe(false);
+    expect(criticalButtonLocked({ dialog: "required", damageType: "fire" })).toBe(false);
+  });
+  it("locked by critical dice apart (#269), a critical table (§207) or a target that cannot be critically hit", () => {
+    expect(criticalButtonLocked({ criticalExtra: { tokens: ["a"] } })).toBe(true);
+    expect(criticalButtonLocked({ criticalHit: "table" })).toBe(true);
+    expect(criticalButtonLocked({ noCritical: true })).toBe(true);
   });
 });

@@ -12,6 +12,7 @@
 
 import { MODULE_ID } from "../constants.mjs";
 import { timedWait } from "./dialogs.mjs";
+import { damageDialogConfig } from "./damage-dialog.mjs";
 import { applyDamageShields, resistRangedWeapon } from "./defenses.mjs";
 import { damageVariant } from "./variants.mjs";
 import { sneakAttackFor, askHitOptions } from "./sneak.mjs";
@@ -151,25 +152,29 @@ export function criticalExtraRolls(rolls, flavor) {
  * @param {boolean} critical      Verdict du moteur (core/action.mjs, isCriticalHit).
  * @param {string[]} [criticalFor]  #269 (§545): only these hit targets are Critical Hits (core/action.mjs, `mixedCriticalTokens`) —
  *                                 the damage is rolled normally, the critical dice apart for them.
+ * @param {{dialog?: string|null}} [options]  #173 (§556): dnd5e's damage dialog — "required", "offered" (core/flow.mjs, `damageDialog`)
+ *                                 or null (no dialog: a roll made for someone else).
  */
-export async function rollDamageFor(carrier, resolution, critical, criticalFor=[]) {
+export async function rollDamageFor(carrier, resolution, critical, criticalFor=[], { dialog=null }={}) {
   if ( resolution.attack ) {
     const attackMessage = game.messages.get(resolution.attack.messageId);
+    // §556: a hit target that cannot be critically hit (`uncritted`, core/action.mjs) — the dialog offers no Critical Hit button.
+    const noCritical = resolution.targets.some(t => t.hit && t.uncritted);
     return attackMessage ? rollDamageForAttack(attackMessage, { critical, criticalFor, variant: resolution.plan.variant?.activity ?? null,
-      names: resolution.targets.filter(t => criticalFor.includes(t.token)).map(t => t.name) }) : null;
+      names: resolution.targets.filter(t => criticalFor.includes(t.token)).map(t => t.name), dialog, noCritical }) : null;
   }
   const activity = carrier.getAssociatedActivity?.({ scaled: true });
   if ( !activity?.rollDamage ) return null;
   // Zone parcourue case par case (§16.20) : les dés sont multipliés au hook `preRollDamageV2` (runtime/areas.mjs).
   const times = carrier.getFlag?.(MODULE_ID, "areaTick")?.times ?? 1;
   const damageType = await chosenDamageType(carrier, activity);
-  const ours = { ...(times > 1 ? { times } : {}), ...(damageType ? { damageType } : {}) };
+  const ours = { ...(times > 1 ? { times } : {}), ...(damageType ? { damageType } : {}), ...(dialog ? { dialog } : {}) };
   // Les modules d'animation (BLFX, `_afterAttackOrDamageRoll`) prennent les cibles de l'utilisateur au hook du jet, à défaut les
   // tokens qu'il contrôle : pour une zone ou une aura (Esprits gardiens à l'entrée, en début de tour), ce ne sont pas les créatures
   // touchées. Le temps du jet, les cibles de l'auteur sont celles de la résolution, puis on remet les siennes (§55).
   const restore = targetResolution(resolution.targets.map(t => t.token));
   try {
-    return await activity.rollDamage(Object.keys(ours).length ? { [MODULE_ID]: ours } : {}, { configure: false }, {
+    return await activity.rollDamage(Object.keys(ours).length ? { [MODULE_ID]: ours } : {}, damageDialogConfig(dialog), {
       // Les cibles de la résolution, pas celles du message : pour une zone, seules les premières sont justes.
       data: { system: { origin: carrier.id, targets: resolution.targets.map(({ token, actor, name }) => ({ token, actor, name })) } }
     });
@@ -194,12 +199,12 @@ export function targetResolution(uuids) {
 }
 
 /**
- * Lance les dégâts d'une attaque qui a touché, sans dialogue, comme le ferait le bouton « Dégâts »
- * de la carte (activity/attack.mjs:303-311) : mêmes caractéristique, munition, mode d'attaque et
- * critique que le jet d'attaque. À appeler sur le client de l'auteur de l'attaque : ce sont ses dés.
+ * Rolls the damage of an attack that hit, like the card's "Damage" button (activity/attack.mjs:303-311): same ability, ammunition,
+ * attack mode and critical as the attack roll. Without dnd5e's dialog, unless `dialog` asks for it (#173, §556). To be called on the
+ * attack author's client: these are their dice.
  * @param {ChatMessage} attackMessage
  */
-export async function rollDamageForAttack(attackMessage, { critical, variant=null, criticalFor=[], names=[] }={}) {
+export async function rollDamageForAttack(attackMessage, { critical, variant=null, criticalFor=[], names=[], dialog=null, noCritical=false }={}) {
   const used = await fromUuid(attackMessage.system.activity.uuid);
   // M5 (§18.8) : les dégâts de la variante choisie au plan (charge, En sang), sinon ceux de la variante « Attack with
   // Advantage » si le jet avait l'avantage (« plus 1d4 if the attack roll had Advantage »).
@@ -248,14 +253,14 @@ export async function rollDamageForAttack(attackMessage, { critical, variant=nul
     ...(typeof hitOptions.sneak === "boolean" ? { sneak: hitOptions.sneak } : {}), ...(hitOptions.bonuses.length ? { acceptedBonuses: hitOptions.bonuses } : {}),
     ...(criticalTable ? { criticalHit: criticalTable } : {}), ...(inspired ? { combatInspiration: inspired } : {}),
     ...(typeof hitOptions.savage === "boolean" ? { savageAttacker: hitOptions.savage } : {}),
-    ...(criticalExtra ? { criticalExtra } : {}) };
+    ...(criticalExtra ? { criticalExtra } : {}), ...(dialog ? { dialog } : {}), ...((dialog && noCritical) ? { noCritical } : {}) };
   // §373 : les cibles de l'attaque sur la carte de dégâts — dnd5e les lirait dans la sélection de l'utilisateur au moment du jet
   // (`TargetsField.getDescriptors()`), qu'une autre résolution (une prise après le coup) a pu relâcher entre-temps.
   const targets = attackMessage?.system?.targets?.length ? attackMessage.system.targets : null;
   const system = { ...(origin ? { origin } : {}), ...(targets ? { targets } : {}) };
   return activity.rollDamage(
     { ability, ammunition, attackMode, isCritical, ...(Object.keys(ours).length ? { [MODULE_ID]: ours } : {}) },
-    { configure: false },
+    damageDialogConfig(dialog),
     Object.keys(system).length ? { data: { system } } : {}
   );
 }

@@ -35,7 +35,7 @@ import { contentOf, identifierOf, enchantmentSourcesOf } from "../adapter/conten
 import { duplicatesAgainst } from "../adapter/duplicates.mjs";
 import { log, loc, isExecutor, whenCanvasReady } from "./shared.mjs";
 import { damageFlow } from "./flow.mjs";
-import { timedWait } from "../adapter/dialogs.mjs";
+import { damageDialog } from "../core/flow.mjs";
 import { isSpellCast } from "../adapter/scrolls.mjs";
 import { areAllies, areEnemies } from "../adapter/factions.mjs";
 import { COMMANDS } from "./engine-commands.mjs";
@@ -383,30 +383,18 @@ function onResolutionFlag(message, changes) {
   // au plateau ; Riposte : appliqué, sans le dé de la manœuvre). Un jet par résolution ; un échec le libère.
   if ( damageRolling.has(resolution.id) ) return;
   damageRolling.add(resolution.id);
-  // §419 : réglage « Dégâts », au clic — l'auteur lance lui-même. La fenêtre n'a qu'une issue : fermée ou restée sans réponse (délai des
-  // fenêtres du combat), le jet part quand même — un coup qui a touché a des dégâts.
-  // §524 : « au clic pour les joueurs » — ce client est celui de l'auteur (`message.isAuthor`) : un joueur clique, le MJ enchaîne.
-  const click = damageFlow({ playerAuthor: !game.user.isGM }).click;
-  const ready = click ? askToRollDamage(message, resolution) : Promise.resolve();
-  log(click ? "damage roll: waiting for the author's click" : "chained damage roll");
-  ready.then(() => rollDamageFor(message, resolution, isCriticalHit(resolution), mixedCriticalTokens(resolution))).catch(err => {
+  // §419 : réglage « Dégâts », au clic — l'auteur lance lui-même. §524 : « au clic pour les joueurs » — ce client est celui de l'auteur
+  // (`message.isAuthor`) : un joueur clique, le MJ enchaîne.
+  // #173 (§556): the author's window is dnd5e's own damage dialog (situational bonus, Critical / Normal, roll mode) — "required" in
+  // the click modes; otherwise "offered", shown only on a client that turned "Rolls without dialog" off. Closed or timed out, the roll
+  // still goes with the default button (adapter/damage-dialog.mjs): a hit has damage.
+  const dialog = damageDialog(damageFlow({ playerAuthor: !game.user.isGM }));
+  log(dialog === "required" ? "damage roll: dnd5e's dialog for the author" : "chained damage roll");
+  rollDamageFor(message, resolution, isCriticalHit(resolution), mixedCriticalTokens(resolution), { dialog }).catch(err => {
     damageRolling.delete(resolution.id);
     console.error(`${MODULE_ID} | automatic damage roll failed`, err);
     ui.notifications.warn("DND5ECOMBAT.DegatsManuels", { localize: true });
   });
-}
-/** §419 : la fenêtre de l'auteur — « Lancer les dégâts » (ou les soins). Toujours résolue. */
-function askToRollDamage(message, resolution) {
-  const activity = message.getAssociatedActivity?.() ?? null;
-  const item = activity?.item?.name ?? "";
-  const heal = !!resolution.plan?.heal;
-  const targets = resolution.targets.filter(t => !t.unaffected && (!resolution.plan.attack || t.hit)).map(t => t.name).join(", ");
-  return timedWait({
-    window: { title: loc(heal ? "Degats.SoinsTitre" : "Degats.LancerTitre", { item }) },
-    classes: ["dnd5e-combat-damage-roll"],
-    content: `<p>${loc(heal ? "Degats.SoinsTexte" : "Degats.LancerTexte", { item, targets })}</p>`,
-    buttons: [{ action: "roll", label: loc(heal ? "Degats.LancerSoins" : "Degats.Lancer"), icon: "fa-solid fa-dice-d20", default: true }]
-  }, { fallback: "roll", awaiting: { actor: activity?.actor ?? null, kind: "roll" } }).catch(() => "roll");
 }
 
 /** Les résolutions dont le jet de dégâts enchaîné est parti, sur ce client. */

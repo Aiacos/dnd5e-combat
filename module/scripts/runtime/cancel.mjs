@@ -55,6 +55,7 @@ export function pendingRoll() {
     if ( !(app instanceof Dialog) || !app.rendered ) continue;
     const activity = app.config?.subject;
     if ( !activity?.uuid || !activity.item ) continue;   // un jet de caractéristique, pas une action
+    if ( app.config?.[MODULE_ID]?.dialog ) continue;   // §556: damage the engine rolls after a hit or a save, not cancellable
     const message = pendingUsageOf(activity);
     if ( message ) return { app, message };
   }

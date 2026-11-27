@@ -2,8 +2,8 @@
  * §524 (issue #173) : réglage « Dégâts et soins » sur « Lancés au clic pour les joueurs, d'office pour les créatures du MJ »
  * (`clickPlayers`). « Arène des refus » (`node tools/arene-refus.mjs`), vrai client joueur (« claude player », propriétaire du Mage des
  * refus, ouvert par le banc : `players: true`). Vérifie :
- *  1. le MJ lance l'arme du Mage contre le Mannequin : aucune fenêtre « Lancer les dégâts », le jet s'enchaîne et s'applique ;
- *  2. le joueur lance la même attaque : chez lui, la fenêtre « Lancer les dégâts » ; aucun jet tant qu'elle est ouverte ; cliquée, sa carte
+ *  1. le MJ lance l'arme du Mage contre le Mannequin : aucune fenêtre de dégâts, le jet s'enchaîne et s'applique ;
+ *  2. le joueur lance la même attaque : chez lui, la fenêtre de dégâts de dnd5e ; aucun jet tant qu'elle est ouverte ; cliquée, sa carte
  *     de dégâts part et le MJ l'applique.
  * Un coup peut rater (douze essais au plus, Mannequin CA 15). Remis en état : le réglage, les PV du Mannequin, les fenêtres restées ouvertes.
  */
@@ -56,17 +56,17 @@ export default {
       window.addEventListener("error", e => keep("uncaught", [e.message]));
       window.addEventListener("unhandledrejection", e => keep("rejection", [e.reason])); } return true;`);
     const playerJournal = () => ctx.asPlayer(`return (window.__dasJournal ?? []).slice(-25);`);
-    /** La fenêtre « Lancer les dégâts » chez le joueur : `{ open }`, et `click: true` la valide. */
+    /** La fenêtre de dégâts de dnd5e chez le joueur (§556) : `{ open }`, et `click: true` la valide. */
     const playerRollWindow = (click=false) => ctx.asPlayer(`
-      const app = [...foundry.applications.instances.values()].find(a => Object.values(a.options?.buttons ?? {}).some(b => b.action === "roll") && a.rendered);
+      const app = [...foundry.applications.instances.values()].find(a => a.rendered && a.config?.["${MODULE_ID}"]?.dialog);
       if ( !app ) return { open: false, apps: [...foundry.applications.instances.values()].filter(a => a.rendered)
-        .map(a => a.constructor.name + ":" + (a.title ?? "") + ":" + Object.values(a.options?.buttons ?? {}).map(b => b.action).join("/")) };
-      if ( args.click ) app.element.querySelector('[data-action="roll"]')?.click();
+        .map(a => a.constructor.name + ":" + (a.title ?? "")) };
+      if ( args.click ) app.element.querySelector('button[data-action="normal"]')?.click();
       return { open: true, title: app.title ?? app.options?.window?.title ?? null };`, { click });
     ctx.restore(() => playerRollWindow(true).catch(() => {}));
-    /** Fenêtres « Lancer les dégâts » chez le MJ. */
-    const gmRollWindows = async () => ((await ctx.call("list-dialogs", { dialogsOnly: true, waitMs: 300 }).catch(() => null))?.windows ?? [])
-      .filter(w => (w.buttons ?? []).some(b => b.action === "roll"));
+    /** Fenêtres de dégâts du moteur chez le MJ (§556 : celle de dnd5e). */
+    const gmRollWindows = async () => ((await ctx.call("run-script", { code: `return [...foundry.applications.instances.values()]
+      .filter(a => a.rendered && a.config?.["${MODULE_ID}"]?.dialog).map(a => a.id);` }).catch(() => null))?.result ?? []);
     const damageCards = msgs => msgs.filter(m => m.type === "damage");
     // Le bâton du Mage (1d6 − 1) peut ne rien faire : les PV se comparent au total de la carte de dégâts.
     const rolledOf = card => (card?.rolls ?? []).reduce((t, x) => t + Math.max(0, Number(x.total) || 0), 0);
@@ -83,7 +83,7 @@ export default {
       await pause(1500);
       const windows = await gmRollWindows();
       const cards = damageCards(await ctx.messagesSince(since));
-      ctx.expect(!windows.length, `MJ : aucune fenêtre « Lancer les dégâts » (${windows.length})`);
+      ctx.expect(!windows.length, `MJ : aucune fenêtre de dégâts (${windows.length})`);
       ctx.expect((r.step === "done") && (cards.length === 1), `MJ : le jet s'enchaîne, résolution terminée (${r.step}, ${cards.length} carte(s) de dégâts)`);
       ctx.expect((await ctx.hp(dummy)) === hp0 - rolledOf(cards[0]), `MJ : dégâts appliqués (${hp0} − ${rolledOf(cards[0])} → ${await ctx.hp(dummy)})`);
     }
@@ -114,7 +114,7 @@ export default {
       if ( res?.step === "missed" ) { await pause(1000); continue; }
       playerDone = true;
       if ( !win.open ) ctx.log(`journal du joueur : ${JSON.stringify(await playerJournal())}`);
-      ctx.expect(win.open, `joueur : la fenêtre « Lancer les dégâts » s'ouvre chez lui (${win.title ?? JSON.stringify(win.apps)}, étape ${res?.step})`);
+      ctx.expect(win.open, `joueur : la fenêtre de dégâts de dnd5e s'ouvre chez lui (${win.title ?? JSON.stringify(win.apps)}, étape ${res?.step})`);
       ctx.expect(!damageCards(await ctx.messagesSince(since)).length, "joueur : aucun jet de dégâts tant qu'elle est ouverte");
       await playerRollWindow(true);
       let cards = [];

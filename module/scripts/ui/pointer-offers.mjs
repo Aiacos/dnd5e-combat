@@ -248,8 +248,11 @@ export function onPostUseActivity(activity, usageConfig, results) {
  * §16.34 : les jets d'attaque, de dégâts et de soins partent sans la fenêtre de configuration de dnd5e (réglage par joueur,
  * activé par défaut) — ceux que dnd5e enchaîne après l'utilisation (activity/attack.mjs:69, heal.mjs:61, damage.mjs:52), depuis
  * la fiche, le HUD ou le bouton de la carte. Avantage et désavantage viennent du moteur ; le mode d'attaque (« lancer ») est
- * présélectionné par runtime/turn.mjs. Les jets que le moteur lance lui-même sont déjà sans fenêtre (adapter/messages.mjs).
+ * présélectionné par runtime/turn.mjs.
+ * #173 (§556): it also covers the damage the engine rolls itself (adapter/messages.mjs), which offers dnd5e's dialog — except when the
+ * world's "Damage and healing" setting asks the author to roll (`dialog: "required"`): the dialog then shows anyway.
  */
 export function onPreRollDamage(config, dialog) {
+  if ( config?.[MODULE_ID]?.dialog === "required" ) return;
   if ( dialog && setting("quickRolls") ) dialog.configure = false;
 }
