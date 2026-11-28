@@ -6,6 +6,16 @@
 const ATTACK_AND_CHECK_DISADVANTAGE = Object.freeze(["str", "dex", "con", "int", "wis", "cha"].flatMap(a => ["attack", "check"]
   .map(roll => ({ key: `system.abilities.${a}.${roll}.roll.mode`, value: -1, priority: null, type: "add" }))));
 
+/**
+ * La malédiction d'un lycanthrope (SRD 5.2) : « If the target is a Humanoid, it is subjected to the following effect », et
+ * « Success: The target is immune to this werewolf's curse for 24 hours ». La marque est tenue dans la porte des effets : une
+ * porte des cibles écarterait aussi les dégâts du coup (core/monster-text.mjs, `monsterImmunity`). Une marque par espèce.
+ */
+const lycanthropeCurse = kind => ({
+  effectsIf: { "target.creatureType": "humanoid", not: { "target.hasMark": `immune:${kind}-curse` } },
+  triggers: [{ on: "savedSave", do: [{ type: "mark", mark: `immune:${kind}-curse`, label: "Marque.Immunite", seconds: 86400 }] }]
+});
+
 export const MONSTERS = Object.freeze({
   // Miasme nocif (dragons verts) : l'effet vise `system.armor.value`, sans effet sur une créature ; −2 à la CA.
   "noxious-miasma": { effectChanges: { TSWsGeApnMgxOyIF: [{ key: "system.attributes.ac.bonus", type: "add", value: "-2" }] } },
@@ -67,11 +77,13 @@ export const MONSTERS = Object.freeze({
   "aversion-to-fire": { onDamageTaken: { types: ["fire"], effect: "kJYNjmfI0RpvF7CQ" },
     effectEnds: { kJYNjmfI0RpvF7CQ: "bearerTurnEnd" },
     dataFixes: [{ effect: "kJYNjmfI0RpvF7CQ", path: "system.changes", from: [], value: ATTACK_AND_CHECK_DISADVANTAGE }] },
-  // Défense (Sanglier-garou) : la malédiction ne vise qu'un Humanoïde.
-  "mm-wereboar-gore": { effectsIf: { "target.creatureType": "humanoid" } },
-  // Morsure (Ours-garou, Rat-garou, Tigre-garou, Loup-garou) : « If the target is a Humanoid, it is subjected to the following
-  // effect » — la malédiction ne vise qu'un Humanoïde ; une Bête mordue la recevait.
-  "mm-lycanthrope-bite": { effectsIf: { "target.creatureType": "humanoid" } },
+  // Défense (Sanglier-garou), Morsure (Ours-garou, Rat-garou, Tigre-garou, Loup-garou) : la malédiction ne vise qu'un Humanoïde
+  // (une Bête mordue la recevait), et une sauvegarde réussie en immunise pour 24 heures.
+  "mm-wereboar-gore": lycanthropeCurse("wereboar"),
+  "mm-werebear-bite": lycanthropeCurse("werebear"),
+  "mm-wererat-bite": lycanthropeCurse("wererat"),
+  "mm-weretiger-bite": lycanthropeCurse("weretiger"),
+  "mm-werewolf-bite": lycanthropeCurse("werewolf"),
   // Ravenloft. Brochette psychique (Ancien) : Épuisement et Étourdi seulement pour une cible Charmée.
   "psychic-skewer": { effectsIf: { "target.hasStatus": "charmed" } },
   // Voile d'ombre (Saidra) : Invisible jusqu'au début de son prochain tour, tombe dès qu'elle inflige des dégâts.
