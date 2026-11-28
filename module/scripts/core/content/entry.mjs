@@ -609,6 +609,21 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     }
   }
   if ( "teleport" in entry ) validateTeleport(entry.teleport, `${at}teleport`, errors);
+  if ( "escapeCheck" in entry ) {
+    const c = entry.escapeCheck;
+    if ( !isObject(c) ) errors.push(`${at}escapeCheck: an object`);
+    else {
+      if ( !("ability" in c) && !("skill" in c) ) errors.push(`${at}escapeCheck: an ability or a skill`);
+      if ( ("ability" in c) && !/^[a-z]{3}$/.test(String(c.ability)) ) errors.push(`${at}escapeCheck.ability: ability key ("dex")`);
+      if ( ("skill" in c) && !/^[a-z]{3}$/.test(String(c.skill)) ) errors.push(`${at}escapeCheck.skill: skill key ("acr")`);
+      if ( !(Number.isFinite(c.dc) && (c.dc > 0)) && !((typeof c.dc === "string") && c.dc.trim()) ) {
+        errors.push(`${at}escapeCheck.dc: a positive number, or a roll-data formula`);
+      }
+      for ( const key of Object.keys(c) ) {
+        if ( !["ability", "skill", "dc"].includes(key) ) errors.push(`${at}escapeCheck.${key}: unknown key`);
+      }
+    }
+  }
   if ( "contest" in entry ) {
     const c = entry.contest;
     const skill = x => (typeof x === "string") && /^[a-z]{3}$/.test(x);
@@ -616,10 +631,16 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     else {
       if ( ("activity" in c) && !isId(c.activity) ) errors.push(`${at}contest.activity: activity id (16 characters) expected`);
       if ( !skill(c.skill) ) errors.push(`${at}contest.skill: skill key ("ins")`);
-      if ( !Array.isArray(c.against) || !c.against.length || !c.against.every(skill) ) errors.push(`${at}contest.against: list of skill keys`);
+      // `dc`: a fixed DC instead of the target's roll (Chain, Rope) — one or the other.
+      if ( "dc" in c ) {
+        if ( !Number.isFinite(c.dc) || ("against" in c) ) errors.push(`${at}contest.dc: a number, instead of against`);
+      }
+      else if ( !Array.isArray(c.against) || !c.against.length || !c.against.every(skill) ) {
+        errors.push(`${at}contest.against: list of skill keys`);
+      }
       if ( !isId(c.effect) ) errors.push(`${at}contest.effect: effect id (16 characters) expected`);
       if ( ("exclusive" in c) && (c.exclusive !== true) ) errors.push(`${at}contest.exclusive: true or absent`);
-      for ( const key of Object.keys(c) ) if ( !["activity", "skill", "against", "effect", "exclusive"].includes(key) ) errors.push(`${at}contest.${key}: unknown key`);
+      for ( const key of Object.keys(c) ) if ( !["activity", "skill", "against", "dc", "effect", "exclusive"].includes(key) ) errors.push(`${at}contest.${key}: unknown key`);
     }
   }
   if ( ("zoneCharges" in entry) && !((Number.isInteger(entry.zoneCharges) && (entry.zoneCharges > 0)) || ((typeof entry.zoneCharges === "string") && entry.zoneCharges.trim())) ) errors.push(`${at}zoneCharges: positive integer or formula`);

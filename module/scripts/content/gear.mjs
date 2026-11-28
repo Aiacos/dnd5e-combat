@@ -18,6 +18,10 @@ const OIL = { value: 6, units: "hour" };
 const HOOD = { bright: 0, dim: 5 };
 const BULLSEYE = { bright: 60, dim: 120, units: "ft", angle: 53, burn: OIL, fuel: "oil" };
 
+/** The "bound" effect a Chain or a Rope places: Restrained, until the creature escapes. */
+const BOUND = Object.freeze({ name: "Bound", type: "base", transfer: false, disabled: false, statuses: ["restrained"],
+  system: { changes: [] } });
+
 export const GEAR = Object.freeze({
   // §52 : sources de lumière portées (Manuel des joueurs 2024) — rayon de la lumière vive, puis rayon EXTÉRIEUR de la faible.
   // Bougie : « Lumière vive sur 1,50 m et faible sur 1,50 m de plus » ; Lampe : « vive sur 4,50 m et faible sur 9 m de plus » ;
@@ -42,6 +46,24 @@ export const GEAR = Object.freeze({
   // d'un tour fait un JS de Dextérité DD 15 ou subit 1 dégât perforant et sa Vitesse tombe à 0 jusqu'au début de son prochain tour ;
   // il faut 10 minutes pour les récupérer ». Billes — « une zone de 3 m de côté à 3 m de soi ; […] DD 10 ou À terre ; 10 minutes pour
   // les récupérer ». La zone reste au sol (runtime/scatter.mjs) : qui y entre s'arrête sur sa première case, puis la sauvegarde.
+  // Chain (SRD 5.2): "As a Utilize action, you can wrap a Chain around an unwilling creature within 5 feet of yourself that has
+  // the Grappled, Incapacitated, or Restrained condition if you succeed on a DC 13 Strength (Athletics) check. If the creature's
+  // legs are bound, the creature has the Restrained condition until it escapes. Escaping the Chain requires the creature to make
+  // a successful DC 18 Dexterity (Acrobatics) check as an action." The data carries the three checks; nothing placed the
+  // condition, and the escape is written as plain text (no enricher): `escapeCheck` gives it to the engine.
+  "chain": { contest: { activity: "nkqvEiPdXCyiJ9ub", skill: "ath", dc: 13, effect: "dasChainBound000" },
+    escapeCheck: { skill: "acr", dc: 18 },
+    dataFixes: [{ effect: "dasChainBound000", create: BOUND },
+      { path: "system.activities.nkqvEiPdXCyiJ9ub.effects", from: [], value: [{ _id: "dasChainBound000" }] }] },
+  // Rope (SRD 5.2): "As a Utilize action, you can tie a knot with Rope if you succeed on a DC 10 Dexterity (Sleight of Hand)
+  // check. [...] You can bind an unwilling creature with the Rope only if the creature has the Grappled, Incapacitated, or
+  // Restrained condition. If the creature's legs are bound, the creature has the Restrained condition until it escapes. Escaping
+  // the Rope requires the creature to make a successful DC 15 Dexterity (Acrobatics) check as an action." Reading: the knot
+  // tied on a creature binds it.
+  "rope": { contest: { activity: "Y0LvyxjfVHNbp4CG", skill: "slt", dc: 10, effect: "dasRopeBound0000" },
+    escapeCheck: { skill: "acr", dc: 15 },
+    dataFixes: [{ effect: "dasRopeBound0000", create: BOUND },
+      { path: "system.activities.Y0LvyxjfVHNbp4CG.effects", from: [], value: [{ _id: "dasRopeBound0000" }] }] },
   "caltrops": { scatter: true, triggers: [{ on: "enter", do: [{ type: "replay" }] }] },
   "ball-bearings": { scatter: true, triggers: [{ on: "enter", do: [{ type: "replay" }] }] },
   // §54 : Huile — une sauvegarde de Dextérité ratée laisse la cible huilée pendant 1 minute ; tant qu'elle l'est, des dégâts de

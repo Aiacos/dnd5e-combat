@@ -4,13 +4,17 @@
  * lanceur, `@abilities.str.dc` ou `@skills.ath.passive` du monstre), par `simplifyBonus` de dnd5e comme les auras.
  */
 
-import { parseEscapeCheck, escapableStatuses } from "../core/escape.mjs";
+import { parseEscapeCheck, declaredEscapeCheck, escapableStatuses } from "../core/escape.mjs";
+import { contentOf } from "./content.mjs";
 import { originItemOf } from "./facts.mjs";
 import { englishDescription } from "./multiattack.mjs";
 
 /** Le test d'évasion qu'écrit un item, ou null. */
 export function escapeCheckOf(item) {
   if ( !item ) return null;
+  // A check the content declares comes first: the item's text gives it without an enricher (Chain, Rope).
+  const declared = declaredEscapeCheck(contentOf(item).entry);
+  if ( declared ) return declared;
   // Un sort écrit son test « contre votre DD de sauvegarde des sorts » : à défaut de DD dans l'enrichisseur (textes importés), celui-là.
   const known = { abilities: Object.keys(CONFIG.DND5E?.abilities ?? {}), skills: Object.keys(CONFIG.DND5E?.skills ?? {}),
     defaultDc: (item.type === "spell") ? "@attributes.spell.dc" : null };

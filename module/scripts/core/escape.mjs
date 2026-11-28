@@ -43,5 +43,17 @@ export function parseEscapeCheck(text, { abilities=[], skills=[], defaultDc=null
   return out;
 }
 
+/**
+ * The escape check a content entry declares (`escapeCheck`), in the shape `parseEscapeCheck` returns, or null. For an item whose
+ * text gives the check without an enricher (Chain, Rope: "a successful DC 18 Dexterity (Acrobatics) check").
+ * @param {{escapeCheck?: {ability?: string, skill?: string, dc: number|string}}|null} entry
+ * @returns {{ability: string|null, skill: string|null, dc: string}|null}
+ */
+export function declaredEscapeCheck(entry) {
+  const c = entry?.escapeCheck;
+  if ( !c || ((c.dc ?? "") === "") || (!c.ability && !c.skill) ) return null;
+  return { ability: c.ability ?? null, skill: c.skill ?? null, dc: String(c.dc) };
+}
+
 /** Les effets dont on se libère par ce test : Entravé, sans Agrippé (l'empoignade a son propre S'échapper). */
 export const escapableStatuses = statuses => statuses.includes("restrained") && !statuses.includes("grappled");

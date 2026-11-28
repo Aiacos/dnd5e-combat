@@ -831,10 +831,14 @@
  *                                               porte `castsSpell`, fait échouer d'office un sort de niveau `level` ou moins (défaut :
  *                                               le niveau de l'item) ; au-delà, test de la caractéristique d'incantation de celui
  *                                               qui contre, DD 10 + le niveau du sort (core/counter.mjs) — pas de sauvegarde du lanceur
- *     contest?: { activity?, skill, against, effect, exclusive? }
+ *     contest?: { activity?, skill, against | dc, effect, exclusive? }
  *                                               test en opposition (§72, Combat perspicace) : l'auteur jette `skill`, la cible la
  *                                               meilleure de `against` (chez son joueur s'il est connecté) ; gagné, l'effet `effect`
  *                                               de l'activité est posé sur elle (`exclusive` : ceux posés ailleurs tombent)
+ *                                               `dc` instead of `against`: a fixed DC, without a roll from the target (Chain, Rope)
+ *     escapeCheck?: { ability?, skill?, dc }    the check that frees a creature from the Restrained effect this item placed, when
+ *                                               the item's text gives it without an enricher (Chain: Acrobatics DC 18) — read
+ *                                               before the text (adapter/escape.mjs); `dc`: a number or a roll-data formula
  *     zoneCharges?: n                           la zone qui dure tombe après n déclenchements (§75) ; §303 : ou une formule du niveau de lancement (Cordon de flèches : « 2 * @item.level »)
  *     pendingDie?: { activity, against: "melee"|"target" }  §89 : l'activité promet son dé au prochain jet de dégâts d'une
  *                                               attaque de l'auteur ce tour-ci, au corps à corps ou contre la cible désignée (Fente,
