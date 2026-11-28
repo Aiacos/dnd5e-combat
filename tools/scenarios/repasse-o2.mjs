@@ -1,10 +1,10 @@
 /**
- * §336, lot O2 de la repasse des objets : sauvegardes et défenses d'objets. Arène de test (Clerc, Guerrier).
- *  1. Manteau de résistance aux sorts sur le Guerrier : pas d'Avantage à la sauvegarde contre Injonction tant qu'il n'est ni porté ni
- *     harmonisé ; porté et harmonisé, l'Avantage (`saveAdvantage`) — le calcul du moteur (`api.mcp.saveChance`).
- *  2. Antidote : corrigé à la création (l'effet porte la marque d'Avantage contre Empoisonné) ; bu, le Guerrier a l'Avantage contre le
- *     Dard de Lolth, qui pose Empoisonné.
- *  3. Broche de défense portée et harmonisée : le Guerrier n'est plus atteint par Projectile magique (`targets.unaffectedIf`).
+ * §336, batch O2 of the item pass: item saving throws and defenses. Test arena (Cleric, Fighter).
+ *  1. Cloak of Spell Resistance on the Fighter: no Advantage on the saving throw against Command while it is neither worn nor
+ *     attuned; worn and attuned, Advantage (`saveAdvantage`) — the engine's computation (`api.mcp.saveChance`).
+ *  2. Antidote: fixed on creation (the effect carries the Advantage mark against Poisoned); drunk, the Fighter has
+ *     Advantage against Lolth's Sting, which places Poisoned.
+ *  3. Brooch of Shielding worn and attuned: the Fighter is no longer hit by Magic Missile (`targets.unaffectedIf`).
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e.spells24.Item.";
@@ -38,7 +38,7 @@ export default {
     const chance = async identifier => ctx.engine("saveChance", { casterId: cleric.id, targetId: fighter.id, itemId: await ctx.itemId(cleric.id, identifier) });
     const wear = (identifier, on) => ctx.call("upsert-actor-item", { actorId, itemData: { system: { equipped: on, attuned: on } }, match: { path: "system.identifier", value: identifier } });
 
-    // 1. Manteau : porté et harmonisé seulement.
+    // 1. Cloak: worn and attuned only.
     await ctx.ensureItem(fighter, `${DMG}dmgMantleOfSpell`);
     await wear("mantle-of-spell-resistance", false);
     await pause(400);
@@ -50,7 +50,8 @@ export default {
     ctx.expect((on?.advantage ?? []).includes("saveAdvantage"), `Manteau porté et harmonisé : Avantage contre Injonction (${JSON.stringify(on?.advantage)})`);
     await wear("mantle-of-spell-resistance", false);
 
-    // 2. Antidote : corrigé à la création, puis bu — par une créature qui n'a pas déjà l'Avantage contre Empoisonné (Résilience naine).
+    // 2. Antidote: fixed on creation, then drunk — by a creature that does not already have Advantage against Poisoned
+    // (Dwarven Resilience).
     await ctx.ensureItem(fighter, `${DMG}dmgLolthsSting00`);
     const sting = async (caster, target) => ctx.engine("saveChance", { casterId: caster.id, targetId: target.id, itemId: await ctx.itemId(caster.id, "lolths-sting") });
     let drinker = null;
@@ -78,7 +79,7 @@ export default {
       await ctx.removeEffectsNamed(target, /Antitoxin|Antidote/i);
     }
 
-    // 3. Broche de défense : immunité à Projectile magique, portée et harmonisée.
+    // 3. Brooch of Shielding: immunity to Magic Missile, worn and attuned.
     await ctx.ensureItem(cleric, `${SRD}phbsplMagicMissi`, atWill).catch(() => null);
     await ctx.ensureItem(fighter, `${DMG}dmgBroochOfShiel`);
     await wear("brooch-of-shielding", true);

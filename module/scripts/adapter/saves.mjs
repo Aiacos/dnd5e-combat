@@ -1,15 +1,15 @@
 /**
- * Activités à jet de sauvegarde de dnd5e 6.0 : lecture des messages, demandes de jet, effets.
+ * dnd5e 6.0 saving throw activities: reading messages, roll requests, effects.
  *
- * Vérifié dans dnd5e 6.0.3 :
- *  - ce qu'un message d'utilisation demande au moteur se lit dans adapter/usage.mjs
- *  - le bouton « Sauvegarde » de la carte lance `actor.rollSavingThrow` avec
+ * Verified in dnd5e 6.0.3:
+ *  - what a use message asks of the engine is read in adapter/usage.mjs
+ *  - the card's "Save" button calls `actor.rollSavingThrow` with
  *    `system.origin = id du message d'utilisation` (documents/activity/save.mjs:117-135)
- *  - le système sait demander un jet à un joueur : message `type: "request"`, `handler: "save"`,
- *    dont le résultat porte `flags.dnd5e.requestResult.requestId`
+ *  - the system knows how to ask a player for a roll: message `type: "request"`, `handler: "save"`,
+ *    whose result carries `flags.dnd5e.requestResult.requestId`
  *    (data/chat-message/request-message-data.mjs, documents/actor/actor.mjs:1272-1277).
- *    On le réutilise tel quel : un seul propriétaire de l'interface de demande de jet.
- *  - `SaveActivity#rollDamage` inscrit `system.onSave` sur le message de dégâts (save.mjs:86-91)
+ *    It is reused as is: a single owner of the roll request interface.
+ *  - `SaveActivity#rollDamage` writes `system.onSave` on the damage message (save.mjs:86-91)
  */
 
 import { isThinWall, touchesWallRegion } from "./wall-side.mjs";
@@ -43,8 +43,8 @@ export { applyEffectsToToken, applyMarkToToken, applyStatusToToken, removeEffect
 export { TARGETS_QUERY, handleTargetsQuery, showTargetsTo } from "./show-targets.mjs";
 
 /**
- * L'activité d'un plan, telle que le message porteur la voit (mise à l'échelle du sort comprise).
- * `uuid` peut désigner une autre activité du même item : la sauvegarde imposée par une attaque.
+ * A plan's activity, as the carrying message sees it (including the spell's scaling).
+ * `uuid` can designate another activity of the same item: the save imposed by an attack.
  */
 export function activityFor(carrier, uuid=null) {
   const primary = carrier.getAssociatedActivity?.({ scaled: true }) ?? null;
@@ -53,13 +53,13 @@ export function activityFor(carrier, uuid=null) {
 }
 
 /**
- * Ce qu'une région posée par une activité (template-placement.mjs:150-163) permet de savoir.
+ * What a region placed by an activity (template-placement.mjs:150-163) lets us know.
  * @param {RegionDocument} region
- * @returns {Promise<object|null>}  null si la région ne vient pas d'une activité.
+ * @returns {Promise<object|null>}  null if the region does not come from an activity.
  */
-/** Qui une zone affecte : `ally`, `enemy`, ou "" (tout le monde) ; une zone « au choix » épargne les alliés. */
+/** Whom an area affects: `ally`, `enemy`, or "" (everyone); an "as chosen" area spares allies. */
 export function areaAffects(activity) {
-  // §86 : ce que le contenu dit de la zone de l'item prime (Présence royale de Yolande : les alliés épargnés).
+  // §86: what the content says about the item's area takes precedence (Yolande's Regal Presence: allies spared).
   const declared = activity?.item ? contentOf(activity.item).entry?.zoneAffects : null;
   if ( declared ) return declared;
   const affects = activity?.target?.affects ?? {};
@@ -74,29 +74,29 @@ export async function readActivityRegion(region) {
   const activity = await fromUuid(uuid);
   const origin = region.getFlag("dnd5e", "origin") ?? null;
   const originToken = origin ? await fromUuid(origin) : null;
-  // P2 : le point d'origine de la zone, pour la ligne d'effet (un plancher entre la zone et la créature).
+  // P2: the area's origin point, for line of effect (a floor between the area and the creature).
   const areaOrigin = areaOriginOf(region, originToken);
-  // P2 : une vraie sphère — la tranche de la région en fait un cylindre, ses coins sont hors de la sphère.
+  // P2: a true Sphere — the region's slice makes it a cylinder, its corners are outside the Sphere.
   const sphere = sphereOf(region, activity, originToken);
   const thinWall = isThinWall(region);
-  // §286 : les `count` gabarits que dnd5e pose dans une seule région — pas les segments d'un mur (une forme par segment).
+  // §286: the `count` templates that dnd5e places in a single region — not a wall's segments (one shape per segment).
   const several = !thinWall && ((Number(activity?.target?.template?.count) || 1) > 1) && ((region.shapes?.length ?? 0) > 1);
   return {
     activity: uuid,
     origin,
     originDisposition: originToken?.disposition ?? null,
     originSide: originToken ? sideOf(originToken) : null,   // §181
-    // O4 (§338) : `includesOrigin` — une zone sur soi qui prend aussi son origine (Poudre à éternuer, Sac de haricots magiques).
-    // §462 / §463 : la zone d'une téléportation, au départ (son auteur est parti) ou à l'arrivée (émanation autour de lui) : pas lui.
+    // O4 (§338): `includesOrigin` — a self area that also takes its origin (Sneezing Powder, Bag of Beans).
+    // §462 / §463: the area of a teleportation, at departure (its author has left) or at arrival (Emanation around them): not them.
     excludeOrigin: ((activity?.range?.units === "self") || !!(activity?.item && contentOf(activity.item).entry?.teleport?.area))
       && !(activity?.item && contentOf(activity.item).entry?.includesOrigin),
-    // « Vous pouvez désigner des créatures qui ne sont pas affectées » (`affects.choice`, Esprits gardiens) : par défaut,
-    // les alliés du lanceur sont épargnés — le moteur ne pose pas la question (§16.23).
+    // "You can designate creatures that are not affected" (`affects.choice`, Spirit Guardians): by default,
+    // the caster's allies are spared — the engine does not ask the question (§16.23).
     affects: areaAffects(activity),
-    // §296 : le plafond de créatures de la zone (`zoneMax`), et la distance de chacune au centre pour le départager.
+    // §296: the area's creature cap (`zoneMax`), and each one's distance to the center to tell them apart.
     max: (activity?.item ? contentOf(activity.item).entry?.zoneMax : null) ?? null,
-    // Appartenance calculée par le cœur (TokenDocument#testInsideRegion, client/documents/token.mjs:3236).
-    // §169, §173 : un mur fin, posé entre les cases — « dans sa zone » à l'apparition : l'espace touche le mur.
+    // Membership computed by the core (TokenDocument#testInsideRegion, client/documents/token.mjs:3236).
+    // §169, §173: a thin wall, placed between cells — "in its area" on appearance: the space touches the wall.
     candidates: region.parent.tokens.filter(t => t.actor && !isObjectToken(t)
       && (thinWall ? touchesWallRegion(region, t) : t.testInsideRegion(region, committedPosition(t)))).map(t => ({
       token: t.uuid,
@@ -105,9 +105,9 @@ export async function readActivityRegion(region) {
       disposition: t.disposition,
       faction: factionOf(t), stance: t.getFlag(MODULE_ID, "stance") ?? null,   // §181
       defeated: t.actor.statuses?.has(CONFIG.specialStatusEffects.DEFEATED) === true,
-      // §286 : plusieurs formes (Nuée de météores, Tempête de feu) — chacune son origine ; prise une seule fois.
+      // §286: several shapes (Meteor Swarm, Fire Storm) — each its own origin; taken only once.
       ...(several ? shapesReach(region, activity, originToken, t) : { lineOfEffect: reachesFromPoint(areaOrigin, t), inVolume: insideSphere(sphere, t) }),
-      offPlane: originToken ? !samePlane(originToken, t) : false,   // §225 : la zone est sur le plan de son lanceur
+      offPlane: originToken ? !samePlane(originToken, t) : false,   // §225: the area is on its caster's plane
       distance: areaOrigin ? Math.hypot(tokenCenter(t).x - areaOrigin.x, tokenCenter(t).y - areaOrigin.y) : null
     }))
   };
@@ -125,15 +125,15 @@ export function readSaveMessage(message) {
     request: message.getFlag("dnd5e", "requestResult")?.requestId ?? null,
     actor: message.getAssociatedActor?.()?.uuid ?? null,
     total: roll.total,
-    // §231 : le mode du d20, pour le retour visuel (Avantage / Désavantage).
+    // §231: the d20's mode, for the visual feedback (Advantage / Disadvantage).
     mode: (roll.hasAdvantage === true) ? "advantage" : (roll.hasDisadvantage === true) ? "disadvantage" : null
   };
 }
 
 export const SAVE_QUERY = `${MODULE_ID}.rollSave`;
-const SAVE_TIMEOUT = 40000;   // deux fenêtres possibles (choix, jet), chacune bornée par adapter/dialogs.mjs
+const SAVE_TIMEOUT = 40000;   // two possible windows (choice, roll), each bounded by adapter/dialogs.mjs
 
-/** Le bonus d'abri à la sauvegarde de Dextérité de `token` contre cette activité (0 : aucun), jugé depuis le token de l'auteur. */
+/** The cover bonus to `token`'s Dexterity save against this activity (0: none), judged from the author's token. */
 function coverBonusForSave(activity, token, ability) {
   const area = !!activity?.target?.template?.type;
   const ignores = contentOf(activity?.item).entry?.saveIgnoresCover === true;
@@ -144,30 +144,30 @@ function coverBonusForSave(activity, token, ability) {
   return coverSaveBonus(coverFor(caster.document ?? caster, target, { activity, quiet: true }));
 }
 
-/** La part « abri » ajoutée aux parts d'un jet de sauvegarde, sous sa propre clé de donnée. */
+/** The "cover" part added to a saving throw's parts, under its own data key. */
 function withCoverPart(bonus, cover) {
   const part = `@${MODULE_ID.replace(/[^a-zA-Z]/g, "")}Cover`;
   const data = { [part.slice(1)]: cover };
   return bonus.parts.length ? { ...bonus, parts: [...bonus.parts, part], data: { ...bonus.data, ...data } } : { parts: [part], data };
 }
 
-/** Paramètres du jet, les mêmes que le bouton « Sauvegarde » de la carte (save.mjs:122-134). */
+/** Roll parameters, the same as the card's "Save" button (save.mjs:122-134). */
 function saveRollArguments(activity, actor, token, usageMessage, { ability, dc, advantage=false, disadvantage=false, foretold=null }) {
-  // Issue #183 : l'abri vaut aussi pour les sauvegardes de Dextérité (« +2 / +5 à la CA et aux jets de sauvegarde de Dextérité »).
-  // Ici pour une sauvegarde qui vise sa cible, sans zone : l'abri se juge depuis l'auteur, comme pour une attaque.
+  // Issue #183: cover also applies to Dexterity saves ("+2 / +5 to AC and Dexterity saving throws").
+  // Here for a save that targets its target, without an area: cover is judged from the author, as for an attack.
   const cover = coverBonusForSave(activity, token, ability);
   if ( cover ) console.log(`${MODULE_ID} | ${actor?.name}: cover, +${cover} to the Dexterity saving throw`);
   let bonus = CONFIG.Dice.BasicRoll.constructParts({ activityBonus: activity.save?.bonus }, activity.getRollData());
-  // L'abri entre seul, avec sa propre donnée : les données de jet de l'activité sont celles de l'AUTEUR (son `@mod`, son `@prof`) et
-  // ne doivent pas remplacer celles de la créature qui sauvegarde.
+  // Cover enters alone, with its own data: the activity's roll data are the AUTHOR's (their `@mod`, their `@prof`) and
+  // must not replace those of the creature that saves.
   if ( cover ) bonus = withCoverPart(bonus, cover);
   const rollConfig = { ability, target: dc };
-  // §16.25 : Ascendance féerique — l'avantage contre une activité qui pose un état que l'un de ses items désigne.
+  // §16.25: Fey Ancestry — Advantage against an activity that applies a condition that one of its items designates.
   if ( saveAdvantageAgainst(actor, activity) || fightingAdvantageFor(activity, token) || sizeAdvantageFor(actor, activity) ) rollConfig.advantage = true;
-  // §32 : Sort intensifié (la cible choisie par requestSaves) ; §249 : le mode donné par cible dans le message d'utilisation.
+  // §32: Heightened Spell (the target chosen by requestSaves); §249: the mode given per target in the use message.
   if ( advantage ) rollConfig.advantage = true;
   if ( disadvantage ) rollConfig.disadvantage = true;
-  // §36 : Présage — le d20 remplacé par le jet noté (bornes du dé, adapter/portent.mjs).
+  // §36: Portent — the d20 replaced by the noted roll (die bounds, adapter/portent.mjs).
   if ( Number.isInteger(foretold) ) rollConfig.rolls = [{ ...bonus, options: foretoldRange(foretold) }];
   else if ( bonus.parts.length ) rollConfig.rolls = [bonus];
   return [rollConfig, {
@@ -179,8 +179,8 @@ function saveRollArguments(activity, actor, token, usageMessage, { ability, dc, 
 }
 
 /**
- * §32 : Sort intensifié — « le Désavantage à une cible du sort » : parmi les cibles dont on demande la sauvegarde, la première hostile
- * au lanceur (uuid de token), ou null si la carte ne porte pas l'option.
+ * §32: Heightened Spell — "Disadvantage on a target of the spell": among the targets whose save is requested, the first one hostile
+ * to the caster (token uuid), or null if the card does not carry the option.
  */
 function heightenedTarget(activity, usageMessage, targets) {
   if ( !usageMetamagic(usageMessage).includes("heightened") ) return null;
@@ -193,15 +193,15 @@ function heightenedTarget(activity, usageMessage, targets) {
 }
 
 /**
- * C12-b : Sort intensifié sur la durée. Au lancement, la cible intensifiée reçoit une marque par item (`flags.dnd5e-combat.heightened`),
- * une autre cible du même lancement la perd ; une sauvegarde rejouée (carte `resave`) ou d'une zone qui agit de nouveau (`areaTick`) lit la marque. Rend vrai si cette sauvegarde a
- * le Désavantage du Sort intensifié. MJ actif.
+ * C12-b: Heightened Spell over time. On casting, the heightened target receives a mark per item (`flags.dnd5e-combat.heightened`),
+ * another target of the same casting loses it; a replayed save (`resave` card) or one from an area that acts again (`areaTick`)
+ * reads the mark. Returns true if this save has the Disadvantage of Heightened Spell. Active GM.
  */
 async function heightenedMark(usageMessage, activity, token, heightened) {
   const actor = token.actor;
   const key = activity.item?.uuid?.replaceAll(".", "_");
   if ( !actor || !key ) return token.uuid === heightened;
-  // Sauvegarde rejouée, ou zone qui agit de nouveau (Esprits gardiens, Rayon de lune : carte `areaTick`).
+  // Replayed save, or area that acts again (Spirit Guardians, Moonbeam: `areaTick` card).
   if ( usageMessage.getFlag(MODULE_ID, "resave") || usageMessage.getFlag(MODULE_ID, "areaTick") ) return !!actor.getFlag(MODULE_ID, `heightened.${key}`);
   const marked = !!actor.getFlag(MODULE_ID, `heightened.${key}`);
   if ( (token.uuid === heightened) && !marked ) await actor.setFlag(MODULE_ID, `heightened.${key}`, true);
@@ -210,8 +210,8 @@ async function heightenedMark(usageMessage, activity, token, heightened) {
 }
 
 /**
- * §16.47 : « avantage si vous ou vos alliés la combattez » (`advantageIfFighting` : Charme-personne) — la cible est dans un
- * combat commencé et hostile au lanceur.
+ * §16.47: "Advantage if you or your allies are fighting it" (`advantageIfFighting`: Charm Person) — the target is in a
+ * combat that has started and hostile to the caster.
  */
 export function fightingAdvantageFor(activity, token) {
   if ( !token || (contentOf(activity?.item).entry?.advantageIfFighting !== true) ) return false;
@@ -221,13 +221,13 @@ export function fightingAdvantageFor(activity, token) {
 }
 
 /**
- * C12-e : le Désavantage qu'un lanceur impose à la sauvegarde contre son sort — rend le nom de la règle, ou null.
- *  - Embuscade magique (Roublard Arnaqueur arcanique 9) : « si vous avez l'état Invisible quand vous lancez un sort sur une créature, elle a
- *    le Désavantage à toute sauvegarde contre lui ce tour-ci » — Invisible, ou caché d'elle (la Furtivité du moteur) ; pas les
- *    sauvegardes rejouées les tours suivants.
- *  - Fragilisation occulte (Chevalier occulte 10) : « quand vous touchez une créature d'une attaque avec une arme, elle a le Désavantage
- *    à la prochaine sauvegarde qu'elle fait contre un de vos sorts avant la fin de votre prochain tour » — la marque posée au coup
- *    (runtime/feats.mjs), consommée ici. MJ actif.
+ * C12-e: the Disadvantage that a caster imposes on the save against their spell — returns the rule's name, or null.
+ *  - Magical Ambush (Arcane Trickster Rogue 9): "if you have the Invisible condition when you cast a spell on a creature, it has
+ *    Disadvantage on any save against it this turn" — Invisible, or hidden from it (the engine's Stealth); not the
+ *    saves replayed on the following turns.
+ *  - Eldritch Strike (Eldritch Knight 10): "when you hit a creature with a weapon attack, it has Disadvantage
+ *    on the next save it makes against one of your spells before the end of your next turn" — the mark set at the hit
+ *    (runtime/feats.mjs), consumed here. Active GM.
  */
 function casterImposedDisadvantage(activity, token) {
   const caster = activity?.actor;
@@ -249,22 +249,22 @@ function casterImposedDisadvantage(activity, token) {
 }
 
 /**
- * §206 : « une créature de taille G ou supérieure a l'Avantage à ce jet » (`saveAdvantageSize` sur l'item de l'activité : Frappe
- * piégeuse). La taille est celle de la fiche (`system.traits.size`).
+ * §206: "a Large or larger creature has Advantage on this roll" (`saveAdvantageSize` on the activity's item: Trip
+ * Strike). The size is the sheet's (`system.traits.size`).
  */
 export function sizeAdvantageFor(actor, activity) {
   const min = contentOf(activity?.item).entry?.saveAdvantageSize;
   return !!min && !!actor && sizeAtLeast(actor.system?.traits?.size, min);
 }
 
-/** Les états que posent les effets d'une activité (profils `activity.effects[]`, lus par `effectOfProfile`, §126). */
+/** The conditions applied by an activity's effects (`activity.effects[]` profiles, read by `effectOfProfile`, §126). */
 function statusesPosedBy(activity) {
   return new Set((activity?.effects ?? []).flatMap(ref => [...(effectOfProfile(ref, activity.item)?.statuses ?? [])]));
 }
 
 /**
- * « Sorts et autres effets magiques » (Résistance à la magie, §18.9) : un sort — y compris la copie qu'Incantation crée
- * (`flags.dnd5e.cachedFor`, de type « spell ») —, ou un item à la propriété Magique (`mgc`) de dnd5e.
+ * "Spells and other magical effects" (Magic Resistance, §18.9): a spell — including the copy that Casting creates
+ * (`flags.dnd5e.cachedFor`, of type "spell") —, or an item with dnd5e's Magical property (`mgc`).
  */
 export function isMagical(activity) {
   const item = activity?.item;
@@ -273,8 +273,8 @@ export function isMagical(activity) {
 }
 
 /**
- * L'acteur réussit-il d'office la sauvegarde de cette activité (`saveAutoSuccessAgainst`) ? « magic » : contre un sort ou un effet
- * magique (Résistance supérieure à la magie). Rend l'identifiant du trait qui le donne, ou null.
+ * Does the actor automatically succeed on the save of this activity (`saveAutoSuccessAgainst`)? "magic": against a spell or a
+ * magical effect (Greater Magic Resistance). Returns the identifier of the trait that gives it, or null.
  */
 export function autoSaveAgainst(actor, activity) {
   if ( !actor || !isMagical(activity) ) return null;
@@ -285,12 +285,12 @@ export function autoSaveAgainst(actor, activity) {
   return null;
 }
 
-/** Les types d'objets que l'on porte (pas les aptitudes ni les sorts). */
+/** The types of objects one carries (not features or spells). */
 const GEAR = new Set(["equipment", "weapon", "consumable", "tool", "loot", "container"]);
-/** Équipé, et harmonisé s'il exige une harmonisation. */
+/** Equipped, and attuned if it requires attunement. */
 const worn = item => (item.system?.equipped !== false) && ((item.system?.attunement !== "required") || (item.system?.attuned === true));
 
-/** `breathAdvantage` : un objet porté donne l'Avantage contre le souffle (identifiant « …-breath ») d'une créature de ces types. */
+/** `breathAdvantage`: a carried object gives Advantage against the breath (identifier "…-breath") of a creature of these types. */
 function breathAdvantageFor(actor, activity) {
   if ( !isBreathWeapon(identifierOf(activity?.item).id) ) return false;
   const type = creatureTypeOf(activity?.actor);
@@ -299,29 +299,29 @@ function breathAdvantageFor(actor, activity) {
 }
 
 /**
- * L'acteur a-t-il l'avantage à la sauvegarde de cette activité (`saveAdvantage`) ? Ce qui le donne : un item qu'il porte
- * (Ascendance féerique, Résistance à la magie), ou, pour un sort, un effet de ce sort posé sur lui (Protection contre le
- * poison) — le lanceur, qui a le sort sur sa fiche, n'en profite pas pour autant.
+ * Does the actor have Advantage on the save of this activity (`saveAdvantage`)? What gives it: an item they carry
+ * (Fey Ancestry, Magic Resistance), or, for a spell, an effect of that spell placed on them (Protection from
+ * Poison) — the caster, who has the spell on their sheet, does not benefit from it.
  */
 export function saveAdvantageAgainst(actor, activity) {
-  // Armure d'écailles de dragon : « l'Avantage aux jets de sauvegarde contre le souffle des Dragons » (`breathAdvantage`) — un
-  // souffle n'est ni magique ni forcément porteur d'un état : jugé avant le reste.
+  // Dragon Scale Mail: "Advantage on saving throws against the breath of Dragons" (`breathAdvantage`) — a
+  // breath is neither magical nor necessarily carrying a condition: judged before the rest.
   if ( breathAdvantageFor(actor, activity) ) return true;
   const posed = statusesPosedBy(activity);
   const magical = isMagical(activity);
   if ( !posed.size && !magical ) return false;
-  // O2 (§336) : un effet qui porte `flags.dnd5e-combat.saveAdvantage.<état|magic>` (l'Antidote bu : sa fiole est souvent consommée).
+  // O2 (§336): an effect carrying `flags.dnd5e-combat.saveAdvantage.<état|magic>` (the Antidote drunk: its vial is often used up).
   const flagged = actor?.flags?.[MODULE_ID]?.saveAdvantage ?? {};
   if ( [...posed].some(s => flagged[s]) || (magical && flagged.magic) ) return true;
-  // §48 : ni un sort de sa fiche, ni un parchemin qu'il porte — c'est l'effet posé qui compte. O2 (§336) : un objet (anneau, manteau,
-  // amulette) ne protège que porté, et harmonisé s'il l'exige.
+  // §48: neither a spell on their sheet, nor a scroll they carry — it is the placed effect that counts. O2 (§336): an object
+  // (ring, cloak, amulet) protects only when carried, and attuned if it requires it.
   const owned = (actor?.items ?? []).filter(item => !isSpellCast(item) && (!GEAR.has(item.type) || worn(item)));
   const borne = (actor?.effects ?? []).filter(e => !e.disabled && !e.isSuppressed).map(originItemOf)
     .filter(item => isSpellCast(item));
   if ( [...owned, ...borne].some(item => (contentOf(item).entry?.saveAdvantage ?? [])
     .some(s => posed.has(s) || ((s === "magic") && magical))) ) return true;
-  // §402 : `saveAdvantageFrom: { types, statuses }` — contre ces états posés par une créature de ces types (Protection contre le mal et
-  // le bien : « une cible déjà Charmée ou Effrayée par l'une d'elles a l'Avantage à toute nouvelle sauvegarde contre cet effet »).
+  // §402: `saveAdvantageFrom: { types, statuses }` — against these conditions applied by a creature of these types (Protection
+  // from Evil and Good: "a target already Charmed or Frightened by one of them has Advantage on any new save against that effect").
   const type = creatureTypeOf(activity?.actor);
   return !!type && borne.some(item => {
     const rule = contentOf(item).entry?.saveAdvantageFrom;
@@ -330,9 +330,9 @@ export function saveAdvantageAgainst(actor, activity) {
 }
 
 /**
- * §402 : Cercle de pouvoir — « si elle réussit une sauvegarde contre un sort ou un effet magique qui inflige la moitié des dégâts sur une
- * réussite, elle n'en subit aucun » : un effet porté qui vient d'un sort dont le contenu déclare `magicEvasion`, contre une activité
- * magique, quelle que soit la caractéristique (rendu « any », comme l'Esquive de monstre).
+ * §402: Circle of Power — "if it succeeds on a save against a spell or magical effect that deals half damage on a
+ * success, it takes none": a carried effect that comes from a spell whose content declares `magicEvasion`, against a magical
+ * activity, whatever the ability (rendered "any", like the monster's Evasion).
  */
 export function magicEvasionAgainst(actor, activity) {
   if ( !actor || !isMagical(activity) ) return false;
@@ -340,10 +340,10 @@ export function magicEvasionAgainst(actor, activity) {
 }
 
 /**
- * Plusieurs caractéristiques au choix de la cible (Lutte / Bousculade : Force ou Dextérité) : la
- * meilleure sauvegarde pour elle — le choix de n'importe quel joueur. Le système, lui, met un bouton
- * par caractéristique sur la carte (documents/activity/save.mjs:55-71) ; la fenêtre du jet ne permet pas
- * d'en changer.
+ * Several abilities at the target's choice (Grapple / Shove: Strength or Dexterity): the
+ * best save for it — the choice of any player. The system, for its part, puts a button
+ * per ability on the card (documents/activity/save.mjs:55-71); the roll window does not allow
+ * changing it.
  */
 export function bestSaveAbility(actor, abilities) {
   const bonus = a => actor.system.abilities?.[a]?.save?.value ?? actor.system.abilities?.[a]?.mod ?? -Infinity;
@@ -351,9 +351,9 @@ export function bestSaveAbility(actor, abilities) {
 }
 
 /**
- * La cible choisit sa caractéristique (Lutte / Bousculade : « c'est elle qui choisit », glossaire du PHB) :
- * une fenêtre « Force (+x) / Dextérité (+y) » chez celui qui la contrôle — le joueur, ou le MJ pour un PNJ.
- * Fermée sans choix : la meilleure.
+ * The target chooses their ability (Grapple / Shove: "it is the one who chooses", PHB glossary):
+ * a "Strength (+x) / Dexterity (+y)" window on the client of whoever controls it — the player, or the GM for an NPC.
+ * Closed without a choice: the best one.
  * @returns {Promise<string>}
  */
 export async function chooseSaveAbility(actor, abilities, { dc, item }) {
@@ -364,7 +364,7 @@ export async function chooseSaveAbility(actor, abilities, { dc, item }) {
     label: `${game.i18n.localize(CONFIG.DND5E.abilities[a]?.label ?? a)} (${signed(actor.system.abilities?.[a]?.save?.value ?? 0)})`,
     default: a === best
   }));
-  // Sans réponse dans le délai : la meilleure.
+  // With no answer within the timeout: the best one.
   const choice = await timedWait({
     window: { title: game.i18n.format("DND5ECOMBAT.ChoixSauvegarde.Titre", { name: actor.name }) },
     content: `<p>${game.i18n.format("DND5ECOMBAT.ChoixSauvegarde.Texte", { item, dc })}</p>`,
@@ -374,12 +374,12 @@ export async function chooseSaveAbility(actor, abilities, { dc, item }) {
 }
 
 /**
- * Côté joueur : la fenêtre du jet de sauvegarde s'ouvre sur SON écran, ce sont ses dés. Le jet
- * n'est jamais lancé à sa place ; fenêtre fermée → false, et le MJ actif lui laisse la carte de
- * demande du système pour qu'il lance quand il veut. Plusieurs caractéristiques au choix : il choisit d'abord.
+ * Player side: the saving throw window opens on THEIR screen, they are their dice. The roll
+ * is never rolled for them; window closed → false, and the active GM leaves them the system's request
+ * card so they roll when they want. Several abilities at their choice: they choose first.
  */
 export async function handleSaveQuery({ usage, token: tokenUuid, ability, abilities=null, ask=true, dc, item, activity: activityUuid=null, advantage=false, disadvantage=false, foretold=null }, { user=null }={}) {
-  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  // §472: only the GM sends this request in the game; from a player, it is dropped (safety refusal, not forceable).
   if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | save query from ${user.name} refused: only a GM sends it`); return false; }
   const usageMessage = game.messages.get(usage);
   const token = await fromUuid(tokenUuid);
@@ -388,9 +388,9 @@ export async function handleSaveQuery({ usage, token: tokenUuid, ability, abilit
   if ( !actor || !activity ) return false;
   ui.notifications.info(game.i18n.format("DND5ECOMBAT.DemandeSauvegardeJoueur", { name: actor.name, item }));
   if ( ask && (abilities?.length > 1) ) ability = await chooseSaveAbility(actor, abilities, { dc, item });
-  // La fenêtre du jet se ferme au bout du délai ; le jet part alors seul (ses dés, sans dialogue).
+  // The roll window closes at the end of the timeout; the roll then goes off by itself (its dice, without a dialog).
   let timedOut = false;
-  // §401 : la fenêtre du jet passe à son tour dans la file des fenêtres de ce poste ; son délai part à l'ouverture.
+  // §401: the roll window in turn goes into this station's window queue; its timeout starts when it opens.
   let rolls = await inLine(async () => {
     const cancel = closeRollDialogAfter(actor, () => { timedOut = true; }, null, { awaiting: "roll" });
     const [rollConfig, messageConfig] = saveRollArguments(activity, actor, token, usageMessage, { ability, dc, advantage, disadvantage, foretold });
@@ -405,27 +405,27 @@ export async function handleSaveQuery({ usage, token: tokenUuid, ability, abilit
 }
 
 /**
- * Fait lancer les sauvegardes attendues : le moteur lance pour les PNJ (et les PJ sans joueur
- * connecté) ; chaque joueur voit s'ouvrir chez lui la fenêtre de son jet (requête), et ne reçoit
- * la carte de demande du système que s'il l'a fermée ou n'a pas répondu. MJ actif uniquement.
- * @param {ChatMessage} usageMessage              Le porteur de la résolution.
- * @param {{ability: string, dc: number, activity: string}} save  La sauvegarde du plan.
- * @param {Array<{token: string, actor: string}>} targets  Cibles dont on attend le jet.
+ * Triggers the expected saving throws: the engine rolls for NPCs (and PCs with no connected player); each player sees their roll
+ * window (request) open on their side, and only receives the system's request card if they closed it or did not answer.
+ * Active GM only.
+ * @param {ChatMessage} usageMessage              The bearer of the resolution.
+ * @param {{ability: string, dc: number, activity: string}} save  The plan's save.
+ * @param {Array<{token: string, actor: string}>} targets  Targets whose roll is awaited.
  * @param {object} [options]
- * @param {boolean} [options.askPlayers]  Plusieurs caractéristiques : le joueur choisit (sinon la meilleure).
- * @param {boolean} [options.askGM]       Idem pour une cible jetée par le MJ (PNJ, PJ sans joueur connecté).
- * @param {string|null} [options.auto]    L'outil de scénario `autoReact` (§36 : Présage — "none" : personne ; "first" : sans fenêtre).
+ * @param {boolean} [options.askPlayers]  Several abilities: the player chooses (otherwise the best one).
+ * @param {boolean} [options.askGM]       Same for a target rolled by the GM (NPC, PC with no connected player).
+ * @param {string|null} [options.auto]    The scenario tool `autoReact` (§36: Portent — "none": nobody; "first": no window).
  */
 export async function requestSaves(usageMessage, save, targets, { askPlayers=true, askGM=false, auto=null }={}) {
   const activity = activityFor(usageMessage, save.activity);
   if ( !activity ) return;
   const { dc } = save;
   const heightened = heightenedTarget(activity, usageMessage, targets);
-  // §249 : l'Avantage ou le Désavantage donné par cible par celui qui a utilisé l'activité (le MJ devant un piège).
+  // §249: the Advantage or Disadvantage given per target by whoever used the activity (the GM in front of a trap).
   const given = normalizeTargetModes(usageMessage.getFlag(MODULE_ID, "targetModes"));
   const requested = [];
   const asked = [];
-  // §36 : un devin qui décline le Présage pour une cible n'est plus consulté pour les autres (Boule de feu : une question, pas cinq).
+  // §36: a diviner who declines Portent for one target is no longer consulted for the others (Fireball: one question, not five).
   const declined = new Set();
   let ability = save.ability;
 
@@ -435,19 +435,19 @@ export async function requestSaves(usageMessage, save, targets, { askPlayers=tru
     if ( !actor ) continue;
     const abilities = save.abilities ?? [save.ability];
     ability = bestSaveAbility(actor, abilities);
-    // §157 : « une Créature artificielle a le Désavantage au jet de sauvegarde » (Fracassement) — `saveDisadvantageFor` du contenu.
+    // §157: "a Construct has Disadvantage on the saving throw" (Shatter) — `saveDisadvantageFor` from the content.
     const byType = (contentOf(activity.item).entry?.saveDisadvantageFor ?? []).includes(creatureTypeOf(actor));
-    // §281 : Inexorable — les sauvegardes contre la Lutte et la Bousculade d'un agrippeur qui l'a (Frappe à mains nues) ont le Désavantage.
+    // §281: Relentless — saves against the Grapple and Shove of a grappler that has it (Unarmed Strike) have Disadvantage.
     const inescapable = unarmedSave(activity) && await inescapableFor(activity.actor, token.name);
     if ( inescapable ) console.log(`${MODULE_ID} | ${activity.item.name}: ${token.name} has Disadvantage against the grapple or shove`);
     const mode = saveModeFor(given, token.uuid);
-    // C12-e : Embuscade magique, Fragilisation occulte — le Désavantage que le lanceur impose.
+    // C12-e: Magical Ambush, "Occult Weakening" — the Disadvantage that the caster imposes.
     const imposed = usageMessage.getFlag(MODULE_ID, "resave") ? null : casterImposedDisadvantage(activity, token);
     if ( imposed ) console.log(`${MODULE_ID} | ${imposed}: ${token.name} has Disadvantage on its saving throw against ${activity.item.name}`);
-    // C12-b : le Sort intensifié vaut pour toutes les sauvegardes du sort, rejouées comprises (Immobilisation de personne) — la cible est
-    // notée sur son acteur au lancement (par item), lue à chaque sauvegarde rejouée, oubliée au lancement suivant sans l'option.
+    // C12-b: Heightened Spell applies to all the spell's saves, replayed ones included (Hold Person) — the target is
+    // noted on its actor at casting (per item), read at each replayed save, forgotten at the next casting without the option.
     const heightenedNow = await heightenedMark(usageMessage, activity, token, heightened);
-    // Armure démoniaque : un objet porté donne le Désavantage contre les sauvegardes d'une créature d'un sous-type.
+    // "Demonic Armor": a worn item gives Disadvantage against the saves of a creature of a subtype.
     const cursed = saveDisadvantageAgainst(actor, activity.actor);
     if ( cursed ) console.log(`${MODULE_ID} | ${cursed.name}: ${token.name} has Disadvantage against ${activity.item.name}`);
     const disadvantage = heightenedNow || byType || inescapable || !!imposed || !!cursed || mode.disadvantage;
@@ -455,13 +455,13 @@ export async function requestSaves(usageMessage, save, targets, { askPlayers=tru
     if ( given?.[token.uuid] ) console.log(`${MODULE_ID} | ${activity.item.name}: ${token.name} has ${given[token.uuid]} on its saving throw (given by the user)`);
     if ( heightenedNow ) console.log(`${MODULE_ID} | Heightened Spell: ${token.name} has Disadvantage on its saving throw`);
     else if ( byType ) console.log(`${MODULE_ID} | ${activity.item.name}: ${token.name} (${creatureTypeOf(actor)}) has Disadvantage on its saving throw`);
-    // §36 : Présage — « à décider avant le jet » : un devin qui voit la cible peut remplacer son d20 par un jet noté. La question
-    // retient la demande (jusqu'à la réponse ou au délai de la fenêtre) : c'est le prix de « avant le jet ».
+    // §36: Portent — "to be decided before the roll": a diviner who sees the target can replace its d20 with a noted
+    // roll. The question holds the request back (until the answer or the window's timeout): that is the price of "before the roll".
     const foretold = (await foretellFor(token, { kind: "save", item: activity.item.name, auto, declined }))?.value ?? null;
     if ( foretold !== null ) console.log(`${MODULE_ID} | Portent: ${token.name}'s saving throw will use ${foretold} on the d20`);
     const userId = rollerFor(actor);
     if ( userId ) {
-      // Sans attendre : les joueurs lancent en parallèle, les PNJ n'attendent personne.
+      // Without waiting: the players roll in parallel, the NPCs wait for nobody.
       asked.push(queryPlayer(game.users.get(userId), SAVE_QUERY,
         { usage: usageMessage.id, token: token.uuid, ability, abilities, ask: askPlayers, dc, item: activity.item.name, activity: activity.uuid, advantage, disadvantage, foretold },
         { timeout: SAVE_TIMEOUT, actor, label: waitLabel("Sauvegarde", { item: activity.item.name }) })
@@ -474,7 +474,7 @@ export async function requestSaves(usageMessage, save, targets, { askPlayers=tru
     await actor.rollSavingThrow(rollConfig, { configure: false }, messageConfig);
   }
 
-  // Sans bloquer la file du moteur : un joueur peut prendre son temps devant sa fenêtre.
+  // Without blocking the engine's queue: a player may take their time in front of their window.
   Promise.all(asked).then(() => {
     if ( !requested.length ) return null;
     return ChatMessage.implementation.create({
@@ -488,24 +488,23 @@ export async function requestSaves(usageMessage, save, targets, { askPlayers=tru
 }
 
 /**
- * Applique des effets de l'activité à une cible, exactement comme le plateau d'effets du système
- * (mise à l'échelle, dépendance à la concentration, origine). On passe par son élément
- * `<effect-application>`, dont `_applyEffectToActor` est protégée et non privée
- * (applications/components/effect-application.mjs:216) : pas de patch, mais une méthode non
- * documentée — à revérifier à chaque version du système. MJ actif uniquement.
- * @param {ChatMessage} usageMessage  Le porteur de la résolution.
+ * Applies effects of the activity to a target, exactly like the system's effects tray
+ * (scaling, dependence on Concentration, origin). It goes through its `<effect-application>` element,
+ * whose `_applyEffectToActor` is protected and not private
+ * (applications/components/effect-application.mjs:216): no patch, but an undocumented method —
+ * to be rechecked at each version of the system. Active GM only.
+ * @param {ChatMessage} usageMessage  The bearer of the resolution.
  * @param {string} tokenUuid
- * @param {Array<{id: string, activity: string}>} refs  Effets du plan (core/action.mjs).
- * @returns {Promise<string[]>}  UUID des effets posés sur la cible.
+ * @param {Array<{id: string, activity: string}>} refs  Effects of the plan (core/action.mjs).
+ * @returns {Promise<string[]>}  UUIDs of the effects placed on the target.
  */
 /**
- * Répare une activité de sauvegarde dont la caractéristique est vide, en la relisant dans le
- * compendium d'où vient l'item. Vu en jeu le 2026-09-20 : les personnages prétirés du module
- * premium PHB embarquent un *Mains brûlantes* dont `save.ability` vaut `[""]`, alors que le sort
- * du compendium porte `["dex"]`. Sans caractéristique, ni le moteur ni le bouton « Sauvegarde »
- * du système ne savent quoi lancer. La correction est écrite sur l'item : elle ne se refait pas.
- * MJ actif uniquement.
- * @returns {Promise<boolean>}  true si l'item a été réparé.
+ * Repairs a save activity whose ability is empty, by rereading it from the compendium the item comes from.
+ * Seen in play on 2026-09-20: the pregenerated characters of the premium PHB module ship a *Burning Hands* whose
+ * `save.ability` is `[""]`, while the compendium spell carries `["dex"]`. Without an ability, neither the engine nor the
+ * system's "Save" button knows what to roll. The fix is written on the item: it is not redone.
+ * Active GM only.
+ * @returns {Promise<boolean>}  true if the item was repaired.
  */
 export async function repairSaveAbility(message) {
   const activity = message.getAssociatedActivity?.();
@@ -522,7 +521,7 @@ export async function repairSaveAbility(message) {
   return true;
 }
 
-/** §281 : une sauvegarde de Lutte ou de Bousculade — celle d'un item dont une attaque est une frappe à mains nues (Frappe à mains nues). */
+/** §281: a Grapple or Shove save — one from an item with an attack that is an Unarmed Strike (Unarmed Strike). */
 function unarmedSave(activity) {
   return (activity?.type === "save") && !!activity.item?.system?.activities?.some?.(a => a.attack?.type?.classification === "unarmed");
 }

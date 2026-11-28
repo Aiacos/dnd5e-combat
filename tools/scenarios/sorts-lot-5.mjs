@@ -1,11 +1,11 @@
 /**
- * §287 : chantiers du 2026-10-30, lot 5 (lumières), monde `dnd-6`, Arène de test. Le Clerc reçoit les sorts du Manuel des joueurs (à
- * volonté, rien de consommé). Vérifie :
- *  - Rayon de soleil : l'« Initial Cast » fait briller le Clerc (9 m vive, 18 m en tout), l'effet lumineux dépend de sa concentration
- *    et part avec elle ;
- *  - Ténèbres : posées sur le Zombi qui brille des Lueurs féeriques (niveau 1), elles les dissipent (effet retiré, carte « dissipe ») ;
- *    une Lumière du jour (niveau 3) recouverte reste.
- * Remet positions, effets, régions.
+ * §287: work items of 2026-10-30, batch 5 (lights), world `dnd-6`, Test Arena. The Cleric receives the Player's Handbook spells
+ * (at will, nothing consumed). Checks:
+ *  - Sunbeam: the "Initial Cast" makes the Cleric shine (9 m Bright Light, 18 m in all), the light effect depends on his
+ *    Concentration and goes away with it;
+ *  - Darkness: placed on the Zombie who shines with Faerie Fire (level 1), it dispels them (effect removed, "dispels" card);
+ *    a covered Daylight (level 3) stays.
+ * Puts back positions, effects, regions.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -81,7 +81,7 @@ export default {
       const lit = await tokenLight(zombi);
       if ( !ctx.expect((lit.dim ?? 0) > 0, `le Zombi brille des Lueurs féeriques (${lit.bright}/${lit.dim})`) ) return;
       const z = await centerOf(zombi);
-      // Lumière du jour (niveau 3) sur le Zombi d'abord : rien à dissiper encore.
+      // Daylight (level 3) on the Zombie first: nothing to dispel yet.
       await ctx.use({ tokenId: cleric.id, itemId: ids.daylight, consume: false, area: { shape: "circle", x: z.x, y: z.y, radius: 12 * grid } });
       await pause(1500);
       const since = await ctx.lastMessageId();

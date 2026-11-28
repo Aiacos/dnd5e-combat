@@ -1,20 +1,22 @@
 /**
- * Issue #42 : Ténèbres et Vision du diable, dans l'« Arène de la vision » (`node tools/arene-vision.mjs` d'abord). L'Occultiste du
- * diable lance Ténèbres depuis sa fiche sur la Cible dans les ténèbres ; puis, pour chaque observateur, ce que jugent les règles
- * (`api.mcp.visionMatrix`, `canSee` — c'est lui qui refuse une cible « pas en vue ») et ce que montre l'écran par ses yeux.
+ * Issue #42: Darkness and Devil's Sight, in the "Vision Arena" (`node tools/arene-vision.mjs` first). The Devil's Sight
+ * Warlock casts Darkness from their sheet on the Target in the darkness; then, for each observer, what the rules judge
+ * (`api.mcp.visionMatrix`, `canSee` — it is what refuses a "not in view" target) and what the screen shows through their eyes.
  *
- * Règles attendues (PHB 2024) :
- *  - Humain, Rôdeur elfe (vision dans le noir) : ne voient ni la cible dans les ténèbres, ni celle derrière ; voient le témoin au loin.
- *  - Occultiste du diable (Vision du diable, 120 ft) : voit dans les ténèbres et à travers ; plus au-delà de 120 ft.
- *  - Vision véritable (120 ft) : voit dans et à travers. Vision aveugle (30 ft) : la cible dans les ténèbres (25 ft), pas celle derrière.
- * Puis Aveuglé (Occultiste, Vision véritable, Vision aveugle) et Assourdi (Humain) : seule la vision aveugle perçoit encore, le reste
- * s'entend (contour de l'ouïe) ; l'Assourdi n'entend plus rien.
- * Puis Lumière du jour à côté : les Ténèbres sont dissipées, l'Humain voit de nouveau.
- * Écran : ce que les règles voient s'affiche net (« seen ») ou par le contour de son sens (« outline » : vision aveugle, vision
- * véritable, filtres de dnd5e ; la Vision du diable, nette avec son liseré rouge sombre) — jamais « veiled » (jugée visible mais dessinée
- * sous le voile de vision : silhouette noire chez le joueur, issue #42 suite) ; ce qu'elles ne voient pas n'est jamais net (caché, ou contour de l'ouïe, « heard », §62). Puis le même relevé réglage « Vision simulée » coupé, pour comparer avec le rendu du cœur seul (journal, sans attente).
+ * Expected rules (PHB 2024):
+ *  - Human, Elf Ranger (Darkvision): see neither the target in the darkness, nor the one behind; see the witness far away.
+ *  - Devil's Sight Warlock (Devil's Sight, 120 ft): sees in the darkness and through; not beyond 120 ft.
+ *  - Truesight (120 ft): sees in and through. Blindsight (30 ft): the target in the darkness (25 ft), not the one behind.
+ * Then Blinded (Warlock, Truesight, Blindsight) and Deafened (Human): only Blindsight still perceives, the rest
+ * is heard (hearing outline); the Deafened hears nothing.
+ * Then Daylight next to it: the Darkness is dispelled, the Human sees again.
+ * Screen: what the rules see is shown sharp ("seen") or by the outline of its sense ("outline": Blindsight, Truesight,
+ * dnd5e filters; Devil's Sight, sharp with its dark red edging) — never "veiled" (judged visible but drawn under the vision
+ * veil: black silhouette for the player, issue #42 follow-up); what they do not see is never sharp (hidden, or hearing outline,
+ * "heard", §62). Then the same survey with the "Simulated Vision" setting off, to compare with the core's rendering alone
+ * (log, without waiting).
  *
- * Sans l'Arène de la vision (autre monde), non applicable : le lanceur saute un scénario dont la scène manque.
+ * Without the Vision Arena (another world), not applicable: the runner skips a scenario whose scene is missing.
  */
 import { ARENE_VISION } from "../lib/stages.mjs";
 
@@ -22,17 +24,17 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const OBSERVERS = ["Humain", "Occultiste du diable", "Rôdeur elfe", "Vision véritable", "Vision aveugle", "Vibrations", "Sens tout", "Voir l'invisible"];
 const TARGETS = ["Cible dans les ténèbres", "Cible derrière les ténèbres", "Cible au loin", "Cible dans le noir", "Cible invisible"];
 
-// observateur → [dans les ténèbres, derrière les ténèbres, au loin (témoin), dans le noir (obscurité ordinaire), invisible] : les règles
-// voient-elles ? Distances (diagonales à 5 ft) : voir ARENE_VISION.
+// observer → [in the darkness, behind the darkness, far away (witness), in the dark (ordinary dark), invisible]: do the
+// rules see? Distances (diagonals at 5 ft): see ARENE_VISION.
 const EXPECTED = Object.fromEntries(Object.entries({
   "Humain":               [false, false, true, false, false],
-  "Rôdeur elfe":          [false, false, true, true,  false],   // vision dans le noir 60 ft : le noir ordinaire, pas les Ténèbres
-  "Occultiste du diable": [true,  true,  true, true,  false],   // Vision du diable 120 ft : « voit normalement », pas l'invisible
+  "Rôdeur elfe":          [false, false, true, true,  false],   // Darkvision 60 ft: ordinary dark, not Darkness
+  "Occultiste du diable": [true,  true,  true, true,  false],   // Devil's Sight 120 ft: "sees normally", not the invisible
   "Vision véritable":     [true,  true,  true, true,  true],
-  "Vision aveugle":       [true,  false, true, true,  true],    // 30 ft : la cible derrière les Ténèbres est à 55 ft
-  "Vibrations":           [false, false, true, false, false],   // la perception des vibrations localise, elle ne voit pas (#118) : seule sa vue compte
-  "Sens tout":            [true,  true,  true, true,  true],    // mode générique du cœur, 120 ft, ni murs ni lumière
-  "Voir l'invisible":     [false, false, true, false, true]     // une vue : ni Ténèbres ni noir, mais l'invisible en pleine lumière
+  "Vision aveugle":       [true,  false, true, true,  true],    // 30 ft: the target behind the Darkness is at 55 ft
+  "Vibrations":           [false, false, true, false, false],   // Tremorsense locates, it does not see (#118): only its sight counts
+  "Sens tout":            [true,  true,  true, true,  true],    // the core's generic mode, 120 ft, no walls or light
+  "Voir l'invisible":     [false, false, true, false, true]     // a sight: no Darkness, no dark, but the invisible in full light
 }).map(([name, row]) => [name, Object.fromEntries(TARGETS.map((t, i) => [t, row[i]]))]));
 
 export default {
@@ -56,12 +58,12 @@ export default {
       }
     };
 
-    // 0. Avant les Ténèbres et le noir : tout le monde voit tout (pleine lumière), sauf la Cible invisible.
+    // 0. Before the Darkness and the dark: everyone sees everything (full light), except the invisible Target.
     const before = (await matrix()).filter(r => r.target !== "Cible invisible");
     ctx.expect(before.every(r => r.rules.sees === true), "pleine lumière : chaque observateur voit chaque cible visible (règles)");
     ctx.expect(before.every(r => ["seen", "outline"].includes(r.screen)), "pleine lumière : chaque cible visible s'affiche");
 
-    // 1. Ténèbres depuis la fiche de l'Occultiste du diable, centrées sur la Cible dans les ténèbres.
+    // 1. Darkness from the Devil's Sight Warlock's sheet, centered on the Target in the darkness.
     const box = await ctx.box(tokens[ARENE_VISION.darknessOn]);
     const centre = { x: box.x + (box.width / 2), y: box.y + (box.height / 2) };
     const dark = await ctx.use({ tokenId: warlock.id, identifier: "darkness", area: { shape: "circle", ...centre, radius: 3 * grid } });
@@ -69,7 +71,7 @@ export default {
     if ( !dark.regionId ) return;
     ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: dark.regionId }).catch(() => {}));
 
-    // 1 bis. Obscurité ordinaire (sans sort) autour de la Cible dans le noir : une région « Ajuster l'obscurité », comme `furtivite-bg3`.
+    // 1 bis. Ordinary dark (no spell) around the Target in the dark: an "Adjust Darkness" region, like `furtivite-bg3`.
     const { sceneId } = await ctx.scene();
     const [dx, dy, dw, dh] = ARENE_VISION.dark;
     const night = await ctx.call("create-region", { sceneId, name: "Obscurité (essai)", color: "#000000",
@@ -79,21 +81,21 @@ export default {
     ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: nightId }).catch(() => {}));
     await pause(2000);
 
-    // 2. Règles et écran, observateur par observateur. Le témoin : la Vision du diable et la vision véritable traversent les ténèbres.
+    // 2. Rules and screen, observer by observer. The witness: Devil's Sight and Truesight see through the darkness.
     const rows = await matrix();
     show(rows);
     for ( const r of rows ) {
       const want = EXPECTED[r.observer]?.[r.target];
       if ( want === undefined ) continue;
       ctx.expect(r.rules.sees === want, `${r.observer} ${want ? "voit" : "ne voit pas"} ${r.target} (règles)`);
-      // #118 : la perception des vibrations ne voit pas, mais elle localise (60 ft, ni murs ni lumière) — chaque cible a une position connue.
+      // #118: Tremorsense does not see, but it locates (60 ft, no walls or light) — every target has a known position.
       if ( r.observer === "Vibrations" ) ctx.expect(r.rules.locates === true, `Vibrations localise ${r.target} (règles)`);
-      // Vue : nette, ou par le contour de son propre sens (vision aveugle, vision véritable : le filtre de dnd5e) — jamais l'ouïe.
+      // Sight: sharp, or by the outline of its own sense (Blindsight, Truesight: dnd5e's filter) — never hearing.
       if ( r.rules.sees ) ctx.expect(["seen", "outline"].includes(r.screen), `${r.observer} : ${r.target} vue par les règles, affichée par sa vue ou son sens (écran : ${r.screen})`);
       else ctx.expect(r.screen !== "seen", `${r.observer} : ${r.target} non vue par les règles, jamais nette à l'écran (écran : ${r.screen})`);
     }
 
-    // 2 bis. Le refus de cible (le panneau de l'issue) : Maléfice, « une créature que vous voyez », prêté à l'Occultiste et à l'Humain.
+    // 2 bis. Target refusal (the issue's panel): Hex, "a creature you can see", lent to the Warlock and the Human.
     const HEX = "Compendium.dnd-players-handbook.spells.phbsplHex0000000";
     for ( const name of ["Occultiste du diable", "Humain"] ) await ctx.ensureItem(tokens[name], HEX, { system: { method: "atwill" } });
     const aimed = ["Cible dans les ténèbres", "Cible derrière les ténèbres"].map(n => tokens[n].id);
@@ -103,14 +105,15 @@ export default {
     const blind = await ctx.engine("sightIssues", { tokenId: tokens["Humain"].id, identifier: "hex", targetIds: aimed });
     ctx.expect(blind.unseen.length === 2, `l'Humain, lui, ne peut pas (refusées : ${blind.unseen.join(", ") || "aucune"})`);
 
-    // 2 ter. Issue #42, suite (Archibald, 0.281.0) : le curseur de visée (`rangeStatus`) — de l'extérieur des Ténèbres, il refusait « pas en
-    // vue » la cible que les règles voyaient (rond barré). Les bords des Ténèbres ne sont plus une ligne de vue coupée : voir, c'est `canSee`.
+    // 2 ter. Issue #42, follow-up (Archibald, 0.281.0): the targeting cursor (`rangeStatus`) — from outside the Darkness, it
+    // refused "not in view" a target the rules saw (crossed circle). The edges of the Darkness are no longer a cut line of sight:
+    // seeing is `canSee`.
     ctx.expect(!seer.cursorRefused.length, `de l'extérieur, le curseur de l'Occultiste du diable accepte les cibles dans et derrière les Ténèbres (refusées : ${seer.cursorRefused.join(", ") || "aucune"})`);
     ctx.expect(!blind.cursorRefused.length, `le curseur ne refuse plus l'Humain sur les seules Ténèbres — la légalité juge la vue (refusées : ${blind.cursorRefused.join(", ") || "aucune"})`);
 
-    // 2 quater. L'effet d'Archibald (`token.detectionModes.devilsSight.range` en override, à la place de celui du PHB) : avec lui, chaque
-    // mise à jour de l'acteur refait les données du token et effaçait la Vision du diable donnée en mémoire — contour de l'ouïe à l'écran.
-    // Relevé sans remise en place de toutes les sources (`screenAfterUpdate`), ce que `visionMatrix` ne voit pas.
+    // 2 quater. Archibald's effect (`token.detectionModes.devilsSight.range` as an override, instead of the PHB's): with it, each
+    // actor update rebuilt the token data and erased the Devil's Sight given in memory — hearing outline on screen.
+    // Survey without resetting all the sources (`screenAfterUpdate`), which `visionMatrix` does not see.
     const archibald = async () => {
       const after = await ctx.engine("screenAfterUpdate", { observerId: warlock.id, targetIds: aimed });
       ctx.log(`  après une mise à jour de l'acteur : ${Object.entries(after.after).map(([n, v]) => `${n} ${v}`).join(", ")} (modes : ${after.modes.join(", ")})`);
@@ -141,7 +144,7 @@ export default {
     if ( phb ) await ctx.call("upsert-embedded-effect", { uuid: itemUuid, effectData: { disabled: false }, match: { path: "_id", value: phb._id } });
     await pause(1000);
 
-    // 2 quinquies. En mètres (la table d'Archibald) : la scène passe à des cases de 1,5 m — 120 ft valent 36 m ; règles, curseur, écran.
+    // 2 quinquies. In meters (Archibald's table): the scene switches to 1.5 m cells — 120 ft is 36 m; rules, cursor, screen.
     const { data: sceneData } = await ctx.call("get-scene", { sceneId }).then(r => ({ data: r.data ?? r })).catch(() => ({ data: null }));
     const grid0 = { units: sceneData?.grid?.units ?? "ft", distance: sceneData?.grid?.distance ?? 5 };
     ctx.restore(() => ctx.call("update-scene", { sceneId, sceneData: { "grid.units": grid0.units, "grid.distance": grid0.distance } }).catch(() => {}));
@@ -157,18 +160,18 @@ export default {
     await ctx.call("update-scene", { sceneId, sceneData: { "grid.units": grid0.units, "grid.distance": grid0.distance } });
     await pause(2500);
 
-    // 2 sexies. Issue #42, suite (0.281.1) : le RENDU. Visée acceptée, mais le token dans les Ténèbres restait une silhouette noire chez le
-    // joueur : le mode, sans filtre, n'était dessiné que sous le voile de vision (« veiled »). Il porte maintenant le liseré rouge sombre
-    // de la Vision du diable, token entier, au-dessus du voile.
+    // 2 sexies. Issue #42, follow-up (0.281.1): the RENDERING. Targeting accepted, but the token in the Darkness stayed a black
+    // silhouette for the player: the mode, without a filter, was drawn only under the vision veil ("veiled"). It now carries
+    // the dark red edging of Devil's Sight, whole token, above the veil.
     const drawn = (await ctx.engine("visionMatrix", { observerIds: [warlock.id], targetIds: aimed })).rows;
     for ( const r of drawn ) {
       ctx.log(`  rendu : ${r.target} écran ${r.screen}, filtre ${JSON.stringify(r.filter)}`);
       ctx.expect(r.screen === "seen" && r.filter === "devilsSight", `de l'extérieur, ${r.target} s'affiche avec le liseré de la Vision du diable, au-dessus du voile (écran : ${r.screen}, filtre : ${JSON.stringify(r.filter)})`);
     }
-    // Le témoin en pleine lumière : vu par la vue de base, sans liseré.
+    // The witness in full light: seen by base sight, no edging.
     const lit = (await ctx.engine("visionMatrix", { observerIds: [warlock.id], targetIds: [tokens["Cible au loin"].id] })).rows[0];
     ctx.expect(lit.screen === "seen" && lit.filter === null, `en pleine lumière, aucun liseré (écran : ${lit.screen}, filtre : ${JSON.stringify(lit.filter)})`);
-    // Aveuglé : la Vision du diable est une vue — plus de liseré, le contour de l'ouïe seul.
+    // Blinded: Devil's Sight is a sight — no more edging, the hearing outline alone.
     ctx.restore(() => ctx.call("set-status", { tokenId: warlock.id, statusId: "blinded", active: false }).catch(() => {}));
     await ctx.call("set-status", { tokenId: warlock.id, statusId: "blinded", active: true });
     await pause(1500);
@@ -177,9 +180,9 @@ export default {
     await ctx.call("set-status", { tokenId: warlock.id, statusId: "blinded", active: false });
     await pause(1000);
 
-    // 2 septies. Le plan Éthéré (§225 ; sauté si le réglage « Plan éthéré automatisé » est coupé). Occultiste éthéré : il voit le plan
-    // matériel jusqu'à 60 ft — la cible dans les Ténèbres (55 ft) avec la teinte de la Vision du diable, pas celle derrière (85 ft).
-    // Puis cible éthérée et occultiste matériel : la Vision du diable ne voit pas dans l'Éthéré.
+    // 2 septies. The Ethereal plane (§225; skipped if the "Automated Ethereal Plane" setting is off). Ethereal Warlock: sees the
+    // material plane up to 60 ft — the target in the Darkness (55 ft) with the Devil's Sight tint, not the one behind (85 ft).
+    // Then ethereal target and material Warlock: Devil's Sight does not see into the Ethereal.
     const ethereal = await ctx.call("get-setting", { namespace: "dnd5e-combat", key: "etherealPlane" }).then(r => r?.value ?? r).catch(() => null);
     if ( ethereal === false ) ctx.log("  plan Éthéré automatisé coupé : phase sautée");
     else {
@@ -203,7 +206,7 @@ export default {
       await pause(1000);
     }
 
-    // 3. Portée de la Vision du diable : l'Occultiste à 125 ft de la cible dans les ténèbres (colonne 42).
+    // 3. Devil's Sight range: the Warlock 125 ft from the target in the darkness (column 42).
     const [, row] = ARENE_VISION.tokens["Occultiste du diable"];
     const far = await ctx.call("move-token", { tokenId: warlock.id, x: 42 * grid, y: row * grid, elevation: 0 });
     ctx.expect(!!far, "Occultiste du diable déplacé à 125 ft");
@@ -216,8 +219,8 @@ export default {
     await ctx.call("move-token", { tokenId: warlock.id, x: x0 * grid, y: y0 * grid, elevation: 0 });
     await pause(800);
 
-    // 4 bis. Aveuglé et Assourdi : la Vision du diable et la vision véritable s'éteignent, la vision aveugle reste ; l'Assourdi n'entend
-    // plus rien (pas de contour, pas d'oreille).
+    // 4 bis. Blinded and Deafened: Devil's Sight and Truesight go out, Blindsight stays; the Deafened hears
+    // nothing (no outline, no ear).
     const status = (name, statusId, active) => ctx.call("set-status", { tokenId: tokens[name].id, statusId, active });
     const BLINDED = ["Occultiste du diable", "Vision véritable", "Vision aveugle"];
     for ( const name of BLINDED ) { ctx.restore(() => status(name, "blinded", false).catch(() => {})); await status(name, "blinded", true); }
@@ -227,7 +230,7 @@ export default {
     const BLIND_EXPECTED = {
       "Occultiste du diable": [false, false, false, false, false],
       "Vision véritable":     [false, false, false, false, false],
-      "Vision aveugle":       [true,  false, true,  true,  true]    // 30 ft : dans les Ténèbres, le témoin, le noir, l'Invisible
+      "Vision aveugle":       [true,  false, true,  true,  true]    // 30 ft: in the Darkness, the witness, the dark, the Invisible
     };
     const impaired = (await ctx.engine("visionMatrix", { observerIds: [...BLINDED, "Humain"].map(n => tokens[n].id), targetIds: TARGETS.map(n => tokens[n].id) })).rows;
     ctx.log("Aveuglé (Occultiste, Vision véritable, Vision aveugle), Assourdi (Humain) :");
@@ -242,16 +245,16 @@ export default {
       const want = BLIND_EXPECTED[r.observer][TARGETS.indexOf(r.target)];
       ctx.expect(r.rules.sees === want, `${r.observer} Aveuglé ${want ? "perçoit" : "ne voit pas"} ${r.target} (règles)`);
       if ( r.rules.sees ) ctx.expect(["seen", "outline"].includes(r.screen), `${r.observer} Aveuglé : ${r.target} affichée par son sens (écran : ${r.screen})`);
-      // Ce qu'il ne perçoit pas, il l'entend : le contour de l'ouïe, même Aveuglé (le cœur saute la perception de la lumière d'une
-      // source aveuglée ; le mode `dasHearing` du moteur prend le relais).
+      // What it does not perceive, it hears: the hearing outline, even Blinded (the core skips light perception from a blinded
+      // source; the engine's `dasHearing` mode takes over).
       else ctx.expect(r.screen === (r.rules.hears ? "heard" : "hidden"), `${r.observer} Aveuglé : ${r.target} ${r.rules.hears ? "entendue" : "absente"} à l'écran (écran : ${r.screen})`);
     }
     for ( const name of BLINDED ) await status(name, "blinded", false);
     await status("Humain", "deafened", false);
     await pause(800);
 
-    // 4 ter. Le geste du MJ : le Rôdeur elfe déjà sélectionné, puis Aveuglé à la main — le cœur ne refait que sa source de vision
-    // (placeables/token.mjs:4580), pas toutes : l'ouïe en mémoire doit survivre (elle disparaissait, vu le 2026-11-08).
+    // 4 ter. The GM's gesture: the Elf Ranger already selected, then Blinded by hand — the core redoes only its vision source
+    // (placeables/token.mjs:4580), not all of them: the hearing in memory must survive (it disappeared, seen on 2026-11-08).
     const ranger = tokens["Rôdeur elfe"];
     ctx.restore(() => ctx.engine("controlToken", { tokenId: null }).catch(() => {}));
     await ctx.engine("controlToken", { tokenId: ranger.id });
@@ -266,7 +269,7 @@ export default {
     await ctx.engine("controlToken", { tokenId: null });
     await pause(800);
 
-    // 4 quater. Lumière du jour (niveau 3) posée à 20 ft des Ténèbres (niveau 2) : elles sont dissipées, l'Humain voit la cible.
+    // 4 quater. Daylight (level 3) placed 20 ft from the Darkness (level 2): they are dispelled, the Human sees the target.
     const human = tokens["Humain"];
     await ctx.ensureItem(human, "Compendium.dnd-players-handbook.spells.phbsplDaylight00", { system: { method: "atwill" } });
     ctx.restore(() => ctx.removeEffectsNamed(human, /concentr/i));
@@ -284,7 +287,7 @@ export default {
       await pause(1000);
     }
 
-    // 4. Réglage « Vision simulée » coupé : le rendu du cœur seul, pour comparaison (journal).
+    // 4. "Simulated Vision" setting off: the core's rendering alone, for comparison (log).
     const setting = await ctx.call("get-setting", { namespace: "dnd5e-combat", key: "vision" });
     const was = setting?.value ?? setting;
     ctx.restore(() => ctx.call("set-setting", { namespace: "dnd5e-combat", key: "vision", value: was }));

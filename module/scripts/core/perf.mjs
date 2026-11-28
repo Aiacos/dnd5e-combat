@@ -1,12 +1,12 @@
 /**
- * §98 : relevé des temps du moteur — par inscrit du routeur (hook + libellé) : le temps SYNCHRONE de chaque appel (le calcul qui bloque
- * le navigateur) et, pour un inscrit qui rend une promesse, le temps jusqu'à sa fin (attentes comprises : une réponse de joueur, un jet
- * de dés 3D — informatif, pas un coût de calcul). Pur : l'horloge est donnée.
+ * §98: engine timing survey — per router registrant (hook + label): the SYNCHRONOUS time of each call (the computation that
+ * blocks the browser) and, for a registrant that returns a promise, the time until it settles (waits included: a player's
+ * answer, a 3D dice roll — informational, not a computation cost). Pure: the clock is given.
  */
 
 /**
  * @param {object} [options]
- * @param {number} [options.threshold=50]  Au-delà (ms, synchrone), l'appel est « lent » et signalé (`onSlow`).
+ * @param {number} [options.threshold=50]  Beyond this (ms, synchronous), the call is "slow" and reported (`onSlow`).
  * @param {(row: object, ms: number) => void} [options.onSlow]
  */
 export function createPerf({ threshold=50, onSlow=() => {} }={}) {
@@ -19,7 +19,7 @@ export function createPerf({ threshold=50, onSlow=() => {} }={}) {
     return row;
   };
   return {
-    /** Un appel : `kind` "sync" (le temps bloquant) ou "async" (jusqu'à la fin de la promesse). */
+    /** A call: `kind` "sync" (the blocking time) or "async" (until the promise settles). */
     record(hook, label, kind, ms) {
       if ( !Number.isFinite(ms) || (ms < 0) ) return;
       const row = rowOf(hook, label);
@@ -36,7 +36,7 @@ export function createPerf({ threshold=50, onSlow=() => {} }={}) {
         onSlow(row, ms);
       }
     },
-    /** Les lignes, les plus coûteuses d'abord (temps synchrone cumulé), arrondies au dixième de ms. */
+    /** The rows, most expensive first (cumulative synchronous time), rounded to a tenth of a ms. */
     report() {
       const r = n => Math.round(n * 10) / 10;
       return Array.from(rows.values())

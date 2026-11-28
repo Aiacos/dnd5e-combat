@@ -1,7 +1,7 @@
 /**
- * Attaque de sort à distance : Trait de feu de l'Ensorceleur sur un Zombi. On tire jusqu'à
- * toucher une fois (quatre essais au plus) pour exercer aussi le chemin des dégâts ; chaque tir,
- * touché ou raté, est vérifié.
+ * Ranged spell attack: Sorcerer's Fire Bolt on a Zombie. We fire until
+ * a hit lands once (four tries at most) so as to exercise the damage path too; each shot,
+ * hit or miss, is checked.
  */
 export default {
   name: "attaque — Trait de feu → Zombi",

@@ -1,13 +1,14 @@
 /**
- * §408 (issue #44, lot 1) : une règle passée outre, dans l'« Arène des refus » (`node tools/arene-refus.mjs`). Le Mage (pré-tiré
- * Magicien niveau 1 du Manuel, personnage joueur) lance Rayon de givre (60 ft) sans confirmation d'office : la fenêtre de légalité
- * s'ouvre chez le MJ (ici celui qui agit).
- *  1. Hors de portée (la Cible lointaine, à 155 ft) — « Renoncer » : rien n'est lancé, aucune alerte.
- *  2. « Utiliser quand même » : la carte d'utilisation est marquée `overridden` (la seule raison « hors de portée ») ; une alerte MJ
- *     porte la raison et la cible.
- *  3. Neutralisé, contre le Mannequin au contact : la seule raison est l'état.
- *  4. Réglage `forcedAlerts` éteint : la carte est marquée, aucune alerte.
- * Le bandeau sur la carte, la fenêtre chez un joueur et le texte flottant « Forcé » se vérifient au navigateur (`claude player`).
+ * §408 (issue #44, batch 1): a rule overridden, in the "Refusals Arena" (`node tools/arene-refus.mjs`). The Mage (level 1
+ * pre-generated Wizard from the Handbook, player character) casts Ray of Frost (60 ft) with no automatic confirmation:
+ * the legality window opens on the GM's side (here the one who acts).
+ *  1. Out of range (the Distant Target, at 155 ft) — "Give up": nothing is cast, no alert.
+ *  2. "Use anyway": the use card is marked `overridden` (the only reason "out of range"); a GM alert
+ *     carries the reason and the target.
+ *  3. Incapacitated, against the Dummy in melee: the only reason is the condition.
+ *  4. Setting `forcedAlerts` off: the card is marked, no alert.
+ * The banner on the card, the window on a player's side and the floating text "Forced" are checked in the browser
+ * (`claude player`).
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -38,7 +39,7 @@ export default {
       targetTokenIds: [target.id], usageConfig: { [MODULE_ID]: { autoReact: "none" } } });
     const alerts = messages => messages.filter(m => m.flags?.[MODULE_ID]?.gmAlert);
     const usages = messages => messages.filter(m => (m.type === "usage") && (m.flags?.[MODULE_ID]?.overridden?.length));
-    /** Lance, répond `button` à la fenêtre, rend les messages créés depuis. */
+    /** Casts, answers `button` to the window, returns the messages created since. */
     const attempt = async (target, button) => {
       const since = await ctx.lastMessageId();
       await cast(target);
@@ -49,12 +50,12 @@ export default {
       return ctx.messagesSince(since);
     };
 
-    // 1. Hors de portée, renoncé.
+    // 1. Out of range, given up.
     let after = await attempt(far, "cancel");
     if ( !ctx.expect(!!after, "hors de portée : la fenêtre de légalité s'ouvre") ) return;
     ctx.expect(!alerts(after).length && !usages(after).length, `renoncé : ni alerte, ni carte (${after.length} message(s))`);
 
-    // 2. Forcé.
+    // 2. Forced.
     after = await attempt(far, "go");
     if ( !ctx.expect(!!after, "la fenêtre se rouvre") ) return;
     let card = usages(after)[0];
@@ -64,7 +65,7 @@ export default {
     let text = alerts(after)[0]?.flags?.[MODULE_ID]?.gmAlert?.text ?? "";
     ctx.expect(!!text && text.includes(reasons[0] ?? "§") && text.includes("Mage des refus"), `une alerte MJ, avec la raison et qui agit (${text})`);
 
-    // 3. Neutralisé, au contact.
+    // 3. Incapacitated, in melee.
     await ctx.call("set-status", { tokenId: mage.id, statusId: "incapacitated", active: true });
     ctx.restore(() => ctx.call("set-status", { tokenId: mage.id, statusId: "incapacitated", active: false }).catch(() => {}));
     after = await attempt(dummy, "go");
@@ -74,7 +75,7 @@ export default {
       ctx.expect(alerts(after).length === 1, `une alerte MJ (${alerts(after).length})`);
     }
 
-    // 4. Alertes au MJ éteintes : la carte reste marquée.
+    // 4. GM alerts off: the card stays marked.
     await ctx.call("set-setting", { namespace: MODULE_ID, key: "forcedAlerts", value: false });
     ctx.restore(() => ctx.call("set-setting", { namespace: MODULE_ID, key: "forcedAlerts", value: true }).catch(() => {}));
     after = await attempt(dummy, "go");

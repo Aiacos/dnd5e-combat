@@ -1,11 +1,11 @@
 /**
  * §542 (issue #43): players who cannot summon. Arène de test (Magicien), world `dnd-6`.
- *  1. Load alert: dnd5e "Allow Summoning" off, nothing dismissed → the GM's window opens and lists the gap (`api.mcp.summonAlert`, the
- *     same decision as at `ready`); closed again.
- *  2. "Don't show again": with the signature of these gaps kept, the window stays shut; a kind of gap the GM never dismissed brings it
- *     back.
- *  3. A player without the right uses Find Familiar (`api.mcp.summonBlocked` for the first non-GM user: the bench has no player client):
- *     the reason is named and the GM gets a whispered alert card that names the player.
+ *  1. Load alert: dnd5e "Allow Summoning" off, nothing dismissed → the GM's window opens and lists the gap
+ *     (`api.mcp.summonAlert`, the same decision as at `ready`); closed again.
+ *  2. "Don't show again": with the signature of these gaps kept, the window stays shut; a kind of gap the GM never
+ *     dismissed brings it back.
+ *  3. A player without the right uses Find Familiar (`api.mcp.summonBlocked` for the first non-GM user: the bench has no
+ *     player client): the reason is named and the GM gets a whispered alert card that names the player.
  *  4. The world diagnostic lists the gap (read only: no repair offered).
  *  5. "Allow Summoning" on: that reason is gone.
  * The player's own warning (`ui.notifications`) shows on the player's client only: not checked here.

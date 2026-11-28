@@ -1,8 +1,8 @@
 /**
- * §380 (issue #36) : le débogueur intégré — la partie pure. Regrouper les erreurs par signature, attribuer une erreur à un module
- * par sa pile, garder la piste des derniers gestes, nettoyer un rapport de ce qui identifie la table (noms, monde, adresses),
- * l'écrire en Markdown ou en JSON et en tirer l'adresse d'une page GitHub « New issue » pré-remplie.
- * Rien ici ne lit Foundry : l'horloge, les noms et les modules sont donnés.
+ * §380 (issue #36): the built-in debugger — the pure part. Group errors by signature, attribute an error to a module
+ * by its stack, keep track of the last actions, scrub a report of what identifies the table (names, world, addresses),
+ * write it as Markdown or JSON and derive from it the address of a pre-filled GitHub "New issue" page.
+ * Nothing here reads Foundry: the clock, the names and the modules are given.
  */
 
 export const MAX_MESSAGE = 1000;
@@ -17,19 +17,19 @@ export const TRAIL_SNAPSHOT = 10;
 const FRAME_URL = /(?:https?|file):\/\/|\/(?:modules|systems)\//;
 const PACKAGE = /\/(modules|systems)\/([^/?#\s]+)\//;
 
-/** Les lignes d'une pile qui pointent vers un fichier (formats Chrome « at f (url) » et Firefox « f@url »). */
+/** The lines of a stack that point to a file (Chrome "at f (url)" and Firefox "f@url" formats). */
 export function stackFrames(stack) {
   if ( typeof stack !== "string" ) return [];
   return stack.split("\n").map(l => l.trim()).filter(l => l && FRAME_URL.test(l));
 }
 
-/** Le paquet d'une ligne de pile : `{ type: "module" | "system", id }`, ou null (cœur de Foundry, navigateur). */
+/** The package of a stack line: `{ type: "module" | "system", id }`, or null (Foundry core, browser). */
 export function packageOfFrame(frame) {
   const m = PACKAGE.exec(frame ?? "");
   return m ? { type: m[1] === "systems" ? "system" : "module", id: m[2] } : null;
 }
 
-/** Les paquets cités par une pile, dans l'ordre, sans doublon (« system:dnd5e » pour un système). */
+/** The packages cited by a stack, in order, without duplicates ("system:dnd5e" for a system). */
 export function packagesOfStack(stack) {
   const out = [];
   for ( const frame of stackFrames(stack) ) {
@@ -42,10 +42,10 @@ export function packagesOfStack(stack) {
 }
 
 /**
- * Le paquet mis en cause : le premier de la pile qui n'est pas ignoré (le débogueur lui-même, lib-wrapper qui ne fait que relayer).
+ * The package at fault: the first of the stack that is not ignored (the debugger itself, lib-wrapper that only relays).
  * @param {string} stack
  * @param {object} [options]
- * @param {string[]} [options.ignore]  Paquets ou fichiers à sauter (`"lib-wrapper"`, `"dnd5e-combat/scripts/runtime/debug.mjs"`).
+ * @param {string[]} [options.ignore]  Packages or files to skip (`"lib-wrapper"`, `"dnd5e-combat/scripts/runtime/debug.mjs"`).
  */
 export function attribute(stack, { ignore=[] }={}) {
   for ( const frame of stackFrames(stack) ) {
@@ -60,7 +60,7 @@ export function attribute(stack, { ignore=[] }={}) {
 /*  Avis de la suite (issue #238, §517)         */
 /* -------------------------------------------- */
 
-/** Les feuilles texte d'un arbre de traductions (`{ A: { B: "texte" } }` ou clés plates). */
+/** The text leaves of a translation tree (`{ A: { B: "texte" } }` or flat keys). */
 export function translationTexts(tree, out=[]) {
   if ( typeof tree === "string" ) out.push(tree);
   else if ( tree && (typeof tree === "object") ) for ( const value of Object.values(tree) ) translationTexts(value, out);
@@ -68,17 +68,17 @@ export function translationTexts(tree, out=[]) {
 }
 
 const stripTags = text => text.replace(/<[^>]*>/g, "");
-/** Un modèle trop court ou sans mots (« {name} », « Oui ») reconnaîtrait n'importe quoi : écarté. */
+/** A template that is too short or without words ("{name}", "Yes") would recognize anything: discarded. */
 const MIN_LITERAL = 12;
 
 /**
- * Issue #238 : reconnaître un avis de la suite (une notification de l'interface) que la console répète. Foundry écrit le texte d'une
- * notification en console (Notifications#notify, `console: true`) ; si un autre module remplace l'affichage des notifications, la pile
- * de cette ligne ne passe plus par `Notifications.*` et l'avis prenait l'allure d'un avertissement de ce module. Les textes de la suite
- * (ses fichiers de langue, balises retirées, `{x}` = n'importe quoi) le reconnaissent quelle que soit la pile.
- * @param {string[]} templates  Les textes traduits.
- * @returns {(text: string) => boolean}  Le texte contient-il l'un de ces modèles rempli ? (Contient : un module qui réécrit les
- *   notifications peut ajouter son préfixe à la ligne de console.)
+ * Issue #238: recognize a notice from the suite (a UI notification) that the console repeats. Foundry writes the text of a
+ * notification to the console (Notifications#notify, `console: true`); if another module replaces the display of
+ * notifications, the stack of that line no longer goes through `Notifications.*` and the notice looked like a warning from that
+ * module. The suite's texts (its language files, tags removed, `{x}` = anything) recognize it whatever the stack.
+ * @param {string[]} templates  The translated texts.
+ * @returns {(text: string) => boolean}  Does the text contain one of these templates filled in? (Contains: a module that rewrites
+ *   notifications may add its prefix to the console line.)
  */
 export function noticeMatcher(templates) {
   const exact = new Set();
@@ -89,7 +89,7 @@ export function noticeMatcher(templates) {
     if ( literal.length < MIN_LITERAL ) continue;
     if ( !/\{[^{}]+\}/.test(template) ) { exact.add(template); continue; }
     const source = template.split(/\{[^{}]+\}/).map(escapeRegExp).join("[\\s\\S]*?");
-    try { patterns.push(new RegExp(source)); } catch { /* modèle illisible : ignoré */ }
+    try { patterns.push(new RegExp(source)); } catch { /* unreadable pattern: ignored */ }
   }
   return text => {
     const line = stripTags(String(text ?? "")).trim();
@@ -106,7 +106,7 @@ export function noticeMatcher(templates) {
 
 const clip = (text, max) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
-/** Un argument de console en texte : une erreur par « Nom: message », un objet en JSON tronqué. */
+/** A console argument as text: an error as "Name: message", an object as truncated JSON. */
 export function formatArg(arg) {
   if ( arg instanceof Error ) return `${arg.name}: ${arg.message}`;
   if ( (arg === null) || (arg === undefined) ) return String(arg);
@@ -118,9 +118,9 @@ export function formatArg(arg) {
 }
 
 /**
- * Les arguments d'un appel de console en un message, coupé à `MAX_MESSAGE`. Un premier argument chaîne avec des substitutions de
- * console (`%c` styles, `%s` `%d` `%i` `%f` `%o` `%O`) est d'abord rempli : les styles disparaissent, les valeurs prennent leur place
- * (PixiJS écrit « %cPixiJS Deprecation Warning: %c%s », styles, texte).
+ * The arguments of a console call as one message, cut at `MAX_MESSAGE`. A first string argument with console substitutions
+ * (`%c` styles, `%s` `%d` `%i` `%f` `%o` `%O`) is filled in first: the styles disappear, the values take their place
+ * (PixiJS writes "%cPixiJS Deprecation Warning: %c%s", styles, text).
  */
 export function formatArgs(args) {
   const list = Array.from(args ?? []);
@@ -139,7 +139,7 @@ export function formatArgs(args) {
   return clip(parts.join(" ").trim(), MAX_MESSAGE);
 }
 
-/** Un texte qui n'est qu'une pile d'appels (lignes « at … » ou « f@url », « Error » en tête au plus) : PixiJS l'écrit seul. */
+/** A text that is only a call stack ("at …" or "f@url" lines, at most "Error" at the top): PixiJS writes it alone. */
 export function isBareStack(text) {
   const lines = String(text ?? "").split("\n").map(l => l.trim()).filter(Boolean);
   if ( !lines.length ) return false;
@@ -147,23 +147,23 @@ export function isBareStack(text) {
   return (body.length > 0) && body.every(l => /^at\s/.test(l) || /^[^\s@]*@\S+:\d+:\d+$/.test(l));
 }
 
-/** Un avertissement de dépréciation (Foundry « Deprecated since Version », PixiJS « Deprecation Warning », « is deprecated »). */
+/** A deprecation warning (Foundry "Deprecated since Version", PixiJS "Deprecation Warning", "is deprecated"). */
 export const isDeprecation = message => /\bdeprecat/i.test(String(message ?? ""));
 
 /**
- * Un avis connu du navigateur, sans gravité, qui n'est l'erreur de personne : « ResizeObserver loop completed with undelivered
- * notifications » (ou « …limit exceeded ») part quand une mise en page se redimensionne pendant sa propre observation.
+ * A known, harmless browser notice that is nobody's error: "ResizeObserver loop completed with undelivered
+ * notifications" (or "…limit exceeded") is emitted when a layout resizes during its own observation.
  */
 export const isBrowserNoise = message =>
   /^(?:Uncaught\s+)?(?:Error:\s*)?ResizeObserver loop (?:completed with undelivered notifications|limit exceeded)/i
     .test(String(message ?? "").trim());
 
-/** La première erreur parmi des arguments de console (pour sa pile), sinon null. */
+/** The first error among console arguments (for its stack), otherwise null. */
 export function errorIn(args) {
   return Array.from(args ?? []).find(a => a instanceof Error) ?? null;
 }
 
-/** Hachage FNV-1a 32 bits en hexadécimal : court, stable, sans dépendance. */
+/** 32-bit FNV-1a hash in hexadecimal: short, stable, dependency-free. */
 export function hash(text) {
   let h = 0x811c9dc5;
   for ( let i = 0; i < text.length; i++ ) {
@@ -174,8 +174,8 @@ export function hash(text) {
 }
 
 /**
- * La signature d'une erreur : son message sans ce qui varie d'une fois à l'autre (identifiants Foundry, nombres) et sa première
- * ligne de pile sans l'adresse du serveur ni la colonne. Deux erreurs de même signature sont « la même » et se comptent.
+ * The signature of an error: its message without what varies from one time to the next (Foundry ids, numbers) and its first
+ * stack line without the server address or the column. Two errors with the same signature are "the same" and are counted.
  */
 export function signature({ kind="error", message="", stack="" }={}) {
   const text = String(message).replace(/\b[a-zA-Z0-9]{16}\b/g, "<id>").replace(/\d+(\.\d+)?/g, "#");
@@ -188,7 +188,7 @@ export function signature({ kind="error", message="", stack="" }={}) {
 /*  Anneau et regroupement                      */
 /* -------------------------------------------- */
 
-/** Un anneau borné : les `limit` derniers éléments. */
+/** A bounded ring: the last `limit` elements. */
 export function createRing(limit=50) {
   let items = [];
   return {
@@ -205,15 +205,15 @@ export function createRing(limit=50) {
 }
 
 /**
- * Le journal des erreurs, groupées par signature. Un client joueur en tire un « delta » (les groupes nouveaux ou qui ont compté
- * depuis le dernier envoi) pour le MJ actif, qui le fusionne dans le sien.
+ * The error log, grouped by signature. A player client derives a "delta" from it (the groups that are new or that have counted
+ * since the last send) for the active GM, who merges it into their own.
  * @param {object} [options]
- * @param {number} [options.limit]  Groupes gardés au plus ; au-delà, les moins récents partent.
+ * @param {number} [options.limit]  Groups kept at most; beyond that, the least recent go.
  * @param {() => number} [options.now]
  */
 export function createErrorLog({ limit=MAX_GROUPS, now=() => Date.now() }={}) {
   let groups = new Map();
-  let sent = new Map();       // signature → compte déjà envoyé
+  let sent = new Map();       // signature → count already sent
 
   const trim = () => {
     if ( groups.size <= limit ) return;
@@ -227,7 +227,7 @@ export function createErrorLog({ limit=MAX_GROUPS, now=() => Date.now() }={}) {
 
   return {
     /**
-     * Une erreur relevée. `entry` : `{ kind, message, stack, module, modules, label, hook, client, trail }`.
+     * A recorded error. `entry`: `{ kind, message, stack, module, modules, label, hook, client, trail }`.
      * @returns {{ group: object, isNew: boolean }}
      */
     add(entry) {
@@ -250,7 +250,7 @@ export function createErrorLog({ limit=MAX_GROUPS, now=() => Date.now() }={}) {
       return { group, isNew };
     },
 
-    /** Les groupes nouveaux ou qui ont compté depuis le dernier appel, avec `added` (le nombre de fois en plus). */
+    /** The groups that are new or that have counted since the last call, with `added` (the number of extra times). */
     delta() {
       const out = [];
       for ( const g of groups.values() ) {
@@ -262,7 +262,7 @@ export function createErrorLog({ limit=MAX_GROUPS, now=() => Date.now() }={}) {
       return out;
     },
 
-    /** Un delta venu d'un autre client (côté MJ) : chaque groupe compte `added` fois de plus, et cite ce client. */
+    /** A delta from another client (GM side): each group counts `added` times more, and cites that client. */
     merge(items, client) {
       for ( const item of items ?? [] ) {
         const known = groups.get(item.sig);
@@ -281,12 +281,12 @@ export function createErrorLog({ limit=MAX_GROUPS, now=() => Date.now() }={}) {
       }
     },
 
-    /** Les groupes, les plus récents d'abord. */
+    /** The groups, most recent first. */
     list() { return Array.from(groups.values()).sort((a, b) => b.last - a.last); },
     get(sig) { return groups.get(sig) ?? null; },
     /**
-     * Le nombre d'erreurs relevées (répétitions comprises). `which` : "suite" (les erreurs DAS seulement), "others" (hors DAS,
-     * gardées par « tous les modules »), absent : toutes.
+     * The number of recorded errors (repetitions included). `which`: "suite" (DAS errors only), "others" (non-DAS,
+     * kept by "all modules"), absent: all.
      */
     total(which) {
       const keep = which === "suite" ? g => !g.thirdParty : which === "others" ? g => !!g.thirdParty : () => true;
@@ -298,31 +298,31 @@ export function createErrorLog({ limit=MAX_GROUPS, now=() => Date.now() }={}) {
 }
 
 /* -------------------------------------------- */
-/*  Confidentialité                             */
+/*  Privacy                                     */
 /* -------------------------------------------- */
 
 export const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * Un nom se masque en mot entier : pas collé à une lettre, un chiffre, un tiret, un souligné ou une barre oblique (l'identifiant d'un
- * module, « darsh-loot », « foundry-connecteur-claude », un chemin), ni précédé d'un point ou suivi d'un point et d'une lettre (un
- * nom de fichier). « Zoé. » en fin de phrase reste un nom.
+ * A name is masked as a whole word: not stuck to a letter, a digit, a hyphen, an underscore or a slash (a module
+ * id, "darsh-loot", "foundry-connecteur-claude", a path), nor preceded by a dot or followed by a dot and a letter (a
+ * file name). "Zoé." at the end of a sentence is still a name.
  */
 export const WORD_BEFORE = "(?<![\\p{L}\\p{N}_./-])";
 export const WORD_AFTER = "(?![\\p{L}\\p{N}_/-]|\\.\\w)";
 
 /**
- * Les utilisateurs en rôles : le MJ « MJ » (« MJ 2 » s'il y en a plusieurs), les joueurs « Joueur 1 », « Joueur 2 »… dans l'ordre
- * donné. Les libellés sont fournis (langue de l'interface).
+ * Users as roles: the GM "GM" ("GM 2" if there are several), the players "Player 1", "Player 2"… in the given
+ * order. The labels are supplied (interface language).
  * @param {{ id: string, name: string, isGM: boolean }[]} users
- * @returns {Map<string, string>} id → libellé
+ * @returns {Map<string, string>} id → label
  */
 export function roleLabels(users, { gm="GM", player="Player" }={}) {
   const out = new Map();
   let gms = 0;
   let players = 0;
-  // Numérotés seulement si plusieurs MJ sont connectés (`active`, vrai par défaut) : un compte MJ de test resté hors ligne ne fait pas
-  // de l'unique MJ de la partie un « GM 1 ».
+  // Numbered only if several GMs are connected (`active`, true by default): a test GM account left offline does not make
+  // the game's only GM a "GM 1".
   const gmCount = users.filter(u => u.isGM && (u.active ?? true)).length;
   for ( const u of users ) {
     if ( u.isGM ) out.set(u.id, (gmCount > 1) ? `${gm} ${++gms}` : gm);
@@ -332,11 +332,11 @@ export function roleLabels(users, { gm="GM", player="Player" }={}) {
 }
 
 /**
- * Un nettoyeur de texte : les noms donnés (utilisateurs, titre du monde, noms d'acteurs quand on ne les veut pas) remplacés par
- * leur libellé, les adresses réduites à leur chemin (l'hôte d'une partie Forge nomme la partie), sans paramètres de requête, le
- * dossier de compte Forge masqué, les clés et jetons visibles effacés.
+ * A text scrubber: the given names (users, world title, actor names when not wanted) replaced by
+ * their label, addresses reduced to their path (a Forge game's host names the game), without query parameters, the
+ * Forge account folder masked, visible keys and tokens erased.
  * @param {object} [options]
- * @param {Array<[string, string]>} [options.names]  Paires [texte à masquer, remplacement]. Les textes de moins de 3 lettres sont ignorés.
+ * @param {Array<[string, string]>} [options.names]  Pairs [text to mask, replacement]. Texts under 3 letters are ignored.
  */
 export function createScrubber({ names=[] }={}) {
   const pairs = names.filter(([text]) => (typeof text === "string") && (text.trim().length >= 3))
@@ -354,7 +354,7 @@ export function createScrubber({ names=[] }={}) {
   };
 }
 
-/** Nettoie toutes les chaînes d'une valeur (objets et tableaux parcourus), sans toucher aux clés. */
+/** Scrubs all strings of a value (objects and arrays walked), without touching keys. */
 export function scrubDeep(value, scrub) {
   if ( typeof value === "string" ) return scrub(value);
   if ( Array.isArray(value) ) return value.map(v => scrubDeep(v, scrub));
@@ -365,11 +365,11 @@ export function scrubDeep(value, scrub) {
 }
 
 /**
- * Les réglages qu'un rapport peut montrer : booléens, nombres finis et chaînes courtes sans espace (un choix : « full », « 2024 »).
- * Les objets, les listes et le texte libre (notes, factions, signalements) n'y vont jamais.
+ * The settings a report may show: booleans, finite numbers and short strings without spaces (a choice: "full", "2024").
+ * Objects, lists and free text (notes, factions, flags) never go there.
  * @param {Record<string, unknown>} values
  * @param {object} [options]
- * @param {string[]} [options.exclude]  Clés à ne jamais montrer, même simples.
+ * @param {string[]} [options.exclude]  Keys never to show, even simple ones.
  */
 export function safeSettings(values, { exclude=[] }={}) {
   const out = {};
@@ -388,16 +388,16 @@ export function safeSettings(values, { exclude=[] }={}) {
 export const REPORT_SCHEMA = 1;
 
 /**
- * Le rapport, nettoyé. Les erreurs gardées sont celles dont la signature est dans `selected` (toutes si absent).
+ * The report, scrubbed. The errors kept are those whose signature is in `selected` (all if absent).
  * @param {object} input
  * @param {string} [input.description]
- * @param {object} [input.environment]   Versions, modules, réglages, client, scène (déjà simples).
- * @param {object[]} [input.errors]      Groupes du journal.
- * @param {string[]} [input.selected]    Signatures retenues.
- * @param {object[]} [input.trail]       Les derniers gestes.
- * @param {object[]} [input.flagged]     Items signalés `{ identifier, note }`.
- * @param {object[]} [input.sections]    Sections des modules voisins `{ module, data }`.
- * @param {object} [input.context]       Le contexte d'un token (menu contextuel).
+ * @param {object} [input.environment]   Versions, modules, settings, client, scene (already simple).
+ * @param {object[]} [input.errors]      Groups of the log.
+ * @param {string[]} [input.selected]    Selected signatures.
+ * @param {object[]} [input.trail]       The latest actions.
+ * @param {object[]} [input.flagged]     Flagged items `{ identifier, note }`.
+ * @param {object[]} [input.sections]    Sections from neighboring modules `{ module, data }`.
+ * @param {object} [input.context]       The context of a token (context menu).
  * @param {number} input.now
  * @param {(text: string) => string} [scrub]
  */
@@ -437,7 +437,7 @@ export const MARKDOWN_LABELS = {
   deprecation: "deprecation"
 };
 
-/** Une durée écoulée lisible : « 12 s », « 47 min », « 2 h 05 ». */
+/** A readable elapsed duration: "12 s", "47 min", "2 h 05". */
 export function formatAgo(seconds) {
   if ( !Number.isFinite(seconds) ) return "?";
   const s = Math.max(0, Math.round(seconds));
@@ -447,8 +447,8 @@ export function formatAgo(seconds) {
 }
 
 /**
- * Le titre d'une erreur : la première ligne de son message, sans le « Error: » que le type dit déjà, coupée à un mot sous `max`.
- * @returns {{ title: string, whole: boolean }}  `whole` : le titre dit tout le message (inutile de le répéter en bloc).
+ * The title of an error: the first line of its message, without the "Error:" that the type already says, cut at a word under `max`.
+ * @returns {{ title: string, whole: boolean }}  `whole`: the title says the whole message (no need to repeat it in a block).
  */
 export function errorTitle(message, max=120) {
   const text = String(message ?? "").trim();
@@ -463,7 +463,7 @@ export function errorTitle(message, max=120) {
 
 const value = v => (typeof v === "object" && v !== null ? JSON.stringify(v) : String(v));
 
-/** Une liste « - clé : valeur » d'un objet plat ou presque (les sous-objets en JSON compact). */
+/** A "- key: value" list of a flat or nearly flat object (sub-objects as compact JSON). */
 function bullets(obj, indent="") {
   return Object.entries(obj ?? {}).filter(([, v]) => (v !== undefined) && (v !== null) && (v !== ""))
     .map(([k, v]) => `${indent}- **${k}**: ${line(value(v))}`);
@@ -471,7 +471,7 @@ function bullets(obj, indent="") {
 
 const stepLine = (s, L) => `- ${formatAgo(s.ago)} ${L.ago} · ${[s.client, s.module, s.kind].filter(Boolean).join(" · ")} — ${line(s.text)}`;
 
-/** Le rapport en Markdown (GitHub, Discord). Les titres sont donnés ; par défaut en anglais, la langue des issues. */
+/** The report as Markdown (GitHub, Discord). The headings are given; English by default, the language of issues. */
 export function reportMarkdown(report, labels={}) {
   const L = { ...MARKDOWN_LABELS, ...labels };
   const out = [];
@@ -505,7 +505,7 @@ export function reportMarkdown(report, labels={}) {
   return `${out.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
 }
 
-/** Une erreur du rapport en lignes de Markdown : titre, contexte, message entier s'il est long, pile, gestes d'avant. */
+/** An error of the report as Markdown lines: title, context, whole message if long, stack, preceding actions. */
 function errorMarkdown(e, L) {
   const out = [];
   const head = [e.module ? `[${e.module}]` : null, e.kind, e.deprecation ? L.deprecation : null, `${L.times}${e.count}`]
@@ -522,7 +522,7 @@ function errorMarkdown(e, L) {
   return out;
 }
 
-/** Le rapport en JSON lisible (le fichier à joindre). */
+/** The report as readable JSON (the file to attach). */
 export function reportJson(report) {
   return `${JSON.stringify(report, null, 2)}\n`;
 }
@@ -531,16 +531,17 @@ export function reportJson(report) {
 /*  GitHub                                      */
 /* -------------------------------------------- */
 
-/** « propriétaire/dépôt » d'une adresse GitHub (`url` d'un module.json, avec ou sans `.git`), sinon null. */
+/** "owner/repo" of a GitHub address (`url` of a module.json, with or without `.git`), otherwise null. */
 export function githubRepo(url) {
   const m = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:[/?#].*)?$/i.exec(String(url ?? "").trim());
   return m ? `${m[1]}/${m[2]}` : null;
 }
 
 /**
- * Le dépôt à proposer : celui du module le plus mis en cause (erreurs × répétitions) qui a un dépôt GitHub, sinon `fallback`.
+ * The repository to suggest: that of the most implicated module (errors × repetitions) that has a GitHub repository, otherwise
+ * `fallback`.
  * @param {object[]} errors
- * @param {Record<string, string>} repos  Module → « propriétaire/dépôt ».
+ * @param {Record<string, string>} repos  Module → "owner/repo".
  */
 export function pickRepo(errors, repos, fallback=null) {
   const score = new Map();
@@ -551,7 +552,7 @@ export function pickRepo(errors, repos, fallback=null) {
   return best ? repos[best[0]] : fallback;
 }
 
-/** Coupe un texte à une fin de ligne pour que son encodage d'adresse tienne dans `budget`, ferme un bloc de code ouvert, ajoute `note`. */
+/** Cuts a text at a line end so that its address encoding fits in `budget`, closes an open code block, adds `note`. */
 export function truncateForUrl(text, budget, note="") {
   if ( encodeURIComponent(text).length <= budget ) return text;
   const tail = note ? `\n\n${note}\n` : "\n";
@@ -568,8 +569,8 @@ export function truncateForUrl(text, budget, note="") {
 }
 
 /**
- * L'adresse de la page « New issue » pré-remplie d'un dépôt. Le corps est coupé pour que l'adresse reste sous `max` caractères
- * (GitHub refuse les adresses trop longues) ; `note` dit alors de joindre le fichier complet.
+ * The address of the pre-filled "New issue" page of a repository. The body is cut so that the address stays under `max`
+ * characters (GitHub rejects addresses that are too long); `note` then says to attach the full file.
  */
 export function issueUrl({ repo, title="", body="", max=7000, note="" }) {
   if ( !repo ) return null;

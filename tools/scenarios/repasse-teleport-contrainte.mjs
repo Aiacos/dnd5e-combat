@@ -1,11 +1,11 @@
 /**
- * §465 (tri « déplacement » de l'ATLAS) : téléportations de soi à destination contrainte, lues dans le texte des créatures
- * (`teleport.destination`). Arène des sorts : le Lanceur (PNJ) reçoit les capacités prêtées depuis le Monster Manual.
- *  - Poursuite du Nalfeshnee (« sa destination doit être à 3 m de la créature qui l'a déclenchée », portée de l'activité 120 ft) : une case
- *    au contact de la Cible, acceptée ; une case loin de toute créature, refusée (et le Lanceur reste) ;
- *  - Marche des arbres de la Dryade (« à 1,50 m d'un second arbre, lui-même à 18 m du premier ») : 70 ft au plus — 13 cases (65 ft)
- *    acceptées, 15 cases (75 ft) refusées. Les arbres ne sont pas des objets de la scène : le MJ en juge (rien n'est vérifié ici).
- * Le chemin est celui du clic du joueur (`teleportTo` : validation `dnd5e.teleport`, puis « blink »).
+ * §465 (ATLAS "movement" triage): self-teleports with a constrained destination, read from the creature text
+ * (`teleport.destination`). Spell arena: the Caster (NPC) receives the abilities lent from the Monster Manual.
+ *  - Nalfeshnee pursuit ("its destination must be 3 m from the creature that triggered it", activity range 120 ft): a cell
+ *    in contact with the Target, accepted; a cell far from any creature, refused (and the Caster stays);
+ *  - Dryad's Tree Stride ("1.50 m from a second tree, itself 18 m from the first"): 70 ft at most — 13 cells (65 ft)
+ *    accepted, 15 cells (75 ft) refused. Trees are not scene objects: the GM judges them (nothing is checked here).
+ * The path is the player's click (`teleportTo`: `dnd5e.teleport` validation, then "blink").
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -48,7 +48,7 @@ export default {
       return { accepted: !!r?.accepted, arrived: (at.x === to.x) && (at.y === to.y), still: (at.x === from.x) && (at.y === from.y), error: r?.error ?? null };
     };
 
-    // Poursuite : près de la Cible, puis loin de tout le monde.
+    // Pursuit: near the Target, then far from everyone.
     const pursuit = await lend(PURSUIT);
     await ctx.call("move-token", { tokenId: caster.id, x: start.x, y: start.y, elevation: 0 });
     await pause(800);
@@ -56,7 +56,7 @@ export default {
     const near = await jumpTo(pursuit, { x: t.x, y: t.y - grid });
     ctx.expect(!near.error, `la Poursuite est reconnue comme téléportation de soi${near.error ? ` (${near.error})` : ""}`);
     ctx.expect(near.accepted && near.arrived, "au contact de la Cible : téléporté");
-    // Une case à l'écart (rangée 18, colonne 20 de l'arène) : à plus de 3 m de toute créature, à moins de 120 ft.
+    // A cell set apart (row 18, column 20 of the arena): more than 3 m from any creature, within 120 ft.
     const lonely = await jumpTo(pursuit, { x: 20 * grid, y: 18 * grid });
     ctx.expect(!lonely.accepted && lonely.still, "loin de toute créature : refusé, reste sur place");
 

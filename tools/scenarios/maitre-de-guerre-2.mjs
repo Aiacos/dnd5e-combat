@@ -1,13 +1,14 @@
 /**
- * §90 — Le reste des manœuvres du Maître de guerre. Le Guerrier passe niveau 3 et reçoit, prêtés depuis le compendium du Manuel des
- * joueurs, le Maître de guerre, la Supériorité martiale et les manœuvres ; le Bandit (300 PV) à l'est, le Clerc au nord-est (au contact
- * des deux), le Zombi au sud-est (au contact des deux). Vérifie :
- *  - Attaque précise : une attaque ratée — la question, un dé dépensé, le total de la résolution = jet + dé, touché ⇔ total ≥ CA ;
- *  - Embuscade : un test de Discrétion — la question, un dé dépensé ; un test d'Athlétisme — aucune question ; Autorité naturelle sur
- *    un test de Persuasion ; l'initiative : la première valeur du Guerrier (20) reçoit le dé ;
- *  - Frappe commandée (en combat, tour du Guerrier) : l'ordre au Clerc (budget, dé promis), son attaque payée par la Réaction, +1d8 ;
- *  - Chassé-croisé : les places échangées, le dé à la CA du Clerc ;
- *  - Balayage : un coup qui touche le Bandit — le dé au Zombi, un dé dépensé.
+ * §90 — The rest of the Battle Master's maneuvers. The Fighter goes to level 3 and receives, lent from the Player's Handbook
+ * compendium, the Battle Master, Combat Superiority and the maneuvers; the Bandit (300 HP) to the east, the Cleric to the
+ * northeast (in contact with both), the Zombie to the southeast (in contact with both). Checks:
+ *  - Precision Attack: a missed attack — the question, a die spent, the resolution total = roll + die, hit ⇔ total ≥ AC;
+ *  - Ambush: a Stealth check — the question, a die spent; an Athletics check — no question; Commanding Presence on a Persuasion
+ *    check; Initiative: the Fighter's first value (20) receives the die;
+ *  - Commander's Strike (in combat, Fighter's turn): the order to the Cleric (budget, die promised), their attack paid by the
+ *    Reaction, +1d8;
+ *  - Bait and Switch: the places swapped, the die to the Cleric's AC;
+ *  - Sweeping Attack: a hit on the Bandit — the die to the Zombie, a die spent.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.classes.Item";
@@ -46,7 +47,7 @@ export default {
     const zhp0 = await ctx.hp(zombie);
     ctx.restore(() => ctx.setHp(zombie, zhp0));
 
-    // Niveau 3 de Guerrier, le temps du scénario.
+    // Fighter level 3, for the duration of the scenario.
     const actor = await ctx.call("get-actor", { actorId: fighter.actorId });
     const cls = (actor.items ?? []).find(i => (i.type === "class") && (i.system?.identifier === "fighter"));
     if ( !ctx.expect(!!cls, "le Guerrier a sa classe de guerrier") ) return;
@@ -84,7 +85,7 @@ export default {
     };
     const bonusCards = (msgs, kind) => msgs.filter(m => m.flags?.[MODULE_ID]?.rollBonus?.kind === kind);
 
-    // 1. Attaque précise : jusqu'à une attaque ratée, dé ajouté.
+    // 1. Precision Attack: until a missed attack, die added.
     let precise = null;
     for ( let n = 0; (n < 20) && !precise; n++ ) {
       await tough(); await refill();
@@ -107,7 +108,7 @@ export default {
       ctx.expect(Number.isFinite(total) && Number.isFinite(t?.ac) && (t.hit === (total >= t.ac)), `Attaque précise : total ${total} contre CA ${t?.ac}, ${t?.hit ? "touché" : "raté"}`);
     }
 
-    // 2. Embuscade et Autorité naturelle : un test de la bonne compétence ouvre la question ; un autre non.
+    // 2. Ambush and Commanding Presence: a check with the right skill opens the question; another one does not.
     const check = async (skill, re) => {
       await refill();
       const before = await spent();
@@ -128,7 +129,7 @@ export default {
     ctx.expect(!!persuasion.asked && (persuasion.cards[0]?.flags?.[MODULE_ID]?.rollBonus?.item === "commanding-presence"),
       `Autorité naturelle : la question au test de Persuasion (${persuasion.cards[0]?.flags?.[MODULE_ID]?.rollBonus?.item ?? "aucune carte"})`);
 
-    // 3. En combat : l'initiative du Guerrier reçoit le dé d'Embuscade.
+    // 3. In combat: the Fighter's Initiative receives the Ambush die.
     await refill();
     await ctx.startCombat([fighter, bandit, cleric]);
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
@@ -146,7 +147,7 @@ export default {
     for ( let i = 0; (i < 3) && ((await current()) !== fighter.id); i++ ) { await ctx.call("previous-turn", { combatId: ctx.ownCombat }); await pause(1500); }
     ctx.expect((await current()) === fighter.id, "tour du Guerrier");
 
-    // 4. Frappe commandée : l'ordre au Clerc, son attaque payée par la Réaction, +1d8 s'il touche.
+    // 4. Commander's Strike: the order to the Cleric, their attack paid by the Reaction, +1d8 if it hits.
     const clericActor = await ctx.call("get-actor", { actorId: cleric.actorId });
     const weapon = (clericActor.items ?? []).find(i => (i.type === "weapon") && i.system?.equipped
       && Object.values(i.system?.activities ?? {}).some(a => (a.type === "attack") && (a.attack?.type?.value === "melee")));
@@ -189,7 +190,7 @@ export default {
       ctx.restore(() => ctx.call("update-actor", { actorId: cleric.actorId, actorData: { [`flags.${MODULE_ID}.-=pendingDie`]: null } }).catch(() => {}));
     }
 
-    // 5. Chassé-croisé : le Guerrier et le Clerc échangent leurs places, le dé à la CA du Clerc.
+    // 5. Bait and Switch: the Fighter and the Cleric swap places, the die to the Cleric's AC.
     await place(); await refill();
     ctx.restore(() => ctx.removeEffectsNamed(cleric, /Chassé|Bait/i));
     ctx.restore(() => ctx.removeEffectsNamed(fighter, /Chassé|Bait/i));
@@ -205,7 +206,7 @@ export default {
     ctx.expect(!!who && (ac1 > ac0) && (ac1 - ac0 <= 8), `Chassé-croisé : CA du Clerc ${ac0} → ${ac1}`);
     ctx.expect((await spent()) === before + 1, "Chassé-croisé : un dé de supériorité dépensé");
 
-    // 6. Balayage : un coup qui touche le Bandit — le dé au Zombi (CA 8).
+    // 6. Sweeping Attack: a hit on the Bandit — the die to the Zombie (AC 8).
     await place();
     await lend("phbmnvSweepingAt");
     await pause(1200);
@@ -217,7 +218,7 @@ export default {
       const z0 = await ctx.hp(zombie);
       const ids = await known();
       const u = await ctx.use({ tokenId: fighter.id, itemId: sword, activityType: "attack", targetTokenIds: [bandit.id] });
-      await answer(ids, /^Garder|^Keep/i, 4000);   // un coup raté : l'Attaque précise n'est pas prise
+      await answer(ids, /^Garder|^Keep/i, 4000);   // a missed hit: Precision Attack is not taken
       const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
       if ( r?.targets?.find(t => t.name === "Bandit")?.hit !== true ) continue;
       const asked = await answer(ids, /^Zombi/i, 10000);

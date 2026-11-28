@@ -1,6 +1,6 @@
 /**
- * §16.47 : Restauration partielle (`cures`) — après l'utilisation, l'état à faire cesser sur la cible : d'office s'il n'y
- * en a qu'un, sinon au choix. L'interface demande ; runtime/cure.mjs retire.
+ * §16.47: Lesser Restoration (`cures`) — after the use, the condition to end on the target: automatically if there is only
+ * one, otherwise by choice. The interface asks; runtime/cure.mjs removes.
  */
 
 import { curable } from "../core/conditions.mjs";
@@ -14,7 +14,7 @@ async function onPostUse(activity, usageConfig, results) {
   const entry = contentOf(activity?.item).entry;
   const cures = entry?.cures;
   if ( !cures?.length || !activity.actor?.isOwner ) return;
-  // §288 : Rupture d'enchantement — seulement cette activité du sort (pas « Cast » ni Renvoi).
+  // §288: Break Enchantment — only this activity of the spell (not "Cast" nor "Return").
   if ( entry.curesOn && (entry.curesOn !== activity.id) ) return;
   const target = Array.from(game.user.targets)[0]?.document ?? usageTokenOf(activity);
   if ( !target?.actor ) return;
@@ -30,7 +30,7 @@ async function onPostUse(activity, usageConfig, results) {
       rejectClose: false
     }).catch(() => null);
   }
-  // La carte d'utilisation : la preuve que lit le MJ quand la cible est à un autre (runtime/cure.mjs, §471).
+  // The use card: the proof the GM reads when the target belongs to someone else (runtime/cure.mjs, §471).
   if ( status ) await cureStatus(target, status, { usage: results?.message?.id ?? null });
 }
 

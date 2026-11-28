@@ -1,6 +1,6 @@
 /**
- * L'attente des dés 3D est bornée (SPEC §12) : une animation qui ne se joue pas — fenêtre en
- * arrière-plan, rendu suspendu — ne doit jamais retenir une résolution.
+ * The wait for 3D dice is bounded (SPEC §12): an animation that does not play — window in the
+ * background, rendering suspended — must never hold up a resolution.
  */
 import { describe, it, expect } from "vitest";
 import { createDiceWait, dice3dAnimation } from "../module/scripts/runtime/shared.mjs";
@@ -20,14 +20,14 @@ function setup({ animation, hidden=false, sleep=never, maxMs=8000 }) {
   return { wait, reports, calls };
 }
 
-describe("attente des dés 3D", () => {
-  it("rend la main tout de suite sans dés 3D, sans rien consigner", async () => {
+describe("waiting for 3D dice", () => {
+  it("returns control at once without 3D dice, logging nothing", async () => {
     const { wait, reports } = setup({ animation: null });
     await wait(message);
     expect(reports).toEqual([]);
   });
 
-  it("attend la fin de l'animation quand elle vient à temps", async () => {
+  it("waits for the end of the animation when it arrives in time", async () => {
     let finish;
     const { wait, reports } = setup({ animation: () => new Promise(resolve => { finish = resolve; }) });
     let done = false;
@@ -40,20 +40,20 @@ describe("attente des dés 3D", () => {
     expect(reports).toEqual([]);
   });
 
-  it("continue sans les dés passé le délai, et le consigne", async () => {
+  it("continues without the dice after the delay, and logs it", async () => {
     const { wait, reports } = setup({ animation: never, sleep: () => Promise.resolve(), maxMs: 8000 });
     await wait(message);
     expect(reports).toEqual(["over 8000 ms"]);
   });
 
-  it("n'attend pas du tout quand la fenêtre est en arrière-plan : l'animation n'est même pas demandée", async () => {
+  it("does not wait at all when the window is in the background: the animation is not even requested", async () => {
     const { wait, reports, calls } = setup({ animation: never, hidden: true });
     await wait(message);
     expect(calls).toEqual([]);
     expect(reports).toEqual(["window in the background"]);
   });
 
-  it("interroge les dés 3D avec l'identifiant du message", async () => {
+  it("queries 3D dice with the message identifier", async () => {
     const { wait, calls } = setup({ animation: () => Promise.resolve() });
     await wait(message);
     expect(calls).toEqual(["msg0000000000001"]);

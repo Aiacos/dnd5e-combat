@@ -1,9 +1,9 @@
 /**
- * Défenses de sorts (SPEC §16.46). Monde `ravenloft` : Bramo (magicien 5), Kaalisti, le Zombi.
- *  1. Voile défensif : la trace est posée sur Bramo (icône, concentration) ; le Coup du Zombi contre lui porte « -1d4 ».
- *  2. Résistance (profil Feu, choisi d'office) : un seul effet posé ; Fire Bolt de Kaalisti sur Bramo — les dégâts de feu
- *     sont réduits (journal du moteur « réduit les dégâts »).
- * Vigueur arcanique demande un clic (combien de dés de vie) : hors scénario. Remet PV, effets et concentration.
+ * Spell defenses (SPEC §16.46). `ravenloft` world: Bramo (wizard 5), Kaalisti, the Zombie.
+ *  1. Defensive Veil: the trace is placed on Bramo (icon, concentration); the Zombie's Strike against him carries "-1d4".
+ *  2. Resistance (Fire profile, chosen automatically): a single effect placed; Kaalisti's Fire Bolt on Bramo — the fire damage
+ *     is reduced (engine log "reduces the damage").
+ * Arcane Vigor asks for a click (how many Hit Dice): outside the scenario. Restores HP, effects and concentration.
  */
 const MODULE_ID = "dnd5e-combat";
 const FIRE = "S7XVvtgRT8uEP1iw";
@@ -23,7 +23,7 @@ export default {
     ctx.restore(() => ctx.removeEffectsNamed(bramo, /Voile défensif|Blade Ward|Protection|concentr/i));
     const effects = async () => (await ctx.call("get-actor", { actorId: bramo.actorId })).effects ?? [];
 
-    // 1. Voile défensif.
+    // 1. Defensive Veil.
     const ward = await ctx.use({ tokenId: bramo.id, identifier: "blade-ward", activityId: "1wca3rjsdb0agWqk" });
     ctx.expect(ward.used, "Voile défensif lancé");
     await pause(2000);
@@ -35,10 +35,10 @@ export default {
     const bonuses = attack?.flags?.[MODULE_ID]?.bonuses ?? [];
     ctx.expect(bonuses.some(b => b.formula === "-1d4"), `Coup du Zombi contre Bramo : « -1d4 » (${JSON.stringify(bonuses)})`);
     await ctx.setHp(bramo, hp0);
-    await ctx.removeEffectsNamed(bramo, /concentr/i);   // la trace part avec la concentration
+    await ctx.removeEffectsNamed(bramo, /concentr/i);   // the trace goes away with the concentration
     await pause(1500);
 
-    // 2. Résistance (feu).
+    // 2. Resistance (fire).
     const res = await ctx.use({ tokenId: bramo.id, identifier: "resistance", targetTokenIds: [bramo.id], usageConfig: { [MODULE_ID]: { choice: FIRE } } });
     ctx.expect(res.used, "Résistance lancée (feu)");
     await ctx.settle(res.usageMessageId).catch(() => null);

@@ -10,8 +10,8 @@ const resolution = choice => ({
   targets: [target("A")], choice, step: "awaitingRolls", pending: []
 });
 
-describe("§504 (B24) : agripper au lieu d'infliger les dégâts", () => {
-  it("schéma : choice { outcome: [\"damage\", \"grapple\"], grapple: { escapeDc } }", () => {
+describe("§504 (B24): grapple instead of dealing the damage", () => {
+  it("schema: choice { outcome: [\"damage\", \"grapple\"], grapple: { escapeDc } }", () => {
     expect(validateEntry({ choice: { outcome: ["damage", "grapple"], grapple: { escapeDc: 11 } } })).toEqual([]);
     expect(validateEntry({ choice: { outcome: ["grapple", "damage"] } })).toEqual([]);
     expect(validateEntry({ choice: { outcome: ["damage"] } })).toEqual([expect.stringContaining("outcome")]);
@@ -20,13 +20,13 @@ describe("§504 (B24) : agripper au lieu d'infliger les dégâts", () => {
     expect(validateEntry({ choice: { effects: "one", grapple: { escapeDc: 11 } } })).toEqual([expect.stringContaining("only with outcome")]);
     expect(validateEntry({ choice: { effects: "one" } })).toEqual([]);
   });
-  it("les dégâts choisis : multiplicateur 1, pas d'empoignade", () => {
+  it("damage chosen: multiplier 1, no grapple", () => {
     const [entry] = applicationPlan(resolution(OUTCOME_DAMAGE));
     expect(entry.multiplier).toBe(1);
     expect(entry.steps).toEqual([]);
-    expect(entry.effects.map(e => e.id)).toEqual(["Item.x.ActiveEffect.curse"]);   // les effets du coup restent
+    expect(entry.effects.map(e => e.id)).toEqual(["Item.x.ActiveEffect.curse"]);   // the hit's effects remain
   });
-  it("l'empoignade choisie : aucun dégât, Agrippé au DD d'évasion déclaré", () => {
+  it("grapple chosen: no damage, Grappled at the declared escape DC", () => {
     const [entry] = applicationPlan(resolution(OUTCOME_GRAPPLE));
     expect(entry.multiplier).toBe(0);
     expect(entry.steps).toEqual([{ type: "status", status: "grappled", escapeDc: 11 }]);

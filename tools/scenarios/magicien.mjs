@@ -1,13 +1,13 @@
 /**
- * Le Magicien du Manuel des joueurs 2024 (SPEC §28), monde `dnd-6`. Le Magicien (niveau 1) reçoit, prêtés depuis le compendium du
- * Manuel des joueurs, Sort mineur appuyé, Façonneur de sorts, Évocation améliorée et Calque illusoire ; le Bandit reçoit 300 PV.
- * Vérifie :
- *  - Sort mineur appuyé : Rayon de givre raté → le Bandit perd la moitié des dégâts (arrondie à l'inférieur), sans l'effet de
- *    lenteur ; Aspersion acide sauvegardée → la moitié ;
- *  - Façonneur de sorts : Vague tonnante posée sur le Guerrier et le Bandit — le Guerrier réussit d'office et ne perd rien ;
- *  - Évocation améliorée : la Vague tonnante porte + le modificateur d'Intelligence ;
- *  - Calque illusoire : le Bandit touche le Magicien → la réaction fait rater l'attaque ; le Bouclier, sans emplacement, n'est pas proposé.
- * Remet positions, PV, emplacements, états ; retire les items prêtés.
+ * The 2024 Player's Handbook Wizard (SPEC §28), world `dnd-6`. The Wizard (level 1) gets, lent from the Player's Handbook
+ * compendium, Potent Cantrip, Sculpt Spells, Empowered Evocation and Illusory Self; the Bandit gets 300 HP.
+ * Checks:
+ *  - Potent Cantrip: missed Ray of Frost → the Bandit loses half the damage (rounded down), without the slowing effect;
+ *    saved Acid Splash → half;
+ *  - Sculpt Spells: Thunderwave placed on the Fighter and the Bandit — the Fighter succeeds automatically and loses nothing;
+ *  - Empowered Evocation: Thunderwave carries + the Intelligence modifier;
+ *  - Illusory Self: the Bandit hits the Wizard → the Reaction makes the attack miss; Shield, without a slot, is not offered.
+ * Restores positions, HP, slots, conditions; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "dnd-players-handbook.classes";
@@ -79,10 +79,10 @@ export default {
     await part("Sort mineur appuyé", async () => {
       const potent = await lend("phbwzdPotentCant");
       await tough(); await place(bandit, g.x + 2 * grid, g.y);
-      // Rayon de givre raté : la moitié, sans la lenteur.
+      // Ray of Frost missed: half, without the slowing.
       let checked = false;
       for ( let n = 0; (n < 20) && !checked; n++ ) {
-        await ctx.removeEffectsNamed(tokens.find(x => x.id === bandit.id), /Ralenti|Slowed|Rayon de givre|Ray of Frost/i);   // posée par un essai qui a touché
+        await ctx.removeEffectsNamed(tokens.find(x => x.id === bandit.id), /Ralenti|Slowed|Rayon de givre|Ray of Frost/i);   // placed by a test that hit
         const hp0 = await ctx.hp(bandit);
         const since = await ctx.lastMessageId();
         const u = await ctx.use({ tokenId: mage.id, identifier: "ray-of-frost", activityType: "attack", targetTokenIds: [bandit.id], usageConfig: { [MODULE_ID]: { confirmed: true } } });
@@ -98,7 +98,7 @@ export default {
         checked = true;
       }
       ctx.expect(checked, "un Rayon de givre raté (20 essais au plus)");
-      // Aspersion acide sauvegardée : la moitié.
+      // Acid Splash saved: half.
       checked = false;
       for ( let n = 0; (n < 20) && !checked; n++ ) {
         const hp0 = await ctx.hp(bandit);
@@ -141,8 +141,8 @@ export default {
       ctx.expect(!!tb?.save && (tb.save.auto !== "sculpted"), `Bandit : sauvegarde jouée (${tb?.save?.total})`);
       const damage = (await ctx.messagesSince(since)).find(m => m.type === "damage");
       const bonuses = (damage?.flags?.[MODULE_ID]?.bonuses ?? []).map(b => `${b.formula} ${b.damageType}`);
-      // §438 : la part bonus est écrite avec les données de l'acteur (1e2c134 : « @abilities.int.mod » → « 3 ») — la valeur attendue est
-      // lue sur la créature, et doit aussi être un jet de la carte (le moteur y ajoute sa part).
+      // §438: the bonus part is written with the actor's data (1e2c134: "@abilities.int.mod" → "3") — the expected value is
+      // read off the creature, and must also be a roll of the card (the engine adds its share there).
       const int = String((await ctx.engine("stats", { tokenId: mage.id }))?.mods?.int);
       const rolls = (damage?.rolls ?? []).map(x => x.formula);
       ctx.expect([`@abilities.int.mod thunder`, `${int} thunder`].some(x => bonuses.includes(x)) && rolls.includes(int), `Évocation améliorée : ${bonuses.join(", ")} ; jets ${rolls.join(" + ")} (Intelligence ${int})`);
@@ -151,7 +151,7 @@ export default {
 
     await part("Calque illusoire", async () => {
       await lend("phbwzdIllusorySe");
-      // Sans emplacement, pas de Bouclier : la seule réaction offerte est le Calque.
+      // Without a slot, no Shield: the only Reaction offered is Illusory Self.
       await ctx.call("update-actor", { actorId: mage.actorId, actorData: { "system.spells.spell1.value": 0 } });
       await tough(); await place(bandit, g.x + grid, g.y);
       let checked = false;

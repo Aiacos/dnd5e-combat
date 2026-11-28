@@ -1,12 +1,12 @@
 /**
- * Troc du filou (SPEC §38.2), monde `dnd-6`. Le Clerc reçoit Invoquer la duplicité et Troc du filou (Manuel des joueurs) ; l'illusion
- * est posée par `api.mcp.summonAt`, l'échange joué par `api.mcp.transpose` (l'intention de l'entrée du menu contextuel). Colonne libre
- * de Restored Keep : Clerc 3080 × 4900, illusion 3080 × 5180. Vérifie :
- *  - hors combat : l'échange (le Clerc à la place de l'illusion, l'illusion à la sienne), et de nouveau ;
- *  - en combat, au tour du Clerc : l'illusion créée ce tour-ci → échange permis ; un second au même tour → refusé ;
- *  - au tour suivant du Clerc, l'illusion ni créée ni déplacée → refusé ; déplacée par le moteur (commande payée : l'action Bonus) →
- *    permis.
- * Remet positions, effets, combat ; retire l'illusion et les items prêtés.
+ * Trickster's Transposition (SPEC §38.2), world `dnd-6`. The Cleric receives Invoke Duplicity and Trickster's Transposition
+ * (Player's Handbook); the illusion is placed by `api.mcp.summonAt`, the swap played by `api.mcp.transpose` (the intent of the
+ * context menu entry). Free column of Restored Keep: Cleric 3080 × 4900, illusion 3080 × 5180. Checks:
+ *  - out of combat: the swap (the Cleric to the illusion's place, the illusion to the Cleric's), and again;
+ *  - in combat, on the Cleric's turn: the illusion created this turn → swap allowed; a second one the same turn → refused;
+ *  - on the Cleric's next turn, the illusion neither created nor moved → refused; moved by the engine (paid command: the
+ *    Bonus Action) → allowed.
+ * Resets positions, effects, combat; removes the illusion and the lent items.
  */
 const CLASSES = "Compendium.dnd-players-handbook.classes.Item.";
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -63,7 +63,7 @@ export default {
     await ctx.call("delete-scene-object", { type: "Token", objectId: illusion.id }).catch(() => {});
     await pause(800);
 
-    // 2. En combat, au tour du Clerc : créée ce tour-ci.
+    // 2. In combat, on the Cleric's turn: created this turn.
     await ctx.startCombat([cleric, zombi]);
     const combat = await ctx.combat();
     for ( const [t, value] of [[cleric, 20], [zombi, 10]] ) {
@@ -80,7 +80,7 @@ export default {
     const twice = await ctx.engine("transpose", { tokenId: fresh.id });
     ctx.expect(!twice.done, "un second échange au même tour : refusé");
 
-    // 3. Tour suivant du Clerc : ni créée ni déplacée.
+    // 3. The Cleric's next turn: neither created nor moved.
     await ctx.nextTurn(); await pause(1500);
     await ctx.nextTurn(); await pause(1500);
     const later = await ctx.engine("transpose", { tokenId: fresh.id });

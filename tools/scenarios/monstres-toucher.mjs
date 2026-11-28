@@ -1,11 +1,11 @@
 /**
- * Bestiaire, SPEC §18.4 — ce qu'une attaque de monstre porte au toucher, lu dans la forme de l'item, sans contenu déclaré.
- * Monde `ravenloft` (les Loups et l'Ours brun du Monster Manual, traduits par Babele : la lecture passe par le français).
- *  - M3, porte de taille : la Morsure du Loup met À terre « une créature de taille M ou inférieure ». Touché, le Zombi (M)
- *    tombe ; l'Ours brun (G) reste debout.
- *  - M2, sauvegarde sœur : la Griffe de la Goule (prêtée au Loup le temps du scénario) impose une sauvegarde de
- *    Constitution au toucher ; ratée → Paralysé, réussie → rien.
- * Les jets sont aléatoires : on rejoue jusqu'à toucher (20 essais au plus).
+ * Bestiary, SPEC §18.4 — what a monster attack carries on a hit, read in the item's shape, without declared content.
+ * World `ravenloft` (the Wolves and the Brown Bear of the Monster Manual, translated by Babele: the reading goes through French).
+ *  - M3, size gate: the Wolf's Bite knocks Prone "a creature of Medium size or smaller". On a hit, the Zombie (M)
+ *    falls; the Brown Bear (L) stays standing.
+ *  - M2, sister saving throw: the Ghoul's Claws (lent to the Wolf for the scenario) impose a Constitution
+ *    saving throw on a hit; failed → Paralyzed, succeeded → nothing.
+ * The rolls are random: replayed until a hit (20 attempts at most).
  */
 const GHOUL = "Compendium.dnd-monster-manual.actors.Actor.mmGhoul000000000";
 
@@ -13,7 +13,7 @@ export default {
   name: "attaques de monstre — porte de taille (M3) et sauvegarde sœur (M2)",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Absent from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise dnd5e's 2024 SRD).
     await ctx.cast({ "Loup": "mmWolf0000000000", "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Loup", "Zombi", "Ours brun"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Loup, Zombi ou Ours brun absent : non applicable"); return; }
@@ -36,7 +36,7 @@ export default {
     await ctx.call("move-token", { tokenId: bear.id, x: at.x - 2 * grid, y: at.y, elevation: at.elevation });
     const statuses = async t => new Set((await ctx.effects(t)).filter(e => !e.disabled).flatMap(e => e.statuses ?? []));
 
-    /** Attaque jusqu'à toucher ; rend la résolution du toucher. */
+    /** Attacks until a hit; returns the hit resolution. */
     const hitWith = async (itemId, target, label) => {
       for ( let i = 0; i < 20; i++ ) {
         await ctx.setHp(target, 100);
@@ -65,7 +65,7 @@ export default {
       ctx.expect(!(await statuses(bear)).has("prone"), "Ours brun (G) mordu : reste debout");
     }
 
-    // M2 — Griffe de la Goule, prêtée au Loup.
+    // M2 — Ghoul's Claws, lent to the Wolf.
     const { data: ghoul } = await ctx.call("get-compendium-entry", { uuid: GHOUL });
     const claw = ghoul.items.find(i => i.system?.identifier === "claw");
     const { _id, folder, ownership, _stats, ...itemData } = claw;

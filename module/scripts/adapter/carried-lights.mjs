@@ -1,6 +1,6 @@
 /**
- * Les sources de lumière portées (SPEC §52, §121) : torches, bougies, lampes et lanternes — allumer, éteindre, durée et
- * combustible, mains libres, source consumée. Extrait d'adapter/lights.mjs.
+ * Carried light sources (SPEC §52, §121): torches, candles, lamps and lanterns — lighting, extinguishing, duration and
+ * fuel, free hands, consumed source. Extracted from adapter/lights.mjs.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -9,28 +9,28 @@ import { tokenLightChanges, burnSeconds, lightPlan, burnoutPlan, handsOf } from 
 import { toGridUnits } from "./lights.mjs";
 
 /* -------------------------------------------- */
-/*  Sources de lumière portées (§52, §121)      */
+/*  Carried light sources (§52, §121)           */
 /* -------------------------------------------- */
 
 const CARRIED_FLAG = "carriedLightOf";
-/** §121 : sur l'item, le temps qui restait (secondes) quand on l'a éteinte ; absent : neuve (torche) ou remplie (lampe). */
+/** §121: on the item, the time that remained (seconds) when it was extinguished; absent: new (torch) or filled (lamp). */
 const BURN_FLAG = "burnLeft";
-/** §346 : sur l'effet de lumière, le capuchon baissé. */
+/** §346: on the light effect, the hood lowered. */
 const HOOD_FLAG = "hooded";
 
-/** La lumière d'une source portée (lampe, lanterne, torche, bougie), ou null. */
+/** The light of a carried source (lamp, lantern, torch, candle), or null. */
 export const carriedLightOf = item => contentOf(item).entry?.carriedLight ?? null;
 
-/** L'effet qui fait briller le porteur de cette source, ou null (éteinte). */
+/** The effect that makes this source's bearer shine, or null (extinguished). */
 export const carriedLightEffect = item => (item?.actor?.effects ?? []).find(e => e.getFlag(MODULE_ID, CARRIED_FLAG) === item.uuid) ?? null;
 
-/** Les sources de lumière que porte un acteur. */
+/** The light sources an actor carries. */
 export const carriedLightsOf = actor => (actor?.items ?? []).filter(i => carriedLightOf(i));
 
-/** Est-ce l'effet d'une source portée ? Rend l'uuid de la source, ou null. */
+/** Is this the effect of a carried source? Returns the source's uuid, or null. */
 export const carriedSourceOf = effect => effect?.getFlag?.(MODULE_ID, CARRIED_FLAG) ?? null;
 
-/** Le temps qu'il reste à l'effet allumé (secondes), d'après la durée que le cœur V14 tient à jour ; null sans durée. */
+/** The time left on the lit effect (seconds), from the duration the V14 core keeps up to date; null without duration. */
 export function remainingOf(effect) {
   const d = effect?.duration;
   if ( !d || !Number.isFinite(d.value) ) return null;
@@ -39,7 +39,7 @@ export function remainingOf(effect) {
   return Number.isFinite(start) ? Math.max(0, start + d.value - game.time.worldTime) : d.value;
 }
 
-/** Le temps qu'il reste à une source : allumée, celui de son effet ; éteinte, celui noté sur l'item ; neuve, une unité entière. */
+/** The time left on a source: lit, that of its effect; extinguished, the one noted on the item; new, a whole unit. */
 export function burnLeftOf(item) {
   const rule = carriedLightOf(item);
   const full = burnSeconds(rule?.burn);
@@ -50,13 +50,13 @@ export function burnLeftOf(item) {
   return Number.isFinite(stored) ? stored : full;
 }
 
-/** §121 : sur la source, « c'est l'allumage qui l'a équipée » — l'éteindre la range alors. */
+/** §121: on the source, "lighting it is what equipped it" — extinguishing it then stows it. */
 const EQUIPPED_FLAG = "equippedToLight";
 
 /**
- * §121 : ce que la créature tient en main, d'après ce qui est équipé (le HUD de darsh-dnd-ui équipe le jeu d'armes en main) :
- * armes (deux mains pour la propriété « two » de dnd5e, config.mjs:2015), boucliers (`system.type.value` « shield »), sources
- * de lumière allumées. Les armes naturelles et les mains nues ne prennent pas de main. `except` : la source qu'on veut allumer.
+ * §121: what the creature holds in hand, from what is equipped (the HUD of darsh-dnd-ui equips the weapon set in hand):
+ * weapons (two hands for dnd5e's "two" property, config.mjs:2015), shields (`system.type.value` "shield"), lit light
+ * sources. Natural weapons and bare hands take no hand. `except`: the source being lit.
  * @returns {Array<{name: string, hands: number}>}
  */
 export function heldItems(actor, except=null) {
@@ -73,12 +73,12 @@ export function heldItems(actor, except=null) {
   return held;
 }
 
-/** Le combustible que porte l'acteur (une flasque d'Huile, par son identifiant), ou null. */
+/** The fuel the actor carries (a flask of Oil, by its identifier), or null. */
 export function fuelOf(actor, identifier) {
   return (actor?.items ?? []).find(i => (identifierOf(i).id === identifier) && ((i.system.quantity ?? 1) > 0)) ?? null;
 }
 
-/** Une unité de moins : la quantité baisse, l'item part à la dernière. Rend true s'il a été retiré. */
+/** One unit less: the quantity goes down, the item goes at the last one. Returns true if it was removed. */
 async function spendOne(item) {
   const quantity = Number(item.system.quantity ?? 1);
   if ( quantity > 1 ) { await item.update({ "system.quantity": quantity - 1 }); return false; }
@@ -86,7 +86,7 @@ async function spendOne(item) {
   return true;
 }
 
-/** L'état d'une source pour l'interface : allumée ou non, temps restant, combustible. */
+/** A source's state for the interface: lit or not, time left, fuel. */
 export function carriedLightState(item) {
   const rule = carriedLightOf(item);
   if ( !rule ) return null;
@@ -96,10 +96,10 @@ export function carriedLightState(item) {
 }
 
 /**
- * Allume (`on: true`) ou éteint la source, sur le client du porteur. Allumer pose un effet au nom et à l'image de l'item, qui porte
- * ses changements `token.light.*` (rayons convertis dans l'unité de la scène) et, §121, la durée qui lui reste : le cœur V14 le
- * marque expiré quand le temps du monde l'atteint (runtime/lights.mjs le consume alors). Une lampe vide prend d'abord une flasque
- * d'huile au porteur. Éteindre note sur l'item le temps restant, que le rallumage reprend.
+ * Lights (`on: true`) or extinguishes the source, on the bearer's client. Lighting places an effect with the item's name and image,
+ * which carries its `token.light.*` changes (radii converted to the scene's unit) and, §121, the duration it has left: the V14 core
+ * marks it expired when world time reaches it (runtime/lights.mjs then consumes it). An empty lamp first takes a flask
+ * of oil from the bearer. Extinguishing notes the remaining time on the item, which relighting resumes.
  * @returns {Promise<{changed: boolean, lit?: boolean, left?: number|null, refilled?: string|null, reason?: string}>}
  */
 export async function setCarriedLight(item, on) {
@@ -116,7 +116,7 @@ export async function setCarriedLight(item, on) {
     return { changed: true, lit: false, left };
   }
   if ( lit ) return { changed: false, reason: "alreadyLit" };
-  // §121 : une source allumée se tient en main — il en faut une de libre, sauf si elle est déjà équipée (torche d'un jeu d'armes).
+  // §121: a lit source is held in hand — a free one is needed, unless it is already equipped (torch of a weapon set).
   const wasEquipped = !!item.system.equipped;
   if ( !wasEquipped ) {
     const held = heldItems(actor, item);
@@ -142,12 +142,12 @@ export async function setCarriedLight(item, on) {
   return { changed: true, lit: true, left: plan.left, refilled, equipped: !wasEquipped };
 }
 
-/** §346 : le capuchon de la source allumée est-il baissé ? */
+/** §346: is the lit source's hood lowered? */
 export const hoodedDown = item => !!carriedLightEffect(item)?.getFlag(MODULE_ID, HOOD_FLAG);
 
 /**
- * §346 : baisse (`down: true`) ou lève le capuchon d'une source allumée qui en a un (`carriedLight.hooded`) — l'effet de lumière prend
- * les rayons capuchon baissé, ou reprend les siens. Rien si la source est éteinte (rallumée, elle repart capuchon levé).
+ * §346: lowers (`down: true`) or raises the hood of a lit source that has one (`carriedLight.hooded`) — the light effect takes
+ * the hooded radii, or resumes its own. Nothing if the source is extinguished (relit, it restarts hood raised).
  * @returns {Promise<{changed: boolean, down?: boolean, reason?: string}>}
  */
 export async function setHood(item, down) {
@@ -164,7 +164,7 @@ export async function setHood(item, down) {
   return { changed: true, down: !!down };
 }
 
-/** §121 : éteinte, la source que l'allumage avait équipée retourne dans le sac (la main est libre). */
+/** §121: extinguished, the source that lighting had equipped goes back in the bag (the hand is free). */
 async function stowIfLit(item) {
   if ( !item?.getFlag?.(MODULE_ID, EQUIPPED_FLAG) ) return;
   await item.update({ "system.equipped": false });
@@ -172,15 +172,15 @@ async function stowIfLit(item) {
 }
 
 /**
- * §121 : la source s'est consumée (son effet est arrivé au bout). MJ actif. L'effet part ; une torche ou une bougie perd l'unité
- * brûlée (la suivante sera neuve), une lampe reste vide. Rend ce qui s'est passé, ou null.
+ * §121: the source has burned out (its effect reached the end). Active GM. The effect goes; a torch or candle loses the burned
+ * unit (the next will be new), a lamp stays empty. Returns what happened, or null.
  * @returns {Promise<{item: string, consumed: boolean, gone: boolean, empty: boolean}|null>}
  */
 export async function burnOut(effect) {
   const uuid = carriedSourceOf(effect);
   if ( !uuid ) return null;
   const item = fromUuidSync(uuid, { strict: false });
-  // Déjà retiré entre-temps (le moteur retire les effets expirés, runtime/durations) : rien à supprimer.
+  // Already removed in the meantime (the engine removes expired effects, runtime/durations): nothing to delete.
   if ( effect.parent?.effects?.has(effect.id) ) await effect.delete({ [MODULE_ID]: { putOut: true } }).catch(() => null);
   const rule = carriedLightOf(item);
   if ( !item || !rule ) return null;
@@ -193,7 +193,7 @@ export async function burnOut(effect) {
   return { item: name, consumed: true, gone, empty: false };
 }
 
-/** §121 : l'effet a été retiré à la main (fiche, HUD) avant la fin : le temps restant se note sur la source. MJ actif. */
+/** §121: the effect was removed by hand (sheet, HUD) before the end: the remaining time is noted on the source. Active GM. */
 export async function rememberBurn(effect) {
   const item = fromUuidSync(carriedSourceOf(effect) ?? "", { strict: false });
   const left = remainingOf(effect);
@@ -203,7 +203,7 @@ export async function rememberBurn(effect) {
   return left;
 }
 
-/** Une source qui quitte la fiche (lâchée, lancée, donnée, détruite) s'éteint : ses effets lumineux sont retirés. */
+/** A source that leaves the sheet (dropped, thrown, given, destroyed) goes out: its light effects are removed. */
 export async function dropCarriedLight(item) {
   const actor = item?.parent;
   if ( actor?.documentName !== "Actor" ) return 0;

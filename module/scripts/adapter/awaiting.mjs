@@ -1,13 +1,14 @@
 /**
- * §381 (issue #35) : qui la table attend. Le client sur lequel une fenêtre de réaction, de choix ou de jet est ouverte le dit à tous les
- * autres ; chacun garde le tableau des attentes connues et le publie (hook `dnd5e-combat.awaiting`, `api.ui.awaiting()`). Le moteur ne
- * nomme aucun voisin : le sablier au-dessus du token (ui/awaiting.mjs), les portraits d'une interface voisine, lisent ce tableau.
+ * §381 (issue #35): who the table is waiting for. The client on which a reaction, choice or roll window is open tells all the
+ * others; each keeps the list of known waits and publishes it (hook `dnd5e-combat.awaiting`, `api.ui.awaiting()`).
+ * The engine names no neighbor: the hourglass above the token (ui/awaiting.mjs), the portraits of a neighboring interface,
+ * read this list.
  *
- * Diffusion par les requêtes du cœur (`user.query`, client/documents/user.mjs), comme les minuteries du §272 : pas de socket de module,
- * rien n'est écrit dans un document. Ce qui part ne dit jamais ce que la fenêtre demande (core/awaiting.mjs, `awaitingEntry`).
+ * Broadcast through the core's queries (`user.query`, client/documents/user.mjs), like the timers of §272: no module socket,
+ * nothing is written into a document. What goes out never says what the window asks (core/awaiting.mjs, `awaitingEntry`).
  *
- * Fin d'une attente : `release()` (réponse, délai, annulation, réponse forcée — appelé dans un `finally`) ; la déconnexion de celui qui
- * répond (hook du cœur `userConnected`, runtime/awaiting.mjs) ; à défaut, l'oubli d'une attente qui n'a plus de nouvelles (core).
+ * End of a wait: `release()` (answer, timeout, cancellation, forced answer — called in a `finally`); the disconnection of whoever
+ * answers (core hook `userConnected`, runtime/awaiting.mjs); failing that, forgetting a wait that has no more news (core).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,27 +16,27 @@ import { applyAwaiting, awaitingEntry, gmLabel, pruneAwaiting } from "../core/aw
 
 export const AWAITING_QUERY = `${MODULE_ID}.awaiting`;
 /**
- * §381 : sur chaque client, à chaque changement du tableau des attentes qu'il connaît (une fenêtre de réaction, de choix ou de jet
- * ouverte ou fermée quelque part, une attente oubliée) : `(entries)`, les attentes en cours, les plus anciennes d'abord —
- * `{ id, userId, userName, token, actor, kind, gm, player, since, seconds, refreshed }`, jamais ce que la fenêtre demande. Lecture seule ;
- * le même tableau : `api.ui.awaiting()`.
+ * §381: on each client, on each change of the list of waits it knows (a reaction, choice or roll window
+ * opened or closed somewhere, a wait forgotten): `(entries)`, the waits in progress, oldest first —
+ * `{ id, userId, userName, token, actor, kind, gm, player, since, seconds, refreshed }`, never what the window asks. Read-only;
+ * the same list: `api.ui.awaiting()`.
  */
 export const AWAITING_HOOK = `${MODULE_ID}.awaiting`;
 
-/** Les attentes ouvertes sur CE client (celles qu'il diffuse) : id → entrée. */
+/** The waits open on THIS client (those it broadcasts): id → entry. */
 const mine = new Map();
 /** Toutes les attentes connues de ce client, la sienne comprise. */
 let known = [];
 
 const publish = () => Hooks.callAll(AWAITING_HOOK, awaitingList());
 
-/** Les attentes en cours connues de ce client, les plus anciennes d'abord (forme publique, sans ce que la fenêtre demande). */
+/** The waits in progress known to this client, oldest first (public form, without what the window asks). */
 export function awaitingList() {
   known = pruneAwaiting(known, Date.now());
   return known.map(e => ({ ...e }));
 }
 
-/** Oublier les attentes expirées ; publier s'il en est tombé. */
+/** Forget expired waits; publish if any dropped. */
 export function pruneKnown() {
   const before = known.length;
   known = pruneAwaiting(known, Date.now());
@@ -48,19 +49,19 @@ export function changeAwaiting(change) {
   publish();
 }
 
-/** Les attentes ouvertes sur ce client (pour les rafraîchir, ou répondre à un client qui arrive). */
+/** The waits open on this client (to refresh them, or answer a client that arrives). */
 export const ownAwaiting = () => [...mine.values()];
 
 /**
- * §426 : ce qu'une fenêtre demande, pour les MJ seulement. L'attente diffusée à la table ne le dit jamais (core/awaiting.mjs) ; le
- * libellé part à part, vers les seuls MJ connectés, et un client qui n'est pas MJ ne le garde pas même s'il le recevait.
- *  - `ownLabels` : ceux des attentes ouvertes sur ce client (pour un MJ qui arrive) ;
- *  - `knownLabels` : ceux que ce client connaît, les siens compris — rempli chez un MJ seulement.
+ * §426: what a window asks, for GMs only. The wait broadcast to the table never says it (core/awaiting.mjs); the
+ * label goes separately, to connected GMs only, and a client that is not a GM does not keep it even if it received it.
+ *  - `ownLabels`: those of the waits open on this client (for a GM who arrives);
+ *  - `knownLabels`: those this client knows, its own included — filled on a GM only.
  */
 const ownLabels = new Map();
 const knownLabels = new Map();
 
-/** §426 : les libellés connus de ce client, par identifiant d'attente — vide chez un joueur. */
+/** §426: the labels known to this client, by wait id — empty on a player. */
 export function awaitingLabels() {
   const alive = new Set(known.map(e => e.id));
   for ( const id of [...knownLabels.keys()] ) if ( !alive.has(id) ) knownLabels.delete(id);
@@ -81,7 +82,7 @@ function send(payload) {
   }
 }
 
-/** Diffuse à nouveau toutes les attentes de ce client (rafraîchissement : elles ne sont pas oubliées). */
+/** Broadcasts all this client's waits again (refresh: they are not forgotten). */
 export function refreshAwaiting() {
   if ( !mine.size ) return;
   const now = Date.now();
@@ -90,19 +91,19 @@ export function refreshAwaiting() {
   send({ type: "replace", userId: game.user.id, list: ownAwaiting() });
 }
 
-/** Le token d'un acteur sur la scène affichée (un token non lié est le sien). */
+/** The token of an actor on the displayed scene (an unlinked token is its own). */
 function tokenOf(actor, token) {
-  // `getActiveTokens(false, true)` rend des TokenDocument ; un Token du canevas porte le sien en `document`.
+  // `getActiveTokens(false, true)` returns TokenDocuments; a canvas Token carries its own in `document`.
   const found = token ?? actor?.token ?? actor?.getActiveTokens?.(false, true)?.[0] ?? null;
   return (found?.document ?? found)?.uuid ?? null;
 }
 
 /**
- * Une fenêtre qui fait attendre la table vient de s'ouvrir sur ce client. Rend `release()`, à appeler à sa fermeture quelle qu'en soit la
- * raison (sans effet la seconde fois).
- * @param {Actor|null} actor   La créature concernée (celle qui réagit, choisit ou lance les dés).
+ * A window that makes the table wait has just opened on this client. Returns `release()`, to call when it closes for whatever
+ * reason (no effect the second time).
+ * @param {Actor|null} actor   The creature concerned (the one reacting, choosing or rolling the dice).
  * @param {"reaction"|"choice"|"roll"} kind
- * @param {{seconds?: number|null, token?: TokenDocument|Token|null}} [options]  `seconds` : le délai de la fenêtre, s'il y en a un.
+ * @param {{seconds?: number|null, token?: TokenDocument|Token|null}} [options]  `seconds`: the window's timeout, if there is one.
  * @returns {() => void}
  */
 export function markAwaiting(actor, kind, { seconds=null, token=null, label=null }={}) {
@@ -118,7 +119,7 @@ export function markAwaiting(actor, kind, { seconds=null, token=null, label=null
   mine.set(entry.id, entry);
   changeAwaiting({ type: "add", entry });
   send({ type: "add", entry });
-  // §426 : ce que la fenêtre demande, aux seuls MJ.
+  // §426: what the window asks, to GMs only.
   const told = gmLabel(label);
   if ( told ) {
     ownLabels.set(entry.id, told);
@@ -135,12 +136,12 @@ export function markAwaiting(actor, kind, { seconds=null, token=null, label=null
     changeAwaiting({ type: "remove", id: entry.id });
     send({ type: "remove", id: entry.id });
   };
-  release.id = entry.id;   // §422 : pour relier la fenêtre ouverte à sa ligne de la File du MJ
+  release.id = entry.id;   // §422: to link the open window to its line in the GM queue
   return release;
 }
 
 /**
- * `fn()` pendant qu'une attente est affichée ; elle tombe quand `fn` se termine, réussite ou erreur.
+ * `fn()` while a wait is displayed; it drops when `fn` finishes, success or error.
  * @template T
  * @param {Actor|null} actor
  * @param {"reaction"|"choice"|"roll"} kind
@@ -155,17 +156,17 @@ export async function whileAwaiting(actor, kind, fn, options={}) {
 }
 
 /**
- * Chez chaque client : une attente d'un autre arrive, part, ou un client donne toutes les siennes. `sync` : un client qui arrive demande
- * les attentes ouvertes ici (rendues telles quelles).
+ * On each client: a wait from another arrives, leaves, or a client gives all of its own. `sync`: an arriving client asks
+ * for the waits open here (returned as they are).
  */
 export function receiveAwaiting(payload={}, { user }={}) {
   if ( payload.type === "sync" ) {
-    // §426 : un MJ qui arrive reçoit aussi les libellés des attentes ouvertes ici.
+    // §426: an arriving GM also receives the labels of the waits open here.
     if ( user?.isGM ) for ( const [id, label] of ownLabels ) sendLabel(id, label, user);
     return ownAwaiting();
   }
   if ( payload.type === "label" ) {
-    // Gardé par un MJ seulement, et seulement pour une attente de celui qui l'envoie.
+    // Kept by a GM only, and only for a wait of the sender.
     const entry = known.find(e => e.id === payload.id);
     if ( !game.user.isGM || !entry || (user && (entry.userId !== user.id)) ) return false;
     const told = gmLabel(payload.label);
@@ -192,7 +193,7 @@ export function receiveAwaiting(payload={}, { user }={}) {
   return true;
 }
 
-/** Un client qui arrive : demande aux autres clients connectés leurs attentes ouvertes. */
+/** An arriving client: asks the other connected clients for their open waits. */
 export async function syncAwaiting() {
   await Promise.all([...game.users].filter(u => u.active && !u.isSelf).map(async user => {
     const list = await user.query(AWAITING_QUERY, { type: "sync" }, { timeout: 5000 }).catch(() => null);
@@ -200,5 +201,5 @@ export async function syncAwaiting() {
   }));
 }
 
-/** Pour les tests du moteur (`api.mcp`) : les attentes de ce client, et les marqueurs posés à la main. */
+/** For the engine's tests (`api.mcp`): this client's waits, and the markers placed by hand. */
 export const testing = { mine: ownAwaiting };

@@ -6,7 +6,7 @@ import { createRouter } from "../module/scripts/runtime/router.mjs";
 const entry = readFileSync(new URL("../module/scripts/dnd5e-combat.mjs", import.meta.url), "utf8");
 
 describe("niveaux d'automatisation (§117)", () => {
-  it("trois niveaux ordonnés, Intégral par défaut", () => {
+  it("three ordered levels, Full by default", () => {
     expect(LEVELS).toEqual(["essentials", "assisted", "full"]);
     expect(DEFAULT_LEVEL).toBe("full");
     expect(atLeast("full", "assisted")).toBe(true);
@@ -15,8 +15,8 @@ describe("niveaux d'automatisation (§117)", () => {
     expect(levelRank("inconnu")).toBe(levelRank("full"));
   });
 
-  it("chaque fonction du point d'entrée passe par gated() et a son niveau dans la table", () => {
-    const raw = Array.from(entry.matchAll(/^\s*(register[A-Z]\w*)\(\);/gm), m => m[1]).filter(n => !["registerLevel", "registerWelcome", "registerDebug", "registerConnection"].includes(n));   // §177 : l'accueil, §380 : le débogueur, §388 : la connexion, hors niveaux (déclarés même en veille)
+  it("every entry-point function goes through gated() and has its level in the table", () => {
+    const raw = Array.from(entry.matchAll(/^\s*(register[A-Z]\w*)\(\);/gm), m => m[1]).filter(n => !["registerLevel", "registerWelcome", "registerDebug", "registerConnection"].includes(n));   // §177: welcome, §380: debugger, §388: connection, outside levels (declared even when dormant)
     expect(raw, "appelées sans gated()").toEqual([]);
     const gatedNames = Array.from(entry.matchAll(/gated\((register[A-Z]\w*)\)/g), m => m[1]);
     expect(gatedNames.length).toBeGreaterThan(90);
@@ -24,13 +24,13 @@ describe("niveaux d'automatisation (§117)", () => {
     expect(Object.keys(FEATURE_LEVELS).filter(n => !gatedNames.includes(n)), "dans la table mais pas au point d'entrée").toEqual([]);
   });
 
-  it("le niveau est déclaré avant toute autre fonction", () => {
+  it("the level is declared before any other function", () => {
     const init = entry.slice(entry.indexOf("Hooks.once(\"init\""));
     expect(init.indexOf("registerLevel()")).toBeGreaterThan(0);
     expect(init.indexOf("registerLevel()")).toBeLessThan(init.indexOf("gated("));
   });
 
-  it("le socle de l'interface est au niveau Essentiel, la résolution à Assisté, le contenu à Intégral", () => {
+  it("the interface foundation is at the Essential level, resolution at Assisted, content at Full", () => {
     for ( const n of ["registerActions", "registerPointer", "registerTurn", "registerVision", "registerTracker"] ) expect(featureLevel(n), n).toBe("essentials");
     for ( const n of ["registerEngine", "registerConditions", "registerConcentration", "registerDeath"] ) expect(featureLevel(n), n).toBe("assisted");
     for ( const n of ["registerAuras", "registerSneak", "registerSmite", "registerWildShape"] ) expect(featureLevel(n), n).toBe("full");
@@ -39,7 +39,7 @@ describe("niveaux d'automatisation (§117)", () => {
 });
 
 describe("routeur : withoutRoutes", () => {
-  it("une fonction lancée sans ses écoutes ne branche rien, et ce qu'elle a demandé se lit", () => {
+  it("a function launched without its listeners hooks nothing, and what it asked for can be read", () => {
     const subscribed = [];
     const router = createRouter({ subscribe: hook => subscribed.push(hook), isExecutor: () => true, report: () => {} });
     let ran = false;
@@ -51,7 +51,7 @@ describe("routeur : withoutRoutes", () => {
     expect(Object.keys(router.describe())).toEqual(["createToken"]);
   });
 
-  it("après withoutRoutes, les inscriptions reprennent normalement, même si la fonction a levé une erreur", () => {
+  it("after withoutRoutes, registrations resume normally, even if the function threw an error", () => {
     const subscribed = [];
     const router = createRouter({ subscribe: hook => subscribed.push(hook), isExecutor: () => true, report: () => {} });
     expect(() => router.withoutRoutes("x", () => { throw new Error("boom"); })).toThrow("boom");

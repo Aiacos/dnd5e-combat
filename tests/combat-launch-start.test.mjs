@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MODULE_ID } from "../module/scripts/constants.mjs";
 
 /**
- * §397 : le premier round commence seul quand tout le monde a lancé — une seule fois. Une réponse du serveur qui porte plusieurs
- * initiatives (PNJ groupés, « lancer les PNJ » de dnd5e) appelle `updateCombatant` une fois par combattant, alors que
- * `combat.started` ne change qu'à la réponse suivante du serveur.
+ * §397: the first round starts by itself when everyone has rolled — only once. A server response that carries several
+ * Initiatives (grouped NPCs, dnd5e's "roll NPCs") calls `updateCombatant` once per combatant, while
+ * `combat.started` changes only at the server's next response.
  */
 const routes = new Map();
 vi.mock("../module/scripts/runtime/router.mjs", () => ({ route: (hook, handler) => routes.set(hook, handler) }));
@@ -29,7 +29,7 @@ beforeEach(() => {
 
 afterEach(() => { delete globalThis.game; });
 
-/** Un combat dont `startCombat` se comporte comme celui de Foundry : `started` ne passe à vrai qu'à la réponse du serveur. */
+/** A combat whose `startCombat` behaves like Foundry's: `started` turns true only at the server's response. */
 function fakeCombat(count) {
   const combatants = Array.from({ length: count }, (_, i) => ({ id: `c${i}`, initiative: null, token: null }));
   const combat = {
@@ -41,8 +41,8 @@ function fakeCombat(count) {
   return combat;
 }
 
-describe("§397 : le premier round ne commence qu'une fois", () => {
-  it("trois initiatives dans la même réponse du serveur : un seul startCombat", async () => {
+describe("§397: the first round starts only once", () => {
+  it("three Initiatives in the same server response: a single startCombat", async () => {
     const combat = fakeCombat(3);
     for ( const c of combat.combatants ) c.initiative = 12;
     await Promise.all(combat.combatants.map(c => routes.get("updateCombatant")(c, { initiative: 12 })));
@@ -50,7 +50,7 @@ describe("§397 : le premier round ne commence qu'une fois", () => {
     expect(combat.started).toBe(true);
   });
 
-  it("un départ qui échoue n'empêche pas le suivant", async () => {
+  it("a start that fails does not prevent the next one", async () => {
     const combat = fakeCombat(2);
     for ( const c of combat.combatants ) c.initiative = 12;
     const start = combat.startCombat;
@@ -61,7 +61,7 @@ describe("§397 : le premier round ne commence qu'une fois", () => {
     expect(combat.starts).toBe(1);
   });
 
-  it("tant qu'il manque une initiative, rien ne commence", async () => {
+  it("as long as an Initiative is missing, nothing starts", async () => {
     const combat = fakeCombat(2);
     combat.combatants[0].initiative = 12;
     await routes.get("updateCombatant")(combat.combatants[0], { initiative: 12 });

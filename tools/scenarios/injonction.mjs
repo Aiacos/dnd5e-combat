@@ -1,17 +1,17 @@
 /**
- * Ordre imposé (SPEC §16.59) : Injonction du Clerc (ajoutée à volonté), l'ordre fixé d'avance sur la carte
- * (`usageConfig["dnd5e-combat"].order`), sauvegarde de Sagesse rejouée jusqu'à l'échec, puis un combat : au début du tour
- * de la cible, l'ordre s'exécute ; à la fin de ce tour, l'effet tombe.
- *  - Choix de l'ordre : sans ordre fixé, la fenêtre s'ouvre chez l'auteur ; « Halte » choisi, posé.
- *  - Rampe (Zombi) : À terre, tour achevé (plus de déplacement).
- *  - Halte (Zombi) : ne bouge pas, tour achevé.
- *  - Approche (Zombi à 4 cases) : arrive au contact du Clerc, tour achevé.
- *  - Fuis (Zombi à 2 cases) : s'éloigne du Clerc. Depuis le contact : l'attaque d'opportunité du Clerc est proposée avant
- *    le déplacement, refusée (« Ne pas réagir »), puis la fuite reprend.
- *  - Lâche (Guerrier) : son arme équipée est lâchée — un tas au sol, l'arme quitte la fiche (rendue et tas retiré à la fin) :
- *    tas d'un module voisin inscrit au hook `dnd5e-combat.dropItems` (§40.3 : une région, sa tuile — Darsh Loot), sinon
- *    sans module voisin : déséquipée.
- * Remet positions, effets, états, équipement et combat.
+ * Imposed order (SPEC §16.59): the Cleric's Command (added at will), the order fixed in advance on the card
+ * (`usageConfig["dnd5e-combat"].order`), Wisdom save replayed until it fails, then a combat: at the start of the target's
+ * turn, the order is carried out; at the end of that turn, the effect ends.
+ *  - Choice of the order: with no order fixed, the window opens on the author's side; "Halt" chosen, placed.
+ *  - Grovel (Zombi): Prone, turn over (no more movement).
+ *  - Halt (Zombi): does not move, turn over.
+ *  - Approach (Zombi at 4 cells): arrives in contact with the Cleric, turn over.
+ *  - Flee (Zombi at 2 cells): moves away from the Cleric. From contact: the Cleric's Opportunity Attack is offered before
+ *    the movement, declined ("Do not react"), then the flight resumes.
+ *  - Drop (Fighter): its equipped weapon is dropped — a pile on the ground, the weapon leaves the sheet (given back and pile
+ *    removed at the end): pile from a neighboring module registered on the hook `dnd5e-combat.dropItems` (§40.3: a region, its
+ *    tile — Darsh Loot), otherwise without a neighboring module: unequipped.
+ * Restores positions, effects, conditions, equipment and combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -63,9 +63,10 @@ export default {
       const pb = await ctx.position(b);
       return Math.max(Math.abs(pa.x - pb.x), Math.abs(pa.y - pb.y)) / grid - 1;   // tokens d'une case
     };
-    // Restored Keep (`dnd-6`), colonne x = 3080 : le Clerc en 4900, et au sud jusqu'en 5460 quatre cases libres de murs et de tokens
-    // (relevé du scénario `poussee`). Le scénario avait été vérifié le 2026-09-27 sur le Mac (`dnd-test-module-combat`), où le Zombi se
-    // posait à l'est du Clerc ; ici, à l'est du Clerc, un mur et une porte le séparent de lui (vu le 2026-09-28).
+    // Restored Keep (`dnd-6`), column x = 3080: the Cleric at 4900, and to the south up to 5460 four cells free of walls and
+    // tokens (survey from the `poussee` scenario). The scenario was checked on 2026-09-27 on the Mac (`dnd-test-module-combat`),
+    // where the Zombi was placed east of the Cleric; here, east of the Cleric, a wall and a door separate it from them
+    // (seen on 2026-09-28).
     const anchor = { x: 3080, y: 4900, elevation: 0 };
     const place = async (t, dx, dy) => {
       const c = await ctx.position(cleric);
@@ -73,7 +74,7 @@ export default {
       await ctx.call("move-token", { tokenId: t.id, x: anchor.x + (dx * grid), y: anchor.y + (dy * grid), elevation: anchor.elevation });
       await pause(1000);
     };
-    /** Injonction jusqu'à une sauvegarde ratée, l'ordre fixé ; rend true si l'effet est posé. */
+    /** Command until a failed save, the order fixed; returns true if the effect is placed. */
     const command = async (target, order) => {
       for ( let n = 1; n <= 20; n++ ) {
         const used = await ctx.use({ tokenId: cleric.id, identifier: "command", activityType: "save", consume: false,
@@ -84,7 +85,7 @@ export default {
       }
       return false;
     };
-    /** Un combat Clerc (20) puis la cible (10) ; on passe au tour de la cible. */
+    /** A combat Cleric (20) then the target (10); we move to the target's turn. */
     const toTurnOf = async target => {
       await ctx.startCombat([cleric, target]);
       const c = await ctx.combat();
@@ -99,7 +100,7 @@ export default {
       await ctx.nextTurn();
       await pause(1500);
     };
-    /** Attend le message « obéit » de la cible (l'ordre exécuté jusqu'au bout), 20 s au plus. */
+    /** Waits for the target's "obéit" message (the order carried out to the end), 20 s at most. */
     const obeyed = async target => {
       for ( let n = 0; n < 40; n++ ) {
         const { messages } = await ctx.call("list-chat-messages", { limit: 20, ...(ctx.since ? { sinceId: ctx.since } : {}) });
@@ -113,8 +114,8 @@ export default {
     const statuses = async t => (await ctx.effects(t)).flatMap(e => e.statuses ?? []);
 
     await part("Choix de l'ordre", async () => {
-      // Sans ordre fixé d'avance : à la sauvegarde ratée, la fenêtre « Quel ordre donner ? » s'ouvre chez l'auteur (le MJ ici) ;
-      // le scénario choisit « Halte » (connecteur : list-dialogs, answer-dialog).
+      // With no order fixed in advance: on the failed save, the "Which order to give?" window opens on the author's side (the GM
+      // here); the scenario chooses "Halt" (connector: list-dialogs, answer-dialog).
       await place(zombi, 0, 3);
       let posed = null;
       for ( let n = 1; (n <= 20) && !posed; n++ ) {
@@ -170,8 +171,8 @@ export default {
       ctx.expect(g1 >= g0 + 2, `Fuis : le Zombi s'éloigne du Clerc (écart ${g0} → ${g1} cases)`);
     });
     await part("Fuis depuis le contact", async () => {
-      // Quitter l'allonge du Clerc provoque son attaque d'opportunité, proposée AVANT le déplacement (fenêtre chez le MJ) ; le
-      // scénario y répond « ne pas réagir » (connecteur : list-dialogs, answer-dialog), puis la fuite reprend.
+      // Leaving the Cleric's reach provokes their Opportunity Attack, offered BEFORE the movement (window on the GM's side); the
+      // scenario answers "do not react" (connector: list-dialogs, answer-dialog), then the flight resumes.
       await place(zombi, 0, 1);
       if ( !ctx.expect(await command(zombi, "flee"), "Fuis (au contact) : l'ordre est posé") ) return;
       const g0 = await gap(zombi, cleric);
@@ -191,8 +192,8 @@ export default {
       await place(fighter, 2, 0);
       const held = fighterItems.filter(i => (i.system?.equipped === true) && (i.type === "weapon") && (i.system?.type?.value !== "natural"));
       if ( !ctx.expect(held.length > 0, `le Guerrier tient une arme (${held.map(i => i.name).join(", ")})`) ) return;
-      // Les listes relues à chaque fois (`ctx.scene()` garde celle du début du scénario : un tas créé ensuite n'y est pas).
-      // Un tas est une région et sa tuile (module voisin, hook `dnd5e-combat.dropItems`, §40.3).
+      // The lists re-read each time (`ctx.scene()` keeps the one from the start of the scenario: a pile created afterwards is not
+      // in it). A pile is a region and its tile (neighboring module, hook `dnd5e-combat.dropItems`, §40.3).
       const KINDS = ["Token", "Region", "Tile"];
       const sceneObjects = async () => (await ctx.call("list-scene-objects", { types: KINDS })).objects ?? {};
       const before = await sceneObjects();
@@ -201,14 +202,15 @@ export default {
         const now = await sceneObjects();
         return Object.fromEntries(KINDS.map(k => [k, (now[k] ?? []).filter(o => !known[k].has(o.id))]));
       };
-      // L'arme quitte la fiche pour un tas : on la rendra, et on retirera le tas (la région d'abord : son coffre part avec elle).
+      // The weapon leaves the sheet for a pile: we will give it back, and remove the pile (the region first: its chest leaves
+      // with it).
       ctx.restore(async () => {
         for ( const kind of ["Token", "Region", "Tile"] ) {
           for ( const o of (await created())[kind] ) await ctx.call("delete-scene-object", { type: kind, objectId: o.id }).catch(() => {});
           await pause(500);
         }
         const items = (await ctx.call("get-actor", { actorId: fighter.actorId })).items ?? [];
-        // Sous son identifiant d'origine : le filet de sécurité retire les items qu'il ne connaissait pas.
+        // Under its original identifier: the safety net removes the items it did not know.
         for ( const h of held ) {
           if ( items.some(i => i._id === h._id) ) continue;
           const { folder, ownership, _stats, ...itemData } = h;
@@ -219,16 +221,16 @@ export default {
       if ( !ctx.expect(await command(fighter, "drop"), "Lâche : le Guerrier rate sa sauvegarde, l'ordre est posé") ) return;
       await toTurnOf(fighter);
       await obeyed(fighter);
-      await pause(1500);   // le tas d'un module voisin se pose objet par objet
+      await pause(1500);   // a neighboring module's pile is placed item by item
       const items = (await ctx.call("get-actor", { actorId: fighter.actorId })).items ?? [];
       const still = held.filter(h => items.find(i => i._id === h._id)?.system?.equipped === true);
       ctx.expect(!still.length, `Lâche : plus rien en main (${held.map(i => i.name).join(", ")} lâché)`);
       ctx.expect(stopped(await movement(fighter)), "Lâche : son tour s'achève");
       const made = await created();
       const gone = held.every(h => !items.some(i => i._id === h._id));
-      // Où le Zombi doit pouvoir s'arrêter : la case du tas (ni obstacle ni case prise, §16.60).
+      // Where the Zombi must be able to stop: the pile's cell (no obstacle, no occupied cell, §16.60).
       const zombiCanStopAt = async point => {
-        // Le Guerrier s'écarte (le tas est posé sur sa case).
+        // The Fighter steps aside (the pile is placed on their cell).
         const f = await ctx.position(fighter);
         await ctx.call("move-token", { tokenId: fighter.id, x: f.x, y: f.y + grid, elevation: f.elevation });
         await pause(1200);
@@ -236,7 +238,7 @@ export default {
         ctx.expect(p.found && p.arrives, `le Zombi peut s'arrêter sur la case du tas (chemin ${p.found ? (p.arrives ? "jusqu'au bout" : "incomplet") : "introuvable"})`);
       };
       if ( made.Region.length ) {
-        // Module voisin (§40.3) : une région de moins d'une case, dans la case du Guerrier, et sa tuile.
+        // Neighboring module (§40.3): a region smaller than a cell, in the Fighter's cell, and its tile.
         ctx.expect((made.Region.length === 1) && !made.Token.length, `module voisin : un tas posé au sol (${made.Region.map(r => r.name).join(", ")})`);
         ctx.expect(gone, "module voisin : l'arme a quitté la fiche du Guerrier");
         const { data } = await ctx.call("get-scene-object", { type: "Region", objectId: made.Region[0].id });

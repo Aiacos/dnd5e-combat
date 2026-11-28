@@ -3,12 +3,12 @@ import { readFileSync } from "node:fs";
 import { holds, unknownFacts } from "../module/scripts/core/triggers.mjs";
 import { knownCastLevel, castLevelAtMost, castLevelAtLeast } from "../module/scripts/core/counter.mjs";
 
-// §481 : les faits `spell.castLevel…` (adapter/facts.mjs, relu dans la source : il touche à Foundry, on ne l'importe pas ici).
+// §481: the `spell.castLevel…` facts (adapter/facts.mjs, re-read in the source: it touches Foundry, so it is not imported here).
 const factsSource = readFileSync(new URL("../module/scripts/adapter/facts.mjs", import.meta.url), "utf8");
 const ADAPTER_FACTS = Array.from(factsSource.matchAll(/^\s+"([a-z]+\.[A-Za-z]+)":/gm), m => m[1]);
 const gatesSource = readFileSync(new URL("../module/scripts/runtime/gates.mjs", import.meta.url), "utf8");
 
-/** Les faits tels que l'adaptateur les compose pour un niveau donné. */
+/** The facts as the adapter composes them for a given level. */
 const factsAt = cast => ({
   "spell.castLevel": cast,
   "spell.castLevelAtMost": n => castLevelAtMost(cast, n),
@@ -17,20 +17,20 @@ const factsAt = cast => ({
 });
 
 describe("§481 : niveau de lancement connu (knownCastLevel)", () => {
-  it("le niveau que le moment connaît l'emporte (porte castsSpell : emplacement choisi)", () => {
+  it("the level the moment knows wins (gate castsSpell: chosen slot)", () => {
     expect(knownCastLevel({ castLevel: 5, isSpell: true, level: 3 })).toBe(5);
-    expect(knownCastLevel({ castLevel: 0, isSpell: true, level: 3 })).toBe(0);   // tour de magie : 0, pas « inconnu »
+    expect(knownCastLevel({ castLevel: 0, isSpell: true, level: 3 })).toBe(0);   // cantrip: 0, not "unknown"
     expect(knownCastLevel({ castLevel: "4" })).toBe(4);
   });
 
-  it("sinon celui de l'item : niveau, mise à l'échelle de dnd5e, capacité qui le lance", () => {
+  it("otherwise the item's: level, dnd5e scaling, the feature that casts it", () => {
     expect(knownCastLevel({ isSpell: true, level: 1 })).toBe(1);
-    expect(knownCastLevel({ isSpell: true, level: 1, scaling: 2 })).toBe(3);    // copie mise à l'échelle d'un message
-    expect(knownCastLevel({ isSpell: true, level: 3, linkedLevel: 4 })).toBe(4); // « Boule de feu (niveau 4) » d'un monstre
+    expect(knownCastLevel({ isSpell: true, level: 1, scaling: 2 })).toBe(3);    // scaled copy of a message
+    expect(knownCastLevel({ isSpell: true, level: 3, linkedLevel: 4 })).toBe(4); // a monster's "Fireball (level 4)"
     expect(knownCastLevel({ isSpell: true, level: 0 })).toBe(0);
   });
 
-  it("hors d'un sort, ou sans niveau lisible : null", () => {
+  it("outside a spell, or without a readable level: null", () => {
     expect(knownCastLevel({ isSpell: false, level: 3 })).toBeNull();
     expect(knownCastLevel({ isSpell: true, level: null })).toBeNull();
     expect(knownCastLevel({ isSpell: true, level: undefined })).toBeNull();
@@ -47,22 +47,22 @@ describe("§481 : bornes de niveau", () => {
     expect(castLevelAtLeast(3, 4)).toBe(false);
   });
 
-  it("un niveau inconnu ne tient jamais, une borne illisible non plus", () => {
+  it("an unknown level never holds, an unreadable bound neither", () => {
     expect(castLevelAtMost(null, 9)).toBe(false);
     expect(castLevelAtLeast(null, 0)).toBe(false);
     expect(castLevelAtMost(2, "trois")).toBe(false);
   });
 });
 
-describe("§481 : faits spell.castLevel… dans une condition de réaction", () => {
+describe("§481: spell.castLevel… facts in a reaction condition", () => {
   const condition = { "target.seesSource": true, "spell.castLevelAtMost": 3 };
 
-  it("l'adaptateur les fournit, la validation les connaît", () => {
+  it("the adapter provides them, validation knows them", () => {
     for ( const key of ["spell.castLevel", "spell.castLevelAtMost", "spell.castLevelAtLeast"] ) expect(ADAPTER_FACTS).toContain(key);
     expect(unknownFacts(condition, Object.fromEntries(ADAPTER_FACTS.map(k => [k, true])))).toEqual([]);
   });
 
-  it("« un sort de niveau 3 ou moins » : niveau 3 oui, niveau 4 non, hors sort non", () => {
+  it("\"a spell of level 3 or less\": level 3 yes, level 4 no, not a spell no", () => {
     expect(holds(condition, factsAt(0))).toBe(true);
     expect(holds(condition, factsAt(3))).toBe(true);
     expect(holds(condition, factsAt(4))).toBe(false);
@@ -71,7 +71,7 @@ describe("§481 : faits spell.castLevel… dans une condition de réaction", () 
     expect(holds({ not: { "spell.castLevelAtLeast": 4 } }, factsAt(3))).toBe(true);
   });
 
-  it("la porte castsSpell passe le niveau aux conditions (counterCandidates, isTargeted, contre-Contresort)", () => {
+  it("the castsSpell gate passes the level to the conditions (counterCandidates, isTargeted, counter-Counterspell)", () => {
     expect(gatesSource).toMatch(/matching\("castsSpell", \{[^}]*castLevel \}\)/);
     expect(gatesSource).toMatch(/matching\("isTargeted", \{[^}]*castLevel \}\)/);
     expect(gatesSource).toMatch(/counterCandidates\(activity, origin, castLevel\)/);

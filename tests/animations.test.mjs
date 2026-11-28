@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { relevantAnimations } from "../module/scripts/core/animations.mjs";
 
-describe("§112 : les animations à attendre avant d'appliquer", () => {
+describe("§112: the animations to wait for before applying", () => {
   const now = 10000;
   const fx = (id, more) => ({ id, source: null, target: null, persist: false, started: now - 500, ended: false, ...more });
-  it("celles qui partent de l'auteur ou arrivent sur une cible", () => {
+  it("those that start from the author or arrive on a target", () => {
     const effects = [fx("a", { source: "T.mage" }), fx("b", { target: "T.zombi" }), fx("c", { source: "T.autre", target: "T.autre2" })];
     expect(relevantAnimations(effects, ["T.mage", "T.zombi"], now)).toEqual(["a", "b"]);
   });

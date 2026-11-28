@@ -1,11 +1,11 @@
 /**
- * §105 — la « Brume vampirique » du monde `ravenloft` (fiche faite à la main, format 2014 en français, sans identifiant hors
- * de sa Forme brumeuse, `misty-form`), contre Alara, sur la scène « Carte de test » :
- *  1. Forme brumeuse, « et inversement » : la Brume peut finir dans la case d'Alara, et Alara dans celle de la Brume ;
- *  2. Drain de vie : touché, sauvegarde de Constitution enchaînée ; ratée, un effet de maximum de PV égal aux dégâts subis
- *     sur Alara, et la Brume regagne des PV ; réussie, aucun effet ;
- *  3. Caresse dévitalisante (Ombre du Monster Manual) prêtée à la Brume : touché, un effet « Force −1d4 » sur Alara.
- * Les jets sont aléatoires : on rejoue jusqu'à l'issue voulue (20 essais au plus).
+ * §105 — the "Vampiric Mist" of the `ravenloft` world (hand-made sheet, 2014 format in French, with no identifier outside
+ * its Misty Form, `misty-form`), against Alara, on the "Carte de test" scene:
+ *  1. Misty Form, "and vice versa": the Mist may end in Alara's cell, and Alara in the Mist's;
+ *  2. Life Drain: on a hit, chained Constitution save; failed, a maximum HP effect equal to the damage taken
+ *     on Alara, and the Mist regains HP; succeeded, no effect;
+ *  3. Draining Swipe (Shadow from the Monster Manual) lent to the Mist: on a hit, a "Strength −1d4" effect on Alara.
+ * The rolls are random: we replay until the wanted outcome (20 tries at most).
  */
 const SHADOW = "Compendium.dnd-monster-manual.actors.Actor.mmShadow00000000";
 const DRAIN_EFFECT = /maximum de PV|Hit Point maximum|: (Force|Strength) −/;
@@ -87,7 +87,7 @@ export default {
     }
     await clearDrains(pc);
 
-    // 3. Caresse dévitalisante prêtée.
+    // 3. Draining Swipe lent.
     const { data: source } = await ctx.call("get-compendium-entry", { uuid: SHADOW });
     const { _id, folder, ownership, _stats, ...itemData } = source.items.find(i => i.system?.identifier === "draining-swipe");
     const up = await ctx.call("upsert-actor-item", { actorId: mistTok.actorId, itemData, match: { path: "system.identifier", value: "draining-swipe" } });

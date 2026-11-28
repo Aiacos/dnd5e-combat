@@ -12,30 +12,30 @@ import { keptAndDropped } from "../core/d20.mjs";
 import { manualModeOverride } from "../core/conditions.mjs";
 
 /**
- * Réglage de monde (éteint par défaut : au MJ de l'activer) : une rangée par cible — icône du verdict, portrait, nom, détail —,
- * comme la carte de Midi-QOL.
+ * World setting (off by default: up to the GM to enable it): one row per target — verdict icon, portrait, name, detail —,
+ * like the Midi-QOL card.
  */
 export const CHAT_ROWS_SETTING = "chatRows";
 
 export const rowsEnabled = () => { try { return !!game.settings.get(MODULE_ID, CHAT_ROWS_SETTING); } catch { return false; } };
 
-/** L'icône du verdict d'une rangée, par classe de ligne (celles de Midi-QOL : coche, coche double au critique, croix). */
+/** A row's verdict icon, by row class (Midi-QOL's: check, double check on a Critical Hit, cross). */
 const ROW_ICONS = Object.freeze({ hit: "fa-check", critical: "fa-check-double", miss: "fa-xmark", pending: "fa-hourglass-half",
   undone: "fa-rotate-left" });
 
-/** L'image du token d'une cible, ou null (token parti, ancienne carte sans uuid). */
+/** A target's token image, or null (token gone, old card without uuid). */
 function tokenImage(uuid) {
   const token = uuid ? fromUuidSync(uuid, { strict: false }) : null;
   return token?.texture?.src ?? token?.actor?.img ?? null;
 }
 
 /**
- * Les lignes d'un résultat en rangées, dans le balisage de la carte de Midi-QOL (ses gabarits `hits.html` et `saves.html`, MIT —
- * la notice est dans styles/dnd5e-combat.css) :
- * une liste de cibles de dnd5e (`ul.evaluation` > `li.target.success|failure`) avec le symbole du verdict, le portrait du token
- * et le nom ; pour une attaque, la CA de la cible à droite (MJ seulement) ; pour une sauvegarde, un titre (caractéristique, et DD
- * si dnd5e le montre à ce joueur) et le total de chaque jet à droite, son détail au survol. Ce que le moteur a fait à la cible
- * (PV perdus, effets) est l'infobulle de sa rangée.
+ * A result's lines as rows, in the markup of the Midi-QOL card (its `hits.html` and `saves.html` templates, MIT —
+ * the notice is in styles/dnd5e-combat.css):
+ * a dnd5e target list (`ul.evaluation` > `li.target.success|failure`) with the verdict symbol, the token portrait
+ * and the name; for an attack, the target's AC on the right (GM only); for a saving throw, a title (ability, and DC
+ * if dnd5e shows it to this player) and the total of each roll on the right, its detail on hover. What the engine did to
+ * the target (HP lost, effects) is the tooltip of its row.
  */
 function rows(lines, context={}) {
   const saves = lines.some(line => line.save) && !lines.some(line => line.attack);
@@ -47,7 +47,7 @@ function rows(lines, context={}) {
   list.classList.add("unlist", "evaluation", "wrapper");
   for ( const line of lines ) {
     const li = saves ? saveRow(line, context) : hitRow(line, context);
-    // Comme Midi-QOL : survol, clic et clic droit sur la rangée agissent sur le token.
+    // Like Midi-QOL: hover, click and right-click on the row act on the token.
     li.addEventListener("mouseenter", hoverTarget);
     li.addEventListener("mouseleave", leaveTarget);
     li.addEventListener("click", selectTarget);
@@ -72,20 +72,20 @@ function rows(lines, context={}) {
   return results;
 }
 
-/** Le DD est-il montré à cet utilisateur ? Au MJ, au propriétaire du lanceur, sinon selon le réglage de dnd5e. */
+/** Is the DC shown to this user? To the GM, to the caster's owner, otherwise per dnd5e's setting. */
 function challengeVisible(caster) {
   if ( game.user.isGM || caster?.testUserPermission?.(game.user, "OWNER") ) return true;
   let mode = "none";
-  try { mode = game.settings.get("dnd5e", "challengeVisibility"); } catch { /* réglage absent */ }
+  try { mode = game.settings.get("dnd5e", "challengeVisibility"); } catch { /* setting missing */ }
   return (mode === "all") || ((mode === "player") && !!caster?.hasPlayerOwner);
 }
 
-/** Part des dégâts sur une sauvegarde réussie, telle que Midi-QOL la note sous le titre. */
+/** Share of damage on a successful save, as Midi-QOL notes it under the title. */
 const ON_SAVE_MARK = Object.freeze({ none: "0", half: "½", full: "1" });
 
 /**
- * Les titres des sauvegardes, comme sur la carte de Midi-QOL : « DD 14 Jet de sauvegarde de Charisme » (au pluriel pour plusieurs
- * cibles, sans le DD pour qui ne doit pas le voir), puis, si l'action inflige des dégâts, leur part sur une réussite.
+ * Saving throw titles, as on the Midi-QOL card: "DC 14 Charisma Saving Throw" (plural for several targets, without the DC for
+ * whoever must not see it), then, if the action deals damage, their share on a success.
  */
 function saveHeadings({ save, damage, caster }, count) {
   const heading = text => {
@@ -110,14 +110,14 @@ function saveHeadings({ save, damage, caster }, count) {
   return out;
 }
 
-/** Le token d'une rangée, s'il est sur la scène affichée. */
+/** A row's token, if it is on the displayed scene. */
 function rowToken(event) {
   const uuid = event.currentTarget?.dataset?.uuid;
   const document = uuid ? fromUuidSync(uuid, { strict: false }) : null;
   return (document?.parent === canvas?.scene) ? document.object : null;
 }
 
-/** Survol d'une rangée : le token est mis en évidence, sauf s'il est déjà sélectionné. */
+/** Hover over a row: the token is highlighted, unless it is already selected. */
 let highlighted = null;
 function hoverTarget(event) {
   const token = rowToken(event);
@@ -131,7 +131,7 @@ function leaveTarget(event) {
   highlighted = null;
 }
 
-/** Clic sur une rangée : le token est sélectionné (et la vue s'y porte) s'il est à l'utilisateur ; un second clic le relâche. */
+/** Click on a row: the token is selected (and the view pans to it) if the user owns it; a second click releases it. */
 function selectTarget(event) {
   event.stopPropagation();
   event.preventDefault();
@@ -143,7 +143,7 @@ function selectTarget(event) {
   }
 }
 
-/** Clic droit sur une rangée : la fiche de l'acteur, pour son propriétaire. */
+/** Right-click on a row: the actor's sheet, for its owner. */
 function showTarget(event) {
   event.stopImmediatePropagation();
   event.preventDefault();
@@ -151,7 +151,7 @@ function showTarget(event) {
   if ( token?.actor?.testUserPermission(game.user, "OWNER") ) token.actor.sheet?.render(true);
 }
 
-/** Le nom d'une cible. */
+/** A target's name. */
 function stackedName(line) {
   const stacked = document.createElement("div");
   stacked.classList.add("name-stacked");
@@ -176,19 +176,19 @@ function portrait(line, css) {
   return img;
 }
 
-/** La rangée d'une cible : ses classes, son token, et ce que le moteur lui a fait en infobulle. */
+/** A target's row: its classes, its token, and what the engine did to it as a tooltip. */
 function targetRow(line, ...classes) {
   const li = document.createElement("li");
   li.classList.add("target", "midi-qol", "midi-qol-target-select", ...classes);
   if ( line.token ) { li.dataset.uuid = line.token; li.dataset.id = line.token.split(".").at(-1); }
-  // `tooltipText` : du texte, jamais relu comme du HTML (un nom, le détail d'un jet).
+  // `tooltipText`: text, never re-read as HTML (a name, a roll's detail).
   if ( line.detail ) { li.dataset.tooltipText = line.detail; li.dataset.tooltipDirection = "LEFT"; }
   return li;
 }
 
 /**
- * Une cible d'attaque : `li.target.success|failure` — coche, coche double au critique, croix — et sa CA pour le MJ. Une cible
- * sans verdict (soins, effet sans jet) n'a ni teinte ni symbole.
+ * An attack target: `li.target.success|failure` — check, double check on a Critical Hit, cross — and its AC for the GM. A target
+ * without a verdict (healing, effect without a roll) has neither tint nor symbol.
  */
 function hitRow(line, { plain=false }={}) {
   const neutral = plain && (line.css === "hit");
@@ -210,7 +210,7 @@ function hitRow(line, { plain=false }={}) {
   return li;
 }
 
-/** Une cible de sauvegarde : `li.target.success|failure` (celle de la cible), le total de son jet à droite, détaillé au survol. */
+/** A save target: `li.target.success|failure` (the target's own), the total of its roll on the right, detailed on hover. */
 function saveRow(line, { save=null, caster=null }={}) {
   const outcome = line.save ? (line.save.success ? "success" : "failure") : null;
   const li = targetRow(line, "midi-qol-save-class", outcome ?? `dnd5e-combat-${line.css}`);
@@ -229,7 +229,7 @@ function saveRow(line, { save=null, caster=null }={}) {
     total.append(String(line.save.total));
     const roll = game.messages.get(line.save.messageId)?.rolls?.[0];
     if ( roll ) {
-      // Comme Midi-QOL : le calcul en infobulle (avec le DD pour qui le voit), le jet au survol.
+      // Like Midi-QOL: the calculation as a tooltip (with the DC for whoever sees it), the roll on hover.
       const versus = (Number.isFinite(save?.dc) && challengeVisible(caster))
         ? ` vs ${game.i18n.localize("DND5E.AbbreviationDC")} ${save.dc}` : "";
       total.dataset.tooltipText = `${line.save.total} = ${roll.result}${versus}`;
@@ -241,7 +241,7 @@ function saveRow(line, { save=null, caster=null }={}) {
   return li;
 }
 
-/** Le jet de sauvegarde d'une cible, montré au survol de son total : formule, puis total teinté. */
+/** A target's saving throw, shown on hover over its total: formula, then tinted total. */
 function saveTooltip(roll, save, outcome) {
   const tip = document.createElement("span");
   tip.classList.add("midi-qol-tooltiptext", "midi-qol-save-tooltip");
@@ -281,7 +281,7 @@ function saveTooltip(roll, save, outcome) {
 function block(lines, context={}) {
   const div = document.createElement("div");
   div.classList.add("dnd5e-combat-result");
-  // En rangées, seulement un résultat par cible : les raisons d'avantage, les bonus et les attentes restent des lignes.
+  // In rows, only one result per target: the reasons for Advantage, the bonuses and the waits remain lines.
   if ( rowsEnabled() && lines.length && lines.every(line => line.name) ) { div.append(rows(lines, context)); return div; }
   for ( const line of lines ) {
     const p = document.createElement("p");
@@ -293,8 +293,8 @@ function block(lines, context={}) {
 }
 
 /**
- * Le contenu d'une ligne : son `text`, ou ses morceaux `nodes` — une chaîne, ou `{ struck }` pour un nombre barré (le dé écarté
- * d'un Avantage ou d'un Désavantage, issue #47).
+ * A line's content: its `text`, or its `nodes` pieces — a string, or `{ struck }` for a struck-out number (the discarded die of an
+ * Advantage or Disadvantage, issue #47).
  */
 export function fillLine(p, { text, nodes }) {
   if ( !nodes ) { p.textContent = text; return; }
@@ -307,32 +307,32 @@ export function fillLine(p, { text, nodes }) {
   }
 }
 
-// Une raison d'office par type de créature (`type:plant`, core/conditions.mjs) se lit par le nom du type.
+// An automatic reason per creature type (`type:plant`, core/conditions.mjs) is read through the type's name.
 const statusName = id => String(id).startsWith("type:")
   ? game.i18n.localize(CONFIG.DND5E.creatureTypes[String(id).slice(5)]?.label ?? String(id).slice(5))
   : game.i18n.localize(CONFIG.statusEffects[id]?.name ?? id);
 
 /**
- * Une distance de règle (« à 5 ft ») dans l'unité de la scène, formatée par dnd5e : « 1,5 m » sur une scène métrique (SPEC §5.7 ;
- * le texte figé « 5 ft » restait en pieds sur une scène en mètres — retour de table, 2026-10-17).
+ * A rule distance ("at 5 ft") in the scene's unit, formatted by dnd5e: "1.5 m" on a metric scene (SPEC §5.7;
+ * the fixed text "5 ft" stayed in feet on a scene in meters — table feedback, 2026-10-17).
  */
 function sceneLength(feet) {
   const units = canvas?.scene?.grid?.units ?? "ft";
   try { return dnd5e.utils.formatLength(convertLength(feet, "ft", units, readUnitFactors()), units); }
-  catch { return dnd5e.utils.formatLength(feet, "ft"); }   // unité de scène inconnue de dnd5e : la règle en pieds
+  catch { return dnd5e.utils.formatLength(feet, "ft"); }   // scene unit unknown to dnd5e: the rule in feet
 }
 
-/** Une source d'avantage ou de désavantage (core/conditions.mjs), en clair. */
+/** A source of Advantage or Disadvantage (core/conditions.mjs), in plain words. */
 export function describeReason(r) {
   if ( r.who === "situation" ) return game.i18n.format(`DND5ECOMBAT.Raison.${r.key}`, { distance: sceneLength(5), ally: r.ally ?? "" });
-  if ( r.who === "content" ) return r.key;   // le nom de l'item qui le déclare (§16, B6)
-  if ( r.key === "unseen" ) return loc(`Raison.unseen.${r.who}`);   // vision (P1) : pas un état
+  if ( r.who === "content" ) return r.key;   // the name of the item that declares it (§16, B6)
+  if ( r.key === "unseen" ) return loc(`Raison.unseen.${r.who}`);   // sight (P1): not a condition
   return game.i18n.format(`DND5ECOMBAT.Raison.${r.who}`, { status: r.key === "proneFar" ? loc("Raison.proneFar") : statusName(r.key) });
 }
 
 /**
- * « Avantage : cible À terre, attaquant Invisible » : les lignes, sous le jet d'attaque ou sur la carte unique (ui/compact.mjs). §480 : avec
- * le jet lancé (`roll`), une ligne de plus quand un Désavantage du moteur a été écarté à la main (`manualModeOverride`).
+ * "Advantage: target Prone, attacker Invisible": the lines, under the attack roll or on the single card (ui/compact.mjs).
+ * §480: with the roll made (`roll`), one more line when an engine Disadvantage was discarded by hand (`manualModeOverride`).
  */
 export function modifierLines(modifiers, roll=null) {
   const describe = describeReason;
@@ -347,9 +347,9 @@ export function modifierLines(modifiers, roll=null) {
 }
 
 /**
- * Issue #47 : « Désavantage : 11, 13 », le 13 barré — le dé gardé puis le dé écarté. La ligne de jet de dnd5e, comme la carte unique,
- * ne montrait que le dé gardé : un Désavantage se lisait comme un jet normal, ou le total et le dé comme deux dés. Rend les morceaux
- * d'une ligne (`fillLine`), ou null pour un jet à un seul d20.
+ * Issue #47: "Disadvantage: 11, 13", the 13 struck out — the kept die then the discarded die. dnd5e's roll line, like the
+ * single card, only showed the kept die: a Disadvantage read like a normal roll, or the total and the die like two dice.
+ * Returns the pieces of a line (`fillLine`), or null for a single-d20 roll.
  */
 export function d20Nodes(roll) {
   const dice = keptAndDropped(roll?.dice?.[0]?.results, roll?.options?.advantageMode);
@@ -359,7 +359,7 @@ export function d20Nodes(roll) {
   return nodes;
 }
 
-/** Sous le jet d'attaque déplié (ou sans carte unique) : les deux d20 d'un Avantage ou d'un Désavantage. */
+/** Under the unfolded attack roll (or without a single card): the two d20s of an Advantage or Disadvantage. */
 function renderD20(message, html) {
   const nodes = (message.type === "attack") ? d20Nodes(message.rolls?.[0]) : null;
   if ( nodes ) html.querySelector(".message-content")?.append(block([{ css: "note", nodes }]));
@@ -370,17 +370,17 @@ function renderModifiers(html, modifiers, roll=null) {
   if ( lines.length ) html.querySelector(".message-content")?.append(block(lines));
 }
 
-/** « Maléfice : +1d6 nécrotique » : les lignes, sous le jet de dégâts ou sur la carte unique. */
+/** "Hex: +1d6 necrotic": the lines, under the damage roll or on the single card. */
 export function bonusLines(bonuses) {
   const typeName = t => game.i18n.localize(CONFIG.DND5E.damageTypes[t]?.label ?? t);
-  // §161 : plusieurs types au choix (Invocation d'élémentaires mineurs).
+  // §161: several types to choose from (Conjure Minor Elementals).
   return bonuses.map(b => ({ css: "note", text: loc("DegatsBonus", { name: b.name, formula: b.formula, type: [b.damageType].flat().map(typeName).join(" / ") }) }));
 }
 
 /**
- * §408 : la carte d'une action dont une règle a été passée outre — un bandeau « Règle passée outre » en tête, les raisons en infobulle et
- * en dessous, visible de toute la table (règle de l'utilisateur : le joueur décide, la table est prévenue) — sauf réglage
- * `overrideVisibility` (issue #178) : alors le MJ et celui qui a forcé seulement.
+ * §408: the card of an action for which a rule was overridden — a "Rule overridden" banner at the top, the reasons as a tooltip and
+ * below, visible to the whole table (user's rule: the player decides, the table is informed) — except with the setting
+ * `overrideVisibility` (issue #178): then the GM and the one who forced it only.
  */
 function renderOverridden(html, reasons) {
   const content = html.querySelector(".message-content");
@@ -405,7 +405,7 @@ function renderBonuses(html, bonuses) {
   html.querySelector(".message-content")?.append(block(bonusLines(bonuses)));
 }
 
-/** « Non affecté : un humanoïde seulement », « non affecté : immunité (Charmé) », « non affecté ». */
+/** "Unaffected: a Humanoid only", "unaffected: Immunity (Charmed)", "unaffected". */
 function unaffectedText({ reason, detail }) {
   if ( reason === "type" ) return loc("NonAffecte.type", { types: typesLabel((detail ?? "").split(",").filter(Boolean)) });
   if ( reason === "immune" ) return loc("NonAffecte.immune", { status: statusName(detail) });
@@ -416,7 +416,7 @@ function unaffectedText({ reason, detail }) {
   return loc("NonAffecte.content");
 }
 
-/** Le verdict d'une cible, en clair. La CA n'est jamais affichée. */
+/** A target's verdict, in plain words. AC is never displayed. */
 function verdictText(t) {
   const key = t.critical ? "Critique" : t.hit ? "Touche" : (t.reason === "cover" ? "AbriTotal" : "Rate");
   const notes = [];
@@ -424,13 +424,13 @@ function verdictText(t) {
   if ( t.reason === "duplicate" ) notes.push(loc("Repliques.Note"));
   else if ( t.reason === "autoCritical" ) notes.push(loc("CritiqueDOffice"));
   else if ( t.reason === "beatsAc" ) notes.push(loc("CritOption.Ecart", { margin: critMargin() }));   // §207
-  else if ( t.reason === "atCost" ) notes.push(loc("APrix.Note"));   // issue #32 : succès à un prix
-  // P1 (b) : l'abri calculé par le moteur, sans la CA.
+  else if ( t.reason === "atCost" ) notes.push(loc("APrix.Note"));   // issue #32: success at a cost
+  // P1 (b): the Cover computed by the engine, without the AC.
   if ( t.cover && (t.cover.bonus !== null) ) notes.push(`${loc(`Abri.${t.cover.degree}`)} +${t.cover.bonus}`);
   return `${loc(key)}${notes.length ? ` (${notes.join(", ")})` : ""}`;
 }
 
-/** Toucher / raté par cible sous le jet d'attaque, visible de tous, quand le porteur est un autre message. */
+/** Hit / miss per target under the attack roll, visible to all, when the bearer is another message. */
 function renderVerdict(html, resolution) {
   if ( !resolution.attack || [STEPS.AWAITING_ATTACK, STEPS.AWAITING_REACTION].includes(resolution.step) ) return;
   const lines = resolution.targets.map(t => ({ css: t.hit ? "hit" : "miss", text: `${t.name} — ${verdictText(t)}`,
@@ -438,7 +438,7 @@ function renderVerdict(html, resolution) {
   html.querySelector(".message-content")?.append(block(lines));
 }
 
-/** Note « annulé », ou bouton d'annulation pour le MJ. */
+/** "Cancelled" note, or cancel button for the GM. */
 function appendUndo(div, message, undone) {
   if ( undone ) {
     const p = document.createElement("p");
@@ -454,7 +454,7 @@ function appendUndo(div, message, undone) {
   }
 }
 
-/** Dégâts réellement perdus par cible, et bouton d'annulation pour le MJ. */
+/** Damage actually lost per target, and cancel button for the GM. */
 function renderDamage(message, html, applied) {
   const lines = applied.lines.map(l => ({
     css: applied.undone ? "undone" : "hit",
@@ -469,10 +469,10 @@ function renderDamage(message, html, applied) {
 const lostOrHealed = applied => (applied < 0) ? loc("PvRendus", { n: -applied }) : loc("PvPerdus", { n: applied });
 
 /**
- * En rangées, une fois l'action réglée, la carte perd ce que la carte de Midi-QOL n'a plus à ce stade : les boutons de jet
- * d'attaque, de dégâts et de sauvegarde de dnd5e (les jets sont faits), la rangée du DD (il est dans le titre des sauvegardes),
- * les résumés de sauvegarde de dnd5e (les rangées les donnent) et le tiroir des effets que le moteur a déjà posés. Pas la carte
- * d'une action annulée (`settled`).
+ * In rows, once the action is settled, the card loses what the Midi-QOL card no longer has at this stage: dnd5e's attack roll,
+ * damage and saving throw buttons (the rolls are made), the DC row (it is in the saves title),
+ * dnd5e's save summaries (the rows give them) and the drawer of effects the engine has already applied. Not the card
+ * of a cancelled action (`settled`).
  */
 function trimCard(content, plan) {
   const spent = ["rollAttack", "rollDamage", "rollSave"].map(action => `.chat-card button[data-action="${action}"]`).join(", ");
@@ -490,9 +490,9 @@ function trimCard(content, plan) {
 }
 
 /**
- * L'action entière sur son porteur : une ligne par cible — verdict, sauvegarde, PV, effets — en
- * attente puis tranchée. Ni la CA ni le DD ne sont affichés. Tant qu'une réaction peut encore
- * changer le verdict, il n'est pas montré.
+ * The whole action on its bearer: one line per target — verdict, save, HP, effects — pending then
+ * settled. Neither the AC nor the DC are displayed. As long as a Reaction can still
+ * change the verdict, it is not shown.
  */
 function renderResolution(message, html, resolution) {
   const { plan, step } = resolution;
@@ -501,12 +501,12 @@ function renderResolution(message, html, resolution) {
   if ( !content ) return console.warn(`${MODULE_ID} | card without .message-content, resolution not shown`, html);
   if ( step === STEPS.AWAITING_REACTION ) return content.append(block([{ css: "pending", text: loc("ReactionEnAttente") }]));
   if ( pendingChoice(resolution) ) return content.append(block([{ css: "pending", text: loc("ChoixEnAttente") }]));
-  // Pas une carte annulée : le MJ peut vouloir relancer, elle garde les boutons de dnd5e et son tiroir d'effets.
+  // Not a cancelled card: the GM may want to reroll, it keeps dnd5e's buttons and its effects drawer.
   if ( rowsEnabled() && settled(step) ) trimCard(content, plan);
 
   const undone = step === STEPS.UNDONE;
   const lines = resolution.targets.map(t => {
-    // §16.8 : hors d'atteinte de l'action (type de créature, règle du contenu, immunité) — rien d'autre à dire.
+    // §16.8: out of the action's reach (creature type, content rule, Immunity) — nothing else to say.
     if ( t.unaffected ) return { css: undone ? "undone" : "miss", text: `${t.name} — ${unaffectedText(t.unaffected)}`,
       name: t.name, token: t.token, detail: unaffectedText(t.unaffected) };
     const parts = [];
@@ -516,11 +516,11 @@ function renderResolution(message, html, resolution) {
     if ( plan.save && reached ) {
       if ( !t.save ) { parts.push(loc("SauvegardeAttendue")); css = "pending"; }
       else {
-        // §232 : `willing` — une créature consentante (Sphère résiliente d'Otiluke).
+        // §232: `willing` — a willing creature (Otiluke's Resilient Sphere).
         parts.push((t.save.auto === "noSave") ? loc("SansSauvegarde") : (t.save.auto === "willing") ? loc("Consentant.Carte")
           : t.save.auto ? loc("SauvegardeDOffice", { status: statusName(t.save.auto) })
           : loc(t.save.success ? "SauvegardeReussie" : "SauvegardeRatee", { n: t.save.total }));
-        if ( t.save.atCost ) parts.push(loc("APrix.Note"));   // issue #32 : succès à un prix
+        if ( t.save.atCost ) parts.push(loc("APrix.Note"));   // issue #32: success at a cost
         if ( t.save.success && !plan.attack ) css = "miss";
       }
     }
@@ -528,7 +528,7 @@ function renderResolution(message, html, resolution) {
     // #269 (§545): only some targets were Critical Hits — say which ones took the critical dice rolled apart.
     if ( t.damage && plan.attack && t.hit && t.critical && resolution.damageRoll?.critical?.length ) parts.push(loc("CoupCritique.DesCritiques"));
     if ( t.effects?.length ) parts.push(loc("EffetsAppliques", { n: t.effects.length }));
-    // En rangées : le jet de sauvegarde de la cible (total, réussite) a sa place à droite ; une sauvegarde d'office n'en a pas.
+    // In rows: the target's saving throw (total, success) has its place on the right; an automatic save has none.
     const rolled = (plan.save && reached && t.save && !t.save.auto)
       ? { total: t.save.total, success: !!t.save.success, messageId: t.save.messageId } : null;
     return { css: undone ? "undone" : css, text: `${t.name} — ${parts.join(", ")}`,
@@ -541,7 +541,7 @@ function renderResolution(message, html, resolution) {
   content.append(div);
 }
 
-/** Journal allégé : les cartes hors écran ne sont ni mises en page ni dessinées (content-visibility, styles/dnd5e-combat.css). */
+/** Lightened log: off-screen cards are neither laid out nor painted (content-visibility, styles/dnd5e-combat.css). */
 function applyChatLight() {
   document.body.classList.toggle("dnd5e-combat-chat-light", !!game.settings.get(MODULE_ID, CHAT_LIGHT_SETTING));
 }
@@ -555,18 +555,18 @@ export function registerChat() {
   route("ready", applyChatLight, { label: "light chat log" });
   route("updateSetting", setting => { if ( setting.key === `${MODULE_ID}.${CHAT_LIGHT_SETTING}` ) applyChatLight(); },
     { label: "light chat log: setting changed" });
-  // Pas `renderChatMessageHTML` : le cœur l'émet AVANT que dnd5e ne remplace le contenu de
-  // `.message-content` par sa propre carte (chat-message-data-model.mjs:80-82), ce qui effaçait
-  // notre bloc. `dnd5e.renderChatMessage` est émis après (documents/chat-message.mjs:168).
+  // Not `renderChatMessageHTML`: the core emits it BEFORE dnd5e replaces the content of
+  // `.message-content` with its own card (chat-message-data-model.mjs:80-82), which erased
+  // our block. `dnd5e.renderChatMessage` is emitted afterwards (documents/chat-message.mjs:168).
   route("dnd5e.renderChatMessage", (message, html) => {
     const overridden = message.getFlag(MODULE_ID, "overridden");
     if ( overridden?.length && overriddenShownOn(message) ) renderOverridden(html, overridden);   // issue #178
-    if ( message.isContentVisible !== false ) renderD20(message, html);   // un jet secret garde ses dés
+    if ( message.isContentVisible !== false ) renderD20(message, html);   // a secret roll keeps its dice
     const modifiers = message.getFlag(MODULE_ID, "modifiers");
     if ( modifiers ) renderModifiers(html, modifiers, (message.type === "attack") ? message.rolls?.[0] : null);
     const bonuses = message.getFlag(MODULE_ID, "bonuses");
     if ( bonuses?.length ) renderBonuses(html, bonuses);
-    // Une résolution d'un ancien schéma (avant la 0.9.0) n'est plus affichée.
+    // A resolution from an old schema (before 0.9.0) is no longer displayed.
     const resolution = current(message.getFlag(MODULE_ID, "resolution"));
     if ( resolution ) renderResolution(message, html, resolution);
     const verdict = message.getFlag(MODULE_ID, "verdict");

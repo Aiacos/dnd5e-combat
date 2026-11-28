@@ -1,8 +1,8 @@
 /**
- * §396 : la fenêtre de la correction du MJ (runtime/correction.mjs) et §395 / §396 : les deux entrées du clic droit d'un objet de la
- * fiche dnd5e (`dnd5e.getItemContextOptions`, inventory.mjs:636) — « Lancer sans DAS » (propriétaire) et « Correction du MJ » (MJ).
- * Une interface voisine (barre d'actions) ouvre la même fenêtre par `api.correction.open(itemOuActivité)` et lance sans DAS par
- * `api.vanilla.use(itemOuActivité, { event })`.
+ * §396: the GM correction window (runtime/correction.mjs) and §395 / §396: the two right-click entries of an item on the
+ * dnd5e sheet (`dnd5e.getItemContextOptions`, inventory.mjs:636) — "Use without DAS" (owner) and "GM Correction" (GM).
+ * A neighboring interface (action bar) opens the same window through `api.correction.open(itemOuActivité)` and uses
+ * without DAS through `api.vanilla.use(itemOuActivité, { event })`.
  */
 
 import { applyCorrection, correctionShape, correctionTargets, undoCorrection, undoOf, DAMAGE_MODES, ATTACK_OUTCOMES, SAVE_OUTCOMES } from "../runtime/correction.mjs";
@@ -15,7 +15,7 @@ import { tokenArt } from "../adapter/token-art.mjs";
 const windowId = "das-correction";
 let CorrectionClass = null;
 
-/** Ce qu'on garde d'une correction à l'autre sur ce client. */
+/** What is kept from one correction to the next on this client. */
 let remembered = { damage: "random", attack: "hit", save: "failed", concentration: true, effects: true, consume: false, public: false };
 
 const usable = item => (item?.system?.activities?.contents ?? []).filter(a => a.canUse !== false);
@@ -137,7 +137,7 @@ const CorrectionApp = () => CorrectionClass ??= class CorrectionApp extends foun
   }
 };
 
-/** Ouvre la fenêtre de correction (MJ) sur un objet ou une activité. */
+/** Opens the correction window (GM) on an item or an activity. */
 export function openCorrection(subject) {
   if ( !game.user.isGM ) return null;
   const item = subject?.documentName === "Item" ? subject : subject?.item;
@@ -146,7 +146,7 @@ export function openCorrection(subject) {
   return new (CorrectionApp())(subject).render({ force: true });
 }
 
-/** Les deux entrées du menu d'un objet de la fiche. */
+/** The two menu entries of an item on the sheet. */
 function onItemContext(item, options) {
   if ( !Array.isArray(options) || !item?.actor || !usable(item).length ) return;
   if ( item.isOwner ) {
@@ -160,8 +160,8 @@ function onItemContext(item, options) {
 }
 
 /**
- * La carte d'une correction (la nôtre, ou celle de dnd5e pour une zone remise) : un bouton « Annuler » pour le MJ, ou la mention
- * « Correction annulée ». `always` : le routeur saute les hooks d'une carte de correction (adapter/vanilla-state.mjs).
+ * A correction's card (ours, or dnd5e's for a restored area): a "Cancel" button for the GM, or the note
+ * "Correction cancelled". `always`: the router skips the hooks of a correction card (adapter/vanilla-state.mjs).
  */
 function onRenderCard(message, html) {
   const root = html instanceof HTMLElement ? html : html?.[0];

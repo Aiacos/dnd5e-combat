@@ -1,10 +1,10 @@
 /**
- * Soutien (Help, SPEC §15.2, règles 2024), partie attaque, sur le MJ actif :
- *  - l'item Soutien utilisé sur un ennemi : une marque est posée sur lui ;
- *  - une attaque d'un allié de l'aidant contre lui : l'avantage est donné au jet (adapter/conditions.mjs),
- *    puis la marque est consommée ;
- *  - au début du prochain tour de l'aidant, ou à la fin du combat, les marques restantes tombent.
- * La partie « test de caractéristique » du Soutien : runtime/skill-aid.mjs (§113, hors combat).
+ * Help (SPEC §15.2, 2024 rules), attack part, on the active GM:
+ *  - the Help item used on an enemy: a mark is placed on it;
+ *  - an attack by an ally of the helper against it: Advantage is given to the roll (adapter/conditions.mjs),
+ *    then the mark is consumed;
+ *  - at the start of the helper's next turn, or at the end of combat, the remaining marks drop.
+ * The "ability check" part of Help: runtime/skill-aid.mjs (§113, out of combat).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,7 +16,7 @@ import { speakerTokenOf } from "../adapter/turn.mjs";
 
 async function onUsage(message) {
   const activity = message.getAssociatedActivity?.();
-  // §72 : l'item Soutien, ou une activité qui le déclare (`basicActions` : Maître des tactiques, à 9 m).
+  // §72: the Help item, or an activity that declares it (`basicActions`: Tactical Master, at 9 m).
   if ( basicActionOfActivity(activity) !== "help" ) return;
   const helper = speakerTokenOf(message);
   if ( !helper ) return;
@@ -39,7 +39,7 @@ async function onAttack(message) {
   }
 }
 
-/** Retire les marques posées par cet aidant (tous les tokens du combat), ou toutes si `helper` est null. */
+/** Removes the marks placed by this helper (all the combat's tokens), or all of them if `helper` is null. */
 async function dropMarks(combat, helper=null) {
   for ( const combatant of combat.combatants ) {
     const actor = combatant.token?.actor;
@@ -52,7 +52,7 @@ export function registerHelp() {
   const executor = { executor: true, label: "help" };
   route("createChatMessage", message => (message.type === "usage") ? onUsage(message)
     : (message.type === "attack") ? onAttack(message) : null, executor);
-  // « Avant le début de votre prochain tour » : au tour de l'aidant, ses marques tombent.
+  // "Before the start of your next turn": on the helper's turn, their marks drop.
   route("combatTurnChange", (combat, prior, current) => dropMarks(combat, combat.combatants.get(current.combatantId)?.token ?? null),
     { executor: true, label: "help: ends on the helper's turn" });
   route("deleteCombat", combat => dropMarks(combat), { executor: true, label: "help: end of combat" });

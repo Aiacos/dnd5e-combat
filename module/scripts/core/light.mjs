@@ -1,21 +1,21 @@
 /**
- * Lumière et ténèbres des sorts (SPEC §16.31, clé `light` de core/content.mjs). dnd5e 6 et le PHB 2.2.0 ne donnent aucune
- * source de lumière à ces sorts (Ténèbres et Lumière du jour : activité utilitaire à sphère ; Poussière d'étoile et Lueurs
- * féeriques : effet sans changement) ; le cœur V14 sait pourtant tout faire — lumière ambiante, source de ténèbres
- * (`config.negative`), et changements `token.light.*` portés par un effet actif (client/documents/actor.mjs:248).
- * Ici : les calculs, sans Foundry.
+ * Light and darkness of spells (SPEC §16.31, `light` key of core/content.mjs). dnd5e 6 and the PHB 2.2.0 give these spells no
+ * light source at all (Darkness and Daylight: utility activity with a Sphere; "Stardust" and Faerie Fire: effect without changes);
+ * yet the V14 core can do everything — ambient light, darkness source
+ * (`config.negative`), and `token.light.*` changes carried by an Active Effect (client/documents/actor.mjs:248).
+ * Here: the calculations, without Foundry.
  *
- * Rayons dans la convention de Foundry : `bright` = rayon de la lumière vive, `dim` = rayon EXTÉRIEUR de la lumière
- * faible (Lumière du jour : vive sur 18 m et faible sur 18 m de plus → bright 60, dim 120).
+ * Radii in Foundry's convention: `bright` = radius of the Bright Light, `dim` = OUTER radius of the Dim Light
+ * (Daylight: bright for 60 feet and dim for 60 feet more → bright 60, dim 120).
  */
 
 /** Les modes de `light.on`. */
 export const LIGHT_ON = Object.freeze(["area", "effect", "summon", "wall", "caster"]);
 
 /**
- * Les rayons de la source d'une zone : ceux de la règle, sinon (ténèbres) le rayon de la zone elle-même.
- * @param {{bright?: number, dim?: number, darkness?: boolean}} rule   Rayons déjà dans l'unité de la grille.
- * @param {number} areaRadius                                         Rayon de la zone, unité de la grille.
+ * The radii of an area's source: those of the rule, otherwise (darkness) the radius of the area itself.
+ * @param {{bright?: number, dim?: number, darkness?: boolean}} rule   Radii already in the grid unit.
+ * @param {number} areaRadius                                         Radius of the area, grid unit.
  * @returns {{bright: number, dim: number, negative: boolean}}
  */
 export function areaLightRadii(rule, areaRadius) {
@@ -25,9 +25,9 @@ export function areaLightRadii(rule, areaRadius) {
 }
 
 /**
- * Les changements d'effet actif qui font briller le porteur (`token.light.*`, appliqués par le cœur V14). `upgrade` : une
- * lumière plus forte déjà portée (torche, autre sort) n'est pas diminuée.
- * @param {{bright?: number, dim?: number, color?: string|null, animation?: object|null}} light  Rayons, unité de la grille.
+ * The Active Effect changes that make the bearer shine (`token.light.*`, applied by the V14 core). `upgrade`: a
+ * stronger light already carried (torch, another spell) is not reduced.
+ * @param {{bright?: number, dim?: number, color?: string|null, animation?: object|null}} light  Radii, grid unit.
  */
 export function tokenLightChanges({ bright=0, dim=0, color=null, animation=null, alpha=null, angle=null }) {
   const changes = [];
@@ -36,7 +36,7 @@ export function tokenLightChanges({ bright=0, dim=0, color=null, animation=null,
   push("dim", Math.max(dim, bright), "upgrade");
   if ( color ) push("color", color, "override");
   if ( Number.isFinite(alpha) ) push("alpha", alpha, "override");
-  // §52 : un cône (lanterne sourde), orienté comme le token.
+  // §52: a Cone (bullseye lantern), oriented like the token.
   if ( Number.isFinite(angle) && (angle > 0) && (angle < 360) ) push("angle", angle, "override");
   if ( animation?.type ) {
     push("animation.type", animation.type, "override");
@@ -47,13 +47,13 @@ export function tokenLightChanges({ bright=0, dim=0, color=null, animation=null,
 }
 
 /**
- * Les ténèbres que dissipe une lumière (Lumière du jour : « si une partie de la zone recouvre des Ténèbres créées par un sort
- * de niveau 3 ou inférieur, ce sort est dissipé »). Deux sphères se recouvrent quand leurs centres sont plus proches que la
- * somme des rayons.
+ * The darkness that a light dispels (Daylight: "if any of this spell's area overlaps with an area of Darkness created by a
+ * spell of level 3 or lower, the spell that created the Darkness is dispelled"). Two Spheres overlap when their centers are
+ * closer than the sum of the radii.
  * @param {{x: number, y: number, radius: number}} light
  * @param {number} maxLevel
  * @param {Array<{id: string, x: number, y: number, radius: number, level: number|null}>} darkness
- * @returns {string[]}  Les ids dissipés.
+ * @returns {string[]}  The dispelled ids.
  */
 export function dispelledBy(light, maxLevel, darkness) {
   return darkness.filter(d => {
@@ -63,12 +63,12 @@ export function dispelledBy(light, maxLevel, darkness) {
 }
 
 /**
- * Une source de ténèbres de la scène compte-t-elle comme des ténèbres pour les règles ? Oui pour celle qu'un MJ a posée à la main
- * (ou qu'un token émet) : le cœur l'oppose déjà à la vision dans le noir, et ses bords arrêtent tous ses modes de détection — la
- * vision aveugle et la vision véritable, que des ténèbres n'arrêtent pas, doivent donc être jugées par le moteur. Pas pour la
- * lumière d'une zone du moteur (`engineZone`) : sa région la représente déjà, et sait qui l'a lancée. Ni pour une source d'un autre
- * niveau de la scène que celui de l'observateur (`onLevel: false`) : le test du cœur (`PointDarknessSource#testPoint`) ignore
- * l'élévation — une lumière de ténèbres du rez-de-chaussée couvrirait sinon deux tokens de l'étage.
+ * Does a darkness source of the scene count as Darkness for the rules? Yes for one that a GM placed by hand
+ * (or that a token emits): the core already opposes it to Darkvision, and its edges stop all of its detection modes — so Blindsight
+ * and Truesight, which darkness does not stop, must be judged by the engine. Not for the light of an engine area
+ * (`engineZone`): its region already represents it, and knows who cast it. Nor for a source on a different level of the scene
+ * than the observer's (`onLevel: false`): the core's test (`PointDarknessSource#testPoint`) ignores
+ * elevation — a darkness light on the ground floor would otherwise cover two tokens upstairs.
  * @param {{active: boolean, preview?: boolean, engineZone?: boolean, onLevel?: boolean}} source
  */
 export function isPlainDarkness({ active, preview=false, engineZone=false, onLevel=true }) {
@@ -76,9 +76,9 @@ export function isPlainDarkness({ active, preview=false, engineZone=false, onLev
 }
 
 /**
- * Un disque peut-il toucher un segment ? Pour écarter, avant d'échantillonner le trait de vue, une source dont le cercle en est
- * loin. `margin` : la tolérance (le cœur teste un point à ±1 px, et le polygone d'une source ne déborde jamais de son rayon).
- * Sans rayon connu : oui (on échantillonne).
+ * Can a disc touch a segment? To rule out, before sampling the line of sight, a source whose circle is far
+ * from it. `margin`: the tolerance (the core tests a point at ±1 px, and a source's polygon never exceeds its radius).
+ * With no known radius: yes (we sample).
  * @param {{x: number, y: number, radius?: number}} disc
  * @param {{x: number, y: number}} from
  * @param {{x: number, y: number}} to
@@ -94,10 +94,10 @@ export function discNearSegment(disc, from, to, margin=2) {
 }
 
 /**
- * Les sens qui percent une zone qui bloque la vue. Brume (`obscures`) : ceux qui ne voient pas (vision aveugle, et les modes du cœur sans
- * murs : `CORE_JUDGED`). Ténèbres magiques : ceux-là, plus la vision véritable (`seeAll` de dnd5e) et la Vision du diable — la vision
- * dans le noir, elle, n'y voit rien (PHB 2024, Ténèbres).
- * La Vision du diable se juge à part (portée, adapter/vision.mjs).
+ * The senses that pierce an area that blocks sight. Fog (`obscures`): those that do not see (Blindsight, and the core modes without
+ * walls: `CORE_JUDGED`). Magical Darkness: those, plus Truesight (`seeAll` of dnd5e) and Devil's Sight — Darkvision
+ * sees nothing in it (PHB 2024, Darkness).
+ * Devil's Sight is judged separately (range, adapter/vision.mjs).
  * @param {{fog: boolean, darkness: boolean}} blocked
  */
 export function sensesThrough({ fog, darkness }) {
@@ -107,63 +107,63 @@ export function sensesThrough({ fog, darkness }) {
 }
 
 /**
- * Les modes de détection du cœur sans murs ni lumière (`walls: false`, client/config.mjs:1312-1337) : la perception des vibrations, et
- * les modes génériques « Sense All » / « Sense Invisibility » qu'un MJ coche à la main. Ils percent brume et ténèbres, et le test du cœur
- * les juge tels quels (ni bords de ténèbres ni aveuglement : `DetectionMode#_canDetect`, detection-mode.mjs). Issue #42 : les deux
- * derniers étaient perçus à l'écran à travers des Ténèbres, mais pas par les règles.
+ * The core's detection modes without walls or light (`walls: false`, client/config.mjs:1312-1337): Tremorsense, and
+ * the generic "Sense All" / "Sense Invisibility" modes that a GM ticks by hand. They pierce fog and darkness, and the
+ * core's test judges them as they are (neither darkness edges nor blinding: `DetectionMode#_canDetect`, detection-mode.mjs).
+ * Issue #42: the last two were perceived on screen through Darkness, but not by the rules.
  */
 export const CORE_JUDGED = Object.freeze(["feelTremor", "senseAll", "senseInvisibility"]);
 
 /**
- * Les modes qui localisent sans voir. La perception des vibrations donne la position d'une créature au contact de la même
- * surface, mais n'est pas une vue (PHB 2024, glossaire) : la cible reste « non vue » — Désavantage pour l'attaquer, Avantage pour
- * elle, et ce qui exige de voir sa cible ne la prend pas. Sa position, elle, est connue.
+ * The modes that locate without seeing. Tremorsense gives the position of a creature in contact with the same
+ * surface, but is not sight (PHB 2024, glossary): the target stays "unseen" — Disadvantage to attack it, Advantage for
+ * it, and anything that requires seeing its target does not take it. Its position, however, is known.
  */
 export const LOCATING = Object.freeze(["feelTremor"]);
 
-/** Ce mode de détection compte-t-il comme une vue ? */
+/** Does this detection mode count as sight? */
 export const countsAsSight = id => !LOCATING.includes(id);
 
 /**
- * Portée de la Vision du diable (« dans un rayon de 36 m »), en pieds. `mode` : l'id du mode de détection que le moteur enregistre
- * (issue #42, ui/perception.mjs) et donne en mémoire aux tokens dont l'acteur a l'invocation.
+ * Range of Devil's Sight ("within 120 feet"), in feet. `mode`: the id of the detection mode that the engine registers
+ * (issue #42, ui/perception.mjs) and gives in memory to the tokens whose actor has the summoning.
  */
 export const DEVILS_SIGHT_MODE = "devilsSight";
 export const DEVILS_SIGHT = Object.freeze({ identifier: "devils-sight", range: 120, units: "ft", mode: DEVILS_SIGHT_MODE });
 
 /**
- * Les modes de détection que le moteur connaît et juge pour « voit-il ? » : la vue de base, la perception de la lumière et « See
- * Invisibility » du cœur (un mode de vue, avec murs, qu'un MJ coche à la main : il fait voir une cible Invisible), la vision
- * véritable et la vision aveugle de dnd5e, la Vision du diable du moteur, et les modes sans murs du cœur (`CORE_JUDGED`).
- * Un mode inscrit par un autre module — une « ouïe » à portée, un sens maison — n'en est pas : le moteur ne sait pas s'il fait
- * voir ou s'il ne fait que localiser, et le compter rendait « vue » une créature Invisible seulement entendue (issue #104).
+ * The detection modes that the engine knows and judges for "does it see?": basic sight, the core's light perception and "See
+ * Invisibility" (a sight mode, with walls, that a GM ticks by hand: it lets one see an Invisible target), dnd5e's Truesight
+ * and Blindsight, the engine's Devil's Sight, and the core's modes without walls (`CORE_JUDGED`).
+ * A mode registered by another module — a ranged "hearing", a house-rule sense — is not one: the engine does not know
+ * whether it lets one see or only locate, and counting it made an Invisible creature that was merely heard "seen" (issue #104).
  */
 export const JUDGED_MODES = Object.freeze(["basicSight", "lightPerception", "seeInvisibility", "seeAll", "blindsight",
   DEVILS_SIGHT_MODE, ...CORE_JUDGED]);
 
-/** Ces modes d'un token, sans ceux que le moteur ne juge pas (`JUDGED_MODES`). Même forme : `{ id: mode }`. */
+/** These modes of a token, without those the engine does not judge (`JUDGED_MODES`). Same shape: `{ id: mode }`. */
 export function judgedModes(modes) {
   return Object.fromEntries(Object.entries(modes ?? {}).filter(([id]) => JUDGED_MODES.includes(id)));
 }
 
 /**
- * Issue #42, suite (0.281.1) : le filtre d'une créature vue par la Vision du diable (ui/perception.mjs) : token teinté de rouge, liseré rouge
- * sombre. Un mode spécial SANS filtre n'est dessiné que sous le voile de vision du cœur : dans des Ténèbres vues de l'extérieur,
- * le token « visible » restait une silhouette noire. Avec un filtre, le cœur le redessine au-dessus du voile (placeables/token.mjs,
+ * Issue #42, continued (0.281.1): the filter of a creature seen by Devil's Sight (ui/perception.mjs): token tinted red, dark red
+ * border. A special mode WITHOUT a filter is only drawn under the core's vision veil: in Darkness seen from outside,
+ * the "visible" token stayed a black silhouette. With a filter, the core redraws it above the veil (placeables/token.mjs,
  * `detectionFilterMesh`).
  */
 export const DEVILS_SIGHT_OUTLINE = Object.freeze({ outlineColor: Object.freeze([0.6, 0.08, 0.08, 1]), thickness: 2, knockout: false, wave: false,
-  // Choix de l'utilisateur (2026-11-11) : un token net doit vouloir dire « vue normale » — la Vision du diable teinte aussi le token en rouge.
+  // User's choice (2026-11-11): a sharp token must mean "normal sight" — Devil's Sight also tints the token red.
   tintColor: Object.freeze([1, 0.22, 0.18]), tintStrength: 0.65 });
 
-/** La ligne du shader de contour du cœur (rendering/filters/outline-overlay.mjs) où la couleur du token est composée. */
+/** The line of the core's outline shader (rendering/filters/outline-overlay.mjs) where the token's color is composed. */
 const OUTLINE_TEXCOLOR = "vec4 texColor = mix(baseColor, wColor, k) * texAlpha;";
 
 /**
- * Issue #42, suite : le shader de contour du cœur, avec la teinte rouge de la Vision du diable sur le token (luminance × teinte, mêlée à la
- * couleur d'origine selon `tintStrength` ; couleurs prémultipliées, l'alpha n'est pas touché). Null si la ligne attendue n'y est plus
- * (cœur changé) : l'appelant garde alors le contour seul.
- * @param {string} source  Le fragment shader de `OutlineOverlayFilter`.
+ * Issue #42, continued: the core's outline shader, with the red tint of Devil's Sight on the token (luminance × tint, blended
+ * with the original color according to `tintStrength`; premultiplied colors, the alpha is not touched). Null if the expected
+ * line is no longer there (core changed): the caller then keeps the outline alone.
+ * @param {string} source  The fragment shader of `OutlineOverlayFilter`.
  * @returns {string|null}
  */
 export function tintOutlineShader(source) {
@@ -179,33 +179,33 @@ export function tintOutlineShader(source) {
 }
 
 /**
- * Issue #42, suite : un token jugé visible par ce client, mais dessiné SOUS le voile de vision — affiché sans filtre de détection, hors de
- * sa propre vue, et hors de la zone que voit chaque source active (le polygone de vue). Ce que le joueur voit alors : rien, ou une
- * silhouette noire. Un défaut d'affichage (runtime/testing-vision.mjs, état « veiled »).
+ * Issue #42, continued: a token judged visible by this client, but drawn UNDER the vision veil — shown without a detection
+ * filter, outside its own sight, and outside the area that each active source sees (the sight polygon). What the player then
+ * sees: nothing, or a black silhouette. A display defect (runtime/testing-vision.mjs, "veiled" state).
  * @param {{visible: boolean, filtered: boolean, ownVision?: boolean, inSight: boolean}} state
  */
 export function drawnUnderVeil({ visible, filtered, ownVision=false, inSight }) {
   return !!visible && !filtered && !ownVision && !inSight;
 }
 
-/** Issue #42 : le mode spécial de l'ouïe d'un observateur Aveuglé (ui/perception.mjs), donné en mémoire comme la Vision du diable. */
+/** Issue #42: the special hearing mode of a Blinded observer (ui/perception.mjs), given in memory like Devil's Sight. */
 export const HEARING_MODE = "dasHearing";
 
 /**
- * Le mode spécial des sens déclarés par du contenu (clé `sense` : détections, Perception divine), donné en mémoire aux tokens dont
- * l'acteur en a un (ui/perception.mjs) : la créature localisée se dessine avec un contour, comme celle qu'on entend.
+ * The special mode of the senses declared by content (`sense` key: detections, Divine Sense), given in memory to the tokens whose
+ * actor has one (ui/perception.mjs): the located creature is drawn with an outline, like one that is heard.
  */
 export const SENSE_MODE = "dasSense";
 
-/** Le contour d'une créature localisée par un sens déclaré : violet pâle, ondulant (l'ouïe est bleu pâle). */
+/** The outline of a creature located by a declared sense: pale violet, undulating (hearing is pale blue). */
 export const SENSE_OUTLINE = Object.freeze({ outlineColor: Object.freeze([0.78, 0.6, 1, 1]), knockout: true, wave: true });
 
 /**
- * Les modes de vision que le moteur enregistre pour le champ de vue d'un sens (ui/perception.mjs) : la carte se voit jusqu'à sa
- * portée, à sa façon — en couleur pour la vision véritable et la Vision du diable (« voit normalement »), sans couleur pour la
- * vision aveugle. Les réglages d'image de ces trois modes (contraste, saturation, luminosité, et pour la vision aveugle l'image
- * sans couleur qui demande un fond éclairé) sont ceux du module Vision 5e, `scripts/vision-modes/` ; ui/perception.mjs
- * (`fieldModes`) en fait les modes de vision. Leur notice :
+ * The vision modes that the engine registers for a sense's field of view (ui/perception.mjs): the map is seen up to its
+ * range, in its own way — in color for Truesight and Devil's Sight ("sees normally"), without color for
+ * Blindsight. The image settings of these three modes (contrast, saturation, brightness, and for Blindsight the colorless image
+ * that requires a lit background) are those of the Vision 5e module, `scripts/vision-modes/`; ui/perception.mjs
+ * (`fieldModes`) makes them the vision modes. Their notice:
  *
  * MIT License
  *
@@ -238,13 +238,13 @@ export const FIELD_MODES = Object.freeze({
 });
 
 /**
- * Le champ de vue d'un token d'après ses sens : celui de plus grande portée, entre la vision dans le noir (ce que dnd5e a déjà
- * projeté sur le token) et la vision véritable, la vision aveugle, la Vision du diable — à portée égale, dans cet ordre. null :
- * rien à changer (aucun de ces trois sens, ou la vision dans le noir porte plus loin). dnd5e projette la vision véritable comme
- * une vision dans le noir (sans couleur) et ne projette pas la vision aveugle : la carte restait noire pour qui « voit » pourtant
- * jusque-là.
- * @param {{darkvision?: number, seeAll?: number, blindsight?: number, devilsSight?: number}} ranges  Unité de la grille ; 0 ou
- *   absent : sans ce sens.
+ * A token's field of view from its senses: the one of greatest range, among Darkvision (what dnd5e has already
+ * projected onto the token) and Truesight, Blindsight, Devil's Sight — at equal range, in that order. null:
+ * nothing to change (none of these three senses, or the Darkvision reaches farther). dnd5e projects Truesight like
+ * Darkvision (without color) and does not project Blindsight: the map stayed black for one who nevertheless "sees"
+ * up to that range.
+ * @param {{darkvision?: number, seeAll?: number, blindsight?: number, devilsSight?: number}} ranges  Grid unit; 0 or
+ *   absent: without this sense.
  * @returns {{sense: string, range: number, visionMode: string, contrast: number, saturation: number, brightness: number}|null}
  */
 export function fieldOfView({ darkvision=0, seeAll=0, blindsight=0, devilsSight=0 }={}) {
@@ -258,13 +258,14 @@ export function fieldOfView({ darkvision=0, seeAll=0, blindsight=0, devilsSight=
 }
 
 /**
- * Issue #42 : pose sur les modes de détection PRÉPARÉS d'un token (objet ordinaire, jamais la source) ceux que le moteur donne en mémoire —
- * la Vision du diable (portée, unité de la grille ; 0 = pas d'invocation : retirée) et l'ouïe d'un Aveuglé, posée en dernier (le cœur
- * essaie les modes spéciaux dans l'ordre : un vrai sens passe avant). Rend true si quelque chose manquait ou différait : la préparation
- * des données du token (`TokenDocument#reset`) les avait effacés, ou un effet `token.detectionModes.devilsSight.range` avait laissé un mode
- * sans `enabled` — la vue doit alors se refaire.
+ * Issue #42: sets on a token's PREPARED detection modes (plain object, never the source) those that the engine gives in memory —
+ * Devil's Sight (range, grid unit; 0 = no summoning: removed) and the hearing of a Blinded creature, set last (the core
+ * tries the special modes in order: a real sense comes first). Returns true if something was missing or differed: the preparation
+ * of the token's data (`TokenDocument#reset`) had erased them, or an effect `token.detectionModes.devilsSight.range` had left a
+ * mode without `enabled` — sight must then be redone.
  * @param {Record<string, {enabled?: boolean, range?: number|null}>} modes
- * `sense` : l'acteur a un sens déclaré par du contenu — son mode, sans portée propre (chaque sens a la sienne), retiré sinon.
+ * `sense`: the actor has a sense declared by content — its mode, with no range of its own (each sense has its own), removed
+ * otherwise.
  * @param {{devilsSight?: number, sense?: boolean, hearing?: boolean}} wanted
  */
 export function grantInMemoryModes(modes, { devilsSight=0, sense=false, hearing=false }={}) {
@@ -290,26 +291,26 @@ export function grantInMemoryModes(modes, { devilsSight=0, sense=false, hearing=
 }
 
 /**
- * Issue #42 : la Vision du diable voit-elle la cible ? « Vous voyez normalement dans les ténèbres, magiques ou non, jusqu'à 36 m » :
- * à portée, ligne de vue (murs, planchers — pas les bords des ténèbres), observateur non Aveuglé, cible ni Invisible (sauf révélée) ni
- * dans une brume (la Vision du diable perce les ténèbres, pas la brume).
+ * Issue #42: does Devil's Sight see the target? "You can see normally in Darkness, both magical and nonmagical, to a
+ * distance of 120 feet": in range, line of sight (walls, floors — not the edges of darkness), observer not Blinded, target
+ * neither Invisible (unless revealed) nor in fog (Devil's Sight pierces darkness, not fog).
  * @param {object} state
- * @param {number} state.distance   Distance observateur → cible, unité de la grille.
- * @param {number} state.range      Portée de la Vision du diable, même unité ; 0 : pas d'invocation.
- * @param {boolean} [state.lineOfSight]  Ligne de vue sans les bords des sources de ténèbres.
- * @param {boolean} [state.invisible]    Cible Invisible, non révélée à l'observateur.
- * @param {boolean} [state.blind]        Observateur Aveuglé.
- * @param {boolean} [state.fog]          Une brume coupe la vue entre les deux.
+ * @param {number} state.distance   Distance observer → target, grid unit.
+ * @param {number} state.range      Range of Devil's Sight, same unit; 0: no summoning.
+ * @param {boolean} [state.lineOfSight]  Line of sight without the edges of the darkness sources.
+ * @param {boolean} [state.invisible]    Target Invisible, not revealed to the observer.
+ * @param {boolean} [state.blind]        Observer Blinded.
+ * @param {boolean} [state.fog]          Fog cuts the sight between the two.
  */
 export function devilsSightSees({ distance, range, lineOfSight=true, invisible=false, blind=false, fog=false }) {
   if ( !(range > 0) || !Number.isFinite(distance) || (distance > range) ) return false;
   return !!lineOfSight && !invisible && !blind && !fog;
 }
 
-/** Les sens qui ne sont pas une vue : un observateur Aveuglé les garde (vision aveugle, et les modes du cœur sans murs). */
+/** The senses that are not sight: a Blinded observer keeps them (Blindsight, and the core modes without walls). */
 /**
- * Réglage `unconsciousSenses` : une créature Inconsciente est « inconsciente de ce qui l'entoure » (PHB 2024, glossaire) — avec le
- * réglage, elle ne voit ni n'entend plus rien. Sans lui (défaut), ses sens restent ceux d'une créature éveillée.
+ * Setting `unconsciousSenses`: an Unconscious creature is "unaware of its surroundings" (PHB 2024, glossary) — with the
+ * setting, it neither sees nor hears anything anymore. Without it (default), its senses stay those of an awake creature.
  * @param {{unconscious: boolean, rule: boolean}} state
  */
 export function senseless({ unconscious=false, rule=false }={}) {
@@ -319,9 +320,9 @@ export function senseless({ unconscious=false, rule=false }={}) {
 export const WORKS_BLIND = Object.freeze(["blindsight", ...CORE_JUDGED]);
 
 /**
- * Issue #42 : un sens qui perce une zone qui bloque la vue (vision aveugle, vision véritable) atteint-il la cible ? Sa portée et la ligne
- * de vue (sans les bords des ténèbres) ; `range` null ou absent = illimité. Un observateur Aveuglé (`blind`) ne voit plus par un sens qui
- * est une vue (`sense` hors de `WORKS_BLIND` : la vision véritable) — la vision aveugle, elle, le reste.
+ * Issue #42: does a sense that pierces an area that blocks sight (Blindsight, Truesight) reach the target? Its range and the line
+ * of sight (without the edges of darkness); `range` null or absent = unlimited. A Blinded observer (`blind`) no longer sees
+ * through a sense that is sight (`sense` outside `WORKS_BLIND`: Truesight) — Blindsight, however, remains.
  */
 export function senseReaches({ distance, range=null, lineOfSight=true, sense=null, blind=false }) {
   if ( blind && !WORKS_BLIND.includes(sense) ) return false;
@@ -330,14 +331,14 @@ export function senseReaches({ distance, range=null, lineOfSight=true, sense=nul
 }
 
 /* -------------------------------------------- */
-/*  Durée et combustible des sources portées    */
+/*  Duration and fuel of carried sources        */
 /* -------------------------------------------- */
 
 const BURN_SECONDS = { second: 1, minute: 60, hour: 3600 };
 
 /**
- * §121 : la durée d'une source portée (`carriedLight.burn`), en secondes : « une torche brûle 1 heure », « une flasque d'huile
- * brûle 6 heures dans une lampe ou une lanterne ». null : pas de durée.
+ * §121: the duration of a carried source (`carriedLight.burn`), in seconds: "a torch burns for 1 hour", "a flask of oil
+ * burns for 6 hours in a lamp or a lantern". null: no duration.
  * @param {{value: number, units: "second"|"minute"|"hour"}|undefined} burn
  */
 export function burnSeconds(burn) {
@@ -346,37 +347,37 @@ export function burnSeconds(burn) {
 }
 
 /**
- * §121 : ce que demande l'allumage. `stored` : le temps qui restait quand on l'a éteinte (indéfini : jamais allumée — une torche
- * neuve, une lampe remplie) ; `full` : une torche entière, une flasque entière ; `fuel` : la source brûle un combustible (lampe,
- * lanterne) ; `hasFuel` : le porteur en a une flasque.
+ * §121: what lighting requires. `stored`: the time that remained when it was put out (undefined: never lit — a new
+ * torch, a filled lamp); `full`: a whole torch, a whole flask; `fuel`: the source burns a fuel (lamp,
+ * lantern); `hasFuel`: the bearer has a flask.
  * @returns {{ok: true, left: number|null, refill: boolean}|{ok: false, reason: "noFuel"}}
  */
 export function lightPlan({ stored, full, fuel=false, hasFuel=false }) {
   if ( !Number.isFinite(full) ) return { ok: true, left: null, refill: false };
   if ( (stored === undefined) || (stored === null) ) return { ok: true, left: full, refill: false };
   if ( stored > 0 ) return { ok: true, left: Math.min(stored, full), refill: false };
-  if ( !fuel ) return { ok: true, left: full, refill: false };   // une torche consumée a laissé place à la suivante
+  if ( !fuel ) return { ok: true, left: full, refill: false };   // a burnt-out torch has given way to the next one
   return hasFuel ? { ok: true, left: full, refill: true } : { ok: false, reason: "noFuel" };
 }
 
 /**
- * §121 : la source s'est consumée. Une torche, une bougie : l'unité brûlée disparaît (quantité − 1, l'item retiré à la dernière),
- * la suivante sera neuve ; une lampe, une lanterne : elle reste, vide (il faudra une flasque pour la rallumer).
+ * §121: the source has burnt out. A torch, a candle: the burnt unit disappears (quantity − 1, the item removed at the last one),
+ * the next will be new; a lamp, a lantern: it stays, empty (a flask will be needed to relight it).
  * @returns {{consume: boolean, stored: number|undefined}}
  */
 export function burnoutPlan({ fuel=false }) {
   return fuel ? { consume: false, stored: 0 } : { consume: true, stored: undefined };
 }
 
-/** Le temps restant en heures et minutes (arrondi à la minute supérieure). */
+/** The remaining time in hours and minutes (rounded up to the minute). */
 export function burnParts(seconds) {
   const minutes = Math.max(0, Math.ceil((Number(seconds) || 0) / 60));
   return { h: Math.floor(minutes / 60), m: minutes % 60 };
 }
 
 /**
- * §121 : les mains qu'occupe ce que la créature tient — une arme équipée (deux si elle est « à deux mains »), un bouclier, une
- * source de lumière allumée. Une créature a deux mains.
+ * §121: the hands occupied by what the creature holds — an equipped weapon (two if it is "two-handed"), a shield, a
+ * lit light source. A creature has two hands.
  * @param {Array<{name: string, hands: number}>} held
  * @returns {{used: number, free: number}}
  */

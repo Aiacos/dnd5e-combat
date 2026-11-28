@@ -1,15 +1,15 @@
 /**
 /**
- * Orbe chromatique (SPEC §16.27) — **interactif** :
- *  1. le type de dégâts : au premier lancement, la fenêtre « type de dégâts » s'ouvre à l'écran du MJ (auteur ici) — en
- *     choisir un ; le jet de dégâts porte ce type ;
- *  2. le rebond : on relance (même type, fixé d'avance) jusqu'à un coup qui touche avec un double aux d8 ; la visée « l'orbe
- *     bondit » s'ouvre à l'écran du MJ — cliquer la seconde cible (amenée à 10 ft) ; le rebond part vers elle, gratuit, même
- *     type. Cibles : le Zombi (CA basse : assez de coups au but) et le Loup, à défaut Rahadin et Morgantha.
- * Monde `ravenloft` ; hors de la suite (`node tools/scenario.mjs orbe`).
+ * Chromatic Orb (SPEC §16.27) — **interactive**:
+ *  1. the damage type: on the first cast, the "damage type" window opens on the GM's screen (author here) — choose
+ *     one; the damage roll carries that type;
+ *  2. the bounce: recast (same type, fixed in advance) until a hit with a double on the d8s; the "the orb
+ *     bounces" aiming opens on the GM's screen — click the second target (brought to 10 ft); the bounce goes to it, free, same
+ *     type. Targets: the Zombie (low AC: enough hits) and the Wolf, failing that Rahadin and Morgantha.
+ * World `ravenloft`; outside the suite (`node tools/scenario.mjs orbe`).
  */
 const MODULE_ID = "dnd5e-combat";
-// Une cible de CA basse (assez de coups au but pour voir un double), et une seconde à 10 ft pour le rebond.
+// A low-AC target (enough hits to see a double), and a second one at 10 ft for the bounce.
 const VICTIMS = ["Zombi", "Rahadin, chambellan du château"];
 const SECONDS = ["Loup", "Morgantha - Coven"];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -38,7 +38,7 @@ export default {
       return roll?.options?.type ?? roll?.type ?? null;
     };
 
-    // 1. Type choisi à la fenêtre : on relance jusqu'à toucher (le type ne se voit que sur un jet de dégâts).
+    // 1. Type chosen in the window: recast until a hit (the type only shows on a damage roll).
     ctx.log(">>> Fenêtre « Orbe chromatique — type de dégâts » à l'écran : choisis un type.");
     let first = null;
     for ( let n = 1; (n <= 5) && !first; n++ ) {
@@ -55,7 +55,7 @@ export default {
     const flagged = chosen?.flags?.[MODULE_ID]?.damageType ?? chosen?.flags?.damageType ?? null;
     ctx.expect(!!type && (type === flagged), `dégâts de type « ${type} », le type choisi (${flagged})`);
 
-    // 2. Rebond : un double aux d8, puis le clic du MJ sur Morgantha.
+    // 2. Bounce: a double on the d8s, then the GM's click on Morgantha.
     let leapUsage = null;
     for ( let n = 1; (n <= 25) && !leapUsage; n++ ) {
       await ctx.setHp(victim, 150);
@@ -75,7 +75,7 @@ export default {
         leapUsage = (await ctx.messagesSince(since)).find(m => (m.type === "usage") && (m.flags?.[MODULE_ID]?.leap ?? m.flags?.leap));
       }
     }
-    // Le journal du moteur autour des rebonds (proposé, refusé), avant que le lanceur ne le vide.
+    // The engine's journal around the bounces (offered, refused), before the caster empties it.
     for ( const line of (await ctx.engineLog()).filter(l => /rebond|double|type de dégâts|bounce|leap|damage type/i.test(l)).slice(-10) ) ctx.log(`· ${line.slice(0, 200)}`);
     ctx.expect(!!leapUsage, "l'orbe a bondi");
     if ( !leapUsage ) return;

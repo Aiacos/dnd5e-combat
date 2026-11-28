@@ -1,19 +1,19 @@
 /**
- * Le Clerc du Manuel des joueurs 2024 (SPEC §27), module premium `dnd-players-handbook` 2.2.0 (pack `classes`, items `phbclc…`).
- * Déjà là : Renvoi des morts-vivants et Calcination (§16, content/targets.mjs, triggers.mjs), Invocation de duplicata (§16,
- * summons.mjs), Domaine de la Tombe (Ravenloft, §19.9).
+ * The 2024 Player's Handbook Cleric (SPEC §27), premium module `dnd-players-handbook` 2.2.0 (pack `classes`, items `phbclc…`).
+ * Already there: Turn Undead and Sear Undead (§16, content/targets.mjs, triggers.mjs), Invoke Duplicity (§16,
+ * summons.mjs), Grave Domain (Ravenloft, §19.9).
  *
- * Ce que dnd5e fait déjà seul : Étincelle divine (soins ou sauvegarde), Radiance de l'aube (sauvegarde en émanation), Survivance
- * (soin — le plafond « la moitié de ses PV » reste au MJ), Voile de la nature… et les utilisations de Conduit divin.
+ * What dnd5e already does alone: Divine Spark (healing or save), Radiance of the Dawn (Emanation save), Preserve Life
+ * (healing — the "half its HP" cap stays with the GM), "Veil of Nature"… and the uses of Channel Divinity.
  */
 
 import { potentSpellcasting } from "./druid.mjs";
 
 /**
- * Impact divin : « une fois à chacun de vos tours, quand vous touchez une créature par un jet d'attaque avec une arme ». Pas pour un clerc
- * qui a reçu l'option Incantation puissante (item du Manuel ; relevé des trous, 2026-10-22) — §431 : sous l'identifiant du Manuel et du
- * SRD de dnd5e 6.0 (`blessed-strikes-potent-spellcasting`) ou sous celui du SRD 6.1 (`potent-spellcasting`, partagé avec le Druide : celui
- * du Clerc seulement).
+ * Divine Strike: "once on each of your turns, when you hit a creature with an attack roll using a weapon". Not for a cleric
+ * who received the Potent Spellcasting option (Manual item; gap survey, 2026-10-22) — §431: under the identifier of the Manual and
+ * of dnd5e 6.0's SRD (`blessed-strikes-potent-spellcasting`) or under that of the 6.1 SRD (`potent-spellcasting`, shared with
+ * the Druid: the Cleric's only).
  */
 const potentOption = { any: [{ "source.hasFeature": "blessed-strikes-potent-spellcasting" },
   { "source.hasClassFeature": { id: "potent-spellcasting", class: "cleric" } }] };
@@ -23,82 +23,85 @@ const divineStrike = (formula, improved) => ({ on: "preDamageRoll", oncePerTurn:
   do: [{ type: "damage", formula, damageType: "radiant" }] });
 
 /**
- * Incantation puissante, l'autre option d'Impacts bénis : « ajoutez votre modificateur de Sagesse aux dégâts de tout sort mineur de
- * Clerc ». L'avancement du Clerc ne donne que « Impacts bénis » (Impact divin par défaut) ; l'item d'option du Manuel (« Blessed
- * Strikes: Potent Spellcasting », `blessed-strikes-potent-spellcasting`) posé sur la fiche porte la règle et retire l'Impact divin.
- * §431 : l'item du SRD de dnd5e 6.1 (`potent-spellcasting`) porte lui-même un effet qui ajoute la Sagesse aux sorts mineurs de Clerc
- * (changement `damage` / `dnd5e.bonus`, condition `item.classIdentifier`) : aucune entrée sous ce nom, sinon le bonus compterait deux fois.
+ * Potent Spellcasting, the other Blessed Strikes option: "add your Wisdom modifier to the damage of any Cleric cantrip".
+ * The Cleric's progression only gives "Blessed Strikes" (Divine Strike by default); the Manual's option item ("Blessed
+ * Strikes: Potent Spellcasting", `blessed-strikes-potent-spellcasting`) placed on the sheet carries the rule and removes
+ * Divine Strike. §431: dnd5e 6.1's SRD item (`potent-spellcasting`) itself carries an effect that adds Wisdom to Cleric cantrips
+ * (`damage` / `dnd5e.bonus` change, `item.classIdentifier` condition): no entry under that name, otherwise the bonus would
+ * count twice.
  */
 
-/** §293 : Calcination des morts-vivants (`phbclcSearUndead`), son activité « Channel Divinity: Turn Undead » (Manuel, SRD de dnd5e 6.0). */
+/** §293: Sear Undead (`phbclcSearUndead`), its "Channel Divinity: Turn Undead" activity (Manual, dnd5e 6.0 SRD). */
 const SEAR_UNDEAD = "fW3U8L8Ca9a6O9Wx";
 /**
- * §431 : dans le SRD de dnd5e 6.1, l'item Calcination n'a plus d'activité ; c'est le Conduit divin (`channel-divinity-cleric`) qui porte
- * « Sear Undead » (sauvegarde, même effet « Turned » que le Renvoi, plus les dégâts radiants), visible au niveau 5 du Clerc.
+ * §431: in dnd5e 6.1's SRD, the Sear Undead item no longer has an activity; it is Channel Divinity (`channel-divinity-cleric`) that
+ * carries "Sear Undead" (save, same "Turned" effect as Turn Undead, plus the radiant damage), visible at Cleric level 5.
  */
 const SEAR_UNDEAD_61 = "rprxorXdFoHbRERZ";
 /**
- * §293 : l'activité « Turn Undead » du Conduit divin (`phbclcChannelDiv`) — §431 : et « Sear Undead » du SRD 6.1, sur le même item. La
- * Calcination proposée à la place du Renvoi : l'activité de l'item Calcination (ancienne forme), sinon celle du Conduit divin si le clerc
- * a l'item Calcination (niveau 5).
+ * §293: the "Turn Undead" activity of Channel Divinity (`phbclcChannelDiv`) — §431: and the 6.1 SRD's "Sear Undead", on the same
+ * item. The Sear Undead offered in place of Turn Undead: the activity of the Sear Undead item (old form), otherwise that of
+ * Channel Divinity if the cleric has the Sear Undead item (level 5).
  */
 const TURN_UNDEAD = Object.freeze({ activities: ["aOptL5pMaj3WtR8S", SEAR_UNDEAD_61], radius: 30, units: "ft",
   upgrade: [{ item: "sear-undead", activity: SEAR_UNDEAD }, { item: "channel-divinity-cleric", activity: SEAR_UNDEAD_61, requires: "sear-undead" }] });
 
 export const CLERIC = Object.freeze({
-  // Intervention divine (niveau 10) — « par une action Magie, un sort de clerc de niveau 5 ou moins qui ne se lance pas par une
-  // Réaction, lancé dans la même action sans emplacement ni composantes matérielles ; une fois par Repos long ». L'activité de
-  // l'item (l'action, l'utilisation) retient le lancement : le sort suivant qui convient part sans emplacement ni coût d'action.
-  // L'Intervention divine supérieure (Souhait) garde sa propre activité de lancement.
+  // Divine Intervention (level 10) — "with a Magic action, a Cleric spell of level 5 or lower that is not cast as a
+  // Reaction, cast in the same action without a slot or Material components; once per Long Rest". The item's activity
+  // (the action, the use) holds the casting: the next suitable spell goes off with no slot or action cost.
+  // Greater Divine Intervention (Wish) keeps its own casting activity.
   "divine-intervention": { freeCast: { activity: "dnd5eactivity000", maxLevel: 5, class: "cleric" } },
-  // Éclat protecteur (Lumière 3) : en Réaction, le clerc donne le Désavantage au jet d'attaque d'une créature qu'il voit à 9 m ou
-  // moins — contre lui ou un allié (§34 : fenêtre avant le jet). Les PV temporaires de l'Éclat
-  // protecteur amélioré restent au joueur.
-  // C12-j : Éclat protecteur amélioré (Lumière 6) — « vous regagnez toutes les utilisations d'Éclat protecteur après un Repos court ou long ».
+  // Warding Flare (Light 3): as a Reaction, the cleric imposes Disadvantage on the attack roll of a creature it sees within 9 m or
+  // less — against itself or an ally (§34: window before the roll). The Temporary Hit Points of Improved
+  // Warding Flare stay with the player.
+  // C12-j: Improved Warding Flare (Light 6) — "you regain all uses of Warding Flare after a Short or Long Rest".
   "improved-warding-flare": { regainOnShortRest: ["warding-flare"] },
   "warding-flare": { triggers: [{ on: "enemyAttacks", if: { "source.nearSelf": { distance: 30, units: "ft" }, "self.seesSource": true },
     do: [{ type: "use", activity: "dnd5eactivity000" }, { type: "disadvantage" }] },
-    // §438 : Manuel 3.0.0 — à partir du niveau 6, l'Éclat est l'activité `6V4FAVqgjzctbpoC` (les PV temporaires d'Éclat amélioré en
-    // plus) et `dnd5eactivity000` est cachée : seule l'activité visible à ce niveau est proposée (adapter/level-gate.mjs, `levelHidden`).
+    // §438: Handbook 3.0.0 — from level 6, Radiance is the activity `6V4FAVqgjzctbpoC` (with the Temporary Hit Points of
+    // improved Radiance on top) and `dnd5eactivity000` is hidden: only the activity visible at that level is offered
+    // (adapter/level-gate.mjs, `levelHidden`).
     { on: "enemyAttacks", if: { "source.nearSelf": { distance: 30, units: "ft" }, "self.seesSource": true },
       do: [{ type: "use", activity: "6V4FAVqgjzctbpoC" }, { type: "disadvantage" }] }] },
-  // Impacts bénis (niveau 7), option Impact divin : 1d8 radiants (au choix nécrotiques ou radiants : radiants d'office) ;
-  // 2d8 avec Impacts bénis améliorés (niveau 14).
-  // Frappes bénies améliorées (niveau 14), Incantation puissante — « quand vous lancez un sort mineur de clerc et infligez des
-  // dégâts à une créature avec lui, vous pouvez donner à vous-même ou à une autre créature à 18 m ou moins des points de vie
-  // temporaires égaux à deux fois votre modificateur de Sagesse ». Seulement si l'Incantation puissante est l'option choisie
-  // (`requires`) ; l'autre moitié, l'Impact divin à 2d8, est dans l'entrée des Frappes bénies.
+  // Blessed Strikes (level 7), Divine Strike option: 1d8 radiant (necrotic or radiant at the player's choice: radiant by default);
+  // 2d8 with improved Blessed Strikes (level 14).
+  // Improved Blessed Strikes (level 14), Potent Spellcasting — "when you cast a Cleric cantrip and deal damage to a
+  // creature with it, you can give yourself or another creature within 18 m Temporary Hit Points equal to twice your
+  // Wisdom modifier".
+  // Only if Potent Spellcasting is the chosen option (`requires`); the other half, Divine Strike at 2d8, is in the Blessed
+  // Strikes entry.
   "improved-blessed-strikes": { cantripVitality: { class: "cleric", tempHp: "2 * @abilities.wis.mod",
     range: { value: 60, units: "ft" }, requires: ["blessed-strikes-potent-spellcasting", "potent-spellcasting"] } },
   "blessed-strikes": { triggers: [divineStrike("1d8", false), divineStrike("2d8", true)] },
-  "blessed-strikes-potent-spellcasting": potentSpellcasting("cleric"),   // §431 : pas `potent-spellcasting` (dnd5e 6.1 le fait seul)
-  // Guérison suprême (niveau 17) : « prenez la valeur maximale pour chaque dé » d'un sort ou d'une Conduit divin qui soigne.
+  "blessed-strikes-potent-spellcasting": potentSpellcasting("cleric"),   // §431: not `potent-spellcasting` (dnd5e 6.1 handles it)
+  // Supreme Healing (level 17): "use the maximum value for each die" of a spell or a Channel Divinity that heals.
   "supreme-healing": { supremeHealing: true },
-  // §295 : Faveur du filou (Domaine de la ruse) — « jusqu'à ce que vous terminiez un Repos long » (la donnée : un round).
-  // §296 : Survivance — « 5 × niveau de Clerc PV répartis entre des créatures En sang à 9 m (vous compris), pas au-delà de la moitié de
-  // leurs PV maximum » : la liste des créatures En sang, puis la réserve partagée.
+  // §295: Trickster's Favor (Trickery Domain) — "until you finish a Long Rest" (the data: one round).
+  // §296: Survivance — "5 × Cleric level HP divided among Bloodied creatures within 9 m (yourself included), not beyond half
+  // their maximum HP": the list of Bloodied creatures, then the shared pool.
   "preserve-life": { pickTargets: { activities: ["dnd5eactivity000"], radius: 30, units: "ft", self: true, check: "allies", filter: "bloodied" },
     healPool: { activities: ["dnd5eactivity000"], cap: "halfMax", choose: true } },
   "blessing-of-the-trickster": { effectDurations: { "1PrZ25K0vYo5oLtP": { seconds: 86400 } }, effectsExpire: "longRest" },
-  // §236 : Avatar de la bataille (Guerre 17) — « Résistance aux dégâts contondants, perforants et tranchants » : aucun effet dans les
-  // données, l'effet est tenu sur l'acteur (runtime/speed-grants.mjs).
+  // §236: Avatar of Battle (War 17) — "Resistance to Bludgeoning, Piercing and Slashing damage": no effect in the data, the effect
+  // is kept on the actor (runtime/speed-grants.mjs).
   "avatar-of-battle": { grantsResistances: ["bludgeoning", "piercing", "slashing"] },
-  // Disciple de la Vie (Vie 3) : « 2 plus le niveau de l'emplacement » de plus ; Guérisseur béni (Vie 6) : autant pour le lanceur
-  // quand le sort soigne une autre créature.
+  // Disciple of Life (Life 3): "2 plus the level of the slot" extra; Blessed Healer (Life 6): the same amount for the caster when
+  // the spell heals another creature.
   "disciple-of-life": { discipleOfLife: true },
   "blessed-healer": { blessedHealer: true },
-  // Prêtre de guerre (Guerre 3) : une attaque d'arme ou à mains nues de plus, au prix d'une action Bonus —
-  // l'activité (action Bonus, une utilisation) ouvre une attaque gratuite, comme le Déluge de coups (§24).
+  // Priest of war (War 3): one more weapon or unarmed attack, at the cost of a Bonus Action —
+  // the activity (Bonus Action, one use) opens a free attack, like Flurry of Blows (§24).
   "war-priest": { flurry: { activity: "dnd5eactivity000", strikes: 1, weapons: true } },
-  // Troc du filou (Duperie 6, `phbclcTricksters`) : quand l'action Bonus crée ou déplace l'illusion d'Invoquer la duplicité, le
-  // clerc peut aussi prendre sa place par téléportation, l'illusion venant à la sienne (§38.2) — une entrée du menu
-  // contextuel de l'illusion et du lanceur ; l'activité « Transpose » de l'item (action Bonus de suivi) n'est pas utilisée.
+  // Trickster's Swap (Trickery 6, `phbclcTricksters`): when the Bonus Action creates or moves the illusion of Invoke Duplicity, the
+  // cleric can also take its place by teleportation, the illusion taking theirs (§38.2) — an entry in the context menu of the
+  // illusion and of the caster; the item's "Transpose" activity (follow-up Bonus Action) is not used.
   "tricksters-transposition": { transpose: { summon: "invoke-duplicity" } },
-  // §293 : Renvoi des morts-vivants — « chaque Mort-vivant de votre choix dans un rayon de 9 m » : la donnée ne pose ni zone ni liste
-  // (portée 30 ft, cibles à cliquer une à une). Une fenêtre liste les créatures à 9 m, le joueur coche ; avec Calcination des
-  // morts-vivants (niveau 5), une case la propose à la place — son activité (même sauvegarde, même effet, plus les dégâts radiants,
-  // la même utilisation de Conduit divin) part alors sur les mêmes cibles, sans sa zone.
-  // §299 : le renvoi « prend fin si vous avez l'état Neutralisé ou si vous mourez ».
+  // §293: Turn Undead — "each Undead of your choice within a 9 m radius": the data sets neither an area nor a list
+  // (range 30 ft, targets to click one by one). A window lists the creatures within 9 m, the player ticks them; with Destroy
+  // Undead (level 5), a cell offers it instead — its activity (same save, same effect, plus the radiant damage, the same use of
+  // Channel Divinity) then goes out on the same targets, without its area.
+  // §299: the turning "ends if you have the Incapacitated condition or if you die".
   "channel-divinity": { pickTargets: TURN_UNDEAD, endsWhen: { incapacitated: "caster" } },
   "channel-divinity-cleric": { pickTargets: TURN_UNDEAD, endsWhen: { incapacitated: "caster" } },
   "sear-undead": { pickTargets: { activities: [SEAR_UNDEAD], radius: 30, units: "ft" }, endsWhen: { incapacitated: "caster" } }

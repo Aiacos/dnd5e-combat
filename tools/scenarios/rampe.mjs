@@ -1,7 +1,7 @@
 /**
- * À terre (SPEC §17.2) : un PJ (Guerrier dans `dnd-6`, Bramo dans `ravenloft`) mis À terre passe en mode ramper
- * (`movementAction: "crawl"` sur son token : coût double, mesuré par dnd5e) ; l'état retiré, il retrouve son mode d'avant.
- * Se relever demande un clic (menu) : hors scénario.
+ * Prone (SPEC §17.2): a PC (Fighter in `dnd-6`, Bramo in `ravenloft`) made Prone switches to crawl mode
+ * (`movementAction: "crawl"` on its token: double cost, measured by dnd5e); with the condition removed, it returns
+ * to its previous mode. Standing up requires a click (menu): outside the scenario.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 

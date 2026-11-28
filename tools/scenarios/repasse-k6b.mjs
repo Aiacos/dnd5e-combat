@@ -1,9 +1,9 @@
 /**
- * §334, restes du lot K6 de la repasse des créatures : la fenêtre d'une Réaction de monstre lue dans son déclencheur. Arène des sorts :
- * le Lanceur (PNJ) et l'« Ennemi au contact » (Massue).
- *  - Bouclier collant du Kuo-toa (« A creature misses the kuo-toa with a melee attack roll ») : l'Ennemi rate le Lanceur au contact, la
- *    Réaction est prise (`autoReact: "first"`) — sa carte d'utilisation paraît ;
- *  - Sang démoniaque du Baron sahuagin (« takes Piercing or Slashing damage ») : touché par une Massue (contondant), rien n'est proposé.
+ * §334, leftovers of batch K6 of the creature pass: the window of a monster Reaction read in its trigger. Spell arena:
+ * the Caster (NPC) and the "Enemy in contact" (Club).
+ *  - Kuo-toa's Sticky Shield ("A creature misses the kuo-toa with a melee attack roll"): the Enemy misses the Caster in melee, the
+ *    Reaction is taken (`autoReact: "first"`) — its use card appears;
+ *  - Sahuagin Baron's Demonic Blood ("takes Piercing or Slashing damage"): hit by a Club (bludgeoning), nothing is offered.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -45,7 +45,7 @@ export default {
       for ( const [actorId, id] of lent.splice(0) ) await ctx.call("remove-embedded-item", { documentType: "Actor", id: actorId, itemId: id }).catch(() => {});
     });
     const club = await lend(enemy, `${PHB}.equipment.Item.phbwepClub000000`, { "system.equipped": true, "system.proficient": 1 });
-    /** Une utilisation de la Réaction parue après ce message : une carte du moteur liée à l'item (son nom ou son uuid). */
+    /** A use of the Reaction that appeared after this message: an engine card linked to the item (its name or its uuid). */
     const reactedSince = async (messageId, name) => {
       const found = m => JSON.stringify(m).includes(name);
       const engine = await ctx.messagesSince(messageId).catch(() => []);
@@ -86,7 +86,7 @@ export default {
     }
     ctx.expect(checked, "l'Ennemi touche le Lanceur (20 essais au plus)");
 
-    // Fuite toxique (Yochlol, contenu) : touché, la Réaction est prise.
+    // Toxic Leak (Yochlol, content): on a hit, the Reaction is taken.
     await lend(caster, `${MM}.mmYochlol0000000.Item.mmToxicEscape000`);
     checked = false;
     for ( let i = 0; (i < 20) && !checked; i++ ) {

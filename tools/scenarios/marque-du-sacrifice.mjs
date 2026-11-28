@@ -1,8 +1,8 @@
 /**
- * §456 : `leavesEffects` — Marque du sacrifice (Ravenloft, Bénédiction). Retirée de la fiche, elle laisse au porteur l'effet « (Removed) »
- * de sa donnée : Désavantage aux sauvegardes de Sagesse, 24 heures. Un acteur de test reçoit la Bénédiction ; l'objet est retiré par le
- * connecteur ; l'acteur porte l'effet (changement de Sagesse, durée 86 400 s, origine = la Bénédiction), la carte de chat est dite. Un
- * second acteur sans la Bénédiction ne reçoit rien quand on lui retire un autre objet. Acteurs retirés.
+ * §456: `leavesEffects` — Mark of Sacrifice (Ravenloft, Boon). Removed from the sheet, it leaves the bearer the "(Removed)" effect
+ * from its data: Disadvantage on Wisdom saving throws, 24 hours. A test actor receives the Boon; the item is removed by the
+ * connector; the actor bears the effect (Wisdom change, duration 86,400 s, origin = the Boon), the chat card is said. A
+ * second actor without the Boon receives nothing when another item is removed from them. Actors removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const UUID = "Compendium.dnd-ravenloft-horrors-within.items.Item.rhwMarkofSacriXa";
@@ -48,7 +48,7 @@ export default {
     ctx.expect(effect?.origin === UUID, `origine : la Bénédiction (${effect?.origin})`);
     ctx.expect(!((await sheet(actorId)).items ?? []).some(i => i.name === itemData.name), "la Bénédiction a bien quitté la fiche");
 
-    // Un autre objet retiré, sans `leavesEffects` : rien.
+    // Another item removed, without `leavesEffects`: nothing.
     const plainId = await make("Témoin (scénario)", [{ name: "Torch", type: "loot", system: {} }]);
     const plain = ((await sheet(plainId)).items ?? [])[0];
     await ctx.call("remove-embedded-item", { documentType: "Actor", id: plainId, itemId: plain._id });

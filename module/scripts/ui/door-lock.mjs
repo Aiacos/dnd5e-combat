@@ -1,7 +1,8 @@
 /**
- * §244 : la section « DAS · Serrure » de la configuration d'un mur (MJ seulement), sous les réglages de porte du cœur. Ses champs
- * s'écrivent dans le drapeau `flags.dnd5e-combat.lock` du mur, avec le reste du formulaire (WallConfig, templates/scene/wall-config.hbs).
- * Elle ne se montre que pour une porte, et suit le choix « Type de porte » du formulaire (`door`, wall-config.mjs `_onChangeForm`).
+ * §244: the "DAS · Lock" section of a wall's configuration (GM only), under the core's door settings. Its fields
+ * are written to the wall's `flags.dnd5e-combat.lock` flag, with the rest of the form (WallConfig,
+ * templates/scene/wall-config.hbs). It shows only for a door, and follows the "Door Type" choice of the form (`door`,
+ * wall-config.mjs `_onChangeForm`).
  */
 
 import { MODULE_ID } from "../constants.mjs";

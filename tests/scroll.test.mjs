@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { replaceKeepingScroll } from "../module/scripts/ui/scroll.mjs";
 
-/** Un faux contenu : des zones par sélecteur, chacune avec son `scrollTop`. */
+/** A fake content: areas by selector, each with its `scrollTop`. */
 const fake = zones => ({ zones, querySelectorAll: s => zones[s] ?? [] });
 const container = first => {
   const content = { scrollTop: 0, current: first,
@@ -11,7 +11,7 @@ const container = first => {
 };
 
 describe("replaceKeepingScroll", () => {
-  it("garde le défilement d'une zone quand la vue ne change pas", () => {
+  it("keeps the scroll of an area when the view does not change", () => {
     const content = container(fake({ ".pane": [{ scrollTop: 0 }] }));
     const memo = {};
     replaceKeepingScroll(content, fake({ ".pane": [{ scrollTop: 0 }] }), [".pane"], memo, "scan");
@@ -33,7 +33,7 @@ describe("replaceKeepingScroll", () => {
     expect(next.zones[".pane"][0].scrollTop).toBe(0);
   });
 
-  it("supporte une zone absente du nouveau contenu", () => {
+  it("tolerates an area missing from the new content", () => {
     const content = container(fake({ ".pane": [{ scrollTop: 0 }] }));
     const memo = { view: "scan" };
     content.current.zones[".pane"][0].scrollTop = 99;

@@ -1,9 +1,9 @@
 /**
- * §333, lot K12 de la repasse des créatures (suite). Arène des sorts : le Lanceur (PNJ), le Héros (PJ : CA calculée — une CA fixe
- * ignore les bonus de CA dans dnd5e) et la Cible (999 PV).
- *  - Miasme nocif du Dragon vert (l'effet visait `system.armor.value`) : sur un échec, la CA du Héros baisse de 2 ;
- *  - Maléfice déformant du Fomorien : sur un échec, le Héros gagne un niveau d'Épuisement (un seul) ;
- *  - Visage troublant du Doppelganger (« that can see the doppelganger ») : une Cible Aveuglée n'est jamais Effrayée.
+ * §333, batch K12 of the creature pass (continued). Spell arena: the Caster (NPC), the Hero (PC: computed AC — a fixed AC
+ * ignores AC bonuses in dnd5e) and the Target (999 HP).
+ *  - Green Dragon's Noxious Miasma (the effect targeted `system.armor.value`): on a failure, the Hero's AC drops by 2;
+ *  - Fomorian's Warping Hex: on a failure, the Hero gains one level of Exhaustion (only one);
+ *  - Doppelganger's Unsettling Visage ("that can see the doppelganger"): a Blinded Target is never Frightened.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -66,7 +66,7 @@ export default {
       await ctx.call("move-token", { tokenId: caster.id, x: p.x - grid, y: p.y, elevation: 0 });
       await pause(800);
     };
-    /** Rejoue la sauvegarde jusqu'à un échec de la créature, puis rend ses statistiques. */
+    /** Replays the saving throw until the creature fails, then returns its statistics. */
     const untilFailed = async (itemId, activityId, area=false, who=target) => {
       const before = await stats(who);
       for ( let i = 0; i < 20; i++ ) {

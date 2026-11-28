@@ -1,13 +1,13 @@
 /**
- * Les sauvegardes du diagnostic (SPEC §177) : un compendium de monde « DAS · Sauvegardes » (type Aventure), une entrée par
- * réparation. Une Aventure porte des acteurs et des objets complets (common/documents/adventure.mjs, `actors`, `items`) : les
- * racines Actor et Item y sont copiées telles quelles, inspectables dans le compendium ; un token non lié est sauvegardé par son
- * **delta** (ce qui le distingue de son acteur de base), dans les flags de l'entrée, et restauré en remplaçant tout ce delta — comme le
- * cœur le fait lui-même (client/documents/token.mjs:3835, `updateSource({ delta }, { diff: false, recursive: false })`). Restaurer la
- * vue de l'acteur du token recopierait dans le delta des objets qui viennent de l'acteur de base.
+ * The diagnostic's backups (SPEC §177): a world compendium "DAS · Backups" (Adventure type), one entry per
+ * repair. An Adventure carries complete actors and items (common/documents/adventure.mjs, `actors`, `items`): the
+ * Actor and Item roots are copied there as they are, inspectable in the compendium; an unlinked token is backed up by its
+ * **delta** (what distinguishes it from its base actor), in the entry's flags, and restored by replacing the whole delta — as the
+ * core itself does (client/documents/token.mjs:3835, `updateSource({ delta }, { diff: false, recursive: false })`). Restoring the
+ * token actor's view would copy into the delta items that come from the base actor.
  *
- * Règle de sûreté : une sauvegarde est relue et comparée à ce qui a été copié (`verifyBackup`) AVANT toute modification ; si elle
- * n'est pas complète, l'appelant ne touche à rien.
+ * Safety rule: a backup is re-read and compared to what was copied (`verifyBackup`) BEFORE any change; if it is not
+ * complete, the caller touches nothing.
  */
 import { MODULE_ID } from "../../constants.mjs";
 import { EMBEDDED, backupName, restorePlan, rootFields, rootKey, verifyBackup } from "../../core/backup.mjs";
@@ -20,7 +20,7 @@ export const LOGO = `modules/${MODULE_ID}/assets/das-logo.png`;
 /** Le compendium des sauvegardes, s'il existe. */
 export const backupPack = () => game.packs.get(`world.${PACK_NAME}`) ?? null;
 
-/** Le compendium des sauvegardes, créé au besoin (MJ). */
+/** The backups compendium, created as needed (GM). */
 export async function ensureBackupPack() {
   const existing = backupPack();
   if ( existing ) return existing;
@@ -32,14 +32,14 @@ export async function ensureBackupPack() {
   return pack;
 }
 
-/** Le document d'une racine, s'il existe encore. Pour un token, son acteur propre. */
+/** A root's document, if it still exists. For a token, its own actor. */
 export function rootDocument(root) {
   const doc = fromUuidSync(root.uuid, { strict: false });
   if ( !doc ) return null;
   return (root.type === "Token") ? (doc.actor ?? null) : doc;
 }
 
-/** La racine d'un document : un acteur ou un objet du monde, ou le token non lié dont l'acteur propre le porte. */
+/** A document's root: a world actor or item, or the unlinked token whose own actor carries it. */
 export function rootOf(doc) {
   let d = doc;
   while ( d?.parent && !(d.parent instanceof foundry.documents.Scene) ) {
@@ -55,7 +55,7 @@ export function rootOf(doc) {
   return null;
 }
 
-/** Les données à copier d'une racine : le document entier, ou le delta d'un token. */
+/** The data to copy from a root: the whole document, or a token's delta. */
 function snapshot(root) {
   if ( root.type === "Token" ) {
     const token = fromUuidSync(root.uuid, { strict: false });
@@ -68,9 +68,9 @@ function snapshot(root) {
 }
 
 /**
- * Une copie que l'Aventure peut porter : un acteur ou un objet dont tous les types (le sien, ceux de ses objets et de ses effets) sont
- * connus de ce monde. Un effet laissé par un module désactivé (« auraeffects.aura », retour Discord 2026-10-29) ferait refuser
- * toute l'entrée par la validation de l'Aventure : une telle copie va telle quelle dans les flags, comme le delta d'un token.
+ * A copy the Adventure can carry: an actor or item whose types (its own, those of its items and its effects) are all known to this
+ * world. An effect left by a disabled module ("auraeffects.aura", Discord feedback 2026-10-29) would make
+ * the Adventure's validation refuse the whole entry: such a copy goes as is into the flags, like a token's delta.
  */
 function storable({ type, data }) {
   const known = (doc, t) => !t || (game.documentTypes?.[doc] ?? [t]).includes(t);
@@ -119,12 +119,12 @@ function placesOf(failures, data) {
   });
 }
 
-/** Ce que rend une entrée relue : les racines et leurs données. */
+/** What a re-read entry returns: the roots and their data. */
 function readEntry(entry) {
   const meta = entry.getFlag(MODULE_ID, "backup") ?? {};
   const actors = new Map(entry.actors.map(a => [a._id, a.toObject?.() ?? a]));
   const items = new Map(entry.items.map(i => [i._id, i.toObject?.() ?? i]));
-  // Des flags lus d'un document ne sont pas des objets simples : une copie, avant de les rendre à une mise à jour.
+  // Flags read from a document are not plain objects: a copy, before handing them back to an update.
   const tokens = new Map((meta.tokens ?? []).map(t => [t.uuid, foundry.utils.deepClone(t.data)]));
   const raw = new Map((meta.raw ?? []).map(r => [r.uuid, foundry.utils.deepClone(r.data)]));
   return (meta.roots ?? []).map(root => {
@@ -136,8 +136,8 @@ function readEntry(entry) {
 }
 
 /**
- * Copie ces racines dans une nouvelle entrée, la relit et la vérifie. Lève une Error si elle n'est pas complète : l'appelant ne doit
- * alors rien modifier. Rend `{ uuid, name }` de l'entrée.
+ * Copies these roots into a new entry, re-reads it and verifies it. Throws an Error if it is not complete: the caller must then
+ * change nothing. Returns `{ uuid, name }` of the entry.
  * @param {{ type: string, uuid: string, name: string }[]} roots
  * @param {{ label: string, checks?: string[] }} context
  */
@@ -180,7 +180,7 @@ export async function createBackup(roots, { label, checks=[] }) {
     throw new Error(places.length ? `${loc("Diagnostic.SauvegardeRefusee")} ${places.join(" ; ")}` : (err?.message ?? String(err)), { cause: err });
   }
   if ( !created ) throw new Error("backup entry not created");
-  // Relire depuis la base, pas depuis l'objet en mémoire.
+  // Re-read from the database, not from the in-memory object.
   const entry = await pack.getDocument(created.id);
   const problems = entry ? verifyBackup(copies, readEntry(entry)) : ["entry unreadable"];
   if ( problems.length ) throw new Error(`backup incomplete: ${problems.join("; ")}`);
@@ -188,7 +188,7 @@ export async function createBackup(roots, { label, checks=[] }) {
   return { uuid: entry.uuid, name };
 }
 
-/** Les sauvegardes, la plus récente d'abord : `{ id, uuid, name, date, roots, checks }`. */
+/** The backups, most recent first: `{ id, uuid, name, date, roots, checks }`. */
 export async function listBackups() {
   const pack = backupPack();
   if ( !pack ) return [];
@@ -211,7 +211,7 @@ function acceptable(data, notes, current=null) {
   return clean;
 }
 
-/** Remet un document dans l'état de sa copie : collections incluses (supprimer, recréer, remettre), puis ses champs. */
+/** Puts a document back in its copy's state: collections included (delete, recreate, put back), then its fields. */
 async function restoreDocument(doc, type, saved, notes=[]) {
   for ( const field of EMBEDDED[type] ?? [] ) {
     const name = (field === "items") ? "Item" : "ActiveEffect";
@@ -236,8 +236,8 @@ async function restoreDocument(doc, type, saved, notes=[]) {
 }
 
 /**
- * Restaure une sauvegarde. Sauvegarde d'abord l'état actuel des mêmes racines (« avant restauration ») : une restauration se
- * défait comme une réparation. Rend `{ lines, before }`.
+ * Restores a backup. First backs up the current state of the same roots ("before restore"): a restore is undone
+ * like a repair. Returns `{ lines, before }`.
  */
 export async function restoreBackup(uuid) {
   if ( !game.user.isGM ) throw new Error("only a GM can restore");
@@ -252,7 +252,7 @@ export async function restoreBackup(uuid) {
       if ( !root.data ) throw new Error("no saved data");
       let doc = rootDocument(root);
       if ( !doc ) {
-        // Un acteur ou un objet du monde supprimé depuis : recréé avec son id (les tokens liés le retrouvent).
+        // A world actor or item deleted since: recreated with its id (linked tokens find it again).
         if ( root.type === "Token" ) throw new Error(loc("Diagnostic.TokenDisparu"));
         const cls = CONFIG[root.type].documentClass;
         const notes = [];

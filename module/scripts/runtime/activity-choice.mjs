@@ -1,12 +1,12 @@
 /**
- * Le choix d'activité de dnd5e, répondu quand il n'y a rien à choisir (SPEC §41.1, §42.1). `Item5e#use` ouvre
- * `ActivityChoiceDialog` pour tout item à plusieurs activités (documents/item.mjs:759 — aucun hook avant lui). Au rendu de la
- * fenêtre, si la règle de core/activity-choice.mjs désigne une activité, on clique son bouton pour le joueur
- * (templates/activity/activity-choices.hbs, `data-action="choose"`) et la fenêtre, rendue invisible, se ferme aussitôt.
- * Aucun patch : le hook de rendu de l'application et son propre bouton. Maj + clic (dnd5e : la première activité, sans
- * fenêtre) et la liste des activités de la fiche restent là pour atteindre les autres.
+ * dnd5e's activity choice, answered when there is nothing to choose (SPEC §41.1, §42.1). `Item5e#use` opens
+ * `ActivityChoiceDialog` for any item with several activities (documents/item.mjs:759 — no hook before it). When the
+ * window renders, if the rule in core/activity-choice.mjs designates an activity, we click its button for the player
+ * (templates/activity/activity-choices.hbs, `data-action="choose"`) and the window, made invisible, closes at once.
+ * No patch: the application's render hook and its own button. Shift + click (dnd5e: the first activity, without a
+ * window) and the sheet's list of activities remain to reach the others.
  *
- * Sur le client de celui qui utilise l'item.
+ * On the client of whoever uses the item.
  */
 
 import { activityToUse } from "../core/activity-choice.mjs";
@@ -18,8 +18,8 @@ import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
 
 /**
- * Le sort est-il déjà en cours pour son lanceur ? Il se concentre dessus, ou un effet actif venu de cet item est posé — sur
- * lui (la flamme de Flammes, l'Armure d'Agathys) ou sur une créature de la scène affichée (le Maléfice, la Marque).
+ * Is the spell already running for its caster? They concentrate on it, or an Active Effect from this item is in place — on
+ * them (the flame of "Flammes", Armor of Agathys) or on a creature of the displayed scene (Hex, Hunter's Mark).
  */
 function isRunning(item) {
   const actor = item.actor;
@@ -31,14 +31,14 @@ function isRunning(item) {
 }
 
 /**
- * Une incantation gratuite qui reste : une activité qui lance le sort sans emplacement sur des utilisations limitées — les siennes,
- * ou celles de l'objet pour l'activité « forward » que dnd5e crée (SpellConfigurationData#applySpellChanges ; ForwardActivity#use
- * relance sans emplacement).
+ * A free casting that remains: an activity that casts the spell without a slot on limited uses — its own,
+ * or the item's for the "forward" activity that dnd5e creates (SpellConfigurationData#applySpellChanges; ForwardActivity#use
+ * recasts without a slot).
  */
 function freeCast(item, a) {
   if ( (a.consumption?.spellSlot !== false) && (a.type !== "forward") ) return false;
-  // §230 : une « forward » vers une activité qui demande un niveau de sort plus haut que celui du sort (la monture volante d'Appel de
-  // destrier, niveau 4) n'est pas une incantation gratuite : elle lance au niveau de base.
+  // §230: a "forward" to an activity that asks for a higher spell level than the spell's (the flying mount of Find
+  // Steed, level 4) is not a free casting: it casts at the base level.
   const minLevel = contentOf(item).entry?.summon?.minLevels?.[a.activity?.id ?? a.id];
   if ( Number.isFinite(minLevel) && ((item.system?.level ?? 0) < minLevel) ) return false;
   const left = u => (u?.max > 0) && (u.value > 0);
@@ -46,7 +46,7 @@ function freeCast(item, a) {
   return onItem ? left(item.system.uses) : left(a.uses);
 }
 
-/** Les temps d'incantation qui coûtent quelque chose au tour (§46) — pas « spéciale », « début / fin de tour », ni aucun. */
+/** Casting times that cost something on the turn (§46) — not "special", "start / end of turn", nor none. */
 const COSTS = new Set(["action", "bonus", "reaction", "legendary", "mythic", "lair"]);
 
 function onRenderActivityChoice(app, element) {
@@ -63,14 +63,14 @@ function onRenderActivityChoice(app, element) {
     activities, level: (item.type === "spell") ? (item.system.level ?? 0) : 0,
     known: !!entry && (Object.keys(entry).length > 0), running: isRunning(item),
     byWounds: entry?.byWounds ?? null, wounded: (targets.length > 0) && targets.every(isWounded),
-    // §45 : Avaler / Engloutir — l'activité qui avale ; les autres (dégâts à chaque tour, sortie du cadavre) sont au moteur.
+    // §45: Swallow / Engulf — the activity that swallows; the others (damage each turn, exit from the corpse) are the engine's.
     entry: swallowOf(item)?.entry?.id ?? null,
     slotLeft: slotLeft(item)
   });
   const button = wanted ? buttons.find(b => b.dataset.activityId === wanted) : null;
   if ( !button ) return;
   log(`${item.name}: activity choice answered (${item.system.activities.get(wanted)?.name ?? wanted})`);
-  element.style.visibility = "hidden";   // la fenêtre se ferme au clic : qu'elle ne clignote pas
+  element.style.visibility = "hidden";   // the window closes on click: so it does not flicker
   button.click();
 }
 

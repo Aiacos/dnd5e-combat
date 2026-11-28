@@ -1,7 +1,7 @@
 /**
- * Proie supérieure du chasseur (clé `markSplash`) : à la fin d'une résolution du Rôdeur qui a blessé une créature portant sa Marque
- * du chasseur, une fois par tour, il choisit une autre créature qu'il voit à portée de la première : elle subit les dégâts
- * supplémentaires du sort. « Personne » d'abord. MJ actif (la route de résolution), la question va au joueur du Rôdeur.
+ * Superior Hunter's Prey (key `markSplash`): at the end of a Ranger's resolution that wounded a creature carrying their Hunter's
+ * Mark, once per turn, they choose another creature they can see within range of the first: it takes the spell's extra damage.
+ * "Nobody" first. Active GM (the resolution route), the question goes to the Ranger's player.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -20,15 +20,15 @@ import { log, tokenOfActor } from "./shared.mjs";
 const seen = new Set();
 
 /**
- * Le tour en cours du combat où se trouve cette créature (même forme que `currentTurnKey`), ou null hors combat. Lu sur le combat
- * du combattant plutôt que sur le combat affiché : vu en jeu, celui-ci n'était pas encore connu à la fin de la résolution.
+ * The current turn of the combat this creature is in (same form as `currentTurnKey`), or null out of combat. Read from the
+ * combatant's combat rather than the displayed combat: seen in play, the latter was not yet known at the end of the resolution.
  */
 function turnKeyOf(token) {
   const combat = game.combats.find(c => c.started && c.combatants.some(x => x.tokenId === token.id));
   return combat ? `${combat.id}.${combat.round}.${combat.turn}` : null;
 }
 
-/** La créature porte-t-elle un effet de l'item `mark` posé par cet acteur ? */
+/** Does the creature carry an effect of the `mark` item placed by this actor? */
 function markedBy(actor, mark, source) {
   return Array.from(actor?.appliedEffects ?? actor?.effects ?? []).some(e => {
     if ( e.disabled || e.isSuppressed ) return false;
@@ -57,13 +57,13 @@ export async function onMarkSplashResolution(resolution) {
   const alive = t => t.actor && !t.hidden && (t.id !== self.id) && ((t.actor.system?.attributes?.hp?.value ?? 0) > 0);
   const tokens = scene.tokens.filter(alive).map(t => ({ id: t.id, name: t.name, first: t.id === first.id,
     enemy: areEnemies(self, t), seen: canSee(self, t) !== false,   // des documents de token (adapter/vision.mjs)
-    distance: (t.id === first.id) ? 0 : distanceBetween(first, t).value }));   // dans l'unité de la scène
+    distance: (t.id === first.id) ? 0 : distanceBetween(first, t).value }));   // in the scene's unit
   const choices = splashTargets(tokens, range);
   if ( !choices.length ) return;
   const formula = splashFormula(rule, source.items.map(i => identifierOf(i).id));
   const answer = await askChoice(source, { actor: source.uuid, item: item.name,
     prompt: game.i18n.format("DND5ECOMBAT.ProieSuperieure.Question", { item: item.name, first: first.name, formula }),
-    // « Personne » d'abord : sans réponse dans le délai, askChoice retient la première option.
+    // "Nobody" first: with no answer within the delay, askChoice takes the first option.
     options: [{ id: "none", label: game.i18n.localize("DND5ECOMBAT.ProieSuperieure.Personne") },
       ...choices.map(t => ({ id: t.id, label: t.name }))] });
   const chosen = scene.tokens.get(answer?.id ?? "");

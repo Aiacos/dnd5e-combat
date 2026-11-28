@@ -1,12 +1,12 @@
 /**
- * §187 : les objets qu'on répand au sol — Chausse-trapes, Billes (Manuel des joueurs 2024, `scatter` dans content/gear.mjs). Leur
- * activité n'a pas de durée, mais leur zone reste (runtime/engine-areas.mjs) et n'agit que sur qui y entre (runtime/areas.mjs, rejeu
- * `enter`). Ici :
- *  - qui y entre s'arrête sur sa première case (`scatterStop`, appelé par `preMoveToken`) : la sauvegarde se joue là, puis il
- *    repart s'il le peut — Vitesse 0 (chausse-trapes) ou À terre (billes) sur un échec ;
- *  - l'image de l'objet sur la zone (une tuile, retirée avec elle) ;
- *  - le ramassage, hors combat : « il faut 10 minutes pour les récupérer » — l'horloge avance de 10 minutes, l'objet revient dans
- *    l'inventaire de qui ramasse (une utilisation rendue, sinon un de plus, sinon une copie de l'objet répandu).
+ * §187: objects that are scattered on the ground — Caltrops, Ball Bearings (Player's Handbook 2024, `scatter` in
+ * content/gear.mjs). Their activity has no duration, but their area remains (runtime/engine-areas.mjs) and only acts on whoever
+ * enters it (runtime/areas.mjs, replay `enter`). Here:
+ *  - whoever enters stops on its first cell (`scatterStop`, called by `preMoveToken`): the save is played there, then it
+ *    moves on if it can — Speed 0 (caltrops) or Prone (ball bearings) on a failure;
+ *  - the object's image on the area (a tile, removed with it);
+ *  - picking up, out of combat: "it takes 10 minutes to retrieve them" — the clock advances 10 minutes, the object returns to
+ *    the picker's inventory (a use returned, otherwise one more, otherwise a copy of the scattered object).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,17 +23,17 @@ import { log, loc, viaActiveGM } from "./shared.mjs";
 import { askAnyway } from "./turn.mjs";
 
 export const PICKUP_QUERY = `${MODULE_ID}.pickUp`;
-/** « Il faut 10 minutes pour les récupérer. » */
+/** "It takes 10 minutes to retrieve them." */
 const RECOVER_SECONDS = 600;
 
 const currentTurnKey = () => turnKeyOf(game.combat?.started ? game.combat.round : null, game.combat?.turn);
 
-/** L'activité pose-t-elle un objet répandu ? */
+/** Does the activity place a scattered object? */
 export function scatterOf(activity) {
   return contentOf(activity?.item).entry?.scatter === true;
 }
 
-/** Les zones d'objets répandus de cette scène. */
+/** This scene's scattered-object areas. */
 export function scatterZones(scene) {
   return lastingRegions(scene).filter(r => readAreaState(r)?.scatter);
 }
@@ -42,7 +42,7 @@ export function scatterZones(scene) {
 /*  Pose                                        */
 /* -------------------------------------------- */
 
-/** Le rectangle qui contient les formes d'une région (pixels). */
+/** The rectangle that contains a region's shapes (pixels). */
 function boundsOf(region) {
   const xs = [];
   const ys = [];
@@ -56,7 +56,7 @@ function boundsOf(region) {
   return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
 }
 
-/** §187, §188 : l'image d'un objet posé au sol (chausse-trapes, flaque d'huile), une tuile sur la zone, retirée avec elle. MJ actif. */
+/** §187, §188: the image of an object placed on the ground (caltrops, oil puddle), a tile on the area, removed with it. Active GM. */
 export async function groundTile(region, img) {
   const box = boundsOf(region);
   if ( !box || !img ) return null;
@@ -68,8 +68,8 @@ export async function groundTile(region, img) {
 }
 
 /**
- * Ce que la zone garde de l'objet répandu : sa copie (l'objet a pu disparaître, chausse-trapes « autoDestroy »), prise au moment de
- * l'utilisation sur le message, et la tuile qui le montre au sol. MJ actif (pose de la zone).
+ * What the area keeps of the scattered object: its copy (the object may have disappeared, caltrops "autoDestroy"), taken at
+ * the time of use on the message, and the tile that shows it on the ground. Active GM (placing the area).
  */
 export async function scatterState(region, message, activity) {
   const item = message?.getFlag(MODULE_ID, "scatterItem") ?? activity?.item?.toObject?.() ?? null;
@@ -79,12 +79,12 @@ export async function scatterState(region, message, activity) {
 }
 
 /* -------------------------------------------- */
-/*  Entrer dans la zone                         */
+/*  Entering the area                           */
 /* -------------------------------------------- */
 
 /**
- * Le trajet case par case : un glisser du cœur n'a que ses points posés (départ, arrivée), l'A* du moteur une case par point. Chaque
- * segment est découpé par la grille (`getDirectPath`, common/grid/base.mjs:490), sur le centre de la case du coin haut-gauche.
+ * The path cell by cell: a core drag has only its placed points (start, end), the engine's A* one cell per point. Each
+ * segment is split by the grid (`getDirectPath`, common/grid/base.mjs:490), on the center of the top-left corner's cell.
  */
 function cellSteps(token, path) {
   const grid = token.parent.grid;
@@ -101,21 +101,21 @@ function cellSteps(token, path) {
 }
 
 /**
- * `preMoveToken` : un trajet qui entre dans une zone d'objets répandus (pour la première fois de ce tour) s'arrête sur sa première
- * case — le reste du trajet n'est pas joué ; la zone rejoue sa sauvegarde à l'arrivée (runtime/areas.mjs). Vrai : le déplacement
- * passe tel quel. Une téléportation n'entre pas « en marchant » ; un trajet qui finit sur cette case passe aussi.
+ * `preMoveToken`: a path that enters a scattered-object area (for the first time this turn) stops on its first
+ * cell — the rest of the path is not played; the area replays its save on arrival (runtime/areas.mjs). True: the move
+ * passes as is. A teleportation does not enter "by walking"; a path that ends on this cell passes too.
  */
 export function scatterStop(token, movement, operation) {
   if ( !token?.actor || isObjectToken(token) || !levelAtLeast("full") ) return true;
   const flags = operation?.[MODULE_ID] ?? continuedFlags(token, movement) ?? null;
   if ( flags?.scatterChecked ) return true;
-  // Hors combat, chaque entrée compte (runtime/areas.mjs) ; en combat, la première de ce tour.
+  // Out of combat, each entry counts (runtime/areas.mjs); in combat, the first of this turn.
   const turnKey = currentTurnKey();
   const zones = scatterZones(token.parent)
     .filter(r => !game.combat?.started || shouldTrigger(readAreaState(r), { event: "enter", token: token.uuid, turnKey }));
   if ( !zones.length ) return true;
-  // Tout le trajet de ce déplacement, comme les attaques d'opportunité (runtime/move-gate.mjs) : à `preMoveToken`, un déplacement
-  // sans étapes intermédiaires est entier dans `passed`.
+  // The whole path of this move, like the Opportunity Attacks (runtime/move-gate.mjs): at `preMoveToken`, a move
+  // with no intermediate steps is entirely in `passed`.
   const waypoints = [...(movement.passed?.waypoints ?? []), ...(movement.pending?.waypoints ?? [])];
   if ( !waypoints.length || waypoints.some(w => CONFIG.Token.movement.actions[w.action]?.teleport || (w.action === "displace")) ) return true;
   const start = positionOf(movement.origin);
@@ -135,7 +135,7 @@ export function scatterStop(token, movement, operation) {
 /*  Ramasser                                    */
 /* -------------------------------------------- */
 
-/** Les zones d'objets répandus que ce token peut ramasser : hors combat, sur la zone ou au contact. */
+/** The scattered-object areas this token can pick up: out of combat, on the area or in contact. */
 export function pickableNear(token) {
   if ( !token?.actor || isObjectToken(token) || game.combat?.started || !levelAtLeast("full") ) return [];
   const grid = token.parent.grid;
@@ -145,7 +145,7 @@ export function pickableNear(token) {
   return scatterZones(token.parent).filter(r => around.some(p => isInside(token, r, p)));
 }
 
-/** Les entrées du menu de son propre token : « Ramasser : Chausse-trapes ». */
+/** The entries of its own token's menu: "Pick up: Caltrops". */
 export function pickUpEntries(token) {
   if ( !token?.isOwner ) return [];
   return pickableNear(token).map(region => ({
@@ -155,16 +155,17 @@ export function pickUpEntries(token) {
   }));
 }
 
-/** Ramasser : par le MJ actif (la région et l'horloge du monde sont à lui). */
+/** Picking up: by the active GM (the region and the world clock are theirs). */
 export async function pickUp(token, region) {
-  // §412 (issue #44, lot 5) : en combat (une minute de ramassage), la fenêtre de légalité chez qui ramasse ; forcé, le MJ actif ramasse quand même.
+  // §412 (issue #44, batch 5): in combat (one minute of picking up), the legality window on the picker's side; forced, the
+  // active GM picks up anyway.
   const forced = !!game.combat?.started;
   if ( forced && !(await askAnyway(`${region.name ?? ""} — ${token.name}`, [loc("Dispersion.EnCombat")], { actor: token.actor, token })) ) return false;
   return viaActiveGM(PICKUP_QUERY, handlePickUp, { token: token.uuid, region: region.uuid, forced },
     { noGm: "Dispersion.SansMJ", fallback: false, timeout: 15000, label: "scattered item: pick up" });
 }
 
-/** L'objet revient : une utilisation rendue (billes vidées), sinon un de plus (même identifiant), sinon une copie. */
+/** The object returns: a use returned (ball bearings emptied), otherwise one more (same identifier), otherwise a copy. */
 async function giveBack(actor, data) {
   const id = identifierOf(data).id;
   const same = actor.items.find(i => (i.type === data.type) && (identifierOf(i).id === id));
@@ -182,7 +183,7 @@ async function giveBack(actor, data) {
 
 export async function handlePickUp({ token: tokenUuid, region: regionUuid, forced=false }, { user=null }={}) {
   const token = await fromUuid(tokenUuid);
-  // §472 : d'un joueur, seulement son propre token (refus de sécurité, non forçable ; `forced` reste le refus forçable du jeu).
+  // §472: from a player, only their own token (safety refusal, not forceable; `forced` remains the game's forceable refusal).
   if ( !actsFor(user, token?.actor) ) { console.warn(`${MODULE_ID} | pickUp query from ${user.name} refused: ${token?.name ?? tokenUuid} is not theirs`); return false; }
   const region = await fromUuid(regionUuid);
   const scatter = region ? readAreaState(region)?.scatter : null;
@@ -203,10 +204,10 @@ export async function handlePickUp({ token: tokenUuid, region: regionUuid, force
 }
 
 export function registerScatter() {
-  // La copie de l'objet, prise avant que dnd5e ne le dépense (les chausse-trapes disparaissent de l'inventaire à l'utilisation). §188 :
-  // la case se pose à l'utilisation — l'étalage d'huile du Manuel a `target.prompt` faux : dnd5e met alors `measuredTemplate` à faux
-  // avant le hook (documents/activity/mixin.mjs:451) et n'ouvre aucune pose, seulement un bouton sur la carte. Un appelant qui pose
-  // lui-même la zone le dit (`areaPlaced` : outils de test) — son `false` ne se distingue pas de celui de dnd5e.
+  // The copy of the object, taken before dnd5e spends it (caltrops disappear from the inventory on use). §188:
+  // the cell is placed on use — the Player's Handbook oil flask spread has a false `target.prompt`: dnd5e then sets
+  // `measuredTemplate` to false before the hook (documents/activity/mixin.mjs:451) and opens no placement, only a button on the
+  // card. A caller that places the area itself says so (`areaPlaced`: test tools) — its `false` is indistinguishable from dnd5e's.
   route("dnd5e.preUseActivity", (activity, usageConfig, dialogConfig, messageConfig) => {
     const scatter = scatterOf(activity);
     const ground = contentOf(activity?.item).entry?.flammable?.ground === true;
@@ -216,7 +217,7 @@ export function registerScatter() {
     }
     if ( scatter && messageConfig ) foundry.utils.setProperty(messageConfig, `data.flags.${MODULE_ID}.scatterItem`, activity.item.toObject());
   }, { label: "ground item: area placed on use, copy kept" });
-  // La tuile part avec sa zone (ramassée, brûlée, ou retirée à la main par le MJ).
+  // The tile goes with its area (picked up, burned, or removed by hand by the GM).
   route("deleteRegion", async region => {
     const tile = region.parent?.tiles.find(t => t.getFlag(MODULE_ID, "ground") === region.id);
     if ( tile ) await tile.delete();

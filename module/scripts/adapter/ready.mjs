@@ -1,22 +1,22 @@
 /**
- * §211 : Se tenir prêt — ce qu'un acteur peut préparer, les emplacements d'un sort préparé, et l'option de réaction qui libère le plan.
+ * §211: Ready — what an actor can ready, the slots of a readied spell, and the Reaction option that releases the plan.
  *
- * Vérifié (dnd5e 6.0, `references/dnd5e-6/src`) :
- *  - un sort préparé se lance à son tour : l'emplacement est dépensé et la créature se concentre dessus jusqu'à le libérer
- *    (`Actor5e#beginConcentrating(activity)`, documents/actor/actor.mjs:1091) ;
- *  - à la libération, `use({ consume: { spellSlot: false }, spell: { slot } })` (documents/activity/mixin.mjs:445-497) lance le sort
- *    sans reprendre d'emplacement, au niveau de celui dépensé.
+ * Verified (dnd5e 6.0, `references/dnd5e-6/src`):
+ *  - a readied spell is cast on its turn: the slot is spent and the creature concentrates on it until it is released
+ *    (`Actor5e#beginConcentrating(activity)`, documents/actor/actor.mjs:1091);
+ *  - on release, `use({ consume: { spellSlot: false }, spell: { slot } })` (documents/activity/mixin.mjs:445-497) casts the spell
+ *    without taking a slot again, at the level of the one spent.
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { readyReach } from "../core/ready.mjs";
 
-/** Le sort est-il prêt à être lancé (mineur, préparé, de pacte, inné, à volonté) ? */
+/** Is the spell ready to be cast (cantrip, prepared, pact, innate, at will)? */
 function castable(item) {
   return ((item.system.level ?? 0) === 0) || !!item.system.prepared || ["pact", "innate", "atwill", "always"].includes(item.system.method);
 }
 
-/** Les données de portée d'une activité, pour `readyReach`. */
+/** An activity's range data, for `readyReach`. */
 function reachData(activity) {
   const item = activity.item;
   const melee = (activity.type === "attack") && (activity.attack?.type?.value === "melee");
@@ -29,9 +29,10 @@ function reachData(activity) {
 }
 
 /**
- * Ce qu'un acteur peut préparer : les attaques de ses armes (équipées pour un personnage) et de ses capacités, et les sorts prêts qui
- * se lancent par une action (« un sort dont le temps d'incantation est d'une action »). Une option par activité qui agit.
- * @returns {Array<{activity: string, name: string, img: string, level: number, spell: boolean, reach: {value: number, units: string}|null}>}
+ * What an actor can ready: the attacks of their weapons (equipped for a character) and of their features, and the ready spells that
+ * are cast with an action ("a spell whose casting time is one action"). One option per activity that acts.
+ * @returns {Array<{activity: string, name: string, img: string, level: number, spell: boolean,
+ *   reach: {value: number, units: string}|null}>}
  */
 export function readyOptionsOf(actor) {
   const out = [];
@@ -54,7 +55,7 @@ export function readyOptionsOf(actor) {
   return out;
 }
 
-/** Les emplacements d'où lancer un sort de ce niveau (au moins le sien, non vides), du plus bas au plus haut. */
+/** The slots from which to cast a spell of this level (at least its own, non-empty), from lowest to highest. */
 export function slotsFor(actor, level) {
   const out = [];
   for ( const [key, v] of Object.entries(actor?.system?.spells ?? {}) ) {
@@ -64,7 +65,7 @@ export function slotsFor(actor, level) {
   return out.sort((a, b) => a.level - b.level);
 }
 
-/** Dépense l'emplacement choisi (sort préparé : l'énergie est retenue jusqu'au déclencheur). */
+/** Spends the chosen slot (readied spell: the energy is held until the trigger). */
 export async function spendSlot(actor, key) {
   const value = Number(actor?.system?.spells?.[key]?.value) || 0;
   if ( value < 1 ) return false;
@@ -72,17 +73,17 @@ export async function spendSlot(actor, key) {
   return true;
 }
 
-/** L'effet de concentration qui retient un sort préparé (posé par `holdSpell`), ou null. */
+/** The concentration effect that holds a readied spell (set by `holdSpell`), or null. */
 export function heldEffectOf(actor) {
   return (actor?.effects ?? []).find(e => e.getFlag?.(MODULE_ID, "readied")) ?? null;
 }
 
 /**
- * Retient le sort préparé par la Concentration : la concentration en cours cesse (on ne se concentre que sur une chose), puis un effet
- * de concentration au format de dnd5e est posé, marqué (`ActiveEffect5e.createConcentrationEffectData`, documents/active-effect.mjs:921
- * — qu'on ne peut pas appeler ici : il refuse un sort sans Concentration, or c'est la règle de l'action préparée qui l'impose). Il dure
- * jusqu'au début du prochain tour (runtime/ready.mjs le retire) ; dnd5e le compte (`Actor5e#concentration`, l'état `concentrating`) :
- * des dégâts demandent le jet de Constitution. Rend l'effet, ou null.
+ * Holds the readied spell through Concentration: the concentration in progress ends (one concentrates on only one thing), then a
+ * concentration effect in dnd5e's format is set, marked (`ActiveEffect5e.createConcentrationEffectData`,
+ * documents/active-effect.mjs:921 — which cannot be called here: it refuses a spell without Concentration, yet it is the Ready
+ * action's rule that imposes it). It lasts until the start of the next turn (runtime/ready.mjs removes it); dnd5e counts it
+ * (`Actor5e#concentration`, the `concentrating` condition): damage calls for the Constitution roll. Returns the effect, or null.
  */
 export async function holdSpell(activity) {
   const actor = activity?.actor;
@@ -108,9 +109,9 @@ export async function holdSpell(activity) {
 }
 
 /**
- * L'option de réaction qui libère le plan, au format d'`askReaction` : son activité, contre la créature qui a déclenché ; un sort
- * préparé se lance sans emplacement, au niveau dépensé, et son effet de concentration tombe d'abord ; la carte porte `readiedRelease`
- * (le plan est servi : runtime/turn.mjs le retire du budget avec la Réaction).
+ * The Reaction option that releases the plan, in `askReaction`'s format: its activity, against the creature that triggered; a
+ * readied spell is cast without a slot, at the level spent, and its concentration effect falls first; the card carries
+ * `readiedRelease` (the plan is served: runtime/turn.mjs removes it from the budget with the Reaction).
  */
 export function readyOption(plan) {
   return {

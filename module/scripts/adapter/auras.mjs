@@ -1,14 +1,14 @@
 /**
- * Auras passives : ce qu'un item déclare (content/auras.mjs, surcouche du monde ou flag
- * `flags["dnd5e-combat"].aura` de l'item), et les copies d'effet posées sur ceux qui se
- * tiennent dans l'aura.
+ * Passive auras: what an item declares (content/auras.mjs, world overlay or the item's flag
+ * `flags["dnd5e-combat"].aura`), and the effect copies placed on those standing
+ * in the aura.
  *
- * Vérifié dans dnd5e 6.0.3 (packs/_source/classes24/paladin/class-features/aura-of-protection.yml) :
- * l'Aura de protection officielle porte un effet « Protected » transféré au paladin seul
- * (`system.bonuses.abilities.save` = `@abilities.cha.mod`), et une activité utilitaire dont le
- * gabarit donne le rayon (`@scale.paladin.aura`) et le camp visé (`ally`). Le moteur réutilise ces
- * données : il copie cet effet sur les alliés à portée. Le bonus est FIGÉ à la valeur du porteur
- * au moment de la copie — laissé en formule, `@abilities.cha.mod` lirait le Charisme de l'allié.
+ * Verified in dnd5e 6.0.3 (packs/_source/classes24/paladin/class-features/aura-of-protection.yml):
+ * the official Aura of Protection carries a "Protected" effect transferred to the paladin alone
+ * (`system.bonuses.abilities.save` = `@abilities.cha.mod`), and a utility activity whose
+ * template gives the radius (`@scale.paladin.aura`) and the targeted side (`ally`). The engine reuses this
+ * data: it copies that effect onto allies in range. The bonus is FROZEN at the bearer's value
+ * at the time of the copy — left as a formula, `@abilities.cha.mod` would read the ally's Charisma.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,26 +16,26 @@ import { AURA_AFFECTS } from "../core/content.mjs";
 import { contentOf } from "./content.mjs";
 import { originItemOf } from "./facts.mjs";
 
-/** Un effet de cet item (pas une copie d'aura) sur l'acteur. `concentration` : la concentration du sort compte. */
+/** An effect of this item (not an aura copy) on the actor. `concentration`: the spell's concentration counts. */
 function ownEffectsFrom(actor, item, { concentration=true }={}) {
   return (actor?.effects ?? []).filter(e => !e.disabled && !e.getFlag(MODULE_ID, "aura")
     && (concentration || !e.statuses?.has("concentrating")) && (originItemOf(e)?.uuid === item.uuid));
 }
 
 /**
- * §16.47 : cette créature porte-t-elle déjà l'effet d'origine du sort (cible du lancement) ? Une aura `whileActive` ne lui
- * en pose pas une copie de plus (les deux s'additionneraient).
+ * §16.47: does this creature already carry the spell's original effect (target of the casting)? A `whileActive` aura does not
+ * place a further copy on it (the two would add up).
  */
 export function carriesOriginal(actor, aura) {
   return !!aura.whileActive && (ownEffectsFrom(actor, aura.item, { concentration: false }).length > 0);
 }
 
-/** La part d'aura que la surcouche du monde déclare pour cet item (elle prime sur le contenu livré). */
+/** The part of an aura that the world overlay declares for this item (it takes precedence over the shipped content). */
 function worldAura(item) {
   return game.modules.get(MODULE_ID).api?.content?.world?.()[contentOf(item).identifier]?.aura ?? {};
 }
 
-/** Rayon et camp lus sur l'activité à gabarit de l'item, quand il en a une. */
+/** Radius and side read from the item's template activity, when it has one. */
 function fromActivity(item) {
   for ( const activity of item.system.activities ?? [] ) {
     const template = activity.target?.template;
@@ -44,14 +44,14 @@ function fromActivity(item) {
     return {
       radius: Number.isFinite(size) && (size > 0) ? size : null,
       units: template.units ?? "ft",
-      // « creature » (le Monster Manual, pour « de son choix ») ne dit pas le camp : le contenu décide.
+      // "creature" (the Monster Manual, for "of its choice") does not state the side: the content decides.
       affects: AURA_AFFECTS.includes(activity.target?.affects?.type) ? activity.target.affects.type : null
     };
   }
   return {};
 }
 
-/** §438 : l'item a-t-il une activité dont un comportement de dnd5e 6.1 pose un effet par une région (`applyActiveEffect`) ? */
+/** §438: does the item have an activity whose dnd5e 6.1 behavior places an effect through a region (`applyActiveEffect`)? */
 function systemAura(item) {
   for ( const activity of item?.system?.activities ?? [] ) {
     for ( const behavior of activity?.behaviors ?? [] ) if ( behavior?.type === "applyActiveEffect" ) return true;
@@ -59,19 +59,19 @@ function systemAura(item) {
   return false;
 }
 
-/** Les auras portées par un acteur. */
+/** The auras carried by an actor. */
 export function aurasOf(actor) {
   const auras = [];
   for ( const item of actor?.items ?? [] ) {
-    // Couches combinées (adapter/content.mjs) : contenu du module, surcouche du monde, flag de l'item.
+    // Combined layers (adapter/content.mjs): module content, world overlay, item flag.
     const declared = contentOf(item).entry?.aura;
     if ( !declared ) continue;
-    // §16.47 : une aura de sort n'existe que tant que le lanceur en porte un effet (concentration comprise).
+    // §16.47: a spell aura exists only while the caster carries an effect of it (concentration included).
     if ( declared.whileActive && !ownEffectsFrom(actor, item).length ) continue;
     const known = { ...declared };
     const merged = { includeSelf: false, affects: "ally", units: "ft", ...known };
-    // Ordre de confiance : ce que le monde ou l'item disent explicitement, puis le gabarit de
-    // l'activité, puis l'échelle de classe, puis la valeur par défaut du contenu livré.
+    // Order of trust: what the world or the item state explicitly, then the template of
+    // the activity, then the class scale, then the default value of the shipped content.
     const fromItem = fromActivity(item);
     const flagged = { ...(contentOf(item).layers.world ? worldAura(item) : {}), ...(item.getFlag(MODULE_ID, "aura") ?? {}) };
     if ( !("radius" in flagged) ) {
@@ -80,18 +80,18 @@ export function aurasOf(actor) {
       else if ( Number.isFinite(scaled) && (scaled > 0) ) merged.radius = scaled;
     }
     if ( !("affects" in flagged) && fromItem.affects ) merged.affects = fromItem.affects;
-    // §18.12 : des changements déclarés remplacent l'effet de l'item (absent, vide ou faux dans le Monster Manual).
+    // §18.12: declared changes replace the item's effect (absent, empty or wrong in the Monster Manual).
     const effect = merged.changes ? null
       : ((merged.effect ? item.effects.get(merged.effect) : null) ?? item.effects.find(e => e.transfer) ?? item.effects.contents[0]);
-    // §438 (décision de l'utilisateur, 2026-11-14) : un sort du Manuel 3.0.0 qui n'a plus d'effet à lui mais une activité à comportement
-    // `applyActiveEffect` (Manteau du croisé, Aura de vie, Aura de pureté, Cercle de pouvoir : effet du compendium du Manuel posé par la
-    // région de dnd5e 6.1, dnd5e.mjs:14159-14205) — dnd5e tient l'aura lui-même : le moteur n'en fait pas une seconde.
+    // §438 (user decision, 2026-11-14): a Player's Handbook 3.0.0 spell that no longer has its own effect but an activity with
+    // `applyActiveEffect` behavior (Crusader's Mantle, Aura of Life, Aura of Purity, Circle of Power: Handbook compendium effect
+    // placed by dnd5e 6.1's region, dnd5e.mjs:14159-14205) — dnd5e holds the aura itself: the engine does not make a second one.
     if ( !effect && !merged.changes && systemAura(item) ) continue;
     if ( (!effect && !merged.changes) || !Number.isFinite(merged.radius) ) {
       console.warn(`${MODULE_ID} | aura "${item.name}" of ${actor.name} ignored: ${(effect || merged.changes) ? "unknown radius" : "no effect to copy"}`);
       continue;
     }
-    // §159 : `effect` (l'id du contenu, dans `merged`) ne doit pas remplacer l'effet trouvé.
+    // §159: `effect` (the content id, in `merged`) must not replace the effect found.
     auras.push({ item, key: item.system.identifier ?? item.id, ...merged, effect });
   }
   return auras;
@@ -99,7 +99,7 @@ export function aurasOf(actor) {
 
 const changesOf = data => data.system?.changes ?? data.changes ?? [];
 
-/** Les changements d'un effet, avec leurs valeurs figées pour le porteur de l'aura. */
+/** An effect's changes, with their values frozen for the aura's bearer. */
 function frozenChanges(effectData, sourceActor) {
   const rollData = sourceActor.getRollData();
   return changesOf(effectData).map(change => {
@@ -110,8 +110,9 @@ function frozenChanges(effectData, sourceActor) {
 }
 
 /**
- * Les données de l'effet à copier : celui de l'item, ou (§18.12) un effet au nom de l'item fait des changements déclarés,
- * sans état — l'Aura de bravoure du Monster Manual porte Charmé et Effrayé en plus de l'immunité à ces états.
+ * The effect data to copy: the item's, or (§18.12) an effect named after the item made of the declared changes,
+ * without a condition — the Monster Manual's Aura of Courage carries Charmed and Frightened in addition to the immunity to those
+ * conditions.
  */
 function baseEffectData(aura) {
   if ( !aura.changes ) return aura.effect.toObject();
@@ -119,13 +120,13 @@ function baseEffectData(aura) {
   return { ...base, statuses: [], system: { ...(base.system ?? {}), changes: foundry.utils.deepClone(aura.changes) }, changes: undefined };
 }
 
-/** Force d'une aura : la somme de ses valeurs numériques une fois figées (départage deux auras de même nom). */
+/** Strength of an aura: the sum of its numeric values once frozen (tells apart two auras of the same name). */
 export function auraValue(aura, sourceActor) {
   return frozenChanges(baseEffectData(aura), sourceActor)
     .reduce((sum, c) => sum + (Number.isFinite(Number(c.value)) ? Number(c.value) : 0), 0);
 }
 
-/** Les copies d'aura présentes sur un acteur. */
+/** The aura copies present on an actor. */
 export function auraCopiesOn(token) {
   const copies = [];
   for ( const effect of token.actor?.effects ?? [] ) {
@@ -139,7 +140,7 @@ export function auraCopiesOn(token) {
   return copies;
 }
 
-/** Données de la copie d'effet à poser (ou à mettre à jour) sur une cible. */
+/** Data of the effect copy to place (or update) on a target. */
 function copyData(aura, sourceToken, value) {
   const data = baseEffectData(aura);
   delete data._id;
@@ -152,8 +153,8 @@ function copyData(aura, sourceToken, value) {
     img: aura.item.img,
     transfer: false,
     disabled: false,
-    // Un effet sans durée est « passif » : par défaut le cœur n'affiche son icône sur le token que
-    // s'il est temporaire (CONST.ACTIVE_EFFECT_SHOW_ICON.CONDITIONAL). Une aura doit se voir.
+    // An effect without duration is "passive": by default the core shows its icon on the token only
+    // if it is temporary (CONST.ACTIVE_EFFECT_SHOW_ICON.CONDITIONAL). An aura must be visible.
     showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS,
     origin: aura.item.uuid,
     flags: { [MODULE_ID]: { aura: { key: aura.key, source: sourceToken.uuid, value } } }
@@ -165,9 +166,9 @@ export async function createAuraCopy(targetToken, aura, sourceToken, value) {
 }
 
 /**
- * Une copie d'aura peut disparaître entre la lecture et l'écriture du recalcul : invocation retirée, sort terminé, remise en
- * état d'un scénario (le serveur répond « ActiveEffect … does not exist! », vu le 2026-10-16 dans `releve-sorts-4`). Une copie
- * déjà partie n'a plus besoin de rien : on continue le recalcul. Toute autre erreur remonte.
+ * An aura copy can disappear between the read and the write of the recomputation: summon removed, spell ended, scenario
+ * reset (the server answers "ActiveEffect … does not exist!", seen on 2026-10-16 in `releve-sorts-4`). A copy
+ * already gone needs nothing more: the recomputation continues. Any other error bubbles up.
  */
 async function unlessGone(targetToken, effectId, write) {
   if ( !targetToken?.actor?.effects.has(effectId) ) return;
@@ -182,7 +183,7 @@ export async function updateAuraCopy(targetToken, effectId, aura, sourceToken, v
     () => targetToken.actor.updateEmbeddedDocuments("ActiveEffect", [{ _id: effectId, ...copyData(aura, sourceToken, value) }]));
 }
 
-/** Remet l'icône sur une copie posée avant que le moteur ne l'affiche. */
+/** Restores the icon on a copy placed before the engine started displaying it. */
 export async function showAuraIcon(targetToken, effectId) {
   await unlessGone(targetToken, effectId,
     () => targetToken.actor.updateEmbeddedDocuments("ActiveEffect", [{ _id: effectId, showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS }]));

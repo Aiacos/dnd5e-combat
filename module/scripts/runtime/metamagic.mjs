@@ -1,8 +1,8 @@
 /**
- * Métamagie (SPEC §32) : l'option choisie (son activité, qui dépense les points de Sorcellerie) est retenue sur l'ensorceleur, puis
- * portée par le sort suivant — Sort accéléré : son coût devient l'action Bonus (coût imposé, lu par la légalité et la dépense,
- * runtime/turn.mjs) ; les autres options sont lues à la résolution (adapter/usage.mjs, adapter/saves.mjs), par la portée
- * (adapter/turn.mjs) et par la fenêtre du Contresort (runtime/gates.mjs). Inscrit avant registerTurn.
+ * Metamagic (SPEC §32): the chosen option (its activity, which spends the Sorcery Points) is held on the sorcerer, then
+ * carried by the next spell — Quickened Spell: its cost becomes the Bonus Action (imposed cost, read by legality and spending,
+ * runtime/turn.mjs); the other options are read at resolution (adapter/usage.mjs, adapter/saves.mjs), by range
+ * (adapter/turn.mjs) and by the Counterspell window (runtime/gates.mjs). Registered before registerTurn.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -12,13 +12,13 @@ import { currentTurnKey } from "../adapter/turn.mjs";
 import { route } from "./router.mjs";
 import { log, loc, notice } from "./shared.mjs";
 
-/** Les options prises sans dépense (Apothéose arcanique), le temps de leur utilisation : l'activité → le tour. */
+/** Options taken without spending (Arcane Apotheosis), for the time of their use: the activity → the turn. */
 const free = new Map();
 
 /**
- * Une option de Métamagie qu'on s'apprête à retenir : sans dépense si l'Apothéose arcanique le permet à ce tour. Au-delà de ce qu'un sort
- * peut porter (une ; deux sous la Sorcellerie incarnée), c'est un souci de la fenêtre de légalité (runtime/turn.mjs `useIssues`,
- * `Souci.metamagicLimit`) : forçable, le MJ prévenu ; forcée, l'option est retenue comme les autres.
+ * A Metamagic option about to be held: free if Arcane Apotheosis allows it this turn. Beyond what a spell can carry (one; two
+ * under Innate Sorcery), it is an issue for the legality window (runtime/turn.mjs `useIssues`,
+ * `Souci.metamagicLimit`): forceable, the GM notified; forced, the option is held like the others.
  */
 function onPreUseOption(activity, usageConfig) {
   const actor = activity.actor;
@@ -41,7 +41,7 @@ function onPreUse(activity, usageConfig) {
   if ( !kinds.length ) return true;
   const ours = (usageConfig[MODULE_ID] ??= {});
   ours.metamagic = kinds;
-  // Sort accéléré : « un sort dont le temps d'incantation est égal à 1 action ».
+  // Quickened Spell: "a spell with a casting time of 1 action".
   if ( kinds.includes("quickened") && (activity.activation?.type === "action") && !ours.cost ) ours.cost = "bonus";
   return true;
 }

@@ -1,6 +1,6 @@
 /**
- * §361, lot O9g de la repasse des objets : Cape elfique. Arène de test (Guerrier, Zombi).
- *  La Perception passive du Zombi contre le Guerrier perd 5 quand le Guerrier porte la cape harmonisée ; rangée, elle revient.
+ * §361, batch O9g of the item pass: Elven Cloak. Test arena (Fighter, Zombie).
+ *  The Zombie's passive Perception against the Fighter loses 5 when the Fighter wears the attuned cloak; stowed, it comes back.
  */
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));

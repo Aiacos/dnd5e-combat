@@ -1,14 +1,15 @@
 /**
- * Escalade (SPEC §192, lots 1 à 3), lue dans Foundry : les murs qu'un token touche, son état de grimpeur, ses vitesses, la marche
- * au plafond (sa capacité, le plafond au-dessus de lui), les surfaces glissantes et le Mouvement acrobatique du moine (§195).
+ * Climbing (SPEC §192, batches 1 to 3), read from Foundry: the walls a token touches, its climber state, its speeds, walking
+ * on the ceiling (its ability, the ceiling above it), slippery surfaces and the monk's Acrobatic Movement (§195).
  *
- * Vérifié :
- *  - les arêtes d'un niveau sont dans `Level#edges` (client/documents/level.mjs:51, un `CanvasEdges`), interrogées par rectangle
- *    (`CanvasEdges#getEdges(rect, { includeOuterBounds })`, canvas/geometry/edges/edges.mjs:140) ; une arête de mur porte son
- *    document (`Edge#object`, client/documents/wall.mjs:164-166), ses extrémités `a` / `b` et sa restriction `move`
- *    (edge.mjs:23-35) ;
- *  - les murs du cœur n'ont pas de hauteur (common/documents/wall.mjs) : on monte le long de la face, dans la même pièce ;
- *  - les murs posés par un sort portent `flags.dnd5e-combat.zone` (adapter/walls.mjs:40) ; leur région porte l'item (`flags.dnd5e.item`).
+ * Verified:
+ *  - a level's edges are in `Level#edges` (client/documents/level.mjs:51, a `CanvasEdges`), queried by rectangle
+ *    (`CanvasEdges#getEdges(rect, { includeOuterBounds })`, canvas/geometry/edges/edges.mjs:140); a wall edge carries its
+ *    document (`Edge#object`, client/documents/wall.mjs:164-166), its endpoints `a` / `b` and its `move` restriction
+ *    (edge.mjs:23-35);
+ *  - core walls have no height (common/documents/wall.mjs): one climbs along the face, in the same room;
+ *  - walls placed by a spell carry `flags.dnd5e-combat.zone` (adapter/walls.mjs:40);
+ *    their region carries the item (`flags.dnd5e.item`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,26 +24,26 @@ import { committedPosition, positionOf } from "./turn.mjs";
 import { groundUnder, boundsUnder, speedsOf, levelAt } from "./altitude.mjs";
 
 export const CLIMB_RULES_SETTING = "climbRules";
-/** Un mur tracé un peu à côté du bord de la case compte encore (fraction d'une case). */
+/** A wall drawn slightly off the cell's edge still counts (fraction of a cell). */
 const WALL_TOLERANCE = 0.1;
 
-/** Les règles d'escalade du monde : `2024` (sans jet) ou `house` (DD 15 à chaque tour, chute sur un échec). */
+/** The world's climbing rules: `2024` (no roll) or `house` (DC 15 each turn, fall on a failure). */
 export function climbRules() {
   return settingOr(CLIMB_RULES_SETTING, "2024") === "house" ? "house" : "2024";
 }
 
-/** Le token grimpe-t-il (mode de déplacement `climb`) ? */
+/** Is the token climbing (movement mode `climb`)? */
 export const isClimbing = token => token?._source?.movementAction === "climb";
 
-/** Le drapeau d'escalade du moteur (`flags.dnd5e-combat.climb` : `from`, `checkedAt`, `ceiling`). */
+/** The engine's climb flag (`flags.dnd5e-combat.climb`: `from`, `checkedAt`, `ceiling`). */
 export const CLIMB_FLAG = "climb";
-/** Le miroir vertical posé au plafond (`flags.dnd5e-combat.ceilingFlip` : `{ scaleY }`, l'échelle d'origine). */
+/** The vertical mirror placed on the ceiling (`flags.dnd5e-combat.ceilingFlip`: `{ scaleY }`, the original scale). */
 export const FLIP_FLAG = "ceilingFlip";
 
 /** §192 lot 2 : le token marche-t-il au plafond (en escalade, drapeau `climb.ceiling`) ? */
 export const isOnCeiling = token => isClimbing(token) && (token.getFlag?.(MODULE_ID, CLIMB_FLAG)?.ceiling === true);
 
-/** L'identifiant du sort qui a posé ce mur, ou null (un mur ordinaire). */
+/** The identifier of the spell that placed this wall, or null (an ordinary wall). */
 function spellOfWall(wall) {
   const regionId = wall.getFlag?.(MODULE_ID, "zone");
   if ( !regionId ) return null;
@@ -52,10 +53,10 @@ function spellOfWall(wall) {
 }
 
 /**
- * Les murs que le token touche à une position (son emprise, le long de son niveau) et qu'on peut grimper : ni porte ouverte, ni mur
- * sans restriction de déplacement, ni mur de sort (sauf Mur de pierre).
+ * The walls the token touches at a position (its footprint, along its level) and that can be climbed: no open door, no wall
+ * without movement restriction, no spell wall (except Wall of Stone).
  * @param {TokenDocument} token
- * @param {object} [pos]  Position (source ou point de passage), sinon la position validée.
+ * @param {object} [pos]  Position (source or waypoint), otherwise the committed position.
  * @returns {WallDocument[]}
  */
 export function wallsNear(token, pos=committedPosition(token)) {
@@ -86,13 +87,13 @@ export function wallsNear(token, pos=committedPosition(token)) {
   return out;
 }
 
-/** La vitesse d'escalade du token (`native` : une vraie vitesse d'escalade, sinon la marche) et le multiplicateur de coût de dnd5e. */
+/** The token's climb speed (`native`: a true climb speed, otherwise walking) and dnd5e's cost multiplier. */
 export function climbingOf(token) {
   const speeds = speedsOf(token?.actor);
   return { ...climbSpeed(speeds), multiplier: climbMultiplier(speeds) };
 }
 
-/** Pourquoi ce grimpeur ne tient plus au mur, ou null : À terre, Neutralisé, Agrippé, sans vitesse. */
+/** Why this climber no longer holds to the wall, or null: Prone, Incapacitated, Grappled, no speed. */
 export function climbFallReasonFor(token) {
   const actor = token?.actor;
   const statuses = actor?.statuses ?? new Set();
@@ -102,7 +103,7 @@ export function climbFallReasonFor(token) {
   });
 }
 
-/** Le token est-il au-dessus de son sol ? */
+/** Is the token above its ground? */
 export function aboveGround(token) {
   return (token._source.elevation ?? 0) > groundUnder(token) + 1e-6;
 }
@@ -112,10 +113,10 @@ export function aboveGround(token) {
 /* -------------------------------------------- */
 
 /**
- * La créature peut-elle marcher au plafond (§192.3) ? Par un item qu'elle porte — identifiant `spider-climb` (trait de monstre, trait
- * du Dhampir de Ravenloft), `slippers-of-spider-climbing`, `cloak-of-arachnida` (équipés), ou toute entrée de contenu `climbsCeilings`
- * (ouvert aux voisins) — ou par un effet qu'un tel item a posé (le SORT Pattes d'araignée : le connaître ne suffit pas, comme pour
- * l'espace partagé, adapter/space-sharing.mjs). Sur une surface glissante (`slippery`, §195), pas par les Pantoufles d'araignée.
+ * Can the creature walk on the ceiling (§192.3)? By an item it carries — identifier `spider-climb` (monster trait, Ravenloft
+ * Dhampir trait), `slippers-of-spider-climbing`, `cloak-of-arachnida` (equipped), or any `climbsCeilings` content entry
+ * (open to neighbors) — or by an effect such an item placed (the SPELL Spider Climb: knowing it is not enough, as for
+ * shared space, adapter/space-sharing.mjs). On a slippery surface (`slippery`, §195), not by the Slippers of Spider Climbing.
  * @param {Actor5e} actor
  * @param {{slippery?: boolean}} [options]
  */
@@ -128,7 +129,7 @@ export function canWalkCeilings(actor, { slippery=false }={}) {
     if ( grants(item) ) return true;
   }
   for ( const effect of actor.effects ?? [] ) {
-    // §195 : la concentration du lanceur a pour origine le sort aussi — elle ne donne rien (Pattes d'araignée lancée sur un allié).
+    // §195: the caster's concentration also originates from the spell — it gives nothing (Spider Climb cast on an ally).
     if ( effect.disabled || effect.isSuppressed || isConcentrationEffect(effect) ) continue;
     const item = originItemOf(effect);
     if ( item && grants(item) ) return true;
@@ -137,19 +138,20 @@ export function canWalkCeilings(actor, { slippery=false }={}) {
 }
 
 /**
- * L'élévation des pieds du token accroché au plafond au-dessus d'une position (la plus basse Surface `move` au-dessus de son sol,
- * `ceilingAt`, moins sa hauteur), ou null sans plafond. `pos` : point de passage ou position d'arrivée, sinon la position validée.
+ * The elevation of the feet of a token hanging from the ceiling above a position (the lowest `move` Surface above its ground,
+ * `ceilingAt`, minus its height), or null without a ceiling. `pos`: waypoint or arrival position, otherwise the
+ * committed position.
  */
 export function ceilingPerchFor(token, pos=committedPosition(token)) {
   const scene = token?.parent;
   if ( !scene?.grid ) return null;
-  const { ceiling } = boundsUnder(token, pos);   // déjà : plafond moins la hauteur du token (tête comprise)
+  const { ceiling } = boundsUnder(token, pos);   // already: ceiling minus the token's height (head included)
   if ( !Number.isFinite(ceiling) ) return null;
   const depth = positionOf({ ...token._source, ...pos }).depth ?? 1;
   return ceilingPerch(ceiling + (depth * scene.grid.distance), depth, scene.grid.distance);
 }
 
-/** Le token, à cette position, serait-il bien accroché au plafond (ses pieds à la hauteur du perchoir) ? */
+/** Would the token, at this position, be properly hung from the ceiling (feet at the height of the perch)? */
 export function hangsAt(token, pos=committedPosition(token)) {
   const perch = ceilingPerchFor(token, pos);
   return (perch !== null) && (Math.abs((pos.elevation ?? token._source.elevation ?? 0) - perch) < 1e-6);
@@ -159,7 +161,7 @@ export function hangsAt(token, pos=committedPosition(token)) {
 /*  Contenu (lot 3, §195)                       */
 /* -------------------------------------------- */
 
-/** La zone d'une région est-elle glissante (son item déclare `slippery` : Graisse, flaque d'Huile) ? */
+/** Is a region's area slippery (its item declares `slippery`: Grease, pool of Oil)? */
 function isSlipperyRegion(region) {
   const uuid = region.getFlag?.("dnd5e", "item");
   if ( !uuid ) return false;
@@ -168,8 +170,8 @@ function isSlipperyRegion(region) {
 }
 
 /**
- * Le token se tient-il, à cette position, sur une surface glissante — dans une zone Graisse ou une flaque d'Huile (élévation comprise :
- * la zone a sa tranche, on en sort en montant) ?
+ * Does the token stand, at this position, on a slippery surface — in a Grease area or a pool of Oil (elevation included:
+ * the area has its slice, one leaves it by going up)?
  * @param {TokenDocument} token
  * @param {object} [pos]
  */
@@ -177,12 +179,12 @@ export function inSlipperyZone(token, pos=committedPosition(token)) {
   for ( const region of token?.parent?.regions ?? [] ) {
     if ( !isSlipperyRegion(region) ) continue;
     try { if ( token.testInsideRegion(region, pos) ) return true; }
-    catch { /* région sans forme */ }
+    catch { /* region without a shape */ }
   }
   return false;
 }
 
-/** La créature peut-elle marcher au plafond là où se tient ce token (les Pantoufles ne tiennent pas sur une surface glissante) ? */
+/** Can the creature walk on the ceiling where this token stands (the Slippers do not hold on a slippery surface)? */
 export const canWalkCeilingsAt = (token, pos=committedPosition(token)) => canWalkCeilings(token?.actor, { slippery: inSlipperyZone(token, pos) });
 
 /** L'item de Mouvement acrobatique de l'acteur (contenu `climbsOnTurn`), ou null. */
@@ -191,8 +193,8 @@ export function acrobaticItemOf(actor) {
 }
 
 /**
- * Le token peut-il « courir sur le mur » maintenant (Mouvement acrobatique, §195) : l'item, sans armure ni bouclier, et en combat à son
- * tour seulement (hors combat, toujours).
+ * Can the token "run along the wall" now (Acrobatic Movement, §195): the item, without armor or shield, and in combat on its
+ * own turn only (outside combat, always).
  */
 export function acrobaticFor(token) {
   const actor = token?.actor;
@@ -208,9 +210,9 @@ export function acrobaticFor(token) {
 /* -------------------------------------------- */
 
 /**
- * §216 : un mur du niveau `level` sépare-t-il ces deux cases à cette hauteur ? (Le mur extérieur d'un étage entre le grimpeur dehors
- * et le plancher de l'étage : on ne s'y hisse pas à travers.) Le test de mouvement du cœur, de centre à centre, sur ce niveau ; sans
- * canevas, rien ne bloque.
+ * §216: does a wall of level `level` separate these two cells at this height? (A story's outer wall between the climber outside
+ * and the story's floor: one does not haul oneself up through it.) The core's movement test, center to center, on that
+ * level; without a canvas, nothing blocks.
  */
 export function crossingBlocked(token, from, to, level, elevation) {
   const scene = token?.parent;
@@ -226,13 +228,14 @@ export function crossingBlocked(token, from, to, level, elevation) {
   } catch { return false; }
 }
 
-/** Les quatre directions d'un rebord, et leur nom (clé de traduction `Escalade.Dir.*`). */
+/** The four directions of a ledge, and their name (translation key `Escalade.Dir.*`). */
 const LEDGE_DIRS = Object.freeze([{ di: -1, dj: 0, dir: "n" }, { di: 1, dj: 0, dir: "s" }, { di: 0, dj: 1, dir: "e" }, { di: 0, dj: -1, dir: "w" }]);
 
 /**
- * §209 : les rebords où ce grimpeur peut se hisser maintenant — une case voisine (nord, sud, est, ouest) dont le sol est plus haut que ses
- * pieds et à portée de sa tête, avec la place de s'y tenir (`ledgeRise`). Au mur seulement (pas au plafond). Rend pour chacun la case,
- * le point d'arrivée, le sol, la hauteur à monter et le niveau où il prend pied (le sol à 20 ft d'un niveau 0-20 est le bas du suivant).
+ * §209: the ledges where this climber can haul itself up now — a neighboring cell (north, south, east, west) whose floor is
+ * higher than its feet and within reach of its head, with room to stand there (`ledgeRise`). Wall only (not the ceiling).
+ * Returns for each the cell, the arrival point, the ground, the height to climb and the level where it gets a foothold
+ * (the floor at 20 ft of a level 0-20 is the bottom of the next).
  * @returns {{dir: string, x: number, y: number, ground: number, rise: number, level: string}[]}
  */
 export function ledgesOf(token) {
@@ -244,11 +247,12 @@ export function ledgesOf(token) {
   const feet = pos.elevation ?? 0;
   const height = (positionOf({ ...token._source, ...pos }).depth ?? 1) * grid.distance;
   const out = [];
-  // Le sol d'un niveau ne compte que ses Surfaces de `[bas, haut[` (adapter/altitude.mjs, `groundAt`) : un toit à 20 ft n'est pas le sol du
-  // niveau 0-20 (c'en est le plafond), mais celui du niveau qui commence à 20. On regarde donc le niveau du grimpeur et celui de sa tête.
+  // A level's ground counts only its Surfaces of `[bas, haut[` (adapter/altitude.mjs, `groundAt`): a roof at 20 ft is not the
+  // floor of level 0-20 (it is its ceiling), but of the level that starts at 20. So we look at the level of the climber
+  // and that of its head.
   const own = pos.level ?? token._source.level;
   const levels = [...new Set([own, levelAt(scene, feet + height, own)])];
-  // §216 : la tête du grimpeur ne passe pas son propre plafond.
+  // §216: the climber's head does not pass its own ceiling.
   const ownCeiling = boundsUnder(token, pos).ceiling + height;
   for ( const { di, dj, dir } of LEDGE_DIRS ) {
     let best = null;
@@ -257,8 +261,9 @@ export function ledgesOf(token) {
       const { ground, ceiling } = boundsUnder(token, at);
       const rise = ledgeRise({ feet, height, ground, ceiling: ceiling + height });
       if ( (rise === null) || (best && (ground <= best.ground)) ) continue;
-      // §216 : ni à travers son propre plafond (un couloir couvert : la tête ne monte pas au-dessus), ni à travers le mur d'une pièce
-      // couverte au niveau d'arrivée. Un toit à ciel ouvert reste accessible malgré le mur qui borde souvent son bord (garde-fou).
+      // §216: neither through its own ceiling (a covered corridor: the head does not rise above), nor through the wall of a
+      // covered room at the arrival level. An open-air roof stays accessible despite the wall that often borders
+      // its edge (guardrail).
       if ( ground >= ownCeiling - 1e-6 ) continue;
       const arrival = levelAt(scene, ground, level);
       if ( Number.isFinite(ceiling) && crossingBlocked(token, pos, at, arrival, ground + 1) ) continue;
@@ -270,9 +275,10 @@ export function ledgesOf(token) {
 }
 
 /**
- * §215 : le haut du mur que ce token regarde, pour la jauge de la fenêtre d'escalade — le rebord le plus bas où poser les pieds sur une
- * case voisine (plus haut que ses pieds, à portée de sa tête sous le plafond ; avec le nom de son niveau), sinon le plafond (la Surface
- * au-dessus de sa tête), sinon null ; et `ceilingFeet`, l'élévation la plus haute de ses pieds. Au sol comme au mur.
+ * §215: the top of the wall this token faces, for the climb window's gauge — the lowest ledge on which to put the feet on a
+ * neighboring cell (higher than its feet, within reach of its head under the ceiling; with the name of its level), otherwise the
+ * ceiling (the Surface above its head), otherwise null; and `ceilingFeet`, the highest elevation of its feet.
+ * On the ground as on the wall.
  * @returns {{top: {kind: "ledge"|"ceiling", at: number, name?: string|null}|null, ceilingFeet: number, height: number}}
  */
 export function wallTopOf(token) {
@@ -285,8 +291,8 @@ export function wallTopOf(token) {
   const ceilingFeet = Number.isFinite(ceiling) ? ceiling : Infinity;
   if ( !grid?.size ) return { top: null, ceilingFeet, height };
   const own = pos.level ?? token._source.level;
-  // Le niveau du grimpeur et tous ceux qui commencent au-dessus de ses pieds, sous son plafond (à ciel ouvert : tous) — le toit voisin
-  // peut appartenir à n'importe lequel.
+  // The level of the climber and all those that start above its feet, under its ceiling (open-air: all) — the neighboring roof
+  // may belong to any of them.
   const above = Array.from(scene.levels ?? []).filter(l => {
     const bottom = Number(l.elevation?.bottom);
     return Number.isFinite(bottom) && (bottom > feet + 1e-6) && (bottom < ceilingFeet + height - 1e-6);
@@ -307,15 +313,15 @@ export function wallTopOf(token) {
     ledge.name = scene.levels?.get?.(ledge.level)?.name ?? null;
     return { top: ledge, ceilingFeet: Math.min(ceilingFeet, wallTopFeetOf(token, pos)), height };
   }
-  // §217 : le mur s'arrête avant le plafond (ou à ciel ouvert) — c'est le haut, et la limite.
+  // §217: the wall stops before the ceiling (or is open-air) — it is the top, and the limit.
   const wallTop = wallTopFeetOf(token, pos);
   if ( wallTop < ceilingFeet - 1e-6 ) return { top: { kind: "wallEnd", at: wallTop + height }, ceilingFeet: wallTop, height };
   return { top: Number.isFinite(ceiling) ? { kind: "ceiling", at: ceilingFeet + height } : null, ceilingFeet, height };
 }
 
 /**
- * §216 : les niveaux de la scène qui commencent au-dessus de ces pieds (repères de la jauge d'escalade) : nom et élévation du bas, du
- * plus bas au plus haut. Les joueurs les voient déjà dans le navigateur de niveaux du cœur.
+ * §216: the scene levels that start above these feet (markers of the climb gauge): name and elevation of the bottom, from
+ * lowest to highest. Players already see them in the core's level navigator.
  * @returns {Array<{at: number, name: string}>}
  */
 export function levelMarksAbove(token, feet) {
@@ -328,9 +334,9 @@ export function levelMarksAbove(token, feet) {
 }
 
 /**
- * §216 : les bords d'où ce token peut se laisser pendre, pour descendre le long du mur — au sol (sur un toit, un chemin de ronde, un
- * étage), une case voisine dont le sol est plus bas d'au moins une case, sans mur sur son propre niveau entre les deux (un parapet se
- * franchit autrement), et un mur où s'agripper de l'autre côté. Il s'y retrouve accroché, la tête à hauteur du bord.
+ * §216: the edges from which this token can let itself hang, to climb down along the wall — on the ground (on a roof, a
+ * wall walk, a story), a neighboring cell whose floor is lower by at least one cell, without a wall on its own level between the
+ * two (a parapet is crossed otherwise), and a wall to grab on the other side. It ends up hanging there, head at edge height.
  * @returns {{dir: string, x: number, y: number, elevation: number, level: string, drop: number}[]}
  */
 export function edgesBelowOf(token) {
@@ -339,33 +345,33 @@ export function edgesBelowOf(token) {
   const grid = scene.grid;
   const pos = committedPosition(token);
   const feet = pos.elevation ?? 0;
-  if ( feet > groundUnder(token, pos) + 1e-6 ) return [];   // en l'air : rien sous les pieds d'où partir
+  if ( feet > groundUnder(token, pos) + 1e-6 ) return [];   // in the air: nothing under the feet to start from
   const height = (positionOf({ ...token._source, ...pos }).depth ?? 1) * grid.distance;
   const own = pos.level ?? token._source.level;
   const out = [];
   for ( const { di, dj, dir } of LEDGE_DIRS ) {
     const at = { ...pos, x: pos.x + (dj * grid.sizeX), y: pos.y + (di * grid.sizeY) };
-    // Le sol continue sur son propre niveau (le toit, le plancher se poursuit) : pas un bord.
+    // The ground continues on its own level (the roof, the floor goes on): not an edge.
     const beside = boundsUnder(token, { ...at, level: own, elevation: feet }).ground;
     if ( Number.isFinite(beside) && (beside > feet - grid.distance + 1e-6) ) continue;
-    // Accroché : la tête au bord, les pieds une hauteur de créature plus bas, sur le niveau de cette hauteur.
+    // Hanging: head at the edge, feet one creature height lower, on the level of that height.
     const hang = feet - height;
     const level = levelAt(scene, hang, own);
     const { ground } = boundsUnder(token, { ...at, level, elevation: hang });
-    if ( !Number.isFinite(ground) || (ground > feet - grid.distance + 1e-6) ) continue;   // pas de vide d'au moins une case
+    if ( !Number.isFinite(ground) || (ground > feet - grid.distance + 1e-6) ) continue;   // no gap of at least one cell
     const elevation = Math.max(hang, ground);
-    // Depuis une pièce couverte, pas à travers son mur ; depuis un toit à ciel ouvert, par-dessus le garde-fou de son bord.
+    // From a covered room, not through its wall; from an open-air roof, over the guardrail of its edge.
     if ( Number.isFinite(boundsUnder(token, pos).ceiling) && crossingBlocked(token, pos, at, own, feet + 1) ) continue;
-    if ( !wallsNear(token, { ...at, level, elevation }).length ) continue;   // rien où s'agripper
+    if ( !wallsNear(token, { ...at, level, elevation }).length ) continue;   // nothing to grab
     out.push({ dir, x: at.x, y: at.y, elevation, level, drop: feet - ground });
   }
   return out;
 }
 
 /**
- * §217 : jusqu'où ce mur monte — l'élévation la plus haute des pieds où le grimpeur tient encore au mur, case par case, avec le test
- * même de la chute (`holdsWallAt`, runtime/climb.mjs : un mur près de lui sur le niveau de cette hauteur). Au-delà, il n'aurait plus rien
- * où s'accrocher et tomberait : la montée s'arrête là.
+ * §217: how far this wall rises — the highest elevation of the feet where the climber still holds the wall, cell by cell,
+ * with the fall's own test (`holdsWallAt`, runtime/climb.mjs: a wall near it on the level of that height). Beyond, it would
+ * have nothing to grab and would fall: the climb stops there.
  */
 export function wallTopFeetOf(token, pos=committedPosition(token)) {
   const scene = token?.parent;

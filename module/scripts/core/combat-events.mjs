@@ -1,10 +1,10 @@
 /**
- * §250 : les rounds d'un évènement d'initiative (runtime/combat-events.mjs). Pur.
+ * §250: the rounds of an Initiative event (runtime/combat-events.mjs). Pure.
  */
 
 /**
- * Du round courant (0 avant le début du combat : il jouera au round 1) pour `rounds` rounds ; `rounds` null ou ≤ 0 : sans fin (`until`
- * null).
+ * From the current round (0 before combat starts: it will play in round 1) for `rounds` rounds; `rounds` null or ≤ 0: no end
+ * (`until` null).
  * @returns {{ from: number, until: number|null }}
  */
 export function eventRounds(round, rounds=1) {
@@ -13,7 +13,7 @@ export function eventRounds(round, rounds=1) {
   return { from, until: (rounds === null) || !(n > 0) ? null : from + n - 1 };
 }
 
-/** L'évènement a-t-il fini, une fois joué son tour du round `round` ? */
+/** Has the event ended, once its turn of round `round` has been played? */
 export function eventEnded(event, round) {
   return Number.isFinite(event?.until) && Number.isFinite(Number(round)) && (Number(round) >= event.until);
 }

@@ -1,13 +1,13 @@
 /**
- * §19.9 : Chemin vers la tombe (Domaine de la Tombe, contenu `discharge`). Quand le clerc ou un allié qu'il voit touche le
- * maudit, le clerc peut, sans action, lever la malédiction : l'attaque inflige alors en plus son niveau de clerc en dégâts,
- * nécrotiques ou radiants à son choix.
+ * §19.9: Path to the Grave (Grave Domain, `discharge` content). When the cleric or an ally they see hits the
+ * cursed creature, the cleric can, without an action, lift the curse: the attack then also deals damage equal to their cleric
+ * level, necrotic or radiant at their choice.
  *
- * Sur le MJ actif, au hook de sortie du moteur `dnd5e-combat.resolution`, une fois l'attaque tranchée et ses dégâts appliqués :
- * pour chaque cible touchée qui porte l'effet déclaré, le lanceur de l'effet est consulté (`askChoice` : le joueur, sinon le
- * MJ ; sans réponse, la malédiction reste). S'il accepte, l'effet cesse et la cible subit les dégâts, lancés par le moteur au
- * nom du lanceur (résistances comprises) — une part à part plutôt qu'ajoutée au jet de l'attaque : un nombre fixe, que le
- * critique ne double pas. Limite : une attaque résolue hors du moteur n'est pas vue.
+ * On the active GM, at the engine's output hook `dnd5e-combat.resolution`, once the attack is settled and its damage applied:
+ * for each hit target that carries the declared effect, the effect's caster is consulted (`askChoice`: the player, otherwise the
+ * GM; with no answer, the curse stays). If they accept, the effect ends and the target takes the damage,
+ * rolled by the engine on behalf of the caster (Resistances included) — a separate part rather than added to the attack's
+ * roll: a fixed number, which a Critical Hit does not double. Limit: an attack resolved outside the engine is not seen.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -25,7 +25,7 @@ import { areEnemies } from "../adapter/factions.mjs";
 
 const seen = new Set();
 
-/** Les effets `discharge` que porte une créature : l'effet, l'item d'où il vient et sa règle. */
+/** The `discharge` effects a creature carries: the effect, the item it comes from and its rule. */
 function chargesOn(actor) {
   const out = [];
   for ( const effect of actor?.effects ?? [] ) {
@@ -52,7 +52,7 @@ async function onResolution(resolution) {
       const caster = item.actor;
       const casterToken = tokenOf(caster);
       if ( (caster.system.attributes?.hp?.value ?? 0) <= 0 ) continue;
-      // « vous ou un allié que vous voyez » : l'attaquant est le lanceur, ou n'est pas son ennemi et il le voit.
+      // "you or an ally you can see": the attacker is the caster, or is not the caster's enemy and the caster sees them.
       if ( attacker?.uuid !== caster.uuid ) {
         if ( !attackerToken || !casterToken || areEnemies(casterToken, attackerToken) ) continue;
         if ( rule.sees && (canSee(casterToken, attackerToken) === false) ) continue;
@@ -66,7 +66,7 @@ async function onResolution(resolution) {
         options: [{ id: "keep", label: loc("Malediction.Garder") }, ...labels]
       });
       if ( !rule.damageTypes.includes(answer?.id) ) { log(`${item.name}: ${caster.name} keeps the curse on ${victim.name}`); continue; }
-      if ( !(await fromUuid(effect.uuid)) ) continue;   // tombée entre-temps
+      if ( !(await fromUuid(effect.uuid)) ) continue;   // fell off in the meantime
       await effect.delete();
       const logged = await inflict({
         step: { formula: rule.formula, damageType: answer.id }, item, targetUuid: t.token,

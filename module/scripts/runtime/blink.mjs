@@ -1,8 +1,9 @@
 /**
- * §161 : Clignotement — « lancez 1d6 à la fin de chacun de vos tours pendant la durée ; sur 4 à 6, vous disparaissez de votre plan
- * d'existence et apparaissez dans le plan Éthéré … au début de votre tour suivant, vous revenez ». Contenu `blink` : l'effet du sort
- * qui porte la durée. La donnée y met l'état Éthéré pour toute la durée : il est retiré à la pose (l'effet ne sert plus qu'à compter),
- * et l'état est posé à part, marqué, sur un 4 à 6 en fin de tour, puis retiré au début du tour suivant. MJ actif.
+ * §161: Blink — "roll a d6 at the end of each of your turns for the duration; on a 4 to 6, you vanish from your plane
+ * of existence and appear in the Ethereal Plane … at the start of your next turn, you return". Content `blink`: the spell's
+ * effect that carries the duration. The data puts the Ethereal condition on it for the whole duration: it is removed at
+ * placement (the effect only serves to count), and the condition is placed separately, marked, on a 4 to 6 at end of turn,
+ * then removed at the start of the next turn. Active GM.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -22,25 +23,25 @@ function blinkOf(actor) {
   }) ?? null;
 }
 
-/** À la pose : l'effet de la donnée perd son état Éthéré permanent. */
+/** At placement: the data's effect loses its permanent Ethereal condition. */
 async function onCreateEffect(effect) {
   if ( (effect.parent?.documentName !== "Actor") || (blinkOf(effect.parent) !== effect) || !effect.statuses?.has(ETHEREAL) ) return;
-  // La donnée lui donne « 1 round » (expiration au début du tour suivant) : la durée du sort est d'une minute.
+  // The data gives it "1 round" (expiry at the start of the next turn): the spell's duration is one minute.
   await effect.update({ statuses: Array.from(effect.statuses).filter(s => s !== ETHEREAL), duration: { value: 60, units: "seconds", expiry: null } });
   log(`${effect.parent.name}: Blink, the d6 decides at the end of each turn`);
 }
 
 /**
- * Dans l'ordre de la règle : la fin du tour qui s'achève (le d6), puis le début de celui qui commence (le retour). Le même acteur
- * peut être les deux — seul à combattre, ou les autres sautés : il part sur 4–6 et revient aussitôt, au lieu de passer tout son
- * nouveau tour dans le plan Éthéré (vu le 2026-10-16 : l'échec intermittent de `releve-sorts-6`, le Zombi sauté).
+ * In the rule's order: the end of the turn that ends (the d6), then the start of the one that begins (the return). The same actor
+ * can be both — alone in combat, or the others skipped: it leaves on 4–6 and returns at once, instead of spending its whole
+ * new turn in the Ethereal Plane (seen on 2026-10-16: the intermittent failure of `releve-sorts-6`, the skipped Zombie).
  */
 async function onTurnChange(combat, prior, current) {
   await endOfTurn(combat.combatants.get(prior?.combatantId)?.actor);
   await startOfTurn(combat.combatants.get(current?.combatantId)?.actor);
 }
 
-/** Fin du tour : le d6. */
+/** End of turn: the d6. */
 async function endOfTurn(actor) {
   const blink = blinkOf(actor);
   if ( !blink ) return;
@@ -52,7 +53,7 @@ async function endOfTurn(actor) {
   log(`${actor.name}: Blink, ${roll.total} — to the Ethereal Plane until the start of their next turn`);
 }
 
-/** Début du tour : le retour du plan Éthéré. */
+/** Start of turn: the return from the Ethereal Plane. */
 async function startOfTurn(actor) {
   const marked = Array.from(actor?.effects ?? []).filter(e => e.getFlag(MODULE_ID, "blink"));
   if ( !marked.length ) return;

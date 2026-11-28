@@ -1,19 +1,19 @@
 /**
- * §129 : les dons d'origine du Manuel des joueurs — ce qui se calcule sans Foundry.
+ * §129: the Player's Handbook origin feats — what is computed without Foundry.
  *
- * Fonctions pures, aucune dépendance à Foundry.
+ * Pure functions, no dependency on Foundry.
  */
 
 import { alliedSides } from "./factions.mjs";
 
-/** Le premier terme de dés d'une part : nombre, faces, modificateurs. */
+/** The first dice term of a part: number, faces, modifiers. */
 const FIRST_DIE = /(\d*)d(\d+)((?:[a-z]+\d*)*)/;
 
 /**
- * §132 : Perforeur — « relancez l'un des dés de dégâts de l'attaque, vous devez garder le nouveau résultat ». Le moteur ne relance pas
- * après coup : le premier terme de dés de la part lance un dé de plus et garde les meilleurs (« 1d8 » → « 2d8kh1 », « 2d6 » →
- * « 3d6kh2 ») — c'est relancer le plus bas en gardant le meilleur des deux, un peu plus favorable que la lettre. Une part déjà en
- * réserve (Sauvagerie martiale) ou qui garde déjà n'est pas touchée.
+ * §132: Piercer — "reroll one of the attack's damage dice, you must use the new roll". The engine does not reroll
+ * afterwards: the first dice term of the part rolls one more die and keeps the best ("1d8" → "2d8kh1", "2d6" →
+ * "3d6kh2") — that is rerolling the lowest while keeping the better of the two, a little more favorable than the letter. A part
+ * already in a pool (Savage Attacker) or that already keeps is not touched.
  * @param {string} part
  * @returns {string}
  */
@@ -23,12 +23,12 @@ export function oneMoreKeepBest(part) {
   return s.replace(FIRST_DIE, (term, n, faces, mods) => (/k/.test(mods) ? term : `${(Number(n) || 1) + 1}d${faces}${mods}kh${Number(n) || 1}`));
 }
 
-/** Un terme de dés d'une formule, avec ses modificateurs (« 1d12 », « 2d6min3 », « 1d4r1 »). */
+/** A dice term of a formula, with its modifiers ("1d12", "2d6min3", "1d4r1"). */
 const DICE = /(\d*d\d+(?:[a-z]+\d*)*)/g;
 
 /**
- * Sauvagerie martiale : « lancez les dés de dégâts de l'arme deux fois et utilisez l'un ou l'autre jet ». Chaque terme de dés de la
- * part devient une réserve des deux jets dont on garde le meilleur (« {1d12,1d12}kh ») ; le reste de la part (modificateur) ne bouge pas.
+ * Savage Attacker: "roll the weapon's damage dice twice and use either roll". Each dice term of the
+ * part becomes a pool of the two rolls of which the best is kept ("{1d12,1d12}kh"); the rest of the part (modifier) does not move.
  * @param {string} part
  * @returns {string}
  */
@@ -37,8 +37,8 @@ export function twiceKeepHighest(part) {
 }
 
 /**
- * Guérisseur : « vous pouvez relancer le dé s'il fait 1, et vous devez utiliser le nouveau résultat » — une fois (« r1 » : Foundry relance une fois, « rr » relancerait sans fin). Un terme
- * qui relance déjà n'est pas touché.
+ * Healer: "you can reroll the die if it rolls a 1, and you must use the new roll" — once ("r1": Foundry rerolls once,
+ * "rr" would reroll endlessly). A term that already rerolls is not touched.
  * @param {string} part
  * @returns {string}
  */
@@ -47,10 +47,11 @@ export function rerollOnesOnce(part) {
 }
 
 /**
- * Vigilant : les alliés avec qui échanger l'initiative — même camp, une initiative déjà lancée, ni Neutralisés ni à 0 PV, autres que soi.
+ * Alert: the allies to swap Initiative with — same side, an Initiative already rolled, neither Incapacitated nor at 0 HP,
+ * other than oneself.
  * @param {{id: string, disposition: number, initiative: number|null, incapacitated?: boolean, down?: boolean}} self
  * @param {Array<typeof self>} others
- * @returns {string[]}  Les ids, dans l'ordre reçu.
+ * @returns {string[]}  The ids, in the order received.
  */
 export function swapPartners(self, others) {
   if ( self.incapacitated || self.down || !Number.isFinite(self.initiative) ) return [];
@@ -59,32 +60,33 @@ export function swapPartners(self, others) {
 }
 
 /**
- * §130 : la condition d'un effet de don (`effectWhile`) tient-elle ? Ce que le Manuel ne dit pas dans ses données :
- *  - `armor` : l'armure portée est de l'un de ces types (Défense : « tant que vous portez une armure légère, intermédiaire ou lourde ») ;
- *  - `oneHanded` : une seule arme maniée, de corps à corps et sans la propriété Deux mains (Duel : « une arme de corps à corps dans une
- *    main et aucune autre arme » — un bouclier n'est pas une arme) ;
- *  - `inCombat` : la créature se bat (Rôdeur furtif, Brouillard de guerre : « l'action Se cacher pendant un combat ») ;
- *  - `abilityAtLeast` : valeurs de caractéristique minimales (Maître des armures intermédiaires : Dextérité 16).
+ * §130: does the condition of a feat effect (`effectWhile`) hold? What the Handbook does not say in its data:
+ *  - `armor`: the worn armor is one of these types (Defense: "while you are wearing light, medium, or heavy armor");
+ *  - `oneHanded`: only one weapon wielded, melee and without the Two-Handed property (Dueling: "a melee weapon in one
+ *    hand and no other weapons" — a shield is not a weapon);
+ *  - `inCombat`: the creature is fighting ("Stealthy Ranger", "Fog of War": "the Hide action during a combat");
+ *  - `abilityAtLeast`: minimum ability scores (Medium Armor Master: Dexterity 16).
  * @param {{armor?: string[], notArmor?: string[], oneHanded?: true, inCombat?: true, abilityAtLeast?: Record<string, number>}} rule
- * @param {{armor: string|null, weapons: Array<{melee: boolean, twoHanded: boolean}>, inCombat: boolean, abilities: Record<string, number>}} facts
+ * @param {{armor: string|null, weapons: Array<{melee: boolean, twoHanded: boolean}>, inCombat: boolean,
+ *   abilities: Record<string, number>}} facts
  * @returns {boolean}
  */
 export function effectHolds(rule, facts) {
   if ( rule.armor && !rule.armor.includes(facts.armor) ) return false;
-  // `notArmor` — pas ce genre d'armure : « tant que vous ne portez pas d'armure lourde » (Déplacement rapide, Vagabondage). Sans
-  // armure, la condition tient.
+  // `notArmor` — not this kind of armor: "while you are not wearing heavy armor" (Fast Movement, Roving). Without
+  // armor, the condition holds.
   if ( rule.notArmor && rule.notArmor.includes(facts.armor) ) return false;
   if ( rule.oneHanded ) {
     const w = facts.weapons ?? [];
     if ( (w.length !== 1) || !w[0].melee || w[0].twoHanded ) return false;
   }
   if ( rule.inCombat && !facts.inCombat ) return false;
-  // O7 (§343) : `unarmored` — ni armure ni bouclier (Bracelets de défense).
+  // O7 (§343): `unarmored` — neither armor nor shield (Bracers of Defense).
   if ( rule.unarmored && (facts.armor || facts.shield) ) return false;
-  // §135 : `light` — la lumière là où se tient le porteur (Faveur de l'esprit nocturne : « dans une lumière faible ou les ténèbres »).
+  // §135: `light` — the light where the bearer stands (Boon of the Night Spirit: "in Dim Light or Darkness").
   if ( rule.light && !rule.light.includes(facts.light) ) return false;
-  // C12-c : `wildShaped` — sous une Forme sauvage (Formes du cercle améliorées) ; `hasEffect` — un effet actif de cet item (Plénitude
-  // stellaire : sous la Forme stellaire).
+  // C12-c: `wildShaped` — under a Wild Shape (Improved Circle Forms); `hasEffect` — an Active Effect of this item (Full of
+  // Stars: under the Starry Form).
   if ( rule.wildShaped && !facts.wildShaped ) return false;
   if ( rule.hasEffect && !(facts.effectsFrom?.has?.(rule.hasEffect)) ) return false;
   for ( const [ability, min] of Object.entries(rule.abilityAtLeast ?? {}) ) {
@@ -93,14 +95,14 @@ export function effectHolds(rule, facts) {
   return true;
 }
 
-/** Les changements d'un effet sont-ils déjà ceux que la règle demande (clé, type, valeur — dans l'ordre) ? */
+/** Are an effect's changes already those the rule asks for (key, type, value — in order)? */
 export function sameChanges(current=[], wanted=[]) {
   const norm = list => list.map(c => `${c.key}|${c.type ?? ""}|${String(c.value)}`);
   return JSON.stringify(norm(current)) === JSON.stringify(norm(wanted));
 }
 
 /**
- * §136 : Maître d'hast — « un bâton, une lance, ou une arme qui a les propriétés Lourde et Allonge ».
+ * §136: Polearm Master — "a Quarterstaff, a Spear, or a weapon that has the Heavy and Reach properties".
  * @param {{baseItem?: string, properties?: Iterable<string>}} weapon
  */
 export function polearmFits(weapon) {
@@ -108,17 +110,18 @@ export function polearmFits(weapon) {
   return ["quarterstaff", "spear"].includes(weapon?.baseItem) || (props.has("hvy") && props.has("rch"));
 }
 
-/** §131 : les arbalètes du Manuel des joueurs (identifiants d'arme de base de dnd5e). */
+/** §131: the Player's Handbook crossbows (dnd5e base weapon identifiers). */
 export const CROSSBOWS = Object.freeze(["handcrossbow", "heavycrossbow", "lightcrossbow"]);
 
 /**
- * §131 : ce que les dons de tir accordent à CETTE attaque (Tireur d'élite, Expert des arbalètes, Sniper de sorts). Chaque règle
- * `rangedFeat` vaut pour un genre d'attaque (`kind`) : « weapon » (attaque à distance avec une arme, lancée comprise), « crossbow »
- * (une arbalète), « spell » (jet d'attaque d'un sort).
- * @param {object[]} rules  Les règles `rangedFeat` des items du porteur.
+ * §131: what the shooting feats grant THIS attack (Sharpshooter, Crossbow Expert, Spell Sniper). Each `rangedFeat` rule
+ * applies to a kind of attack (`kind`): "weapon" (ranged attack with a weapon, thrown included), "crossbow"
+ * (a crossbow), "spell" (spell attack roll).
+ * @param {object[]} rules  The `rangedFeat` rules of the bearer's items.
  * @param {{weapon: boolean, ranged: boolean, crossbow: boolean, spell: boolean}} attack
- * O5a (§339) : `loading` — la propriété Chargement ne limite pas ces armes (Expert des arbalètes).
- * @returns {{cover: boolean, closeCombat: boolean, longRange: boolean, offhandModifier: boolean, loading: boolean, spellRange: object|null}}
+ * O5a (§339): `loading` — the Loading property does not limit these weapons (Crossbow Expert).
+ * @returns {{cover: boolean, closeCombat: boolean, longRange: boolean, offhandModifier: boolean, loading: boolean,
+ *   spellRange: object|null}}
  */
 export function rangedFeatsFor(rules, attack) {
   const out = { cover: false, closeCombat: false, longRange: false, offhandModifier: false, loading: false, spellRange: null };
@@ -128,7 +131,7 @@ export function rangedFeatsFor(rules, attack) {
       : (r.kind === "spell") ? attack.spell : false;
     if ( !fits ) continue;
     for ( const k of ["cover", "closeCombat", "longRange", "offhandModifier", "loading"] ) if ( r[k] === true ) out[k] = true;
-    // `cover: "half"` : seul l'abri partiel est ignoré (Baguette du mage de guerre) — un autre don qui les ignore tous l'emporte.
+    // `cover: "half"`: only Half Cover is ignored (Wand of the War Mage) — another feat that ignores all of them wins.
     if ( (r.cover === "half") && !out.cover ) out.cover = "half";
     if ( r.spellRange ) out.spellRange = r.spellRange;
   }
@@ -136,8 +139,8 @@ export function rangedFeatsFor(rules, attack) {
 }
 
 /**
- * Ce qui fait ignorer l'abri à une attaque, réuni : un don de tir du porteur, l'ennemi juré, l'item lui-même
- * (`attackIgnoresCover`). Le plus fort l'emporte — `true` (partiel et trois quarts), puis `"half"` (partiel seul), sinon `false`.
+ * What makes an attack ignore Cover, combined: a shooting feat of the bearer, the Favored Enemy, the item itself
+ * (`attackIgnoresCover`). The strongest wins — `true` (Half and Three-Quarters), then `"half"` (Half only), otherwise `false`.
  * @param {...(boolean|"half"|null|undefined)} values
  * @returns {true|"half"|false}
  */
@@ -147,8 +150,8 @@ export function coverIgnoreOf(...values) {
 }
 
 /**
- * §131 : l'abri que la règle laisse : un abri partiel ou aux trois quarts ignoré ; l'abri total reste. `ignores` vaut "half" quand
- * seul l'abri partiel est ignoré : l'abri aux trois quarts reste alors aussi.
+ * §131: the Cover that the rule leaves: Half or Three-Quarters Cover ignored; Total Cover remains. `ignores` is "half" when
+ * only Half Cover is ignored: Three-Quarters Cover then remains too.
  */
 export function coverLeft(cover, ignores) {
   if ( !cover || !ignores ) return cover;
@@ -157,8 +160,8 @@ export function coverLeft(cover, ignores) {
 }
 
 /**
- * §447 : `ignoresResistance.from` — l'activité qui inflige les dégâts est-elle une de ces activités de l'item, ou une copie de sort qu'une
- * d'elles a fait lancer (`cachedFor` = « …Item.<item>.Activity.<activité> », dnd5e activity/cast.mjs) ? Sans `from` : toutes.
+ * §447: `ignoresResistance.from` — is the activity that deals the damage one of these activities of the item, or a spell copy
+ * that one of them had cast (`cachedFor` = "…Item.<item>.Activity.<activity>", dnd5e activity/cast.mjs)? Without `from`: all.
  * @param {string[]|undefined} from
  * @param {{itemId: string, activityItemId?: string, activityId?: string, cachedFor?: string}} at
  */

@@ -1,15 +1,15 @@
 /**
- * §182 : les cônes de vision hors combat. Une créature du MJ, hors d'un combat commencé, ne voit que dans un cône centré sur
- * sa rotation (convention du cœur : 0 = vers le bas, sens horaire) ; l'angle dépend de son type de créature (réglable), d'un
- * flag du token, ou du `sight.angle` du token s'il est plus étroit. La vision aveugle, la perception des vibrations et la vision
- * véritable perçoivent à 360° dans leur portée. En combat : 360°, comme les règles 2024.
- * Fonctions pures.
+ * §182: vision cones outside combat. A GM creature, outside a started combat, only sees in a cone centered on
+ * its rotation (core convention: 0 = down, clockwise); the angle depends on its creature type (configurable), on a
+ * token flag, or on the token's `sight.angle` if narrower. Blindsight, Tremorsense and Truesight
+ * perceive in 360° within their range. In combat: 360°, like the 2024 rules.
+ * Pure functions.
  */
 
-/** Angles par défaut : la plupart des créatures voient devant elles ; les vases et les plantes, sans yeux, partout. */
+/** Default angles: most creatures see ahead of them; oozes and plants, having no eyes, see everywhere. */
 export const DEFAULT_CONE_ANGLES = Object.freeze({ default: 120, beast: 150, ooze: 360, plant: 360 });
 
-/** Le texte du réglage par défaut (`120; beast 150; ooze 360; plant 360`). */
+/** The text of the default setting (`120; beast 150; ooze 360; plant 360`). */
 export function formatConeAngles(table=DEFAULT_CONE_ANGLES) {
   const { default: base, ...types } = table;
   return [String(base ?? 120), ...Object.entries(types).map(([k, v]) => `${k} ${v}`)].join("; ");
@@ -18,8 +18,8 @@ export function formatConeAngles(table=DEFAULT_CONE_ANGLES) {
 const clampAngle = v => Math.min(360, Math.max(1, Math.round(v)));
 
 /**
- * Lire le réglage : un nombre seul = l'angle par défaut ; `type nombre` = l'angle d'un type (ou sous-type, ou identifiant).
- * Ce qui ne se lit pas est ignoré.
+ * Read the setting: a lone number = the default angle; `type nombre` = the angle of a type (or subtype, or identifier).
+ * What cannot be read is ignored.
  * @param {string} text
  * @returns {Object<string, number>}
  */
@@ -33,7 +33,7 @@ export function parseConeAngles(text) {
   return out;
 }
 
-/** L'angle d'une créature : identifiant > sous-type > type > défaut. */
+/** The angle of a creature: identifier > subtype > type > default. */
 export function coneAngleFor(table, { type, subtype, identifier }={}) {
   const low = v => (typeof v === "string" ? v.trim().toLowerCase() : "");
   if ( identifier && (low(identifier) in table) ) return table[low(identifier)];
@@ -42,13 +42,13 @@ export function coneAngleFor(table, { type, subtype, identifier }={}) {
   return table.default ?? DEFAULT_CONE_ANGLES.default;
 }
 
-/** Le cap d'un vecteur dans la convention du cœur (0 = vers le bas, 90 = vers la gauche, sens horaire), en degrés [0, 360). */
+/** The heading of a vector in the core convention (0 = down, 90 = left, clockwise), in degrees [0, 360). */
 export function bearingOf(dx, dy) {
   const deg = Math.atan2(-dx, dy) * 180 / Math.PI;
   return ((deg % 360) + 360) % 360;
 }
 
-/** L'écart signé entre deux caps, dans (-180, 180]. */
+/** The signed difference between two headings, in (-180, 180]. */
 export function angleBetween(a, b) {
   let d = ((b - a) % 360 + 360) % 360;
   if ( d > 180 ) d -= 360;
@@ -56,10 +56,10 @@ export function angleBetween(a, b) {
 }
 
 /**
- * Un des points est-il dans le cône ? Un point confondu avec l'œil compte comme dedans.
+ * Is one of the points in the cone? A point coinciding with the eye counts as inside.
  * @param {{x: number, y: number}} eye
- * @param {number} rotation  degrés, convention du cœur
- * @param {number} angle     ouverture totale, degrés ; ≥ 360 : partout
+ * @param {number} rotation  degrees, core convention
+ * @param {number} angle     total opening, degrees; ≥ 360: everywhere
  * @param {Array<{x: number, y: number}>} points
  */
 export function inCone(eye, rotation, angle, points) {

@@ -1,9 +1,10 @@
 /**
- * Trait ensorcelé (SPEC §16.43, clés `tether` et `ranges`). Monde `ravenloft` : Kaalisti (occultiste 5) et le Zombi.
- *  1. L'attaque lie le Zombi, touché ou raté (`flags["dnd5e-combat"].tethers.<id d'item>` sur Kaalisti).
- *  2. L'action Bonus « 1d12 foudre » (activité `ffuqn0xdclG9YAQt`) le vise (ses dégâts : à la main, le connecteur ne les lance pas).
- *  3. Le Zombi éloigné au-delà de 60 ft : le lien se rompt, la concentration tombe, le lien est oublié.
- * Non applicable sans Kaalisti et le Zombi. Remet PV, position et concentration.
+ * Witch Bolt (SPEC §16.43, keys `tether` and `ranges`). World `ravenloft`: Kaalisti (Warlock 5) and the Zombie.
+ *  1. The attack links the Zombie, hit or miss (`flags["dnd5e-combat"].tethers.<id d'item>` on Kaalisti).
+ *  2. The "1d12 lightning" Bonus Action (activity `ffuqn0xdclG9YAQt`) targets it (its damage: by hand, the connector does not
+ *     roll it).
+ *  3. The Zombie moved away beyond 60 ft: the link breaks, Concentration ends, the link is forgotten.
+ * Not applicable without Kaalisti and the Zombie. Resets HP, position and Concentration.
  */
 const MODULE_ID = "dnd5e-combat";
 const FOLLOW = "ffuqn0xdclG9YAQt";
@@ -26,7 +27,7 @@ export default {
     ctx.restore(() => ctx.removeEffectsNamed(warlock, /concentr/i));
     ctx.restore(() => ctx.removeEffectsNamed(zombi, /Foudre continue|Witch Bolt/i));
 
-    // Le Zombi à 20 ft de Kaalisti.
+    // The Zombie 20 ft from Kaalisti.
     await ctx.call("move-token", { tokenId: zombi.id, x: at.x + (4 * grid), y: at.y });
     const itemId = await ctx.itemId(warlock.id, "witch-bolt");
     const tethered = async () => (await ctx.call("get-actor", { actorId: warlock.actorId })).flags?.[MODULE_ID]?.tethers?.[itemId] ?? null;
@@ -38,16 +39,16 @@ export default {
     const bound = await tethered();
     ctx.expect(!!bound && bound.endsWith(zombi.id), `lien noté (${r?.targets?.[0]?.hit ? "touché" : "raté"}) : ${bound}`);
 
-    // 2. L'action Bonus : 1d12 d'office.
-    // Le connecteur coupe l'enchaînement de dnd5e (`subsequentActions: false`) : le jet de dégâts d'une activité « damage » n'est
-    // jamais lancé ici. On vérifie que l'action Bonus vise la créature liée ; les dégâts se vérifient à la main.
+    // 2. The Bonus Action: 1d12 automatically.
+    // The connector cuts dnd5e's chain (`subsequentActions: false`): the damage roll of a "damage" activity is never
+    // rolled here. We check that the Bonus Action targets the linked creature; the damage is checked by hand.
     const follow = await ctx.use({ tokenId: warlock.id, identifier: "witch-bolt", activityId: FOLLOW, targetTokenIds: [zombi.id] });
     await pause(1500);
     const rf = await ctx.resolution(follow.usageMessageId);
     const names = (rf?.targets ?? []).map(t => t.name);
     ctx.expect(follow.used && names.includes("Zombi") && !(rf?.targets ?? []).some(t => t.unaffected), `action Bonus : vise le Zombi (${names.join(", ") || "aucune cible"})`);
 
-    // 3. Au-delà de 60 ft : le sort prend fin.
+    // 3. Beyond 60 ft: the spell ends.
     await ctx.call("move-token", { tokenId: zombi.id, x: at.x + (14 * grid), y: at.y });
     await pause(2500);
     const concentration = ((await ctx.call("get-actor", { actorId: warlock.actorId })).effects ?? []).some(e => (e.statuses ?? []).includes("concentrating"));

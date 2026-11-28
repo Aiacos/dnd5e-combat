@@ -1,24 +1,24 @@
 /**
- * Ce qui, sur la scène, n'est pas une créature (SPEC §16.60) : un objet piloté par le moteur (Arme spirituelle, Sphère de
- * feu : flag `dnd5e-combat.object`, §16.15). Ni cible, ni obstacle, ni allié, ni ennemi ; il ne donne pas d'abri et ne subit
- * pas de zone. (Jusqu'à la 0.149 : aussi un tas d'objets au sol d'Item Piles, un token — retiré au §44 ; ce qu'une créature
- * lâche est posé par un module voisin, qui en fait une région et une tuile.)
+ * What, on the scene, is not a creature (SPEC §16.60): an engine-driven object (Spiritual Weapon, Flaming
+ * Sphere: flag `dnd5e-combat.object`, §16.15). Neither target, nor obstacle, nor ally, nor enemy; it gives no cover and takes
+ * no area effects. (Until 0.149: also an Item Piles pile of objects on the ground, a token — removed in §44; what a creature
+ * drops is placed by a neighboring module, which makes it a region and a tile.)
  */
 
 import { MODULE_ID } from "../constants.mjs";
 
 /**
- * Les types d'acteur de dnd5e qui ne sont jamais une créature : un groupe (le contenant de butin d'un module voisin, le groupe
- * d'aventuriers) et une rencontre. §260 : posés sur une scène, ils étaient pris dans les zones, qui attendaient pour toujours leur
- * sauvegarde.
+ * The dnd5e actor types that are never a creature: a group (a neighboring module's loot container, the party
+ * of adventurers) and an encounter. §260: placed on a scene, they were caught in areas, which waited forever for their
+ * save.
  */
 const NON_CREATURE_TYPES = Object.freeze(["group", "encounter"]);
 
-/** §271 : un piège du Guide du maître 2024 — un PNJ au type de créature personnalisé « Trap » (ou « Piège »), même posé sans la marque. */
+/** §271: a 2024 Dungeon Master's Guide trap — an NPC with the custom creature type "Trap" (or "Piège"), even placed without the mark. */
 const TRAP_TYPE = /^(traps?|pièges?)$/i;
 const isTrapActor = actor => (actor?.system?.details?.type?.value === "custom") && TRAP_TYPE.test(String(actor.system.details.type.custom ?? "").trim());
 
-/** Pas une créature : objet piloté, acteur d'un type qui n'en est jamais une, ou piège. */
+/** Not a creature: driven object, actor of a type that is never one, or trap. */
 export function isObjectToken(token) {
   return !!token?.flags?.[MODULE_ID]?.object || NON_CREATURE_TYPES.includes(token?.actor?.type) || isTrapActor(token?.actor);
 }

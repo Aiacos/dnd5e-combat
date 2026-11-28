@@ -1,14 +1,14 @@
 /**
- * Ordre imposé (SPEC §16.59) : Injonction — « la cible doit réussir un jet de sauvegarde de Sagesse ou suivre l'ordre à son
- * prochain tour ». Les ordres du PHB 2024 et ce que chacun impose au tour de la cible :
+ * Imposed order (SPEC §16.59): Command — "the target must succeed on a Wisdom saving throw or follow the command on its
+ * next turn". The PHB 2024 commands and what each imposes on the target's turn:
  *
- *   approach  Approche : elle se déplace vers vous par le plus court chemin ; son tour s'achève si elle arrive à 1,50 m
- *   drop      Lâche : elle lâche ce qu'elle tient, et son tour s'achève
- *   flee      Fuis : elle consacre son tour à s'éloigner de vous par le moyen le plus rapide
- *   grovel    Rampe : elle tombe À terre, et son tour s'achève
- *   halt      Halte : elle ne se déplace pas et n'entreprend ni action ni action Bonus
+ *   approach  Approach: it moves toward you by the shortest path; its turn ends if it arrives within 1.5 m
+ *   drop      Drop: it drops what it holds, and its turn ends
+ *   flee      Flee: it spends its turn moving away from you by the fastest means
+ *   grovel    Grovel: it falls Prone, and its turn ends
+ *   halt      Halt: it does not move and takes no action or Bonus Action
  *
- * Un tour « achevé » : plus d'action, d'action Bonus ni de déplacement ; la Réaction reste (hors de son tour).
+ * A turn "ended": no more action, Bonus Action or movement; the Reaction remains (outside its turn).
  */
 
 export const ORDERS = Object.freeze(["approach", "drop", "flee", "grovel", "halt"]);
@@ -29,8 +29,8 @@ export function orderPlan(order) {
 }
 
 /**
- * Écart en cases entre deux emprises `{ i, j, w, h }` (diagonale = 1 case) ; 0 au contact, -1 si elles se chevauchent.
- * `i` est la ligne et `j` la colonne (`grid.getOffset`) : `i` va avec la hauteur `h`, `j` avec la largeur `w`.
+ * Gap in cells between two footprints `{ i, j, w, h }` (diagonal = 1 cell); 0 on contact, -1 if they overlap.
+ * `i` is the row and `j` the column (`grid.getOffset`): `i` goes with the height `h`, `j` with the width `w`.
  */
 export function footprintDistance(a, b) {
   const di = Math.max(b.i - (a.i + a.h), a.i - (b.i + b.h));
@@ -40,8 +40,8 @@ export function footprintDistance(a, b) {
 }
 
 /**
- * Les cases (coin haut-gauche) où poser une emprise `size` ({ w, h }) à `gap` cases de `anchor` ({ i, j, w, h }), dans
- * `bounds` ({ i0, j0, i1, j1 }, bornes incluses). `gap` 0 : au contact (Approche) ; plus : aussi loin (Fuis).
+ * The cells (top-left corner) where to place a footprint `size` ({ w, h }) at `gap` cells from `anchor` ({ i, j, w, h }), within
+ * `bounds` ({ i0, j0, i1, j1 }, inclusive bounds). `gap` 0: on contact (Approach); more: as far (Flee).
  */
 export function cellsAtGap(anchor, size, gap, bounds) {
   const out = [];
@@ -55,8 +55,8 @@ export function cellsAtGap(anchor, size, gap, bounds) {
 }
 
 /**
- * §403 : Compulsion — « une direction horizontale » désignée par le lanceur ; les huit de la grille (`n` = vers le haut de la scène).
- * `{ di, dj }` : pas en lignes (i, vers le bas) et en colonnes (j, vers la droite) — les décalages de grille du cœur.
+ * §403: Compulsion — "a horizontal direction" designated by the caster; the eight of the grid (`n` = toward the top of the scene).
+ * `{ di, dj }`: step in rows (i, downward) and in columns (j, rightward) — the core's grid offsets.
  */
 export const DIRECTIONS = Object.freeze({
   n: { di: -1, dj: 0 }, ne: { di: -1, dj: 1 }, e: { di: 0, dj: 1 }, se: { di: 1, dj: 1 },
@@ -64,8 +64,8 @@ export const DIRECTIONS = Object.freeze({
 });
 
 /**
- * §403 : la case visée par « autant de déplacement que possible dans cette direction » — `cells` pas depuis `cell`, bornée à la
- * scène (`bounds` : { rows, columns } ; i de 0 à rows-1, j de 0 à columns-1). Null si la direction est inconnue ou sans pas.
+ * §403: the cell targeted by "as much movement as possible in that direction" — `cells` steps from `cell`, bounded to the
+ * scene (`bounds`: { rows, columns }; i from 0 to rows-1, j from 0 to columns-1). Null if the direction is unknown or has no steps.
  * @param {{i: number, j: number}} cell
  * @param {string} dir
  * @param {number} cells

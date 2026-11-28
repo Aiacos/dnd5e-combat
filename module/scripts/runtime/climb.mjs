@@ -1,26 +1,29 @@
 /**
- * Escalade (SPEC §192, lot 1 : les murs ; lot 2 : les plafonds). Près d'un mur, une créature au sol grimpe : son token passe en mode
- * `climb`, monte sur place (même case, élévation + N cases — un déplacement mesuré en 3D par le cœur, payé au budget du tour : dnd5e
- * ajoute 1 ft par ft sans vitesse d'escalade, rien avec), puis marche le long du mur à cette hauteur (le mode `climb` laisse
- * l'élévation libre, runtime/altitude.mjs). Revenue au sol, elle reprend son mode d'avant.
- *  - Règles `2024` (défaut) : aucun jet (glossaire « Climbing » du Manuel des joueurs) ; `house` : DD 15 Force (Athlétisme) pour
- *    partir, puis à chaque tour en combat (au début du sien) ou toutes les 10 s hors combat — un échec fait tomber.
- *  - Chute : celle de dnd5e (`TokenDocument5e#updateFalling` puis `#plummet`, documents/token.mjs:398-444 — 1d6 par 10 ft, À terre
- *    si dégâts). dnd5e ne réévalue la chute qu'après un déplacement : un grimpeur mis À terre, Neutralisé, Agrippé ou sans vitesse
- *    est fait tomber par le MJ actif ; « Se laisser tomber » (menu) est une chute volontaire, sur le client du joueur.
- *  - Statut « En escalade » sur le token, tenu par le MJ actif d'après le mode.
- *  - **Plafonds (lot 2)** : « Grimper au plafond » (depuis le mur, ou depuis le sol près d'un mur) sous une Surface `move` : le token
- *    monte en `climb` jusqu'au plafond moins sa hauteur, drapeau `climb.ceiling`, statut « Au plafond » ; il marche ensuite sous tout
- *    le plafond (l'A* ne lui laisse que les cases où le plafond est à la même hauteur, adapter/path-world.mjs), un mur n'est plus
- *    nécessaire ; sortir de sous le plafond est refusé (règles 2024) ou fait tomber (maison). Réservé aux créatures qui en ont la
- *    capacité (`canWalkCeilings` : Pattes d'araignée, Pantoufles, Cape d'arachnide, contenu `climbsCeilings`) ; en mode maison, toute
- *    créature l'essaie au DD 20, refait à chaque tour comme le DD 15 du mur. Le MJ actif met le token la tête en bas (`texture.scaleY`
- *    inversé, l'échelle d'origine gardée dans un drapeau et rendue en quittant le plafond, chute comprise) si le réglage « Orienter les
- *    tokens dans le sens du mouvement » est inactif. « Descendre le long du mur » (près d'un mur) ramène au mur puis au sol.
- *  - **Contenu (lot 3, §195)** : « Courir sur le mur » (Mouvement acrobatique du moine) — la même montée, sans test, à son tour (ou hors
- *    combat) ; il tombe s'il finit son tour encore au mur. Les Pantoufles d'araignée ne donnent pas le plafond sur une surface glissante
- *    (Graisse, Huile) : pas d'entrée de menu, et un marcheur de plafond qui n'y tient que par elles en tombe (règles 2024). La chute de dnd5e
- *    (`fallLikeDnd5e`) sert aussi à l'Inversion de la gravité (runtime/elevation-spells.mjs).
+ * Climbing (SPEC §192, batch 1: walls; batch 2: ceilings). Near a wall, a creature on the ground climbs: its token switches to mode
+ * `climb`, rises in place (same cell, elevation + N cells — a move measured in 3D by the core, paid from the turn budget:
+ * dnd5e adds 1 ft per ft without a climbing speed, nothing with one), then walks along the wall at that height (the `climb` mode
+ * leaves elevation free, runtime/altitude.mjs). Back on the ground, it resumes its previous mode.
+ *  - `2024` rules (default): no roll ("Climbing" glossary of the Player's Handbook); `house`: DC 15 Strength (Athletics) to
+ *    start, then each turn in combat (at the start of its own) or every 10 s out of combat — a failure makes it fall.
+ *  - Fall: dnd5e's (`TokenDocument5e#updateFalling` then `#plummet`, documents/token.mjs:398-444 — 1d6 per 10 ft, Prone
+ *    on damage). dnd5e only re-evaluates the fall after a move: a climber made Prone, Incapacitated, Grappled or without speed
+ *    is made to fall by the active GM; "Let go" (menu) is a voluntary fall, on the player's client.
+ *  - "Climbing" status on the token, held by the active GM from the mode.
+ *  - **Ceilings (batch 2)**: "Climb the ceiling" (from the wall, or from the ground near a wall) under a `move` Surface: the token
+ *    rises in `climb` up to the ceiling minus its height, flag `climb.ceiling`, status "On the ceiling"; it then walks under
+ *    the whole ceiling (the A* leaves it only the cells where the ceiling is at the same height, adapter/path-world.mjs),
+ *    a wall is no longer needed; leaving from under the ceiling is refused (2024 rules) or makes it fall (house). Reserved
+ *    for creatures that have the capability (`canWalkCeilings`: Spider Climb, Slippers, Cloak of Arachnida, `climbsCeilings`
+ *    content); in house mode, any creature tries it at DC 20, redone each turn like the wall's DC 15. The active GM turns the
+ *    token upside down (`texture.scaleY`
+ *    inverted, the original scale kept in a flag and restored on leaving the ceiling, fall included) if the "Orient tokens in
+ *    the direction of movement" setting is inactive. "Climb down the wall" (near a wall) brings it back to the wall then the
+ *    ground.
+ *  - **Content (batch 3, §195)**: "Run up the wall" (the monk's Acrobatic Movement) — the same climb, without a check, on its
+ *    turn (or out of combat); it falls if it ends its turn still on the wall. Slippers of Spider Climbing do not grant the
+ *    ceiling on a slippery surface
+ *    (Grease, Oil): no menu entry, and a ceiling walker who holds there only through them falls (2024 rules). dnd5e's fall
+ *    (`fallLikeDnd5e`) is also used for Reverse Gravity (runtime/elevation-spells.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -60,20 +63,20 @@ import { askFallReactions } from "./reactions.mjs";
 import { isEthereal } from "../adapter/plane.mjs";
 
 export const CLIMB_QUERY = `${MODULE_ID}.climbCheck`;
-/** Le joueur a ce temps pour son test (sa fenêtre se ferme avant, au délai des fenêtres de combat). */
+/** The player has this long for their check (their window closes before, at the combat windows' timeout). */
 const CHECK_TIMEOUT_MS = 40000;
-/** Hors combat, le MJ actif relit les grimpeurs à cette cadence. */
+/** Out of combat, the active GM re-reads the climbers at this rate. */
 const TICK_MS = 2500;
 
 const ALTITUDE_OPTIONS = { [MODULE_ID]: { altitude: true } };
 
 /**
- * Une créature que l'escalade concerne : le système d'escalade et de chute allumé (§224), le réglage « Modes de déplacement et élévation »
- * actif, pas un objet ni un objet piloté.
+ * A creature that climbing concerns: the climbing and falling system on (§224), the "Movement modes and elevation" setting
+ * active, not an object nor a driven object.
  */
 function concerned(token) {
   if ( !climbSystemOn() || !settingOr(ALTITUDE_SETTING, true) || !token?.actor || (token.actor.system?.isCreature === false) ) return false;
-  if ( isEthereal(token) ) return false;   // §225 : dans l'Éthéré, on se déplace librement en hauteur — rien à grimper
+  if ( isEthereal(token) ) return false;   // §225: in the Ethereal, one moves freely in height — nothing to climb
   return !pilotOf(token) && !isIntangible(token) && !isObjectToken(token);
 }
 
@@ -89,34 +92,34 @@ const climbFlag = token => token.getFlag(MODULE_ID, CLIMB_FLAG) ?? null;
 /*  Grimper                                     */
 /* -------------------------------------------- */
 
-/** Ce token peut-il grimper (ou monter encore) : à soi, au sol ou déjà au mur (pas au plafond), près d'un mur, ni agrippé ni sans vitesse. */
+/** Can this token climb (or climb more): its own, on ground or wall (not ceiling), near a wall, not Grappled, not speedless. */
 export function canClimb(token) {
   if ( !token?.isOwner || !concerned(token) || isOnCeiling(token) ) return false;
-  if ( !isClimbing(token) && (placementOf(token.movementAction) !== "ground") ) return false;   // en vol ou sous terre, on ne grimpe pas
+  if ( !isClimbing(token) && (placementOf(token.movementAction) !== "ground") ) return false;   // flying or underground: no climbing
   if ( isGrappled(token) || climbFallReasonFor(token) ) return false;
   return wallsNear(token).length > 0;
 }
 
 /**
- * §217 : attend que l'élévation du token ait quitté `from` (au plus `ms`) — un déplacement qui change de niveau en route n'est pas
- * encore écrit quand `token.move` rend la main.
+ * §217: waits until the token's elevation has left `from` (at most `ms`) — a move that changes level on the way is not
+ * yet written when `token.move` returns.
  */
 async function elevationSettled(token, from, ms=3000) {
   const until = Date.now() + ms;
   while ( (Math.abs((token._source.elevation ?? 0) - from) < 1e-6) && (Date.now() < until) ) await new Promise(resolve => setTimeout(resolve, 100));
 }
 
-/** Ce que ce grimpeur peut monter maintenant : cases au plus (budget du tour, plafond), coût d'une case. */
+/** What this climber can climb now: cells at most (turn budget, ceiling), cost per cell. */
 export function climbRoom(token, { forced=false }={}) {
   const grid = token.parent.grid;
   const { multiplier } = climbingOf(token);
   const cap = movementCap(token);
   const history = historyCosts(token);
-  // §412 : forcé, le budget du tour ne borne plus la montée (le plafond, si).
+  // §412: when forced, the turn budget no longer bounds the climb (the ceiling still does).
   const remaining = (Number.isFinite(cap) && !forced) ? Math.max(0, cap - history.spent - history.excluded) : Infinity;
   const elevation = token._source.elevation ?? 0;
   const { ceiling } = boundsUnder(token);
-  // §217 : ni au-delà du plafond, ni au-delà du sommet du mur (le grimpeur n'aurait plus où s'accrocher et tomberait).
+  // §217: neither beyond the ceiling nor beyond the top of the wall (the climber would have nothing to hold on to and would fall).
   const limit = Math.min(Number.isFinite(ceiling) ? ceiling : Infinity, wallTopFeetOf(token));
   const ceilingCells = Number.isFinite(limit) ? (limit - elevation) / grid.distance : Infinity;
   const max = climbableCells({ remaining, gridDistance: grid.distance, multiplier, ceilingCells });
@@ -124,19 +127,19 @@ export function climbRoom(token, { forced=false }={}) {
 }
 
 /**
- * §412 (issue #44, lot 5) : une limite de règle de l'escalade (pas assez de déplacement ce tour) — la fenêtre de légalité ; true si le joueur
- * force (le MJ et la table prévenus).
+ * §412 (issue #44, batch 5): a rule limit on climbing (not enough movement this turn) — the legality window; true if the player
+ * forces (GM and table warned).
  */
 const forceClimb = (token, line) => askAnyway(loc("Escalade.TitreForce", { name: token.name }), [line], { actor: token.actor, token });
 
-/** Les options d'un pas d'escalade forcé : la garde du déplacement ne le rejuge pas (runtime/move-gate.mjs, `forcedMove`). */
+/** Options of a forced climb step: the move guard does not re-judge it (runtime/move-gate.mjs, `forcedMove`). */
 const forcedStep = forced => (forced ? { [MODULE_ID]: { forcedMove: true } } : {});
 
 /**
- * §216 : « S'agripper au bord » — au bord d'un toit, d'un chemin de ronde, d'un étage, le token passe par-dessus et se retrouve
- * accroché au mur côté vide, la tête à hauteur du bord (adapter/climb.mjs, `edgesBelowOf`), en escalade : il descend ensuite le long du
- * mur. Coût en combat : la hauteur descendue au prix de l'escalade, plus la case (le pendant de « Se hisser »). Le test des règles
- * « maison » est dû comme pour grimper.
+ * §216: "Grab the edge" — at the edge of a roof, a parapet walk, a floor, the token goes over and ends up
+ * hanging on the wall on the void side, head level with the edge (adapter/climb.mjs, `edgesBelowOf`), climbing: it then goes
+ * down along the wall. Cost in combat: the height descended at the climbing price, plus the cell (the counterpart of "Pull up").
+ * The "house" rules check is due as for climbing.
  */
 export async function grabEdge(token, edge, { forced=false }={}) {
   if ( !token?.isOwner || !edge || !climbSystemOn() ) return false;
@@ -179,13 +182,13 @@ export async function grabEdge(token, edge, { forced=false }={}) {
 }
 
 /* -------------------------------------------- */
-/*  La fenêtre « Combien de cases ? » (§215)     */
+/*  The "How many cells?" window (§215)          */
 /* -------------------------------------------- */
 
 const GAUGE_HEIGHT = 240;   // hauteur de la colonne de cases, en pixels
-const GAUGE_WIDTH = 250;   // la marge de gauche porte les noms des niveaux (§216)
+const GAUGE_WIDTH = 250;   // the left margin carries the level names (§216)
 
-/** Le haut du mur est-il vu du grimpeur (lumière et sens : `perceivedAt`) ? Aveuglé, non ; sans canevas, oui. */
+/** Is the top of the wall seen by the climber (light and senses: `perceivedAt`)? Blinded, no; without a canvas, yes. */
 function seesTop(token, top) {
   if ( !top ) return true;
   if ( token.actor?.statuses?.has("blinded") ) return false;
@@ -194,7 +197,7 @@ function seesTop(token, top) {
   return seen ? !seen.blinded : true;
 }
 
-/** Le modèle de la jauge (core/climb.mjs, `climbGauge`) pour ce grimpeur. */
+/** The gauge model (core/climb.mjs, `climbGauge`) for this climber. */
 function gaugeFor(token, room, { down=false }={}) {
   const grid = token.parent.grid;
   const feet = token._source.elevation ?? 0;
@@ -205,19 +208,19 @@ function gaugeFor(token, room, { down=false }={}) {
   return { ...model, feet, ground: groundUnder(token), distance: grid.distance, units: grid.units, height };
 }
 
-/** Le mur de profil, en SVG : le sol, les cases (choisissables ou non, choisies), le grimpeur, le haut (rebord, plafond, ou inconnu). */
+/** The wall in profile, as SVG: the ground, the cells (selectable or not, chosen), the climber, the top (ledge, ceiling, unknown). */
 function gaugeSvg(model, chosen, { down=false }={}) {
   const n = model.cells.length;
   const step = Math.min(34, Math.floor(GAUGE_HEIGHT / Math.max(n + 1, 4)));
   const x = 100, w = 46;
   const base = 20 + ((n + 1) * step);
-  const yOf = i => base - (i * step);   // i : rang de la case au-dessus (montée) ou au-dessous (descente) du départ
+  const yOf = i => base - (i * step);   // i: rank of the cell above (climbing) or below (descending) the start
   const parts = [];
   const label = (y, text, cls="") => parts.push(`<text x="${x + w + 8}" y="${y}" class="${cls}">${esc(text)}</text>`);
-  // Départ : pour la montée, la case du grimpeur est en bas ; pour la descente, en haut.
+  // Start: for the climb, the climber's cell is at the bottom; for the descent, at the top.
   const start = down ? 20 + step : base;
   const order = down ? model.cells.map((c, i) => ({ ...c, y: start + ((i + 1) * step) - step })) : model.cells.map((c, i) => ({ ...c, y: yOf(i + 1) }));
-  // Descente : la case de départ (le grimpeur y est), en haut, non cliquable.
+  // Descent: the start cell (the climber is there), at the top, not clickable.
   if ( down ) {
     parts.push(`<rect class="cell start" x="${x}" y="${22}" width="${w}" height="${step - 4}" rx="3"/>`);
     label(20 + (step / 2) + 4, `${Math.round(model.feet * 10) / 10} ${model.units}`);
@@ -227,11 +230,11 @@ function gaugeSvg(model, chosen, { down=false }={}) {
     parts.push(`<rect class="${cls}" data-cells="${c.choosable ? c.n : ""}" x="${x}" y="${c.y + 2}" width="${w}" height="${step - 4}" rx="3"/>`);
     label(c.y + (step / 2) + 4, `${Math.round(c.at * 10) / 10} ${model.units}`);
   }
-  // Le sol (montée : sous la colonne ; descente : sous la dernière case).
+  // The ground (climb: under the column; descent: under the last cell).
   const groundY = down ? 20 + step + (n * step) : base;
   parts.push(`<line class="ground" x1="${x - 18}" y1="${groundY}" x2="${x + w + 8}" y2="${groundY}"/>`);
   label(groundY + 14, loc(down ? "Escalade.Jauge.SolBas" : "Escalade.Jauge.Sol"), "muted");
-  // §216 : les séparations de niveaux (même à ciel ouvert), à leur hauteur — un rebord vu à la même hauteur porte déjà le nom.
+  // §216: the level separators (even in the open air), at their height — a ledge seen at the same height already carries the name.
   if ( !down ) {
     for ( const m of model.marks ?? [] ) {
       const y = base - (((m.at - model.feet) / model.distance) * step);
@@ -239,9 +242,9 @@ function gaugeSvg(model, chosen, { down=false }={}) {
       parts.push(`<text x="${x - 20}" y="${y - 3}" text-anchor="end" class="level-text">${esc(m.name)}</text>`);
     }
   }
-  // Le haut : à sa vraie hauteur (le rebord peut être sous le haut de la colonne) ; inconnu, au-dessus de la colonne.
+  // The top: at its true height (the ledge may be below the top of the column); unknown, above the column.
   if ( !down ) {
-    // Même échelle que les repères de niveaux : une hauteur `h` au-dessus des pieds de départ est à `base - (h / case) × pas`.
+    // Same scale as the level markers: a height `h` above the starting feet is at `base - (h / case) × pas`.
     const topY = (model.top && !model.hidden) ? (base - (((model.top.at - model.feet) / model.distance) * step) + 2) : (yOf(n) - 2);
     if ( model.hidden ) {
       parts.push(`<rect class="unknown" x="${x - 18}" y="${topY - 22}" width="${w + 36}" height="20" rx="3"/>`);
@@ -254,7 +257,7 @@ function gaugeSvg(model, chosen, { down=false }={}) {
       parts.push(`<line class="ledge" x1="${x - 18}" y1="${topY - 6}" x2="${x + w + 18}" y2="${topY - 6}"/>`);
     }
   }
-  // Le grimpeur, sur la case choisie (ou à son départ).
+  // The climber, on the chosen cell (or at its start).
   const at = chosen ? order.find(c => c.n === chosen) : null;
   const cy = at ? at.y + (step / 2) : (down ? 20 + (step / 2) : base - (step / 2));
   parts.push(`<circle class="climber" cx="${x + (w / 2)}" cy="${cy}" r="${Math.max(6, Math.min(11, (step / 2) - 3))}"/>`);
@@ -262,7 +265,7 @@ function gaugeSvg(model, chosen, { down=false }={}) {
   return `<svg class="das-climb-gauge" width="${GAUGE_WIDTH}" height="${svgHeight}" viewBox="0 0 ${GAUGE_WIDTH} ${svgHeight}">${parts.join("")}</svg>`;
 }
 
-/** Les lignes à droite de la jauge : hauteur visée, ce qu'il y a en haut, coût, chute, test des règles « maison ». */
+/** The lines to the right of the gauge: target height, what is at the top, cost, fall, "house" rules check. */
 function gaugeInfo(token, model, room, chosen, { down=false }={}) {
   const height = down ? (model.feet - (chosen * model.distance)) : (model.feet + (chosen * model.distance));
   const lines = [];
@@ -287,11 +290,12 @@ function gaugeInfo(token, model, room, chosen, { down=false }={}) {
   return lines.join("");
 }
 
-/** La fenêtre « Combien de cases ? » (`down` : descendre) : la jauge du mur, une case choisie par un clic ; null si elle est annulée. */
+/** The "How many cells?" window (`down`: descend): the wall gauge, a cell chosen by a click; null if cancelled. */
 async function askCells(token, room, { down=false }={}) {
   const model = gaugeFor(token, room, { down });
   if ( !model.choosable ) return null;
-  // Par défaut : jusqu'au haut s'il est vu (sous le rebord, au plafond), jusqu'au sol en descente ; sinon (à l'aveugle, ciel ouvert) une case.
+  // Default: up to the top if seen (under the ledge, at the ceiling), down to the ground when descending;
+  // otherwise (blind, open sky) one cell.
   let chosen = down ? model.choosable : (model.topCells || 1);
   const render = root => {
     const gauge = root.querySelector(".das-climb-gauge-wrap");
@@ -328,8 +332,8 @@ async function askCells(token, room, { down=false }={}) {
 }
 
 /**
- * Le test des règles « maison » avant de partir (mur : DD 15 ; plafond : DD 20) — faux si le jet est raté. Déjà au mur, monter encore
- * ne refait pas le test du mur (il se refait à chaque tour) ; gagner le plafond, si.
+ * The "house" rules check before leaving (wall: DC 15; ceiling: DC 20) — false if the roll fails. Already on the wall,
+ * climbing more does not redo the wall check (it is redone each turn); reaching the ceiling does.
  */
 async function houseCheckPassed(token, dc) {
   const result = await handleClimbQuery({ token: token.uuid, configure: true, dc });
@@ -340,12 +344,12 @@ async function houseCheckPassed(token, dc) {
 }
 
 /**
- * Grimper : la hauteur demandée (ou choisie dans la fenêtre), le test des règles « maison », puis le mode `climb` et la montée sur
- * place. Si le cœur refuse la montée (budget, plafond, mur de sort au-dessus), le mode d'avant est rendu.
+ * Climb: the requested height (or chosen in the window), the "house" rules check, then `climb` mode and the climb in
+ * place. If the core refuses the climb (budget, ceiling, spell wall above), the previous mode is restored.
  * @param {TokenDocument} token
- * `acrobatic` (§195, « Courir sur le mur ») : le Mouvement acrobatique du moine — sans test, drapeau `climb.acrobatic` ; il tombera s'il
- * finit son tour au mur.
- * @param {{cells?: number|null, acrobatic?: boolean}} [options]  Cases à monter, sans fenêtre (scénarios).
+ * `acrobatic` (§195, "Run up the wall"): the monk's Acrobatic Movement — no check, flag `climb.acrobatic`; it will fall if it
+ * ends its turn on the wall.
+ * @param {{cells?: number|null, acrobatic?: boolean}} [options]  Cells to climb, without a window (scenarios).
  * @returns {Promise<boolean>}
  */
 export async function startClimb(token, { cells=null, acrobatic=false, forced=false }={}) {
@@ -353,7 +357,7 @@ export async function startClimb(token, { cells=null, acrobatic=false, forced=fa
   if ( acrobatic && (isClimbing(token) || !acrobaticFor(token)) ) return false;
   const room = climbRoom(token, { forced });
   if ( room.max < 1 ) {
-    // §412 : plus de déplacement ce tour — forçable ; le plafond (rien à monter) ne l'est pas.
+    // §412: no more movement this turn — forceable; the ceiling (nothing to climb) is not.
     if ( room.remaining < room.cost ) {
       return (await forceClimb(token, loc("Escalade.PasDeDeplacement", { name: token.name }))) ? startClimb(token, { cells, acrobatic, forced: true }) : false;
     }
@@ -363,9 +367,9 @@ export async function startClimb(token, { cells=null, acrobatic=false, forced=fa
   const wanted = Number.isFinite(cells) ? Math.floor(cells) : await askCells(token, room);
   if ( !(wanted >= 1) ) return false;
   const n = Math.min(wanted, room.max);
-  // §215 : le haut n'était pas vu — on a pu demander plus que le plafond ne laisse : la montée s'arrête là.
+  // §215: the top was not seen — more may have been requested than the ceiling allows: the climb stops there.
   if ( wanted > room.max ) notice(token, loc("Escalade.Bute"), "refused");
-  const already = isClimbing(token);   // déjà au mur : on monte encore, sans nouveau test (il se refait à chaque tour)
+  const already = isClimbing(token);   // already on the wall: climb further, without a new check (it is redone each turn)
   if ( !already && !acrobatic && (climbRules() === "house") && !climbingOf(token).native && !(await houseCheckPassed(token, CLIMB_DC)) ) return false;
   const grid = token.parent.grid;
   const from = token._source.elevation ?? 0;
@@ -373,13 +377,14 @@ export async function startClimb(token, { cells=null, acrobatic=false, forced=fa
   if ( !already ) {
     const flag = { from: mode, checkedAt: Date.now(), ...(acrobatic ? { acrobatic: true } : {}) };
     await token.update({ movementAction: "climb", [`flags.${MODULE_ID}.${CLIMB_FLAG}`]: flag }, ALTITUDE_OPTIONS);
-    // Le statut (et son immunité à la chute) avant la montée : posé par le MJ actif (`updateToken`, seul à l'écrire — deux clients qui
-    // l'écrivaient se marchaient dessus) ; on l'attend, sinon dnd5e mettrait le grimpeur « En chute » entre la montée et le statut.
+    // The status (and its immunity to falling) before the climb: placed by the active GM (`updateToken`, the only one to write it —
+    // two clients writing it stepped on each other); we wait for it, otherwise dnd5e would make the climber "Falling" between
+    // the climb and the status.
     await statusSettled(token, true);
   }
   await token.move([{ elevation: from + (n * grid.distance), action: "climb" }], { ...walkOptions(), ...forcedStep(forced) });
-  // §217 : une montée qui passe la limite d'un niveau (20 ft : First → Second Floor) se termine en deux temps chez le cœur — jugée trop
-  // tôt, elle passait pour refusée : le mode était rendu, le grimpeur restait en l'air et tombait.
+  // §217: a climb that crosses a level limit (20 ft: First → Second Floor) ends in two steps in the core — judged too
+  // early, it looked refused: the mode was restored, the climber stayed in the air and fell.
   await elevationSettled(token, from);
   if ( Math.abs((token._source.elevation ?? 0) - from) < 1e-6 ) {
     if ( !already ) await token.update({ movementAction: mode, [`flags.${MODULE_ID}.${CLIMB_FLAG}`]: null }, ALTITUDE_OPTIONS);
@@ -396,20 +401,20 @@ export async function startClimb(token, { cells=null, acrobatic=false, forced=fa
 /* -------------------------------------------- */
 
 /**
- * Ce token peut-il gagner le plafond : à soi, au mur (en escalade) ou au sol près d'un mur, un plafond au-dessus de lui, la capacité
- * (§192.3) ou les règles « maison » (DD 20), ni agrippé ni sans vitesse, pas déjà au plafond.
+ * Can this token reach the ceiling: its own, on the wall (climbing) or on the ground near a wall, a ceiling above it, the
+ * capability (§192.3) or the "house" rules (DC 20), neither Grappled nor without speed, not already on the ceiling.
  */
 export function canClimbCeiling(token) {
   if ( !token?.isOwner || !concerned(token) || isOnCeiling(token) ) return false;
   if ( !isClimbing(token) && (placementOf(token.movementAction) !== "ground") ) return false;
   if ( isGrappled(token) || climbFallReasonFor(token) ) return false;
-  if ( !isClimbing(token) && !wallsNear(token).length ) return false;   // du sol, on monte le long d'un mur
-  if ( !canWalkCeilingsAt(token) && (climbRules() !== "house") ) return false;   // §195 : pas par les Pantoufles sur une surface glissante
+  if ( !isClimbing(token) && !wallsNear(token).length ) return false;   // from the ground, climb along a wall
+  if ( !canWalkCeilingsAt(token) && (climbRules() !== "house") ) return false;   // §195: not through Slippers on a slippery surface
   return ceilingPerchFor(token) !== null;
 }
 
 /**
- * Ce qu'il faut pour gagner le plafond d'ici : le perchoir (pieds), les cases à monter, et si le budget du tour les paie.
+ * What is needed to reach the ceiling from here: the perch (feet), the cells to climb, and whether the turn budget pays for them.
  * @returns {{perch: number, cells: number, affordable: boolean, room: object}|null}
  */
 export function ceilingRoom(token, { forced=false }={}) {
@@ -422,9 +427,9 @@ export function ceilingRoom(token, { forced=false }={}) {
 }
 
 /**
- * « Grimper au plafond » : le test des règles « maison » (DD 20, sans la capacité), le mode `climb` (du sol), la montée jusqu'au
- * plafond moins la hauteur du token, puis le drapeau `climb.ceiling` — le MJ actif pose alors le statut « Au plafond » et retourne
- * le token. Refusé par le cœur (budget, plafond), tout est rendu.
+ * "Climb the ceiling": the "house" rules check (DC 20, without the capability), the `climb` mode (from the ground), the climb
+ * up to the ceiling minus the token's height, then the `climb.ceiling` flag — the active GM then places the "On the ceiling"
+ * status and flips the token. Refused by the core (budget, ceiling), everything is restored.
  * @returns {Promise<boolean>}
  */
 export async function climbToCeiling(token, { forced=false }={}) {
@@ -448,7 +453,7 @@ export async function climbToCeiling(token, { forced=false }={}) {
     ui.notifications.warn(loc("Escalade.Impossible", { name: token.name }));
     return false;
   }
-  const { acrobatic: _run, ...kept } = climbFlag(token) ?? { from: mode };   // au plafond, on ne court plus sur le mur
+  const { acrobatic: _run, ...kept } = climbFlag(token) ?? { from: mode };   // on the ceiling, no more running on the wall
   await token.update({ [`flags.${MODULE_ID}.${CLIMB_FLAG}`]: { ...kept, checkedAt: Date.now(), ceiling: true } }, ALTITUDE_OPTIONS);
   await statusSettled(token, true);
   notice(token, loc("Retour.Escalade.AuPlafond"), "gain");
@@ -456,14 +461,14 @@ export async function climbToCeiling(token, { forced=false }={}) {
   return true;
 }
 
-/** Ce grimpeur (au mur ou au plafond) peut-il redescendre le long d'un mur : à soi, en escalade, au-dessus du sol, près d'un mur. */
+/** Can this climber (on wall or ceiling) go back down along a wall: its own, climbing, above the ground, near a wall. */
 export function canClimbDown(token) {
   if ( !token?.isOwner || !concerned(token) || !isClimbing(token) || !aboveGround(token) ) return false;
   if ( isGrappled(token) || climbFallReasonFor(token) ) return false;
   return wallsNear(token).length > 0;
 }
 
-/** Ce que ce grimpeur peut descendre maintenant : cases au plus (budget du tour, hauteur au-dessus du sol), coût d'une case. */
+/** What this climber can descend now: cells at most (turn budget, height above the ground), cost per cell. */
 export function descentRoom(token, { forced=false }={}) {
   const grid = token.parent.grid;
   const room = climbRoom(token, { forced });
@@ -473,8 +478,8 @@ export function descentRoom(token, { forced=false }={}) {
 }
 
 /**
- * « Descendre le long du mur » : depuis le plafond (le drapeau `ceiling` tombe d'abord : statut et miroir rendus par le MJ actif) ou
- * depuis le mur, N cases vers le bas en `climb`, payées comme la montée ; revenu au sol, le MJ actif rend le mode d'avant.
+ * "Climb down the wall": from the ceiling (the `ceiling` flag drops first: status and mirror restored by the active GM) or
+ * from the wall, N cells down in `climb`, paid like the climb; back on the ground, the active GM restores the previous mode.
  * @param {TokenDocument} token
  * @param {{cells?: number|null}} [options]
  * @returns {Promise<boolean>}
@@ -483,7 +488,7 @@ export async function climbDown(token, { cells=null, forced=false }={}) {
   if ( !canClimbDown(token) ) return false;
   const room = descentRoom(token, { forced });
   if ( room.max < 1 ) {
-    if ( forced || !(room.remaining < room.cost) ) return false;   // rien à descendre
+    if ( forced || !(room.remaining < room.cost) ) return false;   // nothing to descend
     return (await forceClimb(token, loc("Escalade.PasDeDeplacement", { name: token.name }))) ? climbDown(token, { cells, forced: true }) : false;
   }
   const wanted = Number.isFinite(cells) ? Math.floor(cells) : await askCells(token, room, { down: true });
@@ -506,11 +511,11 @@ export async function climbDown(token, { cells=null, forced=false }={}) {
 }
 
 /**
- * §209 : se hisser du mur sur un rebord (toit, chemin de ronde, étage) — la case voisine dont le sol est à portée de la tête
- * (`ledgesOf`). Le token y prend pied par un pas `displace` (par-dessus le haut du mur : ni murs ni Surfaces ne l'arrêtent), sur le
- * niveau de ce sol (le sol à 20 ft d'un niveau 0-20 est le bas du suivant) ; en combat, la hauteur restante au prix de l'escalade plus
- * une case (`ledgeCost`), comptée au budget (`climbed`, comme un escalier). Puis le mode au sol, le drapeau d'escalade retiré, et la vue
- * suit le token à l'étage. Sur le client de son propriétaire.
+ * §209: pull up from the wall onto a ledge (roof, parapet walk, floor) — the neighbouring cell whose floor is within head reach
+ * (`ledgesOf`). The token steps there with a `displace` step (over the top of the wall: neither walls nor Surfaces stop it),
+ * onto the level of that floor (the floor at 20 ft of a level 0-20 is the bottom of the next); in combat, the remaining height
+ * at the climbing price plus one cell (`ledgeCost`), counted against the budget (`climbed`, like a staircase). Then the ground
+ * mode, the climb flag removed, and the view follows the token to the floor. On its owner's client.
  * @param {TokenDocument} token
  * @param {{dir: string, x: number, y: number, ground: number, rise: number, level: string}} ledge
  */
@@ -549,10 +554,10 @@ export async function hoistOnto(token, ledge, { forced=false }={}) {
 }
 
 /**
- * Le miroir vertical d'un token au plafond, tenu par le MJ actif (§192.4 point 8) : `texture.scaleY` inversé en arrivant au plafond
- * (l'échelle d'origine gardée dans `flags.dnd5e-combat.ceilingFlip`), rendu dès qu'il n'y est plus (descente, chute, mode changé) —
- * seulement si le token ne tourne pas déjà en marchant : rotation automatique du cœur coupée (`core.tokenAutoRotate`, §246) ou
- * rotation verrouillée sur le token. En file par token : deux mises à jour qui se suivent ne l'écrivent pas en même temps.
+ * The vertical mirror of a token on the ceiling, held by the active GM (§192.4 point 8): `texture.scaleY` inverted on reaching the
+ * ceiling (the original scale kept in `flags.dnd5e-combat.ceilingFlip`), restored as soon as it is no longer there (descent, fall,
+ * mode changed) — only if the token does not already turn while walking: core automatic rotation off (`core.tokenAutoRotate`, §246)
+ * or rotation locked on the token. Queued per token: two updates in a row do not write it at the same time.
  */
 const syncFlip = token => enqueue(`climb-flip:${token.uuid}`, async () => {
   const kept = token.getFlag(MODULE_ID, FLIP_FLAG) ?? null;
@@ -570,9 +575,9 @@ const syncFlip = token => enqueue(`climb-flip:${token.uuid}`, async () => {
 }).catch(err => console.error(`${MODULE_ID} | ceiling flip`, err));
 
 /**
- * Un joueur au plafond ne sort pas de sous le plafond en marchant (règles 2024 : on y reste accroché tant qu'il y a un plafond ; en
- * mode « maison », il en sort et tombe — `onTokenUpdated`). Les déplacements du moteur (`altitude`, `forced`), les téléportations, la
- * chute et le MJ passent.
+ * A player on the ceiling does not leave from under the ceiling by walking (2024 rules: it stays hanging as long as there is a
+ * ceiling; in "house" mode, it leaves and falls — `onTokenUpdated`). Engine moves (`altitude`, `forced`), teleports, the
+ * fall and the GM pass.
  */
 function onPreMoveToken(token, movement, operation) {
   if ( !isClimbing(token) || !concerned(token) ) return true;
@@ -580,16 +585,16 @@ function onPreMoveToken(token, movement, operation) {
   if ( flags?.altitude || flags?.forced || flags?.forcedMove || operation?.isUndo || game.user.isGM || (climbRules() === "house") ) return true;
   const walking = w => !CONFIG.Token.movement.actions[w.action]?.teleport && !["displace", "fall"].includes(w.action);
   const steps = movement.pending.waypoints.filter(walking);
-  // §196 : au mur, pas de pas loin du mur (en l'air) — on redescend ou on se laisse tomber, comme au plafond.
+  // §196: on the wall, no step away from the wall (in the air) — it climbs down or lets go, as on the ceiling.
   if ( !isOnCeiling(token) ) {
     if ( !steps.some(w => !holdsWallAt(token, positionOf(w))) ) return true;
-    // §412 : la fenêtre de légalité ; forcé, le même trajet repart (`forcedMove`).
+    // §412: the legality window; when forced, the same path starts again (`forcedMove`).
     notice(token, loc("Retour.Escalade.MurFini"));
     forceMoveLater(token, movement, [{ key: "wallEnds", line: loc("Escalade.MurFini", { name: token.name }) }]);
     return false;
   }
   const off = steps.find(w => !hangsAt(token, positionOf(w)));
-  // §195 : celui qui ne tient au plafond que par les Pantoufles n'avance pas au-dessus d'une surface glissante.
+  // §195: one who holds on to the ceiling only through Slippers does not advance over a slippery surface.
   const slips = !off && steps.find(w => !canWalkCeilingsAt(token, positionOf(w)));
   if ( !off && !slips ) return true;
   const key = off ? "PlafondFini" : "Glissant";
@@ -599,8 +604,8 @@ function onPreMoveToken(token, movement, operation) {
 }
 
 /**
- * §196 : un grimpeur au mur tient-il à cette position (point de passage) : un mur à grimper le touche, ou le sol y remonte jusqu'à lui.
- * Le même jugement que l'A* (adapter/path-world.mjs `wallHolds`).
+ * §196: does a climber on the wall hold at this position (waypoint): a climbable wall touches it, or the ground rises up to it.
+ * The same judgment as the A* (adapter/path-world.mjs `wallHolds`).
  */
 function holdsWallAt(token, pos) {
   const elevation = pos.elevation ?? token._source.elevation ?? 0;
@@ -612,14 +617,14 @@ function holdsWallAt(token, pos) {
 /*  Tomber, atterrir                            */
 /* -------------------------------------------- */
 
-/** Le mode au sol qu'un grimpeur reprend : celui d'avant l'escalade (un vol accordé entre-temps : la marche). */
+/** The ground mode a climber resumes: the one from before the climb (a flight granted in between: walking). */
 function groundModeFor(token) {
   const from = climbFlag(token)?.from ?? null;
   if ( ["air", "under"].includes(placementOf(from)) ) return groundModeOf(token.actor);
   return from;
 }
 
-/** La fin de l'animation de déplacement du token (au plus `ms`), sinon on l'arrête : l'élévation visuelle rejoint la source. */
+/** The end of the token's move animation (at most `ms`), else it is stopped: the visual elevation reaches the source. */
 async function settleAnimation(token, ms=5000) {
   const animation = token.object?.movementAnimationPromise;
   if ( animation ) await Promise.race([animation, new Promise(resolve => setTimeout(resolve, ms))]);
@@ -627,14 +632,14 @@ async function settleAnimation(token, ms=5000) {
 }
 
 /**
- * La chute de dnd5e : `updateFalling` pose l'état « En chute » d'après la surface sous le token et ses vitesses, puis `plummet` le fait
- * tomber jusqu'à cette surface et poste la carte de dégâts (1d6 par 10 ft ; le moteur l'applique, `onFallCard`, d'où À terre). Vrai si
- * le token est tombé. Sur un client qui peut modifier le token. Sert aussi à l'Inversion de la gravité (§195).
+ * dnd5e's fall: `updateFalling` places the "Falling" condition from the surface under the token and its speeds, then `plummet`
+ * makes it fall to that surface and posts the damage card (1d6 per 10 ft; the engine applies it, `onFallCard`, hence Prone).
+ * True if the token fell. On a client that can modify the token. Also used for Reverse Gravity (§195).
  */
 export async function fallLikeDnd5e(token) {
-  if ( !climbSystemOn() || isEthereal(token) ) return false;   // §224 : système coupé — aucune chute du moteur ; §225 : ni dans l'Éthéré
-  // §208 : une seule chute à la fois par token — l'escalade et la chute automatique (runtime/falls.mjs) peuvent la demander ensemble
-  // (deux `plummet` en même temps : deux cartes de dégâts).
+  if ( !climbSystemOn() || isEthereal(token) ) return false;   // §224: system off — no engine fall; §225: nor in the Ethereal
+  // §208: one fall at a time per token — climbing and the automatic fall (runtime/falls.mjs) may both request it
+  // (two `plummet` at once: two damage cards).
   if ( plummeting.has(token.uuid) ) return false;
   plummeting.add(token.uuid);
   try { return await plummetOnce(token); }
@@ -645,34 +650,35 @@ const plummeting = new Set();
 async function plummetOnce(token) {
   if ( typeof token.updateFalling === "function" ) await token.updateFalling();
   if ( !token.actor?.statuses?.has("falling") || (typeof token.plummet !== "function") ) return false;
-  // `plummet` mesure la chute depuis l'élévation VISUELLE du token (documents/token.mjs : `this.elevation`, qui suit l'animation) :
-  // lâché juste après la montée, le token n'était visuellement qu'à 1,5 ft et la chute ne faisait aucun dégât (vu le 2026-10-17).
-  // On attend la fin de l'animation en cours (jamais dans un onglet masqué : au plus 5 s, puis on l'arrête).
+  // `plummet` measures the fall from the token's VISUAL elevation (documents/token.mjs: `this.elevation`, which follows the
+  // animation): dropped right after the climb, the token was visually only at 1.5 ft and the fall did no damage (seen on
+  // 2026-10-17). We wait for the current animation to end (never in a hidden tab: at most 5 s, then it is stopped).
   await settleAnimation(token);
-  // Relevé des trous (2026-10-23) : fenêtre en arrière-plan, l'animation d'une montée ne progresse pas, et l'arrêter fige le token à la
-  // hauteur AFFICHÉE (0 pour une montée de 15 ft) — `plummet` ne voit alors rien à tomber (vu au retour de l'Éthéré en l'air). Sans
-  // hauteur affichée juste, la chute n'est pas confiée à dnd5e : l'appelant tombe depuis la hauteur réelle (runtime/falls.mjs).
+  // Survey of the gaps (2026-10-23): window in the background, a climb's animation does not progress, and stopping it freezes
+  // the token at the DISPLAYED height (0 for a 15 ft climb) — `plummet` then sees nothing to fall (seen on returning from the
+  // Ethereal in the air). Without a correct displayed height, the fall is not handed to dnd5e: the caller falls from the real
+  // height (runtime/falls.mjs).
   if ( Math.abs((token.elevation ?? 0) - (token._source.elevation ?? 0)) > 1e-6 ) return false;
-  await token.plummet();   // dnd5e retire lui-même « En chute » après le déplacement de chute (`_onUpdateMovement`)
+  await token.plummet();   // dnd5e itself removes "Falling" after the fall movement (`_onUpdateMovement`)
   return true;
 }
 
 /**
- * Le grimpeur lâche le mur : son mode d'avant, puis la chute de dnd5e s'il est en l'air (`updateFalling` pose l'état « En chute »
- * d'après la surface sous lui et ses vitesses ; `plummet` le fait tomber, dégâts compris). Une créature qui vole reste en l'air, en vol.
- * Sur un client qui peut modifier le token (son propriétaire, le MJ).
+ * The climber lets go of the wall: its previous mode, then dnd5e's fall if it is in the air (`updateFalling` places the "Falling"
+ * condition from the surface under it and its speeds; `plummet` makes it fall, damage included). A creature that flies stays in
+ * the air, flying. On a client that can modify the token (its owner, the GM).
  */
 async function letGo(token) {
   const mode = groundModeFor(token);
-  // Mis À terre, le token est déjà en mode ramper (runtime/prone.mjs, même hook, ordre libre) : on garde ramper, et le mode que le
-  // relevé rendra est celui d'avant l'escalade, pas `climb`.
+  // Made Prone, the token is already in crawl mode (runtime/prone.mjs, same hook, order free): we keep crawl, and the mode that
+  // the survey will restore is the one from before the climb, not `climb`.
   const crawling = token._source.movementAction === "crawl";
   const changes = crawling
     ? { [`flags.${MODULE_ID}.crawl.from`]: mode, [`flags.${MODULE_ID}.${CLIMB_FLAG}`]: null }
     : { movementAction: mode, [`flags.${MODULE_ID}.${CLIMB_FLAG}`]: null };
   await token.update(changes, { [MODULE_ID]: { altitude: true, forced: true } });
-  // Le statut doit être parti avant la chute : il porte l'immunité, dnd5e ne ferait pas tomber le grimpeur avec (le MJ actif le retire
-  // sur la mise à jour du token : mode ou drapeau).
+  // The status must be gone before the fall: it carries the immunity, dnd5e would not make the climber fall with it (the active GM
+  // removes it on the token update: mode or flag).
   await statusSettled(token, false);
   if ( !aboveGround(token) ) return "ground";
   if ( await fallLikeDnd5e(token) ) return "fell";
@@ -683,7 +689,7 @@ async function letGo(token) {
   return "stays";
 }
 
-/** « Se laisser tomber » (menu) : chute volontaire. */
+/** "Let go" (menu): voluntary fall. */
 export async function dropDown(token) {
   if ( !token?.isOwner || !isClimbing(token) || !climbSystemOn() ) return false;
   const ceiling = isOnCeiling(token);
@@ -693,13 +699,13 @@ export async function dropDown(token) {
   return true;
 }
 
-/** Les tokens en train de tomber : un même effet (À terre) passe par plusieurs hooks, la chute ne se joue qu'une fois. */
+/** Tokens currently falling: the same effect (Prone) goes through several hooks, the fall plays only once. */
 const falling = new Set();
 
-/** §208 : l'escalade fait-elle tomber ce token en ce moment ? La chute automatique (runtime/falls.mjs) s'efface alors. */
+/** §208: is climbing making this token fall right now? The automatic fall (runtime/falls.mjs) then stands aside. */
 export const climbFallInProgress = token => falling.has(token?.id) || plummeting.has(token?.uuid);
 
-/** Un grimpeur qui ne tient plus (À terre, Neutralisé, Agrippé, sans vitesse, plus de plafond) ou qui rate son test tombe. MJ actif. */
+/** A climber that no longer holds (Prone, Incapacitated, Grappled, no speed, no ceiling) or that fails its check falls. Active GM. */
 async function fall(token, reason) {
   if ( falling.has(token.id) ) return;
   falling.add(token.id);
@@ -712,10 +718,10 @@ async function fall(token, reason) {
   } finally { falling.delete(token.id); }
 }
 
-/** Un grimpeur : en mode `climb`, ou déjà passé en mode ramper par À terre mais encore au mur (le drapeau d'escalade est là). */
+/** A climber: in `climb` mode, or already switched to crawl mode by Prone but still on the wall (the climb flag is there). */
 const climber = token => isClimbing(token) || !!climbFlag(token);
 
-/** Les grimpeurs de cet acteur qui ne tiennent plus au mur tombent. MJ actif. */
+/** The climbers of this actor that no longer hold to the wall fall. Active GM. */
 async function checkClimbers(actor) {
   for ( const token of tokensOf(actor) ) {
     if ( !climber(token) || !concerned(token) ) continue;
@@ -724,15 +730,15 @@ async function checkClimbers(actor) {
   }
 }
 
-/** Les statuts de prise que le moteur tient : « En escalade » au mur, « Au plafond » au plafond (jamais les deux). */
+/** The grip statuses the engine holds: "Climbing" on the wall, "On the ceiling" on the ceiling (never both). */
 const HOLD_STATUSES = [MODE_STATUSES.climbing.id, MODE_STATUSES.ceiling.id];
 const holds = token => HOLD_STATUSES.some(id => token.actor?.statuses?.has(id));
 
 /**
- * Les statuts « En escalade » / « Au plafond » suivent le mode et le drapeau — écrits par le MJ actif seulement, en file par acteur :
- * deux mises à jour qui se suivent (le mode ramper d'À terre, le drapeau retiré par la chute) ne retirent pas le même effet en même temps
- * (« ActiveEffect … does not exist »). Le statut qui arrive est posé AVANT que l'autre ne parte : entre les deux, le grimpeur garderait
- * sinon un instant sans immunité à « En chute », que dnd5e réévalue à chaque changement d'effet.
+ * The "Climbing" / "On the ceiling" statuses follow the mode and the flag — written by the active GM only, queued per actor:
+ * two updates in a row (Prone's crawl mode, the flag removed by the fall) do not remove the same effect at the same time
+ * ("ActiveEffect … does not exist"). The incoming status is placed BEFORE the other leaves: between the two, the climber would
+ * otherwise be briefly without immunity to "Falling", which dnd5e re-evaluates on every effect change.
  */
 const syncStatus = token => enqueue(`climb-status:${token.actor?.uuid}`, async () => {
   const climbing = isClimbing(token);
@@ -741,7 +747,7 @@ const syncStatus = token => enqueue(`climb-status:${token.actor?.uuid}`, async (
   for ( const [id, on] of Object.entries(wanted) ) if ( !on ) await setStatus(token.actor, id, false);
 }).catch(() => {});
 
-/** Le client du grimpeur attend que le MJ actif ait posé (ou retiré) un statut de prise — au plus `ms` ; sans MJ actif, on n'attend pas. */
+/** The climber's client waits for the active GM to place (or remove) a grip status — at most `ms`; without an active GM, no waiting. */
 async function statusSettled(token, wanted, ms=3000) {
   if ( !game.users.activeGM ) return false;
   const until = Date.now() + ms;
@@ -751,9 +757,9 @@ async function statusSettled(token, wanted, ms=3000) {
 }
 
 /**
- * MJ actif, sur chaque mise à jour d'un token : les statuts et le miroir suivent le mode et le drapeau ; un grimpeur revenu au sol
- * (descendu le long du mur) reprend son mode d'avant ; un marcheur de plafond arrivé là où il n'y a plus de plafond à sa hauteur
- * (glissé par le MJ, ou sorti en mode « maison ») tombe.
+ * Active GM, on every token update: the statuses and the mirror follow the mode and the flag; a climber back on the ground
+ * (climbed down the wall) resumes its previous mode; a ceiling walker who arrives where there is no ceiling at its height
+ * (slid by the GM, or exited in "house" mode) falls.
  */
 async function onTokenUpdated(token, changes) {
   if ( !token.actor || !concerned(token) ) return;
@@ -768,19 +774,19 @@ async function onTokenUpdated(token, changes) {
     log(`${token.name}: back on the ground, climbing over`);
     return;
   }
-  // §196 : glissé loin du mur par le MJ (ou en mode « maison »), le grimpeur lâche prise.
+  // §196: slid away from the wall by the GM (or in "house" mode), the climber lets go.
   if ( moved && isClimbing(token) && !isOnCeiling(token) && !holdsWallAt(token, positionOf(token._source)) ) await fall(token, "noWall");
   else if ( moved && isOnCeiling(token) && !hangsAt(token) ) await fall(token, "noCeiling");
-  // §195 : règles 2024, au plafond par les seules Pantoufles au-dessus d'une surface glissante (glissé là par le MJ) : il tombe. En mode
-  // « maison », il reste — le DD 20 est alors dû, comme pour qui n'a pas la capacité (`checkWanted`).
+  // §195: 2024 rules, on the ceiling only through Slippers above a slippery surface (slid there by the GM): it falls. In
+  // "house" mode, it stays — the DC 20 is then due, as for one without the capability (`checkWanted`).
   else if ( moved && isOnCeiling(token) && (climbRules() !== "house") && !canWalkCeilingsAt(token) ) await fall(token, "slippery");
 }
 
 /**
- * La carte de dégâts de chute de dnd5e (`postFallDamage`, rules/falling.mjs:36 : `flags.dnd5e.context.fall`, cibles dans
- * `system.targets`) n'applique rien d'elle-même — c'est le plateau de dégâts du MJ. Le moteur l'applique aux cibles, par
- * `applyDamage` avec la carte pour origine : dnd5e lit alors son contexte et met À terre (`applyFallProne`, attributes.mjs:684).
- * MJ actif, une fois par carte.
+ * dnd5e's fall damage card (`postFallDamage`, rules/falling.mjs:36: `flags.dnd5e.context.fall`, targets in
+ * `system.targets`) applies nothing by itself — it is the GM's damage tray. The engine applies it to the targets, through
+ * `applyDamage` with the card as origin: dnd5e then reads its context and makes them Prone (`applyFallProne`, attributes.mjs:684).
+ * Active GM, once per card.
  */
 async function onFallCard(message) {
   if ( message.getFlag("dnd5e", "context")?.fall !== true || message.getFlag(MODULE_ID, "fallApplied") ) return;
@@ -790,11 +796,11 @@ async function onFallCard(message) {
   await message.setFlag(MODULE_ID, "fallApplied", true);
   await waitForDice(message);
   for ( const target of targets ) {
-    // Un descripteur de cible de dnd5e porte l'uuid du token (`uuid`) — ou, selon la version, sous `token`.
+    // A dnd5e target descriptor carries the token's uuid (`uuid`) — or, depending on the version, under `token`.
     const doc = fromUuidSync(target.uuid ?? target.token ?? "", { strict: false });
     const actor = (doc?.documentName === "Actor") ? doc : (doc?.actor ?? null);
     if ( !actor ) continue;
-    // §301 : avant les dégâts, les réactions de chute (Chute ralentie : réduits ; Feuille morte : annulés, pas d'À terre).
+    // §301: before the damage, the fall reactions (Slow Fall: reduced; Feather Fall: cancelled, not Prone).
     const token = (doc?.documentName === "Token") ? doc : (actor.getActiveTokens?.(false, true)?.[0] ?? null);
     const total = damages.reduce((sum, d) => sum + d.value, 0);
     const reacted = token ? await askFallReactions(token, total) : { reduce: 0, cancel: false, by: [] };
@@ -808,15 +814,16 @@ async function onFallCard(message) {
 }
 
 /* -------------------------------------------- */
-/*  Le test des règles « maison »               */
+/*  The "house" rules check                     */
 /* -------------------------------------------- */
 
 /**
- * Côté de celui qui grimpe : le test de Force (Athlétisme) — DD 15 au mur, DD 20 au plafond —, dans la fenêtre de jet de dnd5e (où
- * l'interface propose ses aides, §113) ; fermée ou au délai, lancé sans fenêtre. Rend `{ total, success }`, ou null sans jet.
+ * On the climber's side: the Strength (Athletics) check — DC 15 on the wall, DC 20 on the ceiling —, in dnd5e's roll window
+ * (where the interface offers its aids, §113); closed or on timeout, rolled without a window. Returns `{ total, success }`, or
+ * null without a roll.
  */
 export async function handleClimbQuery({ token: uuid, configure=true, dc=CLIMB_DC }, { user=null }={}) {
-  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  // §472: only the GM sends this request in play; from a player, it is dropped (security refusal, not forceable).
   if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | climb query from ${user.name} refused: only a GM sends it`); return null; }
   const token = await fromUuid(uuid);
   const actor = token?.actor;
@@ -832,10 +839,10 @@ export async function handleClimbQuery({ token: uuid, configure=true, dc=CLIMB_D
 
 const busy = new Set();
 
-/** Le DD du test périodique de ce grimpeur : 20 au plafond, 15 au mur. */
+/** The DC of this climber's periodic check: 20 on the ceiling, 15 on the wall. */
 const checkDcOf = token => (isOnCeiling(token) ? CEILING_DC : CLIMB_DC);
 
-/** MJ actif : le test demandé au joueur qui possède le grimpeur (chez lui), sinon lancé ici ; un échec fait tomber. */
+/** Active GM: the check asked of the player who owns the climber (on their side), else rolled here; a failure makes it fall. */
 async function requestClimbCheck(token) {
   if ( busy.has(token.id) ) return;
   busy.add(token.id);
@@ -855,15 +862,15 @@ async function requestClimbCheck(token) {
 }
 
 /**
- * Le test est-il dû pour ce grimpeur (règles « maison ») ? Pas avec une vraie vitesse d'escalade ; au plafond, pas non plus avec la
- * capacité d'y marcher (Pattes d'araignée, Pantoufles…).
+ * Is the check due for this climber ("house" rules)? Not with a real climbing speed; on the ceiling, not either with the
+ * capability to walk there (Spider Climb, Slippers…).
  */
 const checkWanted = token => (climbRules() === "house") && isClimbing(token) && concerned(token) && !climbingOf(token).native
   && !climbFlag(token)?.acrobatic && !(isOnCeiling(token) && canWalkCeilingsAt(token));
 
 /**
- * Changement de tour, MJ actif : le moine qui finissait son tour en courant sur le mur tombe (§195, Mouvement acrobatique : « pendant
- * votre tour ») ; puis le tour d'un grimpeur commence : son test (règles « maison »).
+ * Turn change, active GM: the monk who ended their turn running up the wall falls (§195, Acrobatic Movement: "during
+ * your turn"); then a climber's turn starts: its check ("house" rules).
  */
 async function onTurnChange(combat, prior) {
   const ended = prior?.combatantId ? combat.combatants.get(prior.combatantId)?.token : null;
@@ -874,7 +881,7 @@ async function onTurnChange(combat, prior) {
   await requestClimbCheck(token);
 }
 
-/** Hors combat, toutes les 10 s. MJ actif, scène affichée. */
+/** Out of combat, every 10 s. Active GM, displayed scene. */
 function tick() {
   if ( theaterActive() || !isExecutor() || !canvas?.ready || game.combat?.started || (climbRules() !== "house") ) return;
   for ( const token of canvas.scene?.tokens ?? [] ) {
@@ -886,12 +893,12 @@ function tick() {
 /* -------------------------------------------- */
 
 /**
- * Les entrées du menu de son propre token : « Grimper au mur » près d'un mur, « Courir sur le mur » pour le moine (§195), « Grimper au
- * plafond » sous un plafond (capacité ou règles maison), « Descendre le long du mur » en escalade près d'un mur, « Se laisser tomber » en
- * escalade.
+ * The entries of one's own token menu: "Climb the wall" near a wall, "Run up the wall" for the monk (§195), "Climb the
+ * ceiling" under a ceiling (capability or house rules), "Climb down the wall" while climbing near a wall, "Let go" while
+ * climbing.
  */
 export function climbEntries(token) {
-  return whileClimbSystem(() => entriesOf(token));   // §224 : rien quand le système est coupé
+  return whileClimbSystem(() => entriesOf(token));   // §224: nothing when the system is off
 }
 
 function entriesOf(token) {
@@ -902,7 +909,7 @@ function entriesOf(token) {
   }
   if ( canClimbCeiling(token) ) entries.push({ icon: "fa-solid fa-spider", label: loc("Menu.GrimperPlafond"), run: () => climbToCeiling(token) });
   if ( canClimbDown(token) ) entries.push({ icon: "fa-solid fa-arrow-down", label: loc("Menu.DescendreMur"), run: () => climbDown(token) });
-  // §209 : se hisser sur un rebord à portée — une entrée par direction quand il y en a plusieurs.
+  // §209: pull up onto a ledge within reach — one entry per direction when there are several.
   if ( token?.isOwner ) {
     const ledges = ledgesOf(token);
     for ( const ledge of ledges ) {
@@ -910,7 +917,7 @@ function entriesOf(token) {
       entries.push({ icon: "fa-solid fa-person-through-window", label, run: () => hoistOnto(token, ledge) });
     }
   }
-  // §216 : s'agripper au bord pour descendre — une entrée par direction quand il y en a plusieurs.
+  // §216: grab the edge to descend — one entry per direction when there are several.
   if ( token?.isOwner && concerned(token) && !isGrappled(token) && !climbFallReasonFor(token) ) {
     const edges = edgesBelowOf(token);
     for ( const edge of edges ) {
@@ -929,12 +936,12 @@ function entriesOf(token) {
 const docOf = token => token?.document ?? token ?? null;
 
 /**
- * §196 : l'état d'escalade d'un token, pour une interface ou une IA — ce que le moteur tient (mode, drapeau, statut) et ce que son menu
- * proposerait maintenant. null sans token ni acteur.
+ * §196: a token's climbing state, for an interface or an AI — what the engine holds (mode, flag, status) and what its menu
+ * would offer now. null without token or actor.
  * @param {Token|TokenDocument} token
- * @returns {{climbing: boolean, onCeiling: boolean, acrobatic: boolean, elevation: number, height: number, units: string, speed: number,
- *   native: boolean, multiplier: number, walksCeilings: boolean, enabled: boolean, rules: "2024"|"house", canClimb: boolean, canRun: boolean,
- *   canCeiling: boolean, canDown: boolean, canDrop: boolean}|null}
+ * @returns {{climbing: boolean, onCeiling: boolean, acrobatic: boolean, elevation: number, height: number, units: string,
+ *   speed: number, native: boolean, multiplier: number, walksCeilings: boolean, enabled: boolean, rules: "2024"|"house",
+ *   canClimb: boolean, canRun: boolean, canCeiling: boolean, canDown: boolean, canDrop: boolean}|null}
  */
 export function climbStateOf(token) {
   const doc = docOf(token);
@@ -943,23 +950,23 @@ export function climbStateOf(token) {
   const speeds = climbingOf(doc);
   const elevation = doc._source.elevation ?? 0;
   let ground = elevation;
-  try { ground = groundUnder(doc); } catch { /* scène sans niveaux ni surfaces : le sol est là où il est */ }
+  try { ground = groundUnder(doc); } catch { /* scene without levels or surfaces: the ground is where it is */ }
   return {
     climbing, onCeiling: isOnCeiling(doc), acrobatic: climbing && (climbFlag(doc)?.acrobatic === true),
     elevation, height: Math.max(0, elevation - ground), units: doc.parent.grid.units,
     speed: speeds.speed ?? 0, native: !!speeds.native, multiplier: speeds.multiplier ?? 1, walksCeilings: canWalkCeilings(doc.actor),
-    enabled: climbSystemOn(),   // §224 : l'interrupteur du MJ ; coupé, tous les `can…` sont faux et `ledges` est vide
+    enabled: climbSystemOn(),   // §224: the GM's switch; off, every `can…` is false and `ledges` is empty
     rules: climbRules(), canClimb: canClimb(doc), canRun: canClimb(doc) && !climbing && acrobaticFor(doc),
     canCeiling: canClimbCeiling(doc), canDown: canClimbDown(doc), canDrop: !!doc.isOwner && climbing && climbSystemOn(),
-    // §209 : les rebords où il peut se hisser (direction, sol, hauteur à monter, niveau d'arrivée).
+    // §209: the ledges it can pull up onto (direction, floor, height to climb, arrival level).
     ledges: whileClimbSystem(() => ledgesOf(doc)).map(({ dir, ground, rise, level }) => ({ dir, ground, rise, level }))
   };
 }
 
 /**
- * §196 : ce grimpeur tiendrait-il sur cette case (coin haut-gauche, à sa hauteur) — au mur, un mur à grimper la touche ; au plafond, le
- * plafond y est à sa hauteur (et ne glisse pas sous des Pantoufles) ? Toujours vrai pour qui ne grimpe pas. Pour une marche case par
- * case (manette) : l'A* du moteur applique le même jugement.
+ * §196: would this climber hold on this cell (top-left corner, at its height) — on the wall, a climbable wall touches it; on the
+ * ceiling, the ceiling is there at its height (and does not slip under Slippers)? Always true for one who is not climbing. For a
+ * cell-by-cell walk (gamepad): the engine's A* applies the same judgment.
  * @param {Token|TokenDocument} token
  * @param {{i: number, j: number}} cell
  */
@@ -971,7 +978,7 @@ export function climbHoldsAt(token, cell) {
   return holdsWallAt(doc, pos);
 }
 
-/** Les cases d'où grimper vers une cible : à `reach` cases d'elle au plus (sur la carte), contre un mur, du même côté du mur qu'elle. */
+/** Cells to climb toward a target from: within `reach` cells of it (on the map), against a wall, on the same side of the wall. */
 function climbSpotsToward(token, target, reach) {
   const scene = token.parent;
   const grid = scene.grid;
@@ -987,7 +994,7 @@ function climbSpotsToward(token, target, reach) {
     for ( const cell of cellsAtGap(footprintOf(target), sizeOf(token), gap, bounds) ) {
       const pos = { ...grid.getTopLeftPoint(cell), elevation, level };
       if ( !wallsNear(token, pos).length ) continue;
-      if ( rayBlocker(token, target, { posA: pos })(tokenCenter(token, pos), goal) ) continue;   // derrière le mur : pas le même côté
+      if ( rayBlocker(token, target, { posA: pos })(tokenCenter(token, pos), goal) ) continue;   // behind the wall: other side
       spots.push(cell);
     }
   }
@@ -995,12 +1002,12 @@ function climbSpotsToward(token, target, reach) {
 }
 
 /**
- * §196 : rejoindre une cible hors d'allonge par le vide vertical (au mur, au plafond près d'un mur) en grimpant — le cas simple : aller
- * au pied du mur à côté d'elle (`api.approach`, dans le budget du tour), puis monter le moins de cases qui la mettent à `reachCells`
- * (l'escalade du menu, payée au budget : ×2 sans vitesse d'escalade ; test DD 15 en mode « maison »). Ne décide pas qui doit grimper :
- * l'appelant (une IA) choisit. Rend `{ arrived, climbed, reason? }` — `reason` : `notOwner`, `noWall` (aucun mur à côté d'elle, de son
- * côté), `cannotClimb`, `tooHigh` (même au plus haut, encore hors d'allonge), `refused` (montée refusée ou test raté), ou ce que rend
- * la marche (`noPath`, `exhausted`, `stopped`…).
+ * §196: reach a target out of reach across a vertical void (on the wall, on the ceiling near a wall) by climbing — the simple
+ * case: go to the foot of the wall next to it (`api.approach`, within the turn budget), then climb the fewest cells that put it at
+ * `reachCells` (the menu's climb, paid from the budget: ×2 without climbing speed; DC 15 check in "house" mode). Does not
+ * decide who must climb: the caller (an AI) chooses. Returns `{ arrived, climbed, reason? }` — `reason`: `notOwner`, `noWall`
+ * (no wall next to it, on its side), `cannotClimb`, `tooHigh` (even at the highest, still out of reach), `refused` (climb refused
+ * or check failed), or what the walk returns (`noPath`, `exhausted`, `stopped`…).
  * @param {Token|TokenDocument} token
  * @param {Token|TokenDocument} target
  * @param {{reachCells?: number}} [options]
@@ -1040,34 +1047,34 @@ export async function climbToward(token, target, { reachCells=1 }={}) {
 }
 
 /**
- * §196 : `api.climb` — l'escalade pour les voisins (interface, IA, manette). Lecture : `state(token)`, `holds(token, cell)`,
- * `entries(token)` (les entrées du menu du moteur : `{ icon, label, run }`) ; gestes, sur le client qui possède le token, sans `cells`
- * la fenêtre « combien de cases » du moteur s'ouvre : `up(token, { cells })`, `run(token, { cells })` (Mouvement acrobatique),
- * `ceiling(token)`, `down(token, { cells })`, `drop(token)` → booléen ; `toward(token, target, { reachCells })` (voir `climbToward`).
- * §224 : `enabled()` / `setEnabled(on)` — l'interrupteur du MJ ; coupé, `entries` est vide, les gestes rendent faux, `toward` « disabled ».
+ * §196: `api.climb` — climbing for neighbours (interface, AI, gamepad). Reading: `state(token)`, `holds(token, cell)`,
+ * `entries(token)` (the engine's menu entries: `{ icon, label, run }`); gestures, on the client that owns the token, without
+ * `cells` the engine's "how many cells" window opens: `up(token, { cells })`, `run(token, { cells })` (Acrobatic Movement),
+ * `ceiling(token)`, `down(token, { cells })`, `drop(token)` → boolean; `toward(token, target, { reachCells })` (see `climbToward`).
+ * §224: `enabled()` / `setEnabled(on)` — the GM's switch; off, `entries` is empty, the gestures return false, `toward` "disabled".
  */
 export const climbApi = Object.freeze({
   state: climbStateOf,
   holds: climbHoldsAt,
-  /** Les entrées d'escalade du menu du token (`{ icon, label, run }` : Grimper au mur, au plafond, Descendre, Se laisser tomber…). */
+  /** The token menu's climbing entries (`{ icon, label, run }`: Climb the wall, the ceiling, Climb down, Let go…). */
   entries: token => climbEntries(docOf(token)).map(({ icon, label, run }) => ({ icon, label, run })),
-  /** Grimper au mur de `cells` cases (sans `cells` : la fenêtre « combien de cases ») ; client qui possède le token → booléen. */
+  /** Climb the wall by `cells` cells (without `cells`: the "how many cells" window); client that owns the token → boolean. */
   up: (token, { cells=null }={}) => startClimb(docOf(token), { cells }),
-  /** §195 : « Courir sur le mur » (Mouvement acrobatique du moine), sans test ; comme `up` → booléen. */
+  /** §195: "Run up the wall" (the monk's Acrobatic Movement), without a check; like `up` → boolean. */
   run: (token, { cells=null }={}) => startClimb(docOf(token), { cells, acrobatic: true }),
-  /** Grimper jusqu'au plafond (test des règles « maison » s'il est dû) ; client qui possède le token → booléen. */
+  /** Climb up to the ceiling ("house" rules check if due); client that owns the token → boolean. */
   ceiling: token => climbToCeiling(docOf(token)),
-  /** Descendre le long du mur (ou du plafond) de `cells` cases (sans `cells` : la fenêtre) ; client qui possède le token → booléen. */
+  /** Climb down along the wall (or ceiling) by `cells` cells (without `cells`: the window); client that owns the token → boolean. */
   down: (token, { cells=null }={}) => climbDown(docOf(token), { cells }),
-  /** Lâcher le mur ou le plafond (chute volontaire) ; faux si le token ne grimpe pas ou n'est pas à ce client. */
+  /** Let go of the wall or ceiling (voluntary fall); false if the token is not climbing or not on this client. */
   drop: token => dropDown(docOf(token)),
-  /** §216 : les bords d'où le token peut se laisser pendre pour descendre le long du mur : `[{ dir, x, y, elevation, level, drop }]`. */
+  /** §216: the edges from which the token can hang to descend along the wall: `[{ dir, x, y, elevation, level, drop }]`. */
   edges: token => edgesBelowOf(docOf(token)),
-  /** §216 : « S'agripper au bord » `edge` (un élément de `edges`) ; client qui possède le token → booléen. */
+  /** §216: "Grab the edge" `edge` (an element of `edges`); client that owns the token → boolean. */
   grab: (token, edge) => grabEdge(docOf(token), edge),
   toward: climbToward,
-  enabled: climbSystemOn,   // §224 : le système d'escalade et de chute est-il allumé ? Hook `dnd5e-combat.climbSystem` (`enabled`)
-  setEnabled: setClimbSystem   // §224 : MJ seulement → booléen (faux pour un joueur)
+  enabled: climbSystemOn,   // §224: is the climbing and falling system on? Hook `dnd5e-combat.climbSystem` (`enabled`)
+  setEnabled: setClimbSystem   // §224: GM only → boolean (false for a player)
 });
 
 export function registerClimb() {

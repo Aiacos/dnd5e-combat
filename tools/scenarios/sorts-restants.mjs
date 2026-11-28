@@ -1,13 +1,13 @@
 /**
- * Trois sorts codés jamais joués (issues #4 et #5, le 2026-09-27) ; sorts ajoutés à volonté pour le scénario :
- *  1. Représailles infernales (Clerc) : le Zombi le touche ; la réaction part d'office (`autoReact: "first"`) contre le
- *     Zombi — sauvegarde de Dextérité, dégâts de feu entiers ou moitié.
- *  2. Vigueur arcanique (Magicien, blessé) : la fenêtre « combien de dés de vie » s'ouvre chez le MJ, le scénario y
- *     répond (connecteur : list-dialogs, answer-dialog) ; un dé de vie dépensé, les PV remontent du jet.
- *  3. Foulée brumeuse (Magicien) : une destination à 20 ft est acceptée et le token s'y téléporte ; à 45 ft (au-delà des
- *     30 ft), refusée ; sur la case du Zombi (occupée), refusée — par le point de contrôle du moteur (`dnd5e.teleport`),
- *     joué par `api.mcp.teleport` : seul le clic de la planification du cœur ne l'est pas.
- * Remet PV, dés de vie, effets et positions.
+ * Three coded spells never played (issues #4 and #5, 2026-09-27); spells added at will for the scenario:
+ *  1. Hellish Rebuke (Cleric): the Zombie hits him; the Reaction goes off outright (`autoReact: "first"`) against the
+ *     Zombie — Dexterity saving throw, fire damage full or half.
+ *  2. Arcane Vigor (Wizard, wounded): the "how many Hit Dice" window opens on the GM's side, the scenario
+ *     answers it (connector: list-dialogs, answer-dialog); one Hit Die spent, HP go up by the roll.
+ *  3. Misty Step (Wizard): a destination at 20 ft is accepted and the token teleports there; at 45 ft (beyond the
+ *     30 ft), refused; on the Zombie's cell (occupied), refused — by the engine's checkpoint (`dnd5e.teleport`),
+ *     played by `api.mcp.teleport`: only the click of the core's planning is not.
+ * Puts back HP, Hit Dice, effects and positions.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -66,7 +66,7 @@ export default {
       finally { await reset(); }
     };
 
-    // 1. Représailles infernales.
+    // 1. Hellish Rebuke.
     await part("Représailles infernales", async () => {
       const zItems = (await ctx.call("get-actor", { actorId: zombi.actorId })).items ?? [];
       const weapon = zItems.find(i => (i.type === "weapon") && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"));
@@ -74,9 +74,9 @@ export default {
       await ctx.call("move-token", { tokenId: zombi.id, x: p.x - grid, y: p.y, elevation: p.elevation });
       await pause(1000);
       let rebuke = null;
-      // PV au maximum le temps du test : tombé à 0 par le coup, le Clerc ne réagirait plus (vu le 2026-10-20 : 6 PV laissés par une partie).
-      // Le maximum calculé par dnd5e (une fiche de PJ ne le stocke pas : `hp.max` vaut null dans la source — vu le 2026-10-26, le Clerc
-      // laissé à 6 PV était « remis » à 6 et tombait au premier coup).
+      // HP at maximum for the duration of the test: dropped to 0 by the hit, the Cleric would no longer react (seen on
+      // 2026-10-20: 6 HP left by a run). The maximum computed by dnd5e (a PC sheet does not store it: `hp.max` is null in the
+      // source — seen on 2026-10-26, the Cleric left at 6 HP was "put back" to 6 and dropped on the first hit).
       const clericMax = (await ctx.engine("stats", { tokenId: cleric.id }))?.hp?.max ?? hp0.get(cleric.id);
       for ( let i = 0; (i < 20) && !rebuke; i++ ) {
         await ctx.setHp(cleric, Math.max(clericMax, hp0.get(cleric.id)));
@@ -119,7 +119,7 @@ export default {
       ctx.expect((heal > 0) && (after > 1), `les PV remontent du jet : 1 → ${after} (jet ${heal})`);
     });
 
-    // 3. Foulée brumeuse.
+    // 3. Misty Step.
     await part("Foulée brumeuse", async () => {
       const itemId = await ctx.itemId(mage.id, "misty-step");
       const start = await ctx.position(mage);
@@ -135,7 +135,7 @@ export default {
       await pause(1000);
       const far = await ctx.engine("teleport", { tokenId: mage.id, itemId, x: start.x + (dir[0] * 9 * grid), y: start.y + (dir[1] * 9 * grid) });
       ctx.expect(!far.accepted && (far.position.x === start.x) && (far.position.y === start.y), `destination à 45 ft refusée, le token ne bouge pas`);
-      // Le Zombi posé à 10 ft, dans la direction acceptée : seule la case occupée peut refuser.
+      // The Zombie placed at 10 ft, in the accepted direction: only the occupied cell can refuse.
       const zx = start.x + (dir[0] * 2 * grid);
       const zy = start.y + (dir[1] * 2 * grid);
       await ctx.call("move-token", { tokenId: zombi.id, x: zx, y: zy, elevation: start.elevation });

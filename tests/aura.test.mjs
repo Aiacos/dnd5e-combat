@@ -9,29 +9,29 @@ const paladin = over => ({
 });
 const at = (token, distance, disposition = 1) => ({ token, distance, disposition });
 
-describe("qui reçoit l'aura", () => {
+describe("who receives the aura", () => {
   const around = [at("T.pal", 0), at("T.mage", 5), at("T.roublard", 10), at("T.loin", 15), at("T.zombi", 5, -1)];
 
-  it("les alliés à 10 ft ou moins, pas les ennemis, pas ceux qui sont trop loin", () => {
+  it("allies within 10 ft, not enemies, not those who are too far", () => {
     expect(auraRecipients(paladin(), around)).toEqual(["T.mage", "T.roublard"]);
   });
-  it("le porteur seulement si l'aura le prévoit (il a déjà l'effet d'origine)", () => {
+  it("the bearer only if the aura provides for it (it already has the original effect)", () => {
     expect(auraRecipients(paladin({ includeSelf: true }), around)).toContain("T.pal");
     expect(auraRecipients(paladin(), around)).not.toContain("T.pal");
   });
-  it("une aura éteinte ne touche personne", () => {
+  it("an extinguished aura affects no one", () => {
     expect(auraRecipients(paladin({ inactive: true }), around)).toEqual([]);
   });
   it("une aura hostile vise l'autre camp", () => {
     expect(auraRecipients(paladin({ affects: "enemy" }), around)).toEqual(["T.zombi"]);
   });
-  it("une aura sans camp touche tout le monde à portée", () => {
+  it("an aura without a side affects everyone in range", () => {
     expect(auraRecipients(paladin({ affects: "any" }), around)).toEqual(["T.mage", "T.roublard", "T.zombi"]);
   });
 });
 
 describe("plusieurs auras", () => {
-  it("deux auras de même nom ne se cumulent pas : la plus forte l'emporte", () => {
+  it("two auras of the same name do not stack: the stronger one wins", () => {
     const wanted = wantedAuraEffects([
       { source: paladin({ value: 2 }), recipients: ["T.mage"] },
       { source: paladin({ token: "T.pal2", value: 4 }), recipients: ["T.mage", "T.roublard"] }
@@ -41,7 +41,7 @@ describe("plusieurs auras", () => {
       { target: "T.roublard", key: "aura-of-protection", source: "T.pal2", value: 4 }
     ]);
   });
-  it("deux auras de noms différents coexistent sur la même créature", () => {
+  it("two auras with different names coexist on the same creature", () => {
     const wanted = wantedAuraEffects([
       { source: paladin(), recipients: ["T.mage"] },
       { source: paladin({ key: "aura-of-courage" }), recipients: ["T.mage"] }
@@ -50,21 +50,21 @@ describe("plusieurs auras", () => {
   });
 });
 
-describe("plan de mise à jour", () => {
+describe("update plan", () => {
   const wanted = [{ target: "T.mage", key: "aura-of-protection", source: "T.pal", value: 3 }];
 
-  it("crée ce qui manque", () => {
+  it("creates what is missing", () => {
     expect(planAuraChanges([], wanted)).toEqual({ create: wanted, update: [], remove: [] });
   });
-  it("ne touche à rien quand tout est en place", () => {
+  it("touches nothing when everything is in place", () => {
     const existing = [{ id: "e1", ...wanted[0] }];
     expect(planAuraChanges(existing, wanted)).toEqual({ create: [], update: [], remove: [] });
   });
-  it("retire la copie de celui qui est sorti de l'aura", () => {
+  it("removes the copy of the one who left the aura", () => {
     const existing = [{ id: "e1", target: "T.roublard", key: "aura-of-protection", source: "T.pal", value: 3 }];
     expect(planAuraChanges(existing, wanted).remove).toEqual(existing);
   });
-  it("met à jour quand le bonus du porteur change, ou quand un autre porteur prend le relais", () => {
+  it("updates when the bearer's bonus changes, or when another bearer takes over", () => {
     const existing = [{ id: "e1", ...wanted[0], value: 2 }];
     expect(planAuraChanges(existing, wanted).update).toEqual([{ ...wanted[0], id: "e1" }]);
     const other = [{ id: "e1", ...wanted[0], source: "T.pal2" }];
@@ -77,7 +77,7 @@ describe("plan de mise à jour", () => {
 });
 
 describe("auraRecipients — ligne d'effet (P2)", () => {
-  it("un allié à portée mais sans ligne d'effet (plancher entre les deux) ne reçoit pas l'aura ; inconnu la reçoit", () => {
+  it("an ally in range but without line of effect (floor between them) does not receive the aura; unknown receives it", () => {
     const source = { token: "T.pal", key: "protection", disposition: 1, inactive: false, radius: 10, affects: "ally", includeSelf: false, value: 3 };
     const out = auraRecipients(source, [
       { token: "T.a", disposition: 1, distance: 5, lineOfEffect: true },
@@ -89,8 +89,8 @@ describe("auraRecipients — ligne d'effet (P2)", () => {
   });
 });
 
-describe("auras à bonus du Monster Manual (§18.12)", () => {
-  it("types : seulement les morts-vivants alliés, le porteur exclu", async () => {
+describe("Monster Manual bonus auras (§18.12)", () => {
+  it("types: only allied Undead, the bearer excluded", async () => {
     const source = { token: "DK", disposition: -1, inactive: false, radius: 60, affects: "ally", includeSelf: false, value: 12, types: ["undead"] };
     expect(auraRecipients(source, [
       { token: "DK", disposition: -1, distance: 0, type: "undead" },
@@ -100,7 +100,7 @@ describe("auras à bonus du Monster Manual (§18.12)", () => {
     ])).toEqual(["Squelette"]);
   });
 
-  it("le contenu livré déclare des changements valides, sans état", async () => {
+  it("the shipped content declares valid changes, without a condition", async () => {
     const { CONTENT } = await import("../module/scripts/content/index.mjs");
     const { validateEntry } = await import("../module/scripts/core/content.mjs");
     for ( const id of ["aura-of-authority", "marshal-undead", "aura-of-bravery"] ) {
@@ -108,18 +108,18 @@ describe("auras à bonus du Monster Manual (§18.12)", () => {
     }
     expect(CONTENT["aura-of-authority"].aura.changes).toHaveLength(12);
     expect(CONTENT["aura-of-authority"].aura.changes[0]).toEqual({ key: "system.abilities.str.attack.roll.mode", value: "1", type: "add" });
-    expect(validateEntry({ aura: { changes: [{ key: "x", value: 1, type: "add" }] } })).toHaveLength(1);   // valeur en chaîne
+    expect(validateEntry({ aura: { changes: [{ key: "x", value: 1, type: "add" }] } })).toHaveLength(1);   // string value
     expect(validateEntry({ aura: { types: ["mort-vivant"] } })).toHaveLength(1);
   });
 });
 
-describe("Arme d'alerte (SRD 5.2) : l'Avantage à l'Initiative va aussi aux alliés à 9 m", () => {
+describe("Weapon of Warning (SRD 5.2): the Advantage on Initiative also goes to allies within 9 m", () => {
   const aura = AURAS["weapon-of-warning-enchanted"];
-  it("aura de 9 m sur les alliés, sans le porteur (l'enchantement le lui donne déjà)", () => {
+  it("9 m aura on allies, without the bearer (the enchantment already gives it to them)", () => {
     expect(aura).toMatchObject({ includeSelf: false, affects: "ally", radius: 30, units: "ft" });
     expect(aura.changes).toEqual([{ key: "system.attributes.init.roll.mode", value: "1", type: "add" }]);
   });
-  it("l'entrée est valide", () => {
+  it("the entry is valid", () => {
     expect(validateEntry({ aura })).toEqual([]);
   });
 });

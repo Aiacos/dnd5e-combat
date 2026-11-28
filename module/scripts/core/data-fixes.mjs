@@ -1,23 +1,23 @@
 /**
- * O1 (SPEC §335) : défauts de la donnée d'un objet premium que le moteur corrige — coût d'une activité, charges, DD fixe, parts de
- * dégâts, changements d'un effet porté, effet manquant. Clé de contenu `dataFixes`, par identifiant :
- *   [{ path, value, from? }]                    un champ de l'item (`system.activities.<id>.activation.type` pour une activité)
- *   [{ effect, path, value, from? }]            un champ d'un effet de l'item (`system.changes`, `transfer`, `disabled`, `duration`)
- *   [{ effect, create }]                        l'effet manquant, créé avec cet id (`create` : ses données, sans `_id`)
- * Une correction ne s'applique que si sa cible existe (l'activité, l'effet), que le champ diffère déjà de `value`, et, avec `from`,
- * qu'il vaut encore exactement `from` : une donnée modifiée à la main ne bouge pas. Un tableau se remplace en entier.
- * Écrit par le MJ actif à la création de l'objet (runtime/data-fixes.mjs) et par le diagnostic pour ce qui existe déjà.
+ * O1 (SPEC §335): defects in the data of a premium item that the engine fixes — activity cost, charges, fixed DC, damage parts,
+ * changes of a carried effect, missing effect. Content key `dataFixes`, by identifier:
+ *   [{ path, value, from? }]                    a field of the item (`system.activities.<id>.activation.type` for an activity)
+ *   [{ effect, path, value, from? }]            a field of an item effect (`system.changes`, `transfer`, `disabled`, `duration`)
+ *   [{ effect, create }]                        the missing effect, created with this id (`create`: its data, without `_id`)
+ * A fix applies only if its target exists (the activity, the effect), the field already differs from `value`, and, with `from`,
+ * it still equals exactly `from`: hand-edited data does not move. An array is replaced whole.
+ * Written by the active GM when the item is created (runtime/data-fixes.mjs) and by the diagnostic for what already exists.
  */
 
-/** Un champ d'une activité, qui doit exister (une activité entière, elle, peut être ajoutée : « Recharger »). */
+/** A field of an activity, which must exist (a whole activity, however, can be added: "Recharge"). */
 const ACTIVITY_PATH = /^system\.activities\.([A-Za-z0-9]{16})\./;
 
-/** Lecture d'un chemin à points dans un objet simple. */
+/** Reads a dotted path in a plain object. */
 export function getPath(object, path) {
   return String(path).split(".").reduce((o, k) => ((o === null) || (o === undefined)) ? undefined : o[k], object);
 }
 
-/** Égalité de valeurs JSON (ordre des clés d'objet indifférent, ordre des tableaux compté). */
+/** Equality of JSON values (object key order does not matter, array order counts). */
 export function sameValue(a, b) {
   if ( a === b ) return true;
   if ( (a === null) || (b === null) || (typeof a !== "object") || (typeof b !== "object") ) return false;
@@ -28,11 +28,11 @@ export function sameValue(a, b) {
 }
 
 /**
- * La donnée ressemble-t-elle à l'origine déclarée ? Un objet est comparé sur les seules clés que `from` déclare (dnd5e complète la donnée
- * de valeurs par défaut à la création) ; un tableau, élément par élément et de même longueur ; le reste, à l'identique.
+ * Does the data resemble the declared origin? An object is compared on only the keys that `from` declares (dnd5e fills the data
+ * with default values at creation); an array, element by element and of the same length; anything else, identically.
  */
 export function matchesFrom(current, from) {
-  // Un champ nul n'est pas enregistré dans la donnée source : absent vaut null.
+  // A null field is not stored in the source data: absent means null.
   if ( from === null ) return (current === null) || (current === undefined);
   if ( typeof from !== "object" ) return sameValue(current, from);
   if ( Array.isArray(from) ) return Array.isArray(current) && (current.length === from.length) && from.every((v, i) => matchesFrom(current[i], v));
@@ -40,15 +40,15 @@ export function matchesFrom(current, from) {
   return Object.entries(from).every(([k, v]) => matchesFrom(current[k], v));
 }
 
-/** La correction vaut-elle pour ce champ ? (valeur différente, `from` respecté) */
+/** Does the fix apply to this field? (different value, `from` respected) */
 function wanted(current, fix) {
   if ( ("from" in fix) ? !matchesFrom(current, fix.from) : false ) return false;
   return !matchesFrom(current, fix.value);
 }
 
 /**
- * Les corrections d'une copie de sort : celles du sort, puis celles que l'item qui la lance déclare pour son activité
- * (`spellFixes`). Rien des deux : null.
+ * The fixes of a spell copy: those of the spell, then those that the item casting it declares for its activity
+ * (`spellFixes`). Neither: null.
  */
 export function castFixes(own, fromCaster) {
   const all = [...(own ?? []), ...(fromCaster ?? [])];
@@ -56,9 +56,9 @@ export function castFixes(own, fromCaster) {
 }
 
 /**
- * Le plan de correction d'un item, d'après sa donnée source (`item.toObject()` : `system`, `effects` en tableau) et ses corrections.
- * @returns {{ item: object, effects: object[], create: object[], fields: string[] }}  `item` : mise à jour à points ; `effects` :
- *   mises à jour d'effets (`{ _id, <chemin>: valeur }`) ; `create` : effets à créer (avec `_id`) ; `fields` : ce qui change, lisible.
+ * The fix plan of an item, from its source data (`item.toObject()`: `system`, `effects` as an array) and its fixes.
+ * @returns {{ item: object, effects: object[], create: object[], fields: string[] }}  `item`: dotted update; `effects`:
+ *   effect updates (`{ _id, <chemin>: valeur }`); `create`: effects to create (with `_id`); `fields`: what changes, readable.
  */
 export function dataFixPlan(source, fixes) {
   const plan = { item: {}, effects: [], create: [], fields: [] };
@@ -69,7 +69,7 @@ export function dataFixPlan(source, fixes) {
     if ( fix.effect ) {
       const effect = effects.get(fix.effect);
       if ( fix.create ) {
-        // `unless` : l'effet n'est pas créé si la donnée porte déjà celui-là — une version du module qui l'a ajouté depuis.
+        // `unless`: the effect is not created if the data already carries that one — a module version that has added it since.
         if ( !effect && !effects.has(fix.unless) && !plan.create.some(e => e._id === fix.effect) ) {
           plan.create.push({ ...structuredClone(fix.create), _id: fix.effect });
           plan.fields.push(`effect ${fix.effect} (created)`);
@@ -95,7 +95,7 @@ export function dataFixPlan(source, fixes) {
 /** Le plan change-t-il quelque chose ? */
 export const planIsEmpty = plan => !plan || (!Object.keys(plan.item).length && !plan.effects.length && !plan.create.length);
 
-/** Écrit une valeur à un chemin à points d'un objet simple, en créant les objets intermédiaires. */
+/** Writes a value at a dotted path of a plain object, creating the intermediate objects. */
 function setPath(object, path, value) {
   const keys = String(path).split(".");
   const last = keys.pop();
@@ -105,9 +105,10 @@ function setPath(object, path, value) {
 }
 
 /**
- * §456 : la donnée telle que le moteur la rend — une copie de `source` (`system`, `effects` en tableau) où le plan de ses corrections
- * est appliqué (champs, effets corrigés, effets créés). Sert à comparer à la référence corrigée (diagnostic `phb3-items`, qui sinon
- * verrait chaque objet corrigé « différent du Manuel » et le remplacerait sans fin) et à l'ATLAS. `fields` : ce qui a changé.
+ * §456: the data as the engine renders it — a copy of `source` (`system`, `effects` as an array) where the plan of its fixes
+ * is applied (fixed fields, fixed effects, created effects). Used to compare with the fixed reference (`phb3-items`
+ * diagnostic, which otherwise would see every fixed item as "different from the Handbook" and replace it endlessly) and
+ * for the ATLAS. `fields`: what changed.
  * @returns {{ data: object, fields: string[] }}
  */
 export function withDataFixes(source, fixes) {
@@ -124,7 +125,7 @@ export function withDataFixes(source, fixes) {
   return { data, fields: plan.fields };
 }
 
-/** Validation de la clé `dataFixes` d'une entrée : un message par défaut trouvé. */
+/** Validation of the `dataFixes` key of an entry: one message per defect found. */
 export function validateDataFixes(fixes, at="") {
   const ok = Array.isArray(fixes) && fixes.length && fixes.every(f => {
     if ( !f || (typeof f !== "object") || Array.isArray(f) ) return false;

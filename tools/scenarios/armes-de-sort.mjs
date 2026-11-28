@@ -1,10 +1,11 @@
 /**
- * Armes de sort (SPEC §16.41). Monde `ravenloft` : Sylaene (druide 5), Bramo (un Bâton non magique).
- *  1. Lame de feu : « Invoquer une lame » pose une trace sur Sylaene — icône sur le token, lumière (`token.light.*`), liée à la
- *     concentration ; la concentration retirée, la trace part.
- *  2. Arme élémentaire (profil Feu +1, l'arme passée d'office : la fenêtre des armes demande un clic) : le Bâton de Bramo reçoit
- *     l'enchantement, lié à la concentration de Sylaene ; la concentration retirée, l'enchantement part.
- * Non applicable sans Sylaene et Bramo.
+ * Spell weapons (SPEC §16.41). World `ravenloft`: Sylaene (druid 5), Bramo (a non-magical Quarterstaff).
+ *  1. Flame Blade: "Summon a blade" puts a trace on Sylaene — icon on the token, light (`token.light.*`), tied to
+ *     Concentration; once Concentration is removed, the trace goes away.
+ *  2. Elemental Weapon (Fire +1 profile, weapon passed automatically: the weapons window asks for a click): Bramo's
+ *     Quarterstaff receives the enchantment, tied to Sylaene's Concentration; once Concentration is removed, the enchantment
+ *     goes away.
+ * Not applicable without Sylaene and Bramo.
  */
 const MODULE_ID = "dnd5e-combat";
 const FIRE_PLUS_ONE = "JSh7FcMkMvrPuUze";
@@ -43,7 +44,7 @@ export default {
     const after = ((await actorOf(druid.actorId)).effects ?? []).find(e => e.flags?.[MODULE_ID]?.trace);
     ctx.expect(!after, "concentration retirée : la lame disparaît");
 
-    // 1 bis. Flammes : trace visible, lumière 20/40, coût « action Bonus » sur la carte ; relancée, la flamme est remplacée.
+    // 1 bis. "Flames": visible trace, light 20/40, "Bonus Action" cost on the card; recast, the flame is replaced.
     ctx.restore(() => ctx.removeEffectsNamed(druid, /Flammes|Produce Flame/i));
     const flameTraces = async () => ((await actorOf(druid.actorId)).effects ?? []).filter(e => /produce-flame|Flammes/i.test(e.name ?? "") && e.flags?.[MODULE_ID]?.trace);
     const cast = await ctx.use({ tokenId: druid.id, identifier: "produce-flame", activityId: "MModRd17Oi6hhztj" });
@@ -61,7 +62,7 @@ export default {
     ctx.expect((await flameTraces()).length === 1, "Flammes relancé : une seule flamme");
     await ctx.removeEffectsNamed(druid, /Flammes|Produce Flame/i);
 
-    // 2. Arme élémentaire sur le Bâton de Bramo.
+    // 2. Elemental Weapon on Bramo's Quarterstaff.
     const staff = ((await actorOf(bramo.actorId)).items ?? []).find(i => i.type === "weapon" && i.system?.identifier === "staff");
     ctx.expect(!!staff, "Bramo a un Bâton");
     if ( !staff ) return;

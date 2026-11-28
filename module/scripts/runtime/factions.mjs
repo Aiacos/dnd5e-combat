@@ -1,14 +1,14 @@
 /**
- * §181 : les factions au jeu — réglages, table du cœur tenue à jour, disposition déduite, rancunes, API.
+ * §181: factions in play — settings, core table kept up to date, deduced disposition, grudges, API.
  *
- * - La table du cœur (`core/factions.mjs`) est rechargée au chargement du canevas, au changement du réglage et quand les rancunes
- *   de la scène affichée changent ; hook `dnd5e-combat.factionsChanged` ensuite (les auras se recalculent).
- * - **Disposition déduite** (MJ actif) : seule une relation **explicite** d'une faction avec les PJ (`party`) pose la disposition de
- *   ses tokens (hostile → Hostile, neutre → Neutre, alliée → Amical), à la création du token, à l'affectation et au changement de
- *   la matrice. Sans relation explicite, la disposition reste au MJ.
- * - **Rancune** (MJ actif, sortie de résolution d'une attaque) : attaquer une créature dont la faction n'est pas hostile à la vôtre,
- *   **d'après une relation explicite de la matrice**, rend les deux factions hostiles sur cette scène (flag `grudges`). Sans
- *   relation explicite, rien ne change : c'est ce qui garde un monde sans factions tel qu'il était.
+ * - The core table (`core/factions.mjs`) is reloaded when the canvas loads, when the setting changes and when the grudges
+ *   of the displayed scene change; hook `dnd5e-combat.factionsChanged` afterwards (auras recalculate).
+ * - **Deduced disposition** (active GM): only an **explicit** relation of a faction with the PCs (`party`) sets the disposition of
+ *   its tokens (hostile → Hostile, neutral → Neutral, allied → Friendly), at token creation, at assignment and when
+ *   the matrix changes. Without an explicit relation, the disposition is left to the GM.
+ * - **Grudge** (active GM, attack resolution output): attacking a creature whose faction is not hostile to yours,
+ *   **per an explicit matrix relation**, makes both factions hostile on that scene (flag `grudges`). Without
+ *   an explicit relation, nothing changes: this keeps a world without factions as it was.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,19 +21,19 @@ import {
 } from "../adapter/factions.mjs";
 
 
-/** Recharger la table et prévenir (auras, voisins). */
+/** Reload the table and notify (auras, neighbors). */
 function changed(scene=canvas?.scene ?? null) {
   refreshFactionTable(scene);
-  // §181 : sur ce client, après chaque rechargement de la table des factions (chargement, scène affichée, réglages, rancunes de la scène
-  // affichée ; et chez l'appelant de `assign` / `stance`) : `({ scene })`. Les auras se recalculent ; lecture seule.
+  // §181: on this client, after each reload of the factions table (load, displayed scene, settings, grudges of the displayed
+  // scene; and from the caller of `assign` / `stance`): `({ scene })`. Auras recalculate; read-only.
   Hooks.callAll(`${MODULE_ID}.factionsChanged`, { scene });
 }
 
 /* -------------------------------------------- */
-/*  Réglage                                      */
+/*  Setting                                      */
 /* -------------------------------------------- */
 
-/** Écrire le réglage (MJ) : normalisé, puis dispositions resynchronisées. */
+/** Write the setting (GM): normalized, then dispositions resynchronized. */
 export async function saveFactions(value) {
   const before = factionSettings();
   const next = normalizeFactions(value);
@@ -44,7 +44,7 @@ export async function saveFactions(value) {
   return next;
 }
 
-/** Ajouter une faction (id tiré du nom). Rend son id. */
+/** Add a faction (id derived from the name). Returns its id. */
 export async function addFaction({ name, color }={}) {
   const current = factionSettings();
   const base = (name ?? "faction").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-")
@@ -55,7 +55,7 @@ export async function addFaction({ name, color }={}) {
   return id;
 }
 
-/** Retirer une faction : ses relations partent avec elle ; les flags qui la nomment sont ignorés (faction inconnue). */
+/** Remove a faction: its relations go with it; flags that name it are ignored (unknown faction). */
 export async function removeFaction(id) {
   if ( id === PARTY ) return false;
   const current = factionSettings();
@@ -63,7 +63,7 @@ export async function removeFaction(id) {
   return true;
 }
 
-/** Poser une relation (`null` : suivre la disposition). */
+/** Set a relation (`null`: follow the disposition). */
 export async function setRelation(a, b, relation) {
   if ( a === b ) return;
   const current = factionSettings();
@@ -73,7 +73,7 @@ export async function setRelation(a, b, relation) {
   await saveFactions({ ...current, relations });
 }
 
-/** Les relations suggérées, sous celles déjà posées. */
+/** The suggested relations, below those already set. */
 export async function applySuggested() {
   const current = factionSettings();
   await saveFactions({ ...current, relations: { ...suggestedRelations(current.factions), ...current.relations } });
@@ -86,8 +86,8 @@ export async function applySuggested() {
 const docOf = t => t?.document ?? t ?? null;
 
 /**
- * Affecter des tokens (ou des acteurs) à une faction ; `null` : retirer l'affectation (retour aux règles), `"none"` : aucune
- * faction. Un acteur : vaut pour tous ses tokens qui n'en ont pas une à eux.
+ * Assign tokens (or actors) to a faction; `null`: remove the assignment (back to the rules), `"none"`: no
+ * faction. An actor: applies to all its tokens that do not have one of their own.
  */
 export async function assignFaction(documents, id) {
   const list = (Array.isArray(documents) ? documents : [documents]).map(docOf).filter(Boolean);
@@ -95,17 +95,17 @@ export async function assignFaction(documents, id) {
     if ( (id === null) || (id === undefined) ) await d.unsetFlag(MODULE_ID, "faction");
     else await d.setFlag(MODULE_ID, "faction", id);
   }
-  // Un acteur affecté : ses tokens qui portaient leur propre faction gardent la leur ; on resynchronise tout ce qui en dépend.
+  // An assigned actor: its tokens that carried their own faction keep it; everything that depends on it is resynchronized.
   await syncDispositions({ documents: list });
   changed();
   return list.length;
 }
 
 /* -------------------------------------------- */
-/*  Disposition déduite                          */
+/*  Deduced disposition                          */
 /* -------------------------------------------- */
 
-/** Les tokens à remettre d'aplomb : ceux des factions touchées, ou ceux de ces documents (tokens, ou tokens de ces acteurs). */
+/** The tokens to bring back in line: those of the affected factions, or of these documents (tokens, or tokens of these actors). */
 async function syncDispositions({ factions=null, documents=null }={}) {
   if ( !game.user.isGM ) return;
   refreshFactionTable();
@@ -124,7 +124,7 @@ async function syncDispositions({ factions=null, documents=null }={}) {
   }
 }
 
-/** Un token posé : la disposition que sa faction impose, si elle en impose une. */
+/** A token placed: the disposition its faction imposes, if it imposes one. */
 function onPreCreateToken(token, data) {
   const wanted = dispositionFor(factionOf(token));
   if ( (wanted !== null) && (wanted !== token.disposition) ) token.updateSource({ disposition: wanted });
@@ -134,7 +134,7 @@ function onPreCreateToken(token, data) {
 /*  Rancunes                                     */
 /* -------------------------------------------- */
 
-/** Rendre deux camps hostiles sur une scène (ids de faction ou uuid de token) ; `clear` : lever cette rancune (ou toutes). */
+/** Make two sides hostile on a scene (faction ids or token uuid); `clear`: lift that grudge (or all of them). */
 export async function grudge(scene, a, b, { clear=false }={}) {
   if ( !scene ) return [];
   let list = (scene.getFlag(MODULE_ID, "grudges") ?? []).filter(g => Array.isArray(g) && (g.length === 2));
@@ -146,7 +146,7 @@ export async function grudge(scene, a, b, { clear=false }={}) {
   return list;
 }
 
-/** Sortie de résolution d'une attaque : la victime d'une faction non hostile (relation explicite) en garde rancune. */
+/** Attack resolution output: the victim of a non-hostile faction (explicit relation) holds a grudge for it. */
 async function onResolution(resolution) {
   if ( !resolution?.plan?.attack ) return;
   const scene = canvas.scene;
@@ -163,7 +163,7 @@ async function onResolution(resolution) {
     if ( !relation || (relation === "hostile") ) continue;
     await grudge(scene, a.faction, b.faction);
     log(`factions: ${a.faction} attacked ${b.faction} — grudge on this scene`);
-    // Une rancune envers les PJ : la disposition des tokens de la victime suit, sur cette scène.
+    // A grudge against the PCs: the disposition of the victim's tokens follows, on that scene.
     const other = a.faction === PARTY ? b.faction : (b.faction === PARTY ? a.faction : null);
     if ( other ) {
       const updates = scene.tokens.filter(tok => (factionOf(tok) === other) && !tok.getFlag(MODULE_ID, "stance") && (tok.disposition !== -1))
@@ -177,35 +177,36 @@ async function onResolution(resolution) {
 /*  API et inscription                           */
 /* -------------------------------------------- */
 
-/** `api.factions` (§181) : lecture pour tous, écriture pour le MJ. */
+/** `api.factions` (§181): read for everyone, write for the GM. */
 export const factionsApi = Object.freeze({
   /**
-   * L'id de faction d'un token (posée sur le token, sinon sur l'acteur, sinon `party` pour un PJ, sinon les règles du réglage), ou null.
+   * A token's faction id (set on the token, else on the actor, else `party` for a PC, else the setting's rules), or null.
    */
   of: token => factionOf(token),
-  /** La faction posée à la main (token, sinon acteur), sans les règles ni `party` ; null si aucune. */
+  /** The faction set by hand (token, else actor), without the rules or `party`; null if none. */
   explicit: token => explicitFaction(token),
-  /** La relation de deux tokens : `"hostile"`, `"neutral"` ou `"allied"` (matrice des factions, sinon déduite des dispositions). */
+  /** The relation of two tokens: `"hostile"`, `"neutral"` or `"allied"` (factions matrix, else deduced from the dispositions). */
   relation: (a, b) => relationBetween(a, b),
-  /** Le camp d'un token tel que le moteur le compare : `{ disposition, faction, uuid, stance }`. */
+  /** A token's side as the engine compares it: `{ disposition, faction, uuid, stance }`. */
   side: token => sideOf(token),
-  /** Les factions du réglage, chacune avec son nom affiché (`label`). */
+  /** The setting's factions, each with its displayed name (`label`). */
   list: () => factionSettings().factions.map(f => ({ ...f, label: factionName(f) })),
-  /** Une copie de la matrice des relations : `{ "<id>|<id>": relation }` (une paire absente suit la disposition). */
+  /** A copy of the relations matrix: `{ "<id>|<id>": relation }` (an absent pair follows the disposition). */
   relations: () => ({ ...factionSettings().relations }),
-  /** Le nom affiché de la faction `id` (traduit, sauf si le MJ l'a renommée). */
+  /** The displayed name of faction `id` (translated, unless the GM renamed it). */
   name: id => factionName(factionSettings().factions.find(f => f.id === id)),
   /**
-   * Pose la faction `id` (null : la retire) sur des tokens ou des acteurs — droit d'écrire ces documents requis (le MJ) ; rend leur nombre.
+   * Sets faction `id` (null: removes it) on tokens or actors — write permission on these documents required (the GM);
+   * returns their count.
    */
   assign: (documents, id) => assignFaction(documents, id),
   setRelation, add: addFaction, remove: removeFaction, suggest: applySuggested,
   /**
-   * Rend deux camps (ids de faction ou uuid de token) hostiles sur une scène (la scène affichée par défaut), ou lève cette rancune
-   * (`clear`) ; écrit la scène (MJ) et rend la liste des rancunes.
+   * Makes two sides (faction ids or token uuid) hostile on a scene (the displayed scene by default), or lifts that grudge
+   * (`clear`); writes the scene (GM) and returns the list of grudges.
    */
   grudge: (a, b, { clear=false, scene=canvas?.scene }={}) => grudge(scene, a, b, { clear }),
-  /** Les rancunes d'une scène (la scène affichée par défaut) : `[[a, b], …]`. */
+  /** A scene's grudges (the displayed scene by default): `[[a, b], …]`. */
   grudges: (scene=canvas?.scene) => scene?.getFlag(MODULE_ID, "grudges") ?? [],
   /** Poser ou lever l'attitude d'un token (`"neutral"` : rendu, l'ennemi de personne hors de sa faction). */
   stance: async (token, stance=null) => {

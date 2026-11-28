@@ -1,10 +1,10 @@
 /**
- * Types de créature et immunités (SPEC §16.8), sur le Zombi : mort-vivant, immunisé contre Épuisement et Empoisonné.
- *  1. Immobilisation de personne (« un Humanoïde ») : non affecté, type — aucune sauvegarde, rien de posé.
- *  2. Sommeil (« immunité à l'Épuisement : réussite automatique ») : non affecté, règle du contenu.
- *  3. Rayon empoisonné (attaque, dégâts de poison ET Empoisonné) : les dégâts passent par le système (immunité au
- *     poison de la fiche comprise), mais l'effet Empoisonné n'est pas posé — immunité à l'état.
- * Les sorts sont donnés au Magicien le temps du scénario.
+ * Creature types and Immunities (SPEC §16.8), on the Zombie: Undead, immune to Exhaustion and Poisoned.
+ *  1. Hold Person ("a Humanoid"): not affected, type — no saving throw, nothing placed.
+ *  2. Sleep ("Immunity to Exhaustion: automatic success"): not affected, content rule.
+ *  3. Ray of Sickness (attack, poison damage AND Poisoned): the damage goes through the system (the sheet's poison
+ *     Immunity included), but the Poisoned effect is not placed — condition Immunity.
+ * The spells are given to the Wizard for the scenario's duration.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -23,7 +23,7 @@ export default {
     await ctx.ensureItem(mage, "Compendium.dnd5e.spells24.Item.phbsplRayofSickn");
     const statuses = async () => (await ctx.effects(zombi)).flatMap(e => e.statuses ?? []);
 
-    // 1. Pas un humanoïde.
+    // 1. Not a Humanoid.
     const hold = await ctx.use({ tokenId: mage.id, identifier: "hold-person", activityType: "save", targetTokenIds: [zombi.id] });
     const r1 = await ctx.settle(hold.usageMessageId);
     const t1 = r1.targets.find(t => t.name === "Zombi");
@@ -33,7 +33,7 @@ export default {
     ctx.expect(!(await statuses()).includes("paralyzed"), "le Zombi n'est pas Paralysé");
     await ctx.removeStatusEffects(mage, "concentrating");
 
-    // 2. Immunisé contre l'Épuisement : Sommeil ne l'atteint pas (zone réduite à sa case).
+    // 2. Immune to Exhaustion: Sleep does not reach it (area reduced to its cell).
     const box = await ctx.box(zombi);
     const sleep = await ctx.use({ tokenId: mage.id, identifier: "sleep", activityType: "save", area: { shape: "rectangle", ...box } });
     const r2 = await ctx.settle(sleep.usageMessageId);
@@ -44,7 +44,7 @@ export default {
     ctx.expect(!(await statuses()).includes("incapacitated"), "le Zombi n'est pas Neutralisé");
     await ctx.removeStatusEffects(mage, "concentrating");
 
-    // 3. Immunisé contre Empoisonné : Rayon empoisonné, rejoué jusqu'à toucher.
+    // 3. Immune to Poisoned: Ray of Sickness, replayed until a hit.
     let hit = null;
     for ( let i = 0; i < 20 && !hit; i++ ) {
       await ctx.setHp(zombi, hp0);

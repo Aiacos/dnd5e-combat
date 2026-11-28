@@ -1,18 +1,18 @@
 /**
- * Options de joueur de Ravenloft: The Horrors Within (SPEC §19.9), monde `dnd-6`. Les items sont prêtés depuis le compendium du
- * module premium, traduit par Babele (noms français, `system.identifier` vide) : le moteur les reconnaît par leur source.
- *  - Morsure vampirique (Dhampir), prêtée au Guerrier : touché ⇔ la question « Drain / Renforcement » ; Drain : le Guerrier
- *    regagne les PV perdus par le Bandit ; Renforcement : l'effet porte ce montant, et tombe au jet d'attaque suivant ; contre le
- *    Zombi (Mort-vivant), aucune question ;
- *  - Cercle de mortalité, prêté au Clerc : Attraction de la mort (+1d4 nécrotique) contre un Bandit blessé, rien contre un Bandit
- *    indemne, une fois par tour en combat ; Retour à la vie : Mot de guérison sur le Guerrier à 0 PV → le maximum (2d4 + 3 = 11) ;
- *  - Chemin vers la tombe (sans son coût de Conduit divin : le Clerc est niveau 1) : le Bandit maudit attaque avec le
- *    Désavantage ; le Paladin le touche → question au Clerc, « radiant » : la malédiction cesse, 1 dégât radiant (niveau de clerc) ;
- *  - Sentinelle au seuil de la mort : le Bandit touche le Guerrier En sang → le Clerc réagit (fenêtre « un autre est touché »),
- *    dégâts divisés par deux ; le Guerrier indemne → pas de fenêtre.
- * Pose la distribution de référence de Restored Keep (tools/lib/stages.mjs) : le Bandit et le Zombi se placent par rapport
- * au Guerrier, au Clerc et au Paladin.
- * Remet PV, positions, effets ; retire les items prêtés.
+ * Player options from Ravenloft: The Horrors Within (SPEC §19.9), world `dnd-6`. The items are lent from the premium module's
+ * compendium, translated by Babele (French names, empty `system.identifier`): the engine recognizes them by their source.
+ *  - Vampiric Bite (Dhampir), lent to the Fighter: on a hit ⇔ the "Drain / Strengthening" question; Drain: the Fighter
+ *    regains the HP lost by the Bandit; Strengthening: the effect carries that amount, and ends at the next attack roll;
+ *    against the Zombie (Undead), no question;
+ *  - Circle of Mortality, lent to the Cleric: Death's Attraction (+1d4 necrotic) against a wounded Bandit, nothing against an
+ *    unharmed Bandit, once per turn in combat; Return to Life: Healing Word on the Fighter at 0 HP → the maximum (2d4 + 3 = 11);
+ *  - Path to the Grave (without its Channel Divinity cost: the Cleric is level 1): the cursed Bandit attacks with
+ *    Disadvantage; the Paladin hits it → question to the Cleric, "radiant": the curse ends, 1 radiant damage (cleric level);
+ *  - Sentinel at Death's Door: the Bandit hits the Bloodied Fighter → the Cleric reacts (window "another is hit"),
+ *    damage halved; the unharmed Fighter → no window.
+ * Places the reference distribution of Restored Keep (tools/lib/stages.mjs): the Bandit and the Zombie are placed relative
+ * to the Fighter, the Cleric and the Paladin.
+ * Restores HP, positions, effects; removes the lent items.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -24,10 +24,10 @@ const PATH = "rhwCSPathtotheCb";
 const SENTINEL = "rhwCSSentinelaOa";
 const HEALING_WORD = "Compendium.dnd-players-handbook.spells.Item.phbsplHealingWor";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-/** L'effet de Renforcement posé par le moteur porte le montant dans son nom : « … (+6) ». */
+/** The Strengthening effect placed by the engine carries the amount in its name: "… (+6)". */
 const BOOSTED = /\(\+\d+\)/;
 
-/** `a.b.c` = valeur, dans un objet simple. */
+/** `a.b.c` = value, in a plain object. */
 function setPath(obj, path, value) {
   const keys = path.split(".");
   let o = obj;
@@ -44,8 +44,8 @@ export default {
     if ( need.some(n => !tokens.some(t => t.name === n)) ) { ctx.log(`${need.join(", ")} requis : non applicable`); return; }
     const packs = await ctx.call("list-compendiums", {}).catch(() => null);
     if ( !JSON.stringify(packs ?? "").includes(RHW) ) { ctx.log("module Ravenloft absent : non applicable"); return; }
-    // Les cibles sont placées par rapport au Guerrier, au Clerc, au Paladin : on pose la distribution de référence
-    // (les autres tokens compris : un voisin sur une case d'arrivée ou sur la ligne de vue fausse tout), remise à la fin.
+    // The targets are placed relative to the Fighter, the Cleric, the Paladin: we place the reference distribution
+    // (other tokens included: a neighbor on an arrival cell or on the line of sight spoils everything), restored at the end.
     await ctx.stage(RESTORED_KEEP);
 
     const guerrier = await ctx.token("Guerrier");
@@ -54,8 +54,8 @@ export default {
     const paladin = await ctx.token("Paladin");
     const zombiDoc = tokens.find(t => (t.name === "Zombi") && (t.level === bandit.level) && !t.hidden);
     const grid = await ctx.gridSize();
-    // Les PV du Bandit sont comptés sur sa fiche du Manuel des monstres (11) : un maximum plus haut laissé dans son delta (200, vu le
-    // 2026-10-26) rendait « indemne » un Bandit à 11 PV blessé. Maximum de 11 le temps du scénario (le filet de sécurité le remet).
+    // The Bandit's HP are counted from its Monster Manual sheet (11): a higher maximum left in its delta (200, seen on
+    // 2026-10-26) made a wounded Bandit at 11 HP count as "unharmed". Maximum of 11 for the scenario (the safety net restores it).
     await ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.attributes.hp.max": 11 } });
     const homes = new Map();
     for ( const t of [guerrier, clerc, bandit, paladin, zombiDoc].filter(Boolean) ) homes.set(t.id, { pos: await ctx.position(t), hp: await ctx.hp(t) });
@@ -74,7 +74,7 @@ export default {
     };
     ctx.restore(remettre);
 
-    /** Prête un item du module Ravenloft (source notée dans `flags.dnd5e.sourceId`, comme dnd5e le fait). */
+    /** Lends an item from the Ravenloft module (source noted in `flags.dnd5e.sourceId`, as dnd5e does). */
     const lend = async (t, id, patch={}) => {
       const uuid = `Compendium.${RHW}.Item.${id}`;
       const { data } = await ctx.call("get-compendium-entry", { uuid });
@@ -101,7 +101,7 @@ export default {
       const errors = await ctx.clientErrors();
       ctx.expect(!errors.length, `${name} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
-    /** Attaque jusqu'à toucher ; `onHit(r, t)` rend vrai pour s'arrêter. */
+    /** Attacks until a hit; `onHit(r, t)` returns true to stop. */
     const hitUntil = async (attacker, itemId, target, onHit, { tries=20, before=null, usage={} }={}) => {
       for ( let n = 1; n <= tries; n++ ) {
         const state = before ? await before() : null;
@@ -197,7 +197,7 @@ export default {
         return true;
       }, { before: async () => { await ctx.setHp(bandit, 11); since = await ctx.lastMessageId(); } });
       ctx.expect(full, "masse d'armes : touché (20 essais au plus)");
-      // Une fois par tour, en combat : deux touches dans le même tour, le second sans le dé.
+      // Once per turn, in combat: two hits in the same turn, the second without the die.
       await ctx.startCombat([clerc, bandit]);
       let hits = 0;
       const seen = [];
@@ -216,7 +216,7 @@ export default {
       await ctx.setHp(guerrier, 0);
       await pause(1500);
       const u = await ctx.use({ tokenId: clerc.id, itemId: heal, activityType: "heal", consume: false, targetTokenIds: [guerrier.id] });
-      // Le soin attend le clic « Soins » de la carte (api.mcp.rollCard), comme au scénario sorts-couverts.
+      // The healing waits for the click on the card's "Healing" (api.mcp.rollCard), as in the sorts-couverts scenario.
       await pause(1200);
       await ctx.engine("rollCard", { messageId: u.usageMessageId });
       await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
@@ -234,7 +234,7 @@ export default {
       await pause(1500);
       const cursed = async () => (await ctx.effects(bandit)).some(e => (e.statuses ?? []).includes("cursed"));
       if ( !ctx.expect(await cursed(), "le Bandit est maudit (effet « cursed »)") ) return;
-      // Le maudit attaque avec le Désavantage.
+      // The cursed one attacks with Disadvantage.
       const since = await ctx.lastMessageId();
       const a = await ctx.use({ tokenId: bandit.id, identifier: "scimitar", activityType: "attack", targetTokenIds: [paladin.id] });
       await ctx.settle(a.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
@@ -243,7 +243,7 @@ export default {
       ctx.expect((m.disadvantage ?? []).some(r => r.who === "content"),
         `attaque du maudit : Désavantage déclaré (${(m.disadvantage ?? []).map(r => `${r.who}.${r.key}`).join(", ") || "aucun"})`);
       await ctx.setHp(paladin, homes.get(paladin.id).hp);
-      // Le Paladin (allié que le Clerc voit) le touche : question au Clerc, « radiant ».
+      // The Paladin (an ally the Cleric sees) hits it: question to the Cleric, "radiant".
       const done = await hitUntil(paladin, await ctx.itemId(paladin.id, "longsword"), bandit, async (r, t, u2, state) => {
         const d = await dialogue(state.known);
         if ( !ctx.expect(!!d, `touché par le Paladin : la question de la malédiction s'ouvre (${(d?.buttons ?? []).map(b => b.label).join(", ")})`) ) return true;
@@ -260,7 +260,7 @@ export default {
     const sentinel = await lend(clerc, SENTINEL);
     await part("Sentinelle au seuil de la mort", async () => {
       await place(bandit, g.x + grid, g.y);
-      // Indemne : pas de fenêtre pour le Guerrier.
+      // Unharmed: no window for the Fighter.
       const whole = await hitUntil(bandit, await ctx.itemId(bandit.id, "scimitar"), guerrier, async (r, t) => {
         ctx.expect(!t.reaction && !t.halved, `Guerrier indemne touché : personne ne réagit (${t.reaction ?? "—"})`);
         return true;

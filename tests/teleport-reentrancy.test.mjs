@@ -1,13 +1,13 @@
 /**
- * Issue #108 : deux téléportations de soi lancées l'une pendant l'autre sur le même client (le joueur relance la Foulée brumeuse
- * alors que la visée de la première est encore ouverte). Chacune garde sa propre visée : la fin de la première ne retire pas celle
- * de la seconde.
+ * Issue #108: two self-teleports launched one during the other on the same client (the player relaunches Misty Step
+ * while the first one's targeting is still open). Each keeps its own targeting: the end of the first does not remove that
+ * of the second.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 
 let teleportSelf, currentTeleport;
 
-/** Une activité native « teleport » dont la planification du cœur reste ouverte jusqu'à `close(results)`. */
+/** A native "teleport" activity whose core planning stays open until `close(results)`. */
 function nativeTeleport(token) {
   const activity = { type: "teleport", id: "a", range: { units: "self" }, canPlanTeleport: true,
     teleport: { value: 30, units: "ft" }, getUsageToken: () => token,
@@ -25,8 +25,8 @@ beforeAll(async () => {
   ({ teleportSelf, currentTeleport } = await import("../module/scripts/runtime/teleport.mjs"));
 }, 60000);
 
-describe("issue #108 : téléportations de soi qui se chevauchent", () => {
-  it("la première abandonnée ne casse pas la seconde, qui garde sa visée jusqu'à sa propre fin", async () => {
+describe("issue #108: self-teleports that overlap", () => {
+  it("the first one abandoned does not break the second, which keeps its targeting until its own end", async () => {
     const scene = { grid: { units: "ft" } };
     const token = { uuid: "Scene.s.Token.t", parent: scene, _source: { x: 0, y: 0, elevation: 0 }, object: { control() {} } };
     const first = nativeTeleport(token), second = nativeTeleport(token);
@@ -35,11 +35,11 @@ describe("issue #108 : téléportations de soi qui se chevauchent", () => {
     const two = teleportSelf(second);
     await new Promise(resolve => setTimeout(resolve, 0));
     const aim = currentTeleport();
-    first.close([]);                                   // Échap sur la première visée
+    first.close([]);                                   // Escape on the first targeting
     await expect(one).resolves.toBe(false);
-    expect(currentTeleport()).toBe(aim);               // la visée de la seconde est toujours là
+    expect(currentTeleport()).toBe(aim);               // the second one's targeting is still there
     second.close([]);
-    await expect(two).resolves.toBe(false);            // avant : TypeError, `teleporting` était null
+    await expect(two).resolves.toBe(false);            // before: TypeError, `teleporting` was null
     expect(currentTeleport()).toBeNull();
   });
 });

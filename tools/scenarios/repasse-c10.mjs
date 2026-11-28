@@ -1,10 +1,10 @@
 /**
- * §305, lot C10 de la repasse terme par terme : invocations, compagnons, familiers. Arène des sorts (Lanceur).
- * Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source) et remet tout.
- *  - Appel de destrier : le Lanceur meurt, le destrier disparaît ;
- *  - Compagnon sauvage : le familier reste au-delà de la durée de 2014 (heures), et part au Repos long du Lanceur. §438 : le Compagnon
- *    sauvage du Manuel 3.0.0 n'a plus d'activité d'invocation ; son activité « cast » lance Appel de familier, dont dnd5e pose une copie
- *    sur la fiche (`flags.dnd5e.cachedFor`) : l'invocation part de cette copie, et la règle du Compagnon doit encore s'appliquer.
+ * §305, batch C10 of the term-by-term review: summons, companions, familiars. Spells Arena (Caster).
+ * Each part lends its items from the Player's Handbook (with their source) and restores everything.
+ *  - Find Steed: the Caster dies, the steed disappears;
+ *  - Wild Companion: the familiar stays beyond the 2014 duration (hours), and leaves at the Caster's Long Rest. §438: Handbook
+ *    3.0.0's Wild Companion no longer has a summoning activity; its "cast" activity casts Find Familiar, of which dnd5e places
+ *    a copy on the sheet (`flags.dnd5e.cachedFor`): the summoning comes from that copy, and the Companion's rule must still apply.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -55,7 +55,7 @@ export default {
     const present = async id => !!(await ctx.call("get-scene-object", { type: "Token", objectId: id }).catch(() => null))?.data;
     const until = async test => { for ( let i = 0; i < 20; i++ ) { if ( await test() ) return true; await pause(500); } return false; };
 
-    // 1. Appel de destrier, puis la mort du Lanceur.
+    // 1. Find Steed, then the Caster's death.
     const steed = await lend(`${PHB}.spells.Item.phbsplFindSteed0`, { "system.method": "atwill" });
     const s = await ctx.engine("summonAt", { tokenId: caster.id, itemId: steed, x: home.x + 2 * grid, y: home.y });
     const st = s.tokens?.[0];
@@ -72,9 +72,9 @@ export default {
     await lend(`${PHB}.classes.Item.phbdrdDruid00000`, { "system.levels": 2 });
     await lend(`${PHB}.classes.Item.phbdrdWildShape0`, { "system.uses.spent": 0 });
     const companion = await lend(`${PHB}.classes.Item.phbdrdWildCompan`);
-    // La créature que le scénario `familier` fournit à l'invocation (un acteur du monde), sans le navigateur de compendium.
+    // The creature that the `familier` scenario supplies to the summoning (a world actor), without the compendium browser.
     const owl = "Actor.mmStirge00000000";
-    // §438 : forme 3.0.0, la copie d'Appel de familier que dnd5e a posée pour l'activité « cast » du Compagnon (créée avec l'item).
+    // §438: 3.0.0 form, the Find Familiar copy that dnd5e placed for the Companion's "cast" activity (created with the item).
     let from = companion;
     for ( let i = 0; i < 10; i++ ) {
       const items = (await ctx.call("get-actor", { actorId: caster.actorId })).items ?? [];

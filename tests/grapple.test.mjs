@@ -3,15 +3,15 @@ import { attackModifiers, grappleHolds } from "../module/scripts/core/conditions
 
 const base = { attacker: ["grappled"], target: [], adjacent: true, ranged: false };
 
-describe("Agrippé (règles 2024)", () => {
-  it("désavantage contre toute cible autre que l'agrippeur", () => {
+describe("Grappled (2024 rules)", () => {
+  it("Disadvantage against any target other than the grappler", () => {
     expect(attackModifiers({ ...base, grappledElsewhere: true }).disadvantage).toEqual([{ who: "attacker", key: "grappled" }]);
   });
-  it("aucun désavantage contre l'agrippeur, ni si l'agrippeur est inconnu", () => {
+  it("no Disadvantage against the grappler, nor if the grappler is unknown", () => {
     expect(attackModifiers({ ...base, grappledElsewhere: false }).disadvantage).toEqual([]);
     expect(attackModifiers({ ...base, grappledElsewhere: null }).disadvantage).toEqual([]);
   });
-  it("l'empoignade cesse si l'agrippeur est neutralisé ou trop loin", () => {
+  it("the grapple ends if the grappler is Incapacitated or too far", () => {
     expect(grappleHolds({ grapplerStatuses: [], withinReach: true })).toBe(true);
     expect(grappleHolds({ grapplerStatuses: [], withinReach: false })).toBe(false);
     expect(grappleHolds({ grapplerStatuses: ["unconscious"], withinReach: true })).toBe(false);
@@ -20,8 +20,8 @@ describe("Agrippé (règles 2024)", () => {
   });
 });
 
-describe("Soutien (règles 2024), partie attaque", () => {
-  it("un allié a distrait la cible : avantage", () => {
+describe("Help (2024 rules), attack part", () => {
+  it("an ally distracted the target: Advantage", () => {
     const r = attackModifiers({ attacker: [], target: [], adjacent: true, ranged: false, helped: true });
     expect(r.advantage).toEqual([{ who: "situation", key: "helped" }]);
   });

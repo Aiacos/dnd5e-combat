@@ -1,18 +1,18 @@
 /**
- * §501 (B21) — « si elle devait perdre ses réactions, elle n'en perd qu'une » : `reactions: { perRound: 3, loseOne: true }`. Arène de
- * test : Zombi (acteur synthétique du token) et Guerrier, dans un combat du scénario. Un trait d'essai est prêté au Zombi ; sa règle est
- * dans la surcouche du monde (`overrideContent`, jamais en drapeau d'item).
- *  1. Au début du combat : 3 réactions, il peut réagir.
- *  2. Neutralisé : il garde la faculté de réagir, une réaction de moins (2), avis à la table.
- *  3. Étourdi (2 s plus tard, un autre coup) : une de moins (1), il peut encore réagir.
- *  4. Sans `loseOne` (règle remise à `{ perRound: 3 }`), toujours Neutralisé : il ne peut plus réagir, et le budget ne bouge pas.
- * États retirés d'abord et à la fin (acteur synthétique), trait, surcouche, combat remis. Aucune fenêtre attendue.
+ * §501 (B21) — "if it would lose its reactions, it loses only one": `reactions: { perRound: 3, loseOne: true }`. Test arena:
+ * Zombie (synthetic actor of the token) and Fighter, in a scenario combat. A test trait is lent to the Zombie; its rule is
+ * in the world overlay (`overrideContent`, never in an item flag).
+ *  1. At the start of combat: 3 reactions, it can react.
+ *  2. Incapacitated: it keeps the ability to react, one reaction fewer (2), notice at the table.
+ *  3. Stunned (2 s later, another blow): one fewer (1), it can still react.
+ *  4. Without `loseOne` (rule reset to `{ perRound: 3 }`), still Incapacitated: it can no longer react, the budget stays.
+ * Conditions removed first and at the end (synthetic actor), trait, overlay, combat restored. No window expected.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
 const IDENTIFIER = "das-essai-reaction-perdue";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name as a constant: the bench and the reference take the first "name:" indented by two spaces as the scenario's title.
 const ITEM_NAME = "Essai : réactions multiples";
 const RULE = { reactions: { perRound: 3, loseOne: true } };
 
@@ -24,7 +24,7 @@ const [item] = await actor.createEmbeddedDocuments("Item", [{ name: args.name, t
   system: { identifier: args.identifier, type: { value: "monster" }, description: { value: "<p>Essai §501.</p>" } } }]);
 return { itemId: item.id };
 `;
-/** Le budget de réactions du Zombi dans le combat du scénario. */
+/** The Zombie's reaction budget in the scenario's combat. */
 const BUDGET = `
 const combat = game.combats.get(args.combatId);
 const c = combat?.combatants.find(x => x.tokenId === args.tokenId);
@@ -65,7 +65,7 @@ export default {
     const pose = async status => {
       const since = await ctx.lastMessageId();
       await ctx.call("set-status", { tokenId: zombie.id, statusId: status, active: true });
-      await pause(2500);   // au-delà de la fenêtre « même coup » (1,5 s) du moteur
+      await pause(2500);   // beyond the engine's "same blow" window (1.5 s)
       return { ...(await state()), since };
     };
 

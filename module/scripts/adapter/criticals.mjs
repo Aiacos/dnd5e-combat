@@ -1,13 +1,13 @@
 /**
- * §207 : deux options de coup critique, toutes deux désactivées par défaut (issue GitHub #5) — des règles maison, pas celles de 2024.
- *  - `critMargin` : un coup qui dépasse la CA de la cible d'au moins cet écart est critique (0 : non ; « CA + 10 »). Jugé dans le
- *    verdict (core/action.mjs, `beatsAcBy`) ; l'écart est lu au jet d'attaque (runtime/engine-messages.mjs).
- *  - `criticalMode` : sur un coup critique, « standard » (les dés doublés de dnd5e, comme sans l'option), « choice » (l'attaquant
- *    choisit, sur son écran, entre le critique standard et la table) ou « table » (toujours la table). La table (`criticalTable` :
- *    uuid ou nom d'une table du monde) est tirée dans le chat, et les dégâts sont alors ceux d'un coup normal ; le MJ applique ce
- *    qu'elle dit. `criticalNpc` : l'option vaut aussi pour les PNJ (sinon, leurs critiques restent standard).
- * Le hook `dnd5e-combat.criticalHit` (`Hooks.callAll`, avant la question) reçoit `{ actor, activity, target, mode }` : un module
- * voisin peut changer `mode` (« standard », « table », ou « plain » : dégâts normaux, l'effet du critique étant à sa charge).
+ * §207: two Critical Hit options, both disabled by default (GitHub issue #5) — house rules, not those of 2024.
+ *  - `critMargin`: a hit that beats the target's AC by at least this margin is critical (0: no; "AC + 10"). Judged in the
+ *    verdict (core/action.mjs, `beatsAcBy`); the margin is read at the attack roll (runtime/engine-messages.mjs).
+ *  - `criticalMode`: on a Critical Hit, "standard" (dnd5e's doubled dice, as without the option), "choice" (the attacker
+ *    chooses, on their screen, between the standard critical and the table) or "table" (always the table).
+ *    The table (`criticalTable`: uuid or name of a world table) is rolled in the chat, and the damage is then that of a normal
+ *    hit; the GM applies what it says. `criticalNpc`: the option applies to NPCs too (otherwise, their criticals stay standard).
+ * The hook `dnd5e-combat.criticalHit` (`Hooks.callAll`, before the question) receives `{ actor, activity, target, mode }`:
+ * a neighboring module can change `mode` ("standard", "table", or "plain": normal damage, the critical's effect being left to it).
  */
 import { MODULE_ID } from "../constants.mjs";
 import { timedWait } from "./dialogs.mjs";
@@ -24,13 +24,13 @@ const read = (key, fallback) => {
 };
 const t = (key, data) => (data ? game.i18n.format(`DND5ECOMBAT.CritOption.${key}`, data) : game.i18n.localize(`DND5ECOMBAT.CritOption.${key}`));
 
-/** L'écart du réglage `critMargin` (0 : désactivé). */
+/** The `critMargin` setting's margin (0: disabled). */
 export function critMargin() {
   const n = Number(read(CRIT_MARGIN_SETTING, 0));
   return (Number.isFinite(n) && (n > 0)) ? Math.floor(n) : 0;
 }
 
-/** La table de critiques du réglage : par uuid, sinon par nom parmi les tables du monde. null si aucune. */
+/** The setting's critical table: by uuid, otherwise by name among the world's tables. null if none. */
 export async function criticalTable() {
   const ref = String(read(CRITICAL_TABLE_SETTING, "") ?? "").trim();
   if ( !ref ) return null;
@@ -40,8 +40,8 @@ export async function criticalTable() {
 }
 
 /**
- * Le traitement d'un coup critique, sur le client de l'attaquant, avant le jet de dégâts : « standard » (dés doublés), « table »
- * (table tirée, dégâts normaux) ou « plain » (dégâts normaux, un voisin s'en charge). Sans critique : « standard ».
+ * Handling of a Critical Hit, on the attacker's client, before the damage roll: "standard" (doubled dice), "table"
+ * (table rolled, normal damage) or "plain" (normal damage, a neighbor handles it). Without a critical: "standard".
  * @param {Activity} activity
  * @param {TokenDocument|null} target
  * @returns {Promise<"standard"|"table"|"plain">}
@@ -52,8 +52,9 @@ export async function criticalChoice(activity, target) {
   if ( !CRITICAL_MODES.includes(mode) ) mode = "standard";
   if ( (actor?.type !== "character") && !read(CRITICAL_NPC_SETTING, false) ) mode = "standard";
   const decision = { actor, activity, target, mode };
-  // §207 : sur le client de l'attaquant, sur un coup critique, avant les dégâts : `(decision)`, `{ actor, activity, target, mode }`. Un
-  // écouteur peut changer `decision.mode` : « standard » (dés doublés), « choice », « table » ou « plain » (dégâts normaux, l'effet à sa charge).
+  // §207: on the attacker's client, on a Critical Hit, before the damage: `(decision)`, `{ actor, activity, target, mode }`. A
+  // listener can change `decision.mode`: "standard" (doubled dice), "choice", "table" or "plain"
+  // (normal damage, the effect left to it).
   Hooks.callAll(`${MODULE_ID}.criticalHit`, decision);
   mode = decision.mode;
   if ( mode === "plain" ) return "plain";
@@ -78,9 +79,9 @@ export async function criticalChoice(activity, target) {
 }
 
 /**
- * Tire la table de critiques. Une table de compendium se tire ici ; une table du monde par un MJ (le MJ actif sinon) : sans remise,
- * le cœur marque le résultat tiré (`RollTable#draw`, documents/roll-table.mjs:109), ce qu'un joueur ne peut pas écrire.
- * Rend le texte du résultat, ou null.
+ * Rolls the critical table. A compendium table is rolled here; a world table by a GM (the active GM otherwise):
+ * without replacement, the core marks the drawn result (`RollTable#draw`, documents/roll-table.mjs:109),
+ * which a player cannot write. Returns the result's text, or null.
  */
 export async function drawCriticalTable({ speaker=null }={}) {
   const table = await criticalTable();
@@ -91,7 +92,7 @@ export async function drawCriticalTable({ speaker=null }={}) {
   return gm.query(CRITICAL_TABLE_QUERY, { speaker }, { timeout: 15000 }).catch(() => null);
 }
 
-/** Le tirage, dans le chat, au nom de l'attaquant. */
+/** The roll, in the chat, in the attacker's name. */
 export async function drawHere(table=null, speaker=null) {
   table ??= await criticalTable();
   if ( !table ) return null;

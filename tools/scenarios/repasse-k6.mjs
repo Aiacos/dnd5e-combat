@@ -1,10 +1,10 @@
 /**
- * §327, lot K6 de la repasse des créatures : les Réactions des monstres lues dans le texte, et les identifiants du MM qui tombaient sur
- * une règle du PHB. Arène des sorts : le Lanceur (PNJ) et l'« Ennemi au contact ».
- *  - Contre-attaque (Commandant de guerre) prêtée au Lanceur : l'Ennemi le frappe, la réaction est prise (`autoReact: "first"`) et
- *    l'effet « +4 CA » posé quand il peut faire rater le coup ;
- *  - Riposte (Capitaine pirate) : reconnue sous son identifiant propre (`mm-riposte`), plus la manœuvre du Maître de guerre ;
- *  - Souffle ralentissant (Dragon de cuivre adulte) : la cible qui rate perd ses Réactions.
+ * §327, batch K6 of the creature pass: monster Reactions read in the text, and the MM identifiers that fell on
+ * a PHB rule. Spell arena: the Caster (NPC) and the "Enemy in contact".
+ *  - Parry (War Commander) lent to the Caster: the Enemy hits it, the Reaction is taken (`autoReact: "first"`) and
+ *    the "+4 AC" effect placed when it can make the hit miss;
+ *  - Riposte (Pirate Captain): recognised under its own identifier (`mm-riposte`), no longer the Battle Master's maneuver;
+ *  - Slowing Breath (Adult Copper Dragon): the target that fails loses its Reactions.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -74,7 +74,7 @@ export default {
     const id = (await ctx.engine("identify", { tokenId: caster.id })).find(r => r.id === riposte) ?? (await ctx.engine("identify", { tokenId: caster.id })).find(r => /Riposte/i.test(r.item));
     ctx.expect(id?.identifier === "mm-riposte", `Riposte du Capitaine : identifiant ${id?.identifier ?? "?"} (mm-riposte attendu)`);
 
-    // Souffle ralentissant : la cible qui rate perd ses Réactions.
+    // Slowing Breath: the target that fails loses its Reactions.
     const breath = await lend(caster, `${MM}.mmAdultCopperDra.Item.mmSlowingBreath0`);
     let failed = false;
     for ( let i = 0; (i < 20) && !failed; i++ ) {

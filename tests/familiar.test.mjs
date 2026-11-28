@@ -7,7 +7,7 @@ import { validateEntry } from "../module/scripts/core/content.mjs";
 const M = "dnd5e-combat";
 
 describe("familiers (§107)", () => {
-  it("reçoivent les actions de base, sauf celles qui attaquent — Soutien compris", () => {
+  it("receive the base actions, except those that attack — Help included", () => {
     const kinds = familiarBasicKinds(BASIC_ACTIONS);
     expect(kinds).toContain("help");
     expect(kinds).toContain("dodge");
@@ -17,7 +17,7 @@ describe("familiers (§107)", () => {
     expect(familiarBasicKinds({ a: {}, b: { attack: true } })).toEqual(["a"]);
   });
 
-  it("Appel de familier, Compagnon sauvage et Pacte de la chaîne sont des familiers à leur propre initiative", () => {
+  it("Find Familiar, Wild Companion and Pact of the Chain are familiars with their own Initiative", () => {
     for ( const id of ["find-familiar", "wild-companion", "pact-of-the-chain"] ) {
       expect(SUMMONS[id]).toMatchObject({ initiative: "own", familiar: true });
       expect(validateEntry({ summon: SUMMONS[id] }, { at: id })).toEqual([]);
@@ -25,7 +25,7 @@ describe("familiers (§107)", () => {
     expect(validateEntry({ summon: { initiative: "own", familiar: "oui" } }).length).toBeGreaterThan(0);
   });
 
-  it("ce qu'il porte : les objets, pas ses armes naturelles ni les items du moteur", () => {
+  it("what it carries: the items, not its natural weapons nor the engine's items", () => {
     const items = [
       { id: "a", type: "weapon", system: { type: { value: "natural" } } },
       { id: "b", type: "consumable", system: { type: { value: "potion" } } },
@@ -40,7 +40,7 @@ describe("familiers (§107)", () => {
     expect(carriedItemIds(null, M)).toEqual([]);
   });
 
-  it("la case de réapparition : à 9 m au plus, inoccupée", () => {
+  it("the respawn cell: within 9 m at most, unoccupied", () => {
     expect(RECALL_RANGE).toEqual({ value: 30, units: "ft" });
     expect(POCKET_COST).toBe("action");
     expect(recallProblem({ distance: 30, limit: 30, occupied: false })).toBe(null);
@@ -49,7 +49,7 @@ describe("familiers (§107)", () => {
     expect(recallProblem({ distance: Infinity, limit: 30, occupied: false })).toBe("far");
   });
 
-  it("le token qui revient garde son delta, perd son id et son ordre de suivi, prend la case choisie", () => {
+  it("the token that returns keeps its delta, loses its id and its follow order, takes the chosen cell", () => {
     const stored = { _id: "abcdefghijklmnop", _stats: { createdTime: 1 }, name: "Chouette", actorId: "A", x: 0, y: 0, elevation: 30,
       level: "L1", delta: { system: { attributes: { hp: { value: 1 } } } },
       flags: { [M]: { follow: { leader: "X" }, expiresAt: 100 }, other: { k: 1 } } };
@@ -59,7 +59,7 @@ describe("familiers (§107)", () => {
     expect(data).toMatchObject({ name: "Chouette", x: 200, y: 300, elevation: 0, level: "L2", delta: { system: { attributes: { hp: { value: 1 } } } } });
     expect(data.flags[M]).toEqual({ expiresAt: 100 });
     expect(data.flags.other).toEqual({ k: 1 });
-    expect(stored.flags[M].follow).toEqual({ leader: "X" });   // la donnée gardée n'est pas touchée
+    expect(stored.flags[M].follow).toEqual({ leader: "X" });   // the stored data is not touched
     expect(recalledTokenData({ flags: { [M]: { follow: {} } } }, { x: 0, y: 0 }, M).flags[M]).toBeUndefined();
   });
 });

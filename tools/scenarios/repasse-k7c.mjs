@@ -1,8 +1,8 @@
 /**
- * §334, restes des lots K6 et K7 de la repasse des créatures. Arène des sorts : le Lanceur (PNJ) et la Cible (999 PV).
- *  - Contact du Magmin (« it starts burning ») : au toucher, la Cible est En feu ;
- *  - Rafale perturbatrice du Cerveau en bocal (Ravenloft, « The target can't take Reactions until the end of its next turn ») : au
- *    toucher, la Cible perd ses Réactions.
+ * §334, leftovers of batches K6 and K7 of the creature pass. Spell arena: the Caster (NPC) and the Target (999 HP).
+ *  - Magmin's Touch ("it starts burning"): on a hit, the Target is On Fire;
+ *  - Brain in a Jar's Disruptive Burst (Ravenloft, "The target can't take Reactions until the end of its next turn"): on a
+ *    hit, the Target loses its Reactions.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

@@ -1,11 +1,13 @@
 /**
- * §309, sous-lot C12-b de la repasse terme par terme : zones, émanations, auras. Arène des sorts (Lanceur, Allié, Cible, Héros).
- * Chaque partie prête ses items depuis le Manuel des joueurs (ou Ravenloft) et remet tout.
- *  - Invocation de céleste : l'Allié à 1 PV, déjà dans le Cylindre quand il apparaît, est soigné sans attendre sa fin de tour ;
- *  - Métal brûlant : la Cible tient une massue ; ratée, elle la lâche (pas de Désavantage) ; réussie, elle la garde avec « Heated Metal » ;
- *  - Choc de vie (Ravenloft) : le soin donné au Héros à 0 PV (un PJ : un PNJ à 0 PV est mort, §403) fait jaillir la foudre de lui, sur la Cible (ennemie) à côté, pas sur le Lanceur ;
- *  - Aura de protection contre la magie : l'Allié dans l'aura du Lanceur reçoit les résistances ;
- *  - Rage : le Héros en armure lourde ne peut pas entrer en Rage (souci de légalité).
+ * §309, sub-batch C12-b of the term-by-term review: areas, Emanations, auras. Spells Arena (Caster, Ally, Target, Hero).
+ * Each part lends its items from the Player's Handbook (or Ravenloft) and restores everything.
+ *  - Conjure Celestial: the Ally at 1 HP, already in the Cylinder when it appears, is healed without waiting for the end of
+ *    his turn;
+ *  - Heat Metal: the Target holds a club; failed, it drops it (no Disadvantage); succeeded, it keeps it with "Heated Metal";
+ *  - "Life Shock" (Ravenloft): the healing given to the Hero at 0 HP (a PC: an NPC at 0 HP is dead, §403) makes lightning
+ *    leap from him, onto the (enemy) Target next to him, not onto the Caster;
+ *  - Aura of protection against magic: the Ally in the Caster's aura receives the Resistances;
+ *  - Rage: the Hero in heavy armor cannot enter a Rage (legality concern).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -74,7 +76,7 @@ export default {
       return (await current()) === first.id;
     };
     const tiny = async t => { const b = await ctx.box(t); return { shape: "circle", x: b.x + b.width / 2, y: b.y + b.height / 2, radius: b.width * 0.6 }; };
-    /** Utilise, clique les dés laissés au système (dégâts, soin), attend la résolution. */
+    /** Uses, clicks the dice left to the system (damage, healing), waits for the resolution. */
     const cast = async params => {
       const used = await ctx.use(params);
       await pause(1500);
@@ -97,14 +99,15 @@ export default {
       const heat = await lend(caster, `${PHB}.spells.Item.phbsplHeatMetal0`, { "system.method": "atwill" });
       const club = await lend(target, `${PHB}.equipment.Item.phbwepClub000000`, { "system.equipped": true, "system.proficient": 1 });
       let seen = { failed: false, saved: false };
-      // Cible : Constitution +0 contre DD 17 — 20 % de réussite par essai ; 8 essais ratés de suite arrivaient une passe sur six (banc du 2026-11-19), 20 : une sur cent.
+      // Target: Constitution +0 against DC 17 — 20% chance of success per try; 8 failed tries in a row happened one pass in six
+      // (bench of 2026-11-19), 20: one in a hundred.
       for ( let i = 0; (i < 20) && !(seen.failed && seen.saved); i++ ) {
         await ctx.call("upsert-actor-item", { actorId: target.actorId, itemData: { "system.equipped": true }, match: { path: "_id", value: club } });
         for ( const e of await ctx.effects(target) ) await ctx.call("remove-embedded-effect", { documentType: "Actor", id: target.actorId, effectId: e._id ?? e.id }).catch(() => {});
         await pause(600);
         const since = await ctx.lastMessageId();
         await cast({ tokenId: caster.id, itemId: heat, activityId: "2jWlvr2titPfBMEm", targetTokenIds: [target.id], consume: false });
-        // L'éclat (la sauvegarde de Constitution) suit les dégâts : sa propre résolution, attendue jusqu'au bout.
+        // The burst (the Constitution save) follows the damage: its own resolution, awaited to the end.
         let burst = null;
         for ( let n = 0; (n < 30) && !burst; n++ ) { await pause(500); burst = (await ctx.messagesSince(since)).find(m => m.flags?.[MODULE_ID]?.areaTick?.event === "burst"); }
         const r = burst ? await ctx.settle(burst.id, { timeoutMs: 30000 }).catch(() => null) : null;

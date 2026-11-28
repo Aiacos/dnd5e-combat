@@ -1,19 +1,19 @@
 /**
- * Le Roublard du Manuel des joueurs 2024 (SPEC §20), module premium `dnd-players-handbook` 2.2.0 (pack `classes`, items
- * `phbrge…`). Ids d'activités et d'effets relevés dans ce pack ; identifiants dnd5e gardés par les copies sur les fiches.
+ * The Rogue from the 2024 Player's Handbook (SPEC §20), premium module `dnd-players-handbook` 2.2.0 (`classes` pack, items
+ * `phbrge…`). Activity and effect ids surveyed in that pack; dnd5e identifiers kept by the copies on the sheets.
  *
- * Ce que dnd5e fait déjà seul : Expertise, Talent fiable (effet : 10 au minimum aux tests de compétence maîtrisés), Esprit
- * fuyant (maîtrises de sauvegarde), Bottes d'arme ; Assassinat : l'Avantage à l'Initiative (effet de l'item).
+ * What dnd5e already does by itself: Expertise, Reliable Talent (effect: 10 minimum on proficient skill checks), Slippery
+ * Mind (saving throw proficiencies), weapon Mastery; Assassinate: Advantage on Initiative (the item's effect).
  */
 
-/** Frappes rusées (niveau 5) : Poison (trousse d'empoisonneur), Croc-en-jambe (G ou moins), Repli — 1d6 chacune. */
+/** Cunning Strike (level 5): Poison (poisoner's kit), Trip (Large or smaller), Withdraw — 1d6 each. */
 const CUNNING_STRIKES = Object.freeze({
   poison: { cost: 1, activity: "n64fvJMT9fPUy7DH", requires: "poisoners-kit" },
   trip: { cost: 1, activity: "dWcCw1vTWRMx4YzD", sizeAtMost: "lg" },
   withdraw: { cost: 1, withdraw: true }
 });
 
-/** Frappes sournoises (niveau 14) : Hébétement (2d6), Assommer (6d6), Aveugler (3d6). */
+/** Devious Strikes (level 14): Daze (2d6), Knock Out (6d6), Obscure (3d6). */
 const DEVIOUS_STRIKES = Object.freeze({
   daze: { cost: 2, activity: "4TnBjQTJzt9UjUos" },
   knockOut: { cost: 6, activity: "3eq7lcmpkJJBU2KO" },
@@ -21,21 +21,22 @@ const DEVIOUS_STRIKES = Object.freeze({
 });
 
 export const ROGUE = Object.freeze({
-  // §299 : Voile psychique (Âme acérée 13) — l'invisibilité « prend fin aussitôt après que vous avez infligé des dégâts à une créature ou
-  // forcé une créature à faire un jet de sauvegarde » (un jet d'attaque compte : il inflige les dégâts du coup).
+  // §299: Psychic Veil (Soulknife 13) — the invisibility "ends immediately after you deal damage to a creature or
+  // force a creature to make a saving throw" (an attack roll counts: it deals the damage of the hit).
   "psychic-veil": { breaksOn: ["attack", "damage", "forcesSave"] },
-  // Attaque sournoise : les dés de l'item (`@scale.rogue.sneak-attack`), une fois par tour (core/sneak.mjs).
+  // Sneak Attack: the item's dice (`@scale.rogue.sneak-attack`), once per turn (core/sneak.mjs).
   "sneak-attack": { sneakAttack: true },
-  // §208 : Monte-en-l'air (Voleur 3), Sauteur — « la distance de saut avec la Dextérité au lieu de la Force ».
+  // §208: Second-Story Work (Thief 3), Jumper — "the jump distance with Dexterity instead of Strength".
   "second-story-work": { jump: { useDex: true } },
 
-  // Ruse (niveau 2) : « à votre tour, vous pouvez effectuer l'une des actions suivantes par une action Bonus : Foncer, Se
-  // désengager ou Se cacher ». Les trois activités de l'item coûtent déjà l'action Bonus ; le moteur y pose l'état du tour (Foncer,
-  // Se désengager) ou fait le test de Discrétion de Se cacher (runtime/hide.mjs) — l'effet « Hiding » de l'item n'est pas posé.
+  // Cunning Action (level 2): "on your turn, you can take one of the following actions as a Bonus Action: Dash,
+  // Disengage, or Hide". The item's three activities already cost the Bonus Action; the engine applies the turn's condition (Dash,
+  // Disengage) or makes the Stealth check for Hide (runtime/hide.mjs) — the item's "Hiding" effect is not applied.
   "cunning-action": { basicActions: { NtS3iThuWWwm8O62: "dash", AeCciDTvw3kS583a: "disengage", NiI5qEhg9TepZxMh: "hide" } },
 
-  // Visée stable (niveau 3) : action Bonus qui donne l'Avantage à la prochaine attaque du tour ; seulement si le roublard n'a pas
-  // encore bougé ce tour-ci, et sa Vitesse tombe à 0 jusqu'à la fin du tour. La trace de l'item porte l'Avantage, consommé au premier jet d'attaque, retiré à la fin du tour.
+  // Steady Aim (level 3): Bonus Action that gives Advantage on the next attack of the turn; only if the rogue has not
+  // moved yet this turn, and their Speed drops to 0 until the end of the turn. The item's trace carries the Advantage,
+  // consumed at the first attack roll, removed at the end of the turn.
   "steady-aim": {
     usageLimits: { VGVYnecMRcu0f5Sq: { unmoved: true } },
     holdsStill: true,
@@ -46,9 +47,10 @@ export const ROGUE = Object.freeze({
     ]
   },
 
-  // Frappes rusées : l'auteur les choisit avant ses dégâts ; Poison se rejoue à la fin de chaque tour de la cible.
-  // §433 : l'effet « Empoisonné » sous ses deux formes — celui de l'item (`RazTM6biKVtNtjEW` : Manuel des joueurs, SRD jusqu'à dnd5e 6.0)
-  // et l'effet commun du compendium `dnd5e.effects` que l'activité du SRD de dnd5e 6.1 pose à sa place (`wAnw5y4atBxNJHUP`).
+  // Cunning Strike: the author chooses them before their damage; Poison is repeated at the end of each of the target's turns.
+  // §433: the "Poisoned" effect in its two forms — the item's (`RazTM6biKVtNtjEW`: Player's Handbook, SRD up to dnd5e 6.0)
+  // and the common effect of the `dnd5e.effects` compendium that the dnd5e 6.1 SRD activity applies in its place
+  // (`wAnw5y4atBxNJHUP`).
   "cunning-strike": {
     cunningStrikes: CUNNING_STRIKES,
     triggers: [
@@ -56,21 +58,21 @@ export const ROGUE = Object.freeze({
       { on: "endOfTurn", via: "effect", fromEffect: "wAnw5y4atBxNJHUP", do: [{ type: "resave" }] }
     ]
   },
-  // §236 : Faufilement suprême (Voleur 9) — option de Frappe rusée Attaque furtive (1d6) : caché par Se cacher, l'attaque n'y met pas
-  // fin si le roublard finit son tour derrière un abri aux trois quarts ou total (runtime/sneak.mjs, runtime/hide.mjs).
+  // §236: Supreme Sneak (Thief 9) — Cunning Strike option Stealth Attack (1d6): Hidden through Hide, the attack does not end it
+  // if the rogue ends their turn behind Three-Quarters Cover or Total Cover (runtime/sneak.mjs, runtime/hide.mjs).
   "supreme-sneak": { cunningStrikes: { stealthAttack: { cost: 1, keepsHidden: true } } },
-  // §236 : Réflexes du voleur (Voleur 17) — deux tours au premier round, le second à l'initiative moins 10 (runtime/roll-bonus.mjs).
-  // Utilisation d'objets magiques (Voleur 13), Charges — « chaque fois que vous utilisez une propriété d'objet magique qui dépense
-  // des charges, lancez 1d6 ; sur un 6, vous l'utilisez sans les dépenser ». La quatrième harmonisation est l'effet de l'item, la
-  // lecture de tout parchemin est dans adapter/scrolls.mjs.
+  // §236: Thief's Reflexes (Thief 17) — two turns in the first round, the second at Initiative minus 10 (runtime/roll-bonus.mjs).
+  // Use Magic Device (Thief 13), Charges — "whenever you use a magic item property that expends
+  // charges, roll 1d6; on a 6, you use it without expending them". The fourth attunement is the item's effect, the
+  // reading of any scroll is in adapter/scrolls.mjs.
   "use-magic-device": { savesCharges: { die: 6, on: 6 } },
   "thiefs-reflexes": { extraFirstTurn: { minus: 10 } },
-  // Frappe rusée améliorée (niveau 11) : « jusqu'à deux effets de Frappe rusée ».
+  // Improved Cunning Strike (level 11): "up to two Cunning Strike effects".
   "improved-cunning-strike": { cunningStrikeMax: 2 },
-  // Frappes sournoises (niveau 14). Assommer : « Inconscient pendant 1 minute ou jusqu'à ce qu'elle subisse des dégâts ; elle
-  // réitère le JS à la fin de chacun de ses tours ». Hébétement : « à son prochain tour, la cible ne peut faire qu'une seule de
-  // ces choses : se déplacer, prendre une action ou prendre une action Bonus » — l'effet « Dazed » de l'item le porte, jusqu'à
-  // la fin de ce tour-là.
+  // Devious Strikes (level 14). Knock Out: "Unconscious for 1 minute or until it takes damage; it repeats the
+  // save at the end of each of its turns". Daze: "on its next turn, the target can do only one of
+  // these things: move, take an action, or take a Bonus Action" — the item's "Dazed" effect carries it, until
+  // the end of that turn.
   "devious-strikes": {
     cunningStrikes: DEVIOUS_STRIKES,
     oneThingPerTurn: "wWFV1p8u9C1TUPg5",
@@ -78,22 +80,22 @@ export const ROGUE = Object.freeze({
     triggers: [
       { on: "endOfTurn", via: "effect", fromEffect: "C2IGgt4PnRMxZVey", do: [{ type: "resave" }] },
       { on: "isDamaged", via: "effect", fromEffect: "C2IGgt4PnRMxZVey", do: [{ type: "remove" }] },
-      // §433 : « Inconscient » du compendium `dnd5e.effects`, posé par l'activité du SRD de dnd5e 6.1.
+      // §433: "Unconscious" from the `dnd5e.effects` compendium, applied by the activity of the dnd5e 6.1 SRD.
       { on: "endOfTurn", via: "effect", fromEffect: "HjLkxDzLNBogspf9", do: [{ type: "resave" }] },
       { on: "isDamaged", via: "effect", fromEffect: "HjLkxDzLNBogspf9", do: [{ type: "remove" }] }
     ]
   },
 
-  // Dérobade (niveau 7) et Insaisissable (niveau 18).
+  // Evasion (level 7) and Elusive (level 18).
   "evasion": { evasion: true },
   "elusive": { elusive: true },
-  // Coup de chance (niveau 20) — « si vous ratez un Test d20, vous pouvez faire du jet un 20 » : une fois par repos court ou long
-  // (l'utilisation de l'item, dépensée par son activité). Un 20 ainsi obtenu sur une attaque n'en fait pas un coup critique ici :
-  // le texte ne le dit pas, et rien n'est ajouté au-delà du total.
+  // Stroke of Luck (level 20) — "if you fail a d20 Test, you can turn the roll into a 20": once per Short or Long Rest
+  // (the item's use, spent by its activity). A 20 obtained this way on an attack is not made a Critical Hit here:
+  // the text does not say so, and nothing is added beyond the total.
   "stroke-of-luck": { rollBonus: { activity: "y4PG8Ow1eNEle580", on: ["attack", "save", "check"], reroll: { sets: 20 } } },
 
-  // Assassin (niveau 3), Assassinat : au premier round d'un combat, Avantage contre qui n'a pas encore agi ; une Attaque sournoise
-  // réussie pendant ce round ajoute autant de dégâts (type de l'arme) que le niveau de Roublard.
+  // Assassin (level 3), Assassinate: in the first round of a combat, Advantage against anyone who has not acted yet; a successful
+  // Sneak Attack during that round adds as much damage (weapon's type) as the Rogue level.
   "assassinate": {
     sneakBonus: { formula: "@classes.rogue.levels", firstRound: true },
     triggers: [{ on: "preAttackRoll", if: { "target.hasNotActed": true }, do: [{ type: "advantage" }] }]

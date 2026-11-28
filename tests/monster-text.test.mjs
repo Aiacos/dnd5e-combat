@@ -2,42 +2,42 @@ import { describe, expect, it } from "vitest";
 import { conditionsIn, monsterEndings, plainText, readEndings } from "../module/scripts/core/monster-text.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
-// Exemples synthétiques, réduits aux tournures que le lecteur reconnaît (aucun texte de livre).
+// Synthetic examples, reduced to the phrasings the reader recognizes (no book text).
 const repeat = "Failure: The target has the Stunned condition and repeats the save at the end of each of its turns, ending the effect on itself on a success.";
 const twoStep = "First Failure: The target has the Restrained condition and repeats the save at the end of its next turn if it is still Restrained. Second Failure: The target has the Petrified condition instead of the Restrained condition.";
 const twoStepAlt = "Failure: The target has the Incapacitated condition until the end of its next turn, at which point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This effect ends for the target if it takes damage.";
 const damageEnds = "Failure: The target has the Charmed condition for 1 hour or until it takes damage.";
 
-describe("K1 : fin des états d'une capacité de monstre, lue dans son texte", () => {
-  it("rend le texte lisible (références d'état, enrichers)", () => {
+describe("K1: end of the conditions of a monster ability, read from its text", () => {
+  it("makes the text readable (condition references, enrichers)", () => {
     expect(plainText("<p>has the &amp;Reference[Paralyzed apply=false] condition [[/damage 2d6]]</p>")).toBe("has the Paralyzed condition …");
     expect(conditionsIn("the Paralyzed and Poisoned conditions")).toEqual(["paralyzed", "poisoned"]);
   });
 
-  it("sauvegarde répétée à la fin de chacun de ses tours", () => {
+  it("save repeated at the end of each of its turns", () => {
     expect(readEndings(repeat)).toEqual({ resave: { on: "endOfTurn" }, endsOnDamage: false, resaveOnDamage: false });
     expect(readEndings("At the end of each of its turns, the target repeats the save, ending the effect on a success.").resave).toEqual({ on: "endOfTurn" });
     expect(readEndings("It repeats the Wisdom save at the start of each of its turns.").resave).toEqual({ on: "startOfTurn" });
   });
 
-  it("premier puis second échec : compteur, l'état du second échec", () => {
+  it("first then second failure: counter, the second failure's condition", () => {
     expect(readEndings(twoStep).resave).toEqual({ on: "endOfTurn", tally: { successes: 1, failures: 1, status: "petrified" } });
     const alt = readEndings(twoStepAlt);
     expect(alt.resave).toEqual({ on: "endOfTurn", tally: { successes: 1, failures: 1, status: "unconscious" } });
     expect(alt.endsOnDamage).toBe(true);
   });
 
-  it("fin sur dégâts, et sauvegarde rejouée sur dégâts", () => {
+  it("end on damage, and save replayed on damage", () => {
     expect(readEndings(damageEnds).endsOnDamage).toBe(true);
     expect(readEndings("The condition ends if the target takes damage.").endsOnDamage).toBe(true);
     expect(readEndings("The target succeeds automatically after 10 minutes or if it takes damage.").endsOnDamage).toBe(true);
-    // Seul l'état second tombe : pas l'effet entier.
+    // Only the second condition drops: not the whole effect.
     expect(readEndings("While Poisoned, it also has the Unconscious condition, which ends early if the target takes damage.").endsOnDamage).toBe(false);
     const r = readEndings("The target repeats the save whenever it takes damage, ending the effect on a success.");
     expect(r.resaveOnDamage).toBe(true);
   });
 
-  it("déclarations valides du contenu, pour tout effet de l'item quand il n'a qu'une issue", () => {
+  it("valid content declarations, for any effect of the item when it has only one outcome", () => {
     const t = monsterEndings(`<p>${twoStepAlt}</p>`, [{ id: "a".repeat(16), statuses: ["incapacitated"] }]);
     expect(t).toEqual([
       { on: "endOfTurn", via: "effect", do: [{ type: "resave", tally: { successes: 1, failures: 1, status: "unconscious" } }] },
@@ -47,42 +47,42 @@ describe("K1 : fin des états d'une capacité de monstre, lue dans son texte", (
     expect(monsterEndings("Hit: 7 damage.")).toEqual([]);
   });
 
-  it("plusieurs issues : chaque règle ne vaut que pour l'effet dont l'état est nommé dans son segment", () => {
+  it("several outcomes: each rule applies only to the effect whose condition is named in its segment", () => {
     const html = `Rays. 1: Charm Ray. ${damageEnds} 2: Stunning Ray. ${repeat} 3: Fear Ray. Failure: The target has the Frightened condition for 1 minute.`;
     const effects = [{ id: "c".repeat(16), statuses: ["charmed"] }, { id: "s".repeat(16), statuses: ["stunned"] }, { id: "f".repeat(16), statuses: ["frightened"] }];
     expect(monsterEndings(html, effects)).toEqual([
       { on: "isDamaged", via: "effect", fromEffect: "c".repeat(16), do: [{ type: "remove" }] },
       { on: "endOfTurn", via: "effect", fromEffect: "s".repeat(16), do: [{ type: "resave" }] }
     ]);
-    // « First Roar. … Second Roar. » se coupe aussi ; « First Failure: » non.
+    // "First Roar. … Second Roar." is split too; "First Failure:" is not.
     const roars = `First Roar. Failure: The target has the Frightened condition for 1 minute. Second Roar. ${repeat}`;
     expect(monsterEndings(roars, effects)).toEqual([{ on: "endOfTurn", via: "effect", fromEffect: "s".repeat(16), do: [{ type: "resave" }] }]);
   });
 });
 
-describe("K2 : la mort que promet le texte d'une capacité de monstre", () => {
-  it("mort à 0 PV, réservée à un type ou à une taille", async () => {
+describe("K2: the death that a monster ability's text promises", () => {
+  it("death at 0 HP, restricted to a type or a size", async () => {
     const { monsterDeaths } = await import("../module/scripts/core/monster-text.mjs");
     expect(monsterDeaths("Hit: 9 damage. If this damage reduces the target to 0 Hit Points, it dies.")).toEqual({ killsAtZero: true });
     expect(monsterDeaths("Failure or Success: A Humanoid reduced to 0 Hit Points by this damage dies.")).toEqual({ killsAtZero: { types: ["humanoid"] } });
     expect(monsterDeaths("If this damage reduces a Medium or smaller creature to 0 Hit Points, the creature dies.")).toEqual({ killsAtZero: { sizeAtMost: "med" } });
-    // Ni le porteur, ni une stabilisation, ni un objet.
+    // Neither the bearer, nor a stabilization, nor an item.
     expect(monsterDeaths("The beast dies only if it starts its turn with 0 Hit Points.")).toEqual({});
     expect(monsterDeaths("If this damage reduces the target to 0 Hit Points, the target becomes Stable.")).toEqual({});
     expect(monsterDeaths("The tome turns to dust if reduced to 0 Hit Points.")).toEqual({});
   });
 
-  it("paliers de PV : mort ou chute à 0 PV, dégâts au-dessus", async () => {
+  it("HP thresholds: death or fall at 0 HP, damage above", async () => {
     const { monsterDeaths } = await import("../module/scripts/core/monster-text.mjs");
     expect(monsterDeaths("Failure: If the target has 20 Hit Points or fewer, it drops to 0 Hit Points. Otherwise, it takes 9 damage."))
       .toEqual({ hpTiers: [{ atMost: 20, damage: false, zero: true }, {}] });
-    // L'effet « Mort » que la donnée pose d'office ne vaut que sous le palier.
+    // The "Death" effect that the data places by default applies only under the threshold.
     const dead = "d".repeat(16);
     expect(monsterDeaths("If the creature has 80 Hit Points or fewer, it dies. Otherwise, it takes 40 damage.", { effects: [{ id: dead, statuses: ["dead"] }] }))
       .toEqual({ hpTiers: [{ atMost: 80, damage: false, statuses: ["dead"] }, { effects: [] }] });
   });
 
-  it("un rayon numéroté : la règle ne vaut que pour son activité", async () => {
+  it("a numbered ray: the rule applies only to its activity", async () => {
     const { monsterDeaths } = await import("../module/scripts/core/monster-text.mjs");
     const a = "a".repeat(16), b = "b".repeat(16);
     const html = "Rays. 1: Weak Ray. Failure: 9 damage. 2: Dust Ray. Failure: 20 damage. If the target is a creature and this damage reduces it to 0 Hit Points, it disintegrates into dust.";
@@ -93,37 +93,37 @@ describe("K2 : la mort que promet le texte d'une capacité de monstre", () => {
   });
 });
 
-describe("K3 : un seul des effets, tiré au dé ou au choix", () => {
+describe("K3: only one of the effects, rolled or chosen", () => {
   const ids = ["c", "f", "p", "i"].map(c => c.repeat(16));
   const effects = [{ id: ids[3], statuses: ["incapacitated"] }, { id: ids[0], statuses: ["charmed"] }, { id: ids[2], statuses: ["poisoned"] }, { id: ids[1], statuses: ["frightened"] }];
-  it("tiré au dé, dans l'ordre du texte", async () => {
+  it("rolled, in the order of the text", async () => {
     const { monsterChoice } = await import("../module/scripts/core/monster-text.mjs");
     const r = monsterChoice("Hit: 9 damage. The target has a condition determined by rolling 1d4: on a 1, Charmed; on a 2, Frightened; on a 3, Poisoned; or on a 4, Incapacitated.", effects);
     expect(r).toEqual({ effects: "one", roll: true, order: ids });
     expect(validateEntry({ choice: r })).toEqual([]);
   });
-  it("au choix de la créature", async () => {
+  it("at the creature's choice", async () => {
     const { monsterChoice } = await import("../module/scripts/core/monster-text.mjs");
     expect(monsterChoice("Failure: the target has the Charmed or Frightened condition (the bard's choice).", effects)).toEqual({ effects: "one" });
     expect(monsterChoice("Hit: 9 damage, and the target suffers one of the following effects of the captain's choice: Awe. … Poison. …", effects)).toEqual({ effects: "one" });
     expect(monsterChoice("The fiend chooses a damage type. Failure: the target is cursed.", effects)).toEqual({ effects: "one" });
     expect(monsterChoice("Hit: 9 damage, and the target has the monk's choice of (A) the Charmed condition or (B) the Prone condition.", effects)).toEqual({ effects: "one" });
     expect(monsterChoice("It shape-shifts to resemble a cat (Speed 30 ft.), a crow (20 ft., Fly 60 ft.), or a snake (20 ft.), or returns to its true form.", effects)).toEqual({ effects: "one" });
-    // Un seul effet, ou des rayons numérotés : rien à choisir ici.
+    // A single effect, or numbered rays: nothing to choose here.
     expect(monsterChoice("the Charmed or Frightened condition (its choice)", [effects[0]])).toBe(null);
     expect(monsterChoice("Rays (roll 1d10). 1: Weak Ray. … 2: Slow Ray. …", effects)).toBe(null);
   });
 });
 
-describe("K6 : Réactions lues dans le texte d'une capacité de monstre", () => {
-  it("parade : +N CA contre l'attaque, avec ou sans effet dans la donnée", async () => {
+describe("K6: Reactions read from a monster ability's text", () => {
+  it("parry: +N AC against the attack, with or without an effect in the data", async () => {
     const { monsterReactions } = await import("../module/scripts/core/monster-text.mjs");
     const text = "Trigger: The guard is hit by a melee attack roll. Response: The guard adds 4 to its AC against that attack, possibly causing it to miss.";
     expect(monsterReactions(text, { reaction: true })).toEqual({ triggers: [{ on: "isHit", if: { "activity.isMelee": true }, do: [{ type: "use" }, { type: "penalty", formula: "4" }] }] });
     expect(monsterReactions(text, { reaction: true, acEffect: 4 })).toEqual({ triggers: [{ on: "isHit", if: { "hit.stoppableBy": 4, "activity.isMelee": true }, do: [{ type: "use" }] }] });
     expect(monsterReactions(text, { reaction: false })).toEqual({});
   });
-  it("Réactions perdues, action ou action Bonus", async () => {
+  it("lost Reactions, action or Bonus Action", async () => {
     const { monsterReactions } = await import("../module/scripts/core/monster-text.mjs");
     expect(monsterReactions("Failure: until the end of its next turn, the target can't take Reactions and can take either an action or a Bonus Action on its turn, not both."))
       .toEqual({ noReactions: true, actionOrBonus: true });
@@ -131,18 +131,18 @@ describe("K6 : Réactions lues dans le texte d'une capacité de monstre", () => 
   });
 });
 
-describe("K7 : dégâts récurrents, soins bloqués, absorption", () => {
+describe("K7: recurring damage, blocked healing, absorption", () => {
   const p = "p".repeat(16), g = "g".repeat(16), a = "a".repeat(16);
-  it("dégâts au porteur, rattachés à l'effet dont l'état est nommé", async () => {
+  it("damage to the bearer, attached to the effect whose condition is named", async () => {
     const { monsterRecurring } = await import("../module/scripts/core/monster-text.mjs");
     const html = `<p>Failure: The target has the Poisoned condition. While Poisoned, the target takes [[/damage average activity=${a}]] damage at the start of each of its turns.</p>`;
     const r = monsterRecurring(html, [{ id: p, statuses: ["poisoned"] }, { id: g, statuses: ["grappled"] }]);
     expect(r).toEqual({ triggers: [{ on: "startOfTurn", via: "effect", fromEffect: p, do: [{ type: "damage", to: "bearer", activity: a }] }] });
     expect(validateEntry(r)).toEqual([]);
-    // Une créature avalée : la brique Avaler s'en charge.
+    // A swallowed creature: the Swallow building block handles it.
     expect(monsterRecurring(`A swallowed creature takes [[/damage average activity=${a}]] damage at the start of each of its turns.`)).toEqual({});
   });
-  it("soins bloqués et absorption", async () => {
+  it("blocked healing and absorption", async () => {
     const { monsterRecurring } = await import("../module/scripts/core/monster-text.mjs");
     expect(monsterRecurring("While Poisoned, the target can't regain Hit Points.")).toEqual({ blocksHealing: true });
     expect(monsterRecurring("Whenever the golem is subjected to Fire damage, it regains a number of Hit Points equal to the Fire damage dealt.")).toEqual({ absorbsDamage: ["fire"] });
@@ -150,8 +150,8 @@ describe("K7 : dégâts récurrents, soins bloqués, absorption", () => {
   });
 });
 
-describe("K8 : poussées et tractions lues dans le texte", () => {
-  it("échec de sauvegarde ou toucher, porte de taille", async () => {
+describe("K8: pushes and pulls read from the text", () => {
+  it("failed save or hit, size gate", async () => {
     const { monsterPushes } = await import("../module/scripts/core/monster-text.mjs");
     expect(monsterPushes("Failure: 9 damage, and the target is pushed up to 30 feet straight away from the dragon.", { save: true }))
       .toEqual([{ on: "failedSave", do: [{ type: "move", mode: "push", distance: 30, units: "ft" }] }]);
@@ -162,8 +162,8 @@ describe("K8 : poussées et tractions lues dans le texte", () => {
   });
 });
 
-describe("K9 : porte de type lue dans le texte", () => {
-  it("« succeed automatically »", async () => {
+describe("K9: type gate read from the text", () => {
+  it("\"succeed automatically\"", async () => {
     const { monsterTypeGate } = await import("../module/scripts/core/monster-text.mjs");
     expect(monsterTypeGate("Wisdom Saving Throw: DC 12, one creature (Constructs and Undead succeed automatically). Failure: Unconscious."))
       .toEqual({ unaffectedIf: { any: [{ "target.creatureType": "construct" }, { "target.creatureType": "undead" }] } });
@@ -171,8 +171,8 @@ describe("K9 : porte de type lue dans le texte", () => {
   });
 });
 
-describe("K10 : Avantage conditionnel lu dans le texte", () => {
-  it("cible blessée, porteur En sang, cible Effrayée", async () => {
+describe("K10: conditional Advantage read from the text", () => {
+  it("wounded target, Bloodied bearer, Frightened target", async () => {
     const { monsterAdvantage } = await import("../module/scripts/core/monster-text.mjs");
     expect(monsterAdvantage("The shark has Advantage on attack rolls against any creature that doesn't have all its Hit Points."))
       .toEqual([{ on: "preAttackRoll", if: { "target.wounded": true }, do: [{ type: "advantage" }] }]);
@@ -182,8 +182,8 @@ describe("K10 : Avantage conditionnel lu dans le texte", () => {
   });
 });
 
-describe("K11 : pas de moitié des dégâts sur une réussite quand le texte n'en donne pas", () => {
-  it("clause « Success » sans dégâts, ou absente", async () => {
+describe("K11: no half damage on a success when the text gives none", () => {
+  it("\"Success\" clause with no damage, or absent", async () => {
     const { monsterSaveDamage } = await import("../module/scripts/core/monster-text.mjs");
     const acts = [{ id: "s".repeat(16), type: "save", onSave: "half" }];
     expect(monsterSaveDamage("Failure: 9 damage, and Paralyzed. Success: The target is immune to this gaze for 1 hour.", acts)).toEqual({ ["s".repeat(16)]: "none" });
@@ -193,8 +193,8 @@ describe("K11 : pas de moitié des dégâts sur une réussite quand le texte n'e
   });
 });
 
-describe("K11 : la moitié des dégâts sur une réussite quand le texte la donne", () => {
-  it("« Success: Half damage only » sur une donnée « none »", async () => {
+describe("K11: half damage on a success when the text gives it", () => {
+  it("\"Success: Half damage only\" on data set to \"none\"", async () => {
     const { monsterSaveDamage } = await import("../module/scripts/core/monster-text.mjs");
     const acts = [{ id: "n".repeat(16), type: "save", onSave: "none" }];
     expect(monsterSaveDamage("Failure: 9 damage, and engulfed. Success: Half damage only.", acts)).toEqual({ ["n".repeat(16)]: "half" });
@@ -202,33 +202,33 @@ describe("K11 : la moitié des dégâts sur une réussite quand le texte la donn
   });
 });
 
-describe("§461 : téléportation de soi d'une capacité de monstre, à la portée de son activité", () => {
+describe("§461: self-teleportation of a monster ability, within the range of its activity", () => {
   const ID = "aaaaaaaaaaaaaaaa";
   const utility = (range, extra={}) => [{ id: ID, type: "utility", range, ...extra }];
   const lookup = p => `[[lookup @range.${p} activity=${ID}]]`;
 
-  it("« teleports up to [portée] » : la portée de l'activité fait la distance (pas de distance écrite)", async () => {
+  it("\"teleports up to [range]\": the activity's range gives the distance (no written distance)", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const html = `<p>The [[lookup @name lowercase]] teleports up to ${lookup("value")} ${lookup("units")}. to an unoccupied space it can see.</p>`;
     const rule = monsterSelfTeleport(html, utility({ value: "40", units: "ft" }));
     expect(rule).toEqual({ activity: ID });
     expect(validateEntry({ teleport: rule })).toEqual([]);
-    // « can teleport », destination puis portée : de même.
+    // "can teleport", destination then range: likewise.
     expect(monsterSelfTeleport(`<p>The beast can teleport to an unoccupied space it can see within ${lookup("value")} feet, and it bites.</p>`,
       utility({ value: "30", units: "ft" }))).toEqual({ activity: ID });
   });
 
-  it("portée « soi » : la distance que le texte donne", async () => {
+  it("range \"self\": the distance the text gives", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const rule = monsterSelfTeleport("<p>The herald teleports up to 30 feet to an unoccupied space it can see and makes one Bite attack.</p>",
       utility({ units: "self" }));
     expect(rule).toEqual({ activity: ID, distance: 30, units: "ft" });
     expect(validateEntry({ teleport: rule })).toEqual([]);
-    // Ni distance écrite ni portée lisible : rien.
+    // Neither a written distance nor a readable range: nothing.
     expect(monsterSelfTeleport("<p>The herald teleports to an unoccupied space it can see.</p>", utility({ units: "self" }))).toBeNull();
   });
 
-  it("« along with one willing creature of its choice within 5 feet » : un passager", async () => {
+  it("\"along with one willing creature of its choice within 5 feet\": a passenger", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const html = `<p>The wolf teleports, along with one willing creature of its choice within [[lookup @target.affects.special activity=${ID}]] of it, up to ${lookup("value")} feet ${lookup("special")}.</p>`;
     const rule = monsterSelfTeleport(html, utility({ value: "30", units: "ft", special: "to an unoccupied space it can see" },
@@ -237,21 +237,21 @@ describe("§461 : téléportation de soi d'une capacité de monstre, à la port�
     expect(validateEntry({ teleport: rule })).toEqual([]);
   });
 
-  it("pas lu : sauvegarde ou attaque, gabarit, arbre sans distance, autre créature, choix du maître", async () => {
+  it("not read: save or attack, template, tree without distance, another creature, GM's choice", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const plain = "<p>The fiend teleports up to 60 feet to an unoccupied space it can see.</p>";
     expect(monsterSelfTeleport(plain, [{ id: ID, type: "save", range: { value: "60", units: "ft" } }])).toBeNull();
     expect(monsterSelfTeleport(plain, utility({ value: "60", units: "ft" }, { template: true }))).toBeNull();
     expect(monsterSelfTeleport(plain, [...utility({ value: "60", units: "ft" }), { id: "bbbbbbbbbbbbbbbb", type: "attack" }])).toBeNull();
     const ft = utility({ value: "60", units: "ft" });
-    // §465 : « within 5 feet of a creature it can see » est désormais lu (destination contrainte) ; un second arbre sans distance, non.
+    // §465: "within 5 feet of a creature it can see" is now read (constrained destination); a second tree without distance, not.
     expect(monsterSelfTeleport("<p>The tree spirit teleports to an unoccupied space within 5 feet of a second tree.</p>", ft)).toBeNull();
     expect(monsterSelfTeleport("<p>The demon teleports itself or a willing demon within 10 feet of itself up to 60 feet to an unoccupied space the demon can see.</p>", ft)).toBeNull();
     expect(monsterSelfTeleport("<p>The steed teleports, along with its rider, to an unoccupied space of your choice up to 60 feet away from itself.</p>", ft)).toBeNull();
     expect(monsterSelfTeleport("<p>This spell instantly transports you and up to eight willing creatures to a destination you select.</p>", ft)).toBeNull();
   });
 
-  it("la couche texte porte la téléportation (`teleport`), validée par le schéma", async () => {
+  it("the text layer carries the teleportation (`teleport`), validated by the schema", async () => {
     const { monsterTextLayer } = await import("../module/scripts/core/monster-layer.mjs");
     const layer = monsterTextLayer({ html: "<p>The fiend teleports up to 60 feet to an unoccupied space it can see.</p>",
       activities: [{ id: ID, type: "utility", range: { value: "60", units: "ft" } }] });
@@ -260,12 +260,12 @@ describe("§461 : téléportation de soi d'une capacité de monstre, à la port�
   });
 });
 
-describe("§462 : téléportation de soi avec une zone sur l'espace quitté", () => {
+describe("§462: self-teleportation with an area on the space left", () => {
   const ID = "cccccccccccccccc";
   const act = (type, template) => [{ id: ID, type, range: { value: "60", units: "ft" }, template }];
   const circle = { type: "circle", size: "10", units: "ft", count: "" };
 
-  it("« each creature within 10 feet of the space it left » : `area: \"left\"`, la portée de l'activité fait la distance", async () => {
+  it("\"each creature within 10 feet of the space it left\": `area: \"left\"`, the activity's range gives the distance", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const html = "<p>The wraith teleports up to 60 feet to an unoccupied space it can see, and each creature within "
       + `[[lookup @target.template.size activity=${ID}]] [[lookup @target.template.units activity=${ID}]]. of the space it leaves takes 7 Cold damage.</p>`;
@@ -276,7 +276,7 @@ describe("§462 : téléportation de soi avec une zone sur l'espace quitté", ()
     }
   });
 
-  it("pas lu : taille différente, agrippés emportés, attaque, pas de clause de zone", async () => {
+  it("not read: different size, grappled creatures carried along, attack, no area clause", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const go = "The wraith teleports up to 60 feet to an unoccupied space it can see";
     expect(monsterSelfTeleport(`<p>${go}, and each creature within 10 feet of the space it left takes 7 damage.</p>`,
@@ -287,13 +287,13 @@ describe("§462 : téléportation de soi avec une zone sur l'espace quitté", ()
     expect(monsterSelfTeleport(`<p>${go}.</p>`, act("damage", circle))).toBeNull();
   });
 
-  it("le schéma : `area` vaut \"left\", \"arrival\" ou rien", () => {
+  it("the schema: `area` is \"left\", \"arrival\" or nothing", () => {
     expect(validateEntry({ teleport: { activity: ID, area: "left" } })).toEqual([]);
     expect(validateEntry({ teleport: { activity: ID, area: "arrival" } })).toEqual([]);
     expect(validateEntry({ teleport: { activity: ID, area: "middle" } }).join()).toMatch(/area/);
   });
 
-  it("la forme de la zone au départ : une émanation, quelle que soit la portée", async () => {
+  it("the area's shape at departure: an Emanation, whatever the range", async () => {
     const { departureAreaShape } = await import("../module/scripts/core/self-area.mjs");
     expect(departureAreaShape({ type: "circle", size: "10" })).toBe("emanation");
     expect(departureAreaShape({ type: "radius", size: 10 })).toBe("emanation");
@@ -303,11 +303,11 @@ describe("§462 : téléportation de soi avec une zone sur l'espace quitté", ()
   });
 });
 
-describe("§463 : téléportation de soi avec une zone à l'arrivée", () => {
+describe("§463: self-teleportation with an area at arrival", () => {
   const ID = "dddddddddddddddd";
   const act = (type, template) => [{ id: ID, type, range: { value: "60", units: "ft" }, template }];
 
-  it("« each creature in a 10-foot Emanation originating from it at its destination space » : `area: \"arrival\"`", async () => {
+  it("\"each creature in a 10-foot Emanation originating from it at its destination space\": `area: \"arrival\"`", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const html = "<p>The angel teleports up to 60 feet to an unoccupied space it can see. Dexterity Saving Throw: DC 15, each creature in a "
       + `[[lookup @target.template.size activity=${ID}]]-foot Emanation originating from the [[lookup @name lowercase]] at its destination space. Failure: 9 damage.</p>`;
@@ -316,7 +316,7 @@ describe("§463 : téléportation de soi avec une zone à l'arrivée", () => {
     expect(validateEntry({ teleport: rule })).toEqual([]);
   });
 
-  it("« within 5 feet of the X's destination space », « of its choice » : la zone au choix de la créature", async () => {
+  it("\"within 5 feet of the X's destination space\", \"of its choice\": the area at the creature's choice", async () => {
     const { monsterSelfTeleport, monsterTeleportChoice } = await import("../module/scripts/core/monster-text.mjs");
     const toxic = "<p>The fiend halves the damage, and it teleports to an unoccupied space it can see within 30 feet of itself. Constitution "
       + "Saving Throw: DC 14, each creature within 5 feet of the [[lookup @name lowercase]]'s destination space.</p>";
@@ -328,7 +328,7 @@ describe("§463 : téléportation de soi avec une zone à l'arrivée", () => {
     expect(monsterTeleportChoice(sand)).toBe(true);
   });
 
-  it("la couche texte : `teleport.area` et, « of its choice », `zoneAffects: \"enemy\"`", async () => {
+  it("the text layer: `teleport.area` and, \"of its choice\", `zoneAffects: \"enemy\"`", async () => {
     const { monsterTextLayer } = await import("../module/scripts/core/monster-layer.mjs");
     const layer = monsterTextLayer({ html: "<p>The mummy teleports up to 60 feet to an unoccupied space it can see. Each creature of its choice "
       + "that it can see within 5 feet of its destination space has the Blinded condition.</p>",
@@ -339,11 +339,11 @@ describe("§463 : téléportation de soi avec une zone à l'arrivée", () => {
   });
 });
 
-describe("§464 : téléportation de soi offerte après l'attaque", () => {
+describe("§464: self-teleportation offered after the attack", () => {
   const ATK = "eeeeeeeeeeeeeeee";
   const DMG = "ffffffffffffffff";
 
-  it("« Immediately after the attack hits or misses, … can teleport up to 30 feet » : `after: \"attack\"`, la distance du texte", async () => {
+  it("\"Immediately after the attack hits or misses, … can teleport up to 30 feet\": `after: \"attack\"`, the text's distance", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const html = "<p>Melee Attack Roll: +6, reach 5 ft. Hit: 8 Slashing damage. Immediately after the attack hits or misses, the spirit can teleport "
       + "up to 30 feet to an unoccupied space it can see.</p>";
@@ -352,14 +352,14 @@ describe("§464 : téléportation de soi offerte après l'attaque", () => {
     expect(validateEntry({ teleport: rule })).toEqual([]);
   });
 
-  it("« Hit or Miss: The X can teleport up to 60 feet », une activité de dégâts en plus (critique) : de même", async () => {
+  it("\"Hit or Miss: The X can teleport up to 60 feet\", an extra damage activity (critical): likewise", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const html = "<p>Hit: 9 Slashing damage. Critical Hit: 4 extra damage. Hit or Miss: The knight can teleport up to 60 feet to an unoccupied space it can see.</p>";
     expect(monsterSelfTeleport(html, [{ id: ATK, type: "attack" }, { id: DMG, type: "damage" }]))
       .toEqual({ activity: ATK, distance: 60, units: "ft", after: "attack" });
   });
 
-  it("pas lu : deux attaques, une sauvegarde à côté, une téléportation sans « après l'attaque »", async () => {
+  it("not read: two attacks, a save alongside, a teleportation without \"after the attack\"", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const html = "<p>Hit: 8 damage. Hit or Miss: The knight can teleport up to 60 feet to an unoccupied space it can see.</p>";
     expect(monsterSelfTeleport(html, [{ id: ATK, type: "attack" }, { id: DMG, type: "attack" }])).toBeNull();
@@ -368,16 +368,16 @@ describe("§464 : téléportation de soi offerte après l'attaque", () => {
       [{ id: ATK, type: "attack" }])).toBeNull();
   });
 
-  it("le schéma : `after` vaut \"attack\" ou rien", () => {
+  it("the schema: `after` is \"attack\" or nothing", () => {
     expect(validateEntry({ teleport: { distance: 30, units: "ft", activity: ATK, after: "attack" } })).toEqual([]);
     expect(validateEntry({ teleport: { distance: 30, units: "ft", after: "save" } }).join()).toMatch(/after/);
   });
 });
 
-describe("§465 : téléportation de soi à destination contrainte", () => {
+describe("§465: self-teleportation with a constrained destination", () => {
   const ID = "gggggggggggggggg";
 
-  it("« within 5 feet of a creature it can see » : près d'une créature, sans distance (Rêve éveillé)", async () => {
+  it("\"within 5 feet of a creature it can see\": near a creature, without distance (\"Waking Dream\")", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const rule = monsterSelfTeleport("<p>The horror teleports to an unoccupied space within 5 feet of a creature it can see, then makes a Spear attack.</p>",
       [{ id: ID, type: "utility", range: { units: "self" } }]);
@@ -385,7 +385,7 @@ describe("§465 : téléportation de soi à destination contrainte", () => {
     expect(validateEntry({ teleport: rule })).toEqual([]);
   });
 
-  it("« uses Teleport, but its destination space must be within 10 feet of the triggering creature » : la portée de l'activité, près de la créature", async () => {
+  it("\"uses Teleport, but its destination space must be within 10 feet of the triggering creature\": the activity's range, near the creature", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const html = `<p>Trigger: Another creature ends its move nearby. Response: The demon uses Teleport, but its destination space must be [[lookup @target.affects.special activity=${ID}]].</p>`;
     const rule = monsterSelfTeleport(html, [{ id: ID, type: "utility", range: { value: "120", units: "ft" },
@@ -394,7 +394,7 @@ describe("§465 : téléportation de soi à destination contrainte", () => {
     expect(validateEntry({ teleport: rule })).toEqual([]);
   });
 
-  it("« within 5 feet of a second tree that is within 60 feet of the previous tree » : 70 ft au plus, plante laissée au MJ", async () => {
+  it("\"within 5 feet of a second tree that is within 60 feet of the previous tree\": 70 ft at most, plant left to the GM", async () => {
     const { monsterSelfTeleport } = await import("../module/scripts/core/monster-text.mjs");
     const html = `<p>If within [[lookup @range.value activity=${ID}]] feet of a [[lookup @range.special activity=${ID}]], the spirit teleports to an unoccupied `
       + `space within [[lookup @range.value activity=${ID}]] feet of a second [[lookup @target.affects.special activity=${ID}]] that is within 60 feet of the previous tree.</p>`;
@@ -403,15 +403,15 @@ describe("§465 : téléportation de soi à destination contrainte", () => {
     expect(validateEntry({ teleport: rule })).toEqual([]);
   });
 
-  it("le schéma de `destination`", () => {
+  it("the schema of `destination`", () => {
     expect(validateEntry({ teleport: { activity: ID, destination: { near: "creature", within: 5, units: "ft" } } })).toEqual([]);
     expect(validateEntry({ teleport: { activity: ID, destination: { near: "wall", within: 5, units: "ft" } } }).join()).toMatch(/destination/);
     expect(validateEntry({ teleport: { activity: ID, destination: { near: "creature", within: 0, units: "ft" } } }).join()).toMatch(/destination/);
   });
 });
 
-describe("§466 : poussées et tractions que K8 ne lisait pas", () => {
-  it("« Success: Half damage, and the target is pushed 5 feet straight away » : sur une sauvegarde réussie", async () => {
+describe("§466: pushes and pulls that K8 did not read", () => {
+  it("\"Success: Half damage, and the target is pushed 5 feet straight away\": on a successful save", async () => {
     const { monsterPushes } = await import("../module/scripts/core/monster-text.mjs");
     const html = "<p>Dexterity Saving Throw: DC 15, each creature in the beast's destination space. Failure: 10 damage, and the target has the Prone "
       + "condition. Success: Half damage, and the target is pushed 5 feet straight away from the beast.</p>";
@@ -420,7 +420,7 @@ describe("§466 : poussées et tractions que K8 ne lisait pas", () => {
     expect(validateEntry({ triggers: out })).toEqual([]);
   });
 
-  it("« the X can pull the target up to 10 feet straight toward itself » : au toucher, l'auteur choisit la distance", async () => {
+  it("\"the X can pull the target up to 10 feet straight toward itself\": on a hit, the author chooses the distance", async () => {
     const { monsterPushes } = await import("../module/scripts/core/monster-text.mjs");
     const html = "<p>Hit: 12 damage. If the target is a Huge or smaller creature, it has the Grappled condition, and the kraken can pull the target "
       + "up to 10 feet straight toward itself.</p>";
@@ -428,7 +428,7 @@ describe("§466 : poussées et tractions que K8 ne lisait pas", () => {
     expect(out).toEqual([{ on: "hit", if: { "target.sizeAtMost": "huge" }, do: [{ type: "move", mode: "pull", distance: 10, units: "ft", upTo: true }] }]);
   });
 
-  it("« pulled up to 20 feet straight toward the Sphere's center » : vers le centre de la zone, seulement sur une capacité à gabarit", async () => {
+  it("\"pulled up to 20 feet straight toward the Sphere's center\": toward the area's center, only on a template ability", async () => {
     const { monsterPushes } = await import("../module/scripts/core/monster-text.mjs");
     const html = "<p>Dexterity Saving Throw: DC 15, each creature in a 20-foot-radius Sphere. Failure: 10 damage, and the target has the Prone "
       + "condition and is pulled up to 20 feet straight toward the Sphere's center. Success: Half damage only.</p>";
@@ -438,14 +438,14 @@ describe("§466 : poussées et tractions que K8 ne lisait pas", () => {
     expect(monsterPushes(html, { save: true })).toEqual([]);
   });
 
-  it("toujours pas : « pushed or pulled » au choix, « Failure or Success », poussée vers un centre", async () => {
+  it("still not: \"pushed or pulled\" at choice, \"Failure or Success\", push toward a center", async () => {
     const { monsterPushes } = await import("../module/scripts/core/monster-text.mjs");
     expect(monsterPushes("<p>Failure: 9 damage, and the target is pushed or pulled up to 20 feet straight away or toward the mummy.</p>", { save: true })).toEqual([]);
     expect(monsterPushes("<p>Failure or Success: the target is pushed 10 feet straight away from the giant.</p>", { save: true })).toEqual([]);
     expect(monsterPushes("<p>Failure: the target is pushed up to 20 feet straight away from the Sphere's center.</p>", { save: true, area: true })).toEqual([]);
   });
 
-  it("le schéma : `toward` vaut \"area\" avec une traction", () => {
+  it("the schema: `toward` is \"area\" with a pull", () => {
     expect(validateEntry({ triggers: [{ on: "failedSave", do: [{ type: "move", mode: "push", distance: 5, units: "ft", toward: "area" }] }] }).join()).toMatch(/toward/);
   });
 });

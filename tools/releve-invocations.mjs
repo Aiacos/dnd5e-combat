@@ -1,20 +1,21 @@
 /**
- * Relevé des activités à choix des données premium (issue #38, SPEC §389) : invocations, transformations, enchantements — partout
- * où dnd5e ne laisse choisir que dans SA fenêtre d'utilisation, et que la barre d'actions, « Lancer quand même » ou une relance du
- * moteur sautent. Pour chacune, ce que portent ses données et les cas à risque :
- *   formes        plusieurs profils, tailles ou types de créature (le choix se perd sans fenêtre ; §383 le couvre pour « summon »)
- *   par-niveau    des profils réservés à certains niveaux (`level.min/max`)
- *   nombre        un nombre de créatures qui dépend du niveau (`count` en formule), ou caché dans la cible du sort seulement
- *                 (Animation des morts : `target.affects.count`), sans `summon.chooseCount` du moteur
- *   srd-2014      une créature du SRD 2014 de dnd5e (`dnd5e.monsters`) ; « → MM » / « → SRD 2024 » si l'équivalent existe (§386)
- *   introuvable   un profil dont la créature n'est dans aucun compendium relevé
- *   ne-pose-rien  `summon.prompt` faux et pas dans `PLACES_SUMMONS` (rien n'apparaît, sauf un voisin qui reprend l'invocation)
- *   vise          l'invocation se vise d'un clic : seulement si le contenu le dit (`targetedSummon`, §394 : Doigt de mort)
- * Et ce que le moteur déclare pour l'identifiant (`CONTENT[identifier].summon`, `placesSummons`).
+ * Survey of the premium data's choice activities (issue #38, SPEC §389): summons, transformations, enchantments — wherever
+ * dnd5e only lets you choose in ITS use window, and the action bar, "Cast anyway" or an engine relaunch skip it. For each,
+ * what its data carries and the risky cases:
+ *   formes        several profiles, sizes or creature types (the choice is lost without a window; §383 covers it for "summon")
+ *   par-niveau    profiles reserved for certain levels (`level.min/max`)
+ *   nombre        a number of creatures that depends on the level (`count` as a formula), or hidden only in the spell's target
+ *                 (Animate Dead: `target.affects.count`), without the engine's `summon.chooseCount`
+ *   srd-2014      a creature from dnd5e's SRD 2014 (`dnd5e.monsters`); "→ MM" / "→ SRD 2024" if the equivalent exists (§386)
+ *   introuvable   a profile whose creature is in no surveyed compendium
+ *   ne-pose-rien  `summon.prompt` false and not in `PLACES_SUMMONS` (nothing appears, except a neighbor that takes over the summon)
+ *   vise          the summon is aimed with a click: only if the content says so (`targetedSummon`, §394: Finger of Death)
+ * And what the engine declares for the identifier (`CONTENT[identifier].summon`, `placesSummons`).
  *
- * Lit une COPIE des bases LevelDB (Foundry les verrouille), n'écrit rien dans le dépôt public : le détail (noms premium) va dans le
- * JSON demandé, hors du dépôt, et un résumé Markdown dans `prive/RELEVE_INVOCATIONS.md` si `--md` est donné.
- *   node tools/releve-invocations.mjs "F:/Foundry V14/Data" <sortie.json> [--md prive/RELEVE_INVOCATIONS.md]
+ * Reads a COPY of the LevelDB databases (Foundry locks them), writes nothing to the public repository: the detail (premium
+ * names) goes in the requested JSON, outside the repository, and a Markdown summary in `prive/RELEVE_INVOCATIONS.md` if
+ * `--md` is given.
+ *   node tools/releve-invocations.mjs "F:/Foundry V14/Data" <output.json> [--md prive/RELEVE_INVOCATIONS.md]
  */
 import { cpSync, mkdirSync, readdirSync, mkdtempSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -32,7 +33,7 @@ if ( !data || !out ) {
   process.exit(1);
 }
 
-/** Les paquets relevés : modules premium (s'ils sont installés) et le système. */
+/** The surveyed packages: premium modules (if installed) and the system. */
 const PACKAGES = [
   { id: "dnd-players-handbook", kind: "modules" }, { id: "dnd-monster-manual", kind: "modules" },
   { id: "dnd-dungeon-masters-guide", kind: "modules" }, { id: "dnd-ravenloft-horrors-within", kind: "modules" },
@@ -52,15 +53,15 @@ async function read(dir, fn) {
   finally { await db.close(); }
 }
 
-/** Les acteurs connus (uuid → nom) et les items à activités, de tous les compendiums. */
+/** The known actors (uuid → name) and the items with activities, from all compendiums. */
 const actors = new Map();
 const items = [];
 for ( const { id: pkg, kind } of PACKAGES ) {
   const root = join(data, kind, pkg, "packs");
   if ( !existsSync(root) ) { console.warn(`absent : ${pkg}`); continue; }
   for ( const pack of readdirSync(root) ) {
-    // Les compendiums 2014 de dnd5e (SRD 5.1) ne servent plus : seuls ceux de 2024 (`*24`) — mais leurs acteurs restent connus, pour
-    // dire qu'un profil y pointe (`srd-2014`).
+    // dnd5e's 2014 compendiums (SRD 5.1) are no longer used: only the 2024 ones (`*24`) — but their actors remain known, to
+    // say that a profile points to one (`srd-2014`).
     const legacy = (pkg === "dnd5e") && !pack.endsWith("24");
     const dir = join(root, pack);
     if ( !statSync(dir).isDirectory() || !existsSync(join(dir, "CURRENT")) ) continue;
@@ -81,14 +82,14 @@ for ( const { id: pkg, kind } of PACKAGES ) {
   }
 }
 
-/** L'uuid tel que Foundry le résout (forme courte `Compendium.p.k.id` comprise). */
+/** The uuid as Foundry resolves it (including the short form `Compendium.p.k.id`). */
 function knownActor(uuid) {
   if ( actors.has(uuid) ) return actors.get(uuid);
   const m = /^Compendium\.([^.]+)\.([^.]+)\.(?:Actor\.)?([A-Za-z0-9]{16})$/.exec(String(uuid ?? ""));
   return m ? (actors.get(`Compendium.${m[1]}.${m[2]}.Actor.${m[3]}`) ?? null) : null;
 }
 
-/** §386 : l'équivalent 2024 d'une créature du SRD 2014, comme le moteur le cherche. */
+/** §386: the 2024 equivalent of an SRD 2014 creature, as the engine looks it up. */
 function preferred(uuid) {
   if ( !srdMonsterId(uuid) ) return null;
   const id = mmActorId(knownActor(uuid));
@@ -102,7 +103,7 @@ function preferred(uuid) {
 
 const PLACES = new Set(Object.entries(CONTENT).filter(([, e]) => e?.placesSummons).map(([id]) => id));
 const variable = f => /@|d\d/i.test(String(f ?? ""));
-// §394 : la visée d'une invocation ne dépend plus de sa cible dans les données (`targetedSummon` du contenu).
+// §394: aiming a summon no longer depends on its target in the data (the content's `targetedSummon`).
 
 const rows = [];
 for ( const { pack, ownerName, item } of items ) {
@@ -115,8 +116,8 @@ for ( const { pack, ownerName, item } of items ) {
     const flags = [];
     const sizes = (a.creatureSizes ?? []).length;
     const types = (a.creatureTypes ?? []).length;
-    // Une invocation à plusieurs formes a la fenêtre « Choisir la forme » du moteur (§383) : signalée à part, couverte.
-    // Enchantements et transformations : la même fenêtre du moteur (§391) ; la Forme sauvage a la sienne (§16.39).
+    // A summon with several forms has the engine's "Choose the form" window (§383): flagged separately, covered.
+    // Enchantments and transformations: the same engine window (§391); Wild Shape has its own (§16.39).
     if ( (profiles.length > 1) || (sizes > 1) || (types > 1) ) flags.push(a.type === "summon" ? "formes (couvert §383)"
       : (["wild-shape", "circle-forms"].includes(identifier) ? "formes (couvert §16.39)" : `formes (couvert §391) ${a.type}`));
     if ( profiles.some(p => (p.level?.min ?? null) !== null || (p.level?.max ?? null) !== null) ) flags.push("par-niveau");
@@ -127,7 +128,7 @@ for ( const { pack, ownerName, item } of items ) {
       if ( (countVaries || hiddenCount) && !content?.summon?.chooseCount ) flags.push(hiddenCount ? "nombre (dans la cible)" : "nombre");
       for ( const p of profiles ) {
         if ( a.summon?.mode === "cr" ) continue;
-        // §392 : un lien cassé vers un id du SRD 2014 (DMG) — le moteur le répare comme un profil du SRD 2014.
+        // §392: a broken link to an SRD 2014 id (DMG) — the engine repairs it like an SRD 2014 profile.
         const lostId = (p.uuid && !knownActor(p.uuid)) ? String(p.uuid).split(".").pop() : null;
         if ( lostId ) {
           const order = ["dnd-monster-manual.actors", "dnd5e.actors24", "dnd-players-handbook.actors", "dnd-dungeon-masters-guide.actors"];
@@ -142,17 +143,17 @@ for ( const { pack, ownerName, item } of items ) {
         }
         if ( p.uuid && srdMonsterId(p.uuid) ) {
           const to = preferred(p.uuid);
-          // Le moteur prend l'équivalent 2024 quand il existe (§386) : couvert ; sans équivalent, la créature 2014 reste.
+          // The engine takes the 2024 equivalent when it exists (§386): covered; without an equivalent, the 2014 creature stays.
           flags.push(to ? `srd-2014 couvert §386 ${knownActor(p.uuid) ?? "?"} → ${to}` : `srd-2014 ${knownActor(p.uuid) ?? "?"} (sans équivalent)`);
         }
         if ( p.uuid && !knownActor(p.uuid) ) {
-          // Le même id dans un autre compendium (un lien vers le mauvais pack) ?
+          // The same id in another compendium (a link to the wrong pack)?
           const id = String(p.uuid).split(".").pop();
           const elsewhere = [...actors.keys()].find(k => k.endsWith(`.Actor.${id}`));
           flags.push(`introuvable ${p.uuid}${elsewhere ? ` (même id : ${elsewhere} « ${actors.get(elsewhere)} »)` : ""}${p.name ? ` « ${p.name} »` : ""}`);
         }
       }
-      // Lumière, Flamme éternelle : le moteur pose l'objet lui-même (§16.35, contenu `light` « on: summon »).
+      // Light, Continual Flame: the engine places the object itself (§16.35, `light` content "on: summon").
       if ( (a.summon?.prompt === false) && !PLACES.has(identifier) && (content?.light?.on !== "summon") ) flags.push("ne-pose-rien");
     }
     const affects = (a.target?.override ? a.target?.affects?.type : s.target?.affects?.type) ?? "";
@@ -167,7 +168,7 @@ for ( const { pack, ownerName, item } of items ) {
   }
 }
 
-// « À risque » : au moins un drapeau qui n'est pas couvert par le moteur.
+// "At risk": at least one flag that is not covered by the engine.
 const covered = f => f.startsWith("formes (couvert") || f.startsWith("srd-2014 couvert") || f.startsWith("lien cassé couvert");
 const risky = rows.filter(r => r.flags.some(f => !covered(f)));
 writeFileSync(out, JSON.stringify({ at: new Date().toISOString(), rows }, null, 1));

@@ -1,7 +1,7 @@
 /**
- * M8 (SPEC §18.14) — Mort explosive. Monde `ravenloft` : la Mort explosive du Méphite de poussière (Monster Manual) prêtée
- * au Loup. Bramo et le Zombi à 1,50 m, l'Ours brun à 4,50 m. Le Loup tombe à 0 PV → Mort → une carte : sauvegarde de
- * Dextérité de Bramo et du Zombi (pas de l'Ours), dégâts appliqués. Une seconde écriture de 0 PV ne relance rien.
+ * M8 (SPEC §18.14) — Death Burst. World `ravenloft`: the Dust Mephit's Death Burst (Monster Manual) lent
+ * to the Wolf. Bramo and the Zombie at 1.50 m, the Brown Bear at 4.50 m. The Wolf drops to 0 HP → Death → a card: Dexterity
+ * saving throw of Bramo and the Zombie (not the Bear), damage applied. A second write of 0 HP triggers nothing.
  */
 const MEPHIT = "Compendium.dnd-monster-manual.actors.Actor.mmDustMephit0000";
 const MODULE_ID = "dnd5e-combat";
@@ -11,7 +11,7 @@ export default {
   name: "mort explosive — le Méphite explose en mourant",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Absent from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise dnd5e's 2024 SRD).
     await ctx.cast({ "Loup": "mmWolf0000000000", "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Loup", "Zombi", "Ours brun", "Bramo"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Loup, Zombi, Ours brun ou Bramo absent : non applicable"); return; }

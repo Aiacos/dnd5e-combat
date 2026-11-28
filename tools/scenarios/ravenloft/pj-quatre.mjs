@@ -1,12 +1,12 @@
 /**
- * §65 — Les quatre points des PJ trouvés par l'inventaire (monde `ravenloft` / `ravenloft-test2`).
- *  1. Échappée agile (forme Panthère de Sylaene, posée le temps du scénario) : par une action Bonus, le moteur DEMANDE
- *     « Se désengager ou Se cacher » ; Se désengager : action Bonus dépensée, désengagé ; Se cacher : le test de Discrétion part.
- *  2. Eau bénite de Bramo : sur le Zombi (Mort-vivant) elle agit ; sur Kaalisti (Humanoïde) elle est sans effet.
- *  3. Suggestion de Kaalisti sur le Zombi : des dégâts d'auteur inconnu ne la font pas cesser ; un Trait de feu de Kaalisti, oui.
- *  4. Anneau de chaleur maudit de Sylaene (déclaré par cos-reloaded-creatures) : un Rayon de givre de Bramo sur elle voit ses
- *     dégâts de froid réduits.
- * Les jets sont aléatoires : on rejoue jusqu'à toucher ou rater la sauvegarde voulue.
+ * §65 — The four PC points found by the inventory (world `ravenloft` / `ravenloft-test2`).
+ *  1. Agile Escape (Sylaene's Panther form, placed for the scenario): with a Bonus Action, the engine ASKS
+ *     "Disengage or Hide"; Disengage: Bonus Action spent, disengaged; Hide: the Stealth check goes off.
+ *  2. Bramo's Holy Water: on the Zombie (Undead) it works; on Kaalisti (Humanoid) it has no effect.
+ *  3. Kaalisti's Suggestion on the Zombie: damage from an unknown author does not end it; Kaalisti's Fire Bolt does.
+ *  4. Sylaene's cursed Ring of Warmth (declared by cos-reloaded-creatures): Bramo's Ray of Frost on her has its
+ *     cold damage reduced.
+ * The rolls are random: we replay until the wanted hit or failed save.
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -21,7 +21,7 @@ export default {
     const warlock = await ctx.token("Kaalisti");
     const wizard = await ctx.token("Bramo");
     const druid = await ctx.token("Sylaene");
-    // Les fiches de la campagne seulement : ailleurs (`dnd-6`), des tokens du même nom sans l'Eau bénite ni la forme Panthère.
+    // The campaign's sheets only: elsewhere (`dnd-6`), tokens of the same name without the Holy Water or the Panther form.
     const out = await ctx.call("list-actors", {});
     const actors = Array.isArray(out) ? out : (out.actors ?? Object.values(out).find(Array.isArray));
     const pantherActor = actors.find(a => /^Sylaene \(Panth/.test(a.name));
@@ -38,14 +38,14 @@ export default {
       ?.windows?.find(w => re.test(`${w.title ?? ""} ${w.text ?? ""}`));
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
 
-    // 1. Échappée agile.
+    // 1. Agile Escape.
     if ( ctx.expect(!!pantherActor, "forme Panthère de Sylaene dans le monde") ) {
       const at = await ctx.position(zombi);
       const before = new Set((await ctx.call("list-scene-objects", { types: ["Token"] })).objects.Token.map(t => t.id));
       await ctx.call("place-token", { actorId: pantherActor.id, x: at.x + 2 * grid, y: at.y });
       const panther = (await ctx.call("list-scene-objects", { types: ["Token"] })).objects.Token.find(t => !before.has(t.id));
       ctx.restore(() => ctx.call("delete-scene-object", { type: "Token", objectId: panther.id }).catch(() => {}));
-      // Token lié : l'effet de Furtivité reste sur l'acteur du monde une fois le token retiré (le filet ne suit que la scène).
+      // Linked token: the Stealth effect stays on the world actor once the token is removed (the net only follows the scene).
       ctx.restore(async () => {
         const a = await ctx.call("get-actor", { actorId: pantherActor.id });
         for ( const e of (a.effects ?? []).filter(e => e.flags?.[MODULE_ID]?.hidden) ) {
@@ -86,7 +86,7 @@ export default {
       ctx.ownCombat = null;
     }
 
-    // 2. Eau bénite.
+    // 2. Holy Water.
     const holy = async target => {
       const used = await ctx.use({ tokenId: wizard.id, identifier: "holy-water", targetTokenIds: [target.id] });
       const res = await ctx.settle(used.usageMessageId).catch(() => null);

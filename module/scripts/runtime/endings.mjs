@@ -1,14 +1,14 @@
 /**
- * Fins de sorts (SPEC §42.2) : ce qui suit la fin d'un effet.
+ * Spell endings (SPEC §42.2): what follows the end of an effect.
  *
- *  - `effectThen` (MJ actif) : quand un effet d'item cesse sur une créature — durée écoulée, concentration rompue, dissipation,
- *    retrait à la main —, un autre effet du même item y est posé. Hâte : « quand le sort prend fin, la cible est Neutralisée et sa
- *    Vitesse est de 0 jusqu'à la fin de son prochain tour » (l'effet « Lethargy », que `effectEnds` fait tomber à la fin du
- *    prochain tour du porteur, runtime/cantrips.mjs).
- *  - §258 `endsWhen` (MJ actif) : les fins génériques relevées par l'audit CAT / CPR (core/endings.mjs) — armure enfilée, porteur et
- *    lanceur trop éloignés, 0 PV, et la concentration qui tombe quand l'utilisation n'a affecté personne (réglage `endUnaffected`).
- * Les autres fins vivent avec leur brique : sauvegarde répétée et dégâts au tour du porteur (runtime/triggers.mjs), effet rompu
- * par ce que fait son porteur (`breaksOn`, runtime/breaks.mjs), fin à un tour précis (`effectEnds`, runtime/cantrips.mjs).
+ *  - `effectThen` (active GM): when an item effect ceases on a creature — duration elapsed, concentration broken, dispelled,
+ *    removed by hand —, another effect of the same item is placed on it. Haste: "when the spell ends, the target is Incapacitated
+ *    and its Speed is 0 until the end of its next turn" (the "Lethargy" effect, which `effectEnds` drops at the end of the
+ *    bearer's next turn, runtime/cantrips.mjs).
+ *  - §258 `endsWhen` (active GM): the generic endings found by the CAT / CPR audit (core/endings.mjs) — armor donned, bearer and
+ *    caster too far apart, 0 HP, and concentration that drops when the use affected no one (setting `endUnaffected`).
+ * The other endings live with their building block: repeated save and damage on the bearer's turn (runtime/triggers.mjs), effect
+ * broken by what its bearer does (`breaksOn`, runtime/breaks.mjs), end on a specific turn (`effectEnds`, runtime/cantrips.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -40,7 +40,7 @@ async function onDeleteEffect(effect) {
   const actor = effect.parent;
   if ( actor?.documentName !== "Actor" ) return;
   const item = originItemOf(effect);
-  // §289 : la table que la fin de l'effet fait tirer (Ombre vivante : « Volonté de l'ombre »).
+  // §289: the table that the end of the effect makes roll ("Living Shadow": "Will of the Shadow").
   const draws = item ? contentOf(item).entry?.drawsOnEnd : null;
   const drawn = draws ? Object.keys(draws).find(id => comesFromItemEffect(effect, id)) : null;
   if ( drawn && ((actor.system?.attributes?.hp?.value ?? 0) > 0) ) {
@@ -53,17 +53,17 @@ async function onDeleteEffect(effect) {
       log(`${item.name}: "${effect.name}" ends on ${actor.name}, table "${table.name}" drawn`);
     }).catch(err => console.error(`${MODULE_ID} | drawsOnEnd`, err));
   }
-  // §367 : l'activité que la fin de l'effet fait utiliser autour de son porteur (Esprit de l'ombre).
+  // §367: the activity that the end of the effect makes used around its bearer ("Spirit of the Shadow").
   const ending = item ? contentOf(item).entry?.endActivity : null;
   const endKey = ending ? Object.keys(ending).find(id => comesFromItemEffect(effect, id)) : null;
   if ( endKey ) enqueue(`endActivity:${actor.uuid}`, () => useOnEnd(item, ending[endKey], actor, effect))
     .catch(err => console.error(`${MODULE_ID} | endActivity`, err));
-  // §53 : le sort qu'une potion a fait lancer n'a pas de suite (Rapidité : « sans la vague de léthargie » de Hâte).
+  // §53: the spell that a potion made cast has no sequel (Potion of Speed: "without the wave of lethargy" of Haste).
   const rules = (item && !potionOfCast(item)) ? contentOf(item).entry?.effectThen : null;
   if ( !rules ) return;
   const key = Object.keys(rules).find(id => comesFromItemEffect(effect, id));
   if ( !key ) return;
-  // Une créature à 0 PV n'a plus rien à subir ; un acteur de token supprimé avec son token non plus.
+  // A creature at 0 HP has nothing left to suffer; nor does an actor of a token deleted with its token.
   if ( (actor.system?.attributes?.hp?.value ?? 0) <= 0 ) return;
   if ( actor.isToken ? !actor.token?.parent?.tokens?.has(actor.token.id) : !game.actors.has(actor.id) ) return;
   return enqueue(`effectThen:${actor.uuid}`, async () => {
@@ -73,8 +73,8 @@ async function onDeleteEffect(effect) {
 }
 
 /**
- * §367 : `endActivity` — l'effet est tombé : l'activité de l'item, utilisée par son propriétaire (le lanceur) sur les créatures à `radius`
- * du porteur (lui exclu, vivantes, visibles sur la scène), sans gabarit et sans rien dépenser ; personne autour : rien.
+ * §367: `endActivity` — the effect has ended: the item's activity, used by its owner (the caster) on the creatures within `radius`
+ * of the bearer (it excluded, alive, visible on the scene), without a template and spending nothing; no one around: nothing.
  */
 async function useOnEnd(item, rule, actor, effect) {
   const activity = item.system.activities?.get(rule.activity);
@@ -86,18 +86,18 @@ async function useOnEnd(item, rule, actor, effect) {
   log(`${item.name}: "${effect.name}" ends on ${actor.name}, "${activity.name}" on ${around.map(t => t.name).join(", ") || "nobody"}`);
   if ( !around.length ) return;
   canvas.tokens.setTargets(around.map(t => t.id));
-  // Pas de gabarit : les cibles du message (`givenTargets`, §104), comme une zone dont les cibles sont fournies.
+  // No template: the message's targets (`givenTargets`, §104), like an area whose targets are supplied.
   await activity.use({ consume: false, [MODULE_ID]: { confirmed: true }, create: { measuredTemplate: false } }, { configure: false },
     { data: { flags: { [MODULE_ID]: { givenTargets: true } } } });
 }
 
 /* -------------------------------------------- */
-/*  §258 : fins génériques (`endsWhen`)          */
+/*  §258: generic endings (`endsWhen`)           */
 /* -------------------------------------------- */
 
 const rulesOf = item => (item ? contentOf(item).entry?.endsWhen ?? null : null);
 
-/** Les acteurs d'une scène : ceux du monde (liés) et ceux des tokens non liés. */
+/** The actors of a scene: those of the world (linked) and those of unlinked tokens. */
 const actorsOf = scene => new Set([...game.actors, ...(scene?.tokens ?? []).filter(t => !t.actorLink && t.actor).map(t => t.actor)]);
 
 /**
@@ -108,8 +108,8 @@ const actorsOf = scene => new Set([...game.actors, ...(scene?.tokens ?? []).filt
 const sceneActorsOf = scene => new Set((scene?.tokens ?? []).map(t => t.actor).filter(Boolean));
 
 /**
- * Les effets portés qu'une règle `endsWhen` de leur item d'origine peut faire cesser (la concentration du lanceur exceptée : elle tombe
- * par le sort, pas comme un effet porté).
+ * The carried effects that an `endsWhen` rule of their source item can make cease (the caster's concentration excepted: it drops
+ * through the spell, not as a carried effect).
  * @returns {{actor: Actor, effect: ActiveEffect, item: Item, rule: object}[]}
  */
 function endingEffects(actors) {
@@ -121,13 +121,13 @@ function endingEffects(actors) {
       const rule = rulesOf(item);
       if ( rule ) out.push({ actor, effect, item, rule });
     }
-    // §447 : un enchantement posé sur un de ses items (Courroux sauvage : « transformé » par un enchantement de l'aptitude elle-même) —
-    // le porteur est le propriétaire de l'item enchanté ; le retirer retire ses effets compagnons (dnd5e). Seulement l'enchantement
-    // posé : la définition que l'item porte pour son activité « enchant » n'est pas un effet en cours.
+    // §447: an enchantment placed on one of its items ("Savage Wrath": "transformed" by an enchantment of the feature itself) —
+    // the bearer is the owner of the enchanted item; removing it removes its companion effects (dnd5e). Only the enchantment
+    // placed: the definition the item carries for its "enchant" activity is not a running effect.
     for ( const enchanted of actor?.items ?? [] ) {
       for ( const effect of enchanted.effects ?? [] ) {
         const { type, disabled, isAppliedEnchantment: applied } = effect;
-        // §525 : le profil de l'objet activé à sa place (Courroux sauvage) porte sa propre marque de profil (adapter/content.mjs).
+        // §525: the item profile activated in its place ("Savage Wrath") carries its own profile mark (adapter/content.mjs).
         const ownProfile = effect.flags?.dnd5e?.enchantmentProfile === effect.id;
         if ( !isEndableEnchantment({ type, disabled, applied, ownProfile }) ) continue;
         const item = originItemOf(effect);
@@ -139,7 +139,7 @@ function endingEffects(actors) {
   return out;
 }
 
-/** Le token d'un acteur sur cette scène, ou null. */
+/** The token of an actor on this scene, or null. */
 function tokenIn(actor, scene) {
   if ( !actor || !scene ) return null;
   if ( actor.isToken ) return (actor.token?.parent === scene) ? actor.token : null;
@@ -147,9 +147,9 @@ function tokenIn(actor, scene) {
 }
 
 /**
- * §525 : éteint un profil de l'objet activé à la place d'un enchantement de soi (runtime/enchant.mjs) — ce qu'il a ajouté (ses « riders »,
- * `flags.dnd5e.dependents`) est retiré comme dnd5e le ferait à la suppression d'un enchantement, puis le profil est désactivé et perd sa
- * marque : il redevient une définition que l'activité peut rallumer.
+ * §525: switches off an item profile activated in place of a self-enchantment (runtime/enchant.mjs) — what it added (its "riders",
+ * `flags.dnd5e.dependents`) is removed as dnd5e would on deleting an enchantment, then the profile is disabled and loses its
+ * mark: it becomes a definition again that the activity can relight.
  * @param {ActiveEffect} effect
  */
 async function switchOffProfile(effect) {
@@ -163,11 +163,11 @@ async function switchOffProfile(effect) {
 }
 
 /**
- * Met fin à l'effet — ou, `spell`, au sort entier : sa concentration (dnd5e retire alors les effets qui en dépendent), sinon ses
- * effets sur chaque créature de la scène. Une carte de chat le dit à toute la table.
+ * Ends the effect — or, `spell`, the whole spell: its concentration (dnd5e then removes the effects that depend on it), otherwise
+ * its effects on every creature of the scene. A chat card tells the whole table.
  * @param {{actor, effect, item, rule}} entry
  * @param {"armor"|"apart"|"zeroHp"} reason
- * @param {Set<string>} done  Les sorts déjà terminés pendant ce passage.
+ * @param {Set<string>} done  The spells already ended during this pass.
  */
 async function endEntry({ actor, effect, item, rule }, reason, scene, done) {
   if ( done.has(item.uuid) || done.has(effect.uuid) ) return;
@@ -184,19 +184,19 @@ async function endEntry({ actor, effect, item, rule }, reason, scene, done) {
   else {
     done.add(effect.uuid);
     if ( !effect.parent?.effects?.has(effect.id) ) return;
-    // §525 : un profil de l'objet activé à sa place s'éteint — le retirer viderait l'objet de ce profil pour toujours.
+    // §525: an item profile activated in its place switches off — removing it would empty the item of this profile for good.
     if ( effect.flags?.dnd5e?.enchantmentProfile === effect.id ) await switchOffProfile(effect);
     else await effect.delete();
   }
   log(`${item.name}: ends${rule.spell ? "" : ` on ${actor.name}`} (${reason})`);
-  // §252 : un texte flottant chez chaque client, et un son.
+  // §252: floating text on every client, and a sound.
   const token = tokenIn(actor, scene);
   if ( token ) notice(token, item.name, "effectOff", { all: true, action: "spellEnds", outcome: "success" });
   await say({ actor: item.actor ?? actor }, locEsc(`FinGenerique.${reason}`, { item: item.name, name: actor.name }),
     { ended: { item: item.uuid, actor: actor.uuid, reason } });
 }
 
-/** L'armure enfilée : Armure du mage (toute armure), Rage (armure lourde). */
+/** The armor donned: Mage Armor (any armor), Rage (heavy armor). */
 async function onUpdateItem(item, changes) {
   if ( (item.type !== "equipment") || (foundry.utils.getProperty(changes, "system.equipped") !== true) ) return;
   const weight = item.system?.type?.value;
@@ -211,7 +211,7 @@ async function onUpdateItem(item, changes) {
   });
 }
 
-/** §270 : un allié du lanceur (pas lui) vient de blesser le porteur (Duel forcé) — l'auteur noté par runtime/triggers.mjs (`damagedBy`). */
+/** §270: a caster's ally (not the caster) just hurt the bearer (Compelled Duel) — author noted by runtime/triggers.mjs (`damagedBy`). */
 function hurtByCasterAlly(actor, caster, scene) {
   const noted = actor.getFlag(MODULE_ID, "damagedBy");
   if ( !noted?.uuid || ((Date.now() - (noted.at ?? 0)) > 10000) ) return false;
@@ -223,9 +223,9 @@ function hurtByCasterAlly(actor, caster, scene) {
 }
 
 /**
- * §299 (repasse C4) : un état qui neutralise (Neutralisé, et ce qui le donne : Étourdi, Paralysé, Inconscient, mort…) vient d'être posé —
- * les effets dont la règle `endsWhen.incapacitated` vise ce porteur (`bearer` : Vol draconique, Forme d'effroi) ou ce lanceur (`caster` :
- * Renvoi des morts-vivants, Calcination ; « si vous avez l'état Neutralisé ou si vous mourez ») prennent fin.
+ * §299 (pass C4): an incapacitating condition (Incapacitated, and what grants it: Stunned, Paralyzed, Unconscious, dead…) has
+ * just been placed — the effects whose `endsWhen.incapacitated` rule targets this bearer (`bearer`: Draconic Flight, "Form of
+ * Dread") or this caster (`caster`: Turn Undead, "Calcination"; "if you have the Incapacitated condition or if you die") end.
  */
 async function onIncapacitated(effect) {
   const actor = effect.parent;
@@ -240,8 +240,9 @@ async function onIncapacitated(effect) {
   });
   if ( !entries.length ) return;
   return enqueue(`endsWhen:${actor.uuid}`, async () => {
-    // §447 : tombé à 0 PV avec de quoi se relever (`atZero` : Courroux persistant, qui exige justement le Courroux sauvage) — la fin
-    // attend la décision ; relevé, l'état qui neutralisait est parti et rien ne prend fin (« vos PV changent à la place »).
+    // §447: dropped to 0 HP with the means to get back up (`atZero`: "Persistent Wrath", which precisely requires
+    // "Savage Wrath") — the end waits for the decision; once back up, the incapacitating condition is gone and nothing ends
+    // ("your HP change instead").
     if ( ((actor.system.attributes?.hp?.value ?? 1) <= 0) && risingAtZero(actor) ) {
       for ( let n = 0; (n < 240) && risingAtZero(actor); n++ ) await sleep(500);
       if ( !actor.effects.has(effect.id) ) { log(`${actor.name}: rose at 0 Hit Points, nothing ends`); return; }
@@ -251,7 +252,7 @@ async function onIncapacitated(effect) {
   });
 }
 
-/** 0 HP: the bearer and/or the caster whose effects run on others, as `zeroHp` says (Warding Bond: the caster only, issue #150) ; §270 : blessé par un allié du lanceur. */
+/** 0 HP: the bearer and/or the caster whose effects run on others, as `zeroHp` says (Warding Bond: the caster only, issue #150); §270: hurt by an ally of the caster. */
 async function onUpdateActor(actor, changes) {
   const hp = foundry.utils.getProperty(changes, "system.attributes.hp.value");
   if ( hp === undefined ) return;
@@ -276,9 +277,9 @@ async function onHurt(actor) {
 }
 
 /**
- * §270 : le lanceur vient d'utiliser une activité qui vise une autre créature que le porteur — un jet d'attaque contre elle, ou un sort sur
- * un ennemi (Duel forcé : « si vous effectuez un jet d'attaque contre une créature autre que la cible, si vous lancez un sort sur un
- * ennemi autre que la cible »). Le message d'utilisation porte ses cibles.
+ * §270: the caster has just used an activity that targets a creature other than the bearer — an attack roll against it, or a
+ * spell on an enemy (Compelled Duel: "if you make an attack roll against a creature other than the target, if you cast a spell
+ * on an enemy other than the target"). The use message carries its targets.
  */
 async function onUsage(message) {
   if ( message.type !== "usage" ) return;
@@ -302,7 +303,7 @@ async function onUsage(message) {
   });
 }
 
-/** Porteur et lanceur sont-ils trop éloignés ? Lanceur absent de la scène : on ne juge pas. */
+/** Are the bearer and caster too far apart? Caster absent from the scene: we do not judge. */
 function apartTooFar({ actor, item, rule }, scene) {
   const bearer = tokenIn(actor, scene);
   const caster = tokenIn(item.actor, scene);
@@ -311,7 +312,7 @@ function apartTooFar({ actor, item, rule }, scene) {
   return tooFarApart(value, lengthIn(rule.apart.distance, rule.apart.units, units));
 }
 
-/** Un token a bougé : les liens à distance qui le concernent, porteur ou lanceur (`apart.at` : "move", par défaut). */
+/** A token moved: the distance links that concern it, bearer or caster (`apart.at`: "move", by default). */
 async function onMoveToken(tokenDoc) {
   const scene = tokenDoc.parent;
   const moved = tokenDoc.actor;
@@ -325,7 +326,7 @@ async function onMoveToken(tokenDoc) {
   });
 }
 
-/** La fin du tour du lanceur : les liens jugés à ce moment (`apart.at: "casterTurnEnd"`, Duel forcé). */
+/** The end of the caster's turn: the links judged at that moment (`apart.at: "casterTurnEnd"`, Compelled Duel). */
 async function onTurnChange(combat, prior) {
   const caster = combat.combatants.get(prior?.combatantId)?.actor;
   const scene = combat.scene ?? canvas?.scene;
@@ -338,11 +339,11 @@ async function onTurnChange(combat, prior) {
   });
 }
 
-/** L'utilisation est résolue et n'a affecté personne : la concentration du sort tombe (réglage `endUnaffected`). */
+/** The use is resolved and affected no one: the spell's concentration drops (setting `endUnaffected`). */
 async function onResolution(resolution) {
   if ( ![STEPS.DONE, STEPS.MISSED].includes(resolution?.step) ) return;
   if ( !game.settings.get(MODULE_ID, END_UNAFFECTED_SETTING) ) return;
-  // §275 : un rejeu (sauvegarde répétée, zone, relance) ne dit pas que le sort n'affecte plus personne.
+  // §275: a replay (repeated save, area, reroll) does not say that the spell no longer affects anyone.
   if ( isReplayUsage(game.messages.get(resolution.carrier)?.flags?.[MODULE_ID]) ) return;
   const item = fromUuidSync(resolution.activity ?? "", { strict: false })?.item;
   const rule = rulesOf(item);
@@ -358,8 +359,8 @@ async function onResolution(resolution) {
 }
 
 /**
- * §288 : « vous pouvez mettre un terme prématuré au sort en recourant à l'une des fonctions spéciales » (Dissipation du mal et du bien :
- * Renvoi, Rupture d'enchantement) — l'utilisation faite, la concentration du lanceur sur l'item tombe (dnd5e retire ce qui en dépend).
+ * §288: "you can end the spell early by using one of the special functions" (Dispel Evil and Good: Dismissal,
+ * Break Enchantment) — once the use is made, the caster's concentration on the item drops (dnd5e removes what depends on it).
  */
 async function onUsedEnding(activity) {
   const ids = contentOf(activity?.item).entry?.endsOnUse;
@@ -373,10 +374,10 @@ async function onUsedEnding(activity) {
 }
 
 /**
- * §495 (brique B15) : un soin magique reçu — les effets dont la règle `endsWhen.healedByMagic` vise ce porteur prennent fin.
- * `dnd5e.applyDamage` ne tourne que chez le client qui applique, lequel possède l'acteur (dnd5e l'exige pour écrire ses PV) :
- * la fin est jouée là. La source : la carte d'origine que le moteur passe (`origin`, adapter/messages.mjs) ou celle du bouton
- * « Appliquer » de dnd5e (`originatingMessage`).
+ * §495 (building block B15): magical healing received — the effects whose `endsWhen.healedByMagic` rule targets this bearer end.
+ * `dnd5e.applyDamage` only runs on the applying client, which owns the actor (dnd5e requires it to write its HP):
+ * the ending is played there. The source: the origin card the engine passes (`origin`, adapter/messages.mjs) or that of dnd5e's
+ * "Apply" button (`originatingMessage`).
  */
 async function onHealed(actor, amount, options) {
   if ( !(amount < 0) || !actor?.isOwner ) return;

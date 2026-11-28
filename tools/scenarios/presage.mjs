@@ -1,13 +1,13 @@
 /**
- * Présage du Devin (SPEC §36), monde `dnd-6`. Le Magicien reçoit Présage, prêté depuis le compendium du Manuel des joueurs ; le Bandit
- * 300 PV. Les jets notés sont fixés par `api.mcp.portent` (valeurs connues), la question prise d'office (`autoReact: "first"` : la plus
- * haute valeur pour soi ou un allié, la plus basse pour un ennemi). Vérifie :
- *  - Repos long simulé (`roll: true`) : deux d20 notés, la carte chuchotée ;
- *  - attaque : Rayon de givre du Magicien sur le Bandit avec [20, 2] → le d20 vaut 20 (« min20max20 »), coup critique, il reste [2] ;
- *  - sauvegarde : Aspersion acide sur le Bandit avec [20, 2] → sa sauvegarde a 2 au d20, ratée, il reste [20] ;
- *  - une fois par tour : en combat, deux Rayons de givre au même tour — le second garde son d20 ;
- *  - réglage « Présage du Devin » désactivé (§38.4) : ni l'attaque ni la sauvegarde ne sont bornées, les jets notés restent.
- * Remet positions, PV, états, emplacements ; retire l'item prêté et les jets notés.
+ * Diviner's Portent (SPEC §36), world `dnd-6`. The Wizard receives Portent, lent from the Player's Handbook compendium;
+ * the Bandit has 300 HP. The noted rolls are fixed by `api.mcp.portent` (known values), the question taken automatically
+ * (`autoReact: "first"`: the highest value for oneself or an ally, the lowest for an enemy). Checks:
+ *  - simulated Long Rest (`roll: true`): two d20s noted, the card whispered;
+ *  - attack: the Wizard's Ray of Frost on the Bandit with [20, 2] → the d20 is 20 ("min20max20"), Critical Hit, [2] remains;
+ *  - save: Acid Splash on the Bandit with [20, 2] → its save has 2 on the d20, failed, [20] remains;
+ *  - once per turn: in combat, two Rays of Frost in the same turn — the second keeps its d20;
+ *  - setting "Diviner's Portent" disabled (§38.4): neither the attack nor the save is capped, the noted rolls remain.
+ * Restores positions, HP, conditions, spell slots; removes the lent item and the noted rolls.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "dnd-players-handbook.classes";
@@ -43,7 +43,7 @@ export default {
     const tough = () => ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.attributes.hp.max": 300, "delta.system.attributes.hp.value": 300 } });
     const place = async (t, x, y) => { await ctx.call("move-token", { tokenId: t.id, x, y, elevation: 0 }); await pause(700); };
 
-    // L'item prêté, et les jets notés effacés en fin de scénario.
+    // The lent item, and the noted rolls erased at the end of the scenario.
     const uuid = `Compendium.${CLASSES}.Item.phbwzdPortent000`;
     const { data } = await ctx.call("get-compendium-entry", { uuid });
     const { _id, folder, ownership, _stats, ...itemData } = data;
@@ -71,8 +71,8 @@ export default {
       ctx.expect(!errors.length, `${name} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
 
-    /** Rayon de givre du Magicien sur le Bandit, question prise d'office : la porte suspend l'utilisation, la suite se lit dans le chat.
-     * Seul le Magicien agit dans ce scénario ; ses cartes sont signées du nom de son token (« claude » dans `dnd-6`), d'où le filtre par type. */
+    /** Wizard's Ray of Frost on the Bandit, question taken automatically: the gate suspends the use, the rest is read in the chat.
+     * Only the Wizard acts in this scenario; its cards are signed with its token's name ("claude" in `dnd-6`), hence the filter by type. */
     const frostRay = async () => {
       const since = await ctx.lastMessageId();
       await ctx.use({ tokenId: mage.id, identifier: "ray-of-frost", activityType: "attack", targetTokenIds: [bandit.id],

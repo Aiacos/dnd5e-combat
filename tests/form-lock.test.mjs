@@ -1,24 +1,24 @@
-/** B09 (§488) : verrou de forme porté par un objet (`formLock: { worn: true }`) et traits suspendus (`suspends`). Exemples synthétiques. */
+/** B09 (§488): form lock carried by an item (`formLock: { worn: true }`) and suspended traits (`suspends`). Synthetic examples. */
 import { describe, it, expect } from "vitest";
 import { validateFormLock, validateSuspends, wornFormLock, isWorn, isFormAttempt } from "../module/scripts/core/form-lock.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { actionSound, CORE_SOUNDS } from "../module/scripts/core/action-feedback.mjs";
 
-// Un collier inventé : il empêche son porteur de changer de forme et de se régénérer.
+// An invented collar: it prevents its bearer from changing form and from regenerating.
 const COLLAR = {
   formLock: { worn: true, forms: ["shape-shift"], onAttempt: [{ type: "damage", to: "bearer", formula: "1", damageType: "piercing" }] },
   suspends: ["regeneration"]
 };
 
-describe("Verrou de forme porté (B09)", () => {
-  it("valide l'entrée d'un objet porté, et garde la zone du §403", () => {
+describe("Worn form lock (B09)", () => {
+  it("validates the entry of a worn item, and keeps the area of §403", () => {
     expect(validateEntry(COLLAR)).toEqual([]);
     expect(validateEntry({ formLock: true })).toEqual([]);
     expect(validateEntry({ formLock: { worn: true } })).toEqual([]);
     expect(validateEntry({ formLock: { worn: true, onAttempt: [{ type: "damage", activity: "abcdefghijklmnop" }] } })).toEqual([]);
   });
 
-  it("refuse une forme mal écrite", () => {
+  it("refuses a badly written form", () => {
     expect(validateFormLock(false).length).toBe(1);
     expect(validateFormLock({ onAttempt: [] }).length).toBeGreaterThan(0);   // worn manquant, liste vide
     expect(validateFormLock({ worn: true, forms: [] })).toEqual(["formLock.forms: non-empty list of item identifiers"]);
@@ -29,7 +29,7 @@ describe("Verrou de forme porté (B09)", () => {
     expect(validateEntry({ formLock: "yes" }).length).toBe(1);
   });
 
-  it("valide `suspends` : une liste de traits connus, sans doublon", () => {
+  it("validates `suspends`: a list of known traits, without duplicates", () => {
     expect(validateSuspends(["regeneration"])).toEqual([]);
     expect(validateSuspends([]).length).toBe(1);
     expect(validateSuspends(["flight"]).length).toBe(1);
@@ -37,7 +37,7 @@ describe("Verrou de forme porté (B09)", () => {
     expect(validateEntry({ suspends: "regeneration" }).length).toBe(1);
   });
 
-  it("normalise le verrou porté ; la zone n'en est pas un", () => {
+  it("normalizes the worn lock; the area is not one", () => {
     expect(wornFormLock(COLLAR)).toEqual({ onAttempt: COLLAR.formLock.onAttempt, forms: ["shape-shift"] });
     expect(wornFormLock({ formLock: { worn: true } })).toEqual({ onAttempt: [], forms: [] });
     expect(wornFormLock({ formLock: true })).toBeNull();
@@ -45,13 +45,13 @@ describe("Verrou de forme porté (B09)", () => {
     expect(wornFormLock(null)).toBeNull();
   });
 
-  it("porté : équipé s'il s'équipe, présent sinon", () => {
+  it("worn: equipped if it can be equipped, present otherwise", () => {
     expect(isWorn({ equippable: true, equipped: true })).toBe(true);
     expect(isWorn({ equippable: true, equipped: false })).toBe(false);
     expect(isWorn({ equippable: false })).toBe(true);
   });
 
-  it("reconnaît une tentative de changer de forme", () => {
+  it("recognizes an attempt to change form", () => {
     expect(isFormAttempt({ type: "transform" })).toBe(true);
     expect(isFormAttempt({ type: "utility", declaredChange: true })).toBe(true);
     expect(isFormAttempt({ type: "utility", identifier: "shape-shift" }, ["shape-shift"])).toBe(true);

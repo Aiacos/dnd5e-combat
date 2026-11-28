@@ -1,11 +1,11 @@
 /**
- * §491 : fait `target.wearsArmor` — Avantage déclaré (`preAttackRoll`) contre une cible en armure de métal. Arène de test, Guerrier et
- * Bandit. Un trait d'essai prêté au Guerrier : « Avantage si la cible porte une armure en métal ». Les armures équipées du Bandit sont
- * ôtées le temps du scénario, puis il revêt des armures du SRD 2024 de dnd5e :
- *  1. sans armure : pas d'Avantage ;
- *  2. cotte de mailles : Avantage ; la même marquée `flags.dnd5e-combat.metal = false` : plus d'Avantage ;
- *  3. armure de cuir : pas d'Avantage ; marquée `metal = true` (armure de campagne) : Avantage.
- * Lu par l'outil `attackReasons` (les raisons que le moteur donnerait au jet), sans jet.
+ * §491: fact `target.wearsArmor` — Advantage declared (`preAttackRoll`) against a target in metal armor. Test arena, Fighter and
+ * Bandit. A test trait lent to the Fighter: "Advantage if the target wears metal armor". The Bandit's equipped armors are
+ * removed for the scenario, then he dons dnd5e SRD 2024 armors:
+ *  1. no armor: no Advantage;
+ *  2. chain mail: Advantage; the same marked `flags.dnd5e-combat.metal = false`: no more Advantage;
+ *  3. leather armor: no Advantage; marked `metal = true` (field armor): Advantage.
+ * Read by the `attackReasons` tool (the reasons the engine would give the roll), without a roll.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e.equipment24.Item.";
@@ -22,9 +22,9 @@ export default {
     const bandit = await ctx.token("Bandit");
     const items = async actorId => (await ctx.call("get-actor", { actorId })).items ?? [];
 
-    // Le trait d'essai, sur le Guerrier ; sa déclaration dans la surcouche du monde le temps du scénario. Pas en drapeau d'item :
-    // Foundry déplie les clés pointées des conditions à la création (`"target.wearsArmor"` devient `{ target: { wearsArmor } }`), la
-    // validation refuse le drapeau (« unknown fact "target" ») et la création est annulée (banc du 2026-11-20).
+    // The test trait, on the Fighter; its declaration in the world overlay for the length of the scenario. Not as an item flag:
+    // Foundry unfolds the dotted keys of the conditions at creation (`"target.wearsArmor"` becomes `{ target: { wearsArmor } }`),
+    // the validation refuses the flag ("unknown fact "target"") and the creation is cancelled (test bench of 2026-11-20).
     const { rule, ...shock } = SHOCK;
     const r = await ctx.call("upsert-actor-item", { actorId: fighter.actorId, itemData: shock, match: { path: "system.identifier", value: shock.system.identifier } });
     const traitId = r.itemId ?? r.id ?? r.item?._id ?? (await ctx.itemId(fighter.id, shock.system.identifier));
@@ -35,7 +35,7 @@ export default {
       && !i.flags?.[MODULE_ID]?.basicAction);
     if ( !ctx.expect(!!weapon, "le Guerrier a une arme d'attaque") ) return;
 
-    // Les armures du Bandit ôtées (remises à la fin).
+    // The Bandit's armors removed (put back at the end).
     const worn = (await items(bandit.actorId)).filter(i => (i.type === "equipment") && i.system?.equipped && BODY.includes(i.system?.type?.value));
     const equip = (id, on) => ctx.call("upsert-actor-item", { actorId: bandit.actorId, itemData: { "system.equipped": on }, match: { path: "_id", value: id } });
     for ( const i of worn ) { await equip(i._id, false); ctx.restore(() => equip(i._id, true).catch(() => {})); }
@@ -79,7 +79,7 @@ export default {
   }
 };
 
-/* Le trait d'essai et sa déclaration (`rule`, posée dans la surcouche du monde), après le scénario : son titre est le premier `name`. */
+/* The test trait and its declaration (`rule`, placed in the world overlay), after the scenario: its title is the first `name`. */
 const SHOCK = {
   name: "Décharge contre le métal (essai)", type: "feat", img: "icons/magic/lightning/bolt-forked-blue.webp",
   system: { identifier: "das-test-shock-vs-metal", type: { value: "monster" }, description: { value: "<p>Essai §491.</p>" } },

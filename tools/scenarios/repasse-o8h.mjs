@@ -1,9 +1,9 @@
 /**
- * §351, lot O8h de la repasse des objets : portée minimale des armes de siège. Arène de test (Guerrier, Zombi).
- *  1. Mangonneau (portée 200/800 ft, « ne peut pas toucher une cible à 18 m ou moins ») : le Zombi à 4 cases est trop près —
- *     souci bloquant « trop près ».
- *  2. Le Zombi à 14 cases (70 ft) : aucun souci.
- *  3. Une arme ordinaire (Arbalète légère) à 4 cases : aucun souci de portée minimale.
+ * §351, batch O8h of the item pass: minimum range of siege weapons. Test arena (Fighter, Zombie).
+ *  1. Mangonel (range 200/800 ft, "can't hit a target within 60 feet"): the Zombie at 4 cells is too close —
+ *     blocking issue "too close".
+ *  2. The Zombie at 14 cells (70 ft): no issue.
+ *  3. An ordinary weapon (Light Crossbow) at 4 cells: no minimum range issue.
  */
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
 const PHB = "Compendium.dnd-players-handbook.equipment.Item.";

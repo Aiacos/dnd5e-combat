@@ -6,11 +6,11 @@ import { holds } from "../module/scripts/core/triggers.mjs";
 import { creatureAutoSuccess } from "../module/scripts/core/action.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
-// §457 : copier-coller du Guide du maître 2.0.0 (ids publics du SRD 5.2), sur des formes synthétiques.
+// §457: copy-paste from the Dungeon Master's Guide 2.0.0 (public SRD 5.2 ids), on synthetic shapes.
 const book = (activity, wrong) => ({ effects: [{ _id: "ownBookEffect000" }], system: { activities: {
   [activity]: { _id: activity, type: "utility", effects: [{ _id: wrong, level: {} }] } } } });
 
-describe("objets du Guide : liens d'effet recopiés d'un autre objet, part de dégâts vide (dataFixes)", () => {
+describe("Guide items: effect links copied from another item, empty damage part (dataFixes)", () => {
   for ( const [ident, activity, wrong] of [["manual-of-gainful-exercise", "QoMjlu00wQebXPDg", "9npFjYvEL3twc99F"],
     ["manual-of-bodily-health", "L5OnUjZIn27NHd2E", "9npFjYvEL3twc99F"], ["tome-of-clear-thought", "OCFufJcLGbTJqDqS", "jXvtCEBoDCydH8fa"]] ) {
     it(`${ident} : « Read » ne pose plus l'effet d'un autre livre ; le +2 vient quand la lecture épuise le livre`, () => {
@@ -21,18 +21,18 @@ describe("objets du Guide : liens d'effet recopiés d'un autre objet, part de d�
     });
   }
 
-  it("Fers du zéphyr : leur effet recréé, et l'activité y pointe au lieu de l'effet des Fers de rapidité", () => {
+  it("Horseshoes of a Zephyr: effect recreated, and the activity points to it, not to the Horseshoes of Speed effect", () => {
     const item = { effects: [], system: { activities: { Bm8dAa2MyA5NhcPU: { _id: "Bm8dAa2MyA5NhcPU", effects: [{ _id: "9lS2LxCve4hPYGMn" }] } } } };
     const { data } = withDataFixes(item, ITEM_FIXES["horseshoes-of-a-zephyr"].dataFixes);
     expect(data.effects.map(e => e._id)).toEqual(["AYtAkgcEHRws0Qeo"]);
     expect(data.effects[0].system.changes[0]).toMatchObject({ key: "system.attributes.movement.ignoredDifficultTerrain", value: "all" });
     expect(data.system.activities.Bm8dAa2MyA5NhcPU.effects).toEqual([{ _id: "AYtAkgcEHRws0Qeo" }]);
-    // Déjà juste (SRD) : rien ne bouge.
+    // Already correct (SRD): nothing changes.
     const sane = { effects: [{ _id: "AYtAkgcEHRws0Qeo" }], system: { activities: { Bm8dAa2MyA5NhcPU: { effects: [{ _id: "AYtAkgcEHRws0Qeo" }] } } } };
     expect(dataFixPlan(sane, ITEM_FIXES["horseshoes-of-a-zephyr"].dataFixes).fields).toEqual([]);
   });
 
-  it("Bâton de tonnerre et de foudre : la part de dégâts vide de « Tonnerre et foudre » est retirée", () => {
+  it("Staff of Thunder and Lightning: the empty damage part of \"Thunder and Lightning\" is removed", () => {
     const lightning = { custom: { enabled: false, formula: "" }, number: 2, denomination: 6, bonus: "", types: ["lightning"], scaling: { number: 1 } };
     const empty = { custom: { enabled: false, formula: "" }, number: null, denomination: 0, bonus: "", types: [], scaling: { number: 1 } };
     const item = { effects: [], system: { activities: { EtOETCHaEK0mcw03: { damage: { parts: [lightning, empty] } } } } };
@@ -42,7 +42,7 @@ describe("objets du Guide : liens d'effet recopiés d'un autre objet, part de d�
     expect(parts[0]).toMatchObject({ number: 2, denomination: 6, types: ["lightning"] });
   });
 
-  it("§458 : les six livres posent leur +2 à la fin de la lecture, jamais à chaque heure", async () => {
+  it("§458: the six books apply their +2 at the end of the reading, never every hour", async () => {
     const { validateEntry } = await import("../module/scripts/core/content/entry.mjs").catch(() => ({}));
     for ( const ident of ["manual-of-quickness-of-action", "manual-of-gainful-exercise", "manual-of-bodily-health", "tome-of-clear-thought",
       "tome-of-leadership-and-influence", "tome-of-understanding"] ) {
@@ -55,7 +55,7 @@ describe("objets du Guide : liens d'effet recopiés d'un autre objet, part de d�
   });
 });
 
-describe("§458 : la clé onUsesSpent est validée", () => {
+describe("§458: the onUsesSpent key is validated", () => {
   it("refuse une forme fausse", async () => {
     const { validateEntry } = await import("../module/scripts/core/content/entry.mjs");
     expect(validateEntry({ onUsesSpent: { activity: "MeBH48FuUmQFEhUM", effects: ["yjQAL2g65jahNoBP"] } })).toEqual([]);
@@ -66,7 +66,7 @@ describe("§458 : la clé onUsesSpent est validée", () => {
 });
 
 describe("§459 : sorts du Manuel 3.0.0 dont l'effet a disparu", () => {
-  it("Coquille antivie : l'effet recréé ; Dissipation du mal et du bien : le lien orphelin retiré", async () => {
+  it("Antilife Shell: the effect recreated; Dispel Evil and Good: the orphan link removed", async () => {
     const { SPELL_RULES } = await import("../module/scripts/content/spell-rules.mjs");
     const shell = withDataFixes({ effects: [], system: { activities: { dnd5eactivity000: { effects: [{ _id: "IrE5td3goSQtcc0U" }] } } } },
       SPELL_RULES["antilife-shell"].dataFixes).data;
@@ -77,16 +77,16 @@ describe("§459 : sorts du Manuel 3.0.0 dont l'effet a disparu", () => {
   });
 });
 
-// Guide du maître 2.0.0 : la donnée contredit le texte de l'objet lui-même (DD, lien, charges rendues).
-describe("objets du Guide : DD, lien et recharge que le texte de l'objet donne (dataFixes)", () => {
-  it("Sérum de vérité : la sauvegarde passe de DD 10 à DD 11", () => {
+// Dungeon Master's Guide 2.0.0: the data contradicts the item's own text (DC, attunement, charges regained).
+describe("Guide items: DC, attunement and recharge that the item's text gives (dataFixes)", () => {
+  it("\"Truth Serum\": the save goes from DC 10 to DC 11", () => {
     const item = { effects: [], system: { activities: { gZRykfpoTDxT6cqO: { save: { ability: ["con"], dc: { calculation: "", formula: "10" } } } } } };
     expect(dataFixPlan(item, ITEM_FIXES["truth-serum"].dataFixes).item).toEqual({ "system.activities.gZRykfpoTDxT6cqO.save.dc.formula": "11" });
     item.system.activities.gZRykfpoTDxT6cqO.save.dc.formula = "11";
     expect(dataFixPlan(item, ITEM_FIXES["truth-serum"].dataFixes).fields).toEqual([]);
   });
 
-  it("Boule de cristal de vision véritable : lien requis, Scrutation à DD 17", () => {
+  it("Crystal Ball of True Seeing: attunement required, Scrying at DC 17", () => {
     const item = { effects: [], system: { attunement: "", activities: { EsEZwTpUoGAXQskP: { spell: { challenge: { attack: null, save: null, override: false } } } } } };
     expect(dataFixPlan(item, ITEM_FIXES["true-seeing-crystal-ball-of"].dataFixes).item).toEqual({
       "system.attunement": "required",
@@ -94,14 +94,14 @@ describe("objets du Guide : DD, lien et recharge que le texte de l'objet donne (
     });
   });
 
-  it("Bâton du grand essaim : 1d6 + 4 charges à l'aube ; la fumée reste déclarée", () => {
+  it("Staff of Swarming: 1d6 + 4 charges at dawn; the smoke stays declared", () => {
     const item = { effects: [], system: { uses: { spent: 0, max: "10", recovery: [{ period: "dawn", type: "formula", formula: "1d6" }] } } };
     expect(dataFixPlan(item, ITEM_FIXES["staff-of-swarming-insects"].dataFixes).item)
       .toEqual({ "system.uses.recovery": [{ period: "dawn", type: "formula", formula: "1d6 + 4" }] });
     expect(ITEM_FIXES["staff-of-swarming-insects"].obscures).toBe(true);
   });
 
-  it("Balai dansant de Baba Yaga : lien requis ; il agit toujours juste après son maître", () => {
+  it("Baba Yaga's Dancing Broom: attunement required; it always acts right after its master", () => {
     const item = { effects: [], system: { attunement: "" } };
     expect(dataFixPlan(item, ITEM_FIXES["baba-yagas-dancing-broom"].dataFixes).item).toEqual({ "system.attunement": "required" });
     expect(ITEM_FIXES["baba-yagas-dancing-broom"].summon).toEqual({ initiative: "after" });
@@ -109,8 +109,8 @@ describe("objets du Guide : DD, lien et recharge que le texte de l'objet donne (
 });
 
 
-// Compendium du SRD 5.2 (dnd5e 6.1) : donnée relevée telle quelle, changement vide et durée comprises.
-describe("objets du SRD 5.2 : effet porté vide, durée qui n'est pas celle du texte (dataFixes)", () => {
+// SRD 5.2 compendium (dnd5e 6.1): data recorded as is, including the empty change and the duration.
+describe("SRD 5.2 items: empty carried effect, duration that is not the text's (dataFixes)", () => {
   const emptyChange = { key: "", value: "", type: "add", phase: "initial", _id: "RHoNEHxHTNzZMBHD", conditions: "{}",
     replacement: "" };
 
@@ -129,58 +129,58 @@ describe("objets du SRD 5.2 : effet porté vide, durée qui n'est pas celle du t
     });
   }
 
-  it("Cape elfique : la Perception pour repérer le porteur garde son Désavantage", () => {
+  it("Cloak of Elvenkind: the Perception to spot the bearer keeps its Disadvantage", () => {
     expect(ITEM_FIXES["cloak-of-elvenkind"].hardToPerceive).toBe(true);
   });
 
-  it("Potion d'invulnérabilité : 1 minute, sur l'effet et sur l'activité, au lieu de 10", () => {
+  it("Potion of Invulnerability: 1 minute, on the effect and on the activity, instead of 10", () => {
     const item = { effects: [{ _id: "ojfKVnyWWyc5EPA2", duration: { value: 600, units: "seconds", expiry: "turnStart" } }],
       system: { activities: { WGHHrNkceMYEl8as: { duration: { units: "minute", value: "10" } } } } };
     const plan = dataFixPlan(item, ITEM_FIXES["potion-of-invulnerability"].dataFixes);
     expect(plan.effects).toEqual([{ _id: "ojfKVnyWWyc5EPA2", "duration.value": 60 }]);
     expect(plan.item).toEqual({ "system.activities.WGHHrNkceMYEl8as.duration.value": "1" });
-    // Une durée déjà changée à la main reste.
+    // A duration already changed by hand stays.
     item.effects[0].duration.value = 3600;
     expect(dataFixPlan(item, ITEM_FIXES["potion-of-invulnerability"].dataFixes).effects).toEqual([]);
   });
 });
 
-describe("Épée vorpale (SRD 5.2) : l'arme ignore la Résistance aux dégâts tranchants", () => {
+describe("Vorpal Sword (SRD 5.2): the weapon ignores Resistance to slashing damage", () => {
   const rule = ITEM_FIXES["vorpal-sword-enchanted"].ignoresResistance;
   const by = source => ({ "activity.enchantedBy": id => id === source });
 
-  it("les dégâts tranchants, pour l'arme qui porte l'enchantement seulement", () => {
+  it("slashing damage, for the weapon that carries the enchantment only", () => {
     expect(rule.types).toEqual(["slashing"]);
     expect(holds(rule.if, by("vorpal-sword"))).toBe(true);
-    // Une autre arme du même porteur (une épée longue ordinaire, une Langue de feu) n'en profite pas.
+    // Another weapon of the same bearer (an ordinary longsword, a Flame Tongue) does not benefit.
     expect(holds(rule.if, by(null))).toBe(false);
     expect(holds(rule.if, by("flame-tongue"))).toBe(false);
   });
 
-  it("l'entrée se valide", () => {
+  it("the entry validates", () => {
     expect(validateEntry(ITEM_FIXES["vorpal-sword-enchanted"], { facts: { "activity.enchantedBy": true } })).toEqual([]);
   });
 });
 
-describe("Marteau de lancer nain (SRD 5.2) : le 1d8 de force au lancer seulement, 2d8 contre un Géant", () => {
+describe("Dwarven Thrower (SRD 5.2): the 1d8 force on a throw only, 2d8 against a Giant", () => {
   const entry = ITEM_FIXES["dwarven-thrower"];
   const force = { number: 1, denomination: 8, bonus: "", types: ["force"], modifiers: [], scaling: { number: 1 } };
   const attack = _id => ({ _id, type: "attack", damage: { includeBase: true, parts: [structuredClone(force)] } });
   const item = () => ({ effects: [], system: { activities: {
     bd1kKOncfoLha8CT: attack("bd1kKOncfoLha8CT"), w3ATyMSroDLch6Re: attack("w3ATyMSroDLch6Re") } } });
 
-  it("l'attaque de corps à corps perd sa part de force ; « Throw » garde la sienne", () => {
+  it("the melee attack loses its force part; \"Throw\" keeps its own", () => {
     const plan = dataFixPlan(item(), entry.dataFixes);
     expect(plan.item).toEqual({ "system.activities.bd1kKOncfoLha8CT.damage.parts": [] });
   });
 
-  it("une part changée à la main (2d8, un autre type) ne bouge pas", () => {
+  it("a part changed by hand (2d8, another type) stays unchanged", () => {
     const edited = item();
     edited.system.activities.bd1kKOncfoLha8CT.damage.parts[0].number = 2;
     expect(dataFixPlan(edited, entry.dataFixes).fields).toEqual([]);
   });
 
-  it("le second d8 : au lancer, contre un Géant seulement", () => {
+  it("the second d8: on a throw, against a Giant only", () => {
     const [rule] = entry.triggers;
     expect(rule.do).toEqual([{ type: "damage", formula: "1d8", damageType: "force" }]);
     expect(holds(rule.if, { "activity.id": "w3ATyMSroDLch6Re", "target.creatureType": "giant" })).toBe(true);
@@ -190,59 +190,59 @@ describe("Marteau de lancer nain (SRD 5.2) : le 1d8 de force au lancer seulement
   });
 });
 
-describe("objets du SRD 5.2 : charges, durée et réussite d'office que le texte donne", () => {
-  it("Orbe des dragons : 7 charges, 1d4 + 3 à l'aube — comme l'orbe du Guide", () => {
+describe("SRD 5.2 items: charges, duration and automatic success that the text gives", () => {
+  it("Orb of Dragonkind: 7 charges, 1d4 + 3 at dawn — like the Guide's orb", () => {
     const item = { effects: [], system: { uses: { spent: 0, max: "", recovery: [] } } };
     expect(dataFixPlan(item, ITEM_FIXES["dragon-orb"].dataFixes).item).toEqual({
       "system.uses.max": "7", "system.uses.recovery": [{ period: "dawn", type: "formula", formula: "1d4 + 3" }] });
     expect(ITEM_FIXES["dragon-orb"].dataFixes).toEqual(ITEM_FIXES["orb-of-dragonkind"].dataFixes);
-    // Des charges déjà réglées à la main ne bougent pas.
+    // Charges already set by hand do not change.
     const set = { effects: [], system: { uses: { spent: 0, max: "5", recovery: [{ period: "dawn", type: "recoverAll" }] } } };
     expect(dataFixPlan(set, ITEM_FIXES["dragon-orb"].dataFixes).fields).toEqual([]);
   });
-  it("Philtre d'amour : Charmé 1 heure, pas 10 minutes", () => {
+  it("Philter of Love: Charmed 1 hour, not 10 minutes", () => {
     const item = { effects: [{ _id: "MLhvjPiSXOX1tkUr", duration: { value: 600, units: "seconds" } }], system: {} };
     expect(dataFixPlan(item, ITEM_FIXES["philter-of-love"].dataFixes).effects)
       .toEqual([{ _id: "MLhvjPiSXOX1tkUr", "duration.value": 3600 }]);
   });
-  it("Miroir d'emprisonnement : une Créature artificielle réussit d'office", () => {
+  it("Mirror of Life Trapping: a Construct succeeds automatically", () => {
     expect(ITEM_FIXES["mirror-of-life-trapping"].saveAutoSuccess).toEqual({ types: ["construct"] });
   });
 });
 
-describe("objets du SRD 5.2 : effets vides que le texte remplit (Comète, Piège de chasse)", () => {
+describe("SRD 5.2 items: empty effects that the text fills (Comet, Hunting Trap)", () => {
   const empty = _id => ({ effects: [{ _id, system: { changes: [] } }], system: {} });
-  it("Comète : l'Avantage aux sauvegardes contre la mort", () => {
+  it("Comet: Advantage on death saving throws", () => {
     const plan = dataFixPlan(empty("asqZlVwoKSS1ckCU"), ITEM_FIXES.comet.dataFixes);
     expect(plan.effects).toHaveLength(1);
     expect(plan.effects[0]["system.changes"]).toMatchObject([{ key: "system.attributes.death.roll.mode", type: "add", value: 1 }]);
   });
-  it("Piège de chasse : Vitesse 0 tant que l'effet « Trapped » est porté", () => {
+  it("Hunting Trap: Speed 0 while the \"Trapped\" effect is carried", () => {
     const plan = dataFixPlan(empty("9jl46RZ5GOjs9QlJ"), ITEM_FIXES["hunting-trap"].dataFixes);
     expect(plan.effects[0]["system.changes"])
       .toMatchObject([{ key: "system.attributes.movement.multiplier", type: "override", value: "0" }]);
   });
-  it("un effet déjà rempli par dnd5e n'est pas réécrit", () => {
+  it("an effect already filled in by dnd5e is not rewritten", () => {
     const changes = [{ key: "x", type: "add", value: 1 }];
     const filled = { effects: [{ _id: "asqZlVwoKSS1ckCU", system: { changes } }], system: {} };
     expect(dataFixPlan(filled, ITEM_FIXES.comet.dataFixes).effects).toEqual([]);
   });
 });
 
-describe("Filet tombant (SRD 5.2) : une créature de taille TG ou plus réussit d'office (saveAutoSuccess.sizeAtLeast)", () => {
+describe("\"Falling Net\" (SRD 5.2): a Huge or larger creature succeeds automatically (saveAutoSuccess.sizeAtLeast)", () => {
   const rule = ITEM_FIXES["falling-net"].saveAutoSuccess;
-  it("TG et Gig : réussite d'office ; G et moins : la sauvegarde se tire", () => {
+  it("Huge and Gargantuan: automatic success; Large and smaller: the save is rolled", () => {
     expect(creatureAutoSuccess(rule, { type: "giant", size: "huge" })).toBe("size:huge");
     expect(creatureAutoSuccess(rule, { size: "grg" })).toBe("size:grg");
     expect(creatureAutoSuccess(rule, { size: "lg" })).toBeNull();
     expect(creatureAutoSuccess(rule, { size: "med" })).toBeNull();
   });
-  it("taille inconnue : rien ; le type garde sa règle", () => {
+  it("unknown size: nothing; the type keeps its rule", () => {
     expect(creatureAutoSuccess(rule, {})).toBeNull();
     expect(creatureAutoSuccess({ types: ["construct"] }, { type: "construct", size: "tiny" })).toBe("type:construct");
     expect(creatureAutoSuccess(null, { type: "construct", size: "huge" })).toBeNull();
   });
-  it("la clé est validée", () => {
+  it("the key is validated", () => {
     expect(validateEntry({ saveAutoSuccess: { sizeAtLeast: "huge" } })).toEqual([]);
     expect(validateEntry({ saveAutoSuccess: { sizeAtLeast: "enormous" } })).not.toEqual([]);
     expect(validateEntry({ saveAutoSuccess: {} })).not.toEqual([]);
@@ -250,24 +250,24 @@ describe("Filet tombant (SRD 5.2) : une créature de taille TG ou plus réussit 
 });
 describe("Balai volant (SRD 5.2) : l'activation vise son utilisateur, qui choisit sa charge", () => {
   const entry = ITEM_FIXES["broom-of-flying"];
-  it("la cible vide de l'activité devient l'utilisateur ; une cible déjà renseignée ne bouge pas", () => {
+  it("the activity's empty target becomes the user; an already filled target does not change", () => {
     const item = type => ({ effects: [], system: { activities: { "2wrq53BtZk3dUEuW": { target: { affects: { type } } } } } });
     expect(dataFixPlan(item(""), entry.dataFixes).item)
       .toEqual({ "system.activities.2wrq53BtZk3dUEuW.target.affects.type": "self" });
     expect(dataFixPlan(item("creature"), entry.dataFixes).fields).toEqual([]);
   });
-  it("les deux effets (charge légère, charge lourde) s'excluent", () => {
+  it("the two effects (light charge, heavy charge) exclude each other", () => {
     expect(entry.choice).toEqual({ effects: "one" });
   });
 });
-describe("Bougie d'invocation (SRD 5.2) : l'Avantage aux Tests de d20 posé sur qui l'allume", () => {
+describe("Candle of Invocation (SRD 5.2): Advantage on D20 Tests set on whoever lights it", () => {
   const fixes = ITEM_FIXES["candle-of-invocation"].dataFixes;
   const item = { effects: [{ _id: "gN0PgSLPlbsD8T2g", system: { changes: [] } }],
     system: { activities: { hG1Iplp3uG2fd39N: { target: { affects: { type: "" } } } } } };
-  it("l'activité vise son utilisateur", () => {
+  it("the activity targets its user", () => {
     expect(dataFixPlan(item, fixes).item).toEqual({ "system.activities.hG1Iplp3uG2fd39N.target.affects.type": "self" });
   });
-  it("l'effet vide reçoit 19 changements : attaque, sauvegarde et test pour chaque caractéristique, et la mort", () => {
+  it("the empty effect receives 19 changes: attack, save and check for each ability, and death saves", () => {
     const changes = dataFixPlan(item, fixes).effects[0]["system.changes"];
     expect(changes).toHaveLength(19);
     expect(changes.every(c => (c.type === "add") && (c.value === 1) && c.key.endsWith(".roll.mode"))).toBe(true);
@@ -275,16 +275,16 @@ describe("Bougie d'invocation (SRD 5.2) : l'Avantage aux Tests de d20 posé sur 
       "system.abilities.wis.save.roll.mode", "system.abilities.cha.check.roll.mode", "system.attributes.death.roll.mode"]));
   });
 });
-describe("Sceptre de vigilance (SRD 5.2) : l'Avantage en Perception et à l'Initiative, porté par l'objet", () => {
+describe("Rod of Alertness (SRD 5.2): Advantage on Perception and Initiative, carried by the item", () => {
   const fixes = ITEM_FIXES["rod-of-alertness"].dataFixes;
-  it("l'effet « Alertness » est créé, transféré au porteur", () => {
+  it("the \"Alertness\" effect is created, transferred to the bearer", () => {
     const plan = dataFixPlan({ effects: [{ _id: "fHNlrUKZ6KWRNTmy" }], system: {} }, fixes);
     expect(plan.create).toHaveLength(1);
     expect(plan.create[0]).toMatchObject({ _id: "dasRodAlertness0", name: "Alertness", transfer: true });
     expect(plan.create[0].system.changes.map(c => c.key))
       .toEqual(["system.skills.prc.roll.mode", "system.attributes.init.roll.mode"]);
   });
-  it("déjà créé : rien à refaire", () => {
+  it("already created: nothing to redo", () => {
     const plan = dataFixPlan({ effects: [{ _id: "fHNlrUKZ6KWRNTmy" }, { _id: "dasRodAlertness0" }], system: {} }, fixes);
     expect(plan.create).toEqual([]);
   });

@@ -1,8 +1,10 @@
 /**
- * Cordon de flèches (§75, version simple) : l'action du sort pose la sphère de 9 m (pose de dnd5e, validée par `api.mcp.placeRegionAt`) ;
- * une créature qui y entre fait la sauvegarde de Dextérité de l'activité sœur (2d4 perforants) ; quatre projectiles, puis la zone tombe.
- * Lanceur : un token de la scène dont l'acteur connaît le sort (`cordon-of-arrows`), sinon le Rôdeur à qui le Player's Handbook le prête.
- * Cibles : cinq Bandits hostiles posés pour le scénario (`ctx.cast`), déplacés un à un dans la zone, puis retirés.
+ * Cordon of Arrows (§75, simple version): the spell's action places the 9 m sphere (dnd5e placement, validated by
+ * `api.mcp.placeRegionAt`); a creature that enters it makes the Dexterity save of the sibling activity (2d4 piercing);
+ * four projectiles, then the area ends.
+ * Caster: a token of the scene whose actor knows the spell (`cordon-of-arrows`), otherwise the Ranger to whom the
+ * Player's Handbook lends it.
+ * Targets: five hostile Bandits placed for the scenario (`ctx.cast`), moved one by one into the area, then removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const CORDON = "Compendium.dnd-players-handbook.spells.Item.phbsplCordonofAr";
@@ -19,16 +21,16 @@ export default {
       const i = (a?.items ?? []).find(x => x.system?.identifier === "cordon-of-arrows");
       if ( i ) { caster = t; itemId = i._id; break; }
     }
-    // Personne ne le connaît dans `dnd-6` : prêté au Rôdeur le temps du scénario, depuis le Player's Handbook 2024 (le sort n'est pas dans
-    // le SRD) ; sans ce module, non applicable.
+    // Nobody knows it in `dnd-6`: lent to the Ranger for the duration of the scenario, from the Player's Handbook 2024
+    // (the spell is not in the SRD); without that module, not applicable.
     if ( !caster && tokens.some(t => t.name === "Rôdeur") ) {
       const ranger = await ctx.token("Rôdeur");
       const lent = await ctx.ensureItem(ranger, CORDON).catch(() => null);
       if ( lent ) { caster = ranger; itemId = lent; }
     }
     if ( !caster ) { ctx.log("aucun lanceur du Cordon de flèches sur la scène, ni Player's Handbook pour le prêter : non applicable"); return; }
-    // Les cibles : cinq Bandits hostiles du SRD 2024, posés pour le scénario — le moteur épargne les alliés du lanceur (vu le 2026-11-14 :
-    // avec les personnages de l'Arène de test pour cibles, aucune sauvegarde).
+    // The targets: five hostile SRD 2024 Bandits, placed for the scenario — the engine spares the caster's allies
+    // (seen on 2026-11-14: with the Test Arena characters as targets, no save).
     const names = [1, 2, 3, 4, 5].map(n => `Cible du cordon ${n}`);
     const cast = await ctx.cast(Object.fromEntries(names.map(n => [n, "mmBandit00000000"])), { near: caster.name, disposition: -1 });
     const others = names.map(n => cast[n]).filter(Boolean);
@@ -39,7 +41,7 @@ export default {
     const api = (fn, args, waitMs) => ctx.call("call-module-api", { moduleId: MODULE_ID, fn, args, ...(waitMs ? { waitMs } : {}) });
     const regions = async () => (await ctx.call("list-scene-objects", { types: ["Region"] })).objects.Region ?? [];
 
-    // Les cibles loin de la zone d'abord (au-delà de 9 m), pour qu'elles y ENTRENT.
+    // The targets far from the area first (beyond 9 m), so that they ENTER it.
     for ( const [n, t] of others.entries() ) await ctx.call("move-token", { tokenId: t.id, x: at.x + ((10 + n) * grid), y: at.y + (8 * grid) });
     await sleep(1500);
 
@@ -55,7 +57,7 @@ export default {
     ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: zone.id }).catch(() => {}));
     ctx.expect(!(await ctx.messagesSince(since)).some(m => /Dextérité|Dexterity/i.test(m.flavor ?? "")), "à la pose : aucun projectile");
 
-    // Cinq entrées : quatre projectiles, puis plus rien.
+    // Five entries: four projectiles, then nothing more.
     const saves = [];
     for ( const [n, t] of others.entries() ) {
       const s0 = await ctx.lastMessageId();

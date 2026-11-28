@@ -1,26 +1,26 @@
 /**
- * Changer de taille (SPEC §16.58). L'effet qu'un item déclare (`resize`, par l'id de l'effet de l'item) reçoit, à sa
- * création sur la cible, un changement `system.traits.size` en phase « initial » : la catégorie de la cible décalée de
- * ses crans (core/size.mjs). Le reste est à dnd5e 6 : avec le réglage « Autosize » (`tokenSizeSync`), la taille calculée
- * de l'acteur devient celle du token (`applyActiveEffects`, dnd5e.mjs:42855-42867), que le MJ actif écrit sur le token
- * (`_onOverrideSize`, :93403) — et quand l'effet tombe, le token reprend sa taille. Le moteur lit la source du token :
- * il voit la nouvelle taille une fois écrite.
+ * Changing size (SPEC §16.58). The effect that an item declares (`resize`, by the id of the item's effect) receives, when it is
+ * created on the target, a `system.traits.size` change in the "initial" phase: the target's category shifted by
+ * its steps (core/size.mjs). The rest is up to dnd5e 6: with the "Autosize" setting (`tokenSizeSync`), the actor's computed size
+ * becomes the token's (`applyActiveEffects`, dnd5e.mjs:42855-42867), which the active GM writes on the token
+ * (`_onOverrideSize`, :93403) — and when the effect ends, the token goes back to its size. The engine reads the token's source:
+ * it sees the new size once written.
  */
 
 import { shiftSize } from "../core/size.mjs";
 import { contentOf } from "./content.mjs";
 import { originItemOf } from "./facts.mjs";
 
-/** L'id de l'effet de l'item dont `effect` est la copie appliquée (`_stats.duplicateSource` ou `compendiumSource`, dnd5e). */
+/** The id of the item's effect of which `effect` is the applied copy (`_stats.duplicateSource` or `compendiumSource`, dnd5e). */
 function sourceEffectId(effect) {
   const uuid = effect?._stats?.duplicateSource ?? effect?._stats?.compendiumSource ?? "";
   return uuid.match(/ActiveEffect\.([A-Za-z0-9]{16})$/)?.[1] ?? null;
 }
 
 /**
- * Le changement de taille à ajouter à un effet qu'on crée sur un acteur, ou null.
- * @param {ActiveEffect} effect  l'effet en création (sa copie appliquée)
- * @param {Actor} actor          celui qui le reçoit
+ * The size change to add to an effect being created on an actor, or null.
+ * @param {ActiveEffect} effect  the effect being created (its applied copy)
+ * @param {Actor} actor          the one receiving it
  */
 export function sizeChangeFor(effect, actor) {
   const id = sourceEffectId(effect);

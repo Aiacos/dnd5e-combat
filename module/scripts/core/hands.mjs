@@ -1,35 +1,35 @@
 /**
- * §409 (issue #44, lot 2) : la main libre de la composante somatique. Pur : aucune dépendance à Foundry.
+ * §409 (issue #44, batch 2): the free hand for the somatic component. Pure: no dependency on Foundry.
  *
- * Règle 2024 : un sort à composante somatique (S) demande une main libre ; la composante matérielle (M) demande une main pour la bourse
- * ou le focaliseur, qui peut être la même que celle de S. Mage de guerre : S se fait même avec des armes ou un bouclier en main.
- * Une arme « à deux mains » ne compte deux mains qu'à l'attaque (2024) : entre deux coups, on la tient d'une main.
+ * 2024 rule: a spell with a somatic component (S) needs a free hand; the material component (M) needs a hand for the pouch
+ * or the focus, which can be the same as that of S. War Caster: S can be done even with weapons or a shield in hand.
+ * A "two-handed" weapon counts as two hands only when attacking (2024): between two blows, it is held with one hand.
  */
 
 /**
- * Ce que la créature tient : une entrée par objet en main.
+ * What the creature holds: one entry per object in hand.
  * @typedef {object} Held
  * @property {string} name
- * @property {number} hands        Mains prises (1 ; 2 pour une arme « à deux mains » quand `twoHanded`).
- * @property {boolean} [twoHanded] Arme « à deux mains » (propriété `two` de dnd5e).
- * @property {boolean} [focus]     Un focaliseur d'incantation tenu (bâton, baguette, orbe…).
- * @property {boolean} [armament]  Une arme ou un bouclier (ce que Mage de guerre couvre).
+ * @property {number} hands        Hands taken (1; 2 for a "two-handed" weapon when `twoHanded`).
+ * @property {boolean} [twoHanded] "Two-handed" weapon (dnd5e `two` property).
+ * @property {boolean} [focus]     A spellcasting focus held (staff, wand, orb…).
+ * @property {boolean} [armament]  A weapon or a shield (what War Caster covers).
  */
 
-/** Mains prises pour incanter : une arme « à deux mains » n'en prend qu'une hors de l'attaque. */
+/** Hands taken to cast: a "two-handed" weapon takes only one outside of an attack. */
 export function handsUsed(held) {
   return (held ?? []).reduce((n, h) => n + (h.twoHanded ? 1 : Math.max(0, Number(h.hands) || 0)), 0);
 }
 
 /**
- * Le sort se heurte-t-il à l'absence de main libre ? null s'il passe, sinon `{ items }` : les noms de ce qui occupe les mains.
+ * Does the spell run into the lack of a free hand? null if it passes, otherwise `{ items }`: the names of what occupies the hands.
  * @param {object} use
- * @param {boolean} use.spell          L'utilisation lance un sort.
- * @param {boolean} use.somatic        Il garde sa composante S (une copie « cast » d'un objet qui en dispense ne l'a plus).
- * @param {boolean} [use.material]     Il a une composante M (la main du focaliseur suffit alors).
- * @param {Held[]} use.held            Ce que la créature tient.
- * @param {boolean} [use.freeSomatic]  Mage de guerre (contenu `freeSomatic`).
- * @param {boolean} [use.waived]       Composante S levée pour ce lancement (Sort subtil).
+ * @param {boolean} use.spell          The use casts a spell.
+ * @param {boolean} use.somatic        It keeps its S component (a "cast" copy of an item that dispenses with it no longer has it).
+ * @param {boolean} [use.material]     It has an M component (the focus hand is then enough).
+ * @param {Held[]} use.held            What the creature holds.
+ * @param {boolean} [use.freeSomatic]  War Caster (content `freeSomatic`).
+ * @param {boolean} [use.waived]       S component waived for this cast (Subtle Spell).
  * @returns {{items: string[]}|null}
  */
 export function somaticBlocked({ spell, somatic, material=false, held=[], freeSomatic=false, waived=false }) {
@@ -40,7 +40,7 @@ export function somaticBlocked({ spell, somatic, material=false, held=[], freeSo
   return { items: held.map(h => h.name) };
 }
 
-/** Le contrôle des mains s'applique-t-il à cet acteur ? Réglage `somaticHands` : "off", "pc" (personnages joueurs), "all". */
+/** Does the hand check apply to this actor? `somaticHands` setting: "off", "pc" (player characters), "all". */
 export function handsCheckedFor(setting, isCharacter) {
   if ( setting === "all" ) return true;
   if ( setting === "off" ) return false;

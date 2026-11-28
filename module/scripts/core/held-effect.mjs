@@ -1,15 +1,15 @@
 /**
- * Paume vibratoire (Moine, Main ouverte 17 — SRD 5.2) : « quand vous touchez une créature avec une attaque à mains nues, vous
- * pouvez dépenser 4 points de crédo pour déclencher des vibrations […] Vous ne pouvez avoir qu'une seule créature sous l'effet de
- * cette aptitude à la fois. […] Quand vous y mettez fin, la cible doit faire un jet de sauvegarde de Constitution ». Fonctions
- * pures, sur la règle `heldEffect` : un effet de l'item qu'une seule créature porte, et que l'une de ses activités fait cesser.
+ * Vibrating Palm (Monk, Open Hand 17 — SRD 5.2): "when you hit a creature with an Unarmed Strike, you
+ * can spend 4 Focus Points to start vibrations […] You can have only one creature under the effect of
+ * this feature at a time. […] When you end it, the target must make a Constitution saving throw". Pure
+ * functions, on the `heldEffect` rule: an effect of the item that only one creature bears, and that one of its activities ends.
  */
 
 /**
- * Les effets à retirer quand celui-ci vient d'être posé : les autres effets du même item, sur d'autres créatures.
+ * The effects to remove when this one has just been placed: the other effects of the same item, on other creatures.
  * @param {{single?: true}} rule
- * @param {{id: string, bearer: string}} placed                          l'effet posé, son porteur
- * @param {Array<{id: string, bearer: string}>} others                   tous les effets de cet effet d'item dans la scène
+ * @param {{id: string, bearer: string}} placed                          the placed effect, its bearer
+ * @param {Array<{id: string, bearer: string}>} others                   all the effects of this item effect in the scene
  * @returns {Array<{id: string, bearer: string}>}
  */
 export function supersededEffects(rule, placed, others) {
@@ -17,12 +17,12 @@ export function supersededEffects(rule, placed, others) {
   return (others ?? []).filter(e => (e.id !== placed.id) && (e.bearer !== placed.bearer));
 }
 
-/** Cette activité met-elle fin à l'effet tenu ? */
+/** Does this activity end the held effect? */
 export function endsHeldEffect(rule, activityId) {
   return !!rule && !!activityId && (rule.endedBy === activityId);
 }
 
-/** Une faveur de coup peut-elle se payer ? Il faut `cost` utilisations (une par défaut). */
+/** Can a hit boon be paid for? It takes `cost` uses (one by default). */
 export function riderAffordable(left, cost=1) {
   return left >= Math.max(1, Number(cost) || 1);
 }

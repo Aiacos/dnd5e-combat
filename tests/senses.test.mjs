@@ -1,6 +1,6 @@
 /**
- * Bloc générique `sense` (core/senses.mjs) : un sens déclaré par du contenu — il localise une créature sans la voir, ou compte
- * comme une vue — et `wardsDetection`, ce qui en protège. Règle pure : portée, murs, cible détectée ou non, protection.
+ * Generic `sense` block (core/senses.mjs): a sense declared by content — it locates a creature without seeing it, or counts as
+ * a sight — and `wardsDetection`, what protects against it. Pure rule: range, walls, detected target or not, protection.
  */
 import { describe, it, expect } from "vitest";
 import { senseVerdict, bestVerdict, wardedAgainst, sensesIn, SENSE_VERDICTS, detectsTarget, mutedSenses, hidesIdentity, pinpoints, drawsSensed,
@@ -11,29 +11,29 @@ import { ENTRY_KEYS } from "../module/scripts/core/content.mjs";
 
 const near = { distance: 20, walled: false, matches: true, wards: [] };
 
-describe("sens déclaré : le verdict sur une cible", () => {
+describe("declared sense: the verdict on a target", () => {
   const locate = { kind: "locate", range: 30 };
-  it("dans la portée, sans mur, cible détectée : localisée ; « sight » : vue", () => {
+  it("in range, no wall, target detected: located; \"sight\": sight", () => {
     expect(senseVerdict(locate, near)).toBe("locate");
     expect(senseVerdict({ kind: "sight", range: 30 }, near)).toBe("sight");
   });
-  it("au-delà de la portée, ou la cible n'est pas de celles que le sens détecte : rien", () => {
+  it("beyond range, or the target is not of those the sense detects: nothing", () => {
     expect(senseVerdict(locate, { ...near, distance: 31 })).toBe(null);
     expect(senseVerdict(locate, { ...near, distance: 30 })).toBe("locate");
     expect(senseVerdict(locate, { ...near, matches: false })).toBe(null);
   });
-  it("un mur l'arrête, sauf le sens qui les traverse (`walls: false`)", () => {
+  it("a wall stops it, except the sense that passes through them (`walls: false`)", () => {
     expect(senseVerdict(locate, { ...near, walled: true })).toBe(null);
     expect(senseVerdict({ ...locate, walls: false }, { ...near, walled: true })).toBe("locate");
   });
-  it("`reveals: \"presence\"` : la présence est sue, pas la position", () => {
+  it("`reveals: \"presence\"`: the presence is known, not the position", () => {
     expect(senseVerdict({ ...locate, reveals: "presence" }, near)).toBe("presence");
   });
-  it("une vue ne voit pas une cible Invisible ; un sens qui localise, si", () => {
+  it("a sight does not see an Invisible target; a locating sense does", () => {
     expect(senseVerdict({ kind: "sight", range: 30 }, { ...near, invisible: true })).toBe(null);
     expect(senseVerdict(locate, { ...near, invisible: true })).toBe("locate");
   });
-  it("une brume arrête toute vue ; des ténèbres aussi, sauf la vue qui les perce (`through`)", () => {
+  it("a fog stops all sight; so does Darkness, except the sight that pierces it (`through`)", () => {
     const sight = { kind: "sight", range: 30 };
     const piercing = { ...sight, through: ["darkness"] };
     expect(senseVerdict(sight, { ...near, darkness: true })).toBe(null);
@@ -41,24 +41,24 @@ describe("sens déclaré : le verdict sur une cible", () => {
     expect(senseVerdict(sight, { ...near, fog: true })).toBe(null);
     expect(senseVerdict(piercing, { ...near, fog: true })).toBe(null);
     expect(senseVerdict(piercing, { ...near, darkness: true, invisible: true })).toBe(null);
-    // Ni la brume ni les ténèbres n'arrêtent un sens qui localise.
+    // Neither fog nor Darkness stops a locating sense.
     expect(senseVerdict(locate, { ...near, fog: true, darkness: true })).toBe("locate");
   });
-  it("`needs` : éteint tant que le porteur est Aveuglé (`sight`) ou Assourdi (`hearing`)", () => {
+  it("`needs`: off while the bearer is Blinded (`sight`) or Deafened (`hearing`)", () => {
     const eyes = { kind: "sight", range: 30, needs: "sight" };
     const ears = { kind: "locate", range: 30, needs: "hearing" };
     expect(senseVerdict(eyes, { ...near, blind: true })).toBe(null);
     expect(senseVerdict(eyes, { ...near, deaf: true })).toBe("sight");
     expect(senseVerdict(ears, { ...near, deaf: true })).toBe(null);
     expect(senseVerdict(ears, { ...near, blind: true })).toBe("locate");
-    // Sans `needs`, ni l'un ni l'autre ne l'éteint (une vue qui ne passe pas par les yeux).
+    // Without `needs`, neither turns it off (a sight that does not go through the eyes).
     expect(senseVerdict({ kind: "sight", range: 30 }, { ...near, blind: true, deaf: true })).toBe("sight");
   });
-  it("la présence seule ne dépend pas de la vue, même pour un sens de genre « sight »", () => {
+  it("presence alone does not depend on sight, even for a sense of kind \"sight\"", () => {
     const presence = { kind: "sight", range: 30, reveals: "presence" };
     expect(senseVerdict(presence, { ...near, invisible: true, fog: true })).toBe("presence");
   });
-  it("`reveals: \"aura\"` : une aura sur ce qui est déjà vu — ni position ni vue ; les murs et les protections l'arrêtent", () => {
+  it("`reveals: \"aura\"`: an aura on what is already seen — neither position nor sight; walls and protections stop it", () => {
     const aura = { kind: "locate", range: 30, reveals: "aura", magic: "div" };
     expect(senseVerdict(aura, near)).toBe("aura");
     expect(senseVerdict(aura, { ...near, distance: 35 })).toBe(null);
@@ -77,33 +77,33 @@ describe("sens déclaré : le verdict sur une cible", () => {
   });
 });
 
-describe("protection contre la détection (`wardsDetection`)", () => {
-  it("une protection contre une école n'arrête que les sens de cette école", () => {
+describe("protection against detection (`wardsDetection`)", () => {
+  it("a protection against a school stops only the senses of that school", () => {
     expect(wardedAgainst({ kind: "locate", range: 30, magic: "div" }, ["div"])).toBe(true);
     expect(wardedAgainst({ kind: "locate", range: 30, magic: true }, ["div"])).toBe(false);
     expect(wardedAgainst({ kind: "locate", range: 30 }, ["div"])).toBe(false);
   });
-  it("une protection contre la magie arrête tout sens magique, d'une école ou non, pas un sens naturel", () => {
+  it("a protection against magic stops every magical sense, of a school or not, not a natural sense", () => {
     expect(wardedAgainst({ kind: "locate", range: 30, magic: "div" }, ["magic"])).toBe(true);
     expect(wardedAgainst({ kind: "locate", range: 60, magic: true }, ["magic"])).toBe(true);
     expect(wardedAgainst({ kind: "locate", range: 60 }, ["magic"])).toBe(false);
   });
-  it("la cible protégée n'est pas perçue par ce sens", () => {
+  it("the protected target is not perceived by this sense", () => {
     expect(senseVerdict({ kind: "locate", range: 30, magic: "div" }, { ...near, wards: ["div"] })).toBe(null);
     expect(senseVerdict({ kind: "locate", range: 30 }, { ...near, wards: ["div", "magic"] })).toBe("locate");
   });
 });
 
-describe("`detectedAs` : perçue aussi comme d'autres types", () => {
+describe("`detectedAs`: also perceived as other types", () => {
   const undead = { "target.creatureType": ["undead"] };
   const living = { not: { "target.creatureType": ["construct", "undead"] } };
   const humanoid = { "target.creatureType": "humanoid" };
-  it("sans la clé, seul son type compte", () => {
+  it("without the key, only its type counts", () => {
     expect(detectsTarget(undead, humanoid)).toBe(false);
     expect(detectsTarget(living, humanoid)).toBe(true);
     expect(detectsTarget(null, humanoid)).toBe(true);
   });
-  it("avec, le sens qui cherche ce type la trouve ; celui qui la trouvait déjà la trouve toujours", () => {
+  it("with it, the sense that seeks this type finds it; the one that already found it still does", () => {
     expect(detectsTarget(undead, humanoid, ["undead"])).toBe(true);
     expect(detectsTarget(living, humanoid, ["undead"])).toBe(true);
     expect(detectsTarget({ "target.creatureType": ["fiend"] }, humanoid, ["undead"])).toBe(false);
@@ -115,9 +115,9 @@ describe("`detectedAs` : perçue aussi comme d'autres types", () => {
   });
 });
 
-describe("`senseNeeds` : un sens de la fiche qui dépend de l'ouïe ou de la vue", () => {
+describe("`senseNeeds`: a sheet sense that depends on hearing or sight", () => {
   const echo = [{ blindsight: "hearing" }];
-  it("éteint tant que son porteur est Assourdi, pas autrement", () => {
+  it("off while its bearer is Deafened, not otherwise", () => {
     expect(mutedSenses(echo, { deaf: true })).toEqual(["blindsight"]);
     expect(mutedSenses(echo, { blind: true })).toEqual([]);
     expect(mutedSenses(echo, {})).toEqual([]);
@@ -130,11 +130,11 @@ describe("`senseNeeds` : un sens de la fiche qui dépend de l'ouïe ou de la vue
   });
 });
 
-describe("réglage `anonymousLocated` : l'identité d'une créature perçue sans être vue", () => {
-  it("éteint : jamais cachée", () => {
+describe("setting `anonymousLocated`: the identity of a creature perceived without being seen", () => {
+  it("off: never Hidden", () => {
     for ( const kind of ["heard", "located", "aura", null] ) expect(hidesIdentity(kind, false), String(kind)).toBe(false);
   });
-  it("allumé : cachée pour une créature entendue ou localisée ; pas pour une aura, posée sur ce qui est vu", () => {
+  it("on: Hidden for a creature heard or located; not for an aura, placed on what is seen", () => {
     expect(hidesIdentity("heard", true)).toBe(true);
     expect(hidesIdentity("located", true)).toBe(true);
     expect(hidesIdentity("aura", true)).toBe(false);
@@ -142,33 +142,33 @@ describe("réglage `anonymousLocated` : l'identité d'une créature perçue sans
   });
 });
 
-describe("la marque « localisée, pas vue » d'une créature affichée par un sens déclaré", () => {
-  it("localisée seulement : la marque", () => {
+describe("the \"located, not seen\" mark of a creature displayed by a declared sense", () => {
+  it("located only: the mark", () => {
     expect(onlyLocated(["locate"])).toBe(true);
     expect(onlyLocated([null, "locate", "presence"])).toBe(true);
     expect(onlyLocated([])).toBe(true);
   });
-  it("vue par une vue déclarée, fût-ce par un seul observateur : pas de marque", () => {
+  it("seen by a declared sight, even by a single observer: no mark", () => {
     expect(onlyLocated(["sight"])).toBe(false);
     expect(onlyLocated(["locate", "sight"])).toBe(false);
   });
 });
 
-describe("déclaration dans le contenu", () => {
-  it("les clés sont au schéma", () => {
+describe("declaration in the content", () => {
+  it("the keys are in the schema", () => {
     expect(ENTRY_KEYS).toContain("detectedAs");
     expect(ENTRY_KEYS).toContain("senseNeeds");
     expect(ENTRY_KEYS).toContain("sense");
     expect(ENTRY_KEYS).toContain("wardsDetection");
   });
-  it("une entrée porte un sens ou une liste de sens", () => {
+  it("an entry carries a sense or a list of senses", () => {
     const one = { kind: "locate", range: 30 };
     expect(sensesIn({ sense: one })).toEqual([one]);
     expect(sensesIn({ sense: [one, { kind: "sight", range: 10 }] })).toHaveLength(2);
     expect(sensesIn({})).toEqual([]);
     expect(sensesIn(null)).toEqual([]);
   });
-  it("valide : genre, portée, et les options connues", () => {
+  it("valid: kind, range, and the known options", () => {
     const facts = { "target.creatureType": null };
     const ok = { sense: { kind: "locate", range: 30, units: "ft", via: "effect", fromEffect: "abcdefghij012345", walls: false,
       magic: "div", reveals: "presence", detects: { "target.creatureType": ["undead"] } } };
@@ -181,7 +181,7 @@ describe("déclaration dans le contenu", () => {
     expect(validateEntry({ detectedAs: ["undead"] }, { facts })).toEqual([]);
     expect(validateEntry({ senseNeeds: { blindsight: "hearing", seeAll: "sight" } }, { facts })).toEqual([]);
   });
-  it("refuse : genre inconnu, portée absente, option ou fait inconnus, protection vide", () => {
+  it("refuses: unknown kind, missing range, unknown option or fact, empty protection", () => {
     const facts = { "target.creatureType": null };
     const bad = [{ sense: { kind: "smell", range: 30 } }, { sense: { kind: "locate" } }, { sense: { kind: "locate", range: 0 } },
       { sense: { kind: "locate", range: 30, colour: "red" } }, { sense: { kind: "locate", range: 30, walls: true } },

@@ -1,24 +1,24 @@
 /**
- * Sauvegardes du diagnostic (SPEC §177) : règles pures, testées par tests/backup.test.mjs.
+ * Diagnostic backups (SPEC §177): pure rules, tested by tests/backup.test.mjs.
  *
- * Avant toute réparation, chaque document touché (« racine ») est copié dans une entrée du compendium « DAS · Sauvegardes » ;
- * restaurer remet la racine exactement comme elle était. Trois sortes de racines :
- *   Actor  un acteur du monde (ses objets et ses effets compris) ;
- *   Item   un objet du monde (ses effets compris) ;
- *   Token  un token non lié : sa copie propre de l'acteur (ce que ses objets et effets sont devenus dans son delta).
+ * Before any repair, each document touched ("root") is copied into an entry of the "DAS · Backups" compendium;
+ * restoring puts the root back exactly as it was. Three kinds of roots:
+ *   Actor  a world actor (its items and effects included);
+ *   Item   a world item (its effects included);
+ *   Token  an unlinked token: its own copy of the actor (what its items and effects became in its delta).
  */
 
-/** Les collections incluses d'une racine, par sorte. */
+/** The embedded collections of a root, by kind. */
 export const EMBEDDED = Object.freeze({ Actor: ["items", "effects"], Item: ["effects"], Token: ["items", "effects"] });
 
-/** Les champs qu'une restauration ne remet jamais (identité, rangement, droits, historique). */
+/** The fields a restoration never puts back (identity, sorting, ownership, history). */
 export const KEPT_FIELDS = Object.freeze(["_id", "_stats", "folder", "sort", "ownership"]);
 
 /**
- * Ce qu'il faut faire d'une collection incluse pour revenir à la sauvegarde : supprimer ce qui n'y était pas, recréer ce qui a
- * disparu (avec son id), remettre le reste à l'identique.
- * @param {{ _id: string }[]} current   Les documents inclus actuels (données).
- * @param {{ _id: string }[]} saved     Ceux de la sauvegarde.
+ * What to do with an embedded collection to return to the backup: delete what was not there, recreate what has
+ * disappeared (with its id), put the rest back identically.
+ * @param {{ _id: string }[]} current   The current embedded documents (data).
+ * @param {{ _id: string }[]} saved     Those of the backup.
  * @returns {{ remove: string[], create: object[], update: object[] }}
  */
 export function restorePlan(current=[], saved=[]) {
@@ -31,16 +31,16 @@ export function restorePlan(current=[], saved=[]) {
   };
 }
 
-/** Les données de premier niveau d'une racine à remettre (sans ses collections incluses ni les champs gardés). */
+/** The top-level data of a root to put back (without its embedded collections or the kept fields). */
 export function rootFields(type, data) {
   const skip = new Set([...KEPT_FIELDS, ...(EMBEDDED[type] ?? [])]);
   return Object.fromEntries(Object.entries(data ?? {}).filter(([k]) => !skip.has(k)));
 }
 
-/** La clé d'une racine (pour ne la sauvegarder qu'une fois). */
+/** The key of a root (to back it up only once). */
 export const rootKey = root => `${root.type}:${root.uuid}`;
 
-/** Les racines distinctes d'une liste de tâches (dans l'ordre de première apparition). */
+/** The distinct roots of a task list (in order of first appearance). */
 export function uniqueRoots(tasks) {
   const seen = new Map();
   for ( const t of tasks ?? [] ) if ( t?.root && !seen.has(rootKey(t.root)) ) seen.set(rootKey(t.root), t.root);
@@ -48,10 +48,10 @@ export function uniqueRoots(tasks) {
 }
 
 /**
- * Une sauvegarde relue est-elle complète ? Chaque racine attendue doit y être, avec exactement les mêmes ids d'objets et
- * d'effets que l'original au moment de la copie. Rend la liste des problèmes (vide : complète).
- * @param {{ type: string, uuid: string, data: object }[]} expected   Ce qui a été copié.
- * @param {{ type: string, uuid: string, data: object }[]} readBack   Ce que le compendium rend.
+ * Is a backup read back complete? Each expected root must be there, with exactly the same item and effect ids
+ * as the original at the time of the copy. Returns the list of problems (empty: complete).
+ * @param {{ type: string, uuid: string, data: object }[]} expected   What was copied.
+ * @param {{ type: string, uuid: string, data: object }[]} readBack   What the compendium returns.
  */
 export function verifyBackup(expected, readBack) {
   const problems = [];
@@ -68,7 +68,7 @@ export function verifyBackup(expected, readBack) {
   return problems;
 }
 
-/** Le nom d'une entrée de sauvegarde : « Diagnostic — 2026-10-13 14:05 (3) ». */
+/** The name of a backup entry: "Diagnostic — 2026-10-13 14:05 (3)". */
 export function backupName(label, date, count) {
   const pad = n => String(n).padStart(2, "0");
   const d = new Date(date);

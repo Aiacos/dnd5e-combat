@@ -1,10 +1,10 @@
 /**
- * §80 — Faim de Hadar et Frappe piégeuse (Manuel des joueurs, prêtées sans emplacement au Magicien).
- *  1. Faim de Hadar posée sur le Guerrier (zone réduite à sa case, pour n'y prendre personne d'autre). La zone retient une activité
- *     par moment ; au début du tour du Guerrier, « Start of Turn Damage » (froid) ; à la fin de ce même tour, « End of Turn Save »
- *     (sauvegarde de Dextérité, acide) — le froid n'empêche pas l'acide.
- *  2. Frappe piégeuse sur le Zombi (200 PV le temps du test), jusqu'à ce qu'il soit Entravé ; au début de son tour, il subit les
- *     dégâts perforants de « Start of Turn Damage ».
+ * §80 — Hunger of Hadar and Ensnaring Strike (Player's Handbook, lent with no slot to the Wizard).
+ *  1. Hunger of Hadar placed on the Fighter (area reduced to its cell, so as not to catch anyone else). The area holds
+ *     one activity per moment; at the start of the Fighter's turn, "Start of Turn Damage" (cold); at the end of that same
+ *     turn, "End of Turn Save" (Dexterity save, acid) — the cold does not prevent the acid.
+ *  2. Ensnaring Strike on the Zombi (200 HP for the test), until it is Restrained; at the start of its turn, it takes the
+ *     piercing damage of "Start of Turn Damage".
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -51,7 +51,7 @@ export default {
     let start = null;
     let before = null;
     for ( let i = 0; (i < 4) && !start; i++ ) {
-      before = await ctx.hp(guerrier);   // relevé avant le changement de tour : le froid s'applique aussitôt
+      before = await ctx.hp(guerrier);   // survey before the turn change: the cold applies at once
       await ctx.nextTurn(); await sleep(2500);
       start = (await ticks()).find(m => tickOf(m).event === "turnStart");
     }
@@ -74,7 +74,7 @@ export default {
     if ( used.regionId ) await ctx.call("delete-scene-object", { type: "Region", objectId: used.regionId }).catch(() => {});
     await sleep(1000);
 
-    // 2. Frappe piégeuse.
+    // 2. Ensnaring Strike.
     const { data: tok } = await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id });
     const zhp = await ctx.hp(zombi);
     ctx.restore(() => ctx.setHp(zombi, zhp));
@@ -97,7 +97,7 @@ export default {
       caught = await restrained();
     }
     if ( !ctx.expect(caught, "Frappe piégeuse : le Zombi est Entravé (15 essais au plus)") ) return;
-    // §81 : la donnée met 1d6 sur la sauvegarde du lancement ; la règle 2024 n'en donne qu'au début des tours.
+    // §81: the data puts 1d6 on the casting save; the 2024 rule gives it only at the start of turns.
     const afterCast = await ctx.hp(zombi);
     ctx.expect(afterCast === castHp, `lancement : aucun dégât, réussie ou ratée (${castHp} → ${afterCast} PV)`);
     await ctx.startCombat([mage, zombi]);
@@ -114,13 +114,13 @@ export default {
     await endConcentration();
     await ctx.removeEffectsNamed(zombi, /Ensnared|piég|Entrav/i);
 
-    // 3. §85 : Mur d'épines — un cercle d'épines sur une case libre ; le Zombi y marche (vrai déplacement du moteur) : la sœur
-    // « Traversal Save » (Dextérité, 7d8 tranchants) se rejoue à l'entrée.
+    // 3. §85: Wall of Thorns — a ring of thorns on a free cell; the Zombi walks into it (a real engine move): the sibling
+    // "Traversal Save" (Dexterity, 7d8 slashing) is replayed on entry.
     const thorns = await ctx.ensureItem(mage, `${PHB}.phbsplWallofThor`, { system: { method: "atwill" } });
     const grid = await ctx.gridSize();
     const z0 = await ctx.position(zombi);
     ctx.restore(() => ctx.call("move-token", { tokenId: zombi.id, x: z0.x, y: z0.y, elevation: 0 }));
-    const cell = { x: z0.x + 3 * grid, y: z0.y };   // trois cases à droite du Zombi
+    const cell = { x: z0.x + 3 * grid, y: z0.y };   // three cells to the right of the Zombi
     const wall = await ctx.use({ tokenId: mage.id, itemId: thorns, activityId: "cgge2ISpX3u70Dof",
       area: { shape: "circle", x: cell.x + grid / 2, y: cell.y + grid / 2, radius: grid / 2 } });
     if ( wall.regionId ) ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: wall.regionId }).catch(() => {}));

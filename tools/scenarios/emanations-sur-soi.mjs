@@ -1,10 +1,10 @@
 /**
- * §86 — Émanations sur soi dont la donnée n'a pas de gabarit (Manuel des joueurs premium) : le contenu fournit l'émanation de 10 ft
- * (`selfZone`), posée d'office sur le lanceur (§47), et la zone épargne les alliés (`zoneAffects: "enemy"`).
- *  1. Présence royale de Yolande (prêtée au Barde) : l'émanation est posée sur lui ; le Zombi (ennemi) et le Druide (allié) à 1,50 m.
- *     En combat, le Zombi qui finit son tour dedans fait « Emanation Save » (Sagesse) — À terre s'il la rate ; le Druide, jamais.
- *  2. Invocation d'êtres sylvestres (prêtée au Druide) : « Cast » résout sa sauvegarde à la pose sur le Zombi au contact, pas sur
- *     le Barde (allié) ; la zone retient la sœur « Emanation Save ».
+ * §86 — Self Emanations whose data has no template (premium Player's Handbook): the content provides the 10 ft Emanation
+ * (`selfZone`), placed automatically on the caster (§47), and the area spares allies (`zoneAffects: "enemy"`).
+ *  1. Yolande's Regal Presence (lent to the Bard): the Emanation is placed on him; the Zombie (enemy) and Druid (ally) at 1.50 m.
+ *     In combat, the Zombie that ends its turn inside makes "Emanation Save" (Wisdom) — Prone if it fails; the Druid, never.
+ *  2. Conjure Woodland Beings (lent to the Druid): "Cast" resolves its save on placement on the adjacent Zombie, not on
+ *     the Bard (ally); the area retains the sister "Emanation Save".
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -28,7 +28,8 @@ export default {
     ctx.restore(() => ctx.call("move-token", { tokenId: zombi.id, x: z0.x, y: z0.y, elevation: 0 }));
     ctx.restore(() => ctx.call("move-token", { tokenId: druide.id, x: d0.x, y: d0.y, elevation: 0 }));
     ctx.restore(() => ctx.removeStatusEffects(zombi, "prone"));
-    // 200 PV le temps du scénario : la Présence royale (4d6) tuait parfois le Zombi, qui n'était plus affecté par la seconde zone.
+    // 200 HP for the scenario's duration: Regal Presence (4d6) sometimes killed the Zombie, which was then no longer affected by
+    // the second area.
     const { data: ztok } = await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id });
     if ( !ztok.actorLink ) {
       const max = ztok.delta?.system?.attributes?.hp?.max ?? null;
@@ -39,14 +40,14 @@ export default {
     const endConcentration = async t => ctx.removeEffectsNamed(t, /Concentr/i);
     ctx.restore(() => endConcentration(barde));
     ctx.restore(() => endConcentration(druide));
-    // Le Zombi à droite du Barde, le Druide à sa gauche : tous deux à 1,50 m.
+    // The Zombie to the Bard's right, the Druid to his left: both at 1.50 m.
     await ctx.call("move-token", { tokenId: zombi.id, x: b0.x + grid, y: b0.y, elevation: 0 });
     await ctx.call("move-token", { tokenId: druide.id, x: b0.x - grid, y: b0.y, elevation: 0 });
     await sleep(800);
     const regionsOf = async () => (await ctx.call("list-scene-objects", { types: ["Region"] })).objects.Region ?? [];
     const zoneState = async id => (await ctx.call("get-scene-object", { type: "Region", objectId: id })).data?.flags?.[MODULE_ID]?.area ?? null;
 
-    // 1. Présence royale de Yolande.
+    // 1. Yolande's Regal Presence.
     const yolande = await ctx.ensureItem(barde, `${PHB}.phbsplYolandesRe`, { system: { method: "atwill" } });
     const before = new Set((await regionsOf()).map(r => r.id));
     const since = await ctx.lastMessageId();
@@ -73,7 +74,7 @@ export default {
       ctx.expect(r?.plan?.save?.ability === "wis" && !!t?.save, `sauvegarde de Sagesse : ${t?.save?.total} contre DD ${r?.plan?.save?.dc}`);
       ctx.expect(prone === (t?.save?.success === false), `À terre ${prone ? "posé" : "absent"}, cohérent avec la sauvegarde (${t?.save?.success ? "réussie" : "ratée"})`);
     }
-    await ctx.nextTurn(); await sleep(3000);   // la fin du tour du Druide, s'il n'est pas encore passé
+    await ctx.nextTurn(); await sleep(3000);   // the end of the Druid's turn, if it has not passed yet
     ctx.expect(!(await ticks()).some(m => tickOf(m).token?.endsWith(druide.id)), "le Druide (allié) n'est jamais pris par l'émanation");
     await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {});
     ctx.ownCombat = null;
@@ -82,8 +83,8 @@ export default {
     await ctx.removeStatusEffects(zombi, "prone");
     await sleep(1000);
 
-    // 2. Invocation d'êtres sylvestres, par le Druide revenu à sa place : le Zombi au contact, en diagonale au-dessus à droite (case
-    // libre de la distribution), le Barde (allié) à deux cases à droite, dans l'émanation.
+    // 2. Conjure Woodland Beings, by the Druid back in place: the Zombie adjacent, diagonally up and to the right (free cell
+    // of the distribution), the Bard (ally) two cells to the right, in the Emanation.
     await ctx.call("move-token", { tokenId: druide.id, x: d0.x, y: d0.y, elevation: 0 });
     await ctx.call("move-token", { tokenId: zombi.id, x: d0.x + grid, y: d0.y - grid, elevation: 0 });
     await sleep(800);

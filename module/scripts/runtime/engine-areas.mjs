@@ -1,6 +1,6 @@
 /**
- * Les zones d'effet posées par une utilisation (régions de dnd5e) : la résolution qui s'ouvre sur la zone, nuages et zones
- * instantanées. Extrait de runtime/engine.mjs.
+ * The area effects placed by a use (dnd5e regions): the resolution that opens on the area, clouds and instant
+ * areas. Extracted from runtime/engine.mjs.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -27,7 +27,7 @@ import { tokenArt } from "../adapter/token-art.mjs";
 /*  Zones d'effet                               */
 /* -------------------------------------------- */
 
-/** Le dernier message d'utilisation de cette activité ; `unresolved` : qui n'a pas encore de résolution. */
+/** The latest use message of this activity; `unresolved`: which does not yet have a resolution. */
 function findUsage(activityUuid, { unresolved=false }={}) {
   const messages = game.messages.contents;
   for ( let i = messages.length - 1; i >= Math.max(0, messages.length - LOOKBACK); i-- ) {
@@ -38,28 +38,28 @@ function findUsage(activityUuid, { unresolved=false }={}) {
   return null;
 }
 
-/** §70 : la région posée par un sort à orage qui n'est pas un éclair — le nuage. */
+/** §70: the region placed by a storm spell that is not a lightning bolt — the cloud. */
 function isCloudRegion(region) {
   const item = fromUuidSync(region.getFlag("dnd5e", "item") ?? "", { strict: false });
   return !!stormOf(item) && !isBoltRegion(region);
 }
 
-/** Une zone vient d'être posée : ceux qu'elle recouvre sont les cibles de l'activité. */
+/** An area has just been placed: those it covers are the activity's targets. */
 export async function onRegionCreated(region) {
-  // P2 : une région créée sans tranche d'élévation (connecteur, macro) la reçoit avant qu'on lise qui est dedans.
+  // P2: a region created without an elevation slice (connector, macro) receives it before we read who is inside.
   const slice = await ensureRegionElevation(region);
   if ( slice ) log(`area: elevation slice ${slice.bottom} → ${slice.top} ${region.parent.grid.units}`);
-  // §16.21 : Appel de la foudre — la zone posée est le nuage de l'item ; la foudre frappe à 5 ft du point choisi.
+  // §16.21: Call Lightning — the placed area is the item's cloud; the lightning strikes at 5 ft from the chosen point.
   const bolt = await shrinkToBolt(region);
   if ( bolt ) log("area moved to the struck point (lightning)");
   const area = await readActivityRegion(region);
   if ( !area ) return;
-  // §188 b : une zone de feu posée sur une zone inflammable (flaque d'huile, toile) l'embrase.
+  // §188 b: a fire area placed on a flammable area (oil puddle, web) ignites it.
   const lit = await igniteUnder(region, fromUuidSync(area.activity ?? "", { strict: false }));
   if ( lit ) log(`area: ${lit} flammable area(s) ignited`);
 
-  // Zone d'un sort à concentration : elle tombera avec elle (runtime/concentration.mjs).
-  // §70 : le nuage — à défaut du message, la concentration en cours de son sort.
+  // Area of a concentration spell: it will fall with it (runtime/concentration.mjs).
+  // §70: the cloud — failing the message, the spell's ongoing concentration.
   const effect = concentrationEffectOf(findUsage(area.activity))
     ?? (isCloudRegion(region) ? concentrationOn(fromUuidSync(region.getFlag("dnd5e", "item") ?? "", { strict: false })) : null);
   if ( effect ) {
@@ -67,7 +67,7 @@ export async function onRegionCreated(region) {
     log(`area attached to concentration "${effect.name}"`);
   }
 
-  // §70 : le nuage d'un sort à orage ne résout rien — c'est l'éclair, visé dessous, qui le fera.
+  // §70: a storm spell's cloud resolves nothing — the lightning, aimed below, will.
   if ( isCloudRegion(region) ) { log("storm: cloud placed, waiting for the lightning"); return; }
 
   const message = findUsage(area.activity, { unresolved: true });
@@ -77,37 +77,37 @@ export async function onRegionCreated(region) {
     const usage = readUsage(message);
     const activity = message.getAssociatedActivity?.({ scaled: true });
     const rules = areaRulesOf(activity);
-    // Une activité qui ne fait que POSER la zone (utilitaire sans effet) n'a rien à résoudre elle-même ;
-    // si une sœur doit rejouer (Nuage nauséabond), la zone est quand même retenue comme zone qui dure.
+    // An activity that only PLACES the area (utility with no effect) has nothing to resolve itself;
+    // if a sibling must replay (Stinking Cloud), the area is still kept as a lasting area.
     if ( !usage?.area && !rules?.activity && !rules?.casterPulse ) return null;
     let targets = selectAreaTargets(area.candidates, area).map(({ token, actor, name }) => ({ token, actor, name }));
-    // §401 : « créatures de votre choix » — le lanceur choisit parmi ceux que la zone peut affecter (cochés d'avance : le choix d'office).
+    // §401: "creatures of your choice" — the caster chooses among those the area can affect (checked in advance: the default).
     const picked = usage?.area ? await askAreaChoice(area, activity, targets) : null;
     if ( picked ) targets = picked.targets;
     log(`area placed: ${area.candidates.length} token(s) covered, ${targets.length} affected`);
     if ( usage?.area ) showTargetsTo(message.author, targets.map(t => t.token));
 
-    // §187 : un objet répandu au sol (chausse-trapes, billes) n'a pas de durée, mais sa zone reste — jusqu'à ce qu'on le ramasse.
+    // §187: a spilled object (caltrops, ball bearings) has no duration, but its area stays — until it is picked up.
     const scatter = scatterOf(activity);
-    // §188 : l'huile étalée au sol reste aussi (sans rejeu : elle n'agit qu'une fois embrasée, runtime/flammable.mjs).
+    // §188: oil spread on the ground also stays (without replay: it only acts once ignited, runtime/flammable.mjs).
     const ground = flammableOf(activity)?.ground === true;
     const lasting = rules ?? (ground ? { on: [], activity: null } : null);
-    // §403 : une zone que le contenu fait durer (`zoneLasts` : Symbole, la sphère de 18 m pendant 10 minutes), même instantanée.
-    // Pas une activité utilitaire (Symbole : « Inscribe Glyph » pose le glyphe, il n'a rien à rejouer).
+    // §403: an area that the content makes last (`zoneLasts`: Symbol, the 18 m sphere for 10 minutes), even instant.
+    // Not a utility activity (Symbol: "Inscribe Glyph" places the glyph, it has nothing to replay).
     const lasts = !!contentOf(activity.item).entry?.zoneLasts && (activity.type !== "utility");
     if ( lasting && (!isInstantaneous(activity) || scatter || ground || lasts) ) {
       const rules = lasting;
-      // Zone qui dure : elle rejouera son activité (runtime/areas.mjs). Ceux qu'elle touche à la
-      // pose l'ont été pour ce tour de jeu — sauf si c'est une sœur qui agit et que la pose ne fait rien.
+      // Lasting area: it will replay its activity (runtime/areas.mjs). Those it touches at
+      // placement count as touched for this game turn — unless a sibling is acting and the placement does nothing.
       const key = turnKeyOf(game.combat?.started ? game.combat.round : null, game.combat?.turn);
-      // §300 (repasse C5) : une zone dont le texte ne prévoit rien à l'incantation (`quietPose` : Tempête de neige, Nuage nauséabond)
-      // n'agit qu'aux moments déclarés — ceux qui sont déjà dedans sauvegardent en commençant leur tour.
-      // §396 : une zone remise par la correction du MJ n'agit pas à la pose non plus (carte marquée `quietPose`).
+      // §300 (pass C5): an area whose text provides nothing at casting (`quietPose`: Sleet Storm, Stinking Cloud)
+      // only acts at the declared moments — those already inside save when starting their turn.
+      // §396: an area restored by the GM's correction does not act at placement either (card marked `quietPose`).
       const quiet = (contentOf(activity.item).entry?.quietPose === true) || (message.getFlag(MODULE_ID, "quietPose") === true);
       await writeAreaState(region, {
         ...openArea(rules.on, key, (usage?.area && actsOnPose(rules.on) && !scatter && !quiet) ? targets.map(t => t.token) : []),
         usage: message.id,
-        // §300 : son centre à la pose — un déplacement de la zone ne fait « entrer » que ceux qu'elle recouvre en plus (runtime/areas.mjs).
+        // §300: its center at placement — moving the area only makes "enter" those it additionally covers (runtime/areas.mjs).
         at: zoneCenter(region),
         // §551: and its elevation slice — a vertical move of the area (its caster flies) only makes "enter" those it now covers.
         slice: sliceOf(region._source.elevation),
@@ -116,35 +116,35 @@ export async function onRegionCreated(region) {
         exclude: area.excludeOrigin ? area.origin : null,
         // §91 : le lanceur, dont le tour fait agir la zone (`casterPulse`).
         source: area.origin ?? null,
-        // §16.23 : les rejeux de la zone respectent qui elle affecte (Esprits gardiens épargnent les alliés).
+        // §16.23: the area's replays respect whom it affects (Spirit Guardians spare allies).
         affects: area.affects ?? "", originDisposition: area.originDisposition ?? null, originSide: area.originSide ?? null,
-        // §401 : le choix du lanceur à la pose — ceux qu'il a retenus et ceux qu'il a épargnés ; les autres suivent la règle d'office.
+        // §401: the caster's choice at placement — those they kept and those they spared; the others follow the default rule.
         ...(picked ? { picked: picked.targets.map(t => t.token), spared: picked.spared } : {}),
         ...(scatter ? { scatter: await scatterState(region, message, activity) } : {}),
         ...(ground ? await groundFlammableState(region, activity) : {})
       });
       log(`lasting area: acts on ${rules.on.join(", ")}, once per turn${rules.activity ? ` (replays activity ${rules.activity})` : ""}`);
-      // C12-b : ceux qu'elle recouvre en apparaissant y entrent (`enterOnPose` : Invocation de céleste).
-      // §438 : seulement quand la zone est posée par une autre activité que celle qu'elle rejoue (Esprits gardiens du Manuel 3.0.0) ;
-      // l'activité qui rejoue et pose à la fois (forme 2.2.0) résout sa pose elle-même, plus bas.
+      // C12-b: those it covers on appearing enter it (`enterOnPose`: Summon Celestial).
+      // §438: only when the area is placed by an activity other than the one it replays (Spirit Guardians of the Player's
+      // Handbook 3.0.0); the activity that both replays and places (2.2.0 form) resolves its placement itself, further down.
       if ( (contentOf(activity.item).entry?.enterOnPose === true) && !(rules.activity && (rules.activity === activity.id)) ) {
         enterAllInside(region);
         log(`${activity.item.name}: the creatures already inside enter the area`);
         return null;
       }
-      // Une zone qui n'agit qu'au déplacement (Croissance d'épines) ne fait rien à sa pose.
-      // §91 : une zone qui n'agit qu'au tour de son lanceur (`casterPulse`, aucun moment) résout sa pose comme une autre.
-      // §187 : un objet répandu n'agit pas sur ceux qui sont déjà là — seulement sur qui y entre.
+      // An area that only acts on movement (Spike Growth) does nothing at placement.
+      // §91: an area that only acts on its caster's turn (`casterPulse`, no moment) resolves its placement like any other.
+      // §187: a spilled object does not act on those already there — only on whoever enters.
       if ( !usage?.area || scatter || ground || quiet || (rules.on.length && !actsOnPose(rules.on)) ) return null;
     } else if ( isInstantaneous(activity) || bolt ) {
       await markTransient(region, message.id);
-      // §261 : Tempête de grêle — le terrain difficile reste quand la zone part.
+      // §261: Ice Storm — the Difficult Terrain stays when the area leaves.
       const caster = fromUuidSync(area.origin ?? "", { strict: false })?.actor ?? null;
       const left = await leaveDifficultTerrain(region, activity, { caster, combat: game.combat });
       if ( left ) log(`${activity.item.name}: difficult terrain left until the end of ${caster.name}'s next turn`);
-      // §201 : la résolution commence — la zone ne recouvre plus l'animation du sort.
+      // §201: the resolution begins — the area no longer covers the spell's animation.
       await hideRegion(region);
-      // Personne dedans : aucune résolution ne viendra la retirer. On la laisse voir un instant.
+      // No one inside: no resolution will come to remove it. We let it be seen for a moment.
       if ( !targets.length ) setTimeout(() => removeTransientRegions(message.id).catch(() => {}), TRANSIENT_LINGER_MS);
     }
     return openingFor(message, { ...usage, targets });
@@ -152,8 +152,8 @@ export async function onRegionCreated(region) {
 }
 
 /**
- * §401 : la question « créatures de votre choix » d'une zone posée, si le réglage la veut. Rend `{ targets, spared }`, ou null (pas de
- * question : le choix d'office tient).
+ * §401: the "creatures of your choice" question of a placed area, if the setting wants it. Returns `{ targets, spared }`, or null
+ * (no question: the default choice holds).
  */
 async function askAreaChoice(area, activity, targets) {
   if ( !isChoiceZone(activity) ) return null;

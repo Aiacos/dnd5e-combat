@@ -1,9 +1,9 @@
 /**
- * Indicateur de lumière (SPEC §16.50, §40.2) : dans quelle lumière se tient un token, telle que les autres la voient
- * (core/illumination.mjs, `lightIndicator`), ce que ça change (vu, Désavantage pour le voir, peut se cacher) et comment
- * lui-même y voit. Le moteur ne dessine rien : il publie le calcul (`api.light`, `api.ui.light`) et l'infobulle, qu'une
- * interface affiche où elle veut (le témoin de la Barre de Darsh UI DnD5). Le réglage client « Indicateur de lumière » est
- * rendu dans `enabled` : à l'interface de le respecter.
+ * Light indicator (SPEC §16.50, §40.2): what light a token stands in, as others see it
+ * (core/illumination.mjs, `lightIndicator`), what that changes (seen, Disadvantage to see it, can hide) and how
+ * it sees there itself. The engine draws nothing: it publishes the calculation (`api.light`, `api.ui.light`) and the
+ * tooltip, which an interface displays where it wants (the indicator of the Darsh UI DnD5 Bar). The client setting
+ * "Light indicator" is returned in `enabled`: up to the interface to respect it.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,10 +21,10 @@ function tooltip({ key, own }) {
 }
 
 /**
- * La lumière où se tient un token, pour une interface (`api.light`, demandée par Darsh UI DnD5 le 2026-09-27).
+ * The light a token stands in, for an interface (`api.light`, requested by Darsh UI DnD5 on 2026-09-27).
  * @param {Token|TokenDocument} token
  * @returns {{key: "bright"|"dim"|"dark"|"magical", icon: string, name: string, tooltip: string, enabled: boolean}|null}
- *   `enabled` : le réglage client « Indicateur de lumière » ; null sans canevas ou sans token sur une scène.
+ *   `enabled`: the client setting "Light indicator"; null without a canvas or without a token on a scene.
  */
 export function lightState(token) {
   const doc = token?.document ?? token;
@@ -38,9 +38,9 @@ export function lightState(token) {
 }
 
 /**
- * Ce que donne la lumière globale de la scène affichée, selon les règles du moteur (§16.52 : plage d'obscurité, « vive »,
- * crépuscule) — pour un module d'affichage qui veut le même « plein jour » que les règles (`api.ui.globalLight`, §40.2).
- * @returns {"bright"|"dim"|null}  null : pas de lumière globale à cette obscurité, ou pas de canevas.
+ * What the displayed scene's global light gives, per the engine's rules (§16.52: darkness range, "bright",
+ * twilight) — for a display module that wants the same "full daylight" as the rules (`api.ui.globalLight`, §40.2).
+ * @returns {"bright"|"dim"|null}  null: no global light at this darkness, or no canvas.
  */
 export function globalLightState() {
   const level = globalLight();

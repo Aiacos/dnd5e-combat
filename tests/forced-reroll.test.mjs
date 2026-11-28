@@ -1,6 +1,6 @@
 /**
- * §489 : la relance forcée d'un jet d'attaque (étape `reroll`, Parade d'un monstre) — validation, rejugement du coup par le cœur avec
- * le nouveau jet, faits `attack.fumble` / `attack.rerolled` (riposte sur un échec critique du nouveau jet). Exemples synthétiques.
+ * §489: the forced reroll of an attack roll (`reroll` step, a monster's Parry) — validation, the core re-judging the hit with
+ * the new roll, `attack.fumble` / `attack.rerolled` facts (riposte on a critical failure of the new roll). Synthetic examples.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { open, advance, STEPS } from "../module/scripts/core/action.mjs";
@@ -14,13 +14,13 @@ const T = (n, extra={}) => ({ token: `T${n}`, actor: `A${n}`, name: `Cible ${n}`
 const roll = (total, extra={}) => ({ total, isCritical: false, isFumble: false, ...extra });
 const ACTIVITY = "abcdefghijklmnop";
 
-/** La Parade d'un monstre, comme une campagne la déclarerait. */
+/** A monster's Parry, as a campaign would declare it. */
 const parry = { triggers: [
   { on: "isHit", if: { "hit.critical": false, "activity.isMelee": true }, do: [{ type: "use" }, { type: "reroll" }] },
   { on: "isMissed", free: true, if: { "attack.rerolled": true, "attack.fumble": true },
     do: [{ type: "use", activity: ACTIVITY, target: "source", free: true }] }] };
 
-/** Une attaque qui touche T1 (15 contre CA 15), en attente de sa réaction. */
+/** An attack that hits T1 (15 against AC 15), awaiting its reaction. */
 function hitAwaitingReaction(first=roll(15)) {
   let { resolution } = open({ ...RESOLUTION_BASE, plan: { attack: true, damage: "author" }, targets: [] });
   ({ resolution } = advance(resolution, { type: "attackRolled", roll: first, messageId: "a", targets: [T(1, { canReact: true })] }));
@@ -29,10 +29,10 @@ function hitAwaitingReaction(first=roll(15)) {
 }
 
 describe("§489 : validation de reroll", () => {
-  it("la Parade : isHit + use + reroll, puis la riposte gratuite sur échec critique", () => {
+  it("the Parry: isHit + use + reroll, then the free riposte on a critical failure", () => {
     expect(v(parry)).toEqual([]);
   });
-  it("refuse reroll sans réaction use, hors fenêtre « touché », ou avec une option", () => {
+  it("refuses reroll without a use reaction, outside the \"hit\" window, or with an option", () => {
     const misplaced = "triggers[0].do: \"reroll\" requires the isHit or allyIsHit moment and a \"use\" reaction";
     expect(v({ triggers: [{ on: "isHit", do: [{ type: "reroll" }] }] })).toEqual([misplaced]);
     expect(v({ triggers: [{ on: "isMissed", do: [{ type: "use" }, { type: "reroll" }] }] })).toEqual([misplaced]);
@@ -45,8 +45,8 @@ describe("§489 : validation de reroll", () => {
   });
 });
 
-describe("§489 : le cœur rejuge le coup avec le jet relancé", () => {
-  it("le nouveau jet rate : la cible n'est plus touchée, le jet relancé est noté", () => {
+describe("§489: the core re-judges the hit with the rerolled roll", () => {
+  it("the new roll misses: the target is no longer hit, the rerolled roll is noted", () => {
     let resolution = hitAwaitingReaction();
     const again = roll(9, { from: 15 });
     ({ resolution } = advance(resolution, { type: "reactionResolved", token: "T1", used: "Parade", ac: 15, roll: again }));
@@ -54,13 +54,13 @@ describe("§489 : le cœur rejuge le coup avec le jet relancé", () => {
     expect(resolution.step).toBe(STEPS.MISSED);
     expect(resolution.attack.roll.total).toBe(15);   // le jet d'origine reste celui de l'attaque
   });
-  it("un 1 naturel au nouveau jet : échec critique", () => {
+  it("a natural 1 on the new roll: critical failure", () => {
     let resolution = hitAwaitingReaction();
     ({ resolution } = advance(resolution, { type: "reactionResolved", token: "T1", used: "Parade", ac: 15, roll: roll(30, { isFumble: true, natural: 1 }) }));
     expect(resolution.targets[0]).toMatchObject({ hit: false, reason: "fumble" });
     expect(resolution.targets[0].rerolled.isFumble).toBe(true);
   });
-  it("le nouveau jet touche encore, ou devient un critique : c'est lui qui compte", () => {
+  it("the new roll still hits, or becomes a Critical Hit: it is the one that counts", () => {
     let resolution = hitAwaitingReaction();
     ({ resolution } = advance(resolution, { type: "reactionResolved", token: "T1", used: "Parade", ac: 15, roll: roll(17) }));
     expect(resolution.targets[0]).toMatchObject({ hit: true, critical: false });
@@ -68,13 +68,13 @@ describe("§489 : le cœur rejuge le coup avec le jet relancé", () => {
     ({ resolution } = advance(resolution, { type: "reactionResolved", token: "T1", used: "Parade", ac: 15, roll: roll(25, { isCritical: true, natural: 20 }) }));
     expect(resolution.targets[0]).toMatchObject({ hit: true, critical: true });
   });
-  it("sans jet relancé, rien ne change (réaction sans reroll)", () => {
+  it("without a rerolled roll, nothing changes (reaction without reroll)", () => {
     let resolution = hitAwaitingReaction();
     ({ resolution } = advance(resolution, { type: "reactionResolved", token: "T1", used: "Autre", ac: 15 }));
     expect(resolution.targets[0]).toMatchObject({ hit: true });
     expect(resolution.targets[0].rerolled).toBeUndefined();
   });
-  it("succès à un prix : la cible relancée se juge sur le nouveau total", () => {
+  it("success at a price: the rerolled target is judged on the new total", () => {
     const targets = [{ token: "T1", ac: 15, hit: false, reason: "miss", rerolled: { total: 14 } }, { token: "T2", ac: 15, hit: false, reason: "miss" }];
     expect(nearMissTargets({ total: 10 }, targets, 2)).toEqual([{ token: "T1", by: 1 }]);
   });
@@ -94,7 +94,7 @@ describe("§489 : faits attack.fumble et attack.rerolled", () => {
     ({ factsFor } = await import("../module/scripts/adapter/facts.mjs"));
   });
   const resolutionWith = (target, attackRoll=roll(15)) => ({ attack: { roll: attackRoll }, targets: [{ token: "T1", ...target }] });
-  it("le nouveau jet d'une Parade décide de l'échec critique", () => {
+  it("a Parry's new roll decides the critical failure", () => {
     const f = factsFor({ target: actor, resolution: resolutionWith({ hit: false, rerolled: roll(3, { isFumble: true }) }) });
     expect(f["attack.fumble"](true)).toBe(true);
     expect(f["attack.rerolled"](true)).toBe(true);

@@ -1,26 +1,26 @@
 /**
- * Le plan de la fenêtre de réglages « DAS · Core » (2026-10-18, maquette validée par l'utilisateur : prive/maquettes/) : les onglets,
- * les réglages qu'ils rangent et les outils qu'ils ouvrent. Les réglages gardent leur clé et leur enregistrement d'origine — la
- * fenêtre ne fait que les montrer ; un réglage visible qui n'est rangé nulle part tombe dans le dernier onglet (`placeSettings`).
+ * The layout of the "DAS · Core" settings window (2026-10-18, mockup approved by the user: prive/maquettes/): the tabs,
+ * the settings they hold and the tools they open. Settings keep their original key and registration — the
+ * window only shows them; a visible setting that is not placed anywhere falls into the last tab (`placeSettings`).
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
 /**
- * Un groupe de réglages d'une même règle (demande de l'utilisateur, 2026-11-06, maquette validée : un cadre par règle, toujours ouvert,
- * les options d'une règle décalées sous elle et grisées tant que la règle est éteinte). `tag` : une étiquette discrète à droite du titre
- * (`house` : règle maison, `dmg` : aide du Guide du maître) ; `sub` : clé → `{ parent, off }`, l'option grisée quand la valeur de
- * `parent` est l'une de `off`. Libellé : `DND5ECOMBAT.Reglages.Groupe.<id>`.
+ * A group of settings for one rule (user's request, 2026-11-06, mockup approved: one frame per rule, always open,
+ * the options of a rule indented under it and greyed out while the rule is off). `tag`: a discreet label to the right of the title
+ * (`house`: house rule, `dmg`: Dungeon Master's Guide aid); `sub`: key → `{ parent, off }`, the option greyed out when the value of
+ * `parent` is one of `off`. Label: `DND5ECOMBAT.Reglages.Groupe.<id>`.
  */
 const g = (id, icon, keys, { tag=null, sub={} }={}) => ({ id, icon, keys, ...(tag ? { tag } : {}), sub });
 const offIf = (parent, ...off) => ({ parent, off });
 
-/** Les onglets, dans l'ordre. `tools` : les fenêtres qu'un bouton de l'onglet ouvre (MJ seulement) ; `groups` : les cadres. */
+/** The tabs, in order. `tools`: the windows that a button of the tab opens (GM only); `groups`: the frames. */
 export const SETTINGS_TABS = Object.freeze([
   { id: "general", icon: "fa-solid fa-dragon", keys: ["automationLevel", "refusalMode", "reactionPrompts", "damageFlow", "theaterOfMind", "etherealPlane", "provideBasicActions", "autoUsage", "autoTranslate", "dataFixes", "realTimeClock", "groupRollSeconds", "inlineChecksEngine", "combatLaunchButton", "sidebarButton"],
     groups: [
       g("automation", "fa-solid fa-gauge", ["automationLevel", "theaterOfMind", "autoUsage", "provideBasicActions"]),
-      g("flow", "fa-solid fa-sliders", ["refusalMode", "reactionPrompts", "damageFlow"]),   // §417 : comment le moteur s'y prend — refus (puis réactions, dégâts)
+      g("flow", "fa-solid fa-sliders", ["refusalMode", "reactionPrompts", "damageFlow"]),   // §417: how the engine proceeds — refusal (then reactions, damage)
       g("ethereal", "fa-solid fa-ghost", ["etherealPlane"]),
       g("data", "fa-solid fa-language", ["autoTranslate", "dataFixes"]),
       g("time", "fa-solid fa-clock", ["realTimeClock"]),
@@ -87,9 +87,9 @@ export const SETTINGS_TABS = Object.freeze([
       g("gmAlerts", "fa-solid fa-triangle-exclamation", ["gmAlerts", "gmAlertBanner", "gmAlertSeconds", "forcedAlerts", "overrideVisibility"],
         { sub: { gmAlertBanner: offIf("gmAlerts", false), gmAlertSeconds: offIf("gmAlertBanner", false), forcedAlerts: offIf("gmAlerts", false) } })
     ] },
-  // §228 : les textes qui défilent sur les tokens — rythme, puis ce qui s'affiche.
+  // §228: the texts that scroll over tokens — pace, then what is displayed.
   { id: "float", icon: "fa-solid fa-comment-dots",
-    // §400 : l'interrupteur de la table (coupe les textes du système), et la fenêtre du thème importé.
+    // §400: the table's switch (turns off the system's texts), and the imported theme's window.
     tools: [{ id: "floatTheme", icon: "fa-solid fa-palette" }],
     keys: ["floatSystem", "feedbackText", "floatSounds", "floatSoundVolume", "floatDuration", "floatSpacing", "floatDistance", "floatDirection", "floatScale", "floatDice", "floatIcons",
       "timerHideSeconds", "awaitingShow", "awaitingGm", "awaitingHide", "floatAttacks", "floatHits", "floatAdvantage", "floatSaves", "floatChecks", "floatCover", "floatReactions", "floatStrikes", "floatEffects", "floatResources", "floatPrompts", "floatInitiative"],
@@ -100,7 +100,7 @@ export const SETTINGS_TABS = Object.freeze([
       g("floatWhat", "fa-solid fa-list-check", ["floatAttacks", "floatHits", "floatAdvantage", "floatSaves", "floatChecks", "floatCover", "floatReactions",
         "floatStrikes", "floatEffects", "floatResources", "floatPrompts", "floatInitiative"]),
       g("timers", "fa-solid fa-gear", ["timerHideSeconds"]),
-      // §381 (issue #35) : le sablier au-dessus du token qu'on attend.
+      // §381 (issue #35): the hourglass above the token being waited for.
       g("awaiting", "fa-solid fa-hourglass-half", ["awaitingShow", "awaitingGm", "awaitingHide"],
         { sub: { awaitingGm: offIf("awaitingShow", false) } })
     ] },
@@ -108,9 +108,9 @@ export const SETTINGS_TABS = Object.freeze([
 ]);
 
 /**
- * Les cadres d'un onglet pour ces réglages (déjà filtrés : présents, visibles, d'une portée) : chaque groupe avec ses clés présentes, dans
- * l'ordre du groupe ; ce qu'aucun groupe ne range, dans un dernier cadre `other`. Un onglet sans `groups` : un seul cadre sans titre
- * (`id: null`), comme avant. Les cadres vides sont omis.
+ * The frames of a tab for these settings (already filtered: present, visible, of one scope): each group with its present keys, in
+ * the group's order; what no group holds, in a last `other` frame. A tab without `groups`: a single frame without a title
+ * (`id: null`), as before. Empty frames are omitted.
  * @param {string[]} keys
  * @param {Array<{id: string, keys: string[]}>|undefined} groups
  * @returns {Array<{id: string|null, icon?: string, tag?: string, sub: object, keys: string[]}>}
@@ -131,12 +131,12 @@ export function groupSettings(keys, groups) {
 }
 
 /**
- * Une option d'une règle : `{ sub, off }` — `sub` : elle se range sous sa règle (sa règle est dans le même cadre, avant elle) ; `off` :
- * grisée, la règle étant éteinte (`valueOf(parent)` vaut l'une des valeurs `off`). Une option dont la règle a elle-même été éteinte
- * plus haut est éteinte aussi.
+ * An option of a rule: `{ sub, off }` — `sub`: it is placed under its rule (its rule is in the same frame, before it); `off`:
+ * greyed out, the rule being off (`valueOf(parent)` equals one of the `off` values). An option whose rule has itself been
+ * turned off higher up is off too.
  * @param {string} key
  * @param {{keys: string[], sub: object}} group
- * @param {(key: string) => any} valueOf  La valeur en vigueur (en attente d'enregistrement comprise).
+ * @param {(key: string) => any} valueOf  The value in effect (pending save included).
  */
 export function subState(key, group, valueOf, seen=new Set()) {
   const rule = group?.sub?.[key];
@@ -150,12 +150,12 @@ export function subState(key, group, valueOf, seen=new Set()) {
 }
 
 /**
- * Range les réglages visibles dans les onglets : ceux du plan à leur place (dans l'ordre du plan), les autres à la fin du dernier
- * onglet — un réglage ajouté plus tard sans être rangé reste ainsi accessible. Le plan est celui du moteur par défaut, ou celui
- * qu'un module voisin déclare (`api.settings.registerWindow`) ; chaque onglet garde ses autres champs (libellé, outils).
- * @param {string[]} visibleKeys   Les clés des réglages du module déclarés visibles.
+ * Places the visible settings in the tabs: those of the layout in their place (in the layout's order), the others at the end
+ * of the last tab — a setting added later without being placed thus stays accessible. The layout is the engine's default,
+ * or the one a neighbouring module declares (`api.settings.registerWindow`); each tab keeps its other fields (label, tools).
+ * @param {string[]} visibleKeys   The keys of the module's settings declared visible.
  * @param {Array<{id: string, keys: string[]}>} [tabs]
- * @returns {Array<object>}  Les onglets, chacun avec `keys` restreint aux réglages présents et `tools` (vide par défaut).
+ * @returns {Array<object>}  The tabs, each with `keys` restricted to the present settings and `tools` (empty by default).
  */
 export function placeSettings(visibleKeys, tabs=SETTINGS_TABS) {
   const present = new Set(visibleKeys);
@@ -168,9 +168,9 @@ export function placeSettings(visibleKeys, tabs=SETTINGS_TABS) {
 }
 
 /**
- * Ce qu'un module voisin déclare pour sa fenêtre (`api.settings.registerWindow`) : rend la liste des problèmes (vide = valable).
- * `namespace` : l'id du module ; `tabs` : au moins un onglet, chacun avec un `id` unique et des `keys` (tableau de chaînes) ; chaque
- * outil a un `id` et une fonction `open`.
+ * What a neighbouring module declares for its window (`api.settings.registerWindow`): returns the list of problems (empty = valid).
+ * `namespace`: the module's id; `tabs`: at least one tab, each with a unique `id` and `keys` (array of strings); each
+ * tool has an `id` and an `open` function.
  */
 export function validateWindow(def) {
   const problems = [];
@@ -181,7 +181,7 @@ export function validateWindow(def) {
     if ( !t?.id || ids.has(t.id) ) problems.push(`tabs[${i}]: unique id expected`);
     ids.add(t?.id);
     if ( !Array.isArray(t?.keys) || t.keys.some(k => typeof k !== "string") ) problems.push(`tabs[${i}].keys: array of setting keys expected`);
-    // 2026-11-06 : des cadres par règle, facultatifs — chacun un `id` et des `keys` ; `sub` : clé → `{ parent, off: [...] }`.
+    // 2026-11-06: optional per-rule frames — each an `id` and `keys`; `sub`: key → `{ parent, off: [...] }`.
     if ( (t?.groups !== undefined) && !Array.isArray(t.groups) ) problems.push(`tabs[${i}].groups: array expected`);
     for ( const [j, group] of (Array.isArray(t?.groups) ? t.groups : []).entries() ) {
       if ( !group?.id || !Array.isArray(group.keys) ) problems.push(`tabs[${i}].groups[${j}]: id and keys expected`);
@@ -193,15 +193,15 @@ export function validateWindow(def) {
       if ( !tool?.id || (typeof tool.open !== "function") ) problems.push(`tabs[${i}].tools[${j}]: id and open() expected`);
     }
   }
-  // §291 : l'onglet du module dans la rangée du haut — `end` (à droite, après les autres), `kind: "workshop"` (un atelier : des outils
-  // en cartes), `icon`.
+  // §291: the module's tab in the top row — `end` (on the right, after the others), `kind: "workshop"` (a workshop: tools
+  // as cards), `icon`.
   const tab = def?.tab;
   if ( (tab !== undefined) && ((typeof tab !== "object") || (tab === null)) ) problems.push("tab: object expected");
   else if ( tab?.kind && !["settings", "workshop"].includes(tab.kind) ) problems.push("tab.kind: \"settings\" or \"workshop\" expected");
   return problems;
 }
 
-/** Un réglage correspond-il à la recherche ? Nom et aide, sans casse ni accents. */
+/** Does a setting match the search? Name and help, ignoring case and accents. */
 export function matchesQuery(query, ...texts) {
   const fold = s => String(s ?? "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
   const q = fold(query).trim();
@@ -209,21 +209,21 @@ export function matchesQuery(query, ...texts) {
 }
 
 /**
- * §291 : un module de la suite se reconnaît à son titre public, « DAS · … » (décision de l'utilisateur, 2026-10-05) — le moteur ne
- * nomme aucun voisin. Le point médian peut être entouré d'espaces quelconques.
+ * §291: a suite module is recognized by its public title, "DAS · …" (user's decision, 2026-10-05) — the engine does not
+ * name any neighbour. The middle dot may be surrounded by any spaces.
  */
 export function isSuiteTitle(title) {
   return /^DAS\s*·\s*\S/.test(String(title ?? ""));
 }
 
-/** Le nom court d'un module de la suite, pour son onglet : « DAS · Combat UI » → « Combat UI ». */
+/** The short name of a suite module, for its tab: "DAS · Combat UI" → "Combat UI". */
 export function shortTitle(title) {
   return String(title ?? "").replace(/^DAS\s*·\s*/, "").trim() || String(title ?? "");
 }
 
 /**
- * Les onglets de modules dans l'ordre : le moteur d'abord, puis par nom, et à la fin ceux qui le demandent (`end` : un atelier).
- * `modules` : `[{ id, title, end? }]`.
+ * The module tabs in order: the engine first, then by name, and at the end those that ask for it (`end`: a workshop).
+ * `modules`: `[{ id, title, end? }]`.
  */
 export function orderModules(modules, coreId) {
   return [...modules].sort((a, b) => ((b.id === coreId) - (a.id === coreId)) || ((!!a.end) - (!!b.end))

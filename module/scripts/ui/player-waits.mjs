@@ -1,12 +1,12 @@
 /**
- * §421 : le panneau « File du MJ » (l'ancienne fenêtre de suivi du §290) — en trois parts, ce que le moteur demande au MJ, les joueurs
- * qu'il attend (qui, pour quel personnage, quoi, depuis combien de temps, « Forcer »), et les actions bloquées par un auteur parti
- * (« Lancer à sa place »). La file elle-même : runtime/gm-queue.mjs.
+ * §421: the "GM Queue" panel (the old tracking window of §290) — in three parts: what the engine asks of the GM, the players
+ * it is waiting for (who, for which character, what, for how long, "Force"), and the actions blocked by a departed author
+ * ("Cast in their place"). The queue itself: runtime/gm-queue.mjs.
  *
- * Il s'ouvre de lui-même chez un MJ quand la partie est retenue : une action bloquée, ou un joueur attendu au-delà du délai des fenêtres
- * du combat (possible seulement quand elles sont sans délai — avec un délai, elles se résolvent seules). Il se ferme quand il ne reste
- * plus rien ; `api.queue.open()` (ou `api.waits.open()`) le rouvre. Les fenêtres du MJ continuent de s'ouvrir comme avant : le panneau en
- * tient la liste, il ne les remplace pas.
+ * It opens by itself for a GM when the game is held up: a blocked action, or a player awaited beyond the combat windows'
+ * delay (possible only when they have no delay — with a delay, they resolve by themselves). It closes when nothing is left;
+ * `api.queue.open()` (or `api.waits.open()`) reopens it. The GM's windows keep opening as before: the panel keeps
+ * the list, it does not replace them.
  */
 
 import { GM_QUEUE_HOOK, queue, refreshQueue, forceLine, rollBlocked, answerLine } from "../runtime/gm-queue.mjs";
@@ -16,13 +16,13 @@ import { route } from "../runtime/router.mjs";
 import { loc, esc } from "../runtime/shared.mjs";
 
 const WINDOW_ID = "das-player-waits";
-/** Les lignes que le MJ a écartées en fermant le panneau (il ne se rouvre pas pour elles). */
+/** The rows the GM dismissed by closing the panel (it does not reopen for them). */
 const dismissed = new Set();
 let tick = null;
 let opener = null;
 
 const elapsed = since => Math.max(0, Math.round((Date.now() - since) / 1000));
-/** Le nom et l'image du personnage d'une ligne (lus sur ce client : la ligne ne porte que son uuid). */
+/** The name and image of a row's character (read on this client: the row only carries its uuid). */
 const actorOf = line => (line.actor ? fromUuidSync(line.actor, { strict: false }) : null);
 const what = line => line.label || loc(`File.Sorte.${line.kind}`);
 
@@ -38,9 +38,9 @@ function row(line, button) {
 }
 
 /**
- * §422 : une demande faite au MJ — la créature concernée en tête (le MJ sait que c'est lui : son nom de compte n'apprend rien), ce que la
- * fenêtre demande, et ses boutons : cliquer ici, c'est cliquer dans la fenêtre. Sans fenêtre connue de ce poste (une demande ouverte chez
- * un autre MJ), la ligne seule.
+ * §422: a request made to the GM — the creature concerned first (the GM knows it is them: their account name tells nothing),
+ * what the window asks, and its buttons: clicking here is clicking in the window. Without a window known to this workstation (a
+ * request open at another GM's), the row alone.
  */
 function mineRow(line) {
   const actor = actorOf(line);
@@ -58,8 +58,8 @@ function mineRow(line) {
 }
 
 /**
- * §423 : une demande de jets (§242) — une seule ligne : le test, combien de personnages sont attendus, et le renvoi vers « Jets en
- * cours », la fenêtre qui en montre le détail. « Lancer pour ceux qui tardent » fait ici ce que fait le bouton du suivi.
+ * §423: a roll request (§242) — a single row: the check, how many characters are awaited, and the link to "Rolls in
+ * progress", the window that shows the detail. "Roll for those who are slow" does here what the tracking button does.
  */
 function groupRow(line) {
   return `<li class="das-wait das-wait--mine">
@@ -93,7 +93,7 @@ const WaitsApp = () => WaitsClass ??= class PlayerWaits extends foundry.applicat
     if ( !q.count ) return `<p class="das-muted">${esc(loc("Attente.Aucune"))}</p>`;
     const section = (title, rows) => (rows.length ? `<h4 class="das-queue__title">${esc(loc(title))}</h4><ul class="das-waits">${rows.join("")}</ul>` : "");
     const mine = q.mine.map(mineRow);
-    // §422 : un jet demandé (§242) — le bouton est celui de la fenêtre de suivi des jets, « Lancer pour lui ».
+    // §422: a requested roll (§242) — the button is that of the roll tracking window, "Roll for them".
     const players = q.players.map(l => (l.source === "group") ? groupRow(l) : row(l, l.groupRoll
       ? `<button type="button" data-action="force" data-id="${esc(l.id)}"><i class="fa-solid fa-dice-d20"></i>${esc(loc("JetGroupe.Suivi.LancerPour", { name: actorOf(l)?.name ?? l.userName }))}</button>`
       : `<button type="button" data-action="force" data-id="${esc(l.id)}" data-tooltip="${esc(loc("Attente.ForcerAide"))}">
@@ -117,7 +117,7 @@ const WaitsApp = () => WaitsClass ??= class PlayerWaits extends foundry.applicat
   _onRender() {
     // The toolbar badge always says what the panel lists.
     showCount(queue());
-    // Le temps d'attente avance chaque seconde, sans tout redessiner.
+    // The waiting time advances every second, without redrawing everything.
     clearInterval(tick);
     tick = setInterval(() => {
       for ( const el of this.element?.querySelectorAll(".das-wait__time") ?? [] ) {
@@ -158,7 +158,7 @@ const WaitsApp = () => WaitsClass ??= class PlayerWaits extends foundry.applicat
   }
 };
 
-/** Ouvre (ou ramène devant) le panneau « File du MJ », MJ seulement. */
+/** Opens (or brings to the front) the "GM Queue" panel, GM only. */
 export function openPlayerWaits() {
   if ( !game.user.isGM ) return null;
   const open = foundry.applications.instances.get(WINDOW_ID);
@@ -173,9 +173,9 @@ export function openPlayerWaits() {
 }
 
 /**
- * La file a changé : le panneau ouvert se redessine (et se ferme quand elle est vide) ; sinon il s'ouvre quand la partie est retenue —
- * une action bloquée tout de suite, un joueur attendu au-delà du délai des fenêtres (fenêtres sans délai seulement). Les demandes faites
- * au MJ lui-même n'ouvrent pas le panneau : leur fenêtre est déjà devant lui.
+ * The queue changed: the open panel redraws (and closes when it is empty); otherwise it opens when the game is held up —
+ * a blocked action right away, a player awaited beyond the windows' delay (windows without delay only). Requests made
+ * to the GM themselves do not open the panel: their window is already in front of them.
  */
 function onQueueChanged(q) {
   if ( !game.user.isGM ) return;
@@ -184,9 +184,9 @@ function onQueueChanged(q) {
   const held = [...q.players, ...q.blocked];
   for ( const id of [...dismissed] ) if ( !held.some(l => l.id === id) ) dismissed.delete(id);
   if ( app ) return q.count ? app.render() : app.close();
-  if ( !windowsUnlimited() ) return;   // avec un délai, rien ne retient la partie : la fenêtre se résout, le jet d'un absent est lancé
+  if ( !windowsUnlimited() ) return;   // with a delay, nothing holds up the game: the window resolves, an absentee's roll is made
   if ( q.blocked.some(l => !dismissed.has(l.id)) ) return void openPlayerWaits();
-  // §422 : un jet demandé a déjà sa fenêtre de suivi à l'écran — il n'ouvre pas le panneau.
+  // §422: a requested roll already has its tracking window on screen — it does not open the panel.
   const pending = q.players.filter(l => !dismissed.has(l.id) && !l.groupRoll);
   if ( !pending.length ) return;
   const due = pending[0].since + (combatWindowSeconds() * 1000) - Date.now();
@@ -198,8 +198,8 @@ function onQueueChanged(q) {
 const TOOL = "das-gm-queue";
 
 /**
- * §427 : la pastille du bouton « File du MJ » (barre d'outils des tokens) — combien de lignes attendent. Posée sur le bouton lui-même :
- * rien n'est redessiné.
+ * §427: the badge on the "GM Queue" button (token toolbar) — how many rows are waiting. Placed on the button itself:
+ * nothing is redrawn.
  */
 function showCount(q=null) {
   if ( !game.user?.isGM ) return;
@@ -214,7 +214,7 @@ function showCount(q=null) {
 
 export function registerPlayerWaitsUI() {
   route(GM_QUEUE_HOOK, q => { onQueueChanged(q); showCount(q); }, { always: true, label: "GM queue: panel not refreshed" });
-  // §427 : un bouton pour ouvrir la File à la main (elle ne s'ouvre seule que quand la partie est retenue), à côté de « Lancer un combat ».
+  // §427: a button to open the Queue by hand (it only opens by itself when the game is held up), next to "Start a combat".
   route("getSceneControlButtons", controls => {
     const tokens = controls.tokens;
     if ( !tokens?.tools || !game.user.isGM ) return;

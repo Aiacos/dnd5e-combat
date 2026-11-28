@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { outcomeSourcesOf } from "../module/scripts/adapter/usage.mjs";
 
-// §445 : les items dont les déclarations (dégâts en plus, étapes d'issue) valent pour une utilisation, chacun une seule fois. dnd5e pose
-// sur la copie d'un sort lancé par une activité « cast » un enchantement dont l'origine est cette activité (`system.origin.activity`) :
-// la capacité qui lance le sort était lue deux fois, comme lanceur et comme enchanteur. Exemples synthétiques, sans Foundry.
+// §445: the items whose declarations (extra damage, outcome steps) apply to a use, each only once. dnd5e puts an enchantment on
+// the copy of a spell cast by a "cast" activity, whose origin is that activity (`system.origin.activity`): the ability that casts
+// the spell was read twice, as caster and as enchanter. Synthetic examples, without Foundry.
 const docs = new Map();
 const saved = {};
 beforeAll(() => {
@@ -16,7 +16,7 @@ afterAll(() => {
 });
 
 const ACTOR = "Actor.aaaaaaaaaaaaaaaa";
-/** Un item de l'acteur, avec une activité enregistrée sous son uuid (l'origine d'un enchantement est l'activité). */
+/** An item of the actor, with an activity recorded under its uuid (an enchantment's origin is the activity). */
 const itemOf = (actor, id, name, { effects=[], flags={} }={}) => {
   const item = { id, name, documentName: "Item", uuid: `${ACTOR}.Item.${id}`, actor, flags, system: { identifier: name },
     effects: new Map(effects.map(e => [e._id, e])) };
@@ -24,7 +24,7 @@ const itemOf = (actor, id, name, { effects=[], flags={} }={}) => {
   docs.set(`${ACTOR}.Item.${id}.Activity.enchAAAAAAAAAAAA`, { item, documentName: undefined });
   return item;
 };
-/** L'enchantement « Spell Changes » de la copie : avec son origine (forme de dnd5e 6.1), ou sans (forme d'avant). */
+/** The "Spell Changes" enchantment of the copy: with its origin (dnd5e 6.1 shape), or without (earlier shape). */
 const castChanges = (casterId, withOrigin=true) => ({
   _id: "dnd5espellchange", type: "enchantment", disabled: false, isAppliedEnchantment: true,
   system: { origin: withOrigin ? { activity: `${ACTOR}.Item.${casterId}.Activity.castAAAAAAAAAAAA` } : {} }
@@ -39,29 +39,29 @@ const copyOf = (actor, casterId, effects) => actor.add(itemOf(actor, "copyAAAAAA
 }));
 const names = items => items.map(i => i.name);
 
-describe("sources des étapes d'issue, une fois chacune (§445)", () => {
-  it("copie d'un sort lancé par une capacité, enchantement d'origine renseignée (dnd5e 6.1) : la capacité une seule fois", () => {
+describe("sources of outcome steps, each once (§445)", () => {
+  it("copy of a spell cast by an ability, enchantment with origin filled in (dnd5e 6.1): the ability only once", () => {
     const actor = actorWith();
     actor.add(itemOf(actor, "abilAAAAAAAAAAAA", "capacité qui lance"));
     const copy = copyOf(actor, "abilAAAAAAAAAAAA", [castChanges("abilAAAAAAAAAAAA")]);
     expect(names(outcomeSourcesOf(copy))).toEqual(["copie du sort", "capacité qui lance"]);
   });
 
-  it("même copie, enchantement sans origine (forme d'avant) : même résultat", () => {
+  it("same copy, enchantment without origin (earlier shape): same result", () => {
     const actor = actorWith();
     actor.add(itemOf(actor, "abilAAAAAAAAAAAA", "capacité qui lance"));
     const copy = copyOf(actor, "abilAAAAAAAAAAAA", [castChanges("abilAAAAAAAAAAAA", false)]);
     expect(names(outcomeSourcesOf(copy))).toEqual(["copie du sort", "capacité qui lance"]);
   });
 
-  it("arme enchantée par un autre item (pacte, infusion) : l'enchanteur compte, une fois", () => {
+  it("weapon enchanted by another item (pact, infusion): the enchanter counts, once", () => {
     const actor = actorWith();
     actor.add(itemOf(actor, "pactAAAAAAAAAAAA", "enchanteur"));
     const weapon = actor.add(itemOf(actor, "weapAAAAAAAAAAAA", "arme", { effects: [enchantmentBy("enchAAAAAAAAAAA1", "pactAAAAAAAAAAAA")] }));
     expect(names(outcomeSourcesOf(weapon))).toEqual(["arme", "enchanteur"]);
   });
 
-  it("sort lancé par un objet magique et enchanté par un autre item : l'objet et l'autre item, chacun une fois", () => {
+  it("spell cast by a magic item and enchanted by another item: the item and the other item, each once", () => {
     const actor = actorWith();
     actor.add(itemOf(actor, "wandAAAAAAAAAAAA", "objet qui lance"));
     actor.add(itemOf(actor, "pactAAAAAAAAAAAA", "enchanteur"));
@@ -69,7 +69,7 @@ describe("sources des étapes d'issue, une fois chacune (§445)", () => {
     expect(names(outcomeSourcesOf(copy))).toEqual(["copie du sort", "objet qui lance", "enchanteur"]);
   });
 
-  it("deux enchantements du même item : il compte une fois ; un enchantement coupé ne compte pas", () => {
+  it("two enchantments from the same item: it counts once; a disabled enchantment does not count", () => {
     const actor = actorWith();
     actor.add(itemOf(actor, "pactAAAAAAAAAAAA", "enchanteur"));
     actor.add(itemOf(actor, "offfAAAAAAAAAAAA", "enchanteur coupé"));

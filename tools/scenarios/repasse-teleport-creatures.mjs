@@ -1,12 +1,13 @@
 /**
- * §461 (tri « déplacement » de l'ATLAS) : la téléportation de soi des créatures, lue dans leur texte (`monsterSelfTeleport`) — la distance
- * est la portée de l'activité, ou celle que le texte donne quand l'activité n'en a pas. Arène des sorts : le Lanceur (PNJ) reçoit la
- * capacité prêtée depuis la fiche du compendium.
- *  - Téléportation du Chien clignotant (Monster Manual, portée de l'activité 40 ft) : 7 cases acceptées ; 10 cases refusées (trop loin) ;
- *    la case de la Cible refusée (occupée) ;
- *  - Fouet téléporteur de l'Émissaire mineur (Ravenloft, portée « soi », « up to 30 feet » dans le texte) : 6 cases acceptées, 8 refusées.
- * Le chemin est celui du clic du joueur (`teleportTo` : validation `dnd5e.teleport`, puis « blink ») ; seule la planification
- * interactive du cœur n'est pas jouée.
+ * §461 (ATLAS "movement" triage): the creatures' self-teleport, read from their text (`monsterSelfTeleport`) — the distance
+ * is the activity's range, or the one the text gives when the activity has none. Spell arena: the Caster (NPC) receives the
+ * ability lent from the compendium sheet.
+ *  - Blink Dog's Teleport (Monster Manual, activity range 40 ft): 7 cells accepted; 10 cells refused (too far);
+ *    the Target's cell refused (occupied);
+ *  - "Teleporting Whip" of the "Minor Emissary" (Ravenloft, range "self", "up to 30 feet" in the text): 6 cells accepted,
+ *    8 refused.
+ * The path is the player's click (`teleportTo`: `dnd5e.teleport` validation, then "blink"); only the core's interactive
+ * planning is not played.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -40,7 +41,7 @@ export default {
       await ctx.call("move-token", { tokenId: caster.id, x: home.x, y: home.y, elevation: 0 }).catch(() => {});
       for ( const id of lent.splice(0) ) await ctx.call("remove-embedded-item", { documentType: "Actor", id: caster.actorId, itemId: id }).catch(() => {});
     });
-    // Départ deux rangées sous la Cible : la rangée est libre vers l'est.
+    // Start two rows below the Target: the row is free toward the east.
     const start = { x: home.x, y: home.y + 2 * grid };
     const jump = async (itemId, cells, label) => {
       const from = await ctx.position(caster);
@@ -53,7 +54,7 @@ export default {
       return { accepted: !!r?.accepted, arrived, still: (at.x === from.x) && (at.y === from.y), error: r?.error ?? null };
     };
 
-    // Chien clignotant : portée de l'activité 40 ft.
+    // Blink Dog: activity range 40 ft.
     const dog = await lend(BLINK_DOG);
     await ctx.call("move-token", { tokenId: caster.id, x: start.x, y: start.y, elevation: 0 });
     await pause(800);
@@ -68,7 +69,7 @@ export default {
     const after = await ctx.position(caster);
     ctx.expect(!busy?.accepted && !((after.x === t.x) && (after.y === t.y)), "la case de la Cible : refusée (occupée)");
 
-    // Émissaire mineur : portée « soi », 30 ft dans le texte.
+    // Minor Emissary: range "self", 30 ft in the text.
     if ( !packs.includes("dnd-ravenloft-horrors-within.actors") ) { ctx.log("Ravenloft absent : Fouet téléporteur non joué"); return; }
     const lash = await lend(LASH);
     await ctx.call("move-token", { tokenId: caster.id, x: start.x, y: start.y, elevation: 0 });

@@ -1,13 +1,13 @@
 /**
- * Fonctions de test (api.mcp) : la vision (issue #42). Pour chaque paire observateur → cible, ce que jugent les règles (`canSee`, ce qui
- * décide d'un souci « n'est pas en vue » et des raisons d'Avantage / Désavantage) et ses ingrédients (zone qui bloque la vue, distance,
- * Vision du diable, ouïe, ligne de vue), puis ce que montre l'écran par les yeux de l'observateur (`Token#isVisible` et le filtre de
- * détection : contour de l'ouïe ou d'un mode spécial). Rien n'est écrit dans un document (sauf `screenAfterUpdate` : un drapeau posé
- * puis retiré).
+ * Test functions (api.mcp): vision (issue #42). For each observer → target pair, what the rules judge (`canSee`, what
+ * decides a "not in view" issue and the Advantage / Disadvantage reasons) and its ingredients (area that blocks sight, distance,
+ * Devil's Sight, hearing, line of sight), then what the screen shows through the observer's eyes (`Token#isVisible` and the
+ * detection filter: outline of hearing or of a special mode). Nothing is written to a document (except
+ * `screenAfterUpdate`: a flag set then removed).
  *
- *  - `visionMatrix` : sur le client du MJ (le contrôle de chaque observateur est pris le temps de la lecture, puis rendu) ;
- *  - `screenHere` : sur N'IMPORTE QUEL client (un joueur dans le navigateur intégré) — ce que ce client voit, avec les tokens qu'il
- *    contrôle, sans rien changer.
+ *  - `visionMatrix`: on the GM's client (each observer's control is taken for the time of the read, then returned);
+ *  - `screenHere`: on ANY client (a player in the embedded browser) — what this client sees, with the tokens it
+ *    controls, without changing anything.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,11 +21,11 @@ import { rangeStatus } from "./actions.mjs";
 import { gmOnly, viewedToken } from "./testing-shared.mjs";
 import { DEVILS_SIGHT_OUTLINE, drawnUnderVeil } from "../core/light.mjs";
 
-const HEARING = [0.55, 0.8, 1, 1];   // ui/perception.mjs, contour de l'ouïe
+const HEARING = [0.55, 0.8, 1, 1];   // ui/perception.mjs, hearing outline
 
 /**
- * Le filtre de détection d'un token affiché : null, « ouïe » (contour du moteur), « Vision du diable » (son liseré, token entier), ou les
- * couleurs d'un autre contour.
+ * The detection filter of a displayed token: null, "hearing" (engine outline), "Devil's Sight" (its fringe, whole token), or the
+ * colors of another outline.
  */
 function filterOf(token) {
   const filter = token.detectionFilter;
@@ -39,8 +39,9 @@ function filterOf(token) {
 }
 
 /**
- * Issue #42, suite (0.281.1) : le centre du token est-il dans la zone que voit une source de vision active de ce client (son polygone de
- * vue) ? Hors de toutes, un token affiché sans filtre est dessiné sous le voile de vision du cœur : invisible pour le joueur.
+ * Issue #42, continued (0.281.1): is the token's center inside the area that an active vision source of this client sees (its
+ * sight polygon)? Outside all of them, a token displayed without a filter is drawn under the core's vision veil:
+ * invisible to the player.
  */
 function inSightOfClient(token) {
   const { x, y } = token.center;
@@ -48,8 +49,8 @@ function inSightOfClient(token) {
 }
 
 /**
- * Ce que ce client montre d'une cible : non affichée, affichée nette (la Vision du diable comprise : token entier, liseré rouge sombre),
- * affichée par un contour — ou « veiled » : jugée visible mais dessinée sous le voile (défaut d'affichage, issue #42 suite).
+ * What this client shows of a target: not displayed, displayed sharp (Devil's Sight included: whole token, dark red fringe),
+ * displayed through an outline — or "veiled": judged visible but drawn under the veil (display defect, issue #42 continued).
  */
 function shownAs(token) {
   if ( !token?.isVisible ) return "hidden";
@@ -60,9 +61,10 @@ function shownAs(token) {
 }
 
 /**
- * Attend que la vue de ce client soit celle de l'observateur : sources de vision refaites tout de suite (sans image, fenêtre du MJ en
- * arrière-plan, `isVisible` lisait encore celles de l'observateur précédent), puis sa source ACTIVE — tant qu'aucune ne l'est, un MJ voit
- * tout (`Token#isVisible`, placeables/token.mjs:639), et un observateur sans vue passait pour « voir » chaque cible. 3 s au plus.
+ * Waits until this client's view is the observer's: vision sources rebuilt right away (without an image, GM window in the
+ * background, `isVisible` still read those of the previous observer), then its ACTIVE source — as long as none is, a GM sees
+ * everything (`Token#isVisible`, placeables/token.mjs:639), and an observer without a view counted as "seeing" each target.
+ * 3 s at most.
  */
 async function settleVision(token) {
   for ( const until = Date.now() + 3000; Date.now() < until; ) {
@@ -75,7 +77,7 @@ async function settleVision(token) {
   await sleep(300);
 }
 
-/** Les ingrédients des règles pour une paire (positions validées). */
+/** The rules' ingredients for a pair (validated positions). */
 function rulesFor(observer, target) {
   const blocked = blockedBetween(observer, target);
   const eye = observer.getVisionOrigin?.(committedPosition(observer)) ?? tokenCenter(observer);
@@ -83,9 +85,9 @@ function rulesFor(observer, target) {
   const devil = devilsSightRange(observer);
   return {
     sees: canSee(observer, target),
-    locates: canLocate(observer, target),   // position connue : vue, ou localisée (perception des vibrations, #118)
+    locates: canLocate(observer, target),   // position known: seen, or located (Tremorsense, #118)
     pinpoints: pinpointsTarget(observer, target),   // issue #107: the same, and a locating sense also finds a Hidden creature's square
-    blocked: Object.keys(blocked).filter(k => blocked[k]),   // brume, ténèbres, silence
+    blocked: Object.keys(blocked).filter(k => blocked[k]),   // mist, Darkness, silence
     distance: Math.round(distanceBetween(observer, target).value * 10) / 10,
     units: observer.parent?.grid?.units ?? null,
     lineOfSight: hasLineOfSight(eye, target, level),
@@ -93,14 +95,15 @@ function rulesFor(observer, target) {
     devilsSight: devil || null,
     hears: canHear(observer, target),
     darkvision: observer.actor?.system.attributes?.senses?.ranges?.darkvision ?? null,
-    // La lumière sur la cible, telle que l'observateur la perçoit (sombre 0, faible 1, vive 2) et le Désavantage en Perception.
+    // The light on the target, as the observer perceives it (Darkness 0, Dim Light 1, Bright Light 2)
+    // and the Disadvantage on Perception.
     light: (({ level, perceived, perceptionDisadvantage } = {}) => ({ level, perceived, perceptionDisadvantage }))(perceivedOnToken(observer, target) ?? {}),
     modes: Object.keys(observer.detectionModes ?? {})
   };
 }
 
 /**
- * La vision de chaque paire : règles et écran.
+ * The vision of each pair: rules and screen.
  * @param {{observerIds: string[], targetIds: string[], screen?: boolean}} args
  * @returns {{vision: boolean, rows: Array<{observer: string, target: string, rules: object, screen: string|null}>}}
  */
@@ -138,8 +141,8 @@ export async function visionMatrix({ observerIds=[], targetIds=[], screen=true }
 }
 
 /**
- * Ce que CE client montre des tokens de la scène affichée, avec les tokens qu'il contrôle (ou tous ceux qu'il possède quand il n'en
- * contrôle aucun : la vue d'un joueur). Sans MJ requis, pour un client joueur. `targetIds` vide : tous les tokens.
+ * What THIS client shows of the displayed scene's tokens, with the tokens it controls (or all those it owns when it controls
+ * none: a player's view). No GM required, for a player client. Empty `targetIds`: all tokens.
  */
 export function screenHere({ targetIds=[] }={}) {
   if ( !canvas?.ready ) throw new Error("no scene displayed");
@@ -152,8 +155,8 @@ export function screenHere({ targetIds=[] }={}) {
 }
 
 /**
- * Donne un acteur du monde à des joueurs (propriétaires), par leurs noms — le connecteur ignore `ownership` à la création et à la mise à
- * jour d'un acteur. Pour les arènes (tools/arene-vision.mjs : les observateurs à `claude player`). Les autres droits ne bougent pas.
+ * Gives a world actor to players (owners), by their names — the connector ignores `ownership` when creating and updating an
+ * actor. For arenas (tools/arene-vision.mjs: the observers at `claude player`). The other rights do not change.
  * @param {{actorId: string, users: string[], level?: number}} args
  */
 export async function setOwners({ actorId, users=[], level=3 }) {
@@ -168,8 +171,9 @@ export async function setOwners({ actorId, users=[], level=3 }) {
 }
 
 /**
- * Issue #42 : le souci « {name} n'est pas en vue : ce sort vise une créature que vous voyez » d'une visée, sans ouvrir la fenêtre de
- * légalité — le même calcul que runtime/turn.mjs (`sightRequired` de l'activité, puis `canSee` de l'auteur vers chaque cible).
+ * Issue #42: the "{name} is not in view: this spell targets a creature you can see" issue of an aim, without opening the
+ * legality window — the same computation as runtime/turn.mjs (the activity's `sightRequired`,
+ * then the author's `canSee` toward each target).
  * @param {{tokenId: string, identifier: string, targetIds: string[]}} args
  * @returns {{requiresSight: boolean, unseen: string[]}}
  */
@@ -180,16 +184,17 @@ export function sightIssues({ tokenId, identifier, targetIds=[] }) {
   if ( !activity ) throw new Error(`no activity for ${identifier}`);
   const requires = sightRequired(activity);
   const targets = targetIds.map(id => viewedToken({ tokenId: id }));
-  // Issue #42, suite : le verdict du curseur de visée (`rangeStatus`, ui/pointer-mouse.mjs) — il refusait « pas en vue » ce que les règles voyaient.
+  // Issue #42, continued: the aiming cursor's verdict (`rangeStatus`, ui/pointer-mouse.mjs)
+  // — it refused "not in view" what the rules saw.
   const cursorRefused = targets.filter(t => { const s = rangeStatus(origin, t, activity); return !!(s?.out || s?.blind); }).map(t => t.name);
   return { requiresSight: requires, unseen: requires ? targets.filter(t => canSee(origin, t) === false).map(t => t.name) : [], cursorRefused };
 }
 
 /**
- * Issue #42, suite (Archibald) : l'écran de l'observateur APRÈS une mise à jour de son acteur, sans remise en place de toutes les sources —
- * la préparation des données du token effaçait les modes en mémoire (Vision du diable, ouïe d'un Aveuglé). `visionMatrix`, qui refait toute
- * la vision, ne le voyait pas. L'observateur est sélectionné, sa vue posée, puis un drapeau de son acteur est posé et retiré (une mise à jour
- * sans effet de jeu : rendre des PV temporaires compterait comme des dégâts, jet de concentration compris).
+ * Issue #42, continued (Archibald): the observer's screen AFTER an update of their actor, without resetting all the sources —
+ * token data preparation wiped the in-memory modes (Devil's Sight, a Blinded creature's hearing). `visionMatrix`, which redoes
+ * all the vision, did not see it. The observer is selected, their view set, then a flag of their actor is set and removed
+ * (an update with no game effect: returning Temporary Hit Points would count as damage, Concentration check included).
  */
 export async function screenAfterUpdate({ observerId, targetIds=[] }) {
   gmOnly();
@@ -212,8 +217,8 @@ export async function screenAfterUpdate({ observerId, targetIds=[] }) {
 }
 
 /**
- * Issue #42 : sélectionne un token sur le client du MJ (sa vision devient celle de l'écran), ou relâche tout (`tokenId` null) — pour
- * rejouer le geste d'un MJ : le token déjà sélectionné, puis un état posé, sans remise en place de toutes les sources (`screenHere`).
+ * Issue #42: selects a token on the GM's client (its vision becomes the screen's), or releases everything (`tokenId` null) — to
+ * replay a GM's gesture: the token already selected, then a state placed, without resetting all the sources (`screenHere`).
  */
 export function control({ tokenId=null }={}) {
   gmOnly();

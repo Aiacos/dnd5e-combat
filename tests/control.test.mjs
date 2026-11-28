@@ -11,7 +11,7 @@ describe("§285 : table de Confusion", () => {
     expect(confusionBehavior(7)).toMatchObject({ move: false, action: true });
   });
 
-  it("l'errance va du plus loin au plus près dans la direction du d8, dans la scène", () => {
+  it("wandering goes from farthest to nearest in the d8 direction, within the scene", () => {
     const bounds = { i0: 0, j0: 0, i1: 20, j1: 20 };
     expect(DIRECTIONS).toHaveLength(8);
     expect(wanderCells({ i: 10, j: 10 }, 3, 3, { w: 1, h: 1 }, bounds)).toEqual([{ i: 10, j: 13 }, { i: 10, j: 12 }, { i: 10, j: 11 }]);
@@ -19,8 +19,8 @@ describe("§285 : table de Confusion", () => {
   });
 });
 
-describe("§285 : contenu des sorts de contrôle", () => {
-  it("Terreur, Mauvais œil, Confusion, Couronne du dément, Fou rire", () => {
+describe("§285: content of the control spells", () => {
+  it("Fear, Eyebite, Confusion, Crown of Madness, Tasha's Hideous Laughter", () => {
     expect(CONTENT.fear.panic).toEqual({ drop: true });
     expect(CONTENT.eyebite.panic).toMatchObject({ effect: "Kj1GwWXD5k0Zen75", endsAt: { distance: 60, units: "ft" } });
     expect(CONTENT.confusion).toMatchObject({ confusion: "VxmsgUz9OIUet6WC", noBonus: "VxmsgUz9OIUet6WC", noReactions: true });
@@ -31,7 +31,7 @@ describe("§285 : contenu des sorts de contrôle", () => {
     }
   });
 
-  it("le schéma refuse les formes fausses", () => {
+  it("the schema refuses wrong shapes", () => {
     expect(validateEntry({ panic: { drop: "yes" } }, { at: "x." }).length).toBeGreaterThan(0);
     expect(validateEntry({ panic: { endsAt: { distance: 60 } } }, { at: "x." }).length).toBeGreaterThan(0);
     expect(validateEntry({ confusion: "short" }, { at: "x." }).length).toBeGreaterThan(0);

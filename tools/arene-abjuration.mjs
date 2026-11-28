@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * §414 : monte (ou remet en état) l'« Arène de l'abjuration » d'un monde de test, par le connecteur — la scène du scénario
- * `egide-abjurateur` : l'Égide arcanique dans des conditions de jeu réalistes, sans rien emprunter aux tokens partagés de l'Arène
- * de test (un Guerrier resté À terre, un Magicien prêté à d'autres scénarios faussaient `reduction`, 2026-11-12).
+ * §414: sets up (or restores) the "Abjuration Arena" of a test world, through the connector — the scene of the scenario
+ * `egide-abjurateur`: Arcane Ward under realistic play conditions, borrowing nothing from the shared tokens of the Test
+ * Arena (a Fighter left Prone, a Wizard lent to other scenarios skewed `reduction`, 2026-11-12).
  *
- *  - Abjurateur : le Magicien pré-tiré du Manuel des joueurs monté au niveau 6 (Int 18 : l'Amélioration de caractéristique du
- *    niveau 4), sous-classe Abjurateur, avec Égide arcanique, Égide projetée (niveau 6), Bouclier et Lien protecteur ; 40 PV ;
- *    emplacements 4 / 3 / 3 pleins. Réserve de l'égide attendue : 2 × 6 + 4 = 16.
- *  - Protégé : le Guerrier pré-tiré, 60 PV, allié, à 10 ft de l'Abjurateur.
- *  - Ogre : l'Ogre du Manuel des monstres (gourdin 2d8 + 4), hostile, qui touche les deux sans bouger ; 999 PV.
+ *  - Abjurer: the Player's Handbook pregenerated Wizard raised to level 6 (Int 18: the level 4 Ability Score Improvement),
+ *    Abjurer subclass, with Arcane Ward, Projected Ward (level 6), Shield and Protective Bond; 40 HP;
+ *    spell slots 4 / 3 / 3 full. Expected ward reserve: 2 × 6 + 4 = 16.
+ *  - Protected: the pregenerated Fighter, 60 HP, ally, 10 ft from the Abjurer.
+ *  - Ogre: the Monster Manual Ogre (club 2d8 + 4), hostile, which hits both without moving; 999 HP.
  *
- *   node tools/arene-abjuration.mjs     crée ce qui manque, remet acteurs, niveaux, emplacements et tokens à leur état de référence
+ *   node tools/arene-abjuration.mjs     creates what is missing, resets actors, levels, slots and tokens to their reference state
  *
- * Positions en cases : `ARENE_ABJURATION` (tools/lib/stages.mjs), rétablies par le lanceur de scénarios avant chaque scénario.
+ * Positions in cells: `ARENE_ABJURATION` (tools/lib/stages.mjs), restored by the scenario runner before each scenario.
  */
 import { buildArena } from "./lib/arena.mjs";
 import { connect } from "./lib/connector.mjs";
@@ -34,7 +34,7 @@ const ACTORS = {
 
 const { actorIds } = await buildArena({ stage: ARENE_ABJURATION, folder: "DAS · Arène de l'abjuration", flag: "abjuration", actors: ACTORS });
 
-// Le Magicien au niveau 6 (la classe du pré-tiré est niveau 1), Égide arcanique et Égide projetée prêtes à servir, emplacements pleins.
+// The Wizard at level 6 (the pregenerated class is level 1), Arcane Ward and Projected Ward ready to use, slots full.
 const mcp = await connect();
 try {
   const r = await mcp.call("run-script", { code: `

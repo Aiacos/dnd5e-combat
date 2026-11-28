@@ -9,21 +9,21 @@ describe("planPurge (§58)", () => {
     expect(planPurge(msgs(50), { max: 0, keep: 5 })).toEqual([]);
   });
 
-  it("au-delà du seuil, les plus anciens jusqu'à n'en garder que `keep`", () => {
+  it("beyond the threshold, the oldest until only `keep` remain", () => {
     expect(planPurge(msgs(12), { max: 10, keep: 8 })).toEqual(["m0", "m1", "m2", "m3"]);
   });
 
-  it("une action ouverte et ses jets restent", () => {
+  it("an open action and its rolls stay", () => {
     const list = msgs(12, { 1: { open: true }, 2: { origin: "m1" } });
     expect(planPurge(list, { max: 10, keep: 8 })).toEqual(["m0", "m3"]);
   });
 
-  it("une carte supprimée emporte ses jets, même récents", () => {
+  it("a deleted card takes its rolls with it, even recent ones", () => {
     const list = msgs(12, { 9: { origin: "m3" } });
     expect(planPurge(list, { max: 10, keep: 8 })).toEqual(["m0", "m1", "m2", "m3", "m9"]);
   });
 
-  it("`keep` borné par `max`", () => {
+  it("`keep` bounded by `max`", () => {
     expect(planPurge(msgs(12), { max: 10, keep: 50 })).toEqual(["m0", "m1"]);
   });
 });

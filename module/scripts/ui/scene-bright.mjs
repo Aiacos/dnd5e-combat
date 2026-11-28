@@ -1,10 +1,10 @@
 /**
- * Retour Discord (Fanarie, 2026-11-18) : la case « Lumière vive » de l'illumination globale, dans l'onglet Visibilité de la configuration
- * de la scène (MJ). Le champ existe dans le cœur (`environment.globalLight.bright`, BooleanField, faux par défaut,
- * common/documents/scene.mjs:122) et décide si l'illumination globale vaut plein jour ou lumière faible pour la règle de vision
- * (`adapter/illumination.mjs`, `globalLightLevel`) ; mais Foundry V14 ne l'affiche plus (templates/scene/config/visibility.hbs : seulement
- * `enabled` et `darkness.max`), si bien qu'il restait décoché partout. Le champ est rendu par le cœur (`DataField#toFormGroup`) et
- * enregistré avec le reste du formulaire ; aucune donnée nouvelle.
+ * Discord feedback (Fanarie, 2026-11-18): the "Bright Light" checkbox of global illumination, in the Visibility tab of the scene
+ * configuration (GM). The field exists in the core (`environment.globalLight.bright`, BooleanField, false by default,
+ * common/documents/scene.mjs:122) and decides whether global illumination counts as full daylight or Dim Light for the vision rule
+ * (`adapter/illumination.mjs`, `globalLightLevel`); but Foundry V14 no longer shows it (templates/scene/config/visibility.hbs: only
+ * `enabled` and `darkness.max`), so it stayed unchecked everywhere. The field is rendered by the core (`DataField#toFormGroup`) and
+ * saved with the rest of the form; no new data.
  */
 
 import { route } from "../runtime/router.mjs";

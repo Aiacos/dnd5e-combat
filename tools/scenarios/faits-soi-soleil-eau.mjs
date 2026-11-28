@@ -1,10 +1,10 @@
 /**
- * §484 : faits sur la créature elle-même — `self.inSunlight`, `self.inRunningWater` — et un trait qui blesse son porteur au début de son
- * tour (`to: "self"`, sans effet posé). Arène de test (en plein jour). Deux traits d'essai prêtés au Guerrier :
- *  - « Brûle au soleil » : 20 radiants au début de son tour au soleil, Désavantage aux tests de caractéristique au soleil ;
- *  - « Craint l'eau courante » : 5 dégâts de froid au début de son tour dans une région marquée « eau courante ».
- * Au soleil et dans l'eau : test avec Désavantage (« kl » ou « dis » dans la formule), puis 25 dégâts au début de son tour. Dans une région d'obscurité, hors de l'eau : test
- * sans Désavantage, plus aucun dégât au tour suivant.
+ * §484: facts about the creature itself — `self.inSunlight`, `self.inRunningWater` — and a trait that hurts its bearer at the
+ * start of its turn (`to: "self"`, no effect applied). Test Arena (in broad daylight). Two test traits lent to the Fighter:
+ *  - "Burns in sunlight": 20 radiant at the start of its turn in sunlight, Disadvantage on ability checks in sunlight;
+ *  - "Fears running water": 5 cold damage at the start of its turn in a region marked "running water".
+ * In sunlight and in water: check with Disadvantage ("kl" or "dis" in the formula), then 25 damage at the start of its turn.
+ * In a darkness region, out of the water: check without Disadvantage, no more damage on the next turn.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -23,9 +23,9 @@ export default {
       const hp = await ctx.hp(t);
       ctx.restore(() => ctx.setHp(t, hp));
     }
-    // Les traits d'essai, puis leurs déclarations dans la surcouche du monde le temps du scénario. Pas en drapeaux d'item : Foundry
-    // déplie les clés pointées des conditions à la création (`"self.inSunlight"` devient `{ self: { inSunlight } }`), la validation
-    // refuse le drapeau (« unknown fact "self" ») et la création est annulée (banc du 2026-11-20, comme niveau-sort-reaction).
+    // The test traits, then their declarations in the world overlay for the scenario's duration. Not as item flags: Foundry
+    // expands the dotted keys of conditions at creation (`"self.inSunlight"` becomes `{ self: { inSunlight } }`), validation
+    // refuses the flag ("unknown fact 'self'") and the creation is cancelled (2026-11-20 bench, like niveau-sort-reaction).
     const { data: fTok } = await ctx.call("get-scene-object", { type: "Token", objectId: fighter.id });
     for ( const { rule, ...itemData } of [SUN, WATER] ) {
       const identifier = itemData.system.identifier;
@@ -37,7 +37,7 @@ export default {
     }
     await pause(800);
 
-    // 1. Au soleil : Désavantage au test (« 2d20kl » ou « 2d20dis » selon dnd5e).
+    // 1. In sunlight: Disadvantage on the check ("2d20kl" or "2d20dis" depending on dnd5e).
     const light = (await ctx.engine("stealth", { tokenId: fighter.id }))?.light;
     if ( light !== 2 ) ctx.log(`lumière au départ : ${light} (l'arène n'est pas en plein jour ?)`);
     const sunny = await ctx.engine("rollCheck", { tokenId: fighter.id, skill: "ath" });
@@ -45,7 +45,7 @@ export default {
     const save = await ctx.engine("rollSave", { tokenId: fighter.id, ability: "dex" });
     ctx.expect(!/kl|dis/.test(save?.formula ?? ""), `au soleil : la sauvegarde, elle, sans Désavantage (« ${save?.formula} »)`);
 
-    // 2. Une région « eau courante » sous le Guerrier.
+    // 2. A "running water" region under the Fighter.
     const p = await ctx.position(fighter);
     const water = await ctx.call("create-region", { sceneId, name: "Eau courante (essai)", color: "#3a7bd5",
       shapes: [{ type: "rectangle", x: p.x - grid, y: p.y - grid, width: grid * 3, height: grid * 3 }], behaviors: [] });
@@ -54,7 +54,7 @@ export default {
     await ctx.call("update-scene-object", { type: "Region", objectId: waterId, data: { "flags.dnd5e-combat.runningWater": true } });
     await pause(800);
 
-    // 3. Combat : Bandit d'abord, puis le Guerrier — au début de son tour, 20 radiants et 5 de froid.
+    // 3. Combat: Bandit first, then the Fighter — at the start of its turn, 20 radiant and 5 cold.
     await ctx.startCombat([bandit, fighter]);
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const combat = await state();
@@ -78,7 +78,7 @@ export default {
     const hp = await ctx.hp(fighter);
     ctx.expect(hp <= 35, `PV du Guerrier : ${hp} (60 − 20 − 5, résistances non comprises)`);
 
-    // 4. À l'ombre et hors de l'eau : plus de Désavantage, plus de dégâts.
+    // 4. In shade and out of the water: no more Disadvantage, no more damage.
     const dark = await ctx.call("create-region", { sceneId, name: "Obscurité (essai)", color: "#000000",
       shapes: [{ type: "rectangle", x: p.x + grid * 3, y: p.y - grid, width: grid * 3, height: grid * 3 }],
       behaviors: [{ type: "adjustDarknessLevel", name: "Obscurité", system: { mode: 0, modifier: 1 } }] });
@@ -99,7 +99,7 @@ export default {
   }
 };
 
-/* Les traits d'essai et leurs déclarations (`rule`, posée dans la surcouche du monde), après le scénario : son titre est le premier `name`. */
+/* The test traits and their declarations (`rule`, placed in the world overlay), after the scenario: its title is the first `name`. */
 const SUN = {
   name: "Brûle au soleil (essai)", type: "feat", img: "icons/magic/light/explosion-star-glow-orange.webp",
   system: { identifier: "das-test-burns-in-sunlight", type: { value: "monster" }, description: { value: "<p>Essai §484.</p>" } },

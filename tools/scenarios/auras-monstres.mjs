@@ -1,11 +1,11 @@
 /**
- * M7 (SPEC §18.11) — auras de monstre qui agissent. Monde `ravenloft`, deux capacités du Monster Manual prêtées le temps
- * du scénario :
- *  - l'Aura de feu de la Salamandre à l'Ours brun : à la fin de son tour, « chaque créature de son choix » à 3 m subit des
- *    dégâts de feu — Bramo (ennemi) oui, le Zombi (allié de l'Ours) non ;
- *  - la Puanteur du Blême au Loup : Bramo, qui commence son tour à 1,50 m, fait une sauvegarde de Constitution — ratée,
- *    il est Empoisonné ; réussie, il est immunisé 1 heure et n'en refait pas au tour suivant.
- * Ordre d'initiative imposé : Ours, Bramo, Loup.
+ * M7 (SPEC §18.11) — monster auras that act. World `ravenloft`, two Monster Manual abilities lent for the length
+ * of the scenario:
+ *  - the Salamander's Fire Aura to the Brown Bear: at the end of its turn, "each creature of its choice" within 3 m takes
+ *    fire damage — Bramo (enemy) yes, the Zombie (the Bear's ally) no;
+ *  - the Ghast's Stench to the Wolf: Bramo, who starts his turn within 1.50 m, makes a Constitution saving throw — on a failure,
+ *    he is Poisoned; on a success, he is immune for 1 hour and does not roll again on the next turn.
+ * Imposed Initiative order: Bear, Bramo, Wolf.
  */
 const SALAMANDER = "Compendium.dnd-monster-manual.actors.Actor.mmSalamander0000";
 const GHAST = "Compendium.dnd-monster-manual.actors.Actor.mmGhast000000000";
@@ -15,7 +15,7 @@ export default {
   name: "auras de monstre — Aura de feu (fin de tour), Puanteur (début de tour)",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Missing from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise the dnd5e SRD 2024).
     await ctx.cast({ "Ours brun": "mmBrownBear00000", "Loup": "mmWolf0000000000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Ours brun", "Loup", "Bramo", "Zombi"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Ours brun, Loup, Bramo ou Zombi absent : non applicable"); return; }
@@ -35,7 +35,7 @@ export default {
     await ctx.removeStatusEffects(bramo, "poisoned");
     await ctx.removeEffectsNamed(bramo, /Immunisé|Immune/);
 
-    /** Prête l'item `identifier` d'un acteur du compendium au token. */
+    /** Lends the `identifier` item of a compendium actor to the token. */
     const lend = async (uuid, identifier, token) => {
       const { data: source } = await ctx.call("get-compendium-entry", { uuid });
       const { _id, folder, ownership, _stats, ...itemData } = source.items.find(i => i.system?.identifier === identifier);
@@ -47,7 +47,7 @@ export default {
     await lend(SALAMANDER, "fire-aura", bear);
     await lend(GHAST, "stench", wolf);
 
-    // Combat, initiative imposée, puis on attend le tour de l'Ours, tokens encore loin les uns des autres.
+    // Combat, imposed Initiative, then we wait for the Bear's turn, tokens still far from one another.
     await ctx.startCombat([bear, bramo, wolf]);
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const combat = await state();
@@ -59,7 +59,7 @@ export default {
     for ( let i = 0; (i < 4) && ((await current()) !== bear.id); i++ ) { await ctx.nextTurn(); await sleep(800); }
     if ( !ctx.expect((await current()) === bear.id, "tour de l'Ours") ) return;
 
-    // Autour de Bramo : l'Ours à gauche, le Loup à droite, le Zombi au-dessus de l'Ours.
+    // Around Bramo: the Bear on the left, the Wolf on the right, the Zombie above the Bear.
     const at = await ctx.position(bramo);
     await ctx.call("move-token", { tokenId: bear.id, x: at.x - grid, y: at.y, elevation: at.elevation });
     await ctx.call("move-token", { tokenId: wolf.id, x: at.x + grid, y: at.y, elevation: at.elevation });
@@ -68,11 +68,11 @@ export default {
     await sleep(800);
 
     const emanations = async since => (await ctx.messagesSince(since)).filter(m => m.flags?.["dnd5e-combat"]?.areaTick?.event === "emanation");
-    // Le connecteur ne rend pas les cibles d'une carte : celles de la résolution, et la créature d'une carte de début de tour.
+    // The connector does not return a card's targets: those of the resolution, and the creature of a start-of-turn card.
     const tickOf = m => m.flags["dnd5e-combat"].areaTick;
     const startsFor = (m, token) => (tickOf(m).moment === "turnStart") && String(tickOf(m).token ?? "").endsWith(token.id);
 
-    // Fin du tour de l'Ours → Aura de feu ; début du tour de Bramo → Puanteur.
+    // End of the Bear's turn → Fire Aura; start of Bramo's turn → Stench.
     let mark = await ctx.lastMessageId();
     await ctx.nextTurn();
     await sleep(3000);

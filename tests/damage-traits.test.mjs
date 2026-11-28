@@ -4,21 +4,21 @@ import { CONTENT } from "../module/scripts/content/index.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { dataFixPlan } from "../module/scripts/core/data-fixes.mjs";
 
-describe("onDamageTaken : un trait qui répond à un type de dégâts subi", () => {
+describe("onDamageTaken: a trait that responds to a type of damage taken", () => {
   const rule = { types: ["cold"], effect: "B3otZdkyUcUlgrmk" };
-  it("l'un des types subis suffit ; un autre type, ou aucun dégât, ne déclenche rien", () => {
+  it("any one of the types taken is enough; another type, or no damage, triggers nothing", () => {
     expect(damageTraitHits(rule, ["cold"])).toBe(true);
     expect(damageTraitHits(rule, ["bludgeoning", "cold"])).toBe(true);
     expect(damageTraitHits(rule, ["fire"])).toBe(false);
     expect(damageTraitHits(rule, [])).toBe(false);
     expect(damageTraitHits(rule, null)).toBe(false);
   });
-  it("sans règle, sans effet ou sans type : rien", () => {
+  it("no rule, no effect or no type: nothing", () => {
     expect(damageTraitHits(null, ["cold"])).toBe(false);
     expect(damageTraitHits({ types: ["cold"] }, ["cold"])).toBe(false);
     expect(damageTraitHits({ types: [], effect: "B3otZdkyUcUlgrmk" }, ["cold"])).toBe(false);
   });
-  it("la clé est validée : types de dégâts connus, id d'effet de 16 caractères", () => {
+  it("the key is validated: known damage types, effect id of 16 characters", () => {
     const isId = v => (typeof v === "string") && /^[A-Za-z0-9]{16}$/.test(v);
     expect(validateOnDamageTaken(rule, "", ["cold", "fire"], isId)).toEqual([]);
     expect(validateOnDamageTaken({ types: ["ice"], effect: "B3otZdkyUcUlgrmk" }, "", ["cold", "fire"], isId)).toHaveLength(1);
@@ -28,11 +28,11 @@ describe("onDamageTaken : un trait qui répond à un type de dégâts subi", () 
   });
 });
 
-describe("monstres du SRD 5.2 qui la déclarent", () => {
-  it("Gel (Élémentaire de l'eau) : dégâts de froid → l'effet de Vitesse de la donnée", () => {
+describe("SRD 5.2 monsters that declare it", () => {
+  it("Freeze (Water Elemental): cold damage → the Speed effect from the data", () => {
     expect(CONTENT.freeze.onDamageTaken).toEqual({ types: ["cold"], effect: "B3otZdkyUcUlgrmk" });
   });
-  it("Aversion au feu (Golem de chair) : dégâts de feu → Désavantage aux attaques et aux tests, que l'effet vide reçoit", () => {
+  it("Fire Aversion (Flesh Golem): fire damage → Disadvantage on attacks and checks, which the empty effect receives", () => {
     const entry = CONTENT["aversion-to-fire"];
     expect(entry.onDamageTaken).toEqual({ types: ["fire"], effect: "kJYNjmfI0RpvF7CQ" });
     const plan = dataFixPlan({ effects: [{ _id: "kJYNjmfI0RpvF7CQ", system: { changes: [] } }], system: {} }, entry.dataFixes);
@@ -42,7 +42,7 @@ describe("monstres du SRD 5.2 qui la déclarent", () => {
   });
 });
 
-describe("onDamageTaken : l'effet posé garde sa source, et tombe à la fin du prochain tour du porteur", () => {
+describe("onDamageTaken: the applied effect keeps its source, and drops at the end of the bearer's next turn", () => {
   it("la copie n'a plus d'id, porte l'item en origine et l'effet d'item en source", () => {
     const item = { _id: "kJYNjmfI0RpvF7CQ", name: "Averse", disabled: true, transfer: true, _stats: { coreVersion: "14" } };
     const data = traitEffectData(item, "Actor.a.Item.i.ActiveEffect.kJYNjmfI0RpvF7CQ", "Actor.a.Item.i");
@@ -50,7 +50,7 @@ describe("onDamageTaken : l'effet posé garde sa source, et tombe à la fin du p
     expect(data).toMatchObject({ name: "Averse", origin: "Actor.a.Item.i", transfer: false, disabled: false });
     expect(data._stats).toEqual({ coreVersion: "14", duplicateSource: "Actor.a.Item.i.ActiveEffect.kJYNjmfI0RpvF7CQ" });
   });
-  it("Gel et Aversion au feu : « jusqu'à la fin de son prochain tour »", () => {
+  it("Freeze and Fire Aversion: \"until the end of its next turn\"", () => {
     expect(CONTENT.freeze.effectEnds).toEqual({ B3otZdkyUcUlgrmk: "bearerTurnEnd" });
     expect(CONTENT["aversion-to-fire"].effectEnds).toEqual({ kJYNjmfI0RpvF7CQ: "bearerTurnEnd" });
     for ( const id of ["freeze", "aversion-to-fire"] ) expect(validateEntry(CONTENT[id], { at: `${id}.` })).toEqual([]);

@@ -1,6 +1,7 @@
 /**
- * Time Stop (`extraTurns`, PR #231) played by a PLAYER (real "claude player" client, owner of the Mage des refus, opened by the test
- * bench: `players: true`). "Arène des refus" (`node tools/arene-refus.mjs`): Mage des refus, Mannequin des refus, Guerrier des refus.
+ * Time Stop (`extraTurns`, PR #231) played by a PLAYER (real "claude player" client, owner of the Mage des refus, opened by the
+ * test bench: `players: true`). "Arène des refus" (`node tools/arene-refus.mjs`): Mage des refus, Mannequin des refus,
+ * Guerrier des refus.
  *  1. The player casts Time Stop from their client: the roll card is there, the count is noted on the Mage (written by the GM).
  *  2. The player ends their turn from their client ("End Turn" = `combat.nextTurn()`): the active GM brings the combat back to the
  *     Mage — seen the same way on the GM and on the player client —, until the turns are spent, then the Mannequin plays.

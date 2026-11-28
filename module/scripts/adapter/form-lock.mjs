@@ -1,6 +1,7 @@
 /**
- * B09 (§488) : le verrou de forme porté par un objet (`formLock: { worn: true }`) et les traits qu'un objet porté suspend
- * (`suspends`), vus depuis Foundry. La règle pure : core/form-lock.mjs ; ce qui se joue (refus, étapes, avis) : runtime/form-lock.mjs.
+ * B09 (§488): the form lock carried by an object (`formLock: { worn: true }`) and the traits a worn object suspends
+ * (`suspends`), seen from Foundry. The pure rule: core/form-lock.mjs; what is played (refusals, steps, notices):
+ * runtime/form-lock.mjs.
  */
 
 import { isWorn, isFormAttempt, wornFormLock } from "../core/form-lock.mjs";
@@ -8,10 +9,10 @@ import { contentOf, declaresKey, identifierOf } from "./content.mjs";
 import { formChangeOf } from "./coven.mjs";
 import { originItemOf } from "./facts.mjs";
 
-/** L'objet est-il porté : équipé s'il s'équipe, sinon présent sur la fiche (une capacité qui représente l'objet). */
+/** Is the object worn: equipped if it can be equipped, otherwise present on the sheet (a feature that represents the object). */
 export const wornItem = item => !!item && isWorn({ equippable: ("equipped" in (item.system ?? {})), equipped: item.system?.equipped });
 
-/** Le verrou de forme que porte cet acteur — `{ item, onAttempt, forms }` —, ou null. */
+/** The form lock this actor carries — `{ item, onAttempt, forms }` —, or null. */
 export function wornFormLockOf(actor) {
   for ( const item of actor?.items ?? [] ) {
     if ( !declaresKey(item, "formLock") || !wornItem(item) ) continue;
@@ -22,8 +23,8 @@ export function wornFormLockOf(actor) {
 }
 
 /**
- * L'utilisation de cette activité est-elle une tentative de changer de forme qu'un objet porté interdit ? Rend le verrou, ou null.
- * Une activité « transform », un changement de forme déclaré (`changesForm`), ou l'activité d'un item nommé dans `forms`.
+ * Is using this activity an attempt to change form that a worn object forbids? Returns the lock, or null.
+ * A "transform" activity, a declared form change (`changesForm`), or the activity of an item named in `forms`.
  */
 export function formAttemptLock(activity) {
   const lock = wornFormLockOf(activity?.actor);
@@ -33,8 +34,8 @@ export function formAttemptLock(activity) {
 }
 
 /**
- * Allumer cet effet est-il une tentative de changer de forme ? Oui quand il vient d'un item nommé dans `forms` (les formes d'une fiche
- * faites d'effets à allumer à la main) et que l'acteur porte le verrou. Rend `{ lock, actor, item }`, ou null.
+ * Is turning this effect on an attempt to change form? Yes when it comes from an item named in `forms` (a sheet's forms
+ * made of effects to turn on by hand) and the actor carries the lock. Returns `{ lock, actor, item }`, or null.
  */
 export function effectAttemptLock(effect) {
   const parent = effect?.parent ?? null;
@@ -45,7 +46,7 @@ export function effectAttemptLock(effect) {
   return lock.forms.includes(identifierOf(item).id) ? { lock, actor, item } : null;
 }
 
-/** L'objet porté qui suspend ce trait (`suspends`, une clé d'entrée : « regeneration ») chez cet acteur, ou null. */
+/** The worn object that suspends this trait (`suspends`, an entry key: "regeneration") on this actor, or null. */
 export function suspendedBy(actor, key) {
   for ( const item of actor?.items ?? [] ) {
     if ( !declaresKey(item, "suspends") || !wornItem(item) ) continue;

@@ -1,15 +1,15 @@
 /**
- * §293 : Renvoi des morts-vivants, « chaque Mort-vivant de votre choix dans un rayon de 9 m », monde `dnd-6`, Arène de test. Le Clerc
- * (niveau 1) reçoit, prêtés depuis le compendium du Manuel des joueurs, le Conduit divin (deux utilisations) et Calcination des
- * morts-vivants ; le Zombi, le Bandit et le Guerrier sont posés à 9 m au plus, le Magicien au-delà. Vérifie :
- *  - la liste : les seuls morts-vivants à portée (le Zombi ; ni le Bandit ni le Guerrier, humanoïdes, ni le Magicien, trop loin), cochés
- *    d'avance s'ils sont hostiles ; la Calcination proposée à la place ;
- *  - Renvoi sur le Zombi seul : une sauvegarde de Sagesse, Renvoyé s'il la rate, aucun dégât ;
- *  - case cochée : la Calcination part sur le Zombi et le Bandit, sans zone — le Bandit (humanoïde) n'est pas affecté, le Zombi
- *    qui rate subit les dégâts radiants ; une utilisation de Conduit divin dépensée.
- * §438 : avec le Manuel 3.0.0, la Calcination est une activité du Conduit divin visible au niveau 5 du Clerc : au niveau 1 elle n'est pas
- * proposée ; le Clerc passe au niveau 5 le temps du scénario (rendu ensuite).
- * Remet positions, PV, effets, niveau ; retire les items prêtés.
+ * §293: Turn Undead, "each Undead of your choice within 9 m", world `dnd-6`, Test Arena. The Cleric (level 1) receives,
+ * lent from the Player's Handbook compendium, Channel Divinity (two uses) and Sear Undead; the Zombie, the Bandit and the
+ * Fighter are placed within 9 m at most, the Wizard beyond. Checks:
+ *  - the list: the only Undead in range (the Zombie; neither the Bandit nor the Fighter, Humanoids, nor the Wizard, too far),
+ *    checked in advance if they are hostile; Sear Undead offered instead;
+ *  - Turn Undead on the Zombie alone: a Wisdom save, Turned if it fails, no damage;
+ *  - box checked: Sear Undead goes off on the Zombie and the Bandit, with no area — the Bandit (Humanoid) is not affected,
+ *    the Zombie that fails takes the radiant damage; one use of Channel Divinity spent.
+ * §438: with Handbook 3.0.0, Sear Undead is a Channel Divinity activity visible at Cleric level 5: at level 1 it is not
+ * offered; the Cleric goes to level 5 for the scenario (restored afterwards).
+ * Restores positions, HP, effects, level; removes the lent items.
  */
 const CLASSES = "dnd-players-handbook.classes";
 const TURN = "aOptL5pMaj3WtR8S";
@@ -47,7 +47,7 @@ export default {
     };
     const channel = await lend("phbclcChannelDiv", { "system.uses.max": "9", "system.uses.spent": 0 });
     await lend("phbclcSearUndead");
-    // §438 : la Calcination du Manuel 3.0.0 (activité du Conduit divin, porte de niveau 5).
+    // §438: Handbook 3.0.0's Sear Undead (Channel Divinity activity, level 5 gate).
     const sheetOf = async () => (await ctx.call("get-actor", { actorId: cleric.actorId })).items ?? [];
     const gated = !!(await sheetOf()).find(i => i._id === channel)?.system?.activities?.rprxorXdFoHbRERZ;
     const cls = (await sheetOf()).find(i => (i.type === "class") && (i.system?.identifier === "cleric"));
@@ -63,7 +63,7 @@ export default {
       }
     }
 
-    // Le Clerc au centre, trois créatures à 9 m au plus (6 cases), le Magicien à 8 cases.
+    // The Cleric in the center, three creatures within 9 m at most (6 cells), the Wizard at 8 cells.
     const c = await ctx.position(cleric);
     const place = (t, dx, dy) => ctx.call("move-token", { tokenId: t.id, x: c.x + (dx * grid), y: c.y + (dy * grid), elevation: 0 });
     await place(zombi, -3, 0); await place(bandit, 0, -6); await place(fighter, 2, 2); await place(wizard, -8, 0);
@@ -83,7 +83,7 @@ export default {
     };
     const turned = async () => (await ctx.effects(zombi)).some(e => (e.statuses ?? []).includes("frightened"));
 
-    // 1. Renvoi sur le Zombi seul, jusqu'à une sauvegarde ratée.
+    // 1. Turn Undead on the Zombie alone, until a failed save.
     let z = null;
     for ( let n = 1; (n <= 8) && (z?.save?.success !== false); n++ ) {
       await clearEffects();
@@ -99,7 +99,7 @@ export default {
     await pause(1500);
     ctx.expect(await turned(), "le Zombi est Renvoyé");
 
-    // 2. La case cochée : Calcination sur le Zombi et le Bandit, sans zone.
+    // 2. The box checked: Sear Undead on the Zombie and the Bandit, with no area.
     const spent0 = (await ctx.call("get-actor", { actorId: cleric.actorId })).items?.find(i => i._id === channel)?.system?.uses?.spent ?? 0;
     let zs = null, bs = null, regions = 0;
     for ( let n = 1; (n <= 8) && (zs?.save?.success !== false); n++ ) {
@@ -122,8 +122,8 @@ export default {
     const spent1 = (await ctx.call("get-actor", { actorId: cleric.actorId })).items?.find(i => i._id === channel)?.system?.uses?.spent ?? 0;
     ctx.expect(spent1 > spent0, `une utilisation de Conduit divin dépensée (${spent0} → ${spent1})`);
 
-    // 3. §294 (vu en jeu le 2026-10-31) : une deuxième Calcination sur le Zombi déjà renvoyé — ses dégâts ne font pas tomber l'effet,
-    // et la résolution ne s'interrompt pas sur un effet supprimé entre-temps.
+    // 3. §294 (seen in play on 2026-10-31): a second Sear Undead on the already Turned Zombie — its damage does not end the
+    // effect, and the resolution is not interrupted by an effect removed in the meantime.
     let again = null;
     for ( let n = 1; (n <= 8) && (again?.save?.success !== false); n++ ) {
       const r = await ctx.engine("castPicked", { tokenId: cleric.id, itemId: channel, activityId: TURN, targetIds: [zombi.id], upgrade: true });

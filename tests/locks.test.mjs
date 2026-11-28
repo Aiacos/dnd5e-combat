@@ -4,7 +4,7 @@ import {
 } from "../module/scripts/core/locks.mjs";
 
 describe("serrure d'une porte (§244)", () => {
-  it("lit le drapeau sans lui faire confiance : DD vide ou invalide = le MJ décide", () => {
+  it("reads the flag without trusting it: empty or invalid DC = the GM decides", () => {
     expect(normalizeLock(undefined)).toEqual({ pickDc: null, forceDc: null, unforceable: false, key: "" });
     expect(normalizeLock({ pickDc: "", forceDc: null })).toMatchObject({ pickDc: null, forceDc: null });
     expect(normalizeLock({ pickDc: "15", forceDc: 0, unforceable: "yes", key: "  Clé de la crypte " }))
@@ -12,14 +12,14 @@ describe("serrure d'une porte (§244)", () => {
     expect(normalizeLock({ pickDc: 12.6, forceDc: 20, unforceable: true })).toMatchObject({ pickDc: 13, forceDc: 20, unforceable: true });
   });
 
-  it("reconnaît la clé par son nom (casse et espaces ignorés) ou par son identifiant", () => {
+  it("recognizes the key by its name (case and spaces ignored) or by its identifier", () => {
     expect(isKey({ name: "Clé de la crypte" }, "clé de la crypte ")).toBe(true);
     expect(isKey({ name: "Crypt Key", identifier: "crypt-key" }, "crypt-key")).toBe(true);
     expect(isKey({ name: "Clé rouillée" }, "Clé de la crypte")).toBe(false);
     expect(isKey({ name: "" }, "")).toBe(false);
   });
 
-  it("juge un essai contre le DD ; sans DD, le MJ tranche ; une porte non forçable résiste", () => {
+  it("judges an attempt against the DC; without a DC, the GM rules; a non-forceable door resists", () => {
     const lock = normalizeLock({ pickDc: 15, forceDc: 20 });
     expect(judgeAttempt(lock, "pick", 15)).toBe("success");
     expect(judgeAttempt(lock, "pick", 14)).toBe("failure");
@@ -29,7 +29,7 @@ describe("serrure d'une porte (§244)", () => {
     expect(judgeAttempt(lock, "pick", NaN)).toBe("failure");
   });
 
-  it("note un essai raté par personnage seulement avec le réglage « un essai »", () => {
+  it("records a failed attempt per character only with the \"one attempt\" setting", () => {
     expect(recordTry({}, "Actor.a", "pick", "free")).toEqual({});
     const tries = recordTry({}, "Actor.a", "pick", "once");
     expect(tries).toEqual({ "Actor.a": ["pick"] });
@@ -42,25 +42,25 @@ describe("serrure d'une porte (§244)", () => {
       .toEqual({ "Actor.a": ["pick"], "Actor.b": ["force"] });
   });
 
-  it("note les essais sous une clé sans points (Foundry déplierait « Actor.abc »)", () => {
+  it("records attempts under a key without dots (Foundry would unfold \"Actor.abc\")", () => {
     expect(triesKey("Scene.s1.Token.t1.Actor.a1")).toBe("Scene_s1_Token_t1_Actor_a1");
     expect(triesKey(undefined)).toBe("");
   });
 
-  it("propose la clé à qui la porte, crocheter, et forcer sauf porte non forçable", () => {
+  it("offers the key to whoever carries it, lock picking, and forcing except a non-forceable door", () => {
     const lock = normalizeLock({ key: "Clé", unforceable: false });
     expect(lockChoices(lock, { hasKey: true })).toEqual([
       { method: "key", spent: false }, { method: "pick", spent: false }, { method: "force", spent: false }
     ]);
     expect(lockChoices(lock, { hasKey: false }).map(c => c.method)).toEqual(["pick", "force"]);
-    // O9d (§357) : sans outils de voleur, pas de crochetage.
+    // O9d (§357): without thieves' tools, no lock picking.
     expect(lockChoices(lock, { hasKey: false, hasTools: false }).map(c => c.method)).toEqual(["force"]);
     expect(lockChoices(normalizeLock({ unforceable: true }), {}).map(c => c.method)).toEqual(["pick"]);
     expect(lockChoices(normalizeLock({}), { tries: { "Actor.a": ["pick"] }, who: "Actor.a", mode: "once" }))
       .toEqual([{ method: "pick", spent: true }, { method: "force", spent: false }]);
   });
 
-  it("crochetée ou ouverte à la clé, la porte reste fermée ; forcée, elle s'ouvre", () => {
+  it("picked or opened with the key, the door stays closed; forced, it opens", () => {
     expect(stateAfter("pick")).toBe("closed");
     expect(stateAfter("key")).toBe("closed");
     expect(stateAfter("force")).toBe("open");
@@ -68,12 +68,12 @@ describe("serrure d'une porte (§244)", () => {
 });
 
 describe("hook lockAttempt (§247)", () => {
-  it("rapporte la façon, l'issue et le total", () => {
+  it("reports the method, the outcome and the total", () => {
     expect(attemptReport("pick", "failure", 7)).toEqual({ method: "pick", outcome: "failure", total: 7 });
     expect(attemptReport("force", "success", "21")).toEqual({ method: "force", outcome: "success", total: 21 });
     expect(attemptReport("pick", "gm", 14)).toEqual({ method: "pick", outcome: "gm", total: 14 });
   });
-  it("pas de total pour la clé ni pour un total illisible", () => {
+  it("no total for the key or for an unreadable total", () => {
     expect(attemptReport("key", "success", undefined).total).toBeNull();
     expect(attemptReport("pick", "failure", NaN).total).toBeNull();
     expect(attemptReport("pick", "failure", null).total).toBeNull();

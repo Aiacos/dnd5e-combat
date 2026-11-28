@@ -1,16 +1,17 @@
 /**
- * Lumière et ténèbres des sorts (SPEC §16.31), lues et écrites dans Foundry. Rien n'est patché : le cœur V14 fournit tout.
- *  - Zone (`light.on: "area"`) : une lumière ambiante (AmbientLight) au centre de la région que dnd5e a posée, de ses rayons
- *    ou, pour des ténèbres, une source négative du rayon de la zone (`config.negative`, common/data/data.mjs:26 : « darkness
- *    source ») — le cœur rend alors ce qui s'y trouve invisible aux autres et aveugle qui s'y tient
- *    (point-vision-source.mjs:186-190, detection-mode.mjs:109). Elle suit la région (une région attachée à un token est
- *    déplacée avec lui par le cœur, documents/token.mjs:2486, d'où un `updateRegion`) et disparaît avec elle.
- *  - Effet (`on: "effect"`) : l'effet posé reçoit, à sa création, des changements `token.light.*` — appliqués au token par
- *    le cœur V14 (client/documents/actor.mjs:248, TokenDocument#applyActiveEffects) et retirés avec l'effet.
- *  - Mur (`on: "wall"`, §170) : une rangée de lumières ambiantes de chaque côté d'un mur posé par points, reposée s'il est redessiné.
- *  - Invocation (`on: "summon"`) : l'objet invoqué porte déjà sa lumière (acteur « Lumière » du PHB : 20/40 ft). `carried` :
- *    au lancement, le joueur choisit (ui/light.mjs) « au sol » (l'objet est posé) ou « sur moi » (le lanceur reçoit un effet
- *    qui le fait briller de la même lumière), et la couleur. `single` : les lumières précédentes du même sort s'éteignent.
+ * Spell light and Darkness (SPEC §16.31), read and written in Foundry. Nothing is patched: the V14 core provides everything.
+ *  - Area (`light.on: "area"`): an ambient light (AmbientLight) at the center of the region dnd5e placed, with its radii
+ *    or, for Darkness, a negative source of the area's radius (`config.negative`, common/data/data.mjs:26: "darkness
+ *    source") — the core then renders what is inside invisible to others and blinds whoever stands there
+ *    (point-vision-source.mjs:186-190, detection-mode.mjs:109). It follows the region (a region attached to a token is
+ *    moved with it by the core, documents/token.mjs:2486, hence an `updateRegion`) and disappears with it.
+ *  - Effect (`on: "effect"`): the placed effect receives, at creation, `token.light.*` changes — applied to the token by
+ *    the V14 core (client/documents/actor.mjs:248, TokenDocument#applyActiveEffects) and removed with the effect.
+ *  - Wall (`on: "wall"`, §170): a row of ambient lights on each side of a wall placed by points, placed again if it is
+ *    redrawn.
+ *  - Summon (`on: "summon"`): the summoned object already carries its light (PHB "Light" actor: 20/40 ft). `carried`:
+ *    at casting, the player chooses (ui/light.mjs) "on the ground" (the object is placed) or "on me" (the caster gets an
+ *    effect that makes them glow with the same light), and the color. `single`: the previous lights of the same spell go out.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -24,12 +25,12 @@ import { wallGeometryOf } from "./wall-side.mjs";
 import { lengthIn } from "./units.mjs";
 export { burnLeftOf, burnOut, carriedLightEffect, carriedLightOf, carriedLightState, carriedLightsOf, carriedSourceOf, dropCarriedLight, fuelOf, heldItems, remainingOf, rememberBurn, setCarriedLight, setHood, hoodedDown } from "./carried-lights.mjs";
 
-/** La règle de lumière d'un item, ou null. */
+/** An item's light rule, or null. */
 export function lightRuleOf(item) {
   return item ? (contentOf(item).entry?.light ?? null) : null;
 }
 
-/** L'activité et la règle de lumière d'une région posée par dnd5e (`on` : « area » par défaut, ou « wall »), ou null. */
+/** The activity and light rule of a region placed by dnd5e (`on`: "area" by default, or "wall"), or null. */
 function areaRuleOf(region, on="area") {
   const uuid = region.getFlag?.("dnd5e", "activity");
   const activity = uuid ? fromUuidSync(uuid, { strict: false }) : null;
@@ -42,7 +43,7 @@ export function toGridUnits(value, units, grid) {
   return lengthIn(value, units, grid.units);
 }
 
-/** Le centre d'une région, en pixels : l'origine de sa première forme (cercle, émanation d'un token…). */
+/** A region's center, in pixels: the origin of its first shape (circle, a token's Emanation…). */
 function regionCenter(region) {
   const shape = region.shapes?.[0];
   const origin = shape?.origin;
@@ -51,8 +52,8 @@ function regionCenter(region) {
 }
 
 /**
- * Le rayon d'une zone, unité de la grille : les dimensions que dnd5e a notées à la pose (template-placement.mjs:154) ; à
- * défaut (région posée par une macro, le connecteur), le rayon de sa première forme ronde.
+ * An area's radius, grid unit: the dimensions that dnd5e noted at placement (template-placement.mjs:154); failing
+ * that (region placed by a macro, the connector), the radius of its first round shape.
  */
 function regionRadius(region) {
   const grid = region.parent.grid;
@@ -64,20 +65,20 @@ function regionRadius(region) {
   return Number.isFinite(px) ? (px / grid.size) * grid.distance : 0;
 }
 
-/** L'élévation de la source : le milieu de la tranche de la zone, sinon son bas, sinon le sol. */
+/** The source's elevation: the middle of the area's slice, otherwise its bottom, otherwise the ground. */
 function regionElevation(region) {
   const { bottom, top } = region.elevation ?? {};
   if ( Number.isFinite(bottom) && Number.isFinite(top) ) return (bottom + top) / 2;
   return Number.isFinite(bottom) ? bottom : 0;
 }
 
-/** Les lumières que le moteur a posées pour cette région. */
+/** The lights that the engine placed for this region. */
 function lightsOf(region) {
   return region.parent.lights.filter(l => l.getFlag(MODULE_ID, "region") === region.id);
 }
 
 /**
- * Une zone vient d'être posée : sa lumière (ou ses ténèbres), et ce qu'elle dissipe. MJ actif.
+ * An area has just been placed: its light (or Darkness), and what it dispels. Active GM.
  * @returns {Promise<{light: AmbientLightDocument, dispelled: number}|null>}
  */
 export async function lightUpRegion(region) {
@@ -101,18 +102,18 @@ export async function lightUpRegion(region) {
     config: { bright: radii.bright, dim: radii.dim, negative: radii.negative },
     flags: { [MODULE_ID]: { region: region.id, darkness: radii.negative } }
   }]);
-  // Après la pose : un défaut en dissipant ne laisse pas la zone sans sa lumière.
-  // §287 : des ténèbres qui dissipent (Ténèbres) visent les lumières de sort ; une lumière (Lumière du jour), les ténèbres.
+  // After placement: a failure while dispelling does not leave the area without its light.
+  // §287: Darkness that dispels (Darkness) targets spell lights; a light (Daylight), Darkness.
   const lightsDispelled = (Number.isInteger(rule.dispels) && rule.darkness) ? await dispelLights(region, center, radius, rule.dispels) : [];
   const dispelled = (Number.isInteger(rule.dispels) && !rule.darkness) ? await dispelDarkness(region, center, radii.dim, rule.dispels) : lightsDispelled.length;
   return light ? { light, dispelled, lightsDispelled } : null;
 }
 
 /**
- * §170 : un mur posé par points (Mur de feu) — une rangée de sources de chaque côté, tous les 3 m (§173 : la moitié du rayon pour une
- * grande lumière), à un dixième de case de la ligne
- * (le mur arrête la lumière : chaque rangée éclaire son côté). Couleur et animation de la règle ; transparence réduite, les sources se
- * recouvrant. MJ actif.
+ * §170: a wall placed by points (Wall of Fire) — a row of sources on each side, every 10 ft (§173: half the radius for a
+ * large light), at a tenth of a cell from the line
+ * (the wall stops light: each row lights its side). Color and animation from the rule; reduced transparency, the sources
+ * overlapping. Active GM.
  */
 async function lightUpWall(region, rule) {
   if ( lightsOf(region).length ) return null;
@@ -120,7 +121,7 @@ async function lightUpWall(region, rule) {
   if ( !geometry ) return null;
   const grid = region.parent.grid;
   const perUnit = grid.size / grid.distance;
-  // Tous les 3 m ; plus espacées pour une grande lumière (Mur prismatique : 30 m) — la moitié de son rayon le plus court.
+  // Every 10 ft; more spread out for a large light (Prismatic Wall: 100 ft) — half its shortest radius.
   const shortest = Math.min(...[rule.bright, rule.dim].filter(v => Number.isFinite(v) && (v > 0)));
   const step = toGridUnits(Math.max(10, shortest / 2), rule.units ?? "ft", grid) * perUnit;
   const points = wallLightPoints(geometry, step, grid.size / 10);
@@ -137,9 +138,9 @@ async function lightUpWall(region, rule) {
   return created.length ? { light: created[0], dispelled: 0, count: created.length } : null;
 }
 
-/** La zone a bougé (déplacée, ou emportée par le token auquel elle est attachée) : sa lumière la suit. */
+/** The area moved (displaced, or carried off by the token it is attached to): its light follows it. */
 export async function followRegion(region) {
-  // §170 : un mur redessiné (le disque changé en anneau) — ses lumières sont reposées.
+  // §170: a redrawn wall (the disk turned into a ring) — its lights are placed again.
   if ( areaRuleOf(region, "wall") ) {
     const n = await extinguishRegion(region);
     const done = await lightUpRegion(region);
@@ -154,7 +155,7 @@ export async function followRegion(region) {
   return updates.length;
 }
 
-/** La zone a disparu : sa lumière aussi. */
+/** The area disappeared: so does its light. */
 export async function extinguishRegion(region) {
   const ids = lightsOf(region).map(l => l.id);
   if ( ids.length ) await region.parent.deleteEmbeddedDocuments("AmbientLight", ids);
@@ -162,8 +163,8 @@ export async function extinguishRegion(region) {
 }
 
 /**
- * Lumière du jour : les Ténèbres de niveau ≤ `maxLevel` que la zone recouvre sont dissipées — leur sort prend fin (la
- * concentration qui les tient tombe, runtime/concentration.mjs retire la région), sinon la région est retirée.
+ * Daylight: the Darkness of level ≤ `maxLevel` that the area covers is dispelled — its spell ends (the
+ * Concentration that holds it drops, runtime/concentration.mjs removes the region), otherwise the region is removed.
  */
 async function dispelDarkness(region, center, radius, maxLevel) {
   const scene = region.parent;
@@ -174,14 +175,14 @@ async function dispelDarkness(region, center, radius, maxLevel) {
     if ( !found?.rule.darkness ) continue;
     const c = regionCenter(other);
     if ( !c ) continue;
-    // Rayons en pixels pour les comparer aux centres.
+    // Radii in pixels to compare them to the centers.
     const px = r => (r / scene.grid.distance) * scene.grid.size;
     const level = Number(other.getFlag("dnd5e", "spellLevel"));
     darkness.push({ id: other.id, x: c.x, y: c.y, radius: px(regionRadius(other)), level: Number.isFinite(level) ? level : null });
   }
   const ids = dispelledBy({ x: center.x, y: center.y, radius: (radius / scene.grid.distance) * scene.grid.size }, maxLevel, darkness);
-  // La région d'abord, puis la concentration : supprimer l'effet retire aussi la région (runtime/concentration.mjs), et
-  // les deux suppressions se croiseraient (vu en jeu : « Region … does not exist »).
+  // The region first, then Concentration: deleting the effect also removes the region (runtime/concentration.mjs), and
+  // the two deletions would cross (seen in play: "Region … does not exist").
   for ( const id of ids ) {
     const concentration = scene.regions.get(id)?.getFlag(MODULE_ID, "concentration");
     await scene.deleteEmbeddedDocuments("Region", [id]);
@@ -191,7 +192,7 @@ async function dispelDarkness(region, center, radius, maxLevel) {
   return ids.length;
 }
 
-/** Le niveau du sort d'où vient une lumière : celui noté par dnd5e (lancement surclassé compris), sinon celui de l'item. */
+/** The level of the spell a light comes from: the one noted by dnd5e (upcast included), otherwise the item's. */
 function spellLevelOf(doc, item) {
   const noted = Number(doc?.getFlag?.("dnd5e", "spellLevel"));
   if ( Number.isFinite(noted) ) return noted;
@@ -199,8 +200,8 @@ function spellLevelOf(doc, item) {
 }
 
 /**
- * Le sort d'où vient une lumière prend fin : sa concentration tombe s'il en a une (dnd5e retire ce qui en dépend), sinon ses
- * lumières s'éteignent (objets posés, effets lumineux sur le lanceur) et ses effets lumineux partent de qui les porte.
+ * The spell a light comes from ends: its Concentration drops if it has one (dnd5e removes what depends on it), otherwise its
+ * lights go out (placed objects, light effects on the caster) and its light effects leave whoever carries them.
  */
 async function endLightSpell(item, carrier=null) {
   const caster = item.actor;
@@ -212,17 +213,17 @@ async function endLightSpell(item, carrier=null) {
 }
 
 /**
- * §287 : Ténèbres — « si une partie de la zone recouvre une Lumière vive ou faible créée par un sort de niveau 2 ou inférieur, ce sort
- * est dissipé ». Les lumières de sort de la scène : un token qui brille d'un effet de sort (Lueurs féeriques, Lame de feu, Lumière
- * tenue, Rayon de soleil…), un objet lumineux invoqué (Lumière, Flamme éternelle), une zone de lumière ; recouvertes quand les
- * cercles se touchent (`dispelledBy`). Rend les sorts dissipés : `{ item: nom, token }` (le token qui brillait, pour le retour).
+ * §287: Darkness — "if any part of the area covers a Bright or Dim Light created by a level 2 or lower spell, that spell
+ * is dispelled". The scene's spell lights: a token glowing from a spell effect (Faerie Fire, Flame Blade, "Held Light",
+ * Sunbeam…), a summoned light object (Light, Continual Flame), a light area; covered when the circles touch (`dispelledBy`).
+ * Returns the dispelled spells: `{ item: nom, token }` (the token that was glowing, for the feedback).
  */
 async function dispelLights(region, center, radius, maxLevel) {
   const scene = region.parent;
   const px = r => (r / scene.grid.distance) * scene.grid.size;
   const sources = [];
   for ( const token of scene.tokens ) {
-    // §406 : la position validée (`_source`), pas celle de l'animation (piège V14, adapter/turn.mjs `committedPosition`).
+    // §406: the validated position (`_source`), not the animation's (V14 trap, adapter/turn.mjs `committedPosition`).
     const c = { x: token._source.x + ((token._source.width * scene.grid.sizeX) / 2), y: token._source.y + ((token._source.height * scene.grid.sizeY) / 2) };
     const lit = px(Math.max(Number(token.light?.dim) || 0, Number(token.light?.bright) || 0));
     if ( !(lit > 0) ) continue;
@@ -248,7 +249,7 @@ async function dispelLights(region, center, radius, maxLevel) {
       item: found.activity?.item ?? null, carrier: null, region: other });
   }
   const ids = new Set(dispelledBy({ x: center.x, y: center.y, radius: px(radius) }, maxLevel, sources.filter(s => Number.isFinite(s.level))));
-  // Un sort qui éclaire plusieurs créatures (Lueurs féeriques) ne prend fin qu'une fois.
+  // A spell that lights several creatures (Faerie Fire) ends only once.
   const ended = new Map();
   for ( const source of sources.filter(s => ids.has(s.id)) ) {
     if ( !source.item || ended.has(source.item.uuid) ) continue;
@@ -260,11 +261,11 @@ async function dispelLights(region, center, radius, maxLevel) {
 }
 
 /**
- * §287 : Rayon de soleil — « un point de rayonnement éclatant brille au-dessus de vous » tant que le sort dure : à l'activité de la
- * règle (`on: "caster"`, `activity`), un effet lumineux sur le lanceur, rattaché à sa concentration (`flags.dnd5e.dependents` : dnd5e
- * le retire avec elle, documents/active-effect.mjs:1105). Rien s'il brille déjà de ce sort (« Create New Sunbeam »).
+ * §287: Sunbeam — "a point of dazzling radiance shines above you" while the spell lasts: on the rule's activity
+ * (`on: "caster"`, `activity`), a light effect on the caster, attached to their Concentration (`flags.dnd5e.dependents`: dnd5e
+ * removes it with it, documents/active-effect.mjs:1105). Nothing if they already glow from this spell ("Create New Sunbeam").
  * @param {Activity} activity
- * @param {ActiveEffect|null} concentration  La concentration ouverte par l'utilisation.
+ * @param {ActiveEffect|null} concentration  The Concentration opened by the use.
  */
 export async function lightCasterFor(activity, concentration=null) {
   const item = activity?.item;
@@ -290,8 +291,8 @@ export async function lightCasterFor(activity, concentration=null) {
 /* -------------------------------------------- */
 
 /**
- * À la création d'un effet (hook `preCreateActiveEffect`, sur le client qui l'écrit) : si l'item d'où il vient fait briller
- * son porteur, l'effet reçoit ses changements `token.light.*`. Rend true si l'effet a été complété.
+ * On an effect's creation (hook `preCreateActiveEffect`, on the client that writes it): if the item it comes from makes
+ * its bearer glow, the effect receives its `token.light.*` changes. Returns true if the effect was completed.
  */
 export function addEffectLight(effect) {
   if ( effect.parent?.documentName !== "Actor" ) return false;
@@ -307,26 +308,26 @@ export function addEffectLight(effect) {
 }
 
 /* -------------------------------------------- */
-/*  Objets lumineux invoqués                    */
+/*  Summoned light objects                      */
 /* -------------------------------------------- */
 
 const SECONDS = { minute: 60, hour: 3600, day: 86400, round: 6, turn: 6 };
 
-/** La durée de l'item, en secondes, pour l'effet (rien pour « jusqu'à dissipation »). */
+/** The item's duration, in seconds, for the effect (nothing for "until dispelled"). */
 function durationOf(item) {
   const { value, units } = item.system?.duration ?? {};
   const n = Number(value);
   return (SECONDS[units] && Number.isFinite(n) && (n > 0)) ? { value: n * SECONDS[units], units: "seconds" } : {};
 }
 
-/** Une activité d'invocation dont l'objet lumineux peut aussi être tenu par le lanceur (Lumière, Flamme éternelle), ou null. */
+/** A summoning activity whose light object can also be held by the caster (Light, Continual Flame), or null. */
 export function lightChoiceOf(activity) {
   if ( activity?.type !== "summon" ) return null;
   const rule = lightRuleOf(activity.item);
   return ((rule?.on === "summon") && rule.carried) ? rule : null;
 }
 
-/** La lumière de l'objet que l'activité invoque (acteur du premier profil : « Lumière » du PHB, 20/40 ft, orangée). */
+/** The light of the object that the activity summons (first profile's actor: PHB "Light", 20/40 ft, orange). */
 export async function summonedLightOf(activity) {
   const uuid = activity.profiles?.[0]?.uuid;
   const actor = uuid ? await fromUuid(uuid).catch(() => null) : null;
@@ -335,15 +336,15 @@ export async function summonedLightOf(activity) {
     alpha: light.alpha ?? null, animation: light.animation ? { ...light.animation } : null };
 }
 
-/** La taille de l'objet invoqué : Très petit si le profil le permet (« pas besoin de choisir la taille »), sinon la première. */
+/** The size of the summoned object: Tiny if the profile allows it ("no need to choose the size"), otherwise the first. */
 export function summonSizeOf(activity) {
   const sizes = Array.from(activity.creatureSizes ?? []);
   return sizes.includes("tiny") ? "tiny" : (sizes[0] ?? null);
 }
 
 /**
- * « Sur moi » : le lanceur tient l'objet et brille de sa lumière — un effet (nom, image, durée du sort) qui porte ses
- * changements `token.light.*`, dans la couleur choisie. Sur le client du lanceur : son personnage est à lui.
+ * "On me": the caster holds the object and glows with its light — an effect (name, image, spell duration) that carries its
+ * `token.light.*` changes, in the chosen color. On the caster's client: their character is theirs.
  */
 export async function lightCaster(activity, color=null) {
   const item = activity.item;
@@ -356,7 +357,7 @@ export async function lightCaster(activity, color=null) {
   return effect ?? null;
 }
 
-/** « Au sol » : la couleur choisie passe sur le token de l'objet avant sa création (hook `dnd5e.summonToken`). */
+/** "On the ground": the chosen color goes onto the object's token before its creation (hook `dnd5e.summonToken`). */
 export function colorSummonedToken(activity, tokenData, options) {
   const color = options?.[MODULE_ID]?.lightColor;
   if ( !color || !lightChoiceOf(activity) ) return false;
@@ -364,7 +365,7 @@ export function colorSummonedToken(activity, tokenData, options) {
   return true;
 }
 
-/** Les lumières allumées par cet item : objets posés (toutes scènes) et effets lumineux sur son lanceur. */
+/** The lights turned on by this item: placed objects (all scenes) and light effects on its caster. */
 export function lightsOfItem(item) {
   let n = 0;
   for ( const scene of game.scenes ) n += scene.tokens.filter(t => summonItemOf(t)?.uuid === item.uuid).length;
@@ -372,10 +373,10 @@ export function lightsOfItem(item) {
 }
 
 /**
- * Éteint les lumières d'un item (« le sort prend fin si vous le lancez à nouveau ») : ses objets posés, sur toutes les
- * scènes, et les effets lumineux qu'il a laissés sur son lanceur. MJ actif (un joueur ne supprime pas de token).
+ * Turns off an item's lights ("the spell ends if you cast it again"): its placed objects, on all
+ * scenes, and the light effects it left on its caster. Active GM (a player does not delete tokens).
  * @param {Item} item
- * @param {{keep?: string}} [options]  Id d'un token à garder (celui qui vient d'être posé).
+ * @param {{keep?: string}} [options]  Id of a token to keep (the one just placed).
  */
 export async function extinguishLights(item, { keep=null }={}) {
   let n = 0;
@@ -391,8 +392,8 @@ export async function extinguishLights(item, { keep=null }={}) {
 }
 
 /**
- * Un objet lumineux vient d'être invoqué (MJ actif) : avec `single`, les lumières d'un lancement précédent qui
- * resteraient (lancé sans passer par le choix : connecteur, carte) s'éteignent.
+ * A light object has just been summoned (active GM): with `single`, the lights of a previous casting that
+ * would remain (cast without going through the choice: connector, card) go out.
  * @returns {Promise<{extinguished: number}|null>}
  */
 export async function placeLightObject(tokenDoc) {

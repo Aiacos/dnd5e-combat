@@ -1,11 +1,11 @@
 /**
- * Construit les compendiums du module (module/packs/, non versionné) depuis leurs sources versionnées (SPEC §56).
+ * Builds the module's compendiums (module/packs/, not versioned) from their versioned sources (SPEC §56).
  *
  *   npm run packs
  *
- * Aujourd'hui un seul : `outils`, les macros de tools/macros/ (liste et ordre : tools/macros/index.mjs). Les ids sont tirés du nom de
- * fichier : une macro garde le même id d'une version à l'autre. À lancer Foundry fermé, ou le module inactif dans le monde ouvert
- * (Foundry garde un verrou exclusif sur une base ouverte).
+ * Today just one: `outils`, the macros of tools/macros/ (list and order: tools/macros/index.mjs). Ids are derived from the file
+ * name: a macro keeps the same id from one version to the next. Run with Foundry closed, or the module inactive in the open world
+ * (Foundry holds an exclusive lock on an open database).
  */
 import { compilePack } from "@foundryvtt/foundryvtt-cli";
 import { ClassicLevel } from "classic-level";
@@ -18,13 +18,13 @@ import { MACROS } from "./macros/index.mjs";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "module", "module.json"), "utf8"));
 
-/** Un `_id` Foundry stable : 16 caractères alphanumériques tirés du nom. */
+/** A stable Foundry `_id`: 16 alphanumeric characters derived from the name. */
 export function stableId(name) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   return [...createHash("sha256").update(name).digest()].slice(0, 16).map(b => chars[b % chars.length]).join("");
 }
 
-/** Les documents du pack `outils`. */
+/** The documents of the `outils` pack. */
 export function macroDocuments() {
   return MACROS.map(({ file, name, img }, i) => {
     const _id = stableId(`dnd5e-combat.outils.${file}`);
@@ -38,7 +38,7 @@ export function macroDocuments() {
 
 const SOURCES = { outils: macroDocuments };
 
-/** Une base ouverte par Foundry est verrouillée : on le vérifie AVANT de toucher au dossier (sinon il serait à moitié effacé). */
+/** A database opened by Foundry is locked: we check BEFORE touching the folder (otherwise it would be half erased). */
 async function assertUnlocked(dir) {
   if ( !fs.existsSync(dir) ) return;
   const db = new ClassicLevel(dir);

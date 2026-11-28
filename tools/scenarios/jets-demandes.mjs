@@ -1,11 +1,11 @@
 /**
- * Jets demandés par le MJ (SPEC §242, issue #18), sans joueur connecté : le MJ lance pour chacun, sans fenêtre.
- *  1. Test de groupe de Force, DD 10 caché, à trois : chaque ligne lancée, réussite ⇔ total ≥ 10, verdict 2024 (au moins la moitié).
- *  2. Sauvegarde de Dextérité DD 12, pas de groupe : le verdict est « tous réussissent ».
- *  3. Sans DD : ni réussite ni verdict.
- *  4. « Lancer pour lui » sur une ligne déjà lancée : refusé, le total ne bouge pas (un seul jet par ligne).
- *  5. Avantage + Désavantage demandés ensemble s'annulent ; le modificateur du MJ paraît en tuile.
- *  6. Le mode vient du système : Paladin empoisonné → Désavantage à son test.
+ * Rolls requested by the GM (SPEC §242, issue #18), with no player connected: the GM rolls for each, without a window.
+ *  1. Strength group check, hidden DC 10, three of them: each line rolled, success ⇔ total ≥ 10, 2024 verdict (at least half).
+ *  2. Dexterity save DC 12, no group: the verdict is "everyone succeeds".
+ *  3. Without a DC: neither success nor verdict.
+ *  4. "Roll for them" on an already rolled line: refused, the total does not move (one roll per line).
+ *  5. Advantage + Disadvantage requested together cancel out; the GM's modifier shows as a tile.
+ *  6. The mode comes from the system: poisoned Paladin → Disadvantage on their check.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -25,7 +25,7 @@ export default {
       && (e.success === ((dc === null) ? null : (e.total >= dc))));
     const totals = view => (view?.entries ?? []).map(e => `${e.name} ${e.total}${e.success === true ? "✓" : e.success === false ? "✗" : ""}`).join(", ");
 
-    // 1. Test de groupe, DD caché.
+    // 1. Group check, hidden DC.
     const group = await ctx.engine("groupRoll", { tokenIds, type: "check", key: "str", dc: 10, hideDc: true, group: true, label: "DAS test — group" });
     ctx.expect(group?.done && (group.entries.length === 3), `trois lignes, toutes lancées : ${totals(group)}`);
     ctx.expect(coherent(group, 10), `réussite ⇔ total ≥ 10 sur chaque ligne : ${totals(group)}`);
@@ -33,7 +33,7 @@ export default {
     ctx.expect((group.successes === won) && (group.success === (won >= 2)), `verdict du groupe : ${won} sur 3 → ${group.success}`);
     ctx.expect(group.request?.hideDc === true && group.request?.dc === 10, `le MJ voit le DD caché : ${JSON.stringify(group.request)}`);
 
-    // 2. Sauvegarde, chacun doit réussir.
+    // 2. Save, everyone must succeed.
     const save = await ctx.engine("groupRoll", { tokenIds, type: "save", key: "dex", dc: 12, label: "DAS test — save" });
     ctx.expect(save?.done && coherent(save, 12), `sauvegardes jugées contre 12 : ${totals(save)}`);
     ctx.expect(save.success === save.entries.every(e => e.success), `verdict « tous » : ${save.success}`);
@@ -49,7 +49,7 @@ export default {
     const after = await ctx.engine("groupRollState", { id: group.id });
     ctx.expect((forced === false) && (after.entries.map(e => e.total).join(",") === before), `« Lancer pour lui » refusé sur une ligne lancée : ${forced}, ${before} → ${after.entries.map(e => e.total).join(",")}`);
 
-    // 5. Avantage + Désavantage, modificateur.
+    // 5. Advantage + Disadvantage, modifier.
     const both = await ctx.engine("groupRoll", { tokenIds: [tokens[0].id], type: "check", key: "con", advantage: true, disadvantage: true, bonus: 3, label: "DAS test — modes" });
     ctx.expect(both?.done && !both.request?.advantage && !both.request?.disadvantage && (both.request?.bonus === 3),
       `Avantage et Désavantage s'annulent : ${JSON.stringify(both?.request)}`);
@@ -57,7 +57,7 @@ export default {
     ctx.expect((tiles ?? []).some(t => (t.kind === "request") && (t.value === "+3")), `tuile du modificateur : ${JSON.stringify(tiles)}`);
     ctx.expect((tiles ?? []).some(t => t.kind === "ability"), "tuile de la caractéristique");
 
-    // 6. Mode du système.
+    // 6. System mode.
     const paladin = tokens[2];
     const plain = await ctx.engine("groupRollMode", { tokenId: paladin.id, type: "check", key: "str" });
     await ctx.call("set-status", { tokenId: paladin.id, statusId: "poisoned", active: true });

@@ -1,10 +1,10 @@
 /**
- * §225, lot 4 : le retour du plan Éthéré et les traits du Bestiaire. Arène.
- *  1. Le Guerrier Éthéré se tient sur la case du Zombi ; l'état retiré, il est repoussé sur une case libre voisine et subit 10 dégâts de
- *     force (2 × 5 ft).
- *  2. Le Guerrier Éthéré monté à 15 ft ; l'état retiré, il ne flotte plus : il tombe au sol.
- *  3. Saut éthéré (trait de l'araignée de phase, prêté au Zombi) : il passe dans l'Éthéré, puis en revient.
- * Remet positions, PV, états, items prêtés.
+ * §225, batch 4: the return from the Ethereal plane and the Bestiary traits. Arena.
+ *  1. The Ethereal Fighter stands on the Zombie's cell; the condition removed, he is pushed to a free neighboring cell and takes
+ *     10 force damage (2 × 5 ft).
+ *  2. The Ethereal Fighter raised to 15 ft; the condition removed, he no longer floats: he falls to the ground.
+ *  3. Ethereal Jaunt (Phase Spider trait, lent to the Zombie): it goes into the Ethereal, then comes back.
+ * Restores positions, HP, conditions, lent items.
  */
 const MM = "Compendium.dnd-monster-manual.features.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -32,14 +32,14 @@ export default {
       await ctx.setHp(zombi, hp0.zombi);
     });
 
-    // 1. Retour sur une case occupée.
+    // 1. Return onto an occupied cell.
     await ethereal(fighter, true);
     await pause(1200);
     await ctx.call("move-token", { tokenId: fighter.id, x: home.zombi.x, y: home.zombi.y });
     await pause(800);
     const on = await ctx.position(fighter);
     ctx.expect((on.x === home.zombi.x) && (on.y === home.zombi.y), `Éthéré, le Guerrier se tient sur la case du Zombi (${on.x}, ${on.y})`);
-    // PV au maximum calculé : laissé bas dans le monde (8 PV le 2026-10-26), le Guerrier ne pouvait pas perdre les 10 attendus.
+    // HP at the computed maximum: left low in the world (8 HP on 2026-10-26), the Fighter could not lose the expected 10.
     await ctx.setHp(fighter, (await ctx.engine("stats", { tokenId: fighter.id }))?.hp?.max ?? hp0.fighter);
     const hpBefore = await ctx.hp(fighter);
     await ethereal(fighter, false);
@@ -59,13 +59,14 @@ export default {
     const up = await ctx.engine("rawMove", { tokenId: fighter.id, elevation: 15 });
     ctx.expect(up.after.elevation === 15, `Éthéré, le Guerrier monte à 15 ft (${up.after.elevation} ft)`);
     await ethereal(fighter, false);
-    // Fenêtre de Foundry en arrière-plan, la montée n'a pas fini son animation : le moteur l'attend 5 s avant de tomber lui-même (§237).
+    // Foundry window in the background, the rise has not finished its animation: the engine waits 5 s for it before falling by
+    // itself (§237).
     let landed = await ctx.position(fighter);
     for ( let i = 0; (i < 12) && (landed.elevation !== 0); i++ ) { await pause(1000); landed = await ctx.position(fighter); }
     ctx.expect(landed.elevation === 0, `revenu en l'air, il tombe au sol (${landed.elevation} ft)`);
     await ctx.setHp(fighter, hp0.fighter);
 
-    // 3. Saut éthéré, prêté au Zombi.
+    // 3. Ethereal Jaunt, lent to the Zombie.
     const jaunt = await ctx.ensureItem(zombi, MM + "mmEtherealJaunt0");
     const statuses = async t => (await ctx.effects(t)).flatMap(e => e.statuses ?? []);
     const use = () => ctx.use({ tokenId: zombi.id, itemId: jaunt, targetTokenIds: [], consume: false });

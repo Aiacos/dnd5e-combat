@@ -1,6 +1,6 @@
 /**
- * Le menu contextuel du moteur (clic droit) : déplacement, saut, attaques, portes, escaliers, soi-même, familier, suivre, fins
- * d'effets. Extrait d'ui/pointer.mjs.
+ * The engine's context menu (right click): movement, jump, attacks, doors, stairs, oneself, familiar, follow, effect
+ * endings. Extracted from ui/pointer.mjs.
  */
 
 import { isObjectToken } from "../adapter/bodies.mjs";
@@ -60,11 +60,11 @@ import { commandActivitiesFor, mountEntry } from "../runtime/mount.mjs";
 
 export let menu = null;
 /**
- * §16.44 : le menu d'un token neutre ou amical cache ses actions offensives ; **une fois le menu ouvert**, Maj tenue les montre
- * (relâchée, elles se cachent). `{ point, build(aggressive), hidden, shown }`, ou null.
+ * §16.44: the menu of a neutral or friendly token hides its offensive actions; **once the menu is open**, holding Shift shows
+ * them (released, they hide). `{ point, build(aggressive), hidden, shown }`, or null.
  */
 let menuSource = null;
-/** #33 : une attaque du menu est survolée — sa pastille (chance de toucher, abri) et sa ligne sont affichées. */
+/** #33: a menu attack is hovered — its badge (chance to hit, Cover) and its line are shown. */
 let menuPreview = false;
 export function closeMenu() {
   menu?.remove();
@@ -79,18 +79,18 @@ function endMenuPreview() {
   hideHitChance();
 }
 
-/** La ligne d'aide d'un menu dont les actions offensives sont cachées. */
+/** The help line of a menu whose offensive actions are hidden. */
 const shiftHint = () => ({ hint: true, icon: "fa-solid fa-keyboard", label: loc("Menu.MajOffensives") });
 
 export function openMenu(event, entries, source=null) {
   closeMenu();
   if ( !entries.length ) return;
-  clearPreview();   // #33 : la pastille et la ligne du survol du canevas laissent place à celles du menu
+  clearPreview();   // #33: the badge and line of the canvas hover give way to those of the menu
   renderMenu({ clientX: event.clientX, clientY: event.clientY }, entries);
   menuSource = source;
 }
 
-/** §411 : la raison pour laquelle une entrée d'attaque serait refusée (sans chercher de chemin : le survol le montre), ou null. */
+/** §411: the reason an attack entry would be refused (without looking for a path: the hover shows it), or null. */
 function entryRefusal(entry) {
   if ( !entry.preview ) return null;
   const { token, target, activity, mode } = entry.preview;
@@ -114,12 +114,12 @@ function renderMenu(point, entries) {
     button.type = "button";
     button.innerHTML = `<i class="${entry.icon}"></i> <span></span>`;
     button.querySelector("span").textContent = entry.label;
-    // §411 (issue #44, lot 4) : une attaque refusée (hors de portée, autre plan, pas un ennemi…) reste au menu, grisée, sa raison en
-    // infobulle — le clic ouvre la fenêtre de légalité, d'où l'on peut forcer.
+    // §411 (issue #44, batch 4): a refused attack (out of range, other plane, not an enemy…) stays in the menu, greyed out, its
+    // reason in the tooltip — the click opens the legality window, from which one can force.
     const refused = entryRefusal(entry);
     if ( refused ) { button.classList.add("refused"); button.title = refused; }
     button.addEventListener("click", event => { closeMenu(); exclusive(() => entry.run(event)); });
-    // #33 : survoler une attaque montre, sous le menu, la même pastille que le survol de la cible (et la ligne de visée).
+    // #33: hovering an attack shows, under the menu, the same badge as hovering the target (and the line of aim).
     if ( entry.preview ) {
       const { token, target, activity, mode } = entry.preview;
       button.addEventListener("pointerenter", () => {
@@ -139,8 +139,8 @@ function renderMenu(point, entries) {
 }
 
 /**
- * §16.44 : le menu d'une autre créature. Les actions offensives (attaques, mains nues, sorts d'attaque) n'y sont d'emblée que
- * contre une créature hostile ; sur une créature neutre ou amicale, Maj tenue une fois le menu ouvert les montre.
+ * §16.44: the menu of another creature. The offensive actions (attacks, unarmed strikes, attack spells) are only there from the
+ * start against a hostile creature; on a neutral or friendly creature, Shift held once the menu is open shows them.
  */
 export function openTokenMenu(event, me, target) {
   const hostile = hostileTo(me, target);
@@ -153,11 +153,11 @@ export function openTokenMenu(event, me, target) {
 }
 
 /**
- * §41.4 : les entrées du menu contextuel d'un token, pour une interface qui veut les offrir ailleurs que sur le canevas
- * (le portrait du Groupe de Darsh UI DnD5) : ce que le token en main (le seul contrôlé, à soi) peut faire de celui-là —
- * les mêmes que le clic droit, entrées des modules voisins comprises, sans les actions offensives sur une créature qui
- * n'est pas hostile. Vide sans token en main, ou sur une autre scène. `run(event)` joue l'entrée (une à la fois). §411 : `refused`, la
- * raison d'une attaque refusée (à griser ; le clic ouvre la fenêtre de légalité, d'où l'on peut forcer).
+ * §41.4: the entries of a token's context menu, for an interface that wants to offer them elsewhere than on the canvas
+ * (the Party portrait of Darsh UI DnD5): what the token in hand (the only one controlled, one's own) can do to that one —
+ * the same as the right click, entries of neighbouring modules included, without the offensive actions on a creature that
+ * is not hostile. Empty without a token in hand, or on another scene. `run(event)` plays the entry (one at a time). §411:
+ * `refused`, the reason for a refused attack (to grey out; the click opens the legality window, from which one can force).
  * @param {Token|TokenDocument} target
  * @returns {{icon: string, label: string, refused?: string, run: (event?: Event) => void}[]}
  */
@@ -167,7 +167,7 @@ export function menuEntriesFor(target) {
   if ( !me || !doc?.parent || (doc.parent !== me.parent) ) return [];
   const hostile = (doc !== me) && hostileTo(me, doc);
   const raw = (doc === me) ? selfEntries(me) : withNeighbourEntries(tokenEntries(me, doc, { aggressive: hostile }), me, doc, hostile);
-  // §411 : `refused` — la raison d'une attaque que la fenêtre de légalité dira (l'entrée reste cliquable : on peut forcer).
+  // §411: `refused` — the reason for an attack that the legality window will state (the entry stays clickable: one can force).
   return raw.filter(e => !e.hint).map(e => {
     const refused = entryRefusal(e);
     return { icon: e.icon, label: e.label, ...(refused ? { refused } : {}), run: event => exclusive(() => e.run(event)) };
@@ -175,9 +175,9 @@ export function menuEntriesFor(target) {
 }
 
 /**
- * Le menu d'une porte (`wall` : Wall, WallDocument ou id) et celui d'une case (`point` : `{ x, y }` de la scène) pour le token en
- * main, comme `menuEntriesFor` : les mêmes entrées que le clic droit, celles des voisins comprises (`doorMenu` §247, `groundMenu`
- * §243). Vides sans token en main ou sur une autre scène.
+ * The menu of a door (`wall`: Wall, WallDocument or id) and that of a cell (`point`: `{ x, y }` of the scene) for the token in
+ * hand, like `menuEntriesFor`: the same entries as the right click, those of the neighbours included (`doorMenu` §247,
+ * `groundMenu` §243). Empty without a token in hand or on another scene.
  */
 export function doorMenuFor(wall) {
   const me = actingToken();
@@ -186,8 +186,8 @@ export function doorMenuFor(wall) {
   return doorEntries(me, placeable).map(e => ({ icon: e.icon, label: e.label, run: event => exclusive(() => e.run(event)) }));
 }
 /**
- * Le menu d'une case (`point` : `{ x, y }` de la scène) pour le token en main : `[{ icon, label, run }]`, voisins compris ; vide sans token
- * en main.
+ * The menu of a cell (`point`: `{ x, y }` of the scene) for the token in hand: `[{ icon, label, run }]`, neighbours included;
+ * empty without a token in hand.
  */
 export function groundMenuFor(point) {
   const me = actingToken();
@@ -196,36 +196,36 @@ export function groundMenuFor(point) {
 }
 
 /**
- * §39.4 : les modules voisins ajoutent leurs entrées au menu d'un token (Darsh Loot : « Échanger » sur un autre PJ) par le
- * hook `dnd5e-combat.tokenMenu` — `(entries, { token, target, aggressive })`, chaque entrée `{ icon, label, run(event) }`
- * poussée dans `entries`. Le moteur n'en connaît aucun ; sans inscrit, le menu est le sien. Le hook peut partir plusieurs fois
- * pour un même clic droit (le menu se construit, puis se reconstruit avec Maj, et `api.ui` lit ses entrées) : un écouteur ne fait
- * qu'ajouter des entrées, sans autre effet — l'action va dans `run`.
+ * §39.4: neighbouring modules add their entries to a token's menu (Darsh Loot: "Trade" on another PC) through the
+ * hook `dnd5e-combat.tokenMenu` — `(entries, { token, target, aggressive })`, each entry `{ icon, label, run(event) }`
+ * pushed into `entries`. The engine knows none of them; with none registered, the menu is its own. The hook may fire several
+ * times for one right click (the menu is built, then rebuilt with Shift, and `api.ui` reads its entries): a listener only
+ * adds entries, with no other effect — the action goes in `run`.
  */
 function withNeighbourEntries(entries, token, target, aggressive) {
-  // §39.4 : sur le client qui construit le menu d'un autre token (clic droit, `api.ui.tokenMenu`) :
-  // `(entries, { token, target, aggressive })` — pousser `{ icon, label, run(event) }` dans `entries` ; rien d'autre (le hook part
-  // plusieurs fois par clic droit).
+  // §39.4: on the client that builds another token's menu (right click, `api.ui.tokenMenu`):
+  // `(entries, { token, target, aggressive })` — push `{ icon, label, run(event) }` into `entries`; nothing else (the hook fires
+  // several times per right click).
   Hooks.callAll(`${MODULE_ID}.tokenMenu`, entries, { token, target, aggressive });
   return entries.filter(e => e && (typeof e.run === "function") && e.label);
 }
 
-/** Maj enfoncée ou relâchée, menu ouvert : les actions offensives paraissent ou se cachent. */
+/** Shift pressed or released, menu open: the offensive actions appear or hide. */
 export function onMenuShift(event) {
   if ( (event.key !== "Shift") || !menu || !menuSource?.hidden ) return;
   const shown = event.type === "keydown";
   if ( shown === menuSource.shown ) return;
   const source = menuSource;
   menu.remove();
-  endMenuPreview();   // l'entrée survolée disparaît avec l'ancien menu
+  endMenuPreview();   // the hovered entry disappears with the old menu
   renderMenu(source.point, shown ? source.build(true) : [...source.build(false), shiftHint()]);
   source.shown = shown;
   menuSource = source;
 }
 
 /**
- * §18.24 : la porte sous la souris — le cœur note dans `canvas.walls.hover` le mur dont on survole l'icône de porte
- * (door-control.mjs, `_onMouseOver`, seulement pour qui a le droit « WALL_DOORS »).
+ * §18.24: the door under the mouse — the core notes in `canvas.walls.hover` the wall whose door icon is hovered
+ * (door-control.mjs, `_onMouseOver`, only for whoever has the "WALL_DOORS" permission).
  */
 export function hoveredDoor() {
   const wall = canvas.walls?.hover;
@@ -239,23 +239,23 @@ const LOCK_ENTRIES = {
 };
 
 /**
- * Ouvrir / fermer ; devant une porte verrouillée, la clé, crocheter et forcer (§244) ; pour le MJ, verrouiller / déverrouiller, et
- * remettre les essais à zéro.
+ * Open / close; in front of a locked door, the key, pick the lock and force (§244); for the GM, lock / unlock, and
+ * reset the attempts.
  */
 export function doorEntries(token, wall) {
   const state = doorState(wall);
   const entries = [];
   if ( state === "open" ) entries.push({ icon: "fa-solid fa-door-closed", label: loc("Menu.Fermer"), run: () => setDoorOpen(token, wall, false) });
   else entries.push({ icon: "fa-solid fa-door-open", label: loc("Menu.Ouvrir"), run: () => setDoorOpen(token, wall, true) });
-  // §244 : la clé si on la porte, crocheter, forcer (sauf porte qui ne le peut pas) ; un essai déjà fait le dit.
+  // §244: the key if it is carried, pick the lock, force (except a door that cannot be); an attempt already made says so.
   if ( state === "locked" ) for ( const { method, spent } of lockEntriesFor(token, wall) ) {
     const entry = LOCK_ENTRIES[method];
     const label = loc(entry.label) + (spent ? ` — ${loc("Serrure.Essaye")}` : "");
     entries.push({ icon: entry.icon, label, run: event => entry.run(token, wall, { event }) });
   }
-  // §247 : sur le client qui construit le menu d'une porte (clic droit, `api.ui.doorMenu`), hook `dnd5e-combat.doorMenu` :
-  // `(entries, { token, wall })` — `wall` le WallDocument ; pousser `{ icon, label, run(event) }` (une porte piégée : « Désamorcer le
-  // piège »), placées après celles du moteur pour le joueur ; rien d'autre (le hook peut partir plusieurs fois).
+  // §247: on the client that builds a door's menu (right click, `api.ui.doorMenu`), hook `dnd5e-combat.doorMenu`:
+  // `(entries, { token, wall })` — `wall` the WallDocument; push `{ icon, label, run(event) }` (a trapped door: "Disarm the
+  // trap"), placed after those of the engine for the player; nothing else (the hook may fire several times).
   entries.push(...neighbourEntries("doorMenu", { token, wall: wall.document }));
   if ( game.user.isGM && (state !== "open") ) {
     const locked = state === "locked";
@@ -267,7 +267,7 @@ export function doorEntries(token, wall) {
 }
 
 /**
- * §41.2 : sur un escalier, une échelle ou un ascenseur — une entrée par niveau où il mène (« Monter », « Descendre »).
+ * §41.2: on a staircase, ladder or elevator — one entry per level it leads to ("Go up", "Go down").
  */
 const STAIRS_ICONS = { up: "fa-solid fa-arrow-up-right-dots", down: "fa-solid fa-arrow-down-wide-short", level: "fa-solid fa-right-left" };
 const STAIRS_LABELS = { up: "Menu.Monter", down: "Menu.Descendre", level: "Menu.Rejoindre" };
@@ -277,36 +277,36 @@ export function stairsEntries(token, point) {
 }
 
 /**
- * §208 : l'entrée « Sauter en hauteur ici » (monter d'un saut sur une surface plus haute : estrade, rebord) — en bêta, derrière un
- * réglage de monde désactivé par défaut (décision de l'utilisateur, 2026-10-21 : peu utile pour l'instant, elle encombrait le menu).
+ * §208: the entry "Jump up here" (climbing by a jump onto a higher surface: dais, ledge) — in beta, behind a
+ * world setting off by default (user's decision, 2026-10-21: of little use for now, it cluttered the menu).
  */
 export const HIGH_JUMP_MENU_SETTING = "highJumpMenu";
 const highJumpOffered = () => { try { return game.settings.get(MODULE_ID, HIGH_JUMP_MENU_SETTING) === true; } catch { return false; } };
 
 /**
- * §210 : l'interrupteur des coups non létaux dans le menu contextuel de son token — masqué par défaut (décision de l'utilisateur,
- * 2026-10-21) ; il reste au bouton poing de la barre de Combat UI. Réglage de monde.
+ * §210: the non-lethal blows switch in its token's context menu — hidden by default (user's decision,
+ * 2026-10-21); it stays on the fist button of the Combat UI bar. World setting.
  */
 export const NONLETHAL_MENU_SETTING = "nonLethalMenu";
 const nonLethalOffered = () => { try { return game.settings.get(MODULE_ID, NONLETHAL_MENU_SETTING) === true; } catch { return false; } };
 
 /**
- * §243 : les modules voisins ajoutent leurs entrées au menu d'une case (un coffre posé au sol : « Fouiller ») par le hook
- * `dnd5e-combat.groundMenu` — `(entries, { token, point })`, `point` le point de la scène cliqué, chaque entrée `{ icon, label,
- * run(event) }` poussée dans `entries`. Elles passent **avant** celles du moteur (ce qui est sur la case d'abord, puis s'y déplacer).
- * Comme `tokenMenu`, le hook peut partir plusieurs fois pour un même clic droit : un écouteur ne fait qu'ajouter des entrées.
+ * §243: neighbouring modules add their entries to a cell's menu (a chest lying on the ground: "Search") through the hook
+ * `dnd5e-combat.groundMenu` — `(entries, { token, point })`, `point` the clicked scene point, each entry `{ icon, label,
+ * run(event) }` pushed into `entries`. They go **before** those of the engine (what is on the cell first, then moving there).
+ * Like `tokenMenu`, the hook may fire several times for one right click: a listener only adds entries.
  */
 function neighbourGroundEntries(token, point) {
-  // §243 : sur le client qui construit le menu d'une case (clic droit, `api.ui.groundMenu`) :
-  // `(entries, { token, point })` — pousser `{ icon, label, run(event) }`, placées avant celles du moteur ; rien d'autre (le hook part
-  // plusieurs fois par clic droit).
+  // §243: on the client that builds a cell's menu (right click, `api.ui.groundMenu`):
+  // `(entries, { token, point })` — push `{ icon, label, run(event) }`, placed before those of the engine; nothing else (the
+  // hook fires several times per right click).
   return neighbourEntries("groundMenu", { token, point });
 }
 
 /**
- * Les entrées qu'ajoutent les modules voisins par le hook `dnd5e-combat.<name>` — `(entries, context)`, pousser `{ icon, label,
- * run(event) }` ; une entrée sans libellé ou sans `run` est ignorée. `groundMenu` (§243) et `doorMenu` (§247 : `{ token, wall }`, le
- * WallDocument de la porte).
+ * The entries that neighbouring modules add through the hook `dnd5e-combat.<name>` — `(entries, context)`, push `{ icon, label,
+ * run(event) }`; an entry without a label or without `run` is ignored. `groundMenu` (§243) and `doorMenu` (§247: `{ token,
+ * wall }`, the door's WallDocument).
  */
 function neighbourEntries(name, context) {
   const entries = [];
@@ -327,25 +327,25 @@ export function groundEntries(token, point) {
 }
 
 /**
- * Sur son propre token : S'échapper, s'il est agrippé (toute créature, PNJ compris) ; Renvoyer, si c'est un objet piloté
- * qui met fin au sort (§16.15 : un joueur n'a pas le droit de supprimer un token, même le sien).
+ * On one's own token: Escape, if grappled (any creature, NPCs included); Dismiss, if it is a controlled object
+ * that ends the spell (§16.15: a player has no right to delete a token, not even their own).
  */
 const grappledSelf = token => (token?.actor?.statuses?.has("grappled") === true) || !!swallowerOf(token)?.rule.escape   // §18.21
-  || (escapableRestraintsOf(token?.actor).length > 0)   // §16.54 : entravé, avec un test pour se libérer
-  || (ownEndingsOf(token?.actor).length > 0);   // §43.2 : un effet auquel son action met fin (Danse irrésistible d'Otto)
-/** §43.2 : le libellé de « S'échapper » quand il n'y a ni empoignade ni entrave — « Mettre fin : Forme gazeuse ». */
+  || (escapableRestraintsOf(token?.actor).length > 0)   // §16.54: restrained, with a check to break free
+  || (ownEndingsOf(token?.actor).length > 0);   // §43.2: an effect that its action ends (Otto's Irresistible Dance)
+/** §43.2: the label of "Escape" when there is neither grapple nor restraint — "End: Gaseous Form". */
 function escapeLabel(token) {
   const actor = token?.actor;
   if ( actor?.statuses?.has("grappled") || swallowerOf(token)?.rule.escape || escapableRestraintsOf(actor).length ) return loc("Menu.Echapper");
   const endings = ownEndingsOf(actor);
   return (endings.length === 1) ? loc("Menu.MettreFin", { item: endings[0].item.name }) : loc("Menu.Echapper");
 }
-/** §102 : le menu de son propre token s'ouvre dès qu'il a une entrée — du moteur ou d'un module voisin. */
+/** §102: the menu of one's own token opens as soon as it has an entry — from the engine or a neighbouring module. */
 export const hasSelfMenu = token => selfEntries(token).length > 0;
 export function selfEntries(token) {
   const entries = [];
   if ( canStandUp(token) ) entries.push({ icon: "fa-solid fa-person-arrow-up-from-line", label: loc("Menu.SeRelever"), run: () => standUp(token) });
-  // §285 : entretenir un sort par l'action Magie (Couronne du dément).
+  // §285: sustain a spell with the Magic action (Crown of Madness).
   for ( const { effect, item } of token.isOwner ? upkeepsOf(token.actor) : [] ) {
     if ( canMaintain(token, effect) ) entries.push({ icon: "fa-solid fa-crown", label: loc("Controle.Maintenir", { item: item.name }), run: () => maintain(token, effect, item) });
   }
@@ -353,23 +353,23 @@ export function selfEntries(token) {
   // §16.39 : quitter la Forme sauvage (action Bonus).
   const revert = revertActivityOf(token.actor);
   if ( revert ) entries.push({ icon: "fa-solid fa-paw", label: loc("Forme.Reprendre"), run: event => leaveForm(revert, event) });
-  // §498 : une forme prise pour un temps (`changesForm.revertAfter`) — le retour à la main, avant la fin de la durée ou quand elle
-  // n'est pas automatique (`auto: false`).
+  // §498: a form taken for a time (`changesForm.revertAfter`) — reverting by hand, before the end of the duration or when it
+  // is not automatic (`auto: false`).
   else if ( token.isOwner && formRevertOf(token) ) entries.push({ icon: "fa-solid fa-rotate-left", label: loc("Forme.Reprendre"), run: () => revertShape(token) });
-  // §16.15 : les commandes qui ne visent que l'objet (Main interposée).
+  // §16.15: the commands that only target the object (Interposing Hand).
   const pilot = pilotOf(token);
   for ( const activity of pilot ? commandActivities(pilot, { self: true }) : [] ) {
     entries.push({ icon: "fa-solid fa-hand", label: loc("Menu.Utiliser", { name: commandLabel(activity) }), run: event => useCommand(token, activity, event) });
   }
-  // §169 : retourner la face brûlante d'un Mur de feu qu'il a posé.
+  // §169: flip the burning side of a Wall of Fire it has placed.
   if ( token.isOwner ) for ( const wall of wallsOfCaster(token) ) {
     const item = fromUuidSync(wall.getFlag("dnd5e", "item") ?? "", { strict: false });
     entries.push({ icon: "fa-solid fa-fire", label: loc("MurFace.Retourner", { item: item?.name ?? wall.name }), run: () => flipWallSide(wall) });
   }
-  // §187 : ramasser des chausse-trapes, des billes répandues sur sa case ou au contact (hors combat).
+  // §187: pick up caltrops, ball bearings scattered on its cell or in contact (out of combat).
   entries.push(...pickUpEntries(token));
-  // §188 : allumer une flaque d'huile, une toile, au contact, avec une flamme.
-  entries.push(...burningEntries(token));   // §212 : éteindre ses flammes
+  // §188: light an oil puddle, a web, in contact, with a flame.
+  entries.push(...burningEntries(token));   // §212: put out one's flames
   entries.push(...igniteEntries(token));
   // §192 : grimper au mur qu'on touche ; en escalade, se laisser tomber.
   entries.push(...climbEntries(token));
@@ -377,17 +377,17 @@ export function selfEntries(token) {
   entries.push(...flightEntries(token));
   // §537 : the standing mastery of each weapon that offers a choice (Tactical Master).
   entries.push(...standingMasteryEntries(token));
-  // §210 : coups non létaux (comme l'interrupteur de BG3) — activer ou couper, si le réglage de monde l'affiche dans ce menu.
+  // §210: non-lethal blows (like BG3's switch) — turn on or off, if the world setting shows it in this menu.
   if ( token.isOwner && token.actor && nonLethalOffered() ) {
     const on = isNonLethal(token.actor);
     entries.push({ icon: on ? "fa-solid fa-hand-fist" : "fa-regular fa-hand-fist", label: loc(on ? "Menu.NonLetalCouper" : "Menu.NonLetalActiver"),
       run: () => setNonLethal(token.actor, !on).then(v => notice(token, loc(v ? "Assomme.Actif" : "Assomme.Inactif"))) });
   }
-  // §38.2 : Troc du filou — depuis l'illusion ou depuis son lanceur.
+  // §38.2: "Trickster's Barter" — from the illusion or from its caster.
   const swap = transposeOf(token);
   if ( swap ) entries.push({ icon: "fa-solid fa-arrows-rotate", label: loc("Menu.Echanger", { name: (swap.illusion === token ? swap.caster : swap.illusion).name }), run: () => transpose(token) });
   if ( canDismiss(token) ) entries.push({ icon: "fa-solid fa-xmark", label: loc("Menu.Renvoyer", { name: token.name }), run: () => dismissPilot(token) });
-  // §107 : le familier part dans sa poche dimensionnelle (depuis son token) ; son maître l'en rappelle (depuis le sien).
+  // §107: the familiar goes into its pocket dimension (from its token); its master recalls it from there (from theirs).
   entries.push(...familiarEntries(token, token));
   // §490 (B08) : descendre de sa monture.
   entries.push(...mountEntries(token, token));
@@ -395,16 +395,16 @@ export function selfEntries(token) {
   const leader = leaderOf(token);
   if ( leader ) entries.push({ icon: "fa-solid fa-person-walking-arrow-right", label: loc("Menu.NePlusSuivre", { name: leader.name }), run: () => unfollow(token) });
   pushGroupRoll(entries, token);   // §242 : MJ
-  // §102 : les modules voisins ajoutent aussi leurs entrées sur son propre token (hook `tokenMenu`, `target === token`).
+  // §102: neighbouring modules also add their entries on one's own token (hook `tokenMenu`, `target === token`).
   const all = withNeighbourEntries(entries, token, token, false);
-  // Le menu remplace le HUD du cœur au clic droit : son propriétaire (pas seulement le MJ) le retrouve par cette entrée.
+  // The menu replaces the core's HUD on right click: its owner (not only the GM) finds it again through this entry.
   if ( all.length && token.isOwner ) all.push({ icon: "fa-solid fa-gear", label: loc("Menu.Hud"), run: () => canvas.hud.token.bind(token.object) });
   return all;
 }
 
 /**
- * §107 : sur un familier, « Renvoyer dans sa poche dimensionnelle » (pour qui possède son maître) ; sur le token d'un maître
- * dont la poche garde un familier, « Rappeler X » (son propre token seulement : la case se choisit autour de lui).
+ * §107: on a familiar, "Dismiss to its pocket dimension" (for whoever owns its master); on the token of a master
+ * whose pocket keeps a familiar, "Recall X" (their own token only: the cell is chosen around them).
  */
 function familiarEntries(token, target) {
   const entries = [];
@@ -418,7 +418,7 @@ function familiarEntries(token, target) {
 }
 
 /**
- * §490 (B08) : monter sur cette créature (ou en descendre), et l'ordre à un compagnon — le geste de son maître, `commands`.
+ * §490 (B08): mount this creature (or dismount), and the order to a companion — its master's gesture, `commands`.
  */
 function mountEntries(token, target) {
   const entries = [];
@@ -434,12 +434,12 @@ function mountEntries(token, target) {
 }
 
 /**
- * §41.3 : suivre cette créature, ou — si elle est à soi (familier, invocation, autre personnage) — lui dire de suivre.
- * Rien sur une créature hostile.
+ * §41.3: follow this creature, or — if it is one's own (familiar, summon, other character) — tell it to follow.
+ * Nothing on a hostile creature.
  */
 function followEntries(token, target) {
   const entries = [];
-  // §255 : on ne suit pas un objet (piège posé, arme spirituelle), et il ne suit personne.
+  // §255: one does not follow an object (placed trap, spiritual weapon), and it follows no one.
   if ( hostileTo(token, target) || isObjectToken(target) || isObjectToken(token) ) return entries;
   if ( leaderOf(token) === target ) entries.push({ icon: "fa-solid fa-person-walking-arrow-right", label: loc("Menu.NePlusSuivre", { name: target.name }), run: () => unfollow(token) });
   else if ( canFollow(token, target) ) entries.push({ icon: "fa-solid fa-person-walking-arrow-right", label: loc("Menu.Suivre", { name: target.name }), run: () => follow(token, target) });
@@ -451,8 +451,8 @@ function followEntries(token, target) {
 }
 
 /**
- * §43.2 : mettre fin, par son action, à un effet que porte une autre créature (contenu `actionEnds`, `by: "other"`) —
- * secouer un dormeur (Sommeil, Motif hypnotique), libérer par un test (Frappe piégeuse). Le token vient au contact d'abord.
+ * §43.2: end, by one's action, an effect that another creature bears (content `actionEnds`, `by: "other"`) —
+ * shake a sleeper (Sleep, Hypnotic Pattern), free by a check (Ensnaring Strike). The token comes into contact first.
  */
 function endingEntries(token, target) {
   return endingsOn(target).map(ending => ({
@@ -463,8 +463,8 @@ function endingEntries(token, target) {
 }
 
 /**
- * Issue #31 : « Faire boire » chaque potion de soins de sa fiche à une créature non hostile au contact (règle 2024 : boire ou faire
- * boire une potion, action Bonus), MJ et joueurs. Une entrée par potion (même nom : une seule).
+ * Issue #31: "Give a drink" of each healing potion on its sheet to a non-hostile creature in contact (2024 rule: drinking or
+ * giving a potion to drink, Bonus Action), GM and players. One entry per potion (same name: only one).
  */
 function potionEntries(token, target) {
   if ( !token.isOwner || !target.actor || (target === token) || hostileTo(token, target) ) return [];
@@ -483,9 +483,9 @@ function potionEntries(token, target) {
 
 function tokenEntries(token, target, { aggressive=true }={}) {
   const entries = [];
-  // §16.15 : un objet piloté propose les activités de ses commandes (attaque de l'Arme spirituelle, effets de la Main).
+  // §16.15: a controlled object offers the activities of its commands (Spiritual Weapon's attack, the Hand's effects).
   const pilot = pilotOf(token);
-  // Des dégâts sans jet (« Écraser » de la Main agrippante) ne valent que contre la créature que l'objet agrippe.
+  // Damage without a roll (Grasping Hand's "Crush") only applies against the creature that the object grapples.
   const heldByPilot = pilot && grappleEffectsOf(target.actor).some(e => grapplerOf(e)?.uuid === token.actor?.uuid);
   for ( const activity of pilot ? commandActivities(pilot) : [] ) {
     if ( (activity.type === "damage") && !heldByPilot ) continue;
@@ -499,14 +499,14 @@ function tokenEntries(token, target, { aggressive=true }={}) {
     entries.push({ icon: "fa-solid fa-eye", label: loc("Menu.Observer"), run: () => observe(target) });
     return entries;
   }
-  // §210 : premiers soins à une créature assommée au contact (Médecine DD 10), amie ou ennemie.
+  // §210: first aid to a creature knocked out in contact (Medicine DC 10), friend or enemy.
   if ( isKnockedOut(target.actor) && areAdjacent(token, target, readUnitFactors()) ) {
     entries.push({ icon: "fa-solid fa-kit-medical", label: loc("Menu.PremiersSoins", { name: target.name }), run: () => firstAid(token, target) });
   }
   entries.push(...potionEntries(token, target));   // issue #31 : faire boire une potion de soins
-  // §16.44 : sur une créature neutre ou amicale, rien d'offensif (Maj, menu ouvert, pour le montrer).
+  // §16.44: on a neutral or friendly creature, nothing offensive (Shift, menu open, to show it).
   if ( !aggressive ) {
-    // Relâcher n'a rien d'offensif : il reste sous la main, même sur une créature amicale.
+    // Releasing is not offensive: it stays at hand, even on a friendly creature.
     if ( holdsOf(token, target).length ) entries.push({ icon: "fa-solid fa-hand-holding", label: loc("Menu.Relacher"), run: () => releaseGrapple(token, target) });
     entries.push(...endingEntries(token, target));
     entries.push(...followEntries(token, target));
@@ -521,7 +521,7 @@ function tokenEntries(token, target, { aggressive=true }={}) {
     entries.push({ icon: melee ? "fa-solid fa-sword" : "fa-solid fa-bow-arrow",
       label: loc("Menu.Attaquer", { name: activity.item.name }), run: event => engageWith(token, target, activity, { event }),
       preview: { token, target, activity } });
-    // §15.2 : une arme Légère offre le mode « main secondaire » de dnd5e (action Bonus, ou Coup double).
+    // §15.2: a Light weapon offers dnd5e's "off hand" mode (Bonus Action, or Nick).
     if ( activity.item.system.attackModes?.some(m => m.value === "offhand") ) {
       entries.push({ icon: "fa-solid fa-hand-back-fist",
         label: loc("Menu.MainSecondaire", { name: activity.item.name }), run: event => engageWith(token, target, activity, { mode: "offhand", event }),
@@ -531,8 +531,8 @@ function tokenEntries(token, target, { aggressive=true }={}) {
       entries.push({ icon: "fa-solid fa-hand-point-right",
         label: loc("Menu.Lancer", { name: activity.item.name }), run: event => engageWith(token, target, activity, { mode: "thrown", event }),
         preview: { token, target, activity, mode: "thrown" } });
-      // §240 (issue #13) : une arme Légère et de Lancer offre aussi le lancer de la main secondaire (`thrown-offhand` de dnd5e,
-      // weapon.mjs:204) — même coût que la main secondaire (action Bonus, ou Coup double).
+      // §240 (issue #13): a Light and Thrown weapon also offers the off-hand throw (dnd5e's `thrown-offhand`,
+      // weapon.mjs:204) — same cost as the off hand (Bonus Action, or Nick).
       if ( activity.item.system.attackModes?.some(m => m.value === "thrown-offhand") ) {
         entries.push({ icon: "fa-solid fa-hand-point-right",
           label: loc("Menu.LancerMainSecondaire", { name: activity.item.name }),
@@ -541,7 +541,7 @@ function tokenEntries(token, target, { aggressive=true }={}) {
       }
     }
   }
-  // §16.43 : l'action suivante d'un lien (Trait ensorcelé : 1d12, action Bonus), sur la créature liée.
+  // §16.43: the next action of a link (Witch Bolt: 1d12, Bonus Action), on the linked creature.
   for ( const item of tetherItems(token.actor) ) {
     const activity = item.system.activities?.get(tetherRuleOf(item)?.activity ?? "");
     if ( activity && (tetheredToken(item) === target) ) {
@@ -549,19 +549,19 @@ function tokenEntries(token, target, { aggressive=true }={}) {
         preview: { token, target, activity } });
     }
   }
-  // §16.41 : une arme de sort invoquée (Lame de feu), tant que sa trace est là.
+  // §16.41: a weapon summoned by a spell (Flame Blade), as long as its trace is there.
   for ( const activity of traceAttacks(token.actor) ) {
     entries.push({ icon: "fa-solid fa-fire", label: loc("Menu.Attaquer", { name: activity.item.name }), run: event => engageWith(token, target, activity, { event }),
       preview: { token, target, activity } });
   }
-  // §15.2 : l'attaque à mains nues et sa Lutte / Bousculade (la nôtre, ou celle d'une classe), sur une autre créature.
-  // §16.44 : un seul bouton, qui ouvre le choix (attaque à mains nues, Lutte, Bousculade : à terre, Bousculade : repoussé).
+  // §15.2: the unarmed strike and its Grapple / Shove (ours, or a class's), on another creature.
+  // §16.44: a single button, which opens the choice (unarmed strike, Grapple, Shove: prone, Shove: pushed back).
   const unarmed = unarmedAttackOf(token.actor);
   const grapple = grappleShoveOf(token.actor);
   const bare = [];
   if ( unarmed ) bare.push({ icon: "fa-solid fa-hand-fist", label: loc("Menu.MainsNues"), run: event => engageWith(token, target, unarmed, { event }),
     preview: { token, target, activity: unarmed } });
-  // §18.23 : une créature qu'on agrippe déjà ne se ré-agrippe pas — la Lutte laisse place à « Relâcher ».
+  // §18.23: a creature one already grapples is not grappled again — the Grapple gives way to "Release".
   const holding = holdsOf(token, target).length > 0;
   if ( holding ) bare.push({ icon: "fa-solid fa-hand-holding", label: loc("Menu.Relacher"), run: () => releaseGrapple(token, target) });
   for ( const profile of grapple?.effects ?? [] ) {
@@ -573,9 +573,9 @@ function tokenEntries(token, target, { aggressive=true }={}) {
   }
   if ( bare.length === 1 ) entries.push(bare[0]);
   else if ( bare.length ) entries.push({ icon: "fa-solid fa-hand-fist", label: loc("Menu.MainsNuesChoix"), run: event => openMenu(event, bare) });
-  // §18.22 : Soutien (partie attaque), en combat, sur un ennemi — s'avancer jusqu'à lui s'il est atteignable ce tour-ci.
+  // §18.22: Help (attack part), in combat, on an enemy — move up to it if it is reachable this turn.
   const help = helpActivityOf(token.actor);
-  // §411 : sur une créature qui n'est pas un ennemi (Maj), Soutien reste offert, grisé — le clic dit pourquoi et peut forcer.
+  // §411: on a creature that is not an enemy (Shift), Help stays offered, greyed out — the click says why and can force.
   if ( help && inCombat() ) {
     entries.push({ icon: "fa-solid fa-handshake-angle", label: loc("Menu.Soutien"), run: event => engageWith(token, target, help, { event }),
       preview: { token, target, activity: help } });
@@ -591,28 +591,28 @@ function tokenEntries(token, target, { aggressive=true }={}) {
 }
 
 /**
- * §242 : MJ, sur une créature — « Demander un jet » (la fenêtre de demande, ce token et la sélection cochés). Dans le menu du moteur seulement
- * (retour de l'utilisateur, 2026-10-25 : pas dans le HUD du token) ; sur son propre token aussi, où l'entrée « HUD » le garde à portée.
+ * §242: GM, on a creature — "Request a roll" (the request window, this token and the selection ticked). In the engine's menu only
+ * (user feedback, 2026-10-25: not in the token HUD); on one's own token too, where the "HUD" entry keeps it within reach.
  */
 function pushGroupRoll(entries, target) {
-  // Issue #32 : MJ — pendant la pause d'un jet raté de 1 ou 2 de ce token : offrir le succès à un prix.
+  // Issue #32: GM — during the pause of a roll that this token failed by 1 or 2: offer success at a price.
   const atCost = atCostMenuEntry(target);
   if ( atCost ) entries.unshift(atCost);
   const entry = groupRollEntry(target);
   if ( entry ) entries.push(entry);
-  // §282 : MJ, sur un personnage joueur — donner ou retirer l'Inspiration héroïque.
+  // §282: GM, on a player character — give or remove Heroic Inspiration.
   const heroic = heroicEntry(target);
   if ( heroic ) entries.push(heroic);
-  // §289 : MJ — Seconde peau : le catalyseur du changement vécu.
+  // §289: GM — "Second Skin": the trigger of the lived change.
   const change = game.user.isGM ? catalystOf(target?.actor) : null;
   if ( change && !catalystArmed(target.actor) ) {
     entries.push({ icon: "fa-solid fa-paw-claws", label: loc("Catalyseur.Menu", { item: change.item.name }), run: () => armCatalyst(target.actor) });
   }
-  // §290 : MJ — fenêtres sans délai : forcer la réponse que le joueur de ce personnage tarde à donner.
+  // §290: GM — windows without delay: force the answer that this character's player is slow to give.
   for ( const wait of game.user.isGM ? waitsOf(target?.actor) : [] ) {
     entries.push({ icon: "fa-solid fa-forward", label: loc("Attente.Menu", { name: wait.userName, what: wait.label }), run: () => forceWait(wait.id) });
   }
-  // §380 : « Rapport de bug… » — le MJ sur toute créature, un joueur sur les siennes (le contexte de ce token est joint).
+  // §380: "Bug report…" — the GM on any creature, a player on their own (this token's context is attached).
   const bug = debugMenuEntry(target);
   if ( bug ) entries.push(bug);
 }

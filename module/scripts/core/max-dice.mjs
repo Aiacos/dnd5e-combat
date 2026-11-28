@@ -1,14 +1,14 @@
 /**
- * §233 : « ne lancez pas ces dés de soin ; retenez à la place la valeur maximale de chaque dé » (Retour à la vie du Domaine de la
- * Tombe, Guérison suprême, Lueur d'espoir). Les termes de dés d'une formule deviennent leur maximum, avant le jet : la carte montre la
- * valeur rendue. Pur.
+ * §233: "do not roll these healing dice; instead, use the maximum value of each die" (Grave Domain's Return to Life,
+ * Supreme Healing, Beacon of Hope). The dice terms of a formula become their maximum, before the roll: the card shows the
+ * value returned. Pure.
  */
 
 /**
- * Le nombre de dés qui comptent, modificateurs lus : `khN`, `klN`, `kN` n'en gardent que N (un seul sans nombre) ; `dhN`, `dlN`,
- * `dN` en retirent N. Les autres (`r1`, `min2`, `x`…) ne changent pas le nombre. Un nombre écrit en expression le reste.
- * @param {string} count      `4`, ou `(expression)`.
- * @param {string} modifiers  Les modificateurs du terme, collés (`r1kh3`).
+ * The number of dice that count, modifiers read: `khN`, `klN`, `kN` keep only N (just one without a number); `dhN`, `dlN`,
+ * `dN` remove N. The others (`r1`, `min2`, `x`…) do not change the number. A number written as an expression stays as it is.
+ * @param {string} count      `4`, or `(expression)`.
+ * @param {string} modifiers  The term's modifiers, stuck together (`r1kh3`).
  * @returns {string}
  */
 function keptDice(count, modifiers) {
@@ -25,9 +25,9 @@ function keptDice(count, modifiers) {
 }
 
 /**
- * Chaque terme de dés `NdF`, `dF` ou `(expression)dF` devient `(N*F)`, N étant le nombre de dés gardés (`4d6kh3` : trois) ; ses
- * autres modificateurs (`r1`…) tombent ; le reste de la formule (bonus, `@abilities.wis.mod`) ne bouge pas. Un mot qui contient
- * « d » suivi d'un chiffre (`dnd5e`) n'est pas un dé.
+ * Each dice term `NdF`, `dF` or `(expression)dF` becomes `(N*F)`, N being the number of dice kept (`4d6kh3`: three); its
+ * other modifiers (`r1`…) drop; the rest of the formula (bonus, `@abilities.wis.mod`) does not move. A word that contains
+ * "d" followed by a digit (`dnd5e`) is not a die.
  * @param {string} formula
  * @returns {string}
  */

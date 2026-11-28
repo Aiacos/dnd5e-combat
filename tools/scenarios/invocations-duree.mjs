@@ -1,8 +1,8 @@
 /**
- * §198 (issue #8) : une invocation sans concentration disparaît au bout de la durée de son sort. Le Magicien invoque la Main du
- * mage (1 minute) : une heure de fin est notée ; 30 secondes plus tard elle est là, 61 secondes plus tard elle est partie. Le
- * Paladin invoque sa monture (Appel de destrier, durée instantanée) : aucune heure de fin, elle reste.
- * Remet l'horloge du monde, retire les tokens invoqués et l'item prêté.
+ * §198 (issue #8): a summon without Concentration disappears at the end of its spell's duration. The Wizard summons Mage Hand
+ * (1 minute): an end time is noted; 30 seconds later it is there, 61 seconds later it is gone. The Paladin summons their mount
+ * (Find Steed, instantaneous duration): no end time, it stays.
+ * Restores the world clock, removes the summoned tokens and the lent item.
  */
 const SPELLS = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));

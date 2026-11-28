@@ -1,16 +1,17 @@
 /**
- * §418 : le réglage « Réactions » (`reactionPrompts`, cadre « Déroulement ») — à qui le moteur propose une réaction, vérifié sur
- * l'attaque d'opportunité, « Arène des refus » (`node tools/arene-refus.mjs`), en combat :
- *  - le Mannequin (créature du MJ) quitte l'allonge du Guerrier (personnage de joueur) : la fenêtre du Guerrier ;
- *  - le Guerrier quitte l'allonge du Mannequin : la fenêtre du Mannequin.
+ * §418: the "Reactions" setting (`reactionPrompts`, "Flow" frame) — to whom the engine offers a Reaction, checked on the
+ * Opportunity Attack, "Refusal Arena" (`node tools/arene-refus.mjs`), in combat:
+ *  - the Dummy (GM creature) leaves the Fighter's (player character) reach: the Fighter's window;
+ *  - the Fighter leaves the Dummy's reach: the Dummy's window.
  *
- *                      fenêtre du Guerrier (joueur)   fenêtre du Mannequin (MJ)
- *   `ask`              oui                            oui
- *   `players`          oui                            non
- *   `off`              non                            non
+ *                      Fighter window (player)        Dummy window (GM)
+ *   `ask`              yes                            yes
+ *   `players`          yes                            no
+ *   `off`              no                             no
  *
- * Personne ne réagit (« ne pas réagir ») : la Réaction reste. Le joueur n'étant pas connecté, sa fenêtre s'ouvre chez le MJ. Le réglage
- * « Action impossible » est coupé le temps du scénario : les déplacements hors de son tour partent sans fenêtre. Tout est remis.
+ * Nobody reacts ("do not react"): the Reaction stays. The player not being connected, their window opens on the GM's
+ * side. The "Impossible action" setting is turned off for the scenario: movements outside its turn go off without a window.
+ * Everything is restored.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -35,7 +36,7 @@ export default {
     ctx.restore(async () => { for ( const [key, value] of Object.entries(settings) ) await ctx.engine("setting", { key, value }); });
     await ctx.engine("setting", { key: "refusalMode", value: "off" });
 
-    // Le Mannequin de l'arène n'a aucun objet (tools/lib/arena.mjs, sans `keepItems`) : une arme le temps du scénario, pour qu'il menace.
+    // The arena's Dummy has no items (tools/lib/arena.mjs, without `keepItems`): a weapon for the scenario, so that it threatens.
     const club = await script(`const a = canvas.tokens.get(args.d).actor;
       const [item] = await a.createEmbeddedDocuments("Item", [{ name: "Gourdin d'essai", type: "weapon", img: "icons/svg/sword.svg",
         system: { type: { value: "simpleM" }, equipped: true, range: { reach: 5, units: "ft" },
@@ -49,14 +50,14 @@ export default {
     if ( !ctx.expect(owned.fighter && !owned.dummy, `le Guerrier appartient à un joueur, le Mannequin au MJ (${JSON.stringify(owned)})`) ) return;
     if ( !ctx.expect(owned.dummyAttack, "le Mannequin a une arme pour son attaque d'opportunité") ) return;
 
-    // Côte à côte, le Mannequin à l'est du Guerrier ; en combat.
+    // Side by side, the Dummy east of the Fighter; in combat.
     const side = { x: home.fighter.x + grid, y: home.fighter.y };
     await place(dummy, side.x, side.y);
     await pause(800);
     await ctx.startCombat([fighter, dummy]);
     await pause(1000);
 
-    /** La fenêtre de réaction de `name` (« Réaction — nom », un bouton « ne pas réagir ») ; refermée sur « ne pas réagir ». */
+    /** The Reaction window of `name` ("Reaction — name", a "do not react" button); closed on "do not react". */
     const reactionWindow = async (name, ms=5000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, waitMs: 800 }).catch(() => null);
@@ -68,8 +69,8 @@ export default {
     ctx.restore(async () => { for ( const t of [fighter, dummy] ) await reactionWindow(t.name, 300); });
 
     /**
-     * `mover` s'éloigne de trois cases comme par un clic, dans la première direction libre ; rend si la fenêtre de `reactor` s'est
-     * ouverte (null s'il n'a pas pu bouger) ; chacun revient à sa place.
+     * `mover` moves three cells away as by a click, in the first free direction; returns whether `reactor`'s window
+     * opened (null if it could not move); each goes back to its place.
      */
     const leave = async (mover, reactor, back) => {
       const from = await where(mover);

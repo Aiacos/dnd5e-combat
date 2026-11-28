@@ -1,13 +1,13 @@
 /**
- * §393 : les invocations qui visent, dans l'« Arène des invocations » (`node tools/arene-invocations.mjs` d'abord) — ce que le balayage
- * des invocations saute dans l'Arène des sorts, faute de cible :
- *  1. Doigt de mort, activité « Relever un zombi », sur le Cadavre (un roturier mort) : darsh-loot relève le corps (§118,
- *     `summonOnTargets`) — le token du Cadavre devient un zombi du Manuel des monstres.
- *  2. Animation des morts sur le Cadavre déjà visé : le moteur lance le sort sans viser (§388, `summon.untargeted`), mais une cible
- *     désignée avant reste celle que darsh-loot relève.
- *  3. Doigt de mort sur la Bête morte (un loup) : pas un humanoïde, darsh-loot ne la relève pas.
- * Sans darsh-loot actif, le scénario n'est pas applicable. Le Cadavre relevé est remis (token recréé, mort) ; les zombis, leurs acteurs
- * et le tas d'affaires du mort sont retirés.
+ * §393: summons that target, in the "Arène des invocations" (`node tools/arene-invocations.mjs` first) — what the summons
+ * sweep skips in the Arène des sorts, for lack of a target:
+ *  1. Finger of Death, "Raise a zombie" activity, on the Cadavre (a dead commoner): darsh-loot raises the body (§118,
+ *     `summonOnTargets`) — the Cadavre's token becomes a Monster Manual zombie.
+ *  2. Animate Dead on the already targeted Cadavre: the engine casts the spell without targeting (§388, `summon.untargeted`), but a
+ *     target designated beforehand remains the one that darsh-loot raises.
+ *  3. Finger of Death on the dead Beast (a wolf): not a Humanoid, darsh-loot does not raise it.
+ * Without darsh-loot active, the scenario is not applicable. The raised Cadavre is restored (token recreated, dead); the
+ * zombies, their actors and the dead creature's pile of belongings are removed.
  */
 const SPELLS = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -17,7 +17,7 @@ export default {
   scene: "Arène des invocations",
 
   async run(ctx) {
-    // darsh-loot actif : son réglage se lit (un module inactif n'en enregistre aucun).
+    // darsh-loot active: its setting can be read (an inactive module registers none).
     const lootActive = await ctx.call("get-setting", { namespace: "darsh-loot", key: "dropMode" }).then(() => true, () => false);
     if ( !lootActive ) { ctx.log("darsh-loot inactif : non applicable"); return; }
 
@@ -33,11 +33,12 @@ export default {
     const corpse0 = before.tokens.find(t => t.name === "Cadavre");
     if ( !ctx.expect(!!corpse0, "le Cadavre est sur la scène (sinon : node tools/arene-invocations.mjs)") ) return;
     const corpseActorId = corpse0.actorId;
-    // Les tokens déjà là avant chaque cas (la remise, elle, s'appuie sur `before`) : un zombi du cas précédent n'est pas un nouveau.
+    // The tokens already there before each case (the restoration relies on `before`): a zombie from the previous case
+    // is not a new one.
     let seen = new Set(before.tokens.map(t => t.id));
     const corpsePos = { x: corpse0.x, y: corpse0.y };
 
-    // La remise : les tokens et acteurs nés du test partent, le Cadavre revient mort à sa case.
+    // The restoration: the tokens and actors born from the test leave, the Cadavre comes back dead on its cell.
     ctx.restore(async () => {
       const keep = new Set(before.tokens.map(t => t.id));
       for ( const t of await listTokens() ) if ( !keep.has(t.id) ) await ctx.call("delete-scene-object", { sceneId, type: "Token", objectId: t.id }).catch(() => {});
@@ -51,7 +52,7 @@ export default {
       await ctx.call("set-status", { actorId: corpseActorId, statusId: "dead", active: true }).catch(() => {});
     });
 
-    // Une invocation visée, puis ce que la scène est devenue (jusqu'à 10 s).
+    // A targeted summon, then what the scene became (up to 10 s).
     const cast = async (source, targetName, slot) => {
       const itemId = await ctx.ensureItem(caster, SPELLS + source);
       const target = (await listTokens()).find(t => t.name === targetName);
@@ -64,7 +65,7 @@ export default {
           const actor = await ctx.call("get-actor", { actorId: t.actorId }).catch(() => null);
           if ( actor?.flags?.["darsh-loot"]?.raised ) raised = { token: t, from: actor.flags["darsh-loot"].raised.from };
         }
-        // Une fenêtre (forme, nombre) : sa réponse par défaut, comme un joueur pressé.
+        // A window (form, number): its default answer, like a hurried player.
         for ( const w of (await ctx.call("list-dialogs", { dialogsOnly: true })).windows ?? [] ) {
           const button = (w.buttons ?? []).find(b => b.default) ?? (w.buttons ?? [])[0];
           if ( button ) await ctx.call("answer-dialog", { id: w.id, button: button.action }).catch(() => {});
@@ -78,7 +79,7 @@ export default {
     ctx.expect(finger?.from === "Cadavre", `Doigt de mort : darsh-loot relève le Cadavre (${finger ? `${finger.token.name}` : "rien de relevé"})`);
     ctx.expect(!(await listTokens()).some(t => t.name === "Cadavre"), "Doigt de mort : le token du Cadavre a laissé place au zombi");
 
-    // Remis en place pour le cas suivant : la remise du scénario fait le même travail.
+    // Put back in place for the next case: the scenario's restoration does the same job.
     for ( const t of await listTokens() ) if ( !before.tokens.some(b => b.id === t.id) ) await ctx.call("delete-scene-object", { sceneId, type: "Token", objectId: t.id }).catch(() => {});
     if ( !(await listTokens()).some(t => t.name === "Cadavre") ) {
       await ctx.call("place-token", { sceneId, actorId: corpseActorId, x: corpsePos.x, y: corpsePos.y });
@@ -86,12 +87,12 @@ export default {
     }
     seen = new Set((await listTokens()).map(t => t.id));
 
-    // 2. Animation des morts sur le Cadavre visé d'avance.
+    // 2. Animate Dead on the Cadavre targeted in advance.
     const animate = await cast("phbsplAnimateDea", "Cadavre", "spell3");
     ctx.expect(animate?.from === "Cadavre", `Animation des morts : la cible désignée d'avance est relevée (${animate ? animate.token.name : "rien de relevé"})`);
 
     seen = new Set((await listTokens()).map(t => t.id));
-    // 3. Doigt de mort sur la Bête morte : refusé.
+    // 3. Finger of Death on the dead Beast: refused.
     const beast = await cast("phbsplFingerofDe", "Bête morte", "spell7");
     ctx.expect(!beast, `Doigt de mort sur un loup mort : rien n'est relevé par darsh-loot (${beast ? beast.token.name : "rien"})`);
     ctx.expect((await listTokens()).some(t => t.name === "Bête morte"), "la Bête morte reste sur la scène");

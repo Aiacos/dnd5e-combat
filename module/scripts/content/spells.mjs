@@ -1,50 +1,50 @@
 /**
- * Règles de sorts (SPEC §16.47), par identifiant dnd5e : valent pour toute créature qui a le sort, PJ ou PNJ, quel que
- * soit le format de l'item (PHB premium 5.x ou compendium 6.x — aucune ne dépend d'un id d'activité).
+ * Spell rules (SPEC §16.47), by dnd5e identifier: they hold for any creature that has the spell, PC or NPC, whatever the
+ * item format (PHB premium 5.x or compendium 6.x — none depends on an activity id).
  */
 
-/** Les effets du sort cessent quand leur porteur attaque, inflige des dégâts ou lance un sort (Invisibilité, PHB 2024). */
+/** The spell's effects end when their bearer attacks, deals damage or casts a spell (Invisibility, PHB 2024). */
 export const BREAKS_ON = Object.freeze({
   "invisibility": ["attack", "damage", "spell"],
-  // §53 : Potion d'invisibilité — « l'effet prend fin si vous faites un jet d'attaque, infligez des dégâts ou lancez un sort ».
+  // §53: Potion of Invisibility — "the effect ends if you make an attack roll, deal damage or cast a spell".
   "potion-of-invisibility": ["attack", "damage", "spell"],
-  // §42.2 : Sanctuaire — « le sort prend fin si la créature protégée fait un jet d'attaque, lance un sort ou inflige des
-  // dégâts » ; Double illusoire — « prend fin aussitôt après que vous avez fait un jet d'attaque, infligé des dégâts ou
-  // lancé un sort ».
+  // §42.2: Sanctuary — "the spell ends if the warded creature makes an attack roll, casts a spell or deals
+  // damage"; Mislead — "ends immediately after you make an attack roll, deal damage or
+  // cast a spell".
   "sanctuary": ["attack", "damage", "spell"],
   "mislead": ["attack", "damage", "spell"]
 });
 
-/** Le porteur d'un effet du sort ne peut pas prendre de Réaction (Tentacules de Hadar : jusqu'au début du tour suivant de la cible). */
+/** The bearer of an effect of the spell cannot take a Reaction (Arms of Hadar: until the start of the target's next turn). */
 export const NO_REACTIONS = Object.freeze(["arms-of-hadar", "confusion", "fetid-cloud", "slow"]);
 
-/** §77 : « une action ou une action Bonus lors de son tour, pas les deux » — Nuage fétide (Dretch, Monster Manual 2024), Lenteur. */
-// C12-d : Abjuration d'ennemis — « la créature Effrayée ne peut, à chacun de ses tours, que se déplacer, ou prendre une action, ou une action
-// Bonus » : l'action OU l'action Bonus (le déplacement en plus reste au MJ).
+/** §77: "an action or a Bonus Action on its turn, not both" — Stinking Cloud (Dretch, Monster Manual 2024), Slow. */
+// C12-d: Abjure Enemy — "the Frightened creature can, on each of its turns, only move, or take an action, or a Bonus
+// Action": the action OR the Bonus Action (the movement in addition is left to the GM).
 export const ACTION_OR_BONUS = Object.freeze(["fetid-cloud", "slow", "abjure-foes"]);
-/** §267 : « elle ne peut faire qu'une attaque si elle prend l'action Attaquer » (Lenteur). */
+/** §267: "it can make only one attack if it takes the Attack action" (Slow). */
 export const SINGLE_ATTACK = Object.freeze(["slow"]);
-/** §283 : « si elle lance un sort avec une composante somatique, il y a 25 % de chances que le sort échoue » (Lenteur). */
+/** §283: "if it casts a spell with a somatic component, there is a 25 percent chance the spell fails" (Slow). */
 export const SPELL_FAILURES = Object.freeze({ "slow": { chance: 25, component: "somatic" } });
-/** §269 : « la cible ne peut ni attaquer ni lancer de sorts » (Forme gazeuse). */
-// Marche sur le vent (SRD 5.2) : « sous cette forme de nuage, les seules actions possibles sont l'action Foncer ou une action Magie
-// pour reprendre sa forme normale » — ni attaque ni sort.
+/** §269: "the target can neither attack nor cast spells" (Gaseous Form). */
+// Wind Walk (SRD 5.2): "in this cloud form, the only actions possible are the Dash action or a Magic action
+// to return to normal form" — neither attack nor spell.
 export const NO_ATTACKS_OR_SPELLS = Object.freeze(["gaseous-form", "wind-walk"]);
-/** §284 : « ne peut pas lancer de sorts ni prendre l'action Magie » (Aliénation). */
+/** §284: "can't cast spells or take the Magic action" (Feeblemind). */
 export const NO_SPELLS = Object.freeze(["befuddlement"]);
 /**
- * §284 : « vous savez toujours où se trouve la cible ; elle ne peut pas se Cacher de vous, et l'état Invisible ne lui apporte
- * rien contre vous » (Épine mentale) — vaut pour le lanceur seul.
+ * §284: "you always know where the target is; it can't Hide from you, and the Invisible condition gives it
+ * nothing against you" (Mind Spike) — holds for the caster only.
  */
 export const KNOWN_TO_ORIGIN = Object.freeze(["mind-spike"]);
 
 /**
- * §285 : sorts de contrôle (runtime/control.mjs). Terreur — « lâche ce qu'elle tient » et, Effrayée, « prend l'action Foncer et
- * s'éloigne de vous à chacun de ses tours » ; Mauvais œil, Paniqué (Kj1GwWXD5k0Zen75) — de même, et « si elle arrive à 18 m ou plus
- * de vous, à un endroit d'où elle ne peut pas vous voir, cet effet prend fin ». Confusion (VxmsgUz9OIUet6WC, vide dans la donnée) :
- * ni action Bonus ni Réaction, 1d10 au début de chacun de ses tours. Couronne du dément (0zixJ8ZoYFgSJtMV) : l'attaque imposée avant
- * de se déplacer, et « à vos tours suivants, vous devez prendre l'action Magie pour garder le contrôle, ou le sort prend fin ».
- * Fou rire de Tasha : « elle ne peut pas mettre fin à l'état À terre » (`keepsProne`).
+ * §285: control spells (runtime/control.mjs). Fear — "drops what it is holding" and, Frightened, "takes the Dash action and
+ * moves away from you on each of its turns"; Eyebite, Panicked (Kj1GwWXD5k0Zen75) — likewise, and "if it ends up 18 m or more
+ * from you, at a place where it can't see you, this effect ends". Confusion (VxmsgUz9OIUet6WC, empty in the data):
+ * no Bonus Action or Reaction, 1d10 at the start of each of its turns. Crown of Madness (0zixJ8ZoYFgSJtMV): the imposed
+ * attack before moving, and "on your later turns, you must take the Magic action to maintain control, or the spell ends".
+ * Tasha's Hideous Laughter: "it can't end the Prone condition" (`keepsProne`).
  */
 export const CONTROL = Object.freeze({
   "fear": { panic: { drop: true } },
@@ -56,52 +56,52 @@ export const CONTROL = Object.freeze({
 });
 
 /**
- * §19 : effets posés seulement sur une sauvegarde RÉUSSIE. Rayon affaiblissant — « sur une réussite, la cible a le Désavantage
- * à son prochain jet d'attaque avant le début de votre prochain tour » (« Brief Enfeeblement », yril8uhQgO1dR507, PHB 2.2.0).
+ * §19: effects placed only on a SUCCESSFUL save. Ray of Enfeeblement — "on a success, the target has Disadvantage
+ * on its next attack roll before the start of your next turn" ("Brief Enfeeblement", yril8uhQgO1dR507, PHB 2.2.0).
  */
 export const SAVED_EFFECTS = Object.freeze({
   "ray-of-enfeeblement": ["yril8uhQgO1dR507"],
-  // §43.1 : Pétrification — sur une sauvegarde réussie, « sa Vitesse est de 0 jusqu'au début de votre prochain tour »
-  // (« Unable to Move », que `effectEnds` fait tomber : content/spell-rules.mjs).
+  // §43.1: Flesh to Stone — on a successful save, "its Speed is 0 until the start of your next turn"
+  // ("Unable to Move", which `effectEnds` drops: content/spell-rules.mjs).
   "flesh-to-stone": ["sFyjp6wt9bjyIl9W"],
-  // §43.2 : Danse irrésistible d'Otto — sur une réussite, « elle danse jusqu'à la fin de son prochain tour » (« Short Dance »).
+  // §43.2: Otto's Irresistible Dance — on a success, "it dances until the end of its next turn" ("Short Dance").
   "ottos-irresistible-dance": ["UhFtBDEZEDpVgz9G"]
 });
 
-/** Le sort fait cesser UN de ces états sur sa cible, au choix (Restauration partielle). */
+/** The spell ends ONE of these conditions on its target, of your choice (Lesser Restoration). */
 export const CURES = Object.freeze({
   "lesser-restoration": ["blinded", "deafened", "paralyzed", "poisoned"],
-  // §160 : Restauration suprême — « … fait cesser l'un de ces effets : un niveau d'Épuisement, Charmé, Pétrifié » (la malédiction :
-  // content/spell-rules.mjs, §366 ; la réduction de caractéristique ou de PV max : au MJ).
+  // §160: Greater Restoration — "… ends one of these effects: one level of Exhaustion, Charmed, Petrified" (the curse:
+  // content/spell-rules.mjs, §366; the reduction of an ability score or of max HP: up to the GM).
   "greater-restoration": ["charmed", "petrified", "exhaustion"],
-  // Protection contre le poison : « si la cible est Empoisonnée, cet état prend fin ».
+  // Protection from Poison: "if the target is Poisoned, that condition ends".
   "protection-from-poison": ["poisoned"],
-  // Ramener un mort : l'état Mort cesse, quelle que soit la façon dont il a été posé (le moteur ne retire de lui-même que
-  // la Mort qu'il a posée, quand les PV remontent — adapter/death.mjs).
+  // Raise Dead: the Dead condition ends, however it was placed (the engine only removes by itself
+  // the Death that it placed, when HP rise again — adapter/death.mjs).
   "revivify": ["dead"],
   "raise-dead": ["dead"],
   "resurrection": ["dead"],
   "true-resurrection": ["dead"]
 });
 
-/** « Elle a l'Avantage au jet de sauvegarde si vous ou vos alliés la combattez. » C12-e : Modification de mémoire (« si vous la combattez »). */
+/** "It has Advantage on the saving throw if you or your allies are fighting it." C12-e: Modify Memory ("if you are fighting it"). */
 export const FIGHTING_ADVANTAGE = Object.freeze([
   "charm-person", "charm-monster", "dominate-beast", "dominate-person", "dominate-monster", "modify-memory"
 ]);
 
 /**
- * Changer de taille (§16.58, `resize`) : par l'id de l'effet de l'item, le nombre de catégories. Agrandissement/rapetissement
- * — « la taille de la cible augmente (ou diminue) d'une catégorie » ; mêmes ids dans le PHB et dans le SRD de dnd5e 6.
+ * Change size (§16.58, `resize`): by the id of the item's effect, the number of categories. Enlarge/Reduce
+ * — "the target's size increases (or decreases) by one category"; same ids in the PHB and in the dnd5e 6 SRD.
  */
 export const SIZE_CHANGES = Object.freeze({
   "enlarge-reduce": { "Wi2E10l7n6Ka8k6u": 1, "NXdtOxX4HvPeodml": -1 }
 });
 
 /**
- * Ordre imposé (§16.59, `orders`) : Injonction — « Approche, Lâche, Fuis, Rampe, Halte » (PHB 2024), au choix de l'auteur ;
- * sur une sauvegarde de Sagesse ratée, joué au prochain tour de la cible (runtime/orders.mjs).
+ * Imposed order (§16.59, `orders`): Command — "Approach, Drop, Flee, Grovel, Halt" (PHB 2024), chosen by the author;
+ * on a failed Wisdom save, played on the target's next turn (runtime/orders.mjs).
  */
-/** §147 : la cible qui rate sa sauvegarde fuit le lanceur par sa Réaction (runtime/flee.mjs). */
+/** §147: the target that fails its save flees the caster with its Reaction (runtime/flee.mjs). */
 export const FLEE_ON_FAILED_SAVE = Object.freeze({ "dissonant-whispers": { fleeOnFailedSave: true } });
 
 export const ORDER_LISTS = Object.freeze({ "command": ["approach", "drop", "flee", "grovel", "halt"] });

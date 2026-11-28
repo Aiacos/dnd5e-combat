@@ -1,7 +1,8 @@
 /**
- * §208 : ce que le saut d'un token peut faire maintenant — d'après sa fiche (Force, Dextérité), son contenu (`jump` : Athlète,
- * Monte-en-l'air, sort *Saut* par son effet, Bottes équipées, Pas du vent), son élan (l'historique de déplacement du cœur, en combat) et
- * le budget du tour (saut fixe déjà pris, distance doublée). Les règles : core/jump.mjs. Longueurs en pieds, sauf mention.
+ * §208: what a token's jump can do now — from its sheet (Strength, Dexterity), its content (`jump`: Athlete,
+ * Second-Story Work, the *Jump* spell through its effect, equipped Boots, Step of the Wind), its run-up (the core's movement
+ * history, in combat) and the turn's budget (fixed jump already taken, doubled distance). The rules: core/jump.mjs.
+ * Lengths in feet, unless stated.
  */
 import { RUN_UP, jumpLimits, hasRunningStart } from "../core/jump.mjs";
 import { contentOf } from "./content.mjs";
@@ -10,11 +11,11 @@ import { combatantFor, readBudget, committedPosition } from "./turn.mjs";
 import { lengthIn } from "./units.mjs";
 import { difficultRegionsFor } from "./path-world.mjs";
 
-/** Un objet qui agit porté : équipé, et lié s'il demande un lien. */
+/** An item that acts when worn: equipped, and attuned if it requires attunement. */
 const worn = item => (item.system?.equipped !== false) && ((item.system?.attunement !== "required") || item.system?.attuned === true);
 
 /**
- * Les règles de saut de cet acteur.
+ * This actor's jump rules.
  * @returns {{runUp: number, useDex: boolean, fixed: {distance: number, cost: number}|null, double: string[]}}
  */
 export function jumpRulesOf(actor) {
@@ -25,7 +26,7 @@ export function jumpRulesOf(actor) {
     if ( rule.useDex ) out.useDex = true;
     if ( rule.double ) out.double.push(...rule.double);
     const f = rule.fixed;
-    // Un saut fixe porté par l'effet d'un sort (Saut) ne vaut que pour la créature qui porte l'effet, pas pour le lanceur.
+    // A fixed jump carried by a spell's effect (Jump) applies only to the creature that carries the effect, not to the caster.
     if ( f && ((f.from === "effect") ? !carried : carried) && (!out.fixed || (f.distance > out.fixed.distance)) ) {
       out.fixed = { distance: f.distance, cost: f.cost };
     }
@@ -46,8 +47,8 @@ export function jumpRulesOf(actor) {
 }
 
 /**
- * L'élan : hors combat, toujours (le temps ne compte pas) ; en combat, la marche qui précède le saut, lue dans l'historique de
- * déplacement du tour (`TokenDocument#movementHistory`, vidé au début du tour), doit faire au moins `runUp` pieds.
+ * The run-up: out of combat, always (time does not count); in combat, the walk before the jump, read from the turn's movement
+ * history (`TokenDocument#movementHistory`, cleared at the start of the turn), must be at least `runUp` feet.
  */
 export function runningStartOf(token, runUp=RUN_UP) {
   if ( !combatantFor(token.actor) ) return true;
@@ -64,7 +65,7 @@ export function runningStartOf(token, runUp=RUN_UP) {
   return hasRunningStart(steps, runUp);
 }
 
-/** Ce que permet le saut de ce token, en pieds, et le saut fixe s'il est encore libre ce tour. */
+/** What this token's jump allows, in feet, and the fixed jump if it is still free this turn. */
 export function jumpOptionsOf(token) {
   const actor = token.actor;
   const rules = jumpRulesOf(actor);
@@ -77,7 +78,7 @@ export function jumpOptionsOf(token) {
   return { ...limits, runningStart, fixed: (budget?.fixedJump ? null : rules.fixed), rules, combatant, budget };
 }
 
-/** La case d'arrivée est-elle un terrain difficile pour ce token (régions de terrain difficile de dnd5e) ? */
+/** Is the arrival cell Difficult Terrain for this token (dnd5e's Difficult Terrain regions)? */
 export function landsOnDifficult(token, point, elevation) {
   return difficultRegionsFor(token).some(region => region.testPoint?.({ x: point.x, y: point.y, elevation }));
 }

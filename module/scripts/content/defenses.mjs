@@ -1,11 +1,11 @@
 /**
- * Défenses de sorts (SPEC §16.46), textes du PHB 2024 (FR) :
- *  - Résistance : « quand la créature subit des dégâts du type retenu avant la fin du sort, elle réduit les dégâts subis de
- *    1d4 ; une même créature ne peut bénéficier qu'une fois par tour de ce sort » — 11 profils « Protection : … » sans aucun
- *    changement ; l'id de chacun dit son type (`_stats.duplicateSource` de l'effet appliqué).
- *  - Vigueur arcanique : le lanceur dépense un ou deux dés de vie et regagne leur total plus son modificateur d'incantation ;
- *    +1 dé par niveau d'emplacement au-delà du 2e — activité
- *    « Incanter » (`5paXkJ6hEw07yl8g`) ; les cinq activités de soin par taille de dé de dnd5e dépensent deux dés d'office.
+ * Spell defenses (SPEC §16.46), texts of the 2024 PHB (FR):
+ *  - Resistance: "when the creature takes damage of the chosen type before the spell ends, it reduces the damage taken by
+ *    1d4; the same creature can benefit from this spell only once per turn" — 11 "Protection: …" profiles without any
+ *    change; the id of each one says its type (`_stats.duplicateSource` of the applied effect).
+ *  - Arcane Vigor: the caster spends one or two Hit Dice and regains their total plus their spellcasting modifier;
+ *    +1 die per slot level above 2nd — activity
+ *    "Incanter" (`5paXkJ6hEw07yl8g`); the five healing activities by die size of dnd5e spend two dice by default.
  */
 
 export const DAMAGE_SHIELDS = Object.freeze({

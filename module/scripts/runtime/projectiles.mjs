@@ -1,14 +1,14 @@
 /**
- * Projectiles (SPEC §16.27) : Projectile magique, Rayon ardent, Décharge occulte. dnd5e 6 n'en fait qu'un par lancement ;
- * le texte en donne plusieurs (3 projectiles + 1 par niveau ; 3 rayons + 1 par niveau ; 2 rayons au niveau 5). Chaque
- * projectile est un lancement à part, avec ses propres dés — son jet d'attaque s'il en a un, ses dégâts.
- *  - Visée multiple (ui/pointer.mjs) : après le choix du niveau, un clic par projectile (`picks`) ; le premier est le
- *    lancement, les autres sont gardés sur sa carte (`projectileQueue`). Sans visée multiple (connecteur, plusieurs cibles
- *    déjà désignées), le premier part vers la première cible et l'auteur répartit le reste après coup.
- *  - Ceux qui touchent d'office (Projectile magique) : le jet de dégâts enchaîné de dnd5e est coupé, le moteur les lance.
- *  - Quand la résolution du premier est tranchée, chez l'auteur, le moteur enchaîne chaque projectile restant — même
- *    activité, sans emplacement ni concentration, au niveau du lancement, sans coût d'action (`cost: "free"`), son jet
- *    d'attaque rattaché à sa carte — en attendant que chacun soit tranché avant le suivant.
+ * Projectiles (SPEC §16.27): Magic Missile, Scorching Ray, Eldritch Blast. dnd5e 6 makes only one per casting;
+ * the text gives several (3 projectiles + 1 per level; 3 rays + 1 per level; 2 rays at level 5). Each
+ * projectile is a separate casting, with its own dice — its attack roll if it has one, its damage.
+ *  - Multiple aiming (ui/pointer.mjs): after the level choice, one click per projectile (`picks`); the first is the
+ *    casting, the others are kept on its card (`projectileQueue`). Without multiple aiming (connector, several targets
+ *    already chosen), the first goes to the first target and the author distributes the rest afterwards.
+ *  - Those that hit automatically (Magic Missile): dnd5e's chained damage roll is cut off, the engine rolls them.
+ *  - When the resolution of the first is settled, on the author's side, the engine chains each remaining projectile — same
+ *    activity, no spell slot or Concentration, at the casting's level, at no action cost (`cost: "free"`), its attack
+ *    roll attached to its card — waiting for each to be settled before the next.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -27,8 +27,8 @@ import { antimagicBlocks } from "../adapter/antimagic.mjs";
 const started = new Set();
 
 /**
- * §16.27 : le rebond de l'Orbe chromatique vise une créature à `radius` de la dernière cible, jamais visée par ce lancement ;
- * sinon il est refusé (la visée se referme, le rebond est perdu).
+ * §16.27: the bounce of Chromatic Orb targets a creature within `radius` of the last target, never targeted by this casting;
+ * otherwise it is refused (the aiming closes, the bounce is lost).
  */
 export function leapProblem(activity, leap, target) {
   return leapRefused(activity, leap, target);
@@ -60,15 +60,15 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
   if ( usageConfig?.[MODULE_ID]?.projectileOf ) return true;
   const rule = projectilesOf(activity?.item);
   if ( !rule ) return true;
-  // Chaque projectile est un lancement à part, avec ses propres dés : ceux qui touchent d'office (Projectile magique) ont
-  // leurs dégâts lancés par le moteur (adapter/usage.mjs, `damage: "author"`), pas par l'action enchaînée de dnd5e.
+  // Each projectile is a separate casting, with its own dice: those that hit automatically (Magic Missile) have
+  // their damage rolled by the engine (adapter/usage.mjs, `damage: "author"`), not by dnd5e's chained action.
   if ( rule.attack === false ) usageConfig.subsequentActions = false;
-  // §16.27 : la visée multiple (ui/pointer) a désigné chaque projectile — le premier est ce lancement, les autres, dans
-  // l'ordre des clics, seront enchaînés.
+  // §16.27: the multiple aiming (ui/pointer) chose each projectile — the first is this casting, the others, in
+  // click order, will be chained.
   const picks = usageConfig?.[MODULE_ID]?.picks;
   if ( picks?.length ) {
     if ( messageConfig ) foundry.utils.setProperty(messageConfig, `data.flags.${MODULE_ID}.projectileQueue`, picks.slice(1));
-    // dnd5e a déjà relevé les cibles de la carte, toutes (mixin.mjs:239-242, avant ce hook) : le premier ne vise que la sienne.
+    // dnd5e already surveyed all the card's targets (mixin.mjs:239-242, before this hook): the first only aims at its own.
     const captured = messageConfig?.data?.system?.targets;
     if ( Array.isArray(captured) ) messageConfig.data.system.targets = captured.filter(t => t.token === picks[0]);
     for ( const t of Array.from(game.user.targets) ) if ( t.document.uuid !== picks[0] ) t.setTarget(false, { releaseOthers: false, groupSelection: true });
@@ -82,12 +82,12 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
 }
 
 
-/** Les rayons restants, dans l'ordre : répartis par l'auteur, moins celui qui est déjà parti vers la première cible. */
+/** The remaining rays, in order: distributed by the author, minus the one that already left for the first target. */
 async function remainingShots(activity, usage, resolution, count) {
-  // §403 : « une attaque contre chacune » (Frappe du vent d'acier, `onePerTarget`) — jamais deux sur la même créature.
+  // §403: "an attack against each" (Steel Wind Strike, `onePerTarget`) — never two on the same creature.
   const unique = !!projectilesOf(activity.item)?.onePerTarget;
   const first = resolution.targets?.[0]?.token ?? null;
-  const designated = usage.getFlag(MODULE_ID, "projectileQueue");   // la visée multiple a déjà tout désigné
+  const designated = usage.getFlag(MODULE_ID, "projectileQueue");   // the multiple aiming already chose everything
   if ( Array.isArray(designated) ) return unique ? [...new Set(designated)].filter(t => t !== first).slice(0, count - 1) : [...designated];
   const listed = usage.getFlag(MODULE_ID, "projectileTargets") ?? (first ? [first] : []);
   if ( !listed.length ) return [];
@@ -107,10 +107,10 @@ async function remainingShots(activity, usage, resolution, count) {
 }
 
 /**
- * §448 : un projectile enchaîné ne dépense rien — ni emplacement, ni ressource du sort, ni celle de l'objet qui l'a lancé. Un sort lancé
- * par un objet (activité « cast » : Baguette de projectiles magiques) est un sort mis en cache (`cachedFor`) ; dnd5e y consomme les
- * cibles de l'activité liée (`config.cause`, dnd5e.mjs:19203, :19300) — une charge de la baguette par projectile, vu sur le banc le
- * 2026-11-14 (3 charges pour un lancement de 3 projectiles).
+ * §448: a chained projectile spends nothing — no spell slot, no spell resource, nor that of the item that cast it. A spell cast
+ * by an item ("cast" activity: Wand of Magic Missiles) is a cached spell (`cachedFor`); dnd5e consumes the
+ * targets of the linked activity there (`config.cause`, dnd5e.mjs:19203, :19300) — one wand charge per projectile, seen on
+ * the test bench on 2026-11-14 (3 charges for a casting of 3 projectiles).
  * @param {Activity} activity
  */
 export function chainedConsumption(activity) {
@@ -137,13 +137,13 @@ async function chain(usage, resolution) {
       concentration: { begin: false },
       subsequentActions: false,
       ...(level > 0 ? { scaling, spell: { slot: `spell${level + scaling}` } } : {}),
-      // §448 : le premier a été forcé dans un champ antimagie (sinon il ne serait pas parti) — les suivants aussi, sans nouvelle fenêtre.
+      // §448: the first was forced in an antimagic field (otherwise it would not have left) — the next too, with no new window.
       [MODULE_ID]: { confirmed: true, cost: "free", projectileOf: usage.id, ...(antimagicBlocks(base) ? { antimagicForced: true } : {}) }
     };
     const flags = { data: { flags: { [MODULE_ID]: { projectileOf: usage.id } } } };
     let used = await relaunchUse(base, config, { configure: false }, flags);
-    // Une porte a suspendu ce projectile pour poser sa question (Présage, réaction d'avant l'attaque) : elle le relance elle-même,
-    // jet d'attaque compris. On attend sa relance ; sans elle, le troisième rayon ne partait jamais.
+    // A gate suspended this projectile to ask its question (Portent, a reaction before the attack): it relaunches it itself,
+    // attack roll included. We wait for its relaunch; without it, the third ray never left.
     const gated = !used?.message ? suspendedUse(base.uuid) : null;
     if ( gated ) used = await gated;
     if ( !used?.message ) break;
@@ -152,7 +152,7 @@ async function chain(usage, resolution) {
     }
     await settledResolution(used.message.id, { timeout: 30000, every: 300 });
   }
-  // §402 : « vous pouvez ensuite vous téléporter… à 1,50 m de l'une des cibles » (Frappe du vent d'acier) — sur ce client, l'auteur.
+  // §402: "you can then teleport… to within 5 feet of one of the targets" (Steel Wind Strike) — on this client, the author.
   const near = projectilesOf(base.item)?.teleportNear;
   const caster = speakerTokenOf(usage) ?? usage.getAssociatedActor?.()?.getActiveTokens?.(false, true)?.[0] ?? null;
   const struck = [...new Set([resolution.targets?.[0]?.token, ...queue].filter(Boolean))];
@@ -162,7 +162,7 @@ async function chain(usage, resolution) {
   }
 }
 
-/** Chez l'auteur : la résolution du premier projectile est tranchée — on enchaîne les autres, une fois. */
+/** On the author's side: the resolution of the first projectile is settled — the others are chained, once. */
 function onResolutionFlag(message, changes) {
   const diff = changes.flags?.[MODULE_ID]?.resolution;
   if ( !diff || !("step" in diff) || !message.isAuthor ) return;
@@ -176,18 +176,18 @@ function onResolutionFlag(message, changes) {
 }
 
 /**
- * Intention « lancer avec ces projectiles » (visée multiple, ui/pointer.mjs) : l'utilisation suspendue repart, le niveau
- * déjà choisi, chaque projectile désigné (`picks`, uuids de tokens dans l'ordre des clics).
+ * Intent "cast with these projectiles" (multiple aiming, ui/pointer.mjs): the suspended use resumes, the level
+ * already chosen, each projectile chosen (`picks`, token uuids in click order).
  */
 export function castWithPicks(activity, [config, dialog, message], picks) {
-  // dnd5e fige les cibles dans la configuration du message dès la première utilisation (activity/mixin.mjs:239-242) — celle
-  // qui a été suspendue pour la visée, sans cible : on les laisse se relire (comme runtime/actions.mjs, `engage`).
+  // dnd5e freezes the targets in the message configuration from the first use (activity/mixin.mjs:239-242) — the one
+  // that was suspended for aiming, with no target: we let them be re-read (like runtime/actions.mjs, `engage`).
   const messageConfig = foundry.utils.deepClone(message ?? {});
   if ( messageConfig.data?.system ) delete messageConfig.data.system.targets;
   return relaunchUse(activity, { ...config, [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), picks } }, dialog, messageConfig);
 }
 
-/** À inscrire après la souris (la visée a désigné les cibles) et avant la légalité. */
+/** To register after the mouse (the aiming chose the targets) and before legality. */
 export function registerProjectiles() {
   route("dnd5e.preUseActivity", onPreUseActivity, { cancellable: true, label: "projectiles: one per target, the rest chained" });
   route("updateChatMessage", onResolutionFlag, { label: "chained projectiles" });

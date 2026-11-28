@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
- * §290 : fenêtres du combat sans délai. Sans délai, une question posée à un joueur attend sa réponse et se note pour le suivi du MJ ;
- * « Forcer » fait résoudre ses fenêtres chez lui comme au bout du délai ; un joueur qui part compte comme une absence de réponse. Avec
- * délai (réglage par défaut), rien ne change : la requête du cœur, telle quelle.
+ * §290: combat windows without a timeout. Without a timeout, a question put to a player waits for its answer and is noted
+ * for the GM's follow-up; "Force" makes their windows resolve on their side as at the end of the timeout; a player who leaves
+ * counts as no answer. With a timeout (default setting), nothing changes: the core's request, as is.
  */
 const { expireLater, forceOpenWindows, windowsUnlimited } = await import("../module/scripts/adapter/dialogs.mjs");
 const { queryPlayer, playerWaits, forcePlayerWait, FORCE_WINDOWS_QUERY, PLAYER_WAITS_HOOK } = await import("../module/scripts/adapter/player-wait.mjs");
@@ -27,7 +27,7 @@ afterEach(() => {
   delete globalThis.game; delete globalThis.Hooks; delete globalThis.foundry;
 });
 
-/** Un joueur dont la réponse se donne à la main (`answer`), et qui reçoit les demandes « forcer ». */
+/** A player whose answer is given by hand (`answer`), and who receives the "force" requests. */
 function player(name="Alice") {
   const pending = [];
   const user = {
@@ -46,14 +46,14 @@ function player(name="Alice") {
   return user;
 }
 
-describe("§290 fenêtres sans délai : le MJ force", () => {
-  it("le réglage se lit, faux par défaut quand il est illisible", () => {
+describe("§290 windows without a timeout: the GM forces", () => {
+  it("the setting is read, false by default when unreadable", () => {
     expect(windowsUnlimited()).toBe(true);
     delete globalThis.game;
     expect(windowsUnlimited()).toBe(false);
   });
 
-  it("sans délai, une fenêtre attend ; forcer la résout comme le délai, une seule fois", () => {
+  it("without a timeout, a window waits; forcing resolves it like the timeout, only once", () => {
     const expire = vi.fn();
     const disarm = expireLater(expire, 10, true);
     expect(expire).not.toHaveBeenCalled();
@@ -63,14 +63,14 @@ describe("§290 fenêtres sans délai : le MJ force", () => {
     disarm();
   });
 
-  it("une fenêtre désarmée (le joueur a répondu) n'est plus forcée", () => {
+  it("a disarmed window (the player answered) is no longer forced", () => {
     const expire = vi.fn();
     expireLater(expire, 10, true)();
     expect(forceOpenWindows()).toBe(0);
     expect(expire).not.toHaveBeenCalled();
   });
 
-  it("avec délai, le minuteur décide ; §381 : le MJ peut aussi forcer, une seule fois", () => {
+  it("with a timeout, the timer decides; §381: the GM can also force, only once", () => {
     vi.useFakeTimers();
     const expire = vi.fn();
     expireLater(expire, 1000, false);
@@ -84,7 +84,7 @@ describe("§290 fenêtres sans délai : le MJ force", () => {
     expect(early).toHaveBeenCalledTimes(1);
   });
 
-  it("avec délai, la question part avec ce délai ; §381 : elle est notée, pour que le MJ puisse forcer", async () => {
+  it("with a timeout, the question goes out with that timeout; §381: it is noted, so the GM can force", async () => {
     unlimited = false;
     const user = player();
     const asked = queryPlayer(user, "dnd5e-combat.reaction", { a: 1 }, { timeout: 20000, label: "Réaction" });
@@ -95,7 +95,7 @@ describe("§290 fenêtres sans délai : le MJ force", () => {
     expect(playerWaits()).toEqual([]);
   });
 
-  it("sans délai, l'attente est notée (qui, pour qui, quoi), puis retirée à la réponse", async () => {
+  it("without a timeout, the wait is noted (who, for whom, what), then removed on the answer", async () => {
     const user = player();
     const actor = { uuid: "Actor.pal", name: "Paladin", img: "pal.webp" };
     const asked = queryPlayer(user, "dnd5e-combat.reaction", {}, { timeout: 20000, actor, label: "Réaction" });
@@ -108,7 +108,7 @@ describe("§290 fenêtres sans délai : le MJ force", () => {
     expect(hookCalls).toBe(2);
   });
 
-  it("forcer : le client du joueur résout ses fenêtres, la question revient avec la réponse par défaut", async () => {
+  it("force: the player's client resolves its windows, the question returns with the default answer", async () => {
     const user = player();
     const asked = queryPlayer(user, "dnd5e-combat.choice", {}, { timeout: 20000, label: "Choix" });
     const [wait] = playerWaits();
@@ -119,7 +119,7 @@ describe("§290 fenêtres sans délai : le MJ force", () => {
     await expect(forcePlayerWait(wait.id)).resolves.toBe(false);
   });
 
-  it("forcer sans fenêtre ouverte chez lui : la question est lâchée après un court délai", async () => {
+  it("force with no window open on their side: the question is dropped after a short delay", async () => {
     vi.useFakeTimers();
     const user = player();
     user.query.mockImplementation(query => (query === FORCE_WINDOWS_QUERY ? Promise.resolve(0) : new Promise(() => {})));
@@ -131,7 +131,7 @@ describe("§290 fenêtres sans délai : le MJ force", () => {
     expect(playerWaits()).toEqual([]);
   });
 
-  it("un joueur qui se déconnecte : la question échoue, comme sans réponse", async () => {
+  it("a player who disconnects: the question fails, as with no answer", async () => {
     vi.useFakeTimers();
     const user = player("Bob");
     const asked = queryPlayer(user, "dnd5e-combat.rollSave", {}, { timeout: 40000 });

@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 /**
- * Le F5 du client du MJ, sans main humaine : `api.mcp.reload` (runtime/testing.mjs) par le connecteur, puis attente du
- * retour du client avec le code frais (`api.mcp.status`, heure de chargement changée). À lancer après tout changement du
- * moteur, avant un scénario :
+ * The GM client's F5, without a human hand: `api.mcp.reload` (runtime/testing.mjs) through the connector, then waiting for the
+ * client to come back with the fresh code (`api.mcp.status`, load time changed). Run after any engine change, before a scenario:
  *
  *   node tools/reload.mjs && node tools/scenario.mjs entrave
  *
- * Prérequis : le client du MJ a déjà chargé une version qui a `reload` (0.112.0 et plus) — sinon, un F5 à la main.
- * `call-module-api` n'existe que dans un monde où le réglage « Outils de test » du connecteur est activé.
+ * Prerequisite: the GM client has already loaded a version that has `reload` (0.112.0 and later) — otherwise, an F5 by hand.
+ * `call-module-api` exists only in a world where the connector's "Test tools" setting is enabled.
  */
 
 import { connect } from "./lib/connector.mjs";
@@ -39,7 +38,7 @@ try {
   }
   if ( !after ) throw new Error(`le client n'est pas revenu en ${TIMEOUT_MS / 1000} s`);
   console.log(` rechargé : moteur ${after.version}${after.activeGM ? "" : " — ATTENTION : ce client n'est pas le MJ actif"}`);
-  // Le canevas et les hooks du moteur finissent de s'installer après `ready`.
+  // The canvas and the engine's hooks finish installing after `ready`.
   await sleep(3000);
 } catch(err) {
   console.error(`\nreload : ${err.message}`);

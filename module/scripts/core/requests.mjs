@@ -1,33 +1,34 @@
 /**
- * Ce qu'une requête reçue d'un autre client a le droit de demander (§471). Une requête du cœur V14 (`User#query`) arrive avec
- * son expéditeur ; ses données sont celles que ce client a envoyées. Règles pures :
- * runtime/cure.mjs et adapter/reactions.mjs les appliquent. Un refus ici est de la sécurité, pas une règle du jeu : il ne se force pas
- * (le MJ garde ses moyens, une requête qu'il envoie lui-même passe telle quelle).
+ * What a request received from another client is allowed to ask (§471). A V14 core request (`User#query`) arrives with
+ * its sender; its data is what that client sent. Pure rules:
+ * runtime/cure.mjs and adapter/reactions.mjs apply them. A refusal here is about security, not a game rule: it cannot be forced
+ * (the GM keeps their means, a request they send themselves goes through as is).
  */
 
 /**
- * Faut-il vérifier cette requête ? Non pour un appel local (pas d'expéditeur : c'est ce client qui la fait), ni pour soi-même ou un MJ.
- * @param {{isGM?: boolean, isSelf?: boolean}|null|undefined} user  l'expéditeur, tel que le cœur le passe au gestionnaire
+ * Must this request be checked? No for a local call (no sender: this client is making it), nor for oneself or a GM.
+ * @param {{isGM?: boolean, isSelf?: boolean}|null|undefined} user  the sender, as the core passes it to the handler
  */
 export const needsCheck = user => !!user && !user.isSelf && !user.isGM;
 
 /**
- * Une requête que seul le MJ envoie dans le jeu (sauvegarde, concentration, jet contre la mort…) : d'un joueur, elle tombe.
+ * A request that only the GM sends in the game (saving throw, Concentration, death saving throw…): from a player, it is dropped.
  * @param {{isGM?: boolean, isSelf?: boolean}|null|undefined} user
  */
 export const fromTrusted = user => !needsCheck(user);
 
 /**
- * L'expéditeur peut-il agir pour ce document (il le possède) ? Toujours oui pour un appel local, soi-même ou un MJ.
+ * Can the sender act for this document (do they own it)? Always yes for a local call, oneself or a GM.
  * @param {{isGM?: boolean, isSelf?: boolean}|null|undefined} user
- * @param {{testUserPermission?: Function}|null|undefined} doc  un acteur, un token, un objet…
+ * @param {{testUserPermission?: Function}|null|undefined} doc  an actor, a token, an item…
  */
 export const actsFor = (user, doc) => !needsCheck(user) || !!doc?.testUserPermission?.(user, "OWNER");
 
 /**
- * La requête `cure` : la règle de contenu de l'objet utilisé permet-elle cet acte sur la cible ?
- * @param {object|null} entry  le contenu de l'objet de la carte d'utilisation (`contentOf(item).entry`)
- * @param {string} status      l'acte demandé (`hp`, `temphp`, `curses`, `exhaustion`, `exhaustion-1`, `standReaction`, ou un état)
+ * The `cure` request: does the content rule of the item used allow this act on the target?
+ * @param {object|null} entry  the content of the item of the use card (`contentOf(item).entry`)
+ * @param {string} status      the act requested (`hp`, `temphp`, `curses`, `exhaustion`, `exhaustion-1`, `standReaction`, or a
+ *   condition)
  * @param {*} value
  */
 export function cureAllowed(entry, status, value=null) {
@@ -45,7 +46,7 @@ export function cureAllowed(entry, status, value=null) {
 }
 
 /**
- * Des PV demandés par un autre client : un soin ne blesse jamais et ne dépasse pas le maximum.
+ * HP requested by another client: healing never wounds and never exceeds the maximum.
  * @param {*} value
  * @param {{current: number, max: number}} hp
  * @returns {number}
@@ -57,7 +58,7 @@ export function healedHp(value, { current, max }) {
 }
 
 /**
- * Des PV temporaires demandés par un autre client : positifs, et au plus `ceiling` quand on le connaît (la réserve de la règle, le jet).
+ * Temporary Hit Points requested by another client: positive, and at most `ceiling` when it is known (the rule's pool, the roll).
  * @param {*} value
  * @param {number} [ceiling]
  * @returns {number}
@@ -69,9 +70,9 @@ export function grantedTempHp(value, ceiling=Infinity) {
 }
 
 /**
- * Ce qu'une option de réaction venue d'un autre client peut changer à l'utilisation : seulement les formes que le moteur envoie
- * lui-même — le niveau d'un sort contré (`scaling`, runtime/gates.mjs), le sort préparé déjà payé (`spell.slot`,
- * `consume.spellSlot: false`, `readiedRelease`, adapter/ready.mjs), Égide projetée (`consume: false`). Le reste tombe.
+ * What a Reaction option coming from another client can change about the use: only the forms the engine sends
+ * itself — the level of a countered spell (`scaling`, runtime/gates.mjs), the already-paid readied spell (`spell.slot`,
+ * `consume.spellSlot: false`, `readiedRelease`, adapter/ready.mjs), projected Aegis (`consume: false`). The rest is dropped.
  * @param {object} usage
  */
 function plainUsage(usage) {
@@ -84,9 +85,10 @@ function plainUsage(usage) {
 }
 
 /**
- * La requête `reaction` venue d'un client à qui l'on ne fait pas confiance (`needsCheck`) : la fenêtre est toujours posée (`auto` est
- * l'outil de scénario du MJ), et chaque option ne garde, de ce qui change l'utilisation, que les formes légitimes (`plainUsage`). Ce qui
- * dépend des documents (l'activité est-elle à ce réacteur, que supprime `drop`) se revérifie sur le receveur (adapter/reactions.mjs).
+ * The `reaction` request coming from an untrusted client (`needsCheck`): the window is always posed (`auto` is
+ * the GM's scenario tool), and each option keeps, of what changes the use, only the legitimate forms (`plainUsage`). What
+ * depends on the documents (does the reactor have the activity, what `drop` removes) is rechecked on the receiver
+ * (adapter/reactions.mjs).
  * @param {object} payload
  * @returns {object}
  */

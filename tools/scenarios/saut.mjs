@@ -1,22 +1,22 @@
 /**
- * §208 : le saut des règles 2024 et la chute automatique, sur l'Arène de test de `dnd-6` avec le Guerrier (Force 17 : 17 ft en longueur
- * avec élan, 8 ft sans ; la grille est en cases de 5 ft). Vérifie :
- *  1. hors combat (élan toujours possible) : un saut de 3 cases passe, un saut de 4 cases est refusé ;
- *  2. en combat, sans élan : 2 cases refusées ; après 2 cases de marche, un saut de 3 cases passe, et coûte 15 ft ;
- *  3. Bottes de saut et de célérité prêtées (équipées, liées) : sans élan, 6 cases (30 ft) pour 10 ft de déplacement — saut fixe pris,
- *     20 ft rendus ; un second saut fixe le même tour est refusé ;
- *  4. arrivée dans une région de terrain difficile : le test d'Acrobaties est lancé (À terre ⇔ total < 10) ;
- *  5. chute automatique en combat : vitesse de vol prêtée, à 20 ft, mis À terre → dnd5e pose « En chute », le moteur le fait tomber
- *     (au sol, dégâts appliqués) ; Agrippé en vol → il tombe aussi (règles 2024, Vitesse 0).
- * Remet position, élévation, mode, PV, états, vitesse de vol, réglages ; retire l'objet prêté et la région.
+ * §208: the 2024 rules jump and the automatic fall, on the `dnd-6` Test Arena with the Fighter (Strength 17: 17 ft long jump
+ * with a running start, 8 ft without; the grid is in 5 ft cells). Checks:
+ *  1. out of combat (running start always possible): a 3-cell jump passes, a 4-cell jump is refused;
+ *  2. in combat, no running start: 2 cells refused; after 2 cells of walking, a 3-cell jump passes, and costs 15 ft;
+ *  3. "Boots of jumping and swiftness" lent (equipped, attuned): without a running start, 6 cells (30 ft) for 10 ft of movement —
+ *     fixed jump taken, 20 ft returned; a second fixed jump the same turn is refused;
+ *  4. arrival in a Difficult Terrain region: the Acrobatics check is rolled (Prone ⇔ total < 10);
+ *  5. automatic fall in combat: fly speed lent, at 20 ft, made Prone → dnd5e places "Falling", the engine makes him fall
+ *     (to the ground, damage applied); Grappled in flight → he falls too (2024 rules, Speed 0).
+ * Puts back position, elevation, mode, HP, conditions, fly speed, settings; removes the lent item and the region.
  */
 const MODULE_ID = "dnd5e-combat";
 const BOOTS = "Compendium.dnd-dungeon-masters-guide.equipment.Item.dmgBootsOfStridi";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * §412 : un refus de règle ouvre désormais la fenêtre de légalité au lieu d'un refus sec — l'appel attend la réponse. Ici on renonce
- * (« Renoncer ») et le texte de la fenêtre rejoint `warnings`, comme l'ancien avertissement.
+ * §412: a rule refusal now opens the legality window instead of a flat refusal — the call waits for the answer. Here we give up
+ * ("Give up") and the window's text joins `warnings`, like the former warning.
  */
 async function declining(ctx, name, call) {
   const seen = [];
@@ -49,7 +49,7 @@ export default {
     const cellOf = p => ({ i: Math.round(p.y / grid), j: Math.round(p.x / grid) });
     const start = cellOf(home);
 
-    // Une ligne de 8 cases libres depuis le Guerrier (est, ouest, nord, sud).
+    // A line of 8 free cells from the Fighter (east, west, north, south).
     const taken = new Set(tokens.filter(t => t.id !== hero.id).map(t => { const c = cellOf(t); return `${c.i},${c.j}`; }));
     const dirs = [[0, 1], [0, -1], [-1, 0], [1, 0]];
     const dir = dirs.find(([di, dj]) => [1, 2, 3, 4, 5, 6, 7, 8].every(k => !taken.has(`${start.i + (di * k)},${start.j + (dj * k)}`)));
@@ -81,7 +81,7 @@ export default {
     const auto = await ctx.engine("setting", { key: "autoFall", value: "combat" });
     ctx.restore(() => ctx.engine("setting", { key: "autoFall", value: auto.before }));
     ctx.restore(async () => { await endCombat(); await goHome(); await ctx.setHp(hero, hp0).catch(() => {}); });
-    // La vitesse de vol prêtée : remise telle qu'elle était, ou retirée (une valeur nulle ne l'efface pas).
+    // The lent fly speed: put back as it was, or removed (a null value does not clear it).
     ctx.restore(() => ctx.call("update-actor", { actorId: hero.actorId,
       actorData: (fly0 === null) ? { "system.attributes.movement.speeds.-=fly": null } : { "system.attributes.movement.speeds.fly": fly0 } }).catch(() => {}));
 
@@ -92,7 +92,7 @@ export default {
     r = await jump(4);
     ctx.expect(r.after.x === r.before.x && r.after.y === r.before.y && r.warnings.some(w => /17/.test(w)), `4 cases : refusé (${r.warnings.join(" | ")})`);
 
-    // 2. En combat, sans élan : 2 cases refusées ; après 2 cases de marche, 3 cases passent.
+    // 2. In combat, no running start: 2 cells refused; after 2 cells of walking, 3 cells pass.
     await fight();
     r = await jump(2);
     ctx.expect(!r.options.runningStart && r.options.long === 8 && r.after.x === r.before.x && r.after.y === r.before.y,
@@ -105,7 +105,7 @@ export default {
     ctx.expect(Math.abs((s1 - s0) - 15) < 0.01, `le saut coûte 15 ft (${s0} → ${s1})`);
     await endCombat(); await goHome();
 
-    // 3. Bottes : 6 cases (30 ft) sans élan pour 10 ft ; une fois par tour.
+    // 3. Boots: 6 cells (30 ft) without a running start for 10 ft; once per turn.
     const { data: boots } = await ctx.call("get-compendium-entry", { uuid: BOOTS });
     const { _id, folder, ownership, _stats, ...bootsData } = boots;
     bootsData.system = { ...bootsData.system, equipped: true, attuned: true };
@@ -120,10 +120,10 @@ export default {
     r = await jump(9);
     ctx.expect(r.after.x === r.before.x && r.after.y === r.before.y && r.options.fixed === null, `second saut fixe le même tour : refusé (${r.warnings.join(" | ")})`);
     await endCombat(); await goHome();
-    await removeBoots();   // sinon les Bottes (9 m) permettraient aussi les sauts en hauteur plus loin
+    await removeBoots();   // otherwise the Boots (9 m) would also allow high jumps farther
     await pause(500);
 
-    // 4. Terrain difficile à l'arrivée : le test d'Acrobaties.
+    // 4. Difficult Terrain on arrival: the Acrobatics check.
     const land = at(2);
     const region = await ctx.call("create-region", { sceneId: (await ctx.scene()).sceneId, name: "DAS test terrain difficile", shapes: [{ type: "rectangle", x: land.j * grid, y: land.i * grid, width: grid, height: grid }],
       behaviors: [{ type: "dnd5e.difficultTerrain", system: { magical: false, types: [] } }] }).catch(err => ({ error: err.message }));
@@ -140,8 +140,8 @@ export default {
       await goHome();
     }
 
-    // 4 bis. Saut en hauteur sur une estrade (Surface d'une case) : à 5 ft, la longueur est refusée, la hauteur passe (6 ft au plus) ;
-    // à 10 ft, trop haut.
+    // 4 bis. High jump onto a platform (Surface of one cell): at 5 ft, the long jump is refused, the high jump passes (6 ft
+    // at most); at 10 ft, too high.
     const step = at(1);
     const platform = async elevation => {
       const r = await ctx.call("create-surface", { sceneId: (await ctx.scene()).sceneId, name: `DAS test estrade ${elevation} ft`, elevation,
@@ -184,7 +184,7 @@ export default {
     await ctx.setHp(hero, hp0);
     await ctx.call("set-status", { tokenId: hero.id, statusId: "prone", active: true });
     ctx.expect(await landed(), "volant mis À terre à 20 ft : il tombe tout seul (« En chute » de dnd5e)");
-    // Les dégâts suivent la fin des dés 3D (waitForDice, 8 s au plus) : on les attend au lieu d'un délai fixe.
+    // The damage follows the end of the 3D dice (waitForDice, 8 s at most): we wait for it instead of a fixed delay.
     let hurt = hp0;
     for ( let i = 0; (i < 24) && (hurt >= hp0); i++ ) { await pause(500); hurt = await ctx.hp(hero); }
     ctx.expect(hurt < hp0, `dégâts de chute appliqués (${hp0} → ${hurt})`);

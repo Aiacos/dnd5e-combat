@@ -1,12 +1,12 @@
 /**
- * §356, lot O9c de la repasse des objets : armes maudites qui s'emparent de leur porteur quand on le blesse. Arène de test (Guerrier,
- * Zombi au contact).
- *  1. Hache du berserker (posée sur une Hache d'armes, harmonisée), hors combat : le Zombi blesse le Guerrier — sauvegarde de Sagesse
- *     DD 15 ; ratée, marque « Folie furieuse contre Zombi ».
- *  2. Épée vengeresse (posée sur une Épée longue, harmonisée), hors combat : blessé, aucune sauvegarde (« en combat » seulement).
- *  3. En combat : blessé, sauvegarde ; ratée, marque « Vengeance contre Zombi » ; le Zombi à 0 PV, au début du tour du Guerrier la marque
- *     tombe.
- * Enchantements retirés, PV et marques remis.
+ * §356, batch O9c of the item pass: cursed weapons that take hold of their bearer when it is wounded. Test arena (Fighter,
+ * Zombie in contact).
+ *  1. Berserker Axe (placed on a Battleaxe, attuned), out of combat: the Zombie wounds the Fighter — Wisdom saving throw
+ *     DC 15; failed, mark "Berserker Rage against Zombie".
+ *  2. Sword of Vengeance (placed on a Longsword, attuned), out of combat: wounded, no saving throw ("in combat" only).
+ *  3. In combat: wounded, saving throw; failed, mark "Vengeance against Zombie"; the Zombie at 0 HP, at the start of the Fighter's
+ *     turn the mark drops.
+ * Enchantments removed, HP and marks restored.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -45,7 +45,7 @@ export default {
       return weapon;
     };
     const slam = await ctx.itemId(zombi.id, "slam");
-    /** Le Zombi frappe jusqu'à toucher ; rend les lignes du journal qui suivent. */
+    /** The Zombie strikes until it hits; returns the log lines that follow. */
     const struck = async () => {
       for ( let i = 0; i < 12; i++ ) {
         await ctx.setHp(fighter, hpF);
@@ -75,7 +75,7 @@ export default {
     await dropMarks();
     await set(axe, { system: { attuned: false } });
 
-    // 2. Épée vengeresse, hors combat.
+    // 2. Sword of Vengeance, out of combat.
     const sword = await curse("dmgSwordOfVengea", "nTfJsgV2sJIIUqXr", "phbwepLongsword0");
     await set(sword, { system: { attuned: true } });
     let lines = await struck();
@@ -95,7 +95,7 @@ export default {
     if ( ctx.expect(vengeful, "en combat, sauvegarde ratée : marque « Vengeance contre Zombi »") ) {
       await ctx.setHp(zombi, 0);
       await ctx.nextTurn();   // Zombi
-      await ctx.nextTurn();   // Guerrier : début de son tour
+      await ctx.nextTurn();   // Fighter: start of its turn
       await pause(2000);
       ctx.expect(!(await marks()).length, "le Zombi à 0 PV : au début du tour du Guerrier, la vengeance prend fin");
     }

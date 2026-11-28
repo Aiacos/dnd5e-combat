@@ -1,18 +1,19 @@
 /**
- * §414 : l'Égide arcanique (B14, §16.11 ; Égide projetée §38 ; Lien protecteur §156) dans des conditions de jeu réalistes, sur
- * l'« Arène de l'abjuration » (`node tools/arene-abjuration.mjs`) : un Magicien abjurateur de niveau 6 (Int 18, 40 PV), un Guerrier
- * allié (60 PV) à 10 ft, un Ogre (gourdin 2d8 + 4) qui les touche tous deux. Remplace, pour l'égide, les tokens partagés de l'Arène de
- * test (`reduction`), dont l'état laissé par d'autres scénarios faussait le résultat (2026-11-12). Vérifie, dans l'ordre :
- *  1. Création : l'activité « créer l'égide » donne une réserve de 2 × niveau + mod. d'Int = 16, pleine.
- *  2. Absorption : un coup de l'Ogre sur l'Abjurateur — la réserve prend ce qu'elle peut, les PV le reste ; carte « absorbe ».
- *  3. Recharge : un sort d'abjuration lancé avec un emplacement rend 2 × son niveau (Armure du mage au niveau 1 : +2, au niveau 2 : +4),
- *     l'emplacement est dépensé ; un tour de magie (Rayon de givre) ne recharge rien.
- *  4. Lien protecteur, égide pleine : l'Ogre touche le Protégé (Résistance du Lien : moitié) ; l'Abjurateur subit le même montant, que
- *     son égide absorbe (ce sont des dégâts qu'il subit) — ses PV ne bougent pas.
- *  5. Lien protecteur, égide vide : les mêmes dégâts partagés font baisser les PV de l'Abjurateur.
- *     Avec BLFX actif (§156) : son déclencheur de partage est désarmé sur l'effet, et il ne partage pas une seconde fois.
- *  6. Égide projetée (réaction) : l'Ogre touche le Protégé, l'égide de l'Abjurateur absorbe à sa place ; vide, le Protégé subit le reste.
- * Tout se remet : PV, réserve, emplacements, effets (le lanceur ajoute son filet de sécurité).
+ * §414: Arcane Ward (B14, §16.11; Projected Ward §38; Warding Bond §156) under realistic play conditions, on the
+ * "Arène de l'abjuration" (`node tools/arene-abjuration.mjs`): a level 6 Abjurer Wizard (Int 18, 40 HP), an allied Fighter
+ * (60 HP) at 10 ft, an Ogre (club 2d8 + 4) that hits both. For the ward, replaces the shared tokens of the Test Arena
+ * (`reduction`), whose state left by other scenarios skewed the result (2026-11-12). Checks, in order:
+ *  1. Creation: the "create the ward" activity gives a pool of 2 × level + Int mod. = 16, full.
+ *  2. Absorption: an Ogre hit on the Abjurer — the pool takes what it can, HP the rest; "absorbs" card.
+ *  3. Recharge: an abjuration spell cast with a slot restores 2 × its level (Mage Armor at level 1: +2, at level 2: +4),
+ *     the slot is spent; a cantrip (Ray of Frost) recharges nothing.
+ *  4. Warding Bond, full ward: the Ogre hits the protected creature (Bond Resistance: half); the Abjurer takes the same
+ *     amount, which his ward absorbs (it is damage he takes) — his HP do not move.
+ *  5. Warding Bond, empty ward: the same shared damage lowers the Abjurer's HP.
+ *     With BLFX active (§156): its sharing trigger is disarmed on the effect, and it does not share a second time.
+ *  6. Projected Ward (Reaction): the Ogre hits the protected creature, the Abjurer's ward absorbs in its place; empty, the
+ *     protected creature takes the rest.
+ * Everything is restored: HP, pool, slots, effects (the runner adds its safety net).
  */
 const MODULE_ID = "dnd5e-combat";
 const CREATE = "Hha69hPMTYWhDE4A";
@@ -39,7 +40,7 @@ export default {
     const club = ogreItems.find(i => (i.type === "weapon") && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"));
     if ( !ctx.expect(!!club, `l'Ogre a une arme (${club?.name})`) ) return;
 
-    /** L'état préparé, lu chez le MJ : PV, réserve de l'égide (max calculé par dnd5e), création, emplacements, effets. */
+    /** The prepared state, read on the GM's side: HP, ward pool (max computed by dnd5e), creation, slots, effects. */
     const live = async () => (await ctx.call("run-script", { waitMs: 8000, args: { abj: abj.id, prot: prot.id, ward: id["arcane-ward"] }, code: `
       const A = canvas.tokens.get(args.abj).actor, P = canvas.tokens.get(args.prot).actor, w = A.items.get(args.ward);
       const hp = a => ({ value: a.system.attributes.hp.value, temp: a.system.attributes.hp.temp || 0, max: a.system.attributes.hp.max });
@@ -48,7 +49,7 @@ export default {
         level: A.items.find(i => i.type === "class")?.system.levels, intMod: A.system.abilities.int.mod,
         slots: { 1: A.system.spells.spell1.value, 2: A.system.spells.spell2.value },
         effects: { abj: A.effects.map(e => e.name), prot: P.effects.map(e => e.name) } };` })).result;
-    /** Remet PV et réserve (dépense, création). */
+    /** Restores HP and pool (spent, created). */
     const set = async ({ abjHp, protHp, spent, created } = {}) => ctx.call("run-script", { waitMs: 8000,
       args: { abj: abj.id, prot: prot.id, ward: id["arcane-ward"], abjHp, protHp, spent, created }, code: `
       const A = canvas.tokens.get(args.abj).actor, P = canvas.tokens.get(args.prot).actor, w = A.items.get(args.ward);
@@ -74,7 +75,7 @@ export default {
       const A = canvas.tokens.get(args.abj).actor;
       await A.update({ "system.spells.spell1.value": args.slots[1], "system.spells.spell2.value": args.slots[2] }); return true;` }));
 
-    /** L'Ogre frappe `target` (PV pleins) jusqu'à toucher. `react` : « none » (personne ne réagit) ou « first » (Égide projetée). */
+    /** The Ogre attacks `target` (full HP) until it hits. `react`: "none" (nobody reacts) or "first" (Projected Ward). */
     const strike = async (target, react = "none") => {
       for ( let i = 0; i < 20; i++ ) {
         await set({ abjHp: s0.abj.max, protHp: s0.prot.max });
@@ -91,7 +92,7 @@ export default {
       return null;
     };
 
-    // 1. Création de l'égide.
+    // 1. Ward creation.
     await set({ abjHp: s0.abj.max, protHp: s0.prot.max, spent: 0, created: false });
     await ctx.use({ tokenId: abj.id, itemId: id["arcane-ward"], activityId: CREATE, consume: true });
     await pause(1500);
@@ -113,8 +114,9 @@ export default {
       ctx.expect(hit.msgs.some(m => m.flags?.[MODULE_ID]?.absorbed || /absorb/i.test(`${m.content ?? ""} ${m.text ?? ""}`)), "une carte dit ce que l'égide a absorbé");
     }
 
-    // 2 bis (§474). Le reste au-delà de l'égide, sans dépendre du dé de l'Ogre (6 à 20 : il ne dépasse 16 qu'une fois sur six) :
-    // égide à 5, 9 dégâts contondants — l'égide en prend 5, l'Abjurateur perd 4. DDB Importer actif refaisait l'égide et rendait ces 4 PV.
+    // 2 bis (§474). The remainder beyond the ward, independent of the Ogre's die (6 to 20: it exceeds 16 only one time in six):
+    // ward at 5, 9 bludgeoning damage — the ward takes 5, the Abjurer loses 4. With DDB Importer active, the ward was rebuilt and
+    // those 4 HP restored.
     {
       await set({ abjHp: s0.abj.max, spent: s1.ward.max - 5 });
       const b = await live();
@@ -126,7 +128,7 @@ export default {
       ctx.expect(b.abj.value - a.abj.value === 4, `reste : 9 dégâts, l'Abjurateur perd les 4 qui passent l'égide (${b.abj.value} → ${a.abj.value})`);
     }
 
-    // 3. Recharge par un sort d'abjuration lancé avec un emplacement.
+    // 3. Recharge by an abjuration spell cast with a slot.
     const recharge = async (level, label) => {
       await set({ spent: 10 });
       const b = await live();
@@ -139,7 +141,7 @@ export default {
     };
     await recharge(1, "Armure du mage au niveau 1");
     await recharge(2, "Armure du mage au niveau 2");
-    // Un tour de magie (Rayon de givre sur l'Ogre : une attaque, sans fenêtre) ne recharge rien.
+    // A cantrip (Ray of Frost on the Ogre: one attack, no window) recharges nothing.
     if ( id["ray-of-frost"] ) {
       await set({ spent: 10 });
       const u = await ctx.use({ tokenId: abj.id, itemId: id["ray-of-frost"], activityType: "attack", targetTokenIds: [ogre.id],
@@ -149,14 +151,14 @@ export default {
       ctx.expect((await live()).ward.spent === 10, "un tour de magie (Rayon de givre) ne recharge rien");
     }
 
-    // 4. Lien protecteur, égide pleine : l'égide prend les dégâts partagés.
+    // 4. Warding Bond, full ward: the ward takes the shared damage.
     await set({ spent: 0 });
     await ctx.use({ tokenId: abj.id, itemId: id["warding-bond"], activityType: "utility", targetTokenIds: [prot.id], consume: true,
       usageConfig: { spell: { slot: "spell2" } } });
     await pause(2000);
     const bonded = await live();
     ctx.expect(bonded.effects.prot.some(n => /Warding Bond|Bonded|Lien protecteur|Lié/i.test(n)), `le Protégé porte le Lien protecteur (${bonded.effects.prot.join(", ")})`);
-    // §156 : un module d'animations (BLFX) partage aussi les dégâts du Lien ; le moteur désarme son déclencheur à la pose de l'effet.
+    // §156: an animation module (BLFX) also shares the Bond's damage; the engine disarms its trigger when the effect is applied.
     const foreign = (await ctx.call("run-script", { waitMs: 8000, args: { prot: prot.id }, code: `
       const id = "boss-loot-assets-premium", P = canvas.tokens.get(args.prot).actor;
       const marks = P.effects.map(e => e.flags?.[id]?.blfxCustom?.trigger).filter(t => t != null);
@@ -184,14 +186,14 @@ export default {
       ctx.expect(full.lostAbj === full.lostProt - want, `égide pleine : l'Abjurateur perd ${full.lostAbj} PV (attendu ${full.lostProt - want})`);
     }
 
-    // 5. Lien protecteur, égide vide : l'Abjurateur subit les dégâts partagés.
+    // 5. Warding Bond, empty ward: the Abjurer takes the shared damage.
     await set({ spent: s1.ward.max });
     const empty = await shared("égide vide");
     if ( empty ) {
       ctx.expect(empty.absorbed === 0, `égide vide : rien d'absorbé (${empty.absorbed})`);
       ctx.expect(empty.lostAbj === empty.lostProt && empty.lostAbj > 0, `égide vide : l'Abjurateur perd autant que le Protégé (${empty.lostAbj} = ${empty.lostProt})`);
     }
-    // Le Lien retiré avant l'Égide projetée (sinon les deux se mêlent).
+    // The Bond removed before Projected Ward (otherwise the two mix).
     for ( const e of (await ctx.effects(prot)).filter(e => /Warding Bond|Bonded|Lien protecteur|Lié/i.test(e.name ?? "")) ) {
       await ctx.call("remove-embedded-effect", { documentType: "Actor", id: prot.actorId, effectId: e._id ?? e.id }).catch(() => {});
     }
@@ -200,7 +202,7 @@ export default {
     }
     await pause(1000);
 
-    // 6. Égide projetée : en réaction, l'égide de l'Abjurateur prend les dégâts du Protégé.
+    // 6. Projected Ward: as a Reaction, the Abjurer's ward takes the protected creature's damage.
     if ( id["projected-ward"] ) {
       await set({ spent: 0 });
       const p = await strike(prot, "first");

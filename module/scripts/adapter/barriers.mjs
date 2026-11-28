@@ -1,12 +1,12 @@
 /**
- * §163 : les émanations qui protègent ou interdisent, tenues par un effet de leur lanceur (concentration comprise) et centrées sur lui —
- * elles le suivent :
- *  - `globe: { radius, units, maxLevel, everywhere? }` (adapter/eligibility.mjs, §161) ; `everywhere` — Champ antimagie : aucun sort
- *    n'y affecte personne, d'où qu'il soit lancé, et on n'y lance aucun sort ;
- *  - `barrier: { radius, units, exceptTypes? }` — Coquille antivie : une créature (hors `exceptTypes`) ne peut pas y entrer, ni frapper
- *    au corps à corps à travers sans arme à allonge ; O9h (§363) : `onlyTypes`, `shields` (rien de ce qu'elle fait n'atteint l'intérieur),
- *    `endsOnContact` (Parchemin de protection).
- * Lecture seulement : la légalité (runtime/turn.mjs, runtime/actions.mjs) et l'éligibilité décident.
+ * §163: emanations that protect or forbid, held by an effect of their caster (concentration included) and centered on it —
+ * they follow it:
+ *  - `globe: { radius, units, maxLevel, everywhere? }` (adapter/eligibility.mjs, §161); `everywhere` — Antimagic Field: no spell
+ *    affects anyone there, wherever it is cast from, and no spell is cast there;
+ *  - `barrier: { radius, units, exceptTypes? }` — Antilife Shell: a creature (outside `exceptTypes`) cannot enter, nor strike
+ *    in melee through without a reach weapon; O9h (§363): `onlyTypes`, `shields` (nothing it does reaches the inside),
+ *    `endsOnContact` (Scroll of Protection).
+ * Read only: legality (runtime/turn.mjs, runtime/actions.mjs) and eligibility decide.
  */
 
 import { contentOf } from "./content.mjs";
@@ -15,7 +15,7 @@ import { distanceBetween } from "./turn.mjs";
 import { lengthIn } from "./units.mjs";
 import { inAntimagic, antimagicSourceName } from "./antimagic.mjs";
 
-/** Les émanations `key` de la scène : `{ holder, item, rule }`, une par lanceur et par item. */
+/** The `key` emanations of the scene: `{ holder, item, rule }`, one per caster and per item. */
 export function zonesOf(scene, key) {
   const out = [];
   for ( const holder of scene?.tokens ?? [] ) {
@@ -32,21 +32,21 @@ export function zonesOf(scene, key) {
   return out;
 }
 
-/** Le rayon d'une émanation, dans l'unité de la grille. */
+/** An emanation's radius, in the grid's unit. */
 function radiusOf(scene, rule) {
   return lengthIn(rule.radius, rule.units, scene.grid.units);
 }
 
-/** Le token (à sa position, ou à `pos`) est-il dans l'émanation de `holder` ? */
+/** Is the token (at its position, or at `pos`) inside the emanation of `holder`? */
 export function insideZone(holder, token, rule, pos=undefined) {
   if ( !holder || !token || (holder.parent !== token.parent) ) return false;
   return distanceBetween(holder, token, pos ? { posB: pos } : {}).value <= radiusOf(token.parent, rule) + 1e-6;
 }
 
 /**
- * Le champ antimagie dans lequel se tient ce token, ou null : `{ name, status, item? }`. §436 : d'abord le statut `antimagic` de dnd5e
- * 6.1 (posé par une région `dnd5e.antimagic` — le Champ du SRD, celui du Manuel par le moteur, runtime/antimagic.mjs —, ou à la main) ;
- * sinon (dnd5e 6.0, région absente) le globe `everywhere` du §163, lu sur l'effet du lanceur du champ.
+ * The antimagic field this token stands in, or null: `{ name, status, item? }`. §436: first the `antimagic` status of dnd5e
+ * 6.1 (placed by a `dnd5e.antimagic` region — the SRD's Field, the Handbook's by the engine, runtime/antimagic.mjs —, or by hand);
+ * otherwise (dnd5e 6.0, region absent) the `everywhere` globe of §163, read on the field caster's effect.
  */
 export function antimagicAround(token) {
   if ( inAntimagic(token?.actor) ) return { name: antimagicSourceName(token.actor), status: true, item: null };
@@ -54,14 +54,14 @@ export function antimagicAround(token) {
   return zone ? { ...zone, name: zone.item.name, status: false } : null;
 }
 
-/** §436 : le token serait-il dans un globe `everywhere` (§163) à `pos` ? Le globe, ou null. */
+/** §436: would the token be in an `everywhere` globe (§163) at `pos`? The globe, or null. */
 export function antimagicGlobeAt(token, pos) {
   return zonesOf(token?.parent, "globe").find(z => z.rule.everywhere && insideZone(z.holder, token, z.rule, pos)) ?? null;
 }
 
 /**
- * La créature passe-t-elle la barrière (types exemptés, le lanceur lui-même) ? O9h (§363) : `onlyTypes` — seules ces créatures sont
- * arrêtées (Parchemin de protection).
+ * Does the creature pass the barrier (exempt types, the caster itself)? O9h (§363): `onlyTypes` — only these creatures are
+ * stopped (Scroll of Protection).
  */
 const crosses = (zone, token) => {
   if ( zone.holder === token ) return true;
@@ -71,8 +71,8 @@ const crosses = (zone, token) => {
 };
 
 /**
- * §163 : Coquille antivie — la barrière que ce déplacement franchirait de l'extérieur vers l'intérieur, ou null. `positions` : les
- * positions successives du déplacement (waypoints), la première exclue.
+ * §163: Antilife Shell — the barrier this movement would cross from outside to inside, or null. `positions`: the successive
+ * positions of the movement (waypoints), the first excluded.
  */
 export function barrierCrossed(token, positions) {
   for ( const zone of zonesOf(token?.parent, "barrier") ) {
@@ -83,13 +83,13 @@ export function barrierCrossed(token, positions) {
 }
 
 /**
- * §163 : Coquille antivie — « empêche les créatures … d'atteindre à travers » : une attaque au corps à corps sans allonge, de l'extérieur
- * vers une cible à l'intérieur. Rend la barrière, ou null.
+ * §163: Antilife Shell — "prevents creatures … from reaching through": a melee attack without reach, from outside
+ * toward a target inside. Returns the barrier, or null.
  */
 export function barrierBetween(attacker, target, activity) {
   const melee = (activity?.type === "attack") && (activity.attack?.type?.value === "melee") && !activity.item?.system?.properties?.has?.("rch");
   for ( const zone of zonesOf(attacker?.parent, "barrier") ) {
-    // O9h (§363) : `shields` — la créature arrêtée n'affecte rien dans la zone, quelle que soit l'action (Parchemin de protection).
+    // O9h (§363): `shields` — the stopped creature affects nothing in the area, whatever the action (Scroll of Protection).
     if ( !melee && !zone.rule.shields ) continue;
     if ( crosses(zone, attacker) || insideZone(zone.holder, attacker, zone.rule) ) continue;
     if ( insideZone(zone.holder, target, zone.rule) ) return zone;
@@ -98,8 +98,8 @@ export function barrierBetween(attacker, target, activity) {
 }
 
 /**
- * O9h (§363) : `endsOnContact` — les barrières de ce porteur qui contiennent maintenant une créature qu'elles arrêtent (il s'est déplacé
- * jusqu'à elle : l'émanation tombe). Rend `{ item, rule }` pour chacune.
+ * O9h (§363): `endsOnContact` — this bearer's barriers that now contain a creature they stop (it moved
+ * up to it: the emanation falls). Returns `{ item, rule }` for each.
  */
 export function breachedBarriers(holder) {
   return zonesOf(holder?.parent, "barrier").filter(zone => (zone.holder === holder) && zone.rule.endsOnContact

@@ -1,8 +1,8 @@
 /**
- * §458 : `onUsesSpent` — les livres à 48 heures de lecture du Guide. Arène de test (Magicien). Le Magicien reçoit le Manuel de vitalité
- * (sa donnée posait à « Read » l'effet d'un autre livre) et le Traité de compréhension (qui posait son +2 à chaque heure) ; leur compteur
- * est mis à 46 heures lues. Une lecture (47) : rien. La dernière (48) : l'effet du livre sur le Magicien (+2 Constitution, +2 Sagesse),
- * une seule fois, carte de chat. Objets et effets retirés.
+ * §458: `onUsesSpent` — the 48-hour reading books of the Dungeon Master's Guide. Arène de test (Wizard). The Wizard gets the
+ * Manual of Bodily Health (its data put another book's effect on "Read") and the Tome of Understanding (which put its +2 on
+ * every hour); their counter is set to 46 hours read. One reading (47): nothing. The last one (48): the book's effect on the
+ * Wizard (+2 Constitution, +2 Wisdom), only once, chat card. Objects and effects removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -24,7 +24,7 @@ export default {
     const mage = await ctx.token("Magicien");
     const actorId = mage.actorId;
     const effectsOf = async () => (await ctx.call("get-actor", { actorId })).effects ?? [];
-    // Chemins relatifs à `system` (connecteur : `prepared.system[<chemin>]`).
+    // Paths relative to `system` (connector: `prepared.system[<chemin>]`).
     const ability = async key => (await ctx.call("get-actor", { actorId, preparedPaths: [`abilities.${key}.value`] }).catch(() => null))
       ?.prepared?.system?.[`abilities.${key}.value`] ?? null;
     const spentOf = async itemId => ((await ctx.call("get-actor", { actorId })).items ?? []).find(i => i._id === itemId)?.system?.uses?.spent ?? null;
@@ -38,10 +38,10 @@ export default {
       const itemId = await ctx.ensureItem(mage, book.uuid);
       const base = await ability(book.ability);
       await ctx.call("upsert-actor-item", { actorId, itemData: { "system.uses.spent": 46 }, match: { path: "_id", value: itemId } });
-      // Le livre prêté par le scénario ne garde pas toujours son uuid de compendium : l'effet se reconnaît à sa marque et à son nom.
+      // The book lent by the scenario does not always keep its compendium uuid: the effect is recognized by its mark and its name.
       const marked = async () => (await effectsOf()).filter(e => e.flags?.[MODULE_ID]?.usesSpent && (e.name === book.effect));
 
-      // `consume: true` : l'outil du connecteur ne décompte rien par défaut ; c'est la case cochée qui compte ici.
+      // `consume: true`: the connector's tool counts nothing by default; the ticked box is what counts here.
       await ctx.use({ tokenId: mage.id, itemId, activityId: book.read, consume: true });
       await pause(1500);
       ctx.expect(await spentOf(itemId) === 47, `${book.label} : une heure de plus cochée (${await spentOf(itemId)} / 48)`);
@@ -49,7 +49,7 @@ export default {
       ctx.expect(!(await effectsOf()).some(e => (e.name === book.effect) && !before.some(b => b._id === e._id)),
         `${book.label} : « Read » ne pose plus d'effet à chaque heure`);
 
-      // `consume: true` : l'outil du connecteur ne décompte rien par défaut ; c'est la case cochée qui compte ici.
+      // `consume: true`: the connector's tool counts nothing by default; the ticked box is what counts here.
       await ctx.use({ tokenId: mage.id, itemId, activityId: book.read, consume: true });
       ctx.log(`${book.label} : après la 2e lecture, ${await spentOf(itemId)} / 48 cochées`);
       let got = [];

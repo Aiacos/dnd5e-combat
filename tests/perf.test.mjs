@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createPerf } from "../module/scripts/core/perf.mjs";
 import { createRouter } from "../module/scripts/runtime/router.mjs";
 
-describe("relevé des temps (§98)", () => {
-  it("cumule par inscrit, trie par temps synchrone, signale au-delà du seuil", () => {
+describe("timing survey (§98)", () => {
+  it("accumulates per registrant, sorts by synchronous time, flags above the threshold", () => {
     const slow = [];
     const perf = createPerf({ threshold: 50, onSlow: (row, ms) => slow.push([row.label, ms]) });
     perf.record("h", "a", "sync", 10);
@@ -21,7 +21,7 @@ describe("relevé des temps (§98)", () => {
     expect(perf.report()).toEqual([]);
   });
 
-  it("le routeur chronomètre le temps synchrone, et la fin d'une promesse à part", async () => {
+  it("the router times the synchronous part, and the end of a promise separately", async () => {
     let clock = 0;
     const seen = [];
     const handlers = {};
@@ -38,7 +38,7 @@ describe("relevé des temps (§98)", () => {
     expect(seen[2]).toEqual(["async", "async", 1005]);
   });
 
-  it("une erreur synchrone est quand même chronométrée", () => {
+  it("a synchronous error is timed all the same", () => {
     const seen = [];
     const handlers = {};
     const router = createRouter({ subscribe: (hook, fn) => { handlers[hook] = fn; }, isExecutor: () => true, report: () => {},
@@ -50,11 +50,11 @@ describe("relevé des temps (§98)", () => {
 });
 
 /**
- * Issue #49 : la ligne « slow: » est une mesure, pas une erreur. Le débogueur (runtime/debug.mjs) relève tout `console.warn`
- * préfixé par l'identifiant du module : écrite en avertissement, la ligne levait l'avis « DAS a relevé une erreur » à chaque
- * chargement, chez le MJ comme chez les joueurs.
+ * Issue #49: the "slow:" line is a measurement, not an error. The debugger (runtime/debug.mjs) picks up every `console.warn`
+ * prefixed with the module id: written as a warning, the line raised the "DAS caught an error" notice at every load,
+ * for the GM as well as for the players.
  */
-describe("ligne « slow: » et débogueur (issue #49)", () => {
+describe("\"slow:\" line and debugger (issue #49)", () => {
   let debug, perf, info;
   beforeEach(async () => {
     debug = await import("../module/scripts/runtime/debug.mjs");
@@ -72,10 +72,10 @@ describe("ligne « slow: » et débogueur (issue #49)", () => {
     delete globalThis.game;
   });
 
-  it("un inscrit lent écrit sa ligne en console sans être relevé comme une erreur", () => {
+  it("a slow registrant writes its line to the console without being flagged as an error", () => {
     const heard = [];
     const off = debug.debugApi.onError((group, isNew) => heard.push([group.kind, group.message, isNew]));
-    perf.recordTiming("ready", "issue 49 : audit du contenu", "sync", 52);   // seuil par défaut : 50 ms
+    perf.recordTiming("ready", "issue 49 : audit du contenu", "sync", 52);   // default threshold: 50 ms
     off();
     expect(info).toHaveBeenCalledTimes(1);
     expect(info.mock.calls[0][0]).toMatch(/^dnd5e-combat \| slow: ready "issue 49 : audit du contenu" 52 ms/);
@@ -83,7 +83,7 @@ describe("ligne « slow: » et débogueur (issue #49)", () => {
     expect(debug.debugApi.total("suite")).toBe(0);
   });
 
-  it("un vrai avertissement du module reste relevé", () => {
+  it("a real module warning is still flagged", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     debug.uninstallCapture();
     debug.installCapture({ console: globalThis.console, addEventListener() {}, removeEventListener() {} });

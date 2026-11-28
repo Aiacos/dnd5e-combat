@@ -1,6 +1,6 @@
 /**
- * §93 : un Test d20 dont le d20 GARDÉ fait 1 (avec Avantage ou Désavantage, le dé retenu). Pur : des jets décrits par leur premier
- * terme (`d20.total`, celui de dnd5e : D20Roll#d20, le total des résultats actifs).
+ * §93: a d20 Test whose KEPT d20 is a 1 (with Advantage or Disadvantage, the retained die). Pure: rolls described by their first
+ * term (`d20.total`, dnd5e's: D20Roll#d20, the total of the active results).
  * @param {Array<{d20?: {total?: number}}>} rolls
  * @returns {boolean}
  */

@@ -1,10 +1,11 @@
 /**
- * §301, lot C6 de la repasse terme par terme : réactions jamais proposées. Arène des sorts (Lanceur, Allié, Ennemi au contact).
- * Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source) et remet tout.
- *  - Interception : l'Ennemi au contact touche le Lanceur ; l'Allié à côté, armé, réduit les dégâts (réaction prise d'office) ;
- *  - Représailles : l'Ennemi blesse l'Allié ; la réaction attaque l'Ennemi avec l'arme de l'Allié ;
- *  - Chute ralentie : l'Allié (Moine 4) tombe de 30 ft — la fenêtre s'ouvre avant les dégâts, ils sont réduits de 20 ;
- *  - Feuille morte : l'Allié tombe ; le Lanceur, qui connaît le sort, réagit — pas de dégâts de chute.
+ * §301, batch C6 of the term-by-term pass: Reactions never offered. Spell arena (Caster, Ally, Enemy in contact).
+ * Each part borrows its items from the Player's Handbook (with their source) and puts everything back.
+ *  - Interception: the Enemy in contact hits the Caster; the Ally next to it, armed, reduces the damage (Reaction taken
+ *    automatically);
+ *  - Retaliation: the Enemy wounds the Ally; the Reaction attacks the Enemy with the Ally's weapon;
+ *  - Slow Fall: the Ally (Monk 4) falls 30 ft — the window opens before the damage, it is reduced by 20;
+ *  - Feather Fall: the Ally falls; the Caster, who knows the spell, reacts — no fall damage.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -63,7 +64,7 @@ export default {
     };
     const auto = { [MODULE_ID]: { autoReact: "first" } };
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
-    /** Répond à la première fenêtre nouvelle dont un bouton correspond (la réaction proposée au MJ, qui joue les PNJ). */
+    /** Answers the first new window with a matching button (the Reaction offered to the GM, who plays the NPCs). */
     const answer = async (ids, re, ms=15000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
@@ -74,7 +75,7 @@ export default {
       }
       return null;
     };
-    /** L'Ennemi frappe sa cible avec son gourdin jusqu'à toucher (20 essais au plus) ; rend la résolution du coup. */
+    /** The Enemy strikes its target with its club until it hits (20 tries at most); returns the resolution of the hit. */
     const strike = async (target, club) => {
       for ( let n = 0; n < 20; n++ ) {
         await ctx.setHp(target, 999);
@@ -86,7 +87,7 @@ export default {
       }
       return null;
     };
-    /** L'Allié, en l'air à 30 ft et « En chute », fait un pas : il tombe (2d6… 3d6 de dnd5e). */
+    /** The Ally, in the air at 30 ft and "Falling", takes a step: it falls (2d6… 3d6 in dnd5e). */
     const drop = async () => {
       const p = await ctx.position(ally);
       await ctx.call("move-token", { tokenId: ally.id, x: p.x + ARENE_SORTS.grid * 3, y: p.y, elevation: 30 });
@@ -119,14 +120,14 @@ export default {
       await lend(ally, `${PHB}.classes.Item.phbbrbRetaliatio`);
       await lend(ally, `${PHB}.equipment.Item.phbwepLongsword0`, { "system.equipped": true, "system.proficient": 1 });
       const club = await lend(enemy, `${PHB}.equipment.Item.phbwepClub000000`, { "system.equipped": true, "system.proficient": 1 });
-      // L'Ennemi au contact de l'Allié (« une créature à 1,50 m »), de l'autre côté que le Lanceur.
+      // The Enemy in contact with the Ally ("a creature within 5 ft"), on the other side from the Caster.
       const a = await ctx.position(ally);
       await ctx.call("move-token", { tokenId: enemy.id, x: a.x, y: a.y + ARENE_SORTS.grid, elevation: 0 });
       await pause(1200);
       const since = await ctx.lastMessageId();
       const hit = await strike(ally, club);
       if ( !ctx.expect(!!hit, "l'Ennemi touche l'Allié (20 essais au plus)") ) return;
-      // La riposte peut rater : on lit l'utilisation en réaction de l'Allié, touché ou non.
+      // The riposte may miss: we read the Ally's use as a Reaction, hit or not.
       let back = false;
       for ( let i = 0; (i < 15) && !back; i++ ) {
         await pause(1000);

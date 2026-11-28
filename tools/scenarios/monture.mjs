@@ -1,14 +1,15 @@
 /**
- * §490 (brique B08) : monture et ordre à un compagnon non invoqué. Deux items synthétiques prêtés, leur règle posée dans la surcouche du
- * monde (`api.mcp.overrideContent`) :
- *   - sur le Zombi (la monture) : `mount: { rider: <acteur du Guerrier> }` (contrôlée) ;
- *   - sur le Guerrier (le cavalier) : `commands: { actor: <acteur du Zombi>, distance: 60, units: "ft" }`, action Bonus.
- *  1. ni l'un ni l'autre À terre ou Neutralisé (mise en place), le Guerrier au contact : le menu du Zombi offre « Monter » ; il monte — lien noté des deux côtés, assis sur le Zombi ;
- *  2. le Zombi marche deux cases : le Guerrier suit, toujours en selle ;
- *  3. en combat, initiative du Guerrier 15, du Zombi 3 : le Zombi passe juste après lui ; son attaque demande l'ordre (souci de
- *     légalité), l'ordre donné (« Commander », action Bonus) le lève pour ce round ;
- *  4. le Zombi mis À terre : le lien tombe, le Guerrier est posé à côté, À terre.
- * Remet items, surcouche, états et combat ; les positions par le filet du lanceur.
+ * §490 (brick B08): mount and order to a non-summoned companion. Two synthetic items lent, their rule placed in the world's
+ * overlay (`api.mcp.overrideContent`):
+ *   - on the Zombie (the mount): `mount: { rider: <acteur du Guerrier> }` (controlled);
+ *   - on the Fighter (the rider): `commands: { actor: <acteur du Zombi>, distance: 60, units: "ft" }`, Bonus Action.
+ *  1. neither Prone nor Incapacitated (setup), the Fighter in contact: the Zombie's menu offers "Mount"; they mount — link
+ *     noted on both sides, seated on the Zombie;
+ *  2. the Zombie walks two cells: the Fighter follows, still in the saddle;
+ *  3. in combat, Fighter's Initiative 15, Zombie's 3: the Zombie goes right after them; its attack asks for the order (legality
+ *     concern), the order given ("Command", Bonus Action) lifts it for this round;
+ *  4. the Zombie knocked Prone: the link falls, the Fighter is placed next to it, Prone.
+ * Restores items, overlay, conditions and combat; the positions through the caster's safety net.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -26,7 +27,7 @@ export default {
     const mount = await ctx.token("Zombi");
     const state = async () => ctx.engine("mount", { tokenId: rider.id, targetId: mount.id });
 
-    // --- Items et règles prêtés ----------------------------------------------------------------------------------------
+    // --- Items and rules lent ------------------------------------------------------------------------------------------
     const lend = async (token, identifier, itemData, rule) => {
       await ctx.call("upsert-actor-item", { actorId: token.actorId, itemData, match: { path: "system.identifier", value: identifier } });
       const lent = await ctx.itemId(token.id, identifier);
@@ -46,9 +47,9 @@ export default {
       for ( const t of [rider, mount] ) await ctx.removeStatusEffects(t, "prone").catch(() => {});
     });
 
-    // --- 1. Monter -------------------------------------------------------------------------------------------------------
-    // Mise en place : ni l'un ni l'autre À terre ou Neutralisé (on ne monte pas À terre). Le Guerrier de `dnd-6` garde un effet
-    // « Prone » d'un ancien passage (vu au banc le 2026-11-20) ; le filet du lanceur remet ses effets après le scénario.
+    // --- 1. Mounting ------------------------------------------------------------------------------------------------------
+    // Setup: neither Prone nor Incapacitated (one does not mount while Prone). The `dnd-6` Fighter keeps a "Prone" effect
+    // from an earlier run (seen on the test bench on 2026-11-20); the caster's safety net restores its effects after the scenario.
     const BREAKERS = ["prone", "incapacitated", "paralyzed", "petrified", "stunned", "unconscious", "dead"];
     for ( const t of [rider, mount] ) for ( const status of BREAKERS ) await ctx.removeStatusEffects(t, status).catch(() => {});
     await pause(500);
@@ -57,8 +58,8 @@ export default {
     const { labels, refused } = await ctx.engine("menu", { tokenId: rider.id, targetId: mount.id });
     const entry = labels.find(l => l.includes(mount.name) && /Monter|Mount|Montar|Montare/.test(l));
     ctx.expect(!!entry, `le menu du Zombi offre « Monter » (${labels.join(" | ")})`);
-    // Avant le geste : rien ne doit refuser (son cavalier, au contact, hors combat). Un refus serait une fenêtre « forcer ? » en jeu ;
-    // l'API de test passe outre sans fenêtre (`force`) pour que la suite se joue, mais le refus est compté ici, avec sa raison.
+    // Before the move: nothing must refuse (its rider, in contact, out of combat). A refusal would be a "force it?" window in play;
+    // the test API goes past it without a window (`force`) so the suite plays, but the refusal is counted here, with its reason.
     const pre = await state();
     ctx.expect(!pre.issues.length && !refused?.[entry], `rien ne refuse de monter (${[...pre.issues, refused?.[entry]].filter(Boolean).join(" | ") || "—"} ; `
       + `Guerrier ${pre.token.position.cell.i},${pre.token.position.cell.j} [${pre.token.statuses.join(", ")}], `
@@ -70,7 +71,7 @@ export default {
     ctx.expect((s.token.mountedOn === mount.id) && (s.target.ridden === rider.id), "le lien est noté sur le cavalier et sur la monture");
     ctx.expect((s.token.position.x === s.target.position.x) && (s.token.position.y === s.target.position.y), "le Guerrier est assis sur le Zombi");
 
-    // --- 2. Déplacement commun -------------------------------------------------------------------------------------------
+    // --- 2. Shared movement -----------------------------------------------------------------------------------------------
     const cell = { i: s.target.position.cell.i, j: s.target.position.cell.j + 2 };
     await ctx.engine("move", { tokenId: mount.id, cell }, { timeoutMs: 60000 });
     await pause(1500);
@@ -78,7 +79,7 @@ export default {
     ctx.expect(s.target.position.cell.j === cell.j, "le Zombi a marché deux cases");
     ctx.expect((s.token.position.x === s.target.position.x) && (s.token.position.y === s.target.position.y), "le Guerrier a suivi, toujours en selle");
 
-    // --- 3. Monture contrôlée : initiative et ordre ---------------------------------------------------------------------
+    // --- 3. Controlled mount: Initiative and order ----------------------------------------------------------------------
     const combat = await ctx.startCombat([rider, mount]);
     const c = (await ctx.combat()).combat ?? combat;
     const by = id => (c.combatants ?? []).find(x => x.tokenId === id);

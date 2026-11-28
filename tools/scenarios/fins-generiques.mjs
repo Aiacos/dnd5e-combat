@@ -1,9 +1,10 @@
 /**
- * §258 : fins génériques (`endsWhen`), relevées par l'audit CAT / CPR.
- *  1. Armure du mage sur le Magicien, puis une armure de cuir enfilée : l'effet tombe (`armor: "any"`).
- *  2. Immobilisation de personne sur le Guerrier jusqu'à une sauvegarde réussie : la concentration du Magicien tombe aussitôt
- *     (`unaffected`, réglage `endUnaffected`) ; sur un échec, elle reste.
- *  3. Lien de garde du Magicien sur le Guerrier, puis le Guerrier emmené à plus de 18 m : le lien tombe (`apart`, `spell`).
+ * §258: generic endings (`endsWhen`), surveyed by the CAT / CPR audit.
+ *  1. Mage Armor on the Wizard, then leather armor put on: the effect ends (`armor: "any"`).
+ *  2. Hold Person on the Fighter until a successful save: the Wizard's Concentration ends at once
+ *     (`unaffected`, setting `endUnaffected`); on a failure, it stays.
+ *  3. Warding Bond from the Wizard on the Fighter, then the Fighter taken more than 18 m away:
+ *     the bond ends (`apart`, `spell`).
  *  4. Issue #150 — Warding Bond again: the warded Fighter drops to 0 HP and stays warded (SRD 5.2: "if you drop to 0 Hit Points",
  *     the caster only); then the Wizard drops to 0 HP and the bond ends (`zeroHp: "caster"`).
  */
@@ -31,7 +32,7 @@ export default {
     ctx.restore(() => ctx.removeEffectsFrom(mage, "warding-bond"));
     const endedSince = async (since, reason) => (await ctx.messagesSince(since)).filter(m => m.flags?.[MODULE_ID]?.ended?.reason === reason);
 
-    // 1. Armure du mage, puis une armure enfilée.
+    // 1. Mage Armor, then armor put on.
     await ctx.ensureItem(mage, `${PHB}phbsplMageArmor0`, { system: { method: "atwill" } });
     let since = await ctx.lastMessageId();
     await ctx.use({ tokenId: mage.id, identifier: "mage-armor", targetTokenIds: [mage.id] });
@@ -49,7 +50,7 @@ export default {
     ctx.expect(!(await ctx.effectsFrom(mage, "mage-armor")).length, "armure de cuir enfilée : Armure du mage tombe");
     ctx.expect((await endedSince(since, "armor")).length > 0, "une carte de chat le dit à la table");
 
-    // 2. Immobilisation de personne : réussie, la concentration tombe ; ratée, elle reste.
+    // 2. Hold Person: on a success, Concentration ends; on a failure, it stays.
     await ctx.ensureItem(mage, `${PHB}phbsplHoldPerson`, { system: { method: "atwill" } });
     let sawSuccess = false, sawFailure = false;
     for ( let i = 0; (i < 20) && !(sawSuccess && sawFailure); i++ ) {
@@ -77,7 +78,7 @@ export default {
     await dropConcentration();
     await ctx.removeStatusEffects(guerrier, "paralyzed");
 
-    // 3. Lien de garde, puis le Guerrier emmené à plus de 18 m.
+    // 3. Warding Bond, then the Fighter taken more than 18 m away.
     await ctx.ensureItem(mage, `${PHB}phbsplWardingBon`, { system: { method: "atwill" } });
     since = await ctx.lastMessageId();
     await ctx.use({ tokenId: mage.id, identifier: "warding-bond", targetTokenIds: [guerrier.id] });
@@ -89,7 +90,7 @@ export default {
     const magePos = await ctx.position(mage);
     const size = await ctx.gridSize();
     ctx.restore(() => ctx.call("move-token", { tokenId: guerrier.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => {}));
-    // 14 cases (70 ft) du Magicien, du côté où la scène a de la place.
+    // 14 cells (70 ft) from the Wizard, on the side where the scene has room.
     const dx = (magePos.x > 14 * size) ? -14 : 14;
     await ctx.call("move-token", { tokenId: guerrier.id, x: magePos.x + (dx * size), y: magePos.y });
     await pause(2500);

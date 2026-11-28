@@ -1,11 +1,11 @@
 /**
- * Chance du ténébreux (SPEC §38), monde `dnd-6`. L'Occultiste reçoit Chance du ténébreux (Manuel des joueurs) ; le Clerc lui lance
- * Charme-personne (à volonté) jusqu'à une sauvegarde de Sagesse ratée. La question « ajouter 1d10 ? » s'ouvre chez le MJ (l'Occultiste
- * n'a pas de joueur connecté) : le scénario y répond « Ajouter » (`answer-dialog`). Vérifie :
- *  - la question vient sur une sauvegarde ratée, avec « Garder le jet » en première option (celle que prend l'absence de réponse) ;
- *  - le total de la résolution = le jet + le d10 (carte `rollBonus`), et le verdict suit ce total contre le DD ;
- *  - une utilisation de l'item dépensée.
- * Remet effets et utilisations ; retire les items prêtés.
+ * Dark One's Luck (SPEC §38), world `dnd-6`. The Warlock receives Dark One's Luck (Player's Handbook); the Cleric casts
+ * Charm Person (at will) on him until a failed Wisdom saving throw. The question "add 1d10?" opens on the GM's side (the Warlock
+ * has no connected player): the scenario answers "Add" there (`answer-dialog`). Checks:
+ *  - the question comes on a failed saving throw, with "Keep the roll" as first option (the one taken when there is no answer);
+ *  - the resolution's total = the roll + the d10 (card `rollBonus`), and the verdict follows that total against the DC;
+ *  - one use of the item spent.
+ * Resets effects and uses; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -43,7 +43,7 @@ export default {
       const spent0 = await spentOf();
       const since = await ctx.lastMessageId();
       const used = await ctx.use({ tokenId: cleric.id, itemId: charmId, activityType: "save", consume: false, targetTokenIds: [warlock.id] });
-      // La question n'existe que sur une sauvegarde ratée : on l'attend un moment, sinon la sauvegarde a réussi.
+      // The question only exists on a failed saving throw: we wait for it a while, otherwise the saving throw succeeded.
       let dialog = null;
       for ( let k = 0; (k < 3) && !dialog; k++ ) {
         dialog = (await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: known, waitMs: 5000 })).windows.find(w => /1d10/.test(w.text ?? "")) ?? null;

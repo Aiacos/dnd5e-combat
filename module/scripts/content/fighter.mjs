@@ -1,51 +1,52 @@
 /**
- * Le Guerrier du Manuel des joueurs 2024 (SPEC §21), module premium `dnd-players-handbook` 2.2.0 (packs `classes`, items
- * `phbftr…`, et `feats` pour les styles de combat). Vocabulaire du PHB-fr : Fougue, Second souffle, Décalage tactique, Attaques
- * avisées, Héros du champ d'honneur, styles Armes à deux mains et Armes de jet.
+ * The Fighter of the 2024 Player's Handbook (SPEC §21), premium module `dnd-players-handbook` 2.2.0 (packs `classes`, items
+ * `phbftr…`, and `feats` for the fighting styles). Vocabulary of the French PHB: Action Surge, Second Wind, Tactical Shift,
+ * Studied Attacks, Hero of the Field of Honor, Great Weapon Fighting and Thrown Weapon Fighting styles.
  *
- * Ce que dnd5e fait déjà seul : Second souffle (soin 1d10 + niveau, action Bonus), Attaque supplémentaire (le budget du moteur
- * compte les attaques : adapter/turn.mjs, `attacksPerAction`), Critique amélioré (seuil 19, effet de l'item), styles Archerie,
- * Défense, Duel, Combat en aveugle (effets). Les bottes d'arme : runtime/mastery.mjs.
+ * What dnd5e already does by itself: Second Wind (healing 1d10 + level, Bonus Action), Extra Attack (the engine's budget
+ * counts the attacks: adapter/turn.mjs, `attacksPerAction`), Improved Critical (threshold 19, the item's effect), Archery,
+ * Defense, Dueling, Blind Fighting styles (effects). The weapon masteries: runtime/mastery.mjs.
  */
 
 export const FIGHTER = Object.freeze({
-  // Athlète remarquable (Champion 3) : l'Avantage à l'initiative et en Athlétisme est le drapeau de dnd5e ; « sitôt un coup critique,
-  // vous pouvez vous déplacer de la moitié de votre Vitesse sans provoquer d'attaque d'opportunité » — à son tour (runtime/feats.mjs).
+  // Remarkable Athlete (Champion 3): Advantage on Initiative and on Athletics is dnd5e's flag; "right after a Critical Hit,
+  // you can move up to half your Speed without provoking Opportunity Attacks" — on its turn (runtime/feats.mjs).
   "remarkable-athlete": { critMove: true },
-  // §123 : Ralliement (Chevalier du dragon pourpre) — « un allié à 9 m ou moins » ; Interception (style de combat) — « une autre
-  // créature à 1,50 m de vous ». « Personnelles » dans les données du Manuel des joueurs.
+  // §123: Rally (Purple Dragon Knight) — "an ally within 9 m or less"; Interception (fighting style) — "another
+  // creature within 1.50 m of you". "Personal" in the Player's Handbook data.
   "rally": { ranges: { uyAnJsUHU2Aek9Lk: { value: 30, units: "ft" } } },
-  // §301 : Interception — « quand une créature que vous voyez touche une autre créature à 1,50 m de vous d'un jet d'attaque, votre Réaction
-  // réduit les dégâts de 1d10 + votre bonus de maîtrise ; vous maniez un bouclier ou une arme courante ou de guerre » — avant les dégâts.
+  // §301: Interception — "when a creature you can see hits another creature within 1.50 m of you with an attack roll, your
+  // Reaction reduces the damage by 1d10 + your proficiency bonus; you wield a shield or a Simple or Martial weapon" — before
+  // the damage.
   "interception": { ranges: { Hjm3PZRt6NdVXiFa: { value: 5, units: "ft" } },
     triggers: [{ on: "allyIsHit", if: { "target.nearSelf": { distance: 5, units: "ft" }, "target.isSelf": false, "self.seesSource": true,
       any: [{ "self.hasShield": true }, { "self.wieldsWeapon": true }] },
       do: [{ type: "use", activity: "Hjm3PZRt6NdVXiFa", target: "target" }, { type: "reduce" }] }] },
-  // §301 : Sens tactique (niveau 2) — un test raté : dépenser Second souffle pour ajouter 1d10 ; s'il reste raté, l'utilisation revient.
-  // Survivant (Champion 18) — Défier la mort : « un 18 à 20 à une sauvegarde contre la mort vaut un 20 » (l'Avantage est l'effet
-  // de l'item) ; Sursaut héroïque : « au début de chacun de vos tours, vous regagnez 5 + votre modificateur de Constitution
-  // points de vie si vous êtes Ensanglanté et avez au moins 1 point de vie » — l'activité de soins de l'item.
+  // §301: Tactical Mind (level 2) — a failed check: spend Second Wind to add 1d10; if it still fails, the use comes back.
+  // Survivor (Champion 18) — Defy Death: "an 18 to 20 on a death saving throw counts as a 20" (the Advantage is the
+  // item's effect); Heroic Rally: "at the start of each of your turns, you regain 5 + your Constitution modifier
+  // Hit Points if you are Bloodied and have at least 1 Hit Point" — the item's healing activity.
   "survivor": { deathSaveCritical: 18, turnStartHeal: { activity: "5Fo0QwzexIPyLP3W", bloodied: true } },
   "tactical-mind": { rollBonus: { activity: "VVEGPoQePVprCF9A", on: ["check"], failRefund: true } },
-  // Fougue : « à votre tour, vous pouvez effectuer une action supplémentaire, hors action Magie » ; au niveau 17, deux utilisations
-  // mais une seule par tour. L'activité (activation « spéciale ») ne coûte rien au budget ; le moteur y ajoute l'action.
+  // Action Surge: "on your turn, you can take one additional action, except the Magic action"; at level 17, two uses
+  // but only one per turn. The activity ("special" activation) costs nothing to the budget; the engine adds the action to it.
   "action-surge": { grantsAction: true, usageLimits: { jtpVG47zPBUI0CZ5: { oncePerTurn: true } } },
-  // Décalage tactique (niveau 5) : « chaque fois que vous activez Second souffle par une action Bonus, vous pouvez vous déplacer
-  // jusqu'à la moitié de votre Vitesse sans provoquer d'attaque d'opportunité ».
+  // Tactical Shift (level 5): "whenever you activate Second Wind with a Bonus Action, you can move up to
+  // half your Speed without provoking Opportunity Attacks".
   "tactical-shift": { movesAfter: "second-wind" },
-  // §298 (repasse C3) — Inflexible (Guerrier 9) : « relancer une sauvegarde ratée, avec un bonus égal à votre niveau de Guerrier, et
-  // utiliser le nouveau jet » ; proposé après la sauvegarde ratée, sans coût d'action (la donnée dit « action », sans consommation).
+  // §298 (pass C3) — Indomitable (Fighter 9): "reroll a failed saving throw, with a bonus equal to your Fighter level, and
+  // use the new roll"; offered after the failed save, at no action cost (the data says "action", without consumption).
   "indomitable": { rollBonus: { activity: "84EBzlT1nDmNqhqM", on: ["save"], reroll: { bonus: "@classes.fighter.levels" } },
     usageLimits: { "84EBzlT1nDmNqhqM": { cost: "free" } } },
-  // Magie de guerre (Chevalier occulte 7) : « remplacer une des attaques de l'action Attaquer par un tour de magie de Magicien » ;
-  // Magie de guerre améliorée (18) : « deux des attaques par un sort de Magicien de niveau 1 ou 2 ».
+  // War Magic (Eldritch Knight 7): "replace one of the attacks of the Attack action with a Wizard cantrip";
+  // Improved War Magic (18): "two of the attacks with a Wizard spell of level 1 or 2".
   "war-magic": { spellsInAttack: { maxLevel: 0, class: "wizard" } },
   "improved-war-magic": { spellsInAttack: { maxLevel: 2, class: "wizard", attacks: 2 } },
-  // Énergie psionique, Frappe psionique (Guerrier psi 3) : « une fois à chacun de vos tours, juste après avoir touché une cible avec une
-  // arme » — proposée au coup, payée par un dé d'énergie psionique, sans coût d'action (la donnée dit « action »).
-  // §301 : Champ protecteur — « quand vous ou une créature visible à 9 m subissez des dégâts, votre Réaction et un dé : réduits du dé + Int »
-  // — proposé quand l'attaque touche, avant les dégâts (les dégâts sans jet d'attaque restent au joueur). Le Roublard Âme acérée partage
-  // l'identifiant : sans cette activité, rien ne lui est proposé.
+  // Psionic Energy, Psionic Strike (Psi Warrior 3): "once on each of your turns, right after hitting a target with a
+  // weapon" — offered on the hit, paid with a Psionic Energy die, at no action cost (the data says "action").
+  // §301: Protective Field — "when you or a creature you can see within 9 m takes damage, your Reaction and a die: reduced by
+  // the die + Int" — offered when the attack hits, before the damage (damage without an attack roll is left to the player).
+  // The Rogue Soulknife shares the identifier: without this activity, nothing is offered to it.
   "psionic-power": { hitRider: { pays: "psionic-power", damage: "FxJXB4BPlBnJLF7q", oncePerTurn: true },
     usageLimits: { FxJXB4BPlBnJLF7q: { cost: "free" } },
     triggers: [
@@ -53,95 +54,95 @@ export const FIGHTER = Object.freeze({
       { on: "allyIsHit", if: { "target.nearSelf": { distance: 30, units: "ft" }, "target.isSelf": false, "self.seesTarget": true },
         do: [{ type: "use", activity: "IasIclPwvvEjwvzf", target: "target" }, { type: "reduce" }] }
     ] },
-  // Attaques avisées (niveau 13) : « si vous ratez une créature d'un jet d'attaque, vous avez l'Avantage à votre prochain jet
-  // d'attaque contre elle avant la fin de votre prochain tour » — une marque, comme l'Ouverture (runtime/mastery.mjs).
+  // Studied Attacks (level 13): "if you miss a creature with an attack roll, you have Advantage on your next attack
+  // roll against it before the end of your next turn" — a mark, like Opening (runtime/mastery.mjs).
   "studied-attacks": { studiedAttacks: true },
-  // Héros du champ d'honneur (Champion 10) : « en combat, vous pouvez vous donner l'Inspiration héroïque chaque fois que vous
-  // commencez votre tour sans elle ».
+  // Hero of the Field of Honor (Champion 10): "in combat, you can give yourself Heroic Inspiration whenever you
+  // start your turn without it".
   "heroic-warrior": { heroicWarrior: true },
-  // Style Armes à deux mains : « quand vous lancez les dégâts d'une attaque avec une arme de corps à corps tenue à deux mains, vous
-  // pouvez considérer tout 1 ou 2 sur un dé de dégâts comme un 3 — l'arme doit avoir la propriété Deux mains ou Polyvalente ».
+  // Great Weapon Fighting style: "when you roll the damage of an attack with a melee weapon held in two hands, you
+  // can treat any 1 or 2 on a damage die as a 3 — the weapon must have the Two-Handed or Versatile property".
   "great-weapon-fighting": { greatWeaponFighting: true },
-  // Style Armes de jet : +2 aux dégâts d'un coup à distance porté avec une arme de Lancer.
+  // Thrown Weapon Fighting style: +2 to the damage of a ranged hit made with a Thrown weapon.
   "thrown-weapon-fighting": { thrownDamage: 2 },
 
-  // §87 : manœuvres du Maître de guerre qui se jouent au toucher — « quand vous touchez une créature d'un jet d'attaque, vous pouvez
-  // dépenser un dé de supériorité » : la question des faveurs au jet de dégâts (adapter/smite.mjs, une seule par coup, comme la règle :
-  // une manœuvre par attaque), payée par Supériorité martiale (`pays`) ; le dé, de l'activité « Superiority Die » de la manœuvre,
-  // au type de dégâts de l'arme ; puis la sauvegarde de la manœuvre sur la cible encore debout, et ce qu'un échec fait.
-  // Attaque désarmante : Force ou lâcher un objet (son arme de corps à corps : étape `disarm`).
+  // §87: Battle Master maneuvers that play on a hit — "when you hit a creature with an attack roll, you can
+  // expend a Superiority Die": the question of the smites at the damage roll (adapter/smite.mjs, only one per hit, like the rule:
+  // one maneuver per attack), paid by Martial Superiority (`pays`); the die, from the maneuver's "Superiority Die" activity,
+  // of the weapon's damage type; then the maneuver's save on the target still standing, and what a failure does.
+  // Disarming Attack: Strength or drop an item (its melee weapon: `disarm` step).
   "disarming-attack": {
     hitRider: { pays: "combat-superiority", damage: "mlUC7IiS8ZyTvDpZ", save: "5y3EDGj0EGN3xVzO", weaponDamage: true },
     triggers: [{ on: "failedSave", do: [{ type: "disarm" }] }]
   },
-  // Attaque distrayante : « le prochain jet d'attaque contre la cible par un autre que vous a l'Avantage, avant le début de votre
-  // prochain tour » — l'effet « Distracted » (GrJWQnC7ueEa7U4l), consommé à cette attaque.
+  // Distracting Strike: "the next attack roll against the target by someone other than you has Advantage, before the start of your
+  // next turn" — the "Distracted" effect (GrJWQnC7ueEa7U4l), consumed by that attack.
   "distracting-strike": {
     hitRider: { pays: "combat-superiority", damage: "DBgCFax1iS3mobyw", effect: "GrJWQnC7ueEa7U4l", weaponDamage: true },
     triggers: [{ on: "preAttackRoll", via: "effect", if: { "target.hasEffect": "distracting-strike", not: { "target.hasEffectFrom": "distracting-strike" } },
       do: [{ type: "advantage" }, { type: "consume", side: "target" }] }]
   },
-  // Attaque provocante : Sagesse ou « Désavantage aux jets d'attaque contre une autre cible que vous jusqu'à la fin de votre prochain
-  // tour » — l'effet « Goaded » (bJjBbuJ2PZKby1Nt) de la sauvegarde ; sa part de dégâts (le dé, en double) n'est pas lancée.
+  // Goading Attack: Wisdom or "Disadvantage on attack rolls against a target other than you until the end of your next
+  // turn" — the save's "Goaded" effect (bJjBbuJ2PZKby1Nt); its share of damage (the die, doubled) is not rolled.
   "goading-attack": {
     hitRider: { pays: "combat-superiority", damage: "IxCIr1UxK0rqi5De", save: "YZDchvLnuCD6xMkF", weaponDamage: true },
     noDamage: ["YZDchvLnuCD6xMkF"],
     triggers: [{ on: "preAttackRoll", via: "effect", if: { "source.hasEffect": "goading-attack", not: { "source.hasEffectFromTarget": "goading-attack" } },
       do: [{ type: "disadvantage" }] }]
   },
-  // Attaque menaçante : Sagesse ou Effrayé jusqu'à la fin de votre prochain tour (effet de la sauvegarde, durée §79).
+  // Menacing Attack: Wisdom or Frightened until the end of your next turn (the save's effect, duration §79).
   "menacing-attack": { hitRider: { pays: "combat-superiority", damage: "DCKmEG3Vy2gvxpKH", save: "b6LpZcPAmrfgo5hc", weaponDamage: true } },
-  // Attaque repoussante : une cible de taille G au plus — Force ou repoussée de 4,50 m.
+  // Pushing Attack: a target of Large size or smaller — Strength or pushed 4.50 m.
   "pushing-attack": {
     hitRider: { pays: "combat-superiority", damage: "E8n2vBez77Swvt8l", save: "IFAKr2EogbOKzFSk", sizeAtMost: "lg", weaponDamage: true },
     triggers: [{ on: "failedSave", do: [{ type: "move", mode: "push", distance: 15, units: "ft" }] }]
   },
-  // Croc-en-jambe : une cible de taille G au plus — Force ou À terre.
+  // Trip Attack: a target of Large size or smaller — Strength or Prone.
   "trip-attack": {
     hitRider: { pays: "combat-superiority", damage: "vOstpOszbeITGlUP", save: "EVY5IoXOorEfQbCr", sizeAtMost: "lg", weaponDamage: true },
     triggers: [{ on: "failedSave", do: [{ type: "status", status: "prone" }] }]
   },
-  // Attaque manœuvrante : le dé aux dégâts ; « un allié peut se déplacer de la moitié de sa Vitesse par sa Réaction sans provoquer
-  // d'attaque d'opportunité de la cible » : au MJ.
+  // Maneuvering Attack: the die to the damage; "an ally can move up to half their Speed as a Reaction without provoking
+  // an Opportunity Attack from the target": left to the GM.
   "maneuvering-attack": { hitRider: { pays: "combat-superiority", damage: "y91hZshSUPoqsrpq", weaponDamage: true } },
-  // §88 : Parade (manœuvre) — « quand une autre créature vous inflige des dégâts d'un jet d'attaque au corps à corps, votre Réaction et un
-  // dé réduisent les dégâts du dé + Force ou Dextérité » : l'activité « soin » (F4UxiihGgkdv4orJ, dé + max(For, Dex), un dé de
-  // supériorité) donne le montant retiré, comme la Déviation d'assaut du Moine.
+  // §88: Parry (maneuver) — "when another creature deals damage to you with a melee attack roll, your Reaction and a
+  // die reduce the damage by the die + Strength or Dexterity": the "heal" activity (F4UxiihGgkdv4orJ, die + max(Str, Dex), one
+  // Superiority Die) gives the amount removed, like the Monk's Deflect Attacks.
   "parry-maneuver": { triggers: [{ on: "isHit", if: { "activity.isMelee": true }, do: [{ type: "use", activity: "F4UxiihGgkdv4orJ" }, { type: "reduce" }] }] },
-  // §88 : Riposte — « quand une créature vous rate d'un jet d'attaque au corps à corps, votre Réaction et un dé : une attaque au corps à
-  // corps avec une arme ou à mains nues contre elle ; si vous touchez, le dé s'ajoute aux dégâts » : l'activité « Riposte Damage »
-  // (QhxT9ZuZXmHGlrnT) paie le dé et le donne ; l'attaque est celle de l'arme (`weapon`).
-  // §89 : manœuvres à l'action Bonus. Fente : Foncer, et le dé promis au prochain coup au corps à corps du tour (« si vous vous
-  // déplacez d'au moins 1,50 m en ligne droite juste avant » : non contrôlé) ; l'activité « dégâts » ne lance rien d'elle-même.
+  // §88: Riposte — "when a creature misses you with a melee attack roll, your Reaction and a die: a melee
+  // attack with a weapon or unarmed against it; if you hit, the die is added to the damage": the "Riposte Damage" activity
+  // (QhxT9ZuZXmHGlrnT) pays the die and gives it; the attack is the weapon's (`weapon`).
+  // §89: Bonus Action maneuvers. Lunging Attack: Dash, and the die promised to the next melee hit of the turn ("if you
+  // move at least 1.50 m in a straight line right before": not checked); the "damage" activity rolls nothing by itself.
   "lunging-attack": { basicActions: { aoTn3UKohm5VAuIT: "dash" }, noDamage: ["aoTn3UKohm5VAuIT"], pendingDie: { activity: "aoTn3UKohm5VAuIT", against: "melee" } },
-  // Feinte : une créature à 1,50 m — « l'Avantage à votre prochain jet d'attaque contre elle ce tour-ci ; s'il touche, le dé aux
-  // dégâts ». L'activité « dégâts » ne blesse pas : elle pose l'effet « Feinting Attack » (O7ho6H0UL2rg3Mz9) sur la cible, que
-  // l'attaque suivante de l'auteur consomme avec l'Avantage ; le dé est promis contre elle.
+  // Feinting Attack: a creature within 1.50 m — "Advantage on your next attack roll against it this turn; if it hits, the die
+  // to the damage". The "damage" activity does not hurt: it places the "Feinting Attack" effect (O7ho6H0UL2rg3Mz9) on the
+  // target, which the author's next attack consumes with the Advantage; the die is promised against it.
   "feinting-attack": {
     noDamage: ["Utu8uaZOMepShbyw"],
     pendingDie: { activity: "Utu8uaZOMepShbyw", against: "target" },
     triggers: [{ on: "preAttackRoll", via: "effect", if: { "target.hasEffectFrom": "feinting-attack" }, do: [{ type: "advantage" }, { type: "consume", side: "target" }] }]
   },
-  // Jeu de jambes évasif : Se désengager, et le dé de supériorité ajouté à la CA jusqu'au début de votre prochain tour (effet
-  // « Evasive AC », vide dans la donnée).
+  // Evasive Footwork: Disengage, and the Superiority Die added to AC until the start of your next turn (the
+  // "Evasive AC" effect, empty in the data).
   "evasive-footwork": { basicActions: { d3RqzIKzhqX82OwP: "disengage" }, rolledAc: { activity: "d3RqzIKzhqX82OwP", effect: "rGEvj6OHUjHan8pq" } },
   "riposte": { triggers: [{ on: "isMissed", if: { "activity.isMelee": true }, do: [{ type: "use", target: "source", activity: "QhxT9ZuZXmHGlrnT", weapon: true }] }] },
-  // §90 : le reste des manœuvres. Attaque précise — « quand vous ratez un jet d'attaque, ajoutez le dé, ce qui peut le convertir en
-  // réussite » : proposé à l'attaque ratée, avant le verdict, comme la Chance du ténébreux l'est à une sauvegarde.
+  // §90: the rest of the maneuvers. Precision Attack — "when you miss with an attack roll, add the die, which can turn it into a
+  // hit": offered on the missed attack, before the verdict, like the Rogue's Luck is on a save.
   "precision-attack": { rollBonus: { activity: "WrckriM4bPU6NS38", on: ["attack"] } },
-  // Embuscade, Autorité naturelle, Évaluation tactique : le dé ajouté à un test de ces compétences (ou à l'initiative), proposé
-  // sitôt le jet lancé. « Sans subir l'état Neutralisé » (Embuscade) : au MJ.
+  // Ambush, Commanding Presence, Tactical Assessment: the die added to a check with these skills (or to Initiative), offered
+  // as soon as the roll is made. "Without suffering the Incapacitated condition" (Ambush): left to the GM.
   "ambush": { rollBonus: { activity: "HiargkiZgN4q8kg6", on: ["check", "initiative"], skills: ["ste"] } },
   "commanding-presence": { rollBonus: { activity: "WYWuaoPWf2Vy5olB", on: ["check"], skills: ["itm", "prf", "per"] } },
   "tactical-assessment": { rollBonus: { activity: "qx70O22QGfH0MryE", on: ["check"], skills: ["his", "inv", "ins"] } },
-  // Balayage : après un coup au corps à corps, le dé (du type du coup) à une autre créature à 1,50 m de la cible et à l'allonge,
-  // si le jet l'aurait touchée — l'activité « dégâts » paie et donne le dé.
+  // Sweeping Attack: after a melee hit, the die (of the hit's type) to another creature within 1.50 m of the target and within
+  // reach, if the roll would have hit it — the "damage" activity pays and gives the die.
   "sweeping-attack": { sweep: { activity: "P9XWzKIH1sEvsOtC" } },
-  // Chassé-croisé : échanger sa place avec une créature consentante à 1,50 m (1,50 m de déplacement, sans attaque d'opportunité), puis
-  // le dé ajouté à la CA de l'un ou de l'autre jusqu'au début du prochain tour — la donnée porte un effet par valeur du dé (12) : le
-  // premier sert de modèle, le total écrit dedans.
+  // Bait and Switch: swap places with a willing creature within 1.50 m (1.50 m of movement, no Opportunity Attack), then
+  // the die added to the AC of one or the other until the start of the next turn — the data carries one effect per die value
+  // (12): the first serves as a model, the total written into it.
   "bait-and-switch": { swapPlaces: { activity: "nYe2l7Rml0qyFbf6" }, rolledAc: { activity: "nYe2l7Rml0qyFbf6", effect: "8HUDgkIN8xvG2BAm", to: "choose" } },
-  // Frappe commandée : une attaque de l'action Attaquer cédée à un allié, qui attaque aussitôt avec une arme par sa Réaction, le dé
-  // ajouté aux dégâts s'il touche. L'activité « dégâts » ne blesse pas l'allié qu'elle vise.
+  // Commander's Strike: one attack of the Attack action ceded to an ally, who attacks right away with a weapon as a Reaction,
+  // the die added to the damage if it hits. The "damage" activity does not hurt the ally it targets.
   "commanders-strike": { replacesAttack: true, noDamage: ["spcp6PQ8947Ds4Qg"], commandStrike: { activity: "spcp6PQ8947Ds4Qg" } }
 });

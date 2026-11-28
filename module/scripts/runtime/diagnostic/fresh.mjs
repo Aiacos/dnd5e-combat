@@ -1,13 +1,13 @@
 /**
- * Le document d'une tâche, tel qu'il est au moment de réparer. Une tâche garde le document de l'analyse ; entre-temps, une autre
- * réparation de la même passe a pu :
- *  - faire recréer par le cœur l'acteur propre d'un token (vu : réparer l'acteur de base, puis son token non lié, échouait) ;
- *  - le retirer. dnd5e supprime avec un objet les sorts qu'il donnait (activité « lancer », `flags.dnd5e.cachedFor`) et les recrée
- *    sous un autre id avec l'objet neuf : le nettoyage de Midi-QOL qui remplace l'objet laisse donc, pour ces sorts, des tâches
- *    sans document (#110). Rendre alors le document de l'analyse envoyait l'écriture à un parent que la base n'a plus.
+ * A task's document, as it is at repair time. A task keeps the analysis's document; in the meantime, another
+ * repair of the same pass may have:
+ *  - had the core recreate a token's own actor (seen: repairing the base actor, then its unlinked token, failed);
+ *  - removed it. dnd5e deletes with an item the spells it gave ("cast" activity, `flags.dnd5e.cachedFor`) and recreates them
+ *    under another id with the new item: Midi-QOL's cleanup that replaces the item thus leaves, for these spells, tasks
+ *    without a document (#110). Returning the analysis's document then sent the write to a parent the database no longer has.
  */
 
-/** Le document d'une tâche n'existe plus : rien à réparer, et rien d'anormal (index.mjs le rend comme une tâche passée). */
+/** A task's document no longer exists: nothing to repair, and nothing abnormal (index.mjs returns it as a past task). */
 export class VanishedError extends Error {
   constructor(uuid) {
     super(`document ${uuid} no longer exists`);
@@ -18,7 +18,8 @@ export class VanishedError extends Error {
 
 /** Le document relu, ou `null` s'il n'existe plus. */
 function reread(doc) {
-  // L'acteur propre d'un token se relit par son token (son uuid seul ne rend pas l'acteur propre, vu en jeu) ; ses objets, par lui.
+  // A token's own actor is re-read through its token (its uuid alone does not return the own actor, seen in play);
+  // its items, through it.
   if ( (doc?.documentName === "Actor") && doc.isToken ) return fromUuidSync(doc.token.uuid, { strict: false })?.actor ?? null;
   if ( (doc?.parent?.documentName === "Actor") && doc.parent.isToken ) {
     return reread(doc.parent)?.[doc.collectionName]?.get(doc.id) ?? null;
@@ -26,7 +27,7 @@ function reread(doc) {
   return fromUuidSync(doc.uuid, { strict: false }) ?? null;
 }
 
-/** Le document tel qu'il est maintenant. Lève `VanishedError` s'il n'existe plus. */
+/** The document as it is now. Throws `VanishedError` if it no longer exists. */
 export function fresh(doc) {
   const now = reread(doc);
   if ( !now ) throw new VanishedError(doc?.uuid);

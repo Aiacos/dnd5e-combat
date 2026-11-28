@@ -1,13 +1,13 @@
 /**
- * Attaque sournoise et Frappes rusées (SPEC §20) lues dans dnd5e 6.0 : quel item donne l'Attaque sournoise, combien de dés,
- * si ce jet d'attaque y a droit, et quelles Frappes rusées l'auteur peut payer. Les règles sont dans core/sneak.mjs.
+ * Sneak Attack and Cunning Strikes (SPEC §20) read in dnd5e 6.0: which item gives the Sneak Attack, how many dice,
+ * whether this attack roll qualifies, and which Cunning Strikes the author can pay for. The rules are in core/sneak.mjs.
  *
- * Vérifié dans dnd5e 6.0.3 :
- *  - le mode d'avantage retenu d'un jet d'attaque est dans `roll.options.advantageMode` (dice/d20-roll.mjs, `hasAdvantage`) ;
- *  - un jet de dégâts lancé depuis une attaque porte `system.origin` = le message d'utilisation, comme le jet d'attaque
- *    (activity/attack.mjs:303-311) : on retrouve ainsi l'attaque dont il suit ;
- *  - l'Attaque sournoise du Manuel des joueurs lance `@scale.rogue.sneak-attack` (sa première part de dégâts), une valeur
- *    d'échelle de dés que `Roll.replaceFormulaData` écrit « 3d6 ».
+ * Verified in dnd5e 6.0.3:
+ *  - the retained Advantage mode of an attack roll is in `roll.options.advantageMode` (dice/d20-roll.mjs, `hasAdvantage`);
+ *  - a damage roll made from an attack carries `system.origin` = the use message, like the attack roll
+ *    (activity/attack.mjs:303-311): so we find the attack it follows;
+ *  - the Player's Handbook Sneak Attack rolls `@scale.rogue.sneak-attack` (its first damage part), a dice
+ *    scale value that `Roll.replaceFormulaData` writes as "3d6".
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -19,20 +19,20 @@ import { factsFor } from "./facts.mjs";
 import { timedWait } from "./dialogs.mjs";
 import { speakerTokenOf } from "./turn.mjs";
 
-/** Types d'armes à distance de dnd5e (`CONFIG.DND5E.weaponTypes`) : une arme de corps à corps lancée n'en est pas une. */
+/** dnd5e's ranged weapon types (`CONFIG.DND5E.weaponTypes`): a thrown melee weapon is not one. */
 const RANGED_WEAPON_TYPES = Object.freeze(["simpleR", "martialR"]);
 
-/** Le tour de combat en cours, combat compris (deux combats ont chacun leur round 1, tour 0), ou null hors combat. */
+/** The current combat turn, combat included (two combats each have their round 1, turn 0), or null outside combat. */
 const currentTurnKey = () => (game.combat?.started ? `${game.combat.id}:${turnKeyOf(game.combat.round, game.combat.turn)}` : null);
 
-/** L'item qui donne l'Attaque sournoise à cet acteur, ou null. */
+/** The item that gives this actor the Sneak Attack, or null. */
 export function sneakItemOf(actor) {
   return Array.from(actor?.items ?? []).find(i => !!contentOf(i).entry?.sneakAttack) ?? null;
 }
 
-/** Les dés d'Attaque sournoise de l'item : sa première part de dégâts, sinon ceux d'un roublard de ce niveau. */
+/** The item's Sneak Attack dice: its first damage part, otherwise those of a rogue of that level. */
 export function sneakDiceOf(item) {
-  // §72 : les dés que le contenu fixe (PNJ : « 17 (5d6) »).
+  // §72: the dice that the content fixes (NPC: "17 (5d6)").
   const fixed = contentOf(item).entry?.sneakAttack?.dice;
   if ( fixed ) return parseDice(fixed);
   const activity = Array.from(item?.system?.activities ?? []).find(a => a.damage?.parts?.length);
@@ -48,19 +48,19 @@ export function sneakDiceOf(item) {
   return sneakDiceAtLevel(item?.actor?.classes?.rogue?.system?.levels ?? 0);
 }
 
-/** L'Attaque sournoise a-t-elle déjà servi à ce tour de combat ? Hors combat, jamais. */
+/** Has the Sneak Attack already been used this combat turn? Outside combat, never. */
 export function sneakSpent(actor) {
   const key = currentTurnKey();
   return !!key && (actor?.getFlag(MODULE_ID, "sneakAttack") === key);
 }
 
-/** Marque l'Attaque sournoise comme utilisée à ce tour (sur le client de l'auteur, qui possède l'acteur). */
+/** Marks the Sneak Attack as used this turn (on the author's client, which owns the actor). */
 export async function markSneakSpent(actor) {
   const key = currentTurnKey();
   if ( key && actor?.isOwner ) await actor.setFlag(MODULE_ID, "sneakAttack", key);
 }
 
-/** Le dernier jet d'attaque de cette activité rattaché à ce message d'utilisation, ou null. */
+/** The last attack roll of this activity attached to this use message, or null. */
 export function attackMessageFor(originId, activity) {
   if ( !originId ) return null;
   return game.messages.contents.findLast(m => (m.type === "attack") && (m._source.system?.origin === originId)
@@ -68,10 +68,10 @@ export function attackMessageFor(originId, activity) {
 }
 
 /**
- * L'Attaque sournoise de ce jet de dégâts : l'item, ses dés, la cible et, si elle ne s'applique pas, pourquoi.
- * null si l'auteur n'a pas l'Attaque sournoise ou si le jet ne suit pas une attaque sur une seule cible.
- * @param {Activity} activity           L'attaque (pas sa variante de dégâts).
- * @param {ChatMessage} attackMessage   Son jet d'attaque.
+ * The Sneak Attack of this damage roll: the item, its dice, the target and, if it does not apply, why.
+ * null if the author does not have the Sneak Attack or if the roll does not follow an attack on a single target.
+ * @param {Activity} activity           The attack (not its damage variant).
+ * @param {ChatMessage} attackMessage   Its attack roll.
  * @returns {{item: Item5e, dice: {number: number, faces: number}, issue: string|null, source: TokenDocument,
  *   target: TokenDocument}|null}
  */
@@ -80,7 +80,7 @@ export function sneakAttackFor(activity, attackMessage) {
   const item = sneakItemOf(actor);
   if ( !item || !attackMessage ) return null;
   const targets = attackMessage.system?.targets ?? [];
-  if ( targets.length !== 1 ) return null;   // « une créature que vous touchez »
+  if ( targets.length !== 1 ) return null;   // "a creature that you hit"
   const target = fromUuidSync(targets[0].token ?? "", { strict: false });
   const source = speakerTokenOf(attackMessage);
   if ( !target?.actor || !source ) return null;
@@ -121,7 +121,7 @@ function owns(actor, requires) {
 const sizeRank = size => SIZES.indexOf(size);
 
 /**
- * Les Frappes rusées que l'auteur connaît, avec ce qui les rend possibles contre cette cible.
+ * The Cunning Strikes the author knows, with what makes them possible against this target.
  * @returns {Array<{key: string, cost: number, available: boolean, item: Item5e, activity: Activity|null, withdraw: boolean,
  *   label: string}>}
  */
@@ -142,7 +142,7 @@ export function strikeOptionsOf(actor, target) {
   return out;
 }
 
-/** Combien de Frappes rusées par Attaque sournoise (Frappe rusée améliorée : 2). */
+/** How many Cunning Strikes per Sneak Attack (Improved Cunning Strike: 2). */
 export function strikeMaxOf(actor) {
   return Math.max(1, ...Array.from(actor?.items ?? []).map(i => Number(contentOf(i).entry?.cunningStrikeMax) || 1));
 }
@@ -151,11 +151,11 @@ export function strikeMaxOf(actor) {
 /*  §223 : automatique ou au choix              */
 /* -------------------------------------------- */
 
-/** Réglage de monde : l'Attaque sournoise se met d'elle-même au premier coup éligible du tour (« auto ») ou l'auteur choisit (« ask »). */
+/** World setting: the Sneak Attack applies by itself to the first eligible hit of the turn ("auto") or the author chooses ("ask"). */
 export const SNEAK_MODE_SETTING = "sneakAttackMode";
 export const SNEAK_MODES = Object.freeze(["auto", "ask"]);
 
-/** Le mode du monde (« auto » si le réglage n'est pas lisible). */
+/** The world's mode ("auto" if the setting is not readable). */
 export function sneakMode() {
   try {
     const mode = game.settings.get(MODULE_ID, SNEAK_MODE_SETTING);
@@ -163,15 +163,15 @@ export function sneakMode() {
   } catch { return "auto"; }
 }
 
-/** La clé qui arme l'Attaque sournoise pour le prochain coup éligible : le tour en cours, ou « free » hors combat. */
+/** The key that arms the Sneak Attack for the next eligible hit: the current turn, or "free" outside combat. */
 const armKey = () => currentTurnKey() ?? "free";
 
-/** L'auteur a-t-il réservé son Attaque sournoise (l'activité de l'item, en mode « ask ») pour le prochain coup éligible de ce tour ? */
+/** Has the author reserved their Sneak Attack (the item's activity, in "ask" mode) for this turn's next eligible hit? */
 export function sneakArmed(actor) {
   return actor?.getFlag(MODULE_ID, "sneakArmed") === armKey();
 }
 
-/** Réserve (ou libère) l'Attaque sournoise pour le prochain coup éligible de ce tour. */
+/** Reserves (or releases) the Sneak Attack for this turn's next eligible hit. */
 export async function armSneak(actor, armed=true) {
   if ( !actor?.isOwner ) return;
   if ( armed ) await actor.setFlag(MODULE_ID, "sneakArmed", armKey());
@@ -179,20 +179,20 @@ export async function armSneak(actor, armed=true) {
 }
 
 /**
- * §223 : sur le client de l'auteur, avant ses dégâts, une seule fenêtre pour ce qui se décide « au toucher » :
- *  - l'Attaque sournoise elle-même, en mode « ask » (case cochée d'avance), sauf si l'auteur l'a réservée par l'activité de l'item ;
- *  - les Frappes rusées qu'il peut payer (elles retirent des dés à l'Attaque sournoise ; sans elle, ignorées) ;
- *  - les dégâts bonus au choix (`ask` : Frappe effroyable), décochés d'avance ;
- *  - §516 : la Sauvagerie martiale (`savage`, adapter/savage.mjs), cochée d'avance.
- * Sans réponse dans le délai : ce que la fenêtre propose par défaut (l'Attaque sournoise et la Sauvagerie martiale, rien d'autre). Sans
- * rien à demander, pas de fenêtre.
+ * §223: on the author's client, before their damage, a single window for what is decided "on hit":
+ *  - the Sneak Attack itself, in "ask" mode (box checked in advance), unless the author reserved it through the item's activity;
+ *  - the Cunning Strikes they can pay for (they remove dice from the Sneak Attack; without it, ignored);
+ *  - the optional bonus damage (`ask`: Dreadful Strike), unchecked in advance;
+ *  - §516: "Martial Savagery" (`savage`, adapter/savage.mjs), checked in advance.
+ * Without an answer within the timeout: what the window offers by default (the Sneak Attack and "Martial Savagery", nothing else).
+ * With nothing to ask, no window.
  * @param {Actor} actor
  * @param {TokenDocument} target
- * @param {{dice: {number: number, faces: number}, issue: string|null}|null} sneak   sneakAttackFor (null : pas d'Attaque sournoise).
+ * @param {{dice: {number: number, faces: number}, issue: string|null}|null} sneak   sneakAttackFor (null: no Sneak Attack).
  * @param {Array<{key: string, name: string, formula: string, damageType: string|null, left: number}>} bonuses   optionalBonusesFor.
- * @param {{savage?: boolean}} [options]   `savage` : demander la Sauvagerie martiale pour ce coup.
- * @returns {Promise<{sneak: boolean|null, strikes: string[], bonuses: string[], savage: boolean|null}>}  `sneak` : null sans Attaque
- *   sournoise possible ; `savage` : null sans question de Sauvagerie martiale.
+ * @param {{savage?: boolean}} [options]   `savage`: ask for "Martial Savagery" for this hit.
+ * @returns {Promise<{sneak: boolean|null, strikes: string[], bonuses: string[], savage: boolean|null}>}  `sneak`: null without
+ *   a possible Sneak Attack; `savage`: null without a "Martial Savagery" question.
  */
 export async function askHitOptions(actor, target, sneak, bonuses=[], { savage=false }={}) {
   const eligible = !!sneak && !sneak.issue;
@@ -201,7 +201,7 @@ export async function askHitOptions(actor, target, sneak, bonuses=[], { savage=f
   const fallback = { sneak: eligible ? true : null, strikes: [], bonuses: [], savage: savage ? true : null };
   if ( !ask && !options.length && !bonuses.length && !savage ) return fallback;
   const t = (key, data={}) => game.i18n.format(`DND5ECOMBAT.Sournoise.${key}`, data);
-  // Une ligne par case : la case, le libellé, puis les dés à droite (sans `.form-group`, qui empilait le libellé mot à mot).
+  // One line per box: the box, the label, then the dice on the right (without `.form-group`, which stacked the label word by word).
   const box = (name, label, hint, checked=false) => `<label class="das-hit-option"><input type="checkbox" name="${name}"${checked ? " checked" : ""}>
     <span class="das-hit-option__label">${label}</span>${hint ? `<span class="das-hit-option__hint">${hint}</span>` : ""}</label>`;
   const list = rows => `<div class="das-hit-options">${rows.join("")}</div>`;
@@ -235,8 +235,8 @@ export async function askHitOptions(actor, target, sneak, bonuses=[], { savage=f
             savage: savage ? checked(dialog, button, "savage") : null
           };
         } },
-      // « Rien » : ni Frappe ni dégâts au choix ; l'Attaque sournoise reste si elle est automatique, et se garde si on la demandait.
-      // §516 : la Sauvagerie martiale se garde aussi pour un autre coup.
+      // "Nothing": neither Strike nor optional damage; the Sneak Attack stays if it is automatic, and is kept if it was asked for.
+      // §516: "Martial Savagery" is also kept for another hit.
       { action: "none", label: t((ask || bonuses.length || savage) ? "Rien" : "Aucune"),
         callback: () => ({ sneak: eligible ? !ask : null, strikes: [], bonuses: [], savage: savage ? false : null }) }
     ]

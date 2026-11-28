@@ -1,24 +1,24 @@
 /**
- * Une zone « sur soi » se pose d'office sur le lanceur (SPEC §47). dnd5e 6 demande de placer toute zone d'une activité dont
- * `target.prompt` est vrai — même une émanation de portée « personnelle », où il faut cliquer son propre token (Lames
- * tourbillonnantes, Esprits gardiens, Présence terrifiante, Préservation de la vie…). Il n'y a rien à choisir : la
- * zone part du lanceur. Ici, la décision, sans Foundry.
+ * A "self" area is placed on the caster automatically (SPEC §47). dnd5e 6 asks to place every area of an activity whose
+ * `target.prompt` is true — even an Emanation with "self" range, where you must click your own token (Whirling
+ * Blades, Spirit Guardians, Frightful Presence, Life Preservation…). There is nothing to choose: the
+ * area starts from the caster. Here, the decision, without Foundry.
  *
- * Les cônes, lignes et cubes de portée personnelle se visent autour du lanceur (§59, `aimedAreaShape`). Restent à placer
- * à la main : cylindres et murs (un endroit à choisir — Mur de feu), plusieurs zones à la fois, et toute zone d'une autre
- * portée.
+ * Cones, Lines and Cubes with self range are aimed around the caster (§59, `aimedAreaShape`). Left to place
+ * by hand: cylinders and walls (a place to choose — Wall of Fire), several areas at once, and any area of another
+ * range.
  */
 
-/** Types de zone dnd5e (`CONFIG.DND5E.areaTargetTypes`) centrés sur le lanceur quand la portée est « personnelle ». */
+/** dnd5e area types (`CONFIG.DND5E.areaTargetTypes`) centered on the caster when the range is "self". */
 const SELF_TYPES = Object.freeze({ radius: "emanation", sphere: "circle", circle: "circle" });
 
 /**
  * @param {object} query
  * @param {string} [query.rangeUnits]  `activity.range.units`.
  * @param {string} [query.type]        `activity.target.template.type` (radius, sphere, cone…).
- * @param {number|string} [query.count] `activity.target.template.count` (vide : une zone).
- * @param {number} [query.size]        Taille de la zone (rayon), unité de l'activité.
- * @returns {"emanation"|"circle"|null}  La forme de région à poser sur le lanceur, ou null : pose de dnd5e.
+ * @param {number|string} [query.count] `activity.target.template.count` (empty: one area).
+ * @param {number} [query.size]        Size of the area (radius), in the activity's unit.
+ * @returns {"emanation"|"circle"|null}  The region shape to place on the caster, or null: dnd5e placement.
  */
 export function selfAreaShape({ rangeUnits, type, count, size }={}) {
   if ( rangeUnits !== "self" ) return null;
@@ -30,9 +30,9 @@ export function selfAreaShape({ rangeUnits, type, count, size }={}) {
 }
 
 /**
- * §462 : la zone d'une téléportation « au départ » (`teleport.area: "left"` — « chaque créature à 3 m de l'espace qu'il a quitté » :
- * Téléportation mortelle de la Liche) se pose d'office en émanation fixe autour de l'espace quitté, quelle que soit la portée de
- * l'activité (celle de la téléportation). Un rayon, une sphère ou un cercle, une seule zone, de taille connue.
+ * §462: the area of a "departing" teleportation (`teleport.area: "left"` — "each creature within 10 feet of the space it left":
+ * the Lich's Deadly Teleport) is placed automatically as a fixed Emanation around the space left, whatever the range of
+ * the activity (that of the teleportation). A radius, a Sphere or a circle, a single area, of known size.
  * @param {{type?: string, count?: number|string, size?: number|string}} [query]
  * @returns {"emanation"|null}
  */
@@ -43,17 +43,17 @@ export function departureAreaShape({ type, count, size }={}) {
 }
 
 /* -------------------------------------------- */
-/*  Cônes et lignes partant du lanceur (§59)    */
+/*  Cones and Lines starting from the caster (§59) */
 /* -------------------------------------------- */
 
-/** Types de zone dnd5e qui partent du lanceur dans une direction à choisir (souffles, Mains brûlantes, Éclair, Vague tonnante). */
+/** dnd5e area types that start from the caster in a direction to choose (breaths, Burning Hands, Lightning Bolt, Thunderwave). */
 const AIMED_TYPES = Object.freeze({ cone: "cone", line: "line", cube: "cube" });
 
 /**
- * Un cône ou une ligne de portée « personnelle » se vise autour du lanceur (SPEC §59) : son sommet reste collé à lui, la
- * souris ne choisit que la direction. Mêmes conditions que la zone sur soi : une seule zone, de taille connue.
- * @param {object} query  Comme `selfAreaShape`.
- * @returns {"cone"|"line"|"cube"|null}  La forme à viser, ou null : pose de dnd5e.
+ * A Cone or Line with "self" range is aimed around the caster (SPEC §59): its apex stays stuck to them, the
+ * mouse only chooses the direction. Same conditions as the self area: a single area, of known size.
+ * @param {object} query  Like `selfAreaShape`.
+ * @returns {"cone"|"line"|"cube"|null}  The shape to aim, or null: dnd5e placement.
  */
 export function aimedAreaShape({ rangeUnits, type, count, size }={}) {
   if ( rangeUnits !== "self" ) return null;
@@ -65,17 +65,17 @@ export function aimedAreaShape({ rangeUnits, type, count, size }={}) {
 }
 
 /**
- * Le sommet et la direction d'une zone visée depuis le lanceur. La zone pivote autour du **centre** du lanceur, vers le
- * point visé ; son sommet est posé sur le **bord** de son espace dans cette direction — pas au centre, sans quoi la zone
- * commencerait sous lui (sa propre case en ferait partie). Bord d'un rectangle (token carré), ou d'une ellipse (token
- * elliptique des grilles hexagonales).
- * @param {{x: number, y: number, width: number, height: number}} body  Espace du lanceur, en pixels (coin haut-gauche).
- * @param {{x: number, y: number}} point     Point visé (la souris), en pixels.
+ * The apex and direction of an area aimed from the caster. The area pivots around the caster's **center**, toward the
+ * aimed point; its apex is placed on the **edge** of their space in that direction — not at the center, otherwise the area
+ * would start under them (their own cell would be part of it). Edge of a rectangle (square token), or of an ellipse (elliptical
+ * token of hex grids).
+ * @param {{x: number, y: number, width: number, height: number}} body  The caster's space, in pixels (top-left corner).
+ * @param {{x: number, y: number}} point     Aimed point (the mouse), in pixels.
  * @param {object} [options]
- * @param {boolean} [options.ellipse=false]  Espace elliptique.
- * @param {{x: number, y: number}|null} [options.fallback=null]  Direction si le point est au centre (dernière visée).
- * @returns {{x: number, y: number, rotation: number}}  Sommet (pixels) et direction en degrés, 0 = vers la droite, sens
- *   horaire (y vers le bas), dans [0, 360).
+ * @param {boolean} [options.ellipse=false]  Elliptical space.
+ * @param {{x: number, y: number}|null} [options.fallback=null]  Direction if the point is at the center (last aim).
+ * @returns {{x: number, y: number, rotation: number}}  Apex (pixels) and direction in degrees, 0 = toward the right,
+ *   clockwise (y downward), in [0, 360).
  */
 export function aimFrom(body, point, { ellipse=false, fallback=null }={}) {
   const cx = body.x + (body.width / 2);
@@ -96,18 +96,18 @@ export function aimFrom(body, point, { ellipse=false, fallback=null }={}) {
 }
 
 /**
- * Un cube de portée personnelle (Vague tonnante : « un cube de 4,50 m qui part de vous ») : son point d'origine est sur une
- * face du cube, au bord du lanceur. Le cube est donc **accolé** à l'espace du lanceur, du côté de la souris (l'axe dominant
- * choisit le côté), et glisse le long de ce côté pour suivre la souris, jusqu'aux positions en coin où il ne le touche plus que
- * par un sommet — jamais par-dessus le lanceur. Aligné sur la grille, sans rotation ; calé par pas de `step` pixels (une case)
- * à partir du coin du lanceur.
- * @param {{x: number, y: number, width: number, height: number}} body  Espace du lanceur, en pixels (coin haut-gauche).
- * @param {{x: number, y: number}} point  Point visé (la souris), en pixels.
- * @param {number} side                   Côté du cube, en pixels.
+ * A Cube with self range (Thunderwave: "a 15-foot Cube originating from you"): its point of origin is on a
+ * face of the Cube, at the caster's edge. The Cube is therefore **adjoined** to the caster's space, on the mouse's side (the
+ * dominant axis chooses the side), and slides along that side to follow the mouse, up to the corner positions where it only
+ * touches them by a vertex — never on top of the caster. Aligned to the grid, no rotation; snapped by steps of `step` pixels
+ * (one cell) from the caster's corner.
+ * @param {{x: number, y: number, width: number, height: number}} body  The caster's space, in pixels (top-left corner).
+ * @param {{x: number, y: number}} point  Aimed point (the mouse), in pixels.
+ * @param {number} side                   Side of the Cube, in pixels.
  * @param {object} [options]
- * @param {number} [options.step=0]       Pas de la grille (0 : sans grille, position libre).
- * @param {{x: number, y: number}|null} [options.fallback=null]  Direction si le point est au centre.
- * @returns {{x: number, y: number}}  Coin haut-gauche du cube.
+ * @param {number} [options.step=0]       Grid step (0: no grid, free position).
+ * @param {{x: number, y: number}|null} [options.fallback=null]  Direction if the point is at the center.
+ * @returns {{x: number, y: number}}  Top-left corner of the Cube.
  */
 export function cubeBeside(body, point, side, { step=0, fallback=null }={}) {
   const cx = body.x + (body.width / 2);
@@ -120,7 +120,7 @@ export function cubeBeside(body, point, side, { step=0, fallback=null }={}) {
     if ( step > 0 ) v = Math.min(Math.max(start + (Math.round((v - start) / step) * step), start - side), start + length);
     return v;
   };
-  // À égalité (diagonale parfaite), le côté horizontal : le cube touche alors le lanceur par le coin.
+  // On a tie (perfect diagonal), the horizontal side: the Cube then touches the caster by the corner.
   if ( Math.abs(dx) >= Math.abs(dy) ) {
     return { x: dx >= 0 ? body.x + body.width : body.x - side, y: slide(point.y - (side / 2), body.y, body.height) };
   }

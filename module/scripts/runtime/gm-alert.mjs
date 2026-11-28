@@ -1,11 +1,12 @@
 /**
- * §364 : alerte MJ — ce qu'une capacité ou un effet laisse au MJ lui est signalé, au moment où cela arrive : une carte de chat chuchotée
- * aux MJ, aux couleurs de DAS (ui/gm-alert.mjs la met aussi en bandeau en haut de l'écran du MJ).
- *  - contenu `gmAlert: { key | text, activities? }` (ou une liste) : à l'utilisation de l'item (toutes ses activités, ou celles-là), le
- *    texte `DND5ECOMBAT.AlerteMJ.<key>` (ou `text`, pour une surcouche du monde ou un module voisin) ;
- *  - `alertGM({ text, item, actor })` pour le reste du moteur (une marque de colère posée…), publié aussi en `api.gm.alert` ;
- *  - hook public `dnd5e-combat.gmAlert` `({ text, item, actor })`, appelé avant la carte : un voisin qui rend `false` la remplace.
- * Le texte reçoit `{actor}` (le nom de l'utilisateur) et `{item}`. MJ actif. Réglage de monde `gmAlerts` (§365) : éteint, rien n'est posté.
+ * §364: GM alert — what a feature or an effect leaves to the GM is flagged to them, at the moment it happens: a chat card whispered
+ * to the GMs, in DAS colors (ui/gm-alert.mjs also shows it as a banner at the top of the GM's screen).
+ *  - content `gmAlert: { key | text, activities? }` (or a list): on use of the item (all its activities, or those), the
+ *    text `DND5ECOMBAT.AlerteMJ.<key>` (or `text`, for a world override or a neighboring module);
+ *  - `alertGM({ text, item, actor })` for the rest of the engine (a wrath mark placed…), also published as `api.gm.alert`;
+ *  - public hook `dnd5e-combat.gmAlert` `({ text, item, actor })`, called before the card: a neighbor that returns `false`
+ *    replaces it.
+ * The text receives `{actor}` (the user's name) and `{item}`. Active GM. World setting `gmAlerts` (§365): off, nothing is posted.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,11 +15,11 @@ import { route } from "./router.mjs";
 import { esc, log, loc, viaActiveGM } from "./shared.mjs";
 
 /**
- * §364 : chez le MJ actif, avant de poster une alerte MJ (et seulement si le réglage `gmAlerts` est allumé) : `({ text, item, actor })` —
- * `item` le nom de l'item, `actor` l'acteur ou null. Annulable : `false` et ni carte, ni bandeau.
+ * §364: on the active GM, before posting a GM alert (and only if the `gmAlerts` setting is on): `({ text, item, actor })` —
+ * `item` the item's name, `actor` the actor or null. Cancelable: `false` and neither card nor banner.
  */
 export const GM_ALERT_HOOK = `${MODULE_ID}.gmAlert`;
-/** §365 : réglage de monde — sans lui, aucune alerte (ni carte, ni bandeau). */
+/** §365: world setting — without it, no alert (neither card nor banner). */
 export const GM_ALERTS_SETTING = "gmAlerts";
 
 export function gmAlertsOn() {
@@ -26,14 +27,14 @@ export function gmAlertsOn() {
 }
 const GM_ALERT_QUERY = `${MODULE_ID}.gmAlert`;
 
-/** Le texte d'une règle `gmAlert`, ses variables remplies. */
+/** The text of a `gmAlert` rule, its variables filled in. */
 function textOf(rule, { actor, item }) {
   const data = { actor: actor?.name ?? "", item: item?.name ?? "" };
   if ( rule.text ) return String(rule.text).replace(/\{(actor|item)\}/g, (m, k) => data[k]);
   return loc(`AlerteMJ.${rule.key}`, data);
 }
 
-/** Sur le MJ actif : la carte chuchotée aux MJ. */
+/** On the active GM: the card whispered to the GMs. */
 async function postAlert({ text, item=null, actor=null }) {
   if ( !gmAlertsOn() ) return null;
   const actorDoc = actor ? await fromUuid(actor) : null;
@@ -53,7 +54,7 @@ async function postAlert({ text, item=null, actor=null }) {
 }
 
 /**
- * Signale au MJ ce qui lui revient. Depuis n'importe quel client : la carte est créée par le MJ actif.
+ * Flags to the GM what falls to them. From any client: the card is created by the active GM.
  * @param {{ text: string, item?: Item|string|null, actor?: Actor|null }} alert
  */
 export async function alertGM({ text, item=null, actor=null }) {
@@ -63,7 +64,7 @@ export async function alertGM({ text, item=null, actor=null }) {
   return viaActiveGM(GM_ALERT_QUERY, postAlert, payload);
 }
 
-/** Les règles `gmAlert` de l'item qui valent pour cette activité. */
+/** The item's `gmAlert` rules that apply to this activity. */
 export function alertsFor(item, activityId) {
   const rule = item ? contentOf(item).entry?.gmAlert : null;
   return [rule].flat().filter(Boolean).filter(r => !r.activities || r.activities.includes(activityId));

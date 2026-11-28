@@ -1,24 +1,24 @@
 /**
- * Issue #178 : réglage de monde « Dérogations visibles par » (`overrideVisibility`) — qui voit le texte « Forcé » et le bandeau « Règle
- * passée outre ». Défaut : toute la table, comme avant. Le MJ voit toujours tout ; celui qui a forcé voit sa propre marque.
+ * Issue #178: world setting "Overrides visible to" (`overrideVisibility`) — who sees the "Forced" text and the "Rule overridden"
+ * banner. Default: the whole table, as before. The GM always sees everything; whoever forced sees their own mark.
  */
 import { describe, it, expect } from "vitest";
 import { OVERRIDE_VISIBILITY_MODES, overridePublic, overrideShown } from "../module/scripts/core/forced.mjs";
 import { SETTINGS_TABS } from "../module/scripts/core/settings-layout.mjs";
 
-describe("issue #178 : dérogations visibles par", () => {
+describe("issue #178: overrides visible to", () => {
   it("trois choix, `all` d'abord", () => {
     expect(OVERRIDE_VISIBILITY_MODES).toEqual(["all", "hideGM", "gmOnly"]);
   });
 
-  it("toute la table (défaut, et toute valeur inconnue) : publique, qui que ce soit qui force", () => {
+  it("whole table (default, and any unknown value): public, whoever forces", () => {
     for ( const mode of ["all", undefined, "nimporte"] ) {
       expect(overridePublic(mode, { byGM: true })).toBe(true);
       expect(overridePublic(mode, { byGM: false })).toBe(true);
     }
   });
 
-  it("cacher celles du MJ : celle du MJ discrète, celle d'un joueur publique", () => {
+  it("hide the GM's: the GM's discreet, a player's public", () => {
     expect(overridePublic("hideGM", { byGM: true })).toBe(false);
     expect(overridePublic("hideGM", { byGM: false })).toBe(true);
   });
@@ -34,7 +34,7 @@ describe("issue #178 : dérogations visibles par", () => {
     }
   });
 
-  it("celui qui a forcé voit la sienne ; un autre joueur selon le réglage", () => {
+  it("whoever forced sees their own; another player according to the setting", () => {
     expect(overrideShown("gmOnly", { byGM: false, viewerIsAuthor: true })).toBe(true);
     expect(overrideShown("gmOnly", { byGM: false })).toBe(false);
     expect(overrideShown("hideGM", { byGM: true })).toBe(false);
@@ -42,7 +42,7 @@ describe("issue #178 : dérogations visibles par", () => {
     expect(overrideShown("all", { byGM: true })).toBe(true);
   });
 
-  it("le réglage est rangé avec les alertes au MJ (onglet chat)", () => {
+  it("the setting is filed with the GM alerts (chat tab)", () => {
     const chat = SETTINGS_TABS.find(t => t.id === "chat");
     expect(chat.keys).toContain("overrideVisibility");
     expect(chat.groups.find(g => g.id === "gmAlerts").keys).toContain("overrideVisibility");

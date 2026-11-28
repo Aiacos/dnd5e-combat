@@ -1,15 +1,15 @@
 /**
- * §222 : les bottes choisies, à l'écran.
+ * §222: the chosen mastery properties, on screen.
  *
- *  - **Fiche** (`renderBaseActorSheet`, pour tous) : chaque arme qui porte une botte reçoit une pastille — vive quand le personnage la
- *    maîtrise (dnd5e : `masteryOptions`, data/item/weapon.mjs:331, non vide), terne sinon ; l'infobulle dit pourquoi, et un clic ouvre
- *    la fenêtre des bottes.
- *  - **Fenêtre des bottes** : le compte (choisies / permises), d'où viennent les places (classes, dons), ce qu'un Repos long laisse
- *    changer, les armes que le personnage maîtrise, groupées par type, cochables, avec leur botte ; « Réinitialiser » décoche tout, la
- *    règle juge le choix final (runtime/mastery-choices.mjs) avant « Enregistrer ».
- *  - **Aptitude** : utiliser « Bottes d'arme » d'une classe ou le don « Maître d'armes » (sans activité : dnd5e afficherait sa carte,
- *    `dnd5e.preDisplayCardV2`, documents/item.mjs:805) ouvre la fenêtre à la place.
- *  - **Repos long** (`dnd5e-combat.masteryRest`) : la fenêtre s'ouvre chez le joueur de l'acteur (requête), sinon sur ce client.
+ *  - **Sheet** (`renderBaseActorSheet`, for everyone): each weapon that has a mastery property gets a badge — bright when the
+ *    character has mastery of it (dnd5e: `masteryOptions`, data/item/weapon.mjs:331, non-empty), dull otherwise; the tooltip says
+ *    why, and a click opens the mastery window.
+ *  - **Mastery window**: the count (chosen / allowed), where the slots come from (classes, feats), what a Long Rest lets
+ *    change, the weapons the character has mastery of, grouped by type, tickable, with their mastery property; "Reset" unticks
+ *    everything, the rule judges the final choice (runtime/mastery-choices.mjs) before "Save".
+ *  - **Feature**: using a class's "Weapon Mastery" or the "Weapon Master" feat (no activity: dnd5e would show its card,
+ *    `dnd5e.preDisplayCardV2`, documents/item.mjs:805) opens the window instead.
+ *  - **Long Rest** (`dnd5e-combat.masteryRest`): the window opens for the actor's player (request), otherwise on this client.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -25,11 +25,11 @@ const PATH = "system.traits.weaponProf.mastery.value";
 const BADGE = "das-mastery-badge";
 export const MASTERY_WINDOW_QUERY = `${MODULE_ID}.masteryWindow`;
 
-/** Le nom d'une botte (dnd5e, `CONFIG.DND5E.weaponMasteries`). */
+/** The name of a mastery property (dnd5e, `CONFIG.DND5E.weaponMasteries`). */
 const masteryLabel = key => CONFIG.DND5E.weaponMasteries?.[key]?.label ?? key;
 
 /* -------------------------------------------- */
-/*  Fenêtre                                     */
+/*  Window                                      */
 /* -------------------------------------------- */
 
 const windowId = actor => `das-mastery-${actor.id}`;
@@ -39,7 +39,7 @@ const MasteryApp = () => MasteryClass ??= class MasteryApp extends foundry.appli
   constructor(actor, options={}) {
     super({ ...options, id: windowId(actor) });
     this.actor = actor;
-    /** Le choix en cours (pas encore enregistré). */
+    /** The current choice (not saved yet). */
     this.selection = new Set(chosenMasteries(actor));
   }
 
@@ -74,7 +74,7 @@ const MasteryApp = () => MasteryClass ??= class MasteryApp extends foundry.appli
       ? sources.map(s => esc(loc(s.melee ? "Bottes.SourceMelee" : "Bottes.Source", { label: s.label, count: s.count }))).join(" · ")
       : esc(loc("Bottes.AucuneSource"));
     const notes = [];
-    // §510 : les changements de la sélection en cours sont décomptés ; plus rien à changer, plus de ligne.
+    // §510: the changes of the current selection are counted; nothing left to change, no row.
     const left = allowanceLeft(allowance, chosenMasteries(actor), [...this.selection]);
     if ( rules && allowance ) {
       if ( left ) notes.push(`<p class="das-mastery__rest"><i class="fa-solid fa-campground"></i> ${esc(loc("Bottes.Repos", { count: left }))}</p>`);
@@ -84,7 +84,7 @@ const MasteryApp = () => MasteryClass ??= class MasteryApp extends foundry.appli
     if ( !verdict.ok ) notes.push(`<p class="das-mastery__ko"><i class="fa-solid fa-triangle-exclamation"></i> ${esc(loc(`Bottes.Refus.${verdict.reason}`,
       { name: actor.name, slots, allowance }))}${game.user.isGM ? ` ${esc(loc("Bottes.MJLibre"))}` : ""}</p>`);
 
-    // Les armes que le personnage maîtrise, et celles déjà choisies (maîtrise perdue depuis) ; par type de dnd5e.
+    // The weapons the character has mastery of, and those already chosen (mastery since lost); by dnd5e type.
     const groups = new Map();
     for ( const w of weapons ) {
       if ( !proficientWith(actor, w) && !this.selection.has(w.key) ) continue;
@@ -135,13 +135,13 @@ const MasteryApp = () => MasteryClass ??= class MasteryApp extends foundry.appli
     }));
   }
 
-  /** « Réinitialiser » : aucune botte cochée ; rien n'est écrit avant « Enregistrer ». */
+  /** "Reset": no mastery property ticked; nothing is written before "Save". */
   static #reset() {
     this.selection.clear();
     this.render();
   }
 
-  /** Revenir au choix enregistré. */
+  /** Go back to the saved choice. */
   static #revert() {
     this.selection = new Set(chosenMasteries(this.actor));
     this.render();
@@ -152,7 +152,7 @@ const MasteryApp = () => MasteryClass ??= class MasteryApp extends foundry.appli
     const before = chosenMasteries(this.actor);
     if ( (keys.length === before.length) && keys.every(k => before.includes(k)) ) return this.close();
     await this.actor.update({ [PATH]: keys });
-    // Refusé par la règle (runtime/mastery-choices.mjs) : la fiche garde l'ancien choix, la fenêtre reste ouverte.
+    // Refused by the rule (runtime/mastery-choices.mjs): the sheet keeps the old choice, the window stays open.
     const saved = chosenMasteries(this.actor);
     if ( (saved.length === keys.length) && keys.every(k => saved.includes(k)) ) {
       ui.notifications.info(loc("Bottes.Enregistre", { name: this.actor.name, list: keys.map(k => labelOf(k)).join(", ") || "—" }));
@@ -165,7 +165,7 @@ const MasteryApp = () => MasteryClass ??= class MasteryApp extends foundry.appli
 let labels = new Map();
 const labelOf = key => labels.get(key) ?? key;
 
-/** Ouvre la fenêtre des bottes d'un acteur (une par acteur ; déjà ouverte, elle passe devant). */
+/** Opens an actor's mastery window (one per actor; if already open, it comes to the front). */
 export async function openMasteries(actor) {
   if ( !actor ) return null;
   if ( !labels.size ) labels = new Map((await baseWeapons()).map(w => [w.key, w.label]));
@@ -174,7 +174,7 @@ export async function openMasteries(actor) {
   return new (MasteryApp())(actor).render({ force: true });
 }
 
-/** Sur le client du joueur : la fenêtre ouverte à la demande du client qui a lancé le repos. */
+/** On the player's client: the window opened at the request of the client that started the rest. */
 async function handleWindowQuery({ actor: uuid }) {
   const actor = await fromUuid(uuid);
   if ( !actor?.isOwner ) return false;
@@ -243,8 +243,8 @@ function onMasteryRest(actor) {
 }
 
 /**
- * Rafraîchit la fenêtre des bottes ouverte pour cet acteur : ses bottes enregistrées ont changé (le choix en cours repart d'elles),
- * ou ce que le Repos long laisse changer (le choix en cours est gardé).
+ * Refreshes the mastery window open for this actor: its saved mastery properties changed (the current choice restarts from
+ * them), or what the Long Rest lets change (the current choice is kept).
  */
 function refresh(actor, changes) {
   const open = foundry.applications.instances.get(windowId(actor));
@@ -256,19 +256,19 @@ function refresh(actor, changes) {
 }
 
 export const masteryApi = Object.freeze({
-  /** §222 : ouvre, sur ce client, la fenêtre des bottes d'arme de l'acteur (déjà ouverte : elle passe devant). */
+  /** §222: opens, on this client, the actor's weapon mastery window (if already open: it comes to the front). */
   open: actor => openMasteries(actor),
   /**
-   * Les sources de bottes d'arme de l'acteur (avancements « Trait » en mode « mastery » de ses classes, sous-classes et dons), lues dans
-   * ses items.
+   * The actor's sources of weapon mastery properties ("Trait" advancements in "mastery" mode of its classes, subclasses and
+   * feats), read from its items.
    */
   sources: actor => masterySourcesOf(actor),
-  /** Juge un choix de bottes (`keys` : identifiants d'arme) pour l'acteur, sans rien écrire → `{ ok, reason, slots, removed }`. */
+  /** Judges a choice of mastery choice (`keys`: weapon ids) for the actor, writing nothing → `{ ok, reason, slots, removed }`. */
   judge: (actor, keys) => judgeMasteries(actor, keys)
 });
 
 export function registerMasteryUI() {
-  // Sur tous les clients : c'est celui du joueur qui ouvre sa fenêtre.
+  // On all clients: the player's one opens their window.
   CONFIG.queries[MASTERY_WINDOW_QUERY] = handleWindowQuery;
   route("renderBaseActorSheet", (app, element) => decorate(app, element), { label: "weapon mastery badges", level: "warn" });
   route("dnd5e.preDisplayCardV2", onPreDisplayCard, { cancellable: true, label: "weapon mastery window not opened" });

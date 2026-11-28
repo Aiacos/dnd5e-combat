@@ -1,12 +1,12 @@
 /**
- * §54 : l'Huile — la cible qui rate sa sauvegarde de Dextérité est huilée ; si elle prend des dégâts de feu dans la minute, avant
- * que l'huile sèche, l'huile s'enflamme et lui inflige 5 dégâts de feu de plus.
- * La marque « oiled » est posée à la sauvegarde ratée (étape d'issue `mark`, content/gear.mjs). Ici : les dégâts de feu.
+ * §54: Oil — the target that fails its Dexterity saving throw is oiled; if it takes fire damage within the minute, before the
+ * oil dries, the oil ignites and deals 5 more fire damage to it.
+ * The "oiled" mark is placed on the failed saving throw (outcome step `mark`, content/gear.mjs). Here: the fire damage.
  *
- * Les types de dégâts ne sont connus qu'au calcul (`dnd5e.calculateDamage`, actor.mjs:967, après résistances) — crochet aussi
- * appelé pour les aperçus du plateau de dégâts : on y RETIENT seulement. On agit à l'application réelle (`dnd5e.applyDamage`,
- * actor.mjs:841), sur le client qui applique (il a le droit d'écrire l'acteur) : la marque tombe d'abord (pas de boucle), puis
- * les 5 dégâts de feu.
+ * Damage types are only known at calculation (`dnd5e.calculateDamage`, actor.mjs:967, after Resistances) — hook also
+ * called for the previews of the damage tray: there we only HOLD. We act on the real application (`dnd5e.applyDamage`,
+ * actor.mjs:841), on the client that applies (it has the right to write the actor): the mark falls first (no loop), then
+ * the 5 fire damage.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,7 +14,7 @@ import { route } from "./router.mjs";
 import { log, say, locEsc } from "./shared.mjs";
 
 const OILED = "oiled";
-const lastFire = new WeakMap();   // acteur → des dégâts de feu viennent d'être calculés pour lui
+const lastFire = new WeakMap();   // actor → fire damage was just computed for it
 
 function onCalculate(actor, damages) {
   const fire = Array.from(damages ?? []).some(d => (d.type === "fire") && (Number(d.value) > 0));

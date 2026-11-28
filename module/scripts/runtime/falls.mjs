@@ -1,13 +1,13 @@
 /**
- * §208 : la chute automatique et ce que le saut retient d'un tour.
- *  - dnd5e pose l'état « En chute » à un token en l'air qui ne peut plus s'y tenir (documents/token.mjs `_isFalling` : sans vol, ou
- *    volant mais À terre ou Neutralisé, et sans surplace), mais la chute n'a lieu qu'au clic du MJ sur l'icône (`plummet`). Avec le
- *    réglage de monde `autoFall` (« en combat » par défaut), le MJ actif fait tomber le token dès que l'état apparaît ; la carte de dégâts
- *    de dnd5e est appliquée par le moteur (runtime/climb.mjs, `onFallCard` — À terre si elle fait des dégâts).
- *  - Règles 2024 (glossaire, « Flying ») : une créature volante dont la Vitesse tombe à 0 tombe aussi — dnd5e ne compte pas ce cas.
- *    Agrippée, Entravée (ou Vitesse de vol et de marche à 0), sans surplace et sans escalade : le MJ actif la fait tomber lui-même, avec
- *    la carte de dégâts de dnd5e (`dnd5e.rules.postFallDamage`).
- *  - Pas du vent par un point de focus (`jump.double`) : la distance de saut est doublée pour le tour (budget `jumpDouble`).
+ * §208: automatic falling and what the jump keeps from a turn.
+ *  - dnd5e sets the "Falling" condition on an airborne token that can no longer stay up (documents/token.mjs `_isFalling`:
+ *    no flight, or flying but Prone or Incapacitated, and no hover), but the fall only happens when the GM clicks the icon
+ *    (`plummet`). With the world setting `autoFall` ("in combat" by default), the active GM makes the token fall as soon as the
+ *    condition appears; dnd5e's damage card is applied by the engine (runtime/climb.mjs, `onFallCard` — Prone if it does damage).
+ *  - 2024 rules (glossary, "Flying"): a flying creature whose Speed drops to 0 also falls — dnd5e does not count that case.
+ *    Grappled, Restrained (or flying and walking Speed 0), without hover and without climbing: the active GM makes it fall
+ *    itself, with dnd5e's damage card (`dnd5e.rules.postFallDamage`).
+ *  - Step of the Wind via a Focus Point (`jump.double`): the jump distance is doubled for the turn (`jumpDouble` budget).
  */
 import { MODULE_ID } from "../constants.mjs";
 import { combatantFor, readBudget, writeBudget, committedPosition } from "../adapter/turn.mjs";
@@ -30,19 +30,19 @@ const mode = () => {
 };
 const wanted = actor => (mode() === "always") || ((mode() === "combat") && !!combatantFor(actor));
 
-/** Les tokens de cet acteur sur la scène affichée (le MJ actif voit la scène du combat). */
+/** This actor's tokens on the displayed scene (the active GM sees the combat's scene). */
 const tokensOf = actor => (actor?.getActiveTokens?.(false, true) ?? []).filter(t => t.parent === canvas?.scene);
 
 /** Un token en l'air, au-dessus de son sol. */
 const aloft = token => (token._source.elevation ?? 0) > groundUnder(token, committedPosition(token)) + 1e-6;
 
-/** Une créature volante qui ne peut plus bouger : Agrippée ou Entravée (sa Vitesse est de 0), sans surplace. */
+/** A flying creature that can no longer move: Grappled or Restrained (its Speed is 0), without hover. */
 function grounded(token) {
   const actor = token.actor;
   const movement = actor?.system?.attributes?.movement;
   if ( !movement || movement.hover || actor.system?.traits?.ci?.value?.has?.("falling") ) return false;
-  if ( actor.statuses?.has?.("ethereal") ) return false;   // §225 : pas de gravité dans l'Éthéré
-  // Sans vol (ou un vol ramené à 0 par un effet) : c'est la règle ordinaire de dnd5e, qui fait déjà tomber.
+  if ( actor.statuses?.has?.("ethereal") ) return false;   // §225: no gravity in the Ethereal Plane
+  // Without flight (or flight reduced to 0 by an effect): this is dnd5e's ordinary rule, which already makes it fall.
   if ( !((movement.speeds?.fly ?? movement.fly ?? 0) > 0) ) return false;
   if ( ["climb"].includes(token._source.movementAction) ) return false;      // l'escalade a ses propres chutes (runtime/climb.mjs)
   const statuses = actor.statuses ?? new Set();
@@ -50,7 +50,7 @@ function grounded(token) {
   return statuses.has("grappled") || statuses.has("restrained");
 }
 
-/** La chute d'une créature volante à Vitesse 0 : descendue sur son sol, carte de dégâts de dnd5e. MJ actif. */
+/** The fall of a flying creature at Speed 0: lowered to its floor, dnd5e damage card. Active GM. */
 async function dropFlier(token) {
   const pos = committedPosition(token);
   const ground = groundUnder(token, pos);
@@ -62,32 +62,33 @@ async function dropFlier(token) {
   log(`${token.name}: flying with a Speed of 0, falls ${distance}`);
 }
 
-/** MJ actif, à chaque changement d'effet : « En chute » posé par dnd5e → la chute ; créature volante immobilisée → la chute. */
+/** Active GM, on each effect change: "Falling" set by dnd5e → the fall; immobilized flying creature → the fall. */
 function onEffectChange(effect) {
   const actor = actorOfEffect(effect);
-  if ( !actor || !climbSystemOn() || !wanted(actor) ) return;   // §224 : système d'escalade et de chute coupé, aucune chute
-  // Sans attendre : le routeur passe les écouteurs d'un hook l'un après l'autre, et l'attente ci-dessous retarderait l'escalade (§192),
-  // qui écoute les mêmes changements d'effet (vu : un grimpeur qui rate son test restait suspendu, son statut retiré trop tard).
+  if ( !actor || !climbSystemOn() || !wanted(actor) ) return;   // §224: climbing and falling system off, no fall
+  // Without waiting: the router runs a hook's listeners one after another, and the wait below would delay climbing (§192),
+  // which listens to the same effect changes (seen: a climber who fails their check stayed suspended, status removed too late).
   void enqueue(`fall:${actor.uuid}`, async () => {
     for ( const token of tokensOf(actor) ) {
       if ( !aloft(token) ) continue;
       if ( actor.statuses?.has("falling") ) {
-        // Un grimpeur tombe par runtime/climb.mjs (au mur, en train de lâcher prise, ou déjà en chute là-bas).
+        // A climber falls via runtime/climb.mjs (on the wall, letting go, or already falling there).
         if ( (token._source.movementAction === "climb") || climbFallInProgress(token) ) continue;
-        // Le joueur qui lâche un mur fait tomber son token de son côté (runtime/climb.mjs) : on lui laisse un instant, puis on revérifie.
+        // The player who lets go of a wall makes their token fall on their side (runtime/climb.mjs):
+        // we give them a moment, then check again.
         await new Promise(resolve => setTimeout(resolve, 2000));
         if ( !actor.statuses?.has("falling") || !aloft(token) || climbFallInProgress(token) ) continue;
-        // Sans la chute de dnd5e (hauteur affichée en retard : runtime/climb.mjs), celle du moteur, depuis la hauteur réelle.
+        // Without dnd5e's fall (displayed height lagging: runtime/climb.mjs), the engine's, from the real height.
         if ( (await fallLikeDnd5e(token)) || (await dropToGround(token)) ) log(`${token.name}: falls (dnd5e's Falling status, automatic)`);
       } else if ( grounded(token) ) await dropFlier(token);
     }
   }).catch(err => console.error(`${MODULE_ID} | automatic fall`, err));
 }
 
-/** Pas du vent par un point de focus : la distance de saut doublée pour le tour. Sur le client qui l'utilise. */
+/** Step of the Wind via a Focus Point: the jump distance doubled for the turn. On the client that uses it. */
 async function onPostUse(activity) {
   const double = contentOf(activity?.item).entry?.jump?.double;
-  // La forme gratuite d'une activité qui en a deux (Pas du vent sans point de crédo) ne double pas le saut.
+  // The free form of an activity that has two (Step of the Wind without a Focus Point) does not double the jump.
   if ( !double?.includes(activity.id) || isFreeForm(activity) ) return;
   const combatant = combatantFor(activity.actor);
   if ( !combatant ) return;
@@ -96,10 +97,10 @@ async function onPostUse(activity) {
 }
 
 /**
- * §218 : la chute d'un token en l'air vers son sol, que dnd5e ne fait pas — posé à la base d'un niveau au-dessus du vide (sur l'étage,
- * au-dessus de la cour), dnd5e le croit sur le plancher de ce niveau (documents/token.mjs : `_findSupportingSurface`, repli sur la base
- * du niveau) ; le moteur, lui, voit le sol de la cour. Descendu sur ce sol et sur son niveau, carte de dégâts de dnd5e. MJ actif ou
- * propriétaire.
+ * §218: the fall of an airborne token to its floor, which dnd5e does not do — placed at the base of a level above the void
+ * (on the upper floor, above the courtyard), dnd5e believes it is on that level's floor (documents/token.mjs:
+ * `_findSupportingSurface`, fallback to the base of the level); the engine sees the courtyard floor. Lowered to that floor
+ * and to its level, dnd5e damage card. Active GM or owner.
  */
 async function dropToGround(token) {
   const pos = committedPosition(token);

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { makesDeathSaves, damageAtZero, needsDeathSave, statusAfterDeathSave } from "../module/scripts/core/death.mjs";
 
-describe("qui fait des jets contre la mort", () => {
-  it("les PJ et les PNJ importants, pas les autres PNJ", () => {
+describe("who makes death saving throws", () => {
+  it("PCs and important NPCs, not the other NPCs", () => {
     expect(makesDeathSaves({ type: "character" })).toBe(true);
     expect(makesDeathSaves({ type: "npc", important: true })).toBe(true);
     expect(makesDeathSaves({ type: "npc", important: false })).toBe(false);
@@ -10,40 +10,40 @@ describe("qui fait des jets contre la mort", () => {
   });
 });
 
-describe("dégâts et 0 PV", () => {
+describe("damage and 0 HP", () => {
   const pj = { max: 30, saves: true };
 
-  it("tomber à 0 sans reste suffisant : rien de plus (le système pose Inconscient)", () => {
+  it("dropping to 0 without enough remainder: nothing more (the system applies Unconscious)", () => {
     expect(damageAtZero({ ...pj, hp: 10, through: 25 })).toMatchObject({ failures: null, dead: false });
   });
-  it("Mort sur le coup : le reste atteint les PV max", () => {
+  it("Instant Death: the remainder reaches max HP", () => {
     expect(damageAtZero({ ...pj, hp: 10, through: 40 })).toMatchObject({ dead: true, reason: "massive", failures: null });
     expect(damageAtZero({ ...pj, hp: 10, through: 39 }).dead).toBe(false);
   });
-  it("à 0 PV : un échec, deux sur un coup critique", () => {
+  it("at 0 HP: one failure, two on a Critical Hit", () => {
     expect(damageAtZero({ ...pj, hp: 0, through: 5 })).toMatchObject({ failures: 1, added: 1, dead: false, unstable: true });
     expect(damageAtZero({ ...pj, hp: 0, through: 5, critical: true, failures: 0 })).toMatchObject({ failures: 2, added: 2 });
   });
-  it("à 0 PV : le troisième échec tue, sans dépasser trois", () => {
+  it("at 0 HP: the third failure kills, without exceeding three", () => {
     expect(damageAtZero({ ...pj, hp: 0, through: 5, failures: 2 })).toMatchObject({ failures: 3, dead: true, reason: "failures" });
     expect(damageAtZero({ ...pj, hp: 0, through: 5, failures: 2, critical: true }).failures).toBe(3);
   });
-  it("à 0 PV : des dégâts au moins égaux aux PV max tuent", () => {
+  it("at 0 HP: damage at least equal to max HP kills", () => {
     expect(damageAtZero({ ...pj, hp: 0, through: 30 })).toMatchObject({ dead: true, reason: "massive" });
   });
-  it("rien pour qui ne fait pas de jets contre la mort, ni sans dégâts qui passent les PV temporaires", () => {
+  it("nothing for whoever makes no death saving throws, nor without damage that gets past Temporary Hit Points", () => {
     expect(damageAtZero({ hp: 0, max: 30, through: 50, saves: false }).dead).toBe(false);
     expect(damageAtZero({ ...pj, hp: 0, through: 0 }).failures).toBeNull();
   });
 });
 
-describe("jet contre la mort en début de tour", () => {
+describe("death saving throw at the start of the turn", () => {
   const base = { hp: 0, saves: true, statuses: ["unconscious"] };
-  it("à 0 PV, ni stabilisé ni mort : oui", () => {
+  it("at 0 HP, neither stable nor dead: yes", () => {
     expect(needsDeathSave(base)).toBe(true);
     expect(needsDeathSave({ ...base, failures: 2, successes: 2 })).toBe(true);
   });
-  it("non : PV au-dessus de 0, stabilisé, mort, trois échecs, ou pas de jets contre la mort", () => {
+  it("no: HP above 0, stable, dead, three failures, or no death saving throws", () => {
     expect(needsDeathSave({ ...base, hp: 1 })).toBe(false);
     expect(needsDeathSave({ ...base, statuses: ["stable"] })).toBe(false);
     expect(needsDeathSave({ ...base, statuses: ["dead"] })).toBe(false);
@@ -52,8 +52,8 @@ describe("jet contre la mort en début de tour", () => {
   });
 });
 
-describe("après un jet contre la mort", () => {
-  it("trois succès : Stabilisé ; trois échecs : Mort ; sinon rien", () => {
+describe("after a death saving throw", () => {
+  it("three successes: Stable; three failures: Dead; otherwise nothing", () => {
     expect(statusAfterDeathSave("stable")).toBe("stable");
     expect(statusAfterDeathSave("death")).toBe("dead");
     expect(statusAfterDeathSave("revive")).toBeNull();
@@ -63,18 +63,18 @@ describe("après un jet contre la mort", () => {
 
 import { downedStatus, isDead } from "../module/scripts/core/death.mjs";
 
-describe("§17.1 : l'état obligatoire à 0 PV", () => {
-  it("PNJ ordinaire à 0 PV : Mort ; PJ : Inconscient ; trois échecs : Mort", () => {
+describe("§17.1: the mandatory condition at 0 HP", () => {
+  it("ordinary NPC at 0 HP: Dead; PC: Unconscious; three failures: Dead", () => {
     expect(downedStatus({ hp: 0, saves: false, statuses: [] })).toBe("dead");
     expect(downedStatus({ hp: 0, saves: true, statuses: [] })).toBe("unconscious");
     expect(downedStatus({ hp: 0, saves: true, statuses: ["unconscious"], failures: 3 })).toBe("dead");
   });
-  it("rien à poser : PV restants, déjà mort, déjà inconscient", () => {
+  it("nothing to apply: remaining HP, already dead, already unconscious", () => {
     expect(downedStatus({ hp: 3, saves: false, statuses: [] })).toBe(null);
     expect(downedStatus({ hp: 0, saves: false, statuses: ["dead"] })).toBe(null);
     expect(downedStatus({ hp: 0, saves: true, statuses: ["unconscious", "incapacitated"] })).toBe(null);
   });
-  it("mort : l'état, ou 0 PV sans jets contre la mort", () => {
+  it("dead: the condition, or 0 HP with no death saving throws", () => {
     expect(isDead({ hp: 0, saves: false, statuses: [] })).toBe(true);
     expect(isDead({ hp: 0, saves: true, statuses: ["unconscious"] })).toBe(false);
     expect(isDead({ hp: 5, saves: true, statuses: ["dead"] })).toBe(true);
@@ -84,7 +84,7 @@ describe("§17.1 : l'état obligatoire à 0 PV", () => {
 import { canStabilize } from "../module/scripts/core/death.mjs";
 
 describe("§50 : stabiliser (trousse de soins)", () => {
-  it("à 0 PV, ni morte ni déjà stable", () => {
+  it("at 0 HP, neither dead nor already stable", () => {
     expect(canStabilize({ hp: 0, statuses: ["unconscious"] })).toBe(true);
     expect(canStabilize({ hp: 3, statuses: [] })).toBe(false);
     expect(canStabilize({ hp: 0, statuses: ["dead"] })).toBe(false);

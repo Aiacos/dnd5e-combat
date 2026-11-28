@@ -1,21 +1,21 @@
 /**
- * Résistance légendaire (SPEC §18.9, M6) : « si la créature rate une sauvegarde, elle peut choisir de la réussir ». dnd5e 6 la
- * gère en natif : `resources.legres` du PNJ, un bouton « Résister » sur la carte d'une sauvegarde ratée
- * (`SaveMessageData#canResist`, data/chat-message/save-message-data.mjs:77-81) et `actor.system.resistSave(message)`
- * (data/actor/npc.mjs:572-600), qui dépense une résistance et marque la sauvegarde `resisted` (réussie). Le moteur, qui
- * applique l'issue dès le jet, pose la question AVANT d'appliquer, puis appelle la méthode du système.
+ * Legendary Resistance (SPEC §18.9, M6): "if the creature fails a saving throw, it can choose to succeed instead". dnd5e 6
+ * handles it natively: the NPC's `resources.legres`, a "Resist" button on the card of a failed save
+ * (`SaveMessageData#canResist`, data/chat-message/save-message-data.mjs:77-81) and `actor.system.resistSave(message)`
+ * (data/actor/npc.mjs:572-600), which spends a resistance and marks the save `resisted` (successful). The engine, which
+ * applies the outcome from the roll, asks the question BEFORE applying, then calls the system's method.
  */
 
 import { timedWait } from "./dialogs.mjs";
 
-/** Résistances légendaires restantes, ou 0. */
+/** Remaining Legendary Resistances, or 0. */
 export const legendaryLeft = actor => actor?.system?.resources?.legres?.value ?? 0;
 
-/** Le système permet-il de résister à cette sauvegarde (PNJ, raté, pas déjà résisté, résistance restante) ? */
+/** Does the system allow resisting this save (NPC, failed, not already resisted, resistance left)? */
 export const canResistSave = message => message?.system?.canResist === true;
 
 /**
- * Demande au MJ s'il dépense une Résistance légendaire. Sans réponse dans le délai des fenêtres de combat : non.
+ * Asks the GM whether to spend a Legendary Resistance. With no answer within the combat windows' timeout: no.
  * @returns {Promise<boolean>}
  */
 export async function askLegendary(actor, { total, dc, item }) {
@@ -31,7 +31,7 @@ export async function askLegendary(actor, { total, dc, item }) {
   return answer === "yes";
 }
 
-/** Dépense une Résistance légendaire sur cette sauvegarde : la méthode du système (compteur, carte marquée « résistée »). */
+/** Spends a Legendary Resistance on this save: the system's method (counter, card marked "resisted"). */
 export async function resistSave(message) {
   await message.getAssociatedActor()?.system?.resistSave?.(message);
 }

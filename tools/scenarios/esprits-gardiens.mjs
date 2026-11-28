@@ -1,11 +1,11 @@
 /**
- * Zone qui dure (B1, déclarée depuis 0.6.0, vérifiée ici) : Esprits gardiens (PHB, ajouté au Magicien le temps du
- * scénario, sans emplacement) — émanation de 15 ft ; « chaque fois que l'émanation entre dans l'espace d'une créature et
- * chaque fois qu'une créature y entre ou y termine son tour », sauvegarde de Sagesse, une fois par tour. Contenu :
- * `{ on: ["enter", "turnEnd"], do: [{ type: "replay" }] }`. La zone est posée par l'outil du connecteur (un cercle
- * centré sur le Magicien).
- * §438 : Manuel 3.0.0 — l'émanation est posée par l'activité utilitaire « Cast Spell » (`tevaatMC9LZxVPLS`), la sauvegarde est une activité
- * sœur sans zone, rejouée par la zone.
+ * Lasting area (B1, declared since 0.6.0, verified here): Spirit Guardians (PHB, added to the Wizard for the duration of the
+ * scenario, no slot) — 15 ft Emanation; "Whenever the Emanation enters a creature's space and whenever a creature enters the
+ * Emanation or ends its turn there", Wisdom save, once per turn. Content:
+ * `{ on: ["enter", "turnEnd"], do: [{ type: "replay" }] }`. The area is placed by the connector's tool (a circle
+ * centered on the Wizard).
+ * §438: Manual 3.0.0 — the Emanation is placed by the "Cast Spell" utility activity (`tevaatMC9LZxVPLS`), the save is a
+ * sister activity without area, replayed by the area.
  * §531 (issue #142): SRD 5.2 — nothing when the Emanation appears (unlike Moonbeam's "When the Cylinder appears"): the Zombie two
  * squares away makes no save at the cast, then saves at the end of its turn inside. (The zone here is a circle placed by the
  * connector, not attached to the caster: the "Emanation enters a creature's space" case is played by `zone-sur-soi`.)

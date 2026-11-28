@@ -1,10 +1,10 @@
 /**
- * Protection contre la mort (§73, Manuel des joueurs 2024) : « la première fois que la cible devrait tomber à 0 point de vie avant la
- * fin du sort, elle tombe à 1 point de vie à la place, et le sort prend fin ».
- *  - un personnage joueur de la scène reçoit le sort (compendium du Manuel des joueurs, sans emplacement) et le lance sur lui ;
- *  - à 5 PV, 12 dégâts : il reste à 1 PV, l'effet du sort est retiré, aucun état de mort ;
- *  - de nouveau 12 dégâts : la règle ordinaire (0 PV, Inconscient).
- * Le filet de sécurité remet PV, effets et items.
+ * Death Ward (§73, Player's Handbook 2024): "the first time the target would drop to 0 Hit Points before the spell ends,
+ * the target instead drops to 1 Hit Point, and the spell ends".
+ *  - a player character on the scene receives the spell (Player's Handbook compendium, no spell slot) and casts it on itself;
+ *  - at 5 HP, 12 damage: it stays at 1 HP, the spell's effect is removed, no death condition;
+ *  - 12 damage again: the ordinary rule (0 HP, Unconscious).
+ * The safety net restores HP, effects and items.
  */
 const SPELL = "Compendium.dnd-players-handbook.spells.Item.phbsplDeathWard0";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -22,12 +22,12 @@ export default {
     if ( !pcRef ) { ctx.log("aucun personnage joueur sur la scène : non applicable"); return; }
     const pc = await ctx.token(pcRef.name);
     const itemId = await ctx.ensureItem(pc, SPELL, { system: { method: "atwill" } });
-    // Par l'identifiant du sort, pas par le nom de l'effet (« Protection from Death » dans un client anglais).
+    // By the spell's identifier, not by the effect's name ("Protection from Death" in an English client).
     const ward = () => ctx.effectsFrom(pc, "death-ward");
 
     const used = await ctx.use({ tokenId: pc.id, itemId, targetTokenIds: [pc.id], usageConfig: { "dnd5e-combat": { autoReact: "none" } } });
     ctx.expect(used.used, "Protection contre la mort lancée sur lui-même");
-    // L'effet arrive à la fin de l'animation : on l'attend (10 s au plus) plutôt qu'un délai fixe.
+    // The effect arrives at the end of the animation: we wait for it (10 s at most) rather than a fixed delay.
     for ( const until = Date.now() + 10000; (Date.now() < until) && !(await ward()).length; ) await sleep(500);
     ctx.expect((await ward()).length === 1, `l'effet du sort est posé (${(await ctx.effects(pc)).map(e => e.name).join(", ")})`);
 

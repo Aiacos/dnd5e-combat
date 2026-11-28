@@ -1,6 +1,6 @@
 /**
- * Fonctions de test (api.mcp) : règles du tour et de la résolution — fins d'effets, abri, perception, avantage, sauvegardes,
- * soins et dégâts, aides aux tests, budget, présage, utilisation, factions, furtivité. Extrait de runtime/testing.mjs.
+ * Test functions (api.mcp): turn and resolution rules — effect endings, Cover, perception, Advantage, saving throws,
+ * healing and damage, check aids, budget, Portent, use, factions, stealth. Extracted from runtime/testing.mjs.
  */
 
 import { potionOptions } from "./potion-choice.mjs";
@@ -58,8 +58,8 @@ import { requestGroupRoll, groupRollView, rollsApi } from "./group-roll.mjs";
 import { useDespiteAntimagic } from "./antimagic.mjs";
 
 /**
- * §43.2 : les effets auxquels une action met fin — ceux du token (`own`), ceux qu'un autre lui retire (`byOther`) ; et le
- * geste : sans `targetId`, le token prend « S'échapper » pour lui-même ; avec, il met fin au premier effet de la cible.
+ * §43.2: the effects an action ends — the token's own (`own`), those another removes from it (`byOther`); and the
+ * gesture: without `targetId`, the token takes "Escape" for itself; with it, it ends the target's first effect.
  */
 export function endings({ tokenId }) {
   const token = viewedToken({ tokenId });
@@ -67,7 +67,7 @@ export function endings({ tokenId }) {
   return { own: ownEndingsOf(token.actor).map(tell), byOther: endingsOn(token).map(tell) };
 }
 
-/** K4 (§325) : les empoignades que subit un token — DD d'évasion, allonge de la prise, prise tenue. */
+/** K4 (§325): the grapples a token suffers — escape DC, reach of the hold, hold held. */
 export function grappleState({ tokenId }) {
   const token = viewedToken({ tokenId });
   const factors = readUnitFactors();
@@ -78,8 +78,8 @@ export function grappleState({ tokenId }) {
 }
 
 /**
- * §43.2 : sans `targetId`, le token `tokenId` s'échappe de son agrippement ; avec, il met fin au premier effet de la cible que son action
- * termine → `{ done }`.
+ * §43.2: without `targetId`, the token `tokenId` escapes its grapple; with it, it ends the target's first effect that its action
+ * ends → `{ done }`.
  */
 export async function actionEnd({ tokenId, targetId=null }) {
   const token = viewedToken({ tokenId });
@@ -90,9 +90,9 @@ export async function actionEnd({ tokenId, targetId=null }) {
 }
 
 /**
- * §62 : ce que le client voit à l'écran par les yeux d'un token — le MJ en prend le contrôle (sa vision devient celle de ce
- * token), on lit `isVisible` et le filtre de détection de chaque cible (le contour de l'ouïe, ou d'un mode spécial), puis le
- * contrôle d'avant est rendu.
+ * §62: what the client sees on screen through a token's eyes — the GM takes control of it (their vision becomes that of this
+ * token), we read `isVisible` and each target's detection filter (the outline of hearing, or of a special mode), then the
+ * previous control is restored.
  */
 export async function perceived({ observerId, targetIds=[] }) {
   gmOnly();
@@ -116,19 +116,19 @@ export async function perceived({ observerId, targetIds=[] }) {
   return out;
 }
 
-/** §172 : l'abri de la cible contre l'attaquant, tel que le verdict le calculera (`coverFor`), ou null. */
+/** §172: the target's Cover against the attacker, as the verdict will compute it (`coverFor`), or null. */
 export function cover({ attackerId, targetId, itemId=null, effective=false }) {
   const attacker = canvas.scene?.tokens.get(attackerId);
   const target = canvas.scene?.tokens.get(targetId);
   if ( !attacker || !target ) throw new Error("token not found on the viewed scene");
-  // §173 : avec l'attaque d'un item (une arme à distance devant le Mur de vent).
+  // §173: with an item's attack (a ranged weapon in front of Wind Wall).
   const activity = itemId ? attacker.actor?.items.get(itemId)?.system.activities.find(a => a.type === "attack") ?? null : null;
-  // §353 : `effective` — l'abri qui reste à l'attaque, une fois ôté ce que l'attaquant ignore (dons de tir, ennemi juré).
+  // §353: `effective` — the Cover left to the attack, once what the attacker ignores is removed (shooting feats, Favored Enemy).
   if ( effective && activity ) return coverAgainst(attacker, target, activity, null, { quiet: true });
   return coverFor(attacker, target, { quiet: true, activity });
 }
 
-/** #33 : l'aperçu de l'abri (`api.ui.cover`) de la cible contre l'attaque d'un item de l'attaquant, sur ce client (le MJ : tout). */
+/** #33: the Cover preview (`api.ui.cover`) of the target against an attacker's item attack, on this client (the GM: everything). */
 export function coverPreview({ attackerId, targetId, itemId }) {
   const attacker = canvas.scene?.tokens.get(attackerId);
   const target = canvas.scene?.tokens.get(targetId);
@@ -139,43 +139,43 @@ export function coverPreview({ attackerId, targetId, itemId }) {
 }
 
 /**
- * Les valeurs calculées d'un token (données préparées par dnd5e, que le connecteur ne rend pas : il lit la source) : CA,
- * vitesses, PV, bonus aux attaques et aux sauvegardes — pour vérifier un effet passif sans passer par une attaque.
+ * A token's computed values (data prepared by dnd5e, which the connector does not return: it reads the source): AC,
+ * speeds, HP, attack and save bonuses — to check a passive effect without going through an attack.
  */
 export function stats({ tokenId }) {
   const tok = viewedToken({ tokenId });
   const actor = tok.actor;
   const a = actor?.system?.attributes ?? {};
-  // dnd5e 6 range les bonus de jets sous `system.rolls` (`system.bonuses` ne garde que le DD de sort) et y traduit les
-  // anciennes clés des effets (`system.bonuses.mwak.attack` → `system.rolls.attack.mwak.bonus`), vu en jeu le 2026-09-27.
+  // dnd5e 6 stores roll bonuses under `system.rolls` (`system.bonuses` keeps only the spell DC) and translates the
+  // old effect keys there (`system.bonuses.mwak.attack` → `system.rolls.attack.mwak.bonus`), seen in play on 2026-09-27.
   const rolls = actor?.system?.rolls ?? {};
   const attack = kind => rolls.attack?.[kind]?.bonus ?? "";
   return {
     ac: a.ac?.value ?? null, exhaustion: Number(a.exhaustion) || 0, hp: { value: a.hp?.value ?? null, max: a.hp?.max ?? null, tempmax: a.hp?.tempmax ?? 0 },
     speed: Object.fromEntries(Object.entries(a.movement ?? {}).filter(([, v]) => typeof v === "number")),
-    // dnd5e 6 range les vitesses préparées sous `movement.speeds` (§295 : Forme gazeuse).
+    // dnd5e 6 stores prepared speeds under `movement.speeds` (§295: Gaseous Form).
     speeds: { ...(a.movement?.speeds ?? {}) },
     bonuses: { mwak: attack("mwak"), rwak: attack("rwak"), msak: attack("msak"), rsak: attack("rsak"),
       save: rolls.ability?.save?.bonus ?? "" },
     size: actor?.system?.traits?.size ?? null,
-    // §438 : les résistances préparées (effets à conditions de dnd5e 6.1 compris : Plénitude stellaire du Manuel 3.0.0).
+    // §438: prepared Resistances (including dnd5e 6.1 conditional effects: "Stellar Fullness" from Player's Handbook 3.0.0).
     resistances: Array.from(actor?.system?.traits?.dr?.value ?? []),
     prof: a.prof ?? null,
     mods: Object.fromEntries(Object.entries(actor?.system?.abilities ?? {}).map(([k, v]) => [k, v.mod ?? null])),
     statuses: Array.from(actor?.statuses ?? []),
-    // §494 (B14) : la limite de concentrations (préparée : effet tenu compris) et les sorts tenus.
+    // §494 (B14): the Concentration limit (prepared: held effect included) and the held spells.
     concentration: { limit: a.concentration?.limit ?? null, held: Array.from(actor?.concentration?.effects ?? []).map(e => e.id) },
-    // K6 (§327) : Réactions perdues, action OU action Bonus (effets `noReactions`, `actionOrBonus`).
+    // K6 (§327): lost Reactions, action OR Bonus Action (effects `noReactions`, `actionOrBonus`).
     reactionBlocked: reactionsBlocked(actor), actionOrBonus: actionOrBonusOnly(actor),
-    // §501 (B21) : peut-elle réagir maintenant (budget du round, Neutralisé ou effet qui l'interdit, `reactions.loseOne`) ?
+    // §501 (B21): can it react now (round budget, Incapacitated or an effect that forbids it, `reactions.loseOne`)?
     reaction: actor ? reactionState(actor) : null,
-    // §52 : la lumière du token telle que le cœur la rend (données préparées : effets `token.light.*` compris).
+    // §52: the token's light as the core renders it (prepared data: including `token.light.*` effects).
     light: (() => { const l = (tok?.document ?? tok)?.light ?? {}; return { bright: l.bright ?? 0, dim: l.dim ?? 0, angle: l.angle ?? 360,
       animation: l.animation?.type ?? null }; })()
   };
 }
 
-/** La chance d'échec de la sauvegarde que la pastille afficherait (§15.3), pour la comparer au vrai jet. */
+/** The save failure chance the badge would show (§15.3), to compare with the real roll. */
 export function saveChance({ casterId, targetId, itemId, activityId=null }) {
   const caster = viewedToken({ tokenId: casterId });
   const target = viewedToken({ tokenId: targetId });
@@ -186,8 +186,8 @@ export function saveChance({ casterId, targetId, itemId, activityId=null }) {
 }
 
 /**
- * Les raisons d'Avantage et de Désavantage que le moteur donnerait à cette attaque (core/conditions.mjs), et les créatures
- * hostiles au contact de l'attaquant — pour comprendre un jet « normal » inattendu.
+ * The Advantage and Disadvantage reasons the engine would give this attack (core/conditions.mjs), and the hostile creatures
+ * in contact with the attacker — to understand an unexpected "normal" roll.
  */
 export function attackReasons({ attackerId, targetId, itemId, attackMode=null }) {
   const origin = viewedToken({ tokenId: attackerId });
@@ -202,8 +202,8 @@ export function attackReasons({ attackerId, targetId, itemId, attackMode=null })
 }
 
 /**
- * §27 : pose (ou retire, `entry: null`) l'entrée d'un identifiant dans la surcouche du monde, et rend celle qu'il y avait —
- * pour qu'un scénario la remette (Incantation puissante à la place d'Impact divin).
+ * §27: sets (or removes, `entry: null`) the entry of an identifier in the world overlay, and returns the one that was there —
+ * so that a scenario restores it (Potent Spellcasting instead of Divine Strike).
  */
 export async function overrideContent({ identifier, entry=null }) {
   gmOnly();
@@ -213,8 +213,8 @@ export async function overrideContent({ identifier, entry=null }) {
 }
 
 /**
- * §29 : applique l'enchantement d'une activité (son premier profil, ou `profile`) à un item de l'acteur — ce que dnd5e fait par un
- * glisser-déposer sur la carte (Décharge répulsive sur la Décharge occulte). Rend l'id de l'effet posé.
+ * §29: applies an activity's enchantment (its first profile, or `profile`) to an actor's item — what dnd5e does by a
+ * drag-and-drop onto the card (Repelling Blast on Eldritch Blast). Returns the id of the placed effect.
  */
 export async function enchant({ tokenId, itemId, activityId, targetItemId, profile=null }) {
   const actor = viewedToken({ tokenId }).actor;
@@ -222,22 +222,23 @@ export async function enchant({ tokenId, itemId, activityId, targetItemId, profi
   const target = actor?.items.get(targetItemId);
   if ( !activity || !target ) throw new Error("activity or item not found");
   const profileId = profile ?? activity.effects?.[0]?._id;
-  // O9h (§363) : un enchantement de soi se pose sans les restrictions, comme dnd5e le fait (activity/enchant.mjs, `_triggerSubsequentActions`).
+  // O9h (§363): a self-enchantment is placed without the restrictions, as dnd5e does
+  // (activity/enchant.mjs, `_triggerSubsequentActions`).
   let effect = await activity.applyEnchantment(profileId, target, { strict: !(activity.enchant?.self && (target === activity.item)) });
-  // §435 : un objet qui s'enchante lui-même (Dague venimeuse, Courroux sauvage) — dnd5e ne crée rien, le moteur active le profil sur place
-  // (runtime/enchant.mjs) après le hook : l'attendre, et rendre ce profil ; ses riders sont déjà posés.
+  // §435: an item that enchants itself (Dagger of Venom, "Savage Wrath") — dnd5e creates nothing, the engine activates the
+  // profile in place (runtime/enchant.mjs) after the hook: wait for it, and return that profile; its riders are already placed.
   if ( !effect ) {
     const switched = await selfSwitchOf(target);
     if ( switched ) return { effectId: switched.id, riders: 0, self: true };
   }
-  // O8e (§348) : sans carte de chat, dnd5e ne crée pas les « riders » (activités et effets ajoutés par l'enchantement : « Swear Oath »
-  // de l'Arc du serment) ; ils sont demandés ici comme la carte le ferait (`collectRiders`, chemin enchantmentProfile + activityId).
+  // O8e (§348): without a chat card, dnd5e does not create the "riders" (activities and effects added by the enchantment:
+  // "Swear Oath" of the Oathbow); they are requested here as the card would (`collectRiders`, enchantmentProfile + activityId).
   const riders = effect ? (await effect.system?.collectRiders?.({ dnd5e: { enchantmentProfile: profileId, activityId } }) ?? []) : [];
   if ( riders.length ) await foundry.documents.modifyBatch(riders);
   return { effectId: effect?.id ?? null, riders: riders.length };
 }
 
-/** §23 : soigne un token comme le ferait un sort (`applyDamage` de type « healing ») ; rend ses PV avant et après. */
+/** §23: heals a token as a spell would (`applyDamage` of type "healing"); returns its HP before and after. */
 export async function heal({ tokenId, amount }) {
   const actor = viewedToken({ tokenId }).actor;
   const before = actor.system.attributes.hp.value;
@@ -245,40 +246,40 @@ export async function heal({ tokenId, amount }) {
   return { before, after: actor.system.attributes.hp.value };
 }
 
-/** §23 : des dégâts à un token, par `applyDamage` (résistances comprises) ; rend ses PV avant et après. */
+/** §23: damage to a token, through `applyDamage` (Resistances included); returns its HP before and after. */
 export async function hurt({ tokenId, amount, type="bludgeoning", properties=[] }) {
   const actor = viewedToken({ tokenId }).actor;
   const before = actor.system.attributes.hp.value;
-  // `properties` : celles du jet (« sil » : arme argentée, §78).
+  // `properties`: those of the roll ("sil": silvered weapon, §78).
   await actor.applyDamage([{ value: amount, type, properties: new Set(properties) }]);
   return { before, after: actor.system.attributes.hp.value };
 }
 
-/** §23 : un jet de sauvegarde du token, sans fenêtre ; rend sa formule et son total. */
+/** §23: a token's saving throw, without a window; returns its formula and its total. */
 export async function rollSave({ tokenId, ability }) {
   const rolls = await viewedToken({ tokenId }).actor.rollSavingThrow({ ability }, { configure: false });
   return { formula: rolls?.[0]?.formula ?? null, total: rolls?.[0]?.total ?? null, d20: rolls?.[0]?.d20?.total ?? null };
 }
 
-/** §93 : ce qu'un 1 naturel déclenche chez la créature (le jet lui-même ne se force pas) — sans l'attendre : le scénario répond. */
+/** §93: what a natural 1 triggers on the creature (the roll itself is not forced) — not awaited: the scenario answers. */
 export function naturalOne({ tokenId }) {
   naturalOneFor(viewedToken({ tokenId }).actor, "test").catch(err => console.error(err));
   return { started: true };
 }
 
-/** §90 : un test de compétence (`skill`) ou de caractéristique (`ability`), sans fenêtre ; ce qui suit le jet (dé ajouté) n'est pas attendu. */
+/** §90: a skill check (`skill`) or ability check (`ability`), without a window; what follows the roll (added die) is not awaited. */
 export async function rollCheck({ tokenId, skill=null, ability=null }) {
   const actor = viewedToken({ tokenId }).actor;
   const rolls = skill ? await actor.rollSkill({ skill }, { configure: false }) : await actor.rollAbilityCheck({ ability }, { configure: false });
   return { formula: rolls?.[0]?.formula ?? null, total: rolls?.[0]?.total ?? null, d20: rolls?.[0]?.d20?.total ?? null };
 }
 
-/** §113 : les aides que la fenêtre d'un test de compétence ou d'outil proposerait à ce token. */
+/** §113: the aids that the skill or tool check window would offer this token. */
 export function skillAids({ tokenId, skill=null, tool=null }) {
   return aidsFor(viewedToken({ tokenId }).actor, { skill, tool }).map(a => ({ kind: a.kind, helper: a.helper.name, token: a.token.id, self: a.self }));
 }
 
-/** §113 : l'aide demandée comme le ferait le bouton de la fenêtre ; rend si elle est donnée, et si l'Assistance est posée (attendue 10 s). */
+/** §113: the aid requested as the window button would; returns whether it is given and whether Help is placed (awaited 10 s). */
 export async function skillAid({ tokenId, helperTokenId, kind, skill=null, tool=null }) {
   const tester = viewedToken({ tokenId });
   const helper = viewedToken({ tokenId: helperTokenId }).actor;
@@ -292,7 +293,7 @@ export async function skillAid({ tokenId, helperTokenId, kind, skill=null, tool=
 }
 
 /**
- * Ce qui cloche dans une utilisation (légalité du tour, états), sans l'utiliser ; `cost` force le coût (« bonus », « reaction »).
+ * What is wrong with a use (turn legality, conditions), without using it; `cost` forces the cost ("bonus", "reaction").
  * `attackMode`: dnd5e's attack mode, as chosen by the click (§532: `offhand`, the Light extra attack).
  */
 export function issues({ tokenId, itemId, activityType=null, activityId=null, cost=null, attackMode=null }) {
@@ -301,18 +302,18 @@ export function issues({ tokenId, itemId, activityType=null, activityId=null, co
     : item?.system.activities.find(a => !activityType || (a.type === activityType));
   if ( !activity ) throw new Error("activity not found");
   const use = useIssues(activity, { cost, attackMode });
-  // K5 (§326) : les soucis d'une action légendaire (son tour, plus d'action, une par tour).
+  // K5 (§326): the issues of a legendary action (its turn, no more actions, one per turn).
   return [...use.lines, ...legendaryIssues(activity, use.combatant, use.own)];
 }
 
-/** §236 : la portée que le moteur applique à une activité (règles de contenu comprises : Sniper de sorts, Fureur élémentaire améliorée). */
+/** §236: the range the engine applies to an activity (content rules included: Spell Sniper, Improved Elemental Fury). */
 export function range({ tokenId, itemId, activityType=null }) {
   const activity = viewedToken({ tokenId }).actor?.items.get(itemId)?.system.activities.find(a => !activityType || (a.type === activityType));
   if ( !activity ) throw new Error("activity not found");
   return rangeOf(activity);
 }
 
-/** O8h (§351) : les soucis de portée (hors de portée, portée longue, trop près) d'une activité contre ces cibles, désignées ici. */
+/** O8h (§351): the range issues (out of range, long range, too close) of an activity against these targets, designated here. */
 export function rangeCheck({ tokenId, itemId, targetIds=[], activityType=null }) {
   const activity = viewedToken({ tokenId }).actor?.items.get(itemId)?.system.activities.find(a => !activityType || (a.type === activityType));
   if ( !activity ) throw new Error("activity not found");
@@ -322,14 +323,14 @@ export function rangeCheck({ tokenId, itemId, targetIds=[], activityType=null })
   return problems;
 }
 
-/** Issue #31 : ce que la Combat UI lirait pour la potion `itemId` du token (`api.ui.potion`), ou null. */
+/** Issue #31: what the Combat UI would read for the potion `itemId` of the token (`api.ui.potion`), or null. */
 export function potionOptionsOf({ tokenId, itemId }) {
   const token = viewedToken({ tokenId });
   const item = token.actor?.items.get(itemId);
   return potionOptions(potionChoiceActivity(item));
 }
 
-/** §20 : le budget du tour d'un combattant (action, action Bonus, Foncer, Se désengager, Vitesse à 0, déplacement en plus). */
+/** §20: a combatant's turn budget (action, Bonus Action, Dash, Disengage, Speed at 0, extra movement). */
 export function budget({ tokenId }) {
   const token = viewedToken({ tokenId });
   const combatant = token.actor ? combatantFor(token.actor) : null;
@@ -337,8 +338,8 @@ export function budget({ tokenId }) {
 }
 
 /**
- * §492 : le registre « qui a attaqué qui ce tour » du combat en cours, et, entre deux tokens, les genres d'attaque de `sourceId` contre
- * `targetId` pendant ce tour.
+ * §492: the "who attacked whom this turn" registry of the current combat, and, between two tokens, the kinds of attack from
+ * `sourceId` against `targetId` during this turn.
  */
 export function attacksThisTurn({ sourceId=null, targetId=null }={}) {
   const source = sourceId ? viewedToken({ tokenId: sourceId }).actor : null;
@@ -347,8 +348,8 @@ export function attacksThisTurn({ sourceId=null, targetId=null }={}) {
 }
 
 /**
- * §19.9 : sous quel identifiant le moteur reconnaît chaque item d'un token, d'où il le tient (item, source, compendium, nom) et
- * les clés de contenu qui s'y attachent — pour les items premium sans identifiant (Ravenloft), traduits par Babele.
+ * §19.9: under which identifier the engine recognizes each item of a token, where it gets it from (item, source, compendium,
+ * name) and the content keys attached to it — for premium items without an identifier (Ravenloft), translated by Babele.
  */
 export function identify({ tokenId }) {
   const actor = viewedToken({ tokenId }).actor;
@@ -359,8 +360,8 @@ export function identify({ tokenId }) {
 }
 
 /**
- * §335 : la donnée source d'un objet d'un token, aux chemins demandés (`effect:<id>:<chemin>` pour un effet de l'objet) — ce qu'une
- * correction de donnée premium a écrit.
+ * §335: the source data of a token's item, at the requested paths (`effect:<id>:<chemin>` for an effect of the item) — what a
+ * premium data fix wrote.
  */
 export function itemData({ tokenId, itemId, paths=[] }) {
   const item = viewedToken({ tokenId }).actor?.items.get(itemId);
@@ -376,8 +377,8 @@ export function itemData({ tokenId, itemId, paths=[] }) {
 }
 
 /**
- * §36 : les jets notés du Présage d'un token — `roll: true` les lance comme au Repos long ; `rolls: [n…]` les fixe (scénario : des
- * valeurs connues) ; `clear: true` les efface. Rend le nombre de d20 du devin et son état.
+ * §36: the noted rolls of a token's Portent — `roll: true` rolls them as at a Long Rest; `rolls: [n…]` sets them (scenario: known
+ * values); `clear: true` clears them. Returns the diviner's d20 count and its state.
  */
 export async function portent({ tokenId, roll=false, rolls=null, clear=false }) {
   const actor = viewedToken({ tokenId }).actor;
@@ -389,14 +390,15 @@ export async function portent({ tokenId, roll=false, rolls=null, clear=false }) 
 }
 
 /**
- * MJ : utilise l'item `itemId` du token comme un clic sur la fiche de dnd5e (`item.use({ event })`, sans le moteur ni la fenêtre
- * d'activité forcée), le MJ ayant désigné `targetIds` ; n'attend pas la suite → `{ started }`. §436 : dans un champ antimagie, dnd5e n'y trouve aucune activité permise.
+ * GM: uses the token's item `itemId` like a click on the dnd5e sheet (`item.use({ event })`, without the engine or the forced
+ * activity window), the GM having designated `targetIds`; does not wait for the rest → `{ started }`.
+ * §436: inside an antimagic field, dnd5e finds no permitted activity there.
  */
 export function sheetUse({ tokenId, itemId, targetIds=null }) {
   gmOnly();
   const item = canvas.scene?.tokens.get(tokenId)?.actor?.items.get(itemId);
   if ( !item ) throw new Error("item not found");
-  if ( Array.isArray(targetIds) ) {   // les cibles désignées du MJ, comme à la table avant le clic
+  if ( Array.isArray(targetIds) ) {   // the GM's designated targets, as at the table before the click
     for ( const t of Array.from(game.user.targets) ) t.setTarget(false, { releaseOthers: false });
     for ( const id of targetIds ) canvas.tokens.get(id)?.setTarget(true, { releaseOthers: false });
   }
@@ -405,29 +407,30 @@ export function sheetUse({ tokenId, itemId, targetIds=null }) {
 }
 
 /**
- * Une activité utilisée comme au clic (§47) : pose de zone de dnd5e comprise — à la différence de `use-activity` du connecteur,
- * qui la coupe (`create.measuredTemplate: false`). Sans emplacement ; la fenêtre de dnd5e, si elle s'ouvre, est relevée puis validée ; réactions du MJ refusées. Rend la carte
- * d'utilisation et les régions nées de cette activité dans les 3 s (une pose interactive, elle, attendrait un clic : rien).
+ * An activity used as on click (§47): including dnd5e's area placement — unlike the connector's `use-activity`,
+ * which cuts it (`create.measuredTemplate: false`). Without a slot; the dnd5e window, if it opens, is captured then confirmed;
+ * GM reactions refused. Returns the use card and the regions created by this activity within 3 s (an interactive placement
+ * would wait for a click: nothing).
  */
 export async function use({ tokenId, itemId, activityType=null, activityId=null, extra=null, consume=false }) {
   gmOnly();
   const token = canvas.scene?.tokens.get(tokenId);
   const item = token?.actor?.items.get(itemId);
-  // §438 : `activityId` — une activité nommée (Esprits gardiens du Manuel 3.0.0 : la zone est posée par « Cast Spell »).
+  // §438: `activityId` — a named activity (Spirit Guardians from Player's Handbook 3.0.0: the area is placed by "Cast Spell").
   const activity = activityId ? item?.system.activities.get(activityId)
     : item?.system.activities.find(a => !activityType || (a.type === activityType));
   if ( !activity ) throw new Error("activity not found");
   const before = new Set(canvas.scene.regions.map(r => r.id));
   const mine = () => canvas.scene.regions.filter(r => !before.has(r.id) && (r.getFlag("dnd5e", "activity") === activity.uuid));
-  // La fenêtre d'utilisation de dnd5e, si elle s'ouvre, est relevée (avec ou sans case « Placer le gabarit ») puis validée.
+  // The dnd5e use window, if it opens, is captured (with or without the "Place template" checkbox) then confirmed.
   let dialog = null;
   const hook = Hooks.on("renderActivityUsageDialog", (app, element) => {
     dialog = { templateBox: !!element.querySelector('[name="create.measuredTemplate"]') };
     setTimeout(() => element.querySelector('button[type="submit"], [data-action="use"]')?.click(), 100);
   });
   let used;
-  // `consume` : comme un vrai clic, ressources dépensées (§77 : sans charge, la fenêtre « Plus de charge » du MJ).
-  // §436 : comme un clic du moteur — sous le statut `antimagic`, sa fenêtre forçable avant le refus sec de dnd5e.
+  // `consume`: like a real click, resources spent (§77: without a charge, the GM's "No charge left" window).
+  // §436: like an engine click — under the `antimagic` status, its forceable window before dnd5e's flat refusal.
   try { used = await useDespiteAntimagic(activity, more => activity.use({ ...(consume ? {} : { consume: false }),
     [MODULE_ID]: { confirmed: true, autoReact: "none", ...(extra ?? {}), ...more } }, { configure: true })); }
   finally { Hooks.off("renderActivityUsageDialog", hook); }
@@ -440,21 +443,21 @@ export async function use({ tokenId, itemId, activityType=null, activityId=null,
   };
 }
 
-/** §53 : pour chaque effet d'un token, l'item d'origine que le moteur retrouve (item détruit : relu dans le message). */
+/** §53: for each effect of a token, the origin item the engine finds (destroyed item: reread from the message). */
 export function effectOrigins({ tokenId }) {
   const actor = viewedToken({ tokenId }).actor;
   return (actor?.effects ?? []).map(e => {
     const item = originItemOf(e);
     return { id: e.id, effect: e.name, origin: e.origin ?? null, systemOrigin: e.system?.origin ?? null, item: item?.name ?? null,
       identifier: item ? identifierOf(item).id : null, statuses: Array.from(e.statuses ?? []), disabled: !!e.disabled,
-      // §436 : suspendu (antimagie de dnd5e 6.1 : `system.magical` sous le statut `antimagic`), marqué magique.
+      // §436: suspended (dnd5e 6.1 antimagic: `system.magical` under the `antimagic` status), marked magical.
       suppressed: !!e.isSuppressed, magical: !!e.system?.magical };
   });
 }
 
 /**
- * §181 : les factions, pour un scénario. `op` : `state` (réglage, rancunes, factions des tokens donnés), `snapshot` / `restore`
- * (le réglage entier, `value`), `add` ({ name } → id), `relation` ({ a, b } faction ids, `relation` ou null), `assign`
+ * §181: the factions, for a scenario. `op`: `state` (setting, grudges, factions of the given tokens), `snapshot` / `restore`
+ * (the whole setting, `value`), `add` ({ name } → id), `relation` ({ a, b } faction ids, `relation` or null), `assign`
  * ({ tokenIds, faction|null, actor }), `between` ({ aId, bId } tokens → relation), `grudges` ({ clear }), `stance`,
  * `window` (#275: the Factions window opened through the public API, its edit table unfolded and scrolled to the bottom → its
  * size against the viewport and whether the Save button can be reached; closed again unless `keepOpen`).
@@ -510,7 +513,7 @@ async function factionsWindow({ keepOpen=false }={}) {
   } finally { if ( !keepOpen ) await app.close(); }
 }
 
-/** §182 : l'observateur voit-il la cible (vision du moteur), et son cône. */
+/** §182: does the observer see the target (engine vision), and its Cone. */
 export function sees({ observerId, targetId }) {
   const observer = viewedToken({ tokenId: observerId });
   const target = viewedToken({ tokenId: targetId });
@@ -518,8 +521,8 @@ export function sees({ observerId, targetId }) {
 }
 
 /**
- * §211 : Se tenir prêt, pour un scénario — sans `name`, ce que le token peut préparer et son plan ; avec, le plan rangé (l'option dont
- * le nom contient `name`, le déclencheur, la créature `targetId`, l'emplacement le plus bas pour un sort), sans la fenêtre.
+ * §211: Ready, for a scenario — without `name`, what the token can prepare and its plan; with it, the stored plan
+ * (the option whose name contains `name`, the trigger, the creature `targetId`, the lowest slot for a spell), without the window.
  */
 export async function ready({ tokenId, name=null, trigger="enters", targetId=null }={}) {
   gmOnly();
@@ -542,7 +545,7 @@ export async function ready({ tokenId, name=null, trigger="enters", targetId=nul
   return { set: !!plan, ...state() };
 }
 
-/** §212 : En feu, pour un scénario — l'état, et `extinguish` : éteindre ses flammes comme l'entrée du menu. */
+/** §212: On Fire, for a scenario — the state, and `extinguish`: put out its flames like the menu entry. */
 export async function burning({ tokenId, extinguish: put=false }={}) {
   gmOnly();
   const token = viewedToken({ tokenId });
@@ -551,15 +554,15 @@ export async function burning({ tokenId, extinguish: put=false }={}) {
   return { ...out, after: isBurning(token.actor), statuses: Array.from(token.actor?.statuses ?? []) };
 }
 
-/** §184 : la Furtivité BG3, pour un scénario. `op` : `state` | `set` ({ on }) | `check` | `forget`. */
+/** §184: BG3 Stealth, for a scenario. `op`: `state` | `set` ({ on }) | `check` | `forget`. */
 export async function stealth({ op="state", tokenId, on=true }={}) {
   const token = viewedToken({ tokenId });
   if ( op === "set" ) await setHidden(token, on);
   if ( op === "check" ) await stealthCheck(token.parent);
-  // O9g (§361) : la Perception passive de chaque ennemi contre ce token (Cape elfique : −5).
+  // O9g (§361): the passive Perception of each enemy against this token (Cloak of Elvenkind: −5).
   if ( op === "observers" ) return passiveObservers(token.document ?? token).map(o => ({ name: o.token.name, passive: o.passive }));
   const point = lightAtPoint(stealthPoint(token));
-  // Par nom ; deux observateurs du même nom (deux Bandits) se distinguent par leur id, sinon l'un cacherait l'autre.
+  // By name; two observers with the same name (two Bandits) are told apart by their id, otherwise one would hide the other.
   const names = token.parent.tokens.contents.map(t => t.name);
   const label = id => {
     const name = token.parent.tokens.get(id)?.name;
@@ -572,8 +575,8 @@ export async function stealth({ op="state", tokenId, on=true }={}) {
 }
 
 /**
- * §187 : les objets répandus de la scène (chausse-trapes, billes) et ceux que ce token peut ramasser ; `pickUp` : ramasse le premier,
- * comme l'entrée « Ramasser » du menu.
+ * §187: the scattered objects of the scene (caltrops, ball bearings) and those this token can pick up; `pickUp`: picks up
+ * the first, like the "Pick up" menu entry.
  */
 export async function scatter({ tokenId, pickUp: take=false }) {
   const token = viewedToken({ tokenId });
@@ -585,8 +588,8 @@ export async function scatter({ tokenId, pickUp: take=false }) {
 }
 
 /**
- * §188 : les zones inflammables de la scène (en feu ou non) et celles que ce token peut allumer ; `ignite` : embrase la première qu'il
- * peut allumer (ou `regionId`), comme l'entrée « Allumer » du menu.
+ * §188: the flammable areas of the scene (on fire or not) and those this token can light; `ignite`: sets fire to the first it
+ * can light (or `regionId`), like the "Light" menu entry.
  */
 export async function flammable({ tokenId, ignite: light=false, regionId=null, fireAt=null }) {
   gmOnly();
@@ -598,7 +601,7 @@ export async function flammable({ tokenId, ignite: light=false, regionId=null, f
   const out = { zones: zones.map(tell), near: near.map(tell) };
   const target = regionId ? token.parent.regions.get(regionId) : near[0];
   if ( light && target ) out.lit = await ignite(target, "test");
-  // §189 : viser ce point avec une activité de feu, comme un clic au sol pendant la visée (`{ itemId, activityId?, x, y }`).
+  // §189: aim at this point with a fire activity, like a click on the ground while aiming (`{ itemId, activityId?, x, y }`).
   if ( fireAt ) {
     const item = token.actor.items.get(fireAt.itemId);
     const activity = fireAt.activityId ? item?.system.activities.get(fireAt.activityId) : item?.system.activities.find(a => a.type === "attack");
@@ -610,8 +613,8 @@ export async function flammable({ tokenId, ignite: light=false, regionId=null, f
 }
 
 /**
- * §222 : les bottes choisies d'un acteur — sources, places, choix enregistré, ce que le Repos long laisse changer, et le verdict
- * de la règle pour `keys` s'il est donné.
+ * §222: an actor's chosen masteries — sources, slots, recorded choice, what the Long Rest lets change, and the rule's verdict
+ * for `keys` if given.
  */
 export async function masteries({ actorId, keys=null }) {
   const actor = game.actors.get(actorId);
@@ -623,8 +626,8 @@ export async function masteries({ actorId, keys=null }) {
 }
 
 /**
- * §510 : la fenêtre des bottes de l'acteur, ouverte sur ce client (MJ) par l'API publique (`api.mastery.open`), le choix en cours
- * remplacé par `keys` s'il est donné (rien n'est enregistré) → `{ rest }` : le texte de la ligne verte du Repos long, ou null. Refermée.
+ * §510: the actor's masteries window, opened on this client (GM) by the public API (`api.mastery.open`), the current choice
+ * replaced by `keys` if given (nothing is recorded) → `{ rest }`: the text of the Long Rest green line, or null. Closed again.
  */
 export async function masteryWindow({ actorId, keys=null }) {
   gmOnly();
@@ -638,7 +641,7 @@ export async function masteryWindow({ actorId, keys=null }) {
   } finally { await app.close(); }
 }
 
-/** §225, lot 3 : les murs qui arrêtent le voyage éthéré, vus du token, et si un pas de son centre à `point` en franchit un. */
+/** §225, batch 3: walls that stop ethereal travel, seen from the token, and if a step from its center to `point` crosses one. */
 export function etherealWalls({ tokenId, point }) {
   const token = viewedToken({ tokenId });
   const scene = token.parent;
@@ -648,7 +651,7 @@ export function etherealWalls({ tokenId, point }) {
 }
 
 
-/** §242 : le point d'une demande, en JSON (sans documents). */
+/** §242: the status of a request, in JSON (without documents). */
 function plainRoll(view) {
   if ( !view ) return null;
   return { id: view.id, request: view.request, done: view.done, success: view.success, successes: view.successes, cancelled: !!view.cancelled,
@@ -656,8 +659,8 @@ function plainRoll(view) {
 }
 
 /**
- * §242 : une demande de jets aux tokens donnés, comme le bouton « Demander » ; `wait: false` rend la carte tout de suite (les joueurs
- * peuvent prendre leur temps), sinon le point final.
+ * §242: a roll request to the given tokens, like the "Request" button; `wait: false` returns the card right away (the players
+ * can take their time), otherwise the final status.
  */
 export async function groupRoll({ tokenIds=[], wait=true, ...request }) {
   const actors = tokenIds.map(tokenId => viewedToken({ tokenId }).actor).filter(Boolean);
@@ -672,32 +675,32 @@ export async function groupRoll({ tokenIds=[], wait=true, ...request }) {
   return null;
 }
 
-/** §242 : le point d'une carte de demande, et les tuiles de bonus d'un token pour une demande. */
+/** §242: the status of a request card, and a token's bonus tiles for a request. */
 export function groupRollState({ id }) {
   return plainRoll(groupRollView(id));
 }
-/** §242 : les tuiles du bonus de l'acteur du token `tokenId` pour la demande donnée (comme `api.rolls.breakdown`). */
+/** §242: the bonus tiles of the actor of token `tokenId` for the given request (like `api.rolls.breakdown`). */
 export function groupRollBreakdown({ tokenId, ...request }) {
   return rollsApi.breakdown(viewedToken({ tokenId }).actor, request);
 }
-/** §242 : « Lancer pour lui » sur une ligne de la carte (refusé si elle a déjà un jet), et le mode du système pour une demande. */
+/** §242: "Roll for them" on a card row (refused if it already has a roll), and the system's mode for a request. */
 export async function groupRollForce({ id, tokenId }) {
   return rollsApi.force(id, viewedToken({ tokenId }).actor.uuid);
 }
-/** §242 : l'Avantage / le Désavantage que dnd5e donnera à l'acteur du token `tokenId` pour la demande (comme `api.rolls.mode`). */
+/** §242: the Advantage / Disadvantage dnd5e will give the actor of token `tokenId` for the request (like `api.rolls.mode`). */
 export function groupRollMode({ tokenId, ...request }) {
   return rollsApi.mode(viewedToken({ tokenId }).actor, request);
 }
 
 /**
- * §285 : pose sur un token l'effet `effectId` de l'item `itemId` du lanceur `casterId`, avec son id (comme l'application de dnd5e) et
- * l'item pour origine — ce que l'échec de la sauvegarde aurait posé, sans le hasard du jet. Rend l'id.
+ * §285: places on a token the effect `effectId` of item `itemId` of caster `casterId`, with its id (like dnd5e's application) and
+ * the item as origin — what the failed save would have placed, without the luck of the roll. Returns the id.
  */
 export async function placeItemEffect({ tokenId, casterId, itemId, effectId, uuid=null }) {
   gmOnly();
   const item = viewedToken({ tokenId: casterId }).actor?.items.get(itemId);
-  // §438 : un effet du compendium d'effets (Manuel des joueurs 3.0.0 : Cercle de pouvoir, posé par un comportement de zone de dnd5e),
-  // copié avec l'item pour origine (adapter/effects.mjs, `placeRemoteEffect`).
+  // §438: an effect from the effects compendium (Player's Handbook 3.0.0: Circle of Power, placed by a dnd5e area behavior),
+  // copied with the item as origin (adapter/effects.mjs, `placeRemoteEffect`).
   if ( uuid ) {
     if ( !item ) throw new Error("item not found");
     const created = await placeRemoteEffect(item, uuid, viewedToken({ tokenId }).actor);
@@ -707,13 +710,13 @@ export async function placeItemEffect({ tokenId, casterId, itemId, effectId, uui
   const source = item?.effects.get(effectId);
   if ( !source ) throw new Error("item effect not found");
   const actor = viewedToken({ tokenId }).actor;
-  // §438 : `system.origin.item` aussi (les effets du Manuel 3.0.0 y portent l'item du compendium), comme adapter/effects.mjs.
+  // §438: `system.origin.item` too (the Player's Handbook 3.0.0 effects carry the compendium item there), like adapter/effects.mjs.
   const data = foundry.utils.mergeObject(source.toObject(), { origin: item.uuid, transfer: false, disabled: false, system: { origin: { item: item.uuid } } });
   const [created] = await actor.createEmbeddedDocuments("ActiveEffect", [data], { keepId: true });
   return { effectId: created?.id ?? null };
 }
 
-/** §285 : le lanceur se concentre sur la première activité de l'item (l'effet de concentration de dnd5e), sans rien lancer. */
+/** §285: the caster concentrates on the item's first activity (dnd5e's Concentration effect), without casting anything. */
 export async function concentrate({ tokenId, itemId }) {
   gmOnly();
   const actor = viewedToken({ tokenId }).actor;
@@ -723,7 +726,7 @@ export async function concentrate({ tokenId, itemId }) {
   return { effectId: effect?.id ?? null };
 }
 
-/** §285 : l'entretien d'un sort (Couronne du dément) — l'état, l'entrée du menu offerte, et `maintain` : l'action Magie prise. */
+/** §285: maintaining a spell (Crown of Madness) — the state, the menu entry offered, and `maintain`: the Magic action taken. */
 export async function upkeep({ tokenId, maintain=false }) {
   gmOnly();
   const token = viewedToken({ tokenId });
@@ -734,7 +737,7 @@ export async function upkeep({ tokenId, maintain=false }) {
   return out;
 }
 
-/** §285 : se relever (`standUp`), pour un scénario — rend s'il s'est relevé et si l'entrée du menu est offerte. */
+/** §285: standing up (`standUp`), for a scenario — returns whether it stood up and whether the menu entry is offered. */
 export async function stand({ tokenId }) {
   gmOnly();
   const token = viewedToken({ tokenId });
@@ -742,14 +745,14 @@ export async function stand({ tokenId }) {
   return { offered: canStandUp(doc), stood: await standUp(doc) };
 }
 
-/** §289 : Faveur de vigueur — le bonus de Constitution accordé maintenant à un soin (0 s'il est déjà pris depuis le début de son tour). */
+/** §289: "Favor of Vigor" — the Constitution bonus granted now to a heal (0 if already taken since the start of its turn). */
 export async function fortified({ tokenId }) {
   gmOnly();
   const actor = viewedToken({ tokenId }).actor;
   return { extra: await fortifiedExtra(actor), con: Number(actor.system.abilities?.con?.mod) || 0 };
 }
 
-/** §289 : Seconde peau — le MJ déclare le catalyseur vécu (menu du token). */
+/** §289: "Second Skin" — the GM declares the catalyst experienced (token menu). */
 export async function catalyst({ tokenId }) {
   gmOnly();
   const actor = viewedToken({ tokenId }).actor;

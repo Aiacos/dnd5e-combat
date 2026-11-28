@@ -1,7 +1,7 @@
 /**
- * Chercher (SPEC §16.49) lu dans Foundry : les créatures cachées que l'observateur pourrait trouver, et ce qui décide de
- * chacune (core/search.mjs). Une créature est cachée tant qu'elle porte l'effet de Furtivité du moteur (adapter/hide.mjs),
- * qui garde son total de Discrétion : le DD pour la trouver.
+ * Search (SPEC §16.49) read in Foundry: the hidden creatures the observer could find, and what decides
+ * each one (core/search.mjs). A creature is hidden as long as it carries the engine's Stealth effect (adapter/hide.mjs),
+ * which keeps its Stealth total: the DC to find it.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,14 +15,14 @@ import { isObjectToken } from "./bodies.mjs";
 import { areEnemies } from "./factions.mjs";
 import { outsideCone } from "./cone.mjs";
 
-/** Le DD pour trouver cet acteur caché (le plus haut de ses effets de Furtivité), ou null s'il n'est pas caché. */
+/** The DC to find this hidden actor (the highest of its Stealth effects), or null if it is not hidden. */
 export function hiddenDcOf(actor) {
   const dcs = hiddenEffectsOf(actor).map(e => Number(e.getFlag(MODULE_ID, "hidden")?.dc)).filter(Number.isFinite);
   return dcs.length ? Math.max(...dcs) : null;
 }
 
 /**
- * Les créatures cachées, hostiles à l'observateur, sur sa scène, avec ce qui décide de chacune.
+ * The hidden creatures, hostile to the observer, on its scene, with what decides each one.
  * @param {TokenDocument} searcher
  * @returns {Array<{id: string, token: TokenDocument, dc: number, sensed: boolean, seeable: boolean, disadvantage: boolean}>}
  */
@@ -41,10 +41,10 @@ export function searchCandidates(searcher) {
 }
 
 /**
- * Ce que l'observateur perçoit d'une créature cachée : `sensed` (ses sens la perçoivent malgré Invisible, `canSee`),
- * `seeable` (ni Aveuglé, ligne de vue, ni brume ni ténèbres entre les deux qu'il ne perce pas, lumière perçue autre que
- * ténèbres au point de la cachette), `disadvantage` (zone légèrement obscurcie pour lui). Partagé par Chercher et la
- * Perception passive (§16.49, §16.51).
+ * What the observer perceives of a hidden creature: `sensed` (its senses perceive it despite Invisible, `canSee`),
+ * `seeable` (not Blinded, line of sight, no fog or Darkness between the two that it does not pierce, perceived light other than
+ * Darkness at the hiding point), `disadvantage` (area lightly obscured for it). Shared by Search and
+ * Passive Perception (§16.49, §16.51).
  * @param {TokenDocument} observer
  * @param {TokenDocument} target
  * @returns {{sensed: boolean, seeable: boolean, disadvantage: boolean}}
@@ -56,8 +56,8 @@ export function sightingOf(observer, target) {
   const blocked = blockedBetween(observer, target);
   const senses = sensesToward(observer, tokenPoint(target));
   const throughDarkness = senses.devilsSight || senses.truesight;
-  // Issue #42 : à travers des ténèbres, la ligne de vue sans leurs bords (adapter/vision.mjs, `throughDarkness`) — sinon la Vision du
-  // diable et la vision véritable ne repéraient jamais une créature cachée dans des Ténèbres.
+  // Issue #42: through Darkness, the line of sight without its edges (adapter/vision.mjs, `throughDarkness`) — otherwise
+  // Devil's Sight and Truesight never spotted a creature hidden in Darkness.
   if ( !hasLineOfSight(eye, target, observer.parent.levels?.get?.(observer.level), { throughDarkness: blocked.darkness ? throughDarkness : blocked.ownDarkness,
     externalRadius: observer.object?.externalRadius ?? 0 }) ) {
     return { sensed, seeable: false, disadvantage: false };
@@ -69,9 +69,9 @@ export function sightingOf(observer, target) {
 }
 
 /**
- * Perception passive (§16.51) : les ennemis de la créature cachée, sur sa scène, en état d'agir (ni Neutralisés, ni
- * Inconscients…, ni vaincus), non cachés par le MJ, avec leur Perception passive (`skills.prc.passive` de dnd5e) et ce qu'ils
- * perçoivent d'elle.
+ * Passive Perception (§16.51): the enemies of the hidden creature, on its scene, able to act (not Incapacitated, not
+ * Unconscious…, not defeated), not hidden by the GM, with their Passive Perception (`skills.prc.passive` of dnd5e) and what they
+ * perceive of it.
  * @param {TokenDocument} hidden
  * @returns {Array<{token: TokenDocument, passive: number, sensed: boolean, seeable: boolean, disadvantage: boolean}>}
  */
@@ -93,8 +93,8 @@ export function passiveObservers(hidden) {
 }
 
 /**
- * Le test de Perception tel que core/search.mjs le lit. Les d20 ne sont rendus que pour un test au Désavantage (deux d20, le
- * plus bas gardé) : c'est le seul cas où l'on en tire le total sans Désavantage. Les d20 relancés (Chanceux…) sont écartés.
+ * The Perception check as core/search.mjs reads it. The d20s are only returned for a check with Disadvantage (two d20s, the
+ * lower kept): that is the only case where the total without Disadvantage is drawn from them. Rerolled d20s (Lucky…) are discarded.
  * @param {D20Roll} roll
  * @returns {{total: number, d20: number[], kept: number|null}}
  */

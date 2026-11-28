@@ -1,9 +1,9 @@
 /**
- * §204 : un objet ou une créature créé depuis un compendium traduit, mais resté en anglais (joueur sans droit de parcourir les
- * fichiers, client dans une autre langue, traduction qui ne traduit pas les noms d'effets), prend tout de suite la traduction —
- * sans passer par le diagnostic. Réglage `autoTranslate` : actif, une créature créée en anglais avec ses objets est traduite (un
- * objet sans identifiant enregistré garde celui tiré du nom anglais) ; un objet ajouté ensuite à la fiche aussi, y compris le cas de
- * table (nom traduit, enchantement « Walloping Ammunition ») ; réglage coupé, rien ne bouge.
+ * §204: an item or a creature created from a translated compendium, but left in English (player without the right to browse
+ * the files, client in another language, translation that does not translate effect names), takes the translation right away —
+ * without going through the diagnostic. Setting `autoTranslate`: on, a creature created in English with its items is
+ * translated (an item without a recorded identifier keeps the one derived from the English name); an item added later to
+ * the sheet too, including the table case (translated name, "Walloping Ammunition" enchantment); setting off, nothing moves.
  */
 const MODULE_ID = "dnd5e-combat";
 const WALLOPING = "Compendium.dnd-dungeon-masters-guide.equipment.Item.dmgWallopingAmmu";
@@ -51,7 +51,7 @@ export default {
       return ctx.call("get-actor", { actorId });
     };
 
-    // 1. Une créature créée en anglais, avec deux objets en anglais.
+    // 1. A creature created in English, with two items in English.
     const actorId = await create(actorOrig.name, { core: { sourceId: SKIRMISHER }, [MODULE_ID]: { scenario: "traduction-creation" } }, [english(), bare]);
     if ( !ctx.expect(!!actorId, `créature créée en anglais (${actorOrig.name})`) ) return;
     const after = await settle(actorId, a => (a.name === creature.data.name) && (a.items ?? []).every(i => i.name === item.data.name));
@@ -59,14 +59,14 @@ export default {
     const items = after.items ?? [];
     ctx.expect(items.length === 2 && items.every(i => i.name === item.data.name), `objets traduits à la création (${items.map(i => i.name).join(", ")})`);
     ctx.expect(items.every(i => (i.effects ?? []).every(e => e.name !== origEffect)), `enchantements traduits (${items.flatMap(i => (i.effects ?? []).map(e => e.name)).join(", ")})`);
-    // L'objet complet garde son identifiant du compendium ; celui qui n'en avait pas reçoit celui tiré de son nom anglais.
+    // The complete item keeps its compendium identifier; the one that had none receives the one derived from its English name.
     const ids = items.map(i => i.system?.identifier).sort();
     ctx.expect(JSON.stringify(ids) === JSON.stringify([item.data.system.identifier, "walloping-ammunition"].sort()), `identifiants gardés (${ids.join(", ")})`);
 
-    // 2. Un objet ajouté ensuite : le cas de table, nom traduit et enchantement resté en anglais.
+    // 2. An item added afterwards: the table case, translated name and enchantment left in English.
     const laurent = clone(item.data);
     delete laurent._id;
-    // Le connecteur retire `_stats` d'un objet ajouté à une fiche : la source par l'ancien drapeau, que le moteur lit aussi.
+    // The connector removes `_stats` from an item added to a sheet: the source via the old flag, which the engine reads too.
     laurent.flags = { ...(laurent.flags ?? {}), core: { sourceId: WALLOPING } };
     for ( const e of laurent.effects ?? [] ) e.name = origEffect;
     await ctx.call("upsert-embedded-item", { documentType: "Actor", id: actorId, itemData: laurent });
@@ -74,7 +74,7 @@ export default {
     const third = (added.items ?? []).find(i => !items.some(j => j._id === i._id));
     ctx.expect(!!third && (third.effects ?? []).every(e => e.name === item.data.name), `objet ajouté : enchantement traduit (${(third?.effects ?? []).map(e => e.name).join(", ")})`);
 
-    // 3. Réglage coupé : rien ne bouge.
+    // 3. Setting off: nothing moves.
     await api("setting", { key: "autoTranslate", value: false });
     const offId = await create(actorOrig.name, { core: { sourceId: SKIRMISHER }, [MODULE_ID]: { scenario: "traduction-creation" } }, [english()]);
     await new Promise(r => setTimeout(r, 2000));

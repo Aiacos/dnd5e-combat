@@ -1,6 +1,6 @@
 /**
- * Changer de taille (SPEC §16.58) : à la création d'un effet sur un acteur, le changement de taille que son item déclare
- * (adapter/size.mjs) est ajouté à ses changements — sur le client qui crée l'effet, avant l'écriture (pas d'écriture de plus).
+ * Change size (SPEC §16.58): when an effect is created on an actor, the size change that its item declares
+ * (adapter/size.mjs) is added to its changes — on the client that creates the effect, before the write (no extra write).
  */
 
 import { sizeChangeFor } from "../adapter/size.mjs";

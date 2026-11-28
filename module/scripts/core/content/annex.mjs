@@ -1,6 +1,6 @@
 /**
- * Validateurs des objets d'une entrée qui ont leur forme propre : invocation, absorption, téléportation, cibles, choix,
- * lumière, source portée, émanation. Fonctions pures, aucune dépendance à Foundry.
+ * Validators of the objects of an entry that have their own shape: summon, absorption, teleportation, targets, choice,
+ * light, carried source, Emanation. Pure functions, no dependency on Foundry.
  */
 
 import { CREATURE_TYPES } from "../eligibility.mjs";
@@ -12,11 +12,11 @@ import { isId, isObject } from "./shared.mjs";
 export function validateSummon(summon, at, errors) {
   if ( !isObject(summon) || !["after", "own", "none"].includes(summon.initiative) ) return errors.push(`${at}.initiative: "after", "own" or "none"`);
   if ( ("endsSpell" in summon) && (summon.endsSpell !== true) ) errors.push(`${at}.endsSpell: true or absent`);
-  // `untargeted` : accepté pour les tables déjà écrites, lu nulle part (§394 : une invocation ne se vise que sur `targetedSummon`).
+  // `untargeted`: accepted for the tables already written, read nowhere (§394: a summon is only targeted on `targetedSummon`).
   for ( const flag of ["endsAtZero", "vanishesAtZero", "mimic", "endsIfIncapacitated", "castFrom", "familiar", "replaces", "vanishesWithCaster", "endsOnLongRest", "hostile", "untargeted"] ) {
     if ( (flag in summon) && (summon[flag] !== true) ) errors.push(`${at}.${flag}: true or absent`);
   }
-  // §385 / §387 : `chooseCount` — true (le `count` du profil) ou une formule (« @item.level * 2 - 5 » : Animation des morts).
+  // §385 / §387: `chooseCount` — true (the profile's `count`) or a formula ("@item.level * 2 - 5": Animate Dead).
   if ( ("chooseCount" in summon) && (summon.chooseCount !== true) && !((typeof summon.chooseCount === "string") && summon.chooseCount.trim()) ) {
     errors.push(`${at}.chooseCount: true or a count formula`);
   }
@@ -68,7 +68,7 @@ export function validateSummon(summon, at, errors) {
       errors.push(`${at}.minLevels: { activity id: level }`);
     }
   }
-  // C12-c : `commanded` — l'invocation n'agit (hors Esquiver) que commandée à ce round par cette activité de l'item.
+  // C12-c: `commanded` — the summon acts (except Dodge) only when commanded this round by this activity of the item.
   if ( ("commanded" in summon) && !(isObject(summon.commanded) && isId(summon.commanded.activity) && (Object.keys(summon.commanded).length === 1)) ) {
     errors.push(`${at}.commanded: { activity }`);
   }
@@ -88,7 +88,7 @@ export function validateAbsorb(absorb, at, errors) {
 
 export function validateTeleport(teleport, at, errors) {
   if ( !isObject(teleport) ) return errors.push(`${at}: an object`);
-  // §461 : sans `distance` ni `units`, la portée de l'activité nommée fait la distance (capacités de monstres : « up to [portée] »).
+  // §461: without `distance` or `units`, the range of the named activity gives the distance (monster abilities: "up to [range]").
   const fromRange = !("distance" in teleport) && !("units" in teleport);
   if ( fromRange ) {
     if ( !("activity" in teleport) ) errors.push(`${at}.activity: required without distance (the activity's range is the distance)`);
@@ -108,11 +108,11 @@ export function validateTeleport(teleport, at, errors) {
   }
   if ( ("unseen" in teleport) && (teleport.unseen !== true) ) errors.push(`${at}.unseen: true or absent`);
   if ( ("maxLight" in teleport) && !["dim", "dark"].includes(teleport.maxLight) ) errors.push(`${at}.maxLight: "dim" or "dark"`);
-  // §462 : `area: "left"` — la zone de l'activité se pose d'office sur l'espace quitté (avant le saut), sans son auteur ; §463 : `"arrival"`,
-  // autour de lui après le saut.
+  // §462: `area: "left"` — the activity's area is placed automatically on the space left (before the jump), without its author;
+  // §463: `"arrival"`, around it after the jump.
   if ( ("area" in teleport) && !["left", "arrival"].includes(teleport.area) ) errors.push(`${at}.area: "left", "arrival" or absent`);
-  // §465 : `destination: { near: "creature"|"plant", within, units, trigger? }` — l'arrivée à `within` d'une créature vue (la cible
-  // désignée si `trigger`), ou d'une plante (le MJ en juge).
+  // §465: `destination: { near: "creature"|"plant", within, units, trigger? }` — arrival within `within` of a creature seen (the
+  // designated target if `trigger`), or of a plant (the GM judges).
   if ( "destination" in teleport ) {
     const d = teleport.destination;
     if ( !isObject(d) || !["creature", "plant"].includes(d.near) || !(Number.isFinite(d.within) && (d.within > 0)) || (typeof d.units !== "string")
@@ -120,7 +120,7 @@ export function validateTeleport(teleport, at, errors) {
       errors.push(`${at}.destination: { near: "creature"|"plant", within, units, trigger? }`);
     }
   }
-  // §464 : `after: "attack"` — la téléportation s'offre une fois l'attaque de l'activité jugée (touchée ou ratée), pas à l'utilisation.
+  // §464: `after: "attack"` — the teleportation is offered once the activity's attack is judged (hit or miss), not at use.
   if ( ("after" in teleport) && (teleport.after !== "attack") ) errors.push(`${at}.after: "attack" or absent`);
   for ( const key of Object.keys(teleport) ) if ( !["distance", "units", "activity", "then", "passengers", "unseen", "maxLight", "area", "after", "destination"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
 }
@@ -132,7 +132,7 @@ export function validateTargets(targets, at, facts, errors) {
     else for ( const t of targets.types ) if ( !CREATURE_TYPES.includes(t) ) errors.push(`${at}.types: unknown "${t}" (${CREATURE_TYPES.join(", ")})`);
   }
   if ( "unaffectedIf" in targets ) for ( const key of unknownFacts(targets.unaffectedIf, facts) ) errors.push(`${at}.unaffectedIf: unknown fact "${key}"`);
-  // §505 (B25) : `requires` — une condition que chaque cible désignée doit remplir, sinon la fenêtre de légalité refuse (forçable).
+  // §505 (B25): `requires` — a condition that each designated target must meet, otherwise the legality window refuses (forceable).
   if ( "requires" in targets ) {
     if ( !isObject(targets.requires) || !Object.keys(targets.requires).length ) errors.push(`${at}.requires: a condition (facts)`);
     else for ( const key of unknownFacts(targets.requires, facts) ) errors.push(`${at}.requires: unknown fact "${key}"`);
@@ -142,8 +142,8 @@ export function validateTargets(targets, at, facts, errors) {
 
 export function validateChoice(choice, at, errors) {
   if ( !isObject(choice) ) return errors.push(`${at}: an object`);
-  // §53 : `pool` seul relie des effets de l'item à une activité, sans rien à choisir (Héroïsme : la Bénédiction).
-  // §504 (B24) : `outcome` — le choix porte sur l'issue du coup (les dégâts, ou une empoignade à leur place), pas sur des effets.
+  // §53: `pool` alone links effects of the item to an activity, with nothing to choose (Heroism: Bless).
+  // §504 (B24): `outcome` — the choice concerns the outcome of the hit (the damage, or a grapple in its place), not effects.
   const outcome = "outcome" in choice;
   if ( outcome ) {
     const o = choice.outcome;
@@ -160,10 +160,10 @@ export function validateChoice(choice, at, errors) {
   if ( ("pool" in choice) && !(isObject(choice.pool) && Object.entries(choice.pool).every(([a, ids]) => isId(a) && Array.isArray(ids) && ids.length && ids.every(isId))) ) {
     errors.push(`${at}.pool: { <activity id>: [effect ids] } (16 characters)`);
   }
-  // K3 (§324) : `roll` — l'effet est tiré au dé (Lame du chaos des slaads : 1d4), dans l'ordre de `order` (ids d'effets) s'il est donné.
+  // K3 (§324): `roll` — the effect is rolled on a die (Slaad Chaos Blade: 1d4), in the order of `order` (effect ids) if given.
   if ( ("roll" in choice) && (choice.roll !== true) ) errors.push(`${at}.roll: true or absent`);
   if ( ("order" in choice) && !(Array.isArray(choice.order) && choice.order.length && choice.order.every(isId)) ) errors.push(`${at}.order: effect ids`);
-  // §401 : `perTarget` — un choix par cible (Apaisement des émotions, Amélioration de caractéristique).
+  // §401: `perTarget` — one choice per target (Calm Emotions, Enhance Ability).
   if ( ("perTarget" in choice) && (choice.perTarget !== true) ) errors.push(`${at}.perTarget: true or absent`);
   for ( const key of Object.keys(choice) ) if ( !["effects", "prompt", "pool", "roll", "order", "perTarget", "outcome", "grapple"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
 }
@@ -191,20 +191,20 @@ export function validateLight(l, at, errors) {
   }
 }
 
-/** §52 : une source de lumière portée. */
+/** §52: a carried light source. */
 export function validateCarriedLight(l, at, errors) {
   if ( !isObject(l) ) return errors.push(`${at}: an object`);
   for ( const key of ["bright", "dim"] ) if ( !(Number.isFinite(l[key]) && (l[key] >= 0)) ) errors.push(`${at}.${key}: non-negative number`);
   if ( (typeof l.units !== "string") || !l.units ) errors.push(`${at}.units: unit required`);
   if ( ("angle" in l) && !(Number.isFinite(l.angle) && (l.angle > 0) && (l.angle < 360)) ) errors.push(`${at}.angle: degrees, between 0 and 360`);
   if ( ("animation" in l) && (!isObject(l.animation) || (typeof l.animation.type !== "string")) ) errors.push(`${at}.animation: { type, speed?, intensity? }`);
-  // §121 : durée d'une unité (torche, bougie) ou d'une flasque (lampe, lanterne), et le combustible (identifiant de l'item).
+  // §121: duration of a unit (torch, candle) or of a flask (lamp, lantern), and the fuel (item identifier).
   if ( ("burn" in l) && !(isObject(l.burn) && Number.isFinite(l.burn.value) && (l.burn.value > 0) && ["second", "minute", "hour"].includes(l.burn.units)
     && Object.keys(l.burn).every(k => ["value", "units"].includes(k))) ) errors.push(`${at}.burn: { value > 0, units: second | minute | hour }`);
   if ( ("fuel" in l) && !((typeof l.fuel === "string") && l.fuel) ) errors.push(`${at}.fuel: identifier of the fuel item`);
   if ( ("fuel" in l) && !("burn" in l) ) errors.push(`${at}.fuel: needs burn`);
-  // §346 : `hooded` — les rayons capuchon baissé (Lanterne à capuchon : Lumière faible sur 1,50 m) ; `whileEnchanted` — la lumière suit
-  // un enchantement de l'item (profil, id d'effet : Langue de feu embrasée), sans allumage à la main.
+  // §346: `hooded` — the rays with the hood lowered (Hooded Lantern: Dim Light within 1.5 m); `whileEnchanted` — the light follows
+  // an enchantment of the item (profile, effect id: flaming Flame Tongue), without lighting it by hand.
   if ( ("hooded" in l) && !(isObject(l.hooded) && ["bright", "dim"].every(k => Number.isFinite(l.hooded[k]) && (l.hooded[k] >= 0))
     && Object.keys(l.hooded).every(k => ["bright", "dim"].includes(k))) ) errors.push(`${at}.hooded: { bright, dim }`);
   if ( ("whileEnchanted" in l) && !isId(l.whileEnchanted) ) errors.push(`${at}.whileEnchanted: effect id (16 characters)`);
@@ -221,7 +221,7 @@ export function validateEmanation(e, at, errors) {
   if ( ("radiusFormula" in e) && ((typeof e.radiusFormula !== "string") || !e.radiusFormula) ) errors.push(`${at}.radiusFormula: a formula`);
   if ( ("whileActive" in e) && (e.whileActive !== true) ) errors.push(`${at}.whileActive: true or absent`);
   if ( ("activity" in e) && !isId(e.activity) ) errors.push(`${at}.activity: activity id (16 characters)`);
-  // §447 : `atStart` — aussi au moment où l'effet de l'item arrive sur le porteur (avec `whileActive`).
+  // §447: `atStart` — also at the moment the item's effect arrives on the bearer (with `whileActive`).
   if ( ("atStart" in e) && ((e.atStart !== true) || (e.whileActive !== true)) ) errors.push(`${at}.atStart: true, with whileActive`);
   for ( const key of Object.keys(e) ) if ( !["on", "affects", "sees", "radius", "radiusFormula", "units", "activity", "whileActive", "atStart"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
 }

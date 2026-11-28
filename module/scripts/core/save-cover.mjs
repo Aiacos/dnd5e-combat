@@ -1,17 +1,17 @@
 /**
- * L'abri et les jets de sauvegarde de Dextérité (issue #183) — SRD 5.2, « Abri » : « abri partiel (+2 à la CA et aux jets de
- * sauvegarde de Dextérité), abri aux trois quarts (+5 à la CA et aux jets de sauvegarde de Dextérité) ». Fonctions pures.
- * Portée : une sauvegarde qui vise sa cible, sans zone — l'abri se juge alors depuis l'auteur, comme pour une attaque. Une zone se
- * jugerait depuis son point d'origine : laissé au MJ. `saveIgnoresCover` : « la cible ne bénéficie pas d'un abri partiel ni d'un
- * abri aux trois quarts pour cette sauvegarde » (Flamme sacrée).
+ * Cover and Dexterity saving throws (issue #183) — SRD 5.2, "Cover": "Half Cover (+2 bonus to AC and Dexterity saving
+ * throws), Three-Quarters Cover (+5 bonus to AC and Dexterity saving throws)". Pure functions.
+ * Scope: a saving throw that targets its target, without an area — Cover is then judged from the author, as for an attack. An
+ * area would be judged from its point of origin: left to the GM. `saveIgnoresCover`: "the target gets no benefit from Half Cover or
+ * Three-Quarters Cover for this saving throw" (Sacred Flame).
  */
 
-/** Cette sauvegarde reçoit-elle le bonus d'abri ? */
+/** Does this saving throw receive the Cover bonus? */
 export function dexSaveTakesCover({ ability, area=false, ignores=false }) {
   return (ability === "dex") && !area && !ignores;
 }
 
-/** Le bonus que l'abri donne à la sauvegarde : 2, 5, ou 0 (pas d'abri ; un abri total n'a pas de bonus — la cible n'est pas visée). */
+/** The bonus Cover gives to the saving throw: 2, 5, or 0 (no Cover; Total Cover has no bonus — the target is not targetable). */
 export function coverSaveBonus(cover) {
   return Number.isFinite(cover?.bonus) && (cover.bonus > 0) ? cover.bonus : 0;
 }

@@ -1,7 +1,7 @@
 /**
- * Éclats (SPEC §16.19, clé `burst`) : une fois l'attaque tranchée — touchée ou ratée —, l'activité sœur que l'item déclare
- * joue sur la cible et sur chaque créature à `radius` d'elle (l'explosion du Couteau de glace). Sur le MJ actif, au hook de
- * sortie du moteur `dnd5e-combat.resolution` (runtime/engine.mjs) ; une seule fois par attaque.
+ * Bursts (SPEC §16.19, key `burst`): once the attack is decided — hit or miss —, the sibling activity that the item declares
+ * plays on the target and on each creature within `radius` of it (the Ice Knife explosion). On the active GM, at the engine's
+ * output hook `dnd5e-combat.resolution` (runtime/engine.mjs); only once per attack.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -17,8 +17,9 @@ import { isObjectToken } from "../adapter/bodies.mjs";
 import { lengthIn } from "../adapter/units.mjs";
 
 /**
- * Les créatures touchées par l'éclat : la cible, et toute créature à `radius` d'elle (ni cachée, ni objet piloté). C12-b : `affects:
- * "enemy"` — seulement les ennemis du lanceur, la cible exclue (Choc de vie : la foudre jaillit de la créature ranimée).
+ * The creatures hit by the burst: the target, and any creature within `radius` of it (neither hidden, nor a driven object).
+ * C12-b: `affects: "enemy"` — only the caster's enemies, the target excluded ("Life Shock": lightning springs from the
+ * revived creature).
  */
 function caughtAround(center, { radius, units, affects=null }, caster=null) {
   let limit = lengthIn(radius, units, center.parent.grid.units);
@@ -34,11 +35,11 @@ async function onResolution(resolution) {
   const activity = fromUuidSync(resolution.activity, { strict: false });
   const rule = activity?.item ? contentOf(activity.item).entry?.burst : null;
   if ( !rule ) return;
-  // Sans `from` : après une attaque, touchée ou ratée. Avec : après ces activités, sur une cible qui a subi des dégâts.
-  // C12-b : après un soin (Choc de vie), sans condition de dégâts.
+  // Without `from`: after an attack, hit or miss. With: after those activities, on a target that took damage.
+  // C12-b: after a healing ("Life Shock"), with no damage condition.
   const afterHeal = activity.type === "heal";
   if ( rule.from ? !rule.from.includes(activity.id) || (!afterHeal && !((resolution.targets?.[0]?.damage?.applied ?? 0) > 0)) : !resolution.plan?.attack ) return;
-  // §403 : un soin sur une cible qu'il ne peut pas affecter (Choc de vie sur une créature debout ou morte) ne déclenche rien.
+  // §403: a healing on a target it cannot affect ("Life Shock" on a standing or dead creature) triggers nothing.
   if ( afterHeal && resolution.targets?.[0]?.unaffected ) return;
   const sibling = rule ? activity.item.system.activities?.get(rule.activity) : null;
   const center = resolution.targets?.[0]?.token ? fromUuidSync(resolution.targets[0].token, { strict: false }) : null;

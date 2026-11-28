@@ -1,13 +1,13 @@
 /**
- * §188 : l'Huile et les zones inflammables, dans l'arène.
- *  1. Le lancer d'une flasque remplace une attaque de l'action Attaquer (Paladin, Attaque supplémentaire) ; l'étalage au sol, non.
- *  2. L'huile étalée reste au sol, avec son image, sans rien faire tant qu'elle ne brûle pas.
- *  3. Elle s'embrase : (a) le Zombi qui s'y tient subit des dégâts de feu ; (b) Mains brûlantes posées dessus ; (c) le Magicien, au
- *     contact avec une boîte à amadou, l'allume (l'entrée du menu).
- *  4. En feu : 5 dégâts de feu à qui y entre (hors combat) ou y termine son tour (en combat) ; elle s'éteint hors combat après 12 s, en
- *     combat à la fin du même tour deux rounds plus tard, et sa lumière avec elle.
- *  5. La Toile d'araignée s'embrase aussi : 2d4 au début du tour de qui s'y trouve, puis elle disparaît et libère qui elle entravait.
- * Remet positions, PV, effets, items, zones, combat (le filet du lanceur).
+ * §188: Oil and flammable areas, in the arena.
+ *  1. Throwing a flask replaces one attack of the Attack action (Paladin, Extra Attack); spreading it on the ground does not.
+ *  2. The spread oil stays on the ground, with its image, doing nothing as long as it does not burn.
+ *  3. It ignites: (a) the Zombi standing in it takes fire damage; (b) Burning Hands cast on it; (c) the Wizard, in
+ *     contact with a tinderbox, lights it (the menu entry).
+ *  4. Burning: 5 fire damage to whoever enters it (out of combat) or ends their turn in it (in combat); it goes out after
+ *     12 s out of combat, in combat at the end of the same turn two rounds later, and its light with it.
+ *  5. Web ignites too: 2d4 at the start of the turn of whoever is in it, then it disappears and frees whoever it restrained.
+ * Restores positions, HP, effects, items, areas, combat (the caster's safety net).
  */
 const MODULE_ID = "dnd5e-combat";
 const EQUIPMENT = "Compendium.dnd-players-handbook.equipment.Item.";
@@ -35,8 +35,8 @@ export default {
     const part = async (name, fn) => {
       try { await fn(); } catch ( err ) { ctx.expect(false, `${name} : ${err.message}`); }
       await endCombat();
-      // Les flaques de l'étape partent avec elle : toutes sont sur la même case, et une flaque encore en feu (12 s hors combat)
-      // brûlait aussi à l'étape suivante (vu le 2026-10-28 : 15 dégâts au lieu de 10, selon le minutage).
+      // The step's puddles leave with it: all are on the same cell, and a puddle still burning (12 s out of combat)
+      // also burned at the next step (seen on 2026-10-28: 15 damage instead of 10, depending on timing).
       for ( const id of regions.splice(0) ) await ctx.call("delete-scene-object", { type: "Region", objectId: id }).catch(() => {});
       await ctx.setHp(zombi, hp0);
       await ctx.removeStatusEffects(zombi, "restrained").catch(() => {});
@@ -46,13 +46,13 @@ export default {
     const flammable = (args={}) => ctx.engine("flammable", { tokenId: mage.id, ...args });
     const zoneState = async id => (await flammable()).zones.find(z => z.id === id) ?? null;
 
-    // La flaque : sur la case du Zombi ; le Magicien au contact, à l'ouest.
+    // The puddle: on the Zombi's cell; the Wizard in contact, to the west.
     const spot = { x: home.x, y: home.y };
     await ctx.call("move-token", { tokenId: mage.id, x: spot.x - g, y: spot.y });
     await pause(600);
     const oilId = await ctx.ensureItem(mage, EQUIPMENT + "phbagOil00000000");
     const spread = async () => {
-      // La flasque se détruit à l'usage (« autoDestroy ») : on la redonne avant chaque flaque.
+      // The flask destroys itself on use ("autoDestroy"): it is given again before each puddle.
       const id = await ctx.ensureItem(mage, EQUIPMENT + "phbagOil00000000").catch(() => oilId);
       const used = await ctx.use({ tokenId: mage.id, itemId: id, activityType: "damage", consume: false,
         area: { shape: "rectangle", x: spot.x, y: spot.y, width: g, height: g } });
@@ -85,7 +85,7 @@ export default {
       await pause(1500);
       const lit = await zoneState(id);
       if ( !ctx.expect(!!lit?.burning, "le Zombi, dans la flaque, subit des dégâts de feu : elle s'embrase") ) return;
-      // Hors combat, chaque entrée brûle (sortie par le sud : la case à l'est est souvent prise dans l'arène).
+      // Out of combat, each entry burns (exit to the south: the cell to the east is often taken in the arena).
       await ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y + g });
       await pause(600);
       const hp = await ctx.hp(zombi);
@@ -109,7 +109,7 @@ export default {
     });
 
     await part("Trait de feu tiré sur la flaque (§189)", async () => {
-      // La flaque sans personne dessus : le Zombi part au sud.
+      // The puddle with nobody on it: the Zombi leaves to the south.
       await ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y + g });
       await pause(600);
       const id = await spread();
@@ -125,7 +125,7 @@ export default {
       const usages = (await ctx.messagesSince(since)).filter(m => m.type === "usage");
       ctx.expect(usages.length === 1, `une carte d'utilisation du sort (${usages.length})`);
       ctx.expect((await ctx.hp(zombi)) === hp, "personne d'autre n'est touché");
-      // À côté de la flaque : rien à viser.
+      // Next to the puddle: nothing to target.
       const miss = await flammable({ fireAt: { itemId: bolt, x: spot.x - (3 * g) + (g / 2), y: spot.y + (g / 2) } });
       ctx.expect(miss.aim === null, "un point hors d'une flaque ne se vise pas");
     });
@@ -133,7 +133,7 @@ export default {
     await part("Allumer au contact (c), puis en combat", async () => {
       const id = await spread();
       if ( !id ) return;
-      // Le Magicien de `dnd-6` porte déjà une boîte à amadou (sac d'explorateur) : « sans flamme » ne se vérifie que s'il n'en a pas.
+      // The Wizard of `dnd-6` already carries a tinderbox (Explorer's Pack): "no flame" can only be checked if they have none.
       const kit = ((await ctx.call("get-actor", { actorId: (await ctx.call("get-scene-object", { type: "Token", objectId: mage.id })).data.actorId })).items ?? [])
         .some(i => ["tinderbox", "torch", "lamp", "candle", "lantern-hooded", "lantern-bullseye"].includes(i.system?.identifier));
       if ( !kit ) {
@@ -143,8 +143,8 @@ export default {
       await ctx.ensureItem(mage, EQUIPMENT + "phbagTinderbox00");
       const near = await flammable();
       ctx.expect(near.near.some(z => z.id === id), "avec une boîte à amadou, au contact : « Allumer » proposé");
-      // Combat : le Magicien allume à son tour ; le Zombi, dans la flaque, brûle à la fin de chacun de ses tours ; la flaque s'éteint
-      // à la fin du tour du Magicien deux rounds plus tard.
+      // Combat: the Wizard lights it on their turn; the Zombi, in the puddle, burns at the end of each of its turns;
+      // the puddle goes out at the end of the Wizard's turn two rounds later.
       await ctx.setHp(zombi, hp0);
       await ctx.startCombat([mage, zombi]);
       const lit = await flammable({ ignite: true, regionId: id });
@@ -152,9 +152,9 @@ export default {
       const next = async () => { await ctx.call("next-turn", { combatId: ctx.ownCombat }); await pause(3500); };
       const hp = await ctx.hp(zombi);
       await next();   // fin du tour du Magicien (round 1)
-      await next();   // fin du tour du Zombi : brûle
+      await next();   // end of the Zombi's turn: burns
       await next();   // fin du tour du Magicien (round 2)
-      await next();   // fin du tour du Zombi : brûle
+      await next();   // end of the Zombi's turn: burns
       ctx.expect((hp - (await ctx.hp(zombi))) === 10, `deux fins de tour dans l'huile en feu : ${hp - (await ctx.hp(zombi))} dégâts (attendu 10)`);
       ctx.expect(!!(await zoneState(id))?.burning, "toujours en feu au tour du Magicien, deux rounds après l'allumage");
       await next();   // fin du tour du Magicien (round 3) : terme
@@ -184,11 +184,11 @@ export default {
       if ( !ctx.expect(lit.lit === true, "la toile s'embrase") ) return;
       const next = async () => { await ctx.call("next-turn", { combatId: ctx.ownCombat }); await pause(3500); };
       const hp = await ctx.hp(zombi);
-      await next();   // début du tour du Zombi : 2d4
+      await next();   // start of the Zombi's turn: 2d4
       const lost = hp - (await ctx.hp(zombi));
       ctx.expect((lost >= 2) && (lost <= 8), `début de tour dans la toile en feu : ${lost} dégâts (2d4)`);
       await next();   // fin du tour du Zombi
-      await next();   // fin du tour du Magicien (round 2) : brûlée
+      await next();   // end of the Wizard's turn (round 2): burned out
       ctx.expect(!(await zoneState(id)), "la toile a brûlé (zone retirée)");
       const still = (await ctx.effects(zombi)).some(e => (e.statuses ?? []).includes("restrained"));
       ctx.expect(!still, "le Zombi n'est plus entravé");

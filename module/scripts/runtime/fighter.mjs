@@ -1,13 +1,13 @@
 /**
- * Le Guerrier (SPEC §21) : ce qui ne passe ni par le budget du tour (Fougue, Décalage tactique : runtime/turn.mjs) ni par les
- * marques (Attaques avisées : runtime/mastery.mjs).
+ * The Fighter (SPEC §21): what goes through neither the turn budget (Action Surge, Tactical Shift: runtime/turn.mjs) nor
+ * the marks (Studied Attacks: runtime/mastery.mjs).
  *
- *  - Héros du champ d'honneur : au début de son tour, en combat, le Champion reçoit l'Inspiration héroïque s'il ne l'a pas
- *    (`system.attributes.inspiration` de dnd5e). MJ actif.
- *  - Style Armes à deux mains : sur le client de l'auteur, au jet de dégâts d'une attaque de corps à corps avec une arme à deux
- *    mains (propriété Deux mains, ou Polyvalente maniée à deux mains) : chaque dé de la part de l'arme devient « min3 » (un 1 ou
- *    un 2 compte 3).
- *  - Style Armes de jet : +2 à la part de l'arme d'une attaque lancée qui touche.
+ *  - Heroic Warrior: at the start of their turn, in combat, the Champion gets Heroic Inspiration if they do not have it
+ *    (dnd5e's `system.attributes.inspiration`). Active GM.
+ *  - Great Weapon Fighting style: on the author's client, at the damage roll of a melee attack with a two-handed
+ *    weapon (Two-Handed property, or Versatile wielded with two hands): each die of the weapon's part becomes "min3"
+ *    (a 1 or a 2 counts as 3).
+ *  - Thrown Weapon Fighting style: +2 to the weapon's part of a thrown attack that hits.
  */
 
 import { contentOf } from "../adapter/content.mjs";
@@ -28,7 +28,7 @@ function onTurnStart(combat, prior, current) {
   });
 }
 
-/** Une part d'arme : ses dés deviennent « min3 » (pas ceux qui ont déjà un modificateur de ce genre). */
+/** A weapon part: its dice become "min3" (not those that already have a modifier of this kind). */
 const minThree = part => String(part).replace(/(\d*d\d+)(?![\dmrxk])/g, "$1min3");
 
 function onPreRollDamage(config) {

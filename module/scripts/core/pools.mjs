@@ -1,11 +1,11 @@
 /**
- * §296 (repasse C2) : les réserves de soins ou de PV temporaires « réparties entre les créatures de votre choix » (Survivance, Guérison
- * de groupe, Cavalcade mécanique, Châtiment exaltant). Pur : aucune dépendance à Foundry.
+ * §296 (pass C2): the pools of healing or Temporary Hit Points "distributed among creatures of your choice" ("Survival", "Group
+ * Healing", "Mechanical Cavalcade", "Exalting Smite"). Pure: no dependency on Foundry.
  */
 
 /**
- * Parts d'une réserve — à parts égales, chaque part plafonnée (`caps`) ; ce qu'une créature ne peut pas prendre revient aux autres.
- * Pur. Rend les montants dans l'ordre des plafonds.
+ * Shares of a pool — equal shares, each share capped (`caps`); what a creature cannot take goes back to the others.
+ * Pure. Returns the amounts in the order of the caps.
  */
 export function splitPool(total, caps) {
   const shares = caps.map(() => 0);

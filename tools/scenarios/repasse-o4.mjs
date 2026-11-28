@@ -1,9 +1,9 @@
 /**
- * §338, lot O4 de la repasse des objets : coûts, zones, invocations, fumées. Arène de test (Guerrier, Zombi).
- *  1. Les règles s'attachent aux objets prêtés au Guerrier (`api.mcp.identify`) : Acide et Eau bénite (`replacesAttack`), Grenade fumigène
- *     (`obscures`), gemme élémentaire (`summon`), Poudre à éternuer (`includesOrigin`).
- *  2. Poudre à éternuer jetée par le Guerrier : il fait lui aussi la sauvegarde (la zone personnelle prend son origine).
- *  3. Gemme élémentaire (saphir bleu) en combat : l'élémentaire entre au combat juste après le Guerrier.
+ * §338, batch O4 of the item pass: costs, areas, summons, smoke. Test arena (Fighter, Zombie).
+ *  1. The rules attach to the items lent to the Fighter (`api.mcp.identify`): Acid and Holy Water (`replacesAttack`), Smoke Grenade
+ *     (`obscures`), elemental gem (`summon`), Sneezing Powder (`includesOrigin`).
+ *  2. Sneezing Powder thrown by the Fighter: it also makes the saving throw (the personal area takes its origin).
+ *  3. Elemental gem (blue sapphire) in combat: the elemental enters combat right after the Fighter.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -31,7 +31,7 @@ export default {
       }
     });
 
-    // 1. Les règles attachées.
+    // 1. The attached rules.
     const lent = {
       acid: `${PHB}phbagAcid0000000`, "holy-water": `${PHB}phbagHolyWater00`, "grenade-smoke": `${DMG}dmgGrenadeSmoke0`,
       "blue-elemental-gem": `${DMG}dmgBlueElemental`, "dust-of-sneezing-and-choking": `${DMG}dmgDustOfSneezin`
@@ -42,7 +42,7 @@ export default {
       "dust-of-sneezing-and-choking": "includesOrigin" };
     for ( const [id, key] of Object.entries(want) ) ctx.expect((rules[id] ?? []).includes(key), `${id} : règle ${key} (${(rules[id] ?? []).join(", ") || "aucune"})`);
 
-    // 2. Poudre à éternuer : le Guerrier fait aussi la sauvegarde.
+    // 2. Sneezing Powder: the Fighter also makes the saving throw.
     const box = await ctx.box(fighter);
     const used = await ctx.use({ tokenId: fighter.id, identifier: "dust-of-sneezing-and-choking", activityType: "save", consume: false,
       area: { shape: "rectangle", x: box.x - 100, y: box.y - 100, width: box.width + 200, height: box.height + 200 },
@@ -55,7 +55,7 @@ export default {
     for ( const s of ["incapacitated", "suffocation"] ) await ctx.removeStatusEffects(fighter, s);
     await ctx.removeEffectsFrom(fighter, "dust-of-sneezing-and-choking");
 
-    // 3. Gemme élémentaire en combat.
+    // 3. Elemental gem in combat.
     await ctx.startCombat([fighter, zombi]);
     const started = await ctx.combat();
     for ( const [t, v] of [[fighter, 15], [zombi, 10]] ) await ctx.call("set-initiative", { combatantId: started.combatants.find(x => x.tokenId === t.id).id, value: v, combatId: ctx.ownCombat });

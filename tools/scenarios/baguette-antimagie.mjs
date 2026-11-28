@@ -1,16 +1,16 @@
 /**
- * §448 : la Baguette de projectiles magiques (SRD 2024), un sort à projectiles lancé par un objet, depuis la Barre de DAS · Combat UI et
- * avec la visée multiple du moteur — comme à la souris : la case de la Barre (`barUse`), la fenêtre de niveau de dnd5e, puis un clic par
- * projectile (`pickTarget` de ui/pointer.mjs, ce qu'appelle le clic sur une créature pendant la visée). Monde `dnd-6`, arène.
- *  A. Hors du champ : 3 projectiles, 3 cartes, UNE charge de la baguette (avant : une par projectile, 3 pour un lancement).
- *  B. Dans le Champ antimagie du Magicien, « Utiliser quand même » : les 3 projectiles partent (avant : rien ne partait après la visée,
- *     le champ n'était levé que pour la première utilisation), carte marquée de la raison du champ, UNE alerte au MJ, une charge, le
- *     statut toujours là après.
- *  C. Double clic sur une case refusée par le champ (Trait de feu) : une seule fenêtre « le faire quand même », une seule carte.
- *  D. Rejeu du statut resté collé (vu une fois le 2026-11-14) : le Bandit entre dans le champ, force la baguette, ressort — le statut part.
- *     Rejoué le 2026-11-15 : le statut part dès que le token sort vraiment ; le « collé » était un déplacement refusé (le token resté dans
- *     le champ). Chaque déplacement du Bandit est donc vérifié.
- * Remet positions, effets, PV ; la baguette et le Trait de feu prêtés sont retirés.
+ * §448: the Wand of Magic Missiles (SRD 2024), a spell with projectiles cast by an item, from the DAS · Combat UI Bar and
+ * with the engine's multiple aiming — like with the mouse: the Bar cell (`barUse`), dnd5e's level window, then one click per
+ * projectile (`pickTarget` of ui/pointer.mjs, what a click on a creature calls during aiming). World `dnd-6`, arena.
+ *  A. Outside the field: 3 projectiles, 3 cards, ONE charge of the wand (before: one per projectile, 3 for a cast).
+ *  B. Inside the Wizard's Antimagic Field, "Use anyway": the 3 projectiles go (before: nothing went after aiming,
+ *     the field was only lifted for the first use), card marked with the field's reason, ONE GM alert, one charge, the
+ *     status still there afterwards.
+ *  C. Double click on a cell refused by the field (Fire Bolt): a single "do it anyway" window, a single card.
+ *  D. Replay of the stuck status (seen once on 2026-11-14): the Bandit enters the field, forces the wand, leaves — the status
+ *     goes away. Replayed on 2026-11-15: the status goes away as soon as the token really leaves; the "stuck" one was a
+ *     refused move (the token left in the field). Each of the Bandit's moves is therefore checked.
+ * Resets positions, effects, HP; the lent wand and Fire Bolt are removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -19,12 +19,12 @@ const VICTIM = "Cible humanoïde";
 const FIELD_REASON = /no spell can be cast|aucun sort|no power inside|aucun pouvoir|magic item|objet magique/i;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-/** Sur le client du MJ : la visée multiple du moteur est-elle ouverte (et pour combien de projectiles) ? */
+/** On the GM's client: is the engine's multiple aiming open (and for how many projectiles)? */
 const PICKING = `
 const m = await import("/modules/dnd5e-combat/scripts/ui/pointer.mjs");
 return m.picking ? { count: m.picking.count, done: m.picking.picks.length, item: m.picking.activity?.item?.name ?? null } : null;
 `;
-/** Sur le client du MJ : un clic par projectile sur ces tokens, comme la souris pendant la visée (`pickTarget(hover)`). */
+/** On the GM's client: one click per projectile on these tokens, like the mouse during aiming (`pickTarget(hover)`). */
 const PICK = `
 const m = await import("/modules/dnd5e-combat/scripts/ui/pointer.mjs");
 const clicked = [];
@@ -36,7 +36,7 @@ for ( const id of args.ids ) {
 }
 return { clicked, open: !!m.picking };
 `;
-/** Sur le client du MJ : les charges dépensées d'un item d'un token, et ses effets antimagie (actifs ou levés). */
+/** On the GM's client: the charges spent from an item of a token, and its antimagic effects (active or lifted). */
 const STATE = `
 const actor = canvas.scene.tokens.get(args.tokenId)?.actor;
 const item = args.itemId ? actor?.items.get(args.itemId) : null;
@@ -61,7 +61,7 @@ export default {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: t.id });
       return data.actorLink ? { documentType: "Actor", id: data.actorId } : { uuid: `Scene.${sceneId}.Token.${t.id}.Actor.${data.actorId}` };
     };
-    // Pas `dialogsOnly` : la fenêtre de niveau de dnd5e (« Magic Missile », bouton « use ») est une application, pas un dialogue.
+    // Not `dialogsOnly`: dnd5e's level window ("Magic Missile", button "use") is an application, not a dialog.
     const dialogs = async () => ((await ctx.call("list-dialogs", { waitMs: 600 }).catch(() => null))?.windows ?? []);
     const ours = w => (w.title ?? "").endsWith(` — ${mage.name}`) || (w.title ?? "").endsWith(` — ${bandit.name}`) || (w.buttons ?? []).some(b => b.action === "use");
     ctx.restore(async () => {
@@ -80,8 +80,8 @@ export default {
     const grid = await ctx.gridSize();
     const m = homes.get(mage.id).pos;
     await ctx.call("move-token", { tokenId: victim.id, x: m.x + 6 * grid, y: m.y, elevation: 0 });
-    // Le Bandit attend hors du champ, sur un trajet dégagé (un déplacement refusé laisse le token dans le champ : vu le 2026-11-15, la
-    // sortie vers le bas passait par une case refusée, `moved: false` — c'était le « statut collé » de la vérification du 2026-11-14).
+    // The Bandit waits outside the field, on a clear path (a refused move leaves the token in the field: seen on 2026-11-15, the
+    // exit downward went through a refused cell, `moved: false` — that was the "stuck status" of the 2026-11-14 check).
     const outside = { x: m.x + 7 * grid, y: m.y + 2 * grid };
     const moveBandit = async (to, label) => {
       const r = await ctx.call("move-token", { tokenId: bandit.id, ...to, elevation: 0 });
@@ -98,8 +98,8 @@ export default {
     const legalityOf = (list, who) => list.filter(w => (w.title ?? "").endsWith(` — ${who.name}`));
 
     /**
-     * Un clic sur la case de la baguette, comme à la souris : la fenêtre « le faire quand même » (si le champ refuse) reçoit `answer`,
-     * la fenêtre de niveau de dnd5e « use », puis un clic par projectile sur la cible. Rend ce qui s'est passé et les messages créés.
+     * A click on the wand's cell, like with the mouse: the "do it anyway" window (if the field refuses) receives `answer`,
+     * dnd5e's level window "use", then one click per projectile on the target. Returns what happened and the messages created.
      */
     const fireWand = async (who, wandId, answer="go") => {
       const since = await ctx.lastMessageId();
@@ -122,7 +122,7 @@ export default {
         const ids = Array(seen.picking.count).fill(victim.id);
         seen.clicked = (await ctx.call("run-script", { code: PICK, args: { ids }, waitMs: 15000 })).result?.clicked?.length ?? 0;
       }
-      // Les projectiles enchaînés partent un par un, chacun tranché avant le suivant : attendre toutes les cartes (45 s au plus).
+      // Chained projectiles go one by one, each settled before the next: wait for all the cards (45 s at most).
       let messages = [];
       for ( const stop = Date.now() + 45000; Date.now() < stop; ) {
         await pause(1500);
@@ -135,7 +135,7 @@ export default {
       return { seen, messages: await ctx.messagesSince(since) };
     };
 
-    // A. Hors du champ : une charge pour un lancement de trois projectiles.
+    // A. Outside the field: one charge for a cast of three projectiles.
     const wand = await ctx.ensureItem(mage, WAND, { byUuid: true, ready: true });
     await ctx.refill(mage, wand);
     let before = (await state(mage, wand)).spent;
@@ -145,7 +145,7 @@ export default {
     let after = (await state(mage, wand)).spent;
     ctx.expect(after - before === 1, `A. hors du champ : une seule charge dépensée pour le lancement (${before} → ${after})`);
 
-    // B. Le Champ, puis la baguette forcée.
+    // B. The Field, then the forced wand.
     const lend = id => ctx.ensureItem(mage, PHB + id, { system: { method: "atwill" } });
     const field = await lend("phbsplAntimagicF");
     const used = await ctx.engine("use", { tokenId: mage.id, itemId: field, activityType: "utility" });
@@ -167,7 +167,7 @@ export default {
     ctx.expect(after.spent - before === 1, `B. forcé : une seule charge dépensée (${before} → ${after.spent})`);
     ctx.expect(after.antimagic.length && after.antimagic.every(e => !e.disabled), `B. après : le statut est là et actif (${JSON.stringify(after.antimagic)})`);
 
-    // C. Double clic sur une case refusée par le champ : une seule fenêtre, une seule carte.
+    // C. Double click on a cell refused by the field: a single window, a single card.
     const bolt = await lend("phbsplFireBolt00");
     const since = await ctx.lastMessageId();
     const click = () => ctx.call("call-module-api", { moduleId: "darsh-dnd-ui", fn: "barUse", args: { tokenId: mage.id, ref: `Item.${bolt}`, targetIds: [victim.id] } });

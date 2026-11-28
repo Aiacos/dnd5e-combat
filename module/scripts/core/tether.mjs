@@ -1,12 +1,12 @@
 /**
- * Lien entre un lanceur et une créature (SPEC §16.43, clé `tether` de core/content.mjs) : Trait ensorcelé — « à chacun de vos
- * tours suivants, vous pouvez faire une action Bonus pour infliger automatiquement 1d12 dégâts de foudre à la cible, même si
- * la première attaque a raté ; le sort prend fin dès que la cible sort de sa portée ou bénéficie d'un abri total vis-à-vis de
- * vous ». Fonctions pures.
+ * Link between a caster and a creature (SPEC §16.43, `tether` key of core/content.mjs): Witch Bolt — "on each of your
+ * following turns, you can take a Bonus Action to automatically deal 1d12 lightning damage to the target, even if
+ * the first attack missed; the spell ends as soon as the target leaves its range or has Total Cover from
+ * you". Pure functions.
  */
 
 /**
- * Le lien se rompt-il ? « sa portée » : au-delà de `maxRange` (même unité que `distance`) ; « abri total ».
+ * Does the link break? "its range": beyond `maxRange` (same unit as `distance`); "Total Cover".
  * @param {{distance: number|null, maxRange: number|null, totalCover: boolean}} state
  * @returns {"range"|"cover"|null}
  */

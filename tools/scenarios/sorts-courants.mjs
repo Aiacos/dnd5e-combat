@@ -1,13 +1,13 @@
 /**
- * §283 : chantiers du 2026-10-30, lot 1 (sorts courants), monde `dnd-6`, Arène de test. Le Clerc reçoit les sorts du Manuel des
- * joueurs (à volonté, rien de consommé) et les lance sur le Zombi. Vérifie :
- *  - Sphère glacée d'Otiluke : ses dégâts (sans type dans la donnée) sont roulés en froid ;
- *  - Contamination : sur une sauvegarde ratée, un effet de drain réduit le maximum de PV des dégâts nécrotiques subis, sans le faire
- *    descendre sous 1 ; sur une réussite, aucun drain ;
- *  - Lenteur : le Clerc porte l'effet de son propre sort ; chaque Trait de feu (composante somatique) passe par un d100 montré dans le
- *    chat — échec (1 à 25) : rien n'est lancé ; sinon l'attaque a lieu. Les deux issues vues en 30 essais au plus.
- * Éruption ensorcelée n'a rien à vérifier ici : la donnée du Manuel porte déjà le dé qui explose (`1d8x@mod=8`, dnd5e l'augmente avec
- * le niveau). Remet PV, effets, zones.
+ * §283: work items of 2026-10-30, batch 1 (common spells), world `dnd-6`, Test Arena. The Cleric receives the spells of the
+ * Player's Handbook (at will, nothing consumed) and casts them on the Zombie. Checks:
+ *  - Otiluke's Freezing Sphere: its damage (with no type in the data) is rolled as cold;
+ *  - Contagion: on a failed saving throw, a drain effect reduces the HP maximum by the necrotic damage taken, without
+ *    taking it below 1; on a success, no drain;
+ *  - Slow: the Cleric carries the effect of his own spell; each Fire Bolt (somatic component) goes through a d100 shown in the
+ *    chat — failure (1 to 25): nothing is cast; otherwise the attack happens. Both outcomes seen in 30 tries at most.
+ * "Enchanted Eruption" has nothing to check here: the Handbook's data already carries the exploding die (`1d8x@mod=8`,
+ * dnd5e increases it with the level). Puts back HP, effects, areas.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -54,7 +54,7 @@ export default {
       const errors = await ctx.clientErrors();
       ctx.expect(!errors.length, `${label} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
-    /** Lance un sort du Clerc ; `roll` : le jet de dégâts attendu de l'auteur (clic de la carte). */
+    /** Casts a Cleric spell; `roll`: the author's expected damage roll (card click). */
     const cast = async (key, { roll=false, ...extra }={}) => {
       const since = await ctx.lastMessageId();
       const used = await ctx.use({ tokenId: cleric.id, itemId: ids[key], consume: false, ...extra });
@@ -112,7 +112,7 @@ export default {
       ctx.restore(() => ctx.call("remove-embedded-effect", { documentType: "Actor", id: ctok.actorId, effectId }).catch(() => {}));
       const seen = { failed: false, passed: false };
       for ( let n = 1; (n <= 30) && !(seen.failed && seen.passed); n++ ) {
-        // Le connecteur rend la main dès que la porte suspend l'utilisation : la suite se lit dans le chat.
+        // The connector hands control back as soon as the gate suspends the use: the rest is read in the chat.
         const before = await ctx.lastMessageId();
         await ctx.use({ tokenId: cleric.id, itemId: ids.bolt, consume: false, targetTokenIds: [zombi.id] });
         let gate = null;

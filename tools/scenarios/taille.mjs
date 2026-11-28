@@ -1,12 +1,12 @@
 /**
- * Taille (Maître d'armes lourdes, SPEC §16.26) : après une créature abattue (ou un critique) à l'arme de corps à corps, la
- * même arme attaque pour une action Bonus. Monde `ravenloft` : Kaalisti, à son tour, abat Rahadin laissé à 1 PV — la visée
- * « Taille » s'ouvre sur le client de l'auteur (celui du MJ, ici : à voir à l'écran, clic droit pour la fermer) ; le
- * scénario attaque ensuite avec \`cost: "bonus"\` et vérifie la dépense : action Bonus débitée, action inchangée.
- * Ailleurs : non applicable.
+ * Hew (Great Weapon Master, SPEC §16.26): after a creature is dropped (or a Critical Hit) with a melee weapon, the same weapon
+ * attacks as a Bonus Action. World `ravenloft`: on Kaalisti's turn, Kaalisti drops Rahadin left at 1 HP — the "Hew" targeting
+ * opens on the author's client (the GM's, here: to be seen on screen, right-click to close it); the scenario then attacks with
+ * \`cost: "bonus"\` and checks the spend: Bonus Action debited, action unchanged.
+ * Elsewhere: not applicable.
  */
 const MODULE_ID = "dnd5e-combat";
-// La victime : un humanoïde du SRD 2024 posé pour le scénario (le monde `ravenloft` avait un PNJ de campagne).
+// The victim: a 2024 SRD Humanoid set up for the scenario (the `ravenloft` world had a campaign NPC).
 const VICTIM = "Cible humanoïde";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -42,8 +42,8 @@ export default {
       return null;
     };
 
-    // Kaalisti frappe jusqu'à abattre Rahadin (1 PV) ; seule la première attaque dépense l'action.
-    // Deux attaques par tour (Lame assoiffée) ; les jets sont aléatoires : jusqu'à six tours.
+    // Kaalisti strikes until Rahadin (1 HP) drops; only the first attack spends the action.
+    // Two attacks per turn (Thirsting Blade); the rolls are random: up to six turns.
     let felled = false;
     for ( let turn = 1; (turn <= 6) && !felled; turn++ ) {
       if ( turn > 1 ) { await ctx.nextTurn(); await sleep(800); }

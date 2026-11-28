@@ -1,9 +1,10 @@
 /**
- * Sphère résiliente d'Otiluke (SPEC §232), arène de `dnd-6`. Vérifie :
- *  - lancée sur un allié (le Guerrier), le lanceur dit qu'il consent : sauvegarde ratée d'office (« willing »), sans jet, il est enfermé ;
- *  - l'attaque du Zombi sur le Guerrier enfermé : non affecté (« enclosed ») ; l'attaque du Guerrier enfermé sur le Zombi : non affecté ;
- *  - lancée sur un ennemi (le Zombi) : pas de question, une vraie sauvegarde.
- * Remet effets, PV et positions.
+ * Otiluke's Resilient Sphere (SPEC §232), `dnd-6` arena. Checks:
+ *  - cast on an ally (the Fighter), the caster says he consents: failed saving throw outright ("willing"), no roll, he is enclosed;
+ *  - the Zombie's attack on the enclosed Fighter: not affected ("enclosed"); the enclosed Fighter's attack on the
+ *    Zombie: not affected;
+ *  - cast on an enemy (the Zombie): no question, a real saving throw.
+ * Puts back effects, HP and positions.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -43,7 +44,7 @@ export default {
     const weaponOf = async t => ((await ctx.call("get-actor", { actorId: t.actorId })).items ?? [])
       .find(i => (i.type === "weapon") && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"))?._id ?? null;
 
-    // 1. Sur le Guerrier, consentant : la question arrive chez le MJ (le joueur du Magicien n'est pas connecté).
+    // 1. On the Fighter, willing: the question arrives on the GM's side (the Wizard's player is not connected).
     const known = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
     const using = ctx.use({ tokenId: mage.id, itemId: sphereId, activityType: "save", targetTokenIds: [fighter.id], consume: false });
     let answered = null;
@@ -64,7 +65,7 @@ export default {
     const enclosed = (await added(fighter)).some(e => /sphere|sphère/i.test(e.name ?? ""));
     ctx.expect(enclosed, `le Guerrier est enfermé (${(await added(fighter)).map(e => e.name).join(", ") || "aucun effet"})`);
 
-    // 2. Rien ne traverse : du Zombi vers le Guerrier, du Guerrier vers le Zombi.
+    // 2. Nothing goes through: from the Zombie to the Fighter, from the Fighter to the Zombie.
     const zWeapon = await weaponOf(zombi);
     const fWeapon = await weaponOf(fighter);
     for ( const [from, to, weapon, label] of [[zombi, fighter, zWeapon, "dehors → dedans"], [fighter, zombi, fWeapon, "dedans → dehors"]] ) {
@@ -78,7 +79,7 @@ export default {
     }
     await reset();
 
-    // 3. Sur le Zombi, ennemi : pas de question, une vraie sauvegarde.
+    // 3. On the Zombie, enemy: no question, a real saving throw.
     const known2 = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
     const hostile = await settle(await ctx.use({ tokenId: mage.id, itemId: sphereId, activityType: "save", targetTokenIds: [zombi.id], consume: false }));
     const asked = ((await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: known2, details: true }).catch(() => null))?.windows ?? [])

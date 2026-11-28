@@ -1,16 +1,17 @@
 /**
- * Garder le défilement d'une fenêtre redessinée en entier (`_replaceHTML` qui remplace tout le contenu) : sans cela, chaque clic
- * (case, « Tout décocher », réglage modifié) ramène la fenêtre tout en haut. On relève la position de chaque zone qui défile avant
- * le remplacement et on la remet après, tant que la fenêtre montre la même vue (`view`, ainsi l'onglet) ; changer de vue repart en haut.
+ * Keep the scroll of a fully redrawn window (`_replaceHTML` that replaces all the content): without this, every click
+ * (checkbox, "Uncheck all", changed setting) sends the window back to the very top. The position of each scrolling area is read
+ * before the replacement and restored after, as long as the window shows the same view (`view`, e.g. the tab); changing view
+ * starts at the top again.
  */
 
 /**
- * Remplacer le contenu de `content` par `result` en gardant le défilement des zones `selectors` (et de `content` lui-même).
- * @param {HTMLElement} content      Le conteneur de la fenêtre (`.window-content`).
- * @param {HTMLElement} result       Le nouveau contenu.
- * @param {string[]} selectors       Les zones qui défilent, retrouvées dans l'ancien et le nouveau contenu par ces sélecteurs.
- * @param {object} memo              Un objet propre à la fenêtre, gardé d'un rendu à l'autre (`{ view, tops }`).
- * @param {string} view              La vue montrée ; si elle change, rien n'est remis.
+ * Replace the content of `content` with `result` while keeping the scroll of the `selectors` areas (and of `content` itself).
+ * @param {HTMLElement} content      The window's container (`.window-content`).
+ * @param {HTMLElement} result       The new content.
+ * @param {string[]} selectors       The scrolling areas, found in the old and the new content by these selectors.
+ * @param {object} memo              An object specific to the window, kept from one render to the next (`{ view, tops }`).
+ * @param {string} view              The view shown; if it changes, nothing is restored.
  */
 export function replaceKeepingScroll(content, result, selectors, memo, view) {
   const same = memo.view === view;
@@ -20,14 +21,14 @@ export function replaceKeepingScroll(content, result, selectors, memo, view) {
   if ( tops ) writeTops(content, selectors, tops);
 }
 
-/** La position de chaque zone : `{ "": haut du conteneur, [sélecteur]: [haut de chaque élément trouvé] }`. */
+/** The position of each area: `{ "": haut du conteneur, [sélecteur]: [haut de chaque élément trouvé] }`. */
 export function readTops(content, selectors) {
   const tops = { "": content.scrollTop ?? 0 };
   for ( const s of selectors ) tops[s] = [...content.querySelectorAll(s)].map(e => e.scrollTop ?? 0);
   return tops;
 }
 
-/** Remettre les positions relevées par `readTops`, élément par élément dans l'ordre du document. */
+/** Restore the positions read by `readTops`, element by element in document order. */
 export function writeTops(content, selectors, tops) {
   for ( const s of selectors ) {
     const found = [...content.querySelectorAll(s)];

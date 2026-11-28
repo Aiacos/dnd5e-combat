@@ -1,11 +1,11 @@
 /**
- * §93 — Dons sombres de Ravenloft (module premium `dnd-ravenloft-horrors-within`) : « juste après avoir fait un Test d20 et obtenu un
- * 1 sur le d20 ». Le Guerrier reçoit les dons, prêtés depuis le pack `options`.
- *  - Anatomie aberrante : des tests d'Athlétisme jusqu'à un 1 naturel (le vrai jet) — la sauvegarde de Constitution part, Étourdi ⇔
- *    ratée.
- *  - Guetteurs (déclenché par `api.mcp.naturalOne`) : Sagesse jusqu'à un échec ; Paranoïa : un test au Désavantage, une attaque au
- *    Désavantage ; à la fin du tour du Guerrier, la sauvegarde rejouée.
- *  - Être symbiotique : Charisme jusqu'à un échec ; Charmé ; blessé, la sauvegarde rejouée.
+ * §93 — Ravenloft dark feats (premium module `dnd-ravenloft-horrors-within`): "just after making a D20 Test and getting a
+ * 1 on the d20". The Fighter receives the feats, lent from the `options` pack.
+ *  - Aberrant Anatomy: Athletics checks until a natural 1 (the real roll) — the Constitution save goes off, Stunned ⇔
+ *    failed.
+ *  - Watchers (triggered by `api.mcp.naturalOne`): Wisdom until a failure; Paranoia: a check at Disadvantage, an attack at
+ *    Disadvantage; at the end of the Fighter's turn, the save replayed.
+ *  - Symbiotic Being: Charisma until a failure; Charmed; wounded, the save replayed.
  */
 const MODULE_ID = "dnd5e-combat";
 const RHW = "dnd-ravenloft-horrors-within.options";
@@ -69,7 +69,7 @@ export default {
       const since = await ctx.lastMessageId();
       const r = await ctx.engine("rollCheck", { tokenId: fighter.id, skill: "ath" });
       if ( (r?.d20 ?? 1) > 1 ) other = since;
-      // Un autre 1 : sa sauvegarde (et sa chaîne) arrive après — attendue avant le jet suivant, pour ne pas la lui attribuer.
+      // Another 1: its save (and its chain) arrives later — awaited before the next roll, so as not to attribute it to that one.
       else { await pause(5000); await clear(); }
     }
     await pause(2000);
@@ -118,7 +118,7 @@ export default {
     await clear();
     await dropWatchers();
 
-    // 3. Être symbiotique.
+    // 3. Symbiotic Being.
     await lend("rhwSymbioticBein");
     let charmed = false;
     for ( let n = 0; (n < 15) && !charmed; n++ ) {

@@ -1,11 +1,11 @@
 /**
- * §79 — Fins et durées des sorts.
- *  1. Charme-monstre (Manuel des joueurs, prêté sans emplacement au premier personnage joueur de la scène) sur le Zombi : des dégâts
- *     d'auteur inconnu ne le font pas cesser ; les dégâts du lanceur, si (« jusqu'à ce que vous ou vos alliés lui infligiez des
- *     dégâts », comme Charme-personne et Amitié avec les animaux).
- *  2. Rayon traçant du même lanceur, qui touche le Zombi : la marque posée prend fin à la fin du prochain tour du LANCEUR
- *     (`duration.expiry` « sourceEnd »), pas au tour du combattant suivant (durée « 1 tour » générique des données).
- * Les jets sont aléatoires : on rejoue jusqu'à rater la sauvegarde ou toucher.
+ * §79 — Spell endings and durations.
+ *  1. Charm Monster (Player's Handbook, lent with no spell slot to the first player character of the scene) on the Zombi:
+ *     damage from an unknown author does not end it; the caster's damage does ("until you or your allies deal damage to it",
+ *     like Charm Person and Animal Friendship).
+ *  2. Guiding Bolt from the same caster, which hits the Zombi: the mark placed ends at the end of the caster's next turn
+ *     (`duration.expiry` "sourceEnd"), not at the next combatant's turn (generic "1 turn" duration of the data).
+ * The rolls are random: replay until the save fails or the attack hits.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -19,7 +19,7 @@ export default {
   async run(ctx) {
     const { tokens } = await ctx.scene();
     if ( !tokens.some(t => t.name === "Zombi") ) { ctx.log("pas de Zombi sur la scène : non applicable"); return; }
-    // Dans `dnd-6`, la distribution de référence, Zombi compris (à vue du Magicien) ; ailleurs, rien n'est posé.
+    // In `dnd-6`, the reference cast, Zombi included (in the Wizard's sight); elsewhere, nothing is placed.
     await ctx.stage({ ...RESTORED_KEEP, tokens: { ...RESTORED_KEEP.tokens, Zombi: [2800, 4900] } });
     let pcRef = null;
     for ( const t of tokens ) {
@@ -38,8 +38,8 @@ export default {
     const charmed = async () => (await ctx.effects(zombi)).filter(e => !e.disabled && /charm/i.test(e.name ?? ""));
     ctx.log(`lanceur : ${caster.name}`);
 
-    // 1. Charme-monstre. Le Zombi reçoit 200 PV le temps du scénario : il doit survivre au Rayon traçant, pour que le charme
-    // cesse par les dégâts du lanceur et non par la mort.
+    // 1. Charm Monster. The Zombi gets 200 HP for the length of the scenario: it must survive Guiding Bolt, so that the charm
+    // ends from the caster's damage and not from death.
     const { data: tok } = await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id });
     if ( !tok.actorLink ) {
       const max = tok.delta?.system?.attributes?.hp?.max ?? null;
@@ -59,7 +59,7 @@ export default {
     await sleep(1500);
     ctx.expect((await charmed()).length > 0, "3 dégâts d'auteur inconnu : le charme tient");
 
-    // 2. Rayon traçant du lanceur : ses dégâts mettent fin au charme, sa marque dure jusqu'à la fin du prochain tour du lanceur.
+    // 2. The caster's Guiding Bolt: its damage ends the charm, its mark lasts until the end of the caster's next turn.
     let hit = false;
     for ( let i = 0; (i < 15) && !hit; i++ ) {
       const used = await ctx.use({ tokenId: caster.id, itemId: boltId, targetTokenIds: [zombi.id] });
@@ -74,7 +74,7 @@ export default {
     const mark = (await ctx.effects(zombi)).find(e => /Rayon traçant|Guiding Bolt/i.test(e.name ?? ""));
     if ( ctx.expect(!!mark, `marque du Rayon traçant posée (${(await ctx.effects(zombi)).map(e => e.name).join(", ")})`) ) {
       const d = mark.duration ?? {};
-      // Sans valeur : la durée « 1 tour » générique est remplacée (le cœur range l'unité vide en « seconds »).
+      // No value: the generic "1 turn" duration is replaced (the core stores the empty unit as "seconds").
       ctx.expect(d.expiry === "sourceEnd" && !d.value,`marque : fin du prochain tour du lanceur (${JSON.stringify(d)})`);
     }
   }

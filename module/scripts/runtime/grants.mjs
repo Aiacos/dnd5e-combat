@@ -1,11 +1,12 @@
 /**
- * C12-d : activités données à une autre créature (`grants`, core/content.mjs). Souffle du dragon : « vous touchez une créature consentante
- * et lui donnez la faculté d'exhaler […] ; jusqu'à la fin du sort, la créature peut prendre une action Magie pour exhaler » — c'est elle qui
- * souffle, par sa propre action, au DD de sorts du lanceur et au niveau du lancement.
+ * C12-d: activities granted to another creature (`grants`, core/content.mjs). Dragon's Breath: "you touch a willing creature
+ * and grant it the ability to exhale […]; until the spell ends, the creature can take a Magic action to exhale" — it is the
+ * creature that breathes, with its own action, at the caster's spell save DC and at the casting level.
  *
- * Sur le MJ actif, au message d'utilisation de l'activité `from` : chaque cible reçoit une copie de l'item réduite à l'activité donnée
- * (méthode « à volonté », DD fixé à celui du lanceur, dés du niveau lancé), marquée `flags.dnd5e-combat.granted`. La copie part quand la
- * concentration du lanceur sur ce sort tombe (ou, sans concentration, quand le lanceur la retire). Rien n'est écrit sur l'item d'origine.
+ * On the active GM, on the use message of activity `from`: each target receives a copy of the item reduced to the granted activity
+ * ("at will" method, DC set to the caster's, dice of the cast level), marked `flags.dnd5e-combat.granted`. The copy leaves when the
+ * caster's Concentration on this spell drops (or, without Concentration, when the caster removes it). Nothing is written on the
+ * original item.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,14 +17,14 @@ import { log } from "./shared.mjs";
 import { placeItemEffect } from "../adapter/effects.mjs";
 import { concentrationOn } from "../adapter/summons.mjs";
 
-/** La copie de l'item donnée à la cible : la seule activité donnée, au DD et au niveau du lanceur. */
+/** The copy of the item granted to the target: the single granted activity, at the caster's DC and level. */
 function grantedData(item, rule, { dc, scaling }) {
   const data = item.toObject();
   delete data._id;
   const activity = foundry.utils.deepClone(data.system.activities?.[rule.activity]);
   if ( !activity ) return null;
   if ( activity.save ) activity.save.dc = { calculation: "", formula: String(dc) };
-  // Les dés du niveau lancé : « +1d6 par niveau d'emplacement au-dessus du 2e » — la mise à l'échelle de la part, posée en dur.
+  // The dice of the cast level: "+1d6 per slot level above 2nd" — the scaling of the part, hardcoded.
   for ( const part of activity.damage?.parts ?? [] ) {
     const step = Number(part.scaling?.number) || 0;
     if ( scaling && step && Number.isFinite(part.number) ) part.number += step * scaling;
@@ -37,7 +38,7 @@ function grantedData(item, rule, { dc, scaling }) {
   return data;
 }
 
-/** MJ actif : l'activité qui donne a été utilisée — chaque cible du message reçoit sa copie. */
+/** Active GM: the granting activity was used — each target of the message receives its copy. */
 async function onUsage(message) {
   if ( message.type !== "usage" ) return;
   const activity = message.getAssociatedActivity?.();
@@ -46,7 +47,7 @@ async function onUsage(message) {
   if ( !rule || (rule.from !== activity.id) ) return;
   const caster = item.actor;
   const dc = Number(caster?.system?.attributes?.spell?.dc) || 10;
-  // §406 : la montée est sur le message d'utilisation (`system.scaling`), pas dans ses flags (que dnd5e 6 n'écrit plus).
+  // §406: the upcast is on the use message (`system.scaling`), not in its flags (which dnd5e 6 no longer writes).
   const scaling = Math.max(0, (Number(message.system?.scaling) || 0));
   for ( const t of message.system?.targets ?? [] ) {
     const target = fromUuidSync(t.token ?? t.actor ?? "", { strict: false });
@@ -61,7 +62,7 @@ async function onUsage(message) {
   }
 }
 
-/** MJ actif : la concentration du lanceur sur un sort qui donne tombe — les copies partent. */
+/** Active GM: the caster's Concentration on a granting spell drops — the copies leave. */
 async function onConcentrationEnds(effect) {
   if ( !effect.statuses?.has?.("concentrating") ) return;
   const caster = effect.parent;
@@ -82,9 +83,9 @@ async function onConcentrationEnds(effect) {
 }
 
 /**
- * C12-g : Double illusoire — « vous devenez Invisible au moment où un double illusoire apparaît » : dnd5e pose les effets d'une activité
- * d'invocation sur la créature invoquée (documents/activity/summon.mjs) ; `summonEffectsOnCaster` les remet sur le lanceur, liés à sa
- * concentration. Sur le client qui invoque.
+ * C12-g: Mislead — "you become Invisible at the moment an illusory double appears": dnd5e places the effects of a summon
+ * activity on the summoned creature (documents/activity/summon.mjs); `summonEffectsOnCaster` puts them back on the caster,
+ * tied to their Concentration. On the client that summons.
  */
 async function onPostSummon(activity, profile, tokens) {
   const item = activity?.item;

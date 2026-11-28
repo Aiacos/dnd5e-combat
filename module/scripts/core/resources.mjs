@@ -1,11 +1,11 @@
 /**
- * §410 (issue #44, lot 3) : ce qui manque pour utiliser une activité — emplacement de sort, utilisations, quantité. Pur : aucune
- * dépendance à Foundry. Le moteur le dit dans la fenêtre de légalité (forçable : forcer = ne pas dépenser ce qui manque).
+ * §410 (issue #44, batch 3): what is missing to use an activity — spell slot, uses, quantity. Pure: no
+ * dependency on Foundry. The engine says it in the legality window (forceable: forcing = not spending what is missing).
  */
 
 /**
- * Reste-t-il un emplacement pour lancer à ce niveau ? `slotKey` : l'emplacement demandé (« spell3 », « pact ») ; sans lui, n'importe quel
- * emplacement de ce niveau ou plus haut, pacte compris (ce que proposerait la fenêtre de dnd5e).
+ * Is a slot left to cast at this level? `slotKey`: the slot requested ("spell3", "pact"); without it, any
+ * slot of this level or higher, pact included (what dnd5e's window would offer).
  * @param {Record<string, {value?: number, max?: number, level?: number}>} spells  `actor.system.spells`.
  * @param {number} level
  * @param {string|null} [slotKey]
@@ -19,8 +19,8 @@ export function slotLeft(spells, level, slotKey=null) {
 }
 
 /**
- * Le coût d'une consommation, s'il se lit sans jet : un entier ; une formule (« 1d4 ») compte pour 1 (on ne refuse pas d'avance ce qu'un
- * jet pourrait permettre).
+ * The cost of a consumption, if it reads without a roll: an integer; a formula ("1d4") counts as 1 (we do not refuse in
+ * advance what a roll could allow).
  */
 export function plainCost(value) {
   const n = Number(value);
@@ -28,9 +28,9 @@ export function plainCost(value) {
 }
 
 /**
- * Un sort qui attend d'être préparé : sa méthode se prépare (`CONFIG.DND5E.spellcasting[…].prepares` : « spell », « pact »), il
- * n'est pas mineur, et il n'est pas préparé (`prepared` : 0 non, 1 oui, 2 toujours). Un sort lancé par un objet ou une activité
- * liée n'est pas concerné : l'appelant ne le soumet pas.
+ * A spell waiting to be prepared: its method is prepared (`CONFIG.DND5E.spellcasting[…].prepares`: "spell", "pact"), it
+ * is not a cantrip, and it is not prepared (`prepared`: 0 no, 1 yes, 2 always). A spell cast from an item or a linked
+ * activity is not concerned: the caller does not submit it.
  * @param {{level?: number, prepares?: boolean, prepared?: number|boolean}} spell
  * @returns {boolean}
  */
@@ -39,17 +39,17 @@ export function awaitsPreparation({ level=0, prepares=false, prepared=0 }={}) {
 }
 
 /**
- * Les raisons « ressource » d'une utilisation, dans l'ordre : `noSlot`, `noUses`, `noQuantity`, `unprepared`.
+ * The "resource" reasons of a use, in order: `noSlot`, `noUses`, `noQuantity`, `unprepared`.
  * @param {object} use
- * @param {boolean} [use.slotMissing]    Un emplacement à dépenser (lancement ou consommation) manque.
- * @param {boolean} [use.usesShort]      Des utilisations à dépenser manquent.
- * @param {boolean} [use.quantityShort]  Une quantité à dépenser manque, ou l'objet utilisé est épuisé.
- * @param {boolean} [use.unprepared]     Un sort à préparer, pas préparé.
+ * @param {boolean} [use.slotMissing]    A slot to spend (casting or consumption) is missing.
+ * @param {boolean} [use.usesShort]      Uses to spend are missing.
+ * @param {boolean} [use.quantityShort]  A quantity to spend is missing, or the item used is used up.
+ * @param {boolean} [use.unprepared]     A spell to prepare, not prepared.
  * @returns {string[]}
  */
 export function resourceIssues({ slotMissing=false, usesShort=false, quantityShort=false, unprepared=false }) {
   return [slotMissing && "noSlot", usesShort && "noUses", quantityShort && "noQuantity", unprepared && "unprepared"].filter(Boolean);
 }
 
-/** Une consommation qui manque : coût positif, plus que ce qui reste. */
+/** A consumption that is missing: positive cost, more than what is left. */
 export const isShort = t => (t.cost > 0) && (t.available < t.cost);

@@ -1,11 +1,11 @@
 /**
- * §252 — retour d'une action pour toute la table (règles DAS du 2026-10-27) : un texte flottant vu de tous et un son entendu de tous.
- * Ici, sans Foundry : le son par défaut de chaque action et de son issue, et ce qui voyage d'un client à l'autre. Les sons sont ceux
- * que le cœur de Foundry livre (public/sounds/…), présents sur toute installation ; un module voisin les remplace par le hook public
- * `dnd5e-combat.feedback` (runtime/shared.mjs, `notice`).
+ * §252 — action feedback for the whole table (DAS rules of 2026-10-27): floating text seen by everyone and a sound heard by
+ * everyone. Here, without Foundry: the default sound of each action and of its outcome, and what travels from one client to
+ * another. The sounds are those that the Foundry core ships (public/sounds/…), present on every installation; a neighbouring
+ * module replaces them via the public hook `dnd5e-combat.feedback` (runtime/shared.mjs, `notice`).
  */
 
-/** Les sons du cœur de Foundry utilisés par le moteur. */
+/** The Foundry core sounds used by the engine. */
 export const CORE_SOUNDS = Object.freeze({
   unlock: "sounds/doors/metal/unlock.ogg",
   locked: "sounds/doors/metal/lock.ogg",
@@ -17,15 +17,15 @@ export const CORE_SOUNDS = Object.freeze({
   chime: "sounds/doors/magic/unlock.ogg",
   dull: "sounds/doors/wood/lock.ogg",
   fade: "sounds/doors/magic/lock.ogg",
-  // §282 : l'Inspiration héroïque utilisée — un coup de tambour épique.
+  // §282: Heroic Inspiration used — an epic drum beat.
   heroicHit: "sounds/combat/epic-turn-1hit.ogg",
-  // §290 : le MJ force la réponse d'un joueur.
+  // §290: the GM forces a player's response.
   nextHorn: "sounds/combat/epic-next-horn.ogg",
-  // Issue #32 : un succès à un prix accepté — deux coups de tambour.
+  // Issue #32: a success at an accepted cost — two drum beats.
   atCost: "sounds/combat/epic-turn-2hit.ogg"
 });
 
-/** Le son par défaut d'une action (`action`) selon son issue (`success`, `failure`), ou null. */
+/** The default sound of an action (`action`) by its outcome (`success`, `failure`), or null. */
 const DEFAULTS = Object.freeze({
   pick: { success: CORE_SOUNDS.unlock, failure: CORE_SOUNDS.locked },
   force: { success: CORE_SOUNDS.burst, failure: CORE_SOUNDS.thud },
@@ -35,65 +35,65 @@ const DEFAULTS = Object.freeze({
   escape: { success: CORE_SOUNDS.rattle, failure: CORE_SOUNDS.dull },
   firstAid: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull },
   land: { success: null, failure: CORE_SOUNDS.thud },
-  // §282 : l'Inspiration héroïque dépensée (un dé relancé), puis reçue.
+  // §282: Heroic Inspiration spent (a die rerolled), then received.
   heroic: { success: CORE_SOUNDS.heroicHit, failure: null },
-  // §258 : un sort ou un effet qui prend fin (fins génériques, runtime/endings.mjs).
+  // §258: a spell or an effect that ends (generic endings, runtime/endings.mjs).
   spellEnds: { success: CORE_SOUNDS.fade, failure: null },
-  // §283 : un sort qui échoue sous Lenteur.
+  // §283: a spell that fails under Slow.
   spellFails: { success: null, failure: CORE_SOUNDS.fade },
-  // §285 : un comportement imposé (panique, Confusion, Couronne du dément) ; l'entretien d'un sort par l'action Magie.
+  // §285: an imposed behaviour (panic, Confusion, Crown of Madness); upkeep of a spell by the Magic action.
   control: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull },
   upkeep: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.fade },
-  // §290 : la réponse d'un joueur forcée par le MJ (fenêtres du combat sans délai).
+  // §290: a player's response forced by the GM (combat windows with no delay).
   forced: { success: CORE_SOUNDS.nextHorn, failure: null },
-  // §408 : une règle passée outre par un joueur (la table l'entend).
+  // §408: a rule overridden by a player (the table hears it).
   overridden: { success: CORE_SOUNDS.nextHorn, failure: null },
-  // Issue #32 : le succès à un prix accepté (refusé : rien).
+  // Issue #32: the success at an accepted cost (declined: nothing).
   atCost: { success: CORE_SOUNDS.atCost, failure: null },
-  // §461 : une téléportation de soi faite (Foulée brumeuse, Téléportation d'un démon).
+  // §461: a self-teleport done (Misty Step, a demon's Teleportation).
   teleport: { success: CORE_SOUNDS.chime, failure: null },
-  // B09 (§488) : une tentative de changer de forme qu'un objet porté interdit (le collier se serre).
+  // B09 (§488): an attempt to change shape that a worn item forbids (the collar tightens).
   formLock: { success: null, failure: CORE_SOUNDS.rattle },
-  // §489 : une Parade qui force la relance de l'attaque — le métal qui bloque (le coup rate), le bruit sourd (il passe quand même).
+  // §489: a Parry that forces the attack to be rerolled — the metal that blocks (the hit misses), the dull thud (it lands anyway).
   reroll: { success: CORE_SOUNDS.tools, failure: CORE_SOUNDS.dull },
-  // §490 (B08) : monter, descendre, être jeté à bas de sa monture, l'ordre à un compagnon.
+  // §490 (B08): mounting, dismounting, being thrown off one's mount, the command to a companion.
   mount: { success: CORE_SOUNDS.dull, failure: null },
   dismount: { success: CORE_SOUNDS.dull, failure: null },
   thrown: { success: null, failure: CORE_SOUNDS.thud },
   command: { success: CORE_SOUNDS.chime, failure: null },
-  // §493 (B13) : une réaction contre une zone (Bouclier d'insectes) — la créature épargnée (carillon), ou les dégâts qui passent.
+  // §493 (B13): a reaction against an area ("Insect Shield") — the creature spared (chime), or the damage that goes through.
   areaShield: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull },
-  // §494 (B14) : plusieurs concentrations perdues d'un coup (jet raté, Neutralisé).
+  // §494 (B14): several Concentrations lost at once (failed roll, Incapacitated).
   concentrationLost: { success: null, failure: CORE_SOUNDS.fade },
-  // §495 (B15) : une échelle d'états — la créature se remet d'un palier (carillon), ou s'enfonce d'un palier (bruit sourd).
+  // §495 (B15): a condition ladder — the creature recovers a step (chime), or sinks a step (dull thud).
   stage: { success: CORE_SOUNDS.chime, failure: CORE_SOUNDS.dull },
-  // §496 (B16) : un sort gardé contre une dissipation, par la Réaction et un emplacement.
+  // §496 (B16): a spell kept against a dispelling, by the Reaction and a slot.
   dispelKept: { success: CORE_SOUNDS.chime, failure: null },
-  // §502 (B22) : une créature relâchée parce que l'item n'en agrippe qu'une à la fois (le cliquetis de l'évasion).
+  // §502 (B22): a creature released because the item grabs only one at a time (the rattle of the escape).
   grappleReleased: { success: CORE_SOUNDS.rattle, failure: null },
-  // §501 (B21) : une seule réaction perdue au lieu de toutes (« elle ne perd qu'une réaction »).
+  // §501 (B21): a single reaction lost instead of all of them ("it loses only one reaction").
   reactionLost: { success: null, failure: CORE_SOUNDS.dull },
-  // §500 (B20) : une créature tuée par un drain (maximum de PV ou caractéristique ramené à 0) — le coup sourd.
+  // §500 (B20): a creature killed by a drain (maximum HP or ability score brought to 0) — the dull blow.
   drainDeath: { success: CORE_SOUNDS.thud, failure: null },
-  // §499 (B19) : des dégâts renvoyés à l'attaquant (le coup sourd).
+  // §499 (B19): damage sent back to the attacker (the dull blow).
   damageReturned: { success: CORE_SOUNDS.thud, failure: null },
-  // §498 (B18) : un changement de forme à volonté (carillon), et le retour à la forme d'origine (le son qui s'éteint).
+  // §498 (B18): a change of shape at will (chime), and the return to the original shape (the sound that fades).
   formChange: { success: CORE_SOUNDS.chime, failure: null },
   formRevert: { success: CORE_SOUNDS.fade, failure: null },
-  // Issue #31 : une potion de soins bue par une action — soin maximal.
+  // Issue #31: a healing potion drunk as an action — maximum healing.
   potionMax: { success: CORE_SOUNDS.chime, failure: null },
   // §537 : a standing weapon mastery chosen (Tactical Master).
   standingMastery: { success: CORE_SOUNDS.tools, failure: null }
 });
 
-/** Le son par défaut de cette action et de cette issue (null : aucun). */
+/** The default sound for this action and this outcome (null: none). */
 export function actionSound(action, outcome) {
   return DEFAULTS[action]?.[outcome] ?? null;
 }
 
 /**
- * Un texte d'avis : une chaîne déjà traduite, ou `{ key, data }`, traduit chez chaque client (sa langue peut différer de celle de qui
- * agit). `localize(key, data)` est la traduction du client.
+ * A notice text: an already translated string, or `{ key, data }`, translated at each client (its language may differ from
+ * that of whoever acts). `localize(key, data)` is the client's translation.
  */
 export function noticeText(text, localize) {
   if ( !text ) return "";

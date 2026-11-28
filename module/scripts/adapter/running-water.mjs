@@ -1,10 +1,10 @@
 /**
- * §484 : l'eau courante (faiblesses du vampire, régénération arrêtée). Rien dans dnd5e ni dans le cœur ne dit qu'une case est de l'eau
- * courante : le MJ la marque.
- *  - une région de la scène : `flags["dnd5e-combat"].runningWater === true` (la rivière, le gué) ;
- *  - toute la scène : le même drapeau sur la scène (une barque sur le fleuve).
- * Le token y est quand le centre de ses pieds est dans la région (`RegionDocument#testPoint`, élévation comprise — même lecture que le
- * terrain difficile, adapter/jump.mjs).
+ * §484: running water (the vampire's weaknesses, regeneration stopped). Nothing in dnd5e or the core says a cell is running
+ * water: the GM marks it.
+ *  - a region of the scene: `flags["dnd5e-combat"].runningWater === true` (the river, the ford);
+ *  - the whole scene: the same flag on the scene (a boat on the river).
+ * The token is in it when the center of its feet is in the region (`RegionDocument#testPoint`, elevation included — same reading as
+ * Difficult Terrain, adapter/jump.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -12,13 +12,13 @@ import { tokenCenter } from "./turn.mjs";
 
 export const RUNNING_WATER_FLAG = "runningWater";
 
-/** Les régions marquées « eau courante » d'une scène. */
+/** A scene's regions marked "running water". */
 export function runningWaterRegions(scene) {
   return (scene?.regions ?? []).filter(r => r.getFlag?.(MODULE_ID, RUNNING_WATER_FLAG) === true);
 }
 
 /**
- * Ce token est-il dans de l'eau courante ?
+ * Is this token in running water?
  * @param {TokenDocument|null} doc
  * @returns {boolean}
  */

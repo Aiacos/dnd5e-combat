@@ -1,18 +1,18 @@
 /**
- * §192 (lot 2) : marcher au plafond, sur la scène « Escalade » de `dnd-6` (un mur vertical en x = 700, une Surface « Plafond » à 20 ft
- * sur la moitié ouest, un sol en Surface, le Guerrier contre le mur, le Zombi juste au sud de lui).
- *  1. Sans capacité (règles 2024) : le plafond est là (perchoir à 15 ft, 3 cases), mais « Grimper au plafond » n'est pas proposé.
- *  2. Pattes d'araignée prêtée et lancée sur lui-même : la capacité est reconnue par l'effet du sort ; il gagne le plafond d'un coup
- *     (élévation 15, mode `climb`, drapeau `ceiling`, statut « Au plafond » à la place d'« En escalade ») et, le réglage « Orienter les
- *     tokens » coupé, le MJ actif le retourne (`texture.scaleY` −1, l'échelle d'origine gardée).
- *  3. Il marche sous le plafond, loin du mur, jusqu'au-dessus du Zombi (occupation en trois dimensions) ; au-delà du plafond, aucun chemin.
- *  4. L'attaque de base du Zombi le juge hors d'allonge (10 ft de vide : écart 2 cases) : aucune approche (« tooHigh »), aucune carte,
- *     le Zombi ne bouge pas.
- *  5. Revenu au-dessus de sa case, il descend le long du mur d'une case (statut « En escalade », remis à l'endroit), puis se laisse tomber :
- *     chute de dnd5e, À terre, plus aucun statut de prise, échelle d'origine rendue.
- *  6. Règles « maison », sans la capacité : « Grimper au plafond » est proposé, au DD 20 Force (Athlétisme) ; un échec le laisse au sol,
- *     un succès le pose au plafond ; glissé par le MJ hors du plafond, il tombe (« plus de plafond »).
- * Remet les règles, le réglage d'orientation, la position, le mode, l'échelle, les PV ; le filet du lanceur reprend le reste.
+ * §192 (batch 2): walking on the ceiling, on the "Climbing" scene of `dnd-6` (a vertical wall at x = 700, a "Ceiling" Surface
+ * at 20 ft on the west half, a Surface floor, the Fighter against the wall, the Zombie just south of them).
+ *  1. Without a feature (2024 rules): the ceiling is there (perch at 15 ft, 3 cells), but "Climb the ceiling" is not offered.
+ *  2. Spider Climb lent and cast on themselves: the feature is recognized from the spell's effect; they gain the ceiling at once
+ *     (elevation 15, `climb` mode, `ceiling` flag, "On the ceiling" status in place of "Climbing") and, the "Orient
+ *     tokens" setting off, the active GM flips them (`texture.scaleY` −1, the original scale kept).
+ *  3. They walk under the ceiling, away from the wall, to above the Zombie (3D occupancy); past the ceiling, no path.
+ *  4. The Zombie's basic attack judges them out of reach (10 ft of void: gap of 2 cells): no approach ("tooHigh"), no card,
+ *     the Zombie does not move.
+ *  5. Back above their cell, they climb down the wall by one cell ("Climbing" status, turned upright), then drop:
+ *     dnd5e fall, Prone, no grip status anymore, original scale restored.
+ *  6. "House" rules, without the feature: "Climb the ceiling" is offered, at DC 20 Strength (Athletics); a failure leaves them
+ *     on the ground, a success places them on the ceiling; slid by the GM off the ceiling, they fall ("no more ceiling").
+ * Restores the rules, the orientation setting, the position, the mode, the scale, the HP; the caster's safety net takes the rest.
  */
 const MODULE_ID = "dnd5e-combat";
 const SPIDER_CLIMB = "Compendium.dnd-players-handbook.spells.phbsplSpiderClim";
@@ -40,13 +40,13 @@ export default {
     };
     const rules = await ctx.engine("setting", { key: "climbRules", value: "2024" });
     ctx.restore(() => ctx.engine("setting", { key: "climbRules", value: rules?.before ?? "2024" }));
-    // §246 : sans la rotation automatique du cœur, le token au plafond est retourné (`ceilingFlip`).
+    // §246: without the core's automatic rotation, the token on the ceiling is flipped (`ceilingFlip`).
     const facing = await ctx.engine("foreignSetting", { namespace: "core", key: "tokenAutoRotate", value: false });
     ctx.restore(() => ctx.engine("foreignSetting", { namespace: "core", key: "tokenAutoRotate", value: facing?.before ?? true }));
     ctx.restore(reset);
     ctx.restore(() => ctx.removeEffectsFrom(hero, "spider-climb"));
     const statusesOf = async () => (await ctx.effects(hero)).filter(e => !e.disabled).flatMap(e => e.statuses ?? []);
-    /** La fenêtre de jet de dnd5e chez le MJ (règles maison) : on la valide ; introuvable, le moteur lance sans fenêtre au délai. */
+    /** dnd5e's roll window at the GM (house rules): it is confirmed; not found, the engine rolls without a window at the delay. */
     const answerRoll = async () => {
       for ( let i = 0; i < 15; i++ ) {
         const { windows = [] } = await ctx.call("list-dialogs", {}).catch(() => ({}));
@@ -63,12 +63,12 @@ export default {
       return false;
     };
 
-    // 1. Sans capacité : un plafond, mais pas d'entrée de menu (règles 2024).
+    // 1. Without a feature: a ceiling, but no menu entry (2024 rules).
     let s = await state();
     if ( !ctx.expect((s.perch === 15) && (s.ceiling?.cells === 3) && s.walls.length, `au sol contre le mur, sous un plafond à 20 ft : perchoir à ${s.perch} ft, ${s.ceiling?.cells} cases`) ) return;
     ctx.expect(!s.walksCeilings && !s.canCeiling, `sans capacité, « Grimper au plafond » n'est pas proposé (capacité ${s.walksCeilings}, proposé ${s.canCeiling})`);
 
-    // 2. Pattes d'araignée lancée sur lui-même : la capacité vient de l'effet du sort.
+    // 2. Spider Climb cast on themselves: the feature comes from the spell's effect.
     const spellId = await ctx.ensureItem(hero, SPIDER_CLIMB, { system: { method: "atwill" } });
     await ctx.use({ tokenId: hero.id, itemId: spellId, targetTokenIds: [hero.id], collectMs: 1500 });
     await pause(800);
@@ -83,7 +83,7 @@ export default {
     ctx.expect((s.scaleY === -1) && (s.flip?.scaleY === 1), `orientation coupée : token retourné (scaleY ${s.scaleY}, origine ${s.flip?.scaleY ?? "—"})`);
     ctx.expect(!s.canClimb && s.canDown, `au plafond : plus de « Grimper au mur » (${s.canClimb}), « Descendre le long du mur » proposé (${s.canDown})`);
 
-    // 3. Marche sous le plafond, loin du mur, puis au-dessus du Zombi ; au-delà du plafond, aucun chemin.
+    // 3. Walk under the ceiling, away from the wall, then above the Zombie; beyond the ceiling, no path.
     const away = { i: up.after.cell.i, j: up.after.cell.j - 2 };
     const far = await ctx.engine("move", { tokenId: hero.id, cell: away });
     ctx.expect((far.after.cell.j === away.j) && (far.after.elevation === 15) && (far.after.movementAction === "climb"),
@@ -96,7 +96,7 @@ export default {
     s = await state();
     ctx.expect(s.onCeiling && s.ceilingStatus && (s.scaleY === -1), `toujours au plafond après la marche (statut ${s.ceilingStatus}, scaleY ${s.scaleY})`);
 
-    // 4. L'attaque de base du Zombi : hors d'allonge, pas d'approche, pas de carte.
+    // 4. The Zombie's basic attack: out of reach, no approach, no card.
     const since = await ctx.lastMessageId();
     const reach = await ctx.engine("reachCheck", { tokenId: zombi.id, targetId: hero.id, engage: true, approach: true });
     ctx.expect(reach.tooHigh && (reach.gap === 2) && (reach.vertical === 2) && reach.status?.out,
@@ -106,7 +106,7 @@ export default {
     const cards = (await ctx.messagesSince(since)).filter(m => m.type === "attack" || m.rolls?.length);
     ctx.expect((reach.engaged?.messages === 0) && !cards.length, `attaque de base refusée : ${reach.engaged?.messages ?? "?"} message, ${cards.length} carte d'attaque`);
 
-    // 5. Retour au-dessus de sa case ; descente d'une case le long du mur ; chute volontaire.
+    // 5. Back above their cell; descent of one cell along the wall; voluntary fall.
     const back = await ctx.engine("move", { tokenId: hero.id, cell: up.after.cell });
     ctx.expect((back.after.cell.j === up.after.cell.j) && (back.after.elevation === 15), `revient au-dessus de sa case (élévation ${back.after.elevation})`);
     const down = await ctx.engine("climbDown", { tokenId: hero.id, cells: 1 });
@@ -132,7 +132,7 @@ export default {
     ctx.expect((s.scaleY === 1) && !s.flip, `échelle d'origine rendue après la chute (scaleY ${s.scaleY})`);
     await reset();
 
-    // 6. Règles « maison », sans la capacité : DD 20.
+    // 6. "House" rules, without the feature: DC 20.
     await ctx.removeEffectsFrom(hero, "spider-climb");
     await ctx.call("remove-embedded-item", { documentType: "Actor", id: hero.actorId, itemId: spellId }).catch(() => {});
     await ctx.engine("setting", { key: "climbRules", value: "house" });
@@ -149,7 +149,7 @@ export default {
       if ( r.done ) {
         seen.success = true;
         ctx.expect(now.onCeiling && (now.position.elevation === 15) && now.ceilingStatus, `test DD 20 réussi : au plafond (${now.position.elevation} ft, statut ${now.ceilingStatus})`);
-        // Glissé par le MJ là où il n'y a plus de plafond (derrière le mur, un `displace`) : il tombe.
+        // Slid by the GM where there is no more ceiling (behind the wall, a `displace`): they fall.
         await ctx.call("move-token", { tokenId: hero.id, x: home.x + 200, y: home.y, elevation: 15 });
         let fell = null;
         for ( let i = 0; (i < 30) && !fell; i++ ) { await pause(500); const c = await state(); if ( c.position.elevation === home.elevation ) fell = c; }

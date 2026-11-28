@@ -1,9 +1,9 @@
 /**
- * §349, lot O8f de la repasse des objets : invocations hostiles. Arène de test (Paladin, possédé par un joueur).
- *  1. Le Crâne (Jeu des merveilles) : l'Avatar de la mort apparaît Hostile, et aucun joueur n'en est propriétaire ; à 0 PV il disparaît.
- *  2. Parchemin d'invocation de titan (son activité d'invocation, premier profil : l'Empyréen) : le titan apparaît Hostile, sans joueur
- *     propriétaire.
- * Retire les tokens invoqués.
+ * §349, batch O8f of the item pass: hostile summons. Test arena (Paladin, owned by a player).
+ *  1. The Skull (Deck of Many Things): the Avatar of Death appears Hostile, and no player owns it; at 0 HP it disappears.
+ *  2. Scroll of Titan Summoning (its summoning activity, first profile: the Empyrean): the titan appears Hostile, with no player
+ *     owner.
+ * Removes the summoned tokens.
  */
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -23,13 +23,13 @@ export default {
       const live = (await ctx.call("list-scene-objects", { type: "Token" })).objects.Token.map(t => t.id);
       for ( const id of summoned ) if ( live.includes(id) ) await ctx.call("delete-scene-object", { type: "Token", objectId: id }).catch(() => {});
     });
-    /** Disposition du token et joueurs (non MJ) propriétaires de son acteur. */
+    /** The token's disposition and the (non-GM) players who own its actor. */
     const state = id => ctx.engine("owners", { tokenId: id });
     const present = async id => (await ctx.call("list-scene-objects", { type: "Token" })).objects.Token.some(t => t.id === id);
     const grid = await ctx.gridSize();
     const pos = await ctx.position(paladin);
 
-    // 1. Le Crâne.
+    // 1. The Skull.
     const skull = await ctx.ensureItem(paladin, `${DMG}dmgDmtSkull00000`);
     const a = await ctx.engine("summonAt", { tokenId: paladin.id, itemId: skull, x: pos.x + (2 * grid), y: pos.y });
     const avatar = a.tokens?.[0];

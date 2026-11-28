@@ -1,7 +1,7 @@
 /**
- * Ascendance féerique (SPEC §16.25, `saveAdvantage`) : avantage aux sauvegardes contre une activité qui charme. Monde
- * `ravenloft` : Kaalisti lance Suggestion (effet Charmé) sur Sylaene (elfe), qui sauvegarde avec l'avantage, puis sur Alara
- * (humaine), sans. Ailleurs : non applicable.
+ * Fey Ancestry (SPEC §16.25, `saveAdvantage`): Advantage on saving throws against an activity that charms. World
+ * `ravenloft`: Kaalisti casts Suggestion (Charmed effect) on Sylaene (elf), who saves with Advantage, then on Alara
+ * (human), without. Elsewhere: not applicable.
  */
 export default {
   name: "avantage contre Charmé — Ascendance féerique",

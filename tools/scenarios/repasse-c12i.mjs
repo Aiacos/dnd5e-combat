@@ -1,6 +1,6 @@
 /**
- * §315, sous-lot C12-i de la repasse terme par terme : vision, furtivité. Arène des sorts (Lanceur, Cible).
- *  - Discret, Tireur embusqué : le Lanceur caché attaque la Cible ; raté, il reste caché ; touché, il ne l'est plus.
+ * §315, sub-batch C12-i of the term-by-term pass: vision, stealth. Spell arena (Caster, Target).
+ *  - Unobtrusive, Sniper: the Hidden Caster attacks the Target; on a miss, it stays Hidden; on a hit, it no longer is.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -41,7 +41,7 @@ export default {
       for ( const id of lent.splice(0) ) await ctx.call("remove-embedded-item", { documentType: "Actor", id: caster.actorId, itemId: id }).catch(() => {});
       await ctx.call("move-token", { tokenId: caster.id, x: home.x, y: home.y, elevation: 0 }).catch(() => {});
     });
-    // En pleine lumière, à côté de la Cible, le Lanceur serait repéré aussitôt : la scène dans les ténèbres le temps de l'essai.
+    // In full light, next to the Target, the Caster would be spotted at once: the scene in Darkness for the duration of the test.
     const { sceneId } = await ctx.scene();
     const was = (await ctx.call("get-scene", { sceneId })).environment?.globalLight?.enabled ?? true;
     await ctx.call("update-scene", { sceneId, sceneData: { "environment.globalLight.enabled": false } });
@@ -49,8 +49,9 @@ export default {
     await pause(1500);
     await lend(`${PHB}.feats.Item.phbftSkulker0000`);
     const club = await lend(`${PHB}.equipment.Item.phbwepClub000000`, { "system.equipped": true, "system.proficient": 1 });
-    // §435 : la Cible a une CA basse et l'attaque cachée a l'Avantage — un raté n'arrivait qu'une fois sur vingt ou trente (une passe sur
-    // trois sans aucun raté en 25 essais). Sa CA relevée le temps de l'essai : les deux issues viennent souvent, la règle jugée est la même.
+    // §435: the Target has a low AC and the Hidden attack has Advantage — a miss only came up one time in twenty or thirty
+    // (one pass in three with no miss at all in 25 tries). Its AC is raised for the duration of the test: both outcomes
+    // come up often, the rule judged is the same.
     const tScene = (await ctx.scene()).sceneId;
     const { data: tTok } = await ctx.call("get-scene-object", { type: "Token", objectId: target.id });
     const tUuid = tTok.actorLink ? `Actor.${tTok.actorId}` : `Scene.${tScene}.Token.${target.id}.Actor.${tTok.actorId}`;
@@ -62,7 +63,7 @@ export default {
     await pause(800);
     const seen = { missed: false, hit: false };
     for ( let n = 0; (n < 25) && !(seen.missed && seen.hit); n++ ) {
-      // L'effet « caché » du moteur posé directement (la mise en cachette passe par un test de Furtivité, aléatoire).
+      // The engine's "hidden" effect placed directly (hiding goes through a Stealth check, which is random).
       if ( !(await ctx.engine("stealth", { tokenId: caster.id })).hidden ) {
         await ctx.call("upsert-embedded-effect", { uuid: `Actor.${caster.actorId}`, effectData: { name: "Caché (essai)", img: "icons/svg/cowled.svg",
           transfer: false, disabled: false, flags: { "dnd5e-combat": { hidden: { dc: 30 } } } }, match: { path: "name", value: "Caché (essai)" } });

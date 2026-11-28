@@ -1,6 +1,6 @@
 /**
- * §207 : les options de coup critique (adapter/criticals.mjs) — leurs réglages de monde, tous désactivés par défaut, et la requête
- * qui fait tirer une table de critiques du monde par le MJ actif quand c'est un joueur qui a touché.
+ * §207: the Critical Hit options (adapter/criticals.mjs) — their world settings, all disabled by default, and the request
+ * that has the active GM roll a world critical table when a player scored the hit.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { actsFor, needsCheck } from "../core/requests.mjs";
@@ -13,7 +13,7 @@ import { route } from "./router.mjs";
 
 const key = (setting, part) => `DND5ECOMBAT.Reglage.${setting}.${part}`;
 
-/** Un critique traité autrement (table, voisin) : noté sur la carte de dégâts — il reste un coup critique (jets de mort). */
+/** A Critical Hit handled differently (table, neighbor): noted on the damage card — it stays a Critical Hit (death saves). */
 function onPreRollDamage(config, dialog, message) {
   const kind = config?.[MODULE_ID]?.criticalHit;
   if ( kind ) foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.criticalHit`, kind);
@@ -38,8 +38,8 @@ function onPostDamageConfiguration(rolls, config, dialog, message) {
 }
 
 /**
- * MJ actif : le tirage demandé par un joueur. §472 : d'un joueur, au nom de son propre acteur seulement (le locuteur est refait sur sa
- * fiche, pas repris des données).
+ * Active GM: the roll requested by a player. §472: from a player, on behalf of their own actor only (the speaker is rebuilt from
+ * their sheet, not taken from the data).
  */
 async function handleCriticalTable({ speaker=null }={}, { user=null }={}) {
   if ( !game.user.isGM ) return null;
@@ -69,7 +69,7 @@ export function registerCriticals() {
   game.settings.register(MODULE_ID, CRITICAL_NPC_SETTING, {
     name: key(CRITICAL_NPC_SETTING, "Nom"), hint: key(CRITICAL_NPC_SETTING, "Aide"), scope: "world", config: true, type: Boolean, default: false
   });
-  // Un joueur ne peut pas marquer tiré le résultat d'une table du monde : le MJ actif tire à sa place, au nom de l'attaquant.
+  // A player cannot mark a world table's result as rolled: the active GM rolls in their place, on behalf of the attacker.
   route("dnd5e.preRollDamageV2", onPreRollDamage, { cancellable: true, label: "critical hit: noted on the damage card" });
   route("dnd5e.postDamageRollConfiguration", onPostDamageConfiguration,
     { cancellable: true, label: "critical hit: extra dice apart for the critical targets (#269)" });

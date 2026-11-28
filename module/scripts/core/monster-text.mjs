@@ -1,22 +1,22 @@
 /**
- * K1 (repasse des créatures, SPEC §322) : ce que le texte anglais d'origine d'une capacité de monstre dit de la FIN de ses états, et que
- * le Monster Manual 2024 n'écrit dans aucune donnée — les Tentacules du Charognard rampant, le Souffle euphorisant, les Spores du Vrock
- * « rejouent la sauvegarde à la fin de chacun de leurs tours » ; le Regard du Basilic et le Souffle de la Gorgone ont un premier échec
- * (Entravé) et un second (Pétrifié) ; le Souffle soporifique et le Regard du Chacal-garou « prennent fin si la cible subit des dégâts ».
- * Les règles de dnd5e ne le jouent pas : sans ce texte, l'état dure la minute entière (54 écarts hauts de la repasse).
+ * K1 (creature re-save, SPEC §322): what the original English text of a monster ability says about the END of its conditions, and
+ * that the 2024 Monster Manual writes in no data — the Carrion Crawler's Tentacles, the "Euphoria Breath", the Vrock's Spores
+ * "repeat the save at the end of each of their turns"; the Basilisk's Gaze and the Gorgon's Breath have a first failure
+ * (Restrained) and a second (Petrified); the "Sleep Breath" and the Jackalwere's Gaze "end if the target takes damage".
+ * dnd5e's rules do not play it: without this text, the condition lasts the whole minute (54 high gaps in the re-save).
  *
- * Lu comme M4 (`core/durations.mjs`) et M1 (`core/multiattack.mjs`) : le texte anglais, gardé par Babele sous un monde traduit. Rend des
- * déclarations du schéma du contenu (`triggers`, `via: "effect"`), que le contenu livré par identifiant remplace s'il en déclare.
- * Une capacité à plusieurs issues (Rayons oculaires : charme, paralysie, sommeil…) est lue par segment, et chaque règle ne vaut que pour
- * les effets dont l'état est nommé dans son segment (`fromEffect`).
+ * Read like M4 (`core/durations.mjs`) and M1 (`core/multiattack.mjs`): the English text, kept by Babele under a translated world.
+ * Returns declarations of the content schema (`triggers`, `via: "effect"`), which the content shipped by identifier replaces
+ * if it declares any. An ability with several outcomes (Eye Rays: charm, paralysis, sleep…) is read by segment, and each rule
+ * applies only to the effects whose condition is named in its segment (`fromEffect`).
  *
- * Pur : des chaînes et des objets simples.
+ * Pure: plain strings and objects.
  */
 
 const CONDITIONS = ["blinded", "charmed", "deafened", "frightened", "grappled", "incapacitated", "invisible", "paralyzed", "petrified",
   "poisoned", "prone", "restrained", "stunned", "unconscious"];
 
-/** Texte lisible : enrichers résolus en « … » sauf les références d'état (« &Reference[Paralyzed] » → « Paralyzed »). */
+/** Readable text: enrichers resolved into "…" except condition references ("&Reference[Paralyzed]" → "Paralyzed"). */
 export function plainText(html) {
   return String(html ?? "")
     .replace(/&(?:amp;)?Reference\[([A-Za-z]+)[^\]]*\](?:\{([^}]*)\})?/g, (_, id, label) => label || id)
@@ -27,49 +27,49 @@ export function plainText(html) {
 }
 
 /**
- * Les segments d'une capacité à plusieurs issues : « 1: Charm Ray. … 2: Paralyzing Ray. … » (Rayons oculaires), « First Roar. … Second
- * Roar. … » (Rugissement du Sphinx de la vaillance), sinon le texte entier. « First Failure: » (deux-points) n'en coupe pas.
+ * The segments of an ability with several outcomes: "1: Charm Ray. … 2: Paralyzing Ray. …" (Eye Rays), "First Roar. … Second
+ * Roar. …" (Sphinx of Valor's Roar), otherwise the whole text. "First Failure:" (colon) does not split it.
  */
 function segments(text) {
   const parts = text.split(/(?=\b\d{1,2}\s*:\s*[A-Z][A-Za-z' ]{2,40}\.)|(?=\b(?:First|Second|Third|Fourth|Fifth) [A-Z][a-z]+\.\s)/);
   return parts.length > 1 ? parts : [text];
 }
 
-/** Les états nommés dans un passage (« has the Paralyzed condition »). */
+/** The conditions named in a passage ("has the Paralyzed condition"). */
 export function conditionsIn(text) {
   return CONDITIONS.filter(c => new RegExp(`\\b${c}\\b`, "i").test(text));
 }
 
 /**
- * Les règles de fin lues dans un segment.
+ * The end rules read in a segment.
  * @returns {{resave: {on: string, tally?: object}|null, endsOnDamage: boolean, resaveOnDamage: boolean}}
  */
 export function readEndings(text) {
   let resave = null;
-  // Premier échec puis second : « First Failure: … repeats the save at the end of its next turn … Second Failure: … has the Petrified
-  // condition », ou « … until the end of its next turn, at which point / when it repeats the save. Second Failure: … ».
+  // First failure then second: "First Failure: … repeats the save at the end of its next turn … Second Failure: … has the Petrified
+  // condition", or "… until the end of its next turn, at which point / when it repeats the save. Second Failure: …".
   const second = text.match(/\bSecond Failure\s*:\s*([^]*)$/i);
   if ( second && /\b(?:repeats? the save at the end of its next turn|end of its next turn,? (?:at which point|when) it repeats the save)\b/i.test(text.slice(0, second.index)) ) {
     const status = conditionsIn(second[1].split(/\binstead of\b/i)[0])[0] ?? null;
     resave = { on: "endOfTurn", tally: { successes: 1, failures: 1, ...(status ? { status } : {}) } };
   } else {
-    // « repeats the save at the end of each of its turns », ou « At the end of each of its turns, the target repeats the … save »
-    // (Griffe bannissante de l'Arcanaloth, Création de tourbillon du Djinn, Frayeur du Quasit).
+    // "repeats the save at the end of each of its turns", or "At the end of each of its turns, the target repeats the … save"
+    // (Arcanaloth's Banishing Claw, Djinni's Whirlwind Creation, Quasit's Fright).
     const m = text.match(/\brepeats? the (?:[A-Za-z…]+ )?sav(?:e|ing throw) at the (end|start) of each of its turns\b/i)
       ?? text.match(/\bAt the (end|start) of each of its turns, the target repeats the (?:[A-Za-z…]+ )?sav(?:e|ing throw)\b/i);
     if ( m ) resave = { on: m[1].toLowerCase() === "end" ? "endOfTurn" : "startOfTurn" };
   }
-  // « … for 1 minute or until it takes damage », « This effect ends for the target if it takes damage », « The condition ends if the
-  // target takes damage », « succeeds automatically … if it takes damage » (Bourdonnement du Chasme). Pas « whenever it takes damage »
-  // (sauvegarde rejouée), ni « an X condition, which ends early if … » (Dard du Pseudodragon : seul l'Inconscient tombe, pas l'effet),
-  // ni les dégâts subis ailleurs (« takes damage while … »).
+  // "… for 1 minute or until it takes damage", "This effect ends for the target if it takes damage", "The condition ends if the
+  // target takes damage", "succeeds automatically … if it takes damage" (Chasme's Drone). Not "whenever it takes damage"
+  // (re-played save), nor "an X condition, which ends early if …" (Pseudodragon's Sting: only Unconscious ends, not the effect),
+  // nor damage taken elsewhere ("takes damage while …").
   const endsOnDamage = /\b(?:until (?:it|the target) takes damage|(?:the (?:effect|condition) )?ends?(?: for the target)? if (?:it|the target) takes damage|(?:succeeds|ends) automatically[^.]*\bif it takes damage)\b/i.test(text)
     && !/\bwhich ends early if the target takes damage\b/i.test(text);
   const resaveOnDamage = /\brepeats? the (?:[A-Za-z]+ )?save (?:whenever|each time) it takes damage\b/i.test(text);
   return { resave, endsOnDamage, resaveOnDamage };
 }
 
-/** L'activité d'un segment numéroté (« 9: Disintegration Ray. » → l'activité nommée « 9: … »), ou null. */
+/** The activity of a numbered segment ("9: Disintegration Ray." → the activity named "9: …"), or null. */
 function activityOfSegment(part, activities) {
   const n = part.match(/^\s*(\d{1,2})\s*:/)?.[1];
   if ( !n ) return null;
@@ -77,18 +77,20 @@ function activityOfSegment(part, activities) {
 }
 
 const DEATH = /\b(?:dies|die|kills? (?:it|the target)|is killed|disintegrates?|turns? to dust|dissolves? into ash)\b/i;
-// Ce qui, AVANT les 0 PV, montre que la phrase parle d'autre chose que de la cible tuée (le porteur, un objet, une stabilisation).
+// What, BEFORE the 0 HP, shows that the sentence is about something other than the killed target (the bearer, an object,
+// a stabilization).
 const NOT_THE_TARGET = /\b(?:only if|instead|becomes Stable|tome|gem|rope|bag|canister|limb|body|possession|curse)\b/i;
 
 /**
- * K2 (SPEC §323) : la mort que le texte promet, lue dans une capacité de monstre.
- *  - « If this damage reduces the target to 0 Hit Points, it dies / the X kills it / it disintegrates into dust », « A Humanoid reduced
- *    to 0 Hit Points by this damage dies », « A creature dies and turns to dust if reduced to 0 Hit Points by this attack » →
- *    `killsAtZero` (avec `types: ["humanoid"]`, `sizeAtMost` quand le texte les dit, `activities` pour un segment numéroté) ;
- *  - « If the target has N Hit Points or fewer, it dies / it drops to 0 Hit Points. Otherwise … damage » → `hpTiers` : à N PV ou moins,
- *    pas de dégâts, mort (`statuses: ["dead"]`) ou PV à 0 (`zero: true` — la règle des 0 PV du moteur décide ensuite) ; au-dessus, les
- *    dégâts sans l'effet « Mort » que la donnée pose d'office (Toucher de la mort d'Ankhtepot).
- * Pas les phrases qui parlent du porteur (« dies only if… », le tome, la gemme), ni « becomes Stable », ni « rises as », ni « instead ».
+ * K2 (SPEC §323): the death that the text promises, read in a monster ability.
+ *  - "If this damage reduces the target to 0 Hit Points, it dies / the X kills it / it disintegrates into dust", "A Humanoid
+ *    reduced to 0 Hit Points by this damage dies", "A creature dies and turns to dust if reduced to 0 Hit Points by this attack"
+ *    → `killsAtZero` (with `types: ["humanoid"]`, `sizeAtMost` when the text states them, `activities` for a numbered segment);
+ *  - "If the target has N Hit Points or fewer, it dies / it drops to 0 Hit Points. Otherwise … damage" → `hpTiers`: at N HP
+ *    or fewer, no damage, death (`statuses: ["dead"]`) or HP at 0 (`zero: true` — the engine's 0 HP rule then decides); above
+ *    that, the damage without the "Death" effect that the data applies automatically (Ankhtepot's Death Touch).
+ * Not the sentences that speak of the bearer ("dies only if…", the tome, the gem), nor "becomes Stable", nor "rises as",
+ * nor "instead".
  * @param {string} html
  * @param {{activities?: Array<{id: string, name: string}>, effects?: Array<{id: string, statuses: string[]}>}} [data]
  * @returns {{killsAtZero?: object|true, hpTiers?: object[]}}
@@ -135,12 +137,12 @@ export function monsterDeaths(html, { activities=[], effects=[] }={}) {
 }
 
 /**
- * K3 (SPEC §324) : un seul des effets de la capacité, quand le texte le dit — dnd5e pose sinon tous ceux de l'activité.
- *  - « a condition determined by rolling 1d4: on a 1, Charmed; on a 2, Frightened… » → `{ effects: "one", roll: true, order }` (les
- *    effets dans l'ordre où le texte nomme leurs états) ;
- *  - « the Charmed or Frightened condition (the X's choice) » → `{ effects: "one" }` ;
- *  - « X chooses a damage type » (un effet par type dans la donnée : Malédiction de l'Œil omniscient) → `{ effects: "one" }`.
- * Pas une capacité à plusieurs segments (Rayons oculaires : le dé choisit l'activité, pas l'effet).
+ * K3 (SPEC §324): only one of the ability's effects, when the text says so — otherwise dnd5e applies all those of the activity.
+ *  - "a condition determined by rolling 1d4: on a 1, Charmed; on a 2, Frightened…" → `{ effects: "one", roll: true, order }` (the
+ *    effects in the order in which the text names their conditions);
+ *  - "the Charmed or Frightened condition (the X's choice)" → `{ effects: "one" }`;
+ *  - "X chooses a damage type" (one effect per type in the data: Curse of the Beholder) → `{ effects: "one" }`.
+ * Not an ability with several segments (Eye Rays: the die chooses the activity, not the effect).
  * @param {string} html
  * @param {Array<{id: string, statuses: string[]}>} effects
  * @returns {{effects: "one", roll?: true, order?: string[]}|null}
@@ -159,11 +161,11 @@ export function monsterChoice(html, effects=[]) {
     if ( order.length >= 2 ) return { effects: "one", roll: true, order };
   }
   if ( /\bthe [A-Za-z]+ or [A-Za-z]+ condition \([^)]*\bchoice\)/i.test(text) ) return { effects: "one" };
-  // « suffers one of the following effects of the X's choice » (Cimeterre de l'Amiral pirate), « shape-shifts to resemble a rat (…),
-  // a raven (…), or a spider (…) » (Changement d'aspect du Diablotin, du Quasit : une forme à la fois).
+  // "suffers one of the following effects of the X's choice" (Pirate Admiral's Scimitar), "shape-shifts to resemble a rat (…),
+  // a raven (…), or a spider (…)" (Imp's, Quasit's Shape-Shift: one form at a time).
   if ( /\bone of the following effects(?: of the [^.:]*'s choice| \([^)]*\bchoice\))/i.test(text) ) return { effects: "one" };
-  // « the target has the X's choice of (A) the Charmed condition … or (B) the Prone condition » (Distorsion psychique du Githzerai,
-  // Galvaniser les alliés d'Ez d'Avenir).
+  // "the target has the X's choice of (A) the Charmed condition … or (B) the Prone condition" (Githzerai's Psychic Warp,
+  // Ez d'Avenir's Galvanize Allies).
   if ( /\bchoice of \(A\)[^]*\bor \(B\)/i.test(text) ) return { effects: "one" };
   if ( /\bshape-shifts? to resemble an? [A-Za-z -]+ \([^)]*\), an? [A-Za-z -]+ \([^)]*\),? or an? [A-Za-z -]+/i.test(text) ) return { effects: "one" };
   if ( /\bchooses a damage type\b/i.test(text) ) return { effects: "one" };
@@ -171,15 +173,15 @@ export function monsterChoice(html, effects=[]) {
 }
 
 /**
- * K6 (SPEC §327) : ce que le texte d'une capacité de monstre dit des Réactions.
- *  - une parade : une activité de Réaction dont la réponse « adds N to its AC against that attack » (Contre-attaque du Commandant,
- *    Riposte du Capitaine pirate, Posture défensive, Tourbillon de sable) → la déclaration de la Parade du MM (`isHit`, `use`, `penalty`
- *    de N, ou du bonus de maîtrise quand le texte renvoie à une valeur calculée) ; « melee attack » dans le déclencheur : contre le corps à
- *    corps seulement ;
- *  - « can't take Reactions » → `noReactions` (le porteur d'un effet de l'item) ; « either an action or a Bonus Action », « an action or
- *    a Bonus Action, not both » → `actionOrBonus`.
+ * K6 (SPEC §327): what the text of a monster ability says about Reactions.
+ *  - a parry: a Reaction activity whose response "adds N to its AC against that attack" (Commander's Counterattack,
+ *    Pirate Captain's Riposte, Defensive Stance, Sand Whirlwind) → the MM's Parry declaration (`isHit`, `use`, `penalty`
+ *    of N, or of the Proficiency Bonus when the text refers to a computed value); "melee attack" in the trigger: against melee
+ *    only;
+ *  - "can't take Reactions" → `noReactions` (the bearer of an effect of the item); "either an action or a Bonus Action",
+ *    "an action or a Bonus Action, not both" → `actionOrBonus`.
  * @param {string} html
- * @param {{reaction?: boolean}} [data]  l'item a-t-il une activité de Réaction
+ * @param {{reaction?: boolean}} [data]  does the item have a Reaction activity
  * @returns {{triggers?: object[], noReactions?: true, actionOrBonus?: true}}
  */
 export function monsterReactions(html, { reaction=false, acEffect=null }={}) {
@@ -187,20 +189,20 @@ export function monsterReactions(html, { reaction=false, acEffect=null }={}) {
   const out = {};
   if ( !text ) return out;
   if ( reaction ) {
-    // K12 (§333) : aussi « against melee attack rolls (including the triggering attack) until the start of its next turn » (Posture
-    // défensive) — l'effet « +N CA » de l'item dure alors jusqu'au début de son tour.
+    // K12 (§333): also "against melee attack rolls (including the triggering attack) until the start of its next turn" (Defensive
+    // Stance) — the item's "+N AC" effect then lasts until the start of its turn.
     const ac = text.match(/\badds? (\d+|…) to its AC against (?:that|the|the triggering) attack/i)
       ?? text.match(/\badds? (\d+|…) to its AC against (?:melee )?attack rolls \(including the triggering attack\)/i);
     if ( ac ) {
       const melee = /\bTrigger\s*:[^]*?\bmelee attack\b/i.test(text.split(/\bResponse\s*:/i)[0] ?? "");
-      // La donnée porte l'effet « +N CA » (Contre-attaque, Riposte, Tourbillon de sable) : comme Bouclier — proposée si N peut faire
-      // rater le coup, l'effet posé, le coup rejugé. Sans effet (Parade) : le bonus retiré au jet.
+      // The data carries the "+N AC" effect (Counterattack, Riposte, Sand Whirlwind): like Shield — offered if N can make
+      // the blow miss, the effect applied, the blow re-judged. Without an effect (Parry): the bonus removed from the roll.
       if ( Number.isFinite(acEffect) ) out.triggers = [{ on: "isHit", if: { "hit.stoppableBy": acEffect, ...(melee ? { "activity.isMelee": true } : {}) }, do: [{ type: "use" }] }];
       else out.triggers = [{ on: "isHit", ...(melee ? { if: { "activity.isMelee": true } } : {}),
         do: [{ type: "use" }, { type: "penalty", formula: /^\d+$/.test(ac[1]) ? ac[1] : "@prof" }] }];
     }
   }
-  // Une capacité à rayons numérotés : la restriction d'un rayon vaudrait pour tous ses effets — laissée.
+  // An ability with numbered rays: a ray's restriction would apply to all its effects — left alone.
   if ( segments(text).length > 1 ) return out;
   if ( /\bcan(?:'|no)t take (?:any )?Reactions\b/i.test(text) ) out.noReactions = true;
   if ( /\b(?:either )?an action or a Bonus Action(?:,? (?:but )?not both)?\b[^.]*\b(?:on|during) its turn\b|\bcan take (?:only )?(?:either )?an action or a Bonus Action\b/i.test(text) ) out.actionOrBonus = true;
@@ -208,14 +210,15 @@ export function monsterReactions(html, { reaction=false, acEffect=null }={}) {
 }
 
 /**
- * K7 (SPEC §328) : ce que la capacité inflige à son porteur tour après tour, et les soins qu'elle bloque.
- *  - « the target takes [[/damage … activity=<id>]] damage at the start (end) of each of its turns », « loses […] Hit Points at the start of
- *    each of its turns » → `{ on: startOfTurn|endOfTurn, via: "effect", do: [{ type: "damage", to: "bearer", activity }] }`, pour les
- *    effets dont la phrase nomme l'état (« While Poisoned », « Until the grapple ends » → Agrippé), sinon pour tous ; pas une créature
- *    avalée ou engloutie (la brique Avaler s'en charge, §18.17), ni des dégâts que le porteur inflige autour de lui (« deals … to any
- *    creature ») ;
- *  - « can't regain Hit Points » (le texte parle de la cible) → `blocksHealing`.
- * Lit le HTML brut : l'enricher `[[/damage … activity=…]]` nomme l'activité de dégâts de la capacité.
+ * K7 (SPEC §328): what the ability inflicts on its bearer turn after turn, and the healing it blocks.
+ *  - "the target takes [[/damage … activity=<id>]] damage at the start (end) of each of its turns", "loses […] Hit Points at
+ *    the start of each of its turns" →
+ *    `{ on: startOfTurn|endOfTurn, via: "effect", do: [{ type: "damage", to: "bearer", activity }] }`, for
+ *    the effects whose sentence names the condition ("While Poisoned", "Until the grapple ends" → Grappled), otherwise for
+ *    all; not a creature swallowed or engulfed (the Swallow brick handles it, §18.17), nor damage that the bearer inflicts
+ *    around it ("deals … to any creature");
+ *  - "can't regain Hit Points" (the text speaks of the target) → `blocksHealing`.
+ * Reads the raw HTML: the enricher `[[/damage … activity=…]]` names the ability's damage activity.
  * @param {string} html
  * @param {Array<{id: string, statuses: string[]}>} [effects]
  * @returns {{triggers?: object[], blocksHealing?: true}}
@@ -225,10 +228,11 @@ export function monsterRecurring(html, effects=[], activities=[]) {
     .replace(/\s+/g, " ");
   const out = {};
   const triggers = [];
-  // §334 : un enricher sans activité (« [[/damage average]] », ou « 3 ([[/r 1d6]]) Piercing damage ») — l'unique activité de dégâts.
+  // §334: an enricher without an activity ("[[/damage average]]", or "3 ([[/r 1d6]]) Piercing damage") — the sole damage activity.
   const damageActivities = activities.filter(a => a.type === "damage");
   for ( const sentence of raw.split(/(?<=\.)\s+(?=[A-Z])/) ) {
-    // §334 : « at the start of each of the water elemental's turns » — le tour de la créature qui a posé l'effet (`originTurnStart`).
+    // §334: "at the start of each of the water elemental's turns" — the turn of the creature that applied the effect
+    // (`originTurnStart`).
     const turn = sentence.match(/\bat the (start|end) of each of (its|the [^.]*?['’]s|his|her) turns\b/i);
     const moment = turn?.[1];
     const ofOrigin = !!turn && /^the /i.test(turn[2]);
@@ -245,14 +249,15 @@ export function monsterRecurring(html, effects=[], activities=[]) {
     if ( ids.length && (ids.length < effects.length) ) for ( const id of ids ) triggers.push({ on, via: "effect", fromEffect: id, do: [step] });
     else triggers.push({ on, via: "effect", do: [step] });
   }
-  // Plusieurs dégâts récurrents pour tous les effets à la fois (deux sérums de la Seringue) : lequel va avec quel effet n'est pas dit.
+  // Several recurring damages for all the effects at once (two serums of the Syringe): which goes with which effect is not stated.
   const ambiguous = triggers.filter(t => !t.fromEffect).length > 1;
   const text = plainText(html);
-  // Rayons numérotés : la règle d'un rayon vaudrait pour tous ses effets — laissée.
+  // Numbered rays: a ray's rule would apply to all its effects — left alone.
   const several = segments(text).length > 1;
   if ( triggers.length && !ambiguous && !several ) out.triggers = triggers;
   if ( !several && /\bthe target can(?:'|’|no)t regain Hit Points\b|\bUntil (?:this poison|the curse) ends, the target can(?:'|’|no)t regain Hit Points\b/i.test(text) ) out.blocksHealing = true;
-  // « Whenever the golem is subjected to Fire damage, it (takes no damage and instead) regains … Hit Points equal to the Fire damage dealt ».
+  // "Whenever the golem is subjected to Fire damage, it (takes no damage and instead) regains … Hit Points equal to the Fire
+  // damage dealt".
   const absorbs = [...text.matchAll(/\bWhenever (?:the )?[^.]*? is subjected to ([A-Za-z]+) damage, (?:it takes no damage and instead )?(?:it )?regains a number of Hit Points equal to the \1 damage dealt/gi)]
     .map(m => m[1].toLowerCase());
   if ( absorbs.length ) out.absorbsDamage = [...new Set(absorbs)];
@@ -260,37 +265,39 @@ export function monsterRecurring(html, effects=[], activities=[]) {
 }
 
 /**
- * K8 (SPEC §329) : poussées et tractions d'une capacité de monstre — « the target is pushed up to 10 feet straight away from the X »,
- * « pulled up to 15 feet straight toward the X » → `{ on: failedSave|hit, do: [{ type: "move", mode, distance, units: "ft" }] }` ; « If the
- * target is a Huge or smaller creature » / « Large or smaller » → `if: { "target.sizeAtMost" }`. Sur une sauvegarde : après « Failure » ;
- * sinon sur une attaque : au toucher. Pas une distance renvoyée à une valeur calculée (« pushed up to … »), ni « into the X's space ».
- * §466 : aussi « the target is pushed 5 feet straight away » (sans « up to ») ; après « Success: » → sur une sauvegarde RÉUSSIE (`savedSave` :
- * Saut mortel de la Bulette) ; « the X can pull the target up to 10 feet » → l'auteur choisit la distance (`upTo` : Tentacule du Calmar
- * géant) ; « pulled up to 20 feet straight toward the Sphere's center » sur une zone → vers le centre de la zone (`toward: "area"` :
- * Implosion). Toujours pas : « pushed or pulled » (au choix), « into the X's space ».
+ * K8 (SPEC §329): pushes and pulls of a monster ability — "the target is pushed up to 10 feet straight away from the X",
+ * "pulled up to 15 feet straight toward the X" →
+ * `{ on: failedSave|hit, do: [{ type: "move", mode, distance, units: "ft" }] }`; "If the target is a Huge or smaller
+ * creature" / "Large or smaller" → `if: { "target.sizeAtMost" }`. On a save: after "Failure";
+ * otherwise on an attack: on a hit. Not a distance referring to a computed value ("pushed up to …"), nor "into the X's
+ * space".
+ * §466: also "the target is pushed 5 feet straight away" (without "up to"); after "Success:" → on a SUCCESSFUL save (`savedSave`:
+ * Bulette's Deadly Leap); "the X can pull the target up to 10 feet" → the author chooses the distance (`upTo`: Giant Squid's
+ * Tentacle); "pulled up to 20 feet straight toward the Sphere's center" on an area → toward the area's center (`toward: "area"`:
+ * Implosion). Still not: "pushed or pulled" (at choice), "into the X's space".
  * @param {string} html
- * @param {{save?: boolean, attack?: boolean, area?: boolean}} [kinds]  les activités de l'item (`area` : l'une a un gabarit)
- * @returns {object[]} déclarations `triggers`
+ * @param {{save?: boolean, attack?: boolean, area?: boolean}} [kinds]  the item's activities (`area`: one has a template)
+ * @returns {object[]} `triggers` declarations
  */
 export function monsterPushes(html, { save=false, attack=false, area=false }={}) {
   const text = plainText(html);
   if ( !text || (segments(text).length > 1) ) return [];
   const out = [];
   for ( const sentence of text.split(/(?<=\.)\s+/) ) {
-    // §334 : aussi « the hook horror pulls (pushes, moves) the target up to 15 feet straight toward (away from) itself ».
-    // §466 : « the squid can pull the target up to 10 feet straight toward itself » — `can`, « up to » : l'auteur choisit.
+    // §334: also "the hook horror pulls (pushes, moves) the target up to 15 feet straight toward (away from) itself".
+    // §466: "the squid can pull the target up to 10 feet straight toward itself" — `can`, "up to": the author chooses.
     const active = sentence.match(/\b(can )?(pulls?|push(?:es)?|moves?) the target (up to )?(\d+) feet(?: straight)? (toward|away from) (?:itself|it|him|her)\b/i);
     const passive = sentence.match(/\b(pushed|pulled) (?:up to )?(\d+) feet(?: straight)? (?:away from|toward)\b/i);
     const m = passive ?? (active ? [active[0], (/^push/i.test(active[2]) || /^away/i.test(active[5])) ? "pushed" : "pulled", active[4]] : null);
     const upTo = !passive && !!active?.[1] && !!active?.[3];
-    // Ni « pushed or pulled » / « toward or away » (au choix). §466 : vers le centre d'une zone (Implosion) — seulement une traction, sur une
-    // capacité à gabarit.
+    // Nor "pushed or pulled" / "toward or away" (at choice). §466: toward the center of an area (Implosion) — only a pull, on an
+    // ability with a template.
     if ( !m || /\bor (?:pushed|pulled)\b|\btoward or away\b/i.test(sentence) ) continue;
     const toArea = /\bcenter\b/i.test(sentence);
     if ( toArea && !(area && /^pulled$/i.test(m[1]) && /\btoward the [^.]*?\bcenter\b/i.test(sentence)) ) continue;
     const before = text.slice(0, text.indexOf(sentence));
     const failure = /\bFailure\s*:/i.test(sentence) || (/\bFailure\s*:[^]*$/i.test(before) && !/\bSuccess\s*:[^]*$/i.test(before.split(/\bFailure\s*:/i).at(-1)));
-    // §466 : « Success: Half damage, and the target is pushed 5 feet » — la poussée de la réussite (pas « Failure or Success »).
+    // §466: "Success: Half damage, and the target is pushed 5 feet" — the push of the success (not "Failure or Success").
     const success = /(?:^|[^r]\s)Success\s*:/i.test(sentence) && !/\bFailure or Success\s*:/i.test(sentence);
     const on = (save && success) ? "savedSave" : (save && failure) ? "failedSave" : (attack ? "hit" : null);
     if ( !on ) continue;
@@ -305,23 +312,24 @@ export function monsterPushes(html, { save=false, attack=false, area=false }={})
 }
 
 /**
- * K9 (SPEC §330) : la porte de type d'une capacité de monstre — « (Constructs and Undead succeed automatically) », « the target succeeds
- * automatically if it is a Construct or an Undead » → `targets.unaffectedIf` (un des types). Pas « a creature that isn't a Construct », qui
- * sert souvent à une autre clause (PV temporaires de la Morsure du Souverain lézard). Pas une capacité à rayons numérotés.
+ * K9 (SPEC §330): the type gate of a monster ability — "(Constructs and Undead succeed automatically)", "the target succeeds
+ * automatically if it is a Construct or an Undead" → `targets.unaffectedIf` (one of the types). Not "a creature that isn't a
+ * Construct", which often serves another clause (Temporary Hit Points of the Lizard King's Bite). Not an ability with
+ * numbered rays.
  * @param {string} html
  * @returns {{unaffectedIf: object}|null}
  */
 export function monsterTypeGate(html) {
   const text = plainText(html);
   if ( !text || (segments(text).length > 1) ) return null;
-  // K9 (§334) : aussi « Constructs and Undead automatically succeed on this save », « each creature … that isn't an Undead », « and
-  // isn't a Construct or an Undead » (Cri funeste, Perturbation de la vie, Visage horrifiant, Marionnettiste du sang).
+  // K9 (§334): also "Constructs and Undead automatically succeed on this save", "each creature … that isn't an Undead", "and
+  // isn't a Construct or an Undead" (Death Cry, Life Disruption, Horrifying Visage, Blood Puppeteer).
   const m = text.match(/\(([A-Za-z ,]+?) succeed automatically\)/i) ?? text.match(/\bsucceeds automatically if it is an? ([A-Za-z ,]+?(?: or an? [A-Za-z]+)?)\)?(?:[.;,]|$)/i)
     ?? text.match(/\b((?:Constructs|Undead|Oozes|Plants|Elementals)(?:,? (?:and|or) (?:Constructs|Undead|Oozes|Plants|Elementals))*) automatically succeed on this save/i)
     ?? text.match(/\b(?:that|and) isn['’]t an? ((?:Construct|Undead|Ooze|Plant|Elemental)(?: or an? (?:Construct|Undead|Ooze|Plant|Elemental))*)\b/i);
   if ( !m ) return null;
-  // Une porte de sauvegarde se dit avant la première issue (« Failure: ») : ailleurs, la clause vaut pour autre chose (PV temporaires
-  // de la Morsure du Souverain lézard : « a creature that isn't a Construct or an Undead »).
+  // A save gate is stated before the first outcome ("Failure:"): elsewhere, the clause applies to something else (Temporary
+  // Hit Points of the Lizard King's Bite: "a creature that isn't a Construct or an Undead").
   const failure = text.search(/\bFailure\s*:/i);
   if ( !/\bSaving Throw\b/i.test(text) || ((failure >= 0) && (m.index > failure)) ) return null;
   const TYPES = ["aberration", "beast", "celestial", "construct", "dragon", "elemental", "fey", "fiend", "giant", "humanoid", "monstrosity", "ooze", "plant", "undead"];
@@ -331,15 +339,16 @@ export function monsterTypeGate(html) {
 }
 
 /**
- * K10 (SPEC §331) : l'Avantage conditionnel d'une capacité de monstre, déclaré comme la Tactique de meute (`preAttackRoll`, `advantage`) :
- *  - « Advantage on attack rolls against any creature that doesn't have all its Hit Points » (Frénésie sanguinaire) → `target.wounded` ;
- *  - « While Bloodied, the X has Advantage on attack rolls » (Fureur du péril) → `source.hasStatus: bloodied` ;
- *  - « Advantage on … against a creature Grappled by it / it is grappling » → `target.grappledBySource` ;
- *  - « Advantage on attack rolls against a creature that has the Frightened condition » → `target.hasStatus`.
- * « this attack » (la Morsure de l'Ankheg contre celle qu'il agrippe) : seulement pour les attaques de l'item (`activity.identifier`).
+ * K10 (SPEC §331): the conditional Advantage of a monster ability, declared like Pack Tactics (`preAttackRoll`, `advantage`):
+ *  - "Advantage on attack rolls against any creature that doesn't have all its Hit Points" (Bloodthirsty Frenzy) →
+ *    `target.wounded`;
+ *  - "While Bloodied, the X has Advantage on attack rolls" (Fury of Peril) → `source.hasStatus: bloodied`;
+ *  - "Advantage on … against a creature Grappled by it / it is grappling" → `target.grappledBySource`;
+ *  - "Advantage on attack rolls against a creature that has the Frightened condition" → `target.hasStatus`.
+ * "this attack" (the Ankheg's Bite against the one it grapples): only for the item's attacks (`activity.identifier`).
  * @param {string} html
- * @param {string|null} [identifier]  identifiant de l'item, pour « this attack »
- * @returns {object[]} déclarations `triggers`
+ * @param {string|null} [identifier]  the item's identifier, for "this attack"
+ * @returns {object[]} `triggers` declarations
  */
 export function monsterAdvantage(html, identifier=null) {
   const text = plainText(html);
@@ -363,9 +372,10 @@ export function monsterAdvantage(html, identifier=null) {
 }
 
 /**
- * K11 (SPEC §332) : la donnée donne la moitié des dégâts sur une réussite (`onSave: half`) là où le texte ne donne rien — une clause
- * « Success: » sans dégâts (« The target is immune… », « can't take this action again… »), ou aucune clause « Success: » (Arc tueur du
- * Solar) → `saveDamage: { <activité>: "none" }` ; à l'inverse « Success: Half damage » sur une donnée `none` → `"half"`. « Success: [[/damage]] damage » (la moitié calculée par l'enricher) n'en est pas.
+ * K11 (SPEC §332): the data gives half damage on a success (`onSave: half`) where the text gives nothing — a clause
+ * "Success:" without damage ("The target is immune…", "can't take this action again…"), or no "Success:" clause (Solar's
+ * Slaying Bow) → `saveDamage: { <activité>: "none" }`; conversely "Success: Half damage" on `none` data → `"half"`.
+ * "Success: [[/damage]] damage" (the half computed by the enricher) is not one.
  * @param {string} html
  * @param {Array<{id: string, type: string, onSave?: string}>} activities
  * @returns {object|null}  `saveDamage`
@@ -376,7 +386,7 @@ export function monsterSaveDamage(html, activities=[]) {
   const raw = String(html ?? "").replace(/<[^>]+>/g, " ");
   if ( !/\bFailure\s*:/i.test(raw) || (segments(plainText(html)).length > 1) ) return null;
   const success = raw.match(/\bSuccess\s*:\s*([^]*?)(?=\b(?:Failure|First Failure|Second Failure|Failure or Success)\s*:|$)/i)?.[1] ?? null;
-  // « Success: Half damage » quand la donnée ne donne rien (Enveloppement du Cube gélatineux).
+  // "Success: Half damage" when the data gives nothing (Gelatinous Cube's Engulf).
   if ( (success !== null) && /^\s*half (?:the |as much )?damage/i.test(success) ) {
     const nones = saves.filter(a => a.onSave === "none");
     return nones.length ? Object.fromEntries(nones.map(a => [a.id, "half"])) : null;
@@ -387,10 +397,10 @@ export function monsterSaveDamage(html, activities=[]) {
 }
 
 /**
- * Les déclarations de fin d'une capacité de monstre, d'après son texte anglais.
- * @param {string} html                                         description anglaise d'origine
- * @param {Array<{id: string, statuses: string[]}>} effects     effets de l'item (pour rattacher une règle à son issue)
- * @returns {object[]}  déclarations `triggers` (schéma du contenu), vide s'il n'y a rien à lire
+ * The end declarations of a monster ability, from its English text.
+ * @param {string} html                                         original English description
+ * @param {Array<{id: string, statuses: string[]}>} effects     the item's effects (to attach a rule to its outcome)
+ * @returns {object[]}  `triggers` declarations (content schema), empty if there is nothing to read
  */
 export function monsterEndings(html, effects=[]) {
   const text = plainText(html);
@@ -400,7 +410,8 @@ export function monsterEndings(html, effects=[]) {
   for ( const part of parts ) {
     const { resave, endsOnDamage, resaveOnDamage } = readEndings(part);
     if ( !resave && !endsOnDamage && !resaveOnDamage ) continue;
-    // Une seule issue (ou des effets sans état) : la règle vaut pour tout effet de l'item ; sinon pour les effets dont l'état est nommé ici.
+    // A single outcome (or effects without a condition): the rule applies to any effect of the item; otherwise to the effects
+    // whose condition is named here.
     let from = [null];
     if ( parts.length > 1 ) {
       const named = conditionsIn(part);
@@ -418,18 +429,18 @@ export function monsterEndings(html, effects=[]) {
   return out;
 }
 
-/** Taille écrite en anglais → clé de taille dnd5e. */
+/** Size written in English → dnd5e size key. */
 const SIZE_KEYS = { tiny: "tiny", small: "sm", medium: "med", large: "lg", huge: "huge", gargantuan: "grg" };
 
 /**
- * K12 (SPEC §333) : l'état que le texte pose et que la donnée oublie — « If the target is a Large or smaller creature, it has the
- * Prone condition » sur une attaque sans effet (Décharge aquatique, Coup de l'Élémentaire de l'eau), « Failure: The target has the
- * Restrained condition » sur une sauvegarde dont l'activité ne cite pas l'effet (Filet collant). Au toucher pour une attaque, sur
- * la sauvegarde ratée pour une sauvegarde ; limite de taille gardée. Rien quand une activité du même genre pose déjà cet état,
- * ni pour une phrase conditionnelle (« While », « If this damage reduces », « until it takes damage »).
+ * K12 (SPEC §333): the condition that the text applies and that the data forgets — "If the target is a Large or smaller
+ * creature, it has the Prone condition" on an attack without an effect (Water Elemental's Torrent, Strike), "Failure: The
+ * target has the Restrained condition" on a save whose activity does not cite the effect (Sticky Net). On a hit for an attack, on
+ * the failed save for a save; size limit kept. Nothing when an activity of the same kind already applies that condition,
+ * nor for a conditional sentence ("While", "If this damage reduces", "until it takes damage").
  * @param {string} html
  * @param {{activities?: Array<{type: string, effects?: string[]}>, effects?: Array<{id: string, statuses?: string[]}>}} [data]
- * @returns {object[]} déclarations `triggers`
+ * @returns {object[]} `triggers` declarations
  */
 export function monsterMissingStatus(html, { activities=[], effects=[] }={}) {
   const text = plainText(html);
@@ -441,12 +452,12 @@ export function monsterMissingStatus(html, { activities=[], effects=[] }={}) {
   const out = [];
   const sentences = text.split(/(?<=\.)\s+/);
   for ( const [i, sentence] of sentences.entries() ) {
-    // §334 : aussi « it starts burning » (Contact du magmin) — l'état En feu de dnd5e.
+    // §334: also "it starts burning" (Magmin's Touch) — dnd5e's Burning condition.
     const m = sentence.match(/\b(?:it|the target) has the (Prone|Restrained|Blinded|Deafened|Frightened|Poisoned|Stunned|Incapacitated|Paralyzed) condition\b/i)
       ?? sentence.match(/\b(?:it|the target) starts (burning)\b/i);
     if ( !m || /\b(?:While|until it takes damage|If this damage|reduces the target to 0)\b/i.test(sentence) ) continue;
-    // Un état posé par le moteur n'a pas de durée : la seule durée lue est un tour (`effectEnds` « status:<état> », §334) —
-    // « until the start of the wyvern's next turn » (le lanceur), « until the end of its next turn » (la cible).
+    // A condition applied by the engine has no duration: the only duration read is one turn (`effectEnds` "status:<état>", §334)
+    // — "until the start of the wyvern's next turn" (the caster), "until the end of its next turn" (the target).
     const turn = sentence.match(/\buntil the (start|end) of (?:the \S+?['’]s|its) next turn\b/i);
     const ends = turn ? `${/\bof its next turn/i.test(turn[0]) ? "bearer" : "caster"}Turn${(turn[1].toLowerCase() === "start") ? "Start" : "End"}` : null;
     if ( !ends && /\buntil (?:the (?:start|end)|the grapple ends)\b|\bfor (?:\d+|one|an?|…) (?:round|minute|hour|…)|\bon an? \d/i.test(sentence) ) continue;
@@ -462,8 +473,8 @@ export function monsterMissingStatus(html, { activities=[], effects=[] }={}) {
 }
 
 /**
- * K12 (SPEC §333) : « the target can't make Opportunity Attacks until … » (Fouet d'os, Coup effroyable) → `noOpportunityAttacks`,
- * porté par l'effet de l'item ; seulement si l'item a un effet.
+ * K12 (SPEC §333): "the target can't make Opportunity Attacks until …" (Bone Whip, Frightful Blow) → `noOpportunityAttacks`,
+ * carried by the item's effect; only if the item has an effect.
  */
 export function monsterNoOpportunity(html, effects=[]) {
   if ( !effects.length ) return false;
@@ -471,8 +482,8 @@ export function monsterNoOpportunity(html, effects=[]) {
 }
 
 /**
- * K12 (SPEC §333) : « takes the Dash, the Disengage, or Hide action » (Ruse), « takes the Dash and Disengage actions » (Hâte du
- * Golem d'argile) → `basicActions` de l'activité utilitaire : « or » au choix, « and » toutes.
+ * K12 (SPEC §333): "takes the Dash, the Disengage, or Hide action" (Cunning), "takes the Dash and Disengage actions" (Clay
+ * Golem's Haste) → `basicActions` of the utility activity: "or" at choice, "and" all.
  * @param {string} html
  * @param {Array<{id: string, type: string}>} activities
  */
@@ -488,9 +499,9 @@ export function monsterBasicActions(html, activities=[]) {
 }
 
 /**
- * K12 (SPEC §333) : « each creature in a 30-foot Emanation … that can see the doppelganger » (Visage troublant, Visage horrifiant,
- * Chair qui se défait) → `targets.unaffectedIf: { "target.seesSource": false }` : une créature qui ne voit pas la source n'est pas
- * affectée. Seulement pour une capacité à sauvegarde.
+ * K12 (SPEC §333): "each creature in a 30-foot Emanation … that can see the doppelganger" (Unsettling Visage, Horrifying Visage,
+ * Flesh Unraveling) → `targets.unaffectedIf: { "target.seesSource": false }`: a creature that does not see the source is not
+ * affected. Only for an ability with a save.
  */
 export function monsterSightGate(html, activities=[]) {
   if ( !activities.some(a => a.type === "save") ) return null;
@@ -500,10 +511,10 @@ export function monsterSightGate(html, activities=[]) {
 }
 
 /**
- * K1 (SPEC §334) : « Success: The target is immune to this cloaker's Moan for the next 24 hours » (Gémissement, Regard soporifique,
- * Visage horrifiant, Regard glaçant…) → sur une sauvegarde réussie, une marque `immune:<identifiant>` de cette durée ; la porte
- * `target.hasMark` écarte ensuite la créature marquée (ni sauvegarde, ni effet). Pas pour une attaque (Morsure des lycanthropes : la
- * porte écarterait aussi les dégâts du coup ; l'immunité à la malédiction y reste au MJ).
+ * K1 (SPEC §334): "Success: The target is immune to this cloaker's Moan for the next 24 hours" (Moan, Sleep Gaze,
+ * Horrifying Visage, Chilling Gaze…) → on a successful save, a mark `immune:<identifiant>` of that duration; the gate
+ * `target.hasMark` then rules out the marked creature (neither save nor effect). Not for an attack (Lycanthropes' Bite: the
+ * gate would also rule out the blow's damage; Immunity to the curse is left to the GM there).
  * @param {string} html
  * @param {string} identifier
  * @param {Array<{type: string}>} [activities]
@@ -522,17 +533,17 @@ export function monsterImmunity(html, identifier, activities=[]) {
 }
 
 /**
- * §334 : la durée que le texte donne à l'effet d'une capacité, quand elle se compte en tours (la donnée met souvent « 1 tour », qui tombe
- * au début du tour du combattant suivant) :
- *  - « the target has the Restrained condition until the end of its next turn » → `effectEnds` de l'effet qui porte cet état :
- *    `bearerTurnEnd` (« its ») ou `casterTurnEnd` (« the spy master's ») ; de même « start » ;
- *  - « the target can't take Reactions until … » sur un effet sans état → `noReactions` de cet effet, et sa durée ;
- *  - une durée en tours dite de la cible sans nommer d'état (« the target's Speed is halved until the end of its next turn »,
- *    « This effect lasts until the end of its next turn ») → `effectEnds` de l'unique effet sans état que l'activité cite. La
- *    phrase qui parle de la créature elle-même (« The dragon can't take this action again until the start of its next turn »)
- *    n'en dit rien ; deux phrases qui donnent deux durées différentes non plus ;
- *  - « the creature can't regain Hit Points » sur un effet sans état → `blocksHealing` de cet effet.
- * Un texte à plusieurs segments (rayons numérotés) est laissé.
+ * §334: the duration that the text gives to an ability's effect, when it is counted in turns (the data often says "1 turn",
+ * which falls at the start of the next combatant's turn):
+ *  - "the target has the Restrained condition until the end of its next turn" → `effectEnds` of the effect that carries it:
+ *    `bearerTurnEnd` ("its") or `casterTurnEnd` ("the spy master's"); likewise "start";
+ *  - "the target can't take Reactions until …" on an effect without a condition → `noReactions` of that effect, and its duration;
+ *  - a duration in turns stated of the target without naming a condition ("the target's Speed is halved until the end of its
+ *    next turn", "This effect lasts until the end of its next turn") → `effectEnds` of the single effect without a condition that
+ *    the activity cites. The sentence that speaks of the creature itself ("The dragon can't take this action again until the
+ *    start of its next turn") says nothing about it; nor do two sentences that give two different durations;
+ *  - "the creature can't regain Hit Points" on an effect without a condition → `blocksHealing` of that effect.
+ * A text with several segments (numbered rays) is left alone.
  * @param {string} html
  * @param {{activities?: Array<{type: string, effects?: string[]}>, effects?: Array<{id: string, statuses?: string[]}>}} [data]
  * @returns {{effectEnds?: object, noReactions?: string[], blocksHealing?: string[]}}
@@ -544,7 +555,7 @@ export function monsterEffectDurations(html, { activities=[], effects=[] }={}) {
   const cited = new Set(activities.flatMap(a => a.effects ?? []));
   const own = effects.filter(e => cited.has(e.id));
   const bare = own.filter(e => !(e.statuses ?? []).length);
-  // « its next turn » et « the target's next turn » : le tour du porteur ; « the kuo-toa's next turn » : celui de la créature.
+  // "its next turn" and "the target's next turn": the bearer's turn; "the kuo-toa's next turn": that of the creature.
   const whose = m => (/^(?:its|the target['’]s)$/i.test(m[2]) ? "bearer" : "caster");
   const endOf = m => `${whose(m)}Turn${(m[1].toLowerCase() === "start") ? "Start" : "End"}`;
   const loose = new Set();
@@ -561,13 +572,14 @@ export function monsterEffectDurations(html, { activities=[], effects=[] }={}) {
       (out.effectEnds ??= {})[bare[0].id] = endOf(turn);
       continue;
     }
-    // Une durée dite de la cible, sans état nommé : celle de l'unique effet sans état (jugée plus bas, toutes phrases lues).
+    // A duration stated of the target, with no condition named: that of the single effect without a condition (judged below, once
+    // all sentences are read).
     const aboutTarget = /\bthe target\b|\bThis effect lasts\b/i.test(sentence)
       && !/\bcan[’']t take this action again\b/i.test(sentence);
     if ( aboutTarget ) loose.add(endOf(turn));
   }
-  // Deux phrases qui donnent deux durées différentes (deux effets, dont un seul sans état) : on ne devine pas laquelle est la
-  // sienne.
+  // Two sentences that give two different durations (two effects, only one without a condition): we do not guess which is
+  // its own.
   const [only] = bare;
   if ( (bare.length === 1) && (loose.size === 1) && !out.effectEnds?.[only.id] ) (out.effectEnds ??= {})[only.id] = [...loose][0];
   if ( (bare.length === 1) && /\b(?:the creature|the target) can[’']t regain Hit Points\b/i.test(text) ) out.blocksHealing = [bare[0].id];
@@ -577,24 +589,24 @@ export function monsterEffectDurations(html, { activities=[], effects=[] }={}) {
 const DAMAGE_TYPES = ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"];
 
 /**
- * §334 : la fenêtre d'une Réaction de monstre, d'après son déclencheur (« Trigger: … », ou la condition d'activation de l'activité de
- * Réaction) — la Réaction est proposée (`use`) au moment correspondant du moteur :
- *  - « misses the kuo-toa with a melee attack roll » → `isMissed` (corps à corps) ;
- *  - « hits it with an attack roll », « An attack roll hits the … », « is hit by an attack roll » → `isHit` ;
- *  - « makes an attack roll against it » → `isAttacked` ;
- *  - « takes Piercing or Slashing damage », « is subjected to Cold damage », « deals damage to it » → `isDamaged` (types gardés) ;
- *    « is hit by a ranged attack roll and takes … damage from it » : seulement pour une attaque à distance ;
- *  - « within 30 feet … casts a spell » → `castsSpell`.
- * Le sujet doit être la créature elle-même (pas « A Bloodied creature … takes damage »). Rien pour les autres déclencheurs.
+ * §334: the window of a monster Reaction, from its trigger ("Trigger: …", or the activation condition of the Reaction
+ * activity) — the Reaction is offered (`use`) at the corresponding engine moment:
+ *  - "misses the kuo-toa with a melee attack roll" → `isMissed` (melee);
+ *  - "hits it with an attack roll", "An attack roll hits the …", "is hit by an attack roll" → `isHit`;
+ *  - "makes an attack roll against it" → `isAttacked`;
+ *  - "takes Piercing or Slashing damage", "is subjected to Cold damage", "deals damage to it" → `isDamaged` (types kept);
+ *    "is hit by a ranged attack roll and takes … damage from it": only for a ranged attack;
+ *  - "within 30 feet … casts a spell" → `castsSpell`.
+ * The subject must be the creature itself (not "A Bloodied creature … takes damage"). Nothing for the other triggers.
  * @param {string} html
- * @param {string[]} [conditions]  conditions d'activation des activités de Réaction
- * @param {boolean} [outward]      l'activité de Réaction vise une autre créature (`use` sur la source du déclencheur)
- * @param {string|null} [activity] l'id de l'activité de Réaction
- * @returns {object[]} déclarations `triggers`
+ * @param {string[]} [conditions]  activation conditions of the Reaction activities
+ * @param {boolean} [outward]      the Reaction activity targets another creature (`use` on the trigger's source)
+ * @param {string|null} [activity] the id of the Reaction activity
+ * @returns {object[]} `triggers` declarations
  */
 export function monsterReactionWindow(html, conditions=[], outward=false, activity=null) {
-  // Une Réaction qui vise une autre créature (sauvegarde, attaque, dégâts : Bouclier collant) part sur celle qui l'a déclenchée ; l'activité
-  // de Réaction est nommée (l'item en a parfois d'autres : les tests pour se libérer du Bouclier collant).
+  // A Reaction that targets another creature (save, attack, damage: Sticky Shield) goes to the one that triggered it; the Reaction
+  // activity is named (the item sometimes has others: the checks to break free of the Sticky Shield).
   const use = [{ type: "use", ...(activity ? { activity } : {}), ...(outward ? { target: "source" } : {}) }];
   const text = plainText(html);
   const declared = text.match(/\bTrigger\s*:\s*([^]*?)(?=\bResponse\b|$)/i)?.[1] ?? "";
@@ -605,12 +617,12 @@ export function monsterReactionWindow(html, conditions=[], outward=false, activi
       return [{ on: "isHit", ...(/\bmelee attack roll\b/i.test(t) ? { if: { "activity.isMelee": true } } : {}), do: use }];
     }
     if ( /\bmakes an attack roll against (?:it|him|her|them)\b/i.test(t) ) return [{ on: "isAttacked", do: use }];
-    // Le sujet est la créature (« The shoggoth … », « Laurie … »), ou sous-entendu dans la condition (« takes Acid … damage »).
+    // The subject is the creature ("The shoggoth … ", "Laurie … "), or implied in the condition ("takes Acid … damage").
     if ( /^(?:the|it|takes|is|[A-Z][a-z]+)\b/i.test(t) && !/^(?:A|An|Another|Each)\b/.test(t) ) {
       const dmg = t.match(/\b(?:takes|is subjected to) ((?:[A-Za-z]+, )*[A-Za-z]+(?:,? or [A-Za-z]+)?) damage\b/i);
       if ( dmg ) {
         const types = DAMAGE_TYPES.filter(k => new RegExp(`\\b${k}\\b`, "i").test(dmg[1]));
-        // « hit by a ranged attack roll » (Parade de projectiles du Géant des pierres) : un coup au corps à corps n'ouvre rien.
+        // "hit by a ranged attack roll" (Stone Giant's Deflect Missile): a melee hit opens nothing.
         const ranged = /\bhit by a ranged attack roll\b/i.test(t) ? { "activity.isAttack": true, "activity.isMelee": false } : {};
         const when = { ...(types.length ? { "damage.hasType": types } : {}), ...ranged };
         return [{ on: "isDamaged", ...(Object.keys(when).length ? { if: when } : {}), do: use }];
@@ -646,11 +658,11 @@ export function monsterActivationAdvantage(conditions=[], identifier=null) {
 }
 
 /**
- * §334 : « Attack rolls against the displacer beast have Disadvantage » (Déplacement, Forme floue, Forme incompréhensible) — une
- * déclaration `preAttackRoll` portée par l'item de la CIBLE (`defends: true`) : Désavantage, sauf si elle est Neutralisée quand le texte
- * le dit (« suppressed while … Incapacitated », « unless … has the Incapacitated condition »).
+ * §334: "Attack rolls against the displacer beast have Disadvantage" (Displacement, "Blurred Form", "Incomprehensible Form") —
+ * a `preAttackRoll` declaration carried by the TARGET's item (`defends: true`): Disadvantage, unless it is Incapacitated when the
+ * text says so ("suppressed while … Incapacitated", "unless … has the Incapacitated condition").
  * @param {string} html
- * @returns {object[]} déclarations `triggers`
+ * @returns {object[]} `triggers` declarations
  */
 export function monsterDefense(html) {
   const text = plainText(html);
@@ -661,12 +673,12 @@ export function monsterDefense(html) {
 }
 
 /**
- * §334 : « If the target is a Huge or smaller creature and the elephant moved 20+ feet straight toward it immediately before the hit,
- * the target has the Prone condition » sur une attaque à UNE activité (sans variante de charge, M5) → `effectsIf` : les effets de
- * l'attaque ne passent qu'après une charge de cette longueur (fait `source.chargedFeet`).
+ * §334: "If the target is a Huge or smaller creature and the elephant moved 20+ feet straight toward it immediately before the
+ * hit, the target has the Prone condition" on an attack with ONE activity (no charge variant, M5) → `effectsIf`: the attack's
+ * effects apply only after a charge of that length (fact `source.chargedFeet`).
  * @param {string} html
  * @param {Array<{type: string}>} [activities]
- * @returns {object|null}  condition `effectsIf`
+ * @returns {object|null}  `effectsIf` condition
  */
 export function monsterChargeGate(html, activities=[]) {
   if ( activities.filter(a => a.type === "attack").length !== 1 ) return null;
@@ -677,11 +689,11 @@ export function monsterChargeGate(html, activities=[]) {
 }
 
 /**
- * §334 : « While in sunlight, the drider has Disadvantage on ability checks and attack rolls », « While in Bright Light, the cloaker has
- * Disadvantage on attack rolls » → Désavantage aux jets d'attaque de la créature au soleil (`source.inSunlight` : la lumière globale de
- * la scène, pas une torche) ou en lumière vive (`source.inBrightLight`). Les tests de caractéristique : `monsterLightChecks`.
+ * §334: "While in sunlight, the drider has Disadvantage on ability checks and attack rolls", "While in Bright Light, the
+ * cloaker has Disadvantage on attack rolls" → Disadvantage on the creature's attack rolls in sunlight (`source.inSunlight`: the
+ * scene's global light, not a torch) or in Bright Light (`source.inBrightLight`). Ability checks: `monsterLightChecks`.
  * @param {string} html
- * @returns {object[]} déclarations `triggers`
+ * @returns {object[]} `triggers` declarations
  */
 export function monsterLightSensitivity(html) {
   const text = plainText(html);
@@ -693,9 +705,9 @@ export function monsterLightSensitivity(html) {
 }
 
 /**
- * §334, §484 : l'autre moitié de la même phrase — « Disadvantage on ability checks and attack rolls » → Désavantage aux tests de
- * caractéristique de la créature (`rollDisadvantage`, « check » : tests, compétences et initiative) tant qu'elle est au soleil
- * (`self.inSunlight`) ou en lumière vive (`self.inBrightLight`). Une phrase qui ne nomme que les jets d'attaque n'en dit rien.
+ * §334, §484: the other half of the same sentence — "Disadvantage on ability checks and attack rolls" → Disadvantage on the
+ * creature's ability checks (`rollDisadvantage`, "check": checks, skills and Initiative) while it is in sunlight
+ * (`self.inSunlight`) or in Bright Light (`self.inBrightLight`). A sentence that names only attack rolls says nothing about this.
  * @param {string} html
  * @returns {{on: string[], if: object}|null}
  */
@@ -722,10 +734,10 @@ export function monsterBloodiedSaves(html) {
 }
 
 /**
- * Les effets qu'une capacité pose sur son porteur et qui cessent dès qu'il attaque : « ends early immediately after the X makes
- * an attack roll » (Disparition du Feu follet, SRD 5.2) → `breaksOn: ["attack"]`. Lu dans le texte, pas déclaré par identifiant :
- * un autre monstre porte le même item — même identifiant, mêmes ids d'activité et d'effet — sans cette fin dans son texte.
- * L'autre fin que le texte du Feu follet nomme (l'emploi d'une autre capacité) reste au MJ.
+ * The effects that an ability places on its bearer and that end as soon as it attacks: "ends early immediately after the X makes
+ * an attack roll" (Will-o'-Wisp's "Disappearance", SRD 5.2) → `breaksOn: ["attack"]`. Read from the text, not declared by
+ * identifier: another monster carries the same item — same identifier, same activity and effect ids — without this ending in its
+ * text. The other ending that the Will-o'-Wisp's text names (the use of another ability) is left to the GM.
  * @param {string} html
  * @returns {string[]|null}
  */
@@ -735,10 +747,10 @@ export function monsterBreaksOn(html) {
   return /\bends? early immediately after\b[^.]*\bmakes an attack roll\b/i.test(text) ? ["attack"] : null;
 }
 
-/** Les unités de longueur d'une portée d'activité (dnd5e `CONFIG.DND5E.movementUnits`) : une portée lisible comme distance. */
+/** The length units of an activity range (dnd5e `CONFIG.DND5E.movementUnits`): a range readable as a distance. */
 const LENGTH_UNITS = new Set(["ft", "m", "mi", "km"]);
 
-/** Les `[[lookup @range.…]]`, `@target.affects.special|type` et `@target.template.size|units` d'un texte, remplacés par la valeur de l'activité (comme dnd5e les affiche). */
+/** The `[[lookup @range.…]]`, `@target.affects.special|type` and `@target.template.size|units` of a text, replaced by the activity's value (as dnd5e displays them). */
 function resolveLookups(html, activity) {
   const template = (typeof activity.template === "object") ? activity.template : {};
   const read = { "range.value": activity.range?.value, "range.units": activity.range?.units, "range.special": activity.range?.special,
@@ -749,32 +761,34 @@ function resolveLookups(html, activity) {
 }
 
 /**
- * §461 : la téléportation de soi qu'une capacité de monstre décrit — « the X (magically) teleports (up to 30 feet) to an unoccupied space it
- * can see (within 60 feet) », « can teleport… », la distance en clair ou renvoyée à la portée de l'activité (`[[lookup @range.value]]` :
- * Téléportation des démons et yugoloths, Rôde arcanique des sphinx) → `teleport` du contenu : `{ activity }` quand la portée de l'activité
- * est une longueur (elle fait la distance, runtime/teleport.mjs), sinon `{ activity, distance, units }` d'après le texte (portée « soi »).
- * « Along with one willing creature of its choice within 5 feet of it » → `passengers`, d'après la cible de l'activité.
+ * §461: the self-teleportation that a monster ability describes — "the X (magically) teleports (up to 30 feet) to an unoccupied
+ * space it can see (within 60 feet)", "can teleport…", the distance given in plain text or deferred to the activity's range
+ * (`[[lookup @range.value]]`: "Teleport" of demons and yugoloths, sphinxes' "Arcane Prowl") → content `teleport`: `{ activity }`
+ * when the activity's range is a length (it sets the distance, runtime/teleport.mjs), otherwise `{ activity, distance, units }`
+ * from the text ("self" range). "Along with one willing creature of its choice within 5 feet of it" → `passengers`, from the
+ * activity's target.
  *
- * Seulement ce qui est sûr : la capacité n'a qu'une activité, « utility », sans gabarit — la téléportation est tout ce qu'elle fait (une
- * attaque citée est un autre objet) —, et sa destination est libre. §462 : ou une activité (utilitaire, dégâts, sauvegarde) dont le gabarit
- * frappe l'espace QUITTÉ — « each creature within 10 feet of the space it left » (Téléportation mortelle de la Liche, Pas glaçant), la
- * taille du gabarit égale à celle du texte → `area: "left"` (runtime : zone posée d'office autour du lanceur avant le saut, sans lui) ;
- * §463 : ou l'espace d'ARRIVÉE (« in a 10-foot Emanation originating from it at its destination space », « within 5 feet of its
- * destination space ») → `area: "arrival"` (zone posée après le saut). Ne sont PAS lus : une attaque (l'ordre n'est pas celui de
- * l'utilisation), « taking
- * creatures it is grappling with it » (qui subit la zone, des agrippés emportés ?), une destination contrainte (« within 5 feet of a
- * creature », « of a second tree »), « of your choice » (monture et cavalier), « itself or a willing demon » (une autre créature), le sort
- * Téléportation.
+ * Only what is certain: the ability has a single activity, "utility", with no template — the teleportation is all it does (a cited
+ * attack is another item) —, and its destination is free. §462: or an activity (utility, damage, save) whose template
+ * hits the space LEFT — "each creature within 10 feet of the space it left" (the Lich's "Deadly Teleportation", "Icy Step"), the
+ * template size equal to the text's → `area: "left"` (runtime: area placed automatically around the caster before the jump,
+ * excluding them); §463: or the ARRIVAL space ("in a 10-foot Emanation originating from it at its destination space", "within 5
+ * feet of its destination space") → `area: "arrival"` (area placed after the jump). NOT read: an attack (the order is not that of
+ * the use), "taking
+ * creatures it is grappling with it" (who takes the area, are grappled creatures carried along?), a constrained destination
+ * ("within 5 feet of a creature", "of a second tree"), "of your choice" (mount and rider), "itself or a willing demon" (another
+ * creature), the Teleport spell.
  * @param {string} html
  * @param {Array<{id: string, type?: string, range?: {value?: *, units?: string, special?: string},
  *   template?: boolean|{type?: string, size?: *, units?: string, count?: *},
  *   target?: {type?: string, count?: *, special?: string}}>} [activities]
- * @returns {{activity: string, distance?: number, units?: string, passengers?: object, area?: "left"|"arrival", after?: "attack"}|null}
+ * @returns {{activity: string, distance?: number, units?: string, passengers?: object,
+ *   area?: "left"|"arrival", after?: "attack"}|null}
  */
 export function monsterSelfTeleport(html, activities=[]) {
-  // §464 : « Immediately after the attack hits or misses, the spirit can teleport up to 30 feet… », « Hit or Miss: The X can teleport up
-  // to 60 feet… » — une seule activité d'attaque (d'autres, de dégâts seuls, peuvent l'accompagner : un supplément sur un critique) ; la
-  // distance est celle du texte (la portée de l'attaque est son allonge).
+  // §464: "Immediately after the attack hits or misses, the spirit can teleport up to 30 feet…", "Hit or Miss: The X can
+  // teleport up to 60 feet…" — a single attack activity (others, damage-only, may accompany it: an extra on a Critical Hit); the
+  // distance is the text's (the attack's range is its reach).
   const attacks = activities.filter(a => a.type === "attack");
   if ( (attacks.length === 1) && activities.every(a => ["attack", "damage"].includes(a.type)) ) {
     const after = monsterTeleportAfterAttack(html);
@@ -784,15 +798,15 @@ export function monsterSelfTeleport(html, activities=[]) {
   const [activity] = activities;
   const text = plainText(resolveLookups(html, activity));
   if ( !text || (segments(text).length > 1) ) return null;
-  // §465 : une destination contrainte — une seule activité utilitaire sans gabarit.
+  // §465: a constrained destination — a single utility activity with no template.
   if ( (activity.type === "utility") && !activity.template ) {
     const constrained = constrainedTeleport(text, activity);
     if ( constrained ) return constrained;
   }
   let area = null;
   if ( activity.template ) {
-    // §462 : la zone frappe l'espace quitté ; §463 : ou l'espace d'arrivée — une seule des deux, de la taille du gabarit, sans agrippés
-    // emportés.
+    // §462: the area hits the space left; §463: or the arrival space — only one of the two, of the template's size, without
+    // carried grappled creatures.
     const size = Number(activity.template?.size);
     const left = text.match(/\beach (?:creature|…)\s+within (\d+) (?:feet|ft)\.? of the space (?:it|he|she|they) (?:left|leaves)\b/i);
     const arrival = text.match(/\beach (?:creature|…) in an? (\d+)-foot Emanation originating from [^.]*? at (?:its|his|her|their) destination space\b/i)
@@ -823,13 +837,13 @@ export function monsterSelfTeleport(html, activities=[]) {
 }
 
 /**
- * §465 : une téléportation de soi dont la destination est contrainte —
- *  - « teleports to an unoccupied space within 5 feet of a creature it can see » (Rêve éveillé) : près d'une créature, sans autre limite ;
- *  - « uses Teleport, but its destination space must be within 10 feet of the triggering creature » (Poursuite) : près de la créature qui
- *    l'a déclenchée (la cible désignée, sinon toute créature vue), à la portée de l'activité ;
- *  - « teleports to an unoccupied space within 5 feet of a second tree that is within 60 feet of the previous tree » (Marche des arbres) :
- *    au plus 60 + 2 × 5 ft ; les plantes ne sont pas des objets de la scène — le MJ en juge (`near: "plant"`, rappelé à la visée).
- * @returns {object|null}  La règle `teleport`, ou null.
+ * §465: a self-teleportation whose destination is constrained —
+ *  - "teleports to an unoccupied space within 5 feet of a creature it can see" ("Waking Dream"): near a creature, no other limit;
+ *  - "uses Teleport, but its destination space must be within 10 feet of the triggering creature" ("Pursuit"): near the
+ *    creature that triggered it (the designated target, otherwise any creature seen), within the activity's range;
+ *  - "teleports to an unoccupied space within 5 feet of a second tree that is within 60 feet of the previous tree" (Tree Stride):
+ *    at most 60 + 2 × 5 ft; plants are not scene objects — the GM judges it (`near: "plant"`, reminded when aiming).
+ * @returns {object|null}  The `teleport` rule, or null.
  */
 function constrainedTeleport(text, activity) {
   const range = activity.range ?? {};
@@ -848,7 +862,7 @@ function constrainedTeleport(text, activity) {
 }
 
 /**
- * §464 : la distance (pieds) d'une téléportation que le texte offre une fois l'attaque jugée, touchée ou ratée, ou null.
+ * §464: the distance (feet) of a teleportation that the text offers once the attack is judged, hit or miss, or null.
  * @param {string} html
  * @returns {number|null}
  */
@@ -859,8 +873,8 @@ function monsterTeleportAfterAttack(html) {
 }
 
 /**
- * §463 : « each creature OF ITS CHOICE … within 5 feet of its destination space » (Tourbillon de sable du Seigneur momie) — la zone d'une
- * téléportation que la créature répartit : `zoneAffects: "enemy"` (le choix est proposé, les ennemis cochés d'avance, §401).
+ * §463: "each creature OF ITS CHOICE … within 5 feet of its destination space" (the Mummy Lord's Whirlwind of Sand) — the area of a
+ * teleportation that the creature distributes: `zoneAffects: "enemy"` (the choice is offered, enemies ticked in advance, §401).
  * @param {string} html
  * @returns {boolean}
  */

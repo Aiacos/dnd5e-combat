@@ -1,14 +1,14 @@
 /**
- * §148 : faut-il proposer un dé ajouté après le jet (Inspiration bardique) ? Ce qui se calcule sans Foundry.
+ * §148: should an added die be offered after the roll (Bardic Inspiration)? What can be computed without Foundry.
  *
- * Fonctions pures, aucune dépendance à Foundry.
+ * Pure functions, no dependency on Foundry.
  */
 
 /**
- * « Quand la créature rate un Test d20, elle peut lancer le dé et l'ajouter. » Sans seuil connu (test libre), la question se pose
- * toujours (« Raté ? ») ; avec un seuil : rien sur une réussite, rien non plus quand même le plus haut résultat du dé n'y suffirait
- * (le dé ne se gâche pas).
- * @param {{total: number, needed: number|null, max: number|null}} c  `max` : le plus haut résultat du dé (6 pour 1d6).
+ * "When the creature fails a D20 Test, it can roll the die and add it." With no known threshold (free check), the question
+ * is always asked ("Failed?"); with a threshold: nothing on a success, nothing either when even the die's highest result
+ * would not be enough (the die is not wasted).
+ * @param {{total: number, needed: number|null, max: number|null}} c  `max`: the die's highest result (6 for 1d6).
  * @returns {"offer"|"success"|"hopeless"}
  */
 export function inspirationOffer({ total, needed, max }) {

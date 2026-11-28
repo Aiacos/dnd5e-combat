@@ -1,10 +1,10 @@
 /**
- * §70 : l'orage d'Appel de la foudre — géométrie pure (aucune dépendance à Foundry).
+ * §70: the storm of Call Lightning — pure geometry (no dependency on Foundry).
  */
 
 /**
- * Le point le plus proche de `point` à l'intérieur d'un cercle (le nuage) : le point lui-même s'il y est, sinon sa projection
- * sur le bord. « Un point que vous voyez sous le nuage » : l'éclair ne tombe pas hors de l'orage.
+ * The point closest to `point` inside a circle (the cloud): the point itself if it is inside, otherwise its projection
+ * onto the edge. "A point you can see under the cloud": the bolt does not fall outside the storm.
  * @param {{x: number, y: number}} point
  * @param {{x: number, y: number}} center
  * @param {number} radius

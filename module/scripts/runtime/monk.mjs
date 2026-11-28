@@ -1,15 +1,15 @@
 /**
- * Le Moine (SPEC §24) : ce qui suit un coup. Sur le MJ actif, une fois l'attaque résolue et ses dégâts appliqués
- * (`dnd5e-combat.resolution`) :
- *  - Frappe étourdissante : une fois par tour, après un coup d'une arme de moine ou d'une frappe à mains nues, s'il reste un point
- *    de concentration, la question au moine (`askChoice` : le joueur, sinon le MJ) ; oui : le point dépensé, la sauvegarde de
- *    Constitution de l'item jouée sur la cible (Étourdi sur un échec ; ralentie et l'attaque suivante contre elle avec l'Avantage
- *    sur une réussite — contenu `savedEffects`, `effectEnds`) ;
- *  - Technique de la main ouverte : après un coup d'une frappe du Déluge de coups (carte marquée `flurry`), la question :
- *    Déstabiliser, Repousser ou Renverser — l'activité de l'item jouée sur la cible.
- * Arts martiaux et Déluge de coups (coût des frappes) : runtime/turn.mjs ; la visée des frappes du Déluge : ui/pointer.mjs.
- * §145 : Arts martiaux, la Dextérité aux jets d'attaque et de dégâts des armes de moine (`dnd5e.preRollAttackV2` / `preRollDamageV2`, sur le
- * client qui lance).
+ * The Monk (SPEC §24): what follows a hit. On the active GM, once the attack is resolved and its damage applied
+ * (`dnd5e-combat.resolution`):
+ *  - Stunning Strike: once per turn, after a hit with a monk weapon or an unarmed strike, if a Focus Point is left,
+ *    the question to the monk (`askChoice`: the player, otherwise the GM); yes: the point spent, the item's Constitution saving
+ *    throw rolled on the target (Stunned on a failure; slowed and the next attack against it with Advantage
+ *    on a success — content `savedEffects`, `effectEnds`);
+ *  - Open Hand Technique: after a hit of a Flurry of Blows strike (card marked `flurry`), the question:
+ *    Addle, Push or Topple — the item's activity rolled on the target.
+ * Martial Arts and Flurry of Blows (cost of the strikes): runtime/turn.mjs; aiming the Flurry strikes: ui/pointer.mjs.
+ * §145: Martial Arts, Dexterity for the attack and damage rolls of monk weapons (`dnd5e.preRollAttackV2` /
+ * `preRollDamageV2`, on the casting client).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,7 +23,7 @@ import { enqueue } from "./queue.mjs";
 import { log, loc } from "./shared.mjs";
 import { spendItemUses } from "../adapter/uses.mjs";
 
-/** La règle d'un item de l'acteur (et l'item), ou null. */
+/** The rule of an actor's item (and the item), or null. */
 function ruleOf(actor, key) {
   for ( const item of actor?.items ?? [] ) {
     const rule = contentOf(item).entry?.[key];
@@ -32,7 +32,7 @@ function ruleOf(actor, key) {
   return null;
 }
 
-/** Une frappe à mains nues, ou une arme de moine (arme courante de corps à corps, arme de guerre de corps à corps Légère). */
+/** An unarmed strike, or a monk weapon (simple melee weapon, Light martial melee weapon). */
 function monkWeapon(activity) {
   const item = activity?.item;
   if ( (activity?.type !== "attack") || !item ) return false;
@@ -42,11 +42,11 @@ function monkWeapon(activity) {
 }
 
 /**
- * §145 : Arts martiaux — « vous pouvez utiliser votre modificateur de Dextérité au lieu de votre modificateur de Force pour les jets
- * d'attaque et de dégâts de vos frappes à mains nues et armes de moine », sans armure ni bouclier. dnd5e le fait déjà pour la frappe à
- * mains nues (arme naturelle : Force ou Dextérité) et les armes Finesse ; pas pour une arme courante de corps à corps (lance, bâton).
- * Attaque : `config.ability` = « dex » (dnd5e construit le jet depuis elle) ; dégâts : `@mod` (déjà dans les données du jet) remplacé par
- * la Dextérité quand il vaut la Force et que la Dextérité est meilleure.
+ * §145: Martial Arts — "you can use your Dexterity modifier instead of your Strength modifier for the attack and damage rolls of
+ * your unarmed strikes and monk weapons", with no armor or shield. dnd5e already does it for the unarmed strike (natural weapon:
+ * Strength or Dexterity) and Finesse weapons; not for a simple melee weapon (spear, quarterstaff).
+ * Attack: `config.ability` = "dex" (dnd5e builds the roll from it); damage: `@mod` (already in the roll's data) replaced by
+ * Dexterity when it equals Strength and Dexterity is better.
  */
 function dexterityFor(config) {
   const activity = config?.subject;
@@ -60,8 +60,8 @@ function dexterityFor(config) {
   return (dex > str) ? { actor, activity, str, dex } : null;
 }
 
-/** Jet d'attaque : dnd5e construit ses parties plus tard, depuis `config.ability` (activity/attack.mjs, `_buildAttackConfig` :
- * `formData.ability ?? process.ability`) — la caractéristique choisie dans sa fenêtre, s'il y en a une, reste prioritaire. */
+/** Attack roll: dnd5e builds its parts later, from `config.ability` (activity/attack.mjs, `_buildAttackConfig`:
+ * `formData.ability ?? process.ability`) — the ability chosen in its window, if there is one, keeps priority. */
 function dexterousAttack(config) {
   const found = dexterityFor(config);
   if ( !found || (config.ability && (config.ability !== "str")) ) return true;
@@ -70,7 +70,7 @@ function dexterousAttack(config) {
   return true;
 }
 
-/** Jet de dégâts : ses parties portent déjà `@mod` (la formule de l'arme) — la Force remplacée par la Dextérité. */
+/** Damage roll: its parts already carry `@mod` (the weapon's formula) — Strength replaced by Dexterity. */
 function dexterousDamage(config) {
   const found = dexterityFor(config);
   if ( !found ) return true;
@@ -93,7 +93,7 @@ async function stunningStrike(source, target, activity) {
   const found = ruleOf(source.actor, "stunningStrike");
   if ( !found || !monkWeapon(activity) ) return;
   const key = currentTurnKey();
-  if ( key && (source.actor.getFlag(MODULE_ID, "stunTurn") === key) ) return;   // « une fois par tour »
+  if ( key && (source.actor.getFlag(MODULE_ID, "stunTurn") === key) ) return;   // "once per turn"
   const focus = focusOf(source.actor, found.rule.focus);
   if ( !focus.item || (focus.left < 1) ) return;
   const save = found.item.system.activities?.get(found.rule.activity);

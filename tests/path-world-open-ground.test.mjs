@@ -1,7 +1,7 @@
 /**
- * Issue #92 : sur terrain dégagé, le coût fixe d'un chemin était celui des questions posées pour chaque case — à dnd5e (« un
- * token occupe-t-il cette case ? », une recherche dans le quadtree des tokens) et au cœur (« un mur entre ces deux cases ? »,
- * un polygone construit par pas). Deux raccourcis qui ne répondent que là où la réponse est connue d'avance.
+ * Issue #92: on open ground, the fixed cost of a path was that of the questions asked for each cell — to dnd5e ("does a token
+ * occupy this cell?", a search in the token quadtree) and to the core ("is there a wall between these two cells?", a polygon
+ * built per step). Two shortcuts that answer only where the answer is known in advance.
  */
 import { describe, it, expect } from "vitest";
 
@@ -10,7 +10,7 @@ const { occupancyIndex, noEdgeBetween } = await import("../module/scripts/adapte
 
 const SIZE = 100;
 const grid = { getOffset: ({ x, y }) => ({ i: Math.floor(y / SIZE), j: Math.floor(x / SIZE) }) };
-/** Un token de `w` × `h` cases dont le rectangle est en (i, j) ; `cells` : les cases que dnd5e lui compte. */
+/** A token of `w` × `h` cells whose rectangle is at (i, j); `cells`: the cells dnd5e counts for it. */
 const tokenAt = (i, j, { w=1, h=1, cells=null }={}) => {
   const own = [];
   for ( let di = 0; di < h; di++ ) for ( let dj = 0; dj < w; dj++ ) own.push({ i: i + di, j: j + dj });
@@ -23,8 +23,8 @@ const tokenAt = (i, j, { w=1, h=1, cells=null }={}) => {
     } } };
 };
 
-describe("occupancyIndex — où dnd5e peut trouver un occupant", () => {
-  it("les cases d'un autre token, pas ses voisines que son rectangle ne fait que toucher", () => {
+describe("occupancyIndex — where dnd5e can find an occupant", () => {
+  it("another token's cells, not its neighbors that its rectangle merely touches", () => {
     const self = tokenAt(0, 0);
     const big = tokenAt(4, 4, { w: 2, h: 2 });
     const mayHold = occupancyIndex({ placeables: [self, big] }, self, grid);
@@ -36,12 +36,12 @@ describe("occupancyIndex — où dnd5e peut trouver un occupant", () => {
     }
   });
 
-  it("le token qui se déplace ne compte pas : sa propre case n'est occupée par personne d'autre", () => {
+  it("the moving token does not count: its own cell is occupied by no one else", () => {
     const self = tokenAt(2, 2);
     expect(occupancyIndex({ placeables: [self] }, self, grid)({ i: 2, j: 2 })).toBe(false);
   });
 
-  it("les cases d'un token ne sont calculées que si l'on demande une case que son rectangle touche, et une seule fois", () => {
+  it("a token's cells are computed only when a cell its rectangle touches is requested, and only once", () => {
     const self = tokenAt(0, 0);
     const far = tokenAt(8, 8);
     const mayHold = occupancyIndex({ placeables: [self, far] }, self, grid);
@@ -52,46 +52,46 @@ describe("occupancyIndex — où dnd5e peut trouver un occupant", () => {
     expect(far.document.asked).toBe(1);
   });
 
-  it("un token qui ne se lit pas : la case que son rectangle touche est laissée à dnd5e", () => {
+  it("a token that cannot be read: the cell its rectangle touches is left to dnd5e", () => {
     const self = tokenAt(0, 0);
     const odd = tokenAt(3, 3);
     odd.document.getOccupiedGridSpaceOffsets = () => { throw new Error("no shape"); };
     const mayHold = occupancyIndex({ placeables: [self, odd] }, self, grid);
     expect(mayHold({ i: 3, j: 3 })).toBe(true);
-    expect(mayHold({ i: 4, j: 4 })).toBe(true);    // son rectangle la touche (un pixel de marge) : on ne sait pas
+    expect(mayHold({ i: 4, j: 4 })).toBe(true);    // its rectangle touches it (one pixel margin): unknown
     expect(mayHold({ i: 6, j: 6 })).toBe(false);
   });
 
-  it("un rectangle illisible : null, tout est demandé à dnd5e", () => {
+  it("an unreadable rectangle: null, everything is asked of dnd5e", () => {
     const self = tokenAt(0, 0);
     expect(occupancyIndex({ placeables: [self, { bounds: null, document: {} }] }, self, grid)).toBeNull();
   });
 });
 
-describe("noEdgeBetween — aucun mur à percuter sur ce pas", () => {
+describe("noEdgeBetween — no wall to hit on this step", () => {
   const within = { contains: (x, y) => (x >= 0) && (x < 1000) && (y >= 0) && (y < 1000) };
   const edgesWith = found => ({ asked: [],
     getEdges(rect, options) { this.asked.push({ rect, options }); return new Set(found); } });
 
-  it("aucune arête dans le rectangle du pas (deux pixels de marge, bords de scène écartés) : rien à percuter", () => {
+  it("no edge in the step's rectangle (two pixel margin, scene borders excluded): nothing to hit", () => {
     const edges = edgesWith([]);
     expect(noEdgeBetween(edges, { x: 150, y: 150 }, { x: 250, y: 250 }, within)).toBe(true);
     expect(edges.asked).toEqual([{ rect: { x: 148, y: 148, width: 104, height: 104 },
       options: { includeInnerBounds: false, includeOuterBounds: false } }]);
   });
 
-  it("une arête dans ce rectangle : le test du cœur décide", () => {
+  it("an edge in this rectangle: the core's test decides", () => {
     expect(noEdgeBetween(edgesWith([{ id: "wall" }]), { x: 150, y: 150 }, { x: 250, y: 150 }, within)).toBe(false);
   });
 
-  it("un pas qui sort de la scène ou y rentre percute ses bords, que le quadtree ne contient pas : le test du cœur décide", () => {
+  it("a step leaving or entering the scene hits its edges, which the quadtree does not contain: the core test decides", () => {
     const edges = edgesWith([]);
     expect(noEdgeBetween(edges, { x: 950, y: 150 }, { x: 1050, y: 150 }, within)).toBe(false);
     expect(noEdgeBetween(edges, { x: -50, y: 150 }, { x: 50, y: 150 }, within)).toBe(false);
     expect(edges.asked).toEqual([]);
   });
 
-  it("sans quadtree des arêtes, ou s'il échoue : le test du cœur décide", () => {
+  it("without an edge quadtree, or if it fails: the core's test decides", () => {
     expect(noEdgeBetween(null, { x: 150, y: 150 }, { x: 250, y: 150 }, within)).toBe(false);
     const failing = { getEdges() { throw new Error("not ready"); } };
     expect(noEdgeBetween(failing, { x: 150, y: 150 }, { x: 250, y: 150 }, within)).toBe(false);

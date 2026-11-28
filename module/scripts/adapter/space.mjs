@@ -1,23 +1,23 @@
 /**
- * L'espace en trois dimensions, lu dans Foundry pour le cœur (core/space.mjs) — P2, SPEC §14.2.
+ * Three-dimensional space, read in Foundry for the core (core/space.mjs) — P2, SPEC §14.2.
  *
- *  - **Tranche d'élévation d'une zone de sort.** dnd5e 6 pose la région d'un sort sans hauteur
- *    (`// TODO: Set elevation based on shape's height`, canvas/template-placement.mjs:138) : une
- *    sphère de 20 ft est une colonne infinie. Le moteur la lui donne d'après la forme et la taille
- *    de l'activité, à la pose (hook `dnd5e.createMeasuredTemplate`, dans les données de création :
- *    la région naît avec, et BLFX — qui ne touche pas à une région dont `bottom` et `top` sont finis,
- *    helperFunctions.js:1200 — la laisse), ou après coup pour une région créée sans (connecteur).
- *    Une fois `elevation.bottom/top` écrits, le cœur fait le reste : `TokenDocument#testInsideRegion`
- *    filtre par la tranche (client/documents/token.mjs:3246-3258).
- *  - **Ligne d'effet d'une zone.** Un plancher est une **Surface** (région à comportement
- *    `defineSurface`) : une explosion à l'étage n'atteint pas le dessous si le plancher arrête le
- *    déplacement. Testé par le lancer de rayon 3D de la scène (`Scene#testSurfaceCollision`,
- *    client/documents/scene.mjs:810, type `move` : ce qui arrête un corps arrête un effet) entre le
- *    point d'origine de la zone, à mi-hauteur de sa tranche, et les yeux de la créature.
+ *  - **Elevation slice of a spell area.** dnd5e 6 places a spell's region without a height
+ *    (`// TODO: Set elevation based on shape's height`, canvas/template-placement.mjs:138): a
+ *    20 ft Sphere is an infinite column. The engine gives it one based on the shape and size
+ *    of the activity, at placement (hook `dnd5e.createMeasuredTemplate`, in the creation data:
+ *    the region is born with it, and BLFX — which does not touch a region whose `bottom` and `top` are finite,
+ *    helperFunctions.js:1200 — leaves it alone), or after the fact for a region created without one (connector).
+ *    Once `elevation.bottom/top` are written, the core does the rest: `TokenDocument#testInsideRegion`
+ *    filters by the slice (client/documents/token.mjs:3246-3258).
+ *  - **Line of effect of an area.** A floor is a **Surface** (region with a
+ *    `defineSurface` behavior): an explosion on the upper floor does not reach below if the floor stops
+ *    movement. Tested by the scene's 3D ray cast (`Scene#testSurfaceCollision`,
+ *    client/documents/scene.mjs:810, type `move`: what stops a body stops an effect) between the
+ *    area's point of origin, at mid-height of its slice, and the creature's eyes.
  *
- * Vérifié dans le cœur 14.368 : `Region.elevation.bottom/top` nullables (null = infini,
- * common/documents/region.mjs:56-59) ; `Scene#getSurfaces` sans `level` rend toutes les surfaces
- * (scene.mjs:793) — un plancher est un plancher, quel que soit le niveau où il est affiché.
+ * Verified in core 14.368: `Region.elevation.bottom/top` nullable (null = infinite,
+ * common/documents/region.mjs:56-59); `Scene#getSurfaces` without `level` returns all the surfaces
+ * (scene.mjs:793) — a floor is a floor, whatever level it is displayed on.
  */
 
 import { regionElevationFor, originPointOfShapes, withinSphere, rectOfShape, pointInRect, anyShapeTakes } from "../core/space.mjs";
@@ -30,7 +30,7 @@ let available = false;
 export function setSpaceAvailable(value) { available = !!value; }
 export function isSpaceAvailable() { return available; }
 
-/** Ce que ce fichier demande au cœur, contrôlé une fois à `ready`. */
+/** What this file asks of the core, checked once at `ready`. */
 export function checkSpaceApi() {
   const missing = [];
   if ( typeof CONFIG.Scene?.documentClass?.prototype?.testSurfaceCollision !== "function" ) missing.push("Scene#testSurfaceCollision");
@@ -39,17 +39,17 @@ export function checkSpaceApi() {
 }
 
 /**
- * Forme et dimensions de la zone d'une activité, unité de la grille. Les dimensions écrites par
- * dnd5e dans les flags de la région (`flags.dnd5e.dimensions`, déjà converties) sont préférées ;
- * sinon on lit l'activité (`target.template`, valeurs préparées en nombres, data/shared/target-field.mjs:145)
- * et on convertit son unité vers celle de la grille.
+ * Shape and dimensions of an activity's area, grid unit. The dimensions written by
+ * dnd5e in the region's flags (`flags.dnd5e.dimensions`, already converted) are preferred;
+ * otherwise we read the activity (`target.template`, values prepared as numbers, data/shared/target-field.mjs:145)
+ * and convert its unit to the grid's.
  * @param {Activity} activity
  * @param {Scene} scene
  * @param {{size?: number, width?: number, height?: number, units?: string}|null} [dimensions]
  * @returns {{type: string, size?: number, width?: number, height?: number}|null}
  */
 export function areaOf(activity, scene, dimensions=null) {
-  const template = templateOf(activity);   // §86 : ou celui que le contenu fournit
+  const template = templateOf(activity);   // §86: or the one the content provides
   const type = template?.type;
   if ( !type ) return null;
   const units = scene.grid.units;
@@ -65,12 +65,12 @@ export function areaOf(activity, scene, dimensions=null) {
 }
 
 /**
- * La tranche d'élévation que la zone d'une activité doit recevoir, ou null si on ne sait pas.
+ * The elevation slice that an activity's area must receive, or null if unknown.
  * @param {Activity} activity
  * @param {object} context
  * @param {Scene} context.scene
- * @param {TokenDocument|null} [context.originToken]  Le lanceur : son élévation est celle de la zone.
- * @param {object|null} [context.dimensions]          `flags.dnd5e.dimensions` de la région, s'ils existent.
+ * @param {TokenDocument|null} [context.originToken]  The caster: its elevation is the area's.
+ * @param {object|null} [context.dimensions]          The region's `flags.dnd5e.dimensions`, if they exist.
  * @returns {{bottom: number, top: number, topInclusive: boolean}|null}
  */
 export function elevationSliceFor(activity, { scene, originToken=null, dimensions=null }) {
@@ -81,15 +81,15 @@ export function elevationSliceFor(activity, { scene, originToken=null, dimension
   return slice ? { ...slice, topInclusive: false } : null;
 }
 
-/** La région a-t-elle déjà une tranche (posée par nous, par BLFX, par le MJ) ? Lue à la source : la préparation met ±Infinity. */
+/** Does the region already have a slice (set by us, by BLFX, by the GM)? Read at the source: preparation sets ±Infinity. */
 export function hasElevationSlice(region) {
   const { bottom, top } = region._source.elevation ?? {};
   return (bottom !== null && bottom !== undefined) || (top !== null && top !== undefined);
 }
 
 /**
- * Pour une région déjà créée sans tranche (connecteur, macro) : la calcule et l'écrit, si la région
- * vient d'une activité. Rend la tranche écrite, ou null.
+ * For a region already created without a slice (connector, macro): computes and writes it, if the region
+ * comes from an activity. Returns the slice written, or null.
  * @param {RegionDocument} region
  */
 export async function ensureRegionElevation(region) {
@@ -101,10 +101,10 @@ export async function ensureRegionElevation(region) {
   const originToken = originUuid ? await fromUuid(originUuid) : null;
   const slice = elevationSliceFor(activity, { scene: region.parent, originToken, dimensions: region.getFlag("dnd5e", "dimensions") ?? null });
   if ( !slice ) return null;
-  // Comme dnd5e à la pose (template-placement.mjs:139) : la zone est limitée au niveau du lanceur. Une
-  // région créée sans `levels` (connecteur) est « sur tous les niveaux », et BLFX vient alors lui écrire
-  // le niveau du lanceur par socket, parfois après que le moteur l'a retirée (« does not exist in the
-  // EmbeddedCollection », vu le 2026-09-23) : on le fait d'abord.
+  // Like dnd5e at placement (template-placement.mjs:139): the area is limited to the caster's level. A
+  // region created without `levels` (connector) is "on all levels", and BLFX then comes to write the
+  // caster's level on it through a socket, sometimes after the engine has removed it ("does not exist in the
+  // EmbeddedCollection", seen on 2026-09-23): so we do it first.
   const update = { elevation: slice };
   const level = originToken?._source?.level;
   if ( !region.levels.size && level && region.parent.levels?.has?.(level) ) update.levels = [level];
@@ -113,8 +113,8 @@ export async function ensureRegionElevation(region) {
 }
 
 /**
- * Le point d'origine d'une zone, élevé : le centre de sa forme (le lanceur pour une émanation ou
- * un cône sans origine propre), à mi-hauteur de sa tranche — à défaut de tranche, aux yeux du lanceur.
+ * An area's elevated point of origin: the center of its shape (the caster for an Emanation or
+ * a Cone without its own origin), at mid-height of its slice — without a slice, at the caster's eyes.
  * @param {RegionDocument} region
  * @param {TokenDocument|null} originToken
  * @returns {{x: number, y: number, elevation: number}|null}
@@ -123,7 +123,7 @@ export function areaOriginOf(region, originToken=null) {
   return originOfShapes(region, region.shapes.map(s => s.toObject?.() ?? s), originToken);
 }
 
-/** Le point d'origine élevé de ces formes de la région (la première ; §286 : une seule, pour une zone de plusieurs formes). */
+/** The elevated point of origin of these region shapes (the first; §286: only one, for an area of several shapes). */
 function originOfShapes(region, shapes, originToken) {
   const attached = region.attachment?.token ? region.parent.tokens.get(region.attachment.token) : null;
   const anchor = attached ?? originToken;
@@ -137,8 +137,8 @@ function originOfShapes(region, shapes, originToken) {
 }
 
 /**
- * La sphère d'une zone (sphère ou cercle dnd5e), en pixels : centre de la forme, élévation du lanceur
- * (à mi-hauteur de la tranche), rayon. null pour toute autre forme, ou sans tranche.
+ * An area's Sphere (dnd5e Sphere or circle), in pixels: center of the shape, caster's elevation
+ * (at mid-height of the slice), radius. null for any other shape, or without a slice.
  * @param {RegionDocument} region
  * @param {Activity} activity
  * @param {TokenDocument|null} originToken
@@ -151,7 +151,7 @@ export function sphereOf(region, activity, originToken=null) {
   return sphereAt(region, activity, areaOriginOf(region, originToken));
 }
 
-/** La sphère de la zone autour de ce point d'origine élevé. */
+/** The area's Sphere around this elevated point of origin. */
 function sphereAt(region, activity, origin) {
   const scene = region.parent;
   const area = areaOf(activity, scene, region.getFlag("dnd5e", "dimensions") ?? null);
@@ -161,9 +161,9 @@ function sphereAt(region, activity, origin) {
 }
 
 /**
- * §286 : une zone de plusieurs formes (Nuée de météores, Tempête de feu — dnd5e pose les `count` gabarits dans UNE région,
- * canvas/template-placement.mjs:104,132) — chaque forme a son origine et sa sphère : la créature est prise si une forme la contient
- * et l'atteint, une seule fois (`anyShapeTakes`). `{ inVolume, lineOfEffect }`, comme pour une forme seule.
+ * §286: an area of several shapes (Meteor Swarm, Fire Storm — dnd5e places the `count` templates in ONE region,
+ * canvas/template-placement.mjs:104,132) — each shape has its origin and its Sphere: the creature is caught if a shape contains it
+ * and reaches it, only once (`anyShapeTakes`). `{ inVolume, lineOfEffect }`, as for a single shape.
  * @param {RegionDocument} region
  * @param {Activity} activity
  * @param {TokenDocument|null} originToken
@@ -172,7 +172,7 @@ function sphereAt(region, activity, origin) {
 export function shapesReach(region, activity, originToken, token) {
   const round = (templateOf(activity)?.type === "sphere") || (templateOf(activity)?.type === "circle");
   const center = tokenCenter(token);
-  // 14.370 : une forme « trou » (cases épargnées) ne prend personne — le cœur l'a déjà retirée de l'appartenance.
+  // 14.370: a "hole" shape (spared cells) catches nobody — the core has already removed it from the membership.
   return anyShapeTakes(region.shapes.map(s => s.toObject?.() ?? s).filter(s => !s.hole).map(shape => {
     const origin = originOfShapes(region, [shape], originToken);
     const sphere = (available && round) ? sphereAt(region, activity, origin) : null;
@@ -182,7 +182,7 @@ export function shapesReach(region, activity, originToken, token) {
   }));
 }
 
-/** La créature est-elle dans la sphère (et pas seulement dans le cylindre de la région) ? null sans sphère. */
+/** Is the creature in the Sphere (and not only in the region's cylinder)? null without a Sphere. */
 export function insideSphere(sphere, token) {
   if ( !sphere || !token?.parent ) return null;
   const grid = token.parent.grid;
@@ -197,8 +197,8 @@ export function insideSphere(sphere, token) {
 }
 
 /**
- * La zone atteint-elle cette créature : aucune surface (plancher, plafond) entre son point
- * d'origine et les yeux de la créature ? null si on ne peut pas le dire (en veille, sans origine).
+ * Does the area reach this creature: no surface (floor, ceiling) between its point
+ * of origin and the creature's eyes? null if we cannot tell (asleep, without origin).
  * @param {{x: number, y: number, elevation: number}|null} origin
  * @param {TokenDocument} token
  * @returns {boolean|null}

@@ -1,9 +1,9 @@
 /**
- * §326, lot K5 de la repasse des créatures : les actions légendaires. Arène des sorts : le Lanceur (PNJ, trois actions légendaires le
- * temps du scénario) reçoit le Fouet et le Tentacule de l'Aboleth ; combat avec l'« Ennemi au contact ».
- *  - au tour de l'Ennemi, le Fouet (action légendaire) dépense une action légendaire ;
- *  - le Tentacule qu'il annonce passe gratuit (`cost: "free"` sur la carte) ;
- *  - une seconde action légendaire pendant ce même tour est signalée ; à son propre tour aussi.
+ * §326, batch K5 of the creature pass: legendary actions. Spell arena: the Caster (NPC, three legendary actions for the
+ * duration of the scenario) receives the Aboleth's Lash and Tentacle; combat with the "Enemy in contact".
+ *  - on the Enemy's turn, the Lash (legendary action) spends a legendary action;
+ *  - the Tentacle it announces goes through free (`cost: "free"` on the card);
+ *  - a second legendary action during that same turn is flagged; on its own turn too.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

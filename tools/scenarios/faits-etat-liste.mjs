@@ -1,12 +1,12 @@
 /**
- * Les faits d'état prennent un état ou une liste (DF #253 du 2026-11-23) : `{ "target.hasStatus": ["restrained", "grappled"] }` vaut quand
- * la cible a l'un de ces états — la forme que donne l'en-tête de core/triggers.mjs, que le validateur acceptait mais qui ne tenait jamais.
- * Arène de test, Ensorceleur et Zombi. Une règle d'essai sur Trait de feu (surcouche du monde) : « +5 feu si la cible est Entravée ou
- * Empoignée » (`preDamageRoll`). Le Trait de feu tire jusqu'à toucher :
- *  1. Zombi sans état : pas de « 5 » dans le jet de dégâts ;
- *  2. Zombi Entravé : le « 5 » s'ajoute ;
- *  3. la même règle sous `not` (« sauf Entravée ou Empoignée »), Zombi Entravé : pas de « 5 ».
- * Remis en état : surcouche, état, PV du Zombi.
+ * Condition facts take a condition or a list (DF #253 of 2026-11-23): `{ "target.hasStatus": ["restrained", "grappled"] }` holds
+ * when the target has one of these conditions — the form given by the header of core/triggers.mjs, which the validator accepted
+ * but never held. Test Arena, Sorcerer and Zombie. A test rule on Fire Bolt (world overlay): "+5 fire if the target is
+ * Restrained or Grappled" (`preDamageRoll`). Fire Bolt fires until it hits:
+ *  1. Zombie without condition: no "5" in the damage roll;
+ *  2. Zombie Restrained: the "5" is added;
+ *  3. the same rule under `not` ("except Restrained or Grappled"), Zombie Restrained: no "5".
+ * Restored: overlay, condition, Zombie's HP.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const LIST = ["restrained", "grappled"];
@@ -27,7 +27,7 @@ export default {
     ctx.restore(() => ctx.engine("overrideContent", { identifier: "fire-bolt", entry: before }).catch(() => {}));
     if ( before ) ctx.log(`surcouche déjà posée sur fire-bolt, remplacée le temps du scénario : ${JSON.stringify(before)}`);
 
-    /** Trait de feu jusqu'à toucher (12 essais) : les formules du jet de dégâts, ou null. */
+    /** Fire Bolt until it hits (12 tries): the damage roll's formulas, or null. */
     const hit = async label => {
       for ( let i = 0; i < 12; i++ ) {
         await ctx.setHp(zombi, 200);

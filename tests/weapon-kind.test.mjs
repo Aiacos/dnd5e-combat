@@ -5,7 +5,7 @@ import { validateEntry } from "../module/scripts/core/content.mjs";
 import { dataFixPlan } from "../module/scripts/core/data-fixes.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 
-// Le fait `activity.weaponKind` (adapter/facts.mjs, relu dans la source : il touche à Foundry, on ne l'importe pas ici).
+// The fact `activity.weaponKind` (adapter/facts.mjs, re-read in the source: it touches Foundry, so it is not imported here).
 const factsSource = readFileSync(new URL("../module/scripts/adapter/facts.mjs", import.meta.url), "utf8");
 const ADAPTER_FACTS = Array.from(factsSource.matchAll(/^\s+"([a-z]+\.[A-Za-z]+)":/gm), m => m[1]);
 
@@ -17,7 +17,7 @@ describe("fait activity.weaponKind", () => {
     expect(unknownFacts(condition, Object.fromEntries(ADAPTER_FACTS.map(k => [k, true])))).toEqual([]);
   });
 
-  it("une liste de genres : frappe à mains nues, arme courante ou improvisée oui, arme de guerre non", () => {
+  it("a list of kinds: unarmed strike, simple or improvised weapon yes, martial weapon no", () => {
     for ( const kind of ["unarmed", "simpleM", "improv"] ) expect(holds(condition, { "activity.weaponKind": kind, "activity.isMelee": true }), kind).toBe(true);
     expect(holds(condition, { "activity.weaponKind": "martialM", "activity.isMelee": true })).toBe(false);
     expect(holds(condition, { "activity.weaponKind": null, "activity.isMelee": true })).toBe(false);
@@ -28,12 +28,12 @@ describe("fait activity.baseItem (Brassards d'archer)", () => {
   const entry = CONTENT["bracers-of-archery"];
   const condition = entry.triggers[0].if;
 
-  it("l'adaptateur le fournit, et l'entrée se valide", () => {
+  it("the adapter provides it, and the entry validates", () => {
     expect(ADAPTER_FACTS).toContain("activity.baseItem");
     expect(validateEntry(entry, { facts: Object.fromEntries(ADAPTER_FACTS.map(k => [k, true])) })).toEqual([]);
   });
 
-  it("le +2 aux dégâts d'un Arc long ou court, pas d'une arbalète ni d'une fronde", () => {
+  it("the +2 damage of a Longbow or Shortbow, not of a crossbow or a sling", () => {
     for ( const base of ["longbow", "shortbow"] ) {
       expect(holds(condition, { "activity.isAttack": true, "activity.baseItem": base }), base).toBe(true);
     }
@@ -43,7 +43,7 @@ describe("fait activity.baseItem (Brassards d'archer)", () => {
     expect(entry.triggers[0].do).toEqual([{ type: "damage", formula: "2", damageType: "weapon" }]);
   });
 
-  it("l'effet « +2 à toute arme à distance » de la donnée est vidé ; déjà vidé ou changé à la main, il ne bouge pas", () => {
+  it("the data's \"+2 to any ranged weapon\" effect is emptied; already emptied or changed by hand, it does not move", () => {
     const data = { key: "system.bonuses.rwak.damage", value: 2, type: "add", phase: "initial", conditions: "{}" };
     const item = { effects: [{ _id: "PSGGfFEy4CjBVzyX", transfer: true, system: { changes: [data] } }], system: {} };
     expect(dataFixPlan(item, entry.dataFixes).effects).toEqual([{ _id: "PSGGfFEy4CjBVzyX", "system.changes": [] }]);

@@ -1,11 +1,11 @@
 /**
- * §169 : un mur à face brûlante (Mur de feu, contenu `wallSide: { distance, units }`). Posé le long des lignes de la grille (sans
- * diagonale) ou en anneau, il est fin : aucune case n'est « dedans ». Ce qui vaut sur la grille :
- *  - à l'apparition, les créatures dont l'espace TOUCHE le mur (des deux côtés) font la sauvegarde (`readActivityRegion`) ;
- *  - ensuite, sans sauvegarde : qui TRAVERSE le mur (« entre dans le mur », une fois par tour), et qui finit son tour du côté
- *    brûlant, à `distance` du mur — une seconde région, posée par le moteur, que le lanceur peut retourner.
- * Le mur porte son côté (`flags.dnd5e-combat.wallSide`), la face brûlante sa région d'origine (`flags.dnd5e-combat.sideOf`).
- * Lecture seulement : runtime/wall-side.mjs écrit, runtime/areas.mjs rejoue.
+ * §169: a wall with a burning face (Wall of Fire, content `wallSide: { distance, units }`). Placed along the grid lines (no
+ * diagonal) or as a ring, it is thin: no cell is "inside" it. What applies on the grid:
+ *  - on appearance, the creatures whose space TOUCHES the wall (on both sides) make the save (`readActivityRegion`);
+ *  - then, with no save: whoever CROSSES the wall ("enters the wall", once per turn), and whoever ends their turn on the
+ *    burning side, within `distance` of the wall — a second region, placed by the engine, that the caster can flip.
+ * The wall carries its side (`flags.dnd5e-combat.wallSide`), the burning face its origin region (`flags.dnd5e-combat.sideOf`).
+ * Read only: runtime/wall-side.mjs writes, runtime/areas.mjs replays.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,7 +14,7 @@ import { committedPosition, tokenCenter } from "./turn.mjs";
 import { wallGeometry, touchesWall, crossesWall } from "../core/wall.mjs";
 import { lengthIn } from "./units.mjs";
 
-/** La règle `wallSide` du sort qui a posé cette région (le mur lui-même, pas sa face brûlante), ou null. */
+/** The `wallSide` rule of the spell that placed this region (the wall itself, not its burning face), or null. */
 export function wallSideRuleOf(region) {
   if ( !region || region.getFlag?.(MODULE_ID, "sideOf") ) return null;
   const uuid = region.getFlag?.("dnd5e", "activity");
@@ -22,7 +22,7 @@ export function wallSideRuleOf(region) {
   return activity?.item ? (contentOf(activity.item).entry?.wallSide ?? null) : null;
 }
 
-/** L'entrée du contenu du sort qui a posé cette région, ou null. */
+/** The content entry of the spell that placed this region, or null. */
 function entryOfRegion(region) {
   const uuid = region?.getFlag?.("dnd5e", "activity");
   const activity = uuid ? fromUuidSync(uuid, { strict: false }) : null;
@@ -30,8 +30,8 @@ function entryOfRegion(region) {
 }
 
 /**
- * §169, §173 : un mur fin (Mur de feu, de vent, de pierre, de glace, de force, prismatique) — le mur lui-même, pas une zone qu'il a
- * posée : à l'apparition, les créatures dont l'espace le touche ; on y « entre » en le traversant.
+ * §169, §173: a thin wall (Wall of Fire, Wind Wall, Wall of Stone, Wall of Ice, Wall of Force, Prismatic Wall) — the wall itself,
+ * not an area it placed: on appearance, the creatures whose space touches it; one "enters" it by crossing it.
  */
 export function isThinWall(region) {
   if ( !region || region.getFlag?.(MODULE_ID, "sideOf") || region.getFlag?.(MODULE_ID, "auraOf") ) return false;
@@ -39,65 +39,65 @@ export function isThinWall(region) {
   return !!(entry?.wallSide || (entry?.thinWall === true));
 }
 
-/** §173 : la zone `wallAura` du sort qui a posé ce mur, ou null. */
+/** §173: the `wallAura` area of the spell that placed this wall, or null. */
 export function wallAuraRuleOf(region) {
   if ( !region || region.getFlag?.(MODULE_ID, "sideOf") || region.getFlag?.(MODULE_ID, "auraOf") ) return null;
   return entryOfRegion(region)?.wallAura ?? null;
 }
 
-/** La zone `wallAura` posée pour ce mur, ou null. */
+/** The `wallAura` area placed for this wall, or null. */
 export function auraRegionOf(wall) {
   return wall?.parent?.regions.find(r => r.getFlag(MODULE_ID, "auraOf") === wall.id) ?? null;
 }
 
-/** §172 : le sort qui a posé cette région est-il un mur épais posé sur les cases (`cellWall`) ? */
+/** §172: is the spell that placed this region a thick wall placed on cells (`cellWall`)? */
 export function isCellWall(region) {
   const uuid = region?.getFlag?.("dnd5e", "activity");
   const activity = uuid ? fromUuidSync(uuid, { strict: false }) : null;
   return activity?.item ? (contentOf(activity.item).entry?.cellWall === true) : false;
 }
 
-/** La géométrie du mur (segments ou anneau), d'après ses formes. */
+/** The wall's geometry (segments or ring), from its shapes. */
 export function wallGeometryOf(region) {
   return wallGeometry((region?.shapes ?? []).map(s => s.toObject?.() ?? s));
 }
 
-/** La profondeur de la face brûlante, en pixels de la scène. */
+/** The depth of the burning face, in scene pixels. */
 export function sideDepthOf(scene, rule) {
   let distance = lengthIn(rule.distance, rule.units, scene.grid.units);
   return distance * (scene.grid.size / scene.grid.distance);
 }
 
-/** Le rectangle de l'espace d'un token (position validée, ou donnée), en pixels. */
+/** The rectangle of a token's space (validated position, or given), in pixels. */
 function spaceOf(token, pos=committedPosition(token)) {
   const grid = token.parent.grid;
   return { x: pos.x, y: pos.y, width: (pos.width ?? 1) * grid.sizeX, height: (pos.height ?? 1) * grid.sizeY };
 }
 
-/** Le centre d'un token à une position donnée (point de passage), en pixels, en 2D. */
+/** The center of a token at a given position (waypoint), in pixels, in 2D. */
 function centerAt(token, pos) {
   const { x, y } = tokenCenter(token, pos);
   return { x, y };
 }
 
-/** L'espace de ce token touche-t-il le mur ? (« dans la zone » à l'apparition.) */
+/** Does this token's space touch the wall? ("in the area" on appearance.) */
 export function touchesWallRegion(region, token) {
   const geometry = wallGeometryOf(region);
   return !!geometry && touchesWall(geometry, spaceOf(token));
 }
 
-/** Ce trajet (positions successives du token) traverse-t-il le mur ? */
+/** Does this path (successive token positions) cross the wall? */
 export function crossesWallRegion(region, token, positions) {
   const geometry = wallGeometryOf(region);
   return !!geometry && crossesWall(geometry, positions.map(p => centerAt(token, p)));
 }
 
-/** La face brûlante de ce mur, ou null. */
+/** The burning face of this wall, or null. */
 export function sideRegionOf(wall) {
   return wall?.parent?.regions.find(r => r.getFlag(MODULE_ID, "sideOf") === wall.id) ?? null;
 }
 
-/** Les murs à face brûlante de la scène posés par ce lanceur (son acteur). */
+/** The scene's burning-face walls placed by this caster (its actor). */
 export function wallsOfCaster(token) {
   const actor = token?.actor;
   if ( !actor ) return [];

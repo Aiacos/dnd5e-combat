@@ -1,10 +1,10 @@
 /**
- * §347, lot O8d de la repasse des objets : défenses contre les seules attaques à distance. Arène de test (Guerrier, Clerc, Zombi).
- * Le Clerc juste au sud du Guerrier, le Zombi à 4 cases à l'est du Guerrier, une Arbalète légère en main.
- *  1. Bouclier antiprojectiles tenu : la CA du Guerrier contre le carreau vaut 2 de plus harmonisé que non harmonisé.
- *  2. Le Zombi tire sur le Clerc : le Guerrier réagit (prise d'office) et devient la cible.
- *  3. Bouclier d'attraction tenu et harmonisé : le carreau tiré sur le Clerc vise le Guerrier, sans réaction ; touché, il ne subit que
- *     la moitié des dégâts (Résistance). Non harmonisé : le carreau reste sur le Clerc.
+ * §347, batch O8d of the item pass: defenses against ranged attacks only. Test arena (Fighter, Cleric, Zombie).
+ * The Cleric just south of the Fighter, the Zombie 4 cells east of the Fighter, a Light Crossbow in hand.
+ *  1. Missile-Deflecting Shield held: the Fighter's AC against the bolt is 2 higher attuned than not attuned.
+ *  2. The Zombie shoots the Cleric: the Fighter reacts (taken automatically) and becomes the target.
+ *  3. Shield of Missile Attraction held and attuned: the bolt shot at the Cleric targets the Fighter, with no Reaction; on a hit,
+ *     it only takes half damage (Resistance). Not attuned: the bolt stays on the Cleric.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -38,8 +38,8 @@ export default {
     const attractor = await ctx.ensureItem(fighter, `${DMG}dmgShieldOfMissi`);
     await set(attractor, { system: { equipped: false, attuned: false } });
 
-    /** Le Zombi tire sur `target` (réactions prises d'office) ; rend la cible de la résolution et la résolution. */
-    // Une réaction avant le jet relance l'utilisation : la carte qui porte la résolution est alors la dernière depuis la borne.
+    /** The Zombie shoots at `target` (Reactions taken automatically); returns the resolution's target and the resolution. */
+    // A Reaction before the roll restarts the use: the card that carries the resolution is then the last one since the bound.
     const shoot = async (target, autoReact="first") => {
       const mark = await ctx.lastMessageId();
       const used = await ctx.use({ tokenId: zombi.id, itemId: bow, activityType: "attack", consume: false, targetTokenIds: [target.id],
@@ -82,7 +82,7 @@ export default {
       const { t, used } = await shoot(cleric, "none");
       if ( i === 0 ) ctx.expect(t?.name === "Guerrier", `Bouclier d'attraction : le carreau tiré sur le Clerc vise le Guerrier (${t?.name ?? "?"})`);
       if ( !t?.hit ) continue;
-      // La carte de dégâts suit le jet et ses animations : en fin de longue passe, elle peut tarder plusieurs secondes.
+      // The damage card follows the roll and its animations: at the end of a long pass, it may be several seconds late.
       let damage = null;
       for ( let w = 0; !damage && (w < 10); w++ ) {
         await pause(1000);

@@ -1,27 +1,27 @@
 /**
- * Les items dont l'utilisation laisse une trace sur le lanceur (SPEC §16.9, clé `trace` de core/content.mjs) : un
- * effet qui porte leurs déclarations `via: "effect"`, faute d'effet dans les données de l'item.
+ * Items whose use leaves a trace on the caster (SPEC §16.9, key `trace` of core/content.mjs): an
+ * effect that carries their declarations `via: "effect"`, for lack of an effect in the item's data.
  */
 
 export const TRACES = Object.freeze([
-  // Armure d'Agathys (PHB, spells) : des PV temporaires (activité de soin) et une riposte (activité de dégâts), aucun effet.
+  // Armor of Agathys (PHB, spells): Temporary Hit Points (healing activity) and a retaliation (damage activity), no effect.
   "armor-of-agathys"
 ]);
 
 /**
- * Traces précisées (§16.41, `trace: { activity, show, attack }`). Lame de feu (PHB 2024) : « vous faites apparaître une lame
- * enflammée dans votre main libre ; elle dure pour la durée du sort » (concentration, 10 minutes) ; « par une action Magie, vous
- * pouvez faire une attaque de sort au corps à corps avec la lame » — activités « Invoquer une lame » (`OIU1htXAoSF0cU3U`, qui
- * dépense l'emplacement) et l'attaque (`dnd5eactivity000`, sans emplacement). dnd5e ne pose aucun effet : rien ne montrait la
- * lame, ni ne la retirait à la fin de la concentration.
+ * Specified traces (§16.41, `trace: { activity, show, attack }`). Flame Blade (PHB 2024): "you cause a fiery blade to appear
+ * in your free hand; it lasts for the spell's duration" (Concentration, 10 minutes); "as a Magic action, you
+ * can make a melee spell attack with the blade" — "Summon Blade" activities (`OIU1htXAoSF0cU3U`, which
+ * spends the slot) and the attack (`dnd5eactivity000`, no slot). dnd5e places no effect: nothing showed the
+ * blade, nor removed it at the end of Concentration.
  */
 export const TRACE_RULES = Object.freeze({
   "flame-blade": { activity: "OIU1htXAoSF0cU3U", show: true, attack: "dnd5eactivity000" },
-  // Flammes (PHB 2024) : « une flamme vacillante prend vie dans votre main et y reste pour la durée » (10 minutes, sans
-  // concentration) ; « le sort prend fin si vous le lancez à nouveau » (la trace est remplacée) ; « jusqu'à la fin du sort, vous
-  // pouvez faire une action Magie pour projeter des flammes » — « Incanter » (`MModRd17Oi6hhztj`), « Projeter des flammes »
+  // Produce Flame (PHB 2024): "a flickering flame appears in your hand and remains there for the duration" (10 minutes, no
+  // Concentration); "the spell ends if you cast it again" (the trace is replaced); "until the spell ends, you
+  // can take a Magic action to hurl the flame" — "Cast" (`MModRd17Oi6hhztj`), "Hurl Flame"
   // (`tqKlIEdglRYdqHrp`).
   "produce-flame": { activity: "MModRd17Oi6hhztj", show: true, attack: "tqKlIEdglRYdqHrp" },
-  // Voile défensif (§16.46, PHB 2024 : concentration, 1 minute) : l'activité ne pose aucun effet — la trace le porte.
+  // "Defensive Veil" (§16.46, PHB 2024: Concentration, 1 minute): the activity places no effect — the trace carries it.
   "blade-ward": { activity: "1wca3rjsdb0agWqk", show: true }
 });

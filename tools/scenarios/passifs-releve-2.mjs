@@ -1,15 +1,16 @@
 /**
- * Aptitudes passives du relevé des trous, niveaux 9 à 20 (SPEC §236), dans l'Arène des sorts : le Lanceur (PNJ), le Héros (Barbare
- * pré-tiré : classe, armes, budget de PJ), les Cibles. Chaque partie prête ses items et remet tout.
- *  - Auto-restauration : Charmé et Empoisonné, fin du tour du Héros → un seul des deux retiré (Charmé, le premier de la règle) ;
- *  - Inspiration supérieure : le Lanceur barde sans inspiration, jet d'initiative → deux utilisations ;
- *  - Avatar de la bataille : 20 dégâts tranchants → 10 PV perdus ; 20 de feu → 20 ;
- *  - Puissance indomptable : six sauvegardes de Force du Héros → jamais sous sa valeur de Force ;
- *  - Fureur élémentaire améliorée : Flammes (18 m) d'un druide à Incantation puissante → 108 m ; sans l'option → 18 m ;
- *  - Pas véloce : à son tour, la Rage (action Bonus) puis Pas du vent → gratuit, l'action Bonus reste dépensée une fois ;
- *  - Faufilement suprême : le Héros roublard 9 caché, Attaque sournoise + Attaque furtive → reste caché ; fin du tour à découvert → plus caché ;
- *  - Réflexes du voleur : initiative 20 → un second combattant à 10, retiré au round 2 ;
- *  - Âme de la vengeance : la Cible sous le Vœu d'inimitié du Héros attaque le Lanceur → le Héros riposte (Réaction, `autoReact: "first"`).
+ * Passive features from the gaps survey, levels 9 to 20 (SPEC §236), in the Spell Arena: the Caster (NPC), the Hero (pre-made
+ * Barbarian: class, weapons, PC budget), the Targets. Each part lends its items and restores everything.
+ *  - Self-Restoration: Charmed and Poisoned, end of the Hero's turn → only one of the two removed (Charmed, the first in the rule);
+ *  - Superior Inspiration: the Caster bard without inspiration, Initiative roll → two uses;
+ *  - Avatar of Battle: 20 slashing damage → 10 HP lost; 20 fire → 20;
+ *  - Indomitable Might: six Strength saving throws of the Hero → never below their Strength score;
+ *  - Improved Elemental Fury: Flames (18 m) of a druid with Potent Spellcasting → 108 m; without the option → 18 m;
+ *  - Fleet Step: on their turn, Rage (Bonus Action) then Step of the Wind → free, the Bonus Action stays spent once;
+ *  - Supreme Sneak: level 9 rogue Hero hidden, Sneak Attack + stealth attack → stayshidden; turn ends in the open → not hidden;
+ *  - Thief's Reflexes: Initiative 20 → a second combatant at 10, removed at round 2;
+ *  - Soul of Vengeance: the Target under the Hero's Vow of Enmity attacks the Caster → the Hero ripostes (Reaction,
+ *    `autoReact: "first"`).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -83,7 +84,7 @@ export default {
     });
 
     await part("Inspiration supérieure", async () => {
-      // Toutes les inspirations dépensées dès le prêt (Charisme 20 : 5 utilisations).
+      // All inspirations spent as soon as lent (Charisma 20: 5 uses).
       const { data } = await ctx.call("get-compendium-entry", { uuid: `${CLASSES}phbbrdBardicInsp` });
       const bi = await lend(caster, `${CLASSES}phbbrdBardicInsp`, { uses: { ...(data.system?.uses ?? {}), spent: 5 } });
       await lend(caster, `${CLASSES}phbbrdSuperiorIn`);

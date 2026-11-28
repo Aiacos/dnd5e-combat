@@ -1,15 +1,15 @@
 /**
- * Répliques (SPEC §16.25, clé `duplicates` de core/content.mjs) : Image miroir. Chaque effet de l'item que porte la créature
- * est une réplique (dnd5e 6 en pose trois, « Duplicate A/B/C », qui comptent aussi `flags.dnd-players-handbook.mirrorImages`).
- * Texte vérifié (spells24, mirror-image.yml) : à chaque attaque qui touche le lanceur, un d6 par réplique ; un 3 ou plus sur
- * l'un d'eux fait détourner le coup sur une réplique, qui disparaît. Un attaquant Aveuglé, ou qui a la vision aveugle ou la
- * vision véritable, n'est pas trompé.
+ * Duplicates (SPEC §16.25, key `duplicates` of core/content.mjs): Mirror Image. Each effect of the item that the creature carries
+ * is a duplicate (dnd5e 6 places three, "Duplicate A/B/C", which also count `flags.dnd-players-handbook.mirrorImages`).
+ * Verified text (spells24, mirror-image.yml): on each attack that hits the caster, a d6 per duplicate; a 3 or higher on
+ * any of them redirects the hit onto a duplicate, which disappears. An attacker that is Blinded, or has Blindsight or
+ * Truesight, is not fooled.
  */
 
 import { contentOf } from "./content.mjs";
 import { originItemOf } from "./facts.mjs";
 
-/** Les effets-répliques que porte l'acteur, un par réplique restante. */
+/** The duplicate effects the actor carries, one per remaining duplicate. */
 export function duplicateEffectsOf(actor) {
   return (actor?.appliedEffects ?? []).filter(effect => {
     if ( effect.disabled || effect.isSuppressed ) return false;
@@ -18,7 +18,7 @@ export function duplicateEffectsOf(actor) {
   });
 }
 
-/** L'attaquant se laisse-t-il tromper par les répliques ? (dnd5e senses-field.mjs:15 : `senses.ranges`) */
+/** Is the attacker fooled by the duplicates? (dnd5e senses-field.mjs:15: `senses.ranges`) */
 export function fooledByDuplicates(attacker) {
   if ( !attacker ) return true;
   if ( attacker.statuses?.has("blinded") ) return false;
@@ -26,7 +26,7 @@ export function fooledByDuplicates(attacker) {
   return !((Number(ranges.blindsight) > 0) || (Number(ranges.truesight) > 0));
 }
 
-/** Combien de répliques peuvent prendre ce coup à la place de la cible (0 : aucune, ou attaquant insensible). */
+/** How many duplicates can take this hit in the target's place (0: none, or attacker unaffected). */
 export function duplicatesAgainst(targetActor, attackerActor) {
   const count = duplicateEffectsOf(targetActor).length;
   return (count && fooledByDuplicates(attackerActor)) ? count : 0;

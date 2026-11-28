@@ -1,12 +1,12 @@
 /**
- * M6 (SPEC §18.9) — Résistance à la magie et Résistance légendaire. Monde `ravenloft` : Alara lance Flamme sacrée (sauvegarde
- * de Dextérité, un sort) sur le Zombi, qui jette par le moteur.
- *  1. Résistance à la magie (item du Balor, prêté au Zombi) : sa sauvegarde se jette avec l'avantage (2d20) ; sans l'item, 1d20.
- *  2. Résistance légendaire (2 posées sur le token du Zombi) : consigne `legendary: "never"` — l'échec reste, les dégâts
- *     passent, rien n'est dépensé ; consigne `legendary: "always"` — l'échec devient une réussite (Flamme sacrée : pas de
- *     dégâts), une résistance dépensée (par la méthode du système).
- * Le réglage de monde (demander au MJ) n'est pas touché : la consigne d'intention prime. Les jets sont aléatoires : on
- * rejoue jusqu'à un échec (20 essais au plus).
+ * M6 (SPEC §18.9) — Magic Resistance and Legendary Resistance. World `ravenloft`: Alara casts Sacred Flame (Dexterity saving
+ * throw, a spell) on the Zombie, which rolls through the engine.
+ *  1. Magic Resistance (Balor's item, lent to the Zombie): its save is rolled with Advantage (2d20); without the item, 1d20.
+ *  2. Legendary Resistance (2 placed on the Zombie's token): directive `legendary: "never"` — the failure stays, the damage
+ *     goes through, nothing is spent; directive `legendary: "always"` — the failure becomes a success (Sacred Flame: no
+ *     damage), one resistance spent (through the system's method).
+ * The world setting (ask the GM) is not touched: the intent directive takes precedence. The rolls are random: we
+ * replay until a failure (20 tries at most).
  */
 const MODULE_ID = "dnd5e-combat";
 const BALOR = "Compendium.dnd-monster-manual.actors.Actor.mmBalor000000000";
@@ -26,7 +26,7 @@ export default {
     ctx.restore(() => ctx.call("update-scene-object", { type: "Token", objectId: zombi.id,
       data: { "delta.system.resources.legres": legres0 ?? { max: 0, spent: 0 } } }).catch(() => {}));
 
-    /** Flamme sacrée sur le Zombi ; rend la résolution et le message de sauvegarde. */
+    /** Sacred Flame on the Zombie; returns the resolution and the saving throw message. */
     const flame = async (extra={}) => {
       await ctx.setHp(zombi, 100);
       const since = await ctx.lastMessageId();
@@ -38,7 +38,7 @@ export default {
     };
     const formula = s => s?.rolls?.[0]?.formula ?? "";
 
-    // 1. Résistance à la magie.
+    // 1. Magic Resistance.
     const plain = await flame();
     ctx.expect(/^1d20/.test(formula(plain.save)), `sans Résistance à la magie : 1d20 (${formula(plain.save)})`);
     const { data: balor } = await ctx.call("get-compendium-entry", { uuid: BALOR });
@@ -51,7 +51,7 @@ export default {
     ctx.expect(/^2d20/.test(formula(resisted.save)), `avec Résistance à la magie : avantage (${formula(resisted.save)})`);
     await removeMr();
 
-    // 2. Résistance légendaire.
+    // 2. Legendary Resistance.
     await ctx.call("update-scene-object", { type: "Token", objectId: zombi.id, data: { "delta.system.resources.legres": { max: 2, spent: 0 } } });
     const spent = async () => (await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id })).data.delta?.system?.resources?.legres?.spent ?? 0;
 

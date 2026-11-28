@@ -1,10 +1,10 @@
 /**
- * §412 (issue #44, lot 5) : les refus de déplacement ouvrent la fenêtre de légalité ; forcé, le geste part et le MJ est prévenu.
- * « Arène des refus » (`node tools/arene-refus.mjs`). Le MJ n'est retenu ni par le déplacement du tour ni par une case prise (la garde des
- * joueurs, vérifiée côté joueur) : ici, ce qui retient tout le monde.
- *  1. Saut en longueur bien au-delà de la limite du Guerrier (« Sauter ici ») : fenêtre « trop long » ; renoncé, il ne bouge pas ; forcé, il
- *     arrive, une alerte MJ.
- *  2. Guerrier Agrippé, un clic au sol (`moveTo`) : fenêtre « Agrippé » ; forcé, il y va, une alerte MJ.
+ * §412 (issue #44, batch 5): movement refusals open the legality window; forced, the move goes off and the GM is warned.
+ * "Refusal Arena" (`node tools/arene-refus.mjs`). The GM is held back neither by the turn's movement nor by a taken cell (the
+ * players' guard, checked on the player's side): here, what holds everyone back.
+ *  1. Long jump well beyond the Fighter's limit ("Jump here"): "too long" window; waived, it does not move; forced, it
+ *     arrives, a GM alert.
+ *  2. Grappled Fighter, a click on the ground (`moveTo`): "Grappled" window; forced, it goes there, a GM alert.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -39,7 +39,7 @@ export default {
     const textOf = d => [d?.title, d?.content, d?.text].filter(Boolean).join(" ");
     const alerts = messages => messages.filter(m => m.flags?.[MODULE_ID]?.gmAlert);
     const actions = `const { jumpTo, moveTo } = await import("/modules/${MODULE_ID}/scripts/runtime/actions.mjs"); const t = canvas.scene.tokens.get("${fighter.id}");`;
-    // Huit cases à l'est (40 ft) : au-delà de tout saut en longueur du Guerrier.
+    // Eight cells to the east (40 ft): beyond any of the Fighter's long jumps.
     const goal = { x: home.x + (8 * grid), y: home.y };
     const at = `{ x: ${goal.x} + canvas.scene.grid.size / 2, y: ${goal.y} + canvas.scene.grid.size / 2 }`;
 
@@ -63,7 +63,7 @@ export default {
     await back();
     await pause(1000);
 
-    // 2. Agrippé : un clic au sol.
+    // 2. Grappled: a click on the ground.
     await script(`await canvas.scene.tokens.get("${fighter.id}").actor.toggleStatusEffect("grappled", { active: true }); return true;`);
     await pause(800);
     since = await ctx.lastMessageId();

@@ -1,13 +1,13 @@
 /**
- * §99 : une marche du moteur s'arrête en route — un clic ailleurs (`stopWalking`, par `stopAfterMs` de `api.mcp.move`) ou la
- * pause du jeu (`pauseAfterMs`). Le Zombi marche huit cases vers la droite, hors combat :
- *  - sans interruption, il arrive ;
- *  - arrêté en route, il s'arrête sur une case (coin aligné sur la grille), entre le départ et l'arrivée ;
- *  - mis en pause en route, de même, et le jeu est sorti de pause à la fin.
- * Remet le Zombi à sa place entre chaque marche.
- * §166 : l'arrêt en route ne se juge que dans une fenêtre du MJ VISIBLE. Masquée (`document.hidden`, fenêtre en arrière-plan), le
- * navigateur ne joue plus les animations : le cœur enchaîne tous les morceaux de la marche d'un coup, le déplacement est déjà
- * « completed » quand l'arrêt arrive (vu le 2026-10-12) — rien à arrêter. Le scénario le dit et ne juge que la marche complète.
+ * §99: an engine walk stops on the way — a click elsewhere (`stopWalking`, via `stopAfterMs` of `api.mcp.move`) or the game
+ * pause (`pauseAfterMs`). The Zombie walks eight cells to the right, out of combat:
+ *  - without interruption, it arrives;
+ *  - stopped on the way, it stops on a cell (corner aligned to the grid), between the start and the arrival;
+ *  - paused on the way, likewise, and the game is unpaused at the end.
+ * Puts the Zombie back in place between each walk.
+ * §166: stopping on the way is only judged in a VISIBLE GM window. Hidden (`document.hidden`, background window), the
+ * browser no longer plays animations: the core chains all the pieces of the walk at once, the movement is already
+ * "completed" when the stop arrives (seen on 2026-10-12) — nothing to stop. The scenario says so and only judges the complete walk.
  */
 const CELLS = 8;
 
@@ -22,7 +22,7 @@ export default {
     const goal = { x: start.x + (CELLS * grid), y: start.y };
     const point = { x: goal.x + (grid / 2), y: goal.y + (grid / 2) };
     const onGrid = p => (Math.round(p.x - start.x) % grid === 0) && (Math.round(p.y - start.y) % grid === 0);
-    // Entre les deux : ni au départ ni à l'arrivée (le chemin de l'A* peut s'écarter de la ligne pour éviter un token).
+    // In between: neither at the start nor at the arrival (the A* path may deviate from the line to avoid a token).
     const between = p => (p.x > start.x) && (p.x < goal.x);
 
     const full = await ctx.engine("move", { tokenId: zombi.id, point });

@@ -4,7 +4,7 @@ import { variantsOf, chooseVariant, advantageVariant, chargeOnlyEffects, straigh
 const atk = (id, name, extra={}) => ({ id, type: "attack", name, ...extra });
 
 describe("variantes d'attaque (M5)", () => {
-  it("Défense du Sanglier : charge de 20 ft, À terre seulement après la charge", () => {
+  it("Boar's Defense: charge of 20 ft, Prone only after the charge", () => {
     const plan = variantsOf([atk("base000000000000", "Attack", { effects: ["prone00000000000"] }),
       atk("moving0000000000", "Moving Attack", { condition: "moved 20+ feet", effects: ["prone00000000000"] })]);
     expect(plan).toEqual({ base: "base000000000000", baseEffects: ["prone00000000000"],
@@ -14,7 +14,7 @@ describe("variantes d'attaque (M5)", () => {
     expect(chooseVariant(plan, { chargedFeet: 20 })).toBe("moving0000000000");
   });
 
-  it("la charge ne vaut que contre une cible d'au plus la taille dite (activité, sinon phrase de la description)", () => {
+  it("the charge only applies against a target of at most the stated size (activity, else a sentence of the description)", () => {
     const acts = (extra={}) => [atk("base000000000000", "Attack"),
       atk("moving0000000000", "Moving Attack", { condition: "moved 20+ feet", ...extra })];
     const said = variantsOf(acts({ sizeAtMost: "med" }));
@@ -29,18 +29,18 @@ describe("variantes d'attaque (M5)", () => {
     expect(written.variants[0].sizeAtMost).toBe("lg");
     expect(chooseVariant(written, { chargedFeet: 25, targetSize: "huge" })).toBeNull();
     expect(chooseVariant(written, { chargedFeet: 25, targetSize: "lg" })).toBe("moving0000000000");
-    // Une taille dite pour autre chose que la charge (une empoignade) ne borne pas la charge.
+    // A size stated for something other than the charge (a grapple) does not bound the charge.
     const other = variantsOf(acts(), "<p>If the target is a Medium or smaller creature, it has the Grappled condition."
       + " If the bull moved 20+ feet straight toward the target, extra damage.</p>");
     expect(other.variants[0].sizeAtMost).toBeUndefined();
   });
 
-  it("distance lue dans le texte quand l'activité ne la dit pas (créature inventée, 30 ft)", () => {
+  it("distance read from the text when the activity does not state it (invented creature, 30 ft)", () => {
     const plan = variantsOf([atk("a", ""), atk("b", "Moving Attack")], "<p>If the skyhorn moved 30+ feet straight toward the target…</p>");
     expect(plan.variants[0].feet).toBe(30);
   });
 
-  it("En sang : la nuée elle-même, ou la cible (Faucon de sang)", () => {
+  it("Bloodied: the swarm itself, or the target (Blood Hawk)", () => {
     const swarm = variantsOf([atk("a", ""), atk("b", "Bloodied Attack")], "<p>… or 1d4 if the swarm is Bloodied.</p>");
     expect(swarm.variants[0].subject).toBe("self");
     expect(chooseVariant(swarm, { selfBloodied: true })).toBe("b");
@@ -50,18 +50,18 @@ describe("variantes d'attaque (M5)", () => {
     expect(chooseVariant(hawk, { targetBloodied: true })).toBe("b");
   });
 
-  it("avantage : se juge au jet de dégâts, pas avant", () => {
+  it("Advantage: judged at the damage roll, not before", () => {
     const plan = variantsOf([atk("a", ""), atk("b", "Attack with Advantage")]);
     expect(chooseVariant(plan, { selfBloodied: true, chargedFeet: 99 })).toBeNull();
     expect(advantageVariant(plan)).toBe("b");
   });
 
-  it("Mimique : cible agrippée par elle", () => {
+  it("Mimic: target grappled by it", () => {
     const plan = variantsOf([atk("a", ""), atk("b", "Attacked if Grappling")]);
     expect(chooseVariant(plan, { grappledBySelf: true })).toBe("b");
   });
 
-  it("pas de variante : une seule attaque, ou des attaques sans condition (Changement d'apparence)", () => {
+  it("no variant: a single attack, or attacks without a condition (Shapechanger)", () => {
     expect(variantsOf([atk("a", "")])).toBeNull();
     expect(variantsOf([atk("a", "Attack: Claws"), atk("b", "Attack: Hooves")])).toBeNull();
   });
@@ -72,17 +72,17 @@ describe("charge en ligne droite", () => {
   it("quatre cases droit vers la cible : 20 ft", () => {
     expect(straightChargeFeet([{ x: 5, y: 0 }, { x: 7, y: 0 }, { x: 9, y: 0 }], T, 5)).toBe(20);
   });
-  it("diagonale : une case par pas (règle par défaut de dnd5e)", () => {
+  it("diagonal: one cell per step (dnd5e default rule)", () => {
     expect(straightChargeFeet([{ x: 5, y: 5 }, { x: 9, y: 1 }], T, 5)).toBe(20);
   });
   it("un coude : seule la fin droite compte", () => {
     expect(straightChargeFeet([{ x: 7, y: 5 }, { x: 7, y: 0 }, { x: 9, y: 0 }], T, 5)).toBe(10);
   });
-  it("s'éloigner ou longer la cible ne compte pas", () => {
+  it("moving away or moving alongside the target does not count", () => {
     expect(straightChargeFeet([{ x: 9, y: -4 }, { x: 9, y: 0 }], { x: 13, y: 0 }, 5)).toBe(0);
     expect(straightChargeFeet([{ x: 12, y: 0 }, { x: 16, y: 0 }], T, 5)).toBe(0);
   });
-  it("sans déplacement : 0", () => {
+  it("without movement: 0", () => {
     expect(straightChargeFeet([{ x: 9, y: 0 }], T, 5)).toBe(0);
     expect(straightChargeFeet([], T, 5)).toBe(0);
   });

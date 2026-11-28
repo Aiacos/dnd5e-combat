@@ -1,9 +1,9 @@
 /**
- * Zone déplaçable (SPEC §16.14, B18) : Rayon de lune — « une action Magie lors de vos tours suivants pour déplacer le
- * Cylindre de 18 m au maximum ». Relancer le sort quand sa zone est déjà là la déplace (ui/pointer.mjs : la visée d'une
- * case) ; ici, l'intention (sur le client de celui qui agit : distance, tour, budget) et son exécution par le MJ actif
- * (requête : un joueur ne peut pas modifier une région). Les créatures que la zone recouvre désormais font leur
- * sauvegarde : c'est la zone qui « vient sur elles » (runtime/areas.mjs, `onUpdateRegion`).
+ * Movable area (SPEC §16.14, B18): Moonbeam — "a Magic action on your later turns to move the
+ * Cylinder by 18 m at most". Relaunching the spell when its area is already there moves it (ui/pointer.mjs: aiming at a
+ * cell); here, the intent (on the client of whoever acts: distance, turn, budget) and its execution by the active GM
+ * (request: a player cannot modify a region). The creatures the area now covers make their
+ * saving throw: it is the area that "comes onto them" (runtime/areas.mjs, `onUpdateRegion`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -19,7 +19,7 @@ import { lengthIn } from "../adapter/units.mjs";
 
 export const MOVE_ZONE_QUERY = `${MODULE_ID}.moveZone`;
 
-/** Ce qu'une activité peut déplacer : `{ region, rule, cost }` si son item déclare `movable` et que sa zone est là, sinon null. */
+/** What an activity can move: `{ region, rule, cost }` if its item declares `movable` and its area is there, otherwise null. */
 export function movableZoneOf(activity) {
   const rule = activity?.item ? contentOf(activity.item).entry?.movable : null;
   if ( !rule ) return null;
@@ -27,12 +27,12 @@ export function movableZoneOf(activity) {
   return region ? { region, rule, cost: zoneMoveCost(rule, activity.activation?.type) } : null;
 }
 
-/** La distance dont la zone peut bouger, dans l'unité de la grille. */
+/** The distance the area may move, in the grid's unit. */
 export function maxMoveOf(rule) {
   return lengthIn(rule.distance, rule.units, canvas.grid.units);
 }
 
-/** Ce point est-il trop loin du centre actuel de la zone ? */
+/** Is this point too far from the area's current center? */
 export function tooFarForZone(zone, point) {
   const center = zoneCenter(zone.region);
   return !!center && (canvas.grid.measurePath([center, point]).distance > maxMoveOf(zone.rule) + 1e-6);
@@ -41,8 +41,8 @@ export function tooFarForZone(zone, point) {
 const currentTurnKey = () => turnKeyOf(game.combat?.started ? game.combat.round : null, game.combat?.turn);
 
 /**
- * Intention « déplacer la zone vers ce point ». Rend `true` quand c'est réglé (déplacée, ou abandon choisi) ; `false`
- * quand le point était trop loin et que le joueur a renoncé (§411 : il peut aussi forcer) — on peut en choisir un autre.
+ * Intent "move the area to this point". Returns `true` when settled (moved, or abandonment chosen); `false`
+ * when the point was too far and the player gave up (§411: they can also force) — another one can be chosen.
  * @param {Activity} activity
  * @param {{x: number, y: number}} point
  */
@@ -50,11 +50,12 @@ export async function moveZone(activity, point) {
   const zone = movableZoneOf(activity);
   if ( !zone ) return true;
   const { region, rule, cost } = zone;
-  // Mode souple (§6) : le tour de la pose, le budget — on dit ce qui cloche, le joueur décide. §411 : la distance aussi (avant : refus sec).
+  // Flexible mode (§6): the placement turn, the budget — we say what is wrong, the player decides.
+  // §411: distance too (before: flat refusal).
   const lines = [];
   const far = tooFarForZone(zone, point);
   if ( far ) lines.push(loc("Zone.TropLoin", { item: activity.item.name, max: rule.distance, units: rule.units }));
-  // `cost: "none"` : la zone suit le déplacement du lanceur — dès le tour de la pose, mais à son tour seulement.
+  // `cost: "none"`: the area follows the caster's movement — from the placement turn, but only on their turn.
   const free = rule.cost === "none";
   const sameTurn = !free && !canMoveArea(readAreaState(region), currentTurnKey());
   if ( sameTurn ) lines.push(loc("Zone.MemeTour", { item: activity.item.name }));
@@ -66,16 +67,16 @@ export async function moveZone(activity, point) {
     }
   }
   if ( lines.length && !(await askAnyway(`${activity.item.name} — ${activity.actor?.name ?? ""}`, lines,
-    { actor: activity.actor, item: activity.item })) ) return !far;   // renoncé : trop loin, un autre point se choisit
+    { actor: activity.actor, item: activity.item })) ) return !far;   // gave up: too far, another point is chosen
   const payload = { region: region.uuid, point: { x: point.x, y: point.y }, actor: activity.actor?.uuid ?? null, cost, activity: activity.uuid };
   await viaActiveGM(MOVE_ZONE_QUERY, handleMoveZone, payload, { noGm: "Zone.SansMJ", label: "area move" });
   return true;
 }
 
-/** Côté MJ actif : la région se déplace, l'action est décomptée, le chat le dit. */
+/** Active GM side: the region moves, the action is counted, the chat says so. */
 export async function handleMoveZone(payload, { user=null }={}) {
   let { region: regionUuid, point, actor: actorUuid, cost } = payload ?? {};
-  // §472 : d'un joueur, seulement la zone de son activité (pas une région du MJ), au coût de l'activité. Refus de sécurité : non forçable.
+  // §472: from a player, only the area of their activity (not a GM region), at the activity's cost. Safety refusal: not forceable.
   if ( needsCheck(user) ) {
     const activity = await fromUuid(payload?.activity ?? "");
     const zone = activity ? movableZoneOf(activity) : null;

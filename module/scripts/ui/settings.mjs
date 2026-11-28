@@ -1,16 +1,16 @@
 /**
- * La fenêtre de réglages de la suite DAS (2026-10-18, maquette validée par l'utilisateur : prive/maquettes/reglages-core.html ;
- * §291, 2026-10-30 : **une seule fenêtre pour tous les modules DAS**, un onglet par module en haut). Chaque module y a son onglet :
- * le moteur, et chaque module actif dont le titre public commence par « DAS · » — le moteur ne nomme aucun voisin. Un module qui
- * déclare son plan (`api.settings.registerWindow` : Combat UI, Loot, Homebrew) garde ses sous-onglets à gauche ; les autres ont un
- * onglet simple, avec leurs réglages et, en outils, les boutons de menu qu'ils ont déclarés à Foundry. Les réglages gardent leur clé,
- * leur portée et leur valeur ; au `setup` (et encore au `ready`, pour ce qui se déclare tard), ils quittent la liste de Foundry.
+ * The DAS suite settings window (2026-10-18, mockup validated by the user: prive/maquettes/reglages-core.html;
+ * §291, 2026-10-30: **a single window for all DAS modules**, one tab per module at the top). Each module has its tab there:
+ * the engine, and each active module whose public title starts with "DAS · " — the engine names no neighbour. A module that
+ * declares its plan (`api.settings.registerWindow`: Combat UI, Loot, Homebrew) keeps its sub-tabs on the left; the others have a
+ * simple tab, with their settings and, under tools, the menu buttons they declared to Foundry. The settings keep their key,
+ * their scope and their value; at `setup` (and again at `ready`, for what is declared late), they leave Foundry's list.
  *
- * Chaque sous-onglet sépare « Pour toute la table » (portée monde, le MJ seul) et « Pour ce poste » (portée client, chacun) ; un
- * joueur n'y voit que ses réglages, et seulement les modules où il en a. Aides repliées derrière un « ? », dépliées pour ce que la
- * recherche trouve (dans tous les modules). Rien ne s'écrit avant « Enregistrer » ; un réglage qui demande de recharger recharge
- * tout le monde après confirmation. Un bouton « DAS » dans l'onglet Réglages de la barre latérale l'ouvre (réglage de poste
- * `sidebarButton`), comme le bouton « Ouvrir les réglages » de chaque module dans la liste de Foundry.
+ * Each sub-tab separates "For the whole table" (world scope, the GM only) and "For this workstation" (client scope, everyone); a
+ * player sees only their own settings there, and only the modules where they have some. Help folded behind a "?", unfolded for what
+ * the search finds (in all modules). Nothing is written before "Save"; a setting that requires a reload reloads
+ * everyone after confirmation. A "DAS" button in the Settings tab of the sidebar opens it (workstation setting
+ * `sidebarButton`), like the "Open settings" button of each module in Foundry's list.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { SETTINGS_TABS, placeSettings, matchesQuery, validateWindow, isSuiteTitle, shortTitle, orderModules, groupSettings, subState } from "../core/settings-layout.mjs";
@@ -29,9 +29,9 @@ const WINDOW_ID = "das-settings";
 const LOGO = `modules/${MODULE_ID}/assets/das-logo.png`;
 export const SIDEBAR_SETTING = "sidebarButton";
 
-/** Les modules de la fenêtre, par id : { namespace, tabs, shown, auto }. `auto` : onglet simple, plan déduit (module sans plan). */
+/** The modules of the window, by id: { namespace, tabs, shown, auto }. `auto`: simple tab, deduced plan (module without a plan). */
 const windows = new Map();
-/** Le `setup` est passé : un module déclaré ensuite adopte ses réglages aussitôt. */
+/** `setup` has passed: a module declared afterwards adopts its settings at once. */
 let setupDone = false;
 
 const canEditWorld = () => game.user.isGM || game.user.can("SETTINGS_MODIFY");
@@ -40,8 +40,8 @@ const settingOf = (ns, key) => game.settings.settings.get(`${ns}.${key}`);
 const moduleTitle = ns => shortTitle(game.modules.get(ns)?.title ?? ns);
 
 /**
- * Les réglages visibles d'un module quittent la liste de Foundry pour la fenêtre. Sans effet tant que le module n'a rien déclaré ;
- * rejoué au `ready` pour un réglage déclaré après le `setup`.
+ * The visible settings of a module leave Foundry's list for the window. No effect while the module has declared nothing;
+ * replayed at `ready` for a setting declared after `setup`.
  */
 function adopt(win) {
   for ( const s of game.settings.settings.values() ) {
@@ -51,14 +51,14 @@ function adopt(win) {
   }
 }
 
-/** Les boutons de menu qu'un module sans plan a déclarés à Foundry : des outils de son onglet (MJ seulement s'ils sont restreints). */
+/** The menu buttons that a module without a plan declared to Foundry: tools of its tab (GM only if they are restricted). */
 function menuTools(ns) {
   return [...game.settings.menus.values()].filter(m => (m.namespace === ns) && (m.key !== `${ns}.settingsWindow`))
     .map(m => ({ id: m.key, icon: m.icon ?? "fa-solid fa-toolbox", name: m.name, hint: m.hint, button: m.label ?? m.name,
       everyone: !m.restricted, open: () => new m.type().render(true) }));
 }
 
-/** Les modules « DAS · » actifs qui n'ont pas déclaré de plan : un onglet simple chacun (§291). */
+/** The active "DAS · " modules that have not declared a plan: one simple tab each (§291). */
 function discover() {
   for ( const mod of game.modules ) {
     if ( !mod.active || (mod.id === MODULE_ID) || windows.has(mod.id) || !isSuiteTitle(mod.title) ) continue;
@@ -69,7 +69,7 @@ function discover() {
 }
 
 let AppClass = null;
-/** La fenêtre : créée au premier usage (le module se charge aussi hors de Foundry : tests/load.test.mjs). Un seul exemplaire. */
+/** The window: created on first use (the module also loads outside Foundry: tests/load.test.mjs). A single instance. */
 const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applications.api.ApplicationV2 {
   constructor(options={}) {
     const existing = foundry.applications.instances.get(WINDOW_ID);
@@ -85,31 +85,31 @@ const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applica
   };
 
   #module = MODULE_ID;
-  #scroll = {};            // défilement gardé d'un rendu à l'autre (ui/scroll.mjs)
+  #scroll = {};            // scroll kept from one render to the next (ui/scroll.mjs)
   #tab = new Map();        // module → sous-onglet ouvert
   #query = "";
-  #opened = new Set();     // aides dépliées à la main (« module.clé »)
-  #pending = new Map();    // « module.clé » → valeur pas encore enregistrée
+  #opened = new Set();     // help unfolded by hand ("module.key")
+  #pending = new Map();    // "module.key" → value not yet saved
 
-  /** Ouvre la fenêtre sur l'onglet d'un module (le bouton « Ouvrir les réglages » de ce module). */
+  /** Opens the window on a module's tab (that module's "Open settings" button). */
   showModule(ns) {
     if ( windows.has(ns) ) this.#module = ns;
     this.#query = "";
     return this;
   }
 
-  /** Les sous-onglets d'un module que ce spectateur voit : au moins un réglage pour lui, ou un outil. */
+  /** The sub-tabs of a module that this viewer sees: at least one setting for them, or a tool. */
   #tabs(ns) {
     const win = windows.get(ns);
     if ( !win ) return [];
     const visible = key => (settingOf(ns, key)?.scope !== "world") || canEditWorld();
-    // Un outil est réservé au MJ, sauf s'il se déclare ouvert à tous (`everyone` : l'éditeur de couleurs de Combat UI).
+    // A tool is reserved to the GM, unless it declares itself open to everyone (`everyone`: Combat UI's color editor).
     return placeSettings([...win.shown], win.tabs).map(t => ({ ...t, keys: t.keys.filter(visible),
       tools: t.tools.filter(tool => game.user.isGM || tool.everyone) }))
       .filter(t => t.keys.length || t.tools.length);
   }
 
-  /** Les modules que ce spectateur voit (au moins un sous-onglet), le moteur d'abord. */
+  /** The modules this viewer sees (at least one sub-tab), the engine first. */
   #modules() {
     return orderModules([...windows.values()].map(w => ({ id: w.namespace, title: moduleTitle(w.namespace), end: !!w.tab?.end,
       kind: w.tab?.kind ?? "settings", icon: w.tab?.icon ?? null })), MODULE_ID)
@@ -130,14 +130,14 @@ const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applica
     const searching = !!this.#query.trim();
     const root = document.createElement("div");
     root.className = "das-settings__body";
-    // Un atelier (`kind: "workshop"`) se distingue : à droite, son icône, un contour de la couleur d'accent.
+    // A workshop (`kind: "workshop"`) stands out: on the right, its icon, an outline in the accent color.
     const top = modules.map((m, i) => `<button type="button" class="das-settings__module${(m.id === ns) && !searching ? " on" : ""}${m.kind === "workshop" ? " workshop" : ""}${(m.end && !modules[i - 1]?.end) ? " end" : ""}" data-module="${esc(m.id)}">
       ${(m.id === MODULE_ID) ? `<img src="${LOGO}" alt="">` : m.icon ? `<i class="${esc(m.icon)}"></i>` : ""}<span>${esc(m.title)}</span></button>`).join("");
     const nav = tabs.map(t => `<button type="button" class="das-settings__tab${(t.id === this.#tab.get(ns)) && !searching ? " on" : ""}" data-tab="${t.id}">
       <i class="${t.icon}"></i><span>${esc(tr(t.label))}</span><span class="count">${t.keys.length}</span></button>`).join("");
     let content;
     if ( searching ) {
-      // La recherche parcourt tous les modules : un groupe par module › sous-onglet.
+      // The search covers all modules: one group per module › sub-tab.
       const groups = modules.flatMap(m => this.#tabs(m.id).map(t => ({ m, t, keys: t.keys.filter(k => this.#matches(m.id, k)) })))
         .filter(g => g.keys.length);
       content = groups.length
@@ -169,7 +169,7 @@ const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applica
     return root;
   }
 
-  /** Le défilement est gardé tant qu'on reste dans le même module et le même onglet (un réglage changé redessine tout). */
+  /** The scroll is kept as long as we stay in the same module and the same tab (a changed setting redraws everything). */
   _replaceHTML(result, content) {
     replaceKeepingScroll(content, result, [".das-settings__main nav", ".das-settings__content"], this.#scroll,
       `${this.#module}/${this.#tab.get(this.#module)}`);
@@ -181,8 +181,8 @@ const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applica
   }
 
   /**
-   * Une portée d'un onglet : ses réglages rangés en cadres, un par règle (`groups` du plan : demande de l'utilisateur, 2026-11-06) ; les
-   * options d'une règle décalées sous elle, grisées tant qu'elle est éteinte (valeur en attente comprise). Sans `groups`, une liste.
+   * One scope of a tab: its settings arranged in frames, one per rule (`groups` of the plan: user request, 2026-11-06); the
+   * options of a rule offset beneath it, greyed out while it is off (pending value included). Without `groups`, a list.
    */
   #section(ns, tab, scope) {
     const rows = tab.keys.filter(k => (settingOf(ns, k)?.scope ?? "client") === scope);
@@ -199,7 +199,7 @@ const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applica
       ${frames.join("")}`;
   }
 
-  /** Le titre d'un cadre : celui du moteur (`DND5ECOMBAT.Reglages.Groupe.<id>`), ou pour un voisin `<module>.Reglages.Groupe.<id>`. */
+  /** A frame's title: the engine's (`DND5ECOMBAT.Reglages.Groupe.<id>`), or for a neighbour `<module>.Reglages.Groupe.<id>`. */
   #groupLabel(ns, id) {
     const own = `DND5ECOMBAT.Reglages.Groupe.${id}`;
     const theirs = `${ns}.Reglages.Groupe.${id}`;
@@ -224,7 +224,7 @@ const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applica
   }
 
   #control(id, s, value, off=false) {
-    // Une option d'une règle éteinte : grisée, non modifiable (elle garde sa valeur).
+    // An option of a rule that is off: greyed out, not editable (it keeps its value).
     const html = this.#field(id, s, value);
     return off ? html.replace(/<(input|select)/g, "<$1 disabled") : html;
   }
@@ -247,7 +247,7 @@ const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applica
     return `<input type="text" data-key="${key}" value="${esc(value)}">`;
   }
 
-  /** Un atelier : ses outils en grandes cartes, sous une ligne qui dit ce qu'est le module (sa description). */
+  /** A workshop: its tools as large cards, under a line saying what the module is (its description). */
   #workshop(ns, tools) {
     if ( !tools.length ) return "";
     const about = game.modules.get(ns)?.description ?? "";
@@ -291,10 +291,10 @@ const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applica
         again?.setSelectionRange(again.value.length, again.value.length);
       });
     });
-    // Les champs seulement : la ligne porte aussi `data-key`, et le `change` d'un champ remonte jusqu'à elle (une ligne n'a ni
-    // `checked` ni `value` : une case revenait décochée, un curseur à sa valeur par défaut — vu par l'utilisateur le 2026-10-18).
+    // The fields only: the row also carries `data-key`, and a field's `change` bubbles up to it (a row has neither
+    // `checked` nor `value`: a checkbox came back unchecked, a slider at its default value — seen by the user on 2026-10-18).
     for ( const input of el.querySelectorAll(".ctl [data-key]") ) {
-      // Le curseur d'un nombre suit en direct son champ ; le redessin (badge « modifié ») attend la fin du geste.
+      // A number's slider follows its field live; the redraw ("modified" badge) waits for the end of the gesture.
       if ( input.type === "range" ) input.addEventListener("input", () => {
         el.querySelector(`input[type=number][data-key="${CSS.escape(input.dataset.key)}"]`).value = input.value;
       });
@@ -305,7 +305,7 @@ const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applica
     el.querySelector("[data-action=save]")?.addEventListener("click", () => this.#save());
   }
 
-  /** « module.clé » → [module, clé] (un id de module n'a pas de point ; une clé peut en avoir). */
+  /** "module.key" → [module, key] (a module id has no dot; a key may have one). */
   #split(id) {
     const i = id.indexOf(".");
     return [id.slice(0, i), id.slice(i + 1)];
@@ -353,12 +353,12 @@ const appClass = () => AppClass ??= class DasSettingsApp extends foundry.applica
   }
 };
 
-/** La fenêtre, ouverte sur l'onglet d'un module (le moteur par défaut). */
+/** The window, opened on a module's tab (the engine by default). */
 export function openSettings(ns=MODULE_ID) {
   return new (appClass())().showModule(ns).render({ force: true });
 }
 
-/** Le bouton « Ouvrir les réglages » d'un module dans la liste de Foundry : la même fenêtre, sur son onglet. */
+/** A module's "Open settings" button in Foundry's list: the same window, on its tab. */
 const launcherFor = ns => class extends appClass() {
   constructor(options={}) {
     super(options);
@@ -366,33 +366,35 @@ const launcherFor = ns => class extends appClass() {
   }
 };
 
-/** Inscrit un module dans la fenêtre, et son bouton dans les réglages de Foundry. */
+/** Registers a module in the window, and its button in Foundry's settings. */
 function declare(win, menu={}) {
   windows.set(win.namespace, win);
   if ( game.settings.registerMenu ) game.settings.registerMenu(win.namespace, "settingsWindow", {
     name: menu.name ?? "DND5ECOMBAT.Reglages.Menu.NomVoisin", label: menu.label ?? "DND5ECOMBAT.Reglages.Menu.Bouton",
     hint: menu.hint ?? "DND5ECOMBAT.Reglages.Menu.AideVoisin", icon: menu.icon ?? "fa-solid fa-sliders", type: launcherFor(win.namespace), restricted: false
   });
-  // Déclaré après le `setup` (un module voisin qui s'inscrit tard) : ses réglages quittent la liste tout de suite.
+  // Declared after `setup` (a neighbouring module registering late): its settings leave the list right away.
   if ( setupDone ) adopt(win);
   return { open: () => openSettings(win.namespace) };
 }
 
 /**
- * `api.settings.registerWindow(def)` : un module voisin range ses réglages en sous-onglets dans son onglet de la fenêtre DAS. À appeler
- * à son `init` (ou son `setup`), après avoir déclaré ses réglages. `def` : `{ namespace, title, tabs: [{ id, icon, label, keys, tools:
- * [{ id, icon, name, hint, button, open, everyone? }] }], menu?: { name, label, hint, icon } }` — un outil est réservé au MJ sauf
- * `everyone: true` ; `label`, `name`, `hint`, `button` sont des clés de traduction du module (`title` n'est plus lu : l'onglet porte le
- * titre du module). `tab?: { end, kind, icon }` : l'onglet du module en haut — `end` le range à droite après les autres, `kind:
- * "workshop"` en fait un atelier (des outils en grandes cartes, contour d'accent), `icon` (Font Awesome) précède son nom. Rend `{ open }`. Une déclaration invalide est refusée (erreur) : le module garde alors la liste de Foundry. Un
- * module « DAS · » qui ne déclare rien a quand même son onglet (§291).
+ * `api.settings.registerWindow(def)`: a neighbouring module arranges its settings in sub-tabs in its tab of the DAS window. To call
+ * at its `init` (or its `setup`), after declaring its settings. `def`: `{ namespace, title, tabs: [{ id, icon, label, keys, tools:
+ * [{ id, icon, name, hint, button, open, everyone? }] }], menu?: { name, label, hint, icon } }` — a tool is reserved to the GM
+ * unless `everyone: true`; `label`, `name`, `hint`, `button` are translation keys of the module (`title` is no longer read:
+ * the tab carries the module's title). `tab?: { end, kind, icon }`: the module's tab at the top — `end` puts it on the right
+ * after the others, `kind:
+ * "workshop"` makes it a workshop (tools as large cards, accent outline), `icon` (Font Awesome) precedes its name.
+ * Returns `{ open }`. An invalid declaration is refused (error): the module then keeps Foundry's list. A "DAS · " module that
+ * declares nothing still has its tab (§291).
  */
 export function registerWindow(def) {
   const problems = validateWindow(def);
   if ( problems.length ) throw new Error(`${MODULE_ID} | settings window of ${def?.namespace ?? "?"}: ${problems.join("; ")}`);
   const known = windows.get(def.namespace);
   if ( known && !known.auto ) return { open: () => openSettings(def.namespace) };
-  // Découvert d'abord (inscrit après le `setup`) : son plan remplace l'onglet simple, ses réglages déjà adoptés restent.
+  // Discovered first (registered after `setup`): its plan replaces the simple tab, its settings already adopted remain.
   return declare({ namespace: def.namespace, tabs: def.tabs, tab: def.tab ?? null, shown: known?.shown ?? new Set() }, def.menu ?? {});
 }
 
@@ -407,12 +409,12 @@ const ENGINE_TOOLS = Object.freeze({
   floatTheme: () => openFloatTheme()
 });
 
-/** §291 : le bouton « DAS » de l'onglet Réglages de la barre latérale, sous « Paramètres du jeu ». */
+/** §291: the "DAS" button of the sidebar's Settings tab, under "Game Settings". */
 function sidebarButton(app, html) {
   const root = (html instanceof HTMLElement) ? html : html?.[0];
   if ( !root || root.querySelector(".das-sidebar-settings") ) return;
   let on = true;
-  try { on = game.settings.get(MODULE_ID, SIDEBAR_SETTING); } catch { /* réglage pas encore déclaré */ }
+  try { on = game.settings.get(MODULE_ID, SIDEBAR_SETTING); } catch { /* setting not yet declared */ }
   if ( !on ) return;
   const anchor = root.querySelector('button[data-app="configure"]');
   if ( !anchor ) return;
@@ -425,8 +427,8 @@ function sidebarButton(app, html) {
 }
 
 /**
- * La fenêtre est ouverte à tous (chacun y règle son poste) ; au `setup`, une fois toutes les fonctionnalités déclarées, les modules
- * « DAS · » sont découverts, et leurs réglages visibles quittent la liste de Foundry pour leur onglet.
+ * The window is open to everyone (each person sets their own workstation); at `setup`, once all features are declared, the
+ * "DAS · " modules are discovered, and their visible settings leave Foundry's list for their tab.
  */
 export function registerSettingsWindow() {
   game.settings.register(MODULE_ID, SIDEBAR_SETTING, {

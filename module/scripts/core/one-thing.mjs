@@ -1,13 +1,13 @@
 /**
- * Hébétement (Frappes sournoises du Roublard, SRD 5.2) : « à son prochain tour, la cible ne peut faire qu'une seule de ces
- * choses : se déplacer, prendre une action ou prendre une action Bonus ». Fonctions pures, sur le budget du tour (core/turn.mjs).
+ * Daze (Rogue's Cunning Strike, SRD 5.2): "on its next turn, the target can do only one of these
+ * things: move, take an action, or take a Bonus Action". Pure functions, on the turn budget (core/turn.mjs).
  */
 
 /**
- * Le budget tel que la règle le laisse : ce qui a déjà été fait ferme les deux autres portes.
- * @param {{action: number, bonus: number, limited?: number}} budget  le budget en cours
- * @param {{action: number, bonus: number}} fresh                    le budget d'un tour neuf
- * @param {boolean} moved                                            la créature s'est déplacée à ce tour
+ * The budget as the rule leaves it: what has already been done closes the other two doors.
+ * @param {{action: number, bonus: number, limited?: number}} budget  the current budget
+ * @param {{action: number, bonus: number}} fresh                    the budget of a fresh turn
+ * @param {boolean} moved                                            the creature moved this turn
  */
 export function oneThingBudget(budget, fresh, moved) {
   const acted = budget.action < fresh.action;
@@ -18,7 +18,7 @@ export function oneThingBudget(budget, fresh, moved) {
   return budget;
 }
 
-/** La créature a pris une action ou une action Bonus : elle ne se déplace plus à ce tour. */
+/** The creature took an action or a Bonus Action: it no longer moves this turn. */
 export function oneThingStopsMove(budget, fresh) {
   return (budget.action < fresh.action) || (budget.bonus < fresh.bonus);
 }

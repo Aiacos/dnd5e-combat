@@ -1,9 +1,9 @@
 /**
- * §359, lot O9f de la repasse des objets : consommables. Arène de test (Guerrier, Zombi au contact).
- *  1. Huile éthérée appliquée sans cible désignée : c'est le Guerrier qui devient Éthéré.
- *  2. Menottes : l'effet « Manacled » posé sur le Zombi (le test « Bind » est celui de la cible, la pose reste à la carte de dnd5e) — lié,
- *     il attaque avec le Désavantage, et peut tenter de s'en libérer.
- *  3. Corde d'enchevêtrement (« Entangle » raté par le Zombi) : Entravé, il peut tenter de s'en libérer.
+ * §359, batch O9f of the item pass: consumables. Test arena (Fighter, Zombie in contact).
+ *  1. Oil of Etherealness applied with no designated target: it is the Fighter who becomes Ethereal.
+ *  2. Manacles: the "Manacled" effect placed on the Zombie (the "Bind" check is the target's, the placing stays with
+ *     dnd5e's card) — bound, it attacks with Disadvantage, and can try to break free.
+ *  3. Rope of Entanglement ("Entangle" failed by the Zombie): Restrained, it can try to break free.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -40,7 +40,7 @@ export default {
       return r;
     };
 
-    // 1. Huile éthérée.
+    // 1. Oil of Etherealness.
     const oil = await ctx.ensureItem(fighter, `${DMG}dmgOilOfEthereal`);
     await play(oil, "CEUD70b6Aouaqs6Z", []);
     ctx.expect((await statuses(fighter)).includes("ethereal"), `Huile éthérée sans cible : le Guerrier est Éthéré (${(await statuses(fighter)).join(", ") || "rien"})`);
@@ -60,7 +60,7 @@ export default {
     }
     await clean();
 
-    // 3. Corde d'enchevêtrement.
+    // 3. Rope of Entanglement.
     const rope = await ctx.ensureItem(fighter, `${DMG}dmgRopeOfEntangl`);
     let caught = false;
     for ( let i = 0; (i < 12) && !caught; i++ ) {

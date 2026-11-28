@@ -1,14 +1,16 @@
 /**
- * §285 : sorts de contrôle (lot 3 des chantiers du 2026-10-30). MJ actif.
- *  - Panique (`panic`) — Terreur : « lâche ce qu'elle tient » sur l'échec (résolution close) ; Terreur et Mauvais œil (Paniqué) : à
- *    chacun de ses tours, la créature prend l'action Foncer et s'éloigne du lanceur par l'A* du moteur (attaques d'opportunité, murs).
- *    Mauvais œil : l'effet cesse si elle finit ce déplacement à `endsAt` du lanceur sans le voir. Le « chemin le plus sûr » reste au MJ.
- *  - Confusion (`confusion`) : 1d10 montré au début de son tour (core/control.mjs) — errance, rien, coup au hasard à son allonge
- *    (annoncé : le jet d'attaque reste au joueur ou au MJ), ou libre. Ni action Bonus (`noBonus`) ni Réaction (`noReactions`).
- *  - Couronne du dément (`forcedAttack`, `upkeep`) : au début du tour de la créature Charmée, le rappel « attaque au corps à corps une
- *    créature que le lanceur choisit, avant de se déplacer » ; à la fin de chaque tour suivant du lanceur, le sort prend fin s'il ne
- *    l'a pas entretenu (action Magie : entrée « Maintenir » du menu de son token, `maintain`).
- * Retour visuel et sonore vu de tous (`notice`, `all`), carte dans le chat.
+ * §285: control spells (batch 3 of the 2026-10-30 workstreams). Active GM.
+ *  - Panic (`panic`) — Fear: "drops what it is holding" on a failure (closed resolution); Fear and Evil Eye (Panicked): on
+ *    each of its turns, the creature takes the Dash action and moves away from the caster by the engine's A*
+ *    (Opportunity Attacks, walls). Evil Eye: the effect ends if it finishes this move at `endsAt` from the caster without
+ *    seeing the caster. The "safest path" is left to the GM.
+ *  - Confusion (`confusion`): 1d10 shown at the start of its turn (core/control.mjs) — wander, nothing, a random strike
+ *    within its reach (announced: the attack roll stays with the player or the GM), or free. Neither Bonus Action (`noBonus`) nor
+ *    Reaction (`noReactions`).
+ *  - Crown of Madness (`forcedAttack`, `upkeep`): at the start of the Charmed creature's turn, the reminder
+ *    "make a melee attack against a creature the caster chooses, before moving"; at the end of each following turn of the caster,
+ *    the spell ends if the caster has not maintained it (Magic action: "Maintain" entry in the token menu, `maintain`).
+ * Visual and audio feedback seen by everyone (`notice`, `all`), card in the chat.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -32,12 +34,12 @@ import { log, loc, locEsc, notice, say, sleep, waitForDice } from "./shared.mjs"
 const handled = new Set();
 const INCAPACITATING = ["incapacitated", "paralyzed", "petrified", "stunned", "unconscious"];
 
-/** Les effets actifs de l'acteur dont l'item d'origine déclare `key` (et, si la règle nomme un effet, celui-là) : `{ effect, item, rule }`. */
+/** The actor's Active Effects whose source item declares `key` (and, if the rule names an effect, that one): `{ effect, item, rule }`. */
 function ruled(actor, key, effectOf=rule => rule?.effect ?? null) {
   const out = [];
   for ( const effect of actor?.effects ?? [] ) {
     if ( effect.disabled || effect.isSuppressed ) continue;
-    // L'effet de concentration du lanceur vient du même item : il ne porte pas la règle de la cible (comme adapter/triggers.mjs).
+    // The caster's concentration effect comes from the same item: it does not carry the target's rule (like adapter/triggers.mjs).
     if ( effect.statuses?.has?.("concentrating") || (effect.getFlag?.("dnd5e", "type") === "concentration") ) continue;
     const item = originItemOf(effect);
     const rule = item ? contentOf(item).entry?.[key] : null;
@@ -49,7 +51,7 @@ function ruled(actor, key, effectOf=rule => rule?.effect ?? null) {
   return out;
 }
 
-/** Le token du lanceur d'un item sur la scène de `token`, ou null. */
+/** The token of an item's caster on the scene of `token`, or null. */
 function casterToken(item, token) {
   const actor = item?.actor;
   if ( !actor || (actor === token.actor) ) return null;
@@ -59,7 +61,7 @@ function casterToken(item, token) {
 const canAct = actor => ((actor?.system?.attributes?.hp?.value ?? 0) > 0) && !INCAPACITATING.some(s => actor.statuses?.has(s));
 
 /* -------------------------------------------- */
-/*  Terreur : lâcher sur l'échec                */
+/*  Fear: drop on a failure                     */
 /* -------------------------------------------- */
 
 async function onResolution(resolution) {
@@ -82,10 +84,10 @@ async function onResolution(resolution) {
 }
 
 /* -------------------------------------------- */
-/*  Début du tour du porteur                    */
+/*  Start of the bearer's turn                  */
 /* -------------------------------------------- */
 
-/** Panique : Foncer, puis s'éloigner du lanceur ; Mauvais œil : fin à `endsAt` hors de vue. */
+/** Panic: Dash, then move away from the caster; Evil Eye: ends at `endsAt` out of sight. */
 async function panic(combatant, token, { effect, item, rule }) {
   const caster = casterToken(item, token);
   if ( !caster || !canAct(token.actor) ) return;
@@ -152,7 +154,7 @@ async function confused(combatant, token, { item }) {
   await say({ token }, lines, { control: { kind: "confusion", item: item.name, token: token.uuid, roll: roll.total, behavior: behavior.kind, target: target?.uuid ?? null } });
 }
 
-/** Couronne du dément : le rappel de l'attaque imposée. */
+/** Crown of Madness: the reminder of the imposed attack. */
 async function forcedAttack(token, { item }) {
   if ( !canAct(token.actor) ) return;
   const caster = item.actor;
@@ -169,7 +171,7 @@ async function onTurnStart(combatant) {
   const confusions = ruled(actor, "confusion", rule => (typeof rule === "string") ? rule : null);
   const crowns = ruled(actor, "forcedAttack", rule => (typeof rule === "string") ? rule : null);
   if ( !panics.length && !confusions.length && !crowns.length ) return;
-  // La remise à neuf du budget (runtime/turn.mjs) part au même changement de tour : on la laisse arriver (comme Injonction).
+  // The budget reset (runtime/turn.mjs) fires on the same turn change: we let it happen (like Command).
   await sleep(600);
   if ( panics.length ) await panic(combatant, token, panics[0]);
   else if ( confusions.length ) await confused(combatant, token, confusions[0]);
@@ -180,23 +182,23 @@ async function onTurnStart(combatant) {
 /*  Entretien par l'action Magie (Couronne)     */
 /* -------------------------------------------- */
 
-/** Les sorts du lanceur à entretenir : ses effets de concentration dont l'item déclare `upkeep`. */
+/** The caster's spells to maintain: its concentration effects whose item declares `upkeep`. */
 export function upkeepsOf(actor) {
   return Array.from(actor?.effects ?? []).filter(e => !e.disabled && (e.statuses?.has?.("concentrating") || (e.getFlag?.("dnd5e", "type") === "concentration")))
     .map(effect => ({ effect, item: originItemOf(effect) })).filter(({ item }) => item && (contentOf(item).entry?.upkeep === true));
 }
 
-/** Entretenir peut-il se faire maintenant (en combat, à son tour, pas déjà fait ce tour) ? */
+/** Can upkeep be done now (in combat, on its turn, not already done this turn)? */
 export function canMaintain(token, effect) {
   const combatant = combatantFor(token?.actor);
   const key = currentTurnKey();
   if ( !combatant || !key || (game.combat?.combatant?.id !== combatant.id) ) return false;
-  // `since` : noté à la fin du tour du lancement (onTurnEnd) — pendant ce tour-là, rien à entretenir.
+  // `since`: noted at the end of the casting turn (onTurnEnd) — during that turn, nothing to maintain.
   const flag = effect.getFlag(MODULE_ID, "upkeep") ?? {};
   return !!flag.since && (flag.since !== key) && (flag.done !== key);
 }
 
-/** L'action Magie qui entretient le sort : l'action du tour, notée sur l'effet de concentration. Sur le client de celui qui agit. */
+/** The Magic action that maintains the spell: the turn's action, noted on the concentration effect. On the acting client. */
 export async function maintain(token, effect, item) {
   const combatant = combatantFor(token.actor);
   if ( !combatant ) return false;
@@ -210,7 +212,7 @@ export async function maintain(token, effect, item) {
   return true;
 }
 
-/** Fin du tour du lanceur : le tour du lancement est noté ; ensuite, sans entretien ce tour-là, la concentration tombe. */
+/** End of the caster's turn: the casting turn is noted; afterwards, without upkeep that turn, concentration drops. */
 async function onTurnEnd(combatant, priorKey) {
   const token = combatant?.token;
   const actor = token?.actor;

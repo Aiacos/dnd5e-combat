@@ -1,7 +1,8 @@
 /**
- * §264 : Porte dimensionnelle avec passager — « une créature consentante à 1,50 m de vous… se téléporte dans un espace à 1,50 m de
- * votre destination ». Le Magicien, le Guerrier à son contact et ciblé, saute à 8 cases : le Guerrier arrive au contact du Magicien.
- * Puis un saut sans cible : le Guerrier reste.
+ * §264: Dimension Door with a passenger — "a willing creature within 5 feet of you… teleports to a space within 5 feet of
+ * your destination". The Wizard, the Fighter in contact with them and targeted, jumps 8 cells: the Fighter arrives in contact
+ * with the Wizard.
+ * Then a jump without a target: the Fighter stays.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 

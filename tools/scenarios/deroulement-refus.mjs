@@ -1,12 +1,13 @@
 /**
- * §417 : le réglage « Action impossible » (`refusalMode`, cadre « Déroulement ») — ce que devient un refus du moteur, côté MJ, sur
- * l'« Arène des refus » (`node tools/arene-refus.mjs`), une attaque ou un sort lancés depuis la fiche sur la Cible lointaine (155 ft) :
- *  1. `window` : la fenêtre « hors de portée » avec « utiliser quand même » ; renoncé, rien ne part.
- *  2. `strict` : le MJ garde la fenêtre entière (le joueur, lui, ne peut que renoncer : à vérifier avec `claude player`).
- *  3. `notice` : aucune fenêtre ; la javeline du Guerrier part, la carte est marquée, UNE alerte MJ (§416 : le jet ne redemande pas).
- *  4. `off` : aucune fenêtre ; la Flamme sacrée du Clerc part, sans marque ni alerte.
- * Un lanceur différent par étape : forcer une portée la tient pour acquise 60 s par activité et cibles (`acknowledge`, runtime/turn.mjs).
- * Le réglage est remis à sa valeur d'avant.
+ * §417: the "Impossible action" setting (`refusalMode`, "Flow" frame) — what an engine refusal becomes, on the GM's side, in
+ * the "Refusal Arena" (`node tools/arene-refus.mjs`), an attack or a spell cast from the sheet on the Distant Target (155 ft):
+ *  1. `window`: the "out of range" window with "use anyway"; waived, nothing goes off.
+ *  2. `strict`: the GM keeps the full window (the player can only waive: to check with `claude player`).
+ *  3. `notice`: no window; the Fighter's javelin goes off, the card is marked, ONE GM alert (§416: the roll does not ask again).
+ *  4. `off`: no window; the Cleric's Sacred Flame goes off, with no mark or alert.
+ * A different caster per step: forcing a range takes it as acknowledged for 60 s per activity and targets
+ * (`acknowledge`, runtime/turn.mjs).
+ * The setting is restored to its previous value.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -33,7 +34,7 @@ export default {
     const legality = async (name, ms=6000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, waitMs: 1000 }).catch(() => null);
-        // La fenêtre du refus, pas celle « Au toucher » (§516, Sauvagerie martiale), qui porte le même nom en titre.
+        // The refusal's window, not the "On hit" one (§516, Martial Savagery), which has the same title.
         const d = (r?.windows ?? []).find(w => (w.title ?? "").endsWith(` — ${name}`)
           && (w.buttons ?? []).some(x => ["go", "cancel"].includes(x.action)));
         if ( d ) return d;
@@ -46,7 +47,7 @@ export default {
         if ( d ) await ctx.call("answer-dialog", { id: d.id, button: "cancel" }).catch(() => {});
       }
     });
-    /** Depuis la fiche : la cible désignée, puis `activity.use()` sans rien de confirmé — le chemin d'un clic sur l'objet. */
+    /** From the sheet: the target designated, then `activity.use()` with nothing confirmed — the path of a click on the item. */
     const useFromSheet = (token, itemId, type) => script(`const t = canvas.tokens.get("${token.id}");
       canvas.tokens.get("${far.id}").setTarget(true, { releaseOthers: true });
       const activity = t.actor.items.get("${itemId}").system.activities.find(a => a.type === "${type}");
@@ -56,7 +57,7 @@ export default {
     const marked = messages => messages.filter(m => m.flags?.[MODULE_ID]?.overridden?.length);
     const types = messages => messages.map(m => m.type).join(", ") || "aucun message";
 
-    // 1 et 2. La fenêtre — celle de tous (`window`), celle que le MJ garde en refus strict.
+    // 1 and 2. The window — everyone's (`window`), the one the GM keeps in strict refusal.
     for ( const value of ["window", "strict"] ) {
       await mode(value);
       const since = await ctx.lastMessageId();
@@ -69,7 +70,7 @@ export default {
       ctx.expect(!after.length, `${value} : renoncé, rien ne part (${types(after)})`);
     }
 
-    // 3. Simple avertissement : l'action part, marquée, le MJ prévenu une fois.
+    // 3. Simple warning: the action goes off, marked, the GM warned once.
     if ( ctx.expect(!!javelin, "le Guerrier des refus a une javeline") ) {
       await mode("notice");
       const since = await ctx.lastMessageId();
@@ -77,7 +78,7 @@ export default {
       const d = await legality(fighter.name, 3000);
       ctx.expect(!d, "notice : aucune fenêtre");
       if ( d ) await ctx.call("answer-dialog", { id: d.id, button: "cancel" });
-      // Un coup qui touche ouvre la fenêtre « Au toucher » (Sauvagerie martiale, §516) : validée, pour que les dégâts partent.
+      // A hit opens the "On hit" window (Martial Savagery, §516): validated, so that the damage goes off.
       for ( const stop = Date.now() + 5000; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, waitMs: 1000 }).catch(() => null);
         const hit = (r?.windows ?? []).find(w => (w.buttons ?? []).some(x => x.action === "strike"));
@@ -90,7 +91,7 @@ export default {
       ctx.expect(alerts(after).length === 1, `notice : une seule alerte MJ (${alerts(after).length})`);
     }
 
-    // 4. Aucun contrôle : l'action part, rien n'est signalé.
+    // 4. No check: the action goes off, nothing is reported.
     if ( ctx.expect(!!flame, "le Clerc des refus a la Flamme sacrée") ) {
       await mode("off");
       const since = await ctx.lastMessageId();

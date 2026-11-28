@@ -1,11 +1,11 @@
 /**
- * Audit d'une fiche de PJ (2026-10-29) : chaque activité jouable de ses sorts, aptitudes, armes et consommables, utilisée une fois dans
- * l'« Arène des sorts » avec les invariants du balayage (`tools/lib/balayage.mjs`). On joue une COPIE de la fiche (« <nom> (audit) »,
- * mêmes items, mêmes ids, mêmes effets), posée à la place du Lanceur : la fiche du PJ n'est jamais touchée. La copie est marquée
- * acteur d'essai et retirée à la fin (`darsh-loot`, `api.mcp.removeTestActors`).
- * Ne se joue que nommé : `PJ=Kaalisti node tools/scenario.mjs audit-pj`. Variables du balayage : `DEPUIS=<identifiant>`, `PILE=1` ;
- * `ITEMS=fireball,hellish-rebuke` (identifiants) pour n'en jouer que quelques-uns.
- * Hors de l'audit : les actions de base du moteur (`dnd5e-combat-*`), et ce que le balayage ne joue pas (invocations, renvois).
+ * Audit of a PC sheet (2026-10-29): every playable activity of its spells, features, weapons and consumables, used once in the
+ * "Spell Arena" with the sweep invariants (`tools/lib/balayage.mjs`). A COPY of the sheet is played ("<name> (audit)",
+ * same items, same ids, same effects), placed in the Caster's stead: the PC's sheet is never touched. The copy is marked as a
+ * test actor and removed at the end (`darsh-loot`, `api.mcp.removeTestActors`).
+ * Only played when named: `PJ=Kaalisti node tools/scenario.mjs audit-pj`. Sweep variables: `DEPUIS=<identifiant>`, `PILE=1`;
+ * `ITEMS=fireball,hellish-rebuke` (identifiers) to play only a few.
+ * Outside the audit: the engine's basic actions (`dnd5e-combat-*`), and what the sweep does not play (summons, dismissals).
  */
 import { sweep } from "../lib/balayage.mjs";
 import { ARENE_SORTS } from "../lib/stages.mjs";
@@ -27,19 +27,19 @@ export default {
     const source = await ctx.call("get-actor", { actorId: found.id });
     const NAME = `${pj} (audit)`;
 
-    // La copie : liée, hostile à personne (disposition du Lanceur), marquée acteur d'essai.
+    // The copy: linked, hostile to no one (the Caster's disposition), marked as a test actor.
     const { _id, folder, ownership, _stats, id, ...data } = source;
     const created = await ctx.call("create-actor", { actorData: { ...data, name: NAME,
       prototypeToken: { ...(data.prototypeToken ?? {}), actorLink: true, name: NAME },
       flags: { ...(data.flags ?? {}), "darsh-loot": { test: true } },
-      // L'arène remet chacun à 999 PV entre deux utilisations : un PJ à 54 PV max serait ramené à son maximum en cours de route.
+      // The arena resets everyone to 999 HP between two uses: a PC with 54 max HP would be capped at its maximum midway.
       system: { ...(data.system ?? {}), attributes: { ...(data.system?.attributes ?? {}), hp: { ...(data.system?.attributes?.hp ?? {}), max: 999, value: 999 } } } } });
     const actorId = created?.id ?? created?.actor?.id;
     ctx.restore(async () => {
       await ctx.call("call-module-api", { moduleId: "darsh-loot", fn: "removeTestActors", args: {} }).catch(err => ctx.log(`copie non retirée : ${err.message}`));
     });
 
-    // Le Lanceur de l'arène s'écarte (coin nord-ouest), la copie prend sa place.
+    // The arena's Caster steps aside (northwest corner), the copy takes its place.
     const lanceur = await ctx.token("Lanceur");
     const at = await ctx.position(lanceur);
     const grid = ARENE_SORTS.grid;
@@ -50,7 +50,7 @@ export default {
     const tokenId = placed?.id ?? placed?.token?.id ?? placed?.tokenId;
     if ( tokenId && (disposition !== undefined) ) await ctx.call("update-scene-object", { type: "Token", objectId: tokenId, data: { disposition } }).catch(() => {});
     await pause(1000);
-    // `ctx.scene()` garde la liste des tokens du début du scénario : la copie y est ajoutée.
+    // `ctx.scene()` keeps the token list from the start of the scenario: the copy is added to it.
     const live = (await ctx.liveTokens()).find(x => x.name === NAME);
     if ( live ) (await ctx.scene()).tokens.push(live);
 

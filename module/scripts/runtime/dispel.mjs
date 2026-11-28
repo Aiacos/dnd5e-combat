@@ -1,14 +1,15 @@
 /**
- * §37.2 : Dissipation de la magie. Au message d'utilisation d'un sort dont le contenu déclare `dispel` (MJ actif) : pour chaque cible
- * du message, les sorts en cours (adapter/dispel.mjs) cessent d'office jusqu'au niveau 3 ou à celui de l'emplacement, les autres sur
- * un test de la caractéristique d'incantation du lanceur contre DD 10 + niveau (core/dispel.mjs, lancé par le moteur). Une carte dit
- * ce qui a cessé et ce qui a résisté (flag `dispel`, lu par les scénarios).
- * §403 : « une créature, un objet ou un effet magique à portée » — sans créature désignée, le lanceur choisit une zone de sort à portée
- * (Toile, Rayon de lune, Ténèbres… ; adapter/dispel.mjs, `spellZonesNear`), qui cesse comme un sort sur une créature : sa concentration
- * retirée, sinon la zone. Les objets (enchantement d'une arme) : au MJ.
- * §496 (brique B16) : `dispel: { upTo, beyond, keepBySlot }` — plafond fixe ; au-delà rien (`none`) ou le test ; `keepBySlot` : avant
- * qu'un sort de concentration ne cesse, la créature qui s'y concentre peut, par sa Réaction (Neutralisée ou sans Réaction : non), dépenser
- * un emplacement de niveau 1 ou plus pour le garder (question à son joueur, sinon au MJ ; « le laisser finir » est la première option).
+ * §37.2: Dispel Magic. On the use message of a spell whose content declares `dispel` (active GM): for each target
+ * of the message, the spells in progress (adapter/dispel.mjs) end automatically up to level 3 or the slot's level, the others on
+ * an ability check with the caster's spellcasting ability against DC 10 + level (core/dispel.mjs, rolled by the engine).
+ * A card says what ended and what resisted (flag `dispel`, read by the scenarios).
+ * §403: "a creature, an object or a magical effect within range" — with no designated creature, the caster chooses a spell
+ * area within range (Web, Moonbeam, Darkness…; adapter/dispel.mjs, `spellZonesNear`), which ends like a spell on a creature:
+ * its concentration removed, otherwise the area. Objects (a weapon's enchantment): left to the GM.
+ * §496 (building block B16): `dispel: { upTo, beyond, keepBySlot }` — fixed ceiling; beyond it nothing (`none`) or the check;
+ * `keepBySlot`: before a Concentration spell ends, the creature concentrating on it can, with its Reaction (Incapacitated or
+ * without a Reaction: no), spend a spell slot of level 1 or higher to keep it (question to its player, otherwise to the GM;
+ * "let it end" is the first option).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -68,15 +69,16 @@ async function onUsage(message) {
 }
 
 /**
- * Un sort face à la dissipation : il cesse d'office, sur un test, ou reste (au-delà du plafond avec `none`, test raté) ; §496 : avant
- * de cesser, la créature concentrée peut le garder (`keepBySlot`). Rend `{ ends, total, kept }` (`kept` : `{ by, slot }`).
+ * A spell facing Dispel Magic: it ends automatically, on a check, or stays (beyond the ceiling with `none`, failed check);
+ * §496: before ending, the concentrating creature can keep it (`keepBySlot`).
+ * Returns `{ ends, total, kept }` (`kept`: `{ by, slot }`).
  */
 async function resolveStep(item, caster, spell, step, rule) {
   if ( step.none ) return { ends: false, total: null, kept: null };
   let ends = step.auto;
   let total = null;
   if ( !ends ) {
-    // §306 (repasse C11) : Briseur de sorts (Abjurateur 10) — « vous ajoutez votre bonus de maîtrise au test » de Dissipation de la magie.
+    // §306 (C11 pass): Spell Breaker (Abjurer 10) — "you add your Proficiency Bonus to the check" of Dispel Magic.
     const breaker = (identifierOf(item).id === "dispel-magic") && caster.items.some(i => identifierOf(i).id === "spell-breaker");
     total = await castingCheck(caster, castingAbilityOf(item, caster), step.dc, { bonus: breaker ? (Number(caster.system.attributes?.prof) || 0) : 0 });
     if ( breaker ) log(`${caster.name}: Spell Breaker, proficiency bonus added to the check (${total})`);
@@ -89,8 +91,8 @@ async function resolveStep(item, caster, spell, step, rule) {
 }
 
 /**
- * §496 : la créature concentrée sur ce sort le garde-t-elle, par sa Réaction et un emplacement de niveau 1+ ? Chez le MJ actif ; la
- * question va à son joueur (sinon au MJ). Rend `{ by, slot }` (nom, niveau de l'emplacement dépensé), ou null.
+ * §496: does the creature concentrating on this spell keep it, with its Reaction and a slot of level 1+? On the active GM; the
+ * question goes to its player (otherwise the GM). Returns `{ by, slot }` (name, level of the slot spent), or null.
  */
 async function keepWithSlot(item, spell) {
   const concentration = spell.concentration ? await fromUuid(spell.concentration) : null;
@@ -114,7 +116,7 @@ async function keepWithSlot(item, spell) {
   return { by: holder.name, slot: chosen.level };
 }
 
-/** §403 : sans créature désignée, une zone de sort à portée, au choix du lanceur (aucune : rien). */
+/** §403: with no designated creature, a spell area within range, at the caster's choice (none: nothing). */
 async function dispelZone(message, item, caster, slot, rule) {
   const casterToken = speakerTokenOf(message) ?? caster?.getActiveTokens?.(false, true)?.[0] ?? null;
   const range = item.system?.range ?? {};

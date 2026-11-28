@@ -1,25 +1,26 @@
 /**
- * Enchantements manquants de la progression « ModifyItem » de dnd5e 6.1 (vérification `modify-item` du diagnostic, §453).
+ * Missing enchantments of dnd5e 6.1's "ModifyItem" advancement (`modify-item` check of the diagnostic, §453).
  *
- * Cette progression pose un enchantement de l'aptitude sur un autre objet de la fiche (Frappes renforcées → l'attaque à mains nues,
- * Armes empoisonnées → Frappe rusée, Main de mage subtile → le sort Main de mage…). dnd5e ne le fait qu'à l'application de la progression
- * (`ModifyItemAdvancement#apply`), sur les objets visés DÉJÀ présents : un objet arrivé après (un sort appris plus tard), ou une aptitude
- * remplacée par sa version du Manuel 3.0.0 (vérification `phb3-items`), reste sans enchantement, et rien ne le signale.
+ * This advancement places an enchantment of the feature on another item of the sheet (Enhanced Strikes → the unarmed attack,
+ * Poisoned Weapons → Sneak Attack, Subtle Mage Hand → the Mage Hand spell…). dnd5e does it only when the advancement is applied
+ * (`ModifyItemAdvancement#apply`), on the targeted items ALREADY present: an item that arrived later (a spell learned
+ * afterwards), or a feature replaced by its Player's Handbook 3.0.0 version (check `phb3-items`), stays without an
+ * enchantment, and nothing signals it.
  *
- * Un enchantement est présent sur l'objet visé quand l'un de ses effets :
- *  - porte la marque de dnd5e `flags.dnd5e.advancementOrigin` = « <id de l'aptitude>.<id de la progression> » et vient de cet effet
- *    (`flags.dnd5e.sourceId` : l'uuid de l'effet de l'aptitude, qui finit par « .ActiveEffect.<id> », ou l'uuid distant du changement) ;
- *  - ou est noté dans `value.modified` de la progression (même changement, même objet, effet encore là) ;
- *  - ou est un enchantement du même nom (posé autrement, par une ancienne version : ne pas le doubler).
+ * An enchantment is present on the targeted item when one of its effects:
+ *  - bears dnd5e's mark `flags.dnd5e.advancementOrigin` = "<feature id>.<advancement id>" and comes from that effect
+ *    (`flags.dnd5e.sourceId`: the uuid of the feature's effect, ending in ".ActiveEffect.<id>", or the remote uuid of the change);
+ *  - or is noted in the advancement's `value.modified` (same change, same item, effect still there);
+ *  - or is an enchantment of the same name (placed otherwise, by an older version: do not double it).
  *
- * Pur : reçoit des descriptions simples, sans document Foundry.
+ * Pure: receives plain descriptions, without a Foundry document.
  */
 
-/** La marque que dnd5e pose sur l'enchantement : « <aptitude>.<progression> ». */
+/** The mark that dnd5e places on the enchantment: "<feature>.<advancement>". */
 export const modifyOrigin = (featureId, advancementId) => `${featureId}.${advancementId}`;
 
 /**
- * L'effet de l'objet visé vient-il de ce changement ?
+ * Does the targeted item's effect come from this change?
  * @param {{ id: string, name?: string, type?: string, advancementOrigin?: string, sourceId?: string }} effect
  * @param {{ origin: string, change: { _id: string, uuid?: string|null }, effectName?: string }} wanted
  */
@@ -32,12 +33,13 @@ export function comesFromChange(effect, { origin, change, effectName }) {
 }
 
 /**
- * Les enchantements manquants d'une fiche.
+ * The missing enchantments of a sheet.
  * @param {Array<{ id: string, name: string, advancements: Array<{ id: string,
  *   changes: Array<{ _id: string, uuid?: string|null, identifiers: string[], effectName?: string, exists?: boolean }>,
- *   modified?: Array<{ change: string, item: string, effect: string }> }> }>} features  les aptitudes qui ont une progression ModifyItem
- * @param {(key: string) => Array<{ id: string, name: string, dependent?: boolean }>} targetsOf  « type:identifiant » → objets de la fiche
- * @param {(itemId: string) => Array<{ id: string, name?: string, type?: string, advancementOrigin?: string, sourceId?: string }>} effectsOf
+ *   modified?: Array<{ change: string, item: string, effect: string }> }> }>} features  features with a ModifyItem advancement
+ * @param {(key: string) => Array<{ id: string, name: string, dependent?: boolean }>} targetsOf  "type:identifier" → sheet items
+ * @param {(itemId: string) => Array<{ id: string, name?: string, type?: string, advancementOrigin?: string, sourceId?: string }>}
+ *   effectsOf
  * @returns {Array<{ feature: object, advancement: object, change: object, target: { id: string, name: string } }>}
  */
 export function missingModifications(features, targetsOf, effectsOf) {
@@ -46,7 +48,7 @@ export function missingModifications(features, targetsOf, effectsOf) {
     for ( const advancement of feature.advancements ) {
       const origin = modifyOrigin(feature.id, advancement.id);
       for ( const change of advancement.changes ) {
-        if ( change.exists === false ) continue;   // l'effet de l'aptitude n'existe pas : rien à poser
+        if ( change.exists === false ) continue;   // the feature's effect does not exist: nothing to place
         const seen = new Set();
         for ( const key of change.identifiers ?? [] ) {
           for ( const target of targetsOf(key) ?? [] ) {

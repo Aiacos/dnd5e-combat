@@ -1,11 +1,11 @@
 /**
- * Brique B8 « effet qui cesse sur dégâts » et B4 sur dégâts (SPEC §16.7), portées par l'effet posé sur le Zombi :
- *  1. Motif hypnotique (spells24, donné au Magicien le temps du scénario), zone réduite à la case du Zombi, rejoué
- *     jusqu'à un échec : le Zombi est Charmé et Neutralisé. Un Rayon de givre qui le touche → l'effet cesse, carte
- *     « cesse » (`flags["dnd5e-combat"].ended`).
- *  2. Fou rire de Tasha, rejoué jusqu'à un échec (Neutralisé, À terre). Un Rayon de givre qui le touche → il rejoue
- *     sa sauvegarde (message `resave`, moment `isDamaged`) ; l'effet reste sur un échec, tombe sur une réussite.
- * Le Magicien est concentré sur l'un puis l'autre : la concentration est rompue entre les deux et à la fin.
+ * Brick B8 "effect that ends on damage" and B4 on damage (SPEC §16.7), carried by the effect placed on the Zombie:
+ *  1. Hypnotic Pattern (spells24, given to the Wizard for the scenario's duration), area reduced to the Zombie's cell, replayed
+ *     until a failure: the Zombie is Charmed and Incapacitated. A Ray of Frost that hits it → the effect ends, "ends"
+ *     card (`flags["dnd5e-combat"].ended`).
+ *  2. Tasha's Hideous Laughter, replayed until a failure (Incapacitated, Prone). A Ray of Frost that hits it → it replays
+ *     its save (message `resave`, moment `isDamaged`); the effect stays on a failure, ends on a success.
+ * The Wizard concentrates on one then the other: Concentration is broken between the two and at the end.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -25,7 +25,7 @@ export default {
     await ctx.ensureItem(mage, "Compendium.dnd5e.spells24.Item.phbsplTashasHide");
     const statusesOf = async () => (await ctx.effects(zombi)).flatMap(e => e.statuses ?? []);
 
-    /** Lance le sort jusqu'à ce que le Zombi rate sa sauvegarde ; rend la résolution, ou null. */
+    /** Casts the spell until the Zombie fails its save; returns the resolution, or null. */
     const until = async (identifier, extra={}) => {
       for ( let i = 0; i < 20; i++ ) {
         await endConcentration();
@@ -39,7 +39,7 @@ export default {
       return null;
     };
 
-    /** Rayon de givre jusqu'à toucher le Zombi ; rend le message d'avant le tir (pour lire ce qui a suivi). */
+    /** Ray of Frost until it hits the Zombie; returns the message from before the shot (to read what followed). */
     const hurt = async () => {
       for ( let i = 0; i < 20; i++ ) {
         await ctx.setHp(zombi, hp0);
@@ -51,7 +51,7 @@ export default {
       return null;
     };
 
-    // 1. Motif hypnotique : cesse sur dégâts.
+    // 1. Hypnotic Pattern: ends on damage.
     const box = await ctx.box(zombi);
     const hp = await until("hypnotic-pattern", { area: { shape: "rectangle", ...box } });
     if ( !ctx.expect(!!hp, "Motif hypnotique : le Zombi rate sa sauvegarde (20 essais au plus)") ) return;
@@ -64,7 +64,7 @@ export default {
     const ended = (await ctx.messagesSince(since)).find(m => m.flags?.["dnd5e-combat"]?.ended);
     ctx.expect(!!ended, `le chat dit que le sort cesse (${ended ? "carte « cesse »" : "aucune carte"})`);
 
-    // 2. Fou rire de Tasha : sauvegarde rejouée sur dégâts.
+    // 2. Tasha's Hideous Laughter: save replayed on damage.
     const hl = await until("hideous-laughter", { targetTokenIds: [zombi.id] });
     if ( !ctx.expect(!!hl, "Fou rire : le Zombi rate sa sauvegarde (20 essais au plus)") ) return;
     ctx.expect((await statusesOf()).includes("incapacitated"), "Zombi Neutralisé par le Fou rire");

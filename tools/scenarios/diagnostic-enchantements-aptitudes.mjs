@@ -1,10 +1,11 @@
 /**
- * §453 : le diagnostic « Enchantements des aptitudes » (progression « ModifyItem » de dnd5e 6.1). Un acteur reçoit, posés directement
- * (sans la progression, comme une aptitude remplacée par sa version 3.0.0 ou un objet obtenu après), Frappes renforcées et l'attaque à
- * mains nues du Moine, Frappe rusée et Armes empoisonnées du Roublard. L'analyse trouve les deux enchantements manquants ; la réparation
- * (sauvegarde d'abord) les pose comme dnd5e — sur l'attaque à mains nues et sur Frappe rusée, marqués par la progression — et dnd5e
- * crée le rider d'Armes empoisonnées (l'activité « Poison » sur Frappe rusée), inscrit dans la progression ; une nouvelle analyse ne
- * trouve plus rien. Acteur et sauvegarde retirés.
+ * §453: the "Feature enchantments" diagnostic (dnd5e 6.1 "ModifyItem" progression). An actor receives, placed directly
+ * (without the progression, like a feature replaced by its 3.0.0 version or an item obtained afterwards), Heightened Strikes
+ * and the Monk's Unarmed Strike, the Rogue's Cunning Strike and Poisoned Weapons. The analysis finds the two missing
+ * enchantments; the repair
+ * (backup first) places them as dnd5e does — on the Unarmed Strike and on Cunning Strike, marked by the progression — and dnd5e
+ * creates the Poisoned Weapons rider (the "Poison" activity on Cunning Strike), recorded in the progression; a new analysis
+ * finds nothing. Actor and backup removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.classes.Item.";
@@ -20,7 +21,7 @@ export default {
     const hadPack = JSON.stringify((await ctx.call("list-compendiums", {}).catch(() => [])) ?? "").includes("world.das-backups");
     ctx.restore(() => api("diagnosticForget", { uuids: backups, dropPack: !hadPack, actors }));
 
-    /** Un objet du Manuel, tel quel, avec son origine. */
+    /** A Handbook item, as is, with its origin. */
     const entry = async id => {
       const uuid = PHB + id;
       const res = await ctx.call("get-compendium-entry", { uuid }).catch(() => null);

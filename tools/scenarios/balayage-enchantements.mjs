@@ -1,13 +1,14 @@
 /**
- * §391 (issue #38, suite) : balayage des enchantements et transformations à PLUSIEURS profils (Arme élémentaire, Arme magique, Gourdin
- * magique, Frappe assurée, Empoisonneur, armes et armures +1/+2/+3 du DMG, Métamorphose suprême…) par les chemins qui sautent la fenêtre
- * de dnd5e :
- *   barre        `activity.use(…, { configure: false })` (avec l'emplacement de son niveau pour un sort) ;
- *   sans-empl.   un sort lancé par la fiche, emplacements vidés : « Plus de charge → Lancer quand même » (§77).
- * La fenêtre du moteur est répondue en prenant le DERNIER profil. Invariants : une fenêtre de choix s'ouvre ; si l'utilisation va à son
- * terme (`postUseActivity`), dnd5e reçoit le profil choisi ; aucune erreur dans la console. Une utilisation qui attend ensuite une cible
- * (Arme élémentaire : la créature puis son arme) est notée « suite attendue », sans défaut. La Forme sauvage (sa propre fenêtre, §16.39)
- * est sautée. Ne se joue que nommé : `node tools/scenario.mjs balayage-enchantements` ; `ITEMS=elemental-weapon,magic-weapon`.
+ * §391 (issue #38, continued): sweep of enchantments and transformations with SEVERAL profiles (Elemental Weapon, Magic Weapon,
+ * Shillelagh, True Strike, Poisoner, DMG +1/+2/+3 weapons and armor, True Polymorph…) through the paths that skip
+ * dnd5e's window:
+ *   barre        `activity.use(…, { configure: false })` (with the slot of its level for a spell);
+ *   sans-empl.   a spell cast from the sheet, slots emptied: "Out of charges → Cast anyway" (§77).
+ * The engine's window is answered by taking the LAST profile. Invariants: a choice window opens; if the use runs to its
+ * end (`postUseActivity`), dnd5e receives the chosen profile; no error in the console. A use that then waits for a target
+ * (Elemental Weapon: the creature, then its weapon) is noted "continuation awaited", without defect. Wild Shape (its own
+ * window, §16.39) is skipped. Only played when named: `node tools/scenario.mjs balayage-enchantements`;
+ * `ITEMS=elemental-weapon,magic-weapon`.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -27,11 +28,11 @@ export default {
     const { tokens } = await ctx.scene();
     if ( !tokens.some(t => t.name === "Lanceur") ) { ctx.log("Lanceur absent : lancer tools/arene-sorts.mjs"); return; }
     const caster = await ctx.token("Lanceur");
-    // La cible désignée avant de lancer : une créature (Métamorphose suprême) ou le porteur de l'arme (Arme élémentaire, Arme magique).
+    // The target designated before casting: a creature (True Polymorph) or the weapon's bearer (Elemental Weapon, Magic Weapon).
     const target = await ctx.token(tokens.some(t => t.name === "Héros") ? "Héros" : (tokens.some(t => t.name === "Allié") ? "Allié" : "Lanceur"));
     const at = await ctx.position(caster);
     const effectsBefore = new Set(((await ctx.call("get-actor", { actorId: caster.actorId })).effects ?? []).map(e => e._id ?? e.id));
-    // Les effets déjà posés sur les objets de la cible (ses enchantements à elle) : le test retire seulement ceux qu'il a posés.
+    // Effects already placed on the target's items (its own enchantments): the test only removes those it placed.
     const itemEffects = async () => ((await ctx.call("get-actor", { actorId: target.actorId })).items ?? [])
       .flatMap(i => (i.effects ?? []).map(e => ({ item: i._id, effect: e._id ?? e.id })));
     const targetBefore = new Set((await itemEffects()).map(x => `${x.item}.${x.effect}`));
@@ -97,7 +98,7 @@ export default {
               chose = radio.at(-1).value;
               await ctx.call("answer-dialog", { id: w.id, fields: { profile: chose }, button: "summon" }).catch(() => {});
             } else if ( (w.fields ?? []).some(f => ["enchantmentProfile", "transform.profile"].includes(f.name)) ) {
-              // La fenêtre de dnd5e (ouverte par un chemin du moteur depuis la fiche : Arme élémentaire) propose le choix elle aussi.
+              // dnd5e's window (opened by an engine path from the sheet: Elemental Weapon) offers the choice as well.
               const field = w.fields.find(f => ["enchantmentProfile", "transform.profile"].includes(f.name));
               saw = saw || ((field.options ?? []).length > 1);
               chose = (field.options ?? []).at(-1)?.value ?? chose;
@@ -105,9 +106,9 @@ export default {
             } else if ( (w.buttons ?? []).some(b => ["yes", "go"].includes(b.action)) ) {
               await ctx.call("answer-dialog", { id: w.id, button: (w.buttons ?? []).some(b => b.action === "go") ? "go" : "yes" }).catch(() => {});
             } else if ( (w.className === "DialogV2") && (w.buttons ?? []).length && !answered.has(w.id) ) {
-              // La suite d'un chemin du moteur (l'arme de la créature pour Arme élémentaire, Arme magique) : son bouton par défaut.
+              // The continuation of an engine path (the creature's weapon for Elemental Weapon, Magic Weapon): its default button.
               answered.add(w.id);
-              // Une fenêtre à cartes (l'arme de la créature) : la première carte ; sinon son bouton par défaut.
+              // A card window (the creature's weapon): the first card; otherwise its default button.
               const clicked = await ctx.engine("clickCard", { id: w.id }).catch(() => null);
               if ( !clicked?.clicked ) {
                 const button = (w.buttons.find(x => x.default) ?? w.buttons[0]).action;
@@ -121,7 +122,7 @@ export default {
         const used = captured?.used ?? null;
         const got = used ? (type === "enchant" ? used.enchantmentProfile : used.transformProfile) : null;
         const problems = [];
-        // Un seul profil disponible à ce niveau (Arme magique +1 au niveau 2, Gourdin magique) : rien à choisir.
+        // Only one profile available at this level (Magic Weapon +1 at level 2, Shillelagh): nothing to choose.
         if ( !saw && ((started.profiles?.length ?? 0) > 1) ) problems.push(`${started.profiles.length} profils, aucune fenêtre de choix (fenêtres vues : ${[...seen].join(" | ") || "aucune"})`);
         if ( used && chose && (got !== chose) ) problems.push(`dnd5e reçoit ${got}, pas le profil choisi`);
         await pause(800);

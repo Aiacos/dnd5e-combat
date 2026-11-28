@@ -1,16 +1,17 @@
 /**
- * Sorts du clerc et du druide codés mais jamais joués (issues #4 à #6, le 2026-09-27). Le Clerc lance (sorts ajoutés à
- * volonté pour le scénario, retirés à la fin), le Zombi (mort-vivant) frappe ou subit :
- *  1. Protection contre le mal et le bien sur le Guerrier : l'attaque du Zombi a le Désavantage ; sans la protection, non.
- *  2. Lien de protection sur le Guerrier : le Zombi le touche, le Clerc perd autant de PV — par le moteur (le drapeau de
- *     BLFX, s'il en pose un, est retiré de l'effet pour que ce soit le moteur qui partage).
- *  3. Cécité/surdité sur le Zombi, Cécité choisie : un seul effet (Aveuglé) ; au combat, sauvegarde répétée à la fin de
- *     chacun de ses tours, l'effet tombe sur une réussite.
- *  4. Tempête de neige sur le Zombi : rien à la pose (§300) ; au début de son tour, le sort rejoue (message marqué `areaTick`).
- *  5. Aura de vitalité, « Soins de début de tour » sur le Guerrier blessé : le soin lancé est appliqué.
- *  6. Convocation de fée, au combat : l'esprit entre juste après le Clerc (initiative entre le Clerc et le suivant) ; la fin
- *     de la concentration le retire. Placement à une case fixe (`api.mcp.summonAt`).
- * Chaque partie remet PV, effets, états, zones, positions et combat.
+ * Cleric and druid spells coded but never played (issues #4 to #6, 2026-09-27). The Cleric casts (spells added at
+ * will for the scenario, removed at the end), the Zombie (Undead) strikes or suffers:
+ *  1. Protection from Evil and Good on the Fighter: the Zombie's attack has Disadvantage; without the protection, not.
+ *  2. Warding Bond on the Fighter: the Zombie hits him, the Cleric loses as many HP — through the engine (the BLFX
+ *     flag, if one is placed, is removed from the effect so that the engine does the sharing).
+ *  3. Blindness/Deafness on the Zombie, Blindness chosen: a single effect (Blinded); in combat, repeated saving throw at the end of
+ *     each of its turns, the effect ends on a success.
+ *  4. Sleet Storm on the Zombie: nothing at placement (§300); at the start of its turn, the spell replays (message marked
+ *     `areaTick`).
+ *  5. Aura of Vitality, "Start-of-turn healing" on the wounded Fighter: the healing cast is applied.
+ *  6. Summon Fey, in combat: the spirit enters right after the Cleric (Initiative between the Cleric and the next one);
+ *     the end of Concentration removes it. Placement on a fixed cell (`api.mcp.summonAt`).
+ * Each part puts back HP, effects, conditions, areas, positions and combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -80,7 +81,7 @@ export default {
       await ctx.call("move-token", { tokenId: zombi.id, x: p.x - grid, y: p.y, elevation: p.elevation });
       await pause(800);
     };
-    /** Une attaque du Zombi ; `untilHit` : rejouée jusqu'à toucher. Rend la résolution, le jet et les messages. */
+    /** A Zombie attack; `untilHit`: replayed until it hits. Returns the resolution, the roll and the messages. */
     const strike = async (target, { untilHit=false }={}) => {
       for ( let i = 0; i < (untilHit ? 20 : 1); i++ ) {
         const since = await ctx.lastMessageId();
@@ -135,7 +136,7 @@ export default {
         ctx.log("drapeau BLFX retiré de l'effet : c'est le moteur qui partage");
       }
       await nextTo(fighter);
-      // Des PV temporaires laissés par un scénario précédent absorberaient la part du Clerc : retirés le temps de la lecture.
+      // Temporary Hit Points left by a previous scenario would absorb the Cleric's share: removed for the duration of the reading.
       await ctx.call("update-actor", { actorId: cleric.actorId, actorData: { "system.attributes.hp.temp": 0 } }).catch(() => {});
       const clericBefore = await ctx.hp(cleric);
       const hit = await strike(fighter, { untilHit: true });
@@ -147,7 +148,7 @@ export default {
       ctx.expect((lostFighter > 0) && (lostCleric === Math.min(lostFighter, clericBefore)), `le Guerrier perd ${lostFighter} PV, le Clerc aussi : ${lostCleric}`);
     });
 
-    // 3. Cécité/surdité, Cécité choisie, puis sauvegarde répétée en fin de tour.
+    // 3. Blindness/Deafness, Blindness chosen, then repeated saving throw at end of turn.
     await part("Cécité/surdité", async () => {
       let blinded = null;
       for ( let n = 1; (n <= 20) && !blinded; n++ ) {
@@ -159,8 +160,8 @@ export default {
       ctx.expect((blinded.length === 1) && (await statuses(zombi)).includes("blinded") && !(await statuses(zombi)).includes("deafened"),
         `un seul effet, Aveuglé (${blinded.map(e => e.name).join(", ")})`);
       await combatWith([cleric, zombi], [[cleric, 20], [zombi, 10]]);
-      // Le sort dure 1 minute (10 rounds) : on s'arrête avant, pour que l'effet ne tombe que sur une sauvegarde réussie.
-      // Deux combattants : un changement de tour sur deux finit le tour du Zombi.
+      // The spell lasts 1 minute (10 rounds): we stop before, so that the effect ends only on a successful saving throw.
+      // Two combatants: every second turn change ends the Zombie's turn.
       let removed = null;
       let resaves = 0;
       for ( let turn = 0; (turn < 16) && !removed; turn++ ) {
@@ -182,7 +183,8 @@ export default {
       await endCombat();
     });
 
-    // 4. Tempête de neige : rien à la pose (§300, texte 2024 : sauvegarde à l'entrée et au début du tour), rejeu au début du tour du Zombi.
+    // 4. Sleet Storm: nothing at placement (§300, 2024 text: saving throw on entry and at the start of the turn),
+    // replay at the start of the Zombie's turn.
     await part("Tempête de neige", async () => {
       await ctx.removeStatusEffects(zombi, "prone");
       const box = await ctx.box(zombi);
@@ -196,14 +198,14 @@ export default {
       ctx.expect(!(await statuses(zombi)).includes("prone"), "le Zombi reste debout à la pose");
       await combatWith([cleric, zombi], [[cleric, 20], [zombi, 10]]);
       const since = await ctx.lastMessageId();
-      await ctx.nextTurn();   // Clerc → Zombi : début de son tour dans la zone
+      await ctx.nextTurn();   // Cleric → Zombie: start of its turn in the area
       await pause(3500);
       const tick = (await ctx.messagesSince(since)).find(m => (m.type === "usage") && (m.flags?.[MODULE_ID]?.areaTick));
       ctx.expect(!!tick, "début du tour du Zombi dans la zone : le sort rejoue (message marqué areaTick)");
       await endCombat();
     });
 
-    // 5. Aura de vitalité : le soin de début de tour.
+    // 5. Aura of Vitality: the start-of-turn healing.
     await part("Aura de vitalité", async () => {
       await ctx.setHp(fighter, Math.max(1, hp0.get(fighter.id) - 9));
       const before = await ctx.hp(fighter);
@@ -219,7 +221,7 @@ export default {
         `soin appliqué : ${before} → ${after} PV (jet ${healing?.total ?? "?"})`);
     });
 
-    // 6. Convocation de fée, au combat.
+    // 6. Summon Fey, in combat.
     await part("Convocation de fée", async () => {
       await combatWith([cleric, zombi], [[cleric, 15], [zombi, 10]]);
       const p = await ctx.position(cleric);

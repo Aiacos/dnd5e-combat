@@ -1,23 +1,26 @@
 /**
- * Relevé des trous (2026-10-22) : ce que le relevé de lecture des sorts et des dons (`prive/RELEVE_SORTS.md`, `RELEVE_DONS.md`) a pu
- * laisser passer, cherché mécaniquement dans les données — pas dans le texte relu à la main. Pour chaque sort, don, aptitude de classe
- * et trait d'espèce du Manuel des joueurs premium (et les sorts du SRD 2024 de dnd5e), croisé avec ce que le moteur déclare (`CONTENT`) :
- *  - `ref-morte`   : un id (activité ou effet) cité par l'entrée du moteur n'existe pas sur l'item — la règle ne s'accroche à rien ;
- *  - `effet-orphelin` : un effet de l'item qu'aucune activité ne pose, qui n'est pas transféré et que le moteur ne cite pas (État cadavérique) ;
- *  - `lien-casse`  : une activité pose un effet absent de l'item ;
- *  - `etat-absent` : le texte impose un état (« the Prone condition ») qu'aucun effet de l'item ne porte et que le moteur ne cite pas ;
- *  - `degats-vides`: une part de dégâts sans dés ni formule (la lance des prétirés, §151) ;
- *  - `sans-degats` : le texte annonce des dés de dégâts / de soin, aucune activité n'en porte, le moteur n'en déclare pas ;
- *  - `montee`      : sort de niveau ≥ 1 dont le texte augmente les dés au niveau supérieur, sans `scaling` sur la part ni sur l'activité ;
- *  - `tour-sans-montee` : tour de magie à dés sans montée « whole » ;
- *  - `moitie`      : « half as much damage » dans le texte et `onSave` ≠ half, ou l'inverse ;
- *  - `cle-inconnue`: changement d'effet sur une clé absente des données d'acteur de dnd5e (Maître des armures intermédiaires, §130) ;
- *  - `portee-soi`  : portée « personnelle » d'une activité qui vise une créature (relevé §124, rappelé) ;
- *  - `ident-orphelin` : une entrée du moteur dont l'identifiant n'existe dans aucune donnée lue (faute de frappe, renommage) ;
- *  - `srdRenamed` : un item du SRD 2024 renommé (même id de document que le Manuel, autre identifiant) sans la règle du Manuel.
- * Lit une COPIE des bases LevelDB, n'écrit rien dans le dépôt : le JSON (texte premium) va où on le demande, hors du dépôt.
- *   node tools/releve-trous.mjs <dossier Data de Foundry> <acteur.json> <sortie.json>
- * `acteur.json` : un acteur personnage et un PNJ lus par le connecteur (`get-actor`), en tableau — la liste des clés valides.
+ * Gap survey (2026-10-22): what the spell and feat reading survey (`prive/RELEVE_SORTS.md`, `RELEVE_DONS.md`) may have
+ * missed, searched mechanically in the data — not in the hand-read text. For each spell, feat, class feature and species trait
+ * of the premium Player's Handbook (and the SRD 2024 spells of dnd5e), cross-checked with what the engine declares (`CONTENT`):
+ *  - `ref-morte`:    an id (activity or effect) cited by the engine entry does not exist on the item — the rule hooks onto nothing;
+ *  - `effet-orphelin`: an effect of the item that no activity applies, that is not transferred and that the engine does not
+ *    cite ("Cadaveric State");
+ *  - `lien-casse`:   an activity applies an effect absent from the item;
+ *  - `etat-absent`:  the text imposes a condition ("the Prone condition") that no effect of the item carries and that the
+ *    engine does not cite;
+ *  - `degats-vides`: a damage part with no dice or formula (the pregens' spear, §151);
+ *  - `sans-degats`:  the text announces damage / healing dice, no activity carries any, the engine declares none;
+ *  - `montee`:       spell of level ≥ 1 whose text increases the dice at a higher level, without `scaling` on the part or activity;
+ *  - `tour-sans-montee`: cantrip with dice without "whole" scaling;
+ *  - `moitie`:       "half as much damage" in the text and `onSave` ≠ half, or the reverse;
+ *  - `cle-inconnue`: effect change on a key absent from dnd5e's actor data (Medium Armor Master, §130);
+ *  - `portee-soi`:   "personal" range of an activity that targets a creature (survey §124, repeated);
+ *  - `ident-orphelin`: an engine entry whose identifier exists in no data read (typo, rename);
+ *  - `srdRenamed`:   a renamed SRD 2024 item (same document id as the Handbook, other identifier) without its rule.
+ * Reads a COPY of the LevelDB databases, writes nothing to the repository: the JSON (premium text) goes where requested,
+ * outside the repository.
+ *   node tools/releve-trous.mjs <Foundry Data folder> <acteur.json> <output.json>
+ * `acteur.json`: a player character and an NPC read by the connector (`get-actor`), as an array — the list of valid keys.
  */
 import { cpSync, mkdirSync, readdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -72,7 +75,7 @@ for ( const { book, dir } of SOURCES ) {
   });
 }
 const known = new Set(items.map(i => i.item.system?.identifier).filter(Boolean));
-const knownIds = new Map();   // identifiant → ids (activités, effets) de toutes ses versions, bestiaires compris
+const knownIds = new Map();   // identifier → ids (activities, effects) of all its versions, bestiaries included
 const noteIds = (ident, item, effects=[]) => {
   if ( !ident ) return;
   if ( !knownIds.has(ident) ) knownIds.set(ident, new Set());
@@ -96,7 +99,7 @@ for ( const dir of KNOWN_ONLY ) {
 }
 for ( const { dir, item } of items ) noteIds(item.system?.identifier, item, effectsOf.get(`${dir}|${item._id}`) ?? []);
 
-/* ---- les clés d'acteur valides ---- */
+/* ---- the valid actor keys ---- */
 const actors = JSON.parse(readFileSync(actorFile, "utf8"));
 const keys = new Set();
 const walk = (obj, path) => {
@@ -105,7 +108,7 @@ const walk = (obj, path) => {
   for ( const [k, v] of Object.entries(obj) ) walk(v, `${path}.${k}`);
 };
 for ( const a of [actors].flat() ) walk(a.system, "system");
-// Valeurs dérivées que les données source n'ont pas (préparées par dnd5e) : acceptées sous un parent connu.
+// Derived values that the source data does not have (prepared by dnd5e): accepted under a known parent.
 const DERIVED = new Set(["value", "max", "min", "bonus", "mod", "total", "dc", "bonuses", "tempmax", "temp", "effectiveMax", "mode",
   "flat", "calc", "formula", "armor", "shield", "cover", "abilities", "all"]);
 const flagKeys = new Set();
@@ -121,7 +124,7 @@ const keyOk = key => {
   if ( key.startsWith("flags.") || key.startsWith("macro.") || key.startsWith("ATL.") || key.startsWith("ATE.") ) return true;
   if ( !key.startsWith("system.") ) return true;
   if ( keys.has(key) ) return true;
-  // Clés anciennes que dnd5e 6 renomme à l'application (documents/active-effect.mjs:80-86), valeurs préparées.
+  // Old keys that dnd5e 6 renames on application (documents/active-effect.mjs:80-86), prepared values.
   if ( /^system\.attributes\.movement\.(speed|walk|burrow|climb|fly|jump|swim)$/.test(key) ) return true;
   if ( /^system\.(scale\.|traits\.dm\.amount\.|attributes\.hp\.bonuses\.)/.test(key) ) return true;
   const parts = key.split(".");
@@ -132,13 +135,13 @@ const keyOk = key => {
   return false;
 };
 
-/* ---- les relevés ---- */
+/* ---- the surveys ---- */
 const CONDITIONS = { Blinded: "blinded", Charmed: "charmed", Deafened: "deafened", Frightened: "frightened", Grappled: "grappled",
   Incapacitated: "incapacitated", Invisible: "invisible", Paralyzed: "paralyzed", Petrified: "petrified", Poisoned: "poisoned",
   Prone: "prone", Restrained: "restrained", Stunned: "stunned", Unconscious: "unconscious", Exhaustion: "exhaustion" };
 const idsIn = (value, acc=new Set()) => {
-  // Un id fait 16 caractères ; un nom de clé du schéma aussi parfois (« difficultTerrain ») : un mot en camelCase n'en est pas un,
-  // sauf les ids lisibles des modules premium (« phbsplCompulsion »).
+  // An id is 16 characters; a schema key name sometimes too ("difficultTerrain"): a camelCase word is not one,
+  // except the readable ids of premium modules ("phbsplCompulsion").
   if ( typeof value === "string" ) {
     if ( /^[A-Za-z0-9]{16}$/.test(value) && (!/^[a-z]+([A-Z][a-z]+)+$/.test(value) || /^(phb|mm|dmg|rhw|hotb|dnd5e)/.test(value)) ) acc.add(value);
   }
@@ -153,7 +156,7 @@ const seen = new Set();
 for ( const { book, dir, item } of items ) {
   const s = item.system ?? {};
   const ident = s.identifier ?? "";
-  // Un même identifiant au PHB et au SRD : le PHB d'abord, le SRD seulement s'il n'a pas de version PHB.
+  // The same identifier in the PHB and the SRD: the PHB first, the SRD only if it has no PHB version.
   const dedupe = `${item.type}|${ident}`;
   if ( (book === "SRD") && seen.has(dedupe) ) continue;
   seen.add(dedupe);
@@ -168,12 +171,12 @@ for ( const { book, dir, item } of items ) {
   const findings = [];
   const add = (kind, detail) => findings.push({ kind, detail });
 
-  // ref-morte : id cité par le moteur, absent de cet item (et de toute version de cet identifiant).
+  // ref-morte: id cited by the engine, absent from this item (and from every version of this identifier).
   for ( const id of entryIds ) {
     if ( activityIds.has(id) || effectIds.has(id) ) continue;
     if ( knownIds.get(ident)?.has(id) ) continue;
     if ( /^dnd5eactivity\d{3}$/.test(id) ) { add("ref-morte", `${id} (activité générique absente)`); continue; }
-    // Un id d'un autre item (un sort cité par une aptitude) : signalé à part, moins grave.
+    // An id of another item (a spell cited by a feature): flagged separately, less serious.
     const elsewhere = [...knownIds.entries()].find(([, set]) => set.has(id))?.[0];
     if ( !elsewhere ) add("ref-morte", id);
   }
@@ -183,24 +186,24 @@ for ( const { book, dir, item } of items ) {
   for ( const e of effects ) {
     if ( e.transfer || posed.has(e._id) || entryIds.has(e._id) ) continue;
     if ( e.type === "enchantment" && activities.some(a => a.type === "enchant") ) continue;
-    // Un effet visé par un `riders` d'enchantement ou nommé par le moteur.
+    // An effect targeted by an enchantment `riders` or named by the engine.
     if ( entryText.includes(JSON.stringify(e.name)) ) continue;
     add("effet-orphelin", `${e.name} (${e._id})${e.statuses?.length ? ` [${e.statuses.join(", ")}]` : ""}`);
   }
   for ( const e of effects.filter(e => e.type !== "enchantment") ) for ( const c of changesOf(e) ) if ( !keyOk(c.key) ) add("cle-inconnue", `${e.name} : ${c.key} = ${c.value}`);
-  // États annoncés.
+  // Announced conditions.
   const statuses = new Set(effects.flatMap(e => e.statuses ?? []));
   for ( const [name, id] of Object.entries(CONDITIONS) ) {
     const re = new RegExp(`(have|has|gains?|give[sn]?|is|are|be|becomes?|knocked|fall|falls)\\s+(the\\s+)?${name}\\s+condition|${name} condition (until|for)`, "i");
     const m = desc.match(re);
     if ( !m ) continue;
-    // Une condition préalable (« unless you have the Incapacitated condition ») n'est pas un état imposé.
+    // A precondition ("unless you have the Incapacitated condition") is not an imposed condition.
     if ( /(unless|if|while|isn't|aren't|don't|doesn't|lack|not|without)[^.]{0,40}$/i.test(desc.slice(Math.max(0, m.index - 50), m.index)) ) continue;
     if ( statuses.has(id) || entryText.includes(`"${id}"`) ) continue;
     if ( new RegExp(`(immun\\w* to|ends? the|remove[sd]? the|end one|doesn't have|can't (have|be))[^.]{0,40}${name}`, "i").test(desc) && !new RegExp(`(has|have|gains?) the ${name}`, "i").test(desc) ) continue;
     add("etat-absent", name);
   }
-  // Dégâts.
+  // Damage.
   const dmgParts = activities.flatMap(a => (a.damage?.parts ?? []).map(p => ({ a, p })));
   for ( const { a, p } of dmgParts ) {
     const hasDice = (p.number && p.denomination) || p.custom?.enabled && p.custom?.formula?.trim() || String(p.bonus ?? "").trim();
@@ -220,10 +223,10 @@ for ( const { book, dir, item } of items ) {
     const half = /half as much damage|half damage|half the damage/i.test(desc);
     const saves = activities.filter(a => (a.type === "save") && a.damage?.parts?.length);
     if ( half && saves.length && !saves.some(a => a.damage?.onSave === "half") ) add("moitie", `texte : moitié ; onSave = ${saves.map(a => a.damage?.onSave || "none").join("/")}`);
-    // Le moteur corrige la part sur une réussite (`saveDamage`) : plus un trou.
+    // The engine fixes the part on a success (`saveDamage`): no longer a gap.
     if ( !half && saves.some(a => (a.damage?.onSave === "half") && !entry?.saveDamage?.[a._id]) && !/half/i.test(desc) ) add("moitie", "onSave = half, le texte ne le dit pas");
   }
-  // Portée personnelle vers une créature.
+  // Personal range toward a creature.
   for ( const a of activities ) {
     const range = a.range?.override ? a.range?.units : s.range?.units;
     const affects = a.target?.override ? a.target?.affects?.type : s.target?.affects?.type;
@@ -234,8 +237,8 @@ for ( const { book, dir, item } of items ) {
   if ( findings.length ) rows.push({ book, type: item.type, subtype: s.type?.value ?? "", level: s.level, name: item.name, identifier: ident, id: item._id,
     engine: entry ? Object.keys(entry).filter(k => k !== "source") : [], findings, text: desc.slice(0, 1500) });
 }
-// Un item du SRD 2024 qui garde l'id de document du Manuel sous un autre identifiant (« black-tentacles » pour
-// « evards-black-tentacles ») : sans entrée propre ni alias, il n'a pas la règle du Manuel dans un monde sans le Manuel premium.
+// An SRD 2024 item that keeps the Handbook's document id under another identifier ("black-tentacles" for
+// "evards-black-tentacles"): without its own entry or alias, it lacks the Handbook rule in a world without the premium Handbook.
 const phbById = new Map(items.filter(i => i.book === "PHB").map(i => [i.item._id, i.item.system?.identifier]));
 const srdRenamed = items.filter(i => i.book === "SRD").map(i => ({ srd: i.item.system?.identifier, phb: phbById.get(i.item._id), name: i.item.name }))
   .filter(x => x.phb && x.srd && (x.phb !== x.srd) && CONTENT[x.phb] && !CONTENT[x.srd]);

@@ -1,15 +1,15 @@
 /**
- * §486 (brique B07) — `usageLimits.<activité>.whileEffect` / `unlessEffect` : une activité permise seulement sous un effet, ou
- * seulement hors de lui (« Griffes (requiert Modification d'apparence) », les armes d'une forme). Prêtés au Zombi de l'arène :
- *  - un don « Essai : forme » portant un effet transféré « Essai : forme bestiale », éteint au départ ;
- *  - des « Essai : griffes » (arme naturelle) dont l'attaque n'est permise que sous cet effet (son id) ;
- *  - un « Essai : gourdin » permis seulement hors de lui (`unlessEffect`, par l'identifiant du don).
- * Déclarés en drapeaux sur les items (couche « item » du contenu).
- *  1. Effet éteint : les griffes ont le souci « seulement sous l'effet de Essai : forme bestiale », le gourdin aucun.
- *  2. Effet allumé : les griffes n'ont plus de souci, le gourdin a « pas possible sous l'effet de ».
- *  3. Griffes, effet éteint, depuis la fiche : la fenêtre « le faire quand même » s'ouvre ; renoncer ne laisse rien, passer outre
- *     donne la carte marquée de la raison et l'alerte au MJ.
- * Retire les items prêtés.
+ * §486 (brick B07) — `usageLimits.<activité>.whileEffect` / `unlessEffect`: an activity allowed only under an effect, or
+ * only outside it ("Claws (requires Change Appearance)", a form's weapons). Lent to the arena Zombie:
+ *  - a feat "Essai : forme" carrying a transferred effect "Essai : forme bestiale", off at the start;
+ *  - "Essai : griffes" (natural weapon) whose attack is allowed only under that effect (its id);
+ *  - an "Essai : gourdin" allowed only outside it (`unlessEffect`, by the feat's identifier).
+ * Declared as flags on the items (the content's "item" layer).
+ *  1. Effect off: the claws have the issue "seulement sous l'effet de Essai : forme bestiale", the club none.
+ *  2. Effect on: the claws have no more issue, the club has "pas possible sous l'effet de".
+ *  3. Claws, effect off, from the sheet: the "do it anyway" window opens; giving up leaves nothing, overriding
+ *     gives the card marked with the reason and the alert to the GM.
+ * Removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLAW_ACTIVITY = "b07EssaiGriffes0";
@@ -44,7 +44,7 @@ export default {
       return id;
     };
 
-    // Le don et son effet transféré, éteint.
+    // The feat and its transferred effect, off.
     const formId = await put({ name: "Essai : forme", type: "feat", img: "icons/svg/paw.svg",
       flags: { [MODULE_ID]: { scenarioB07: "b07-essai-forme" } },
       system: { identifier: "b07-essai-forme", type: { value: "monster", subtype: "" } },
@@ -65,13 +65,13 @@ export default {
     const toggle = on => ctx.call("upsert-embedded-effect", { uuid: `Actor.${zombie.actorId}.Item.${formId}`, effectData: { disabled: !on },
       match: { path: "_id", value: effectId } });
 
-    // 1. Effet éteint.
+    // 1. Effect off.
     let claw = await issues(clawId);
     let club = await issues(clubId);
     ctx.expect(claw.some(needs), `effet éteint : griffes refusées (${claw.join(" ; ") || "aucun souci"})`);
     ctx.expect(!club.some(barred), `effet éteint : gourdin permis (${club.join(" ; ") || "aucun souci"})`);
 
-    // 2. Effet allumé.
+    // 2. Effect on.
     await toggle(true);
     ctx.restore(() => toggle(false).catch(() => {}));
     await pause(1000);
@@ -80,7 +80,7 @@ export default {
     ctx.expect(!claw.some(needs), `effet allumé : griffes permises (${claw.join(" ; ") || "aucun souci"})`);
     ctx.expect(club.some(barred), `effet allumé : gourdin refusé (${club.join(" ; ") || "aucun souci"})`);
 
-    // 3. Forcer : effet éteint, la fenêtre « le faire quand même » s'ouvre ; renoncer, puis passer outre (carte marquée, alerte MJ).
+    // 3. Force: effect off, the "do it anyway" window opens; give up, then override (card marked, GM alert).
     await toggle(false);
     await pause(1000);
     const target = tokens.find(t => (t.id !== zombie.id) && (t.name !== "Zombi"));

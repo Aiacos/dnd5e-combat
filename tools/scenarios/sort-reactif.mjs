@@ -1,8 +1,8 @@
 /**
- * Sort réactif (Mage de guerre, SPEC §16.26) — **interactif** : Rahadin quitte l'allonge de Sylaene à son tour ; la fenêtre
- * d'attaque d'opportunité s'ouvre à l'écran du MJ (Sylaene n'a pas de joueur connecté) et propose, en plus de ses armes,
- * ses sorts « réactifs ». Le MJ choisit un sort : le scénario vérifie qu'il est lancé sur Rahadin, payé par la réaction.
- * Monde `ravenloft` seulement ; hors du lot par défaut (`node tools/scenario.mjs sort-reactif`).
+ * Reactive spell (War Mage, SPEC §16.26) — **interactive**: Rahadin leaves Sylaene's reach on his turn; the Opportunity Attack
+ * window opens on the GM's screen (Sylaene has no connected player) and offers, besides her weapons,
+ * her "reactive" spells. The GM picks a spell: the scenario checks that it is cast on Rahadin, paid for by the Reaction.
+ * World `ravenloft` only; outside the default batch (`node tools/scenario.mjs sort-reactif`).
  */
 const MODULE_ID = "dnd5e-combat";
 const VICTIM = "Rahadin, chambellan du château";
@@ -41,7 +41,7 @@ export default {
     if ( !usage ) return;
     const flags = usage.flags?.[MODULE_ID] ?? usage.flags ?? {};
     ctx.expect(flags.cost === "reaction", `payé par la réaction (${flags.cost})`);
-    // La dépense est consignée par le MJ juste après la carte : on l'attend.
+    // The expenditure is logged by the GM right after the card: we wait for it.
     let spent = flags.spent;
     for ( const until = Date.now() + 6000; !spent && (Date.now() < until); await sleep(400) ) {
       const again = (await ctx.call("list-chat-messages", { limit: 30, flagScope: MODULE_ID })).messages?.find(m => m.id === usage.id);

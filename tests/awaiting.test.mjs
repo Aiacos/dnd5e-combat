@@ -1,4 +1,4 @@
-/** §381 (issue #35) : qui la table attend — ce qui se calcule sans Foundry. */
+/** §381 (issue #35): who the table is waiting for — what is computed without Foundry. */
 import { describe, it, expect } from "vitest";
 import { gmLabel } from "../module/scripts/core/awaiting.mjs";
 import { AWAITING_STALE_MS, applyAwaiting, awaitingAlive, awaitingEntry, awaitingLeft, awaitingPlacement, pruneAwaiting }
@@ -6,13 +6,13 @@ import { AWAITING_STALE_MS, applyAwaiting, awaitingAlive, awaitingEntry, awaitin
 
 const base = { id: "a1", userId: "u1", userName: "Alice", token: "Scene.s.Token.t", actor: "Actor.x", kind: "reaction", since: 1000 };
 
-describe("attente diffusée", () => {
-  it("ne garde que sa forme publique : jamais le nom de la réaction ni l'invite", () => {
+describe("broadcast wait", () => {
+  it("keeps only its public form: never the name of the Reaction or the prompt", () => {
     const e = awaitingEntry({ ...base, label: "Bouclier", prompt: "Utiliser Bouclier ?", item: "Bouclier", options: [{ id: "x" }] });
     expect(Object.keys(e).sort()).toEqual(["actor", "gm", "id", "kind", "player", "refreshed", "seconds", "since", "token", "userId", "userName"]);
     expect(JSON.stringify(e)).not.toMatch(/Bouclier/);
   });
-  it("une sorte inconnue devient un choix ; sans id ni utilisateur, rien", () => {
+  it("an unknown kind becomes a choice; without an id or a user, nothing", () => {
     expect(awaitingEntry({ ...base, kind: "shield" }).kind).toBe("choice");
     expect(awaitingEntry({ ...base, id: "" })).toBeNull();
     expect(awaitingEntry({ ...base, userId: null })).toBeNull();
@@ -20,58 +20,58 @@ describe("attente diffusée", () => {
 });
 
 describe("expiration", () => {
-  it("une attente sans nouvelles depuis trop longtemps est oubliée (onglet figé)", () => {
+  it("a wait with no news for too long is forgotten (frozen tab)", () => {
     const e = awaitingEntry(base);
     expect(awaitingAlive(e, 1000 + AWAITING_STALE_MS)).toBe(true);
     expect(awaitingAlive(e, 1001 + AWAITING_STALE_MS)).toBe(false);
     expect(awaitingAlive({ ...e, refreshed: 50000 }, 1001 + AWAITING_STALE_MS)).toBe(true);
   });
-  it("une fenêtre à délai tombe après son délai et une marge", () => {
+  it("a window with a timeout expires after its timeout plus a margin", () => {
     const e = awaitingEntry({ ...base, seconds: 10 });
     expect(awaitingAlive(e, 1000 + 14000)).toBe(true);
     expect(awaitingAlive(e, 1000 + 16000)).toBe(false);
   });
-  it("le reste du délai, pour la jauge ; rien sans délai", () => {
+  it("the rest of the timeout, for the gauge; nothing without a timeout", () => {
     expect(awaitingLeft(awaitingEntry({ ...base, seconds: 10 }), 6000)).toBe(0.5);
     expect(awaitingLeft(awaitingEntry({ ...base, seconds: 10 }), 99000)).toBe(0);
     expect(awaitingLeft(awaitingEntry(base), 6000)).toBeNull();
   });
-  it("pruneAwaiting retire ce qui a expiré", () => {
+  it("pruneAwaiting removes what has expired", () => {
     const list = [awaitingEntry(base), awaitingEntry({ ...base, id: "a2", seconds: 1 })];
     expect(pruneAwaiting(list, 10000).map(e => e.id)).toEqual(["a1"]);
   });
 });
 
-describe("où le montrer", () => {
+describe("where to show it", () => {
   const player = awaitingEntry({ ...base, player: true });
   const gmNpc = awaitingEntry({ ...base, id: "g", userId: "gm", gm: true, player: false });
   const gmForPc = awaitingEntry({ ...base, id: "h", userId: "gm", gm: true, player: true });
   const viewer = { userId: "u2", isGM: false };
-  it("au-dessus du token pour les autres, rien pour celui qui répond", () => {
+  it("above the token for the others, nothing for the one who answers", () => {
     expect(awaitingPlacement(player, viewer)).toBe("token");
     expect(awaitingPlacement(player, { userId: "u1", isGM: false })).toBe("none");
   });
-  it("éteint par la table ou masqué chez soi : rien", () => {
+  it("turned off by the table or hidden locally: nothing", () => {
     expect(awaitingPlacement(player, { ...viewer, enabled: false })).toBe("none");
     expect(awaitingPlacement(player, { ...viewer, hidden: true })).toBe("none");
   });
-  it("une fenêtre du MJ pour un monstre : bandeau discret par défaut, ou token, ou rien ; le MJ voit tout", () => {
+  it("a GM window for a monster: discreet banner by default, or token, or nothing; the GM sees everything", () => {
     expect(awaitingPlacement(gmNpc, viewer)).toBe("banner");
     expect(awaitingPlacement(gmNpc, { ...viewer, gmMode: "token" })).toBe("token");
     expect(awaitingPlacement(gmNpc, { ...viewer, gmMode: "hidden" })).toBe("none");
     expect(awaitingPlacement(gmNpc, { userId: "gm2", isGM: true, gmMode: "hidden" })).toBe("token");
   });
-  it("le MJ qui répond pour un personnage joueur absent : sur le token, ce n'est pas un secret", () => {
+  it("the GM answering for an absent player character: on the token, it is not a secret", () => {
     expect(awaitingPlacement(gmForPc, viewer)).toBe("token");
   });
-  it("sans token sur la scène : rien (ou le bandeau pour un secret du MJ)", () => {
+  it("without a token on the scene: nothing (or the banner for a GM secret)", () => {
     expect(awaitingPlacement({ ...player, token: null }, viewer)).toBe("none");
     expect(awaitingPlacement({ ...gmNpc, token: null }, { ...viewer, gmMode: "token" })).toBe("banner");
   });
 });
 
 describe("tableau des attentes", () => {
-  it("arrivée, départ, remplacement par utilisateur, déconnexion", () => {
+  it("arrival, departure, replacement per user, disconnection", () => {
     let list = applyAwaiting([], { type: "add", entry: base });
     list = applyAwaiting(list, { type: "add", entry: { ...base, id: "b", userId: "u2", since: 500 } });
     expect(list.map(e => e.id)).toEqual(["b", "a1"]);
@@ -85,14 +85,14 @@ describe("tableau des attentes", () => {
   });
 });
 
-// §426 : le libellé réservé aux MJ voyage à part ; l'attente diffusée ne le porte toujours pas.
-describe("libellé réservé aux MJ", () => {
-  it("une ligne courte : espaces resserrés, 80 caractères au plus", () => {
+// §426: the label reserved for GMs travels separately; the broadcast wait still does not carry it.
+describe("label reserved for GMs", () => {
+  it("a short line: spaces tightened, 80 characters at most", () => {
     expect(gmLabel("  Inspiration   héroïque\n— Paladin ")).toBe("Inspiration héroïque — Paladin");
     expect(gmLabel("x".repeat(200))).toHaveLength(80);
     expect(gmLabel(null)).toBe("");
   });
-  it("l'attente diffusée ne le garde pas, même si on le lui donne", () => {
+  it("the broadcast wait does not keep it, even if it is given to it", () => {
     const e = awaitingEntry({ id: "a1", userId: "u1", kind: "choice", since: 1, label: "Inspiration héroïque", gmLabel: "Inspiration héroïque" });
     expect(JSON.stringify(e)).not.toMatch(/Inspiration/);
   });

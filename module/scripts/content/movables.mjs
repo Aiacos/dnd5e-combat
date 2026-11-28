@@ -1,15 +1,15 @@
 /**
- * Zones déplaçables (SPEC §16.14, clé `movable` de core/content.mjs) : relancer le sort quand sa zone est là la déplace.
- * Le coût est l'activation de l'activité du sort (Rayon de lune : action → l'action Magie de la règle 2024).
- * Texte vérifié dans packs/_source/spells24 de dnd5e 6.0.3 et l'extraction du PHB 2.2.0.
+ * Movable areas (SPEC §16.14, `movable` key of core/content.mjs): recasting the spell while its area is there moves it.
+ * The cost is the activation of the spell's activity (Moonbeam: action → the Magic action of the 2024 rules).
+ * Text verified in packs/_source/spells24 of dnd5e 6.0.3 and in the extraction of the PHB 2.2.0.
  */
 
 export const MOVABLES = Object.freeze({
-  // « Vous pouvez effectuer une action Magie lors de vos tours suivants pour déplacer le Cylindre de 18 m au maximum. »
+  // "You can take a Magic action on your later turns to move the Cylinder up to 18 m."
   "moonbeam": { distance: 60, units: "ft" },
-  // §158 : Nuée de dagues — « par une action Magie lors de vos tours suivants, vous pouvez téléporter le Cube de 9 m au maximum ».
+  // §158: Cloud of Daggers — "as a Magic action on your later turns, you can teleport the Cube up to 9 m".
   "cloud-of-daggers": { distance: 30, units: "ft" },
-  // §164 : Invocation de céleste — « quand vous vous déplacez à votre tour, vous pouvez aussi déplacer le Cylindre de 9 m au
-  // maximum » (SRD 5.2 ; le texte de l'item le dit aussi) : pas d'action Magie, à la différence des deux sorts ci-dessus.
+  // §164: Summon Celestial — "when you move on your turn, you can also move the Cylinder up to 9 m" (SRD 5.2; the item's text
+  // says so too): no Magic action, unlike the two spells above.
   "conjure-celestial": { distance: 30, units: "ft", cost: "none" }
 });

@@ -1,13 +1,13 @@
 /**
- * Bottes d'arme (SPEC §21) lues et écrites dans dnd5e 6.0 : la botte employée par une attaque, les marques que posent Sape, Coup
- * vexant et Ralentissement (des effets du moteur, `flags["dnd5e-combat"].mastery`), l'Avantage et le Désavantage qu'elles
- * donnent, et les créatures qu'Enchaînement peut atteindre. Les règles sont dans core/mastery.mjs.
+ * Weapon mastery properties (SPEC §21) read and written in dnd5e 6.0: the mastery property used by an attack, the marks that
+ * Sap, Vex and Slow place (engine effects, `flags["dnd5e-combat"].mastery`), the Advantage and Disadvantage that they
+ * give, and the creatures that Cleave can reach. The rules are in core/mastery.mjs.
  *
- * Vérifié dans dnd5e 6.0.3 :
- *  - le message d'attaque porte la botte employée dans `system.mastery` (data/chat-message/attack-message-data.mjs:29), choisie
- *    parmi `masteryOptions` de l'arme — seulement si l'acteur maîtrise l'arme de base (data/item/weapon.mjs:331) ;
- *  - la caractéristique de l'attaque est `system.ability` du même message ;
- *  - la Vitesse se réduit par `system.attributes.movement.bonus`, ajouté à chaque vitesse non nulle (attributes.mjs:563-567).
+ * Verified in dnd5e 6.0.3:
+ *  - the attack message carries the mastery property used in `system.mastery` (data/chat-message/attack-message-data.mjs:29),
+ *    chosen among the weapon's `masteryOptions` — only if the actor has mastery of the base weapon (data/item/weapon.mjs:331);
+ *  - the attack's ability is `system.ability` of the same message;
+ *  - Speed is reduced through `system.attributes.movement.bonus`, added to each non-zero speed (attributes.mjs:563-567).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,17 +21,17 @@ import { masterySources, standingMastery, standingChoiceToStore } from "../core/
 
 const loc = (key, data) => game.i18n.format(`DND5ECOMBAT.Botte.${key}`, data ?? {});
 
-/** La botte employée par ce jet d'attaque, ou null. */
+/** The mastery property used by this attack roll, or null. */
 export const masteryOf = attackMessage => attackMessage?.system?.mastery ?? null;
 
-/** Le modificateur de la caractéristique employée pour ce jet d'attaque. */
+/** The modifier of the ability used for this attack roll. */
 export function attackModOf(attackMessage) {
   const actor = attackMessage?.getAssociatedActor?.();
   const ability = attackMessage?.system?.ability;
   return Number(actor?.system?.abilities?.[ability]?.mod) || 0;
 }
 
-/** Les marques de botte d'une sorte portées par un acteur. */
+/** The mastery marks of one kind carried by an actor. */
 export function marksOn(actor, kind=null) {
   return Array.from(actor?.effects ?? []).filter(e => {
     const m = e.getFlag?.(MODULE_ID, "mastery");
@@ -43,14 +43,14 @@ const IMAGES = Object.freeze({ sap: "icons/svg/downgrade.svg", vex: "icons/svg/t
   reckless: "icons/svg/sword.svg" });
 
 /**
- * L'effet d'une marque. `bearer` : qui la porte (la cible pour Sape et Ralentissement, l'attaquant pour Ouverture).
+ * A mark's effect. `bearer`: who carries it (the target for Sap and Slow, the attacker for Vex).
  * @param {"sap"|"vex"|"slow"} kind
  * @param {{source: TokenDocument, target: TokenDocument, weapon: Item5e, turnKey: string|null}} context
  */
 export function markData(kind, { source, target, weapon, turnKey }) {
   const changes = [];
   if ( kind === "slow" ) {
-    // « Réduire sa Vitesse de 3 m » : 10 ft, dans l'unité de vitesse de la créature ralentie.
+    // "Reduce its Speed by 10 feet": 10 ft, in the speed unit of the slowed creature.
     const units = target.actor?.system?.attributes?.movement?.units ?? "ft";
     let value = lengthIn(10, "ft", units);
     changes.push({ key: "system.attributes.movement.bonus", value: String(-value), type: "add" });
@@ -61,7 +61,8 @@ export function markData(kind, { source, target, weapon, turnKey }) {
     transfer: false, disabled: false,
     showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS,
     origin: weapon?.uuid ?? null,
-    // Hors combat, une marque ne vit qu'un round (au MJ de la retirer plus tôt) ; en combat, le moteur la retire à son heure.
+    // Out of combat, a mark lasts only one round (up to the GM to remove it earlier); in combat, the engine removes
+    // it at the right time.
     duration: { value: 12, units: "seconds" },
     system: { changes },
     flags: { [MODULE_ID]: { mastery: {
@@ -72,23 +73,23 @@ export function markData(kind, { source, target, weapon, turnKey }) {
 }
 
 /**
- * L'Avantage et le Désavantage que donnent les marques pour une attaque de `sourceToken` contre `targetToken` : Sape portée par
- * l'attaquant (Désavantage à son prochain jet), Ouverture portée par l'attaquant contre cette cible (Avantage).
+ * The Advantage and Disadvantage that the marks give for an attack by `sourceToken` against `targetToken`: Sap carried by
+ * the attacker (Disadvantage on their next roll), Vex carried by the attacker against this target (Advantage).
  * @returns {{advantage: string[], disadvantage: string[], consumed: ActiveEffect[]}}
  */
 export function markModifiers(sourceToken, targetToken, activity=null) {
   const out = { advantage: [], disadvantage: [], consumed: [] };
   const attacker = sourceToken?.actor;
   if ( !attacker ) return out;
-  // §22 : Témérité — « l'Avantage aux jets d'attaque utilisant la Force », et « les jets d'attaque contre vous ont l'Avantage ».
-  // Jusqu'au début de son prochain tour ; rien n'est consommé.
+  // §22: Reckless Attack — "Advantage on attack rolls using Strength", and "attack rolls against you have Advantage".
+  // Until the start of their next turn; nothing is consumed.
   if ( (activity?.ability === "str") ) for ( const effect of marksOn(attacker, "reckless") ) out.advantage.push(effect.name);
   for ( const effect of marksOn(targetToken?.actor, "reckless") ) out.advantage.push(effect.name);
   for ( const effect of marksOn(attacker, "sap") ) {
     out.disadvantage.push(effect.name);
     out.consumed.push(effect);
   }
-  // Ouverture, et Attaques avisées du Guerrier (§21) : l'Avantage contre la créature marquée seulement.
+  // Vex, and the Fighter's Studied Attacks (§21): Advantage against the marked creature only.
   for ( const effect of [...marksOn(attacker, "vex"), ...marksOn(attacker, "studied")] ) {
     if ( effect.getFlag(MODULE_ID, "mastery").target !== targetToken?.uuid ) continue;
     out.advantage.push(effect.name);
@@ -98,8 +99,8 @@ export function markModifiers(sourceToken, targetToken, activity=null) {
 }
 
 /**
- * Enchaînement : les créatures qu'une seconde attaque peut viser — hostiles à l'attaquant, autres que la première, à 1,50 m
- * d'elle et à l'allonge de l'arme, ni mortes ni cachées, pas des objets.
+ * Cleave: the creatures that a second attack can target — hostile to the attacker, other than the first, within 5 feet
+ * of it and within the weapon's reach, neither dead nor hidden, not objects.
  * @param {TokenDocument} attacker
  * @param {TokenDocument} first
  * @param {Activity} activity
@@ -107,7 +108,7 @@ export function markModifiers(sourceToken, targetToken, activity=null) {
 export function cleaveCandidates(attacker, first, activity) {
   const factors = readUnitFactors();
   const r = reachOf(activity);
-  const reach = { value: r.value ?? 5, units: r.units ?? "ft" };   // allonge non renseignée : 1,50 m
+  const reach = { value: r.value ?? 5, units: r.units ?? "ft" };   // reach not set: 5 ft
   const near = (a, b, range) => { try { return isWithinRange(distanceBetween(a, b), range, factors); } catch { return false; } };
   return first.parent.tokens.filter(t => (t !== first) && (t !== attacker) && t.actor && !t.hidden && !isObjectToken(t)
     && !isDeadActor(t.actor) && ((t.actor.system.attributes?.hp?.value ?? 1) > 0)
@@ -115,7 +116,7 @@ export function cleaveCandidates(attacker, first, activity) {
     && near(first, t, { value: 5, units: "ft" }) && near(attacker, t, reach));
 }
 
-/** Enchaînement déjà employé à ce tour de combat par cet acteur ? (« une fois par tour » ; hors combat, jamais.) */
+/** Cleave already used this combat turn by this actor? ("once per turn"; out of combat, never.) */
 export const cleaveSpent = actor => !!currentTurnKey() && (actor?.getFlag(MODULE_ID, "cleaveTurn") === currentTurnKey());
 
 /* -------------------------------------------- */
@@ -123,21 +124,21 @@ export const cleaveSpent = actor => !!currentTurnKey() && (actor?.getFlag(MODULE
 /* -------------------------------------------- */
 
 /**
- * Le drapeau d'acteur posé à la fin d'un Repos long : `{ allowance }`, le nombre de bottes que le joueur peut encore changer.
- * Retiré une fois dépensé, ou quand l'acteur entre en combat.
+ * The actor flag set at the end of a Long Rest: `{ allowance }`, the number of mastery properties the player can still change.
+ * Removed once spent, or when the actor enters combat.
  */
 export const MASTERY_REST_FLAG = "masteryRest";
 
-/** Les bottes choisies, telles qu'enregistrées (pas celles qu'un effet ajoute) : `system.traits.weaponProf.mastery.value`. */
+/** The chosen mastery properties, as recorded (not those an effect adds): `system.traits.weaponProf.mastery.value`. */
 export const chosenMasteries = actor => Array.from(actor?._source?.system?.traits?.weaponProf?.mastery?.value ?? []);
 
 /** Ce qu'un Repos long laisse encore changer. */
 export const restAllowanceOf = actor => Math.max(0, Number(actor?.getFlag?.(MODULE_ID, MASTERY_REST_FLAG)?.allowance) || 0);
 
 /**
- * Les sources de bottes de l'acteur (core/mastery.mjs `masterySources`) : avancements « Trait » en mode « mastery » de ses items —
- * classe (data/item/class.mjs, `system.levels`), sous-classe (niveau de sa classe, `item.class`), don ou autre (toujours).
- * Lus dans la source de l'item (`_source.system.advancement`, objet par id en dnd5e 6).
+ * The actor's mastery sources (core/mastery.mjs `masterySources`): "Trait" advancements in "mastery" mode on its items —
+ * class (data/item/class.mjs, `system.levels`), subclass (its class's level, `item.class`), feat or other (always).
+ * Read from the item's source (`_source.system.advancement`, object by id in dnd5e 6).
  */
 export function masterySourcesOf(actor) {
   const items = [];
@@ -158,9 +159,10 @@ export function masterySourcesOf(actor) {
 }
 
 /**
- * La classe (ou sous-classe) dont un item tient ses avancements de bottes : lui-même s'il en est une ; sinon la racine de son
- * attribution quand dnd5e l'y lie (dnd5e 6.1 / PHB 3.0 : l'aptitude « Weapon Mastery » donnée par la classe porte les paliers,
- * `system.advancementRootItem` + `advancementClassLinked`, data/abstract/item-data-model) ; sinon l'item (un don : tout compte).
+ * The class (or subclass) an item gets its mastery advancements from: itself if it is one; otherwise the root of its
+ * assignment when dnd5e links it there (dnd5e 6.1 / PHB 3.0: the "Weapon Mastery" feature granted by the class carries the tiers,
+ * `system.advancementRootItem` + `advancementClassLinked`, data/abstract/item-data-model);
+ * otherwise the item (a feat: all of it counts).
  */
 function classOwnerOf(item) {
   if ( (item.type === "class") || (item.type === "subclass") ) return item;
@@ -169,14 +171,15 @@ function classOwnerOf(item) {
   return ((root?.type === "class") || (root?.type === "subclass")) ? root : item;
 }
 
-/** L'aptitude ou le don qui ouvre la fenêtre des bottes : « Bottes d'arme » d'une classe, « Maître d'armes ». */
+/** The feature or feat that opens the mastery window: a class's "Weapon Mastery", "Weapon Master". */
 export const MASTERY_FEATURES = Object.freeze(["weapon-mastery", "weapon-master"]);
 
 let weaponIndex = null;
 
 /**
- * Les armes de base de dnd5e (`CONFIG.DND5E.weaponIds`) : clé, nom (`Trait.keyLabel`, traduit), corps à corps ou distance, catégorie
- * (`weaponProficienciesMap`), botte (`system.mastery` de l'item du compendium, lu dans son index). L'index se lit une fois.
+ * dnd5e's base weapons (`CONFIG.DND5E.weaponIds`): key, name (`Trait.keyLabel`, translated), melee or ranged, category
+ * (`weaponProficienciesMap`), mastery property (`system.mastery` of the compendium item, read from its index).
+ * The index is read once.
  * @returns {Promise<Array<{key: string, label: string, melee: boolean, category: string|null, mastery: string|null}>>}
  */
 export async function baseWeapons() {
@@ -201,7 +204,7 @@ export async function baseWeapons() {
   return weaponIndex;
 }
 
-/** L'acteur maîtrise-t-il cette arme de base (sa catégorie ou elle-même, `system.traits.weaponProf.value` préparé) ? */
+/** Is the actor proficient with this base weapon (its category or itself, prepared `system.traits.weaponProf.value`)? */
 export function proficientWith(actor, weapon) {
   const prof = actor?.system?.traits?.weaponProf?.value;
   const has = k => (prof?.has?.(k) ?? Array.from(prof ?? []).includes(k));
@@ -209,8 +212,8 @@ export function proficientWith(actor, weapon) {
 }
 
 /**
- * Les armes de base, telles que la règle les juge pour cet acteur : `{ clé: { melee, proficient } }`. Synchrone (pour un hook `pre…`) :
- * vide tant que `baseWeapons()` n'a pas été lu une fois (le moteur le lit à `ready`).
+ * The base weapons, as the rule judges them for this actor: `{ clé: { melee, proficient } }`. Synchronous (for a `pre…` hook):
+ * empty until `baseWeapons()` has been read once (the engine reads it at `ready`).
  */
 export function weaponFacts(actor) {
   return Object.fromEntries((weaponIndex ?? []).map(w => [w.key, { melee: w.melee, proficient: proficientWith(actor, w) }]));

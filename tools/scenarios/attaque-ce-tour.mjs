@@ -1,12 +1,12 @@
 /**
- * §492 : fait `source.attackedSelfThisTurn` — « quand une créature hostile termine son tour après l'avoir attaquée au corps à corps ».
- * Arène de test, Guerrier et Bandit. Un item d'essai prêté au Bandit (réaction), sa règle posée dans la surcouche du monde :
+ * §492: fact `source.attackedSelfThisTurn` — "when a hostile creature ends its turn after having attacked it in melee".
+ * Test arena, Fighter and Bandit. A test item lent to the Bandit (Reaction), its rule placed in the world overlay:
  *   { on: "enemyTurnEnd", if: { "source.attackedSelfThisTurn": "melee" }, do: [{ type: "use", target: "source" }] }
- *  1. le Guerrier, au contact, finit son tour sans attaquer : pas de fenêtre de réaction ;
- *  2. au round suivant, il attaque le Bandit avec une arme de corps à corps : le registre du combat note « melee » (outil
- *     `attacksThisTurn`) ; il finit son tour : la fenêtre de réaction du Bandit s'ouvre chez le MJ (on répond « aucune ») ;
- *  3. au round suivant, il finit son tour sans attaquer : plus de fenêtre (le registre ne vaut que pour son tour).
- * Remet position, PV, item prêté, surcouche et combat.
+ *  1. the Fighter, in melee contact, ends his turn without attacking: no Reaction window;
+ *  2. next round, he attacks the Bandit with a melee weapon: the combat registry notes "melee" (tool
+ *     `attacksThisTurn`); he ends his turn: the Bandit's Reaction window opens on the GM's side (answered "none");
+ *  3. next round, he ends his turn without attacking: no more window (the registry only holds for his turn).
+ * Resets position, HP, lent item, overlay and combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -24,7 +24,7 @@ export default {
     const fighter = await ctx.token("Guerrier");
     const bandit = await ctx.token("Bandit");
 
-    // --- Item et règle prêtés ----------------------------------------------------------------------------------------
+    // --- Lent item and rule ----------------------------------------------------------------------------------------
     const itemData = { name: "Essai : riposte", type: "feat", img: "icons/svg/sword.svg",
       system: { identifier: IDENTIFIER, activities: { [ACTIVITY]: { _id: ACTIVITY, type: "utility", name: "Riposte",
         activation: { type: "reaction", value: 1 }, target: { affects: { type: "creature", count: "1" } } } } } };
@@ -34,7 +34,7 @@ export default {
     const { before } = await ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: RULE });
     ctx.restore(() => ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: before }).catch(() => {}));
 
-    // --- Le Guerrier au contact, PV du Bandit gardés ------------------------------------------------------------------------
+    // --- The Fighter in melee, Bandit's HP kept ------------------------------------------------------------------------
     const home = await ctx.position(fighter);
     const hp = await ctx.hp(bandit);
     ctx.restore(async () => {
@@ -62,7 +62,7 @@ export default {
     if ( !ctx.expect((await current()) === fighter.id, "combat : au tour du Guerrier") ) return;
 
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
-    /** La prochaine fenêtre de réaction (bouton `use0`), dans `ms`. */
+    /** The next Reaction window (button `use0`), within `ms`. */
     const reactionWindow = async (ids, ms=15000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
@@ -71,7 +71,7 @@ export default {
       }
       return null;
     };
-    /** Le Guerrier finit son tour ; rend la fenêtre de réaction du Bandit s'il y en a une (refusée aussitôt). */
+    /** The Fighter ends his turn; returns the Bandit's Reaction window if there is one (refused immediately). */
     const endFighterTurn = async ms => {
       const ids = await known();
       await ctx.nextTurn();
@@ -79,16 +79,16 @@ export default {
       if ( d ) await ctx.call("answer-dialog", { id: d.id, button: "none" }).catch(() => {});
       return d;
     };
-    /** Du tour du Bandit au tour suivant du Guerrier. */
+    /** From the Bandit's turn to the Fighter's next turn. */
     const backToFighter = async () => { await pause(1500); await ctx.nextTurn(); await pause(1500); };
 
-    // --- 1. Pas d'attaque : pas de fenêtre ---------------------------------------------------------------------------------
+    // --- 1. No attack: no window ---------------------------------------------------------------------------------------
     let d = await endFighterTurn(6000);
     ctx.expect(!d, `sans attaque, le Guerrier finit son tour : aucune fenêtre${d ? ` (« ${d.title} »)` : ""}`);
     await backToFighter();
     if ( !ctx.expect((await current()) === fighter.id, "round 2 : au tour du Guerrier") ) return;
 
-    // --- 2. Une attaque au corps à corps : la fenêtre s'ouvre --------------------------------------------------------------
+    // --- 2. A melee attack: the window opens ---------------------------------------------------------------------------
     const a = await ctx.use({ tokenId: fighter.id, itemId: weapon, activityType: "attack", targetTokenIds: [bandit.id] });
     const res = a.usageMessageId ? await ctx.settle(a.usageMessageId, { timeoutMs: 30000 }).catch(() => null) : null;
     ctx.expect(["done", "missed", "applied"].includes(res?.step), `l'attaque du Guerrier se résout (étape ${res?.step ?? "?"})`);
@@ -96,13 +96,13 @@ export default {
     const noted = await ctx.engine("attacksThisTurn", { sourceId: fighter.id, targetId: bandit.id });
     ctx.expect(JSON.stringify(noted.kinds) === JSON.stringify(["melee"]),
       `le registre du tour note une attaque au corps à corps du Guerrier contre le Bandit (${JSON.stringify(noted.kinds)}, tour ${noted.turn})`);
-    await ctx.setHp(bandit, hp);   // le Bandit doit être debout pour réagir
+    await ctx.setHp(bandit, hp);   // the Bandit must be standing to react
     d = await endFighterTurn(15000);
     ctx.expect(!!d, `le Guerrier finit son tour après l'avoir attaqué : le MJ peut faire réagir le Bandit${d ? ` (« ${d.title} »)` : ""}`);
     await backToFighter();
     if ( !ctx.expect((await current()) === fighter.id, "round 3 : au tour du Guerrier") ) return;
 
-    // --- 3. Le tour suivant, sans attaque : plus de fenêtre --------------------------------------------------------------
+    // --- 3. The next turn, without attack: no more window ---------------------------------------------------------------
     const fresh = await ctx.engine("attacksThisTurn", { sourceId: fighter.id, targetId: bandit.id });
     ctx.expect(!(fresh.kinds ?? []).length, `nouveau tour : le registre ne compte plus l'attaque d'avant (${JSON.stringify(fresh.kinds)})`);
     d = await endFighterTurn(6000);

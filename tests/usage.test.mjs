@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { pickSpellSlot, misplacedSelfUses, canCastHigher, forcedSpellSlot, atCastLevel, followUpScaling, castLevelUsage, spellCastLevel } from "../module/scripts/core/usage.mjs";
 
-describe("§68 : l'emplacement d'une utilisation sans fenêtre", () => {
+describe("§68: the slot of a use without a dialog", () => {
   const slots = { spell1: { value: 0, level: 1 }, spell2: { value: 2, level: 2 }, spell3: { value: 1, level: 3 }, pact: { value: 1, level: 2 } };
   it("celui que dnd5e propose, s'il en reste", () => expect(pickSpellSlot(slots, "spell2", 1)).toBe("spell2"));
-  it("sinon le plus bas qui en a encore (l'emplacement ordinaire avant le pacte à niveau égal)", () => {
+  it("otherwise the lowest one that still has some (the ordinary slot before the pact at equal level)", () => {
     expect(pickSpellSlot(slots, "spell1", 1)).toBe("spell2");
     expect(pickSpellSlot({ ...slots, spell2: { value: 0, level: 2 } }, "spell1", 1)).toBe("pact");
   });
@@ -14,44 +14,44 @@ describe("§68 : l'emplacement d'une utilisation sans fenêtre", () => {
   });
 });
 
-describe("§77 : utilisations de l'activité posées sur l'item", () => {
+describe("§77: the activity's uses placed on the item", () => {
   const self = [{ type: "activityUses", target: "" }, { type: "itemUses", target: "" }, { type: "activityUses", target: "aaaaaaaaaaaaaaaa" }];
-  it("l'activité sans maximum, l'item avec : ses propres utilisations deviennent celles de l'item", () => expect(misplacedSelfUses(self, false, true)).toEqual([0]));
+  it("the activity without a maximum, the item with one: its own uses become the item's", () => expect(misplacedSelfUses(self, false, true)).toEqual([0]));
   it("sinon rien", () => {
     expect(misplacedSelfUses(self, true, true)).toEqual([]);
     expect(misplacedSelfUses(self, false, false)).toEqual([]);
   });
 });
 
-describe("§106 : un sort lançable plus haut garde la fenêtre de dnd5e", () => {
+describe("§106: a spell castable higher keeps the dnd5e dialog", () => {
   const slots = { spell1: { value: 2, level: 1 }, spell2: { value: 0, level: 2 }, spell3: { value: 1, level: 3 }, pact: { value: 0, level: 3 } };
   it("un emplacement plus haut reste", () => expect(canCastHigher(slots, 1)).toBe(true));
-  it("rien au-dessus du niveau du sort", () => expect(canCastHigher(slots, 3)).toBe(false));
-  it("les emplacements vides ne comptent pas", () => expect(canCastHigher({ ...slots, spell3: { value: 0, level: 3 } }, 1)).toBe(false));
-  it("le pacte compte, à son niveau", () => expect(canCastHigher({ spell1: { value: 0, level: 1 }, pact: { value: 1, level: 3 } }, 2)).toBe(true));
+  it("nothing above the spell's level", () => expect(canCastHigher(slots, 3)).toBe(false));
+  it("empty slots do not count", () => expect(canCastHigher({ ...slots, spell3: { value: 0, level: 3 } }, 1)).toBe(false));
+  it("the pact counts, at its level", () => expect(canCastHigher({ spell1: { value: 0, level: 1 }, pact: { value: 1, level: 3 } }, 2)).toBe(true));
 });
 
-describe("§384 : un sort plus haut que l'emplacement de pacte (issue #38, Création de morts-vivants)", () => {
+describe("§384: a spell higher than the pact slot (issue #38, Create Undead)", () => {
   const warlock = { pact: { value: 2, max: 2, level: 3 }, spell6: { value: 0, max: 0, level: 6 } };
-  it("l'emplacement de pacte de niveau 3 ne lance pas un sort de niveau 6", () => {
+  it("the level 3 pact slot does not cast a level 6 spell", () => {
     expect(pickSpellSlot(warlock, "pact", 6)).toBeNull();
     expect(pickSpellSlot(warlock, "pact", 3)).toBe("pact");
     expect(pickSpellSlot(warlock, "pact", 1)).toBe("pact");
   });
-  it("lancé quand même par le MJ : au niveau du sort", () => {
+  it("cast anyway by the GM: at the spell's level", () => {
     expect(forcedSpellSlot(warlock, "pact", 6)).toBe("spell6");
     expect(forcedSpellSlot(warlock, "pact", 3)).toBe("pact");
     expect(forcedSpellSlot({ spell5: { level: 5 } }, "spell5", 5)).toBe("spell5");
     expect(forcedSpellSlot({ spell7: { level: 7 } }, "spell7", 5)).toBe("spell7");
   });
-  it("rien pour un tour de magie ou sans emplacement proposé", () => {
+  it("nothing for a cantrip or without an offered slot", () => {
     expect(forcedSpellSlot(warlock, "pact", 0)).toBeNull();
     expect(forcedSpellSlot(warlock, null, 6)).toBeNull();
   });
 });
 
-describe("§404 : l'activité au niveau de lancement", () => {
-  // Un item factice : `scaledClone(n)` rend une copie dont l'activité porte la montée.
+describe("§404: the activity at the casting level", () => {
+  // A dummy item: `scaledClone(n)` returns a copy whose activity carries the upcast.
   const itemOf = calls => {
     const item = {
       scaledClone: n => {
@@ -63,7 +63,7 @@ describe("§404 : l'activité au niveau de lancement", () => {
     };
     return item;
   };
-  it("une montée d'emplacement → la copie mise à l'échelle, même id", () => {
+  it("a slot upcast → the scaled copy, same id", () => {
     const calls = [];
     const activity = { id: "atk", item: itemOf(calls), dice: 3 };
     const scaled = atCastLevel(activity, 2);
@@ -71,60 +71,60 @@ describe("§404 : l'activité au niveau de lancement", () => {
     expect(scaled.id).toBe("atk");
     expect(scaled.dice).toBe(5);
   });
-  it("une montée lue sur un message (chaîne) est convertie", () => {
+  it("an upcast read from a message (string) is converted", () => {
     const calls = [];
     expect(atCastLevel({ id: "atk", item: itemOf(calls), dice: 3 }, "1").dice).toBe(4);
   });
-  it("sans montée, négative ou illisible : l'activité telle quelle, sans clone", () => {
+  it("without upcast, negative or unreadable: the activity as is, without a clone", () => {
     const calls = [];
     const activity = { id: "atk", item: itemOf(calls), dice: 3 };
     for ( const s of [0, null, undefined, -1, "x"] ) expect(atCastLevel(activity, s)).toBe(activity);
     expect(calls).toEqual([]);
   });
-  it("sans `scaledClone` (activité d'un objet non item) ou sans activité : inchangé", () => {
+  it("without `scaledClone` (activity of a non-item object) or without activity: unchanged", () => {
     const bare = { id: "atk", item: {} };
     expect(atCastLevel(bare, 2)).toBe(bare);
     expect(atCastLevel(null, 2)).toBeNull();
   });
-  it("l'activité absente de la copie : l'activité d'origine", () => {
+  it("the activity missing from the copy: the original activity", () => {
     const activity = { id: "autre", item: itemOf([]) };
     expect(atCastLevel(activity, 1)).toBe(activity);
   });
 });
 
-describe("§405 : une activité d'un sort sans emplacement, au niveau de sa concentration", () => {
-  it("Lame de feu lancée au niveau 4 : l'attaque suivante à +2, emplacement de niveau 4 (rien n'est dépensé)", () => {
+describe("§405: an activity of a spell without a slot, at its Concentration level", () => {
+  it("Flame Blade cast at level 4: the next attack at +2, level 4 slot (nothing is spent)", () => {
     expect(followUpScaling({ spellLevel: 2, consumesSlot: false, scaling: 0, concentrationScaling: 2 })).toEqual({ scaling: 2, slot: "spell4" });
   });
-  it("une montée lue sur un effet (chaîne) est convertie", () => {
+  it("an upcast read from an effect (string) is converted", () => {
     expect(followUpScaling({ spellLevel: 1, consumesSlot: false, concentrationScaling: "1" })).toEqual({ scaling: 1, slot: "spell2" });
   });
-  it("rien : activité qui dépense un emplacement, montée déjà fixée, concentration au niveau de base ou absente, tour de magie", () => {
+  it("nothing: activity that spends a slot, upcast already set, Concentration at base level or absent, cantrip", () => {
     expect(followUpScaling({ spellLevel: 2, consumesSlot: true, concentrationScaling: 2 })).toBeNull();
     expect(followUpScaling({ spellLevel: 2, consumesSlot: false, scaling: 1, concentrationScaling: 2 })).toBeNull();
     expect(followUpScaling({ spellLevel: 2, consumesSlot: false, concentrationScaling: 0 })).toBeNull();
     expect(followUpScaling({ spellLevel: 2, consumesSlot: false })).toBeNull();
     expect(followUpScaling({ spellLevel: 0, consumesSlot: false, concentrationScaling: 2 })).toBeNull();
   });
-  it("`scaling: false` (dnd5e, mise à l'échelle interdite) n'empêche pas la reprise", () => {
+  it("`scaling: false` (dnd5e, scaling forbidden) does not prevent the resumption", () => {
     expect(followUpScaling({ spellLevel: 2, consumesSlot: false, scaling: false, concentrationScaling: 1 })).toEqual({ scaling: 1, slot: "spell3" });
   });
 });
 
-describe("§406 : une activité rejouée par le moteur au niveau du lancement (castLevelUsage)", () => {
-  it("Boule de feu à retardement lancée au niveau 9 (sort de niveau 7, montée 2) : montée et emplacement de ce niveau", () => {
+describe("§406: an activity replayed by the engine at the casting level (castLevelUsage)", () => {
+  it("Delayed Blast Fireball cast at level 9 (level 7 spell, upcast 2): upcast and slot of that level", () => {
     expect(castLevelUsage(7, 2)).toEqual({ scaling: 2, spell: { slot: "spell9" } });
     expect(castLevelUsage("3", "1")).toEqual({ scaling: 1, spell: { slot: "spell4" } });
   });
-  it("rien sans montée, ni pour un tour de magie", () => {
+  it("nothing without an upcast, nor for a cantrip", () => {
     expect(castLevelUsage(7, 0)).toEqual({});
     expect(castLevelUsage(7, undefined)).toEqual({});
     expect(castLevelUsage(0, 2)).toEqual({});
   });
 });
 
-describe("§406 : le niveau de lancement lu sur une copie mise à l'échelle (spellCastLevel)", () => {
-  it("niveau du sort + montée (`flags.dnd5e.scaling`) ; le niveau du sort seul sans montée", () => {
+describe("§406: the casting level read from a scaled copy (spellCastLevel)", () => {
+  it("spell level + upcast (`flags.dnd5e.scaling`); the spell level alone without an upcast", () => {
     expect(spellCastLevel({ system: { level: 1 }, flags: { dnd5e: { scaling: 2 } } })).toBe(3);
     expect(spellCastLevel({ system: { level: 3 }, flags: {} })).toBe(3);
     expect(spellCastLevel(null)).toBe(0);

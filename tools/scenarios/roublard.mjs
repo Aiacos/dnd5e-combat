@@ -1,20 +1,20 @@
 /**
- * Le Roublard du Manuel des joueurs 2024 (SPEC §20), monde `dnd-6`. Le Roublard (halfelin, niveau 1) passe niveau 5 le temps du
- * scénario (Attaque sournoise 3d6) et reçoit, prêtées depuis le compendium du Manuel des joueurs, Frappe malicieuse, Ruse,
- * Visée appliquée, Esquive totale, Insaisissable et Assassinat. Le Bandit reçoit 300 PV pour survivre aux coups.
- *  - pas d'Avantage ni d'allié à 1,50 m du Bandit : pas d'Attaque sournoise ;
- *  - le Guerrier à côté du Bandit : Attaque sournoise ; la question de Frappe malicieuse s'ouvre, Croc-en-jambe coché : 2d6
- *    lancés au lieu de 3d6, puis la sauvegarde de Dextérité du Bandit — À terre ⇔ ratée ;
- *  - le Roublard À terre (Désavantage), le Guerrier à côté : pas d'Attaque sournoise ;
- *  - en combat, deux coups dans le même tour : l'Attaque sournoise une seule fois ;
- *  - Repli : la moitié de la Vitesse en plus au budget, et Se désengager ;
- *  - Ruse : Se désengager et Foncer par une action Bonus ;
- *  - Visée appliquée : Vitesse à 0, puis l'arc court tire avec l'Avantage (Attaque sournoise sans allié), la trace tombe ;
- *  - Esquive totale : Mains brûlantes de l'Ensorceleur sur le Roublard — 0 sur une réussite, la moitié sur un échec ;
- *  - Insaisissable : le Roublard Entravé n'est pas attaqué avec l'Avantage (il l'est sans la capacité) ;
- *  - Assassinat : au premier round, le Bandit qui n'a pas joué est attaqué avec l'Avantage, et l'Attaque sournoise ajoute le
- *    niveau de Roublard (5).
- * Remet positions, PV, états, niveau ; retire les items prêtés.
+ * The Rogue from the 2024 Player's Handbook (SPEC §20), world `dnd-6`. The Rogue (halfling, level 1) goes to level 5 for the
+ * scenario (Sneak Attack 3d6) and receives, lent from the Player's Handbook compendium, Cunning Strike, Cunning Action,
+ * Steady Aim, Evasion, Elusive and Assassinate. The Bandit receives 300 HP to survive the hits.
+ *  - no Advantage or ally within 1.50 m of the Bandit: no Sneak Attack;
+ *  - the Fighter next to the Bandit: Sneak Attack; the Cunning Strike question opens, Trip checked: 2d6
+ *    rolled instead of 3d6, then the Bandit's Dexterity saving throw — Prone ⇔ failed;
+ *  - the Rogue Prone (Disadvantage), the Fighter next to him: no Sneak Attack;
+ *  - in combat, two hits in the same turn: Sneak Attack only once;
+ *  - Withdraw: half the Speed more in the budget, and Disengage;
+ *  - Cunning Action: Disengage and Dash as a Bonus Action;
+ *  - Steady Aim: Speed to 0, then the shortbow fires with Advantage (Sneak Attack without an ally), the mark falls;
+ *  - Evasion: the Sorcerer's Burning Hands on the Rogue — 0 on a success, half on a failure;
+ *  - Elusive: the Restrained Rogue is not attacked with Advantage (he is without the feature);
+ *  - Assassinate: in the first round, the Bandit who has not played is attacked with Advantage, and Sneak Attack adds the
+ *    Rogue level (5).
+ * Puts back positions, HP, conditions, level; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "dnd-players-handbook.classes";
@@ -51,8 +51,8 @@ export default {
     for ( const t of [rogue, bandit, fighter, sorc] ) homes.set(t.id, { pos: await ctx.position(t), hp: await ctx.hp(t) });
     const r0 = homes.get(rogue.id).pos;
 
-    // Les tokens ajoutés sous le Roublard le 2026-09-28 (Moine, Druide, Rôdeur, Barde, ligne y = 5740) sont des alliés à 1,50 m de la case
-    // du Bandit : ils donneraient l'Attaque sournoise « sans allié ». Écartés de deux rangées le temps du scénario, remis ensuite.
+    // The tokens added under the Rogue on 2026-09-28 (Monk, Druid, Ranger, Bard, row y = 5740) are allies within 1.50 m of the
+    // Bandit's cell: they would give Sneak Attack "without an ally". Moved aside by two rows for the scenario, put back afterwards.
     for ( const name of ["Moine", "Druide", "Rôdeur", "Barde"] ) {
       const t = (await ctx.scene()).tokens.find(x => x.name === name);
       if ( !t ) continue;
@@ -61,7 +61,7 @@ export default {
       await ctx.call("move-token", { tokenId: t.id, x: pos.x, y: pos.y + 2 * grid, elevation: pos.elevation ?? 0 });
     }
 
-    // Le Bandit tient le coup : 300 PV le temps du scénario.
+    // The Bandit holds up: 300 HP for the duration of the scenario.
     const { data: bdata } = await ctx.call("get-scene-object", { type: "Token", objectId: bandit.id });
     const max0 = bdata.delta?.system?.attributes?.hp?.max ?? null;
     ctx.restore(() => ctx.call("update-scene-object", { type: "Token", objectId: bandit.id,
@@ -69,7 +69,7 @@ export default {
     const tough = () => ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.attributes.hp.max": 300, "delta.system.attributes.hp.value": 300 } });
 
     const place = async (t, x, y) => {
-      await ctx.call("move-token", { tokenId: t.id, x, y, elevation: 0 });   // un update de x/y est contraint par les murs
+      await ctx.call("move-token", { tokenId: t.id, x, y, elevation: 0 });   // an x/y update is constrained by the walls
       await pause(600);
     };
     const statuses = ["prone", "restrained", "poisoned", "unconscious", "dead", "blinded"];
@@ -81,14 +81,14 @@ export default {
           await ctx.removeStatusEffects(t, s);
           await ctx.call("set-status", { tokenId: id, statusId: s, active: false }).catch(() => {});
         }
-        // Les marques de botte (Ouverture de l'épée courte) d'un coup donnent l'Avantage au suivant : retirées entre les parties.
+        // The mastery marks (Shortsword Vex) of a hit give Advantage on the next one: removed between parts.
         await ctx.removeEffectsNamed(t, /Visée|Steady|Frappe malicieuse|Cunning Strike|Caché|Hidden|Furtiv|Ouverture|Vex/i);
         if ( id !== bandit.id ) await ctx.setHp(t, h.hp);
       }
     };
     ctx.restore(remettre);
 
-    /* ---- Le Roublard niveau 5, les capacités prêtées ---- */
+    /* ---- The level 5 Rogue, the lent abilities ---- */
 
     const actor = await ctx.call("get-actor", { actorId: rogue.actorId });
     const cls = (actor.items ?? []).find(i => (i.type === "class") && (i.system?.identifier === "rogue"));
@@ -107,12 +107,12 @@ export default {
     };
     const unlend = itemId => ctx.call("remove-embedded-item", { documentType: "Actor", id: rogue.actorId, itemId }).catch(() => {});
     await lend(ITEMS.cunningStrike);
-    const dagger = await ctx.itemId(rogue.id, "shortsword");   // épée courte (Finesse) : la dague de la fiche est à quantité 0
+    const dagger = await ctx.itemId(rogue.id, "shortsword");   // shortsword (Finesse): the sheet's dagger has quantity 0
     const shortbow = await ctx.itemId(rogue.id, "shortbow");
 
     const part = async (name, fn) => {
       try { await fn(); } catch ( err ) { ctx.expect(false, `${name} : ${err.message}`); }
-      // Un combat laissé ouvert par une partie qui échoue fausserait la suivante (le budget lu serait le sien).
+      // A combat left open by a failing part would skew the next one (the budget read would be its own).
       if ( ctx.ownCombat ) { await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {}); ctx.ownCombat = null; }
       await remettre();
       await pause(1000);
@@ -131,8 +131,8 @@ export default {
     };
 
     /**
-     * Une attaque du Roublard. `strikes` : la réponse à la question de Frappe malicieuse (null : ne pas l'attendre ; [] : « tous
-     * les dés »). Rend la résolution, les messages (attaque, dégâts) et la question vue.
+     * A Rogue attack. `strikes`: the answer to the Cunning Strike question (null: do not wait for it; []: "all
+     * the dice"). Returns the resolution, the messages (attack, damage) and the question seen.
      */
     const attack = async (itemId, target, { strikes=null, usage={} }={}) => {
       const since = await ctx.lastMessageId();
@@ -162,7 +162,7 @@ export default {
       return { res: settled, hit, dialog, msgs, since, mode: attackMsg?.rolls?.[0]?.options?.advantageMode ?? null,
         sneak: damage?.flags?.[MODULE_ID]?.sneak ?? null, damage };
     };
-    /** Attaque jusqu'à toucher (20 essais), `before` avant chaque essai. */
+    /** Attacks until it hits (20 tries), `before` before each try. */
     const hitUntil = async (itemId, target, options={}, { tries=20, before=null }={}) => {
       for ( let n = 1; n <= tries; n++ ) {
         if ( before ) await before();
@@ -173,7 +173,7 @@ export default {
     };
     const budget = () => ctx.engine("budget", { tokenId: rogue.id });
 
-    // Le Bandit à gauche du Roublard, personne d'autre à côté de lui ; le Guerrier à gauche du Bandit pour « un allié à 1,50 m ».
+    // The Bandit to the left of the Rogue, nobody else next to him; the Fighter to the left of the Bandit for "an ally at 1.50 m".
     const bx = r0.x - grid;
     const by = r0.y;
 
@@ -198,7 +198,7 @@ export default {
       ctx.expect(!!a.dialog, `la question de Frappe malicieuse s'ouvre (${a.dialog?.title ?? "aucune"})`);
       ctx.expect(a.sneak?.dice === 2 && (a.sneak?.strikes ?? []).join() === "trip", `Attaque sournoise : ${a.sneak?.dice}d6 lancés (3d6 moins 1d6), frappes : ${(a.sneak?.strikes ?? []).join(", ")}`);
       ctx.expect((a.damage?.rolls ?? []).some(x => /^2d6$/.test((x.formula ?? "").replace(/\s/g, ""))), `jet de dégâts « ${(a.damage?.rolls ?? []).map(x => x.formula).join(" | ")} »`);
-      // La sauvegarde de Croc-en-jambe, jouée par le moteur après les dégâts.
+      // Trip's saving throw, played by the engine after the damage.
       let card = null;
       for ( const until = Date.now() + 15000; !card && (Date.now() < until); await pause(500) ) {
         card = (await ctx.messagesSince(a.since)).find(m => m.flags?.[MODULE_ID]?.areaTick?.event === "cunningStrike");
@@ -231,8 +231,8 @@ export default {
       for ( const [t, value] of order ) {
         await ctx.call("set-initiative", { combatantId: combat.combatants.find(x => x.tokenId === t.id).id, value, combatId: ctx.ownCombat });
       }
-      // L'initiative fixée retrie les combattants sans changer l'index du tour : on revient en arrière (toujours au round 1,
-      // pour Assassinat) plutôt que d'avancer.
+      // The fixed Initiative re-sorts the combatants without changing the turn index: we go back (always in round 1,
+      // for Assassinate) rather than advance.
       for ( let i = 0; (i < 4) && ((await current()) !== rogue.id); i++ ) {
         await ctx.call("previous-turn", { combatId: ctx.ownCombat }).catch(() => ctx.nextTurn());
         await pause(1500);
@@ -288,7 +288,7 @@ export default {
     const steady = await lend(ITEMS.steadyAim);
     await part("Visée appliquée", async () => {
       await tough();
-      await place(bandit, r0.x - 3 * grid, by);   // à 4 cases, un mur cache le Bandit dans Restored Keep
+      await place(bandit, r0.x - 3 * grid, by);   // 4 cells away, a wall hides the Bandit in Restored Keep
       if ( !ctx.expect(await fight([[rogue, 20], [bandit, 10]]), "combat : au tour du Roublard") ) return;
       await ctx.use({ tokenId: rogue.id, itemId: steady, activityId: "VGVYnecMRcu0f5Sq" });
       await pause(2500);
@@ -306,7 +306,7 @@ export default {
       await endFight();
     });
 
-    /* ---- Défense ---- */
+    /* ---- Defense ---- */
 
     await part("Insaisissable (contrôle) : Entravé, attaqué avec l'Avantage", async () => {
       await place(bandit, bx, by);
@@ -359,7 +359,7 @@ export default {
     await part("Assassinat", async () => {
       await tough();
       await place(bandit, bx, by);
-      // Le Bandit joue après le Roublard : au premier round, il n'a pas encore joué.
+      // The Bandit plays after the Rogue: in the first round, he has not played yet.
       if ( !ctx.expect(await fight([[rogue, 20], [bandit, 10]]), "combat : au tour du Roublard (round 1)") ) return;
       const a = await attack(dagger, bandit, { strikes: [] });
       ctx.expect(a.mode === 1, `Avantage contre le Bandit qui n'a pas joué (mode ${a.mode})`);

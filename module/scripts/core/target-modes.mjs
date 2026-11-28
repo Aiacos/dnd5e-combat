@@ -1,30 +1,30 @@
 /**
- * §249 : l'Avantage ou le Désavantage donné **par cible** par celui qui utilise l'activité (un voisin : le MJ qui juge le jeu de rôle
- * des joueurs devant un piège). Il se passe dans le message d'utilisation, `flags.dnd5e-combat.targetModes` = `[{ token: <uuid du
- * token>, mode: "advantage" | "disadvantage" }]`, et s'applique au jet de sauvegarde demandé à cette cible ; pour une attaque, il est
- * **inversé** sur le jet d'attaque contre elle (une cible favorisée est plus dure à toucher). Une liste et pas un objet indexé par
- * UUID : le cœur développe les clés à points d'un drapeau (`Scene.x.Token.y` devenait un objet imbriqué, vu en jeu le 2026-10-27).
+ * §249: Advantage or Disadvantage given **per target** by whoever uses the activity (a neighbor: the GM judging the players'
+ * roleplay in front of a trap). It travels in the use message, `flags.dnd5e-combat.targetModes` = `[{ token: <uuid du
+ * token>, mode: "advantage" | "disadvantage" }]`, and applies to the saving throw requested of that target; for an attack, it
+ * is **inverted** on the attack roll against it (a favored target is harder to hit). A list and not an object indexed by
+ * UUID: the core expands the dotted keys of a flag (`Scene.x.Token.y` became a nested object, seen in play on 2026-10-27).
  */
 
 const MODES = new Set(["advantage", "disadvantage"]);
 
-/** Les modes donnés, par UUID de token, valeurs inconnues retirées ; null s'il n'y en a pas. */
+/** The given modes, by token UUID, unknown values removed; null if there are none. */
 export function normalizeTargetModes(raw) {
   if ( !Array.isArray(raw) ) return null;
   const out = Object.fromEntries(raw.filter(e => e?.token && MODES.has(e.mode)).map(e => [e.token, e.mode]));
   return Object.keys(out).length ? out : null;
 }
 
-/** Le mode de la sauvegarde de cette cible : `{ advantage, disadvantage }`. */
+/** The mode of this target's saving throw: `{ advantage, disadvantage }`. */
 export function saveModeFor(modes, uuid) {
   const mode = modes?.[uuid];
   return { advantage: mode === "advantage", disadvantage: mode === "disadvantage" };
 }
 
 /**
- * Le jet d'attaque contre ces cibles (une attaque, un jet pour toutes) : le mode inversé de chacune. Les cibles sans mode donné comptent
- * comme « normal ». Si elles ne s'accordent pas, rien n'est posé (`agreed: false`) : à l'appelant de faire une attaque par groupe.
- * @param {(string|null)[]} perTarget  Le mode donné de chaque cible.
+ * The attack roll against these targets (one attack, one roll for all): each target's inverted mode. Targets with no given mode
+ * count as "normal". If they do not agree, nothing is set (`agreed: false`): the caller must make one attack per group.
+ * @param {(string|null)[]} perTarget  The given mode of each target.
  * @returns {{ advantage: boolean, disadvantage: boolean, agreed: boolean }}
  */
 export function attackModeAgainst(perTarget) {

@@ -1,13 +1,13 @@
 /**
- * Sorts du clerc et du druide qui portaient plusieurs effets (audit du compendium, le 2026-09-27). Le Clerc lance sur le
- * Guerrier (sorts ajoutés à volonté pour le scénario, retirés à la fin) :
- *  1. Aide (niveau 2) : un seul effet, celui du niveau lancé (« +5 PV max ») — le moteur posait les huit profils.
- *  2. Protection contre l'énergie (feu), Amélioration de caractéristique (Sagesse), Agrandissement/rapetissement
- *     (agrandi, sauvegarde ratée) : un seul effet, celui choisi.
- *  3. Protection contre le poison : l'état Empoisonné cesse ; le Guerrier sauvegarde ensuite avec l'avantage contre un
- *     effet qui empoisonne (Nuage nauséabond du Zombi), le Clerc — qui a le sort sur sa fiche mais pas l'effet — sans.
- *  4. Retour à la vie : le Guerrier, Mort à 0 PV, revient à 1 PV ou plus, sans l'état Mort.
- * Remet PV, effets et états.
+ * Cleric and druid spells that carried several effects (compendium audit, 2026-09-27). The Cleric casts on the
+ * Fighter (spells added at will for the scenario, removed at the end):
+ *  1. Aid (level 2): a single effect, the one for the level cast ("+5 max HP") — the engine placed all eight profiles.
+ *  2. Protection from Energy (fire), Enhance Ability (Wisdom), Enlarge/Reduce
+ *     (enlarged, failed saving throw): a single effect, the chosen one.
+ *  3. Protection from Poison: the Poisoned condition ends; the Fighter then saves with Advantage against an
+ *     effect that poisons (the Zombie's Stinking Cloud), the Cleric — who has the spell on his sheet but not the effect — without.
+ *  4. Raise Dead: the Fighter, Dead at 0 HP, comes back at 1 HP or more, without the Dead condition.
+ * Puts back HP, effects and conditions.
  */
 const MODULE_ID = "dnd5e-combat";
 const SPELLS = "Compendium.dnd5e.spells24.Item.";
@@ -30,7 +30,7 @@ export default {
     const hp0 = await ctx.hp(fighter);
     const clericHp0 = await ctx.hp(cleric);
     const spellEffects = /pv max|Protection|Amélioration|Agrandissement|Rapetissement|concentr|Poison nauséabond/i;
-    // Les effets des sorts du scénario, par l'identifiant du sort (le nom d'un effet suit la langue du client du MJ).
+    // The scenario's spell effects, by the spell's id (an effect's name follows the language of the GM's client).
     const SPELL_IDS = ["aid", "protection-from-energy", "enhance-ability", "enlarge-reduce", "protection-from-poison", "revivify", "stinking-cloud"];
     const cleanup = async () => {
       await ctx.removeEffectsNamed(fighter, spellEffects);
@@ -44,12 +44,12 @@ export default {
     };
     ctx.restore(cleanup);
     const from = (token, identifier) => ctx.effectsFrom(token, identifier).then(list => list.map(e => ({ ...e, name: e.effect })));
-    // Le nom, dans la langue du client, d'un effet de l'item du Clerc (le profil choisi), pour le reconnaître une fois posé.
+    // The name, in the client's language, of an effect of the Cleric's item (the chosen profile), to recognize it once placed.
     const profileName = async (identifier, effectId) => {
       const item = ((await ctx.call("get-actor", { actorId: cleric.actorId })).items ?? []).find(i => i.system?.identifier === identifier);
       return (item?.effects ?? []).find(e => (e._id ?? e.id) === effectId)?.name ?? null;
     };
-    // `roll` : soins ou dégâts laissés au bouton de la carte (Aide, Retour à la vie) — le clic de l'auteur, par api.mcp.rollCard.
+    // `roll`: healing or damage left to the card's button (Aid, Raise Dead) — the author's click, through api.mcp.rollCard.
     const cast = async (identifier, { roll=false, ...params }={}) => {
       const used = await ctx.use({ tokenId: cleric.id, identifier, consume: false, targetTokenIds: [fighter.id], ...params });
       if ( roll ) {
@@ -62,7 +62,7 @@ export default {
       return used;
     };
 
-    // 1. Aide au niveau 2 : le seul profil « Niveau 2 ».
+    // 1. Aid at level 2: the single "Level 2" profile.
     await cast("aid", { roll: true });
     const aid = await from(fighter, "aid");
     ctx.expect(aid.length === 1, `Aide : un seul effet posé (${aid.map(e => e.name).join(", ") || "aucun"})`);
@@ -80,7 +80,7 @@ export default {
       ctx.expect((posed.length === 1) && (posed[0].name === wanted), `${label} : un seul effet, le choisi « ${wanted} » (${posed.map(e => e.name).join(", ") || "aucun"})`);
       await cleanup();
     }
-    // Agrandissement : sauvegarde de Con (le Guerrier peut réussir) ; on rejoue jusqu'à un échec.
+    // Enlarge: Con saving throw (the Fighter can succeed); we replay until a failure.
     let enlarged = null;
     const enlargeName = await profileName("enlarge-reduce", "Wi2E10l7n6Ka8k6u");
     for ( let n = 1; (n <= 20) && !enlarged; n++ ) {
@@ -108,15 +108,15 @@ export default {
     };
     const protectedSave = await saveMode(fighter);
     ctx.expect(protectedSave.found && (protectedSave.mode === 1), `le Guerrier protégé sauvegarde contre le poison avec l'avantage (${protectedSave.formula}, mode ${protectedSave.mode})`);
-    // Le Clerc de `dnd-6` est nain : Résistance naine (§31) lui donne à bon droit l'Avantage contre Empoisonné — le contrôle « le sort
-    // ne vaut pas pour son lanceur » ne se fait alors pas sur lui.
+    // The `dnd-6` Cleric is a dwarf: Dwarven Resilience (§31) rightly gives him Advantage against Poisoned — the check "the spell
+    // does not apply to its caster" is then not done on him.
     const dwarf = ((await ctx.call("get-actor", { actorId: cleric.actorId })).items ?? []).some(i => i.system?.identifier === "dwarven-resilience");
     const casterSave = await saveMode(cleric);
     if ( dwarf ) ctx.log(`le Clerc est nain (Résistance naine) : avantage attendu de son espèce (${casterSave.formula})`);
     else ctx.expect(casterSave.found && (casterSave.mode !== 1), `le Clerc, qui a le sort mais pas l'effet, sans avantage (${casterSave.formula}, mode ${casterSave.mode})`);
     await cleanup();
 
-    // 4. Retour à la vie.
+    // 4. Raise Dead.
     await ctx.setHp(fighter, 0);
     await ctx.call("set-status", { tokenId: fighter.id, statusId: "dead", active: true });
     await pause(1200);

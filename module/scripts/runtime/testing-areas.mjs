@@ -1,5 +1,5 @@
 /**
- * Fonctions de test (api.mcp) : zones et murs posés, côtés d'un mur, invocations à un point, tempête, régions. Extrait de
+ * Test functions (api.mcp): areas and walls placed, sides of a wall, summons at a point, storm, regions. Extracted from
  * runtime/testing.mjs.
  */
 
@@ -17,8 +17,9 @@ import { chainOutliers } from "../adapter/chain.mjs";
 import { damageTypeChoices } from "../adapter/messages.mjs";
 
 /**
- * §162 : un mur posé par points, comme la visée de l'interface le ferait après les clics (ui/pointer.mjs, `aimWall`) : l'activité est
- * utilisée avec les points (`aimed: { type: "wall", points }`), la région et ses murs suivent `postUseActivity`. Rend l'id de la région.
+ * §162: a wall placed by points, as the interface's aiming would do after the clicks (ui/pointer.mjs, `aimWall`): the activity is
+ * used with the points (`aimed: { type: "wall", points }`), the region and its walls follow `postUseActivity`. Returns the
+ * region's id.
  */
 export async function wall({ tokenId, itemId, activityId=null, points }) {
   gmOnly();
@@ -38,8 +39,8 @@ export async function wall({ tokenId, itemId, activityId=null, points }) {
 }
 
 /**
- * §169 : l'état d'un mur à face brûlante — son côté, sa face brûlante (id, formes), ses murs du cœur ; `flip: true` la retourne d'abord
- * (comme l'entrée du menu du lanceur).
+ * §169: the state of a wall with a burning face — its side, its burning face (id, shapes), its core walls; `flip: true` flips it
+ * first (like the caster menu entry).
  */
 export async function wallSide({ regionId, flip=false }) {
   gmOnly();
@@ -52,22 +53,22 @@ export async function wallSide({ regionId, flip=false }) {
     shapes: region.shapes.map(s => s.toObject()),
     burning: burning ? { id: burning.id, shapes: burning.shapes.map(s => s.toObject()), area: burning.getFlag(MODULE_ID, "area") } : null,
     walls: canvas.scene.walls.filter(w => w.getFlag(MODULE_ID, "zone") === region.id).map(w => ({ c: w.c, move: w.move, sight: w.sight })),
-    // §170 : ses lumières ; et les sons qu'un module voisin y aurait posés (`flags.*.wall`).
+    // §170: its lights; and the sounds that a neighbouring module would have placed on it (`flags.*.wall`).
     lights: canvas.scene.lights.filter(l => l.getFlag(MODULE_ID, "region") === region.id).map(l => ({ x: l.x, y: l.y, bright: l.config.bright, dim: l.config.dim })),
     sounds: canvas.scene.sounds.filter(s => Object.values(s.flags ?? {}).some(f => f?.wall === region.id)).length,
-    // §172 : ses comportements (terrain difficile, coût de déplacement).
+    // §172: its behaviors (Difficult Terrain, movement cost).
     behaviors: region.behaviors.map(b => ({ type: b.type, system: b.system?.toObject?.() ?? null }))
   };
 }
 
 /**
- * Une invocation posée à une case fixe, pour un scénario. L'activité est utilisée sans invoquer (`create.summons: false` :
- * carte, concentration, budget comme en jeu), puis `placeSummons` est appelé avec le premier profil (ou `profile`) ; le
- * placement interactif de dnd5e (`getPlacement`, un clic sur le canevas, dnd5e 6.0.3 dnd5e.mjs:40825-40843, appelé par
- * `placeSummons` :40494) est remplacé par la position donnée, sur CETTE instance d'activité et le temps de l'appel.
- * Outil de test seulement : le moteur, lui, laisse le placement au système.
+ * A summon placed on a fixed cell, for a scenario. The activity is used without summoning (`create.summons: false`:
+ * card, Concentration, budget as in play), then `placeSummons` is called with the first profile (or `profile`); dnd5e's
+ * interactive placement (`getPlacement`, a click on the canvas, dnd5e 6.0.3 dnd5e.mjs:40825-40843, called by
+ * `placeSummons` :40494) is replaced by the given position, on THIS activity instance and for the time of the call.
+ * Test tool only: the engine itself leaves the placement to the system.
  */
-/** O8f (§349) : la disposition d'un token et les joueurs (non MJ, ou « default ») qui ont au moins un droit sur son acteur du monde. */
+/** O8f (§349): a token's disposition and the players (non-GM, or "default") who have at least one permission on its world actor. */
 export function owners({ tokenId }) {
   const token = canvas.scene?.tokens.get(tokenId);
   if ( !token ) throw new Error("token not found");
@@ -78,9 +79,9 @@ export function owners({ tokenId }) {
 }
 
 /**
- * MJ : utilise l'activité d'invocation de l'item (`activityId`, sinon la première) sans rien consommer, puis pose les créatures du
- * profil (`profile`, sinon le premier) à la case `x`, `y` → `{ messageId, tokens: [{ id, name, actorId }] }`. `actorUuid` : la créature
- * d'une invocation « par FP » (§107).
+ * GM: uses the item's summon activity (`activityId`, otherwise the first) consuming nothing, then places the creatures of the
+ * profile (`profile`, otherwise the first) at cell `x`, `y` → `{ messageId, tokens: [{ id, name, actorId }] }`. `actorUuid`: the
+ * creature of a "by CR" summon (§107).
  */
 export async function summonAt({ tokenId, itemId, activityId=null, profile=null, actorUuid=null, x, y }) {
   gmOnly();
@@ -88,13 +89,13 @@ export async function summonAt({ tokenId, itemId, activityId=null, profile=null,
   const item = token?.actor?.items.get(itemId);
   const activity = activityId ? item?.system.activities.get(activityId) : item?.system.activities.find(a => a.type === "summon");
   if ( !activity || (activity.type !== "summon") ) throw new Error("summon activity not found");
-  // §84 : sans rien consommer, comme `use` par défaut — un lanceur sans emplacement ouvrait « Plus de charge » chez le MJ (§77).
-  // O8f (§349) : une activité « rider » (Parchemin d'invocation de titan : elle n'apparaît qu'avec l'enchantement qui nomme le titan) ne
-  // s'utilise pas telle quelle — seule la pose est faite.
+  // §84: consuming nothing, like `use` by default — a caster with no slot opened "No more charge" on the GM (§77).
+  // O8f (§349): a "rider" activity (Scroll of Titan Summoning: it only appears with the enchantment that names the titan) is
+  // not used as it is — only the placement is done.
   const used = activity.isHidden ? null : await activity.use({ consume: false, create: { summons: false }, [MODULE_ID]: { confirmed: true, autoReact: "none", placeSummons: false } },
     { configure: false });
   activity.getPlacement = async () => [{ x, y, elevation: token.elevation ?? 0, rotation: 0 }];
-  // §107 : une invocation « par FP » (Appel de familier) demande la créature au joueur (summon.mjs, `queryActor`) — fournie ici.
+  // §107: a "by CR" summon (Find Familiar) asks the player for the creature (summon.mjs, `queryActor`) — provided here.
   if ( actorUuid ) activity.queryActor = async () => actorUuid;
   try {
     const created = await activity.placeSummons({ profile: profile ?? activity.profiles[0]?._id });
@@ -105,14 +106,14 @@ export async function summonAt({ tokenId, itemId, activityId=null, profile=null,
   }
 }
 
-/** La visée d'une téléportation en cours sur ce client : celle du moteur, et la planification du cœur (`_movementPlanningContext`). */
+/** The aiming of a teleportation in progress on this client: the engine's, and the core's planning (`_movementPlanningContext`). */
 export function planning() {
   const ctx = canvas.tokens?._movementPlanningContext ?? null;
   return { teleporting: currentTeleport()?.token?.name ?? null, planning: ctx?.object?.name ?? null,
     controlled: canvas.tokens?.controlled.map(t => t.name) ?? [] };
 }
 
-/** §70 : le clic de la visée de l'éclair (un point de la scène) : la pose du cœur est fermée, l'éclair posé au point. */
+/** §70: the click of the bolt's aiming (a point of the scene): the core's placement is closed, the bolt placed at the point. */
 export async function stormStrike({ x, y }) {
   const aim = boltAim();
   if ( !aim ) return { struck: false };
@@ -123,9 +124,9 @@ export async function stormStrike({ x, y }) {
 }
 
 /**
- * §70 : valide la pose de région en cours (`RegionLayer#placeRegion` : celle de dnd5e pour la zone d'un sort, ou la visée de
- * l'éclair) au point (x, y) de la scène, comme un clic : la forme y est centrée, puis la fin de `#nextPlacement` est rejouée
- * (client/canvas/layers/regions.mjs:1146-1191 : création si `create`, sinon le document rendu). Une seule forme.
+ * §70: validates the region placement in progress (`RegionLayer#placeRegion`: dnd5e's for a spell's area, or the bolt's
+ * aiming) at the scene point (x, y), like a click: the shape is centered there, then the end of `#nextPlacement` is replayed
+ * (client/canvas/layers/regions.mjs:1146-1191: creation if `create`, otherwise the document returned). A single shape.
  */
 export async function placeRegionAt({ x, y }) {
   const ctx = canvas.regions._placementContext;
@@ -139,9 +140,9 @@ export async function placeRegionAt({ x, y }) {
     ? { ...shape, points: shape.points.map((v, i) => v + ((i % 2) ? (y - center.y) : (x - center.x))) }
     : (shape.type === "rectangle") ? { ...shape, x: x - (shape.width / 2), y: y - (shape.height / 2) } : { ...shape, x, y };
   document.updateSource({ shapes: [moved] });
-  // Comme `#confirmPlacement` : le rappel du demandeur (dnd5e y relève la forme posée, template-placement.mjs:36).
+  // Like `#confirmPlacement`: the requester's callback (dnd5e picks up the placed shape there, template-placement.mjs:36).
   if ( preConfirm && (preConfirm({ event: null, document, regionIndex, regionCount, shape: ctx.shape, shapeIndex: 0, shapeCount: 1 }) === false) ) return { placed: false };
-  // `_cancelPlacement` détruit l'aperçu (son document est celui qu'on rend) : on lui en laisse un factice, et on finit comme le cœur.
+  // `_cancelPlacement` destroys the preview (its document is the one we return): we leave it a dummy one, and finish like the core.
   ctx.resolve = () => {};
   ctx.preview = { destroyed: true };
   canvas.regions._cancelPlacement();
@@ -163,7 +164,7 @@ const shapeCenterOf = shape => (Array.isArray(shape.points)
       y: shape.points.filter((_, i) => i % 2).reduce((a, b) => a + b, 0) / (shape.points.length / 2) }
   : (shape.type === "rectangle") ? { x: shape.x + (shape.width / 2), y: shape.y + (shape.height / 2) } : { x: shape.x, y: shape.y });
 
-/** §70 : l'orage d'un item sur la scène (nuage, « déjà là », visée en cours). */
+/** §70: an item's storm on the scene (cloud, "already there", aiming in progress). */
 export function storm({ tokenId, itemId }) {
   const item = viewedToken({ tokenId }).actor?.items.get(itemId);
   const cloud = cloudOf(item);
@@ -172,9 +173,9 @@ export function storm({ tokenId, itemId }) {
 }
 
 /**
- * §286 : ce que la pose refuserait pour ces formes de l'activité de zone de l'item (`far`, `hidden`, `apart` — cubes non contigus),
- * ou null ; sans ouvrir la pose de dnd5e. `shapes` : formes de région en pixels (`circle` { x, y, radius }, `rectangle` { x, y,
- * width, height }).
+ * §286: what the placement would refuse for these shapes of the item's area activity (`far`, `hidden`, `apart` — non-contiguous
+ * cubes), or null; without opening dnd5e's placement. `shapes`: region shapes in pixels (`circle` { x, y, radius }, `rectangle`
+ * { x, y, width, height }).
  */
 export function rangedPlacement({ tokenId, itemId, shapes }) {
   gmOnly();
@@ -186,7 +187,7 @@ export function rangedPlacement({ tokenId, itemId, shapes }) {
   return { area: area ? { count: area.count, contiguous: area.contiguous, range: area.range } : null, problem: area ? rangedPlacementProblem(area, shapes) : null };
 }
 
-/** §286 : Chaîne d'éclairs — les cibles (après la première) trop loin de la première, par nom. */
+/** §286: Chain Lightning — the targets (after the first) too far from the first, by name. */
 export function chainCheck({ tokenId, itemId, targetIds }) {
   gmOnly();
   const token = viewedToken({ tokenId });
@@ -197,7 +198,7 @@ export function chainCheck({ tokenId, itemId, targetIds }) {
   return { outliers: chainOutliers(activity, targets).map(t => t.name) };
 }
 
-/** §287 : la lumière du token telle que la rendent ses effets (`token.light.*` appliqués par le cœur), pas celle de sa source. */
+/** §287: the token's light as its effects render it (`token.light.*` applied by the core), not that of its source. */
 export function tokenLight({ tokenId }) {
   gmOnly();
   const token = viewedToken({ tokenId });
@@ -205,7 +206,7 @@ export function tokenLight({ tokenId }) {
   return { bright: Number(light.bright) || 0, dim: Number(light.dim) || 0, color: light.color ? String(light.color) : null };
 }
 
-/** §288 : les types de dégâts au choix de l'attaque d'un item (Coup au but : celui de l'arme ou radiant), tels que le jet les proposera. */
+/** §288: the damage types at the choice of an item's attack ("Coup au but": the weapon's or radiant), as the roll will offer them. */
 export function damageTypes({ tokenId, itemId }) {
   gmOnly();
   const token = viewedToken({ tokenId });
@@ -216,22 +217,22 @@ export function damageTypes({ tokenId, itemId }) {
 }
 
 /**
- * §383 (issue #38) : lancer une invocation comme la barre d'actions de DAS · Combat UI (`activity.use({ spell: { slot } },
- * { configure: false })`, sans `confirmed` : la fenêtre « Choisir la forme » du moteur doit s'ouvrir), sans rien consommer. La pose
- * qui suivra est notée et faite à la case donnée (le placement interactif de dnd5e, `getPlacement`, est remplacé sur l'instance
- * d'activité que `dnd5e.preSummon` reçoit — la copie mise à l'échelle). Ne fait pas attendre la fenêtre : rend tout de suite.
- * `sheet: true` : comme depuis la fiche (voir plus bas).
+ * §383 (issue #38): cast a summon like the DAS · Combat UI action bar (`activity.use({ spell: { slot } },
+ * { configure: false })`, without `confirmed`: the engine's "Choose the form" window must open), consuming nothing. The placement
+ * that follows is noted and done at the given cell (dnd5e's interactive placement, `getPlacement`, is replaced on the activity
+ * instance that `dnd5e.preSummon` receives — the scaled copy). Does not wait for the window: returns right away.
+ * `sheet: true`: as from the sheet (see below).
  */
 let summonWatch = null;
 /**
- * MJ : lance l'activité `type` (invocation par défaut) comme la barre de DAS · Combat UI, sans attendre la fenêtre ni consommer (sauf
- * `sheet: true`) → `{ started, profiles }` ; ce qui est posé se lit par `summonCaptured`.
+ * GM: runs the `type` activity (summon by default) like the DAS · Combat UI bar, without waiting for the window or
+ * consuming (unless `sheet: true`) → `{ started, profiles }`; what is placed is read through `summonCaptured`.
  */
 export function castFromBar({ tokenId, itemId, slot=null, x, y, sheet=false, type="summon", targetIds=null }) {
   gmOnly();
   const token = canvas.scene?.tokens.get(tokenId);
   const item = token?.actor?.items.get(itemId);
-  // §391 : aussi une activité d'enchantement ou de transformation (`type`) ; le profil reçu par dnd5e est relevé à `postUseActivity`.
+  // §391: also an enchantment or transformation activity (`type`); the profile dnd5e receives is captured at `postUseActivity`.
   const activity = item?.system.activities.find(a => a.type === type);
   if ( !activity ) throw new Error(`${type} activity not found`);
   if ( summonWatch ) {
@@ -251,7 +252,7 @@ export function castFromBar({ tokenId, itemId, slot=null, x, y, sheet=false, typ
       creatureSize: options?.creatureSize ?? null, creatureType: options?.creatureType ?? null,
       count: (() => { try { return new Roll(String(profile?.count || "1"), a.getRollData()).evaluateSync().total; } catch(err) { return null; } })(),
       level: a.getRollData?.()?.item?.level ?? null };
-    // Autant de cases que de créatures (`count` du profil au niveau lancé, §385), en ligne à partir de la case donnée.
+    // As many cells as creatures (`count` of the profile at the cast level, §385), in a row starting from the given cell.
     const n = Math.max(1, Number(watch.summoned.count) || 1);
     const step = canvas.grid?.size ?? 100;
     a.getPlacement = async () => Array.from({ length: n }, (_, i) => ({ x: x + (i * step), y, elevation: token.elevation ?? 0, rotation: 0 }));
@@ -262,9 +263,9 @@ export function castFromBar({ tokenId, itemId, slot=null, x, y, sheet=false, typ
     watch.tokens = (tokens ?? []).map(t => ({ id: t.id, name: t.name, actorId: t.actorId }));
     Hooks.off("dnd5e.postSummon", watch.tokenHook);
   });
-  // `sheet` : comme un clic dans la fiche (`activity.use()` ordinaire, fenêtre de dnd5e, consommation) — sans emplacement, le MJ reçoit
-  // « Plus de charge » (§77), dont la relance saute la fenêtre de dnd5e.
-  // §391 : les cibles désignées avant de lancer (Métamorphose suprême vise une créature ; sans elles, le moteur attend un clic).
+  // `sheet`: like a click in the sheet (ordinary `activity.use()`, dnd5e window, consumption) — with no slot, the GM gets
+  // "No charge left" (§77), whose retry skips the dnd5e window.
+  // §391: the targets designated before casting (True Polymorph targets a creature; without them, the engine waits for a click).
   if ( Array.isArray(targetIds) ) {
     for ( const t of game.user.targets ) t.setTarget(false, { releaseOthers: false });
     for ( const id of targetIds ) canvas.tokens.get(id)?.setTarget(true, { releaseOthers: false });
@@ -275,7 +276,7 @@ export function castFromBar({ tokenId, itemId, slot=null, x, y, sheet=false, typ
   return { started: true, profiles: Array.from(list ?? []).map(p => ({ id: p._id, name: p.name || p.effect?.name || "" })) };
 }
 
-/** §383 : ce que la dernière `castFromBar` a invoqué (profil reçu par dnd5e, tokens posés), ou null tant que rien n'est parti. */
+/** §383: what the last `castFromBar` summoned (profile received by dnd5e, tokens placed), or null while nothing has started. */
 export function summonCaptured() {
   return summonWatch ? { summoned: summonWatch.summoned, tokens: summonWatch.tokens, used: summonWatch.used } : null;
 }

@@ -1,25 +1,25 @@
 /**
- * §251 : l'horloge en temps réel — hors combat, le temps du monde avance d'une seconde par seconde réelle, pour que les durées que le
- * moteur et ses voisins comptent en temps du monde s'écoulent (zones, invocations, Forme sauvage, torches, huile en feu, délais de
- * fouille, pièges qui se réarment…). Le cœur de Foundry n'avance le temps qu'en combat (6 s par round) ; hors combat, sans module de
- * calendrier, il reste figé.
+ * §251: the real-time clock — outside combat, world time advances one second per real second, so that the durations the
+ * engine and its neighbors count in world time elapse (areas, summons, Wild Shape, torches, burning oil, search delays,
+ * traps that reset…). Foundry's core only advances time in combat (6 s per round); outside combat, without a calendar
+ * module, it stays frozen.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
-/** Les modules qui font déjà tourner l'horloge du monde : actifs, l'horloge du moteur s'efface (sinon le temps avancerait deux fois). */
+/** The modules that already run the world clock: active, the engine's clock steps aside (otherwise time would advance twice). */
 export const CLOCK_MODULES = Object.freeze([
   "simple-timekeeping", "foundryvtt-simple-calendar", "foundryvtt-simple-calendar-reborn", "calendaria", "about-time"
 ]);
 
-/** Le pas d'avance, en secondes : un round. Plus fin, chaque pas serait une écriture serveur et un `updateWorldTime` chez tous. */
+/** The advance step, in seconds: one round. Finer, each step would be a server write and an `updateWorldTime` for everyone. */
 export const CLOCK_STEP_SECONDS = 6;
 
-/** Au-delà, un écart réel n'est pas du jeu (onglet endormi, machine en veille) : on n'en compte qu'un pas. */
+/** Beyond it, a real gap is not play (sleeping tab, machine on standby): only one step is counted. */
 export const CLOCK_MAX_GAP_SECONDS = 60;
 
 /**
- * Pourquoi l'horloge ne tourne pas en ce moment (null : elle tourne).
+ * Why the clock is not running right now (null: it is running).
  * @param {{ enabled: boolean, executor: boolean, rival: string|null, paused: boolean, inCombat: boolean }} state
  * @returns {"off"|"notExecutor"|"rival"|"paused"|"combat"|null}
  */
@@ -33,10 +33,10 @@ export function clockHalt({ enabled, executor, rival, paused, inCombat }) {
 }
 
 /**
- * Ce qu'il faut avancer maintenant, en secondes de temps du monde, et le temps réel désormais compté.
- * @param {number|null} counted  Millisecondes réelles déjà comptées (null : l'horloge vient de repartir — on part de maintenant).
- * @param {number} now           Millisecondes réelles.
- * @returns {{ advance: number, counted: number }}  `advance` est un multiple entier de secondes ; le reste attend le pas suivant.
+ * What to advance now, in seconds of world time, and the real time now counted.
+ * @param {number|null} counted  Real milliseconds already counted (null: the clock has just restarted — we start from now).
+ * @param {number} now           Real milliseconds.
+ * @returns {{ advance: number, counted: number }}  `advance` is a whole multiple of seconds; the rest waits for the next step.
  */
 export function clockTick(counted, now) {
   if ( !Number.isFinite(counted) || (now < counted) ) return { advance: 0, counted: now };
@@ -46,5 +46,5 @@ export function clockTick(counted, now) {
   return { advance: elapsed, counted: counted + (elapsed * 1000) };
 }
 
-/** Le premier module d'horloge actif parmi les ids donnés (`isActive(id)`), ou null. */
+/** The first active clock module among the given ids (`isActive(id)`), or null. */
 export const rivalClock = isActive => CLOCK_MODULES.find(id => isActive(id)) ?? null;

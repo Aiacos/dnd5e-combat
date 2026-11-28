@@ -1,14 +1,14 @@
 /**
- * Trace d'une utilisation (SPEC §16.9) : un sort qui ne pose aucun effet (Armure d'Agathys : des PV temporaires et une
- * riposte) ne laisse rien sur son lanceur, et le moteur ne peut pas savoir qu'il est actif — se fier aux seuls PV
- * temporaires ferait riposter un occultiste Fiélon dont la Bénédiction du Ténébreux vient d'en donner. Le contenu
- * déclare `trace: true` : à l'utilisation, le moteur pose sur le lanceur un effet au nom et à l'image de l'item, pour
- * la durée de l'item, dont l'origine est l'activité — ses déclarations `via: "effect"` s'y accrochent comme à tout
- * effet d'item (adapter/triggers.mjs, `declarationsOfEffects`). Le niveau de lancement est gardé comme le fait le
- * plateau d'effets de dnd5e (`flags.dnd5e.scaling`, `spellLevel` : effect-application.mjs, `_prepareEffectData`).
- * Relancé, le sort remplace sa trace.
- * §16.41 : `trace: { activity, show, attack }` — la trace d'une activité précise, montrée sur le token, qui offre une attaque au
- * menu du clic droit ; celle d'un sort à concentration tombe avec elle.
+ * Trace of a use (SPEC §16.9): a spell that applies no effect (Armor of Agathys: Temporary Hit Points and a
+ * retaliation) leaves nothing on its caster, and the engine cannot know it is active — relying on Temporary Hit Points alone
+ * would make a Fiend warlock retaliate when the Dark One's Blessing has just granted some. The content
+ * declares `trace: true`: on use, the engine puts on the caster an effect with the item's name and image, for
+ * the item's duration, whose origin is the activity — its `via: "effect"` declarations attach to it as to any
+ * item effect (adapter/triggers.mjs, `declarationsOfEffects`). The cast level is kept as dnd5e's effects
+ * tray does (`flags.dnd5e.scaling`, `spellLevel`: effect-application.mjs, `_prepareEffectData`).
+ * Recast, the spell replaces its trace.
+ * §16.41: `trace: { activity, show, attack }` — the trace of a specific activity, shown on the token, which offers an attack in the
+ * right-click menu; that of a Concentration spell drops with it.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,14 +16,14 @@ import { contentOf } from "./content.mjs";
 import { concentrationOn } from "./summons.mjs";
 import { favoriteIdOf, favoritePlan, favoriteRemoval } from "../core/spell-weapons.mjs";
 
-/** La règle de trace d'un item, normalisée : `{ activity, show, attack }`, ou null. */
+/** An item's normalized trace rule: `{ activity, show, attack }`, or null. */
 export function traceRuleOf(item) {
   const t = item ? contentOf(item).entry?.trace : null;
   if ( t === true ) return { activity: null, show: false, attack: null };
   return (t && (typeof t === "object")) ? { activity: t.activity ?? null, show: t.show === true, attack: t.attack ?? null } : null;
 }
 
-/** La trace active de cet item sur l'acteur, ou null. */
+/** The active trace of this item on the actor, or null. */
 export function traceOn(actor, item) {
   // §554: an expired trace (the core marks it `duration.expired`, it does not delete it) no longer counts.
   return (actor?.effects ?? []).find(e => (e.getFlag(MODULE_ID, "trace") === item.uuid) && !e.disabled && !e.duration?.expired) ?? null;
@@ -62,8 +62,8 @@ export function spellWeapons(actor) {
 }
 
 /**
- * §16.41 : les attaques offertes par une trace active (Lame de feu : l'attaque de la lame tant qu'elle est invoquée), pour le
- * menu du clic droit.
+ * §16.41: the attacks offered by an active trace (Flame Blade: the blade's attack while it is summoned), for the
+ * right-click menu.
  */
 export function traceAttacks(actor) {
   const out = [];
@@ -140,10 +140,10 @@ export function expiresByItself(effect) {
   return !combat?.getCombatantsByActor?.(effect.parent)?.length;
 }
 
-/** Secondes par unité de durée de dnd5e (`CONFIG.DND5E.scalarTimePeriods`). */
+/** Seconds per dnd5e duration unit (`CONFIG.DND5E.scalarTimePeriods`). */
 const SECONDS = Object.freeze({ turn: 6, round: 6, minute: 60, hour: 3600, day: 86400, month: 2592000, year: 31536000 });
 
-/** La durée de l'item en secondes, ou null (instantané, permanent, spécial). */
+/** The item's duration in seconds, or null (instantaneous, permanent, special). */
 function durationOf(item) {
   const { value, units } = item.system?.duration ?? {};
   const n = Number(value);
@@ -151,8 +151,8 @@ function durationOf(item) {
 }
 
 /**
- * Pose la trace d'une utilisation, si le contenu de l'item la demande. MJ actif uniquement.
- * @param {ChatMessage} message  Le message d'utilisation (`type: "usage"`).
+ * Applies the trace of a use, if the item's content asks for it. Active GM only.
+ * @param {ChatMessage} message  The use message (`type: "usage"`).
  * @returns {Promise<ActiveEffect|null>}
  */
 export async function leaveTrace(message) {
@@ -162,8 +162,8 @@ export async function leaveTrace(message) {
   const actor = message.getAssociatedActor?.();
   const activity = message.getAssociatedActivity?.();
   if ( !actor || !activity ) return null;
-  if ( rule.activity && (activity.id !== rule.activity) ) return null;   // Lame de feu : pas à chaque attaque
-  // §16.41 : un sort à concentration — la trace tombe avec elle (runtime/concentration.mjs).
+  if ( rule.activity && (activity.id !== rule.activity) ) return null;   // Flame Blade: not on every attack
+  // §16.41: a Concentration spell — the trace drops with it (runtime/concentration.mjs).
   const concentration = concentrationOn(item);
   // A trace held by a concentration that has just ended (cast again: dnd5e ends the old concentration first) is removed by
   // runtime/concentration.mjs — deleting it here too would fail on the second delete.

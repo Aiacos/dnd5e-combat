@@ -1,21 +1,21 @@
 /**
- * §224 : l'état du système d'escalade et de chute — allumé, le moteur aligne chaque déplacement sur le sol, fait grimper et tomber ;
- * coupé (bouton du MJ, réglage de monde `climbSystem`), on se déplace librement en hauteur et chacun garde son élévation
- * (runtime/climb-system.mjs). Dans un fichier sans import, au cœur : l'A* (adapter/path-world.mjs), l'altitude, l'escalade et les
- * chutes le lisent.
+ * §224: the state of the climbing and falling system — on, the engine aligns each move with the ground, makes creatures climb
+ * and fall; off (GM button, world setting `climbSystem`), creatures move freely in height and each keeps its elevation
+ * (runtime/climb-system.mjs). In a file with no imports, in the core: the A* (adapter/path-world.mjs), altitude, climbing and
+ * falls read it.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
 let on = true;
 
-/** Le système d'escalade et de chute est-il allumé ? */
+/** Is the climbing and falling system on? */
 export const climbSystemOn = () => on;
 
-/** Tenu par runtime/climb-system.mjs, d'après le réglage de monde. */
+/** Held by runtime/climb-system.mjs, from the world setting. */
 export function setClimbSystemState(value) {
   on = value !== false;
 }
 
-/** Ce que le système propose (entrées de menu, rebords) : `make()` allumé, rien (sans le calculer) quand il est coupé. */
+/** What the system offers (menu entries, ledges): `make()` when on, nothing (without computing it) when it is off. */
 export const whileClimbSystem = (make, active=on) => (active ? make() : []);

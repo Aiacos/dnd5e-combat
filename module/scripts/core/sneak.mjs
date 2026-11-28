@@ -1,30 +1,31 @@
 /**
- * Attaque sournoise et Frappes rusées du Roublard (SPEC §20, Manuel des joueurs 2024). Fonctions pures.
+ * Rogue's Sneak Attack and Cunning Strikes (SPEC §20, Player's Handbook 2024). Pure functions.
  *
- * Attaque sournoise : au plus une fois par tour, des dés de dégâts en plus (du type de l'arme) sur un coup porté avec une arme
- * de Finesse ou à distance, à deux conditions possibles : l'attaque a l'Avantage, ou bien un allié non Neutralisé se tient à
- * 1,50 m de la cible et l'attaque n'a pas le Désavantage.
+ * Sneak Attack: at most once per turn, extra damage dice (of the weapon's type) on a hit made with a Finesse or ranged
+ * weapon, under two possible conditions: the attack has Advantage, or an ally who is not Incapacitated is within
+ * 5 feet of the target and the attack does not have Disadvantage.
  *
- * Frappes rusées (niveau 5) : au moment des dégâts de l'Attaque sournoise, le roublard peut sacrifier certains de ses dés pour
- * y greffer un effet, chaque effet ayant son prix en dés. Deux effets au niveau 11
- * (Frappe rusée améliorée), trois de plus au niveau 14 (Frappes sournoises).
+ * Cunning Strike (level 5): when the Sneak Attack damage is dealt, the Rogue can forgo some of its dice to
+ * add an effect, each effect having its price in dice. Two effects at level 11
+ * (Improved Cunning Strike), three more at level 14 (Devious Strikes).
  */
 
-/** Le mode d'avantage d'un jet de dnd5e (`advantageMode`) : 1 avantage, -1 désavantage, 0 ni l'un ni l'autre. */
+/** The advantage mode of a dnd5e roll (`advantageMode`): 1 Advantage, -1 Disadvantage, 0 neither. */
 export const ADVANTAGE = 1;
 export const DISADVANTAGE = -1;
 
 /**
- * Pourquoi l'Attaque sournoise ne s'applique pas, ou null si elle s'applique.
+ * Why Sneak Attack does not apply, or null if it applies.
  * @param {object} attack
- * @param {boolean} attack.weapon          L'attaque est faite avec une arme (pas un sort, pas une attaque à mains nues).
- * @param {boolean} attack.finesse         L'arme a la propriété Finesse.
- * @param {boolean} attack.rangedWeapon    C'est une arme à distance (pas une arme de corps à corps lancée).
- * @param {number} attack.advantageMode    Le mode du jet d'attaque, une fois avantage et désavantage combinés.
- * @param {boolean} attack.allyNear        Un allié non Neutralisé de l'attaquant à 1,50 m de la cible.
- * @param {boolean} [attack.spent]         L'Attaque sournoise a déjà servi ce tour.
- * @param {boolean} [attack.anyWeapon]     §72 : toute arme convient (Attaque sournoise d'un PNJ).
- * @param {boolean} [attack.freeTarget]    §72 : la cible est d'un type contre lequel rien n'est requis (« si la cible est un mort-vivant »).
+ * @param {boolean} attack.weapon          The attack is made with a weapon (not a spell, not an unarmed attack).
+ * @param {boolean} attack.finesse         The weapon has the Finesse property.
+ * @param {boolean} attack.rangedWeapon    It is a ranged weapon (not a thrown melee weapon).
+ * @param {number} attack.advantageMode    The attack roll's mode, once Advantage and Disadvantage are combined.
+ * @param {boolean} attack.allyNear        An ally of the attacker, not Incapacitated, within 5 feet of the target.
+ * @param {boolean} [attack.spent]         Sneak Attack has already been used this turn.
+ * @param {boolean} [attack.anyWeapon]     §72: any weapon will do (an NPC's Sneak Attack).
+ * @param {boolean} [attack.freeTarget]    §72: the target is of a type against which nothing is required ("if the target is an
+ *   Undead").
  * @returns {"spent"|"notWeapon"|"weaponKind"|"disadvantage"|"noAdvantage"|null}
  */
 export function sneakAttackIssue({ weapon, finesse, rangedWeapon, advantageMode, allyNear, spent=false, anyWeapon=false, freeTarget=false }) {
@@ -38,7 +39,7 @@ export function sneakAttackIssue({ weapon, finesse, rangedWeapon, advantageMode,
 }
 
 /**
- * Le nombre de dés et leur taille d'une formule d'Attaque sournoise (« 3d6 »), ou null si elle ne se lit pas ainsi.
+ * The number of dice and their size in a Sneak Attack formula ("3d6"), or null if it does not read that way.
  * @param {string} formula
  * @returns {{number: number, faces: number}|null}
  */
@@ -47,16 +48,16 @@ export function parseDice(formula) {
   return m ? { number: Number(m[1]), faces: Number(m[2]) } : null;
 }
 
-/** Les dés d'Attaque sournoise d'un roublard de ce niveau (table du Roublard : 1d6 au niveau 1, +1d6 tous les deux niveaux). */
+/** The Sneak Attack dice of a Rogue of this level (Rogue table: 1d6 at level 1, +1d6 every two levels). */
 export function sneakDiceAtLevel(level) {
   const n = Math.ceil((Number(level) || 0) / 2);
   return n > 0 ? { number: n, faces: 6 } : null;
 }
 
 /**
- * Les Frappes rusées qu'on peut proposer : chacune coûte `cost` dés, et il faut en garder au moins le coût.
- * @param {Array<{key: string, cost: number, available?: boolean}>} options   `available: false` : une condition manque (trousse
- *                                                                              d'empoisonneur, taille de la cible).
+ * The Cunning Strikes that can be offered: each costs `cost` dice, and at least the cost must be kept.
+ * @param {Array<{key: string, cost: number, available?: boolean}>} options   `available: false`: a condition is missing (poisoner's
+ *                                                                              kit, size of the target).
  * @param {number} dice
  * @returns {Array<{key: string, cost: number}>}
  */
@@ -65,12 +66,12 @@ export function affordableStrikes(options, dice) {
 }
 
 /**
- * Le choix de l'auteur, remis dans les règles : chaque effet au plus une fois, pas plus de `max` effets, et un coût total qui
- * tient dans les dés. Ce qui dépasse est écarté, dans l'ordre du choix.
+ * The author's choice, put back into the rules: each effect at most once, no more than `max` effects, and a total cost that
+ * fits in the dice. What exceeds is dropped, in the order of the choice.
  * @param {string[]} chosen
- * @param {Array<{key: string, cost: number}>} options   Celles qu'on pouvait choisir (affordableStrikes).
+ * @param {Array<{key: string, cost: number}>} options   Those that could be chosen (affordableStrikes).
  * @param {{dice: number, max: number}} limits
- * @returns {{strikes: string[], cost: number, dice: number}}  `dice` : ceux qui restent à lancer.
+ * @returns {{strikes: string[], cost: number, dice: number}}  `dice`: those left to roll.
  */
 export function settleStrikes(chosen, options, { dice, max }) {
   const byKey = new Map((options ?? []).map(o => [o.key, o]));
@@ -86,14 +87,14 @@ export function settleStrikes(chosen, options, { dice, max }) {
 }
 
 /**
- * Assassinat (Assassin, niveau 3) : au premier round d'un combat, Avantage contre toute créature qui n'a pas encore agi.
- * Une créature a joué son tour au premier round si elle passe avant le
- * combattant dont c'est le tour (ordre de l'initiative) ; celle dont c'est le tour est en train de le jouer.
- * @param {{round: number, turn: number, targetTurn: number|null}} combat   `targetTurn` : rang de la cible dans l'ordre du
- *                                                                           combat, null si elle n'y est pas.
+ * Assassinate (Assassin, level 3): in the first round of a combat, Advantage against any creature that has not yet acted.
+ * A creature has taken its turn in the first round if it comes before the
+ * combatant whose turn it is (Initiative order); the one whose turn it is is taking it.
+ * @param {{round: number, turn: number, targetTurn: number|null}} combat   `targetTurn`: rank of the target in the
+ *                                                                           combat order, null if it is not in it.
  */
 export function hasNotActedYet({ round, turn, targetTurn }) {
   if ( round !== 1 ) return false;
-  if ( !Number.isInteger(targetTurn) ) return true;   // hors du combat (surprise, arrivée tardive) : elle n'a pas joué
+  if ( !Number.isInteger(targetTurn) ) return true;   // outside the combat (surprise, late arrival): it has not acted
   return targetTurn > turn;
 }

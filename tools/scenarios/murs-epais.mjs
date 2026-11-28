@@ -1,11 +1,11 @@
 /**
- * Murs épais posés sur les cases (SPEC §172), monde `dnd-6`, arène, coin libre au nord-ouest. Le Magicien (sorts prêtés du Manuel des
- * joueurs, à volonté) pose les murs par `api.mcp.wall` (la visée par points, les clics remplacés par les centres de case) :
- *  - Mur d'épines : la rangée de cases (un point hors de l'axe redressé, bouts prolongés d'une demi-case), un mur du cœur qui arrête la
- *    vue, le coût de déplacement ×4 ; le Zombi, dans une case du mur, fait la sauvegarde à l'apparition ; à son tour, sorti puis rentré
- *    dans le mur : la sauvegarde de traversée (une fois par tour) ; en anneau : une bande à l'intérieur du cercle, ses murs ;
- *  - Barrière de lames : la rangée de cases, terrain difficile ; le Guerrier et le Bandit de part et d'autre : abri aux trois quarts.
- * Remet positions, PV, combat.
+ * Thick walls placed on cells (SPEC §172), world `dnd-6`, arena, free corner to the northwest. The Wizard (spells lent from
+ * the Player's Handbook, at will) places the walls through `api.mcp.wall` (aiming by points, the clicks replaced by cell centers):
+ *  - Wall of Thorns: the row of cells (a point off the straightened axis, ends extended by half a cell), a core wall that blocks
+ *    sight, movement cost ×4; the Zombie, in a cell of the wall, makes the saving throw on appearance; on its turn, out then
+ *    back in the wall: the crossing saving throw (once per turn); as a ring: a band inside the circle, its walls;
+ *  - Blade Barrier: the row of cells, Difficult Terrain; the Fighter and the Bandit on either side: three-quarters Cover.
+ * Restores positions, HP, combat.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -51,7 +51,7 @@ export default {
     };
     if ( !ctx.expect(await turnOf(mage), "tour du Magicien") ) return;
 
-    // 1. Mur d'épines, en ligne.
+    // 1. Wall of Thorns, in a line.
     const thorns = await lend("phbsplWallofThor");
     await ctx.engineLog();
     const placed = await ctx.engine("wall", { tokenId: mage.id, itemId: thorns, points: [C(11, 33), { x: 16.5 * grid, y: 33.8 * grid }] });
@@ -75,7 +75,7 @@ export default {
     if ( !ctx.expect(await turnOf(zombi), "tour du Zombi") ) return;
     await ctx.engineLog();
     let before = await ctx.hp(zombi);
-    // Contre le mur : une case d'épines coûte 6 m (×4), toute la vitesse du Zombi.
+    // Against the wall: a cell of thorns costs 6 m (×4), the Zombie's whole Speed.
     await place(zombi, 14, 34);
     const moved = await ctx.engine("move", { tokenId: zombi.id, point: C(14, 33) });
     ctx.log(`déplacement : ${JSON.stringify(moved?.cost ?? moved?.after ?? null)}`);
@@ -90,7 +90,7 @@ export default {
     ctx.expect(hp === before, `fin de tour dans le mur, même tour : rien de plus (${before - hp} PV)`);
     await remove(placed.regionId);
 
-    // 2. Mur d'épines en anneau autour du Zombi.
+    // 2. Wall of Thorns as a ring around the Zombie.
     if ( !ctx.expect(await turnOf(mage), "tour du Magicien (anneau)") ) return;
     const item = ((await ctx.call("get-actor", { actorId: mage.actorId })).items ?? []).find(i => i._id === thorns);
     const ring = Object.entries(item?.system?.activities ?? {}).find(([, a]) => ["cylinder", "ring"].includes(a.target?.template?.type))?.[0];
@@ -106,7 +106,7 @@ export default {
       await remove(used.regionId);
     }
 
-    // 3. Barrière de lames : abri aux trois quarts derrière elle.
+    // 3. Blade Barrier: three-quarters Cover behind it.
     const blades = await lend("phbsplBladeBarri");
     await place(zombi, 30, 36);
     const barrier = await ctx.engine("wall", { tokenId: mage.id, itemId: blades, points: [C(18, 33), C(26, 33)] });
@@ -118,7 +118,7 @@ export default {
     ctx.expect(s.behaviors.some(b => b.type === "dnd5e.difficultTerrain"), "terrain difficile");
     const cover = await ctx.engine("cover", { attackerId: fighter.id, targetId: bandit.id });
     ctx.expect(cover?.degree === "threeQuarters", `le Bandit derrière la Barrière : abri ${cover?.degree ?? "aucun"} (+${cover?.bonus ?? 0})`);
-    // Une case libre de la Barrière (l'Arène de test peut avoir un autre token sur la ligne : Alara Dhampir en 22, 33).
+    // A free cell of the Barrier (the test Arena may have another token on the line: Alara Dhampir at 22, 33).
     const { tokens: here } = await ctx.scene();
     const taken = new Set(here.filter(t => t.id !== bandit.id).map(t => `${Math.round(t.x / grid)},${Math.round(t.y / grid)}`));
     const gx = [22, 21, 23, 20, 24, 19, 25].find(x => !taken.has(`${x},33`)) ?? 22;

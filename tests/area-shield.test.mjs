@@ -1,6 +1,6 @@
 /**
- * §493 (B13) : réaction contre une zone (Bouclier d'insectes) — fait `activity.areaShape`, moment `inArea`, étape `cancelForSelf`
- * (`ifSourceFails`). Exemple générique : une créature qui, prise dans un cône ou une ligne, impose une sauvegarde au lanceur.
+ * §493 (B13): reaction against an area (Insect Shield) — fact `activity.areaShape`, moment `inArea`, step `cancelForSelf`
+ * (`ifSourceFails`). Generic example: a creature that, caught in a Cone or a Line, imposes a saving throw on the caster.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { validateEntry } from "../module/scripts/core/content.mjs";
@@ -16,19 +16,19 @@ describe("§493 : validation", () => {
   it("le moment `inArea` existe", () => {
     expect(Object.keys(MOMENTS)).toContain("inArea");
   });
-  it("une réaction de zone qui impose une sauvegarde à la source : valide", () => {
+  it("an area reaction that imposes a saving throw on the source: valid", () => {
     expect(validateEntry(SHIELD, { facts })).toEqual([]);
   });
-  it("sans condition sur la source, d'office : valide", () => {
+  it("with no condition on the source, automatic: valid", () => {
     expect(validateEntry({ triggers: [{ on: "inArea", do: [{ type: "use" }, { type: "cancelForSelf" }] }] }, { facts })).toEqual([]);
   });
-  it("`cancelForSelf` hors de `inArea`, ou sans réaction `use` : refusé", () => {
+  it("`cancelForSelf` outside `inArea`, or without a `use` reaction: refused", () => {
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "use" }, { type: "cancelForSelf" }] }] }, { facts }).join())
       .toMatch(/cancelForSelf" requires the inArea moment/);
     expect(validateEntry({ triggers: [{ on: "inArea", do: [{ type: "cancelForSelf" }] }] }, { facts }).join())
       .toMatch(/cancelForSelf" requires the inArea moment and a "use" reaction/);
   });
-  it("`ifSourceFails` : vrai ou absent, et une réaction qui vise la source", () => {
+  it("`ifSourceFails`: true or absent, and a reaction that targets the source", () => {
     expect(validateEntry({ triggers: [{ on: "inArea", do: [{ type: "use", target: "source" }, { type: "cancelForSelf", ifSourceFails: "yes" }] }] }, { facts }).join())
       .toMatch(/ifSourceFails: true or absent/);
     expect(validateEntry({ triggers: [{ on: "inArea", do: [{ type: "use" }, { type: "cancelForSelf", ifSourceFails: true }] }] }, { facts }).join())
@@ -36,36 +36,36 @@ describe("§493 : validation", () => {
     expect(validateEntry({ triggers: [{ on: "inArea", do: [{ type: "use", target: "source" }, { type: "cancelForSelf", half: true }] }] }, { facts }).join())
       .toMatch(/unknown key half/);
   });
-  it("un fait inconnu dans la condition : refusé", () => {
+  it("an unknown fact in the condition: refused", () => {
     expect(validateEntry({ triggers: [{ on: "inArea", if: { "activity.areaForm": "cone" }, do: [{ type: "use" }, { type: "cancelForSelf" }] }] }, { facts }).join())
       .toMatch(/unknown fact "activity.areaForm"/);
   });
 });
 
 describe("§493 : forme de la zone et issue", () => {
-  it("la forme se lit sur `target.template.type`, null sans zone", () => {
+  it("the shape is read from `target.template.type`, null without an area", () => {
     expect(areaShapeOf({ target: { template: { type: "cone" } } })).toBe("cone");
     expect(areaShapeOf({ target: { template: { type: "" } } })).toBe(null);
     expect(areaShapeOf({ target: {} })).toBe(null);
     expect(areaShapeOf(null)).toBe(null);
   });
-  it("la condition « cône ou ligne » tient pour un cône, pas pour une sphère ni sans zone", () => {
+  it("the \"Cone or Line\" condition holds for a Cone, not for a Sphere or without an area", () => {
     const at = shape => holds(SHIELD.triggers[0].if, { "activity.isSpell": true, "activity.areaShape": shape });
     expect(at("cone")).toBe(true);
     expect(at("line")).toBe(true);
     expect(at("sphere")).toBe(false);
     expect(at(null)).toBe(false);
   });
-  it("épargnée : réaction prise, et sauvegarde de la source ratée quand elle est exigée", () => {
+  it("spared: reaction taken, and the source's saving throw failed when it is required", () => {
     expect(sparedFromArea({ taken: false })).toBe(false);
     expect(sparedFromArea({ taken: true })).toBe(true);
     expect(sparedFromArea({ taken: true, ifSourceFails: true, sourceSave: { success: false } })).toBe(true);
     expect(sparedFromArea({ taken: true, ifSourceFails: true, sourceSave: { success: true } })).toBe(false);
-    expect(sparedFromArea({ taken: true, ifSourceFails: true, sourceSave: null })).toBe(false);   // sauvegarde illisible : les dégâts passent
+    expect(sparedFromArea({ taken: true, ifSourceFails: true, sourceSave: null })).toBe(false);   // unreadable save: the damage goes through
   });
 });
 
-describe("§493 : le fait `activity.areaShape` dans `factsFor`", () => {
+describe("§493: the fact `activity.areaShape` in `factsFor`", () => {
   let factsFor;
   beforeAll(async () => {
     globalThis.Hooks ??= { on() {}, once() {}, callAll() {}, call: () => true };
@@ -74,10 +74,10 @@ describe("§493 : le fait `activity.areaShape` dans `factsFor`", () => {
     globalThis.foundry ??= { utils: { throttle: fn => fn, debounce: fn => fn, isNewerVersion: () => false } };
     globalThis.CONFIG ??= { DND5E: { movementUnits: { ft: { conversion: 1 } } }, specialStatusEffects: {}, queries: {} };
     globalThis.canvas = null;
-    await import("../module/scripts/adapter/running-water.mjs");   // même ordre que self-facts.test.mjs (imports circulaires)
+    await import("../module/scripts/adapter/running-water.mjs");   // same order as self-facts.test.mjs (circular imports)
     ({ factsFor } = await import("../module/scripts/adapter/facts.mjs"));
   });
-  it("connu sans activité (validation du contenu), et lu sur l'activité", () => {
+  it("known without an activity (content validation), and read from the activity", () => {
     expect("activity.areaShape" in factsFor()).toBe(true);
     expect(factsFor()["activity.areaShape"]).toBe(null);
     expect(factsFor({ activity: { type: "save", target: { template: { type: "line" } } } })["activity.areaShape"]).toBe("line");

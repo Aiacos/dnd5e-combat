@@ -1,9 +1,9 @@
 /**
- * §86 — Aura sacrée (Manuel des joueurs, prêtée sans emplacement au Clerc, qui la lance et en profite lui-même).
- *  - l'aura est posée sur le Clerc : avantage à ses jets de sauvegarde ;
- *  - le Zombi (Mort-vivant) au contact attaque le Clerc avec le Désavantage ;
- *  - quand il le touche au corps à corps, il fait la sauvegarde de Constitution de « Fiend/Undead Save » ; ratée, il est Aveuglé.
- * Les jets sont aléatoires : on rejoue jusqu'à toucher (et, pour l'Aveuglé, jusqu'à une sauvegarde ratée).
+ * §86 — Holy Aura (Player's Handbook, lent without a slot to the Cleric, who casts it and benefits from it himself).
+ *  - the aura is placed on the Cleric: Advantage on his saving throws;
+ *  - the Zombie (Undead) in contact attacks the Cleric with Disadvantage;
+ *  - when it hits him in melee, it makes the Constitution save of "Fiend/Undead Save"; on a failure, it is Blinded.
+ * The rolls are random: we replay until a hit (and, for Blinded, until a failed save).
  */
 const SPELL = "Compendium.dnd-players-handbook.spells.Item.phbsplHolyAura00";
 const MODULE_ID = "dnd5e-combat";
@@ -24,7 +24,7 @@ export default {
     ctx.restore(() => ctx.setHp(clerc, hp));
     ctx.restore(() => ctx.removeEffectsNamed(zombi, /Blind|Aveugl/i));
     ctx.restore(() => ctx.removeEffectsNamed(clerc, /Concentr|Holy|sacrée/i));
-    await ctx.call("move-token", { tokenId: zombi.id, x: c0.x - grid, y: c0.y, elevation: 0 });   // au contact, à gauche
+    await ctx.call("move-token", { tokenId: zombi.id, x: c0.x - grid, y: c0.y, elevation: 0 });   // in contact, on the left
     await sleep(800);
     const itemId = await ctx.ensureItem(clerc, SPELL, { system: { method: "atwill" } });
 
@@ -43,8 +43,8 @@ export default {
     for ( let i = 0; (i < 30) && !(checked && failedSeen); i++ ) {
       await ctx.setHp(clerc, hp);
       await ctx.removeEffectsNamed(zombi, /Blind|Aveugl/i);
-      // Un coup peut faire rater au Clerc son jet de concentration : l'aura prend fin, et à bon droit plus aucune sauvegarde n'est
-      // imposée (vu le 2026-10-16, l'échec « aléatoire » du scénario). On la relance avant le coup suivant.
+      // A hit can make the Cleric fail his Concentration check: the aura ends, and rightly no saving throw is
+      // imposed anymore (seen on 2026-10-16, the scenario's "random" failure). It is recast before the next hit.
       if ( !(await auraOn()) ) {
         ctx.log("concentration perdue : Aura sacrée relancée");
         await ctx.use({ tokenId: clerc.id, itemId, activityType: "utility" });

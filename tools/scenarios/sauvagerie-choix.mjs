@@ -1,10 +1,10 @@
 /**
- * §516 : Sauvagerie martiale au choix (question de Discord), monde `dnd-6`. Le Guerrier reçoit le don le temps du scénario s'il ne l'a
- * pas, le Bandit 300 PV, à côté de lui ; coups d'épée à deux mains.
- *  - réglage « demander », en combat : au premier coup, la fenêtre « Au toucher » propose la Sauvagerie ; « Rien de tout cela » la
- *    garde (dégâts sans elle) ; au second coup du tour, reproposée et acceptée ; au troisième, ni question ni Sauvagerie ;
- *  - réglage « automatique » : pas de question, le premier coup du tour l'a, le second non.
- * Remet le réglage, le don, positions, PV.
+ * §516: optional Savage Attacker (Discord question), world `dnd-6`. The Fighter receives the feat for the scenario if he does
+ * not have it, the Bandit 300 HP, next to him; greatsword hits.
+ *  - "ask" setting, in combat: on the first hit, the "On Hit" window offers Savage Attacker; "None of the above" keeps it
+ *    (damage without it); on the second hit of the turn, offered again and accepted; on the third, no question or Savage Attacker;
+ *  - "automatic" setting: no question, the first hit of the turn has it, the second does not.
+ * Puts back the setting, the feat, positions, HP.
  */
 const MODULE_ID = "dnd5e-combat";
 const HIT_TITLE = /Au toucher|On hit/i;
@@ -38,7 +38,7 @@ export default {
     ctx.restore(remettre);
     const setting = async (key, value) => { const r = await ctx.engine("setting", { key, value }); ctx.restore(() => ctx.engine("setting", { key, value: r.before })); return r; };
 
-    // Le don, s'il manque (un don d'origine « savage-attacker », lu par son identifiant).
+    // The feat, if missing (an origin feat "savage-attacker", read by its identifier).
     const actor = await ctx.call("get-actor", { actorId: fighter.actorId });
     if ( !(actor.items ?? []).some(i => ["savage-attacker", "soldier-feature"].includes(i.system?.identifier)) ) {
       const made = await ctx.call("upsert-actor-item", { actorId: fighter.actorId,
@@ -67,7 +67,7 @@ export default {
       }
       return null;
     };
-    /** Un coup d'épée ; `answer` : "strike" (valider, case cochée), "none" (rien de tout cela) ou null (aucune fenêtre attendue). */
+    /** A sword hit; `answer`: "strike" (validate, box checked), "none" (none of the above) or null (no window expected). */
     const attack = async answer => {
       const since = await ctx.lastMessageId();
       const ids = await known();

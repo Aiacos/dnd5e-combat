@@ -1,8 +1,8 @@
 /**
- * Des tours d'affilée (`extraTurns`, core/extra-turns.mjs) : Arrêt du temps. À l'utilisation, en combat, le nombre de tours est tiré
- * (jet visible) et noté sur le lanceur ; à chaque fin de son tour, tant qu'il en reste, le MJ actif ramène le combat sur lui. Ce qui y
- * met fin plus tôt (« si une de vos actions affecte une autre créature ») reste au MJ : retirer le drapeau, ou passer le tour à la main
- * en arrière puis en avant, n'est pas nécessaire — un retour arrière du tracker ne consomme rien.
+ * Consecutive turns (`extraTurns`, core/extra-turns.mjs): Time Stop. On use, in combat, the number of turns is rolled
+ * (visible roll) and noted on the caster; at the end of each of their turns, while any remain, the active GM brings the
+ * combat back to them. What ends it early ("if one of your actions affects another creature") is left to the GM: removing
+ * the flag, or passing the turn by hand backward then forward, is not necessary — a tracker rewind consumes nothing.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -19,7 +19,7 @@ async function onPostUse(activity, usageConfig, results) {
   const combat = game.combat;
   if ( !rule || !results?.message || !actor || !combat?.started ) return;
   if ( !combat.combatants.some(c => c.actorId === actor.id) ) return;
-  // La formule est celle de la règle (« 1d4 + 1 »), sans donnée de l'activité : rien à monter au niveau de lancement.
+  // The formula is the rule's ("1d4 + 1"), with no activity data: nothing to scale to the casting level.
   const roll = await new Roll(rule.formula).evaluate();
   await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor }),
     flavor: loc("ToursAffilee.Jet", { item: activity.item.name, n: roll.total }) });
@@ -32,7 +32,7 @@ async function onTurnChange(combat, prior, current) {
   const actor = ended?.actor;
   const state = actor?.getFlag(MODULE_ID, FLAG) ?? null;
   if ( !takesAnotherTurn(state, { combat: combat.id, forward: movedForward(prior, current) }) ) {
-    // Un drapeau d'un autre combat, ou épuisé : on le retire quand son porteur finit un tour.
+    // A flag from another combat, or spent: we remove it when its bearer ends a turn.
     if ( state && ((state.combat !== combat.id) || !(state.left > 0)) ) await actor.unsetFlag(MODULE_ID, FLAG);
     return;
   }

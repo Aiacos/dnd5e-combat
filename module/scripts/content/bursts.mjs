@@ -1,12 +1,12 @@
 /**
- * Éclats (SPEC §16.19, clé `burst` de core/content.mjs) : une fois l'attaque tranchée — touchée **ou ratée** —, le moteur
- * joue une activité sœur de l'item sur la cible et sur chaque créature à `radius` d'elle. Texte vérifié dans dnd5e 6
- * (spells24) et le PHB 2.2.0 :
- *  - Couteau de glace : que l'attaque touche ou non, l'éclat éclate ; la cible et ses voisins à 1,50 m font une sauvegarde
- *    de Dextérité contre 2d6 dégâts de froid — activité « Shard Explosion » (`dnd5eactivity100`).
- *  - Métal brûlant (§16.21) : « si une créature qui tient ou porte l'objet en subit les dégâts, elle doit réussir un jet
- *    de sauvegarde de Constitution ou lâcher l'objet » — après « Cast and Heat » ou « Reheat », sur la cible seule
- *    (`radius: 0`), si elle a subi des dégâts.
+ * Bursts (SPEC §16.19, `burst` key of core/content.mjs): once the attack is decided — hit **or missed** —, the engine
+ * plays a sibling activity of the item on the target and on each creature within `radius` of it. Text verified in dnd5e 6
+ * (spells24) and the PHB 2.2.0:
+ *  - Ice Knife: whether the attack hits or not, the shard bursts; the target and its neighbors within 1.50 m make a
+ *    Dexterity save against 2d6 cold damage — "Shard Explosion" activity (`dnd5eactivity100`).
+ *  - Heat Metal (§16.21): "if a creature holding or wearing the object takes the damage, it must succeed on a Constitution
+ *    saving throw or drop the object" — after "Cast and Heat" or "Reheat", on the target alone
+ *    (`radius: 0`), if it took damage.
  */
 
 export const BURSTS = Object.freeze({
@@ -15,89 +15,89 @@ export const BURSTS = Object.freeze({
 });
 
 /**
- * Sorts qui se relancent tant qu'ils durent (§16.21, clé `recast`) : Appel de la foudre — « tant que le sort dure, vous
- * pouvez faire une action Magie pour appeler de nouveau la foudre » ; §120 : Caresse du vampire — « refaire l’attaque à chacun
- * de vos tours par une action Magie ». Carreau ensorcelé et Métal brûlant n'en ont pas
- * besoin : dnd5e 6 leur donne une activité à l'action Bonus, sans emplacement.
+ * Spells that are recast while they last (§16.21, `recast` key): Call Lightning — "while the spell lasts, you
+ * can take a Magic action to call down lightning again"; §120: Vampiric Touch — "make the attack again on each
+ * of your turns with a Magic action". Witch Bolt and Heat Metal do not need it:
+ * dnd5e 6 gives them a Bonus Action activity, with no slot.
  */
-// C12-a : Modification d'apparence — « par une action Magie, vous pouvez changer d'option » sans nouvel emplacement ni nouvelle concentration.
+// C12-a: Alter Self — "with a Magic action, you can change your option" with no new slot or new Concentration.
 export const RECASTS = Object.freeze(["call-lightning", "vampiric-touch", "alter-self"]);
 
-/** « Chaque créature à 1,50 m du point » (§16.21, `bolt`) : Appel de la foudre, dont dnd5e fait poser le nuage (60 ft). */
+/** "Each creature within 1.50 m of the point" (§16.21, `bolt`): Call Lightning, whose cloud dnd5e has placed (60 ft). */
 export const BOLTS = Object.freeze({ "call-lightning": { radius: 5, units: "ft" } });
 
-/** Zones qui obscurcissent fortement (§16.24, `obscures`) : Nappe de brouillard — « la sphère est une zone à visibilité nulle ». */
-// §158 : Brume mortelle, Nuage incendiaire, Nuage nauséabond, Tempête de neige (« fortement obscurci ») ; Mur de feu (« opaque »).
+/** Areas that heavily obscure (§16.24, `obscures`): Fog Cloud — "the sphere is an area of zero visibility". */
+// §158: Cloudkill, Incendiary Cloud, Stinking Cloud, Sleet Storm ("heavily obscured"); Wall of Fire ("opaque").
 export const OBSCURES = Object.freeze(["fog-cloud", "cloudkill", "incendiary-cloud", "stinking-cloud", "sleet-storm"]);
 
-/** Soins au maximum (§16.24, `healMax`) : Lueur d'espoir — « chaque fois qu'une cible regagne des PV, elle en regagne le maximum ». */
+/** Maximum healing (§16.24, `healMax`): Beacon of Hope — "whenever a target regains HP, it regains the maximum". */
 export const HEAL_MAX = Object.freeze(["beacon-of-hope"]);
 
-/** Répliques (§16.25, `duplicates`) : Image miroir — les trois effets « Duplicate » du sort sont les répliques. */
+/** Duplicates (§16.25, `duplicates`): Mirror Image — the spell's three "Duplicate" effects are the duplicates. */
 export const DUPLICATES = Object.freeze(["mirror-image"]);
 
 /**
- * Avantage aux sauvegardes contre un état (§16.25, `saveAdvantage`) : Ascendance féerique — « pour éviter ou faire cesser
- * Charmé ». `"magic"` : contre les sorts et les effets magiques — Résistance à la magie, 76 créatures du MM (§18.9).
+ * Advantage on saves against a condition (§16.25, `saveAdvantage`): Fey Ancestry — "to avoid or end
+ * Charmed". `"magic"`: against spells and magical effects — Magic Resistance, 76 MM creatures (§18.9).
  */
 export const SAVE_ADVANTAGES = Object.freeze({ "fey-ancestry": ["charmed"], "magic-resistance": ["magic"],
-  // Protection contre le poison : « Avantage aux jets de sauvegarde pour éviter ou faire cesser l'état Empoisonné » — le porteur
-  // de l'effet du sort, pas le lanceur (adapter/saves.mjs, saveAdvantageAgainst).
+  // Protection from Poison: "Advantage on saving throws to avoid or end the Poisoned condition" — the bearer
+  // of the spell's effect, not the caster (adapter/saves.mjs, saveAdvantageAgainst).
   "protection-from-poison": ["poisoned"],
-  // §302 : Fascination détournée (Traqueur des ténèbres 11) — « Avantage aux sauvegardes pour éviter ou faire cesser Charmé ou Effrayé ».
+  // §302: "Averted Fascination" (Gloom Stalker 11) — "Advantage on saves to avoid or end Charmed or Frightened".
   "beguiling-twist": ["charmed", "frightened"] });
 
 /**
- * Ennemi tombé (§16.25, `onFell`) : Bénédiction du Ténébreux — « quand vous réduisez un ennemi à 0 PV […], ou si quelqu'un
- * d'autre réduit à 0 PV un ennemi dans un rayon de 3 m de vous » ; activité « heal » (PV temporaires) de dnd5e 6.
+ * Fallen enemy (§16.25, `onFell`): Dark One's Blessing — "when you reduce an enemy to 0 HP […], or if someone
+ * else reduces an enemy to 0 HP within 3 m of you"; dnd5e 6's "heal" activity (Temporary Hit Points).
  */
 /**
- * Attaque en action Bonus après un coup (§16.26, `bonusAttack`) : Maître d'armes lourdes, « Taille » — un critique au corps à
- * corps, ou une créature mise à 0 PV par l'arme, ouvre aussitôt une attaque de plus avec la même arme, en action Bonus
+ * Bonus Action attack after a hit (§16.26, `bonusAttack`): Great Weapon Master, "Hew" — a melee Critical Hit, or a creature
+ * reduced to 0 HP by the weapon, immediately opens one more attack with the same weapon, as a Bonus Action
  * (PHB 2.2.0, feats).
  */
 export const BONUS_ATTACKS = Object.freeze({ "great-weapon-master": { after: ["critical", "felled"], melee: true } });
 
 /**
- * Sort réactif (§16.26, `reactiveSpell`) : Mage de guerre — à la place de l'attaque d'opportunité qu'une créature provoque en
- * sortant de l'allonge, la réaction peut servir à lui lancer un sort, à condition qu'il se lance en une action et ne vise
- * qu'elle (PHB 2.2.0).
+ * Reactive spell (§16.26, `reactiveSpell`): War Caster — in place of the Opportunity Attack a creature provokes by
+ * leaving reach, the Reaction can be used to cast a spell at it, provided it is cast in one action and targets
+ * only it (PHB 2.2.0).
  */
 export const REACTIVE_SPELLS = Object.freeze(["war-caster"]);
 
 /**
- * Composante somatique sans main libre (§409, issue #44, `freeSomatic`) : Mage de guerre — les composantes somatiques se font même
- * avec des armes ou un bouclier dans une main ou les deux (PHB 2024).
+ * Somatic component without a free hand (§409, issue #44, `freeSomatic`): War Caster — somatic components can be performed
+ * even with weapons or a shield in one or both hands (PHB 2024).
  */
 export const FREE_SOMATIC = Object.freeze(["war-caster"]);
 
 /**
- * Plusieurs projectiles par lancement (§16.27, `projectiles`) ; dnd5e 6 n'en fait qu'un, le nombre n'est que dans la
- * description (spells24 : « [[2 + @item.level]] », « [[@item.level + 1]]{Total Rays} », « [[(floor((@details.level+1)/6)+1)]] »).
+ * Several projectiles per casting (§16.27, `projectiles`); dnd5e 6 makes only one, the number is only in the
+ * description (spells24: "[[2 + @item.level]]", "[[@item.level + 1]]{Total Rays}", "[[(floor((@details.level+1)/6)+1)]]").
  */
 export const PROJECTILES = Object.freeze({
   "magic-missile": { count: "2 + @item.level", attack: false },
   "scorching-ray": { count: "@item.level + 1", attack: true },
   "eldritch-blast": { count: "floor((@details.level + 1) / 6) + 1", attack: true },
-  // C12-j : Frappe du vent d'acier — « jusqu'à cinq créatures : un jet d'attaque de sort au corps à corps contre chacune ». §402 :
-  // « vous pouvez ensuite vous téléporter dans un espace inoccupé que vous voyez, à 1,50 m de l'une des cibles » (`teleportNear`).
-  // §403 : « jusqu'à cinq créatures… contre chacune » — une attaque au plus par créature (`onePerTarget`), moins de cinq possible.
+  // C12-j: Steel Wind Strike — "up to five creatures: a melee spell attack roll against each". §402:
+  // "you can then teleport to an unoccupied space you can see within 1.50 m of one of the targets" (`teleportNear`).
+  // §403: "up to five creatures… against each" — at most one attack per creature (`onePerTarget`), fewer than five possible.
   "steel-wind-strike": { count: "5", attack: true, onePerTarget: true, teleportNear: { distance: 5, units: "ft" } }
 });
 
 /**
- * Rebond (§16.27, `leap`) : Orbe chromatique — un double (ou mieux) parmi les d8 de dégâts fait sauter l'orbe vers une autre
- * cible choisie à 9 m de la première, avec un nouveau jet d'attaque et de nouveaux dégâts ; le nombre de sauts est borné par
- * le niveau de l'emplacement, et chaque créature n'est visée qu'une fois par lancement.
+ * Bounce (§16.27, `leap`): Chromatic Orb — a double (or better) among the d8 of damage makes the orb leap to another
+ * target chosen within 9 m of the first, with a new attack roll and new damage; the number of leaps is bounded by
+ * the slot's level, and each creature is targeted only once per casting.
  */
 export const LEAPS = Object.freeze({ "chromatic-orb": { radius: 30, units: "ft", max: "@item.level" } });
 
 export const ON_FELL = Object.freeze({ "dark-ones-blessing": { activity: "p3YSnjGDlLIbiLpC", radius: 10, units: "ft" } });
 
-/** Activité proposée au début du tour du lanceur (§16.21, `atTurnStart`) : Aura de vitalité, « Start of Turn Heal ». */
+/** Activity offered at the start of the caster's turn (§16.21, `atTurnStart`): Aura of Vitality, "Start of Turn Heal". */
 export const TURN_STARTS = Object.freeze({
   "aura-of-vitality": { activity: "0vYjMbBcXaMfGWR2" },
-  // §19 : Force fantasmagorique — « à chacun de vos tours, ce fantasme peut infliger 2d8 dégâts psychiques à la cible »,
-  // l'activité « Dégâts fantasmatiques » (QCUpctimdMH6E6F8) du PHB 2.2.0.
+  // §19: Phantasmal Force — "on each of your turns, this phantasm can deal 2d8 psychic damage to the target",
+  // the "Phantasmal Damage" activity (QCUpctimdMH6E6F8) of the PHB 2.2.0.
   "phantasmal-force": { activity: "QCUpctimdMH6E6F8" }
 });

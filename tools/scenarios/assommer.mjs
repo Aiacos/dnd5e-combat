@@ -1,11 +1,12 @@
 /**
- * §210 : assommer (coups non létaux) et surprise — Paladin de `dnd-6` contre le Bandit (CA 5, 1 PV le temps du test).
- *  1. Coups non létaux activés : un coup d'épée longue qui ferait tomber le Bandit à 0 PV le laisse à 1 PV, Inconscient, « assommé ».
- *  2. Des PV regagnés le réveillent : plus Inconscient, plus « assommé ».
- *  3. Coups non létaux coupés : le même coup le fait tomber à 0 PV.
- *  4. Surprise : le Paladin caché (Furtivité du moteur), l'initiative du Bandit se lance avec le Désavantage ; l'état « Surpris » posé
- *     sur le Bandit disparaît une fois son initiative lancée.
- * Remet drapeau, CA, PV, états, positions, Furtivité.
+ * §210: knocking out (non-lethal blows) and surprise — `dnd-6` Paladin against the Bandit (AC 5, 1 HP for the test).
+ *  1. Non-lethal blows enabled: a longsword hit that would drop the Bandit to 0 HP leaves him at 1 HP, Unconscious,
+ *     "knocked out".
+ *  2. HP regained wake him: no longer Unconscious, no longer "knocked out".
+ *  3. Non-lethal blows off: the same hit drops him to 0 HP.
+ *  4. Surprise: the Paladin Hidden (the engine's Stealth), the Bandit's Initiative is rolled with Disadvantage;
+ *     the "Surprised" condition placed on the Bandit disappears once his Initiative is rolled.
+ * Resets flag, AC, HP, conditions, positions, Stealth.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -73,7 +74,7 @@ export default {
       await ctx.setHp(bandit, 1);
     };
     const sword = await ctx.itemId(pal.id, "longsword");
-    /** Frappe le Bandit jusqu'à toucher (10 essais au plus, en passant le tour pour retrouver l'action). */
+    /** Strikes the Bandit until a hit lands (10 tries at most, passing the turn to regain the action). */
     const hit = async () => {
       for ( let n = 0; n < 10; n++ ) {
         const u = await ctx.use({ tokenId: pal.id, itemId: sword, activityType: "attack", targetTokenIds: [bandit.id], usageConfig: { [MODULE_ID]: { confirmed: true } } });
@@ -94,7 +95,7 @@ export default {
       ctx.expect(hp === 1, `coup non létal : le Bandit reste à 1 PV (${hp})`);
       ctx.expect(s.has("unconscious") && !s.has("dead"), `Inconscient, pas mort (${[...s].join(", ")})`);
       ctx.expect(await knockedOut(), "drapeau « assommé » posé");
-      // Un vrai soin (applyDamage → mise à jour de la fiche) : écrire les PV dans le token ne passe pas par `updateActor`.
+      // A real heal (applyDamage → sheet update): writing the HP into the token does not go through `updateActor`.
       await ctx.engine("heal", { tokenId: bandit.id, amount: 4 });
       await pause(2500);
       const after = await statuses();
@@ -111,7 +112,7 @@ export default {
       ctx.expect(!(await knockedOut()), "pas de drapeau « assommé »");
     });
 
-    /** L'initiative du Bandit dans un combat neuf : rend la formule du jet. */
+    /** The Bandit's Initiative in a fresh combat: returns the roll formula. */
     const banditInitiative = async () => {
       await ctx.startCombat([pal, bandit]);
       const cid = (await state()).combatants.find(x => x.tokenId === bandit.id).id;

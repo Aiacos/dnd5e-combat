@@ -1,13 +1,13 @@
 /**
- * Relevé des sorts, lot 3 : auras et invocations qui agissent (SPEC §159), monde `dnd-6`, arène. Sorts prêtés depuis le Manuel des
- * joueurs (à volonté) ; invocations posées par `api.mcp.summonAt`.
- *  - Aura du croisé, Aura de pureté : lancées le Guerrier loin ; il entre à 1,50 m du Paladin → la copie de l'aura ; il s'en va → elle
- *    part ;
- *  - Aura de vie (combat) : le Guerrier à 0 PV dans l'aura commence son tour → 1 PV ;
- *  - Appel de destrier, Épée de Mordenkainen : l'invocation entre au combat juste après le lanceur ;
- *  - Gardien de la foi : le Zombi commence son tour à 3 m du gardien → sa sauvegarde (areaTick `pulse`) ;
- *  - Chien de garde : au début du tour du Magicien, le chien mord le Zombi à 1,50 m (areaTick `pulse`).
- * Remet positions, PV, effets, invocations, combat.
+ * Spell survey, batch 3: auras and summons that act (SPEC §159), world `dnd-6`, arena. Spells lent from the Player's
+ * Handbook (at will); summons placed by `api.mcp.summonAt`.
+ *  - Crusader's Mantle, Aura of Purity: cast with the Fighter far away; he enters within 1.50 m of the Paladin → the aura's
+ *    copy; he leaves → it goes away;
+ *  - Aura of Life (combat): the Fighter at 0 HP in the aura starts his turn → 1 HP;
+ *  - Find Steed, Mordenkainen's Sword: the summon enters combat right after the caster;
+ *  - Guardian of Faith: the Zombie starts its turn 3 m from the guardian → its save (areaTick `pulse`);
+ *  - Mordenkainen's Faithful Hound: at the start of the Wizard's turn, the hound bites the Zombie at 1.50 m (areaTick `pulse`).
+ * Restores positions, HP, effects, summons, combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -44,11 +44,11 @@ export default {
     const reset = async () => {
       if ( ctx.ownCombat ) await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {});
       ctx.ownCombat = null;
-      // §438 : les concentrations d'abord — leur fin retire la zone, et dnd5e retire alors lui-même les effets de son comportement
-      // (auras du Manuel 3.0.0) ; les retirer en même temps faisait une erreur « does not exist » chez le MJ.
+      // §438: concentrations first — their end removes the area, and dnd5e then removes the effects of its behavior itself
+      // (Handbook 3.0.0 auras); removing them at the same time caused a "does not exist" error on the GM's side.
       for ( const t of all ) await clearNew(t, e => (e.statuses ?? []).includes("concentrating") || /^Concentrat/i.test(e.name ?? ""));
       await pause(1500);
-      for ( const t of all ) await clearNew(t);   // la concentration du lanceur emporte ses invocations
+      for ( const t of all ) await clearNew(t);   // the caster's concentration takes its summons with it
       await pause(1500);
       for ( const t of await ctx.liveTokens() ) if ( !tokens0.has(t.id) ) await ctx.call("delete-scene-object", { type: "Token", objectId: t.id }).catch(() => {});
       for ( const t of all ) {
@@ -101,9 +101,10 @@ export default {
     };
 
     /**
-     * §438 : Manuel 3.0.0 — l'aura n'a plus d'effet sur l'item : son activité porte un comportement de zone de dnd5e
-     * (`applyActiveEffect`, effet du compendium d'effets), laissé à dnd5e (décision de l'utilisateur). Le sort est alors lancé comme au
-     * clic (`api.mcp.use` : dnd5e pose l'émanation, le moteur la rattache au lanceur) ; l'ancienne forme garde l'appel du connecteur.
+     * §438: Handbook 3.0.0 — the aura no longer has an effect on the item: its activity carries a dnd5e area behavior
+     * (`applyActiveEffect`, effect from the effects compendium), left to dnd5e (user's decision). The spell is then cast like a
+     * click (`api.mcp.use`: dnd5e places the Emanation, the engine attaches it to the caster); the old form keeps the
+     * connector's call.
      */
     const castAura = async (itemId, rest={}) => {
       const item = ((await ctx.call("get-actor", { actorId: pal.actorId })).items ?? []).find(i => i._id === itemId);
@@ -114,7 +115,7 @@ export default {
       for ( const r of used?.regions ?? [] ) ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: r.id }).catch(() => {}));
       return used;
     };
-    /** L'aura est lancée le Guerrier à 10 cases ; il entre à 1,50 m du Paladin, puis repart. */
+    /** The aura is cast with the Fighter 10 cells away; he enters within 1.50 m of the Paladin, then leaves again. */
     const auraCase = (label, id, identifier) => part(label, async () => {
       const itemId = await lend(pal, id);
       const p = await ctx.position(pal);
@@ -169,14 +170,14 @@ export default {
 
     await part("Gardien de la foi", async () => {
       const itemId = await lend(cleric, "phbsplGuardianof");
-      // Le Zombi (15 PV) mourait sous le pouls : plus de cible au tour suivant, et une Mort que dnd5e et la remise en état
-      // retiraient chacun de leur côté (« ActiveEffect dnd5edead0000000 does not exist »). PV remis par `reset`.
+      // The Zombie (15 HP) died under the pulse: no more target on the next turn, and a Death that dnd5e and the restoration
+      // each removed on their own ("ActiveEffect dnd5edead0000000 does not exist"). HP restored by `reset`.
       await ctx.setHp(zombi, 100);
       if ( !ctx.expect(await fight([cleric, zombi]), "Gardien : tour du Clerc") ) return;
       const z = await ctx.position(zombi);
       const guardian = await summon(cleric, itemId, z.x + 2 * grid, z.y);
       if ( !ctx.expect(!!guardian, `Gardien : invoqué (${guardian?.name ?? "rien"})`) ) return;
-      // §259 : « il disparaît quand il a infligé 60 dégâts au total » — 59 déjà comptés, le pouls suivant (au moins 1) l'achève.
+      // §259: "it disappears when it has dealt 60 damage in total" — 59 already counted, the next pulse (at least 1) finishes it.
       await ctx.call("update-scene-object", { type: "Token", objectId: guardian.id, data: { "flags.dnd5e-combat.pulseDamage": 59 } });
       const r = await pulseOn(zombi, 2);
       ctx.expect(!!r, "Gardien : le Zombi commence son tour à 3 m → sa sauvegarde");
@@ -187,8 +188,8 @@ export default {
 
     await part("Chien de garde", async () => {
       const itemId = await lend(mage, "phbFaithfulHound");
-      // Le Zombi (15 PV) mourait sous le pouls : plus de cible au tour suivant, et une Mort que dnd5e et la remise en état
-      // retiraient chacun de leur côté (« ActiveEffect dnd5edead0000000 does not exist »). PV remis par `reset`.
+      // The Zombie (15 HP) died under the pulse: no more target on the next turn, and a Death that dnd5e and the restoration
+      // each removed on their own ("ActiveEffect dnd5edead0000000 does not exist"). HP restored by `reset`.
       await ctx.setHp(zombi, 100);
       if ( !ctx.expect(await fight([mage, zombi]), "Chien : tour du Magicien") ) return;
       const z = await ctx.position(zombi);

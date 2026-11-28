@@ -1,12 +1,12 @@
 /**
- * §72 : le test en opposition (clé de contenu `contest`) — fonctions pures.
+ * §72: the contest (content key `contest`) — pure functions.
  */
 
 /**
- * L'issue d'un test en opposition : l'auteur l'emporte s'il fait strictement plus ; à égalité, rien ne change (règles 2024,
- * « Contests » : la situation reste en l'état), donc l'auteur ne l'emporte pas.
- * @param {number} mine      Total de l'auteur.
- * @param {number} theirs    Total de la cible.
+ * The outcome of a contest: the author wins on a strictly higher total; on a tie nothing changes (2024 rules,
+ * "Contests": the situation stays as it is), so the author does not win.
+ * @param {number} mine      The author's total.
+ * @param {number} theirs    The target's total.
  * @returns {"win"|"lose"|"tie"}
  */
 export function contestOutcome(mine, theirs) {
@@ -16,8 +16,8 @@ export function contestOutcome(mine, theirs) {
 }
 
 /**
- * La compétence que la cible oppose : parmi celles permises, la meilleure pour elle (le plus grand bonus total).
- * @param {Record<string, number>} bonuses   Bonus total par compétence (`system.skills.<clé>.total`).
+ * The skill the target opposes: among those allowed, the best for it (the highest total bonus).
+ * @param {Record<string, number>} bonuses   Total bonus per skill (`system.skills.<clé>.total`).
  * @param {string[]} allowed
  * @returns {string|null}
  */

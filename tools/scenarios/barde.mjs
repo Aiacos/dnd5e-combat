@@ -1,12 +1,12 @@
 /**
- * Le Barde du Manuel des joueurs 2024 (SPEC §33), monde `dnd-6`. Le Barde inspire le Guerrier ; il reçoit, prêté depuis le
- * compendium du Manuel des joueurs, Mots cinglants. Le Bandit reçoit 300 PV. Vérifie :
- *  - Inspiration bardique, attaque : un coup raté du Guerrier → la question, le dé ajouté au total, le verdict rejugé (touché ⇔
- *    total ≥ CA), l'inspiration retirée ;
- *  - Inspiration bardique, sauvegarde : Murmures dissonants du Barde sur le Guerrier inspiré — sauvegarde ratée → la question, le dé
- *    ajouté (réussite ⇔ total ≥ DD) ;
- *  - Mots cinglants : le Bandit touche le Guerrier → le Barde réagit, son dé vaut autant de CA, le coup est rejugé.
- * Remet positions, PV, utilisations, états ; retire l'item prêté.
+ * The Player's Handbook 2024 Bard (SPEC §33), world `dnd-6`. The Bard inspires the Fighter; he receives, lent from the
+ * Player's Handbook compendium, Cutting Words. The Bandit receives 300 HP. Checks:
+ *  - Bardic Inspiration, attack: a missed Fighter's attack → the question, the die added to the total, the verdict rejudged (hit ⇔
+ *    total ≥ AC), the inspiration removed;
+ *  - Bardic Inspiration, saving throw: the Bard's Dissonant Whispers on the inspired Fighter — failed saving throw → the
+ *    question, the die added (success ⇔ total ≥ DC);
+ *  - Cutting Words: the Bandit hits the Fighter → the Bard reacts, his die is worth that much AC, the hit is rejudged.
+ * Resets positions, HP, uses, conditions; removes the lent item.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "dnd-players-handbook.classes";
@@ -112,7 +112,7 @@ export default {
         const u = await ctx.use({ tokenId: fighter.id, itemId: sword, activityType: "attack", targetTokenIds: [bandit.id], usageConfig: { [MODULE_ID]: { confirmed: true } } });
         const asked = await answerAll(ids, [[/Inspiration/i, /Lancer|Roll/i]], 6000);
         const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
-        if ( !asked.some(d => d.answered) ) continue;   // touché d'emblée : pas de question
+        if ( !asked.some(d => d.answered) ) continue;   // hit outright: no question
         await pause(1500);
         const raw = (await ctx.messagesSince(since)).find(m => m.type === "attack")?.rolls?.[0]?.total;
         const t = r?.targets?.find(x => x.name === "Bandit");
@@ -124,8 +124,8 @@ export default {
       ctx.expect(checked, "un coup raté du Guerrier (20 essais au plus)");
     });
 
-    // Sans réponse (le joueur absent) : la question se ferme au bout du délai sur sa première option, « La garder » — l'inspiration
-    // reste, le jet ne bouge pas (choix de l'utilisateur, 2026-09-29).
+    // Without an answer (the player absent): the question closes after the timeout on its first option, "Keep it" — the inspiration
+    // remains, the roll does not move (user's choice, 2026-09-29).
     await part("Inspiration, sans réponse", async () => {
       await tough();
       await place(bard, spot.bard); await place(fighter, spot.fighter); await place(bandit, spot.bandit);
@@ -136,10 +136,10 @@ export default {
         const ids = await known();
         const since = await ctx.lastMessageId();
         const u = await ctx.use({ tokenId: fighter.id, itemId: sword, activityType: "attack", targetTokenIds: [bandit.id], usageConfig: { [MODULE_ID]: { confirmed: true } } });
-        const asked = await answerAll(ids, [], 6000);   // on la voit, on ne répond pas
+        const asked = await answerAll(ids, [], 6000);   // we see it, we do not answer
         const question = asked.find(d => /Inspiration/i.test(d.text));
         const r = await ctx.settle(u.usageMessageId, { timeoutMs: 60000 }).catch(() => null);
-        if ( !question ) continue;   // touché d'emblée : pas de question
+        if ( !question ) continue;   // hit outright: no question
         await pause(1500);
         const raw = (await ctx.messagesSince(since)).find(m => m.type === "attack")?.rolls?.[0]?.total;
         ctx.expect(r?.attack?.roll?.total === raw, `sans réponse : le jet reste ${r?.attack?.roll?.total} (jet ${raw})`);
@@ -161,7 +161,7 @@ export default {
         const u = await ctx.use({ tokenId: bard.id, itemId: whispers, activityType: "save", targetTokenIds: [fighter.id], usageConfig: { [MODULE_ID]: { confirmed: true, autoReact: "none" } } });
         const asked = await answerAll(ids, [[/Inspiration/i, /Lancer|Roll/i]], 8000);
         const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
-        if ( !asked.some(d => d.answered) ) continue;   // réussie d'emblée
+        if ( !asked.some(d => d.answered) ) continue;   // succeeded outright
         const t = r?.targets?.find(x => x.name === "Guerrier");
         const dc = r?.plan?.save?.dc;
         ctx.expect(!!t?.save && (t.save.success === (t.save.total >= dc)), `sauvegarde ratée, + dé → ${t?.save?.total} contre DD ${dc} : ${t?.save?.success ? "réussie" : "ratée"}`);

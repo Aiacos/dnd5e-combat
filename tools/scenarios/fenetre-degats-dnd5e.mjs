@@ -1,9 +1,9 @@
 /**
- * #173 (§556): dnd5e's own damage dialog for the damage the engine rolls. Fire Bolt of the Sorcerer against the Zombie (Arène de test),
- * cast until it hits, played as the GM (the author and the GM are the same client):
- *  1. `click`: after the hit, dnd5e's damage dialog (not DAS's old "Roll damage" button); no damage roll while it is open. A situational
- *     bonus of +7 typed in, "Critical Hit" pressed on a hit that is not a natural 20: the card holds the +7, the roll is critical, the
- *     Zombie loses the card's total.
+ * #173 (§556): dnd5e's own damage dialog for the damage the engine rolls. Fire Bolt of the Sorcerer against the Zombie
+ * (Arène de test), cast until it hits, played as the GM (the author and the GM are the same client):
+ *  1. `click`: after the hit, dnd5e's damage dialog (not DAS's old "Roll damage" button); no damage roll while it is open.
+ *     A situational bonus of +7 typed in, "Critical Hit" pressed on a hit that is not a natural 20: the card holds the +7,
+ *     the roll is critical, the Zombie loses the card's total.
  *  2. `click`, the dialog closed without a button (header X / Escape / delay): the roll still goes, the damage is applied.
  *  3. `auto` with this client's "Rolls without dialog" unchecked: the dialog is offered; "Normal" pressed, damage applied.
  *  4. `auto` with "Rolls without dialog" checked (the default): no dialog, the roll is chained as always.

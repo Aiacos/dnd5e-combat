@@ -1,7 +1,7 @@
 /**
- * Incantation puissante des Frappes bénies améliorées (clé `cantripVitality`) : à la fin de la résolution d'un sort mineur de clerc
- * qui a infligé des dégâts, le lanceur choisit qui reçoit les points de vie temporaires — lui, ou une créature de son camp à
- * portée ; « personne » d'abord. MJ actif (la route de résolution), la question va au joueur du lanceur. Une fois par résolution.
+ * Potent Spellcasting of Improved Blessed Strikes (key `cantripVitality`): at the end of the resolution of a cleric cantrip
+ * that dealt damage, the caster chooses who receives the Temporary Hit Points — themself, or a creature on their side within
+ * range; "nobody" first. Active GM (the resolution route), the question goes to the caster's player. Once per resolution.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -35,15 +35,15 @@ export async function onVitalityResolution(resolution) {
   const range = lengthIn(rule.range.value, rule.range.units, scene.grid.units, readUnitFactors());
   const tokens = scene.tokens.filter(t => t.actor && !t.hidden && ((t.actor.system?.attributes?.hp?.value ?? 0) > 0))
     .map(t => ({ id: t.id, name: t.name, self: t.id === self.id, ally: !areEnemies(self, t),
-      distance: (t.id === self.id) ? 0 : distanceBetween(self, t).value }));   // `{ value, units }`, dans l'unité de la scène
+      distance: (t.id === self.id) ? 0 : distanceBetween(self, t).value }));   // `{ value, units }`, in the scene's unit
   const recipients = vitalityRecipients(tokens, range);
   let amount = 0;
   try { amount = Number(Roll.safeEval(Roll.replaceFormulaData(rule.tempHp, source.getRollData()))) || 0; }
-  catch { /* formule illisible : rien à donner */ }
+  catch { /* unreadable formula: nothing to give */ }
   if ( !recipients.length || !(amount > 0) ) return;
   const answer = await askChoice(source, { actor: source.uuid, item: item.name,
     prompt: game.i18n.format("DND5ECOMBAT.Vitalite.Question", { item: item.name, spell: activity.item.name, n: amount }),
-    // « Personne » d'abord : sans réponse dans le délai, askChoice retient la première option.
+    // "Nobody" first: with no answer within the delay, askChoice takes the first option.
     options: [{ id: "none", label: game.i18n.localize("DND5ECOMBAT.Vitalite.Personne") },
       ...recipients.map(t => ({ id: t.id, label: t.self ? game.i18n.localize("DND5ECOMBAT.Vitalite.Soi") : t.name }))] });
   const chosen = scene.tokens.get(answer?.id ?? "");

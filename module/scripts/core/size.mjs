@@ -1,14 +1,14 @@
 /**
- * Changer de taille (SPEC §16.58) : « la taille de la cible augmente d'une catégorie — de Moyenne à Grande, par exemple »
- * (Agrandissement/rapetissement). Les catégories dans l'ordre de dnd5e (`CONFIG.DND5E.actorSizes.orderedKeys` : tiny, sm,
- * med, lg, huge, grg), bornées aux extrêmes.
+ * Changing size (SPEC §16.58): "the target's size increases by one category — from Medium to Large, for example"
+ * (Enlarge/Reduce). The categories in dnd5e's order (`CONFIG.DND5E.actorSizes.orderedKeys`: tiny, sm,
+ * med, lg, huge, grg), clamped at the extremes.
  */
 
 /**
- * @param {string} size             catégorie actuelle
- * @param {number} steps            crans (+1 : une catégorie au-dessus)
- * @param {string[]} orderedKeys    catégories, de la plus petite à la plus grande
- * @returns {string|null}  la nouvelle catégorie, ou null si la taille actuelle est inconnue
+ * @param {string} size             current category
+ * @param {number} steps            steps (+1: one category up)
+ * @param {string[]} orderedKeys    categories, from smallest to largest
+ * @returns {string|null}  the new category, or null if the current size is unknown
  */
 export function shiftSize(size, steps, orderedKeys) {
   const i = orderedKeys.indexOf(size);

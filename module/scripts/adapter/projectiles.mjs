@@ -1,7 +1,7 @@
 /**
- * Projectiles (SPEC §16.27, clé `projectiles`) : combien un lancement en crée, d'après la formule du contenu évaluée sur les
- * données de l'activité mise à l'échelle (niveau de l'emplacement : `@item.level` ; niveau du personnage : `@details.level`),
- * et la question de répartition posée à l'auteur.
+ * Projectiles (SPEC §16.27, key `projectiles`): how many a casting creates, from the content's formula evaluated on the
+ * scaled activity's data (slot level: `@item.level`; character level: `@details.level`),
+ * and the distribution question put to the author.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,31 +14,31 @@ import { queryPlayer, waitLabel } from "./player-wait.mjs";
 export const ALLOCATION_QUERY = `${MODULE_ID}.allocation`;
 const ALLOCATION_TIMEOUT = 45000;
 
-/** La règle de projectiles d'un item, ou null. */
+/** An item's projectile rule, or null. */
 export function projectilesOf(item) {
   return item ? (contentOf(item).entry?.projectiles ?? null) : null;
 }
 
-/** Une formule du contenu évaluée sur les données de l'activité mise à l'échelle ; `fallback` si elle échoue. */
+/** A content formula evaluated on the scaled activity's data; `fallback` if it fails. */
 export function evalRuleFormula(formula, activity, fallback=0) {
   try { return Math.floor(Roll.safeEval(Roll.replaceFormulaData(formula, activity?.getRollData?.() ?? {}, { missing: 0 }))); }
   catch { return fallback; }
 }
 
-/** La règle de rebond d'un item (Orbe chromatique), ou null. */
+/** An item's bounce rule (Chromatic Orb), or null. */
 export function leapOf(item) {
   return item ? (contentOf(item).entry?.leap ?? null) : null;
 }
 
-/** Un double parmi les dés de la première part d'un message de dégâts (les d8 de l'orbe) ? */
+/** A double among the dice of the first part of a damage message (the orb's d8)? */
 export function rolledDouble(damageMessage) {
   const faces = (damageMessage?.rolls?.[0]?.dice?.[0]?.results ?? []).filter(r => r.active !== false).map(r => r.result);
   return new Set(faces).size < faces.length;
 }
 
 /**
- * Le nombre de projectiles de ce lancement (au moins 1). `level` : le niveau d'emplacement choisi, quand l'activité n'est pas
- * encore mise à l'échelle (visée multiple, avant le lancement) ; sinon celui de l'item.
+ * The number of projectiles of this casting (at least 1). `level`: the chosen slot level, when the activity is not
+ * scaled yet (multiple targeting, before the casting); otherwise the item's.
  */
 export function projectileCount(activity, { level=null }={}) {
   const rule = projectilesOf(activity?.item);
@@ -52,10 +52,10 @@ export function projectileCount(activity, { level=null }={}) {
 }
 
 /**
- * Le nombre de créatures qu'une activité vise (§16.33 : Bénédiction « 2 + @item.level », Prière de guérison « 5 », Immobilisation
- * de personne « @item.level - 1 »), au niveau d'emplacement `level` s'il est donné. dnd5e évalue la formule à la
- * préparation, au niveau de base de l'item (data/shared/target-field.mjs:131-136) : pour un sort surclassé, on relit la formule
- * d'origine (celle de l'activité si elle remplace la cible de l'item, sinon celle de l'item). Au moins 1.
+ * The number of creatures an activity targets (§16.33: Bless "2 + @item.level", Prayer of Healing "5", Hold Person
+ * "@item.level - 1"), at slot level `level` if given. dnd5e evaluates the formula at
+ * preparation, at the item's base level (data/shared/target-field.mjs:131-136): for an upcast spell, the original formula is
+ * read again (the activity's if it replaces the item's target, otherwise the item's). At least 1.
  */
 export function targetCount(activity, { level=null }={}) {
   const prepared = Number(activity?.target?.affects?.count) || 1;
@@ -70,18 +70,18 @@ export function targetCount(activity, { level=null }={}) {
 }
 
 /**
- * Côté de l'auteur : une fenêtre, un champ par cible, la somme à atteindre. Sans réponse dans le délai (le double du délai des
- * fenêtres de combat : il y a des nombres à saisir) : un chacun, le reste au premier (le cœur remet d'aplomb).
+ * On the author's side: a window, one field per target, the sum to reach. With no answer within the timeout (twice the combat
+ * windows' timeout: there are numbers to enter): one each, the rest to the first (the core sets it right).
  * @param {{item: string, count: number, targets: Array<{token: string, name: string}>}} payload
  * @returns {Promise<{counts: Object<string, number>}|null>}
  */
 export async function handleAllocationQuery({ item, count, targets, actor: actorUuid=null, defaults=null, text=null, title=null }) {
-  // §381 : la table voit qu'on attend l'auteur (la question le nomme depuis cette version ; avant, pas de sablier).
+  // §381: the table sees that the author is awaited (the question names them since this version; before, no hourglass).
   const actor = actorUuid ? await fromUuid(actorUuid) : null;
   return inLine(() => whileAwaiting(actor, "choice", () => allocate({ item, count, targets, defaults, text, title })));
 }
 
-/** §401 : `defaults` (token → nombre) préremplit la fenêtre (une réserve de PV) ; `text` remplace la phrase des projectiles. */
+/** §401: `defaults` (token → number) prefills the window (an HP pool); `text` replaces the projectiles sentence. */
 async function allocate({ item, count, targets, defaults=null, text=null, title=null }) {
   const start = (t, i) => (defaults && (t.token in defaults)) ? defaults[t.token] : (i === 0 ? count - targets.length + 1 : 1);
   const rows = targets.map((t, i) => `<div class="form-group"><label>${foundry.utils.escapeHTML(t.name)}</label>
@@ -93,7 +93,7 @@ async function allocate({ item, count, targets, defaults=null, text=null, title=
     rejectClose: false,
     buttons: [{ action: "ok", label: game.i18n.localize("DND5ECOMBAT.Repartition.Valider"), default: true,
       callback: (event, button) => Object.fromEntries(targets.map((t, i) => [t.token, Number(button.form.elements[`t${i}`]?.value) || 0])) }],
-    // §290 : sans délai, le MJ la ferme en forçant, comme au bout du délai.
+    // §290: with no timeout, the GM closes it by forcing, as at the end of the timeout.
     render: (event, dialog) => { disarm ??= expireLater(() => dialog.close(), combatWindowSeconds() * 2000); },
     close: () => { disarm?.(); return null; }
   });
@@ -101,7 +101,7 @@ async function allocate({ item, count, targets, defaults=null, text=null, title=
   return (result && typeof result === "object") ? { counts: result } : null;
 }
 
-/** Sur le MJ actif : demande à l'auteur (son joueur, sinon le MJ lui-même). Ne lève jamais. */
+/** On the active GM: asks the author (their player, otherwise the GM themselves). Never throws. */
 export async function askAllocation(actor, payload) {
   const userId = rollerFor(actor);
   try {

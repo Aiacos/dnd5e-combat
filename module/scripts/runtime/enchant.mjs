@@ -1,7 +1,7 @@
 /**
- * Enchanter l'arme d'une créature choisie, en marche (SPEC §16.41) : l'interface fait choisir le niveau et l'élément (fenêtre
- * de dnd5e), la créature (visée), puis l'arme (ui/enchant.mjs) ; l'utilisation repart avec l'arme notée, et le MJ actif applique
- * l'enchantement après elle (requête `dnd5e-combat.enchant`).
+ * Enchant a chosen creature's weapon, on the fly (SPEC §16.41): the interface has the user pick the level and the element
+ * (dnd5e window), the creature (targeted), then the weapon (ui/enchant.mjs); the use resumes with the weapon noted, and the
+ * active GM applies the enchantment after it (request `dnd5e-combat.enchant`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,13 +15,13 @@ import { relaunchUse } from "./relaunch.mjs";
 
 export const ENCHANT_QUERY = `${MODULE_ID}.enchant`;
 
-/** §16.45 : la réécriture qui attend l'enchantement d'une arme (uuid → options), lue au `dnd5e.preApplyEnchantment`. */
+/** §16.45: the rewrite waiting for a weapon's enchantment (uuid → options), read at `dnd5e.preApplyEnchantment`. */
 const pactRewrites = new Map();
 
-/** §435 : l'activation en cours d'un profil d'un objet qui s'enchante lui-même (uuid de l'item → promesse), pour qui doit l'attendre. */
+/** §435: the in-progress activation of a profile of an item that enchants itself (item uuid → promise), for whoever must wait for it. */
 const selfSwitches = new Map();
 
-/** §435 : la promesse de l'activation sur place du profil de cet item (enchantement de soi), ou null s'il n'y en a pas en cours. */
+/** §435: the promise of the in-place activation of this item's profile (self-enchantment), or null if none is in progress. */
 export function selfSwitchOf(item) {
   return selfSwitches.get(item?.uuid) ?? null;
 }
@@ -34,7 +34,7 @@ async function handleEnchant({ activity: activityUuid, item: itemUuid, profile, 
   const concentration = concUuid ? await fromUuid(concUuid) : null;
   const pact = pactRuleOf(activity.item);
   if ( pact ) {
-    // « Une seule arme de pacte » : le lien précédent tombe.
+    // "Only one pact weapon": the previous link drops.
     for ( const old of Array.from(activity.appliedEnchantments ?? []) ) await old.delete();
     pactRewrites.set(item.uuid, { damageTypes: pact.damageTypes, chosen: pactDamage ?? null, ability: pact.ability ?? null,
       suffix: game.i18n.localize("DND5ECOMBAT.Pacte.Suffixe") });
@@ -47,8 +47,8 @@ async function handleEnchant({ activity: activityUuid, item: itemUuid, profile, 
 }
 
 /**
- * Intention « enchanter cette arme » (fenêtre des armes, ui/enchant.mjs) — l'utilisation suspendue repart avec l'arme notée ;
- * dnd5e fige les cibles de la carte à la première utilisation (activity/mixin.mjs:239-242) : on les laisse se relire.
+ * "Enchant this weapon" intent (weapons window, ui/enchant.mjs) — the suspended use resumes with the weapon noted;
+ * dnd5e freezes the card's targets at first use (activity/mixin.mjs:239-242): we let them be re-read.
  */
 export function enchantWith(activity, [config, dialog, message], itemUuid, extra={}) {
   const messageConfig = foundry.utils.deepClone(message ?? {});
@@ -57,8 +57,8 @@ export function enchantWith(activity, [config, dialog, message], itemUuid, extra
 }
 
 /**
- * §16.45 : intention « lier cette arme » (fenêtre du pacte, ui/pact.mjs) — une arme de l'inventaire, ou une arme invoquée depuis
- * le compendium (créée dans l'inventaire) ; `damageType` : un des types du pacte, ou null (le type normal).
+ * §16.45: "bind this weapon" intent (pact window, ui/pact.mjs) — a weapon from the inventory, or a weapon summoned from
+ * the compendium (created in the inventory); `damageType`: one of the pact's types, or null (the normal type).
  */
 export async function pactWith(activity, usage, { itemUuid=null, conjureUuid=null, damageType=null }) {
   let uuid = itemUuid;
@@ -83,29 +83,31 @@ async function onPostUse(activity, usageConfig, results) {
 
 export function registerEnchant() {
   route("dnd5e.postUseActivity", onPostUse, { label: "enchantment: weapon not enchanted" });
-  // §16.45 : l'enchantement du pacte, réécrit avant sa création (type de dégâts choisi, Charisme, nom).
+  // §16.45: the pact's enchantment, rewritten before its creation (chosen damage type, Charisma, name).
   route("dnd5e.preApplyEnchantment", (item, data) => {
     const rewrite = pactRewrites.get(item.uuid);
     if ( !rewrite ) return;
     data.system.changes = rewritePactChanges(data.system.changes, rewrite);
     log(`${item.name}: pact weapon (${rewrite.chosen ?? "normal type"})`);
   }, { label: "pact weapon: enchantment not rewritten" });
-  // O9h (§363) : un objet qui s'enchante lui-même avec l'un de ses propres profils (Parchemin de protection : le type de créature) — la
-  // copie que dnd5e crée sur l'objet qui porte déjà le profil n'aboutit pas (vu en jeu : aucun effet créé, sans erreur). Le profil choisi
-  // est activé à sa place, comme un enchantement posé (origine : l'activité) ; les autres profils de l'activité sont éteints.
+  // O9h (§363): an item that enchants itself with one of its own profiles (Scroll of Protection: the creature type) — the copy
+  // that dnd5e creates on the item that already carries the profile does not succeed (seen in play: no effect created, no error).
+  // The chosen profile is activated in its place, like an applied enchantment (origin: the activity); the activity's other
+  // profiles are switched off.
   route("dnd5e.preApplyEnchantment", (item, data, { activity }={}) => {
     const profile = data?.flags?.dnd5e?.enchantmentProfile;
     if ( !activity || (activity.item !== item) || !profile || !item.effects?.has?.(profile) ) return;
     const profiles = new Set((activity.effects ?? []).map(p => p._id));
     const updates = item.effects.filter(e => profiles.has(e.id) && (e.id !== profile)).map(e => ({ _id: e.id, disabled: true }));
     updates.push({ _id: profile, disabled: false, origin: activity.uuid, "system.origin": data.system?.origin ?? {}, "flags.dnd5e": data.flags.dnd5e });
-    // Les « riders » du profil (activité « Use » du parchemin, cachée tant qu'aucun enchantement ne la déclare) : copiés comme dnd5e le fait
-    // à la pose d'un enchantement (data/active-effect/enchantment.mjs, `collectRiders`).
+    // The profile's "riders" (the scroll's "Use" activity, hidden as long as no enchantment declares it): copied as dnd5e does
+    // when applying an enchantment (data/active-effect/enchantment.mjs, `collectRiders`).
     const switching = item.updateEmbeddedDocuments("ActiveEffect", updates).then(async () => {
-      // §433 : dnd5e 6.1 ne rend les riders que d'un enchantement APPLIQUÉ (`isApplied` : `transfer` vrai, enchantment.mjs:285), et un effet
-      // cité par une activité de son item n'est jamais transféré (`isOnActivity`, active-effect-data-model.mjs:57) : le profil activé sur
-      // place ne peut pas répondre. La question est posée à une copie en mémoire, sous un autre identifiant et marquée appliquée ; ce
-      // qu'elle rend dépend d'elle (`dependentOn`) : l'identifiant du profil y est remis. Rien n'est écrit sur l'effet.
+      // §433: dnd5e 6.1 only renders the riders of an APPLIED enchantment (`isApplied`: `transfer` true, enchantment.mjs:285), and
+      // an effect cited by an item's activity is never transferred (`isOnActivity`, active-effect-data-model.mjs:57): the
+      // profile activated in place cannot answer. The question is put to an in-memory copy, under another identifier and marked
+      // applied; what it returns depends on it (`dependentOn`): the profile's identifier is put back there. Nothing is written on
+      // the effect.
       const switched = item.effects.get(profile);
       const probeId = foundry.utils.randomID();
       const probe = switched?.clone({ _id: probeId, transfer: true }, { keepId: true });
@@ -113,10 +115,10 @@ export function registerEnchant() {
       const riders = (await probe?.system?.collectRiders?.({ dnd5e: { enchantmentProfile: profile, activityId: activity.id } }) ?? [])
         .map(op => ({ ...op, ...(op.updates ? { updates: asProfile(op.updates) } : {}), ...(op.data ? { data: asProfile(op.data) } : {}) }));
       if ( riders.length ) await foundry.documents.modifyBatch(riders);
-      // Le nom que le profil donne (« Scroll of Protection: Undead ») : dnd5e n'applique pas ses changements à un profil de l'objet.
+      // The name the profile gives ("Scroll of Protection: Undead"): dnd5e does not apply its changes to an item's profile.
       const named = (item.effects.get(profile)?.system?.changes ?? item.effects.get(profile)?.changes ?? []).find(c => c.key === "name")?.value;
-      // §435 : un nom qui décore (« {} (Active) », Courroux sauvage) ne vaut que le temps de l'effet : il n'est pas écrit sur l'objet (il
-      // y resterait, littéralement « {} (Active) », après la fin de l'effet). Seul un nom complet (le parchemin) l'est.
+      // §435: a decorating name ("{} (Active)", "Savage Wrath") only holds for the duration of the effect: it is not written on
+      // the item (it would stay there, literally "{} (Active)", after the effect ends). Only a full name (the scroll) is.
       if ( named && !named.includes("{}") && (named !== item.name) ) await item.update({ name: named });
       log(`${item.name}: its own profile "${item.effects.get(profile)?.name}" switched on`);
       return item.effects.get(profile) ?? null;

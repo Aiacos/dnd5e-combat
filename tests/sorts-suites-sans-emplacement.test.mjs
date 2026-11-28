@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 import { dataFixPlan, planIsEmpty } from "../module/scripts/core/data-fixes.mjs";
 
-/** La donnée du sort telle que dnd5e la rend sur une fiche : chaque activité avec `consumption.spellSlot` (vrai par défaut). */
+/** The spell data as dnd5e renders it on a sheet: each activity with `consumption.spellSlot` (true by default). */
 const spell = (activities) => ({ system: { activities: Object.fromEntries(Object.entries(activities)
   .map(([id, spellSlot]) => [id, { _id: id, consumption: { spellSlot, targets: [] } }])) }, effects: [] });
 
@@ -13,7 +13,7 @@ const CASES = {
   "flaming-sphere": { cast: "dnd5eactivity000", follow: "dnd5eactivity100" }
 };
 
-describe("suites d'un sort déjà lancé : pas de second emplacement (dataFixes)", () => {
+describe("follow-ups of an already cast spell: no second slot (dataFixes)", () => {
   for ( const [ident, { cast, follow }] of Object.entries(CASES) ) {
     it(`${ident} : la suite ne dépense plus d'emplacement, le lancement si`, () => {
       const plan = dataFixPlan(spell({ [cast]: true, [follow]: true }), CONTENT[ident].dataFixes);

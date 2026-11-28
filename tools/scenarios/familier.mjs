@@ -1,12 +1,12 @@
 /**
- * Familiers (SPEC §107), monde `dnd-6`. Le Magicien reçoit Appel de familier (Manuel des joueurs) ; le familier est invoqué par
- * `api.mcp.summonAt` (la créature fournie : la Stryge du monde, pour ne rien importer). Vérifie :
- *  - à l'invocation : reconnu comme familier, vision activée, actions de base sans l'attaque à mains nues (Soutien compris) ;
- *  - hors combat : le congé dans la poche dimensionnelle (token retiré, poche notée avec ses PV) ; le rappel refusé trop loin
- *    et sur une case occupée ; accepté à deux cases (token recréé, mêmes PV, vision et actions de base, poche vide) ;
- *  - en combat, au tour du Magicien : le congé coûte son action (budget), le rappel ensuite la demande encore — « Utiliser
- *    quand même » (fenêtre du mode souple chez le MJ) — et le familier rentre au combat avec sa propre initiative.
- * Remet combat, poche, items prêtés ; retire le familier.
+ * Familiars (SPEC §107), world `dnd-6`. The Wizard receives Find Familiar (Player's Handbook); the familiar is summoned by
+ * `api.mcp.summonAt` (the supplied creature: the world's Stirge, to import nothing). Checks:
+ *  - on summoning: recognized as a familiar, vision enabled, basic actions without the unarmed strike (Help included);
+ *  - out of combat: dismissal into the pocket dimension (token removed, pocket noted with its HP); the recall refused too far
+ *    and on an occupied cell; accepted at two cells (token recreated, same HP, vision and basic actions, pocket empty);
+ *  - in combat, on the Wizard's turn: dismissal costs its action (budget), the recall then asks for it again — "Use
+ *    anyway" (soft-mode window on the GM's side) — and the familiar enters combat with its own Initiative.
+ * Restores combat, pocket, lent items; removes the familiar.
  */
 const SPELL = "Compendium.dnd-players-handbook.spells.Item.phbsplFindFamili";
 const CREATURE = "Actor.mmStirge00000000";
@@ -69,7 +69,7 @@ export default {
     ctx.expect((await ctx.engine("stats", { tokenId: again.id })).hp.value === hp0, `mêmes PV (${hp0})`);
     ctx.expect(!(await state(wizard.id)).pocket, "la poche est vide");
 
-    // 3. En combat, au tour du Magicien.
+    // 3. In combat, on the Wizard's turn.
     await ctx.startCombat([wizard, zombi]);
     const combat = await ctx.combat();
     for ( const [t, value] of [[wizard, 20], [zombi, 10]] ) {
@@ -82,7 +82,7 @@ export default {
     ctx.expect(inCombat.done === true, "en combat : congédié");
     const budget = await ctx.engine("budget", { tokenId: wizard.id });
     ctx.expect(budget?.action === 0 || budget?.action === false, `l'action du Magicien est dépensée (${JSON.stringify(budget)})`);
-    // Le rappel demande encore une action : la fenêtre du mode souple s'ouvre chez le MJ, on répond « Utiliser quand même ».
+    // The recall asks for an action again: the soft-mode window opens on the GM's side, we answer "Use anyway".
     const known = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
     const pending = ctx.engine("familiarRecall", { tokenId: wizard.id, point: center(2, 0) }).catch(err => ({ error: String(err) }));
     const d = (await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: known, waitMs: 6000 }).catch(() => null))?.windows?.[0];

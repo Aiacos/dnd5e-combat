@@ -1,9 +1,9 @@
 /**
- * §340, lot O5b de la repasse des objets : dégâts en plus contre un type de créature, y compris par enchantement. Arène de test
- * (Guerrier, Zombi — un Mort-vivant).
- *  1. Vengeresse sacrée posée sur une Épée longue (enchantement du Guide) : touché, le Zombi prend 2d10 radiants de plus.
- *  2. Épée radieuse (son propre identifiant) : 1d8 radiant de plus contre le Zombi.
- *  3. L'Épée longue ordinaire, sans enchantement : rien de plus.
+ * §340, batch O5b of the item pass: extra damage against a creature type, including through enchantment. Test arena
+ * (Fighter, Zombie — an Undead).
+ *  1. Holy Avenger placed on a Longsword (Guide enchantment): on a hit, the Zombie takes 2d10 extra radiant.
+ *  2. Radiant Blade (its own identifier): 1d8 extra radiant against the Zombie.
+ *  3. The ordinary Longsword, without enchantment: nothing extra.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -25,7 +25,7 @@ export default {
     const hp0 = await ctx.hp(zombi);
     ctx.restore(() => ctx.setHp(zombi, hp0));
 
-    /** Attaque jusqu'au toucher (20 essais au plus) ; rend la formule du jet de dégâts, ou null. */
+    /** Attacks until a hit (20 tries at most); returns the damage roll formula, or null. */
     const hitFormula = async itemId => {
       for ( let i = 0; i < 20; i++ ) {
         await ctx.setHp(zombi, hp0);
@@ -41,17 +41,17 @@ export default {
       return null;
     };
 
-    // 1. Vengeresse sacrée enchantant une Épée longue.
+    // 1. Holy Avenger enchanting a Longsword.
     const sword = await ctx.ensureItem(fighter, `${PHB}phbwepLongsword0`);
-    // Guide 3.0.0 : les activités des objets à harmonisation sont cachées tant que l'objet n'est pas harmonisé (`visibility.requireMagic`,
-    // dnd5e refuse « Using this activity isn't currently possible ») — objets prêtés équipés et harmonisés (`ready`).
+    // Guide 3.0.0: the activities of attunement items are hidden while the item is not attuned (`visibility.requireMagic`,
+    // dnd5e refuses "Using this activity isn't currently possible") — items lent equipped and attuned (`ready`).
     const avenger = await ctx.ensureItem(fighter, `${DMG}dmgHolyAvenger00`, { ready: true });
     const { effectId } = await ctx.engine("enchant", { tokenId: fighter.id, itemId: avenger, activityId: "IMVUc41lxWG8Hyq3", targetItemId: sword });
     if ( !ctx.expect(!!effectId, "la Vengeresse sacrée enchante l'Épée longue") ) return;
     const enchanted = await hitFormula(sword);
     ctx.expect(/2d10/.test(enchanted ?? ""), `touché, le Zombi prend 2d10 radiants de plus (${enchanted})`);
     const { data: tok } = await ctx.call("get-scene-object", { type: "Token", objectId: fighter.id });
-    // L'épée enchantée retirée ; une Épée longue neuve, sans enchantement.
+    // The enchanted sword removed; a new Longsword, without enchantment.
     await ctx.call("remove-embedded-item", { documentType: "Actor", id: tok.actorId, itemId: sword }).catch(() => null);
     await pause(500);
     const fresh = await ctx.ensureItem(fighter, `${PHB}phbwepLongsword0`);
@@ -60,10 +60,10 @@ export default {
     const plain = await hitFormula(fresh);
     ctx.expect(plain !== null && !/2d10/.test(plain), `sans l'enchantement, rien de plus (${plain})`);
 
-    // 2. Épée radieuse.
+    // 2. Radiant Blade.
     const sun = await ctx.ensureItem(fighter, `${DMG}dmgSunBlade00000`, { ready: true });
     const radiant = await hitFormula(sun);
-    // 1d8 de plus, doublé en 2d8 sur un critique.
+    // 1d8 extra, doubled to 2d8 on a Critical Hit.
     ctx.expect(/\+ [12]d8$/.test(radiant ?? ""), `Épée radieuse : 1d8 radiant de plus (${radiant})`);
   }
 };

@@ -1,9 +1,9 @@
 /**
- * §334, restes des lots K1 à K9 de la repasse des créatures. Arène des sorts : le Lanceur (PNJ) et la Cible (999 PV).
- *  - Morsure de l'Homoncule : identifiant propre `mm-homunculus-bite` (clé « acteur.item » de sa source ; « bite » est partagé) ;
- *  - Absorption de vie du Feu follet (« that has 0 Hit Points ») : une Cible debout n'est pas affectée (ni sauvegarde, ni Mort) ;
- *  - Brochette psychique de l'Ancien (Ravenloft, « If the target has the Charmed condition… ») : une Cible non Charmée qui rate n'est
- *    ni Étourdie ni Épuisée.
+ * §334, leftovers of batches K1 to K9 of the creature pass. Spell arena: the Caster (NPC) and the Target (999 HP).
+ *  - Homunculus's Bite: own identifier `mm-homunculus-bite` ("actor.item" key of its source; "bite" is shared);
+ *  - Will-o'-Wisp's Life Drain ("that has 0 Hit Points"): a standing Target is not affected (neither saving throw nor Death);
+ *  - Elder Brain's Psychic Skewer (Ravenloft, "If the target has the Charmed condition…"): a non-Charmed Target that fails is
+ *    neither Stunned nor Exhausted.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

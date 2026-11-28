@@ -1,13 +1,13 @@
 /**
- * §447 — Le lot C12 de Ravenloft (module premium `dnd-ravenloft-horrors-within`, pack `options`), aptitudes prêtées aux personnages de
- * l'arène (comme `sous-classes-ravenloft`) :
- *  - Forme ombrale (Ensorceleur) : l'activité pose l'effet de l'item (donnée corrigée) — Résistances, `transformed` ; puis Trait de feu sur
- *    le Bandit avec l'Avantage (celui de la Sorcellerie innée).
- *  - Toucher de la mort (Occultiste) : le Bandit résiste au nécrotique ; Contact glacial du Manuel : dégâts réduits de moitié ; Contact
- *    glacial lancé par le don : dégâts entiers.
- *  - Courroux sauvage (Rôdeur) : l'Aura troublante dès la transformation (`atStart`) ; le Bandit le blesse — Représailles rôdeuses proposées,
- *    une attaque d'arme contre lui ; Neutralisé : la forme cesse (l'enchantement retiré).
- *  - Seconde peau (Guerrier) : Modification d'apparence lancée par le don, sans Concentration.
+ * §447 — Ravenloft's batch C12 (premium module `dnd-ravenloft-horrors-within`, pack `options`), features lent to the characters of
+ * the arena (like `sous-classes-ravenloft`):
+ *  - Umbral Form (Sorcerer): the activity places the item's effect (corrected data) — Resistances, `transformed`; then Fire Bolt on
+ *    the Bandit with Advantage (that of Innate Sorcery).
+ *  - "Death's Touch" (Warlock): the Bandit resists necrotic; the Manual's Chill Touch: damage halved; Chill Touch cast by the
+ *    feature: full damage.
+ *  - "Wild Wrath" (Ranger): the "Unsettling Aura" from the transformation (`atStart`); the Bandit wounds them — "Ranger's Reprisal"
+ *    offered, a weapon attack against it; Incapacitated: the form ends (the enchantment removed).
+ *  - "Second Skin" (Fighter): Alter Self cast by the feature, without Concentration.
  */
 const MODULE_ID = "dnd5e-combat";
 const RHW = "dnd-ravenloft-horrors-within.options";
@@ -87,11 +87,11 @@ export default {
       ctx.expect(atk?.rolls?.[0]?.options?.advantageMode === 1, `Trait de feu sous la Forme ombrale : l'Avantage (mode ${atk?.rolls?.[0]?.options?.advantageMode})`);
     }
 
-    // 2. Toucher de la mort : le Bandit résiste au nécrotique.
+    // 2. Death's Touch: the Bandit resists necrotic.
     const warlock = T.Occultiste;
     await place(bandit, 1, 0, warlock);
     await pause(800);
-    /** Lance une attaque jusqu'à toucher ; rend { dealt, rolled } (PV perdus, total du jet de dégâts). */
+    /** Casts an attack until it hits; returns { dealt, rolled } (HP lost, damage roll total). */
     const necroticHit = async use => {
       for ( let n = 0; n < 10; n++ ) {
         await tough();
@@ -101,7 +101,7 @@ export default {
         const since = await ctx.lastMessageId();
         const u = await use().catch(err => { ctx.log(`lancement : ${err.message}`); return null; });
         await pause(1500);
-        // Une activité « cast » rend son propre message : celui du sort lancé (sa copie sur la fiche) est le dernier message d'utilisation.
+        // A "cast" activity returns its own message: the one of the spell cast (its copy on the sheet) is the last use message.
         const usage = (await ctx.messagesSince(since)).filter(m => m.type === "usage").at(-1)?.id ?? u?.usageMessageId;
         if ( !usage ) { ctx.log("aucun message d'utilisation"); return null; }
         const r = await ctx.settle(usage, { timeoutMs: 45000 }).catch(err => { ctx.log(`issue non lue : ${err.message}`); return null; });
@@ -120,8 +120,9 @@ export default {
     const plain = await necroticHit(() => ctx.use({ tokenId: warlock.id, itemId: chill, activityType: "attack", targetTokenIds: [bandit.id] }));
     if ( ctx.expect(!!plain, "Contact glacial du Manuel : un coup") ) ctx.expect(plain.dealt === Math.floor(plain.rolled / 2), `Résistance appliquée : ${plain.rolled} → ${plain.dealt} PV perdus`);
     const death = await lend(warlock, "rhwTouchofDeathA");
-    // La copie du sort que l'activité « cast » crée sur la fiche (`flags.dnd5e.cachedFor` = …Activity.UZVF…) : le lancement l'utilise ;
-    // le connecteur ne lance que le jet de l'activité qu'il utilise, donc l'attaque de la copie est utilisée directement (même chemin).
+    // The copy of the spell that the "cast" activity creates on the sheet (`flags.dnd5e.cachedFor` = …Activity.UZVF…): the
+    // casting uses it; the connector only rolls the roll of the activity it uses, so the copy's attack is used directly
+    // (same path).
     const cachedOf = async (t, activityId) => ((await actorOf(t)).items ?? []).find(i => String(i.flags?.dnd5e?.cachedFor ?? "").endsWith(activityId));
     if ( !(await cachedOf(warlock, "UZVFEmVZMhLRl5vD")) ) {
       await ctx.use({ tokenId: warlock.id, itemId: death, activityId: "UZVFEmVZMhLRl5vD", targetTokenIds: [bandit.id] }).catch(() => null);
@@ -133,7 +134,7 @@ export default {
     if ( ctx.expect(!!viaFeat, "Contact glacial lancé par Toucher de la mort : un coup") ) {
       ctx.expect(viaFeat.dealt === viaFeat.rolled, `Toucher de la mort : la Résistance ignorée (${viaFeat.rolled} → ${viaFeat.dealt} PV perdus)`);
     }
-    // Le même sort du Manuel, don présent : toujours réduit (« ce sort seulement »).
+    // The same Manual spell, feature present: still reduced ("this spell only").
     const still = await necroticHit(() => ctx.use({ tokenId: warlock.id, itemId: chill, activityType: "attack", targetTokenIds: [bandit.id] }));
     if ( still ) ctx.expect(still.dealt === Math.floor(still.rolled / 2), `Contact glacial du Manuel, don présent : réduit (${still.rolled} → ${still.dealt})`);
     await ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.traits.dr.value": delta0.traits?.dr?.value ?? [] } });
@@ -156,12 +157,12 @@ export default {
       const r = await ctx.settle(aura.id, { timeoutMs: 45000 }).catch(() => null);
       ctx.expect(r?.plan?.save?.ability === "wis" && (r?.targets ?? []).some(t => t.name === "Bandit"), `Sagesse du Bandit (${r?.targets?.map(t => t.name).join(", ")})`);
     }
-    // Représailles rôdeuses : le Bandit le blesse.
+    // Ranger's Reprisal: the Bandit wounds them.
     let retaliated = null;
-    for ( let n = 0; (n < 30) && !retaliated; n++ ) {   // l'Armure ancestrale relève sa CA : le Bandit rate souvent
-      await ctx.setHp(ranger, 80);   // maximum relevé plus haut : un critique ne le met pas à 0 (à 0 PV, pas de réaction)
+    for ( let n = 0; (n < 30) && !retaliated; n++ ) {   // Ancestral Armor raises its AC: the Bandit often misses
+      await ctx.setHp(ranger, 80);   // maximum raised higher: a critical does not put it at 0 (at 0 HP, no Reaction)
       const ids = await known();
-      // `autoReact: "ask"` : la fenêtre « blessé » s'ouvre (l'outil la ferme d'office, `none`) ; la question est répondue plus bas.
+      // `autoReact: "ask"`: the "wounded" window opens (the tool closes it by default, `none`); the question is answered below.
       const u = await ctx.use({ tokenId: bandit.id, identifier: "scimitar", activityType: "attack", targetTokenIds: [ranger.id],
         usageConfig: { [MODULE_ID]: { autoReact: "ask" } } }).catch(() => null);
       if ( !u?.usageMessageId ) break;
@@ -169,7 +170,7 @@ export default {
       if ( r?.targets?.find(t => t.name === "Rôdeur")?.hit !== true ) continue;
       const asked = await answer(ids, /Wrath|Courroux/i, 9000);
       await pause(5000);
-      // L'attaque de Représailles, lue dans le journal du moteur (« attack N → Bandit » du Rôdeur, après la fenêtre).
+      // The Reprisal attack, read in the engine's journal (the Ranger's "attack N → Bandit", after the window).
       const lines = await ctx.engineLog();
       const window = lines.findLastIndex(l => /Rôdeur is damaged: reaction window/.test(l));
       const back = (window >= 0) && lines.slice(window).some(l => /attack \d+ → Bandit/.test(l));
@@ -178,7 +179,7 @@ export default {
     if ( ctx.expect(!!retaliated?.asked, "Représailles rôdeuses proposées quand le Bandit blesse le Rôdeur transformé") ) {
       ctx.expect(retaliated.back, "Représailles rôdeuses : une attaque d'arme du Rôdeur contre le Bandit");
     }
-    // Neutralisé : la forme cesse.
+    // Incapacitated: the form ends.
     if ( await enchanted() ) {
       await ctx.call("set-status", { tokenId: ranger.id, statusId: "incapacitated", active: true });
       ctx.restore(() => ctx.call("set-status", { tokenId: ranger.id, statusId: "incapacitated", active: false }).catch(() => {}));
@@ -188,14 +189,14 @@ export default {
       await ctx.call("set-status", { tokenId: ranger.id, statusId: "incapacitated", active: false });
     }
 
-    // 4. Seconde peau : Modification d'apparence lancée par le don, sans Concentration.
+    // 4. Second Skin: Alter Self cast by the feature, without Concentration.
     const fighter = T.Guerrier;
     const skin = await lend(fighter, "rhwSecondSkinkc1");
     ctx.restore(() => ctx.removeEffectsNamed(fighter, /Alter|apparence|concentr/i));
-    // La copie du sort sur la fiche (`flags.dnd5e.cachedFor`) : dnd5e lui retire les propriétés que l'activité « cast » liste.
+    // The spell copy on the sheet (`flags.dnd5e.cachedFor`): dnd5e removes from it the properties that the "cast" activity lists.
     const cached = ((await actorOf(fighter)).items ?? []).find(i => String(i.flags?.dnd5e?.cachedFor ?? "").endsWith("ZrjtFFSbJZTj8Cfm"));
     ctx.log(`Seconde peau : copie du sort ${cached ? `« ${cached.name} », propriétés ${JSON.stringify(cached.system?.properties ?? [])}` : "absente"}`);
-    // Modification d'apparence a trois activités (dnd5e demande laquelle, dans une liste) : celle de « Change Appearance » de la copie.
+    // Alter Self has three activities (dnd5e asks which, in a list): the one of the copy's "Change Appearance".
     const appearance = Object.entries(cached?.system?.activities ?? {}).find(([, a]) => /Appearance|apparence/i.test(a.name ?? ""))?.[0];
     const sinceSkin = await ctx.lastMessageId();
     if ( cached && appearance ) await ctx.use({ tokenId: fighter.id, itemId: cached._id, activityId: appearance, targetTokenIds: [fighter.id] }).catch(err => ctx.log(`Seconde peau : ${err.message}`));

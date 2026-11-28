@@ -1,29 +1,29 @@
 /**
- * Retour visuel au-dessus des tokens (SPEC §15.3) : ce qu'une résolution vient d'apprendre, entre
- * deux de ses états — verdict d'attaque (critique, raté), abri, réaction, sauvegarde. Chaque fait
- * n'apparaît qu'une fois : on compare l'état précédent au nouveau. Fonctions pures, aucune
- * dépendance à Foundry ; l'affichage est dans ui/feedback.mjs.
+ * Visual feedback above tokens (SPEC §15.3): what a resolution has just learned, between
+ * two of its states — attack verdict (critical, miss), cover, reaction, save. Each fact
+ * appears only once: the previous state is compared with the new one. Pure functions, no
+ * dependency on Foundry; the display is in ui/feedback.mjs.
  */
 
 /**
  * @typedef {object} Feedback
- * @property {string} token   UUID du token au-dessus duquel écrire.
+ * @property {string} token   UUID of the token to write above.
  * @property {"hit"|"critical"|"miss"|"cover"|"reaction"|"saveSuccess"|"saveFail"|"duplicate"|"unaffected"} kind
- *           `hit` : un coup qui touche sans critique (§228 : affiché seulement si le MJ le veut, ou par son jet)
- *           `duplicate` : une réplique d'Image miroir a pris le coup (§16.25) ; `unaffected` : l'action ne peut pas l'affecter (§16.8)
- * @property {string} [degree]  Abri : "half", "threeQuarters", "total".
- * @property {string} [name]    Réaction : son nom.
- * @property {boolean} [auto]   Sauvegarde ratée d'office (état).
- * @property {number} [roll]    §228 : le total du jet d'attaque (verdict) ou de sauvegarde, quand il est connu.
- * @property {"advantage"|"disadvantage"} [mode]  §231 : le d20 de ce jet, lancé avec Avantage ou Désavantage.
+ *           `hit`: a hit without a critical (§228: shown only if the GM wants it, or by their roll)
+ *           `duplicate`: a Mirror Image duplicate took the hit (§16.25); `unaffected`: the action cannot affect it (§16.8)
+ * @property {string} [degree]  Cover: "half", "threeQuarters", "total".
+ * @property {string} [name]    Reaction: its name.
+ * @property {boolean} [auto]   Automatically failed save (condition).
+ * @property {number} [roll]    §228: the total of the attack roll (verdict) or save, when known.
+ * @property {"advantage"|"disadvantage"} [mode]  §231: the d20 of this roll, rolled with Advantage or Disadvantage.
  */
 
 const blank = { hit: null, critical: false, cover: null, reaction: null, save: null, duplicate: null, unaffected: null };
 
 /**
- * Les faits nouveaux d'une résolution.
- * @param {object|null} before  État précédent (null : rien de connu).
- * @param {object} after        Nouvel état.
+ * The new facts of a resolution.
+ * @param {object|null} before  Previous state (null: nothing known).
+ * @param {object} after        New state.
  * @returns {Feedback[]}
  */
 export function feedbackBetween(before, after) {
@@ -57,8 +57,8 @@ export function feedbackBetween(before, after) {
 }
 
 /**
- * §16.40 : les ressources qu'une utilisation rend ou dépense, à montrer au-dessus du token — seulement pour une activité qui
- * **rend** quelque chose (une consommation négative : Regain sauvage), pour ne pas écrire « −1 emplacement » à chaque sort.
+ * §16.40: the resources a use gives back or spends, to show above the token — only for an activity that
+ * **gives back** something (a negative consumption: Wild Resurgence), so as not to write "−1 slot" on each spell.
  * @param {Array<{type: "itemUses"|"spellSlots", value: number, name?: string, level?: number}>} targets
  * @returns {Array<{kind: "gain"|"spend", type: string, n: number, name?: string, level?: number}>}
  */

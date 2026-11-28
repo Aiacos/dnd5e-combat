@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
-describe("Perception de la magie (Chuul, SRD 5.2) : le sens de Détection de la magie, permanent, à 36 m", () => {
-  it("même sens que le sort, sans effet à porter ni école de magie", () => {
+describe("Sense Magic (Chuul, SRD 5.2): the sense of Detect Magic, permanent, at 36 m", () => {
+  it("same sense as the spell, without an effect to carry or school of magic", () => {
     const { sense } = CONTENT["sense-magic"];
     const spell = CONTENT["detect-magic"].sense;
     expect(sense).toEqual({ kind: "locate", range: 120, units: "ft", reveals: "aura", detects: { "target.carriesMagic": true } });

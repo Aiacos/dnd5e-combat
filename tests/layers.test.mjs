@@ -1,11 +1,11 @@
 /**
- * Les couches du SPEC §13.3 tiennent par leurs imports, pas par convention :
- *   core/     n'importe que core/
- *   content/  n'importe que content/ et core/
- *   adapter/  n'importe jamais runtime/ ni ui/
- *   runtime/  n'importe jamais ui/ — l'interface lit l'état et émet des intentions, rien ne remonte
- *   ui/       importe ce qu'il veut
- * Et core/ ne touche à aucun global de Foundry.
+ * The layers of SPEC §13.3 hold by their imports, not by convention:
+ *   core/     imports only core/
+ *   content/  imports only content/ and core/
+ *   adapter/  never imports runtime/ or ui/
+ *   runtime/  never imports ui/ — the interface reads state and emits intents, nothing flows back up
+ *   ui/       imports whatever it wants
+ * And core/ touches no Foundry global.
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -14,7 +14,7 @@ import { join } from "node:path";
 const ROOT = join(import.meta.dirname, "../module/scripts");
 const LAYERS = ["core", "content", "adapter", "runtime", "ui"];
 
-/** Les fichiers d'une couche, sous-dossiers compris (`runtime/diagnostic/…`). */
+/** The files of a layer, subfolders included (`runtime/diagnostic/…`). */
 const files = dir => readdirSync(join(ROOT, dir)).flatMap(f => statSync(join(ROOT, dir, f)).isDirectory() ? files(`${dir}/${f}`)
   : (f.endsWith(".mjs") ? [`${dir}/${f}`] : []));
 const source = file => readFileSync(join(ROOT, file), "utf8");
@@ -30,7 +30,7 @@ function resolve(file, spec) {
   return parts.join("/");
 }
 
-/** Les couches qu'un fichier importe : le premier dossier du chemin résolu (`../../runtime/x.mjs` d'un sous-dossier compris). */
+/** The layers a file imports: the first folder of the resolved path (`../../runtime/x.mjs` from a subfolder included). */
 function importedLayers(file) {
   const out = new Set();
   for ( const [, spec] of source(file).matchAll(/from\s+"([^"]+)"/g) ) {
@@ -59,7 +59,7 @@ describe("couches", () => {
     });
   }
 
-  it("core/ ne référence aucun global de Foundry", () => {
+  it("core/ references no Foundry global", () => {
     for ( const file of files("core") ) {
       const code = source(file).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
       expect(code, file).not.toMatch(/\b(game|canvas|Hooks|CONFIG|ui)\s*[.[]/);
@@ -68,9 +68,9 @@ describe("couches", () => {
 });
 
 /**
- * §15.1 — un seul chemin pour toute action : l'interface ne lance jamais une activité elle-même
- * (ni `use`, ni jet, ni consommation) ; elle passe par runtime/, qui finit dans `activity.use()`,
- * donc dans `dnd5e.preUseActivity` (visée, légalité) comme la fiche et la barre BG3.
+ * §15.1 — a single path for every action: the interface never launches an activity itself
+ * (no `use`, no roll, no consumption); it goes through runtime/, which ends in `activity.use()`,
+ * hence in `dnd5e.preUseActivity` (aiming, legality) like the sheet and the BG3 bar.
  */
 describe("un seul chemin pour toute action", () => {
   it("ui/ n'appelle ni use, ni rollAttack, ni rollDamage, ni consume", () => {
@@ -80,27 +80,27 @@ describe("un seul chemin pour toute action", () => {
     }
   });
 
-  it("engage (clic, menu, visée) finit dans activity.use()", () => {
+  it("engaging (click, menu, aiming) ends in activity.use()", () => {
     const code = source("runtime/actions.mjs");
     const body = code.slice(code.indexOf("export async function engage"), code.indexOf("/*", code.indexOf("export async function engage")));
-    // §436 : par `useDespiteAntimagic` (la fenêtre forçable sous le statut `antimagic`), qui appelle toujours `activity.use`.
+    // §436: through `useDespiteAntimagic` (the forceable window under the `antimagic` status), which always calls `activity.use`.
     expect(body).toMatch(/await (activity\.use\(|useDespiteAntimagic\(activity, extra => activity\.use\()/);
   });
 });
 
 /**
- * Sous Vitest (transformation de Vite), un import d'un nom qui n'existe pas donne `undefined` au lieu
- * d'échouer au chargement : tests/load.test.mjs ne voit pas un export cassé. On le vérifie ici, à la lecture :
- * tout nom importé d'un fichier du module doit en être exporté (vu le 2026-09-23 : `escapeGrapple` importé
- * par ui/pointer.mjs avant d'exister, tests verts).
+ * Under Vitest (Vite's transform), an import of a name that does not exist gives `undefined` instead of
+ * failing at load: tests/load.test.mjs does not see a broken export. We check it here, by reading:
+ * every name imported from a module file must be exported by it (seen on 2026-09-23: `escapeGrapple` imported
+ * by ui/pointer.mjs before it existed, tests green).
  */
-describe("imports et exports du module", () => {
+describe("module imports and exports", () => {
   const exportsOf = (file, seen=new Set()) => {
     const code = source(file);
     const names = new Set();
     if ( seen.has(file) ) return names;
     seen.add(file);
-    // `export * from "./x.mjs"` : tout ce que l'autre fichier exporte (un fichier-façade après découpage).
+    // `export * from "./x.mjs"`: everything the other file exports (a facade file after splitting).
     for ( const [, spec] of code.matchAll(/export\s*\*\s*from\s*"(\.[^"]+)"/g) ) {
       for ( const name of exportsOf(resolve(file, spec), seen) ) names.add(name);
     }
@@ -115,7 +115,7 @@ describe("imports et exports du module", () => {
   };
   const allFiles = LAYERS.flatMap(files);
 
-  it("chaque nom importé existe dans le fichier d'où on l'importe", () => {
+  it("every imported name exists in the file it is imported from", () => {
     const missing = [];
     for ( const file of allFiles ) {
       for ( const [, list, spec] of source(file).matchAll(/import\s*\{([^}]*)\}\s*from\s*"(\.[^"]+)"/g) ) {

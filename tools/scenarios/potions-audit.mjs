@@ -1,7 +1,8 @@
 /**
- * Audit des potions du Guide du maître et du Manuel des joueurs (SPEC §53) — un diagnostic, pas un test : le Guerrier boit chaque
- * potion (sans cible désignée, comme un joueur qui boit) et l'on relève ce qui en sort — effets posés et sur qui, PV, PV temporaires,
- * états, sort lancé. `ONLY=speed,flying` ne boit que les potions dont l'identifiant contient l'un de ces mots. Remet tout.
+ * Audit of the Dungeon Master's Guide and Player's Handbook potions (SPEC §53) — a diagnostic, not a test: the Fighter drinks
+ * each potion (with no designated target, like a player drinking) and we record what comes out — effects placed and on whom,
+ * HP, Temporary Hit Points, conditions, spell cast. `ONLY=speed,flying` drinks only the potions whose identifier contains
+ * one of these words. Restores everything.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -10,7 +11,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export default {
   name: "audit des potions — ce que chacune fait vraiment",
-  audit: true,   // un diagnostic : joué seulement quand on le nomme (`node tools/scenario.mjs potions-audit`)
+  audit: true,   // a diagnostic: played only when named (`node tools/scenario.mjs potions-audit`)
 
   async run(ctx) {
     const { tokens } = await ctx.scene();
@@ -25,13 +26,13 @@ export default {
     const reset = async () => {
       const a = await actor();
       for ( const e of a.effects ?? [] ) if ( !baseEffects.has(e._id) ) await ctx.call("remove-embedded-effect", { documentType: "Actor", id: actorId, effectId: e._id }).catch(() => {});
-      // Les copies de sort d'abord laissées : retirer la potion les emporte (dnd5e, data/item/templates/activities.mjs:503-508) ; les
-      // retirer aussi faisait « Item … does not exist! » dans la console du MJ. On relit la fiche pour ce qui reste.
+      // The spell copies are left first: removing the potion takes them away (dnd5e, data/item/templates/activities.mjs:503-508);
+      // removing them too caused "Item … does not exist!" in the GM's console. The sheet is re-read for what remains.
       const removeAll = list => Promise.all(list.filter(i => !baseItems.has(i._id))
         .map(i => ctx.call("remove-embedded-item", { documentType: "Actor", id: actorId, itemId: i._id }).catch(() => {})));
       await removeAll((a.items ?? []).filter(i => !i.flags?.dnd5e?.cachedFor));
-      // dnd5e retire la copie sans l'attendre (`deleteEmbeddedDocuments` non attendu, :508) : relue trop tôt, elle était encore là et
-      // partait deux fois (Potion de rapidité, une passe sur deux). On lui laisse le temps.
+      // dnd5e removes the copy without waiting for it (`deleteEmbeddedDocuments` not awaited, :508): re-read too early, it was
+      // still there and went away twice (Potion of Speed, one pass in two). We give it time.
       if ( (a.items ?? []).some(i => !baseItems.has(i._id) && i.flags?.dnd5e?.cachedFor) ) await pause(1000);
       await removeAll((await actor()).items ?? []);
       await ctx.call("update-actor", { actorId, actorData: { "system.attributes.hp.value": Math.max(1, (hp0 ?? 20) - 12), "system.attributes.hp.temp": 0 } });
@@ -45,7 +46,7 @@ export default {
       for ( const e of (Array.isArray(r) ? r : (r?.entries ?? [])) ) if ( e.type === "consumable" ) potions.push({ pack, ...e });
     }
     const seen = new Set();
-    // Les erreurs de la console relevées potion par potion (le tampon se vide à chaque lecture) : chacune est rattachée à sa ligne.
+    // The console errors collected potion by potion (the buffer empties on each read): each is attached to its row.
     const errors = [];
     await ctx.clientErrors();
     for ( const p of potions ) {
@@ -73,8 +74,8 @@ export default {
         await ctx.settle(used.usageMessageId, { timeoutMs: 15000 }).catch(() => null);
       } catch ( err ) { outcome += ` ÉCHEC ${err.message.slice(0, 80)}`; }
       await pause(2500);
-      // Un sort à plusieurs activités (Détection des pensées de la potion de Lecture des pensées) ouvre le choix d'activité de
-      // dnd5e chez le MJ : à la table le joueur choisit ; ici on le note et on le ferme, sinon il reste sur l'écran.
+      // A spell with several activities (Detect Thoughts from the Potion of Mind Reading) opens dnd5e's activity choice on the
+      // GM's client: at the table the player chooses; here we note it and close it, otherwise it stays on the screen.
       const opened = (await ctx.engine("windows")).filter(w => !windowsBefore.has(w.id));
       for ( const w of opened ) await ctx.engine("closeWindow", { id: w.id }).catch(() => {});
       if ( opened.length ) outcome += ` (fenêtre : ${opened.map(w => w.title ?? w.className).join(", ")})`;

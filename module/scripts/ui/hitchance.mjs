@@ -1,10 +1,10 @@
 /**
- * La chance de toucher près du curseur, façon BG3 (SPEC §15.3). `ui/pointer.mjs` décide quand
- * l'afficher (survol d'une cible avec l'attaque de base en combat, ou en mode visée) ; ici on ne
- * fait que la dessiner. Le calcul est dans adapter/hitchance.mjs, la formule dans core/hitchance.mjs.
+ * The hit chance near the cursor, BG3 style (SPEC §15.3). `ui/pointer.mjs` decides when to
+ * display it (hovering a target with the base attack in combat, or in aiming mode); here we only
+ * draw it. The calculation is in adapter/hitchance.mjs, the formula in core/hitchance.mjs.
  *
- * Ce que voit un joueur est un réglage de monde : pourcentage et CA (comme BG3), pourcentage seul,
- * ou rien. Le MJ voit toujours tout.
+ * What a player sees is a world setting: percentage and AC (like BG3), percentage only,
+ * or nothing. The GM always sees everything.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -18,7 +18,7 @@ import { describeReason } from "./chat.mjs";
 
 const OFFSET = 18;
 let badge = null;
-/** #33 : la pastille posée sous un menu (son rectangle) au lieu de suivre le curseur ; null : au curseur. */
+/** #33: the badge placed under a menu (its rectangle) instead of following the cursor; null: at the cursor. */
 let anchor = null;
 
 function element() {
@@ -30,7 +30,7 @@ function element() {
   return badge;
 }
 
-/** Ce que ce client a le droit de voir : "full", "percent", "advantage" (#247 : les raisons d'avantage seules) ou "off". */
+/** What this client may see: "full", "percent", "advantage" (#247: the reasons for advantage only) or "off". */
 function reveal() {
   if ( !game.settings.get(MODULE_ID, "hitChance") ) return "off";
   return game.user.isGM ? "full" : game.settings.get(MODULE_ID, "hitChancePlayers");
@@ -43,12 +43,12 @@ function line(css, text) {
   return p;
 }
 
-/** #33 : l'aperçu de l'abri est-il en service (réglage de monde, désactivé par défaut) ? */
+/** #33: is the Cover preview in service (world setting, disabled by default)? */
 function previewOn() {
   try { return game.settings.get(MODULE_ID, "coverPreview") === true; } catch { return false; }
 }
 
-/** #33 : les lignes de l'aperçu de l'abri, ou null (réglage coupé, pas une attaque, canevas indisponible). */
+/** #33: the Cover preview's lines, or null (setting off, not an attack, canvas unavailable). */
 function previewLines(attacker, target, activity, posA, attackMode=null) {
   if ( !previewOn() ) return null;
   let preview = null;
@@ -64,7 +64,7 @@ function previewLines(attacker, target, activity, posA, attackMode=null) {
   return text.sub ? [main, line("cover-source", text.sub)] : [main];
 }
 
-/** La pastille est-elle affichée ? (#33 : rejouer le survol quand un token bouge) */
+/** Is the badge displayed? (#33: replay the hover when a token moves) */
 export function hitChanceShown() {
   return (!!badge && !badge.hidden) || attackLineShown();
 }
@@ -74,11 +74,11 @@ function coverText(cover) {
   return (cover.bonus === null) ? loc("AbriTotal") : `${loc(`Abri.${cover.degree}`)} (+${cover.bonus})`;
 }
 
-/** Suit le curseur (à chaque mouvement, sans attendre le calcul, qui est bridé). */
+/** Follows the cursor (at each movement, without waiting for the calculation, which is throttled). */
 export function placeHitChance(event) {
   if ( !badge || badge.hidden ) return;
   const { offsetWidth: w, offsetHeight: h } = badge;
-  // #33 : sous le menu contextuel (au-dessus s'il n'y a pas la place), alignée sur son bord gauche.
+  // #33: under the context menu (above if there is no room), aligned on its left edge.
   if ( anchor ) {
     const below = anchor.bottom + 4;
     badge.style.left = `${Math.max(4, Math.min(anchor.left, window.innerWidth - w - 4))}px`;
@@ -90,7 +90,7 @@ export function placeHitChance(event) {
   badge.style.top = `${Math.min(event.clientY + OFFSET, window.innerHeight - h - 4)}px`;
 }
 
-/** Un badge au curseur, sans chance de toucher : « Hors de portée », « Déjà visé » (§16.29). */
+/** A badge at the cursor, without a hit chance: "Out of range", "Already targeted" (§16.29). */
 export function showBadge(event, text, { at=null }={}) {
   if ( reveal() === "off" ) return hideHitChance();
   anchor = at;
@@ -106,26 +106,26 @@ export function showBadge(event, text, { at=null }={}) {
 export function hideHitChance() {
   if ( badge ) badge.hidden = true;
   anchor = null;
-  hideAttackLine();   // #33 : la ligne de visée part avec la pastille
+  hideAttackLine();   // #33: the aiming line goes with the badge
 }
 
 /**
- * Affiche la chance qu'`attacker` touche `target` avec `activity`.
+ * Displays the chance that `attacker` hits `target` with `activity`.
  * @param {PointerEvent} event
  * @param {TokenDocument} attacker
  * @param {TokenDocument} target
  * @param {Activity} activity
  * @param {object} [options]
- * @param {object} [options.posA]         Position de l'attaquant au bout de son approche.
- * @param {boolean} [options.outOfReach]  L'approche n'arrive pas à portée ce tour-ci.
- * @param {{advantage?: boolean, disadvantage?: boolean}} [options.keys]  Touches d'avantage / désavantage tenues.
- * @param {string|null} [options.attackMode]  Le mode d'attaque de dnd5e (« thrown »…), quand le menu le choisit.
- * @param {DOMRect|null} [options.at]         #33 : poser la pastille sous ce rectangle (le menu contextuel) plutôt qu'au curseur.
+ * @param {object} [options.posA]         The attacker's position at the end of their approach.
+ * @param {boolean} [options.outOfReach]  The approach does not get within range this turn.
+ * @param {{advantage?: boolean, disadvantage?: boolean}} [options.keys]  Advantage / Disadvantage keys held.
+ * @param {string|null} [options.attackMode]  dnd5e's attack mode ("thrown"…), when the menu chooses it.
+ * @param {DOMRect|null} [options.at]         #33: place the badge under this rectangle (the context menu), not at the cursor.
  */
 export function showHitChance(event, attacker, target, activity, { posA, outOfReach=false, keys={}, attackMode=null, at=null }={}) {
   const level = reveal();
   if ( activity?.type !== "attack" ) return hideHitChance();
-  // #33 : l'aperçu de l'abri s'affiche même quand la chance de toucher est cachée à ce client.
+  // #33: the Cover preview is displayed even when the hit chance is hidden from this client.
   const cover = previewLines(attacker, target, activity, posA, attackMode);
   if ( (level === "off") && !cover ) return hideHitChance();
   let info = null;
@@ -151,13 +151,13 @@ export function showHitChance(event, attacker, target, activity, { posA, outOfRe
       el.append(line("percent", `${percent} %`));
       const crit = (info.critical > 0) && (info.critical < 0.005) ? "< 1" : asPercent(info.critical);
       if ( info.hit > 0 ) el.append(line("detail", loc("Toucher.Critique", { percent: crit })));
-      // CA et abri : la CA seulement si le MJ la révèle aux joueurs. #33 : avec l'aperçu, l'abri a sa propre ligne.
+      // AC and Cover: the AC only if the GM reveals it to players. #33: with the preview, Cover has its own line.
       const coverNote = cover ? null : coverText(info.cover);
       if ( info.ac === null ) { if ( coverNote ) el.append(line("detail", coverNote)); }
       else if ( shows.ac ) el.append(line("detail", `${loc("Toucher.CA")} ${info.ac}${coverNote ? ` — ${coverNote}` : ""}`));
       else if ( coverNote ) el.append(line("detail", coverNote));
     }
-    // #247 : les raisons seules — ni pourcentage ni couleur ; sans raison (et sans aperçu de l'abri), rien à montrer.
+    // #247: the reasons only — no percentage or color; without a reason (and without a Cover preview), nothing to show.
     else el.classList.add("cover-only");
     if ( cover ) el.append(...cover);
     const advantage = info.advantage.map(describeReason);
@@ -178,14 +178,14 @@ export function showHitChance(event, attacker, target, activity, { posA, outOfRe
 }
 
 /**
- * Affiche la chance que `target` rate la sauvegarde de `activity` (§15.3) : le pourcentage d'échec, du point de vue du
- * lanceur ; le DD et le bonus de la cible si le MJ les révèle (réglage « pourcentage et CA ») ; avantage, désavantage,
- * échec d'office, immunité, Résistance légendaire.
+ * Displays the chance that `target` fails the saving throw of `activity` (§15.3): the failure percentage, from the
+ * caster's point of view; the DC and the target's bonus if the GM reveals them (setting "percentage and AC"); advantage,
+ * disadvantage, automatic failure, Immunity, Legendary Resistance.
  */
 export function showSaveChance(event, caster, target, activity, { outOfReach=false }={}) {
   const level = reveal();
-  // #247 : « advantage » ne montre rien d'une sauvegarde — ses raisons parlent de la cible (une résistance, un état), pas du
-  // lanceur.
+  // #247: "advantage" shows nothing of a saving throw — its reasons are about the target (a resistance, a condition), not the
+  // caster.
   if ( !hitChanceShows(level).percent || (activity?.type !== "save") ) return hideHitChance();
   let info = null;
   if ( !outOfReach ) {
@@ -223,7 +223,7 @@ export function showSaveChance(event, caster, target, activity, { outOfReach=fal
 }
 
 export function registerHitChance() {
-  // #33 : l'aperçu de l'abri dans la pastille — décidé par le MJ pour la table, désactivé par défaut.
+  // #33: the Cover preview in the badge — decided by the GM for the table, disabled by default.
   game.settings.register(MODULE_ID, "coverPreview", { scope: "world", config: true, type: Boolean, default: false,
     name: "DND5ECOMBAT.Reglage.coverPreview.Nom", hint: "DND5ECOMBAT.Reglage.coverPreview.Aide" });
   game.settings.register(MODULE_ID, "hitChance", { scope: "client", config: true, type: Boolean, default: true,

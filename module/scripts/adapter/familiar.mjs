@@ -1,11 +1,11 @@
 /**
- * Familiers (SPEC §107), lus et écrits dans Foundry. Un familier est une créature invoquée (dnd5e : `flags.dnd5e.summon.origin`
- * de son acteur = uuid de l'item qui l'a invoqué : summon.mjs:261-267, dans le delta d'un token non lié, :543) dont l'item déclare `summon.familiar`
- * (content/summons.mjs). Son maître est l'acteur de cet item.
+ * Familiars (SPEC §107), read and written in Foundry. A familiar is a summoned creature (dnd5e: `flags.dnd5e.summon.origin`
+ * of its actor = uuid of the item that summoned it: summon.mjs:261-267, in an unlinked token's delta, :543) whose item
+ * declares `summon.familiar` (content/summons.mjs). Its master is the actor of that item.
  *
- * La poche dimensionnelle est un flag du maître : `flags["dnd5e-combat"].pocket = { token, name, img, scene, at }`, `token`
- * étant `TokenDocument#toObject()` au moment du congé (le delta d'un token non lié compris : PV, effets, items). Un seul
- * familier à la fois (« Un seul familier »).
+ * The pocket dimension is a flag of the master: `flags["dnd5e-combat"].pocket = { token, name, img, scene, at }`, `token`
+ * being `TokenDocument#toObject()` at the moment of dismissal (an unlinked token's delta included: HP, effects, items). Only one
+ * familiar at a time ("Only one familiar").
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -25,31 +25,31 @@ const POCKET = "pocket";
 /** Cet item invoque-t-il un familier (`summon.familiar`) ? */
 export const isFamiliarItem = item => !!item && (summonRuleOf(item)?.familiar === true);
 
-/** L'item d'origine d'un acteur invoqué, s'il déclare un familier. */
+/** The origin item of a summoned actor, if it declares a familiar. */
 function familiarItemOfActor(actor) {
   const uuid = actor?.getFlag?.("dnd5e", "summon.origin");
   const item = uuid ? fromUuidSync(uuid, { strict: false }) : null;
   return isFamiliarItem(item) ? item : null;
 }
 
-/** Cet acteur (celui d'un token, synthétique ou non) est-il un familier ? */
+/** Is this actor (a token's, synthetic or not) a familiar? */
 export const isFamiliarActor = actor => !!familiarItemOfActor(actor);
 
 /** Ce token est-il un familier ? */
 export const isFamiliarToken = tokenDoc => isFamiliarItem(summonItemOf(tokenDoc));
 
-/** Le maître d'un familier (l'acteur de l'item d'invocation), ou null. */
+/** A familiar's master (the summoning item's actor), or null. */
 export function masterOf(tokenDoc) {
   return isFamiliarToken(tokenDoc) ? (summonItemOf(tokenDoc)?.actor ?? null) : null;
 }
 
-/** Le familier que ce maître garde dans sa poche dimensionnelle, ou null. */
+/** The familiar this master keeps in its pocket dimension, or null. */
 export function pocketOf(actor) {
   const pocket = actor?.getFlag?.(MODULE_ID, POCKET);
   return pocket?.token ? pocket : null;
 }
 
-/** Écrit (MJ actif) le familier congédié dans la poche de son maître. */
+/** Writes (active GM) the dismissed familiar into its master's pocket. */
 export async function storeInPocket(master, tokenDoc) {
   const data = tokenDoc.toObject();
   await master.unsetFlag(MODULE_ID, POCKET);
@@ -58,14 +58,14 @@ export async function storeInPocket(master, tokenDoc) {
   return data;
 }
 
-/** Vide (MJ actif) la poche dimensionnelle du maître. */
+/** Empties (active GM) the master's pocket dimension. */
 export function emptyPocket(master) {
   return pocketOf(master) ? master.unsetFlag(MODULE_ID, POCKET) : null;
 }
 
 /**
- * Un token provisoire (jamais créé) du familier gardé, à une position de la scène du maître : pour mesurer la distance et
- * l'occupation avec les fonctions du moteur. Lié à l'acteur de base : un delta ne sert à rien ici.
+ * A provisional token (never created) of the kept familiar, at a position of the master's scene: to measure distance and
+ * occupancy with the engine's functions. Linked to the base actor: a delta is useless here.
  */
 function probeToken(pocket, scene, at={}) {
   const s = pocket.token;
@@ -75,8 +75,8 @@ function probeToken(pocket, scene, at={}) {
 }
 
 /**
- * La case (coin haut-gauche, pixels) où le familier gardé réapparaîtrait sous ce point, au niveau et à l'élévation du maître,
- * et ce qui la refuse (« far », « occupied », ou null).
+ * The cell (top-left corner, pixels) where the kept familiar would reappear under this point, at the master's level and
+ * elevation, and what refuses it ("far", "occupied", or null).
  * @param {TokenDocument} masterToken
  * @param {{x: number, y: number}} point
  */

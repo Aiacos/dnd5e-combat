@@ -1,23 +1,23 @@
 /**
- * Ce qu'un message d'utilisation de dnd5e 6.0 demande au moteur : le PLAN de la machine d'action
- * (core/action.mjs) et ses cibles. Une activité sans plan garde son comportement natif.
+ * What a dnd5e 6.0 use message asks of the engine: the PLAN of the action machine
+ * (core/action.mjs) and its targets. An activity without a plan keeps its native behavior.
  *
- * Vérifié dans dnd5e 6.0.3 :
- *  - le message d'utilisation (`type: "usage"`) porte `system.targets` et retrouve son activité par
+ * Verified in dnd5e 6.0.3:
+ *  - the use message (`type: "usage"`) carries `system.targets` and finds its activity through
  *    `getAssociatedActivity()` (documents/chat-message.mjs:690)
- *  - utiliser une activité d'attaque enchaîne son jet d'attaque (activity/attack.mjs:68-70) ; les
- *    activités `damage` et `heal` lancent ELLES-MÊMES leur jet à l'utilisation
- *    (damage.mjs:51, heal.mjs:60) — l'auteur n'a pas à le relancer ; une activité `save` ne lance rien
- *  - un soin crée un message `type: "healing"` (heal.mjs:69-73), de même forme qu'un message de dégâts
- *  - pour un sort à gabarit, le message est créé AVANT la pose de la zone
- *    (activity/mixin.mjs:293-296) : ses cibles ne valent rien, on attend la région
+ *  - using an attack activity chains its attack roll (activity/attack.mjs:68-70); the
+ *    `damage` and `heal` activities THEMSELVES roll their roll on use
+ *    (damage.mjs:51, heal.mjs:60) — the author need not roll it again; a `save` activity rolls nothing
+ *  - a heal creates a `type: "healing"` message (heal.mjs:69-73), of the same shape as a damage message
+ *  - for a template spell, the message is created BEFORE the area is placed
+ *    (activity/mixin.mjs:293-296): its targets are worthless, we wait for the region
  *
- * Inventaire des packs 2024 du système (2026-09-21), ce qui a décidé des formes couvertes :
- * attaque avec effet au toucher 44 · activités `damage` 45 · `heal` 49 · utilitaire à effet 118 ·
- * sauvegarde 380 · attaque + sauvegarde sur le même item : 2 seulement — le chaînage s'y DÉCLARE
- * (`onHit.save` = id de l'activité de sauvegarde, dans le contenu ou `flags["dnd5e-combat"].onHit`
- * de l'item). Les attaques du Monster Manual, elles, se reconnaissent à leur forme et à leur amorce
- * (SPEC §18.4, M2, `core/riders.mjs`) ; leur porte de taille aussi (M3).
+ * Inventory of the system's 2024 packs (2026-09-21), which decided the shapes covered:
+ * attack with on-hit effect 44 · `damage` activities 45 · `heal` 49 · utility with effect 118 ·
+ * save 380 · attack + save on the same item: only 2 — chaining is DECLARED there
+ * (`onHit.save` = id of the save activity, in the content or `flags["dnd5e-combat"].onHit`
+ * of the item). Monster Manual attacks are recognized by their shape and their lead-in
+ * (SPEC §18.4, M2, `core/riders.mjs`); their size gate too (M3).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -38,30 +38,30 @@ import { templateOf } from "./template.mjs";
 import { isPotion, potionOfCast } from "./potions.mjs";
 import { speakerTokenOf } from "./turn.mjs";
 
-/** Clé stable d'un effet de l'activité (`_id` pour un effet de l'item, `uuid` pour un effet de référence). */
+/** Stable key of an activity effect (`_id` for an item effect, `uuid` for a reference effect). */
 export const effectKey = e => e._id ?? e.uuid;
 
 /**
- * L'effet d'un profil d'activité (`activity.effects[i]`), lu sans attendre : sur l'item, ou par `fromUuidSync` pour une
- * référence par UUID (null si elle n'est pas en mémoire, un index de compendium si elle n'y est qu'indexée). Remplace le
- * getter `profile.effect`, que dnd5e 6.0 déprécie (retiré en 6.2, `applied-effect-field.mjs:36`) au profit de `getEffect()`,
- * asynchrone quand le profil porte un `uuid` (§126). Là où l'on peut attendre, `await profile.getEffect()`.
+ * The effect of an activity profile (`activity.effects[i]`), read without waiting: on the item, or via `fromUuidSync` for a
+ * UUID reference (null if it is not in memory, a compendium index if it is only indexed). Replaces the
+ * `profile.effect` getter, which dnd5e 6.0 deprecates (removed in 6.2, `applied-effect-field.mjs:36`) in favor of `getEffect()`,
+ * asynchronous when the profile carries a `uuid` (§126). Where one can wait, `await profile.getEffect()`.
  */
 export const effectOfProfile = (profile, item) => (profile?._id ? item?.effects?.get?.(profile._id) : null)
   ?? (profile?.uuid ? fromUuidSync(profile.uuid, { strict: false }) : null) ?? null;
 
 /**
- * Les effets que l'activité applique au niveau où elle est lancée : `applicableEffects` de dnd5e, qui filtre les profils
- * par `level.min`/`level.max` d'après `relevantLevel` (le niveau du sort de la copie mise à l'échelle,
- * `getAssociatedActivity({ scaled: true })`) — dnd5e 6.0.3, dnd5e.mjs:20091-20096 et :20165-20169. Sans ce filtre, Aide
- * posait ses huit effets « Niveau N : +X PV max » à la fois.
+ * The effects the activity applies at the level it is cast at: dnd5e's `applicableEffects`, which filters the profiles
+ * by `level.min`/`level.max` according to `relevantLevel` (the spell level of the scaled copy,
+ * `getAssociatedActivity({ scaled: true })`) — dnd5e 6.0.3, dnd5e.mjs:20091-20096 and :20165-20169. Without this filter, Aid
+ * applied its eight "Level N: +X max HP" effects at once.
  */
 export const applicableEffectsOf = activity => [...(activity?.applicableEffects ?? activity?.effects ?? []), ...poolEffectsOf(activity)];
 
 /**
- * §37 : les effets de l'item que le contenu fait proposer par cette activité sans qu'elle les relie (`choice.pool`) — « Curse
- * Ability » de la Malédiction ne relie aucune de ses six malédictions de caractéristique. Même forme qu'un profil d'effet de
- * l'activité (`_id`, `effect`, `getEffect`), pour le plan, la question et l'application.
+ * §37: the item's effects that the content has this activity offer without it linking them (`choice.pool`) — Bestow Curse's "Curse
+ * Ability" links none of its six ability curses. Same shape as an activity effect profile (`_id`, `effect`, `getEffect`),
+ * for the plan, the question and the application.
  */
 export function poolEffectsOf(activity) {
   const item = activity?.item;
@@ -70,17 +70,17 @@ export function poolEffectsOf(activity) {
 }
 
 /**
- * Les effets de l'activité, avec leur moment. `condition` (facultative) : ce que la cible doit remplir pour les recevoir,
- * en JSON comme la condition d'une étape (M3 : porte de taille).
- * §158, §226 : aucun pour un item `zoneEffects`, quel que soit le type de l'activité — ses effets sont portés par la zone (le
- * comportement `applyActiveEffect` du cœur, adapter/zone-effects.mjs) ; posés en plus sur les cibles, ils ne partaient jamais.
+ * The activity's effects, with their moment. `condition` (optional): what the target must meet to receive them,
+ * in JSON like a step's condition (M3: size gate).
+ * §158, §226: none for a `zoneEffects` item, whatever the activity type — its effects are carried by the area (the
+ * core's `applyActiveEffect` behavior, adapter/zone-effects.mjs); applied to the targets as well, they never went away.
  */
 const effectsOf = (activity, when, condition=null) => (contentOf(activity.item).entry?.zoneEffects === true) ? []
   : applicableEffectsOf(activity).filter(e => !(contentOf(activity.item).entry?.dropsEffects ?? []).includes(effectKey(e))).map(e => ({
     id: effectKey(e), activity: activity.uuid, when: when(e), ...(condition ? { if: JSON.stringify(condition) } : {})
   }));
 
-/** M5 (§18.8) : la variante d'attaque que la situation désigne, pour la première cible du message. */
+/** M5 (§18.8): the attack variant that the situation designates, for the message's first target. */
 function attackVariant(message, activity, targets) {
   const attacker = speakerTokenOf(message);
   const target = targets[0]?.token ? fromUuidSync(targets[0].token) : null;
@@ -88,20 +88,20 @@ function attackVariant(message, activity, targets) {
 }
 
 /**
- * M5 (§18.8) : effets de l'attaque de BASE que sa variante de charge porte aussi — ils ne valent qu'après une charge
- * (Défense du Sanglier : « … moved 20+ feet straight toward it …, the target … has the Prone condition »).
+ * M5 (§18.8): effects of the BASE attack that its charge variant also carries — they only hold after a charge
+ * (Boar's Defense: "… moved 20+ feet straight toward it …, the target … has the Prone condition").
  */
 function chargeOnly(activity) {
   const plan = variantPlanOf(activity.item);
   return (plan && (plan.base === activity.id)) ? chargeOnlyEffects(plan) : [];
 }
 
-/** Les activités de l'item, en liste (`system.activities` est une collection). */
+/** The item's activities, as a list (`system.activities` is a collection). */
 const activitiesOf = item => Array.from(item?.system?.activities?.values?.() ?? []);
 
 /**
- * M3 (§18.4) : « If the target is a Large or smaller creature, it has the Prone condition ». La taille se lit dans
- * `target.affects.special` de l'activité ou dans la phrase « If the target is… » de la description.
+ * M3 (§18.4): "If the target is a Large or smaller creature, it has the Prone condition". The size is read in
+ * `target.affects.special` of the activity or in the "If the target is…" sentence of the description.
  * @returns {object|null}  condition `{ "target.sizeAtMost": "lg" }`
  */
 function sizeGate(activity) {
@@ -115,9 +115,9 @@ function sizeGate(activity) {
 }
 
 /**
- * La condition que la cible doit remplir pour recevoir les effets de l'attaque : la porte de taille (M3), et celle que le contenu
- * déclare (§71, `effectsIf` : « si la cible tombe à 0 PV en raison de cette attaque » → `{ "target.atZero": true }`, jugée après
- * les dégâts). Les deux : toutes deux.
+ * The condition the target must meet to receive the attack's effects: the size gate (M3), and the one the content
+ * declares (§71, `effectsIf`: "if the target drops to 0 HP because of this attack" → `{ "target.atZero": true }`, judged after
+ * the damage). Both: both of them.
  */
 function effectGate(activity) {
   const conditions = [sizeGate(activity), contentOf(activity.item).entry?.effectsIf ?? null].filter(Boolean);
@@ -125,13 +125,13 @@ function effectGate(activity) {
 }
 
 /**
- * L'activité lance-t-elle des dégâts ? On lit la configuration du jet que dnd5e préparerait (`getDamageConfig`), pas
- * la seule liste des parties : une partie peut être vide (« Grapple » de la Main de Bigby : ni dés ni formule), et des
- * dégâts peuvent venir d'ailleurs (les flammes de la Sphère de feu : partie vide, `(niveau)d6` ajouté par l'invocation,
- * §16.15). Sans cette méthode, la liste des parties.
+ * Does the activity roll damage? We read the roll configuration that dnd5e would prepare (`getDamageConfig`), not
+ * just the list of parts: a part can be empty (Bigby's Hand "Grapple": neither dice nor formula), and damage
+ * can come from elsewhere (the flames of Flaming Sphere: empty part, `(niveau)d6` added by the summon,
+ * §16.15). Without this method, the list of parts.
  */
 function hasDamageParts(activity) {
-  // §81 : des dégâts que la donnée met là où la règle n'en donne pas (Frappe piégeuse : sur la sauvegarde du lancement).
+  // §81: damage that the data puts where the rule gives none (Ensnaring Strike: on the casting save).
   if ( contentOf(activity.item).entry?.noDamage?.includes(activity.id) ) return false;
   if ( typeof activity.getDamageConfig !== "function" ) return (activity.damage?.parts?.length ?? 0) > 0;
   try { return (activity.getDamageConfig({})?.rolls ?? []).some(r => (r.parts ?? []).some(part => String(part ?? "").trim())); }
@@ -139,50 +139,50 @@ function hasDamageParts(activity) {
 }
 
 /**
- * `abilities` : toutes les caractéristiques permises (Lutte / Bousculade : Force OU Dextérité, au choix de
- * la cible) ; chaque cible jette la meilleure pour elle (adapter/saves.mjs). `ability` : la première,
- * pour ce qui ne dépend que d'une (échec d'office, journal).
+ * `abilities`: all the allowed abilities (Grapple / Shove: Strength OR Dexterity, at the target's choice);
+ * each target rolls the best one for itself (adapter/saves.mjs). `ability`: the first one,
+ * for what depends on only one (automatic failure, log).
  * @returns {{ability: string, abilities: string[], dc: number, onSave: string, activity: string}|null}
  */
 function saveOf(activity) {
   const dc = activity.save?.dc?.value;
   const abilities = Array.from(activity.save?.ability ?? []).filter(Boolean);
   if ( !Number.isFinite(dc) || !abilities.length ) return null;
-  // §92 : la règle prime sur la donnée (`saveDamage` : Foulée effroyable, rien sur une réussite).
+  // §92: the rule takes precedence over the data (`saveDamage`: "Fearsome Stride", nothing on a success).
   const onSave = contentOf(activity.item).entry?.saveDamage?.[activity.id] ?? activity.damage?.onSave ?? "half";
   return { ability: abilities[0], abilities, dc, onSave, activity: activity.uuid };
 }
 
-/** Descripteurs de cible du message, réduits à ce que le cœur attend. */
+/** Target descriptors of the message, reduced to what the core expects. */
 const messageTargets = message => (message.system.targets ?? []).map(t => ({
   token: t.token, actor: t.actor, name: t.name, ac: t.ac ?? null
 }));
 
-/** Celui qui parle dans le message, comme cible (activité qui ne vise que soi). */
+/** The one who speaks in the message, as target (activity that targets only itself). */
 function selfTarget(message) {
   const actorId = message.speaker?.actor;
-  // §133 : une réaction utilisée sur le client d'un joueur qui n'a pas son token sélectionné (Parade du Duelliste défensif) parle sans
-  // token (`speaker.token` null) : le token actif de l'acteur.
+  // §133: a Reaction used on the client of a player who has not selected their token (Defensive Duelist's Parry) speaks without a
+  // token (`speaker.token` null): the actor's active token.
   const token = speakerTokenOf(message)
     ?? (actorId ? (game.actors.get(actorId)?.getActiveTokens?.(false, true)?.[0] ?? null) : null);
   return token?.actor ? [{ token: token.uuid, actor: token.actor.uuid, name: token.name, ac: null }] : [];
 }
 
-/** §345 : les enchantements appliqués à l'item depuis ce profil (`flags.dnd5e.enchantmentProfile`, dnd5e activity/enchant.mjs:165). */
+/** §345: the enchantments applied to the item from this profile (`flags.dnd5e.enchantmentProfile`, dnd5e activity/enchant.mjs:165). */
 export function enchantedBy(item, profile) {
   return Array.from(item?.effects?.values?.() ?? []).filter(e => !e.disabled && (e.getFlag?.("dnd5e", "enchantmentProfile") === profile));
 }
 
 /**
- * La sauvegarde qu'une attaque qui touche impose : celle que l'item déclare, sinon la sauvegarde sœur que la forme
- * de l'item annonce (M2, Griffe de la Goule).
+ * The save that a hit attack imposes: the one the item declares, otherwise the sister save that the item's
+ * shape announces (M2, Ghoul's Claw).
  */
 function chainedSave(activity) {
   const item = activity.item;
   const onHit = item ? contentOf(item).entry?.onHit : null;
-  // §345 : une sauvegarde qui ne vaut que sous un enchantement de l'item (la lame enduite de la Dague venimeuse).
+  // §345: a save that only applies under an enchantment of the item (the coated blade of the Dagger of Venom).
   if ( onHit?.whileEnchanted && !enchantedBy(item, onHit.whileEnchanted).length ) return null;
-  // `"sole"` : la seule sauvegarde de l'item — celle qu'un enchantement lui a ajoutée (Épée de blessure), d'id imprévisible.
+  // `"sole"`: the item's only save — the one an enchantment added to it (Sword of Wounding), with an unpredictable id.
   const declared = (onHit?.save === "sole") ? soleSaveOf(activitiesOf(item)) : onHit?.save;
   const id = item ? (declared ?? ((onHit?.save === "sole") ? null
     : siblingSaveOf(activitiesOf(item), item.system?.description?.value ?? ""))) : null;
@@ -193,27 +193,27 @@ function chainedSave(activity) {
 }
 
 /**
- * Les étapes d'issue que le contenu déclare pour cet item (SPEC §16 : `move`, `status` sur `hit` ou
- * `failedSave`), portées par le plan avec leur condition ; le cœur les filtre par cible comme les effets,
- * l'adaptateur juge `if` au moment d'appliquer.
+ * The outcome steps that the content declares for this item (SPEC §16: `move`, `status` on `hit` or
+ * `failedSave`), carried by the plan with their condition; the core filters them per target like the effects,
+ * the adapter judges `if` at the moment of applying.
  * @param {Item5e} item
  * @param {string} moment   "hit" | "failedSave"
  * @param {string} when     "always" | "failedSave"
  */
 /**
- * Les items dont les déclarations valent pour une utilisation de cet item, chacun une seule fois (§445) : l'item ; l'item qui a lancé
- * cette copie de sort (`castItemOf`) — les dégâts « en plus » d'une créature qui lance un sort valent pour sa copie, pas pour le sort de
- * tout le monde ; C12-h, les items qui l'enchantent (Décharge répulsive posée sur n'importe quel tour de magie de l'occultiste).
- * dnd5e pose sur la copie d'un sort lancé par une activité « cast » un enchantement (« Spell Changes », activity/cast.mjs) dont l'origine
- * est cette activité (`system.origin.activity`) : sans la règle « une fois », la capacité qui lance le sort comptait deux fois — lanceur
- * et enchanteur — et ses dégâts en plus tombaient deux fois. Deux enchantements d'un même item ne le comptent pas deux fois non plus.
+ * The items whose declarations hold for a use of this item, each only once (§445): the item; the item that cast
+ * this spell copy (`castItemOf`) — the "extra" damage of a creature casting a spell holds for its copy, not for everyone's spell;
+ * C12-h, the items that enchant it (Repelling Blast placed on any of the warlock's cantrips).
+ * dnd5e puts on the copy of a spell cast by a "cast" activity an enchantment ("Spell Changes", activity/cast.mjs) whose origin
+ * is this activity (`system.origin.activity`): without the "once" rule, the feature that casts the spell counted twice — caster
+ * and enchanter — and its extra damage applied twice. Two enchantments of the same item do not count it twice either.
  * @param {Item5e} item
  * @returns {Item5e[]}
  */
 export function outcomeSourcesOf(item) {
   if ( !item ) return [];
   const enchanters = Array.from(item.effects?.values?.() ?? []).filter(e => !e.disabled && (e.isAppliedEnchantment ?? (e.type === "enchantment")))
-    .map(e => originItemOf(e)).filter(i => i?.documentName === "Item");   // l'origine d'un enchantement est l'activité
+    .map(e => originItemOf(e)).filter(i => i?.documentName === "Item");   // an enchantment's origin is the activity
   const out = [];
   for ( const source of [item, castItemOf(item), ...enchanters] ) if ( source && !out.includes(source) ) out.push(source);
   return out;
@@ -224,10 +224,10 @@ function outcomeStepsOf(item, moment, when) {
   const out = [];
   for ( const d of outcomeSourcesOf(item).flatMap(i => declarationsOfItem(i)) ) {
     if ( !d.on.includes(moment) ) continue;
-    // La condition voyage en JSON : écrite telle quelle dans un flag, Foundry éclaterait ses clés à points
-    // (`"target.sizeAtMost"` → `{ target: { sizeAtMost } }`), vu en jeu le 2026-09-24 (scénario `traction`).
+    // The condition travels as JSON: written as is in a flag, Foundry would split its dotted keys
+    // (`"target.sizeAtMost"` → `{ target: { sizeAtMost } }`), seen in play on 2026-09-24 (scenario `traction`).
     for ( const step of d.do ) {
-      // Dégâts d'issue (sans destinataire : la cible atteinte) ; `onSave: "half"` : aussi sur une réussite, à moitié.
+      // Outcome damage (without a recipient: the target hit); `onSave: "half"`: also on a success, halved.
       const outcomeDamage = (step.type === "damage") && !("to" in step);
       if ( !OUTCOME_STEPS.includes(step.type) && !outcomeDamage ) continue;
       const stepWhen = (outcomeDamage && (step.onSave === "half")) ? "always" : when;
@@ -238,25 +238,25 @@ function outcomeStepsOf(item, moment, when) {
 }
 
 /**
- * Les effets de l'activité de sauvegarde, avec leur moment : `savedEffects` du contenu (réussite seulement), `onSave` ;
- * `failMargins` (§19.6) : un écart de sauvegarde exigé (« si elle rate le jet de 5 ou plus »).
+ * The effects of the save activity, with their moment: `savedEffects` of the content (success only), `onSave`;
+ * `failMargins` (§19.6): a required save margin ("if it fails the roll by 5 or more").
  */
 function saveEffectsOf(activity) {
   const entry = activity.item ? contentOf(activity.item).entry : null;
-  // §158 : rien pour une zone `zoneEffects` (`effectsOf`) — Tempête radieuse de Jallarzi : Aveuglé, Assourdi « tant qu'elle est dans
-  // le Cylindre ».
+  // §158: nothing for a `zoneEffects` area (`effectsOf`) — Jallarzi's Storm of Radiance: Blinded, Deafened "as long as it is in
+  // the Cylinder".
   const saved = new Set(entry?.savedEffects ?? []);
   const margins = entry?.failMargins ?? {};
-  // K9 (§330) : la porte de taille (M3) vaut aussi pour les effets d'une sauvegarde (Coup de bouclier, Constriction : « si la cible est
-  // de taille G ou inférieure ») — elle ne valait que pour ceux d'une attaque. K12 (§333) : `effectsIf` aussi (Protection ésotérique :
-  // « si la cible est un Mort-vivant »).
+  // K9 (§330): the size gate (M3) also holds for the effects of a save (Shield Bash, Constrict: "if the target is
+  // Large or smaller") — it used to hold only for those of an attack. K12 (§333): `effectsIf` too ("Esoteric Protection":
+  // "if the target is an Undead").
   return effectsOf(activity, e => saved.has(effectKey(e)) ? "saved" : (e.onSave === true ? "always" : "failedSave"), effectGate(activity))
     .map(e => (margins[e.id] ? { ...e, margin: margins[e.id] } : e));
 }
 
-/** Sauvegarde répétée (brique « resave ») : le message ne demande que la sauvegarde, rien n'est appliqué. */
+/** Repeated save ("resave" brick): the message only asks for the save, nothing is applied. */
 function resavePlan(message, activity, common, targets) {
-  // C12-e : la sauvegarde déclarée par le contenu (`resave.ability`), quand l'activité n'en a pas.
+  // C12-e: the save declared by the content (`resave.ability`), when the activity has none.
   const declared = message.getFlag(MODULE_ID, "resave")?.save;
   const save = declared ? { ability: declared.ability, abilities: [declared.ability], dc: declared.dc, onSave: "none", activity: activity.uuid } : saveOf(activity);
   if ( !save ) return null;
@@ -264,37 +264,37 @@ function resavePlan(message, activity, common, targets) {
 }
 
 /**
- * Le nom d'un effet de l'activité, pour la question posée à l'auteur. Lu sur l'item (ou la référence de compendium déjà en
- * cache), pas par `profile.effect` : dnd5e 6.0 le déprécie au profit de `getEffect()`, asynchrone (un avertissement par effet,
- * dix-huit pour Assistance).
+ * The name of an activity effect, for the question asked to the author. Read on the item (or the compendium reference already in
+ * cache), not via `profile.effect`: dnd5e 6.0 deprecates it in favor of `getEffect()`, asynchronous (one warning per effect,
+ * eighteen for "Assistance").
  */
 const effectLabel = (e, item) => effectOfProfile(e, item)?.name ?? e.uuid ?? e._id;
 
 /**
- * Effets EXCLUSIFS (contenu `choice: { effects: "one" }`, Maléfice) : le plan porte la question,
- * une option par effet propre à l'activité ; le cœur retient l'application jusqu'à la réponse.
- * Rien à choisir avec un seul effet.
+ * EXCLUSIVE effects (content `choice: { effects: "one" }`, Hex): the plan carries the question,
+ * one option per effect specific to the activity; the core holds back the application until the answer.
+ * Nothing to choose with a single effect.
  */
 function withChoice(activity, plan) {
-  // §53 : la potion qui a fait lancer ce sort en impose un effet (`potionEffect` : Croissance → agrandir) — pas de question.
+  // §53: the potion that made this spell be cast imposes an effect on it (`potionEffect`: Growth → enlarge) — no question.
   const potion = potionOfCast(activity?.item);
   const imposed = potion?.identifier ? entryOfIdentifier(potion.identifier)?.potionEffect : null;
-  // L'effet est donné, pas subi : pas de sauvegarde (celle d'Agrandissement/rapetissement vaut pour une cible non consentante).
+  // The effect is given, not suffered: no save (that of Enlarge/Reduce applies to an unwilling target).
   if ( imposed ) return { ...plan, save: null, effects: (plan.effects ?? []).filter(e => e.id === imposed).map(e => ({ ...e, when: "always" })) };
   const choice = activity.item ? contentOf(activity.item).entry?.choice : null;
-  // §504 (B24) : « au lieu d'infliger des dégâts, la créature peut agripper la cible » — sur une attaque qui fait des dégâts.
+  // §504 (B24): "instead of dealing damage, the creature can grapple the target" — on an attack that deals damage.
   if ( choice?.outcome && plan.attack && plan.damage ) {
     const escapeDc = choice.grapple?.escapeDc ?? null;
     return { ...plan, choice: { prompt: choice.prompt ?? game.i18n.localize("DND5ECOMBAT.ChoixIssue.Question"), outcome: { escapeDc },
       options: [{ id: OUTCOME_DAMAGE, label: game.i18n.localize("DND5ECOMBAT.ChoixIssue.Degats") },
         { id: OUTCOME_GRAPPLE, label: escapeDc ? game.i18n.format("DND5ECOMBAT.ChoixIssue.AgripperDD", { dc: escapeDc }) : game.i18n.localize("DND5ECOMBAT.ChoixIssue.Agripper") }] } };
   }
-  if ( choice?.effects !== "one" ) return plan;   // `pool` seul : effets reliés, rien à choisir (§53)
-  // Une attaque qui enchaîne sa sauvegarde sœur (§19.8 : poussée ou Agrippée) : les effets de la sœur.
+  if ( choice?.effects !== "one" ) return plan;   // `pool` alone: linked effects, nothing to choose (§53)
+  // An attack that chains its sister save (§19.8: push or Grappled): the sister's effects.
   const chained = plan.save?.chained ? activity.item.system.activities?.get(plan.save.activity?.split(".").pop()) : null;
   const own = applicableEffectsOf(chained ?? activity).map(e => ({ id: effectKey(e), label: effectLabel(e, (chained ?? activity).item) }));
   if ( own.length < 2 ) return plan;
-  // K3 (§324) : tiré au dé — les options dans l'ordre du texte (`order`), celles qu'il ne nomme pas à la suite.
+  // K3 (§324): rolled with a die — the options in the order of the text (`order`), those it does not name following.
   const order = choice.order ?? [];
   const rank = o => { const i = order.indexOf(o.id.split(".").pop()); return (i < 0) ? order.length : i; };
   const options = choice.roll ? [...own].sort((a, b) => rank(a) - rank(b)) : own;
@@ -302,8 +302,8 @@ function withChoice(activity, plan) {
 }
 
 /**
- * §53 : le sort qu'une potion fait lancer est-il pour le buveur ? Oui (« vous gagnez l'effet du sort »), sauf la potion qui « permet
- * de lancer » le sort sur une autre créature (`castTargets` : Amitié avec les animaux).
+ * §53: is the spell that a potion makes you cast for the drinker? Yes ("you gain the effect of the spell"), except the potion that
+ * "allows casting" the spell on another creature (`castTargets`: Animal Friendship).
  */
 export function potionCastsOnDrinker(item) {
   const potion = potionOfCast(item);
@@ -311,40 +311,40 @@ export function potionCastsOnDrinker(item) {
 }
 
 /**
- * @param {ChatMessage} message  Message de type "usage".
+ * @param {ChatMessage} message  Message of type "usage".
  * @returns {{activity: string, source: string|null, origin: string, plan: object, targets: object[],
- *   area: boolean}|null}  null : rien à résoudre, le comportement natif reste.
+ *   area: boolean}|null}  null: nothing to resolve, the native behavior remains.
  */
 export function readUsage(message) {
   const usage = readPlan(message);
   if ( !usage ) return null;
   const activity = message.getAssociatedActivity?.({ scaled: true });
-  // Une sauvegarde répétée n'applique rien (`resavePlan`) : pas de question d'effet exclusif — l'effet choisi au lancer est déjà posé
-  // (vu le 2026-10-26 : Cécité/Surdité reposait « choisir un effet » à chaque fin de tour, et la sauvegarde restait en attente).
+  // A repeated save applies nothing (`resavePlan`): no exclusive-effect question — the effect chosen at casting is already applied
+  // (seen on 2026-10-26: Blindness/Deafness asked again to "choose an effect" at each end of turn, and the save stayed pending).
   const plan = message.getFlag?.(MODULE_ID, "resave") ? usage.plan : withChoice(activity, usage.plan);
   return { ...usage, plan: casterRules(activity, plan, message) };
 }
 
 /**
- * §28 : ce que les aptitudes du lanceur changent au plan d'un sort — Sort mineur appuyé (`potent` : un tour de magie à dégâts,
- * raté ou sauvegardé, fait la moitié des dégâts) ; Façonneur de sorts (`sculpt` : dans un sort d'Évocation à sauvegarde,
- * jusqu'à 1 + son niveau alliés réussissent d'office et ne subissent rien).
+ * §28: what the caster's features change in a spell's plan — Potent Cantrip (`potent`: a damaging cantrip,
+ * missed or saved, deals half damage); Sculpt Spells (`sculpt`: in an Evocation spell with a save,
+ * up to 1 + the spell's level allies succeed automatically and take nothing).
  */
 function casterRules(activity, plan, message=null) {
   const item = activity?.item;
   const actor = activity?.actor;
-  if ( !isSpellCast(item) || !actor ) return plan;   // §48 : un parchemin aussi
+  if ( !isSpellCast(item) || !actor ) return plan;   // §48: a scroll too
   const has = key => actor.items.some(i => contentOf(i).entry?.[key] === true);
   const level = spellLevelOf(item);
   const out = { ...plan };
   if ( plan.damage && (level === 0) && has("potentCantrip") ) out.potent = true;
-  // §157 : l'item lui-même fait la moitié des dégâts sur un raté (Flèche acide de Melf) — même règle, pour lui seul.
+  // §157: the item itself deals half damage on a miss (Melf's Acid Arrow) — same rule, for it alone.
   if ( plan.damage && plan.attack && (contentOf(item).entry?.halfOnMiss === true) ) out.potent = true;
-  // §296 : « 1 + le niveau du sort » — le niveau auquel il est lancé (dnd5e note la montée sur le message : `system.scaling` ; §406 : pas
-  // dans ses flags, que dnd5e 6 n'écrit plus).
+  // §296: "1 + the spell's level" — the level it is cast at (dnd5e records the upcast on the message: `system.scaling`; §406: not
+  // in its flags, which dnd5e 6 no longer writes).
   if ( plan.save && (spellSchoolOf(item) === "evo") && has("sculptSpells") ) out.sculpt = 1 + level + (Number(message?.system?.scaling) || 0);
-  // §32 : Métamagie portée par la carte — Sort prévenant : autant d'alliés que le modificateur de Charisme (au moins un) réussissent
-  // d'office, comme le Façonneur de sorts ; Sort intensifié : la première cible hostile a le Désavantage (adapter/saves.mjs).
+  // §32: Metamagic carried by the card — Careful Spell: as many allies as the Charisma modifier (at least one) succeed
+  // automatically, like Sculpt Spells; Heightened Spell: the first hostile target has Disadvantage (adapter/saves.mjs).
   const meta = usageMetamagic(message);
   if ( plan.save && meta.includes("careful") ) out.sculpt = Math.max(out.sculpt ?? 0, Math.max(1, Number(actor.system.abilities?.cha?.mod) || 0));
   if ( plan.save && meta.includes("heightened") ) out.heightened = true;
@@ -352,35 +352,35 @@ function casterRules(activity, plan, message=null) {
 }
 
 /**
- * L'activité attend-elle la pose de son gabarit ? Pas une ruée en ligne droite (§57, Frappe du vent) : son gabarit de ligne
- * n'est pas posé, les créatures près du trajet sont les cibles du message (`flags.dnd5e-combat.dash`).
+ * Does the activity wait for its template to be placed? Not a straight-line rush (§57, Zephyr Strike): its Line template
+ * is not placed, the creatures near the path are the message's targets (`flags.dnd5e-combat.dash`).
  */
-// §86 : le gabarit de la donnée, ou celui que le contenu fournit (adapter/template.mjs).
+// §86: the data's template, or the one the content supplies (adapter/template.mjs).
 const templated = (activity, message) => !!templateOf(activity)?.type && !message.getFlag?.(MODULE_ID, "dash");
 
 function readPlan(message) {
   const activity = message.getAssociatedActivity?.({ scaled: true });
   if ( !activity ) return null;
   const common = { activity: activity.uuid, source: message.getAssociatedActor?.()?.uuid ?? null, origin: message.id, area: false };
-  // Image miroir (§16.25) : « portée personnelle », sans type de cible dans dnd5e — ses répliques se posent sur le lanceur.
-  // §51 : portée « personnelle », sans zone, utilisée sans cible désignée — c'est l'utilisateur (la Potion de guérison du Guide
-  // du maître : « personnelle », cible « une créature » sans nombre ; sans cela, personne n'était soigné). Les soins seulement :
-  // une capacité utilitaire à portée personnelle (Rage…) a ses effets posés par d'autres chemins.
-  // §101 : de même une potion « au toucher » (Potion de guérison importante du Guide du maître, seule de sa famille à porter
-  // « contact, une créature ») : boire ou faire boire — désignée, la cible ; sans cible, le buveur.
-  // O9f (§359) : une potion ou une huile « au toucher » qui n'est pas un soin (Huile éthérée : son effet sur personne) suit la même règle.
+  // Mirror Image (§16.25): "personal range", without a target type in dnd5e — its duplicates are placed on the caster.
+  // §51: "personal" range, no area, used with no designated target — the user is the target (the Potion of Healing of the
+  // Dungeon Master's Guide: "personal", target "one creature" without a number; without this, nobody was healed). Healing only:
+  // a utility feature with personal range (Rage…) has its effects applied by other paths.
+  // §101: likewise a "touch" potion (Potion of Greater Healing of the Dungeon Master's Guide, the only one of its family to carry
+  // "touch, one creature"): drink or have someone drink — the designated target if there is one; without a target, the drinker.
+  // O9f (§359): a "touch" potion or oil that is not healing (Oil of Etherealness: its effect on no one) follows the same rule.
   const untargetedSelf = !activity.target?.template?.type && !(message.system?.targets?.length)
     && (((activity.type === "heal") && (rangeUnitsOf(activity) === "self")) || (isPotion(activity.item) && (activity.range?.units === "touch")));
-  // §53 : une potion « sur soi » est pour le buveur, quel que soit le type d'activité (Invisibilité, Force de géant, Potion de
-  // poison…) et même si une autre créature est encore visée ; de même le sort qu'une potion fait lancer (Rapidité : Hâte,
-  // Croissance…), quelle que soit sa portée — « quand vous buvez cette potion, vous gagnez l'effet du sort ».
-  // Issue #31 : « Faire boire » (menu du moteur, `administer`) — une potion de soins « personnelle » (Guide du maître) va à la
-  // créature désignée : la règle 2024 permet de boire ou de faire boire une potion.
+  // §53: a "self" potion is for the drinker, whatever the activity type (Invisibility, Giant Strength, Potion of
+  // Poison…) and even if another creature is still targeted; likewise the spell that a potion makes you cast (Speed: Haste,
+  // Growth…), whatever its range — "when you drink this potion, you gain the effect of the spell".
+  // Issue #31: "Give to drink" (engine menu, `administer`) — a "personal" healing potion (Dungeon Master's Guide) goes to the
+  // designated creature: the 2024 rule allows drinking a potion or giving it to someone to drink.
   const administered = (activity.type === "heal") && !!message.getFlag?.(MODULE_ID, "administer") && !!(message.system?.targets?.length);
   const potionSelf = !activity.target?.template?.type && !administered
     && ((isPotion(activity.item) && (activity.range?.units === "self")) || potionCastsOnDrinker(activity.item));
-  // §124 : une capacité que le contenu déclare « sur soi » (`ranges` : { units: "self" } — Champion ancestral, Nimbe sacré) vise le
-  // lanceur, même si les données disent « une créature ».
+  // §124: a feature that the content declares "on self" (`ranges`: { units: "self" } — Ancestral Champion, Holy Nimbus) targets the
+  // caster, even if the data say "a creature".
   const declaredSelf = contentOf(activity.item).entry?.ranges?.[activity.id]?.units === "self";
   const self = (activity.target?.affects?.type === "self") || untargetedSelf || potionSelf || declaredSelf
     || (!!activity.item && (contentOf(activity.item).entry?.duplicates === true));
@@ -390,8 +390,8 @@ function readPlan(message) {
   switch ( activity.type ) {
     case "attack": {
       const chain = chainedSave(activity);
-      // M5 (§18.8) : la variante qui vaut avant le jet (charge, En sang, cible agrippée) donne ses effets et ses dégâts ;
-      // l'attaque reste celle de base (même jet). La variante « avantage » se juge au jet de dégâts.
+      // M5 (§18.8): the variant that applies before the roll (charge, Bloodied, grappled target) gives its effects and its damage;
+      // the attack stays the base one (same roll). The "advantage" variant is judged at the damage roll.
       const variant = attackVariant(message, activity, targets);
       const source = variant?.activity ?? activity;
       const advantage = advantageVariantOf(activity);
@@ -409,7 +409,7 @@ function readPlan(message) {
     case "save": {
       const save = saveOf(activity);
       if ( !save ) {
-        // Donnée d'item abîmée et non réparable (adapter/saves.mjs, repairSaveAbility) : on le dit au lieu de se taire.
+        // Damaged item data that cannot be repaired (adapter/saves.mjs, repairSaveAbility): we say so instead of staying silent.
         console.warn(`${MODULE_ID} | ${activity.item?.name}: saving throw without ability or DC, not automated`, activity);
         if ( game.user.isGM ) ui.notifications.warn(game.i18n.format("DND5ECOMBAT.SauvegardeIncomplete", { item: activity.item?.name }));
         return null;
@@ -422,54 +422,57 @@ function readPlan(message) {
       } };
     }
     case "damage":
-      // §89 : une activité de dégâts dont le contenu retire les dégâts (`noDamage` : Feinte) pose encore ses effets, comme un utilitaire.
+      // §89: a damage activity whose content removes the damage (`noDamage`: Feint) still applies its effects, like a utility.
       if ( !hasDamageParts(activity) ) {
         const effects = effectsOf(activity, () => "always");
         return effects.length ? { ...common, targets, plan: { effects } } : null;
       }
-      // Une activité de dégâts utilisée après le toucher (Frappe occulte, §16.19) porte les étapes « au toucher » du contenu.
-      // À gabarit (Nuage de dagues, Croissance d'épines, §16.20), c'est une zone : ses cibles sont ceux qu'elle recouvre.
-      // Rejouée par une zone (`areaTick`), personne n'a cliqué : c'est le moteur qui lance les dés.
-      // Projectile magique (§16.27) : chaque projectile est un lancement à part, dont le moteur lance les dégâts
-      // (runtime/projectiles.mjs coupe le jet enchaîné de dnd5e et enchaîne les suivants).
+      // A damage activity used after the hit (Eldritch Strike, §16.19) carries the content's "on hit" steps.
+      // With a template (Cloud of Daggers, Spike Growth, §16.20), it is an area: its targets are those it covers.
+      // Replayed by an area (`areaTick`), nobody clicked: the engine rolls the dice.
+      // Magic Missile (§16.27): each missile is a separate cast, whose damage the engine rolls
+      // (runtime/projectiles.mjs cuts off dnd5e's chained roll and chains the following ones).
       const dart = projectilesOf(activity.item)?.attack === false;
       return { ...common, targets, area: templated(activity, message), plan: {
         damage: (message.getFlag?.(MODULE_ID, "areaTick") || dart) ? "author" : "system", effects: effectsOf(activity, () => "always"),
         steps: outcomeStepsOf(activity.item, "hit", "always") } };
     case "heal":
       if ( !activity.healing?.formula ) return null;
-      // §24 : Parade — le « soin » n'est qu'un montant retiré aux dégâts (adapter/reactions.mjs) : rien à appliquer.
+      // §24: Parry — the "heal" is only an amount removed from the damage (adapter/reactions.mjs): nothing to apply.
       if ( message.getFlag?.(MODULE_ID, "reduceOnly") ) return null;
-      // §164 : rejouée par une zone (Lumière guérisseuse d'Invocation de céleste), personne n'a cliqué — le moteur lance les soins.
-      // §296 : une réserve à répartir (`healPool` : Survivance, Guérison de groupe) — runtime/cure.mjs l'applique, pas le jet de dnd5e.
+      // §164: replayed by an area (Healing Light of Summon Celestial), nobody clicked — the engine rolls the healing.
+      // §296: a pool to distribute (`healPool`: "Survivance", "Group Healing") — runtime/cure.mjs applies it, not dnd5e's roll.
       if ( contentOf(activity.item).entry?.healPool?.activities?.includes(activity.id) ) {
         const effects = effectsOf(activity, () => "always");
         return effects.length ? { ...common, targets, plan: { effects } } : null;
       }
       return { ...common, targets, plan: { damage: message.getFlag?.(MODULE_ID, "areaTick") ? "author" : "system", heal: true, effects: effectsOf(activity, () => "always") } };
     case "utility":
-      // §226 : Silence — ses effets n'existent que dans sa zone (`effectsOf` n'en rend aucun) : rien à résoudre.
+      // §226: Silence — its effects exist only in its area (`effectsOf` returns none): nothing to resolve.
       if ( !effectsOf(activity, () => "always").length ) return null;
-      // Une activité qui prend une action de base (Ruse : Se cacher, §20) : le moteur la fait (runtime/hide.mjs) ; l'effet
-      // « Hiding » de l'item n'est pas posé.
+      // An activity that takes a basic action (Cunning Action: Hide, §20): the engine performs it (runtime/hide.mjs); the item's
+      // "Hiding" effect is not applied.
       if ( declaredBasicsOf(activity) ) return null;
-      // §90 : un dé ajouté à la CA (Chassé-croisé : un effet par valeur du dé dans la donnée) — runtime/maneuver-dice.mjs pose le bon.
+      // §90: a die added to AC ("Cross-step": one effect per die value in the data) — runtime/maneuver-dice.mjs applies
+      // the right one.
       if ( contentOf(activity.item).entry?.rolledAc?.activity === activity.id ) return null;
-      // Défense supérieure du chasseur : la donnée porte un effet de Résistance par type de dégâts, que dnd5e poserait tous.
-      // Prise en Réaction, l'étape `resist` pose celle du coup (runtime/reactions.mjs) ; à la main, la carte les laisse au joueur.
+      // Superior Hunter's Defense: the data carries a Resistance effect per damage type, which dnd5e would apply all at once.
+      // Taken as a Reaction, the `resist` step applies the one for the hit (runtime/reactions.mjs); by hand, the card leaves
+      // them to the player.
       if ( message.getFlag?.(MODULE_ID, "reaction") && placesOwnResistance(contentOf(activity.item).entry, activity.id) ) {
         return null;
       }
-      // §72 : un test en opposition (`contest`) — l'effet ne se pose que gagné (runtime/contest.mjs).
+      // §72: a contest (`contest`) — the effect is applied only when won (runtime/contest.mjs).
       const contest = contentOf(activity.item).entry?.contest;
       if ( contest && (!contest.activity || (contest.activity === activity.id)) ) return null;
-      // O9h (§363) : une émanation sur soi qui pose ses effets (Poussière de disparition : « vous et chaque créature dans 3 m ») — ses
-      // cibles sont ceux qu'elle recouvre, comme une zone de sauvegarde.
+      // O9h (§363): a self Emanation that applies its effects (Dust of Disappearance: "you and each creature within 3 m") — its
+      // targets are those it covers, like a save area.
       return { ...common, targets, ...(!self && (rangeUnitsOf(activity) === "self") && activity.target?.template?.type ? { area: templated(activity, message) } : {}),
         plan: { effects: effectsOf(activity, () => "always") } };
     case "check": {
-      // §402 : une activité de test que le contenu déclare porteuse d'effets (`checkPoses` : Dédale — la donnée en fait un test, le
-      // texte bannit d'office) pose ses effets sur la cible, sans test ; le test d'évasion reste celui de `actionEnds`.
+      // §402: a check activity that the content declares as carrying effects (`checkPoses`: Maze — the data makes it a check, the
+      // text banishes automatically) applies its effects to the target, without a check; the escape check remains that of
+      // `actionEnds`.
       if ( contentOf(activity.item).entry?.checkPoses !== true ) return null;
       const effects = effectsOf(activity, () => "always");
       return effects.length ? { ...common, targets, plan: { effects } } : null;

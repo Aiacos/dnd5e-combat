@@ -1,8 +1,8 @@
 /**
- * Fin d'une zone qui dure sans concentration (SPEC §16.37) : Lumière du jour de Sylaene reçoit son heure de fin (une heure
- * après la pose) ; ramenée à 6 s de là, un round de combat (6 s d'heure du monde, dnd5e `CONFIG.time.roundTime`) la fait
- * disparaître, sa lumière avec. Fait avancer l'heure du monde du monde de test d'un round ou deux. Monde `ravenloft`
- * (Sylaene, Zombi) ; non applicable ailleurs.
+ * End of an area that lasts without concentration (SPEC §16.37): Sylaene's Daylight receives its end time (one hour
+ * after placement); brought back to 6 s from then, a combat round (6 s of world time, dnd5e `CONFIG.time.roundTime`) makes it
+ * disappear, its light with it. Advances the test world's world time by a round or two. `ravenloft` world
+ * (Sylaene, Zombie); not applicable elsewhere.
  */
 const DAYLIGHT = "Compendium.dnd-players-handbook.spells.phbsplDaylight00";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -33,7 +33,7 @@ export default {
     const lights = async () => ((await ctx.call("list-scene-objects", { types: ["AmbientLight"] })).objects?.AmbientLight ?? []);
     const before = (await lights()).length;
 
-    // Une heure, c'est long : on ramène la fin à 6 s de maintenant (heure notée − 3600 + 6), puis un round de combat.
+    // An hour is long: we bring the end back to 6 s from now (noted time − 3600 + 6), then a combat round.
     await ctx.call("update-scene-object", { type: "Region", objectId: day.regionId, data: { "flags.dnd5e-combat.expiresAt": at - 3600 + 6 } });
     await ctx.startCombat([druid, zombi]);
     for ( let i = 0; (i < 4) && (await region()); i++ ) {

@@ -1,8 +1,8 @@
 /**
- * Tentacules noirs d'Evard (relevé des trous, 2026-10-22), dans l'Arène des sorts : « sur un échec, elle subit 3d6 dégâts » — rien sur
- * une réussite. La donnée du Manuel porte `onSave: "half"` ; le contenu la corrige (`saveDamage`). `releve-sorts-3` jouait le sort sans
- * regarder ce cas. On relance jusqu'à voir une réussite et un échec (15 essais au plus) : réussite → aucun PV perdu, échec → PV perdus =
- * dégâts consignés, et Entravé. Le sort du Manuel, puis celui du SRD (`black-tentacles`, mêmes ids).
+ * Evard's Black Tentacles (survey of the gaps, 2026-10-22), in the spell Arena: "on a failure, it takes 3d6 damage" — nothing on
+ * a success. The Manual's data carries `onSave: "half"`; the content corrects it (`saveDamage`). `releve-sorts-3` played the
+ * spell without looking at that case. We replay until we see a success and a failure (15 attempts at most): success → no HP lost,
+ * failure → HP lost = recorded damage, and Restrained. The Manual's spell, then the SRD's (`black-tentacles`, same ids).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -38,7 +38,7 @@ export default {
             ctx.expect((lost > 0) && (lost === t.damage?.applied), `${uuid.split(".")[1]} : ${t.name} rate → ${lost} PV perdus, ${t.damage?.applied} consignés`);
           }
         }
-        // La zone de l'essai : retirée avant le suivant (elle rejouerait sa sauvegarde à l'entrée).
+        // The attempt's area: removed before the next one (it would replay its saving throw on entry).
         const { objects } = await ctx.call("list-scene-objects", { types: ["Region"] });
         for ( const reg of objects.Region ?? [] ) await ctx.call("delete-scene-object", { type: "Region", objectId: reg.id }).catch(() => {});
       }

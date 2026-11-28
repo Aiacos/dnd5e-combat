@@ -1,7 +1,7 @@
 /**
- * §102 : ce que le moteur offre aux modules voisins pour le budget du tour — savoir si une dépense est possible, et la faire
- * (Darsh Loot : « Fouiller les environs » coûte l'action Observation en combat). Le moteur n'en connaît aucun : c'est l'API
- * publique `api.budget`. Même schéma que le déplacement d'une zone (runtime/zones.mjs `handleMoveZone`).
+ * §102: what the engine offers neighboring modules for the turn budget — knowing whether a spend is possible, and making it
+ * (Darsh Loot: "Search the surroundings" costs the Search action in combat). The engine knows none of them: it is the public API
+ * `api.budget`. Same pattern as the movement of an area (runtime/zones.mjs `handleMoveZone`).
  */
 import { checkUse, spendUse, basicAction, BASIC_ACTION_FLAGS } from "../core/turn.mjs";
 import { windowDisengaged } from "./reactions.mjs";
@@ -10,15 +10,15 @@ import { dropHeld } from "../adapter/orders.mjs";
 
 const request = cost => ({ cost, weaponAttack: false, usesSpellSlot: false });
 
-/** Le combattant de cet acteur dans le combat commencé, ou null (hors combat : rien ne coûte). */
+/** This actor's combatant in the started combat, or null (out of combat: nothing costs). */
 function combatantOf(actor) {
   if ( !actor || !game.combat?.started ) return null;
   return combatantFor(actor) ?? null;
 }
 
 /**
- * Ce qui empêche cette dépense (« notYourTurn », « noAction », « noBonus », « noReaction ») ; liste vide si elle est possible,
- * ou si l'acteur n'est pas en combat.
+ * What prevents this spend ("notYourTurn", "noAction", "noBonus", "noReaction"); empty list if it is possible,
+ * or if the actor is not in combat.
  * @param {Actor} actor
  * @param {"action"|"bonus"|"reaction"} [cost="action"]
  */
@@ -29,8 +29,8 @@ export function budgetIssues(actor, cost="action") {
 }
 
 /**
- * Dépenser une action (ou une action Bonus, une réaction) du budget de cet acteur, s'il est en combat. À appeler chez le MJ
- * actif (le budget est un drapeau du combattant). Rend vrai si une dépense a été écrite.
+ * Spend an action (or a Bonus Action, a Reaction) from this actor's budget, if they are in combat. To call on the active
+ * GM (the budget is a combatant flag). Returns true if a spend was written.
  */
 export async function spendBudget(actor, cost="action") {
   const combatant = combatantOf(actor);
@@ -39,14 +39,13 @@ export async function spendBudget(actor, cost="action") {
   return true;
 }
 
-/** §179 : les actions de base qu'un voisin peut faire prendre à une créature sans item (un PNJ n'a pas ceux du moteur). */
+/** §179: the basic actions that a neighbor can have a creature without an item take (an NPC does not have the engine's). */
 export const TAKEABLE_BASICS = Object.freeze(["dash", "disengage", "dodge"]);
 
 /**
- * §179 : faire prendre une action de base à une créature en combat (Foncer, Se désengager, Esquiver), comme son item le ferait :
- * l'action dépensée et l'état du tour posé (déplacement doublé, pas d'attaque d'opportunité, Esquive) ; Se désengager ouvre aussi
- * les réactions à un désengagement (Sentinelle). Chez le MJ actif. Rend vrai si c'est fait ; faux hors combat, hors de son tour,
- * sans action, ou déjà pris.
+ * §179: have a creature in combat take a basic action (Dash, Disengage, Dodge), as its item would: the action spent and the turn
+ * state set (doubled movement, no Opportunity Attack, Dodge); Disengage also opens the Reactions to a disengagement (Sentinel).
+ * On the active GM. Returns true if done; false out of combat, out of its turn, with no action, or already taken.
  * @param {Actor} actor
  * @param {"dash"|"disengage"|"dodge"} kind
  */
@@ -55,7 +54,7 @@ export async function takeBasicAction(actor, kind) {
   const combatant = combatantOf(actor);
   if ( !combatant ) return false;
   const before = readBudget(combatant);
-  if ( (kind !== "dash") && before[BASIC_ACTION_FLAGS[kind]] ) return false;   // §402 : Foncer se reprend avec une autre action
+  if ( (kind !== "dash") && before[BASIC_ACTION_FLAGS[kind]] ) return false;   // §402: Dash is taken again with another action
   if ( checkUse(before, request("action"), { isOwnTurn: isOwnTurn(combatant) }).length ) return false;
   await writeBudget(combatant, basicAction(before, kind));
   if ( (kind === "disengage") && combatant.token ) windowDisengaged(combatant.token);
@@ -63,9 +62,9 @@ export async function takeBasicAction(actor, kind) {
 }
 
 /**
- * §180 : une sauvegarde demandée à une créature hors d'une résolution (un voisin : le test de moral d'un PNJ), lancée sans fenêtre,
- * visible dans le chat comme les sauvegardes des PNJ que le moteur lance. Rend `{ total, d20, dc, success }`, ou null si rien n'a été
- * lancé. `flavor` : le titre de la carte.
+ * §180: a saving throw requested of a creature outside a resolution (a neighbor: an NPC's morale check), rolled without a
+ * window, visible in chat like the saving throws of NPCs that the engine rolls. Returns `{ total, d20, dc, success }`, or null if
+ * nothing was rolled. `flavor`: the card's title.
  * @param {Actor} actor
  * @param {{ ability: string, dc: number, advantage?: boolean, disadvantage?: boolean, flavor?: string }} request
  */
@@ -79,8 +78,8 @@ export async function requestSave(actor, { ability, dc, advantage=false, disadva
 }
 
 /**
- * §180 : lâcher ce que la créature tient (comme l'ordre « Lâche » d'Injonction : au sol si un voisin en fait une pile, sinon
- * déséquipé). Rend `{ items, pile, kept }` (adapter/orders.mjs `dropHeld`).
+ * §180: drop what the creature holds (like the "Drop" order of Command: on the ground if a neighbor makes a pile of it, otherwise
+ * unequipped). Returns `{ items, pile, kept }` (adapter/orders.mjs `dropHeld`).
  */
 export const dropHeldBy = token => dropHeld(token?.document ?? token);
 

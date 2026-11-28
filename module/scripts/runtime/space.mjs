@@ -1,12 +1,12 @@
 /**
- * L'espace en trois dimensions en marche (SPEC §14.2, P2) : le réglage de monde « Élévation et
- * volumes », l'auto-contrôle de l'API du cœur à `ready`, et la tranche d'élévation donnée aux
- * zones de sort **à la pose**, dans les données de création que dnd5e soumet au hook
- * `dnd5e.createMeasuredTemplate` (canvas/template-placement.mjs:172) — sur le client qui pose le
- * gabarit, joueur compris : la région naît avec sa hauteur, personne n'a à la réécrire.
+ * Three-dimensional space in play (SPEC §14.2, P2): the world setting "Elevation and
+ * volumes", the core API self-check at `ready`, and the elevation slice given to
+ * spell areas **when placed**, in the creation data that dnd5e submits to the hook
+ * `dnd5e.createMeasuredTemplate` (canvas/template-placement.mjs:172) — on the client that places the
+ * template, player included: the region is born with its height, nobody has to rewrite it.
  *
- * Les distances en 3D (adapter/turn.mjs) ne dépendent d'aucun réglage : sans élévation, rien ne
- * change. Ce réglage tient la tranche des zones et la ligne d'effet à travers les surfaces.
+ * 3D distances (adapter/turn.mjs) depend on no setting: without elevation, nothing
+ * changes. This setting holds the slice of the areas and the line of effect through surfaces.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,7 +21,7 @@ function refresh() {
   setSpaceAvailable(game.settings.get(MODULE_ID, VOLUMES_SETTING) && !checkSpaceApi().length);
 }
 
-/** dnd5e va créer les régions d'une activité : on leur donne leur tranche d'élévation. */
+/** dnd5e is about to create the regions of an activity: we give them their elevation slice. */
 function onTemplateData(activity, regionData) {
   if ( !isSpaceAvailable() || !canvas?.scene ) return;
   const originToken = usageTokenOf(activity);
@@ -42,11 +42,11 @@ export function registerSpace() {
 
   route("dnd5e.createMeasuredTemplate", onTemplateData, { label: "area: elevation slice not set" });
 
-  // Piège du cœur 14.368 (vu en jeu le 2026-09-23) : `RegionDocument#segmentizeMovementPath` lit le champ
-  // privé `#polygonTree` (client/documents/region.mjs, #testSamples) sans passer par l'accesseur qui le
-  // construit ; un changement d'élévation PUR d'un token (sans x/y) plante alors « Cannot read properties
-  // of undefined (reading 'testPoint') » tant que rien n'a lu `region.polygonTree`. On le lit pour chaque
-  // région de la scène affichée — c'est un cache, pas un patch.
+  // Core 14.368 trap (seen in play on 2026-09-23): `RegionDocument#segmentizeMovementPath` reads the
+  // private field `#polygonTree` (client/documents/region.mjs, #testSamples) without going through the accessor that
+  // builds it; a PURE elevation change of a token (without x/y) then crashes with "Cannot read properties
+  // of undefined (reading 'testPoint')" as long as nothing has read `region.polygonTree`. We read it for every
+  // region of the displayed scene — it is a cache, not a patch.
   const warm = () => { for ( const r of canvas?.scene?.regions ?? [] ) r.polygonTree; };
   for ( const hook of ["canvasReady", "createRegion", "updateRegion"] ) route(hook, warm, { label: "regions: polygons not prepared" });
 

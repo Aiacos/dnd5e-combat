@@ -1,13 +1,15 @@
 /**
- * Relevé des sorts, lot 5a (SPEC §161), monde `dnd-6`, arène. Sorts prêtés du Manuel des joueurs (à volonté).
- *  - Détection de l'invisibilité : le Zombi Invisible — le Désavantage du Magicien contre lui disparaît une fois le sort lancé ;
- *  - Injonction (Compulsion) : Charmé sur un échec ; sans direction désignée, pas de sauvegarde rejouée en fin de tour (§403) ;
- *  - Télékinésie : Entravé sur un échec, jusqu'à la fin du prochain tour du lanceur ;
- *  - Sphère résiliente d'Otiluke : le Zombi enfermé ne perd aucun PV ;
- *  - Globe d'invulnérabilité : le Paladin et le Guerrier dedans, le Zombi dehors lance Flamme sacrée sur le Guerrier → hors d'atteinte ;
- *  - Clignotement : l'effet ne porte plus Éthéré ; en fin de tour, sur 4–6, Éthéré, retiré au début du tour suivant ;
- *  - Invocation d'élémentaires mineurs : l'attaque du Magicien contre le Zombi à 4,50 m reçoit 2d8 de plus.
- * Remet positions, PV, effets, combat.
+ * Spell survey, batch 5a (SPEC §161), world `dnd-6`, arena. Spells lent from the Player's Handbook (at will).
+ *  - See Invisibility: the Zombie Invisible — the Wizard's Disadvantage against it disappears once the spell is cast;
+ *  - Compulsion: Charmed on a failure; with no designated direction, no save replayed at the end of the turn (§403);
+ *  - Telekinesis: Restrained on a failure, until the end of the caster's next turn;
+ *  - Otiluke's Resilient Sphere: the enclosed Zombie loses no HP;
+ *  - Globe of Invulnerability: the Paladin and the Fighter inside, the Zombie outside casts Sacred Flame on the Fighter →
+ *    out of reach;
+ *  - Blink: the effect no longer carries Ethereal; at the end of the turn, on 4–6, Ethereal, removed at the start of the next
+ *    turn;
+ *  - Conjure Minor Elementals: the Wizard's attack against the Zombie at 4.50 m receives 2d8 more.
+ * Restores positions, HP, effects, combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -74,7 +76,7 @@ export default {
     const next = async () => { await ctx.call("next-turn", { combatId: ctx.ownCombat }); await pause(3000); };
     const weaponOf = async t => ((await ctx.call("get-actor", { actorId: t.actorId })).items ?? [])
       .find(i => (i.type === "weapon") && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"))?._id ?? null;
-    /** Jusqu'à une sauvegarde ratée (15 essais) ; rend la résolution. */
+    /** Until a failed save (15 tries); returns the resolution. */
     const untilFailed = async (caster, itemId, target, activityType="save") => {
       for ( let n = 1; n <= 15; n++ ) {
         await clearNew(target); await clearNew(caster);
@@ -103,7 +105,7 @@ export default {
       if ( !ctx.expect(!!r && (await statuses(zombi)).includes("charmed"), "Injonction : Charmé sur un échec") ) return;
       await next(); await next();   // fin du tour du Zombi
       const log = (await ctx.engineLog()).filter(l => /repeats the saving throw/.test(l) && /Zombi/.test(l));
-      // §403 : la sauvegarde ne se rejoue qu'après la marche dans la direction désignée (ecarts-sorts-2) ; sans direction, aucune.
+      // §403: the save is replayed only after the walk in the designated direction (ecarts-sorts-2); with no direction, none.
       ctx.expect(log.length === 0, `Injonction : sans direction, pas de sauvegarde rejouée à la fin du tour du Zombi (${log.at(-1) ?? "aucune"})`);
     });
 
@@ -148,9 +150,10 @@ export default {
       ctx.expect(!(await statuses(mage)).includes("ethereal"), "Clignotement : l'effet ne porte plus Éthéré d'office");
       let seen = false;
       for ( let round = 1; (round <= 8) && !seen; round++ ) {
-        await next();   // fin du tour du Magicien : le d6
-        // Le Zombi doit jouer entre deux tours du Magicien ; sauté, le Magicien part et revient au même changement de tour
-        // (le moteur fait le d6 puis le retour) et l'état Éthéré ne se voit jamais (vu le 2026-10-16, cause du saut non trouvée).
+        await next();   // end of the Wizard's turn: the d6
+        // The Zombie must play between two of the Wizard's turns; skipped, the Wizard leaves and returns on the same turn
+        // change (the engine rolls the d6 then the return) and the Ethereal condition is never seen (seen on 2026-10-16,
+        // cause of the skip not found).
         if ( (await current()) !== zombi.id ) {
           const c = await state();
           ctx.expect(false, `Clignotement : le Zombi joue après le Magicien (combattants : ${(c.combatants ?? []).map(x => `${x.name}${x.defeated ? " (vaincu)" : ""}${x.hidden ? " (caché)" : ""}`).join(", ")})`);
@@ -158,7 +161,7 @@ export default {
         }
         if ( (await statuses(mage)).includes("ethereal") ) {
           seen = true;
-          await next();   // début de son tour suivant
+          await next();   // start of its next turn
           ctx.expect(!(await statuses(mage)).includes("ethereal"), "Clignotement : de retour au début de son tour");
         }
         else await next();

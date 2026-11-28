@@ -1,14 +1,14 @@
 /**
- * §212 : En feu (danger « Burning », règles 2024) et propagation des flammes.
- *  - Une créature en feu (l'état `burning` de dnd5e, ou un effet que son item déclare tel : adapter/burning.mjs) subit 1d4 dégâts de
- *    feu au début de chacun de ses tours (MJ actif, en combat). Par une action, elle éteint les flammes en se jetant À terre et en se
- *    roulant au sol (entrée « Éteindre les flammes » du menu de son propre token). Le feu arrosé, l'immersion, l'étouffement : au MJ
- *    (décocher l'état dans le HUD).
- *  - Propagation, selon les règles : une créature en feu qui entre dans une zone inflammable pas encore en feu (Huile, Toile), ou qui
- *    s'y trouve quand elle prend feu, l'embrase (runtime/flammable.mjs). Ses brûlures sont des dégâts de feu : dans une telle zone,
- *    elles l'embrasent aussi (§188 a).
- *  - Propagation maison (réglage de monde `fireSpread`, désactivé par défaut, à la Baldur's Gate 3) : une créature brûlée par une zone
- *    en feu prend feu à son tour, sauf immunité au feu.
+ * §212: Burning ("Burning" hazard, 2024 rules) and spread of flames.
+ *  - A burning creature (dnd5e's `burning` condition, or an effect that its item declares as such: adapter/burning.mjs)
+ *    takes 1d4 fire damage at the start of each of its turns (active GM, in combat). With an action, it puts out the flames by
+ *    throwing itself Prone and rolling on the ground ("Put out the flames" entry of its own token's menu). Dousing with water,
+ *    immersion, smothering: left to the GM (uncheck the condition in the HUD).
+ *  - Spread, per the rules: a burning creature that enters a flammable zone not yet on fire (Oil, Web), or that
+ *    is in one when it catches fire, ignites it (runtime/flammable.mjs). Its burns are fire damage: in such a zone,
+ *    they ignite it too (§188 a).
+ *  - House spread (`fireSpread` world setting, disabled by default, Baldur's Gate 3 style): a creature burned by a zone
+ *    on fire catches fire in turn, unless immune to fire.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -31,10 +31,10 @@ const spreads = () => {
 };
 
 /* -------------------------------------------- */
-/*  Brûler                                      */
+/*  Burn                                        */
 /* -------------------------------------------- */
 
-/** MJ actif, au début du tour d'un combattant en feu : 1d4 de feu, lancé dans le chat, appliqué (résistances de dnd5e). */
+/** Active GM, at the start of a burning combatant's turn: 1d4 fire, rolled in the chat, applied (dnd5e Resistances). */
 function onTurnStart(combat, prior, now) {
   const actor = combat.combatants.get(now?.combatantId)?.actor;
   if ( !actor || !isBurning(actor) ) return;
@@ -52,7 +52,7 @@ function onTurnStart(combat, prior, now) {
   }).catch(err => console.error(`${MODULE_ID} | burning`, err));
 }
 
-/** Éteindre ses flammes : une action (en combat), les effets « En feu » retirés, À terre. Sur le client du propriétaire. */
+/** Put out one's flames: an action (in combat), the "Burning" effects removed, Prone. On the owner's client. */
 export async function extinguish(token) {
   const actor = token?.actor;
   if ( !actor || !isBurning(actor) ) return false;
@@ -65,7 +65,7 @@ export async function extinguish(token) {
   return true;
 }
 
-/** L'entrée du menu de son propre token. */
+/** The entry of one's own token's menu. */
 export function burningEntries(token) {
   if ( !token?.isOwner || !isBurning(token.actor) || !levelAtLeast("assisted") ) return [];
   return [{ icon: "fa-solid fa-fire-extinguisher", label: loc("EnFeu.Eteindre"), run: () => extinguish(token) }];
@@ -75,20 +75,20 @@ export function burningEntries(token) {
 /*  Propagation                                 */
 /* -------------------------------------------- */
 
-/** Les zones inflammables pas encore en feu où se tient ce token en feu s'embrasent. */
+/** The flammable zones not yet on fire where this burning token stands ignite. */
 async function igniteAround(token, cause) {
   if ( !token?.parent || !isBurning(token.actor) || !levelAtLeast("full") ) return;
   for ( const zone of unlitZones(token.parent) ) if ( isInside(token, zone) ) await igniteViaGM(zone, cause);
 }
 
-/** MJ actif : un token en feu a bougé — il embrase la zone inflammable où il arrive. */
+/** Active GM: a burning token moved — it ignites the flammable zone where it arrives. */
 function onTokenMoved(token, changes) {
   if ( !("x" in changes) && !("y" in changes) && !("elevation" in changes) ) return;
   if ( !isBurning(token.actor) ) return;
   igniteAround(token, `${token.name} is on fire`).catch(err => console.error(`${MODULE_ID} | burning: spread`, err));
 }
 
-/** MJ actif : une créature prend feu — la zone inflammable où elle se tient s'embrase. */
+/** Active GM: a creature catches fire — the flammable zone where it stands ignites. */
 function onEffectCreated(effect) {
   if ( !isBurningEffect(effect) || (effect.parent?.documentName !== "Actor") ) return;
   for ( const token of effect.parent.getActiveTokens?.(false, true) ?? [] ) {
@@ -97,8 +97,8 @@ function onEffectCreated(effect) {
 }
 
 /**
- * Propagation maison (`fireSpread`) : une créature brûlée par une zone en feu prend feu à son tour (runtime/flammable.mjs, `burnTick`,
- * après les dégâts). MJ actif.
+ * House spread (`fireSpread`): a creature burned by a zone on fire catches fire in turn (runtime/flammable.mjs, `burnTick`,
+ * after the damage). Active GM.
  */
 export async function catchFireFromZone(token, zoneName) {
   const actor = token?.actor;

@@ -1,27 +1,27 @@
 /**
- * §381 (issue #35) : qui la table attend — une fenêtre de réaction, de choix ou de jet ouverte chez un joueur ou chez le MJ. Ce qui se
- * calcule sans Foundry : la forme d'une attente diffusée (jamais ce qu'elle demande), son expiration, et où chaque client la montre.
+ * §381 (issue #35): who the table is waiting for — a reaction, choice or roll window open for a player or for the GM. What is
+ * computed without Foundry: the shape of a broadcast wait (never what it asks), its expiry, and where each client shows it.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
-/** Les sortes d'attente : une réaction, un choix (option, confirmation), un jet de dés. */
+/** The kinds of wait: a reaction, a choice (option, confirmation), a dice roll. */
 export const AWAITING_KINDS = Object.freeze(["reaction", "choice", "roll"]);
 
-/** Le client qui attend rafraîchit ses attentes à ce rythme ; une attente non rafraîchie depuis `AWAITING_STALE_MS` est oubliée. */
+/** The waiting client refreshes its waits at this rate; a wait not refreshed since `AWAITING_STALE_MS` is forgotten. */
 export const AWAITING_REFRESH_MS = 20000;
 export const AWAITING_STALE_MS = 60000;
-/** Après la fin annoncée d'une fenêtre à délai (le temps qu'elle se résolve seule), son attente tombe d'elle-même. */
+/** After the announced end of a window with a delay (the time it takes to resolve itself), its wait drops by itself. */
 export const AWAITING_GRACE_MS = 5000;
 
-/** Les modes du réglage `awaitingGm` : une fenêtre du MJ pour une créature sans joueur. */
+/** The modes of the `awaitingGm` setting: a GM window for a creature without a player. */
 export const AWAITING_GM_MODES = Object.freeze(["discreet", "token", "hidden"]);
 
 /**
- * La forme diffusée d'une attente : rien d'autre que ces champs — ni le nom de la réaction, ni l'objet, ni l'invite.
+ * The broadcast shape of a wait: nothing but these fields — neither the name of the reaction, nor the item, nor the prompt.
  * @param {object} raw
  * @returns {{id: string, userId: string, userName: string, token: string|null, actor: string|null, kind: string, gm: boolean,
- *   player: boolean, since: number, seconds: number|null, refreshed: number}|null}  null si l'attente est inutilisable.
+ *   player: boolean, since: number, seconds: number|null, refreshed: number}|null}  null if the wait is unusable.
  */
 export function awaitingEntry(raw={}) {
   const id = String(raw.id ?? "");
@@ -42,16 +42,16 @@ export function awaitingEntry(raw={}) {
 }
 
 /**
- * §426 : le libellé d'une attente réservé aux MJ (le titre de la fenêtre : « Inspiration héroïque — Paladin »). Il ne fait PAS partie de
- * l'attente diffusée (`awaitingEntry` ne le garde pas) : il voyage à part, vers les seuls MJ, pour leur File. Une ligne, 80 caractères
- * au plus ; chaîne vide si rien d'utilisable.
+ * §426: the label of a wait reserved for GMs (the window title: "Heroic Inspiration — Paladin"). It is NOT part of
+ * the broadcast wait (`awaitingEntry` does not keep it): it travels apart, to the GMs only, for their Queue. One line,
+ * 80 characters at most; empty string if nothing usable.
  */
 export function gmLabel(text) {
   const clean = String(text ?? "").replace(/\s+/g, " ").trim();
   return (clean.length > 80) ? `${clean.slice(0, 79)}…` : clean;
 }
 
-/** Une attente est-elle encore valable à `now` ? Ni oubliée (pas de nouvelles), ni au-delà de la fin de son délai. */
+/** Is a wait still valid at `now`? Neither forgotten (no news), nor past the end of its delay. */
 export function awaitingAlive(entry, now) {
   if ( !entry ) return false;
   if ( (now - entry.refreshed) > AWAITING_STALE_MS ) return false;
@@ -59,7 +59,7 @@ export function awaitingAlive(entry, now) {
   return true;
 }
 
-/** Ce qui reste du délai, de 1 (vient de s'ouvrir) à 0 ; null sans délai. */
+/** What remains of the delay, from 1 (just opened) to 0; null without a delay. */
 export function awaitingLeft(entry, now) {
   if ( !entry?.seconds ) return null;
   const total = entry.seconds * 1000;
@@ -67,13 +67,13 @@ export function awaitingLeft(entry, now) {
 }
 
 /**
- * Où ce client montre l'attente.
- *  - `none` : rien (c'est lui qui répond, ou la table a éteint l'indicateur, ou le MJ le garde pour lui) ;
- *  - `token` : le sablier au-dessus du token ;
- *  - `banner` : le bandeau discret « Le MJ décide… », sans désigner de créature.
- * Une fenêtre du MJ pour une créature sans joueur révélerait qu'elle a une réaction ou une option : le réglage `gmMode` décide ce que
- * les joueurs en voient. Le MJ, lui, voit tout sur les tokens. Une fenêtre du MJ pour un personnage joueur (joueur absent) n'est pas
- * un secret : sur le token.
+ * Where this client shows the wait.
+ *  - `none`: nothing (it is the one answering, or the table turned the indicator off, or the GM keeps it for themself);
+ *  - `token`: the hourglass above the token;
+ *  - `banner`: the discreet banner "The GM is deciding…", without designating a creature.
+ * A GM window for a creature without a player would reveal that it has a Reaction or an option: the `gmMode` setting decides what
+ * the players see of it. The GM sees everything on the tokens. A GM window for a player character (player absent) is not
+ * a secret: on the token.
  * @param {object} entry
  * @param {{userId: string, isGM: boolean, enabled?: boolean, hidden?: boolean, gmMode?: string}} viewer
  * @returns {"none"|"token"|"banner"}
@@ -89,8 +89,8 @@ export function awaitingPlacement(entry, { userId, isGM, enabled=true, hidden=fa
 }
 
 /**
- * Le tableau des attentes connues de ce client : celles d'un utilisateur remplacent les précédentes (`replace`), une attente arrive ou
- * part (`add`, `remove`), un utilisateur déconnecté perd toutes les siennes (`drop`). Rend un nouveau tableau, trié par ancienneté.
+ * The array of waits known to this client: those of a user replace the previous ones (`replace`), a wait arrives or
+ * leaves (`add`, `remove`), a disconnected user loses all of theirs (`drop`). Returns a new array, sorted by age.
  * @param {object[]} entries
  * @param {{type: "add"|"remove"|"replace"|"drop", entry?: object, id?: string, userId?: string, list?: object[]}} change
  */
@@ -113,7 +113,7 @@ export function applyAwaiting(entries, change) {
   }
 }
 
-/** Les attentes encore valables à `now`. */
+/** The waits still valid at `now`. */
 export function pruneAwaiting(entries, now) {
   return entries.filter(e => awaitingAlive(e, now));
 }

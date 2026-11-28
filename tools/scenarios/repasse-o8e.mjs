@@ -1,10 +1,10 @@
 /**
- * §348, lot O8e de la repasse des objets : Désavantage avec les autres armes. Arène de test (Guerrier, Zombi).
- *  1. Hache du berserker posée sur une Hache d'armes, harmonisée : l'Épée longue du Guerrier attaque avec le Désavantage, la Hache
- *     sans ; non harmonisée : rien.
- *  2. Arc du serment posé sur un Arc long, harmonisé : rien sans ennemi juré ; « Swear Oath » sur le Zombi → l'Épée longue a le
- *     Désavantage, l'Arc non ;
- *     le Zombi à 0 PV → plus de Désavantage.
+ * §348, batch O8e of the item pass: Disadvantage with the other weapons. Test arena (Fighter, Zombie).
+ *  1. Berserker Axe placed on a Battleaxe, attuned: the Fighter's Longsword attacks with Disadvantage, the Axe
+ *     without; not attuned: nothing.
+ *  2. Oathbow placed on a Longbow, attuned: nothing without a sworn enemy; "Swear Oath" on the Zombie → the Longsword has
+ *     Disadvantage, the Bow does not;
+ *     the Zombie at 0 HP → no more Disadvantage.
  */
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
 const PHB = "Compendium.dnd-players-handbook.equipment.Item.";

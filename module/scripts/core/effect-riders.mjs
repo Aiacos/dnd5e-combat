@@ -1,20 +1,21 @@
 /**
- * §526 (issue #255) : les états « cavaliers » d'un effet d'item. dnd5e crée chaque état que l'effet demande en cavalier
- * (`system.rider.statuses`) comme un effet À PART, sans origine, qui survit à la fin de l'effet (data/abstract/active-effect-data-model.mjs,
- * `collectRiders`) : le Dard du pseudodragon laissait la cible Inconsciente une fois le poison parti, un « Frightened » d'une activité
- * la laissait Effrayée. Un état de condition demandé en cavalier devient un état de l'effet lui-même (avec ceux qu'il implique :
- * Inconscient → Neutralisé), et finit donc avec lui. À terre reste un cavalier à part : se réveiller ne relève pas. Pur.
+ * §526 (issue #255): the "rider" conditions of an item effect. dnd5e creates each condition the effect asks for as a rider
+ * (`system.rider.statuses`) as a SEPARATE effect, with no origin, which outlives the end of the effect
+ * (data/abstract/active-effect-data-model.mjs, `collectRiders`): the pseudodragon's Sting left the target Unconscious
+ * once the poison was gone, a "Frightened" from an activity left it Frightened. A condition requested as a rider becomes a
+ * condition of the effect itself (with those it implies: Unconscious → Incapacitated), and so ends with it. Prone stays a
+ * separate rider: waking up does not get one up. Pure.
  */
 
-/** Les cavaliers qui restent à part, quoi qu'il arrive à l'effet qui les a posés. */
+/** The riders that stay separate, whatever happens to the effect that applied them. */
 export const KEPT_RIDERS = Object.freeze(["prone"]);
 
 /**
  * @param {object} o
- * @param {string[]} [o.statuses]    Les états de l'effet.
- * @param {string[]} [o.riders]      Les états qu'il demande en cavaliers.
- * @param {string[]} [o.conditions]  Les états qui sont des conditions (CONFIG.DND5E.conditionTypes).
- * @param {Record<string, string[]>} [o.implied]  Ce qu'implique chaque état (Inconscient → Neutralisé).
+ * @param {string[]} [o.statuses]    The conditions of the effect.
+ * @param {string[]} [o.riders]      The conditions it requests as riders.
+ * @param {string[]} [o.conditions]  The conditions that are conditions (CONFIG.DND5E.conditionTypes).
+ * @param {Record<string, string[]>} [o.implied]  What each condition implies (Unconscious → Incapacitated).
  * @returns {{statuses: string[], riders: string[], folded: string[]}}
  */
 export function foldRiderStatuses({ statuses=[], riders=[], conditions=[], implied={} }={}) {

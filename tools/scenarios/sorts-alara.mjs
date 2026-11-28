@@ -1,12 +1,12 @@
 /**
- * Règles de sorts (SPEC §16.47), monde `ravenloft` : Alara (clerc), Bramo, le Zombi.
- *  1. Invisibilité sur soi, puis Flamme sacrée sur le Zombi : l'invisibilité cesse (lancer un sort).
- *  2. Assistance sur Bramo, profil Perception choisi d'office : un seul effet posé.
- *  3. Stabilisation sur Bramo debout : rien (il n'est pas à 0 PV) ; à 0 PV : Stabilisé ; soigné : Stabilisé retiré.
- *  4. Restauration partielle sur Bramo Empoisonné : l'état cesse, sans fenêtre (un seul état à faire cesser).
- *  5. Passage sans trace sur soi : Bramo, à moins de 9 m, reçoit la copie d'aura ; la concentration retirée, elle part.
- * Tentacules de Hadar (réactions) et Charme-personne (avantage en combat) : jugés au moment d'une réaction ou d'une
- * sauvegarde, hors scénario. Remet PV, états et concentration.
+ * Spell rules (SPEC §16.47), world `ravenloft`: Alara (cleric), Bramo, the Zombie.
+ *  1. Invisibility on self, then Sacred Flame on the Zombie: the invisibility ends (casting a spell).
+ *  2. Guidance on Bramo, Perception profile chosen outright: a single effect placed.
+ *  3. Spare the Dying on Bramo standing: nothing (he is not at 0 HP); at 0 HP: Stable; healed: Stable removed.
+ *  4. Lesser Restoration on Poisoned Bramo: the condition ends, with no window (a single condition to end).
+ *  5. Pass without Trace on self: Bramo, within 9 m, receives the aura copy; Concentration removed, it goes away.
+ * Arms of Hadar (Reactions) and Charm Person (Advantage in combat): judged at the moment of a Reaction or a
+ * saving throw, outside the scenario. Puts back HP, conditions and Concentration.
  */
 const MODULE_ID = "dnd5e-combat";
 const PERCEPTION = "qPowjrduxnzKpH8x";
@@ -35,7 +35,7 @@ export default {
       await ctx.call("update-actor", { actorId: bramo.actorId, actorData: { "system.attributes.death.success": 0, "system.attributes.death.failure": 0 } });
     });
 
-    // 1. Invisibilité rompue par un sort.
+    // 1. Invisibility broken by a spell.
     await ctx.use({ tokenId: alara.id, identifier: "invisibility", targetTokenIds: [alara.id] });
     await pause(1500);
     ctx.expect((await statuses(alara)).includes("invisible"), "Invisibilité sur Alara");
@@ -53,8 +53,8 @@ export default {
     await dropConcentration();
     await ctx.removeEffectsNamed(bramo, /Assistance|Guidance/);
 
-    // 3. Stabilisation.
-    // L'effet se pose à la fin de l'animation (BLFX, ~2,4 s dans `dnd-6`) : on attend la résolution, pas un délai fixe.
+    // 3. Spare the Dying.
+    // The effect is placed at the end of the animation (BLFX, ~2.4 s in `dnd-6`): we wait for the resolution, not a fixed delay.
     const spare = async () => {
       const used = await ctx.use({ tokenId: alara.id, identifier: "spare-the-dying", targetTokenIds: [bramo.id] });
       if ( used.usageMessageId ) await ctx.settle(used.usageMessageId).catch(() => null);
@@ -78,8 +78,8 @@ export default {
     await pause(2000);
     ctx.expect(!(await statuses(bramo)).includes("poisoned"), "Restauration partielle : Empoisonné cesse");
 
-    // 5. Passage sans trace (en combat : le réglage « auras en combat seulement » peut être actif). Bramo près d'Alara (deux cases) : ces
-    //    deux-là ne sont pas replacés par le lanceur (hors de la distribution de l'arène), Bramo a pu être laissé à 50 ft (vu le 2026-10-20).
+    // 5. Pass without Trace (in combat: the "auras in combat only" setting may be active). Bramo near Alara (two cells): these
+    //    two are not repositioned by the caster (outside the arena's layout), Bramo may have been left at 50 ft (seen 2026-10-20).
     const bramoHome = await ctx.position(bramo);
     const alaraAt = await ctx.position(alara);
     const g = await ctx.gridSize();

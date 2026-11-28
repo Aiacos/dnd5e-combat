@@ -1,13 +1,13 @@
 /**
- * §164 : des sorts qui changent l'élévation d'une créature.
- *  - Lévitation (`levitate: { effect, height, units }`) : le porteur de l'effet s'élève de `height` à la pose ; tant qu'il lévite, son
- *    effet porte l'immunité à « En chute » de dnd5e (content/spell-rules.mjs, `effectChanges`). §195 : l'effet tombé, il « redescend
- *    doucement jusqu'au sol » — le sol sous lui (`groundUnder`), par un déplacement `fall` (sans coût, sans dégâts), puis dnd5e réévalue
- *    sa chute (`updateFalling`, qui retire « En chute » s'il l'avait posé entre-temps).
- *  - Inversion de la gravité (étape `lift` sur une sauvegarde ratée, runtime/engine.mjs) : la cible monte au sommet de la zone ; quand la
- *    zone tombe (concentration, durée), elle chute — §195 : la chute de dnd5e (`fallLikeDnd5e`, runtime/climb.mjs : `updateFalling` puis
- *    `plummet`, 1d6 contondants par 3 m, 20d6 au plus, À terre si elle subit des dégâts).
- * Le token monte par `displace` (ni chemin, ni coût, ni attaque d'opportunité, comme `move-token`). MJ actif.
+ * §164: spells that change a creature's elevation.
+ *  - Levitate (`levitate: { effect, height, units }`): the effect's bearer rises by `height` on placement; while it levitates, its
+ *    effect carries dnd5e's Immunity to "Falling" (content/spell-rules.mjs, `effectChanges`). §195: once the effect ends, it
+ *    "floats gently down to the ground" — the ground under it (`groundUnder`), by a `fall` move (no cost, no damage), then dnd5e
+ *    re-evaluates its fall (`updateFalling`, which removes "Falling" if it had set it in the meantime).
+ *  - Reverse Gravity (`lift` step on a failed save, runtime/engine.mjs): the target rises to the top of the area; when the
+ *    area falls (concentration, duration), it falls — §195: dnd5e's fall (`fallLikeDnd5e`, runtime/climb.mjs: `updateFalling` then
+ *    `plummet`, 1d6 bludgeoning per 3 m, 20d6 at most, Prone if it takes damage).
+ * The token rises by `displace` (no path, no cost, no Opportunity Attack, like `move-token`). Active GM.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -19,16 +19,16 @@ import { lengthIn } from "../adapter/units.mjs";
 import { groundUnder } from "../adapter/altitude.mjs";
 import { fallLikeDnd5e } from "./climb.mjs";
 
-/** Une hauteur dans l'unité de la grille de la scène. */
+/** A height in the unit of the scene's grid. */
 const toGrid = (scene, value, units) => lengthIn(value, units, scene.grid.units);
 
-/** Déplace le token à cette élévation, sur place. */
+/** Moves the token to this elevation, in place. */
 async function setElevation(token, elevation) {
   const { x, y, level } = token._source;
   await token.move([{ x, y, elevation, level, action: "displace" }], { [MODULE_ID]: { cleared: true } });
 }
 
-/** La règle `levitate` de l'item d'où vient cet effet, s'il en est l'effet. */
+/** The `levitate` rule of the item this effect comes from, if it is its effect. */
 function levitationOf(effect) {
   const rule = contentOf(originItemOf(effect)).entry?.levitate;
   return (rule && comesFromItemEffect(effect, rule.effect)) ? rule : null;
@@ -48,9 +48,9 @@ async function onCreateEffect(effect) {
 }
 
 /**
- * La Lévitation finie : le token se pose sur le sol sous lui (pas à l'élévation qu'il avait : il a pu passer au-dessus d'un fossé ou d'un
- * toit), en douceur — un déplacement `fall` (dnd5e : sans coût ; aucune carte de dégâts, celle-ci ne vient que de `plummet`) —, puis dnd5e
- * réévalue sa chute.
+ * Levitation ended: the token settles on the ground under it (not at the elevation it had: it may have passed over a ditch or a
+ * roof), gently — a `fall` move (dnd5e: no cost; no damage card, that one only comes from `plummet`) —, then dnd5e
+ * re-evaluates its fall.
  */
 async function onDeleteEffect(effect) {
   const actor = effect.parent;
@@ -69,7 +69,7 @@ async function onDeleteEffect(effect) {
   }
 }
 
-/** Étape `lift` (runtime/engine.mjs) : la cible monte ; la zone qui l'a soulevée est notée sur son token. */
+/** `lift` step (runtime/engine.mjs): the target rises; the area that lifted it is noted on its token. */
 export async function liftToken(token, step, region) {
   if ( !token ) return;
   const from = token._source.elevation ?? 0;
@@ -81,8 +81,8 @@ export async function liftToken(token, step, region) {
 }
 
 /**
- * La zone tombée : chacun de ceux qu'elle a soulevés chute — la chute de dnd5e (§195), jusqu'à la surface sous lui ; la carte de dégâts
- * de dnd5e est appliquée par le moteur (runtime/climb.mjs, `onFallCard`), qui met À terre si la chute blesse.
+ * The area has fallen: each of those it lifted falls — dnd5e's fall (§195), down to the surface under it; dnd5e's damage card
+ * is applied by the engine (runtime/climb.mjs, `onFallCard`), which makes it Prone if the fall hurts.
  */
 async function onDeleteRegion(region) {
   for ( const token of region.parent?.tokens ?? [] ) {

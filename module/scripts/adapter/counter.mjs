@@ -1,18 +1,18 @@
 /**
- * §66 : contresort à la manière de 2014 — ce qui touche à dnd5e : le niveau auquel un sort va être lancé (lu sur sa configuration
- * d'utilisation, avant le lancement), et le test de celui qui contre. La règle elle-même est pure (core/counter.mjs).
+ * §66: 2014-style Counterspell — what touches dnd5e: the level at which a spell is about to be cast (read from its use
+ * configuration, before casting), and the countering creature's check. The rule itself is pure (core/counter.mjs).
  *
- * Vérifié dans dnd5e 6.0 : à `dnd5e.preUseActivity`, `usageConfig` est déjà préparé (activity/mixin.mjs:232 puis :257) —
- * `spell.slot` (clé d'emplacement, par défaut celle du niveau du sort ou du sort lié) et `scaling` ; un sort lancé par une
- * activité « cast » (`flags.dnd5e.cachedFor`) prend le niveau de cette activité (`spell.level`, data/item/spell.mjs:285 et
- * :312, `scalingIncrease`). Le niveau choisi ensuite dans la fenêtre d'utilisation n'est pas connu de la porte (elle passe avant).
+ * Verified in dnd5e 6.0: at `dnd5e.preUseActivity`, `usageConfig` is already prepared (activity/mixin.mjs:232 then :257) —
+ * `spell.slot` (slot key, by default that of the spell's level or the linked spell's) and `scaling`; a spell cast by a
+ * "cast" activity (`flags.dnd5e.cachedFor`) takes that activity's level (`spell.level`, data/item/spell.mjs:285 and
+ * :312, `scalingIncrease`). The level chosen afterwards in the use dialog is not known to the gate (it runs before).
  */
 
 import { castLevelOf, counterPlan, counterSucceeds } from "../core/counter.mjs";
 import { contentOf } from "./content.mjs";
 import { castingAbilityOf, castingCheck } from "./dispel.mjs";
 
-/** Le niveau de lancement d'un sort, d'après sa configuration d'utilisation (`dnd5e.preUseActivity`). */
+/** The casting level of a spell, from its use configuration (`dnd5e.preUseActivity`). */
 export function castLevelFor(activity, usageConfig={}) {
   const item = activity?.item;
   const slot = usageConfig?.spell?.slot;
@@ -27,7 +27,7 @@ export function castLevelFor(activity, usageConfig={}) {
 }
 
 /**
- * Le contresort que l'item déclare (`counter`), ou null : la Réaction de 2024 (sauvegarde du lanceur) n'en déclare pas.
+ * The Counterspell that the item declares (`counter`), or null: the 2024 Reaction (a save by the caster) declares none.
  * @returns {{level: number}|null}
  */
 export function counterOf(item) {
@@ -37,8 +37,8 @@ export function counterOf(item) {
 }
 
 /**
- * Chez celui qui contre (ses dés) : le sort lancé au niveau `castLevel` échoue-t-il ? Test de la caractéristique d'incantation de
- * l'item (ou de l'acteur) contre DD 10 + niveau, au-delà du niveau du contresort.
+ * On the countering creature's side (their dice): does the spell cast at level `castLevel` fail? Check of the spellcasting
+ * ability of the item (or actor) against DC 10 + level, above the Counterspell's level.
  * @returns {Promise<{castLevel, level, auto, dc, total, ability, dissipated}|null>}
  */
 export async function resolveCounter(actor, item, castLevel) {

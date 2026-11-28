@@ -1,1229 +1,1549 @@
 /**
- * Le schéma du contenu (SPEC §13, S4) : ce qu'un item peut déclarer au moteur, d'où que cela
- * vienne — contenu livré avec le module, surcouche du monde, flag de l'item — et comment ces
- * couches se combinent. Validation ici, pas dans Foundry : une entrée fausse est refusée à
- * l'écriture (runtime/content.mjs) et ignorée à la lecture, jamais appliquée à moitié.
+ * The content schema (SPEC §13, S4): what an item can declare to the engine, wherever it
+ * comes from — content shipped with the module, world overlay, item flag — and how these
+ * layers combine. Validation here, not in Foundry: a wrong entry is refused on
+ * write (runtime/content.mjs) and ignored on read, never half-applied.
  *
- * Une ENTRÉE, indexée par identifiant dnd5e :
+ * An ENTRY, indexed by dnd5e identifier:
  *   {
- *     triggers?: [{ on, if?, do, via? }]        déclarations du registre (core/triggers.mjs) ; `via: "effect"` :
- *                                               portée par les effets que l'item pose (sauvegarde répétée)
+ *     triggers?: [{ on, if?, do, via? }]        declarations of the registry (core/triggers.mjs); `via: "effect"`:
+ *                                               carried by the effects the item applies (repeated save)
  *     aura?: { radius?, units?, affects?, includeSelf?, effect?, radiusFormula?, changes?, types?, whileActive? }
- *                                               `changes` : les changements de la copie, à la place de l'effet de l'item
- *                                               (effet absent, vide ou faux dans le Monster Manual, §18.12) — la copie ne
- *                                               porte alors aucun état ; `types` : seulement ces types de créature
- *     onHit?: { save: <id d'activité> | "sole" } attaque qui impose une sauvegarde (adapter/usage.mjs) ; `"sole"` : la seule
- *                                               sauvegarde de l'item, quand son id n'est pas fixe (activité ajoutée par un
- *                                               enchantement : Épée de blessure)
- *     choice?: { effects: "one", prompt?, pool? }  effets EXCLUSIFS : l'auteur en choisit un (Maléfice) ; `pool` :
- *                                               { <id d'activité> : [ids d'effets de l'item] } — des effets de l'item
- *                                               qu'une activité propose sans les relier (§37, Malédiction : « Curse
- *                                               Ability » et ses six caractéristiques) ; K3 (§324) : `roll: true` — tiré au dé,
- *                                               une face par effet, dans l'ordre de `order` (Lame du chaos : 1d4) ;
- *                                               §504 (B24) : `{ outcome: ["damage", "grapple"], grapple?: { escapeDc } }` — sur une
- *                                               attaque qui touche, l'auteur choisit les dégâts, ou une empoignade à leur place (aucun
- *                                               dégât, Agrippé au DD d'évasion dit) ; `choice` d'avance à l'utilisation : pas de question
- *     teleport?: { distance, units, activity? } l'utilisation téléporte l'utilisateur (§16.10, B11) : la destination se
- *                                               choisit aussitôt, à `distance` au plus — pour un item sans activité
- *                                               « teleport » de dnd5e (tout le PHB : Foulée brumeuse y est utilitaire) ;
- *                                               §461 : sans `distance` ni `units`, la portée de `activity` (en longueur)
- *                                               fait la distance (capacités de monstres, lues dans leur texte) ;
- *                                               `then` : id d'une activité de l'item utilisée à l'arrivée (§67 quater) ;
- *                                               `passengers: { count, within?, units? }` (§264) : jusqu'à `count` créatures non
- *                                               hostiles à `within` (5 ft) partent avec lui, posées à son contact (Porte dimensionnelle) ;
- *                                               `maxLight: "dim"|"dark"` (§367) : départ et arrivée pas plus éclairés (Marche dans l'ombre) ;
- *                                               `area: "left"` (§462) : la zone de l'activité se pose d'office autour de l'espace
- *                                               quitté, avant le saut, et ne prend pas son auteur (Téléportation mortelle) ;
- *                                               `"arrival"` (§463) : autour de lui, une fois arrivé (Téléportation radieuse) ;
- *                                               `after: "attack"` (§464) : offerte une fois l'attaque jugée, touchée ou
- *                                               ratée, pas à l'utilisation (Griffes de l'esprit yugoloth) ;
- *                                               `destination: { near, within, units, trigger? }` (§465) : l'arrivée à
- *                                               `within` d'une créature vue (`trigger` : la cible désignée d'abord ;
- *                                               Poursuite, Rêve éveillé) ou d'une plante (`"plant"`, rappel au MJ ;
- *                                               Marche des arbres) ; sans distance ni portée, près d'une créature suffit
- *     lineDash?: { reach, units, activity? }    ruée en ligne droite (§57) : à l'utilisation, la case
- *                                               d'arrivée se choisit (jusqu'à la Vitesse, inoccupée, en vue, en ligne droite à
- *                                               travers les créatures, sans attaque d'opportunité) ; l'activité (défaut : celle
- *                                               utilisée) joue sur chaque créature à `reach` ou moins d'un espace traversé — sans
- *                                               gabarit (core/dash.mjs)
- *     movable?: { distance, units, cost? }      la zone du sort se déplace (§16.14, B18 : Rayon de lune, « une action
- *                                               Magie lors de vos tours suivants, 18 m au plus ») : relancer le sort
- *                                               quand sa zone est déjà là la déplace vers la case cliquée, au prix de
- *                                               l'activation de l'activité, sans emplacement ; `cost: "none"` — sans rien
- *                                               coûter, à son tour, dès le tour de la pose (la zone suit le déplacement du
- *                                               lanceur : Invocation de céleste)
+ *                                               `changes`: the copy's changes, in place of the item's effect
+ *                                               (effect missing, empty or wrong in the Monster Manual, §18.12) — the copy
+ *                                               then carries no condition; `types`: only these creature types
+ *     onHit?: { save: <activity id> | "sole" }   attack that imposes a save (adapter/usage.mjs); `"sole"`: the only
+ *                                               save of the item, when its id is not fixed (activity added by an
+ *                                               enchantment: Sword of Wounding)
+ *     choice?: { effects: "one", prompt?, pool? }  EXCLUSIVE effects: the author chooses one (Hex); `pool`:
+ *                                               { <activity id>: [item effect ids] } — item effects
+ *                                               that an activity offers without linking them (§37, Bestow Curse:
+ *                                               "Curse Ability" and its six abilities); K3 (§324): `roll: true` —
+ *                                               rolled on a die, one face per effect, in the order of `order`
+ *                                               (Chaos Blade: 1d4);
+ *                                               §504 (B24): `{ outcome: ["damage", "grapple"], grapple?: { escapeDc } }`
+ *                                               — on an attack that hits, the author chooses the damage, or a
+ *                                               grapple in its place (no damage, Grappled at the stated escape DC);
+ *                                               `choice` in advance on use: no question
+ *     teleport?: { distance, units, activity? } use teleports the user (§16.10, B11): the destination is
+ *                                               chosen at once, within `distance` at most — for an item without a
+ *                                               dnd5e "teleport" activity (all of the PHB: Misty Step is a utility
+ *                                               there); §461: without `distance` or `units`, the range of `activity`
+ *                                               (as a length) gives the distance (monster abilities, read from their
+ *                                               text);
+ *                                               `then`: id of an item activity used on arrival (§67 quater);
+ *                                               `passengers: { count, within?, units? }` (§264): up to `count`
+ *                                               non-hostile creatures within `within` (5 ft) leave with them, set
+ *                                               down next to them (Dimension Door);
+ *                                               `maxLight: "dim"|"dark"` (§367): departure and arrival no brighter
+ *                                               ("Shadow Walk");
+ *                                               `area: "left"` (§462): the activity's area is placed automatically
+ *                                               around the space left, before the jump, and does not include its
+ *                                               author ("Deadly Teleportation");
+ *                                               `"arrival"` (§463): around them, once arrived ("Radiant
+ *                                               Teleportation");
+ *                                               `after: "attack"` (§464): offered once the attack is judged, hit or
+ *                                               missed, not on use ("Yugoloth Mind Claws");
+ *                                               `destination: { near, within, units, trigger? }` (§465): arrival
+ *                                               within `within` of a seen creature (`trigger`: the designated target
+ *                                               first; "Pursuit", "Waking Dream") or of a plant (`"plant"`,
+ *                                               reminder to the GM; Tree Stride); without distance or range, near a
+ *                                               creature is enough
+ *     lineDash?: { reach, units, activity? }    straight-line rush (§57): on use, the cell
+ *                                               of arrival is chosen (up to the Speed, unoccupied, in sight, in a
+ *                                               straight line through creatures, without Opportunity Attacks); the
+ *                                               activity (default: the one used) plays on each creature within
+ *                                               `reach` or less of a space crossed — without template
+ *                                               (core/dash.mjs)
+ *     movable?: { distance, units, cost? }      the spell's area moves (§16.14, B18: Moonbeam, "a Magic
+ *                                               action on your later turns, 18 m at most"): recasting the spell
+ *                                               when its area is already there moves it to the clicked cell, at the
+ *                                               price of the activity's activation, without a spell slot;
+ *                                               `cost: "none"` — at no cost, on their turn, from the turn it is
+ *                                               placed (the area follows the movement of the caster: Summon
+ *                                               Celestial)
  *     summon?: { initiative: "after"|"own"|"none", pilot?, endsSpell?, untargeted?, chooseCount? }
- *                                               §385 : `untargeted` — accepté, sans effet : depuis §394 une invocation ne se vise
- *                                               que sur demande (`targetedSummon`) ; `chooseCount` — « jusqu'à N » créatures :
- *                                               le lanceur choisit combien
- *                                               dans la fenêtre « Choisir la forme » (avec le niveau), N selon le niveau du sort :
- *                                               true = le `count` du profil, ou une formule (§387, Animation des morts).
- *                                               les créatures invoquées entrent au combat (§16.13, B12) : `after` =
- *                                               « partage votre initiative et joue juste après vous » (Summon X) ;
- *                                               `own` = « lance sa propre initiative » (Appel de familier) ; `none` =
- *                                               n'entre pas au combat (Œil magique, Lumières dansantes : ils n'agissent pas).
- *                                               `replaces: true` (§230) : une nouvelle invocation renvoie les précédentes du même
- *                                               item (Appel de destrier : « le destrier est remplacé par le nouveau ») ;
- *                                               `minLevels: { <activité>: n }` (§230) : cette activité ne se lance qu'à partir
- *                                               du niveau de sort n — son incantation gratuite (au niveau de base) n'en est pas une.
- *                                               O8f (§349) `hostile: true` : la créature est hostile à tous (Le Crâne, Parchemin
- *                                               d'invocation de titan) — token Hostile, aucun joueur propriétaire ni pilote.
- *                                               §305 `vanishesWithCaster: true` : elle disparaît à la mort de son lanceur (Appel de
- *                                               destrier, Compagnon primitif) ; `endsOnLongRest: true` : elle part au Repos long de
- *                                               son lanceur (Compagnon sauvage).
- *                                               `familiar: true` (§107) : un familier — actions de base sauf l'attaque, vision
- *                                               activée, son maître peut le congédier dans sa poche dimensionnelle et l'en rappeler.
- *                                               `pilot: { cost, distance, units, onCast? }` (§16.15, B19) : un objet que
- *                                               le lanceur commande pendant son tour (Arme spirituelle) — son tour est
- *                                               sauté, une commande coûte `cost` au lanceur et ouvre un déplacement de
- *                                               `distance` et une utilisation ; `onCast` : « use » | « command », la
- *                                               commande offerte au tour du lancement ; `occupies: false` : l'objet
- *                                               n'occupe pas son espace (Main de Bigby) ; `shared: true` : une commande
- *                                               vaut pour tous les objets du sort (« déplacer les lumières ») ;
- *                                               `cluster: { distance, units }` : chacun reste à cette distance d'un autre ;
- *                                               `leash: true` : un objet qui sort de la portée du sort disparaît ;
- *                                               `tether: { distance, units }` : il ne se déplace qu'à cette distance du
- *                                               lanceur (Duplicité : 36 m).
- *                                               `lasts: { value, units }` : la créature disparaît au bout de cette durée
- *                                               d'heure du monde (formule sur les données de l'item ; Compagnon sauvage).
- *                                               Et, pour l'invocation : `mimic: true` (le token prend l'image du lanceur),
- *                                               `endsIfIncapacitated: true` (elle cesse si le lanceur est Neutralisé),
- *                                               `castFrom: true` (le lanceur lance ses sorts depuis sa case : la portée
- *                                               se mesure depuis l'un ou l'autre). `endsSpell: true` : retirer
- *                                               l'objet met fin à la concentration du sort ; `endsAtZero: true` :
- *                                               l'objet à 0 PV aussi ; `vanishesAtZero: true` : la créature
- *                                               disparaît à 0 PV, le sort continue (§259 : sorts d'invocation
- *                                               du PHB 2024) ; `vanishesAfterDamage: n` : elle disparaît quand
- *                                               ses pulsations ont infligé n dégâts au total (Gardien de la foi).
- *                                               `pulse: { item, radius, units }` : une créature
- *                                               qui finit son tour à `radius` de l'objet subit l'activité de son
- *                                               item `item` (identifiant ; Sphère de feu : « flames ») ; `on` : les
- *                                               moments (turnEnd par défaut ; enter : une créature arrive à portée ; turnStart : elle commence son tour à portée ;
- *                                               casterTurnStart : au début du tour du lanceur, contre UN ennemi à portée (§159) ;
- *                                               moves : l'objet arrive à portée d'elle ; `stopsOnContact` (§403) : il s'arrête
- *                                               alors pour le tour, Sphère de feu), une fois par tour et par
- *                                               créature ; `affects: "enemy"` : seulement les ennemis du lanceur ;
- *                                               `seenBy: "caster"` : seulement une créature que le lanceur voit (§368)
- *     burst?: { activity, radius, units, from?, affects? } après le jet d'attaque, touché ou raté, le moteur joue l'activité sœur
- *                                               `activity` sur la cible et chaque créature à `radius` d'elle (§16.19 :
- *                                               l'explosion du Couteau de glace) ; `from` : après ces activités-là
- *                                               (ids), et sur une cible qui a subi des dégâts (Métal brûlant, §16.21) — ou qui a été
- *                                               soignée, après un soin (C12-b : Choc de vie) ; `affects: "enemy"` : les ennemis du
- *                                               lanceur seulement, la cible exclue
- *     recast?: true                             relancer le sort tant que sa concentration tient le réutilise, sans
- *                                               emplacement ni nouvelle concentration (Appel de la foudre, §16.21)
- *     obscures?: true | { fromPulse }           la zone posée par l'item obscurcit fortement (Nappe de brouillard, §16.24) —
- *                                               `fromPulse` : à partir de ce rejeu de `casterPulse` (Tempête vengeresse) :
- *                                               la vue ne la traverse pas ; vision aveugle et perception des vibrations, si
+ *                                               §385: `untargeted` — accepted, no effect: since §394 a summon is only
+ *                                               targeted on request (`targetedSummon`); `chooseCount` — "up to N"
+ *                                               creatures: the caster chooses how many
+ *                                               in the "Choose the form" window (with the level), N according to the
+ *                                               spell level: true = the `count` of the profile, or a formula (§387,
+ *                                               Animate Dead).
+ *                                               the summoned creatures enter combat (§16.13, B12): `after` =
+ *                                               "shares your Initiative and acts right after you" (Summon X);
+ *                                               `own` = "rolls its own Initiative" (Find Familiar); `none` =
+ *                                               does not enter combat (Arcane Eye, Dancing Lights: they do not act).
+ *                                               `replaces: true` (§230): a new summon dismisses the previous ones of
+ *                                               the same item (Find Steed: "the steed is replaced by the new one");
+ *                                               `minLevels: { <activité>: n }` (§230): this activity can only be
+ *                                               cast from spell level n — its free casting (at the base level) is
+ *                                               not one.
+ *                                               O8f (§349) `hostile: true`: the creature is hostile to everyone
+ *                                               ("The Skull", Scroll of Titan Summoning) — Hostile token, no owning
+ *                                               player or pilot.
+ *                                               §305 `vanishesWithCaster: true`: it vanishes when its caster dies
+ *                                               (Find Steed, Primal Companion); `endsOnLongRest: true`: it leaves on
+ *                                               its caster's Long Rest (Wild Companion).
+ *                                               `familiar: true` (§107): a familiar — basic actions except Attack,
+ *                                               vision enabled, its master can dismiss it into its pocket dimension
+ *                                               and recall it.
+ *                                               `pilot: { cost, distance, units, onCast? }` (§16.15, B19): an object
+ *                                               that the caster commands during their turn (Spiritual Weapon) — its
+ *                                               turn is skipped, a command costs the caster `cost` and opens a
+ *                                               movement of `distance` and a use; `onCast`: "use" | "command", the
+ *                                               command offered on the turn of casting; `occupies: false`: the
+ *                                               object does not occupy its space (Bigby's Hand); `shared: true`: one
+ *                                               command applies to all the objects of the spell ("move the
+ *                                               lights"); `cluster: { distance, units }`: each stays within this
+ *                                               distance of another; `leash: true`: an object that leaves the
+ *                                               spell's range disappears; `tether: { distance, units }`: it only
+ *                                               moves within this distance of the caster ("Duplicity": 36 m).
+ *                                               `lasts: { value, units }`: the creature disappears after this
+ *                                               world-time duration (formula on the item's data; Wild Companion).
+ *                                               And, for the summon: `mimic: true` (the token takes the caster's
+ *                                               image), `endsIfIncapacitated: true` (it ends if the caster is
+ *                                               Incapacitated), `castFrom: true` (the caster casts their spells from
+ *                                               their cell: the range is measured from either one).
+ *                                               `endsSpell: true`: removing the object ends the spell's
+ *                                               Concentration; `endsAtZero: true`: the object at 0 HP too;
+ *                                               `vanishesAtZero: true`: the creature disappears at 0 HP, the spell
+ *                                               continues (§259: summoning spells of the 2024 PHB);
+ *                                               `vanishesAfterDamage: n`: it disappears when its pulses have dealt n
+ *                                               damage in total (Guardian of Faith).
+ *                                               `pulse: { item, radius, units }`: a creature that ends its turn
+ *                                               within `radius` of the object suffers the activity of its item
+ *                                               `item` (identifier; Flaming Sphere: "flames"); `on`: the moments
+ *                                               (turnEnd by default; enter: a creature arrives in range; turnStart:
+ *                                               it starts its turn in range; casterTurnStart: at the start of the
+ *                                               caster's turn, against ONE enemy in range (§159); moves: the object
+ *                                               arrives in range of it; `stopsOnContact` (§403): it stops then for
+ *                                               the turn, Flaming Sphere), once per turn and per creature;
+ *                                               `affects: "enemy"`: only the caster's enemies;
+ *                                               `seenBy: "caster"`: only a creature the caster sees (§368)
+ *     burst?: { activity, radius, units, from?, affects? }
+ *                                               after the attack roll, hit or missed, the engine plays the sibling
+ *                                               activity `activity` on the target and every creature within `radius`
+ *                                               of it (§16.19: the explosion of Ice Knife); `from`: after those
+ *                                               activities (ids), and on a target that took damage (Heat Metal,
+ *                                               §16.21) — or that was healed, after a heal (C12-b: "Life Shock");
+ *                                               `affects: "enemy"`: the caster's enemies only, the target excluded
+ *     recast?: true                             casting the spell again while its Concentration lasts reuses it,
+ *                                               without spell slot or new Concentration (Call Lightning, §16.21)
+ *     obscures?: true | { fromPulse }           the area placed by the item heavily obscures (Fog Cloud, §16.24) —
+ *                                               `fromPulse`: from this replay of `casterPulse` (Storm of Vengeance):
+ *                                               sight does not pass through it; Blindsight and Tremorsense, if
  *                                               (§14.1, adapter/vision.mjs)
- *     silences?: true                           la zone posée par l'item fait le silence (Silence, issue #42) : aucun son n'y
- *                                               naît ni ne la traverse — on n'entend ni ce qui est dedans, ni à travers
- *                                               (adapter/hearing.mjs)
- *     usageLimits?: { <id d'activité>: { oncePerTurn?, whenEmpty?, lowestSlot?, noDialog?, cost?, unmoved?, whileEffect?, unlessEffect?,
- *                                               automatic?, light? } }
- *                                               limites d'utilisation que dnd5e ne contrôle pas (§16.40, core/limits.mjs) :
- *                                               une fois à chacun de vos tours ; seulement si l'item `whenEmpty` n'a plus
- *                                               d'utilisation ; `lowestSlot` : l'emplacement le plus bas, sans fenêtre ;
- *                                               `noDialog` : sans la fenêtre de dnd5e ; `cost` : le coût de la règle 2024 (« free » :
- *                                               aucun, §298 : Arme sacrée)
- *                                               quand les données de dnd5e disent autre chose (Flammes : action Bonus)
- *                                               (Regain sauvage) ; `unmoved` : seulement sans s'être déplacé ce tour (Visée
- *                                               stable, §20) ; `whileEffect` (§486) : seulement sous l'effet d'un item de cet
- *                                               identifiant, ou d'un effet de cet id (une liste = l'un d'eux), refus forçable
- *                                               sinon ; `unlessEffect` : seulement hors de ces effets ; `automatic` : le
- *                                               moteur joue déjà cette activité de lui-même, la lancer à la main est refusé
- *                                               (forçable). Une activité ajoutée par un enchantement (id tiré au hasard) se
- *                                               lit sous l'id de l'activité d'origine (adapter/limits.mjs, `riderOriginId`) ;
- *                                               `light` : ["dim", "dark"]… — seulement dans l'une de ces lumières (Ne faire
- *                                               qu'un avec les ombres)
- *     effectsExpire?: "longRest"|"shortRest"    les effets que l'item pose prennent fin à ce repos du porteur (expiration
- *                                               native de dnd5e, `duration.expiry`) — Prière de guérison, §16.38
- *     revealsInvisible?: true                   le porteur d'un effet de l'item « ne peut pas bénéficier de l'état
- *                                               Invisible » (Poussière d'étoile, Lueurs féeriques, §16.36) : la vision
- *                                               simulée et l'état forfaitaire le jugent comme s'il ne l'était pas
+ *     silences?: true                           the area placed by the item makes silence (Silence, issue #42): no
+ *                                               sound is born in it or crosses it — nothing inside is heard, nor
+ *                                               anything through it (adapter/hearing.mjs)
+ *     usageLimits?: { <activity id>: { oncePerTurn?, whenEmpty?, lowestSlot?, noDialog?, cost?, unmoved?, whileEffect?,
+ *                                               unlessEffect?, automatic?, light? } }
+ *                                               usage limits that dnd5e does not control (§16.40, core/limits.mjs):
+ *                                               once on each of your turns; only if the item `whenEmpty` has no
+ *                                               uses left; `lowestSlot`: the lowest slot, without a window;
+ *                                               `noDialog`: without the dnd5e window; `cost`: the cost of the 2024
+ *                                               rule ("free": none, §298: Sacred Weapon)
+ *                                               when the dnd5e data says something else ("Flames": Bonus Action)
+ *                                               (Wild Resurgence); `unmoved`: only without having moved this turn
+ *                                               (Steady Aim, §20); `whileEffect` (§486): only under the effect of an
+ *                                               item with this identifier, or an effect with this id (a list = any
+ *                                               of them), forceable refusal otherwise; `unlessEffect`: only outside
+ *                                               these effects; `automatic`: the engine already plays this activity
+ *                                               by itself, casting it by hand is refused (forceable). An activity
+ *                                               added by an enchantment (random id) is read under the id of the
+ *                                               original activity (adapter/limits.mjs, `riderOriginId`);
+ *                                               `light`: ["dim", "dark"]… — only in one of these lights (One with
+ *                                               Shadows)
+ *     effectsExpire?: "longRest"|"shortRest"    the effects the item applies end at this rest of the bearer
+ *                                               (native dnd5e expiry, `duration.expiry`) — Prayer of Healing, §16.38
+ *     revealsInvisible?: true                   the bearer of an item effect "can't benefit from the Invisible
+ *                                               condition" ("Stardust", Faerie Fire, §16.36): simulated vision and
+ *                                               the flat-rate condition judge them as if they were not
  *     light?: { on, bright?, dim?, units?, darkness?, dispels?, carried?, single?, color?, animation?, activity? }
- *                                               lumière ou ténèbres du sort (§16.31, core/light.mjs). `on` : « area » = une
- *                                               source sur la zone posée, qui la suit et part avec elle (`darkness: true` :
- *                                               ténèbres magiques du rayon de la zone, qui bloquent la vue comme la brume,
- *                                               sauf vision véritable et Vision du diable ; `dispels: n` : dissipe les
- *                                               ténèbres de niveau ≤ n qu'elle recouvre) ; « effect » = les effets de l'item
- *                                               font briller leur porteur ; « summon » = l'objet invoqué porte sa lumière,
- *                                               `carried` : au lancement, le joueur choisit « au sol » ou « sur moi » (le
- *                                               lanceur brille) et la couleur (§16.35) ;
- *                                               « wall » (§170) = une rangée de sources de chaque côté d'un mur posé par
- *                                               points (Mur de feu), qui naissent, suivent et partent avec lui ;
- *                                               « caster » (§287) = à l'activité `activity` (sinon toute), le lanceur
- *                                               brille tant que dure sa concentration (Rayon de soleil) ; `darkness` +
- *                                               `dispels: n` : les ténèbres dissipent les lumières de sort de niveau ≤ n
- *                                               qu'elles recouvrent (Ténèbres) ;
- *                                               `single` : relancer le sort éteint le précédent. Rayons en convention de
- *                                               Foundry (`dim` = rayon extérieur de la lumière faible)
- *     saveAdvantage?: string[]                  le porteur de l'item a l'avantage aux sauvegardes contre une activité qui
- *                                               pose l'un de ces états (Ascendance féerique : `charmed`, §16.25) ;
- *                                               `"magic"` : contre un sort ou un effet magique (Résistance à la magie, §18.9)
- *     saveIgnoresCover?: true                   la sauvegarde de Dextérité de l'item ne reçoit pas le bonus d'abri de la cible
- *                                               (Flamme sacrée ; core/save-cover.mjs)
- *     attackIgnoresCover?: true | "half"        les attaques de l'item ignorent l'abri partiel et aux trois quarts de leur cible
- *                                               (`"half"` : le partiel seul) ; l'abri total reste. `rangedFeat.cover` vaut pour le
- *                                               porteur et toutes ses attaques d'un genre, cette clé pour l'item seul
- *     saveAutoSuccessAgainst?: ["magic"]        le porteur de l'item réussit d'office ses sauvegardes contre un sort ou un effet
- *                                               magique (Résistance supérieure à la magie)
- *     spellAttacksMiss?: true                   les jets d'attaque des sorts ratent d'office le porteur de l'item : il est hors
- *                                               d'atteinte d'un sort à jet d'attaque (Résistance supérieure à la magie)
+ *                                               light or darkness of the spell (§16.31, core/light.mjs). `on`:
+ *                                               "area" = a source on the placed area, which follows it and leaves
+ *                                               with it (`darkness: true`: magical Darkness of the area's radius,
+ *                                               which blocks sight like fog, except Truesight and Devil's Sight;
+ *                                               `dispels: n`: dispels the Darkness of level ≤ n it covers);
+ *                                               "effect" = the item's effects make their bearer shine; "summon" =
+ *                                               the summoned object carries its light, `carried`: on casting, the
+ *                                               player chooses "on the ground" or "on me" (the caster shines) and
+ *                                               the color (§16.35);
+ *                                               "wall" (§170) = a row of sources on each side of a wall placed by
+ *                                               points (Wall of Fire), which appear, follow and leave with it;
+ *                                               "caster" (§287) = on the `activity` activity (otherwise any), the
+ *                                               caster shines as long as their Concentration lasts (Sunbeam);
+ *                                               `darkness` + `dispels: n`: the Darkness dispels spell lights of
+ *                                               level ≤ n it covers (Darkness);
+ *                                               `single`: recasting the spell puts out the previous one. Radii in
+ *                                               the convention of Foundry (`dim` = outer radius of the Dim Light)
+ *     saveAdvantage?: string[]                  the item's bearer has Advantage on saves against an activity that
+ *                                               applies one of these conditions (Fey Ancestry: `charmed`, §16.25);
+ *                                               `"magic"`: against a spell or a magical effect (Magic Resistance,
+ *                                               §18.9)
+ *     saveIgnoresCover?: true                   the item's Dexterity save does not receive the target's Cover bonus
+ *                                               (Sacred Flame; core/save-cover.mjs)
+ *     attackIgnoresCover?: true | "half"        the item's attacks ignore Half Cover and Three-Quarters Cover of
+ *                                               their target (`"half"`: Half Cover only); Total Cover remains.
+ *                                               `rangedFeat.cover` applies to the bearer and all their attacks of one
+ *                                               kind, this key to the item alone
+ *     saveAutoSuccessAgainst?: ["magic"]        the item's bearer automatically succeeds on their saves against a
+ *                                               spell or a magical effect ("Superior Magic Resistance")
+ *     spellAttacksMiss?: true                   spell attack rolls automatically miss the item's bearer: they are
+ *                                               out of reach of a spell with an attack roll ("Superior Magic
+ *                                               Resistance")
  *     saveResist?: { activity, schools?, singleTarget? }
- *                                               le porteur de l'objet peut changer en réussite une sauvegarde ratée contre un
- *                                               sort (de ces écoles ; qui ne cible que lui), sur les utilisations de cette
- *                                               activité de l'objet — demandé, jamais d'office (Bâton d'envoûtement)
+ *                                               the object's bearer can turn a failed save against a spell (of these
+ *                                               schools; that targets only them) into a success, on uses of this
+ *                                               object activity — asked, never automatic (Staff of Charming)
  *     saveReflect?: { activity, schools?, singleTarget? }
- *                                               la même forme, pour une sauvegarde réussie : la Réaction et 1 charge de l'objet
- *                                               retournent le sort contre son lanceur, comme si le porteur l'avait lancé
- *     onFell?: { activity?, radius, units }     quand un ennemi tombe à 0 PV sous les coups du porteur, ou à `radius` de
- *                                               lui, l'activité (défaut : le premier soin de l'item) joue (Bénédiction du
- *                                               Ténébreux, §16.25)
- *     bonusAttack?: { after, melee? }          après une attaque d'arme de l'auteur qui `after` ("critical" : un coup
- *                                               critique ; "felled" : une cible tombée à 0 PV) — au corps à corps si
- *                                               `melee` —, la même arme attaque de nouveau pour une action Bonus, à son tour
- *                                               (Maître d'armes lourdes, « Taille », §16.26)
- *     reactiveSpell?: true                      le porteur peut répondre à une attaque d'opportunité par un sort d'une action
- *                                               qui ne vise que la créature qui s'en va (Mage de guerre, §16.26)
- *     freeSomatic?: true                        le porteur fait les composantes somatiques avec armes ou bouclier en main (Mage de
- *                                               guerre, §409 : le contrôle de main libre ne le refuse pas)
- *     projectiles?: { count, attack }           plusieurs projectiles par lancement (§16.27) — `count` : formule (données de
- *                                               l'activité mise à l'échelle : `@item.level`, `@details.level`) ; `attack` :
- *                                               false = ils touchent d'office, répartis entre les cibles (Projectile
- *                                               magique) ; true = une attaque par projectile, enchaînées par le moteur ;
- *                                               `onePerTarget` (§403) : jamais deux sur la même créature (Frappe du vent d'acier)
- *                                               (Rayon ardent, Décharge occulte)
- *     chain?: { radius, units }                §286 : les cibles après la première doivent être à `radius` d'elle (Chaîne
- *                                               d'éclairs) — refusées à la visée, signalées au contrôle de légalité
- *     leap?: { radius, units, max }             sur un double aux dés de dégâts d'une attaque qui touche, le sort rebondit
- *                                               vers une autre cible à `radius` de la dernière, jamais visée par ce
- *                                               lancement, `max` fois au plus (formule : `@item.level`) — Orbe chromatique, §16.27
- *     duplicates?: true                         les effets de l'item sur son porteur sont des répliques (Image miroir, §16.25) :
- *                                               un coup qui le touche peut toucher une réplique à sa place
- *     healMax?: true                            une créature qui porte un effet de l'item regagne le maximum d'un soin
- *                                               (Lueur d'espoir, §16.24)
- *     bolt?: { radius, units }                  la zone posée (gabarit de l'item) est ramenée à un cercle de ce rayon autour
- *                                               de son centre, puis retirée après la résolution (Appel de la foudre, §16.21)
+ *                                               the same form, for a successful save: the Reaction and 1 charge of
+ *                                               the object turn the spell back on its caster, as if the bearer had
+ *                                               cast it
+ *     onFell?: { activity?, radius, units }     when an enemy drops to 0 HP from the bearer's blows, or within
+ *                                               `radius` of them, the activity (default: the item's first heal)
+ *                                               plays (Dark One's Blessing, §16.25)
+ *     bonusAttack?: { after, melee? }          after a weapon attack by the author that `after` ("critical": a
+ *                                               Critical Hit; "felled": a target dropped to 0 HP) — melee if
+ *                                               `melee` —, the same weapon attacks again as a Bonus Action, on their
+ *                                               turn (Great Weapon Master, "Hew", §16.26)
+ *     reactiveSpell?: true                      the bearer can answer an Opportunity Attack with a one-action spell
+ *                                               that targets only the creature that is leaving (War Caster, §16.26)
+ *     freeSomatic?: true                        the bearer performs somatic components with weapons or a shield in
+ *                                               hand (War Caster, §409: the free-hand check does not refuse it)
+ *     projectiles?: { count, attack }           several projectiles per cast (§16.27) — `count`: formula (data of
+ *                                               the scaled activity: `@item.level`, `@details.level`); `attack`:
+ *                                               false = they hit automatically, spread among the targets (Magic
+ *                                               Missile); true = one attack per projectile, chained by the engine;
+ *                                               `onePerTarget` (§403): never two on the same creature (Steel Wind
+ *                                               Strike) (Scorching Ray, Eldritch Blast)
+ *     chain?: { radius, units }                §286: targets after the first must be within `radius` of it (Chain
+ *                                               Lightning) — refused at targeting, flagged at the legality check
+ *     leap?: { radius, units, max }             on doubles on the damage dice of an attack that hits, the spell
+ *                                               bounces to another target within `radius` of the last, never
+ *                                               targeted by this cast, `max` times at most (formula: `@item.level`)
+ *                                               — Chromatic Orb, §16.27
+ *     duplicates?: true                         the item's effects on its bearer are duplicates (Mirror Image,
+ *                                               §16.25): a hit that strikes them may strike a duplicate instead
+ *     healMax?: true                            a creature bearing an item effect regains the maximum of a heal
+ *                                               (Beacon of Hope, §16.24)
+ *     bolt?: { radius, units }                  the placed area (the item's template) is reduced to a circle of
+ *                                               this radius around its center, then removed after resolution (Call
+ *                                               Lightning, §16.21)
  *     casterPulse?: { at, by: [{ from, to?, activity, max?, use?, pay? }], ground?, away?, untilSpent? }
- *                                               §91 : au début (`at: "turnStart"`) ou à la fin (`"turnEnd"`) du tour du lanceur, la
- *                                               zone qui dure rejoue une activité sœur sur ce qui est dedans — celle de l'entrée dont
- *                                               [from, to] contient le numéro du rejeu (1 = le premier tour après la pose : Tempête
- *                                               vengeresse, tours 2, 3, 4, 5–10) ; `max` : au plus tant de cibles (les éclairs : 6,
- *                                               les ennemis du lanceur d'abord) ; `use` : l'activité est UTILISÉE par le lanceur (ses
- *                                               consommations, sans cible ni zone : un compteur) ; `ground` : seulement les créatures
- *                                               au sol (Tremblement de terre) ; `pay` : les consommations de l'activité payées avant le
- *                                               rejeu (un compteur que ses dés lisent) ; `away: { distance, units }` : la zone
- *                                               s'éloigne d'abord du lanceur ; `untilSpent` : le sort prend fin quand l'item n'a plus
- *                                               d'utilisation (Tsunami)
+ *                                               §91: at the start (`at: "turnStart"`) or the end (`"turnEnd"`) of the
+ *                                               caster's turn, the lasting area replays a sibling activity on what
+ *                                               is inside — the one of the entry whose [from, to] contains the
+ *                                               replay number (1 = the first turn after placement: Storm of
+ *                                               Vengeance, turns 2, 3, 4, 5–10); `max`: at most that many targets
+ *                                               (the lightning bolts: 6, the caster's enemies first); `use`: the
+ *                                               activity is USED by the caster (its consumptions, without a target
+ *                                               or area: a counter); `ground`: only the creatures on the ground
+ *                                               (Earthquake); `pay`: the activity's consumptions paid before the
+ *                                               replay (a counter that its dice read); `away: { distance, units }`:
+ *                                               the area first moves away from the caster; `untilSpent`: the spell
+ *                                               ends when the item has no use left (Tsunami)
  *     atZero?: { activity, save?: { ability, dc }, whileEffect? }
- *                                               §95 : tombé à 0 PV sans être tué sur le coup, le porteur peut se relever — l'activité
- *                                               UTILISÉE (ses consommations fixent les PV : Cosse nécrotique ; ou son soin, sur lui :
- *                                               Courroux persistant, Force du tombeau), après la sauvegarde `save` réussie (DD :
- *                                               formule, `@damage` = les dégâts subis) ; `whileEffect` : seulement s'il porte un
- *                                               effet de l'item de cet identifiant (transformé par Courroux sauvage)
- *     afterSneak?: { activity, radius, units }  §95 : juste après des dégâts d'Attaque sournoise à son tour, l'activité (dégâts) sur une
- *                                               AUTRE créature à `radius` de la première (Lamentations d'outre-tombe)
- *     searchBonus?: { formula?, advantage? }    §94 : à l'action Chercher (runtime/search.mjs), un dé ajouté au test (`formula` :
- *                                               Guetteurs, 1d4) ou l'Avantage (`advantage` : Œil vif — une utilisation de l'item,
- *                                               dépensée seulement si le test trouve quelqu'un)
- *     lifesteal?: { damageType?, fraction? }    §120 : l'auteur regagne des PV égaux à une part (`fraction`, 1 par défaut ; arrondi
- *                                               inférieur) des dégâts de ce type que l'item inflige (Caresse du vampire : la moitié
- *                                               des dégâts nécrotiques) — runtime/lifesteal.mjs
- *     savageAttacker?: true                     §129 : une fois par tour, au jet de dégâts d'une arme, ses dés lancés deux fois, le
- *                                               meilleur gardé (Sauvagerie martiale) — runtime/feats.mjs
- *     initiativeSwap?: true                     §129 : juste après son jet d'initiative, la créature peut échanger son initiative avec celle
- *                                               d'un allié du combat (Vigilant) — runtime/roll-bonus.mjs
- *     healingRerolls?: true                     §129 : aux dés de soins d'un sort de la créature, un 1 est relancé une fois (Guérisseur)
- *     effectWhile?: { <id d'effet>: { if: { armor?, notArmor?, oneHanded?, inCombat?, abilityAtLeast? }, changes? } }
- *                                               §130 : l'effet transféré de l'item n'est actif que si la condition tient pour le porteur
- *                                               (Défense, Duel…) ; `changes` réécrit les changements de l'effet (données cassées) ; sans
- *                                               `if` (§295), seuls les changements sont réécrits, l'effet reste actif ou non au choix du joueur —
- *                                               runtime/effect-while.mjs
+ *                                               §95: dropped to 0 HP without being killed outright, the bearer can
+ *                                               get back up — the activity USED (its consumptions set the HP:
+ *                                               Necrotic Husk; or its heal, on them: "Lingering Wrath", Strength of
+ *                                               the Grave), after the `save` save succeeds (DC: formula, `@damage` =
+ *                                               the damage taken); `whileEffect`: only if they bear an item effect
+ *                                               with this identifier (transformed by "Wild Wrath")
+ *     afterSneak?: { activity, radius, units }
+ *                                               §95: right after Sneak Attack damage on their turn, the activity
+ *                                               (damage) on an OTHER creature within `radius` of the first (Wails
+ *                                               from the Grave)
+ *     searchBonus?: { formula?, advantage? }    §94: on the Search action (runtime/search.mjs), a die added to the
+ *                                               check (`formula`: "Lookouts", 1d4) or Advantage (`advantage`:
+ *                                               "Sharp Eye" — a use of the item, spent only if the check finds
+ *                                               someone)
+ *     lifesteal?: { damageType?, fraction? }    §120: the author regains HP equal to a share (`fraction`, 1 by
+ *                                               default; rounded down) of the damage of this type that the item
+ *                                               deals (Vampiric Touch: half of the necrotic damage) —
+ *                                               runtime/lifesteal.mjs
+ *     savageAttacker?: true                     §129: once per turn, on a weapon's damage roll, its dice rolled
+ *                                               twice, the best kept (Savage Attacker) — runtime/feats.mjs
+ *     initiativeSwap?: true                     §129: right after their Initiative roll, the creature can swap
+ *                                               their Initiative with that of an ally in the combat (Alert) —
+ *                                               runtime/roll-bonus.mjs
+ *     healingRerolls?: true                     §129: on the healing dice of a spell of the creature, a 1 is
+ *                                               rerolled once (Healer)
+ *     effectWhile?: { <effect id>: { if: { armor?, notArmor?, oneHanded?, inCombat?, abilityAtLeast? }, changes? } }
+ *                                               §130: the item's transferred effect is only active if the condition
+ *                                               holds for the bearer (Defense, Dueling…); `changes` rewrites the
+ *                                               effect's changes (broken data); without `if` (§295), only the
+ *                                               changes are rewritten, the effect stays active or not at the
+ *                                               player's choice — runtime/effect-while.mjs
  *     rangedFeat?: { kind, cover?, closeCombat?, longRange?, offhandModifier?, spellRange? }
- *                                               §131 : dons de tir — pour un genre d'attaque (`kind` : "weapon" = attaque à distance
- *                                               avec une arme, "crossbow" = arbalète, "spell" = jet d'attaque d'un sort) : l'abri partiel
- *                                               et aux trois quarts ignoré, pas de Désavantage au contact d'un ennemi ni à longue portée,
- *                                               le modificateur aux dégâts de l'attaque Légère, la portée du sort allongée (`spellRange`)
- *                                               `cover: "half"` : seul l'abri partiel est ignoré (Baguette du mage de guerre)
- *     peerlessAim?: true                        §135 : une attaque ratée touche à la place, une fois jusqu'au prochain tour (Prouesse martiale)
- *     fortifiedHealing?: true                   §135 : + Con aux PV regagnés, une fois par tour (Faveur de vigueur)
- *     overwhelmingStrike?: true                 §135 : sur un critique, des dégâts égaux à la valeur de la caractéristique augmentée par
- *                                               l'item (Faveur d'attaque irrésistible)
- *     spellRecall?: true                        §135 : 1d4 égal au niveau d'un emplacement 1–4 : il n'est pas dépensé (Rappel des sorts)
- *     lastStandHeal?: { activity }              §135 : à 0 PV, 1 PV + la moitié du maximum, sur les utilisations de l'activité (Dernier carré)
- *     elementalAdept?: true                     §134 : sorts du type choisi (flag de l'item) — résistance ignorée, 1 → 2 aux dés
- *     ignoresResistance?: { types, from?, if? } §134 : les dégâts de ces types que le porteur inflige ignorent la résistance (Empoisonneur) ;
- *                                               §447 `from` : seulement ceux de ces activités de l'item, ou du sort qu'elles font lancer
- *                                               (Toucher de la mort) ; `if` : une condition sur l'auteur (`source`) et l'activité
- *     rollDisadvantage?: { on, if? }            §484 : le porteur fait ces jets (`on` : "check" — tests, compétences et initiative
- *                                               comprises —, "save") avec le Désavantage quand `if` tient sur lui (`self.inSunlight`)
+ *                                               §131: ranged feats — for an attack kind (`kind`: "weapon" = ranged
+ *                                               attack with a weapon, "crossbow" = crossbow, "spell" = spell attack
+ *                                               roll): Half Cover and Three-Quarters Cover ignored, no Disadvantage
+ *                                               in contact with an enemy or at long range, the damage modifier of
+ *                                               the Light attack, the spell's range extended (`spellRange`)
+ *                                               `cover: "half"`: only Half Cover is ignored (Wand of the War Mage)
+ *     peerlessAim?: true                        §135: a missed attack hits instead, once until the next turn (Boon
+ *                                               of Combat Prowess)
+ *     fortifiedHealing?: true                   §135: + Con to the HP regained, once per turn (Boon of Fortitude)
+ *     overwhelmingStrike?: true                 §135: on a Critical Hit, damage equal to the value of the ability
+ *                                               score raised by the item (Boon of Irresistible Offense)
+ *     spellRecall?: true                        §135: 1d4 equal to the level of a 1–4 spell slot: it is not spent
+ *                                               (Boon of Spell Recall)
+ *     lastStandHeal?: { activity }              §135: at 0 HP, 1 HP + half the maximum, on uses of the activity
+ *                                               ("Last Stand")
+ *     elementalAdept?: true                     §134: spells of the chosen type (item flag) — Resistance ignored,
+ *                                               1 → 2 on the dice
+ *     ignoresResistance?: { types, from?, if? } §134: the damage of these types that the bearer deals ignores
+ *                                               Resistance (Poisoner);
+ *                                               §447 `from`: only that of these activities of the item, or of the
+ *                                               spell they make cast ("Touch of Death"); `if`: a condition on the
+ *                                               author (`source`) and the activity
+ *     rollDisadvantage?: { on, if? }            §484: the bearer makes these rolls (`on`: "check" — ability checks,
+ *                                               skills and Initiative included —, "save") with Disadvantage when
+ *                                               `if` holds on them (`self.inSunlight`)
  *     rollAdvantage?: { on, if? }               the same, with Advantage (Bloodied Frenzy: "while Bloodied, Advantage on saving
  *                                               throws", `self.hasStatus: "bloodied"`)
- *     fleeOnFailedSave?: true                   §147 : sauvegarde ratée → la cible fuit le lanceur par sa Réaction (Murmures dissonants)
- *     ritualAdept?: {class: string}           §139 : Savoir rituel — les sorts rituels de ce grimoire, non préparés, en rituel hors combat
+ *     fleeOnFailedSave?: true                   §147: failed save → the target flees from the caster using their
+ *                                               Reaction (Dissonant Whispers)
+ *     ritualAdept?: {class: string}           §139: Ritual Adept — the ritual spells of this spellbook, unprepared,
+ *                                               as rituals out of combat
  *     slotRecovery?: {class: string, maxLevel?: number, activity?: id}
- *                                               §139 : Restauration magique au Repos court (moitié du niveau de la classe) ;
- *                                               `activity` : l'activité de l'item qui compte l'utilisation, quand
- *                                               l'item n'en a pas lui-même (Ressourcement du Druide)
- *     reactiveStrike?: true                     §136 : Attaque réactive (Maître d'hast) contre qui entre dans l'allonge de l'arme d'hast tenue
- *     opportunityDisadvantage?: true | { whileEffect }  §134 : les attaques d'opportunité contre le porteur ont le Désavantage (Rapide) ;
- *                                               O9g (§362) `whileEffect` : tant que cet effet venu de l'item est sur le porteur (Bottes de rapidité)
- *     quickStand?: { value, units }             §134 : se relever coûte ce déplacement (au plus la moitié de la Vitesse ; Athlète)
- *     quickSearch?: true                        §134 : l'action Chercher se prend par une action Bonus quand elle est libre (Observateur)
- *     haltOnReaction?: { effect }               §133 : une attaque en Réaction (attaque d'opportunité) qui touche pose cet effet de
- *                                               l'item sur la cible (Sentinelle, Halte : Vitesse 0)
+ *                                               §139: Arcane Recovery on a Short Rest (half the class level);
+ *                                               `activity`: the item activity that counts the use, when
+ *                                               the item has none itself (Natural Recovery of the Druid)
+ *     reactiveStrike?: true                     §136: Reactive Strike (Polearm Master) against whoever enters the
+ *                                               reach of the polearm weapon held
+ *     opportunityDisadvantage?: true | { whileEffect }
+ *                                               §134: Opportunity Attacks against the bearer have Disadvantage
+ *                                               (Speedy);
+ *                                               O9g (§362) `whileEffect`: as long as this effect from the item is on
+ *                                               the bearer (Boots of Speed)
+ *     quickStand?: { value, units }             §134: standing up costs this movement (at most half the Speed;
+ *                                               Athlete)
+ *     quickSearch?: true                        §134: the Search action is taken as a Bonus Action when it is free
+ *                                               (Observant)
+ *     haltOnReaction?: { effect }               §133: an attack made as a Reaction (Opportunity Attack) that hits
+ *                                               applies this effect of the item to the target (Sentinel, Halt:
+ *                                               Speed 0)
  *     spellDamageTypes?: { class?, types, from?, cost? }
- *                                               relevé des trous : un sort de cette classe (§447 : sans classe, tout sort) qui
- *                                               inflige des dégâts peut prendre l'un de ces types, proposé avec ses types
- *                                               au choix avant le jet (Sorts psychiques) ; `from` : seulement un sort qui
- *                                               inflige l'un de ces types ; `cost` : l'activité de l'item qui paie le
- *                                               changement, proposé tant qu'il reste de quoi (Sort transmuté)
- *     spellDamageRerolls?: { activity, count }  Sort renforcé : après le jet de dégâts d'un sort du porteur, cette activité (qui
- *                                               paie) relance jusqu'à `count` dés (formule), les plus bas ; les nouveaux comptent
- *     turnStartHeal?: { activity, bloodied? }   Survivant : au début de chacun de ses tours, le porteur qui a au moins 1 PV (et,
- *                                               avec `bloodied`, la moitié de ses PV ou moins) utilise cette activité de soins
- *     deathSaveCritical?: number                Survivant : le d20 à partir duquel une sauvegarde contre la mort vaut un 20 naturel
+ *                                               gap survey: a spell of this class (§447: without a class, any spell)
+ *                                               that deals damage can take one of these types, offered with its
+ *                                               types to choose from before the roll ("Psychic Spells"); `from`:
+ *                                               only a spell that deals one of these types; `cost`: the item
+ *                                               activity that pays for the change, offered as long as enough
+ *                                               remains (Transmuted Spell)
+ *     spellDamageRerolls?: { activity, count }  Empowered Spell: after the damage roll of a spell of the bearer, this
+ *                                               activity (which pays) rerolls up to `count` dice (formula), the
+ *                                               lowest; the new ones count
+ *     turnStartHeal?: { activity, bloodied? }   Survivor: at the start of each of their turns, the bearer who has at
+ *                                               least 1 HP (and, with `bloodied`, half their HP or less) uses this
+ *                                               healing activity
+ *     deathSaveCritical?: number                Survivor: the d20 from which a death saving throw counts as a
+ *                                               natural 20
  *     endsOwnConditions?: string[] | { statuses?, at?, exhaustion?, uses? }
- *                                               §236 : à la fin de chacun de ses tours, le porteur met fin à l'un de ces états
- *                                               (Auto-restauration : Charmé, Effrayé, Empoisonné) ; §278 : `at: "turnStart"` (au début),
- *                                               `exhaustion` (à défaut d'un état, un niveau d'Épuisement), `uses` (une utilisation de
- *                                               l'item chaque fois) — core/self-care.mjs
+ *                                               §236: at the end of each of their turns, the bearer ends one of
+ *                                               these conditions (Self-Restoration: Charmed, Frightened, Poisoned);
+ *                                               §278: `at: "turnStart"` (at the start), `exhaustion` (if there is no
+ *                                               condition, a level of Exhaustion), `uses` (a use of the item each
+ *                                               time) — core/self-care.mjs
  *     regainOnInitiative?: { item, upTo } | { items?, exhaustion?, uses? }
- *                                               §236 : au jet d'initiative, les utilisations de l'item remontent à `upTo` au moins
- *                                               (Inspiration supérieure) ; §278 : `items` (identifiants : toutes leurs utilisations
- *                                               reviennent), `exhaustion` (niveaux retirés), `uses` (une utilisation de l'item, seulement
- *                                               s'il y a quelque chose à regagner)
- *     grantsConditionImmunities?: string[]      §295 : immunités d'état que l'item donne sans effet dans ses données (Protégé de dame
- *                                               Nature : Empoisonné) — dans l'effet tenu de `grantsSpeeds` (runtime/speed-grants.mjs)
- *     saveAutoSuccess?: { types?, fighting?, sizeAtLeast? }  §402 : réussite d'office — ces types de créature (Pétrification),
- *                                               une créature que le lanceur combat (`fighting` : Discours captivant, Faux
- *                                               amis), ou une créature au moins de cette taille (`sizeAtLeast` : Filet tombant)
- *     saveAutoFail?: { types }                 échec d'office — ces types de créature (Flétrissement : une Plante), sans jet
- *     fadesOnLongRest?: [ids d'effets]   §402 : un de ces effets tombe à chaque Repos long (Rappel à la vie : −4 qui diminue)
- *     onUsesSpent?: { activity?, effects }   §458 : quand les utilisations de l'item sont épuisées, ces effets de l'item sont posés
- *                                               sur son porteur, une fois (les livres à 48 heures de lecture : +2 à une caractéristique)
- *     leavesEffects?: [ids d'effets]     §456 : quand l'item quitte la fiche, ces effets de l'item sont posés sur l'ancien porteur (Marque
- *                                               du sacrifice retirée : Désavantage aux sauvegardes de Sagesse 24 h) ; pas lors d'un
- *                                               remplacement par le diagnostic (option `replacing`)
- *     magicEvasion?: true                  §402 : l'effet porté du sort annule la moitié des dégâts d'une sauvegarde réussie contre la magie (Cercle de pouvoir)
- *     saveAdvantageFrom?: { types, statuses }  §402 : Avantage aux sauvegardes contre ces états posés par ces types (Protection contre le mal et le bien)
- *     breathAdvantage?: { types }               Avantage aux sauvegardes contre le souffle (capacité « …-breath ») d'une créature
- *                                               de ces types, pour qui porte l'objet (Armure d'écailles de dragon)
- *     leash?: { distance, units }        §402 : la créature qui porte un effet de l'item ne s'éloigne pas volontairement du lanceur au-delà (Duel forcé)
- *     mount?: { rider?, controlled? }    §490 (B08) : la créature qui porte l'item peut être montée — par l'acteur `rider` seul (id), sinon
- *                                               par une créature alliée plus petite ; contrôlée (défaut) : elle agit juste après son
- *                                               cavalier et ne prend que Foncer / Se désengager / Esquiver sans ordre ; `controlled: false` :
- *                                               monture indépendante. Déplacement commun, chute du cavalier (runtime/mount.mjs)
- *     commands?: { actor | identifier, distance, units, cost? }  §490 (B08) : l'item ordonne à un compagnon non invoqué (id d'acteur,
- *                                               ou identifiant d'un item qu'il porte) à portée — commandé pour ce round
- *     durationByLevel?: [{ from, seconds?, concentration? }]  §403 : durée des effets et de la concentration selon l'emplacement ;
- *                                               sans `seconds` : jusqu'à dissipation ; `concentration: false` : dnd5e ne la commence pas
- *                                               (Malédiction : 10 min au niveau 4, 8 h sans Concentration au niveau 5…) — runtime/cantrips.mjs
- *     zoneLasts?: { seconds }              §403 : la zone d'une activité de l'item dure ce temps (heure du monde), même instantanée, et
- *                                               rejoue ce que ses déclencheurs disent (Symbole : la sphère de 18 m, 10 minutes)
- *     formLock?: true                      §403 : dans la zone qui dure, pas d'activité « transform » (Rayon de lune : « ne peut pas
- *                                               prendre une autre forme » — souci de légalité, runtime/turn.mjs)
- *     formLock?: { worn: true, onAttempt?, forms? }  B09 (§488) : tant que l'objet est porté (équipé, ou sur la fiche s'il ne s'équipe
- *                                               pas), son porteur ne change pas de forme : chaque tentative (activité « transform »,
- *                                               `changesForm`, activité d'un item nommé dans `forms`, effet d'un tel item allumé à la
- *                                               main) est refusée, forçable, et lui inflige `onAttempt` (étapes `damage`, `to: "bearer"`,
- *                                               formule ou activité de l'objet) — core/form-lock.mjs, runtime/form-lock.mjs
- *     suspends?: ["regeneration"]          B09 (§488) : tant que l'objet est porté, ces traits de son porteur ne fonctionnent pas
- *                                               (collier qui empêche de se régénérer) — adapter/form-lock.mjs `suspendedBy`
- *     windward?: true                      §403 : dans la zone qui dure, chaque mètre vers le lanceur en coûte deux (Bourrasque ;
- *                                               core/windward.mjs, refus avant le pas, surcoût noté au budget : `windward`)
- *     keepsSpeed?: true                    §403 : le porteur d'un effet de l'item ne voit pas sa Vitesse réduite par un effet magique posé
- *                                               ensuite (Liberté de mouvement ; core/speed-floor.mjs, à la pose dans runtime/cantrips.mjs)
- *     compels?: true                       §403 : Compulsion — au tour du lanceur, une direction (action Bonus) ; la cible y marche à son
- *                                               tour, puis rejoue sa sauvegarde (`resave` avec `ifCompelled`, runtime/compulsion.mjs)
- *     checkPoses?: true                    §402 : une activité de test (check) pose ses effets sur la cible, sans test (Dédale : « Banished »)
- *     quietPose?: true                          §300 : la zone qui dure n'agit pas à sa pose — seulement aux moments déclarés
- *                                               (Tempête de neige, Nuage nauséabond : ceux qui sont déjà dedans sauvegardent au début de leur tour)
- *     brutalStrike?: { options?, count? }       C12-e : Coup brutal — options offertes avec Témérité (`push` : poussée ; `effect` :
- *                                               effet de l'item posé sur la cible touchée, ou liste d'identifiants — §433 : le premier qu'un
- *                                               item de Coup brutal de l'acteur porte), nombre d'options par coup (runtime/barbarian.mjs)
+ *                                               §236: on the Initiative roll, the item's uses go back up to at least
+ *                                               `upTo` (Superior Inspiration); §278: `items` (identifiers: all their
+ *                                               uses come back), `exhaustion` (levels removed), `uses` (a use of the
+ *                                               item, only if there is something to regain)
+ *     grantsConditionImmunities?: string[]      §295: condition immunities the item grants with no effect in its
+ *                                               data ("Protected by Lady Nature": Poisoned) — in the held effect of
+ *                                               `grantsSpeeds` (runtime/speed-grants.mjs)
+ *     saveAutoSuccess?: { types?, fighting?, sizeAtLeast? }
+ *                                               §402: automatic success — these creature types (Petrification), a
+ *                                               creature the caster is fighting (`fighting`: "Captivating Speech",
+ *                                               "False Friends"), or a creature at least this size (`sizeAtLeast`:
+ *                                               "Falling Net")
+ *     saveAutoFail?: { types }                  automatic failure — these creature types (Blight: a Plant), without
+ *                                               a roll
+ *     fadesOnLongRest?: [effect ids]            §402: one of these effects drops at each Long Rest (Raise Dead: −4
+ *                                               that diminishes)
+ *     onUsesSpent?: { activity?, effects }      §458: when the item's uses are exhausted, these item effects are
+ *                                               applied to its bearer, once (books with 48 hours of reading: +2 to
+ *                                               an ability score)
+ *     leavesEffects?: [effect ids]              §456: when the item leaves the sheet, these item effects are applied
+ *                                               to the former bearer (Mark of Sacrifice removed: Disadvantage on
+ *                                               Wisdom saves for 24 h); not when replaced by the diagnosis (option
+ *                                               `replacing`)
+ *     magicEvasion?: true                       §402: the spell's held effect cancels half the damage of a
+ *                                               successful save against magic (Circle of Power)
+ *     saveAdvantageFrom?: { types, statuses }   §402: Advantage on saves against these conditions applied by these
+ *                                               types (Protection from Evil and Good)
+ *     breathAdvantage?: { types }               Advantage on saves against the breath ("…-breath" ability) of a
+ *                                               creature of these types, for whoever bears the object (Dragon Scale
+ *                                               Mail)
+ *     leash?: { distance, units }               §402: the creature bearing an item effect does not voluntarily move
+ *                                               away from the caster beyond it (Compelled Duel)
+ *     mount?: { rider?, controlled? }           §490 (B08): the creature bearing the item can be mounted — by the
+ *                                               `rider` actor alone (id), otherwise by a smaller allied creature;
+ *                                               controlled (default): it acts right after its rider and only takes
+ *                                               Dash / Disengage / Dodge without orders; `controlled: false`:
+ *                                               independent mount. Shared movement, rider's fall (runtime/mount.mjs)
+ *     commands?: { actor | identifier, distance, units, cost? }
+ *                                               §490 (B08): the item commands a non-summoned companion (actor id,
+ *                                               or identifier of an item it carries) in range — commanded for this
+ *                                               round
+ *     durationByLevel?: [{ from, seconds?, concentration? }]
+ *                                               §403: duration of the effects and of Concentration according to the
+ *                                               slot; without `seconds`: until dispelled; `concentration: false`:
+ *                                               dnd5e does not start it (Bestow Curse: 10 min at level 4, 8 h
+ *                                               without Concentration at level 5…) — runtime/cantrips.mjs
+ *     zoneLasts?: { seconds }                   §403: the area of an activity of the item lasts this long (world
+ *                                               time), even if instantaneous, and replays what its triggers say
+ *                                               (Symbol: the 18 m sphere, 10 minutes)
+ *     formLock?: true                           §403: in the lasting area, no "transform" activity (Moonbeam: "can't
+ *                                               assume another form" — legality issue, runtime/turn.mjs)
+ *     formLock?: { worn: true, onAttempt?, forms? }
+ *                                               B09 (§488): as long as the object is worn (equipped, or on the sheet
+ *                                               if it is not equipped), its bearer does not change form: each
+ *                                               attempt ("transform" activity, `changesForm`, activity of an item
+ *                                               named in `forms`, effect of such an item turned on by hand) is
+ *                                               refused, forceable, and inflicts `onAttempt` on them (`damage`
+ *                                               steps, `to: "bearer"`, formula or activity of the object) —
+ *                                               core/form-lock.mjs, runtime/form-lock.mjs
+ *     suspends?: ["regeneration"]               B09 (§488): as long as the object is worn, these traits of its
+ *                                               bearer do not work (collar that prevents regenerating) —
+ *                                               adapter/form-lock.mjs `suspendedBy`
+ *     windward?: true                           §403: in the lasting area, each meter toward the caster costs two
+ *                                               (Gust of Wind; core/windward.mjs, refusal before the step, extra
+ *                                               cost noted in the budget: `windward`)
+ *     keepsSpeed?: true                         §403: the bearer of an item effect does not see their Speed reduced
+ *                                               by a magical effect applied afterwards (Freedom of Movement;
+ *                                               core/speed-floor.mjs, on placement in runtime/cantrips.mjs)
+ *     compels?: true                            §403: Compulsion — on the caster's turn, a direction (Bonus Action);
+ *                                               the target walks that way on their turn, then replays their save
+ *                                               (`resave` with `ifCompelled`, runtime/compulsion.mjs)
+ *     checkPoses?: true                         §402: a check activity applies its effects to the target, without a
+ *                                               check (Maze: "Banished")
+ *     quietPose?: true                          §300: the lasting area does not act on placement — only at the
+ *                                               declared moments (Sleet Storm, Stinking Cloud: those already inside
+ *                                               save at the start of their turn)
+ *     brutalStrike?: { options?, count? }       C12-e: Brutal Strike — options offered with Reckless Attack
+ *                                               (`push`: push; `effect`: item effect applied to the target hit, or
+ *                                               list of identifiers — §433: the first one that a Brutal Strike item
+ *                                               of the actor carries), number of options per hit
+ *                                               (runtime/barbarian.mjs)
  *     dataFixes?: [{ path, value, from? } | { effect, path, value, from? } | { effect, create, unless? }]
- *                                               O1 (§335) : corrections de la donnée premium de l'objet (coût, charges, DD, dégâts, effets
- *                                               portés, effet manquant), écrites par le MJ actif à la création et par le diagnostic — core/data-fixes.mjs
- *                                               `unless` : l'effet n'est pas créé si la donnée porte déjà cet autre effet (une
- *                                               version du module qui l'a ajouté depuis : Guide 3.0.0)
- *     spellFixes?: { <id d'activité « cast »>: [corrections] }
- *                                               les mêmes corrections, pour la copie du sort que cette activité de l'item lance
- *                                               (Baguette de terreur : « Terreur (cône de 18 m) »)
- *     includesOrigin?: true                     O4 (§338) : la zone « personnelle » de l'item prend aussi son origine (Poudre à éternuer)
- *     absorbsDamage?: string[]                  K7 (§328) : le porteur de l'item change ces types de dégâts en soin, avant résistances et
- *                                               immunités (Absorption de l'acide, du feu, de la foudre des golems)
- *     regainOnShortRest?: string[]              C12-j : au Repos court, les utilisations de ces items (identifiants) reviennent (Source
- *                                               d'inspiration, Éclat protecteur amélioré ; runtime/grimoire.mjs)
- *     sniper?: true                             C12-i : caché, un jet d'attaque raté ne révèle pas le porteur (Discret, runtime/hide.mjs)
- *     hidesBehindLarger?: true                  Discrétion naturelle (Halfelin) : un ennemi dont la vue passe par une créature
- *                                               d'au moins une taille de plus que le porteur ne l'empêche pas de se cacher
- *     summonEffectsOnCaster?: true              C12-g : les effets de l'activité d'invocation vont au lanceur, liés à sa concentration,
- *                                               pas à la créature invoquée (Double illusoire : le lanceur devient Invisible)
- *     grants?: { from, activity }               C12-d : les cibles de l'activité `from` reçoivent une copie de l'item réduite à
- *                                               `activity`, au DD et au niveau du lanceur, jusqu'à la fin de sa concentration
- *                                               (Souffle du dragon, runtime/grants.mjs)
+ *                                               O1 (§335): fixes to the item's premium data (cost, charges, DC,
+ *                                               damage, borne effects, missing effect), written by the active GM on
+ *                                               creation and by the diagnosis — core/data-fixes.mjs
+ *                                               `unless`: the effect is not created if the data already carries this
+ *                                               other effect (a module version that added it since: Dungeon
+ *                                               Master's Guide 3.0.0)
+ *     spellFixes?: { <"cast" activity id>: [fixes] }
+ *                                               the same fixes, for the copy of the spell that this item activity
+ *                                               casts (Wand of Fear: "Fear (18 m cone)")
+ *     includesOrigin?: true                     O4 (§338): the item's "personal" area also takes its origin (Dust of
+ *                                               Sneezing and Choking)
+ *     absorbsDamage?: string[]                  K7 (§328): the item's bearer turns these damage types into healing,
+ *                                               before Resistances and Immunities (Acid, Fire, Lightning Absorption
+ *                                               of the golems)
+ *     regainOnShortRest?: string[]              C12-j: on a Short Rest, the uses of these items (identifiers) come
+ *                                               back (Font of Inspiration, Improved Protective Shard;
+ *                                               runtime/grimoire.mjs)
+ *     sniper?: true                             C12-i: hidden, a missed attack roll does not reveal the bearer
+ *                                               (Skulker, runtime/hide.mjs)
+ *     hidesBehindLarger?: true                  Naturally Stealthy (Halfling): an enemy whose sight passes through a
+ *                                               creature at least one size larger than the bearer does not prevent
+ *                                               them from hiding
+ *     summonEffectsOnCaster?: true              C12-g: the effects of the summoning activity go to the caster, tied
+ *                                               to their Concentration, not to the summoned creature (Mislead: the
+ *                                               caster becomes Invisible)
+ *     grants?: { from, activity }               C12-d: the targets of the `from` activity receive a copy of the item
+ *                                               reduced to `activity`, at the caster's DC and level, until the end
+ *                                               of their Concentration (Dragon's Breath, runtime/grants.mjs)
  *     killsAtZero?: true | { types?, sizeAtMost?, activities? }
- *                                               C12-f : une créature que les dégâts de l'item réduisent à 0 PV meurt (Désintégration) ;
- *                                               K2 (§323) : seulement de ces types (« un Humanoïde »), de cette taille au plus, par ces
- *                                               activités (le rayon désintégrant parmi les Rayons oculaires)
- *     retort?: { damageType }                   C12-f : la réaction de l'item ratée par l'attaquant lui renvoie les dégâts que le
- *                                               porteur subit (Défenses envoûtantes, runtime/reactions.mjs)
- *     enterOnPose?: true                        C12-b : une zone qui dure, posée par une activité qui ne résout rien elle-même : les
- *                                               créatures qu'elle recouvre en apparaissant y entrent (Invocation de céleste ; §438 :
- *                                               Esprits gardiens 3.0.0). Rien quand l'activité qui pose est celle qui rejoue
- *     hitDefense?: true                         C12-e : qui touche le porteur d'un jet d'attaque a le Désavantage à ses autres jets
- *                                               contre lui pendant ce tour (Tactiques défensives : Défense multiattaque)
- *     effectsFirst?: true                       §303 : les effets de l'activité posés avant ses dégâts ou son soin (Aide : PV max relevés
- *                                               d'abord, sinon le soin est plafonné aux PV max d'avant)
- *     healRaisesMax?: true                      avec `effectsFirst` : le soin tiré relève aussi les PV maximum d'autant, dans
- *                                               l'effet posé avant lui (Festin des héros)
- *     zoneBound?: true                          §300 : les effets de l'item ne tiennent que dans une de ses zones (Esprits gardiens : la
- *                                               Vitesse divisée par deux tombe à la sortie de l'émanation ; runtime/areas.mjs)
- *     duringRage?: { enable?, post?, disable?, copiesEnd?, oneOption?, cures?, onStart? }  §299 : effets de l'item tenus par la Rage du porteur —
- *                                               activés / posés à l'entrée, retirés à la fin, états guéris, activité jouée à l'entrée
- *                                               (Rage aveugle, Rage du prédateur, Savoir primal, Vitalité de l'Arbre) — runtime/barbarian.mjs ;
- *                                               `oneOption` (Core#98) : une seule option de l'item par Rage, une seconde est un souci
- *                                               forçable (runtime/turn.mjs `useIssues`, core/limits.mjs `secondRageOption`)
- *     spellsInAttack?: { maxLevel, class?, attacks? }  §298 : un sort d'une action, de niveau `maxLevel` au plus (et de cette classe),
- *                                               se lance à la place de `attacks` attaques (1 par défaut) de l'action Attaquer (Magie
- *                                               de guerre, Attaque supplémentaire de la Vaillance, Magie de guerre améliorée : 2)
- *     zoneMax?: number                          §296 : au plus ce nombre de créatures dans la zone de l'item, les plus proches de son
- *                                               centre (Lenteur, Soins de groupe : « jusqu'à six ») — core/area.mjs
+ *                                               C12-f: a creature that the item's damage reduces to 0 HP dies
+ *                                               (Disintegrate); K2 (§323): only of these types ("a Humanoid"), of
+ *                                               this size at most, by these activities (the Disintegration Ray among
+ *                                               the Eye Rays)
+ *     retort?: { damageType }                   C12-f: the item's reaction missed by the attacker sends back to them
+ *                                               the damage the bearer takes ("Bewitching Defenses",
+ *                                               runtime/reactions.mjs)
+ *     enterOnPose?: true                        C12-b: a lasting area, placed by an activity that resolves nothing
+ *                                               itself: the creatures it covers on appearing enter it (Summon
+ *                                               Celestial; §438: Spirit Guardians 3.0.0). Nothing when the placing
+ *                                               activity is the one that replays
+ *     hitDefense?: true                         C12-e: whoever hits the bearer with an attack roll has Disadvantage
+ *                                               on their other rolls against them during that turn (Defensive
+ *                                               Tactics: Multiattack Defense)
+ *     effectsFirst?: true                       §303: the effects of the activity applied before its damage or its
+ *                                               healing (Aid: max HP raised first, otherwise the healing is capped
+ *                                               at the previous max HP)
+ *     healRaisesMax?: true                      with `effectsFirst`: the rolled healing also raises the maximum HP
+ *                                               by as much, in the effect applied before it (Heroes' Feast)
+ *     zoneBound?: true                          §300: the item's effects only hold inside one of its areas (Spirit
+ *                                               Guardians: the halved Speed ends on leaving the Emanation;
+ *                                               runtime/areas.mjs)
+ *     duringRage?: { enable?, post?, disable?, copiesEnd?, oneOption?, cures?, onStart? }
+ *                                               §299: item effects held by the bearer's Rage — enabled / applied on
+ *                                               entry, removed at the end, conditions cured, activity played on
+ *                                               entry ("Blind Rage", "Predator's Rage", Primal Knowledge, Vitality
+ *                                               of the Tree) — runtime/barbarian.mjs;
+ *                                               `oneOption` (Core#98): only one option of the item per Rage, a
+ *                                               second is a forceable issue (runtime/turn.mjs `useIssues`,
+ *                                               core/limits.mjs `secondRageOption`)
+ *     spellsInAttack?: { maxLevel, class?, attacks? }
+ *                                               §298: a one-action spell, of level `maxLevel` or lower (and of this
+ *                                               class), is cast in place of `attacks` attacks (1 by default) of the
+ *                                               Attack action (War Magic, Valor's Extra Attack, Improved War Magic:
+ *                                               2)
+ *     zoneMax?: number                          §296: at most this number of creatures in the item's area, the
+ *                                               closest to its center (Slow, Mass Cure Wounds: "up to six") —
+ *                                               core/area.mjs
  *     healPool?: { activities, cap?: "halfMax", temp?: true, formula? }
- *                                               §296 : le jet de soin de ces activités est une réserve répartie à parts égales entre les
- *                                               cibles choisies (Survivance : plafond à la moitié des PV max ; `temp` : en PV temporaires,
- *                                               Châtiment exaltant) — runtime/cure.mjs, core/pools.mjs
+ *                                               §296: the healing roll of these activities is a pool split equally
+ *                                               among the chosen targets ("Survival": cap at half the max HP;
+ *                                               `temp`: as Temporary Hit Points, "Exalting Smite") —
+ *                                               runtime/cure.mjs, core/pools.mjs
  *     multiattackPlan?: { options: [[{ n, refs, except? }]], replace?: [{ n, refs, of? }], extra?: [{ refs }] }
- *                                               B01 : sur l'item Attaques multiples, le plan déclaré remplace la lecture du texte —
- *                                               options exclusives, groupes de `n` attaques au plus citant une clé de `refs` et aucune
- *                                               d'`except` (`identifier:<id>`, `id:`, `name:`, `kind:attack|melee|ranged`…) — core/multiattack.mjs
- *     flurryStrikes?: number                    §295 : le porteur de l'item frappe ce nombre de fois au Déluge de coups (Credo accru : 3)
- *     effectDurations?: { <id d'effet>: { seconds } | { formula, units } }  §295 : la durée d'un effet de l'item à sa pose, quand la donnée se trompe
- *                                               (Présence intimidante : une minute, pas un round) ; O9h : `{ formula, units }` — tirée une fois par
- *                                               utilisation, la même pour toutes les cibles (Poussière de disparition : 2d4 minutes)
- *     grantsResistances?: string[]              §236 : les Résistances que l'item donne sans effet dans ses données (Avatar de la
- *                                               bataille) — un effet tenu sur l'acteur, comme `grantsSpeeds`
- *     scoreFloor?: string[]                     §236 : un test ou une sauvegarde de ces caractéristiques vaut au moins leur valeur
- *                                               (Puissance indomptable : Force)
- *     cantripRange?: { class, add, requires? }  §236 : un tour de magie de la classe, d'une portée d'au moins 3 m, porte plus loin
- *                                               de `add` — si l'acteur a l'item `requires` (Fureur élémentaire améliorée)
- *     fleetStep?: { item, activity }            §236 : après une action Bonus autre que celle-ci, l'activité de l'item est gratuite
- *                                               une fois ce tour-là (Pas véloce : Pas du vent)
- *     extraFirstTurn?: { minus }                §236 : un second tour au premier round, à l'initiative moins `minus`, sauf Surpris
- *                                               (Réflexes du voleur)
- *     combatInspiration?: true                  relevé des trous : la créature qui porte l'Inspiration bardique de ce barde peut en
- *                                               ajouter le dé aux dégâts de son coup, ou à sa CA par sa Réaction quand elle est
- *                                               touchée (Inspiration de combat, Collège de la vaillance ; adapter/inspiration.mjs)
- *     critMove?: true                           relevé des trous : sitôt un coup critique porté, à son tour, la moitié de sa Vitesse
- *                                               en plus sans attaque d'opportunité (Athlète remarquable)
- *     keepsConcentration?: string[]             relevé des trous : subir des dégâts ne rompt pas la concentration sur ces items
- *                                               (identifiants) — pas de jet de concentration quand toute la concentration du porteur
- *                                               vient d'eux (Chasseur implacable : Marque du chasseur)
- *     concentration?: { limit, loseAll?: true } §494 (B14) : la créature tient jusqu'à `limit` concentrations à la fois (effet tenu sur
- *                                               l'acteur, runtime/speed-grants.mjs) ; `loseAll` : un jet raté, Neutralisé, 0 PV les font
- *                                               toutes tomber (déjà la règle de dnd5e et du moteur : la clé le déclare, la perte est annoncée)
- *     concentrationBreaker?: true | "item"      §133 : la créature concentrée que le porteur blesse a le Désavantage à son prochain
- *                                               jet de concentration (Tueur de mages) ; `"item"` : seulement quand le dégât vient
- *                                               d'une activité de cet objet, équipé et harmonisé s'il le demande (une arme magique)
- *     interposeShield?: true                    §133 : sauvegarde de Dextérité réussie contre des dégâts réduits de moitié, bouclier
- *                                               tenu : la Réaction pour n'en subir aucun (Maître des boucliers)
- *     piercer?: true                            §132 : Perforeur — une fois par tour, un dé d'une attaque perforante relancé (le plus
- *                                               bas) ; un dé de plus au critique perforant — runtime/feats.mjs
- *     critMark?: { damageType, side }           §132 : un coup critique de ce type pose une marque sur la cible jusqu'au début du
- *                                               prochain tour de l'auteur : "against" = Avantage contre elle (Cogneur), "by" =
- *                                               Désavantage à ses attaques (Trancheur)
+ *                                               B01: on the Multiattack item, the declared plan replaces reading the
+ *                                               text — exclusive options, groups of at most `n` attacks citing a
+ *                                               key of `refs` and none of `except` (`identifier:<id>`, `id:`,
+ *                                               `name:`, `kind:attack|melee|ranged`…) — core/multiattack.mjs
+ *     flurryStrikes?: number                    §295: the item's bearer strikes this many times with Flurry of Blows
+ *                                               ("Heightened Creed": 3)
+ *     effectDurations?: { <effect id>: { seconds } | { formula, units } }
+ *                                               §295: the duration of an item effect when placed, when the data is
+ *                                               wrong (Intimidating Presence: one minute, not one round); O9h:
+ *                                               `{ formula, units }` — rolled once per use, the same for all targets
+ *                                               (Dust of Disappearance: 2d4 minutes)
+ *     grantsResistances?: string[]              §236: the Resistances the item grants with no effect in its data
+ *                                               (Avatar of Battle) — an effect held on the actor, like
+ *                                               `grantsSpeeds`
+ *     scoreFloor?: string[]                     §236: a check or save of these abilities counts as at least their
+ *                                               score (Indomitable Might: Strength)
+ *     cantripRange?: { class, add, requires? }  §236: a cantrip of the class, with a range of at least 3 m, reaches
+ *                                               farther by `add` — if the actor has the `requires` item (Improved
+ *                                               Elemental Fury)
+ *     fleetStep?: { item, activity }            §236: after a Bonus Action other than this one, the item's activity
+ *                                               is free once that turn (Fleet Step: Step of the Wind)
+ *     extraFirstTurn?: { minus }                §236: a second turn in the first round, at Initiative minus `minus`,
+ *                                               unless Surprised (Thief's Reflexes)
+ *     combatInspiration?: true                  gap survey: the creature bearing this bard's Bardic Inspiration can
+ *                                               add the die to the damage of their hit, or to their AC as a Reaction
+ *                                               when hit (Combat Inspiration, College of Valor;
+ *                                               adapter/inspiration.mjs)
+ *     critMove?: true                           gap survey: right after landing a Critical Hit, on their turn, half
+ *                                               their Speed more without Opportunity Attacks (Remarkable Athlete)
+ *     keepsConcentration?: string[]             gap survey: taking damage does not break Concentration on these
+ *                                               items (identifiers) — no Concentration check when all of the
+ *                                               bearer's Concentration comes from them (Relentless Hunter: Hunter's
+ *                                               Mark)
+ *     concentration?: { limit, loseAll?: true } §494 (B14): the creature holds up to `limit` Concentrations at once
+ *                                               (effect held on the actor, runtime/speed-grants.mjs); `loseAll`: a
+ *                                               failed roll, Incapacitated, 0 HP make them all drop (already the
+ *                                               rule of dnd5e and of the engine: the key declares it, the loss is
+ *                                               announced)
+ *     concentrationBreaker?: true | "item"      §133: the concentrating creature that the bearer wounds has
+ *                                               Disadvantage on their next Concentration check (Mage Slayer);
+ *                                               `"item"`: only when the damage comes from an activity of this
+ *                                               object, equipped and attuned if it asks for it (a magic weapon)
+ *     interposeShield?: true                    §133: successful Dexterity save against damage halved, shield held:
+ *                                               the Reaction to take none (Shield Master)
+ *     piercer?: true                            §132: Piercer — once per turn, one die of a piercing attack
+ *                                               rerolled (the lowest); one extra die on a piercing Critical Hit —
+ *                                               runtime/feats.mjs
+ *     critMark?: { damageType, side }           §132: a Critical Hit of this type puts a mark on the target until
+ *                                               the start of the author's next turn: "against" = Advantage against
+ *                                               it (Crusher), "by" = Disadvantage on its attacks (Slasher)
  *     grappleDamage?: { formula, damageType, grapplers? }
- *                                               §132 : au début de chaque tour de l'auteur, ces dégâts à chaque créature qu'il agrippe
- *                                               (Combat à mains nues) ; `grapplers: true` : à celles qui l'agrippent aussi (Peau
- *                                               barbelée du Diable barbelé)
- *     rerollInitiative?: { atMost }             §120 : à chaque jet d'initiative, un d20 de `atMost` ou moins peut être relancé (question), le nouveau
- *                                               gardé (Survivant, Hypervigilance : 9) — runtime/roll-bonus.mjs
- *     onNatural1?: { activity }                 §93 : juste après un Test d20 de la créature dont le d20 fait 1, elle utilise
- *                                               l'activité (Dons sombres de Ravenloft : sa sauvegarde, sur elle-même)
- *     zoneEnd?: { activity }                    §91 : quand la zone qui dure de l'item prend fin (concentration, durée, retirée), le
- *                                               lanceur utilise l'activité, sa zone centrée sur celle qui tombe (Boule de feu à
- *                                               retardement : la bille explose)
- *     atTurnStart?: { activity }                au début du tour du lanceur, tant que la concentration du sort tient,
- *                                               l'activité est proposée (visée ouverte) : Aura de vitalité (§16.21)
- *     absorb?: { activeAfter?, recharge? }      réserve qui absorbe les dégâts avant les PV (§16.11, B14 : Égide
- *                                               arcanique) : ses PV sont les utilisations de l'item ; `activeAfter` = id
- *                                               de l'activité qui la crée (sans utilisation dépensée, pas de réserve) ;
- *                                               `recharge: { school, perLevel }` = un sort de cette école lancé avec un
- *                                               emplacement lui rend `perLevel` × le niveau de l'emplacement
- *     ranges?: { <id d'activité>: { value, units } | { units: "self" } }
- *                                               la portée de la règle quand les données de dnd5e disent autre chose (Trait
- *                                               ensorcelé : « personnelle » dans les données, 18 m au PHB 2024)
- *     tether?: { attack, activity, range }      lien avec la créature visée par l'activité `attack`, touchée ou ratée (§16.43,
- *                                               Trait ensorcelé) : l'activité `activity` ne vise qu'elle (début de tour,
- *                                               menu du clic droit) ; au-delà de `range` ou derrière un abri total, la
- *                                               concentration tombe
+ *                                               §132: at the start of each of the author's turns, this damage to
+ *                                               each creature they grapple (Unarmed Fighting); `grapplers: true`: to
+ *                                               those grappling them too (Barbed Hide of the Barbed Devil)
+ *     rerollInitiative?: { atMost }             §120: on each Initiative roll, a d20 of `atMost` or less can be
+ *                                               rerolled (question), the new one kept (Survivor, "Hypervigilance":
+ *                                               9) — runtime/roll-bonus.mjs
+ *     onNatural1?: { activity }                 §93: right after a d20 Test of the creature whose d20 shows 1, they
+ *                                               use the activity (Dark Gifts of Ravenloft: their save, on
+ *                                               themselves)
+ *     zoneEnd?: { activity }                    §91: when the item's lasting area ends (Concentration, duration,
+ *                                               removed), the caster uses the activity, their area centered on the
+ *                                               one that falls (Delayed Blast Fireball: the bead explodes)
+ *     atTurnStart?: { activity }                at the start of the caster's turn, as long as the spell's
+ *                                               Concentration holds, the activity is offered (open targeting): Aura
+ *                                               of Vitality (§16.21)
+ *     absorb?: { activeAfter?, recharge? }      pool that absorbs damage before HP (§16.11, B14: Arcane Ward): its
+ *                                               HP are the item's uses; `activeAfter` = id of the activity that
+ *                                               creates it (no use spent, no pool); `recharge: { school, perLevel }`
+ *                                               = a spell of this school cast with a slot restores `perLevel` × the
+ *                                               slot's level to it
+ *     ranges?: { <activity id>: { value, units } | { units: "self" } }
+ *                                               the rule's range when the dnd5e data says something else (Witch
+ *                                               Bolt: "Self" in the data, 18 m in the 2024 PHB)
+ *     tether?: { attack, activity, range }      link with the creature targeted by the `attack` activity, hit or
+ *                                               missed (§16.43, Witch Bolt): the `activity` activity only targets it
+ *                                               (start of turn, right-click menu); beyond `range` or behind Total
+ *                                               Cover, the Concentration drops
  *     damageShield?: { effects | worn, formula, oncePerTurn? }
- *                                               le porteur d'un effet de l'item (`effects` : id du profil → type de dégâts)
- *                                               réduit les dégâts de ce type de `formula` (Résistance, §16.46) ; `worn` (un type de
- *                                               dégâts) : le porteur de l'item lui-même, équipé (et harmonisé s'il le faut) — un
- *                                               anneau qui « réduit les dégâts de froid subis de 2d8 » (§65)
- *     rangedDefense?: { ac?, resistance?, attract? }   O8d (§347) : porté (et harmonisé) — `ac` : bonus de CA contre les jets
- *                                               d'attaque à distance ; `resistance` : Résistance aux dégâts des attaques avec une arme à
- *                                               distance ; `attract` (ft) : une attaque avec une arme à distance contre une créature à cette
- *                                               distance du porteur le vise à sa place (malédiction).
- *     exclusiveWeapon?: true | { whileEffect } O8e (§348) : l'item harmonisé, son porteur a le Désavantage aux attaques avec ses autres
- *                                               armes — toujours, ou tant qu'une créature vivante de la scène porte l'effet `whileEffect`
- *                                               de l'item (Arc du serment : l'ennemi juré)
- *     minRange?: { value, units }               O8h (§351) : portée minimale — une cible à cette distance ou moins est un souci de
- *                                               légalité bloquant, comme hors de portée (Mangonneau, Trébuchet : 18 m)
- *     swornEnemy?: { effect }                   §353 : une attaque à distance avec l'arme contre la cible qui porte cet effet venu
- *                                               d'elle (Arc du serment) — Avantage, abri partiel ou aux trois quarts ignoré, pas de
- *                                               Désavantage à longue portée
- *     devours?: true                            §355 : une créature (ni Créature artificielle ni Mort-vivant) que l'arme fait tomber à 0 PV est tuée
- *                                               et son porteur gagne des PV temporaires égaux à son maximum de PV (Noirtranchant)
- *     critFeeds?: { amount }                    §355 : un coup critique de l'arme sur une créature (ni Créature artificielle ni Mort-vivant)
- *                                               donne à son porteur ces PV temporaires (Épée voleuse de vie : 15)
- *     maxSpellDamageVs?: string[]               §355 : l'objet dans l'inventaire, les dégâts des sorts de son porteur contre ces types de
- *                                               créature sont maximisés (Demonomicon d'Iggwilv : Fiélon)
- *     wrath?: { kind, save: { ability, dc } }   §356 : arme maudite harmonisée — blessé par une autre créature (en combat pour
- *                                               `vengeance`), le porteur fait la sauvegarde ; ratée, une marque « Folie furieuse » /
- *                                               « Vengeance » contre l'auteur des dégâts, levée au début de son tour quand la colère
- *                                               prend fin (runtime/wrath.mjs)
- *     hardToPerceive?: true                     O9g (§361) : porté et harmonisé, la Perception pour repérer le porteur a le Désavantage
- *                                               (passive −5 ; Cape elfique)
- *     gmAlert?: { key | text, activities? } | [...]  §364 : à l'utilisation de l'item (ou de ces activités), le MJ est alerté de ce qui lui
- *                                               revient (bandeau en haut de son écran, carte chuchotée aux couleurs de DAS) — `key` : le texte
- *                                               `DND5ECOMBAT.AlerteMJ.<key>`, `{actor}` et `{item}` remplis ; `text` : un texte tel quel
- *                                               (surcouche du monde, module voisin). runtime/gm-alert.mjs
- *     coats?: { activity, damage, damageTypes, seconds, ammunition? }  O9h (§363) : l'activité `activity` enduit une arme (ou `ammunition`
- *                                               munitions) du porteur, au choix ; pendant `seconds`, le premier jet de dégâts de cette arme qui
- *                                               porte l'un des `damageTypes` reçoit les dés de l'activité `damage`, puis l'enduit tombe
- *                                               (Poison standard ; runtime/coatings.mjs)
- *     castDuration?: { seconds }                O9h (§363) : les sorts que l'objet fait lancer durent ce temps (effets et zones ; Huile
- *                                               d'insaisissabilité : 8 heures)
- *     backfire?: { after, chance, activity, destroys? }  O9h (§363) : après l'une des activités `after`, un d100 ; `chance` % ou moins,
- *                                               l'activité de dégâts `activity` frappe le porteur, et l'objet est détruit (`destroys` ; Cor de
- *                                               dévastation)
- *     breaksOn?: ("attack"|"damage"|"spell")[] les effets de l'item cessent quand leur porteur fait un jet d'attaque, inflige des
- *                                               dégâts ou lance un sort (Invisibilité, §16.47)
+ *                                               the bearer of an item effect (`effects`: profile id → damage type)
+ *                                               reduces damage of this type by `formula` (Resistance, §16.46);
+ *                                               `worn` (a damage type): the item's bearer themselves, equipped (and
+ *                                               attuned if needed) — a ring that "reduces the cold damage you take
+ *                                               by 2d8" (§65)
+ *     rangedDefense?: { ac?, resistance?, attract? }
+ *                                               O8d (§347): worn (and attuned) — `ac`: AC bonus against ranged
+ *                                               attack rolls; `resistance`: Resistance to damage from attacks with a
+ *                                               ranged weapon; `attract` (ft): an attack with a ranged weapon
+ *                                               against a creature within this distance of the bearer targets them
+ *                                               instead (curse).
+ *     exclusiveWeapon?: true | { whileEffect }
+ *                                               O8e (§348): the attuned item, its bearer has Disadvantage on attacks
+ *                                               with their other weapons — always, or as long as a living creature
+ *                                               in the scene bears the `whileEffect` effect of the item (Oathbow:
+ *                                               the sworn enemy)
+ *     minRange?: { value, units }               O8h (§351): minimum range — a target at this distance or less is a
+ *                                               blocking legality issue, like out of range (Mangonel, Trebuchet:
+ *                                               18 m)
+ *     swornEnemy?: { effect }                   §353: a ranged attack with the weapon against the target bearing
+ *                                               this effect from it (Oathbow) — Advantage, Half Cover or
+ *                                               Three-Quarters Cover ignored, no Disadvantage at long range
+ *     devours?: true                            §355: a creature (neither Construct nor Undead) that the weapon
+ *                                               drops to 0 HP is killed and its bearer gains Temporary Hit Points
+ *                                               equal to its maximum HP (Blackrazor)
+ *     critFeeds?: { amount }                    §355: a Critical Hit of the weapon on a creature (neither Construct
+ *                                               nor Undead) gives its bearer these Temporary Hit Points (Sword of
+ *                                               Life Stealing: 15)
+ *     maxSpellDamageVs?: string[]               §355: the object in the inventory, the damage of its bearer's
+ *                                               spells against these creature types is maximized (Demonomicon of
+ *                                               Iggwilv: Fiend)
+ *     wrath?: { kind, save: { ability, dc } }   §356: attuned cursed weapon — wounded by another creature (in
+ *                                               combat for `vengeance`), the bearer makes the save; failed, a
+ *                                               "Furious Madness" / "Vengeance" mark against the author of the
+ *                                               damage, lifted at the start of their turn when the wrath ends
+ *                                               (runtime/wrath.mjs)
+ *     hardToPerceive?: true                     O9g (§361): worn and attuned, the Perception check to spot the
+ *                                               bearer has Disadvantage (passive −5; Cloak of Elvenkind)
+ *     gmAlert?: { key | text, activities? } | [...]
+ *                                               §364: on use of the item (or of these activities), the GM is alerted
+ *                                               to what is theirs to handle (banner at the top of their screen,
+ *                                               whispered card in DAS colors) — `key`: the text
+ *                                               `DND5ECOMBAT.AlerteMJ.<key>`, `{actor}` and `{item}` filled in;
+ *                                               `text`: a text as is (world overlay, neighboring module).
+ *                                               runtime/gm-alert.mjs
+ *     coats?: { activity, damage, damageTypes, seconds, ammunition? }
+ *                                               O9h (§363): the `activity` activity coats a weapon (or `ammunition`
+ *                                               ammunition) of the bearer, their choice; for `seconds`, the first
+ *                                               damage roll of this weapon that carries one of the `damageTypes`
+ *                                               receives the dice of the `damage` activity, then the coating falls
+ *                                               (Basic Poison; runtime/coatings.mjs)
+ *     castDuration?: { seconds }                O9h (§363): the spells the object makes cast last this long (effects
+ *                                               and areas; Oil of Slipperiness: 8 hours)
+ *     backfire?: { after, chance, activity, destroys? }
+ *                                               O9h (§363): after one of the `after` activities, a d100; `chance` %
+ *                                               or less, the `activity` damage activity strikes the bearer, and the
+ *                                               object is destroyed (`destroys`; Horn of Blasting)
+ *     breaksOn?: ("attack"|"damage"|"spell")[]
+ *                                               the item's effects end when their bearer makes an attack roll, deals
+ *                                               damage or casts a spell (Invisibility, §16.47)
  *     breaksOnActivity?: { [activityId]: ("attack"|"damage"|"spell"|"save"|"forcesSave")[] }
- *                                               §438 : comme `breaksOn`, mais seulement pour les effets posés par cette activité
- *                                               (Foulée évanescente : l'Invisible tombe, Nargué — posé par le même item — reste)
+ *                                               §438: like `breaksOn`, but only for the effects applied by this
+ *                                               activity ("Fading Stride": the Invisible condition drops,
+ *                                               "Taunted" — applied by the same item — stays)
  *     breaksOnOrigin?: ("attack"|"damage"|"forcesSave")[]
- *                                               §366 : les effets de l'item cessent sur toute créature quand celui qui les a
- *                                               posés fait un jet d'attaque, un jet de dégâts ou impose une sauvegarde par un AUTRE
- *                                               item (Amitié) — runtime/breaks.mjs, MJ actif
- *     noReactions?: true                        le porteur d'un effet de l'item ne peut pas prendre de Réaction (Tentacules de
- *                                               Hadar, §16.47)
- *     actionOrBonus?: true                      le porteur d'un effet de l'item ne prend qu'une action OU une action Bonus à son
- *                                               tour, pas les deux (§77 : Nuage fétide du Dretch, Lenteur)
- *     potionEffect?: <id d'effet>                le sort que la potion fait lancer ne pose que cet effet (§53 : Croissance →
- *                                               « agrandir » d'Agrandissement/rapetissement, Rapetissement → « rapetisser »)
- *     effectStatuses?: { <id d'effet>: string[] | { set: string[] } }  §96 : états ajoutés à cet effet de l'item quand il est posé
- *                                               (Esprit couard : l'effet « Frightened » de la donnée n'a pas l'état) ; §334 : `set`
- *                                               les remplace (Rayon pétrifiant : l'effet « Restrained » porte Pétrifié)
- *     effectChanges?: { <id d'effet>: [{ key, type, value, replace?, unlessKey? }] }
- *                                               changements ajoutés à cet effet de l'item quand il est posé (§53 : Vol, Escalade —
- *                                               les données ne donnent pas la vitesse) ; `value: "@walk"` = la vitesse au sol du porteur ;
- *                                               `unlessKey` : pas si l'effet porte déjà un changement de cette autre clé (§433) ;
- *                                               `replace` : remplace le changement de même clé que porte déjà l'effet (§195 : Pattes
- *                                               d'araignée, dont la formule ne donne pas la Vitesse) ; `ifCaster` : seulement si le
- *                                               lanceur porte un item de cet identifiant (C12-e : Maléfice occulte)
- *     castTargets?: true                        le sort que la potion fait lancer vise normalement (§53 : Amitié avec les animaux —
- *                                               « vous pouvez lancer le sort » sur une bête), au lieu du buveur
- *     curesAll?: string[]                       l'utilisation fait cesser TOUS ces états sur la cible (§53 : Élixir de santé,
- *                                               Potion de vitalité ; « exhaustion » remet l'Épuisement à zéro)
- *     cures?: string[]                          l'utilisation fait cesser UN de ces états sur la cible, au choix (Restauration
- *                                               partielle, §16.47)
- *     curesOn?: <id d'activité>                 §288 : `cures` seulement pour cette activité (Rupture d'enchantement)
- *     endActivity?: { <id d'effet>: { activity, radius, units } }
- *                                               §367 : quand cet effet de l'item tombe (durée, rupture, retrait), l'activité de
- *                                               l'item est utilisée sur les créatures à `radius` de son porteur, lui exclu, sans
- *                                               rien dépenser (Esprit de l'ombre : « Emanate and End ») — runtime/endings.mjs, MJ actif
- *     noRangedWeapons?: true | { fromPulse }   §367 : dans la zone de l'item, pas d'attaque à distance avec une arme (ni depuis la
- *                                               zone, ni vers elle) ; `fromPulse` : à partir de ce rejeu de `casterPulse` (Tempête de
- *                                               vengeance, tours 5 à 10) — souci de légalité, runtime/turn.mjs
- *     drawsOnEnd?: { <id d'effet>: <uuid de table> }  §289 : quand cet effet de l'item tombe, la table est tirée (Ombre vivante :
- *                                               « Volonté de l'ombre » au début du tour)
- *     catalyst?: { save, cast, effect }         §289 : Seconde peau — le MJ déclare le catalyseur (menu du token) ; au début du tour
- *                                               suivant du porteur, la sauvegarde `save` ; ratée, l'activité `cast` s'il reste une
- *                                               utilisation, sinon l'effet `effect`
- *     endsOnUse?: [ids d'activité]              §288 : utiliser l'une de ces activités met fin au sort — la concentration du
- *                                               lanceur sur l'item tombe (Renvoi, Rupture d'enchantement de Dissipation du mal et du bien)
- *     advantageIfFighting?: true                avantage à la sauvegarde de la cible si elle est en combat contre le lanceur
- *                                               ou ses alliés (Charme-personne, §16.47)
+ *                                               §366: the item's effects end on every creature when the one who
+ *                                               applied them makes an attack roll, a damage roll or imposes a save
+ *                                               through ANOTHER item (Friends) — runtime/breaks.mjs, active GM
+ *     noReactions?: true                        the bearer of an item effect cannot take a Reaction (Arms of Hadar,
+ *                                               §16.47)
+ *     actionOrBonus?: true                      the bearer of an item effect takes only an action OR a Bonus Action
+ *                                               on their turn, not both (§77: Dretch's Fetid Cloud, Slow)
+ *     potionEffect?: <effect id>                the spell the potion makes cast only applies this effect (§53:
+ *                                               Growth → "enlarge" of Enlarge/Reduce, Diminution → "reduce")
+ *     effectStatuses?: { <effect id>: string[] | { set: string[] } }
+ *                                               §96: conditions added to this item effect when it is applied
+ *                                               ("Cowardly Spirit": the data's "Frightened" effect does not have the
+ *                                               condition); §334: `set` replaces them ("Petrifying Ray": the
+ *                                               "Restrained" effect carries Petrified)
+ *     effectChanges?: { <effect id>: [{ key, type, value, replace?, unlessKey? }] }
+ *                                               changes added to this item effect when it is applied (§53: Fly,
+ *                                               Climb — the data does not give the speed); `value: "@walk"` = the
+ *                                               bearer's walking speed; `unlessKey`: not if the effect already
+ *                                               carries a change of this other key (§433); `replace`: replaces the
+ *                                               change with the same key that the effect already carries (§195:
+ *                                               Spider Climb, whose formula does not give the Speed); `ifCaster`:
+ *                                               only if the caster bears an item with this identifier (C12-e:
+ *                                               "Occult Hex")
+ *     castTargets?: true                        the spell the potion makes cast targets normally (§53: Animal
+ *                                               Friendship — "you can cast the spell" on a Beast), instead of the
+ *                                               drinker
+ *     curesAll?: string[]                       the use ends ALL these conditions on the target (§53: Elixir of
+ *                                               Health, Potion of Vitality; "exhaustion" resets Exhaustion to zero)
+ *     cures?: string[]                          the use ends ONE of these conditions on the target, their choice
+ *                                               (Lesser Restoration, §16.47)
+ *     curesOn?: <activity id>                   §288: `cures` only for this activity (Break Enchantment)
+ *     endActivity?: { <effect id>: { activity, radius, units } }
+ *                                               §367: when this item effect ends (duration, break, removal), the
+ *                                               item's activity is used on the creatures within `radius` of its
+ *                                               bearer, them excluded, without spending anything ("Spirit of the
+ *                                               Shadow": "Emanate and End") — runtime/endings.mjs, active GM
+ *     noRangedWeapons?: true | { fromPulse }    §367: in the item's area, no ranged attack with a weapon (neither
+ *                                               from the area, nor into it); `fromPulse`: from this replay of
+ *                                               `casterPulse` (Storm of Vengeance, turns 5 to 10) — legality issue,
+ *                                               runtime/turn.mjs
+ *     drawsOnEnd?: { <effect id>: <table uuid> }
+ *                                               §289: when this item effect ends, the table is rolled (Living
+ *                                               Shadow: "Will of the Shadow" at the start of the turn)
+ *     catalyst?: { save, cast, effect }         §289: Second Skin — the GM declares the catalyst (token menu); at
+ *                                               the start of the bearer's next turn, the `save` save; failed, the
+ *                                               `cast` activity if a use remains, otherwise the `effect` effect
+ *     endsOnUse?: [activity ids]                §288: using one of these activities ends the spell — the caster's
+ *                                               Concentration on the item drops (Dismissal, Break Enchantment of
+ *                                               Dispel Evil and Good)
+ *     advantageIfFighting?: true                Advantage on the target's save if it is in combat against the
+ *                                               caster or their allies (Charm Person, §16.47)
  *     emanation?: { on, affects?, sees?, radius?, radiusFormula?, units?, activity?, whileActive?, atStart? }
- *                                               aura de monstre qui agit (§18.11, M7) : à la fin du tour du porteur
- *                                               (`on: "ownTurnEnd"`, Aura de feu) ou au début du tour d'une créature qui s'y
- *                                               trouve (`"turnStart"`, Puanteur), l'activité de l'item (défaut : la première
- *                                               sauvegarde, dégâts ou attaque) joue sur elle. Rayon : le gabarit ou la portée
- *                                               de l'activité ; `affects: "enemy"` : « de son choix » ; `sees` : la créature
- *                                               doit voir le porteur. Le texte anglais dit le reste (core/emanation.mjs) ;
- *                                               §92 : `radiusFormula` (lue sur le porteur, avec `units` : l'Aura de protection
- *                                               du Paladin) ; `whileActive` : seulement tant qu'un effet de l'item est sur le
- *                                               porteur (Ange vengeur) ; §447 `atStart` (avec `whileActive`) : elle agit aussi dès
- *                                               que cet effet arrive sur le porteur (Courroux sauvage : « quand vous vous transformez »)
+ *                                               monster aura that acts (§18.11, M7): at the end of the bearer's turn
+ *                                               (`on: "ownTurnEnd"`, Fire Aura) or at the start of the turn of a
+ *                                               creature that is in it (`"turnStart"`, Stench), the item's activity
+ *                                               (default: the first save, damage or attack) plays on it. Radius: the
+ *                                               template or the range of the activity; `affects: "enemy"`: "of their
+ *                                               choice"; `sees`: the creature must see the bearer. The English text
+ *                                               says the rest (core/emanation.mjs);
+ *                                               §92: `radiusFormula` (read on the bearer, with `units`: the
+ *                                               Paladin's Aura of Protection); `whileActive`: only while an item
+ *                                               effect is on the bearer (Avenging Angel); §447 `atStart` (with
+ *                                               `whileActive`): it also acts as soon as this effect arrives on the
+ *                                               bearer ("Wild Wrath": "when you transform")
  *     afterTeleport?: { spells, options: [{ activity, around? }] }
- *                                               §92 : après une téléportation de soi par l'un de ces sorts (identifiants), l'effet
- *                                               supplémentaire au choix de la créature (Foulée des fées) — l'activité utilisée sur
- *                                               elle, ou (`around: "left"|"arrival"`) sur les créatures à 1,50 m de la case
- *                                               quittée ou d'arrivée
+ *                                               §92: after teleporting oneself with one of these spells
+ *                                               (identifiers), the additional effect of the creature's choice (Fey
+ *                                               Step) — the activity used on them, or (`around: "left"|"arrival"`)
+ *                                               on the creatures within 1.5 m of the cell left or arrived at
  *     regeneration?: true|{ amount?, needsHp?, stoppedBy?, silveredBy?, stoppedByItems?, stoppedWhile?, survivesZero?, critical? }
- *                                               Régénération d'un monstre (§18.13) : l'activité de soin de l'item joue au début
- *                                               du tour ; ce qui la coupe et « ne meurt qu'à 0 PV sans régénérer » se lisent
- *                                               dans le texte anglais (core/regeneration.mjs). B04 : la forme déclarée l'emporte,
- *                                               clé par clé, sur cette lecture — `amount` (nombre ou formule, à la place de celle de
- *                                               l'activité), `needsHp` (au moins 1 PV), `stoppedBy` / `silveredBy` (types de dégâts ;
- *                                               d'une arme argentée), `stoppedByItems` (identifiants des objets dont les dégâts la
- *                                               coupent : "holy-water"), `stoppedWhile` ("sunlight", "runningWater" : ne fonctionne
- *                                               pas tant que la créature y est), `survivesZero`, `critical` (un coup critique la coupe)
- *     fortitude?: true                          Robustesse de la non-vie (MM 2024, §61) : des dégâts qui font tomber le porteur à
- *                                               0 PV lui font jeter une sauvegarde de Constitution (DD 5 + dégâts subis), sauf
- *                                               dégâts radiants ou coup critique ; réussie, il reste à 1 PV (core/fortitude.mjs)
- *     onDamageTaken?: { types, effect }         le porteur qui subit des dégâts d'un de ces types reçoit cet effet de l'item, sans
- *                                               Réaction ni question (Gel, Aversion au feu ; core/damage-traits.mjs)
- *     reducesForcedMove?: { distance, units }   le porteur peut prendre sa Réaction pour raccourcir d'autant un déplacement subi
- *                                               (poussée, traction) — Harnois nain ; demandé, jamais d'office
+ *                                               a monster's Regeneration (§18.13): the item's healing activity plays
+ *                                               at the start of the turn; what stops it and "dies only at 0 HP
+ *                                               without regenerating" are read from the English text
+ *                                               (core/regeneration.mjs). B04: the declared form wins, key by key,
+ *                                               over this reading — `amount` (number or formula, in place of that of
+ *                                               the activity), `needsHp` (at least 1 HP), `stoppedBy` /
+ *                                               `silveredBy` (damage types; from a silvered weapon),
+ *                                               `stoppedByItems` (identifiers of the objects whose damage stops it:
+ *                                               "holy-water"), `stoppedWhile` ("sunlight", "runningWater": does not
+ *                                               work while the creature is in it), `survivesZero`, `critical` (a
+ *                                               Critical Hit stops it)
+ *     fortitude?: true                          Undead Fortitude (MM 2024, §61): damage that drops the bearer to
+ *                                               0 HP makes them roll a Constitution save (DC 5 + damage taken),
+ *                                               except radiant damage or a Critical Hit; on success, they stay at
+ *                                               1 HP (core/fortitude.mjs)
+ *     onDamageTaken?: { types, effect }         the bearer who takes damage of one of these types receives this item
+ *                                               effect, without Reaction or question ("Frost", "Aversion to Fire";
+ *                                               core/damage-traits.mjs)
+ *     reducesForcedMove?: { distance, units }   the bearer can use their Reaction to shorten by that much a movement
+ *                                               they suffer (push, pull) — Dwarven Plate; asked, never automatic
  *     castFromBearer?: { distance, units }      the caster's spell range is also measured from a creature carrying an effect
  *                                               of the item, when within that distance of the caster (Gaze of Two Minds)
- *     extraTurns?: { formula }                  en combat, l'utilisation donne à son auteur ce nombre de tours d'affilée : le
- *                                               combat revient à lui à la fin de chacun (Arrêt du temps ; core/extra-turns.mjs)
+ *     extraTurns?: { formula }                  in combat, use gives its author this number of turns in a row: the
+ *                                               combat returns to them at the end of each (Time Stop;
+ *                                               core/extra-turns.mjs)
  *     damageByCount?: { <activity id>: { from: <activity id>, formulas: [formula, …] } }
  *                                               the activity's damage by the number created at the `from` activity (1 + its
  *                                               scaling), noted on the item (Ring of Shooting Stars; core/damage-by-count.mjs)
- *     targetedSummon?: true                      §394 : l'activité d'invocation se vise d'un clic (Doigt de mort : le cadavre) ;
- *                                               sans elle, une invocation ne vise jamais, quoi que disent ses données
- *     placesSummons?: true                       §109 : l'invocation se place toujours, même quand l'activité dit le contraire
- *                                               (`summon.prompt: false` : case « placer » décochée, que l'utilisation sans
- *                                               fenêtre ne laisse plus cocher — Invocation d'animaux)
- *     sharesSpace?: "enter"|"mutual"            §105 : entre dans la case d'une autre créature et s'y arrête ; "mutual" :
- *                                               l'inverse aussi (Nuée) — par sa présence sur la fiche, ou par l'effet
- *                                               d'un sort (Forme gazeuse ; adapter/space-sharing.mjs)
+ *     targetedSummon?: true                     §394: the summon activity is targeted with a click (Finger of Death:
+ *                                               the corpse); without it, a summon never targets, whatever its data
+ *                                               says
+ *     placesSummons?: true                      §109: the summon is always placed, even when the activity says
+ *                                               otherwise (`summon.prompt: false`: "place" checkbox unchecked, which
+ *                                               use without a window no longer lets you check — Conjure Animals)
+ *     sharesSpace?: "enter"|"mutual"            §105: enters another creature's cell and stops there; "mutual":
+ *                                               the reverse too (Swarm) — by its presence on the sheet, or through
+ *                                               the effect of a spell (Gaseous Form; adapter/space-sharing.mjs)
  *     noOpportunity?: "always"|"flying"|"afterUse"|"whileEffect"
- *                                               ne provoque pas d'attaque d'opportunité (§18.15) : toujours (Agile),
- *                                               tant qu'il porte un effet de l'item (§74, Frappe du zéphyr),
- *                                               en volant (Vol rasant), ou le reste du tour après avoir utilisé l'item
- *                                               (« moves … without provoking Opportunity Attacks », lu dans le texte)
- *     drain?: true                              drain du maximum de PV (§18.16) : « égal aux dégâts [nécrotiques] subis », ou une
- *                                               formule sur une sauvegarde ratée ; le vampire regagne ce qu'il draine — lu
- *                                               dans le texte anglais (core/drain.mjs)
- *     swallow?: true                            Avaler / Engloutir (§18.17) : l'effet de l'item qui porte l'abri total (ou
- *                                               Agrippé) fait de la cible un avalé — posée dans l'avaleur, qui l'emporte ;
- *                                               dégâts à chaque tour, seuil de régurgitation, lus dans le texte anglais
- *                                               (core/swallow.mjs)
- *     saveDamage?: { <id d'activité>: "none"|"half" }  §92 : les dégâts sur une sauvegarde réussie, quand la donnée dit autre chose
- *                                               que la règle (Foulée effroyable : « sous peine de subir 2d10 » — rien sur une réussite)
- *     savedEffects?: string[]                   ids d'effets de l'item posés seulement sur une sauvegarde RÉUSSIE (et jamais sur un
- *                                               échec) : Rayon affaiblissant — « sur une réussite, Désavantage à son prochain jet
- *                                               d'attaque » ; les données de dnd5e mettent les deux effets sur l'activité, sans
- *                                               `onSave`
- *     sharedHp?: true                           les créatures de la scène qui portent un item de cet identifiant partagent leurs PV
- *                                               (§19.5 : tout dégât subi par un membre est retiré des PV communs) —
- *                                               l'écart subi par l'une est reporté sur les autres (core/coven.mjs)
- *     secondPhase?: { activity }                à 0 PV, pas de Mort : l'activité « transform » de l'item (id) change la créature dans
- *                                               la forme de son profil, à ses PV max, même token (même initiative), états gardés
- *                                               (§19.5 : seconde phase)
+ *                                               does not provoke Opportunity Attacks (§18.15): always ("Nimble"), as
+ *                                               long as it bears an item effect (§74, Zephyr Strike), while flying
+ *                                               (Flyby), or the rest of the turn after using the item ("moves …
+ *                                               without provoking Opportunity Attacks", read from the text)
+ *     drain?: true                              max HP drain (§18.16): "equal to the [necrotic] damage taken", or a
+ *                                               formula on a failed save; the vampire regains what they drain —
+ *                                               read from the English text (core/drain.mjs)
+ *     swallow?: true                            Swallow / Engulf (§18.17): the item effect that carries Total Cover
+ *                                               (or Grappled) makes the target swallowed — placed in the swallower,
+ *                                               who carries them; damage each turn, regurgitation threshold, read
+ *                                               from the English text (core/swallow.mjs)
+ *     saveDamage?: { <activity id>: "none"|"half" }
+ *                                               §92: the damage on a successful save, when the data says something
+ *                                               else than the rule ("Dreadful Stride": "on pain of taking 2d10" —
+ *                                               nothing on a success)
+ *     savedEffects?: string[]                   ids of item effects applied only on a SUCCESSFUL save (and never on
+ *                                               a failure): Ray of Enfeeblement — "on a success, Disadvantage on its
+ *                                               next attack roll"; dnd5e's data puts both effects on the activity,
+ *                                               without `onSave`
+ *     sharedHp?: true                           the creatures of the scene that bear an item with this identifier
+ *                                               share their HP (§19.5: any damage taken by a member is removed from
+ *                                               the shared HP) — the gap taken by one is carried over to the others
+ *                                               (core/coven.mjs)
+ *     secondPhase?: { activity }                at 0 HP, no Death: the item's "transform" activity (id) changes the
+ *                                               creature into the form of its profile, at its max HP, same token
+ *                                               (same Initiative), conditions kept (§19.5: second phase)
  *     afterUse?: { onlyCantrips: true | { castTime: "action"|"bonus" }, activity? }
- *                                               §503 (B23) : après l'utilisation de cet item (ou de l'activité `activity`,
- *                                               un sort lancé par une activité « cast » compris), à son tour : plus de sort ce
- *                                               tour, sauf un sort mineur (de ce temps d'incantation) — refus forçable
- *     grapples?: { one?: true, by?: "summon" }  §502 (B22) : `one` — une seule créature agrippée à la fois par les effets de cet item (une
- *                                               nouvelle empoignade relâche l'ancienne, avec un avis) ; `by: "summon"` — l'empoignade est
- *                                               tenue par l'invocation de l'agrippeur (la liane) : elle tient tant que celle-ci est sur la
- *                                               scène et n'est pas neutralisée, quelle que soit la distance à l'agrippeur
- *     changesForm?: { activity, keepHp? }       à l'utilisation de cette activité « transform » (id), la créature prend la forme de son
- *                                               profil comme une seconde phase (même token, PV max de la forme, états gardés sauf
- *                                               `keepConditions: false`) — une vraie forme révélée à volonté (§76) ; `keepHp` (§78, ici et dans
- *                                               `secondPhase`) : la forme garde les PV actuels (« son profil reste le même
- *                                               dans chaque forme » : un lycanthrope), à 0 PV compris
- *                                               §498 (B18) : `revertAfter: { rounds | seconds, auto? }` — la forme dure ce temps (temps
- *                                               du monde, un round = 6 s), puis le token reprend sa forme d'origine (acteur, apparence,
- *                                               PV gardés si `keepHp`, sinon ceux d'avant) avec avis et son ; `auto: false` : seulement un
- *                                               rappel au MJ, retour par « Reprendre sa forme » (menu du token, toujours offert) ;
- *                                               `shareSpellSlots: true` : les emplacements dépensés sous une forme le restent sous l'autre
- *     failMargins?: { <id d'effet>: { min?, max? } }
- *                                               l'effet de l'activité de sauvegarde ne va qu'à qui l'a ratée de `min` ou plus (et de
- *                                               `max` au plus) : « si une créature rate le jet de 5 ou plus, elle est aussi
- *                                               Effrayée » (§19.6) ; une étape d'issue le dit par `margin`
- *     orders?: string[]                         ordres au choix de l'auteur, imposés à qui rate la sauvegarde, joués à son tour
- *                                               (Injonction : approach, drop, flee, grovel, halt — core/orders.mjs, §16.59)
- *     resize?: { <id d'effet>: <crans> }        l'effet change la taille de celui qui le reçoit de ce nombre de catégories
- *                                               (+1 : Agrandissement, -1 : Rapetissement, §16.58) ; dnd5e redimensionne le token
- *     reactions?: { perRound, loseOne? }        réactions par round, pas plus d'une par tour de jeu (par exemple trois) ;
- *                                               §501 `loseOne: true` : Neutralisé ou un effet `noReactions` ne lui en ôte qu'une
- *                                               (à la pose de l'effet), au lieu de toutes
- *     lastStand?: { threshold }                 réaction quand les PV tombent à `threshold` ou moins (fait `target.hpAtMost`) : ses
- *                                               effets tombent ; à 0 PV, jouée d'office, la créature reste à 1 PV (Amulette de
- *                                               Ravenloft) — l'item a des utilisations, une par fois
- *     forOneAttack?: true                       les effets que l'item pose sur son porteur ne valent que pour l'attaque qui a ouvert la
- *                                               réaction : retirés sitôt la CA relue (Parade : « +5 à sa CA contre une attaque »)
+ *                                               §503 (B23): after using this item (or the `activity` activity, a
+ *                                               spell cast through a "cast" activity included), on their turn: no
+ *                                               more spell this turn, except a cantrip (of this casting time) —
+ *                                               forceable refusal
+ *     grapples?: { one?: true, by?: "summon" }
+ *                                               §502 (B22): `one` — only one creature grappled at a time by the
+ *                                               effects of this item (a new grapple releases the old one, with a
+ *                                               notice); `by: "summon"` — the grapple is held by the grappler's
+ *                                               summon (the vine): it holds as long as the latter is in the scene
+ *                                               and not Incapacitated, whatever the distance to the grappler
+ *     changesForm?: { activity, keepHp? }       on use of this "transform" activity (id), the creature takes the
+ *                                               form of its profile as a second phase (same token, form's max HP,
+ *                                               conditions kept unless `keepConditions: false`) — a true form
+ *                                               revealed at will (§76); `keepHp` (§78, here and in `secondPhase`):
+ *                                               the form keeps the current HP ("its profile stays the same in each
+ *                                               form": a lycanthrope), at 0 HP included
+ *                                               §498 (B18): `revertAfter: { rounds | seconds, auto? }` — the form
+ *                                               lasts this long (world time, one round = 6 s), then the token
+ *                                               returns to its original form (actor, appearance, HP kept if
+ *                                               `keepHp`, otherwise those from before) with a notice and sound;
+ *                                               `auto: false`: only a reminder to the GM, return through "Revert to
+ *                                               own form" (token menu, always offered); `shareSpellSlots: true`:
+ *                                               the slots spent in one form stay spent in the other
+ *     failMargins?: { <effect id>: { min?, max? } }
+ *                                               the effect of the save activity only goes to whoever failed it by
+ *                                               `min` or more (and by `max` at most): "if a creature fails the roll
+ *                                               by 5 or more, it is also Frightened" (§19.6); an outcome step says
+ *                                               it with `margin`
+ *     orders?: string[]                         orders of the author's choice, imposed on whoever fails the save,
+ *                                               played on their turn (Command: approach, drop, flee, grovel, halt —
+ *                                               core/orders.mjs, §16.59)
+ *     resize?: { <effect id>: <steps> }         the effect changes the size of its recipient by this number of
+ *                                               categories (+1: Enlarge, -1: Reduce, §16.58); dnd5e resizes the
+ *                                               token
+ *     reactions?: { perRound, loseOne? }        reactions per round, no more than one per game turn (for example
+ *                                               three); §501 `loseOne: true`: Incapacitated or a `noReactions`
+ *                                               effect only removes one of them (when the effect is applied),
+ *                                               instead of all
+ *     lastStand?: { threshold }                 reaction when HP drop to `threshold` or less (makes
+ *                                               `target.hpAtMost`): its effects end; at 0 HP, played automatically,
+ *                                               the creature stays at 1 HP ("Amulet of Ravenloft") — the item has
+ *                                               uses, one each time
+ *     forOneAttack?: true                       the effects that the item applies to its bearer only last for the
+ *                                               attack that opened the reaction: removed as soon as the AC is
+ *                                               re-read (Parry: "+5 to its AC against one attack")
  *     basicActions?: { <id d'activité>: "dash"|"disengage"|"dodge"|"hide" | [...] | { choose: [...] } }
- *                                               l'activité prend cette action de base, au coût de son activation (Pas rapide : Foncer
- *                                               ou Se désengager par une action Bonus ; Ruse du Roublard : Se cacher aussi, §20) ;
- *                                               une liste : toutes à la fois (Défense patiente) ; `{ choose }` : une seule, au choix de
- *                                               l'auteur à l'utilisation (Échappée agile : Se désengager OU Se cacher, §65)
- *     ignoresCloseCombat?: true                 le porteur de l'item n'a pas le Désavantage au tir quand un ennemi est au contact
- *                                               (capacité déclarée par un module de créatures tiers)
- *     (aura) whileActive?: true                 l'aura n'est tenue que tant que le lanceur porte un effet de l'item
- *                                               (concentration comprise) : Passage sans trace, §16.47
- *     hitDiceHeal?: { activity, base }          après `activity`, dépenser des dés de vie pour se soigner (`base` dés, +1 par
- *                                               niveau d'emplacement au-delà du sort : Vigueur arcanique, §16.46)
- *     pact?: { damageTypes, ability? }          arme de pacte (§16.45) : le type de dégâts se choisit au pacte parmi
- *                                               `damageTypes` (ou le type normal), les attaques de l'arme lisent `ability`
- *     enchantTarget?: "weapon" | "ownWeapon" (« ownWeapon » : ses propres armes, ou une arme invoquée — §16.45)
- *     enchantTarget (weapon)                  l'enchantement vise l'arme d'une créature choisie (§16.41, Arme élémentaire) :
- *                                               un clic sur la créature (soi compris), puis la liste de ses armes
+ *                                               the activity takes this basic action, at the cost of its activation
+ *                                               ("Swift Step": Dash or Disengage as a Bonus Action; Cunning Action
+ *                                               of the Rogue: Hide too, §20); a list: all at once (Patient
+ *                                               Defense); `{ choose }`: only one, the author's choice on use
+ *                                               (Nimble Escape: Disengage OR Hide, §65)
+ *     ignoresCloseCombat?: true                 the item's bearer has no Disadvantage on ranged attacks when an
+ *                                               enemy is in melee contact (ability declared by a third-party
+ *                                               creature module)
+ *     (aura) whileActive?: true                 the aura is only held while the caster bears an effect of the item
+ *                                               (Concentration included): Pass without Trace, §16.47
+ *     hitDiceHeal?: { activity, base }          after `activity`, spend Hit Dice to heal (`base` dice, +1 per spell
+ *                                               slot level above the spell: Arcane Vigor, §16.46)
+ *     pact?: { damageTypes, ability? }          pact weapon (§16.45): the damage type is chosen at the pact among
+ *                                               `damageTypes` (or the normal type), the weapon's attacks read
+ *                                               `ability`
+ *     enchantTarget?: "weapon" | "ownWeapon" ("ownWeapon": their own weapons, or a summoned weapon — §16.45)
+ *     enchantTarget (weapon)                    the enchantment targets the weapon of a chosen creature (§16.41,
+ *                                               Elemental Weapon): a click on the creature (themselves included),
+ *                                               then the list of its weapons
  *     trace?: true | { activity?, show?, attack? }
- *                                               (§16.41) `activity` : seulement pour cette activité (Lame de feu : « Invoquer
- *                                               une lame », pas l'attaque) ; `show` : l'icône sur le token ; `attack` :
- *                                               l'activité d'attaque offerte au menu du clic droit tant que la trace est là.
- *                                               Une trace d'un sort à concentration tombe avec elle.
- *     trace (true)                              l'utilisation laisse sur le lanceur un effet « trace » (nom, image, durée de
- *                                               l'item) qui porte ses déclarations `via: "effect"` — pour un sort qui
- *                                               ne pose aucun effet (Armure d'Agathys, §16.9)
+ *                                               (§16.41) `activity`: only for this activity (Flame Blade: "Summon a
+ *                                               blade", not the attack); `show`: the icon on the token; `attack`:
+ *                                               the attack activity offered in the right-click menu as long as the
+ *                                               trace is there. A trace of a Concentration spell drops with it.
+ *     trace (true)                              use leaves on the caster a "trace" effect (name, image, duration of
+ *                                               the item) that carries its `via: "effect"` declarations — for a
+ *                                               spell that applies no effect (Armor of Agathys, §16.9)
  *     empower?: { damageType, effect, excludeTypes? }
- *                                               morsure qui renforce (§19.9, Morsure vampirique du Dhampir) : quand l'arme de l'item
- *                                               inflige des dégâts de `damageType` à une créature d'un autre type que `excludeTypes`,
- *                                               et qu'il reste une utilisation à l'item, l'auteur choisit : regagner autant de PV,
- *                                               ou recevoir l'effet `effect` de l'item, ses changements valant ce montant, jusqu'à
- *                                               son prochain jet d'attaque ou de caractéristique (1 minute)
+ *                                               empowering bite (§19.9, Dhampir's Vampiric Bite): when the item's
+ *                                               weapon deals `damageType` damage to a creature of a type other than
+ *                                               `excludeTypes`, and the item has a use left, the author chooses:
+ *                                               regain as many HP, or receive the item's `effect` effect, its
+ *                                               changes taking this amount, until their next attack roll or ability
+ *                                               check (1 minute)
  *     discharge?: { effect, formula, damageTypes, sees? }
- *                                               l'effet `effect` de l'item, posé sur une créature, peut être dépensé par son lanceur
- *                                               quand lui ou un allié (`sees` : qu'il voit) la touche d'un jet d'attaque : l'effet
- *                                               cesse et la cible subit `formula` (données du lanceur), d'un type au choix
- *                                               (Chemin vers la tombe, §19.9)
+ *                                               the item's `effect` effect, placed on a creature, can be spent by
+ *                                               its caster when they or an ally (`sees`: whom they see) hit it with
+ *                                               an attack roll: the effect ends and the target takes `formula`
+ *                                               (caster's data), of a chosen type (Path to the Grave, §19.9)
  *     sneakAttack?: true | { dice?, anyWeapon?, alwaysVs? }
- *                                               Attaque sournoise (§20) : une fois par tour, les dés de l'item (sa première part de
- *                                               dégâts, sinon ⌈niveau de roublard / 2⌉d6) s'ajoutent à une attaque qui touche avec une
- *                                               arme de Finesse ou à distance, avec l'Avantage ou un allié à 1,50 m de la cible ;
- *                                               objet (§72, PNJ) : `dice` (« 5d6 »), `anyWeapon` (toute arme), `alwaysVs` (types de
- *                                               créature contre lesquels ni Avantage ni allié ne sont requis : ["undead"])
- *     sneakBonus?: { formula, firstRound? }     une part de plus quand l'Attaque sournoise touche (du type de l'arme) ; `firstRound` :
- *                                               seulement au premier round du combat (Assassinat : « égaux à votre niveau de Roublard »)
- *     cunningStrikes?: { <clé>: { cost, activity?, requires?, sizeAtMost?, withdraw?, keepsHidden? } }
- *                                               Frappes rusées (§20) : effets payés en dés d'Attaque sournoise, choisis par l'auteur
- *                                               avant ses dégâts ; `activity` : la sauvegarde de l'item jouée sur la cible après les
- *                                               dégâts ; `requires` : identifiant d'un item que l'auteur doit avoir (trousse
- *                                               d'empoisonneur) ; `sizeAtMost` : taille maximale de la cible ; `withdraw` : l'auteur
- *                                               se déplace de la moitié de sa Vitesse sans provoquer d'attaque d'opportunité
- *     cunningStrikeMax?: number                 nombre de Frappes rusées par Attaque sournoise (Frappe rusée améliorée : 2)
- *     evasion?: true                            Dérobade (§20) : sauvegarde de Dextérité pour la moitié des dégâts — rien sur une
- *                                               réussite, la moitié sur un échec ; pas si le porteur est Neutralisé
- *     avoidance?: true                          §334 : Esquive (Bête éclipsante) — comme `evasion`, pour toute sauvegarde à moitié des dégâts
- *     elusive?: true                            Insaisissable (§20) : aucun jet d'attaque n'a l'Avantage contre le porteur, sauf
- *                                               s'il est Neutralisé
- *     holdsStill?: true                         après l'utilisation, la Vitesse de l'utilisateur est 0 jusqu'à la fin du tour (Visée
- *                                               stable, §20)
- *     grantsAction?: true                       l'utilisation donne une action de plus au budget du tour (Fougue, §21)
- *     movesAfter?: string | { item, disengage? } après une utilisation par action Bonus de l'item de cet identifiant, la moitié de la
- *                                               Vitesse en déplacement de plus, sans attaque d'opportunité (Décalage tactique, §21) ;
- *                                               `disengage: false` : sans rien sur les attaques d'opportunité (Bond instinctif, §22)
- *     rage?: { effect }                         la Rage du Barbare (§22) : l'effet de l'item qui la porte ; le moteur tient sa durée
- *     persistentRage?: true                     la Rage n'a pas à être entretenue, et seul Inconscient y met fin (§22)
- *     reckless?: true                           Témérité (§22) : à la première attaque de Force du tour, le choix d'attaquer avec témérité
- *     relentless?: { activity }                 Rage implacable (§22) : à 0 PV en Rage, la sauvegarde de l'item (id) ; réussie, 2 × le
- *                                               niveau de Barbare en PV
- *     studiedAttacks?: true                     un jet d'attaque raté donne l'Avantage au prochain contre la même créature, jusqu'à la
- *                                               fin du prochain tour (Attaques avisées, §21)
- *     heroicWarrior?: true                      en combat, l'Inspiration héroïque au début de son tour s'il ne l'a pas (§21)
- *     greatWeaponFighting?: true                dés de dégâts d'une arme de corps à corps à deux mains : 1 et 2 comptent 3 (§21)
- *     thrownDamage?: number                     bonus aux dégâts d'une attaque à distance avec une arme de lancer (§21)
- *     effectEnds?: { <id d'effet> | "status:<état>": "casterTurnStart"|"casterTurnEnd"|"bearerTurnStart"|"bearerTurnEnd"
+ *                                               Sneak Attack (§20): once per turn, the item's dice (its first
+ *                                               damage part, otherwise ⌈Rogue level / 2⌉d6) are added to an attack
+ *                                               that hits with a Finesse or ranged weapon, with Advantage or an ally
+ *                                               within 1.5 m of the target; item (§72, NPC): `dice` ("5d6"),
+ *                                               `anyWeapon` (any weapon), `alwaysVs` (creature types against which
+ *                                               neither Advantage nor ally is required: ["undead"])
+ *     sneakBonus?: { formula, firstRound? }     an extra part when the Sneak Attack hits (of the weapon's type);
+ *                                               `firstRound`: only in the first round of combat (Assassinate:
+ *                                               "equal to your Rogue level")
+ *     cunningStrikes?: { <key>: { cost, activity?, requires?, sizeAtMost?, withdraw?, keepsHidden? } }
+ *                                               Cunning Strike (§20): effects paid in Sneak Attack dice, chosen by
+ *                                               the author before their damage; `activity`: the item's save played
+ *                                               on the target after the damage; `requires`: identifier of an item
+ *                                               the author must have (poisoner's kit); `sizeAtMost`: maximum size
+ *                                               of the target; `withdraw`: the author moves half their Speed
+ *                                               without provoking Opportunity Attacks
+ *     cunningStrikeMax?: number                 number of Cunning Strikes per Sneak Attack (Improved Cunning
+ *                                               Strike: 2)
+ *     evasion?: true                            Evasion (§20): Dexterity save for half damage — nothing on a
+ *                                               success, half on a failure; not if the bearer is Incapacitated
+ *     avoidance?: true                          §334: Avoidance (Displacer Beast) — like `evasion`, for any save for
+ *                                               half damage
+ *     elusive?: true                            Elusive (§20): no attack roll has Advantage against the bearer,
+ *                                               unless they are Incapacitated
+ *     holdsStill?: true                         after use, the user's Speed is 0 until the end of the turn (Steady
+ *                                               Aim, §20)
+ *     grantsAction?: true                       use gives one more action to the turn's budget (Action Surge, §21)
+ *     movesAfter?: string | { item, disengage? }
+ *                                               after a use by Bonus Action of the item with this identifier, half
+ *                                               the Speed in extra movement, without Opportunity Attacks (Tactical
+ *                                               Shift, §21); `disengage: false`: with no protection against
+ *                                               Opportunity Attacks (Instinctive Pounce, §22)
+ *     rage?: { effect }                         the Barbarian's Rage (§22): the item effect that carries it; the
+ *                                               engine tracks its duration
+ *     persistentRage?: true                     Rage does not need to be maintained, and only Unconscious ends it
+ *                                               (§22)
+ *     reckless?: true                           Reckless Attack (§22): on the first Strength attack of the turn,
+ *                                               the choice to attack recklessly
+ *     relentless?: { activity }                 Relentless Rage (§22): at 0 HP while Raging, the item's save (id);
+ *                                               on success, 2 × the Barbarian level in HP
+ *     studiedAttacks?: true                     a missed attack roll gives Advantage on the next one against the
+ *                                               same creature, until the end of the next turn (Studied Attacks, §21)
+ *     heroicWarrior?: true                      in combat, Heroic Inspiration at the start of their turn if they do
+ *                                               not have it (§21)
+ *     greatWeaponFighting?: true                damage dice of a two-handed melee weapon: 1 and 2 count as 3 (§21)
+ *     thrownDamage?: number                     bonus to the damage of a ranged attack with a thrown weapon (§21)
+ *     effectEnds?: { <effect id> | "status:<condition>": "casterTurnStart"|"casterTurnEnd"|"bearerTurnStart"|"bearerTurnEnd"
  *                    |"currentTurnEnd" }
- *                                               (`status:stunned` : l'état posé par une étape `status` de l'item, §157)
- *                                               l'effet de l'item tombe au début du prochain tour du lanceur, à la fin de son prochain
- *                                               tour, au début ou à la fin du prochain tour du porteur (Rayon de givre, Contact
- *                                               glacial, §23 ; léthargie de Hâte, §42.2)
- *     actionEnds?: { <id d'effet>: { by: "bearer"|"other", roll?: "save"|"check", verb?: "wake", status?: "prone" } }
- *                                               une action fait cesser cet effet de l'item (§43.2) — `by: "bearer"` : le
- *                                               porteur (`roll: "save"` : il rejoue la sauvegarde du sort, Danse irrésistible
- *                                               d'Otto ; `roll: "check"` : le test écrit dans le texte de l'item ; sans `roll` :
- *                                               l'effet tombe, Forme gazeuse) ; `by: "other"` : une autre créature au contact
- *                                               (sans `roll` : secouer un dormeur — `verb: "wake"` pour le libellé ; `roll:
- *                                               "check"` : Frappe piégeuse) ; `status` : l'état que le porteur se donne en y mettant fin (§49,
- *                                               feu grégeois : « en vous infligeant l'état À terre ») ; §288 : `spell` — l'effet
- *                                               tombé, le sort prend fin (concentration du lanceur) ; `turnStart` — l'action est
- *                                               proposée au porteur au début de son tour (Dédale : banni, son token est caché)
- *     afterSmite?: { effect, smites? }           §273 : quand l'un des châtiments nommés (identifiants ; tous sans `smites`) de son porteur
- *                                               touche, cet effet de l'item est posé sur lui (Châtiment de protection)
- *     wardsConditions?: { types, statuses }      §268 : le porteur d'un effet de l'item est immunisé contre ces états quand ils viennent
- *                                               d'une créature de ces types (Protection contre le Mal et le Bien : Charmé, Effrayé)
- *     noAttacksOrSpells?: true                  §269 : le porteur d'un effet de l'item ne peut ni attaquer ni lancer de sorts (Forme
- *                                               gazeuse) — un souci de légalité, l'item lui-même excepté
- *     noTeleport?: true                         le porteur d'un effet de l'item ne peut pas se téléporter (Entraves
- *                                               dimensionnelles) : refus forçable des téléportations que le moteur connaît
- *     noSpells?: true                           §284 : le porteur d'un effet de l'item ne peut ni lancer de sorts ni prendre l'action
- *                                               Magie (Aliénation) — un souci de légalité sur les sorts et les objets magiques
- *     panic?: { effect?, drop?, endsAt? }      §285 : le porteur d'un effet de l'item (`effect` : celui-là) prend l'action Foncer et
- *                                               s'éloigne du lanceur à chacun de ses tours ; `drop` : il lâche ce qu'il tient sur la
- *                                               sauvegarde ratée ; `endsAt` ({ distance, units }) : l'effet cesse à cette distance
- *                                               du lanceur, hors de sa vue (Terreur, Mauvais œil)
- *     confusion?: <id d'effet>                  §285 : le porteur de cet effet lance 1d10 au début de son tour (table de Confusion)
- *     noBonus?: <id d'effet>                    §285 : le porteur de cet effet n'a pas d'action Bonus (Confusion)
- *     forcedAttack?: <id d'effet>               §285 : au début de son tour, le porteur doit attaquer au corps à corps une créature que
- *                                               le lanceur choisit (rappel ; Couronne du dément)
- *     upkeep?: true                             §285 : à ses tours suivants, le lanceur entretient le sort par une action Magie (menu
- *                                               de son token), sinon sa concentration tombe à la fin de son tour (Couronne du dément)
- *     keepsProne?: true                         §285 : le porteur d'un effet de l'item ne peut pas mettre fin à l'état À terre
- *                                               (Fou rire de Tasha)
- *     knownToOrigin?: true                      §284 : le porteur d'un effet de l'item ne peut pas se Cacher du lanceur de l'item, et
- *                                               l'état Invisible ne lui sert à rien contre lui (Épine mentale)
- *     singleAttack?: true                       §267 : le porteur d'un effet de l'item ne fait qu'une attaque par action Attaquer
- *                                               (Lenteur ; un PNJ à Attaques multiples garde son plan)
- *     spellFailure?: { chance, component? }     §283 : un sort lancé par le porteur d'un effet de l'item échoue sur un d100 ≤ chance
- *                                               (seulement s'il a la composante nommée : Lenteur, 25 % pour « somatic ») — rien
- *                                               n'est lancé ni dépensé, comme un sort contré (runtime/gates.mjs)
- *     untypedDamage?: <type>                    §283 : un jet de dégâts de l'item que la donnée laisse sans type prend celui-ci, avant le
- *                                               jet (Sphère glacée d'Otiluke : 10d6 sans type → froid ; résistances et immunités jouent)
- *     banishes?: [ids d'effet]                  §265 : ces effets de l'item transportent leur porteur dans un demi-plan — token et
- *                                               combattant cachés tant qu'ils durent, retour à l'espace quitté (ou au plus proche
- *                                               libre) quand ils tombent (Bannissement, Châtiment bannissant)
- *     endsWhen?: { armor?: "any"|"heavy", apart?: { distance, units, at?: "move"|"casterTurnEnd" }, zeroHp?: true|"bearer"|"caster"|"either",
+ *                                               (`status:stunned`: the condition applied by a `status` step of the
+ *                                               item, §157) the item's effect ends at the start of the caster's next
+ *                                               turn, at the end of their next turn, at the start or end of the
+ *                                               bearer's next turn (Ray of Frost, Chill Touch, §23; Haste's
+ *                                               lethargy, §42.2)
+ *     actionEnds?: { <effect id>: { by: "bearer"|"other", roll?: "save"|"check", verb?: "wake", status?: "prone" } }
+ *                                               an action ends this item effect (§43.2) — `by: "bearer"`: the
+ *                                               bearer (`roll: "save"`: they replay the spell's save, Otto's
+ *                                               Irresistible Dance; `roll: "check"`: the check written in the
+ *                                               item's text; without `roll`: the effect ends, Gaseous Form);
+ *                                               `by: "other"`: another creature in contact (without `roll`: shaking
+ *                                               a sleeper — `verb: "wake"` for the label; `roll:
+ *                                               "check"`: Ensnaring Strike); `status`: the condition the bearer
+ *                                               gives themselves by ending it (§49, Alchemist's Fire: "by
+ *                                               inflicting the Prone condition on yourself"); §288: `spell` — the
+ *                                               effect ended, the spell ends (caster's Concentration); `turnStart`
+ *                                               — the action is offered to the bearer at the start of their turn
+ *                                               (Maze: banished, their token is hidden)
+ *     afterSmite?: { effect, smites? }          §273: when one of the named smites (identifiers; all without
+ *                                               `smites`) of its bearer hits, this item effect is applied to them
+ *                                               (Smite of Protection)
+ *     wardsConditions?: { types, statuses }     §268: the bearer of an item effect is immune to these conditions
+ *                                               when they come from a creature of these types (Protection from Evil
+ *                                               and Good: Charmed, Frightened)
+ *     noAttacksOrSpells?: true                  §269: the bearer of an item effect can neither attack nor cast
+ *                                               spells (Gaseous Form) — a legality issue, the item itself excepted
+ *     noTeleport?: true                         the bearer of an item effect cannot teleport (Dimensional
+ *                                               Shackles): forceable refusal of the teleports the engine knows
+ *     noSpells?: true                           §284: the bearer of an item effect can neither cast spells nor take
+ *                                               the Magic action ("Alienation") — a legality issue on spells and
+ *                                               magic items
+ *     panic?: { effect?, drop?, endsAt? }       §285: the bearer of an item effect (`effect`: that one) takes the
+ *                                               Dash action and moves away from the caster on each of their turns;
+ *                                               `drop`: they drop what they hold on the failed save; `endsAt`
+ *                                               ({ distance, units }): the effect ends at this distance from the
+ *                                               caster, out of their sight (Fear, Evil Eye)
+ *     confusion?: <effect id>                   §285: the bearer of this effect rolls 1d10 at the start of their
+ *                                               turn (Confusion table)
+ *     noBonus?: <effect id>                     §285: the bearer of this effect has no Bonus Action (Confusion)
+ *     forcedAttack?: <effect id>                §285: at the start of their turn, the bearer must make a melee
+ *                                               attack against a creature that the caster chooses (reminder; Crown
+ *                                               of Madness)
+ *     upkeep?: true                             §285: on their later turns, the caster maintains the spell with a
+ *                                               Magic action (menu of their token), otherwise their Concentration
+ *                                               drops at the end of their turn (Crown of Madness)
+ *     keepsProne?: true                         §285: the bearer of an item effect cannot end the Prone condition
+ *                                               (Tasha's Hideous Laughter)
+ *     knownToOrigin?: true                      §284: the bearer of an item effect cannot Hide from the item's
+ *                                               caster, and the Invisible condition is of no use to them against
+ *                                               them (Mind Sliver)
+ *     singleAttack?: true                       §267: the bearer of an item effect makes only one attack per Attack
+ *                                               action (Slow; an NPC with Multiattack keeps their plan)
+ *     spellFailure?: { chance, component? }     §283: a spell cast by the bearer of an item effect fails on a d100
+ *                                               ≤ chance (only if it has the named component: Slow, 25% for
+ *                                               "somatic") — nothing is cast or spent, like a countered spell
+ *                                               (runtime/gates.mjs)
+ *     untypedDamage?: <type>                    §283: a damage roll of the item that the data leaves untyped takes
+ *                                               this type, before the roll (Otiluke's Freezing Sphere: 10d6
+ *                                               untyped → cold; Resistances and Immunities apply)
+ *     banishes?: [effect ids]                   §265: these item effects carry their bearer to a demiplane — token
+ *                                               and combatant hidden as long as they last, return to the space left
+ *                                               (or the nearest free one) when they end (Banishment, Banishing
+ *                                               Smite)
+ *     endsWhen?: { armor?: "any"|"heavy", apart?: { distance, units, at?: "move"|"casterTurnEnd" },
+ *                  zeroHp?: true|"bearer"|"caster"|"either",
  *                  unaffected?: "failedSave"|"noHits"|"noTargets", spell?: true, casterTargetsOther?: true, allyDamages?: true,
  *                  healedByMagic?: true }
- *                                               §258 : fins génériques (core/endings.mjs, runtime/endings.mjs) — l'effet de l'item
- *                                               cesse quand son porteur enfile une armure (`heavy` : lourde ; Armure du mage, Rage),
- *                                               quand porteur et lanceur sont séparés de plus de `apart` (à chaque déplacement, ou
- *                                               à la fin du tour du lanceur : Lien de garde, Duel forcé), quand l'un des deux tombe à
- *                                               0 PV (`zeroHp` ; `"caster"` : the caster only, Warding Bond) ; `unaffected` : l'utilisation n'a affecté personne, la
- *                                               concentration tombe (réglage `endUnaffected`) ; `spell` : la fin vaut pour tout le
- *                                               sort (sa concentration, ou ses effets sur chaque créature), pas pour ce seul porteur ;
- *                                               §270 `casterTargetsOther` : le lanceur attaque une autre créature, ou lance un sort sur
- *                                               un autre ennemi ; `allyDamages` : un allié du lanceur blesse le porteur (Duel forcé) ;
- *                                               §495 `healedByMagic` : le porteur reçoit un soin magique (sort, objet magique, potion,
- *                                               capacité dite `magical`)
- *     effectThen?: { <id d'effet>: <id d'effet> }
- *                                               quand le premier effet de l'item cesse sur une créature, le second y est posé
- *                                               (Hâte : « quand le sort prend fin, la cible est Neutralisée… », §42.2)
- *     blocksHealing?: true                      le porteur d'un effet de l'item ne regagne pas de PV (Contact glacial, §23)
- *     blocksTempHp?: true | [ids d'effets]     §505 (B25) : ne reçoit pas de PV temporaires — la créature qui porte le trait, ou le porteur
- *                                               d'un effet de l'item (nuées : « can't gain Temporary Hit Points »)
- *     noOpportunityAttacks?: true|string[]      le porteur d'un effet de l'item (ou de ces effets : Coup chancelant) ne fait pas
- *                                               d'attaque d'opportunité (Poigne électrique)
- *     byWounds?: { healthy, wounded }           deux activités (ids) : les dégâts sont ceux de `wounded` contre une cible blessée,
- *                                               de `healthy` sinon, quelle que soit celle utilisée (Glas, §23)
- *     oneAttack?: true                          l'enchantement de l'item vaut pour une attaque : l'attaque est offerte aussitôt, et
- *                                               l'enchantement tombe après elle (Frappe assurée, §23)
- *     martialArts?: true                        Arts martiaux (§24) : une frappe à mains nues peut se payer de l'action Bonus
- *     flurry?: { activity, strikes, weapons? }  Déluge de coups (§24) : l'activité (ou l'une d'une liste, §438) ouvre `strikes` frappes gratuites ;
- *                                               `weapons` : des attaques d'arme aussi (Prêtre de guerre, §27)
- *     stunningStrike?: { activity, focus }      Frappe étourdissante (§24) : après un coup, une fois par tour, la sauvegarde de l'item
- *                                               contre une utilisation de l'item `focus` (identifiant)
- *     openHand?: { addle, push, topple }        Technique de la main ouverte (§24) : après un coup du Déluge, l'une des trois activités
+ *                                               §258: generic endings (core/endings.mjs, runtime/endings.mjs) — the
+ *                                               item's effect ends when its bearer dons armor (`heavy`: heavy; Mage
+ *                                               Armor, Rage), when bearer and caster are separated by more than
+ *                                               `apart` (on each movement, or at the end of the caster's turn:
+ *                                               Warding Bond, Compelled Duel), when either one drops to
+ *                                               0 HP (`zeroHp`; `"caster"`: the caster only, Warding Bond);
+ *                                               `unaffected`: the use affected no one, the Concentration drops
+ *                                               (setting `endUnaffected`); `spell`: the ending applies to the whole
+ *                                               spell (its Concentration, or its effects on each creature), not to
+ *                                               this bearer alone;
+ *                                               §270 `casterTargetsOther`: the caster attacks another creature, or
+ *                                               casts a spell on another enemy; `allyDamages`: an ally of the
+ *                                               caster hurts the bearer (Compelled Duel);
+ *                                               §495 `healedByMagic`: the bearer receives magical healing (spell,
+ *                                               magic item, potion, ability called `magical`)
+ *     effectThen?: { <effect id>: <effect id> }
+ *                                               when the item's first effect ends on a creature, the second is
+ *                                               applied to it (Haste: "when the spell ends, the target is
+ *                                               Incapacitated…", §42.2)
+ *     blocksHealing?: true                      the bearer of an item effect does not regain HP (Chill Touch, §23)
+ *     blocksTempHp?: true | [effect ids]        §505 (B25): does not receive Temporary Hit Points — the creature
+ *                                               that bears the trait, or the bearer of an item effect (swarms:
+ *                                               "can't gain Temporary Hit Points")
+ *     noOpportunityAttacks?: true|string[]      the bearer of an item effect (or of these effects: "Staggering
+ *                                               Blow") does not make Opportunity Attacks (Shocking Grasp)
+ *     byWounds?: { healthy, wounded }           two activities (ids): the damage is that of `wounded` against a
+ *                                               wounded target, of `healthy` otherwise, whichever one is used (Toll
+ *                                               the Dead, §23)
+ *     oneAttack?: true                          the item's enchantment lasts for one attack: the attack is offered
+ *                                               at once, and the enchantment ends after it (True Strike, §23)
+ *     martialArts?: true                        Martial Arts (§24): an Unarmed Strike can be paid for with the
+ *                                               Bonus Action
+ *     flurry?: { activity, strikes, weapons? }  Flurry of Blows (§24): the activity (or one from a list, §438) opens
+ *                                               `strikes` free strikes; `weapons`: weapon attacks too (War Priest,
+ *                                               §27)
+ *     stunningStrike?: { activity, focus }      Stunning Strike (§24): after a hit, once per turn, the item's save
+ *                                               against a use of the `focus` item (identifier)
+ *     openHand?: { addle, push, topple }        Open Hand Technique (§24): after a Flurry hit, one of the three
+ *                                               activities
  *     smite?: { damage, fiends?, save?, effect?, ranged?, burst?, saveAtMostHp?, replaces?, onMiss?, blast? }
- *                                               sort de châtiment (§25) : proposé au jet de dégâts d'un coup au corps à corps, ses dés
- *                                               (activité `damage`, ou `fiends` contre un Fiélon ou un Mort-vivant) s'ajoutent au jet,
- *                                               puis la sauvegarde `save` joue sur la cible ; `effect` : l'effet de l'item posé sur
- *                                               la cible touchée, sans sauvegarde (brûlure du Châtiment de fournaise, §42.2) ;
- *                                               `saveAtMostHp` (§262) : la sauvegarde ne joue que si le coup laisse la cible à ce
- *                                               nombre de PV ou moins (Châtiment bannissant : 50) ; §288 : `replaces` — ses dés
- *                                               remplacent ceux de l'arme ; `onMiss: "half"` — offert aussi après un raté, la cible
- *                                               subit la moitié ; `blast` — chaque créature à `radius` de la cible fait la sauvegarde
- *                                               `ability` contre les dés de l'activité `activity`, moitié sur une réussite (Flèche de
- *                                               foudre)
- *     healsDownedMax?: true                     le porteur de l'item soigne au maximum des dés une créature à 0 PV, avec un sort ou
- *                                               une Conduit divin (Retour à la vie du Domaine de la Tombe, §19.9)
- *     dispel?: true                             Dissipation de la magie (§37.2) : les sorts en cours sur les cibles cessent —
- *                                               d'office jusqu'au niveau 3 ou à celui de l'emplacement, sinon par un test de
- *                                               la caractéristique d'incantation contre DD 10 + niveau (core/dispel.mjs)
- *     dispel?: { upTo, beyond?, keepBySlot? }   §496 : dissipation bornée — d'office jusqu'au niveau `upTo` (quel que soit
- *                                               l'emplacement) ; au-delà, `beyond: "none"` : rien, sans test, `"check"` (défaut) :
- *                                               le test ci-dessus ; `keepBySlot: true` : la créature concentrée sur un sort qui
- *                                               cesserait peut, par sa Réaction, dépenser un emplacement de niveau 1+ pour le garder
- *     counter?: { level? }                      contresort à la manière de 2014 (§66, SRD 5.1) : l'item, utilisé en réaction à la
- *                                               porte `castsSpell`, fait échouer d'office un sort de niveau `level` ou moins (défaut :
- *                                               le niveau de l'item) ; au-delà, test de la caractéristique d'incantation de celui
- *                                               qui contre, DD 10 + le niveau du sort (core/counter.mjs) — pas de sauvegarde du lanceur
+ *                                               smite spell (§25): offered on the damage roll of a melee hit, its
+ *                                               dice (`damage` activity, or `fiends` against a Fiend or an Undead)
+ *                                               are added to the roll, then the `save` save plays on the target;
+ *                                               `effect`: the item effect applied to the target hit, without a save
+ *                                               (burn from Searing Smite, §42.2); `saveAtMostHp` (§262): the save
+ *                                               only plays if the hit leaves the target at this number of HP or
+ *                                               fewer (Banishing Smite: 50); §288: `replaces` — its dice replace
+ *                                               those of the weapon; `onMiss: "half"` — also offered after a miss,
+ *                                               the target takes half; `blast` — each creature within `radius` of
+ *                                               the target makes the save `ability` against the dice of the
+ *                                               `activity` activity, half on a success (Lightning Arrow)
+ *     healsDownedMax?: true                     the item's bearer heals a creature at 0 HP for the maximum of the
+ *                                               dice, with a spell or a Channel Divinity (Circle of Mortality of the
+ *                                               Grave Domain, §19.9)
+ *     dispel?: true                             Dispel Magic (§37.2): the ongoing spells on the targets end —
+ *                                               automatically up to level 3 or the slot's level, otherwise by a
+ *                                               check of the spellcasting ability against DC 10 + level
+ *                                               (core/dispel.mjs)
+ *     dispel?: { upTo, beyond?, keepBySlot? }   §496: bounded dispelling — automatically up to level `upTo`
+ *                                               (whatever the slot); beyond, `beyond: "none"`: nothing, no check,
+ *                                               `"check"` (default): the check above; `keepBySlot: true`: the
+ *                                               creature concentrating on a spell that would end can, with their
+ *                                               Reaction, spend a level 1+ spell slot to keep it
+ *     counter?: { level? }                      Counterspell in the 2014 manner (§66, SRD 5.1): the item, used as a
+ *                                               reaction at the gate `castsSpell`, automatically makes a spell of
+ *                                               level `level` or lower fail (default: the item's level); beyond, a
+ *                                               spellcasting ability check by the one countering, DC 10 + the
+ *                                               spell's level (core/counter.mjs) — no save for the caster
  *     contest?: { activity?, skill, against, effect, exclusive? }
- *                                               test en opposition (§72, Combat perspicace) : l'auteur jette `skill`, la cible la
- *                                               meilleure de `against` (chez son joueur s'il est connecté) ; gagné, l'effet `effect`
- *                                               de l'activité est posé sur elle (`exclusive` : ceux posés ailleurs tombent)
- *     zoneCharges?: n                           la zone qui dure tombe après n déclenchements (§75) ; §303 : ou une formule du niveau de lancement (Cordon de flèches : « 2 * @item.level »)
- *     pendingDie?: { activity, against: "melee"|"target" }  §89 : l'activité promet son dé au prochain jet de dégâts d'une
- *                                               attaque de l'auteur ce tour-ci, au corps à corps ou contre la cible désignée (Fente,
- *                                               Feinte du Maître de guerre ; runtime/maneuver-dice.mjs)
- *     maxDamage?: { activity, weapons?, refundOnHit? }  §279 : l'activité promet le maximum des dés à la prochaine attaque de l'auteur
- *                                               ce tour-ci avec une arme de ces genres (`weapons` : "unarmed", "simpleM", "improv"… —
- *                                               WEAPON_KINDS) ; touchée, `refundOnHit` rend les utilisations que l'activité a coûtées ;
- *                                               ratée, la promesse est perdue (runtime/maneuver-dice.mjs)
+ *                                               opposed check (§72, Insightful Fighting): the author rolls `skill`,
+ *                                               the target the best of `against` (at their player if connected);
+ *                                               won, the activity's `effect` effect is placed on them (`exclusive`:
+ *                                               those placed elsewhere end)
+ *     zoneCharges?: n                           the lasting area ends after n triggerings (§75); §303: or a formula
+ *                                               of the casting level (Cordon of Arrows: "2 * @item.level")
+ *     pendingDie?: { activity, against: "melee"|"target" }
+ *                                               §89: the activity promises its die to the next damage roll of an
+ *                                               attack by the author this turn, in melee or against the designated
+ *                                               target (Lunging Attack, Feinting Attack of the Battle Master;
+ *                                               runtime/maneuver-dice.mjs)
+ *     maxDamage?: { activity, weapons?, refundOnHit? }
+ *                                               §279: the activity promises the maximum of the dice on the author's
+ *                                               next attack this turn with a weapon of these kinds (`weapons`:
+ *                                               "unarmed", "simpleM", "improv"… — WEAPON_KINDS); on a hit,
+ *                                               `refundOnHit` returns the uses the activity cost; on a miss, the
+ *                                               promise is lost (runtime/maneuver-dice.mjs)
  *     hitFollowUp?: { use: [{ item, activity }], choose?, weapons? }
- *                                               §373 : après un coup qui touche (attaque de ces genres d'arme), l'auteur peut
- *                                               utiliser gratuitement contre la cible encore debout jusqu'à `choose` (1) des
- *                                               activités listées (item par identifiant) — Cogneur : Agripper ou Pousser de
- *                                               l'Attaque à mains nues. Plusieurs items : une seule question, la réunion des
- *                                               activités, le plus grand `choose`
- *     maxNextHit?: true | <id d'effet>          §279 : le porteur d'un effet de l'item subit le maximum des dés de la prochaine attaque qui
- *                                               le touche, puis l'effet cesse ; §372 : un id — seulement le porteur de cet effet
- *     grappleSize?: { bonus?, dragFree? }       §281 : l'auteur compte comme `bonus` tailles de plus pour Agripper et Pousser ; il traîne
- *                                               sans surcoût une victime d'au plus `dragFree` tailles de plus que lui (Poids lourd : 1 et 0)
- *     inescapable?: true | { activity }         §281 : les sauvegardes contre sa Lutte ou sa Bousculade, et les tests pour échapper à sa
- *                                               prise, ont le Désavantage (Inexorable) ; §374 : `{ activity }` — seulement si
- *                                               l'agrippeur le veut, avant le jet, en payant ce que coûte cette activité de l'item
- *     grappleCover?: "half"|"threeQuarters"     §281 : tant qu'il agrippe une créature, cet abri contre les attaques des créatures qu'il
- *                                               n'agrippe pas (Bouclier de chair) ; fait `source.grappledByTarget` pour réagir à la fin du
- *                                               tour d'un ennemi qu'il agrippe (`enemyTurnEnd`)
- *     weaponDamageTypes?: { weapons, types }    §279 : une attaque de l'auteur avec une arme de ces genres peut prendre l'un de ces types de
- *                                               dégâts, proposé avec le sien avant le jet (comme `spellDamageTypes`)
- *     rolledAc?: { activity, effect, to? }      §89 : l'activité lance le dé de son `roll` et pose l'effet de l'item sur l'auteur, le
- *                                               bonus de CA écrit dedans (Jeu de jambes évasif) ; §90 `to: "choose"` : sur l'auteur
- *                                               ou sur la créature visée, au choix de l'auteur (Chassé-croisé)
- *     swapPlaces?: { activity }                 §90 : l'activité échange les places de l'auteur et de la créature visée (Chassé-croisé :
- *                                               1,50 m de déplacement de l'auteur, sans attaque d'opportunité)
- *     sweep?: { activity }                      §90 : après un coup au corps à corps (arme, mains nues), l'auteur peut infliger le dé
- *                                               de l'activité, du type du coup, à une autre créature à 1,50 m de la cible et à son
- *                                               allonge, si le jet l'aurait touchée (Balayage) ; l'activité paie
- *     commandStrike?: { activity }              §90 : l'activité ordonne à la créature visée une attaque d'arme par sa Réaction, son
- *                                               dé promis aux dégâts (Frappe commandée ; avec `replacesAttack`)
- *     selfZone?: { <id d'activité>: { type, size, units } }  le gabarit d'une activité qui n'en a pas dans la donnée (§86,
- *                                               Présence royale de Yolande : émanation de 10 ft sur soi) — posé d'office (§47) ;
- *                                               §91 : hors de portée personnelle, posé à la souris (Interdiction)
- *     zoneAffects?: "enemy"|"ally"              qui la zone de l'item affecte, quand la donnée ne le dit pas (§86 : « une
- *                                               créature que vous voyez… vous pouvez la forcer » — les alliés épargnés)
- *     dropsEffects?: [ids d'effet]            §334 : ces effets de l'item ne sont jamais posés — la donnée se trompe d'état (Frappe
- *                                               draconique : À terre au lieu d'Effrayé, que le texte fait poser)
- *     noDamage?: [ids d'activité]               le moteur ne lance pas les dégâts de ces activités (§81, Frappe piégeuse : la
- *                                               donnée en met sur la sauvegarde, le texte n'en donne qu'au début des tours)
- *     wardsAtZero?: true                        l'effet du sort fait tomber à 1 PV au lieu de 0, puis prend fin (§73,
- *                                               Protection contre la mort)
- *     stableAtZero?: true                       une cible que l'attaque fait tomber à 0 PV est Stabilisée : ni jet contre
- *                                               la mort ni mort, même un PNJ (§71, Dague des ombres du Familier de vampire)
- *     effectsIf?: condition                     les effets de l'attaque ne passent que si la condition tient pour la cible,
- *                                               jugée après les dégâts (§71 : `{ "target.atZero": true }`)
- *     storm?: { bonus? }                        orage (§70, Appel de la foudre) : la zone de l'item est un nuage qui
- *                                               reste (concentration) ; chaque lancement vise un éclair (`bolt`) dessous ;
- *                                               `bonus` : dés ajoutés quand l'orage était déjà là (question à l'incantation) ;
- *                                               `strike` (§469) : l'activité de l'éclair quand celle de l'incantation ne
- *                                               fait que poser le nuage (Manuel 3.0.0) ; `stormStrike` : sa variante « orage
- *                                               déjà là », qui porte déjà le dé en plus (pas de `bonus` ajouté)
+ *                                               §373: after a hit that lands (attack of these weapon kinds), the
+ *                                               author can use for free against the target still standing up to
+ *                                               `choose` (1) of the listed activities (item by identifier) —
+ *                                               Crusher: Grapple or Shove of the Unarmed Strike. Several items: a
+ *                                               single question, the union of the activities, the largest `choose`
+ *     maxNextHit?: true | <effect id>           §279: the bearer of an item effect takes the maximum of the dice of
+ *                                               the next attack that hits them, then the effect ends; §372: an id —
+ *                                               only the bearer of this effect
+ *     grappleSize?: { bonus?, dragFree? }       §281: the author counts as `bonus` sizes larger for Grapple and
+ *                                               Shove; they drag without extra cost a victim at most `dragFree`
+ *                                               sizes larger than them ("Heavyweight": 1 and 0)
+ *     inescapable?: true | { activity }         §281: saves against their Grapple or Shove, and checks to escape
+ *                                               their hold, have Disadvantage ("Inexorable"); §374: `{ activity }`
+ *                                               — only if the grappler wants it, before the roll, by paying what
+ *                                               this item activity costs
+ *     grappleCover?: "half"|"threeQuarters"     §281: while they grapple a creature, this Cover against attacks
+ *                                               from creatures they do not grapple ("Flesh Shield"); supplies
+ *                                               `source.grappledByTarget` to react at the end of the turn of an
+ *                                               enemy they grapple (`enemyTurnEnd`)
+ *     weaponDamageTypes?: { weapons, types }    §279: an attack by the author with a weapon of these kinds can take
+ *                                               one of these damage types, offered along with its own before the
+ *                                               roll (like `spellDamageTypes`)
+ *     rolledAc?: { activity, effect, to? }      §89: the activity rolls the die of its `roll` and applies the item
+ *                                               effect to the author, the AC bonus written in it (Evasive
+ *                                               Footwork); §90 `to: "choose"`: on the author or on the targeted
+ *                                               creature, the author's choice ("Crossover")
+ *     swapPlaces?: { activity }                 §90: the activity swaps the places of the author and the targeted
+ *                                               creature ("Crossover": 1.5 m of movement for the author, without
+ *                                               Opportunity Attacks)
+ *     sweep?: { activity }                      §90: after a melee hit (weapon, unarmed), the author can deal the
+ *                                               die of the activity, of the hit's type, to another creature within
+ *                                               1.5 m of the target and within their reach, if the roll would have
+ *                                               hit it (Sweeping Attack); the activity pays
+ *     commandStrike?: { activity }              §90: the activity orders the targeted creature to make a weapon
+ *                                               attack with their Reaction, its die promised to the damage
+ *                                               (Commander's Strike; with `replacesAttack`)
+ *     selfZone?: { <activity id>: { type, size, units } }
+ *                                               the template of an activity that has none in the data (§86,
+ *                                               Yolande's Royal Presence: 10 ft Emanation on self) — placed
+ *                                               automatically (§47); §91: out of personal range, placed with the
+ *                                               mouse (Forbiddance)
+ *     zoneAffects?: "enemy"|"ally"              who the item's area affects, when the data does not say (§86: "a
+ *                                               creature you can see… you can force it" — allies spared)
+ *     dropsEffects?: [effect ids]               §334: these item effects are never applied — the data gets the
+ *                                               condition wrong ("Draconic Strike": Prone instead of Frightened,
+ *                                               which the text has applied)
+ *     noDamage?: [activity ids]                 the engine does not roll the damage of these activities (§81,
+ *                                               Ensnaring Strike: the data puts some on the save, the text only
+ *                                               gives any at the start of turns)
+ *     wardsAtZero?: true                        the spell's effect drops to 1 HP instead of 0, then ends (§73,
+ *                                               Death Ward)
+ *     stableAtZero?: true                       a target that the attack drops to 0 HP is Stabilized: no death save
+ *                                               or death, even an NPC (§71, Shadow Dagger of the Vampire Familiar)
+ *     effectsIf?: condition                     the attack's effects only apply if the condition holds for the
+ *                                               target, judged after the damage (§71: `{ "target.atZero": true }`)
+ *     storm?: { bonus? }                        storm (§70, Call Lightning): the item's area is a cloud that stays
+ *                                               (Concentration); each cast targets a bolt (`bolt`) below it;
+ *                                               `bonus`: dice added when the storm was already there (question on
+ *                                               casting); `strike` (§469): the bolt's activity when the casting one
+ *                                               only places the cloud (Handbook 3.0.0); `stormStrike`: its "storm
+ *                                               already there" variant, which already carries the extra die (no
+ *                                               `bonus` added)
  *     difficultTerrain?: { types?, cost?, fromPulse? }
- *                                               la zone du sort est un terrain difficile (§69) — `fromPulse` : seulement à partir
- *                                               de ce rejeu de `casterPulse` (Tempête vengeresse) ; `cost` (§172) : un autre
- *                                               multiplicateur que ×2 (Mur d'épines : ×4), par le comportement « coût de
- *                                               déplacement » du cœur V14 à la place de celui de dnd5e ; sinon comportement
- *                                               `dnd5e.difficultTerrain` posé sur la région si les données ne l'ont pas
- *                                               (Manuel des joueurs premium : Enchevêtrement, Croissance d'épines…) ; magique ;
- *                                               `lingers: "casterNextTurnEnd"` (§261) : une zone instantanée laisse ce
- *                                               terrain jusqu'à la fin du prochain tour du lanceur (Tempête de grêle) ;
- *                                               `enemiesOnly` (§403) : la disposition du lanceur passe sans frais
- *                                               (Invocation d'élémentaires mineurs : « pour vos ennemis »)
- *     encloses?: true                           §232 : un effet de cet item enferme sa cible (Sphère résiliente d'Otiluke) — rien ne
- *                                               l'atteint du dehors, elle n'atteint rien dehors (résolutions « non affecté », clics refusés).
- *     willingFails?: true                       §232 : une créature consentante peut rater la sauvegarde d'office — le lanceur dit, à
- *                                               l'ouverture, si chaque cible non ennemie consent (pas de jet).
- *     zoneEffects?: true                        les effets de l'activité sont portés tant qu'on est dans sa zone (§37.4,
- *                                               Silence) : comportement `applyActiveEffect` du cœur (adapter/zone-effects.mjs)
- *     rollBonus?: { activity, on, skills? }     un dé que la créature ajoute à SON jet, après l'avoir vu (§38, Chance du
- *                                               ténébreux) : le jet de l'activité (`roll.formula`), qui dépense ses consommations ;
- *                                               `on` : "save" (ratée, lue par le moteur), "attack" (ratée, §90 Attaque précise),
- *                                               "check" (tout test, sitôt lancé), "initiative" (§90) ; `skills` : les seules
- *                                               compétences dont le test compte (Embuscade : ["ste"]) ; §94 `statuses` : une
- *                                               sauvegarde seulement pour éviter ou finir l'un de ces états (Survivant) ;
- *                                               §129 `luck: true` — pas de dé de l'activité : le d20 est relancé et le meilleur
- *                                               gardé (Chanceux : l'Avantage, décidé après avoir vu le jet) ; s'ajoute l'écart positif ;
- *                                               relevé des trous `reroll: { bonus, during }` — sans activité : le d20 relancé, `bonus`
- *                                               ajouté, le nouveau jet imposé, une fois par effet de l'item `during` (Concentration
- *                                               fanatique : sauvegarde ratée en Rage, bonus des dégâts de Rage)
- *                                               §280 : `reroll: { bonus?, advantage? }` AVEC une activité — elle paie la relance
- *                                               d'un jet raté, le nouveau imposé (Inébranlable) ; `advantage: true` — le nouveau
- *                                               jet a l'Avantage (Contre-charme) ; `failRefund: true` — le dé ajouté à un test qui reste raté
- *                                               (DD connu) : ce que l'activité a coûté revient, l'item perd une utilisation (Fanfaronnade) ;
- *                                               `abilities` vaut aussi pour les tests (caractéristique du test)
- *                                               `spellAttack: true` — seulement le jet d'attaque d'un sort (Sort chercheur)
- *     transpose?: { summon }                    échanger sa place avec l'invocation pilotée de l'item `summon` (identifiant),
- *                                               quand l'action Bonus la crée ou la déplace (§38.2, Troc du filou ; core/pilot.mjs)
- *     portent?: { dice }                        Présage (§36) : `dice` d20 notés à chaque Repos long (Présage : 2 ; Présage
- *                                               supérieur : 3), qui peuvent remplacer un Test d20 (core/portent.mjs)
- *     metamagic?: { activity, kind }            option de Métamagie (§32) : l'activité retient `kind` pour le prochain sort de
- *                                               l'ensorceleur (`METAMAGIC_KINDS`)
+ *                                               the spell's area is Difficult Terrain (§69) — `fromPulse`: only from
+ *                                               this replay of `casterPulse` (Storm of Vengeance); `cost` (§172): a
+ *                                               different multiplier than ×2 (Wall of Thorns: ×4), through the V14
+ *                                               core's "movement cost" behavior in place of dnd5e's; otherwise the
+ *                                               `dnd5e.difficultTerrain` behavior placed on the region if the data
+ *                                               does not have it (premium Player's Handbook: Entangle, Spike
+ *                                               Growth…); magical;
+ *                                               `lingers: "casterNextTurnEnd"` (§261): an instantaneous area leaves
+ *                                               this terrain until the end of the caster's next turn (Ice Storm);
+ *                                               `enemiesOnly` (§403): the caster's disposition passes free of charge
+ *                                               (Conjure Minor Elementals: "for your enemies")
+ *     encloses?: true                           §232: an effect of this item encloses its target (Otiluke's
+ *                                               Resilient Sphere) — nothing reaches them from outside, they reach
+ *                                               nothing outside ("unaffected" resolutions, clicks refused).
+ *     willingFails?: true                       §232: a willing creature can fail the save automatically — the
+ *                                               caster says, on opening, whether each non-enemy target consents (no
+ *                                               roll).
+ *     zoneEffects?: true                        the activity's effects are held as long as one is in its area
+ *                                               (§37.4, Silence): `applyActiveEffect` behavior of the core
+ *                                               (adapter/zone-effects.mjs)
+ *     rollBonus?: { activity, on, skills? }     a die the creature adds to THEIR roll, after seeing it (§38, Dark
+ *                                               One's Own Luck): the activity's roll (`roll.formula`), which spends
+ *                                               its consumptions; `on`: "save" (failed, read by the engine),
+ *                                               "attack" (failed, §90 Precision Attack), "check" (any check, as
+ *                                               soon as rolled), "initiative" (§90); `skills`: the only skills
+ *                                               whose check counts (Ambush: ["ste"]); §94 `statuses`: a save only
+ *                                               to avoid or end one of these conditions (Survivor);
+ *                                               §129 `luck: true` — no die from the activity: the d20 is rerolled
+ *                                               and the best kept (Lucky: Advantage, decided after seeing the
+ *                                               roll); the positive gap is added;
+ *                                               gap survey `reroll: { bonus, during }` — without an activity: the
+ *                                               d20 rerolled, `bonus` added, the new roll imposed, once per effect
+ *                                               of the item `during` (Fanatical Focus: failed save while Raging,
+ *                                               Rage damage bonus)
+ *                                               §280: `reroll: { bonus?, advantage? }` WITH an activity — it pays
+ *                                               for the reroll of a failed roll, the new one imposed
+ *                                               ("Unshakable"); `advantage: true` — the new roll has Advantage
+ *                                               (Countercharm); `failRefund: true` — the die added to a check that
+ *                                               stays failed (known DC): what the activity cost comes back, the
+ *                                               item loses a use ("Bravado");
+ *                                               `abilities` also applies to checks (the check's ability)
+ *                                               `spellAttack: true` — only the attack roll of a spell ("Seeker
+ *                                               Spell")
+ *     transpose?: { summon }                    swap places with the piloted summon of the item `summon`
+ *                                               (identifier), when the Bonus Action creates or moves it (§38.2,
+ *                                               "Trickster's Trade"; core/pilot.mjs)
+ *     portent?: { dice }                        Portent (§36): `dice` d20 noted at each Long Rest (Portent: 2;
+ *                                               Greater Portent: 3), which can replace a d20 Test (core/portent.mjs)
+ *     metamagic?: { activity, kind }            Metamagic option (§32): the activity holds `kind` for the next spell
+ *                                               of the Sorcerer (`METAMAGIC_KINDS`)
  *     endurance?: true | { effect?, tempHp?, restores? }
- *                                               Acharnement (§31) : tombé à 0 PV sans être tué sur le coup, le porteur reste à 1 PV,
- *                                               une utilisation de l'item dépensée ; §371 : puis `effect` (effet de l'item) posé sur
- *                                               lui, `tempHp` (formule, données de l'acteur) en PV temporaires s'ils dépassent les
- *                                               siens, les utilisations des items `restores` (identifiants) rendues
- *     replacesAttack?: true | string[]          l'activité remplace une attaque de l'action Attaquer (Souffle, §31) ; une liste : ces
- *                                               activités seulement (§188, Huile : le lancer, pas l'étalage au sol)
+ *                                               Relentless Endurance (§31): dropped to 0 HP without being killed
+ *                                               outright, the bearer stays at 1 HP, one use of the item spent; §371:
+ *                                               then `effect` (item effect) applied to them, `tempHp` (formula,
+ *                                               actor's data) as Temporary Hit Points if they exceed theirs, the
+ *                                               uses of the `restores` items (identifiers) restored
+ *     replacesAttack?: true | string[]          the activity replaces an attack of the Attack action (Breath, §31);
+ *                                               a list: these activities only (§188, Oil: the throw, not the
+ *                                               spreading on the ground)
  *     hitRider?: { damage?, effect?, status?, sizeAtMost?, slot?, weapon?, oncePerTurn?, save?, item?, whileActive? } | [...]
- *                                               faveur proposée au jet de dégâts d'une attaque qui touche, contre une
- *                                               utilisation de l'item (Ascendance gigante, §31) : les dés de l'activité
- *                                               `damage`, puis l'effet `effect` de l'item ou l'état `status` posés sur la
- *                                               cible (de taille `sizeAtMost` au plus — les dégâts valent quelle que soit la taille).
- *                                               `slot: "pact"` : coûte un emplacement de pacte au lieu d'une utilisation (dés
- *                                               lus au niveau de l'emplacement) ; `weapon` : seulement avec une arme enchantée
- *                                               par l'item de cet identifiant (« pact-of-the-blade ») ; `oncePerTurn` (Frappe
- *                                               occulte, §47 bis) ; §78 : `save` — l'activité de sauvegarde de l'item,
- *                                               jouée ensuite contre la cible encore debout ; `item` — seulement avec
- *                                               l'arme de cet identifiant ; §129 `unarmed` — seulement une attaque à mains nues ;
- *                                               `push` — la cible touchée est repoussée de `{ distance, units }` (Bagarreur de
- *                                               tavernes) ; §132 `melee`, `shield` (bouclier équipé), `damageType` (l'attaque en
- *                                               inflige), `sizeAbove` (cible d'au plus N tailles de plus) ; un item sans maximum d'utilisations se
- *                                               propose sans compter (Piqué : au MJ de juger la trajectoire) ; §87 : `pays` —
- *                                               l'identifiant de l'item dont une utilisation paie la faveur (les manœuvres : les dés
- *                                               de `combat-superiority`) ; `weaponDamage` — les dés ont le type de dégâts de l'arme ;
- *                                               une faveur à `sizeAtMost` ne joue sa sauvegarde que contre une cible assez petite
- *                                               §372 : une liste d'options exclusives du même item (au moins deux, chacune avec
- *                                               `name`, l'activité qui la nomme), qui partagent sa marque « une fois par tour » ;
- *                                               `formula` — des dés propres (« 1d12 ») ; `weapons` — seulement une attaque de ces
- *                                               genres d'arme (`WEAPON_KINDS`) ; `perTurn: { count, while }` — la limite par
- *                                               tour passe à `count` tant qu'un effet de l'item `while` est porté (avec
- *                                               `oncePerTurn`)
- *     cellWall?: true                           §172 : mur d'une case d'épaisseur (Mur d'épines, Barrière de lames) — posé sur une
- *                                               rangée de cases (centres, sans diagonale, bouts prolongés d'une demi-case) ; son
- *                                               anneau, tiré d'un disque, est une bande à l'intérieur du cercle
- *     coverThrough?: degré | { degree, against }  §172 : la zone donne cet abri (« half », « threeQuarters », « total ») à qui est
- *                                               derrière elle (une ligne entre l'attaquant et la cible qui la traverse, ni l'un ni
- *                                               l'autre dedans) — Barrière de lames ; `against: "rangedWeapon"` (§173) : contre les
- *                                               seules attaques à distance avec une arme (Mur de vent : les projectiles ratent)
- *     thinWall?: true                           §173 : un mur fin (Mur de vent, de pierre, de glace, de force, prismatique) — posé
- *                                               sans diagonale ; à l'apparition, les créatures dont l'espace touche le mur sont dans la
- *                                               zone ; on y « entre » en le traversant ; le disque d'un globe devient un anneau fin
- *     wallAura?: { distance, units, activity, on }  §173 : une zone de `distance` des deux côtés du mur, qui rejoue l'activité sœur
- *                                               aux moments `on` (Mur prismatique : sauvegarde d'aveuglement à 6 m)
- *     wallSide?: { distance, units }          §169 : mur à face brûlante (Mur de feu) — posé sans diagonale ; à l'apparition, sauvegarde
- *                                               des créatures dont l'espace touche le mur ; ensuite, sans sauvegarde : qui le traverse
- *                                               (une fois par tour), qui finit son tour à `distance` du côté brûlant (région à part,
- *                                               retournable depuis le menu du lanceur)
- *     pointWall?: false                         §162 : un gabarit « wall » qui n'est pas un mur (portails, portes) — pas de pose par points
- *     walls?: { move?: false, sight?: true, activities? }  §162 : la zone posée par l'item lève des murs du cœur (le long d'un mur posé
- *                                               par points, sinon sur son pourtour) : ils arrêtent le déplacement (sauf `move: false`) et,
- *                                               avec `sight`, la vue et la lumière ; `activities` : seulement les zones de ces activités
- *     blink?: <id d'effet>                        §161 : Clignotement — l'effet du sort porte la durée ; 1d6 en fin de tour, 4–6 : Éthéré
- *                                               jusqu'au début du tour suivant (runtime/blink.mjs)
- *     globe?: { radius, units, maxLevel, everywhere? }  §161 : tant que le lanceur porte un effet de l'item, un sort de niveau `maxLevel`
- *                                               ou moins lancé de l'extérieur de l'Émanation n'y affecte personne (Globe d'invulnérabilité) ;
- *                                               §163 `everywhere` : d'où qu'il soit lancé, et aucun sort ne s'y lance (Champ antimagie)
- *     magical?: true                            §436 : les activités de l'item sont magiques (action Magie, effet magique d'un monstre) :
- *                                               le statut `antimagic` de dnd5e les refuse à qui s'y tient et en protège qui s'y tient
- *     antimagicZone?: true                      §436 : la région d'une activité de l'item reçoit le comportement `dnd5e.antimagic` du
- *                                               système quand l'activité ne l'a pas (Champ antimagie du Manuel, Cône antimagie)
- *     recastCost?: "bonus"|"action"             §164 : le coût d'une relance pendant la concentration (Vif carquois : une action Bonus)
- *     levitate?: { effect, height, units }      §164 : le porteur de l'effet s'élève de `height` à la pose, redescend quand il tombe (Lévitation)
- *     prismatic?: { indigo, violet }            §164 : un d8 par cible choisit la couleur — 1 à 5 : le type des dégâts (feu, acide,
- *                                               foudre, poison, froid) ; 6 : l'effet `indigo`, 7 : l'effet `violet`, sans dégâts ; 8 : deux
- *                                               rayons (Embruns prismatiques) ; `all` (§173) : toutes les couches à la fois (Mur
- *                                               prismatique traversé) ; `activities` : seulement pour ces activités
- *     barrier?: { radius, units, exceptTypes? }  §163 : une créature (hors `exceptTypes`) n'entre pas dans l'Émanation, ni n'y frappe au
- *                                               corps à corps sans allonge (Coquille antivie, adapter/barriers.mjs)
- *                                               O9h (§363) : `onlyTypes` — seules ces créatures sont arrêtées ; `shields` — elles n'affectent
- *                                               rien dedans (aucune action ne les y atteint) ; `endsOnContact` — l'émanation tombe si son
- *                                               porteur se déplace de façon à en mettre une dedans (Parchemin de protection)
- *     seesInvisible?: true                      §161 : le porteur d'un effet de l'item voit les créatures Invisibles (Détection de
- *                                               l'invisibilité) — vision simulée et état forfaitaire de l'attaque
- *     seesThroughOwnDarkness?: true             §447 : le porteur voit normalement à travers les ténèbres magiques (`light.darkness`)
- *                                               qu'un de SES sorts a posées : règles (`canSee`, `canSeePoint`, recherche) et écran
- *                                               (le mode « Vision du diable », sans limite dans ces ténèbres) — Pouvoir de l'ombre
- *     sense?: {…} | [{…}]                       un sens que l'item donne à son porteur, hors de ceux de sa fiche (core/senses.mjs)
- *       kind: "locate" | "sight"                `locate` — la position de la cible est connue sans qu'elle soit vue (elle reste
- *                                               « non vue » pour l'attaque) ; `sight` — compte comme une vue : pas d'une cible
- *                                               Invisible, ni à travers une brume ou une zone de ténèbres. Une vue déclarée
- *                                               IGNORE LA LUMIÈRE : elle voit dans le noir ordinaire jusqu'à sa portée, et, sans
- *                                               `needs: "sight"`, même quand son porteur est Aveuglé — plus proche d'une vision
- *                                               aveugle que de la vue ; ajouter `needs: "sight"` pour qu'elle s'éteigne Aveuglé
- *       range: 30, units?: "ft"                 portée de règle, convertie à la grille
- *       via?: "effect", fromEffect?: "<id>"     porté par un effet de l'item sur son porteur (un sort, un pouvoir activé), celui-là
- *                                               seulement si `fromEffect` ; sans `via` : par la possession de l'item
- *       walls?: false                           false — traverse les murs ; absent — un mur de vue l'arrête
- *       detects?: <condition>                   faits sur la cible (`target.*`) ; absent — toute créature
- *       magic?: true | "<école>"                sens magique, d'un sort de cette école : `wardsDetection` peut l'arrêter
- *       reveals?: "presence" | "aura"           `presence` — la présence est sue, pas la position ; `aura` — la créature déjà vue
- *                                               qui porte ce que le sens détecte est marquée, rien de plus
- *       through?: ["darkness"]                  pour `sight` : cette vue perce les ténèbres (jamais une brume)
- *       needs?: "sight" | "hearing"             éteint tant que le porteur est Aveuglé (`sight`) ou Assourdi (`hearing`)
- *     wardsDetection?: ["magic" | "<école>"…]   le porteur d'un effet de l'item n'est pas trouvé par les sens magiques (`magic`),
- *                                               ou par ceux des sorts de ces écoles
- *     detectedAs?: ["<type de créature>"…]      pour les sens (`sense.detects`), le possesseur de l'item compte aussi comme ces
- *                                               types — jamais pour l'attaque ni la sauvegarde
- *     senseNeeds?: { <mode>: "sight"|"hearing" }  ce sens de la fiche du possesseur (mode de détection : `blindsight`…) est éteint
- *                                               tant qu'il est Aveuglé (`sight`) ou Assourdi (`hearing`)
+ *                                               boon offered on the damage roll of an attack that hits, against a
+ *                                               use of the item (Giant Ancestry, §31): the dice of the activity
+ *                                               `damage`, then the item's `effect` effect or the `status` condition
+ *                                               applied to the target (of size `sizeAtMost` at most — the damage
+ *                                               applies whatever the size).
+ *                                               `slot: "pact"`: costs a pact slot instead of a use (dice read at
+ *                                               the slot's level); `weapon`: only with a weapon enchanted by the
+ *                                               item with this identifier ("pact-of-the-blade"); `oncePerTurn`
+ *                                               (Eldritch Strike, §47 bis); §78: `save` — the item's save activity,
+ *                                               then played against the target still standing; `item` — only with
+ *                                               the weapon with this identifier; §129 `unarmed` — only an Unarmed
+ *                                               Strike; `push` — the target hit is pushed back by `{ distance,
+ *                                               units }` (Tavern Brawler); §132 `melee`, `shield` (shield
+ *                                               equipped), `damageType` (the attack deals it), `sizeAbove` (target
+ *                                               at most N sizes larger); an item with no maximum uses is offered
+ *                                               without counting ("Dive": the GM judges the trajectory); §87:
+ *                                               `pays` — the identifier of the item whose use pays for the boon
+ *                                               (the maneuvers: the dice of `combat-superiority`); `weaponDamage` —
+ *                                               the dice have the weapon's damage type; a boon with `sizeAtMost`
+ *                                               only plays its save against a small enough target
+ *                                               §372: a list of exclusive options from the same item (at least two,
+ *                                               each with `name`, the activity that names it), sharing its "once
+ *                                               per turn" mark; `formula` — its own dice ("1d12"); `weapons` — only
+ *                                               an attack of these weapon kinds (`WEAPON_KINDS`);
+ *                                               `perTurn: { count, while }` — the limit per turn goes to `count`
+ *                                               while an item effect `while` is borne (with `oncePerTurn`)
+ *     cellWall?: true                           §172: wall one cell thick (Wall of Thorns, Blade Barrier) — placed
+ *                                               on a row of cells (centers, no diagonal, ends extended by half a
+ *                                               cell); its ring, drawn from a disc, is a band inside the circle
+ *     coverThrough?: degree | { degree, against }
+ *                                               §172: the area gives this cover ("half", "threeQuarters", "total")
+ *                                               to whoever is behind it (a line between the attacker and the target
+ *                                               that crosses it, neither one inside) — Blade Barrier;
+ *                                               `against: "rangedWeapon"` (§173): against ranged attacks with a
+ *                                               weapon only (Wall of Wind: projectiles miss)
+ *     thinWall?: true                           §173: a thin wall (Wall of Wind, Stone, Ice, Force, Prismatic Wall)
+ *                                               — placed without diagonal; on appearing, creatures whose space
+ *                                               touches the wall are in the area; one "enters" it by crossing it; a
+ *                                               globe's disc becomes a thin ring
+ *     wallAura?: { distance, units, activity, on }
+ *                                               §173: an area of `distance` on both sides of the wall, which replays
+ *                                               the sibling activity at the `on` moments (Prismatic Wall: blindness
+ *                                               save at 6 m)
+ *     wallSide?: { distance, units }            §169: wall with a burning face (Wall of Fire) — placed without
+ *                                               diagonal; on appearing, save of the creatures whose space touches
+ *                                               the wall; afterwards, without a save: whoever crosses it (once per
+ *                                               turn), whoever ends their turn within `distance` of the burning side
+ *                                               (separate region, flippable from the caster's menu)
+ *     pointWall?: false                         §162: a "wall" template that is not a wall (portals, doors) — no
+ *                                               placement by points
+ *     walls?: { move?: false, sight?: true, activities? }
+ *                                               §162: the area placed by the item raises core walls (along a wall
+ *                                               placed by points, otherwise around its perimeter): they stop
+ *                                               movement (except `move: false`) and, with `sight`, sight and light;
+ *                                               `activities`: only the areas of these activities
+ *     blink?: <effect id>                       §161: Blink — the spell's effect carries the duration; 1d6 at end of
+ *                                               turn, 4–6: Ethereal until the start of the next turn
+ *                                               (runtime/blink.mjs)
+ *     globe?: { radius, units, maxLevel, everywhere? }
+ *                                               §161: while the caster bears an item effect, a spell of level
+ *                                               `maxLevel` or lower cast from outside the Emanation affects no one
+ *                                               in it (Globe of Invulnerability); §163 `everywhere`: wherever it is
+ *                                               cast from, and no spell is cast in it (Antimagic Field)
+ *     magical?: true                            §436: the item's activities are magical (Magic action, a monster's
+ *                                               magical effect): the dnd5e `antimagic` status refuses them to
+ *                                               whoever is in it and protects whoever is in it
+ *     antimagicZone?: true                      §436: the region of an item's activity receives the system's
+ *                                               `dnd5e.antimagic` behavior when the activity does not have it
+ *                                               (Handbook's Antimagic Field, Antimagic Cone)
+ *     recastCost?: "bonus"|"action"             §164: the cost of a recast during Concentration (Swift Quiver: a
+ *                                               Bonus Action)
+ *     levitate?: { effect, height, units }      §164: the effect's bearer rises by `height` on placement, comes down
+ *                                               when it ends (Levitate)
+ *     prismatic?: { indigo, violet }            §164: a d8 per target picks the color — 1 to 5: the damage type
+ *                                               (fire, acid, lightning, poison, cold); 6: the `indigo` effect, 7:
+ *                                               the `violet` effect, no damage; 8: two rays (Prismatic Spray); `all`
+ *                                               (§173): all the layers at once (Prismatic Wall crossed);
+ *                                               `activities`: only for these activities
+ *     barrier?: { radius, units, exceptTypes? } §163: a creature (outside `exceptTypes`) cannot enter the Emanation,
+ *                                               nor hit in melee within it without reach (Antilife Shell,
+ *                                               adapter/barriers.mjs)
+ *                                               O9h (§363): `onlyTypes` — only these creatures are stopped;
+ *                                               `shields` — they affect nothing inside (no action reaches them
+ *                                               there); `endsOnContact` — the Emanation drops if its bearer moves so
+ *                                               as to put one inside (Scroll of Protection)
+ *     seesInvisible?: true                      §161: the bearer of an item effect sees Invisible creatures (See
+ *                                               Invisibility) — simulated vision and flat-rate condition of the
+ *                                               attack
+ *     seesThroughOwnDarkness?: true             §447: the bearer sees normally through the magical Darkness
+ *                                               (`light.darkness`) that one of THEIR spells placed: rules (`canSee`,
+ *                                               `canSeePoint`, search) and screen (the "Devil's Sight" mode, no
+ *                                               limit in that Darkness) — "Power of the Shadow"
+ *     sense?: {…} | [{…}]                       a sense the item gives its bearer, besides those of their sheet
+ *                                               (core/senses.mjs)
+ *       kind: "locate" | "sight"                `locate` — the target's position is known without it being seen (it stays
+ *                                               "unseen" for the attack); `sight` — counts as sight: not of an
+ *                                               Invisible target, nor through a mist or a zone of Darkness. A
+ *                                               declared sight IGNORES LIGHT: it sees in ordinary darkness up to its
+ *                                               range, and, without `needs: "sight"`, even when its bearer is
+ *                                               Blinded — closer to Blindsight than to sight; add `needs: "sight"`
+ *                                               for it to go out when Blinded
+ *       range: 30, units?: "ft"                 rule range, converted to the grid
+ *       via?: "effect", fromEffect?: "<id>"     borne by an item effect on its bearer (a spell, an activated power), that one
+ *                                               only if `fromEffect`; without `via`: by possession of the item
+ *       walls?: false                           false — passes through walls; absent — a sight wall stops it
+ *       detects?: <condition>                   facts about the target (`target.*`); absent — any creature
+ *       magic?: true | "<school>"               magical sense, of a spell of this school: `wardsDetection` can stop it
+ *       reveals?: "presence" | "aura"           `presence` — the presence is known, not the position; `aura` — the
+ *                                               creature already seen that bears what the sense detects is marked,
+ *                                               nothing more
+ *       through?: ["darkness"]                  for `sight`: this sight pierces Darkness (never a mist)
+ *       needs?: "sight" | "hearing"             goes out while the bearer is Blinded (`sight`) or Deafened (`hearing`)
+ *     wardsDetection?: ["magic" | "<school>"…]   the bearer of an item effect is not found by magical senses
+ *                                               (`magic`), or by those of spells of these schools
+ *     detectedAs?: ["<creature type>"…]         for senses (`sense.detects`), the item's possessor also counts as
+ *                                               these types — never for the attack or the save
+ *     senseNeeds?: { <mode>: "sight"|"hearing" }  this sense on the possessor's sheet (detection mode:
+ *                                               `blindsight`…) is off while they are Blinded (`sight`) or Deafened
+ *                                               (`hearing`)
  *     hpTiers?: [{ atMost?, damage?: false, effects?, statuses? }]
- *                                               §160 : l'issue selon les PV de la cible AVANT les dégâts — le premier palier qui tient
- *                                               (`atMost` absent : tous) ; aucun : ni dégâts ni effet. `damage: false` : pas de dégâts ;
- *                                               `effects` : seuls ces effets de l'activité ; `statuses` : états posés (« dead » : PV à 0) ;
- *                                               K2 (§323) : `zero: true` — PV à 0, la règle des 0 PV décide (Regard mortel) ;
- *                                               `activities` : le palier ne vaut que pour ces activités de l'item
- *     endsCurses?: string[]                     §160 : l'utilisation fait cesser sur la cible les effets venus d'items de ces
- *                                               identifiants (Délivrance des malédictions : Malédiction, Maléfice)
- *     tempHpPool?: number                       §160 : autant de PV temporaires partagés à parts égales entre les cibles (Mot de pouvoir
- *                                               fortifiant : 120)
- *     standsWithReaction?: true                 §401 : une cible À terre peut se relever par sa Réaction (Mot de pouvoir guérisseur) ; la
- *                                               question va à son joueur, sinon au MJ
- *     revivesFull?: true                        §160 : la cible revient à son maximum de PV (Résurrection, Résurrection suprême)
- *     noActions?: <id d'effet>                    §158 : le porteur de cet effet de l'item n'a ni action ni action Bonus (Nuage nauséabond)
- *     oneThingPerTurn?: <id d'effet>              Hébétement : le porteur de cet effet de l'item ne fait à son tour qu'une chose —
- *                                               se déplacer, une action ou une action Bonus (core/one-thing.mjs)
- *     limitedAction?: <id d'effet>                §157 : le porteur de cet effet de l'item a, à chacun de ses tours, une action limitée (Hâte :
- *                                               une seule attaque d'arme, Foncer, Se désengager ou Se cacher) — core/turn.mjs
- *     saveDisadvantageFor?: string[]            §157 : les cibles de ces types de créature font la sauvegarde de l'item avec le Désavantage
- *                                               (Fracassement : « construct »)
- *     saveDisadvantageAgainst?: { subtypes }    le porteur de l'objet (équipé, harmonisé s'il l'exige) fait avec le Désavantage les
- *                                               sauvegardes qu'impose une créature de ces sous-types (Armure démoniaque)
- *     halfOnMiss?: true                         §157 : l'attaque de l'item ratée inflige la moitié de ses dégâts, sans effet (Flèche acide de
- *                                               Melf : « sur un échec, la moitié des dégâts initiaux seulement ») — comme le Sort mineur appuyé
- *     potentCantrip?: true                      Sort mineur appuyé (§28) : un tour de magie à dégâts du porteur, raté ou sauvegardé, fait
- *                                               la moitié des dégâts, sans effet
- *     sculptSpells?: true                       Façonneur de sorts (§28) : dans un sort d'Évocation à sauvegarde du porteur, jusqu'à
- *                                               1 + son niveau alliés réussissent d'office et ne subissent rien
- *     supremeHealing?: true                     le porteur soigne au maximum des dés avec un sort ou une Conduit divin (§27)
- *     stabilizes?: true                         utiliser l'item stabilise la cible à 0 PV, sans test (trousse de soins, §50)
+ *                                               §160: the outcome according to the target's HP BEFORE the damage —
+ *                                               the first tier that holds (`atMost` absent: all); none: neither
+ *                                               damage nor effect. `damage: false`: no damage; `effects`: only
+ *                                               these effects of the activity; `statuses`: conditions applied
+ *                                               ("dead": HP to 0); K2 (§323): `zero: true` — HP to 0, the 0 HP rule
+ *                                               decides ("Death Gaze"); `activities`: the tier only applies for
+ *                                               these activities of the item
+ *     endsCurses?: string[]                     §160: the use ends on the target the effects coming from items with
+ *                                               these identifiers (Remove Curse: Bestow Curse, Hex)
+ *     tempHpPool?: number                       §160: this many Temporary Hit Points shared equally among the
+ *                                               targets (Power Word Fortify: 120)
+ *     standsWithReaction?: true                 §401: a Prone target can stand up with their Reaction (Power Word
+ *                                               Heal); the question goes to their player, otherwise to the GM
+ *     revivesFull?: true                        §160: the target returns to their maximum HP (Resurrection, True
+ *                                               Resurrection)
+ *     noActions?: <effect id>                   §158: the bearer of this item effect has neither an action nor a
+ *                                               Bonus Action (Stinking Cloud)
+ *     oneThingPerTurn?: <effect id>             Dazed: the bearer of this item effect does only one thing on their
+ *                                               turn — move, an action or a Bonus Action (core/one-thing.mjs)
+ *     limitedAction?: <effect id>               §157: the bearer of this item effect has, on each of their turns, a
+ *                                               limited action (Haste: a single weapon attack, Dash, Disengage or
+ *                                               Hide) — core/turn.mjs
+ *     saveDisadvantageFor?: string[]            §157: targets of these creature types make the item's save with
+ *                                               Disadvantage (Shatter: "construct")
+ *     saveDisadvantageAgainst?: { subtypes }    the object's bearer (equipped, attuned if required) makes with
+ *                                               Disadvantage the saves imposed by a creature of these subtypes
+ *                                               (Demon Armor)
+ *     halfOnMiss?: true                         §157: the item's missed attack deals half its damage, without an
+ *                                               effect (Melf's Acid Arrow: "on a failure, half the initial damage
+ *                                               only") — like Potent Cantrip
+ *     potentCantrip?: true                      Potent Cantrip (§28): a damage cantrip of the bearer, missed or
+ *                                               saved against, deals half damage, without an effect
+ *     sculptSpells?: true                       Sculpt Spells (§28): in an Evocation spell with a save by the
+ *                                               bearer, up to 1 + the spell's level allies succeed automatically
+ *                                               and take nothing
+ *     supremeHealing?: true                     the bearer heals for the maximum of the dice with a spell or a
+ *                                               Channel Divinity (§27)
+ *     stabilizes?: true                         using the item stabilizes the target at 0 HP, without a check
+ *                                               (healer's kit, §50)
  *     carriedLight?: { bright, dim, units, angle?, animation?, burn?, fuel? }
- *                                               une source de lumière que l'on porte (§52 : lampe, lanternes, torche, bougie) —
- *                                               son activité utilitaire l'allume ou l'éteint ; `angle` : un cône (lanterne sourde)
- *     kindles?: true                            l'item allume ou éteint une source portée, au choix (boîte à amadou, §52)
- *     scatter?: true                            §187 : un objet qu'on répand au sol (chausse-trapes, billes) — sa zone dure sans durée,
- *                                               n'agit pas à la pose, arrête qui y entre sur sa première case et se ramasse hors combat
+ *                                               a light source that one carries (§52: lamp, lanterns, torch,
+ *                                               candle) — its utility activity lights or snuffs it; `angle`: a cone
+ *                                               (bullseye lantern)
+ *     kindles?: true                            the item lights or snuffs a carried source, as chosen (tinderbox,
+ *                                               §52)
+ *     scatter?: true                            §187: an object scattered on the ground (caltrops, ball bearings) —
+ *                                               its area lasts without duration, does not act on placement, stops
+ *                                               whoever enters it on its first cell and is picked up out of combat
  *     flammable?: { damage, type, rounds, seconds, on, ground?, frees? }
- *                                               §188 : la zone de l'item s'embrase (dégâts de feu reçus dedans, zone de feu posée dessus,
- *                                               flamme portée au contact) et brûle `rounds` rounds — jusqu'à la fin du même tour — ou
- *                                               `seconds` hors combat : `damage` de `type` aux moments `on`, une fois par tour, puis elle
- *                                               disparaît ; `ground` : la zone reste au sol jusque-là (Huile, sans durée) ; `frees` : l'état
- *                                               qu'elle posait tombe avec elle (Toile d'araignée)
- *     climbsCeilings?: true                     §194 : l'item (ou l'effet qu'il a posé) donne la marche au plafond
- *     grantsSpeeds?: { <vitesse>: "walk" | number }
- *                                               §195 : le porteur a cette vitesse (« égale à votre Vitesse » : "walk"), par un effet que
- *                                               le MJ actif tient sur l'acteur tant que l'item y est — les données n'en ont pas (Athlète)
- *     climbsOnTurn?: true                       §195 : « Courir sur le mur » — surfaces verticales pendant son tour, sans test, sans
- *                                               armure ni bouclier ; il tombe s'il finit son tour au mur (Mouvement acrobatique)
- *     slippery?: true                           §195 : la zone de l'item est une surface glissante (Graisse, Huile)
- *     notOnSlippery?: true                      §195 : l'item ne donne pas la marche au plafond sur une surface glissante (Pantoufles)
- *     discipleOfLife?: true                    un sort de soin lancé par un emplacement rend 2 + le niveau de l'emplacement de plus à
- *                                               chaque créature soignée (§27)
- *     blessedHealer?: true                      le même sort, s'il soigne une autre créature, rend 2 + le niveau au lanceur (§27)
- *     targets?: { types?, unaffectedIf? }       qui l'action peut affecter (§16.8) : `types` = types de créature permis
- *                                               (« un Humanoïde ») ; `unaffectedIf` = condition (faits du moment, la
- *                                               cible en `target`) qui la laisse hors d'atteinte (Sommeil : immunité
- *                                               à l'Épuisement) — ni sauvegarde, ni dégâts, ni effet
- *     spellTargets?: { <id d'activité « cast »>: { types?, unaffectedIf? } }
- *                                               ce que l'item dit des cibles du sort que cette activité lance (Anneau d'influence
- *                                               animale : « Terreur (n'affecte que les Bêtes) ») — s'ajoute à `targets` du sort
+ *                                               §188: the item's area ignites (fire damage taken inside, fire area
+ *                                               placed on it, flame carried on contact) and burns for `rounds`
+ *                                               rounds — until the end of the same turn — or `seconds` out of
+ *                                               combat: `damage` of `type` at the `on` moments, once per turn, then
+ *                                               it disappears; `ground`: the area stays on the ground until then
+ *                                               (Oil, without duration); `frees`: the condition it applied ends with
+ *                                               it (Web)
+ *     climbsCeilings?: true                     §194: the item (or the effect it applied) grants walking on
+ *                                               ceilings
+ *     grantsSpeeds?: { <speed>: "walk" | number }
+ *                                               §195: the bearer has this speed ("equal to your Speed": "walk"),
+ *                                               through an effect that the active GM holds on the actor as long as
+ *                                               the item is there — the data has none (Athlete)
+ *     climbsOnTurn?: true                       §195: "Run up the Wall" — vertical surfaces during their turn,
+ *                                               without a check, without armor or shield; they fall if they end
+ *                                               their turn on the wall (Acrobatic Movement)
+ *     slippery?: true                           §195: the item's area is a slippery surface (Grease, Oil)
+ *     notOnSlippery?: true                      §195: the item does not grant walking on ceilings on a slippery
+ *                                               surface (Slippers)
+ *     discipleOfLife?: true                     a healing spell cast with a slot restores 2 + the slot's level more
+ *                                               to each creature healed (§27)
+ *     blessedHealer?: true                      the same spell, if it heals another creature, restores 2 + the
+ *                                               level to the caster (§27)
+ *     targets?: { types?, unaffectedIf? }       who the action can affect (§16.8): `types` = creature types allowed
+ *                                               ("a Humanoid"); `unaffectedIf` = condition (facts of the moment, the
+ *                                               target as `target`) that leaves them out of reach (Sleep: immunity
+ *                                               to Exhaustion) — no save, no damage, no effect
+ *     spellTargets?: { <activity id "cast">: { types?, unaffectedIf? } }
+ *                                               what the item says about the targets of the spell this activity
+ *                                               casts (Ring of Animal Influence: "Fear (affects only Beasts)") —
+ *                                               added to the spell's `targets`
  *   }
  *
- * Les ÉTAPES d'une déclaration (SPEC §16, une brique chacune) :
- *   { type: "use", target?: "source", activity? }        réaction : proposer l'activité de réaction
- *   { type: "replay", activity? }                        zone qui dure : rejouer l'activité (ou une sœur, par id)
- *   { type: "damage", formula, damageType }              dégâts bonus ; damageType "weapon" = celui de l'arme
+ * The STEPS of a declaration (SPEC §16, one block each):
+ *   { type: "use", target?: "source", activity? }        reaction: offer the reaction activity
+ *   { type: "replay", activity? }                        lasting area: replay the activity (or a sibling, by id)
+ *   { type: "damage", formula, damageType }              bonus damage; damageType "weapon" = the weapon's
  *   { type: "damage", to: "source", formula?, damageType?, activity? }
- *                                                        riposte (§16.9, B9 : moment isHit) : l'attaquant subit ces
- *                                                        dégâts — une formule et son type, ou l'activité de dégâts
- *                                                        de l'item (id), au niveau où le sort a été lancé
+ *                                                        retort (§16.9, B9: isHit moment): the attacker takes this
+ *                                                        damage — a formula and its type, or the item's damage
+ *                                                        activity (id), at the level the spell was cast
  *   { type: "damage", to: "source", same: true | "resisted", damageType? }
- *                                                        §499 (B19) : riposte du même montant — au seul moment isDamaged,
- *                                                        `via: "effect"` : l'auteur des dégâts subis (noté à l'application)
- *                                                        en subit autant, par type (ou sous `damageType`) ; "resisted" : les
- *                                                        seules parts que le porteur a réduites de moitié. Les faits
- *                                                        `activity.*` et `damage.hasType` du moment isDamaged d'un effet porté
- *                                                        lisent l'activité et les types de ces dégâts
- *   { type: "save", to: "source", activity }             §86, riposte par une sauvegarde (moment isHit) : l'attaquant fait
- *                                                        la sauvegarde de cette activité de l'item, ses effets s'il la
- *                                                        rate (Aura sacrée : Aveuglé)
- *   { type: "move", mode: "push"|"pull", distance, units }   déplacement forcé de la cible (moments hit, failedSave) ;
- *                                                        `distance` : un nombre, ou une formule lue sur la source
- *                                                        (« 5 + 5 * @flags.dnd5e.summon.mod », Main puissante) ;
- *                                                        `follow: true` : la source suit la cible (même décalage)
+ *                                                        §499 (B19): same-amount retort — at the isDamaged moment
+ *                                                        only, `via: "effect"`: the author of the damage taken
+ *                                                        (noted on application) takes as much, by type (or under
+ *                                                        `damageType`); "resisted": only the shares the bearer
+ *                                                        reduced by half. The facts `activity.*` and
+ *                                                        `damage.hasType` of the isDamaged moment of a borne effect
+ *                                                        read the activity and the types of that damage
+ *   { type: "save", to: "source", activity }             §86, retort by a save (isHit moment): the attacker makes
+ *                                                        the save of this item activity, its effects if they
+ *                                                        fail it (Holy Aura: Blinded)
+ *   { type: "move", mode: "push"|"pull", distance, units }   forced movement of the target (hit, failedSave moments);
+ *                                                        `distance`: a number, or a formula read on the source
+ *                                                        ("5 + 5 * @flags.dnd5e.summon.mod", "Mighty Hand");
+ *                                                        `follow: true`: the source follows the target (same offset)
  *   { type: "move", mode: "random", distance, units, directions?, ifBlocked?, minSpeed? }
- *                                                        §497 : dans une direction tirée au dé (1dN visible, N = nombre de
- *                                                        `directions` parmi n, ne, e, se, s, sw, w, nw ; les huit par défaut),
- *                                                        sans attaque d'opportunité (Infestation) ; `ifBlocked: "stay"` : rien
- *                                                        si la distance entière n'est pas libre (par défaut `stop` : aussi loin
- *                                                        que possible) ; `minSpeed` (en `units`) : rien si la Vitesse de la
- *                                                        cible est plus faible
- *   { type: "status", status }                           état natif posé sur la cible (moments hit, failedSave)
- *   { type: "breakConcentration" }                       §91 : la concentration de la cible est rompue (moments hit, failedSave ;
- *                                                        Tremblement de terre)
- *   { type: "mark", mark, label, seconds? }              §54 : une marque posée sur la cible (moments hit, failedSave) — un
- *                                                        effet nommé (`label` : clé de traduction), rattaché à l'item, de
- *                                                        `seconds` secondes (Huile : « couverte d'huile », 1 minute)
+ *                                                        §497: in a direction rolled on a die (visible 1dN, N = number
+ *                                                        of `directions` among n, ne, e, se, s, sw, w, nw; all eight
+ *                                                        by default), without Opportunity Attacks (Infestation);
+ *                                                        `ifBlocked: "stay"`: nothing if the whole distance is not
+ *                                                        free (by default `stop`: as far as possible); `minSpeed`
+ *                                                        (in `units`): nothing if the target's Speed is lower
+ *   { type: "status", status }                           native condition applied to the target (hit, failedSave moments)
+ *   { type: "breakConcentration" }                       §91: the target's Concentration is broken (hit, failedSave
+ *                                                        moments; Earthquake)
+ *   { type: "mark", mark, label, seconds? }              §54: a mark placed on the target (hit, failedSave moments) — a
+ *                                                        named effect (`label`: translation key), attached to the item,
+ *                                                        of `seconds` seconds (Oil: "covered in oil", 1 minute)
  *   { type: "resave", …, tally: { successes, failures, status? } }
- *                                                        §43.1 : compteur — l'effet ne tombe qu'à `successes` réussites ; à
- *                                                        `failures` échecs plus aucune sauvegarde n'est rejouée, l'effet reste
- *                                                        et reçoit l'état `status` (Pétrification : « petrified »)
+ *                                                        §43.1: counter — the effect only ends at `successes`
+ *                                                        successes; at `failures` failures no save is replayed anymore,
+ *                                                        the effect stays and receives the `status` condition
+ *                                                        (Petrification: "petrified")
  *   { type: "resave", …, stages: [{ effect?, status? }, …], onSuccess?: "down"|"end", critEnds?: true }
- *                                                        §495 : échelle d'états — chaque échec monte d'un palier (un effet de
- *                                                        l'item `effect`, posé à part et retiré avec l'effet, et/ou un état
- *                                                        `status` ajouté à l'effet) ; chaque réussite redescend d'un palier et,
- *                                                        au palier 0, l'effet tombe (`onSuccess: "end"` : il tombe d'un coup) ;
- *                                                        `critEnds` : un 20 naturel le fait tomber
- *   { type: "resave", keep?, onFail?, unlessSeesOrigin?, advantage? } la créature rejoue la sauvegarde ; réussie, l'effet tombe (`keep:
- *                                                        true` : il reste) ; `onFail: "dodge"` : ratée, elle prend l'action
- *                                                        Esquiver (§37, Malédiction : « Cursed Actions ») ;
- *                                                        `unlessSeesOrigin: true` : seulement si elle ne voit pas le lanceur
- *                                                        (Terreur : « termine son tour sans ligne de vue sur vous », §42.2) ;
- *                                                        `ifCompelled: true` : seulement après la marche imposée (§403, Compulsion)
- *                                                        (moments startOfTurn, endOfTurn, isDamaged, avec `via: "effect"`)
- *   { type: "resave", own: "choose", advantage? }        §485 : réaction de l'item (pas de `via`, avec son étape `use`, moment
- *                                                        enemyTurnEnd seul) — le réacteur rejoue la sauvegarde d'un effet qu'il
- *                                                        porte, choisi par son joueur (Indomptable) ; à conditionner par
- *                                                        { "self.hasSavableEffect": true }
- *   { type: "consume", side: "target"|"source" }         la marque tombe au premier jet d'attaque qu'elle concerne (§16.12,
- *                                                        B10) : `target` = celle que porte la cible (Rayon traçant : « la
- *                                                        prochaine attaque contre elle ») ; `source` = celle que porte
- *                                                        l'attaquant (Moquerie cruelle : « sa prochaine attaque ») —
- *                                                        moment preAttackRoll, `via: "effect"`
- *   { type: "uncrit" }                                   avec une réaction `use` (isHit, allyIsHit) : si elle est prise, un coup
- *                                                        critique n'est plus qu'un coup (Sentinelle au seuil de la mort, §19.9)
- *   { type: "reroll" }                                   §489 : avec une réaction `use` (isHit, allyIsHit) : si elle est prise,
- *                                                        l'attaquant relance son jet d'attaque et garde le nouveau — le
- *                                                        coup est rejugé (Parade d'un monstre) ; « sans effet contre un
- *                                                        coup critique » : { "hit.critical": false }. La riposte sur un
- *                                                        échec critique du nouveau jet : isMissed, `free`, faits
- *                                                        { "attack.rerolled": true, "attack.fumble": true }
- *   { type: "use", …, free: true }                       §489 : l'utilisation ne coûte rien au budget (la riposte qui fait
- *                                                        partie d'une réaction déjà prise)
- *   { type: "endCondition" }                             avec une réaction `use` au moment gainsCondition : si elle est
- *                                                        prise, l'état subi cesse (§19.8)
- *   { type: "halve" }                                    avec une réaction `use` au moment isHit : si elle est prise, la
- *                                                        cible ne subit que la moitié des dégâts de l'attaque (§16.11,
- *                                                        B14 : Esquive instinctive)
+ *                                                        §495: condition ladder — each failure goes up one tier (an
+ *                                                        item effect `effect`, applied separately and removed with the
+ *                                                        effect, and/or a condition `status` added to the effect); each
+ *                                                        success goes down one tier and, at tier 0, the effect ends
+ *                                                        (`onSuccess: "end"`: it ends at once); `critEnds`: a natural
+ *                                                        20 ends it
+ *   { type: "resave", keep?, onFail?, unlessSeesOrigin?, advantage? }
+ *                                                        the creature replays the save; on success, the effect ends
+ *                                                        (`keep:
+ *                                                        true`: it stays); `onFail: "dodge"`: on failure, they take the
+ *                                                        Dodge action (§37, Bestow Curse: "Cursed Actions");
+ *                                                        `unlessSeesOrigin: true`: only if they cannot see the caster
+ *                                                        (Fear: "ends its turn without line of sight to you", §42.2);
+ *                                                        `ifCompelled: true`: only after the imposed walk (§403,
+ *                                                        Compulsion) (startOfTurn, endOfTurn, isDamaged moments, with
+ *                                                        `via: "effect"`)
+ *   { type: "resave", own: "choose", advantage? }        §485: item reaction (no `via`, with its `use` step, moment
+ *                                                        enemyTurnEnd only) — the reactor replays the save of an effect
+ *                                                        they bear, chosen by their player (Indomitable); to be
+ *                                                        conditioned by { "self.hasSavableEffect": true }
+ *   { type: "consume", side: "target"|"source" }         the mark ends on the first attack roll it concerns (§16.12,
+ *                                                        B10): `target` = the one the target bears (Guiding Bolt: "the
+ *                                                        next attack against it"); `source` = the one the attacker
+ *                                                        bears (Vicious Mockery: "its next attack") — preAttackRoll
+ *                                                        moment, `via: "effect"`
+ *   { type: "uncrit" }                                   with a `use` reaction (isHit, allyIsHit): if it is taken, a
+ *                                                        Critical Hit becomes a mere hit (Sentinel at Death's Door,
+ *                                                        §19.9)
+ *   { type: "reroll" }                                   §489: with a `use` reaction (isHit, allyIsHit): if it is
+ *                                                        taken, the attacker rerolls their attack roll and keeps the
+ *                                                        new one — the hit is re-judged (a monster's Parry); "no
+ *                                                        effect against a Critical Hit": { "hit.critical": false }. The
+ *                                                        retort on a critical miss of the new roll: isMissed, `free`,
+ *                                                        facts { "attack.rerolled": true, "attack.fumble": true }
+ *   { type: "use", …, free: true }                       §489: the use costs the budget nothing (the retort that is
+ *                                                        part of an already taken reaction)
+ *   { type: "endCondition" }                             with a `use` reaction at the gainsCondition moment: if it is
+ *                                                        taken, the condition suffered ends (§19.8)
+ *   { type: "halve" }                                    with a `use` reaction at the isHit moment: if it is taken, the
+ *                                                        target only takes half the attack's damage (§16.11, B14:
+ *                                                        Uncanny Dodge)
  *   { type: "damage", to: "origin", formula?, damageType? }
- *                                                        le lanceur de l'effet porté subit des dégâts — sans formule, le
- *                                                        même montant que le porteur vient de subir (isDamaged, via: "effect" :
- *                                                        Lien protecteur, §16.11)
- *   { type: "damage", formula, damageType, onSave? }     à une issue (moments hit, failedSave) : la cible atteinte subit ces
- *                                                        dégâts, lancés par le moteur ; `onSave: "half"` (failedSave) : la
- *                                                        moitié sur une sauvegarde réussie, sinon rien (dégâts « en plus » des
- *                                                        sorts lancés par des créatures d'un module tiers)
+ *                                                        the caster of the borne effect takes damage — without a
+ *                                                        formula, the same amount the bearer has just taken
+ *                                                        (isDamaged, via: "effect": Warding Bond, §16.11)
+ *   { type: "damage", formula, damageType, onSave? }     on an outcome (hit, failedSave moments): the target hit takes
+ *                                                        this damage, rolled by the engine; `onSave: "half"`
+ *                                                        (failedSave): half on a successful save, otherwise nothing
+ *                                                        ("extra" damage of spells cast by creatures of a third-party
+ *                                                        module)
  *   { type: "damage", to: "bearer", formula?, damageType?, activity? }
- *                                                        au tour du porteur d'un effet (startOfTurn, endOfTurn, via: "effect") :
- *                                                        il subit ces dégâts — une formule et son type, ou l'activité de dégâts
- *                                                        de l'item, au niveau de lancement (Flèche acide de Melf : « 2d4 dégâts
- *                                                        d'acide à la fin de son prochain tour »)
+ *                                                        on the turn of the bearer of an effect (startOfTurn,
+ *                                                        endOfTurn, via: "effect"): they take this damage — a formula
+ *                                                        and its type, or the item's damage activity, at the casting
+ *                                                        level (Melf's Acid Arrow: "2d4 acid damage at the end of
+ *                                                        their next turn")
  *   { type: "damage", to: "self", formula?, damageType?, activity? }
- *                                                        §484 : au tour du porteur d'un TRAIT (startOfTurn, endOfTurn, sans via) : il
- *                                                        subit ces dégâts, quand `if` tient sur lui (`self.inSunlight` :
- *                                                        Hypersensibilité au soleil, 20 radiants au début de son tour au soleil)
- *   { type: "lift", height, units }                   §164 : à une issue (failedSave) — la cible monte à `height` d'élévation ; quand
- *                                                        la zone de l'item tombe, elle chute (1d6 contondants par 3 m, 20d6 au plus, À terre)
- *   { type: "disarm" }                                   à une issue (failedSave) : la cible lâche son arme de corps à corps
- *                                                        maniée (dés-équipée) — un désarmement
- *   { type: "use", …, advantage: true }                  la réaction se joue avec l'Avantage (Riposte)
- *   `margin: { min?, max? }` sur une étape d'issue       seulement si la cible a raté de `min` ou plus (Chaîne : À terre à 5)
- *   { type: "remove" }                                   l'effet qui porte la déclaration tombe (§16, B8 : Sommeil,
- *                                                        Motif hypnotique cessent sur dégâts ; avec `via: "effect"`)
- *   { type: "attackBonus", formula }                     ajoutée au jet d'attaque (« -1d4 » : Voile défensif, §16.46 ;
- *                                                        moment preAttackRoll)
- *   { type: "advantage" } · { type: "disadvantage" }     une raison d'avantage ou de désavantage à l'attaque
- *                                                        (moment preAttackRoll ; core/conditions.mjs, `declared`)
- *   { type: "interpose" }                                avec une réaction `use` au moment allyIsDamaged : le réacteur prend les dégâts
- *                                                        à la place de la créature (§78, Interposition d'un garou ; les effets restent à elle)
- *   { type: "redirect" }                                 §375 : avec une réaction `use` au moment isMissed : l'attaquant refait la même
- *                                                        attaque, gratuite, contre une créature que le réacteur agrippe (Bouclier de
- *                                                        chair) ; proposée seulement s'il en agrippe une
- *   { type: "cancelForSelf", ifSourceFails? }          §493 (B13) : avec une réaction `use` au moment inArea : les dégâts de la zone
- *                                                        ne sont pas appliqués au réacteur (lui seul ; les autres créatures de la zone
- *                                                        les subissent) ; `ifSourceFails: true` — seulement si l'auteur rate la
- *                                                        sauvegarde de l'activité de réaction, qui doit viser la source (`target:
- *                                                        "source"` : Bouclier d'insectes, DD de la créature, Int / Sag / Cha au choix)
- *   { type: "absorb" }                                   avec une réaction `use` au moment allyIsDamaged : la réserve du réacteur (clé
- *                                                        `absorb`, Égide arcanique) prend les dégâts de la créature (§38, Égide projetée)
- *   { type: "use", target: "self", activity }          §72 : la réaction vise le réacteur lui-même (Protection contre la mort
- *                                                        lancée par le Bracelet de charme) ; plusieurs `use` d'un même item :
- *                                                        un bouton par activité, nommé d'après elle
- *   { type: "use", target: "source", approach: true }    la réaction rejoint d'abord la source : hors d'allonge, le réacteur
- *                                                        s'en approche jusqu'à sa vitesse, sans attaque d'opportunité (§67,
- *                                                        « se déplacer jusqu'à sa vitesse vers l'attaquant et l'attaquer »)
- *   { type: "use", …, consume: false }                  la réaction s'utilise sans rien consommer d'elle-même (la réserve paie)
- *   { type: "bonus", formula }                           avec une réaction `use` avant le jet d'attaque d'un allié (allyAttacks) :
- *                                                        le dé, lancé en clair, ajouté au jet (Présage cosmique, Fortune)
- *   { type: "ward", activity? }                          l'attaquant doit réussir la sauvegarde de l'item (activité
- *                                                        sœur par id, sinon la première de sauvegarde) ou perd son
- *                                                        attaque (moment isAttacked, avec `via: "effect"`)
+ *                                                        §484: on the turn of the bearer of a TRAIT (startOfTurn,
+ *                                                        endOfTurn, without via): they take this damage, when `if`
+ *                                                        holds on them (`self.inSunlight`: Sunlight Sensitivity, 20
+ *                                                        radiant at the start of their turn in sunlight)
+ *   { type: "lift", height, units }                      §164: on an outcome (failedSave) — the target rises to `height`
+ *                                                        of elevation; when the item's area ends, they fall (1d6
+ *                                                        bludgeoning per 3 m, 20d6 at most, Prone)
+ *   { type: "disarm" }                                   on an outcome (failedSave): the target drops their wielded
+ *                                                        melee weapon (unequipped) — a disarm
+ *   { type: "use", …, advantage: true }                  the reaction is played with Advantage (Riposte)
+ *   `margin: { min?, max? }` on an outcome step          only if the target failed by `min` or more ("Chain": Prone at 5)
+ *   { type: "remove" }                                   the effect that carries the declaration ends (§16, B8: Sleep,
+ *                                                        Hypnotic Pattern end on damage; with `via: "effect"`)
+ *   { type: "attackBonus", formula }                     added to the attack roll ("-1d4": "Defensive Veil", §16.46;
+ *                                                        preAttackRoll moment)
+ *   { type: "advantage" } · { type: "disadvantage" }     a reason for Advantage or Disadvantage on the attack
+ *                                                        (preAttackRoll moment; core/conditions.mjs, `declared`)
+ *   { type: "interpose" }                                with a `use` reaction at the allyIsDamaged moment: the reactor
+ *                                                        takes the damage in the creature's place (§78, a werecreature's
+ *                                                        "Interposition"; the effects stay on it)
+ *   { type: "redirect" }                                 §375: with a `use` reaction at the isMissed moment: the
+ *                                                        attacker makes the same attack again, free, against a
+ *                                                        creature the reactor grapples ("Flesh Shield"); offered only
+ *                                                        if they grapple one
+ *   { type: "cancelForSelf", ifSourceFails? }            §493 (B13): with a `use` reaction at the inArea moment: the
+ *                                                        area's damage is not applied to the reactor (them alone; the
+ *                                                        other creatures in the area take it); `ifSourceFails: true` —
+ *                                                        only if the author fails the save of the reaction activity,
+ *                                                        which must target the source (`target:
+ *                                                        "source"`: "Insect Shield", the creature's DC, Int / Wis /
+ *                                                        Cha of choice)
+ *   { type: "absorb" }                                   with a `use` reaction at the allyIsDamaged moment: the
+ *                                                        reactor's pool (key `absorb`, Arcane Ward) takes the
+ *                                                        creature's damage (§38, Projected Ward)
+ *   { type: "use", target: "self", activity }            §72: the reaction targets the reactor itself (Death Ward cast
+ *                                                        by the "Bracelet of Charm"); several `use` of the same item:
+ *                                                        one button per activity, named after it
+ *   { type: "use", target: "source", approach: true }    the reaction first reaches the source: out of reach, the
+ *                                                        reactor approaches it up to their speed, without Opportunity
+ *                                                        Attacks (§67, "move up to your speed toward the attacker and
+ *                                                        attack them")
+ *   { type: "use", …, consume: false }                   the reaction is used without consuming anything of its own (the
+ *                                                        pool pays)
+ *   { type: "bonus", formula }                           with a `use` reaction before an ally's attack roll
+ *                                                        (allyAttacks): the die, rolled in the open, added to the roll
+ *                                                        (Cosmic Omen, Fortune)
+ *   { type: "ward", activity? }                          the attacker must succeed on the item's save (sibling
+ *                                                        activity by id, otherwise the first save) or loses their
+ *                                                        attack (isAttacked moment, with `via: "effect"`)
  *
- * Fonctions pures, aucune dépendance à Foundry.
+ * Pure functions, no dependency on Foundry.
  */
 
 export * from "./content/enums.mjs";

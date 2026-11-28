@@ -1,10 +1,10 @@
 /**
- * §120, monde `ravenloft` (fiche réelle d'Alara, dhampir clerc, qui connaît Caresse du vampire et a le don Survivant) :
- *  1. Caresse du vampire sur le Zombi au contact : chaque attaque qui touche rend à Alara la moitié (arrondie en dessous) des
- *     dégâts nécrotiques ; la relance, tant que la concentration tient, ne dépense pas d'emplacement.
- *  2. Survivant, Hypervigilance : un jet d'initiative dont le d20 fait 9 ou moins est relancé, et l'initiative corrigée de la
- *     différence des deux d20.
- * Remet PV, emplacements (filet de sécurité), concentration et combat.
+ * §120, world `ravenloft` (Alara's real sheet, dhampir cleric, who knows Vampiric Touch and has the Survivor feat):
+ *  1. Vampiric Touch on the Zombie in contact: each attack that hits gives Alara back half (rounded down) of the
+ *     necrotic damage; the recast, as long as Concentration holds, spends no slot.
+ *  2. Survivor, "Hypervigilance": an Initiative roll whose d20 is 9 or less is rerolled, and the Initiative corrected by the
+ *     difference of the two d20.
+ * Resets HP, slots (safety net), Concentration and combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -14,8 +14,8 @@ export default {
 
   async run(ctx) {
     const { tokens } = await ctx.scene();
-    // L'Alara qui connaît le sort : « Alara » dans `ravenloft`, « Alara Dhampir » dans `dnd-6` (où « Alara » est la fiche du
-    // Domaine de la Ruse, sans Caresse du vampire).
+    // The Alara who knows the spell: "Alara" in `ravenloft`, "Alara Dhampir" in `dnd-6` (where "Alara" is the sheet of the
+    // Trickery Domain, without Vampiric Touch).
     let alara = null;
     for ( const name of ["Alara Dhampir", "Alara"] ) {
       if ( !tokens.some(t => t.name === name) ) continue;
@@ -40,7 +40,7 @@ export default {
     await ctx.setHp(alara, 5);
     let hits = 0;
     for ( let n = 1; (n <= 12) && !hits; n++ ) {
-      // Un lancement neuf à chaque essai : la concentration retirée, l'utilisation n'est pas une relance.
+      // A fresh cast on each try: Concentration removed, the use is not a recast.
       await ctx.removeEffectsNamed(alara, /concentr/i);
       await pause(800);
       if ( (await ctx.hp(zombi)) < 8 ) await ctx.setHp(zombi, hpZombi);
@@ -59,8 +59,8 @@ export default {
     }
     ctx.expect(hits > 0, "au moins une Caresse a touché");
 
-    // La relance, concentration en cours : une nouvelle carte, notée relance, sans emplacement dépensé (consommation demandée).
-    // Un emplacement de niveau 3 au moins, pour qu'une dépense se voie (le filet de sécurité remet ceux de la fiche).
+    // The recast, Concentration ongoing: a new card, noted as a recast, with no slot spent (consumption requested).
+    // At least a level 3 slot, so that a spending shows (the safety net restores those of the sheet).
     if ( !(await slots()) ) await ctx.call("update-actor", { actorId: alara.actorId, actorData: { "system.spells.spell3.value": 1 } });
     const slotsBefore = await slots();
     const since = await ctx.lastMessageId();
@@ -78,7 +78,7 @@ export default {
     const combat = await ctx.startCombat([alara, zombi]);
     const cid = (combat.combatants ?? []).find(c => c.tokenId === alara.id)?.id
       ?? (await ctx.combat()).combatants?.find(c => c.tokenId === alara.id)?.id;
-    // La question va au joueur d'Alara, sinon au MJ : sans propriétaire joueur dans ce monde, c'est une fenêtre chez le MJ.
+    // The question goes to Alara's player, otherwise to the GM: with no player owner here, it is a window on the GM's side.
     const known = async () => ((await ctx.call("list-dialogs", {})).windows ?? []).map(w => w.id);
     let kept = 0, rerolled = 0;
     for ( let n = 1; (n <= 30) && !(kept && rerolled); n++ ) {

@@ -1,12 +1,12 @@
 /**
- * M8 (SPEC §18.15) — ne provoque pas d'attaque d'opportunité. Monde `ravenloft`, en combat, le Loup à côté de Bramo s'éloigne
- * à pied (écriture de x/y : un vrai déplacement `walk`, qui passe par `preMoveToken` ; `move-token` déplace en `displace`,
- * que le moteur traite comme une téléportation) :
- *  1. Agile (Rat) prêté au Loup : rien n'est proposé ;
- *  2. témoin, Agile retiré : l'attaque d'opportunité de Bramo est proposée — la réaction de Bramo était donc disponible au
- *     test d'Agile. ⚠️ une fenêtre de réaction s'ouvre chez le MJ, et se ferme seule au bout du délai (« non ») ;
- *  3. au tour suivant du Loup (Bramo a joué entre-temps : sa réaction est revenue), Rôder (Tigre-garou) prêté et utilisé :
- *     le reste du tour, rien n'est proposé.
+ * M8 (SPEC §18.15) — does not provoke an Opportunity Attack. World `ravenloft`, in combat, the Wolf next to Bramo moves away
+ * on foot (writing x/y: a real `walk` move, which goes through `preMoveToken`; `move-token` moves with `displace`,
+ * which the engine treats as a teleport):
+ *  1. "Agile" (Rat) lent to the Wolf: nothing is offered;
+ *  2. witness, "Agile" removed: Bramo's Opportunity Attack is offered — so Bramo's Reaction was available at the
+ *     "Agile" test. ⚠️ a Reaction window opens on the GM's side, and closes by itself after the delay ("no");
+ *  3. on the Wolf's next turn (Bramo has played in the meantime: his Reaction is back), "Prowl" (Weretiger) lent and used:
+ *     the rest of the turn, nothing is offered.
  */
 const RAT = "Compendium.dnd-monster-manual.actors.Actor.mmRat00000000000";
 const WERETIGER = "Compendium.dnd-monster-manual.actors.Actor.mmWeretiger00000";
@@ -16,7 +16,7 @@ export default {
   name: "sans attaque d'opportunité — Agile, Rôder",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Absent from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise the dnd5e SRD 2024).
     await ctx.cast({ "Loup": "mmWolf0000000000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Loup", "Bramo"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Loup ou Bramo absent : non applicable"); return; }
@@ -49,11 +49,11 @@ export default {
     for ( let i = 0; (i < 3) && ((await current()) !== wolf.id); i++ ) { await ctx.nextTurn(); await sleep(1000); }
     if ( !ctx.expect((await current()) === wolf.id, "tour du Loup") ) return;
 
-    /** Le Loup se pose à côté de Bramo (sans provoquer), puis s'éloigne à pied de trois cases. Rend true si une attaque d'opportunité a été proposée. */
+    /** The Wolf is placed next to Bramo (without provoking), then moves away on foot by three cells. Returns true if an OA was offered. */
     const walkAway = async wait => {
       await ctx.call("move-token", { tokenId: wolf.id, x: at.x + grid, y: at.y, elevation: at.elevation });
       await sleep(800);
-      // Le journal du moteur n'est pas vidé par sa lecture : on compte les propositions avant et après.
+      // The engine's log is not emptied by reading it: we count the offers before and after.
       const proposed = async () => (await ctx.engineLog()).filter(l => /attaque d'opportunité proposée|Opportunity Attack offered/.test(l) && /Loup/.test(l)).length;
       const before = await proposed();
       await ctx.call("update-scene-object", { type: "Token", objectId: wolf.id, data: { x: at.x + 4 * grid, y: at.y } });
@@ -68,10 +68,10 @@ export default {
     await agile.remove();
     await sleep(500);
 
-    // 2. Témoin.
+    // 2. Witness.
     ctx.expect(await walkAway(14000), "témoin (Agile retiré) : l'attaque d'opportunité est proposée — Bramo pouvait réagir");
 
-    // 3. Rôder, au tour suivant du Loup.
+    // 3. Prowl, on the Wolf's next turn.
     for ( let i = 0; (i < 3) && ((await current()) === wolf.id); i++ ) { await ctx.nextTurn(); await sleep(1000); }
     for ( let i = 0; (i < 3) && ((await current()) !== wolf.id); i++ ) { await ctx.nextTurn(); await sleep(1000); }
     if ( !ctx.expect((await current()) === wolf.id, "tour suivant du Loup") ) return;

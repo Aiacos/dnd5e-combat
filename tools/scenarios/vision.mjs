@@ -1,8 +1,8 @@
 /**
- * Vision simulée (P1) : les faits « qui voit qui » posent l'avantage ou le désavantage du jet.
- * Ensorceleur et Zombi à découvert : rien. Zombi Invisible (l'Ensorceleur n'a pas de vision
- * aveugle) : « cible non vue » → désavantage, et le Zombi voit toujours l'Ensorceleur. Zombi
- * Aveuglé : « attaquant non vu » → avantage. Les états sont retirés en fin de scénario.
+ * Simulated Vision (P1): the "who sees whom" facts set the roll's Advantage or Disadvantage.
+ * Sorcerer and Zombie in the open: nothing. Invisible Zombie (the Sorcerer has no Blindsight):
+ * "target unseen" → Disadvantage, and the Zombie still sees the Sorcerer. Blinded Zombie:
+ * "attacker unseen" → Advantage. The conditions are removed at the end of the scenario.
  */
 const MODULE_ID = "dnd5e-combat";
 

@@ -1,10 +1,10 @@
 /**
- * §410 (issue #44, lot 3) : plus d'emplacement, plus d'utilisation, sort non préparé — la fenêtre de légalité au lieu du refus sec de
- * dnd5e, et forcer n'en dépense rien. « Arène des refus » (`node tools/arene-refus.mjs`).
- *  1. Le Mage sans emplacement du 1er niveau lance Armure du mage sur lui-même : fenêtre « aucun emplacement » ; forcé, la carte part, marquée,
- *     les emplacements restent à 0 (rien de dépensé, pas d'erreur de dnd5e).
- *  2. Emplacements rendus, Armure du mage non préparée : fenêtre « non préparé ».
- *  3. Le Guerrier sans utilisation de Second souffle : fenêtre « plus d'utilisation » ; forcé, la carte part, les utilisations restent à 0.
+ * §410 (issue #44, batch 3): no more spell slots, no more uses, unprepared spell — the legality window instead of dnd5e's
+ * flat refusal, and forcing spends nothing. "Refusal arena" (`node tools/arene-refus.mjs`).
+ *  1. The Mage with no 1st-level spell slot casts Mage Armor on himself: "no slot" window; forced, the card goes out, marked,
+ *     the spell slots stay at 0 (nothing spent, no dnd5e error).
+ *  2. Spell slots restored, Mage Armor not prepared: "not prepared" window.
+ *  3. The Fighter with no use of Second Wind: "no more uses" window; forced, the card goes out, the uses stay at 0.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -49,7 +49,7 @@ export default {
       }
     });
     const textOf = d => [d?.title, d?.content, d?.text].filter(Boolean).join(" ");
-    /** Lance ; rend `{ dialog, messages }` après avoir répondu `button`. */
+    /** Casts; returns `{ dialog, messages }` after answering `button`. */
     const attempt = async (token, itemId, activityType, button) => {
       const since = await ctx.lastMessageId();
       await ctx.call("use-activity", { tokenId: token.id, itemId, activityType, configure: false, consume: true,
@@ -72,7 +72,7 @@ export default {
     const left = (await actor(mageId)).system?.spells?.spell1?.value;
     ctx.expect(left === 0, `forcé : aucun emplacement dépensé (${left})`);
 
-    // 2. Non préparé.
+    // 2. Not prepared.
     await ctx.call("update-actor", { actorId: mageId, actorData: { "system.spells.spell1.value": 2 } });
     await ctx.call("upsert-actor-item", { actorId: mageId, itemData: { "system.prepared": 0 }, match: { path: "_id", value: armor } });
     r = await attempt(mage, armor, "utility", "cancel");

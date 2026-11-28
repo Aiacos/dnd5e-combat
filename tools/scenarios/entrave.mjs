@@ -1,9 +1,9 @@
 /**
- * Se libérer par un test (SPEC §16.54) : le Clerc lance Enchevêtrement (ajouté à volonté pour le scénario) sur le Guerrier
- * — zone posée sur lui, sauvegarde de Force rejouée jusqu'à l'échec (Entravé). Le Guerrier utilise S'échapper : un test de
- * Force (Athlétisme) contre le DD de sauvegarde des sorts du Clerc, écrit dans le texte du sort ; rejoué jusqu'à la
- * réussite. Vérifie : échec ⇔ total < DD et l'effet reste ; réussite ⇔ total ≥ DD et l'effet part. Remet effets,
- * concentration et zones.
+ * Breaking free by a check (SPEC §16.54): the Cleric casts Entangle (added at will for the scenario) on the Fighter
+ * — area placed on him, Strength save replayed until failure (Restrained). The Fighter uses Escape: a Strength
+ * (Athletics) check against the Cleric's spell save DC, written in the spell's text; replayed until
+ * success. Checks: failure ⇔ total < DC and the effect stays; success ⇔ total ≥ DC and the effect leaves. Restores effects,
+ * Concentration and areas.
  */
 const SPELLS = "Compendium.dnd5e.spells24.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,7 +28,7 @@ export default {
     ctx.restore(cleanup);
     const restraints = async () => (await ctx.effects(fighter)).filter(e => (e.statuses ?? []).includes("restrained"));
 
-    // 1. Enchevêtrement, jusqu'à une sauvegarde ratée.
+    // 1. Entangle, until a failed save.
     let caught = false;
     for ( let n = 1; (n <= 20) && !caught; n++ ) {
       const used = await ctx.use({ tokenId: cleric.id, identifier: "entangle", activityType: "save", consume: false,
@@ -42,16 +42,16 @@ export default {
     ctx.expect(caught, "Enchevêtrement : le Guerrier est Entravé (sauvegarde ratée)");
     if ( !caught ) return;
 
-    // 2. S'échapper, jusqu'à la réussite.
+    // 2. Escape, until success.
     const escapeId = await ctx.itemId(fighter.id, "dnd5e-combat-escape").catch(() => null);
     ctx.expect(!!escapeId, "le Guerrier a l'action de base S'échapper");
     if ( !escapeId ) return;
     let freed = false;
     let failures = 0;
     for ( let n = 1; (n <= 20) && !freed; n++ ) {
-      // Le moteur écrit « Guerrier se libère de Enchevêtrement (15 contre DD 13) » — le DD n'est pas sur le message. La
-      // trace est un tampon tournant : on prend la dernière ligne, celle de cet essai. Depuis §252 le verdict suit la fin des
-      // dés 3D (8 s au plus) : on attend une ligne de plus qu'avant l'essai.
+      // The engine writes "Guerrier se libère de Enchevêtrement (15 contre DD 13)" — the DC is not on the message. The
+      // trace is a rolling buffer: we take the last line, the one from this try. Since §252 the verdict follows the end of the 3D
+      // dice (8 s at most): we wait for one more line than before the try.
       const tries = async () => (await ctx.engineLog()).filter(l => /se libère pas de|se libère de|break free of|breaks free of/.test(l));
       const lines0 = await tries();
       await ctx.use({ tokenId: fighter.id, itemId: escapeId });

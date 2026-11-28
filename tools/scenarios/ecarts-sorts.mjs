@@ -1,17 +1,17 @@
 /**
- * §402 : écarts moyens de la repasse des sorts, corrigés — joués dans l'« Arène des sorts ». `PART=<mot>` ne joue que les parties dont
- * le nom le contient.
- *  - repli : Repli expéditif (Foncer en action Bonus) puis Foncer avec l'action → trois fois la Vitesse au budget du tour.
- *  - dedale : Dédale pose « Banished » d'office (activité de test de la donnée) → la Cible est cachée, puis revient à la fin.
- *  - parole : Parole divine sur une Cible faite Fiélon (999 PV) qui rate → renvoyée (token cachée), quels que soient ses PV.
- *  - petrification : Pétrification sur la Créature artificielle → réussite d'office, sans jet.
- *  - oeil : Mauvais œil — une cible qui a réussi n'est plus affectée par les reprises du sort.
- *  - rappel : Rappel à la vie — les quatre effets de −1 posés, un Repos long en retire un.
- *  - renvoi : Dissipation du mal et du bien, « Renvoi » sur la Cible faite Fiélon → renvoyée (cachée) sur un échec.
- *  - duel : Duel forcé posé sur la Cible (à 20 ft du Lanceur) — un pas à 25 ft passe, un pas à 45 ft est refusé.
- *  - vent : Frappe du vent d'acier sur la Cible et sa voisine — après les attaques, la question « se téléporter près d'une cible ».
- *  - discours : Discours captivant en combat sur la Cible hostile → réussite d'office (« vous la combattez »).
- *  - cercle : l'effet de Cercle de pouvoir sur la Cible ; une Boule de feu réussie → aucun dégât.
+ * §402: corrected average gaps from the spell re-pass — played in the "Arène des sorts". `PART=<mot>` plays only the parts whose
+ * name contains it.
+ *  - repli: Expeditious Retreat (Dash as a Bonus Action) then Dash with the action → three times the Speed in the turn budget.
+ *  - dedale: Maze applies "Banished" automatically (the data's check activity) → the target is hidden, then returns at the end.
+ *  - parole: Divine Word on a target made a Fiend (999 HP) that fails → sent back (token hidden), whatever its HP.
+ *  - petrification: Petrification on the Construct → automatic success, no roll.
+ *  - oeil: Eyebite — a target that succeeded is no longer affected by the spell's repeat saves.
+ *  - rappel: Raise Dead — the four −1 effects applied, a Long Rest removes one.
+ *  - renvoi: Dispel Evil and Good, "Dismissal" on the target made a Fiend → sent back (hidden) on a failure.
+ *  - duel: Compelled Duel on the target (20 ft from the caster) — a step to 25 ft is allowed, a step to 45 ft is refused.
+ *  - vent: Steel Wind Strike on the target and its neighbor — after the attacks, the question "teleport next to a target".
+ *  - discours: Enthrall in combat on the hostile target → automatic success ("you are fighting it").
+ *  - cercle: the Circle of Power effect on the target; a successful Fireball → no damage.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -20,8 +20,8 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
 const only = (process.env.PART ?? "").toLowerCase();
 const wanted = name => !only || name.toLowerCase().includes(only);
 
-/** Lance `use` et répond aux fenêtres qui s'ouvrent chez le MJ pendant ce temps (même aide que choix-sorts). `tail` : tours d'attente
- * après la fin de `use` (une question qui suit la résolution, comme la téléportation de Frappe du vent d'acier). */
+/** Runs `use` and answers the windows that open on the GM's side meanwhile (same helper as choix-sorts). `tail`: waiting turns
+ * after `use` ends (a question that follows the resolution, like Steel Wind Strike's teleportation). */
 async function usingWith(ctx, use, answer, { tail=3 }={}) {
   const seen = [];
   const known = new Set(((await ctx.call("list-dialogs", {}).catch(() => null))?.windows ?? []).map(w => w.id));
@@ -40,7 +40,7 @@ async function usingWith(ctx, use, answer, { tail=3 }={}) {
   return { used: await using, seen };
 }
 
-/** L'état « caché » d'un token. */
+/** The "hidden" condition of a token. */
 async function hidden(ctx, token) {
   const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: token.id });
   return data.hidden === true;
@@ -48,10 +48,10 @@ async function hidden(ctx, token) {
 async function unhide(ctx, token) {
   await ctx.call("update-scene-object", { type: "Token", objectId: token.id, data: { hidden: false, "flags.dnd5e-combat.-=banished": null } }).catch(() => {});
 }
-/** Change le type de créature d'un token non lié (son delta), et le remet à la fin. */
+/** Changes the creature type of an unlinked token (its delta), and puts it back at the end. */
 async function setType(ctx, token, type) {
-  // L'acteur du token (synthétique pour un token non lié : la modification va dans son delta) — un update-scene-object du delta par
-  // chemin à points est refusé par le cœur.
+  // The token's actor (synthetic for an unlinked token: the change goes into its delta) — an update-scene-object of the delta by
+  // dotted path is refused by the core.
   const set = value => ctx.call("run-script", { code: `const a = canvas.scene.tokens.get("${token.id}").actor; const before = a.system.details.type.value; await a.update({ "system.details.type.value": ${JSON.stringify("__V__")} }); return before;`.replace('"__V__"', JSON.stringify(value)) });
   const r = await set(type);
   const before = r?.result ?? "humanoid";
@@ -67,13 +67,13 @@ export default {
     const target = await ctx.token("Cible");
     const hero = await ctx.token("Héros");
 
-    // ---- Repli expéditif puis Foncer ----
+    // ---- Expeditious Retreat then Dash ----
     if ( wanted("repli") ) {
       await ctx.ensureItem(caster, PHB("phbsplExpeditiou"));
       const fight = await ctx.startCombat([caster, target]);
       // Le lanceur ne referme que le dernier combat ouvert (`ctx.ownCombat`) : celui-ci se referme ici.
       ctx.restore(() => (fight?.id ? ctx.call("end-combat", { combatId: fight.id }).catch(() => {}) : null));
-      // Le tour du Lanceur : Foncer se paie avec son action.
+      // The caster's turn: Dash is paid with its action.
       await ctx.call("run-script", { code: `const c = game.combats.find(x => x.combatants.some(k => k.tokenId === "${caster.id}")); const i = c.turns.findIndex(k => k.tokenId === "${caster.id}"); await c.update({ turn: i }); return i;` });
       await pause(1000);
       const speed = Number((await ctx.call("get-actor", { actorId: caster.actorId })).system?.attributes?.movement?.walk) || 30;
@@ -87,7 +87,7 @@ export default {
       ctx.expect(afterAction?.cap === speed * 3 || afterAction?.cap === null, `déplacement du tour : trois fois la Vitesse (${afterAction?.cap} pour ${speed})`);
     }
 
-    // ---- Dédale ----
+    // ---- Maze ----
     if ( wanted("dedale") ) {
       await ctx.ensureItem(caster, PHB("phbsplMaze000000"));
       ctx.restore(async () => { await ctx.removeEffectsFrom(target, "maze"); await unhide(ctx, target); });
@@ -122,7 +122,7 @@ export default {
       await unhide(ctx, target);
     }
 
-    // ---- Dissipation du mal et du bien : le Renvoi ----
+    // ---- Dispel Evil and Good: the Dismissal ----
     if ( wanted("renvoi") ) {
       await ctx.ensureItem(caster, PHB("phbsplDispelEvil"));
       await setType(ctx, target, "fiend");
@@ -141,7 +141,7 @@ export default {
       await unhide(ctx, target);
     }
 
-    // ---- Duel forcé : la laisse de 9 m ----
+    // ---- Compelled Duel: the 9 m leash ----
     if ( wanted("duel") ) {
       const itemId = await ctx.ensureItem(caster, PHB("phbsplCompelledD"));
       const grid = await ctx.gridSize();
@@ -162,7 +162,7 @@ export default {
       ctx.expect(far.x === near.x, `Duel forcé : un pas à 45 ft du lanceur est refusé (${Math.round((far.x - home.x) / grid)} cases)`);
     }
 
-    // ---- Pétrification ----
+    // ---- Petrification ----
     if ( wanted("petrification") ) {
       const golem = await ctx.token("Créature artificielle");
       await ctx.ensureItem(caster, PHB("phbsplFleshtoSto"));
@@ -175,7 +175,7 @@ export default {
       ctx.expect(!on.some(n => /Turning to Stone|Pétrifi/i.test(n)), `pas d'Entravé de l'échec (${on.join(", ") || "aucun effet"})`);
     }
 
-    // ---- Mauvais œil ----
+    // ---- Eyebite ----
     if ( wanted("oeil") ) {
       await ctx.ensureItem(caster, PHB("phbsplEyebite000"));
       ctx.restore(async () => { await ctx.removeEffectsFrom(target, "eyebite"); });
@@ -195,7 +195,7 @@ export default {
       if ( !saved ) ctx.expect(false, "Mauvais œil : aucune réussite en 20 essais");
     }
 
-    // ---- Rappel à la vie ----
+    // ---- Raise Dead ----
     if ( wanted("rappel") ) {
       const itemId = await ctx.ensureItem(caster, PHB("phbsplRaiseDead0"));
       ctx.restore(() => ctx.removeEffectsFrom(hero, "raise-dead"));
@@ -211,7 +211,7 @@ export default {
       ctx.expect(!after.some(e => /Day 4|Jour 4/.test(e.name)), "le jour 4 tombe le premier");
     }
 
-    // ---- Frappe du vent d'acier : la téléportation proposée après les attaques ----
+    // ---- Steel Wind Strike: the teleportation offered after the attacks ----
     if ( wanted("vent") ) {
       const other = await ctx.token("Cible voisine");
       await ctx.ensureItem(caster, PHB("phbsplSteelWindS"));
@@ -228,7 +228,7 @@ export default {
         `Frappe du vent d'acier : la téléportation près d'une cible est proposée (${run.seen.map(d => d.title).join(" | ") || "aucune fenêtre"})`);
     }
 
-    // ---- Discours captivant : réussite d'office d'une créature combattue ----
+    // ---- Enthrall: automatic success of a creature being fought ----
     if ( wanted("discours") ) {
       await ctx.ensureItem(caster, PHB("phbsplEnthrall00"));
       await ctx.startCombat([caster, target]);
@@ -239,13 +239,13 @@ export default {
       ctx.expect(t?.save?.success === true && t.save.auto === "fighting", `Discours captivant : la Cible combattue réussit d'office (${JSON.stringify(t?.save)})`);
     }
 
-    // ---- Cercle de pouvoir : rien sur une sauvegarde réussie contre la magie ----
+    // ---- Circle of Power: nothing on a successful save against magic ----
     if ( wanted("cercle") ) {
       const circleId = await ctx.ensureItem(caster, PHB("phbsplCircleofPo"));
       await ctx.ensureItem(caster, PHB("phbsplFireball00"));
       ctx.restore(() => ctx.removeEffectsFrom(target, "circle-of-power"));
-      // §438 : Manuel 3.0.0, l'effet n'est plus sur l'item : un effet du compendium d'effets, posé par le comportement de zone de dnd5e
-      // (`applyActiveEffect`) — copié ici avec le sort pour origine, comme le fait ce comportement (`system.origin.activity`).
+      // §438: Manual 3.0.0, the effect is no longer on the item: an effect from the effects compendium, applied by dnd5e's
+      // area behavior (`applyActiveEffect`) — copied here with the spell as origin, as it does (`system.origin.activity`).
       const circle = ((await ctx.call("get-actor", { actorId: caster.actorId })).items ?? []).find(i => i._id === circleId);
       const remote = Object.values(circle?.system?.activities ?? {}).flatMap(a => (a.behaviors ?? []).flatMap(b => b.config?.effects ?? []))
         .find(u => /ActiveEffect/.test(u ?? ""));

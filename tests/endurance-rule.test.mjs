@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
-// §371 : `endurance` — true (Acharnement), ou ce qui suit le maintien à 1 PV (effet, PV temporaires, utilisations rendues).
+// §371: `endurance` — true ("Relentlessness"), or what follows staying at 1 HP (effect, Temporary Hit Points, uses restored).
 describe("contenu endurance", () => {
   it("true reste valable", () => expect(validateEntry({ endurance: true })).toEqual([]));
 

@@ -3,11 +3,11 @@ import { BRICKS, ENTRY_TABLES } from "../module/scripts/content/index.mjs";
 import { MERGE } from "../module/scripts/core/content/merge.mjs";
 
 /**
- * Le contenu livré se compose de tables par brique puis de tables d'entrées (content/index.mjs). Deux écritures d'une même clé
- * pour un même identifiant ne se voient pas : la seconde remplace la première. Seule la fusion champ par champ (`shallow`) est
- * permise entre deux tables ; tout le reste doit être déclaré en un seul endroit.
+ * The shipped content is made of per-brick tables, then entry tables (content/index.mjs). Two writes of the same key
+ * for the same identifier are not seen: the second replaces the first. Only field-by-field merging (`shallow`) is
+ * allowed between two tables; everything else must be declared in a single place.
  */
-describe("composition du contenu livré", () => {
+describe("composition of the shipped content", () => {
   const writes = [];
   for ( const [source, key] of BRICKS ) {
     const ids = Array.isArray(source) ? source : Object.keys(source);
@@ -17,7 +17,7 @@ describe("composition du contenu livré", () => {
     for ( const [id, entry] of Object.entries(table) ) for ( const k of Object.keys(entry) ) writes.push({ id, key: k, from: `table ${i}` });
   });
 
-  it("aucune clé écrite deux fois pour un même identifiant (hors fusion champ par champ)", () => {
+  it("no key written twice for the same identifier (apart from field-by-field merging)", () => {
     const seen = new Map();
     const twice = [];
     for ( const w of writes ) {

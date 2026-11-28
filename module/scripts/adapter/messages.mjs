@@ -1,13 +1,13 @@
 /**
- * Lecture des messages de jet de dnd5e 6.0 et écriture des conséquences. Seul endroit, avec
- * units.mjs, qui connaît la forme des documents du système (SPEC §5.1).
+ * Reading dnd5e 6.0 roll messages and writing the consequences. The only place, with
+ * units.mjs, that knows the shape of the system's documents (SPEC §5.1).
  *
- * Vérifié dans dnd5e 6.0.3 :
- *  - un jet d'attaque crée un message `type: "attack"` avec `system.targets` (token, ca),
- *    `system.activity.uuid` et `system.origin` = message d'utilisation (activity/attack.mjs:158-166)
- *  - un jet de dégâts crée un message `type: "damage"` de même forme (activity/mixin.mjs:879-885)
- *  - le critique du dernier jet d'attaque est reporté sur le jet de dégâts par le système
- *    lui-même (activity/attack.mjs:306-310) : le moteur n'a pas à s'en mêler.
+ * Verified in dnd5e 6.0.3:
+ *  - an attack roll creates a `type: "attack"` message with `system.targets` (token, AC),
+ *    `system.activity.uuid` and `system.origin` = use message (activity/attack.mjs:158-166)
+ *  - a damage roll creates a `type: "damage"` message of the same shape (activity/mixin.mjs:879-885)
+ *  - the Critical Hit of the last attack roll is carried over to the damage roll by the system
+ *    itself (activity/attack.mjs:306-310): the engine need not get involved.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -29,15 +29,15 @@ import { spellClassOf } from "./spell-class.mjs";
 import { weaponKind } from "./facts.mjs";
 import { retypeOffers } from "../core/retype.mjs";
 
-// §279 : déplacé dans facts.mjs (fait `activity.weaponKind`) ; réexporté pour les appelants existants.
+// §279: moved to facts.mjs (fact `activity.weaponKind`); re-exported for existing callers.
 export { weaponKind };
 import { offerCombatInspirationDamage, usesLeftFor } from "./inspiration.mjs";
 
 const SETTLED_STEPS = new Set([STEPS.DONE, STEPS.MISSED, STEPS.UNDONE]);
 
 /**
- * Attend que la résolution d'un message soit tranchée (faite, ratée ou défaite), depuis n'importe quel client : le flag est relu
- * toutes les `every` ms. Rend la résolution (au schéma courant, `current`), ou null au-delà de `timeout`.
+ * Waits until a message's resolution is settled (done, missed or defeated), from any client: the flag is re-read
+ * every `every` ms. Returns the resolution (in the current schema, `current`), or null after `timeout`.
  */
 export async function settledResolution(messageId, { timeout=60000, every=400 }={}) {
   for ( const until = Date.now() + timeout; Date.now() < until; ) {
@@ -48,12 +48,12 @@ export async function settledResolution(messageId, { timeout=60000, every=400 }=
   return null;
 }
 
-/** Id du message d'utilisation à l'origine d'un jet, ou null. */
+/** Id of the use message that a roll originates from, or null. */
 function originOf(message) {
   return message._source.system?.origin ?? null;
 }
 
-/** §231 : « advantage », « disadvantage » ou null — le mode du d20 (dnd5e dice/d20-roll.mjs:137-147). */
+/** §231: "advantage", "disadvantage" or null — the d20 mode (dnd5e dice/d20-roll.mjs:137-147). */
 export function d20Mode(roll) {
   if ( roll?.hasAdvantage === true ) return "advantage";
   if ( roll?.hasDisadvantage === true ) return "disadvantage";
@@ -61,8 +61,8 @@ export function d20Mode(roll) {
 }
 
 /**
- * @param {ChatMessage} message  Message de type "attack".
- * @returns {object|null}        Entrées du cœur, ou null si le message n'est pas exploitable.
+ * @param {ChatMessage} message  Message of type "attack".
+ * @returns {object|null}        Core inputs, or null if the message cannot be used.
  */
 export function readAttackMessage(message) {
   const roll = message.rolls?.[0];
@@ -72,7 +72,7 @@ export function readAttackMessage(message) {
     origin: originOf(message),
     activity,
     source: message.getAssociatedActor?.()?.uuid ?? null,
-    // `natural` : le d20 gardé — un seuil de critique abaissé ne fait pas toucher, seul le 20 naturel (core/attack.mjs).
+    // `natural`: the kept d20 — a lowered Critical Hit threshold does not make it hit, only a natural 20 does (core/attack.mjs).
     roll: { total: roll.total, isCritical: roll.isCritical === true, isFumble: roll.isFumble === true,
       ...(Number.isFinite(roll.d20?.total) ? { natural: roll.d20.total } : {}), ...(d20Mode(roll) ? { mode: d20Mode(roll) } : {}) },
     targets: (message.system.targets ?? []).map(t => ({ token: t.token, actor: t.actor, name: t.name, ac: t.ac ?? null }))
@@ -80,7 +80,7 @@ export function readAttackMessage(message) {
 }
 
 /**
- * @param {ChatMessage} message  Message de type "damage" ou "healing" (même forme, heal.mjs:69-73).
+ * @param {ChatMessage} message  Message of type "damage" or "healing" (same shape, heal.mjs:69-73).
  * @returns {{origin: string|null, activity: string, damages: object[]}|null}
  */
 export function readDamageMessage(message) {
@@ -89,7 +89,7 @@ export function readDamageMessage(message) {
   // #269 (§545): the extra critical dice rolled apart for some targets only, read on their own.
   const rolls = all.filter(r => !isCriticalExtra(r));
   if ( !activity || !rolls.length ) return null;
-  // Même agrégation que le plateau de dégâts du système (applications/components/damage-application.mjs:271).
+  // Same aggregation as the system's damage tray (applications/components/damage-application.mjs:271).
   const aggregate = list => dnd5e.dice.aggregateDamageRolls(list, { respectProperties: true }).map(roll => ({
     properties: new Set(roll.options.properties ?? []),
     type: roll.options.type,
@@ -144,16 +144,16 @@ export function criticalExtraRolls(rolls, flavor) {
 }
 
 /**
- * L'auteur d'une action lance ses dégâts au signal de la résolution : ceux de son attaque si elle
- * en a une, sinon ceux de l'activité, comme le bouton « Dégâts » de la carte (save.mjs:104-106).
- * À appeler sur le client de l'auteur : ce sont ses dés.
- * @param {ChatMessage} carrier   Le message qui porte la résolution.
+ * The author of an action rolls their damage on the resolution signal: that of their attack if it
+ * has one, otherwise that of the activity, like the card's "Damage" button (save.mjs:104-106).
+ * To call on the author's client: these are their dice.
+ * @param {ChatMessage} carrier   The message that carries the resolution.
  * @param {object} resolution
- * @param {boolean} critical      Verdict du moteur (core/action.mjs, isCriticalHit).
+ * @param {boolean} critical      Engine verdict (core/action.mjs, isCriticalHit).
  * @param {string[]} [criticalFor]  #269 (§545): only these hit targets are Critical Hits (core/action.mjs, `mixedCriticalTokens`) —
  *                                 the damage is rolled normally, the critical dice apart for them.
- * @param {{dialog?: string|null}} [options]  #173 (§556): dnd5e's damage dialog — "required", "offered" (core/flow.mjs, `damageDialog`)
- *                                 or null (no dialog: a roll made for someone else).
+ * @param {{dialog?: string|null}} [options]  #173 (§556): dnd5e's damage dialog — "required", "offered"
+ *                                 (core/flow.mjs, `damageDialog`) or null (no dialog: a roll made for someone else).
  */
 export async function rollDamageFor(carrier, resolution, critical, criticalFor=[], { dialog=null }={}) {
   if ( resolution.attack ) {
@@ -165,17 +165,17 @@ export async function rollDamageFor(carrier, resolution, critical, criticalFor=[
   }
   const activity = carrier.getAssociatedActivity?.({ scaled: true });
   if ( !activity?.rollDamage ) return null;
-  // Zone parcourue case par case (§16.20) : les dés sont multipliés au hook `preRollDamageV2` (runtime/areas.mjs).
+  // Area traversed cell by cell (§16.20): the dice are multiplied at the `preRollDamageV2` hook (runtime/areas.mjs).
   const times = carrier.getFlag?.(MODULE_ID, "areaTick")?.times ?? 1;
   const damageType = await chosenDamageType(carrier, activity);
   const ours = { ...(times > 1 ? { times } : {}), ...(damageType ? { damageType } : {}), ...(dialog ? { dialog } : {}) };
-  // Les modules d'animation (BLFX, `_afterAttackOrDamageRoll`) prennent les cibles de l'utilisateur au hook du jet, à défaut les
-  // tokens qu'il contrôle : pour une zone ou une aura (Esprits gardiens à l'entrée, en début de tour), ce ne sont pas les créatures
-  // touchées. Le temps du jet, les cibles de l'auteur sont celles de la résolution, puis on remet les siennes (§55).
+  // Animation modules (BLFX, `_afterAttackOrDamageRoll`) take the user's targets at the roll hook, failing that the
+  // tokens they control: for an area or an aura (Spirit Guardians on entry, at the start of a turn), these are not the creatures
+  // hit. For the duration of the roll, the author's targets are those of the resolution, then theirs are put back (§55).
   const restore = targetResolution(resolution.targets.map(t => t.token));
   try {
     return await activity.rollDamage(Object.keys(ours).length ? { [MODULE_ID]: ours } : {}, damageDialogConfig(dialog), {
-      // Les cibles de la résolution, pas celles du message : pour une zone, seules les premières sont justes.
+      // The resolution's targets, not the message's: for an area, only the first ones are right.
       data: { system: { origin: carrier.id, targets: resolution.targets.map(({ token, actor, name }) => ({ token, actor, name })) } }
     });
   } finally {
@@ -184,13 +184,14 @@ export async function rollDamageFor(carrier, resolution, critical, criticalFor=[
 }
 
 /**
- * Désigne ces tokens (uuids) comme les cibles de l'utilisateur de ce client, les autres relâchées. Rend la fonction qui remet
- * les cibles d'avant. Sans effet si les cibles sont déjà celles-là, ou si aucun de ces tokens n'est sur la scène affichée.
+ * Designates these tokens (uuids) as the targets of this client's user, the others released. Returns the function that restores
+ * the previous targets. Does nothing if the targets are already those, or if none of these tokens is on the displayed scene.
  * @param {string[]} uuids
  * @returns {() => void}
  */
 export function targetResolution(uuids) {
-  // Les tokens de la scène affichée (TokenLayer#setTargets, client/canvas/layers/tokens.mjs:341 : diffusé aux autres clients).
+  // The tokens of the displayed scene (TokenLayer#setTargets, client/canvas/layers/tokens.mjs:341:
+  // broadcast to the other clients).
   const ids = uuids.map(uuid => fromUuidSync(uuid, { strict: false })?.object).filter(t => t?.scene === canvas.scene).map(t => t.id);
   const before = Array.from(game.user.targets).map(t => t.id);
   if ( !ids.length || ((before.length === ids.length) && ids.every(id => before.includes(id))) ) return () => {};
@@ -206,19 +207,19 @@ export function targetResolution(uuids) {
  */
 export async function rollDamageForAttack(attackMessage, { critical, variant=null, criticalFor=[], names=[], dialog=null, noCritical=false }={}) {
   const used = await fromUuid(attackMessage.system.activity.uuid);
-  // M5 (§18.8) : les dégâts de la variante choisie au plan (charge, En sang), sinon ceux de la variante « Attack with
-  // Advantage » si le jet avait l'avantage (« plus 1d4 if the attack roll had Advantage »).
+  // M5 (§18.8): the damage of the variant chosen in the plan (charge, Bloodied), otherwise that of the "Attack with
+  // Advantage" variant if the roll had Advantage ("plus 1d4 if the attack roll had Advantage").
   const origin = originOf(attackMessage);
-  // §404 : au niveau de lancement — l'activité relue par son uuid est celle de la fiche, au niveau de base ; la montée
-  // d'emplacement est sur le message d'utilisation (`system.scaling`), comme la lit le bouton « Dégâts » de dnd5e.
+  // §404: at the casting level — the activity re-read by its uuid is the sheet's, at the base level; the slot
+  // upcast is on the use message (`system.scaling`), as dnd5e's "Damage" button reads it.
   const activity = atCastLevel((variant ? await fromUuid(variant) : null) ?? damageVariant(used, attackMessage.rolls[0]) ?? used,
     game.messages.get(origin ?? "")?.system?.scaling);
   if ( !activity?.rollDamage ) return null;
   const { ability, ammunitionItem: ammunition, mode: attackMode } = attackMessage.system;
-  // Le verdict du moteur prime : un coup qui touche une cible paralysée à 5 ft est critique sans 20 naturel.
+  // The engine's verdict takes precedence: a hit on a Paralyzed target within 5 ft is a Critical Hit without a natural 20.
   let isCritical = critical ?? (attackMessage.rolls[0]?.isCritical === true);
-  // §207 : critique standard, table de critiques (dégâts normaux) ou un voisin qui s'en charge — avant les châtiments, dont les dés
-  // ne sont doublés que sur un critique standard. Le coup reste un critique (jets de mort : `criticalHit` sur les dégâts).
+  // §207: standard Critical Hit, critical table (normal damage) or a neighbor that handles it — before smites, whose dice
+  // are doubled only on a standard Critical Hit. The hit stays a Critical Hit (death saves: `criticalHit` on the damage).
   let criticalTable = null;
   // #269 (§545): only some hit targets are Critical Hits — the roll is normal, the critical dice are added apart for them.
   let criticalExtra = null;
@@ -236,26 +237,26 @@ export async function rollDamageForAttack(attackMessage, { critical, variant=nul
     }
   }
   const damageType = await chosenDamageType(game.messages.get(origin ?? "") ?? attackMessage, activity);
-  // §20 : Frappes rusées — choisies avant le jet, elles retirent des dés à l'Attaque sournoise (runtime/sneak.mjs). §223 : dans la même
-  // fenêtre, l'Attaque sournoise elle-même (réglage « demander ») et les dégâts bonus au choix (Frappe effroyable, runtime/triggers.mjs).
+  // §20: Cunning Strikes — chosen before the roll, they remove dice from Sneak Attack (runtime/sneak.mjs). §223: in the same
+  // window, Sneak Attack itself ("ask" setting) and the optional bonus damage (Dreadful Strikes, runtime/triggers.mjs).
   const sneak = sneakAttackFor(used, attackMessage);
   const target = sneak?.target ?? fromUuidSync(attackMessage.system?.targets?.[0]?.token ?? "", { strict: false });
   const optional = ((attackMessage.system?.targets ?? []).length === 1)
     ? optionalBonusesFor({ actor: used.actor, activity, sourceToken: sneak?.source ?? speakerTokenOf(attackMessage), targetToken: target }) : [];
-  // §516 : la Sauvagerie martiale au choix (réglage « ask »), dans la même fenêtre.
+  // §516: the optional "Martial Savagery" ("ask" setting), in the same window.
   const hitOptions = await askHitOptions(used.actor, target, sneak, optional, { savage: savageToAsk(used) });
   const strikes = hitOptions.strikes;
-  // Relevé des trous : Inspiration de combat, Attaque — le dé du barde de la vaillance, ajouté aux dégâts (runtime/feats.mjs).
+  // Survey of the gaps: Combat Inspiration, Attack — the Valor Bard's die, added to the damage (runtime/feats.mjs).
   const inspired = await offerCombatInspirationDamage(used.actor);
-  // §25 : un châtiment — lancé « immédiatement après avoir touché », ses dés s'ajoutent à ce jet (runtime/smite.mjs).
+  // §25: a smite — cast "immediately after hitting", its dice are added to this roll (runtime/smite.mjs).
   const smite = await chooseSmite(used, attackMessage);
   const ours = { ...(damageType ? { damageType } : {}), ...(strikes.length ? { strikes } : {}), ...(smite ? { smite } : {}),
     ...(typeof hitOptions.sneak === "boolean" ? { sneak: hitOptions.sneak } : {}), ...(hitOptions.bonuses.length ? { acceptedBonuses: hitOptions.bonuses } : {}),
     ...(criticalTable ? { criticalHit: criticalTable } : {}), ...(inspired ? { combatInspiration: inspired } : {}),
     ...(typeof hitOptions.savage === "boolean" ? { savageAttacker: hitOptions.savage } : {}),
     ...(criticalExtra ? { criticalExtra } : {}), ...(dialog ? { dialog } : {}), ...((dialog && noCritical) ? { noCritical } : {}) };
-  // §373 : les cibles de l'attaque sur la carte de dégâts — dnd5e les lirait dans la sélection de l'utilisateur au moment du jet
-  // (`TargetsField.getDescriptors()`), qu'une autre résolution (une prise après le coup) a pu relâcher entre-temps.
+  // §373: the attack's targets on the damage card — dnd5e would read them from the user's selection at the time of the roll
+  // (`TargetsField.getDescriptors()`), which another resolution (a grapple after the hit) may have released in the meantime.
   const targets = attackMessage?.system?.targets?.length ? attackMessage.system.targets : null;
   const system = { ...(origin ? { origin } : {}), ...(targets ? { targets } : {}) };
   return activity.rollDamage(
@@ -266,14 +267,14 @@ export async function rollDamageForAttack(attackMessage, { critical, variant=nul
 }
 
 /**
- * Les types au choix d'une activité (Orbe chromatique : acide, froid, feu… ; Étincelle divine : nécrotique ou radiant) :
- * ceux de la première part de dégâts qui en propose plusieurs (`DamageData#types`, un Set). dnd5e ne les fait choisir que
- * dans la fenêtre du jet — que le moteur ne montre pas : sans choix, il garderait le premier.
+ * The chosen types of an activity (Chromatic Orb: acid, cold, fire…; Divine Spark: necrotic or radiant):
+ * those of the first damage part that offers several (`DamageData#types`, a Set). dnd5e only has them chosen
+ * in the roll window — which the engine does not show: without a choice, it would keep the first.
  */
 export function damageTypeChoices(activity) {
   const size = types => types?.size ?? types?.length ?? 0;
-  // Relevé des trous : Sorts psychiques — les types que le lanceur peut donner aux dégâts d'un sort de sa classe, après ceux du sort.
-  // §279 : de même pour une attaque d'arme ou à mains nues (`weaponDamageTypes`) — les types de l'arme d'abord.
+  // Survey of the gaps: Psychic Spells — the types the caster can give to the damage of a spell of their class, after those of
+  // the spell. §279: likewise for a weapon or unarmed attack (`weaponDamageTypes`) — the weapon's types first.
   const extra = spellRetypes(activity);
   if ( extra.length ) {
     const parts = activity.damage?.parts ?? [];
@@ -283,16 +284,16 @@ export function damageTypeChoices(activity) {
   }
   const part = (activity?.damage?.parts ?? []).find(p => size(p.types) > 1);
   if ( part ) return [...part.types];
-  // §16.45 : les dégâts de base d'une arme (l'arme de pacte : son type normal, nécrotique, psychique ou radiant, au choix à
-  // chaque attaque) — le type normal en premier, choisi par défaut.
+  // §16.45: a weapon's base damage (the pact weapon: its normal type, necrotic, psychic or radiant, chosen at each
+  // attack) — the normal type first, chosen by default.
   const base = (activity?.damage?.includeBase && (activity.item?.type === "weapon")) ? activity.item.system.damage?.base?.types : null;
   return size(base) > 1 ? [...base] : [];
 }
 
 /**
- * Relevé des trous (2026-10-22) : les types qu'un item du lanceur permet de donner aux dégâts de ce sort (clé `spellDamageTypes`) —
- * Sorts psychiques : « quand vous lancez un sort d'Occultiste qui inflige des dégâts, vous pouvez changer leur type en psychique ». Un
- * sort de la classe : rangé sous elle (`spellClassOf`), ou sans classe chez un acteur qui l'a (comme `activity.cantripOf`).
+ * Survey of the gaps (2026-10-22): the types a caster's item lets them give to this spell's damage (key `spellDamageTypes`) —
+ * Psychic Spells: "when you cast a Warlock spell that deals damage, you can change its type to psychic". A
+ * class spell: filed under it (`spellClassOf`), or classless for an actor that has it (like `activity.cantripOf`).
  * @returns {string[]}
  */
 export function spellRetypes(activity) {
@@ -303,9 +304,9 @@ export function spellRetypes(activity) {
 }
 
 /**
- * Les types offerts à ce sort et, pour chacun, l'activité qui le paie s'il coûte (Sort transmuté : 1 point de sorcellerie), ou
- * null.
- * Un changement payant n'est offert que s'il reste de quoi le payer.
+ * The types offered to this spell and, for each, the activity that pays for it if it costs (Transmuted Spell: 1 Sorcery Point),
+ * or null.
+ * A paid change is only offered if there is enough left to pay for it.
  * @returns {Array<{type: string, cost: Activity|null}>}
  */
 export function spellRetypeOffers(activity) {
@@ -317,7 +318,7 @@ export function spellRetypeOffers(activity) {
   for ( const i of actor.items ) {
     const rule = contentOf(i).entry?.spellDamageTypes;
     if ( !rule ) continue;
-    // §447 : sans classe, tout sort (Marqué par la tombe).
+    // §447: classless, any spell ("Marked by the Grave").
     const cls = rule.class ? (spellClassOf(item) || (actor.classes?.[rule.class] ? rule.class : null)) : null;
     if ( rule.class && (cls !== rule.class) ) continue;
     const payer = rule.cost ? i.system.activities?.get(rule.cost) ?? null : null;
@@ -330,7 +331,7 @@ export function spellRetypeOffers(activity) {
 }
 
 
-/** §279 : `weaponDamageTypes` — les types qu'un item de l'auteur permet de donner aux dégâts d'une attaque de ces genres d'arme. */
+/** §279: `weaponDamageTypes` — the types an author's item lets them give to the damage of an attack with these weapon kinds. */
 function weaponRetypes(activity) {
   const kind = weaponKind(activity);
   const out = new Set();
@@ -342,8 +343,8 @@ function weaponRetypes(activity) {
 }
 
 /**
- * Le type choisi par l'auteur, sur son client, avant le jet (SPEC §16.27) ; retenu sur la carte d'utilisation (`damageType`)
- * pour qu'un rebond ou une relance reprenne le même. Sans réponse : le premier. null si l'activité n'offre pas de choix.
+ * The type chosen by the author, on their client, before the roll (SPEC §16.27); kept on the use card (`damageType`)
+ * so that a rebound or a reroll picks up the same one. No answer: the first. null if the activity offers no choice.
  */
 async function chosenDamageType(carrier, activity) {
   const types = damageTypeChoices(activity);
@@ -357,7 +358,8 @@ async function chosenDamageType(carrier, activity) {
     buttons: types.map((t, i) => ({ action: t, label: label(t), default: i === 0 }))
   }, { fallback: types[0], awaiting: { actor: activity.actor ?? null, kind: "choice" } });
   let type = types.includes(choice) ? choice : types[0];
-  // Un type qui se paie (Sort transmuté) : l'activité de l'item le règle, une fois, au moment du choix ; sans quoi le type du sort.
+  // A type that is paid for (Transmuted Spell): the item's activity settles it, once, at the time of choice;
+  // otherwise the spell's type.
   const payer = spellRetypeOffers(activity).find(o => o.type === type)?.cost ?? null;
   if ( payer ) {
     const paid = await payer.use({ [MODULE_ID]: { confirmed: true } }, { configure: false }, { create: false }).catch(() => null);
@@ -374,30 +376,30 @@ function readHp(actor) {
 }
 
 /**
- * Applique des dégâts à un token par la méthode publique du système, qui gère résistances,
- * immunités, vulnérabilités et PV temporaires. À n'appeler que sur le client du MJ actif.
- * @returns {Promise<object|null>}  Entrée de journal pour recordDamage(), ou null si la cible a disparu.
+ * Applies damage to a token through the system's public method, which handles Resistances,
+ * Immunities, Vulnerabilities and Temporary Hit Points. To be called only on the active GM's client.
+ * @returns {Promise<object|null>}  Log entry for recordDamage(), or null if the target has disappeared.
  */
 export async function applyDamageToToken(tokenUuid, raw, originMessage, { multiplier=1, reduction=0, absorbInto=null, ignoreResistance=[], rangedWeapon=false, critical=null }={}) {
   const actor = (await fromUuid(tokenUuid))?.actor;
   if ( !actor ) return null;
   const before = readHp(actor);
-  // §16.46 : Résistance — les dégâts du type protégé réduits, avant leur application.
-  // O8d (§347) : Résistance aux dégâts d'une attaque avec une arme à distance (Bouclier d'attraction), avant le reste.
+  // §16.46: Resistance — the damage of the protected type reduced, before it is applied.
+  // O8d (§347): Resistance to the damage of an attack with a ranged weapon ("Attraction Shield"), before the rest.
   const ranged = rangedWeapon ? resistRangedWeapon(actor, raw) : { damages: raw, reduced: 0 };
   if ( ranged.reduced ) console.log(`${MODULE_ID} | ${actor.name}: Resistance to ranged weapon damage, -${ranged.reduced}`);
   const shielded = await applyDamageShields(actor, ranged.damages);
   const shields = shielded.done;
-  // §24 : Parade — « réduit les dégâts totaux de l'attaque » : retiré part après part (avant résistances et multiplicateur).
+  // §24: Parry — "reduces the attack's total damage": removed part by part (before Resistances and multiplier).
   let left = Math.max(0, Number(reduction) || 0);
   const damages = shielded.damages.map(d => {
     const cut = Math.min(left, d.value);
     left -= cut;
     return cut ? { ...d, value: d.value - cut } : d;
   });
-  // `multiplier` : part des dégâts subie après une sauvegarde réussie (actor.mjs:872).
-  // §38 : `absorbInto` — la réserve d'un autre (Égide projetée) absorbe d'abord (adapter/absorb.mjs, `absorbDamage`).
-  // §134 : `ignoreResistance` — les types dont la résistance est ignorée (Expert élémentaire, Empoisonneur) : l'option `ignore` de dnd5e
+  // `multiplier`: share of the damage taken after a successful save (actor.mjs:872).
+  // §38: `absorbInto` — another creature's pool (Projected Ward) absorbs first (adapter/absorb.mjs, `absorbDamage`).
+  // §134: `ignoreResistance` — the types whose Resistance is ignored (Elemental Adept, Poisoner): dnd5e's `ignore` option
   // (documents/actor/actor.mjs, `#changeIsIgnored`).
   const ignore = ignoreResistance.length ? { ignore: { resistance: new Set(ignoreResistance) } } : {};
   // #269 (§545): `critical` is the engine's verdict for THIS target (an attack on several targets is not critical for all of them);
@@ -415,8 +417,8 @@ export async function applyDamageToToken(tokenUuid, raw, originMessage, { multip
 }
 
 /**
- * Le maximum d'un jet de soin (Lueur d'espoir, §16.24) : chaque jet du message relancé au maximum (`maximize` du cœur),
- * rendu dans la forme des dégâts sérialisés (un par type). null si le message manque.
+ * The maximum of a healing roll (Beacon of Hope, §16.24): each roll of the message rerolled at its maximum (the core's `maximize`),
+ * returned in the shape of serialized damage (one per type). null if the message is missing.
  */
 export async function maximizedHealing(damageMessage, { critical=false }={}) {
   // #269 (§545): the critical dice rolled apart count only for a Critical Hit target.
@@ -431,7 +433,7 @@ export async function maximizedHealing(damageMessage, { critical=false }={}) {
   return out;
 }
 
-/** Restaure des PV consignés dans le journal d'une résolution. */
+/** Restores HP recorded in the log of a resolution. */
 export async function restoreHp(actorUuid, hp) {
   const actor = await fromUuid(actorUuid);
   await actor?.update({ "system.attributes.hp.value": hp.value, "system.attributes.hp.temp": hp.temp });

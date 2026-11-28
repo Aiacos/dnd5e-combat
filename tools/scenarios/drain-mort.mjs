@@ -1,21 +1,23 @@
 /**
- * §500 (B20) — la mort par drain annoncée à toute la table : quand un drain ramène le maximum de PV de la cible à 0, elle meurt (règle
- * existante, runtime/drain.mjs) ET le moteur pose une carte de chat (drapeau `drainDeath`) avec un avis et un son chez chaque client.
- * Arène de test : Zombi (l'attaquant), Bandit (la cible, acteur synthétique du token). Un trait d'essai est prêté au Zombi : une attaque
- * dont le texte dit le drain du Monster Manual 2024 (« Hit Point maximum decreases by an amount equal to the Necrotic damage taken …
- * dies if this effect reduces its Hit Point maximum to 0 »). Les dégâts sont appliqués par le client du MJ comme le bouton d'une carte
- * de dégâts (`applyDamage` avec un message d'origine en mémoire qui nomme le Zombi et l'activité du trait) : montants exacts, aucun jet,
- * aucune fenêtre. Le Bandit reçoit 999 PV temporaires : ses PV ne tombent pas à 0 par les dégâts (la mort n'est due qu'au drain).
- *  1. Dégâts nécrotiques = la moitié de son maximum : le maximum baisse d'autant, pas de mort, pas de carte.
- *  2. Dégâts nécrotiques = le reste du maximum : maximum à 0 → Mort, une seule carte `drainDeath` (le Bandit, le trait, "hp").
- * Effet de drain, Mort, PV temporaires, PV et trait remis.
+ * §500 (B20) — death by drain announced to the whole table: when a drain brings the target's Hit Point maximum to 0, it dies
+ * (existing rule, runtime/drain.mjs) AND the engine places a chat card (flag `drainDeath`) with a notice and a sound on every
+ * client. Test arena: Zombie (the attacker), Bandit (the target, the token's synthetic actor). A test feature is lent to the
+ * Zombie: an attack
+ * whose text states the Monster Manual 2024 drain ("Hit Point maximum decreases by an amount equal to the Necrotic damage taken …
+ * dies if this effect reduces its Hit Point maximum to 0"). The damage is applied by the GM's client like the button of a damage
+ * card (`applyDamage` with an origin message in memory that names the Zombie and the feature's activity): exact amounts, no roll,
+ * no window. The Bandit receives 999 Temporary Hit Points: its HP do not drop to 0 through the damage (death is only due to
+ * the drain).
+ *  1. Necrotic damage = half of its maximum: the maximum drops by that much, no death, no card.
+ *  2. Necrotic damage = the rest of the maximum: maximum at 0 → Dead, a single `drainDeath` card (the Bandit, the feature, "hp").
+ * Drain effect, Dead, Temporary Hit Points, HP and feature restored.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
 const IDENTIFIER = "das-essai-drain-mort";
 const ACTIVITY = "dasEssaiDrainAtk";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name as a constant: the test bench and the reference take the first "name:" indented by two spaces as the scenario title.
 const ITEM_NAME = "Essai : drain mortel";
 const TEXT = "<p>Melee Attack Roll: +5, reach 5 ft. Hit: 7 (2d6) Necrotic damage. The target's Hit Point maximum decreases by an amount "
   + "equal to the Necrotic damage taken. The target dies if this effect reduces its Hit Point maximum to 0.</p>";
@@ -66,7 +68,7 @@ export default {
     const bandit = await ctx.token("Bandit");
     const script = async (code, args={}) => (await ctx.call("run-script", { code, args, waitMs: 20000 }))?.result ?? null;
 
-    // --- Fenêtres chez le MJ : aucune ne reste sans réponse --------------------------------------------------------------
+    // --- Windows on the GM's side: none stays unanswered ------------------------------------------------------------------
     const seen = new Set(((await ctx.call("list-dialogs", {})).windows ?? []).map(w => w.id));
     const sweep = async (ms=800) => {
       const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...seen], waitMs: ms, details: true }).catch(() => null);
@@ -79,7 +81,7 @@ export default {
       }
     };
 
-    // --- Bandit propre (acteur synthétique), trait prêté au Zombi ---------------------------------------------------------------
+    // --- Clean Bandit (synthetic actor), feature lent to the Zombie -------------------------------------------------------
     const start = await script(STATE, { target: bandit.id });
     const clean = (temp=0, hp=null) => script(STATE, { target: bandit.id, clean: true, temp, hp });
     await clean(0);

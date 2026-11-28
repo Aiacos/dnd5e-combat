@@ -1,92 +1,91 @@
 /**
- * Qui une action peut affecter (SPEC §16.8, clé `targets` de core/content.mjs), par identifiant dnd5e. Les données
- * d'activité de dnd5e ne disent que « créature » : le type exigé par le texte de la règle est déclaré ici.
- *   types         les types de créature permis : une cible d'un autre type n'est pas affectée (ni sauvegarde, ni
- *                 effet), et la légalité le dit avant l'utilisation
- *   unaffectedIf  une condition (faits de adapter/facts.mjs, la cible en `target`) qui la laisse hors d'atteinte
- * Les immunités aux états, elles, ne se déclarent pas : elles se lisent sur la fiche (`traits.ci`).
+ * Who an action can affect (SPEC §16.8, key `targets` of core/content.mjs), by dnd5e identifier. The dnd5e activity
+ * data only say "creature": the type required by the rule text is declared here.
+ *   types         the creature types allowed: a target of another type is not affected (neither save nor
+ *                 effect), and legality says so before use
+ *   unaffectedIf  a condition (facts from adapter/facts.mjs, the target as `target`) that leaves it out of reach
+ * Immunities to conditions are not declared: they are read from the sheet (`traits.ci`).
  *
- * Textes vérifiés dans packs/_source/spells24 de dnd5e 6.0.3.
+ * Texts checked in packs/_source/spells24 of dnd5e 6.0.3.
  */
 
 export const TARGETS = Object.freeze({
-  // « Choisissez un Humanoïde… », « Un Humanoïde que vous voyez… », « Chaque Humanoïde dans une Sphère… »
+  // "Choose a Humanoid…", "A Humanoid you can see…", "Each Humanoid in a Sphere…"
   "hold-person": { types: ["humanoid"] },
-  // §157 : Bouclier — « vous ne subissez aucun dégât de Projectile magique » tant qu'il tient.
-  // O2 (§336) : la Broche de défense « immunité aux dégâts du sort Projectile magique », portée et harmonisée (effet transféré).
+  // §157: Shield — "you take no damage from Magic Missile" while it holds.
+  // O2 (§336): the Brooch of Shielding "Immunity to damage from the Magic Missile spell", worn and attuned (transferred effect).
   "magic-missile": { unaffectedIf: { any: [{ "target.hasEffect": "shield" }, { "target.hasEffect": "brooch-of-shielding" }] } },
   "charm-person": { types: ["humanoid"] },
   "dominate-person": { types: ["humanoid"] },
   "calm-emotions": { types: ["humanoid"] },
-  // §19 : Couronne du dément — sans effet sur une créature qui n'est pas Humanoïde.
+  // §19: Crown of Madness — no effect on a creature that is not a Humanoid.
   "crown-of-madness": { types: ["humanoid"] },
-  // Causer la peur (Xanathar's) : sans prise sur les Créatures artificielles et les Morts-vivants.
+  // Cause Fear (Xanathar's): no hold on Constructs and Undead.
   "cause-fear": { unaffectedIf: { "target.creatureType": ["construct", "undead"] } },
-  // « Une Bête que vous voyez… »
+  // "A Beast you can see…"
   "dominate-beast": { types: ["beast"] },
-  // §65 : Eau bénite (PHB 2024, et la fiole 2014) — les dégâts radiants ne valent que contre un Fiélon ou un Mort-vivant.
+  // §65: Holy Water (PHB 2024, and the 2014 vial) — radiant damage only counts against a Fiend or an Undead.
   "holy-water": { types: ["fiend", "undead"] },
   "flask-of-holy-water": { types: ["fiend", "undead"] },
   "animal-friendship": { types: ["beast"] },
-  // Sommeil 2024 : « les créatures qui ne dorment pas, comme les elfes, ou qui ont l'immunité à l'état Épuisement
-  // réussissent automatiquement leurs sauvegardes contre ce sort ». L'immunité se lit ; « ne dort pas » (elfes) non.
-  // §302 : les elfes (Transe, Elfe éternel) se lisent par leur trait.
-  // §447 : Ravenloft — « la magie ne peut pas vous endormir » (Marqué par la tombe, Impérissable du Né-de-nouveau).
+  // Sleep 2024: "creatures that don't sleep, such as elves, or that have Immunity to the Exhaustion condition
+  // automatically succeed on saving throws against this spell". Immunity is read; "doesn't sleep" (elves) is not.
+  // §302: elves (Trance, Eternal Elf) are read through their trait.
+  // §447: Ravenloft — "magic can't put you to sleep" (Grave-Marked, Deathless of the Reborn).
   "sleep": { unaffectedIf: { any: [{ "target.immuneTo": "exhaustion" }, { "target.hasFeature": "trance" },
     { "target.hasFeature": "grave-touched" }, { "target.hasFeature": "everlasting" }] } },
-  // §302 : Motif hypnotique — « chaque créature dans le cube qui voit le motif » : une créature Aveuglée n'est pas affectée.
+  // §302: Hypnotic Pattern — "each creature in the Cube that sees the pattern": a Blinded creature is not affected.
   "hypnotic-pattern": { unaffectedIf: { "target.hasStatus": "blinded" } },
-  // §16.47 : Stabilisation — « une créature à 0 point de vie et qui n'est pas morte ».
+  // §16.47: Spare the Dying — "a creature at 0 Hit Points that isn't dead".
   "spare-the-dying": { unaffectedIf: { any: [{ "target.atZero": false }, { "target.isDead": true }] } },
-  // Renvoi des morts-vivants (§16.25) : « chaque Mort-vivant de votre choix dans un rayon de 9 m ». Conduit divin du clerc
-  // (PHB et dnd5e 6 : `channel-divinity` / `channel-divinity-cleric`) : la seule activité « Turn Undead » ; Étincelle divine
-  // vise n'importe qui. Calcination des morts-vivants remplace le Renvoi (même sauvegarde, même effet, plus les dégâts).
-  // §431 : le SRD de dnd5e 6.1 met « Sear Undead » (rprxorXdFoHbRERZ) sur le Conduit divin — morts-vivants seuls, elle aussi.
+  // Turn Undead (§16.25): "each Undead of your choice within 9 m". Cleric's Channel Divinity
+  // (PHB and dnd5e 6: `channel-divinity` / `channel-divinity-cleric`): the only "Turn Undead" activity; Divine Spark
+  // targets anyone. Sear Undead replaces Turn Undead (same save, same effect, plus the damage).
+  // §431: the dnd5e 6.1 SRD puts "Sear Undead" (rprxorXdFoHbRERZ) on Channel Divinity — Undead only, as well.
   "channel-divinity": { unaffectedIf: { "activity.id": ["aOptL5pMaj3WtR8S", "rprxorXdFoHbRERZ"], not: { "target.creatureType": "undead" } } },
   "channel-divinity-cleric": { unaffectedIf: { "activity.id": ["aOptL5pMaj3WtR8S", "rprxorXdFoHbRERZ"], not: { "target.creatureType": "undead" } } },
   "sear-undead": { types: ["undead"] },
-  // Prière de guérison 2024 (§16.38) : « une créature ne peut plus être affectée par ce sort avant d'avoir terminé un Repos
-  // long » — l'effet « Guéris par prière » que le sort pose la marque (et tombe au repos long, EFFECT_EXPIRIES ci-dessous).
+  // Prayer of Healing 2024 (§16.38): "a creature can't be affected by this spell again until it finishes a Long
+  // Rest" — the "Healed by prayer" effect that the spell places is the mark (and drops at Long Rest, EFFECT_EXPIRIES below).
   "prayer-of-healing": { unaffectedIf: { "target.hasEffect": "prayer-of-healing" } }
 });
 
 /**
- * Limites d'utilisation (§16.40, `usageLimits`). Regain sauvage (druide 5, PHB 2024) : « une fois à chacun de vos tours, si vous
- * n'avez plus d'utilisation de Forme sauvage, vous pouvez vous en rendre une en dépensant un emplacement de sort » — activité
- * « Regain de Forme sauvage » (`7nAgPNN2dth7SR0D`). L'autre (« Regain d'emplacement de sort », une fois par repos long) est
- * tenue par les utilisations de l'item, dnd5e le contrôle.
+ * Usage limits (§16.40, `usageLimits`). Wild Resurgence (Druid 5, PHB 2024): "once on each of your turns, if you have no
+ * uses of Wild Shape left, you can regain one by expending a spell slot" — "Wild Shape Regain" activity (`7nAgPNN2dth7SR0D`).
+ * The other ("Spell Slot Regain", once per Long Rest) is held by the item's uses, dnd5e checks it.
  */
 export const USAGE_LIMITS = Object.freeze({
-  // `lowestSlot` : le PHB laisse choisir le niveau par un curseur « Valeur d'évolution » (scaling) — il ne change rien.
-  // « Regain d'emplacement de sort » (`dnd5eactivity000`) : une Forme sauvage contre un emplacement de niveau 1, rien à choisir.
+  // `lowestSlot`: the PHB lets you choose the level with a "Scaling Value" slider — it changes nothing.
+  // "Spell Slot Regain" (`dnd5eactivity000`): one Wild Shape for a level 1 slot, nothing to choose.
   "wild-resurgence": {
     "7nAgPNN2dth7SR0D": { oncePerTurn: true, whenEmpty: "wild-shape", lowestSlot: true },
     "dnd5eactivity000": { noDialog: true }
   },
-  // Lame de feu (§16.41) : l'attaque de la lame invoquée n'a rien à choisir (ni emplacement, ni concentration) — pas de fenêtre.
+  // Flame Blade (§16.41): the attack of the summoned blade has nothing to choose (neither slot nor Concentration) — no window.
   "flame-blade": { "dnd5eactivity000": { noDialog: true } },
-  // Flammes (§16.42) : « Temps d'incantation : action Bonus » (PHB 2024 ; les données disent « action ») ; « projeter des flammes »
-  // (action Magie) n'a rien à choisir.
+  // Produce Flame (§16.42): "Casting Time: Bonus Action" (PHB 2024; the data say "action"); "hurl flames"
+  // (Magic action) has nothing to choose.
   "produce-flame": { "MModRd17Oi6hhztj": { cost: "bonus" }, "tqKlIEdglRYdqHrp": { noDialog: true } },
-  // Crosse des druides : « Temps d'incantation : action Bonus » (PHB 2024 ; les données disent « action »).
+  // Shillelagh: "Casting Time: Bonus Action" (PHB 2024; the data say "action").
   "shillelagh": { "B4nxtIzrCEGEzq1T": { cost: "bonus" } }
 });
 
 /**
- * L'enchantement vise l'arme d'une créature choisie (§16.41, `enchantTarget`). Arme élémentaire (PHB 2024) : rend magique une
- * arme non magique touchée — activité « enchant » de dnd5e (15 profils : 5 éléments × +1/+2/+3 selon le
- * niveau), que dnd5e applique par un glisser-déposer de l'arme sur la carte.
+ * The enchantment targets the weapon of a chosen creature (§16.41, `enchantTarget`). Elemental Weapon (PHB 2024): makes a
+ * touched non-magical weapon magical — dnd5e "enchant" activity (15 profiles: 5 elements × +1/+2/+3 depending on
+ * level), which dnd5e applies by dragging and dropping the weapon onto the card.
  */
-// C12-a : Arme magique — « une arme non magique » au contact, la sienne ou celle d'un allié (comme Arme élémentaire).
+// C12-a: Magic Weapon — "a nonmagical weapon" touched, one's own or an ally's (like Elemental Weapon).
 export const ENCHANT_TARGETS = Object.freeze({ "elemental-weapon": "weapon", "magic-weapon": "weapon", "pact-of-the-blade": "ownWeapon" });
 
 /**
- * Pacte de la lame (§16.45, `pact`). PHB 2024 : en action Bonus, l'occultiste fait apparaître en main une arme de corps à corps
- * (courante ou de guerre, au choix) ou se lie à une arme magique touchée ; il y emploie son Charisme à l'attaque et aux dégâts,
- * dont le type peut être nécrotique, psychique, radiant ou celui de l'arme ; une nouvelle invocation fait disparaître la
- * précédente. Activité « Forge Pact Weapon » (`8MSXmrGSgc6xHotB`).
+ * Pact of the Blade (§16.45, `pact`). PHB 2024: as a Bonus Action, the Warlock conjures a melee weapon in hand
+ * (Simple or Martial, of its choice) or bonds with a touched magic weapon; it uses its Charisma for the attack and damage,
+ * whose type can be necrotic, psychic, radiant or the weapon's; a new summoning makes the
+ * previous one disappear. "Forge Pact Weapon" activity (`8MSXmrGSgc6xHotB`).
  */
 export const PACTS = Object.freeze({ "pact-of-the-blade": { damageTypes: ["necrotic", "psychic", "radiant"], ability: "spellcasting" } });
 
-/** Les effets de l'item prennent fin à ce repos du porteur (§16.38, `effectsExpire`) : dnd5e ne le règle pas sur l'effet. */
+/** The item's effects end at this rest of the bearer (§16.38, `effectsExpire`): dnd5e does not set it on the effect. */
 export const EFFECT_EXPIRIES = Object.freeze({ "prayer-of-healing": "longRest" });

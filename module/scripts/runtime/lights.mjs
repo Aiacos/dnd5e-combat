@@ -1,7 +1,7 @@
 /**
- * Lumière et ténèbres des sorts en marche (SPEC §16.31) : quand dnd5e pose la zone, crée l'effet ou invoque l'objet, le
- * moteur y met la source que le cœur V14 sait rendre (adapter/lights.mjs). La vision simulée lit les ténèbres par le
- * contenu (adapter/vision.mjs, `blockingRegions`), pas par ces sources.
+ * Light and Darkness of running spells (SPEC §16.31): when dnd5e places the area, creates the effect or summons the object,
+ * the engine puts on it the source that the V14 core can render (adapter/lights.mjs). Simulated vision reads Darkness through
+ * the content (adapter/vision.mjs, `blockingRegions`), not through these sources.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -20,19 +20,19 @@ import { relaunchUse } from "./relaunch.mjs";
 
 export const EXTINGUISH_QUERY = `${MODULE_ID}.extinguish`;
 
-/** Côté MJ actif : éteindre les lumières d'un item, pour un joueur qui possède son lanceur. */
+/** Active GM side: turn off an item's lights, for a player who owns its caster. */
 async function handleExtinguish({ item: itemUuid }, { user }={}) {
   const item = await fromUuid(itemUuid);
   if ( !item || (user && !item.actor?.testUserPermission(user, "OWNER")) ) return 0;
   return extinguishLights(item);
 }
 
-/** Éteindre les lumières précédentes d'un item : par le MJ actif, qui peut retirer des tokens. */
+/** Turn off an item's previous lights: by the active GM, who can remove tokens. */
 function extinguishBefore(item) {
   return viaActiveGM(EXTINGUISH_QUERY, handleExtinguish, { item: item.uuid }, { fallback: 0 });
 }
 
-/** §16.35 : intention « éteindre » (bouton de la fenêtre de choix) — les lumières de l'item s'éteignent, rien n'est lancé. */
+/** §16.35: intent "turn off" (button of the choice window) — the item's lights go out, nothing is cast. */
 export async function putOutLight(activity) {
   const n = await extinguishBefore(activity.item);
   log(`${activity.item.name}: ${n} light(s) extinguished`);
@@ -40,12 +40,12 @@ export async function putOutLight(activity) {
 }
 
 /**
- * §16.35 : intention « lancer la lumière » (fenêtre de choix, ui/light.mjs) — `where` : « ground » (l'objet est posé, dans
- * la couleur choisie) ou « self » (le lanceur le tient et brille) ; `color` : couleur de la lumière. Relancer un sort
- * `single` (Lumière) éteint d'abord la précédente. Pas de fenêtre de taille : l'objet est Très petit ; un sort de niveau 1+
- * (Flamme éternelle) garde la fenêtre de dnd5e pour l'emplacement.
+ * §16.35: intent "cast the light" (choice window, ui/light.mjs) — `where`: "ground" (the object is placed, in the chosen
+ * color) or "self" (the caster holds it and glows); `color`: color of the light. Recasting a `single` spell (Light) turns off
+ * the previous one first. No size window: the object is Tiny; a level 1+ spell (Continual Flame) keeps the dnd5e window for
+ * the spell slot.
  * @param {Activity} activity
- * @param {[object, object, object]} usage   Configurations suspendues (utilisation, fenêtre, message).
+ * @param {[object, object, object]} usage   Suspended configurations (use, window, message).
  * @param {{where: "ground"|"self", color: string|null}} choice
  */
 export async function castLight(activity, [config, dialog, message], { where, color }) {
@@ -59,12 +59,12 @@ export async function castLight(activity, [config, dialog, message], { where, co
   const use = { ...config, summons, create: { ...(config?.create ?? {}), summons: where === "ground" },
     [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), lightChoice: where, lightColor: color } };
   const cantrip = (activity.item.system.level ?? 0) === 0;
-  // « Sur moi » : le lanceur brille une fois l'utilisation faite (`dnd5e.postUseActivity`, ci-dessous) — même si la
-  // légalité l'a suspendue puis relancée.
+  // "On me": the caster glows once the use is done (`dnd5e.postUseActivity`, below) — even if legality suspended it then
+  // relaunched it.
   return relaunchUse(activity, use, cantrip ? { ...(dialog ?? {}), configure: false } : dialog, message);
 }
 
-/** §121 : un temps restant lisible (« 5 h 20 », « 45 min »). */
+/** §121: a readable remaining time ("5 h 20", "45 min"). */
 export function burnLabel(seconds) {
   if ( !Number.isFinite(seconds) ) return "";
   const { h, m } = burnParts(seconds);
@@ -72,8 +72,8 @@ export function burnLabel(seconds) {
 }
 
 /**
- * §121 : allumer ou éteindre une source portée (`on` absent : l'inverse de son état), sur le client du porteur — activité de
- * la source, boîte à amadou, menu de l'inventaire, HUD. Le porteur voit ce qui s'est passé au-dessus de son token.
+ * §121: turn a carried source on or off (`on` absent: the inverse of its state), on the bearer's client — source activity,
+ * tinderbox, inventory menu, HUD. The bearer sees what happened above their token.
  * @returns {Promise<{changed: boolean, lit?: boolean, left?: number|null, refilled?: string|null, reason?: string}>}
  */
 export async function toggleCarriedLight(item, on=null) {
@@ -99,8 +99,8 @@ export async function toggleCarriedLight(item, on=null) {
 }
 
 /**
- * §346 : baisse ou lève le capuchon de la source allumée (Lanterne à capuchon), sur le client du porteur. Sans coût d'action, comme
- * l'allumage (l'action Bonus reste à la table).
+ * §346: lowers or raises the hood of the lit source (Hooded Lantern), on the bearer's client. No action cost, like lighting
+ * (the Bonus Action is left to the table).
  */
 export async function toggleHood(item, down=null) {
   if ( !item?.actor?.isOwner ) return { changed: false, reason: "notOwner" };
@@ -112,8 +112,8 @@ export async function toggleHood(item, down=null) {
 }
 
 /**
- * §346 : la lumière d'une arme qui suit un enchantement (`carriedLight.whileEnchanted` : Langue de feu embrasée, flammes du Heaume
- * scintillant) — allumée quand l'enchantement de ce profil arrive sur l'item, éteinte quand il part. MJ actif.
+ * §346: the light of a weapon that follows an enchantment (`carriedLight.whileEnchanted`: Flame Tongue ablaze, flames of the
+ * "Scintillating Helm") — lit when this profile's enchantment arrives on the item, put out when it leaves. Active GM.
  */
 async function followEnchantment(effect) {
   const item = effect?.parent;
@@ -127,8 +127,9 @@ async function followEnchantment(effect) {
 }
 
 /**
- * §121 : la source s'est consumée — l'effet part, la torche aussi ; le porteur et le MJ l'apprennent. MJ actif. Une seule fois par
- * effet : le cœur le marque expiré (`updateActiveEffect`) et le moteur retire les effets expirés (`deleteActiveEffect` qui suit).
+ * §121: the source has burned out — the effect goes, the torch too; the bearer and the GM are told. Active GM. Only once
+ * per effect: the core marks it expired (`updateActiveEffect`) and the engine removes expired effects (`deleteActiveEffect`
+ * that follows).
  */
 const burning = new Set();
 async function onBurnOut(effect) {
@@ -147,8 +148,8 @@ async function onBurnOut(effect) {
 }
 
 /**
- * §287 : Ténèbres ont dissipé des lumières de sort — chacun le voit au-dessus du token qui brillait, l'entend (son de fin de sort), et
- * la carte de chat le dit. MJ actif.
+ * §287: Darkness dispelled spell lights — everyone sees it above the token that was glowing, hears it (spell-end sound), and
+ * the chat card says so. Active GM.
  */
 async function tellDispelled(region, dispelled) {
   const darkness = fromUuidSync(region.getFlag("dnd5e", "item") ?? "", { strict: false });
@@ -162,12 +163,12 @@ async function tellDispelled(region, dispelled) {
 }
 
 export function registerLights() {
-  // §346 : la lumière d'une arme enchantée suit son enchantement.
+  // §346: the light of an enchanted weapon follows its enchantment.
   for ( const hook of ["createActiveEffect", "updateActiveEffect", "deleteActiveEffect"] ) {
     route(hook, effect => enqueue(`enchantLight:${effect?.parent?.uuid}`, () => followEnchantment(effect)),
       { executor: true, label: "enchanted weapon: light not updated" });
   }
-  // À la file par région : la création et un redessin aussitôt après (l'anneau du Mur de feu, §170) ne posent pas deux fois.
+  // Queued per region: the creation and a redraw right after (the Wall of Fire ring, §170) do not place twice.
   const queued = (region, task) => enqueue(`light:${region.id}`, task);
   route("createRegion", region => queued(region, async () => {
     const done = await lightUpRegion(region);
@@ -188,11 +189,11 @@ export function registerLights() {
     if ( n ) log(`zone removed: ${n} light(s) extinguished`);
   }), { executor: true, label: "zone light not extinguished" });
 
-  // Toute région peut porter des ténèbres : la vision simulée est à refaire quand l'une naît, bouge ou disparaît.
+  // Any region can carry Darkness: simulated vision must be redone when one appears, moves or disappears.
   for ( const hook of ["createRegion", "updateRegion", "deleteRegion"] ) route(hook, () => invalidateVision(), { label: "vision: sources to rebuild" });
 
-  // §16.36 : « ne peut pas bénéficier de l'état Invisible » jusque dans l'affichage — l'invisibilité d'une créature révélée
-  // est suspendue, et reprend quand la révélation tombe (adapter/reveal.mjs).
+  // §16.36: "can't benefit from the Invisible condition" down to the display — the invisibility of a revealed creature
+  // is suspended, and resumes when the revelation ends (adapter/reveal.mjs).
   route("preCreateActiveEffect", effect => {
     if ( veilOnCreate(effect) ) log(`${effect.parent?.name ?? "?"}: ${effect.name} suspended (revealed)`);
   }, { label: "invisibility: not suspended" });
@@ -216,13 +217,13 @@ export function registerLights() {
     if ( addEffectLight(effect) ) log(`${effect.parent?.name ?? "?"}: ${effect.name} makes it shed light`);
   }, { label: "light effect not completed" });
 
-  // Lumière, Flamme éternelle : le PHB leur donne `summon.prompt: false` — dnd5e ne place alors rien au lancement, il faut
-  // cliquer « Invoquer » sur la carte (documents/activity/summon.mjs:68). Vu en jeu : « rien ne se passe, juste un message de
-  // chat ». L'objet lumineux se pose au lancement. Après la légalité et les portes (dernier inscrit) : jamais rien d'annulé ici.
+  // Light, Continual Flame: the PHB gives them `summon.prompt: false` — dnd5e then places nothing on casting, you have to
+  // click "Summon" on the card (documents/activity/summon.mjs:68). Seen in play: "nothing happens, just a chat message". The
+  // luminous object is placed on casting. After legality and the gates (last registered): nothing is ever cancelled here.
   route("dnd5e.preUseActivity", (activity, usageConfig) => {
     if ( (activity?.type !== "summon") || (lightRuleOf(activity.item)?.on !== "summon") ) return;
     if ( (usageConfig.create === false) || !activity.canSummon || !canvas?.scene ) return;
-    // §16.35 : « sur moi » — rien à poser, le lanceur brille (castLight).
+    // §16.35: "on me" — nothing to place, the caster glows (castLight).
     if ( usageConfig[MODULE_ID]?.lightChoice === "self" ) return;
     usageConfig.create ??= {};
     usageConfig.create.summons = true;
@@ -230,7 +231,7 @@ export function registerLights() {
     usageConfig.summons.creatureSize = summonSizeOf(activity) ?? usageConfig.summons.creatureSize;
   }, { cancellable: true, label: "light object: placed on cast" });
 
-  // §16.35 : la couleur choisie passe sur le token de l'objet, sur le client qui l'invoque.
+  // §16.35: the chosen color goes on the object's token, on the client that summons it.
   route("dnd5e.summonToken", (activity, profile, tokenData, options) => {
     if ( colorSummonedToken(activity, tokenData, options) ) log(`${activity.item.name}: light ${tokenData.light?.color}`);
   }, { label: "light object: color not applied" });
@@ -241,7 +242,7 @@ export function registerLights() {
     if ( await lightCaster(activity, ours.lightColor ?? null) ) log(`${activity.actor.name} holds ${activity.item.name}: it sheds light`);
   }, { label: "light object: the caster does not shed light" });
 
-  // §287 : Rayon de soleil — le lanceur brille tant que dure sa concentration (sur le client qui lance : son personnage est à lui).
+  // §287: Sunbeam — the caster glows as long as their Concentration lasts (on the casting client: their character is theirs).
   route("dnd5e.postUseActivity", async (activity, usageConfig, results) => {
     const effect = await lightCasterFor(activity, concentrationEffectOf(results?.message));
     if ( effect ) log(`${activity.actor.name}: ${activity.item.name} shines above them`);
@@ -249,22 +250,22 @@ export function registerLights() {
 
   CONFIG.queries[EXTINGUISH_QUERY] = handleExtinguish;
 
-  // §121 : le moteur tient la durée et le combustible — dnd5e ne dépense rien à l'activité de la source (sans quoi la Bougie,
-  // « autoDestroy », disparaissait à l'allumage et s'éteignait aussitôt, et la Lampe, sa seule utilisation dépensée, ne s'éteignait plus).
+  // §121: the engine keeps the duration and the fuel — dnd5e spends nothing on the source's activity (otherwise the Candle,
+  // "autoDestroy", disappeared on lighting and went out at once, and the Lamp, its only use spent, no longer went out).
   route("dnd5e.preUseActivity", (activity, usageConfig) => {
     if ( (activity?.type !== "utility") || !carriedLightOf(activity.item) ) return;
     usageConfig.consume = false;
   }, { label: "light source: dnd5e consumption not skipped" });
-  // §52 : une source de lumière portée — son activité utilitaire l'allume, ou l'éteint si elle brûle déjà.
+  // §52: a carried light source — its utility activity lights it, or puts it out if it is already burning.
   route("dnd5e.postUseActivity", async activity => {
     const item = activity?.item;
     if ( (activity?.type !== "utility") || !carriedLightOf(item) || !item.actor?.isOwner ) return;
     await toggleCarriedLight(item);
   }, { label: "light source: not lit" });
-  // §121 : arrivée au bout de sa durée, le cœur V14 marque l'effet expiré (`CONFIG.ActiveEffect.expiryAction` « update »,
-  // client/helpers/active-effect-registry.mjs:146) — ou le supprime (« delete »). Retiré à la main avant : le temps restant se note.
-  // Hors combat, dnd5e supprime aussitôt l'effet expiré (documents/active-effect.mjs:803-806) : c'est le `deleteActiveEffect` qui suit
-  // qui le consume. En combat il reste, suspendu : on le consume ici, s'il est encore là une seconde plus tard.
+  // §121: at the end of its duration, the V14 core marks the effect expired (`CONFIG.ActiveEffect.expiryAction` "update",
+  // client/helpers/active-effect-registry.mjs:146) — or deletes it ("delete"). Removed by hand beforehand: the remaining time
+  // is noted. Out of combat, dnd5e deletes the expired effect at once (documents/active-effect.mjs:803-806): it is the following
+  // `deleteActiveEffect` that consumes it. In combat it stays, suspended: it is consumed here, if still there a second later.
   route("updateActiveEffect", (effect, changes) => {
     if ( !carriedSourceOf(effect) || (changes?.duration?.expired !== true) ) return;
     setTimeout(() => { if ( effect.parent?.effects?.has(effect.id) ) onBurnOut(effect); }, 1000);
@@ -276,7 +277,7 @@ export function registerLights() {
     const kept = await rememberBurn(effect);
     if ( kept !== null ) log(`${effect.parent?.name}: ${effect.name} put out by hand, ${Math.round(kept / 60)} min left`);
   }, { executor: true, label: "light source: remaining time not kept" });
-  // Elle quitte la fiche (lâchée, lancée, donnée) : elle s'éteint sur son ancien porteur.
+  // It leaves the sheet (dropped, thrown, given): it goes out on its former bearer.
   route("deleteItem", async item => {
     const n = carriedLightOf(item) ? await dropCarriedLight(item) : 0;
     if ( n ) log(`${item.parent?.name ?? "?"}: ${item.name} no longer carried, its light goes out`);

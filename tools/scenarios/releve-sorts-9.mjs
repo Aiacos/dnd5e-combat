@@ -1,13 +1,14 @@
 /**
- * Relevé des sorts, lot 5c (SPEC §164), monde `dnd-6`, arène. Sorts prêtés du Manuel des joueurs.
- *  - Lévitation (le Guerrier, sauvegarde ratée) : +20 ft d'élévation ; l'effet retiré, il redescend ;
- *  - Inversion de la gravité (le Zombi, ratée) : en haut du Cylindre (100 ft) ; la concentration retirée, il chute — dégâts, À terre ;
- *  - Embruns prismatiques : une couleur tirée par cible (journal du moteur) ;
- *  - Vif carquois (combat, le Rôdeur) : deux attaques gratuites ouvertes ;
- *  - Invocation d'élémentaire : l'esprit à côté du Zombi ; au début du tour du Zombi, sa sauvegarde (areaTick `pulse`) ;
- *  - Invocation de céleste : le Cylindre sur le Guerrier — soigné à son apparition (§309), puis à la fin de son tour (Lumière guérisseuse) ;
- *  - Grêle d'épines : le Rôdeur touche le Zombi à l'arc, la question du châtiment y répond ; le Zombi et le Bandit à côté sauvegardent.
- * Remet positions, élévations, PV, effets, emplacements, combat.
+ * Spell survey, batch 5c (SPEC §164), world `dnd-6`, arena. Spells lent from the Player's Handbook.
+ *  - Levitate (the Fighter, failed save): +20 ft of elevation; the effect removed, he comes back down;
+ *  - Reverse Gravity (the Zombie, failed): at the top of the Cylinder (100 ft); concentration removed, it falls — damage, Prone;
+ *  - Prismatic Spray: one color drawn per target (engine log);
+ *  - Swift Quiver (combat, the Ranger): two free attacks opened;
+ *  - Conjure Elemental: the spirit next to the Zombie; at the start of the Zombie's turn, its save (areaTick `pulse`);
+ *  - Conjure Celestial: the Cylinder on the Fighter — healed at its appearance (§309), then at the end of his turn (Healing Light);
+ *  - Hail of Thorns: the Ranger hits the Zombie with the bow, the smite question answers it; the Zombie and the Bandit
+ *    beside it save.
+ * Restores positions, elevations, HP, effects, spell slots, combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -61,7 +62,7 @@ export default {
       await reset();
     };
     const lend = (t, id, system={ method: "atwill" }) => ctx.ensureItem(t, PHB + id, { system });
-    // Le journal du moteur nomme l'objet comme le client du MJ le voit (traduit par Babele) : on cherche son nom, pas le nom anglais.
+    // The engine log names the object as the GM's client sees it (translated by Babele): we look for its name, not the English one.
     const nameOf = async (t, itemId) => {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: t.id });
       return ((await ctx.call("get-actor", { actorId: data.actorId })).items ?? []).find(i => i._id === itemId)?.name ?? "";
@@ -92,7 +93,8 @@ export default {
       }
       const up = await elevation(fighter);
       ctx.expect(up === 20, `Lévitation : le Guerrier à ${up} ft`);
-      // §195 : en l'air, il lévite — dnd5e ne le met pas « En chute » (immunité portée par l'effet) ; l'effet fini, il se pose en douceur.
+      // §195: in the air, he levitates — dnd5e does not make him "Falling" (immunity carried by the effect); the effect over,
+      // he lands gently.
       await pause(1500);
       const aloft = (await ctx.effects(fighter)).filter(e => !e.disabled).flatMap(e => e.statuses ?? []);
       ctx.expect(!aloft.includes("falling"), `Lévitation : en l'air sans « En chute » (${aloft.join(", ") || "aucun état"})`);
@@ -149,7 +151,7 @@ export default {
       await pause(2500);
       if ( !ctx.expect(!!s?.tokens?.[0], `Élémentaire : invoqué (${s?.tokens?.[0]?.name ?? "rien"})`) ) return;
       const since = await ctx.lastMessageId();
-      await next();   // début du tour du Zombi
+      await next();   // start of the Zombie's turn
       const tick = (await ctx.messagesSince(since)).find(m => (m.type === "usage") && (m.flags?.[MODULE_ID]?.areaTick?.event === "pulse"));
       ctx.expect(!!tick, "Élémentaire : le Zombi commence son tour à côté → la sauvegarde de l'esprit");
     });
@@ -159,14 +161,14 @@ export default {
       if ( !ctx.expect(await fight([cleric, fighter]), "Céleste : tour du Clerc") ) return;
       await ctx.setHp(fighter, 1);
       await settled(await ctx.use({ tokenId: cleric.id, itemId: id, activityId: "VjKltnyiWXZ0xDGZ", consume: false, area: await tiny(fighter) }));
-      // §309 : déjà dans le Cylindre à son apparition, il est soigné tout de suite.
+      // §309: already in the Cylinder at its appearance, he is healed right away.
       for ( let n = 0; (n < 20) && ((await ctx.hp(fighter)) <= 1); n++ ) await pause(500);
       ctx.expect((await ctx.hp(fighter)) > 1, `Céleste : le Guerrier, dans le Cylindre à son apparition, est soigné (${await ctx.hp(fighter)} PV)`);
       await ctx.setHp(fighter, 1);
       await pause(800);
       const before = await ctx.hp(fighter);
       await next(); await next();   // fin du tour du Guerrier
-      // Le soin de fin de tour passe par une résolution (jet, carte) : attendu jusqu'à 10 s plutôt qu'une pause fixe.
+      // The end-of-turn healing goes through a resolution (roll, card): awaited up to 10 s rather than a fixed pause.
       for ( let n = 0; (n < 20) && ((await ctx.hp(fighter)) <= before); n++ ) await pause(500);
       const log = (await ctx.engineLog()).filter(l => /Healing Light|Searing Light/.test(l)).slice(-2);
       ctx.expect((await ctx.hp(fighter)) > before, `Céleste : le Guerrier (allié) finit son tour dans le Cylindre → ${before} → ${await ctx.hp(fighter)} PV ${log.join(" / ")}`);
@@ -181,7 +183,8 @@ export default {
       ctx.restore(() => ctx.call("update-actor", { actorId: ranger.actorId, actorData: { "system.spells.spell1.value": slot0 } }).catch(() => {}));
       const bow = (actor0.items ?? []).find(i => (i.type === "weapon") && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack" && a.attack?.type?.value === "ranged"))?._id;
       if ( !ctx.expect(!!bow, "Grêle d'épines : le Rôdeur a une arme à distance") ) return;
-      // Le Bandit sur une case libre à côté du Zombi (à l'est, l'arène de `dnd-6` a « Alara Dhampir », qui sauvegarde aussi : accepté).
+      // The Bandit on a free cell next to the Zombie (to the east, the `dnd-6` arena has "Alara Dhampir", who also saves:
+      // accepted).
       const z = await ctx.position(zombi);
       const { tokens: all } = await ctx.scene();
       const free = [[-1, 0], [0, 1], [0, -1], [1, 0], [-1, 1], [-1, -1], [1, 1], [1, -1]].map(([dx, dy]) => ({ x: z.x + dx * grid, y: z.y + dy * grid }))
@@ -189,7 +192,7 @@ export default {
       await ctx.call("move-token", { tokenId: bandit.id, x: free.x, y: free.y, elevation: 0 }); await pause(800);
       const b0 = await ctx.position(bandit);
       if ( !ctx.expect((b0.x === free.x) && (b0.y === free.y), `Grêle d'épines : le Bandit à côté du Zombi (${b0.x}, ${b0.y})`) ) return;
-      // Le Zombi (15 PV) tombait sous la flèche : il faut qu'il soit encore debout pour sauvegarder (remis par `reset`).
+      // The Zombie (15 HP) fell under the arrow: it must still be standing to save (restored by `reset`).
       for ( const t of [zombi, bandit] ) await ctx.setHp(t, 100);
       for ( let n = 1; n <= 10; n++ ) {
         const ids = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
@@ -206,7 +209,7 @@ export default {
         const r = await ctx.settle(used.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
         if ( r?.targets?.[0]?.hit !== true ) continue;
         await pause(4000);
-        // Les sauvegardes de ce tir : depuis la dernière du Zombi (la cible d'abord, puis chaque créature à 1,50 m d'elle).
+        // The saves of this shot: since the Zombie's last one (the target first, then each creature within 1.50 m of it).
         const saves = (await ctx.engineLog()).filter(l => new RegExp(`${hailName}: .* makes their saving throw`).test(l));
         const log = saves.slice(Math.max(0, saves.findLastIndex(l => /Zombi makes/.test(l))));
         ctx.expect(/Zombi makes/.test(log[0] ?? "") && log.some(l => /Bandit, within/.test(l)), `Grêle d'épines : ${log.join(" / ") || "aucune sauvegarde"}`);

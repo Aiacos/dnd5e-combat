@@ -6,8 +6,8 @@ const half = { degree: "half", bonus: 2 };
 const threeQuarters = { degree: "threeQuarters", bonus: 5 };
 const total = { degree: "total" };
 
-describe("attackIgnoresCover : l'attaque de l'item ignore l'abri partiel ou aux trois quarts de sa cible", () => {
-  it("coverIgnoreOf : le plus fort de ce qui fait ignorer l'abri (true, puis \"half\", puis rien)", () => {
+describe("attackIgnoresCover: the item's attack ignores half or three-quarters Cover on its target", () => {
+  it("coverIgnoreOf: the strongest of what makes Cover ignored (true, then \"half\", then nothing)", () => {
     expect(coverIgnoreOf()).toBe(false);
     expect(coverIgnoreOf(false, undefined, null)).toBe(false);
     expect(coverIgnoreOf(false, "half")).toBe("half");
@@ -15,7 +15,7 @@ describe("attackIgnoresCover : l'attaque de l'item ignore l'abri partiel ou aux 
     expect(coverIgnoreOf(true, false)).toBe(true);
   });
 
-  it("avec coverLeft : true retire l'abri partiel et aux trois quarts, \"half\" le partiel seul, l'abri total reste", () => {
+  it("with coverLeft: true removes half and three-quarters Cover, \"half\" the half only, Total Cover remains", () => {
     expect(coverLeft(half, coverIgnoreOf(false, true))).toBe(null);
     expect(coverLeft(threeQuarters, coverIgnoreOf(false, true))).toBe(null);
     expect(coverLeft(total, coverIgnoreOf(false, true))).toBe(total);
@@ -24,7 +24,7 @@ describe("attackIgnoresCover : l'attaque de l'item ignore l'abri partiel ou aux 
     expect(coverLeft(half, coverIgnoreOf(false))).toBe(half);
   });
 
-  it("le schéma : true ou \"half\"", () => {
+  it("the schema: true or \"half\"", () => {
     expect(ENTRY_KEYS).toContain("attackIgnoresCover");
     expect(validateEntry({ attackIgnoresCover: true })).toEqual([]);
     expect(validateEntry({ attackIgnoresCover: "half" })).toEqual([]);

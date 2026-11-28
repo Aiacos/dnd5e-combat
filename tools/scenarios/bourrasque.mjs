@@ -1,10 +1,10 @@
 /**
- * Bourrasque (SPEC §37.3), monde `dnd-6`. Le Clerc reçoit Bourrasque (Manuel des joueurs, à volonté) et souffle vers le sud, sur la
- * colonne libre de Restored Keep : Clerc 3080 × 4900, Zombi 3080 × 5040 ; la Ligne est approchée par un rectangle d'une case de large
- * qui couvre le Zombi et la case derrière lui. Vérifie :
- *  - pose : sauvegarde de Force du Zombi ; ratée → repoussé de 4,50 m (3 cases) loin du Clerc, le long de la colonne ;
- *  - zone qui dure : au combat, le Zombi remis dans la Ligne finit son tour dedans → le sort rejoue ; ratée ⇔ repoussé.
- * Remet positions, effets, zone et concentration.
+ * Gust of Wind (SPEC §37.3), world `dnd-6`. The Cleric receives Gust of Wind (Player's Handbook, at will) and blows south, on the
+ * free column of Restored Keep: Cleric 3080 × 4900, Zombie 3080 × 5040; the Line is approximated by a rectangle one cell wide
+ * that covers the Zombie and the cell behind it. Checks:
+ *  - placement: the Zombie's Strength saving throw; failed → pushed 4.50 m (3 cells) away from the Cleric, along the column;
+ *  - lasting area: in combat, the Zombie put back in the Line ends its turn in it → the spell replays; failed ⇔ pushed.
+ * Resets positions, effects, area and Concentration.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -46,7 +46,7 @@ export default {
     const put = async (t, y) => { await ctx.call("move-token", { tokenId: t.id, x: X, y, elevation: 0 }); await pause(700); };
     const clearZone = async () => {
       for ( const id of regions.splice(0) ) await ctx.call("delete-scene-object", { type: "Region", objectId: id }).catch(() => {});
-      await clearNew(cleric);   // la concentration du Clerc (elle tient la zone)
+      await clearNew(cleric);   // the Cleric's Concentration (it holds the area)
       await clearNew(zombi);
     };
     const reset = async () => {
@@ -61,7 +61,7 @@ export default {
     };
     ctx.restore(reset);
 
-    /** Souffle la Bourrasque sur le Zombi posé en ZOMBI_Y ; rend la résolution et le déplacement du Zombi (px). */
+    /** Blows the Gust of Wind at the Zombie placed at ZOMBI_Y; returns the resolution and the Zombie's displacement (px). */
     const blow = async () => {
       await clearZone();
       await put(cleric, CLERIC_Y); await put(zombi, ZOMBI_Y);
@@ -74,7 +74,7 @@ export default {
       return { used, r, t: r?.targets?.find(x => x.name === "Zombi") ?? null, moved: { dx: pos.x - X, dy: pos.y - ZOMBI_Y } };
     };
 
-    // 1. Pose : jusqu'à une sauvegarde ratée (20 essais au plus).
+    // 1. Placement: until a failed saving throw (20 tries at most).
     let failedCast = null;
     for ( let n = 1; (n <= 20) && !failedCast; n++ ) {
       const cast = await blow();
@@ -87,7 +87,7 @@ export default {
         `ratée (${failedCast.t.save.total}) : repoussé de 3 cases loin du Clerc (${failedCast.moved.dx}, ${failedCast.moved.dy} px)`);
     }
 
-    // 2. Zone qui dure : le Zombi remis dans la Ligne finit son tour dedans.
+    // 2. Lasting area: the Zombie put back in the Line ends its turn in it.
     if ( failedCast?.used?.regionId ) {
       await put(zombi, ZOMBI_Y);
       await ctx.startCombat([cleric, zombi]);
@@ -102,7 +102,7 @@ export default {
         await ctx.nextTurn();
         await pause(2500);
         replayed = (await ctx.messagesSince(since)).find(m => (m.type === "usage") && m.flags?.[MODULE_ID]?.areaTick);
-        if ( !replayed ) await put(zombi, ZOMBI_Y);   // repoussé par un rejeu manqué ou déplacé : remis dans la Ligne
+        if ( !replayed ) await put(zombi, ZOMBI_Y);   // pushed back by a missed replay or moved: put back in the Line
       }
       if ( ctx.expect(!!replayed, "fin du tour du Zombi dans la Ligne : le sort rejoue (areaTick)") ) {
         const r = await ctx.settle(replayed.id, { timeoutMs: 45000 }).catch(() => null);

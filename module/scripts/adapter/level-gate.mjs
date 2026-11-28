@@ -1,15 +1,15 @@
 /**
- * §438 : la porte de niveau d'une activité, lue sur l'activité de dnd5e (pur : core/level-gate.mjs).
+ * §438: an activity's level gate, read on the dnd5e activity (pure: core/level-gate.mjs).
  */
 
 import { hiddenAtLevel } from "../core/level-gate.mjs";
 
 /**
- * §438 : une activité cachée à ce niveau par la donnée (`visibility.level` ; dnd5e 6.1.0 `isHidden`, dnd5e.mjs:18844-18853 —
- * `relevantLevel` : le niveau de la classe nommée, sinon celui du personnage). Le Manuel des joueurs 3.0.0 range les versions
- * améliorées d'une aptitude comme des activités du même item, l'une visible jusqu'à un niveau, l'autre à partir du suivant (Éclat
- * protecteur, Déluge de coups « Heightened ») : le contenu les nomme toutes, seule celle du niveau est proposée. Rien d'autre de
- * `isHidden` n'est repris (un item masqué sur la fiche garde ses réactions).
+ * §438: an activity hidden at this level by the data (`visibility.level`; dnd5e 6.1.0 `isHidden`, dnd5e.mjs:18844-18853 —
+ * `relevantLevel`: the named class's level, otherwise the character's). The Player's Handbook 3.0.0 stores the upgraded
+ * versions of a feature as activities of the same item, one visible up to a level, the other from the next ("Protective
+ * Burst", Flurry of Blows "Heightened"): the content names them all, only the one for the level is offered. Nothing else from
+ * `isHidden` is taken over (an item hidden on the sheet keeps its reactions).
  */
 export function levelHidden(activity) {
   const range = activity?.visibility?.level;

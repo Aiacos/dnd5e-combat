@@ -1,9 +1,9 @@
 /**
- * M1 (SPEC §18.6) — Attaques multiples lues dans le texte anglais d'origine, sous Babele. Monde `ravenloft` : l'Ours brun
- * du Monster Manual (« makes one Bite attack and one Claw attack », traduit en français sur la fiche).
- * À son tour : la Morsure paie l'action et ouvre les Attaques multiples (1/2) ; la Griffe passe sans action (2/2) ; une
- * seconde Morsure ne tient plus dans le plan — la légalité la signale (le scénario la confirme d'office) et le plan ne
- * bouge pas.
+ * M1 (SPEC §18.6) — Multiattack read from the original English text, under Babele. World `ravenloft`: the Brown Bear
+ * from the Monster Manual ("makes one Bite attack and one Claw attack", translated into French on the sheet).
+ * On its turn: the Bite pays the action and opens Multiattack (1/2); the Claw goes through without an action (2/2); a
+ * second Bite no longer fits in the plan — legality flags it (the scenario confirms it automatically) and the plan
+ * does not move.
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -12,7 +12,7 @@ export default {
   name: "Attaques multiples — Ours brun : une Morsure et une Griffe",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Missing from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise the dnd5e SRD 2024).
     await ctx.cast({ "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Ours brun", "Zombi"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Ours brun ou Zombi absent : non applicable"); return; }

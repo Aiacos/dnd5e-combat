@@ -1,14 +1,15 @@
 /**
- * §494 (brique B14) : plusieurs concentrations à la fois. dnd5e 6 en porte la limite (`system.attributes.concentration.limit`,
- * 1 par défaut) : à la limite, un nouveau sort à concentration remplace celle du même item, sinon la première ; un jet de concentration
- * raté met fin à toutes (`endConcentration()` sans argument, bouton « Rompre la concentration »). Il manque la limite portée par un trait
- * de créature (« elle peut se concentrer sur trois sorts à la fois ») : la clé de contenu `concentration: { limit, loseAll? }`, que le
- * moteur tient dans l'effet des dons sans effet (runtime/speed-grants.mjs). Fonctions pures.
+ * §494 (brick B14): several Concentrations at once. dnd5e 6 carries the limit (`system.attributes.concentration.limit`,
+ * 1 by default): at the limit, a new Concentration spell replaces that of the same item, otherwise the first; a failed
+ * Concentration check ends them all (`endConcentration()` without argument, "Break Concentration" button). What is missing is
+ * the limit carried by a creature trait ("it can concentrate on three spells at once"): the content key
+ * `concentration: { limit, loseAll? }`, which the engine holds in the effect of feats without an effect
+ * (runtime/speed-grants.mjs). Pure functions.
  */
 
 export const CONCENTRATION_LIMIT_KEY = "system.attributes.concentration.limit";
 
-/** Validation de la clé `concentration` ; rend la liste des erreurs. */
+/** Validation of the `concentration` key; returns the list of errors. */
 export function validateConcentrationRule(rule) {
   const ok = (rule !== null) && (typeof rule === "object") && !Array.isArray(rule)
     && Number.isInteger(rule.limit) && (rule.limit >= 1) && (rule.limit <= 20)
@@ -18,9 +19,9 @@ export function validateConcentrationRule(rule) {
 }
 
 /**
- * La règle de concentration de la créature, d'après les entrées de ses items : la plus haute limite, et « perd tout » si l'une le dit.
- * @param {Array<object|null>} entries  Les entrées de contenu de ses items.
- * @returns {{limit: number, loseAll: boolean}|null}  null : aucun item ne déclare de règle.
+ * The creature's Concentration rule, from the entries of its items: the highest limit, and "loses all" if one says so.
+ * @param {Array<object|null>} entries  The content entries of its items.
+ * @returns {{limit: number, loseAll: boolean}|null}  null: no item declares a rule.
  */
 export function concentrationRuleOf(entries) {
   const rules = (entries ?? []).map(e => e?.concentration).filter(r => Number.isInteger(r?.limit));
@@ -28,15 +29,15 @@ export function concentrationRuleOf(entries) {
   return { limit: Math.max(...rules.map(r => r.limit)), loseAll: rules.some(r => r.loseAll === true) };
 }
 
-/** Les changements d'effet qui portent la limite (« upgrade » : un effet de la fiche qui la monte plus haut garde le dessus). */
+/** The effect changes that carry the limit ("upgrade": an effect of the sheet that raises it higher keeps the upper hand). */
 export function concentrationLimitChanges(rule) {
   const limit = Number(rule?.limit);
   return (Number.isInteger(limit) && (limit > 1)) ? [{ key: CONCENTRATION_LIMIT_KEY, type: "upgrade", value: String(limit) }] : [];
 }
 
 /**
- * Lancer un nouveau sort à concentration en remplace-t-il un ? Comme dnd5e (activity/mixin.mjs, `_prepareUsageConfig`) : seulement si la
- * créature en tient déjà autant que sa limite. Une limite de 0 (suivi désactivé) ne remplace rien.
+ * Does casting a new Concentration spell replace one? Like dnd5e (activity/mixin.mjs, `_prepareUsageConfig`): only if the
+ * creature already holds as many as its limit. A limit of 0 (tracking disabled) replaces nothing.
  */
 export function replacesConcentration(held, limit) {
   const max = Number(limit);

@@ -1,9 +1,9 @@
 /**
- * Soutien et Intention (SPEC §15.2, vocabulaire 2024 : Help = Soutien, Ready = Intention) :
- *  1. le Magicien, au contact du Zombi, utilise Soutien sur lui : une marque « distrait » est posée ;
- *  2. le Paladin, son allié, attaque le Zombi : avantage « soutien d'un allié », puis la marque tombe ;
- *  3. le Magicien prend l'Intention : son budget consigne `readied`.
- * Remet tokens, PV, items et marques en place.
+ * Help and Ready (SPEC §15.2, 2024 vocabulary; French labels: Soutien = Help, Intention = Ready):
+ *  1. the Wizard, in contact with the Zombie, uses Help on him: a "distracted" mark is placed;
+ *  2. the Paladin, his ally, attacks the Zombie: "ally's help" Advantage, then the mark falls;
+ *  3. the Wizard takes Ready: his budget records `readied`.
+ * Puts back tokens, HP, items and marks.
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));

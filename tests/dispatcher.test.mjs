@@ -1,7 +1,7 @@
 /**
- * Scénarios complets, hors de Foundry : le cœur et le répartiteur, avec de faux ports à la place
- * des messages de chat et des adaptateurs. Ce que ces tests tiennent : l'ordre (écrire AVANT
- * d'exécuter), la file par porteur, et le chemin entier d'une action.
+ * Complete scenarios, outside Foundry: the core and the dispatcher, with fake ports in place of
+ * chat messages and adapters. What these tests hold: the order (write BEFORE
+ * executing), the queue per bearer, and the whole path of an action.
  */
 import { describe, it, expect } from "vitest";
 import { createDispatcher } from "../module/scripts/runtime/dispatcher.mjs";
@@ -22,7 +22,7 @@ function world({ reaction=null, coalesce=false, flushMs=250, think=5, writeMs=0 
   const execute = async (command, carrier, resolution) => {
     journal.push(`${command.type}${command.on ? `:${command.on}` : ""} @${flags.get(carrier).step}`);
     if ( command.type === "askReactions" ) {
-      await new Promise(resolve => setTimeout(resolve, think));   // quelqu'un réfléchit
+      await new Promise(resolve => setTimeout(resolve, think));   // someone is thinking
       peeks.push(dispatcher.peek(carrier)?.step ?? null);         // ce qu'un lecteur voit pendant l'attente
       return command.tokens.map(token => ({ type: "reactionResolved", token, ...(reaction ?? { used: null, ac: 12 }) }));
     }
@@ -35,7 +35,7 @@ function world({ reaction=null, coalesce=false, flushMs=250, think=5, writeMs=0 
   dispatcher = createDispatcher({
     read: id => flags.get(id) ?? null,
     write: async (id, resolution) => {
-      if ( writeMs ) await new Promise(resolve => setTimeout(resolve, writeMs));   // l'écriture met du temps à arriver
+      if ( writeMs ) await new Promise(resolve => setTimeout(resolve, writeMs));   // the write takes time to arrive
       flags.set(id, resolution); journal.push(`écrit ${resolution.step}`);
     },
     execute, enqueue, coalesce: () => coalesce, flushMs,
@@ -48,8 +48,8 @@ const T = (n, extra={}) => ({ token: `T${n}`, actor: `A${n}`, name: `Cible ${n}`
 const opening = (plan, targets) => async () => ({ id: "r", origin: "U", activity: "Act", source: "Src", plan, targets });
 const FIRE = [{ type: "fire", value: 8, properties: [] }];
 
-describe("répartiteur", () => {
-  it("attaque avec Bouclier : l'étape « réaction » est écrite avant qu'on attende la réponse", async () => {
+describe("dispatcher", () => {
+  it("attack with Shield: the \"reaction\" step is written before we wait for the answer", async () => {
     const { dispatcher, journal, flags } = world({ reaction: { used: "Bouclier", ac: 17 } });
     await dispatcher.open("U", opening({ attack: true, damage: "author" }, []));
     await dispatcher.send("U", { type: "attackRolled", roll: { total: 15, isCritical: false, isFumble: false }, messageId: "Atk",
@@ -62,7 +62,7 @@ describe("répartiteur", () => {
     expect(flags.get("U").targets[0]).toMatchObject({ hit: false, reaction: "Bouclier" });
   });
 
-  it("sauvegarde de zone : jets simultanés mis en série, appliqué une seule fois, tout est publié", async () => {
+  it("area save: simultaneous rolls put in series, applied once, everything is published", async () => {
     const { dispatcher, journal, flags, published } = world();
     const save = { ability: "dex", dc: 15, onSave: "half", activity: "Act", chained: false };
     await dispatcher.open("U", opening({ save, damage: "author", effects: [{ id: "E", activity: "Act", when: "failedSave" }] }, [T(1), T(2), T(3)]));
@@ -71,7 +71,7 @@ describe("répartiteur", () => {
       dispatcher.send("U", { type: "saveRolled", actor: "A2", total: 4, messageId: "s2" }),
       dispatcher.send("U", { type: "damageRolled", messageId: "D", damages: FIRE }),
       dispatcher.send("U", { type: "saveRolled", actor: "A3", total: 9, messageId: "s3" }),
-      dispatcher.send("U", { type: "saveRolled", actor: "A3", total: 20, messageId: "s4" })   // double clic : ignoré
+      dispatcher.send("U", { type: "saveRolled", actor: "A3", total: 20, messageId: "s4" })   // double click: ignored
     ]);
     expect(results).toEqual([true, true, true, true, false]);
     expect(journal.filter(l => l.startsWith("apply"))).toHaveLength(1);
@@ -84,7 +84,7 @@ describe("répartiteur", () => {
     expect(published.at(-1)).toBe("applied→done");
   });
 
-  it("un évènement calculé dans la file voit l'état du moment, et peut renoncer", async () => {
+  it("an event computed in the queue sees the state of the moment, and can give up", async () => {
     const { dispatcher } = world();
     await dispatcher.open("U", opening({ attack: true }, []));
     const seen = [];
@@ -93,7 +93,7 @@ describe("répartiteur", () => {
     expect(taken).toBe(false);
   });
 
-  it("n'ouvre pas deux fois le même porteur, n'ouvre rien si le constructeur renonce, ignore un porteur sans résolution", async () => {
+  it("does not open the same bearer twice, opens nothing if the builder gives up, ignores a bearer without a resolution", async () => {
     const { dispatcher, journal } = world();
     expect(await dispatcher.open("X", async () => null)).toBe(null);
     await dispatcher.open("U", opening({ attack: true }, []));
@@ -102,14 +102,14 @@ describe("répartiteur", () => {
     expect(await dispatcher.send("inconnu", { type: "undone" })).toBe(false);
   });
 
-  it("drained attend la fin de ce qui est en file", async () => {
+  it("drained waits for the end of what is queued", async () => {
     const { dispatcher, flags } = world();
     dispatcher.open("U", opening({ effects: [{ id: "Bouclier", activity: "Act", when: "always" }] }, [T(1)]));
     await dispatcher.drained("U");
     expect(flags.get("U").step).toBe(STEPS.DONE);
   });
 
-  describe("écritures regroupées (journal allégé)", () => {
+  describe("batched writes (lightened journal)", () => {
     const attack = async dispatcher => {
       await dispatcher.open("U", opening({ attack: true, damage: "author", effects: [{ id: "E", activity: "Act", when: "hit" }] }, []));
       await dispatcher.send("U", { type: "attackRolled", roll: { total: 15, isCritical: false, isFumble: false }, messageId: "Atk",
@@ -118,7 +118,7 @@ describe("répartiteur", () => {
     };
     const writes = journal => journal.filter(l => l.startsWith("écrit"));
 
-    it("une attaque touchée : une écriture par tâche au lieu d'une par étape, même état final", async () => {
+    it("a hit attack: one write per task instead of one per step, same final state", async () => {
       const off = world();
       await attack(off.dispatcher);
       const on = world({ coalesce: true });
@@ -126,10 +126,10 @@ describe("répartiteur", () => {
       expect(writes(on.journal).length).toBeLessThan(writes(off.journal).length);
       expect(writes(on.journal)).toEqual(["écrit awaitingAttack", "écrit awaitingRolls", "écrit done"]);
       expect(on.flags.get("U")).toEqual(off.flags.get("U"));
-      expect(on.published).toEqual(off.published);   // chaque étape reste publiée
+      expect(on.published).toEqual(off.published);   // each step stays published
     });
 
-    it("peek rend l'état en mémoire avant qu'il soit écrit", async () => {
+    it("peek returns the in-memory state before it is written", async () => {
       const { dispatcher, flags } = world({ coalesce: true, flushMs: 1000 });
       const seen = [];
       await dispatcher.open("U", async () => {
@@ -137,22 +137,22 @@ describe("répartiteur", () => {
         return { id: "r", origin: "U", activity: "Act", source: "Src", plan: { attack: true }, targets: [] };
       });
       expect(seen).toEqual([null]);
-      expect(flags.get("U").step).toBe(STEPS.AWAITING_ATTACK);   // écrit à la fin de la tâche, sans attendre le délai
+      expect(flags.get("U").step).toBe(STEPS.AWAITING_ATTACK);   // written at the end of the task, without waiting for the delay
       expect(dispatcher.peek("U").step).toBe(STEPS.AWAITING_ATTACK);
     });
 
-    it("une commande qui attend quelqu'un : l'état d'attente est écrit au bout du délai, pas à la fin", async () => {
+    it("a command that waits for someone: the waiting state is written at the end of the delay, not at the end", async () => {
       const { dispatcher, journal } = world({ coalesce: true, flushMs: 10, think: 60, reaction: { used: null, ac: 12 } });
       await dispatcher.open("U", opening({ attack: true, damage: "author" }, []));
       await dispatcher.send("U", { type: "attackRolled", roll: { total: 15, isCritical: false, isFumble: false }, messageId: "Atk",
         targets: [T(1, { canReact: true })] });
       const i = journal.indexOf("écrit awaitingReaction");
       expect(i).toBeGreaterThan(-1);
-      expect(i).toBeLessThan(journal.indexOf("echo:attack @awaitingReaction"));   // écrit pendant l'attente, avant la réponse
+      expect(i).toBeLessThan(journal.indexOf("echo:attack @awaitingReaction"));   // written during the wait, before the answer
     });
 
-    it("§153 : pendant qu'une écriture regroupée est en route, peek rend l'état parti, pas l'ancien porteur", async () => {
-      // Écriture partie à 10 ms, arrivée à 80 ms ; le lecteur regarde à 30 ms, pendant le trajet.
+    it("§153: while a batched write is in flight, peek returns the departed state, not the previous bearer", async () => {
+      // Write sent at 10 ms, arrived at 80 ms; the reader looks at 30 ms, during the trip.
       const { dispatcher, peeks } = world({ coalesce: true, flushMs: 10, writeMs: 70, think: 30, reaction: { used: null, ac: 12 } });
       await dispatcher.open("U", opening({ attack: true, damage: "author" }, []));
       await dispatcher.send("U", { type: "attackRolled", roll: { total: 15, isCritical: false, isFumble: false }, messageId: "Atk",

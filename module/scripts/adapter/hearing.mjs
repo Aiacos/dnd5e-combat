@@ -1,7 +1,7 @@
 /**
- * L'ouïe (§62) lue dans Foundry : l'observateur entend-il la cible ? Surdité (état Assourdi), cible cachée (effet de Furtivité
- * du moteur, adapter/search.mjs), cible morte, et les murs et planchers qui arrêtent le son (moteur de collision `sound` et
- * Surfaces du cœur, niveaux). Positions validées (`_source`). La règle est dans core/hearing.mjs.
+ * Hearing (§62) read from Foundry: does the observer hear the target? Deafness (Deafened condition), hidden target (the
+ * engine's Hide effect, adapter/search.mjs), dead target, and the walls and floors that stop sound (`sound` collision engine
+ * and the core's Surfaces, levels). Validated positions (`_source`). The rule is in core/hearing.mjs.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,11 +14,11 @@ import { blockedBetween, isSenseless } from "./vision.mjs";
 import { lengthIn, readUnitFactors } from "./units.mjs";
 
 /**
- * Un mur ou un plancher qui arrête le son sépare-t-il les deux tokens ? Comme la vue du cœur (detection-mode.mjs:211-259), les
- * murs et les Surfaces (régions `defineSurface`, scene.mjs:836) sont testés séparément : les murs dans le niveau de chacun, les
- * Surfaces de tous les niveaux (un plancher rattaché au seul niveau du dessus arrête aussi le son qui monte). Une cible dans un
- * niveau qu'on ne voit pas depuis le sien (`Level#visibility.levels`, token.mjs:399-417) n'est pas entendue non plus : sinon elle
- * serait « détectée », et le cœur estomperait pour elle l'image du niveau qui la recouvre.
+ * Does a wall or floor that stops sound separate the two tokens? Like the core's sight (detection-mode.mjs:211-259), walls and
+ * Surfaces (`defineSurface` regions, scene.mjs:836) are tested separately: walls in each token's level, Surfaces of all levels
+ * (a floor attached only to the level above also stops sound that rises). A target in a level that cannot be seen from the
+ * observer's own (`Level#visibility.levels`, token.mjs:399-417) is not heard either: otherwise it would be "detected", and the
+ * core would fade out for it the image of the level covering it.
  */
 function soundBlocked(observer, target) {
   const scene = observer.parent;
@@ -37,17 +37,17 @@ function soundBlocked(observer, target) {
   return false;
 }
 
-/** Réglage `hearingRange` : la portée de chaque acteur, en pieds, pour la formule en cours (lue une fois, pas à chaque paire). */
+/** `hearingRange` setting: each actor's range, in feet, for the current formula (read once, not for each pair). */
 let ranges = new WeakMap();
 
-/** La fiche, ses effets ou ses objets ont changé, ou le réglage : les portées se relisent. */
+/** The sheet, its effects or its items changed, or the setting: the ranges are re-read. */
 export function clearHearingRanges() {
   ranges = new WeakMap();
 }
 
 /**
- * Réglage `hearingRange` : la portée d'ouïe de l'observateur, dans l'unité de sa scène ; null — sans portée — quand le réglage est
- * vide (la règle officielle). La formule est évaluée avec les données de jet de l'acteur (`@skills.prc.passive`…), en pieds.
+ * `hearingRange` setting: the observer's hearing range, in the unit of their scene; null — no range — when the setting is
+ * empty (the official rule). The formula is evaluated with the actor's roll data (`@skills.prc.passive`…), in feet.
  * @param {TokenDocument} observer
  * @returns {number|null}
  */
@@ -78,20 +78,20 @@ export function canHear(observer, target) {
   if ( !observer || !target || (observer === target) || target.hidden || (observer.parent !== target.parent) ) return false;
   const statuses = s => target.actor?.statuses?.has(s) ?? false;
   return hears({
-    // Réglage `unconsciousSenses` : Inconscient, il n'entend plus rien non plus.
+    // `unconsciousSenses` setting: Unconscious, it no longer hears anything either.
     deafened: (observer.actor?.statuses?.has("deafened") ?? false) || isSenseless(observer),
     hidden: hiddenDcOf(target.actor) !== null,
-    // §255 : un objet (piège posé, arme spirituelle) ou un acteur piège ne fait pas de bruit — un piège repéré hors de vue se
-    // montrait « entendu ».
+    // §255: an object (placed trap, Spiritual Weapon) or a trap actor makes no noise — a trap spotted out of sight would
+    // show up as "heard".
     silent: statuses("dead") || isObjectToken(target) || trapLike(target.actor),
-    // Issue #42 : Silence — « aucun son ne peut naître dans la Sphère ni la traverser » : la cible dedans, ou le trait qui les relie
-    // la traversant (l'observateur dedans est déjà Assourdi par la zone, §37.4).
+    // Issue #42: Silence — "no sound can be created within or pass through the Sphere": the target inside, or the line
+    // joining them passing through it (the observer inside is already Deafened by the area, §37.4).
     soundBlocked: soundBlocked(observer, target) || blockedBetween(observer, target).silence,
     outOfRange: outOfHearing(observer, target)
   });
 }
 
-/** La cible est-elle au-delà de la portée d'ouïe de l'observateur ? Sans portée, la distance n'est pas lue. */
+/** Is the target beyond the observer's hearing range? With no range, the distance is not read. */
 function outOfHearing(observer, target) {
   const range = hearingRangeOf(observer);
   return (range !== null) && beyondHearing(distanceBetween(observer, target).value, range);

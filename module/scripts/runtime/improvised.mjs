@@ -1,14 +1,15 @@
 /**
- * §213 : Armes improvisées (règles 2024) — demandées au MJ.
- *  - L'action de base « Arme improvisée » (content/actions.mjs, sans coût par elle-même) : le joueur nomme l'objet (« une chaise ») et
- *    le geste (frapper au corps à corps, ou lancer).
- *  - Le MJ actif reçoit la demande et décide : refuser ; accepter comme arme improvisée (1d4, le type de dégâts qu'il juge logique,
- *    portée de lancer 6/18 m) ; ou accepter « comme » une arme du jeu (`CONFIG.DND5E.weaponIds` : un pied de table comme un gourdin),
- *    dont la créature prend les dégâts, les propriétés et la maîtrise.
- *  - Accepté : une arme temporaire (`flags.dnd5e-combat.improvised`) est posée sur la fiche, et son attaque part aussitôt (en visée sans
- *    cible) — une attaque d'arme comme une autre (l'action Attaquer, Attaque supplémentaire). Arme improvisée : sans maîtrise, sauf le
- *    don Bagarreur de taverne (« maîtrise des armes improvisées » ; dnd5e ne la donne qu'au drapeau 2014 `tavernBrawlerFeat`,
- *    data/item/weapon.mjs:372). L'arme temporaire disparaît à la fin du tour de la créature, avec le combat, ou à la demande suivante.
+ * §213: Improvised Weapons (2024 rules) — requested from the GM.
+ *  - The basic action "Improvised Weapon" (content/actions.mjs, no cost by itself): the player names the object ("a chair") and
+ *    the gesture (strike in melee, or throw).
+ *  - The active GM receives the request and decides: refuse; accept as an improvised weapon (1d4, the damage type they judge
+ *    logical, throw range 6/18 m); or accept "as" a weapon of the game (`CONFIG.DND5E.weaponIds`: a table leg as a club),
+ *    whose damage, properties and mastery the creature takes.
+ *  - Accepted: a temporary weapon (`flags.dnd5e-combat.improvised`) is placed on the sheet, and its attack goes off at once (in
+ *    aim mode with no target) — a weapon attack like any other (the Attack action, Extra Attack). Improvised weapon: no
+ *    proficiency, except the Tavern Brawler feat ("proficiency with improvised weapons"; dnd5e only gives it on the 2014 flag
+ *    `tavernBrawlerFeat`, data/item/weapon.mjs:372). The temporary weapon disappears at the end of the creature's turn, with the
+ *    combat, or at the next request.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,16 +22,16 @@ import { whileAwaiting } from "../adapter/awaiting.mjs";
 
 export const IMPROVISED_QUERY = `${MODULE_ID}.improvised`;
 const FLAG = "improvised";
-/** Le temps laissé au MJ pour décider. */
+/** The time left to the GM to decide. */
 const GM_TIMEOUT = 120000;
-/** Types de dégâts proposés au MJ pour une arme improvisée. */
+/** Damage types offered to the GM for an improvised weapon. */
 const DAMAGE_TYPES = ["bludgeoning", "piercing", "slashing", "fire", "cold", "acid", "lightning", "poison"];
 
 /* -------------------------------------------- */
-/*  Côté joueur : la demande                    */
+/*  Player side: the request                    */
 /* -------------------------------------------- */
 
-/** La fenêtre du joueur : l'objet et le geste ; null si fermée. */
+/** The player's window: the object and the gesture; null if closed. */
 async function askObject(actor) {
   const content = `<p>${loc("Improvise.Intro")}</p>
     <div class="form-group"><label>${loc("Improvise.Objet")}</label><input type="text" name="object" placeholder="${esc(loc("Improvise.Exemple"))}" autofocus></div>
@@ -48,19 +49,19 @@ async function askObject(actor) {
 }
 
 /* -------------------------------------------- */
-/*  Côté MJ : la décision                       */
+/*  GM side: the decision                       */
 /* -------------------------------------------- */
 
-/** Les armes du jeu proposées au MJ (`CONFIG.DND5E.weaponIds`), par nom. */
+/** The game's weapons offered to the GM (`CONFIG.DND5E.weaponIds`), by name. */
 function weaponChoices() {
   return Object.entries(CONFIG.DND5E.weaponIds ?? {})
     .map(([id, uuid]) => ({ id, name: fromUuidSync(uuid, { strict: false })?.name ?? id }))
     .sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang));
 }
 
-/** MJ actif : la demande d'un joueur — refuser, ou accepter (arme improvisée, ou comme une arme du jeu). */
+/** Active GM: a player's request — refuse, or accept (improvised weapon, or as a weapon of the game). */
 async function handleRequest({ actor: actorUuid, object, mode, user }, { user: sender=null }={}) {
-  // §472 : le nom affiché au MJ est celui de l'expéditeur réel.
+  // §472: the name shown to the GM is the real sender's.
   if ( sender && !sender.isSelf ) user = sender.id;
   const actor = await fromUuid(actorUuid ?? "");
   if ( !actor ) return { accepted: false };
@@ -72,7 +73,7 @@ async function handleRequest({ actor: actorUuid, object, mode, user }, { user: s
     <div class="form-group"><label>${loc("Improvise.TypeDegats")}</label><select name="type">
       ${DAMAGE_TYPES.map(t => opt(t, game.i18n.localize(CONFIG.DND5E.damageTypes[t]?.label ?? t))).join("")}</select></div>
     <p class="hint">${loc("Improvise.AideMJ")}</p>`;
-  // §381 : la table voit que le MJ tranche (sablier au-dessus du personnage).
+  // §381: the table sees the GM deciding (hourglass above the character).
   const answer = await whileAwaiting(actor, "choice", () => foundry.applications.api.DialogV2.wait({
     window: { title: loc("Improvise.TitreMJ") }, content, rejectClose: false, position: { width: 460 },
     buttons: [
@@ -90,10 +91,10 @@ async function handleRequest({ actor: actorUuid, object, mode, user }, { user: s
 /*  L'arme temporaire                           */
 /* -------------------------------------------- */
 
-/** Le don Bagarreur de taverne (2024) donne la maîtrise des armes improvisées. */
+/** The Tavern Brawler feat (2024) grants proficiency with improvised weapons. */
 const tavernBrawler = actor => (actor?.items ?? []).some(i => identifierOf(i).id === "tavern-brawler") || !!actor?.getFlag?.("dnd5e", "tavernBrawlerFeat");
 
-/** Les données de l'arme improvisée générique : 1d4 du type choisi, à lancer 6/18 m si lancée. */
+/** The generic improvised weapon's data: 1d4 of the chosen type, range 6/18 m if thrown. */
 function improvisedData(actor, { object, mode, type }) {
   const thrown = mode === "thrown";
   const activityId = "dnd5eCombatImprv";
@@ -119,7 +120,7 @@ function improvisedData(actor, { object, mode, type }) {
   };
 }
 
-/** Les données d'une arme du jeu prise « comme » : la sienne, renommée d'après l'objet. */
+/** The data of a game weapon taken "as": its own, renamed after the object. */
 async function asWeaponData(weaponId, { object }) {
   const source = await fromUuid(CONFIG.DND5E.weaponIds?.[weaponId] ?? "");
   if ( !source ) return null;
@@ -137,7 +138,7 @@ async function dropTemporary(actor) {
   if ( ids.length ) await actor.deleteEmbeddedDocuments("Item", ids);
 }
 
-/** `dnd5e.postUseActivity`, sur le client qui a pris l'action : la demande, la décision du MJ, l'arme posée et l'attaque. */
+/** `dnd5e.postUseActivity`, on the client that took the action: the request, the GM's decision, the weapon and the attack. */
 async function onImprovisedUsed(activity) {
   if ( basicActionOf(activity?.item) !== "improvised" ) return;
   const actor = activity.actor;
@@ -162,13 +163,13 @@ async function onImprovisedUsed(activity) {
   await say({ actor, token }, loc("Improvise.CarteAccord", { name: esc(actor.name), object: esc(request.object), weapon: esc(item?.name ?? "") }));
   log(`${actor.name}: improvised weapon ${item?.name} (${request.mode})`);
   if ( !attack ) return;
-  // Lancer : le mode « lancer » de dnd5e, tenu par le moteur jusqu'au jet (§150) — une arme du jeu sans Lancer reste lancée comme le
-  // MJ l'a acceptée.
+  // Throwing: dnd5e's "throw" mode, held by the engine until the roll (§150) — a game weapon without Thrown stays thrown as the
+  // GM accepted it.
   const thrown = (request.mode === "thrown") && item.system.properties?.has?.("thr");
   await attack.use({ [MODULE_ID]: thrown ? { attackMode: "thrown" } : {} });
 }
 
-/** MJ actif : à la fin du tour d'une créature, ses armes temporaires disparaissent (avec le combat aussi). */
+/** Active GM: at the end of a creature's turn, its temporary weapons disappear (with the combat too). */
 function onTurnEnd(combat, prior) {
   const actor = combat.combatants.get(prior?.combatantId)?.actor;
   if ( actor ) dropTemporary(actor).catch(err => console.error(`${MODULE_ID} | improvised weapon`, err));

@@ -1,21 +1,21 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { lengthIn } from "../module/scripts/adapter/units.mjs";
 
-/** `lengthIn` : la conversion du cœur avec les facteurs de dnd5e, et la valeur telle quelle quand une unité manque. */
+/** `lengthIn`: the core's conversion with the dnd5e factors, and the value as is when a unit is missing. */
 afterEach(() => { delete globalThis.CONFIG; });
 
 describe("lengthIn", () => {
-  it("convertit avec les facteurs de CONFIG.DND5E.movementUnits", () => {
+  it("converts with the factors of CONFIG.DND5E.movementUnits", () => {
     globalThis.CONFIG = { DND5E: { movementUnits: { ft: { conversion: 1 }, m: { conversion: 10 / 3 } } } };
     expect(lengthIn(30, "ft", "m")).toBeCloseTo(9);
     expect(lengthIn(30, "ft", "ft")).toBe(30);
   });
-  it("garde la valeur quand une unité est inconnue ou absente", () => {
+  it("keeps the value when a unit is unknown or missing", () => {
     globalThis.CONFIG = { DND5E: { movementUnits: { ft: { conversion: 1 } } } };
     expect(lengthIn(30, "ft", "lieues")).toBe(30);
     expect(lengthIn(30, undefined, "ft")).toBe(30);
   });
-  it("prend les facteurs donnés (une boucle les lit une fois)", () => {
+  it("takes the given factors (a loop reads them once)", () => {
     expect(lengthIn(10, "ft", "m", { ft: 1, m: 10 / 3 })).toBeCloseTo(3);
   });
 });

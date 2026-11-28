@@ -1,15 +1,15 @@
 /**
- * §380 (issue #36) : le débogueur intégré — la capture, sur chaque client.
- *  - Dès le chargement du script (avant `init`, pour voir aussi les erreurs du démarrage) : `console.error` / `console.warn`
- *    enveloppés, `window` « error » et « unhandledrejection ». Le routeur signale en plus chaque inscrit qui échoue, avec son
- *    libellé et son hook (`noteRouterError`) ; la même erreur n'est alors pas relevée une seconde fois par la console.
- *  - Par défaut, seules les erreurs où un module de la suite apparaît (pile, ou message préfixé « <id> | ») sont gardées
- *    (réglage CLIENT `debugAllModules` : tout). Réglage CLIENT `debugCapture` : coupé, plus rien n'est enveloppé.
- *  - La piste : les 50 derniers gestes DAS de ce client (activités utilisées, résolutions, opérations refusées, tours, scènes),
- *    décrits par identifiants ; chaque nouvelle erreur en fige les 10 derniers. Les voisins y ajoutent les leurs (`api.debug.trail`).
- *  - Mode détaillé (en mémoire, jusqu'au rechargement) : les lignes de console des modules de la suite gardées en plus (300).
- *  - Un client qui n'est pas le MJ actif lui envoie, au plus toutes les 3 s, ce qui est nouveau (requête `DEBUG_QUERY`).
- * Rien n'est écrit dans le monde ; rien ne quitte la table sans un clic dans la fenêtre du rapport (ui/debug-report.mjs, lot 3).
+ * §380 (issue #36): the built-in debugger — the capture, on each client.
+ *  - From the script load (before `init`, to also see startup errors): `console.error` / `console.warn`
+ *    wrapped, `window` "error" and "unhandledrejection". The router also reports each registrant that fails, with its
+ *    label and its hook (`noteRouterError`); the same error is then not collected a second time by the console.
+ *  - By default, only the errors where a suite module appears (stack, or message prefixed "<id> | ") are kept
+ *    (CLIENT setting `debugAllModules`: all). CLIENT setting `debugCapture`: off, nothing is wrapped anymore.
+ *  - The trail: the last 50 DAS gestures of this client (activities used, resolutions, refused operations, turns, scenes),
+ *    described by identifiers; each new error freezes the last 10. Neighbors add theirs (`api.debug.trail`).
+ *  - Verbose mode (in memory, until reload): the console lines of the suite's modules kept as well (300).
+ *  - A client that is not the active GM sends it, every 3 s at most, what is new (`DEBUG_QUERY` request).
+ * Nothing is written to the world; nothing leaves the table without a click in the report window (ui/debug-report.mjs, batch 3).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -26,18 +26,18 @@ export const DEBUG_ALL_SETTING = "debugAllModules";
 export const DEBUG_QUERY = `${MODULE_ID}.debug`;
 export const DEBUG_VERBOSE_QUERY = `${MODULE_ID}.debugVerbose`;
 /**
- * §380 : sur chaque client, au `setup` de Foundry (même moteur en veille) : `(debugApi)`, le débogueur — un voisin s'y déclare (`register`)
- * et ajoute ses gestes à la piste (`trail`).
+ * §380: on each client, at Foundry's `setup` (even with the engine on standby): `(debugApi)`, the debugger —
+ * a neighbor declares itself there (`register`) and adds its gestures to the trail (`trail`).
  */
 export const DEBUG_HOOK = `${MODULE_ID}.debug`;
-/** Une sonde pour les scénarios : un inscrit du routeur qui échoue exprès (message « DAS debug probe … »). */
+/** A probe for scenarios: a router registrant that fails on purpose (message "DAS debug probe …"). */
 export const DEBUG_PROBE_HOOK = `${MODULE_ID}.debugProbe`;
 export const PROBE_MARK = "DAS debug probe";
 export const RELAY_MS = 3000;
 
 const SELF_FILE = `${MODULE_ID}/scripts/runtime/debug.mjs`;
 const IGNORE = [SELF_FILE, "lib-wrapper"];
-/** La pile d'une ligne de console écrite par `ui.notifications` (foundry.mjs, Notifications#notify). */
+/** The stack of a console line written by `ui.notifications` (foundry.mjs, Notifications#notify). */
 const NOTIFICATION = /\bNotifications\.(?:notify|info|warn|error)\b/;
 
 const errors = createErrorLog();
@@ -47,14 +47,14 @@ const registered = new Map();     // module → { module, repo, collect }
 const listeners = new Set();
 const state = { installed: false, enabled: true, all: false, verbose: false, busy: false, pending: [], timer: null, original: null };
 let lastRouterError = null;
-/** Les libellés des groupes de console ouverts (`console.group` / `groupCollapsed`), le plus récent en dernier. */
+/** The labels of the open console groups (`console.group` / `groupCollapsed`), the most recent last. */
 const consoleGroups = [];
 
 /* -------------------------------------------- */
 /*  Filtre                                      */
 /* -------------------------------------------- */
 
-/** Un paquet de la suite : titre « DAS · … » ou inscrit par `api.debug.register`. Avant que les modules soient lus : oui. */
+/** A suite package: title "DAS · …" or registered by `api.debug.register`. Before the modules are read: yes. */
 export function isSuitePackage(id) {
   if ( !id || id.startsWith("system:") ) return false;
   if ( (id === MODULE_ID) || registered.has(id) ) return true;
@@ -63,35 +63,35 @@ export function isSuitePackage(id) {
   return isSuiteTitle(modules.get(id)?.title);
 }
 
-/** Le préfixe « <id> | » d'un message de console, s'il nomme un module de la suite. */
+/** The "<id> | " prefix of a console message, if it names a suite module. */
 function prefixed(message) {
   const m = /^([a-z0-9][\w-]*) \|/i.exec(message);
   return m && isSuitePackage(m[1]) ? m[1] : null;
 }
 
-/** Une erreur concerne-t-elle la suite ? Le paquet attribué, puis le préfixe du message. */
+/** Does an error concern the suite? The attributed package, then the message prefix. */
 function concernsSuite(modules, message) {
   return modules.some(isSuitePackage) || !!prefixed(message);
 }
 
 /* -------------------------------------------- */
-/*  Relevé                                      */
+/*  Survey                                      */
 /* -------------------------------------------- */
 
 const userId = () => globalThis.game?.user?.id ?? globalThis.game?.userId ?? null;
 
-/** Les erreurs levées avant que la liste des modules soit lisible : triées à `init` (`replayEarly`), 50 au plus. */
+/** Errors thrown before the module list is readable: sorted at `init` (`replayEarly`), 50 at most. */
 const early = [];
 const modulesReadable = () => typeof globalThis.game?.modules?.get === "function";
 
-/** À `init` : les erreurs du démarrage passent le tri de la suite, comme les autres. */
+/** At `init`: startup errors go through the suite's sorting, like the others. */
 export function replayEarly() {
   for ( const entry of early.splice(0) ) recordError(entry);
 }
 
 /**
- * Une erreur relevée sur ce client. Les champs : `{ kind, message, stack, label, hook, module }`.
- * @returns {object|null} le groupe, ou null si l'erreur est hors de la suite (et le réglage ne garde pas tout).
+ * An error collected on this client. The fields: `{ kind, message, stack, label, hook, module }`.
+ * @returns {object|null} the group, or null if the error is outside the suite (and the setting does not keep everything).
  */
 export function recordError(entry) {
   let { kind="error", message="", stack="", label=null, hook=null, module=null } = entry;
@@ -101,41 +101,41 @@ export function recordError(entry) {
     if ( early.length < 50 ) early.push({ ...entry });
     return null;
   }
-  state.busy = true;     // une erreur pendant le relevé (un écouteur) ne boucle pas
+  state.busy = true;     // an error during the survey (a listener) does not loop
   try {
-    // Les lignes de l'enveloppe de console (ce fichier) ne mettent personne en cause : sans elles, toute pile citerait le moteur.
+    // The lines of the console wrapper (this file) blame no one: without them, every stack would cite the engine.
     stack = String(stack ?? "").split("\n").filter(l => !l.includes(SELF_FILE)).join("\n");
     const modules = packagesOfStack(stack);
     const owner = module ?? attribute(stack, { ignore: IGNORE }) ?? prefixed(message);
-    // §467 : une dépréciation est la faute du module qui appelle l'ancienne API (`owner`). Si ce n'est pas la suite, un module DAS
-    // plus bas dans la pile (le bouton qui a lancé l'action) ne la fait pas compter comme DAS — vu avec Monk's Combat Details.
+    // §467: a deprecation is the fault of the module that calls the old API (`owner`). If it is not the suite, a DAS module
+    // lower in the stack (the button that launched the action) does not make it count as DAS — seen with Monk's Combat Details.
     const deprecation = isDeprecation(message);
     const suite = (deprecation && owner && !isSuitePackage(owner)) ? false
       : concernsSuite(owner ? [owner, ...modules] : modules, message);
     if ( !state.all && !suite ) return null;
-    // Hors de la suite (gardée parce que « tous les modules » est coché) : rangée à part dans le rapport, décochée par défaut.
+    // Outside the suite (kept because "all modules" is ticked): put apart in the report, unticked by default.
     const { group, isNew } = errors.add({ kind, message, stack, label, hook, module: owner, modules, client: userId(),
       thirdParty: !suite, deprecation, trail: trailRing.last(10) });
     for ( const fn of listeners ) {
-      try { fn(group, isNew); } catch { /* un écouteur fautif ne casse pas le relevé */ }
+      try { fn(group, isNew); } catch { /* a faulty listener does not break the survey */ }
     }
     return group;
   } finally { state.busy = false; }
 }
 
-/** Appelé par le routeur quand un inscrit échoue : l'erreur avec son libellé et son hook. */
+/** Called by the router when a registrant fails: the error with its label and its hook. */
 export function noteRouterError(entry, err) {
   lastRouterError = err;
   recordError({ kind: entry.level === "warn" ? "warn" : "error", message: formatArgs([err]), stack: err?.stack ?? "",
     label: entry.label, hook: entry.hook, module: MODULE_ID });
 }
 
-/** Appelé par le routeur quand un inscrit annule une opération : un geste de la piste. */
+/** Called by the router when a registrant cancels an operation: a trail gesture. */
 export function noteRefused(entry) {
   trail("refused", `${entry.hook} ← ${entry.label}`);
 }
 
-/** Les textes du moteur (sa langue et l'anglais de repli), lus une fois les traductions chargées. */
+/** The engine's texts (its language and the English fallback), read once the translations are loaded. */
 let noticeTest = null;
 function ownNotice(text) {
   if ( !noticeTest ) {
@@ -143,25 +143,26 @@ function ownNotice(text) {
     const prefix = "DND5ECOMBAT";
     const subtree = tree => tree?.[prefix] ?? Object.fromEntries(Object.entries(tree ?? {}).filter(([k]) => k.startsWith(`${prefix}.`)));
     const texts = [...translationTexts(subtree(i18n?.translations)), ...translationTexts(subtree(i18n?._fallback))];
-    if ( !texts.length ) return false;   // avant le chargement des traductions : rien à reconnaître, on réessaiera
+    if ( !texts.length ) return false;   // before the translations load: nothing to recognize, we will retry
     noticeTest = noticeMatcher(texts);
   }
   return noticeTest(text);
 }
 
-/** Une ligne de console enveloppée. */
+/** A wrapped console line. */
 function fromConsole(kind, args) {
   const err = errorIn(args);
-  if ( err && (err === lastRouterError) ) { lastRouterError = null; return; }   // déjà relevée par le routeur, avec son libellé
+  if ( err && (err === lastRouterError) ) { lastRouterError = null; return; }   // already collected by the router, with its label
   const here = err ? "" : (new Error().stack ?? "");
-  // Une notification de l'interface (« hors de portée »…) : Foundry la répète en console, ce n'est pas une erreur.
+  // A notification from the interface ("out of range"…): Foundry repeats it in the console, it is not an error.
   if ( NOTIFICATION.test(here) ) return;
   let message = formatArgs(args);
-  // Issue #238 : un avis du moteur dont un autre module a remplacé l'affichage (la pile ne passe plus par Notifications), reconnu à son texte.
+  // Issue #238: an engine notice whose display another module replaced (the stack no longer goes through Notifications),
+  // recognized by its text.
   if ( !err && ownNotice(message) ) return;
   let stack = err?.stack ?? here;
-  // Dans un groupe de console, le texte est souvent dans le libellé du groupe : PixiJS y met son avertissement de dépréciation et
-  // n'écrit que la pile dans `console.warn` (pixi.min.js, `deprecation`). Le libellé passe devant ; une pile seule devient la pile.
+  // In a console group, the text is often in the group's label: PixiJS puts its deprecation warning there and
+  // writes only the stack in `console.warn` (pixi.min.js, `deprecation`). The label goes first; a lone stack becomes the stack.
   const group = consoleGroups.at(-1);
   if ( group ) {
     if ( !err && isBareStack(message) ) {
@@ -173,25 +174,25 @@ function fromConsole(kind, args) {
   recordError({ kind, message, stack });
 }
 
-/** Un groupe de console ouvert : son libellé (styles `%c` retirés), 20 niveaux au plus. */
+/** An open console group: its label (`%c` styles removed), 20 levels at most. */
 function openConsoleGroup(args) {
   consoleGroups.push(formatArgs(args));
   if ( consoleGroups.length > 20 ) consoleGroups.shift();
 }
 
-/** Un groupe de console fermé. */
+/** A closed console group. */
 function closeConsoleGroup() {
   consoleGroups.pop();
 }
 
-/** En mode détaillé, une ligne de console d'un module de la suite. */
+/** In verbose mode, a console line from a suite module. */
 function fromLog(args) {
   const message = formatArgs(args);
   const module = prefixed(message);
   if ( module ) logRing.push({ t: Date.now(), client: userId(), module, kind: "log", text: message });
 }
 
-/** Un geste de la piste. `text` : des identifiants, jamais un nom. */
+/** A trail gesture. `text`: identifiers, never a name. */
 export function trail(kind, text="", { module=MODULE_ID }={}) {
   if ( !state.enabled ) return null;
   return trailRing.push({ t: Date.now(), client: userId(), module, kind: String(kind), text: String(text).slice(0, 300) });
@@ -208,7 +209,7 @@ const onRejection = event => {
   recordError({ kind: "rejection", message: formatArgs([reason]), stack: reason?.stack ?? "" });
 };
 
-/** Enveloppe la console et écoute les erreurs globales. Sans effet si c'est déjà fait. */
+/** Wraps the console and listens to global errors. No effect if already done. */
 export function installCapture(target=globalThis) {
   if ( state.installed || !target.console ) return;
   const c = target.console;
@@ -230,8 +231,8 @@ export function installCapture(target=globalThis) {
 }
 
 /**
- * Rend la console d'origine. Si un autre module a enveloppé la console après nous (le connecteur), on n'y touche pas : nos
- * enveloppes restent mais ne relèvent plus rien (`enabled` faux).
+ * Restores the original console. If another module wrapped the console after us (the connector), we do not touch it: our
+ * wrappers stay but no longer collect anything (`enabled` false).
  */
 export function uninstallCapture() {
   if ( !state.installed ) return;
@@ -251,10 +252,10 @@ export function uninstallCapture() {
 }
 
 /* -------------------------------------------- */
-/*  Remontée vers le MJ actif                   */
+/*  Escalation to the active GM                 */
 /* -------------------------------------------- */
 
-/** Chez un client qui n'est pas le MJ actif : envoie ce qui est nouveau. Garde l'envoi pour plus tard s'il n'y a pas de MJ. */
+/** On a client that is not the active GM: sends what is new. Keeps the send for later if there is no GM. */
 export async function flush() {
   const gm = globalThis.game?.users?.activeGM;
   if ( gm?.isSelf ) return false;      // le MJ actif garde tout chez lui
@@ -271,10 +272,10 @@ export async function flush() {
   }
 }
 
-/** Chez le MJ actif : ce qu'un autre client a relevé. */
+/** On the active GM: what another client collected. */
 export function receive({ userId: from, items }={}, { user=null }={}) {
   if ( !Array.isArray(items) ) return false;
-  // §472 : le client qui signale est celui qui envoie, pas celui que disent les données.
+  // §472: the reporting client is the one that sends, not the one the data say.
   if ( user && !user.isSelf ) from = user.id;
   errors.merge(items.slice(0, 200), from ?? null);
   for ( const fn of listeners ) {
@@ -283,14 +284,14 @@ export function receive({ userId: from, items }={}, { user=null }={}) {
   return true;
 }
 
-/** Le mode détaillé sur ce client. */
+/** Verbose mode on this client. */
 export function setVerbose(on) {
   state.verbose = !!on;
   trail("debug", `verbose ${state.verbose ? "on" : "off"}`);
   return state.verbose;
 }
 
-/** Le MJ : le mode détaillé chez tous les clients connectés (les autres à la réception de la requête). */
+/** The GM: verbose mode on all connected clients (the others on receiving the request). */
 export async function setVerboseEverywhere(on) {
   setVerbose(on);
   const users = (globalThis.game?.users ?? []).filter(u => u.active && !u.isSelf);
@@ -299,7 +300,7 @@ export async function setVerboseEverywhere(on) {
 }
 
 /* -------------------------------------------- */
-/*  Piste : les gestes du moteur                */
+/*  Trail: the engine's gestures                */
 /* -------------------------------------------- */
 
 function onUseActivity(activity, usage, results) {
@@ -332,47 +333,46 @@ function onScene(canvas) {
 /* -------------------------------------------- */
 
 export const debugApi = Object.freeze({
-  /** Un voisin se déclare : `{ module, repo?, collect? }` — `collect()` rend une section d'environnement (valeurs simples). */
+  /** A neighbor declares itself: `{ module, repo?, collect? }` — `collect()` returns an environment section (simple values). */
   register({ module, repo=null, collect=null }={}) {
     if ( typeof module !== "string" || !module ) return false;
     registered.set(module, { module, repo, collect: typeof collect === "function" ? collect : null });
     return true;
   },
-  /** Un geste d'un voisin dans la piste : `trail(module, kind, text)`. */
+  /** A neighbor's gesture in the trail: `trail(module, kind, text)`. */
   trail: (module, kind, text) => trail(kind, text, { module }),
   /**
-   * Les erreurs relevées, groupées par signature, la plus récente d'abord — chez le MJ actif, celles que les joueurs lui envoient
-   * comprises.
+   * The collected errors, grouped by signature, most recent first — on the active GM, including those the players send it.
    */
   errors: () => errors.list(),
-  /** Le nombre d'erreurs relevées : `total()` toutes ; `total("suite")` les erreurs DAS ; `total("others")` hors DAS. */
+  /** The number of collected errors: `total()` all; `total("suite")` the DAS errors; `total("others")` non-DAS. */
   total: which => errors.total(which),
-  /** La piste de ce client : ses 50 derniers gestes DAS (et ceux des voisins), du plus ancien au plus récent. */
+  /** This client's trail: its last 50 DAS gestures (and the neighbors'), from oldest to most recent. */
   trailList: () => trailRing.list(),
-  /** Les lignes de console des modules de la suite gardées en mode détaillé (300 au plus) sur ce client. */
+  /** The console lines of the suite's modules kept in verbose mode (300 at most) on this client. */
   logs: () => logRing.list(),
-  /** Les voisins déclarés par `register` : `[{ module, repo, collect }]`. */
+  /** The neighbors declared through `register`: `[{ module, repo, collect }]`. */
   registered: () => Array.from(registered.values()),
   /**
-   * Sans argument : le mode détaillé de ce client est-il allumé ? Avec `on` : l'allume ou l'éteint sur ce client, et rend le nouvel état.
+   * With no argument: is this client's verbose mode on? With `on`: turns it on or off on this client, and returns the new state.
    */
   verbose: on => (on === undefined ? state.verbose : setVerbose(on)),
   verboseEverywhere: setVerboseEverywhere,
-  /** Écouter les nouvelles erreurs (la pastille de l'interface) ; rend une fonction pour arrêter. */
+  /** Listen to new errors (the interface badge); returns a function to stop. */
   onError(fn) { listeners.add(fn); return () => listeners.delete(fn); },
-  /** Vide, sur ce client, les erreurs relevées, la piste, les lignes gardées et ce qui attendait d'être envoyé au MJ actif. */
+  /** Clears, on this client, the collected errors, the trail, the kept lines and what was waiting to be sent to the active GM. */
   clear() { errors.clear(); trailRing.clear(); logRing.clear(); state.pending = []; },
-  /** La capture tourne-t-elle sur ce client (réglage client `debugCapture`) ? */
+  /** Is the capture running on this client (client setting `debugCapture`)? */
   enabled: () => state.enabled
 });
 
 const internalSections = new Map();
-/** Une section du moteur lui-même dans le rapport (§388 : les derniers tests de connexion). Vide : absente. */
+/** A section of the engine itself in the report (§388: the last connection tests). Empty: absent. */
 export function addReportSection(name, collect) {
   internalSections.set(name, collect);
 }
 
-/** Les sections des voisins, chacune lue à part (une section qui échoue est notée, pas fatale). */
+/** The neighbors' sections, each read separately (a section that fails is noted, not fatal). */
 export function collectSections() {
   const out = [];
   for ( const [module, collect] of internalSections ) {
@@ -387,7 +387,7 @@ export function collectSections() {
   return out;
 }
 
-/** Les dépôts connus : ceux des voisins inscrits, puis l'`url` du module.json de chaque module de la suite. */
+/** The known repositories: those of the registered neighbors, then the `url` of each suite module's module.json. */
 export function knownRepos() {
   const out = {};
   for ( const mod of globalThis.game?.modules ?? [] ) if ( mod.active && isSuitePackage(mod.id) && mod.url ) out[mod.id] = mod.url;
@@ -399,16 +399,16 @@ export function knownRepos() {
 /*  Le rapport                                  */
 /* -------------------------------------------- */
 
-/** Les rôles des utilisateurs, en anglais (la langue des issues) : « GM », « Player 1 »… */
+/** The users' roles, in English (the issues' language): "GM", "Player 1"… */
 export function roles(labels={}) {
   const users = Array.from(globalThis.game?.users ?? [], u => ({ id: u.id, name: u.name, isGM: u.isGM, active: !!u.active }));
   return roleLabels(users, labels);
 }
 
 /**
- * Les réglages simples des modules de la suite qui diffèrent de leur valeur par défaut : booléens, nombres, et chaînes à choix (jamais
- * du texte libre ni un objet). Ceux restés par défaut ne disent rien de la table et noyaient le rapport (vu sur un vrai rapport :
- * 190 lignes).
+ * The simple settings of the suite's modules that differ from their default value: booleans, numbers, and choice strings (never
+ * free text or an object). Those left at default say nothing about the table and drowned the report (seen on a real report:
+ * 190 lines).
  */
 function suiteSettings() {
   const values = {};
@@ -423,7 +423,7 @@ function suiteSettings() {
   return safeSettings(values);
 }
 
-/** L'environnement de ce client : versions, modules actifs, réglages de la suite, navigateur, scène. Rien qui nomme la table. */
+/** This client's environment: versions, active modules, suite settings, browser, scene. Nothing that names the table. */
 export function environment() {
   const scene = globalThis.canvas?.scene;
   const levels = scene?.levels?.size ?? scene?.levels?.length ?? 0;
@@ -446,7 +446,7 @@ export function environment() {
   };
 }
 
-/** Ce qu'un token dit de lui sans se nommer : type, niveau, taille, états, identifiants de ses objets, position verticale. */
+/** What a token says of itself without naming itself: type, level, size, conditions, item identifiers, vertical position. */
 export function tokenContext(token) {
   const doc = token?.document ?? token;
   const actor = doc?.actor;
@@ -468,7 +468,7 @@ export function tokenContext(token) {
   };
 }
 
-/** Les noms que le rapport masque : utilisateurs (→ rôles), titre du monde, et, sauf demande, acteurs du monde et de la scène. */
+/** The names the report masks: users (→ roles), world title, and, unless asked, the world's and scene's actors. */
 function scrubberFor({ includeNames=false }={}) {
   const names = [];
   const r = roles();
@@ -483,15 +483,15 @@ function scrubberFor({ includeNames=false }={}) {
 }
 
 /**
- * Le rapport complet, nettoyé, et son Markdown. Les clients (identifiants d'utilisateurs) deviennent des rôles.
+ * The full report, cleaned, and its Markdown. Clients (user ids) become roles.
  * @param {object} [options]
  * @param {string} [options.description]
- * @param {string[]} [options.selected]       Signatures des erreurs retenues (si absent : toutes, sauf celles hors de la suite).
- * @param {boolean} [options.includeNames]    Garder les noms d'acteurs et de tokens.
- * @param {boolean} [options.includeFlagged]  Joindre les items signalés (identifiant et note).
- * @param {boolean} [options.includeLogs]     Joindre les lignes du mode détaillé.
- * @param {Token|TokenDocument} [options.token]  Le contexte d'un token (menu contextuel).
- * @param {object} [options.labels]           Titres du Markdown.
+ * @param {string[]} [options.selected]       Signatures of the retained errors (if absent: all, except those outside the suite).
+ * @param {boolean} [options.includeNames]    Keep actor and token names.
+ * @param {boolean} [options.includeFlagged]  Attach the flagged items (identifier and note).
+ * @param {boolean} [options.includeLogs]     Attach the verbose-mode lines.
+ * @param {Token|TokenDocument} [options.token]  A token's context (context menu).
+ * @param {object} [options.labels]           Markdown titles.
  */
 export function buildDebugReport({ description="", selected, includeNames=false, includeFlagged=false, includeLogs=false, token=null,
   labels={} }={}) {
@@ -508,12 +508,12 @@ export function buildDebugReport({ description="", selected, includeNames=false,
   return { report, markdown: reportMarkdown(report, labels) };
 }
 
-/** Les erreurs retenues par défaut : celles de la suite (une entrée hors suite se coche à la main). */
+/** The errors retained by default: the suite's (an entry outside the suite is ticked by hand). */
 export function defaultSelection() {
   return errors.list().filter(g => !g.thirdParty).map(g => g.sig);
 }
 
-/** Les dépôts GitHub proposés (« propriétaire/dépôt »), le plus mis en cause en premier. */
+/** The GitHub repositories offered ("owner/repo"), the most implicated first. */
 export function reportRepos(report) {
   const repos = Object.fromEntries(Object.entries(knownRepos()).map(([id, url]) => [id, githubRepo(url) ?? (/^[\w.-]+\/[\w.-]+$/.test(url) ? url : null)])
     .filter(([, repo]) => repo));
@@ -526,7 +526,7 @@ export function reportRepos(report) {
 /*  Inscription                                 */
 /* -------------------------------------------- */
 
-/** À `init`, même en veille et à tout niveau d'automatisation : réglages, requêtes, piste, remontée. */
+/** At `init`, even on standby and at any automation level: settings, requests, trail, escalation. */
 export function registerDebug() {
   game.settings.register(MODULE_ID, DEBUG_CAPTURE_SETTING, {
     name: "DND5ECOMBAT.Reglage.debugCapture.Nom", hint: "DND5ECOMBAT.Reglage.debugCapture.Aide",
@@ -541,11 +541,11 @@ export function registerDebug() {
   try {
     applyCapture(game.settings.get(MODULE_ID, DEBUG_CAPTURE_SETTING));
     setCaptureAll(game.settings.get(MODULE_ID, DEBUG_ALL_SETTING));
-  } catch { /* réglages illisibles : valeurs par défaut */ }
+  } catch { /* unreadable settings: default values */ }
   replayEarly();
 
   CONFIG.queries[DEBUG_QUERY] = (data, options) => receive(data, options);
-  // §472 : seul un MJ allume le mode détaillé chez les autres.
+  // §472: only a GM turns on verbose mode on the others.
   CONFIG.queries[DEBUG_VERBOSE_QUERY] = ({ on }={}, { user=null }={}) => (fromTrusted(user) ? setVerbose(on) : state.verbose);
 
   const opts = label => ({ label: `debug: ${label}`, always: true });
@@ -562,7 +562,7 @@ export function registerDebug() {
   }, opts("relay"));
 }
 
-/** Garder aussi les erreurs des modules hors de la suite (réglage client `debugAllModules`). */
+/** Also keep the errors of modules outside the suite (client setting `debugAllModules`). */
 export function setCaptureAll(on) {
   state.all = !!on;
 }
@@ -573,5 +573,5 @@ function applyCapture(on) {
   else uninstallCapture();
 }
 
-// Au chargement du script : la capture tourne avant `init` (les erreurs du démarrage). Le réglage la coupe à `init`.
+// At script load: the capture runs before `init` (startup errors). The setting turns it off at `init`.
 installCapture();

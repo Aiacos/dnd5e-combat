@@ -1,17 +1,17 @@
 /**
- * Bottes d'arme (SPEC §21). dnd5e 6 note la botte employée sur le message d'attaque ; le moteur en tire les conséquences.
+ * Weapon mastery properties (SPEC §21). dnd5e 6 notes the property used on the attack message; the engine draws the consequences.
  *
- *  - Sur le MJ actif, une fois l'attaque tranchée et ses dégâts appliqués (`dnd5e-combat.resolution`) : Écorchure (dégâts égaux
- *    au modificateur, sur un raté), Poussée (3 m, au choix de l'attaquant), Renversement (sauvegarde de Constitution, À terre sur
- *    un échec — lancée par le MJ), et les marques Sape, Ouverture, Ralentissement (effets du moteur, adapter/mastery.mjs).
- *  - Les marques donnent leur Avantage / Désavantage au jet (adapter/triggers.mjs, `declaredAttackModifiers`), tombent au jet
- *    qu'elles concernent (message d'attaque), ou à leur heure : Sape et Ralentissement au début du prochain tour de l'attaquant,
- *    Ouverture à la fin de son prochain tour.
- *  - Enchaînement : la visée de la seconde attaque s'ouvre chez l'auteur (ui/pointer.mjs, sans coût : `cost: "free"`, drapeau
- *    `cleave`) ; ses dégâts se lancent sans le modificateur positif ; une fois par tour de combat.
- *  - Coup double : budget du tour (core/turn.mjs).
- *  - Renversement : la sauvegarde d'un PJ s'ouvre chez son joueur s'il est connecté (requête `toppleSave`), sinon le MJ la lance.
- * Limite : l'annulation d'une attaque ne défait pas ce que la botte a fait.
+ *  - On the active GM, once the attack is decided and its damage applied (`dnd5e-combat.resolution`): Graze (damage equal
+ *    to the modifier, on a miss), Push (3 m, at the attacker's choice), Topple (Constitution saving throw, Prone on
+ *    a failure — rolled by the GM), and the marks Sap, Vex, Slow (engine effects, adapter/mastery.mjs).
+ *  - The marks give their Advantage / Disadvantage to the roll (adapter/triggers.mjs, `declaredAttackModifiers`), fall at the roll
+ *    they concern (attack message), or at their time: Sap and Slow at the start of the attacker's next turn,
+ *    Vex at the end of its next turn.
+ *  - Cleave: aiming the second attack opens for the author (ui/pointer.mjs, at no cost: `cost: "free"`, flag
+ *    `cleave`); its damage is rolled without the positive modifier; once per combat turn.
+ *  - Nick: turn budget (core/turn.mjs).
+ *  - Topple: a PC's saving throw opens for their player if connected (query `toppleSave`), otherwise the GM rolls it.
+ * Limit: cancelling an attack does not undo what the property did.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -34,31 +34,31 @@ import { route } from "./router.mjs";
 import { enqueue } from "./queue.mjs";
 import { log, loc, notice } from "./shared.mjs";
 
-/** §222 : la sauvegarde du Renversement demandée au joueur de la cible. */
+/** §222: the Topple saving throw requested from the target's player. */
 export const TOPPLE_QUERY = `${MODULE_ID}.toppleSave`;
 const TOPPLE_TIMEOUT_MS = 40000;
 
-/** La clé du tour de combat en cours (« combat.round.tour »), ou null hors combat. */
+/** The key of the current combat turn ("combat.round.tour"), or null out of combat. */
 const turnKey = () => currentTurnKey();
 
-/** Propriétés physiques de l'arme que garde une part de dégâts (magique, argentée, adamantine). */
+/** Physical properties of the weapon that a damage part keeps (magical, silvered, adamantine). */
 const physical = weapon => Array.from(weapon?.system?.properties ?? []).filter(p => CONFIG.DND5E.itemProperties[p]?.isPhysical);
 
 /* -------------------------------------------- */
-/*  Après l'attaque                             */
+/*  After the attack                            */
 /* -------------------------------------------- */
 
 const seen = new Set();
 
-/** Une seule file pour tout ce qui pose ou retire une marque : deux retraits du même effet feraient une erreur du cœur. */
+/** A single queue for everything that places or removes a mark: two removals of the same effect would cause a core error. */
 const MARKS = "mastery:marks";
 
 async function mark(kind, source, target, weapon) {
   const onSource = ["vex", "studied"].includes(kind);
   const bearer = onSource ? source : target;
-  // Ralentissement : « la réduction ne dépasse pas 3 m » — une seule marque ; Ouverture, Attaques avisées : une par cible.
+  // Slow: "the reduction does not exceed 3 m" — a single mark; Vex, Studied Attacks: one per target.
   const old = marksOn(bearer.actor, kind).filter(e => !onSource || (e.getFlag(MODULE_ID, "mastery").target === target.uuid));
-  // Une ancienne marque peut tomber en même temps (consommée par ce jet d'attaque : runtime ci-dessous) — on n'y tient pas.
+  // An old mark may fall at the same time (consumed by this attack roll: runtime below) — we do not rely on it.
   const ids = old.map(e => e.id).filter(id => bearer.actor.effects.has(id));
   if ( ids.length ) await bearer.actor.deleteEmbeddedDocuments("ActiveEffect", ids);
   await bearer.actor.createEmbeddedDocuments("ActiveEffect", [markData(kind, { source, target, weapon, turnKey: turnKey() })]);
@@ -91,11 +91,11 @@ async function push(source, target, weapon) {
 }
 
 /**
- * La sauvegarde de Constitution du Renversement, sur ce client : fenêtre du jet (`configure`, fermée au délai des fenêtres de combat,
- * puis lancée seule) ou sans fenêtre. Rend le total, ou null sans jet.
+ * The Topple Constitution saving throw, on this client: roll window (`configure`, closed at the combat windows' delay,
+ * then rolled alone) or without a window. Returns the total, or null with no roll.
  */
 async function rollToppleSave({ token: uuid, dc, weapon, configure=false }, { user=null }={}) {
-  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  // §472: only the GM sends this query in play; from a player, it drops (safety refusal, not forceable).
   if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | topple query from ${user.name} refused: only a GM sends it`); return null; }
   const target = await fromUuid(uuid);
   const actor = target?.actor;
@@ -113,7 +113,7 @@ async function rollToppleSave({ token: uuid, dc, weapon, configure=false }, { us
 
 async function topple(attackMessage, source, target, weapon) {
   const dc = toppleDC(attackModOf(attackMessage), source.actor?.system?.attributes?.prof);
-  // §222 : un PJ dont le joueur est connecté lance sa sauvegarde chez lui ; sinon (PNJ, joueur absent, pas de réponse), ici.
+  // §222: a PC whose player is connected rolls their saving throw on their side; otherwise (NPC, absent player, no answer), here.
   const payload = { token: target.uuid, dc, weapon: weapon?.name ?? "" };
   const userId = rollerFor(target.actor);
   const user = userId ? game.users.get(userId) : null;
@@ -128,7 +128,7 @@ async function topple(attackMessage, source, target, weapon) {
   await target.actor.toggleStatusEffect("prone", { active: true });
 }
 
-/** §21 : Attaques avisées — chaque créature ratée par ce jet est marquée : l'Avantage au prochain jet contre elle. */
+/** §21: Studied Attacks — each creature missed by this roll is marked: Advantage on the next roll against it. */
 async function studied(resolution, source, item) {
   if ( !source?.actor?.items.some(i => contentOf(i).entry?.studiedAttacks === true) ) return;
   for ( const t of resolution.targets ?? [] ) {
@@ -158,7 +158,7 @@ async function onResolution(resolution) {
     if ( !target?.actor ) continue;
     const effect = masteryEffect(mastery, {
       hit: t.hit, damaged: (t.damage?.applied ?? 0) > 0, melee, size: target.actor.system.traits?.size ?? null,
-      down: (target.actor.system.attributes?.hp?.value ?? 1) <= 0, cleaveSpent: true   // Enchaînement : chez l'auteur (ui/pointer.mjs)
+      down: (target.actor.system.attributes?.hp?.value ?? 1) <= 0, cleaveSpent: true   // Cleave: author-side (ui/pointer.mjs)
     });
     if ( !effect ) continue;
     if ( effect === "graze" ) await graze(attackMessage, source, target, weapon);
@@ -169,7 +169,7 @@ async function onResolution(resolution) {
 }
 
 /* -------------------------------------------- */
-/*  Les marques : consommées au jet, retirées à leur heure  */
+/*  The marks: consumed at the roll, removed at their time  */
 /* -------------------------------------------- */
 
 async function onAttackRolled(message) {
@@ -182,7 +182,7 @@ async function onAttackRolled(message) {
       if ( removed.has(effect.uuid) ) continue;
       removed.add(effect.uuid);
       const actor = effect.parent;
-      if ( !actor?.effects?.has(effect.id) ) continue;   // déjà retirée (reposée par la botte d'un coup précédent)
+      if ( !actor?.effects?.has(effect.id) ) continue;   // already removed (re-placed by a previous hit's property)
       await actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id]);
       log(`mastery: "${effect.name}" used up by ${source.name}'s roll`);
     }
@@ -204,7 +204,7 @@ async function expire(combat, combatantId, moment, key) {
 }
 
 function onTurnChange(combat, prior, current) {
-  // `prior` : le tour qui s'achève (sa clé : combat, round, tour d'alors) ; `current` : celui qui commence.
+  // `prior`: the turn that is ending (its key: combat, round, turn of then); `current`: the one that is starting.
   const priorKey = turnKeyAt(combat, prior);
   return enqueue(MARKS, async () => {
     await expire(combat, prior?.combatantId, "turnEnd", priorKey);
@@ -213,10 +213,10 @@ function onTurnChange(combat, prior, current) {
 }
 
 /* -------------------------------------------- */
-/*  Enchaînement                                */
+/*  Cleave                                      */
 /* -------------------------------------------- */
 
-/** Sur le client de l'auteur : la seconde attaque d'Enchaînement se lance sans le modificateur de caractéristique positif. */
+/** On the author's client: the second Cleave attack is rolled without the positive ability modifier. */
 function onPreRollDamage(config, dialog, message) {
   const origin = foundry.utils.getProperty(message ?? {}, "data.system.origin");
   if ( !origin || !game.messages.get(origin)?.getFlag(MODULE_ID, "cleave") ) return true;
@@ -228,7 +228,7 @@ function onPreRollDamage(config, dialog, message) {
   return true;
 }
 
-/** La seconde attaque d'Enchaînement est faite : « une fois par tour ». */
+/** The second Cleave attack is made: "once per turn". */
 async function onCleaveUsed(message) {
   const actor = message.getAssociatedActor?.();
   const key = turnKey();
@@ -276,7 +276,7 @@ export async function setStandingMastery(item, choice) {
 }
 
 export function registerMastery() {
-  // Sur tous les clients : c'est celui du joueur de la cible qui lance sa sauvegarde.
+  // On all clients: it is the target's player's client that rolls their saving throw.
   CONFIG.queries[TOPPLE_QUERY] = rollToppleSave;
   route(`${MODULE_ID}.resolution`, resolution => enqueue(MARKS, () => onResolution(resolution)),
     { executor: true, label: "weapon mastery not played" });

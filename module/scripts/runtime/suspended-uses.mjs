@@ -1,19 +1,19 @@
 /**
- * Les utilisations qu'une porte a suspendues pour poser ses questions (runtime/gates.mjs : Sanctuaire, Contresort, réactions
- * d'avant l'attaque, Présage) et qu'elle relancera elle-même. `dnd5e.preUseActivity` rend alors `false` : l'appelant de
- * `activity.use()` ne reçoit rien, alors que l'utilisation n'est pas refusée. Qui enchaîne plusieurs utilisations (les projectiles
- * d'un sort) lit ici la promesse de la relance au lieu de conclure que rien n'est parti. Sans dépendance à Foundry.
+ * The uses that a gate has suspended to ask its questions (runtime/gates.mjs: Sanctuary, Counterspell, pre-attack Reactions,
+ * Portent) and that it will relaunch itself. `dnd5e.preUseActivity` then returns `false`: the caller of
+ * `activity.use()` receives nothing, although the use is not refused. Whoever chains several uses (a spell's projectiles)
+ * reads here the promise of the relaunch instead of concluding that nothing went out. No dependency on Foundry.
  */
 
 const pending = new Map();
-/** Une relance tranchée reste lisible ce temps-là : l'appelant la lit juste après le retour de `activity.use()`. */
+/** A decided relaunch stays readable for that long: the caller reads it just after `activity.use()` returns. */
 const KEEP_MS = 2000;
 
 /**
- * Inscrit la relance d'une utilisation suspendue.
- * @param {string} key                 l'uuid de l'activité
- * @param {Promise<{message?: object}|null|undefined>} relaunch  ce que rend la relance, ou rien si l'utilisation ne part pas
- * @returns {Promise<{message: object}|null>}  la même, ramenée à « un résultat avec sa carte » ou null
+ * Registers the relaunch of a suspended use.
+ * @param {string} key                 the activity's uuid
+ * @param {Promise<{message?: object}|null|undefined>} relaunch  what the relaunch returns, or nothing if the use does not go out
+ * @returns {Promise<{message: object}|null>}  the same, brought back to "a result with its card" or null
  */
 export function suspendUse(key, relaunch) {
   const settled = Promise.resolve(relaunch).then(used => (used?.message ? used : null), () => null);
@@ -22,7 +22,7 @@ export function suspendUse(key, relaunch) {
   return settled;
 }
 
-/** La relance en cours (ou tout juste tranchée) de cette activité, ou null si aucune porte ne l'a suspendue. */
+/** This activity's relaunch in progress (or just decided), or null if no gate has suspended it. */
 export function suspendedUse(key) {
   return pending.get(key) ?? null;
 }

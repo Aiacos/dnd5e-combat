@@ -1,15 +1,16 @@
 /**
- * §36 : Présage du Devin (core/portent.mjs) côté Foundry — les jets notés sur le devin, qui peut s'en servir, et la question.
+ * §36: Diviner's Portent (core/portent.mjs) on the Foundry side — the rolls noted on the diviner, who can use them, and the
+ * question.
  *
- * Vérifié :
- *  - `dnd5e.restCompleted(actor, result, config)`, `config.type` = "long" pour un Repos long (documents/actor/actor.mjs:2299, 2421).
- *  - Le d20 d'un jet se borne par `options.minimum` / `options.maximum` du premier jet de la configuration : D20Roll les applique au
- *    dé (dice/d20-roll.mjs:259-266, `applyRange` de d20-die.mjs:104-112) et les fusionne avec ceux du système (`mergeOptions`,
- *    d20-roll.mjs:297-303) ; « 1d20min7max7 » vaut 7, même avec l'Avantage ; un 20 noté est un critique (d20-die.mjs:33-37, le total
- *    du dé après bornes).
+ * Verified:
+ *  - `dnd5e.restCompleted(actor, result, config)`, `config.type` = "long" for a Long Rest (documents/actor/actor.mjs:2299, 2421).
+ *  - A roll's d20 is bounded by `options.minimum` / `options.maximum` of the first roll of the configuration: D20Roll applies
+ *    them to the die (dice/d20-roll.mjs:259-266, `applyRange` of d20-die.mjs:104-112) and merges them with those of the system
+ *    (`mergeOptions`, d20-roll.mjs:297-303); "1d20min7max7" is worth 7, even with Advantage; a noted 20 is a Critical Hit
+ *    (d20-die.mjs:33-37, the die's total after bounds).
  *
- * Les jets vivent sur l'acteur du devin : `flags["dnd5e-combat"].portent` = { rolls, turn }. Qui les écrit : celui qui répond à la
- * question (le joueur du devin, ou le MJ), propriétaire de l'acteur.
+ * The rolls live on the diviner's actor: `flags["dnd5e-combat"].portent` = { rolls, turn }. Who writes them: whoever answers the
+ * question (the diviner's player, or the GM), owner of the actor.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -25,22 +26,22 @@ import { areAllies } from "./factions.mjs";
 import { settingOr } from "./settings.mjs";
 
 export const PORTENT_QUERY = `${MODULE_ID}.portent`;
-/** §38.4 : réglage de monde « Présage du Devin » — le moteur le propose-t-il ? (actif par défaut) */
+/** §38.4: world setting "Diviner's Portent" — does the engine offer it? (on by default) */
 export const PORTENT_SETTING = "portent";
 const portentOffered = () => settingOr(PORTENT_SETTING, true) !== false;
-const PORTENT_TIMEOUT = 20000;   // au-delà du délai de la fenêtre (adapter/dialogs.mjs)
+const PORTENT_TIMEOUT = 20000;   // beyond the window's timeout (adapter/dialogs.mjs)
 
-/** Combien de d20 le devin note à chaque Repos long (0 : pas de Présage). Présage supérieur l'emporte sur Présage. */
+/** How many d20 the diviner notes at each Long Rest (0: no Portent). Greater Portent overrides Portent. */
 export function portentDice(actor) {
   let dice = 0;
   for ( const item of actor?.items ?? [] ) dice = Math.max(dice, contentOf(item).entry?.portent?.dice ?? 0);
   return dice;
 }
 
-/** Les jets notés du devin, tels qu'il les a. */
+/** The diviner's noted rolls, as they have them. */
 export const portentOf = actor => readPortent(actor?.getFlag(MODULE_ID, "portent"));
 
-/** Repos long : les jets restants s'effacent, de nouveaux d20 sont lancés et notés — la carte n'est vue que du devin et du MJ. */
+/** Long Rest: the remaining rolls are cleared, new d20 are rolled and noted — the card is seen only by the diviner and the GM. */
 export async function rollPortent(actor) {
   const dice = portentDice(actor);
   if ( !dice ) return null;
@@ -58,7 +59,7 @@ export async function rollPortent(actor) {
   return rolls;
 }
 
-/** Le jet noté sert : retiré, le tour retenu, et la carte le dit. Rend false s'il n'était plus noté. Propriétaire de l'acteur. */
+/** The noted roll is used: removed, the turn recorded, and the card says so. Returns false if no longer noted. Actor owner. */
 async function useForetold(actor, value, { subject, kind }) {
   const spent = spendPortent(actor.getFlag(MODULE_ID, "portent"), value, currentTurnKey());
   if ( !spent ) return false;
@@ -72,9 +73,9 @@ async function useForetold(actor, value, { subject, kind }) {
 }
 
 /**
- * Les devins qui peuvent remplacer le Test d20 de cette créature : sur sa scène, vivants et conscients, avec des jets notés et pas
- * déjà servis ce tour-ci, et qui la voient (la créature elle-même compte : « effectué par vous »). Neutralisé, il le peut : le Présage
- * n'est pas une réaction. `skip` : ids de tokens à ne pas consulter (ceux qui viennent de décliner).
+ * The diviners who can replace this creature's d20 Test: on its scene, alive and conscious, with noted rolls not yet used
+ * this turn, and who see it (the creature itself counts: "made by you"). Incapacitated, they can: Portent is not a Reaction.
+ * `skip`: token ids not to consult (those that just declined).
  * @param {TokenDocument} subject
  * @returns {Array<{token: TokenDocument, choices: number[]}>}
  */
@@ -84,7 +85,7 @@ export function seersOf(subject, { skip=null }={}) {
   const out = [];
   for ( const token of subject.parent.tokens ) {
     const actor = token.actor;
-    // Le flag d'abord : sans jet noté, rien à lire de plus (appelé à chaque attaque et chaque sauvegarde).
+    // The flag first: with no noted roll, nothing more to read (called on every attack and every save).
     const state = actor?.getFlag(MODULE_ID, "portent");
     if ( !state?.rolls?.length || !canForetell(state, turnKey) || skip?.has(token.id) ) continue;
     if ( token.hidden || isObjectToken(token) || !portentDice(actor) ) continue;
@@ -96,8 +97,8 @@ export function seersOf(subject, { skip=null }={}) {
 }
 
 /**
- * Côté du devin (son joueur, ou le MJ) : une fenêtre, un bouton par jet noté, et « ne pas s'en servir » — la réponse par défaut, un
- * jet ne se dépense jamais sans accord. Le jet choisi est dépensé ici (propriétaire de l'acteur), et la carte le dit.
+ * On the diviner's side (their player, or the GM): a window, one button per noted roll, and "do not use it" — the default answer, a
+ * roll is never spent without consent. The chosen roll is spent here (actor owner), and the card says so.
  * @param {{actor: string, subject: string, kind: "attack"|"save", item: string}} payload
  * @returns {Promise<{value: number}|null>}
  */
@@ -121,9 +122,9 @@ export async function handlePortentQuery({ actor: actorUuid, subject, kind, item
 }
 
 /**
- * Demande au devin s'il remplace ce jet : son joueur connecté, sinon le MJ actif (depuis n'importe quel client : l'attaquant peut être
- * un joueur). Ne lève jamais : pas de réponse = pas de Présage.
- * @returns {Promise<number|null>}  La valeur notée qui remplace le d20.
+ * Asks the diviner whether they replace this roll: their connected player, otherwise the active GM (from any client: the attacker
+ * may be a player). Never throws: no answer = no Portent.
+ * @returns {Promise<number|null>}  The noted value that replaces the d20.
  */
 export async function askPortent(actor, payload) {
   const userId = rollerFor(actor) ?? game.users.activeGM?.id ?? null;
@@ -138,11 +139,11 @@ export async function askPortent(actor, payload) {
 }
 
 /**
- * Consulte les devins l'un après l'autre pour le Test d20 de `subject` ; le premier qui accepte l'emporte (une seule valeur remplace
- * le d20). `auto` (scénarios) : "none" = personne ; "first" = le premier devin, sa plus haute valeur pour un allié du sujet (ou le
- * sujet), sa plus basse sinon — sans fenêtre.
- * `declined` (facultatif) : reçoit les ids des devins qui ont décliné, pour ne pas leur reposer la question aux autres cibles de la même
- * sauvegarde (adapter/saves.mjs).
+ * Consults the diviners one after another for `subject`'s d20 Test; the first to accept wins (a single value replaces
+ * the d20). `auto` (scenarios): "none" = nobody; "first" = the first diviner, their highest value for an ally of the subject
+ * (or the subject), their lowest otherwise — without a window.
+ * `declined` (optional): receives the ids of the diviners who declined, so as not to ask them again for the other targets of
+ * the same save (adapter/saves.mjs).
  * @returns {Promise<{value: number, seer: string}|null>}
  */
 export async function foretellFor(subject, { kind, item, auto=null, declined=null }) {
@@ -152,8 +153,8 @@ export async function foretellFor(subject, { kind, item, auto=null, declined=nul
     if ( auto === "first" ) {
       const friendly = (token === subject) || areAllies(token, subject);
       const wanted = friendly ? choices[0] : choices.at(-1);
-      // Écrit ici : ce client doit posséder le devin (les scénarios tournent chez le MJ) ; sinon, pas de Présage plutôt qu'une porte
-      // interrompue.
+      // Written here: this client must own the diviner (scenarios run on the GM's client); otherwise, no Portent
+      // rather than an interrupted gate.
       try { value = (await useForetold(token.actor, wanted, { subject: subject.name, kind })) ? wanted : null; }
       catch(err) { console.warn(`${MODULE_ID} | Portent for ${token.name}: not written`, err); }
     }

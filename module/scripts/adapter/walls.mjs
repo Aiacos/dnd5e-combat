@@ -1,9 +1,9 @@
 /**
- * §162 : les murs du cœur qu'une zone de sort pose (contenu `walls: { move?, sight?, activities? }`) — le long de l'axe de chaque forme
- * « line » (un mur posé par points), sinon sur le pourtour de la région (globe, sphère, cube). Ils portent la région qui les a posés
- * (`flags.dnd5e-combat.zone`) et ses niveaux. Mur de force : arrête le déplacement, pas la vue ; Mur prismatique : arrête la vue, pas
- * le déplacement. MJ actif. §225 : `ethereal: true` (Mur de force, Cage de force) — le mur arrête aussi qui est dans le plan Éthéré
- * (`flags.dnd5e-combat.ethereal`, que le MJ peut aussi poser à la main sur un mur de la carte).
+ * §162: the core walls that a spell area places (content `walls: { move?, sight?, activities? }`) — along the axis of each
+ * "line" shape (a wall placed by points), otherwise around the region's perimeter (globe, sphere, cube). They carry the
+ * region that placed them (`flags.dnd5e-combat.zone`) and its levels. Wall of Force: stops movement, not sight; Prismatic
+ * Wall: stops sight, not movement. Active GM. §225: `ethereal: true` (Wall of Force, Forcecage) — the wall also stops whoever
+ * is on the Ethereal plane (`flags.dnd5e-combat.ethereal`, which the GM can also set by hand on a map wall).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -11,7 +11,7 @@ import { contentOf } from "./content.mjs";
 import { lineAxis, polygonEdges, circleEdges } from "../core/wall.mjs";
 import { wallGeometryOf } from "./wall-side.mjs";
 
-/** La règle `walls` qui vaut pour cette région (activité qui l'a posée), ou null. */
+/** The `walls` rule that applies to this region (the activity that placed it), or null. */
 export function wallRuleOf(region) {
   const uuid = region?.getFlag?.("dnd5e", "activity");
   const activity = uuid ? fromUuidSync(uuid, { strict: false }) : null;
@@ -20,13 +20,13 @@ export function wallRuleOf(region) {
   return rule;
 }
 
-/** Les données des murs d'une région. */
+/** The wall data of a region. */
 export function wallDataFor(region, rule) {
   const block = CONST.WALL_MOVEMENT_TYPES.NORMAL;
   const sense = CONST.EDGE_SENSE_TYPES.NORMAL;
   const none = CONST.EDGE_SENSE_TYPES.NONE;
   const lines = region.shapes.filter(s => s.type === "line");
-  // §169, §172 : un mur en anneau (forme « ring » : Mur de feu, Mur d'épines) — un seul cercle de murs, au milieu de la bande.
+  // §169, §172: a ring wall ("ring" shape: Wall of Fire, Wall of Thorns) — a single circle of walls, in the middle of the band.
   const ring = region.shapes.some(s => s.type === "ring") ? wallGeometryOf(region)?.ring : null;
   const segments = ring ? circleEdges(ring)
     : (lines.length === region.shapes.length) ? lines.map(s => lineAxis(s))
@@ -42,7 +42,7 @@ export function wallDataFor(region, rule) {
   }));
 }
 
-/** Les murs posés pour cette région. */
+/** The walls placed for this region. */
 export function zoneWallsOf(region) {
   return (region.parent?.walls ?? []).filter(w => w.getFlag(MODULE_ID, "zone") === region.id);
 }

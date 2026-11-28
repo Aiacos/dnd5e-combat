@@ -1,12 +1,12 @@
 /**
- * §438 : la porte de niveau d'une activité (dnd5e 6.1, `visibility.level { min, max }`) — le Manuel des joueurs 3.0.0 range les versions
- * améliorées d'une aptitude comme des activités du même item, l'une visible jusqu'à un niveau, l'autre à partir du suivant. Pur.
+ * §438: an activity's level gate (dnd5e 6.1, `visibility.level { min, max }`) — the Player's Handbook 3.0.0 arranges the
+ * upgraded versions of a feature as activities of the same item, one visible up to a level, the other from the next. Pure.
  */
 
 /**
- * L'activité est-elle cachée à ce niveau ? Sans porte (ou bornes nulles), ou sans niveau lisible : non.
+ * Is the activity hidden at this level? With no gate (or null bounds), or no readable level: no.
  * @param {{min?: number|null, max?: number|null}|null|undefined} range
- * @param {number} level  Le niveau qui compte (`relevantLevel` de dnd5e : la classe nommée, sinon le personnage, le sort pour un sort).
+ * @param {number} level  The level that counts (dnd5e's `relevantLevel`: the named class, else the character, or the spell).
  */
 export function hiddenAtLevel(range, level) {
   if ( !range || ((range.min == null) && (range.max == null)) ) return false;

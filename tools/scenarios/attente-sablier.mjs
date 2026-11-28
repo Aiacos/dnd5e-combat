@@ -1,11 +1,11 @@
 /**
- * §381 (issue #35) : qui la table attend — Arène, le Zombi. Le client du MJ ouvre une vraie fenêtre du moteur (`timedWait`, celle des
- * réactions et des choix), marquée pour le Zombi.
- *  1. Ouverte : une attente « reaction » au nom du MJ, sur le token du Zombi, avec son délai, sans rien de ce qu'elle demande ;
- *     répondue (`answer-dialog`) : l'attente tombe.
- *  2. Laissée sans réponse (délai court) : elle se résout seule et l'attente tombe.
- *  3. Annulée (fenêtre fermée sans choisir) : l'attente tombe.
- * Le dessin du sablier et ce qu'en voit un joueur se vérifient au navigateur (un seul client ici).
+ * §381 (issue #35): who the table is waiting for — Arena, the Zombie. The GM's client opens a real engine window
+ * (`timedWait`, the one used for Reactions and choices), marked for the Zombie.
+ *  1. Open: a "reaction" wait in the GM's name, on the Zombie's token, with its timeout, without anything of what it asks;
+ *     answered (`answer-dialog`): the wait ends.
+ *  2. Left unanswered (short timeout): it resolves by itself and the wait ends.
+ *  3. Cancelled (window closed without choosing): the wait ends.
+ * The hourglass drawing and what a player sees of it are checked in the browser (only one client here).
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -39,7 +39,7 @@ export default {
       if ( d ) await ctx.call("answer-dialog", { id: d.id, button: "no" }).catch(() => {});
     });
 
-    // 1. Répondue.
+    // 1. Answered.
     await ctx.engine("awaiting", { action: "open", tokenId: zombie.id, kind: "reaction", seconds: 30 });
     const open = await ours();
     ctx.expect(open.length === 1, `une attente publiée pour le Zombi (${open.length})`);
@@ -54,14 +54,14 @@ export default {
     ctx.expect(r1.value === "yes", `la réponse revient (${r1.value})`);
     ctx.expect(!(await ours()).length, "répondue : l'attente est retirée");
 
-    // 2. Délai.
+    // 2. Timeout.
     await ctx.engine("awaiting", { action: "open", tokenId: zombie.id, kind: "choice", seconds: 3 });
     ctx.expect((await ours()).length === 1, "délai : une attente publiée");
     const r2 = await settled(12000);
     ctx.expect(r2.value === "timeout", `au bout du délai, la réponse par défaut (${r2.value})`);
     ctx.expect(!(await ours()).length, "délai : l'attente est retirée");
 
-    // 3. Annulée.
+    // 3. Cancelled.
     await ctx.engine("awaiting", { action: "open", tokenId: zombie.id, kind: "roll", seconds: 30 });
     const d3 = await probeDialog();
     if ( ctx.expect(!!d3, "annulation : la fenêtre est ouverte") ) await ctx.call("answer-dialog", { id: d3.id, close: true }).catch(async () => {

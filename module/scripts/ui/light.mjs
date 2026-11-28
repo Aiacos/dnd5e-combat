@@ -1,7 +1,7 @@
 /**
- * §16.35 : le choix d'un sort de lumière qui invoque un objet (Lumière, Flamme éternelle) — « au sol » (l'objet est posé)
- * ou « sur moi » (le lanceur le tient et brille), et la couleur. L'interface demande ; runtime/lights.mjs (`castLight`)
- * lance.
+ * §16.35: the choice for a light spell that summons an object (Light, Continual Flame) — "on the ground" (the object is placed)
+ * or "on me" (the caster holds it and shines), and the color. The interface asks; runtime/lights.mjs (`castLight`)
+ * casts.
  */
 
 import { summonedLightOf, lightsOfItem } from "../adapter/lights.mjs";
@@ -10,10 +10,10 @@ import { loc } from "../runtime/shared.mjs";
 const HEX = /^#[0-9a-f]{6}$/i;
 
 /**
- * La fenêtre : « Au sol », « Sur moi », et « Éteindre » quand une lumière du sort brille déjà ; un sélecteur de couleur (la
- * couleur de l'objet par défaut).
+ * The window: "On the ground", "On me", and "Extinguish" when a light from the spell already shines; a color picker (the
+ * object's color by default).
  * @param {Activity} activity
- * @returns {Promise<{where: "ground"|"self"|"off", color: string|null}|null>}  null : on renonce.
+ * @returns {Promise<{where: "ground"|"self"|"off", color: string|null}|null>}  null: the user gives up.
  */
 export async function askLightChoice(activity) {
   const light = await summonedLightOf(activity);

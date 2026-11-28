@@ -1,11 +1,11 @@
 /**
- * §524 (issue #173) : réglage « Dégâts et soins » sur « Lancés au clic pour les joueurs, d'office pour les créatures du MJ »
- * (`clickPlayers`). « Arène des refus » (`node tools/arene-refus.mjs`), vrai client joueur (« claude player », propriétaire du Mage des
- * refus, ouvert par le banc : `players: true`). Vérifie :
- *  1. le MJ lance l'arme du Mage contre le Mannequin : aucune fenêtre de dégâts, le jet s'enchaîne et s'applique ;
- *  2. le joueur lance la même attaque : chez lui, la fenêtre de dégâts de dnd5e ; aucun jet tant qu'elle est ouverte ; cliquée, sa carte
- *     de dégâts part et le MJ l'applique.
- * Un coup peut rater (douze essais au plus, Mannequin CA 15). Remis en état : le réglage, les PV du Mannequin, les fenêtres restées ouvertes.
+ * §524 (issue #173): "Damage and healing" setting on "Rolled on click for players, automatic for the GM's creatures"
+ * (`clickPlayers`). "Refusal Arena" (`node tools/arene-refus.mjs`), real player client ("claude player", owner of the Refusal
+ * Mage, opened by the bench: `players: true`). Checks:
+ *  1. the GM uses the Mage's weapon against the Dummy: no damage window, the roll chains and is applied;
+ *  2. the player makes the same attack: on their side, the dnd5e damage window; no roll while it is open; once clicked,
+ *     their damage card goes off and the GM applies it.
+ * A hit can miss (twelve tries at most, Dummy AC 15). Restored: the setting, the Dummy's HP, the windows left open.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -56,7 +56,7 @@ export default {
       window.addEventListener("error", e => keep("uncaught", [e.message]));
       window.addEventListener("unhandledrejection", e => keep("rejection", [e.reason])); } return true;`);
     const playerJournal = () => ctx.asPlayer(`return (window.__dasJournal ?? []).slice(-25);`);
-    /** La fenêtre de dégâts de dnd5e chez le joueur (§556) : `{ open }`, et `click: true` la valide. */
+    /** The dnd5e damage window on the player's side (§556): `{ open }`, and `click: true` confirms it. */
     const playerRollWindow = (click=false) => ctx.asPlayer(`
       const app = [...foundry.applications.instances.values()].find(a => a.rendered && a.config?.["${MODULE_ID}"]?.dialog);
       if ( !app ) return { open: false, apps: [...foundry.applications.instances.values()].filter(a => a.rendered)
@@ -64,14 +64,14 @@ export default {
       if ( args.click ) app.element.querySelector('button[data-action="normal"]')?.click();
       return { open: true, title: app.title ?? app.options?.window?.title ?? null };`, { click });
     ctx.restore(() => playerRollWindow(true).catch(() => {}));
-    /** Fenêtres de dégâts du moteur chez le MJ (§556 : celle de dnd5e). */
+    /** The engine's damage windows on the GM's side (§556: the dnd5e one). */
     const gmRollWindows = async () => ((await ctx.call("run-script", { code: `return [...foundry.applications.instances.values()]
       .filter(a => a.rendered && a.config?.["${MODULE_ID}"]?.dialog).map(a => a.id);` }).catch(() => null))?.result ?? []);
     const damageCards = msgs => msgs.filter(m => m.type === "damage");
-    // Le bâton du Mage (1d6 − 1) peut ne rien faire : les PV se comparent au total de la carte de dégâts.
+    // The Mage's staff (1d6 − 1) may do nothing: HP are compared with the damage card's total.
     const rolledOf = card => (card?.rolls ?? []).reduce((t, x) => t + Math.max(0, Number(x.total) || 0), 0);
 
-    // 1. Le MJ : jet enchaîné, aucune fenêtre.
+    // 1. The GM: chained roll, no window.
     let gmDone = false;
     for ( let i = 1; (i <= 12) && !gmDone; i++ ) {
       await ctx.setHp(dummy, hp0);
@@ -89,7 +89,7 @@ export default {
     }
     ctx.expect(gmDone, "MJ : un coup touche (douze essais au plus)");
 
-    // 2. Le joueur : sa fenêtre, rien avant le clic, puis le jet appliqué.
+    // 2. The player: their window, nothing before the click, then the roll applied.
     let playerDone = false;
     for ( let i = 1; (i <= 12) && !playerDone; i++ ) {
       await ctx.setHp(dummy, hp0);
@@ -103,7 +103,7 @@ export default {
           return { ok: true };
         } catch(err) { return { error: String(err?.stack ?? err).slice(0, 600) }; }`, { item: weaponUuid, dummy: dummy.id });
       if ( used?.error ) { ctx.expect(false, `joueur : erreur (${used.error})`); return; }
-      // Le coup se tranche : raté → on recommence ; touché → la fenêtre du joueur s'ouvre.
+      // The hit is resolved: miss → we start again; hit → the player's window opens.
       let res = null, win = { open: false };
       for ( const stop = Date.now() + 20000; Date.now() < stop; await pause(500) ) {
         res = (await ctx.messagesSince(since)).map(m => m.flags?.[MODULE_ID]?.resolution).filter(Boolean).pop() ?? null;

@@ -1,12 +1,13 @@
 /**
- * L'Ensorceleur du Manuel des joueurs 2024 (SPEC §32), monde `dnd-6`. L'Ensorceleur passe un temps niveau 5 et reçoit, prêtés
- * depuis le compendium du Manuel des joueurs, la Réserve arcanique et les options de Métamagie ; le Bandit reçoit 300 PV. Vérifie :
- *  - Sorcellerie innée : active, l'Éclair de feu a l'Avantage ;
- *  - Sort accéléré : deux points dépensés, l'Éclair de feu (une action) se paie de l'action Bonus, l'action reste ; l'option oubliée ;
- *  - Sort intensifié : Mains brûlantes sur le Bandit — sa sauvegarde a le Désavantage ;
- *  - Sort prévenant : Mains brûlantes sur le Guerrier et le Bandit — le Guerrier réussit d'office et ne perd rien ;
- *  - Sort subtil : un Mage hostile à portée, pas de fenêtre de Contresort.
- * Remet niveau, positions, PV, points, états ; retire les items prêtés.
+ * The 2024 Player's Handbook Sorcerer (SPEC §32), world `dnd-6`. The Sorcerer is level 5 for a while and receives, lent
+ * from the Player's Handbook compendium, the Arcane Reserve and the Metamagic options; the Bandit receives 300 HP.
+ * Checks:
+ *  - Innate Sorcery: active, Fire Bolt has Advantage;
+ *  - Quickened Spell: two points spent, Fire Bolt (an action) is paid with the Bonus Action, the action remains; option forgotten;
+ *  - Heightened Spell: Burning Hands on the Bandit — its save has Disadvantage;
+ *  - Careful Spell: Burning Hands on the Fighter and the Bandit — the Fighter succeeds automatically and loses nothing;
+ *  - Subtle Spell: a hostile Mage in range, no Counterspell window.
+ * Restores level, positions, HP, points, conditions; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "dnd-players-handbook.classes";
@@ -34,7 +35,7 @@ export default {
     const grid = await ctx.gridSize();
     const homes = new Map();
     for ( const t of [sorc, bandit, fighter] ) homes.set(t.id, { pos: await ctx.position(t), hp: await ctx.hp(t) });
-    // Restored Keep, 3080 × 4900 : loin de tout hostile (sa case d'origine touche l'Âme-en-peine : Désavantage à distance).
+    // Restored Keep, 3080 × 4900: far from any hostile (its cell of origin touches the Wraith: ranged Disadvantage).
     const g = { x: 3080, y: 4900 };
 
     const { data: bdata } = await ctx.call("get-scene-object", { type: "Token", objectId: bandit.id });
@@ -107,7 +108,7 @@ export default {
       await pause(1000);
       return (await ctx.messagesSince(since)).find(m => m.type === "attack")?.rolls?.[0]?.formula ?? "";
     };
-    /** Mains brûlantes : zone posée sur `boxes` ; rend la résolution et les messages. */
+    /** Burning Hands: area placed on `boxes`; returns the resolution and the messages. */
     const burn = async (...targets) => {
       const boxes = [];
       for ( const t of targets ) boxes.push(await ctx.box(t));

@@ -1,12 +1,12 @@
 /**
- * Recherche de chemin sur grille carrée (A*, huit voisins). Noyau pur : le monde est décrit par
- * des fonctions fournies par l'appelant (murs, cases occupées, coût du terrain).
+ * Pathfinding on a square grid (A*, eight neighbors). Pure core: the world is described by
+ * functions supplied by the caller (walls, occupied cells, terrain cost).
  *
- * Le cœur de Foundry V14 n'a pas de pathfinder : `Token#findMovementPath` rend la ligne droite,
- * arrêtée au premier mur (client/canvas/placeables/token.mjs:3397). C'est un point d'extension.
+ * The Foundry V14 core has no pathfinder: `Token#findMovementPath` returns the straight line,
+ * stopped at the first wall (client/canvas/placeables/token.mjs:3397). It is an extension point.
  */
 
-// P2 : une case porte son niveau (`level`, facultatif) — deux cases de mêmes i, j à des niveaux différents sont deux nœuds.
+// P2: a cell carries its level (`level`, optional) — two cells with the same i, j at different levels are two nodes.
 const key = c => `${c.i},${c.j},${c.level ?? ""}`;
 
 const NEIGHBOURS = [
@@ -14,12 +14,12 @@ const NEIGHBOURS = [
   [-1, -1], [-1, 1], [1, -1], [1, 1]
 ];
 
-/** Distance de Tchebychev entre deux cases : le nombre de pas à huit voisins. */
+/** Chebyshev distance between two cells: the number of steps with eight neighbors. */
 export function cellDistance(a, b) {
   return Math.max(Math.abs(a.i - b.i), Math.abs(a.j - b.j));
 }
 
-/** Tas binaire minimal, sur la priorité `f`. */
+/** Minimal binary heap, on the priority `f`. */
 class Heap {
   #items = [];
   get size() { return this.#items.length; }
@@ -59,17 +59,17 @@ class Heap {
 /**
  * @param {object} query
  * @param {{i:number,j:number}} query.start
- * @param {{i:number,j:number}[]} [query.goals]     Cases d'arrivée acceptables. Ou bien :
- * @param {(cell) => boolean} [query.isGoal]        Test d'arrivée (zone d'approche d'une cible), avec
- * @param {(cell) => number} [query.heuristic]      son estimation du nombre de pas restants, jamais surévaluée.
- * @param {(from, to) => boolean} query.canStep     Peut-on passer de `from` à sa voisine `to` ? (murs, ennemis)
- * @param {(cell) => boolean} [query.canEnd]        Peut-on s'arrêter sur cette case ? (un allié se traverse, on ne s'y arrête pas)
- * @param {(from, to) => number} [query.stepCost]   Coût d'un pas, 1 par défaut (2 en terrain difficile) ; jamais moins de 1.
- * @param {(cell) => {cell: object, cost: number}[]} [query.transitions]  Voisins hors grille d'une case (P2) :
- *   la même case sur un autre niveau par un escalier, au coût de la hauteur franchie. Une case garde le
- *   `level` de celle d'où l'on vient ; seule une transition en change.
- * @param {number} [query.maxNodes]                 Garde-fou : nombre de cases explorées.
- * @returns {{path: {i:number,j:number}[], cost: number}|null}  Le chemin, départ compris, ou null.
+ * @param {{i:number,j:number}[]} [query.goals]     Acceptable arrival cells. Or else:
+ * @param {(cell) => boolean} [query.isGoal]        Arrival test (approach zone of a target), with
+ * @param {(cell) => number} [query.heuristic]      its estimate of the remaining steps, never overestimated.
+ * @param {(from, to) => boolean} query.canStep     Can one pass from `from` to its neighbor `to`? (walls, enemies)
+ * @param {(cell) => boolean} [query.canEnd]        Can one stop on this cell? (an ally can be crossed, not stopped on)
+ * @param {(from, to) => number} [query.stepCost]   Cost of a step, 1 by default (2 on Difficult Terrain); never less than 1.
+ * @param {(cell) => {cell: object, cost: number}[]} [query.transitions]  Off-grid neighbors of a cell (P2):
+ *   the same cell on another level via a staircase, at the cost of the height crossed. A cell keeps the
+ *   `level` of the one it came from; only a transition changes it.
+ * @param {number} [query.maxNodes]                 Safeguard: number of cells explored.
+ * @returns {{path: {i:number,j:number}[], cost: number}|null}  The path, start included, or null.
  */
 export function findPath({ start, goals, isGoal, heuristic, canStep, canEnd=() => true, stepCost=() => 1, transitions=null, maxNodes=6000 }) {
   let arrived = isGoal ? (c => isGoal(c) && canEnd(c)) : null;
@@ -96,7 +96,7 @@ export function findPath({ start, goals, isGoal, heuristic, canStep, canEnd=() =
   while ( open.size ) {
     const { cell, g } = open.pop();
     const k = key(cell);
-    if ( g > (best.get(k) ?? Infinity) ) continue;   // entrée périmée
+    if ( g > (best.get(k) ?? Infinity) ) continue;   // stale entry
     if ( arrived(cell) ) {
       const path = [cell];
       for ( let p = parent.get(k); p; p = parent.get(key(p)) ) path.unshift(p);
@@ -113,20 +113,20 @@ export function findPath({ start, goals, isGoal, heuristic, canStep, canEnd=() =
     for ( const [di, dj] of NEIGHBOURS ) {
       const next = { i: cell.i + di, j: cell.j + dj };
       if ( cell.level !== undefined ) next.level = cell.level;
-      // Déjà atteinte à un coût qu'un pas d'ici ne peut pas battre (un pas coûte au moins 1) : inutile de demander si l'on peut
-      // passer — `canStep` finit par un lancer de rayon du cœur, et `relax` écarterait ce pas de toute façon.
+      // Already reached at a cost that a step from here cannot beat (a step costs at least 1): no point asking whether one can
+      // pass — `canStep` ends in a core raycast, and `relax` would discard this step anyway.
       if ( g + 1 + ((di && dj) ? 0.001 : 0) >= (best.get(key(next)) ?? Infinity) ) continue;
       if ( !canStep(cell, next) ) continue;
-      // Une diagonale coûte un soupçon de plus : à coût égal on préfère le chemin le plus droit.
+      // A diagonal costs a touch more: at equal cost the straightest path is preferred.
       relax(next, g + stepCost(cell, next) + ((di && dj) ? 0.001 : 0));
     }
-    // P2 : un escalier, une échelle — la même case sur un autre niveau.
+    // P2: a staircase, a ladder — the same cell on another level.
     if ( transitions ) for ( const { cell: next, cost } of transitions(cell) ) relax(next, g + cost);
   }
   return null;
 }
 
-/** Retire les cases intermédiaires alignées : il ne reste que le départ, les virages et l'arrivée. */
+/** Removes the aligned intermediate cells: only the start, the turns and the arrival remain. */
 export function turningPoints(path) {
   if ( path.length <= 2 ) return path.slice();
   const out = [path[0]];

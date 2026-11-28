@@ -1,41 +1,43 @@
 /**
- * Le Barde du Manuel des joueurs 2024 (SPEC §33), module premium `dnd-players-handbook` 2.2.0 (pack `classes`, items `phbbrd…`).
- * L'Inspiration bardique elle-même (le dé ajouté à un jet raté par la créature inspirée) est tenue par le moteur hors du contenu :
+ * The 2024 Player's Handbook Bard (SPEC §33), premium module `dnd-players-handbook` 2.2.0 (pack `classes`, items `phbbrd…`).
+ * Bardic Inspiration itself (the die added to a failed roll by the inspired creature) is held by the engine outside the content:
  * adapter/inspiration.mjs, runtime/engine.mjs.
  *
- * Ce que dnd5e fait déjà seul : l'Inspiration bardique donnée (activité, effet « Inspiré », utilisations), Touche-à-tout, Expertise,
- * Source d'inspiration, Pirouettes éblouissantes (CA, frappe à mains nues), Mante d'inspiration (PV temporaires), Attaque
- * supplémentaire (budget), les sorts toujours préparés des collèges.
+ * What dnd5e already does alone: Bardic Inspiration given (activity, "Inspired" effect, uses), Jack of All Trades, Expertise,
+ * Font of Inspiration, Dazzling Footwork (AC, unarmed strike), Mantle of Inspiration (Temporary Hit Points), Extra Attack
+ * (budget), the colleges' always-prepared spells.
  */
 
 export const BARD = Object.freeze({
-  // §298 : Attaque supplémentaire (Collège de la vaillance 6) — « un de vos tours de magie d'une action à la place d'une des attaques ».
+  // §298: Extra Attack (College of Valor 6) — "one of your cantrips with a casting time of one action in place of one of
+  // the attacks".
   "valor-extra-attack": { spellsInAttack: { maxLevel: 0 } },
-  // Mots cinglants (Savoir 3) : « quand une créature que vous voyez à 18 m réussit un jet d'attaque, votre Réaction et une
-  // Inspiration : lancez le dé et soustrayez le résultat du jet » — proposé quand l'attaque touche le barde ou un allié ; l'attaque
-  // est rejugée (le dé vaut autant de CA). Les tests et les jets de dégâts restent au joueur.
-  // §301 : « une créature que vous voyez à 18 m » — l'attaquant, vu et à portée du barde (touché lui-même : `target` = le barde).
+  // Cutting Words (Lore 3): "when a creature you can see within 18 m succeeds on an attack roll, your Reaction and one
+  // Inspiration: roll the die and subtract the result from the roll" — offered when the attack hits the bard or an ally; the attack
+  // is re-judged (the die is worth that much AC). Checks and damage rolls stay with the player.
+  // §301: "a creature you can see within 18 m" — the attacker, seen by and within range of the bard (hit itself: `target` = the
+  // bard).
   "cutting-words": { triggers: [
     { on: "isHit", if: { "target.within": { distance: 60, units: "ft" }, "target.seesSource": true }, do: [{ type: "use" }, { type: "penalty", formula: "@scale.bard.inspiration" }] },
     { on: "allyIsHit", if: { "source.nearSelf": { distance: 60, units: "ft" }, "self.seesSource": true }, do: [{ type: "use" }, { type: "penalty", formula: "@scale.bard.inspiration" }] }
   ] },
-  // §301 : Contre-charme (niveau 7) — « vous ratez une sauvegarde contre un effet qui inflige Charmé ou Effrayé : votre Réaction, relancez-la »
-  // (proposé sur une sauvegarde ratée pour éviter ou finir l'un de ces états), « et le nouveau jet a l'Avantage ». Simplification :
-  // une créature à 9 m qui rate la sienne n'est pas couverte.
+  // §301: Countercharm (level 7) — "you fail a saving throw against an effect that inflicts Charmed or Frightened: your
+  // Reaction, reroll it" (offered on a failed save to avoid or end one of these conditions), "and the new roll has Advantage".
+  // Simplification: a creature within 9 m that fails its own is not covered.
   "countercharm": { rollBonus: { activity: "dnd5eactivity000", on: ["save"], statuses: ["charmed", "frightened"],
     reroll: { advantage: true } } },
-  // Esquive cavalière (Danse 14) : l'Esquive totale (§20) ; la partager avec une créature à 1,50 m reste au joueur.
+  // Leading Evasion (Dance 14): the Evasion (§20); sharing it with a creature within 1.50 m stays with the player.
   "leading-evasion": { evasion: true },
-  // Inspiration de combat (Vaillance 3) : la créature inspirée par ce barde ajoute le dé aux dégâts d'un coup, ou à sa CA par sa Réaction
-  // quand elle est touchée (adapter/inspiration.mjs) — à la place de l'ajouter à un jet raté, qui reste possible.
+  // Combat Inspiration (Valor 3): the creature inspired by this bard adds the die to the damage of a hit, or to its AC with its
+  // Reaction when it is hit (adapter/inspiration.mjs) — instead of adding it to a failed roll, which remains possible.
   "combat-inspiration": { combatInspiration: true },
-  // Talent hors pair (Savoir 14) — « quand vous ratez un test de caractéristique ou un jet d'attaque, vous pouvez dépenser une Inspiration
-  // bardique, lancer le dé et l'ajouter au d20 ; sur un échec, l'Inspiration n'est pas dépensée » (`failRefund`). Sur un test sans DD
-  // connu, la question est posée sitôt le jet lancé et rien n'est rendu : le moteur ne sait pas s'il est raté.
+  // Peerless Skill (Lore 14) — "when you fail an ability check or an attack roll, you can expend a Bardic Inspiration use,
+  // roll the die and add it to the d20; on a failure, the Inspiration is not expended" (`failRefund`). On a check with no known
+  // DC, the question is asked as soon as the roll is made and nothing is refunded: the engine does not know if it is a failure.
   "peerless-skill": { rollBonus: { activity: "dnd5eactivity000", on: ["attack", "check"], failRefund: true } },
-  // §236 : Inspiration supérieure (niveau 18) — « quand vous jouez l'initiative, vous regagnez des utilisations d'Inspiration bardique
-  // jusqu'à en avoir deux ».
-  // C12-j : Source d'inspiration (Barde 5) — « vous regagnez toutes vos Inspirations bardiques dépensées après un Repos court ou long ».
+  // §236: Superior Inspiration (level 18) — "when you roll Initiative, you regain Bardic Inspiration uses
+  // until you have two".
+  // C12-j: Font of Inspiration (Bard 5) — "you regain all your expended Bardic Inspirations after a Short or Long Rest".
   "font-of-inspiration": { regainOnShortRest: ["bardic-inspiration"] },
   "superior-inspiration": { regainOnInitiative: { item: "bardic-inspiration", upTo: 2 } }
 });

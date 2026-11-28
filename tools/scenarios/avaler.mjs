@@ -1,13 +1,14 @@
 /**
- * M8 (SPEC §18.17) — Avaler. Monde `ravenloft` : l'Avalement du Béhir (Monster Manual) prêté à l'Ours brun, la Morsure de la
- * Tarasque prêtée au Zombi (4d12 : de quoi dépasser le seuil de 30 dégâts de l'intérieur). Initiative : Ours, Zombi, Kaalisti.
- *  1. Étreinte (le Béhir n'avale que ce qu'il agrippe), puis sauvegarde de Dextérité ratée : le Zombi est avalé (Aveuglé, Entravé, abri total), posé dans l'espace de l'Ours.
- *  2. Kaalisti tire sur le Zombi avalé : abri total, raté.
- *  3. L'Ours marche : le Zombi suit.
- *  4. Début du tour de l'Ours : une carte de dégâts d'acide pour le Zombi.
- *  5. Tour du Zombi : il mord l'Ours de l'intérieur jusqu'à 30 dégâts ; à la fin de son tour, l'Ours sauvegarde (Con DD 14) —
- *     ratée : le Zombi est régurgité, À terre, hors de l'Ours ; réussie : il reste avalé.
- *  6. L'Ours meurt : un Zombi encore avalé est libéré, À terre.
+ * M8 (SPEC §18.17) — Swallow. World `ravenloft`: the Behir's Swallow (Monster Manual) lent to the Brown Bear, the Tarrasque's
+ * Bite lent to the Zombie (4d12: enough to exceed the 30-damage threshold from inside). Initiative: Bear, Zombie, Kaalisti.
+ *  1. Constrict (the Behir only swallows what it grapples), then a failed Dexterity saving throw: the Zombie is swallowed
+ *     (Blinded, Restrained, Total Cover), placed in the Bear's space.
+ *  2. Kaalisti shoots the swallowed Zombie: Total Cover, miss.
+ *  3. The Bear walks: the Zombie follows.
+ *  4. Start of the Bear's turn: an acid damage card for the Zombie.
+ *  5. The Zombie's turn: it bites the Bear from inside up to 30 damage; at the end of its turn, the Bear saves (Con DC 14) —
+ *     failed: the Zombie is regurgitated, Prone, outside the Bear; succeeded: it stays swallowed.
+ *  6. The Bear dies: a still-swallowed Zombie is released, Prone.
  */
 const BEHIR = "Compendium.dnd-monster-manual.actors.Actor.mmBehir000000000";
 const TARRASQUE = "Compendium.dnd-monster-manual.actors.Actor.mmTarrasque00000";
@@ -18,7 +19,7 @@ export default {
   name: "avaler — Béhir : avalé, abri total, emporté, dégâts, régurgité, libéré",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Missing from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise the dnd5e SRD 2024).
     await ctx.cast({ "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Ours brun", "Zombi", "Kaalisti"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Ours brun, Zombi ou Kaalisti absent : non applicable"); return; }
@@ -41,7 +42,7 @@ export default {
       return itemId;
     };
     const swallowItem = await lend(BEHIR, "swallow", bear);
-    // §18.21 : le Béhir n'avale que la créature qu'il agrippe — son Étreinte d'abord.
+    // §18.21: the Behir only swallows the creature it grapples — its Constrict first.
     const constrictItem = await lend(BEHIR, "constrict", bear);
     const biteItem = await lend(TARRASQUE, "bite", zombi);
     const swallowedEffect = async () => (await ctx.effects(zombi)).find(e => !e.disabled && (e.statuses ?? []).includes("coverTotal")) ?? null;
@@ -56,7 +57,7 @@ export default {
     await ctx.call("move-token", { tokenId: zombi.id, x: at.x + 2 * grid, y: at.y, elevation: at.elevation });
     await ctx.call("move-token", { tokenId: warlock.id, x: at.x + 5 * grid, y: at.y, elevation: at.elevation });
 
-    // 1. Agrippé par l'Étreinte, puis avalé.
+    // 1. Grappled by the Constrict, then swallowed.
     const grappled = async () => (await ctx.effects(zombi)).some(e => !e.disabled && (e.statuses ?? []).includes("grappled"));
     for ( let i = 0; (i < 20) && !(await grappled()); i++ ) {
       const used = await ctx.use({ tokenId: bear.id, itemId: constrictItem, activityId: "IgOMjRxAt7UISkJq", targetTokenIds: [zombi.id],
@@ -83,12 +84,12 @@ export default {
     const t = shot?.targets?.find(x => x.token?.endsWith(zombi.id));
     ctx.expect(t && !t.hit, `Trait de feu sur le Zombi avalé : raté (${t?.reason ?? (t?.hit ? "touché" : "?")})`);
 
-    // 3. Emporté.
+    // 3. Carried along.
     await ctx.call("move-token", { tokenId: bear.id, x: at.x, y: at.y + 2 * grid, elevation: at.elevation });
     await sleep(2000);
     ctx.expect(await inside(), "l'Ours se déplace : le Zombi suit, toujours dans son espace");
 
-    // 4. Dégâts au début du tour de l'Ours.
+    // 4. Damage at the start of the Bear's turn.
     await ctx.startCombat([bear, zombi, warlock]);
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const combat = await state();
@@ -110,9 +111,9 @@ export default {
       ctx.expect((await ctx.hp(zombi)) < 100, `le Zombi subit l'acide (${await ctx.hp(zombi)} PV)`);
     }
 
-    // 5. De l'intérieur : 30 dégâts, puis la sauvegarde de l'Ours à la fin du tour du Zombi.
+    // 5. From inside: 30 damage, then the Bear's saving throw at the end of the Zombie's turn.
     if ( !ctx.expect(await turnOf(zombi), "tour du Zombi") ) return;
-    // De quoi encaisser 30 dégâts et plus sans mourir : dnd5e plafonne les PV au maximum (une trentaine pour l'Ours).
+    // Enough to take 30 damage or more without dying: dnd5e caps HP at the maximum (around thirty for the Bear).
     const { data: bearTok } = await ctx.call("get-scene-object", { type: "Token", objectId: bear.id });
     const max0 = bearTok.delta?.system?.attributes?.hp?.max ?? null;
     ctx.restore(() => ctx.call("update-scene-object", { type: "Token", objectId: bear.id,

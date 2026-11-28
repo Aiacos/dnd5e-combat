@@ -1,9 +1,9 @@
 /**
- * L'Huile (SPEC §54). Item prêté depuis le compendium du Manuel des joueurs.
- *  1. Le Magicien lance une fiole sur le Zombi jusqu'à une sauvegarde ratée : « Couvert d'huile » (1 minute).
- *  2. Des dégâts contondants : l'huile ne s'enflamme pas, la marque reste.
- *  3. Des dégâts de feu : 5 dégâts de feu en plus, annoncés au chat, la marque tombe.
- * Remet PV et effets ; retire l'item prêté.
+ * Oil (SPEC §54). Item lent from the Player's Handbook compendium.
+ *  1. The Wizard throws a vial at the Zombi until a failed save: "Covered in oil" (1 minute).
+ *  2. Bludgeoning damage: the oil does not ignite, the mark stays.
+ *  3. Fire damage: 5 extra fire damage, announced in the chat, the mark drops.
+ * Restores HP and effects; removes the lent item.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 

@@ -1,10 +1,10 @@
 /**
- * Forme sauvage (SPEC §16.39). Monde `ravenloft` : Sylaene (druide 5, Cercle de la Lune).
- *  1. Formes du cercle en Ours brun (FP 1 = niveau / 3) : le token passe sur l'acteur transformé, qui porte l'heure de fin, les
- *     PV temporaires du cercle (3 × niveau de druide) et l'action « Reprendre sa forme ».
- *  2. « Reprendre sa forme » : retour à l'acteur d'origine.
- *  3. Forme sauvage en Loup, puis 0 PV : la forme cesse d'elle-même.
- * La forme est passée d'office (`wildForm`), sans la fenêtre des formes connues. Tout est remis en état.
+ * Wild Shape (SPEC §16.39). World `ravenloft`: Sylaene (druid 5, Circle of the Moon).
+ *  1. Circle forms as Brown Bear (CR 1 = level / 3): the token switches to the transformed actor, which carries the end time,
+ *     the circle's Temporary Hit Points (3 × druid level) and the "Revert form" action.
+ *  2. "Revert form": return to the original actor.
+ *  3. Wild Shape as Wolf, then 0 HP: the form ends by itself.
+ * The form is passed directly (`wildForm`), without the known-forms window. Everything is restored.
  */
 const MODULE_ID = "dnd5e-combat";
 const BEAR = "Compendium.dnd-monster-manual.actors.mmBrownBear00000";

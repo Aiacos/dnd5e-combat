@@ -1,6 +1,6 @@
 /**
- * §492 : qui a attaqué qui pendant le tour — registre sur le Combat, fait `source.attackedSelfThisTurn`. Exemple générique : une créature
- * qui riposte en réaction quand un ennemi finit son tour après l'avoir attaquée au corps à corps.
+ * §492: who attacked whom during the turn — registry on the Combat, fact `source.attackedSelfThisTurn`. Generic example: a creature
+ * that retaliates with a Reaction when an enemy ends its turn after attacking it in melee.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { attackKindOf, recordAttack, attacksDuring, attackedMatches, validAttackedArg } from "../module/scripts/core/attacked-this-turn.mjs";
@@ -9,8 +9,8 @@ import { holds } from "../module/scripts/core/triggers.mjs";
 
 const T1 = "c.1.0", T2 = "c.1.1";
 
-describe("§492 : règle pure", () => {
-  it("le genre d'une attaque : mêlée, sauf lancée ou tirée ; null hors attaque", () => {
+describe("§492: pure rule", () => {
+  it("the kind of an attack: melee, except thrown or fired; null outside an attack", () => {
     expect(attackKindOf({ activityType: "attack", attackType: "melee" })).toBe("melee");
     expect(attackKindOf({ activityType: "attack", attackType: "melee", attackMode: "oneHanded" })).toBe("melee");
     expect(attackKindOf({ activityType: "attack", attackType: "melee", attackMode: "thrown" })).toBe("ranged");
@@ -18,7 +18,7 @@ describe("§492 : règle pure", () => {
     expect(attackKindOf({ activityType: "attack", attackType: "ranged" })).toBe("ranged");
     expect(attackKindOf({ activityType: "save" })).toBe(null);
   });
-  it("note les attaques d'un tour, chaque genre une fois, jamais contre soi", () => {
+  it("records a turn's attacks, each kind once, never against oneself", () => {
     let log = recordAttack(null, { turn: T1, source: "A", targets: ["B", "C", "A"], kind: "melee" });
     log = recordAttack(log, { turn: T1, source: "A", targets: ["B"], kind: "ranged" });
     log = recordAttack(log, { turn: T1, source: "A", targets: ["B"], kind: "melee" });
@@ -26,21 +26,21 @@ describe("§492 : règle pure", () => {
     expect(attacksDuring(log, { turn: T1, source: "A", target: "C" })).toEqual(["melee"]);
     expect(attacksDuring(log, { turn: T1, source: "A", target: "A" })).toEqual([]);
     expect(attacksDuring(log, { turn: T1, source: "B", target: "A" })).toEqual([]);
-    expect(Array.isArray(log.attacks)).toBe(true);   // une liste : setFlag la remplace entière
+    expect(Array.isArray(log.attacks)).toBe(true);   // a list: setFlag replaces it whole
   });
-  it("un autre tour repart de zéro, et l'ancien registre ne répond plus", () => {
+  it("another turn starts from zero, and the old registry no longer answers", () => {
     const first = recordAttack(null, { turn: T1, source: "A", targets: ["B"], kind: "melee" });
     const second = recordAttack(first, { turn: T2, source: "B", targets: ["A"], kind: "ranged" });
     expect(second.attacks).toEqual([{ source: "B", target: "A", kinds: ["ranged"] }]);
     expect(attacksDuring(first, { turn: T2, source: "A", target: "B" })).toEqual([]);
-    expect(first.attacks[0].kinds).toEqual(["melee"]);   // pas modifié en place
+    expect(first.attacks[0].kinds).toEqual(["melee"]);   // not modified in place
   });
-  it("rien à noter sans tour, source, cible ou genre", () => {
+  it("nothing to record without a turn, source, target or kind", () => {
     expect(recordAttack(null, { turn: null, source: "A", targets: ["B"], kind: "melee" })).toBe(null);
     expect(recordAttack(null, { turn: T1, source: "A", targets: [], kind: "melee" })).toBe(null);
     expect(recordAttack(null, { turn: T1, source: "A", targets: ["B"], kind: null })).toBe(null);
   });
-  it("la condition : true, false, un genre ou une liste", () => {
+  it("the condition: true, false, a kind or a list", () => {
     expect(attackedMatches(["melee"], true)).toBe(true);
     expect(attackedMatches([], true)).toBe(false);
     expect(attackedMatches([], false)).toBe(true);
@@ -72,7 +72,7 @@ describe("§492 : le fait source.attackedSelfThisTurn", () => {
     globalThis.foundry ??= { utils: { throttle: fn => fn, debounce: fn => fn, isNewerVersion: () => false } };
     globalThis.CONFIG ??= { DND5E: { movementUnits: { ft: { conversion: 1 } } }, specialStatusEffects: {}, queries: {} };
     globalThis.canvas = null;
-    await import("../module/scripts/adapter/running-water.mjs");   // même ordre de chargement que armor-facts.test.mjs (cycle facts ↔ content)
+    await import("../module/scripts/adapter/running-water.mjs");   // same loading order as armor-facts.test.mjs (facts ↔ content cycle)
     ({ factsFor } = await import("../module/scripts/adapter/facts.mjs"));
     ({ noteAttack } = await import("../module/scripts/adapter/attacked-this-turn.mjs"));
     KNOWN_FACTS = factsFor();
@@ -81,15 +81,15 @@ describe("§492 : le fait source.attackedSelfThisTurn", () => {
   const retort = want => ({ triggers: [{ on: "enemyTurnEnd", if: { "source.attackedSelfThisTurn": want },
     do: [{ type: "use", target: "source" }] }] });
 
-  it("est un fait connu du contenu", () => {
+  it("is a fact known to the content", () => {
     expect(validateEntry(retort("melee"), { facts: KNOWN_FACTS })).toEqual([]);
     expect(validateEntry(retort(true), { facts: KNOWN_FACTS })).toEqual([]);
   });
 
-  it("à la fin du tour de l'attaquant : vrai pour la cible attaquée au corps à corps, pas pour une autre", async () => {
+  it("at the end of the attacker's turn: true for the target attacked in melee, not for another", async () => {
     await noteAttack(attacker, [guard], sword);
     await noteAttack(attacker, [other], bow);
-    // Le combat passe au tour suivant ; la fenêtre parle du tour qui vient de finir.
+    // The combat moves on to the next turn; the window is about the turn that just ended.
     combat.turn = 1;
     const ended = { source: attacker, target: guard, self: guard, turnKey: "c.1.0" };
     expect(holds({ "source.attackedSelfThisTurn": "melee" }, factsFor(ended))).toBe(true);
@@ -97,7 +97,7 @@ describe("§492 : le fait source.attackedSelfThisTurn", () => {
     const onOther = { ...ended, target: other, self: other };
     expect(holds({ "source.attackedSelfThisTurn": "melee" }, factsFor(onOther))).toBe(false);
     expect(holds({ "source.attackedSelfThisTurn": true }, factsFor(onOther))).toBe(true);
-    // Sans le tour qui vient de finir, « ce tour » est le tour en cours : rien.
+    // Without the turn that just ended, "this turn" is the current turn: nothing.
     expect(holds({ "source.attackedSelfThisTurn": true }, factsFor({ source: attacker, target: guard, self: guard }))).toBe(false);
   });
 

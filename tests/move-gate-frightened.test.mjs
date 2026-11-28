@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
- * §17.3 : Effrayé — pas de pas volontaire qui rapproche de la source de la peur, quelle que soit la façon de bouger. Un déplacement
- * d'un seul tenant (glisser, clavier) arrive à `preMoveToken` avec tout son trajet dans `passed` et rien dans `pending` (§225).
+ * §17.3: Frightened — no voluntary step that brings it closer to the source of fear, whatever the way of moving. A movement
+ * made in one piece (drag, keyboard) arrives at `preMoveToken` with its whole path in `passed` and nothing in `pending` (§225).
  */
 const source = { name: "Dragon", x: 0 };
 vi.mock("../module/scripts/adapter/barriers.mjs", () => ({ barrierCrossed: () => null }));
@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 afterEach(() => { delete globalThis.game; delete globalThis.CONFIG; });
 
-/** Un token effrayé à 30 de la source, et un trajet : `passed` (ce qui part d'un seul tenant), `pending` (la suite). */
+/** A Frightened token 30 from the source, and a path: `passed` (what departs in one piece), `pending` (the rest). */
 const token = (statuses=["frightened"]) => ({ name: "Héros", _source: { x: 30 }, actor: { statuses: new Set(statuses) } });
 const step = (x, action="walk") => ({ x, action });
 const movement = (passed, pending=[]) => ({
@@ -44,25 +44,25 @@ const movement = (passed, pending=[]) => ({
 });
 const keys = issues => issues.map(i => i.key);
 
-describe("§17.3 : Effrayé, le trajet entier compte", () => {
-  it("glisser vers la source (tout dans `passed`) : retenu", () => {
+describe("§17.3: Frightened, the whole path counts", () => {
+  it("dragging toward the source (everything in `passed`): held back", () => {
     expect(keys(moveIssues(token(), movement([step(25), step(20)])))).toEqual(["frightened"]);
   });
 
-  it("la suite d'un trajet coupé (`pending`) : retenu aussi", () => {
+  it("the rest of a cut path (`pending`): held back too", () => {
     expect(keys(moveIssues(token(), movement([step(35)], [step(20)])))).toEqual(["frightened"]);
   });
 
-  it("s'éloigner : libre", () => {
+  it("moving away: free", () => {
     expect(moveIssues(token(), movement([step(35), step(40)]))).toEqual([]);
   });
 
-  it("téléportation ou déplacement forcé vers la source : pas un pas volontaire", () => {
+  it("teleportation or forced movement toward the source: not a voluntary step", () => {
     expect(moveIssues(token(), movement([step(20, "blink")]))).toEqual([]);
     expect(moveIssues(token(), movement([step(20, "displace")]))).toEqual([]);
   });
 
-  it("sans l'état Effrayé : libre", () => {
+  it("without the Frightened condition: free", () => {
     expect(moveIssues(token([]), movement([step(20)]))).toEqual([]);
   });
 

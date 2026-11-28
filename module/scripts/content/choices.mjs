@@ -1,52 +1,53 @@
 /**
- * Effets exclusifs livrés avec le module (SPEC §7, étape `choice`) : l'activité porte plusieurs
- * effets dont la règle n'en fait appliquer qu'UN, au choix de l'auteur. Le moteur le lui demande
- * (adapter/choices.mjs) avant d'appliquer, au lieu de tout poser comme le fait un plan d'utilitaire.
- * Un item peut déclarer le sien dans `flags["dnd5e-combat"].choice`.
+ * Exclusive effects shipped with the module (SPEC §7, `choice` step): the activity carries several
+ * effects of which the rule applies only ONE, at the author's choice. The engine asks the author for it
+ * (adapter/choices.mjs) before applying, instead of placing everything as a utility plan does.
+ * An item can declare its own in `flags["dnd5e-combat"].choice`.
  *
- *   { effects: "one", prompt?: <texte> }   — `prompt` : question affichée, à défaut la question générique.
+ *   { effects: "one", prompt?: <text> }   — `prompt`: question shown, otherwise the generic question.
  *
- * Identifiants vérifiés dans packs/_source/spells24 de dnd5e 6.0.3 (`system.identifier`).
+ * Identifiers verified in packs/_source/spells24 of dnd5e 6.0.3 (`system.identifier`).
  */
 
 export const CHOICES = Object.freeze({
-  // K3 (§324) : Domination d'esprit de l'Aboleth (MM 2024) — l'effet « Dominated » (Charmé) n'est relié à aucune activité dans la
-  // donnée : la sauvegarde ratée ne posait rien. Relié à l'activité de sauvegarde, sans choix.
+  // K3 (§324): the Aboleth's "Mind Domination" (MM 2024) — the "Dominated" effect (Charmed) is linked to no activity in the
+  // data: the failed save placed nothing. Linked to the save activity, with no choice.
   "dominate-mind": { pool: { zdXAMnjaOcsVmLZP: ["85n0EJTGfngNSLLl"] } },
-  // Une caractéristique au choix : six effets « Hexed <caractéristique> » sur l'activité Place Curse.
+  // A chosen ability: six "Hexed <ability>" effects on the Place Curse activity.
   "hex": { effects: "one" },
-  // C12-f : Incarnation élémentaire, « Damage Resistance » — une résistance au choix parmi cinq.
+  // C12-f: "Elemental Embodiment", "Damage Resistance" — one Resistance of choice among five.
   "elemental-epitome": { effects: "one" },
-  // Attaque à mains nues 2024, sauvegarde ratée : Lutte (agrippé) OU Bousculade (à terre, ou repoussé de 1,50 m).
-  // L'item du Barbare et du Moine (classes24, même identifiant) n'a que les deux premiers.
+  // 2024 Unarmed Strike, failed save: Grapple (Grappled) OR Shove (Prone, or pushed 1.50 m).
+  // The Barbarian's and Monk's item (classes24, same identifier) has only the first two.
   "unarmed-strike": { effects: "one" },
-  // Bouclier de feu : « le bouclier est chaud ou froid, au choix » — deux effets sur l'activité utilitaire (chaud :
-  // résistance au froid, riposte de feu ; froid : l'inverse). Sans choix, le plan poserait les deux (§16.9).
+  // Fire Shield: "the shield is warm or cold, your choice" — two effects on the utility activity (warm:
+  // cold Resistance, fire retaliation; cold: the reverse). Without a choice, the plan would place both (§16.9).
   "fire-shield": { effects: "one" },
-  // §53 : Potion de résistance — « Résistance à un type de dégâts » (le MJ choisit ou tire) : dix effets, un seul posé.
+  // §53: Potion of Resistance — "Resistance to one damage type" (the GM chooses or rolls): ten effects, only one placed.
   "potion-of-resistance": { effects: "one" },
-  // Résistance (§16.46) : « en choisissant un type de dégâts » — onze effets « Protection : … » sur l'activité ; sans choix, le
-  // plan les poserait tous (la cible résisterait à tout).
+  // Resistance (§16.46): "by choosing a damage type" — eleven "Protection: …" effects on the activity; without a choice, the
+  // plan would place them all (the target would resist everything).
   "resistance": { effects: "one" },
-  // §16.47 : Assistance — « choisissez une compétence » ; dnd5e pose ses 18 effets (un par compétence) d'un coup.
+  // §16.47: Guidance — "choose a skill"; dnd5e places its 18 effects (one per skill) at once.
   "guidance": { effects: "one" },
-  // §19 : Cécité/surdité — « Aveuglé ou Assourdi (au choix) » ; Mauvais œil — « l'un des effets suivants, au choix ».
+  // §19: Blindness/Deafness — "Blinded or Deafened (your choice)"; Eyebite — "one of the following effects, your choice".
   "blindness-deafness": { effects: "one" },
   "eyebite": { effects: "one" },
-  // Audit du compendium des sorts du PHB (le 2026-09-27) : activités à plusieurs effets dont la règle n'en donne qu'un.
-  // Amélioration de caractéristique — « choisissez une caractéristique » (cinq effets, un par caractéristique hors Con).
-  // §401 : « vous pouvez choisir une caractéristique différente pour chaque cible ».
+  // Audit of the PHB spell compendium (on 2026-09-27): activities with several effects of which the rule gives only one.
+  // Enhance Ability — "choose an ability" (five effects, one per ability except Con).
+  // §401: "you can choose a different ability for each target".
   "enhance-ability": { effects: "one", perTarget: true },
-  // Agrandissement/rapetissement — « la cible est agrandie ou rapetissée, au choix ».
+  // Enlarge/Reduce — "the target is enlarged or reduced, your choice".
   "enlarge-reduce": { effects: "one" },
-  // Protection contre l'énergie — « résistance à un type de dégâts de votre choix » (acide, froid, feu, foudre, tonnerre).
+  // Protection from Energy — "Resistance to one damage type of your choice" (acid, cold, fire, lightning, thunder).
   "protection-from-energy": { effects: "one" },
-  // Apaisement des émotions — « choisissez l'un des deux effets » (Apaisé, Indifférence).
-  // §401 : « choisissez l'un des effets suivants » pour chaque créature qui rate.
+  // Calm Emotions — "choose one of the two effects" (Calmed, Indifference).
+  // §401: "choose one of the following effects" for each creature that fails.
   "calm-emotions": { effects: "one", perTarget: true },
-  // Contagion — « choisissez une caractéristique » (six effets Infecté).
+  // Contagion — "choose an ability" (six Infected effects).
   "contagion": { effects: "one" },
-  // §295 : Magie envoûtante (Collège du savoir) — « Charmé ou Effrayé (au choix) » ; Emprisonnement — « l'un des effets suivants ».
+  // §295: Bewitching Magic (College of Lore) — "Charmed or Frightened (your choice)"; Imprisonment — "one of the following
+  // effects".
   "beguiling-magic": { effects: "one" },
   "imprisonment": { effects: "one" }
 });

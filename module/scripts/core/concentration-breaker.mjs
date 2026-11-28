@@ -1,15 +1,15 @@
 /**
- * §133 : le briseur de concentration — la créature concentrée qu'on blesse a le Désavantage à son prochain jet de concentration.
- * Fonction pure.
+ * §133: the concentration breaker — the concentrating creature that is hurt has Disadvantage on its next Concentration check.
+ * Pure function.
  *
- * `concentrationBreaker: true` vaut pour le porteur : tout dégât qu'il inflige compte (un don, Tueur de mages). `"item"` vaut
- * pour l'objet seul : le dégât doit venir d'une de ses activités, et l'objet être prêt à servir (équipé, harmonisé s'il le
- * demande) — une arme magique qui ne doit rien donner aux autres attaques de son porteur.
+ * `concentrationBreaker: true` applies to the bearer: any damage they deal counts (a feat, Mage Slayer). `"item"` applies
+ * to the item alone: the damage must come from one of its activities, and the item must be ready for use (equipped, attuned if it
+ * requires it) — a magic weapon must give nothing to the other attacks of its bearer.
  *
  * @param {object} o
- * @param {Array<true|"item"|undefined>} [o.owned]  Ce que déclarent les objets du porteur.
- * @param {true|"item"|undefined} [o.item]          Ce que déclare l'objet dont l'activité a infligé le dégât.
- * @param {boolean} [o.itemReady]                   Cet objet est-il équipé, et harmonisé s'il le demande ?
+ * @param {Array<true|"item"|undefined>} [o.owned]  What the bearer's items declare.
+ * @param {true|"item"|undefined} [o.item]          What the item whose activity dealt the damage declares.
+ * @param {boolean} [o.itemReady]                   Is this item equipped, and attuned if it requires it?
  * @returns {boolean}
  */
 export function breaksConcentration({ owned=[], item, itemReady=true }={}) {

@@ -1,10 +1,10 @@
 /**
- * §355 : les armes qui nourrissent leur porteur. Sur le MJ actif, au hook de sortie du moteur `dnd5e-combat.resolution`, une fois la
- * résolution close (comme runtime/felled.mjs) :
- *  - `devours` (Noirtranchant) : une créature que l'arme fait tomber à 0 PV, ni Créature artificielle ni Mort-vivant, est tuée (Morte) et
- *    le porteur gagne des PV temporaires égaux à son maximum de PV ;
- *  - `critFeeds` (Épée voleuse de vie) : un coup critique sur une telle créature donne au porteur ces PV temporaires.
- * Les PV temporaires ne se cumulent pas : seule une valeur plus forte remplace celle du porteur.
+ * §355: weapons that feed their bearer. On the active GM, at the engine's exit hook `dnd5e-combat.resolution`, once the
+ * resolution is closed (like runtime/felled.mjs):
+ *  - `devours` (Blackrazor): a creature the weapon drops to 0 HP, neither a Construct nor an Undead, is killed (Dead) and
+ *    the bearer gains Temporary Hit Points equal to their maximum HP;
+ *  - `critFeeds` (Sword of Life Stealing): a Critical Hit on such a creature gives the bearer these Temporary Hit Points.
+ * Temporary Hit Points do not stack: only a higher value replaces the bearer's.
  */
 
 import { STEPS } from "../core/action.mjs";
@@ -35,8 +35,8 @@ async function onResolution(resolution) {
   const { tempHp, slain } = weaponFeed({ devours: entry.devours === true, critAmount: entry.critFeeds?.amount ?? 0, victims });
   const carrier = game.messages.get(resolution.carrier ?? "");
   for ( const id of slain ) {
-    // À 0 PV, le moteur pose déjà Inconscient ou Mort (même id d'effet, `dnd5edead0000000`) : un temps pour qu'il ait fini, puis
-    // seulement si la créature n'est pas déjà Morte — deux créations croisées de l'état échouent (vu le 2026-11-03).
+    // At 0 HP, the engine already sets Unconscious or Dead (same effect id, `dnd5edead0000000`): one beat for it to finish, then
+    // only if the creature is not already Dead — two crossed creations of the condition fail (seen on 2026-11-03).
     await new Promise(resolve => setTimeout(resolve, 600));
     if ( fromUuidSync(id, { strict: false })?.actor?.statuses?.has("dead") ) continue;
     await applyStatusToToken(carrier, id, "dead");

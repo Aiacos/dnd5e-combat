@@ -1,10 +1,10 @@
 /**
- * Fins de sorts (SPEC §42.2), avec les sorts du **Manuel des joueurs** (ceux des fiches de joueurs — leurs identifiants ne sont
- * pas toujours ceux du SRD : « tashas-hideous-laughter »).
- *  1. Fou rire de Tasha (PHB) : la sauvegarde est rejouée quand la cible subit des dégâts.
- *  2. Lenteur : la sauvegarde est rejouée à la fin de chaque tour de la cible ; réussie, l'effet tombe.
- *  3. Sanctuaire : le sort cesse quand la créature protégée fait un jet d'attaque.
- * Pose la distribution de référence de Restored Keep. Remet PV, effets, positions ; retire les sorts prêtés.
+ * Spell endings (SPEC §42.2), with the spells of the **Player's Handbook** (those of the player sheets — their identifiers are not
+ * always the SRD's: "tashas-hideous-laughter").
+ *  1. Tasha's Hideous Laughter (PHB): the save is replayed when the target takes damage.
+ *  2. Slow: the save is replayed at the end of each of the target's turns; succeeded, the effect ends.
+ *  3. Sanctuary: the spell ends when the protected creature makes an attack roll.
+ * Places the reference distribution of Restored Keep. Restores HP, effects, positions; removes the lent spells.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -40,7 +40,7 @@ export default {
     const sanctuary = await ctx.ensureItem(clerc, `${SPELLS}.phbSanctuary0000`);
     const newEffects = async t => (await ctx.effects(t)).filter(e => !effects0.get(t.id).has(e._id ?? e.id) && !e.flags?.["dnd5e-combat"]?.aura);
 
-    /** Lance le sort sur le Zombi jusqu'à ce qu'il rate sa sauvegarde ; rend la résolution, ou null. */
+    /** Casts the spell on the Zombie until it fails its save; returns the resolution, or null. */
     const until = async (itemId, extra={}) => {
       for ( let i = 0; i < 20; i++ ) {
         await endConcentration();
@@ -53,7 +53,7 @@ export default {
       return null;
     };
 
-    // 1. Fou rire de Tasha, celui du Manuel des joueurs : rejoué sur dégâts.
+    // 1. Tasha's Hideous Laughter, the Player's Handbook one: replayed on damage.
     const hl = await until(laughter, { targetTokenIds: [zombi.id] });
     if ( ctx.expect(!!hl, "Fou rire de Tasha (PHB) : le Zombi rate sa sauvegarde (20 essais au plus)") ) {
       const since = await ctx.lastMessageId();
@@ -67,11 +67,11 @@ export default {
     await clearZombi();
     await ctx.setHp(zombi, hp0);
 
-    // 2. Lenteur : rejouée à la fin de chaque tour de la cible.
+    // 2. Slow: replayed at the end of each of the target's turns.
     const box = await ctx.box(zombi);
     const sl = await until(slow, { targetTokenIds: [zombi.id], area: { shape: "rectangle", ...box } });
     if ( ctx.expect(!!sl, "Lenteur : le Zombi rate sa sauvegarde (20 essais au plus)") ) {
-      // L'effet du sort lui-même, par son nom : en combat, d'autres effets (statuts de tour) apparaissent sur le Zombi.
+      // The spell's own effect, by its name: in combat, other effects (turn statuses) appear on the Zombi.
       const slowed = async () => (await newEffects(zombi)).some(e => /Slowed|Ralenti|Lent/i.test(e.name ?? ""));
       ctx.expect(await slowed(), "le Zombi porte l'effet de Lenteur");
       await ctx.startCombat([mage, zombi]);
@@ -101,7 +101,7 @@ export default {
     await endConcentration();
     await clearZombi();
 
-    // 3. Sanctuaire : cesse quand la créature protégée fait un jet d'attaque.
+    // 3. Sanctuary: ends when the protected creature makes an attack roll.
     const z = await ctx.position(zombi);
     await ctx.call("move-token", { tokenId: clerc.id, x: z.x + grid, y: z.y, elevation: 0 });
     await pause(800);

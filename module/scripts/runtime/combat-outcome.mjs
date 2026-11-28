@@ -19,9 +19,9 @@ export const COMBAT_ENDED_HOOK = `${MODULE_ID}.combatEnded`;
 
 /**
  * §555: on the active GM, when a creature becomes defeated — the `dead` status (Foundry's DEFEATED) placed on it, or the tracker's
- * « defeated » ticked: `({ token, actor, combat, cause })` — `token` the TokenDocument, `combat` the running combat it takes part in
- * or null, `cause` « dead » or « tracker ». Once per creature until it is back (status removed, tracker unticked). Characters
- * included: the listener filters. Read-only.
+ * « defeated » ticked: `({ token, actor, combat, cause })` — `token` the TokenDocument, `combat` the running combat it takes
+ * part in or null, `cause` « dead » or « tracker ». Once per creature until it is back (status removed, tracker unticked).
+ * Characters included: the listener filters. Read-only.
  */
 export const CREATURE_DEFEATED_HOOK = `${MODULE_ID}.creatureDefeated`;
 

@@ -5,8 +5,8 @@ import { traitBlocksHealing } from "../module/scripts/core/healing-block.mjs";
 
 const FACTS = { "target.sharesSpaceWithSource": () => true, "target.grappledBySource": () => true };
 
-describe("§505 (B25) : nuée — pas de PV temporaires, cibles dans son espace", () => {
-  it("blocksTempHp : true ou une liste d'effets", () => {
+describe("§505 (B25): swarm — no Temporary Hit Points, targets in its space", () => {
+  it("blocksTempHp: true or a list of effects", () => {
     expect(validateEntry({ blocksTempHp: true })).toEqual([]);
     expect(validateEntry({ blocksTempHp: ["aaaaaaaaaaaaaaaa"] })).toEqual([]);
     expect(validateEntry({ blocksTempHp: false })).toEqual([expect.stringContaining("blocksTempHp")]);
@@ -20,18 +20,18 @@ describe("§505 (B25) : nuée — pas de PV temporaires, cibles dans son espace"
   });
 });
 
-describe("§505 : nuée — ni PV regagnés, ni PV temporaires", () => {
-  it("le contenu livré : espace partagé, soins et PV temporaires bloqués", () => {
+describe("§505: swarm — neither HP regained, nor Temporary Hit Points", () => {
+  it("the shipped content: shared space, healing and Temporary Hit Points blocked", () => {
     expect(CONTENT.swarm).toMatchObject({ sharesSpace: "mutual", blocksHealing: true, blocksTempHp: true });
   });
-  it("un trait sans effet qui déclare blocksHealing vaut pour la créature qui le porte", () => {
+  it("a trait without an effect that declares blocksHealing applies to the creature that bears it", () => {
     expect(traitBlocksHealing({ rule: true, effects: 0 })).toBe(true);
   });
-  it("un item qui pose des effets ne bloque pas son propriétaire (Contact glacial : le lanceur se soigne)", () => {
+  it("an item that places effects does not block its owner (Chill Touch: the caster heals)", () => {
     expect(traitBlocksHealing({ rule: true, effects: 1 })).toBe(false);
     expect(CONTENT["chill-touch"].blocksHealing).toBe(true);
   });
-  it("une liste d'effets, ou pas de règle : jamais le porteur du trait", () => {
+  it("a list of effects, or no rule: never the bearer of the trait", () => {
     expect(traitBlocksHealing({ rule: ["aaaaaaaaaaaaaaaa"], effects: 0 })).toBe(false);
     expect(traitBlocksHealing({ rule: null, effects: 0 })).toBe(false);
     expect(traitBlocksHealing()).toBe(false);

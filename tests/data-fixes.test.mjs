@@ -13,8 +13,8 @@ const source = () => ({
   effects: [{ _id: FX, name: "Oops", transfer: true, disabled: true, system: { changes: [{ key: "system.traits.dr.value", value: "bludegoning", priority: null, type: "add" }] } }]
 });
 
-describe("corrections de la donnée premium (§335)", () => {
-  it("corrige un champ d'activité, d'item et d'effet, et crée l'effet manquant", () => {
+describe("fixes to the premium data (§335)", () => {
+  it("fixes an activity, item and effect field, and creates the missing effect", () => {
     const plan = dataFixPlan(source(), [
       { path: `system.activities.${ACT}.activation.type`, from: "special", value: "action" },
       { path: "system.uses.max", from: "", value: "7" },
@@ -27,7 +27,7 @@ describe("corrections de la donnée premium (§335)", () => {
     expect(plan.fields).toHaveLength(4);
   });
 
-  it("laisse une valeur modifiée à la main, une activité absente et ce qui est déjà juste", () => {
+  it("leaves a hand-modified value, a missing activity and what is already right", () => {
     const edited = source();
     edited.system.uses.max = "3";
     const plan = dataFixPlan(edited, [
@@ -39,7 +39,7 @@ describe("corrections de la donnée premium (§335)", () => {
     expect(planIsEmpty(plan)).toBe(true);
   });
 
-  it("compare l'origine sur les seules clés déclarées (dnd5e complète la donnée)", () => {
+  it("compares the origin on the declared keys only (dnd5e completes the data)", () => {
     const plan = dataFixPlan(source(), [{ path: `system.activities.${ACT}.consumption.targets`,
       from: [{ type: "activityUses", value: "2" }], value: [{ type: "itemUses", value: "2", target: "", scaling: {} }] }]);
     expect(Object.keys(plan.item)).toEqual([`system.activities.${ACT}.consumption.targets`]);
@@ -48,7 +48,7 @@ describe("corrections de la donnée premium (§335)", () => {
     expect(matchesFrom("", null)).toBe(false);
   });
 
-  it("tient un champ nul non enregistré pour nul, et ajoute une activité entière", () => {
+  it("treats an unsaved null field as null, and adds a whole activity", () => {
     const src = source();
     src.system.activities[ACT].spell = { challenge: { override: false } };
     const plan = dataFixPlan(src, [
@@ -60,18 +60,18 @@ describe("corrections de la donnée premium (§335)", () => {
     expect(Object.keys(dataFixPlan(src, [{ path: "system.activities.dasReloadAction0", value: { _id: "dasReloadAction0", type: "utility" } }]).item)).toEqual([]);
   });
 
-  it("réécrit en entier un tableau de changements", () => {
+  it("rewrites a changes array in full", () => {
     const fixed = [{ key: "system.traits.dr.value", value: "bludgeoning", priority: null, type: "add" }];
     const plan = dataFixPlan(source(), [{ effect: FX, path: "system.changes",
       from: [{ key: "system.traits.dr.value", value: "bludegoning", priority: null, type: "add" }], value: fixed }]);
     expect(plan.effects).toEqual([{ _id: FX, "system.changes": fixed }]);
-    // Appliqué une seconde fois : rien à faire.
+    // Applied a second time: nothing to do.
     const after = source();
     after.effects[0].system.changes = fixed;
     expect(planIsEmpty(dataFixPlan(after, [{ effect: FX, path: "system.changes", value: fixed }]))).toBe(true);
   });
 
-  it("valide la clé", () => {
+  it("validates the key", () => {
     expect(validateDataFixes([{ path: "system.uses.max", value: "1" }])).toEqual([]);
     expect(validateDataFixes([{ effect: FX, create: { name: "x" } }])).toEqual([]);
     expect(validateDataFixes([{ path: "flags.x", value: 1 }])).toHaveLength(1);
@@ -79,7 +79,7 @@ describe("corrections de la donnée premium (§335)", () => {
     expect(validateDataFixes([])).toHaveLength(1);
   });
 
-  it("chaque correction livrée vise un id de 16 caractères et déclare son origine ou crée un effet", () => {
+  it("every shipped fix targets a 16-character id and declares its origin or creates an effect", () => {
     for ( const [id, entry] of Object.entries(CONTENT) ) {
       for ( const fix of entry.dataFixes ?? [] ) {
         expect(validateDataFixes([fix]), id).toEqual([]);
@@ -93,7 +93,7 @@ describe("corrections de la donnée premium (§335)", () => {
 });
 
 describe("table des corrections d'objets (§335–§338)", () => {
-  it("ne déclare jamais deux fois le même identifiant (la seconde écraserait la première)", async () => {
+  it("never declares the same identifier twice (the second would overwrite the first)", async () => {
     const { readFileSync } = await import("node:fs");
     const src = readFileSync(new URL("../module/scripts/content/item-fixes.mjs", import.meta.url), "utf8");
     const keys = [...src.matchAll(/^  "([a-z0-9-]+)": /gm)].map(m => m[1]);
@@ -101,19 +101,19 @@ describe("table des corrections d'objets (§335–§338)", () => {
   });
 });
 
-describe("dataFixes : un effet que le module a ajouté depuis (`unless`)", () => {
+describe("dataFixes: an effect that the module has added since (`unless`)", () => {
   const BOOK = "RcwWrY6u4OPM5qZl";
   const fix = ITEM_FIXES["robe-of-stars"].dataFixes;
-  it("Robe étoilée : créé quand l'objet n'a pas le sien, pas quand il l'a déjà", () => {
+  it("Robe of Stars: created when the item does not have its own, not when it already has it", () => {
     expect(dataFixPlan({ effects: [], system: {} }, fix).create).toHaveLength(1);
     expect(dataFixPlan({ effects: [{ _id: BOOK }], system: {} }, fix).create).toEqual([]);
   });
-  it("Bâton de puissance : de même", () => {
+  it("Staff of Power: likewise", () => {
     const staff = ITEM_FIXES["staff-of-power"].dataFixes;
     expect(dataFixPlan({ effects: [], system: {} }, staff).create).toHaveLength(1);
     expect(dataFixPlan({ effects: [{ _id: "3qnJecDB1SMFTNLw" }], system: {} }, staff).create).toEqual([]);
   });
-  it("Anneau de vision aux rayons X : la sauvegarde qui ne désigne plus rien reçoit l'Épuisement", () => {
+  it("Ring of X-ray Vision: the save that no longer designates anything receives Exhaustion", () => {
     const ring = ITEM_FIXES["ring-of-x-ray-vision"].dataFixes;
     const v3 = { effects: [], system: { activities: { v41FhJBMoCPTochw: { effects: [] } } } };
     const v2 = { effects: [], system: { activities: { v41FhJBMoCPTochw: { effects: [{ _id: "InZzuugyN8PbtKGR" }] } } } };

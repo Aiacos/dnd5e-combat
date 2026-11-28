@@ -1,8 +1,8 @@
 /**
- * Lien lanceur → créature (SPEC §16.43, clé `tether` : Trait ensorcelé), lu et écrit dans Foundry. dnd5e ne pose l'effet
- * « Foudre continue » qu'au toucher ; la règle garde le lien même si l'attaque rate. Le moteur note donc la créature visée par
- * l'attaque, touchée ou ratée : `flags["dnd5e-combat"].tethers.<id d'item>` = uuid de son token, sur le lanceur. Le lien ne vaut
- * que tant que la concentration du sort tient.
+ * Caster → creature link (SPEC §16.43, key `tether`: Witch Bolt), read and written in Foundry. dnd5e applies the
+ * "Continuous Lightning" effect only on a hit; the rule keeps the link even if the attack misses. The engine therefore records the
+ * creature targeted by the attack, hit or missed: `flags["dnd5e-combat"].tethers.<id d'item>` = uuid of its token, on the caster.
+ * The link holds only as long as the spell's Concentration holds.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,12 +14,12 @@ import { coverFor, hasLineOfEffect } from "./cover.mjs";
 import { tokenOnViewedScene } from "./vision.mjs";
 import { lengthIn } from "./units.mjs";
 
-/** La règle de lien d'un item, ou null. */
+/** An item's link rule, or null. */
 export function tetherRuleOf(item) {
   return item ? (contentOf(item).entry?.tether ?? null) : null;
 }
 
-/** L'item qui porte cette activité de lien (attaque ou action suivante), et sa règle. */
+/** The item that carries this link activity (attack or following action), and its rule. */
 export function tetherOfActivity(activity) {
   const rule = tetherRuleOf(activity?.item);
   if ( !rule ) return null;
@@ -28,7 +28,7 @@ export function tetherOfActivity(activity) {
   return null;
 }
 
-/** Le token lié par cet item, tant que sa concentration tient ; sinon null. */
+/** The token linked by this item, as long as its Concentration holds; otherwise null. */
 export function tetheredToken(item) {
   const uuid = item?.actor?.getFlag(MODULE_ID, `tethers.${item.id}`);
   if ( !uuid || !concentrationOn(item) ) return null;
@@ -36,25 +36,25 @@ export function tetheredToken(item) {
   return token?.actor ? token : null;
 }
 
-/** Note le lien, à l'utilisation de l'attaque (MJ actif). `targetUuid` : le token visé. */
+/** Records the link, on use of the attack (active GM). `targetUuid`: the targeted token. */
 export async function recordTether(item, targetUuid) {
   await item.actor.setFlag(MODULE_ID, `tethers.${item.id}`, targetUuid);
 }
 
-/** Oublie le lien (fin du sort). */
+/** Forgets the link (end of the spell). */
 export async function clearTether(item) {
   if ( item?.actor?.getFlag(MODULE_ID, `tethers.${item.id}`) ) await item.actor.unsetFlag(MODULE_ID, `tethers.${item.id}`);
 }
 
-/** Les items de cet acteur dont le lien est noté. */
+/** The items of this actor whose link is recorded. */
 export function tetherItems(actor) {
   const tethers = actor?.getFlag(MODULE_ID, "tethers") ?? {};
   return Object.keys(tethers).map(id => actor.items.get(id)).filter(Boolean);
 }
 
 /**
- * Le lien est-il rompu ? « sort de sa portée » (distance 3D entre les tokens, unité de la grille) ; « abri total » (murs,
- * surfaces). Rend « range », « cover » ou null (ou null s'il ne se juge pas : scènes différentes, canevas absent).
+ * Is the link broken? "leaves its range" (3D distance between the tokens, grid unit); "Total Cover" (walls,
+ * surfaces). Returns "range", "cover" or null (or null if it cannot be judged: different scenes, canvas absent).
  */
 export function tetherBroken(item) {
   const rule = tetherRuleOf(item);

@@ -1,7 +1,7 @@
 /**
- * §16.39 : la fenêtre des formes connues d'un druide — un portrait par forme, les formes que l'activité ne permet pas (FP,
- * vol) grisées avec leur motif ; « × » oublie une forme ; « Ajouter une forme… » ouvre le navigateur de compendium de dnd5e,
- * filtré comme le profil de l'activité (`TransformActivity#queryActor`). L'interface demande ; runtime/wildshape.mjs lance.
+ * §16.39: the window of a druid's known forms — a portrait per form, the forms the activity does not allow (CR,
+ * flying) greyed out with their reason; "×" forgets a form; "Add a form…" opens dnd5e's compendium browser,
+ * filtered like the activity's profile (`TransformActivity#queryActor`). The interface asks; runtime/wildshape.mjs casts.
  */
 
 import { knownForms, setKnownForms, formInfo, formRefusedBy } from "../adapter/wildshape.mjs";
@@ -20,8 +20,8 @@ function cardsHtml(activity, infos) {
 }
 
 /**
- * Demande une forme. Rend l'uuid choisi, ou null si l'on renonce.
- * @param {Activity} activity  Forme sauvage ou Formes du cercle.
+ * Asks for a form. Returns the chosen uuid, or null if the player gives up.
+ * @param {Activity} activity  Wild Shape or Circle Forms.
  */
 export async function askWildForm(activity) {
   for ( ;; ) {

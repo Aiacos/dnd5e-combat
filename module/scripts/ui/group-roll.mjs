@@ -1,16 +1,16 @@
 /**
- * §242 (issue #18) : les jets demandés par le MJ, à l'écran.
+ * §242 (issue #18): the rolls requested by the GM, on screen.
  *
- *  - **Fenêtre de demande** (MJ) : le libellé (« Sauter le pont »), le type de jet (test de caractéristique, sauvegarde, compétence,
- *    outil) et ce qu'on lance, les personnages concernés (le groupe de dnd5e, les personnages des joueurs, plus les tokens sélectionnés
- *    ou celui d'où l'on vient ; un point vert pour un joueur connecté), le DD (facultatif, caché ou non aux joueurs), Avantage /
- *    Désavantage, un modificateur fixe et le test de groupe 2024. « Demander » passe à runtime/group-roll.mjs.
- *  - **Où l'ouvrir** : un dé dans la barre d'outils des tokens, l'entrée « Demander un jet » du menu du moteur sur une créature (MJ,
- *    ui/pointer-menu.mjs), et `api.rolls.open({ actors })`.
- *  - **Enregistrer en macro** : une macro de script qui refait la même demande (mêmes personnages, même test, mêmes options), d'un clic
- *    dans la barre de macros.
- *  - **Carte** : la carte de demande de dnd5e, complétée — le DD (« caché » pour les joueurs), les réussites que dnd5e ne marque pas
- *    (DD caché : les jets n'en portent pas, seul le MJ les voit), et le verdict du groupe.
+ *  - **Request window** (GM): the label ("Jump the bridge"), the roll type (ability check, saving throw, skill,
+ *    tool) and what is rolled, the characters concerned (dnd5e's group, the players' characters, plus the selected tokens
+ *    or the one we come from; a green dot for a connected player), the DC (optional, hidden or not from players), Advantage /
+ *    Disadvantage, a fixed modifier and the 2024 group check. "Request" hands over to runtime/group-roll.mjs.
+ *  - **Where to open it**: a die in the token toolbar, the "Request a roll" entry of the engine menu on a creature (GM,
+ *    ui/pointer-menu.mjs), and `api.rolls.open({ actors })`.
+ *  - **Save as macro**: a script macro that redoes the same request (same characters, same check, same options), in one click
+ *    from the macro bar.
+ *  - **Card**: dnd5e's request card, completed — the DC ("hidden" for players), the successes that dnd5e does not mark
+ *    (hidden DC: the rolls carry none, only the GM sees them), and the group's verdict.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,13 +23,13 @@ import { route } from "../runtime/router.mjs";
 import { loc, esc } from "../runtime/shared.mjs";
 
 /* -------------------------------------------- */
-/*  Fenêtre de demande                          */
+/*  Request window                              */
 /* -------------------------------------------- */
 
-/** Le dernier choix du MJ sur ce client, repris à l'ouverture suivante (sauf les personnages). */
+/** The GM's last choice on this client, reused at the next opening (except the characters). */
 let remembered = { type: "skill", key: "ath", dc: "", hideDc: false, mode: "normal", bonus: "", group: false };
 
-/** Ce qu'on peut lancer pour chaque type, trié par nom. */
+/** What can be rolled for each type, sorted by name. */
 function keyChoices(type) {
   const sort = list => list.sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));
   if ( (type === "check") || (type === "save") ) {
@@ -39,10 +39,10 @@ function keyChoices(type) {
   return sort(Object.keys(CONFIG.DND5E.tools ?? {}).map(value => ({ value, label: toolLabel(value) })));
 }
 
-/** Les joueurs (non MJ) qui possèdent l'acteur. */
+/** The (non-GM) players who own the actor. */
 const ownersOf = actor => game.users.filter(u => !u.isGM && actor.testUserPermission(u, "OWNER"));
 
-/** Les personnages proposés : le groupe de dnd5e, ceux des joueurs, puis ceux qu'on apporte (tokens sélectionnés…). */
+/** The characters offered: dnd5e's group, the players', then those brought in (selected tokens…). */
 function candidates(extra=[]) {
   const out = new Map();
   const add = actor => { if ( actor?.system?.abilities && !out.has(actor.uuid) ) out.set(actor.uuid, actor); };
@@ -56,7 +56,7 @@ const windowId = "das-group-roll";
 let GroupRollClass = null;
 
 const GroupRollApp = () => GroupRollClass ??= class GroupRollApp extends foundry.applications.api.ApplicationV2 {
-  /** @param {{actors?: Actor[]}} [preset]  Les personnages cochés d'office ; sans eux, ceux des joueurs connectés. */
+  /** @param {{actors?: Actor[]}} [preset]  The characters checked by default; without them, those of the connected players. */
   constructor(preset={}, options={}) {
     super({ ...options, id: windowId });
     this.preset = preset.actors ?? [];
@@ -88,7 +88,7 @@ const GroupRollApp = () => GroupRollClass ??= class GroupRollApp extends foundry
 
   async _renderHTML() {
     const v = this.values;
-    // §397 : l'initiative se demande par le lancement du combat (ui/combat-launch.mjs), pas ici.
+    // §397: initiative is requested by starting the combat (ui/combat-launch.mjs), not here.
     const types = ROLL_TYPES.filter(t => t !== "initiative").map(t => `<option value="${t}" ${v.type === t ? "selected" : ""}>${esc(loc(`JetGroupe.Type.${t}`))}</option>`).join("");
     const keys = keyChoices(v.type);
     if ( !keys.some(k => k.value === v.key) ) v.key = keys[0]?.value ?? "";
@@ -152,12 +152,12 @@ const GroupRollApp = () => GroupRollClass ??= class GroupRollApp extends foundry
         else this.chosen.delete(input.dataset.uuid);
       }
       this.#read(form);
-      // Le type change la liste de ce qu'on lance ; une case cochée change le compte du bouton.
+      // The type changes the list of what is rolled; a checked box changes the button's count.
       if ( (input.name === "type") || input.dataset.uuid ) this.render();
     });
   }
 
-  /** Les valeurs du formulaire, gardées d'un rendu à l'autre. */
+  /** The form's values, kept from one render to the next. */
   #read(form) {
     const f = form.elements;
     Object.assign(this.values, {
@@ -174,7 +174,7 @@ const GroupRollApp = () => GroupRollClass ??= class GroupRollApp extends foundry
     this.render();
   }
 
-  /** La demande telle que la fenêtre la décrit, prête pour `api.rolls.request` (les personnages en uuid). */
+  /** The request as the window describes it, ready for `api.rolls.request` (characters as uuids). */
   #request() {
     this.#read(this.element.querySelector("form"));
     const v = this.values;
@@ -183,8 +183,8 @@ const GroupRollApp = () => GroupRollClass ??= class GroupRollApp extends foundry
   }
 
   /**
-   * « Enregistrer en macro » : une macro de script (dans le répertoire des macros, à glisser dans la barre) qui refait cette demande —
-   * mêmes personnages (ceux qui n'existent plus sont ignorés), même test, mêmes options — par l'API publique du moteur.
+   * "Save as macro": a script macro (in the macro directory, to drag onto the bar) that redoes this request —
+   * same characters (those that no longer exist are ignored), same check, same options — through the engine's public API.
    */
   static async #macro() {
     const input = this.#request();
@@ -210,7 +210,7 @@ const GroupRollApp = () => GroupRollClass ??= class GroupRollApp extends foundry
     const v = this.values;
     const actors = [...this.chosen].map(uuid => fromUuidSync(uuid)).filter(Boolean);
     if ( !actors.length ) return;
-    const { label, ...kept } = v;   // le libellé ne se garde pas d'une demande à l'autre
+    const { label, ...kept } = v;   // the label is not kept from one request to the next
     remembered = kept;
     this.close();
     try {
@@ -225,7 +225,7 @@ const GroupRollApp = () => GroupRollClass ??= class GroupRollApp extends foundry
 };
 
 /**
- * Ouvre la fenêtre de demande (MJ). `actors` : acteurs, tokens ou uuid cochés d'office ; `values` : les champs pré-remplis
+ * Opens the request window (GM). `actors`: actors, tokens or uuids checked by default; `values`: the pre-filled fields
  * (`type`, `key`, `dc`, `hideDc`, `mode`, `bonus`, `label`, `group`, and `ability` for a skill or tool with another ability).
  */
 export function openGroupRoll({ actors=[], values={} }={}) {
@@ -237,14 +237,14 @@ export function openGroupRoll({ actors=[], values={} }={}) {
   return app;
 }
 
-/** Les acteurs des tokens sélectionnés, plus celui d'où l'on vient. */
+/** The actors of the selected tokens, plus the one we come from. */
 function withSelection(token=null) {
   const list = (canvas?.tokens?.controlled ?? []).map(t => t.actor).filter(Boolean);
   if ( token?.actor && !list.includes(token.actor) ) list.push(token.actor);
   return list;
 }
 
-/** L'entrée du menu du moteur sur un personnage (ui/pointer-menu.mjs), MJ seulement. */
+/** The engine menu entry on a character (ui/pointer-menu.mjs), GM only. */
 export function groupRollEntry(target) {
   if ( !game.user.isGM || !target?.actor?.system?.abilities ) return null;
   return { icon: "fa-solid fa-dice-d20", label: loc("JetGroupe.Menu"), run: () => openGroupRoll({ actors: withSelection(target) }) };
@@ -281,13 +281,14 @@ function onRenderCard(message, html) {
   head.innerHTML = lines.join("");
   content.prepend(head);
 
-  // Le total et la réussite de chaque ligne sont les nôtres : dnd5e ne lit que le jet (sans le dé d'Inspiration bardique ajouté ensuite), et
-  // avec un DD caché les jets n'ont pas de cible — dnd5e ne marque rien. Au MJ toujours, aux joueurs quand le DD n'est pas caché.
+  // The total and success of each line are ours: dnd5e reads only the roll (without the Bardic Inspiration die added
+  // afterwards), and with a hidden DC the rolls have no target — dnd5e marks nothing. Always to the GM, to players when the
+  // DC is not hidden.
   for ( const item of root.querySelectorAll(".targets [data-uuid]") ) {
     const entry = view.entries.find(e => e.uuid === item.dataset.uuid);
     const status = item.querySelector(".status");
     if ( !status || !entry ) continue;
-    // En décision : le jet est là, le dé d'Inspiration bardique pas encore tranché.
+    // Pending a decision: the roll is there, the Bardic Inspiration die not yet settled.
     const raw = status.querySelector(".total");
     if ( entry.deciding && raw ) {
       raw.textContent = `${entry.rolled}…`;
@@ -305,9 +306,9 @@ function onRenderCard(message, html) {
     status.querySelectorAll(".fa-check, .fa-xmark").forEach(i => i.remove());
     status.append(foundry.applications.fields.createFontAwesomeIcon(entry.success ? "check" : "xmark"));
   }
-  // Issue #32 : succès à un prix — bouton du MJ sur une ligne ratée de 1 ou 2, marque sur une ligne acceptée.
+  // Issue #32: success at a cost — GM button on a line that failed by 1 or 2, mark on an accepted line.
   decorateGroupCard(message, root, view, { what: testTitle(request) });
-  // Le verdict : au MJ toujours, aux joueurs quand le DD n'est pas caché.
+  // The verdict: always to the GM, to players when the DC is not hidden.
   root.querySelector(".das-group-roll__verdict")?.remove();
   if ( (view.success !== null) && (gm || !request.hideDc) ) {
     const verdict = document.createElement("p");

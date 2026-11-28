@@ -1,22 +1,23 @@
 /**
- * §68 : l'utilisation sans fenêtre (réglage de monde « autoUsage », activé par défaut). La fenêtre d'utilisation de dnd5e
- * (applications/activity/activity-usage-dialog.mjs) ne sert qu'à décocher ce que dnd5e a déjà prévu (activity/mixin.mjs:445-510,
- * `_prepareUsageConfig`) : consommer (action, ressources, emplacement), commencer la concentration (et finir la précédente si la
- * limite est atteinte), poser la zone. Sans elle, les trois s'appliquent tels quels (`dialogConfig.configure = false`).
+ * §68: use without a window (world setting "autoUsage", enabled by default). The dnd5e use window
+ * (applications/activity/activity-usage-dialog.mjs) serves only to uncheck what dnd5e has already planned
+ * (activity/mixin.mjs:445-510, `_prepareUsageConfig`): consuming (action, resources, slot), starting Concentration
+ * (and ending the previous one if the limit is reached), placing the area. Without it, the three apply as they are
+ * (`dialogConfig.configure = false`).
  *
- *  - Emplacement de sort : celui que dnd5e propose s'il en reste, sinon le plus bas disponible au moins du niveau du sort
- *    (core/usage.mjs), et le niveau de lancement suit (`scaling`).
- *  - §106 : un sort qui peut se lancer plus haut (il reste un emplacement d'un niveau supérieur) garde la fenêtre de dnd5e, où se
- *    choisit le niveau — depuis la fiche notamment. Qui a déjà choisi l'emplacement la saute lui-même (`configure: false` : tiroir
- *    de la barre de darsh-dnd-ui), comme les utilisations du moteur.
- *  - Plus de ressources (aucun emplacement, utilisations de l'activité ou de l'item épuisées) : §77, le MJ peut toujours lancer — une
- *    fenêtre d'avertissement le laisse lancer sans rien consommer, ou renoncer (que la fenêtre de dnd5e soit passée ou non) ; un
- *    joueur non — dnd5e refuse l'utilisation avec son propre avertissement.
- *  - §77 : une activité qui dépense ses propres utilisations sans en avoir, quand l'item en porte (donnée du Monster Manual 2024,
- *    Nuage fétide du Dretch), dépense celles de l'item (corrigé sur la copie de l'item que dnd5e utilise, pas sur la fiche).
- *  - Un vrai choix reste à la fenêtre : profil d'invocation, de transformation ou d'enchantement quand il y en a plusieurs,
- *    taille ou type de créature d'une invocation (§383), commande de bastion. Un appel qui saute lui-même la fenêtre (barre
- *    d'actions) reçoit la fenêtre « Choisir la forme » du moteur (ui/summon-form.mjs).
+ *  - Spell slot: the one dnd5e proposes if any remain, otherwise the lowest available of at least the spell's level
+ *    (core/usage.mjs), and the casting level follows (`scaling`).
+ *  - §106: a spell that can be cast higher (a slot of a higher level remains) keeps the dnd5e window, where the
+ *    level is chosen — from the sheet in particular. Whoever has already chosen the slot skips it themselves
+ *    (`configure: false`: drawer of the darsh-dnd-ui bar), like the engine's uses.
+ *  - No more resources (no slot, activity or item uses exhausted): §77, the GM can always cast — a
+ *    warning window lets them cast without consuming anything, or give up (whether or not the dnd5e window was passed); a
+ *    player cannot — dnd5e refuses the use with its own warning.
+ *  - §77: an activity that spends its own uses without having any, when the item carries some (data of the 2024 Monster Manual,
+ *    Dretch's Fetid Cloud), spends the item's (fixed on the copy of the item that dnd5e uses, not on the sheet).
+ *  - A real choice remains for the window: summon, transformation or enchantment profile when there are several,
+ *    size or creature type of a summon (§383), bastion command. A call that skips the window itself (action
+ *    bar) gets the engine's "Choose the form" window (ui/summon-form.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -30,15 +31,15 @@ import { summonChoicesOf, applySummonCount, applyPreferredActors, concentrationO
 
 export const AUTO_USAGE_SETTING = "autoUsage";
 
-/** Un choix que seule la fenêtre de dnd5e propose. */
+/** A choice that only the dnd5e window offers. */
 function needsChoice(activity) {
   if ( activity.type === "order" ) return true;
-  // §122 : une dépense ajustable hors sort — combien de points prendre dans la réserve (Imposition des mains : « restaurer un
-  // nombre de PV égal à… », jusqu'à ce qui reste), le curseur de la fenêtre de dnd5e (`consumption.scaling`). Sans elle, dnd5e
-  // prenait 1 point. Le niveau d'un sort est jugé plus bas (§106).
+  // §122: an adjustable expenditure outside spells — how many points to take from the pool (Lay On Hands: "restore a
+  // number of Hit Points equal to…", up to what remains), the slider of the dnd5e window (`consumption.scaling`).
+  // Without it, dnd5e took 1 point. A spell's level is judged further down (§106).
   if ( activity.consumption?.scaling?.allowed && !activity.requiresSpellSlot ) return true;
-  // §383 : une invocation garde la fenêtre dès qu'il y a une forme, une taille ou un type à choisir (Appel de familier : un seul
-  // profil, trois types de créature — le premier était pris d'office).
+  // §383: a summon keeps the window as soon as there is a form, size or type to choose (Find Familiar: a single
+  // profile, three creature types — the first was taken by default).
   if ( activity.type === "summon" ) return summonChoicesOf(activity).any;
   if ( ["transform", "enchant"].includes(activity.type) ) {
     const profiles = (activity.type === "enchant") ? activity.availableEnchantments : activity.availableProfiles;
@@ -47,7 +48,7 @@ function needsChoice(activity) {
   return false;
 }
 
-/** Une utilisation (de l'activité ou d'un item) que la consommation demande et qui manque. */
+/** A use (of the activity or of an item) that the consumption asks for and that is missing. */
 function lacksUses(activity, usageConfig) {
   const indexes = usageConfig.consume?.resources;
   if ( !Array.isArray(indexes) ) return false;
@@ -55,7 +56,7 @@ function lacksUses(activity, usageConfig) {
   return indexes.some(i => {
     const target = targets[i];
     const cost = Number(target?.value);
-    if ( !(cost > 0) ) return false;   // une formule ou un coût nul : dnd5e jugera
+    if ( !(cost > 0) ) return false;   // a formula or a zero cost: dnd5e will judge
     if ( target.type === "activityUses" ) {
       const owner = target.target ? activity.item.system.activities?.get(target.target) : activity;
       return !!owner?.uses?.max && ((Number(owner.uses.value) || 0) < cost);
@@ -69,15 +70,15 @@ function lacksUses(activity, usageConfig) {
 }
 
 /**
- * §77 : les utilisations propres d'une activité qui n'en a pas, portées par l'item : réécrites en utilisations de l'item sur la COPIE
- * de l'item que dnd5e utilise (`Activity#use` clone l'item ; `updateSource` survit à la mise à l'échelle). Rend l'activité à jour.
+ * §77: the own uses of an activity that has none, carried by the item: rewritten as item uses on the COPY
+ * of the item that dnd5e uses (`Activity#use` clones the item; `updateSource` survives scaling). Returns the updated activity.
  */
 function repairSelfUses(activity) {
   const targets = Array.from(activity.consumption?.targets ?? []);
   const wrong = misplacedSelfUses(targets, !!activity.uses?.max, !!activity.item.system.uses?.max);
   if ( !wrong.length ) return activity;
   const source = activity.toObject().consumption.targets.map((t, i) => (wrong.includes(i) ? { ...t, type: "itemUses" } : t));
-  // Comme dnd5e pour la mise à l'échelle (activity/mixin.mjs:541-544) : la copie se prépare avec sa fiche, puis ses attributs finaux.
+  // As dnd5e does for scaling (activity/mixin.mjs:541-544): the copy is prepared with its sheet, then its final attributes.
   const item = activity.item;
   if ( item.actor ) item.actor._embeddedPreparation = true;
   item.updateSource({ [`system.activities.${activity.id}.consumption.targets`]: source });
@@ -88,12 +89,12 @@ function repairSelfUses(activity) {
 }
 
 /**
- * §109 : un sort qui invoque toujours, dont la case « placer » part décochée (`summon.prompt: false`) — cochée ici, comme on
- * l'aurait fait dans la fenêtre ; `create.summons` est déjà préparé à ce hook (documents/activity/summon.mjs:65-70).
- * §116 : un appelant qui place lui-même les invocations le dit (`{ "dnd5e-combat": { placeSummons: false } }`) — à ce hook, son
- * `create.summons: false` explicite ne se distingue pas de celui que dnd5e prépare (`??=`, summon.mjs:67).
- * §389 : aussi à la relance « Lancer quand même » (§77), qui sortait avant — Animation des morts, Invocation d'animaux, Destrier
- * fantôme… ne posaient rien (balayage des invocations).
+ * §109: a spell that always summons, whose "place" checkbox starts unchecked (`summon.prompt: false`) — checked here, as it
+ * would have been in the window; `create.summons` is already prepared for this hook (documents/activity/summon.mjs:65-70).
+ * §116: a caller that places the summons itself says so (`{ "dnd5e-combat": { placeSummons: false } }`) — at this hook, its
+ * explicit `create.summons: false` cannot be told apart from the one dnd5e prepares (`??=`, summon.mjs:67).
+ * §389: also at the "Cast anyway" relaunch (§77), which used to exit earlier — Animate Dead, Conjure Animals, Phantom
+ * Steed… placed nothing (summons sweep).
  */
 function placeAlways(activity, usageConfig) {
   if ( (activity.type === "summon") && (usageConfig[MODULE_ID]?.placeSummons !== false)
@@ -105,25 +106,25 @@ function placeAlways(activity, usageConfig) {
 
 function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
   if ( !activity?.item ) return;
-  // §111 : une zone déplaçable déjà posée — l'utilisation la déplace (ui/pointer.mjs, §16.14), rien n'est lancé : ni emplacement
-  // à choisir ou à corriger, ni « plus de charge » chez le MJ. Un appelant qui confirme d'office lance vraiment (même règle).
+  // §111: a movable area already placed — the use moves it (ui/pointer.mjs, §16.14), nothing is cast: no slot
+  // to choose or fix, no "out of charges" for the GM. A caller that confirms outright really casts (same rule).
   if ( !usageConfig[MODULE_ID]?.confirmed && movableZoneOf(activity) ) return;
   activity = repairSelfUses(activity);
-  // §498 : un changement de forme déclaré (`changesForm`) — le moteur fait l'échange après l'utilisation. Sans cela, une activité
-  // « transform » de dnd5e en mode `cr` (le défaut, data/activity/transform-data.mjs:41) ouvre à la fin de l'utilisation le compendium
-  // pour choisir la créature (`_finalizeUsage` → `queryActor`, documents/activity/transform.mjs:114-117) et l'attend : un profil
-  // qu'il ne connaît pas l'en empêche (comme la Forme sauvage, runtime/wildshape.mjs `takeForm`).
+  // §498: a declared form change (`changesForm`) — the engine does the swap after the use. Without it, a dnd5e "transform"
+  // activity in `cr` mode (the default, data/activity/transform-data.mjs:41) opens the compendium at the end of the use to choose
+  // the creature (`_finalizeUsage` → `queryActor`, documents/activity/transform.mjs:114-117) and waits for it: a profile
+  // it does not know prevents that (like Wild Shape, runtime/wildshape.mjs `takeForm`).
   if ( (activity.type === "transform") && formChangeOf(activity) ) usageConfig.transform = { ...(usageConfig.transform ?? {}), profile: MODULE_ID };
-  // §386 : une créature du SRD 2014 invoquée par celle du Monster Manual 2024 quand il est là.
+  // §386: a 2014 SRD creature summoned by the 2024 Monster Manual one when it is there.
   if ( activity.type === "summon" ) activity = applyPreferredActors(activity);
-  // §385 : « jusqu'à N » créatures — le nombre choisi dans la fenêtre « Choisir la forme », sur la copie de l'item.
+  // §385: "up to N" creatures — the number chosen in the "Choose the form" window, on the copy of the item.
   const count = Number(usageConfig[MODULE_ID]?.summonCount) || 0;
   if ( (activity.type === "summon") && (count >= 1) && usageConfig.summons?.profile ) {
     activity = applySummonCount(activity, usageConfig.summons.profile, count);
     log(`${activity.item.name}: ${count} creature(s) summoned`);
   }
-  // §405 : une activité d'un sort qui ne dépense pas d'emplacement (attaque de la Lame de feu, dégâts du Trait ensorcelé) se joue au
-  // niveau de lancement, que dnd5e a noté sur l'effet de concentration du sort.
+  // §405: an activity of a spell that does not spend a slot (Flame Blade attack, Witch Bolt damage) is played at the
+  // casting level, which dnd5e noted on the spell's Concentration effect.
   const followUp = activity.isSpell ? followUpScaling({ spellLevel: activity.item.system.level,
     consumesSlot: activity.consumption?.spellSlot !== false, scaling: usageConfig.scaling,
     concentrationScaling: concentrationOn(activity.item)?.getFlag?.("dnd5e", "scaling") }) : null;
@@ -132,11 +133,11 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
     usageConfig.spell = { ...(usageConfig.spell ?? {}), slot: followUp.slot };
     log(`${activity.item.name}: played at its cast level (+${followUp.scaling}, from its concentration)`);
   }
-  // §77 : relancée par le MJ sans charge — rien n'est consommé, pas de fenêtre.
+  // §77: relaunched by the GM without a charge — nothing is consumed, no window.
   if ( usageConfig[MODULE_ID]?.forced ) {
     usageConfig.consume = { ...(usageConfig.consume ?? {}), resources: false, spellSlot: false };
     dialogConfig.configure = false;
-    // §384 : au niveau du sort, pas à celui de l'emplacement proposé (pacte de niveau 3 pour un sort de niveau 6).
+    // §384: at the spell's level, not that of the proposed slot (level 3 pact slot for a level 6 spell).
     if ( activity.requiresSpellSlot ) {
       const level = Number(activity.item.system.level) || 0;
       const slot = forcedSpellSlot(activity.actor?.system.spells, usageConfig.spell?.slot, level);
@@ -163,14 +164,14 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
       log(`${activity.item.name}: no ${proposed} slot left, cast with ${slot}`);
     }
   }
-  // §106 : le niveau est un vrai choix — la fenêtre de dnd5e reste (avec l'emplacement corrigé ci-dessus, s'il l'a été).
+  // §106: the level is a real choice — the dnd5e window stays (with the slot corrected above, if it was).
   if ( auto && !lacking && activity.requiresSpellSlot && usageConfig.consume?.spellSlot && (usageConfig.scaling !== false)
     && canCastHigher(slots, Number(activity.item.system.level) || 0) ) auto = false;
   const slotLacking = lacking;
   if ( !lacking ) lacking = lacksUses(activity, usageConfig);
-  // §77, §410 (issue #44, lot 3) : plus de ressources — plus de refus sec ni de fenêtre propre au MJ : ce qui manque est noté pour la
-  // fenêtre de légalité (runtime/turn.mjs, inscrite après), qui le dit à tous, MJ et joueurs ; forcé, l'utilisation repart avec
-  // `forced` (ci-dessus : rien n'est consommé, le sort à son niveau).
+  // §77, §410 (issue #44, batch 3): no more resources — no more flat refusal or GM-only window: what is missing is noted for
+  // the legality window (runtime/turn.mjs, registered later), which tells everyone, GM and players; forced, the use restarts with
+  // `forced` (above: nothing is consumed, the spell at its level).
   if ( lacking ) usageConfig[MODULE_ID] = { ...(usageConfig[MODULE_ID] ?? {}), lacking: slotLacking ? "noSlot" : "noUses" };
   if ( auto ) dialogConfig.configure = false;
   placeAlways(activity, usageConfig);

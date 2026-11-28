@@ -1,14 +1,14 @@
 /**
- * Malédiction (SPEC §37), monde `dnd-6`. Le Clerc reçoit Malédiction et Rayon traçant (Manuel des joueurs, à volonté) et maudit le
- * Zombi, au contact, sur la colonne libre de Restored Keep (Clerc 3080 × 4900, Zombi 3080 × 5040, Guerrier 3080 × 5180). Chaque
- * partie relance la sauvegarde jusqu'à un échec (20 essais au plus). Vérifie :
- *  - Caractéristique : « Curse Ability » pose UN seul effet, la Force choisie (réserve `choice.pool`) ; sauvegarde de Force du
- *    Zombi au Désavantage ;
- *  - Attaques : le Zombi attaque le Clerc au Désavantage, le Guerrier sans ;
- *  - Actions : au combat, au début des tours du Zombi, sauvegarde de Sagesse rejouée ; ratée → action Esquiver (budget), réussie →
- *    la malédiction reste ;
- *  - Résilience : le Rayon traçant du Clerc sur le Zombi maudit porte 1d8 nécrotique de plus.
- * Remet positions, PV, effets ; retire les items prêtés.
+ * Bestow Curse (SPEC §37), world `dnd-6`. The Cleric receives Bestow Curse and Ray of Frost (Player's Handbook, at will) and
+ * curses the Zombie, in contact, on the free column of Restored Keep (Cleric 3080 × 4900, Zombie 3080 × 5040, Fighter
+ * 3080 × 5180). Each part rerolls the saving throw until a failure (20 attempts at most). Checks:
+ *  - Ability: "Curse Ability" applies ONE single effect, the chosen Strength (pool `choice.pool`); the Zombie's Strength saving
+ *    throw at Disadvantage;
+ *  - Attacks: the Zombie attacks the Cleric at Disadvantage, the Fighter without;
+ *  - Actions: in combat, at the start of the Zombie's turns, Wisdom saving throw replayed; failed → Dodge (budget), succeeded →
+ *    the curse remains;
+ *  - Resilience: the Cleric's Ray of Frost on the cursed Zombie carries 1d8 more necrotic damage.
+ * Restores positions, HP, effects; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -79,7 +79,7 @@ export default {
     };
     const curses = async () => (await ctx.effects(zombi)).filter(e => !effects0.get(zombi.id).has(e._id ?? e.id) && (e.statuses ?? []).includes("cursed"));
 
-    /** Maudit le Zombi par cette activité jusqu'à une sauvegarde ratée ; rend les effets de malédiction posés. */
+    /** Curses the Zombie through this activity until a failed saving throw; returns the curse effects applied. */
     const curse = async (activityId, usage={}) => {
       for ( let n = 1; n <= 20; n++ ) {
         await clearNew(zombi);

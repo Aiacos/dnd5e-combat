@@ -1,16 +1,16 @@
 /**
- * Mode de déplacement et élévation (SPEC §17.4, demande de l'utilisateur du 2026-09-26). Noyau pur.
+ * Movement mode and elevation (SPEC §17.4, user request of 2026-09-26). Pure core.
  *
- * Un mode dit où se trouve le corps par rapport au sol sous lui :
- *  - marcher, ramper : au sol, toujours ;
- *  - voler : au moins à 5 ft au-dessus du sol ;
- *  - fouir : au moins à 5 ft sous le sol.
- * Les autres modes (escalade, nage, saut, téléportation, chute) laissent l'élévation telle quelle.
+ * A mode says where the body is relative to the ground beneath it:
+ *  - walk, crawl: on the ground, always;
+ *  - fly: at least 5 ft above the ground;
+ *  - burrow: at least 5 ft below the ground.
+ * The other modes (climb, swim, jump, teleportation, fall) leave the elevation as it is.
  *
- * Le « sol » est calculé par l'adaptateur (surface qui arrête le déplacement sous le token, sinon base du niveau).
+ * The "ground" is computed by the adapter (surface that stops movement under the token, otherwise the base of the level).
  */
 
-/** Où un mode place le corps : `ground`, `air`, `under`, ou null (libre). */
+/** Where a mode puts the body: `ground`, `air`, `under`, or null (free). */
 const PLACEMENT = { walk: "ground", crawl: "ground", fly: "air", burrow: "under" };
 
 export const placementOf = action => PLACEMENT[action] ?? null;
@@ -21,9 +21,9 @@ const SPEED = { fly: "fly", burrow: "burrow" };
 export const speedFor = action => SPEED[action] ?? null;
 
 /**
- * Pourquoi ce mode est refusé à une créature, ou null. Voler ou fouir demande la vitesse correspondante.
+ * Why this mode is refused to a creature, or null. Flying or burrowing requires the matching speed.
  * @param {string} action
- * @param {Record<string, number>} speeds  Vitesses préparées de la fiche.
+ * @param {Record<string, number>} speeds  Prepared speeds of the sheet.
  * @returns {"noSpeed"|null}
  */
 export function modeRefusal(action, speeds) {
@@ -33,13 +33,13 @@ export function modeRefusal(action, speeds) {
 }
 
 /**
- * L'élévation cohérente avec un mode, au plus près de l'élévation voulue.
+ * The elevation consistent with a mode, as close as possible to the wanted elevation.
  * @param {string} action
- * @param {number} elevation   Élévation voulue.
- * @param {number} ground      Élévation du sol à cet endroit.
- * @param {number} clearance   Écart minimal au sol en vol ou en fouissement (5 ft, dans l'unité de la scène).
- * @param {number} [ceiling]   Élévation la plus haute où poser les pieds en vol : sous le plafond, tête comprise. Un
- *                             plafond plus bas que  ne l'emporte pas (on vole quand même à 5 ft).
+ * @param {number} elevation   Wanted elevation.
+ * @param {number} ground      Elevation of the ground at that spot.
+ * @param {number} clearance   Minimum gap to the ground when flying or burrowing (5 ft, in the scene's unit).
+ * @param {number} [ceiling]   Highest elevation at which to set the feet when flying: under the ceiling, head included. A
+ *                             ceiling lower than  does not win out (one flies at 5 ft anyway).
  */
 export function coherentElevation(action, elevation, ground, clearance, ceiling=Infinity) {
   switch ( placementOf(action) ) {
@@ -51,13 +51,13 @@ export function coherentElevation(action, elevation, ground, clearance, ceiling=
 }
 
 /**
- * Le mouvement vertical qu'impose un changement de mode, ou null s'il n'y en a pas : décoller, atterrir, s'enfouir,
- * remonter. `action` est le mode dans lequel ce mouvement se fait (on descend en volant, on remonte en fouissant).
- * Un changement vers un mode au sol depuis un mode libre (escalade, saut…) ne déplace rien : si le corps est en l'air,
- * c'est une chute, que dnd5e gère (état « En chute »).
- * @param {string} from        Mode actuel.
- * @param {string} to          Mode demandé.
- * @param {number} elevation   Élévation actuelle.
+ * The vertical movement that a mode change imposes, or null if there is none: take off, land, burrow in,
+ * come back up. `action` is the mode in which this movement is made (one goes down flying, comes up burrowing).
+ * A change to a ground mode from a free mode (climb, jump…) moves nothing: if the body is in the air,
+ * it is a fall, which dnd5e handles ("Falling" condition).
+ * @param {string} from        Current mode.
+ * @param {string} to          Requested mode.
+ * @param {number} elevation   Current elevation.
  * @param {number} ground
  * @param {number} clearance
  * @param {number} [ceiling]
@@ -72,17 +72,17 @@ export function modeShift(from, to, elevation, ground, clearance, ceiling=Infini
 }
 
 /**
- * Aligne un chemin sur le sol selon le mode de chaque pas.
- *  - Au sol, le corps suit le sol : une marche de `step` (5 ft) au plus, en montant comme en descendant. Plus haut, il
- *    faut grimper (`tooHigh`, chemin refusé) ; plus bas, c'est une chute : le chemin s'arrête au bord, sur le vide,
- *    et dnd5e met la créature « En chute » (`falls`). `lenient` (le MJ) : le sol est suivi quoi qu'il arrive.
- *  - En vol, jamais sous `sol + clearance` ni au-dessus de `ceiling` ; en fouissement, jamais au-dessus de `sol − clearance`.
- *  - Les autres modes ne sont pas touchés.
- * @param {{elevation: number}} origin                               Point de départ (élévation actuelle).
+ * Aligns a path with the ground according to the mode of each step.
+ *  - On the ground, the body follows the ground: a step of at most `step` (5 ft), going up as well as down. Higher, it
+ *    must climb (`tooHigh`, path refused); lower, it is a fall: the path stops at the edge, over the void,
+ *    and dnd5e puts the creature "Falling" (`falls`). `lenient` (the GM): the ground is followed whatever happens.
+ *  - Flying, never below `sol + clearance` nor above `ceiling`; burrowing, never above `sol − clearance`.
+ *  - The other modes are not touched.
+ * @param {{elevation: number}} origin                               Starting point (current elevation).
  * @param {{elevation: number, action: string, ground: number, ceiling?: number}[]} waypoints
  * @param {{clearance: number, step: number, lenient?: boolean}} options
  * @returns {{elevations: number[], kept: number, issue: "tooHigh"|"falls"|null, changed: boolean}}
- *   `elevations` : une par point gardé ; `kept` : nombre de points gardés.
+ *   `elevations`: one per point kept; `kept`: number of points kept.
  */
 export function alignPath(origin, waypoints, { clearance, step, lenient=false }) {
   const elevations = [];
@@ -94,7 +94,7 @@ export function alignPath(origin, waypoints, { clearance, step, lenient=false })
       const rise = elevation - previous;
       if ( rise > step + 1e-6 ) return { elevations, kept: elevations.length, issue: "tooHigh", changed: true };
       if ( -rise > step + 1e-6 ) {
-        // Le pas au-dessus du vide : on y va, à l'élévation d'où l'on vient, et l'on s'arrête là.
+        // The step over the void: one goes there, at the elevation one comes from, and stops there.
         elevations.push(previous);
         return { elevations, kept: elevations.length, issue: "falls", changed: true };
       }
@@ -107,19 +107,19 @@ export function alignPath(origin, waypoints, { clearance, step, lenient=false })
 }
 
 /**
- * Un pas de l'A*, d'une case à une voisine, est-il possible au sol ? La même marche de `step` au plus : l'A* ne fait ni
- * grimper ni sauter dans le vide.
+ * Is an A* step, from one cell to a neighbour, possible on the ground? The same step of at most `step`: the A* neither
+ * climbs nor jumps into the void.
  */
 export const groundStepAllowed = (fromGround, toGround, step) => Math.abs(toGround - fromGround) <= step + 1e-6;
 
 /**
- * §238 : ce que le menu de son propre token propose pour le vol — `takeOff` (s'envoler : 5 ft au-dessus du sol), `land` (atterrir :
- * descendre en volant jusqu'au sol), ou null.
- *  - Atterrir : en vol, ou en l'air dans un mode au sol chez une créature qui vole (`effectiveMode`).
- *  - S'envoler : dans un mode au sol, au sol, avec une Vitesse de vol (À terre, Agrippé… la ramènent à 0) et la place sous le plafond.
- *  - Les autres modes (escalade, nage, fouissement) n'ont rien ici : l'escalade a ses propres entrées.
+ * §238: what the menu of one's own token offers for flight — `takeOff` (fly up: 5 ft above the ground), `land` (land:
+ * descend while flying to the ground), or null.
+ *  - Land: flying, or in the air in a ground mode on a creature that flies (`effectiveMode`).
+ *  - Take off: in a ground mode, on the ground, with a fly Speed (Prone, Grappled… bring it to 0) and room under the ceiling.
+ *  - The other modes (climb, swim, burrow) have nothing here: climbing has its own entries.
  * @param {{mode: string, airborne: boolean, flySpeed: number, ground: number, ceiling: number, clearance: number}} state
- *   `ceiling` : l'élévation la plus haute où poser les pieds en vol (adapter/altitude.mjs `boundsUnder`).
+ *   `ceiling`: the highest elevation at which to set the feet when flying (adapter/altitude.mjs `boundsUnder`).
  * @returns {"takeOff"|"land"|null}
  */
 export function flightChoice({ mode, airborne, flySpeed, ground, ceiling=Infinity, clearance }) {

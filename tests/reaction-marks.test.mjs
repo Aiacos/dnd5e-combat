@@ -1,21 +1,21 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { markReactionDamage, takeReactionDamage, markReactionAdvantage, takeReactionAdvantage } from "../module/scripts/adapter/marks.mjs";
 
-// §438 suite : le minuteur d'une marque ancienne ne doit pas effacer la marque qui l'a remplacée (Riposte ratée, puis Riposte
-// qui touche moins d'une minute après : le dé de supériorité disparaissait des dégâts).
-describe("marques de réaction : minuteurs", () => {
+// §438 continued: the timer of an old mark must not erase the mark that replaced it (a missed Riposte, then a Riposte
+// that hits less than a minute later: the superiority die disappeared from the damage).
+describe("reaction marks: timers", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("une nouvelle marque de dégâts survit au minuteur de l'ancienne", () => {
+  it("a new damage mark survives the old one's timer", () => {
     vi.useFakeTimers();
-    markReactionDamage("A", "1d8", "Riposte");          // Riposte ratée : la marque reste
+    markReactionDamage("A", "1d8", "Riposte");          // missed Riposte: the mark stays
     vi.advanceTimersByTime(50000);
     markReactionDamage("A", "1d8", "Riposte");          // nouvelle Riposte
-    vi.advanceTimersByTime(20000);                      // l'ancien minuteur (60 s) serait tombé ici
+    vi.advanceTimersByTime(20000);                      // the old timer (60 s) would have expired here
     expect(takeReactionDamage("A")).toEqual({ formula: "1d8", name: "Riposte" });
   });
 
-  it("une marque sans jet tombe d'elle-même, une marque prise ne revient pas", () => {
+  it("a mark with no roll expires by itself, a taken mark does not come back", () => {
     vi.useFakeTimers();
     markReactionDamage("B", "1d8", "Riposte");
     vi.advanceTimersByTime(60001);
@@ -25,7 +25,7 @@ describe("marques de réaction : minuteurs", () => {
     expect(takeReactionAdvantage("C")).toBeNull();
   });
 
-  it("même chose pour l'avantage", () => {
+  it("same for advantage", () => {
     vi.useFakeTimers();
     markReactionAdvantage("D", "x");
     vi.advanceTimersByTime(25000);
@@ -37,24 +37,24 @@ describe("marques de réaction : minuteurs", () => {
 
 import { noteReactionAttack } from "../module/scripts/adapter/marks.mjs";
 
-describe("marques de réaction : Riposte ratée", () => {
-  it("ratée puis rattrapée par une relance (Chanceux) : le dé reste pour les dégâts de cette attaque", () => {
+describe("reaction marks: missed Riposte", () => {
+  it("missed then saved by a reroll (Lucky): the die stays for that attack's damage", () => {
     markReactionDamage("E", "1d8", "Riposte");
-    expect(noteReactionAttack("E")).toBe(false);       // jet raté ; la relance ne refait pas de jet d'attaque
+    expect(noteReactionAttack("E")).toBe(false);       // missed roll; the reroll does not make a new attack roll
     expect(takeReactionDamage("E")).toEqual({ formula: "1d8", name: "Riposte" });
   });
-  it("touchée : le dé attend les dégâts de cette attaque", () => {
+  it("hit: the die waits for that attack's damage", () => {
     markReactionDamage("F", "1d8", "Riposte");
     expect(noteReactionAttack("F")).toBe(false);
     expect(takeReactionDamage("F")).toEqual({ formula: "1d8", name: "Riposte" });
   });
-  it("ratée pour de bon, puis le coup suivant de la même arme : le dé tombe avant ses dégâts", () => {
+  it("really missed, then the same weapon's next blow: the die drops before its damage", () => {
     markReactionDamage("G", "1d8", "Riposte");
     noteReactionAttack("G");
     expect(noteReactionAttack("G")).toBe(true);
     expect(takeReactionDamage("G")).toBeNull();
   });
-  it("une attaque d'une autre arme ne touche pas à la marque", () => {
+  it("an attack with another weapon does not touch the mark", () => {
     markReactionDamage("H", "1d8", "Riposte");
     expect(noteReactionAttack("autre")).toBe(false);
     expect(takeReactionDamage("H")).not.toBeNull();

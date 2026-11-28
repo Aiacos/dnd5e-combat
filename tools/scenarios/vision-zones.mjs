@@ -1,22 +1,23 @@
 /**
- * Issue #42, suite : la vue et l'ouïe face aux zones et aux murs, dans l'« Arène de la vision » (`node tools/arene-vision.mjs` d'abord).
- * Chaque phase pose sa zone ou ses murs, relève règles et écran pour chaque observateur (`api.mcp.visionMatrix`), puis les retire.
+ * Issue #42, follow-up: sight and hearing facing zones and walls, in the "Vision Arena" (`node tools/arene-vision.mjs` first).
+ * Each phase places its zone or walls, surveys rules and screen for each observer (`api.mcp.visionMatrix`), then removes them.
  *
- *  1. Nappe de brouillard (sphère de 20 ft) sur la Cible dans les ténèbres : la brume ne se perce que par la vision aveugle, les
- *     vibrations et Sense All — ni la vision véritable, ni la Vision du diable, ni la vision dans le noir. Le reste s'entend.
- *  2. Silence (sphère de 20 ft) au même endroit : la vue ne change pas, mais rien ne s'entend dedans ni à travers (« aucun son ne peut
- *     naître dans la Sphère ni la traverser ») ; ailleurs, on entend.
- *  3. Murs entre les observateurs de gauche et la Cible au loin : mur plein (ni vue ni son), vitre (la vue passe, pas le son), rideau
- *     (le son passe, pas la vue). Sense All ignore les murs.
- *  4. Une cible en vol dans le noir : les vibrations ne la perçoivent plus (detection-modes/tremor-perception.mjs), la vision dans le
- *     noir, si.
- *  5. L'Invisible révélé : Détection de l'invisibilité (l'Humain, sur lui-même) ; Lueurs féeriques sur la Cible invisible — tous la voient.
- *  6. Lumière faible : la Cible dans le noir, d'abord dans l'obscurité, puis sous une lumière faible. Dans le noir, l'Humain ne la voit
- *     pas et le Rôdeur (vision dans le noir) la voit comme en lumière faible (Désavantage en Perception) ; en lumière faible, l'Humain la
- *     voit, avec Désavantage en Perception, le Rôdeur et l'Occultiste (Vision du diable) comme en lumière vive, sans Désavantage.
- *  7. Réglage « Inconscient : ni vue ni ouïe » : le Rôdeur Inconscient ne voit ni n'entend plus rien (règles et écran) ; réglage
- *     décoché, il garde ses sens.
- * Écran : ce que les règles voient s'affiche (net ou par le contour de son sens) ; le reste est entendu (contour de l'ouïe) ou absent.
+ *  1. Fog Cloud (20 ft Sphere) on the Target in the darkness: the mist is pierced only by Blindsight, Tremorsense
+ *     and Sense All — not Truesight, nor Devil's Sight, nor Darkvision. The rest is heard.
+ *  2. Silence (20 ft Sphere) in the same place: sight does not change, but nothing is heard inside or through ("no sound can
+ *     be created within or pass through the Sphere"); elsewhere, it is heard.
+ *  3. Walls between the left observers and the far Target: solid wall (neither sight nor sound), glass pane (sight passes, not
+ *     sound), curtain (sound passes, not sight). Sense All ignores walls.
+ *  4. A target flying in the dark: Tremorsense no longer perceives it (detection-modes/tremor-perception.mjs), Darkvision
+ *     does.
+ *  5. The Invisible revealed: See Invisibility (the Human, on themselves); Faerie Fire on the invisible Target — all see it.
+ *  6. Dim Light: the Target in the dark, first in obscurity, then under a Dim Light. In the dark, the Human does not see it
+ *     and the Ranger (Darkvision) sees it as in Dim Light (Disadvantage on Perception); in Dim Light, the Human
+ *     sees it, with Disadvantage on Perception, the Ranger and the Warlock (Devil's Sight) as in Bright Light, without
+ *     Disadvantage.
+ *  7. "Unconscious: neither sight nor hearing" setting: the Unconscious Ranger neither sees nor hears anything (rules and
+ *     screen); setting unchecked, it keeps its senses.
+ * Screen: what the rules see is shown (sharp or by the outline of its sense); the rest is heard (hearing outline) or absent.
  */
 import { ARENE_VISION } from "../lib/stages.mjs";
 
@@ -25,7 +26,7 @@ const SPELLS = "Compendium.dnd-players-handbook.spells.";
 const FOG = `${SPELLS}phbsplFogCloud00`;
 const SILENCE = `${SPELLS}phbsplSilence000`;
 const OBSERVERS = ["Humain", "Occultiste du diable", "Rôdeur elfe", "Vision véritable", "Vision aveugle", "Vibrations", "Sens tout", "Voir l'invisible"];
-const LEFT = ["Humain", "Occultiste du diable", "Rôdeur elfe", "Vision véritable", "Sens tout", "Voir l'invisible"];   // à gauche du mur
+const LEFT = ["Humain", "Occultiste du diable", "Rôdeur elfe", "Vision véritable", "Sens tout", "Voir l'invisible"];   // left of wall
 const WALL = { NONE: 0, NORMAL: 20 };
 
 export default {
@@ -42,11 +43,11 @@ export default {
     const matrix = async (observers, targets) => (await ctx.engine("visionMatrix", { observerIds: observers.map(n => tokens[n].id),
       targetIds: targets.map(n => tokens[n].id) })).rows;
     const show = rows => { for ( const r of rows ) ctx.log(`  ${r.observer} → ${r.target} : règles ${r.rules.sees ? "voit" : "ne voit pas"}${r.rules.hears ? ", entend" : ", n'entend pas"} (${r.rules.distance} ft${r.rules.blocked.length ? `, ${r.rules.blocked.join("+")}` : ""}) ; écran ${r.screen}`); };
-    /** Une ligne : règles attendues (vue, ouïe), et l'écran qui en découle. */
+    /** One row: expected rules (sight, hearing), and the screen that follows from them. */
     const check = (r, sees, hears, label) => {
       ctx.expect(r.rules.sees === sees, `${label} : ${r.observer} ${sees ? "voit" : "ne voit pas"} ${r.target} (règles)`);
       if ( hears !== null ) ctx.expect(r.rules.hears === hears, `${label} : ${r.observer} ${hears ? "entend" : "n'entend pas"} ${r.target}`);
-      // #118 : une cible localisée sans être vue (perception des vibrations) garde le contour de son sens à l'écran.
+      // #118: a target located without being seen (Tremorsense) keeps the outline of its sense on screen.
       const screen = r.rules.sees ? ["seen", "outline"] : (r.rules.locates ? ["outline"] : [r.rules.hears ? "heard" : "hidden"]);
       if ( r.observer === "Vibrations" && !r.rules.sees ) ctx.expect(r.rules.locates === (label !== "en vol"), `${label} : Vibrations ${label !== "en vol" ? "localise" : "ne localise pas"} ${r.target} (règles)`);
       ctx.expect(screen.includes(r.screen), `${label} : ${r.observer} → ${r.target} à l'écran ${screen.join(" ou ")} (écran : ${r.screen})`);
@@ -67,7 +68,7 @@ export default {
     // 1. Nappe de brouillard.
     const fog = await zone(FOG, "fog-cloud");
     if ( fog ) {
-      // [dans, derrière] : la vue les atteint-elle à travers la brume ?
+      // [inside, behind]: does sight reach them through the mist?
       const FOG_SEES = { "Humain": [false, false], "Occultiste du diable": [false, false], "Rôdeur elfe": [false, false],
         "Vision véritable": [false, false], "Vision aveugle": [true, false], "Vibrations": [false, false], "Sens tout": [true, true],
         "Voir l'invisible": [false, false] };
@@ -87,7 +88,7 @@ export default {
       const rows = await matrix(["Humain", "Rôdeur elfe", "Vision aveugle", "Vibrations"], [IN, BEHIND, FAR]);
       ctx.log("Silence :"); show(rows);
       for ( const r of rows ) {
-        // La vue ne change pas (pleine lumière) ; l'ouïe s'arrête à la sphère — la cible dedans, ou derrière elle.
+        // Sight does not change (full light); hearing stops at the Sphere — the target inside, or behind it.
         check(r, true, (r.target === FAR) ? true : ((r.target === IN) ? false : null), "Silence");
         if ( r.target === BEHIND ) {
           const crosses = r.rules.blocked.includes("silence");
@@ -98,7 +99,7 @@ export default {
       await ctx.removeEffectsNamed(caster, /concentr/i);
     }
 
-    // 3. Murs entre la gauche (colonne 6) et la Cible au loin (colonne 10) : colonne 9, des lignes 0 à 7.
+    // 3. Walls between the left (column 6) and the far Target (column 10): column 9, rows 0 to 7.
     const x = 9 * grid;
     const listWalls = async () => ((await ctx.call("list-scene-objects", { sceneId, types: ["Wall"] })).objects?.Wall ?? []).map(w => w.id);
     for ( const [label, sight, sound] of [["mur plein", WALL.NORMAL, WALL.NORMAL], ["vitre", WALL.NONE, WALL.NORMAL], ["rideau", WALL.NORMAL, WALL.NONE]] ) {
@@ -110,14 +111,14 @@ export default {
       const rows = await matrix(LEFT, [FAR]);
       ctx.log(`${label} :`); show(rows);
       for ( const r of rows ) {
-        const always = r.observer === "Sens tout";   // Sense All : ni murs ni lumière
+        const always = r.observer === "Sens tout";   // Sense All: no walls, no light
         check(r, always || (sight === WALL.NONE), sound === WALL.NONE, label);
       }
       for ( const id of added ) await ctx.call("delete-scene-object", { type: "Wall", objectId: id }).catch(() => {});
       await pause(1000);
     }
 
-    // 4. En vol dans le noir : la vision dans le noir la voit ; les vibrations la localisent au sol (sans la voir, #118), plus en vol.
+    // 4. Flying in the dark: Darkvision sees it; Tremorsense locates it on the ground (without seeing it, #118), not in flight.
     const [dx, dy, dw, dh] = ARENE_VISION.dark;
     const night = await ctx.call("create-region", { sceneId, name: "Obscurité (essai)", color: "#000000",
       shapes: [{ type: "rectangle", x: dx * grid, y: dy * grid, width: dw * grid, height: dh * grid }],
@@ -140,7 +141,7 @@ export default {
     await ctx.call("delete-scene-object", { type: "Region", objectId: nightId }).catch(() => {});
     await pause(1000);
 
-    // 5. L'Invisible révélé : Détection de l'invisibilité (sur soi, l'Humain) ; Lueurs féeriques sur la Cible invisible (Occultiste).
+    // 5. The Invisible revealed: See Invisibility (on themselves, the Human); Faerie Fire on the invisible Target (Warlock).
     const invisible = "Cible invisible";
     await ctx.call("set-status", { tokenId: tokens[invisible].id, statusId: "invisible", active: true });
     await ctx.removeEffectsNamed(tokens[invisible], /outlined|silhouette|faerie|lueur/i);
@@ -150,7 +151,7 @@ export default {
     const human = tokens["Humain"];
     await ctx.ensureItem(human, `${SPELLS}phbsplSeeInvisib`, { system: { method: "atwill" } });
     ctx.restore(() => ctx.removeEffectsNamed(human, /see invisib|détection|concentr/i));
-    // L'effet du sort (sens spécial « Invisible creatures ») se pose au bouton de la carte de dnd5e : posé ici directement.
+    // The spell's effect (special sense "Invisible creatures") is placed by the dnd5e card button: placed here directly.
     const seeItem = await ctx.itemId(human.id, "see-invisibility");
     await ctx.engine("placeItemEffect", { tokenId: human.id, casterId: human.id, itemId: seeItem, effectId: "BRwB0T8buWhJAuDx" });
     await pause(1500);
@@ -159,7 +160,7 @@ export default {
     for ( const r of rowsInv ) check(r, r.observer === "Humain", true, "Détection de l'invisibilité");
     await ctx.removeEffectsNamed(human, /see invisib|détection|concentr/i);
     await pause(1000);
-    // Lueurs féeriques : sauvegarde de Dextérité de la cible — rejouée jusqu'à l'échec (10 essais au plus).
+    // Faerie Fire: the target's Dexterity saving throw — replayed until it fails (10 attempts at most).
     await ctx.ensureItem(caster, `${SPELLS}phbsplFaerieFire`, { system: { method: "atwill" } });
     const ib = await ctx.box(tokens[invisible]);
     let lit = false;
@@ -179,7 +180,7 @@ export default {
       for ( const r of rowsInv ) check(r, true, true, "Lueurs féeriques");
     }
 
-    // 6. Lumière faible : obscurité sur la Cible dans le noir, puis une lumière faible sur elle.
+    // 6. Dim Light: obscurity on the Target in the dark, then a Dim Light on it.
     const LIGHTS = ["Humain", "Rôdeur elfe", "Occultiste du diable"];
     const DIM = 1, BRIGHT = 2;
     const night2 = await ctx.call("create-region", { sceneId, name: "Obscurité (lumière faible)", color: "#000000",
@@ -221,7 +222,7 @@ export default {
     await ctx.call("delete-scene-object", { type: "Region", objectId: night2Id }).catch(() => {});
     await pause(1000);
 
-    // 7. Réglage « Inconscient : ni vue ni ouïe ».
+    // 7. "Unconscious: neither sight nor hearing" setting.
     const ranger = tokens["Rôdeur elfe"];
     const got = await ctx.call("get-setting", { namespace: "dnd5e-combat", key: "unconsciousSenses" });
     const wasRule = got?.value ?? got ?? false;

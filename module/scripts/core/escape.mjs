@@ -1,27 +1,26 @@
 /**
- * Se libérer par un test (SPEC §16.54) : « une créature Entravée peut entreprendre une action pour effectuer un test de
- * Force (Athlétisme) contre votre DD de sauvegarde des sorts » — Enchevêtrement, Frappe piégeuse, Tentacules noirs
- * d'Evard ; Filet collant du kuo-toa, Absorber, Submerger dans le Monster Manual. Le test est écrit dans le texte de
- * l'item, en enrichisseur de dnd5e :
+ * Escaping through a check (SPEC §16.54): "a Restrained creature can take an action to make a Strength (Athletics) check
+ * against your spell save DC" — Entangle, Ensnaring Strike, Evard's Black Tentacles; the kuo-toa's "Sticky Net", Absorb,
+ * Engulf in the Monster Manual. The check is written in the item's text, as a dnd5e enricher:
  *
- *   [[/check ability=str skill=ath dc=@attributes.spell.dc]]   (sorts du PHB)
+ *   [[/check ability=str skill=ath dc=@attributes.spell.dc]]   (PHB spells)
  *   [[/check ath dc=@skills.ath.passive format=long]]           (Monster Manual)
  *   [[/skill ath 10]]
  *
- * Forme de l'enrichisseur : dnd5e 6.0.3, `parseConfig` et `enrichCheck` (dnd5e.mjs:32003-32016, :32383) — paires
- * `clé=valeur` ou valeurs seules, rangées d'après ce qu'elles sont (caractéristique, compétence, nombre = DD).
+ * Enricher form: dnd5e 6.0.3, `parseConfig` and `enrichCheck` (dnd5e.mjs:32003-32016, :32383) — pairs
+ * `clé=valeur` or bare values, sorted by what they are (ability, skill, number = DC).
  */
 
 const ENRICHER = /\[\[\/(check|skill)\s+([^\]]*)\]\]/i;
 
 /**
- * Le premier test d'un texte, ou null.
+ * The first check of a text, or null.
  * @param {string} text
- * @param {{abilities: string[], skills: string[], defaultDc?: string|null}} known  clés de `CONFIG.DND5E.abilities` / `.skills` ;
- *   `defaultDc` : le DD d'un test écrit sans DD — celui des sorts du lanceur pour un sort (« contre votre DD de sauvegarde des
- *   sorts »), que les textes importés (DDB Importer : `[[/check str format=long]]`) ne mettent pas dans l'enrichisseur. Sans lui,
- *   un test sans DD reste illisible.
- * @returns {{ability: string|null, skill: string|null, dc: string}|null}  `dc` : nombre ou formule (`@attributes.spell.dc`)
+ * @param {{abilities: string[], skills: string[], defaultDc?: string|null}} known  keys of `CONFIG.DND5E.abilities` / `.skills`;
+ *   `defaultDc`: the DC of a check written without a DC — the caster's spell DC for a spell ("against your spell save
+ *   DC"), which imported texts (DDB Importer: `[[/check str format=long]]`) do not put in the enricher. Without it,
+ *   a check without a DC stays unreadable.
+ * @returns {{ability: string|null, skill: string|null, dc: string}|null}  `dc`: number or formula (`@attributes.spell.dc`)
  */
 export function parseEscapeCheck(text, { abilities=[], skills=[], defaultDc=null }={}) {
   const m = String(text ?? "").match(ENRICHER);
@@ -43,5 +42,5 @@ export function parseEscapeCheck(text, { abilities=[], skills=[], defaultDc=null
   return out;
 }
 
-/** Les effets dont on se libère par ce test : Entravé, sans Agrippé (l'empoignade a son propre S'échapper). */
+/** The effects one escapes through this check: Restrained, without Grappled (a grapple has its own Escape). */
 export const escapableStatuses = statuses => statuses.includes("restrained") && !statuses.includes("grappled");

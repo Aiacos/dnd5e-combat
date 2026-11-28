@@ -4,26 +4,26 @@ import { apiShape, browserFamily, browserName, compareClients, connectionMarkdow
 const ids = list => list.map(f => `${f.level} ${f.id}`);
 
 describe("§388 pingStats", () => {
-  it("médiane, meilleur, pire, irrégularité ; l'écart d'horloge lu sur l'essai le plus court", () => {
+  it("median, best, worst, irregularity; the clock offset read from the shortest trial", () => {
     const s = pingStats([
       { sent: 0, received: 100, remote: 5050 },
-      { sent: 1000, received: 1040, remote: 6020 },   // le plus court : milieu 1020 → écart 5000
+      { sent: 1000, received: 1040, remote: 6020 },   // the shortest: midpoint 1020 → offset 5000
       { sent: 2000, received: 2300, remote: 7150 },
       { lost: true }
     ]);
     expect(s).toMatchObject({ count: 4, lost: 1, min: 40, median: 100, worst: 300, jitter: 260, offset: 5000 });
   });
-  it("aucun essai réussi : rien à mesurer", () => {
+  it("no successful trial: nothing to measure", () => {
     expect(pingStats([{ lost: true }, { lost: true }])).toMatchObject({ count: 2, lost: 2, median: null, offset: null });
   });
 });
 
 describe("§388 empreinte du code", () => {
-  it("la forme d'une API, ordre indifférent", () => {
+  it("the shape of an API, order irrelevant", () => {
     const a = { ui: { cost() {}, cell() {} }, open() {} };
     const b = { open() {}, ui: { cell() {}, cost() {} } };
     expect(apiShape(a)).toEqual(["open", "ui", "ui.cell", "ui.cost"]);
-    // Une instance et des valeurs simples : leur état vivant n'entre pas dans l'empreinte.
+    // An instance and plain values: their live state does not enter the fingerprint.
     class Bar { constructor() { this.pending = 1; } render() {} }
     expect(apiShape({ bar: new Bar(), state: { ready: true }, open() {} })).toEqual(["open", "state"]);
     expect(fingerprint(apiShape(a))).toBe(fingerprint(apiShape(b)));
@@ -35,7 +35,7 @@ describe("§388 empreinte du code", () => {
 describe("§388 compareClients", () => {
   const gm = { foundry: "14.370", system: "dnd5e 6.0.6", modules: [{ id: "dnd5e-combat", version: "0.280.0", code: "aaa" },
     { id: "darsh-loot", version: "0.20.0", code: "bbb" }], activeModules: ["dnd5e-combat", "darsh-loot", "babele"] };
-  it("version différente : page pas rechargée ; même version et autre code : cache", () => {
+  it("different version: page not reloaded; same version and other code: cache", () => {
     const d = compareClients(gm, { foundry: "14.370", system: "dnd5e 6.0.6",
       modules: [{ id: "dnd5e-combat", version: "0.279.0", code: "old" }, { id: "darsh-loot", version: "0.20.0", code: "zzz" }],
       activeModules: ["dnd5e-combat", "darsh-loot", "dice-so-nice"] });
@@ -62,16 +62,16 @@ describe("§388 diagnose", () => {
     expect(ids(f)).toEqual(["ok ping", "ok versions", "ok fps"]);
   });
 
-  it("pas de réponse du tout", () => {
+  it("no response at all", () => {
     const f = diagnose({ pings: { count: 10, lost: 10, median: null }, probe: null, reference });
     expect(ids(f)).toEqual(["bad noAnswer"]);
   });
 
-  it("répond aux allers-retours mais pas à la sonde", () => {
+  it("answers the round trips but not the probe", () => {
     expect(ids(diagnose({ pings, probe: null, reference }))).toEqual(["bad noProbe", "ok ping"]);
   });
 
-  it("les problèmes triés du plus grave au moins grave", () => {
+  it("problems sorted from most to least serious", () => {
     const f = diagnose({
       pings: { ...pings, median: 450, worst: 1200, jitter: 1150, lost: 1, offset: -12500 },
       probe: { ...probe, modules: [{ id: "dnd5e-combat", version: "1", code: "y" }], gpu: "Google SwiftShader", fps: 15, hidden: false,
@@ -84,19 +84,19 @@ describe("§388 diagnose", () => {
     expect(f.find(x => x.id === "clock").data.seconds).toBe(-12.5);
   });
 
-  it("fenêtre cachée : les images par seconde ne comptent pas", () => {
+  it("hidden window: frames per second do not count", () => {
     const f = diagnose({ pings, probe: { ...probe, hidden: true, fps: null }, reference });
     expect(ids(f)).toEqual(["warn hidden", "ok ping", "ok versions"]);
   });
 });
 
 describe("§388 divers", () => {
-  it("nom du navigateur sans les marques leurres", () => {
+  it("browser name without the decoy brands", () => {
     expect(browserName([{ brand: "Not?A_Brand", version: "24" }, { brand: "Chromium", version: "152" }], "ua")).toBe("Chromium 152");
     expect(browserName([{ brand: "Chromium", version: "130" }, { brand: "Google Chrome", version: "130" }, { brand: "Not_A Brand", version: "8" }])).toBe("Google Chrome 130");
     expect(browserName(undefined, "Mozilla Firefox")).toBe("Mozilla Firefox");
   });
-  it("affichage figé (0 image par seconde, fenêtre pas cachée)", () => {
+  it("frozen display (0 frames per second, window not hidden)", () => {
     const f = diagnose({ pings: { count: 1, lost: 0, min: 1, median: 1, worst: 1, jitter: 0 }, probe: { canvas: true, fps: 0, hidden: false }, reference: {} });
     expect(f.map(x => x.id)).toContain("frozen");
     expect(f.map(x => x.id)).not.toContain("fps");
@@ -107,7 +107,7 @@ describe("§388 divers", () => {
     expect(browserFamily("Mozilla/5.0 (Macintosh) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15")).toBe("safari");
     expect(browserFamily("Mozilla/5.0 Electron/30.0 Chrome/124")).toBe("chromium");
   });
-  it("le Markdown : un constat par ligne, les mesures repliées, le rôle sans nom", () => {
+  it("the Markdown: one finding per line, measurements folded, the role without a name", () => {
     const md = connectionMarkdown({ role: "Player 2", pings: { count: 10, lost: 0, min: 1, median: 2, worst: 3, offset: 0 },
       findings: [{ id: "ping", level: "ok", data: {} }, { id: "hidden", level: "warn", data: {} }],
       probe: { foundry: "14.370", gpu: "X", modules: [{ id: "dnd5e-combat", version: "1", code: "abc" }] } }, key => key);

@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * Recopie les tests modèles de la suite DAS (ce dossier) dans `tests/` des modules : la copie est identique au modèle, ce
- * qui est propre à un module reste dans ses fichiers de réglage (`tests/das-tests.json`, `tests/core-contract.json`), que
- * cet outil ne touche jamais.
+ * Copies the template tests of the DAS suite (this folder) into the modules' `tests/`: the copy is identical to the template,
+ * what is specific to a module stays in its setting files (`tests/das-tests.json`, `tests/core-contract.json`), which
+ * this tool never touches.
  *
- *   node tools/contract/sync.mjs           recopie les modèles dans les modules présents à côté de ce dépôt
- *   node tools/contract/sync.mjs --check   ne recopie rien : dit quelles copies diffèrent du modèle (code de sortie 1 si une diffère)
+ *   node tools/contract/sync.mjs           copies the templates into the modules present next to this repository
+ *   node tools/contract/sync.mjs --check   copies nothing: says which copies differ from the template (exit code 1 if one differs)
  *
- * Où : les dépôts voisins du moteur (`../<dossier>`), d'après la liste MODULES ; un dépôt absent est signalé et passé.
- * `core-contract.test.mjs` va chez les voisins seulement (le moteur ne se teste pas contre lui-même) ; les modèles `das-*`
- * vont aussi dans `tests/` du moteur. Après une recopie : `npm test` dans chaque module, puis un commit par dépôt.
- * Sans dépendance (Node seul).
+ * Where: the engine's neighboring repositories (`../<dossier>`), from the MODULES list; an absent one is reported and skipped.
+ * `core-contract.test.mjs` goes to the neighbors only (the engine is not tested against itself); the `das-*` templates
+ * also go into the engine's `tests/`. After a copy: `npm test` in each module, then one commit per repository.
+ * No dependency (Node only).
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -20,7 +20,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const CORE = join(HERE, "..", "..");
 const PARENT = join(CORE, "..");
 
-/** Les modèles, et à qui ils vont. */
+/** The templates, and who they go to. */
 const TEMPLATES = [
   { file: "core-contract.test.mjs", core: false },
   { file: "das-i18n.test.mjs", core: true },
@@ -28,7 +28,7 @@ const TEMPLATES = [
   { file: "das-syntax.test.mjs", core: true }
 ];
 
-/** Les modules voisins, par nom de dossier (à côté du dépôt du moteur). */
+/** The neighboring modules, by folder name (next to the engine's repository). */
 const MODULES = [
   "Foundry dnd5e interface de combat",
   "Foundry dnd5e butin et commerce",
@@ -40,7 +40,7 @@ const MODULES = [
 ];
 
 const check = process.argv.includes("--check");
-// Fins de ligne : une copie extraite en CRLF sur Windows n'est pas « différente ».
+// Line endings: a copy checked out as CRLF on Windows is not "different".
 const read = file => existsSync(file) ? readFileSync(file, "utf8").replace(/\r\n/g, "\n") : null;
 
 const targets = [{ name: "(moteur)", dir: CORE, core: true }, ...MODULES.map(name => ({ name, dir: join(PARENT, name), core: false }))];

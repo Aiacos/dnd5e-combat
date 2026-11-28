@@ -1,12 +1,12 @@
 /**
- * §92 — Foulée des fées et Échappatoire brumeuse (Protecteur Archifée), Ange vengeur (Serment de vengeance). Prêtés depuis le compendium
- * du Manuel des joueurs, avec la Foulée brumeuse.
- *  - L'Occultiste se téléporte (`api.mcp.teleport`, la validation du moteur) : la question des effets de plus ; Foulée narquoise sur le
- *    Bandit resté à côté de la case quittée (Sagesse, « Narguée » ⇔ ratée ; il attaque alors le Clerc au Désavantage, l'Occultiste
- *    sans) ; Foulée effroyable à l'arrivée (Sagesse, 2d10 psychiques ⇔ ratée) ; Foulée revigorante (PV temporaires) ; Foulée
- *    évanescente (Invisible, jusqu'à sa première attaque — §438 ; Nargué, lui, ne cesse pas quand le Bandit attaque).
- *  - Le Paladin devient Ange vengeur ; le Bandit commence son tour dans l'aura : Sagesse, Effrayé ⇔ ratée ; l'attaque du Paladin
- *    contre lui a l'Avantage ; blessé, il n'est plus Effrayé.
+ * §92 — Steps of the Fey and Misty Escape (Archfey Patron), Avenging Angel (Oath of Vengeance). Lent from the Player's Handbook
+ * compendium, with Misty Step.
+ *  - The Warlock teleports (`api.mcp.teleport`, the engine's validation): the effects question added; Taunting Step on the
+ *    Bandit left next to the cell left behind (Wisdom, "Taunted" ⇔ failed; it then attacks the Cleric at Disadvantage, the Warlock
+ *    without); Dreadful Step on arrival (Wisdom, 2d10 psychic ⇔ failed); Refreshing Step (Temporary Hit Points); Disappearing
+ *    Step (Invisible, until its first attack — §438; Taunted, for its part, does not end when the Bandit attacks).
+ *  - The Paladin becomes Avenging Angel; the Bandit starts its turn in the aura: Wisdom, Frightened ⇔ failed; the Paladin's attack
+ *    against it has Advantage; wounded, it is no longer Frightened.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "Compendium.dnd-players-handbook.classes.Item";
@@ -48,7 +48,7 @@ export default {
         for ( const d of r?.windows ?? [] ) {
           const b = (d.buttons ?? []).find(x => re.test(x.label ?? ""));
           if ( b ) { await ctx.call("answer-dialog", { id: d.id, button: b.action ?? b.label }); return { labels: (d.buttons ?? []).map(x => x.label) }; }
-          // Beaucoup d'options : une liste déroulante (adapter/choices.mjs, §113) et un bouton « Valider ».
+          // Many options: a dropdown list (adapter/choices.mjs, §113) and a "Confirm" button.
           for ( const f of (d.fields ?? []).filter(x => x.type === "select") ) {
             const o = (f.options ?? []).find(x => re.test(x.label ?? ""));
             if ( !o ) continue;
@@ -70,9 +70,9 @@ export default {
     const temp0 = (await ctx.call("get-actor", { actorId: warlock.actorId })).system?.attributes?.hp?.temp ?? 0;
     ctx.restore(() => ctx.call("update-actor", { actorId: warlock.actorId, actorData: { "system.attributes.hp.temp": temp0 } }).catch(() => {}));
 
-    // 1. Foulée des fées.
-    // §438 : Manuel 3.0.0 — les foulées de l'Échappatoire brumeuse (évanescente, effroyable) sont des activités de la Foulée des fées
-    // visibles au niveau 6 d'Occultiste : l'Occultiste y passe le temps du scénario (rendu ensuite).
+    // 1. Steps of the Fey.
+    // §438: Manual 3.0.0 — the Misty Escape steps (disappearing, dreadful) are Steps of the Fey activities
+    // visible at Warlock level 6: the Warlock spends the scenario's duration there (restored afterwards).
     const wcls = ((await ctx.call("get-actor", { actorId: warlock.actorId })).items ?? []).find(i => (i.type === "class") && (i.system?.identifier === "warlock"));
     if ( wcls && ((wcls.system?.levels ?? 0) < 6) ) {
       const lv0 = wcls.system.levels;
@@ -91,7 +91,7 @@ export default {
       await ctx.call("move-token", { tokenId: cleric.id, x: w0.x + grid, y: w0.y + grid, elevation: 0 });
       await pause(800);
     };
-    /** Se téléporte à 4 cases à l'ouest (ou à côté du Bandit : `near`) et choisit l'option ; rend ce qu'a vu la question. */
+    /** Teleports 4 cells to the west (or next to the Bandit: `near`) and picks the option; returns what the question saw. */
     const step = async (re, { near=false }={}) => {
       await home(); await tough(); await clear();
       const ids = await known();
@@ -107,7 +107,7 @@ export default {
       return { accepted: r?.accepted, asked, res, since };
     };
 
-    // Foulée narquoise : jusqu'à un échec du Bandit.
+    // Taunting Step: until the Bandit fails.
     let taunted = null;
     for ( let n = 0; (n < 12) && !taunted; n++ ) {
       const s = await step(/narquoise|Taunting/i);
@@ -130,28 +130,29 @@ export default {
       };
       ctx.expect((await modeAgainst(cleric)) === -1, "Nargué : son attaque contre le Clerc au Désavantage");
       ctx.expect((await modeAgainst(warlock)) !== -1, "Nargué : son attaque contre l'Occultiste sans Désavantage");
-      // §438 : Nargué ne cesse pas quand le Bandit attaque (la fin à l'attaque ne vaut que pour la Foulée évanescente, `breaksOnActivity`).
+      // §438: Taunted does not end when the Bandit attacks (ending on attack applies only to Disappearing Step,
+      // `breaksOnActivity`).
       ctx.expect((await named(bandit, /Nargu|Taunt/i)).length > 0, "Nargué reste après les attaques du Bandit");
     }
 
-    // Foulée effroyable, à l'arrivée à côté du Bandit.
+    // Dreadful Step, on arrival next to the Bandit.
     const dread = await step(/effroyable.*arriv|Dreadful.*(arriv|destination)/i, { near: true });
     const td = dread.res?.targets?.find(x => x.name === "Bandit");
     ctx.expect(dread.res?.plan?.save?.ability === "wis" && !!td?.save, `Foulée effroyable : Sagesse du Bandit (${td?.save?.total})`);
     ctx.expect((td?.save?.success === false) ? ((td?.damage?.applied ?? 0) > 0) : ((td?.damage?.applied ?? 0) === 0), `2d10 psychiques ⇔ ratée (${td?.damage?.applied ?? 0})`);
 
-    // Foulée revigorante : des PV temporaires.
+    // Refreshing Step: Temporary Hit Points.
     await ctx.call("update-actor", { actorId: warlock.actorId, actorData: { "system.attributes.hp.temp": 0 } });
     await step(/revigorante|Refreshing/i);
     await pause(1500);
     const temp1 = (await ctx.call("get-actor", { actorId: warlock.actorId })).system?.attributes?.hp?.temp ?? 0;
     ctx.expect((temp1 >= 1) && (temp1 <= 10), `Foulée revigorante : ${temp1} PV temporaires`);
 
-    // Foulée évanescente : Invisible.
+    // Disappearing Step: Invisible.
     await step(/évanescente|Disappearing/i);
     const invisible = (await ctx.effects(warlock)).some(e => !e.disabled && (e.statuses ?? []).includes("invisible"));
     ctx.expect(invisible, "Foulée évanescente : l'Occultiste est Invisible");
-    // §438 : « jusqu'à ce que vous fassiez un jet d'attaque, infligiez des dégâts ou lanciez un sort » — l'Occultiste attaque le Bandit.
+    // §438: "until you make an attack roll, deal damage, or cast a spell" — the Warlock attacks the Bandit.
     if ( invisible ) {
       const weapon = (await ctx.call("get-actor", { actorId: warlock.actorId })).items.find(i => (i.type === "weapon")
         && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"));
@@ -185,7 +186,7 @@ export default {
     let frightened = false, saw = false;
     for ( let n = 0; (n < 16) && !frightened; n++ ) {
       await clear();
-      // La borne avant le tour du Bandit : l'aura agit dès le début de son tour.
+      // The bound before the Bandit's turn: the aura acts from the start of its turn.
       const since = await ctx.lastMessageId();
       for ( let i = 0; (i < 3) && ((await current()) !== bandit.id); i++ ) { await ctx.nextTurn(); await pause(2000); }
       await pause(3000);

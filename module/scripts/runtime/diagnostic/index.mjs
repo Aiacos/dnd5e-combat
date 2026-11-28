@@ -1,7 +1,7 @@
 /**
- * Le diagnostic du monde (SPEC §177) : analyser (rien n'est écrit), puis réparer ce que le MJ a coché — après une sauvegarde
- * vérifiée de chaque document touché. Si la sauvegarde échoue ou est incomplète, rien n'est modifié. Chaque tâche est réparée
- * seule : une erreur n'arrête pas les suivantes et se lit dans le compte rendu. Une sauvegarde se restaure (backup.mjs).
+ * The world diagnostic (SPEC §177): analyze (nothing is written), then repair what the GM ticked — after a verified backup
+ * of each touched document. If the backup fails or is incomplete, nothing is modified. Each task is repaired
+ * alone: an error does not stop the following ones and is read in the report. A backup can be restored (backup.mjs).
  */
 import { MODULE_ID } from "../../constants.mjs";
 import { uniqueRoots } from "../../core/backup.mjs";
@@ -11,7 +11,7 @@ import { loc, log } from "../shared.mjs";
 
 let busy = false;
 
-/** Analyse : `{ [checkId]: tâches }`. Chaque tâche reçoit un id stable pour cette analyse. N'écrit rien. */
+/** Analysis: `{ [checkId]: tâches }`. Each task gets an id stable for this analysis. Writes nothing. */
 export async function scanWorld(ids=null) {
   if ( !game.user.isGM ) throw new Error("only a GM can run the diagnostic");
   const out = {};
@@ -28,9 +28,9 @@ export async function scanWorld(ids=null) {
 }
 
 /**
- * Répare ces tâches. Rend `{ backup, results: [{ task, ok, line }] }`. Lève si la sauvegarde n'a pas pu être faite (rien n'a
- * alors été modifié). `options` : `{ [checkId]: { [optionId]: valeur } }`, les options d'une vérification (`check.options`),
- * passées à l'`apply` de chacune de ses tâches.
+ * Repairs these tasks. Returns `{ backup, results: [{ task, ok, line }] }`. Throws if the backup could not be made (nothing has
+ * then been modified). `options`: `{ [checkId]: { [optionId]: valeur } }`, a check's options (`check.options`),
+ * passed to the `apply` of each of its tasks.
  */
 export async function repairTasks(tasks, options={}) {
   if ( !game.user.isGM ) throw new Error("only a GM can repair");
@@ -45,7 +45,7 @@ export async function repairTasks(tasks, options={}) {
       try {
         results.push({ task, ok: true, line: await task.apply(options[task.check] ?? {}) });
       } catch(err) {
-        // Le document de la tâche a été retiré par une réparation précédente de cette passe (fresh.mjs) : pas un échec.
+        // The task's document was removed by an earlier repair of this pass (fresh.mjs): not a failure.
         if ( err?.vanished ) { results.push({ task, ok: true, line: loc("Diagnostic.ReparationDisparu") }); continue; }
         console.error(`${MODULE_ID} | repair ${task.id}`, err);
         results.push({ task, ok: false, line: loc("Diagnostic.ReparationEchec", { error: foundry.utils.escapeHTML(err.message) }) });
@@ -58,7 +58,7 @@ export async function repairTasks(tasks, options={}) {
   }
 }
 
-/** Restaure une sauvegarde (après en avoir fait une de l'état actuel). */
+/** Restores a backup (after making one of the current state). */
 export async function restore(uuid) {
   if ( busy ) throw new Error(loc("Diagnostic.Occupe"));
   busy = true;

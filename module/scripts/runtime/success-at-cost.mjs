@@ -1,19 +1,24 @@
 /**
- * Issue GitHub #32 : « Succès à un prix », aide optionnelle du Guide du maître 2024 (chapitre 2) — réglage de monde, éteint par défaut.
+ * GitHub issue #32: "Success at a Cost", optional help from the 2024 Dungeon Master's Guide (chapter 2) — world setting, off by
+ * default.
  *
- * Quand un test d20 rate de 1 ou 2, le moteur le signale au MJ seul, sans fenêtre : une pastille au-dessus du token (ui/success-at-cost.mjs)
- * et une entrée du menu contextuel. Le MJ décide d'offrir la réussite et décrit le prix avec ses mots ; le joueur accepte ou refuse.
+ * When a d20 check misses by 1 or 2, the engine signals it to the GM alone, without a window: a badge above the token
+ * (ui/success-at-cost.mjs) and a context-menu entry. The GM decides to offer the success and describes the cost in their
+ * own words; the player accepts or refuses.
  *
- * Deux circuits, selon ce qui dépend du résultat :
- *  - **le moteur applique le résultat** (attaque résolue, sauvegarde demandée par une résolution) : une pause courte AVANT le verdict
- *    (`successAtCostHold`, 5 s ; 0 = pas de pause). Sans geste du MJ, l'échec reste. Accepté : l'attaque touche (jamais d'un critique) ou
- *    la sauvegarde réussit, et la résolution reprend — dégâts et effets appliqués une seule fois, puisque rien ne l'a encore été ;
- *  - **rien n'est appliqué** (ligne d'un jet demandé par le MJ, §242 ; jet d'une carte de demande de dnd5e portant un DD) : un bouton du MJ sur la carte, sans
- *    pause ni limite. Accepté : le jet est marqué réussi (`flags.dnd5e-combat.atCost`), la carte et le verdict du groupe le comptent.
+ * Two circuits, depending on what depends on the result:
+ *  - **the engine applies the result** (resolved attack, saving throw requested by a resolution): a short pause BEFORE the verdict
+ *    (`successAtCostHold`, 5 s; 0 = no pause). Without a GM gesture, the failure stands. Accepted: the attack hits (never as a
+ *    Critical Hit) or the saving throw succeeds, and the resolution resumes — damage and effects applied only once, since nothing
+ *    has been yet;
+ *  - **nothing is applied** (line of a roll requested by the GM, §242; roll from a dnd5e request card carrying a DC): a GM
+ *    button on the card, with no pause or limit. Accepted: the roll is marked as succeeded (`flags.dnd5e-combat.atCost`), the
+ *    card and the group's verdict count it.
  *
- * Après les autres aides (Inspiration héroïque, Inspiration bardique, dés d'aptitude, Visée sans pareille) : seulement sur ce qui reste raté.
- * Un 1 naturel en attaque n'est jamais proposé. Retour à toute la table quand le joueur accepte : carte, texte flottant, éclat, son.
- * Hook public `dnd5e-combat.successAtCost` `({ actor, kind, accepted, cost, by })` après chaque réponse.
+ * After the other helps (Heroic Inspiration, Bardic Inspiration, aptitude dice, Peerless Aim): only on what remains missed.
+ * A natural 1 on an attack is never offered. Feedback to the whole table when the player accepts: card, floating text, burst,
+ * sound.
+ * Public hook `dnd5e-combat.successAtCost` `({ actor, kind, accepted, cost, by })` after each answer.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -27,23 +32,24 @@ import { esc, isExecutor, loc, locEsc, log, notice, say, tokenOfActor, viaActive
 export const AT_COST_SETTING = "successAtCost";
 export const AT_COST_HOLD_SETTING = "successAtCostHold";
 /**
- * Issue #32 : chez le MJ actif, après chaque réponse à une réussite offerte : `({ actor, kind, accepted, cost, by })` — `kind` « attack »,
- * « save » ou « check », `cost` le prix décrit, `by` « player » (le joueur a répondu) ou « gm » (pas de joueur connecté). Lecture seule.
+ * Issue #32: on the active GM, after each answer to an offered success: `({ actor, kind, accepted, cost, by })` — `kind` "attack",
+ * "save" or "check", `cost` the cost described, `by` "player" (the player answered) or "gm" (no player connected). Read-only.
  */
 export const AT_COST_HOOK = `${MODULE_ID}.successAtCost`;
 /**
- * Issue #32 : chez le MJ actif, pour son interface, quand une occasion (un jet raté de peu, pendant la pause) s'ouvre, est prise par le
- * MJ (`claimed`) ou se ferme (`closed: true`) : `({ id, token, actor, name, what, total, needed, by, kind, deadline, seconds, claimed })`.
+ * Issue #32: on the active GM, for its interface, when an opportunity (a roll narrowly missed, during the pause) opens, is
+ * taken by the GM (`claimed`) or closes (`closed: true`):
+ * `({ id, token, actor, name, what, total, needed, by, kind, deadline, seconds, claimed })`.
  */
 export const AT_COST_CANDIDATE_HOOK = `${MODULE_ID}.successAtCostCandidate`;
 const AT_COST_MARK_QUERY = `${MODULE_ID}.successAtCostMark`;
 
 const read = (key, fallback) => { try { return game.settings.get(MODULE_ID, key) ?? fallback; } catch { return fallback; } };
 
-/** Issue #32 : la règle « succès à un prix » est-elle allumée (réglage de monde, coupé par défaut) ? */
+/** Issue #32: is the "success at a cost" rule on (world setting, off by default)? */
 export const atCostEnabled = () => read(AT_COST_SETTING, false) === true;
 
-/** L'écart de l'aide pour un jet de cette créature (0 : rien à proposer). */
+/** The margin of help for a roll of this creature (0: nothing to offer). */
 export function atCostMarginOf(actor) {
   if ( !actor || ["group", "vehicle"].includes(actor.type) ) return 0;
   return atCostMarginFor({ enabled: atCostEnabled(), isCharacter: actor.type === "character" });
@@ -53,13 +59,13 @@ export function atCostMarginOf(actor) {
 /*  Les occasions en attente (MJ actif)          */
 /* -------------------------------------------- */
 
-/** Les occasions ouvertes sur ce client, par id. */
+/** The opportunities open on this client, by id. */
 const candidates = new Map();
 
 const publicOf = c => ({ id: c.id, token: c.token, actor: c.actor, name: c.name, what: c.what, total: c.total, needed: c.needed, by: c.by,
   kind: c.kind, deadline: c.deadline, seconds: c.seconds, claimed: c.claimed });
 
-/** Les occasions ouvertes (interface, menu, scénarios). */
+/** The open opportunities (interface, menu, scenarios). */
 export function atCostCandidates() {
   return [...candidates.values()].map(publicOf);
 }
@@ -79,8 +85,9 @@ function close(id, answer) {
 }
 
 /**
- * Le moteur a un jet raté de peu, dont il va appliquer le résultat : la pause, pendant laquelle le MJ peut offrir le succès à un prix.
- * MJ actif. Rend `{ accepted, cost }` (accepté : la réussite), ou null (aide éteinte, pas de pause, le MJ n'a rien fait, échec laissé).
+ * The engine has a narrowly missed roll, whose result it is about to apply: the pause, during which the GM can offer the
+ * success at a cost. Active GM. Returns `{ accepted, cost }` (accepted: the success), or null (help off, no pause, the GM did
+ * nothing, failure left).
  * @param {{actor: Actor, token?: TokenDocument|null, what: string, total: number, needed: number, kind: "attack"|"save"}} data
  */
 export async function holdForAtCost({ actor, token=null, what, total, needed, kind }) {
@@ -102,15 +109,15 @@ export async function holdForAtCost({ actor, token=null, what, total, needed, ki
   return answer?.accepted ? answer : null;
 }
 
-/** Le MJ laisse passer l'occasion (pastille fermée) : l'échec reste, tout de suite. */
+/** The GM lets the opportunity pass (badge closed): the failure stands, right away. */
 export function dismissAtCost(id) {
   const c = candidates.get(id);
   if ( c && !c.claimed ) close(id, null);
 }
 
 /**
- * Le MJ prend l'occasion : la pause s'arrête, sa fenêtre décrit le prix (sauf `cost` donné : macro, scénario), puis la question au
- * joueur. Rend true si le joueur a accepté.
+ * The GM takes the opportunity: the pause stops, their window describes the cost (unless `cost` is given: macro, scenario),
+ * then the question to the player. Returns true if the player accepted.
  * @param {string} id
  * @param {{cost?: string}} [options]
  */
@@ -132,14 +139,14 @@ export async function offerAtCost(id, { cost }={}) {
 }
 
 /**
- * La fenêtre du MJ (si `cost` n'est pas donné), la question au joueur, le retour à la table. Rend `{ accepted, cost, by }`, ou null si le
- * MJ a laissé l'échec.
+ * The GM's window (if `cost` is not given), the question to the player, the feedback to the table. Returns
+ * `{ accepted, cost, by }`, or null if the GM left the failure.
  */
 async function proposeTo(actor, { what, kind, cost, total, needed, by }) {
   if ( !actor ) return null;
   let text = cost;
   if ( text === undefined ) {
-    // §381 : la table voit que le MJ réfléchit au prix (sablier au-dessus du personnage).
+    // §381: the table sees that the GM is thinking about the cost (hourglass above the character).
     const asked = await whileAwaiting(actor, "choice", () => askCost({ name: actor.name, what, total, needed, by }));
     if ( !asked ) { log(`success at a cost: the GM keeps ${actor.name}'s failure`); return null; }
     text = asked.cost;
@@ -152,7 +159,7 @@ async function proposeTo(actor, { what, kind, cost, total, needed, by }) {
   return { accepted, cost: price, by: decidedBy };
 }
 
-/** Accepté : carte publique, texte flottant, éclat et son chez tous. Refusé : un texte flottant discret. */
+/** Accepted: public card, floating text, burst and sound for everyone. Refused: a discreet floating text. */
 async function tellTable(actor, { what, cost, accepted }) {
   const token = tokenOfActor(actor);
   if ( accepted ) {
@@ -164,31 +171,31 @@ async function tellTable(actor, { what, cost, accepted }) {
 }
 
 /* -------------------------------------------- */
-/*  Sur une carte : jets dont rien ne dépend      */
+/*  On a card: rolls on which nothing depends     */
 /* -------------------------------------------- */
 
-/** Le DD et le total d'un jet natif de dnd5e qui peut devenir une réussite à un prix ; null sinon. */
+/** The DC and the total of a native dnd5e roll that can become a success at a cost; null otherwise. */
 export function nativeCandidate(message) {
   if ( !message || ["attack", "damage", "healing", "usage", "request"].includes(message.type) ) return null;
   if ( message.getFlag(MODULE_ID, "groupRollResult") || message.getFlag(MODULE_ID, "atCost") ) return null;
-  // Un jet que le moteur a lui-même lancé ou exploité (saut, escalade, serrure, opposition…) porte ses drapeaux : son issue est déjà
-  // appliquée, la changer après coup ne la déferait pas.
+  // A roll that the engine has itself made or used (jump, climb, lock, contest…) carries its flags: its outcome is already
+  // applied, changing it afterwards would not undo it.
   if ( Object.keys(message.flags?.[MODULE_ID] ?? {}).length ) return null;
-  // Et seulement le jet d'une carte de demande de dnd5e (`flags.dnd5e.requestResult`, data/chat-message/request-message-data.mjs:127,
-  // documents/actor/actor.mjs:2480) : les tests que le moteur lance lui-même avec un DD (escalade, Se cacher, réception d'un saut…)
-  // n'en portent pas, et leur issue est déjà appliquée.
+  // And only the roll of a dnd5e request card (`flags.dnd5e.requestResult`, data/chat-message/request-message-data.mjs:127,
+  // documents/actor/actor.mjs:2480): the checks that the engine itself makes with a DC (climb, Hide, landing a jump…)
+  // do not carry one, and their outcome is already applied.
   if ( !message.getFlag("dnd5e", "requestResult") ) return null;
   if ( ["death", "concentration"].includes(message.system?.type) ) return null;
   const roll = message.rolls?.[0];
   if ( !(roll instanceof CONFIG.Dice.D20Roll) || !Number.isNumeric(roll.options?.target) ) return null;
-  // Une sauvegarde qu'une résolution du moteur attend : elle a sa pause, pas de bouton (rien n'est défait après coup).
+  // A saving throw that an engine resolution is waiting for: it has its pause, no button (nothing is undone afterwards).
   if ( message.getFlag(MODULE_ID, "inResolution") ) return null;
   const actor = message.getAssociatedActor?.() ?? null;
   const by = nearMiss(roll.total, Number(roll.options.target), atCostMarginOf(actor));
   return by ? { actor, total: roll.total, needed: Number(roll.options.target), by } : null;
 }
 
-/** La ligne d'un jet demandé par le MJ (§242) qui peut devenir une réussite à un prix ; null sinon. */
+/** The line of a roll requested by the GM (§242) that can become a success at a cost; null otherwise. */
 export function rowCandidate(entry, request) {
   if ( !entry || (entry.status !== "rolled") || entry.atCost || !entry.message ) return null;
   const by = nearMiss(entry.total, request?.dc ?? null, atCostMarginOf(entry.actor));
@@ -196,8 +203,8 @@ export function rowCandidate(entry, request) {
 }
 
 /**
- * Le MJ offre le succès à un prix sur un jet déjà posé (bouton de la carte). Accepté : le jet est marqué par le MJ actif.
- * @param {string} messageId  Le message du jet.
+ * The GM offers the success at a cost on a roll already placed (card button). Accepted: the roll is marked by the active GM.
+ * @param {string} messageId  The roll's message.
  * @param {{what: string, cost?: string}} options
  */
 export async function offerOnMessage(messageId, { what, cost }={}) {
@@ -213,9 +220,9 @@ export async function offerOnMessage(messageId, { what, cost }={}) {
   return true;
 }
 
-/** MJ actif : le jet est marqué réussi à un prix (une seule fois). */
+/** Active GM: the roll is marked as succeeded at a cost (only once). */
 async function markMessage({ message: id, cost=null }, { user=null }={}) {
-  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  // §472: only the GM sends this query in the game; from a player, it falls (safety refusal, not forceable).
   if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | successAtCostMark query from ${user.name} refused: only a GM sends it`); return false; }
   const message = game.messages.get(id);
   if ( !message || message.getFlag(MODULE_ID, "atCost") ) return false;
@@ -223,12 +230,12 @@ async function markMessage({ message: id, cost=null }, { user=null }={}) {
   return true;
 }
 
-/** Une ligne de jet demandé (§242) : le DD vient de la demande (le jet n'a pas de cible quand le DD est caché). */
+/** A line of a requested roll (§242): the DC comes from the request (the roll has no target when the DC is hidden). */
 export async function offerOnRow(cardId, row, { cost }={}) {
   const card = game.messages.get(cardId);
   const result = game.messages.get(row?.message ?? "");
   if ( !game.user.isGM || !card || !result ) return false;
-  // Le DD vient de la demande, pas du jet (il n'y est pas quand il est caché) : le jet n'est pas réécrit.
+  // The DC comes from the request, not from the roll (it is not there when it is hidden): the roll is not rewritten.
   const actor = result.getAssociatedActor?.() ?? row.actor ?? null;
   if ( !actor || result.getFlag(MODULE_ID, "atCost") ) return false;
   const answer = await proposeTo(actor, { what: row.what, kind: "check", cost, total: row.total, needed: row.needed, by: row.needed - row.total });
@@ -237,7 +244,7 @@ export async function offerOnRow(cardId, row, { cost }={}) {
   return true;
 }
 
-/** Le texte de l'état « à un prix » sous un jet (carte), déjà échappé. */
+/** The text of the "at a cost" condition under a roll (card), already escaped. */
 export function atCostLabel(flag) {
   return flag?.cost ? locEsc("APrix.MarqueAvecPrix", { cost: flag.cost }) : esc(loc("APrix.Marque"));
 }
@@ -257,8 +264,8 @@ export function registerSuccessAtCost() {
     name: `DND5ECOMBAT.Reglage.${key}.Nom`, hint: `DND5ECOMBAT.Reglage.${key}.Aide`, ...data });
   world(AT_COST_SETTING, { type: Boolean, default: false });
   world(AT_COST_HOLD_SETTING, { type: Number, default: AT_COST_HOLD.byDefault, range: { min: AT_COST_HOLD.min, max: AT_COST_HOLD.max, step: 1 } });
-  CONFIG.queries[AT_COST_QUERY] = handleAtCostQuery;   // chez le joueur qui répond
+  CONFIG.queries[AT_COST_QUERY] = handleAtCostQuery;   // on the player who answers
   CONFIG.queries[AT_COST_MARK_QUERY] = markMessage;
-  // Une scène qui change : les occasions ouvertes se ferment (l'échec reste).
+  // A scene that changes: the open opportunities close (the failure stands).
   route("canvasTearDown", () => { for ( const id of [...candidates.keys()] ) dismissAtCost(id); }, { label: "success at a cost: not cleared" });
 }

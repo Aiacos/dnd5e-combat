@@ -1,9 +1,8 @@
 /**
- * Ce que le moteur publie pour une interface externe (SPEC §40.1) : `game.modules.get("dnd5e-combat").api.ui`. Lecture
- * seule, sur n'importe quel client ; aucune règle ici — les mêmes lectures que le tracker (ui/budget.mjs), le contrôle de
- * légalité (runtime/turn.mjs `useIssues`) et le plafond de déplacement (runtime/actions.mjs `movementCap`). Le moteur ne
- * connaît aucune interface : une interface qui recopiait ces calculs (flag `turn` du combattant, historique du token) les
- * lit ici.
+ * What the engine publishes for an external interface (SPEC §40.1): `game.modules.get("dnd5e-combat").api.ui`. Read-only,
+ * on any client; no rule here — the same reads as the tracker (ui/budget.mjs), the legality check (runtime/turn.mjs `useIssues`)
+ * and the movement cap (runtime/actions.mjs `movementCap`). The engine knows no interface: an interface that copied these
+ * computations (the combatant's `turn` flag, the token's history) reads them here.
  */
 
 import { reactionAvailable, movementAllowance } from "../core/turn.mjs";
@@ -29,9 +28,9 @@ import { climbingOf } from "../adapter/climb.mjs";
 import { coverPreviewOf } from "../adapter/cover-preview.mjs";
 
 /**
- * Le budget du tour d'un combattant, tel que le moteur le juge : une action reste disponible tant que l'action Attaquer a
- * des attaques à donner ; la réaction suit « pas deux dans le même tour » (§19.6). null hors d'un combat commencé.
- * Qui a le droit de le voir est l'affaire de l'interface (le tracker du moteur : ui/budget.mjs `budgetVisible`).
+ * The budget of a combatant's turn, as the engine judges it: an action stays available as long as the Attack action has
+ * attacks left to give; the Reaction follows "not two in the same turn" (§19.6). null outside a started combat.
+ * Who may see it is the interface's business (the engine's tracker: ui/budget.mjs `budgetVisible`).
  * @param {Combatant} combatant
  * @returns {{action: boolean, bonus: boolean, reaction: boolean, attacks: {used: number, granted: number, left: number},
  *            dashed: boolean, disengaged: boolean, dodging: boolean, ownTurn: boolean}|null}
@@ -48,12 +47,12 @@ function budget(combatant) {
 }
 
 /**
- * Le déplacement du tour d'un token en combat, dans l'unité de la grille : dépensé (escaliers et relevé compris,
- * téléportations exclues), permis (vitesse, Foncer, déplacement ouvert par un effet), et ce qui reste **réellement** — le
- * plafond que le moteur applique à la marche (victime traînée, tour achevé par un ordre). null hors combat ou sans vitesse.
+ * The movement of a token's turn in combat, in the grid's unit: spent (stairs and survey included,
+ * teleports excluded), allowed (speed, Dash, movement opened by an effect), and what **really** remains — the
+ * cap the engine applies to walking (dragged victim, turn ended by an order). null outside combat or without speed.
  * @param {Token|TokenDocument} token
- * §196 : plus `mode` (l'action de déplacement du token : `walk`, `climb`, `fly`…) et `multiplier` (ce que coûte un pied dans ce mode :
- * 2 en escalade sans vitesse d'escalade, le coût de dnd5e ; 1 sinon) — l'anneau d'une interface suit ainsi le grimpeur.
+ * §196: plus `mode` (the token's movement action: `walk`, `climb`, `fly`…) and `multiplier` (what one foot costs in this mode:
+ * 2 when climbing with no climb speed, dnd5e's cost; 1 otherwise) — so an interface's ring follows the climber.
  * @returns {{spent: number, allowance: number, left: number, speed: number, units: string, dashed: boolean, mode: string|null,
  *            multiplier: number}|null}
  */
@@ -64,7 +63,7 @@ function movement(token) {
   if ( !m ) return null;
   const b = readBudget(combatant);
   const allowance = movementAllowance(b, m.speed);
-  // Le plafond se compare à l'historique du cœur, téléportations comprises (runtime/actions.mjs `movementCap`).
+  // The cap is compared with the core's history, teleports included (runtime/actions.mjs `movementCap`).
   const history = historyCosts(doc);
   const cap = movementCap(doc);
   const left = b.stopped ? 0 : Math.max(0, Number.isFinite(cap) ? cap - history.spent - history.excluded : allowance - m.spent);
@@ -74,8 +73,8 @@ function movement(token) {
 }
 
 /**
- * Ce qui cloche si cette activité était utilisée maintenant, avant de savoir qui elle vise (budget et tour, emplacement déjà
- * lancé ce tour, Silence, limites d'usage, états qui empêchent d'agir, Rage) : les raisons, traduites ; vide = rien.
+ * What is wrong if this activity were used now, before knowing who it targets (budget and turn, slot already
+ * cast this turn, Silence, usage limits, conditions that prevent acting, Rage): the reasons, translated; empty = nothing.
  * @param {Activity} activity
  * @param {{cost?: string|null, attackMode?: string|null, recast?: boolean}} [options]
  * @returns {string[]}
@@ -83,42 +82,42 @@ function movement(token) {
 function issues(activity, options={}) {
   if ( !activity?.actor ) return [];
   options = { ...potionCost(activity), ...options };
-  // §111 : une zone déplaçable déjà posée (Rayon de lune) — l'utiliser la déplace, sans emplacement ; sans rien coûter si sa
-  // règle le dit (`movable.cost: "none"`).
+  // §111: a movable area already placed (Moonbeam) — using it moves it, with no slot; costing nothing if its
+  // rule says so (`movable.cost: "none"`).
   const zone = movableZoneOf(activity);
   if ( !zone ) return useIssues(activity, options).lines;
   return useIssues(activity, { ...options, recast: true, ...(zone.rule.cost === "none" ? { cost: "free" } : {}) }).lines;
 }
 
 /**
- * Issue #31 : une potion de soins que la règle maison fera boire par l'action (l'action Bonus déjà prise) — son coût est l'action, pas
- * celui de la donnée : une interface ne la grise pas faute d'action Bonus.
+ * Issue #31: a healing potion that the house rule has drunk using the action (the Bonus Action already taken) — its cost is the
+ * action, not the data's: an interface does not gray it out for lack of a Bonus Action.
  */
 function potionCost(activity) {
   try { const p = potionOptions(activity); return (p && !p.ask && (p.mode === "action")) ? { cost: "action" } : {}; } catch { return {}; }
 }
 
 /**
- * §137 : ce que coûterait cette activité au budget du tour, tel que le moteur le jugera — « action », « bonus », « reaction », autre
- * chose ou null. Diffère de l'activation de la donnée quand une règle la change (Observateur : Chercher par une action Bonus, tant
- * qu'elle est libre).
+ * §137: what this activity would cost the turn's budget, as the engine will judge it — "action", "bonus", "reaction",
+ * something else or null. Differs from the data's activation when a rule changes it (Observant: Search as a Bonus Action,
+ * while it is free).
  * @param {Activity} activity
  * @returns {string|null}
  */
 function cost(activity) {
   if ( !activity?.actor ) return null;
-  // Une zone déplaçable déjà posée que sa règle déplace sans rien coûter (`movable.cost: "none"`).
+  // A movable area already placed that its rule moves at no cost (`movable.cost: "none"`).
   if ( movableZoneOf(activity)?.rule.cost === "none" ) return null;
-  // §145 : le coût après les règles du tour (Arts martiaux : la frappe à mains nues en action Bonus une fois l'action prise), sinon
-  // celui de la donnée et des règles fixes (Observateur).
+  // §145: the cost after the turn rules (Martial Arts: the unarmed strike as a Bonus Action once the action is taken), otherwise
+  // that of the data and the fixed rules (Observant).
   try { return useIssues(activity, potionCost(activity)).request?.cost ?? costFor(activity) ?? null; } catch { return null; }
 }
 
 /**
- * §205 : les raisons (`issues`) et le coût (`cost`) d'une case d'interface en un seul calcul. Les deux passent par `useIssues` : une
- * barre qui les demandait séparément le faisait deux fois par case (28 cases : ~14 ms chacun, mesuré le 2026-10-18 dans darsh-dnd-ui).
- * Mêmes valeurs que `issues(activity)` et `cost(activity)` : une zone déplaçable déjà posée (Rayon de lune) garde ses raisons « en
- * relance » et son coût de donnée, calculés à part comme avant.
+ * §205: the reasons (`issues`) and the cost (`cost`) of an interface cell in a single computation. Both go through `useIssues`: a
+ * bar that asked for them separately did it twice per cell (28 cells: ~14 ms each, measured on 2026-10-18 in darsh-dnd-ui).
+ * Same values as `issues(activity)` and `cost(activity)`: a movable area already placed (Moonbeam) keeps its "on relaunch" reasons
+ * and its data cost, computed separately as before.
  * @param {Activity} activity
  * @returns {{ issues: string[], cost: string|null }}
  */
@@ -128,16 +127,16 @@ function cell(activity) {
   if ( zone ) return { issues: issues(activity), cost: cost(activity) };
   let result;
   try { result = useIssues(activity, potionCost(activity)); } catch { return { issues: issues(activity), cost: null }; }
-  // §410 : `resources` — le moteur juge aussi emplacements, utilisations, quantité et préparation (une interface n'a plus à les juger) ;
-  // `forceable` — toutes ces raisons s'ouvrent dans la fenêtre « Utiliser quand même » (§408). Issue #46 : faux quand ce client ne peut
-  // pas passer outre (réglage « Action impossible » en refus strict, chez un joueur) — une interface peut montrer un cadenas.
+  // §410: `resources` — the engine also judges slots, uses, quantity and preparation (an interface no longer has to judge them);
+  // `forceable` — all these reasons open in the "Use anyway" window (§408). Issue #46: false when this client cannot
+  // override (the "Impossible action" setting in strict refusal, on a player) — an interface can show a padlock.
   return { issues: result.lines, cost: result.request?.cost ?? costFor(activity) ?? null, resources: true,
     forceable: refusal().proceed !== false };
 }
 
 /**
- * §111 : l'activité a-t-elle une zone déplaçable déjà posée (Rayon de lune) ? L'utiliser la déplace alors (ui/pointer.mjs, §16.14) :
- * rien n'est lancé, aucun emplacement n'est dépensé — une interface ne doit ni la griser faute d'emplacement, ni demander un niveau.
+ * §111: does the activity have a movable area already placed (Moonbeam)? Using it then moves it (ui/pointer.mjs, §16.14):
+ * nothing is cast, no slot is spent — an interface must neither gray it out for lack of a slot nor ask for a level.
  * @param {Activity} activity
  * @returns {boolean}
  */
@@ -146,8 +145,8 @@ function movableZone(activity) {
 }
 
 /**
- * §18.19 : ce qui reste des Attaques multiples ouvertes ce tour par cet acteur — uuids des items encore jouables (`left`),
- * de ceux du plan qui n'ont plus rien (`spent`), noms des premiers. null sans plan ouvert.
+ * §18.19: what remains of the Multiattack opened this turn by this actor — uuids of the items still playable (`left`),
+ * of those of the plan that have nothing left (`spent`), names of the first ones. null with no open plan.
  * @param {Actor5e} actor
  * @returns {{left: string[], spent: string[], names: string[]}|null}
  */
@@ -159,8 +158,8 @@ function multiattack(actor) {
 }
 
 /**
- * §108 : les réserves qui absorbent les dégâts de cet acteur, actives (Égide arcanique créée depuis le dernier repos long) :
- * points restants et maximum (les utilisations de l'item, adapter/absorb.mjs). Vide sans réserve active.
+ * §108: the pools that absorb this actor's damage, active (Arcane Ward created since the last Long Rest):
+ * remaining points and maximum (the item's uses, adapter/absorb.mjs). Empty with no active pool.
  * @param {Actor5e} actor
  * @returns {Array<{name: string, img: string, identifier: string, value: number, max: number}>}
  */
@@ -170,9 +169,9 @@ function wards(actor) {
 }
 
 /**
- * §139 : comment ce sort se lancerait maintenant — « ritual » : en rituel d'office (sans emplacement, même non préparé avec Savoir
- * rituel) ; « ask » : le joueur choisira rituel ou emplacement ; « none » : comme d'habitude. Une interface ne grise pas un sort
- * « ritual » faute de préparation ni d'emplacement.
+ * §139: how this spell would be cast now — "ritual": as a ritual outright (no slot, even unprepared with Ritual Adept);
+ * "ask": the player will choose ritual or slot; "none": as usual. An interface does not gray out a
+ * "ritual" spell for lack of preparation or of a slot.
  * @param {Activity} activity
  * @returns {"none"|"ritual"|"ask"}
  */
@@ -180,18 +179,18 @@ function ritual(activity) {
   try { return ritualModeOf(activity); } catch { return "none"; }
 }
 
-/** Un document par lui-même ou par son uuid ; un Token (objet du canevas) par son document. */
+/** A document by itself or by its uuid; a Token (canvas object) by its document. */
 const docOf = x => (typeof x === "string") ? fromUuidSync(x, { strict: false }) : (x?.document ?? x);
 
 /**
- * #33 : l'abri qu'aurait `target` contre une attaque de `attacker` avec `activity`, tel que CE client peut le montrer — le calcul
- * du verdict, mais un joueur ne compte que les créatures qu'il voit (l'invisible ne se trahit pas) ; « none » est un résultat.
+ * #33: the Cover `target` would have against an attack by `attacker` with `activity`, as THIS client can show it — the computation
+ * of the verdict, but a player counts only the creatures they see (the Invisible does not give itself away); "none" is a result.
  * @param {TokenDocument|Token|string} attacker
  * @param {TokenDocument|Token|string} target
- * @param {Activity|string} activity     Une activité d'attaque.
- * @param {object} [options]             `posA` : position de l'attaquant au bout d'une approche ; `attackMode`.
+ * @param {Activity|string} activity     An attack activity.
+ * @param {object} [options]             `posA`: the attacker's position at the end of an approach; `attackMode`.
  * @returns {{degree: string, bonus: number|null, sources: string[], zone: string|null, manual: boolean,
- *            ignored: {degree: string, by: string}|null}|null}  null : pas une attaque, ou la scène n'est pas affichée ici.
+ *            ignored: {degree: string, by: string}|null}|null}  null: not an attack, or the scene is not displayed here.
  */
 function cover(attacker, target, activity, options={}) {
   try { return coverPreviewOf(docOf(attacker), docOf(target), docOf(activity), options); } catch { return null; }
@@ -199,43 +198,45 @@ function cover(attacker, target, activity, options={}) {
 
 export const uiApi = {
   /**
-   * §272 : `timer({ token, seconds, label?, icon?, id? })` — une minuterie au-dessus du token, chez tous les clients qui le voient
-   * (engrenage qui tourne, jauge au dégradé DAS) ; rend `{ id, done, stop() }` (`stop` : geste interrompu, partout).
+   * §272: `timer({ token, seconds, label?, icon?, id? })` — a timer above the token, on every client that sees it
+   * (turning gear, gauge with the DAS gradient); returns `{ id, done, stop() }` (`stop`: gesture interrupted, everywhere).
    */
   timer: startTimer,
   /**
-   * §381 (issue #35) : `awaiting()` — qui la table attend : `[{ id, userId, userName, token, actor, kind, gm, player, since, seconds,
-   * refreshed, shown }]` (uuids ; `kind` : « reaction », « choice » ou « roll » ; `seconds` : le délai de la fenêtre, null sans délai ;
-   * `shown` : ce que CE client en montre, « token », « banner » ou « none »). Jamais ce que la fenêtre demande. Ses changements se
-   * publient par le hook `dnd5e-combat.awaiting` (la liste, sans `shown`), sur chaque client.
+   * §381 (issue #35): `awaiting()` — whom the table is waiting for:
+   * `[{ id, userId, userName, token, actor, kind, gm, player, since, seconds, refreshed, shown }]` (uuids; `kind`: "reaction",
+   * "choice" or "roll"; `seconds`: the window's delay, null with no delay; `shown`: what THIS client shows of it, "token", "banner"
+   * or "none"). Never what the window asks. Its changes are published through the hook `dnd5e-combat.awaiting` (the list, without
+   * `shown`), on every client.
    */
   awaiting: awaitingState,
   budget, wards, movableZone, movement, issues, cost, cell, ritual, multiattackLeft: multiattack, light: lightState, globalLight: globalLightState,
   /**
-   * Issue #31 : `potion(activity)` — la règle maison des potions de soins (réglage `potionHealing`) : null si elle ne s'applique pas
-   * (réglage coupé, autre chose qu'une potion de soins en action Bonus) ; sinon `{ ask, mode, available: { bonus, action }, formula,
-   * max }` — `ask` : proposer le choix (sinon le moteur prend `mode`). L'interface passe le choix à l'utilisation :
-   * `activity.use({ "dnd5e-combat": { potionMode: "bonus" | "action" } })` — action : soin maximal (`max`), coût d'une action.
+   * Issue #31: `potion(activity)` — the house rule for healing potions (setting `potionHealing`): null if it does not apply
+   * (setting off, something other than a healing potion as a Bonus Action); otherwise
+   * `{ ask, mode, available: { bonus, action }, formula, max }` — `ask`: offer the choice (otherwise the engine takes `mode`).
+   * The interface passes the choice to the use:
+   * `activity.use({ "dnd5e-combat": { potionMode: "bonus" | "action" } })` — action: maximum healing (`max`), cost of an action.
    */
   potion: activity => { try { return potionOptions(activity); } catch { return null; } },
-  /** §41.4 : `tokenMenu(token)` — les entrées du menu contextuel de ce token pour le token en main (ui/pointer.mjs). */
+  /** §41.4: `tokenMenu(token)` — the entries of this token's context menu for the token in hand (ui/pointer.mjs). */
   tokenMenu: menuEntriesFor,
-  /** `doorMenu(wall)`, `groundMenu({ x, y })` — le menu d'une porte, d'une case, pour le token en main (ui/pointer-menu.mjs). */
+  /** `doorMenu(wall)`, `groundMenu({ x, y })` — the menu of a door, of a cell, for the token in hand (ui/pointer-menu.mjs). */
   doorMenu: doorMenuFor,
   groundMenu: groundMenuFor,
   /**
-   * §118 : `targeting()` — la visée que ce client attend (`{ token, activity, identifier }`, uuids), ou null. Tant qu'elle est
-   * ouverte, le clic gauche est au moteur ; ses changements se publient par le hook `dnd5e-combat.targeting` (ui/pointer.mjs).
-   * §119 : plus `kind`, `item`, `prompt` (consigne traduite) et `picked` / `total` (visée multiple) ; le hook part aussi à chaque
-   * créature choisie ou retirée.
+   * §118: `targeting()` — the aiming this client awaits (`{ token, activity, identifier }`, uuids), or null. As long as it is
+   * open, the left click belongs to the engine; its changes are published through the hook `dnd5e-combat.targeting`
+   * (ui/pointer.mjs). §119: plus `kind`, `item`, `prompt` (translated instruction) and `picked` / `total` (multiple aiming);
+   * the hook also fires at each creature picked or removed.
    */
-  /** #33 : `cover(attacker, target, activity, { posA?, attackMode? })` — l'aperçu de l'abri pour ce client (voir plus haut). */
+  /** #33: `cover(attacker, target, activity, { posA?, attackMode? })` — the Cover preview for this client (see above). */
   cover,
   targeting: pendingTargeting,
   /**
-   * §121 : `carriedLights(actor)` — les sources de lumière portées de l'acteur : `{ uuid, name, img, lit, left, full, fuel }` (`left`,
-   * `full` en secondes ou null ; `fuel` : `{ identifier, name, quantity }` ou null). `toggleLight(item, on?)` — allumer ou éteindre
-   * (item ou uuid ; `on` absent : l'inverse), sur le client du porteur ; rend `{ changed, lit?, left?, refilled?, reason? }`.
+   * §121: `carriedLights(actor)` — the actor's carried light sources: `{ uuid, name, img, lit, left, full, fuel }` (`left`,
+   * `full` in seconds or null; `fuel`: `{ identifier, name, quantity }` or null). `toggleLight(item, on?)` — turn on or off
+   * (item or uuid; `on` absent: the opposite), on the bearer's client; returns `{ changed, lit?, left?, refilled?, reason? }`.
    */
   carriedLights: actor => carriedLightsOf(actor).map(carriedLightState),
   /**
@@ -245,12 +246,12 @@ export const uiApi = {
    */
   spellWeapons: actor => spellWeapons(actor),
   /**
-   * L'état d'une source de lumière portée (item ou uuid) : `{ uuid, name, img, lit, left, full, fuel }`, ou null si l'item n'en est pas
-   * une.
+   * The state of a carried light source (item or uuid): `{ uuid, name, img, lit, left, full, fuel }`, or null if the item is not
+   * one.
    */
   carriedLight: item => carriedLightState(typeof item === "string" ? fromUuidSync(item, { strict: false }) : item),
   /**
-   * §121 : allume ou éteint une source portée (item ou uuid ; `on` absent : l'inverse), sur le client du porteur → `{ changed, lit?, left?,
-   * refilled?, reason? }`.
+   * §121: turns a carried source on or off (item or uuid; `on` absent: the opposite), on the bearer's client →
+   * `{ changed, lit?, left?, refilled?, reason? }`.
    */
   toggleLight: (item, on=null) => toggleCarriedLight(typeof item === "string" ? fromUuidSync(item, { strict: false }) : item, on) };

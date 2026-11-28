@@ -1,16 +1,17 @@
 /**
- * Issue #178 : réglage de monde « Dérogations visibles par » (`overrideVisibility`), vu d'un VRAI client joueur (« claude player »,
- * ouvert par le banc : `players: true`), dans l'« Arène des refus » (`node tools/arene-refus.mjs`). Le MJ force Rayon de givre du Mage des
- * refus hors de portée (la Cible lointaine), dans chacun des trois modes :
- *  - `all` (défaut) : le joueur reçoit le texte flottant « Forcé » et voit le bandeau « Règle passée outre » sur la carte ;
- *  - `hideGM` et `gmOnly` : le joueur ne reçoit ni le texte ni le bandeau ; le MJ voit toujours le bandeau.
- * Puis une carte marquée dont l'auteur est un joueur (créée par le MJ au nom d'un autre joueur, faute d'un second client) :
- *  - `hideGM` : le joueur la voit marquée (dérogation d'un joueur, publique) ; `gmOnly` : non ;
- *  - celle que le joueur crée lui-même : il voit toujours sa propre marque.
- * La même portée signalée n'est pas redemandée pendant une minute (runtime/turn.mjs, `ACK_LIFETIME`) : chaque coup forcé attend 61 s
- * après le précédent, et le scénario attend la fin de cette minute avant de rendre la main (le suivant, `regle-forcee`, lance le même sort).
- * Non couvert ici : le texte flottant d'une dérogation forcée par un joueur (la fenêtre s'ouvre chez lui). Remis en état : le réglage, les
- * cartes créées, l'écouteur du joueur.
+ * Issue #178: world setting "Overrides visible by" (`overrideVisibility`), seen from a REAL player client ("claude player",
+ * opened by the bench: `players: true`), in the "Refusals Arena" (`node tools/arene-refus.mjs`). The GM forces the Mage's
+ * Ray of Frost of the refusals out of range (the Distant Target), in each of the three modes:
+ *  - `all` (default): the player receives the floating text "Forced" and sees the "Rule overridden" banner on the card;
+ *  - `hideGM` and `gmOnly`: the player receives neither the text nor the banner; the GM always sees the banner.
+ * Then a marked card whose author is a player (created by the GM in another player's name, for lack of a second client):
+ *  - `hideGM`: the player sees it marked (a player's override, public); `gmOnly`: no;
+ *  - the one the player creates themselves: they always see their own mark.
+ * The same flagged range is not asked again for a minute (runtime/turn.mjs, `ACK_LIFETIME`): each forced blow waits 61 s
+ * after the previous one, and the scenario waits for the end of that minute before handing back (the next one,
+ * `regle-forcee`, casts the same spell).
+ * Not covered here: the floating text of an override forced by a player (the window opens on their side). Restored: the
+ * setting, the created cards, the player's listener.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -34,7 +35,7 @@ export default {
     ctx.restore(() => ctx.call("run-script", { code: `await ChatMessage.deleteDocuments(args.ids.filter(id => game.messages.has(id))); return true;`,
       args: { ids: created } }).catch(() => {}));
 
-    // L'écouteur du joueur : les textes flottants « forced » reçus.
+    // The player's listener: the "forced" floating texts received.
     await ctx.asPlayer(`
       window.__dasForced = [];
       if ( !window.__dasForcedHook ) window.__dasForcedHook = Hooks.on("${MODULE_ID}.notice", d => { if ( d?.kind === "forced" ) window.__dasForced.push(d.token); });
@@ -59,7 +60,7 @@ export default {
       const d = await legality(500);
       if ( d ) await ctx.call("answer-dialog", { id: d.id, button: "cancel" }).catch(() => {});
     });
-    /** Le MJ force Rayon de givre hors de portée ; rend la carte d'utilisation marquée et les textes « Forcé » reçus par le joueur. */
+    /** The GM forces Ray of Frost out of range; returns the marked use card and the "Forced" texts received by the player. */
     let lastForce = 0;
     const waitMemory = async () => { const left = lastForce + 61000 - Date.now(); if ( left > 0 ) await pause(left); };
     ctx.restore(waitMemory);
@@ -89,7 +90,7 @@ export default {
       ctx.expect((await gmSees(id)) === true, `${mode} : bandeau toujours montré au MJ`);
     }
 
-    // Cartes marquées dont l'auteur est un joueur.
+    // Marked cards whose author is a player.
     const other = (await ctx.call("run-script", { code: `return game.users.find(u => !u.isGM && (u.id !== args.me))?.id ?? null;`,
       args: { me: who.id } }))?.result ?? null;
     const markedBy = async author => {

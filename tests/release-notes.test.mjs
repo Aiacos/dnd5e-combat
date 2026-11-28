@@ -1,8 +1,8 @@
 /**
- * §439 : le message de mise à jour. Deux choses tenues ici :
- *  - le GARDE-FOU DE RELEASE : la version de `module/module.json` a sa note dans `content/releases.mjs`, chaque nouveauté et chaque
- *    risque a son texte dans les trois langues, chaque vérification conseillée existe dans le diagnostic ;
- *  - les règles pures de `core/release-notes.mjs` (quelles notes montrer, modules en retard, écarts de version, conditions).
+ * §439: the update message. Two things held here:
+ *  - the RELEASE GUARD: the version of `module/module.json` has its note in `content/releases.mjs`, every novelty and every
+ *    risk has its text in the three languages, every recommended check exists in the diagnostic;
+ *  - the pure rules of `core/release-notes.mjs` (which notes to show, outdated modules, version gaps, conditions).
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -18,12 +18,12 @@ const LANGS = Object.fromEntries(["en", "fr", "pt-BR"].map(l => [l, JSON.parse(r
 const CHECK_IDS = [...read("module/scripts/runtime/diagnostic/checks.mjs").matchAll(/^\s*id: "([a-z0-9-]+)"/gm)].map(m => m[1]);
 
 describe("garde-fou de release : les notes de version", () => {
-  it("la version de module.json a sa note de nouveautés, et la table est saine", () => {
+  it("the module.json version has its release note, and the table is sound", () => {
     expect(CHECK_IDS.length).toBeGreaterThan(5);
     expect(validateReleases(RELEASES, { version: MANIFEST.version, checkIds: CHECK_IDS })).toEqual([]);
   });
 
-  it("chaque nouveauté, chaque risque et chaque vérification a son texte en en, fr et pt-BR", () => {
+  it("every novelty, risk and check has its text in en, fr and pt-BR", () => {
     const missing = [];
     for ( const r of RELEASES ) {
       const keys = [
@@ -38,19 +38,19 @@ describe("garde-fou de release : les notes de version", () => {
     expect(missing, "textes manquants dans module/lang/").toEqual([]);
   });
 
-  it("aucun texte de nouveauté sans note qui le cite", () => {
+  it("no novelty text without a note that cites it", () => {
     const used = new Set(RELEASES.flatMap(r => [...r.highlights.map(id => `Point.${id}`), ...(r.risks ?? []).map(x => `Risque.${x.id}`)]));
     const orphans = Object.keys(LANGS.en).map(k => /^DND5ECOMBAT\.Nouveautes\.((?:Point|Risque)\.[A-Za-z0-9]+)/.exec(k)?.[1])
       .filter(k => k && !used.has(k));
     expect(orphans).toEqual([]);
   });
 
-  it("le français des notes n'emploie pas le pronom « on »", () => {
+  it("the notes' French does not use the pronoun \"on\"", () => {
     const bad = Object.entries(LANGS.fr).filter(([k, v]) => k.startsWith("DND5ECOMBAT.Nouveautes.") && /(^|[\s'’(«])on\s/i.test(v)).map(([k]) => k);
     expect(bad).toEqual([]);
   });
 
-  it("le garde-fou parle quand une version n'a pas sa note", () => {
+  it("the guard speaks up when a version has no note", () => {
     expect(validateReleases(RELEASES, { version: "99.0.0" }).join("\n")).toMatch(/99\.0\.0.*n'a pas sa note/);
     expect(validateReleases([{ version: "1.0.0", highlights: [], tested: { foundry: "14.370", system: "6.1.0" } }])).toHaveLength(1);
     expect(validateReleases([{ version: "1.0.0", highlights: ["a"], tested: { foundry: "14.370", system: "6.1.0" }, checks: [{ id: "inconnue" }] }],
@@ -74,7 +74,7 @@ const world = (over={}) => ({
   ...over
 });
 
-describe("règles du message de mise à jour", () => {
+describe("update message rules", () => {
   it("compare les versions nombre par nombre", () => {
     expect(compareVersions("0.283.0", "0.282.1")).toBeGreaterThan(0);
     expect(compareVersions("0.9.0", "0.10.0")).toBeLessThan(0);
@@ -82,23 +82,23 @@ describe("règles du message de mise à jour", () => {
     expect(compareVersions("6.1", "6.1.0")).toBe(0);
   });
 
-  it("les notes des versions sorties depuis la dernière vue, la plus récente d'abord", () => {
+  it("the notes of the versions released since the last one seen, most recent first", () => {
     expect(notesBetween(NOTES, { seen: "0.2.0", current: "0.3.0" }).map(n => n.version)).toEqual(["0.3.0", "0.2.1"]);
     expect(notesBetween(NOTES, { seen: "0.1.0", current: "0.2.1" }).map(n => n.version)).toEqual(["0.2.1", "0.2.0"]);
     expect(notesBetween(NOTES, { seen: "0.3.0", current: "0.3.0" })).toEqual([]);
-    // Ouverture à la main : les dernières, jamais une note plus récente que le module installé.
+    // Manual opening: the latest ones, never a note newer than the installed module.
     expect(notesBetween(NOTES, { current: "0.2.1", limit: 5 }).map(n => n.version)).toEqual(["0.2.1", "0.2.0"]);
     expect(testedFor(NOTES, "0.2.5").system).toBe("6.0.6");
   });
 
-  it("les modules actifs plus anciens que la version testée", () => {
+  it("active modules older than the tested version", () => {
     const installed = world({ modules: [{ id: "voisin", title: "Voisin", version: "0.4.9", active: true }, { id: "autre", title: "Autre", version: "1.0.0", active: false }] });
     expect(lateModules(NOTES[0].tested, installed)).toEqual([{ id: "voisin", title: "Voisin", version: "0.4.9", tested: "0.5.0" }]);
     expect(lateModules(NOTES[0].tested, world())).toEqual([]);
     expect(lateModules(NOTES[1].tested, world())).toEqual([]);
   });
 
-  it("l'écart d'une version avec la version testée : correctif = info, au-delà = alerte", () => {
+  it("the gap of one version from the tested version: patch = info, beyond = alert", () => {
     expect(versionGap("6.1.0", "6.1.0")).toBeNull();
     expect(versionGap("6.1.2", "6.1.0")).toEqual({ way: "newer", level: "info" });
     expect(versionGap("6.0.6", "6.1.0")).toEqual({ way: "older", level: "warn" });
@@ -106,15 +106,15 @@ describe("règles du message de mise à jour", () => {
     expect(versionGap("15.380", "14.370")).toEqual({ way: "newer", level: "warn" });
   });
 
-  it("Foundry, le système et les livres installés face aux versions testées", () => {
+  it("Foundry, the system and the installed books against the tested versions", () => {
     expect(compatibility(NOTES[0].tested, world())).toEqual([]);
     const old = world({ system: "6.0.6", modules: [{ id: "livre", title: "Le Livre", version: "2.2.0", active: true }] });
     expect(compatibility(NOTES[0].tested, old).map(g => [g.kind, g.way, g.level])).toEqual([["system", "older", "warn"], ["book", "older", "warn"]]);
-    // Un livre absent ou inactif n'est pas un écart.
+    // A missing or inactive book is not a gap.
     expect(compatibility(NOTES[0].tested, world({ modules: [{ id: "livre", version: "2.2.0", active: false }] }))).toEqual([]);
   });
 
-  it("les conditions : module actif à partir d'une version, avant une version, système", () => {
+  it("conditions: module active from a version, before a version, system", () => {
     expect(matches(null, world())).toBe(true);
     expect(matches({ module: "livre", min: "3.0.0" }, world())).toBe(true);
     expect(matches({ module: "livre", below: "3.0.0" }, world())).toBe(false);
@@ -122,7 +122,7 @@ describe("règles du message de mise à jour", () => {
     expect(matches({ system: "6.1.0" }, world({ system: "6.0.6" }))).toBe(false);
   });
 
-  it("risques et vérifications conseillées, sans doublon, selon le monde", () => {
+  it("risks and recommended checks, without duplicates, by world", () => {
     const notes = notesBetween(NOTES, { seen: "0.2.0", current: "0.3.0" });
     expect(activeRisks(notes, world()).map(r => r.id)).toEqual(["fiches", "toujours"]);
     expect(recommendedChecks(notes, world()).map(c => c.id)).toEqual(["reparer", "marques"]);
@@ -131,14 +131,14 @@ describe("règles du message de mise à jour", () => {
     expect(recommendedChecks(notes, sansLivre).map(c => c.id)).toEqual(["reparer"]);
   });
 
-  it("le rapport complet, et s'il y a quelque chose à dire", () => {
+  it("the full report, and whether there is anything to say", () => {
     const report = releaseReport(NOTES, { seen: "0.2.1", current: "0.3.0", installed: world() });
     expect(report.notes.map(n => n.version)).toEqual(["0.3.0"]);
     expect(hasNews(report)).toBe(true);
     expect(hasNews(releaseReport([], { seen: "0.1.0", current: "0.2.0", installed: world() }))).toBe(false);
   });
 
-  it("la note livrée de la prochaine version : le Manuel 3.0.0 amène son risque et ses deux vérifications", () => {
+  it("the shipped note of the next version: Manual 3.0.0 brings its risk and its two checks", () => {
     const next = RELEASES[0];
     const installed = { foundry: next.tested.foundry, system: next.tested.system,
       modules: [{ id: "dnd-players-handbook", title: "PHB", version: "3.0.0", active: true }] };

@@ -17,12 +17,12 @@ const isInactive = actor => actor.statuses.has("incapacitated") || actor.statuse
   || actor.statuses.has(CONFIG.specialStatusEffects.DEFEATED);
 
 /**
- * Réglage « auras en combat seulement » : hors combat, aucune aura n'est tenue et les copies
- * existantes sont retirées. Le calcul est léger, mais il tourne à chaque déplacement de token ;
- * en exploration, sur une grande scène, c'est du travail pour un bonus qui ne sert qu'aux rares
- * sauvegardes hors combat — que le MJ peut alors compter à la main.
+ * "Auras in combat only" setting: out of combat, no aura is held and the existing copies
+ * are removed. The computation is light, but it runs at every token move;
+ * in exploration, on a large scene, that is work for a bonus that only serves the rare
+ * saves out of combat — which the GM can then count by hand.
  */
-/** §403 : les tokens de celui qui a invoqué ce token (`flags.dnd5e.summon.origin` : l'item de l'invocateur). */
+/** §403: the tokens of whoever summoned this token (`flags.dnd5e.summon.origin`: the summoner's item). */
 function summonerTokens(token) {
   const origin = token.actor?.getFlag?.("dnd5e", "summon")?.origin;
   const actor = origin ? fromUuidSync(origin, { strict: false })?.actor : null;
@@ -36,14 +36,14 @@ function aurasActiveOn(scene) {
 }
 
 /**
- * Remet les auras de la scène affichée d'aplomb : qui se tient dans quelle aura, et donc quelles
- * copies d'effet créer, corriger ou retirer. Tout est recalculé à chaque fois — les scènes de
- * combat comptent quelques dizaines de tokens — et seul l'écart est écrit.
+ * Puts the auras of the displayed scene back in order: who stands in which aura, and so which
+ * effect copies to create, fix or remove. Everything is recomputed each time — combat scenes
+ * have a few dozen tokens — and only the difference is written.
  */
 async function refreshScene(scene) {
   const tokens = scene.tokens.filter(t => t.actor && !t.hidden && !isObjectToken(t));
-  // §403 : une invocation tenue pour un objet (la meute d'Invocation d'animaux : pilotée, sans espace) peut porter une aura ; elle n'en
-  // reçoit aucune.
+  // §403: a summon held as an object (the pack of Conjure Animals: driven, no space) can carry an aura; it does not
+  // receive any.
   const sources = scene.tokens.filter(t => t.actor && !t.hidden);
   const active = aurasActiveOn(scene);
   const factors = readUnitFactors();
@@ -60,11 +60,11 @@ async function refreshScene(scene) {
       includeSelf: aura.includeSelf === true, value: auraValue(aura, sourceToken.actor), types: aura.types ?? null,
       ...(aura.affects === "summoner" ? { summoners: summonerTokens(sourceToken) } : {})
     };
-    // P2 : distance en 3D ; une émanation est arrêtée par un abri total (plancher, mur plein) — testé
-    // seulement pour qui est à portée, la ligne d'effet coûte des rayons.
+    // P2: 3D distance; an Emanation is stopped by Total Cover (floor, solid wall) — tested
+    // only for whoever is in range, line of effect costs rays.
     const candidates = tokens.map(t => {
-      // §16.47 : qui porte déjà l'effet d'origine du sort n'en reçoit pas de copie.
-      // §225 : ni d'un plan à l'autre.
+      // §16.47: whoever already carries the spell's original effect gets no copy of it.
+      // §225: nor from one plane to another.
       const distance = (carriesOriginal(t.actor, aura) || !samePlane(sourceToken, t)) ? Infinity
         : (t === sourceToken ? 0 : distanceBetween(sourceToken, t).value);
       const lineOfEffect = ((t === sourceToken) || (distance > radius + 1e-6)) ? null : hasLineOfEffect(sourceToken, t);
@@ -99,12 +99,12 @@ export function registerAuras() {
     name: "DND5ECOMBAT.Reglage.aurasOnlyInCombat.nom",
     hint: "DND5ECOMBAT.Reglage.aurasOnlyInCombat.aide",
     scope: "world", config: true, type: Boolean, default: false,
-    // Sur chaque client, quand le réglage `aurasOnlyInCombat` change (sans argument) : les auras se recalculent. Un voisin peut l'émettre
-    // pour le même effet.
+    // On each client, when the `aurasOnlyInCombat` setting changes (no argument): the auras are recomputed. A neighbor may emit it
+    // for the same effect.
     onChange: () => Hooks.callAll(`${MODULE_ID}.refreshAuras`)
   });
 
-  // Un seul recalcul à la fois, et les rafales (déplacement de groupe) sont regroupées.
+  // A single recomputation at a time, and bursts (group move) are grouped.
   const refresh = foundry.utils.debounce(() => {
     if ( !isExecutor() || !canvas?.scene ) return;
     enqueue("auras", () => refreshScene(canvas.scene))
@@ -113,16 +113,16 @@ export function registerAuras() {
 
   const auras = { label: "auras: recalculation requested" };
   const always = () => refresh();
-  // Début et fin de combat : avec le réglage « en combat seulement », les auras s'allument et s'éteignent.
+  // Start and end of combat: with the "in combat only" setting, the auras turn on and off.
   for ( const hook of ["canvasReady", `${MODULE_ID}.refreshAuras`, "combatStart", "deleteCombat", "moveToken",
     "createToken", "deleteToken", "createItem", "deleteItem", `${MODULE_ID}.factionsChanged`] ) route(hook, always, auras);
   route("updateToken", (token, changes) => {
-    // §181 : une faction ou une attitude qui change déplace les camps.
+    // §181: a faction or a disposition that changes moves the sides.
     const flags = changes.flags?.[MODULE_ID] ?? {};
     if ( ("hidden" in changes) || ("disposition" in changes) || ("faction" in flags) || ("-=faction" in flags) || ("stance" in flags) || ("-=stance" in flags) ) refresh();
   }, auras);
-  // Un état qui éteint l'aura (neutralisé), un Charisme qui change, un item d'aura ajouté ou retiré.
-  // Nos propres copies ne relancent rien : elles ne changent ni les porteurs ni les distances.
+  // A condition that turns the aura off (Incapacitated), a Charisma that changes, an aura item added or removed.
+  // Our own copies relaunch nothing: they change neither the bearers nor the distances.
   const onEffect = effect => { if ( !effect.getFlag(MODULE_ID, "aura") ) refresh(); };
   route("createActiveEffect", onEffect, auras);
   route("deleteActiveEffect", onEffect, auras);

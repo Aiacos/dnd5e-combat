@@ -1,17 +1,19 @@
 /**
- * M8 (SPEC §18.17) : Avaler / Engloutir en jeu. MJ actif.
- *  - l'effet « avalé » posé (la sauvegarde ratée du Béhir, l'action de la Grenouille) : l'agrippement par l'avaleur cesse (le
- *    texte : « no longer Grappled »), l'avalé est posé au centre de l'espace de l'avaleur, et le suit quand il marche ;
- *  - les dégâts à chaque tour, au moment que dit le texte (core/swallow.mjs) ; la Grenouille recrache après les siens ;
- *  - « s'il subit 30 dégâts ou plus en un seul tour d'une créature à l'intérieur » : sauvegarde de Constitution à la fin de ce
- *    tour, ratée → tous régurgités, À terre, au contact ;
- *  - l'avaleur meurt : les avalés sont libérés, À terre, au contact.
- * §18.21 : capacité (« une seule créature à la fois ») et cible agrippée exigées à l'effet posé ; « ne peut pas utiliser
- * Morsure tant qu'il a avalé » ; S'échapper (test de l'item, Cube gélatineux ; runtime/grapple.mjs) ; sauvegarde répétée à la
- * fin de chaque tour de l'avalé (Blob) ; un avalé sorti autrement (évasion, sauvegarde, fin de l'empoignade du Tertre) quitte
- * l'espace de l'avaleur ; engloutir en marchant (Cube, Blob) : après l'action, qui le cube traverse fait la sauvegarde.
- * §45 : le Crapaud géant, dont aucune activité ne pose l'effet « avalé » : à son action, le moteur le pose sur la créature
- * agrippée.
+ * M8 (SPEC §18.17): Swallow / Engulf in play. Active GM.
+ *  - the "swallowed" effect placed (the Behir's failed saving throw, the Frog's action): the grapple by the swallower ends (the
+ *    text: "no longer Grappled"), the swallowed creature is placed at the center of the swallower's space, and follows it when
+ *    it walks;
+ *  - the damage each turn, at the moment the text says (core/swallow.mjs); the Frog spits it out after its own;
+ *  - "if it takes 30 damage or more in a single turn from a creature inside": Constitution saving throw at the end of that
+ *    turn, failed → all regurgitated, Prone, in contact;
+ *  - the swallower dies: the swallowed creatures are freed, Prone, in contact.
+ * §18.21: capacity ("only one creature at a time") and grappled target required when the effect is placed; "cannot use
+ * Bite while it has swallowed"; Escape (item check, Gelatinous Cube; runtime/grapple.mjs); repeated saving throw at the
+ * end of each turn of the swallowed creature (Blob); a swallowed creature that comes out otherwise (escape, saving throw,
+ * end of the Mound's grapple) leaves the swallower's space; engulfing while walking (Cube, Blob): after the action, whoever
+ * the cube passes through makes the saving throw.
+ * §45: the Giant Toad, whose activities place no "swallowed" effect: at its action, the engine places it on the grappled
+ * creature.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -33,14 +35,14 @@ import { relaunchUse } from "./relaunch.mjs";
 
 const turnKey = combat => (combat?.started ? `${combat.id}.${combat.round}.${combat.turn}` : "hors-combat");
 
-/** L'effet « avalé » vient d'être posé. */
+/** The "swallowed" effect has just been placed. */
 async function onSwallowed(effect) {
   const by = swallowedBy(effect);
   if ( !by ) return;
   const token = swallowedTokenOf(effect);
   const swallowerToken = token ? swallowerTokenFor(effect, by, token.parent) : null;
   if ( !token || !swallowerToken ) return;
-  // §18.21 : « only one creature swallowed at a time », « a target it is grappling » — sinon l'effet ne tient pas.
+  // §18.21: "only one creature swallowed at a time", "a target it is grappling" — otherwise the effect does not hold.
   const rule = by.rule;
   const others = swallowedIn(swallowerToken).filter(i => i.token !== token);
   const held = grappleEffectsOf(token.actor).some(g => (g.id !== effect.id) && (grapplerOf(g)?.uuid === by.swallower?.uuid));
@@ -55,7 +57,7 @@ async function onSwallowed(effect) {
     return;
   }
   await effect.setFlag(MODULE_ID, "swallow", { since: turnKey(game.combat) });
-  // « which is no longer Grappled » : l'empoignade de l'avaleur cesse (pas l'effet « avalé » lui-même : Tertre errant).
+  // "which is no longer Grappled": the swallower's grapple ends (not the "swallowed" effect itself: Shambling Mound).
   for ( const grapple of grappleEffectsOf(token.actor) ) {
     if ( (grapple.id !== effect.id) && (grapplerOf(grapple)?.uuid === by.swallower?.uuid) ) await grapple.delete();
   }
@@ -64,8 +66,8 @@ async function onSwallowed(effect) {
 }
 
 /**
- * Un effet « avalé » retiré autrement que par le moteur (évasion, sauvegarde répétée réussie, fin de l'empoignade du Tertre
- * errant) : la créature quitte l'espace de l'avaleur, debout.
+ * A "swallowed" effect removed otherwise than by the engine (escape, successful repeated saving throw, end of the Shambling
+ * Mound's grapple): the creature leaves the swallower's space, standing.
  */
 async function onRemoved(effect) {
   if ( releasing.has(effect.uuid) ) return;
@@ -79,9 +81,9 @@ async function onRemoved(effect) {
 }
 
 /**
- * S'échapper d'un avaleur dont l'item porte un test d'évasion (Cube gélatineux : Athlétisme contre son DD ; Tertre errant) —
- * appelé par l'action S'échapper (runtime/grapple.mjs), sur le client de celui qui s'échappe. null : pas avalé, ou rien à
- * tester ; sinon true si libre.
+ * Escaping from a swallower whose item carries an escape check (Gelatinous Cube: Athletics against its DC; Shambling Mound) —
+ * called by the Escape action (runtime/grapple.mjs), on the client of whoever escapes. null: not swallowed, or nothing to
+ * check; otherwise true if free.
  */
 export async function escapeSwallow(actor) {
   const token = actor?.token ?? actor?.getActiveTokens?.(false, true)?.[0] ?? null;
@@ -100,7 +102,7 @@ export async function escapeSwallow(actor) {
   return free;
 }
 
-/** « it can't use Bite while it has a swallowed target » — refusé, sur le client qui utilise. */
+/** "it can't use Bite while it has a swallowed target" — refused, on the client that uses it. */
 function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
   const actor = activity?.actor;
   const rule = swallowItemOf(actor);
@@ -108,7 +110,7 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
   if ( usageConfig?.[MODULE_ID]?.swallowForced ) return;
   const token = actor.token ?? actor.getActiveTokens?.(false, true)?.[0] ?? null;
   if ( !token || !swallowedIn(token).length ) return;
-  // §412 (issue #44, lot 5) : la fenêtre de légalité ; forcée, la même utilisation repart (le MJ prévenu).
+  // §412 (issue #44, batch 5): the legality window; forced, the same use restarts (the GM warned).
   askAnyway(`${activity.item.name} — ${token.name}`, [loc("Avale.Interdit", { source: token.name, item: activity.item.name })],
     { actor, item: activity.item, token }).then(go => {
     if ( go ) relaunchUse(activity, { ...usageConfig, [MODULE_ID]: { ...(usageConfig?.[MODULE_ID] ?? {}), swallowForced: true } }, dialogConfig, messageConfig);
@@ -120,13 +122,13 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
 /*  Engloutir en marchant (Cube, Blob)          */
 /* -------------------------------------------- */
 
-/** Avaleur → { turn, done } : l'action d'engloutir a été utilisée ce tour-ci ; `done` : déjà visés pendant ce déplacement. */
+/** Swallower → { turn, done }: the engulf action was used this turn; `done`: already targeted during this move. */
 const engulfing = new Map();
 
 /**
- * §45 : l'avaleur dont aucune activité ne pose l'effet « avalé » (Crapaud géant : « swallows a Medium or smaller target it
- * is grappling ») vient d'utiliser son action — le moteur pose l'effet sur la créature qu'il agrippe (la première qui tient
- * sous la taille dite), et la suite est celle de tout avalement (`onSwallowed`). Rien à avaler : on le dit.
+ * §45: the swallower whose activities place no "swallowed" effect (Giant Toad: "swallows a Medium or smaller target it
+ * is grappling") has just used its action — the engine places the effect on the creature it grapples (the first that fits
+ * under the stated size), and what follows is that of any swallowing (`onSwallowed`). Nothing to swallow: we say so.
  */
 async function swallowHeld(activity, rule) {
   const actor = activity.actor;
@@ -159,7 +161,7 @@ function onUsage(message) {
   log(`${token.name}: ${rule.item.name} - those whose space it enters will make a saving throw`);
 }
 
-/** Positions du trajet, un échantillon tous les demi-cases (départ compris). */
+/** Positions along the path, one sample every half cell (start included). */
 function sampledPath(token, movement) {
   const points = [movement.origin, ...(movement.passed?.waypoints ?? []), movement.destination].filter(p => p && Number.isFinite(p.x));
   const step = Math.min(token.parent.grid.sizeX, token.parent.grid.sizeY) / 2;
@@ -191,7 +193,7 @@ async function engulfAlong(token, movement) {
   await swallowAgainst(rule.entry, token, targets, "engulf", { event: "engulf", flavor: "DND5ECOMBAT.Avale.Engloutit" });
 }
 
-/** L'avaleur a marché : ses avalés suivent. */
+/** The swallower has walked: its swallowed creatures follow. */
 async function onMove(token, movement, operation) {
   if ( operation?.[MODULE_ID]?.dragged ) return;
   await engulfAlong(token, movement);
@@ -203,10 +205,10 @@ async function onMove(token, movement, operation) {
 }
 
 /* -------------------------------------------- */
-/*  Dégâts de l'intérieur : régurgiter          */
+/*  Damage from inside: regurgitate             */
 /* -------------------------------------------- */
 
-/** Dégâts subis par un avaleur de ses avalés, par tour : `${tour}|${avaleur}` → total. */
+/** Damage taken by a swallower from its swallowed creatures, per turn: `${tour}|${avaleur}` → total. */
 const fromInside = new Map();
 
 function onApplyDamage(actor, amount, options) {
@@ -221,7 +223,7 @@ function onApplyDamage(actor, amount, options) {
   log(`${actor.name}: ${amount} damage from ${attacker.name}, from inside (${fromInside.get(key)} this turn)`);
 }
 
-/** Fin d'un tour : chaque avaleur qui a subi assez de dégâts de l'intérieur sauvegarde, ou régurgite tout. */
+/** End of a turn: each swallower that has taken enough damage from inside makes a saving throw, or regurgitates everything. */
 async function regurgitateChecks(combat, prior) {
   const priorKey = turnKeyAt(combat, prior);
   for ( const [key, total] of Array.from(fromInside) ) {
@@ -243,14 +245,14 @@ async function regurgitateChecks(combat, prior) {
 }
 
 /* -------------------------------------------- */
-/*  Dégâts à chaque tour                        */
+/*  Damage each turn                            */
 /* -------------------------------------------- */
 
 async function damageAt(combat, prior, current) {
   const ended = combat.combatants.get(prior?.combatantId)?.token ?? null;
   const started = combat.combatants.get(current?.combatantId)?.token ?? null;
   const priorKey = turnKeyAt(combat, prior);
-  // Le tour de l'avaleur s'achève ou commence.
+  // The swallower's turn ends or starts.
   for ( const [owner, which] of [[ended, "ended"], [started, "started"]] ) {
     if ( !owner?.actor ) continue;
     const rule = swallowItemOf(owner.actor);
@@ -261,14 +263,14 @@ async function damageAt(combat, prior, current) {
     log(`${owner.name}: ${rule.item.name} - ${inside.map(i => i.token.name).join(", ")}`);
     await swallowAgainst(rule.damage, owner, inside.map(i => i.token), rule.damageAt);
   }
-  // Le tour d'un avalé s'achève : « repeats the save at the end of each of its turns » (Blob) — réussie, l'effet tombe
-  // (runtime/engine.mjs, brique resave) et la créature sort (onRemoved).
+  // A swallowed creature's turn ends: "repeats the save at the end of each of its turns" (Blob) — if successful, the effect
+  // drops (runtime/engine.mjs, resave brick) and the creature comes out (onRemoved).
   const out = ended ? swallowerOf(ended) : null;
   if ( out?.rule.repeatsSave && out.rule.entry ) {
     log(`${ended.name}, inside ${out.token.name}: repeated saving throw`);
     await resaveAgainst(out.effect, out.rule.entry, ended, "endOfTurn");
   }
-  // Le tour d'un avalé commence (Kraken, Blob, Tertre : « at the start of each of its turns »).
+  // A swallowed creature's turn starts (Kraken, Blob, Mound: "at the start of each of its turns").
   const holder = started ? swallowerOf(started) : null;
   if ( holder?.rule.damage && swallowDamageNow(holder.rule.damageAt, { targetStarted: true }) ) {
     log(`${started.name} starts their turn inside ${holder.token.name}: ${holder.rule.item.name}`);
@@ -277,8 +279,8 @@ async function damageAt(combat, prior, current) {
 }
 
 /**
- * La Grenouille : « If that damage doesn't kill it, the frog disgorges it ». Le Cube : « Success: … the target moves to an
- * unoccupied space within 5 feet » — qui a réussi et se tient dans son espace en sort.
+ * The Frog: "If that damage doesn't kill it, the frog disgorges it". The Cube: "Success: … the target moves to an
+ * unoccupied space within 5 feet" — whoever succeeded and stands in its space comes out of it.
  */
 async function onResolution(resolution) {
   if ( resolution.step !== STEPS.DONE ) return;
@@ -301,7 +303,7 @@ async function onResolution(resolution) {
   }
 }
 
-/** L'avaleur meurt : ses avalés sont libérés. */
+/** The swallower dies: its swallowed creatures are freed. */
 async function onDeath(effect) {
   if ( !effect.statuses?.has("dead") ) return;
   const actor = actorOfEffect(effect);

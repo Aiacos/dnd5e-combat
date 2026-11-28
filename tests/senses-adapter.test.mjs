@@ -1,6 +1,6 @@
 /**
- * Sens déclarés lus sur les acteurs (adapter/senses.mjs) : par la possession d'un item, par un effet qu'il a posé, depuis le
- * contenu qu'un autre module enregistre ; protections portées par la cible.
+ * Declared senses read from actors (adapter/senses.mjs): by owning an item, by an effect it placed, from the content that another
+ * module registers; protections carried by the target.
  */
 import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import { CONTENT_VERSION } from "../module/scripts/core/content.mjs";
@@ -21,11 +21,11 @@ function actorOf(id, identifiers, { type="npc", creatureType="humanoid" }={}) {
   actor.items = identifiers.map(identifier => itemOf(actor, identifier));
   return actor;
 }
-/** Un effet actif posé par un item (son origine), copie de l'effet `id` de cet item. */
+/** An Active Effect placed by an item (its origin), copy of this item's effect `id`. */
 const effectFrom = (item, id) => ({ id: `applied-${id}`, disabled: false, isSuppressed: false, origin: item.uuid,
   statuses: new Set(), _stats: { duplicateSource: `${item.uuid}.ActiveEffect.${id}` }, system: {} });
 const tokenOf = (actor, x) => ({ actor, x, parent: { grid: { units: "ft" } } });
-/** La scène entre deux tokens du test : la distance le long de x ; un mur, ou non. */
+/** The scene between two test tokens: the distance along x; a wall, or not. */
 const between = (a, b, walled) => ({ distance: () => Math.abs(a.x - b.x), walled });
 
 beforeAll(async () => {
@@ -57,17 +57,17 @@ const TABLE = {
 };
 afterEach(() => { unregisterTable(PACK); uuids.clear(); });
 
-describe("sens déclarés d'un acteur", () => {
-  it("par la possession de l'item — depuis une table enregistrée par un autre module", () => {
+describe("an actor's declared senses", () => {
+  it("by owning the item — from a table registered by another module", () => {
     registerTable(PACK, TABLE);
     expect(declaredSensesOf(actorOf("a", ["trait-sense", "multiattack"]))).toEqual([TABLE["trait-sense"].sense]);
     expect(declaredSensesOf(actorOf("b", ["multiattack"]))).toEqual([]);
   });
-  it("un sens porté par un effet ne vaut que tant que l'effet est là", () => {
+  it("a sense carried by an effect holds only as long as the effect is there", () => {
     registerTable(PACK, TABLE);
     const caster = actorOf("c", ["spell-sense"]);
     expect(declaredSensesOf(caster)).toEqual([]);
-    // Comme en jeu : l'effet créé, puis modifié, fait oublier ce qui a été lu de l'acteur (runtime/vision.mjs).
+    // As in play: the effect created, then modified, makes what was read from the actor be forgotten (runtime/vision.mjs).
     caster.effects = [effectFrom(caster.items[0], "bbbbbbbbbbbbbbbb")];
     forgetSenses(caster);
     expect(declaredSensesOf(caster)).toEqual([TABLE["spell-sense"].sense]);
@@ -75,7 +75,7 @@ describe("sens déclarés d'un acteur", () => {
     forgetSenses(caster);
     expect(declaredSensesOf(caster)).toEqual([]);
   });
-  it("`fromEffect` : cet effet-là de l'item, pas un autre", () => {
+  it("`fromEffect`: that effect of the item, not another", () => {
     registerTable(PACK, TABLE);
     const actor = actorOf("d", ["two-effects"]);
     actor.effects = [effectFrom(actor.items[0], "cccccccccccccccc")];
@@ -86,9 +86,9 @@ describe("sens déclarés d'un acteur", () => {
   });
 });
 
-// Revue de #119 : `canSee` demande ces lectures pour chaque paire de tokens — elles sont gardées par acteur.
-describe("ce qui a été lu d'un acteur est gardé, jusqu'à ce que quelque chose change", () => {
-  /** Compte les items d'origine cherchés (`fromUuidSync`) pendant `fn`. */
+// Review of #119: `canSee` asks for these reads for each pair of tokens — they are kept per actor.
+describe("what was read from an actor is kept, until something changes", () => {
+  /** Counts the origin items looked up (`fromUuidSync`) during `fn`. */
   const lookups = fn => {
     const real = globalThis.fromUuidSync;
     let count = 0;
@@ -103,7 +103,7 @@ describe("ce qui a été lu d'un acteur est gardé, jusqu'à ce que quelque chos
     return actor;
   };
 
-  it("cent demandes : les items d'origine des effets ne sont cherchés qu'à la première", () => {
+  it("a hundred requests: the effects' origin items are looked up only at the first", () => {
     registerTable(PACK, TABLE);
     const actor = warded();
     const first = lookups(() => { declaredSensesOf(actor); detectionWardsOf(actor); });
@@ -114,19 +114,19 @@ describe("ce qui a été lu d'un acteur est gardé, jusqu'à ce que quelque chos
     expect(declaredSensesOf(actor)).toBe(declaredSensesOf(actor));
   });
 
-  it("oublié pour l'acteur dont un item ou un effet change, pas pour les autres", () => {
+  it("forgotten for the actor whose item or effect changes, not for the others", () => {
     registerTable(PACK, TABLE);
     const [one, other] = [warded(), warded()];
     detectionWardsOf(one);
     detectionWardsOf(other);
     one.effects = [];
-    expect(detectionWardsOf(one)).toEqual(["div"]);   // rien ne l'a dit : la lecture gardée
+    expect(detectionWardsOf(one)).toEqual(["div"]);   // nothing said it: the kept read
     forgetSenses(one);
     expect(detectionWardsOf(one)).toEqual([]);
     expect(lookups(() => detectionWardsOf(other))).toBe(0);
   });
 
-  it("oublié pour tous quand le tour ou l'heure avance (`forgetSenses()`)", () => {
+  it("forgotten for everyone when the turn or the time advances (`forgetSenses()`)", () => {
     registerTable(PACK, TABLE);
     const actor = warded();
     detectionWardsOf(actor);
@@ -136,7 +136,7 @@ describe("ce qui a été lu d'un acteur est gardé, jusqu'à ce que quelque chos
     expect(detectionWardsOf(actor)).toEqual([]);
   });
 
-  it("relu de lui-même quand une table du contenu est enregistrée ou retirée", () => {
+  it("re-read by itself when a content table is registered or removed", () => {
     const actor = actorOf("a", ["trait-sense"]);
     expect(declaredSensesOf(actor)).toEqual([]);
     registerTable(PACK, TABLE);
@@ -145,7 +145,7 @@ describe("ce qui a été lu d'un acteur est gardé, jusqu'à ce que quelque chos
     expect(declaredSensesOf(actor)).toEqual([]);
   });
 
-  it("le tableau rendu est partagé : il ne se modifie pas", () => {
+  it("the returned array is shared: it is not modified", () => {
     registerTable(PACK, TABLE);
     const senses = declaredSensesOf(actorOf("a", ["trait-sense"]));
     expect(Object.isFrozen(senses)).toBe(true);
@@ -153,9 +153,9 @@ describe("ce qui a été lu d'un acteur est gardé, jusqu'à ce que quelque chos
   });
 });
 
-describe("ce que ces sens disent d'une cible", () => {
+describe("what these senses say about a target", () => {
   const walled = () => true;
-  it("localise la créature du bon type dans la portée, à travers un mur si le sens les traverse", () => {
+  it("locates the creature of the right type in range, through a wall if the sense passes through them", () => {
     registerTable(PACK, TABLE);
     const observer = tokenOf(actorOf("o", ["trait-sense"]), 0);
     const see = target => sensedBy(observer, target, between(observer, target, walled));
@@ -163,7 +163,7 @@ describe("ce que ces sens disent d'une cible", () => {
     expect(see(tokenOf(actorOf("h", [], { creatureType: "humanoid" }), 50))).toBe(null);
     expect(see(tokenOf(actorOf("f", [], { creatureType: "fiend" }), 65))).toBe(null);
   });
-  it("un mur arrête le sens qui ne les traverse pas", () => {
+  it("a wall stops the sense that does not pass through them", () => {
     registerTable(PACK, TABLE);
     const caster = actorOf("c", ["spell-sense"]);
     caster.effects = [effectFrom(caster.items[0], "bbbbbbbbbbbbbbbb")];
@@ -172,7 +172,7 @@ describe("ce que ces sens disent d'une cible", () => {
     expect(sensedBy(observer, target, between(observer, target, () => false))).toBe("locate");
     expect(sensedBy(observer, target, between(observer, target, walled))).toBe(null);
   });
-  it("la cible protégée contre l'école du sort n'est pas trouvée par lui ; un sens naturel la trouve", () => {
+  it("the target protected against the spell's school is not found by it; a natural sense finds it", () => {
     registerTable(PACK, TABLE);
     const caster = actorOf("c", ["spell-sense"]);
     caster.effects = [effectFrom(caster.items[0], "bbbbbbbbbbbbbbbb")];
@@ -184,7 +184,7 @@ describe("ce que ces sens disent d'une cible", () => {
     expect(sensedBy(spell, target, between(spell, target, () => false))).toBe(null);
     expect(sensedBy(natural, target, between(natural, target, () => false))).toBe("locate");
   });
-  it("une vue déclarée : à travers un mur si elle les traverse, pas une cible Invisible, pas si son porteur est Aveuglé", () => {
+  it("a declared sight: through a wall if it passes through them, not an Invisible target, not if its bearer is Blinded", () => {
     registerTable(PACK, TABLE);
     const observer = tokenOf(actorOf("o", ["trait-sight"]), 0);
     const target = tokenOf(actorOf("t", []), 20);
@@ -195,7 +195,7 @@ describe("ce que ces sens disent d'une cible", () => {
     expect(sensedBy(observer, target, scene({ deaf: () => true }))).toBe("sight");
     expect(sensedBy(observer, target, scene({ blocked: () => ({ fog: false, darkness: true }) }))).toBe(null);
   });
-  it("des ténèbres n'arrêtent pas la vue qui les perce ; une brume, si", () => {
+  it("Darkness does not stop the sight that pierces it; a fog does", () => {
     registerTable(PACK, TABLE);
     const observer = tokenOf(actorOf("o", ["trait-dark-sight"]), 0);
     const target = tokenOf(actorOf("t", []), 40);
@@ -203,7 +203,7 @@ describe("ce que ces sens disent d'une cible", () => {
     expect(sensedBy(observer, target, scene({ fog: false, darkness: true }))).toBe("sight");
     expect(sensedBy(observer, target, scene({ fog: true, darkness: true }))).toBe(null);
   });
-  it("un sens qui localise ne lit ni la zone ni l'état Invisible ; `needs: \"hearing\"` l'éteint pour un porteur Assourdi", () => {
+  it("a locating sense ignores area and Invisible condition; `needs: \"hearing\"` turns it off for a Deafened bearer", () => {
     registerTable(PACK, TABLE);
     const observer = tokenOf(actorOf("o", ["trait-echo"]), 0);
     const target = tokenOf(actorOf("t", []), 20);
@@ -212,7 +212,7 @@ describe("ce que ces sens disent d'une cible", () => {
     expect(sensedBy(observer, target, scene({}))).toBe("locate");
     expect(sensedBy(observer, target, scene({ deaf: () => true }))).toBe(null);
   });
-  it("`detectedAs` : le sens qui cherche des morts-vivants trouve aussi qui est perçu comme tel", () => {
+  it("`detectedAs`: the sense that looks for Undead also finds whoever is perceived as such", () => {
     registerTable(PACK, TABLE);
     const observer = tokenOf(actorOf("o", ["trait-sense"]), 0);
     const plain = tokenOf(actorOf("h", [], { creatureType: "humanoid" }), 30);
@@ -222,7 +222,7 @@ describe("ce que ces sens disent d'une cible", () => {
     expect(sensedBy(observer, plain, between(observer, plain, () => false))).toBe(null);
     expect(sensedBy(observer, gifted, between(observer, gifted, () => false))).toBe("locate");
   });
-  it("`senseNeeds` : la vision aveugle par écholocalisation s'éteint pour un porteur Assourdi", () => {
+  it("`senseNeeds`: Blindsight by echolocation turns off for a Deafened bearer", () => {
     registerTable(PACK, TABLE);
     const actor = actorOf("b", ["trait-echolocation"]);
     const token = { ...tokenOf(actor, 0), hasStatusEffect: () => false };
@@ -233,7 +233,7 @@ describe("ce que ces sens disent d'une cible", () => {
     other.statuses.add("deafened");
     expect(mutedSensesOf({ ...tokenOf(other, 0), hasStatusEffect: () => false })).toEqual([]);
   });
-  it("sans sens déclaré : rien, et la scène n'est même pas lue", () => {
+  it("without a declared sense: nothing, and the scene is not even read", () => {
     let asked = 0;
     const scene = { distance: () => { asked++; return 5; }, walled: () => { asked++; return false; } };
     expect(sensedBy(tokenOf(actorOf("o", ["multiattack"]), 0), tokenOf(actorOf("t", []), 5), scene)).toBe(null);
@@ -241,7 +241,7 @@ describe("ce que ces sens disent d'une cible", () => {
   });
 });
 
-describe("contenu livré : Détection de la magie", () => {
+describe("shipped content: Detect Magic", () => {
   let CONTENT, validateEntry, KNOWN_FACTS, senseVerdict, carriesMagic;
   beforeAll(async () => {
     ({ CONTENT } = await import("../module/scripts/content/index.mjs"));
@@ -250,7 +250,7 @@ describe("contenu livré : Détection de la magie", () => {
     ({ senseVerdict } = await import("../module/scripts/core/senses.mjs"));
     ({ carriesMagic } = await import("../module/scripts/adapter/facts.mjs"));
   });
-  it("l'entrée : une aura à 30 ft, par l'effet du sort, une divination, sur qui porte de la magie", () => {
+  it("the entry: an aura at 30 ft, by the spell's effect, a divination, on whoever carries magic", () => {
     const entry = CONTENT["detect-magic"];
     expect(validateEntry(entry, { facts: KNOWN_FACTS })).toEqual([]);
     expect(entry.sense).toMatchObject({ range: 30, via: "effect", magic: "div", reveals: "aura" });
@@ -261,7 +261,7 @@ describe("contenu livré : Détection de la magie", () => {
     expect(senseVerdict(entry.sense, at(10, { walled: true }))).toBe(null);
     expect(senseVerdict(entry.sense, at(10, { wards: ["div"] }))).toBe(null);
   });
-  it("porter de la magie : un effet magique actif, ou un objet magique sur soi — ni rangé dans un sac, ni un effet coupé", () => {
+  it("carrying magic: an active magic effect, or a magic item on oneself — not in a bag, not a disabled effect", () => {
     const effect = extra => ({ disabled: false, isSuppressed: false, system: { magical: true }, ...extra });
     const item = (equipped, properties, container=null) => ({ system: { equipped, properties: new Set(properties), container } });
     expect(carriesMagic({ effects: [], items: [] })).toBe(false);
@@ -270,10 +270,10 @@ describe("contenu livré : Détection de la magie", () => {
     expect(carriesMagic({ effects: [effect({ isSuppressed: true })], items: [] })).toBe(false);
     expect(carriesMagic({ effects: [effect({ system: { magical: false } })], items: [] })).toBe(false);
     expect(carriesMagic({ effects: [], items: [item(true, ["mgc"])] })).toBe(true);
-    // Porté sans être équipé (une potion, une baguette, un anneau au fond d'une poche) : il se voit.
+    // Carried without being equipped (a potion, a wand, a ring at the bottom of a pocket): it is seen.
     expect(carriesMagic({ effects: [], items: [item(false, ["mgc"])] })).toBe(true);
     expect(carriesMagic({ effects: [], items: [item(undefined, ["mgc"])] })).toBe(true);
-    // Rangé dans un contenant : pas d'aura ; équipé, il se voit même si la donnée le dit dans un contenant.
+    // Stowed in a container: no aura; equipped, it is seen even if the data says it is in a container.
     expect(carriesMagic({ effects: [], items: [item(false, ["mgc"], "sacAdosAdosAdos0")] })).toBe(false);
     expect(carriesMagic({ effects: [], items: [item(true, ["mgc"], "sacAdosAdosAdos0")] })).toBe(true);
     expect(carriesMagic({ effects: [], items: [item(false, ["fin"])] })).toBe(false);
@@ -282,7 +282,7 @@ describe("contenu livré : Détection de la magie", () => {
   });
 });
 
-describe("contenu livré : sorts et pouvoirs qui déclarent un sens ou une protection", () => {
+describe("shipped content: spells and powers that declare a sense or a protection", () => {
   let CONTENT, factsFor, validateEntry, KNOWN_FACTS;
   beforeAll(async () => {
     ({ CONTENT } = await import("../module/scripts/content/index.mjs"));
@@ -294,7 +294,7 @@ describe("contenu livré : sorts et pouvoirs qui déclarent un sens ou une prote
     "channel-divinity"];
   const WARDS = { nondetection: ["div"], "mind-blank": ["magic"], sequester: ["div", "magic"] };
 
-  it("chaque entrée est valide, et son sens localise sans voir", () => {
+  it("each entry is valid, and its sense locates without seeing", () => {
     for ( const id of SENSES ) {
       expect(validateEntry(CONTENT[id], { facts: KNOWN_FACTS }), id).toEqual([]);
       expect(CONTENT[id].sense.kind, id).toBe("locate");
@@ -302,7 +302,7 @@ describe("contenu livré : sorts et pouvoirs qui déclarent un sens ou une prote
     }
     for ( const [id, wards] of Object.entries(WARDS) ) expect(CONTENT[id].wardsDetection, id).toEqual(wards);
   });
-  it("portées et cibles : six types à 30 ft, trois à 60 ft à travers les murs, la présence seule de qui pense", () => {
+  it("ranges and targets: six types at 30 ft, three at 60 ft through walls, the presence alone of whoever thinks", () => {
     const types = id => CONTENT[id].sense.detects["target.creatureType"];
     expect(CONTENT["detect-evil-and-good"].sense.range).toBe(30);
     expect([...types("detect-evil-and-good")].sort()).toEqual(["aberration", "celestial", "elemental", "fey", "fiend", "undead"]);
@@ -311,7 +311,7 @@ describe("contenu livré : sorts et pouvoirs qui déclarent un sens ou une prote
     expect(CONTENT["detect-thoughts"].sense.reveals).toBe("presence");
     expect(CONTENT["detect-thoughts"].dataFixes).toHaveLength(1);
   });
-  it("faits : une créature qui connaît une langue ou est télépathe ; une créature venimeuse", () => {
+  it("facts: a creature that knows a language or is telepathic; a venomous creature", () => {
     const languages = (value, custom="", telepathy=0) => ({ value: new Set(value), custom,
       communication: { telepathy: { value: telepathy } } });
     const targetWith = traits => ({ system: { traits: { languages: traits } }, items: [] });

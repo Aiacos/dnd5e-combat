@@ -1,6 +1,6 @@
 /**
- * Cape de déplacement (Guide du Maître 2024, SRD 5.2) : la propriété est suspendue tant que la Vitesse du porteur est de 0. L'entrée
- * ne regardait que l'état Neutralisé (le texte de 2014) : vu en jeu, un porteur Agrippé gardait le Désavantage des attaquants.
+ * Cloak of Displacement (Dungeon Master's Guide 2024, SRD 5.2): the property is suspended while the bearer's Speed is 0. The entry
+ * only looked at the Incapacitated condition (the 2014 text): seen in play, a Grappled bearer kept the attackers' Disadvantage.
  */
 import { describe, it, expect } from "vitest";
 import { speedIsZero } from "../module/scripts/core/movement.mjs";
@@ -8,22 +8,22 @@ import { holds } from "../module/scripts/core/triggers.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 
 describe("speedIsZero", () => {
-  it("toutes les vitesses à 0 : oui (le saut ne compte pas)", () => {
+  it("all speeds at 0: yes (jump does not count)", () => {
     expect(speedIsZero({ walk: 0, burrow: 0, climb: 0, fly: 0, swim: 0, jump: 8 })).toBe(true);
     expect(speedIsZero({})).toBe(true);
   });
-  it("une vitesse qui reste : non", () => {
+  it("a speed that remains: no", () => {
     expect(speedIsZero({ walk: 30, burrow: 0, climb: 0, fly: 0, swim: 0 })).toBe(false);
     expect(speedIsZero({ walk: 0, fly: 60 })).toBe(false);
     expect(speedIsZero({ walk: "30" })).toBe(false);
   });
-  it("sans données de déplacement : non", () => {
+  it("without movement data: no", () => {
     expect(speedIsZero(null)).toBe(false);
     expect(speedIsZero(undefined)).toBe(false);
   });
 });
 
-describe("Cape de déplacement : quand les attaquants ont le Désavantage", () => {
+describe("Cloak of Displacement: when the attackers have Disadvantage", () => {
   const condition = CONTENT["cloak-of-displacement"].triggers[0].if;
   const wearer = ({ suppressed=false, speedZero=false, incapacitated=false }={}) => ({
     "target.hasEffect": id => suppressed && (id === "cloak-of-displacement"),
@@ -31,7 +31,7 @@ describe("Cape de déplacement : quand les attaquants ont le Désavantage", () =
     "target.hasStatus": id => incapacitated && (id === "incapacitated") });
 
   it("porteur libre : oui", () => expect(holds(condition, wearer())).toBe(true));
-  it("Vitesse de 0 (Agrippé, Entravé) : non", () => expect(holds(condition, wearer({ speedZero: true }))).toBe(false));
-  it("propriété suspendue après des dégâts : non", () => expect(holds(condition, wearer({ suppressed: true }))).toBe(false));
-  it("Neutralisé (texte de 2014, même identifiant) : non", () => expect(holds(condition, wearer({ incapacitated: true }))).toBe(false));
+  it("Speed of 0 (Grappled, Restrained): no", () => expect(holds(condition, wearer({ speedZero: true }))).toBe(false));
+  it("property suspended after damage: no", () => expect(holds(condition, wearer({ suppressed: true }))).toBe(false));
+  it("Incapacitated (2014 text, same identifier): no", () => expect(holds(condition, wearer({ incapacitated: true }))).toBe(false));
 });

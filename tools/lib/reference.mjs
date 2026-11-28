@@ -1,10 +1,10 @@
 /**
- * Les références générées du moteur (`docs/reference/`) : API publique, hooks, réglages, clés de contenu, scénarios.
- * Rien n'y est écrit à la main : tout est relu dans le code, pour que la référence ne dérive pas.
- *  - L'API, les réglages et les écoutes viennent du module **chargé** hors de Foundry, avec des globals factices (comme
- *    `tests/load.test.mjs`) : l'objet `api` réel, chaque `game.settings.register`, `api.routes()`.
- *  - Les hooks émis, les scénarios et les descriptions viennent d'une lecture du texte des sources.
- * `build()` rend `{ "<fichier>.md": texte }` ; `tools/reference.mjs` les écrit, `tests/reference.test.mjs` les compare.
+ * The engine's generated references (`docs/reference/`): public API, hooks, settings, content keys, scenarios.
+ * Nothing is written by hand: everything is read back from the code, so that the reference does not drift.
+ *  - The API, the settings and the listeners come from the module **loaded** outside Foundry, with fake globals (like
+ *    `tests/load.test.mjs`): the real `api` object, each `game.settings.register`, `api.routes()`.
+ *  - The emitted hooks, the scenarios and the descriptions come from a reading of the sources' text.
+ * `build()` returns `{ "<fichier>.md": texte }`; `tools/reference.mjs` writes them, `tests/reference.test.mjs` compares them.
  */
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -17,7 +17,7 @@ const SCRIPTS = join(ROOT, "module/scripts");
 const MODULE_ID = "dnd5e-combat";
 const slash = path => path.split("\\").join("/");
 
-/** Tous les `.mjs` d'un dossier, triés, en chemins relatifs à `base`. */
+/** All the `.mjs` of a folder, sorted, as paths relative to `base`. */
 function filesUnder(dir, base=dir) {
   return readdirSync(dir).sort().flatMap(name => {
     const full = join(dir, name);
@@ -30,13 +30,13 @@ const cell = text => String(text ?? "").replace(/\|/g, "\\|").replace(/\s+/g, " 
 const clip = (text, max=220) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
 const sections = text => [...new Set(text.match(/§\d+(?:\.\d+)*/g) ?? [])];
 
-/** Le commentaire qui précède `index` dans `text` (bloc `/** … *\/` ou lignes `//`), nettoyé, ou "". */
+/** The comment that precedes `index` in `text` (`/** … *\/` block or `//` lines), cleaned, or "". */
 function commentBefore(text, index) {
   const before = text.slice(0, index).replace(/[ \t]*$/, "");
   const block = before.match(/\/\*\*?((?:(?!\*\/)[\s\S])*)\*\/\s*$/);
   if ( block ) return block[1].split("\n").map(line => line.replace(/^\s*\*?\s?/, "")).join(" ").replace(/\s+/g, " ").trim();
   const lines = [];
-  // `index` est souvent un début de ligne : le saut de ligne qui le précède ne compte pas comme une ligne vide.
+  // `index` is often a line start: the line break that precedes it does not count as a blank line.
   for ( const line of before.replace(/\r?\n$/, "").split("\n").reverse() ) {
     const found = line.match(/^\s*\/\/\s?(.*)$/);
     if ( !found ) break;
@@ -45,11 +45,11 @@ function commentBefore(text, index) {
   return lines.join(" ").replace(/\s+/g, " ").trim();
 }
 
-/* ------------------------------------------------------------------ le module chargé ---- */
+/* ------------------------------------------------------------------ the loaded module ---- */
 
 let loaded = null;
 
-/** Charge le module avec des globals factices et rend `{ api, settings, routes }`. Une seule fois par processus. */
+/** Loads the module with fake globals and returns `{ api, settings, routes }`. Only once per process. */
 async function load() {
   if ( loaded ) return loaded;
   const hooks = {};
@@ -81,7 +81,7 @@ async function load() {
 
 /* ------------------------------------------------------------------ lecture des sources ---- */
 
-/** Le texte entre la parenthèse ouvrante en `open` et sa fermante, espaces réduits. */
+/** The text between the opening parenthesis at `open` and its closing one, spaces collapsed. */
 function balanced(text, open) {
   let depth = 0;
   for ( let i = open; i < text.length; i++ ) {
@@ -111,7 +111,7 @@ function scanSources() {
 /* ------------------------------------------------------------------ API ---- */
 
 const signature = fn => {
-  // Sous vitest, un import devient `__vite_ssr_import_N__.NOM` dans le texte de la fonction : on rend le nom d'origine.
+  // Under vitest, an import becomes `__vite_ssr_import_N__.NOM` in the function's text: we return the original name.
   const source = Function.prototype.toString.call(fn).replace(/__vite_ssr_import_\d+__\./g, "");
   const open = source.indexOf("(");
   if ( (open < 0) || (open > source.indexOf("=>") && source.includes("=>") && !/^(async\s+)?function/.test(source)) ) {
@@ -127,23 +127,23 @@ const signature = fn => {
 };
 
 /**
- * Où une fonction de l'API est écrite : on cherche son texte exact (`Function#toString`) dans les sources. C'est ce qui retrouve une
- * fonction fléchée ou une méthode écrite en ligne dans un objet (`clear() { … }`, `options: item => …`), dont le nom n'est que la
- * clé et que la recherche par nom confondait avec une homonyme d'un autre fichier. Plusieurs endroits au même texte : celui qui est
- * écrit sous la même clé. La description est le commentaire qui précède la ligne, seulement si la fonction est la première chose de
- * cette ligne (sinon le commentaire parlerait d'une autre propriété) : une fonction écrite en ligne prend une ligne à elle.
- * @returns {{file: string, doc: string}|null}  null : texte introuvable (fonction liée ou fabriquée) — on se rabat sur le nom.
+ * Where an API function is written: we look for its exact text (`Function#toString`) in the sources. This is what finds an
+ * arrow function or a method written inline in an object (`clear() { … }`, `options: item => …`), whose name is only the
+ * key and which a search by name confused with a homonym in another file. Several places with the same text: the one
+ * written under the same key. The description is the comment that precedes the line, only if the function is the first thing of
+ * that line (otherwise the comment would be about another property): a function written inline gets a line of its own.
+ * @returns {{file: string, doc: string}|null}  null: text not found (bound or fabricated function) — we fall back on the name.
  */
 function locate(fn, key, sources) {
   const raw = Function.prototype.toString.call(fn);
   if ( (raw.length < 8) || raw.includes("[native code]") ) return null;
-  // Sous vitest, un import devient `__vite_ssr_import_N__.NOM` (`(0, __vite_ssr_import_N__.NOM)` dans un appel), où NOM est le nom
-  // exporté et non l'alias du fichier (`reports as itemReports`) : ces morceaux valent « un nom quelconque » dans la recherche, pour que
-  // `npm run reference` (node) et `npm test` (vitest) retrouvent le même endroit.
+  // Under vitest, an import becomes `__vite_ssr_import_N__.NOM` (`(0, __vite_ssr_import_N__.NOM)` in a call), where NOM is the
+  // exported name and not the file's alias (`reports as itemReports`): these pieces mean "any name" in the search, so that
+  // `npm run reference` (node) and `npm test` (vitest) find the same place.
   const parts = raw.split(/\(0\s*,\s*__vite_ssr_import_\d+__\.[A-Za-z0-9_$]+\)|__vite_ssr_import_\d+__\.[A-Za-z0-9_$]+|__vite_ssr_import_meta__|__vite_ssr_dynamic_import__/);
   const longest = parts.reduce((a, b) => (b.length > a.length ? b : a), "");
   const pattern = (parts.length > 1)
-    // Le texte trouvé doit finir là où finit la fonction : `() => x()` ne doit pas tomber dans `() => y().z`.
+    // The text found must end where the function ends: `() => x()` must not land in `() => y().z`.
     ? new RegExp(`${parts.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[A-Za-z0-9_$.]+")}(?![A-Za-z0-9_$.(\\[])`, "g") : null;
   const text = parts.length > 1 ? null : raw;
   const hits = [];
@@ -154,12 +154,12 @@ function locate(fn, key, sources) {
     else if ( source.includes(longest) ) for ( const found of source.matchAll(pattern) ) hits.push({ file, source, at: found.index });
   }
   if ( !hits.length ) return null;
-  // Sous la même clé (ou le même nom) : `clé: …`, `const clé = …`, `clé(…) {`, `function clé(`.
+  // Under the same key (or the same name): `clé: …`, `const clé = …`, `clé(…) {`, `function clé(`.
   const names = [...new Set([key, fn.name].filter(Boolean))].map(n => n.replace(/\$/g, "\\$")).join("|");
   const keyed = new RegExp(`(?:^|[^A-Za-z0-9_$.])(?:(?:const|let|var)\\s+)?(?:${names})\\s*[:=]\\s*$`);
   const own = new RegExp(`^(?:async\\s+)?(?:function\\s*\\*?\\s*)?(?:${names})\\s*\\(`);
   const underKey = hit => own.test(raw) || keyed.test(hit.source.slice(Math.max(0, hit.at - 80), hit.at));
-  // Un motif à noms réécrits (vitest) peut tomber sur un autre texte de même forme : sans la clé, il faut qu'il soit seul.
+  // A pattern with rewritten names (vitest) can land on another text of the same shape: without the key, it must be alone.
   const hit = hits.find(underKey) ?? ((text || (hits.length === 1)) ? hits[0] : null);
   if ( !hit ) return null;
   const lineStart = hit.source.lastIndexOf("\n", hit.at) + 1;
@@ -234,7 +234,7 @@ function emittedHooks(sources) {
       const lineStart = text.lastIndexOf("\n", call.index) + 1;
       const line = text.slice(lineStart, text.indexOf("\n", call.index));
       const doc = commentBefore(text, lineStart);
-      // Les arguments passés aux écouteurs : tout ce qui suit le nom du hook dans l'appel.
+      // The arguments passed to the listeners: everything that follows the hook's name in the call.
       const all = balanced(text, call.index + call[0].indexOf("("));
       const first = call[2].replace(/\s+/g, " ");
       const rest = all.slice(1, -1).replace(/\s+/g, " ").slice(first.length).replace(/^\s*,\s*/, "");
@@ -245,7 +245,7 @@ function emittedHooks(sources) {
         const constant = (sources.constants[call[6]] ?? []).find(c => c.file === file) ?? sources.constants[call[6]]?.[0];
         if ( constant ) note(`${MODULE_ID}.${constant.name}`, { ...entry, constantDoc: constant.doc });
         else {
-          // Un nom de hook tenu dans une variable locale : les noms `${MODULE_ID}.x` écrits dans les lignes qui précèdent.
+          // A hook name held in a local variable: the `${MODULE_ID}.x` names written in the preceding lines.
           const above = text.slice(0, call.index).split("\n").slice(-12).join("\n");
           const names = [...above.matchAll(/`\$\{MODULE_ID\}\.([A-Za-z0-9]+)`/g)].map(found => found[1]);
           if ( names.length ) for ( const name of new Set(names) ) note(`${MODULE_ID}.${name}`, entry);
@@ -253,10 +253,10 @@ function emittedHooks(sources) {
         }
       }
       else {
-        // Un nom composé (`${MODULE_ID}.${name}`) dans une fonction d'aide : les noms que le fichier lui passe en clair.
+        // A composite name (`${MODULE_ID}.${name}`) in a helper function: the names that the file passes to it literally.
         const helpers = [...text.slice(0, call.index).matchAll(/function\s+([A-Za-z0-9_$]+)\s*\(/g)];
         const helper = helpers.length ? helpers[helpers.length - 1][1] : null;
-        // La description d'un tel nom : le commentaire qui précède la ligne où le fichier le passe à la fonction d'aide.
+        // The description of such a name: the comment that precedes the line where the file passes it to the helper function.
         const uses = helper ? [...text.matchAll(new RegExp(`\\b${helper.replace(/\$/g, "\\$")}\\(\\s*"([A-Za-z0-9]+)"`, "g"))] : [];
         const names = uses.map(found => found[1]);
         const docOf = name => uses.filter(u => u[1] === name).map(u => commentBefore(text, text.lastIndexOf("\n", u.index) + 1)).find(Boolean) ?? "";
@@ -269,8 +269,8 @@ function emittedHooks(sources) {
 }
 
 /**
- * La description d'un hook émis. Une seule fait foi : celle de la constante qui nomme le hook, sinon celle du premier point
- * d'émission (fichiers dans l'ordre alphabétique, puis l'ordre du texte) qui en a une.
+ * The description of an emitted hook. Only one is authoritative: that of the constant that names the hook, otherwise that of
+ * the first emission point (files in alphabetical order, then the text order) that has one.
  */
 const hookDoc = entries => entries.map(e => e.constantDoc).find(Boolean) ?? entries.map(e => e.doc).find(Boolean) ?? "";
 
@@ -328,7 +328,7 @@ async function hooksPage(routes, sources) {
   return { text: out.join("\n"), own, moments: Object.keys(MOMENTS).sort() };
 }
 
-/* ------------------------------------------------------------------ réglages ---- */
+/* ------------------------------------------------------------------ settings ---- */
 
 async function settingsPage(settings) {
   const { SETTINGS_TABS } = await import(pathToFileURL(join(SCRIPTS, "core/settings-layout.mjs")).href);
@@ -409,7 +409,7 @@ async function contentPage() {
   return { text: out.join("\n") };
 }
 
-/* ------------------------------------------------------------------ scénarios ---- */
+/* ------------------------------------------------------------------ scenarios ---- */
 
 function scenariosPage() {
   const dir = join(ROOT, "tools/scenarios");
@@ -444,7 +444,7 @@ function scenariosPage() {
 
 const GENERATED = "> Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.";
 
-/** Toutes les pages : `{ "API.md": texte, … }`, plus `surface` (chemins d'API, hooks et réglages, pour le contrat des voisins). */
+/** All the pages: `{ "API.md": texte, … }`, plus `surface` (API paths, hooks and settings, for the neighbors' contract). */
 export async function build() {
   const { api, settings, routes } = await load();
   const sources = scanSources();
@@ -479,8 +479,8 @@ export async function build() {
 }
 
 /**
- * Ce qui n'a pas de description dans la référence : `{ api: [{ path, file }], hooks: [{ name, files }] }`. Toute l'API publique est
- * comptée, `api.mcp` compris (voir `tests/reference.test.mjs`) ; les hooks sont les `dnd5e-combat.*` émis, hors moments.
+ * What has no description in the reference: `{ api: [{ path, file }], hooks: [{ name, files }] }`. The whole public API is
+ * counted, `api.mcp` included (see `tests/reference.test.mjs`); the hooks are the emitted `dnd5e-combat.*`, moments excluded.
  */
 export async function undocumented() {
   const { api } = await load();

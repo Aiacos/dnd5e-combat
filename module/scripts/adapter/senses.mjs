@@ -1,6 +1,6 @@
 /**
- * Sens déclarés par du contenu (clé `sense`) et protections contre la détection (`wardsDetection`) lus sur les acteurs. Règle au
- * cœur (core/senses.mjs) ; la scène — distance, mur — est lue ici et par l'appelant (adapter/vision.mjs).
+ * Senses declared by content (key `sense`) and protections against detection (`wardsDetection`) read on actors. Rule in the
+ * core (core/senses.mjs); the scene — distance, wall — is read here and by the caller (adapter/vision.mjs).
  */
 
 import { sensesIn, senseVerdict, bestVerdict, detectsTarget, mutedSenses } from "../core/senses.mjs";
@@ -9,7 +9,7 @@ import { contentOf, declaresKey, worldOverrides } from "./content.mjs";
 import { originItemOf, comesFromItemEffect, factsFor } from "./facts.mjs";
 import { lengthIn, readUnitFactors } from "./units.mjs";
 
-/** Les effets actifs d'un acteur, avec l'item qui les a posés. */
+/** An actor's Active Effects, with the item that placed them. */
 function* effectOrigins(actor) {
   for ( const effect of actor?.appliedEffects ?? actor?.effects ?? [] ) {
     if ( effect.disabled || effect.isSuppressed ) continue;
@@ -19,15 +19,15 @@ function* effectOrigins(actor) {
 }
 
 /**
- * Ce qui a été lu d'un acteur, gardé tant que rien n'a changé : `canSee` le demande pour chaque paire de tokens (boucle de
- * Discrétion, légalité, IA des PNJ), et presque aucun acteur n'a de sens déclaré. Oublié pour un acteur quand un de ses items ou
- * de ses effets change (`forgetSenses(actor)`, runtime/vision.mjs), pour tous quand le tour ou l'heure du monde avance (un effet
- * peut se suspendre sans être modifié) ; relu de lui-même si une table du contenu ou la surcouche du monde a changé.
+ * What was read from an actor, kept as long as nothing has changed: `canSee` asks for it for each pair of tokens (Stealth loop,
+ * legality, NPC AI), and almost no actor has a declared sense. Forgotten for an actor when one of its items or its effects
+ * changes (`forgetSenses(actor)`, runtime/vision.mjs), for all when the turn or the world time advances (an effect
+ * can suspend without being modified); reread by itself if a content table or the world overlay has changed.
  */
 const read = new WeakMap();
 let epoch = 0;
 
-/** Ce qui a été lu de cet acteur ne vaut plus ; sans acteur : de tous. */
+/** What was read from this actor is no longer valid; without an actor: from all of them. */
 export function forgetSenses(actor=null) {
   if ( actor ) read.delete(actor);
   else epoch++;
@@ -45,10 +45,10 @@ function readOf(actor) {
 }
 
 /**
- * Les sens déclarés que l'acteur a en ce moment : ceux des items qu'il possède, et ceux que lui donnent les effets qu'il porte
- * (`via: "effect"`, d'un effet précis de l'item si `fromEffect`). Presque aucun item ne déclare cette clé : on ne compose l'entrée
- * (`contentOf`) que de celui dont une couche la porte (`declaresKey`), comme pour `seesThroughOwnDarkness`. Tableau gardé et
- * partagé (`readOf`) : ne pas le modifier.
+ * The declared senses the actor has right now: those of the items it owns, and those given to it by the effects it carries
+ * (`via: "effect"`, from a specific effect of the item if `fromEffect`). Almost no item declares this key: the entry is composed
+ * (`contentOf`) only for the one that a layer carries it (`declaresKey`), as for `seesThroughOwnDarkness`. Array kept and
+ * shared (`readOf`): do not modify it.
  * @param {Actor} actor
  * @returns {readonly object[]}
  */
@@ -72,8 +72,8 @@ function readSenses(actor, overrides) {
 }
 
 /**
- * Ce dont les effets que porte l'acteur le protègent (`wardsDetection` de l'item qui les a posés) : `magic`, des écoles. Tableau
- * gardé et partagé : ne pas le modifier.
+ * What the effects the actor carries protect it from (`wardsDetection` of the item that placed them): `magic`, schools. Array
+ * kept and shared: do not modify it.
  * @param {Actor} actor
  * @returns {readonly string[]}
  */
@@ -90,7 +90,7 @@ function readWards(actor, overrides) {
   return Array.from(wards);
 }
 
-/** Les types de créature sous lesquels les sens perçoivent aussi cet acteur (`detectedAs` des items qu'il possède). */
+/** The creature types under which the senses also perceive this actor (`detectedAs` of the items it owns). */
 export function detectedTypesOf(actor) {
   const overrides = worldOverrides();
   const types = new Set();
@@ -102,8 +102,8 @@ export function detectedTypesOf(actor) {
 }
 
 /**
- * Les sens de la fiche de ce token (ids de modes de détection) éteints en ce moment : ceux qu'un item qu'il possède dit dépendre de
- * la vue ou de l'ouïe (`senseNeeds`), quand il est Aveuglé ou Assourdi. Les items ne sont lus que dans l'un de ces deux états.
+ * The senses on this token's sheet (detection mode ids) that are switched off right now: those that an item it owns says depend on
+ * sight or hearing (`senseNeeds`), when it is Blinded or Deafened. The items are only read in one of those two states.
  * @param {TokenDocument} observer
  * @returns {string[]}
  */
@@ -121,15 +121,15 @@ export function mutedSensesOf(observer) {
 }
 
 /**
- * Ce que les sens déclarés de l'observateur disent de la cible : `"sight"`, `"locate"`, `"presence"`, `"aura"`, ou null. Tokens
+ * What the observer's declared senses say about the target: `"sight"`, `"locate"`, `"presence"`, `"aura"`, or null. Tokens
  * (documents).
  * @param {TokenDocument} observer
  * @param {TokenDocument} target
  * @param {{distance: () => number, walled: () => boolean, blind?: () => boolean, deaf?: () => boolean,
- *   invisible?: () => boolean, blocked?: () => {fog: boolean, darkness: boolean}}} scene  Lus par l'appelant, et seulement si un
- *   sens en a besoin : la distance qui les sépare (unité de la grille) ; un mur de vue entre eux (pour un sens que les murs
- *   arrêtent) ; l'observateur Aveuglé, Assourdi (`needs`) ; pour une vue, la cible Invisible pour lui, et la zone qui bloque la
- *   vue entre eux.
+ *   invisible?: () => boolean, blocked?: () => {fog: boolean, darkness: boolean}}} scene  Read by the caller, and only if a
+ *   sense needs it: the distance between them (grid unit); a sight wall between them (for a sense that walls
+ *   stop); the observer Blinded, Deafened (`needs`); for sight, the target Invisible to it, and the area that blocks
+ *   sight between them.
  */
 export function sensedBy(observer, target, scene) {
   const senses = declaredSensesOf(observer?.actor);

@@ -1,18 +1,18 @@
 /**
- * Tours de magie (SPEC §23) : ce que les données de dnd5e ne disent pas.
+ * Cantrips (SPEC §23): what dnd5e's data does not say.
  *
- *  - `effectEnds` (MJ actif) : un effet d'item tombe au début du prochain tour du lanceur (Rayon de givre), à la fin de son
- *    prochain tour (Contact glacial, Éclat mental, Moquerie cruelle), au début du prochain tour du porteur (Poigne électrique)
- *    ou à la fin de son prochain tour (léthargie de Hâte, §42.2).
- *    À sa pose, le moteur note le tour et lui donne une minute de durée, pour que l'expiration de dnd5e (« 1 round », au début d'un
- *    tour quelconque) ne passe pas avant.
- *  - `blocksHealing` (client qui applique) : le porteur d'un effet de l'item ne regagne pas de PV (Contact glacial).
- *  - `byWounds` (client de l'auteur) : Glas lance les dés de la bonne activité — d12 contre une cible blessée, d8 sinon ; et le
- *    choix « cible indemne / cible blessée » que dnd5e ouvre pour un item à deux activités n'est plus posé (§41.1 ;
- *    runtime/activity-choice.mjs, qui lit `byWounds`).
- *  - `oneAttack` (MJ actif) : l'enchantement de Frappe assurée tombe après l'attaque de l'arme. L'attaque elle-même est offerte par
- *    l'interface dès l'enchantement posé (ui/pointer.mjs).
- * Éclat mental (`breaksOn: ["save"]`) : runtime/breaks.mjs ; Poigne électrique (`noOpportunityAttacks`) : runtime/reactions.mjs.
+ *  - `effectEnds` (active GM): an item effect ends at the start of the caster's next turn (Ray of Frost), at the end of their
+ *    next turn (Chill Touch, Mind Sliver, Vicious Mockery), at the start of the bearer's next turn (Shocking Grasp)
+ *    or at the end of their next turn (Haste's lethargy, §42.2).
+ *    At its placement, the engine notes the turn and gives it a duration of one minute, so that dnd5e's expiry ("1 round", at
+ *    the start of any turn) does not pass first.
+ *  - `blocksHealing` (applying client): the bearer of an item effect does not regain HP (Chill Touch).
+ *  - `byWounds` (author's client): Toll the Dead rolls the dice of the right activity — d12 against a wounded target, d8
+ *    otherwise; and the "unharmed target / wounded target" choice that dnd5e opens for an item with two activities is no
+ *    longer asked (§41.1; runtime/activity-choice.mjs, which reads `byWounds`).
+ *  - `oneAttack` (active GM): the True Strike enchantment ends after the weapon attack. The attack itself is offered by
+ *    the interface as soon as the enchantment is placed (ui/pointer.mjs).
+ * Mind Sliver (`breaksOn: ["save"]`): runtime/breaks.mjs; Shocking Grasp (`noOpportunityAttacks`): runtime/reactions.mjs.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -33,21 +33,21 @@ import { route } from "./router.mjs";
 import { enqueue } from "./queue.mjs";
 import { log } from "./shared.mjs";
 
-/** La règle `effectEnds` qui vaut pour cet effet (posé par un item), ou null. */
+/** The `effectEnds` rule that applies to this effect (placed by an item), or null. */
 function endRuleOf(effect) {
   const item = originItemOf(effect);
   const rules = item ? contentOf(item).entry?.effectEnds : null;
   if ( !rules ) return null;
-  // §157 : `status:<id>` — un état posé par l'item sans effet à lui (étape `status` : Étourdi du Châtiment de stupeur).
+  // §157: `status:<id>` — a condition placed by the item with no effect of its own (`status` step: Stunned from Stunning Smite).
   const key = Object.keys(rules).find(id => id.startsWith("status:") ? effect.statuses?.has?.(id.slice(7)) : comesFromItemEffect(effect, id));
   return key ? { when: rules[key], caster: item.actor ?? null } : null;
 }
 
 /**
- * §42.2 : le contenu fait-il tomber lui-même cet effet au tour de son porteur (`remove` à startOfTurn / endOfTurn : les dégâts
- * différés de la Flèche acide de Melf, de la Sphère de vitriol) ? Leur durée d'« 1 tour » expirerait au changement de tour même où
- * les dégâts doivent tomber — et un effet expiré en combat n'est pas supprimé par dnd5e mais suspendu (`isSuppressed`,
- * client/documents/active-effect.mjs:192 ; documents/active-effect.mjs:804), donc ignoré : vu en jeu le 2026-10-01.
+ * §42.2: does the content itself make this effect fall on its bearer's turn (`remove` at startOfTurn / endOfTurn: the delayed
+ * damage of Melf's Acid Arrow, of Vitriolic Sphere)? Their duration of "1 turn" would expire at the very turn change where
+ * the damage must fall — and an effect expired in combat is not deleted by dnd5e but suspended (`isSuppressed`,
+ * client/documents/active-effect.mjs:192; documents/active-effect.mjs:804), thus ignored: seen in play on 2026-10-01.
  */
 function removedAtTurn(effect) {
   const item = originItemOf(effect);
@@ -58,10 +58,10 @@ function removedAtTurn(effect) {
     && (d.do ?? []).some(s => s.type === "remove"));
 }
 
-/** O9h (§363) : les durées tirées par utilisation (`{ formula, units }`), pour que toutes les cibles d'un même usage aient la même. */
+/** O9h (§363): durations drawn per use (`{ formula, units }`), so that all targets of the same use have the same one. */
 const drawn = new Map();
 
-/** La durée de cet effet selon la règle `effectDurations` — tirée une fois par utilisation (message d'origine) et par item. */
+/** The duration of this effect per the `effectDurations` rule — drawn once per use (origin message) and per item. */
 function drawnDuration(effect, item, rule) {
   if ( Number.isFinite(rule.seconds) ) return rule.seconds;
   const now = Date.now();
@@ -75,50 +75,50 @@ function drawnDuration(effect, item, rule) {
   return drawn.get(key).seconds;
 }
 
-/** Ce sort a-t-il été lancé avec le Sort étendu ? La carte d'origine de l'effet le porte ; sinon ce que son lanceur retient. */
+/** Was this spell cast with Extended Spell? The effect's origin card carries it; otherwise what its caster retains. */
 function extendedCast(effect, item) {
   const usage = game.messages?.get(effect.system?.origin?.message ?? "");
   if ( usage ) return usageMetamagic(usage).includes("extended");
   return pendingMetamagic(item.actor).includes("extended");
 }
 
-/** O9h (§363) : un effet du sort qu'un objet a fait lancer (copie `cachedFor`) dure ce que l'objet déclare (`castDuration`). */
+/** O9h (§363): an effect of the spell that an object cast (copy `cachedFor`) lasts what the object declares (`castDuration`). */
 export function castDurationOf(spell) {
   const potion = spell ? potionOfCast(spell) : null;
   return potion?.identifier ? (entryOfIdentifier(potion.identifier)?.castDuration?.seconds ?? null) : null;
 }
 
 /**
- * Avant la pose, sur le client qui crée l'effet : le tour noté, une minute de durée (l'heure de fin est celle du moteur). Dans les
- * données de création, sans écriture : une mise à jour juste après croisait la réécriture d'un token non lié (« A parent Document
- * provided to the database operation must be a Document instance », vu le 2026-09-28).
+ * Before placement, on the client that creates the effect: the noted turn, a duration of one minute (the end time is the
+ * engine's). In the creation data, with no write: an update right after crossed the rewrite of an unlinked token ("A parent
+ * Document provided to the database operation must be a Document instance", seen on 2026-09-28).
  */
 function onPreCreateEffect(effect) {
   if ( effect.parent?.documentName !== "Actor" ) return true;
-  // §295 : `effectDurations` — la durée que la règle donne à cet effet de l'item (Présence intimidante : une minute, la donnée dit un
-  // round), en combat comme hors combat. Une règle `effectEnds` du même effet, plus bas, garde la main sur sa fin.
+  // §295: `effectDurations` — the duration that the rule gives to this item effect (Frightful Presence: one minute, the data says
+  // one round), in and out of combat. An `effectEnds` rule of the same effect, further down, keeps control of its end.
   const item = originItemOf(effect);
   const durations = item ? contentOf(item).entry?.effectDurations : null;
   const wanted = durations ? Object.entries(durations).find(([id]) => comesFromItemEffect(effect, id))?.[1] : null;
   const seconds = wanted ? drawnDuration(effect, item, wanted) : castDurationOf(item);
   if ( seconds ) effect.updateSource({ duration: { value: seconds, units: "seconds", expiry: null } });
-  // Sort étendu (Métamagie) : l'effet d'un sort lancé avec cette option dure le double (24 heures au plus) ; marqué, pour
-  // l'Avantage aux sauvegardes de Concentration (runtime/feats.mjs). L'option se lit sur la carte du sort, ou — pour l'effet de
-  // concentration, créé pendant l'utilisation — sur ce que le lanceur a retenu.
+  // Extended Spell (Metamagic): the effect of a spell cast with this option lasts double (24 hours at most); marked, for
+  // the Advantage on Concentration saves (runtime/feats.mjs). The option is read on the spell's card, or — for the
+  // Concentration effect, created during the use — on what the caster retained.
   if ( (item?.type === "spell") && extendedCast(effect, item) ) {
     const longer = extendedSeconds(effect._source?.duration ?? effect.duration);
     effect.updateSource({ ...(longer ? { duration: { value: longer, units: "seconds", expiry: null } } : {}),
       [`flags.${MODULE_ID}.extendedSpell`]: true });
     if ( longer ) log(`${item.name}: ${effect.name} lasts ${longer} s (Extended Spell)`);
   }
-  // §403 : `keepsSpeed` — Liberté de mouvement : « sa Vitesse ne peut pas être réduite par la magie ». Un effet magique (sort, objet
-  // magique) posé sur un porteur protégé arrive sans ses réductions de Vitesse (Rayon de givre, Lenteur, Danse irrésistible).
+  // §403: `keepsSpeed` — Freedom of Movement: "its Speed can't be reduced by magic". A magical effect (spell, magic
+  // item) placed on a protected bearer arrives without its Speed reductions (Ray of Frost, Slow, Irresistible Dance).
   const changes = effect.system?.changes ?? effect.changes ?? [];
   if ( changes.some(reducesSpeed) && magicalOrigin(item) && speedKept(effect.parent) ) {
     effect.updateSource({ "system.changes": withoutSpeedReductions(changes) });
     log(`${effect.parent.name}: ${effect.name} cannot reduce its Speed (magic)`);
   }
-  // §403 : `durationByLevel` — la durée selon l'emplacement de lancement (Malédiction), sur les effets posés et sur la concentration.
+  // §403: `durationByLevel` — the duration by casting slot (Bestow Curse), on the placed effects and on Concentration.
   const byLevel = item ? contentOf(item).entry?.durationByLevel : null;
   if ( byLevel ) {
     const tier = durationAtLevel(byLevel, (Number(item.system?.level) || 0) + (Number(effect.flags?.dnd5e?.scaling) || 0));
@@ -143,8 +143,8 @@ async function expire(combat, prior, current) {
       if ( !rule ) return false;
       const caster = rule.caster?.uuid ?? null;
       const placedOn = effect.getFlag(MODULE_ID, "placedOn");
-      // §42.2 : « jusqu'à la fin de son prochain tour » (léthargie de Hâte) n'est pas la fin du tour où l'effet a été posé ;
-      // « jusqu'à la fin du tour en cours » (`currentTurnEnd`) l'est (core/effect-ends.mjs).
+      // §42.2: "until the end of its next turn" (Haste lethargy) is not the end of the turn in which the effect was placed;
+      // "until the end of the current turn" (`currentTurnEnd`) is (core/effect-ends.mjs).
       return effectEndsNow(rule.when, {
         casterStarts: !!currentActor && (currentActor.uuid === caster),
         bearerStarts: !!currentActor && (currentActor.uuid === actor.uuid),
@@ -161,19 +161,19 @@ async function expire(combat, prior, current) {
 
 /* -------------------------------------------- */
 
-/** Un sort, ou un objet à la propriété Magique. */
+/** A spell, or an item with the Magical property. */
 function magicalOrigin(item) {
   return !!item && ((item.type === "spell") || (item.system?.properties?.has?.("mgc") === true));
 }
 
-/** §403 : l'acteur porte-t-il un effet d'un item `keepsSpeed` (Liberté de mouvement) ? */
+/** §403: does the actor carry an effect from an item with `keepsSpeed` (Freedom of Movement)? */
 function speedKept(actor) {
   return (actor?.effects ?? []).some(e => !e.disabled && !e.isSuppressed && (contentOf(originItemOf(e)).entry?.keepsSpeed === true));
 }
 
 /**
- * §403 : `durationByLevel` — à l'emplacement où le sort ne demande plus de Concentration (Malédiction au niveau 5+), dnd5e ne la
- * commence pas : `usageConfig.concentration.begin` est lu juste après ce hook (activity/mixin.mjs:338, puis 278).
+ * §403: `durationByLevel` — at the slot where the spell no longer requires Concentration (Bestow Curse at level 5+), dnd5e does
+ * not start it: `usageConfig.concentration.begin` is read just after this hook (activity/mixin.mjs:338, then 278).
  */
 function onPreActivityConsumption(activity, usageConfig) {
   const rule = activity?.item ? contentOf(activity.item).entry?.durationByLevel : null;
@@ -186,9 +186,9 @@ function onPreActivityConsumption(activity, usageConfig) {
   return true;
 }
 
-/** Contact glacial : pas de PV regagnés tant que l'effet tient. */
+/** Chill Touch: no HP regained while the effect holds. */
 function onPreApplyDamage(actor, amount, updates) {
-  // §505 (B25) : `blocksTempHp` — les PV temporaires ne montent pas (un sort, une potion, la carte d'un soin « temphp »).
+  // §505 (B25): `blocksTempHp` — Temporary Hit Points do not rise (a spell, a potion, a "temphp" healing card).
   if ( actor && blocksTempHp(actor) ) {
     const temp = Number(actor.system.attributes?.hp?.temp) || 0;
     if ( Number(updates["system.attributes.hp.temp"]) > temp ) {
@@ -197,8 +197,8 @@ function onPreApplyDamage(actor, amount, updates) {
     }
   }
   if ( !(amount < 0) || !actor?.effects ) return true;
-  // §334 : `blocksHealing` — tous les effets de l'item, ou ceux de la liste (Rayon énervant : son Empoisonné seul).
-  // §505 : un trait sans effet qui le déclare vaut pour la créature qui le porte (Nuée : « can't regain Hit Points »).
+  // §334: `blocksHealing` — all the item's effects, or those in the list ("Enervating Ray": its Poisoned alone).
+  // §505: a trait without an effect that declares it applies to the creature that bears it (Swarm: "can't regain Hit Points").
   const byTrait = (actor.items ?? [])
     .some(i => traitBlocksHealing({ rule: contentOf(i).entry?.blocksHealing, effects: i.effects?.size ?? 0 }));
   const blocked = byTrait || actor.effects.some(e => {
@@ -216,8 +216,8 @@ function onPreApplyDamage(actor, amount, updates) {
 }
 
 /**
- * §505 (B25) : la créature ne peut-elle pas recevoir de PV temporaires ? Un trait qu'elle porte (`blocksTempHp: true` sur l'item), ou un
- * effet d'un item qui le déclare (tous ses effets, ou ceux de la liste).
+ * §505 (B25): can the creature not receive Temporary Hit Points? A trait it bears (`blocksTempHp: true` on the item), or an
+ * effect from an item that declares it (all its effects, or those in the list).
  */
 function blocksTempHp(actor) {
   if ( (actor.items ?? []).some(i => contentOf(i).entry?.blocksTempHp === true) ) return true;
@@ -228,7 +228,7 @@ function blocksTempHp(actor) {
   });
 }
 
-/** Glas : les dés de l'activité qui convient à la cible (blessée : `wounded`, indemne : `healthy`). Client de l'auteur. */
+/** Toll the Dead: the dice of the activity that suits the target (wounded: `wounded`, unharmed: `healthy`). Author's client. */
 function onPreRollDamage(config, dialog, message) {
   const activity = config.subject;
   const rule = activity?.item ? contentOf(activity.item).entry?.byWounds : null;
@@ -250,9 +250,9 @@ function onPreRollDamage(config, dialog, message) {
 }
 
 /**
- * Frappe assurée : l'enchantement ne tombe qu'après l'attaque (ci-dessous). Hors combat, V14 marque « expirée » sa durée d'« 1 tour »
- * (`duration.expired`), et dnd5e supprime alors l'effet (documents/active-effect.mjs:804) — vu le 2026-09-28, avant qu'on ait pu
- * attaquer. Cette mise à jour-là est refusée.
+ * True Strike: the enchantment only falls after the attack (below). Out of combat, V14 marks its "1 turn" duration as "expired"
+ * (`duration.expired`), and dnd5e then deletes the effect (documents/active-effect.mjs:804) — seen on 2026-09-28, before one could
+ * attack. That update is refused.
  */
 function onPreUpdateEffect(effect, changes) {
   if ( foundry.utils.getProperty(changes, "duration.expired") !== true ) return true;
@@ -260,7 +260,7 @@ function onPreUpdateEffect(effect, changes) {
   return false;
 }
 
-/** Frappe assurée : après l'attaque de l'arme enchantée, l'enchantement tombe. MJ actif. */
+/** True Strike: after the attack with the enchanted weapon, the enchantment falls. Active GM. */
 async function onResolution(resolution) {
   if ( ![STEPS.DONE, STEPS.MISSED].includes(resolution?.step) || !resolution.plan?.attack ) return;
   const weapon = fromUuidSync(resolution.activity, { strict: false })?.item;

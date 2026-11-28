@@ -1,9 +1,9 @@
 /**
- * Ennemi tombé (SPEC §16.25, clé `onFell`) : Bénédiction du Ténébreux. Sur le MJ actif, au hook de sortie du moteur
- * `dnd5e-combat.resolution`, une fois la résolution close : chaque cible passée de plus de 0 à 0 PV. Chaque créature de la
- * scène qui porte un item `onFell` et lui est hostile en profite si c'est elle qui l'a fait tomber, ou si elle est à
- * `radius` de la victime : l'activité de l'item joue (PV temporaires, que dnd5e ne cumule pas).
- * Limite : des dégâts appliqués hors du moteur (plateau du système, barre du token) ne sont pas vus.
+ * Felled enemy (SPEC §16.25, key `onFell`): Dark One's Blessing. On the active GM, at the engine's output hook
+ * `dnd5e-combat.resolution`, once the resolution is closed: each target that went from more than 0 to 0 HP. Each creature in the
+ * scene that carries an `onFell` item and is hostile to it benefits if it is the one that made it fall, or if it is within
+ * `radius` of the victim: the item's activity plays (Temporary Hit Points, which dnd5e does not stack).
+ * Limit: damage applied outside the engine (the system's board, the token bar) is not seen.
  */
 
 import { STEPS } from "../core/action.mjs";
@@ -19,7 +19,7 @@ import { lengthIn } from "../adapter/units.mjs";
 
 const seen = new Set();
 
-/** L'item `onFell` de l'acteur et sa règle — un seul par créature (une fiche peut en porter deux copies). */
+/** The actor's `onFell` item and its rule — only one per creature (a sheet may carry two copies of it). */
 function fellRuleOf(actor) {
   for ( const item of actor?.items ?? [] ) {
     const rule = contentOf(item).entry?.onFell;
@@ -47,8 +47,8 @@ async function onResolution(resolution) {
       const activity = activities?.get(found.rule.activity ?? "") ?? activities?.find(a => a.type === "heal");
       if ( !activity ) continue;
       log(`${found.item.name}: ${victim.name} falls ${mine ? "to the blows of" : "near"} ${token.name}`);
-      // Le soin se lance ici, sans fenêtre : l'action enchaînée de dnd5e (heal.mjs:60) ouvrirait la fenêtre du jet chez le
-      // MJ, faute d'évènement. Rattaché à sa carte (`system.origin`), il suit le chemin commun du moteur.
+      // The heal is rolled here, without a window: dnd5e's chained action (heal.mjs:60) would open the roll window on the
+      // GM's side, for lack of an event. Attached to its card (`system.origin`), it follows the engine's common path.
       const used = await activity.use({ subsequentActions: false, [MODULE_ID]: { confirmed: true } }, { configure: false },
         { data: { speaker: ChatMessage.getSpeaker({ token }) } });
       if ( used?.message ) await activity.rollDamage({}, { configure: false }, { data: { system: { origin: used.message.id } } });

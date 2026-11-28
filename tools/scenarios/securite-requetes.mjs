@@ -1,13 +1,13 @@
 /**
- * Requêtes entre clients (§471) : depuis un VRAI client joueur (« claude player », ouvert par le banc de test : `players: true`), des
- * requêtes que le moteur n'enverrait jamais sont adressées au MJ actif, comme un joueur pourrait les taper dans sa console. Le MJ n'en
- * fait que ce que ce joueur a le droit de demander :
- *  1. `choice` dont la question porte un `<img onerror>` : la fenêtre s'ouvre et répond (le canal marche), le code ne s'exécute pas
- *     chez le MJ (le texte de la fenêtre est lu dans un document inerte) ;
- *  2. `cure` sans carte d'utilisation, sur un PNJ que le joueur ne possède pas : refusée, PV inchangés ;
- *  3. `reaction` avec `auto: true` et un `drop` visant un journal : `auto` tombe (la fenêtre est posée chez le MJ, elle n'est pas
- *     répondue d'office) et le journal est toujours là.
- * Hors du banc (aucun client joueur), non applicable. Remis en état : PV du Zombi, journal, fenêtres.
+ * Requests between clients (§471): from a REAL player client ("claude player", opened by the test bench: `players: true`),
+ * requests that the engine would never send are addressed to the active GM, as a player could type them in his console. The GM
+ * does only what that player is entitled to ask:
+ *  1. `choice` whose question carries an `<img onerror>`: the window opens and answers (the channel works), the code does not run
+ *     on the GM's side (the window's text is read in an inert document);
+ *  2. `cure` without a use card, on an NPC the player does not own: refused, HP unchanged;
+ *  3. `reaction` with `auto: true` and a `drop` targeting a journal: `auto` is dropped (the window is placed on the GM's
+ *     side, it is not answered automatically) and the journal is still there.
+ * Outside the bench (no player client), not applicable. Put back: the Zombie's HP, journal, windows.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const MARKER = "__dasChoixInerte";
@@ -22,7 +22,7 @@ export default {
     const zombie = await ctx.token("Zombi");
     const tokenUuid = `Scene.${sceneId}.Token.${zombie.id}`;
 
-    // Le joueur voit-il le Zombi, et n'en est-il pas propriétaire ? Un MJ actif répond-il ?
+    // Does the player see the Zombie, and not own it? Does an active GM answer?
     const seen = await ctx.asPlayer(`
       const t = await fromUuid(args.token);
       return { user: game.user.name, gm: game.user.isGM, activeGM: game.users.activeGM?.name ?? null,
@@ -35,7 +35,7 @@ export default {
       catch(err) { return { error: String(err?.message ?? err) }; }`, { name, data, timeout });
     const windows = async () => (await ctx.engine("windows")).map(w => w.id);
 
-    // 1. Une question dont le texte porte du code : la fenêtre répond seule au bout de 2 s ; le marqueur ne doit pas apparaître.
+    // 1. A question whose text carries code: the window answers by itself after 2 s; the marker must not appear.
     await ctx.call("run-script", { code: `delete window.${MARKER}; return true;` });
     ctx.restore(() => ctx.call("run-script", { code: `delete window.${MARKER}; return true;` }).catch(() => {}));
     const choice = await send("dnd5e-combat.choice", {
@@ -47,7 +47,7 @@ export default {
     ctx.expect(choice.answer?.id === "a", `choice : le MJ répond au joueur (${JSON.stringify(choice)})`);
     ctx.expect(marker === null, `choice : le code de la question ne s'exécute pas chez le MJ (marqueur ${JSON.stringify(marker)})`);
 
-    // 2. Un « soin » qui blesse, sans carte d'utilisation.
+    // 2. A "heal" that wounds, without a use card.
     const hp0 = await ctx.hp(zombie);
     ctx.restore(() => ctx.setHp(zombie, hp0));
     const cure = await send("dnd5e-combat.cure", { target: tokenUuid, status: "hp", value: 1 });
@@ -56,13 +56,14 @@ export default {
     ctx.expect(!cure.answer, `cure : refusée (${JSON.stringify(cure)})`);
     ctx.expect(hp1 === hp0, `cure : PV du Zombi inchangés (${hp0} → ${hp1})`);
 
-    // 3. Une réaction « répondue d'office » qui supprimerait un journal.
+    // 3. A Reaction "answered automatically" that would delete a journal.
     const made = (await ctx.call("run-script", { code: `
       const j = await JournalEntry.create({ name: "Scénario — journal témoin", ownership: { default: 0 } });
       return { id: j.id, uuid: j.uuid };` }))?.result;
     if ( !ctx.expect(made?.uuid, `journal témoin créé (${made?.uuid})`) ) return;
     ctx.restore(() => ctx.call("run-script", { code: `await game.journal.get("${made.id}")?.delete(); return true;` }).catch(() => {}));
-    // Une vraie activité du Zombi lui-même : sans activité, l'ancien gestionnaire s'arrêtait avant `drop` et le test ne prouvait rien.
+    // A real activity of the Zombie itself: without an activity, the former handler stopped before `drop` and the test
+    // proved nothing.
     const activity = (await ctx.call("run-script", { code: `
       const a = (await fromUuid("${seen.actor}"))?.items.contents.flatMap(i => [...(i.system.activities ?? [])])[0];
       return { uuid: a?.uuid ?? null };` }))?.result?.uuid ?? null;
@@ -72,7 +73,7 @@ export default {
       actor: seen.actor, prompt: { key: "ReactionTitre", data: { name: "Test" } }, target: null, auto: true,
       options: [{ name: "Test", activity, drop: [made.uuid] }]
     });
-    // La fenêtre posée chez le MJ (`auto` tombé) : fermée sans répondre, comme un MJ qui ne réagit pas.
+    // The window placed on the GM's side (`auto` dropped): closed without answering, like a GM who does not react.
     let posed = [];
     for ( let i = 0; (i < 20) && !posed.length; i++ ) { await pause(250); posed = (await windows()).filter(id => !before.has(id)); }
     for ( const id of posed ) await ctx.engine("closeWindow", { id }).catch(() => {});

@@ -1,8 +1,8 @@
 /**
- * §120 : l'auteur regagne une part des dégâts qu'il inflige (clé `lifesteal`) — Caresse du vampire : « la cible subit 3d6 dégâts
- * nécrotiques, et vous regagnez des PV égaux à la moitié des dégâts nécrotiques infligés ».
- * Même circuit que la Morsure vampirique (runtime/empower.mjs) : le montant se lit au calcul des dégâts, résistances comprises, sur
- * le client qui les applique ; les PV de l'auteur se rendent une fois ceux de la cible écrits. Pas de question : le soin est dû.
+ * §120: the author regains a share of the damage they deal (key `lifesteal`) — Vampiric Touch: "the target takes 3d6 Necrotic
+ * damage, and you regain Hit Points equal to half the Necrotic damage dealt".
+ * Same circuit as the Vampiric Bite (runtime/empower.mjs): the amount is read when damage is computed, Resistances included, on
+ * the client that applies it; the author's HP are restored once the target's are written. No question: the healing is due.
  */
 
 import { MODULE_ID } from "../constants.mjs";

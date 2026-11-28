@@ -1,16 +1,16 @@
 /**
- * Prendre un escalier d'un seul geste (SPEC §41.2), sur une scène à niveaux et escaliers (Restored Keep) : ce que fait un
- * clic sur l'escalier, ou « Monter / Descendre » de son menu.
- *  1. Sous un point de l'escalier, le moteur dit où il mène (`stairsAt` : ce que lisent le curseur et le menu).
- *  2. `takeStairs` : le token marche jusqu'à l'escalier et se retrouve sur l'autre niveau, SANS le dialogue « Change Level »
- *     du cœur, et la vue du MJ suit.
- *  3. Depuis l'escalier de l'autre niveau, le même point ramène au niveau de départ.
- * Remet la vue du MJ ; le filet de sécurité replace le token. Sans escalier à deux niveaux, non applicable.
+ * Taking a staircase in one gesture (SPEC §41.2), on a scene with levels and staircases (Restored Keep): what a
+ * click on the staircase does, or "Go up / Go down" from its menu.
+ *  1. Under a point of the staircase, the engine says where it leads (`stairsAt`: what the cursor and the menu read).
+ *  2. `takeStairs`: the token walks to the staircase and ends up on the other level, WITHOUT the core's "Change Level" dialog,
+ *     and the GM's view follows.
+ *  3. From the staircase of the other level, the same point leads back to the starting level.
+ * Restores the GM's view; the safety net puts the token back. Without a two-level staircase, not applicable.
  */
 const NAMES = ["Paladin", "Guerrier"];
 
 export default {
-  scene: "keep",   // §83 : étages et escaliers, dans Restored Keep
+  scene: "keep",   // §83: floors and staircases, in Restored Keep
   name: "escalier direct — un clic sur l'escalier change de niveau, sans dialogue",
 
   async run(ctx) {
@@ -29,7 +29,7 @@ export default {
     const stairs = (await ctx.engine("stairs", { tokenId: walker.id })).filter(s => s.levels.includes(home.level) && (s.levels.length > 1) && s.cells.length);
     if ( !stairs.length ) { ctx.log(`aucun escalier au niveau « ${levelName(home.level)} » : non applicable`); return; }
 
-    // Un escalier que le token atteint : on essaie les premiers jusqu'à ce que l'un d'eux mène à l'autre niveau.
+    // A staircase the token reaches: we try the first ones until one leads to the other level.
     let taken = null;
     for ( const s of stairs.slice(0, 6) ) {
       const cell = s.cells[Math.floor(s.cells.length / 2)];
@@ -52,7 +52,7 @@ export default {
     ctx.expect(!dialogs.length, `aucun dialogue du cœur ne s'ouvre (${dialogs.map(w => w.title).join(", ") || "aucun"})`);
     ctx.expect(r.viewedLevel === dest.id, `la vue du MJ suit (${levelName(r.viewedLevel)})`);
 
-    // 3. Retour par le même escalier.
+    // 3. Return by the same staircase.
     const back = await ctx.engine("stairsAt", { tokenId: walker.id, point });
     const homeward = back.find(d => d.id === home.level);
     if ( !ctx.expect(!!homeward, `depuis l'autre niveau, le même point ramène à « ${levelName(home.level)} » (${back.map(d => d.name).join(", ") || "rien"})`) ) return;

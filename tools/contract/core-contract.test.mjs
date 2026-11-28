@@ -1,27 +1,27 @@
 /**
- * Contrat avec DAS · Core (`dnd5e-combat`) — fichier COPIÉ tel quel depuis le dépôt du moteur
- * (`tools/contract/core-contract.test.mjs`) : ne pas le modifier ici, le recopier quand il change là-bas.
+ * Contract with DAS · Core (`dnd5e-combat`) — file COPIED as is from the engine repository
+ * (`tools/contract/core-contract.test.mjs`): do not modify it here, copy it again when it changes there.
  *
- * Ce module appelle l'API publique du moteur et écoute ses hooks. Ce test lit `module/scripts/` et vérifie que chaque
- * chose demandée au moteur existe dans son contrat, `docs/reference/surface.json` (généré là-bas depuis le code) :
- *   - chaque chemin d'API (`….api.ui.budget`, `engine()?.climb?.state`…) ;
- *   - chaque hook `dnd5e-combat.<nom>` écouté (un hook émis par le moteur, ou un moment) ;
- *   - chaque réglage du moteur lu ou écrit (`game.settings.get("dnd5e-combat", "clé")`).
- * Un renommage ou un retrait dans le moteur fait donc échouer le test du voisin, avant la partie.
+ * This module calls the engine's public API and listens to its hooks. This test reads `module/scripts/` and checks that every
+ * thing asked of the engine exists in its contract, `docs/reference/surface.json` (generated there from the code):
+ *   - each API path (`….api.ui.budget`, `engine()?.climb?.state`…);
+ *   - each `dnd5e-combat.<nom>` hook listened to (a hook emitted by the engine, or a moment);
+ *   - each engine setting read or written (`game.settings.get("dnd5e-combat", "clé")`).
+ * A rename or a removal in the engine therefore fails the neighbor's test, before the game session.
  *
- * Où est le moteur : la variable `DAS_CORE` (un dossier), sinon le dépôt voisin `../Foundry dnd5e moteur de combat`, sinon
- * `core/`. Introuvable sur un poste : le test est sauté ; en CI (`CI=true`), il échoue — le workflow récupère le moteur.
+ * Where the engine is: the `DAS_CORE` variable (a folder), otherwise the sibling repository `../Foundry dnd5e moteur de combat`,
+ * otherwise `core/`. Not found on a machine: the test is skipped; in CI (`CI=true`), it fails — the workflow fetches the engine.
  *
- * Ce que le relevé sait suivre : l'accès direct (`game.modules.get(ID).api.x.y`), le module gardé dans une variable
- * (`const mod = game.modules.get(ID); mod.api.x`), une fonction d'accès (`function engine() { … return ….api; }`, puis
- * `engine()?.x`, ou `engine.content()?.x` après `import * as engine from "./adapter/engine.mjs"`), une variable locale qui reçoit
- * l'API ou un groupe (`const api = engine()?.combat; api.addEvent`).
- * `CONTRACT_LIST=1 npx vitest run tests/core-contract.test.mjs` affiche ce qu'il a relevé.
+ * What the survey can follow: direct access (`game.modules.get(ID).api.x.y`), the module kept in a variable
+ * (`const mod = game.modules.get(ID); mod.api.x`), an access function (`function engine() { … return ….api; }`, then
+ * `engine()?.x`, or `engine.content()?.x` after `import * as engine from "./adapter/engine.mjs"`), a local variable that
+ * receives the API or a group (`const api = engine()?.combat; api.addEvent`).
+ * `CONTRACT_LIST=1 npx vitest run tests/core-contract.test.mjs` prints what it found.
  *
- * Réglages propres au module, facultatifs, dans `tests/core-contract.json` :
- *   { "roots": ["monAcces\\(\\)"],                            // expressions (regex) qui rendent l'API du moteur
- *     "dynamic": [{ "pattern": "\\bread\\(\"([A-Za-z]+)\"", "prefix": "ui." }],   // lectures par nom : `read("budget")`
- *     "allow": ["ui.ancienNom", "dnd5e-combat.vieuxHook", "setting:vieuxReglage"] }   // exceptions voulues, à justifier dans le commit
+ * Module-specific, optional settings, in `tests/core-contract.json`:
+ *   { "roots": ["monAcces\\(\\)"],                            // expressions (regex) that return the engine's API
+ *     "dynamic": [{ "pattern": "\\bread\\(\"([A-Za-z]+)\"", "prefix": "ui." }],   // reads by name: `read("budget")`
+ *     "allow": ["ui.ancienNom", "dnd5e-combat.vieuxHook", "setting:vieuxReglage"] }   // intended exceptions, justify in the commit
  */
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -46,7 +46,7 @@ function filesUnder(dir) {
   });
 }
 
-/** Le code sans ses commentaires (un nom cité dans un commentaire n'est pas un appel), longueur et lignes conservées. */
+/** The code without its comments (a name quoted in a comment is not a call), length and lines preserved. */
 function code(text) {
   return text.replace(/\/\*[\s\S]*?\*\/|(^|[^:"'`\\])\/\/[^\n]*/g, (found, lead="") => lead + found.slice(lead.length).replace(/[^\n]/g, " "));
 }
@@ -62,16 +62,16 @@ const sources = existsSync(SCRIPTS)
   ? filesUnder(SCRIPTS).map(file => ({ file: relative(ROOT, file).split("\\").join("/"), text: code(readFileSync(file, "utf8")) }))
   : [];
 
-/** Les constantes qui valent l'identifiant du moteur quelque part dans le module (`ENGINE_ID`, `CORE_ID`, `ID`…). */
+/** The constants that equal the engine's identifier somewhere in the module (`ENGINE_ID`, `CORE_ID`, `ID`…). */
 const coreConstants = new Set(sources.flatMap(({ text }) => [...text.matchAll(new RegExp(`const\\s+([A-Z][A-Z0-9_]*)\\s*=\\s*"${CORE_ID}"`, "g"))].map(found => found[1])));
 
-/** Dans ce fichier, les écritures de l'identifiant du moteur : le littéral, et les constantes qui n'y valent pas autre chose. */
+/** In this file, the spellings of the engine's identifier: the literal, and the constants that equal nothing else here. */
 function idsIn(text) {
   const names = [...coreConstants].filter(name => !new RegExp(`const\\s+${name}\\s*=\\s*"(?!${CORE_ID}")`).test(text));
   return { names, pattern: [`"${CORE_ID}"`, `'${CORE_ID}'`, ...names].join("|") };
 }
 
-/** La fin du bloc qui contient `index` : une variable locale ne vaut que jusque-là. */
+/** The end of the block that contains `index`: a local variable only holds up to there. */
 function blockEnd(text, index) {
   let depth = 0;
   for ( let i = index; i < text.length; i++ ) {
@@ -83,15 +83,15 @@ function blockEnd(text, index) {
 
 const directRoot = text => ({ source: `modules\\.get\\(\\s*(?:${idsIn(text).pattern})\\s*\\)\\s*\\??\\.\\s*api`, prefix: [] });
 const callOf = name => `(?<![.\\w$])${escaped(name)}\\(\\s*\\)`;
-/** Ce fichier connaît-il cette fonction d'accès : il la déclare, ou il l'importe ? */
+/** Does this file know this access function: does it declare it, or import it? */
 const knows = (text, name) => new RegExp(`(?:function\\s+${escaped(name)}\\s*\\(|const\\s+${escaped(name)}\\s*=|import\\s*\\{[^}]*\\b${escaped(name)}\\b[^}]*\\})`).test(text);
 const baseName = path => path.split("/").pop();
 /** Les imports en espace de noms d'un fichier : `import * as engine from "./adapter/engine.mjs"` → `{ name: "engine", file: "engine.mjs" }`. */
 const namespaces = text => [...text.matchAll(new RegExp(`import\\s*\\*\\s*as\\s+(${NAME})\\s+from\\s*["']([^"']+)["']`, "g"))]
   .map(found => ({ name: found[1], file: baseName(found[2]) }));
 /**
- * Les façons d'appeler, dans ce fichier, les fonctions d'accès connues : par leur nom (déclarées ou importées ici), ou par
- * l'espace de noms du fichier qui les déclare (`engine.content()` après `import * as engine from "./adapter/engine.mjs"`).
+ * The ways, in this file, of calling the known access functions: by their name (declared or imported here), or by
+ * the namespace of the file that declares them (`engine.content()` after `import * as engine from "./adapter/engine.mjs"`).
  */
 function accessorRoots(text, known) {
   const spaces = namespaces(text);
@@ -103,9 +103,9 @@ function accessorRoots(text, known) {
 }
 
 /**
- * Les fonctions d'accès du module : `{ name, prefix, file }` — `function engine() { return game.modules.get(ENGINE_ID)?.api ?? null; }`,
- * sa forme en plusieurs lignes (courte : elle lit le module du moteur et rend son `.api` tel quel), et celles qui en
- * dérivent (`const content = () => engine()?.content;`).
+ * The module's access functions: `{ name, prefix, file }` —
+ * `function engine() { return game.modules.get(ENGINE_ID)?.api ?? null; }`, its multi-line form (short: it reads the engine's
+ * module and returns its `.api` as is), and those that derive from it (`const content = () => engine()?.content;`).
  */
 function accessors() {
   const found = [];
@@ -115,7 +115,8 @@ function accessors() {
     for ( const match of text.matchAll(new RegExp(`(?:function\\s+(${NAME})\\s*\\([^)]*\\)|const\\s+(${NAME})\\s*=\\s*\\([^)]*\\)\\s*=>)\\s*\\{`, "g")) ) {
       const from = match.index + match[0].length;
       const body = text.slice(from, blockEnd(text, from));
-      // Elle doit RENDRE l'API elle-même (`return mod.api ?? null;`, `return on ? (mod.api ?? null) : null;`), pas un objet à elle.
+      // It must RETURN the API itself (`return mod.api ?? null;`, `return on ? (mod.api ?? null) : null;`), not an object of its
+      // own.
       if ( (body.length <= 400) && getsCore.test(body) && /return[^;{]*\.api\s*(?:\?\?\s*null\s*)?\)?\s*(?::\s*null\s*)?;/.test(body) ) add(match[1] ?? match[2], [], file);
     }
   }
@@ -132,26 +133,26 @@ function accessors() {
   return found;
 }
 
-/** Les chemins d'API demandés au moteur : `[{ path, file, line }]`. */
+/** The API paths asked of the engine: `[{ path, file, line }]`. */
 function apiUses() {
   const uses = [];
   const shared = accessors();
   for ( const { file, text } of sources ) {
-    // Un nom d'API cité dans une chaîne (un message de journal) n'est pas un appel.
+    // An API name quoted in a string (a log message) is not a call.
     const quoted = index => {
       const line = text.slice(text.lastIndexOf("\n", index) + 1, index);
       return ((line.split("\"").length % 2) === 0) || ((line.split("`").length % 2) === 0);
     };
     const note = (path, index) => { if ( path.length && !quoted(index) ) uses.push({ path, file, line: lineOf(text, index) }); };
     const ids = idsIn(text).pattern;
-    // Le module du moteur gardé dans une variable de ce fichier : `const mod = game.modules.get(ENGINE_ID);` puis `mod.api.x`.
+    // The engine's module kept in a variable of this file: `const mod = game.modules.get(ENGINE_ID);` then `mod.api.x`.
     const holders = [...text.matchAll(new RegExp(`(?:const|let)\\s+(${NAME})\\s*=\\s*game\\.modules\\.get\\(\\s*(?:${ids})\\s*\\)\\s*;`, "g"))]
       .map(found => ({ source: `(?<![.\\w$])${escaped(found[1])}\\s*\\??\\.\\s*api`, prefix: [] }));
     const roots = [directRoot(text), ...holders, ...(config.roots ?? []).map(source => ({ source, prefix: [] })),
       ...accessorRoots(text, shared)];
     for ( const root of roots ) {
       for ( const found of text.matchAll(new RegExp(`${root.source}${chainPattern}`, "g")) ) note([...root.prefix, ...segments(found[1])], found.index);
-      // Une variable locale qui reçoit l'API ou un groupe : `const api = engineApi()?.combat;` — suivie jusqu'à la fin de son bloc.
+      // A local variable that receives the API or a group: `const api = engineApi()?.combat;` — followed to the end of its block.
       for ( const found of text.matchAll(new RegExp(`(?:const|let)\\s+(${NAME})\\s*=\\s*(?:game\\.)?${root.source}${chainPattern}?${TAIL}`, "g")) ) {
         const prefix = [...root.prefix, ...segments(found[2] ?? "")];
         const from = found.index + found[0].length;
@@ -166,17 +167,17 @@ function apiUses() {
   return uses;
 }
 
-/** Où un chemin quitte le contrat : null s'il y est (un chemin exact, un groupe, ou la suite d'une valeur rendue). */
+/** Where a path leaves the contract: null if it is in it (an exact path, a group, or the continuation of a returned value). */
 function divergence(path, paths) {
   for ( let n = 1; n <= path.length; n++ ) {
     const prefix = path.slice(0, n).join(".");
-    if ( paths.has(prefix) ) return null;   // une fonction ou une valeur du contrat : ce qui suit est à elle (`.bind`, un champ)
+    if ( paths.has(prefix) ) return null;   // a function or a value of the contract: what follows belongs to it (`.bind`, a field)
     if ( ![...paths].some(known => known.startsWith(`${prefix}.`)) ) return prefix;
   }
   return null;
 }
 
-/** Les noms `dnd5e-combat.<nom>` écrits sur une ligne qui écoute, émet ou nomme un hook. */
+/** The `dnd5e-combat.<nom>` names written on a line that listens to, emits or names a hook. */
 function hookUses() {
   const uses = [];
   for ( const { file, text } of sources ) {
@@ -186,7 +187,7 @@ function hookUses() {
     for ( const form of forms ) {
       for ( const found of text.matchAll(new RegExp(form, "g")) ) {
         const line = lineOf(text, found.index);
-        // Le même préfixe sert aux requêtes entre clients, aux drapeaux et aux classes CSS : seule une ligne de hook compte.
+        // The same prefix is used for requests between clients, flags and CSS classes: only a hook line counts.
         if ( !/Hooks\.(on|once|off|call|callAll)\(|_HOOK\b/.test(lines[line - 1]) ) continue;
         uses.push({ name: found[1], file, line });
       }

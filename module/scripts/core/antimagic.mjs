@@ -1,19 +1,19 @@
 /**
- * §436 : l'antimagie, règles pures. dnd5e 6.1 porte le statut `antimagic` (posé par le comportement de région `dnd5e.antimagic`) et
- * suspend lui-même les effets `system.magical` et les bonus des objets magiques d'un acteur qui le porte ; le moteur ajoute ce que le
- * système ne fait pas (refuser de lancer, protéger les cibles, borner la téléportation) et marque les effets magiques comme le ferait la
- * migration de dnd5e.
+ * §436: antimagic, pure rules. dnd5e 6.1 carries the `antimagic` status (applied by the `dnd5e.antimagic` region behavior) and
+ * itself suspends the `system.magical` effects and the bonuses of magic items of an actor that bears it; the engine adds what the
+ * system does not do (refuse to cast, protect the targets, bound teleportation) and marks magical effects as dnd5e's
+ * migration would.
  */
 
 /** L'identifiant du statut de dnd5e 6.1 (`CONFIG.DND5E.statusEffects.antimagic`). */
 export const ANTIMAGIC_STATUS = "antimagic";
 
-/** Le type du comportement de région de dnd5e 6.1 qui pose le statut. */
+/** The type of the dnd5e 6.1 region behavior that applies the status. */
 export const ANTIMAGIC_BEHAVIOR = "dnd5e.antimagic";
 
 /**
- * Un item dont les effets sont magiques — la règle de la migration de dnd5e (`_migrateEffectMagical`) : un sort, un parchemin, ou un
- * item à la propriété `mgc` ; §436 : ou une capacité que le contenu dit magique (`magical`).
+ * An item whose effects are magical — the rule of dnd5e's migration (`_migrateEffectMagical`): a spell, a scroll, or an
+ * item with the `mgc` property; §436: or a feature that the content says is magical (`magical`).
  * @param {{type?: string, subtype?: string, properties?: Iterable<string>, magical?: boolean}} item
  */
 export function isMagicalSource(item) {
@@ -25,23 +25,23 @@ export function isMagicalSource(item) {
 }
 
 /**
- * Une utilisation que le champ interdit à qui s'y tient, et dont il protège qui s'y tient : un sort lancé (parchemin compris), ou une
- * activité d'un objet magique — sauf l'attaque d'une arme magique, qui frappe comme une arme ordinaire (dnd5e retire déjà son bonus,
- * `magicAvailable`).
+ * A use that the field forbids to whoever stands in it, and from which it protects whoever stands in it: a spell cast (scroll
+ * included), or an activity of a magic item — except the attack of a magic weapon, which strikes like an ordinary weapon (dnd5e
+ * already removes its bonus, `magicAvailable`).
  * @param {{spellCast?: boolean, item?: object, activityType?: string, magical?: boolean}} use
  */
 export function isMagicalUse({ spellCast=false, item=null, activityType=null, magical=false }={}) {
-  // §436 : une activité `cast` (sort lancé par une capacité ou un objet) ; une capacité que le contenu dit magique (`magical`).
+  // §436: a `cast` activity (spell cast by a feature or an item); a feature that the content says is magical (`magical`).
   if ( spellCast || magical || (activityType === "cast") ) return true;
   if ( !isMagicalSource(item) ) return false;
   return !((item.type === "weapon") && (activityType === "attack"));
 }
 
 /**
- * Faut-il marquer `system.magical` sur cet effet ? Un effet ordinaire (type `base`, pas un état ni une concentration), pas encore
- * marqué, dont l'item d'origine est magique.
+ * Must `system.magical` be marked on this effect? An ordinary effect (type `base`, not a condition or a Concentration), not yet
+ * marked, whose origin item is magical.
  * @param {{type?: string, magical?: boolean, statuses?: Iterable<string>}} effect
- * @param {object|null} originItem   comme pour isMagicalSource
+ * @param {object|null} originItem   as for isMagicalSource
  */
 export function shouldMarkMagical(effect, originItem) {
   if ( !effect || effect.magical ) return false;
@@ -52,10 +52,11 @@ export function shouldMarkMagical(effect, originItem) {
 }
 
 /**
- * Une activité que dnd5e cache **seulement** à cause du statut antimagie, et que le moteur peut donc proposer de forcer : dnd5e la refuse
- * (`canUse` faux) parce qu'elle exige la magie (`visibility.requireMagic`, mis sur tout sort et toute activité « cast ») et que l'item
- * n'en a plus (`magicAvailable` faux sous le statut), l'item lui-même reste utilisable, et c'est une utilisation magique. Toute autre
- * raison de la cacher (harmonisation, identification, niveau) n'est pas levée par le forçage : pas de proposition.
+ * An activity that dnd5e hides **only** because of the antimagic status, and that the engine can therefore offer to force:
+ * dnd5e refuses it (`canUse` false) because it requires magic (`visibility.requireMagic`, set on every spell and every
+ * "cast" activity) and the item no longer has any (`magicAvailable` false under the status), the item itself stays usable,
+ * and it is a magical use. Any other
+ * reason to hide it (attunement, identification, level) is not lifted by forcing: no offer.
  * @param {{inAntimagic?: boolean, canUse?: boolean, itemCanUse?: boolean, requireMagic?: boolean, magicAvailable?: boolean,
  *   otherHidden?: boolean, magicalUse?: boolean}} facts
  */

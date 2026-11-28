@@ -1,9 +1,9 @@
 import { convertLength } from "../core/units.mjs";
 
 /**
- * Facteurs de conversion de longueur lus dans la configuration du système
- * (CONFIG.DND5E.movementUnits.<unité>.conversion, exprimés par rapport au pied).
- * Seul endroit qui connaît la forme de cette configuration ; le cœur ne reçoit qu'une table.
+ * Length conversion factors read from the system configuration
+ * (CONFIG.DND5E.movementUnits.<unit>.conversion, expressed relative to the foot).
+ * The only place that knows the shape of this configuration; the core receives only a table.
  * @returns {Record<string, number>}
  */
 export function readUnitFactors() {
@@ -15,8 +15,8 @@ export function readUnitFactors() {
 }
 
 /**
- * Une longueur exprimée dans l'unité `to` (celle de la grille, d'ordinaire) ; la valeur telle quelle si une unité est inconnue ou
- * absente (`convertLength` lève alors une erreur). `factors` : déjà lus, pour une boucle.
+ * A length expressed in the unit `to` (the grid's, usually); the value as is if a unit is unknown or
+ * absent (`convertLength` then throws an error). `factors`: already read, for a loop.
  * @param {number} value
  * @param {string} from
  * @param {string} to

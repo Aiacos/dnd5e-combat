@@ -1,36 +1,36 @@
 /**
- * Les recettes (SPEC §114) : les briques du schéma de contenu (core/content.mjs) dites comme un MJ les pense — « des dégâts
- * bonus », « un état à l'échec », « une zone qui dure » — avec des champs simples, et la façon d'en tirer une entrée du schéma.
- * C'est ce qu'un outil sans code (un créateur de contenu, une fenêtre de réglages) lit pour bâtir ses formulaires : il ne
- * connaît ni les moments, ni les étapes, ni leurs contraintes croisées, la recette les pose.
+ * The recipes (SPEC §114): the building blocks of the content schema (core/content.mjs) put the way a GM thinks of them — "bonus
+ * damage", "a condition on failure", "an area that lasts" — with simple fields, and the way to derive a schema entry from them.
+ * This is what a no-code tool (a content creator, a settings window) reads to build its forms: it knows neither the moments, nor
+ * the steps, nor their cross constraints, the recipe sets them.
  *
  *   recipes = [{ type: "bonusDamage", values: { formula: "1d6", damageType: "necrotic", scope: "own" } }, …]
  *   buildEntry(recipes, { identifier: "mon-sort" })  →  { entry: { triggers: [...] }, errors: [] }
  *
- * L'entrée produite se valide ensuite comme tout contenu (`validateEntry`) : une recette ne contourne rien.
+ * The resulting entry is then validated like any content (`validateEntry`): a recipe bypasses nothing.
  *
- * Les champs sont typés par `kind`. Ceux qui dépendent de Foundry ou de dnd5e (types de dégâts, états, activités de l'item)
- * ne portent que leur genre ; l'outil qui les affiche en tire les choix (CONFIG, l'item en cours). Libellés :
+ * Fields are typed by `kind`. Those that depend on Foundry or dnd5e (damage types, conditions, item activities)
+ * carry only their kind; the tool that displays them derives the choices (CONFIG, the current item). Labels:
  * `DND5ECOMBAT.Recette.<type>.Nom` / `.Aide`, `DND5ECOMBAT.Recette.Champ.<champ>`, `DND5ECOMBAT.Recette.Valeur.<valeur>`,
  * `DND5ECOMBAT.Recette.Fait.<fait>` (lang/).
  *
- * Fonctions pures, aucune dépendance à Foundry.
+ * Pure functions, no dependency on Foundry.
  */
 
-/** Version du catalogue : monte quand une recette change de champs ou de sens (une création enregistrée la porte). */
+/** Catalog version: goes up when a recipe changes fields or meaning (a saved creation carries it). */
 export const RECIPES_VERSION = 1;
 
 /** Les genres de champ. */
 export const FIELD_KINDS = Object.freeze([
-  "formula",      // chaîne de dés de dnd5e (« 1d6 », « @prof »)
+  "formula",      // dnd5e dice string ("1d6", "@prof")
   "number",       // nombre positif
   "boolean",
   "choice",       // une valeur parmi `options`
-  "multi",        // une ou plusieurs valeurs parmi `options`
-  "damageType",   // clé de CONFIG.DND5E.damageTypes
-  "status",       // id d'un état (CONFIG.statusEffects)
-  "units",        // unité de distance (ft, m)
-  "activity",     // id d'une activité de l'item (`activityTypes` : filtre facultatif)
+  "multi",        // one or more values among `options`
+  "damageType",   // key of CONFIG.DND5E.damageTypes
+  "status",       // id of a condition (CONFIG.statusEffects)
+  "units",        // distance unit (ft, m)
+  "activity",     // id of an item activity (`activityTypes`: optional filter)
   "effect",       // id d'un effet de l'item
   "condition"     // liste de clauses de faits, voir FACTS
 ]);
@@ -38,12 +38,13 @@ export const FIELD_KINDS = Object.freeze([
 const UNITS = ["ft", "m"];
 
 /**
- * Les faits qu'on peut poser en condition, et la forme de leur argument (`arg`). Un sous-ensemble des faits du moteur
- * (adapter/facts.mjs), ceux qui ont un sens pour un MJ ; le test vérifie qu'ils existent tous. `subject` dit de qui il parle :
- * l'auteur de l'action (`source`), la créature visée (`target`), l'action elle-même (`activity`), les dégâts subis (`damage`).
+ * The facts that can be set as a condition, and the shape of their argument (`arg`). A subset of the engine's facts
+ * (adapter/facts.mjs), those that make sense to a GM; the test checks that they all exist. `subject` says whom it is about:
+ * the author of the action (`source`), the targeted creature (`target`), the action itself (`activity`), the damage taken
+ * (`damage`).
  *
- * Genres d'argument : `true` (fait vrai, rien à saisir), `status`, `identifier` (identifiant d'item), `creatureType`, `size`,
- * `range` ({ distance, units }), `damageTypes` (liste), `number`, `activityType`, `classLevel` ({ class, level }).
+ * Argument kinds: `true` (true fact, nothing to enter), `status`, `identifier` (item identifier), `creatureType`, `size`,
+ * `range` ({ distance, units }), `damageTypes` (list), `number`, `activityType`, `classLevel` ({ class, level }).
  */
 export const FACTS = Object.freeze({
   "activity.isAttack": { subject: "activity", arg: "true" },
@@ -77,25 +78,25 @@ const ACTIVITY_TYPES = ["attack", "save", "damage", "heal", "utility", "cast", "
 const SIZES = ["tiny", "sm", "med", "lg", "huge", "grg"];
 const CREATURE_TYPES = ["aberration", "beast", "celestial", "construct", "dragon", "elemental", "fey", "fiend", "giant", "humanoid", "monstrosity", "ooze", "plant", "undead"];
 
-/** Les valeurs permises d'un argument de fait, quand elles ne viennent pas de CONFIG (pour l'outil qui affiche). */
+/** The allowed values of a fact argument, when they do not come from CONFIG (for the tool that displays them). */
 export const FACT_ARG_OPTIONS = Object.freeze({ activityType: ACTIVITY_TYPES, size: SIZES, creatureType: CREATURE_TYPES, units: UNITS });
 
 const isObject = v => (typeof v === "object") && (v !== null) && !Array.isArray(v);
 const filled = v => (v !== undefined) && (v !== null) && (v !== "");
 
-/** Les codes de problème (`issue`) : chacun a son libellé `DND5ECOMBAT.Recette.Erreur.<code>` (test). */
+/** The problem codes (`issue`): each has its label `DND5ECOMBAT.Recette.Erreur.<code>` (test). */
 export const ISSUE_CODES = Object.freeze(["required", "unknownRecipe", "unique", "needsIdentifier", "atLeastOneLimit", "unknownFact",
   "expectNumber", "expectRange", "expectClassLevel", "expectDamageType", "expectValue"]);
 
 /**
- * Un problème relevé en construisant une entrée : `code` et `data` pour qu'un outil le traduise
- * (`DND5ECOMBAT.Recette.Erreur.<code>`), `message` en anglais pour la console et les tests.
+ * A problem found while building an entry: `code` and `data` so that a tool can translate it
+ * (`DND5ECOMBAT.Recette.Erreur.<code>`), `message` in English for the console and the tests.
  */
 function issue(at, code, data, text) {
   return { at, code, data, message: `${at}: ${text}` };
 }
 
-/** L'argument d'une clause, mis en forme pour le fait (et ses erreurs). */
+/** A clause's argument, formatted for the fact (and its errors). */
 function factArg(fact, arg, at, errors) {
   const shape = FACTS[fact];
   switch ( shape.arg ) {
@@ -129,8 +130,8 @@ function factArg(fact, arg, at, errors) {
 }
 
 /**
- * Une condition du moteur (core/triggers.mjs, `holds`) à partir de clauses `{ fact, arg?, not? }`, toutes requises.
- * Aucune clause : `null` (pas de condition). Les problèmes vont dans `errors` (voir `issue`).
+ * An engine condition (core/triggers.mjs, `holds`) built from `{ fact, arg?, not? }` clauses, all required.
+ * No clauses: `null` (no condition). Problems go into `errors` (see `issue`).
  */
 export function buildCondition(clauses=[], { at="condition", errors=[] }={}) {
   const parts = [];
@@ -143,21 +144,21 @@ export function buildCondition(clauses=[], { at="condition", errors=[] }={}) {
   return parts.length === 1 ? parts[0] : { all: parts };
 }
 
-/** Deux conditions (ou `null`) en une. */
+/** Two conditions (or `null`) in one. */
 function both(a, b) {
   if ( !a ) return b ?? null;
   if ( !b ) return a;
   return { all: [a, b] };
 }
 
-/** « Seulement les activités de cet objet » : le fait qui le dit, d'après l'identifiant de la création. */
+/** "Only this item's activities": the fact that says so, from the creation's identifier. */
 function ownScope(scope, ctx, errors) {
   if ( scope !== "own" ) return null;
   if ( !filled(ctx?.identifier) ) errors.push(issue("scope", "needsIdentifier", {}, "\"this item only\" needs the item's identifier"));
   return { "activity.identifier": ctx?.identifier };
 }
 
-/** Une déclaration de déclencheur, sans clés vides. */
+/** A trigger declaration, without empty keys. */
 function declaration({ on, via=null, condition=null, ...rest }, steps) {
   const d = { on };
   if ( via ) d.via = via;
@@ -168,13 +169,13 @@ function declaration({ on, via=null, condition=null, ...rest }, steps) {
 }
 
 /**
- * Le catalogue. Chaque recette : `category` (pour ranger), `fields` (`{ key, kind, required?, default?, options?,
- * activityTypes?, when? }` — `when` : `{ champ: valeur | [valeurs] }`, le champ n'a de sens que si…), `keys` (les clés
- * d'entrée qu'elle produit), `unique` (une seule par objet), `build(values, ctx, errors)` → fragment d'entrée, et `example`
- * (des valeurs qui doivent produire une entrée valide : le test le vérifie).
+ * The catalog. Each recipe: `category` (for sorting), `fields` (`{ key, kind, required?, default?, options?,
+ * activityTypes?, when? }` — `when`: `{ champ: valeur | [valeurs] }`, the field only makes sense if…), `keys` (the entry
+ * keys it produces), `unique` (only one per item), `build(values, ctx, errors)` → entry fragment, and `example`
+ * (values that must produce a valid entry: the test checks it).
  */
 export const RECIPES = Object.freeze({
-  // B2 — Maléfice, Voile spirituel, Attraction de la mort.
+  // B2 — Hex, Spirit Shroud, Death Ward.
   bonusDamage: {
     category: "damage",
     keys: ["triggers"],
@@ -193,7 +194,7 @@ export const RECIPES = Object.freeze({
     example: { formula: "1d6", damageType: "necrotic", scope: "all", condition: [{ fact: "activity.isAttack" }, { fact: "target.hasEffectFrom", arg: "hex" }] }
   },
 
-  // B6 — Lueurs féeriques (porté par un effet), Tactique de meute (porté par l'objet).
+  // B6 — Faerie Fire (carried by an effect), Pack Tactics (carried by the item).
   attackModifier: {
     category: "attack",
     keys: ["triggers"],
@@ -211,7 +212,7 @@ export const RECIPES = Object.freeze({
     example: { mode: "advantage", carrier: "effect", condition: [{ fact: "target.hasEffect", arg: "faerie-fire" }, { fact: "source.seesTarget" }] }
   },
 
-  // B7 — Frappe occulte (À terre), « Agrippé au toucher » des monstres.
+  // B7 — Eldritch Strike (Prone), monsters' "Grappled on touch".
   outcomeStatus: {
     category: "outcome",
     keys: ["triggers"],
@@ -226,7 +227,7 @@ export const RECIPES = Object.freeze({
     example: { on: "failedSave", status: "prone" }
   },
 
-  // B3 — Vague tonnante (poussée), Fouet d'épines (traction).
+  // B3 — Thunderwave (push), Thorn Whip (pull).
   forcedMove: {
     category: "outcome",
     keys: ["triggers"],
@@ -244,7 +245,7 @@ export const RECIPES = Object.freeze({
     example: { on: "failedSave", mode: "push", distance: 10, units: "ft", condition: [{ fact: "target.sizeAtMost", arg: "lg" }] }
   },
 
-  // B4 — Immobilisation de personne : l'effet posé par l'objet rejoue la sauvegarde.
+  // B4 — Hold Person: the effect placed by the item repeats the saving throw.
   repeatSave: {
     category: "effect",
     keys: ["triggers"],
@@ -257,7 +258,7 @@ export const RECIPES = Object.freeze({
     example: { moments: ["endOfTurn"] }
   },
 
-  // B8 — Sommeil, Motif hypnotique : l'effet tombe quand son porteur subit des dégâts.
+  // B8 — Sleep, Hypnotic Pattern: the effect ends when its bearer takes damage.
   endsOnDamage: {
     category: "effect",
     keys: ["triggers"],
@@ -284,7 +285,7 @@ export const RECIPES = Object.freeze({
     example: { moments: ["enter", "turnEnd"] }
   },
 
-  // B5 — Bouclier (touché), Représailles infernales (blessé, vers l'attaquant), Absorption des éléments.
+  // B5 — Shield (hit), Hellish Rebuke (wounded, toward the attacker), Absorb Elements.
   reaction: {
     category: "reaction",
     keys: ["triggers"],
@@ -303,7 +304,7 @@ export const RECIPES = Object.freeze({
     example: { on: "isDamaged", target: "source", condition: [{ fact: "target.seesSource" }] }
   },
 
-  // B9 — Bouclier de feu, Forme corrosive : qui touche le porteur subit des dégâts.
+  // B9 — Fire Shield, Corrosive Form: whoever hits the bearer takes damage.
   retaliation: {
     category: "defense",
     keys: ["triggers"],
@@ -345,7 +346,7 @@ export const RECIPES = Object.freeze({
     example: { radius: 10, units: "ft", affects: "ally", includeSelf: true }
   },
 
-  // B16 — Morsure empoisonnée : l'attaque qui touche impose la sauvegarde d'une autre activité de l'objet.
+  // B16 — Poisoned Bite: the attack that hits imposes the saving throw of another activity of the item.
   hitThenSave: {
     category: "outcome",
     keys: ["onHit"],
@@ -357,7 +358,7 @@ export const RECIPES = Object.freeze({
     example: { save: "udF9lrpAQMvL0b9J" }
   },
 
-  // B11 — Foulée brumeuse, Porte dimensionnelle.
+  // B11 — Misty Step, Dimension Door.
   teleport: {
     category: "movement",
     keys: ["teleport"],
@@ -375,7 +376,7 @@ export const RECIPES = Object.freeze({
     example: { distance: 30, units: "ft" }
   },
 
-  // B12 — Convocations du PHB : la créature joue après son invocateur, et disparaît avec la concentration.
+  // B12 — PHB summonings: the creature acts after its summoner, and vanishes with Concentration.
   summon: {
     category: "summon",
     keys: ["summon"],
@@ -392,7 +393,7 @@ export const RECIPES = Object.freeze({
     example: { initiative: "after" }
   },
 
-  // §16.40 — « Une fois à chacun de vos tours », coût d'action changé.
+  // §16.40 — "Once on each of your turns", changed action cost.
   usageLimit: {
     category: "usage",
     keys: ["usageLimits"],
@@ -411,7 +412,7 @@ export const RECIPES = Object.freeze({
     example: { activity: "7nAgPNN2dth7SR0D", oncePerTurn: true }
   },
 
-  // Effets de l'objet qui tombent au repos (Armure de mage : repos long).
+  // Item effects that end on a rest (Mage Armor: Long Rest).
   effectsExpire: {
     category: "effect",
     keys: ["effectsExpire"],
@@ -424,10 +425,10 @@ export const RECIPES = Object.freeze({
   }
 });
 
-/** Les clés d'entrée qu'un outil sans code peut produire (les autres restent au contenu écrit à la main). */
+/** The entry keys that a no-code tool can produce (the others stay with hand-written content). */
 export const PUBLIC_KEYS = Object.freeze(Array.from(new Set(Object.values(RECIPES).flatMap(r => r.keys))));
 
-/** Les champs requis vides d'une recette. */
+/** A recipe's empty required fields. */
 function missing(recipe, values, errors) {
   for ( const f of recipe.fields ) {
     if ( !f.required ) continue;
@@ -438,13 +439,13 @@ function missing(recipe, values, errors) {
 }
 
 /**
- * L'entrée du schéma tirée d'une liste de recettes. Les déclencheurs s'ajoutent, `usageLimits` se fusionne par activité, une
- * clé `unique` ne vient qu'une fois. `base` : une entrée existante sur laquelle construire (reprise d'un objet), gardée telle
- * quelle — ses déclencheurs passent avant ceux des recettes.
+ * The schema entry drawn from a list of recipes. Triggers are appended, `usageLimits` is merged per activity, a
+ * `unique` key comes only once. `base`: an existing entry to build on (resuming an item), kept as is
+ * — its triggers come before those of the recipes.
  *
- * Les problèmes sont rendus deux fois : `errors`, des phrases en anglais (console, tests) ; `issues`, de quoi les traduire —
- * `{ recipe, type, at, code, data }`, `recipe` l'indice de la recette, `at` le champ (ou la clause) en cause, `code` une clé
- * de `DND5ECOMBAT.Recette.Erreur`.
+ * Problems are rendered twice: `errors`, sentences in English (console, tests); `issues`, what is needed to translate them —
+ * `{ recipe, type, at, code, data }`, `recipe` the recipe's index, `at` the field (or clause) at fault, `code` a key
+ * of `DND5ECOMBAT.Recette.Erreur`.
  * @param {{type: string, values?: object}[]} recipes
  * @param {{identifier?: string, base?: object|null}} ctx
  * @returns {{entry: object, errors: string[], issues: object[]}}

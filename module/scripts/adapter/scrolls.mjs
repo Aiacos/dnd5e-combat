@@ -1,14 +1,14 @@
 /**
- * §48 : un parchemin de sort se joue comme le sort qu'il contient — lancer le sort, sans emplacement (core/scrolls.mjs).
+ * §48: a spell scroll plays like the spell it contains — casting the spell, without a spell slot (core/scrolls.mjs).
  *
- * Ce qui compte comme « lancer un sort » (isSpellCast) : Contresort, rupture de l'invisibilité et de la discrétion, rage,
- * composante verbale, Sort mineur appuyé, Façonneur de sorts, Retour à la vie, Dissipation et avantage aux sauvegardes donnés
- * par ses effets, et le contenu déclaré du sort (identifierOf, adapter/content.mjs). Ce qui ne compte pas, parce qu'un
- * parchemin ne dépense pas d'emplacement et n'est pas « un sort de votre classe » : la limite d'un sort à emplacement par tour,
- * Disciple de la Vie, les réserves rechargées par un emplacement, le surclassement, la Métamagie, `classSpell`, `cantripOf`.
+ * What counts as "casting a spell" (isSpellCast): Counterspell, breaking Invisibility and stealth, rage, verbal component,
+ * boosted cantrip, "Spell Shaper", Revivify, Dispel and Advantage on saves given by its effects, and the spell's declared
+ * content (identifierOf, adapter/content.mjs). What does not count, because a scroll spends no slot and is not "a spell of
+ * your class": the limit of one spell with a slot per turn, Disciple of Life, the pools recharged by a slot, upcasting,
+ * Metamagic, `classSpell`, `cantripOf`.
  *
- * L'index des sorts (noms français et anglais, identifiants) se bâtit au `ready`, sur les index des compendiums d'items
- * (`getIndex` avec `system.identifier`, `system.level`, `system.school`) et les sorts du monde.
+ * The spell index (French and English names, identifiers) is built at `ready`, on the item compendium indexes
+ * (`getIndex` with `system.identifier`, `system.level`, `system.school`) and the world's spells.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,7 +16,7 @@ import { scrollCandidates, scrollSpell, slug, scrollAccess, highestSlotLevel } f
 import { identifierOf } from "./content.mjs";
 import { potionOfCast } from "./potions.mjs";
 
-/** slug (identifiant, nom affiché, nom anglais) → { identifier, level, school }. */
+/** slug (identifier, displayed name, English name) → { identifier, level, school }. */
 const known = new Map();
 
 function remember(identifier, names, level, school) {
@@ -25,7 +25,7 @@ function remember(identifier, names, level, school) {
   for ( const key of [identifier, ...names.map(slug)] ) if ( key && !known.has(key) ) known.set(key, entry);
 }
 
-/** Bâtit l'index des sorts. À appeler au `ready` (les compendiums sont là, Babele a traduit leurs index). */
+/** Builds the spell index. Call at `ready` (the compendiums are there, Babele has translated their indexes). */
 export async function buildSpellIndex() {
   known.clear();
   for ( const item of game.items ?? [] ) {
@@ -49,13 +49,13 @@ export async function buildSpellIndex() {
 export const isScroll = item => (item?.type === "consumable") && (item.system?.type?.value === "scroll");
 
 /**
- * Le sort d'un parchemin `{ identifier, level, school }`, ou null (pas un parchemin, ou sort introuvable).
+ * The spell of a scroll `{ identifier, level, school }`, or null (not a scroll, or spell not found).
  *
- * Un parchemin fait depuis un compendium (`createScrollFromCompendiumSpell`, documents/item.mjs) ne recopie pas le sort : il
- * porte une activité « cast » vers lui, comme une baguette ; l'utiliser lance le vrai sort (un item de sort en cache), que le
- * moteur voit comme tel. Ce parchemin-là n'est donc PAS un sort lui-même — sinon le moteur verrait deux lancements (deux
- * fenêtres de Contresort). Seuls les parchemins à activités recopiées (`createScrollFromSpell` d'un sort du monde, imports,
- * anciens) sont reconnus ici.
+ * A scroll made from a compendium (`createScrollFromCompendiumSpell`, documents/item.mjs) does not copy the spell: it
+ * carries a "cast" activity pointing to it, like a wand; using it casts the real spell (a cached spell item), which the
+ * engine sees as such. That scroll is therefore NOT a spell itself — otherwise the engine would see two castings (two
+ * Counterspell windows). Only scrolls with copied activities (`createScrollFromSpell` of a world spell, imports,
+ * old ones) are recognized here.
  */
 export function scrollSpellOf(item) {
   if ( !isScroll(item) ) return null;
@@ -71,26 +71,26 @@ export function scrollSpellOf(item) {
 }
 
 /**
- * Utiliser cet item, est-ce lancer un sort ? Un sort, ou un parchemin dont on connaît le sort — pas le sort qu'une potion
- * fait lancer (§53 : boire n'est pas lancer un sort).
+ * Does using this item cast a spell? A spell, or a scroll whose spell is known — not the spell that a potion
+ * makes you cast (§53: drinking is not casting a spell).
  */
 export const isSpellCast = item => ((item?.type === "spell") && !potionOfCast(item)) || !!scrollSpellOf(item);
 
-/** Le niveau du sort lancé (sort ou parchemin), 0 sinon. */
+/** The level of the spell cast (spell or scroll), 0 otherwise. */
 export function spellLevelOf(item) {
   if ( item?.type === "spell" ) return Number(item.system.level) || 0;
   return scrollSpellOf(item)?.level ?? 0;
 }
 
-/** L'école du sort lancé (sort ou parchemin), ou null. */
+/** The school of the spell cast (spell or scroll), or null. */
 export function spellSchoolOf(item) {
   if ( item?.type === "spell" ) return item.system.school ?? null;
   return scrollSpellOf(item)?.school ?? null;
 }
 
 /**
- * `dnd5e.createScrollFromSpell` (documents/item.mjs, après la composition des données) : le moteur note sur le parchemin le
- * sort qu'il contient, que dnd5e ne garde pas.
+ * `dnd5e.createScrollFromSpell` (documents/item.mjs, after the data is composed): the engine notes on the scroll the
+ * spell it contains, which dnd5e does not keep.
  */
 export function stampScroll(spell, scrollData) {
   if ( (spell?.type !== "spell") || !scrollData ) return;
@@ -103,20 +103,20 @@ export function stampScroll(spell, scrollData) {
 }
 
 /**
- * O8g (§350) : l'activité du parchemin derrière une utilisation — celle du parchemin lui-même, ou, pour le sort en cache qu'une
- * activité « cast » lance (`flags.dnd5e.cachedFor`, documents/activity/cast.mjs : `use` passe au sort), l'activité « cast » de son
- * parchemin. Null sinon.
+ * O8g (§350): the scroll's activity behind a use — that of the scroll itself, or, for the cached spell that a "cast"
+ * activity casts (`flags.dnd5e.cachedFor`, documents/activity/cast.mjs: `use` passes to the spell), the "cast" activity of its
+ * scroll. Null otherwise.
  */
 export function scrollActivityOf(activity) {
   if ( isScroll(activity?.item) ) return activity;
-  // `cachedFor` est un uuid relatif à l'acteur : dnd5e le résout par `linkedActivity` (data/item/spell.mjs).
+  // `cachedFor` is a uuid relative to the actor: dnd5e resolves it with `linkedActivity` (data/item/spell.mjs).
   const cast = activity?.item?.flags?.dnd5e?.cachedFor ? (activity.item.system?.linkedActivity ?? null) : null;
   return ((cast?.type === "cast") && isScroll(cast.item)) ? cast : null;
 }
 
 /**
- * O8g (§350) : le sort que lit cette activité d'un parchemin `{ identifier, level }`, ou null — un parchemin à activité « cast » (fait
- * depuis un compendium : l'activité vise le vrai sort) comme un parchemin à activités recopiées (`scrollSpellOf`).
+ * O8g (§350): the spell that this scroll activity reads `{ identifier, level }`, or null — a scroll with a "cast" activity (made
+ * from a compendium: the activity targets the real spell) as well as a scroll with copied activities (`scrollSpellOf`).
  */
 export function scrollReadOf(activity) {
   const item = activity?.item;
@@ -132,10 +132,10 @@ export function scrollReadOf(activity) {
 }
 
 /**
- * O8g (§350) : ce qu'un personnage peut faire de ce parchemin (`scrollAccess`) — la liste de sorts de ses classes et sous-classes
- * (registre de dnd5e `dnd5e.registry.spellLists`), Utilisation d'objets magiques, son plus haut emplacement ; la caractéristique du
- * test : celle de la classe dont la liste porte le sort, sinon l'Intelligence (Arcanes). Null : pas un parchemin, pas un personnage,
- * ou registre pas prêt (rien n'est imposé).
+ * O8g (§350): what a character can do with this scroll (`scrollAccess`) — the spell list of its classes and subclasses
+ * (dnd5e registry `dnd5e.registry.spellLists`), Use Magic Device, its highest slot; the ability of the
+ * check: that of the class whose list carries the spell, otherwise Intelligence (Arcana). Null: not a scroll, not a character,
+ * or registry not ready (nothing is imposed).
  */
 export function scrollReadingFor(activity, actor) {
   activity = scrollActivityOf(activity);

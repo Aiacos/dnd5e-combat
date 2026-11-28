@@ -3,10 +3,10 @@ import { attackModifiers } from "../module/scripts/core/conditions.mjs";
 
 describe("§214 formation au port d'armure", () => {
   const base = { attacker: [], target: [], adjacent: true, ranged: false };
-  it("armure sans formation : Désavantage à l'attaque", () => {
+  it("armor without training: Disadvantage on the attack", () => {
     expect(attackModifiers({ ...base, untrainedArmor: true }).disadvantage).toContainEqual({ who: "situation", key: "untrainedArmor" });
   });
-  it("formé : rien", () => {
+  it("trained: nothing", () => {
     expect(attackModifiers({ ...base }).disadvantage).toEqual([]);
   });
 });

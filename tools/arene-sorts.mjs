@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * Monte (ou remet en état) l'« Arène des sorts » d'un monde de test, par le connecteur : une scène plate et vide, et des acteurs
- * d'essai faits pour le balayage des sorts et des aptitudes (`tools/scenarios/balayage-sorts.mjs`, `balayage-aptitudes.mjs`).
- * Pourquoi pas l'« Arène de test » (§83) : quinze tokens y entourent le Zombi, une zone en touche une demi-douzaine, et ce sont les
- * fiches de PJ, que prêter 391 sorts salirait. Ici, un **Lanceur** PNJ sans aucun item (lanceur de niveau 20, emplacements 9 à
- * chaque niveau, carac. d'incantation à 20 : les sorts prêtés sont les seuls qu'il porte), des cibles à 999 PV qui ne meurent pas,
- * et rien d'autre à portée d'une zone.
+ * Sets up (or restores) the "Spells Arena" of a test world, through the connector: a flat, empty scene, and test actors made
+ * for the sweep of spells and abilities (`tools/scenarios/balayage-sorts.mjs`, `balayage-aptitudes.mjs`).
+ * Why not the "Test Arena" (§83): fifteen tokens surround the Zombie, an area touches half a dozen of them, and these are the
+ * PC sheets, which lending 391 spells would dirty. Here, an NPC **Caster** with no item at all (level 20 caster, 9 slots at
+ * each level, spellcasting ability at 20: the lent spells are the only ones it carries), targets at 999 HP that do not die,
+ * and nothing else within reach of an area.
  *
- *   node tools/arene-sorts.mjs          crée ce qui manque, remet acteurs et tokens à leur état de référence
+ *   node tools/arene-sorts.mjs          creates what is missing, resets actors and tokens to their reference state
  *
- * Idempotent : un acteur ou la scène se retrouve par son nom ; rien hors de son dossier n'est touché. Positions en cases :
- * `ARENE_SORTS` (tools/lib/stages.mjs), que le lanceur de scénarios rétablit avant chaque scénario de cette scène.
+ * Idempotent: an actor or the scene is found by its name; nothing outside its folder is touched. Positions in cells:
+ * `ARENE_SORTS` (tools/lib/stages.mjs), which the scenario runner restores before each scenario of this scene.
  */
 import { buildArena } from "./lib/arena.mjs";
 import { ARENE_SORTS } from "./lib/stages.mjs";
@@ -21,9 +21,9 @@ const FOLDER = "DAS · Arène des sorts";
 const SLOTS = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`spell${i + 1}`, { value: 9, override: 9 }]));
 
 /**
- * Les acteurs d'essai : base du Bestiaire, items retirés (rien d'autre que ce qu'un scénario prête), puis retouches. Le Héros, un
- * personnage (le Barbare pré-tiré du Manuel, `keepItems`) : ce qu'un PNJ n'a pas — classe et échelles (dégâts de Rage), Rage, armes,
- * budget de tour d'un PJ (Concentration fanatique, Athlète remarquable, Inspiration de combat, scénario `passifs-releve`).
+ * The test actors: Bestiary base, items removed (nothing but what a scenario lends), then touch-ups. The Hero, a
+ * character (the Handbook's pregenerated Barbarian, `keepItems`): what an NPC lacks — class and scales (Rage damage), Rage,
+ * weapons, a PC's turn budget (Fanatical Focus, Remarkable Athlete, Combat Inspiration, scenario `passifs-releve`).
  */
 const ACTORS = {
   "Lanceur": { base: "mmArchmage000000", disposition: 1, system: {

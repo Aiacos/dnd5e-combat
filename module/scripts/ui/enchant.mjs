@@ -1,6 +1,7 @@
 /**
- * §16.41 : choisir l'arme à enchanter parmi celles de la créature visée (Arme élémentaire) — un portrait par arme, celles que
- * l'enchantement refuse (déjà magique…) grisées avec leur motif. L'interface demande ; runtime/enchant.mjs lance.
+ * §16.41: choose the weapon to enchant among those of the targeted creature (Elemental Weapon) — one portrait per weapon,
+ * those that the enchantment refuses (already magical…) greyed out with their reason. The interface asks;
+ * runtime/enchant.mjs casts.
  */
 
 import { enchantableWeapons } from "../adapter/enchant.mjs";

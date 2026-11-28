@@ -1,15 +1,15 @@
 /**
- * Les espèces du Manuel des joueurs 2024 (SPEC §31), monde `dnd-6`. Le Guerrier reçoit, prêtés depuis le compendium du Manuel des
- * joueurs (pack `origins`), des traits d'espèce ; le Bandit reçoit 300 PV. Vérifie :
- *  - Acharnement (Orc) : tombé à 0 PV, le Guerrier reste à 1 PV, l'utilisation dépensée ; la fois suivante, il tombe ;
- *  - Brûlure ignée (Goliath) : la question au coup, « Brûlure ignée » → +1d10 feu, une utilisation dépensée ;
- *    Renversement des coteaux → le Bandit À terre ;
- *  - Endurance de la pierre (Goliath) : le Bandit touche → réaction, dégâts réduits du jet (1d12 + Constitution, §295) ;
- *  - Tonnerre des cieux (Goliath) : le Bandit blesse le Guerrier → réaction, le Bandit subit des dégâts de tonnerre ;
- *  - Révélation céleste (Aasimar) : transformé, + bonus de maîtrise radiants au premier coup du tour ;
- *  - Poussée d'adrénaline (Orc) : Foncer par une action Bonus ;
- *  - Forme de géant (Goliath) : le token passe à la taille G (2 × 2 cases).
- * Remet positions, PV, états ; retire les items prêtés.
+ * The 2024 Player's Handbook species (SPEC §31), world `dnd-6`. The Fighter receives, lent from the Player's Handbook compendium
+ * (`origins` pack), species traits; the Bandit receives 300 HP. Checks:
+ *  - Relentless Endurance (Orc): dropped to 0 HP, the Fighter stays at 1 HP, the use spent; the next time, he drops;
+ *  - Fire's Burn (Goliath): the question at the hit, "Fire's Burn" → +1d10 fire, one use spent;
+ *    Hill's Tumble → the Bandit Prone;
+ *  - Stone's Endurance (Goliath): the Bandit hits → Reaction, damage reduced by the roll (1d12 + Constitution, §295);
+ *  - Storm's Thunder (Goliath): the Bandit wounds the Fighter → Reaction, the Bandit takes thunder damage;
+ *  - Celestial Revelation (Aasimar): transformed, + proficiency bonus radiant at the first hit of the turn;
+ *  - Adrenaline Rush (Orc): Dash as a Bonus Action;
+ *  - Large Form (Goliath): the token becomes size L (2 × 2 cells).
+ * Restores positions, HP, conditions; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const ORIGINS = "dnd-players-handbook.origins";
@@ -96,8 +96,8 @@ export default {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...ids, ...seen.map(d => d.id)], waitMs: 1500, details: true }).catch(() => null);
         for ( const d of r?.windows ?? [] ) {
           const text = `${d.title ?? ""} ${d.content ?? d.text ?? ""}`;
-          // §516 : la fenêtre « Au toucher » (Sauvagerie martiale du Guerrier, cochée d'avance) vient avant les faveurs — validée telle
-          // quelle, sans compter comme la réponse attendue.
+          // §516: the "On hit" window (the Fighter's Martial Savagery, ticked in advance) comes before the boons — validated as
+          // is, without counting as the expected answer.
           const before = /Savage Attacker|Sauvagerie martiale/i.test(text) ? (d.buttons ?? []).find(x => /Confirm|Frapper|Valider/i.test(x.label ?? "")) : null;
           if ( before ) {
             await ctx.call("answer-dialog", { id: d.id, button: before.action ?? before.label }).catch(() => {});
@@ -114,7 +114,7 @@ export default {
       return seen;
     };
     const sword = await ctx.itemId(hero.id, "greatsword");
-    /** Le Guerrier frappe jusqu'à toucher (10 essais), en répondant `button` à la question des faveurs ; rend le jet de dégâts. */
+    /** The Fighter attacks until it hits (10 tries), answering `button` to the boons question; returns the damage roll. */
     const heroHits = async (button=null) => {
       for ( let n = 0; n < 10; n++ ) {
         const ids = await known();
@@ -128,7 +128,7 @@ export default {
       }
       return null;
     };
-    /** Le Bandit frappe le Guerrier jusqu'à toucher (20 essais) ; rend la résolution et les messages. */
+    /** The Bandit attacks the Fighter until it hits (20 tries); returns the resolution and the messages. */
     const banditHits = async (usage={}) => {
       for ( let n = 0; n < 20; n++ ) {
         await ctx.setHp(hero, homes.get(hero.id).hp);
@@ -200,7 +200,7 @@ export default {
       const dealt = (res.msgs.find(m => (m.type === "damage") && (m.alias === "Bandit"))?.rolls ?? []).reduce((s, x) => s + (x.total ?? 0), 0);
       const rolled = (res.msgs.find(m => (m.type === "healing") || ((m.type === "damage") && (m.alias !== "Bandit")))?.rolls ?? []).reduce((s, x) => s + (x.total ?? 0), 0);
       const lost = homes.get(hero.id).hp - (await ctx.hp(hero));
-      // §295 : le jet de l'activité porte déjà la Constitution (« 1d12 + @abilities.con.mod ») — elle n'est plus ajoutée une seconde fois.
+      // §295: the activity's roll already carries Constitution ("1d12 + @abilities.con.mod") — it is not added a second time.
       ctx.expect(!!res.t.reaction && (lost === Math.max(0, dealt - rolled)), `« ${res.t.reaction} » : ${dealt} dégâts, réduits de ${rolled} (Constitution ${con} comprise) → ${lost} PV perdus`);
       await unlend(item);
     });
@@ -227,8 +227,8 @@ export default {
       if ( !ctx.expect(await fight(), "combat : au tour du Guerrier") ) return;
       const res = await heroHits();
       const bonuses = (res?.damage?.flags?.[MODULE_ID]?.bonuses ?? []).map(b => `${b.formula} ${b.damageType}`);
-      // §438 : la part bonus est écrite avec les données de l'acteur (1e2c134 : « @prof » → « 2 ») — la valeur attendue est lue sur la
-      // créature, et doit aussi être un jet de la carte (le moteur y ajoute sa part).
+      // §438: the bonus part is written with the actor's data (1e2c134: "@prof" → "2") — the expected value is read on the
+      // creature, and must also be a roll of the card (the engine adds its part to it).
       const prof = String((await ctx.engine("stats", { tokenId: hero.id }))?.prof);
       const rolls = (res?.damage?.rolls ?? []).map(x => x.formula);
       ctx.expect([`@prof radiant`, `${prof} radiant`].some(x => bonuses.includes(x)) && rolls.includes(prof), `transformé : ${bonuses.join(", ")} ; jets ${rolls.join(" + ")} (maîtrise ${prof})`);

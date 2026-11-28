@@ -1,39 +1,40 @@
 /**
- * §113 : les aides proposées à un test de compétence ou d'outil, à la manière de BG3 — règles 2024.
- *  - Assistance (`guidance`, tour de magie, contact, concentration) : « vous touchez une créature consentante et choisissez une
- *    compétence ; jusqu'à la fin du sort, elle ajoute 1d4 à tout test de caractéristique utilisant cette compétence ». Le testeur
- *    lui-même s'il connaît le sort, ou un allié au contact — à 7,50 m hors combat (`GUIDANCE_REACH`). Pas pour un test d'outil (« une compétence »).
- *  - Soutien (Help), partie test : « choisissez l'une de vos maîtrises de compétence ou d'outil et un allié assez proche pour
- *    l'aider ; il a l'Avantage à son prochain test avec cette compétence ou cet outil ». Un allié, jamais soi-même.
- *  - Inspiration bardique (`bardic-inspiration`, action Bonus, 18 m dans la donnée) : « une autre créature » — un allié barde qui a
- *    encore une utilisation, à portée de l'activité ; pas si le testeur porte déjà une inspiration. Le dé se lance APRÈS le test,
- *    s'il est raté (« quand la créature rate un Test d20 ») : runtime/roll-bonus.mjs le propose.
+ * §113: the aids offered to a skill or tool check, BG3 style — 2024 rules.
+ *  - Guidance (`guidance`, cantrip, touch, Concentration): "you touch a willing creature and choose a
+ *    skill; until the spell ends, it adds 1d4 to any ability check using that skill". The checker
+ *    themselves if they know the spell, or an ally in touch — at 7.50 m out of combat (`GUIDANCE_REACH`). Not for a tool check
+ *    ("a skill").
+ *  - Help, check part: "choose one of your skill or tool proficiencies and an ally close enough to
+ *    help you; they have Advantage on their next check with that skill or tool". An ally, never oneself.
+ *  - Bardic Inspiration (`bardic-inspiration`, Bonus Action, 60 ft in the data): "another creature" — a Bard ally who still
+ *    has a use, within the activity's range; not if the checker already carries an inspiration. The die is rolled AFTER the check,
+ *    if it is missed ("when the creature fails a D20 Test"): runtime/roll-bonus.mjs offers it.
  *
- * En combat comme hors combat ; seule la portée d'Assistance change (demande de l'utilisateur, 2026-10-08). Sans dépendance à Foundry.
+ * In combat as out of combat; only Guidance's range changes (user's request, 2026-10-08). No dependency on Foundry.
  */
 
-/** « Assez proche pour aider » (Soutien) : 1,50 m, la case voisine (constante de règle, convertie par l'appelant). */
+/** "Close enough to help" (Help): 1.50 m, the neighbouring cell (rule constant, converted by the caller). */
 export const AID_REACH = Object.freeze({ value: 5, units: "ft" });
 
 /**
- * Assistance proposée depuis la fenêtre du test, HORS COMBAT : le contact multiplié par cinq, 7,50 m — souplesse demandée par
- * l'utilisateur (2026-10-08) : l'allié fait les quelques pas pour toucher le testeur. En combat, le contact (`AID_REACH`).
+ * Guidance offered from the check window, OUT OF COMBAT: the touch multiplied by five, 7.50 m — flexibility requested by
+ * the user (2026-10-08): the ally takes the few steps to touch the checker. In combat, the touch (`AID_REACH`).
  */
 export const GUIDANCE_REACH = Object.freeze({ value: AID_REACH.value * 5, units: AID_REACH.units });
 
 /**
  * @param {object} args
- * @param {string|null} [args.skill]      La compétence testée.
- * @param {string|null} [args.tool]       L'outil testé.
- * @param {boolean} [args.inCombat]       Le testeur est dans un combat commencé.
- * @param {boolean} [args.guided]         Le testeur a déjà une Assistance sur cette compétence.
- * @param {boolean} [args.inspired]       Le testeur porte déjà une Inspiration bardique.
+ * @param {string|null} [args.skill]      The skill checked.
+ * @param {string|null} [args.tool]       The tool checked.
+ * @param {boolean} [args.inCombat]       The checker is in a combat that has started.
+ * @param {boolean} [args.guided]         The checker already has a Guidance on this skill.
+ * @param {boolean} [args.inspired]       The checker already carries a Bardic Inspiration.
  * @param {Array<{id: string, self?: boolean, inReach: boolean, inGuidanceReach?: boolean, able: boolean, knowsGuidance?: boolean,
  *   canCast?: boolean, proficient?: boolean, inspires?: boolean, inInspirationReach?: boolean}>} [args.candidates]
- *   Le testeur (`self`) et ses alliés : à portée du Soutien (`AID_REACH`) et de l'Assistance (`GUIDANCE_REACH`), capable
- *   d'agir (pas Neutralisé), connaît Assistance, peut lancer un sort à composante verbale, maîtrise la compétence ou l'outil,
- *   peut donner une Inspiration bardique et le testeur est à sa portée.
- * @returns {Array<{kind: "guidance"|"inspiration"|"help", helper: string}>}  Assistance, Inspiration, Soutien ; le testeur en tête.
+ *   The checker (`self`) and their allies: within reach of Help (`AID_REACH`) and Guidance (`GUIDANCE_REACH`), able
+ *   to act (not Incapacitated), knows Guidance, can cast a spell with a verbal component, is proficient in the skill or tool,
+ *   can give a Bardic Inspiration and the checker is within their reach.
+ * @returns {Array<{kind: "guidance"|"inspiration"|"help", helper: string}>}  Guidance, Inspiration, Help; the checker first.
  */
 export function skillAids({ skill=null, tool=null, inCombat=false, guided=false, inspired=false, candidates=[] }={}) {
   if ( !skill && !tool ) return [];

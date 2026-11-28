@@ -1,18 +1,18 @@
 /**
- * §434 : le Coup brutal du SRD de dnd5e 6.1 joué en jeu (§433, points 4 et 5). Arène des sorts (Lanceur, Cible, Héros). Le Héros (Barbare
- * pré-tiré) reçoit, prêtés depuis le compendium `dnd5e.classes24` (SRD 6.1, pas le Manuel), Témérité, Coup brutal — l'item unique qui porte
- * les quatre coups et leurs effets — et, au niveau 13, Coup brutal amélioré (vide dans cette donnée). Le Lanceur reçoit un gourdin et
- * Flamme sacrée du SRD 6.1. Vérifie :
- *  - niveau 9, Coup handicapant : la Cible porte « Hamstrung » une seule fois, sa Vitesse au sol baisse de 15 ft exactement (l'effet
- *    retire déjà 15 ft par `movement.bonus` ; le moteur n'ajoute pas son −15) ;
- *  - niveau 9, Coup chancelant demandé sans Coup brutal amélioré : rien n'est posé (l'option n'existe pas encore) ;
- *  - Coup puissant : la Cible est poussée de 15 ft (3 cases) ;
- *  - niveau 13, Coup chancelant : la Cible porte « Staggered » ; elle ne menace plus le Héros qui s'éloigne (pas d'attaque d'opportunité,
- *    témoin avant le coup) ; sa sauvegarde contre la Flamme sacrée du Lanceur a le Désavantage ;
- *  - niveau 13, Coup fendant : la Cible porte « Sundered » ; une seconde attaque du Héros n'a pas le +5 ; l'attaque du Lanceur l'a, et
- *    l'effet est consommé ;
- *  - niveau 17 (Coup brutal amélioré (2)) : deux effets à la fois, Staggered et Sundered.
- * Remet niveaux, positions, PV, effets ; retire les items prêtés.
+ * §434: the SRD 6.1 dnd5e Brutal Strike played in game (§433, points 4 and 5). Spell arena (Caster, Target, Hero). The Hero
+ * (pregenerated Barbarian) receives, lent from the `dnd5e.classes24` compendium (SRD 6.1, not the Handbook), Reckless Attack,
+ * Brutal Strike — the single item carrying the four strikes and their effects — and, at level 13, Improved Brutal Strike (empty
+ * in this data). The Caster receives a club and the SRD 6.1 Sacred Flame. Checks:
+ *  - level 9, Hamstring Blow: the Target carries "Hamstrung" only once, its ground Speed drops by exactly 15 ft (the effect
+ *    already removes 15 ft through `movement.bonus`; the engine does not add its −15);
+ *  - level 9, Staggering Blow requested without Improved Brutal Strike: nothing is placed (the option does not exist yet);
+ *  - Forceful Blow: the Target is pushed 15 ft (3 cells);
+ *  - level 13, Staggering Blow: the Target carries "Staggered"; it no longer threatens the Hero who moves away (no Opportunity
+ *    Attack, witness before the hit); its saving throw against the Caster's Sacred Flame has Disadvantage;
+ *  - level 13, Sundering Blow: the Target carries "Sundered"; a second attack by the Hero does not have the +5; the Caster's
+ *    attack does, and the effect is consumed;
+ *  - level 17 (Improved Brutal Strike (2)): two effects at once, Staggered and Sundered.
+ * Puts back levels, positions, HP, effects; removes the lent items.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -82,7 +82,7 @@ export default {
     };
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
-    /** Combat : le Héros (20), le Lanceur (15), la Cible (10) ; au tour du Héros. */
+    /** Combat: the Hero (20), the Caster (15), the Target (10); on the Hero's turn. */
     const fight = async () => {
       const order = [[hero, 20], [caster, 15], [target, 10]];
       await ctx.startCombat(order.map(([t]) => t));
@@ -91,7 +91,7 @@ export default {
       for ( let i = 0; (i < 4) && ((await current()) !== hero.id); i++ ) { await ctx.call("previous-turn", { combatId: ctx.ownCombat }); await pause(1500); }
       return (await current()) === hero.id;
     };
-    /** Les termes d'une formule d'attaque que la seconde a en plus de la première (« +5 »…), dés mis à part. */
+    /** The terms of an attack formula that the second has in addition to the first ("+5"…), dice aside. */
     const terms = f => f.replace(/\s/g, "").split(/(?=[+-])/).filter(t => t && !/d20/.test(t));
     const extraTerms = (base, other) => {
       const left = terms(base);
@@ -107,7 +107,7 @@ export default {
       return { hit: r?.targets?.find(t => t.name === victim.name)?.hit ?? null, mode: roll?.options?.advantageMode ?? null,
         formula: roll?.formula ?? "", total: roll?.total ?? null };
     };
-    /** Le Coup brutal du Héros (téméraire), jusqu'à toucher (12 essais). */
+    /** The Hero's Brutal Strike (reckless), until it hits (12 tries). */
     const brutal = async (axe, options) => {
       let a = null;
       for ( let i = 0; i < 12; i++ ) {
@@ -118,12 +118,12 @@ export default {
       await pause(1500);
       return a?.hit ? a : null;
     };
-    /** Les effets de la Cible copiés d'un effet de Coup brutal : la copie garde son effet source (`_stats.duplicateSource`) ou son nom. */
+    /** The Target's effects copied from a Brutal Strike effect: the copy keeps its source effect (`_stats.duplicateSource`) or name. */
     const NAMES = { [EFFECTS.hamstrung]: /Hamstrung/i, [EFFECTS.staggered]: /Staggered/i, [EFFECTS.sundered]: /Sundered/i };
     const effectsOf = async id => (await ctx.effects(target)).filter(e => !e.disabled
       && (String(e._stats?.duplicateSource ?? "").endsWith(`.ActiveEffect.${id}`) || NAMES[id].test(e.name ?? "")));
     const walk = async t => (await ctx.engine("stats", { tokenId: t.id }))?.speed?.walk ?? null;
-    /** Le Héros prêt : niveau, Témérité et Coup brutal du SRD 6.1, la grande hache. */
+    /** The Hero ready: level, SRD 6.1 Reckless Attack and Brutal Strike, the greataxe. */
     const ready = async level => {
       await setLevel(level);
       await lend(hero, `${SRD}.classes24.Item.phbbrbRecklessAt`);
@@ -162,7 +162,7 @@ export default {
 
     await part("Coup puissant", async () => {
       const axe = await ready(9);
-      await placeHero(0, 1);   // sous la Cible : la poussée l'envoie vers le haut, cases libres
+      await placeHero(0, 1);   // under the Target: the push sends it upward, free cells
       if ( !ctx.expect(await fight(), "combat : au tour du Héros") ) return;
       const a = await brutal(axe, ["forceful"]);
       if ( !ctx.expect(!!a, "le Coup brutal touche (12 essais)") ) return;
@@ -175,7 +175,7 @@ export default {
     await part("Coup chancelant (niveau 13)", async () => {
       const axe = await ready(13);
       const flame = await lend(caster, `${SRD}.spells24.Item.phbsplSacredFlam`, { "system.method": "atwill" });
-      // La Cible armée d'un gourdin : elle menace qui quitte son allonge (témoin avant le coup).
+      // The Target armed with a club: it threatens whoever leaves its reach (witness before the hit).
       await lend(target, `${SRD}.equipment24.Item.phbwepClub000000`, { "system.equipped": true, "system.proficient": 1 });
       await placeHero(-1, 0);
       if ( !ctx.expect(await fight(), "combat : au tour du Héros") ) return;
@@ -187,7 +187,7 @@ export default {
       ctx.expect((await effectsOf(EFFECTS.staggered)).length === 1, `la Cible porte « Staggered » (${(await ctx.effects(target)).map(e => e.name).join(", ")})`);
       const after = await ctx.engine("threats", { tokenId: hero.id, point: away });
       ctx.expect(before.includes("Cible") && !after.includes("Cible"), `chancelante, la Cible ne menace plus le Héros qui s'éloigne (avant : ${before.join(", ") || "personne"} ; après : ${after.join(", ") || "personne"})`);
-      await ctx.nextTurn(); await pause(2500);   // tour du Lanceur : l'effet tient jusqu'au début du tour du Héros
+      await ctx.nextTurn(); await pause(2500);   // Caster's turn: the effect holds until the start of the Hero's turn
       const since = await ctx.lastMessageId();
       const used = await ctx.use({ tokenId: caster.id, itemId: flame, activityType: "save", targetTokenIds: [target.id], consume: false });
       if ( used.usageMessageId ) await ctx.settle(used.usageMessageId, { timeoutMs: 30000 }).catch(() => null);
@@ -203,7 +203,7 @@ export default {
       await placeHero(-1, 0);
       await ctx.call("move-token", { tokenId: caster.id, x: tc.x, y: tc.y - grid, elevation: 0 });
       await pause(800);
-      // Témoin : le bonus d'attaque du Lanceur au gourdin, sans « Sundered ».
+      // Witness: the Caster's club attack bonus, without "Sundered".
       const plain = await attack(caster, club, target, { confirmed: true });
       if ( !ctx.expect(await fight(), "combat : au tour du Héros") ) return;
       const a = await brutal(axe, ["sundering"]);

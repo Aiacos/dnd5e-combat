@@ -1,15 +1,15 @@
 /**
- * Relevé des sorts, lot 1 (SPEC §157), monde `dnd-6`, arène : les sorts prêtés depuis le Manuel des joueurs (à volonté), chacun
- * joué directement par son activité, et ce que le moteur en fait lu sur la table :
- *  - Flou : l'effet posé sur le Magicien, une raison de Désavantage de plus à l'attaque du Zombi contre lui ;
- *  - Assassin imaginaire, Duel forcé (Zombi raté) : Désavantage aux attaques du Zombi (contre le Guerrier ; pas contre le Paladin
- *    pour le Duel) ;
- *  - État cadavérique : Aveuglé et Neutralisé sur le Guerrier ;
- *  - Châtiment de révélation : l'effet sur le Zombi, Avantage du Guerrier contre lui ;
- *  - Châtiment de tonnerre (sauvegarde ratée) : repoussé de 3 m loin du Paladin ;
- *  - Châtiment de stupeur (sauvegarde ratée, en combat) : Étourdi jusqu'à la fin du prochain tour du Paladin ;
- *  - Repli expéditif (en combat) : Foncer pris.
- * Remet positions, PV, effets, combat.
+ * Spell survey, batch 1 (SPEC §157), world `dnd-6`, arena: spells lent from the Player's Handbook (at will), each
+ * played directly by its activity, and what the engine does with it read off the table:
+ *  - Blur: the effect placed on the Wizard, one more reason for Disadvantage on the Zombie's attack against him;
+ *  - Phantasmal Killer, Compelled Duel (Zombie failed): Disadvantage on the Zombie's attacks (against the Fighter; not against the
+ *    Paladin for the Duel);
+ *  - Feign Death: Blinded and Incapacitated on the Fighter;
+ *  - "Revealing Smite": the effect on the Zombie, the Fighter's Advantage against it;
+ *  - Thunderous Smite (failed save): pushed 3 m away from the Paladin;
+ *  - Staggering Smite (failed save, in combat): Stunned until the end of the Paladin's next turn;
+ *  - Expeditious Retreat (in combat): Dash taken.
+ * Restores positions, HP, effects, combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -69,7 +69,7 @@ export default {
     const fWeapon = await weaponOf(fighter);
     const reasons = (attacker, target, itemId) => ctx.engine("attackReasons", { attackerId: attacker.id, targetId: target.id, itemId });
     const lend = id => async t => ctx.ensureItem(t, PHB + id, { system: { method: "atwill" } });
-    /** Lance l'activité (type) sur la cible jusqu'à une sauvegarde ratée (15 essais) ; rend la résolution, ou null. */
+    /** Casts the activity (type) on the target until a failed save (15 tries); returns the resolution, or null. */
     const untilFailed = async (caster, itemId, target, activityType="save") => {
       for ( let n = 1; n <= 15; n++ ) {
         await clearNew(target);
@@ -99,7 +99,7 @@ export default {
       const id = await lend("phbsplBlur000000")(mage);
       const before = (await reasons(zombi, mage, zWeapon)).disadvantage;
       await settled(await ctx.use({ tokenId: mage.id, itemId: id, targetTokenIds: [mage.id], consume: false }));
-      // La concentration arrive d'abord ; l'effet du sort, à la fin de l'animation.
+      // The concentration arrives first; the spell's effect, at the end of the animation.
       ctx.expect((await ctx.effectsFrom(mage, "blur")).some(e => !/concentr/i.test(e.effect ?? "")), "Flou : l'effet est sur le Magicien");
       const after = (await reasons(zombi, mage, zWeapon)).disadvantage;
       ctx.expect(after.filter(r => r.startsWith("content")).length > before.filter(r => r.startsWith("content")).length,
@@ -136,7 +136,7 @@ export default {
     });
 
     await part("Châtiment de révélation", async () => {
-      // Le vrai chemin : le Paladin touche le Zombi au corps à corps, la question du châtiment répond « Châtiment de révélation ».
+      // The real path: the Paladin hits the Zombie in melee, the smite question answers "Revealing Smite".
       await ctx.ensureItem(pal, PHB + "phbsplShiningSmi");
       const grid = await ctx.gridSize();
       const p = await ctx.position(pal);

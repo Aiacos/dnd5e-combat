@@ -1,8 +1,8 @@
 /**
- * Brique « déplacement forcé », traction au toucher : Fouet d'épines (module PHB, ajouté au Magicien le temps
- * du scénario) sur le Zombi à distance. Contenu `thorn-whip` : `{ on: "hit", if: { "target.sizeAtMost": "lg" },
- * do: [{ type: "move", mode: "pull", distance: 10, units: "ft" }] }`. Sur un toucher, le Zombi (M) est attiré
- * de deux cases vers le Magicien ; sur un raté, il ne bouge pas. On rejoue jusqu'à toucher.
+ * "Forced movement" building block, pull on hit: Thorn Whip (PHB module, added to the Wizard for the
+ * scenario's duration) on the Zombie at range. `thorn-whip` content: `{ on: "hit", if: { "target.sizeAtMost": "lg" },
+ * do: [{ type: "move", mode: "pull", distance: 10, units: "ft" }] }`. On a hit, the Zombie (M) is pulled
+ * two cells toward the Wizard; on a miss, it does not move. We replay until a hit.
  */
 export default {
   name: "traction — Fouet d'épines attire le Zombi de 10 ft au toucher",
@@ -17,8 +17,8 @@ export default {
     ctx.restore(() => ctx.setHp(zombi, hp0));
     ctx.restore(() => ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => {}));
     await ctx.ensureItem(mage, "Compendium.dnd-players-handbook.spells.Item.phbsplThornWhip0");
-    // Une ligne dégagée : le Zombi à quatre cases au sud du Magicien (à sa place habituelle, le Paladin est sur la
-    // ligne et arrête la traction après une case — vu le 2026-09-24).
+    // A clear line: the Zombie four cells south of the Wizard (at its usual place, the Paladin is on the
+    // line and stops the pull after one cell — seen on 2026-09-24).
     const pos0 = { x: magePos.x, y: magePos.y + 4 * grid, elevation: home.elevation };
 
     let hit = null;

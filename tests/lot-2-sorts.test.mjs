@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 
-describe("§284 : effets vides dans la donnée", () => {
-  it("Danse irrésistible d'Otto : Vitesses à 0 sur les deux effets, Dex en Désavantage sous Charmé seulement", () => {
+describe("§284: empty effects in the data", () => {
+  it("Otto's Irresistible Dance: Speeds at 0 on both effects, Dex at Disadvantage under Charmed only", () => {
     const changes = CONTENT["ottos-irresistible-dance"].effectChanges;
     for ( const id of ["MpToumiJ2o3S16K7", "UhFtBDEZEDpVgz9G"] ) {
       expect(changes[id].filter(c => c.key.startsWith("system.attributes.movement.")).map(c => c.value)).toEqual([0, 0, 0, 0, 0]);
@@ -14,13 +14,13 @@ describe("§284 : effets vides dans la donnée", () => {
     expect(steps).toEqual(["advantage", "disadvantage"]);
   });
 
-  it("Prémonition : Avantage pour le porteur, Désavantage contre lui", () => {
+  it("Foresight: Advantage for the bearer, Disadvantage against them", () => {
     const t = CONTENT.foresight.triggers.filter(d => d.on === "preAttackRoll");
     expect(t.find(d => d.if["source.hasEffect"])?.do[0].type).toBe("advantage");
     expect(t.find(d => d.if["target.hasEffect"])?.do[0].type).toBe("disadvantage");
   });
 
-  it("Aliénation et Épine mentale déclarent leur marqueur", () => {
+  it("\"Alienation\" and Mind Sliver declare their marker", () => {
     expect(CONTENT.befuddlement.noSpells).toBe(true);
     expect(CONTENT["mind-spike"].knownToOrigin).toBe(true);
     expect(validateEntry({ noSpells: "yes" }, { at: "x." }).length).toBeGreaterThan(0);

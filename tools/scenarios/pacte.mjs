@@ -1,10 +1,10 @@
 /**
- * Pacte de la lame (SPEC §16.45). Monde `ravenloft` : Kaalisti (Porte-Fardeau, Hache de bataille argentée). Le choix de la
- * fenêtre est passé d'office (`enchantItem`, `pactDamage`) ; l'invocation depuis le compendium demande un clic (hors scénario).
- *  1. Pacte radiant sur Porte-Fardeau : l'enchantement fixe le type radiant (seul), fait lire le Charisme (caractéristique
- *     d'incantation) aux attaques de l'arme, et renomme l'arme « … (arme de pacte) ».
- *  2. Nouveau pacte sur la Hache : le lien de Porte-Fardeau tombe.
- * Non applicable sans Kaalisti. Retire les enchantements à la fin.
+ * Pact of the Blade (SPEC §16.45). World `ravenloft`: Kaalisti (Burden-Bearer, Silvered Battleaxe). The window's choice
+ * is passed automatically (`enchantItem`, `pactDamage`); the summon from the compendium requires a click (outside the scenario).
+ *  1. Radiant pact on Burden-Bearer: the enchantment sets the radiant type (alone), makes the weapon's attacks read Charisma
+ *     (spellcasting ability), and renames the weapon "… (pact weapon)".
+ *  2. New pact on the Axe: the Burden-Bearer link falls.
+ * Not applicable without Kaalisti. Removes the enchantments at the end.
  */
 const MODULE_ID = "dnd5e-combat";
 const PROFILE = "QElum2XYhYUYQ5l2";

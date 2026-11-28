@@ -1,25 +1,25 @@
 /**
- * Escalade (SPEC §192, lot 1 : les murs ; lot 2 : les plafonds ; lot 3 : le contenu, §195). Noyau pur.
+ * Climbing (SPEC §192, batch 1: walls; batch 2: ceilings; batch 3: content, §195). Pure core.
  *
- * Règles 2024 (Manuel des joueurs, glossaire « Climbing », « Climb Speed ») : grimper ne demande aucun jet — chaque pied coûte un
- * pied de plus sans vitesse d'escalade (le coût est celui de dnd5e, action `climb`), rien de plus avec. Le DD 15 Force
- * (Athlétisme) n'existe que « au choix du MJ » : c'est le réglage de monde « maison » (`climbRules`), qui le demande à chaque tour
- * (toutes les 10 s hors combat) et fait tomber sur un échec. Une créature À terre, Neutralisée, Agrippée ou à Vitesse 0 ne tient
- * pas au mur : elle tombe (dnd5e ne réévalue la chute qu'après un déplacement, le moteur la déclenche).
+ * 2024 rules (Player's Handbook, glossary "Climbing", "Climb Speed"): climbing requires no roll — each foot costs one
+ * extra foot without a Climb Speed (the cost is dnd5e's, action `climb`), nothing extra with one. The DC 15 Strength
+ * (Athletics) exists only "at the GM's option": it is the "house" world setting (`climbRules`), which asks for it every turn
+ * (every 10 s outside combat) and makes the creature fall on a failure. A Prone, Incapacitated, Grappled creature or one with
+ * Speed 0 does not hold on to the wall: it falls (dnd5e only re-evaluates the fall after a move, the engine triggers it).
  */
 
-/** DD du test de Force (Athlétisme) pour tenir à un mur (réglage « maison »). */
+/** DC of the Strength (Athletics) check to hold on to a wall ("house" setting). */
 export const CLIMB_DC = 15;
-/** DD du test pour gagner ou tenir un plafond sans la capacité (réglage « maison », §192.2 : la proposition). */
+/** DC of the check to reach or hold a ceiling without the capability ("house" setting, §192.2: the proposal). */
 export const CEILING_DC = 20;
-/** Hors combat, l'équivalent d'un tour : 10 s (comme la nouvelle tentative de Se cacher, §183). */
+/** Outside combat, the equivalent of a turn: 10 s (like the new Hide attempt, §183). */
 export const CLIMB_CHECK_SECONDS = 10;
-/** Sans plafond ni budget (hors combat), on ne monte pas plus haut d'un coup. */
+/** Without a ceiling or budget (outside combat), a creature does not climb higher in one go. */
 export const MAX_CLIMB_CELLS = 20;
 
 /**
- * Un segment (une arête de mur) touche-t-il un rectangle (l'emprise d'un token), à `tolerance` près ? Le rectangle est élargi de la
- * tolérance, puis on cherche une intersection avec le segment : une extrémité dedans, ou le segment qui le traverse (Liang–Barsky).
+ * Does a segment (a wall edge) touch a rectangle (a token's footprint), within `tolerance`? The rectangle is widened by the
+ * tolerance, then we look for an intersection with the segment: an endpoint inside, or the segment crossing it (Liang–Barsky).
  * @param {{x: number, y: number}} a
  * @param {{x: number, y: number}} b
  * @param {{x: number, y: number, width: number, height: number}} rect
@@ -42,8 +42,8 @@ export function segmentTouchesRect(a, b, rect, tolerance=0) {
 }
 
 /**
- * Le mur est-il de ceux qu'on grimpe ? Pas une porte ouverte, pas un mur sans restriction de déplacement, pas un mur posé par
- * un sort (`spell` : son identifiant, ou null) sauf le Mur de pierre.
+ * Is the wall one that can be climbed? Not an open door, not a wall without movement restriction, not a wall placed by
+ * a spell (`spell`: its identifier, or null) except Wall of Stone.
  * @param {{move: boolean, openDoor: boolean, spell?: string|null}} wall
  */
 export function isClimbableWall({ move, openDoor, spell=null }) {
@@ -52,9 +52,10 @@ export function isClimbableWall({ move, openDoor, spell=null }) {
 }
 
 /**
- * La vitesse qui borne le tour en escalade : l'escalade si la fiche en a une, sinon la marche (le ×2 est dans le coût de dnd5e).
- * @param {Record<string, number>} speeds  Vitesses préparées.
- * @returns {{speed: number, native: boolean}}  `native` : une vraie vitesse d'escalade.
+ * The speed that bounds the turn when climbing: the climb speed if the sheet has one, otherwise walking (the ×2 is in
+ * dnd5e's cost).
+ * @param {Record<string, number>} speeds  Prepared speeds.
+ * @returns {{speed: number, native: boolean}}  `native`: a real climb speed.
  */
 export function climbSpeed(speeds) {
   const climb = Number(speeds?.climb) || 0;
@@ -62,11 +63,11 @@ export function climbSpeed(speeds) {
   return { speed: Number(speeds?.walk) || 0, native: false };
 }
 
-/** Ce que coûte un pied d'escalade, en multiple : 2 sans vitesse d'escalade, 1 avec (dnd5e, `walkFallback`). */
+/** What a foot of climbing costs, as a multiple: 2 without a climb speed, 1 with one (dnd5e, `walkFallback`). */
 export const climbMultiplier = speeds => (climbSpeed(speeds).native ? 1 : 2);
 
 /**
- * Pourquoi un grimpeur ne tient plus au mur, ou null : À terre, Neutralisé, Agrippé, ou plus de vitesse (Entravé, Paralysé…).
+ * Why a climber no longer holds on to the wall, or null: Prone, Incapacitated, Grappled, or no more speed (Restrained, Paralyzed…).
  * @param {{prone?: boolean, incapacitated?: boolean, grappled?: boolean, speed?: number}} state
  * @returns {"prone"|"incapacitated"|"grappled"|"noSpeed"|null}
  */
@@ -79,8 +80,8 @@ export function climbFallReason({ prone=false, incapacitated=false, grappled=fal
 }
 
 /**
- * Combien de cases on peut monter d'un coup : ce que le déplacement restant paie (une case coûte `gridDistance × multiplier`), sous
- * le plafond (`ceilingCells` : cases libres au-dessus, Infinity sans plafond), jamais plus de `MAX_CLIMB_CELLS`.
+ * How many cells one can climb in one go: what the remaining movement pays for (a cell costs `gridDistance × multiplier`), under
+ * the ceiling (`ceilingCells`: free cells above, Infinity without a ceiling), never more than `MAX_CLIMB_CELLS`.
  * @param {{remaining: number, gridDistance: number, multiplier: number, ceilingCells?: number}} p
  */
 export function climbableCells({ remaining, gridDistance, multiplier, ceilingCells=Infinity }) {
@@ -89,7 +90,7 @@ export function climbableCells({ remaining, gridDistance, multiplier, ceilingCel
   return Math.max(0, Math.min(affordable, room, MAX_CLIMB_CELLS));
 }
 
-/** Le test du mode « maison » est-il dû : jamais fait, ou fait il y a plus de `intervalMs` ? */
+/** Is the "house" mode check due: never done, or done more than `intervalMs` ago? */
 export const climbCheckDue = (lastAt, now, intervalMs) => !Number.isFinite(lastAt) || ((now - lastAt) >= intervalMs);
 
 /* -------------------------------------------- */
@@ -97,15 +98,15 @@ export const climbCheckDue = (lastAt, now, intervalMs) => !Number.isFinite(lastA
 /* -------------------------------------------- */
 
 /**
- * Les identifiants dnd5e qui donnent la marche au plafond (§192.3) : le sort Pattes d'araignée (et le trait de monstre du même
- * identifiant), les Pantoufles d'araignée et la Cape d'arachnide du Guide du maître. Un voisin déclare les siens par le contenu
- * (`climbsCeilings: true`, `api.content.register`).
+ * The dnd5e identifiers that grant walking on ceilings (§192.3): the Spider Climb spell (and the monster trait with the same
+ * identifier), the Slippers of Spider Climbing and the Cloak of Arachnida from the Dungeon Master's Guide. A neighbor declares
+ * its own through content (`climbsCeilings: true`, `api.content.register`).
  */
 export const CEILING_IDENTIFIERS = Object.freeze(["spider-climb", "slippers-of-spider-climbing", "cloak-of-arachnida"]);
 
 /**
- * Un item (son identifiant, son entrée de contenu) donne-t-il la marche au plafond ? Sur une surface glissante (`slippery`, §195), pas un
- * item qui ne tient pas sur une surface glissante (`notOnSlippery` : les Pantoufles d'araignée).
+ * Does an item (its identifier, its content entry) grant walking on ceilings? On a slippery surface (`slippery`, §195), not an
+ * item that cannot hold on a slippery surface (`notOnSlippery`: the Slippers of Spider Climbing).
  */
 export function grantsCeiling(identifier, entry=null, { slippery=false }={}) {
   if ( slippery && (entry?.notOnSlippery === true) ) return false;
@@ -113,9 +114,10 @@ export function grantsCeiling(identifier, entry=null, { slippery=false }={}) {
 }
 
 /**
- * L'élévation des pieds d'une créature accrochée à un plafond : le plafond moins sa hauteur (`depth` en cases). null sans plafond.
- * @param {number} ceiling        Élévation du plafond (Infinity : aucun).
- * @param {number} depth          Hauteur de la créature, en cases.
+ * The elevation of the feet of a creature hanging from a ceiling: the ceiling minus its height (`depth` in cells).
+ * null without a ceiling.
+ * @param {number} ceiling        Elevation of the ceiling (Infinity: none).
+ * @param {number} depth          Height of the creature, in cells.
  * @param {number} gridDistance
  */
 export function ceilingPerch(ceiling, depth, gridDistance) {
@@ -123,15 +125,15 @@ export function ceilingPerch(ceiling, depth, gridDistance) {
   return ceiling - (depth * gridDistance);
 }
 
-/** La créature est-elle accrochée à ce plafond (sa tête contre lui) ? */
+/** Is the creature hanging from this ceiling (its head against it)? */
 export function hangsFrom(elevation, depth, gridDistance, ceiling) {
   const perch = ceilingPerch(ceiling, depth, gridDistance);
   return (perch !== null) && (Math.abs(elevation - perch) < 1e-6);
 }
 
 /**
- * Le miroir vertical d'un token au plafond (§192.4 point 8) : l'échelle verticale inversée, l'échelle d'origine gardée pour la
- * rendre en quittant le plafond — un token déjà en miroir repasse à l'endroit, ce qui est bien « la tête en bas » pour lui.
+ * The vertical mirror of a token on the ceiling (§192.4 point 8): the vertical scale inverted, the original scale kept to
+ * restore it when leaving the ceiling — a token already mirrored goes back upright, which is indeed "head down" for it.
  */
 export const flippedScale = scaleY => -(Number(scaleY) || 1);
 
@@ -140,9 +142,9 @@ export const flippedScale = scaleY => -(Number(scaleY) || 1);
 /* -------------------------------------------- */
 
 /**
- * Les changements d'effet qu'une règle `grantsSpeeds` (§195 : Athlète, « une vitesse d'escalade égale à votre Vitesse ») donne au porteur :
- * `"walk"` vaut la Vitesse lue maintenant (`walk`), un nombre vaut lui-même ; même forme que les capacités de dnd5e qui donnent une
- * vitesse (`system.attributes.movement.<vitesse>`, `upgrade`). Une valeur nulle ne donne rien.
+ * The effect changes that a `grantsSpeeds` rule (§195: Athlete, "a climb speed equal to your Speed") gives the bearer:
+ * `"walk"` is worth the Speed read now (`walk`), a number is worth itself; same shape as the dnd5e capabilities that give a
+ * speed (`system.attributes.movement.<vitesse>`, `upgrade`). A null value gives nothing.
  * @param {Record<string, "walk"|number>} rule
  * @param {number} walk
  * @returns {Array<{key: string, type: string, value: string}>}
@@ -156,15 +158,15 @@ export function grantedSpeedChanges(rule, walk) {
   return out;
 }
 
-/** Les changements d'un effet sont-ils ceux voulus (mêmes clés, types, valeurs ; l'ordre ne compte pas) ? */
+/** Are the changes of an effect the wanted ones (same keys, types, values; order does not matter)? */
 export function sameSpeedChanges(current, wanted) {
   const norm = list => (list ?? []).map(c => `${c.key}|${c.type}|${String(c.value)}`).sort().join(";");
   return norm(current) === norm(wanted);
 }
 
 /**
- * Mouvement acrobatique (§195, Moine 9) : « sans armure ni bouclier, […] des surfaces verticales pendant votre tour ». En combat, à son tour
- * seulement ; hors combat, toujours (il n'y a pas de tour — rien ne le fait tomber).
+ * Acrobatic Movement (§195, Monk 9): "without armor or shield, […] vertical surfaces during your turn". In combat, on its own
+ * turn only; outside combat, always (there is no turn — nothing makes it fall).
  * @param {{armor?: boolean, shield?: boolean, inCombat?: boolean, ownTurn?: boolean}} state
  */
 export function acrobaticAllowed({ armor=false, shield=false, inCombat=false, ownTurn=false }={}) {
@@ -173,19 +175,20 @@ export function acrobaticAllowed({ armor=false, shield=false, inCombat=false, ow
 }
 
 /**
- * Le moine qui finissait son tour en courant sur le mur tombe-t-il ? Oui s'il y est encore (en escalade, au-dessus du sol), pas s'il est
- * redescendu ni s'il a gagné le plafond (il n'y monte pas ainsi).
+ * Does the Monk who was ending their turn running on the wall fall? Yes if still there (climbing, above the ground), not if they
+ * came back down or reached the ceiling (they do not climb up there this way).
  * @param {{acrobatic?: boolean, climbing?: boolean, aboveGround?: boolean, onCeiling?: boolean}} state
  */
 export const acrobaticFallDue = ({ acrobatic=false, climbing=false, aboveGround=false, onCeiling=false }={}) =>
   acrobatic && climbing && aboveGround && !onCeiling;
 
 /**
- * §209 : se hisser sur un rebord (toit, chemin de ronde, étage) depuis le mur où l'on grimpe. Le sol de la case voisine doit être plus haut
- * que les pieds du grimpeur et pas plus haut que sa tête (il l'atteint des mains), et il faut assez de place au-dessus pour s'y tenir.
- * Rend la hauteur qui reste à monter, ou null si le rebord n'est pas à sa portée.
+ * §209: hoisting onto a ledge (roof, wall walk, upper floor) from the wall being climbed. The floor of the neighboring cell must be
+ * higher than the climber's feet and no higher than their head (they reach it with their hands), and there must be enough room
+ * above to stand.
+ * Returns the height left to climb, or null if the ledge is not within reach.
  * @param {{feet: number, height: number, ground: number, ceiling?: number}} data
- *   `height` : la hauteur du token ; `ground` : le sol de la case voisine ; `ceiling` : le plafond au-dessus d'elle (Infinity : aucun).
+ *   `height`: the token's height; `ground`: the floor of the neighboring cell; `ceiling`: the ceiling above it (Infinity: none).
  * @returns {number|null}
  */
 export function ledgeRise({ feet, height, ground, ceiling=Infinity }) {
@@ -196,31 +199,32 @@ export function ledgeRise({ feet, height, ground, ceiling=Infinity }) {
 }
 
 /**
- * §209 : ce que coûte se hisser : la hauteur qui reste, au prix de l'escalade (`multiplier` : 2 sans vitesse d'escalade), plus la case où
- * l'on prend pied. Unités de la grille.
+ * §209: what hoisting costs: the height left, at the climbing price (`multiplier`: 2 without a climb speed), plus the cell where
+ * one gets a footing. Grid units.
  */
 export const ledgeCost = ({ rise, multiplier, gridDistance }) => (rise * multiplier) + gridDistance;
 
 /* -------------------------------------------- */
-/*  La jauge de la fenêtre d'escalade (§215)     */
+/*  The gauge of the climbing window (§215)      */
 /* -------------------------------------------- */
 
 /**
- * Les dés de chute (dnd5e, rules/falling.mjs : 1d6 par tranche de 10 ft, 20d6 au plus) pour une hauteur au-dessus du sol, dans l'unité
- * de la grille (`step` : 10 en pieds, 3 en mètres).
+ * The falling dice (dnd5e, rules/falling.mjs: 1d6 per 10 ft, 20d6 at most) for a height above the ground, in the grid
+ * unit (`step`: 10 in feet, 3 in meters).
  */
-/** §215 : à l'aveugle hors combat, la montée d'un coup est bornée (on ne propose pas 100 ft dans le noir). */
+/** §215: blind outside combat, the climb in one go is bounded (we do not offer 100 ft in the dark). */
 export const HIDDEN_CLIMB_CELLS = 6;
 
 export const fallDice = (height, step=10) => Math.max(0, Math.min(20, Math.floor((height + 1e-6) / step)));
 
 /**
- * La jauge de la fenêtre « Grimper » / « Descendre » : le mur vu de profil, case par case.
- *  - Montée : les cases au-dessus des pieds du grimpeur ; on peut choisir celles que le déplacement du tour paie et, si le haut est
- *    vu (`seen`), que le plafond laisse (`ceilingFeet` : l'élévation la plus haute des pieds sous le plafond). Le haut (`top` : un rebord
- *    `{ kind: "ledge", at }` où poser les pieds, ou le plafond `{ kind: "ceiling", at }`) n'est rendu que s'il est vu — sinon rien ne le
- *    trahit, pas même le nombre de cases : on choisit d'après son seul déplacement, et la montée s'arrête au plafond.
- *  - Descente : les cases sous les pieds jusqu'au sol (`ground`).
+ * The gauge of the "Climb" / "Descend" window: the wall seen in profile, cell by cell.
+ *  - Climbing: the cells above the climber's feet; one can choose those that the turn's movement pays for and, if the top is
+ *    seen (`seen`), that the ceiling allows (`ceilingFeet`: the highest elevation of the feet under the ceiling). The top (`top`:
+ *    a ledge `{ kind: "ledge", at }` to put the feet on, or the ceiling `{ kind: "ceiling", at }`) is shown only if seen —
+ *    otherwise nothing gives it away, not even the number of cells: one chooses from one's movement alone, and the climb stops
+ *    at the ceiling.
+ *  - Descending: the cells under the feet down to the ground (`ground`).
  * @returns {{cells: Array<{n: number, at: number, choosable: boolean}>, choosable: number, top: object|null, hidden: boolean}}
  */
 export function climbGauge({ feet, ground=0, gridDistance, height=gridDistance, remaining, multiplier, ceilingFeet=Infinity, top=null, seen=true, down=false, marks=[] }) {
@@ -232,21 +236,22 @@ export function climbGauge({ feet, ground=0, gridDistance, height=gridDistance, 
     return { cells, choosable, top: null, hidden: false, marks: [], topCells: 0 };
   }
   const real = climbableCells({ remaining, gridDistance, multiplier, ceilingCells: (ceilingFeet - feet) / gridDistance });
-  // À l'aveugle et sans limite de déplacement (hors combat), pas plus de `HIDDEN_CLIMB_CELLS` cases d'un coup.
+  // Blind and with no movement limit (outside combat), no more than `HIDDEN_CLIMB_CELLS` cells in one go.
   const choosable = seen ? real : (Number.isFinite(remaining) ? affordable : Math.min(affordable, HIDDEN_CLIMB_CELLS));
-  // Les cases montrées : celles qu'on peut choisir, jusqu'au haut s'il est vu — sous un rebord, la case d'où l'on s'y hisse (sa tête à
-  // hauteur du rebord) ; sous un plafond, la case où la tête le touche (`ceilingFeet`).
+  // The cells shown: those one can choose, up to the top if seen — under a ledge, the cell from which one hoists onto it (head at
+  // the height of the ledge); under a ceiling, the cell where the head touches it (`ceilingFeet`).
   const below = top?.kind === "ledge" ? (top.at - height) : ceilingFeet;
   const toTop = (seen && top && Number.isFinite(below)) ? Math.max(0, Math.floor(((below - feet) / gridDistance) + 1e-6)) : 0;
-  // §216 : la séparation du prochain niveau se voit même hors de portée (cases grisées jusqu'à elle) — sous un plafond vu, pas au-delà.
-  // Seul un plafond vu arrête la jauge et les repères ; un rebord non (le mur peut continuer).
+  // §216: the boundary of the next level is visible even out of range (cells greyed out up to it) — under a seen ceiling,
+  // not beyond.
+  // Only a seen ceiling stops the gauge and the markers; a ledge does not (the wall may continue).
   const limit = (seen && ["ceiling", "wallEnd"].includes(top?.kind)) ? (top.at - feet) : Infinity;
   const ledge = seen && (top?.kind === "ledge");
-  // Le prochain repère (au-delà du rebord quand il y en a un : celui du rebord se lit déjà).
+  // The next marker (beyond the ledge when there is one: that of the ledge already reads).
   const nextMark = marks.find(m => (m.at > (ledge ? top.at + 1e-6 : feet)) && ((m.at - feet) <= limit + 1e-6));
   const toMark = nextMark ? Math.ceil(((nextMark.at - feet) / gridDistance) - 1e-6) : 0;
-  // Sous un rebord vu, la jauge montre le rebord et un peu au-dessus (deux cases, ou jusqu'au prochain niveau), pas toute la hauteur
-  // qu'on pourrait grimper : le champ « Cases » permet d'aller plus haut.
+  // Under a seen ledge, the gauge shows the ledge and a little above it (two cells, or up to the next level), not the whole height
+  // one could climb: the "Cells" field allows going higher.
   const count = Math.min(MAX_CLIMB_CELLS, ledge ? Math.min(choosable, Math.max(toTop + 2, toMark)) : Math.max(choosable, toTop, toMark));
   const cells = Array.from({ length: count }, (_, i) => ({ n: i + 1, at: feet + ((i + 1) * gridDistance), choosable: (i + 1) <= choosable }));
   const shownTop = feet + (count * gridDistance) + height;

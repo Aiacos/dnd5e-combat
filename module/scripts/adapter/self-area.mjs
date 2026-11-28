@@ -1,14 +1,14 @@
 /**
- * Une zone « sur soi », posée sur le lanceur sans clic (SPEC §47) — la région que dnd5e aurait créée si l'on avait cliqué
- * son token, construite comme `TemplatePlacement.fromActivity` (canvas/template-placement.mjs:86-189) :
- *  - émanation (type `radius`) : forme `emanation` à base `token` (template-placement.mjs:60-66), rattachée au token
- *    (`attachment.token`, sauf zone `stationary`), aux dimensions du token (template-placement.mjs:124-127) ;
- *  - sphère, cercle : forme `circle` au centre du token, non rattachée (dnd5e ne rattache que l'émanation) ;
- *  - mêmes flags `dnd5e` (activity, dimensions, item, origin, spellLevel), mêmes restriction, visibilité, niveau.
- * Les hooks du système sont émis comme il le fait (`dnd5e.createMeasuredTemplate` avant la création — la tranche
- * d'élévation du moteur y est posée, runtime/space.mjs —, `dnd5e.postCreateMeasuredTemplate` après) : qui les écoute voit
- * la même chose qu'avec la pose à la souris. Le reste (comportements de la région, résolution de zone, concentration) suit
- * `createRegion` comme d'habitude.
+ * A "self" area, placed on the caster without a click (SPEC §47) — the region that dnd5e would have created had one clicked
+ * its token, built like `TemplatePlacement.fromActivity` (canvas/template-placement.mjs:86-189):
+ *  - Emanation (type `radius`): `emanation` shape based on the `token` (template-placement.mjs:60-66), attached to the token
+ *    (`attachment.token`, except for a `stationary` area), with the token's dimensions (template-placement.mjs:124-127);
+ *  - Sphere, circle: `circle` shape at the token's center, not attached (dnd5e only attaches the Emanation);
+ *  - same `dnd5e` flags (activity, dimensions, item, origin, spellLevel), same restriction, visibility, level.
+ * The system's hooks are emitted as it does (`dnd5e.createMeasuredTemplate` before creation — the engine's elevation
+ * slice is set there, runtime/space.mjs —, `dnd5e.postCreateMeasuredTemplate` after): whoever listens to them sees
+ * the same thing as with placement by mouse. The rest (region behaviors, area resolution, Concentration) follows
+ * `createRegion` as usual.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,17 +23,17 @@ import { clearPathTo } from "./cover.mjs";
 import { contiguousRects, rectOfShape } from "../core/space.mjs";
 
 /**
- * La forme et le token d'une zone à poser d'office, ou null (dnd5e pose comme d'habitude) : portée personnelle, zone
- * centrée (core/self-area.mjs), lanceur sur la scène affichée, droit de créer une région.
+ * The shape and token of an area to place automatically, or null (dnd5e places as usual): personal range, centered
+ * area (core/self-area.mjs), caster on the displayed scene, right to create a region.
  * @param {Activity} activity
  * @returns {{shape: "emanation"|"circle", token: TokenDocument}|null}
  */
 export function selfAreaOf(activity) {
-  // §254 : le rayon d'une source de lumière portée (lanterne à capote : « Light », 60 pi sur soi) est sa lumière, que le moteur pose
-  // sur le token (§121) — pas une zone : la région suivait le porteur partout.
+  // §254: the radius of a carried light source (Hooded Lantern: "Light", 60 ft on self) is its light, which the engine places
+  // on the token (§121) — not an area: the region followed the bearer everywhere.
   if ( carriedLightOf(activity?.item) ) return null;
-  const template = templateOf(activity);   // §86 : ou celui que le contenu fournit
-  // §462 : une téléportation dont la zone frappe l'espace quitté — émanation fixe autour du lanceur, posée avant qu'il ne parte.
+  const template = templateOf(activity);   // §86: or the one the content provides
+  // §462: a teleportation whose area hits the space left behind — fixed Emanation around the caster, placed before they leave.
   const left = leavesArea(activity);
   const shape = left ? departureAreaShape({ type: template?.type, count: template?.count, size: template?.size })
     : selfAreaShape({ rangeUnits: activity?.range?.units, type: template?.type, count: template?.count, size: template?.size });
@@ -45,8 +45,8 @@ export function selfAreaOf(activity) {
 }
 
 /**
- * §462 : l'activité téléporte son utilisateur et sa zone frappe l'espace qu'il quitte (`teleport.area: "left"`, contenu ou couche texte
- * des créatures : Téléportation arcanique, Téléportation mortelle, Pas glaçant).
+ * §462: the activity teleports its user and its area hits the space they leave (`teleport.area: "left"`, content or text layer
+ * of the creatures: "Arcane Teleportation", "Deadly Teleportation", "Chilling Step").
  * @param {Activity} activity
  */
 export function leavesArea(activity) {
@@ -54,8 +54,8 @@ export function leavesArea(activity) {
 }
 
 /**
- * §462 / §463 : où frappe la zone d'une téléportation de soi déclarée — `"left"` (l'espace quitté), `"arrival"` (l'espace d'arrivée),
- * ou null.
+ * §462 / §463: where the area of a declared self-teleportation hits — `"left"` (the space left), `"arrival"` (the arrival space),
+ * or null.
  * @param {Activity} activity
  * @returns {"left"|"arrival"|null}
  */
@@ -66,8 +66,8 @@ export function teleportAreaOf(activity) {
 }
 
 /**
- * §463 : pose la zone d'une téléportation « à l'arrivée » autour du token, là où il est (après le saut) — émanation fixe, comme celle du
- * départ. Rend les régions créées, ou null (forme illisible, pas le droit de créer une région).
+ * §463: places the area of an "on arrival" teleportation around the token, where it is (after the jump) — fixed Emanation, like the
+ * departure one. Returns the regions created, or null (unreadable shape, no right to create a region).
  * @param {Activity} activity
  * @param {TokenDocument} token
  */
@@ -78,14 +78,14 @@ export function placeArrivalArea(activity, token) {
   return createAreaRegions(activity, token, [selfAreaRegionData(activity, token, shape, { stationary: true })]);
 }
 
-/** Une longueur de l'activité, dans l'unité de la grille (undefined si absente). */
+/** A length of the activity, in the grid's unit (undefined if absent). */
 function toGrid(value, units, scene) {
   const n = Number(value);
   if ( !(n > 0) ) return undefined;
   return lengthIn(n, units, scene.grid.units);
 }
 
-/** Les dimensions de la zone de l'activité, dans l'unité de la grille. */
+/** The dimensions of the activity's area, in the grid's unit. */
 function dimensionsOf(activity, scene) {
   const target = templateOf(activity) ?? {};
   return {
@@ -96,11 +96,11 @@ function dimensionsOf(activity, scene) {
 }
 
 /**
- * Une région de zone d'activité, comme `TemplatePlacement.fromActivity` la construit (template-placement.mjs:136-171).
+ * An activity area region, as `TemplatePlacement.fromActivity` builds it (template-placement.mjs:136-171).
  * @param {Activity} activity
- * @param {TokenDocument} token   Le lanceur (origine).
- * @param {object} shapeData      La forme, en pixels.
- * @param {boolean} attached      Rattachée au lanceur (émanation non `stationary`).
+ * @param {TokenDocument} token   The caster (origin).
+ * @param {object} shapeData      The shape, in pixels.
+ * @param {boolean} attached      Attached to the caster (non-`stationary` Emanation).
  * @returns {object}
  */
 function regionData(activity, token, shapeData, attached) {
@@ -123,14 +123,14 @@ function regionData(activity, token, shapeData, attached) {
         origin: token.uuid,
         spellLevel: activity.getRollData().item?.level
       },
-      // §190 : posée par le moteur (cône visé, zone sur soi, bille de Boule de feu à retardement), pas par la pose de dnd5e — la
-      // vérification de portée (ui/pointer.mjs) ne s'y applique pas.
+      // §190: placed by the engine (aimed Cone, area on self, bead of Delayed Blast Fireball), not by dnd5e's placement — the
+      // range check (ui/pointer.mjs) does not apply to it.
       [MODULE_ID]: { enginePlaced: true }
     }
   };
 }
 
-/** Crée les régions en émettant les hooks de dnd5e autour de la création, comme sa pose (template-placement.mjs:173-187). */
+/** Creates the regions, emitting dnd5e's hooks around the creation, like its placement (template-placement.mjs:173-187). */
 async function createAreaRegions(activity, token, data) {
   if ( Hooks.call("dnd5e.createMeasuredTemplate", activity, data) === false ) return null;
   const created = await token.parent.createEmbeddedDocuments("Region", data);
@@ -139,7 +139,7 @@ async function createAreaRegions(activity, token, data) {
 }
 
 /**
- * Les données de la région, comme dnd5e les construit.
+ * The region's data, as dnd5e builds it.
  * @param {Activity} activity
  * @param {TokenDocument} token
  * @param {"emanation"|"circle"} shape
@@ -159,10 +159,10 @@ export function selfAreaRegionData(activity, token, shape, { stationary=false }=
 }
 
 /**
- * §91 : pose la zone de l'activité (sphère, cercle) centrée sur un point, sans clic — la bille de la Boule de feu à retardement qui
- * explose là où elle est. Mêmes données et mêmes hooks que la pose de dnd5e.
+ * §91: places the activity's area (Sphere, circle) centered on a point, without a click — the bead of Delayed Blast Fireball that
+ * explodes where it is. Same data and same hooks as dnd5e's placement.
  * @param {Activity} activity
- * @param {TokenDocument} token      Le lanceur (origine).
+ * @param {TokenDocument} token      The caster (origin).
  * @param {{x: number, y: number}} point
  * @returns {Promise<RegionDocument[]|null>}
  */
@@ -173,9 +173,9 @@ export function placeAreaAt(activity, token, point) {
 }
 
 /**
- * Pose la zone sur le lanceur, en émettant les hooks de dnd5e autour de la création.
+ * Places the area on the caster, emitting dnd5e's hooks around the creation.
  * @param {Activity} activity
- * @param {{shape: "emanation"|"circle", token: TokenDocument}} area  Ce que `selfAreaOf` a rendu.
+ * @param {{shape: "emanation"|"circle", token: TokenDocument}} area  What `selfAreaOf` returned.
  * @returns {Promise<RegionDocument[]|null>}
  */
 export function placeSelfArea(activity, { shape, token, stationary=false }) {
@@ -183,24 +183,24 @@ export function placeSelfArea(activity, { shape, token, stationary=false }) {
 }
 
 /* -------------------------------------------- */
-/*  Zones lancées à distance (§190)             */
+/*  Areas cast at a distance (§190)             */
 /* -------------------------------------------- */
 
-/** Les unités de portée qui sont des longueurs (pas « personnelle », « contact », « illimitée »…). */
+/** The range units that are lengths (not "personal", "touch", "unlimited"…). */
 const LENGTH_UNITS = new Set(["ft", "m", "km", "mi"]);
 
 /**
- * §190 : une sphère, un cylindre, un cube ou un carré lancé « en un point à portée » (Aspersion d'acide, Boule de feu) — ce qu'il faut
- * pour le poser à la souris avec sa portée : `{ token, shape: "circle"|"rectangle", side (px : rayon ou côté), range (unités de la
- * grille), max, units, count, contiguous }`, ou null (portée personnelle ou au contact, lanceur absent de la scène
- * affichée). Formes et dimensions comme `TemplatePlacement#createShapeData` (template-placement.mjs:52-71).
+ * §190: a Sphere, cylinder, Cube or square cast "at a point within range" (Acid Splash, Fireball) — what is needed
+ * to place it with the mouse with its range: `{ token, shape: "circle"|"rectangle", side (px : rayon ou côté), range (unités de la
+ * grille), max, units, count, contiguous }`, or null (personal or touch range, caster absent from the displayed
+ * scene). Shapes and dimensions as in `TemplatePlacement#createShapeData` (template-placement.mjs:52-71).
  * @param {Activity} activity
  */
 export function rangedAreaOf(activity) {
   const template = activity?.target?.template;
   const kind = CONFIG.DND5E?.areaTargetTypes?.[template?.type]?.template;
   if ( !["circle", "rect", "rectangle"].includes(kind) ) return null;
-  // §286 : plusieurs gabarits (Nuée de météores, Tempête de feu) — chacun à portée ; `contiguous` : des cubes qui se touchent.
+  // §286: several templates (Meteor Swarm, Fire Storm) — each within range; `contiguous`: Cubes that touch each other.
   const count = Math.max(1, Number(template.count) || 1);
   const value = Number(activity.range?.value);
   if ( !(value > 0) || !LENGTH_UNITS.has(activity.range?.units) ) return null;
@@ -216,15 +216,15 @@ export function rangedAreaOf(activity) {
 }
 
 
-/** §190 : le centre d'une forme posée — §200 : son point d'origine. */
+/** §190: the center of a placed shape — §200: its point of origin. */
 export function rangedCenter(shapeData) {
   if ( shapeData.type === "rectangle" ) return { x: shapeData.x + (shapeData.width / 2), y: shapeData.y + (shapeData.height / 2) };
   return { x: shapeData.x, y: shapeData.y };
 }
 
 /**
- * §190 : la forme est-elle hors de portée ? Distance du bord de l'espace du lanceur (son centre, moins sa demi-largeur) au point
- * d'origine — le centre d'une sphère, d'un cylindre ; pour un cube, une face (le centre, moins la moitié du côté).
+ * §190: is the shape out of range? Distance from the edge of the caster's space (its center, minus its half-width) to the point
+ * of origin — the center of a Sphere, a cylinder; for a Cube, a face (the center, minus half the side).
  */
 export function rangedTooFar(area, shapeData) {
   const grid = area.token.parent.grid;
@@ -236,10 +236,10 @@ export function rangedTooFar(area, shapeData) {
 }
 
 /**
- * Ce qui refuse la pose de ces formes (`rangedAreaOf`) : `"far"` (§190, une forme hors de portée), `"hidden"` (§200, pas de chemin
- * dégagé jusqu'à son point), `"apart"` (§286, des cubes `contiguous` qui ne se touchent pas : Tempête de feu), ou null.
+ * What refuses the placement of these shapes (`rangedAreaOf`): `"far"` (§190, a shape out of range), `"hidden"` (§200, no clear
+ * path to its point), `"apart"` (§286, `contiguous` Cubes that do not touch: Fire Storm), or null.
  * @param {object} area  `rangedAreaOf`.
- * @param {object[]} shapes  Les formes des régions à créer.
+ * @param {object[]} shapes  The shapes of the regions to create.
  */
 export function rangedPlacementProblem(area, shapes) {
   if ( shapes.some(shape => rangedTooFar(area, shape)) ) return "far";
@@ -251,17 +251,17 @@ export function rangedPlacementProblem(area, shapes) {
 
 
 /* -------------------------------------------- */
-/*  Cônes et lignes visés depuis le lanceur     */
+/*  Cones and Lines aimed from the caster       */
 /* -------------------------------------------- */
 
 /**
- * Le cône, la ligne ou le cube à viser autour du lanceur (SPEC §59), ou null (pose de dnd5e) : portée personnelle, une zone
- * (core/self-area.mjs), lanceur sur la scène affichée, droit de créer une région.
+ * The Cone, Line or Cube to aim around the caster (SPEC §59), or null (dnd5e's placement): personal range, an area
+ * (core/self-area.mjs), caster on the displayed scene, right to create a region.
  * @param {Activity} activity
  * @returns {{shape: "cone"|"line"|"cube", token: TokenDocument}|null}
  */
 export function aimedAreaOf(activity) {
-  // §254 : de même le cône d'une lanterne sourde.
+  // §254: likewise the Cone of a Bullseye Lantern.
   if ( carriedLightOf(activity?.item) ) return null;
   const template = activity?.target?.template;
   const shape = aimedAreaShape({ rangeUnits: activity?.range?.units, type: template?.type, count: template?.count, size: template?.size });
@@ -273,15 +273,15 @@ export function aimedAreaOf(activity) {
 }
 
 /**
- * La forme visée vers ce point : sommet sur le bord de l'espace du lanceur, pivot en son centre (`aimFrom`) ; un cube, accolé
- * au lanceur du côté visé (`cubeBeside`).
- * Dimensions comme `TemplatePlacement#createShapeData` (template-placement.mjs:52-71) : angle du cône par défaut du cœur,
- * largeur de la ligne lue sur l'activité (une case si elle n'en dit rien).
+ * The shape aimed toward this point: apex on the edge of the caster's space, pivot at its center (`aimFrom`); a Cube, flush
+ * against the caster on the aimed side (`cubeBeside`).
+ * Dimensions as in `TemplatePlacement#createShapeData` (template-placement.mjs:52-71): Cone angle defaulting to the core's,
+ * Line width read from the activity (one cell if it says nothing).
  * @param {Activity} activity
  * @param {{shape: "cone"|"line"|"cube", token: TokenDocument}} area
- * @param {{x: number, y: number}} point         Point visé, en pixels.
- * @param {{x: number, y: number}|null} [fallback]  Direction si le point est au centre du lanceur.
- * @returns {object}  Données de forme de région.
+ * @param {{x: number, y: number}} point         Aimed point, in pixels.
+ * @param {{x: number, y: number}|null} [fallback]  Direction if the point is at the caster's center.
+ * @returns {object}  Region shape data.
  */
 export function aimedShapeData(activity, { shape, token }, point, fallback=null) {
   const scene = token.parent;
@@ -301,7 +301,7 @@ export function aimedShapeData(activity, { shape, token }, point, fallback=null)
 }
 
 /**
- * Les données de la région visée (aperçu de la visée, puis création).
+ * The aimed region's data (aiming preview, then creation).
  * @param {Activity} activity
  * @param {{shape: "cone"|"line"|"cube", token: TokenDocument}} area
  * @param {object} shapeData  `aimedShapeData`.
@@ -312,7 +312,7 @@ export function aimedRegionData(activity, { token }, shapeData) {
 }
 
 /**
- * Pose la zone visée, en émettant les hooks de dnd5e autour de la création.
+ * Places the aimed area, emitting dnd5e's hooks around the creation.
  * @param {Activity} activity
  * @param {{shape: "cone"|"line"|"cube", token: TokenDocument}} area
  * @param {object} shapeData
@@ -323,14 +323,14 @@ export function placeAimedArea(activity, area, shapeData) {
 }
 
 /* -------------------------------------------- */
-/*  Murs posés par points (§162)                */
+/*  Walls placed by points (§162)               */
 /* -------------------------------------------- */
 
 /**
- * §162 : un sort à gabarit « wall » (Mur de feu, Mur de force en panneaux, Barrière de lames…) se pose par points : la ligne brisée
- * qu'ils dessinent, au plus la longueur totale du sort (la taille du gabarit, fois le nombre de panneaux), de son épaisseur. Rend
- * ce qu'il faut à la visée (longueur et épaisseur en pixels), ou null : pas un mur, lanceur absent de la scène affichée, pas le
- * droit de créer une région.
+ * §162: a spell with a "wall" template (Wall of Fire, paneled Wall of Force, Blade Barrier…) is placed by points: the broken line
+ * they draw, at most the spell's total length (the template's size, times the number of panels), of its thickness. Returns
+ * what is needed for aiming (length and thickness in pixels), or null: not a wall, caster absent from the displayed scene, no
+ * right to create a region.
  * @param {Activity} activity
  * @returns {{shape: "wall", token: TokenDocument, length: number, width: number, orthogonal: boolean, cells: boolean, half: number,
  *   lineLength: number}|null}
@@ -338,7 +338,7 @@ export function placeAimedArea(activity, area, shapeData) {
 export function wallAreaOf(activity) {
   const template = activity?.target?.template;
   if ( template?.type !== "wall" ) return null;
-  // Portails et portes (Portail arcanique, Portail, Demi-plan, Manoir) : pas des murs.
+  // Gates and doors (Arcane Gate, Gate, Demiplane, Mansion): not walls.
   if ( contentOf(activity.item).entry?.pointWall === false ) return null;
   const token = usageTokenOf(activity);
   if ( !token?.parent || (token.parent !== canvas?.scene) ) return null;
@@ -347,8 +347,8 @@ export function wallAreaOf(activity) {
   const perUnit = scene.grid.size / scene.grid.distance;
   const { size, width } = dimensionsOf(activity, scene);
   const count = Math.max(1, Number(template.count) || 1);
-  // §169 : un mur à face brûlante (Mur de feu) se pose sans diagonale ; §172 : un mur épais (Mur d'épines, Barrière de lames), sur
-  // une rangée de cases — points au centre des cases, la ligne de centres plus courte d'une case que le mur.
+  // §169: a wall with a burning face (Wall of Fire) is placed without a diagonal; §172: a thick wall (Wall of Thorns, Blade
+  // Barrier), on a row of cells — points at the centers of the cells, the line of centers one cell shorter than the wall.
   const entry = contentOf(activity.item).entry;
   const cells = entry?.cellWall === true;
   const length = (size || 0) * count * perUnit;
@@ -357,7 +357,7 @@ export function wallAreaOf(activity) {
 }
 
 /**
- * Pose le mur le long des points, en émettant les hooks de dnd5e autour de la création : une région, une forme « line » par segment.
+ * Places the wall along the points, emitting dnd5e's hooks around the creation: one region, one "line" shape per segment.
  * @param {Activity} activity
  * @param {{token: TokenDocument, length: number, width: number}} area  `wallAreaOf`.
  * @param {Array<{x: number, y: number}>} points

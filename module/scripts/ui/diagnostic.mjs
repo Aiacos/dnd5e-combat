@@ -1,6 +1,6 @@
 /**
- * La fenêtre du diagnostic (SPEC §177) : onglet « Analyse » (analyser, cocher, réparer après sauvegarde) et onglet
- * « Sauvegardes » (restaurer une réparation). Toute l'action est dans runtime/diagnostic/ ; ici, l'affichage et les confirmations.
+ * The diagnostic window (SPEC §177): "Analysis" tab (analyze, check, repair after backup) and "Backups" tab
+ * (restore a repair). All the action is in runtime/diagnostic/; here, the display and the confirmations.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { allChecks, listBackups, repairTasks, restore, scanWorld } from "../runtime/diagnostic/index.mjs";
@@ -8,7 +8,7 @@ import { uniqueRoots } from "../core/backup.mjs";
 import { loc, esc } from "../runtime/shared.mjs";
 import { replaceKeepingScroll } from "./scroll.mjs";
 
-/** La classe de la fenêtre, créée au premier usage (le module se charge aussi hors de Foundry : tests/load.test.mjs). */
+/** The window's class, created on first use (the module also loads outside Foundry: tests/load.test.mjs). */
 let DiagnosticClass = null;
 export const DiagnosticApp = () => DiagnosticClass ??= class DiagnosticApp extends foundry.applications.api.ApplicationV2 {
   static DEFAULT_OPTIONS = {
@@ -19,8 +19,8 @@ export const DiagnosticApp = () => DiagnosticClass ??= class DiagnosticApp exten
   };
 
   /**
-   * Ouvrir sur une seule vérification (macros « Outils du MJ »). B6 : un seul exemplaire — le menu des réglages crée la fenêtre
-   * par `new` : il reçoit celle qui est déjà ouverte (`openDiagnostic` referme d'abord celle d'une autre vérification).
+   * Open on a single check ("GM Tools" macros). B6: a single instance — the settings menu creates the window
+   * with `new`: it receives the one already open (`openDiagnostic` first closes the one of another check).
    */
   constructor({ check=null, ...options }={}) {
     const existing = foundry.applications.instances.get("das-diagnostic");
@@ -29,18 +29,18 @@ export const DiagnosticApp = () => DiagnosticClass ??= class DiagnosticApp exten
     this.#only = check;
   }
 
-  /** La vérification seule sur laquelle la fenêtre est ouverte, ou null (toutes). */
+  /** The single check the window is open on, or null (all). */
   get only() { return this.#only; }
 
   #only = null;
   #tab = "scan";
-  #scan = null;          // { [checkId]: tâches }
-  #checked = new Set();  // ids des tâches cochées
+  #scan = null;          // { [checkId]: tasks }
+  #checked = new Set();  // ids of the checked tasks
   #options = {};         // { [checkId]: { [optionId]: valeur } } choisies par le MJ
   #result = null;        // { backup, results }
   #backups = null;
   #working = false;
-  #scroll = {};          // défilement gardé d'un rendu à l'autre (ui/scroll.mjs)
+  #scroll = {};          // scroll position kept from one render to the next (ui/scroll.mjs)
 
   async _renderHTML() {
     const root = document.createElement("div");
@@ -77,8 +77,8 @@ export const DiagnosticApp = () => DiagnosticClass ??= class DiagnosticApp exten
           <button type="button" class="das-link" data-none="${check.id}">${esc(loc("Diagnostic.ToutDecocher"))}</button></div>` : ""}
         ${options}${rows}</details>`;
     };
-    // Les vérifications d'un groupe (`check.group`, ainsi « ddb » : le contenu importé de D&D Beyond) forment une section à part,
-    // après les autres, sous leur titre.
+    // A group's checks (`check.group`, such as "ddb": content imported from D&D Beyond) form a separate section,
+    // after the others, under their title.
     const shown = allChecks().filter(c => this.#scan[c.id]);
     const groups = [...new Set(shown.map(c => c.group).filter(Boolean))].map(group => `<section class="das-group">
         <h3><i class="${shown.find(c => c.group === group).icon}"></i> ${esc(loc(`Diagnostic.Groupe.${group}.Nom`))}</h3>
@@ -122,23 +122,23 @@ export const DiagnosticApp = () => DiagnosticClass ??= class DiagnosticApp exten
     return `${intro}<ul class="das-backups">${rows}</ul>`;
   }
 
-  /** Le défilement est gardé dans le même onglet : cocher, « Tout décocher » ou une option ne ramène plus en haut. */
+  /** Scrolling is kept within the same tab: checking, "Uncheck all" or an option no longer returns to the top. */
   _replaceHTML(result, content) {
     replaceKeepingScroll(content, result, [".das-pane"], this.#scroll, this.#tab);
   }
 
-  /** La valeur d'une option de vérification : celle choisie, sinon son défaut. */
+  /** The value of a check's option: the chosen one, otherwise its default. */
   #option(checkId, option) {
     return this.#options[checkId]?.[option.id] ?? option.default;
   }
 
-  /** Les options de chaque vérification, défauts compris, pour la réparation. */
+  /** Each check's options, defaults included, for the repair. */
   #allOptions() {
     return Object.fromEntries(allChecks().filter(c => c.options?.length)
       .map(c => [c.id, Object.fromEntries(c.options.map(o => [o.id, this.#option(c.id, o)]))]));
   }
 
-  /** Les tâches cochées (seulement celles qu'on peut réparer). */
+  /** The checked tasks (only those that can be repaired). */
   #selected() {
     return Object.values(this.#scan ?? {}).flat().filter(t => t.apply && this.#checked.has(t.id));
   }
@@ -157,7 +157,7 @@ export const DiagnosticApp = () => DiagnosticClass ??= class DiagnosticApp exten
       const uncheck = el.querySelector("[data-action=uncheckAll]");
       if ( uncheck ) uncheck.disabled = !count;
     }));
-    // Tout désélectionner, toutes vérifications confondues (les boutons par section restent pour une seule vérification).
+    // Deselect everything, all checks combined (the per-section buttons remain for a single check).
     el.querySelector("[data-action=uncheckAll]")?.addEventListener("click", () => { this.#checked.clear(); this.render(); });
     el.querySelectorAll("[data-option]").forEach(box => box.addEventListener("change", () => {
       const [checkId, optionId] = box.dataset.option.split(".");
@@ -201,7 +201,7 @@ export const DiagnosticApp = () => DiagnosticClass ??= class DiagnosticApp exten
       this.#scan = null;
       this.#checked.clear();
     } catch(err) {
-      // La sauvegarde a échoué : rien n'a été modifié.
+      // The backup failed: nothing was modified.
       ui.notifications.error(loc("Diagnostic.SauvegardeEchec", { error: err.message }), { permanent: true });
       console.error(`${MODULE_ID} | diagnostic`, err);
     } finally {
@@ -232,7 +232,7 @@ export const DiagnosticApp = () => DiagnosticClass ??= class DiagnosticApp exten
   }
 };
 
-/** Pour l'API et les macros : ouvrir le diagnostic, éventuellement sur une seule vérification. */
+/** For the API and macros: open the diagnostic, optionally on a single check. */
 export async function openDiagnostic({ check=null }={}) {
   const existing = foundry.applications.instances.get("das-diagnostic");
   if ( existing && (existing.only !== check) ) await existing.close();

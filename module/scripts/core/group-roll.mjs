@@ -1,31 +1,31 @@
 /**
- * §242 (issue #18) : jets demandés par le MJ à plusieurs personnages — test de caractéristique, sauvegarde, compétence ou outil,
- * avec un DD (affiché ou caché aux joueurs), l'Avantage ou le Désavantage, un modificateur fixe et un libellé (« Sauter le pont »).
- * Ici, la règle seule : la demande valide, le résultat de chacun, le verdict du test de groupe (PHB 2024 : le groupe réussit si au
- * moins la moitié de ses membres réussit) et ce qu'un joueur a le droit de voir.
+ * §242 (issue #18): rolls requested by the GM from several characters — ability check, saving throw, skill or tool check,
+ * with a DC (shown or hidden from players), Advantage or Disadvantage, a fixed modifier and a label ("Jump the bridge").
+ * Here, the rule alone: the valid request, each result, the verdict of the group check (PHB 2024: the group succeeds if at
+ * least half of its members succeed) and what a player is allowed to see.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
 export const ROLL_TYPES = Object.freeze(["check", "save", "skill", "tool", "initiative"]);
 
-/** §397 : la clé d'une demande d'initiative (le jet d'initiative de la fiche, sa caractéristique comprise). */
+/** §397: the key of an Initiative request (the sheet's Initiative roll, its ability included). */
 export const INITIATIVE_KEY = "init";
 
 /**
- * La demande, normalisée ; une erreur (texte anglais, pour la console) si elle ne se joue pas.
+ * The request, normalized; an error (English text, for the console) if it cannot be played.
  * @param {object} input
  * @param {string} input.type          "check" | "save" | "skill" | "tool"
- * @param {string} input.key           La caractéristique (check, save), la compétence ou l'outil.
+ * @param {string} input.key           The ability (check, save), the skill or the tool.
  * @param {number|string|null} [input.dc]
- * @param {boolean} [input.hideDc]     Le DD n'est pas montré aux joueurs.
+ * @param {boolean} [input.hideDc]     The DC is not shown to players.
  * @param {boolean} [input.advantage]
  * @param {boolean} [input.disadvantage]
- * @param {number|string} [input.bonus]  Modificateur fixe (entier, positif ou négatif).
+ * @param {number|string} [input.bonus]  Fixed modifier (integer, positive or negative).
  * @param {string} [input.label]
- * @param {boolean} [input.group]      Test de groupe (2024).
- * @param {string|null} [input.ability] Pour une compétence ou un outil : une autre caractéristique que celle par défaut.
- * @param {string|null} [input.combat] §397 : pour l'initiative, le combat dont les combattants reçoivent le résultat.
+ * @param {boolean} [input.group]      Group check (2024).
+ * @param {string|null} [input.ability] For a skill or a tool: an ability other than the default one.
+ * @param {string|null} [input.combat] §397: for Initiative, the combat whose combatants receive the result.
  * @returns {{request: object|null, error: string|null}}
  */
 export function normalizeRequest(input={}) {
@@ -53,25 +53,25 @@ export function normalizeRequest(input={}) {
   };
 }
 
-/** Réussite d'un total contre un DD : true, false, ou null sans DD ni total. */
+/** Success of a total against a DC: true, false, or null with no DC or total. */
 export function outcomeOf(total, dc) {
   if ( (dc === null) || (dc === undefined) || !Number.isFinite(Number(total)) ) return null;
   return Number(total) >= Number(dc);
 }
 
 /**
- * Le point de la demande : chacun (`waiting` ou `rolled`, total, réussite), le compte, et le verdict du groupe.
+ * The status of the request: each one (`waiting` or `rolled`, total, success), the count, and the verdict of the group.
  * @param {{dc: number|null, group: boolean}} request
- * @param {Array<{total: number|null}>} entries  `total` null : pas encore lancé.
+ * @param {Array<{total: number|null}>} entries  `total` null: not rolled yet.
  * @returns {{entries: Array<object>, rolled: number, waiting: number, successes: number, failures: number, done: boolean,
- *   success: boolean|null}}  `success` : le verdict — du groupe (test de groupe), sinon de tous (chacun réussit) ; null sans DD ou
- *   tant que le résultat n'est pas acquis.
+ *   success: boolean|null}}  `success`: the verdict — of the group (group check), otherwise of everyone (each one succeeds);
+ *   null with no DC or as long as the result is not settled.
  */
 export function tally(request, entries) {
   const dc = request?.dc ?? null;
   const out = entries.map(e => {
     const rolled = Number.isFinite(e.total) && (e.total !== null);
-    // Issue #32 : une ligne acceptée en succès à un prix (`atCost`) compte comme réussie, son total restant celui du jet.
+    // Issue #32: a line accepted as a success at a cost (`atCost`) counts as succeeded, its total remaining that of the roll.
     return { ...e, status: rolled ? "rolled" : "waiting", success: rolled ? ((e.atCost && (dc !== null)) ? true : outcomeOf(e.total, dc)) : null };
   });
   const rolled = out.filter(e => e.status === "rolled").length;
@@ -82,8 +82,8 @@ export function tally(request, entries) {
   let success = null;
   if ( (dc !== null) && out.length ) {
     if ( request.group ) {
-      // « Si au moins la moitié du groupe réussit, le groupe réussit » — acquis dès que la moitié a réussi, ou perdu dès que
-      // trop ont échoué pour l'atteindre.
+      // "If at least half the group succeeds, the group succeeds" — settled as soon as half have succeeded, or lost as soon as
+      // too many have failed to reach it.
       const needed = Math.ceil(out.length / 2);
       if ( successes >= needed ) success = true;
       else if ( (out.length - failures) < needed ) success = false;
@@ -95,8 +95,8 @@ export function tally(request, entries) {
 }
 
 /**
- * Ce qu'un client a le droit de voir : le MJ tout ; un joueur, sans le DD caché, ni réussites, ni verdict tant qu'il est caché.
- * @param {object} view     `tally()` complété de la demande (`request`).
+ * What a client is allowed to see: the GM everything; a player, without the hidden DC, and no successes or verdict while hidden.
+ * @param {object} view     `tally()` completed with the request (`request`).
  * @param {{gm: boolean}} viewer
  */
 export function visibleTo(view, { gm }) {

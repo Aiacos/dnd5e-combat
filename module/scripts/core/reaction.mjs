@@ -1,34 +1,34 @@
 /**
- * Réactions (SPEC §7) : une fenêtre s'ouvre à un moment précis d'une résolution, et seulement si
- * quelqu'un peut y répondre. Fonctions pures, aucune dépendance à Foundry.
+ * Reactions (SPEC §7): a window opens at a precise moment of a resolution, and only if
+ * someone can answer it. Pure functions, no dependency on Foundry.
  *
- * Fenêtres connues :
- *  - "isHit"        l'attaque vient de toucher la créature, avant les dégâts (Bouclier)
- *  - "isDamaged"    la créature vient de subir des dégâts (Représailles infernales)
- *  - "leavesReach"  une créature hostile quitte l'allonge (attaque d'opportunité)
+ * Known windows:
+ *  - "isHit"        the attack has just hit the creature, before damage (Shield)
+ *  - "isDamaged"    the creature has just taken damage (Hellish Rebuke)
+ *  - "leavesReach"  a hostile creature leaves reach (Opportunity Attack)
  */
 
 import { hostileSides, neutralFacing } from "./factions.mjs";
 
-/** Deux camps sont-ils opposés ? (défini avec les factions, §181 ; réexporté ici pour les appelants d'avant) */
+/** Are two sides opposed? (defined with factions, §181; re-exported here for earlier callers) */
 export { areHostile } from "./factions.mjs";
 
 /**
- * Les réactions qu'une créature peut proposer dans une fenêtre.
- * @param {Array<{on: string[]}>} declared   Déclarations canoniques de ses items (core/triggers.mjs).
+ * The Reactions that a creature can offer in a window.
+ * @param {Array<{on: string[]}>} declared   Canonical declarations of its items (core/triggers.mjs).
  * @param {string} window
  * @param {{reactionAvailable: boolean, incapacitated?: boolean}} state
  */
 export function eligibleReactions(declared, window, { reactionAvailable, incapacitated=false }) {
   if ( incapacitated ) return [];
-  // §129 : une déclaration `free` ne coûte pas la Réaction (Chanceux) : proposée même quand celle-ci est prise.
+  // §129: a `free` declaration does not cost the Reaction (Lucky): offered even when the Reaction is taken.
   return declared.filter(r => r.on.includes(window) && (reactionAvailable || (r.free === true)));
 }
 
 /**
- * §136 : le premier pas d'un chemin qui fait ENTRER dans une allonge (de plus loin à à portée) — l'indice de la position atteinte,
- * ou -1. Une créature qui part déjà à portée n'y entre pas.
- * @param {number[]} distances  La distance à chaque position du chemin, départ compris.
+ * §136: the first step of a path that ENTERS a reach (from farther away to within range) — the index of the position reached,
+ * or -1. A creature that starts already in range does not enter it.
+ * @param {number[]} distances  The distance at each position of the path, start included.
  * @param {number} reach
  */
 export function entersAt(distances, reach) {
@@ -39,12 +39,12 @@ export function entersAt(distances, reach) {
 }
 
 /**
- * §136 : Maître d'hast, Attaque réactive — « vous pouvez prendre une Réaction pour porter une attaque de corps à corps contre une
- * créature qui entre dans l'allonge que vous avez avec cette arme ». Ce n'est pas une attaque d'opportunité : Se désengager ne
- * l'évite pas. Une téléportation n'entre pas « dans » l'allonge en s'y déplaçant (limite assumée, comme l'attaque d'opportunité).
+ * §136: Polearm Master, Reactive Strike — "you can take a Reaction to make a melee attack against a
+ * creature that enters the reach you have with that weapon". This is not an Opportunity Attack: Disengage does not
+ * avoid it. A teleportation does not enter reach "into" it by moving (accepted limit, like the Opportunity Attack).
  * @param {{disposition: number, teleported: boolean}} mover
  * @param {Array<{token: string, disposition: number, enters: number, reactionAvailable: boolean, incapacitated?: boolean,
- *   hasLineOfEffect?: boolean|null}>} others  `enters` : l'indice d'entrée (entersAt), -1 si elle n'entre pas.
+ *   hasLineOfEffect?: boolean|null}>} others  `enters`: the entry index (entersAt), -1 if it does not enter.
  * @returns {string[]}
  */
 export function reachStrikers(mover, others) {
@@ -54,20 +54,20 @@ export function reachStrikers(mover, others) {
 }
 
 /**
- * Qui peut tenter une attaque d'opportunité contre une créature qui vient de se déplacer.
- * On compare la position de départ et d'arrivée : sortir de l'allonge puis y revenir dans le même
- * déplacement n'est pas vu (limite assumée).
+ * Who can attempt an Opportunity Attack against a creature that has just moved.
+ * We compare the start and arrival positions: leaving reach then coming back in the same
+ * movement is not seen (accepted limit).
  * @param {object} mover
  * @param {number} mover.disposition
- * @param {boolean} mover.disengaged   A pris l'action Se désengager ce tour.
- * @param {boolean} mover.teleported   Téléportation ou déplacement forcé : pas d'attaque d'opportunité.
+ * @param {boolean} mover.disengaged   Took the Disengage action this turn.
+ * @param {boolean} mover.teleported   Teleportation or forced movement: no Opportunity Attack.
  * @param {Array<{token: string, disposition: number, before: number, after: number, reach: number,
  *   reactionAvailable: boolean, incapacitated?: boolean, hasMeleeAttack: boolean, seesMover?: boolean|null,
  *   hasLineOfEffect?: boolean|null}>} others
- *   `before`, `after` et `reach` dans la même unité ; `seesMover` : « une créature que vous pouvez
- *   voir » (règle 2024) — false l'exclut, null (inconnu) ne l'exclut pas ; `hasLineOfEffect` : peut-elle
- *   frapper celui qui bouge (pas de plancher, de plafond ni d'abri total entre eux — P2, §14.2) ? Même règle.
- * @returns {string[]}  UUID des tokens qui peuvent réagir.
+ *   `before`, `after` and `reach` in the same unit; `seesMover`: "a creature that you can
+ *   see" (2024 rule) — false excludes it, null (unknown) does not exclude it; `hasLineOfEffect`: can it
+ *   strike the one who moves (no floor, ceiling or Total Cover between them — P2, §14.2)? Same rule.
+ * @returns {string[]}  UUIDs of the tokens that can react.
  */
 export function opportunityAttackers(mover, others) {
   if ( mover.disengaged || mover.teleported ) return [];
@@ -79,11 +79,11 @@ export function opportunityAttackers(mover, others) {
 }
 
 /**
- * §479 : pourquoi une créature dont ce déplacement quitte l'allonge n'a PAS d'attaque d'opportunité — la première raison, dans l'ordre
- * des conditions d'`opportunityAttackers` (mêmes entrées). Rien pour celles qui ne quittent pas l'allonge ou qui peuvent attaquer.
- * `notice` : la raison mérite d'être dite au MJ (elle surprend) — un camp Neutre face à un camp Amical ou Hostile sans relation de faction
- * (un monstre resté Neutre ne provoque rien), une créature hostile sans attaque de corps à corps utilisable, ou qui ne voit pas
- * celle qui part. Deux alliés, une Réaction déjà prise, un Désengagement : la règle se lit d'elle-même, rien n'est dit.
+ * §479: why a creature whose movement leaves its reach has NO Opportunity Attack — the first reason, in the order
+ * of the conditions of `opportunityAttackers` (same entries). Nothing for those that do not leave reach or that can attack.
+ * `notice`: the reason deserves to be told to the GM (it is surprising) — a Neutral side facing a Friendly or Hostile side with no
+ * faction relation (a monster that stayed Neutral provokes nothing), a hostile creature with no usable melee attack, or that does
+ * not see the one leaving. Two allies, a Reaction already taken, a Disengage: the rule reads itself, nothing is said.
  * @returns {Array<{token: string, reason: string, notice: boolean}>}
  */
 export function opportunityMisses(mover, others) {

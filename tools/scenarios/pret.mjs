@@ -1,13 +1,13 @@
 /**
- * §211 : Se tenir prêt — Guerrier et Magicien de `dnd-6` contre le Zombi (Arène).
- *  1. « Arrive à portée » : le Guerrier prépare son épée ; au tour du Zombi, celui-ci marche vers une case au-delà du Guerrier. Sa
- *     marche s'arrête à la case où il arrive à l'allonge, la Réaction est proposée (acceptée), l'attaque part avec `readiedRelease`,
- *     puis la marche reprend jusqu'au bout ; le plan est servi, la Réaction dépensée.
- *  2. Refuser laisse le plan armé.
- *  3. « Attaque » : le Guerrier prépare son épée contre une attaque ; le Zombi attaque le Guerrier ; la Réaction est proposée après.
- *  4. Sort préparé : le Magicien prépare Projectile magique — un emplacement dépensé, la Concentration posée ; au début de son tour
- *     suivant, non libéré, il est perdu (Concentration retirée, plan tombé).
- * Remet positions, PV, emplacements, Concentration.
+ * §211: Ready — Fighter and Wizard of `dnd-6` against the Zombie (Arena).
+ *  1. "Comes within range": the Fighter readies his sword; on the Zombie's turn, it walks toward a cell beyond the Fighter.
+ *     Its walk stops at the cell where it arrives within reach, the Reaction is offered (accepted), the attack goes off with
+ *     `readiedRelease`, then the walk resumes to the end; the plan is served, the Reaction spent.
+ *  2. Declining leaves the plan armed.
+ *  3. "Attack": the Fighter readies his sword against an attack; the Zombie attacks the Fighter; the Reaction is offered after.
+ *  4. Readied spell: the Wizard readies Magic Missile — a spell slot spent, Concentration placed; at the start of his next
+ *     turn, not released, it is lost (Concentration removed, plan dropped).
+ * Restores positions, HP, spell slots, Concentration.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -45,7 +45,7 @@ export default {
       await setSlots(slots0);
     };
     ctx.restore(remettre);
-    // Le Zombi encaisse (300 PV le temps du test) : mort, il ne finirait pas sa marche.
+    // The Zombie absorbs (300 HP for the time of the test): dead, it would not finish its walk.
     const { data: zdata } = await ctx.call("get-scene-object", { type: "Token", objectId: zombie.id });
     const max0 = zdata.delta?.system?.attributes?.hp?.max ?? null;
     ctx.restore(() => ctx.call("update-scene-object", { type: "Token", objectId: zombie.id, data: { "delta.system.attributes.hp.max": max0 } }).catch(() => {}));
@@ -72,7 +72,7 @@ export default {
     const ready = (t, args) => ctx.engine("ready", { tokenId: t.id, ...args });
     const budget = t => ctx.engine("budget", { tokenId: t.id });
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
-    /** Attend la fenêtre de réaction ; `button` : /regex/ du bouton (ou « Ne pas réagir »). Rend ce qui a été vu, et la position du Zombi à ce moment. */
+    /** Waits for the reaction window; `button`: /regex/ of the button (or "Do not react"). Returns what was seen, and the Zombie's position then. */
     const answer = async (ids, button, ms=15000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
@@ -95,7 +95,7 @@ export default {
       await ctx.nextTurn(); await pause(1500);
       const since = await ctx.lastMessageId();
       const ids = await known();
-      const goal = { i: home.i + 1, j: home.j };   // 4 cases (Vitesse 20 ft) : la dernière après l'entrée à portée
+      const goal = { i: home.i + 1, j: home.j };   // 4 cells (Speed 20 ft): the last one after entering range
       const walking = ctx.engine("move", { tokenId: zombie.id, cell: goal });
       const seen = await answer(ids, /Épée|sword/i);
       await walking.catch(() => null);
@@ -164,7 +164,8 @@ export default {
       await ctx.nextTurn(); await pause(1500);
       const since = await ctx.lastMessageId();
       const ids = await known();
-      // Il frappe le Guerrier : touché, le Magicien ferait son jet de Concentration (raté, le sort serait perdu — la règle).
+      // It hits the Fighter: on a hit, the Wizard would make his Concentration check (failed, the spell would be lost —
+      // the rule).
       const using = ctx.use({ tokenId: zombie.id, identifier: "slam", activityType: "attack", targetTokenIds: [hero.id] });
       const seen = await answer(ids, /Projectile|Missile/i, 40000);
       await using.catch(() => null);

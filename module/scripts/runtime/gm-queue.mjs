@@ -1,14 +1,14 @@
 /**
- * §421 : la « File du MJ » (core/gm-queue.mjs) côté Foundry — ce que le MJ doit décider, les joueurs qu'il attend, les actions bloquées
- * par un auteur parti ; et ses deux gestes : forcer la fenêtre d'un joueur, lancer à la place d'un absent.
+ * §421: the "GM Queue" (core/gm-queue.mjs) on the Foundry side — what the GM must decide, the players they are waiting for, the
+ * actions blocked by an author who left; and its two gestures: forcing a player's window, rolling in place of an absentee.
  *
- * Complément du retour à la table, pas son remplaçant : le sablier au-dessus des tokens et le bandeau « Le MJ décide… »
- * (ui/awaiting.mjs) disent aux joueurs qu'on attend quelqu'un ; la file dit au MJ qui, pour quoi, et lui donne la main.
+ * Complement to the return to the table, not its replacement: the hourglass above the tokens and the banner "The GM is deciding…"
+ * (ui/awaiting.mjs) tell the players someone is awaited; the queue tells the GM who, for what, and gives them control.
  *
- * Forcer : toute fenêtre du combat ouverte sur un client s'y inscrit (`expireLater`, adapter/dialogs.mjs), qu'elle vienne d'une question
- * du MJ ou qu'elle se soit ouverte d'elle-même chez l'auteur (dégâts au clic, châtiment, Attaque sournoise, coup critique) : le MJ
- * demande au client du joueur de les résoudre comme au bout du délai. Avant ce §, seules les questions posées par le MJ avaient une
- * ligne à forcer ; une fenêtre ouverte chez l'auteur, sans délai, n'avait pas d'issue.
+ * Forcing: every combat window open on a client registers there (`expireLater`, adapter/dialogs.mjs), whether it comes from a GM
+ * question or opened by itself on the author's side (click damage, smite, Sneak Attack, Critical Hit): the GM asks the player's
+ * client to resolve them as at the end of the delay. Before this §, only the questions asked by the GM had a line to force;
+ * a window opened on the author's side, with no delay, had no way out.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { gmQueue, queueSignature } from "../core/gm-queue.mjs";
@@ -22,18 +22,18 @@ import { route } from "./router.mjs";
 import { log, notice, tokenOfActor, isExecutor } from "./shared.mjs";
 
 /**
- * §421 : chez un MJ, quand une ligne de sa file arrive, part ou reçoit son libellé : `(queue)`, `{ mine, players, blocked, count }` —
- * ce que le moteur lui demande, les joueurs attendus, les actions dont l'auteur est parti. Une ligne :
- * `{ id, userId, userName, actor, kind, label, since, seconds, waitIds }`. Lecture seule ; la même file : `api.queue.list()`.
+ * §421: on a GM, when a line of their queue arrives, leaves or gets its label: `(queue)`, `{ mine, players, blocked, count }` —
+ * what the engine asks of them, the players awaited, the actions whose author left. A line:
+ * `{ id, userId, userName, actor, kind, label, since, seconds, waitIds }`. Read-only; the same queue: `api.queue.list()`.
  */
 export const GM_QUEUE_HOOK = `${MODULE_ID}.gmQueue`;
 
-/** Le délai laissé au client d'un joueur pour résoudre ses fenêtres quand le MJ force. */
+/** The delay left to a player's client to resolve their windows when the GM forces. */
 const FORCE_GRACE_MS = 4000;
 
 /**
- * MJ : la file — `{ mine, players, blocked, count }` (ce que le moteur lui demande, les joueurs attendus, les actions dont l'auteur est
- * parti) ; vide chez un joueur. Une ligne : `{ id, userId, userName, actor, kind, label, since, seconds, waitIds }`.
+ * GM: the queue — `{ mine, players, blocked, count }` (what the engine asks of them, the players awaited, the actions whose author
+ * left); empty on a player. A line: `{ id, userId, userName, actor, kind, label, since, seconds, waitIds }`.
  */
 export function queue() {
   if ( !game.user?.isGM ) return gmQueue();
@@ -41,7 +41,7 @@ export function queue() {
     labels: awaitingLabels() });
 }
 
-/** §422 : les jets demandés par le MJ (§242) que quelqu'un n'a pas encore lancés — `{ messageId, actor, label }`, parmi les derniers messages. */
+/** §422: the rolls requested by the GM (§242) that someone has not yet made — `{ messageId, actor, label }`, among the latest messages. */
 function pendingGroupRolls() {
   const pending = [];
   for ( const message of game.messages?.contents.slice(-GROUP_LOOKBACK) ?? [] ) {
@@ -58,7 +58,7 @@ const GROUP_LOOKBACK = 50;
 let last = "";
 /**
  * Recomputes the queue; when it differs from the last one announced, `GM_QUEUE_HOOK` fires. Returns the queue (empty at a player).
- * 2026-11-28 (badge left at « 1 » on an empty queue): every reader that shows the queue goes through here, so what it shows and what
+ * 2026-11-28 (badge left at "1" on an empty queue): every reader that shows the queue goes through here, so what it shows and what
  * the next change is compared with are the same snapshot — the toolbar badge used to recompute on its own at each toolbar render
  * without moving `last`, and a line that came and went between two announcements left it lit for good.
  */
@@ -87,15 +87,15 @@ function chatChanged() {
 const CHAT_REFRESH_MS = 100;
 
 /**
- * Le MJ force la ligne `id` de « J'attends un joueur » : sa fenêtre se ferme chez lui avec la réponse que le délai aurait donnée. La table
- * le voit (texte au-dessus du token). Rend false si la ligne n'existe plus, ou chez un joueur.
+ * The GM forces line `id` of "I'm waiting for a player": its window closes on their side with the answer the delay would
+ * have given. The table sees it (text above the token). Returns false if the line no longer exists, or on a player.
  * @param {string} id
  */
 export async function forceLine(id) {
   if ( !game.user.isGM ) return false;
   const line = queue().players.find(l => l.id === id);
   if ( !line ) return false;
-  // §423 : une demande de jets — « Lancer pour ceux qui tardent », comme la fenêtre de suivi des jets : chaque jet est fait ici.
+  // §423: a roll request — "Roll for the laggards", like the roll tracking window: each roll is made here.
   if ( line.source === "group" ) {
     log(`group roll forced from the GM queue (${line.label}, ${line.actors.length} waiting)`);
     let rolled = false;
@@ -107,9 +107,9 @@ export async function forceLine(id) {
   const token = tokenOfActor(actor);
   if ( token ) notice(token, { key: "Attente.Avis", data: { name: line.userName } }, "refused", { all: true, action: "forced", outcome: "success" });
   log(`${line.userName}'s window forced by the GM (${line.label || line.kind})`);
-  // §422 : un jet demandé — « Lancer pour lui », comme la fenêtre de suivi des jets : le jet est fait ici, sa fenêtre se ferme chez lui.
+  // §422: a requested roll — "Roll for them", like the roll tracking window: the roll is made here, its window closes on theirs.
   if ( line.groupRoll ) return forceGroupRoll(line.groupRoll, line.actor);
-  // Une question posée par ce client : elle sait se lâcher si la réponse ne revient pas (adapter/player-wait.mjs).
+  // A question asked by this client: it knows how to let go if the answer does not come back (adapter/player-wait.mjs).
   if ( line.waitIds.length ) {
     for ( const waitId of line.waitIds ) await forcePlayerWait(waitId);
     return true;
@@ -121,8 +121,8 @@ export async function forceLine(id) {
 }
 
 /**
- * §422 : le MJ répond depuis sa file à ce que le moteur lui demande — le bouton `action` de la fenêtre de la ligne `id` de `mine`, comme
- * s'il l'avait cliqué dans la fenêtre. Rend false si la ligne n'a pas (ou plus) de fenêtre sur ce poste.
+ * §422: the GM answers from their queue to what the engine asks of them — the `action` button of the window of line `id` of `mine`,
+ * as if they had clicked it in the window. Returns false if the line has no window (any more) on this workstation.
  * @param {string} id
  * @param {string} action
  */
@@ -133,7 +133,8 @@ export function answerLine(id, action) {
 }
 
 /**
- * Le MJ lance à la place d'un auteur parti le jet que doit la ligne `id` de « Bloqué » (ou l'identifiant de son message). MJ actif.
+ * The GM rolls in place of an author who left the roll owed by line `id` of "Blocked" (or the identifier of its message).
+ * Active GM.
  * @param {string} id
  */
 export async function rollBlocked(id) {
@@ -147,7 +148,7 @@ export function registerGmQueue() {
   route(AWAITING_HOOK, changed, { ...always, label: "GM queue: not refreshed (awaiting)" });
   route(PLAYER_WAITS_HOOK, changed, { ...always, label: "GM queue: not refreshed (waits)" });
   route(PROMPTS_HOOK, changed, { ...always, label: "GM queue: not refreshed (windows of this client)" });
-  // Une résolution qui avance peut lever un blocage (le jet est arrivé).
+  // A resolution that moves on may lift a block (the roll arrived).
   // A resolution that moves on may lift a block; a requested roll's card gets its results; a message deleted takes its lines away.
   route("createChatMessage", chatChanged, { ...always, label: "GM queue: not refreshed (new message)" });
   route("updateChatMessage", chatChanged, { ...always, label: "GM queue: not refreshed (message changed)" });
@@ -155,11 +156,11 @@ export function registerGmQueue() {
   route("userConnected", (user, connected) => {
     changed();
     if ( connected || !isExecutor() ) return;
-    // « Les fenêtres du combat ne retiennent pas la partie » : avec un délai, le jet qu'un joueur parti devait est lancé pour lui au bout
-    // de ce délai. Sans délai, c'est le MJ qui décide, depuis sa file (« Bloqué »).
+    // "Combat windows do not hold up the game": with a delay, the roll that a departed player owed is made for them at the end
+    // of that delay. Without a delay, the GM decides, from their queue ("Blocked").
     if ( windowsUnlimited() ) return;
     setTimeout(async () => {
-      if ( game.users.get(user.id)?.active ) return;   // revenu entre-temps : c'est à lui
+      if ( game.users.get(user.id)?.active ) return;   // back in the meantime: it's up to them
       for ( const stuck of blockedRolls().filter(b => b.userId === user.id) ) {
         log(`${user.name} left with a roll due (${stuck.item}): rolled for them`);
         await rollForAbsent(stuck.messageId);

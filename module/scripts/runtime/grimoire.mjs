@@ -1,11 +1,11 @@
 /**
- * §139 : le grimoire du Magicien — rituels et Restauration magique.
- *  - Rituel (`dnd5e.preUseActivity`, sur le client de celui qui lance) : hors combat, un sort qui a l'étiquette Rituel se lance sans
- *    emplacement (`consume.spellSlot: false`, documents/activity/mixin.mjs) quand il ne peut se lancer qu'en rituel (non préparé avec
- *    Savoir rituel, ou plus d'emplacement) ; préparé avec un emplacement, le joueur choisit — l'utilisation est suspendue puis relancée
- *    avec sa réponse, comme les portes (runtime/gates.mjs).
- *  - Restauration magique (`dnd5e.restCompleted`, sur le client qui a lancé le Repos court) : le joueur désigne les emplacements à
- *    récupérer, niveau par niveau, dans la limite de la règle ; une utilisation de l'item est dépensée.
+ * §139: the Wizard's spellbook — rituals and Arcane Recovery.
+ *  - Ritual (`dnd5e.preUseActivity`, on the client of the caster): out of combat, a spell with the Ritual tag is cast without a
+ *    spell slot (`consume.spellSlot: false`, documents/activity/mixin.mjs) when it can only be cast as a ritual (not prepared with
+ *    Ritual Adept, or no slot left); prepared with a slot, the player chooses — the use is suspended then relaunched
+ *    with their answer, like the gates (runtime/gates.mjs).
+ *  - Arcane Recovery (`dnd5e.restCompleted`, on the client that started the Short Rest): the player designates the slots to
+ *    recover, level by level, within the rule's limit; one use of the item is spent.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -22,8 +22,8 @@ import { relaunchUse } from "./relaunch.mjs";
 const tokenOfActor = actor => actor?.getActiveTokens?.(false, true)?.[0] ?? null;
 
 /**
- * En rituel : sans emplacement, au niveau du sort. La fenêtre d'utilisation reste ce que les réglages en font : un rituel qui invoque
- * (Appel de familier) y choisit sa forme.
+ * As a ritual: without a slot, at the spell's level. The use window stays what the settings make of it: a ritual that summons
+ * (Find Familiar) chooses its form there.
  */
 function asRitual(activity, usageConfig) {
   usageConfig.consume = { ...((usageConfig.consume && (typeof usageConfig.consume === "object")) ? usageConfig.consume : {}), spellSlot: false };
@@ -42,7 +42,7 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
     asRitual(activity, usageConfig);
     return true;
   }
-  // Préparé, un emplacement reste : rituel ou emplacement, au joueur ; fermée sans choisir, rien n'est lancé.
+  // Prepared, a slot remains: ritual or slot, up to the player; closed without choosing, nothing is cast.
   (async () => {
     const answer = await askChoice(activity.actor, {
       actor: activity.actor.uuid, item: activity.item.name, untimed: true,
@@ -57,8 +57,8 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
 }
 
 /**
- * C12-j : `regainOnShortRest` — les utilisations de ces items (identifiants) reviennent toutes au Repos court (Source d'inspiration :
- * Inspiration bardique ; Éclat protecteur amélioré : Éclat protecteur), là où la donnée ne les rend qu'au Repos long.
+ * C12-j: `regainOnShortRest` — the uses of these items (identifiers) all come back on a Short Rest (Font of Inspiration:
+ * Bardic Inspiration; Improved Warding Flare: Warding Flare), where the data only restores them on a Long Rest.
  */
 async function shortRestRegain(actor, result, config) {
   if ( (config?.type !== "short") || !actor?.isOwner ) return;
@@ -72,8 +72,8 @@ async function shortRestRegain(actor, result, config) {
 }
 
 /**
- * §402 : `fadesOnLongRest: [ids d'effets]` — à chaque Repos long, le porteur perd un de ces effets de l'item, le premier présent dans
- * l'ordre de la liste (Rappel à la vie, Résurrection : « le malus diminue de 1 à chaque Repos long » — quatre effets de −1).
+ * §402: `fadesOnLongRest: [ids d'effets]` — at each Long Rest, the bearer loses one of these effects of the item, the first
+ * present in the list order (Raise Dead, Resurrection: "the penalty is reduced by 1 each Long Rest" — four effects of −1).
  */
 async function longRestFade(actor, result, config) {
   if ( (config?.type !== "long") || !actor?.isOwner ) return;
@@ -120,7 +120,7 @@ async function onRestCompleted(actor, result, config) {
   if ( !taken.length ) return;
   const updates = Object.fromEntries([...new Set(taken)].map(level => [`system.spells.spell${level}.value`, slots[level].value]));
   await actor.update(updates);
-  // L'utilisation se dépense là où elle se compte : l'activité nommée par la règle (Ressourcement), sinon l'item.
+  // The use is spent where it is counted: the activity named by the rule ("Replenishment"), otherwise the item.
   if ( counter === "activity" ) {
     const spent = Number(item.system.activities.get(rule.activity)?.uses?.spent) || 0;
     await item.update({ [`system.activities.${rule.activity}.uses.spent`]: spent + 1 });
@@ -133,7 +133,7 @@ async function onRestCompleted(actor, result, config) {
 
 export function registerGrimoire() {
   route("dnd5e.preUseActivity", onPreUse, { cancellable: true, label: "Ritual: cast without a spell slot" });
-  // Sur le client qui a lancé le repos (documents/actor/actor.mjs) : propriétaire de l'acteur ; la question va à son joueur.
+  // On the client that started the rest (documents/actor/actor.mjs): owner of the actor; the question goes to its player.
   route("dnd5e.restCompleted", onRestCompleted, { label: "Arcane Recovery not offered" });
   route("dnd5e.restCompleted", shortRestRegain, { label: "uses not regained on a Short Rest" });
   route("dnd5e.restCompleted", longRestFade, { label: "effect not faded on a Long Rest" });

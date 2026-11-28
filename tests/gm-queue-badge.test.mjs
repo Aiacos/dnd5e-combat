@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
  * 2026-11-28 (user's report: the « GM queue » tool showed a red « 1 » while the queue was empty). Two causes, both fixed:
- *  - the badge recomputed the queue at each toolbar render without moving the snapshot the next change is compared with: a line that
- *    came and went between two announcements left the badge lit for good;
- *  - chat messages carry two parts of the queue (requested rolls, rolls due by an absent author), but only a resolution change refreshed
- *    it: a requested roll's last result, or a message deleted, left the badge as it was.
+ *  - the badge recomputed the queue at each toolbar render without moving the snapshot the next change is compared with:
+ *    a line that came and went between two announcements left the badge lit for good;
+ *  - chat messages carry two parts of the queue (requested rolls, rolls due by an absent author), but only a resolution
+ *    change refreshed it: a requested roll's last result, or a message deleted, left the badge as it was.
  */
 const routes = new Map();
 vi.mock("../module/scripts/runtime/router.mjs", () => ({

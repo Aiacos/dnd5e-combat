@@ -1,7 +1,7 @@
 /**
- * §270 : Duel forcé — « le sort prend fin si vous effectuez un jet d'attaque contre une créature autre que la cible […] si un de vos
- * alliés inflige des dégâts à la cible ». Le Paladin défie le Zombi ; il attaque le Bandit : le duel tombe. Défié de nouveau, le Guerrier
- * (allié du Paladin) blesse le Zombi : le duel tombe.
+ * §270: Compelled Duel — "the spell ends if you make an attack roll against a creature other than the target […] if one of your
+ * allies deals damage to the target". The Paladin challenges the Zombie; it attacks the Bandit: the duel ends. Challenged
+ * again, the Fighter (the Paladin's ally) wounds the Zombie: the duel ends.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));

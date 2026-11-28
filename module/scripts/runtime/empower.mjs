@@ -1,11 +1,12 @@
 /**
- * §19.9 : Morsure vampirique (Dhampir, contenu `empower`). Quand la morsure inflige des dégâts perforants à une créature qui
- * n'est ni une Créature artificielle ni un Mort-vivant, et qu'il reste une utilisation à l'item, l'auteur choisit :
- *  - Drain : il regagne autant de PV que les dégâts perforants infligés ;
- *  - Renforcement : un bonus égal à ces dégâts à son prochain jet d'attaque ou test de caractéristique, dans la minute
- *    (l'effet de l'item, posé avec ce montant, retiré au premier jet qui en profite).
- * Même circuit que le drain des monstres (runtime/drain.mjs) : le montant se lit au calcul des dégâts (résistances comprises),
- * la question se pose une fois les PV écrits. La question passe par `askChoice` (le joueur, sinon le MJ) ; sans réponse, rien.
+ * §19.9: Vampiric Bite (Dhampir, `empower` content). When the bite deals piercing damage to a creature that
+ * is neither a Construct nor an Undead, and the item has a use left, the author chooses:
+ *  - Drain: it regains as much HP as the piercing damage dealt;
+ *  - Empowerment: a bonus equal to that damage on its next attack roll or ability check, within the minute
+ *    (the item's effect, placed with that amount, removed at the first roll that benefits from it).
+ * Same circuit as the monsters' drain (runtime/drain.mjs): the amount is read at damage calculation (Resistances included),
+ * the question is asked once the HP are written. The question goes through `askChoice` (the player, otherwise the GM); with no
+ * answer, nothing.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -19,7 +20,7 @@ import { route } from "./router.mjs";
 import { log, loc, notice, say, locEsc } from "./shared.mjs";
 import { spendItemUses } from "../adapter/uses.mjs";
 
-/** Sur le client qui applique les dégâts : le montant de la morsure, gardé pour après l'écriture des PV. */
+/** On the client that applies the damage: the bite's amount, kept for after the HP are written. */
 function onCalculateDamage(actor, damages, options) {
   const item = damageSourceItem(options);
   const rule = empowerOf(item);
@@ -57,7 +58,7 @@ async function empower(victim, { n, item: itemUuid }) {
     const data = boostData(item, rule, n);
     if ( !data ) { log(`${item.name}: empowerment effect ${rule.effect} not found`); return; }
     await spendItemUses(item);
-    // Un seul renforcement à la fois : le nouveau remplace celui qui n'a pas encore servi.
+    // Only one Empowerment at a time: the new one replaces the one that has not yet been used.
     const old = boostsOf(biter).filter(e => e.getFlag(MODULE_ID, "boost")?.item === item.uuid).map(e => e.id);
     if ( old.length ) await biter.deleteEmbeddedDocuments("ActiveEffect", old);
     await biter.createEmbeddedDocuments("ActiveEffect", [data]);
@@ -71,11 +72,11 @@ async function empower(victim, { n, item: itemUuid }) {
 function onApplyDamage(actor, amount, options) {
   const e = options?.[MODULE_ID]?.empower;
   if ( !e ) return;
-  // Sans attente : la résolution de l'attaque suit son cours pendant que l'auteur choisit.
+  // Without waiting: the attack's resolution carries on while the author chooses.
   enqueue(`empower:${e.item}`, () => empower(actor, e));
 }
 
-/** Le renforcement sert au prochain jet d'attaque ou test de caractéristique : retiré sitôt ce jet lancé, sur ce client. */
+/** Empowerment applies to the next attack roll or ability check: removed as soon as that roll is made, on this client. */
 const consuming = new Set();
 async function consumeBoosts(actor, kind) {
   if ( !actor?.isOwner ) return;
@@ -90,8 +91,8 @@ async function consumeBoosts(actor, kind) {
 export function registerEmpower() {
   route("dnd5e.calculateDamage", onCalculateDamage, { label: "bite: amount not read" });
   route("dnd5e.applyDamage", onApplyDamage, { label: "bite: empowerment not offered" });
-  // dnd5e 6.0.3 : documents/activity/attack.mjs:212 (`subject` = l'activité) ; documents/actor/actor.mjs:1448 (compétence,
-  // outil : `dnd5e.roll${name}`) et 1657 (test de caractéristique) — `subject` = l'acteur.
+  // dnd5e 6.0.3: documents/activity/attack.mjs:212 (`subject` = the activity); documents/actor/actor.mjs:1448 (skill,
+  // tool: `dnd5e.roll${name}`) and 1657 (ability check) — `subject` = the actor.
   route("dnd5e.rollAttack", (rolls, { subject }={}) => consumeBoosts(subject?.actor, "attack"), { label: "empowerment not consumed" });
   for ( const hook of ["dnd5e.rollAbilityCheck", "dnd5e.rollSkill", "dnd5e.rollToolCheck"] ) {
     route(hook, (rolls, { subject }={}) => consumeBoosts(subject, "check"), { label: "empowerment not consumed" });

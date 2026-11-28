@@ -1,6 +1,6 @@
 /**
- * L'application d'une résolution sur un token : effets de l'activité (repris du compendium s'ils manquent), poussées, états,
- * marques, retrait d'effets. Extrait d'adapter/saves.mjs.
+ * Applying a resolution to a token: the activity's effects (taken from the compendium if missing), pushes, conditions,
+ * marks, effect removal. Extracted from adapter/saves.mjs.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -12,12 +12,13 @@ import { conditionImmunitiesAgainst } from "./facts.mjs";
 import { activityFor } from "./saves.mjs";
 
 /**
- * §71 : l'effet qu'un profil de l'activité cite, absent de l'item du monde — la Dague des ombres d'un Familier de vampire importé le
- * 2026-10-04 l'avait perdu (l'activité gardait le profil `dsK5sPtkUMySmyvw`, l'item n'avait plus d'effet). On le prend sur la fiche
- * d'origine (compendium) : même acteur (`_stats.compendiumSource`, sinon un compendium d'acteurs qui a son id), même item, même effet.
- * L'effet du compendium s'applique tel quel (dnd5e note sa source, effect-application.mjs:237). Rien d'écrit sur la fiche.
- * §154 : d'abord la source de l'item lui-même — l'Image miroir de Kaalisti dans `dnd-6` (sort du Manuel, copié sur une fiche de
- * personnage) citait trois effets qu'elle n'avait plus ; le sort du compendium les a, sous les mêmes ids.
+ * §71: the effect that an activity profile cites, absent from the world item — the "Shadow Dagger" of a "Vampire Familiar"
+ * imported on 2026-10-04 had lost it (the activity kept the profile `dsK5sPtkUMySmyvw`, the item no longer had an effect).
+ * We take it from the sheet of origin (compendium): same actor (`_stats.compendiumSource`, otherwise an actor compendium
+ * that has its id), same item, same effect.
+ * The compendium effect applies as is (dnd5e notes its source, effect-application.mjs:237). Nothing written to the sheet.
+ * §154: first the source of the item itself — Kaalisti's Mirror Image in `dnd-6` (spell from the Player's Handbook, copied onto a
+ * character sheet) cited three effects it no longer had; the compendium spell has them, under the same ids.
  */
 async function lostEffectOf(activity, effectId) {
   const item = activity?.item;
@@ -41,8 +42,9 @@ async function lostEffectOf(activity, effectId) {
     const effect = source?.items?.get(item.id)?.effects?.get(effectId);
     if ( effect ) { console.log(`${MODULE_ID} | "${effect.name}" taken from ${pack.collection}: the world item lost it`); return effect; }
   }
-  // Relevé des trous (2026-10-22) : ni source ni fiche d'origine retrouvable — la Rage du Barbare pré-tiré du Manuel, copiée sous un autre
-  // id, cite l'effet `G5XZTi4zYTFiHVll` sans le porter. Un item de compendium de même identifiant qui a cet effet sous cet id.
+  // Survey of the gaps (2026-10-22): neither source nor sheet of origin found — the pre-generated Barbarian's Rage of the
+  // Player's Handbook, copied under another id, cites the effect `G5XZTi4zYTFiHVll` without carrying it. A compendium item
+  // with the same identifier that has this effect under this id.
   const identifier = item.system?.identifier;
   for ( const pack of identifier ? game.packs.filter(p => p.documentName === "Item") : [] ) {
     const index = await pack.getIndex({ fields: ["system.identifier"] }).catch(() => null);
@@ -63,7 +65,7 @@ export async function applyEffectsToToken(usageMessage, tokenUuid, refs) {
   const applied = [];
   for ( const ref of refs ) {
     const activity = activityFor(usageMessage, ref.activity);
-    // §37 : un effet de la réserve (`choice.pool`) n'est pas un profil de l'activité.
+    // §37: a pool effect (`choice.pool`) is not an activity profile.
     const profile = [...(activity?.effects ?? []), ...poolEffectsOf(activity)].find(e => effectKey(e) === ref.id);
     const own = await profile?.getEffect();
     const effect = own ?? (profile ? await lostEffectOf(activity, ref.id) : null);
@@ -71,11 +73,12 @@ export async function applyEffectsToToken(usageMessage, tokenUuid, refs) {
       console.log(`${MODULE_ID} | effect ${ref.id} not found on ${activity?.item?.name ?? ref.activity}, nor on its source sheet`);
       continue;
     }
-    // §16.8 : immunisée contre l'un de ses états, la créature ne reçoit pas l'effet (Motif hypnotique sans Charmé).
+    // §16.8: immune to one of its conditions, the creature does not receive the effect (Hypnotic Pattern without Charmed).
     if ( blockedFor(effect, actor, activity?.actor ?? usageMessage.getAssociatedActor?.() ?? null).length ) continue;
     const result = await tray._applyEffectToActor(effect, actor);
-    // Relevé des trous : un effet repris d'un compendium a pour origine l'item du compendium — le moteur ne le rattacherait plus à l'item
-    // de la fiche (`originItemOf` : Concentration fanatique « en Rage », auras, fins d'effet). L'origine redevient l'item du monde.
+    // Survey of the gaps: an effect taken from a compendium has the compendium item as its origin — the engine would no
+    // longer attach it to the sheet's item (`originItemOf`: Fanatical Focus "in Rage", auras, effect endings).
+    // The origin becomes the world item again.
     if ( result?.uuid && !own && activity?.item && (result.origin !== activity.item.uuid) ) await result.update({ origin: activity.item.uuid }).catch(() => null);
     if ( result?.uuid ) applied.push(result.uuid);
   }
@@ -83,8 +86,8 @@ export async function applyEffectsToToken(usageMessage, tokenUuid, refs) {
 }
 
 /**
- * Sépare des effets du plan ceux qui sont des poussées (« repoussé » de la Bousculade,
- * content/actions.mjs) : ils ne se posent pas, le moteur déplace la cible.
+ * Separates from the plan's effects those that are pushes (the Shove's "pushed away",
+ * content/actions.mjs): they are not placed, the engine moves the target.
  * @returns {Promise<{effects: Array<{id: string, activity: string}>, pushes: object[]}>}
  */
 export async function splitPushes(usageMessage, refs) {
@@ -92,7 +95,7 @@ export async function splitPushes(usageMessage, refs) {
   const pushes = [];
   for ( const ref of refs ) {
     const activity = activityFor(usageMessage, ref.activity);
-    // §37 : un effet de la réserve (`choice.pool`) n'est pas un profil de l'activité.
+    // §37: a pool effect (`choice.pool`) is not an activity profile.
     const profile = [...(activity?.effects ?? []), ...poolEffectsOf(activity)].find(e => effectKey(e) === ref.id);
     const push = pushOf(await profile?.getEffect());
     if ( push ) pushes.push(push);
@@ -102,10 +105,10 @@ export async function splitPushes(usageMessage, refs) {
 }
 
 /**
- * Pose un état natif sur la cible (SPEC §16, étape `status` : À terre de Tempête de neige, Agrippé d'une
- * morsure…), avec l'activité pour origine — `hasEffectFrom` le retrouve, et l'annulation le retire comme
- * un effet de l'activité. `Actor#toggleStatusEffect` du cœur (client/documents/actor.mjs:547) ; un état
- * déjà porté n'est pas doublé. Rend l'UUID de l'effet créé, ou null.
+ * Places a native condition on the target (SPEC §16, `status` step: Prone from Sleet Storm, Grappled from a
+ * bite…), with the activity as origin — `hasEffectFrom` finds it again, and cancellation removes it like
+ * an activity effect. The core's `Actor#toggleStatusEffect` (client/documents/actor.mjs:547); a condition
+ * already carried is not doubled. Returns the UUID of the created effect, or null.
  */
 export async function applyStatusToToken(usageMessage, tokenUuid, status, { escapeDc=null }={}) {
   const tokenDoc = await fromUuid(tokenUuid);
@@ -114,24 +117,24 @@ export async function applyStatusToToken(usageMessage, tokenUuid, status, { esca
   if ( !actor || !CONFIG.statusEffects.some(s => s.id === status) ) return null;
   if ( actor.statuses.has(status) ) return null;
   const activity = usageMessage.getAssociatedActivity?.();
-  // §16.8 : immunisée, rien n'est posé ; §268 : y compris face à cette source (Protection contre le Mal et le Bien).
+  // §16.8: immune, nothing is placed; §268: including against this source (Protection from Evil and Good).
   if ( conditionImmunitiesAgainst(actor, activity?.actor ?? null).includes(status) ) return null;
   const effect = await actor.toggleStatusEffect(status, { active: true });
   if ( !effect?.uuid ) return null;
-  // Un état est un effet `condition`, dont le modèle de dnd5e retire `system.origin` (data/active-effect/
-  // condition.mjs:12) : l'origine va dans le champ `origin` du cœur, que `originItemOf` lit en repli.
-  // §157 : le tour de la pose noté, comme pour un effet d'item (runtime/cantrips.mjs) — « jusqu'à la fin de votre prochain tour ».
+  // A condition is a `condition` effect, whose dnd5e model removes `system.origin` (data/active-effect/
+  // condition.mjs:12): the origin goes in the core's `origin` field, which `originItemOf` reads as a fallback.
+  // §157: the turn of placement is noted, as for an item effect (runtime/cantrips.mjs) — "until the end of your next turn".
   if ( activity ) await effect.update({ origin: activity.uuid, ...(game.combat?.started ? { [`flags.${MODULE_ID}.placedOn`]: currentTurnKey() } : {}),
-    // §504 (B24) : le DD d'évasion que la règle déclare (« DD 11 pour s'échapper »), lu par `escapeDcOf`.
+    // §504 (B24): the escape DC that the rule declares ("DC 11 to escape"), read by `escapeDcOf`.
     ...(escapeDc ? { [`flags.${MODULE_ID}.escapeDc`]: escapeDc } : {}),
-    // La scène du token visé : un acteur lié a des tokens sur plusieurs scènes (adapter/grapple.mjs `grappleSceneOf`).
+    // The scene of the targeted token: a linked actor has tokens on several scenes (adapter/grapple.mjs `grappleSceneOf`).
     ...(tokenScene ? { [`flags.${MODULE_ID}.scene`]: tokenScene } : {}) });
   return effect.uuid;
 }
 
 /**
- * §54 : une marque (étape d'issue `mark`) — un effet nommé, à l'image de l'item, rattaché à l'activité et au message
- * d'utilisation (l'item peut être détruit : une fiole d'huile lancée), d'une durée en secondes. Une marque déjà là est remplacée.
+ * §54: a mark (`mark` outcome step) — a named effect, with the item's image, attached to the activity and to the use
+ * message (the item may be destroyed: a thrown flask of oil), with a duration in seconds. A mark already there is replaced.
  */
 export async function applyMarkToToken(usageMessage, tokenUuid, step, label) {
   const actor = (await fromUuid(tokenUuid))?.actor;
@@ -148,7 +151,7 @@ export async function applyMarkToToken(usageMessage, tokenUuid, step, label) {
   return effect?.uuid ?? null;
 }
 
-/** Retire des effets posés par une résolution (annulation). */
+/** Removes the effects placed by a resolution (cancellation). */
 export async function removeEffects(uuids) {
   for ( const uuid of uuids ) await (await fromUuid(uuid))?.delete();
 }

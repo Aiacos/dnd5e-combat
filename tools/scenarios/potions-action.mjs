@@ -1,12 +1,12 @@
 /**
- * Issue #31 : règle maison des potions de soins (réglage `potionHealing`). Potion de guérison du Manuel des joueurs (2d4 + 2, action Bonus)
- * et du Guide du maître (portée « personnelle »), prêtées au Guerrier.
- *  1. Réglage actif, en combat, au tour du Guerrier : bue par une action → 10 PV, l'action dépensée, l'action Bonus libre.
- *  2. Même tour : bue par l'action Bonus → 4 à 10 PV, l'action Bonus dépensée.
- *  3. Hors combat, sans choix : soin maximal d'office (10 PV).
- *  4. Hors combat, « Faire boire » au Clerc la potion du Guide (« personnelle ») : le Clerc regagne 10 PV, le Guerrier rien.
- *  5. Réglage coupé, hors combat : la règle 2024 (4 à 10 PV, jamais forcément 10).
- * Remet le réglage, les PV, la position du Clerc (filet de sécurité) ; retire les potions prêtées.
+ * Issue #31: house rule for healing potions (setting `potionHealing`). Potion of Healing from the Player's Handbook (2d4 + 2,
+ * Bonus Action) and from the Dungeon Master's Guide ("self" range), lent to the Fighter.
+ *  1. Setting active, in combat, on the Fighter's turn: drunk as an action → 10 HP, the action spent, the Bonus Action free.
+ *  2. Same turn: drunk as a Bonus Action → 4 to 10 HP, the Bonus Action spent.
+ *  3. Out of combat, without a choice: maximum healing automatically (10 HP).
+ *  4. Out of combat, "Give a drink" to the Cleric the Guide's potion ("self"): the Cleric regains 10 HP, the Fighter nothing.
+ *  5. Setting off, out of combat: the 2024 rule (4 to 10 HP, not necessarily 10).
+ * Restores the setting, the HP, the Cleric's position (safety net); removes the lent potions.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -46,7 +46,7 @@ export default {
       potions.add(r.itemId);
       return r.itemId;
     };
-    /** Boire (ou faire boire) : le choix passé comme la Combat UI le passe ; le jet de soin par la carte (use-activity coupe l'enchaînement). */
+    /** Drinking (or giving a drink): the choice passed as the Combat UI passes it; healing roll by the card (use-activity cuts chaining). */
     const drink = async (itemId, targets, ours={}) => {
       const used = await ctx.use({ tokenId: guerrier.id, itemId, activityType: "heal", targetTokenIds: targets.map(t => t.id), consume: true,
         usageConfig: { "dnd5e-combat": ours } });
@@ -58,7 +58,7 @@ export default {
     };
     const rolled = d => (d >= 4) && (d <= 10);
 
-    // 1-2. En combat, au tour du Guerrier.
+    // 1-2. In combat, on the Fighter's turn.
     await ctx.setHp(guerrier, 1);
     await ctx.startCombat([guerrier, clerc]);
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
@@ -97,13 +97,13 @@ export default {
       ctx.expect((hp1 - hp0) === 10, `hors combat : ${hp1 - hp0} PV (attendu 10, maximum d'office)`);
     }
 
-    // 4. Faire boire au Clerc la potion du Guide (« personnelle »).
+    // 4. Give the Cleric the Guide's potion ("self").
     if ( packs.includes("dnd-dungeon-masters-guide.equipment") ) {
       const spot = await ctx.position(guerrier);
       const grid = await ctx.gridSize();
       await ctx.call("move-token", { tokenId: clerc.id, x: spot.x + grid, y: spot.y, elevation: spot.elevation ?? 0 });
-      // Un Clerc de niveau 1 n'a pas toujours 10 PV de marge (vu au banc le 2026-11-21 : +9, plafonné) : des PV maximum
-      // temporaires le temps de l'étape, pour qu'un soin lancé (4 à 10) et le maximum (10) se distinguent.
+      // A level 1 Cleric does not always have 10 HP of room (seen on the test bench on 2026-11-21: +9, capped): maximum
+      // Temporary Hit Points for the step, so that a rolled heal (4 to 10) and the maximum (10) can be told apart.
       const cMax = (await ctx.engine("stats", { tokenId: clerc.id }).catch(() => null))?.hp ?? {};
       if ( Number.isFinite(cMax.max) && (cMax.max < 11) ) {
         const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: clerc.id });
@@ -121,7 +121,7 @@ export default {
       ctx.expect(((c1 - c0) === 10) && (g1 === g0), `faire boire au Clerc : lui +${c1 - c0} (attendu 10), le Guerrier ${g1 - g0}`);
     } else ctx.log("Guide du maître absent : partie 4 non applicable");
 
-    // 5. Réglage coupé : la règle 2024.
+    // 5. Setting off: the 2024 rule.
     await ctx.engine("setting", { key: "potionHealing", value: false });
     let tens = 0;
     for ( let i = 0; i < 3; i++ ) {

@@ -1,13 +1,13 @@
 /**
- * §129 : dons d'origine du Manuel des joueurs, au jet de dégâts (sur le client de l'auteur, `dnd5e.preRollDamageV2`).
+ * §129: origin feats from the Player's Handbook, at the damage roll (on the author's client, `dnd5e.preRollDamageV2`).
  *
- *  - Sauvagerie martiale (`savageAttacker`) : une fois par tour, au jet de dégâts d'une arme (pas une attaque à mains nues), ses dés
- *    sont lancés deux fois et le meilleur gardé (core/feats.mjs, `twiceKeepHighest`). Le choix « l'un ou l'autre » est toujours le
- *    meilleur. §516 : le coup se choisit (case de la fenêtre « au toucher », réglage `savageAttackerMode`). Hors combat, chaque coup.
- *  - Guérisseur (`healingRerolls`) : aux dés de soins d'un sort, un 1 relancé une fois (`rerollOnesOnce`). Les Soins de combat du don
- *    portent déjà la relance dans leurs données.
- * Ailleurs : Bagarreur de tavernes (faveur `hitRider`, adapter/smite.mjs), Chanceux (`rollBonus.luck`, adapter/inspiration.mjs ; sa
- * fenêtre avant une attaque, content/feats.mjs), Vigilant (`initiativeSwap`, runtime/roll-bonus.mjs).
+ *  - Savage Attacker (`savageAttacker`): once per turn, on a weapon's damage roll (not an unarmed strike), its dice
+ *    are rolled twice and the better kept (core/feats.mjs, `twiceKeepHighest`). The "either" choice is always the
+ *    better. §516: the hit is chosen (checkbox of the "on hit" window, setting `savageAttackerMode`). Out of combat, every hit.
+ *  - Healer (`healingRerolls`): on a spell's healing dice, a 1 is rerolled once (`rerollOnesOnce`). The feat's Battle Medic
+ *    already carries the reroll in its data.
+ * Elsewhere: Tavern Brawler (boon `hitRider`, adapter/smite.mjs), Lucky (`rollBonus.luck`, adapter/inspiration.mjs; its
+ * window before an attack, content/feats.mjs), Alert (`initiativeSwap`, runtime/roll-bonus.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -40,7 +40,7 @@ import { usesLeftFor } from "../adapter/inspiration.mjs";
 
 const hasRule = (actor, key) => Array.from(actor?.items ?? []).some(i => contentOf(i).entry?.[key] === true);
 
-/** Le tour de combat où se bat l'acteur (« combat.round.tour »), ou null hors combat. */
+/** The combat turn in which the actor fights ("combat.round.turn"), or null outside combat. */
 function turnOf(actor) {
   const combat = combatantFor(actor)?.parent ?? null;
   return combat?.started ? `${combat.id}:${combat.round}:${combat.turn}` : null;
@@ -50,7 +50,7 @@ function onPreRollDamage(config, dialog, message) {
   const activity = config.subject;
   const actor = activity?.actor;
   if ( !actor || !config.rolls?.length ) return true;
-  // §283 : des dégâts que la donnée laisse sans type (Sphère glacée d'Otiluke) prennent celui que le contenu de l'item déclare.
+  // §283: damage that the data leaves without a type (Otiluke's Freezing Sphere) takes the one the item's content declares.
   const untyped = activity.item ? contentOf(activity.item).entry?.untypedDamage : null;
   if ( untyped ) {
     for ( const roll of config.rolls ) {
@@ -61,21 +61,22 @@ function onPreRollDamage(config, dialog, message) {
       log(`${activity.item.name}: untyped damage rolled as ${untyped}`);
     }
   }
-  // Relevé des trous : Inspiration de combat, Attaque — le dé déjà lancé (adapter/messages.mjs), en part fixe du type de l'attaque.
+  // Survey of gaps: Combat Inspiration, Attack — the die already rolled (adapter/messages.mjs),
+  // as a fixed part of the attack's type.
   const inspired = Number(config[MODULE_ID]?.combatInspiration) || 0;
   if ( inspired ) {
     const base = config.rolls.find(r => r.base) ?? config.rolls[0];
     config.rolls.push({ data: base.data ?? {}, parts: [String(inspired)], options: { type: base.options?.type, types: base.options?.types ?? [], properties: [] } });
     log(`Combat Inspiration: +${inspired} damage`);
   }
-  // Guérisseur : les dés de soins d'un sort.
+  // Healer: a spell's healing dice.
   if ( (activity.type === "heal") && (activity.item?.type === "spell") && hasRule(actor, "healingRerolls") ) {
     for ( const roll of config.rolls ) roll.parts = (roll.parts ?? []).map(rerollOnesOnce);
     log(`Healer: 1s rerolled once on ${activity.item.name}'s healing dice`);
   }
-  // Sauvagerie martiale : la part de l'arme d'un coup d'arme, une fois par tour. §516 : refusée dans la fenêtre « au toucher »
-  // (`savageAttacker: false`, adapter/savage.mjs), elle reste pour un autre coup du tour ; sans réponse (jet du bouton de la carte,
-  // mode « auto »), elle se met d'office au premier coup du tour.
+  // Savage Attacker: the weapon's part of a weapon hit, once per turn. §516: declined in the "on hit" window
+  // (`savageAttacker: false`, adapter/savage.mjs), it stays for another hit of the turn; with no answer (card button roll,
+  // "auto" mode), it is applied automatically on the first hit of the turn.
   const savage = config[MODULE_ID]?.savageAttacker;
   if ( (savage === false) && savageApplies(activity) ) log(`Savage Attacker: kept for another hit (${actor.name})`);
   else if ( savageApplies(activity) && !savageSpent(actor) ) {
@@ -86,7 +87,7 @@ function onPreRollDamage(config, dialog, message) {
     if ( turn ) actor.setFlag(MODULE_ID, "savageAttacker", turn).catch(() => null);
     log(`Savage Attacker: ${base.parts[0]}`);
   }
-  // §134 : Expert élémentaire — « quand vous lancez les dégâts d'un sort de ce type, un 1 sur un dé compte comme un 2 ».
+  // §134: Elemental Adept — "when you roll damage for a spell of that type, a 1 on a die counts as a 2".
   if ( activity.item?.type === "spell" ) {
     const types = elementalTypes(actor);
     for ( const roll of types.length ? config.rolls : [] ) {
@@ -96,9 +97,9 @@ function onPreRollDamage(config, dialog, message) {
       log(`Elemental Adept: ${roll.parts.join(" + ")}`);
     }
   }
-  // §135 : Faveur d'attaque irrésistible, Frappe écrasante — « quand vous obtenez un 20 au d20 d'un jet d'attaque, des dégâts en plus
-  // égaux à la valeur de la caractéristique augmentée par la faveur, du type de l'attaque ». Le moteur lit le critique (un seuil abaissé
-  // compte aussi).
+  // §135: Boon of Irresistible Offense, Overwhelming Strike — "when you roll a 20 on the d20 of an attack roll, extra damage
+  // equal to the value of the ability the boon increased, of the attack's type". The engine reads the critical (a lowered
+  // threshold counts too).
   const strike = (activity.type === "attack") ? ruleItem(actor, "overwhelmingStrike") : null;
   if ( strike && (config.isCritical || config.rolls.some(r => r.options?.isCritical)) ) {
     const ability = boostedAbility(strike);
@@ -110,7 +111,7 @@ function onPreRollDamage(config, dialog, message) {
       log(`${strike.name}: +${score} ${type ?? ""} (critical hit)`);
     }
   }
-  // §132 : Perforeur — une attaque qui inflige des dégâts perforants.
+  // §132: Piercer — an attack that deals piercing damage.
   if ( (activity.type === "attack") && attackDamageTypes(activity).includes("piercing") && hasRule(actor, "piercer") ) {
     for ( const roll of config.rolls ) {
       roll.options ??= {};
@@ -134,12 +135,12 @@ function onPreRollDamage(config, dialog, message) {
 
 const seen = new Set();
 
-/** Après une attaque tranchée (MJ actif) : chaque cible touchée d'un coup critique du bon type reçoit la marque des dons de l'auteur. */
+/** After a resolved attack (active GM): each target hit by a Critical Hit of the right type receives the mark of the author's feats. */
 /**
- * Relevé des trous (2026-10-22) : Athlète remarquable — « immédiatement après avoir porté un coup critique, vous pouvez vous déplacer de
- * la moitié de votre Vitesse sans provoquer d'attaque d'opportunité ». Au budget du tour, comme le Décalage tactique (§21) : la moitié de
- * la Vitesse en plus, et plus d'attaque d'opportunité ce tour-là (simplification : le reste du tour, pas ce seul déplacement). À son
- * propre tour seulement (un critique d'attaque d'opportunité ne déplace personne).
+ * Survey of gaps (2026-10-22): Remarkable Athlete — "immediately after you score a Critical Hit, you can move up to half
+ * your Speed without provoking Opportunity Attacks". Into the turn's budget, like Tactical Shift (§21): half the
+ * Speed more, and no more Opportunity Attack that turn (simplification: the rest of the turn, not just this movement). On its
+ * own turn only (an Opportunity Attack critical moves nobody).
  */
 async function critMove(resolution, source) {
   if ( !(resolution.targets ?? []).some(t => t.hit && t.critical) ) return;
@@ -156,7 +157,7 @@ async function critMove(resolution, source) {
 async function onResolution(resolution) {
   if ( (resolution?.step !== STEPS.DONE) || !resolution.plan?.attack || seen.has(resolution.id) ) return;
   seen.add(resolution.id);
-  // `resolution.source` : l'uuid de l'ACTEUR auteur (runtime/felled.mjs le compare à `token.actor.uuid`).
+  // `resolution.source`: the uuid of the author ACTOR (runtime/felled.mjs compares it to `token.actor.uuid`).
   const from = fromUuidSync(resolution.source ?? "", { strict: false });
   const source = (from?.documentName === "Actor") ? from : (from?.actor ?? null);
   const activity = fromUuidSync(resolution.activity ?? "", { strict: false });
@@ -184,15 +185,15 @@ async function onResolution(resolution) {
 }
 
 /* -------------------------------------------- */
-/*  §135 : faveurs épiques                         */
+/*  §135: epic boons                               */
 /* -------------------------------------------- */
 
 const ruleItem = (actor, key) => Array.from(actor?.items ?? []).find(i => contentOf(i).entry?.[key] === true) ?? null;
 
 /**
- * Faveur de prouesse martiale, Visée sans pareille — « quand vous ratez un jet d'attaque, vous pouvez toucher à la place ; vous ne
- * pouvez plus le faire avant le début de votre prochain tour ». Au joueur ; en combat, une fois jusqu'à son prochain tour (drapeau
- * retiré au début de son tour). true : l'attaque touche.
+ * Boon of Combat Prowess, Peerless Aim — "when you miss with an attack roll, you can hit instead; you can't
+ * do so again until the start of your next turn". For the player; in combat, once until their next turn (flag
+ * removed at the start of their turn). true: the attack hits.
  */
 export async function offerPeerlessAim(actor, { total, needed }) {
   const item = ruleItem(actor, "peerlessAim");
@@ -208,13 +209,13 @@ export async function offerPeerlessAim(actor, { total, needed }) {
   return true;
 }
 
-/** Faveur de vigueur — le modificateur de Constitution en plus d'un soin, une fois par tour (en combat). 0 sinon. MJ actif. */
+/** Boon of Fortitude — the Constitution modifier added to a heal, once per turn (in combat). 0 otherwise. Active GM. */
 export async function fortifiedExtra(actor) {
   const item = ruleItem(actor, "fortifiedHealing");
   const con = Number(actor?.system?.abilities?.con?.mod) || 0;
   if ( !item || !(con > 0) ) return 0;
-  // §289 : « vous ne pouvez plus y recourir jusqu'au début de votre tour suivant » — en combat, le drapeau tombe au début du tour du
-  // porteur (comme Visée sans pareille), pas à chaque tour d'un autre combattant. Hors combat : pas de tours, pas de limite.
+  // §289: "you can't do so again until the start of your next turn" — in combat, the flag drops at the start of the
+  // bearer's turn (like Peerless Aim), not at each turn of another combatant. Out of combat: no turns, no limit.
   const inCombat = !!combatantFor(actor)?.parent?.started;
   if ( inCombat && actor.getFlag(MODULE_ID, "fortifiedHealing") ) return 0;
   if ( inCombat ) await actor.setFlag(MODULE_ID, "fortifiedHealing", true);
@@ -222,7 +223,7 @@ export async function fortifiedExtra(actor) {
   return con;
 }
 
-/** Faveur d'attaque irrésistible, Frappe écrasante : la caractéristique que la faveur a augmentée (son étape « Augmentation »). */
+/** Boon of Irresistible Offense, Overwhelming Strike: the ability the boon increased (its "Increase" step). */
 function boostedAbility(item) {
   for ( const adv of item.system.advancement ?? [] ) {
     const assigned = Object.entries(adv.value?.assignments ?? {}).find(([, n]) => n > 0);
@@ -232,8 +233,8 @@ function boostedAbility(item) {
 }
 
 /**
- * Faveur du rappel des sorts, Incantation gratuite — « quand vous lancez un sort avec un emplacement de niveau 1 à 4, lancez 1d4 ; si
- * le résultat égale le niveau de l'emplacement, il n'est pas dépensé ». Sur le client du lanceur, après l'utilisation.
+ * Boon of Spell Recall, Free Casting — "when you cast a spell using a level 1 to 4 spell slot, roll 1d4; if
+ * the roll equals the slot's level, it is not expended". On the caster's client, after use.
  */
 async function spellRecall(activity, usageConfig) {
   const actor = activity?.actor;
@@ -251,21 +252,21 @@ async function spellRecall(activity, usageConfig) {
 }
 
 /* -------------------------------------------- */
-/*  §134 : résistances ignorées, Expert élémentaire */
+/*  §134: ignored Resistances, Elemental Adept */
 /* -------------------------------------------- */
 
-/** Les types que l'Expert élémentaire peut choisir. */
+/** The types that Elemental Adept can choose. */
 export const ELEMENTAL_TYPES = Object.freeze(["acid", "cold", "fire", "lightning", "thunder"]);
 
-/** Les types choisis par les Experts élémentaires de l'acteur (le don se reprend, un type à chaque fois). */
+/** The types chosen by the actor's Elemental Adepts (the feat can be taken again, one type each time). */
 function elementalTypes(actor) {
   return Array.from(actor?.items ?? []).filter(i => contentOf(i).entry?.elementalAdept === true)
     .map(i => i.getFlag(MODULE_ID, "elementalType")).filter(t => ELEMENTAL_TYPES.includes(t));
 }
 
 /**
- * À l'application des dégâts (MJ actif) : les types dont la résistance est ignorée pour cette activité — Empoisonneur (`ignoresResistance`,
- * « un jet de dégâts qui inflige des dégâts de poison ignore la résistance au poison »), Expert élémentaire (le type choisi, pour un sort).
+ * On damage application (active GM): the types whose Resistance is ignored for this activity — Poisoner (`ignoresResistance`,
+ * "a damage roll that deals poison damage ignores Resistance to poison"), Elemental Adept (the chosen type, for a spell).
  */
 export function resistanceIgnoredBy(actor, activity) {
   if ( !actor ) return [];
@@ -280,9 +281,9 @@ export function resistanceIgnoredBy(actor, activity) {
 }
 
 /**
- * §447 : la règle `ignoresResistance` de cet item vaut-elle pour cette activité ? `from` : une de ses activités, ou une copie de sort
- * qu'une d'elles a fait lancer (`flags.dnd5e.cachedFor` = « …Item.<item>.Activity.<activité> », activity/cast.mjs) — Toucher de la mort,
- * « ce sort seulement » ; `if` : la condition, l'auteur en `source`.
+ * §447: does this item's `ignoresResistance` rule apply to this activity? `from`: one of its activities, or a spell copy
+ * that one of them caused to be cast (`flags.dnd5e.cachedFor` = "…Item.<item>.Activity.<activity>", activity/cast.mjs) —
+ * "Touch of Death", "this spell only"; `if`: the condition, the author as `source`.
  */
 function ignoresFor(rule, item, actor, activity) {
   if ( rule.from && !resistanceRuleCovers(rule.from, { itemId: item.id, activityItemId: activity?.item?.id, activityId: activity?.id,
@@ -291,9 +292,9 @@ function ignoresFor(rule, item, actor, activity) {
 }
 
 /**
- * Expert élémentaire : la question du type, au joueur (sinon au MJ), notée sur l'item. MJ actif, à l'arrivée du don et au chargement.
- * §137 : sans délai — un choix fait une fois ; fermée sans réponse, rien n'est noté et la question revient au prochain chargement
- * (d'ici là, le don ne s'applique à aucun type).
+ * Elemental Adept: the type question, put to the player (else the GM), noted on the item. Active GM, when the feat
+ * arrives and on load. §137: without delay — a choice made once; closed with no answer, nothing is noted and the question
+ * comes back at the next load (until then, the feat applies to no type).
  */
 async function askElementalType(item) {
   if ( !item?.actor || (contentOf(item).entry?.elementalAdept !== true) || ELEMENTAL_TYPES.includes(item.getFlag(MODULE_ID, "elementalType")) ) return;
@@ -308,15 +309,15 @@ async function askElementalType(item) {
 }
 
 /* -------------------------------------------- */
-/*  §133 : réactions de don                       */
+/*  §133: feat reactions                          */
 /* -------------------------------------------- */
 
 const shieldOf = actor => (actor?.items ?? []).find(i => (i.type === "equipment") && (i.system.type?.value === "shield") && i.system.equipped) ?? null;
 
 /**
- * Maître des boucliers, Interposer le bouclier — « soumis à un effet qui permet une sauvegarde de Dextérité pour ne subir que la moitié
- * des dégâts, vous pouvez prendre une Réaction pour n'en subir aucun si vous réussissez, en tenant un bouclier ». Proposé après la
- * réussite (MJ actif, au joueur de la créature) ; la Réaction est dépensée. true : aucun dégât.
+ * Shield Master, Interpose Shield — "subjected to an effect that allows a Dexterity saving throw to take only half
+ * damage, you can use a Reaction to take no damage if you succeed on the save, while holding a shield". Offered after
+ * the success (active GM, to the creature's player); the Reaction is spent. true: no damage.
  */
 export async function offerInterpose(actor) {
   const item = (actor?.items ?? []).find(i => contentOf(i).entry?.interposeShield === true);
@@ -334,22 +335,23 @@ export async function offerInterpose(actor) {
 }
 
 /**
- * §523 : les marques que ce client vient de poser, lues sans attendre leur écriture. La sauvegarde de concentration du PNJ est lancée par
- * le MJ actif — celui qui pose la marque — pendant que le drapeau s'écrit encore (vu sur le banc : la sauvegarde partait avant la fin de
- * `setFlag`, sans le Désavantage). Le drapeau reste pour la sauvegarde lancée par un autre client (le joueur d'un personnage concentré).
+ * §523: the marks this client has just placed, read without waiting for their write. The NPC's Concentration save is rolled
+ * by the active GM — the one that places the mark — while the flag is still being written (seen on the test bench: the save
+ * went out before the end of `setFlag`, without the Disadvantage). The flag stays for the save rolled by another client
+ * (the player of a concentrating character).
  * @type {Map<string, {source: string, at: number}>}
  */
 const freshBreakers = new Map();
 
 /**
- * Tueur de mages, Briseur de concentration — l'auteur blesse une créature concentrée : son prochain jet de concentration a le Désavantage.
- * @returns {Promise<boolean>}  La marque est-elle posée ?
+ * Mage Slayer, Concentration Breaker — the author wounds a concentrating creature: its next Concentration roll has Disadvantage.
+ * @returns {Promise<boolean>}  Is the mark placed?
  */
 export async function markConcentrationBreaker(source, target, activity=null) {
   if ( !source || !target || (source === target) ) return false;
-  // `"item"` : l'objet dont l'activité a blessé, s'il est à ce porteur, équipé et harmonisé au besoin
+  // `"item"`: the object whose activity wounded, if it is with this bearer, equipped and attuned as needed
   // (core/concentration-breaker.mjs).
-  // L'objet est relu sur la fiche du porteur par son id : l'activité d'une résolution peut venir d'un clone de l'item.
+  // The object is re-read from the bearer's sheet by its id: a resolution's activity may come from a clone of the item.
   const item = activity?.item?.id ? (source.items?.get?.(activity.item.id) ?? null) : null;
   const itemReady = !!item && (item.system?.equipped !== false)
     && ((item.system?.attunement !== "required") || (item.system?.attuned === true));
@@ -364,10 +366,10 @@ export async function markConcentrationBreaker(source, target, activity=null) {
   return true;
 }
 
-/** Le jet de concentration, sur le client qui le lance : le Désavantage s'il y a une marque récente (moins d'une minute), qui tombe. */
+/** The Concentration roll, on the client that rolls it: Disadvantage if there is a recent mark (under a minute), which drops. */
 function onPreRollConcentration(config) {
   const actor = config?.subject;
-  // Sort étendu : « si le sort demande la Concentration, vous avez l'Avantage aux jets de sauvegarde pour la maintenir ».
+  // Extended Spell: "if the spell requires Concentration, you have Advantage on saving throws to maintain it".
   if ( actor?.effects?.some(e => e.statuses?.has?.("concentrating") && e.getFlag(MODULE_ID, "extendedSpell")) ) {
     config.advantage = true;
     log(`Extended Spell: Advantage on ${actor.name}'s Concentration saving throw`);
@@ -382,13 +384,13 @@ function onPreRollConcentration(config) {
   }
   if ( actor.isOwner ) {
     actor.unsetFlag(MODULE_ID, "concentrationBreaker").catch(() => null);
-    // Lue en mémoire : le drapeau s'écrit peut-être encore — retiré aussi une fois écrit, pour ne pas valoir à la sauvegarde suivante.
+    // Read from memory: the flag may still be writing — also removed once written, so it does not apply to the next save.
     if ( fresh ) setTimeout(() => actor.unsetFlag(MODULE_ID, "concentrationBreaker").catch(() => null), 3000);
   }
   return true;
 }
 
-/** Sentinelle, Halte — « quand vous touchez une créature d'une attaque d'opportunité, sa Vitesse tombe à 0 pour le reste du tour ». */
+/** Sentinel, Halt — "when you hit a creature with an Opportunity Attack, its Speed becomes 0 for the rest of the turn". */
 async function halt(resolution, source) {
   const items = source.items.filter(i => contentOf(i).entry?.haltOnReaction);
   if ( !items.length ) return;
@@ -410,8 +412,8 @@ async function halt(resolution, source) {
 }
 
 /**
- * C12-e : Tactiques défensives, Défense multiattaque — « quand une créature vous touche avec un jet d'attaque, elle a le Désavantage à
- * ses autres jets d'attaque contre vous pendant ce tour » (`hitDefense`). Une marque sur l'attaquant, retirée au changement de tour.
+ * C12-e: Defensive Tactics, Multiattack Defense — "when a creature hits you with an attack roll, it has Disadvantage on
+ * its other attack rolls against you for the rest of the turn" (`hitDefense`). A mark on the attacker, removed at turn change.
  */
 async function hitDefense(resolution, source) {
   for ( const t of resolution.targets ?? [] ) {
@@ -429,8 +431,8 @@ async function hitDefense(resolution, source) {
 }
 
 /**
- * C12-e : Fragilisation occulte — un coup d'arme du Chevalier occulte marque la cible ; sa prochaine sauvegarde contre un sort de
- * l'auteur, avant la fin de son prochain tour, a le Désavantage (adapter/saves.mjs). Une marque par auteur, renouvelée.
+ * C12-e: "Occult Weakening" — a weapon hit by the Eldritch Knight marks the target; its next save against a spell of
+ * the author, before the end of the author's next turn, has Disadvantage (adapter/saves.mjs). One mark per author, renewed.
  */
 async function eldritchStrike(resolution, source, activity) {
   const item = Array.from(source.items).find(i => identifierOf(i).id === "eldritch-strike");
@@ -449,8 +451,8 @@ async function eldritchStrike(resolution, source, activity) {
 }
 
 /**
- * C12-e : les marques de Défense multiattaque tombent au changement de tour ; de même ce qu'une réaction a donné « jusqu'à la fin
- * du tour en cours » (`untilTurnChange` : la Résistance de la Défense supérieure du chasseur, runtime/reactions.mjs).
+ * C12-e: Multiattack Defense marks drop at turn change; likewise what a reaction gave "until the end of
+ * the current turn" (`untilTurnChange`: the Resistance of the Hunter's Superior Defense, runtime/reactions.mjs).
  */
 async function dropHitDefense() {
   for ( const token of canvas?.scene?.tokens ?? [] ) {
@@ -461,7 +463,7 @@ async function dropHitDefense() {
   }
 }
 
-/** Retire les marques qu'un auteur a posées (au début de son tour, à la fin du combat). */
+/** Removes the marks an author has placed (at the start of their turn, at the end of combat). */
 async function dropMarks(sourceUuid) {
   for ( const token of canvas?.scene?.tokens ?? [] ) {
     const actor = token.actor;
@@ -470,13 +472,13 @@ async function dropMarks(sourceUuid) {
   }
 }
 
-/** §132 : Combat à mains nues — « au début de chacun de vos tours, 1d4 dégâts contondants à une créature que vous agrippez ». */
+/** §132: Unarmed Fighting — "at the start of each of your turns, 1d4 bludgeoning damage to a creature you are grappling". */
 async function grappleDamage(actor, token) {
   const item = actor.items.find(i => contentOf(i).entry?.grappleDamage);
   if ( !item || !token ) return;
   const rule = contentOf(item).entry.grappleDamage;
-  // `grapplers: true` : celles qui l'agrippent aussi (l'acteur lu à l'origine de chaque état Agrippé qu'il porte), une fois
-  // chacune.
+  // `grapplers: true`: those that also grapple it (the actor read at the origin of each Grappled condition it carries), once
+  // each.
   const struck = new Map(victimsOf(token).map(t => [t.uuid, t]));
   if ( rule.grapplers === true ) {
     for ( const effect of grappleEffectsOf(actor) ) {
@@ -494,9 +496,9 @@ async function grappleDamage(actor, token) {
 }
 
 /**
- * §236 : Auto-restauration — « à la fin de chacun de vos tours, vous pouvez mettre fin à l'un de ces états sur vous : Charmé, Effrayé,
- * Empoisonné ». Le premier que la créature porte, dans l'ordre de la règle ; les effets qui le portent sont retirés. MJ actif.
- * §278 : la règle dit aussi le moment (`at`), un niveau d'Épuisement à défaut d'un état, et le coût d'une utilisation de l'item.
+ * §236: Self-Restoration — "at the end of each of your turns, you can end one of these conditions on yourself: Charmed,
+ * Frightened, Poisoned". The first one the creature has, in the rule's order; the effects that carry it are removed. Active GM.
+ * §278: the rule also gives the moment (`at`), a level of Exhaustion in lieu of a condition, and the cost of one use of the item.
  */
 async function endOwnCondition(actor, at) {
   if ( (actor.system.attributes?.hp?.value ?? 0) <= 0 ) return;
@@ -518,16 +520,16 @@ async function endOwnCondition(actor, at) {
   }
 }
 
-/** Les utilisations de l'objet avant l'utilisation d'une de ses propriétés à charges : l'activité → ce qui était dépensé. */
+/** The object's uses before the use of one of its charged properties: the activity → what was spent. */
 const chargesBefore = new Map();
 
 /**
- * L'objet de la fiche : après l'utilisation, dnd5e passe aux hooks une activité clonée (mise à l'échelle), dont l'item ne reçoit
- * pas la mise à jour des utilisations.
+ * The sheet's object: after use, dnd5e passes the hooks a cloned (scaled) activity, whose item does not receive
+ * the update of the uses.
  */
 const ownedItemOf = activity => activity?.actor?.items?.get(activity?.item?.id) ?? activity?.item ?? null;
 
-/** La règle `savesCharges` du porteur, quand cette activité dépense des charges d'un objet magique (core/charges.mjs), ou null. */
+/** The bearer's `savesCharges` rule, when this activity spends charges of a magic item (core/charges.mjs), or null. */
 function chargeRuleFor(activity) {
   const item = ownedItemOf(activity);
   const actor = activity?.actor;
@@ -547,8 +549,8 @@ function onPreUseCharges(activity) {
 }
 
 /**
- * Utilisation d'objets magiques (Voleur 13) : après une propriété qui a dépensé des charges, le dé — à 6, les charges reviennent.
- * Sur le client qui a utilisé l'objet.
+ * Use Magic Device (Rogue 13): after a property that spent charges, the die — on a 6, the charges come back.
+ * On the client that used the item.
  */
 async function keepCharges(activity) {
   if ( !chargesBefore.has(activity?.uuid) ) return;
@@ -566,17 +568,17 @@ async function keepCharges(activity) {
     flavor: game.i18n.format(`DND5ECOMBAT.Charges.${kept ? "Gardees" : "Depensees"}`,
       { feature: owner?.name ?? "", item: item.name, n: spent }),
     flags: { [MODULE_ID]: { savesCharges: { item: identifierOf(item).id, spent, kept } } } });
-  if ( card ) await waitForDice(card);   // règle de la suite : l'état change après les dés 3D
+  if ( card ) await waitForDice(card);   // rule of the suite: the condition changes after the 3D dice
   if ( kept ) await item.update({ "system.uses.spent": before });
   log(`${actor.name}: ${owner?.name ?? "charges"} on ${item.name}, d${rule.die} = ${roll.total}`
     + `${kept ? `, ${spent} charge(s) kept` : ""}`);
 }
 
 /**
- * Sort renforcé (Métamagie, `spellDamageRerolls`) : après le jet de dégâts d'un sort du porteur, la question — relancer les dés
- * bas (au plus `count`) contre ce que coûte l'activité de l'item. Les nouveaux jets comptent. Rend ce qui change à l'agrégat,
- * part par part (runtime/engine-messages.mjs). Simplification : le moteur désigne les dés (la moitié de leur maximum ou moins,
- * les plus bas) ; le joueur ne les choisit pas un par un.
+ * Empowered Spell (Metamagic, `spellDamageRerolls`): after the damage roll of a bearer's spell, the question — reroll the low
+ * dice (up to `count`) against what the item's activity costs. The new rolls count. Returns what changes to the aggregate,
+ * part by part (runtime/engine-messages.mjs). Simplification: the engine designates the dice (half their maximum or less,
+ * the lowest); the player does not choose them one by one.
  */
 export async function offerSpellDamageRerolls(actor, message) {
   if ( message.getAssociatedActivity?.()?.item?.type !== "spell" ) return [];
@@ -588,21 +590,21 @@ export async function offerSpellDamageRerolls(actor, message) {
     if ( !activity || !(usesLeftFor(activity) > 0) ) continue;
     let count = 1;
     try { count = Number(Roll.safeEval(Roll.replaceFormulaData(rule.count, actor.getRollData()))) || 1; }
-    catch { /* formule illisible : un dé */ }
+    catch { /* unreadable formula: one die */ }
     const dice = damageDice(rolls);
     const picked = empoweredPicks(dice, count).map(i => dice[i]);
     if ( !picked.length ) continue;
     const listed = picked.map(d => `d${d.faces}: ${d.value}`).join(", ");
     const answer = await askChoice(actor, { actor: actor.uuid, item: item.name,
       prompt: game.i18n.format("DND5ECOMBAT.SortRenforce.Question", { item: item.name, dice: listed, n: picked.length }),
-      // « Garder » d'abord : sans réponse dans le délai, askChoice retient la première option — rien n'est dépensé sans accord.
+      // "Keep" first: with no answer within the delay, askChoice takes the first option — nothing is spent without consent.
       options: [{ id: "no", label: game.i18n.localize("DND5ECOMBAT.SortRenforce.Non") },
         { id: "yes", label: game.i18n.format("DND5ECOMBAT.SortRenforce.Oui", { n: picked.length }) }] });
     if ( answer?.id !== "yes" ) continue;
     const used = await activity.use({ [MODULE_ID]: { confirmed: true } }, { configure: false }, { create: false })
       .catch(() => null);
     if ( !used ) return [];
-    // Les modificateurs qui bornent le dé (« min2 ») valent aussi pour la relance.
+    // Modifiers that bound the die ("min2") apply to the reroll too.
     const reroll = await new Roll(picked.map(d => `1d${d.faces}${d.modifiers.join("")}`).join(" + ")).evaluate();
     const values = reroll.dice.map(d => d.total);
     const deltas = empoweredDeltas(picked, values);
@@ -620,13 +622,13 @@ export async function offerSpellDamageRerolls(actor, message) {
 }
 
 /**
- * Surcharge (Évocateur 14, `overchannel`) : après le jet de dégâts d'un sort de magicien lancé avec un emplacement de niveau 1 à 5,
- * la question — les dégâts maximaux, avec le contrecoup annoncé. Acceptée, elle vaut pour tous les jets de dégâts de ce sort à ce
- * tour (les rayons d'un même lancement) ; le contrecoup, une fois, ignore la Résistance et l'Immunité. Rend ce qui change à
- * l'agrégat.
+ * Overchannel (Evoker 14, `overchannel`): after the damage roll of a wizard spell cast with a level 1 to 5 spell slot,
+ * the question — maximum damage, with the backlash announced. If accepted, it applies to all damage rolls of that spell
+ * this turn (the rays of one casting); the backlash, once, ignores Resistance and Immunity. Returns what changes to
+ * the aggregate.
  * @param {Actor} actor
- * @param {ChatMessage} message  la carte du jet de dégâts
- * @param {ChatMessage|null} usage  la carte d'utilisation du sort (son niveau de lancement)
+ * @param {ChatMessage} message  the damage roll card
+ * @param {ChatMessage|null} usage  the spell's use card (its casting level)
  */
 export async function offerOverchannel(actor, message, usage) {
   const spell = message.getAssociatedActivity?.()?.item;
@@ -641,7 +643,7 @@ export async function offerOverchannel(actor, message, usage) {
   const deltas = maximizedDeltas(dice);
   const turn = currentTurnKey();
   const held = actor.getFlag(MODULE_ID, "overchannel");
-  // Déjà accepté pour ce sort à ce tour : les autres jets du même lancement, sans nouvelle question ni nouveau contrecoup.
+  // Already accepted for this spell this turn: the other rolls of the same casting, with no new question or new backlash.
   if ( held && (held.spell === spell.uuid) && (held.turn === turn) && turn ) return deltas;
   if ( !deltas.length ) return [];
   const uses = item.system.uses ?? {};
@@ -650,7 +652,7 @@ export async function offerOverchannel(actor, message, usage) {
   const answer = await askChoice(actor, { actor: actor.uuid, item: item.name,
     prompt: game.i18n.format(`DND5ECOMBAT.Surcharge.${backlash ? "QuestionContrecoup" : "Question"}`,
       { item: item.name, spell: spell.name, level: castLevel, dice: backlash, die: rule.die }),
-    // « Garder » d'abord : sans réponse dans le délai, askChoice retient la première option.
+    // "Keep" first: with no answer within the delay, askChoice takes the first option.
     options: [{ id: "no", label: game.i18n.localize("DND5ECOMBAT.Surcharge.Non") },
       { id: "yes", label: game.i18n.localize("DND5ECOMBAT.Surcharge.Oui") }] });
   if ( answer?.id !== "yes" ) return [];
@@ -663,7 +665,7 @@ export async function offerOverchannel(actor, message, usage) {
       flavor: game.i18n.format("DND5ECOMBAT.Surcharge.Carte", { item: item.name, name: actor.name, total: roll.total }),
       flags: { [MODULE_ID]: { overchannel: { use, level: castLevel, backlash: roll.total } } } });
     if ( card ) await waitForDice(card);
-    // « Ces dégâts ignorent la Résistance et l'Immunité. »
+    // "This damage ignores Resistance and Immunity."
     await actor.applyDamage([{ value: roll.total, type: "necrotic" }],
       { ignore: { resistance: new Set(["necrotic"]), immunity: new Set(["necrotic"]) } });
   }
@@ -671,8 +673,8 @@ export async function offerOverchannel(actor, message, usage) {
 }
 
 /**
- * Survivant (Champion 18), Sursaut héroïque : l'activité de soins de l'item, au début du tour du porteur Ensanglanté qui a au
- * moins 1 point de vie. Le texte ne laisse pas le choix (« vous regagnez ») : sans question. MJ actif.
+ * Survivor (Champion 18), Heroic Rally: the item's healing activity, at the start of the turn of a Bloodied bearer who has at
+ * least 1 Hit Point. The text leaves no choice ("you regain"): no question. Active GM.
  */
 async function healAtTurnStart(actor) {
   const hp = actor.system.attributes?.hp;
@@ -687,7 +689,7 @@ async function healAtTurnStart(actor) {
   }
 }
 
-/** Survivant, Défier la mort : le d20 d'une sauvegarde contre la mort vaut un 20 à partir du seuil déclaré (`criticalSuccess`). */
+/** Survivor, Defy Death: the d20 of a death saving throw counts as a 20 from the declared threshold (`criticalSuccess`). */
 function onPreRollDeathSave(config) {
   const actor = config?.subject;
   const roll = config?.rolls?.[0];
@@ -699,9 +701,9 @@ function onPreRollDeathSave(config) {
 }
 
 /**
- * §236 : Puissance indomptable — « si votre total pour un test de Force ou un jet de sauvegarde de Force est inférieur à votre valeur de
- * Force, vous pouvez utiliser cette valeur à la place ». Au jet, le d20 reçoit un minimum (`options.minimum`, comme le Présage) : total
- * ≥ valeur ⇔ d20 ≥ valeur − bonus. Un bonus en dés (Bénédiction) est compté au plus bas : le total peut alors dépasser la valeur.
+ * §236: Indomitable Might — "if your total for a Strength check or Strength saving throw is less than your Strength score,
+ * you can use that score in place of the total". At the roll, the d20 gets a minimum (`options.minimum`, like Portent): total
+ * ≥ score ⇔ d20 ≥ score − bonus. A dice bonus (Bless) is counted at the lowest: the total may then exceed the score.
  */
 function onPreRollD20(config) {
   const actor = config?.subject;
@@ -730,8 +732,8 @@ function onTurnChange(combat, prior, current) {
   if ( !actor ) return;
   return enqueue(`feats-turn:${actor.uuid}`, async () => {
     await dropMarks(actor.uuid);
-    if ( actor.getFlag(MODULE_ID, "peerlessAim") ) await actor.unsetFlag(MODULE_ID, "peerlessAim");   // §135 : Visée sans pareille
-    if ( actor.getFlag(MODULE_ID, "fortifiedHealing") ) await actor.unsetFlag(MODULE_ID, "fortifiedHealing");   // §289 : Santé fortifiée
+    if ( actor.getFlag(MODULE_ID, "peerlessAim") ) await actor.unsetFlag(MODULE_ID, "peerlessAim");   // §135: Peerless Aim
+    if ( actor.getFlag(MODULE_ID, "fortifiedHealing") ) await actor.unsetFlag(MODULE_ID, "fortifiedHealing");   // §289: Fortified Health
     if ( (actor.system.attributes?.hp?.value ?? 0) > 0 ) await grappleDamage(actor, combatant.token);
     await endOwnCondition(actor, "turnStart");   // §278
     await healAtTurnStart(actor);
@@ -739,7 +741,7 @@ function onTurnChange(combat, prior, current) {
 }
 
 export function registerFeats() {
-  // §516 : Sauvagerie martiale demandée au coup (défaut) ou d'office au premier coup d'arme du tour.
+  // §516: Savage Attacker asked on the hit (default) or applied automatically on the first weapon hit of the turn.
   game.settings.register(MODULE_ID, SAVAGE_MODE_SETTING, {
     name: `DND5ECOMBAT.Reglage.${SAVAGE_MODE_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${SAVAGE_MODE_SETTING}.Aide`, scope: "world", config: true,
     type: String, choices: Object.fromEntries(SAVAGE_MODES.map(m => [m, `DND5ECOMBAT.Reglage.${SAVAGE_MODE_SETTING}.${m}`])), default: "ask"
@@ -758,7 +760,7 @@ export function registerFeats() {
   route("dnd5e.preUseActivity", onPreUseCharges, { cancellable: true, label: "Use Magic Device: charges not noted" });
   route("dnd5e.postUseActivity", activity => (activity?.actor?.isOwner ? keepCharges(activity) : null),
     { label: "Use Magic Device: charges" });
-  // §134 : Expert élémentaire — le type, demandé à l'arrivée du don, et au chargement pour un don déjà là.
+  // §134: Elemental Adept — the type, asked when the feat arrives, and on load for a feat already there.
   route("createItem", item => (item.parent?.documentName === "Actor" ? enqueue(`elemental:${item.uuid}`, () => askElementalType(item)) : null),
     { executor: true, label: "Elemental Adept: type not asked" });
   route("ready", () => { for ( const actor of game.actors ) for ( const item of actor.items ) enqueue(`elemental:${item.uuid}`, () => askElementalType(item)); },

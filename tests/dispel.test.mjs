@@ -3,13 +3,13 @@ import { autoDispelLevel, dispelPlan, dispelRule } from "../module/scripts/core/
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
 describe("§37.2 : Dissipation de la magie", () => {
-  it("cesse d'office jusqu'au niveau 3, ou jusqu'à celui de l'emplacement", () => {
+  it("ends automatically up to level 3, or up to the slot's level", () => {
     expect(autoDispelLevel(3)).toBe(3);
     expect(autoDispelLevel(5)).toBe(5);
     expect(autoDispelLevel(undefined)).toBe(3);
   });
 
-  it("au-delà : un test contre DD 10 + niveau", () => {
+  it("beyond that: a check against DC 10 + level", () => {
     expect(dispelPlan([{ key: "a", level: 1 }, { key: "b", level: 3 }, { key: "c", level: 4 }, { key: "d", level: 6 }], 3)).toEqual([
       { key: "a", level: 1, auto: true, dc: null },
       { key: "b", level: 3, auto: true, dc: null },
@@ -20,8 +20,8 @@ describe("§37.2 : Dissipation de la magie", () => {
   });
 });
 
-describe("§496 (B16) : dissipation bornée", () => {
-  it("la règle déclarée prend une forme unique", () => {
+describe("§496 (B16): bounded dispelling", () => {
+  it("the declared rule takes a single form", () => {
     expect(dispelRule(true)).toEqual({ upTo: null, beyond: "check", keepBySlot: false });
     expect(dispelRule({ upTo: 3, beyond: "none", keepBySlot: true })).toEqual({ upTo: 3, beyond: "none", keepBySlot: true });
     expect(dispelRule({ upTo: 2 })).toEqual({ upTo: 2, beyond: "check", keepBySlot: false });
@@ -29,7 +29,7 @@ describe("§496 (B16) : dissipation bornée", () => {
     expect(dispelRule(false)).toBeNull();
   });
 
-  it("un plafond fixe, quel que soit l'emplacement ; au-delà, rien sans test", () => {
+  it("a fixed ceiling, whatever the slot; beyond it, nothing without a check", () => {
     const spells = [{ key: "a", level: 2 }, { key: "b", level: 3 }, { key: "c", level: 5 }];
     expect(dispelPlan(spells, 7, { upTo: 3, beyond: "none" })).toEqual([
       { key: "a", level: 2, auto: true, dc: null },
@@ -39,12 +39,12 @@ describe("§496 (B16) : dissipation bornée", () => {
     expect(dispelPlan(spells, 7, { upTo: 2, beyond: "check" }).map(s => s.dc)).toEqual([null, 13, 15]);
   });
 
-  it("sans règle, la Dissipation de 2024 reste la même", () => {
+  it("without a rule, the 2024 Dispel Magic stays the same", () => {
     expect(dispelPlan([{ key: "c", level: 4 }], 3, dispelRule(true))).toEqual([{ key: "c", level: 4, auto: false, dc: 14 }]);
   });
 });
 
-describe("§496 (B16) : la clé `dispel` se valide", () => {
+describe("§496 (B16): the `dispel` key is validated", () => {
   it("true ou { upTo, beyond?, keepBySlot? }", () => {
     expect(validateEntry({ dispel: true })).toEqual([]);
     expect(validateEntry({ dispel: { upTo: 3, beyond: "none", keepBySlot: true } })).toEqual([]);

@@ -1,5 +1,5 @@
 /**
- * §162 : les murs d'une zone de sort (adapter/walls.mjs) naissent avec elle, la suivent quand elle bouge, et partent avec elle. MJ actif.
+ * §162: the walls of a spell area (adapter/walls.mjs) are born with it, follow it when it moves, and leave with it. Active GM.
  */
 
 import { wallRuleOf, wallDataFor, zoneWallsOf } from "../adapter/walls.mjs";
@@ -21,7 +21,7 @@ async function lower(region) {
   if ( ids.length ) await region.parent.deleteEmbeddedDocuments("Wall", ids);
 }
 
-/** Murs posés de nouveau, à la file par région : la création et un redessin aussitôt après (l'anneau du §169) ne se croisent pas. */
+/** Walls placed again, queued per region: the creation and a redraw right after (the §169 ring) do not cross. */
 const redraw = region => enqueue(`walls:${region.id}`, async () => {
   await lower(region);
   if ( region.parent?.regions.has(region.id) ) await raise(region);

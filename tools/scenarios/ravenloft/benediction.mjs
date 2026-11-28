@@ -1,7 +1,7 @@
 /**
- * Bénédiction du Ténébreux (SPEC §16.25, `onFell`) : un ennemi réduit à 0 PV par l'occultiste — ou par un autre à 10 ft de
- * lui — lui donne des PV temporaires (Charisme + niveau d'occultiste). Monde `ravenloft` : Kaalisti, Rahadin laissé à 1 PV ;
- * l'autre tueur est Sylaene. Monde `dnd-6` : non applicable tant qu'aucun occultiste du Fiélon n'y est.
+ * Dark One's Blessing (SPEC §16.25, `onFell`): an enemy reduced to 0 HP by the warlock — or by another within 10 ft of
+ * him — gives him Temporary Hit Points (Charisma + warlock level). World `ravenloft`: Kaalisti, Rahadin left at 1 HP;
+ * the other killer is Sylaene. World `dnd-6`: not applicable as long as no Fiend warlock is there.
  */
 const VICTIMS = ["Rahadin, chambellan du château", "Zombi"];
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -24,12 +24,12 @@ export default {
     const temp0 = await temp();
     ctx.restore(() => setTemp(temp0));
 
-    /** Fait tomber la victime (1 PV) sous les coups de `killer` ; rend la résolution du coup qui l'a abattue. */
+    /** Drops the victim (1 HP) under `killer`'s blows; returns the resolution of the blow that felled it. */
     const fell = async (killer, identifier) => {
       for ( let n = 1; n <= 12; n++ ) {
         await ctx.setHp(victim, 1);
         const used = await ctx.use({ tokenId: killer.id, identifier, activityType: "attack", targetTokenIds: [victim.id] });
-        // 60 s : quand le journal de discussion du MJ n'est pas affiché, chaque attente des dés 3D va à son maximum (8 s).
+        // 60 s: when the GM's chat log is not displayed, each 3D dice wait goes to its maximum (8 s).
         const r = await ctx.settle(used.usageMessageId, { timeoutMs: 60000 });
         if ( r.targets[0]?.hit && ((await ctx.hp(victim)) === 0) ) return r;
       }
@@ -46,7 +46,7 @@ export default {
       ctx.expect((await temp()) === expected, `Kaalisti gagne ${expected} PV temporaires (${await temp()})`);
     }
 
-    // 2. Un autre l'abat à 10 ft de Kaalisti : la bénédiction joue aussi.
+    // 2. Another fells it within 10 ft of Kaalisti: the blessing plays too.
     const other = tokens.find(t => (t.name === "Sylaene")) ?? null;
     if ( !other ) return;
     const sylaene = await ctx.token("Sylaene");

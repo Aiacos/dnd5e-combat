@@ -1,13 +1,13 @@
 /**
- * §383 (issue #38) : la fenêtre « Choisir la forme » d'une invocation lancée sans la fenêtre de dnd5e (barre d'actions, manette).
- * Une carte par forme (image et nom de la créature, nom du profil quand il en a un — Vengeur / Défenseur), plus la taille ou le
- * type de créature quand l'activité en propose plusieurs. Un clic sur une carte invoque cette forme (s'il n'y a rien d'autre à
- * choisir) ; « Invoquer » prend la carte cochée. Elle s'ouvre sur l'écran de celui qui lance (le joueur chez lui, le MJ chez lui),
- * avec le sablier « en attente » au-dessus du lanceur pour la table (§381). L'interface demande ; runtime/summon-handover.mjs lance.
+ * §383 (issue #38): the "Choose the form" window of a summon cast without the dnd5e window (action bar, gamepad).
+ * One card per form (image and name of the creature, name of the profile when it has one — Avenger / Defender), plus the size or
+ * creature type when the activity offers several. A click on a card summons that form (if there is nothing else to
+ * choose); "Summon" takes the ticked card. It opens on the caster's screen (the player on theirs, the GM on theirs),
+ * with the "waiting" hourglass above the caster for the table (§381). The interface asks; runtime/summon-handover.mjs casts.
  *
- * §385 : pour « jusqu'à N » créatures (contenu `summon.chooseCount`, Création de morts-vivants), aussi le **nombre** (1 à N, N selon le
- * niveau) et, ouverte depuis la fiche, le **niveau** (les emplacements qui restent) — les formes permises et N suivent le niveau
- * (blêmes et nécrophages au niveau 8, momies au 9).
+ * §385: for "up to N" creatures (content `summon.chooseCount`, Create Undead), also the **number** (1 to N, N depending on the
+ * level) and, opened from the sheet, the **level** (the slots that remain) — the permitted forms and N follow the level
+ * (ghouls and ghasts at level 8, mummies at 9).
  */
 
 import { loc, esc } from "../runtime/shared.mjs";
@@ -15,7 +15,7 @@ import { summonChoicesOf, summonCountAt, summonProfilesAt, castLevelsOf, preferr
 import { countChoices } from "../core/summon.mjs";
 import { whileAwaiting } from "../adapter/awaiting.mjs";
 
-/** Le libellé de dnd5e pour un profil (nom, sinon « FP x ou moins », sinon le nom de la créature ; « 2 × » devant un nombre). */
+/** dnd5e's label for a profile (name, otherwise "CR x or less", otherwise the creature's name; "2 × " in front of a number). */
 function profileLabel(activity, profile, rollData) {
   const dialog = globalThis.dnd5e?.applications?.activity?.SummonUsageDialog;
   try {
@@ -24,16 +24,16 @@ function profileLabel(activity, profile, rollData) {
   return profile.name || fromUuidSync(profile.uuid, { strict: false })?.name || "—";
 }
 
-/** Une forme : son id, son libellé, l'image et le nom de la créature (index du compendium, traduit par Babele s'il l'est). */
+/** A form: its id, its label, the creature's image and name (compendium index, translated by Babele if it is). */
 function formOf(activity, profile, rollData, { bare=false }={}) {
-  // §386 : la créature réellement invoquée (Monster Manual 2024 plutôt que SRD 2014).
+  // §386: the creature actually summoned (Monster Manual 2024 rather than SRD 2014).
   const uuid = profile.uuid ? preferredSummonUuid(profile.uuid) : null;
   const actor = uuid ? fromUuidSync(uuid, { strict: false }) : null;
-  // Sans nom de profil, celui de la créature réellement invoquée (Monster Manual, traduit par le MM-fr).
+  // Without a profile name, that of the creature actually summoned (Monster Manual, translated by the MM-fr).
   const native = profileLabel(activity, profile, rollData);
   const times = /^\s*\d+\s*×\s*/.exec(native)?.[0] ?? "";
   let label = (!profile.name && actor?.name) ? `${times}${actor.name}` : native;
-  // Le nombre se choisit à part : pas de « 3 × » devant le nom.
+  // The number is chosen separately: no "3 × " in front of the name.
   if ( bare ) label = label.replace(/^\s*\d+\s*×\s*/, "");
   const creature = actor?.name ?? null;
   return { id: profile._id, label, creature: (creature && !label.includes(creature)) ? creature : null,
@@ -56,23 +56,23 @@ function selectHtml(name, label, values, labels, current) {
 }
 
 /**
- * Demande la forme. Rend `{ profile, creatureSize?, creatureType?, slot?, count? }`, ou null si l'on renonce (fenêtre fermée : rien
- * n'est lancé).
- * @param {Activity} activity  L'activité « summon » (copie mise à l'échelle comprise : les profils disponibles suivent le niveau).
- * @param {object} [current]   Ce que dnd5e a préparé (`usageConfig.summons`), coché d'avance.
+ * Asks for the form. Returns `{ profile, creatureSize?, creatureType?, slot?, count? }`, or null if the player gives up (window
+ * closed: nothing is cast).
+ * @param {Activity} activity  The "summon" activity (scaled copy included: the available profiles follow the level).
+ * @param {object} [current]   What dnd5e prepared (`usageConfig.summons`), pre-ticked.
  * @param {{ chooseCount?: boolean, countFormula?: string|null, chooseLevel?: boolean, slot?: string|null }} [options]  §385, §387.
  */
 export async function askSummonForm(activity, current={}, { chooseCount=false, countFormula=null, chooseLevel=false, slot=null }={}) {
   const choices = summonChoicesOf(activity);
   const baseRollData = activity.getRollData?.() ?? {};
   const baseLevel = Number(activity.item?.system?.level) || 0;
-  // Les niveaux proposés (depuis la fiche), sinon le niveau de l'emplacement déjà choisi (barre) ou celui du sort.
+  // The levels offered (from the sheet), otherwise the level of the slot already chosen (bar) or that of the spell.
   const levels = chooseLevel ? castLevelsOf(activity) : [];
   const fixedLevel = Math.max(baseLevel, Number(activity.actor?.system?.spells?.[slot]?.level) || baseLevel);
   let level = levels.length ? levels[0].level : fixedLevel;
   let slotKey = levels.length ? levels[0].slot : null;
   const rollAt = lvl => ({ ...baseRollData, item: { ...(baseRollData.item ?? {}), level: lvl } });
-  // §390 : une forme dont le nombre tombe à 0 à ce niveau (objet TG avec un modificateur d'incantation de 2) n'est pas proposée.
+  // §390: a form whose number falls to 0 at this level (TG item with a spellcasting modifier of 2) is not offered.
   const profilesAt = lvl => (chooseCount
     ? summonProfilesAt(activity, lvl).filter(p => summonCountAt(activity, p, lvl, countFormula) !== 0)
     : Array.from(activity.availableProfiles ?? []));
@@ -90,7 +90,7 @@ export async function askSummonForm(activity, current={}, { chooseCount=false, c
       Object.fromEntries(levels.map((l, i) => [i, loc("Invocation.NiveauLibelle", { level: l.level, slot: l.label ?? "", left: l.left })])), 0)
     : "";
 
-  /** Les cartes et le nombre au niveau courant. */
+  /** The cards and the number at the current level. */
   const body = () => {
     const profiles = profilesAt(level);
     if ( !profiles.some(p => p._id === picked) ) picked = profiles[0]?._id ?? null;
@@ -106,7 +106,7 @@ export async function askSummonForm(activity, current={}, { chooseCount=false, c
     ${levelHtml}<div class="dnd5e-combat-summon-body">${body()}</div>${fixed}`;
   const read = form => {
     const data = new foundry.applications.ux.FormDataExtended(form).object;
-    // Le nombre borné au maximum de la forme cochée à ce niveau (une forme changée sans clic garderait celui d'une autre).
+    // The number capped at the maximum of the ticked form at this level (a form changed without a click would keep another's).
     const max = chooseCount ? summonCountAt(activity, profilesAt(level).find(p => p._id === (data.profile || picked)), level, countFormula) : null;
     const count = (Number(data.count) > 0) ? (max ? Math.min(Number(data.count), max) : Number(data.count)) : null;
     return { profile: data.profile || picked, ...(choices.size ? { creatureSize: data.creatureSize } : {}),
@@ -124,7 +124,7 @@ export async function askSummonForm(activity, current={}, { chooseCount=false, c
       const root = dialog.element;
       const wire = () => {
         for ( const card of root.querySelectorAll(".dnd5e-combat-form") ) {
-          // Une forme cochée autrement que par un clic (clavier) : le nombre suit aussi.
+          // A form ticked other than by a click (keyboard): the number follows too.
           card.querySelector("input[type=radio]")?.addEventListener("change", () => {
             picked = card.dataset.profile;
             if ( chooseCount ) refresh();
@@ -159,11 +159,12 @@ export async function askSummonForm(activity, current={}, { chooseCount=false, c
 }
 
 /**
- * §391 : la même fenêtre pour un enchantement ou une transformation à plusieurs profils (Arme élémentaire, Arme magique, armes +1/+2/+3,
- * Métamorphose suprême), quand la fenêtre de dnd5e est sautée. Une carte par profil : l'effet d'enchantement (nom, icône) ou la forme de
- * transformation (nom, créature). Un clic choisit. Rend `{ enchantmentProfile }` ou `{ transform: { profile } }`, ou null.
- * @param {Activity} activity  Une activité « enchant » ou « transform ».
- * @param {object} usageConfig  Ce que dnd5e a préparé (le profil coché d'avance).
+ * §391: the same window for an enchantment or a transformation with several profiles (Elemental Weapon, Magic Weapon,
+ * +1/+2/+3 weapons, True Polymorph), when dnd5e's window is skipped. One card per profile: the enchantment effect (name, icon)
+ * or the transformation form (name, creature). A click chooses. Returns `{ enchantmentProfile }` or `{ transform: { profile } }`,
+ * or null.
+ * @param {Activity} activity  An "enchant" or "transform" activity.
+ * @param {object} usageConfig  What dnd5e prepared (the profile pre-ticked).
  */
 export async function askProfile(activity, usageConfig={}) {
   const enchant = activity.type === "enchant";

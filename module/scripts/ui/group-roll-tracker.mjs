@@ -1,13 +1,14 @@
 /**
- * §242 : la fenêtre de suivi du MJ — les jets demandés **en cours**, à la manière de la fenêtre du joueur (Combat UI) : par demande, le
- * libellé, le test, le DD, puis une carte par personnage, côte à côte — portrait, nom, joueur (point vert : connecté), un d20 (« ? » qui
- * pulse tant qu'il n'a pas lancé, puis le chiffre sorti), le total, réussite ou échec, une flèche verte vers le haut pour l'Avantage, rouge
- * vers le bas pour le Désavantage (« forcé » quand le joueur l'a imposé), les aides accordées (portrait de l'aidant) et, tant qu'il n'a pas
- * lancé, « Lancer pour lui » — sa fenêtre se ferme chez son joueur (le jet arrive d'ailleurs, runtime/group-roll.mjs).
+ * §242: the GM tracking window — the requested rolls **in progress**, like the player's window (Combat UI): per request, the
+ * label, the check, the DC, then one card per character, side by side — portrait, name, player (green dot: connected),
+ * a d20 ("?" that pulses until it has rolled, then the number rolled), the total, success or failure, a green up arrow
+ * for Advantage, red down for Disadvantage ("forced" when the player imposed it), the aid granted (helper's portrait) and,
+ * until it has rolled, "Roll for them" — its window closes on its player's side (the roll arrives from elsewhere,
+ * runtime/group-roll.mjs).
  *
- * Une demande terminée montre son verdict quelques secondes, puis quitte la liste (retour de l'utilisateur : « pas les jets précédents,
- * juste les tests en cours ») ; la fenêtre se ferme quand il n'en reste aucune. Elle s'ouvre d'elle-même chez le MJ qui fait une demande, et
- * depuis la fenêtre de demande (« Jets en cours ») ou `api.rolls.tracker()`.
+ * A finished request shows its verdict a few seconds, then leaves the list (user feedback: "not the previous rolls,
+ * just the checks in progress"); the window closes when none is left. It opens by itself on the GM who makes a request, and
+ * from the request window ("Rolls in progress") or `api.rolls.tracker()`.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -17,22 +18,22 @@ import { route } from "../runtime/router.mjs";
 import { loc, esc } from "../runtime/shared.mjs";
 
 const WINDOW_ID = "das-group-roll-tracker";
-/** Une demande plus vieille que ça n'est plus suivie (elle reste dans la discussion). */
+/** A request older than this is no longer tracked (it stays in the chat). */
 const RECENT_MS = 3 * 60 * 60 * 1000;
-/** Une demande terminée reste affichée ce temps-là, avec son verdict. */
+/** A finished request stays displayed this long, with its verdict. */
 const DONE_KEEP_MS = 6000;
-/** Les demandes retirées à la main, sur ce client. */
+/** Requests removed by hand, on this client. */
 const dismissed = new Set();
 
 const AID_KEYS = { guidance: "JetGroupe.Suivi.AideAssistance", inspiration: "JetGroupe.Suivi.AideInspiration", help: "JetGroupe.Suivi.AideSoutien" };
 
-/** Le moment où une demande a été achevée (son dernier jet), ou null tant qu'elle ne l'est pas. */
+/** The moment a request was completed (its last roll), or null as long as it is not. */
 function finishedAt(view) {
   if ( !view.done ) return null;
   return Math.max(0, ...view.entries.map(e => game.messages.get(e.message)?.timestamp ?? 0));
 }
 
-/** Les demandes en cours (et celles qui viennent de finir), la plus récente d'abord. */
+/** Requests in progress (and those that just finished), most recent first. */
 function trackedViews() {
   const since = Date.now() - RECENT_MS;
   return game.messages.contents.filter(m => requestOf(m) && (m.timestamp >= since) && !dismissed.has(m.id)).reverse()
@@ -43,7 +44,7 @@ function trackedViews() {
     });
 }
 
-/** Le d20 de la fenêtre du joueur, en petit : la valeur au centre (« ? » tant qu'il n'a pas lancé). */
+/** The player window's d20, small: the value at the center ("?" until it has rolled). */
 function d20Svg(value, waiting) {
   const hex = "50,4 90,27 90,73 50,96 10,73 10,27";
   const tri = "50,24 78,68 22,68";
@@ -128,7 +129,7 @@ const TrackerApp = () => TrackerClass ??= class GroupRollTracker extends foundry
 
   async _renderHTML() {
     const views = trackedViews();
-    // Une demande qui vient de finir quitte la liste après son verdict : un rendu de plus à ce moment-là.
+    // A request that has just finished leaves the list after its verdict: one more render at that moment.
     for ( const v of views ) {
       const end = finishedAt(v);
       if ( end !== null ) setTimeout(() => refresh(), Math.max(0, DONE_KEEP_MS - (Date.now() - end)) + 50);
@@ -161,7 +162,7 @@ const TrackerApp = () => TrackerClass ??= class GroupRollTracker extends foundry
   }
 };
 
-/** Ouvre (ou ramène devant) la fenêtre de suivi, MJ seulement. */
+/** Opens (or brings to the front) the tracking window, GM only. */
 export function openTracker() {
   if ( !game.user.isGM ) return null;
   const open = foundry.applications.instances.get(WINDOW_ID);
@@ -175,7 +176,7 @@ export function openTracker() {
   return app;
 }
 
-/** Rafraîchit la fenêtre ouverte ; plus rien en cours : elle se ferme. */
+/** Refreshes the open window; nothing in progress anymore: it closes. */
 function refresh() {
   const app = foundry.applications.instances.get(WINDOW_ID);
   if ( !app ) return;
@@ -184,7 +185,7 @@ function refresh() {
 }
 
 export function registerGroupRollTracker() {
-  // Le MJ qui fait une demande voit s'ouvrir le suivi ; toute carte qui change le rafraîchit.
+  // The GM who makes a request sees the tracker open; any card that changes refreshes it.
   route("createChatMessage", message => {
     if ( !requestOf(message) || !game.user.isGM ) return;
     if ( message.author?.isSelf ) openTracker();

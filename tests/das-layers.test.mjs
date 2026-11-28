@@ -1,26 +1,26 @@
 /**
- * Socle de tests DAS — COUCHES. Fichier COPIÉ tel quel depuis le dépôt du moteur (`tools/contract/das-layers.test.mjs`) :
- * ne pas le modifier ici. Dans le moteur, `node tools/contract/sync.mjs` le recopie dans tous les modules ; les règles
- * propres à un module (elles diffèrent : voir `prive/ARCHITECTURE.md` §1 de chacun) vont dans `tests/das-tests.json`,
- * section `"layers"`. Une règle que le réglage ne déclare pas est sautée.
+ * DAS test base — LAYERS. File COPIED as is from the engine repository (`tools/contract/das-layers.test.mjs`):
+ * do not modify it here. In the engine, `node tools/contract/sync.mjs` copies it into all modules; the rules
+ * specific to a module (they differ: see `prive/ARCHITECTURE.md` §1 of each) go in `tests/das-tests.json`,
+ * section `"layers"`. A rule that the setting does not declare is skipped.
  *
- * Les couches tiennent par leurs imports et par ce que leur code nomme, pas par convention. Un « dossier » est le premier
- * dossier sous `module/scripts/` (`runtime/diagnostic/x.mjs` est dans `runtime`) ; `"."` désigne les fichiers posés à la
- * racine de `module/scripts/` (point d'entrée, `shared.mjs`…).
+ * Layers hold through their imports and through what their code names, not by convention. A "folder" is the first
+ * folder under `module/scripts/` (`runtime/diagnostic/x.mjs` is in `runtime`); `"."` designates the files placed at the
+ * root of `module/scripts/` (entry point, `shared.mjs`…).
  *
- * Réglage, `tests/das-tests.json` :
+ * Setting, `tests/das-tests.json`:
  *   "layers": {
- *     "imports": { "core": [".", "adapter", "runtime", "ui"], "runtime": ["ui"] },   // dossier → dossiers qu'il n'importe jamais
+ *     "imports": { "core": [".", "adapter", "runtime", "ui"], "runtime": ["ui"] },   // folder → folders it never imports
  *     "pure": { "folders": ["core"], "globals": ["PIXI", "navigator."], "ignoreTemplates": false },
- *         // dossiers purs : aucun global de Foundry (game, canvas, Hooks, CONFIG, foundry, ui.) ni ceux de "globals" en plus
- *         // ("nom." = seulement l'accès « nom.x » / « nom[x] »), et aucun import autre que relatif ; "ignoreTemplates" : le texte
- *         // entre accents graves (une macro générée, exécutée dans le jeu) n'est pas lu
- *     "router": "runtime/router.mjs",              // seul fichier où `Hooks.on(` est permis
- *     "names": [{ "name": "dnd5e-combat", "only": ["adapter/engine.mjs"], "why": "seul l'adaptateur parle au moteur" }],
+ *         // pure folders: no Foundry global (game, canvas, Hooks, CONFIG, foundry, ui.) nor those of "globals" in addition
+ *         // ("name." = only the access "name.x" / "name[x]"), and no import other than relative; "ignoreTemplates": the text
+ *         // between backticks (a generated macro, run in the game) is not read
+ *     "router": "runtime/router.mjs",              // the only file where `Hooks.on(` is allowed
+ *     "names": [{ "name": "dnd5e-combat", "only": ["adapter/engine.mjs"], "why": "only the adapter talks to the engine" }],
  *     "forbid": [{ "name": "ecritures", "pattern": "\\bactor\\.update\\(", "in": ["ui/"], "strings": false, "why": "…" }],
- *         // motif interdit dans les fichiers dont le chemin commence par une entrée de "in" (défaut : tous)
- *     "except": { "imports:core/x.mjs → runtime/y.mjs": "raison", "pure:core/x.mjs:game": "raison",
- *                 "router:ui/x.mjs": "raison", "names:dnd5e-combat:ui/x.mjs": "raison", "forbid:ecritures:ui/x.mjs": "raison" }
+ *         // forbidden pattern in the files whose path starts with an entry of "in" (default: all)
+ *     "except": { "imports:core/x.mjs → runtime/y.mjs": "reason", "pure:core/x.mjs:game": "reason",
+ *                 "router:ui/x.mjs": "reason", "names:dnd5e-combat:ui/x.mjs": "reason", "forbid:ecritures:ui/x.mjs": "reason" }
  *   }
  */
 import { describe, it, expect, vi } from "vitest";
@@ -28,8 +28,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..");
-// Ces tests lisent tout le code du module : sur le moteur (~510 fichiers), dans la passe complète où les autres fichiers de test
-// occupent tous les cœurs, plusieurs secondes. Même délai que le chargement du module (tests/load.test.mjs du moteur).
+// These tests read all the module's code: on the engine (~510 files), in the full pass where the other test files
+// occupy all the cores, several seconds. Same delay as loading the module (the engine's tests/load.test.mjs).
 vi.setConfig({ testTimeout: 60000 });
 const SCRIPTS = join(ROOT, "module/scripts");
 const configFile = join(ROOT, "tests/das-tests.json");
@@ -47,9 +47,9 @@ const filesUnder = dir => existsSync(dir) ? readdirSync(dir).sort().flatMap(name
 const lineOf = (text, index) => text.slice(0, index).split("\n").length;
 
 /**
- * Le code sans commentaires (remplacés par des espaces : positions et lignes restent justes). Avec `strings: false`, le
- * contenu des chaînes est blanchi aussi (les guillemets restent ; le texte d'un `${…}` d'un gabarit reste du code).
- * Les expressions régulières littérales sont reconnues (un `"` ou un `//` dedans n'ouvre rien).
+ * The code without comments (replaced by spaces: positions and lines stay correct). With `strings: false`, the
+ * content of strings is blanked too (quotes stay; the text of a `${…}` in a template stays code).
+ * Literal regular expressions are recognized (a `"` or a `//` inside does not open anything).
  */
 function clean(src, { strings = true } = {}) {
   let out = "";
@@ -57,14 +57,14 @@ function clean(src, { strings = true } = {}) {
   const blank = s => s.replace(/[^\n]/g, " ");
   const keep = s => strings ? s : blank(s);
   const regexAllowed = () => {
-    // Le dernier caractère significatif avant le `/` (lu à rebours : un `replace(/\s+$/)` sur tout le texte serait quadratique).
+    // The last significant character before the `/` (read backwards: a `replace(/\s+$/)` on the whole text would be quadratic).
     let k = out.length - 1;
     while ( (k >= 0) && /\s/.test(out[k]) ) k--;
     if ( k < 0 ) return true;
     if ( "(,=:[!&|?{};+-*%<>~^".includes(out[k]) ) return true;
     return /\b(return|typeof|case|in|of|new|delete|void|throw|else|yield|await)$/.test(out.slice(Math.max(0, k - 9), k + 1));
   };
-  const stack = [];   // pour chaque `${` ouvert dans un gabarit : la profondeur d'accolades à l'intérieur
+  const stack = [];   // for each `${` opened in a template: the brace depth inside
   while ( i < src.length ) {
     const c = src[i];
     const next = src[i + 1];
@@ -97,7 +97,7 @@ function clean(src, { strings = true } = {}) {
       out += c + keep(src.slice(i + 1, j)) + (closed ? c : ""); i = closed ? j + 1 : j;
     }
     else if ( (c === "`") || ((c === "}") && stack.length && (stack.at(-1) === 0)) ) {
-      // Début d'un gabarit, ou retour dans le gabarit à la fin d'un `${…}`.
+      // Start of a template, or return into the template at the end of a `${…}`.
       if ( c === "}" ) stack.pop();
       out += c;
       let j = i + 1;
@@ -126,7 +126,7 @@ const FILES = filesUnder(SCRIPTS).map(full => {
 const inFolder = (f, entries) => entries.some(e => (e === ".") ? (f.folder === ".") : ((f.path === e) || f.path.startsWith(e.endsWith("/") ? e : `${e}/`)));
 const rule = (declared, title, fn) => declared ? it(title, fn) : it.skip(`${title} (sauté : non déclaré dans tests/das-tests.json)`, fn);
 
-/** Les imports d'un fichier : `{ spec, index }` (statiques, effets de bord, dynamiques à chemin écrit). */
+/** The imports of a file: `{ spec, index }` (static, side effects, dynamic with a written path). */
 const importsOf = f => [
   ...f.code.matchAll(/(?:^|[;}])\s*(?:import|export)\b[^;"'`]*?\bfrom\s*["']([^"']+)["']/gm),
   ...f.code.matchAll(/(?:^|[;}])\s*import\s*["']([^"']+)["']/gm),
@@ -159,7 +159,7 @@ describe("couches du module", () => {
     const names = ["game", "canvas", "Hooks", "CONFIG", "foundry", "ui.", ...(pure.globals ?? [])];
     const patterns = names.map(n => n.endsWith(".")
       ? { name: n.slice(0, -1), re: new RegExp(`(?<![\\w$.])${n.slice(0, -1)}\\s*(?:\\?\\.|[.[])`, "g") }
-      // Le nom seul, mais pas une clé d'objet (`{ foundry: version }`) ni une propriété (`x.game`).
+      // The name alone, but not an object key (`{ foundry: version }`) nor a property (`x.game`).
       : { name: n, re: new RegExp(`(?<![\\w$.])${n}(?![\\w$]|\\s*:(?!:))`, "g") });
     const problems = [];
     for ( const f of FILES.filter(f => inFolder(f, pure.folders ?? [])) ) {
@@ -221,7 +221,7 @@ describe("couches du module", () => {
     expect(problems, "motifs interdits").toEqual([]);
   });
 
-  it("chaque exception de la section layers sert encore", () => {
+  it("every exception of the layers section is still used", () => {
     const stale = Object.keys(EXCEPT).filter(k => !used.has(k));
     expect(stale, "exceptions qui ne servent plus → les retirer de tests/das-tests.json (layers.except)").toEqual([]);
   });

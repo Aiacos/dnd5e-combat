@@ -1,11 +1,11 @@
 /**
- * Le Druide du Manuel des joueurs 2024 (SPEC §30), monde `dnd-6`. Le Guerrier reçoit, prêtés depuis le compendium du Manuel des
- * joueurs, Fureur élémentaire (et sa version améliorée), Foulée sélène et Courroux des mers ; le Bandit reçoit 300 PV. Vérifie :
- *  - Attaques primitives : +1d8 de feu au premier coup d'arme du tour, pas au second ; 2d8 avec Fureur élémentaire améliorée ;
- *  - Foulée sélène : l'attaque suivante a l'Avantage, la marque consommée (l'attaque d'après, non) ;
- *  - Courroux des mers : une sauvegarde de Constitution ratée repousse le Bandit de 15 ft (trois cases) ; Manuel 3.0.0 : la manifestation
- *    enchaîne la sauvegarde sans seconde action Bonus, sur soi ou (niveau 14) autour d'une autre créature (§438).
- * Remet positions, PV, états ; retire les items prêtés.
+ * The Player's Handbook 2024 Druid (SPEC §30), `dnd-6` world. The Fighter receives, lent from the Player's Handbook
+ * compendium, Elemental Fury (and its improved version), Selenic Stride and Wrath of the Sea; the Bandit receives 300 HP. Checks:
+ *  - Primal Strike: +1d8 fire on the first weapon hit of the turn, not on the second; 2d8 with improved Elemental Fury;
+ *  - Selenic Stride: the next attack has Advantage, the mark consumed (the attack after, not);
+ *  - Wrath of the Sea: a failed Constitution save pushes the Bandit back 15 ft (three cells); Handbook 3.0.0: the manifestation
+ *    chains the save without a second Bonus Action, on oneself or (level 14) around another creature (§438).
+ * Restores positions, HP, conditions; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "dnd-players-handbook.classes";
@@ -62,7 +62,7 @@ export default {
     ctx.restore(remettre);
     const part = async (name, fn) => {
       if ( process.env.PART && !name.includes(process.env.PART) ) return;
-      // Le Guerrier du monde peut être À terre (état de `dnd-6` à la copie) : son Désavantage annulerait l'Avantage vérifié ici.
+      // The world's Fighter may be Prone (a `dnd-6` condition at copy time): its Disadvantage would cancel the Advantage checked.
       for ( const st of ["prone", "unconscious"] ) await ctx.call("set-status", { tokenId: hero.id, statusId: st, active: false }).catch(() => {});
       try { await fn(); } catch ( err ) { ctx.expect(false, `${name} : ${err.message}`); }
       if ( ctx.ownCombat ) { await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {}); ctx.ownCombat = null; }
@@ -81,7 +81,7 @@ export default {
       return (await current()) === hero.id;
     };
     const sword = await ctx.itemId(hero.id, "greatsword");
-    /** Une attaque à l'épée à deux mains : sa formule d'attaque, touché ou non, et les dégâts bonus du jet. */
+    /** A two-handed sword attack: its attack formula, hit or not, and the roll's bonus damage. */
     const swing = async () => {
       const since = await ctx.lastMessageId();
       const u = await ctx.use({ tokenId: hero.id, itemId: sword, activityType: "attack", targetTokenIds: [bandit.id], usageConfig: { [MODULE_ID]: { confirmed: true } } });
@@ -118,7 +118,7 @@ export default {
       const u = await ctx.use({ tokenId: hero.id, itemId: step, activityId: "dnd5eactivity000", usageConfig: { [MODULE_ID]: { confirmed: true } } });
       await ctx.settle(u.usageMessageId, { timeoutMs: 15000 }).catch(() => null);
       await pause(2000);
-      // La destination de la téléportation attend un clic chez l'auteur : on la laisse (Échap), l'Avantage est ce qu'on vérifie.
+      // The teleportation destination waits for a click on the author's side: we leave it (Escape), the Advantage is what we check.
       await ctx.call("list-dialogs", {}).catch(() => null);
       const marked = (await ctx.call("get-actor", { actorId: hero.actorId })).effects?.some(e => /Foulée sélène|Moonlight/i.test(e.name));
       ctx.expect(!!marked, "le Guerrier porte l'effet de la Foulée sélène");
@@ -132,17 +132,17 @@ export default {
     await part("Courroux des mers", async () => {
       const wrath = await lend("phbdrdWrathOfThe");
       await tough();
-      // Restored Keep, colonne x = 3080 : de y = 5040 à 5460, quatre cases libres de murs (relevé du scénario `poussee`, sous la
-      // case d'origine du Magicien, 3080 × 4760). Le druide en 4900, le Bandit en 5040, repoussé jusqu'en 5460.
+      // Restored Keep, column x = 3080: from y = 5040 to 5460, four cells free of walls (survey of the `poussee` scenario, under
+      // the Wizard's original cell, 3080 × 4760). The druid at 4900, the Bandit at 5040, pushed back to 5460.
       await place(hero, 3080, 4900);
       const pos0 = { x: 3080, y: 5040 };
       let checked = false;
       for ( let n = 0; (n < 20) && !checked; n++ ) {
         await place(bandit, pos0.x, pos0.y);
-        // L'activité pose une émanation (gabarit) : la zone est donnée, sur la case du Bandit.
+        // The activity places an Emanation (template): the area is given, on the Bandit's cell.
         const box = await ctx.box(bandit);
-        // §438 : Manuel 3.0.0 — la sauvegarde `9U9AoJYvcrCQtIMm` n'a plus de gabarit (« une créature dans l'émanation ») : la créature est
-        // désignée par la liste du moteur (`castPicked`), comme au clic.
+        // §438: Handbook 3.0.0 — the save `9U9AoJYvcrCQtIMm` no longer has a template ("a creature in the Emanation"): the
+        // creature is designated through the engine's list (`castPicked`), as on click.
         const saveAct = ((await ctx.call("get-actor", { actorId: hero.actorId })).items ?? []).find(i => i._id === wrath)?.system?.activities?.["9U9AoJYvcrCQtIMm"];
         const picked = !saveAct?.target?.template?.type;
         const u = picked
@@ -164,14 +164,14 @@ export default {
       await unlend(wrath);
     });
 
-    // §438 suite : Manuel 3.0.0 — la manifestation (utilitaire) enchaîne la sauvegarde sans seconde action Bonus ; au niveau 14, sur une
-    // autre créature (« Another ») : la liste s'ouvre autour d'elle, elle exceptée ; aux tours suivants, la sauvegarde seule propose
-    // aussi les créatures autour de qui porte l'effet de l'item.
+    // §438 continued: Handbook 3.0.0 — the manifestation (utility) chains the save without a second Bonus Action; at level 14, on
+    // another creature ("Another"): the list opens around it, it excepted; on the following turns, the save alone also
+    // offers the creatures around whoever carries the item's effect.
     await part("Courroux des mers enchaîné", async () => {
       const wrath = await lend("phbdrdWrathOfThe");
       const acts = ((await ctx.call("get-actor", { actorId: hero.actorId })).items ?? []).find(i => i._id === wrath)?.system?.activities ?? {};
       if ( acts.nNTYj4vqURV4Dhjt?.type !== "utility" || !acts.ituofBRxXKLI7wNW ) { ctx.log("Courroux des mers 2.2.0 : enchaînement non applicable"); await unlend(wrath); return; }
-      // Druide de niveau 14 le temps de la partie (porte de niveau d'« Another », rayon de 3 m).
+      // Level 14 Druid for the duration of the game (level gate of "Another", 3 m radius).
       const cls = await ctx.call("upsert-actor-item", { actorId: hero.actorId,
         itemData: { name: "Druid", type: "class", system: { identifier: "druid", levels: 14 } }, match: { path: "system.identifier", value: "druid" } });
       ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: hero.actorId, itemId: cls.id }).catch(() => {}));
@@ -181,7 +181,7 @@ export default {
       if ( mage ) ctx.restore(() => ctx.removeEffectsNamed(mage, /Tempétueux|Stormborn|Courroux|Wrath/i));
       await tough();
       const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
-      /** La liste qui suit : ses créatures, puis « Valider » (le Bandit, ennemi, coché d'avance). */
+      /** The list that follows: its creatures, then "Confirm" (the Bandit, an enemy, pre-checked). */
       const pickList = async ids => {
         for ( const stop = Date.now() + 12000; Date.now() < stop; ) {
           const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
@@ -190,7 +190,7 @@ export default {
         }
         return null;
       };
-      /** Manifeste (sans dépenser de Forme sauvage : le Guerrier n'en a pas), répond à la liste, rend la sauvegarde qui a suivi. */
+      /** Manifests (without spending Wild Shape: the Fighter has none), answers the list, returns the save that followed. */
       const manifest = async (activityId, targets=[]) => {
         const ids = await known();
         const since = await ctx.lastMessageId();
@@ -198,12 +198,12 @@ export default {
           usageConfig: { consume: false, create: { measuredTemplate: false } } });
         const list = await pickList(ids);
         await pause(1500);
-        // La sauvegarde : l'utilisation qui vise le Bandit (la manifestation ne vise personne, ou le Magicien).
+        // The save: the use that targets the Bandit (the manifestation targets nobody, or the Wizard).
         const msg = (await ctx.messagesSince(since)).find(m => (m.type === "usage") && (m.targets ?? []).some(t => t.name === "Bandit"));
         const r = msg ? await ctx.settle(msg.id, { timeoutMs: 20000 }).catch(() => null) : null;
         return { list, msg, r };
       };
-      // 1. Sur soi : le Bandit au contact.
+      // 1. On oneself: the Bandit in contact.
       await place(hero, 3080, 4900);
       await place(bandit, 3080, 5040);
       const self = await manifest("nNTYj4vqURV4Dhjt");
@@ -211,7 +211,7 @@ export default {
       ctx.expect(self.msg?.flags?.[MODULE_ID]?.cost === "free", `la sauvegarde suit sans seconde action Bonus (coût ${self.msg?.flags?.[MODULE_ID]?.cost})`);
       ctx.expect(self.r?.plan?.save?.ability === "con" && !!self.r?.targets?.find(x => x.name === "Bandit")?.save, "sauvegarde de Constitution du Bandit");
       await remettre();
-      // 2. Sur une autre créature (niveau 14) : le Magicien, le Bandit à 3 m de lui et à 4,50 m du druide.
+      // 2. On another creature (level 14): the Wizard, the Bandit 3 m from them and 4.50 m from the druid.
       if ( !mage ) { ctx.log("Magicien absent : « Another » non joué"); }
       else {
         await place(hero, 3080, 4760);
@@ -220,8 +220,9 @@ export default {
         const other = await manifest("ituofBRxXKLI7wNW", [mage]);
         ctx.expect(!!other.list && /Bandit/.test(other.list) && !/Magicien/.test(other.list), "« Another » : la liste autour du Magicien, lui excepté, le Bandit dedans");
         ctx.expect(other.msg?.flags?.[MODULE_ID]?.cost === "free" && !!other.r?.targets?.find(x => x.name === "Bandit")?.save, "« Another » : la sauvegarde du Bandit suit, sans action de plus");
-        // 3. Au tour suivant, la sauvegarde seule : le Bandit (hors de portée du druide) proposé, s'il porte l'effet — sinon dit.
-        await place(bandit, 3080, 5180);   // une sauvegarde ratée l'a repoussé de 4,50 m
+        // 3. On the next turn, the save alone: the Bandit (out of the druid's range) offered, if it carries the effect —
+        // otherwise said.
+        await place(bandit, 3080, 5180);   // a failed save pushed it back 4.50 m
         const carries = (await ctx.effects(mage)).some(e => !e.disabled && /Tempétueux|Stormborn/i.test(e.name ?? ""));
         const pick = await ctx.engine("pickTargets", { tokenId: hero.id, itemId: wrath, activityId: "9U9AoJYvcrCQtIMm" });
         const listed = (pick?.creatures ?? []).some(c => c.name === "Bandit");

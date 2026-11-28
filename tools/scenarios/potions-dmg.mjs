@@ -1,6 +1,6 @@
 /**
- * Potions du Guide du maître (SPEC §53), bues pour de vrai (consommées, donc détruites) par le Guerrier, sans cible désignée.
- * `ONLY=speed,growth` ne joue que les parties dont le nom contient l'un de ces mots. Remet tout.
+ * Dungeon Master's Guide potions (SPEC §53), drunk for real (consumed, so destroyed) by the Fighter, with no designated target.
+ * `ONLY=speed,growth` plays only the parts whose name contains one of these words. Restores everything.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -28,7 +28,7 @@ export default {
     const reset = async () => {
       const a = await actor();
       for ( const e of a.effects ?? [] ) if ( !baseEffects.has(e._id) ) await ctx.call("remove-embedded-effect", { documentType: "Actor", id: actorId, effectId: e._id }).catch(() => {});
-      await pause(800);   // une suite d'effet (léthargie) aurait le temps de naître
+      await pause(800);   // an effect follow-up (lethargy) would have time to arise
       const b = await actor();
       for ( const i of b.items ?? [] ) if ( !baseItems.has(i._id) ) await ctx.call("remove-embedded-item", { documentType: "Actor", id: actorId, itemId: i._id }).catch(() => {});
       await ctx.call("update-actor", { actorId, actorData: { "system.attributes.hp.value": hp0, "system.attributes.hp.temp": 0, "system.attributes.exhaustion": 0 } });
@@ -41,7 +41,7 @@ export default {
       await pause(500);
       try { await fn(); } catch ( err ) { ctx.expect(false, `${name} : ${err.message}`); }
     };
-    /** Boit la potion `id` du Guide (activité `type`) : prêtée, consommée. Rend l'id de l'item prêté. */
+    /** Drinks the Guide's potion `id` (activity `type`): lent, consumed. Returns the id of the lent item. */
     const drink = async (id, type="utility") => {
       const { data } = await ctx.call("get-compendium-entry", { uuid: `${DMG}.${id}` });
       const { _id, folder, ownership, _stats, ...itemData } = data;

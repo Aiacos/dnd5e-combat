@@ -1,9 +1,9 @@
 /**
- * Image miroir (SPEC §16.25) : le sort pose trois répliques sur le lanceur, sans cible ; une attaque qui le touche fait
- * lancer 1d6 par réplique — un 3 ou plus : la réplique prend le coup (raté, PV intacts, une réplique de moins) ; sinon le
- * coup porte. Un coup raté contre la CA ne fait rien lancer.
- * Monde `dnd-6` : le Magicien reçoit le sort du compendium, le Zombi attaque. Monde `ravenloft` : Kaalisti (qui le connaît),
- * attaqué par Rahadin au sabre.
+ * Mirror Image (SPEC §16.25): the spell places three duplicates on the caster, with no target; an attack that hits it makes
+ * it roll 1d6 per duplicate — a 3 or more: the duplicate takes the blow (miss, HP intact, one duplicate fewer); otherwise the
+ * blow lands. A miss against AC rolls nothing.
+ * World `dnd-6`: the Wizard receives the spell from the compendium, the Zombie attacks. World `ravenloft`: Kaalisti (who knows it),
+ * attacked by Rahadin with a saber.
  */
 const SPELL = "Compendium.dnd5e.spells24.Item.phbsplMirrorImag";
 const CASTERS = ["Kaalisti", "Magicien"];
@@ -21,7 +21,7 @@ export default {
     const attacker = await ctx.token(attackerRule.name);
     await ctx.ensureItem(caster, SPELL);
 
-    // L'attaquant au contact du lanceur, à l'est (le filet de sécurité le remet à sa place).
+    // The attacker in contact with the caster, to the east (the safety net puts it back in place).
     const grid = await ctx.gridSize();
     const at = await ctx.position(caster);
     await ctx.call("move-token", { tokenId: attacker.id, x: at.x + grid, y: at.y });
@@ -30,8 +30,8 @@ export default {
     const cast = await ctx.use({ tokenId: caster.id, identifier: "mirror-image" });
     ctx.expect(cast.used, "Image miroir lancée");
     await ctx.settle(cast.usageMessageId).catch(() => null);
-    // Les effets d'Image miroir seulement : un coup qui porte peut ajouter « En péril » (dnd5e, `bloodied`), qui n'en est pas une
-    // (vu dans `dnd-6` le 2026-09-26 : « répliques intactes (4) »).
+    // Mirror Image's effects only: a hit that lands can add "Bloodied" (dnd5e, `bloodied`), which is not one of them
+    // (seen in `dnd-6` on 2026-09-26: "duplicates intact (4)").
     const duplicates = () => ctx.effects(caster).then(list => list.filter(e => !before.has(e._id) && !(e.statuses ?? []).length));
     let count = (await duplicates()).length;
     ctx.expect(count === 3, `trois répliques posées sur ${casterName}, sans cible (${count})`);

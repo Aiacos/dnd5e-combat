@@ -1,21 +1,21 @@
 /**
- * Un trait qui répond à un type de dégâts subi (clé de contenu `onDamageTaken`) : « s'il subit des dégâts de froid, sa Vitesse diminue de
- * 6 m jusqu'à la fin de son prochain tour » (Élémentaire de l'eau, Gel), « s'il subit des dégâts de feu, il a le Désavantage aux jets
- * d'attaque et aux tests de caractéristique jusqu'à la fin de son prochain tour » (Golem de chair, Aversion au feu). Ce n'est pas une
- * Réaction : rien n'est demandé, rien n'est dépensé — l'effet du trait est posé sur son porteur. Fonctions pures.
+ * A trait that responds to a type of damage taken (content key `onDamageTaken`): "if it takes cold damage, its Speed is reduced by
+ * 6 m until the end of its next turn" (Water Elemental, Freeze), "if it takes fire damage, it has Disadvantage on attack rolls
+ * and ability checks until the end of its next turn" (Flesh Golem, Aversion to Fire). This is not a
+ * Reaction: nothing is asked, nothing is spent — the trait's effect is placed on its bearer. Pure functions.
  */
 
 /**
- * La règle vaut-elle pour ces dégâts ?
- * @param {{types: string[], effect: string}|null|undefined} rule  `onDamageTaken` de l'entrée.
- * @param {string[]} taken  Les types des dégâts réellement subis (valeur > 0, après résistances et immunités).
+ * Does the rule apply to this damage?
+ * @param {{types: string[], effect: string}|null|undefined} rule  `onDamageTaken` of the entry.
+ * @param {string[]} taken  The types of damage actually taken (value > 0, after Resistances and Immunities).
  */
 export function damageTraitHits(rule, taken) {
   if ( !rule?.effect || !Array.isArray(rule.types) || !rule.types.length ) return false;
   return (taken ?? []).some(t => rule.types.includes(t));
 }
 
-/** Les erreurs de la clé. Vide = valide. */
+/** The key's errors. Empty = valid. */
 export function validateOnDamageTaken(rule, at, damageTypes, isId) {
   const errors = [];
   const shape = `${at}onDamageTaken: { types: [damage types], effect: effect id }`;
@@ -27,12 +27,12 @@ export function validateOnDamageTaken(rule, at, damageTypes, isId) {
 }
 
 /**
- * Les données de l'effet du trait à poser sur son porteur : la copie de l'effet d'item, sans son id, qui garde sa source
- * (`_stats.duplicateSource`) comme le fait le plateau d'effets de dnd5e — c'est par elle que le moteur reconnaît l'effet
- * d'item (`comesFromItemEffect`) et lui applique ce que l'entrée en dit (`effectEnds`).
- * @param {object} data        `effect.toObject()` de l'effet d'item
- * @param {string} sourceUuid  uuid de l'effet d'item
- * @param {string} itemUuid    uuid de l'item, origine de l'effet posé
+ * The data of the trait's effect to place on its bearer: the copy of the item effect, without its id, which keeps its source
+ * (`_stats.duplicateSource`) as dnd5e's effect tray does — through it the engine recognizes the item effect
+ * (`comesFromItemEffect`) and applies what the entry says about it (`effectEnds`).
+ * @param {object} data        `effect.toObject()` of the item effect
+ * @param {string} sourceUuid  uuid of the item effect
+ * @param {string} itemUuid    uuid of the item, origin of the placed effect
  */
 export function traitEffectData(data, sourceUuid, itemUuid) {
   const { _id, ...rest } = data ?? {};

@@ -1,11 +1,11 @@
 /**
- * Suivre (SPEC §41.3) : un token en suit un autre, hors combat.
- *  1. Le Clerc reçoit l'ordre de suivre le Guerrier : l'ordre est noté, et il vient au contact.
- *  2. Le Guerrier se déplace : le Clerc le rejoint, au contact de sa nouvelle place.
- *  3. Pas de boucle : le Guerrier ne peut pas se mettre à suivre le Clerc qui le suit.
- *  4. Le Clerc déplacé autrement (son joueur le prend en main) : l'ordre tombe.
- *  5. « Ne plus suivre » : l'ordre tombe, et le Clerc ne bouge plus quand le Guerrier repart.
- * Pose la distribution de référence de Restored Keep ; remet les ordres et les positions.
+ * Follow (SPEC §41.3): one token follows another, out of combat.
+ *  1. The Cleric is ordered to follow the Fighter: the order is noted, and the Cleric moves into contact.
+ *  2. The Fighter moves: the Cleric catches up, in contact with the Fighter's new position.
+ *  3. No loop: the Fighter cannot start following the Cleric who is following the Fighter.
+ *  4. The Cleric moved another way (its player takes control): the order lapses.
+ *  5. "Stop following": the order lapses, and the Cleric no longer moves when the Fighter leaves again.
+ * Sets up the Restored Keep reference layout; resets the orders and positions.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -13,7 +13,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const STEPS = [[3, 0], [0, 3], [-3, 0], [0, -3], [2, 2], [-2, -2], [2, -2], [-2, 2]];
 
 export default {
-  scene: "keep",   // §83 : étages et escaliers, dans Restored Keep
+  scene: "keep",   // §83: floors and stairs, in Restored Keep
   name: "suivre — un token en suit un autre, la boucle refusée, l'ordre qui tombe",
 
   async run(ctx) {
@@ -26,7 +26,7 @@ export default {
     for ( const t of [follower, leader] ) ctx.restore(() => ctx.engine("unfollow", { tokenId: t.id }).catch(() => {}));
 
     const touching = (a, b) => (a.level === b.level) && (Math.max(Math.abs(a.cell.i - b.cell.i), Math.abs(a.cell.j - b.cell.j)) <= 1);
-    /** Attend que le suiveur soit au contact du meneur (le suivi part après un court délai, puis marche). */
+    /** Waits until the follower is in contact with the leader (following starts after a short delay, then walks). */
     const joined = async (timeoutMs=30000) => {
       for ( const stop = Date.now() + timeoutMs; Date.now() < stop; await pause(700) ) {
         const [f, l] = [await state(follower), await state(leader)];
@@ -34,7 +34,7 @@ export default {
       }
       return false;
     };
-    /** Une case atteignable à quelques pas du token, où il ira par le chemin du moteur. */
+    /** A reachable cell a few steps from the token, which it will reach by the engine's path. */
     const stepAway = async t => {
       const here = (await state(t)).position.cell;
       for ( const [di, dj] of STEPS ) {
@@ -45,7 +45,7 @@ export default {
       return null;
     };
 
-    // 1. L'ordre, et la mise au contact.
+    // 1. The order, and the move into contact.
     const r = await ctx.engine("follow", { followerId: follower.id, leaderId: leader.id });
     ctx.expect(r.following === true, "le Clerc reçoit l'ordre de suivre le Guerrier");
     ctx.expect((await state(follower)).leader === leader.id, "l'ordre est noté sur le Clerc");
@@ -62,7 +62,7 @@ export default {
     ctx.expect((after.cell.i !== before.cell.i) || (after.cell.j !== before.cell.j), `le Clerc a marché (${before.cell.i},${before.cell.j} → ${after.cell.i},${after.cell.j})`);
     ctx.expect((await state(follower)).leader === leader.id, "il suit toujours (sa propre marche ne casse pas l'ordre)");
 
-    // 2 bis. Par un escalier : le meneur change de niveau, le suiveur aussi (scène à niveaux seulement).
+    // 2 bis. By a staircase: the leader changes level, the follower too (levelled scene only).
     const { levels } = await ctx.call("list-levels", {}).catch(() => ({ levels: [] }));
     if ( levels?.length > 1 ) {
       const size = await ctx.gridSize();
@@ -91,7 +91,7 @@ export default {
     const loop = await ctx.engine("follow", { followerId: leader.id, leaderId: follower.id });
     ctx.expect(loop.following === false, "boucle refusée : le Guerrier ne suit pas le Clerc qui le suit");
 
-    // 4. Repris en main : un déplacement qui ne vient pas du suivi fait tomber l'ordre.
+    // 4. Taken back in hand: a move that does not come from following drops the order.
     const away = await stepAway(follower);
     if ( ctx.expect(!!away, "une case où déplacer le Clerc à la main") ) {
       await ctx.engine("move", { tokenId: follower.id, cell: away }, { timeoutMs: 60000 });
@@ -99,7 +99,7 @@ export default {
       ctx.expect((await state(follower)).leader === null, "le Clerc déplacé à la main ne suit plus");
     }
 
-    // 5. « Ne plus suivre ».
+    // 5. "Stop following".
     await ctx.engine("follow", { followerId: follower.id, leaderId: leader.id });
     ctx.expect(await joined(), "ordre redonné : le Clerc revient au contact");
     const stopped = await ctx.engine("unfollow", { tokenId: follower.id });

@@ -1,18 +1,18 @@
 /**
- * §272 : minuteries au-dessus des tokens (fouille, désamorçage, tout geste qui prend du temps) — ce qui se calcule sans Foundry.
+ * §272: timers above tokens (searching, disarming, any gesture that takes time) — what is computed without Foundry.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
-/** Le dégradé du logo DAS (site darshyne.github.io, `--logo`), de gauche à droite. */
+/** The DAS logo gradient (site darshyne.github.io, `--logo`), from left to right. */
 export const TIMER_GRADIENT = Object.freeze(["#e005f4", "#ee0388", "#fc0016"]);
 
-/** Dimensions de la jauge, en fraction de la largeur d'une case, et ses bords. */
+/** Gauge dimensions, as a fraction of a cell's width, and its edges. */
 export const TIMER_LAYOUT = Object.freeze({ width: 0.9, height: 0.12, gap: 0.08, outline: 2, iconSize: 0.26 });
 
 /**
- * Où en est une minuterie lancée à `startedAt` (ms) pour `seconds` secondes, à l'instant `now` (ms).
- * @returns {{pct: number, left: number, done: boolean}}  `left` : secondes restantes, arrondies au-dessus.
+ * Where a timer started at `startedAt` (ms) for `seconds` seconds stands, at time `now` (ms).
+ * @returns {{pct: number, left: number, done: boolean}}  `left`: seconds remaining, rounded up.
  */
 export function timerState({ startedAt, seconds }, now) {
   const total = Math.max(0, Number(seconds) || 0) * 1000;
@@ -22,7 +22,7 @@ export function timerState({ startedAt, seconds }, now) {
   return { pct, left: Math.max(0, Math.ceil((total - elapsed) / 1000)), done: elapsed >= total };
 }
 
-/** Le texte des secondes restantes (« 4 s »), ou rien quand la table les masque. */
+/** The text of the seconds remaining ("4 s"), or nothing when the table hides them. */
 export function timerSecondsText(left, { hideSeconds=false, unit="s" }={}) {
   if ( hideSeconds || !Number.isFinite(left) ) return "";
   return `${left} ${unit}`;

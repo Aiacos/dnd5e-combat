@@ -1,6 +1,6 @@
 /**
- * Les commandes de la machine d'action (SPEC §5) : ce que le répartiteur (runtime/dispatcher.mjs) fait exécuter pour une
- * résolution — demander les sauvegardes et les réactions, lancer les dégâts, appliquer, déplacer, poser les états. Extrait de
+ * The action machine's commands (SPEC §5): what the dispatcher (runtime/dispatcher.mjs) has executed for a
+ * resolution — request the saves and Reactions, roll damage, apply, move, set conditions. Extracted from
  * runtime/engine.mjs.
  */
 
@@ -41,8 +41,8 @@ import { damageFlow } from "./flow.mjs";
 import { promptWait } from "../adapter/dialogs.mjs";
 
 /**
- * §419 : la fenêtre du MJ avant l'application — qui, quoi, combien (le jet, avant résistances et sauvegardes), sur qui. Sans délai : c'est
- * le MJ qui a demandé à valider. Fermée sans choix : rien n'est appliqué.
+ * §419: the GM's window before application — who, what, how much (the roll, before Resistances and saves), on whom. No delay: it is
+ * the GM who asked to validate. Closed with no choice: nothing is applied.
  */
 async function confirmApplication(command, resolution, activity, source) {
   const damages = deserializeDamages(resolution.damageRoll?.damages ?? []);
@@ -55,8 +55,8 @@ async function confirmApplication(command, resolution, activity, source) {
     return `${t?.name ?? "?"}${part(e.multiplier)}`;
   }).join(", ");
   const heal = !!resolution.plan?.heal;
-  // §421 : la table voit que le MJ décide (bandeau « Le MJ décide… », sans désigner de créature : pas d'acteur). §422 : suivie — le MJ
-  // peut répondre depuis sa File.
+  // §421: the table sees that the GM is deciding (banner "The GM decides…", without naming a creature: no actor). §422: followed —
+  // the GM can answer from their Queue.
   const choice = await promptWait({
     window: { title: loc("Degats.ValiderTitre", { item: activity?.item?.name ?? "" }) },
     classes: ["dnd5e-combat-damage-validate"],
@@ -79,9 +79,9 @@ import { braceCut } from "../core/forced-move.mjs";
 /* -------------------------------------------- */
 
 /**
- * §37 : la créature prend l'action Esquiver (Malédiction, « Cursed Actions » : « doit réussir un jet de sauvegarde de Sagesse au
- * début de chacun de ses tours, ou être forcée de prendre l'action Esquiver ») — son action du tour dépensée, l'état Esquive
- * posé (runtime/conditions.mjs le montre sur le token). Hors combat, rien.
+ * §37: the creature takes the Dodge action (Curse, "Cursed Actions": "must succeed on a Wisdom saving throw at the
+ * start of each of its turns, or be forced to take the Dodge action") — its turn's action spent, the Dodge condition
+ * placed (runtime/conditions.mjs shows it on the token). Out of combat, nothing.
  */
 async function forceDodge(tokenUuid) {
   const token = await fromUuid(tokenUuid);
@@ -94,13 +94,13 @@ async function forceDodge(tokenUuid) {
   log(`${token.name}: saving throw failed, Dodge action forced`);
 }
 
-/** L'outil de scénario `autoReact` de l'utilisation (« none » : personne ne réagit ; « first » : la première, sans fenêtre). */
+/** The scenario tool `autoReact` of the use ("none": nobody reacts; "first": the first, without a window). */
 const autoReactOf = (carrier, resolution) =>
   game.messages.get(resolution?.origin ?? carrier.id)?.getFlag(MODULE_ID, "autoReact") ?? carrier.getFlag(MODULE_ID, "autoReact") ?? null;
 
 /**
- * K2 (§323) : la règle `killsAtZero` vaut-elle ici ? `true` ; ou réservée à des types de créature (« un Humanoïde réduit à 0 PV… »),
- * à une taille au plus (« une créature de taille M ou inférieure »), à des activités de l'item (le rayon désintégrant).
+ * K2 (§323): does the `killsAtZero` rule apply here? `true`; or reserved to creature types ("a Humanoid reduced to 0 HP…"),
+ * to a size at most ("a Medium or smaller creature"), to activities of the item (the disintegrating ray).
  */
 const SIZE_ORDER = ["tiny", "sm", "med", "lg", "huge", "grg"];
 function killsHere(rule, activity, actor) {
@@ -114,8 +114,8 @@ function killsHere(rule, activity, actor) {
 
 export const COMMANDS = {
   /**
-   * Issue #32 : succès à un prix — l'attaque rate de 1 ou 2 une cible au moins (CA finale) : la pause du MJ. Accepté : ces cibles sont
-   * touchées ; sinon l'échec reste. Rien n'a encore été appliqué.
+   * Issue #32: success at a cost — the attack misses at least one target by 1 or 2 (final AC): the GM's pause. Accepted: those
+   * targets are hit; otherwise the failure stands. Nothing has been applied yet.
    */
   async atCostPause(command, carrier, resolution) {
     const tokenDoc = await fromUuid(speakerTokenUuid(carrier) ?? "");
@@ -130,8 +130,8 @@ export const COMMANDS = {
   }),
 
   /**
-   * Image miroir (§16.25) : un d6 par réplique, lancé par le moteur, visible de tous ; une réplique touchée est détruite
-   * (son effet retiré — la dernière retirée met fin au sort).
+   * Mirror Image (§16.25): a d6 per duplicate, rolled by the engine, visible to all; a hit duplicate is destroyed
+   * (its effect removed — the last one removed ends the spell).
    */
   async rollDuplicates(command, carrier, resolution) {
     const events = [];
@@ -154,7 +154,7 @@ export const COMMANDS = {
     return events;
   },
 
-  /** §16.27 : l'auteur répartit ses projectiles (Projectile magique) ; sans réponse, le cœur répartit au mieux. */
+  /** §16.27: the author distributes their missiles (Magic Missile); with no answer, the core distributes as best it can. */
   async askAllocation(command, carrier, resolution) {
     const actor = await fromUuid(resolution.source ?? "");
     const activity = carrier.getAssociatedActivity?.();
@@ -166,8 +166,8 @@ export const COMMANDS = {
   async requestSaves(command, carrier, resolution) {
     const { save } = resolution.plan;
     log(`${(save.abilities ?? [save.ability]).join("/")} saving throw DC ${save.dc} requested from`, command.targets.map(t => t.name).join(", "));
-    // Plusieurs caractéristiques au choix de la cible : le joueur choisit ; pour le MJ, selon le réglage.
-    // Une intention peut l'imposer (`saveChoice: "best"` sur la carte : scénarios, sans clic).
+    // Several abilities at the target's choice: the player chooses; for the GM, per the setting.
+    // An intention can impose it (`saveChoice: "best"` on the card: scenarios, no click).
     const forced = game.messages.get(resolution.origin ?? carrier.id)?.getFlag(MODULE_ID, "saveChoice") ?? carrier.getFlag(MODULE_ID, "saveChoice");
     const ask = forced !== "best";
     await requestSaves(carrier, save, command.targets,
@@ -178,13 +178,13 @@ export const COMMANDS = {
     const damageMessage = game.messages.get(resolution.damageRoll?.messageId);
     const activity = carrier.getAssociatedActivity?.({ scaled: true }) ?? null;
     const source = await fromUuid(speakerTokenUuid(carrier) ?? "");
-    // §419 : réglage « Dégâts », validés par le MJ — rien n'est appliqué (ni PV, ni effets) sans son accord ; refusé, la résolution se
-    // clôt sans rien toucher. Seulement quand il y a un jet à appliquer : un effet seul part comme avant.
+    // §419: "Damage" setting, validated by the GM — nothing is applied (neither HP nor effects) without their agreement; refused,
+    // the resolution closes without touching anything. Only when there is a roll to apply: an effect alone goes as before.
     if ( resolution.damageRoll && damageFlow().validate && !(await confirmApplication(command, resolution, activity, source)) ) {
       log(`${activity?.item?.name ?? "action"}: application refused by the GM`);
       return [{ type: "applied", entries: [], extra: [] }];
     }
-    // §112 : les PV tombent quand l'animation (BLFX, par Sequencer) arrive, pas à son départ.
+    // §112: HP drop when the animation (BLFX, by Sequencer) arrives, not at its start.
     await waitForAnimations([source?.uuid, ...command.entries.map(e => e.token)]);
     const resave = carrier.getFlag(MODULE_ID, "resave");
     const attackMode = game.messages.get(resolution.attack?.messageId ?? "")?.rolls?.[0]?.options?.attackMode ?? null;
@@ -193,13 +193,13 @@ export const COMMANDS = {
     const slotHeal = resolution.plan.heal ? slotHealBonus(source?.actor ?? activity?.actor, activity) : null;
     let healedOther = false;
     for ( let entry of command.entries ) {
-      // Riposte (§16.9) : jugée au moment du coup, avant ses dégâts (« tant que vous avez ces PV temporaires »).
+      // Riposte (§16.9): judged at the moment of the blow, before its damage ("as long as you have these Temporary Hit Points").
       const struck = resolution.plan.attack ? await fromUuid(entry.token) : null;
       const retaliations = struck ? retaliationsFor({ bearerToken: struck, attackerToken: source, activity, attackMode }) : [];
-      // §16.24 : une cible sous Lueur d'espoir (`healMax`) regagne le maximum du soin.
+      // §16.24: a target under Beacon of Hope (`healMax`) regains the maximum of the healing.
       const patient = (await fromUuid(entry.token))?.actor;
-      // §160 : paliers de PV (`hpTiers`) — l'issue se choisit d'après les PV de la cible AVANT les dégâts (Mot de pouvoir mortel, Mot de
-      // pouvoir étourdissant, Parole divine) : le premier palier qui tient ; aucun, aucun effet.
+      // §160: HP tiers (`hpTiers`) — the outcome is chosen from the target's HP BEFORE the damage (Power Word Kill, Power Word
+      // Stun, Divine Word): the first tier that holds; none, no effect.
       const tier = hpTierFor(activity?.item, patient, entry, resolution.plan, activity,
         (resolution.targets ?? []).find(t => t.token === entry.token)?.save?.success === false);
       if ( tier ) entry = tier.entry;
@@ -215,44 +215,44 @@ export const COMMANDS = {
         && (healsMax(patient) || healsDownedToMax(source?.actor ?? activity?.actor, activity, patient)))
         ? await maximizedHealing(damageMessage) : null;
       if ( healed ) log(`maximum healing for ${entry.token} (${healed.map(d => d.value).join(" + ")})`);
-      // Rien à lire sans jet (sauvegarde ou effet seuls : `multiplier` 0, pas de `damageRoll`).
+      // Nothing to read without a roll (save or effect alone: `multiplier` 0, no `damageRoll`).
       // #269 (§545): the critical dice rolled apart go to the Critical Hit targets only (`damageFor`).
       const struckCritical = !!(resolution.plan.attack && (resolution.targets ?? []).find(t => t.token === entry.token && t.hit && t.critical));
       let rolled = (entry.multiplier > 0) ? (healed ?? deserializeDamages(damageFor(resolution, entry.token))) : [];
-      // §355 : Demonomicon d'Iggwilv — les dégâts d'un sort du porteur contre un Fiélon sont maximisés.
+      // §355: Iggwilv's Demonomicon — the damage of a bearer's spell against a Fiend is maximized.
       if ( rolled.length && !resolution.plan.heal && spellDamageMaxed(source?.actor ?? activity?.actor, activity, patient) ) {
         rolled = (await maximizedHealing(damageMessage, { critical: struckCritical })) ?? rolled;
         log(`${activity.item.name}: maximum damage against ${patient?.name}`);
       }
-      // §164 : le type de chaque rayon d'Embruns prismatiques ; deux rayons de dégâts, deux fois les dégâts.
+      // §164: the type of each Prismatic Spray ray; two damage rays, double damage.
       if ( prism?.types.length ) rolled = prism.types.flatMap(type => rolled.map(d => ({ ...d, type })));
-      // §27 : Disciple de la Vie — des PV de plus au soin d'un sort lancé par un emplacement.
+      // §27: Disciple of Life — extra HP on the healing of a spell cast with a spell slot.
       if ( slotHeal?.disciple && (entry.multiplier > 0) && rolled.some(d => d.type === "healing") ) {
         rolled = [...rolled, { type: "healing", value: slotHeal.disciple, properties: new Set() }];
         log(`Disciple of Life: +${slotHeal.disciple} HP for ${entry.token}`);
       }
-      // §135 : Faveur de vigueur — « quand vous regagnez des PV, vous pouvez en regagner autant que votre modificateur de Constitution en
-      // plus », une fois par tour.
+      // §135: Boon of Fortitude — "when you regain HP, you can regain as many as your Constitution modifier in addition",
+      // once per turn.
       if ( (entry.multiplier > 0) && rolled.some(d => d.type === "healing") ) {
         const extra = await fortifiedExtra(patient);
         if ( extra ) rolled = [...rolled, { type: "healing", value: extra, properties: new Set() }];
       }
       if ( resolution.plan.heal && (entry.multiplier > 0) && patient && (patient !== (source?.actor ?? activity?.actor)) ) healedOther = true;
-      // §38 : Égide projetée — avant l'application, un allié peut faire absorber ces dégâts par sa réserve.
+      // §38: Projected Ward — before application, an ally can have their pool absorb this damage.
       const hurting = (entry.multiplier > 0) && !resolution.plan.heal && rolled.some(d => !["healing", "temphp"].includes(d.type) && (d.value > 0));
-      // §493 (B13) : prise dans une zone, la créature peut réagir (Bouclier d'insectes) — épargnée, elle seule ne subit pas les dégâts.
+      // §493 (B13): caught in an area, the creature can react ("Insect Shield") — spared, it alone does not take the damage.
       const shielded = hurting ? await askAreaReactions(entry.token, source?.uuid ?? null, activity, { auto: autoReactOf(carrier, resolution) }) : null;
       if ( shielded?.spared ) rolled = [];
       const ward = (hurting && !shielded?.spared) ? await askDamageGuardians(entry.token, source?.uuid ?? null, activity, { auto: autoReactOf(carrier, resolution) }) : null;
       if ( ward?.item ) log(`${ward.reactor}: Projected Ward, their Arcane Ward takes ${entry.token}'s damage`);
-      // §78 : Interposition — les dégâts passent sur le réacteur ; les effets restent à la cible.
+      // §78: "Interposition" — the damage passes to the reactor; the effects stay with the target.
       if ( ward?.interpose ) log(`${ward.reactor} interposes: takes ${entry.token}'s damage`);
-      // §303 (repasse C8) : Aide — l'effet (PV maximum relevés) passe avant le soin, sinon dnd5e plafonne le soin aux PV maximum d'avant
-      // et une cible à pleins PV ne gagnait rien (`effectsFirst`). Les effets sans condition seulement.
+      // §303 (pass C8): Aid — the effect (raised maximum HP) goes before the healing, otherwise dnd5e caps the healing at the
+      // previous maximum HP and a target at full HP gained nothing (`effectsFirst`). Unconditional effects only.
       const first = (entry.multiplier > 0) && (contentOf(activity?.item).entry?.effectsFirst === true) && (entry.effects ?? []).some(e => !e.if);
       const early = first ? await applyEffectsToToken(carrier, entry.token, entry.effects.filter(e => !e.if)) : [];
-      // Festin des héros : « ses PV maximum augmentent de 2d10, et elle gagne autant de PV » (`healRaisesMax`) — le soin tiré
-      // relève d'abord le maximum, dans l'effet qui vient d'être posé ; il tombe donc avec lui.
+      // Heroes' Feast: "its HP maximum increases by 2d10, and it gains the same number of HP" (`healRaisesMax`) — the rolled
+      // healing first raises the maximum, in the effect just placed; so it drops with it.
       const raise = (early.length && (contentOf(activity?.item).entry?.healRaisesMax === true)) ? healingTotal(rolled) : 0;
       if ( raise > 0 ) {
         for ( const uuid of early ) {
@@ -261,9 +261,9 @@ export const COMMANDS = {
         }
         log(`${activity?.item?.name}: hit point maximum raised by ${raise}`);
       }
-      // §133, §523 : Tueur de mages — la créature concentrée que l'auteur blesse a le Désavantage à son jet de concentration. La marque
-      // se pose AVANT les dégâts : dnd5e demande la sauvegarde dès qu'ils sont appliqués, et le moteur la lance aussitôt
-      // (runtime/concentration.mjs) — posée après, elle tombait sur la sauvegarde suivante. Rien sur une cible épargnée ou interposée.
+      // §133, §523: Mage Slayer — the concentrating creature that the author hurts has Disadvantage on its Concentration save. The
+      // mark is placed BEFORE the damage: dnd5e asks for the save as soon as it is applied, and the engine rolls it right away
+      // (runtime/concentration.mjs) — placed after, it fell on the next save. Nothing on a spared or interposed target.
       const breaking = hurting && !shielded?.spared && !ward?.interpose
         && await markConcentrationBreaker(source?.actor ?? activity?.actor, patient, activity);
       const hp = ((entry.multiplier > 0) && !shielded?.spared)
@@ -272,10 +272,10 @@ export const COMMANDS = {
           rangedWeapon: !!resolution.plan.attack && isRangedWeaponAttack(activity, attackMode),   // O8d (§347)
           ...(resolution.plan.attack ? { critical: struckCritical } : {}) })   // #269: THIS target's critical (death saves, regeneration)
         : null;
-      // §523 : aucun dégât appliqué au bout du compte — pas de sauvegarde, la marque ne doit pas attendre la suivante. (Pas d'après les PV
-      // relus : l'acteur d'un token non lié est recréé par sa mise à jour, ses PV « après » restaient ceux d'avant — vu sur le banc.)
+      // §523: no damage applied in the end — no save, the mark must not wait for the next one. (Not from the re-read HP: the actor
+      // of an unlinked token is recreated by its update, its "after" HP stayed those of before — seen on the test bench.)
       if ( breaking && !hp ) await patient.unsetFlag(MODULE_ID, "concentrationBreaker").catch(() => null);
-      // C12-f : Défenses envoûtantes — l'attaquant qui a raté la sauvegarde subit les dégâts que le porteur vient de subir.
+      // C12-f: Beguiling Defenses — the attacker who failed the save takes the damage the bearer just took.
       const retort = hp ? patient?.getFlag?.(MODULE_ID, "retort") : null;
       if ( retort && (retort.resolution === resolution.id) ) {
         await patient.unsetFlag(MODULE_ID, "retort");
@@ -287,19 +287,19 @@ export const COMMANDS = {
           if ( logged ) { extra.push({ ...logged, name: retort.item }); log(`${retort.item}: ${dealt} ${retort.type} damage back to the attacker`); }
         }
       }
-      // C12-f : Désintégration — « une créature réduite à 0 PV par ce sort est désintégrée » : morte, sans jets contre la mort (`killsAtZero`).
+      // C12-f: Disintegrate — "a creature reduced to 0 HP by this spell is disintegrated": dead, no death saves (`killsAtZero`).
       if ( hp && hurting && (hp.after.value <= 0) && killsHere(contentOf(activity?.item).entry?.killsAtZero, activity, patient) && patient && !patient.statuses?.has("dead") ) {
         await applyStatusToToken(carrier, entry.token, "dead");
         log(`${activity.item.name}: ${patient.name} reduced to 0 HP — disintegrated`);
       }
       const target = await fromUuid(entry.token);
-      // §16.46 : ce qu'une défense (Résistance) a retiré aux dégâts.
+      // §16.46: what a defense (Resistance) removed from the damage.
       for ( const s of hp?.shields ?? [] ) {
         log(`${target?.name ?? entry.token}: ${s.name} reduces the damage by ${s.reduced} (${s.formula ?? "1d4"} = ${s.rolled})`);
         if ( target ) notice(target, loc("Retour.Reduit", { item: s.name, n: s.reduced }), "gain");
       }
-      // Un effet sous condition (M3, §18.4 : « si la cible est de taille G ou inférieure ») ne passe que si elle tient.
-      // La résolution accompagne les faits : `hit.critical` s'y lit (Masse de châtiment : « sur un 20 […] après ces dégâts »).
+      // A conditional effect (M3, §18.4: "if the target is Large or smaller") only goes through if it holds.
+      // The resolution accompanies the facts: `hit.critical` is read there (Mace of Smiting: "on a 20 […] after this damage").
       const facts = factsFor({ source: source?.actor ?? null, target: target?.actor ?? null, activity, sourceToken: source,
         targetToken: target, resolution });
       const allowed = (entry.effects ?? []).filter(e => {
@@ -308,23 +308,23 @@ export const COMMANDS = {
         if ( !ok ) log(`effect ${e.id}: condition not met for ${target?.name ?? entry.token}, not applied`);
         return ok;
       });
-      // « Repoussé » (Bousculade) n'est pas un effet : c'est un déplacement subi, loin de l'auteur.
+      // "Pushed" (Shove) is not an effect: it is a forced move, away from the author.
       const { effects: toApply, pushes } = await splitPushes(carrier, allowed);
       for ( const push of pushes ) await forcedMove(source, target, { mode: "push", ...push });
       const effects = [...early, ...await applyEffectsToToken(carrier, entry.token, toApply)];
       if ( toApply.length > effects.length - early.length ) log(`${target?.name ?? entry.token}: ${toApply.length - effects.length} planned effect(s) not applied (${toApply.map(e => e.id).join(", ")})`);
       else if ( (entry.effects ?? []).length && !toApply.length && !pushes.length && !early.length ) log(`${target?.name ?? entry.token}: no effect to apply (${(entry.effects ?? []).length} planned)`);
-      // Étapes d'issue du contenu (SPEC §16) : poussée, traction, état — si leur condition tient pour cette cible.
+      // Content outcome steps (SPEC §16): push, pull, condition — if their condition holds for this target.
       for ( const step of entry.steps ?? [] ) {
-        const condition = (typeof step.if === "string") ? JSON.parse(step.if) : step.if;   // JSON dans le plan (adapter/usage.mjs)
+        const condition = (typeof step.if === "string") ? JSON.parse(step.if) : step.if;   // JSON in the plan (adapter/usage.mjs)
         if ( !holds(condition, facts) ) {
           log(`${step.name ?? step.type}: condition not met for ${target?.name ?? entry.token}, step "${step.type}" skipped`);
           continue;
         }
         if ( step.type === "move" ) await forcedMove(source, target, { ...step, activity });
         else if ( step.type === "disarm" ) {
-          // §19.6 : « l'ennemi lâche l'objet » — son arme de corps à corps équipée (la première), dés-équipée.
-          // §304 : Lien occulte — « on ne peut vous désarmer de l'arme liée tant que vous n'êtes pas Neutralisé ».
+          // §19.6: "the enemy drops the item" — their equipped melee weapon (the first), unequipped.
+          // §304: "Occult Bond" — "you cannot be disarmed of the bonded weapon while you are not Incapacitated".
           const incapacitated = target?.actor?.statuses?.has("incapacitated");
           const bonded = i => !incapacitated && i.effects.some(e => !e.disabled && (identifierOf(originItemOf(e) ?? {}).id === "war-bond"));
           const weapon = target?.actor?.items.find(i => (i.type === "weapon") && i.system.equipped && !bonded(i)
@@ -334,13 +334,13 @@ export const COMMANDS = {
             notice(target, loc("Retour.Desarme", { item: weapon.name }), "ended");
             log(`${step.name ?? "disarm"}: ${target.name} drops ${weapon.name}`);
           } else if ( step.elseEffect && target?.actor && activity?.item ) {
-            // C12-b : rien à lâcher (Métal brûlant sur une armure portée) — l'effet de l'item à la place (Désavantage).
+            // C12-b: nothing to drop (Heat Metal on worn armor) — the item's effect instead (Disadvantage).
             await placeItemEffect(activity.item, step.elseEffect, target.actor);
             log(`${step.name ?? "disarm"}: ${target.name} has nothing to drop, "${step.elseEffect}" placed`);
           }
         }
         else if ( step.type === "damage" ) {
-          // §19 : dégâts d'issue (« si elle échoue au jet de sauvegarde, ou la moitié en cas de réussite »).
+          // §19: outcome damage ("if it fails the saving throw, or half as much on a success").
           const part = step.saved ? ((step.onSave === "half") ? 0.5 : 0) : 1;
           const logged = await inflict({
             step, item: activity?.item ?? null, multiplier: part, targetUuid: entry.token,
@@ -355,35 +355,35 @@ export const COMMANDS = {
           if ( uuid ) { effects.push(uuid); log(`${step.name ?? "mark"}: ${target?.name} receives "${step.mark}"`); }
         }
         else if ( step.type === "revertForm" ) {
-          // §402 : « une créature métamorphosée qui rate la sauvegarde reprend sa forme véritable » (Rayon de lune) — la transformation
-          // de dnd5e (Forme sauvage, Métamorphose) défaite par son API.
+          // §402: "a polymorphed creature that fails the save reverts to its true form" (Moonbeam) — the dnd5e transformation
+          // (Wild Shape, Polymorph) undone through its API.
           if ( target?.actor?.isPolymorphed ) {
             await target.actor.revertOriginalForm({ renderSheet: false });
             log(`${step.name ?? "revert"}: ${target.name} reverts to its true form`);
           }
         }
         else if ( step.type === "banish" ) {
-          // §402 : renvoyée sur son plan d'origine (Parole divine) — retirée de la scène et du combat (runtime/banish.mjs).
+          // §402: sent back to its plane of origin (Divine Word) — removed from the scene and the combat (runtime/banish.mjs).
           if ( target && await banishToken(target) ) log(`${step.name ?? "banish"}: ${target.name} sent back to its plane`);
         }
         else if ( step.type === "breakConcentration" ) {
-          // §91 : « sa Concentration est rompue » (Tremblement de terre).
+          // §91: "its Concentration is broken" (Earthquake).
           if ( target?.actor?.concentration?.effects?.size ) {
             await target.actor.endConcentration();
             log(`${step.name ?? "concentration"}: ${target.name}'s is broken`);
           }
         }
         else if ( step.type === "lift" ) {
-          // §164 : Inversion de la gravité — la zone de cette utilisation (la plus récente de l'activité) chute avec elle.
+          // §164: Reverse Gravity — the area of this use (the most recent of the activity) falls with it.
           const region = target?.parent?.regions?.filter(r => r.getFlag("dnd5e", "activity") === activity?.uuid).at(-1) ?? null;
           await liftToken(target, step, region);
         }
         else if ( step.type === "status" ) {
-          // §352 : `around` — la cible et chaque créature à cette distance d'elle, l'auteur excepté (Marteau de tonnerre : « la cible et
-          // chaque créature à 9 m d'elle autre que vous »), chacune sa sauvegarde.
+          // §352: `around` — the target and each creature within this distance of it, the author excepted
+          // ("Thunder Hammer": "the target and each creature within 9 m of it other than you"), each with its own save.
           const struck = target ? [target, ...(step.around ? creaturesAround(target, step.around, source) : [])] : [];
           for ( const victim of struck ) {
-            // §345 : l'état seulement sur une sauvegarde ratée (Tueuse de géants), lancée ici, sans fenêtre.
+            // §345: the condition only on a failed save (Giant Slayer), rolled here, without a window.
             if ( step.save && victim.actor ) {
               const saved = await requestSave(victim.actor, { ability: step.save.ability, dc: step.save.dc, flavor: step.name ?? null });
               log(`${step.name ?? "condition"}: ${victim.name} ${step.save.ability} saving throw ${saved?.total ?? "?"} vs DC ${step.save.dc}: ${saved?.success ? "succeeded" : "failed"}`);
@@ -391,24 +391,24 @@ export const COMMANDS = {
             }
             const uuid = await applyStatusToToken(carrier, victim.uuid, step.status, { escapeDc: step.escapeDc ?? null });
             if ( uuid ) { effects.push(uuid); log(`${step.name ?? "condition"}: ${victim.name} receives "${step.status}"`); }
-            // O9a (§354) : « détruite », « tuée sur le coup » — Morte, et ses PV à 0 (comme les paliers de PV, plus bas).
+            // O9a (§354): "destroyed", "killed outright" — Dead, and HP at 0 (like the HP tiers, further down).
             if ( uuid && (step.status === "dead") ) await victim.actor?.update({ "system.attributes.hp.value": 0 });
           }
         }
       }
       for ( const status of tier?.statuses ?? [] ) {
-        // §303 (repasse C8) : Protection contre la mort — « un effet qui la tuerait sur le coup sans infliger de dégâts est annulé » : la
-        // garde tombe à la place de la mort (Mot de pouvoir mortel, Parole divine).
+        // §303 (pass C8): Death Ward — "an effect that would kill it outright without dealing damage is negated": the
+        // ward drops in place of the death (Power Word Kill, Divine Word).
         const ward = (status === "dead") ? deathWardOf(target?.actor) : null;
         if ( ward ) { await ward.delete(); log(`${activity?.item?.name}: ${target?.name} is not killed, ${ward.name} ends instead`); continue; }
-        // L'état d'abord, les PV ensuite : à 0 PV, dnd5e et le moteur posent eux-mêmes Mort (même id, `dnd5edead0000000`) — deux
-        // créations croisées faisaient échouer la résolution (vu le 2026-10-12, Parole divine).
+        // The condition first, the HP afterwards: at 0 HP, dnd5e and the engine themselves place Dead (same id,
+        // `dnd5edead0000000`) — two crossed creations made the resolution fail (seen on 2026-10-12, Divine Word).
         const uuid = await applyStatusToToken(carrier, entry.token, status);
         if ( uuid ) { effects.push(uuid); log(`${activity?.item?.name}: ${target?.name} at ${tier.hp} HP receives "${status}"`); }
         if ( status === "dead" ) await target?.actor?.update({ "system.attributes.hp.value": 0 });
       }
-      // K2 (§323) : « elle tombe à 0 PV » (Regard mortel, Plainte funeste) — des dégâts égaux à ses PV, par dnd5e : la Protection contre la
-      // mort et la règle des 0 PV du moteur (Mort pour un PNJ, Inconscient pour un personnage) décident comme pour tout coup.
+      // K2 (§323): "it drops to 0 HP" ("Deadly Gaze", "Ominous Wail") — damage equal to its HP, by dnd5e: Death Ward and
+      // the engine's 0 HP rule (Dead for an NPC, Unconscious for a character) decide as for any blow.
       if ( tier?.zero && target?.actor ) {
         const hpNow = target.actor.system?.attributes?.hp ?? {};
         const total = Number(hpNow.value ?? 0) + Number(hpNow.temp ?? 0);
@@ -416,7 +416,7 @@ export const COMMANDS = {
       }
       entries.push({ token: entry.token, actor: entry.actor, before: hp?.before ?? null, after: hp?.after ?? null, effects });
       for ( const r of retaliations ) {
-        // §86 : une riposte par une sauvegarde de l'attaquant (Aura sacrée) — sa propre résolution, à part.
+        // §86: a retaliation by a save of the attacker (Holy Aura) — its own resolution, apart.
         if ( r.step.type === "save" ) {
           const asked = await saveRetaliation(r, { bearerToken: struck, attackerToken: source });
           if ( asked ) log(`${r.declaration.name}: ${source?.name} makes its saving throw for hitting ${struck.name}`);
@@ -426,15 +426,15 @@ export const COMMANDS = {
         if ( logged ) { extra.push(logged); log(`${r.declaration.name}: ${source?.name} takes ${(logged.before.value + logged.before.temp) - (logged.after.value + logged.after.temp)} damage for hitting ${struck.name}`); }
       }
     }
-    // §27 : Guérisseur béni — « aussitôt après avoir lancé par un emplacement un sort qui restitue des PV à une autre créature ».
+    // §27: Blessed Healer — "immediately after casting with a spell slot a spell that restores HP to another creature".
     if ( slotHeal?.healer && healedOther && source?.uuid ) {
       const logged = await applyDamageToToken(source.uuid, [{ type: "healing", value: slotHeal.healer, properties: new Set() }], damageMessage);
       if ( logged ) { extra.push({ ...logged, name: "blessed-healer" }); log(`Blessed Healer: ${source.name} regains ${slotHeal.healer} HP`); }
     }
-    // Sauvegarde répétée (brique « resave ») : réussie, l'effet tombe ; ratée, rien ne change — sauf les dégâts qu'elle
-    // porte (§19.6, `onFail` : le saignement d'Épine).
+    // Repeated save ("resave" building block): succeeded, the effect drops; failed, nothing changes — except the damage it
+    // carries (§19.6, `onFail`: the bleeding of "Thorn").
     if ( resave?.effect ) {
-      /** §19.6 : les dégâts du porteur qui ne valent que si la sauvegarde est ratée (saignement d'Épine, Fumées d'othur). */
+      /** §19.6: the bearer's damage that only applies if the save fails (bleeding of "Thorn", Othur's Fumes). */
       const failDamage = async t => {
         if ( !resave.onFail || !t.save || (t.save.success === true) ) return;
         const item = await fromUuid(resave.onFail.item ?? "");
@@ -447,7 +447,7 @@ export const COMMANDS = {
         }
       };
       for ( const t of resolution.targets ) {
-        // §495 (brique B15) : échelle d'états — un échec monte d'un palier, une réussite en redescend ; au palier 0, l'effet tombe.
+        // §495 (block B15): condition ladder — a failure goes up a step, a success goes down one; at step 0, the effect drops.
         if ( resave.stages && t.save ) {
           const effect = await fromUuid(resave.effect);
           if ( !effect ) continue;
@@ -456,7 +456,7 @@ export const COMMANDS = {
           const natural20 = isNatural20(t.save);
           const after = stageAfter(prior.level, t.save.success === true, { count: rule.stages.length, onSuccess: rule.onSuccess, natural20, critEnds: rule.critEnds });
           if ( after.outcome === "ended" ) {
-            // Les effets de palier dépendent de l'effet (`dependentOn`) : dnd5e les retire avec lui.
+            // The step effects depend on the effect (`dependentOn`): dnd5e removes them with it.
             log(`stages: ${t.name} ${(natural20 && rule.critEnds) ? "rolls a natural 20" : "succeeds"}, "${effect.name}" removed`);
             notice(t.token, effect.name, "effectOff", { all: true, action: "stage", outcome: "success" });
             await effect.delete();
@@ -471,7 +471,7 @@ export const COMMANDS = {
           await failDamage(t);
           continue;
         }
-        // §43.1 : compteur — l'effet ne tombe qu'au seuil de réussites ; au seuil d'échecs, il reste et plus rien n'est rejoué.
+        // §43.1: counter — the effect only drops at the success threshold; at the failure threshold, it stays, no more replays.
         if ( resave.tally && t.save ) {
           const effect = await fromUuid(resave.effect);
           if ( !effect ) continue;
@@ -488,12 +488,12 @@ export const COMMANDS = {
           await effect.update(update);
           log(`tally: ${t.name} — ${said}${after.settled ? `; settled, "${effect.name}" remains${resave.tally.status ? ` (${resave.tally.status})` : ""}` : ""}`);
           notice(t.token, after.settled ? loc("Compteur.Clos", { item: effect.name }) : said, after.settled ? "refused" : "prompt");
-          // O9h (§363) : un compteur avec des dégâts d'échec (Fumées d'othur : « à chaque nouvel échec, 1d6 dégâts de poison »).
+          // O9h (§363): a counter with failure damage (Othur's Fumes: "at each new failure, 1d6 poison damage").
           await failDamage(t);
           continue;
         }
         if ( t.save?.success !== true ) {
-          // §37 : Malédiction, « Cursed Actions » — ratée, la créature prend l'action Esquiver ce tour.
+          // §37: Curse, "Cursed Actions" — failed, the creature takes the Dodge action this turn.
           if ( resave.dodge && t.save ) await forceDodge(t.token);
           await failDamage(t);
           continue;
@@ -506,13 +506,13 @@ export const COMMANDS = {
     return [{ type: "applied", entries, extra }];
   },
 
-  /** Effets exclusifs : l'auteur choisit (adapter/choices.mjs). Sans réponse, la résolution reste en attente et la question est reposée à `ready`. */
+  /** Exclusive effects: the author chooses (adapter/choices.mjs). No answer: the resolution stays pending, the question is re-asked at `ready`. */
   async askChoice(command, carrier, resolution) {
     const actor = await fromUuid(resolution.source ?? "");
     const activity = await fromUuid(resolution.activity ?? "");
     const item = activity?.item?.name ?? "";
     if ( !actor ) return [];
-    // K3 (§324) : un effet tiré au dé (Lame du chaos : 1d4) — un jet visible de tous, une face par option, sans question.
+    // K3 (§324): an effect rolled on a die ("Chaos Blade": 1d4) — a roll visible to all, one face per option, no question.
     if ( command.roll ) {
       const roll = await new Roll(`1d${command.options.length}`).evaluate();
       await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor }), flavor: loc("EffetTire", { item }) });
@@ -520,7 +520,7 @@ export const COMMANDS = {
       log(`${item}: d${command.options.length} = ${roll.total} → ${picked?.label ?? "?"}`);
       return picked ? [{ type: "choiceMade", id: picked.id }] : [];
     }
-    // §401 : un choix par cible — une question par créature, nommée.
+    // §401: one choice per target — one question per creature, named.
     if ( command.perTarget?.length ) {
       const choices = {};
       for ( const t of command.perTarget ) {
@@ -538,20 +538,20 @@ export const COMMANDS = {
     return [{ type: "choiceMade", id: answer.id }];
   },
 
-  /** L'essentiel redit là où on le lit : le verdict sous le jet d'attaque, les PV sous le jet de dégâts. */
+  /** The essentials repeated where they are read: the verdict under the attack roll, the HP under the damage roll. */
   async echo(command, carrier, resolution) {
     if ( command.on === "attack" ) {
       log(`attack ${resolution.attack.roll.total} →`, resolution.targets.map(t =>
         `${t.name}: ${t.hit ? (t.critical ? "critical" : "hit") : "miss"}${t.reaction ? ` (${t.reaction})` : ""}`).join(", "));
       const attackMessage = game.messages.get(resolution.attack.messageId);
       if ( attackMessage && (attackMessage.id !== carrier.id) ) await attackMessage.setFlag(MODULE_ID, "verdict", { carrier: carrier.id });
-      // §19.6 : fenêtre « raté » (Riposte, Désarmement) — pour chaque cible que l'attaque n'a pas touchée.
+      // §19.6: "miss" window (Riposte, Disarm) — for each target the attack did not hit.
       const missed = resolution.targets.filter(t => (t.hit === false) && !t.unaffected).map(t => t.token);
       if ( missed.length ) windowIsMissed(missed, speakerTokenUuid(carrier), carrier.speaker?.alias ?? "",
         { activity: resolution.activity, auto: autoReactOf(carrier, resolution), resolution });
-      // §236 : « une créature hostile vient d'attaquer » (Âme de la vengeance), touché ou raté.
+      // §236: "a hostile creature has just attacked" (Soul of Vengeance), hit or miss.
       windowEnemyAttacked(speakerTokenUuid(carrier), carrier.speaker?.alias ?? "", { activity: resolution.activity, auto: autoReactOf(carrier, resolution) });
-      // §492 : qui a attaqué qui ce tour (fait `source.attackedSelfThisTurn`), touché ou raté.
+      // §492: who attacked whom this turn (fact `source.attackedSelfThisTurn`), hit or miss.
       const attacker = fromUuidSync(resolution.source ?? "", { strict: false });
       const attacked = resolution.targets.filter(t => !t.unaffected).map(t => fromUuidSync(t.token, { strict: false })?.actor).filter(Boolean);
       const activity = fromUuidSync(resolution.activity ?? "", { strict: false });
@@ -567,23 +567,23 @@ export const COMMANDS = {
     });
   },
 
-  /** Fenêtre « blessé » : sans incidence sur cette résolution, donc sans attente. */
+  /** "Hurt" window: no bearing on this resolution, so no waiting. */
   window(command, carrier, resolution) {
-    // §19 : ce qui a blessé — l'activité (Défenses : « une attaque de mêlée ») et les types de dégâts (Absorption des éléments).
+    // §19: what hurt — the activity (Defenses: "a melee attack") and the damage types (Absorb Elements).
     const damageTypes = [...new Set((resolution?.damageRoll?.damages ?? []).map(d => d.type).filter(Boolean))];
     if ( command.window === "isDamaged" ) windowIsDamaged(command.tokens, speakerTokenUuid(carrier), carrier.speaker?.alias ?? "",
       { activity: resolution?.activity ?? null, damageTypes, auto: autoReactOf(carrier, resolution) });
-    // §487 : « réussit une sauvegarde contre » (Représailles du mage).
+    // §487: "succeeds on a saving throw against" ("Mage's Retaliation").
     if ( command.window === "savesAgainst" ) windowSavesAgainst(command.tokens, speakerTokenUuid(carrier), carrier.speaker?.alias ?? "",
       { activity: resolution?.activity ?? null, auto: autoReactOf(carrier, resolution) });
   },
 
   /**
-   * Zone instantanée retirée un peu après la résolution, pas tout de suite : un module d'animation
-   * (BLFX, `boss-loot-assets-premium`) joue son effet sur la région, y écrit, puis la supprime
-   * lui-même (`BlfxMacroExecutor.deleteTemplate`, 1 s après l'animation). La retirer en même temps
-   * faisait écrire ce module sur une région disparue (« id … does not exist », vu le 2026-09-23).
-   * S'il l'a déjà fait, il n'y a plus rien à retirer.
+   * Instant area removed a little after the resolution, not right away: an animation module
+   * (BLFX, `boss-loot-assets-premium`) plays its effect on the region, writes to it, then deletes it
+   * itself (`BlfxMacroExecutor.deleteTemplate`, 1 s after the animation). Removing it at the same time
+   * made that module write to a vanished region ("id … does not exist", seen on 2026-09-23).
+   * If it already did so, there is nothing left to remove.
    */
   cleanup(command, carrier) {
     setTimeout(() => removeTransientRegions(carrier.id)
@@ -592,25 +592,25 @@ export const COMMANDS = {
   }
 };
 
-/** Déplacement forcé d'une cible par rapport à l'auteur (étape `move`, et « repoussé » de la Bousculade). */
+/** Forced movement of a target relative to the author (`move` step, and "pushed" from Shove). */
 async function forcedMove(source, target, { mode, distance, units, follow=false, upTo=false, toward=null, activity=null, directions=null, ifBlocked="stop", minSpeed=null }) {
   if ( !source || !target ) return;
   if ( mode === "random" ) return randomMove(source, target, { distance, units, directions, ifBlocked, minSpeed, activity });
-  // §466 : vers le centre de la zone de l'activité (Implosion) — la dernière région posée par elle sur la scène de la cible.
+  // §466: toward the center of the activity's area (Implosion) — the last region placed by it on the target's scene.
   let point = null;
   if ( toward === "area" ) {
     const regions = (target.parent?.regions ?? []).filter(r => activity && (r.getFlag("dnd5e", "activity") === activity.uuid));
     point = regions.length ? zoneCenter(regions.at(-1)) : null;
     if ( !point ) return log(`pull: no area of ${activity?.item?.name ?? "the activity"} on the scene, ${target.name} not moved`);
   }
-  // §502 (B22) : vers l'invocation de l'auteur (la liane de Liane avide), pas vers l'auteur.
+  // §502 (B22): toward the author's summon (the vine of "Greedy Vine"), not toward the author.
   if ( toward === "summon" ) {
     const anchor = summonTokenFor(source.actor, activity?.item ?? null, target.parent, target);
     if ( !anchor ) return log(`pull: no creature summoned by ${source.name} on the scene, ${target.name} not moved`);
     point = tokenCenter(anchor);
     log(`pull: toward ${anchor.name} (summoned by ${source.name})`);
   }
-  // §401 : « jusqu'à » — l'auteur choisit, par cases, de 0 à la distance permise.
+  // §401: "up to" — the author chooses, by cells, from 0 to the permitted distance.
   if ( upTo && Number.isFinite(distance) ) {
     const chosen = await askDistance(source, target, { mode, distance, units });
     if ( chosen === null ) return;
@@ -618,22 +618,22 @@ async function forcedMove(source, target, { mode, distance, units, follow=false,
     if ( !(distance > 0) ) return log(`${mode}: ${target.name} not moved (the author's choice)`);
   }
   const towards = mode === "pull";
-  // Une distance en formule se lit sur la source (Main puissante : « 5 + 5 * @flags.dnd5e.summon.mod », §16.15).
+  // A distance as a formula is read on the source ("Powerful Hand": "5 + 5 * @flags.dnd5e.summon.mod", §16.15).
   let value = distance;
   if ( typeof distance === "string" ) {
     try { value = new Roll(distance, source.actor?.getRollData() ?? {}).evaluateSync({ strict: false }).total; }
     catch(err) { return log(`push: distance "${distance}" unreadable (${err.message})`); }
     if ( !(value > 0) ) return log(`push: distance "${distance}" = ${value}, nothing`);
   }
-  // Harnois nain : « si un effet vous déplace contre votre gré sur le sol, vous pouvez utiliser votre Réaction pour réduire la
-  // distance de 3 m au plus » (`reducesForcedMove`) — demandé au porteur, qui garde sa Réaction s'il ne répond pas.
+  // Dwarven Plate: "if an effect moves you against your will along the ground, you can use your Reaction to reduce the
+  // distance by up to 3 m" (`reducesForcedMove`) — asked of the bearer, who keeps their Reaction if they do not answer.
   value = await bracedDistance(target, value, units, towards ? "pull" : "push");
   if ( !(value > 0) ) return log(`${towards ? "pull" : "push"}: ${target.name} not moved (braced)`);
   const { cells, wanted } = await pushAway(source, target, { distance: value, units }, readUnitFactors(), { towards, follow, point });
   log(`${towards ? "pull" : "push"}: ${target.name} ${towards ? "pulled" : "pushed"} ${cells} square(s) out of ${wanted}${cells < wanted ? " (stopped)" : ""}`);
 }
 
-/** `reducesForcedMove` : ce qu'il reste d'un déplacement subi, une fois la Réaction du porteur prise — ou la distance inchangée. */
+/** `reducesForcedMove`: what remains of a forced move, once the bearer's Reaction is taken — or the distance unchanged. */
 async function bracedDistance(target, value, units, mode) {
   const actor = target?.actor;
   if ( !actor || !Number.isFinite(value) ) return value;
@@ -649,11 +649,11 @@ async function bracedDistance(target, value, units, mode) {
 }
 
 /**
- * §497 : déplacement aléatoire (étape `move`, mode `random` : Infestation, « la cible se déplace de 1,50 m dans une direction
- * aléatoire »). Rien si la Vitesse de marche de la cible est sous `minSpeed` ; sinon un 1dN visible (N = nombre de `directions`),
- * attendu jusqu'à la fin des dés 3D, choisit la direction ; le déplacement est subi (`pushAway`, un pas `displace` : ni attaque
- * d'opportunité ni coût) ; `ifBlocked: "stay"` : tout ou rien. Le résultat est noté sur le message du jet
- * (`flags.dnd5e-combat.randomMove` : token, face, direction, cases, bloqué) et dit à toute la table (texte et son).
+ * §497: random move (`move` step, `random` mode: Infestation, "the target moves 1.50 m in a random
+ * direction"). Nothing if the target's walking Speed is below `minSpeed`; otherwise a visible 1dN (N = number of `directions`),
+ * awaited until the 3D dice end, chooses the direction; the move is suffered (`pushAway`, a `displace` step: no Opportunity
+ * Attack nor cost); `ifBlocked: "stay"`: all or nothing. The result is noted on the roll's message
+ * (`flags.dnd5e-combat.randomMove`: token, face, direction, cells, blocked) and told to the whole table (text and sound).
  */
 async function randomMove(source, target, { distance, units, directions, ifBlocked, minSpeed, activity }) {
   const actor = target.actor;
@@ -692,8 +692,8 @@ async function randomMove(source, target, { distance, units, directions, ifBlock
 }
 
 /**
- * §401 : la distance d'un déplacement forcé « jusqu'à » — demandée à l'auteur (son joueur, sinon le MJ), par cases de la scène. Rend la
- * distance en `units`, ou null si l'auteur n'a pas d'acteur.
+ * §401: the distance of an "up to" forced move — asked of the author (their player, otherwise the GM), by cells of the scene.
+ * Returns the distance in `units`, or null if the author has no actor.
  */
 async function askDistance(source, target, { mode, distance, units }) {
   const actor = source.actor;
@@ -707,7 +707,7 @@ async function askDistance(source, target, { mode, distance, units }) {
     const value = Math.round(n * step * 100) / 100;
     options.push({ id: String(n), label: n ? `${value} ${sceneUnits}` : loc("DistanceAucune"), value: n ? lengthIn(value, sceneUnits, units) : 0 });
   }
-  options.reverse();   // le plus loin d'abord : la règle par défaut
+  options.reverse();   // farthest first: the default rule
   const answer = await askChoice(actor, { actor: actor.uuid, item: loc(mode === "pull" ? "Tirer" : "Repousser"),
     prompt: loc("DistanceQuestion", { name: target.name }), options: options.map(({ id, label }) => ({ id, label })) });
   const picked = options.find(o => o.id === answer?.id) ?? options[0];
@@ -715,8 +715,8 @@ async function askDistance(source, target, { mode, distance, units }) {
 }
 
 /**
- * §352 : les créatures vivantes à `around.radius` (en `around.units`) d'un token, sur la même scène, lui et l'auteur exceptés (ni
- * objet, ni token caché).
+ * §352: the living creatures within `around.radius` (in `around.units`) of a token, on the same scene, it and the author excepted
+ * (no object, no hidden token).
  */
 function creaturesAround(center, around, source) {
   const factors = readUnitFactors();
@@ -724,23 +724,24 @@ function creaturesAround(center, around, source) {
     && !t.actor.statuses?.has?.("dead") && (rangeIssue(distanceBetween(center, t), { value: around.radius, units: around.units }, factors) === null));
 }
 
-/** §355 : l'auteur porte-t-il un objet qui maximise les dégâts de ses sorts contre le type de cette créature (`maxSpellDamageVs`) ? */
+/** §355: does the author carry an item that maximizes their spells' damage against this creature's type (`maxSpellDamageVs`)? */
 function spellDamageMaxed(actor, activity, target) {
   if ( !actor || !target || !isSpellCast(activity?.item) ) return false;
   const type = creatureTypeOf(target);
   return !!type && Array.from(actor.items ?? []).some(i => (contentOf(i).entry?.maxSpellDamageVs ?? []).includes(type));
 }
 
-/** §495 : la sauvegarde est-elle un 20 naturel ? Lu sur son message de jet (`D20Roll#isCritical`, au seuil de critique du jet). */
+/** §495: is the save a natural 20? Read on its roll message (`D20Roll#isCritical`, at the roll's critical threshold). */
 function isNatural20(save) {
   const roll = game.messages.get(save?.messageId ?? "")?.rolls?.[0];
   return roll?.isCritical === true;
 }
 
 /**
- * §495 : l'effet passe d'un palier à l'autre. Le palier quitté est défait — son effet (posé à part) retiré, son état retiré de l'effet
- * s'il l'y avait ajouté —, puis le nouveau est posé : son effet de l'item, dépendant de l'effet (dnd5e le retire avec lui), et son état
- * ajouté aux états de l'effet. Le palier atteint est noté sur l'effet (`flags.dnd5e-combat.stage`).
+ * §495: the effect moves from one step to another. The step left is undone — its effect (placed apart) removed, its condition
+ * removed from the effect if it had added it there —, then the new one is placed: its item effect, dependent on the effect (dnd5e
+ * removes it with it), and its condition added to the effect's conditions. The step reached is noted on the effect
+ * (`flags.dnd5e-combat.stage`).
  */
 async function moveStage(effect, prior, level, rule) {
   const statuses = new Set(effect.statuses ?? []);
@@ -762,7 +763,7 @@ async function moveStage(effect, prior, level, rule) {
     [`flags.${MODULE_ID}.stage`]: { level, effect: placed?.uuid ?? null, status: added } });
 }
 
-/** §495 : le nom d'un palier, pour l'avis — l'effet seul au palier 0, sinon l'effet de palier posé ou le nom de l'état. */
+/** §495: a step's name, for the notice — the effect alone at step 0, otherwise the placed step effect or the condition's name. */
 async function stageLabel(effect, level, rule) {
   if ( !level ) return effect.name;
   const stage = rule.stages[level - 1] ?? {};

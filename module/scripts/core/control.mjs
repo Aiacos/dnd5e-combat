@@ -1,18 +1,18 @@
 /**
- * §285 : sorts de contrôle (lot 3 des chantiers du 2026-10-30). Pur : ce que la table de Confusion impose, et la direction tirée
- * pour l'errance.
+ * §285: control spells (batch 3 of the 2026-10-30 workstreams). Pure: what the Confusion table imposes, and the direction
+ * drawn for wandering.
  *
- * Confusion (PHB 2024), 1d10 au début de chacun de ses tours :
- *   1     elle n'entreprend aucune action et dépense tout son déplacement dans une direction aléatoire (1d8 pour la direction) ;
- *   2–6   elle ne se déplace pas et n'entreprend aucune action ;
- *   7–8   elle fait une attaque au corps à corps contre une créature au hasard à son allonge, sinon elle n'entreprend aucune action ;
- *   9–10  elle choisit son comportement.
+ * Confusion (PHB 2024), 1d10 at the start of each of its turns:
+ *   1     it takes no action and spends all its movement in a random direction (1d8 for the direction);
+ *   2–6   it does not move and takes no action;
+ *   7–8   it makes a melee attack against a random creature within its reach, otherwise it takes no action;
+ *   9–10  it chooses its behavior.
  */
 
 /**
  * @param {number} d10
  * @returns {{ kind: "wander"|"idle"|"lash"|"free", move: boolean, action: boolean }}
- *   `move` : elle garde son déplacement ; `action` : elle garde son action.
+ *   `move`: it keeps its movement; `action`: it keeps its action.
  */
 export function confusionBehavior(d10) {
   if ( d10 <= 1 ) return { kind: "wander", move: true, action: false };
@@ -23,18 +23,19 @@ export function confusionBehavior(d10) {
 
 import { MOVE_DIRECTIONS as COMPASS } from "./content/enums.mjs";
 
-/** Les huit directions de la grille, dans l'ordre d'un 1d8 (nord, puis dans le sens des aiguilles d'une montre). `di` : ligne. */
+/** The eight grid directions, in the order of a 1d8 (north, then clockwise). `di`: row. */
 export const DIRECTIONS = Object.freeze([
   { di: -1, dj: 0 }, { di: -1, dj: 1 }, { di: 0, dj: 1 }, { di: 1, dj: 1 },
   { di: 1, dj: 0 }, { di: 1, dj: -1 }, { di: 0, dj: -1 }, { di: -1, dj: -1 }
 ]);
 
 /**
- * §497 : la direction d'un déplacement aléatoire (étape `move`, mode `random` : Infestation). `directions` : les directions permises
- * (`MOVE_DIRECTIONS`, n, ne, e, se, s, sw, w, nw ; les huit par défaut), dans l'ordre du dé ; `face` : le résultat du 1dN, N = leur nombre.
+ * §497: the direction of a random move (`move` step, `random` mode: Infestation). `directions`: the allowed directions
+ * (`MOVE_DIRECTIONS`, n, ne, e, se, s, sw, w, nw; all eight by default), in die order; `face`: the 1dN result, N = their
+ * number.
  * @param {string[]|null|undefined} directions
  * @param {number} face
- * @returns {{key: string, di: number, dj: number}|null}  null si la face ou une direction est inconnue.
+ * @returns {{key: string, di: number, dj: number}|null}  null if the face or a direction is unknown.
  */
 export function randomDirection(directions, face) {
   const keys = (Array.isArray(directions) && directions.length) ? directions : COMPASS;
@@ -44,14 +45,14 @@ export function randomDirection(directions, face) {
   return { key, ...DIRECTIONS[index] };
 }
 
-/** §497 : le nombre de faces du dé d'un déplacement aléatoire. */
+/** §497: the number of faces of a random move's die. */
 export function randomDie(directions) {
   return (Array.isArray(directions) && directions.length) ? directions.length : COMPASS.length;
 }
 
 /**
- * Les cases visées par l'errance : de la plus lointaine (`cells` pas dans la direction du d8) à la plus proche, bornées par la
- * scène (`bounds` : { i0, j0, i1, j1 }, coin haut-gauche de l'emprise `size` { w, h }). La marche prend la première joignable.
+ * The cells targeted by wandering: from the farthest (`cells` steps in the d8 direction) to the nearest, bounded by the
+ * scene (`bounds`: { i0, j0, i1, j1 }, top-left corner of the footprint `size` { w, h }). The walk takes the first one reachable.
  */
 export function wanderCells(from, d8, cells, size, bounds) {
   const dir = DIRECTIONS[(Math.max(1, Math.min(8, d8)) - 1)];

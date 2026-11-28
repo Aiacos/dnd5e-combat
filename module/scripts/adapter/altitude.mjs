@@ -1,16 +1,16 @@
 /**
- * Le sol sous un token, et ce qu'une créature peut faire de ses modes de déplacement (SPEC §17.4).
+ * The ground under a token, and what a creature can do with its movement modes (SPEC §17.4).
  *
- * Vérifié :
- *  - le sol d'une scène V14 est une **Surface** qui arrête le déplacement : `Scene#getSurfaces({ type: "move", level })`
- *    (client/documents/scene.mjs:793), rangées par élévation croissante, chacune avec `elevation` et `region`. dnd5e 6.0.3
- *    cherche de la même façon la surface qui porte un token (`TokenDocument5e#_findSupportingSurface`,
- *    documents/token.mjs:294 — interne, donc relu ici et non appelé) et, faute de surface sur la scène, prend la base du
- *    niveau (`level.elevation.base`)
- *  - un niveau a une tranche `elevation.bottom`/`top` (null = infini) : seule une surface de cette tranche est le sol de
- *    ce niveau — le plancher de l'étage du dessus peut être listé dans le niveau du dessous (Restored Keep, §14.2)
- *  - les vitesses préparées sont dans `system.attributes.movement.speeds` (data/actor/templates/attributes.mjs:535), déjà
- *    ramenées à 0 par À terre, Agrippé, Entravé…
+ * Verified:
+ *  - the ground of a V14 scene is a **Surface** that stops movement: `Scene#getSurfaces({ type: "move", level })`
+ *    (client/documents/scene.mjs:793), sorted by increasing elevation, each with `elevation` and `region`. dnd5e 6.0.3
+ *    looks up the surface that supports a token the same way (`TokenDocument5e#_findSupportingSurface`,
+ *    documents/token.mjs:294 — internal, so re-read here and not called) and, lacking a surface on the scene, takes the
+ *    level's base (`level.elevation.base`)
+ *  - a level has a slice `elevation.bottom`/`top` (null = infinite): only a surface in that slice is the ground of
+ *    that level — the floor of the storey above may be listed in the level below (Restored Keep, §14.2)
+ *  - prepared speeds are in `system.attributes.movement.speeds` (data/actor/templates/attributes.mjs:535), already
+ *    reduced to 0 by Prone, Grappled, Restrained…
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -22,11 +22,11 @@ import { committedPosition, positionOf, tokenCenter } from "./turn.mjs";
 const rangeOf = level => ({ bottom: level?.elevation?.bottom ?? -Infinity, top: level?.elevation?.top ?? Infinity });
 
 /**
- * L'élévation du sol d'un niveau en un point de la scène : la plus haute surface `move` de sa tranche qui contient le
- * point ; à défaut, une surface plus bas que le niveau (la cour vue de l'étage : pas de plancher d'étage au-dessus
- * d'elle, son sol est celui du rez-de-chaussée) ; sinon la base du niveau initial de la scène s'il est plus bas, ou celle
- * du niveau (0 sans niveau). Sans aucune surface sur la
- * scène, chaque niveau est un étage dont la base est le sol, comme le suppose dnd5e (documents/token.mjs:330).
+ * The ground elevation of a level at a point of the scene: the highest `move` surface of its slice that contains the
+ * point; failing that, a surface lower than the level (the courtyard seen from the upper floor: no upper floor
+ * above it, its ground is the ground floor's); otherwise the base of the scene's initial level if it is lower, or that
+ * of the level (0 without a level). With no surface at all on the
+ * scene, each level is a storey whose base is the ground, as dnd5e assumes (documents/token.mjs:330).
  * @param {Scene} scene
  * @param {string|null} levelId
  * @param {{x: number, y: number}} point
@@ -44,18 +44,18 @@ export function groundAt(scene, levelId, point) {
   if ( Number.isFinite(bottom) ) {
     for ( let n = all.length; n--; ) if ( (all[n].elevation < bottom) && covers(all[n]) ) return all[n].elevation;
   }
-  // Aucun plancher sous le point, sur une scène qui en a : au-dessus du vide à l'étage, le sol est celui du niveau initial
-  // de la scène (le rez-de-chaussée), pas la base de l'étage — vu en jeu le 2026-09-26 : descendu depuis l'étage au-dessus
-  // de la cour, le token « passait sous le sol » à 15 ft.
+  // No floor under the point, on a scene that has some: above the void on an upper floor, the ground is that of the
+  // scene's initial level (the ground floor), not the base of the upper floor — seen in play on 2026-09-26: descended
+  // from the floor above the courtyard, the token "passed under the ground" at 15 ft.
   const base = level?.elevation?.base ?? 0;
   const initial = all.length ? scene.initialLevel?.elevation?.base : undefined;
   return (Number.isFinite(initial) && (initial < base)) ? initial : base;
 }
 
 /**
- * Le niveau d'une élévation : celui dont la tranche `[bas, haut[` la contient. Le niveau actuel s'il la contient encore,
- * s'il n'y en a aucun ou s'il y en a plusieurs (même règle que dnd5e à l'arrivée d'une chute, documents/token.mjs:355).
- * Le cœur V14 ne change jamais le niveau d'un token d'après son élévation : seul un escalier (`changeLevel`) le fait.
+ * The level of an elevation: the one whose slice `[bas, haut[` contains it. The current level if it still contains it,
+ * or if there is none or there are several (same rule as dnd5e when a fall ends, documents/token.mjs:355).
+ * The V14 core never changes a token's level based on its elevation: only a staircase (`changeLevel`) does.
  * @param {Scene} scene
  * @param {number} elevation
  * @param {string} currentId
@@ -69,35 +69,35 @@ export function levelAt(scene, elevation, currentId) {
   return (homes.length === 1) ? homes[0].id : currentId;
 }
 
-/** Le centre d'un token à une position (source ou point de passage), en 2D. */
+/** The center of a token at a position (source or waypoint), in 2D. */
 function centerAt(token, pos) {
   const { x, y } = tokenCenter(token, pos);
   return { x, y };
 }
 
-/** Le sol sous un token, à sa position validée ou à `pos`. */
+/** The ground under a token, at its validated position or at `pos`. */
 export function groundUnder(token, pos=committedPosition(token)) {
   return groundAt(token.parent, pos.level ?? token._source.level, centerAt(token, pos));
 }
 
 /**
- * Le plafond en un point, vu d'un sol donné : la plus basse surface `move` au-dessus de ce sol qui contient le point,
- * **quel que soit le niveau auquel elle est rattachée**. Infinity : rien. Le haut du niveau n'est pas un plafond : sans
- * surface, on monte dans le niveau du dessus (`levelAt`).
- * Vu en jeu le 2026-09-26 (« Magicien des vins ») : un token qui vole les pieds SUR une surface ne peut plus redescendre —
- * le cœur la tient pour pleine en dessous quand le rayon part d'elle (`side: "below"`, scene.mjs:810). Et le cœur ne
- * teste que les surfaces du niveau du token : le plancher de l'étage, rattaché à l'étage seul, laissait monter à travers
- * lui depuis le rez-de-chaussée. Un plancher arrête un vol d'où qu'il vienne.
- * Le cœur arrête un token dès qu'une partie de lui passe sous un plancher (rayons des pieds, du centre et de la tête,
- * placeables/token.mjs:3222-3232) : au bord d'un bâtiment, le centre seul ne suffit pas — on teste les points de contrôle
- * du token (`TokenDocument#getContainmentTestPoints`, documents/token.mjs:3348), et un seul sous le plancher suffit.
+ * The ceiling at a point, seen from a given ground: the lowest `move` surface above that ground that contains the point,
+ * **whatever level it is attached to**. Infinity: none. The top of the level is not a ceiling: without a
+ * surface, you go up into the level above (`levelAt`).
+ * Seen in play on 2026-09-26 ("Magicien des vins"): a token that flies with its feet ON a surface can no longer descend —
+ * the core treats it as solid below when the ray starts from it (`side: "below"`, scene.mjs:810). And the core
+ * only tests the surfaces of the token's level: the upper floor's floor, attached to the upper floor alone, let a token go up
+ * through it from the ground floor. A floor stops a flight wherever it comes from.
+ * The core stops a token as soon as part of it passes under a floor (rays from the feet, the center and the head,
+ * placeables/token.mjs:3222-3232): at a building's edge, the center alone is not enough — the token's control points are tested
+ * (`TokenDocument#getContainmentTestPoints`, documents/token.mjs:3348), and a single one under the floor is enough.
  * @param {Scene} scene
  * @param {{x: number, y: number}|{x: number, y: number}[]} points
  * @param {number} ground
  */
 export function ceilingAt(scene, points, ground) {
   const list = Array.isArray(points) ? points : [points];
-  for ( const surface of scene.getSurfaces?.({ type: "move" }) ?? [] ) {   // rangées par élévation croissante
+  for ( const surface of scene.getSurfaces?.({ type: "move" }) ?? [] ) {   // sorted by increasing elevation
     if ( !Number.isFinite(surface.elevation) || (surface.elevation <= ground + 1e-6) ) continue;
     if ( list.some(p => surface.region?.polygonTree?.testPoint(p)) ) return surface.elevation;
   }
@@ -105,8 +105,8 @@ export function ceilingAt(scene, points, ground) {
 }
 
 /**
- * Où un token peut se tenir à une position : `ground` (sol) et `ceiling` (élévation la plus haute pour ses pieds en vol :
- * plafond moins sa hauteur, `depth` du cœur V14 en cases).
+ * Where a token can stand at a position: `ground` (ground) and `ceiling` (highest elevation for its feet in flight:
+ * ceiling minus its height, V14 core `depth` in cells).
  */
 export function boundsUnder(token, pos=committedPosition(token)) {
   const scene = token.parent;
@@ -120,7 +120,7 @@ export function boundsUnder(token, pos=committedPosition(token)) {
   return { ground, ceiling: ceilingAt(scene, points, ground) - height };
 }
 
-/** 5 ft (règle : écart minimal au sol en vol ou en fouissement, et hauteur d'une marche), dans l'unité de la scène. */
+/** 5 ft (rule: minimum gap from the ground when flying or burrowing, and height of a step), in the scene's unit. */
 export function clearanceOf(scene) {
   try { return convertLength(5, "ft", scene.grid.units, readUnitFactors()); }
   catch { return scene.grid.distance; }
@@ -128,27 +128,27 @@ export function clearanceOf(scene) {
 
 export const speedsOf = actor => actor?.system?.attributes?.movement?.speeds ?? actor?.system?.attributes?.movement ?? {};
 
-/** Pourquoi cette créature ne peut pas prendre ce mode, ou null. */
+/** Why this creature cannot take this mode, or null. */
 export const modeRefusalFor = (actor, action) => modeRefusal(action, speedsOf(actor));
 
 /* -------------------------------------------- */
-/*  Vitesse accordée par le choix du mode       */
+/*  Speed granted by choosing the mode          */
 /* -------------------------------------------- */
 
 /**
- * Les effets que le moteur a posés pour accorder une vitesse (flag `grantedSpeed` = la vitesse : `fly`, `burrow`).
+ * The effects the engine placed to grant a speed (flag `grantedSpeed` = the speed: `fly`, `burrow`).
  * @param {Actor5e} actor
  */
 export const grantedSpeedEffects = actor => (actor?.effects ?? []).filter(e => e.getFlag?.(MODULE_ID, "grantedSpeed"));
 
 /**
- * Choisir un mode dans le HUD du token vaut décision du MJ ou du joueur : une créature qui n'en a pas la vitesse la
- * reçoit, égale à sa vitesse de marche (30 ft si elle n'en a pas), par un effet qui porte le nom du mode. Même forme de
- * changement que les capacités de dnd5e qui donnent un vol (Ailes draconiques : `system.attributes.movement.fly`,
+ * Choosing a mode in the token HUD counts as a decision by the GM or the player: a creature without that speed gets
+ * it, equal to its walking speed (30 ft if it has none), through an effect named after the mode. Same kind of
+ * change as dnd5e's features that grant flight (Dragon Wings: `system.attributes.movement.fly`,
  * `upgrade`, packs/_source/classes24/sorcerer/…/dragon-wings.yml:159).
  * @param {TokenDocument} token
- * @param {string} action  Le mode choisi.
- * @returns {Promise<boolean>}  true si un effet a été posé.
+ * @param {string} action  The chosen mode.
+ * @returns {Promise<boolean>}  true if an effect was placed.
  */
 export async function grantSpeedFor(token, action) {
   const speed = speedFor(action);
@@ -166,8 +166,8 @@ export async function grantSpeedFor(token, action) {
 }
 
 /**
- * Retire les vitesses accordées qui ne servent plus au mode `action` (retour à la marche : le vol accordé tombe).
- * @returns {Promise<number>}  Nombre d'effets retirés.
+ * Removes the granted speeds that the `action` mode no longer needs (back to walking: the granted flight drops).
+ * @returns {Promise<number>}  Number of effects removed.
  */
 export async function revokeSpeedsBut(token, action) {
   const keep = speedFor(action);
@@ -176,14 +176,14 @@ export async function revokeSpeedsBut(token, action) {
   return ids.length;
 }
 
-/** Le mode au sol d'une créature : ramper si elle ne peut que ramper (À terre), sinon marcher. */
+/** A creature's ground mode: crawl if it can only crawl (Prone), otherwise walk. */
 export const groundModeOf = actor => (actor?.hasConditionEffect?.("crawl") ? "crawl" : "walk");
 
 /**
- * Le mode dans lequel le token se déplace vraiment : le sien, sauf un mode au sol nettement en l'air (ou sous terre) —
- * une créature qui vole (ou fouit) dont personne n'a changé le mode ; si elle en a la vitesse, c'est ce mode-là.
+ * The mode in which the token is really moving: its own, except a ground mode clearly in the air (or underground) —
+ * a creature that flies (or burrows) whose mode nobody changed; if it has that speed, that mode applies.
  * @param {TokenDocument} token
- * @param {object} [pos]  Position (point de départ d'un déplacement), sinon la position validée.
+ * @param {object} [pos]  Position (starting point of a move), otherwise the validated position.
  */
 export function effectiveMode(token, pos=committedPosition(token)) {
   const mode = token.movementAction;
@@ -195,7 +195,7 @@ export function effectiveMode(token, pos=committedPosition(token)) {
   return (to && !modeRefusalFor(token.actor, to)) ? to : mode;
 }
 
-/** Le token est-il en l'air (en vol, ou au-dessus de son sol) ? §192 : un grimpeur tient au mur, il n'est pas en l'air. */
+/** Is the token in the air (flying, or above its ground)? §192: a climber clings to the wall, it is not in the air. */
 export function isAirborne(token) {
   if ( placementOf(token.movementAction) === "air" ) return true;
   if ( token._source.movementAction === "climb" ) return false;

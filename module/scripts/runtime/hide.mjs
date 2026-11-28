@@ -1,13 +1,13 @@
 /**
- * Furtivité (Hide, SPEC §15.2, §185), sur le client de celui qui se cache. Un seul état « caché » (décision de l'utilisateur,
- * 2026-10-14 : l'action et le mode furtif ne font plus qu'un) — l'effet de Furtivité, invisible pour les ennemis seuls (adapter/stealth.mjs) :
- *  - règles `2024` : test de Discrétion DD 15 ; réussi, l'effet porte le total (le DD pour vous localiser) ; raté, hors combat, on ne
- *    peut retenter qu'après 10 s (contre le spam ; en combat, l'Action est le coût) ;
- *  - règles `bg3` : pas de jet ; l'effet porte la Discrétion passive (pour Chercher) ; chaque ennemi doit ensuite repérer la créature
+ * Hide (SPEC §15.2, §185), on the client of the one who hides. A single "hidden" state (user decision,
+ * 2026-10-14: the action and stealth mode are now one) — the Hide effect, invisible to enemies only (adapter/stealth.mjs):
+ *  - `2024` rules: Stealth check DC 15; on a success, the effect carries the total (the DC to locate you); on a failure, out of
+ *    combat, you can only retry after 10 s (against spam; in combat, the Action is the cost);
+ *  - `bg3` rules: no roll; the effect carries passive Stealth (for Search); each enemy must then spot the creature
  *    (runtime/stealth.mjs).
- * Dans les deux : il faut être hors du champ de vision de tout ennemi (cônes compris hors combat ; la légalité le vérifie pour l'item,
- * `hideToken` pour le raccourci) ; la Furtivité cesse après un jet d'attaque, ou un sort à composante verbale.
- * Être localisé ou faire du bruit reste au MJ : il retire l'effet (ou Perception passive, Chercher, détection BG3).
+ * In both: you must be out of every enemy's field of view (cones included out of combat; legality checks it for the item,
+ * `hideToken` for the shortcut); Hide ends after an attack roll, or a spell with a verbal component.
+ * Being located or making noise is left to the GM: they remove the effect (or passive Perception, Search, BG3 detection).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,20 +23,20 @@ import { coverFor } from "../adapter/cover.mjs";
 import { enqueue } from "./queue.mjs";
 import { STEPS } from "../core/action.mjs";
 
-/** DD du test de Discrétion (règle 2024). */
+/** DC of the Stealth check (2024 rule). */
 const HIDE_DC = 15;
-/** Hors combat, après un échec (règles 2024) : attendre avant de retenter. */
+/** Out of combat, after a failure (2024 rules): wait before retrying. */
 const RETRY_MS = 10000;
 
 const fighting = doc => !!game.combats?.some(c => c.started && c.combatants.some(cb => cb.tokenId === doc?.id));
 const tokensOf = actor => actor?.getActiveTokens?.(false, true) ?? [];
 
-/** Effacer qui avait repéré ces tokens (règles BG3). */
+/** Clear who had spotted these tokens (BG3 rules). */
 async function forgetSpotters(actor) {
   for ( const t of tokensOf(actor) ) if ( t.isOwner && t.getFlag(MODULE_ID, "stealth") ) await t.unsetFlag(MODULE_ID, "stealth");
 }
 
-/** §435 : la fin de cachette en cours par créature (uuid → promesse) — l'issue d'un tir du Tireur embusqué l'attend. */
+/** §435: the hide end in progress per creature (uuid → promise) — the outcome of an "Ambush Shooter" shot waits for it. */
 const endings = new Map();
 
 export function endHiding(actor, why) {
@@ -52,7 +52,7 @@ export function endHiding(actor, why) {
 async function endHidingNow(actor, why) {
   const effects = hiddenEffectsOf(actor);
   if ( !effects.length || !actor.isOwner ) return;
-  // §236 : Faufilement suprême — l'état retiré par un jet d'attaque est gardé, pour que l'Attaque furtive le rende (runtime/sneak.mjs).
+  // §236: Supreme Sneak — the condition removed by an attack roll is kept, so that Sneak Attack can restore it (runtime/sneak.mjs).
   if ( (why === "attack roll") && (hasStealthAttack(actor) || hasSniper(actor)) ) {
     await actor.setFlag(MODULE_ID, "hiddenBeforeAttack", effects.map(e => { const { _id, ...data } = e.toObject(); return data; }));
   }
@@ -60,20 +60,21 @@ async function endHidingNow(actor, why) {
   await forgetSpotters(actor);
   log(`hide: ${actor.name} is no longer hidden (${why})`);
   ui.notifications.info(loc("Furtivite.Fin", { name: actor.name }));
-  // §183 : sur le client qui change l'état caché d'une créature : `(token, hidden)` — son premier token (TokenDocument, ou null) et
-  // le nouvel état. Lecture seule.
+  // §183: on the client that changes a creature's hidden state: `(token, hidden)` — its first token (TokenDocument, or null) and
+  // the new state. Read-only.
   Hooks.callAll(`${MODULE_ID}.sneak`, tokensOf(actor)[0] ?? null, false);
 }
 
-/** §236 : la créature connaît-elle l'Attaque furtive (une Frappe rusée `keepsHidden`) ? */
+/** §236: does the creature know Sneak Attack (a Cunning Strike `keepsHidden`)? */
 const hasStealthAttack = actor => actor.items.some(i => Object.values(contentOf(i).entry?.cunningStrikes ?? {}).some(s => s.keepsHidden));
 
-/** C12-i : Discret, Tireur embusqué — « si vous êtes caché et ratez un jet d'attaque, l'attaque ne vous révèle pas » (`sniper`). */
+/** C12-i: Skulker, "Ambush Shooter" — "if you are hidden and miss with an attack roll, the attack doesn't reveal you" (`sniper`) */
 const hasSniper = actor => actor.items.some(i => contentOf(i).entry?.sniper === true);
 
 /**
- * §236 : rend l'état caché qu'un jet d'attaque a retiré (Attaque furtive) ; la fin du tour jugera l'abri. Rend true si rendu.
- * C12-i : `plain` — rendu tel quel, sans jugement d'abri en fin de tour (Tireur embusqué : le tir a raté).
+ * §236: restores the hidden state that an attack roll removed (Sneak Attack); end of turn will judge the cover. Returns true if
+ * restored.
+ * C12-i: `plain` — restored as is, without end-of-turn cover judgment ("Ambush Shooter": the shot missed).
  */
 export async function restoreHiding(actor, { plain=false }={}) {
   const kept = actor.getFlag(MODULE_ID, "hiddenBeforeAttack");
@@ -85,8 +86,8 @@ export async function restoreHiding(actor, { plain=false }={}) {
 }
 
 /**
- * §236 : à la fin du tour d'une créature restée cachée par l'Attaque furtive, il lui faut un abri aux trois quarts ou total contre chaque
- * ennemi qui la voit d'ordinaire (vivant, sur la scène) ; sinon l'état prend fin. MJ actif.
+ * §236: at the end of the turn of a creature kept hidden by Sneak Attack, it needs Three-Quarters Cover or Total Cover against each
+ * enemy that would normally see it (alive, on the scene); otherwise the condition ends. Active GM.
  */
 async function stealthAttackCheck(combat, prior) {
   const token = combat.combatants.get(prior?.combatantId)?.token;
@@ -102,21 +103,21 @@ async function stealthAttackCheck(combat, prior) {
   }
 }
 
-/** Le drapeau d'un jet d'attaque sans Attaque furtive ne sert plus : retiré au tour suivant. */
+/** The flag of an attack roll without Sneak Attack is no longer needed: removed on the next turn. */
 async function forgetKeptHiding(combat, prior) {
   const actor = combat.combatants.get(prior?.combatantId)?.actor;
   if ( actor?.getFlag(MODULE_ID, "hiddenBeforeAttack") ) await actor.unsetFlag(MODULE_ID, "hiddenBeforeAttack");
 }
 
 /**
- * Se cacher, selon les règles du monde (l'action est déjà payée, ou hors combat). Rend `{ hidden, total?, reason? }`.
+ * Hiding, per the world's rules (the action is already paid, or out of combat). Returns `{ hidden, total?, reason? }`.
  * @param {Actor} actor
  * @param {TokenDocument|null} token
  */
 export async function attemptHide(actor, token=null) {
   const rules = stealthRules();
   const t = token ?? tokensOf(actor)[0] ?? null;
-  // Issue #65 : Furtivité non gérée — l'action est prise, le MJ juge ; un avis chez tous, aucun jet, aucun effet.
+  // Issue #65: Hide not handled — the action is taken, the GM judges; a notice to all, no roll, no effect.
   if ( rules === "off" ) {
     log(`hide: ${actor.name} hides (stealth rules off: the GM decides)`);
     if ( t ) notice(t, { key: "Retour.Action.CacheMJ" }, "gain", { all: true, action: "hide" });
@@ -133,7 +134,7 @@ export async function attemptHide(actor, token=null) {
   let dc;
   if ( rules === "bg3" ) dc = Number(actor.system?.skills?.ste?.passive) || (10 + (Number(actor.system?.skills?.ste?.total) || 0));
   else {
-    // §252 : le verdict attend la fin des dés 3D, puis se voit et s'entend chez tous.
+    // §252: the verdict waits for the 3D dice to finish, then is seen and heard by all.
     const rolls = await rolledAndShown(() => actor.rollSkill({ skill: "ste", target: HIDE_DC }, { configure: false }));
     const total = rolls?.[0]?.total;
     if ( !Number.isFinite(total) ) return { hidden: false, reason: "noRoll" };
@@ -157,8 +158,8 @@ export async function attemptHide(actor, token=null) {
 }
 
 /**
- * Le raccourci et le bouton (§183) : caché → ne plus l'être ; sinon se cacher. Hors combat, sans coût, s'il n'est vu d'aucun ennemi.
- * En combat, l'action Furtivité se prend par son item (légalité et budget) : rend `reason: "inCombat"`.
+ * The shortcut and the button (§183): hidden → no longer so; otherwise hide. Out of combat, free, if no enemy sees them.
+ * In combat, the Hide action is taken through its item (legality and budget): returns `reason: "inCombat"`.
  */
 export async function toggleHidden(token) {
   const doc = token?.document ?? token;
@@ -178,28 +179,28 @@ export async function toggleHidden(token) {
 async function onPostUse(activity, usageConfig) {
   const actor = activity.actor;
   if ( !actor ) return;
-  // L'item Furtivité, ou une activité qui prend l'action Se cacher (Ruse du Roublard, par une action Bonus : §20).
+  // The Hide item, or an activity that takes the Hide action (Rogue's Cunning Action, as a Bonus Action: §20).
   if ( basicActionOfActivity(activity, usageConfig?.[MODULE_ID]?.basicChoice) === "hide" ) return attemptHide(actor);
-  // Un sort à composante verbale trahit la cachette.
+  // A spell with a verbal component gives the hiding place away.
   if ( isSpellCast(activity.item) && activity.item.system.properties?.has("vocal") ) await endHiding(actor, "spell with a Verbal component");
 }
 
-/** C12-i : MJ actif — l'attaque d'un Tireur embusqué tranchée : ratée (toutes cibles), il reste caché ; touchée, la cachette gardée est oubliée. */
+/** C12-i: active GM — an "Ambush Shooter" attack decided: missed (all targets), they stay hidden; hit, the kept hiding is forgotten. */
 async function sniperOutcome(resolution) {
   if ( !resolution?.plan?.attack || ![STEPS.DONE, STEPS.MISSED].includes(resolution.step) ) return;
   const from = fromUuidSync(resolution.source ?? "", { strict: false });
   const actor = (from?.documentName === "Actor") ? from : (from?.actor ?? null);
   if ( !actor || !hasSniper(actor) ) return;
-  // §435 : un tir raté se tranche avant même que dnd5e appelle `dnd5e.rollAttackV2` (vu au banc : l'issue « missed » publiée, l'état
-  // caché encore là, pas de drapeau) — la fin de cachette du jet n'a pas commencé. L'attendre (3 s au plus), sinon le Tireur embusqué
-  // perdait sa cachette sur un raté.
+  // §435: a missed shot is decided before dnd5e even calls `dnd5e.rollAttackV2` (seen on the bench: outcome "missed" published,
+  // the hidden state still there, no flag) — the roll's hide end has not started. Wait for it (3 s at most), otherwise the
+  // "Ambush Shooter" lost their hiding on a miss.
   for ( const stop = Date.now() + 3000; !endings.has(actor.uuid) && !actor.getFlag(MODULE_ID, "hiddenBeforeAttack")
     && hiddenEffectsOf(actor).length && (Date.now() < stop); ) await new Promise(r => setTimeout(r, 100));
   await endings.get(actor.uuid)?.catch(() => {});
   if ( !actor.getFlag(MODULE_ID, "hiddenBeforeAttack") ) return;
   const missed = (resolution.targets ?? []).every(t => !t.hit);
   if ( missed && await restoreHiding(actor, { plain: true }) ) { log(`hide: ${actor.name} missed from hiding — still hidden (Skulker)`); return; }
-  // Touchée : l'Attaque furtive (Roublard) peut encore la rendre ; sinon, la cachette gardée ne sert plus.
+  // Hit: Sneak Attack (Rogue) can still restore it; otherwise, the kept hiding is no longer needed.
   if ( !hasStealthAttack(actor) ) await actor.unsetFlag(MODULE_ID, "hiddenBeforeAttack");
 }
 
@@ -207,7 +208,7 @@ export function registerHide() {
   route(`${MODULE_ID}.resolution`, resolution => enqueue(`sniper:${resolution?.id}`, () => sniperOutcome(resolution)), { executor: true, label: "Skulker: hiding not kept" });
   route("dnd5e.postUseActivity", (activity, usageConfig) => { onPostUse(activity, usageConfig).catch(err => console.error(`${MODULE_ID} | hide`, err)); },
     { label: "hide" });
-  // « Vous cessez d'être caché aussitôt après… un jet d'attaque » : après le jet, qui a profité de l'invisibilité.
+  // "You stop being hidden immediately after… an attack roll": after the roll, which benefited from invisibility.
   route("dnd5e.rollAttackV2", (rolls, { subject }={}) => {
     const actor = subject?.actor;
     if ( actor ) endHiding(actor, "attack roll").catch(err => console.error(`${MODULE_ID} | hide`, err));

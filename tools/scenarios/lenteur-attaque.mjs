@@ -1,6 +1,6 @@
 /**
- * §267 : Lenteur — « elle ne peut faire qu'une attaque si elle prend l'action Attaquer ». Le Paladin (niveau 8, Attaque
- * supplémentaire) attaque le Zombi : l'action Attaquer ouvre deux attaques ; ralenti par le Magicien, une seule.
+ * §267: Slow — "it can make only one attack if it takes the Attack action". The Paladin (level 8, Extra
+ * Attack) attacks the Zombi: the Attack action opens two attacks; slowed by the Wizard, only one.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -10,7 +10,7 @@ export default {
 
   async run(ctx) {
     const mage = await ctx.token("Magicien");
-    const guerrier = await ctx.token("Paladin");   // niveau 8 : Attaque supplémentaire
+    const guerrier = await ctx.token("Paladin");   // level 8: Extra Attack
     const zombi = await ctx.token("Zombi");
     const grid = await ctx.gridSize();
     for ( const t of [guerrier, zombi] ) {
@@ -50,8 +50,8 @@ export default {
     const before = await granted();
     ctx.expect(before >= 2, `sans Lenteur : l'action Attaquer ouvre ${before} attaques`);
 
-    // §296 : Lenteur épargne désormais les alliés du lanceur (« jusqu'à six créatures de votre choix ») — le Magicien ne peut plus
-    // ralentir le Paladin par le sort : l'effet « Slowed » du sort est posé directement, comme si le Paladin avait raté sa sauvegarde.
+    // §296: Slow now spares the caster's allies ("up to six creatures of your choice") — the Wizard can no longer
+    // slow the Paladin with the spell: the spell's "Slowed" effect is placed directly, as if the Paladin had failed their save.
     const slowId = await ctx.ensureItem(mage, "Compendium.dnd-players-handbook.spells.Item.phbsplSlow000000", { system: { method: "atwill" } });
     await drop(); await pause(500);
     await ctx.engine("placeItemEffect", { tokenId: guerrier.id, casterId: mage.id, itemId: slowId, effectId: "z1lkguBohjqXRSHm" });

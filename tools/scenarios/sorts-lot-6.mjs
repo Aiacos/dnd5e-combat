@@ -1,15 +1,15 @@
 /**
- * §288 : chantiers du 2026-10-30, lot 6 (données du PHB défectueuses), monde `dnd-6`, Arène de test. Le Paladin reçoit les sorts du
- * Manuel des joueurs ; le Bandit (300 PV) est la cible, le Zombi à côté de lui. Vérifie :
- *  - Flèche de foudre, javeline lancée qui touche : proposée comme un châtiment, ses 4d8 remplacent les dés de la javeline, l'emplacement
- *    de niveau 3 est dépensé, l'éclat fait sauvegarder le Zombi (carte) ;
- *  - Flèche de foudre, javeline qui rate : proposée au raté, la moitié des dégâts sur le Bandit, l'éclat ;
- *  - Dissipation du mal et du bien : « Cast » laisse une trace sur le Paladin, le Zombi (mort-vivant) l'attaque avec le Désavantage ;
- *    Renvoi utilisé, la concentration tombe et la trace avec ;
- *  - Dédale : le Zombi banni (token caché), au début de son tour l'action Étude lui est proposée ; réussie (bonus d'essai), il revient et
- *    le sort prend fin ;
- *  - Coup au but : l'épée longue enchantée propose ses dégâts tranchants ou radiants.
- * Remet positions, PV, emplacements, quantités, effets ; retire les items prêtés.
+ * §288: work items of 2026-10-30, batch 6 (defective PHB data), world `dnd-6`, Test Arena. The Paladin receives the
+ * Player's Handbook spells; the Bandit (300 HP) is the target, the Zombie next to him. Checks:
+ *  - Lightning Arrow, thrown javelin that hits: offered like a smite, its 4d8 replace the javelin's dice, the level 3 spell slot
+ *    is spent, the burst makes the Zombie save (card);
+ *  - Lightning Arrow, javelin that misses: offered on the miss, half damage on the Bandit, the burst;
+ *  - Dispel Evil and Good: "Cast" leaves a mark on the Paladin, the Zombie (Undead) attacks him with Disadvantage;
+ *    Dismissal used, Concentration drops and the mark with it;
+ *  - Maze: the Zombie banished (hidden token), at the start of his turn the Study action is offered to him; succeeded
+ *    (attempt bonus), he comes back and the spell ends;
+ *  - "Direct Hit": the enchanted longsword offers its slashing or radiant damage.
+ * Puts back positions, HP, spell slots, quantities, effects; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const SPELLS = "dnd-players-handbook.spells";
@@ -66,8 +66,8 @@ export default {
       return r.id;
     };
     const arrow = await lend("phbsplLightningA");
-    // La Flèche de foudre se paie d'un emplacement (offerte comme un châtiment) : pas « à volonté » — et préparée, sans quoi elle
-    // n'est pas proposée après un coup (issue #144).
+    // Lightning Arrow is paid for with a spell slot (offered like a smite): not "at will" — and prepared, otherwise it
+    // is not offered after a hit (issue #144).
     await ctx.call("upsert-actor-item", { actorId: pal.actorId, itemData: { "system.method": "spell", "system.prepared": 1 }, match: { path: "_id", value: arrow } });
     const dispel = await lend("phbsplDispelEvil");
     const maze = await lend("phbsplMaze000000");
@@ -86,8 +86,8 @@ export default {
         for ( const e of (await ctx.effects(t)).filter(e => !h.effects.has(e._id ?? e.id) && !e.flags?.[MODULE_ID]?.aura) ) {
           await ctx.call("remove-embedded-effect", { ...target, effectId: e._id ?? e.id }).catch(() => {});
         }
-        // §435 : le Renvoi de la Dissipation du mal et du bien bannit pour de bon un mort-vivant qui rate (§402, `banish`) : la marque du
-        // moteur restait sur le Zombi, et le Dédale le croyait déjà banni (rien caché) — l'échec, une fois sur deux, de la passe.
+        // §435: the Dismissal of Dispel Evil and Good banishes an Undead that fails for good (§402, `banish`): the engine's mark
+        // stayed on the Zombie, and Maze thought him already banished (nothing hidden) — the failure, one time in two, of the run.
         await ctx.call("update-scene-object", { type: "Token", objectId: t.id, data: { hidden: false, [`flags.${MODULE_ID}.-=banished`]: null } }).catch(() => {});
         await ctx.call("move-token", { tokenId: t.id, x: h.pos.x, y: h.pos.y, elevation: h.pos.elevation ?? 0 }).catch(() => {});
         if ( t !== bandit ) await ctx.setHp(t, h.hp);
@@ -106,7 +106,7 @@ export default {
     };
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
-    /** Combat : les tokens dans cet ordre d'initiative, au tour du premier. */
+    /** Combat: the tokens in this Initiative order, on the first one's turn. */
     const fight = async order => {
       await ctx.startCombat(order);
       const combat = await state();
@@ -115,7 +115,7 @@ export default {
       return (await current()) === order[0].id;
     };
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
-    /** Répond aux fenêtres du MJ (`answers` : [motif du texte, motif du bouton]) pendant `ms`, jusqu'à une réponse ; rend ce qui a été vu. */
+    /** Answers the GM's windows (`answers`: [text pattern, button pattern]) for `ms`, until an answer; returns what was seen. */
     const answerAll = async (ids, answers, ms=9000) => {
       const seen = [];
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
@@ -136,7 +136,7 @@ export default {
       const u = await ctx.use({ tokenId: pal.id, itemId: javelin, activityType: "attack", targetTokenIds: [bandit.id], usageConfig: { [MODULE_ID]: { attackMode: "thrown", cost: "free" } } });
       return { since, usage: u.usageMessageId };
     };
-    /** Lance des javelines (12 au plus) jusqu'à l'issue voulue (`hit`), en répondant selon `answers` ; rend l'essai retenu. */
+    /** Throws javelins (12 at most) until the wanted outcome (`hit`), answering per `answers`; returns the retained try. */
     const until = async (hit, answers, ms=8000) => {
       for ( let n = 0; n < 12; n++ ) {
         await ctx.call("upsert-actor-item", { actorId: pal.actorId, itemData: { "system.quantity": 10 }, match: { path: "_id", value: javelin } });
@@ -179,8 +179,8 @@ export default {
       await tough(); await place(bandit, 4, 0); await place(zombi, 5, 0);
       await setSlots({ ...slots0, spell3: 1 });
       if ( !ctx.expect(await fight([pal, bandit, zombi]), "combat : au tour du Paladin") ) return;
-      // §435 : un raté de peu passe d'abord par la fenêtre « réussite à un prix » du MJ (jusqu'à 16 s, runtime/success-at-cost.mjs) ;
-      // la question de la Flèche de foudre vient après — au-delà des 8 s d'écoute, elle restait sans réponse (une passe sur deux).
+      // §435: a near miss first goes through the GM's "success at a cost" window (up to 16 s, runtime/success-at-cost.mjs);
+      // the Lightning Arrow question comes after — beyond the 8 s of listening, it stayed unanswered (one run in two).
       const res = await until(false, [[/rate |misses/i, LIGHTNING], [/Châtiment|Smite|toucher|hit/i, NONE]], 30000);
       if ( !ctx.expect(!!res, "la javeline rate le Bandit (12 essais au plus)") ) return;
       const offered = res.asked.flatMap(d => d.buttons ?? []);
@@ -217,7 +217,7 @@ export default {
       await pause(1500);
       const hidden = async () => (await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id })).data?.hidden === true;
       ctx.expect(await hidden(), "le Zombi est banni dans le dédale (token caché)");
-      // Essai : le test d'Investigation réussit à coup sûr.
+      // Try: the Investigation check succeeds for sure.
       await ctx.call("upsert-embedded-effect", { ...(await targetOf(zombi)), effectData: { name: "Essai : fil d'Ariane", img: "icons/svg/book.svg", transfer: false,
         changes: [{ key: "system.skills.inv.bonuses.check", value: "40", type: "add" }] } });
       if ( !ctx.expect(await fight([pal, zombi]), "combat : au tour du Paladin") ) return;

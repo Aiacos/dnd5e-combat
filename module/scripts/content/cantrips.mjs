@@ -1,49 +1,49 @@
 /**
- * Les tours de magie du Manuel des joueurs 2024 (SPEC §23), par identifiant dnd5e (les mêmes dans `spells24` du système et dans
- * le module premium). Ids d'activités et d'effets relevés dans le pack `spells` du module premium 2.2.0.
+ * The 2024 Player's Handbook cantrips (SPEC §23), by dnd5e identifier (the same in the system's `spells24` and in
+ * the premium module). Activity and effect ids taken from the `spells` pack of the premium module 2.2.0.
  *
- * Déjà complets ailleurs (§16) : Voile défensif, Lumières dansantes, Décharge occulte, Assistance, Lumière, Flammes, Résistance,
- * Gourdin magique, Épargner les mourants, Trait étoilé, Fouet épineux, Moquerie cruelle. Réglés par les données de dnd5e (le
- * moteur ne fait que résoudre) : Aspersion d'acide, Trait de feu, Aspersion de poison, Flamme sacrée (le moteur n'ajoute jamais
- * l'abri aux sauvegardes), Explosion occulte (d8 qui explosent, type au choix), Coup de tonnerre et Mot de radiance (émanations
- * qui épargnent le lanceur ; Mot de radiance, « de votre choix » : les ennemis). Sans effet en combat : Druidisme,
- * Élémentalisme, Réparation, Message, Prestidigitation, Thaumaturgie.
+ * Already complete elsewhere (§16): Blade Ward, Dancing Lights, Eldritch Blast, Guidance, Light, Produce Flame, Resistance,
+ * Shillelagh, Spare the Dying, Starry Wisp, Thorn Whip, Vicious Mockery. Settled by dnd5e's data (the
+ * engine only resolves): Acid Splash, Fire Bolt, Poison Spray, Sacred Flame (the engine never adds
+ * Cover to saving throws), Sorcerous Burst (d8s that explode, type of choice), Thunderclap and Word of Radiance (Emanations
+ * that spare the caster; Word of Radiance, "of your choice": the enemies). No effect in combat: Druidcraft,
+ * Elementalism, Mending, Message, Prestidigitation, Thaumaturgy.
  *
- * `effectEnds` : l'effet tombe au début ou à la fin d'un tour précis — dnd5e leur donne « 1 round » ou « 1 tour », qu'il fait
- * expirer au début d'un tour quelconque ; le moteur les retire à leur heure (runtime/cantrips.mjs).
+ * `effectEnds`: the effect ends at the start or end of a specific turn — dnd5e gives them "1 round" or "1 turn", which it
+ * expires at the start of any turn; the engine removes them at their time (runtime/cantrips.mjs).
  */
 
 export const CANTRIPS = Object.freeze({
-  // Contact glacial : « elle ne peut pas regagner de points de vie jusqu'à la fin de votre prochain tour » — effet « Blocked Healing ».
+  // Chill Touch: "it cannot regain Hit Points until the end of your next turn" — "Blocked Healing" effect.
   "chill-touch": { blocksHealing: true, effectEnds: { zwks0mAqBHGZC1Pk: "casterTurnEnd" } },
-  // Rayon de givre : « sa Vitesse est réduite de 3 m jusqu'au début de votre prochain tour » — effet « Reduced Movement ».
+  // Ray of Frost: "its Speed is reduced by 3 m until the start of your next turn" — "Reduced Movement" effect.
   "ray-of-frost": { effectEnds: { "7dnnwBMWLykrVJub": "casterTurnStart" } },
-  // Éclat mental : -1d4 à la prochaine sauvegarde de la cible, jusqu'à la fin du prochain tour du lanceur — l'effet
-  // « Slivered » (-1d4 aux sauvegardes) tombe à la première sauvegarde, sinon à la fin du prochain tour du lanceur.
+  // Mind Sliver: -1d4 on the target's next save, until the end of the caster's next turn — the "Slivered" effect
+  // (-1d4 on saves) falls at the first save, otherwise at the end of the caster's next turn.
   "mind-sliver": { breaksOn: ["save"], effectEnds: { DMjD7IpAZuoVPCXY: "casterTurnEnd" } },
-  // Poigne électrique : « elle ne peut pas faire d'attaque d'opportunité jusqu'au début de son prochain tour » — effet « Shocked ».
+  // Shocking Grasp: "it cannot make Opportunity Attacks until the start of its next turn" — "Shocked" effect.
   "shocking-grasp": { noOpportunityAttacks: true, effectEnds: { DQCAm67ck1GEKHtE: "bearerTurnStart" } },
-  // Moquerie cruelle (§16.12) : « … sa prochaine attaque avant la fin de votre prochain tour » — l'effet « Mocked ».
-  // §295 (repasse) : « sa prochaine attaque avant la fin de SON prochain tour » — le tour de la cible, pas celui du lanceur.
+  // Vicious Mockery (§16.12): "… its next attack before the end of your next turn" — the "Mocked" effect.
+  // §295 (pass): "its next attack before the end of ITS next turn" — the target's turn, not the caster's.
   "vicious-mockery": { effectEnds: { suEeAQQXl0X2JqzF: "bearerTurnEnd" } },
-  // Glas : 1d8 nécrotiques, ou 1d12 contre une cible déjà blessée — les deux activités de l'item ; la
-  // bonne est jouée d'après la cible, quelle que soit celle choisie.
-  // §295 : la copie de Heroes of the Borderlands dit « personnelle » sur les deux activités (même ids que le Manuel) : 18 m, comme le texte.
+  // Toll the Dead: 1d8 necrotic, or 1d12 against an already wounded target — the item's two activities; the
+  // right one is played based on the target, whichever was chosen.
+  // §295: the Heroes of the Borderlands copy says "personal" on both activities (same ids as the Manual): 18 m, as the text.
   "toll-the-dead": { byWounds: { healthy: "LFXYm5sLg6D3ZilN", wounded: "w9KUTNVoj3K8XSlv" },
     ranges: { LFXYm5sLg6D3ZilN: { value: 60, units: "ft" }, w9KUTNVoj3K8XSlv: { value: 60, units: "ft" } } },
-  // §295 : Poussière d'étoile — « jusqu'à la fin de votre prochain tour » (la donnée : un tour, au début d'un tour quelconque).
+  // §295: "Star Dust" — "until the end of your next turn" (the data: one turn, at the start of any turn).
   "starry-wisp": { effectEnds: { T9kBIL7LS3j0Upwz: "casterTurnEnd" } },
-  // Amitié : sans effet sur une cible qui n'est pas Humanoïde ; des dégâts subis par la cible mettent fin au sort ; §366 : la fin
-  // aussi quand le lanceur fait un jet d'attaque, inflige des dégâts ou impose une sauvegarde (`breaksOnOrigin`). §402 : « la cible
-  // réussit d'office si elle n'est pas Humanoïde, si vous la combattez » (`saveAutoSuccess.fighting`) ; s'il la lui a lancé dans les
-  // 24 h : au MJ.
+  // Friends: no effect on a target that is not Humanoid; damage taken by the target ends the spell; §366: it also ends
+  // when the caster makes an attack roll, deals damage or forces a saving throw (`breaksOnOrigin`). §402: "the target
+  // succeeds automatically if it is not Humanoid, if you are fighting it" (`saveAutoSuccess.fighting`); if the caster cast it on it
+  // within 24 h: up to the GM.
   "friends": { targets: { types: ["humanoid"] }, breaksOnOrigin: ["attack", "damage", "forcesSave"], saveAutoSuccess: { fighting: true },
     triggers: [{ on: "isDamaged", via: "effect", do: [{ type: "remove" }] }] },
-  // Main de mage, Illusion mineure : ni l'une ni l'autre n'agit au combat.
+  // Mage Hand, Minor Illusion: neither acts in combat.
   "mage-hand": { summon: { initiative: "none" } },
   "minor-illusion": { summon: { initiative: "none" } },
-  // Frappe assurée : « vous faites une attaque avec l'arme utilisée pour lancer le sort » — une arme à soi, enchantée (caractéristique
-  // d'incantation, dégâts radiants au choix, dés radiants en plus) ; l'attaque est offerte aussitôt, sans coût, et l'enchantement
-  // tombe après elle.
+  // True Strike: "you make an attack with the weapon used to cast the spell" — a personal weapon, enchanted (spellcasting ability,
+  // radiant damage of choice, extra radiant dice); the attack is granted at once, at no cost, and the enchantment
+  // ends after it.
   "true-strike": { enchantTarget: "ownWeapon", oneAttack: true }
 });

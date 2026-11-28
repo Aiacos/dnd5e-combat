@@ -1,10 +1,11 @@
 /**
- * Compteur de sauvegardes et action de fin (SPEC §43). Sorts prêtés depuis le compendium du Manuel des joueurs.
- *  1. Pétrification (compteur) : une sauvegarde réussie au lancement ne pose que « Vitesse 0 » ; ratée, l'Entravé — puis, à
- *     chaque fin de tour, une sauvegarde comptée : trois réussites, l'effet tombe ; trois échecs, Pétrifié et plus de sauvegarde.
- *  2. Danse irrésistible d'Otto (action du porteur) : le Zombi prend son action pour rejouer la sauvegarde ; réussie, la danse cesse.
- *  3. Sommeil (action d'un autre) : le Clerc vient au contact du Bandit endormi et le réveille.
- * `PART=Otto` ne joue que la partie dont le nom le contient ; `PLAYER=1` laisse le réveil à un joueur connecté (trois minutes). Remet PV, effets, positions ; retire les sorts prêtés.
+ * Save counter and end action (SPEC §43). Spells borrowed from the Player's Handbook compendium.
+ *  1. Flesh to Stone (counter): a successful save on casting only applies "Speed 0"; on a failure, Restrained — then, at
+ *     the end of each turn, a counted save: three successes, the effect ends; three failures, Petrified and no more saves.
+ *  2. Otto's Irresistible Dance (bearer's action): the Zombie takes its action to retry the save; on a success, the dance ends.
+ *  3. Sleep (another creature's action): the Cleric comes into contact with the sleeping Bandit and wakes it.
+ * `PART=Otto` only plays the part whose name contains it; `PLAYER=1` leaves the waking to a connected player (three minutes).
+ * Restores HP, effects, positions; removes the borrowed spells.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -32,7 +33,7 @@ export default {
     const baseline = new Map();
     for ( const t of [mage, clerc, bandit, zombi] ) baseline.set(t.id, new Set((await ctx.effects(t)).map(e => e._id ?? e.id)));
     const newEffects = async t => (await ctx.effects(t)).filter(e => !baseline.get(t.id).has(e._id ?? e.id));
-    /** Les effets nouveaux d'un token qui viennent de cet effet d'item. */
+    /** The token's new effects that come from this item effect. */
     const from = async (t, id) => (await newEffects(t)).filter(e => String(e._stats?.duplicateSource ?? "").endsWith(`.ActiveEffect.${id}`));
     const clear = async t => {
       for ( const e of await newEffects(t) ) await ctx.call("remove-embedded-effect", { documentType: "Token", id: t.id, effectId: e._id ?? e.id }).catch(() => {});
@@ -64,8 +65,8 @@ export default {
       ctx.expect(!errors.length, `${name} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
     /**
-     * Lance le sort du Magicien sur `target` jusqu'à une sauvegarde ratée (20 essais) ; `onSuccess` est appelé une fois, à la
-     * première sauvegarde réussie, avant le nettoyage. Rend l'id du message d'utilisation, ou null.
+     * Casts the Wizard's spell on `target` until a save fails (20 tries); `onSuccess` is called once, at the first
+     * successful save, before cleanup. Returns the id of the use message, or null.
      */
     const until = async (itemId, target, { extra={}, onSuccess=null }={}) => {
       let told = false;
@@ -175,8 +176,8 @@ export default {
       ctx.expect(await asleep(), "le Bandit porte l'effet du Sommeil");
       const offered = await ctx.engine("endings", { tokenId: bandit.id });
       ctx.expect((offered.byOther ?? []).length === 1, `une autre créature peut le réveiller (${(offered.byOther ?? []).map(e => e.item).join(", ")})`);
-      // PLAYER=1 : le réveil est laissé à un joueur (navigateur intégré, « claude player », menu du Clerc sur le Bandit) — le
-      // Clerc est posé au contact, et l'on attend trois minutes que l'effet tombe par la requête au MJ actif.
+      // PLAYER=1: the waking is left to a player (built-in browser, "claude player", Cleric's menu on the Bandit) — the
+      // Cleric is placed in contact, and we wait three minutes for the effect to end through the request to the active GM.
       if ( process.env.PLAYER ) {
         const spot = await ctx.position(bandit);
         await ctx.call("move-token", { tokenId: clerc.id, x: spot.x + grid, y: spot.y, elevation: spot.elevation ?? 0 });

@@ -1,35 +1,36 @@
 /**
- * Socle de tests DAS — TRADUCTIONS. Fichier COPIÉ tel quel depuis le dépôt du moteur (`tools/contract/das-i18n.test.mjs`) :
- * ne pas le modifier ici. Dans le moteur, `node tools/contract/sync.mjs` le recopie dans tous les modules ; ce qui est propre
- * à un module va dans `tests/das-tests.json`, section `"i18n"` (sans elle, le relevé des clés du code est sauté).
+ * DAS test base — TRANSLATIONS. File COPIED as is from the engine repository (`tools/contract/das-i18n.test.mjs`):
+ * do not modify it here. In the engine, `node tools/contract/sync.mjs` copies it into all modules; what is specific
+ * to a module goes in `tests/das-tests.json`, section `"i18n"` (without it, the survey of the code's keys is skipped).
  *
- * La règle de la suite : `en` est la langue de repli de Foundry, `fr` a toutes ses clés ; une autre langue (`pt-BR`, traduite
- * par un contributeur) peut avoir du retard, mais n'a jamais de clé en trop, de valeur vide ni d'autres `{variables}`.
- * Vérifie :
- *   1. chaque fichier de `module/lang/` est du JSON valide et cité dans `module.json` (`languages`), `en` et `fr` compris ;
- *   2. chaque valeur est un texte non vide ;
- *   3. `fr` a toutes les clés de `en` ; aucune langue n'a de clé absente de `en`, ni d'autres `{variables}` que `en` ;
- *   4. aucune clé n'est le préfixe d'une autre (« A.B » et « A.B.C » : Foundry range les clés en arbre, l'une écrase l'autre) ;
- *   5. chaque clé écrite en dur dans le code existe dans `en` (donc dans `fr`), et chaque début de clé construite
- *      (`` `DLO.Tables.${…}` ``) commence au moins une clé de `en` ;
- *   6. les `LOCALIZATION_PREFIXES` du code, les libellés des compendiums et les types de documents déclarés par
- *      `module.json` (`TYPES.RegionBehavior.<id>.<type>`) ont leurs traductions.
+ * The suite's rule: `en` is Foundry's fallback language, `fr` has all its keys; another language (`pt-BR`, translated
+ * by a contributor) may lag behind, but never has an extra key, an empty value or other `{variables}`.
+ * Checks:
+ *   1. every file in `module/lang/` is valid JSON and listed in `module.json` (`languages`), `en` and `fr` included;
+ *   2. every value is a non-empty text;
+ *   3. `fr` has all the keys of `en`; no language has a key missing from `en`, nor other `{variables}` than `en`;
+ *   4. no key is the prefix of another ("A.B" and "A.B.C": Foundry stores keys in a tree, one overwrites the other);
+ *   5. every key hard-coded in the code exists in `en` (hence in `fr`), and every start of a built key
+ *      (`` `DLO.Tables.${…}` ``) starts at least one key of `en`;
+ *   6. the code's `LOCALIZATION_PREFIXES`, the compendium labels and the document types declared by
+ *      `module.json` (`TYPES.RegionBehavior.<id>.<type>`) have their translations.
  *
- * Réglage, `tests/das-tests.json` :
+ * Setting, `tests/das-tests.json`:
  *   "i18n": {
- *     "namespaces": ["DLO"],                       // premiers segments des clés du module : "DLO.Window.Title" est une clé
- *     "sources": ["module/scripts", "tools/macros"],   // dossiers lus (.mjs, .js, .hbs) ; défaut : module/scripts
- *     "minKeys": 100,                              // garde-fou : le relevé doit trouver au moins tant de clés
- *     "constants": { "NS": "DLO" },                // `${NS}` dans un gabarit vaut "DLO"
- *     "calls": [{ "fn": "loc", "prefix": "DLO." }],    // loc("Window.Title") demande DLO.Window.Title
- *     "groups": "DLO",                             // "Window.Title" (premier segment = un groupe de DLO.*) compte comme une clé
- *     "fileHelpers": [{ "define": "const L = key => [^\\n]*`(?:DLO\\.)?([\\w.]+)\\.\\$\\{key\\}`", "call": "L", "prefix": "DLO." }],
- *                                                  // aide locale à un fichier : L("X") demande <préfixe capturé>.X
+ *     "namespaces": ["DLO"],                       // first segments of the module's keys: "DLO.Window.Title" is one
+ *     "sources": ["module/scripts", "tools/macros"],   // folders read (.mjs, .js, .hbs); default: module/scripts
+ *     "minKeys": 100,                              // safeguard: the survey must find at least this many keys
+ *     "constants": { "NS": "DLO" },                // `${NS}` in a template is "DLO"
+ *     "calls": [{ "fn": "loc", "prefix": "DLO." }],    // loc("Window.Title") asks for DLO.Window.Title
+ *     "groups": "DLO",                             // "Window.Title" (first segment = a group of DLO.*) counts as a key
+ *     "fileHelpers": [{ "define": "const L = key => [^\\n]*`(?:DLO\\.)?([\\w.]+)\\.\\$\\{key\\}`",
+ *                       "call": "L", "prefix": "DLO." }],
+ *                                                  // helper local to a file: L("X") asks for <captured prefix>.X
  *     "patterns": [{ "pattern": "\\btoggle\\(\"(\\w+)\"", "keys": ["DLO.Settings.$1.Name", "DLO.Settings.$1.Hint"] }],
- *     "keys": ["DLO.Niveau.off"],                  // clés demandées autrement, à vérifier aussi
+ *     "keys": ["DLO.Niveau.off"],                  // keys requested otherwise, to check as well
  *     "lists": [{ "prefix": "DLO.Erreur", "file": "core/x.mjs", "export": "CODES" }, { "prefix": "DLO.Mode", "values": ["a"] }],
- *     "allow": { "DLO.Vieux.Nom": "raison" },      // clé ou début de clé citée par le code, absente de en : exception nommée
- *     "langAllow": { "pt-BR:DLO.X": "raison" }     // exception sur les fichiers de langue (clé du message d'échec)
+ *     "allow": { "DLO.Vieux.Nom": "reason" },      // key or start of key cited by the code, absent from en: named exception
+ *     "langAllow": { "pt-BR:DLO.X": "reason" }     // exception on the language files (key of the failure message)
  *   }
  */
 import { describe, it, expect, vi } from "vitest";
@@ -38,8 +39,8 @@ import { join, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const ROOT = join(import.meta.dirname, "..");
-// Ces tests lisent tout le code du module : sur le moteur (~510 fichiers), dans la passe complète où les autres fichiers de test
-// occupent tous les cœurs, plusieurs secondes. Même délai que le chargement du module (tests/load.test.mjs du moteur).
+// These tests read all the module's code: on the engine (~510 files), in the full pass where the other test files
+// occupy all the cores, several seconds. Same delay as loading the module (the engine's tests/load.test.mjs).
 vi.setConfig({ testTimeout: 60000 });
 const MODULE = join(ROOT, "module");
 const configFile = join(ROOT, "tests/das-tests.json");
@@ -57,7 +58,7 @@ const filesUnder = (dir, exts) => existsSync(dir) ? readdirSync(dir).sort().flat
   return statSync(full).isDirectory() ? filesUnder(full, exts) : (exts.some(e => name.endsWith(e)) ? [full] : []);
 }) : [];
 
-/** Les feuilles d'un fichier de langue en clés pointées, qu'il soit imbriqué ou à plat. */
+/** The leaves of a language file as dotted keys, whether nested or flat. */
 function flatten(object, prefix = "", out = {}) {
   for ( const [key, value] of Object.entries(object) ) {
     const path = prefix ? `${prefix}.${key}` : key;
@@ -69,7 +70,7 @@ function flatten(object, prefix = "", out = {}) {
 
 const manifest = JSON.parse(readFileSync(join(MODULE, "module.json"), "utf8"));
 const declared = manifest.languages ?? [];
-/** { lang: { clé: valeur } } des langues déclarées dont le fichier se lit. */
+/** { lang: { key: value } } of the declared languages whose file can be read. */
 const LANGS = {};
 const langErrors = [];
 for ( const l of declared ) {
@@ -82,7 +83,7 @@ const EN = LANGS.en ?? {};
 const OTHERS = Object.keys(LANGS).filter(l => l !== "en");
 
 describe("fichiers de langue", () => {
-  it("chaque fichier est du JSON valide et cité dans module.json, en et fr compris", () => {
+  it("every file is valid JSON and listed in module.json, en and fr included", () => {
     const problems = [...langErrors];
     for ( const l of ["en", "fr"] ) if ( !declared.some(d => d.lang === l) ) problems.push(`module/module.json languages — « ${l} » n'est pas déclaré → l'ajouter`);
     const paths = new Set(declared.map(d => posix(d.path ?? "")));
@@ -93,7 +94,7 @@ describe("fichiers de langue", () => {
     expect(problems, "fichiers de langue").toEqual([]);
   });
 
-  it("chaque valeur est un texte non vide", () => {
+  it("every value is a non-empty text", () => {
     const problems = [];
     for ( const [l, flat] of Object.entries(LANGS) ) for ( const [k, v] of Object.entries(flat) ) {
       if ( (typeof v === "string") && v.trim() ) continue;
@@ -103,7 +104,7 @@ describe("fichiers de langue", () => {
     expect(problems, "valeurs vides").toEqual([]);
   });
 
-  it("fr a toutes les clés de en ; aucune langue n'a de clé en trop", () => {
+  it("fr has all the keys of en; no language has an extra key", () => {
     const problems = [];
     for ( const l of OTHERS ) for ( const k of Object.keys(LANGS[l]) ) {
       if ( (k in EN) || allowed(LANG_ALLOW, `${l}:${k}`) ) continue;
@@ -116,7 +117,7 @@ describe("fichiers de langue", () => {
     expect(problems, "clés absentes ou en trop").toEqual([]);
   });
 
-  it("les mêmes {variables} que en dans chaque langue", () => {
+  it("the same {variables} as en in every language", () => {
     const vars = s => [...String(s).matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort().join(", ");
     const problems = [];
     for ( const l of OTHERS ) for ( const [k, v] of Object.entries(LANGS[l]) ) {
@@ -127,7 +128,7 @@ describe("fichiers de langue", () => {
     expect(problems, "variables différentes").toEqual([]);
   });
 
-  it("aucune clé n'est le préfixe d'une autre", () => {
+  it("no key is the prefix of another", () => {
     const problems = [];
     for ( const [l, flat] of Object.entries(LANGS) ) {
       const keys = Object.keys(flat).sort();
@@ -145,12 +146,12 @@ describe("fichiers de langue", () => {
   });
 });
 
-// ——— Relevé des clés demandées par le code ———
+// ——— Survey of the keys requested by the code ———
 
 /**
- * Le code sans commentaires (remplacés par des espaces : positions et lignes restent justes). Avec `strings: false`, le
- * contenu des chaînes est blanchi aussi (les guillemets restent ; le texte d'un `${…}` d'un gabarit reste du code).
- * Les expressions régulières littérales sont reconnues (un `"` ou un `//` dedans n'ouvre rien).
+ * The code without comments (replaced by spaces: positions and lines stay correct). With `strings: false`, the
+ * content of strings is blanked too (quotes stay; the text of a `${…}` in a template stays code).
+ * Literal regular expressions are recognized (a `"` or a `//` inside does not open anything).
  */
 function clean(src, { strings = true } = {}) {
   let out = "";
@@ -158,14 +159,14 @@ function clean(src, { strings = true } = {}) {
   const blank = s => s.replace(/[^\n]/g, " ");
   const keep = s => strings ? s : blank(s);
   const regexAllowed = () => {
-    // Le dernier caractère significatif avant le `/` (lu à rebours : un `replace(/\s+$/)` sur tout le texte serait quadratique).
+    // The last significant character before the `/` (read backwards: a `replace(/\s+$/)` on the whole text would be quadratic).
     let k = out.length - 1;
     while ( (k >= 0) && /\s/.test(out[k]) ) k--;
     if ( k < 0 ) return true;
     if ( "(,=:[!&|?{};+-*%<>~^".includes(out[k]) ) return true;
     return /\b(return|typeof|case|in|of|new|delete|void|throw|else|yield|await)$/.test(out.slice(Math.max(0, k - 9), k + 1));
   };
-  const stack = [];   // pour chaque `${` ouvert dans un gabarit : la profondeur d'accolades à l'intérieur
+  const stack = [];   // for each `${` opened in a template: the brace depth inside
   while ( i < src.length ) {
     const c = src[i];
     const next = src[i + 1];
@@ -198,7 +199,7 @@ function clean(src, { strings = true } = {}) {
       out += c + keep(src.slice(i + 1, j)) + (closed ? c : ""); i = closed ? j + 1 : j;
     }
     else if ( (c === "`") || ((c === "}") && stack.length && (stack.at(-1) === 0)) ) {
-      // Début d'un gabarit, ou retour dans le gabarit à la fin d'un `${…}`.
+      // Start of a template, or return into the template at the end of a `${…}`.
       if ( c === "}" ) stack.pop();
       out += c;
       let j = i + 1;
@@ -226,7 +227,7 @@ const KEY = "[\\w.-]*[\\w-]";
 
 /** `{ keys: Map(clé → "fichier:ligne"), prefixes: Map(début → "fichier:ligne"), branches: Map }` */
 let cache = null;
-/** Le relevé, fait une seule fois pour tous les tests (il lit tout le code : plusieurs secondes sur le moteur). */
+/** The survey, done once for all the tests (it reads all the code: several seconds on the engine). */
 const relevé = () => cache ??= scan();
 
 function scan() {
@@ -242,11 +243,11 @@ function scan() {
     for ( const [name, value] of Object.entries(SETTINGS.constants ?? {}) ) code = code.replaceAll("${" + name + "}", value);
     const path = posix(relative(ROOT, file));
     const at = index => `${path}:${lineOf(code, index)}`;
-    // LOCALIZATION_PREFIXES d'un modèle de données : des branches, pas des clés.
+    // LOCALIZATION_PREFIXES of a data model: branches, not keys.
     const prefixLists = [...code.matchAll(/LOCALIZATION_PREFIXES\s*=\s*\[([^\]]*)\]/g)];
     for ( const m of prefixLists ) for ( const p of m[1].matchAll(/["'`]([^"'`]*)["'`]/g) ) add(branches, p[1], at(m.index));
     const text = prefixLists.reduce((t, m) => t.slice(0, m.index) + " ".repeat(m[0].length) + t.slice(m.index + m[0].length), code);
-    // Une clé complète entre guillemets, ou le début fixe d'une clé construite (`DLO.X.${…}`, "DLO.X." + y).
+    // A full key between quotes, or the fixed start of a built key (`DLO.X.${…}`, "DLO.X." + y).
     const take = (m, key) => { if ( (m[3] === "${") || key.endsWith(".") ) add(prefixes, key, at(m.index)); else add(keys, key, at(m.index)); };
     if ( nsRe ) for ( const m of text.matchAll(new RegExp(`(["'\`])((?:${nsRe})\\.[\\w.-]*)(\\1|\\$\\{)`, "g")) ) take(m, m[2]);
     if ( groups.size ) for ( const m of text.matchAll(new RegExp(`(["'\`])([A-Za-z0-9_]+\\.[\\w.-]*)(\\1|\\$\\{)`, "g")) ) {
@@ -286,7 +287,7 @@ const run = SETTINGS ? it : it.skip;
 const prefixAllowed = key => Object.keys(ALLOW).find(a => (a === key) || (a.endsWith(".") && key.startsWith(a)));
 const isAllowed = key => { const a = prefixAllowed(key); if ( a ) used.add(a); return Boolean(a); };
 
-describe("clés demandées par le code" + (SETTINGS ? "" : " (sauté : pas de section i18n dans tests/das-tests.json)"), () => {
+describe("keys requested by the code" + (SETTINGS ? "" : " (sauté : pas de section i18n dans tests/das-tests.json)"), () => {
   run("chaque clé écrite en dur existe dans en.json", () => {
     const { keys } = relevé();
     expect(keys.size, `le relevé n'a trouvé que ${keys.size} clés : un motif de das-tests.json (i18n) ne marche plus ?`).toBeGreaterThanOrEqual(SETTINGS.minKeys ?? 1);

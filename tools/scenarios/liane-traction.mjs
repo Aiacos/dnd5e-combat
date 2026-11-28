@@ -1,15 +1,17 @@
 /**
- * §502 (B22) — traction vers l'invocation et une seule créature agrippée : `move { mode: "pull", toward: "summon" }` au moment `hit`,
- * `grapples: { one: true, by: "summon" }`. Arène de test : Zombi (l'auteur, acteur synthétique), Guerrier et Bandit (les cibles).
- * Un trait d'essai est prêté au Zombi : une attaque (+50 au toucher, 1 contondant) dont l'effet rend Agrippé. Une « liane » d'essai est
- * posée trois cases à l'est du Zombi, marquée invoquée par ce trait (`flags.dnd5e.summon.origin`) ; la règle est dans la surcouche du
- * monde (`overrideContent`, jamais en drapeau d'item).
- *  1. Le Zombi touche le Guerrier : le Guerrier est agrippé et tiré vers la liane (sa distance à la liane baisse) ; 2 s plus tard,
- *     l'empoignade tient toujours (tenue par la liane, pas jugée à l'allonge du Zombi).
- *  2. Le Zombi touche le Bandit : le Bandit est agrippé, le Guerrier relâché (plus d'Agrippé de ce trait), avis `Empoignade.UneSeule`.
- *  3. La liane retirée : l'empoignade du Bandit cesse.
- * Un 1 naturel rate : chaque attaque est rejouée jusqu'à trois fois. Positions remises par le lanceur ; Agrippé, trait, liane, surcouche
- * retirés. Toute fenêtre « le faire quand même » est acceptée (« go »), toute autre fermée.
+ * §502 (B22) — pull toward the summon and a single grappled creature: `move { mode: "pull", toward: "summon" }` at the
+ * `hit` moment,
+ * `grapples: { one: true, by: "summon" }`. Arène de test: Zombi (the author, synthetic actor), Fighter and Bandit (the targets).
+ * A test feature is lent to the Zombi: an attack (+50 to hit, 1 bludgeoning) whose effect makes Grappled. A test "vine" is
+ * placed three cells east of the Zombi, marked as summoned by this feature (`flags.dnd5e.summon.origin`); the rule is in the
+ * world overlay (`overrideContent`, never in an item flag).
+ *  1. The Zombi hits the Fighter: the Fighter is grappled and pulled toward the vine (its distance to the vine drops); 2 s later,
+ *     the grapple still holds (held by the vine, not judged against the Zombi's reach).
+ *  2. The Zombi hits the Bandit: the Bandit is grappled, the Fighter released (no more Grappled from this feature),
+ *     notice `Empoignade.UneSeule`.
+ *  3. The vine removed: the Bandit's grapple ends.
+ * A natural 1 misses: each attack is replayed up to three times. Positions restored by the caster; Grappled, feature, vine, overlay
+ * removed. Any "do it anyway" window is accepted ("go"), any other closed.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -17,7 +19,7 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
 const IDENTIFIER = "das-essai-liane-traction";
 const ACTIVITY = "dasEssaiLianeAtq";
 const EFFECT = "dasEssaiLianeAgr";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name in a constant: the test bench and the reference take the first "name:" indented by two spaces as the scenario title.
 const ITEM_NAME = "Essai : liane qui tire";
 const VINE = "Essai : liane";
 const RULE = { grapples: { one: true, by: "summon" },
@@ -57,7 +59,7 @@ const t = canvas.scene.tokens.get(args.vineToken);
 if ( t ) await t.delete();
 return true;
 `;
-/** Pour chaque cible : Agrippé de ce trait ? distance (en cases) à la liane. */
+/** For each target: Grappled by this feature? distance (in cells) to the vine. */
 const READ = `
 const vine = canvas.scene.tokens.get(args.vineToken);
 const g = canvas.scene.grid.size;
@@ -82,7 +84,7 @@ export default {
     const bandit = await ctx.token("Bandit");
     const script = async (code, args={}) => (await ctx.call("run-script", { code, args, waitMs: 20000 }))?.result ?? null;
 
-    // --- Fenêtres chez le MJ : aucune ne reste sans réponse --------------------------------------------------------------
+    // --- Windows on the GM's side: none stays unanswered -----------------------------------------------------------------
     const seen = new Set(((await ctx.call("list-dialogs", {})).windows ?? []).map(w => w.id));
     const sweep = async (ms=800) => {
       const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...seen], waitMs: ms, details: true }).catch(() => null);
@@ -95,7 +97,7 @@ export default {
       }
     };
 
-    // --- Cibles propres, trait, liane, règle -----------------------------------------------------------------------------------
+    // --- Own targets, feature, vine, rule -------------------------------------------------------------------------------------
     const clear = async () => { for ( const t of [fighter, bandit] ) await ctx.removeStatusEffects(t, "grappled").catch(() => {}); };
     await clear();
     ctx.restore(clear);
@@ -108,7 +110,7 @@ export default {
 
     const ids = [fighter.id, bandit.id];
     const read = () => script(READ, { vineToken: set.vineToken, ids, name: ITEM_NAME });
-    /** Une attaque du trait sur `target`, rejouée sur un 1 naturel ; rend vrai si elle a touché. */
+    /** An attack of the feature on `target`, replayed on a natural 1; returns true if it hit. */
     const strike = async target => {
       for ( let shot = 1; shot <= 3; shot++ ) {
         const used = await ctx.use({ tokenId: zombie.id, itemId: set.itemId, activityType: "attack", targetTokenIds: [target.id] });

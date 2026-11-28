@@ -1,19 +1,19 @@
 /**
- * §439 : les notes de version du moteur, de la plus récente à la plus ancienne — ce que le message de mise à jour montre au MJ à la
- * première ouverture d'un monde après une mise à jour (ui/release-notes.mjs, règles dans core/release-notes.mjs).
+ * §439: the engine's release notes, from newest to oldest — what the update message shows the GM the first time a world
+ * is opened after an update (ui/release-notes.mjs, rules in core/release-notes.mjs).
  *
- * UNE ENTRÉE PAR VERSION PUBLIÉE, ajoutée en tête au moment du changement de version de `module/module.json`
- * (tests/release-notes.test.mjs échoue sinon) :
- *  - `version`    : celle de `module.json`.
- *  - `highlights` : les nouveautés, quelques-unes. Chaque id a son texte `DND5ECOMBAT.Nouveautes.Point.<id>` dans module/lang/
- *                   (en, fr, pt-BR) : une phrase pour un MJ, pas pour un développeur.
- *  - `tested`     : avec quoi cette version a été jouée sur le banc de test (les versions du résumé de la dernière passe complète) —
- *                   `foundry`, `system` (dnd5e), `books` (modules premium, par id), `modules` (le reste de la suite DAS, par id :
- *                   la version la plus ancienne avec laquelle cette version du moteur a été testée). Ces ids sont des données
- *                   d'affichage : le moteur ne demande rien à ces modules.
- *  - `risks`      : les risques de compatibilité écrits à la main, `{ id, when? }` — textes `Nouveautes.Risque.<id>.Titre` / `.Texte`.
- *  - `checks`     : les vérifications du Diagnostic du monde conseillées, `{ id, when? }` (id de runtime/diagnostic/checks.mjs).
- *  `when` : `{ module, min?, below? }` (ce module est actif, à partir de `min`, avant `below`) et / ou `{ system: "6.1.0" }`.
+ * ONE ENTRY PER PUBLISHED VERSION, added at the top when the version of `module/module.json` changes
+ * (tests/release-notes.test.mjs fails otherwise):
+ *  - `version`    : that of `module.json`.
+ *  - `highlights` : what is new, a few items. Each id has its text `DND5ECOMBAT.Nouveautes.Point.<id>` in module/lang/
+ *                   (en, fr, pt-BR): one sentence for a GM, not for a developer.
+ *  - `tested`     : what this version was played with on the test bench (the versions in the summary of the last full pass) —
+ *                   `foundry`, `system` (dnd5e), `books` (premium modules, by id), `modules` (the rest of the DAS suite, by id:
+ *                   the oldest version this engine version was tested with). These ids are display
+ *                   data: the engine asks nothing of these modules.
+ *  - `risks`      : the compatibility risks written by hand, `{ id, when? }` — texts `Nouveautes.Risque.<id>.Titre` / `.Texte`.
+ *  - `checks`     : the recommended World Diagnostic checks, `{ id, when? }` (id from runtime/diagnostic/checks.mjs).
+ *  `when`: `{ module, min?, below? }` (that module is active, from `min`, before `below`) and / or `{ system: "6.1.0" }`.
  */
 
 const PHB = "dnd-players-handbook";

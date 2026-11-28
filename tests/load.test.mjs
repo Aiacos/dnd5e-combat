@@ -1,7 +1,7 @@
 /**
- * Chargement du module entier hors de Foundry, avec des globals factices : attrape un import ou
- * un export cassé (ce que les tests du cœur ne voient pas), et vérifie le contrat du routeur —
- * un seul écouteur par hook de Foundry, quel que soit le nombre de fonctionnalités inscrites.
+ * Loading the whole module outside Foundry, with fake globals: catches a broken import or
+ * export (what the core tests do not see), and checks the router contract —
+ * a single listener per Foundry hook, whatever the number of registered features.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 
@@ -9,10 +9,10 @@ const hooks = {};
 const once = {};
 const api = {};
 
-// Délai du chargement : importer les ~510 fichiers du module prend 5 à 7 s seul, mais 11 à 13 s dans la passe
-// complète `npm test` sur un PC Windows à 16 cœurs (mesuré le 2026-11-11), parce que les autres fichiers de test
-// occupent tous les cœurs en même temps — d'où l'échec systématique avec le délai par défaut de 10 s. 60 s laisse
-// une marge de près de cinq fois la pire mesure. Même délai dans `reference.test.mjs`, qui charge le même module.
+// Load timeout: importing the ~510 module files takes 5 to 7 s alone, but 11 to 13 s in the full `npm test` pass on a
+// 16-core Windows PC (measured on 2026-11-11), because the other test files occupy all the cores at the same time —
+// hence the systematic failure with the default 10 s timeout. 60 s leaves a margin of nearly five times the worst
+// measurement. Same timeout in `reference.test.mjs`, which loads the same module.
 const LOAD_TIMEOUT = 60000;
 
 beforeAll(async () => {
@@ -48,7 +48,7 @@ describe("chargement du module", () => {
     expect(Object.isFrozen(api.api.mcp)).toBe(true);
   });
 
-  it("§196 : publie l'escalade (api.climb) et l'écart en trois dimensions (api.gap) pour les voisins", () => {
+  it("§196: publishes climbing (api.climb) and the three-dimensional gap (api.gap) for the neighbors", () => {
     expect(Object.keys(api.api.climb).sort()).toEqual(["ceiling", "down", "drop", "edges", "enabled", "entries", "grab", "holds", "run", "setEnabled", "state", "toward", "up"]);
     expect(Object.isFrozen(api.api.climb)).toBe(true);
     expect(typeof api.api.gap).toBe("function");
@@ -57,34 +57,34 @@ describe("chargement du module", () => {
     expect(api.api.climb.holds(null, { i: 0, j: 0 })).toBe(true);
   });
 
-  it("ne branche qu'un écouteur par hook de Foundry", () => {
+  it("hooks only one listener per Foundry hook", () => {
     for ( const [hook, listeners] of Object.entries(hooks) ) expect(listeners, hook).toHaveLength(1);
   });
 
-  it("aucune fonctionnalité ne s'inscrit par Hooks.once : seul le point d'entrée (un écouteur par hook)", () => {
+  it("no feature registers through Hooks.once: only the entry point (one listener per hook)", () => {
     for ( const [hook, listeners] of Object.entries(once) ) expect(listeners, hook).toHaveLength(1);
   });
 
-  it("appelle les inscrits de createChatMessage dans l'ordre voulu : résolution d'abord", () => {
+  it("calls createChatMessage's registrants in the intended order: resolution first", () => {
     expect(api.api.routes().createChatMessage.map(r => r.label)).toEqual([
       "resolution interrupted", "concentration: processing interrupted", "pool: recharge not written", "targets released", "Flurry of Blows: targeting not opened",
       "budget: spending not recorded", "Dispel Magic: nothing dispelled", "trace or mark not handled", "manual roll mode: GM not told", "granted activity not given", "backfire: explosion chance not rolled", "weapon mastery: mark not used up", "maneuver: Bait and Switch or Commander's Strike not played", "Heroic Inspiration not offered on Initiative", "Initiative d20 not rerolled", "effect end when the caster targets another creature: not judged", "Rage: upkeep not recorded", "swallow / engulf: action not tracked", "GM queue: not refreshed (new message)", "fall damage not applied", "Ready: \"attacks / casts a spell\" trigger not checked", "effect ending on the caster's action not removed", "help", "group roll: result not processed", "tether: not recorded", "single card: roll not folded", "GM alert: not posted", "GM alert: banner not shown", "chat log purge", "visual feedback: effect ending", "group roll: tracker not opened"
     ]);
   });
 
-  it("le marquage « sans DAS » (§395), la relance (§16.21), puis la visée (ui), l'utilisation sans fenêtre (§68), la Métamagie, la légalité (runtime), les portes, sur dnd5e.preUseActivity", () => {
+  it("the \"without DAS\" marking (§395), the reroll (§16.21), then aiming (ui), use without a window (§68), Metamagic, legality (runtime), the gates, on dnd5e.preUseActivity", () => {
     expect(api.api.routes()["dnd5e.preUseActivity"].map(r => r.label)).toEqual([
       "without DAS: usage not marked", "correction: quiet zone not marked", "recast of a lasting spell", "targeting: target expected", "projectiles: one per target, the rest chained", "use without dialog", "metamagic: spell not modified", "free cast: spell not modified", "healing potion: Bonus Action or action not chosen", "worn form lock: attempt not punished", "use legality", "gates: Sanctuary, Counterspell, pre-attack reactions, Portent", "summon on targets: neighbours asked", "Ritual: cast without a spell slot", "self area: without the \"Place Template\" box", "Sneak Attack: item activity not redirected", "Use Magic Device: charges not noted", "Reckless Attack: prompt",
       "swallow: Bite not refused", "potion: concentration not removed", "ground item: area placed on use, copy kept", "light object: placed on cast", "light source: dnd5e consumption not skipped"
     ]);
   });
 
-  it("déclare annulables les hooks `pre…` du système et du cœur, `dnd5e.teleport`, `dnd5e.createMeasuredTemplate` (§190) et `dropCanvasData` (appelés par Hooks.call, board.mjs:2490), et eux seuls", () => {
+  it("declares the system's and core's `pre…` hooks cancelable, `dnd5e.teleport`, `dnd5e.createMeasuredTemplate` (§190) and `dropCanvasData` (called by Hooks.call, board.mjs:2490), and only those", () => {
     const cancellable = Object.entries(api.api.routes()).filter(([, rs]) => rs.some(r => r.cancellable)).map(([h]) => h).sort();
     expect(cancellable).toEqual(["dnd5e.createMeasuredTemplate", "dnd5e.postAttackRollConfiguration", "dnd5e.postDamageRollConfiguration", "dnd5e.preActivityConsumption", "dnd5e.preApplyEnchantment", "dnd5e.preCombatRecovery", "dnd5e.preCreateMeasuredTemplate", "dnd5e.preDisplayCardV2", "dnd5e.preRollAbilityCheckV2", "dnd5e.preRollAttackV2", "dnd5e.preRollConcentrationV2", "dnd5e.preRollDamageV2", "dnd5e.preRollDeathSaveV2", "dnd5e.preRollSavingThrowV2", "dnd5e.preRollSkillV2", "dnd5e.preRollToolCheckV2", "dnd5e.preSummon", "dnd5e.preUseActivity", "dnd5e.teleport", "dropCanvasData", "preCreateActiveEffect", "preCreateItem", "preMoveToken", "preUpdateActiveEffect", "preUpdateActor", "preUpdateItem", "preUpdateToken"]);
   });
 
-  it("enregistre les requêtes entre clients", () => {
+  it("registers cross-client requests", () => {
     expect(Object.keys(CONFIG.queries).sort()).toEqual([
       "dnd5e-combat.actionEnd", "dnd5e-combat.allocation", "dnd5e-combat.awaiting", "dnd5e-combat.catalyst", "dnd5e-combat.choice", "dnd5e-combat.climbCheck", "dnd5e-combat.concentration", "dnd5e-combat.connectionConsent", "dnd5e-combat.connectionPing", "dnd5e-combat.connectionProbe", "dnd5e-combat.contest", "dnd5e-combat.criticalTable", "dnd5e-combat.cure", "dnd5e-combat.damageParts", "dnd5e-combat.deathSave", "dnd5e-combat.debug", "dnd5e-combat.debugVerbose", "dnd5e-combat.dismissSummon", "dnd5e-combat.doorLock", "dnd5e-combat.enchant", "dnd5e-combat.extinguish", "dnd5e-combat.familiarPocket", "dnd5e-combat.familiarRecall", "dnd5e-combat.flipWallSide", "dnd5e-combat.forceWindows", "dnd5e-combat.formLock", "dnd5e-combat.gmAlert", "dnd5e-combat.groupRoll", "dnd5e-combat.heroic", "dnd5e-combat.ignite", "dnd5e-combat.improvised", "dnd5e-combat.masteryWindow", "dnd5e-combat.mount", "dnd5e-combat.moveZone", "dnd5e-combat.nearSpace", "dnd5e-combat.notice", "dnd5e-combat.opportunity", "dnd5e-combat.pickUp", "dnd5e-combat.portent", "dnd5e-combat.reaction", "dnd5e-combat.restSummons", "dnd5e-combat.revertForm", "dnd5e-combat.revertShape", "dnd5e-combat.rollSave", "dnd5e-combat.search", "dnd5e-combat.setTargets", "dnd5e-combat.skillAid", "dnd5e-combat.stabilize", "dnd5e-combat.successAtCost", "dnd5e-combat.successAtCostMark", "dnd5e-combat.teleportPassengers", "dnd5e-combat.timer", "dnd5e-combat.toppleSave", "dnd5e-combat.transform", "dnd5e-combat.wake", "dnd5e-combat.wasteUse", "dnd5e-combat.zoneChoice"
     ]);

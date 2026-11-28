@@ -1,18 +1,18 @@
 /**
- * Brique « zone qui dure, activité sœur » (SPEC §16) : Nuage nauséabond (ajouté au Magicien le temps du
- * scénario). « Créer un nuage » (utilitaire, sans effet) pose la sphère sur le Guerrier ; rien à résoudre à la
- * pose. En combat, quand le Guerrier COMMENCE son tour dedans, le moteur rejoue la sœur « Sauvegarde de début de
- * tour » (`replay` avec `activity`) : sauvegarde de Constitution, Empoisonné sur un échec.
- * Sur le Guerrier, pas le Zombi : immunisé contre Empoisonné, le Zombi n'est pas affecté par le nuage (§16.8).
- * Contenu `stinking-cloud` : `{ on: "turnStart", do: [{ type: "replay", activity: … }] }`, la sœur sous ses deux identifiants
- * (`dnd5eactivity000` jusqu'à dnd5e 6.0 et dans le Manuel des joueurs, `pyaS54TcG7kx15V2` dans le SRD de dnd5e 6.1).
+ * "Lasting area, sibling activity" building block (SPEC §16): Stinking Cloud (added to the Wizard for the
+ * scenario's duration). "Create Cloud" (utility, no effect) places the Sphere on the Fighter; nothing to resolve at
+ * placement. In combat, when the Fighter STARTS their turn inside, the engine replays the sibling "Start-of-Turn Save"
+ * (`replay` with `activity`): Constitution saving throw, Poisoned on a failure.
+ * On the Fighter, not the Zombie: immune to Poisoned, the Zombie is not affected by the cloud (§16.8).
+ * Content `stinking-cloud`: `{ on: "turnStart", do: [{ type: "replay", activity: … }] }`, the sibling under its two
+ * identifiers (`dnd5eactivity000` up to dnd5e 6.0 and in the Player's Handbook, `pyaS54TcG7kx15V2` in the dnd5e 6.1 SRD).
  */
 export default {
   name: "zone à activité sœur — Nuage nauséabond, début de tour du Guerrier dedans",
 
   async run(ctx) {
     const mage = await ctx.token("Magicien");
-    const guerrier = await ctx.token("Guerrier");   // PJ sans joueur : le moteur jette pour lui
+    const guerrier = await ctx.token("Guerrier");   // PC without player: the engine rolls for it
     ctx.restore(() => ctx.removeStatusEffects(guerrier, "poisoned"));
     ctx.restore(async () => {
       for ( const e of (await ctx.effects(mage)).filter(e => /concentr/i.test(e.name ?? "")) ) {

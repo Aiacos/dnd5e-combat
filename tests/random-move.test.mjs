@@ -4,7 +4,7 @@ import { validateEntry, MOVE_MODES, MOVE_DIRECTIONS } from "../module/scripts/co
 
 const step = extra => ({ triggers: [{ on: "failedSave", do: [{ type: "move", mode: "random", distance: 5, units: "ft", ...extra }] }] });
 
-describe("§497 : direction d'un déplacement aléatoire", () => {
+describe("§497: direction of a random move", () => {
   it("d4 nord, sud, est, ouest (Infestation)", () => {
     const dirs = ["n", "s", "e", "w"];
     expect(randomDie(dirs)).toBe(4);
@@ -13,21 +13,21 @@ describe("§497 : direction d'un déplacement aléatoire", () => {
     ]);
   });
 
-  it("sans liste : les huit directions, dans l'ordre du d8 de Confusion", () => {
+  it("without a list: the eight directions, in the order of Confusion's d8", () => {
     expect(randomDie(null)).toBe(8);
     expect(MOVE_DIRECTIONS).toHaveLength(8);
     for ( let f = 1; f <= 8; f++ ) expect(randomDirection(undefined, f)).toMatchObject(DIRECTIONS[f - 1]);
     expect(randomDirection([], 2).key).toBe("ne");
   });
 
-  it("une face hors du dé ne donne rien", () => {
+  it("a face outside the die gives nothing", () => {
     expect(randomDirection(["n", "s"], 3)).toBeNull();
     expect(randomDirection(["n", "s"], 0)).toBeNull();
   });
 });
 
-describe("§497 : schéma de l'étape move random", () => {
-  it("accepte la déclaration d'Infestation", () => {
+describe("§497: schema of the move random step", () => {
+  it("accepts the Infestation declaration", () => {
     expect(MOVE_MODES).toContain("random");
     expect(validateEntry(step({ directions: ["n", "s", "e", "w"], ifBlocked: "stay", minSpeed: 5 }), { at: "x." })).toEqual([]);
     expect(validateEntry(step({}), { at: "x." })).toEqual([]);

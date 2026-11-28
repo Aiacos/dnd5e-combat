@@ -1,13 +1,14 @@
 /**
- * §285 : chantiers du 2026-10-30, lot 3 (contrôle), monde `dnd-6`, Arène de test. Le Clerc reçoit les sorts du Manuel des joueurs ;
- * leurs effets sont posés sur le Zombi tels que la sauvegarde ratée les poserait (`api.mcp.placeItemEffect` : l'effet de l'item, son
- * id, l'item pour origine), puis un combat Clerc (20) / Zombi (10). Vérifie :
- *  - Terreur, Mauvais œil (Paniqué) : au tour du Zombi, Foncer et fuite — plus loin du Clerc qu'avant ;
- *  - Confusion : le d10 au début de son tour, son comportement et le budget (ni action Bonus ; rien / errance : plus d'action) ;
- *  - Couronne du dément : le rappel au tour du Zombi ; l'entretien du Clerc — offert au tour suivant, pris (action), puis oublié :
- *    sa concentration tombe à la fin de ce tour-là ;
- *  - Fou rire de Tasha : se relever refusé ; des dégâts → sauvegarde rejouée avec l'Avantage (mode par cible).
- * Remet positions, effets, combat.
+ * §285: work items of 2026-10-30, batch 3 (control), world `dnd-6`, Test Arena. The Cleric receives the Player's Handbook spells;
+ * their effects are placed on the Zombie as a failed saving throw would place them (`api.mcp.placeItemEffect`: the item's effect,
+ * its id, the item as origin), then a Cleric (20) / Zombie (10) combat. Checks:
+ *  - Fear, Evil Eye (Panicked): on the Zombie's turn, Dash and flight — farther from the Cleric than before;
+ *  - Confusion: the d10 at the start of its turn, its behavior and the budget (no Bonus Action; nothing / wandering: no
+ *    more action);
+ *  - Crown of Madness: the reminder on the Zombie's turn; the Cleric's upkeep — offered on the next turn, taken (action),
+ *    then forgotten: his Concentration drops at the end of that turn;
+ *  - Tasha's Hideous Laughter: standing up refused; damage → saving throw replayed with Advantage (per-target mode).
+ * Puts back positions, effects, combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -61,14 +62,14 @@ export default {
       const a = await ctx.position(cleric), b = await ctx.position(zombi);
       return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) / grid - 1;
     };
-    /** Le Zombi à `cells` cases à l'est du Clerc. */
+    /** The Zombie `cells` cells east of the Cleric. */
     const placeZombi = async cells => {
       const c = await ctx.position(cleric);
       await ctx.call("move-token", { tokenId: zombi.id, x: c.x + ((cells + 1) * grid), y: c.y, elevation: c.elevation ?? 0 });
       await pause(800);
     };
     const place = key => ctx.engine("placeItemEffect", { tokenId: zombi.id, casterId: cleric.id, itemId: ids[key], effectId: EFFECTS[key] });
-    /** Combat Clerc (20) / Zombi (10), au tour du Clerc. */
+    /** Cleric (20) / Zombie (10) combat, on the Cleric's turn. */
     const fight = async () => {
       await ctx.startCombat([cleric, zombi]);
       const c = await ctx.combat();
@@ -80,7 +81,7 @@ export default {
       if ( (now.combatants ?? []).find(x => x.isCurrent || x.current)?.name !== cleric.name ) await ctx.nextTurn();
       await pause(800);
     };
-    /** Passe au tour suivant et attend la carte du moteur de ce `kind` (20 s au plus). */
+    /** Goes to the next turn and waits for the engine's card of this `kind` (20 s at most). */
     const next = async (kind, ms=20000) => {
       const since = await ctx.lastMessageId();
       await ctx.nextTurn();
@@ -128,17 +129,17 @@ export default {
       await ctx.engine("concentrate", { tokenId: cleric.id, itemId: ids.crown });
       await place("crown");
       await fight();
-      const reminded = await next("forcedAttack");   // fin du tour du Clerc (le lancement), tour du Zombi
+      const reminded = await next("forcedAttack");   // end of the Cleric's turn (the cast), Zombie's turn
       ctx.expect(!!reminded, "au tour du Zombi : l'attaque imposée est rappelée");
       let state = await ctx.engine("upkeep", { tokenId: cleric.id });
       ctx.expect(!!state[0]?.flag?.since && !state[0].offered, "le tour du lancement est noté ; rien à entretenir hors de son tour");
       await next(null);   // round 2, tour du Clerc
       state = await ctx.engine("upkeep", { tokenId: cleric.id, maintain: true });
       ctx.expect(state[0]?.offered === true && state[0]?.maintained === true, `l'entretien est offert puis pris (${JSON.stringify(state[0])})`);
-      await next(null);   // fin du tour du Clerc, entretenu : le sort reste
+      await next(null);   // end of the Cleric's turn, upkept: the spell stays
       state = await ctx.engine("upkeep", { tokenId: cleric.id });
       ctx.expect(state.length === 1, "entretenu : la concentration tient");
-      await next(null);   // round 3, tour du Clerc — pas d'entretien
+      await next(null);   // round 3, Cleric's turn — no upkeep
       const lost = await next("upkeepLost");
       ctx.expect(!!lost, "sans entretien, le sort prend fin à la fin du tour du Clerc");
       state = await ctx.engine("upkeep", { tokenId: cleric.id });

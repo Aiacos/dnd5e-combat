@@ -1,4 +1,4 @@
-/** §258 : fins génériques (`endsWhen`) relevées par l'audit CAT / CPR — décisions pures, schéma, contenu livré. */
+/** §258: generic endings (`endsWhen`) raised by the CAT / CPR audit — pure decisions, schema, shipped content. */
 import { describe, it, expect } from "vitest";
 import { armorEnds, isReplayUsage, tooFarApart, nobodyAffected, zeroHpEnds } from "../module/scripts/core/endings.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
@@ -6,21 +6,21 @@ import { CONTENT } from "../module/scripts/content/index.mjs";
 
 const target = (over={}) => ({ unaffected: null, hit: null, save: null, ...over });
 
-describe("fins génériques — décisions", () => {
-  it("armure : toute armure, ou seulement lourde ; un bouclier ne compte pas", () => {
+describe("generic endings — decisions", () => {
+  it("armor: any armor, or heavy only; a shield does not count", () => {
     expect(armorEnds("any", "light")).toBe(true);
     expect(armorEnds("any", "shield")).toBe(false);
     expect(armorEnds("heavy", "medium")).toBe(false);
     expect(armorEnds("heavy", "heavy")).toBe(true);
   });
 
-  it("distance : strictement au-delà de la limite", () => {
+  it("distance: strictly beyond the limit", () => {
     expect(tooFarApart(60, 60)).toBe(false);
     expect(tooFarApart(65, 60)).toBe(true);
     expect(tooFarApart(NaN, 60)).toBe(false);
   });
 
-  it("§275 : un rejeu (sauvegarde répétée, zone, relance) ne juge pas « personne d'affecté »", () => {
+  it("§275: a replay (repeated save, area, reroll) does not judge \"nobody affected\"", () => {
     expect(isReplayUsage({ resave: { effect: "x", moment: "turnStart" } })).toBe(true);
     expect(isReplayUsage({ areaTick: { event: "turnEnd" } })).toBe(true);
     expect(isReplayUsage({ recast: true })).toBe(true);
@@ -28,14 +28,14 @@ describe("fins génériques — décisions", () => {
     expect(isReplayUsage(undefined)).toBe(false);
   });
 
-  it("personne d'affecté : toutes les sauvegardes réussies", () => {
+  it("nobody affected: all the saves succeeded", () => {
     const saved = { targets: [target({ save: { success: true } }), target({ save: { success: true } })] };
     expect(nobodyAffected(saved, "failedSave")).toBe(true);
     const one = { targets: [target({ save: { success: true } }), target({ save: { success: false } })] };
     expect(nobodyAffected(one, "failedSave")).toBe(false);
   });
 
-  it("une sauvegarde pas encore jugée ne décide rien ; une cible inaffectable ne compte pas", () => {
+  it("a save not yet judged decides nothing; an unaffectable target does not count", () => {
     expect(nobodyAffected({ targets: [target()] }, "failedSave")).toBe(false);
     const immune = { targets: [target({ unaffected: { reason: "type" } }), target({ save: { success: true } })] };
     expect(nobodyAffected(immune, "failedSave")).toBe(true);
@@ -70,7 +70,7 @@ describe("zeroHp — who drops to 0 HP (issue #150)", () => {
   });
 });
 
-describe("fins génériques — schéma", () => {
+describe("generic endings — schema", () => {
   it("accepte les quatre fins et `spell`", () => {
     expect(validateEntry({ endsWhen: { armor: "any" } })).toEqual([]);
     expect(validateEntry({ endsWhen: { apart: { distance: 30, units: "ft", at: "casterTurnEnd" }, zeroHp: true, spell: true } })).toEqual([]);
@@ -88,8 +88,8 @@ describe("fins génériques — schéma", () => {
   });
 });
 
-describe("fins génériques — contenu livré", () => {
-  it("Armure du mage, Rage, Lien de garde, Duel forcé", () => {
+describe("generic endings — shipped content", () => {
+  it("Mage Armor, Rage, Warding Bond, Compelled Duel", () => {
     expect(CONTENT["mage-armor"].endsWhen).toEqual({ armor: "any" });
     expect(CONTENT["rage"].endsWhen).toEqual({ armor: "heavy" });
     expect(CONTENT["rage"].rage).toBeTruthy();
@@ -100,17 +100,17 @@ describe("fins génériques — contenu livré", () => {
     expect(CONTENT["compelled-duel"].endsWhen.allyDamages).toBe(true);
     expect(CONTENT["compelled-duel"].triggers).toBeTruthy();
   });
-  it("les sorts de sauvegarde à concentration finissent quand personne n'est affecté", () => {
+  it("saving-throw spells with Concentration end when nobody is affected", () => {
     for ( const id of ["hold-person", "banishment", "slow", "hypnotic-pattern", "polymorph"] ) {
       expect(CONTENT[id].endsWhen?.unaffected).toBe("failedSave");
-      // §302 : Motif hypnotique épargne une créature Aveuglée (`target.hasStatus`).
+      // §302: Hypnotic Pattern spares a Blinded creature (`target.hasStatus`).
       expect(validateEntry(CONTENT[id], { facts: { "target.hasStatus": true } })).toEqual([]);
     }
   });
 });
 
-describe("§259 : invocations qui disparaissent à 0 PV", () => {
-  it("les sorts d'invocation, Insecte géant, Destrier fidèle, Serviteur invisible", () => {
+describe("§259: summons that vanish at 0 HP", () => {
+  it("summon spells, Giant Insect, \"Faithful Steed\", Unseen Servant", () => {
     for ( const id of ["summon-beast", "summon-undead", "giant-insect", "find-steed", "unseen-servant"] ) {
       expect(CONTENT[id].summon.vanishesAtZero).toBe(true);
       expect(validateEntry(CONTENT[id])).toEqual([]);
@@ -118,51 +118,51 @@ describe("§259 : invocations qui disparaissent à 0 PV", () => {
     expect(CONTENT["find-steed"].summon.replaces).toBe(true);
     expect(CONTENT["animate-objects"].summon.vanishesAtZero).toBeUndefined();
   });
-  it("schéma : true ou absent", () => {
+  it("schema: true or absent", () => {
     expect(validateEntry({ summon: { initiative: "after", vanishesAtZero: "oui" } })).toHaveLength(1);
   });
 });
 
-describe("§259 : Gardien de la foi, plafond de dégâts", () => {
-  it("60 dégâts au total", () => {
+describe("§259: Guardian of Faith, damage cap", () => {
+  it("60 damage in total", () => {
     expect(CONTENT["guardian-of-faith"].summon.vanishesAfterDamage).toBe(60);
     expect(validateEntry(CONTENT["guardian-of-faith"])).toEqual([]);
     expect(validateEntry({ summon: { initiative: "none", vanishesAfterDamage: 0 } })).toHaveLength(1);
   });
 });
 
-describe("§261 : terrain difficile laissé par une zone instantanée", () => {
-  it("Tempête de grêle, jusqu'à la fin du prochain tour du lanceur", () => {
+describe("§261: Difficult Terrain left by an instantaneous area", () => {
+  it("Ice Storm, until the end of the caster's next turn", () => {
     expect(CONTENT["ice-storm"].difficultTerrain).toEqual({ lingers: "casterNextTurnEnd" });
     expect(validateEntry(CONTENT["ice-storm"])).toEqual([]);
     expect(validateEntry({ difficultTerrain: { lingers: "forever" } })).toHaveLength(1);
   });
 });
 
-describe("§262 : Châtiment bannissant, sauvegarde sous 50 PV", () => {
-  it("contenu et schéma", () => {
+describe("§262: Banishing Smite, save under 50 HP", () => {
+  it("content and schema", () => {
     expect(CONTENT["banishing-smite"].smite.saveAtMostHp).toBe(50);
     expect(validateEntry(CONTENT["banishing-smite"])).toEqual([]);
     expect(validateEntry({ smite: { damage: "CXmmXBTfen6D6LXY", saveAtMostHp: -1 } })).toHaveLength(1);
   });
 });
 
-describe("§263 : « chaque créature de votre choix » — les alliés épargnés", () => {
-  it("Vague destructrice, Parole radieuse, Tir de barrage, Volée", () => {
+describe("§263: \"each creature of your choice\" — the allies spared", () => {
+  it("Destructive Wave, Word of Radiance, \"Barrage Fire\", \"Volley\"", () => {
     for ( const id of ["destructive-wave", "word-of-radiance", "conjure-barrage", "conjure-volley"] ) expect(CONTENT[id].zoneAffects).toBe("enemy");
   });
 });
 
-describe("§264 : téléportation avec passager", () => {
-  it("Porte dimensionnelle emmène une créature à 1,50 m", () => {
+describe("§264: teleportation with a passenger", () => {
+  it("Dimension Door takes along a creature at 1.50 m", () => {
     expect(CONTENT["dimension-door"].teleport.passengers).toEqual({ count: 1, within: 5, units: "ft" });
     expect(validateEntry(CONTENT["dimension-door"])).toEqual([]);
     expect(validateEntry({ teleport: { distance: 30, units: "ft", passengers: { count: 0 } } })).toHaveLength(1);
   });
 });
 
-describe("§265 : Bannissement réel", () => {
-  it("les effets « Banni » déclarés", () => {
+describe("§265: actual Banishment", () => {
+  it("the \"Banished\" effects declared", () => {
     expect(CONTENT["banishment"].banishes).toEqual(["nwne4bDtD4pSWWPM"]);
     expect(CONTENT["banishing-smite"].banishes).toEqual(["dAnHnTaGvsiN1WzK"]);
     expect(CONTENT["banishing-smite"].smite.saveAtMostHp).toBe(50);
@@ -170,8 +170,8 @@ describe("§265 : Bannissement réel", () => {
   });
 });
 
-describe("§266 : Bouclier de feu éclaire", () => {
-  it("3 m de lumière vive, 3 m de faible", () => {
+describe("§266: Fire Shield sheds light", () => {
+  it("3 m of Bright Light, 3 m of Dim Light", () => {
     expect(CONTENT["fire-shield"].light).toEqual({ on: "effect", bright: 10, dim: 20, units: "ft" });
     expect(CONTENT["fire-shield"].choice).toBeTruthy();
     expect(validateEntry({ light: CONTENT["fire-shield"].light })).toEqual([]);
@@ -186,8 +186,8 @@ describe("§267 : Lenteur, une seule attaque", () => {
   });
 });
 
-describe("§268 : Protection contre le Mal et le Bien écarte Charmé et Effrayé", () => {
-  it("contenu et schéma", () => {
+describe("§268: Protection from Evil and Good wards off Charmed and Frightened", () => {
+  it("content and schema", () => {
     expect(CONTENT["protection-from-evil-and-good"].wardsConditions.statuses).toEqual(["charmed", "frightened"]);
     expect(CONTENT["protection-from-evil-and-good"].wardsConditions.types).toContain("fiend");
     expect(CONTENT["protection-from-evil-and-good"].triggers).toBeTruthy();
@@ -202,8 +202,8 @@ describe("§269 : Forme gazeuse, ni attaque ni sort", () => {
   });
 });
 
-describe("§273 : Châtiment de protection", () => {
-  it("l'effet posé après un Châtiment divin, l'aura qu'il allume, sa fin", () => {
+describe("§273: \"Protection Smite\"", () => {
+  it("the effect placed after a Divine Smite, the aura it lights, its end", () => {
     const e = CONTENT["smite-of-protection"];
     expect(e.afterSmite).toEqual({ effect: "EyWEQv8qPwbXyDmA", smites: ["divine-smite"] });
     expect(e.effectEnds).toEqual({ EyWEQv8qPwbXyDmA: "casterTurnStart" });

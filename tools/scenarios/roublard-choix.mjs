@@ -1,11 +1,11 @@
 /**
- * §223 (#16) : l'Attaque sournoise au choix et l'activité de l'item, monde `dnd-6`. Le Roublard (halfelin, niveau 1) passe niveau 5
- * le temps du scénario (Attaque sournoise 3d6), le Guerrier se tient à côté du Bandit (un allié à 1,50 m), le Bandit reçoit 300 PV.
- *  - réglage « automatique » : l'activité de l'item ne lance rien (ni dégâts, ni PV perdus pour le Roublard) ;
- *  - réglage « demander », en combat : au premier coup, la fenêtre « Au toucher » s'ouvre ; « Rien de tout cela » garde l'Attaque
- *    sournoise ; au second coup du tour, elle se repropose, acceptée : 3d6 ; au troisième, plus de question ni d'Attaque sournoise ;
- *  - réglage « demander », tour suivant : l'activité de l'item réserve l'Attaque sournoise, le coup suivant l'a sans question.
- * Remet le réglage, positions, PV, niveau.
+ * §223 (#16): optional Sneak Attack and the item's activity, world `dnd-6`. The Rogue (halfling, level 1) goes to level 5
+ * for the scenario (Sneak Attack 3d6), the Fighter stands next to the Bandit (an ally at 1.50 m), the Bandit receives 300 HP.
+ *  - "automatic" setting: the item's activity rolls nothing (no damage, no HP lost for the Rogue);
+ *  - "ask" setting, in combat: on the first hit, the "On Hit" window opens; "None of the above" keeps the Sneak
+ *    Attack; on the second hit of the turn, it is offered again, accepted: 3d6; on the third, no more question or Sneak Attack;
+ *  - "ask" setting, next turn: the item's activity reserves the Sneak Attack, the next hit has it without a question.
+ * Puts back the setting, positions, HP, level.
  */
 const MODULE_ID = "dnd5e-combat";
 const HIT_TITLE = /Au toucher|On hit/i;
@@ -26,7 +26,7 @@ export default {
     for ( const t of [rogue, bandit, fighter] ) homes.set(t.id, { pos: await ctx.position(t), hp: await ctx.hp(t) });
     const r0 = homes.get(rogue.id).pos;
 
-    // Les alliés rangés sous le Roublard s'écartent (voir le scénario `roublard`).
+    // The allies lined up under the Rogue move aside (see the `roublard` scenario).
     for ( const name of ["Moine", "Druide", "Rôdeur", "Barde"] ) {
       const t = (await ctx.scene()).tokens.find(x => x.name === name);
       if ( !t ) continue;
@@ -64,7 +64,7 @@ export default {
       const used = await ctx.use({ tokenId: rogue.id, itemId: sneakItem._id, activityType: "damage", targetTokenIds: [] }).catch(err => ({ error: err.message }));
       await pause(2000);
       const msgs = await ctx.messagesSince(since);
-      // L'utilisation annulée ne laisse ni carte d'utilisation ni jet de dégâts.
+      // The canceled use leaves neither a use card nor a damage roll.
       return { used: used?.used === true, card: msgs.some(m => m.type === "usage"), damage: msgs.find(m => m.type === "damage") ?? null,
         hpBefore: hp, hpAfter: await ctx.hp(rogue) };
     };
@@ -86,7 +86,7 @@ export default {
       }
       return null;
     };
-    /** Une attaque à l'épée courte ; `answer` : "strike" (valider tel quel), "none" (rien de tout cela) ou null (aucune fenêtre attendue). */
+    /** A shortsword attack; `answer`: "strike" (validate as is), "none" (none of the above) or null (no window expected). */
     const attack = async answer => {
       const since = await ctx.lastMessageId();
       const ids = await known();
@@ -169,7 +169,7 @@ export default {
       const a = await hitUntil(null);
       if ( !ctx.expect(!!a, "coup (20 essais au plus)") ) return;
       ctx.expect(!a.dialog && (a.sneak?.dice === 3), `réservée : sans question (${a.dialog?.title ?? "aucune"}), ${a.sneak?.dice ?? "aucun"}d6`);
-      // Au tour suivant du Roublard, la réservation est oubliée : la question revient.
+      // On the Rogue's next turn, the reservation is forgotten: the question comes back.
       await ctx.nextTurn(); await pause(1500);
       if ( !ctx.expect(await toRogue(), "tour suivant du Roublard") ) return;
       const b = await hitUntil("strike");

@@ -1,17 +1,17 @@
 /**
- * §184-§186 : la Furtivité « BG3 » sur une vraie carte — le repaire des Chapes rouges (« Redbrand Hideout [30x20] » de `dnd-6`). La
- * pièce nord-ouest est sans lumière ; un couloir, portes ouvertes, mène à la pièce juste au sud, éclairée par une lampe au fond, où
- * deux Bandits (Hostiles, sans vision dans le noir) se tiennent sous la porte. Le Magicien en mode furtif :
- *  1. au fond de la pièce sombre : ni test ni repérage, et les Bandits ne le voient pas ;
- *  2. les Bandits tournés vers le nord (vers la porte), le Magicien face à eux mais dans le noir complet : toujours aucun test —
- *     ils ne voient pas dans le noir ;
- *  3. dans le couloir, en lumière faible : chaque entrée dans leur champ de vision est un test (Discrétion contre Perception
- *     passive) — un échec = doute, deux = repéré ; on entre et ressort jusqu'à être repéré (quatorze entrées sans deux échecs :
- *     cohérent aussi) ;
- *  4. les Bandits tournés vers le sud (vers la lampe), le Magicien sous la lampe devant eux : repéré aussitôt ;
- *  5. sortir du mode efface les repérages.
- * Une obscurité réelle (lumière de la pièce éteinte), là où `furtivite-bg3` pose une région « Ajuster l'obscurité » dans l'arène.
- * Remet : réglages, mode furtif, positions, rotations.
+ * §184-§186: "BG3" Stealth on a real map — the Redbrand hideout ("Redbrand Hideout [30x20]" of `dnd-6`). The northwest room has
+ * no light; a corridor, doors open, leads to the room just south, lit by a lamp at the back, where two Bandits (Hostile, no
+ * Darkvision) stand under the door. The Wizard in stealth mode:
+ *  1. at the back of the dark room: no check or spotting, and the Bandits do not see the Wizard;
+ *  2. the Bandits turned north (toward the door), the Wizard facing them but in complete darkness: still no check —
+ *     they cannot see in the dark;
+ *  3. in the corridor, in Dim Light: each entry into their field of view is a check (Stealth against passive Perception)
+ *     — one failure = doubt, two = spotted; enter and leave until spotted (fourteen entries without two failures:
+ *     also consistent);
+ *  4. the Bandits turned south (toward the lamp), the Wizard under the lamp in front of them: spotted at once;
+ *  5. leaving the mode clears the spottings.
+ * A real darkness (the room's light off), where `furtivite-bg3` places an "Adjust darkness" region in the arena.
+ * Restores: settings, stealth mode, positions, rotations.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -21,9 +21,9 @@ export default {
 
   async run(ctx) {
     const { tokens } = await ctx.scene();
-    // §319 : les deux Bandits du poste, placés par le scénario sous la porte sud — un Bandit resté DANS la pièce sombre (vu le 2026-11-01,
-    // déplacé par un autre essai) refusait la mise en furtivité et faisait croire que les Bandits voyaient dans le noir. Le troisième
-    // (« En sang », à l'est) reste où il est.
+    // §319: the post's two Bandits, placed by the scenario under the south door — a Bandit left INSIDE the dark room (seen on
+    // 2026-11-01, moved by another run) refused the switch to stealth and made it look as if the Bandits saw in the dark. The third
+    // ("Bloodied", to the east) stays where it is.
     const posts = [[1200, 1400], [1300, 1300]];
     const near = t => Math.hypot(t.x - 1250, t.y - 1350);
     const bandits = tokens.filter(t => t.name === "Bandit").sort((a, b) => near(a) - near(b)).slice(0, 2);
@@ -40,7 +40,7 @@ export default {
     }
     const st = (op="state", extra={}) => ctx.engine("stealth", { op, tokenId: mage.id, ...extra });
     ctx.restore(() => st("set", { on: false }));
-    // Les Bandits regardent vers le nord (rotation 180 : 0 regarde vers le bas), vers la porte de la pièce sombre.
+    // The Bandits look north (rotation 180: 0 looks down), toward the door of the dark room.
     for ( const b of bandits ) {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: b.id });
       ctx.restore(() => ctx.call("update-scene-object", { type: "Token", objectId: b.id, data: { rotation: data.rotation ?? 0 } }));
@@ -52,30 +52,31 @@ export default {
     await face(180);
     const { data: m0 } = await ctx.call("get-scene-object", { type: "Token", objectId: mage.id });
     ctx.restore(() => ctx.call("move-token", { tokenId: mage.id, x: m0.x, y: m0.y, elevation: m0.elevation ?? 0 }));
-    // Pièce sombre : x 994–1400, y 688–1094 ; portes du couloir en x 1181–1306 (y 1094 et 1200) ; Bandits en (1200, 1400) et (1300, 1300).
-    const corner = [1000, 700];        // au fond, à l'ouest : hors de l'axe des portes
-    const facing = [1200, 900];        // dans la pièce sombre, face aux portes : noir complet
-    const corridor = [1200, 1100];     // le couloir entre les deux portes : lumière faible (la lampe de la pièce sud)
-    const lamp = [1200, 1550];         // sous la lampe (1248, 1671), au sud des Bandits : pleine lumière
+    // Dark room: x 994–1400, y 688–1094; corridor doors at x 1181–1306 (y 1094 and 1200);
+    // Bandits at (1200, 1400) and (1300, 1300).
+    const corner = [1000, 700];        // at the back, to the west: off the doors' axis
+    const facing = [1200, 900];        // in the dark room, facing the doors: complete darkness
+    const corridor = [1200, 1100];     // the corridor between the two doors: Dim Light (the south room's lamp)
+    const lamp = [1200, 1550];         // under the lamp (1248, 1671), south of the Bandits: full light
     const go = async ([x, y]) => { await ctx.call("move-token", { tokenId: mage.id, x, y, elevation: 0 }); await pause(900); return st("check"); };
     const seen = async () => Promise.all(bandits.map(async b => (await ctx.engine("sees", { observerId: b.id, targetId: mage.id })).sees));
 
-    // 1. Au fond de la pièce sombre.
+    // 1. At the back of the dark room.
     await st("set", { on: true });
     let s = await go(corner);
     ctx.expect(s.hidden && !s.spottedBy.length, `au fond de la pièce sombre : caché, pas repéré (lumière ${s.light})`);
     ctx.expect((await seen()).every(v => v === false), "les Bandits ne le voient pas");
 
-    // 2. Face à eux, dans le noir complet : ils ne voient pas dans le noir.
+    // 2. Facing them, in complete darkness: they cannot see in the dark.
     s = await go(facing);
     ctx.expect(s.light === 0, `face aux portes : noir complet (lumière ${s.light})`);
     ctx.expect(!s.spottedBy.length && !Object.keys(s.views ?? {}).length, `dans le noir complet : aucun test (${JSON.stringify(s.views)})`);
 
-    // 3. Dans le couloir, en lumière faible : un test à chaque entrée dans leur vue.
+    // 3. In the corridor, in Dim Light: a check on each entry into their view.
     s = await go(corridor);
     ctx.expect(s.light === 1, `le couloir : lumière faible (lumière ${s.light})`);
     if ( !s.spottedBy.length ) s = await go(corner);
-    // Un doute (un échec) d'un Bandit, vu à une entrée précédente ou au moment où il le repère (deux échecs).
+    // A doubt (one failure) from a Bandit, seen at an earlier entry or at the moment it spots the Wizard (two failures).
     let entries = 0, doubted = false;
     for ( ; (entries < 14) && !s.spottedBy.length; entries++ ) {
       s = await go(corridor);
@@ -88,7 +89,7 @@ export default {
     if ( s.spottedBy.length ) ctx.expect(doubted, `repéré (${s.spottedBy.join(", ")}) seulement après un premier doute`);
     else ctx.log("quatorze entrées sans deux échecs : la Discrétion a tenu (cohérent)");
 
-    // 4. Sous la lampe, devant eux : le mode remis à zéro, repéré aussitôt.
+    // 4. Under the lamp, in front of them: mode reset, spotted at once.
     await st("set", { on: false });
     await go(corner);
     await face(0);
@@ -97,7 +98,7 @@ export default {
     ctx.expect(s.light === 2, `sous la lampe : pleine lumière (lumière ${s.light})`);
     ctx.expect(s.spottedBy.length > 0, `devant eux en pleine lumière : repéré aussitôt (${s.spottedBy.join(", ") || "personne"})`);
 
-    // 5. Sortir du mode efface les repérages.
+    // 5. Leaving the mode clears the spottings.
     await st("set", { on: false });
     s = await st("state");
     ctx.expect(!s.hidden && !s.spottedBy.length, "hors du mode furtif : plus caché, plus repéré");

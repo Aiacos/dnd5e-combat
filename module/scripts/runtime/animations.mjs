@@ -1,16 +1,16 @@
 /**
- * §112 : l'application d'une résolution (dégâts, soins, effets) attend la fin de l'animation qui la montre — retour de séance
- * (2026-10-08) : les PV tombaient au départ du projectile de BLFX, pas à son arrivée.
+ * §112: applying a resolution (damage, healing, effects) waits for the end of the animation that shows it — session
+ * feedback (2026-10-08): HP dropped at the projectile's launch in BLFX, not at its arrival.
  *
- * BLFX (Boss Loot) n'annonce pas la fin de ses animations, mais il les joue par Sequencer, qui le fait sur chaque client :
- * `createSequencerEffect` à la lecture et `endedSequencerEffect` à la fin (sequencer.js 4.2.3 : 15468, 15485 ; l'effet porte
- * `sourceDocument` / `targetDocument`, 14889-14958, et `data.persist`). BLFX lance l'animation après les dés 3D, comme le moteur
- * (helperFunctions.js:1711-1733, `waitForDiceSoNiceRoll`) : les deux partaient ensemble.
+ * BLFX (Boss Loot) does not announce the end of its animations, but plays them through Sequencer, which does so on each client:
+ * `createSequencerEffect` on playback and `endedSequencerEffect` at the end (sequencer.js 4.2.3: 15468, 15485; the effect
+ * carries `sourceDocument` / `targetDocument`, 14889-14958, and `data.persist`). BLFX launches the animation after the 3D dice,
+ * like the engine (helperFunctions.js:1711-1733, `waitForDiceSoNiceRoll`): both started together.
  *
- * Avant d'appliquer (commande `apply`, runtime/engine.mjs), chez le MJ actif : si Sequencer est là, on guette un court moment une
- * animation qui part de l'auteur ou arrive sur une cible (core/animations.mjs), puis on attend sa fin — borné par le réglage
- * `animationWait` (secondes). Rien à attendre : on applique aussitôt. Fenêtre sans rendu (onglet masqué, réduite) : aucune
- * animation n'y joue, on n'attend pas.
+ * Before applying (`apply` command, runtime/engine.mjs), on the active GM: if Sequencer is there, we watch for a short moment
+ * for an animation that starts from the author or arrives on a target (core/animations.mjs), then wait for its end — bounded by
+ * the `animationWait` setting (seconds). Nothing to wait for: we apply at once. Window without rendering (hidden tab, minimized):
+ * no animation plays there, we do not wait.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,20 +21,20 @@ import { log, sleep } from "./shared.mjs";
 export const SYNC_SETTING = "syncAnimations";
 export const WAIT_SETTING = "animationWait";
 
-/** Le temps laissé à BLFX pour lancer son animation, après les dés (il attend les mêmes dés que le moteur). */
+/** The time given to BLFX to launch its animation, after the dice (it waits for the same dice as the engine). */
 const LOOK_MS = 600;
 
 /** id → { id, source, target, persist, started, ended, done: Promise } */
 const live = new Map();
 
-/** Relevé des derniers débuts d'animation et des attentes (pour `api.mcp.animations`, scénarios). */
+/** Survey of the latest animation starts and waits (for `api.mcp.animations`, scenarios). */
 const journal = [];
 function note(entry) {
   journal.push({ ...entry, at: Date.now() });
   if ( journal.length > 40 ) journal.shift();
 }
 
-/** Les animations suivies et le relevé récent (test). */
+/** The tracked animations and the recent survey (test). */
 export function animationState() {
   return { live: [...live.values()].map(({ done, resolve, ...e }) => e), journal: [...journal] };
 }
@@ -63,7 +63,8 @@ function onEnded(effect) {
 const sequencerActive = () => !!game.modules.get("sequencer")?.active;
 
 /**
- * Attendre la fin des animations de ces tokens (auteur, cibles) avant d'appliquer. Rend la durée attendue (ms), 0 sans attente.
+ * Wait for the end of the animations of these tokens (author, targets) before applying.
+ * Returns the time waited (ms), 0 without a wait.
  * @param {Array<string|null|undefined>} uuids
  * @returns {Promise<number>}
  */
@@ -73,7 +74,7 @@ export async function waitForAnimations(uuids) {
   if ( !maxMs ) return 0;
   const t0 = Date.now();
   let ids = relevantAnimations([...live.values()], uuids, Date.now());
-  // BLFX n'a peut-être pas encore lancé la sienne : on la guette un court moment.
+  // BLFX may not have launched its own yet: we watch for it for a short moment.
   while ( !ids.length && ((Date.now() - t0) < LOOK_MS) ) {
     await sleep(50);
     ids = relevantAnimations([...live.values()], uuids, Date.now());

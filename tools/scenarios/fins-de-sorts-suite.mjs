@@ -1,12 +1,12 @@
 /**
- * Fins de sorts, suite (SPEC §42.2) : ce qui revient à chaque tour, et ce qui suit la fin d'un effet. Sorts prêtés depuis le
- * compendium du Manuel des joueurs ; le Zombi reçoit 300 PV le temps du scénario.
- *  1. Assassin imaginaire : sauvegarde rejouée à la fin du tour de la cible ; ratée, elle subit de nouveau les dégâts ; réussie,
- *     l'effet tombe.
- *  2. Sphère de vitriol : sauvegarde ratée, 5d4 dégâts d'acide de plus à la fin du prochain tour de la cible, puis l'effet tombe.
- *  3. Hâte : quand le sort prend fin, la léthargie est posée ; elle tombe à la fin du prochain tour du porteur.
- *  4. Châtiment de fournaise : le coup pose la brûlure ; au début du tour de la cible, 1d6 dégâts de feu puis la sauvegarde.
- * `PART=Hâte` ne joue que la partie dont le nom le contient. Remet PV, effets, positions, emplacements ; retire les sorts prêtés.
+ * Spell endings, continued (SPEC §42.2): what comes back each turn, and what follows the end of an effect. Spells lent from the
+ * Player's Handbook compendium; the Zombie receives 300 HP for the scenario's duration.
+ *  1. Phantasmal Killer: save replayed at the end of the target's turn; failed, it takes the damage again; succeeded,
+ *     the effect ends.
+ *  2. Vitriolic Sphere: failed save, 5d4 more acid damage at the end of the target's next turn, then the effect ends.
+ *  3. Haste: when the spell ends, lethargy is applied; it ends at the end of the bearer's next turn.
+ *  4. Searing Smite: the hit applies the burn; at the start of the target's turn, 1d6 fire damage then the save.
+ * `PART=Hâte` plays only the part whose name contains it. Restores HP, effects, positions, slots; removes the lent spells.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -31,7 +31,7 @@ export default {
     const grid = await ctx.gridSize();
     const only = process.env.PART ?? "";
 
-    // Le Zombi tient les dégâts répétés : 300 PV le temps du scénario.
+    // The Zombie withstands repeated damage: 300 HP for the scenario's duration.
     const { data: zdata } = await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id });
     const max0 = zdata.delta?.system?.attributes?.hp?.max ?? null;
     const hp0 = await ctx.hp(zombi);
@@ -62,7 +62,7 @@ export default {
 
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
-    /** Combat entre `first` (qui a la main) et `second`. */
+    /** Combat between `first` (who has the turn) and `second`. */
     const fight = async (first, second) => {
       await ctx.startCombat([first, second]);
       const combat = await state();
@@ -78,7 +78,7 @@ export default {
       const errors = await ctx.clientErrors();
       ctx.expect(!errors.length, `${name} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
-    /** Lance le sort du Magicien sur le Zombi jusqu'à ce qu'il rate sa sauvegarde (20 essais) ; rend la résolution, ou null. */
+    /** Casts the Wizard's spell on the Zombie until it fails its save (20 tries); returns the resolution, or null. */
     const until = async (itemId, extra={}) => {
       for ( let i = 0; i < 20; i++ ) {
         await endConcentration();
@@ -91,7 +91,7 @@ export default {
       }
       return null;
     };
-    /** La dernière sauvegarde rejouée depuis `since`, autre que `last`. */
+    /** The last save replayed since `since`, other than `last`. */
     const resaveSince = async (since, last) => {
       const m = (await ctx.messagesSince(since)).filter(x => (x.type === "usage") && x.flags?.[MODULE_ID]?.resave).at(-1);
       return (m && (m.id !== last)) ? m : null;
@@ -163,7 +163,7 @@ export default {
       ctx.expect((await lethargy()).length === 1, `la léthargie est posée (${(await lethargy()).map(e => e.name).join(", ")})`);
       const stats = await ctx.engine("stats", { tokenId: clerc.id });
       ctx.expect(stats?.statuses?.includes("incapacitated"), `le Clerc est Neutralisé (${(stats?.statuses ?? []).join(", ")})`);
-      await ctx.nextTurn();   // fin du tour du Magicien, début de celui du Clerc
+      await ctx.nextTurn();   // end of the Wizard's turn, start of the Cleric's
       await pause(2500);
       ctx.expect((await lethargy()).length === 1, "au début du tour du Clerc, la léthargie tient");
       await ctx.nextTurn();   // fin du tour du Clerc
@@ -180,8 +180,8 @@ export default {
       const spent0 = divine ? ((actor0.items ?? []).find(i => i._id === divine)?.system?.uses?.spent ?? 0) : 0;
       const setUses = spent => divine ? ctx.call("upsert-actor-item", { actorId: pal.actorId, itemData: { "system.uses.spent": spent }, match: { path: "_id", value: divine } }) : null;
       ctx.restore(() => setUses(spent0)?.catch?.(() => {}));
-      // La fiche du Paladin de dnd-6 porte une copie plus ancienne du sort, sans son activité de dégâts (non proposée par le
-      // moteur) : la version du compendium est prêtée à côté, par sa source.
+      // The Paladin's sheet in dnd-6 carries an older copy of the spell, without its damage activity (not offered by the
+      // engine): the compendium's version is lent alongside, by its source.
       {
         const uuid = `${SPELLS}.phbsplSearingSmi`;
         const { data } = await ctx.call("get-compendium-entry", { uuid });
@@ -196,7 +196,7 @@ export default {
       await tough();
       await ctx.call("move-token", { tokenId: zombi.id, x: p.x + grid, y: p.y, elevation: 0 });
       await pause(800);
-      await setUses(1);                                   // pas de Châtiment divin gratuit : une seule réponse possible
+      await setUses(1);                                   // no free Divine Smite: only one possible answer
       await setSlots({ ...slots0, spell1: 1, spell2: 0, spell3: 0, spell4: 0, spell5: 0 });
       if ( !ctx.expect(await fight(pal, zombi), "combat : au tour du Paladin") ) return;
       const sword = await ctx.itemId(pal.id, "longsword");
@@ -226,7 +226,7 @@ export default {
       }
       if ( !ctx.expect(!!hit && hit.asked, `l'épée longue touche le Zombi, le Châtiment de fournaise choisi (10 essais au plus)${hit?.asked ? "" : ` — touché : ${!!hit} ; fenêtres vues : ${seenDialogs.join(" ; ") || "aucune"}`}`) ) { ctx.log((await ctx.engineLog()).slice(-14).join(" ¦ ").slice(0, 1800)); return; }
       await pause(2500);
-      // La brûlure seule : l'épée longue pose aussi sa marque de botte (Sape).
+      // The burn alone: the longsword also applies its mastery mark (Sap).
       const burn = async () => (await newEffects(zombi)).filter(e => String(e._stats?.duplicateSource ?? "").endsWith(".ActiveEffect.A0tTvLeRetrC708K"));
       const seared = await burn();
       if ( !ctx.expect(seared.length === 1, `le Zombi porte la brûlure (${seared.map(e => e.name).join(", ")})`) ) return;

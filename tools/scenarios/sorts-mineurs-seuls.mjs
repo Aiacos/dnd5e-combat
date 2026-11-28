@@ -1,11 +1,11 @@
 /**
- * §503 (B23) — après une capacité, « aucun autre sort ce tour, sauf un sort mineur d'une action » : `afterUse: { onlyCantrips: { castTime:
- * "action" } }`. Arène de test : Ensorceleur (Trait de feu sur sa fiche, Bénédiction prêtée à volonté), Zombi, dans un combat du scénario
- * (l'Ensorceleur joue le premier). Un trait d'essai (activité utilitaire, action Bonus) est prêté à l'Ensorceleur ; sa règle est dans la
- * surcouche du monde (`overrideContent`, jamais en drapeau d'item). Rien n'est lancé : la légalité se lit par `api.mcp.issues`.
- *  1. Avant le trait : Bénédiction n'a pas ce refus.
- *  2. Le trait utilisé (son tour) : Bénédiction est refusée (« sauf un sort mineur »), Trait de feu (sort mineur d'une action) ne l'est pas.
- * Trait, sort prêté, surcouche, combat remis. Aucune fenêtre attendue (toute fenêtre « le faire quand même » est fermée).
+ * §503 (B23) — after an ability, "no other spell this turn, except a one-action cantrip": `afterUse: { onlyCantrips: { castTime:
+ * "action" } }`. Test Arena: Sorcerer (Fire Bolt on his sheet, Bless lent at will), Zombie, in a scenario combat
+ * (the Sorcerer plays first). A test trait (utility activity, Bonus Action) is lent to the Sorcerer; its rule is in the world
+ * overlay (`overrideContent`, never as an item flag). Nothing is cast: legality is read through `api.mcp.issues`.
+ *  1. Before the trait: Bless does not have this refusal.
+ *  2. The trait used (his turn): Bless is refused ("except a cantrip"), Fire Bolt (one-action cantrip) is not.
+ * Trait, lent spell, overlay, combat put back. No window expected (any "do it anyway" window is closed).
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -13,7 +13,7 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
 
 const IDENTIFIER = "das-essai-sorts-mineurs-seuls";
 const ACTIVITY = "dasEssaiMineurs0";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name as a constant: the bench and the reference take the first "name:" indented by two spaces as the scenario's title.
 const ITEM_NAME = "Essai : vitesse qui ferme les sorts";
 const ITEM = { name: ITEM_NAME, type: "feat", img: "icons/magic/nature/snake-tail-green.webp",
   system: { identifier: IDENTIFIER, type: { value: "monster" }, description: { value: "<p>Essai §503.</p>" },

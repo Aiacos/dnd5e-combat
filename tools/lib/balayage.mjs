@@ -1,21 +1,21 @@
 /**
- * Le balayage de l'« Arène des sorts » (2026-10-22, relevé des trous) : chaque item d'une liste — sorts, dons, aptitudes — prêté au
- * Lanceur (`tools/arene-sorts.mjs`), chacune de ses activités utilisée une fois sur la cible que ses données désignent (zone posée
- * sur la Cible, soin sur l'Allié, item personnel sur le Lanceur), et des invariants qui ne dépendent pas des dés :
- *  1. l'utilisation a lieu (dnd5e ne la refuse pas) ;
- *  2. une activité d'attaque ou de sauvegarde reçoit une résolution du moteur, et celle-ci est tranchée (pas bloquée en route) ;
- *  3. PV lus sur chaque cible = dégâts consignés par la résolution (soins compris, en négatif) ;
- *  4. une activité qui pose des effets les pose sur la cible touchée / qui rate (ou sans jet), et sur personne d'autre que les
- *     cibles de la résolution ;
- *  5. un sort de concentration laisse le Lanceur concentré ;
- *  6. un sort de niveau ≥ 1 dépense un emplacement de son niveau, un seul (`consume: true`) ;
- *  7. aucune erreur dans la console du MJ pendant l'utilisation ;
- *  8. (§406, option `upcast`, `MONTEE=2` du balayage des sorts) lancé `upcast` niveaux au-dessus du sien, un sort dont les données
- *     ont des dés qui montent (`scaling` d'une part de dégâts ou du soin) lance le bon nombre de dés (le double accepté sur un
- *     critique), et dépense l'emplacement de ce niveau. Seules ces activités sont jouées.
- * Hors du balayage : activités d'invocation, de métamorphose et de renvoi (`forward`), téléportations et murs posés point par point
- * (ils attendent un clic). Rapport : `prive/balayages/<kind>-<date>.json` et `.md` (noms et constats, aucun texte d'item).
- * Scénarios : `balayage-sorts`, `balayage-aptitudes` (ne se jouent que nommés).
+ * The sweep of the "Spell Arena" (2026-10-22, gap survey): each item of a list — spells, feats, features — lent to the
+ * Caster (`tools/arene-sorts.mjs`), each of its activities used once on the target that its data designates (area placed
+ * on the Target, healing on the Ally, personal item on the Caster), and invariants that do not depend on the dice:
+ *  1. the use takes place (dnd5e does not refuse it);
+ *  2. an attack or save activity receives a resolution from the engine, and it is settled (not blocked along the way);
+ *  3. HP read on each target = damage recorded by the resolution (healing included, as negative);
+ *  4. an activity that sets effects sets them on the target that is hit / that misses (or with no roll), and on no one else
+ *     than the targets of the resolution;
+ *  5. a Concentration spell leaves the Caster concentrating;
+ *  6. a spell of level ≥ 1 spends a slot of its level, only one (`consume: true`);
+ *  7. no error in the GM's console during the use;
+ *  8. (§406, option `upcast`, `MONTEE=2` of the spell sweep) cast `upcast` levels above its own, a spell whose data
+ *     have rising dice (`scaling` of a damage part or of the healing) rolls the right number of dice (double accepted on a
+ *     Critical Hit), and spends the slot of that level. Only these activities are played.
+ * Outside the sweep: summoning, transformation and forwarding (`forward`) activities, teleportations and walls placed point by
+ * point (they wait for a click). Report: `prive/balayages/<kind>-<date>.json` and `.md` (names and findings, no item text).
+ * Scenarios: `balayage-sorts`, `balayage-aptitudes` (only played when named).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { CONTENT } from "../../module/scripts/content/index.mjs";
@@ -26,11 +26,11 @@ const SKIPPED_TYPES = new Set(["summon", "transform", "forward"]);
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * §406 : les dés qu'une activité doit lancer `increase` niveaux au-dessus de son sort, d'après ses données — même calcul que
- * `DamageData#scaledFormula` de dnd5e 6.0.6 (dnd5e.mjs:19627) : mode « whole » (chaque niveau) ou « half » (un niveau sur deux),
- * `scaling.number` dés de plus sur le premier dé, `scaling.formula` ajoutée autant de fois. Rend `[{ count, faces, part }]` pour les
- * seules parts qui montent (vide : l'activité n'a pas de dés qui montent).
- * @param {object} activity  Données d'activité (compendium) : `damage.parts` ou `healing`.
+ * §406: the dice an activity must roll `increase` levels above its spell, from its data — same computation as
+ * `DamageData#scaledFormula` of dnd5e 6.0.6 (dnd5e.mjs:19627): "whole" mode (each level) or "half" (every other level),
+ * `scaling.number` more dice on the first die, `scaling.formula` added as many times. Returns `[{ count, faces, part }]` for the
+ * parts that scale only (empty: the activity has no rising dice).
+ * @param {object} activity  Activity data (compendium): `damage.parts` or `healing`.
  * @param {number} increase
  */
 export function upcastDice(activity, increase) {
@@ -53,8 +53,9 @@ export function upcastDice(activity, increase) {
 }
 
 /**
- * §406 : les dés attendus (`upcastDice`) absents des formules lancées. Un dé attendu est trouvé quand une formule a un terme de même
- * taille et de ce nombre, ou du double (critique). Rend les manques lisibles (« 5d8 attendu »), vide si tout y est.
+ * §406: the expected dice (`upcastDice`) missing from the rolled formulas. An expected die is found when a formula has a term
+ * of the same size and of that number, or of double (Critical Hit). Returns the readable gaps ("5d8 expected"), empty if all
+ * is there.
  * @param {{count: number, faces: number}[]} expected
  * @param {string[]} formulas
  */
@@ -65,33 +66,33 @@ export function missingDice(expected, formulas) {
 }
 
 /**
- * @param {object} ctx  le contexte d'un scénario (tools/scenario.mjs)
+ * @param {object} ctx  the context of a scenario (tools/scenario.mjs)
  * @param {object} options
- * @param {string} options.kind        nom du rapport (« sorts », « aptitudes »)
- * @param {string[]} options.packs     compendiums lus
- * @param {(data: object) => boolean} options.select   les items balayés
- * @param {(data: object) => string} options.sortKey   l'ordre du balayage
- * @param {object} options.lend        retouches de `system` au prêt (un sort préparé…)
- * @param {boolean} options.consume    dépenser les ressources (emplacements)
- * @param {string} [options.caster]    le token qui lance (« Lanceur » par défaut ; une copie de PJ pour l'audit d'une fiche)
- * @param {() => Promise<{itemId: string, data: object}[]>} [options.items]  les items PROPRES du lanceur, à la place des compendiums :
- *                                     rien n'est prêté ni retiré (audit d'une fiche, `audit-pj`)
- * @param {number} [options.upcast]    §406 : lancer chaque sort ce nombre de niveaux au-dessus du sien, et ne jouer que les activités
- *                                     dont les dés montent (invariant 8)
+ * @param {string} options.kind        name of the report ("spells", "features")
+ * @param {string[]} options.packs     compendiums read
+ * @param {(data: object) => boolean} options.select   the items swept
+ * @param {(data: object) => string} options.sortKey   the sweep order
+ * @param {object} options.lend        `system` tweaks on loan (a prepared spell…)
+ * @param {boolean} options.consume    spend the resources (slots)
+ * @param {string} [options.caster]    the token that casts ("Caster" by default; a PC copy for the audit of a sheet)
+ * @param {() => Promise<{itemId: string, data: object}[]>} [options.items]  the caster's OWN items, instead of the compendiums:
+ *                                     nothing is lent or removed (audit of a sheet, `audit-pj`)
+ * @param {number} [options.upcast]    §406: cast each spell this many levels above its own, and only play the activities
+ *                                     whose dice rise (invariant 8)
  */
 export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {}, consume, caster: casterName = "Lanceur", items, upcast = 0 }) {
   const names = Object.keys(ARENE_SORTS.tokens);
   const { tokens } = await ctx.scene();
   if ( !names.every(n => tokens.some(t => t.name === n)) ) { ctx.log("tokens de l'arène manquants : lancer tools/arene-sorts.mjs"); return; }
   const t = Object.fromEntries(await Promise.all(names.map(async n => [n, await ctx.token(n)])));
-  // Un autre lanceur (copie de PJ) : le Lanceur de l'arène reste sur la scène (gardé), mais hors du balayage.
+  // Another caster (PC copy): the arena's Caster stays on the scene (kept), but out of the sweep.
   const keep = new Set(Object.values(t).map(x => x.id));
   if ( casterName !== "Lanceur" ) { delete t["Lanceur"]; t[casterName] = await ctx.token(casterName); keep.add(t[casterName].id); }
   const caster = t[casterName];
   const grid = ARENE_SORTS.grid;
   const sceneId = (await ctx.scene()).sceneId;
 
-  // Les items : index des compendiums, filtres du balayage — ou les items propres du lanceur.
+  // The items: compendium indexes, sweep filters — or the caster's own items.
   const docs = items ? (await items()).filter(d => select(d.data)) : [];
   for ( const packId of (items ? [] : packs) ) {
     const index = await ctx.call("list-compendium-entries", { packId });
@@ -110,17 +111,17 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
   const px = feet => (Number(feet) || 0) / 5 * grid;
   const slotsOf = async () => (await ctx.call("get-actor", { actorId: caster.actorId })).system?.spells ?? {};
   const tokenOf = tr => Object.values(t).find(x => (x.id === tr.tokenId) || (x.name === tr.name));
-  /** PV et PV temporaires (acteurs liés de l'arène) : un soin en PV temporaires (Armure d'Agathys, Simulacre de vie) compte aussi. */
+  /** HP and Temporary Hit Points (arena's linked actors): Temporary Hit Points healing (Armor of Agathys, False Life) counts too. */
   const hpOf = async tok => {
     const hp = (await ctx.call("get-actor", { actorId: tok.actorId })).system?.attributes?.hp ?? {};
     return (Number(hp.value) || 0) + (Number(hp.temp) || 0);
   };
 
-  // Les effets déjà là (ceux d'une fiche de PJ : espèce, dons, objets portés) ne sont jamais retirés.
+  // The effects already there (those of a PC sheet: species, feats, worn items) are never removed.
   const baseline = new Set();
   for ( const tok of Object.values(t) ) for ( const e of (await ctx.call("get-actor", { actorId: tok.actorId })).effects ?? [] ) baseline.add(e._id ?? e.id);
 
-  /** Tout ce qu'une utilisation a laissé : effets, zones, tokens invoqués, PV, emplacements, fenêtres. */
+  /** All that a use left behind: effects, areas, summoned tokens, HP, slots, windows. */
   const cleanup = async () => {
     for ( const tok of Object.values(t) ) {
       const actor = await ctx.call("get-actor", { actorId: tok.actorId });
@@ -138,22 +139,22 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
     for ( const w of await ctx.engine("windows").catch(() => []) ) await ctx.engine("closeWindow", { id: w.id }).catch(() => {});
   };
 
-  /** La cible et la zone d'une activité, d'après ses données. */
+  /** The target and the area of an activity, from its data. */
   const aim = async (item, activity) => {
     const s = item.system;
-    // L'activité a ses propres cible et portée quand elle les surcharge — et toujours sur un don ou une aptitude, qui n'en a pas.
+    // The activity has its own target and range when it overrides them — and always on a feat or a feature, which has none.
     const target = (activity.target?.override || !s.target) ? activity.target : s.target;
     const range = (activity.range?.override || !s.range) ? activity.range : s.range;
     const template = target?.template?.type ? target.template : null;
     const affects = target?.affects?.type ?? "";
     let who = (activity.type === "heal") || ["ally", "willing"].includes(affects) ? t["Allié"] : t["Cible"];
     if ( ((range?.units === "self") && !template) || (affects === "self") ) who = caster;
-    // Une arme de corps à corps (attaque, et la Lutte d'une attaque à mains nues) vise l'ennemi au contact : à 6 m, le moteur lâchait
-    // aussitôt une empoignade réussie, hors d'allonge (audit de Kaalisti, 2026-10-29).
+    // A melee weapon (attack, and the Grapple of an unarmed strike) targets the enemy in contact: at 6 m, the engine dropped
+    // a successful grapple at once, out of reach (Kaalisti audit, 2026-10-29).
     if ( (item.type === "weapon") && ((activity.attack?.type?.value === "melee") || ((activity.type === "save") && (s.type?.value !== "simpleR") && (s.type?.value !== "martialR"))) ) who = t["Ennemi au contact"];
     if ( !template ) return { targets: [who] };
     if ( template.type === "wall" ) return { skip: "mur posé point par point" };
-    // Une taille peut être une formule du niveau du sort (Confusion : « @item.level * 5 - 10 ») : évaluée au niveau de base.
+    // A size can be a formula of the spell's level (Confusion: "@item.level * 5 - 10"): evaluated at the base level.
     const formula = String(template.size || 5).replace(/@item\.level/g, String(s.level ?? 0));
     const size = px(/^[\d\s+\-*/().]+$/.test(formula) ? Function(`return (${formula})`)() : 5);
     const onSelf = range?.units === "self";
@@ -161,8 +162,8 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
     const near = [t["Cible"], t["Cible voisine"]];
     switch ( template.type ) {
       case "cone": case "line": case "rect": {
-        // La Cible est à 20 ft : un cône de 15 ft ne l'atteindrait pas. On ne teste pas la géométrie ici, mais ce que l'item fait
-        // aux créatures prises : la zone va du Lanceur jusqu'au bout de la Cible voisine.
+        // The Target is at 20 ft: a 15 ft Cone would not reach it. Geometry is not tested here, but what the item does
+        // to the creatures caught: the area goes from the Caster to the end of the neighboring Target.
         const c = await centre(caster);
         const far = await centre(t["Cible voisine"]);
         const start = c.box.x + c.box.width;
@@ -173,7 +174,7 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
       case "cube": case "square":
         return { targets: near, area: { shape: "rectangle", x: at.x - size / 2, y: at.y - size / 2, width: size, height: size } };
       default:
-        // Une émanation autour du Lanceur : l'ennemi au contact et l'Allié y sont (le Lanceur n'est pas une cible de sa propre zone).
+        // An Emanation around the Caster: the enemy in contact and the Ally are in it (the Caster is not a target of its own area).
         return { targets: onSelf ? [t["Ennemi au contact"], t["Allié"]] : near, area: { shape: "circle", x: at.x, y: at.y, radius: size } };
     }
   };
@@ -188,7 +189,7 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
       engine: Object.keys(CONTENT[ident] ?? {}).filter(k => k !== "source"), runs: [], notes: [] };
     report.push(row);
     if ( CONTENT[ident]?.teleport || CONTENT[ident]?.pointWall ) { row.notes.push(`non joué : ${CONTENT[ident]?.teleport ? "téléportation" : "mur point par point"} (attend un clic)`); continue; }
-    // §406 : en montée, seuls les sorts dont une activité a des dés qui montent, et qui existent à ce niveau.
+    // §406: when upcasting, only the spells that have an activity with rising dice, and that exist at that level.
     const cast = isSpell ? (s.level ?? 0) + upcast : null;
     if ( upcast && (!isSpell || !(s.level >= 1) || (cast > 9)
       || !Object.values(s.activities ?? {}).some(a => upcastDice(a, upcast).length)) ) { report.pop(); continue; }
@@ -201,11 +202,11 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
       if ( SKIPPED_TYPES.has(activity.type) ) { row.notes.push(`${label} : non joué`); continue; }
       const expected = upcast ? upcastDice(activity, upcast) : [];
       if ( upcast && !expected.length ) continue;
-      // Une activité « rider » qu'un enchantement de l'item donne à sa cible (l'attaque de l'arme de pacte) : dnd5e la cache sur
-      // l'item source (`isHidden`, `isRider`) et en refuse l'usage ; elle se joue sur l'arme enchantée.
+      // A "rider" activity that an enchantment of the item gives to its target (the pact weapon's attack): dnd5e hides it on
+      // the source item (`isHidden`, `isRider`) and refuses its use; it is played on the enchanted weapon.
       const rider = Object.values(s.activities ?? {}).some(a => (a.effects ?? []).some(e => (e.riders?.activity ?? []).includes(activity._id)));
       if ( rider ) { row.notes.push(`${label} : rider d'enchantement, joué sur l'objet enchanté`); continue; }
-      // Les dégâts d'un châtiment se lancent après le coup d'une arme (§107) : utilisés seuls, ils frapperaient le Lanceur.
+      // A smite's damage is rolled after a weapon's hit (§107): used alone, it would strike the Caster.
       if ( CONTENT[ident]?.smite && (activity.type === "damage") ) { row.notes.push(`${label} : non joué (après un coup d'arme)`); continue; }
       const run = { activity: label, issues: [] };
       row.runs.push(run);
@@ -218,8 +219,8 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
         for ( const tok of Object.values(t) ) hp0.set(tok.id, await hpOf(tok));
         const slots0 = await slotsOf();
         await ctx.clientErrors();
-        // Une question du moteur ou de dnd5e chez le MJ (cible consentante ?, caractéristique du Maléfice, rituel ou emplacement…) :
-        // première option, notée dans le rapport. Elle peut tenir l'utilisation en suspens : on la cherche pendant et juste après.
+        // A question from the engine or from dnd5e to the GM (willing target?, Hex ability, ritual or slot…):
+        // first option, noted in the report. It can keep the use pending: we look for it during and just after.
         const known = new Set(((await ctx.call("list-dialogs", {}).catch(() => null))?.windows ?? []).map(w => w.id));
         let done = false;
         let ritualAsked = false;
@@ -230,7 +231,7 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
           const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...known], waitMs: 1500, details: true }).catch(() => null);
           for ( const d of r?.windows ?? [] ) {
             known.add(d.id);
-            // Rituel ou emplacement : l'emplacement, pour que l'invariant de la dépense se vérifie.
+            // Ritual or slot: the slot, so that the spending invariant can be checked.
             const buttons = (d.buttons ?? []).filter(x => !/cancel|annuler|close|fermer/i.test(`${x.action ?? ""} ${x.label ?? ""}`));
             const b = buttons.find(x => /slot|emplacement/i.test(x.label ?? "")) ?? buttons[0] ?? d.buttons?.[0];
             if ( !b ) continue;
@@ -241,31 +242,32 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
           if ( done ) after++;
         }
         const used = await using;
-        // §139 : la question « rituel ou emplacement » annule l'utilisation et la relance avec la réponse, hors de `use-activity`.
+        // §139: the "ritual or slot" question cancels the use and relaunches it with the answer, outside `use-activity`.
         if ( !used?.used && ritualAsked ) { run.skipped = "relancé par le moteur après la question rituel / emplacement (§139)"; continue; }
         if ( !used?.used ) { bad(`pas d'utilisation : ${used?.reason ?? "?"}`); continue; }
 
-        // 2. La résolution.
+        // 2. The resolution.
         let r = null;
         if ( used.usageMessageId ) {
           for ( let i = 0; (i < 8) && !r; i++ ) { r = await ctx.resolution(used.usageMessageId); if ( !r ) await pause(500); }
           if ( r ) {
-            // `use-activity` coupe l'enchaînement des jets (`subsequentActions: false`, §233) : les dégâts ou le soin d'une activité
-            // sans jet d'attaque se lancent comme le bouton de la carte.
+            // `use-activity` cuts the chain of rolls (`subsequentActions: false`, §233): the damage or healing of an activity
+            // with no attack roll are rolled like the card's button.
             if ( /^awaiting(Rolls|Damage|Healing)$/.test(r.step ?? "") ) await ctx.engine("rollCard", { messageId: used.usageMessageId }).catch(() => {});
-            // 60 s : avec le journal de discussion du MJ masqué, Dice So Nice ne révèle pas ses jets et chaque attente des dés 3D va à son maximum
-            // (8 s) — une arme à deux jets (attaque, dégâts) et un châtiment dépassaient 25 s (audit de Kaalisti, 2026-10-29).
+            // 60 s: with the GM's chat log hidden, Dice So Nice does not reveal its rolls and each wait for the
+            // 3D dice goes to its maximum (8 s) — a weapon with two rolls (attack, damage) and a smite exceeded
+            // 25 s (Kaalisti audit, 2026-10-29).
             try { r = await ctx.settle(used.usageMessageId, { timeoutMs: 60000 }); }
             catch ( err ) { bad(`résolution bloquée : ${err.message.replace(/^résolution \S+ /, "")}`); }
           }
         }
-        // §401 : une zone qui n'agit pas à sa pose (`quietPose` : Tempête de neige, Nuage nauséabond) n'ouvre pas de résolution — ceux
-        // qui sont dedans sauvegardent au début de leur tour.
+        // §401: an area that does not act when placed (`quietPose`: Blizzard, Stinking Cloud) opens no resolution — those
+        // inside it save at the start of their turn.
         const quiet = CONTENT[ident]?.quietPose === true;
         if ( ["attack", "save"].includes(activity.type) && !r && !quiet ) bad("aucune résolution du moteur");
         await pause(1500);
-        // Un sort à projectiles (Décharge occulte à 2 rayons, Rayon ardent) enchaîne ses projectiles après la première résolution : on
-        // attend que les PV de la Cible ne bougent plus, sinon un rayon tardif tombait dans l'item suivant (audit de Kaalisti, 2026-10-29).
+        // A spell with projectiles (Eldritch Blast with 2 beams, Scorching Ray) chains its projectiles after the first resolution:
+        // we wait until the Target's HP stop moving, otherwise a late ray fell into the next item (Kaalisti audit, 2026-10-29).
         if ( CONTENT[ident]?.projectiles ) {
           let last = await hpOf(t["Cible"]);
           for ( let quiet = 0, i = 0; (quiet < 3) && (i < 30); i++ ) {
@@ -288,7 +290,7 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
 
         // 4. Les effets.
         const declared = (activity.effects ?? []).map(e => e._id);
-        // Un enchantement se pose sur un item (l'arme), pas sur une créature : le Lanceur n'en porte pas.
+        // An enchantment is set on an item (the weapon), not on a creature: the Caster does not carry it.
         if ( declared.length && !CONTENT[ident]?.zoneEffects && (activity.type !== "enchant") && !quiet ) {
           const affected = r?.targets?.length
             ? r.targets.filter(tr => (tr.hit !== false) && (tr.save?.success !== true) && !tr.unaffected).map(tokenOf).filter(Boolean)
@@ -296,25 +298,25 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
           for ( const tok of affected ) {
             const on = await ctx.effectsFrom(tok, ident);
             if ( on.filter(e => !(e.statuses ?? []).includes("concentrating")).length ) continue;
-            // Ce que la cible porte quand même (un état posé par le moteur sous une autre origine) : pour trier le constat.
+            // What the target carries anyway (a condition set by the engine under another origin): to sort the finding.
             const worn = ((await ctx.call("get-actor", { actorId: tok.actorId })).effects ?? []).filter(e => !baseline.has(e._id ?? e.id))
               .map(e => `${e.name}${e.origin ? ` ← ${String(e.origin).split(".").slice(-2).join(".")}` : ""}`);
             const tr = r?.targets?.find(x => tokenOf(x) === tok);
             bad(`${tok.name} : aucun effet de l'item (${declared.length} déclaré(s) ; sauvegarde ${tr?.save?.total ?? "?"}${tr?.save ? (tr.save.success ? " réussie" : " ratée") : ""} ; porte : ${worn.join(", ") || "rien"})`);
           }
           const touched = new Set((r?.targets ?? []).map(tr => tr.name).concat(plan.targets.map(x => x.name), [caster.name]));
-          // §401 : une aura (Aura de vie, Aura sacrée, Passage sans trace) pose son effet sur les alliés dans son rayon : pas un défaut.
+          // §401: an aura (Aura of Life, Aura of Purity, Pass without Trace) sets its effect on allies in its radius: not a defect.
           if ( !CONTENT[ident]?.aura ) for ( const tok of Object.values(t) ) {
             if ( !touched.has(tok.name) && (await ctx.effectsFrom(tok, ident)).length ) bad(`${tok.name} : effet de l'item posé hors des cibles`);
           }
         }
 
-        // 5. La concentration.
-        // Seule l'activité qui lance le sort (elle prend l'emplacement) commence la concentration : pas « Déplacer les lumières ».
+        // 5. Concentration.
+        // Only the activity that casts the spell (it takes the slot) starts Concentration: not "Move Lights".
         if ( isSpell && (s.properties ?? []).includes("concentration") && (activity.consumption?.spellSlot !== false) ) {
           const on = await ctx.effectsFrom(caster, ident);
-          // §401 : toutes les cibles ont réussi leur sauvegarde ou ne pouvaient pas être affectées — la concentration tombe d'elle-même
-          // (réglage `endUnaffected`) : pas un défaut.
+          // §401: all the targets succeeded on their save or could not be affected — Concentration drops by itself
+          // (`endUnaffected` setting): not a defect.
           const nobody = !!r?.targets?.length && r.targets.every(tr => tr.unaffected || (tr.save?.success === true) || (tr.hit === false));
           if ( !on.some(e => (e.statuses ?? []).includes("concentrating")) && !nobody ) bad("Lanceur non concentré");
         }
@@ -328,7 +330,7 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
           if ( !consumes && spent.length ) bad(`emplacement dépensé par une activité qui n'en prend pas (${spent.map(([k]) => k).join(", ")})`);
         }
 
-        // 8. §406 : les dés du niveau de lancement, lus sur le jet de dégâts ou de soin de la résolution.
+        // 8. §406: the dice of the casting level, read on the resolution's damage or healing roll.
         if ( upcast ) {
           const id = r?.damageRoll?.messageId ?? null;
           const m = id ? ((await ctx.call("list-chat-messages", { limit: 80 })).messages ?? []).find(x => x.id === id) : null;
@@ -338,10 +340,10 @@ export async function sweep(ctx, { kind, packs = [], select, sortKey, lend = {},
           else for ( const miss of missingDice(expected, formulas) ) bad(`niveau ${cast} : ${formulas.join(" + ") || "?"} — ${miss}`);
         }
 
-        // 7. La console (les erreurs connues hors moteur sont filtrées par le lanceur, `ctx.clientErrors`).
+        // 7. The console (known errors from outside the engine are filtered by the runner, `ctx.clientErrors`).
         const errors = await ctx.clientErrors();
         if ( process.env.PILE ) for ( const e of errors ) console.log(JSON.stringify(e).slice(0, 3000));
-        // Une aptitude prêtée hors de sa classe : ses formules citent une échelle ou un niveau que le Lanceur n'a pas.
+        // A feature lent outside its class: its formulas cite a scale or a level that the Caster does not have.
         if ( !isSpell && errors.length && /@(scale|classes)\./.test(JSON.stringify(activity)) ) {
           run.issues.length = 0;
           run.skipped = "formules de classe (échelle, niveau) absentes du Lanceur";

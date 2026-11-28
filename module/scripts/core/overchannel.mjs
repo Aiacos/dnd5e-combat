@@ -1,16 +1,16 @@
 /**
- * Surcharge (Magicien, Évocateur 14 — SRD 5.2) : « quand vous lancez un sort de magicien avec un emplacement de niveau 1 à 5 qui
- * inflige des dégâts, vous pouvez infliger les dégâts maximaux avec ce sort au tour où vous le lancez. La première fois, sans
- * contrecoup. Si vous l'utilisez de nouveau avant un Repos long, vous subissez 2d12 dégâts nécrotiques par niveau de
- * l'emplacement juste après l'avoir lancé ; ces dégâts ignorent la Résistance et l'Immunité. À chaque nouvelle utilisation avant un
- * Repos long, les dégâts nécrotiques par niveau augmentent de 1d12. » Fonctions pures.
+ * Overchannel (Wizard, Evoker 14 — SRD 5.2): "when you cast a Wizard spell with a level 1 to 5 spell slot that
+ * deals damage, you can deal maximum damage with that spell on the turn you cast it. The first time, with no
+ * backlash. If you use it again before a Long Rest, you take 2d12 Necrotic damage per level of the
+ * slot right after casting it; this damage ignores Resistance and Immunity. With each new use before a
+ * Long Rest, the Necrotic damage per level increases by 1d12." Pure functions.
  */
 
 /**
- * Ce lancement peut-il être surchargé ?
+ * Can this cast be overchanneled?
  * @param {{maxLevel: number, class?: string}} rule
- * @param {{isSpell: boolean, baseLevel: number, castLevel: number, sourceClass?: string|null}} cast  `sourceClass` vide :
- *   inconnu, admis
+ * @param {{isSpell: boolean, baseLevel: number, castLevel: number, sourceClass?: string|null}} cast  `sourceClass` empty:
+ *   unknown, allowed
  */
 export function overchannelApplies(rule, { isSpell, baseLevel, castLevel, sourceClass=null }) {
   if ( !rule || !isSpell || !(baseLevel >= 1) || !(castLevel >= 1) || (castLevel > rule.maxLevel) ) return false;
@@ -18,9 +18,9 @@ export function overchannelApplies(rule, { isSpell, baseLevel, castLevel, source
 }
 
 /**
- * Les dés de dégâts à leur maximum : ce qui change à l'agrégat, part par part (type et propriétés).
+ * The damage dice at their maximum: what changes in the aggregate, part by part (type and properties).
  * @param {Array<{type: string|null, properties: string[], value: number, faces: number}>} dice
- * @returns {Array<{type: string|null, properties: string[], old: number, now: number}>}  rien pour une part déjà au maximum
+ * @returns {Array<{type: string|null, properties: string[], old: number, now: number}>}  nothing for a part already at maximum
  */
 export function maximizedDeltas(dice) {
   const parts = new Map();
@@ -35,9 +35,9 @@ export function maximizedDeltas(dice) {
 }
 
 /**
- * Le nombre de d12 du contrecoup : rien à la première utilisation depuis le Repos long, puis (rang de l'utilisation) par niveau
- * d'emplacement — 2 par niveau à la deuxième, 3 à la troisième…
- * @param {number} use        le rang de cette utilisation depuis le dernier Repos long (1 = la première)
+ * The number of d12 of the backlash: nothing on the first use since the Long Rest, then (rank of the use) per slot
+ * level — 2 per level on the second, 3 on the third…
+ * @param {number} use        the rank of this use since the last Long Rest (1 = the first)
  * @param {number} castLevel
  */
 export function backlashDice(use, castLevel) {

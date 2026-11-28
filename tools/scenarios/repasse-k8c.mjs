@@ -1,11 +1,11 @@
 /**
- * §466 : les poussées et tractions que K8 (§329) ne lisait pas, lues dans le texte des monstres. Arène des sorts : le Lanceur (PNJ) et la
- * Cible, capacités prêtées depuis les compendiums.
- *  - Tentacule du Calmar géant (MM) : au toucher, « peut tirer la cible jusqu'à 3 m vers lui » — l'auteur choisit la distance ; on répond
- *    1,50 m : la Cible avance d'une case ;
- *  - Saut mortel de la Bulette (MM) : sur une sauvegarde RÉUSSIE, « repoussée de 1,50 m » : la Cible recule d'une case ;
- *  - Implosion de l'Inquisiteur du Tome (Ravenloft) : sur un échec, « tirée jusqu'à 6 m vers le centre de la Sphère » : la Cible, à 3 cases
- *    du centre, finit sur la case du centre.
+ * §466: the pushes and pulls that K8 (§329) did not read, read in the monsters' text. Spell arena: the Caster (NPC) and the
+ * Target, abilities borrowed from the compendia.
+ *  - Giant Squid's Tentacle (MM): on a hit, "can pull the target up to 10 feet toward it" — the author chooses the distance; we
+ *    answer 5 ft: the Target moves forward one cell;
+ *  - Bulette's Deadly Leap (MM): on a SUCCESSFUL saving throw, "pushed 5 feet": the Target moves back one cell;
+ *  - Tome Inquisitor's Implosion (Ravenloft): on a failure, "pulled up to 20 feet toward the center of the Sphere": the Target,
+ *    3 cells from the center, ends on the center cell.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -46,7 +46,7 @@ export default {
       await clear();
       await ctx.setHp(target, 999).catch(() => {});
     });
-    // Deux rangées sous leur place : le Lanceur, la Cible à `gap` cases à l'est.
+    // Two rows below their place: the Caster, the Target `gap` cells to the east.
     const base = { x: homes.get(caster.id).x, y: homes.get(caster.id).y + 2 * grid };
     const place = async (gap, shift=0) => {
       await clear();
@@ -58,7 +58,7 @@ export default {
       return { x: x0 + gap * grid, y: base.y };
     };
     const column = async t0 => Math.round(((await ctx.position(target)).x - t0.x) / grid);
-    // La question « jusqu'où ? » de l'auteur : on prend la deuxième option (1,50 m ; la première est la distance entière).
+    // The author's "how far?" question: we take the second option (5 ft; the first is the whole distance).
     const answering = async (settle) => {
       let done = false;
       const p = settle.finally(() => { done = true; });
@@ -75,7 +75,7 @@ export default {
       return { result: await p, asked: seen.length };
     };
 
-    // Tentacule : au toucher, tirée « jusqu'à » 10 ft — on choisit 5 ft.
+    // Tentacle: on a hit, pulled "up to" 10 ft — we choose 5 ft.
     const tentacle = await lend(TENTACLE);
     let checked = false;
     for ( let i = 0; (i < 20) && !checked; i++ ) {
@@ -91,12 +91,12 @@ export default {
     }
     ctx.expect(checked, "le Tentacule touche (20 essais au plus)");
 
-    // Saut mortel : la poussée de la réussite.
+    // Deadly Leap: the push of the success.
     const leap = await lend(LEAP);
     checked = false;
     for ( let i = 0; (i < 20) && !checked; i++ ) {
       const t0 = await place(1);
-      // L'activité a une zone (la ligne du saut, sans pose demandée) : posée sur la case de la Cible — l'espace d'arrivée de la Bulette.
+      // The activity has an area (the leap's Line, no placement asked): placed on the Target's cell — the Bulette's arrival space.
       const u = await ctx.use({ tokenId: caster.id, itemId: leap, activityType: "save", consume: false,
         area: { shape: "circle", x: t0.x + grid / 2, y: t0.y + grid / 2, radius: grid / 2 } });
       const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
@@ -110,13 +110,14 @@ export default {
     }
     ctx.expect(checked, "la Cible réussit la sauvegarde du Saut mortel (20 essais au plus)");
 
-    // Implosion : vers le centre de la Sphère.
+    // Implosion: toward the center of the Sphere.
     if ( !packs.includes("dnd-ravenloft-horrors-within.actors") ) { ctx.log("Ravenloft absent : Implosion non jouée"); return; }
     const implode = await lend(IMPLODE);
     checked = false;
     for ( let i = 0; (i < 20) && !checked; i++ ) {
-      // 15 colonnes plus à l'est (une partie vide de l'arène : la Sphère ne prend que la Cible — une autre créature tirée vers le centre
-      // l'y précéderait et l'arrêterait). La Cible à 2 cases du Lanceur ; le centre de la Sphère 3 cases plus à l'est (rayon 4 cases).
+      // 15 columns further east (an empty part of the arena: the Sphere only takes the Target — another creature pulled toward the
+      // center would get there first and stop it). The Target 2 cells from the Caster; the Sphere's center 3 cells further
+      // east (radius 4 cells).
       const t0 = await place(2, 15);
       const center = { x: t0.x + 3 * grid + grid / 2, y: t0.y + grid / 2 };
       const u = await ctx.use({ tokenId: caster.id, itemId: implode, activityType: "save", consume: false,

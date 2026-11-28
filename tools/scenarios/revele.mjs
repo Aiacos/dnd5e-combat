@@ -1,8 +1,8 @@
 /**
- * Poussière d'étoile : la cible « ne peut bénéficier de l'état Invisible » (SPEC §16.36, `revealsInvisible`). Monde
- * `ravenloft` : Zombi rendu Invisible ; Sylaene lui tire Poussière d'étoile — « cible non vue » (désavantage) tant qu'elle ne
- * l'a pas touché ; une fois touché (effet « Illuminé »), le tir suivant ne porte plus cette raison. Non applicable sans
- * Sylaene et le Zombi.
+ * Starry Wisp: the target "can't benefit from the Invisible condition" (SPEC §16.36, `revealsInvisible`). World
+ * `ravenloft`: Zombie made Invisible; Sylaene shoots Starry Wisp at it — "target not seen" (Disadvantage) as long as she has
+ * not hit it; once it is hit (effect "Illuminated"), the next shot no longer carries that reason. Not applicable without
+ * Sylaene and the Zombie.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -51,7 +51,7 @@ export default {
     ctx.log(`tir suivant : ${after.reasons.join(", ") || "aucune raison"}`);
     ctx.expect(!after.reasons.includes("target.unseen"), "illuminé : il ne bénéficie plus d'Invisible (plus de « cible non vue »)");
 
-    // Jusque dans l'affichage : l'effet d'Invisibilité est suspendu tant que dure la révélation, puis reprend.
+    // Even in the display: the Invisibility effect is suspended for as long as the reveal lasts, then resumes.
     const invisibleEffects = async () => (await ctx.effects(zombi)).filter(e => (e.statuses ?? []).includes("invisible"));
     const veiled = await invisibleEffects();
     ctx.expect(veiled.length && veiled.every(e => e.disabled), `effet d'Invisibilité suspendu (${veiled.map(e => `${e.name}: ${e.disabled ? "désactivé" : "actif"}`).join(", ")})`);
@@ -60,7 +60,7 @@ export default {
     const back = await invisibleEffects();
     ctx.expect(back.length && back.every(e => !e.disabled), "illumination retirée : l'invisibilité reprend");
 
-    // Illuminé d'abord, invisible ensuite : l'effet naît suspendu.
+    // Illuminated first, invisible afterwards: the effect is born suspended.
     await ctx.call("set-status", { tokenId: zombi.id, statusId: "invisible", active: false });
     await ctx.removeStatusEffects(zombi, "invisible");
     let lit2 = false;

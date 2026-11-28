@@ -1,12 +1,12 @@
 /**
- * §300, lot C5 de la repasse terme par terme : zones, émanations, entrées. Arène des sorts (Lanceur, Allié, Cible, Cible voisine).
- * Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source) et remet tout.
- *  - Esprits gardiens : rien à la pose (§531, SRD 5.2) ; la zone avance d'une case, la Cible déjà dedans ne sauvegarde pas (§540) ;
- *    sortie de l'émanation, sa Vitesse divisée par deux tombe ; au round suivant, elle y revient et sauvegarde ;
- *  - Tempête de neige : rien à l'incantation, la sauvegarde vient au début du tour de la Cible ;
- *  - Croissance végétale : la zone reste, terrain ×4 ; l'incantation coûte l'action ;
- *  - Aura de vitalité, Soins de groupe : une créature au choix (resp. six) — seules les cochées sont soignées ;
- *  - Courroux des mers : une seule créature de l'émanation sauvegarde et prend les dégâts, pas sa voisine.
+ * §300, batch C5 of the term-by-term pass: areas, Emanations, entries. Spell arena (Caster, Ally, Target, Neighbouring Target).
+ * Each part borrows its items from the Player's Handbook (with their source) and puts everything back.
+ *  - Spirit Guardians: nothing on placement (§531, SRD 5.2); the area moves one cell, the Target already inside does not
+ *    save (§540); leaving the Emanation, its halved Speed drops; next round, it comes back in and saves;
+ *  - Ice Storm: nothing on casting, the saving throw comes at the start of the Target's turn;
+ *  - Plant Growth: the area stays, terrain ×4; casting costs the action;
+ *  - Aura of Vitality, Mass Cure Wounds: one creature of choice (resp. six) — only the ticked ones are healed;
+ *  - Maelstrom: a single creature in the Emanation saves and takes the damage, not its neighbour.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -94,7 +94,7 @@ export default {
       }
       await pause(1500);
     };
-    /** L'Allié et la Cible voisine écartés : seule la Cible compte. */
+    /** The Ally and the Neighbouring Target moved aside: only the Target counts. */
     const clearField = async () => {
       const c = await ctx.position(caster);
       await moveTo(ally, c.x, c.y - 8 * grid);
@@ -106,9 +106,10 @@ export default {
       const spell = await lend(caster, `${PHB}.spells.Item.phbsplSpiritGuar`, { "system.method": "atwill" });
       const c = await clearField();
       await moveTo(target, c.x - 2 * grid, c.y);
-      // §438 : Manuel 3.0.0 — l'émanation est posée par « Cast Spell » avec le comportement de dnd5e (Vitesse divisée par deux) ; le
-      // connecteur pose sa zone sans ce comportement : le sort est lancé comme au clic (dnd5e pose l'émanation, rattachée au lanceur), la
-      // sœur est rejouée par la zone (« enter », fin de tour), qui « avance » quand le lanceur fait un pas.
+      // §438: Manual 3.0.0 — the Emanation is placed by "Cast Spell" with dnd5e's behaviour (Speed halved); the
+      // connector places its area without that behaviour: the spell is cast as on a click (dnd5e places the Emanation,
+      // attached to the caster), the sister is replayed by the area ("enter", end of turn), which "moves" when the caster takes
+      // a step.
       const v3 = !!((await ctx.call("get-actor", { actorId: caster.actorId })).items ?? []).find(i => i._id === spell)?.system?.activities?.tevaatMC9LZxVPLS;
       let used, r, since;
       if ( v3 ) {
@@ -141,7 +142,7 @@ export default {
       await moveTo(target, c.x - 2 * grid, c.y + 7 * grid);
       await pause(1500);
       ctx.expect(!await has(target, "spirit-guardians"), "sortie de l'émanation, la Vitesse divisée par deux tombe");
-      // Une fois par tour : la zone revient sur la Cible au round suivant.
+      // Once per turn: the area comes back onto the Target next round.
       await startFight([caster, target]);
       await ctx.nextTurn(); await ctx.nextTurn(); await pause(1500);
       const before = (await ticks(since, "enter")).length;
@@ -221,8 +222,8 @@ export default {
       await moveTo(ally, c.x, c.y - 8 * grid);
       await moveTo(target, c.x - grid, c.y);
       await moveTo(other, c.x + grid, c.y);
-      // §438 : Manuel 3.0.0 — « Manifest Ocean Spray » est utilitaire (l'émanation, sans jet) ; la sauvegarde est la sœur
-      // `9U9AoJYvcrCQtIMm`. Manuel 2.2.0 : la manifestation porte la sauvegarde.
+      // §438: Manual 3.0.0 — "Manifest Ocean Spray" is a utility (the Emanation, no roll); the saving throw is the sister
+      // `9U9AoJYvcrCQtIMm`. Manual 2.2.0: the manifestation carries the saving throw.
       const manifest = ((await ctx.call("get-actor", { actorId: caster.actorId })).items ?? []).find(i => i._id === item)?.system?.activities?.nNTYj4vqURV4Dhjt;
       const saveId = (manifest?.type === "utility") ? "9U9AoJYvcrCQtIMm" : "nNTYj4vqURV4Dhjt";
       if ( saveId !== "nNTYj4vqURV4Dhjt" ) ctx.log("forme 3.0.0 : la sauvegarde est l'activité sœur");

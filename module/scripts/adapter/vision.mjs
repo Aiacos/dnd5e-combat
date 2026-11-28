@@ -1,28 +1,28 @@
 /**
- * Vision simulée (SPEC §14.1, P1) : « CE token voit-il CE token ? », sur n'importe quel client,
- * pour n'importe quelle paire, sans rien changer à ce qui est affiché.
+ * Simulated vision (SPEC §14.1, P1): "does THIS token see THIS token?", on any client,
+ * for any pair, without changing anything about what is displayed.
  *
- * `canvas.visibility.testVisibility` répond pour les sources de vision ACTIVES du client (ses
- * tokens contrôlés). Ici, chaque observateur reçoit une source de vision JETABLE, non rattachée
- * au canevas — exactement ce que le cœur fait pour le brouillard partagé
- * (client/canvas/groups/visibility.mjs:668-690 : `_createSharedFogVisionSource`, états d'aveuglement
- * copiés, `initialize(_getVisionSourceData())`, mémoïsée par `_visionSourceVersion`). Puis on
- * rejoue la boucle de `testVisibility` (visibility.mjs:843-903) pour cette seule source : lumières
- * qui donnent la vue, vue de base, perception de la lumière, modes spéciaux (vision aveugle…).
- * Les modes de détection jugent déjà Invisible et Aveuglé par les sens (detection-mode.mjs:106-130).
+ * `canvas.visibility.testVisibility` answers for the client's ACTIVE vision sources (its
+ * controlled tokens). Here, each observer gets a DISPOSABLE vision source, not attached
+ * to the canvas — exactly what the core does for shared fog
+ * (client/canvas/groups/visibility.mjs:668-690: `_createSharedFogVisionSource`, blindness states
+ * copied, `initialize(_getVisionSourceData())`, memoized by `_visionSourceVersion`). Then we
+ * replay the `testVisibility` loop (visibility.mjs:843-903) for that single source: lights
+ * that grant sight, basic sight, light perception, special modes (Blindsight…).
+ * The detection modes already judge Invisible and Blinded through the senses (detection-mode.mjs:106-130).
  *
- * Positions : celles VALIDÉES (`_source`, foundry-core-notes/v14-migration.md), jamais la position
- * visuelle — l'origine de la vision comme les points de test de la cible.
+ * Positions: the VALIDATED ones (`_source`, foundry-core-notes/v14-migration.md), never the visual
+ * position — the vision origin as well as the target's test points.
  *
- * Repli pour les PNJ sans vue activée sur le token (la plupart des monstres du MM) : dnd5e 6
- * projette les sens de la fiche sur `sight.range` et les modes spéciaux (documents/token.mjs:74-131,
- * réglage `senseVisionSync`), mais n'active pas la vue ; le cœur n'ajoute alors ni vue de base ni
- * perception de la lumière (documents/token.mjs, _prepareDetectionModes). On les ajoute ici, comme
- * si la vue était activée : une créature sans vision configurée voit comme sa fiche le dit.
+ * Fallback for NPCs without sight enabled on the token (most MM monsters): dnd5e 6
+ * projects the sheet's senses onto `sight.range` and the special modes (documents/token.mjs:74-131,
+ * setting `senseVisionSync`), but does not enable sight; the core then adds neither basic sight nor
+ * light perception (documents/token.mjs, _prepareDetectionModes). We add them here, as
+ * if sight were enabled: a creature without configured vision sees as its sheet says.
  *
- * Mémoïsation : une source par observateur, revue quand sa version de vision, sa position ou ses
- * états d'aveuglement changent ; tout est jeté quand murs, lumières ou scène changent
- * (runtime/vision.mjs), et détruit au démontage du canevas.
+ * Memoization: one source per observer, rebuilt when its vision version, position or
+ * blindness states change; everything is discarded when walls, lights or the scene change
+ * (runtime/vision.mjs), and destroyed on canvas teardown.
  */
 
 import { committedPosition, distanceBetween, tokenCenter } from "./turn.mjs";
@@ -43,7 +43,7 @@ import { LIGHT } from "../core/illumination.mjs";
 
 const SOURCE_PREFIX = "dnd5e-combat";
 
-/** Ce que ce fichier demande au cœur, contrôlé une fois à `ready` (SPEC §13.3 : API fragiles isolées). */
+/** What this file asks of the core, checked once at `ready` (SPEC §13.3: fragile APIs isolated). */
 export function checkVisionApi() {
   const missing = [];
   const Token = foundry.canvas.placeables.Token;
@@ -55,7 +55,7 @@ export function checkVisionApi() {
   return missing;
 }
 
-/** Vision en service : l'API du cœur est là (contrôle à `ready`) et le réglage de monde le veut. */
+/** Vision in service: the core API is there (check at `ready`) and the world setting wants it. */
 let available = false;
 export function setVisionAvailable(value) { available = !!value; }
 export function isVisionAvailable() { return available; }
@@ -65,14 +65,14 @@ export function isVisionAvailable() { return available; }
 /* -------------------------------------------- */
 
 const sources = new Map();   // token id → { source, key }
-let generation = 0;          // murs, lumières, scène : tout est à refaire
+let generation = 0;          // walls, lights, scene: everything has to be redone
 
-/** À appeler quand l'environnement change (murs, lumières, scène, acteurs). */
+/** To call when the environment changes (walls, lights, scene, actors). */
 export function invalidateVision() {
   generation++;
 }
 
-/** Au démontage du canevas : les sources sont détruites, rien ne survit. */
+/** On canvas teardown: the sources are destroyed, nothing survives. */
 export function disposeVision() {
   for ( const { source } of sources.values() ) source.destroy?.();
   sources.clear();
@@ -87,7 +87,7 @@ function sourceKey(doc, token, pos, blinded) {
   return `${generation}|${token._visionSourceVersion ?? 0}|${pos.x},${pos.y},${pos.elevation}|${blinded.blind ? 1 : 0}${blinded.burrow ? 1 : 0}|${doc.sight.range}|${doc.sight.angle}|${doc.rotation}`;
 }
 
-/** La source de vision de cet observateur, à sa position validée. null si le token n'est pas dessiné. */
+/** This observer's vision source, at its validated position. null if the token is not drawn. */
 function sourceFor(doc) {
   const token = doc.object;
   if ( !token || token.destroyed ) return null;
@@ -100,11 +100,11 @@ function sourceFor(doc) {
   const source = new CONFIG.Canvas.visionSourceClass({ sourceId: `${SOURCE_PREFIX}.${doc.id}`, object: token });
   for ( const state in blinded ) source.blinded[state] = blinded[state];
   const data = token._getVisionSourceData();
-  Object.assign(data, doc.getVisionOrigin(pos));   // position validée, pas visuelle
-  // Repli sans vue activée (voir detectionModesOf) : le cœur donne alors `lightRadius: 0` (Token#lightPerceptionRange,
-  // placeables/token.mjs:772-775, faute de mode lightPerception sur le document) et le polygone de lumière de la
-  // source est vide — un humain sans vision dans le noir ne voyait rien, même en pleine lumière (vu le 2026-09-24,
-  // Mage du MM). null → la portée maximale de la scène (point-vision-source.mjs:211), bornée par les murs.
+  Object.assign(data, doc.getVisionOrigin(pos));   // validated position, not visual
+  // Fallback without sight enabled (see detectionModesOf): the core then gives `lightRadius: 0` (Token#lightPerceptionRange,
+  // placeables/token.mjs:772-775, for lack of a lightPerception mode on the document) and the source's light
+  // polygon is empty — a human without Darkvision saw nothing, even in full light (seen on 2026-09-24,
+  // MM Mage). null → the scene's maximum range (point-vision-source.mjs:211), bounded by walls.
   if ( !doc.sight.enabled && !(data.lightRadius > 0) ) data.lightRadius = null;
   source.initialize(data);
   sources.set(doc.id, { source, key });
@@ -112,11 +112,11 @@ function sourceFor(doc) {
 }
 
 /**
- * Les modes de détection de l'observateur, vue de base et perception de la lumière comprises même
- * sans vue activée. Normalisés comme le fait `TokenDocument#_prepareDetectionModes` (`enabled`
- * vrai par défaut, `range` null = illimité) : lus sur le document, un `range: null` traverse
- * jusqu'au test de portée du cœur, qui le prend pour « hors de portée » (`null <= 0`). Vu en jeu.
- * Issue #104 : seulement les modes que le moteur juge (`judgedModes`) — pas celui qu'un autre module a inscrit sur le token.
+ * The observer's detection modes, basic sight and light perception included even
+ * without sight enabled. Normalized as `TokenDocument#_prepareDetectionModes` does (`enabled`
+ * true by default, `range` null = unlimited): read on the document, a `range: null` goes through
+ * to the core's range test, which takes it as "out of range" (`null <= 0`). Seen in play.
+ * Issue #104: only the modes that the engine judges (`judgedModes`) — not the one another module registered on the token.
  */
 function detectionModesOf(doc) {
   const modes = {};
@@ -127,27 +127,27 @@ function detectionModesOf(doc) {
     modes.lightPerception ??= { enabled: true, range: Infinity };
     modes.basicSight ??= { enabled: true, range: doc.sight.range };
   }
-  // `senseNeeds` : un sens de la fiche qui dépend de l'ouïe ou de la vue de son porteur, Assourdi ou Aveuglé — éteint.
+  // `senseNeeds`: a sheet sense that depends on its bearer's hearing or sight, Deafened or Blinded — turned off.
   for ( const id of mutedSensesOf(doc) ) delete modes[id];
   return modes;
 }
 
-/** Les points de test d'une cible à sa position validée, dans la forme attendue par les modes de détection. */
+/** A target's test points at its validated position, in the shape expected by the detection modes. */
 function testsFor(target, observer=null) {
   const pos = committedPosition(target);
   const level = canvas.scene.levels?.get?.(target.level) ?? canvas.level;
   const tests = target.getVisibilityTestPoints(pos).map(point => ({ point, level, los: new Map() }));
-  // §161 : l'observateur qui voit l'Invisible (Détection de l'invisibilité) la voit comme une autre.
+  // §161: the observer who sees the Invisible (See Invisibility) sees it like any other creature.
   return { object: asSeenBy(observer, target.object), level, tests };
 }
 
 /**
- * §161, issue #42 : la cible telle que la présenter aux modes de détection de l'observateur — dévoilée (`unveiled`) quand il voit
- * l'Invisible (Détection de l'invisibilité, Troisième œil) ou qu'elle ne peut pas bénéficier de l'état (Lueurs féeriques, Poussière
- * d'étoile) ; sinon telle quelle. Partagé par les règles (`testsFor`) et l'écran (ui/perception.mjs) : à l'écran, la vue de base refusait
- * l'Invisible alors que les règles la voyaient.
+ * §161, issue #42: the target as to present it to the observer's detection modes — unveiled (`unveiled`) when it sees
+ * the Invisible (See Invisibility, Third Eye) or when it cannot benefit from the condition (Faerie Fire, Stardust);
+ * otherwise as is. Shared by the rules (`testsFor`) and the screen (ui/perception.mjs): on screen, basic sight refused
+ * the Invisible while the rules saw it.
  * @param {TokenDocument|null} observer
- * @param {Token} target  Le token dessiné.
+ * @param {Token} target  The drawn token.
  */
 export function asSeenBy(observer, target) {
   if ( !target?.document ) return target;
@@ -155,10 +155,10 @@ export function asSeenBy(observer, target) {
 }
 
 /**
- * §16.36 : la cible telle que la voient les modes de détection quand elle « ne peut pas bénéficier de l'état Invisible »
- * (Poussière d'étoile, Lueurs féeriques). Chaque mode du cœur refuse une cible invisible dans son `_canDetect`
- * (detection-mode.mjs:118-121, detection-modes/darkvision.mjs:20-24…), par `target.document.hasStatusEffect` ; on lui présente
- * une vue du token dont le document ne porte pas Invisible — même prototype (`instanceof Token` tient), rien n'est modifié.
+ * §16.36: the target as the detection modes see it when it "cannot benefit from the Invisible condition"
+ * (Stardust, Faerie Fire). Each core mode refuses an invisible target in its `_canDetect`
+ * (detection-mode.mjs:118-121, detection-modes/darkvision.mjs:20-24…), via `target.document.hasStatusEffect`; we present it
+ * a view of the token whose document does not carry Invisible — same prototype (`instanceof Token` holds), nothing is modified.
  */
 function unveiled(token) {
   if ( !token ) return token;
@@ -171,29 +171,29 @@ function unveiled(token) {
 /* -------------------------------------------- */
 
 /**
- * L'observateur voit-il la cible ? Vision, lumière, murs, modes spéciaux, Invisible et Aveuglé
- * compris, aux positions validées.
+ * Does the observer see the target? Vision, light, walls, special modes, Invisible and Blinded included,
+ * at the validated positions.
  * @param {TokenDocument} observer
  * @param {TokenDocument} target
- * @param {{ignoreHidden?: boolean, locating?: boolean, senseOnly?: boolean}} [options]  §185 : juger comme si la cible n'était pas
- *   cachée (la détection elle-même). `locating` : compter aussi les sens qui localisent sans voir (`canLocate`). `senseOnly`
+ * @param {{ignoreHidden?: boolean, locating?: boolean, senseOnly?: boolean}} [options]  §185: judge as if the target were not
+ *   hidden (the detection itself). `locating`: also count the senses that locate without seeing (`canLocate`). `senseOnly`
  *   (issue #107, with `locating`): ONLY those senses — no light, no sight mode, no declared sight (`pinpointsTarget`).
- * @returns {boolean|null}  null : impossible à dire ici (canevas absent, token non dessiné).
+ * @returns {boolean|null}  null: cannot tell here (no canvas, token not drawn).
  */
 export function canSee(observer, target, { ignoreHidden=false, locating=false, senseOnly=false }={}) {
   if ( !canvas?.ready || !observer || !target ) return null;
   if ( observer === target ) return true;
-  if ( isSenseless(observer) ) return false;   // réglage `unconsciousSenses` : Inconscient, ni vue ni ouïe
-  if ( !target.object || target.hidden ) return false;   // un token caché par le MJ est hors jeu pour tout le monde
-  if ( outsideCone(observer, target) ) return false;   // §182 : hors combat, une créature du MJ ne voit que devant elle
-  if ( !ignoreHidden && hiddenFrom(observer, target) ) return false;   // §185 : caché, pour un ennemi qui ne l'a pas repéré
-  if ( !perceivesPlane(observer, target) ) return false;   // §225 : d'un plan à l'autre, seulement avec une vue de l'Éthéré
-  // §16.24 et §16.31 : une zone qui bloque la vue (Nappe de brouillard, Ténèbres) entre les deux, ou autour de l'un d'eux. Lue une
-  // fois, et seulement si quelqu'un la demande (une vue déclarée, puis les vues de la fiche).
+  if ( isSenseless(observer) ) return false;   // `unconsciousSenses` setting: Unconscious, no sight or hearing
+  if ( !target.object || target.hidden ) return false;   // a token hidden by the GM is out of play for everyone
+  if ( outsideCone(observer, target) ) return false;   // §182: out of combat, a GM creature only sees in front of it
+  if ( !ignoreHidden && hiddenFrom(observer, target) ) return false;   // §185: Hidden, for an enemy that has not spotted it
+  if ( !perceivesPlane(observer, target) ) return false;   // §225: from one plane to the other, only with Ethereal sight
+  // §16.24 and §16.31: an area that blocks sight (Fog Cloud, Darkness) between the two, or around one of them. Read once,
+  // and only if someone asks for it (a declared sight, then the sheet's sights).
   let zone = null;
   const between = () => (zone ??= blockedBetween(observer, target));
-  // Un sens déclaré par du contenu (`sense`) : il localise sans voir — ni la brume ni les ténèbres ne l'arrêtent —, ou il compte
-  // comme une vue : pas d'une cible Invisible, pas à travers une brume, et à travers des ténèbres seulement s'il les perce.
+  // A sense declared by content (`sense`): it either locates without seeing — neither fog nor darkness stops it —, or it counts
+  // as a sight: not of an Invisible target, not through fog, and through darkness only if it pierces it.
   const declared = sensedBy(observer, target, sceneBetween(observer, target, between));
   if ( (declared === "sight") && !senseOnly ) return true;
   if ( locating && (declared === "locate") ) return true;
@@ -201,14 +201,14 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false, s
   if ( !source ) return null;
   const config = testsFor(target, observer);
 
-  // La vue ne passe pas la zone — seuls jugent les sens qui ne voient pas, et, dans des ténèbres, la vision véritable et la
-  // Vision du diable.
+  // Sight does not pass the area — only the senses that do not see judge, and, in darkness, Truesight and
+  // Devil's Sight.
   const blocked = between();
   if ( blocked.fog || blocked.darkness ) return seesThroughBlock(observer, target, source, config, blocked, locating, senseOnly);
-  // §447 : seules des Ténèbres lancées par l'observateur, qui voit à travers (`seesThroughOwnDarkness`) : « il voit normalement ».
+  // §447: only Darkness cast by the observer, who sees through it (`seesThroughOwnDarkness`): "sees normally".
   if ( !senseOnly && blocked.ownDarkness && devilsSightSeesToken(observer, target, blocked) ) return true;
 
-  // Lumières qui donnent la vue (le cœur les teste en premier, pour tout le monde).
+  // Lights that grant sight (the core tests them first, for everyone).
   for ( const light of senseOnly ? [] : canvas.effects.lightSources ) {
     if ( !light.data.vision || !light.active ) continue;
     if ( light.testVisibility(config) === true ) return true;
@@ -216,8 +216,8 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false, s
 
   const modes = CONFIG.Canvas.detectionModes;
   const own = detectionModesOf(observer);
-  // C12-e : Vision ombreuse — « entièrement dans les ténèbres, vous êtes Invisible pour qui compte sur la vision dans le noir pour vous
-  // voir » : la vue de base (la vision dans le noir de dnd5e) ne la trouve pas ; la lumière, la vision aveugle, la vision véritable si.
+  // C12-e: Umbral Sight — "fully in Darkness, you are Invisible to anyone who relies on Darkvision to see you":
+  // base sight (dnd5e's Darkvision) does not find it; light, Blindsight and Truesight do.
   const umbral = umbralTo(target);
   if ( umbral ) delete own.basicSight;
   if ( !source.isBlinded && !senseOnly ) {
@@ -228,7 +228,7 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false, s
   }
   for ( const [id, mode] of Object.entries(own) ) {
     if ( (id === "basicSight") || (id === "lightPerception") ) continue;
-    if ( !locating && !countsAsSight(id) ) continue;   // la perception des vibrations localise, elle ne voit pas
+    if ( !locating && !countsAsSight(id) ) continue;   // Tremorsense locates, it does not see
     if ( senseOnly && countsAsSight(id) ) continue;    // issue #107: only the senses that locate without sight
     if ( modes[id]?.testVisibility(source, mode, config) === true ) return true;
   }
@@ -236,8 +236,8 @@ export function canSee(observer, target, { ignoreHidden=false, locating=false, s
 }
 
 /**
- * L'observateur sait-il où est la cible : il la voit, ou un sens qui n'est pas une vue la localise (perception des vibrations) ?
- * Pour ce qui demande une position connue et non une vue : se cacher, chercher, viser une case. Mêmes garde-fous que `canSee`.
+ * Does the observer know where the target is: do they see it, or does a non-sight sense locate it (Tremorsense)?
+ * For what needs a known position and not sight: hiding, searching, aiming at a cell. Same safeguards as `canSee`.
  * @param {TokenDocument} observer
  * @param {TokenDocument} target
  * @param {{ignoreHidden?: boolean}} [options]
@@ -264,8 +264,8 @@ export function pinpointsTarget(observer, target) {
 }
 
 /**
- * Ce que les sens déclarés par du contenu disent de la cible, avec les garde-fous de `canSee` (sens éteints, token caché par le MJ,
- * plan) : `"sight"`, `"locate"`, `"presence"`, `"aura"`, ou null. Pour l'affichage et pour un voisin (`api.vision.sensed`).
+ * What the senses declared by content say about the target, with the safeguards of `canSee` (senses off, token hidden by the GM,
+ * plane): `"sight"`, `"locate"`, `"presence"`, `"aura"`, or null. For display and for a neighbor (`api.vision.sensed`).
  */
 export function sensedThrough(observer, target) {
   if ( !canvas?.ready || !observer || !target || (observer === target) ) return null;
@@ -274,8 +274,8 @@ export function sensedThrough(observer, target) {
 }
 
 /**
- * Ce que `sensedBy` lit de la scène entre deux tokens : la distance, un mur de vue (ténèbres écartées), l'observateur Aveuglé ou
- * Assourdi, la cible Invisible pour lui, la zone qui bloque la vue entre eux (`blocked` : celle que l'appelant a déjà lue).
+ * What `sensedBy` reads from the scene between two tokens: the distance, a sight wall (darkness set aside), the observer Blinded
+ * or Deafened, the target Invisible to it, the area that blocks sight between them (`blocked`: the one the caller already read).
  */
 function sceneBetween(observer, target, blocked=() => blockedBetween(observer, target)) {
   return {
@@ -288,13 +288,13 @@ function sceneBetween(observer, target, blocked=() => blockedBetween(observer, t
   };
 }
 
-/** La cible est-elle Invisible pour cet observateur : elle porte l'état, il ne voit pas l'Invisible, rien ne la révèle ? */
+/** Is the target Invisible to this observer: it has the condition, the observer cannot see Invisible, nothing reveals it? */
 function invisibleTo(observer, target) {
   if ( !target.hasStatusEffect?.(CONFIG.specialStatusEffects.INVISIBLE) ) return false;
   return !(revealedInvisible(target.actor, observer?.actor) || seesInvisible(observer?.actor));
 }
 
-/** C12-e : la cible porte Vision ombreuse et se tient dans les ténèbres. */
+/** C12-e: the target has Umbral Sight and stands in Darkness. */
 function umbralTo(target) {
   if ( !Array.from(target.actor?.items ?? []).some(i => identifierOf(i).id === "umbral-sight") ) return false;
   const light = lightOnToken(target);
@@ -302,9 +302,9 @@ function umbralTo(target) {
 }
 
 /**
- * Les régions de la scène qui bloquent la vue : brume (`obscures`, §16.24) ou ténèbres magiques (`light.darkness`,
- * §16.31), posées par l'activité d'un item (`flags.dnd5e.activity`) — et celles qui bloquent le son (Silence, `silences`, issue #42).
- * §447 : `caster` — l'acteur dont un SORT a posé des ténèbres (`seesThroughOwnDarkness`), sinon null.
+ * The scene regions that block sight: fog (`obscures`, §16.24) or magical darkness (`light.darkness`,
+ * §16.31), placed by an item's activity (`flags.dnd5e.activity`) — and those that block sound (Silence, `silences`, issue #42).
+ * §447: `caster` — the actor whose SPELL placed the darkness (`seesThroughOwnDarkness`), otherwise null.
  * @returns {Array<{region: RegionDocument, kind: "fog"|"darkness"|"silence", caster?: Actor|null}>}
  */
 export function blockingRegions(scene) {
@@ -316,14 +316,14 @@ export function blockingRegions(scene) {
     const entry = contentOf(activity.item).entry;
     if ( fromPulseReached(entry?.obscures, region.getFlag?.(MODULE_ID, "area")?.pulses) ) out.push({ region, kind: "fog" });
     else if ( entry?.light?.darkness === true ) out.push({ region, kind: "darkness", caster: (activity.item.type === "spell") ? (activity.item.actor ?? null) : null });
-    if ( entry?.silences === true ) out.push({ region, kind: "silence" });   // issue #42 : ne bloque pas la vue, le son (adapter/hearing.mjs)
+    if ( entry?.silences === true ) out.push({ region, kind: "silence" });   // issue #42: blocks sound, not sight (adapter/hearing.mjs)
   }
   return out;
 }
 
 /**
- * Les sources de ténèbres de la scène affichée qui ne viennent pas d'une zone du moteur : une lumière de ténèbres posée à la main,
- * un token qui en émet (`isPlainDarkness`). Celles des zones du moteur portent `flags.<module>.region` (adapter/lights.mjs).
+ * The darkness sources of the displayed scene that do not come from an engine area: a hand-placed darkness light,
+ * a token that emits one (`isPlainDarkness`). Those of the engine's areas carry `flags.<module>.region` (adapter/lights.mjs).
  */
 function plainDarknessSources(scene, observer=null, from=null, to=null) {
   if ( !canvas?.ready || (scene !== canvas.scene) ) return [];
@@ -332,7 +332,7 @@ function plainDarknessSources(scene, observer=null, from=null, to=null) {
     const engineZone = !!source.object?.document?.flags?.[MODULE_ID]?.region;
     const onLevel = sourceOnLevel(source, observer?.level ?? null);
     if ( !isPlainDarkness({ active: source.active, preview: source.isPreview, engineZone, onLevel }) ) continue;
-    // Une source dont le cercle est loin du trait n'a pas à être échantillonnée.
+    // A source whose circle is far from the line need not be sampled.
     if ( from && to && !discNearSegment({ x: source.x, y: source.y, radius: source.radius }, from, to) ) continue;
     out.push(source);
   }
@@ -340,9 +340,9 @@ function plainDarknessSources(scene, observer=null, from=null, to=null) {
 }
 
 /**
- * La source de ténèbres est-elle du niveau de l'observateur (scènes à niveaux de la V14) ? Son document le dit (`includedInLevel` :
- * une lumière sans niveaux cochés est de tous, un token est du sien) ; à défaut, le niveau que porte la source. Sans niveau
- * d'observateur, ou sans rien qui le dise : oui.
+ * Is the darkness source on the observer's level (V14 multi-level scenes)? Its document says so (`includedInLevel`:
+ * a light with no levels ticked belongs to all, a token to its own); failing that, the level the source carries. With no
+ * observer level, or nothing that says: yes.
  */
 function sourceOnLevel(source, levelId) {
   if ( !levelId ) return true;
@@ -353,15 +353,15 @@ function sourceOnLevel(source, levelId) {
 }
 
 /**
- * Ce qui bloque la vue le long d'un trait (échantillonné tous les demi-carreaux), extrémités comprises : une brume, des
- * ténèbres, les deux ou rien.
- * §447 : `observer` — s'il voit à travers les ténèbres de ses propres sorts : elles comptent en `ownDarkness`, pas en `darkness`.
+ * What blocks sight along a line (sampled every half-square), endpoints included: fog, darkness,
+ * both, or nothing.
+ * §447: `observer` — if it sees through the darkness of its own spells: it counts in `ownDarkness`, not in `darkness`.
  * @returns {{fog: boolean, darkness: boolean, silence: boolean, ownDarkness: boolean}}
  */
 function blockedAlong(scene, from, to, observer=null) {
   const out = { fog: false, darkness: false, silence: false, ownDarkness: false };
   let regions = blockingRegions(scene);
-  // Ses items ne sont lus que si l'observateur a lui-même posé des Ténèbres (ce test court à chaque rafraîchissement de la vue).
+  // Its items are read only if the observer itself has placed Darkness (this test runs on every sight refresh).
   const mine = r => (r.kind === "darkness") && observer?.actor && (r.caster?.uuid === observer.actor.uuid);
   if ( regions.some(mine) && ownDarknessSight(observer) ) regions = regions.map(r => mine(r) ? { ...r, kind: "ownDarkness" } : r);
   const plain = plainDarknessSources(scene, observer, from, to);
@@ -380,30 +380,30 @@ function blockedAlong(scene, from, to, observer=null) {
 }
 
 /**
- * Une zone qui bloque la vue coupe-t-elle la vue entre deux tokens — l'un d'eux dedans, ou le trait qui les relie la
- * traversant ? Positions validées. `{ fog, darkness }`.
+ * Does an area that blocks sight cut sight between two tokens — one of them inside, or the line joining them
+ * crossing it? Validated positions. `{ fog, darkness }`.
  */
 export function blockedBetween(a, b) {
   return blockedAlong(a.parent, tokenCenter(a), tokenCenter(b), a);
 }
 
 /**
- * §447 : l'observateur voit-il normalement à travers les Ténèbres de ses propres sorts (`seesThroughOwnDarkness` : Pouvoir de l'ombre) ?
- * Son acteur, ou null.
+ * §447: does the observer see normally through the Darkness of their own spells (`seesThroughOwnDarkness`: "Shadow Power")?
+ * Its actor, or null.
  * @param {TokenDocument} observer
  */
 export function ownDarknessSight(observer) {
   const actor = observer?.actor;
   if ( !actor ) return null;
-  // Appelé pour chaque token doté de la vue à chaque rafraîchissement de la vue (ui/perception.mjs, `grantAll`) : presque aucun
-  // objet ne déclare cette clé — on ne compose l'entrée (`contentOf`) que de celui dont une couche la porte.
+  // Called for each token with sight on every sight refresh (ui/perception.mjs, `grantAll`): almost no
+  // item declares this key — the entry (`contentOf`) is composed only for the one that has a layer carrying it.
   const overrides = worldOverrides();
   const key = "seesThroughOwnDarkness";
   const sees = item => declaresKey(item, key, overrides) && (contentOf(item).entry?.[key] === true);
   return Array.from(actor.items ?? []).some(sees) ? actor : null;
 }
 
-/** §447 : ce point est-il dans des Ténèbres qu'un sort de l'observateur a posées, et l'observateur y voit-il (`seesThroughOwnDarkness`) ? */
+/** §447: is this point in Darkness that a spell of the observer placed, and does the observer see in it (`seesThroughOwnDarkness`)? */
 export function inOwnDarkness(observer, point) {
   const actor = observer?.actor;
   if ( !actor || !point ) return false;
@@ -411,12 +411,12 @@ export function inOwnDarkness(observer, point) {
   return here && !!ownDarknessSight(observer);
 }
 
-/** Un rayon lu dans l'unité d'une règle, ramené à celle de la grille (la valeur telle quelle si l'unité est inconnue). */
+/** A radius read in a rule's unit, converted to the grid's (the value as is if the unit is unknown). */
 function toGridUnits(value, units, grid) {
   return lengthIn(value, units, grid.units);
 }
 
-/** La portée de la Vision du diable de l'observateur, unité de la grille, ou 0. */
+/** The range of the observer's Devil's Sight, in grid units, or 0. */
 export function devilsSightRange(observer) {
   const items = observer.actor?.items ?? [];
   if ( !items.some?.(i => identifierOf(i).id === DEVILS_SIGHT.identifier) ) return 0;
@@ -424,17 +424,17 @@ export function devilsSightRange(observer) {
 }
 
 /**
- * À travers une zone qui bloque la vue, l'observateur perçoit-il la cible ? Les sens qui percent (core/light.mjs,
- * `sensesThrough`) se jugent ici à la portée et aux murs seuls : dans des ténèbres, le cœur tient la source pour aveuglée
- * (`blinded.darkness`, point-vision-source.mjs:186-190) et ses propres modes échoueraient. La perception des vibrations,
- * qui ignore les murs et l'aveuglement, reste jugée par le cœur. La Vision du diable « voit normalement » : pas un
- * Invisible.
+ * Through an area that blocks sight, does the observer perceive the target? The senses that pierce (core/light.mjs,
+ * `sensesThrough`) are judged here on range and walls alone: in darkness, the core treats the source as blinded
+ * (`blinded.darkness`, point-vision-source.mjs:186-190) and its own modes would fail. Tremorsense,
+ * which ignores walls and blinding, is still judged by the core. Devil's Sight "sees normally": not an
+ * Invisible target.
  */
 function seesThroughBlock(observer, target, source, config, blocked, locating=false, senseOnly=false) {
   const own = detectionModesOf(observer);
   const distance = distanceBetween(observer, target).value;
   for ( const id of sensesThrough(blocked) ) {
-    if ( id === DEVILS_SIGHT.mode ) continue;   // jugée par l'invocation elle-même, ci-dessous (un PNJ n'a pas forcément le mode)
+    if ( id === DEVILS_SIGHT.mode ) continue;   // judged by the call itself, below (an NPC need not have the mode)
     if ( senseOnly && countsAsSight(id) ) continue;   // issue #107: only the senses that locate without sight
     const mode = own[id];
     if ( !mode || (mode.enabled === false) ) continue;
@@ -443,14 +443,14 @@ function seesThroughBlock(observer, target, source, config, blocked, locating=fa
       if ( CONFIG.Canvas.detectionModes[id]?.testVisibility(source, mode, config) === true ) return true;
       continue;
     }
-    // Issue #42 : la ligne de vue sans les bords des ténèbres — sinon ni la vision aveugle ni la vision véritable n'y voyaient.
+    // Issue #42: line of sight without the darkness edges — otherwise neither Blindsight nor Truesight saw into it.
     if ( senseReaches({ distance, range: mode.range, lineOfSight: lineOfSightThrough(observer, target), sense: id, blind: isBlind(observer) }) ) return true;
   }
   return !senseOnly && devilsSightSeesToken(observer, target, blocked);
 }
 
 /**
- * Réglage `unconsciousSenses` : l'observateur est-il Inconscient, et le réglage du monde lui retire-t-il ses sens ?
+ * `unconsciousSenses` setting: is the observer Unconscious, and does the world setting remove their senses?
  * @param {TokenDocument} observer
  */
 export function isSenseless(observer) {
@@ -461,28 +461,28 @@ export function isSenseless(observer) {
   return senseless({ unconscious, rule });
 }
 
-/** L'observateur est-il Aveuglé (état du cœur) ? */
+/** Is the observer Blinded (core condition)? */
 function isBlind(observer) {
   return !!observer?.hasStatusEffect?.(CONFIG.specialStatusEffects.BLIND);
 }
 
-/** Issue #42 : depuis les yeux de l'observateur, la ligne de vue sur la cible, sans les bords des sources de ténèbres. */
+/** Issue #42: from the observer's eyes, the line of sight to the target, without the edges of darkness sources. */
 function lineOfSightThrough(observer, target) {
   const eye = observer.getVisionOrigin?.(committedPosition(observer)) ?? tokenCenter(observer);
   return hasLineOfSight(eye, target, canvas.scene.levels?.get?.(observer.level), { throughDarkness: true, externalRadius: observer.object?.externalRadius ?? 0 });
 }
 
 /**
- * Issue #42 : la Vision du diable de l'observateur voit-elle la cible (« voit normalement dans les ténèbres, magiques ou non, à 120 ft ») ?
- * Pour les règles (`canSee`) comme pour l'écran (le mode de détection `devilsSight`, ui/perception.mjs). Positions validées.
+ * Issue #42: does the observer's Devil's Sight see the target ("sees normally in Darkness, magical or otherwise, to 120 ft")?
+ * For the rules (`canSee`) as for the screen (the `devilsSight` detection mode, ui/perception.mjs). Validated positions.
  * @param {TokenDocument} observer
  * @param {TokenDocument} target
- * @param {{fog: boolean}} [blocked]  Ce qui coupe la vue entre les deux, s'il est déjà connu.
+ * @param {{fog: boolean}} [blocked]  What cuts sight between the two, if already known.
  */
 export function devilsSightSeesToken(observer, target, blocked=null) {
   if ( !observer || !target ) return false;
   blocked ??= blockedBetween(observer, target);
-  // §447 : seules ses propres Ténèbres entre les deux (`seesThroughOwnDarkness`) — « voit normalement », sans limite de portée.
+  // §447: only its own Darkness between the two (`seesThroughOwnDarkness`) — "sees normally", with no range limit.
   const range = (blocked.ownDarkness && !blocked.darkness) ? Infinity : devilsSightRange(observer);
   if ( !range ) return false;
   const fog = blocked.fog;
@@ -495,8 +495,8 @@ export function devilsSightSeesToken(observer, target, blocked=null) {
 }
 
 /**
- * Issue #42 : un sens qui perce les ténèbres (vision aveugle, vision véritable) atteint-il la cible, pour l'écran ? Portée du mode et
- * ligne de vue sans les bords des ténèbres ; Aveuglé, seule la vision aveugle perce encore.
+ * Issue #42: does a sense that pierces darkness (Blindsight, Truesight) reach the target, for the screen? Mode range and
+ * line of sight without the darkness edges; Blinded, only Blindsight still pierces.
  */
 export function senseReachesToken(observer, target, range, sense=null) {
   return senseReaches({ distance: distanceBetween(observer, target).value, range: range ?? null, lineOfSight: lineOfSightThrough(observer, target),
@@ -504,11 +504,11 @@ export function senseReachesToken(observer, target, range, sense=null) {
 }
 
 /**
- * L'observateur voit-il ce point (« un espace inoccupé que vous pouvez voir », Pas brumeux) ? Même test que `canSee`
- * — lumières, vue, perception de la lumière, modes spéciaux, murs —, sur le seul point, au niveau de l'observateur.
+ * Does the observer see this point ("an unoccupied space you can see", Misty Step)? Same test as `canSee`
+ * — lights, sight, light perception, special modes, walls —, on the point alone, at the observer's level.
  * @param {TokenDocument} observer
  * @param {{x: number, y: number, elevation?: number}} point
- * @returns {boolean|null}  null : impossible à dire (vision hors service, canevas absent).
+ * @returns {boolean|null}  null: cannot tell (vision out of service, no canvas).
  */
 export function canSeePoint(observer, point) {
   if ( !available || !canvas?.ready || !observer ) return null;
@@ -517,9 +517,9 @@ export function canSeePoint(observer, point) {
   if ( !source ) return null;
   const level = canvas.scene.levels?.get?.(observer.level) ?? canvas.level;
   const config = { object: null, level, tests: [{ point: { x: point.x, y: point.y, elevation: point.elevation ?? 0 }, level, los: new Map() }] };
-  // §16.31 : un point dans une brume ou des ténèbres, ou vu à travers, ne se voit pas — sauf par les sens qui les percent.
+  // §16.31: a point in fog or darkness, or seen through it, is not seen — except by the senses that pierce them.
   const blocked = blockedAlong(observer.parent, tokenCenter(observer), point, observer);
-  // §447 : seules ses propres Ténèbres (`seesThroughOwnDarkness`) : la vue normale, sans leurs bords.
+  // §447: only its own Darkness (`seesThroughOwnDarkness`): normal sight, without their edges.
   if ( blocked.ownDarkness && !blocked.fog && !blocked.darkness ) {
     const eye = observer.getVisionOrigin?.(committedPosition(observer)) ?? tokenCenter(observer);
     return CONFIG.Canvas.polygonBackends.sight.testCollision(eye, { x: point.x, y: point.y, elevation: point.elevation ?? eye.elevation },
@@ -530,14 +530,14 @@ export function canSeePoint(observer, point) {
     const grid = observer.parent.grid;
     const from = tokenCenter(observer);
     const distance = grid.measurePath([from, { x: point.x, y: point.y, elevation: point.elevation ?? from.elevation }]).distance;
-    // Un point (« un espace que vous pouvez voir ») se voit : les modes du cœur sans murs (vibrations, Sense All, Sense Invisibility) ne
-    // comptent pas.
+    // A point ("a space you can see") is seen: the core's modes without walls (Tremorsense, Sense All, Sense Invisibility) do not
+    // count.
     const ranges = sensesThrough(blocked).filter(id => !CORE_JUDGED.includes(id) && own[id] && (own[id].enabled !== false))
       .map(id => own[id].range);
     if ( blocked.darkness && !blocked.fog ) ranges.push(devilsSightRange(observer));
     if ( !ranges.some(r => r && (distance <= r)) ) return false;
     const eye = observer.getVisionOrigin?.(committedPosition(observer)) ?? from;
-    // Issue #42 : sans les bords des sources de ténèbres (clockwise-sweep.mjs:116-124, 163-175) — ils coupaient tout rayon qui y entre.
+    // Issue #42: without the edges of darkness sources (clockwise-sweep.mjs:116-124, 163-175) — they cut every ray entering them.
     return CONFIG.Canvas.polygonBackends.sight.testCollision(eye, { x: point.x, y: point.y, elevation: point.elevation ?? eye.elevation },
       { type: "sight", mode: "any", level: level ?? undefined, edgeTypes: { source: false } }) !== true;
   }
@@ -553,7 +553,7 @@ export function canSeePoint(observer, point) {
 }
 
 /**
- * Les deux faits d'une attaque, ou null si l'un des deux ne peut pas être établi.
+ * The two facts of an attack, or null if either cannot be established.
  * @returns {{attackerSees: boolean, targetSees: boolean}|null}
  */
 export function visionFacts(attacker, target) {
@@ -567,7 +567,7 @@ export function visionFacts(attacker, target) {
 /*  Depuis un acteur, depuis un point           */
 /* -------------------------------------------- */
 
-/** Le token d'un acteur sur la scène affichée : le sien (non lié), sinon le premier de ses tokens. */
+/** An actor's token on the displayed scene: its own (unlinked), otherwise the first of its tokens. */
 export function tokenOnViewedScene(actor) {
   if ( !actor ) return null;
   if ( actor.token?.parent === canvas?.scene ) return actor.token;
@@ -575,8 +575,8 @@ export function tokenOnViewedScene(actor) {
 }
 
 /**
- * Un acteur en voit-il un autre ? Pour les réactions (« que vous pouvez voir ») et Effrayé
- * (« tant que la source est en vue »). null : impossible à dire (vision hors service, pas de token).
+ * Does one actor see another? For Reactions ("that you can see") and Frightened
+ * ("as long as the source is in sight"). null: cannot tell (vision out of service, no token).
  */
 export function seesBetween(observerActor, targetActor) {
   if ( !available ) return null;
@@ -584,31 +584,31 @@ export function seesBetween(observerActor, targetActor) {
 }
 
 /**
- * Depuis ce point, a-t-on la LIGNE DE VUE sur la cible ? Murs de type `sight` seulement — ni
- * lumière, ni portée des sens : c'est le test bon marché de l'approche (« une case d'où l'on voit
- * la cible », SPEC §14.1), joué sur beaucoup de cases candidates par le chercheur de chemin.
+ * From this point, is there a LINE OF SIGHT to the target? `sight` walls only — neither
+ * light nor sense range: it is the cheap test of the approach ("a cell from which the target
+ * is seen", SPEC §14.1), played on many candidate cells by the pathfinder.
  * @param {{x: number, y: number, elevation?: number}} point
  * @param {TokenDocument} target
- * @param {Level} [level]  Niveau dont on prend les murs (celui de l'observateur) ; à défaut, le niveau affiché.
- * @param {{throughDarkness?: boolean, externalRadius?: number}} [options]  Issue #42 : sans les bords des sources de ténèbres.
- *        `externalRadius` (§518) : le rayon de l'observateur, pour le seuil des fenêtres (`Token#externalRadius`, token.mjs:3928).
+ * @param {Level} [level]  Level whose walls are used (the observer's); otherwise the displayed level.
+ * @param {{throughDarkness?: boolean, externalRadius?: number}} [options]  Issue #42: without the edges of darkness sources.
+ *        `externalRadius` (§518): the observer's radius, for the window threshold (`Token#externalRadius`, token.mjs:3928).
  */
 export function hasLineOfSight(point, target, level=undefined, { throughDarkness=false, externalRadius=0 }={}) {
   if ( !canvas?.ready || !target?.object ) return true;
   const backend = CONFIG.Canvas.polygonBackends.sight;
   const origin = { x: point.x, y: point.y, elevation: point.elevation ?? committedPosition(target).elevation ?? 0 };
-  // P2 : les murs du niveau de l'observateur (sans `level`, le cœur prend le niveau affiché, source-polygon.mjs:187).
-  // Issue #42 : un rayon `sight` du cœur compte aussi les bords des sources de ténèbres (clockwise-sweep.mjs:163-175, bords `sight`
-  // de point-darkness-source.mjs:98-107) — tout rayon qui entre dans des Ténèbres était coupé. Pour un sens qui les perce (Vision du
-  // diable, vision véritable, vision aveugle), `throughDarkness` les écarte (`edgeTypes`, clockwise-sweep.mjs:116-124) : murs et
-  // planchers comptent toujours.
-  // §518 (Discord, SpitFire) : le seuil des murs « proximité » (fenêtres) comme la vision d'un token (`useThreshold`,
-  // sources/point-vision-source.mjs:293 ; `Edge#applyThreshold`, edges/edge.mjs:220) — sans lui, une fenêtre coupait la vue même collé à
-  // la vitre, et un archer à sa fenêtre était refusé « hors de vue ».
+  // P2: the walls of the observer's level (without `level`, the core takes the displayed level, source-polygon.mjs:187).
+  // Issue #42: a core `sight` ray also counts the edges of darkness sources (clockwise-sweep.mjs:163-175, `sight` edges
+  // of point-darkness-source.mjs:98-107) — every ray entering Darkness was cut. For a sense that pierces them (Devil's
+  // Sight, Truesight, Blindsight), `throughDarkness` sets them aside (`edgeTypes`, clockwise-sweep.mjs:116-124): walls and
+  // floors still count.
+  // §518 (Discord, SpitFire): the threshold of "proximity" walls (windows) as for a token's vision (`useThreshold`,
+  // sources/point-vision-source.mjs:293; `Edge#applyThreshold`, edges/edge.mjs:220) — without it, a window cut sight even
+  // pressed against the pane, and an archer at their window was refused "out of sight".
   const config = { type: "sight", mode: "any", level: level ?? undefined, useThreshold: true, externalRadius,
     ...(throughDarkness ? { edgeTypes: { source: false } } : {}) };
-  // P2 : un plancher ou un plafond (Surface `sight`) coupe la ligne de vue comme un mur — entre la hauteur
-  // du point et celle des yeux de la cible (Scene#testSurfaceCollision, un lancer de rayon 3D).
+  // P2: a floor or ceiling (`sight` Surface) cuts the line of sight like a wall — between the height
+  // of the point and that of the target's eyes (Scene#testSurfaceCollision, a 3D ray cast).
   const scene = target.parent;
   const surfaces = typeof scene.testSurfaceCollision === "function";
   return target.getVisibilityTestPoints(committedPosition(target)).some(p => {

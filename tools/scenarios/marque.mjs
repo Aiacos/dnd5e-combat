@@ -1,12 +1,12 @@
 /**
- * Brique B10 « marque consommée » (SPEC §16.12) :
- *  1. Rayon traçant (PHB, donné au Magicien le temps du scénario) touche le Zombi → marque (effet « Guiding Bolt ») ;
- *     le Guerrier attaque le Zombi → son jet a l'avantage déclaré (raison `content`) et la marque tombe.
- *  2. Moquerie cruelle (PHB) : le Zombi rate sa sauvegarde → effet « Mocked » ; il attaque le Magicien → son jet a le
- *     désavantage déclaré et l'effet tombe.
- * La consommation est jouée par le MJ actif ; les raisons d'avantage sont écrites sous le jet par le client qui UTILISE
- * l'attaque (celui du MJ qui porte le connecteur) : cette partie demande que ce client ait le code ≥ 0.39.0 (F5).
- * Les items sont donnés AVANT d'inscrire les remises en état : les effets tombent avant que leurs items soient retirés.
+ * Brick B10 "consumed mark" (SPEC §16.12):
+ *  1. Guiding Bolt (PHB, given to the Wizard for the scenario) hits the Zombie → mark (effect "Guiding Bolt");
+ *     the Fighter attacks the Zombie → their roll has the declared advantage (reason `content`) and the mark falls.
+ *  2. Vicious Mockery (PHB): the Zombie fails its saving throw → effect "Mocked"; it attacks the Wizard → its roll has the
+ *     declared disadvantage and the effect falls.
+ * The consumption is played by the active GM; the advantage reasons are written under the roll by the client that USES
+ * the attack (the GM's one that carries the connector): this part requires that client to have code ≥ 0.39.0 (F5).
+ * The items are given BEFORE registering the restorations: the effects fall before their items are removed.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -23,7 +23,7 @@ export default {
     ctx.restore(() => ctx.setHp(zombi, hp0.z));
     ctx.restore(() => ctx.setHp(mage, hp0.m));
     ctx.restore(() => ctx.setHp(fighter, hp0.f));
-    // Par l’origine (l’item du sort), pas par le nom : Babele traduit les noms d’effets sur le client du connecteur.
+    // By origin (the spell's item), not by name: Babele translates effect names on the connector's client.
     const zombiEffects = async itemId => (await ctx.effects(zombi)).filter(e => JSON.stringify([e.origin, e.system?.origin]).includes(itemId));
     const modifiersOf = async usageId => {
       const m = (await ctx.messagesSince(usageId)).find(x => x.type === "attack");
@@ -35,7 +35,7 @@ export default {
         && (i.system?.equipped !== false));
     };
 
-    // 1. Rayon traçant.
+    // 1. Guiding Bolt.
     let marked = false;
     for ( let i = 0; i < 20 && !marked; i++ ) {
       await ctx.setHp(zombi, hp0.z);

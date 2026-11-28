@@ -1,14 +1,14 @@
 /**
- * §403 : Bourrasque (`windward`) — le surcoût d'un trajet vers le lanceur dans la Ligne qui dure (core/windward.mjs). Les zones : celles
- * de la scène dont l'item déclare `windward`, le lanceur lu sur l'état de la zone (`source`). Coûts : ceux des points du trajet du cœur
- * (`cost`), sinon la distance mesurée sur la grille.
+ * §403: Gust of Wind (`windward`) — the extra cost of a path toward the caster in the lasting Line (core/windward.mjs).
+ * The areas: those of the scene whose item declares `windward`, the caster read from the area's state (`source`).
+ * Costs: those of the core path's points (`cost`), otherwise the distance measured on the grid.
  */
 
 import { windwardExtra } from "../core/windward.mjs";
 import { contentOf } from "./content.mjs";
 import { lastingRegions, readAreaState, isInside } from "./areas.mjs";
 
-/** Les zones `windward` de la scène, avec le token de leur lanceur. */
+/** The scene's `windward` areas, with the token of their caster. */
 function windwardZones(scene) {
   return lastingRegions(scene).map(region => {
     const state = readAreaState(region);
@@ -20,7 +20,7 @@ function windwardZones(scene) {
 }
 
 /**
- * Le surcoût, dans l'unité de la grille, du trajet `origin` → `waypoints` (positions de token), ou 0.
+ * The extra cost, in grid units, of the path `origin` → `waypoints` (token positions), or 0.
  * @param {TokenDocument} token
  * @param {object} origin
  * @param {object[]} waypoints

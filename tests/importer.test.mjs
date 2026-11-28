@@ -1,7 +1,7 @@
 /**
- * Diagnostic du monde : les objets d'un importeur peuvent porter leurs activités et leurs effets sous d'autres ids que l'objet
- * officiel (§245) — vrai de DDB Importer, que le moteur connaît, et d'autres importeurs, qu'un module compagnon déclare
- * (`api.diagnostic.registerImporter`). Le moteur n'en nomme aucun autre.
+ * World diagnostic: an importer's items may carry their activities and effects under ids other than the official item's
+ * (§245) — true of DDB Importer, which the engine knows, and of other importers, which a companion module declares
+ * (`api.diagnostic.registerImporter`). The engine names no other.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -10,8 +10,8 @@ import { DDB_IMPORTER, importerErrors, importerOf } from "../module/scripts/core
 const read = path => readFileSync(new URL(`../module/${path}`, import.meta.url), "utf8");
 const other = { id: "other-importer", flag: "otherimporter", name: "Items imported by Other" };
 
-describe("importerOf — l'importeur d'un objet d'après ses flags", () => {
-  it("DDB Importer sans rien déclarer ; un importeur déclaré ; ni l'un ni l'autre", () => {
+describe("importerOf — the importer of an item from its flags", () => {
+  it("DDB Importer with nothing declared; a declared importer; neither", () => {
     expect(importerOf({ ddbimporter: { id: 1 } })).toBe("ddb");
     expect(importerOf({ otherimporter: { page: "spells" } })).toBeNull();
     expect(importerOf({ otherimporter: { page: "spells" } }, [other])).toBe("other-importer");
@@ -20,7 +20,7 @@ describe("importerOf — l'importeur d'un objet d'après ses flags", () => {
     expect(importerOf(null, [other])).toBeNull();
     expect(importerOf(undefined)).toBeNull();
   });
-  it("un objet passé par deux importeurs n'est compté qu'une fois : par DDB Importer, puis dans l'ordre des déclarations", () => {
+  it("an item passed through two importers is counted only once: by DDB Importer, then in declaration order", () => {
     expect(importerOf({ otherimporter: {}, ddbimporter: { id: 2 } }, [other])).toBe("ddb");
     const second = { id: "second", flag: "second" };
     expect(importerOf({ otherimporter: {}, second: {} }, [other, second])).toBe("other-importer");
@@ -28,19 +28,19 @@ describe("importerOf — l'importeur d'un objet d'après ses flags", () => {
   });
 });
 
-describe("importerErrors — la déclaration d'un importeur", () => {
-  it("une bonne déclaration : rien", () => {
+describe("importerErrors — an importer's declaration", () => {
+  it("a good declaration: nothing", () => {
     expect(importerErrors(other)).toEqual([]);
     expect(importerErrors({ ...other, hint: "Help", icon: "fa-solid fa-file-import" })).toEqual([]);
   });
-  it("id, flag et nom sont requis, à la bonne forme", () => {
+  it("id, flag and name are required, in the right shape", () => {
     expect(importerErrors(null).length).toBe(1);
     expect(importerErrors({ ...other, id: "Other Importer" }).join()).toMatch(/^id:/);
     expect(importerErrors({ ...other, flag: "" }).join()).toMatch(/^flag:/);
     expect(importerErrors({ ...other, name: "  " }).join()).toMatch(/^name:/);
     expect(importerErrors({ ...other, hint: 3 }).join()).toMatch(/^hint:/);
   });
-  it("ni l'id ni le flag de DDB Importer, ni ceux d'un importeur déjà déclaré", () => {
+  it("neither DDB Importer's id nor flag, nor those of an already declared importer", () => {
     expect(importerErrors({ ...other, id: DDB_IMPORTER.id }).join()).toMatch(/already taken/);
     expect(importerErrors({ ...other, flag: DDB_IMPORTER.flag }).join()).toMatch(/already belongs to "ddb"/);
     expect(importerErrors({ ...other, id: "again" }, [other]).join()).toMatch(/already belongs to "other-importer"/);
@@ -49,12 +49,12 @@ describe("importerErrors — la déclaration d'un importeur", () => {
 });
 
 describe("le moteur ne nomme que DDB Importer", () => {
-  it("aucun autre importeur dans le code du diagnostic, ses traductions, ni l'API", () => {
+  it("no other importer in the diagnostic code, its translations, or the API", () => {
     const sources = ["scripts/core/importer.mjs", "scripts/runtime/diagnostic/checks.mjs", "scripts/runtime/diagnostic/index.mjs",
       "scripts/ui/diagnostic.mjs", "lang/en.json", "lang/fr.json", "lang/it.json"].map(read).join("\n");
     expect(sources).not.toMatch(/plutonium/i);
   });
-  it("la vérification d'un importeur déclaré porte son propre nom et sa propre aide", () => {
+  it("the check of a declared importer carries its own name and its own help", () => {
     const ui = read("scripts/ui/diagnostic.mjs");
     expect(ui).toContain("check.name ?? loc(`Diagnostic.Verif.${check.id}.Nom`)");
     expect(ui).toContain("check.hint ?? loc(`Diagnostic.Verif.${check.id}.Aide`)");

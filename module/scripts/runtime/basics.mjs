@@ -1,16 +1,16 @@
 /**
- * Actions de base (SPEC §15.2) : le MJ actif pose sur TOUS les personnages (acteurs « character », qu'ils
- * aient un joueur ou non — un personnage joué par le MJ en a besoin aussi) les items qui leur manquent, en
- * permanence : au chargement du monde, à la création d'un personnage, au début d'un combat et quand un
- * personnage rejoint un combat en cours. Rien n'est retiré, rien n'est posé sur un PNJ — sauf un familier (§107 : Appel de
- * familier, Compagnon sauvage, Pacte de la chaîne), qui reçoit à son invocation celles qui n'attaquent pas (« un familier ne peut
- * pas attaquer, mais il peut entreprendre d'autres actions normalement ») : sur l'acteur de son token (le delta d'un token non
- * lié, comme dnd5e le crée). Réglage de monde.
- * (Première version, 0.23.0 : seulement les personnages des joueurs, seulement au début d'un combat —
- * introuvables hors combat, absents d'un personnage joué par le MJ ; corrigé le 2026-09-23.)
+ * Basic actions (SPEC §15.2): the active GM puts on ALL characters ("character" actors, whether they
+ * have a player or not — a character played by the GM needs them too) the items they lack, on
+ * a permanent basis: at world load, at character creation, at the start of a combat and when a
+ * character joins a combat in progress. Nothing is removed, nothing is placed on an NPC — except a familiar (§107: Find
+ * Familiar, Wild Companion, Pact of the Chain), which receives on summoning those that do not attack ("a familiar can't
+ * attack, but it can take other actions as normal"): on the actor of its token (the delta of an unlinked token, as dnd5e
+ * creates it). World setting.
+ * (First version, 0.23.0: only players' characters, only at the start of a combat —
+ * not findable out of combat, absent from a character played by the GM; fixed on 2026-09-23.)
  *
- * Et l'attaque de la main secondaire côté dégâts : dnd5e retire déjà le modificateur positif en mode
- * `offhand` (data/activity/attack-data.mjs:426) ; le style Combat à deux armes le rend.
+ * And the off-hand attack on the damage side: dnd5e already removes the positive modifier in `offhand`
+ * mode (data/activity/attack-data.mjs:426); the Two-Weapon Fighting style gives it back.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -29,13 +29,13 @@ async function provide(actors) {
   const seen = new Set();
   for ( const actor of actors ) {
     if ( !actor || seen.has(actor.uuid) ) continue;
-    // L'acteur de base d'un familier non lié (celui du dossier des acteurs) n'est pas touché : seul celui de son token.
+    // The base actor of an unlinked familiar (the one in the actors directory) is not touched: only that of its token.
     const familiar = (actor.type !== "character") && (actor.isToken || actor.prototypeToken?.actorLink === true) && isFamiliarActor(actor);
     if ( (actor.type !== "character") && !familiar ) continue;
     seen.add(actor.uuid);
-    // Lire ce qui manque puis le créer, en série par acteur : deux passages qui se chevauchent (deux combattants du même
-    // personnage, le début du combat pendant qu'un combattant s'ajoute) lisaient tous deux « manquantes » et créaient les items
-    // en double.
+    // Read what is missing then create it, serialized per actor: two overlapping passes (two combatants of the same
+    // character, the combat start while a combatant is added) both read "missing" and created the items
+    // twice.
     await enqueue(`basics:${actor.uuid}`, async () => {
       const missing = missingBasicActions(actor, { familiar });
       if ( !missing.length ) return;
@@ -45,19 +45,19 @@ async function provide(actors) {
   }
 }
 
-/** §107 : les acteurs des familiers posés sur les scènes (invoqués avant cette version). */
+/** §107: the actors of familiars placed on scenes (summoned before this version). */
 function familiarActorsOnScenes() {
   const out = [];
   for ( const scene of game.scenes ) for ( const token of scene.tokens ) if ( isFamiliarToken(token) && token.actor ) out.push(token.actor);
   return out;
 }
 
-/** Combat à deux armes : le modificateur revient aux dégâts de la main secondaire (sur le client de l'auteur). */
+/** Two-Weapon Fighting: the modifier returns to the off-hand damage (on the author's client). */
 function onPreRollDamage(config) {
   const actor = config.subject?.actor;
   const roll = config.rolls?.[0];
   if ( !config.attackMode?.endsWith?.("offhand") || !roll || !actor ) return true;
-  // §131 : Expert des arbalètes — « l'attaque supplémentaire de la propriété Légère avec une arbalète Légère ».
+  // §131: Crossbow Expert — "the extra attack of the Light property with a Light crossbow".
   const crossbow = rangedFeatsOf(actor, config.subject, config.attackMode).offhandModifier;
   if ( !crossbow && !actor.items.some(i => identifierOf(i).id === "two-weapon-fighting") ) return true;
   if ( !((roll.data?.mod ?? 0) > 0) || roll.parts?.includes("@mod") ) return true;
@@ -67,19 +67,19 @@ function onPreRollDamage(config) {
 }
 
 export function registerBasics() {
-  // Fenêtres du combat (réaction, choix, sauvegarde) : résolues seules au bout de ce délai (adapter/dialogs.mjs).
+  // Combat windows (reaction, choice, save): resolved on their own after this delay (adapter/dialogs.mjs).
   game.settings.register(MODULE_ID, "combatWindowSeconds", {
     name: "DND5ECOMBAT.Reglage.combatWindowSeconds.Nom", hint: "DND5ECOMBAT.Reglage.combatWindowSeconds.Aide",
     scope: "world", config: true, type: Number, default: 10, range: { min: 3, max: 60, step: 1 }
   });
-  // Sauvegarde à plusieurs caractéristiques au choix de la cible (Lutte, Bousculade) : pour une cible jetée
-  // par le MJ, demander (fenêtre chez le MJ) ou prendre la meilleure. Un joueur choisit toujours.
+  // Save with several abilities at the target's choice (Grapple, Shove): for a target rolled
+  // by the GM, ask (window on the GM) or take the best. A player always chooses.
   game.settings.register(MODULE_ID, "npcSaveChoice", {
     name: "DND5ECOMBAT.Reglage.npcSaveChoice.Nom", hint: "DND5ECOMBAT.Reglage.npcSaveChoice.Aide",
     scope: "world", config: true, type: String, default: "ask",
     choices: { ask: "DND5ECOMBAT.Reglage.npcSaveChoice.ask", best: "DND5ECOMBAT.Reglage.npcSaveChoice.best" }
   });
-  // §18.9 : Résistance légendaire d'un PNJ qui rate une sauvegarde — demander au MJ, toujours la dépenser, ou jamais.
+  // §18.9: Legendary Resistance of an NPC that fails a save — ask the GM, always spend it, or never.
   game.settings.register(MODULE_ID, "legendaryResistance", {
     name: "DND5ECOMBAT.Reglage.legendaryResistance.Nom", hint: "DND5ECOMBAT.Reglage.legendaryResistance.Aide",
     scope: "world", config: true, type: String, default: "ask",
@@ -93,7 +93,7 @@ export function registerBasics() {
   const placed = { executor: true, label: "basic actions added" };
   route("ready", () => provide([...game.actors, ...familiarActorsOnScenes()]).catch(err => console.error(`${MODULE_ID} | basic actions`, err)), placed);
   route("createActor", actor => provide([actor]), placed);
-  // §107 : un familier invoqué (ou rappelé de sa poche) — l'acteur de son token.
+  // §107: a familiar summoned (or recalled from its pocket) — the actor of its token.
   route("createToken", tokenDoc => (isFamiliarToken(tokenDoc) ? provide([tokenDoc.actor]) : null), placed);
   route("combatStart", combat => provide(combat.combatants.map(c => c.actor)), placed);
   route("createCombatant", combatant => provide([combatant.actor]), placed);

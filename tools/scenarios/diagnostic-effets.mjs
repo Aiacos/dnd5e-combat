@@ -1,9 +1,9 @@
 /**
- * §202 : le diagnostic du monde rétablit l'enchantement perdu d'un objet du Guide du maître (Projectile percutant), sur un acteur
- * créé pour le test : l'objet, sans effet, est trouvé par « Objets aux effets perdus » ; réparé (sauvegarde d'abord), il est remplacé
- * par une copie neuve du compendium qui garde son nom et porte l'enchantement — au nom de l'objet traduit, jamais au nom anglais
- * quand l'objet est traduit (core/localize.mjs).
- * Remet tout : acteur, entrées de sauvegarde, et le compendium s'il n'existait pas avant.
+ * §202: the world diagnostic restores the lost enchantment of a Dungeon Master's Guide item (Ammunition of Impact), on an actor
+ * created for the test: the item, without effect, is found by "Items with lost effects"; repaired (backup first), it is replaced
+ * by a fresh compendium copy that keeps its name and carries the enchantment — under the translated item name, never under
+ * the English name when the item is translated (core/localize.mjs).
+ * Restores everything: actor, backup entries, and the compendium if it did not exist before.
  */
 const MODULE_ID = "dnd5e-combat";
 const WALLOPING = "Compendium.dnd-dungeon-masters-guide.equipment.Item.dmgWallopingAmmu";

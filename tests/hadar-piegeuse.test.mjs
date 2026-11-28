@@ -1,30 +1,30 @@
-/** §80 : Faim de Hadar (une activité sœur par moment de zone) et Frappe piégeuse (dégâts au début du tour de l'entravée). */
+/** §80: Hunger of Hadar (a sibling activity per area moment) and Ensnaring Strike (damage at the Restrained one's turn start). */
 import { describe, it, expect } from "vitest";
 import { siblingFor, hitKey, siblingsByMoment, shouldTrigger, markHit, openArea, pulseFor, pulseTargets } from "../module/scripts/core/area.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 
-describe("une activité sœur par moment", () => {
-  it("siblingsByMoment : seulement quand elles diffèrent", () => {
+describe("one sibling activity per moment", () => {
+  it("siblingsByMoment: only when they differ", () => {
     expect(siblingsByMoment([{ on: ["turnStart"], activity: "cold" }, { on: ["turnEnd"], activity: "acid" }])).toEqual({ turnStart: "cold", turnEnd: "acid" });
-    expect(siblingsByMoment([{ on: ["enter", "turnEnd"], activity: "save" }])).toBeNull();   // Cordon de flèches
+    expect(siblingsByMoment([{ on: ["enter", "turnEnd"], activity: "save" }])).toBeNull();   // Cordon of Arrows
     expect(siblingsByMoment([{ on: ["enter", "turnEnd"], activity: null }])).toBeNull();     // Rayon de lune
   });
-  it("siblingFor : celle du moment, sinon la seule", () => {
+  it("siblingFor: the one for the moment, otherwise the only one", () => {
     const hadar = { activity: "acid", activities: { turnStart: "cold", turnEnd: "acid" } };
     expect(siblingFor(hadar, "turnStart")).toBe("cold");
     expect(siblingFor(hadar, "turnEnd")).toBe("acid");
     expect(siblingFor({ activity: "save" }, "enter")).toBe("save");
     expect(siblingFor({ activity: null }, "enter")).toBeNull();
   });
-  it("le froid du début du tour n'empêche pas l'acide de la fin, chacun une fois par tour", () => {
+  it("the cold of the start of the turn does not prevent the acid of the end, each once per turn", () => {
     const area = { ...openArea(["turnStart", "turnEnd"], "1-0"), activities: { turnStart: "cold", turnEnd: "acid" } };
     const at = event => ({ event, token: hitKey(area, event, "T"), turnKey: "1-0" });
     const afterStart = { ...area, ...markHit(area, at("turnStart")) };
     expect(shouldTrigger(afterStart, at("turnEnd"))).toBe(true);
     expect(shouldTrigger(afterStart, at("turnStart"))).toBe(false);
   });
-  it("une zone à une seule activité garde « une fois par tour » (Rayon de lune)", () => {
+  it("an area with a single activity keeps \"once per turn\" (Moonbeam)", () => {
     const area = openArea(["enter", "turnEnd"], "1-0");
     const ctx = event => ({ event, token: hitKey(area, event, "T"), turnKey: "1-0" });
     const after = { ...area, ...markHit(area, ctx("enter")) };
@@ -40,17 +40,17 @@ describe("contenu", () => {
     ]);
     expect(validateEntry(CONTENT["hunger-of-hadar"])).toEqual([]);
   });
-  it("Frappe piégeuse : dégâts au début du tour, et l'évasion par un autre reste", () => {
+  it("Ensnaring Strike: damage at the start of the turn, and the escape by someone else remains", () => {
     expect(CONTENT["ensnaring-strike"].triggers).toEqual([{ on: "startOfTurn", via: "effect", fromEffect: "tFGMG3cjQTEeAhv2",
       do: [{ type: "damage", to: "bearer", activity: "ZWId9mbOE9zFnP6f" }] }]);
     expect(CONTENT["ensnaring-strike"].actionEnds).toEqual({ tFGMG3cjQTEeAhv2: { by: "other", roll: "check" } });
-    expect(CONTENT["ensnaring-strike"].noDamage).toEqual(["dnd5eactivity000"]);   // §81 : pas de dégâts au lancement
+    expect(CONTENT["ensnaring-strike"].noDamage).toEqual(["dnd5eactivity000"]);   // §81: no damage on cast
     expect(validateEntry(CONTENT["ensnaring-strike"])).toEqual([]);
   });
 });
 
 describe("noDamage (§81)", () => {
-  it("liste d'ids d'activité de 16 caractères", () => {
+  it("list of 16-character activity ids", () => {
     expect(validateEntry({ noDamage: ["dnd5eactivity000"] })).toEqual([]);
     expect(validateEntry({ noDamage: [] }).length).toBeGreaterThan(0);
     expect(validateEntry({ noDamage: ["court"] }).length).toBeGreaterThan(0);
@@ -58,20 +58,20 @@ describe("noDamage (§81)", () => {
   });
 });
 
-describe("Mur d'épines (§85)", () => {
-  it("entrée et fin de tour : la sœur « Traversal Save », une fois par tour", () => {
+describe("Wall of Thorns (§85)", () => {
+  it("entry and end of turn: the sibling \"Traversal Save\", once per turn", () => {
     expect(CONTENT["wall-of-thorns"].triggers).toEqual([{ on: ["enter", "turnEnd"], do: [{ type: "replay", activity: "dMiM7Qec4keU3w7B" }] }]);
     expect(validateEntry(CONTENT["wall-of-thorns"])).toEqual([]);
   });
 });
 
-describe("Aura sacrée (§86)", () => {
-  it("aura : avantage aux sauvegardes, alliés et soi, tant que le sort tient", () => {
+describe("Holy Aura (§86)", () => {
+  it("aura: Advantage on saves, allies and self, as long as the spell holds", () => {
     const aura = CONTENT["holy-aura"].aura;
     expect(aura).toMatchObject({ whileActive: true, includeSelf: true, affects: "ally", radius: 30, units: "ft" });
     expect(aura.changes.map(c => c.key)).toContain("system.abilities.con.save.roll.mode");
   });
-  it("désavantage des attaquants, sauvegarde d'un Fiélon ou d'un Mort-vivant qui touche au corps à corps", () => {
+  it("Disadvantage for attackers, save of a Fiend or an Undead that hits in melee", () => {
     const [disadvantage, retaliation] = CONTENT["holy-aura"].triggers;
     expect(disadvantage).toMatchObject({ on: "preAttackRoll", via: "effect", do: [{ type: "disadvantage" }] });
     expect(retaliation).toEqual({ on: "isHit", via: "effect", if: { "activity.isMelee": true, "source.creatureType": ["fiend", "undead"] },
@@ -79,15 +79,15 @@ describe("Aura sacrée (§86)", () => {
     const facts = { "target.hasEffect": true, "activity.isMelee": true, "source.creatureType": true };
     expect(validateEntry(CONTENT["holy-aura"], { facts })).toEqual([]);
   });
-  it("étape save : vers la source, une activité", () => {
+  it("save step: toward the source, one activity", () => {
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "save", to: "source", activity: "0kylpwRauH0WgW0G" }] }] })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "save", to: "bearer", activity: "0kylpwRauH0WgW0G" }] }] }).length).toBeGreaterThan(0);
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "save", to: "source" }] }] }).length).toBeGreaterThan(0);
   });
 });
 
-describe("gabarit fourni par le contenu : Yolande, êtres sylvestres (§86)", () => {
-  it("selfZone et zoneAffects, validés", () => {
+describe("template supplied by the content: Yolande, sylvan beings (§86)", () => {
+  it("selfZone and zoneAffects, validated", () => {
     const facts = {};
     for ( const id of ["yolandes-regal-presence", "conjure-woodland-beings"] ) {
       expect(CONTENT[id].zoneAffects).toBe("enemy");
@@ -104,7 +104,7 @@ describe("gabarit fourni par le contenu : Yolande, êtres sylvestres (§86)", ()
   });
 });
 
-describe("manœuvres au toucher (§87)", () => {
+describe("touch maneuvers (§87)", () => {
   const facts = { "target.hasEffect": true, "target.hasEffectFrom": true, "source.hasEffect": true, "source.hasEffectFromTarget": true };
   for ( const id of ["disarming-attack", "distracting-strike", "goading-attack", "menacing-attack", "pushing-attack", "trip-attack", "maneuvering-attack"] ) {
     it(id, () => {
@@ -112,12 +112,12 @@ describe("manœuvres au toucher (§87)", () => {
       expect(validateEntry(CONTENT[id], { facts })).toEqual([]);
     });
   }
-  it("repoussante et croc-en-jambe : taille G au plus ; provocante : la sauvegarde sans dégâts", () => {
+  it("pushing and tripping: size Large at most; taunting: the save without damage", () => {
     expect(CONTENT["pushing-attack"].hitRider.sizeAtMost).toBe("lg");
     expect(CONTENT["trip-attack"].triggers).toEqual([{ on: "failedSave", do: [{ type: "status", status: "prone" }] }]);
     expect(CONTENT["goading-attack"].noDamage).toEqual(["YZDchvLnuCD6xMkF"]);
   });
-  it("pays : une chaîne, pas avec slot", () => {
+  it("pays: a string, not with slot", () => {
     expect(validateEntry({ hitRider: { pays: "combat-superiority", damage: "mlUC7IiS8ZyTvDpZ" } })).toEqual([]);
     expect(validateEntry({ hitRider: { pays: "combat-superiority", slot: "pact" } }).length).toBeGreaterThan(0);
     expect(validateEntry({ hitRider: { pays: "" } }).length).toBeGreaterThan(0);
@@ -125,14 +125,14 @@ describe("manœuvres au toucher (§87)", () => {
   });
 });
 
-describe("Parade et Riposte du Maître de guerre (§88)", () => {
-  it("la Parade du PHB a son propre identifiant ; celle du Monster Manual ne change pas", async () => {
+describe("Battle Master's Parry and Riposte (§88)", () => {
+  it("the PHB's Parry has its own identifier; the Monster Manual's does not change", async () => {
     const { SOURCE_IDENTIFIERS } = await import("../module/scripts/content/sources.mjs");
     expect(SOURCE_IDENTIFIERS.phbmnvParry00000).toBe("parry-maneuver");
     expect(CONTENT["parry-maneuver"].triggers[0].do).toEqual([{ type: "use", activity: "F4UxiihGgkdv4orJ" }, { type: "reduce" }]);
     expect(CONTENT.parry.triggers[0].do).toEqual([{ type: "use" }, { type: "penalty", formula: "@prof" }]);
   });
-  it("Riposte : use vers la source, avec l'arme", () => {
+  it("Riposte: use toward the source, with the weapon", () => {
     expect(CONTENT.riposte.triggers).toEqual([{ on: "isMissed", if: { "activity.isMelee": true },
       do: [{ type: "use", target: "source", activity: "QhxT9ZuZXmHGlrnT", weapon: true }] }]);
     expect(validateEntry(CONTENT.riposte, { facts: { "activity.isMelee": true } })).toEqual([]);
@@ -140,8 +140,8 @@ describe("Parade et Riposte du Maître de guerre (§88)", () => {
   });
 });
 
-describe("manœuvres à l'action Bonus (§89)", () => {
-  it("Fente, Feinte, Jeu de jambes évasif", () => {
+describe("Bonus Action maneuvers (§89)", () => {
+  it("Lunge, Feint, Evasive Footwork", () => {
     expect(CONTENT["lunging-attack"]).toMatchObject({ basicActions: { aoTn3UKohm5VAuIT: "dash" }, noDamage: ["aoTn3UKohm5VAuIT"], pendingDie: { activity: "aoTn3UKohm5VAuIT", against: "melee" } });
     expect(CONTENT["feinting-attack"].pendingDie).toEqual({ activity: "Utu8uaZOMepShbyw", against: "target" });
     expect(CONTENT["evasive-footwork"]).toMatchObject({ basicActions: { d3RqzIKzhqX82OwP: "disengage" }, rolledAc: { activity: "d3RqzIKzhqX82OwP", effect: "rGEvj6OHUjHan8pq" } });
@@ -154,14 +154,14 @@ describe("manœuvres à l'action Bonus (§89)", () => {
   });
 });
 
-describe("le reste des manœuvres (§90)", () => {
-  it("Attaque précise, Embuscade, Autorité naturelle, Évaluation tactique : rollBonus", () => {
+describe("the rest of the maneuvers (§90)", () => {
+  it("Precision Attack, Ambush, \"Natural Authority\", Tactical Assessment: rollBonus", () => {
     expect(CONTENT["precision-attack"].rollBonus).toEqual({ activity: "WrckriM4bPU6NS38", on: ["attack"] });
     expect(CONTENT.ambush.rollBonus).toEqual({ activity: "HiargkiZgN4q8kg6", on: ["check", "initiative"], skills: ["ste"] });
     expect(CONTENT["commanding-presence"].rollBonus.skills).toEqual(["itm", "prf", "per"]);
     expect(CONTENT["tactical-assessment"].rollBonus.skills).toEqual(["his", "inv", "ins"]);
   });
-  it("Balayage, Chassé-croisé, Frappe commandée", () => {
+  it("Sweeping Attack, Bait and Switch, Commander's Strike", () => {
     expect(CONTENT["sweeping-attack"]).toEqual({ sweep: { activity: "P9XWzKIH1sEvsOtC" } });
     expect(CONTENT["bait-and-switch"]).toEqual({ swapPlaces: { activity: "nYe2l7Rml0qyFbf6" }, rolledAc: { activity: "nYe2l7Rml0qyFbf6", effect: "8HUDgkIN8xvG2BAm", to: "choose" } });
     expect(CONTENT["commanders-strike"]).toEqual({ replacesAttack: true, noDamage: ["spcp6PQ8947Ds4Qg"], commandStrike: { activity: "spcp6PQ8947Ds4Qg" } });
@@ -178,8 +178,8 @@ describe("le reste des manœuvres (§90)", () => {
   });
 });
 
-describe("sorts au tour du lanceur (§91)", () => {
-  it("pulseFor : l'entrée qui couvre le numéro du rejeu", () => {
+describe("spells on the caster's turn (§91)", () => {
+  it("pulseFor: the entry that covers the replay number", () => {
     const rule = CONTENT["storm-of-vengeance"].casterPulse;
     expect(pulseFor(rule, 1).activity).toBe("WOo8u0FLAzNMpMJN");
     expect(pulseFor(rule, 2)).toMatchObject({ activity: "Fd8ZGgmDyNmJJuj3", max: 6 });
@@ -188,13 +188,13 @@ describe("sorts au tour du lanceur (§91)", () => {
     expect(pulseFor(rule, 9).activity).toBe("yt2oWWelZl1zV4CB");
     expect(pulseFor(rule, 10)).toBeNull();
   });
-  it("pulseTargets : les ennemis du lanceur d'abord, plafonnés", () => {
+  it("pulseTargets: the caster's enemies first, capped", () => {
     const t = [{ n: "a", disposition: 1 }, { n: "b", disposition: -1 }, { n: "c", disposition: -1 }, { n: "d", disposition: 1 }];
     expect(pulseTargets(t, 1, 2).map(x => x.n)).toEqual(["b", "c"]);
     expect(pulseTargets(t, 1, 3).map(x => x.n)).toEqual(["b", "c", "a"]);
     expect(pulseTargets(t, 1).map(x => x.n)).toEqual(["b", "c", "a", "d"]);
   });
-  it("le contenu des six sorts est valide", () => {
+  it("the content of the six spells is valid", () => {
     for ( const id of ["storm-of-vengeance", "earthquake", "delayed-blast-fireball", "tsunami", "symbol", "forbiddance"] ) {
       expect(validateEntry(CONTENT[id], { facts: { "activity.id": true, "source.hasEffect": true } }), id).toEqual([]);
     }
@@ -214,7 +214,7 @@ describe("sorts au tour du lanceur (§91)", () => {
   });
 });
 
-describe("Foulée des fées, Échappatoire brumeuse, Ange vengeur (§92)", () => {
+describe("Steps of the Fey, Misty Escape, Avenging Angel (§92)", () => {
   it("contenu", () => {
     expect(CONTENT["steps-of-the-fey"].afterTeleport.options.slice(0, 2)).toEqual([{ activity: "QUbshQXhUDQqlu2s" }, { activity: "48TdRWDqCVcC9mh4", around: "left" }]);
     expect(CONTENT["misty-escape"].saveDamage).toEqual({ kj8zIhPbjs4UIHtc: "none" });
@@ -227,14 +227,14 @@ describe("Foulée des fées, Échappatoire brumeuse, Ange vengeur (§92)", () =>
     expect(validateEntry({ afterTeleport: { spells: [], options: [{ activity: "QUbshQXhUDQqlu2s" }] } }).length).toBeGreaterThan(0);
     expect(validateEntry({ afterTeleport: { spells: ["misty-step"], options: [{ activity: "QUbshQXhUDQqlu2s", around: "near" }] } }).length).toBeGreaterThan(0);
     expect(validateEntry({ saveDamage: { kj8zIhPbjs4UIHtc: "full" } }).length).toBeGreaterThan(0);
-    expect(validateEntry({ emanation: { on: "turnStart", radiusFormula: "@scale.paladin.aura" } }).length).toBeGreaterThan(0);   // sans unité
+    expect(validateEntry({ emanation: { on: "turnStart", radiusFormula: "@scale.paladin.aura" } }).length).toBeGreaterThan(0);   // no unit
     expect(validateEntry({ emanation: { on: "turnStart", whileActive: "oui" } }).length).toBeGreaterThan(0);
   });
 });
 
 describe("Dons sombres : 1 naturel (§93)", async () => {
   const { rolledNaturalOne } = await import("../module/scripts/core/natural-one.mjs");
-  it("le d20 gardé fait 1", () => {
+  it("the kept d20 is 1", () => {
     expect(rolledNaturalOne([{ d20: { total: 1 } }])).toBe(true);
     expect(rolledNaturalOne([{ d20: { total: 2 } }])).toBe(false);
     expect(rolledNaturalOne([{ d20: { total: 14 } }, { d20: { total: 1 } }])).toBe(true);
@@ -252,7 +252,7 @@ describe("Dons sombres : 1 naturel (§93)", async () => {
   });
 });
 
-describe("dons et espèces de Ravenloft (§94)", () => {
+describe("Ravenloft feats and species (§94)", () => {
   it("contenu valide", () => {
     for ( const id of ["gathered-whispers", "symbiotic-being", "survivor-ravenloft", "mist-walker", "sharp-eye-ravenloft", "knowledge-from-a-past-life", "lupin-howl", "feral-pounce", "watchers"] ) {
       expect(validateEntry(CONTENT[id], { facts: { "source.hasEffect": true } }), id).toEqual([]);
@@ -285,7 +285,7 @@ describe("sous-classes de Ravenloft (§95)", () => {
   });
 });
 
-describe("Collège des esprits (§96)", () => {
+describe("College of Spirits (§96)", () => {
   it("contenu valide", () => {
     for ( const id of ["avenger-spirit", "brute-spirit", "coward-spirit", "fortune-teller-spirit", "priest-spirit", "shade-spirit", "empowered-channeling"] ) {
       expect(validateEntry(CONTENT[id], { facts: { "activity.isMelee": true, "source.hasEffect": true, "activity.classSpell": true, "activity.cantripOf": true, "activity.type": true } }), id).toEqual([]);
@@ -299,15 +299,15 @@ describe("Collège des esprits (§96)", () => {
   });
 });
 
-describe("§435 : la Submersion du Monster Manual n'est pas le marteau « Whelm » du Guide", () => {
-  it("identifiant propre, sans entrée livrée : seule la couche texte (dégâts au début du tour de l'Élémentaire) s'y applique", async () => {
+describe("§435: the Monster Manual's \"Submersion\" is not the Dungeon Master's Guide's \"Whelm\" hammer", () => {
+  it("own identifier, no shipped entry: only the text layer (damage at the start of the Elemental's turn) applies", async () => {
     const { SOURCE_IDENTIFIERS } = await import("../module/scripts/content/sources.mjs");
     expect(SOURCE_IDENTIFIERS.mmWhelm000000000).toBe("mm-whelm");
     expect(CONTENT["mm-whelm"]).toBeUndefined();
     expect(CONTENT.whelm?.triggers?.[0]?.fromEffect).toBe("esmyGn6aLpCfWsFm");
   });
 
-  it("le texte de la Submersion donne les dégâts au début du tour de la créature qui l'a posée", async () => {
+  it("the \"Submersion\" text gives the damage at the start of the turn of the creature that placed it", async () => {
     const { monsterRecurring } = await import("../module/scripts/core/monster-text.mjs");
     const html = "<p>While Grappled, the target takes [[/damage average activity=khxVwH3AB0sx1qRG]] damage at the start of each of the elemental's turns.</p>";
     expect(monsterRecurring(html, [{ id: "rN76liiHkUoMRMJN", statuses: ["grappled", "restrained"] }]).triggers)

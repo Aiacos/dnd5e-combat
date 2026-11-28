@@ -1,9 +1,9 @@
 /**
- * Appel de la foudre (§70) : l'incantation pose le NUAGE (la pose de dnd5e, validée par `api.mcp.placeRegionAt`), habillé en orage
- * (FXMaster s'il est actif, sinon une zone sombre) ; la visée de l'ÉCLAIR s'ouvre aussitôt (`api.mcp.stormStrike` joue le clic) :
- * 1,50 m autour du point, le Zombi y fait sa sauvegarde de Dextérité. « Orage déjà là » (`stormy`) : +1d10. Relancé : pas de
- * nouveau nuage, un nouvel éclair. La concentration finie, le nuage s'en va.
- * Monde : un token dont l'acteur connaît le sort (`call-lightning`) et un Zombi sur la scène.
+ * Call Lightning (§70): the casting places the CLOUD (dnd5e's placement, validated by `api.mcp.placeRegionAt`), dressed as a storm
+ * (FXMaster if active, otherwise a dark area); aiming of the BOLT opens at once (`api.mcp.stormStrike` plays the click):
+ * 1.50 m around the point, the Zombie makes its Dexterity saving throw there. "Storm already there" (`stormy`): +1d10. Recast: no
+ * new cloud, a new bolt. When Concentration ends, the cloud goes away.
+ * World: a token whose actor knows the spell (`call-lightning`) and a Zombie on the scene.
  */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -34,7 +34,7 @@ export default {
     };
     ctx.restore(endConcentration);
 
-    // 1. L'incantation, orage déjà là : dnd5e attend la pose du nuage.
+    // 1. The casting, storm already there: dnd5e waits for the cloud placement.
     let since = await ctx.lastMessageId();
     await api("use", { tokenId: caster.id, itemId: item._id, extra: { stormy: true } }, 500);
     await sleep(1500);
@@ -47,7 +47,7 @@ export default {
     ctx.log("habillage du nuage :", JSON.stringify({ visibility: state?.cloud?.visibility, behaviors: state?.cloud?.behaviors }));
     ctx.expect(state?.aiming === true, "la visée de l'éclair est ouverte");
 
-    // 2. L'éclair sur le Zombi.
+    // 2. The bolt on the Zombie.
     const hp0 = await ctx.hp(zombie);
     const struck = (await api("stormStrike", center)).result;
     ctx.expect(struck?.struck, "l'éclair est posé");
@@ -62,7 +62,7 @@ export default {
     state = (await api("storm", { tokenId: caster.id, itemId: item._id })).result;
     ctx.expect(!!state?.cloud && !state.aiming, "après l'éclair, le nuage est toujours là, la visée fermée");
 
-    // 3. La relance : pas de nouveau nuage, un nouvel éclair.
+    // 3. The recast: no new cloud, a new bolt.
     const cloudId = state?.cloud?.id;
     since = await ctx.lastMessageId();
     await api("use", { tokenId: caster.id, itemId: item._id }, 500);

@@ -1,12 +1,12 @@
 /**
- * §463 (tri « déplacement » de l'ATLAS) : téléportation de soi dont la zone frappe l'espace d'ARRIVÉE, lue dans le texte des créatures
- * (`teleport.area: "arrival"`). Arène des sorts : le Lanceur (PNJ) reçoit la Téléportation radieuse du Solar (Monster Manual : sauvegarde de
- * Dextérité, dégâts radiants dans une émanation de 3 m autour de lui à l'arrivée, portée de l'activité 60 ft).
- *  - l'utilisation ne pose aucune zone (ni case « Placer le gabarit », ni pose à la souris) ;
- *  - le saut de 4 cases fait (accepté), l'émanation se pose autour du Lanceur arrivé : la Cible, à 1 case de l'arrivée, subit des
- *    dégâts ; la Cible voisine, à 4 cases, et le Lanceur, rien.
- * La visée interactive de la téléportation est coupée le temps du scénario (réglage `teleportPlanning`) : le saut passe par `teleportTo`
- * puis `afterTeleport`, le même chemin que le clic du joueur.
+ * §463 ("movement" sort of the ATLAS): self-teleportation whose area hits the ARRIVAL space, read in the creatures' text
+ * (`teleport.area: "arrival"`). Spell arena: the Caster (NPC) receives the Solar's Radiant Teleportation (Monster Manual:
+ * Dexterity saving throw, radiant damage in a 10 ft Emanation around it on arrival, activity range 60 ft).
+ *  - the use places no area (neither a "Place the template" cell, nor a mouse placement);
+ *  - the 4-cell jump done (accepted), the Emanation is placed around the arrived Caster: the Target, 1 cell from the arrival,
+ *    takes damage; the Neighbouring Target, at 4 cells, and the Caster, nothing.
+ * The interactive teleport aiming is turned off for the duration of the scenario (`teleportPlanning` setting): the jump
+ * goes through `teleportTo` then `afterTeleport`, the same path as the player's click.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -46,7 +46,8 @@ export default {
     const item = (await ctx.call("upsert-actor-item", { actorId: caster.actorId, itemData, match: { path: "flags.dnd5e.sourceId", value: RADIANT } })).id;
     lent.push(item);
 
-    // Départ deux rangées sous la Cible ; arrivée 4 cases plus bas. La Cible à 1 case de l'arrivée, la Cible voisine à 4 cases.
+    // Start two rows below the Target; arrival 4 cells lower. The Target 1 cell from the arrival, the Neighbouring Target at
+    // 4 cells.
     const start = { x: homes.get(caster.id).x, y: homes.get(caster.id).y + 2 * grid };
     const go = { x: start.x, y: start.y + 4 * grid };
     await ctx.call("move-token", { tokenId: caster.id, x: start.x, y: start.y, elevation: 0 });

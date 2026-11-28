@@ -1,8 +1,8 @@
 /**
- * O9h (§363) : une barrière qui tombe quand son porteur va au contact (`barrier.endsOnContact` — Parchemin de protection : « si vous
- * vous déplacez de telle sorte qu'une créature du type choisi se retrouve dans la zone, l'effet prend fin »). MJ actif, après chaque
- * déplacement d'un token : ses émanations qui contiennent maintenant une créature qu'elles arrêtent tombent (les effets de l'objet sur
- * lui). Le reste de la barrière (entrer, affecter l'intérieur) : adapter/barriers.mjs.
+ * O9h (§363): a barrier that drops when its bearer comes into contact (`barrier.endsOnContact` — Scroll of Protection: "if you
+ * move so that a creature of the chosen type ends up in the area, the effect ends"). Active GM, after each
+ * token move: its Emanations that now contain a creature they stop drop (the item's effects on
+ * it). The rest of the barrier (entering, affecting the inside): adapter/barriers.mjs.
  */
 
 import { breachedBarriers } from "../adapter/barriers.mjs";

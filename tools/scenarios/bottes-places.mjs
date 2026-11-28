@@ -1,15 +1,15 @@
 /**
- * §222, retour Discord (2026-11-19) : le nombre de places de bottes d'arme. Depuis dnd5e 6.1 et le PHB 3.0, les paliers ne sont plus
- * sur la classe mais sur l'aptitude « Weapon Mastery » (objet `feat`, identifiant `weapon-mastery`) que la classe donne ; dnd5e
- * relie l'aptitude à sa classe par `flags.dnd5e.advancementRoot` (`system.advancementRootItem`). Acteurs créés d'un bloc, sans
- * compendium, avec la même forme que les données du PHB 3.0 :
- *  - Guerrier 1 → 3 places (et non 6), une seule botte changée au Repos long, étiquette de la classe ; Guerrier 4 → 4 ;
- *  - Barbare 1 → 2 places, corps à corps seulement ;
- *  - un don Maître d'armes rattaché à la classe (palier de don) reste compté en entier, sans la règle du Guerrier ;
- *  - une aptitude sans classe d'origine ne plante pas et compte tous ses paliers ;
- *  - §510 (Discord, Fanarie) : fenêtre des bottes du Guerrier 4 après un Repos long (une botte à changer) — la ligne verte l'annonce ;
- *    une botte remplacée dans la sélection, la ligne disparaît (le changement permis est déjà pris).
- * Acteurs retirés.
+ * §222, Discord feedback (2026-11-19): the number of weapon mastery slots. Since dnd5e 6.1 and PHB 3.0, the tiers are no
+ * longer on the class but on the "Weapon Mastery" feature (`feat` item, identifier `weapon-mastery`) that the class grants;
+ * dnd5e links the feature to its class through `flags.dnd5e.advancementRoot` (`system.advancementRootItem`). Actors created in
+ * one go, without compendium, with the same shape as the PHB 3.0 data:
+ *  - Fighter 1 → 3 slots (not 6), a single mastery swapped on a Long Rest, class label; Fighter 4 → 4;
+ *  - Barbarian 1 → 2 slots, melee only;
+ *  - a Weapon Master feat attached to the class (feat tier) is still counted in full, without the Fighter's rule;
+ *  - a feature without an origin class does not crash and counts all its tiers;
+ *  - §510 (Discord, Fanarie): Fighter 4's mastery window after a Long Rest (one mastery to change) — the green line announces it;
+ *    one mastery replaced in the selection, the line disappears (the permitted change is already taken).
+ * Actors removed.
  */
 const MODULE_ID = "dnd5e-combat";
 
@@ -40,7 +40,7 @@ export default {
     };
     const masteries = actorId => api("masteries", { actorId });
 
-    // Guerrier niveau 1 : la classe sans palier, l'aptitude qu'elle donne avec ses quatre paliers.
+    // Fighter level 1: the class without tiers, the feature it grants with its four tiers.
     const fighter = await create("Bottes (Guerrier)", [classItem("bottesFighter001", "Fighter", "fighter", 1),
       feature("bottesFtrMastery", "Weapon Mastery", "weapon-mastery", "bottesFighter001", FIGHTER_TRAITS)]);
     if ( !ctx.expect(!!fighter, "Guerrier créé") ) return;
@@ -52,7 +52,7 @@ export default {
     m = await masteries(fighter);
     ctx.expect(m.slots === 4, `Guerrier 4 : 4 places (vu ${m.slots})`);
 
-    // §510 : la ligne verte du Repos long décompte le changement en cours.
+    // §510: the green Long Rest line counts the change in progress.
     const chosen = ["greatsword", "flail", "javelin", "longsword"];
     await ctx.call("update-actor", { actorId: fighter, actorData: { "system.traits.weaponProf.mastery.value": chosen,
       [`flags.${MODULE_ID}.masteryRest`]: { allowance: 1 } } });
@@ -71,7 +71,7 @@ export default {
     ctx.expect(m.slots === 2, `Barbare 1 : 2 places (vu ${m.slots})`);
     ctx.expect(m.sources[0]?.melee === true, "Barbare : corps à corps seulement");
 
-    // Un don (type « feat ») rattaché à la classe par un palier : dnd5e ne le lie pas à la classe, il compte en entier.
+    // A feat (type "feat") attached to the class by a tier: dnd5e does not link it to the class, it counts in full.
     const feat = await create("Bottes (don)", [classItem("bottesFighter002", "Fighter", "fighter", 4),
       feature("bottesWpnMaster1", "Weapon Master", "weapon-master", "bottesFighter002", [trait("mastFeatLvl0aaaa", 0, 1)], "feat")]);
     if ( !ctx.expect(!!feat, "acteur au don créé") ) return;
@@ -80,7 +80,7 @@ export default {
     ctx.expect(m.sources[0]?.changes === 1 && m.sources[0]?.label === "Weapon Master",
       `don : son propre nom, sans la règle du Guerrier (vu « ${m.sources[0]?.label} », ${m.sources[0]?.changes})`);
 
-    // Une aptitude sans classe d'origine (ajoutée à la main) : pas d'erreur, tous les paliers comptés.
+    // A feature without an origin class (added by hand): no error, all the tiers counted.
     const loose = await create("Bottes (sans origine)", [feature("bottesLooseMast1", "Weapon Mastery", "weapon-mastery", null, FIGHTER_TRAITS)]);
     if ( !ctx.expect(!!loose, "acteur sans origine créé") ) return;
     m = await masteries(loose);

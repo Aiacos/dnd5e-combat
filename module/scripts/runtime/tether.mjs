@@ -1,6 +1,6 @@
 /**
- * Liens en marche (SPEC §16.43, Trait ensorcelé) : noter la créature liée à l'attaque, rompre le lien — et le sort — quand elle
- * sort de portée ou passe derrière un abri total, l'oublier quand la concentration tombe. Sur le MJ actif.
+ * Active links (SPEC §16.43, "Enchanted Bolt"): note the creature tied to the attack, break the link — and the spell — when it
+ * leaves range or goes behind Total Cover, forget it when Concentration drops. On the active GM.
  */
 
 import { tetherOfActivity, recordTether, clearTether, tetherItems, tetherBroken } from "../adapter/tether.mjs";
@@ -19,9 +19,9 @@ async function onUsage(message) {
   log(`${activity.item.name}: ${activity.actor.name} tethered to ${message.system.targets[0].name ?? "?"}`);
 }
 
-/** Un token a bougé : les liens qui le concernent sont-ils rompus ? */
+/** A token moved: are the links that concern it broken? */
 async function onMove(tokenDoc) {
-  // Les lanceurs possibles : les acteurs du monde (PJ liés) et ceux des tokens non liés de la scène.
+  // The possible casters: world actors (linked PCs) and those of the scene's unlinked tokens.
   const actors = new Set([...game.actors, ...(tokenDoc.parent?.tokens ?? []).filter(t => !t.actorLink && t.actor).map(t => t.actor)]);
   for ( const actor of actors ) {
     for ( const item of tetherItems(actor) ) {
@@ -38,7 +38,7 @@ async function onMove(tokenDoc) {
 export function registerTether() {
   route("createChatMessage", onUsage, { executor: true, label: "tether: not recorded" });
   route("moveToken", onMove, { executor: true, label: "tether: break not judged" });
-  // Fin du sort (concentration supprimée, quelle qu'en soit la cause) : le lien s'oublie.
+  // End of the spell (Concentration removed, whatever the cause): the link is forgotten.
   route("deleteActiveEffect", async effect => {
     const actor = effect.parent;
     if ( (actor?.documentName !== "Actor") || !effect.statuses?.has?.("concentrating") ) return;

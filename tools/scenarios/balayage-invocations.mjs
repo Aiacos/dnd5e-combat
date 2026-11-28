@@ -1,25 +1,26 @@
 /**
- * §389 (issue #38) : balayage des invocations par les VRAIS chemins de lancement — les balayages de sorts et d'aptitudes
- * (`tools/lib/balayage.mjs`) sautent les activités « summon » et lancent tout avec `confirmed` : ni la barre d'actions, ni la fiche,
- * ni « Lancer quand même » n'y passaient, et Convocation de céleste (forme imposée), Création de morts-vivants (0 goule) n'avaient
- * rien pour les attraper. Ici, chaque sort du Manuel des joueurs qui invoque est prêté au Lanceur de l'« Arène des sorts » et lancé :
- *   barre        comme la barre de DAS · Combat UI : emplacement de son niveau, sans la fenêtre de dnd5e (`castFromBar`) ;
- *   fiche        comme un clic dans la fiche : fenêtre de dnd5e ou du moteur, consommation (`castFromBar({ sheet })`) ;
- *   sans-empl.   la fiche, emplacements vidés : le MJ passe par « Plus de charge → Lancer quand même » (§77, §384).
- * Les fenêtres sont répondues en choisissant la DERNIÈRE forme (une forme imposée d'office — la première — se voit) et, s'il y a un
- * nombre à choisir, 2. Invariants, sans dépendre des dés :
- *   1. plusieurs formes → une fenêtre de choix s'ouvre (celle du moteur ou celle de dnd5e) ;
- *   2. la forme choisie est celle que dnd5e invoque ;
- *   3. au moins une créature posée, autant que le nombre choisi (ou que dnd5e en compte) ;
- *   4. le sort part au moins à son niveau ;
- *   5. pas de créature du SRD 2014 quand le Monster Manual 2024 ou le SRD 2024 l'a (§386) ;
- *   6. aucune erreur dans la console du MJ.
- * Un rituel préparé, des emplacements restants (Disque flottant, Serviteur invisible, Destrier fantôme) : le moteur demande « en rituel
- * ou avec un emplacement » (§139) ; la barre et la fiche répondent « avec un emplacement » (le sort part à son niveau), sans emplacement
- * il part d'office en rituel.
- * Sautés (dit dans le rapport) : invocations « par FP » (dnd5e ouvre le navigateur de compendium : Appel de familier), Lumière et
- * Flamme éternelle (leur propre fenêtre, §16.35), invocations qui visent un objet ou une créature (Animation des objets, Doigt de mort). Ne se joue que nommé : `node tools/scenario.mjs balayage-invocations`. Variables :
- * `SORTS=summon-celestial,create-undead` (identifiants), `CHEMINS=barre,fiche` (par défaut les trois).
+ * §389 (issue #38): sweep of summons through the REAL casting paths — the spell and feature sweeps
+ * (`tools/lib/balayage.mjs`) skip "summon" activities and cast everything with `confirmed`: neither the action bar, nor the sheet,
+ * nor "Cast anyway" went through there, and Summon Celestial (imposed form), Create Undead (0 ghouls) had
+ * nothing to catch them. Here, every Player's Handbook spell that summons is lent to the Caster of the "Spell Arena" and cast:
+ *   barre        like the DAS · Combat UI bar: slot of its level, without dnd5e's window (`castFromBar`);
+ *   fiche        like a click in the sheet: dnd5e's or the engine's window, consumption (`castFromBar({ sheet })`);
+ *   sans-empl.   the sheet, slots emptied: the GM goes through "Out of charges → Cast anyway" (§77, §384).
+ * The windows are answered by choosing the LAST form (a form imposed outright — the first one — would show) and, if there is a
+ * number to choose, 2. Invariants, independent of the dice:
+ *   1. several forms → a choice window opens (the engine's or dnd5e's);
+ *   2. the chosen form is the one dnd5e summons;
+ *   3. at least one creature placed, as many as the chosen number (or as dnd5e counts);
+ *   4. the spell goes off at least at its level;
+ *   5. no SRD 2014 creature when the Monster Manual 2024 or the SRD 2024 has it (§386);
+ *   6. no error in the GM's console.
+ * A prepared ritual, slots remaining (Floating Disk, Unseen Servant, Phantom Steed): the engine asks "as a ritual
+ * or with a slot" (§139); the bar and the sheet answer "with a slot" (the spell goes off at its level), without a slot
+ * it goes off as a ritual automatically.
+ * Skipped (said in the report): "by CR" summons (dnd5e opens the compendium browser: Find Familiar), Light and
+ * Continual Flame (their own window, §16.35), summons that target an object or a creature (Animate Objects, Finger of Death).
+ * Only played when named: `node tools/scenario.mjs balayage-invocations`. Variables:
+ * `SORTS=summon-celestial,create-undead` (identifiers), `CHEMINS=barre,fiche` (the three by default).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 import { CONTENT } from "../../module/scripts/content/index.mjs";
@@ -27,15 +28,15 @@ import { readFileSync } from "node:fs";
 
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const only = (process.env.SORTS ?? "").split(",").filter(Boolean);
-// §392 : `OBJETS=1` balaie les objets magiques (DMG, SRD 2024) au lieu des sorts — pour un objet, la barre et la fiche passent par le
-// même chemin (la fenêtre de dnd5e) : « fiche » seul.
+// §392: `OBJETS=1` sweeps magic items (DMG, SRD 2024) instead of spells — for an item, the bar and the sheet go through the
+// same path (dnd5e's window): "fiche" alone.
 const ITEMS = !!process.env.OBJETS;
 const PACKS = ITEMS ? ["dnd-dungeon-masters-guide.equipment", "dnd5e.equipment24"] : ["dnd-players-handbook.spells"];
 const PATHS = (process.env.CHEMINS ?? (process.env.OBJETS ? "fiche" : "barre,fiche,sans-empl.")).split(",").filter(Boolean);
 const FULL = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`spell${i + 1}`, { value: 9, override: 9 }]));
 const EMPTY = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`spell${i + 1}`, { value: 0, override: 0 }]));
 const OWN_WINDOW = new Set(["light", "continual-flame"]);
-// §139 : la question du rituel se reconnaît à son bouton « avec un emplacement », dans la langue du client.
+// §139: the ritual question is recognized by its button "with a slot", in the client's language.
 const WITH_SLOT = new Set(["en", "fr", "it", "pt-BR"].map(l => JSON.parse(readFileSync(new URL(`../../module/lang/${l}.json`, import.meta.url), "utf-8"))["DND5ECOMBAT.Rituel.AvecEmplacement"]).filter(Boolean));
 
 export default {
@@ -74,7 +75,7 @@ export default {
       for ( const id of made ) if ( !actorsBefore.has(id) ) await ctx.call("trash-document", { documentType: "Actor", documentId: id }).catch(() => {});
     });
 
-    // Les sorts du Manuel qui invoquent (activité « summon »).
+    // The Handbook's spells that summon ("summon" activity).
     const spells = [];
     for ( const packId of PACKS ) for ( const e of (await ctx.call("list-compendium-entries", { packId }).catch(() => [])) ?? [] ) {
       const { data } = await ctx.call("get-compendium-entry", { uuid: e.uuid });
@@ -92,28 +93,28 @@ export default {
       const level = Number(data.system.level) || 0;
       if ( summon.summon?.mode === "cr" ) { report.push(`${id} : sauté (invocation par FP, navigateur de compendium)`); continue; }
       if ( OWN_WINDOW.has(id) ) { report.push(`${id} : sauté (sa propre fenêtre, §16.35)`); continue; }
-      // §394 : seules les invocations que le contenu fait viser (`targetedSummon` : Doigt de mort relève un cadavre) attendent un
-      // clic — scénario `invocations-ciblees`, dans l'Arène des invocations.
+      // §394: only the summons that the content makes target (`targetedSummon`: Finger of Death raises a corpse) wait for a
+      // click — scenario `invocations-ciblees`, in the Summons Arena.
       const affects = (summon.target?.override ? summon.target?.affects?.type : data.system.target?.affects?.type) ?? "";
       if ( CONTENT[id]?.targetedSummon ) {
         report.push(`${id} : sauté (vise ${affects} : attend un clic)`);
         ctx.log(`${id} : sauté (vise ${affects} : attend un clic)`);
         continue;
       }
-      // §393 : un objet est prêté par son uuid (DMG et SRD 2024 partagent des identifiants), équipé et harmonisé.
+      // §393: an item is lent by its uuid (DMG and SRD 2024 share identifiers), equipped and attuned.
       const itemId = await ctx.ensureItem(caster, uuid, ITEMS ? { byUuid: true, ready: true } : {});
       const forms = (summon.profiles ?? []).filter(p => ((p.level?.min ?? 0) <= level) && ((p.level?.max ?? 99) >= level)).length;
       for ( const path of PATHS ) {
         if ( (path === "sans-empl.") && (level < 1) ) continue;
         if ( (path === "barre") && (level < 1) ) continue;
         await slots(path === "sans-empl." ? EMPTY : FULL);
-        await ctx.refill(caster, itemId);   // §393 : les charges du passage précédent
+        await ctx.refill(caster, itemId);   // §393: the charges from the previous pass
         await ctx.call("get-client-errors", { clear: true }).catch(() => {});
         const label = `${id} [${path}]`;
         const started = await ctx.engine("castFromBar", { tokenId: caster.id, itemId, sheet: path !== "barre",
           slot: (path === "barre") ? `spell${level}` : null, x: at.x + grid, y: at.y + (2 * grid) });
         const profiles = started.profiles ?? [];
-        // Les fenêtres, jusqu'à ce que dnd5e invoque (ou abandonne) : on choisit la dernière forme, et 2 créatures s'il y a un nombre.
+        // The windows, until dnd5e summons (or gives up): we pick the last form, and 2 creatures if there is a number.
         let chose = null;
         let wanted = null;
         let sawChoice = false;
@@ -131,7 +132,7 @@ export default {
             if ( radio.length || count ) {
               sawChoice = sawChoice || (radio.length > 1) || !!count;
               chose = radio.length ? radio[radio.length - 1].value : (chose ?? null);
-              // En deux temps, comme un joueur : la forme d'abord (elle redessine la liste des nombres), puis le nombre.
+              // In two steps, like a player: the form first (it redraws the list of numbers), then the number.
               let state = w;
               if ( radio.length ) state = (await ctx.call("answer-dialog", { id: w.id, fields: { profile: chose }, waitMs: 300 }).catch(() => null))?.window ?? w;
               const counts = (state.fields ?? []).find(f => f.name === "count");
@@ -158,7 +159,7 @@ export default {
         if ( (forms > 1) && !sawChoice ) problems.push(`${forms} formes, aucune fenêtre de choix`);
         if ( chose && captured?.summoned?.profile && (captured.summoned.profile !== chose) ) problems.push(`forme invoquée ${captured.summoned.name || captured.summoned.profile}, pas celle choisie`);
         if ( !tokensOut.length ) problems.push("aucune créature posée");
-        // §392 : la créature réellement invoquée existe (lien du DMG réparé) — dnd5e l'a posée sous ce nom.
+        // §392: the creature actually summoned exists (DMG link repaired) — dnd5e placed it under this name.
         if ( ritualAsked ) ctx.log(`${label} : rituel préparé — « avec un emplacement » choisi`);
         if ( tokensOut.length ) ctx.log(`${label} : ${tokensOut.map(t => t.name).join(", ")} (${String(captured?.summoned?.uuid ?? "").split(".").slice(1, 3).join(".")})`);
         const expected = Number(captured?.summoned?.count) || null;
@@ -168,15 +169,15 @@ export default {
         if ( mm && String(captured?.summoned?.uuid ?? "").startsWith("Compendium.dnd5e.monsters.") ) problems.push("créature du SRD 2014");
         await pause(1500);
         const errors = (await ctx.call("get-client-errors", { levels: ["error", "uncaught", "unhandledrejection"] }).catch(() => ({ entries: [] }))).entries ?? [];
-        // Une erreur d'animation de BLFX (module tiers) est notée à part, pas comptée contre le moteur.
+        // A BLFX animation error (third-party module) is noted separately, not counted against the engine.
         const blfx = e => /boss-loot-assets-premium/.test(String(e.text ?? e.message ?? ""));
         const ours = errors.filter(e => !blfx(e));
         if ( ours.length ) problems.push(`erreur console : ${String(ours[0].text).slice(0, 120)}`);
         if ( errors.length > ours.length ) ctx.log(`${label} : erreur d'animation de BLFX (tiers), non comptée`);
         ctx.expect(!problems.length, `${label} : ${problems.length ? problems.join(" ; ") : `${tokensOut.length} posée(s), niveau ${captured?.summoned?.level ?? "?"}`}`);
         report.push(`${label} : ${problems.length ? problems.join(" ; ") : "ok"}`);
-        // L'animation d'apparition (BLFX, darsh-animations) tourne encore quelques secondes : retirer la créature avant qu'elle finisse
-        // fait planter BLFX (« reading 'rotation' »), compté au lancement suivant.
+        // The appearance animation (BLFX, darsh-animations) still runs for a few seconds: removing the creature before it finishes
+        // crashes BLFX ("reading 'rotation'"), counted at the next cast.
         await pause(4000);
         await tidy();
       }

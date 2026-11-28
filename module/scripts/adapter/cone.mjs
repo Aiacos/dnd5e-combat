@@ -1,8 +1,8 @@
 /**
- * §182 : le cône de vision d'un observateur, lu dans Foundry (`core/cone.mjs`). S'applique à une créature **du MJ** (ni PJ ni
- * possédée par un joueur), **hors d'un combat commencé** où elle figure, quand le réglage de monde `visionCones` est allumé.
- * Angle : flag du token `flags.dnd5e-combat.coneAngle` > réglage `coneAngles` par type > défaut ; un `sight.angle` de token plus
- * étroit l'emporte. Vision aveugle, perception des vibrations et vision véritable : 360° dans leur portée.
+ * §182: an observer's vision cone, read from Foundry (`core/cone.mjs`). Applies to a **GM** creature (neither PC nor
+ * owned by a player), **outside a started combat** in which it appears, when the world setting `visionCones` is on.
+ * Angle: token flag `flags.dnd5e-combat.coneAngle` > per-type `coneAngles` setting > default; a narrower token `sight.angle`
+ * wins. Blindsight, Tremorsense and Truesight: 360° within their range.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,7 +14,7 @@ export const CONES_SETTING = "visionCones";
 export const ANGLES_SETTING = "coneAngles";
 export const DEFAULT_ANGLES_TEXT = formatConeAngles();
 
-/** Les sens qui perçoivent tout autour (ids des modes de détection du cœur et de dnd5e). */
+/** Senses that perceive all around (ids of the core's and dnd5e's detection modes). */
 const ALL_AROUND = ["blindsight", "feelTremor", "seeAll"];
 
 let cachedText = null;
@@ -30,16 +30,16 @@ function enabled() {
   return settingOr(CONES_SETTING, false) === true;
 }
 
-/** Un PJ, ou une créature qu'un joueur possède : jamais de cône (le joueur voit ce qu'il voit). */
+/** A PC, or a creature that a player owns: never a cone (the player sees what they see). */
 const playerSide = actor => !!actor && ((actor.type === "character") || !!actor.hasPlayerOwner);
 
-/** Figure-t-il dans un combat commencé ? */
+/** Does it appear in a started combat? */
 function fighting(doc) {
   return !!game.combats?.some(c => c.started && c.combatants.some(cb => cb.tokenId === doc.id));
 }
 
 /**
- * Le cône d'un observateur, ou null s'il voit à 360° (réglage coupé, PJ, en combat, angle ≥ 360).
+ * An observer's cone, or null if it sees in 360° (setting off, PC, in combat, angle ≥ 360).
  * @param {TokenDocument} doc
  * @returns {{angle: number, rotation: number}|null}
  */
@@ -56,7 +56,7 @@ export function coneOf(doc) {
   return { angle, rotation: Number(doc.rotation) || 0 };
 }
 
-/** La portée (unités de la grille) d'un sens qui perçoit tout autour, la plus grande ; 0 sans. */
+/** The range (grid units) of a sense that perceives all around, the largest; 0 if none. */
 function allAroundRange(doc) {
   let best = 0;
   for ( const id of ALL_AROUND ) {
@@ -69,8 +69,8 @@ function allAroundRange(doc) {
 }
 
 /**
- * La cible est-elle **hors** du cône de l'observateur (et hors de portée de ses sens à 360°) ? false quand il n'a pas de cône.
- * Les points testés : le centre et les quatre coins de la cible.
+ * Is the target **outside** the observer's cone (and outside the range of its 360° senses)? false when it has no cone.
+ * The points tested: the center and the four corners of the target.
  */
 export function outsideCone(observer, target) {
   const cone = coneOf(observer);
@@ -78,7 +78,7 @@ export function outsideCone(observer, target) {
   const eye = tokenCenter(observer);
   const pos = committedPosition(target);
   const grid = target.parent.grid;
-  // La taille du document engagé, comme la position (`_source`) : pas celle, animée, d'un changement de taille en cours.
+  // The size of the committed document, like the position (`_source`): not the animated one of a resize in progress.
   const size = target._source ?? target;
   const w = (size.width ?? 1) * grid.sizeX, h = (size.height ?? 1) * grid.sizeY;
   const points = [{ x: pos.x + w / 2, y: pos.y + h / 2 }, { x: pos.x, y: pos.y }, { x: pos.x + w, y: pos.y },

@@ -1,7 +1,7 @@
 /**
- * Sort de zone à sauvegarde, instantané : Mains brûlantes de l'Ensorceleur, zone posée sur le
- * Zombi (PNJ : le moteur lance sa sauvegarde lui-même). Sauvegarde réussie ⇔ jet ≥ DD ; dégâts
- * réduits de moitié sur une réussite ; PV du token cohérents ; zone retirée après coup.
+ * Area spell with a saving throw, instantaneous: the Sorcerer's Burning Hands, area placed on the
+ * Zombie (NPC: the engine rolls its saving throw itself). Saving throw succeeded ⇔ roll ≥ DC; damage
+ * halved on a success; token HP consistent; area removed afterwards.
  */
 export default {
   name: "sauvegarde de zone — Mains brûlantes sur un Zombi",
@@ -11,7 +11,8 @@ export default {
     const zombi = await ctx.token("Zombi");
     const hp0 = await ctx.hp(zombi);
     ctx.restore(() => ctx.setHp(zombi, hp0));
-    // Le Zombi n'a que 15 PV : des dégâts plafonnés à ses PV restants fausseraient « dégâts appliqués = jet ». PV hauts le temps du test.
+    // The Zombie has only 15 HP: damage capped at its remaining HP would skew "damage applied = roll".
+    // High HP for the duration of the test.
     await ctx.setHp(zombi, 100);
     const regionsBefore = (await ctx.call("list-scene-objects", { types: ["Region"] })).objects.Region ?? [];
 

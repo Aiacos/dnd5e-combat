@@ -1,16 +1,16 @@
 /**
- * Le Rôdeur du Manuel des joueurs 2024 (SPEC §26), module premium `dnd-players-handbook` 2.2.0 (pack `classes`, items `phbrgr…`),
- * et la Marque du chasseur (pack `spells`), que d'autres classes peuvent aussi lancer.
+ * The Ranger of the Player's Handbook 2024 (SPEC §26), premium module `dnd-players-handbook` 2.2.0 (pack `classes`, items
+ * `phbrgr…`), and Hunter's Mark (pack `spells`), which other classes can also cast.
  *
- * Ce que dnd5e fait déjà seul : Ennemi juré (Marque du chasseur lancée sans emplacement, utilisations de l'item), Infatigable (PV
- * temporaires), Voile de la nature (effet Invisible), Arpenteur, Sens sauvages, Vision ombreuse, Mental d'acier, Séduction mystique
- * (effets), Vagabond des brumes et Renforts féeriques (utilisations), le Compagnon primitif (convocation).
+ * What dnd5e already does by itself: Favored Enemy (Hunter's Mark cast without a slot, uses of the item), Tireless (Temporary
+ * Hit Points), Nature's Veil (Invisible effect), Roving, Feral Senses, Umbral Sight, Iron Mind, Beguiling Twist
+ * (effects), Misty Wanderer and Fey Reinforcements (uses), the Primal Companion (summoning).
  */
 
-/** « Quand vous touchez la créature marquée avec un jet d'attaque ». */
+/** "When you hit the marked creature with an attack roll". */
 const marked = { "activity.isAttack": true, "target.hasEffectFrom": "hunters-mark" };
 
-/** Vagabondage : les trois changements de l'effet de la donnée. */
+/** Roving: the three changes of the data's effect. */
 const ROVING = {
   bonus: { key: "system.attributes.movement.bonus", value: 10, type: "add" },
   climb: { key: "system.attributes.movement.speeds.climb", value: "@attributes.movement.speed", type: "upgrade" },
@@ -18,13 +18,13 @@ const ROVING = {
 };
 
 export const RANGER = Object.freeze({
-  // Voile de la nature (niveau 14) — « par une action Bonus, vous vous donnez l'état Invisible jusqu'à la fin de votre prochain
-  // tour » : l'effet de l'item n'a pas de durée dans la donnée et ne cessait jamais.
+  // Nature's Veil (level 14) — "as a Bonus Action, you give yourself the Invisible condition until the end of your next
+  // turn": the item's effect has no duration in the data and never ended.
   "natures-veil": { effectEnds: { NOSQczI2MCQ5Ha8F: "casterTurnEnd" } },
-  // Chasseur implacable (niveau 13) : « subir des dégâts ne peut pas rompre votre concentration sur la Marque du chasseur ».
-  // Vagabondage (SRD 5.2) : « votre Vitesse augmente de 3 m tant que vous ne portez pas d'armure lourde. Vous avez aussi une
-  // Vitesse d'escalade et de nage égales à votre Vitesse ». La donnée met les trois dans un seul effet sans condition : l'escalade
-  // et la nage passent dans un effet à part, qui reste, et le +3 m suit l'armure.
+  // Relentless Hunter (level 13): "taking damage can't break your Concentration on Hunter's Mark".
+  // Roving (SRD 5.2): "your Speed increases by 3 m while you are not wearing heavy armor. You also have a Climb and Swim
+  // Speed equal to your Speed". The data puts all three in a single effect with no condition: the climb and swim go into
+  // a separate effect, which stays, and the +3 m follows the armor.
   "roving": {
     dataFixes: [
       { effect: "dasRovingSpeeds0", create: { name: "Roving: Climb and Swim", type: "base", transfer: true, disabled: false,
@@ -34,47 +34,47 @@ export const RANGER = Object.freeze({
     effectWhile: { J9RWCSmYGnP0fkn1: { if: { notArmor: ["heavy"] } } }
   },
   "relentless-hunter": { keepsConcentration: ["hunters-mark"] },
-  // Esquive des ombres (Traqueur des ténèbres 11) : en Réaction, le rôdeur donne le Désavantage à un jet d'attaque qui le vise
-  // (§34 : fenêtre avant le jet) ; la téléportation de 9 m qui suit reste au joueur.
+  // Shadowy Dodge (Gloom Stalker 11): as a Reaction, the ranger gives Disadvantage to an attack roll that targets them
+  // (§34: window before the roll); the 9 m teleportation that follows remains with the player.
   "shadowy-dodge": { triggers: [{ on: "isAttacked", do: [{ type: "use", activity: "0DMuCuULnpS5lIR5" }, { type: "disadvantage" }] }] },
-  // Marque du chasseur : « 1d6 dégâts de force supplémentaires chaque fois que vous touchez la cible avec un jet d'attaque » —
-  // 1d10 avec Tueur implacable (niveau 20), déclaré sur son item.
+  // Hunter's Mark: "1d6 extra force damage whenever you hit the target with an attack roll" —
+  // 1d10 with Foe Slayer (level 20), declared on its item.
   "hunters-mark": { triggers: [{ on: "preDamageRoll", if: { ...marked, not: { "source.hasFeature": "foe-slayer" } },
     do: [{ type: "damage", formula: "1d6", damageType: "force" }] }] },
   "foe-slayer": { triggers: [{ on: "preDamageRoll", if: marked, do: [{ type: "damage", formula: "1d10", damageType: "force" }] }] },
-  // Chasseur précis (niveau 17) : « l'Avantage à vos jets d'attaque contre la créature affectée par votre Marque du chasseur ».
+  // Precise Hunter (level 17): "Advantage on your attack rolls against the creature affected by your Hunter's Mark".
   "precise-hunter": { triggers: [{ on: "preAttackRoll", if: { "target.hasEffectFrom": "hunters-mark" }, do: [{ type: "advantage" }] }] },
 
-  // Proie du chasseur (Chasseur 3), option Tueur de colosses — celle dont l'item porte l'activité : « une fois par tour, quand vous
-  // touchez une créature avec une arme et qu'il lui manque des points de vie, 1d8 dégâts supplémentaires », du type de l'arme.
-  // L'autre option (Briseur de hordes, une attaque de plus) reste au joueur : rien dans les données ne dit laquelle est retenue.
+  // Hunter's Prey (Hunter 3), Colossus Slayer option — the one whose item carries the activity: "once per turn, when you
+  // hit a creature with a weapon and it is missing Hit Points, 1d8 extra damage", of the weapon's type.
+  // The other option (Horde Breaker, one more attack) remains with the player: nothing in the data says which is chosen.
   "hunters-prey": { triggers: [{ on: "preDamageRoll", oncePerTurn: true, if: { "activity.isWeapon": true, "target.wounded": true },
     do: [{ type: "damage", formula: "1d8", damageType: "weapon" }] }] },
 
-  // C12-e : Tactiques défensives (Chasseur 7), option Défense multiattaque — celle dont l'item porte l'activité : « quand une créature
-  // vous touche avec un jet d'attaque, elle a le Désavantage à tous ses autres jets d'attaque contre vous pendant ce tour ». (Cauchemar
-  // de la horde, l'autre option, reste au joueur : rien dans les données ne dit laquelle est retenue.)
-  // Proie supérieure du chasseur (Chasseur 11) — « une fois par tour, quand vous infligez des dégâts à une créature marquée par
-  // votre Marque du chasseur, vous pouvez aussi infliger les dégâts supplémentaires de ce sort à une autre créature que vous voyez
-  // à 9 m ou moins de la première ». Le d6 du sort ; le d10 avec le Pourfendeur d'ennemis.
+  // C12-e: Defensive Tactics (Hunter 7), Multiattack Defense option — the one whose item carries the activity: "when a creature
+  // hits you with an attack roll, it has Disadvantage on all its other attack rolls against you this turn". ("Horde Nightmare",
+  // the other option, remains with the player: nothing in the data says which one is chosen.)
+  // Superior Hunter's Prey (Hunter 11) — "once per turn, when you deal damage to a creature marked by your Hunter's Mark, you can
+  // also deal the extra damage of that spell to another creature you can see within 9 m or less of the first".
+  // The d6 of the spell; the d10 with Foe Slayer.
   "superior-hunters-prey": { markSplash: { mark: "hunters-mark", formula: "1d6", damageType: "force",
     range: { value: 30, units: "ft" }, upgrades: [{ feature: "foe-slayer", formula: "1d10" }] } },
   "defensive-tactics": { hitDefense: true },
-  // Défense supérieure du chasseur (Chasseur 15) — « quand vous subissez des dégâts, votre Réaction vous donne la Résistance à ces
-  // dégâts et à tout autre dégât du même type jusqu'à la fin du tour en cours ». Proposée quand une attaque touche ; des dégâts
-  // sans jet d'attaque (une sauvegarde ratée) n'ouvrent pas de fenêtre avant d'être appliqués : là, l'activité reste au joueur.
-  // La donnée porte un effet de Résistance par type de dégâts : la Réaction ne pose que celle du coup (étape `resist`).
+  // Superior Hunter's Defense (Hunter 15) — "when you take damage, your Reaction gives you Resistance to that
+  // damage and to any other damage of the same type until the end of the current turn". Offered when an attack hits; damage
+  // without an attack roll (a failed save) opens no window before being applied: there, the activity remains with the player.
+  // The data carries one Resistance effect per damage type: the Reaction applies only that of the hit (step `resist`).
   "superior-hunters-defense": { triggers: [{ on: "isHit", do: [{ type: "use" }, { type: "resist" }] }] },
 
-  // Embuscade effrayante (Traqueur des ténèbres 3), Frappe effroyable : « vous pouvez » ajouter 2d6 psychiques à un coup d'arme, au
-  // plus une fois par tour (2d8 avec Rafale du traqueur : l'échelle de la sous-classe), autant de fois que le modificateur de Sagesse
-  // par repos long — §223 (#12) : proposée avant le jet de dégâts, une utilisation de l'activité dépensée.
-  // §438 : Manuel 3.0.0 — deux activités, « (2d6) » jusqu'au niveau 10, « (2d8) » ensuite, qui consomment les utilisations de l'item
-  // (et non plus les leurs) : la visible à ce niveau compte (adapter/uses.mjs).
+  // Dread Ambusher (Gloom Stalker 3), Dreadful Strike: "you can" add 2d6 psychic damage to a weapon hit, at
+  // most once per turn (2d8 with Stalker's Flurry: the subclass's scale), as many times as your Wisdom modifier per Long Rest —
+  // §223 (#12): offered before the damage roll, one use of the activity spent.
+  // §438: Player's Handbook 3.0.0 — two activities, "(2d6)" up to level 10, "(2d8)" after, which consume the item's uses
+  // (and no longer their own): the one visible at that level counts (adapter/uses.mjs).
   "dread-ambusher": { triggers: [{ on: "preDamageRoll", oncePerTurn: true, ask: { uses: ["DMVf7FTyTC2HCAf9", "NGiX54LWGJGvMMwL"] }, if: { "activity.isWeapon": true },
     do: [{ type: "damage", formula: "2d(6 + 2 * min(1, floor(@classes.ranger.levels / 11)))", damageType: "psychic" }] }] },
-  // Frappes effroyables (Vagabond féerique 3) : un coup d'arme ajoute 1d4 psychiques, limité à une fois par tour et par cible,
-  // 1d6 au niveau 11 — le moteur les limite à une fois par tour.
+  // Dreadful Strikes (Fey Wanderer 3): a weapon hit adds 1d4 psychic damage, limited to once per turn and per target,
+  // 1d6 at level 11 — the engine limits them to once per turn.
   "dreadful-strikes": { triggers: [{ on: "preDamageRoll", oncePerTurn: true, if: { "activity.isWeapon": true },
     do: [{ type: "damage", formula: "1d(4 + 2 * min(1, floor(@classes.ranger.levels / 11)))", damageType: "psychic" }] }] }
 });

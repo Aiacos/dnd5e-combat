@@ -1,10 +1,10 @@
 /**
- * Balayage des dons, aptitudes de classe et de sous-classe et traits d'espèce du Manuel des joueurs qui ont une activité, dans l'« Arène
- * des sorts » (`tools/lib/balayage.mjs`). Prêtés au Lanceur (un PNJ sans classe) sans dépenser leurs utilisations : une aptitude dont
- * une formule cite son échelle de classe (`@scale.monk.die`) et qui échoue pour cela est notée « non jouée », pas en défaut. Ce qui ne
- * s'utilise pas (un don passif, une réaction déclenchée par le moteur) n'est pas couvert ici : ce sont les scénarios de règles.
- * Ne se joue que nommé : `node tools/scenario.mjs balayage-aptitudes`. Variables : `APTITUDES=lay-on-hands,second-wind`
- * (identifiants), `MOTEUR=1` (seulement celles que le moteur déclare), `DEPUIS=<identifiant>`, `PILE=1`.
+ * Sweep of the Player's Handbook feats, class and subclass features and species traits that have an activity, in the "Spell
+ * Arena" (`tools/lib/balayage.mjs`). Lent to the Caster (a classless NPC) without spending their uses: a feature whose formula
+ * cites its class scale (`@scale.monk.die`) and which fails because of it is noted "not played", not as a defect. What is not
+ * used (a passive feat, a Reaction triggered by the engine) is not covered here: those are the rules scenarios.
+ * Only played when named: `node tools/scenario.mjs balayage-aptitudes`. Variables: `APTITUDES=lay-on-hands,second-wind`
+ * (identifiers), `MOTEUR=1` (only those the engine declares), `DEPUIS=<identifiant>`, `PILE=1`.
  */
 import { CONTENT } from "../../module/scripts/content/index.mjs";
 import { sweep } from "../lib/balayage.mjs";

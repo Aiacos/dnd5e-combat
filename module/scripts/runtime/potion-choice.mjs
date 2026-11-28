@@ -1,16 +1,18 @@
 /**
- * Issue #31 (Henrique) : règle maison des potions de soins, réglage de monde `potionHealing`, désactivé par défaut.
+ * Issue #31 (Henrique): house rule for healing potions, world setting `potionHealing`, disabled by default.
  *
- * - Action Bonus : on boit ou l'on fait boire, le soin est lancé (règle 2024, rien ne change).
- * - Action : le soin est maximal (Potion de guérison 2d4 + 2 → 10 PV) — les dés deviennent leur maximum AVANT le jet, comme Guérison
- *   suprême (§233) : la carte montre la valeur rendue, Dice So Nice n'a aucun dé à animer.
+ * - Bonus Action: one drinks or has someone drink, the healing is rolled (2024 rule, nothing changes).
+ * - Action: the healing is maximal (Potion of Healing 2d4 + 2 → 10 HP) — the dice become their maximum BEFORE the roll, like
+ *   Supreme Healing (§233): the card shows the returned value, Dice So Nice has no die to animate.
  *
- * Le choix : passé par l'appelant (`usageConfig["dnd5e-combat"].potionMode`, la Combat UI et le menu « Faire boire »), sinon demandé ici
- * quand l'action et l'action Bonus sont libres toutes les deux (core/potion-choice.mjs) ; hors combat, soin maximal sans question.
- * Le coût passe par la clé `cost` que la légalité et le budget lisent déjà (le Sort accéléré fait l'inverse) : inscrit avant
- * registerTurn. Seules les potions dont le soin coûte une action Bonus (donnée 2024) sont concernées (`offersPotionChoice`).
+ * The choice: passed by the caller (`usageConfig["dnd5e-combat"].potionMode`, the Combat UI and the "Give a drink" menu), otherwise
+ * asked here when the action and the Bonus Action are both free (core/potion-choice.mjs); out of combat, maximal healing with no
+ * question. The cost goes through the `cost` key that legality and the budget already read (Quickened Spell does the opposite):
+ * registered before registerTurn. Only potions whose healing costs a Bonus Action (2024 data) are concerned
+ * (`offersPotionChoice`).
  *
- * Faire boire à un autre : les règles de visée ne changent pas (§101) ; celui qui administre choisit et paie, le patient reçoit le soin.
+ * Having another drink: targeting rules do not change (§101); whoever administers chooses and pays, the patient receives
+ * the healing.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -25,17 +27,18 @@ import { log, loc, locEsc, notice } from "./shared.mjs";
 
 export const POTION_HEALING_SETTING = "potionHealing";
 
-/** La règle maison est-elle active dans ce monde ? */
+/** Is the house rule active in this world? */
 export function potionHealingOn() {
   try { return game.settings.get(MODULE_ID, POTION_HEALING_SETTING) === true; } catch { return false; }
 }
 
 /**
- * Ce qu'une interface peut proposer pour cette activité (la Combat UI : son tiroir), ou null si la règle ne s'applique pas.
- * `bonus` : la formule lancée ; `action` : le soin maximal ; `available` : ce que le budget du tour permet ; `ask` : faut-il un choix
- * (sinon `mode` est celui que le moteur prendra d'office).
+ * What an interface can offer for this activity (the Combat UI: its drawer), or null if the rule does not apply.
+ * `bonus`: the formula rolled; `action`: the maximal healing; `available`: what the turn's budget allows; `ask`: is a choice needed
+ * (otherwise `mode` is the one the engine will take by default).
  * @param {Activity} activity
- * @returns {{ ask: boolean, mode: string|null, available: {bonus: boolean, action: boolean}, formula: string|null, max: number|null }|null}
+ * @returns {{ ask: boolean, mode: string|null, available: {bonus: boolean, action: boolean},
+ *   formula: string|null, max: number|null }|null}
  */
 export function potionOptions(activity) {
   if ( !potionHealingOn() || !offersPotionChoice(activity) || !activity.actor ) return null;
@@ -47,12 +50,12 @@ export function potionOptions(activity) {
 
 /* -------------------------------------------- */
 
-/** Le soin maximal promis, par « idActeur.idItem » : la potion bue peut être détruite avant le jet (dernière de sa pile). */
+/** The promised maximal healing, by "actorId.itemId": the drunk potion may be destroyed before the roll (last of its stack). */
 const promised = new Map();
 const PROMISE_MS = 10 * 60 * 1000;
 const promiseKey = activity => `${activity?.actor?.id}.${activity?.item?.id}`;
 
-/** La question, quand l'action et l'action Bonus sont libres. Rend « bonus », « action » ou null (fermée). */
+/** The question, when the action and the Bonus Action are free. Returns "bonus", "action" or null (closed). */
 function askMode(activity) {
   const heal = healingFormulaOf(activity, maximizeDice);
   const formula = heal?.formula ?? "?";
@@ -66,7 +69,7 @@ function askMode(activity) {
   }, { fallback: "bonus", awaiting: { actor: activity.actor, kind: "choice" } });
 }
 
-/** `dnd5e.preUseActivity` : le choix (passé, d'office ou demandé) et son coût. */
+/** `dnd5e.preUseActivity`: the choice (passed, by default or asked) and its cost. */
 function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
   if ( !potionHealingOn() || !offersPotionChoice(activity) ) return true;
   const ours = (usageConfig[MODULE_ID] ??= {});
@@ -75,7 +78,7 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
     const combatant = combatantFor(activity.actor);
     const choice = potionChoice({ inCombat: !!combatant, budget: combatant ? readBudget(combatant) : null });
     if ( choice.ask ) {
-      // Les cibles de l'utilisation suspendue repartent avec la relance (faire boire à un autre).
+      // The suspended use's targets restart with the relaunch (having another drink).
       const targets = Array.from(game.user.targets);
       askMode(activity).then(picked => {
         if ( !chosenPotionMode(picked) ) return;
@@ -94,13 +97,13 @@ function onPreUse(activity, usageConfig, dialogConfig, messageConfig) {
   return true;
 }
 
-/** `dnd5e.postUseActivity` : l'utilisation a eu lieu — le soin maximal est promis au jet qui suit. */
+/** `dnd5e.postUseActivity`: the use took place — the maximal healing is promised to the roll that follows. */
 function onPostUse(activity, usageConfig, results) {
   if ( usageConfig?.[MODULE_ID]?.potionMode !== "action" || !offersPotionChoice(activity) ) return;
   promised.set(promiseKey(activity), { at: Date.now(), message: results?.message?.id ?? null });
 }
 
-/** Le jet de soin de cette potion doit-il être maximal ? Par la carte d'utilisation, sinon par la promesse en mémoire. */
+/** Must this potion's healing roll be maximal? By the use card, otherwise by the promise in memory. */
 function promisedMax(activity, message) {
   const origin = foundry.utils.getProperty(message ?? {}, "data.system.origin");
   if ( origin && (game.messages.get(origin)?.getFlag(MODULE_ID, "potionMode") === "action") ) return true;
@@ -110,7 +113,7 @@ function promisedMax(activity, message) {
   return true;
 }
 
-/** `dnd5e.preRollDamageV2` (client de celui qui boit ou fait boire) : les dés au maximum, et le retour visible de la table. */
+/** `dnd5e.preRollDamageV2` (client of whoever drinks or gives a drink): dice at their maximum, and visible feedback. */
 function onPreRollHealing(config, dialog, message) {
   const activity = config?.subject;
   if ( !offersPotionChoice(activity) || !config.rolls?.length || !promisedMax(activity, message) ) return true;
@@ -135,11 +138,12 @@ export function registerPotionChoice() {
 }
 
 /**
- * Issue #31 : « Faire boire une potion de soins » (menu contextuel d'une créature au contact, MJ et joueurs) — la créature est désignée,
- * puis la potion utilisée comme d'un clic : la question action Bonus / action vient ensuite si la règle maison est active. `administer`
- * fait aller le soin d'une potion « personnelle » (Guide du maître) à la créature désignée (adapter/usage.mjs).
+ * Issue #31: "Have a creature drink a healing potion" (context menu of a creature in contact, GM and players) — the
+ * creature is chosen, then the potion is used as if clicked: the Bonus Action / action question follows if the house rule is
+ * active. `administer` makes the healing of a "personal" potion (Dungeon Master's Guide) go to the chosen creature
+ * (adapter/usage.mjs).
  * @param {TokenDocument} target
- * @param {Activity} activity  L'activité de soin de la potion (adapter/potions.mjs, `healingPotionActivity`).
+ * @param {Activity} activity  The potion's healing activity (adapter/potions.mjs, `healingPotionActivity`).
  * @param {{event?: Event, potionMode?: string}} [options]
  */
 export function administerPotion(target, activity, { event=null, potionMode=null }={}) {

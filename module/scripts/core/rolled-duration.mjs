@@ -1,12 +1,12 @@
 /**
- * O9h (§363) : une durée écrite comme une formule (« 2d4 » minutes : Poussière de disparition), tirée une fois. Pur : aucune
- * dépendance à Foundry. Formules permises : une somme de termes « NdM » et d'entiers (« 2d4 », « 1d6 + 2 », « 3 »).
+ * O9h (§363): a duration written as a formula ("2d4" minutes: Dust of Disappearance), rolled once. Pure: no
+ * dependency on Foundry. Allowed formulas: a sum of "NdM" terms and integers ("2d4", "1d6 + 2", "3").
  */
 
 const SECONDS = Object.freeze({ seconds: 1, minutes: 60, hours: 3600 });
 
 /**
- * Le total de la formule, avec `random` (∈ [0, 1[) pour les dés ; null si la formule n'est pas de cette forme.
+ * The formula's total, with `random` (∈ [0, 1[) for the dice; null if the formula is not of this form.
  * @param {string} formula
  * @param {() => number} [random]
  */
@@ -28,7 +28,7 @@ export function rollSimple(formula, random=Math.random) {
   return total;
 }
 
-/** La durée en secondes d'une règle `{ seconds }` ou `{ formula, units }` ; null si illisible ou nulle. */
+/** The duration in seconds of a `{ seconds }` or `{ formula, units }` rule; null if unreadable or zero. */
 export function durationSeconds(rule, random=Math.random) {
   if ( Number.isFinite(rule?.seconds) ) return rule.seconds > 0 ? rule.seconds : null;
   const total = rollSimple(rule?.formula, random);

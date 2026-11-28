@@ -1,6 +1,6 @@
 /**
- * Téléportation de soi (SPEC §16.10) : validation de la destination (`dnd5e.teleport`), planification et clic du moteur,
- * activité d'arrivée. Extrait de runtime/actions.mjs.
+ * Self-teleportation (SPEC §16.10): validation of the destination (`dnd5e.teleport`), planning and the engine's click,
+ * arrival activity. Extracted from runtime/actions.mjs.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -24,16 +24,16 @@ import { antimagicRegionAt } from "../adapter/antimagic.mjs";
 import { placeArrivalArea } from "../adapter/self-area.mjs";
 
 /* -------------------------------------------- */
-/*  Téléportation (§16.10)                      */
+/*  Teleportation (§16.10)                      */
 /* -------------------------------------------- */
 
-/** Refus de la dernière destination, par token : l'intention demande s'il faut forcer, sinon reprend la visée au lieu d'abandonner. */
+/** Refusal of the last destination, per token: the intention asks whether to force, else resumes the aiming instead of giving up. */
 const refusedTeleports = new Map();   // §411 : uuid du token → `{ to, lines }`, de quoi forcer
 
 /**
- * La portée d'une téléportation, dans l'unité de la scène : celle de l'activité native (`teleport.value`, préparée par
- * dnd5e, teleport-data.mjs), sinon celle que le contenu déclare (`teleport`) — §461 : ou, sans distance déclarée, la portée de
- * l'activité utilisée (capacités de monstres). null : sans limite.
+ * The range of a teleportation, in the scene's unit: that of the native activity (`teleport.value`, prepared by
+ * dnd5e, teleport-data.mjs), otherwise the one the content declares (`teleport`) — §461: or, with no declared distance, the range
+ * of the activity used (monster abilities). null: no limit.
  */
 function teleportLimit(activity, scene) {
   const rule = (activity?.type === "teleport") ? { distance: activity.teleport?.value, units: activity.teleport?.units }
@@ -43,9 +43,9 @@ function teleportLimit(activity, scene) {
 }
 
 /**
- * `dnd5e.teleport` (activité native « teleport » de dnd5e 6, documents/activity/teleport.mjs) : la destination doit
- * être un espace inoccupé que la créature voit (Pas brumeux, Porte dimensionnelle : « un espace inoccupé… »). La
- * distance, elle, est déjà bornée par la planification du cœur (`maxDistance`). Sur le client qui planifie.
+ * `dnd5e.teleport` (dnd5e 6's native "teleport" activity, documents/activity/teleport.mjs): the destination must
+ * be an unoccupied space that the creature sees (Misty Step, Dimension Door: "an unoccupied space…"). The
+ * distance, for its part, is already bounded by the core's planning (`maxDistance`). On the client that plans.
  */
 export function onTeleport(activity, plans) {
   for ( const { token, plan } of plans ?? [] ) {
@@ -54,8 +54,8 @@ export function onTeleport(activity, plans) {
     if ( !doc || !to ) continue;
     const issues = teleportIssues(activity, doc, to);
     if ( !issues.length ) continue;
-    // §411 (issue #44, lot 4) : plus de refus sec. Le déplacement est annulé (le hook est synchrone) ; l'intention (`teleportSelf`,
-    // `handleNearSpace`) demande ensuite, et peut forcer la même case.
+    // §411 (issue #44, batch 4): no more flat refusal. The move is cancelled (the hook is synchronous); the intention
+    // (`teleportSelf`, `handleNearSpace`) then asks, and can force the same cell.
     notice(doc, loc(issues[0].notice));
     refusedTeleports.set(doc.uuid, { to: { x: to.x, y: to.y, elevation: to.elevation ?? doc._source.elevation ?? 0 }, lines: issues.map(i => i.line) });
     return false;
@@ -64,34 +64,34 @@ export function onTeleport(activity, plans) {
 }
 
 /**
- * Ce qui cloche dans une destination de téléportation : `[{ line, notice }]` (phrase de la fenêtre, texte flottant). « Jusqu'à 9 m » ; un
- * espace inoccupé ; §367 Marche dans l'ombre ; une case que l'on voit (C12-b : sauf `teleport.unseen`, Porte dimensionnelle).
+ * What is wrong with a teleportation destination: `[{ line, notice }]` (window sentence, floating text). "Up to 9 m"; an
+ * unoccupied space; §367 "Marche dans l'ombre"; a cell that is seen (C12-b: except `teleport.unseen`, Dimension Door).
  * @param {Activity|null} activity
  * @param {TokenDocument} doc
  * @param {{x: number, y: number, elevation?: number}} to
  */
 export function teleportIssues(activity, doc, to) {
   const issues = [];
-  // « Jusqu'à 9 m » (Foulée brumeuse) : la destination du plan est celle du clic — le cœur ne la borne pas toujours.
+  // "Up to 9 m" (Misty Step): the plan's destination is that of the click — the core does not always bound it.
   const limit = teleportLimit(activity, doc.parent);
   const travelled = (limit !== null) ? distanceBetween(doc, doc, { posB: { x: to.x, y: to.y, elevation: to.elevation ?? doc._source.elevation } }).value : 0;
   if ( (limit !== null) && (travelled > limit + 1e-6) ) {
     issues.push({ line: loc("Teleport.TropLoin", { distance: limit, units: doc.parent.grid.units }), notice: "Retour.TropLoin" });
   }
   if ( occupiedAt(doc, to) ) issues.push({ line: loc("Teleport.CaseOccupee"), notice: "Retour.CaseOccupee" });
-  // §465 : « à 1,50 m d'une créature qu'il voit » (Rêve éveillé), « à 3 m de la créature qui l'a déclenchée » (Poursuite).
+  // §465: "within 1.50 m of a creature it sees" ("Rêve éveillé"), "within 3 m of the creature that triggered it" ("Poursuite").
   const destination = activity?.item ? contentOf(activity.item).entry?.teleport?.destination : null;
   if ( (destination?.near === "creature") && !nearCreature(doc, to, destination) ) {
     const within = Math.round(lengthIn(destination.within, destination.units, doc.parent.grid.units) * 10) / 10;
     issues.push({ line: loc("Teleport.LoinCreature", { distance: within, units: doc.parent.grid.units }), notice: "Retour.TropLoin" });
   }
-  // §436 : Champ antimagie — ni vers lui, ni depuis lui (statut `antimagic` de dnd5e 6.1 au départ, région `dnd5e.antimagic` ou globe
-  // du §163 à l'arrivée).
+  // §436: Antimagic Field — neither into it, nor out of it (dnd5e 6.1 `antimagic` status at departure, `dnd5e.antimagic` region or
+  // §163 globe at arrival).
   const position = { x: to.x, y: to.y, elevation: to.elevation ?? doc._source.elevation ?? 0 };
   const field = antimagicAround(doc)?.name ?? antimagicRegionAt(doc, position)?.name ?? antimagicGlobeAt(doc, position)?.item?.name ?? null;
   if ( field ) issues.push({ line: loc("Teleport.Antimagie", { item: field }), notice: "Retour.Antimagie" });
   const center = doc.getCenterPoint ? doc.getCenterPoint(to) : { x: to.x, y: to.y };
-  // §367 : Marche dans l'ombre — « en Pénombre ou dans les Ténèbres, vers un espace … lui aussi en Pénombre ou dans les Ténèbres ».
+  // §367: "Marche dans l'ombre" — "in Dim Light or Darkness, to a space … also in Dim Light or Darkness".
   const lit = tooBrightFor(activity, doc, { ...center, elevation: to.elevation ?? doc._source.elevation ?? 0 });
   if ( lit ) issues.push({ line: loc(`Teleport.TropEclaire.${lit}`), notice: "Retour.TropEclaire" });
   const unseen = activity?.item ? contentOf(activity.item).entry?.teleport?.unseen === true : false;
@@ -102,8 +102,8 @@ export function teleportIssues(activity, doc, to) {
 }
 
 /**
- * §465 : la case d'arrivée est-elle à `within` d'une créature que le token voit ? `trigger` : d'abord les cibles désignées (la créature
- * qui a déclenché la réaction), sinon toute créature de la scène, lui excepté.
+ * §465: is the arrival cell within `within` of a creature the token sees? `trigger`: first the designated targets (the creature
+ * that triggered the Reaction), otherwise any creature of the scene, it excepted.
  */
 function nearCreature(doc, to, { within, units, trigger=false }) {
   const scene = doc.parent;
@@ -120,8 +120,8 @@ function nearCreature(doc, to, { within, units, trigger=false }) {
 }
 
 /**
- * §411 : la dernière destination refusée de ce token — « Faire quand même » ? Forcé : le token y est téléporté (`blink`, sans la
- * validation), le MJ et la table prévenus. Rend true si c'est fait.
+ * §411: this token's last refused destination — "Do it anyway"? Forced: the token is teleported there (`blink`, without the
+ * validation), the GM and the table warned. Returns true if it is done.
  */
 async function forceRefusedTeleport(activity, doc) {
   const refused = refusedTeleports.get(doc.uuid);
@@ -131,15 +131,15 @@ async function forceRefusedTeleport(activity, doc) {
   const go = await askAnyway(`${item?.name ?? loc("Teleport.Titre")} — ${doc.name}`, refused.lines, { actor: doc.actor, item, token: doc });
   if ( !go ) return false;
   const { x, y, elevation } = refused.to;
-  // Une case prise : dnd5e ne laisse pas finir un déplacement sur une autre créature (canvas/token.mjs, `constrainMovementPath`) sauf
-  // `ignoreTokens` — forcer, c'est y aller quand même.
+  // An occupied cell: dnd5e does not let a move end on another creature (canvas/token.mjs, `constrainMovementPath`) except
+  // `ignoreTokens` — forcing is going there anyway.
   await doc.move([{ x, y, elevation, action: "blink", snapped: true }], { constrainOptions: { ignoreTokens: true }, [MODULE_ID]: { cleared: true } });
   return true;
 }
 
 /**
- * §367 : `teleport.maxLight` — le départ (`"from"`) ou l'arrivée (`"to"`) plus éclairés que la règle ne le permet, ou null. Sans canevas
- * ou sans lumière lisible : rien à redire.
+ * §367: `teleport.maxLight` — the departure (`"from"`) or the arrival (`"to"`) more lit than the rule allows, or null. Without a
+ * canvas or without readable light: nothing to say.
  * @param {Activity} activity
  * @param {TokenDocument} doc
  * @param {{x: number, y: number, elevation?: number}|null} [destination]
@@ -156,17 +156,18 @@ export function tooBrightFor(activity, doc, destination=null) {
 }
 
 /**
- * La téléportation de soi qu'une activité déclenche, ou null : l'activité native « teleport » de dnd5e à portée « soi »
- * (sorts SRD), sinon ce que le contenu déclare pour l'item (`teleport`, content/teleports.mjs : le PHB).
+ * The self-teleportation that an activity triggers, or null: dnd5e's native "teleport" activity with a "self" range
+ * (SRD spells), otherwise what the content declares for the item (`teleport`, content/teleports.mjs: the PHB).
  * @returns {{native: true}|{native: false, distance: number, units: string}|null}
  */
 export function selfTeleportOf(activity) {
   const rule = activity?.item ? contentOf(activity.item).entry?.teleport : null;
-  // §264 : les passagers que le contenu déclare valent aussi pour l'activité native (Porte dimensionnelle du SRD).
+  // §264: the passengers that the content declares also apply to the native activity (SRD Dimension Door).
   if ( (activity?.type === "teleport") && (activity.range?.units === "self") && activity.canPlanTeleport ) return { native: true, passengers: rule?.passengers ?? null };
   if ( !rule || (rule.activity && (rule.activity !== activity.id)) ) return null;
-  // §461 : sans distance déclarée, la portée de l'activité (« teleports up to [portée] ») ; illisible (« soi », spéciale) : pas de téléportation.
-  // §465 : sauf une arrivée « près d'une créature qu'il voit » (Rêve éveillé), qui borne seule la destination.
+  // §461: with no declared distance, the activity's range ("teleports up to [range]"); unreadable ("self", special): no
+  // teleportation.
+  // §465: except an arrival "near a creature it sees" ("Rêve éveillé"), which alone bounds the destination.
   const reach = teleportReach(rule, activity.range) ?? ((rule.destination?.near === "creature") ? { distance: null, units: null } : null);
   if ( !reach ) return null;
   return { native: false, distance: reach.distance, units: reach.units, then: rule.then ?? null, passengers: rule.passengers ?? null,
@@ -174,12 +175,13 @@ export function selfTeleportOf(activity) {
 }
 
 /**
- * §67 quater : l'activité que la téléportation déclare pour l'arrivée (`teleport.then` : « elle peut ensuite forcer chaque
- * créature à 1,50 m de sa nouvelle position… »), utilisée aussitôt depuis la nouvelle position — une zone sur soi se pose
- * d'office (runtime/self-area.mjs).
+ * §67 quater: the activity that the teleportation declares for the arrival (`teleport.then`: "it can then force each
+ * creature within 1.50 m of its new position…"), used right away from the new position — an area on self is placed
+ * automatically (runtime/self-area.mjs).
  */
 export async function afterTeleport(activity, rule) {
-  // §463 : la zone « à l'arrivée » (Téléportation radieuse) — posée autour de la créature arrivée ; sa résolution suit la région.
+  // §463: the "at arrival" area ("Téléportation radieuse") — placed around the creature that arrived; its resolution
+  // follows the region.
   if ( rule?.area === "arrival" ) {
     const token = activity.getUsageToken?.() ?? activity.actor?.getActiveTokens?.(false, true)?.[0] ?? null;
     const created = token ? await placeArrivalArea(activity, token).catch(err => { console.error(`${MODULE_ID} | arrival area`, err); return null; }) : null;
@@ -192,14 +194,14 @@ export async function afterTeleport(activity, rule) {
     .catch(err => console.error(`${MODULE_ID} | teleport arrival activity`, err));
 }
 
-/** Planifie une téléportation déclarée, comme le fait l'activité native (dnd5e teleport.mjs, `planTeleport`). */
+/** Plans a declared teleportation, as the native activity does (dnd5e teleport.mjs, `planTeleport`). */
 async function planDeclaredTeleport(activity, object, { distance, units }) {
-  // §465 : sans distance (Rêve éveillé), la planification n'est pas bornée — la validation exige une créature près de l'arrivée.
+  // §465: with no distance ("Rêve éveillé"), the planning is not bounded — the validation requires a creature near the arrival.
   const bounded = Number.isFinite(distance) ? { maxDistance: lengthIn(distance, units, canvas.grid.units) } : {};
   const plan = await object.planMovement({ allowedActions: ["blink"], direct: true, ...bounded, preventDrop: true });
   if ( !plan ) return null;
   const plans = [{ token: object, plan }];
-  // Le même point de contrôle que la téléportation native : notre validation, et quiconque l'écoute.
+  // The same checkpoint as the native teleportation: our validation, and anyone who listens.
   if ( Hooks.call("dnd5e.teleport", activity, plans) === false ) return [];
   const moved = await object.document.startMovement(plan.id);
   return [{ token: object, plan, moved }];
@@ -207,14 +209,14 @@ async function planDeclaredTeleport(activity, object, { distance, units }) {
 
 let teleporting = null;
 
-/** La téléportation dont on choisit la destination sur ce client (`{ token, limit }`, portée dans l'unité de la scène), ou null. */
+/** The teleportation whose destination is being chosen on this client (`{ token, limit }`, range in the scene's unit), or null. */
 export const currentTeleport = () => teleporting;
 
 /**
- * §67 ter : la planification du cœur (`Token#planMovement`) ne se valide qu'en GLISSANT le token jusqu'à la destination
- * (canvas/placeables/token.mjs, `_prepareDragLeftDropUpdates` : seul le token planifié est interactif) — un clic au sol n'y fait
- * rien. Le clic du moteur (ui/pointer.mjs) choisit donc la case sous la souris : la planification du cœur est fermée, et
- * `teleportSelf` téléporte le token après la même validation (`dnd5e.teleport`). Le glisser du cœur reste possible.
+ * §67 ter: the core's planning (`Token#planMovement`) is only validated by DRAGGING the token to the destination
+ * (canvas/placeables/token.mjs, `_prepareDragLeftDropUpdates`: only the planned token is interactive) — a click on the ground does
+ * nothing there. The engine's click (ui/pointer.mjs) therefore chooses the cell under the mouse: the core's planning is closed, and
+ * `teleportSelf` teleports the token after the same validation (`dnd5e.teleport`). The core's drag remains possible.
  */
 export function teleportClick(point) {
   const tp = teleporting;
@@ -225,7 +227,7 @@ export function teleportClick(point) {
   return true;
 }
 
-/** Téléporter vers la case choisie d'un clic : la validation de `onTeleport` (et de quiconque écoute), puis un `blink`. */
+/** Teleport to the cell chosen by a click: the validation of `onTeleport` (and of anyone who listens), then a `blink`. */
 export async function teleportTo(activity, token, { x, y }) {
   const elevation = token._source.elevation ?? 0;
   const plans = [{ token: token.object, plan: { destination: { x, y, elevation } } }];
@@ -235,32 +237,32 @@ export async function teleportTo(activity, token, { x, y }) {
 }
 
 /**
- * Intention « se téléporter » (Foulée brumeuse) : le token de la créature est contrôlé, et la planification du cœur
- * s'ouvre aussitôt — celle de l'activité native (`planTeleport`, bouton « Téléporter » de sa carte), ou la même pour un
- * item qui la déclare. BG3 : on choisit la case dans la foulée. Une destination refusée (case prise, pas en vue)
- * rouvre la visée ; Échap l'abandonne.
+ * "Teleport self" intention (Misty Step): the creature's token is controlled, and the core's planning
+ * opens right away — that of the native activity (`planTeleport`, "Teleport" button of its card), or the same for an
+ * item that declares it. BG3: the cell is chosen right away. A refused destination (occupied cell, not in view)
+ * reopens the aiming; Escape abandons it.
  * @param {Activity} activity
- * @returns {Promise<boolean>}  true si la créature s'est téléportée.
+ * @returns {Promise<boolean>}  true if the creature teleported.
  */
 export async function teleportSelf(activity) {
   const rule = selfTeleportOf(activity);
   const token = activity?.getUsageToken?.() ?? activity?.actor?.getActiveTokens?.(false, true)?.[0] ?? null;
   const object = token?.object ?? null;
   if ( !rule || !object ) return false;
-  // Sa propre visée, gardée ici : une autre téléportation lancée pendant celle-ci remplace `teleporting`, et la fin de la première
-  // le remettait à null sous la seconde (issue #108 : « Cannot read properties of null (reading 'chosen') »).
+  // Its own aiming, kept here: another teleportation launched during this one replaces `teleporting`, and the end of the first
+  // set it back to null under the second (issue #108: "Cannot read properties of null (reading 'chosen')").
   const own = teleporting = { token, limit: teleportLimit(activity, token.parent) };
-  // §465 : une arrivée près d'une plante (Marche des arbres) — les arbres ne sont pas des objets de la scène : le rappel, le MJ en juge.
+  // §465: an arrival near a plant (Tree Stride) — trees are not objects of the scene: the reminder, the GM judges it.
   if ( rule.destination?.near === "plant" ) {
     const within = Math.round(lengthIn(rule.destination.within, rule.destination.units, token.parent.grid.units) * 10) / 10;
     ui.notifications.info(loc("Teleport.Plante", { item: activity.item.name, distance: within, units: token.parent.grid.units }));
   }
-  // §92 : la case quittée, pour les options de la Foulée des fées (créatures à 1,50 m de l'espace quitté).
+  // §92: the cell left, for the options of the Steps of the Fey (creatures within 1.50 m of the space left).
   const from = { x: token._source.x, y: token._source.y, elevation: token._source.elevation ?? 0, level: token._source.level ?? null };
-  // §264 : qui part avec lui (Porte dimensionnelle), choisi avant le saut ; posé à côté de lui à l'arrivée.
+  // §264: who leaves with it (Dimension Door), chosen before the jump; placed next to it on arrival.
   const passengers = await choosePassengers(token, rule.passengers);
   const done = async () => {
-    // §461 : la table voit et entend la téléportation (règle DAS : retour visible et son chez tous les clients).
+    // §461: the table sees and hears the teleportation (DAS rule: visible feedback and sound on all clients).
     notice(token, { key: "Retour.Teleporte" }, "gain", { all: true, action: "teleport", outcome: "success" });
     await carryPassengers(token, passengers);
     await afterTeleport(activity, rule); await afterTeleportOptions(activity, token, from); return true;
@@ -271,7 +273,7 @@ export async function teleportSelf(activity) {
       refusedTeleports.delete(token.uuid);
       const results = rule.native ? await activity.planTeleport() : await planDeclaredTeleport(activity, object, rule);
       if ( results?.some(r => r.moved) ) return done();
-      // §67 ter : une destination choisie d'un clic (`teleportClick`) — la planification du cœur, elle, s'est fermée sans rien.
+      // §67 ter: a destination chosen by a click (`teleportClick`) — the core's planning, for its part, closed with nothing.
       const chosen = own.chosen;
       if ( chosen ) {
         own.chosen = null;
@@ -279,9 +281,9 @@ export async function teleportSelf(activity) {
       }
       if ( !refusedTeleports.has(token.uuid) ) {
         if ( chosen ) continue;
-        return false;   // abandonnée (Échap), pas refusée
+        return false;   // abandoned (Escape), not refused
       }
-      // §411 : refusée (case prise, hors de vue, trop loin) — forcer, sinon la visée se rouvre.
+      // §411: refused (occupied cell, out of view, too far) — force, otherwise the aiming reopens.
       if ( await forceRefusedTeleport(activity, token) ) return done();
     }
     return false;
@@ -289,27 +291,27 @@ export async function teleportSelf(activity) {
 }
 
 /* -------------------------------------------- */
-/*  §401 : un espace de votre choix, tout près   */
+/*  §401: a space of your choice, very close     */
 /* -------------------------------------------- */
 
 export const NEAR_SPACE_QUERY = `${MODULE_ID}.nearSpace`;
 
-/** Au-delà, la planification se ferme d'elle-même (le token reste où il est, ou le MJ actif le décale). */
+/** Beyond that, the planning closes by itself (the token stays where it is, or the active GM shifts it). */
 const NEAR_SPACE_MS = 30000;
 
 /**
- * §401 : Clignotement — « vous revenez dans un espace inoccupé de votre choix, que vous voyez, à 3 m ou moins de l'espace quitté ». Sur le
- * client de celui qui choisit (le joueur du token, sinon le MJ) : rester là (si l'espace est libre) ou choisir la case, par la
- * planification du cœur ou un clic (comme la Foulée brumeuse), validée comme une téléportation (case libre, en vue, à portée). Rend la
- * case choisie `{ x, y }` (le token y est), ou null (il reste où il est).
+ * §401: Blink — "you return to an unoccupied space of your choice that you can see within 3 m of the space you left". On the
+ * client of whoever chooses (the token's player, otherwise the GM): stay there (if the space is free) or choose the cell, through
+ * the core's planning or a click (like Misty Step), validated like a teleportation (free cell, in view, in range). Returns the
+ * chosen cell `{ x, y }` (the token is there), or null (it stays where it is).
  * @param {{token: string, distance: number, units: string, mustMove?: boolean, item?: string}} payload
  */
 export async function handleNearSpace({ token: uuid, distance, units, mustMove=false, item="", near=null }) {
   const doc = await fromUuid(uuid);
   const object = doc?.object;
   if ( !object ) return null;
-  // §402 : `near` (uuids de tokens) — la case est à `distance` de l'une de ces créatures, pas de la position du token (Frappe du vent
-  // d'acier : « à 1,50 m de l'une des cibles ») ; le trajet n'est pas borné.
+  // §402: `near` (token uuids) — the cell is within `distance` of one of those creatures, not of the token's position (Steel Wind
+  // Strike: "within 1.50 m of one of the targets"); the path is not bounded.
   const anchors = (near ?? []).map(u => fromUuidSync(u, { strict: false })).filter(Boolean);
   const reach = lengthIn(distance, units, doc.parent.grid.units);
   const limit = anchors.length ? Infinity : reach;
@@ -336,9 +338,9 @@ export async function handleNearSpace({ token: uuid, distance, units, mustMove=f
         own.chosen = null;
         const to = plan?.destination ?? (chosen ? { ...chosen, elevation: doc._source.elevation ?? 0 } : null);
         if ( !to ) return null;
-        // Un clic n'est pas borné par la planification du cœur : la portée se relit ici.
+        // A click is not bounded by the core's planning: the range is read again here.
         const travelled = distanceBetween(doc, doc, { posB: { x: to.x, y: to.y, elevation: to.elevation ?? doc._source.elevation } }).value;
-        // §411 : ce qui cloche (trop loin, case prise, hors de vue) se dit dans une fenêtre — forcer, sinon choisir une autre case.
+        // §411: what is wrong (too far, occupied cell, out of view) is told in a window — force, otherwise choose another cell.
         const at = { x: to.x, y: to.y, elevation: to.elevation ?? doc._source.elevation ?? 0 };
         const lines = [];
         if ( travelled > limit + 1e-6 ) lines.push(loc("Teleport.TropLoin", { distance: Math.round(limit * 10) / 10, units: doc.parent.grid.units }));

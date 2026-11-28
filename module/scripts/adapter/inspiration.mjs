@@ -1,10 +1,12 @@
 /**
- * Inspiration bardique (SPEC §33) : « une fois dans l'heure, quand la créature rate un Test d20, elle peut lancer le dé d'Inspiration
- * bardique et en ajouter le résultat, ce qui peut changer l'échec en réussite ». La créature inspirée porte l'effet « Inspiré » de
- * l'item du barde (origine : l'item `bardic-inspiration`) ; le dé est l'échelle du barde (`@scale.bard.inspiration`, d6 → d12).
+ * Bardic Inspiration (SPEC §33): "once within the next hour, when the creature fails a d20 Test, it can roll the Bardic
+ * Inspiration die and add the result, which can turn the failure into a success". The inspired creature carries the
+ * "Inspired" effect of the bard's item (origin: the `bardic-inspiration` item); the die is the bard's scale
+ * (`@scale.bard.inspiration`, d6 → d12).
  *
- * Le moteur le propose aux jets qu'il lit : un jet d'attaque qui rate une cible, une sauvegarde ratée — au joueur de la créature
- * (sinon au MJ), avant que le verdict ne parte au cœur (runtime/engine.mjs). Le dé est lancé en clair, l'effet retiré.
+ * The engine offers it for the rolls it reads: an attack roll that misses a target, a failed saving throw — to the creature's
+ * player (otherwise to the GM), before the verdict goes to the core (runtime/engine.mjs). The die is rolled openly, the effect
+ * removed.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -18,7 +20,7 @@ import { rerollFormula, rerollOffered, rerollQuestion } from "../core/reroll.mjs
 
 const t = (key, data) => game.i18n.format(`DND5ECOMBAT.Inspiration.${key}`, data ?? {});
 
-/** Le dé d'Inspiration d'un barde (`@scale.bard.inspiration`, d6 → d12), « 1d6 » à défaut. */
+/** A bard's Inspiration die (`@scale.bard.inspiration`, d6 → d12), "1d6" by default. */
 export function inspirationDieOf(bard) {
   try {
     const die = Roll.replaceFormulaData("@scale.bard.inspiration", bard?.getRollData?.() ?? {}, { missing: "" }).trim();
@@ -27,7 +29,7 @@ export function inspirationDieOf(bard) {
   return "1d6";
 }
 
-/** L'inspiration que porte l'acteur : l'effet et la formule du dé ; null s'il n'en a pas. */
+/** The inspiration the actor carries: the effect and the die formula; null if it has none. */
 export function inspirationOf(actor) {
   for ( const effect of actor?.appliedEffects ?? actor?.effects ?? [] ) {
     if ( effect.disabled || effect.isSuppressed ) continue;
@@ -39,8 +41,8 @@ export function inspirationOf(actor) {
 }
 
 /**
- * §113 : ce qu'un barde peut donner — l'item Inspiration bardique, l'activité qui pose l'effet « Inspiré » et son dé, s'il lui reste
- * une utilisation ; null sinon.
+ * §113: what a bard can give — the Bardic Inspiration item, the activity that places the "Inspired" effect and its die, if it
+ * has a use left; null otherwise.
  */
 export function inspirationSourceOf(bard) {
   const item = bard?.items?.find(i => identifierOf(i).id === "bardic-inspiration");
@@ -51,29 +53,30 @@ export function inspirationSourceOf(bard) {
 }
 
 /**
- * La question (joueur de la créature, sinon MJ), puis le dé : rend le résultat à ajouter, ou 0 (refusé, pas d'inspiration).
+ * The question (the creature's player, otherwise the GM), then the die: returns the result to add, or 0 (declined, no inspiration).
  * @param {Actor} actor
- * @param {{what: string, total: number, needed: number|null, test?: boolean}} context  Le jet raté : « attaque » ou « sauvegarde », son
- *   total, le seuil ; `needed` null pour un test libre (§113), dont le moteur ne connaît pas le DD. §148 : `test` — un test dont le DD
- *   est connu (porté par le jet) : la question le dit.
+ * @param {{what: string, total: number, needed: number|null, test?: boolean}} context  The failed roll: "attack" or "save", its
+ *   total, the threshold; `needed` null for a free check (§113), whose DC the engine does not know. §148: `test` — a check whose DC
+ *   is known (carried by the roll): the question says so.
  */
 export async function offerInspiration(actor, { what, total, needed, test=false, save=false, seconds=null }) {
   const inspiration = inspirationOf(actor);
   if ( !inspiration ) return 0;
-  // §148 : seuil connu — rien sur une réussite, ni quand même le plus haut résultat du dé ne suffirait (le dé ne se gâche pas).
+  // §148: known threshold — nothing on a success, nor when even the die's highest result would not be enough (the die is
+  // not wasted).
   let max = null;
   try { max = new Roll(inspiration.formula).evaluateSync({ maximize: true }).total; } catch { /* formule inconnue : on propose */ }
   const offer = inspirationOffer({ total, needed, max });
   if ( offer !== "offer" ) return 0;
   const answer = await askChoice(actor, {
     actor: actor.uuid, item: t("Nom"),
-    // §242 : une sauvegarde demandée, DD caché — pas « Test (…) ».
+    // §242: a requested saving throw, hidden DC — not "Check (…)".
     prompt: ((needed === null) && save) ? t("QuestionSave", { what, total, formula: inspiration.formula })
       : (needed === null) ? t("QuestionTest", { what, total, formula: inspiration.formula })
       : test ? t("QuestionDD", { what, total, needed, gap: needed - total, formula: inspiration.formula })
       : t("Question", { what, total, needed, formula: inspiration.formula }),
-    // « Non » d'abord : sans réponse dans le délai, askChoice retient la première option — l'inspiration n'est pas dépensée sans accord
-    // (choix de l'utilisateur le 2026-09-29, comme la Chance du ténébreux).
+    // "No" first: with no answer within the timeout, askChoice takes the first option — the inspiration is not spent without
+    // consent (user's choice on 2026-09-29, like Dark One's Own Luck).
     options: [{ id: "no", label: t("Non") }, { id: "yes", label: t("Oui", { formula: inspiration.formula }) }],
     ...(Number(seconds) > 0 ? { seconds } : {})
   });
@@ -85,8 +88,8 @@ export async function offerInspiration(actor, { what, total, needed, test=false,
 }
 
 /**
- * §94 : la formule du jet de l'activité, lue avant qu'elle ne paie — « @consumed.hd » (Symbiose : « dépensez un dé de vie, lancez-le »)
- * devient le dé que la consommation va dépenser (le plus grand ou le plus petit restant). null si rien à lancer.
+ * §94: the activity roll's formula, read before it pays — "@consumed.hd" ("Symbiosis": "spend a Hit Die, roll it")
+ * becomes the die that the consumption will spend (the largest or the smallest remaining). null if nothing to roll.
  */
 function rollFormulaOf(activity) {
   let formula = activity?.roll?.formula;
@@ -102,15 +105,15 @@ function rollFormulaOf(activity) {
 }
 
 /**
- * Ce qui reste pour payer l'activité : le plus petit nombre d'utilisations restantes parmi celles qu'elle consomme — de son item, ou
- * d'un autre (§90 : les manœuvres paient sur la Supériorité martiale ; dnd5e a déjà ramené la cible à l'id de l'item de l'acteur,
- * `_remapConsumptionTarget`). Infinity si rien de compté.
+ * What is left to pay for the activity: the smallest number of remaining uses among those it consumes — of its item, or
+ * of another (§90: maneuvers pay from Combat Superiority; dnd5e has already brought the target back to the id of the actor's
+ * item, `_remapConsumptionTarget`). Infinity if nothing is counted.
  */
 export function usesLeftFor(activity) {
   let left = Infinity;
   const count = item => (item && Number(item.system.uses?.max)) ? Math.max(0, Number(item.system.uses.value) || 0) : Infinity;
   for ( const t of activity?.consumption?.targets ?? [] ) {
-    // §94 : les utilisations de l'activité elle-même (Se ressaisir : une fois par repos long), les dés de vie (Symbiose).
+    // §94: the uses of the activity itself ("Pull Yourself Together": once per Long Rest), the Hit Dice ("Symbiosis").
     if ( t.type === "activityUses" ) { if ( Number(activity.uses?.max) ) left = Math.min(left, Math.max(0, Number(activity.uses.value) || 0)); continue; }
     if ( t.type === "hitDice" ) { left = Math.min(left, Math.max(0, Number(activity.actor?.system?.attributes?.hd?.value) || 0)); continue; }
     if ( t.type !== "itemUses" ) continue;
@@ -121,20 +124,20 @@ export function usesLeftFor(activity) {
 }
 
 /**
- * §38 : un dé que la créature ajoute à SON propre jet, après l'avoir vu (clé de contenu `rollBonus: { activity, on, skills }` — Chance du
- * ténébreux : « ajoutez 1d10 à votre test de caractéristique ou jet de sauvegarde ; après avoir vu le jet, avant ses effets ; une fois
- * par jet » ; §90 : Attaque précise, Embuscade, Autorité naturelle, Évaluation tactique). Proposé s'il reste de quoi payer ; oui :
- * l'activité est utilisée par dnd5e (ses consommations dépensées), son jet (`roll.formula`) lancé en clair et rendu. Rend le résultat à
- * ajouter, ou 0. `needed` absent (un test sans DD connu) : la question ne donne que le total.
+ * §38: a die that the creature adds to ITS OWN roll, after having seen it (content key `rollBonus: { activity, on, skills }` —
+ * Dark One's Own Luck: "add 1d10 to your ability check or saving throw; after seeing the roll, before its effects; once
+ * per roll"; §90: Precision Attack, Ambush, "Natural Authority", Tactical Assessment). Offered if enough is left to pay; yes:
+ * the activity is used by dnd5e (its consumptions spent), its roll (`roll.formula`) rolled openly and returned. Returns the result
+ * to add, or 0. `needed` absent (a check with no known DC): the question gives only the total.
  * @param {Actor} actor
  * @param {{kind: "save"|"check"|"attack"|"initiative", what: string, total: number, needed?: number, skill?: string,
- *   statuses?: string[]}} context  `statuses` : les états que la sauvegarde évite ou fait finir (Survivant).
+ *   statuses?: string[]}} context  `statuses`: the conditions that the save avoids or ends (Survivor).
  */
 /**
- * Relevé des trous (2026-10-22) : Inspiration de combat (Collège de la vaillance 3) — « une créature qui a un dé d'Inspiration bardique de
- * vous peut l'utiliser ainsi. Défense : quand elle est touchée par un jet d'attaque, elle peut prendre une Réaction pour lancer le dé et
- * ajouter le résultat à sa CA contre cette attaque, ce qui peut la faire rater. Attaque : juste après avoir touché, elle peut lancer le dé
- * et ajouter le résultat aux dégâts de l'attaque. » L'inspiration de l'acteur, si son barde a l'aptitude (clé `combatInspiration`).
+ * Gap survey (2026-10-22): Combat Inspiration (College of Valor 3) — "a creature that has a Bardic Inspiration die from
+ * you can use it in these ways. Defense: when it is hit by an attack roll, it can take a Reaction to roll the die and
+ * add the result to its AC against that attack, which can make it miss. Offense: just after hitting, it can roll the die
+ * and add the result to the attack's damage." The actor's inspiration, if its bard has the feature (key `combatInspiration`).
  */
 function combatInspirationOf(actor) {
   const inspiration = inspirationOf(actor);
@@ -142,12 +145,12 @@ function combatInspirationOf(actor) {
   return inspiration;
 }
 
-/** La créature pourrait-elle se défendre par l'Inspiration de combat ? (pré-contrôle de la fenêtre « touché », sans l'attaque) */
+/** Could the creature defend itself with Combat Inspiration? (pre-check of the "hit" window, without the attack) */
 export function hasCombatInspiration(actor) {
   return !!combatInspirationOf(actor);
 }
 
-/** Le dé lancé en clair et l'inspiration dépensée. */
+/** The die rolled openly and the inspiration spent. */
 async function spendCombatInspiration(actor, inspiration, key) {
   const roll = await new Roll(inspiration.formula).evaluate();
   await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor }), flavor: t(key, { name: actor.name, bard: inspiration.bard, total: roll.total }),
@@ -157,8 +160,8 @@ async function spendCombatInspiration(actor, inspiration, key) {
 }
 
 /**
- * Inspiration de combat, Attaque : sur le client de l'auteur, avant le jet de dégâts d'un coup. Rend le résultat du dé (ajouté aux
- * dégâts par runtime/feats.mjs), ou 0.
+ * Combat Inspiration, Offense: on the author's client, before the damage roll of a hit. Returns the die's result (added to
+ * damage by runtime/feats.mjs), or 0.
  */
 export async function offerCombatInspirationDamage(actor) {
   const inspiration = combatInspirationOf(actor);
@@ -169,9 +172,9 @@ export async function offerCombatInspirationDamage(actor) {
 }
 
 /**
- * Inspiration de combat, Défense : la créature touchée (fenêtre « touché », runtime/reactions.mjs), si sa Réaction est libre, que le coup
- * n'est pas critique et que le dé peut le faire rater. `auto` : la réponse sans question (`autoReact: "first"`). Rend le dé, ajouté à
- * la CA pour rejuger ; 0 sinon. La Réaction est dépensée.
+ * Combat Inspiration, Defense: the creature that was hit ("hit" window, runtime/reactions.mjs), if its Reaction is free, the
+ * hit is not a Critical Hit and the die can make it miss. `auto`: the answer without a question (`autoReact: "first"`).
+ * Returns the die, added to the AC to re-judge; 0 otherwise. The Reaction is spent.
  */
 export async function offerCombatInspirationDefense(actor, { total, ac, critical=false, auto=false }) {
   const inspiration = critical ? null : combatInspirationOf(actor);
@@ -190,18 +193,18 @@ export async function offerCombatInspirationDefense(actor, { total, ac, critical
   return spendCombatInspiration(actor, inspiration, "VaillanceCarteDefense");
 }
 
-/** §129 : le d20 gardé d'un jet (celui qui compte, après Avantage / Désavantage), ou null. */
+/** §129: the kept d20 of a roll (the one that counts, after Advantage / Disadvantage), or null. */
 export function keptD20(roll) {
   const die = roll?.dice?.find?.(d => d.faces === 20);
   const kept = die?.results?.filter(r => r.active && !r.discarded) ?? [];
   return (kept.length === 1) ? kept[0].result : null;
 }
 
-/** §280 : les utilisations d'items que l'activité a coûtées reviennent ; l'item de la règle en perd une (s'il en compte). */
+/** §280: the item uses that the activity cost are returned; the rule's item loses one (if it counts any). */
 async function refundFailed(activity, item) {
   for ( const t of activity.consumption?.targets ?? [] ) {
     if ( t.type !== "itemUses" ) continue;
-    // Une cible par identifiant (données de DDB Importer : « moxie ») plutôt que par id.
+    // A target by identifier (DDB Importer data: "moxie") rather than by id.
     const paid = t.target ? (activity.actor?.items.get(t.target) ?? activity.actor?.items.find(i => identifierOf(i).id === t.target)) : activity.item;
     const spent = Number(paid?.system?.uses?.spent) || 0;
     if ( paid && spent ) await paid.update({ "system.uses.spent": Math.max(0, spent - (Number(t.value) || 1)) });
@@ -216,16 +219,16 @@ export async function offerRollBonus(actor, { kind, what, total, needed=null, sk
   for ( const item of actor?.items ?? [] ) {
     const rule = contentOf(item).entry?.rollBonus;
     if ( !rule || !(rule.on ?? []).includes(kind) ) continue;
-    // O6 (§342) : un anneau ou un objet merveilleux ne joue que porté, et harmonisé s'il l'exige.
+    // O6 (§342): a ring or a wondrous item works only when worn, and attuned if it requires it.
     if ( (item.type === "equipment") && ((item.system?.equipped === false) || ((item.system?.attunement === "required") && !item.system?.attuned)) ) continue;
-    // Sort chercheur : « si vous faites un jet d'attaque pour un sort et ratez » — pas une attaque d'arme.
+    // Seeking spell: "if you make an attack roll for a spell and miss" — not a weapon attack.
     if ( rule.spellAttack && !((kind === "attack") && spell) ) continue;
     if ( (kind === "check") && rule.skills && !rule.skills.includes(skill) ) continue;
     if ( rule.statuses && !rule.statuses.some(s => statuses.includes(s)) ) continue;
-    // §133 : seulement une sauvegarde de ces caractéristiques (Tueur de mages, Esprit gardé : Intelligence, Sagesse, Charisme).
+    // §133: only a save of these abilities (Mage Slayer, Guarded Mind: Intelligence, Wisdom, Charisma).
     if ( rule.abilities && !rule.abilities.includes(ability) ) continue;
     const activity = item.system.activities?.get(rule.activity);
-    // §133 : `succeed` — la sauvegarde ratée devient une réussite (Tueur de mages, Esprit gardé) : ce qui s'ajoute est l'écart au DD.
+    // §133: `succeed` — the failed save becomes a success (Mage Slayer, Guarded Mind): what is added is the gap to the DC.
     if ( rule.succeed ) {
       const left = usesLeftFor(activity);
       if ( !activity || !Number.isFinite(needed) || (total >= needed) || !(left > 0) ) continue;
@@ -242,9 +245,9 @@ export async function offerRollBonus(actor, { kind, what, total, needed=null, sk
         flags: { [MODULE_ID]: { rollBonus: { item: identifierOf(item).id, kind, added: needed - total, succeed: true } } } });
       return needed - total;
     }
-    // Relevé des trous (2026-10-22) : Concentration fanatique — « une fois par Rage active, si vous ratez un jet de sauvegarde, vous pouvez
-    // le relancer avec un bonus égal à vos dégâts de Rage ; vous devez utiliser le nouveau jet ». Ce qui s'ajoute peut être négatif.
-    // §280 : sans `during`, l'activité de la règle paie la relance (Inébranlable : un point de Moxie, une sauvegarde ratée).
+    // Gap survey (2026-10-22): Fanatical Focus — "once per active Rage, if you fail a saving throw, you can reroll it
+    // with a bonus equal to your Rage damage; you must use the new roll". What is added can be negative.
+    // §280: without `during`, the rule's activity pays for the reroll ("Unshakeable": one Moxie point, a failed save).
     if ( rule.reroll && !rule.reroll.during ) {
       const left = usesLeftFor(activity);
       if ( !activity || !(left > 0) || !rerollOffered(rule.reroll, { d20, total, needed }) ) continue;
@@ -252,7 +255,8 @@ export async function offerRollBonus(actor, { kind, what, total, needed=null, sk
       const fixed = Number.isInteger(rule.reroll.sets);
       const answer = await askChoice(actor, {
         actor: actor.uuid, item: item.name, ...(Number(seconds) > 0 ? { seconds } : {}),
-        // La relance qu'une activité paie n'est pas « une fois par Rage » : sa propre question, qui dit l'Avantage s'il y en a un.
+        // The reroll that an activity pays for is not "once per Rage": its own question, which states the Advantage
+        // if there is one.
         prompt: game.i18n.format(`DND5ECOMBAT.Relance.${rerollQuestion(rule.reroll, needed)}`,
           { what, total, needed, d20, bonus, item: item.name, sets: rule.reroll.sets }),
         options: [{ id: "no", label: game.i18n.localize("DND5ECOMBAT.BonusJet.Non") },
@@ -262,7 +266,7 @@ export async function offerRollBonus(actor, { kind, what, total, needed=null, sk
       if ( answer?.id !== "yes" ) continue;
       const used = await activity.use({ [MODULE_ID]: { confirmed: true } }, { configure: false }, { create: false }).catch(() => null);
       if ( !used ) return 0;
-      // §298 : une activité qui ne consomme rien dans la donnée (Inflexible) — l'utilisation de son item est dépensée ici.
+      // §298: an activity that consumes nothing in the data (Indomitable) — the use of its item is spent here.
       if ( !(activity.consumption?.targets ?? []).some(t => ["itemUses", "activityUses"].includes(t.type)) && Number(item.system.uses?.max) ) {
         await item.update({ "system.uses.spent": (Number(item.system.uses.spent) || 0) + 1 });
       }
@@ -291,16 +295,16 @@ export async function offerRollBonus(actor, { kind, what, total, needed=null, sk
         flags: { [MODULE_ID]: { rollBonus: { item: identifierOf(item).id, kind, added, reroll: { old: d20, new: roll.total } } } } });
       return added;
     }
-    // §129 : Chanceux — le d20 relancé, le meilleur gardé : il faut connaître le d20 du jet.
+    // §129: Lucky — the d20 rerolled, the better one kept: the d20 of the roll must be known.
     if ( rule.luck && !Number.isInteger(d20) ) continue;
-    // §280 : un dé « quand vous ratez » (Fanfaronnade) n'est pas proposé sur un test déjà réussi, quand le DD est connu.
+    // §280: a "when you fail" die (Swagger) is not offered on a check that already succeeded, when the DC is known.
     if ( rule.failRefund && Number.isFinite(needed) && (total >= needed) ) continue;
-    // La formule de l'activité, ses références résolues : la question montre « 1d10 », pas « @scale.bard.inspiration ».
+    // The activity's formula, its references resolved: the question shows "1d10", not "@scale.bard.inspiration".
     const raw = rule.luck ? "1d20" : rollFormulaOf(activity);
     const formula = raw ? formulaShown(raw, activity?.getRollData?.() ?? actor.getRollData()) : raw;
     const left = usesLeftFor(activity);
     if ( !activity || !formula || !(left > 0) ) continue;
-    // §94 : une activité de Réaction (Symbiose, Se ressaisir) n'est proposée que si la Réaction est libre ; elle est dépensée.
+    // §94: a Reaction activity ("Symbiosis", "Pull Yourself Together") is offered only if the Reaction is free; it is spent.
     const reaction = activity.activation?.type === "reaction";
     const combatant = reaction ? combatantFor(actor) : null;
     if ( combatant && !((readBudget(combatant).reaction ?? 1) >= 1) ) continue;
@@ -310,26 +314,27 @@ export async function offerRollBonus(actor, { kind, what, total, needed=null, sk
       prompt: rule.luck ? game.i18n.format((needed === null) ? "DND5ECOMBAT.Chance.QuestionTest" : "DND5ECOMBAT.Chance.Question", { what, total, needed, d20, item: item.name, left: shown })
         : (needed === null) ? game.i18n.format("DND5ECOMBAT.BonusJet.QuestionTest", { what, total, formula, item: item.name, left: shown })
         : game.i18n.format("DND5ECOMBAT.BonusJet.Question", { what, total, needed, formula, item: item.name, left: shown }),
-      // « Garder le jet » d'abord : sans réponse dans le délai, askChoice retient la première option — une utilisation ne part pas sans accord.
+      // "Keep the roll" first: with no answer within the timeout, askChoice takes the first option — a use is not spent
+      // without consent.
       options: [{ id: "no", label: game.i18n.localize("DND5ECOMBAT.BonusJet.Non") },
         { id: "yes", label: rule.luck ? game.i18n.localize("DND5ECOMBAT.Chance.Oui") : game.i18n.format("DND5ECOMBAT.BonusJet.Oui", { formula }) }]
     });
     if ( answer?.id !== "yes" ) continue;
-    // Des utilisations d'activité sans maximum dans la donnée (Se ressaisir : « une fois par repos long », non chiffré) : dnd5e refuserait
-    // l'utilisation faute de quoi payer — rien à décompter, elle se fait sans consommer.
+    // Activity uses with no maximum in the data ("Pull Yourself Together": "once per Long Rest", not numbered): dnd5e would
+    // refuse the use for lack of something to pay with — nothing to count, it is done without consuming.
     const untracked = (activity.consumption?.targets ?? []).some(t => t.type === "activityUses") && !Number(activity.uses?.max);
     const used = await activity.use({ [MODULE_ID]: { confirmed: true }, ...(untracked ? { consume: false } : {}) }, { configure: false }, { create: false }).catch(() => null);
     if ( !used ) return 0;
     if ( combatant ) { const budget = readBudget(combatant); await writeBudget(combatant, { ...budget, reaction: Math.max(0, (budget.reaction ?? 1) - 1) }); }
     const roll = await new Roll(formula, activity.getRollData?.() ?? actor.getRollData()).evaluate();
-    // §129 : Chanceux — ce qui s'ajoute est l'écart entre le nouveau d20 et l'ancien, s'il est meilleur.
+    // §129: Lucky — what is added is the gap between the new d20 and the old one, if it is better.
     const added = rule.luck ? Math.max(0, roll.total - d20) : roll.total;
     await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor }),
       flavor: rule.luck ? game.i18n.format("DND5ECOMBAT.Chance.Carte", { item: item.name, name: actor.name, what, old: d20, d20: roll.total, sum: total + added })
         : game.i18n.format("DND5ECOMBAT.BonusJet.CarteTotal", { item: item.name, name: actor.name, what, total, sum: total + roll.total }),
       flags: { [MODULE_ID]: { rollBonus: { item: identifierOf(item).id, kind, added, ...(rule.luck ? { luck: { old: d20, new: roll.total } } : {}) } } } });
-    // §280 : encore raté (DD connu) — ce que l'activité a coûté revient, et l'item perd une utilisation : « vous regagnez le point dépensé
-    // et ne pouvez plus utiliser cette aptitude avant un repos ».
+    // §280: failed again (DC known) — what the activity cost is returned, and the item loses a use: "you regain the spent point
+    // and cannot use this feature before a rest".
     if ( rule.failRefund && Number.isFinite(needed) && ((total + added) < needed) ) await refundFailed(activity, item);
     return added;
   }

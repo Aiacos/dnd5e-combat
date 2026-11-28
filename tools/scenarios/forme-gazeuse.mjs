@@ -1,6 +1,6 @@
 /**
- * §269 : Forme gazeuse — « la cible ne peut ni attaquer ni lancer de sorts ». Le Magicien se la lance : Trait de feu devient un souci de
- * légalité ; avant, il n'y en avait pas.
+ * §269: Gaseous Form — "the target can neither attack nor cast spells". The Wizard casts it on himself: Fire Bolt becomes a
+ * legality concern; before, there was none.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 

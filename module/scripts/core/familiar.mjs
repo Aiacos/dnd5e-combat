@@ -1,23 +1,23 @@
 /**
- * Familiers (SPEC §107) : Appel de familier (PHB 2024, `find-familiar`), le Compagnon sauvage du druide (`wild-companion`) et le
- * Pacte de la chaîne de l'occultiste (`pact-of-the-chain`), déclarés `summon.familiar` (content/summons.mjs). Fonctions pures.
+ * Familiars (SPEC §107): Find Familiar (PHB 2024, `find-familiar`), the druid's Wild Companion (`wild-companion`) and the
+ * warlock's Pact of the Chain (`pact-of-the-chain`), declared `summon.familiar` (content/summons.mjs). Pure functions.
  *
- * Règles (PHB 2024, Appel de familier) : « un familier ne peut pas attaquer, mais il peut entreprendre d'autres actions
- * normalement » ; « par une action Magie, vous pouvez congédier temporairement le familier dans une poche dimensionnelle » ;
- * « par une action Magie tant qu'il est congédié temporairement, vous pouvez le faire réapparaître dans un espace inoccupé à
- * 9 m ou moins de vous » ; « chaque fois que le familier tombe à 0 point de vie ou disparaît dans la poche dimensionnelle, il
- * laisse dans son espace tout ce qu'il portait ».
+ * Rules (PHB 2024, Find Familiar): "a familiar can't attack, but it can take other actions as
+ * normal"; "as a Magic action, you can temporarily dismiss the familiar into a pocket dimension";
+ * "as a Magic action while it is temporarily dismissed, you can make it reappear in an unoccupied space within
+ * 9 m of you"; "whenever the familiar drops to 0 Hit Points or disappears into the pocket dimension, it
+ * leaves behind in its space anything it was carrying".
  */
 
-/** La distance à laquelle le familier réapparaît, en pieds (constante de règle, convertie comme le reste : SPEC §5.7). */
+/** The distance at which the familiar reappears, in feet (rule constant, converted like the rest: SPEC §5.7). */
 export const RECALL_RANGE = Object.freeze({ value: 30, units: "ft" });
 
-/** Le coût de chaque geste du maître en combat : l'action Magie, une action. */
+/** The cost of each of the master's gestures in combat: the Magic action, an action. */
 export const POCKET_COST = "action";
 
 /**
- * Les actions de base qu'un familier reçoit : toutes sauf celles qui attaquent (`attack: true` dans la table — l'attaque à
- * mains nues et sa Lutte / Bousculade).
+ * The basic actions a familiar receives: all except those that attack (`attack: true` in the table — the unarmed
+ * attack and its Grapple / Shove).
  * @param {Record<string, {attack?: boolean}>} table  BASIC_ACTIONS (content/actions.mjs).
  * @returns {string[]}
  */
@@ -25,16 +25,16 @@ export function familiarBasicKinds(table) {
   return Object.entries(table ?? {}).filter(([, def]) => def?.attack !== true).map(([kind]) => kind);
 }
 
-/** Types d'items qu'une créature porte (objets), par opposition à ses capacités. */
+/** Item types a creature carries (objects), as opposed to its abilities. */
 const CARRIED_TYPES = new Set(["weapon", "equipment", "consumable", "tool", "loot", "container"]);
 
 /**
- * Ce que le familier « porte » : les objets de sa fiche, sauf ses armes naturelles (Serres, Morsure : arme de type « natural »),
- * son armure naturelle (équipement « natural ») et les items du moteur (actions de base). Données simples :
+ * What the familiar "carries": the objects on its sheet, except its natural weapons (Talons, Bite: weapon of type "natural"),
+ * its natural armor (equipment "natural") and the engine's items (basic actions). Plain data:
  * `{ id, type, system: { type: { value } }, flags }`.
  * @param {object[]} items
  * @param {string} moduleId
- * @returns {string[]}  Les ids.
+ * @returns {string[]}  The ids.
  */
 export function carriedItemIds(items, moduleId) {
   return (items ?? []).filter(i => CARRIED_TYPES.has(i?.type)
@@ -43,7 +43,7 @@ export function carriedItemIds(items, moduleId) {
 }
 
 /**
- * Ce qui refuse la case de réapparition : « far » (au-delà de la portée), « occupied » (une créature l'occupe), ou null.
+ * What refuses the reappearance cell: "far" (beyond range), "occupied" (a creature occupies it), or null.
  * @param {{distance: number, limit: number, occupied: boolean}} args
  */
 export function recallProblem({ distance, limit, occupied }) {
@@ -53,9 +53,9 @@ export function recallProblem({ distance, limit, occupied }) {
 }
 
 /**
- * Les données de création du token qui revient de la poche : celles du token congédié (son delta compris : PV, effets, items),
- * sans son id ni ses statistiques, sans ordre de suivi, posé à la case choisie, au niveau et à l'élévation du maître.
- * @param {object} stored    `TokenDocument#toObject()` au moment du congé.
+ * The creation data of the token coming back from the pocket: those of the dismissed token (its delta included: HP, effects,
+ * items), without its id or its statistics, without a follow order, placed at the chosen cell, at the master's level and elevation.
+ * @param {object} stored    `TokenDocument#toObject()` at the time of dismissal.
  * @param {{x: number, y: number, elevation?: number, level?: string|null}} at
  * @param {string} moduleId
  */
@@ -66,7 +66,7 @@ export function recalledTokenData(stored, { x, y, elevation=0, level=null }, mod
     delete ours.follow;
     if ( !Object.keys(ours).length ) delete data.flags[moduleId];
   }
-  // La trace du déplacement d'avant (V14 : `_movementHistory`) ne vaut plus pour ce nouveau token.
+  // The trace of the previous movement (V14: `_movementHistory`) no longer applies to this new token.
   delete data._movementHistory;
   return { ...data, x, y, elevation, ...(level ? { level } : {}) };
 }

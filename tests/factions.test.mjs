@@ -15,7 +15,7 @@ const table = {
 
 afterEach(() => useFactionTable(null));
 
-describe("§181 sans faction : exactement la règle des dispositions", () => {
+describe("§181 without a faction: exactly the disposition rule", () => {
   it("toutes les combinaisons, table vide et table pleine", () => {
     for ( const t of [null, table] ) {
       useFactionTable(t);
@@ -24,7 +24,7 @@ describe("§181 sans faction : exactement la règle des dispositions", () => {
         expect(hostileSides(sa, sb)).toBe(areHostile(a, b));
         expect(alliedSides(sa, sb)).toBe(a === b);
         expect(targetRelation(sa, sb)).toBe(relationOf(a, b));
-        // Un seul des deux a une faction : rien ne change non plus.
+        // Only one of the two has a faction: nothing changes either.
         expect(hostileSides({ ...sa, faction: "bandits" }, sb)).toBe(areHostile(a, b));
         expect(alliedSides(sa, { ...sb, faction: "wildlife" })).toBe(a === b);
       }
@@ -37,7 +37,7 @@ describe("§181 sans faction : exactement la règle des dispositions", () => {
     expect(hostileSides({ disposition: 1, faction: PARTY }, { disposition: -1, faction: PARTY })).toBe(true);
   });
 
-  it("un couple que la matrice ne règle pas suit la disposition", () => {
+  it("a pair the matrix does not settle follows the disposition", () => {
     useFactionTable(table);
     const loup = { disposition: -1, faction: "wildlife" }, goule = { disposition: -1, faction: "undead" };
     expect(alliedSides(loup, goule)).toBe(true);
@@ -50,7 +50,7 @@ describe("§181 avec factions", () => {
   const loup = { disposition: -1, faction: "wildlife", uuid: "T.loup" };
   const goule = { disposition: -1, faction: "undead", uuid: "T.goule" };
 
-  it("bandit et loup, tous deux Hostiles, sont ennemis ; bandit et goule neutres", () => {
+  it("bandit and wolf, both Hostile, are enemies; bandit and ghoul neutral", () => {
     useFactionTable(table);
     expect(hostileSides(bandit, loup)).toBe(true);
     expect(alliedSides(bandit, loup)).toBe(false);
@@ -60,7 +60,7 @@ describe("§181 avec factions", () => {
     expect(targetRelation(bandit, goule)).toBe("neutral");
   });
 
-  it("même faction : alliés, quelle que soit la disposition", () => {
+  it("same faction: allies, whatever the disposition", () => {
     useFactionTable(table);
     expect(alliedSides(bandit, { disposition: 0, faction: "bandits" })).toBe(true);
   });
@@ -70,20 +70,20 @@ describe("§181 avec factions", () => {
     expect(hostileSides(bandit, goule)).toBe(true);
     useFactionTable({ ...table, grudges: [["T.goule", "T.bandit"]] });
     expect(factionRelation(goule, bandit)).toBe("hostile");
-    // La rancune vaut même sans faction.
+    // The grudge holds even without a faction.
     expect(hostileSides({ disposition: 1, uuid: "T.a" }, { disposition: 1, uuid: "T.b" })).toBe(false);
     useFactionTable({ grudges: [["T.a", "T.b"]] });
     expect(hostileSides({ disposition: 1, uuid: "T.a" }, { disposition: 1, uuid: "T.b" })).toBe(true);
   });
 
-  it("une créature rendue n'est l'ennemie de personne hors de sa faction", () => {
+  it("a returned creature is nobody's enemy outside its faction", () => {
     useFactionTable(table);
     expect(hostileSides({ ...bandit, stance: "neutral" }, loup)).toBe(false);
     expect(hostileSides({ ...bandit, stance: "neutral" }, { disposition: 1, faction: PARTY })).toBe(false);
     expect(alliedSides({ ...bandit, stance: "neutral" }, { disposition: -1, faction: "bandits" })).toBe(true);
   });
 
-  it("disposition imposée par la relation avec les PJ", () => {
+  it("disposition imposed by the relationship with the PCs", () => {
     useFactionTable(table);
     expect(dispositionFor("bandits")).toBe(-1);
     expect(dispositionFor("wildlife")).toBe(null);
@@ -91,8 +91,8 @@ describe("§181 avec factions", () => {
   });
 });
 
-describe("§181 réglage et règles", () => {
-  it("normalise : party en tête, ids invalides et doublons écartés, relations inconnues retirées", () => {
+describe("§181 setting and rules", () => {
+  it("normalizes: party first, invalid ids and duplicates dropped, unknown relations removed", () => {
     const n = normalizeFactions({
       factions: [{ id: "bandits", name: "Bandits", rules: { types: [" Humanoid "] } }, { id: "bandits" }, { id: "x y" }, { id: "loups", color: "red" }],
       relations: { "bandits|loups": "hostile", "loups|bandits": "allied", "bandits|nobody": "hostile", "bandits|bandits": "allied", "loups|party": "bof" }
@@ -103,16 +103,16 @@ describe("§181 réglage et règles", () => {
     expect(Object.keys(n.relations)).toEqual([pairKey("bandits", "loups")]);
   });
 
-  it("règles : identifiant > sous-type > type", () => {
+  it("rules: identifier > subtype > type", () => {
     const factions = [{ id: PARTY, rules: { types: ["humanoid"] } }, ...GENERIC_FACTIONS,
       { id: "gobelins", rules: { subtypes: ["goblinoid"] } }, { id: "meute", rules: { identifiers: ["wolf"] } }];
     expect(factionByRules(factions, { type: "beast" })).toBe("wildlife");
     expect(factionByRules(factions, { type: "beast", identifier: "wolf" })).toBe("meute");
     expect(factionByRules(factions, { type: "humanoid", subtype: "Goblinoid" })).toBe("gobelins");
-    expect(factionByRules(factions, { type: "humanoid" })).toBe(null);   // party ne se gagne pas par règle
+    expect(factionByRules(factions, { type: "humanoid" })).toBe(null);   // party is not gained by rule
   });
 
-  it("relations suggérées : les haineux contre tous, le reste neutre", () => {
+  it("suggested relations: the hateful against all, the rest neutral", () => {
     const s = suggestedRelations([{ id: PARTY }, ...GENERIC_FACTIONS]);
     expect(s[pairKey("undead", "wildlife")]).toBe("hostile");
     expect(s[pairKey("plants", "wildlife")]).toBe("neutral");

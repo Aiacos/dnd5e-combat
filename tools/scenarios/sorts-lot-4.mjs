@@ -1,12 +1,12 @@
 /**
- * §286 : chantiers du 2026-10-30, lot 4 (zones multiples, cibles choisies), monde `dnd-6`, Arène de test. Le Clerc reçoit les sorts
- * du Manuel des joueurs (à volonté, rien de consommé), le Zombi est à 10 cases à l'est. Vérifie :
- *  - Nuée de météores : la pose de dnd5e (`api.mcp.placeRegionAt`, une fois par sphère) donne UNE région de quatre sphères ; les deux
- *    premières loin du Zombi, les deux dernières sur lui → il fait sa sauvegarde une seule fois, le Clerc est épargné ;
- *  - Tempête de feu : dix cubes en colonne, le Zombi sous le dernier → pris une fois ; la pose refuse des cubes qui ne se touchent que
- *    par un coin, ou un cube hors de portée (`api.mcp.rangedPlacement`, sans ouvrir la pose) ;
- *  - Chaîne d'éclairs : une cible secondaire à plus de 9 m de la première est signalée (`api.mcp.chainCheck`).
- * Remet positions, PV, régions.
+ * §286: work items of 2026-10-30, batch 4 (multiple areas, chosen targets), world `dnd-6`, Test Arena. The Cleric receives the
+ * Player's Handbook spells (at will, nothing consumed), the Zombie is 10 cells east. Checks:
+ *  - Meteor Swarm: dnd5e's placement (`api.mcp.placeRegionAt`, once per sphere) gives ONE region of four Spheres; the first two
+ *    far from the Zombie, the last two on him → he makes his saving throw only once, the Cleric is spared;
+ *  - Fire Storm: ten Cubes in a column, the Zombie under the last one → hit once; the placement refuses Cubes that touch only
+ *    at a corner, or a Cube out of range (`api.mcp.rangedPlacement`, without opening the placement);
+ *  - Chain Lightning: a secondary target more than 9 m from the first is flagged (`api.mcp.chainCheck`).
+ * Puts back positions, HP, regions.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -49,7 +49,7 @@ export default {
       const errors = await ctx.clientErrors();
       ctx.expect(!errors.length, `${label} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
-    /** Le Zombi à `cells` cases à l'est du Clerc ; rend le centre du Zombi en pixels. */
+    /** The Zombie `cells` cells east of the Cleric; returns the Zombie's center in pixels. */
     const placeZombi = async cells => {
       const c = await ctx.position(cleric);
       await ctx.call("move-token", { tokenId: zombi.id, x: c.x + (cells * grid), y: c.y, elevation: c.elevation ?? 0 });
@@ -58,8 +58,8 @@ export default {
       return { x: z.x + (grid / 2), y: z.y + (grid / 2) };
     };
     /**
-     * Lance le sort sans sa zone, pose chaque gabarit par la pose de dnd5e (un `placeRegionAt` par point), puis attend la résolution.
-     * Rend la résolution et la région créée.
+     * Casts the spell without its area, places each template through dnd5e's placement (one `placeRegionAt` per point), then
+     * waits for the resolution. Returns the resolution and the created region.
      */
     const castAt = async (key, points) => {
       await ctx.setHp(zombi, zhp);
@@ -91,14 +91,14 @@ export default {
 
     await part("Tempête de feu", async () => {
       const z = await placeZombi(10);
-      // Dix cubes de 3 m en colonne au-dessus du Zombi, le dernier sur lui : contigus par une face.
+      // Ten 3 m Cubes in a column above the Zombie, the last on him: contiguous by a face.
       const points = Array.from({ length: 10 }, (_, k) => ({ x: z.x, y: z.y - ((9 - k) * 2 * grid) }));
       const { resolution, regions } = await castAt("storm", points);
       ctx.expect(regions.length === 1 && regions[0].shapes.length === 10, `une région de dix cubes (${JSON.stringify(regions.map(r => r.shapes.length))})`);
       const hits = (resolution.targets ?? []).filter(t => t.name === "Zombi");
       ctx.expect(hits.length === 1 && !!hits[0].save, `le Zombi, sous le dixième cube, fait sa sauvegarde une fois (${hits.length})`);
       ctx.expect(!(resolution.targets ?? []).some(t => t.name === "Clerc"), "le Clerc est épargné");
-      // La pose : coin seul, cube isolé, cube hors de portée (150 ft).
+      // The placement: corner only, isolated Cube, Cube out of range (150 ft).
       const cube = (cx, cy) => ({ type: "rectangle", x: cx - grid, y: cy - grid, width: 2 * grid, height: 2 * grid });
       const check = shapes => ctx.engine("rangedPlacement", { tokenId: cleric.id, itemId: ids.storm, shapes });
       const ok = await check([cube(z.x, z.y), cube(z.x + (2 * grid), z.y)]);

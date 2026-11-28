@@ -1,10 +1,10 @@
 /**
- * Sorts de châtiment (SPEC §25) lus et dépensés dans dnd5e 6.0 : quels châtiments l'auteur d'un coup peut lancer, à quels niveaux,
- * ce qu'ils ajoutent au jet de dégâts. Sur le client de l'auteur (ce sont ses emplacements).
+ * Smite spells (SPEC §25) read and spent in dnd5e 6.0: which Smites the author of a hit can cast, at which levels,
+ * what they add to the damage roll. On the author's client (they are its slots).
  *
- * Vérifié dans dnd5e 6.0.3 : les emplacements restants sont dans `system.spells.spell<N>.value` et `system.spells.pact`
- * (`value`, `level`) ; un sort à utilisation gratuite (Châtiment divin du paladin) porte `system.uses` (max 1, repos long) ; une part
- * de dégâts « whole » grandit de `scaling.number` dés par niveau au-dessus de celui du sort.
+ * Verified in dnd5e 6.0.3: the remaining slots are in `system.spells.spell<N>.value` and `system.spells.pact`
+ * (`value`, `level`); a spell with a free use (the paladin's Divine Smite) carries `system.uses` (max 1, Long Rest); a
+ * "whole" damage part grows by `scaling.number` dice per level above the spell's.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -19,7 +19,7 @@ import { spendItemUses } from "./uses.mjs";
 
 const t = (key, data) => game.i18n.format(`DND5ECOMBAT.Chatiment.${key}`, data ?? {});
 
-/** Un coup au corps à corps avec une arme ou une frappe à mains nues ? */
+/** A melee hit with a weapon or an Unarmed Strike? */
 export function meleeWeaponHit(activity, attackMode) {
   const mode = attackMode ?? "";
   return (activity?.type === "attack") && (activity.attack?.type?.value === "melee") && !mode.startsWith("thrown")
@@ -27,15 +27,15 @@ export function meleeWeaponHit(activity, attackMode) {
 }
 
 /**
- * §128 : la règle d'un châtiment pour CET exemplaire du sort. Une copie plus ancienne (le Châtiment de fournaise des personnages
- * pré-tirés du Manuel des joueurs : une seule activité, de sauvegarde, qui porte les dés) n'a pas l'activité de dégâts déclarée —
- * on prend alors celle de l'objet qui porte des dés, et on oublie ce que la copie n'a pas (sauvegarde, effet, activité « fiends »).
- * null : rien à lancer.
+ * §128: a Smite's rule for THIS copy of the spell. An older copy (the Searing Smite of the Player's Handbook
+ * pregenerated characters: a single save activity, which carries the dice) does not have the declared damage activity —
+ * so we take the object's one that carries dice, and drop what the copy lacks (save, effect, "fiends" activity).
+ * null: nothing to cast.
  */
 export function smiteRuleOf(item, rule) {
   const activities = item?.system?.activities;
   if ( !rule || !activities ) return null;
-  // §164 : un châtiment sans dés ajoutés au coup (Grêle d'épines : les dégâts sont ceux de sa sauvegarde).
+  // §164: a Smite with no dice added to the hit (Hail of Thorns: the damage is that of its save).
   if ( !rule.damage ) return rule;
   if ( activities.get(rule.damage) ) return rule;
   const dice = a => (a.damage?.parts ?? []).some(p => p.number && p.denomination);
@@ -45,7 +45,7 @@ export function smiteRuleOf(item, rule) {
     save: activities.get(rule.save) ? rule.save : undefined, effect: item.effects?.get(rule.effect) ? rule.effect : undefined };
 }
 
-/** §164 : un coup à distance avec une arme (Grêle d'épines). */
+/** §164: a ranged hit with a weapon (Hail of Thorns). */
 export function rangedWeaponHit(activity, attackMode) {
   const mode = attackMode ?? "";
   return (activity?.type === "attack") && (activity.item?.type === "weapon")
@@ -53,8 +53,8 @@ export function rangedWeaponHit(activity, attackMode) {
 }
 
 /**
- * Les châtiments possibles : pour chaque sort qui en déclare un, chaque niveau d'emplacement restant (et l'emplacement de pacte), et
- * l'utilisation gratuite de l'item s'il en a une. Rien sans action Bonus disponible en combat.
+ * The possible Smites: for each spell that declares one, each remaining slot level (and the pact slot), and
+ * the item's free use if it has one. Nothing without a Bonus Action available in combat.
  * @returns {Array<{item: Item5e, rule: object, level: number, slot: string|null, free: boolean, label: string}>}
  */
 export function smiteOptions(actor, { ranged=false }={}) {
@@ -64,10 +64,10 @@ export function smiteOptions(actor, { ranged=false }={}) {
   const out = [];
   for ( const item of actor?.items ?? [] ) {
     const rule = isSpellCast(item) ? smiteRuleOf(item, contentOf(item).entry?.smite) : null;
-    // Un châtiment qui n'est pas préparé ne se propose pas (issue #144) — la même règle qu'au lancement (`unprepared`), sauf pour
-    // la copie qu'un objet lance (`cachedFor`).
+    // A Smite that is not prepared is not offered (issue #144) — the same rule as at casting (`unprepared`), except for
+    // the copy that an object casts (`cachedFor`).
     if ( rule && unpreparedSpell(item) && !item.getFlag?.("dnd5e", "cachedFor") ) continue;
-    // §206 : `any` — après toute attaque d'arme, au corps à corps comme à distance (Frappe piégeuse).
+    // §206: `any` — after any weapon attack, melee as well as ranged (Ensnaring Strike).
     if ( !rule || (!rule.any && (!!rule.ranged !== ranged)) ) continue;
     const base = Number(item.system.level) || 1;
     const uses = item.system.uses;
@@ -86,8 +86,8 @@ export function smiteOptions(actor, { ranged=false }={}) {
 }
 
 /**
- * « Une fois par tour » (Frappe occulte) : n'importe quel tour, en combat — le combat où l'acteur se bat, pas `game.combat` (le combat
- * affiché, qui peut en être un autre).
+ * "Once per turn" (Eldritch Smite): any turn, in combat — the combat where the actor is fighting, not `game.combat` (the displayed
+ * combat, which may be another one).
  */
 function turnKey(actor) {
   const combat = combatantFor(actor)?.parent ?? null;
@@ -95,8 +95,8 @@ function turnKey(actor) {
 }
 
 /**
- * §372 : combien de fois une faveur « une fois par tour » a servi ce tour-ci — la marque vaut le tour (une fois) ou « tour#n ».
- * Les options d'une même liste partagent la marque de leur item.
+ * §372: how many times a "once per turn" boon has been used this turn — the mark is worth the turn (once) or "turn#n".
+ * The options of the same list share their item's mark.
  */
 function usedThisTurn(actor, key, turn) {
   const mark = String(actor?.getFlag?.(MODULE_ID, `oncePerTurn.${key}`) ?? "");
@@ -106,14 +106,14 @@ function usedThisTurn(actor, key, turn) {
   return (at === turn) ? (Number(n) || 1) : 0;
 }
 
-/** §372 : la limite par tour d'une faveur — relevée (`perTurn.count`) tant qu'un effet de l'item `perTurn.while` est porté. */
+/** §372: a boon's limit per turn — raised (`perTurn.count`) as long as an effect of the item `perTurn.while` is carried. */
 function perTurnLimit(actor, rule) {
   return (rule.perTurn && carriesEffectFrom(actor, rule.perTurn.while)) ? rule.perTurn.count : 1;
 }
 
 /**
- * L'arme du coup est-elle enchantée par l'item `id` (arme de pacte : « pact-of-the-blade ») ? Si aucune arme de l'acteur ne l'est
- * (pacte jamais posé sur cette fiche, arme liée à la main du temps de Midi), toute arme de corps à corps compte.
+ * Is the hit's weapon enchanted by the item `id` (pact weapon: "pact-of-the-blade")? If none of the actor's weapons is
+ * (pact never placed on this sheet, weapon bound to the hand in Midi's days), any melee weapon counts.
  */
 function wieldsBound(activity, actor, id) {
   const bound = item => (item?.effects ?? []).some(e => !e.disabled && (e.isAppliedEnchantment ?? (e.type === "enchantment"))
@@ -123,10 +123,10 @@ function wieldsBound(activity, actor, id) {
 }
 
 /**
- * Ce qu'on peut ajouter à un coup qui touche (`hitRider`) : §31, les faveurs d'espèce (Ascendance gigante — Brûlure ignée, Froid
- * mordant, Renversement des coteaux), tant que l'item a une utilisation ; §47 bis, la Frappe occulte (emplacement de pacte, arme de
- * pacte au corps à corps, une fois par tour). L'état (À terre) ne vaut que contre une cible de taille `sizeAtMost` au plus ; une
- * faveur qui ne fait que cela n'est pas proposée contre une plus grande.
+ * What can be added to a hit that lands (`hitRider`): §31, the species boons (Giant Ancestry — Fire's Burn, Frost's
+ * Chill, Hill's Tumble), as long as the item has a use; §47 bis, Eldritch Smite (pact slot, pact weapon in melee,
+ * once per turn). The condition (Prone) only works against a target of size `sizeAtMost` or smaller; a
+ * boon that does only that is not offered against a larger one.
  */
 export function riderOptions(actor, target, activity=null, attackMode=null) {
   const sizes = ["tiny", "sm", "med", "lg", "huge", "grg"];
@@ -135,15 +135,15 @@ export function riderOptions(actor, target, activity=null, attackMode=null) {
   for ( const item of actor?.items ?? [] ) {
     const declared = contentOf(item).entry?.hitRider;
     if ( !declared ) continue;
-    // §372 : une liste — des options exclusives du même item (École des coups durs : 1d12, Mise en danger ou Provocation).
+    // §372: a list — mutually exclusive options of the same item (School of Hard Knocks: 1d12, Endanger or Taunt).
     for ( const rule of [declared].flat() ) {
       let left;
       let level = null;
-      // §87 : la faveur se paie avec une utilisation d'un AUTRE item (les manœuvres : les dés de Supériorité martiale).
+      // §87: the boon is paid with a use of ANOTHER item (the maneuvers: the Superiority Dice).
       const payer = rule.pays ? (actor.items.find(i => identifierOf(i).id === rule.pays) ?? null) : null;
       if ( rule.pays && !payer ) continue;
-      // §298 : l'activité de dégâts manque sur cet item (le « psionic-power » de l'Âme acérée porte le même identifiant que celui du
-      // Guerrier psi, sans Frappe psionique) : rien à proposer.
+      // §298: the damage activity is missing on this item (the Soul Knife's "psionic-power" carries the same identifier as the
+      // Psi Warrior's, without Psionic Strike): nothing to offer.
       if ( rule.damage && !item.system.activities?.get(rule.damage) ) continue;
       if ( payer ) {
         const uses = payer.system.uses ?? {};
@@ -152,37 +152,37 @@ export function riderOptions(actor, target, activity=null, attackMode=null) {
         const pact = actor.system?.spells?.pact ?? {};
         left = Number(pact.value) || 0;
         level = Number(pact.level) || 0;
-      } else if ( !(item.system.uses?.max ?? "") ) left = Infinity;   // §78 : sans maximum, sans compter (Piqué)
+      } else if ( !(item.system.uses?.max ?? "") ) left = Infinity;   // §78: without a maximum, not counted (Stung)
       else {
         const uses = item.system.uses ?? {};
         left = Number.isFinite(Number(uses.value)) ? Number(uses.value) : (Number(uses.max) || 0) - (Number(uses.spent) || 0);
       }
-      // Paume vibratoire : une faveur qui coûte plusieurs utilisations de l'item qui la paie (`cost` : 4 points de crédo).
+      // Quivering Palm: a boon that costs several uses of the item that pays for it (`cost`: 4 credo points).
       if ( !riderAffordable(left, rule.cost) ) continue;
-      // §95 : seulement tant qu'un effet de l'item est sur le porteur (Avatar terrifiant : sous la Forme d'effroi).
+      // §95: only while an effect of the item is on the bearer (Terrifying Avatar: under the Form of Dread).
       if ( rule.whileActive && !carriesEffectFrom(actor, identifierOf(item).id) ) continue;
       if ( rule.weapon && !(meleeWeaponHit(activity, attackMode) && wieldsBound(activity, actor, rule.weapon)) ) continue;
-      // §78 : seulement avec l'arme de cet identifiant (Piqué : l'épée courte).
+      // §78: only with the weapon of this identifier (Stung: the shortsword).
       if ( rule.item && (identifierOf(activity?.item ?? {}).id !== rule.item) ) continue;
-      // §129 : seulement une attaque à mains nues (Bagarreur de tavernes : l'Attaque à mains nues, ou l'attaque améliorée du don).
+      // §129: only an unarmed attack (Tavern Brawler: the Unarmed Strike, or the feat's improved attack).
       if ( rule.unarmed && !unarmedAttack(activity) ) continue;
-      // §132 : un coup au corps à corps (arme ou mains nues), un bouclier au bras, des dégâts de ce type (Cogneur, Trancheur, Chargeur,
-      // Maître des boucliers).
+      // §132: a melee hit (weapon or unarmed), a shield on the arm, damage of this type (Crusher, Slasher, Charger,
+      // Shield Master).
       if ( rule.melee && !meleeWeaponHit(activity, attackMode) ) continue;
       if ( rule.shield && !wearsShield(actor) ) continue;
       if ( rule.damageType && !attackDamageTypes(activity).includes(rule.damageType) ) continue;
-      // §372 : seulement une attaque de ces genres d'arme (« unarmed », types d'arme de dnd5e).
+      // §372: only an attack of these kinds of weapon ("unarmed", dnd5e's weapon types).
       if ( rule.weapons && !rule.weapons.includes(weaponKind(activity)) ) continue;
       const key = identifierOf(item).id ?? item.id;
       if ( rule.oncePerTurn && turn && (usedThisTurn(actor, key, turn) >= perTurnLimit(actor, rule)) ) continue;
       const size = target?.actor?.system?.traits?.size;
-      // §132 : `sizeAbove` — la cible n'a pas plus de N tailles de plus que l'auteur (Cogneur : « pas plus d'une taille au-dessus »).
+      // §132: `sizeAbove` — the target is not more than N sizes larger than the author (Crusher: "no more than one size larger").
       const own = actor.system?.traits?.size;
       const fits = (!rule.sizeAtMost || !size || (sizes.indexOf(size) <= sizes.indexOf(rule.sizeAtMost)))
         && (!rule.sizeAbove || !size || !own || (sizes.indexOf(size) <= sizes.indexOf(own) + rule.sizeAbove));
       if ( !fits && !rule.damage && !rule.effect ) continue;
       const unlimited = left === Infinity;
-      // §372 : le nom d'une option de liste, celui de son activité (« School of Hard Knocks: Endanger »).
+      // §372: the name of a list option, that of its activity ("School of Hard Knocks: Endanger").
       const name = rule.name ? (item.system.activities?.get(rule.name)?.name || item.name) : null;
       const label = (rule.slot === "pact") ? t("FaveurPacte", { item: item.name, level, n: left })
         : (name ?? (unlimited ? item.name : t("Faveur", { item: item.name, n: left })));
@@ -192,12 +192,12 @@ export function riderOptions(actor, target, activity=null, attackMode=null) {
   return out;
 }
 
-/** §132 : un bouclier équipé. */
+/** §132: an equipped shield. */
 function wearsShield(actor) {
   return (actor?.items ?? []).some(i => (i.type === "equipment") && (i.system.type?.value === "shield") && i.system.equipped);
 }
 
-/** §132 : les types de dégâts d'une attaque — ceux de ses parts, et ceux de l'arme si l'activité les reprend. */
+/** §132: the damage types of an attack — those of its parts, and those of the weapon if the activity takes them over. */
 export function attackDamageTypes(activity) {
   const out = new Set();
   for ( const p of activity?.damage?.parts ?? [] ) for ( const t of p.types ?? [] ) out.add(t);
@@ -207,22 +207,22 @@ export function attackDamageTypes(activity) {
   return Array.from(out);
 }
 
-/** §129 : une attaque à mains nues — classée « unarmed » par dnd5e, ou l'Attaque à mains nues elle-même. */
+/** §129: an unarmed attack — classed "unarmed" by dnd5e, or the Unarmed Strike itself. */
 function unarmedAttack(activity) {
   return (activity?.type === "attack") && ((activity.attack?.type?.classification === "unarmed")
     || (identifierOf(activity.item ?? {}).id === "unarmed-strike"));
 }
 
-/** Les dés que le châtiment ajoute, au niveau lancé, contre cette cible : `{ formula, type }`, ou null. */
+/** The dice that the Smite adds, at the level cast, against this target: `{ formula, type }`, or null. */
 export function smiteDamage(option, target) {
   const { item, rule, level } = option;
   if ( option.rider ) {
-    // §372 : des dés propres à l'option (École des coups durs : 1d12), lus avec les données de l'acteur.
+    // §372: dice specific to the option (School of Hard Knocks: 1d12), read with the actor's data.
     if ( rule.formula ) return { formula: Roll.replaceFormulaData(rule.formula, item.actor?.getRollData() ?? {}, { missing: "0" }), type: null };
-    // Une faveur sans dégâts (Renversement des coteaux) : rien à lancer, mais elle vaut.
+    // A boon without damage (Hill's Tumble): nothing to roll, but it counts.
     const part = rule.damage ? item.system.activities?.get(rule.damage)?.damage?.parts?.[0] : null;
     const type = Array.from(part?.types ?? [])[0] ?? null;
-    // Une formule libre (Frappe occulte : « (1 + @spells.pact.level)d8 »), lue avec les données de l'acteur : « 4d8 » au niveau 3.
+    // A free formula (Eldritch Smite: "(1 + @spells.pact.level)d8"), read with the actor's data: "4d8" at level 3.
     if ( part?.custom?.enabled && part.custom.formula ) {
       const formula = Roll.replaceFormulaData(part.custom.formula, item.actor?.getRollData() ?? {});
       const sum = formula.match(/^\(\s*(\d+)\s*\+\s*(\d+)\s*\)d(\d+)$/);
@@ -231,7 +231,7 @@ export function smiteDamage(option, target) {
     if ( !part?.number || !part.denomination ) return { formula: null, type: null };
     return { formula: `${part.number}d${part.denomination}`, type };
   }
-  if ( !rule.damage ) return { formula: null, type: null };   // §164 : Grêle d'épines
+  if ( !rule.damage ) return { formula: null, type: null };   // §164: Hail of Thorns
   const undead = ["fiend", "undead"].includes(creatureTypeOf(target?.actor));
   const activity = item.system.activities?.get((undead && rule.fiends) ? rule.fiends : rule.damage);
   const part = activity?.damage?.parts?.[0];
@@ -241,7 +241,7 @@ export function smiteDamage(option, target) {
   return { formula: `${part.number + extra}d${part.denomination}`, type };
 }
 
-/** Dépense ce que coûte le châtiment choisi : l'utilisation gratuite, ou l'emplacement. */
+/** Spends what the chosen Smite costs: the free use, or the slot. */
 export async function spendSmite(actor, option) {
   if ( option.once ) {
     const turn = turnKey(actor);
@@ -267,15 +267,15 @@ export async function spendSmite(actor, option) {
 }
 
 /**
- * La question, sur le client de l'auteur : le sort, puis son niveau (§290), et « pas de châtiment ». Sans réponse : aucun.
- * @returns {Promise<object|null>}  L'option choisie.
+ * The question, on the author's client: the spell, then its level (§290), and "no Smite". Without an answer: none.
+ * @returns {Promise<object|null>}  The chosen option.
  */
 export async function askSmite(actor, target, options) {
   if ( !options.length ) return null;
   const riders = options.every(o => o.rider);
-  // §290 : en deux temps — le sort (une tuile par sort : icône, nom), puis son niveau (un bouton par niveau disponible ; un seul : pris
-  // d'emblée) ; « Autre sort » revient au premier temps. Un bouton par sort et par niveau faisait dix boutons pour un paladin (retour de
-  // table). Les boutons du pied restent, cachés : DialogV2 y cherche ses actions.
+  // §290: in two steps — the spell (one tile per spell: icon, name), then its level (one button per available level; only
+  // one: taken straight away); "Another spell" goes back to the first step. One button per spell and per level made ten
+  // buttons for a paladin (table feedback). The footer buttons stay, hidden: DialogV2 looks for its actions there.
   const groups = [];
   options.forEach((o, i) => {
     let group = groups.find(g => g.item === o.item);
@@ -293,8 +293,8 @@ export async function askSmite(actor, target, options) {
       window: { title }, classes: ["dnd5e-combat-smite"],
       position: { width: Math.min(640, 140 + (Math.min(groups.length, 5) * 104)) },
       content: `<p>${t(riders ? "QuestionFaveur" : "Question", { name: target?.name ?? "" })}</p><div class="tiles">${tiles}</div>`,
-      // Les boutons cachés de chaque option (sort et niveau) d'abord : un choix fait d'un coup (scénarios, `answer-dialog`) saute le second
-      // temps.
+      // The hidden buttons of each option (spell and level) first: a choice made in one go (scenarios, `answer-dialog`) skips
+      // the second step.
       buttons: [...options.map((o, i) => ({ action: `smite${i}`, label: o.label })),
         ...groups.map((g, n) => ({ action: `group${n}`, label: g.item.name, default: n === 0 })), none]
     }, { fallback: "none", awaiting: { actor, kind: "choice" } });
@@ -302,7 +302,7 @@ export async function askSmite(actor, target, options) {
     const group = String(first ?? "").startsWith("group") ? groups[Number(first.replace("group", ""))] : null;
     if ( !group ) return null;
     if ( group.picks.length === 1 ) return group.picks[0].o;
-    // §372 : les options d'une liste se montrent par leur nom.
+    // §372: the options of a list are shown by their name.
     const named = group.picks.every(({ o }) => o.name);
     const levels = group.picks.map(({ i, o }) => `<button type="button" class="level${o.free ? " free" : ""}${o.name ? " named" : ""}" data-action="smite${i}"
       data-tooltip="${esc(o.label)}">${esc(o.name ?? (o.level ? String(o.level) : t("PastilleUtiliser")))}</button>`).join("");
@@ -320,10 +320,10 @@ export async function askSmite(actor, target, options) {
 }
 
 /**
- * Au jet de dégâts d'un coup (`rollDamageForAttack`, client de l'auteur) : la question, puis ce que le jet doit porter —
- * `{ item, level, formula, type, save, target }` —, l'emplacement ou l'utilisation déjà dépensés. null sans châtiment.
+ * At the damage roll of a hit (`rollDamageForAttack`, author's client): the question, then what the roll must carry —
+ * `{ item, level, formula, type, save, target }` —, the slot or use already spent. null without a Smite.
  */
-/** §87 : le type de dégâts du coup — celui que porte le jet d'attaque, sinon le premier de l'arme. */
+/** §87: the hit's damage type — the one the attack roll carries, otherwise the weapon's first. */
 function weaponDamageType(activity, attackMessage) {
   const chosen = attackMessage?.getFlag?.(MODULE_ID, "damageType");
   if ( chosen ) return chosen;
@@ -338,7 +338,7 @@ export async function chooseSmite(activity, attackMessage) {
   if ( !actor || (targets.length !== 1) || (activity?.type !== "attack") ) return null;
   const target = fromUuidSync(targets[0].token ?? "", { strict: false });
   if ( !target ) return null;
-  // Les châtiments : un coup au corps à corps avec une arme ou à mains nues ; les faveurs d'espèce : tout jet d'attaque.
+  // The Smites: a melee hit with a weapon or unarmed; the species boons: any attack roll.
   const mode = attackMessage.system?.mode;
   const options = [...(meleeWeaponHit(activity, mode) ? smiteOptions(actor) : []),
     ...(rangedWeaponHit(activity, mode) ? smiteOptions(actor, { ranged: true }) : []), ...riderOptions(actor, target, activity, mode)];
@@ -348,8 +348,8 @@ export async function chooseSmite(activity, attackMessage) {
   if ( !dice ) return null;
   await spendSmite(actor, option);
   if ( option.rider ) {
-    // §87 : les dés au type de dégâts de l'arme (manœuvres) ; la sauvegarde d'une faveur bornée en taille, seulement contre une cible
-    // assez petite (Attaque repoussante, Croc-en-jambe : « Large or smaller »).
+    // §87: the dice at the weapon's damage type (maneuvers); the save of a size-limited boon, only against a target
+    // small enough (Pushing Attack, Trip Attack: "Large or smaller").
     const weaponType = option.rule.weaponDamage ? weaponDamageType(activity, attackMessage) : null;
     return { kind: "rider", item: option.item.uuid, name: option.item.name, ...dice, ...(weaponType ? { type: weaponType } : {}),
       effect: option.rule.effect ?? null, status: option.fits ? (option.rule.status ?? null) : null,
@@ -358,6 +358,6 @@ export async function chooseSmite(activity, attackMessage) {
   return { item: option.item.uuid, name: option.item.name, level: option.level, free: option.free, ...dice,
     save: option.rule.save ?? null, effect: option.rule.effect ?? null,
     scaling: Math.max(0, option.level - (Number(option.item.system.level) || 1)), target: target.uuid,
-    // §288 : Flèche de foudre — ses dés au lieu de ceux de l'arme ; l'éclat autour de la cible, une fois l'attaque résolue.
+    // §288: Lightning Arrow — its dice instead of the weapon's; the burst around the target, once the attack is resolved.
     ...(option.rule.replaces ? { replaces: true } : {}), ...(option.rule.blast ? { blast: true } : {}) };
 }

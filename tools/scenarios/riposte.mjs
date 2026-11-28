@@ -1,10 +1,10 @@
 /**
- * Brique B9 « dégâts renvoyés à l'attaquant » (SPEC §16.9), sur le Magicien attaqué au contact par le Zombi :
- *  1. Bouclier de feu (spells24, donné au Magicien le temps du scénario), bouclier CHAUD choisi d'avance : un coup du
- *     Zombi qui touche → carte de riposte (`flags["dnd5e-combat"].retaliation`), 2d8 de feu appliqués au Zombi, et la
- *     riposte journalisée dans la résolution de l'attaque (annulable avec elle).
- *  2. Armure d'Agathys (PHB) : 5 PV temporaires et une trace posée sur le Magicien ; un coup qui touche → 5 dégâts de
- *     froid au Zombi (l'activité de dégâts de l'item) ; la trace ne reste que tant qu'il reste des PV temporaires.
+ * Brick B9 "damage returned to the attacker" (SPEC §16.9), on the Wizard attacked in melee by the Zombie:
+ *  1. Fire Shield (spells24, given to the Wizard for the scenario), WARM shield chosen in advance: a Zombie hit that
+ *     lands → retaliation card (`flags["dnd5e-combat"].retaliation`), 2d8 fire applied to the Zombie, and the
+ *     retaliation logged in the attack's resolution (cancelable with it).
+ *  2. Armor of Agathys (PHB): 5 Temporary Hit Points and a mark placed on the Wizard; a hit that lands → 5 cold damage to the
+ *     Zombie (the item's damage activity); the mark stays only as long as Temporary Hit Points remain.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 const WARM = "YbUr13GTnMrootmf";
@@ -35,14 +35,14 @@ export default {
     ctx.restore(clearNew);
     ctx.restore(() => ctx.setHp(zombi, zombiHp));
     ctx.restore(() => ctx.call("move-token", { tokenId: zombi.id, x: zHome.x, y: zHome.y, elevation: zHome.elevation }).catch(() => {}));
-    // Le Zombi au contact du Magicien (à gauche), pour frapper au corps à corps.
+    // The Zombie in contact with the Wizard (on the left), to strike in melee.
     await ctx.call("move-token", { tokenId: zombi.id, x: magePos.x - grid, y: magePos.y, elevation: zHome.elevation });
     await pause(800);
     const items = (await ctx.call("get-actor", { actorId: zombi.actorId })).items ?? [];
     const weapon = items.find(i => (i.type === "weapon") && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"));
     if ( !ctx.expect(!!weapon, `le Zombi a une attaque au corps à corps (${weapon?.name})`) ) return;
 
-    /** Le Zombi frappe jusqu'à toucher ; rend la résolution et les messages qui ont suivi. */
+    /** The Zombie strikes until it hits; returns the resolution and the messages that followed. */
     const strike = async prepare => {
       for ( let i = 0; i < 20; i++ ) {
         await prepare?.();
@@ -84,8 +84,8 @@ export default {
       await ctx.setHp(mage, mageHp);
       await ctx.use({ tokenId: mage.id, identifier: "armor-of-agathys", activityType: "heal", targetTokenIds: [mage.id] });
       await pause(1500);
-      // Le connecteur coupe les actions enchaînées de toute activité (`subsequentActions: false`, use-activity) : le jet
-      // de soin que dnd5e lancerait seul à l'utilisation ne part pas. Les 5 PV temporaires sont donc donnés ici.
+      // The connector cuts the chained actions of every activity (`subsequentActions: false`, use-activity): the healing roll
+      // that dnd5e would make on its own on use does not go out. The 5 Temporary Hit Points are therefore given here.
       await setTemp(5);
       await pause(500);
     };
@@ -101,9 +101,9 @@ export default {
     const still = (await newEffects()).some(e => e.flags?.["dnd5e-combat"]?.trace);
     ctx.expect(still === (temp > 0), `trace ${still ? "toujours là" : "tombée"}, PV temporaires restants : ${temp}`);
 
-    // 3. Armure d'Agathys au niveau 3 (retour de séance, 2026-10-08) : « les PV temporaires et les dégâts de froid augmentent
-    // de 5 par niveau d'emplacement au-dessus du 1er » — 15 dégâts. Le niveau passe par l'emplacement (`spell.slot`,
-    // dnd5e activity/mixin.mjs:533-535), puis par la trace (`flags.dnd5e.scaling`) jusqu'à la riposte.
+    // 3. Armor of Agathys at level 3 (session feedback, 2026-10-08): "the Temporary Hit Points and the cold damage increase
+    // by 5 for each spell slot level above 1st" — 15 damage. The level goes through the spell slot (`spell.slot`,
+    // dnd5e activity/mixin.mjs:533-535), then through the mark (`flags.dnd5e.scaling`) up to the retaliation.
     await clearNew();
     const armor3 = async () => {
       await clearNew();

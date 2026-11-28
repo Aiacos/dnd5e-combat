@@ -1,11 +1,11 @@
 /**
- * L'Occultiste du Manuel des joueurs 2024 (SPEC §29), module premium `dnd-players-handbook` 2.2.0 (pack `classes`, items `phbwlk…`
- * et manifestations `phbinv…`). Déjà là : Pacte de la lame (§16.45), Frappe occulte (§16.19), Lame assoiffée (budget, §16.25),
- * Bénédiction du ténébreux (§16.25), Décharge occulte (rayons, §16.27), Maléfice.
+ * The Warlock of the 2024 Player's Handbook (SPEC §29), premium module `dnd-players-handbook` 2.2.0 (pack `classes`, items
+ * `phbwlk…` and manifestations `phbinv…`). Already there: Pact of the Blade (§16.45), Eldritch Smite (§16.19), Thirsting Blade
+ * (budget, §16.25), Dark One's Blessing (§16.25), Eldritch Blast (rays, §16.27), Hex.
  *
- * Ce que dnd5e fait déjà seul : Décharge déchirante et Lance occulte (enchantements du tour de magie), Vision du diable, Esprit
- * occulte, Vision sorcière, Résistance fiélonne, Bouclier mental (effets), les sorts lancés sans emplacement (activités « cast »),
- * Rouerie magique, Lumière guérisseuse (soin par la réserve de dés).
+ * What dnd5e already does by itself: Agonizing Blast and Eldritch Spear (cantrip enchantments), Devil's Sight, Eldritch Mind,
+ * Witch Sight, Fiendish Resilience, "Mind Shield" (effects), spells cast without a spell slot ("cast" activities),
+ * Magical Cunning, Healing Light (healing from the dice pool).
  */
 
 export const WARLOCK = Object.freeze({
@@ -17,46 +17,48 @@ export const WARLOCK = Object.freeze({
       statuses: [], system: { changes: [] } } },
     { path: "system.activities.TqjZeWzJpT25ZX8s.effects", from: [], value: [{ _id: "dasGazeTwoMinds0" }] },
     { path: "system.activities.TqjZeWzJpT25ZX8s.range.units", from: "ft", value: "touch" }] },
-  // §298 (repasse C3) : Pacte de la chaîne — « vous pouvez lancer Appel de familier par une action Magie » (la donnée dit « 1 heure » :
-  // en combat, l'invocation ne coûtait rien).
-  // Ne faire qu'un avec les ombres (SRD 5.2) : « tant que vous êtes dans une zone de Lumière faible ou de Ténèbres, vous pouvez
-  // lancer Invisibilité sur vous-même sans dépenser d'emplacement » — l'activité de la donnée le permettait en pleine lumière.
+  // §298 (pass C3): Pact of the Chain — "you can cast Find Familiar as a Magic action" (the data says "1 hour":
+  // in combat, the summoning cost nothing).
+  // One with Shadows (SRD 5.2): "while you are in an area of Dim Light or Darkness, you can cast Invisibility on yourself
+  // without expending a spell slot" — the data's activity allowed it in full light.
   "one-with-shadows": { usageLimits: { uF0beZxnJDJ6LQp8: { light: ["dim", "dark"] } } },
   "pact-of-the-chain": { usageLimits: { uehA2kfgOCKRIqAs: { cost: "action" }, "5W78W2Opzhax0Jcf": { cost: "action" } } },
-  // Frappe occulte : au plus une fois par tour, un coup de l'arme de pacte peut coûter un emplacement de Magie de pacte pour
-  // ajouter des dégâts de force (1d8, plus 1d8 par niveau d'emplacement) et, au choix, renverser une cible de taille TG au plus —
-  // proposée au jet de dégâts du coup (§47 bis) ; l'activité
-  // « Frappe » de l'item reste là pour un usage à la main (son déclencheur pose À terre, content/triggers.mjs).
+  // Eldritch Smite: at most once per turn, a hit with the pact weapon can cost a Pact Magic spell slot to add force damage
+  // (1d8, plus 1d8 per slot level) and, optionally, knock a target of size Huge or smaller Prone —
+  // offered on the hit's damage roll (§47 bis); the item's "Smite" activity stays for manual use (its trigger applies Prone,
+  // content/triggers.mjs).
   "eldritch-smite": { hitRider: { damage: "CXJlzDUkMYU9w9i9", status: "prone", sizeAtMost: "huge", slot: "pact", weapon: "pact-of-the-blade", oncePerTurn: true } },
-  // Décharge répulsive : chaque rayon qui touche une cible de taille G au plus peut l'éloigner de 3 m en ligne droite — le tour
-  // de magie porte l'enchantement « Répulsive » ; la poussée, facultative dans la règle, est toujours appliquée. C12-h : déclarée sur
-  // l'invocation elle-même — elle vaut pour le tour de magie qu'elle enchante, quel qu'il soit (Contact glacial, Aspersion empoisonnée…).
+  // Repelling Blast: each ray that hits a target of size Large or smaller can push it 10 ft away in a straight line — the
+  // cantrip carries the "Repulsive" enchantment; the push, optional in the rules, is always applied. C12-h: declared on
+  // the invocation itself — it applies to whatever cantrip it enchants (Chill Touch, Poison Spray…).
   "repelling-blast": { triggers: [{ on: "hit", if: { "activity.enchantedBy": "repelling-blast", "target.sizeAtMost": "lg" },
     do: [{ type: "move", mode: "push", distance: 10, units: "ft" }] }] },
-  // Buveuse de vie (niveau 9) : au plus une fois par tour, un coup de l'arme de pacte ajoute 1d6, au choix nécrotique, psychique
-  // ou radiant — nécrotiques d'office ; le soin par un dé de vie reste au joueur.
+  // Lifedrinker (level 9): at most once per turn, a hit with the pact weapon adds 1d6, necrotic, psychic or radiant at choice
+  // — necrotic by default; healing by a Hit Die is left to the player.
   "lifedrinker": { triggers: [{ on: "preDamageRoll", oncePerTurn: true, if: { "activity.enchantedBy": "pact-of-the-blade" },
     do: [{ type: "damage", formula: "1d6", damageType: "necrotic" }] }] },
-  // Âme radieuse (Céleste 6) : le modificateur de Charisme s'ajoute, une fois par tour, aux dégâts radiants ou de feu d'un sort
-  // de l'occultiste.
+  // Radiant Soul (Celestial 6): the Charisma modifier is added, once per turn, to the radiant or fire damage of a spell of
+  // the warlock.
   "radiant-soul": { triggers: [{ on: "preDamageRoll", oncePerTurn: true, if: { "activity.isSpell": true, "activity.dealsType": ["radiant", "fire"] },
     do: [{ type: "damage", formula: "@abilities.cha.mod", damageType: "weapon" }] }] },
-  // Défenses envoûtantes (Archifée 10) : touché par un attaquant visible, l'occultiste peut, en Réaction, diviser les dégâts par
-  // deux et soumettre l'attaquant à une sauvegarde de Sagesse — l'activité vise l'attaquant.
-  // C12-g : Vengeance ardente (Céleste 14) — les créatures Aveuglées le sont « jusqu'à la fin du tour en cours » (le tour de l'occultiste).
-  // §438 : Manuel 3.0.0 — l'Aveuglé commun du compendium `dnd5e.effects` (`4odkdDU1wBQrCMJ1`), posé par l'activité de l'item.
-  // `currentTurnEnd` : la fin du tour où l'effet est posé — `casterTurnEnd` le gardait jusqu'à la fin du tour suivant.
+  // Beguiling Defenses (Archfey 10): hit by a visible attacker, the warlock can, as a Reaction, halve the damage
+  // and subject the attacker to a Wisdom save — the activity targets the attacker.
+  // C12-g: Searing Vengeance (Celestial 14) — Blinded creatures are so "until the end of the current turn" (the warlock's turn).
+  // §438: Handbook 3.0.0 — the common Blinded of the `dnd5e.effects` compendium (`4odkdDU1wBQrCMJ1`), applied by the item's
+  // activity. `currentTurnEnd`: the end of the turn on which the effect is applied — `casterTurnEnd` kept it until the end of
+  // the next turn.
   "searing-vengeance": { effectEnds: { KOXCayzftTFF9Kam: "currentTurnEnd", "4odkdDU1wBQrCMJ1": "currentTurnEnd" } },
-  // C12-f : « sur un échec, l'attaquant subit des dégâts psychiques égaux aux dégâts que vous avez subis » (`retort`).
+  // C12-f: "on a failure, the attacker takes psychic damage equal to the damage you took" (`retort`).
   "beguiling-defenses": { retort: { damageType: "psychic" }, triggers: [{ on: "isHit", if: { "target.seesSource": true },
     do: [{ type: "use", activity: "Y2cMdoDnGTyEqs0l", target: "source" }, { type: "halve" }] }] },
-  // Chance du ténébreux (Fiélon 6) : « quand vous faites un test de caractéristique ou un jet de sauvegarde, ajoutez 1d10 ; après avoir
-  // vu le jet, avant ses effets » (§38) — proposé sur une sauvegarde ratée que le moteur lit ; l'activité « Luck » dépense l'utilisation.
-  // §92 : Foulée des fées — après chaque Foulée brumeuse, un effet de plus au choix : Foulée revigorante (1d10 PV temporaires, sur
-  // soi ; « ou une créature que vous voyez à 3 m » : au MJ) ou Foulée narquoise (Sagesse pour les créatures à 1,50 m de la case
-  // quittée, sinon « Narguée » : Désavantage aux attaques contre d'autres que vous, jusqu'au début de votre tour suivant).
-  // §302 : Combattant clairvoyant (Grand Ancien 10) — sauvegarde ratée : « Désavantage à ses jets d'attaque contre vous, Avantage aux vôtres
-  // contre elle, pendant le lien ». Durée : 10 minutes (le lien d'Esprit éveillé dure autant de minutes que le niveau ; à partir de 10).
+  // Dark One's Own Luck (Fiend 6): "when you make an ability check or a saving throw, add 1d10; after seeing the roll, before
+  // its effects" (§38) — offered on a failed save that the engine reads; the "Luck" activity spends the use.
+  // §92: Steps of the Fey — after each Misty Step, one more effect of your choice: Refreshing Step (1d10 Temporary Hit Points, on
+  // yourself; "or a creature you can see within 10 ft": left to the GM) or Taunting Step (Wisdom save for creatures within 5 ft of
+  // the cell left, otherwise "Taunted": Disadvantage on attacks against anyone but you, until the start of your next turn).
+  // §302: Clairvoyant Combatant (Great Old One 10) — failed save: "Disadvantage on its attack rolls against you, Advantage on
+  // yours against it, for the duration of the link". Duration: 10 minutes (the Awakened Mind link lasts as many minutes as the
+  // level; from 10).
   "clairvoyant-combatant": {
     effectDurations: { HMegeL0quWtCaUFV: { seconds: 600 } },
     triggers: [
@@ -64,11 +66,11 @@ export const WARLOCK = Object.freeze({
       { on: "preAttackRoll", via: "effect", fromEffect: "HMegeL0quWtCaUFV", if: { "source.hasEffectFromTarget": "clairvoyant-combatant" }, do: [{ type: "disadvantage" }] }
     ]
   },
-  // §438 : Manuel 3.0.0 — l'Échappatoire brumeuse (Archifée 6) est rangée ici, derrière le niveau 6 : la Réaction aux dégâts
-  // (« Escape », `Z2DMzP2QpvVjNVLY`, qui renvoie au lancement), Foulée évanescente (`zgz1…`) et Foulée effroyable (`PPfl…`). Les options
-  // d'un niveau que l'acteur n'a pas ne sont pas proposées (`levelHidden`). Foulée évanescente : l'Invisible commun (effet distant) cesse à
-  // l'attaque, aux dégâts, au sort — par activité (`breaksOnActivity`) : un `breaksOn` de l'item ferait aussi tomber Nargué chez l'ennemi
-  // qui attaque.
+  // §438: Handbook 3.0.0 — Misty Escape (Archfey 6) is filed here, behind level 6: the Reaction to damage
+  // ("Escape", `Z2DMzP2QpvVjNVLY`, which points back to the cast), Vanishing Step (`zgz1…`) and Terrifying Step (`PPfl…`).
+  // Options of a level the actor does not have are not offered (`levelHidden`). Vanishing Step: the common Invisible
+  // (remote effect) ends on attack, damage, spell — per activity (`breaksOnActivity`): an item `breaksOn` would also drop
+  // Taunted on the enemy who attacks.
   "steps-of-the-fey": {
     triggers: [{ on: "preAttackRoll", via: "effect", fromEffect: "sERUxQRn17lzEQbl", if: { "source.hasEffect": "steps-of-the-fey", not: { "source.hasEffectFromTarget": "steps-of-the-fey" } },
       do: [{ type: "disadvantage" }] },
@@ -78,25 +80,25 @@ export const WARLOCK = Object.freeze({
     saveDamage: { PPflqO75qwj2WJP9: "none" },
     breaksOnActivity: { zgz1KLkZUycIeVF9: ["attack", "damage", "spell"] }
   },
-  // §92 : Échappatoire brumeuse — deux options de plus : Foulée évanescente (Invisible jusqu'au début de votre tour suivant, ou
-  // jusqu'à une attaque, des dégâts, un sort : `breaksOn`) et Foulée effroyable (Sagesse ou 2d10 psychiques, à 1,50 m de la case
-  // quittée OU d'arrivée, au choix). La Foulée brumeuse par une Réaction aux dégâts : l'activité « cast » de la donnée.
+  // §92: Misty Escape — two more options: Vanishing Step (Invisible until the start of your next turn, or
+  // until an attack, damage, a spell: `breaksOn`) and Terrifying Step (Wisdom save or 2d10 psychic, within 5 ft of the cell
+  // left OR arrived at, at choice). Misty Step by a Reaction to damage: the data's "cast" activity.
   "misty-escape": {
-    // §301 : « quand vous subissez des dégâts, Foulée brumeuse par une Réaction » — l'activité « cast » de la donnée.
+    // §301: "when you take damage, Misty Step as a Reaction" — the data's "cast" activity.
     triggers: [{ on: "isDamaged", do: [{ type: "use", activity: "2ceGTpBbBclN3qF9" }] }],
     afterTeleport: { spells: ["misty-step"], options: [{ activity: "KMyLMOnvFbMuoRYa" }, { activity: "kj8zIhPbjs4UIHtc", around: "left" }, { activity: "kj8zIhPbjs4UIHtc", around: "arrival" }] },
     breaksOn: ["attack", "damage", "spell"],
     saveDamage: { kj8zIhPbjs4UIHtc: "none" }
   },
-  // Sorts psychiques (Grand Ancien 3) : « quand vous lancez un sort d'Occultiste qui inflige des dégâts, vous pouvez changer leur type
-  // en psychique » — proposé avec les types du sort avant le jet (adapter/messages.mjs). La seconde moitié (Enchantement ou Illusion
-  // sans composante verbale ni somatique) reste à la fiche.
+  // Psychic Spells (Great Old One 3): "when you cast a Warlock spell that deals damage, you can change its damage type
+  // to psychic" — offered with the spell's types before the roll (adapter/messages.mjs). The second half (Enchantment or Illusion
+  // without Verbal or Somatic components) is left to the sheet.
   "psychic-spells": { spellDamageTypes: { class: "warlock", types: ["psychic"] } },
-  // Projection à travers l'enfer (Fiélon 14) — « une fois par tour, quand vous touchez une créature avec un jet d'attaque » : la
-  // sauvegarde de Charisme de l'item (8d10 psychiques et Neutralisé sur un échec) proposée sur le coup, son utilisation dépensée.
-  // « Neutralisé jusqu'à la fin de votre prochain tour » : l'effet vient du pack d'effets commun (pas un effet de l'item), sans
-  // durée — suivi par son état (`status:`). Restent au joueur : pas de dégâts
-  // contre un Fiélon, la cible qui disparaît puis revient, et l'emplacement de pacte qui rend l'utilisation (l'autre activité).
+  // Hurl Through Hell (Fiend 14) — "once per turn, when you hit a creature with an attack roll": the item's Charisma
+  // save (8d10 psychic and Incapacitated on a failure) offered on the hit, its use spent.
+  // "Incapacitated until the end of your next turn": the effect comes from the common effects pack (not an item effect), with no
+  // duration — tracked by its condition (`status:`). Left to the player: no damage
+  // against a Fiend, the target that disappears then returns, and the pact slot that restores the use (the other activity).
   "hurl-through-hell": { hitRider: { save: "vIY5Deb2vCh5POdP", oncePerTurn: true },
     effectEnds: { "status:incapacitated": "casterTurnEnd" } },
   "dark-ones-own-luck": { rollBonus: { activity: "4A1lkH3i3azHU1YQ", on: ["save", "check"] } }

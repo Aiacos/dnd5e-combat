@@ -1,16 +1,16 @@
 /**
- * Pastille d'automatisation et signalements, sur la fiche d'acteur de dnd5e 6 (SPEC §9.2). MJ seulement.
+ * Automation badge and flags, on the dnd5e 6 actor sheet (SPEC §9.2). GM only.
  *
- * Chaque ligne d'item (`[data-item-id] > .item-row .item-name`, templates/inventory/inventory.hbs:88-106 de dnd5e 6.0.3,
- * rendu commun à l'inventaire, aux sorts et aux capacités) reçoit :
- *   - une pastille : DAS (rose) / auto / passif / manuel (adapter/automation.mjs), l'infobulle dit pourquoi ; aucune
- *     sur du matériel sans rien à jouer (butin, focaliseur) ;
- *   - un drapeau : coché quand l'item a posé problème en partie, avec une note facultative.
- * Les signalements se relisent en fin de partie dans le panneau « Bilan de la partie » (réglages du module, ou
- * `api.reports.open()`), qui les copie, les envoie au chat du MJ ou les efface.
+ * Each item row (`[data-item-id] > .item-row .item-name`, templates/inventory/inventory.hbs:88-106 of dnd5e 6.0.3,
+ * rendering shared by the inventory, spells and features) receives:
+ *   - a badge: DAS (pink) / auto / passive / manual (adapter/automation.mjs), the tooltip says why; none
+ *     on gear with nothing to play (loot, focus);
+ *   - a flag: checked when the item caused a problem in play, with an optional note.
+ * The flags are re-read at the end of the game in the "Session Report" panel (module settings, or
+ * `api.reports.open()`), which copies them, sends them to the GM's chat or clears them.
  *
- * Le hook est `renderBaseActorSheet` : ApplicationV2 appelle `render<Classe>` pour chaque classe de la chaîne
- * (client/applications/api/application.mjs:417-442, 591), donc PJ et PNJ par la classe commune de dnd5e.
+ * The hook is `renderBaseActorSheet`: ApplicationV2 calls `render<Classe>` for each class of the chain
+ * (client/applications/api/application.mjs:417-442, 591), so PCs and NPCs through dnd5e's common class.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -25,7 +25,7 @@ const shown = () => game.user.isGM && game.settings.get(MODULE_ID, SETTING);
 
 const ICONS = { rule: "fa-solid fa-gears", auto: "fa-solid fa-dice-d20", passive: "fa-solid fa-feather", manual: "fa-solid fa-hand" };
 
-/** L'infobulle de la pastille : le niveau, puis ce que le moteur reconnaît et d'où. */
+/** The badge tooltip: the level, then what the engine recognizes and from where. */
 function badgeTooltip(auto) {
   const lines = [`<strong>${esc(loc(`Automatisation.${auto.level}.Nom`))}</strong>`, esc(loc(`Automatisation.${auto.level}.Aide`))];
   if ( auto.rules.length ) {
@@ -55,7 +55,7 @@ function decorate(app, element) {
       <a class="flag${report ? " on" : ""}" role="button" aria-label="${esc(loc("Signalement.Titre"))}"
          data-tooltip-text="${esc(report ? (report.note || loc("Signalement.SansNote")) : loc("Signalement.Poser"))}">
         <i class="${report ? "fa-solid" : "fa-regular"} fa-flag"></i></a>`;
-    // Ni la ligne (utiliser l'item), ni le glisser, ni les actions de la fiche : ce clic est le nôtre.
+    // Neither the row (use the item), nor the drag, nor the sheet actions: this click is ours.
     const stop = ev => { ev.stopPropagation(); ev.preventDefault(); };
     box.addEventListener("pointerdown", ev => ev.stopPropagation());
     box.addEventListener("dragstart", stop);
@@ -67,7 +67,7 @@ function decorate(app, element) {
   }
 }
 
-/** Poser, modifier ou retirer le signalement d'un item. */
+/** Set, edit or remove an item's flag. */
 async function editReport(item) {
   const current = reportOf(item);
   const buttons = [{ action: "save", label: loc(current ? "Signalement.Enregistrer" : "Signalement.Poser"), icon: "fa-solid fa-flag",
@@ -87,8 +87,8 @@ async function editReport(item) {
 }
 
 /**
- * Le panneau de fin de partie : les signalements par acteur. La classe se crée au premier usage : `foundry.applications`
- * n'existe pas au chargement du module hors de Foundry (tests/load.test.mjs).
+ * The end-of-game panel: the flags per actor. The class is created on first use: `foundry.applications`
+ * does not exist when the module loads outside Foundry (tests/load.test.mjs).
  */
 let panelClass = null;
 const Panel = () => (panelClass ??= makePanel());
@@ -164,22 +164,22 @@ return class ReportsPanel extends foundry.applications.api.ApplicationV2 {
 };
 }
 
-/** Rafraîchit ce qui montre les signalements : fiches d'acteur ouvertes et panneau. */
+/** Refreshes what shows the flags: open actor sheets and the panel. */
 function refresh() {
   for ( const app of foundry.applications.instances.values() ) {
     if ( (panelClass && (app instanceof panelClass)) || (app.document instanceof Actor) ) app.render();
   }
 }
 
-/** Exposé sur `api.reports` : le bilan, pour une macro ou pour Claude par le connecteur. */
+/** Exposed on `api.reports`: the recap, for a macro or for Claude through the connector. */
 export const reportsApi = Object.freeze({
-  /** Les items signalés par le MJ (réglage de monde) : `{ uuid de l'item: { actor, actorUuid, item, identifier, note, at } }`. */
+  /** The items flagged by the GM (world setting): `{ uuid de l'item: { actor, actorUuid, item, identifier, note, at } }`. */
   list: () => reports(),
-  /** Le bilan des signalements en texte brut, par acteur, à coller dans une conversation. */
+  /** The recap of the flags as plain text, per actor, to paste into a conversation. */
   text: () => reportsText(reports()),
-  /** Ouvre le panneau du bilan sur ce client. */
+  /** Opens the recap panel on this client. */
   open: () => new (Panel())().render(true),
-  /** Retire le signalement d'un item (par uuid), ou tous sans argument ; écrit un réglage de monde (MJ). */
+  /** Removes an item's flag (by uuid), or all with no argument; writes a world setting (GM). */
   clear: uuid => clearReport(uuid ?? null)
 });
 
@@ -189,6 +189,6 @@ export function registerAutomation() {
   game.settings.register(MODULE_ID, SETTING, { scope: "client", config: true, type: Boolean, default: true,
     name: "DND5ECOMBAT.Reglage.automationBadges.Nom", hint: "DND5ECOMBAT.Reglage.automationBadges.Aide",
     onChange: () => refresh() });
-  // Le bilan s'ouvre depuis la fenêtre de réglages (onglet Général, ui/settings.mjs), plus depuis la liste de Foundry.
+  // The recap opens from the settings window (General tab, ui/settings.mjs), no longer from Foundry's list.
   route("renderBaseActorSheet", (app, element) => decorate(app, element), { label: "automation badges", level: "warn" });
 }

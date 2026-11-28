@@ -1,36 +1,36 @@
 /**
- * Annuler l'action en cours tant qu'aucun dé n'est lancé (SPEC §15.1, « clic droit annule ») :
- * l'utilisation est effacée comme si elle n'avait pas eu lieu. Ensuite, c'est « Annuler » du MJ.
+ * Cancel the action in progress as long as no die is rolled (SPEC §15.1, "right click cancels"):
+ * the use is erased as if it had not happened. After that, it is the GM's "Cancel".
  *
- * Sur le client de l'auteur : le dialogue de jet encore ouvert (attaque ou dégâts, rien de lancé)
- * est fermé, dnd5e rend ce qu'il avait consommé (`Activity#refund` sur `system.deltas` du message,
- * documents/activity/mixin.mjs:385 — le bouton « Rembourser » de la carte fait la même chose,
- * mixin.mjs:1100), la concentration ouverte par ce sort tombe, puis la carte est supprimée,
- * marquée `cancelled`. Le MJ actif rend alors la dépense du budget (runtime/turn.mjs).
+ * On the author's client: the roll dialog still open (attack or damage, nothing rolled)
+ * is closed, dnd5e gives back what it had consumed (`Activity#refund` on the message's `system.deltas`,
+ * documents/activity/mixin.mjs:385 — the card's "Refund" button does the same,
+ * mixin.mjs:1100), the Concentration opened by this spell ends, then the card is deleted,
+ * marked `cancelled`. The active GM then gives back the budget spend (runtime/turn.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { concentrationEffectOf } from "../adapter/concentration.mjs";
 import { log, loc } from "./shared.mjs";
 
-/** Au-delà, une carte n'est plus « l'action en cours ». */
+/** Beyond that, a card is no longer "the action in progress". */
 const PENDING_MS = 300000;
 
-/** Aucun dé encore jeté pour cette utilisation (attaque, dégâts, sauvegarde) ? */
+/** No die yet rolled for this use (attack, damage, save)? */
 function noDiceYet(message) {
   const resolution = message.getFlag(MODULE_ID, "resolution");
   if ( !resolution ) return true;
   return !resolution.attack && !resolution.damageRoll && !resolution.targets?.some(t => t.save && (t.save.total !== null));
 }
 
-/** La dernière carte d'utilisation de cette activité, de ce client, récente et sans dé. */
+/** The latest use card of this activity, from this client, recent and with no die. */
 function pendingUsageOf(activity) {
   const recent = game.messages.contents.slice(-30).reverse();
   return recent.find(m => m.isAuthor && (m.type === "usage") && (m.getAssociatedActivity?.()?.uuid === activity.uuid)
     && ((Date.now() - (m.timestamp ?? 0)) < PENDING_MS) && noDiceYet(m)) ?? null;
 }
 
-/** Efface une utilisation : ressources rendues, concentration retirée, carte supprimée (le MJ rend le budget). */
+/** Erases a use: resources returned, Concentration removed, card deleted (the GM gives back the budget). */
 export async function cancelUsage(message) {
   const activity = message.getAssociatedActivity?.();
   if ( activity && message.system?.deltas ) await activity.refund(message.system.deltas);
@@ -43,9 +43,9 @@ export async function cancelUsage(message) {
 }
 
 /**
- * Le dialogue de jet ouvert d'une action de ce client dont la carte n'a encore aucun dé, avec cette
- * carte ; null sinon (un dialogue de dégâts après un touché n'est plus annulable : c'est « Annuler »
- * du MJ). Synchrone : lu au clic.
+ * The open roll dialog of an action of this client whose card has no die yet, with this
+ * card; null otherwise (a damage dialog after a hit can no longer be canceled: it is the
+ * GM's "Cancel"). Synchronous: read on click.
  * @returns {{app: object, message: ChatMessage}|null}
  */
 export function pendingRoll() {
@@ -54,7 +54,7 @@ export function pendingRoll() {
   for ( const app of foundry.applications.instances.values() ) {
     if ( !(app instanceof Dialog) || !app.rendered ) continue;
     const activity = app.config?.subject;
-    if ( !activity?.uuid || !activity.item ) continue;   // un jet de caractéristique, pas une action
+    if ( !activity?.uuid || !activity.item ) continue;   // an ability check, not an action
     if ( app.config?.[MODULE_ID]?.dialog ) continue;   // §556: damage the engine rolls after a hit or a save, not cancellable
     const message = pendingUsageOf(activity);
     if ( message ) return { app, message };
@@ -62,7 +62,7 @@ export function pendingRoll() {
   return null;
 }
 
-/** Ferme le dialogue de jet d'une action sans dé et efface son utilisation. true si quelque chose a été annulé. */
+/** Closes the roll dialog of an action with no die and erases its use. true if something was canceled. */
 export async function cancelPendingRoll() {
   const pending = pendingRoll();
   if ( !pending ) return false;

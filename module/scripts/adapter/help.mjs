@@ -1,19 +1,19 @@
 /**
- * Soutien (Help, règles 2024), partie attaque : on distrait un ennemi à 1,50 m ; la prochaine attaque
- * d'un de NOS alliés contre lui a l'avantage, avant le début de notre prochain tour. La marque est un
- * effet sur l'ennemi (`flags["dnd5e-combat"].help`), posé et retiré par le MJ actif (runtime/help.mjs) ;
- * le client de l'attaquant la lit pour l'avantage (adapter/conditions.mjs).
+ * Help (2024 rules), attack part: one distracts an enemy within 5 feet; the next attack
+ * by one of OUR allies against it has Advantage, before the start of our next turn. The mark is an
+ * effect on the enemy (`flags["dnd5e-combat"].help`), placed and removed by the active GM (runtime/help.mjs);
+ * the attacker's client reads it for the Advantage (adapter/conditions.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { areAllies } from "./factions.mjs";
 
-/** Les marques de Soutien posées sur un acteur. */
+/** The Help marks placed on an actor. */
 export function helpMarksOn(actor) {
   return (actor?.effects ?? []).filter(e => e.getFlag?.(MODULE_ID, "help"));
 }
 
-/** §181 : l'auteur du Soutien est-il du camp de l'attaquant ? Factions si son token existe encore, sinon la disposition notée. */
+/** §181: is the Help's author on the attacker's side? Factions if their token still exists, else the recorded disposition. */
 function helperAllied(help, attackerToken) {
   const helper = help.helper ? fromUuidSync(help.helper, { strict: false }) : null;
   if ( helper && attackerToken ) return areAllies(helper, attackerToken);
@@ -21,8 +21,8 @@ function helperAllied(help, attackerToken) {
 }
 
 /**
- * Cette attaque profite-t-elle d'un Soutien ? Il faut une marque sur la cible, posée par un allié de
- * l'attaquant (même disposition) qui n'est pas l'attaquant lui-même.
+ * Does this attack benefit from a Help? There must be a mark on the target, placed by an ally of
+ * the attacker (same disposition) who is not the attacker themselves.
  */
 export function helpedAgainst(attackerToken, targetToken) {
   return helpMarksOn(targetToken?.actor).some(effect => {
@@ -31,7 +31,7 @@ export function helpedAgainst(attackerToken, targetToken) {
   });
 }
 
-/** Les marques qu'une attaque de cet attaquant consomme sur cette cible. */
+/** The marks that an attack by this attacker consumes on this target. */
 export function helpMarksUsedBy(attackerToken, targetToken) {
   return helpMarksOn(targetToken?.actor).filter(effect => {
     const help = effect.getFlag(MODULE_ID, "help");
@@ -39,7 +39,7 @@ export function helpMarksUsedBy(attackerToken, targetToken) {
   });
 }
 
-/** Pose une marque de Soutien sur la cible, au nom de celui qui aide. */
+/** Places a Help mark on the target, in the name of the one who helps. */
 export async function markHelped(targetToken, helperToken, { name, img }) {
   const actor = targetToken?.actor;
   if ( !actor ) return null;

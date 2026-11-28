@@ -12,72 +12,72 @@ const all = [mage, guerrier, zombi, goule];
 const names = list => list.map(t => t.name);
 
 describe("selectAreaTargets", () => {
-  it("un cône partant du lanceur ne le touche pas, mais touche ses alliés", () => {
+  it("a Cone starting from the caster does not hit the caster, but hits its allies", () => {
     const out = selectAreaTargets(all, { origin: mage.token, originDisposition: 1, excludeOrigin: true, affects: "creature" });
     expect(names(out)).toEqual(["Guerrier", "Zombi", "Goule"]);
   });
-  it("une boule de feu posée à distance touche aussi le lanceur s'il est dedans", () => {
+  it("a Fireball placed at range also hits the caster if inside it", () => {
     const out = selectAreaTargets(all, { origin: mage.token, originDisposition: 1, excludeOrigin: false, affects: "creature" });
     expect(names(out)).toEqual(["Magicien", "Guerrier", "Zombi", "Goule"]);
   });
-  it("une zone « ennemis » épargne le camp du lanceur et le lanceur", () => {
+  it("an \"enemies\" area spares the caster's side and the caster", () => {
     const out = selectAreaTargets(all, { origin: mage.token, originDisposition: 1, excludeOrigin: false, affects: "enemy" });
     expect(names(out)).toEqual(["Zombi", "Goule"]);
   });
-  it("une zone « alliés » ne garde que le camp du lanceur", () => {
+  it("an \"allies\" area keeps only the caster's side", () => {
     const out = selectAreaTargets(all, { origin: zombi.token, originDisposition: -1, excludeOrigin: true, affects: "ally" });
     expect(names(out)).toEqual(["Goule"]);
   });
-  it("ignore les créatures hors de combat", () => {
+  it("ignores creatures that are out of combat", () => {
     const out = selectAreaTargets([zombi, c("Squelette", -1, { defeated: true })], { origin: mage.token, originDisposition: 1, excludeOrigin: true });
     expect(names(out)).toEqual(["Zombi"]);
   });
-  it("sans camp connu pour le lanceur, ne filtre pas par camp", () => {
+  it("without a known side for the caster, does not filter by side", () => {
     const out = selectAreaTargets(all, { origin: null, originDisposition: null, excludeOrigin: false, affects: "enemy" });
     expect(out).toHaveLength(4);
   });
 });
 
-describe("zone qui dure (Rayon de lune 2024 : entrée ou fin de tour, une fois par tour)", () => {
+describe("lasting area (Moonbeam 2024: entering or ending a turn, once per turn)", () => {
   const key = turnKeyOf(2, 1);
   const moonbeam = openArea(["enter", "turnEnd"], key, ["T.Zombi"]);
 
-  it("ceux qu'elle a touchés à la pose ne le sont pas de nouveau ce tour-ci", () => {
+  it("those it hit when placed are not hit again this turn", () => {
     expect(shouldTrigger(moonbeam, { event: "turnEnd", token: "T.Zombi", turnKey: key })).toBe(false);
   });
-  it("une créature qui entre pendant ce tour est touchée", () => {
+  it("a creature that enters during this turn is hit", () => {
     expect(shouldTrigger(moonbeam, { event: "enter", token: "T.Goule", turnKey: key })).toBe(true);
   });
-  it("au tour de jeu suivant, la mémoire est remise à zéro", () => {
+  it("on the next turn of play, the memory is reset", () => {
     expect(shouldTrigger(moonbeam, { event: "turnEnd", token: "T.Zombi", turnKey: turnKeyOf(2, 2) })).toBe(true);
   });
-  it("ignore les moments que la zone ne connaît pas", () => {
+  it("ignores the moments the area does not know", () => {
     expect(shouldTrigger(moonbeam, { event: "turnStart", token: "T.Goule", turnKey: key })).toBe(false);
   });
-  it("entrer puis finir son tour dans la zone : une seule fois", () => {
+  it("entering then ending one's turn in the area: only once", () => {
     const after = markHit(moonbeam, { token: "T.Goule", turnKey: key });
     expect(shouldTrigger(after, { event: "turnEnd", token: "T.Goule", turnKey: key })).toBe(false);
   });
-  it("noter un token à un nouveau tour oublie ceux du tour précédent", () => {
+  it("noting a token at a new turn forgets those of the previous turn", () => {
     const next = turnKeyOf(2, 2);
     const after = markHit(moonbeam, { token: "T.Goule", turnKey: next });
     expect(after).toMatchObject({ turnKey: next, hit: ["T.Goule"] });
     expect(moonbeam.hit).toEqual(["T.Zombi"]);
   });
-  it("hors combat, une seule clé de tour", () => {
+  it("out of combat, a single turn key", () => {
     expect(turnKeyOf(null, null)).toBe("hors-combat");
   });
 });
 
-describe("entrer dans une zone", () => {
-  it("arriver dedans depuis l'extérieur", () => expect(entersArea(false, [false, true])).toBe(true));
-  it("la traverser sans s'y arrêter compte aussi", () => expect(entersArea(false, [true, false])).toBe(true));
-  it("s'y déplacer en y étant déjà n'est pas une entrée", () => expect(entersArea(true, [true, true])).toBe(false));
+describe("entering an area", () => {
+  it("arriving inside from the outside", () => expect(entersArea(false, [false, true])).toBe(true));
+  it("crossing it without stopping there counts too", () => expect(entersArea(false, [true, false])).toBe(true));
+  it("moving within it while already inside is not an entry", () => expect(entersArea(true, [true, true])).toBe(false));
   it("rester dehors", () => expect(entersArea(false, [false, false])).toBe(false));
 });
 
 describe("selectAreaTargets — ligne d'effet (P2)", () => {
-  it("une créature que la zone n'atteint pas (plancher, plafond) est écartée ; inconnu ne l'écarte pas", () => {
+  it("a creature the area does not reach (floor, ceiling) is discarded; unknown does not discard it", () => {
     const below = c("Rat", -1, { lineOfEffect: false });
     const unknown = c("Chauve-souris", -1, { lineOfEffect: null });
     const out = selectAreaTargets([mage, zombi, below, unknown], { origin: mage.token, originDisposition: 1, excludeOrigin: false, affects: "creature" });
@@ -85,8 +85,8 @@ describe("selectAreaTargets — ligne d'effet (P2)", () => {
   });
 });
 
-describe("selectAreaTargets — vraie sphère (P2)", () => {
-  it("une créature dans le cylindre de la région mais hors de la sphère est écartée", () => {
+describe("selectAreaTargets — true Sphere (P2)", () => {
+  it("a creature in the region's cylinder but outside the Sphere is discarded", () => {
     const corner = c("Harpie", -1, { inVolume: false });
     const inside = c("Rat", -1, { inVolume: true });
     const out = selectAreaTargets([zombi, corner, inside], { origin: mage.token, originDisposition: 1, excludeOrigin: false, affects: "creature" });
@@ -94,9 +94,9 @@ describe("selectAreaTargets — vraie sphère (P2)", () => {
   });
 });
 
-describe("objets répandus (§187) : la première case du trajet qui entre dans une zone", () => {
-  it("rend la case où l'on entre, pas celles d'avant ni d'après", () => {
-    // départ, puis trois cases ; une zone, où l'on entre à la deuxième case
+describe("scattered objects (§187): the first cell of the path that enters an area", () => {
+  it("returns the cell where one enters, not those before or after", () => {
+    // start, then three cells; an area, entered at the second cell
     expect(firstEntry([[false], [false], [true], [true]])).toBe(2);
   });
   it("partir de la zone, ou ne jamais y entrer : -1", () => {
@@ -104,20 +104,20 @@ describe("objets répandus (§187) : la première case du trajet qui entre dans 
     expect(firstEntry([[false], [false]])).toBe(-1);
     expect(firstEntry([])).toBe(-1);
   });
-  it("plusieurs zones : la première entrée, quelle que soit la zone ; quitter l'une pour l'autre compte", () => {
+  it("several areas: the first entry, whichever the area; leaving one for another counts", () => {
     expect(firstEntry([[false, false], [false, false], [false, true], [true, true]])).toBe(2);
     expect(firstEntry([[true, false], [false, true]])).toBe(1);
   });
 });
 
-describe("zones inflammables (§188) : la fin du feu", () => {
-  const until = { round: 5, turn: 2 };   // embrasée au round 3, tour 2, pour 2 rounds
-  it("s'éteint à la fin du même tour, rounds plus tard — pas avant", () => {
+describe("flammable areas (§188): the end of the fire", () => {
+  const until = { round: 5, turn: 2 };   // set ablaze at round 3, turn 2, for 2 rounds
+  it("goes out at the end of the same turn, rounds later — not before", () => {
     expect(burnedOut(until, { round: 5, turn: 1 })).toBe(false);
     expect(burnedOut(until, { round: 4, turn: 3 })).toBe(false);
     expect(burnedOut(until, { round: 5, turn: 2 })).toBe(true);
   });
-  it("un tour sauté (combattant retiré) ou un round passé l'éteint aussi", () => {
+  it("a skipped turn (combatant removed) or a passed round puts it out too", () => {
     expect(burnedOut(until, { round: 5, turn: 3 })).toBe(true);
     expect(burnedOut(until, { round: 6, turn: 0 })).toBe(true);
   });
@@ -127,16 +127,16 @@ describe("zones inflammables (§188) : la fin du feu", () => {
   });
 });
 
-describe("§401 : zones « créatures de votre choix »", () => {
+describe("§401: \"creatures of your choice\" areas", () => {
   const c = (token, disposition, extra={}) => ({ token, actor: `A.${token}`, name: token, disposition, ...extra });
   const opts = { origin: "me", originDisposition: 1, excludeOrigin: false, affects: "enemy", max: null };
   const candidates = [c("me", 1), c("ami", 1), c("orc", -1), c("mort", -1, { defeated: true }), c("neutre", 0)];
 
-  it("propose tous ceux que la zone peut affecter, sans le lanceur ni les morts", () => {
+  it("offers all those the area can affect, without the caster or the dead", () => {
     expect(eligibleAreaTargets(candidates, opts).map(x => x.token)).toEqual(["ami", "orc", "neutre"]);
   });
 
-  it("« mixed » : demande seulement si le choix d'office laisse quelqu'un de côté", () => {
+  it("\"mixed\": asks only if the automatic choice leaves someone out", () => {
     const eligible = eligibleAreaTargets(candidates, opts);
     const chosen = selectAreaTargets(candidates, opts);
     expect(zoneChoiceNeeded("mixed", eligible, chosen)).toBe(true);
@@ -147,13 +147,13 @@ describe("§401 : zones « créatures de votre choix »", () => {
     expect(zoneChoiceNeeded("always", [], [])).toBe(false);
   });
 
-  it("« mixed » : demande aussi quand le plafond (`zoneMax`) écarte des ennemis", () => {
+  it("\"mixed\": also asks when the cap (`zoneMax`) discards enemies", () => {
     const three = [c("a", -1, { distance: 1 }), c("b", -1, { distance: 2 }), c("d", -1, { distance: 3 })];
     const capped = { ...opts, max: 2 };
     expect(zoneChoiceNeeded("mixed", eligibleAreaTargets(three, capped), selectAreaTargets(three, capped))).toBe(true);
   });
 
-  it("une zone qui dure suit le choix de la pose, puis la règle d'office pour les nouveaux venus", () => {
+  it("a lasting area follows the placement choice, then the automatic rule for newcomers", () => {
     const state = { picked: ["orc"], spared: ["ami"] };
     expect(pickedAtPose(state, "orc")).toBe(true);
     expect(pickedAtPose(state, "ami")).toBe(false);

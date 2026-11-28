@@ -1,8 +1,8 @@
 /**
- * §403 : Bourrasque — « chaque mètre parcouru en direction de vous coûte 2 m de déplacement » dans la Ligne. Le surcoût d'un trajet :
- * pour chaque pas qui commence ou finit dans la zone et rapproche du lanceur, son coût une fois de plus. Pur.
- * @param {Array<{x: number, y: number, inside: boolean, cost?: number}>} points  Départ puis chaque point du trajet (`cost` : celui du
- *                                                                                  pas qui y mène).
+ * §403: Gust of Wind — "every meter moved toward you costs 2 m of movement" in the Line. The extra cost of a path:
+ * for each step that starts or ends in the area and brings the creature closer to the caster, its cost once more. Pure.
+ * @param {Array<{x: number, y: number, inside: boolean, cost?: number}>} points  Start, then each path point (`cost`: that of the
+ *                                                                                  step leading to it).
  * @param {{x: number, y: number}} caster
  * @returns {number}
  */

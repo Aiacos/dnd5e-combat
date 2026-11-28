@@ -1,12 +1,13 @@
 /**
- * Égide projetée (SPEC §38), monde `dnd-6`. Le Magicien reçoit l'Égide arcanique et l'Égide projetée (Manuel des joueurs), crée son
- * égide (pleine) ; le Zombi frappe le Guerrier, à 9 m ou moins du Magicien, jusqu'à toucher ; la réaction est prise d'office
- * (`autoReact: "first"`). Vérifie :
- *  - l'égide absorbe : sa dépense > 0, la carte « absorbe » est signée du Magicien ;
- *  - dégâts subis par le Guerrier + absorbés = dégâts du jet (l'égide d'abord, le reste au Guerrier) ;
- *  - coups suivants jusqu'à épuiser l'égide : à chaque coup, subis + absorbés = jet ; quand elle ne suffit plus, elle prend ce qui lui
- *    reste et le Guerrier le reste (l'excédent, une fois l'égide à 0 PV, revient à la créature protégée) ; vide, rien d'absorbé.
- * Remet PV, positions, effets ; retire les items prêtés.
+ * Projected Ward (SPEC §38), world `dnd-6`. The Wizard receives Arcane Ward and Projected Ward (Player's Handbook), creates its
+ * ward (full); the Zombie hits the Fighter, within 9 m of the Wizard, until it hits; the Reaction is taken automatically
+ * (`autoReact: "first"`). Checks:
+ *  - the ward absorbs: its spend > 0, the "absorbs" card is signed by the Wizard;
+ *  - damage taken by the Fighter + absorbed = damage of the roll (the ward first, the rest to the Fighter);
+ *  - following hits until the ward is exhausted: on each hit, taken + absorbed = roll; when it is no longer enough, it
+ *    takes what it has left and the Fighter the rest (the excess, once the ward is at 0 HP, goes back to the protected
+ *    creature); empty, nothing absorbed.
+ * Restores HP, positions, effects; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "Compendium.dnd-players-handbook.classes.Item.";
@@ -57,7 +58,7 @@ export default {
     await pause(800);
     const fighterMax = (await ctx.engine("stats", { tokenId: fighter.id }))?.hp?.max ?? hp0.get(fighter.id);
 
-    /** Le Zombi frappe le Guerrier (PV pleins) jusqu'à toucher ; rend les dégâts du jet, la perte de PV, la dépense de l'égide, les cartes. */
+    /** The Zombie hits the Fighter (full HP) until it hits; returns the roll's damage, the HP loss, the ward's spend, the cards. */
     const strike = async () => {
       for ( let i = 0; i < 20; i++ ) {
         await ctx.setHp(fighter, fighterMax);
@@ -76,7 +77,7 @@ export default {
       return null;
     };
 
-    // Égide créée, pleine (« Create Ward », une utilisation par repos long).
+    // Ward created, full ("Create Ward", one use per Long Rest).
     await ctx.use({ tokenId: mage.id, itemId: wardId, activityId: "Hha69hPMTYWhDE4A", consume: true });
     await pause(1200);
     ctx.log(`égide créée : dépensé ${await spentOf()}`);
@@ -88,7 +89,7 @@ export default {
     ctx.expect(hit.lost + hit.absorbed === hit.dealt, `Guerrier : ${hit.lost} PV perdus + ${hit.absorbed} absorbés = ${hit.dealt}`);
     ctx.expect(!!card && /Magicien|claude/i.test(card.alias ?? ""), `carte « absorbe » signée du Magicien (${card?.alias})`);
 
-    // Coups suivants jusqu'à épuiser l'égide : partielle, puis vide.
+    // Following hits until the ward is exhausted: partial, then empty.
     const seen = { partial: false, empty: false };
     for ( let n = 0; (n < 8) && !seen.empty; n++ ) {
       const next = await strike();

@@ -1,8 +1,8 @@
 /**
- * Réduction et absorption de dégâts (SPEC §16.11, B14) : la réserve (Égide arcanique) sur `dnd5e.preApplyDamage`,
- * AVANT les 0 PV (runtime/death.mjs : ce qui est absorbé n'atteint pas la créature) — l'ordre des `register…()` de
- * dnd5e-combat.mjs le tient. L'Esquive instinctive (moitié des dégâts d'une attaque) est une réaction (core/action.mjs,
- * `halved`) ; le Lien protecteur, un partage sur `isDamaged` (runtime/triggers.mjs).
+ * Damage reduction and absorption (SPEC §16.11, B14): the pool (Arcane Ward) on `dnd5e.preApplyDamage`,
+ * BEFORE 0 HP (runtime/death.mjs: what is absorbed does not reach the creature) — the order of the `register…()` calls in
+ * dnd5e-combat.mjs ensures it. Uncanny Dodge (half the damage of an attack) is a Reaction (core/action.mjs,
+ * `halved`); Warding Bond, a share on `isDamaged` (runtime/triggers.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,7 +21,7 @@ export function registerReduction() {
     if ( (message.type !== "usage") || message.getFlag(MODULE_ID, "areaTick") || message.getFlag(MODULE_ID, "resave") ) return;
     for ( const r of await rechargePools(message) ) log(`${r.name}: +${r.gained}`);
   }, { executor: true, label: "pool: recharge not written" });
-  // §474 : l'égide de DDB Importer absorbait une seconde fois ce qui passait celle du moteur — ses automatismes coupés, le MJ prévenu.
+  // §474: DDB Importer's aegis absorbed a second time what got past the engine's — its automations cut off, the GM warned.
   route("ready", async () => {
     const keys = await disarmForeignEnhancers();
     if ( !keys.length ) return;

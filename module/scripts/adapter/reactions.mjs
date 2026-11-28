@@ -1,16 +1,16 @@
 /**
- * Réactions : qui peut réagir, comment le lui demander, et ce que son choix déclenche.
+ * Reactions: who can react, how to ask them, and what their choice triggers.
  *
- * Vérifié :
- *  - requêtes entre clients du cœur : `CONFIG.queries[nom] = (données, {timeout}) => résultat`,
- *    appelées par `user.query(nom, données, {timeout})` (client/config.mjs:2964, user.mjs:289).
- *    La réponse est le signal ; le délai n'est qu'un filet (SPEC §5.3).
- *  - ce qu'un item déclare (fenêtre, cible) vient du registre : content/triggers.mjs, ou
- *    `flags["dnd5e-combat"].triggers` sur l'item (adapter/triggers.mjs)
- *  - Bouclier officiel (packs/_source/spells24/1st-level/shield.yml) : identifiant `shield`,
- *    activité utilitaire, activation « réaction », cible « soi », effet CA +5 jusqu'au début du
- *    prochain tour du lanceur (`expiry: sourceStart`, natif en 6.0).
- *  - utiliser une activité d'attaque enchaîne son jet d'attaque (activity/attack.mjs:68-70).
+ * Verified:
+ *  - requests between core clients: `CONFIG.queries[nom] = (données, {timeout}) => résultat`,
+ *    called by `user.query(nom, données, {timeout})` (client/config.mjs:2964, user.mjs:289).
+ *    The answer is the signal; the timeout is only a safety net (SPEC §5.3).
+ *  - what an item declares (window, target) comes from the registry: content/triggers.mjs, or
+ *    `flags["dnd5e-combat"].triggers` on the item (adapter/triggers.mjs)
+ *  - Official Shield (packs/_source/spells24/1st-level/shield.yml): identifier `shield`,
+ *    utility activity, "reaction" activation, "self" target, AC +5 effect until the start of the
+ *    caster's next turn (`expiry: sourceStart`, native in 6.0).
+ *  - using an attack activity chains its attack roll (activity/attack.mjs:68-70).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -36,30 +36,30 @@ import { needsCheck, plainReaction } from "../core/requests.mjs";
 
 export const REACTION_QUERY = `${MODULE_ID}.reaction`;
 
-/** Délai de sécurité d'une demande de réaction. Le MJ n'attend jamais plus. */
-const REACTION_TIMEOUT = 20000;   // au-delà du délai de la fenêtre (adapter/dialogs.mjs) : le joueur n'a plus la main
+/** Safety timeout of a reaction request. The GM never waits longer. */
+const REACTION_TIMEOUT = 20000;   // beyond the window's timeout (adapter/dialogs.mjs): the player no longer has control
 
-/** §16.47 : l'acteur porte-t-il un effet d'un sort qui interdit les Réactions (`noReactions` : Tentacules de Hadar) ? */
+/** §16.47: does the actor carry a spell effect that forbids Reactions (`noReactions`: Arms of Hadar)? */
 export function reactionsBlocked(actor) {
   return (actor?.effects ?? []).some(blocksReactions);
 }
 
-/** §501 : cet effet actif interdit-il les Réactions (`noReactions` de son item d'origine) ? */
+/** §501: does this Active Effect forbid Reactions (`noReactions` of its origin item)? */
 export function blocksReactions(e) {
   return !!e && !e.disabled && !e.isSuppressed && effectRule(e, contentOf(originItemOf(e))?.entry?.noReactions);
 }
 
-/** §334 : une règle d'effet vraie pour tous les effets de l'item (`true`), ou pour ceux de la liste (Rayon ralentissant). */
+/** §334: an effect rule true for all of the item's effects (`true`), or for those in the list (Ray of Slowing). */
 const effectRule = (e, rule) => (rule === true) || (Array.isArray(rule) && rule.some(id => comesFromItemEffect(e, id)));
 
-/** §77 : l'acteur porte-t-il un effet qui ne laisse qu'une action OU une action Bonus par tour (`actionOrBonus` : Nuage fétide) ? */
+/** §77: does the actor carry an effect that leaves only an action OR a Bonus Action per turn (`actionOrBonus`: Stinking Cloud)? */
 export function actionOrBonusOnly(actor) {
   return (actor?.effects ?? []).some(e => !e.disabled && !e.isSuppressed && effectRule(e, contentOf(originItemOf(e))?.entry?.actionOrBonus));
 }
 
-/** §23 : le porteur d'un effet d'item `noOpportunityAttacks` (Poigne électrique) ne fait pas d'attaque d'opportunité. */
+/** §23: the bearer of an item effect `noOpportunityAttacks` (Shocking Grasp) makes no Opportunity Attack. */
 export function opportunityBlocked(actor) {
-  // C12-e : une liste d'effets de l'item — seuls ceux-là (Coup chancelant, pas Coup fendant).
+  // C12-e: a list of the item's effects — only those (Staggering Strike, not Cleaving Strike).
   return (actor?.effects ?? []).some(e => {
     if ( e.disabled || e.isSuppressed ) return false;
     const rule = contentOf(originItemOf(e))?.entry?.noOpportunityAttacks;
@@ -67,78 +67,78 @@ export function opportunityBlocked(actor) {
   });
 }
 
-/** Hors combat la réaction est toujours disponible ; en combat, c'est le budget qui le dit. */
+/** Outside combat the Reaction is always available; in combat, the budget says so. */
 export function reactionState(actor) {
   const combatant = combatantFor(actor);
   return {
     reactionAvailable: combatant ? reactionAvailable(readBudget(combatant), currentTurnKey()) : true,
-    // « Ne peut pas réagir » : Neutralisé, mort, ou un effet qui l'interdit. §501 : `reactions.loseOne` — Neutralisé ou l'effet ne lui
-    // ont ôté qu'une réaction (runtime/reaction-loss.mjs) ; morte, inconsciente ou pétrifiée, elle ne réagit pas.
+    // "Cannot react": Incapacitated, dead, or an effect that forbids it. §501: `reactions.loseOne` — Incapacitated or the
+    // effect only took away one Reaction (runtime/reaction-loss.mjs); dead, unconscious or petrified, it does not react.
     incapacitated: cannotReact({ statuses: Array.from(actor.statuses ?? []), blocked: reactionsBlocked(actor), loseOne: losesOnlyOneReaction(actor) })
   };
 }
 
 /**
- * Les réactions qu'un acteur peut proposer, parmi des déclarations déjà retenues pour la fenêtre
- * (runtime/triggers.mjs). Une option par étape `use` : l'activité de réaction de l'item, ou celle
- * que l'étape nomme ; `targetSource` = la réaction vise qui a provoqué la fenêtre.
+ * The Reactions an actor can offer, among declarations already kept for the window
+ * (runtime/triggers.mjs). One option per `use` step: the item's Reaction activity, or the one
+ * the step names; `targetSource` = the Reaction targets whoever provoked the window.
  */
 export function reactionOptions(actor, window, declarations) {
   return eligibleReactions(declarations, window, reactionState(actor)).flatMap(d => stepsOf(d, "use").map(step => ({
     activity: step.activity ? `${d.item}.Activity.${step.activity}` : d.activity,
-    // §72 : une activité nommée de l'item (Bracelet de charme : un sort par activité) — le bouton porte son nom.
+    // §72: a named activity of the item (Bracelet of Charm: one spell per activity) — the button carries its name.
     name: activityLabel(d, step), img: d.img, targetSource: step.target === "source", targetSelf: step.target === "self",
     targetTarget: step.target === "target",   // §133 : Protection
     halve: stepsOf(d, "halve").length > 0,
-    resist: stepsOf(d, "resist").length > 0,   // Défense supérieure du chasseur : la Résistance aux types du coup, ce tour
+    resist: stepsOf(d, "resist").length > 0,   // Hunter's Superior Defense: Resistance to the types of the hit, this turn
     endCondition: stepsOf(d, "endCondition").length > 0,
     uncrit: stepsOf(d, "uncrit").length > 0,
     reduce: stepsOf(d, "reduce").length > 0,
     cancel: stepsOf(d, "cancel").length > 0,   // §301 : Feuille morte
-    // §493 (B13) : Bouclier d'insectes — les dégâts de la zone épargnent le réacteur (si la source rate sa sauvegarde).
+    // §493 (B13): Insect Shield — the area's damage spares the reactor (if the source fails its save).
     cancelForSelf: stepsOf(d, "cancelForSelf").length ? { ifSourceFails: stepsOf(d, "cancelForSelf")[0].ifSourceFails === true } : null,
     intercept: stepsOf(d, "intercept").length > 0,   // O8d (§347) : Bouclier antiprojectiles
     reduceBonus: stepsOf(d, "reduce")[0]?.bonus ?? null,
     miss: stepsOf(d, "miss").length > 0,
     reroll: stepsOf(d, "reroll").length > 0,   // §489 : Parade d'un monstre — l'attaquant relance son jet
-    free: step.free === true,   // §489 : la riposte d'une Parade ne coûte rien au budget
+    free: step.free === true,   // §489: a Parry's riposte costs the budget nothing
     penalty: stepsOf(d, "penalty")[0]?.formula ?? null,
     bonus: stepsOf(d, "bonus")[0]?.formula ?? null,
     disadvantage: stepsOf(d, "disadvantage").length > 0,
     absorb: stepsOf(d, "absorb").length > 0,
     interpose: stepsOf(d, "interpose").length > 0,
     redirect: stepsOf(d, "redirect").length > 0,   // §375 : Bouclier de chair
-    // §485 : Indomptable — après la réaction, la sauvegarde d'un effet porté, au choix (runtime/resave-choice.mjs).
+    // §485: Indomitable — after the Reaction, the save against a carried effect, as chosen (runtime/resave-choice.mjs).
     resave: ownResave(d),
     consume: step.consume !== false,
     approach: step.approach === true,
     advantage: step.advantage === true,
-    // §88 : l'attaque se fait avec une arme de corps à corps de l'acteur ; l'activité de l'item paie et donne le dé (Riposte).
+    // §88: the attack is made with a melee weapon of the actor; the item's activity pays and gives the die (Riposte).
     weapon: step.weapon === true
-  // §133 : une attaque d'arme en réaction n'a pas besoin d'une activité de l'item qui paie (Sentinelle n'en a aucune).
+  // §133: a weapon attack as a Reaction needs no item activity to pay (Sentinel has none).
   })).filter(o => (o.activity || o.weapon) && (!o.activity || affordable(o.activity)) && (!o.weapon || meleeAttacksOf(actor).options.length)
-    // §375 : une attaque à détourner vers… personne — seulement si le réacteur agrippe une créature.
+    // §375: an attack to redirect to… nobody — only if the reactor grapples a creature.
     && (!o.redirect || victimsOf(actor.token ?? actor.getActiveTokens?.(false, true)?.[0] ?? null).length)));
 }
 
-/** §485 : l'étape `resave` à `own` d'une déclaration, réduite à ce que la fenêtre transporte ; null sans elle. */
+/** §485: the `resave` step at `own` of a declaration, reduced to what the window carries; null without it. */
 function ownResave(d) {
   const step = stepsOf(d, "resave").find(s => "own" in s);
   return step ? { own: step.own, advantage: step.advantage === true } : null;
 }
 
 /**
- * §28 : une réaction qu'on ne peut pas payer n'est pas proposée (Bouclier sans emplacement, Calque illusoire déjà utilisé). Sort
- * lancé par un emplacement (`method` « spell » ou « pact ») : un emplacement libre de son niveau ou plus. Activité qui consomme
- * les utilisations de son propre item : il en reste une.
- * §66 : la copie d'un sort qu'une capacité lance (activité « cast », `flags.dnd5e.cachedFor` : Magie protectrice du Mage du Monster
- * Manual 2024, qui lance Contresort ou Bouclier) ne prend pas d'emplacement — dnd5e fait payer l'activité qui la lance
- * (activity/mixin.mjs:609, `spellSlot: false`) : ce sont SES utilisations qui comptent.
+ * §28: a Reaction that cannot be paid for is not offered (Shield without a slot, Illusory Double already used). Spell
+ * cast through a slot (`method` "spell" or "pact"): a free slot of its level or higher. Activity that consumes
+ * the uses of its own item: one is left.
+ * §66: the copy of a spell that a feature casts ("cast" activity, `flags.dnd5e.cachedFor`: the Mage's Protective Magic in
+ * the Monster Manual 2024, which casts Counterspell or Shield) takes no slot — dnd5e makes the activity that casts it pay
+ * (activity/mixin.mjs:609, `spellSlot: false`): it is ITS uses that count.
  */
 function affordable(activityUuid) {
   const activity = fromUuidSync(activityUuid, { strict: false });
   if ( levelHidden(activity) ) return false;
-  // §301 : une activité nommée que l'item n'a pas (deux items de même identifiant : l'Énergie psionique du guerrier et du roublard).
+  // §301: a named activity the item does not have (two items with the same identifier: the fighter's and rogue's Psionic Energy).
   if ( !activity && /\.Activity\./.test(activityUuid ?? "") && fromUuidSync(activityUuid.split(".Activity.")[0], { strict: false }) ) return false;
   const item = activity?.item;
   if ( !item ) return true;
@@ -155,11 +155,11 @@ function affordable(activityUuid) {
   }
   const ownUses = (activity.consumption?.targets ?? []).some(t => (t.type === "itemUses") && !t.target);
   if ( ownUses && Number(item.system.uses?.max) && !((Number(item.system.uses.value) || 0) > 0) ) return false;
-  // §94 : les utilisations de l'activité elle-même (Cri surnaturel : bonus de maîtrise par repos long).
+  // §94: the activity's own uses (Supernatural Cry: proficiency bonus per Long Rest).
   const activityUses = (activity.consumption?.targets ?? []).some(t => t.type === "activityUses");
   if ( activityUses && Number(activity.uses?.max) && !((Number(activity.uses.value) || 0) > 0) ) return false;
-  // §88 : les utilisations d'un AUTRE item (les manœuvres : Supériorité martiale ; dnd5e a déjà ramené la cible, uuid de compendium ou
-  // identifiant, à l'id de l'item de l'acteur — data/activity/base-activity.mjs, `_remapConsumptionTarget`).
+  // §88: the uses of ANOTHER item (the maneuvers: Martial Superiority; dnd5e has already mapped the target, compendium uuid or
+  // identifier, to the actor's item id — data/activity/base-activity.mjs, `_remapConsumptionTarget`).
   for ( const t of activity.consumption?.targets ?? [] ) {
     if ( (t.type !== "itemUses") || !t.target ) continue;
     const other = item.actor?.items.get(t.target);
@@ -168,7 +168,7 @@ function affordable(activityUuid) {
   return true;
 }
 
-/** §66 : l'activité « cast » qui lance la copie d'un sort a-t-elle encore de quoi payer (utilisations de son item ou les siennes) ? */
+/** §66: does the "cast" activity that casts a spell copy still have what it takes to pay (its item's uses or its own)? */
 function linkedAffordable(linked) {
   for ( const target of linked.consumption?.targets ?? [] ) {
     if ( target.type === "itemUses" ) {
@@ -180,20 +180,20 @@ function linkedAffordable(linked) {
   return true;
 }
 
-/** Les attaques de mêlée dont un acteur dispose pour une attaque d'opportunité, et sa meilleure allonge. */
+/** The melee attacks an actor has for an Opportunity Attack, and their best reach. */
 export function meleeAttacksOf(actor) {
   const options = [];
   let reach = 0;
   let units = "ft";
   for ( const item of actor.items ) {
-    // « Une attaque de corps à corps avec une arme ou une attaque à mains nues » (PHB 2024, Attaques d'opportunité) :
-    // pour un personnage, ses seuls items d'arme équipés (l'Attaque à mains nues en est un) — ni sort (Crosse des druides,
-    // Fouet épineux), ni capacité (Pacte de la lame), ni consommable (parchemin) ; pour un monstre, ses armes et ses
-    // attaques naturelles (capacité à attaque d'arme : Griffes, Morsure).
+    // "A melee attack with a weapon or an Unarmed Strike" (PHB 2024, Opportunity Attacks):
+    // for a character, only their equipped weapon items (the Unarmed Strike is one) — no spell (Shillelagh,
+    // Thorn Whip), no feature (Pact of the Blade), no consumable (scroll); for a monster, its weapons and its
+    // natural attacks (feature with a weapon attack: Claws, Bite).
     const weaponItem = item.type === "weapon";
-    // §428 : l'Attaque à mains nues ne se « tient » pas — elle compte toujours, équipée ou non. Celle que le moteur pose sur les
-    // personnages est créée non équipée (adapter/basics.mjs) : un personnage qui n'avait qu'un arc en main n'avait aucune attaque de
-    // corps à corps, donc aucune attaque d'opportunité (vu en jeu par l'utilisateur, le 2026-11-12).
+    // §428: the Unarmed Strike is not "held" — it always counts, equipped or not. The one the engine adds to
+    // characters is created unequipped (adapter/basics.mjs): a character with only a bow in hand had no melee
+    // attack, hence no Opportunity Attack (seen in play by the user, on 2026-11-12).
     const held = item.system.equipped || (identifierOf(item).id === "unarmed-strike");
     if ( actor.type === "character" ? (!weaponItem || !held) : !(weaponItem || (item.type === "feat")) ) continue;
     for ( const activity of item.system.activities ?? [] ) {
@@ -208,8 +208,8 @@ export function meleeAttacksOf(actor) {
 }
 
 /**
- * §136 : Maître d'hast, Attaque réactive — les attaques de corps à corps des armes tenues qui la permettent (bâton, lance, arme
- * Lourde à Allonge), et la plus grande allonge qu'elles donnent ; rien sans un item `reactiveStrike`.
+ * §136: Polearm Master, Reactive Strike — the melee attacks of held weapons that allow it (quarterstaff, spear, Heavy weapon
+ * with Reach), and the greatest reach they give; nothing without a `reactiveStrike` item.
  */
 export function reactiveStrikesOf(actor) {
   const out = { options: [], reach: 0, units: "ft" };
@@ -228,11 +228,11 @@ export function reactiveStrikesOf(actor) {
 }
 
 /**
- * §16.26 : Sort réactif (Mage de guerre) — les sorts qu'un acteur peut lancer à la place d'une attaque d'opportunité, s'il
- * porte un item `reactiveSpell` : une action d'incantation, une seule créature visée, sans zone, qui fait quelque chose à
- * la cible (attaque, sauvegarde, dégâts), à portée autre que personnelle ; préparé, ou toujours disponible (sort mineur, pacte, inné, à volonté).
+ * §16.26: Reactive Spell (War Mage) — the spells an actor can cast in place of an Opportunity Attack, if they
+ * carry a `reactiveSpell` item: a casting action, a single targeted creature, no area, that does something to
+ * the target (attack, save, damage), with a range other than self; prepared, or always available (cantrip, pact, innate, at will).
  */
-/** §418 : le réglage de monde « Réactions » (déclaré par runtime/flow.mjs). */
+/** §418: the world setting "Reactions" (declared by runtime/flow.mjs). */
 function reactionMode() {
   try { return game.settings.get(MODULE_ID, "reactionPrompts"); } catch { return "level"; }
 }
@@ -245,10 +245,10 @@ export function reactiveSpellsOf(actor) {
     const level = item.system.level ?? 0;
     const ready = (level === 0) || item.system.prepared || ["pact", "innate", "atwill", "always"].includes(item.system.method);
     if ( !ready ) continue;
-    // « Ne viser que cette créature » : pas un sort qui pose une zone ou invoque (même par une activité sœur), ni un sort
-    // personnel (Crosse des druides, Lame de feu).
-    // « Un temps d'incantation d'une action » : celui du sort (Flammes, Lame de feu se lancent en action Bonus, leur attaque
-    // ne vient qu'après).
+    // "Target only that creature": not a spell that places an area or summons (even through a sibling activity), nor a
+    // personal spell (Shillelagh, Flame Blade).
+    // "A casting time of one action": the spell's (Flames, Flame Blade are cast as a Bonus Action, their attack
+    // only comes afterwards).
     if ( (item.system.activation?.type ?? "action") !== "action" ) continue;
     const activities = [...(item.system.activities ?? [])];
     if ( item.system.target?.template?.type || activities.some(x => x.target?.template?.type || (x.type === "summon")) ) continue;
@@ -258,23 +258,23 @@ export function reactiveSpellsOf(actor) {
       const count = Number(activity.target?.affects?.count || 1);
       if ( (count !== 1) || ["self", "space", "area"].includes(activity.target?.affects?.type) ) continue;
       options.push({ activity: activity.uuid, name: game.i18n.format("DND5ECOMBAT.SortReactif", { name: item.name }), img: item.img });
-      break;   // une option par sort
+      break;   // one option per spell
     }
   }
   return options;
 }
 
 /**
- * Demande à celui qui contrôle l'acteur s'il réagit : son joueur s'il est connecté, sinon le MJ actif — depuis n'importe quel client :
- * les portes d'avant l'attaque et du Contresort tournent chez l'attaquant, et sans ce renvoi la fenêtre de réaction d'un PNJ s'ouvrait
- * chez le JOUEUR qui attaquait (corrigé le 2026-09-29, §38.6). Ne lève jamais : pas de réponse = pas de réaction.
+ * Asks whoever controls the actor whether they react: their player if connected, otherwise the active GM — from any client:
+ * the gates before the attack and of Counterspell run on the attacker's client, and without this relay an NPC's Reaction
+ * window opened on the attacking PLAYER's client (fixed on 2026-09-29, §38.6). Never throws: no answer = no Reaction.
  * @param {Actor} actor
  * @param {object} payload  { actor, prompt: {key, data}, options: [{activity, name, img}], target? }
  * @returns {Promise<{used: string, message: string|null}|null>}
  */
 export async function askReaction(actor, payload) {
-  // §418 : le réglage « Réactions » (cadre « Déroulement ») — pas proposée, pas prise : celui qui la veut l'utilise lui-même. L'outil de
-  // scénario (`auto`, la première option sans fenêtre) n'est pas une question : il passe.
+  // §418: the "Reactions" setting ("Flow" frame) — not offered, not taken: whoever wants it uses it themselves. The
+  // scenario tool (`auto`, the first option without a window) is not a question: it passes.
   if ( !payload?.auto && !offersReaction(reactionMode(), { playerOwned: actor?.hasPlayerOwner === true }) ) {
     console.debug(`${MODULE_ID} | reaction of ${actor?.name}: not offered (setting)`);
     return null;
@@ -291,18 +291,18 @@ export async function askReaction(actor, payload) {
 }
 
 /**
- * Côté de celui qui réagit : la fenêtre de choix, puis l'utilisation de l'activité choisie. C'est
- * lui qui l'utilise : ses ressources, ses dés.
+ * On the side of whoever reacts: the choice window, then the use of the chosen activity. They are
+ * the one who uses it: their resources, their dice.
  */
 /**
- * §67 : rejoindre la source avant la réaction (`use … approach`). Le chemin et la marche sont au runtime (runtime/actions.mjs,
- * `reactionApproach`), qui s'inscrit ici : l'adaptateur n'importe pas le runtime.
+ * §67: joining the source before the Reaction (`use … approach`). The path and the walk belong to the runtime (runtime/actions.mjs,
+ * `reactionApproach`), which registers here: the adapter does not import the runtime.
  */
-/** Le nom du bouton d'une option : l'item, suivi du nom de l'activité visée quand elle en a un (« Bracelet de charme : Cécité/surdité »). */
+/** An option's button name: the item, followed by the targeted activity's name when it has one ("Bracelet of Charm: Blindness/Deafness"). */
 function activityLabel(d, step) {
   if ( !step.activity ) return d.name;
   const activity = fromUuidSync(`${d.item}.Activity.${step.activity}`, { strict: false });
-  // Le sort d'une activité « cast » : sa copie sur la fiche (traduite par Babele), sinon le compendium (son index peut être en anglais).
+  // The spell of a "cast" activity: its copy on the sheet (translated by Babele), else the compendium (index maybe in English).
   const own = activity?.name || (activity?.type === "cast"
     ? (activity.cachedSpell?.name ?? fromUuidSync(activity.spell?.uuid ?? "", { strict: false })?.name) : null);
   return own ? `${d.name} : ${own}` : d.name;
@@ -310,7 +310,7 @@ function activityLabel(d, step) {
 
 let approachSource = null;
 
-/** Les cibles d'un jet d'attaque, comme dnd5e les écrit (data/chat-message/fields/targets-field.mjs:32) ; null sans token. */
+/** The targets of an attack roll, as dnd5e writes them (data/chat-message/fields/targets-field.mjs:32); null without a token. */
 function targetDescriptors(tokenDoc) {
   const token = tokenDoc?.document ?? tokenDoc;
   const actor = token?.actor;
@@ -320,14 +320,14 @@ function targetDescriptors(tokenDoc) {
 }
 export function setReactionApproach(fn) { approachSource = fn; }
 
-/** §403 : le contre-Contresort — la porte (runtime/gates.mjs) qu'un sort lancé en réaction passe avant de partir ; false : contré. */
+/** §403: the counter-Counterspell — the gate (runtime/gates.mjs) a Reaction spell passes before going off; false: countered. */
 let reactionSpellGate = null;
 export function setReactionSpellGate(fn) { reactionSpellGate = fn; }
 
 export async function handleReactionQuery(payload, { user=null }={}) {
-  // §471 : d'un autre client qu'un MJ, ce client ne répond que pour
-  // une créature qu'il contrôle et que l'expéditeur ne contrôle pas (sinon celui-ci se serait posé la question lui-même, `askReaction`),
-  // la fenêtre est toujours posée, et l'utilisation ne garde que les formes légitimes (core/requests.mjs). Refus de sécurité : non forçable.
+  // §471: from a client other than a GM, this client only answers for
+  // a creature it controls and that the sender does not control (otherwise the sender would have asked itself, `askReaction`),
+  // the window is always shown, and the use keeps only the legitimate forms (core/requests.mjs). Safety refusal: not forceable.
   const untrusted = needsCheck(user);
   const { actor: actorUuid, prompt, options, target, auto=false, castLevel=null } = untrusted ? plainReaction(payload) : payload;
   const actor = await fromUuid(actorUuid);
@@ -337,8 +337,8 @@ export async function handleReactionQuery(payload, { user=null }={}) {
   }
   const buttons = options.map((o, i) => ({ action: `use${i}`, label: o.name, icon: "fa-solid fa-bolt", default: i === 0 }));
   buttons.push({ action: "none", label: game.i18n.localize("DND5ECOMBAT.NePasReagir") });
-  // Sans réponse dans le délai : pas de réaction (elle n'est pas dépensée sans consentement).
-  // `auto` (outil de scénario, `usageConfig["dnd5e-combat"].autoReact`) : la première option, sans fenêtre.
+  // With no answer within the timeout: no Reaction (it is not spent without consent).
+  // `auto` (scenario tool, `usageConfig["dnd5e-combat"].autoReact`): the first option, without a window.
   const choice = auto ? "use0" : await timedWait({
     window: { title: game.i18n.format("DND5ECOMBAT.ReactionTitre", { name: actor?.name ?? "" }) },
     classes: ["dnd5e-combat-reaction"],
@@ -349,7 +349,7 @@ export async function handleReactionQuery(payload, { user=null }={}) {
   const option = options[Number(String(choice ?? "").replace("use", ""))];
   if ( !choice?.startsWith?.("use") || !option ) return null;
 
-  // §72 : une réaction qui vise le réacteur lui-même ; sinon la source, si la fenêtre en a une.
+  // §72: a Reaction that targets the reactor itself; otherwise the source, if the window has one.
   const selfToken = option.targetSelf ? (actor?.token ?? actor?.getActiveTokens?.(false, true)?.[0] ?? null) : null;
   if ( selfToken ) (selfToken.object ?? selfToken).setTarget?.(true, { releaseOthers: true });
   else if ( target ) {
@@ -357,14 +357,14 @@ export async function handleReactionQuery(payload, { user=null }={}) {
     token?.setTarget(true, { releaseOthers: true });
   }
   let activity = option.activity ? await fromUuid(option.activity) : null;
-  // §471 : l'activité est celle du réacteur (ses ressources, ses dés), d'où que vienne la question.
+  // §471: the activity is the reactor's (their resources, their dice), wherever the question comes from.
   if ( activity && (activity.actor?.uuid !== actor?.uuid) ) {
     console.warn(`${MODULE_ID} | reaction of ${actor?.name}: activity ${option.activity} is not theirs, refused`);
     return null;
   }
-  // §88 : Riposte — l'activité de l'item paie (ses consommations : un dé de supériorité) et donne le dé ; l'attaque est celle d'une arme
-  // de corps à corps de l'acteur (la première équipée, `meleeAttacksOf`), contre la source, et le dé s'ajoute à ses dégâts si elle touche.
-  // §133 : sans activité de l'item (Sentinelle), l'attaque d'arme seule, payée par la Réaction.
+  // §88: Riposte — the item's activity pays (its consumptions: a superiority die) and gives the die; the attack is that of a melee
+  // weapon of the actor (the first equipped, `meleeAttacksOf`), against the source, and the die is added to its damage if it hits.
+  // §133: without an item activity (Sentinel), the weapon attack alone, paid by the Reaction.
   if ( option.weapon ) {
     const weapon = await fromUuid(meleeAttacksOf(actor).options[0]?.activity ?? "");
     if ( !weapon ) return null;
@@ -379,30 +379,31 @@ export async function handleReactionQuery(payload, { user=null }={}) {
   if ( option.approach && target && approachSource ) {
     await approachSource(actor, await fromUuid(target), activity).catch(err => console.error(`${MODULE_ID} | reaction approach`, err));
   }
-  // §19.6 : « … contre cet ennemi, avec l'avantage » (Riposte) — marque lue au jet qui suit, sur ce client.
+  // §19.6: "… against that enemy, with Advantage" (Riposte) — mark read at the next roll, on this client.
   if ( option.advantage ) markReactionAdvantage(option.activity, option.name);
-  // §134 : Rapide — l'attaque d'opportunité contre ce porteur a le Désavantage (marque lue au jet, comme l'avantage ci-dessus).
+  // §134: Quick — the Opportunity Attack against this bearer has Disadvantage (mark read at the roll, like the Advantage above).
   if ( option.hampered && activity?.uuid ) markReactionDisadvantage(activity.uuid, option.hampered);
-  // Marquée confirmée (la question vient d'être posée) et payée par la réaction, quel que soit
-  // son type d'activation : une attaque d'opportunité est une action d'arme utilisée en réaction.
-  // §34 : une réaction ne pose pas de gabarit au milieu d'une fenêtre (Éclat protecteur : « une Émanation de 9 m pour repérer »,
-  // `prompt: true`) — dnd5e attendrait le clic de pose (activity/mixin.mjs:451, 833) et la fenêtre resterait bloquée.
-  // §38 : `consume: false` — la réaction ne consomme rien d'elle-même (Égide projetée : c'est la réserve qui paie les dégâts).
-  // §67 bis : une attaque contre la source — dnd5e lance le jet d'attaque juste après l'utilisation (attack.mjs:68,
-  // `_triggerSubsequentActions`) en lisant les cibles de l'utilisateur à cet instant (attack.mjs:84) ; la résolution de l'action
-  // qui a ouvert la fenêtre peut les avoir relâchées entre-temps, et le jet partait sans cible (rien à résoudre). Le jet est donc
-  // lancé ici, sa cible écrite dans le message.
+  // Marked confirmed (the question has just been asked) and paid by the Reaction, whatever
+  // its activation type: an Opportunity Attack is a weapon action used as a Reaction.
+  // §34: a Reaction does not place a template in the middle of a window (Protective Flare: "a 30-foot Emanation to spot",
+  // `prompt: true`) — dnd5e would wait for the placement click (activity/mixin.mjs:451, 833) and the window would stay blocked.
+  // §38: `consume: false` — the Reaction consumes nothing by itself (Projected Aegis: the pool pays the damage).
+  // §67 bis: an attack against the source — dnd5e rolls the attack roll right after the use (attack.mjs:68,
+  // `_triggerSubsequentActions`) reading the user's targets at that moment (attack.mjs:84); the resolution of the action
+  // that opened the window may have released them in the meantime, and the roll went off with no target (nothing to
+  // resolve). The roll is therefore made here, its target written in the message.
   const aimed = (activity?.type === "attack") ? targetDescriptors(target ? await fromUuid(target) : null) : null;
-  // §211 : une action préparée (Se tenir prêt) — l'effet de concentration qui retenait le sort tombe avant qu'il parte ; le sort part
-  // sans emplacement, au niveau dépensé (`usage`), et sa zone se pose (`template` : la fenêtre n'attend pas de résolution).
-  // §471 : seulement un effet du réacteur lui-même (l'effet de concentration qui retenait le sort), jamais un autre document.
+  // §211: a readied action (Ready) — the concentration effect that held the spell falls before it goes off; the spell goes off
+  // without a slot, at the level spent (`usage`), and its area is placed (`template`: the window does not wait for a resolution).
+  // §471: only an effect of the reactor itself (the concentration effect that held the spell), never another document.
   for ( const uuid of option.drop ?? [] ) {
     const held = await fromUuid(uuid);
     if ( (held?.documentName === "ActiveEffect") && actor && (held.parent?.uuid === actor.uuid) ) await held.delete();
     else console.warn(`${MODULE_ID} | reaction of ${actor?.name}: ${uuid} is not one of their effects, not removed`);
   }
-  // §403 : un sort lancé en réaction (Contresort, Bouclier) peut lui-même être contré — la porte consulte les ennemis qui le voient ; contré,
-  // il ne part pas (la Réaction est perdue, l'emplacement non) et la fenêtre qui l'a ouvert continue comme sans réaction.
+  // §403: a spell cast as a Reaction (Counterspell, Shield) can itself be countered — the gate consults the enemies who see
+  // it; countered, it does not go off (the Reaction is lost, the slot is not) and the window that opened it goes on as if
+  // without a Reaction.
   if ( reactionSpellGate && isSpellCast(activity.item) ) {
     const goes = await reactionSpellGate(activity, actor).catch(err => { console.error(`${MODULE_ID} | counter-counterspell`, err); return true; });
     if ( goes === false ) return null;
@@ -413,8 +414,8 @@ export async function handleReactionQuery(payload, { user=null }={}) {
     data: { flags: { [MODULE_ID]: { cost: option.free ? "free" : "reaction", reaction: true, ...(option.reduce ? { reduceOnly: true } : {}), ...(option.flags ?? {}) } } }
   });
   if ( results && aimed ) activity.rollAttack({}, {}, { data: { system: { origin: results.message?.id, targets: aimed } } });
-  // §24 : Parade — le jet de l'activité (un soin dans les données, que le moteur n'applique pas : `reduceOnly`) est le montant retiré
-  // aux dégâts de l'attaque. dnd5e lance ce jet de lui-même à l'utilisation (heal.mjs:60) ; on l'attend un peu.
+  // §24: Parry — the activity's roll (a heal in the data, which the engine does not apply: `reduceOnly`) is the amount removed
+  // from the attack's damage. dnd5e rolls it by itself on use (heal.mjs:60); it is awaited a little.
   let reduce = 0;
   if ( results && option.reduce ) {
     const usage = results.message?.id;
@@ -423,18 +424,18 @@ export async function handleReactionQuery(payload, { user=null }={}) {
       reduce = Math.max(0, (roll?.rolls ?? []).reduce((sum, r) => sum + (r.total ?? 0), 0));
       if ( !reduce ) await new Promise(resolve => setTimeout(resolve, 200));
     }
-    // §31 : le bonus que la règle ajoute au jet des données (Endurance de la pierre : + Constitution).
+    // §31: the bonus the rule adds to the data's roll (Stone's Endurance: + Constitution).
     if ( reduce && option.reduceBonus ) {
       try { reduce += Number(Roll.safeEval(Roll.replaceFormulaData(option.reduceBonus, actor.getRollData()))) || 0; }
       catch { /* formule illisible : le jet seul */ }
     }
   }
-  // §33 : Mots cinglants — le dé retiré au jet d'attaque (runtime/reactions.mjs l'ajoute à la CA pour rejuger) ; §36 : Présage cosmique,
-  // Fortune — le dé ajouté au jet d'attaque de l'allié.
+  // §33: Cutting Words — the die subtracted from the attack roll (runtime/reactions.mjs adds it to the AC to judge again);
+  // §36: Cosmic Omen, Fortune — the die added to the ally's attack roll.
   const penalty = (results && option.penalty) ? await rollInClear(actor, option.penalty, "DND5ECOMBAT.Penalite", option.name) : 0;
   const bonus = (results && option.bonus) ? await rollInClear(actor, option.bonus, "DND5ECOMBAT.Bonus", option.name) : 0;
-  // §66 : contresort à la manière de 2014 (`counter`) — c'est celui qui contre qui fait son test, ici, avec ses dés ; la porte
-  // (runtime/gates.mjs) lit la réponse au lieu d'attendre une sauvegarde du lanceur.
+  // §66: 2014-style Counterspell (`counter`) — the one who counters makes their check, here, with their dice; the gate
+  // (runtime/gates.mjs) reads the answer instead of waiting for a save from the caster.
   const counter = (results && (castLevel !== null)) ? await resolveCounter(actor, activity.item, castLevel) : null;
   return results ? { counter, reduce, penalty, bonus, disadvantage: option.disadvantage === true, used: option.activity, name: option.name, message: results.message?.id ?? null, halve: option.halve === true,
     resist: option.resist === true,
@@ -443,7 +444,7 @@ export async function handleReactionQuery(payload, { user=null }={}) {
     cancelForSelf: option.cancelForSelf ? { ifSourceFails: option.cancelForSelf.ifSourceFails === true } : null, intercept: option.intercept === true, redirect: option.redirect === true } : null;
 }
 
-/** §88 : dépense ce que l'activité consomme d'utilisations d'items (Riposte : un dé de supériorité), sans l'utiliser. */
+/** §88: spends what the activity consumes in item uses (Riposte: a superiority die), without using it. */
 export async function payWithoutUse(activity) {
   for ( const t of activity.consumption?.targets ?? [] ) {
     if ( t.type !== "itemUses" ) continue;
@@ -454,7 +455,7 @@ export async function payWithoutUse(activity) {
   }
 }
 
-/** §88 : la formule de la première part de dégâts de l'activité, lue avec les données de l'acteur (« @scale…die » → « 1d8 »). */
+/** §88: the formula of the activity's first damage part, read with the actor's data ("@scale…die" → "1d8"). */
 function riderFormula(activity) {
   const part = activity?.damage?.parts?.[0];
   if ( !part ) return null;
@@ -462,7 +463,7 @@ function riderFormula(activity) {
   return raw ? Roll.replaceFormulaData(raw, activity.getRollData?.() ?? activity.actor?.getRollData() ?? {}) : null;
 }
 
-/** Un dé de réaction lancé en clair (sa carte dans le chat) ; son total, 0 si la formule est illisible. */
+/** A Reaction die rolled openly (its card in the chat); its total, 0 if the formula is unreadable. */
 async function rollInClear(actor, formula, flavorKey, item) {
   try {
     const roll = await new Roll(formula, actor.getRollData()).evaluate();
@@ -474,7 +475,7 @@ async function rollInClear(actor, formula, flavorKey, item) {
   }
 }
 
-/** CA actuelle d'un token, comme le système la décrit sur un message d'attaque (targets-field.mjs:38). */
+/** A token's current AC, as the system describes it on an attack message (targets-field.mjs:38). */
 export async function currentAc(tokenUuid) {
   const actor = (await fromUuid(tokenUuid))?.actor;
   if ( !actor ) return null;

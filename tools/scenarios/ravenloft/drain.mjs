@@ -1,23 +1,23 @@
 /**
- * M8 (SPEC §18.16) — drain du maximum de PV. Monde `ravenloft`, capacités du Monster Manual prêtées :
- *  1. Absorption de vie (Nécrophage ; une sauvegarde de Constitution dans le MM 2024) au Loup, contre le Zombi : ratée, le
- *     maximum du Zombi baisse des dégâts subis
- *     (`hp.tempmax` du delta du token).
- *  2. Morsure du Vampire (sauvegarde de Constitution, perforant + nécrotique) au Zombi, contre le Loup : ratée, le maximum du
- *     Loup baisse des seuls dégâts nécrotiques, et le Zombi regagne autant de PV.
- *  3. Drain d'énergie (Demi-liche) au Zombi, contre le Loup ramené à un maximum effectif de 3 : ratée, le maximum baisse de
- *     4d6, donc à 0 — le Loup meurt.
- *  4. §105 : Caresse dévitalisante (Ombre) au Zombi, contre le Loup : touché, un effet « Force −1d4 » sur le Loup.
- *  5. §105 : Drain de vie de la « Brume vampirique » (fiche du monde faite à la main, format 2014 en français : attaque puis
- *     sauvegarde enchaînée) au Zombi, contre le Loup : touché et sauvegarde ratée, effet de maximum de PV = dégâts subis.
- * Depuis le §105, chaque drain est un effet sur la cible (flag `dnd5e-combat.drain`), plus une écriture de `hp.tempmax`.
- * Les jets sont aléatoires : on rejoue jusqu'au toucher ou à l'échec (20 essais au plus).
+ * M8 (SPEC §18.16) — maximum HP drain. World `ravenloft`, Monster Manual abilities lent:
+ *  1. Life Drain (Wight; a Constitution save in the MM 2024) from the Wolf, against the Zombie: failed, the
+ *     Zombie's maximum drops by the damage taken
+ *     (`hp.tempmax` of the token delta).
+ *  2. Vampire's Bite (Constitution save, piercing + necrotic) from the Zombie, against the Wolf: failed, the maximum of the
+ *     Wolf drops by the necrotic damage alone, and the Zombie regains as many HP.
+ *  3. Energy Drain (Demilich) from the Zombie, against the Wolf brought down to an effective maximum of 3: failed, the
+ *     maximum drops by 4d6, so to 0 — the Wolf dies.
+ *  4. §105: Draining Swipe (Shadow) from the Zombie, against the Wolf: on a hit, a "Strength −1d4" effect on the Wolf.
+ *  5. §105: Life Drain of the "Vampiric Mist" (world sheet made by hand, 2014 format in French: attack then chained
+ *     save) from the Zombie, against the Wolf: hit and failed save, maximum HP effect = damage taken.
+ * Since §105, each drain is an effect on the target (flag `dnd5e-combat.drain`), no longer a write to `hp.tempmax`.
+ * The rolls are random: we replay until a hit or a failure (20 tries at most).
  */
 const WIGHT = "Compendium.dnd-monster-manual.actors.Actor.mmWight000000000";
 const VAMPIRE = "Compendium.dnd-monster-manual.actors.Actor.mmVampire0000000";
 const DEMILICH = "Compendium.dnd-monster-manual.actors.Actor.mmDemilich000000";
 const SHADOW = "Compendium.dnd-monster-manual.actors.Actor.mmShadow00000000";
-const MIST = "lcCmYY4WnuhxMDSs";   // « Brume vampirique », acteur du monde `ravenloft`
+const MIST = "lcCmYY4WnuhxMDSs";   // "Vampiric Mist", actor of the `ravenloft` world
 const DRAIN_EFFECT = /maximum de PV|Hit Point maximum|: (Force|Strength) −/;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -98,17 +98,17 @@ export default {
       const damage = (await ctx.messagesSince(since)).find(m => m.type === "damage");
       const necrotic = (damage?.rolls ?? []).filter(x => /necrotic/i.test(JSON.stringify(x.options ?? {}))).reduce((n, x) => n + (x.total ?? 0), 0);
       const necroticDrained = await drained(wolf);
-      // « égal aux dégâts nécrotiques subis » : les dégâts (dnd5e, après résistances), pas les PV perdus — un Loup à 11 PV qui
-      // encaisse 18 nécrotiques voit son maximum baisser de 18.
+      // "equal to the necrotic damage taken": the damage (dnd5e, after resistances), not the HP lost — a Wolf at 11 HP who
+      // takes 18 necrotic sees its maximum drop by 18.
       ctx.expect((necroticDrained > 0) && (!necrotic || necroticDrained <= necrotic),
         `effet : maximum du Loup -${necroticDrained} : la part nécrotique (jet nécrotique ${necrotic || "?"}, subi en tout ${failed.damage.applied})`);
       ctx.expect((await ctx.hp(zombi)) > zombiBefore, `le Zombi regagne des PV (${zombiBefore} → ${await ctx.hp(zombi)})`);
     }
     await clearDrains(wolf);
 
-    // 3. Drain d'énergie.
+    // 3. Energy Drain.
     const energy = await lend(DEMILICH, "energy-drain", zombi);
-    // Maximum effectif ramené à 3 (le delta du Loup de `ravenloft` porte un maximum de 100) : 4d6 le met sûrement à 0.
+    // Effective maximum brought down to 3 (the `ravenloft` Wolf's delta carries a maximum of 100): 4d6 surely puts it at 0.
     const { data: wolfTok } = await ctx.call("get-scene-object", { type: "Token", objectId: wolf.id });
     const baseMax = wolfTok.delta?.system?.attributes?.hp?.max ?? 11;
     const start = -(baseMax - 3);
@@ -137,7 +137,7 @@ export default {
     for ( const s of ["dead", "unconscious", "prone", "incapacitated"] ) await ctx.removeStatusEffects(wolf, s);
     await clearDrains(wolf);
 
-    // 4. Caresse dévitalisante (Ombre).
+    // 4. Draining Swipe (Shadow).
     const swipe = await lend(SHADOW, "draining-swipe", zombi);
     let struck = null;
     for ( let i = 0; (i < 20) && !struck; i++ ) {
@@ -156,7 +156,7 @@ export default {
     await clearDrains(wolf);
     for ( const s of ["dead", "unconscious", "prone", "incapacitated"] ) await ctx.removeStatusEffects(wolf, s);
 
-    // 5. Drain de vie de la Brume vampirique (fiche faite à la main, en français).
+    // 5. Life Drain of the Vampiric Mist (hand-made sheet, in French).
     const mist = await lend(MIST, "drain-de-vie-test", zombi, null, { name: "Drain de vie" }).catch(() => null);
     if ( !mist ) { ctx.log("Brume vampirique absente du monde : partie 5 non applicable"); return; }
     let sucked = null;

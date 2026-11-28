@@ -1,15 +1,14 @@
 /**
- * §147 : la fuite par la Réaction (Murmures dissonants) — ce qui se calcule sans Foundry.
+ * §147: fleeing through the Reaction (Dissonant Whispers) — what can be computed without Foundry.
  *
- * Fonctions pures, aucune dépendance à Foundry.
+ * Pure functions, no dependency on Foundry.
  */
 
 /**
- * Les écarts à essayer, en cases, du plus loin au plus près : « aussi loin que sa Vitesse le permet » — l'écart actuel plus la
- * Vitesse en cases, puis un de moins à chaque fois qu'un mur ou un obstacle rend l'écart visé injoignable, jusqu'à un de plus que
- * l'écart actuel.
- * @param {number} from   L'écart actuel (0 : au contact).
- * @param {number} cells  La Vitesse, en cases.
+ * The gaps to try, in cells, from farthest to nearest: "as far as its Speed allows" — the current gap plus the Speed in cells,
+ * then one less each time a wall or an obstacle makes the targeted gap unreachable, down to one more than the current gap.
+ * @param {number} from   The current gap (0: in contact).
+ * @param {number} cells  The Speed, in cells.
  * @returns {number[]}
  */
 export function fleeGaps(from, cells) {

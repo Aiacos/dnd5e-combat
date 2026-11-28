@@ -1,11 +1,11 @@
 /**
- * §214 : Formation au port d'armure — le Magicien de `dnd-6` (aucune formation d'armure) revêt une cotte de mailles et un bouclier du
- * compendium SRD 2024 de dnd5e.
- *  1. Bouclier sans formation : l'effet du moteur retire son bonus — CA 16 (cotte de mailles), pas 18.
- *  2. Armure sans formation : Désavantage aux sauvegardes de Dextérité (pas de Sagesse), raison « Armure sans formation » à une attaque
- *     de Force ou de Dextérité, et lancer un sort est un souci de légalité.
- *  3. Armure et bouclier retirés : plus d'effet, plus de souci.
- * Retire les items prêtés.
+ * §214: Armor Training — the Wizard of `dnd-6` (no armor training) dons chain mail and a shield from the dnd5e SRD 2024
+ * compendium.
+ *  1. Shield without training: the engine's effect removes its bonus — AC 16 (chain mail), not 18.
+ *  2. Armor without training: Disadvantage on Dexterity saving throws (not Wisdom), reason "Armor without training" on a
+ *     Strength or Dexterity attack, and casting a spell is a legality issue.
+ *  3. Armor and shield removed: no more effect, no more issue.
+ * Removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e.equipment24.Item.";
@@ -26,8 +26,8 @@ export default {
     const items = async () => (await ctx.call("get-actor", { actorId: mage.actorId })).items ?? [];
     const penalty = async () => (await ctx.effects(mage)).find(e => e.flags?.[MODULE_ID]?.untrainedShield || /sans formation|without training/i.test(e.name ?? "")) ?? null;
 
-    // Une cotte de mailles et un bouclier du SRD, équipés, marqués par le scénario : jamais trouvés par leur nom (le sort « Shield »
-    // du Magicien porte le même nom anglais que le bouclier — `ensureItem` l'aurait pris).
+    // Chain mail and a shield from the SRD, equipped, marked by the scenario: never found by name (the Wizard's "Shield" spell
+    // has the same English name as the shield — `ensureItem` would have picked it).
     const wear = async (id, mark) => {
       const uuid = `${SRD}${id}`;
       const { data } = await ctx.call("get-compendium-entry", { uuid });

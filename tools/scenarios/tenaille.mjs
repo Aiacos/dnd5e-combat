@@ -1,11 +1,11 @@
 /**
- * §369 (issue GitHub #27) : la prise en tenaille, règle maison désactivée par défaut — le Guerrier et le Paladin de `dnd-6` autour
- * du Zombi de l'Arène.
- *  1. Réglage « Avantage » : Guerrier à gauche, Paladin à droite → raison « situation.flanking » à l'attaque au corps à corps du Guerrier.
- *  2. Paladin au-dessus (côtés voisins) → plus de tenaille.
- *  3. Paladin de nouveau en face mais Neutralisé → plus de tenaille.
- *  4. « PNJ seulement » → le Guerrier (PJ) n'en profite plus ; réglage désactivé → plus rien.
- * Remet les réglages, les états et les positions.
+ * §369 (GitHub issue #27): flanking, a house rule off by default — the Fighter and the Paladin of `dnd-6` around the Arena's
+ * Zombie.
+ *  1. "Advantage" setting: Fighter on the left, Paladin on the right → reason "situation.flanking" on the Fighter's melee attack.
+ *  2. Paladin above (adjacent sides) → no more flanking.
+ *  3. Paladin opposite again but Incapacitated → no more flanking.
+ *  4. "NPCs only" → the Fighter (PC) no longer benefits; setting off → nothing.
+ * Resets the settings, conditions and positions.
  */
 const SETTINGS = ["flanking", "flankingSide", "flankingConga"];
 

@@ -1,18 +1,18 @@
 /**
- * Une cible est-elle à portée ? Tout est converti dans l'unité de la grille avant de comparer
- * (SPEC §5.7) : le monde est métrique, un item peut être resté en pieds. Fonctions pures.
+ * Is a target in range? Everything is converted into the grid unit before comparing
+ * (SPEC §5.7): the world is metric, an item may have stayed in feet. Pure functions.
  */
 
 import { convertLength } from "./units.mjs";
 
 /**
- * @param {{value: number, units: string}} measured  Distance mesurée sur la scène, unité de la grille.
+ * @param {{value: number, units: string}} measured  Distance measured on the scene, grid unit.
  * @param {object} range
- * @param {number|null} range.value   Portée normale (ou allonge, pour une attaque de mêlée).
- * @param {number|null} [range.long]  Portée longue d'une arme à distance.
- * @param {string} range.units        Unité de l'item ("ft", "m"…). Les portées « soi », « contact », « spéciale » n'ont pas de valeur.
+ * @param {number|null} range.value   Normal range (or reach, for a melee attack).
+ * @param {number|null} [range.long]  Long range of a ranged weapon.
+ * @param {string} range.units        Item unit ("ft", "m"…). The "self", "touch", "special" ranges have no value.
  * @param {Record<string, number>} factors
- * @returns {"outOfRange"|"longRange"|null}  null = à portée, ou portée non mesurable.
+ * @returns {"outOfRange"|"longRange"|null}  null = in range, or range not measurable.
  */
 export function rangeIssue(measured, range, factors) {
   if ( !Number.isFinite(range?.value) || !(range.units in factors) || !(measured.units in factors) ) return null;
@@ -26,11 +26,11 @@ export function rangeIssue(measured, range, factors) {
 }
 
 /**
- * O8h (§351) : une portée minimale — « ne peut pas toucher une cible à 18 m ou moins de lui » (Mangonneau, Trébuchet, tir en cloche).
- * @param {{value: number, units: string}} measured  Distance mesurée, unité de la grille.
- * @param {{value: number, units: string}|null} min  La portée minimale de l'arme, ou null.
+ * O8h (§351): a minimum range — "cannot hit a target 18 m or less from it" (Mangonel, Trebuchet, lobbed shot).
+ * @param {{value: number, units: string}} measured  Distance measured, grid unit.
+ * @param {{value: number, units: string}|null} min  The weapon's minimum range, or null.
  * @param {Record<string, number>} factors
- * @returns {boolean}  vrai si la cible est trop près (à la portée minimale ou moins) ; faux sans portée minimale mesurable.
+ * @returns {boolean}  true if the target is too close (at the minimum range or less); false with no measurable minimum range.
  */
 export function tooClose(measured, min, factors) {
   if ( !Number.isFinite(min?.value) || !(min.units in factors) || !(measured?.units in factors) ) return false;

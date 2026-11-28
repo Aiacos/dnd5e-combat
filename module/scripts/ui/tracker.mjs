@@ -1,7 +1,8 @@
 /**
- * Le budget du tour dans le tracker de combat (SPEC §6) : pastilles action / bonus / réaction,
- * attaques restantes, déplacement, et les boutons Foncer / Se désengager / Esquiver. C'est l'affichage du MJ : les joueurs
- * regardent leur interface (Darsh UI DnD5, qui lit `api.ui`, §40.1). La lecture du budget et les clics sont communs (ui/budget.mjs).
+ * The turn budget in the combat tracker (SPEC §6): action / Bonus Action / Reaction pips,
+ * remaining attacks, movement, and the Dash / Disengage / Dodge buttons. This is the GM's display: players
+ * look at their own interface (Darsh UI DnD5, which reads `api.ui`, §40.1). Reading the budget and the clicks are shared
+ * (ui/budget.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -55,7 +56,7 @@ function budgetRow(combatant) {
   if ( view.editable ) row.addEventListener("click", async event => {
     const key = event.target.closest("[data-key]")?.dataset.key;
     if ( !key ) return;
-    event.stopPropagation();   // ne pas activer le combattant sous la pastille
+    event.stopPropagation();   // do not activate the combatant under the pip
     await applyBudgetIntent(combatant, key);
   });
   return row;
@@ -66,7 +67,7 @@ function onRenderCombatTracker(app, html) {
   if ( !combat?.started ) return;
   for ( const li of html.querySelectorAll("li.combatant[data-combatant-id]") ) {
     const combatant = combat.combatants.get(li.dataset.combatantId);
-    // Les PNJ du MJ ne révèlent pas leur budget aux joueurs.
+    // The GM's NPCs do not reveal their budget to players.
     if ( !budgetVisible(combatant) ) continue;
     li.append(budgetRow(combatant));
   }
@@ -75,7 +76,7 @@ function onRenderCombatTracker(app, html) {
 export function registerTracker() {
   route("renderCombatTracker", onRenderCombatTracker, { label: "budget in the tracker" });
 
-  // Le déplacement vit sur le token, pas sur le combattant : le tracker ne le voit pas bouger tout seul.
+  // Movement lives on the token, not on the combatant: the tracker does not see it move by itself.
   const refresh = foundry.utils.debounce(() => ui.combat?.render(), 150);
   route("updateToken", (token, changes) => {
     if ( game.combat?.started && (("x" in changes) || ("y" in changes) || ("_movementHistory" in changes)) ) refresh();

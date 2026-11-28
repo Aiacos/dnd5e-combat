@@ -1,13 +1,15 @@
 /**
- * §489 : la relance forcée d'un jet d'attaque — étape `reroll` d'une réaction « touché » (Parade d'un monstre : « l'attaquant relance son
- * jet d'attaque et doit utiliser le nouveau résultat »).
+ * §489: the forced reroll of an attack roll — `reroll` step of a "hit" reaction (a monster's Parry: "the attacker rerolls its
+ * attack roll and must use the new result").
  *
- * Le jet du message d'attaque est relancé tel quel : `Roll#reroll` (cœur, client/dice/roll.mjs:475) évalue un clone, même formule, même
- * Avantage, mêmes bonus (le D20Roll cloné garde `options.configured`, dnd5e dice/d20-roll.mjs:24). Il part sur sa propre carte, au nom
- * de l'attaquant, Dice So Nice attendu ; puis le cœur rejuge ce coup contre la cible seule (core/action.mjs, `reactionResolved`, `roll`).
- * Ce qui s'était ajouté au premier jet après coup (Inspiration bardique, héroïque) ne suit pas : c'est un nouveau jet.
+ * The attack message's roll is rerolled as is: `Roll#reroll` (core, client/dice/roll.mjs:475) evaluates a clone, same formula, same
+ * Advantage, same bonuses (the cloned D20Roll keeps `options.configured`, dnd5e dice/d20-roll.mjs:24). It goes out on its own card,
+ * in the name of the attacker, Dice So Nice awaited; then the core re-judges that hit against the target alone (core/action.mjs,
+ * `reactionResolved`, `roll`).
+ * What was added to the first roll afterwards (Bardic Inspiration, Heroic) does not follow: it is a new roll.
  *
- * Retour à toute la table : texte au-dessus du réacteur et son (« parade réussie » si le coup rate désormais, sinon « le coup passe »).
+ * Return to the whole table: text above the reactor and sound ("parry succeeded" if the hit now misses, otherwise
+ * "the hit goes through").
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,20 +17,20 @@ import { d20Mode } from "../adapter/messages.mjs";
 import { tokenOf } from "../adapter/facts.mjs";
 import { esc, loc, log, notice, waitForDice } from "./shared.mjs";
 
-/** Le jet relancé, dans la forme du cœur (core/attack.mjs, `AttackRoll`), plus l'ancien total (`from`). */
+/** The rerolled roll, in the core's form (core/attack.mjs, `AttackRoll`), plus the old total (`from`). */
 function rollFacts(roll, from) {
   return { total: roll.total, isCritical: roll.isCritical === true, isFumble: roll.isFumble === true,
     ...(Number.isFinite(roll.d20?.total) ? { natural: roll.d20.total } : {}), ...(d20Mode(roll) ? { mode: d20Mode(roll) } : {}), from };
 }
 
 /**
- * Relance le jet d'attaque de la résolution, pour la cible `target` qui a réagi.
- * @param {object} resolution        La résolution en attente de réaction (son `attack.messageId`).
- * @param {object} target            La cible de la résolution (`ac`, `cover`, `name`).
- * @param {Actor} reactor            Celui qui force la relance.
- * @param {string} name              Le nom de la réaction (« Parade »).
- * @param {number} ac                La CA de la cible pour ce rejugement (abri compris).
- * @returns {Promise<object|null>}   Le nouveau jet (`AttackRoll` + `from`), ou null si le jet d'origine est introuvable.
+ * Rerolls the resolution's attack roll, for the target `target` that reacted.
+ * @param {object} resolution        The resolution awaiting a reaction (its `attack.messageId`).
+ * @param {object} target            The resolution's target (`ac`, `cover`, `name`).
+ * @param {Actor} reactor            Whoever forces the reroll.
+ * @param {string} name              The reaction's name ("Parry").
+ * @param {number} ac                The target's AC for this re-judging (Cover included).
+ * @returns {Promise<object|null>}   The new roll (`AttackRoll` + `from`), or null if the original roll cannot be found.
  */
 export async function forceReroll(resolution, target, reactor, name, ac) {
   const message = game.messages.get(resolution?.attack?.messageId ?? "");

@@ -1,4 +1,4 @@
-/** Les filtres du lanceur de scénarios (`--grep`, `--section`, `--scene`) : tools/lib/scenario-meta.mjs. */
+/** The filters of the scenario runner (`--grep`, `--section`, `--scene`): tools/lib/scenario-meta.mjs. */
 import { describe, it, expect } from "vitest";
 import { matches, scenarioMeta } from "../tools/lib/scenario-meta.mjs";
 
@@ -10,24 +10,24 @@ export default {
   name: "zone-duree — Rayon de lune, fin de tour du Zombi dedans (§47)",
 };`;
 
-describe("scénarios : ce qu'on lit sans les charger", () => {
+describe("scenarios: what is read without loading them", () => {
   const meta = scenarioMeta(TEXT);
-  it("titre, résumé, scène, § cités", () => {
+  it("title, summary, scene, cited §", () => {
     expect(meta.scene).toBe("Escalade");
     expect(meta.summary).toBe("Rayon de lune, fin de tour du Zombi dedans (§47)");
     expect(meta.refs).toEqual(["§16.8", "§47"]);
   });
-  it("un mot, sans accents ni casse ; plusieurs mots : l'un ou l'autre", () => {
+  it("one word, without accents or case; several words: one or the other", () => {
     expect(matches("zone-duree", meta, { words: ["ZÔNE"] })).toBe(true);
     expect(matches("zone-duree", meta, { words: ["porte", "lune"] })).toBe(true);
     expect(matches("zone-duree", meta, { words: ["porte"] })).toBe(false);
   });
-  it("un § vaut pour ses sous-sections, pas pour un numéro qui commence pareil", () => {
+  it("a § applies to its subsections, not to a number that starts the same way", () => {
     expect(matches("x", meta, { sections: ["16"] })).toBe(true);
     expect(matches("x", meta, { sections: ["4"] })).toBe(false);
     expect(matches("x", meta, { sections: ["47"] })).toBe(true);
   });
-  it("la scène ; « arene » : aucune scène déclarée ; les familles de filtres se cumulent", () => {
+  it("the scene; \"arene\": no scene declared; the filter families add up", () => {
     expect(matches("x", meta, { scenes: ["escalade"] })).toBe(true);
     expect(matches("x", meta, { scenes: ["arene"] })).toBe(false);
     expect(matches("x", scenarioMeta("export default { name: \"a — b\" };"), { scenes: ["arene"] })).toBe(true);

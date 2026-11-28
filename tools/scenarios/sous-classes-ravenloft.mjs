@@ -1,13 +1,17 @@
 /**
- * §95 — Sous-classes de Ravenloft (module premium `dnd-ravenloft-horrors-within`, pack `options`), aptitudes prêtées aux personnages de
- * l'arène :
- *  - Patron Mort-vivant (Occultiste) : Forme d'effroi, puis un coup — l'Avatar terrifiant proposé, Sagesse, Effrayé ⇔ ratée ;
- *    Cosse nécrotique : à 0 PV, la question, l'émanation (Constitution des ennemis), PV = 2 × niveau d'Occultiste, 1 Épuisement.
- *  - Sorcellerie de l'ombre (Ensorceleur) : à 0 PV, Force du tombeau — Charisme contre DD 5 + dégâts ; réussie : PV = Charisme + niveau.
- *  - Fantôme (Roublard) : une Attaque sournoise sur le Bandit — les Lamentations proposées, le Zombi choisi, dégâts nécrotiques ;
- *    Marche fantôme : l'attaque du Bandit contre lui au Désavantage.
- *  - Gardien creux (Rôdeur) : Courroux sauvage ; au début de son tour, l'Aura troublante sur le Bandit ; Courroux persistant à 0 PV.
- *  - §441 : Effroi supérieur choisi au niveau 14 (donnée corrigée), Résistance nécrotique de la Cosse, Immunité à l'Épuisement de la Puissance ancestrale.
+ * §95 — Ravenloft subclasses (premium module `dnd-ravenloft-horrors-within`, pack `options`), abilities lent to the arena
+ * characters:
+ *  - "Undead Patron" (Warlock): Form of Dread, then a hit — "Terrifying Avatar" offered, Wisdom, Frightened ⇔ failed;
+ *    Necrotic Husk: at 0 HP, the question, the Emanation (Constitution of the enemies), HP = 2 × Warlock level, 1
+ *    Exhaustion.
+ *  - "Shadow Sorcery" (Sorcerer): at 0 HP, Strength of the Grave — Charisma against DC 5 + damage; succeeded: HP =
+ *    Charisma + level.
+ *  - "Phantom" (Rogue): a Sneak Attack on the Bandit — Wails from the Grave offered, the Zombie chosen, necrotic damage;
+ *    Ghost Walk: the Bandit's attack against him at Disadvantage.
+ *  - "Hollow Guardian" (Ranger): "Savage Wrath"; at the start of his turn, the "Disturbing Aura" on the Bandit;
+ *    "Lingering Wrath" at 0 HP.
+ *  - §441: "Greater Dread" chosen at level 14 (data corrected), Necrotic Resistance of the Husk, Exhaustion Immunity of
+ *    "Ancestral Power".
  */
 const MODULE_ID = "dnd5e-combat";
 const RHW = "dnd-ravenloft-horrors-within.options";
@@ -54,7 +58,7 @@ export default {
         for ( const d of r?.windows ?? [] ) {
           const b = (d.buttons ?? []).find(x => re.test(x.label ?? ""));
           if ( b ) { await ctx.call("answer-dialog", { id: d.id, button: b.action ?? b.label }); return { labels: (d.buttons ?? []).map(x => x.label) }; }
-          // Beaucoup d'options : une liste déroulante (adapter/choices.mjs, §113) et un bouton « Valider ».
+          // Many options: a drop-down list (adapter/choices.mjs, §113) and a "Confirm" button.
           for ( const f of (d.fields ?? []).filter(x => x.type === "select") ) {
             const o = (f.options ?? []).find(x => re.test(x.label ?? ""));
             if ( !o ) continue;
@@ -65,7 +69,7 @@ export default {
       }
       return null;
     };
-    /** §441 : un changement porté par l'effet que le moteur tient pour les items sans effet (runtime/speed-grants.mjs). */
+    /** §441: a change carried by the effect that the engine keeps for items without an effect (runtime/speed-grants.mjs). */
     const granted = async (t, key, value) => {
       for ( let w = 0; w < 12; w++ ) {
         const found = (await ctx.effects(t)).some(e => e.flags?.[MODULE_ID]?.speedGrant
@@ -79,14 +83,14 @@ export default {
     const actorOf = t => ctx.call("get-actor", { actorId: t.actorId });
     const clear = async t => { for ( const s of ["frightened", "unconscious", "prone", "incapacitated", "dead"] ) await ctx.removeStatusEffects(t, s); };
     const place = async (t, dx, dy, ref) => { const p = await ctx.position(ref); await ctx.call("move-token", { tokenId: t.id, x: p.x + dx * grid, y: p.y + dy * grid, elevation: 0 }); };
-    /** Tombe à 0 PV ; répond à la question (« Oui ») ; rend ce qu'on lit ensuite. */
+    /** Drops to 0 HP; answers the question ("Yes"); returns what is read afterwards. */
     const drop = async t => {
       await ctx.setHp(t, 6);
       await ctx.call("update-actor", { actorId: t.actorId, actorData: { "system.attributes.hp.temp": 0 } }).catch(() => {});   // des PV temporaires absorberaient la chute
       await clear(t);
       const ids = await known();
       const since = await ctx.lastMessageId();
-      await ctx.engine("hurt", { tokenId: t.id, amount: 6 });   // pile à 0 : pas de mort sur le coup (excédent ≥ PV max)
+      await ctx.engine("hurt", { tokenId: t.id, amount: 6 });   // exactly 0: no death on the spot (excess ≥ max HP)
       const asked = await answer(ids, /^Oui|^Yes/i, 9000);
       await pause(6000);
       return { asked, since, hp: await ctx.hp(t), st: await statuses(t) };
@@ -98,14 +102,15 @@ export default {
     await place(zombie, 0, 1, warlock);
     await pause(800);
     const dread = await lend(warlock, "rhwUPFormofDreOJ");
-    // §441 : la donnée corrigée à la création — l'activité « prendre la forme » a sa tranche du niveau 14 (Effroi supérieur).
+    // §441: the data corrected at creation — the "take the form" activity has its level 14 tier ("Greater Dread").
     const avatarEffects = ((await actorOf(warlock)).items ?? []).find(i => i._id === dread)?.system?.activities?.sjAc47PXRIIRKS0u?.effects ?? [];
     ctx.expect(avatarEffects.some(e => (e._id === "1oBMDR1fQh6rCruX") && (e.level?.min === 14)), "Forme d'effroi : l'effet d'Effroi supérieur choisi à partir du niveau 14 (§441)");
     const fu =await ctx.use({ tokenId: warlock.id, itemId: dread, activityId: "sjAc47PXRIIRKS0u", targetTokenIds: [warlock.id] });
     await pause(800);
-    // Le connecteur coupe l'enchaînement de dnd5e : le jet de PV temporaires se lance par la carte.
+    // The connector cuts dnd5e's chaining: the Temporary Hit Points roll is made through the card.
     if ( fu.usageMessageId ) await ctx.engine("rollCard", { messageId: fu.usageMessageId }).catch(() => null);
-    // L'effet suit le jet de PV temporaires, posé après la fin des dés 3D (8 s au plus) : on l'attend (vu le 2026-10-29 : ~3,5 s).
+    // The effect follows the Temporary Hit Points roll, placed after the end of the 3D dice (8 s at most): we wait for it
+    // (seen on 2026-10-29: ~3.5 s).
     const dreadOn = async () => (await ctx.effects(warlock)).some(e => !e.disabled && /Dread|effroi/i.test(e.name ?? ""));
     let dreading = false;
     for ( let w = 0; (w < 24) && !dreading; w++ ) { await pause(500); dreading = await dreadOn(); }
@@ -155,7 +160,7 @@ export default {
     ctx.expect(Number.isFinite(total) && (dc === 11), `Charisme contre DD 5 + 6 dégâts (${total} contre ${dc})`);
     ctx.expect((total >= dc) ? (grave.hp > 0) : ((grave.hp === 0) && grave.st.includes("unconscious")), `${total >= dc ? "relevé" : "tombé"} (${grave.hp} PV, ${grave.st.join(", ") || "aucun état"})`);
 
-    // 3. Fantôme.
+    // 3. Phantom.
     const rogue = T.Roublard;
     await place(bandit, 1, 0, rogue);
     await place(T.Guerrier, 2, 0, rogue);
@@ -196,7 +201,7 @@ export default {
     const wrath = await lend(ranger, "rhwHWWrathofth3C");
     await lend(ranger, "rhwHWAncientMibA");
     ctx.expect(await granted(ranger, "system.traits.ci.value", "exhaustion"), "Puissance ancestrale : Immunité contre l'état Épuisé (§441)");
-    // `api.mcp.use` : l'enchantement « sur soi » se pose dans les actions enchaînées de dnd5e, que le connecteur coupe.
+    // `api.mcp.use`: the "on self" enchantment is placed in dnd5e's chained actions, which the connector cuts.
     await ctx.engine("use", { tokenId: ranger.id, itemId: wrath, activityType: "enchant" }).catch(err => ctx.log(`transformation : ${err.message}`));
     await pause(2500);
     const transformed = ((await actorOf(ranger)).items ?? []).find(i => i._id === wrath)?.effects?.some(e => (e.type === "enchantment") && !e.disabled);
@@ -207,10 +212,11 @@ export default {
     for ( const [t, v] of [[bandit, 20], [ranger, 10]] ) await ctx.call("set-initiative", { combatantId: combat.combatants.find(x => x.tokenId === t.id).id, value: v, combatId: ctx.ownCombat });
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
     for ( let i = 0; (i < 3) && ((await current()) !== bandit.id); i++ ) { await ctx.call("previous-turn", { combatId: ctx.ownCombat }); await pause(1500); }
-    // §447 : l'Aura troublante agit aussi à la transformation (`atStart`) ; son Effrayé est retiré pour juger celle du début de tour seule.
+    // §447: the "Disturbing Aura" also acts at transformation (`atStart`); its Frightened is removed to judge the
+    // start-of-turn one alone.
     await ctx.removeEffectsNamed(bandit, /Frightened|Effrayé/i);
     const since4 = await ctx.lastMessageId();
-    await ctx.nextTurn(); await pause(4500);   // début du tour du Rôdeur
+    await ctx.nextTurn(); await pause(4500);   // start of the Ranger's turn
     const aura = (await ctx.messagesSince(since4)).find(m => (m.type === "usage") && (m.flags?.[MODULE_ID]?.areaTick?.moment === "ownTurnStart"));
     if ( ctx.expect(!!aura, "Aura troublante : au début du tour du Rôdeur") ) {
       const r = await ctx.settle(aura.id, { timeoutMs: 45000 }).catch(() => null);

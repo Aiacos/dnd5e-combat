@@ -1,12 +1,12 @@
 /**
- * Ruée en ligne droite (SPEC §57, clé `lineDash` de core/content.mjs) : la créature va de sa case à la case choisie en ligne
- * droite, et ce qui se trouve près des espaces qu'elle traverse subit l'activité (par exemple : toute
- * créature à 1,50 m au plus d'une case de son trajet). Ici, les cases traversées, sans Foundry.
+ * Straight-line rush (SPEC §57, `lineDash` key of core/content.mjs): the creature goes from its cell to the chosen cell in a
+ * straight line, and whatever is near the spaces it crosses is subject to the activity (for example: any
+ * creature within 1.50 m at most of a cell of its path). Here, the cells crossed, without Foundry.
  */
 
 /**
- * Les positions (coin haut-gauche, en cases) d'une emprise qui glisse en ligne droite de `from` à `to`, départ et arrivée
- * compris, sans doublon : l'échantillon se prend tous les quarts de case, et chaque position est la case la plus proche.
+ * The positions (top-left corner, in cells) of a footprint that slides in a straight line from `from` to `to`, start and end
+ * included, without duplicates: the sampling is taken every quarter cell, and each position is the nearest cell.
  * @param {{i: number, j: number}} from
  * @param {{i: number, j: number}} to
  * @returns {{i: number, j: number}[]}
@@ -18,7 +18,7 @@ export function straightCells(from, to) {
   const out = [];
   const seen = new Set();
   for ( let k = 0; k <= n; k++ ) {
-    // Arrondi symétrique (une demi-case s'éloigne de zéro dans les deux sens) : le tracé ne dépend pas de la direction.
+    // Symmetric rounding (a half cell moves away from zero in both directions): the path does not depend on the direction.
     const cell = { i: from.i + nearest((di * k) / n), j: from.j + nearest((dj * k) / n) };
     const key = `${cell.i},${cell.j}`;
     if ( seen.has(key) ) continue;

@@ -1,10 +1,10 @@
 /**
- * Lumière et ténèbres des sorts (SPEC §16.31, clé `light`). Monde `ravenloft` : Kaalisti lance Ténèbres sur le Zombi →
- * une source de ténèbres (lumière négative) au centre de la zone, et la vision simulée tient le Zombi pour non vu et
- * aveugle : Poussière d'étoile de Sylaene porte les deux raisons « cible non vue » et « attaquant non vu ». Touché, le
- * Zombi porte « Illuminé » avec sa lumière faible de 10 ft (`token.light.dim`). Puis Lumière du jour, à côté : les
- * Ténèbres sont dissipées (région, source et concentration de Kaalisti), et une lumière 60/120 ft est posée.
- * Non applicable sans Kaalisti, Sylaene et le Zombi (monde `dnd-6`).
+ * Spell light and darkness (SPEC §16.31, key `light`). World `ravenloft`: Kaalisti casts Darkness on the Zombie →
+ * a darkness source (negative light) at the center of the area, and the simulated vision treats the Zombie as unseen and
+ * blinded: Sylaene's Starry Wisp carries both reasons "target unseen" and "attacker unseen". On a hit, the
+ * Zombie carries "Illuminated" with its 10 ft Dim Light (`token.light.dim`). Then Daylight, next to it: the
+ * Darkness is dispelled (region, source and Kaalisti's Concentration), and a 60/120 ft light is placed.
+ * Not applicable without Kaalisti, Sylaene and the Zombie (world `dnd-6`).
  */
 const DAYLIGHT = "Compendium.dnd-players-handbook.spells.phbsplDaylight00";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -38,7 +38,7 @@ export default {
       return found;
     };
 
-    // 1. Ténèbres (sphère de 15 ft) centrées sur le Zombi.
+    // 1. Darkness (15 ft Sphere) centered on the Zombie.
     const box = await ctx.box(zombi);
     const centre = { x: box.x + (box.width / 2), y: box.y + (box.height / 2) };
     const dark = await ctx.use({ tokenId: warlock.id, identifier: "darkness", area: { shape: "circle", ...centre, radius: 3 * grid } });
@@ -50,7 +50,7 @@ export default {
     ctx.expect(!!shadow && shadow.config?.negative === true, `source de ténèbres posée (négative : ${shadow?.config?.negative}, rayon ${shadow?.config?.dim})`);
     ctx.expect(!!shadow && (Math.abs(shadow.x - centre.x) <= 1) && (Math.abs(shadow.y - centre.y) <= 1), "au centre de la zone");
 
-    // 2. Poussière d'étoile de Sylaene sur le Zombi : non vu, et ne voit pas.
+    // 2. Sylaene's Starry Wisp on the Zombie: unseen, and does not see.
     let hit = null;
     let reasons = null;
     for ( let n = 1; (n <= 10) && !hit; n++ ) {
@@ -74,7 +74,7 @@ export default {
       ctx.expect(!!change, `« ${effect?.name ?? "?"} » fait briller le Zombi (token.light.dim = ${change?.value})`);
     }
 
-    // 3. Lumière du jour à 20 ft du Zombi : les Ténèbres (niveau 2) sont dissipées.
+    // 3. Daylight 20 ft from the Zombie: the Darkness (level 2) is dispelled.
     await ctx.ensureItem(druid, DAYLIGHT, { system: { method: "atwill" } });
     const day = await ctx.use({ tokenId: druid.id, identifier: "daylight", area: { shape: "circle", x: centre.x + (4 * grid), y: centre.y, radius: 12 * grid } });
     ctx.expect(day.used && !!day.regionId, "Lumière du jour posée");

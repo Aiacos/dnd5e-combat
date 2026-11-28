@@ -1,5 +1,5 @@
 /**
- * Validation des autres clés d'une entrée (appelée par `validateEntry`). Fonctions pures, aucune dépendance à Foundry.
+ * Validation of the other keys of an entry (called by `validateEntry`). Pure functions, no dependency on Foundry.
  */
 
 import { CREATURE_TYPES } from "../eligibility.mjs";
@@ -7,20 +7,21 @@ import { ACTION_END_BY, ACTION_END_ROLLS, ACTION_END_STATUSES, ACTION_END_VERBS,
 import { isId, isObject } from "./shared.mjs";
 import { validatePlan } from "../multiattack.mjs";
 /**
- * Les clés validées hors de `validateEntry` : d'abord celles du Roublard (§20 : parts de plus de l'Attaque sournoise, Frappes
- * rusées), puis toutes celles ajoutées depuis (murs, globes, paliers de PV, rappel de sort…).
+ * The keys validated outside `validateEntry`: first those of the Rogue (§20: extra parts of Sneak Attack, Cunning Strike),
+ * then all those added since (walls, globes, HP tiers, spell recall…).
  */
 export function validateExtras(entry, at, errors) {
-  // B01 : le plan d'Attaques multiples déclaré, qui remplace la lecture du texte (core/multiattack.mjs).
+  // B01: the declared Multiattack plan, which replaces reading the text (core/multiattack.mjs).
   if ( "multiattackPlan" in entry ) errors.push(...validatePlan(entry.multiattackPlan, at));
-  // §293 : « chaque créature de votre choix dans un rayon de… » — la liste des créatures à portée, cochées par le joueur, devient les cibles
-  // de l'activité ; `upgrade` : une autre activité (d'un autre item du lanceur) qui peut la remplacer, proposée par une case.
-  // §295 : le Déluge de coups ouvre plus de frappes (Credo accru) ; la durée d'un effet de l'item (la donnée se trompe) ; des
-  // immunités d'état sans effet dans la donnée (Protégé de dame Nature).
+  // §293: "each creature of your choice within a radius of…" — the list of creatures in range, ticked by the player, becomes
+  // the targets of the activity; `upgrade`: another activity (of another item of the caster) that can replace it, offered by
+  // a checkbox.
+  // §295: Flurry of Blows opens more strikes ("Heightened Creed"); the duration of an item effect (the data is wrong); condition
+  // immunities with no effect in the data ("Protected by Lady Nature").
   if ( ("flurryStrikes" in entry) && !(Number.isInteger(entry.flurryStrikes) && (entry.flurryStrikes > 0)) ) errors.push(`${at}flurryStrikes: positive integer`);
   if ( "effectDurations" in entry ) {
     const d = entry.effectDurations;
-    // O9h : `{ formula, units }` — une durée tirée une fois par utilisation, la même pour toutes les cibles (Poussière de disparition : 2d4 minutes).
+    // O9h: `{ formula, units }` — a duration rolled once per use, the same for all targets (Dust of Disappearance: 2d4 minutes).
     const okDuration = v => isObject(v) && ((Number.isInteger(v.seconds) && (v.seconds > 0) && Object.keys(v).every(k => k === "seconds"))
       || ((typeof v.formula === "string") && v.formula.trim() && ["seconds", "minutes", "hours"].includes(v.units)
         && Object.keys(v).every(k => ["formula", "units"].includes(k))));
@@ -42,7 +43,7 @@ export function validateExtras(entry, at, errors) {
       errors.push(`${at}duringRage: { enable?, post?, disable?, copiesEnd?: true, oneOption?: true, cures?, onStart? }`);
     }
   }
-  // §298 : un sort lancé à la place d'attaques de l'action Attaquer (Magie de guerre).
+  // §298: a spell cast in place of attacks of the Attack action (War Magic).
   if ( "spellsInAttack" in entry ) {
     const s = entry.spellsInAttack;
     if ( !isObject(s) || !Number.isInteger(s.maxLevel) || (s.maxLevel < 0) || (("attacks" in s) && !(Number.isInteger(s.attacks) && (s.attacks > 0)))
@@ -50,7 +51,7 @@ export function validateExtras(entry, at, errors) {
       errors.push(`${at}spellsInAttack: { maxLevel, class?, attacks? }`);
     }
   }
-  // §296 : plafond de créatures d'une zone ; réserve de soins ou de PV temporaires à répartir.
+  // §296: cap on the creatures of an area; pool of healing or Temporary Hit Points to split.
   if ( ("zoneMax" in entry) && !(Number.isInteger(entry.zoneMax) && (entry.zoneMax > 0)) ) errors.push(`${at}zoneMax: positive integer`);
   if ( "healPool" in entry ) {
     const h = entry.healPool;
@@ -66,22 +67,23 @@ export function validateExtras(entry, at, errors) {
     if ( !isObject(p) ) errors.push(`${at}pickTargets: { activities, radius, units, upgrade? }`);
     else {
       if ( !Array.isArray(p.activities) || !p.activities.length || !p.activities.every(isId) ) errors.push(`${at}pickTargets.activities: a list of activity ids`);
-      // §300 : ou une formule de données de jet (Courroux des mers : « @scale.sea.wrath-range »).
+      // §300: or a roll data formula (Wrath of the Sea: "@scale.sea.wrath-range").
       if ( !((Number.isFinite(p.radius) && (p.radius > 0)) || ((typeof p.radius === "string") && p.radius.trim())) ) errors.push(`${at}pickTargets.radius: positive number or formula`);
       if ( !["ft", "m"].includes(p.units) ) errors.push(`${at}pickTargets.units: ft, m`);
-      // §431 : ou une liste, la première que le lanceur a l'emporte ; `requires` : un item que le lanceur doit avoir en plus.
+      // §431: or a list, the first one the caster has wins; `requires`: an item the caster must also have.
       const upgradeOk = u => isObject(u) && (typeof u.item === "string") && u.item && isId(u.activity)
         && (!("requires" in u) || ((typeof u.requires === "string") && u.requires)) && Object.keys(u).every(k => ["item", "activity", "requires"].includes(k));
       if ( ("upgrade" in p) && !(Array.isArray(p.upgrade) ? (p.upgrade.length && p.upgrade.every(upgradeOk)) : upgradeOk(p.upgrade)) ) {
         errors.push(`${at}pickTargets.upgrade: { item: identifier, activity: activity id, requires?: identifier } or a list of them`);
       }
-      // §296 : `max` (nombre de créatures), `self` (le lanceur aussi), `check` (qui est coché d'avance), `filter` (« bloodied »).
+      // §296: `max` (number of creatures), `self` (the caster too), `check` (which is ticked in advance), `filter` ("bloodied").
       if ( ("max" in p) && !(Number.isInteger(p.max) && (p.max > 0)) ) errors.push(`${at}pickTargets.max: positive integer`);
       if ( ("self" in p) && (p.self !== true) ) errors.push(`${at}pickTargets.self: true or absent`);
       if ( ("check" in p) && !["enemies", "allies"].includes(p.check) ) errors.push(`${at}pickTargets.check: enemies, allies`);
       if ( ("filter" in p) && (p.filter !== "bloodied") ) errors.push(`${at}pickTargets.filter: bloodied`);
-      // §438 : `after` — l'activité utilitaire qui manifeste, puis la liste pour l'activité qui suit, autour du lanceur ou des cibles ;
-      // `bearers` — aussi autour des créatures qui portent un effet de l'item (l'émanation manifestée sur une autre créature).
+      // §438: `after` — the utility activity that manifests, then the list for the following activity, around the caster
+      // or the targets; `bearers` — also around the creatures that bear an effect of the item (the Emanation manifested
+      // on another creature).
       if ( "after" in p ) {
         const a = p.after;
         if ( !isObject(a) || !Object.keys(a).length ) errors.push(`${at}pickTargets.after: { <activity id>: { activity, around } }`);
@@ -97,12 +99,12 @@ export function validateExtras(entry, at, errors) {
       for ( const key of Object.keys(p) ) if ( !["activities", "radius", "units", "upgrade", "max", "self", "check", "filter", "after", "bearers"].includes(key) ) errors.push(`${at}pickTargets.${key}: unknown key`);
     }
   }
-  // §188 : une activité qui remplace une attaque — tout l'item (`true`) ou certaines activités (l'Huile : le lancer, pas l'étalage).
+  // §188: an activity that replaces an attack — the whole item (`true`) or some activities (Oil: the throw, not the spreading).
   if ( ("replacesAttack" in entry) && (entry.replacesAttack !== true)
     && !(Array.isArray(entry.replacesAttack) && entry.replacesAttack.length && entry.replacesAttack.every(isId)) ) {
     errors.push(`${at}replacesAttack: true, or a list of activity ids`);
   }
-  // §188 : une zone inflammable — elle s'embrase (feu, flamme) et brûle `rounds` rounds (`seconds` hors combat).
+  // §188: a flammable area — it ignites (fire, flame) and burns for `rounds` rounds (`seconds` out of combat).
   if ( "flammable" in entry ) {
     const f = entry.flammable;
     const KEYS = ["ground", "damage", "type", "rounds", "seconds", "on", "frees"];
@@ -213,7 +215,7 @@ export function validateExtras(entry, at, errors) {
     && Object.keys(entry.barrier).every(k => ["radius", "units", "exceptTypes", "onlyTypes", "shields", "endsOnContact"].includes(k))) ) {
     errors.push(`${at}barrier: { radius > 0, units, exceptTypes?, onlyTypes?, shields?, endsOnContact? }`);
   }
-  // §364 : alerte MJ — à l'utilisation, ce que le MJ doit gérer : une clé de traduction (`DND5ECOMBAT.AlerteMJ.<key>`) ou un texte.
+  // §364: GM alert — on use, what the GM must handle: a translation key (`DND5ECOMBAT.AlerteMJ.<key>`) or a text.
   if ( "gmAlert" in entry ) {
     const ok = r => isObject(r) && ((("key" in r) && /^[A-Za-z0-9]+$/.test(r.key ?? "") && !("text" in r)) || ((typeof r.text === "string") && r.text.trim() && !("key" in r)))
       && (!("activities" in r) || (Array.isArray(r.activities) && r.activities.length && r.activities.every(isId)))
@@ -221,7 +223,7 @@ export function validateExtras(entry, at, errors) {
     const list = [entry.gmAlert].flat();
     if ( !list.length || !list.every(ok) ) errors.push(`${at}gmAlert: { key | text, activities? } or a list of them`);
   }
-  // O9h : un enduit d'arme (Poison standard) — l'activité qui enduit, celle qui porte les dés, les types de dégâts qui le délivrent.
+  // O9h: a weapon coating (Basic Poison) — the activity that coats, the one that carries the dice, the damage types delivering it.
   if ( "coats" in entry ) {
     const c = entry.coats;
     const ok = isObject(c) && isId(c.activity) && isId(c.damage) && Array.isArray(c.damageTypes) && c.damageTypes.length
@@ -230,10 +232,10 @@ export function validateExtras(entry, at, errors) {
       && Object.keys(c).every(k => ["activity", "damage", "damageTypes", "seconds", "ammunition"].includes(k));
     if ( !ok ) errors.push(`${at}coats: { activity, damage (activity ids), damageTypes, seconds, ammunition? }`);
   }
-  // O9h : la durée des sorts que l'objet fait lancer (Huile d'insaisissabilité : 8 heures).
+  // O9h: the duration of the spells the item makes cast (Oil of Slipperiness: 8 hours).
   if ( ("castDuration" in entry) && !(isObject(entry.castDuration) && Number.isInteger(entry.castDuration.seconds) && (entry.castDuration.seconds > 0)
     && (Object.keys(entry.castDuration).length === 1)) ) errors.push(`${at}castDuration: { seconds }`);
-  // O9h : après certaines activités, une chance que l'objet se retourne contre son porteur (Cor de dévastation : 20 %).
+  // O9h: after certain activities, a chance that the item turns against its bearer (Horn of Blasting: 20%).
   if ( "backfire" in entry ) {
     const b = entry.backfire;
     const ok = isObject(b) && Array.isArray(b.after) && b.after.length && b.after.every(isId) && Number.isInteger(b.chance) && (b.chance > 0) && (b.chance <= 100)
@@ -271,7 +273,7 @@ export function validateExtras(entry, at, errors) {
       if ( !isId(id) || !isId(next) || (id === next) ) errors.push(`${at}effectThen.${id}: two distinct effect ids (16 characters)`);
     }
   }
-  // §164 : `ranged` (après un coup à distance), `burst` (la sauvegarde aussi autour de la cible), `damage` facultatif avec `save`.
+  // §164: `ranged` (after a ranged hit), `burst` (the save also around the target), optional `damage` with `save`.
   if ( ("smite" in entry) && !(isObject(entry.smite) && (isId(entry.smite.damage) || (!("damage" in entry.smite) && isId(entry.smite.save)))
     && ["fiends", "save", "effect"].every(k => !(k in entry.smite) || isId(entry.smite[k]))
     && (!("ranged" in entry.smite) || (entry.smite.ranged === true))
@@ -283,8 +285,8 @@ export function validateExtras(entry, at, errors) {
       && (entry.smite.blast.radius > 0) && (typeof entry.smite.blast.units === "string") && (typeof entry.smite.blast.ability === "string")
       && Object.keys(entry.smite.blast).every(k => ["activity", "radius", "units", "ability"].includes(k))))
     && Object.keys(entry.smite).every(k => ["damage", "fiends", "save", "effect", "ranged", "any", "burst", "saveAtMostHp", "replaces", "onMiss", "blast"].includes(k))) ) errors.push(`${at}smite: { damage, fiends?, save?, effect?, ranged?, any?, burst?, replaces?, onMiss?: "half", blast?: { activity, radius, units, ability } } (activity ids, effect id)`);
-  // Sorcellerie incarnée, Apothéose arcanique : tant qu'un effet de l'item `whileEffect` est sur le lanceur, `limit` options par
-  // sort au lieu d'une, ou une option sans dépense à chacun de ses tours (`freePerTurn`) — core/metamagic-rules.mjs.
+  // Innate Sorcery, Arcane Apotheosis: while an item effect `whileEffect` is on the caster, `limit` options per
+  // spell instead of one, or a free option on each of their turns (`freePerTurn`) — core/metamagic-rules.mjs.
   if ( ("metamagicRules" in entry) && !(isObject(entry.metamagicRules) && (typeof entry.metamagicRules.whileEffect === "string")
     && !!entry.metamagicRules.whileEffect && (("limit" in entry.metamagicRules) || ("freePerTurn" in entry.metamagicRules))
     && (!("limit" in entry.metamagicRules) || (Number.isInteger(entry.metamagicRules.limit) && (entry.metamagicRules.limit >= 2)))
@@ -292,16 +294,16 @@ export function validateExtras(entry, at, errors) {
     && Object.keys(entry.metamagicRules).every(k => ["whileEffect", "limit", "freePerTurn"].includes(k))) ) {
     errors.push(`${at}metamagicRules: { whileEffect: identifier, limit?: integer ≥ 2, freePerTurn?: true }`);
   }
-  // Surcharge : les dégâts maximaux d'un sort lancé avec un emplacement de niveau `maxLevel` au plus (`class` : seulement un sort
-  // de cette classe), et le contrecoup en d`die` (core/overchannel.mjs).
+  // Overchannel: the maximum damage of a spell cast with a spell slot of level `maxLevel` or lower (`class`: only a spell
+  // of this class), and the backlash in d`die` (core/overchannel.mjs).
   if ( ("overchannel" in entry) && !(isObject(entry.overchannel) && Number.isInteger(entry.overchannel.maxLevel)
     && (entry.overchannel.maxLevel >= 1) && Number.isInteger(entry.overchannel.die) && (entry.overchannel.die >= 2)
     && (!("class" in entry.overchannel) || ((typeof entry.overchannel.class === "string") && !!entry.overchannel.class))
     && Object.keys(entry.overchannel).every(k => ["maxLevel", "die", "class"].includes(k))) ) {
     errors.push(`${at}overchannel: { maxLevel: integer ≥ 1, die: faces, class?: identifier }`);
   }
-  // Intervention divine : l'activité retient un lancement sans emplacement, « dans la même action », pour le sort suivant de
-  // niveau `maxLevel` au plus (`class` : seulement un sort de cette classe) — core/free-cast.mjs.
+  // Divine Intervention: the activity holds back a cast without a spell slot, "in the same action", for the next spell of
+  // level `maxLevel` or lower (`class`: only a spell of this class) — core/free-cast.mjs.
   if ( ("freeCast" in entry) && !(isObject(entry.freeCast) && isId(entry.freeCast.activity)
     && Number.isInteger(entry.freeCast.maxLevel) && (entry.freeCast.maxLevel >= 1)
     && (!("class" in entry.freeCast) || ((typeof entry.freeCast.class === "string") && !!entry.freeCast.class))
@@ -310,17 +312,17 @@ export function validateExtras(entry, at, errors) {
   }
   if ( ("metamagic" in entry) && !(isObject(entry.metamagic) && isId(entry.metamagic.activity) && METAMAGIC_KINDS.includes(entry.metamagic.kind)
     && Object.keys(entry.metamagic).every(k => ["activity", "kind"].includes(k))) ) errors.push(`${at}metamagic: { activity, kind: ${METAMAGIC_KINDS.join(" | ")} }`);
-  // Relevé des trous : `reroll` — sans activité, le d20 relancé avec ce bonus, le nouveau jet imposé, une fois par effet de `during`.
-  // §280 : ou, avec une activité qui le paie, le d20 relancé (bonus facultatif), le nouveau jet imposé (Inébranlable) ; `failRefund` : le
-  // test encore raté rend ce que l'activité a coûté, et l'item perd une utilisation (Fanfaronnade).
-  // `spellAttack: true` — seulement le jet d'attaque d'un sort (Sort chercheur) ; ne vaut qu'avec `on: ["attack"]`.
+  // Gap survey: `reroll` — with no activity, the d20 rerolled with this bonus, the new roll imposed, once per effect of `during`.
+  // §280: or, with an activity that pays for it, the d20 rerolled (optional bonus), the new roll imposed ("Unshakable");
+  // `failRefund`: the check still failed gives back what the activity cost, and the item loses a use ("Bravado").
+  // `spellAttack: true` — only the attack roll of a spell ("Seeker Spell"); only valid with `on: ["attack"]`.
   if ( isObject(entry.rollBonus) && ("spellAttack" in entry.rollBonus)
     && !((entry.rollBonus.spellAttack === true) && Array.isArray(entry.rollBonus.on) && entry.rollBonus.on.includes("attack")) ) {
     errors.push(`${at}rollBonus.spellAttack: true, with on: ["attack"]`);
   }
   const reroll = entry.rollBonus?.reroll;
   const paid = isId(entry.rollBonus?.activity);
-  // `sets` : le d20 prend cette valeur au lieu d'être relancé (Coup de chance), payé par une activité, sans Avantage.
+  // `sets`: the d20 takes this value instead of being rerolled (Stroke of Luck), paid for by an activity, without Advantage.
   const rerollKeys = ["bonus", "during", "advantage", "sets"];
   const rerollOk = (reroll === undefined) || (isObject(reroll) && Object.keys(reroll).every(k => rerollKeys.includes(k))
     && (!("advantage" in reroll) || ((reroll.advantage === true) && paid))
@@ -337,8 +339,8 @@ export function validateExtras(entry, at, errors) {
     && (!("succeed" in entry.rollBonus) || (entry.rollBonus.succeed === true))
     && (!("abilities" in entry.rollBonus) || (Array.isArray(entry.rollBonus.abilities) && entry.rollBonus.abilities.length && entry.rollBonus.abilities.every(a => (typeof a === "string") && a)))
     && Object.keys(entry.rollBonus).every(k => ["activity", "on", "skills", "statuses", "luck", "succeed", "abilities", "reroll", "failRefund", "spellAttack"].includes(k))) ) errors.push(`${at}rollBonus: { activity (or reroll: { bonus, during }), on: [${ROLL_BONUS_ON.join(" | ")}], skills?, statuses?, luck?: true, succeed?: true, abilities?, reroll?: { bonus?, advantage?: true, sets?: 1–20 }, failRefund?: true }`);
-  // Utilisation d'objets magiques : un d`die` à chaque propriété d'objet magique qui dépense des charges ; à `on` ou plus, elles
-  // ne sont pas dépensées (core/charges.mjs).
+  // Use Magic Device: a d`die` on each magic item property that spends charges; at `on` or more, they
+  // are not spent (core/charges.mjs).
   if ( ("savesCharges" in entry) && !(isObject(entry.savesCharges) && Number.isInteger(entry.savesCharges.die)
     && (entry.savesCharges.die >= 2) && Number.isInteger(entry.savesCharges.on) && (entry.savesCharges.on >= 1)
     && (entry.savesCharges.on <= entry.savesCharges.die)
@@ -347,8 +349,8 @@ export function validateExtras(entry, at, errors) {
   }
   if ( ("transpose" in entry) && !(isObject(entry.transpose) && (typeof entry.transpose.summon === "string") && entry.transpose.summon
     && Object.keys(entry.transpose).every(k => k === "summon")) ) errors.push(`${at}transpose: { summon } (identifier of the summoning item)`);
-  // Incantation puissante (Frappes bénies améliorées) : après un sort mineur de `class` qui a infligé des dégâts, `tempHp` points
-  // de vie temporaires au lanceur ou à une créature de son camp à `range` ; `requires` : l'option choisie (core/vitality.mjs).
+  // Potent Spellcasting (Improved Blessed Strikes): after a cantrip of `class` that dealt damage, `tempHp` Temporary Hit Points
+  // to the caster or a creature on their side within `range`; `requires`: the chosen option (core/vitality.mjs).
   if ( "cantripVitality" in entry ) {
     const v = entry.cantripVitality;
     const ok = isObject(v) && (typeof v.class === "string") && !!v.class && (typeof v.tempHp === "string") && !!v.tempHp.trim()
@@ -361,8 +363,8 @@ export function validateExtras(entry, at, errors) {
   }
   if ( ("portent" in entry) && !(isObject(entry.portent) && Number.isInteger(entry.portent.dice) && (entry.portent.dice > 0)
     && Object.keys(entry.portent).every(k => k === "dice")) ) errors.push(`${at}portent: { dice } (positive integer)`);
-  // Proie supérieure du chasseur : après des dégâts à une créature portant un effet de l'item `mark` du porteur, une fois par tour,
-  // `formula` de `damageType` à une autre créature vue à `range` de la première (core/mark-splash.mjs).
+  // Superior Hunter's Prey: after damage to a creature bearing an item effect `mark` of the bearer, once per turn,
+  // `formula` of `damageType` to another creature seen within `range` of the first (core/mark-splash.mjs).
   if ( "markSplash" in entry ) {
     const m = entry.markSplash;
     const ok = isObject(m) && (typeof m.mark === "string") && !!m.mark && (typeof m.formula === "string") && !!m.formula.trim()
@@ -376,8 +378,8 @@ export function validateExtras(entry, at, errors) {
         + " upgrades?: [{ feature, formula }] }");
     }
   }
-  // Paume vibratoire : un effet de l'item qu'une seule créature porte à la fois (`single`), et que l'activité `endedBy` fait cesser
-  // une fois résolue (core/held-effect.mjs).
+  // Quivering Palm: an item effect that only one creature bears at a time (`single`), and that the `endedBy` activity ends
+  // once resolved (core/held-effect.mjs).
   if ( ("heldEffect" in entry) && !(isObject(entry.heldEffect) && isId(entry.heldEffect.effect)
     && (!("single" in entry.heldEffect) || (entry.heldEffect.single === true))
     && (!("endedBy" in entry.heldEffect) || isId(entry.heldEffect.endedBy))
@@ -390,7 +392,7 @@ export function validateExtras(entry, at, errors) {
     : validRider(entry.hitRider)) ) {
     errors.push(`${at}hitRider: { damage?, effect?, status?, sizeAtMost?, slot?: "pact", weapon?, oncePerTurn?: true, save?, item?, pays?, weaponDamage?: true, push?: { distance, units }, unarmed?: true, melee?: true, shield?: true, damageType?, sizeAbove?, formula?, weapons?: [weapon kinds], perTurn?: { count, while } }, or a list of at least two such options, each with name (activity id)`);
   }
-  // §373 : après un coup, des activités d'un item (Agripper, Pousser de l'Attaque à mains nues) proposées gratuitement contre la cible.
+  // §373: after a hit, activities of an item (Grapple, Shove of the Unarmed Strike) offered for free against the target.
   if ( "hitFollowUp" in entry ) {
     const f = entry.hitFollowUp;
     const ok = isObject(f) && Object.keys(f).every(k => ["use", "choose", "weapons"].includes(k))
@@ -400,7 +402,7 @@ export function validateExtras(entry, at, errors) {
       && (!("weapons" in f) || (Array.isArray(f.weapons) && f.weapons.length && f.weapons.every(k => WEAPON_KINDS.includes(k))));
     if ( !ok ) errors.push(`${at}hitFollowUp: { use: [{ item: identifier, activity: id }], choose?: integer ≥ 1, weapons?: [weapon kinds] }`);
   }
-  // §438 : une activité, ou une liste (le Déluge « Heightened » du Manuel 3.0.0).
+  // §438: an activity, or a list (the "Heightened" Flurry of the Handbook 3.0.0).
   if ( ("flurry" in entry) && !(isObject(entry.flurry) && (isId(entry.flurry.activity) || (Array.isArray(entry.flurry.activity) && entry.flurry.activity.length && entry.flurry.activity.every(isId))) && Number.isInteger(entry.flurry.strikes) && (entry.flurry.strikes > 0)
     && (!("weapons" in entry.flurry) || (typeof entry.flurry.weapons === "boolean"))
     && Object.keys(entry.flurry).every(k => ["activity", "strikes", "weapons"].includes(k))) ) {
@@ -424,7 +426,7 @@ export function validateExtras(entry, at, errors) {
   }
 }
 
-/** Une faveur au toucher (`hitRider`), seule ou dans une liste (§372). */
+/** A boon on hit (`hitRider`), alone or in a list (§372). */
 function validRider(r) {
   return isObject(r) && Object.keys(r).length
     && Object.keys(r).every(k => ["damage", "effect", "status", "sizeAtMost", "slot", "weapon", "oncePerTurn", "save", "item", "pays", "cost", "weaponDamage", "whileActive", "push", "unarmed", "melee", "shield", "damageType", "sizeAbove", "name", "formula", "weapons", "perTurn"].includes(k))
@@ -445,8 +447,8 @@ function validRider(r) {
     && (!("item" in r) || (typeof r.item === "string"))
     && (!("status" in r) || (typeof r.status === "string"))
     && (!("sizeAtMost" in r) || SIZES.includes(r.sizeAtMost))
-    // §372 : une option parmi plusieurs (liste) — son nom (une activité de l'item), ses dés propres, les genres d'arme, la limite par tour
-    // relevée tant qu'un effet d'un autre item est porté.
+    // §372: one option among several (list) — its name (an activity of the item), its own dice, the weapon kinds, the limit
+    // per turn raised while an effect of another item is borne.
     && (!("name" in r) || isId(r.name))
     && (!("formula" in r) || ((typeof r.formula === "string") && !!r.formula.trim()))
     && (!("weapons" in r) || (Array.isArray(r.weapons) && r.weapons.length && r.weapons.every(k => WEAPON_KINDS.includes(k))))

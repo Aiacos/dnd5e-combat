@@ -1,24 +1,25 @@
 /**
- * B09 (§488) — Objet porté qui verrouille la forme et suspend un trait. Exemples synthétiques, prêtés à l'Ours brun :
- * - la Régénération du Troll (Monster Manual) ;
- * - « Forme d'essai » (identifiant `das-essai-forme`) : une activité utilitaire et un effet transféré éteint, la forme d'une fiche ;
- * - « Collier d'essai » (identifiant `das-essai-collier`, capacité : porté tant qu'il est sur la fiche), déclaré dans la surcouche du
- *   monde (`overrideContent`, comme les autres scénarios de brique ; pas de drapeau d'item) :
- *   `formLock: { worn: true, forms: ["das-essai-forme"], onAttempt: [1 dégât perforant au porteur] }`, `suspends: ["regeneration"]`.
- *  1. Au début de son tour, l'Ours ne se régénère pas (trait suspendu).
- *  2. Activité de la forme, depuis la fiche (sans confirmation) : la fenêtre de légalité donne la raison du collier ; l'Ours perd 1 PV ;
- *     « Renoncer » : pas de carte d'utilisation.
- *  3. Effet de la forme allumé à la main sur l'acteur du token (celui que la fiche du token montre) : refusé (l'effet reste éteint),
- *     1 PV de moins, fenêtre ; « Utiliser quand même » : l'effet s'allume, alerte au MJ.
- *  4. Le collier retiré : au début de son tour, l'Ours se régénère de nouveau.
- * Initiative imposée : Kaalisti, puis l'Ours. Items, PV et effets remis comme avant.
+ * B09 (§488) — Worn item that locks the form and suspends a trait. Synthetic examples, lent to the Brown Bear:
+ * - the Troll's Regeneration (Monster Manual);
+ * - "Test Form" (identifier `das-essai-forme`): a utility activity and a transferred effect left off, the form of a sheet;
+ * - "Test Collar" (identifier `das-essai-collier`, capability: worn as long as it is on the sheet), declared in the world's
+ *   overlay (`overrideContent`, like the other building-block scenarios; no item flag):
+ *   `formLock: { worn: true, forms: ["das-essai-forme"], onAttempt: [1 dégât perforant au porteur] }`,
+ *   `suspends: ["regeneration"]`.
+ *  1. At the start of its turn, the Bear does not regenerate (trait suspended).
+ *  2. Form activity, from the sheet (no confirmation): the legality window gives the collar's reason; the Bear loses 1 HP;
+ *     "Give up": no use card.
+ *  3. Form effect turned on by hand on the token's actor (the one the token sheet shows): refused (the effect stays off),
+ *     1 HP less, window; "Use anyway": the effect turns on, alert to the GM.
+ *  4. The collar removed: at the start of its turn, the Bear regenerates again.
+ * Initiative imposed: Kaalisti, then the Bear. Items, HP and effects reset as before.
  */
 const MODULE_ID = "dnd5e-combat";
 const TROLL = "Compendium.dnd-monster-manual.actors.Actor.mmTroll000000000";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const LOCK_REASON = /Collier d'essai|change (its )?form|changer de forme/i;
 
-// Noms d'items en constantes : le banc et la référence prennent le premier « name: \"…\" » du fichier pour le titre du scénario.
+// Item names as constants: the bench and the reference take the first "name: \"…\"" of the file as the scenario's title.
 const SHAPE_NAME = "Forme d'essai";
 const COLLAR_NAME = "Collier d'essai";
 const ACTIVITY_NAME = "Changer de forme";
@@ -66,7 +67,7 @@ export default {
       if ( d ) await ctx.call("answer-dialog", { id: d.id, button: "cancel" }).catch(() => {});
     });
 
-    // Les trois items prêtés.
+    // The three lent items.
     const lend = async (itemData, identifier) => {
       const up = await ctx.call("upsert-actor-item", { actorId: tok.actorId, itemData, match: { path: "system.identifier", value: identifier } });
       const id = up.itemId ?? up.id ?? up.item?._id ?? (await ctx.itemId(bear.id, identifier));
@@ -93,13 +94,13 @@ export default {
       return (await current()) === token.id;
     };
 
-    // 1. Régénération suspendue.
+    // 1. Regeneration suspended.
     if ( !ctx.expect(await turnOf(warlock), "tour de Kaalisti") ) return;
     await ctx.setHp(bear, 10);
     await ctx.nextTurn(); await sleep(2500);
     ctx.expect((await ctx.hp(bear)) === 10, `collier porté : pas de régénération au début du tour (10 → ${await ctx.hp(bear)} PV)`);
 
-    // 2. L'activité de la forme : punie, refusée.
+    // 2. The form's activity: punished, refused.
     await ctx.setHp(bear, 15);
     const since = await ctx.lastMessageId();
     await ctx.use({ tokenId: bear.id, itemId: shapeId, activityType: "utility", usageConfig: { [MODULE_ID]: { confirmed: false } } }).catch(() => null);
@@ -112,12 +113,12 @@ export default {
     ctx.expect(!after.some(m => m.type === "usage"), "activité, « Renoncer » : aucune carte d'utilisation");
     ctx.expect(after.some(m => m.flags?.[MODULE_ID]?.formLock), "activité : la carte de dégâts du collier est dans le chat");
 
-    // 3. L'effet de la forme allumé à la main.
-    // L'effet s'allume sur l'acteur du token, comme depuis la fiche du token : pour un token non lié, l'acteur synthétique (l'item
-    // prêté à l'acteur de base y est hérité). Sur l'acteur de base, le moteur ne trouverait aucun token à blesser (banc du 2026-11-20).
+    // 3. The form's effect turned on by hand.
+    // The effect turns on on the token's actor, as from the token sheet: for an unlinked token, the synthetic actor (the item
+    // lent to the base actor is inherited there). On the base actor, the engine would find no token to hurt (bench of 2026-11-20).
     const sceneId = (await ctx.scene()).sceneId;
     const shapeUuid = `${tok.actorLink ? `Actor.${tok.actorId}` : `Scene.${sceneId}.Token.${bear.id}.Actor.${tok.actorId}`}.Item.${shapeId}`;
-    // L'état de l'effet : l'item du delta du token s'il a été modifié, sinon celui de l'acteur.
+    // The effect's state: the token delta's item if it was modified, otherwise the actor's.
     const effectState = async () => {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: bear.id });
       const own = tok.actorLink ? null : (data.delta?.items ?? []).find(i => i._id === shapeId);
@@ -139,7 +140,7 @@ export default {
     ctx.expect((await ctx.messagesSince(beforeForce)).some(m => m.flags?.[MODULE_ID]?.gmAlert), "effet forcé : alerte au MJ");
     await ctx.call("upsert-embedded-effect", { uuid: shapeUuid, effectData: { disabled: true }, match: { path: "_id", value: "dasEssaiFormeEf0" } }).catch(() => null);
 
-    // 4. Sans collier, la Régénération revient.
+    // 4. Without the collar, Regeneration returns.
     await ctx.call("remove-embedded-item", { documentType: "Actor", id: tok.actorId, itemId: collarId }).catch(() => {});
     if ( !ctx.expect(await turnOf(warlock), "tour de Kaalisti") ) return;
     await ctx.setHp(bear, 10);

@@ -1,16 +1,16 @@
 /**
- * §408 (issue #44, lot 1) : une règle passée outre. Règle de l'utilisateur (2026-11-11) : tout refus du moteur ouvre une fenêtre qui dit
- * pourquoi, propose de faire quand même, et c'est **le joueur** qui décide ; s'il force, le MJ et la table sont **prévenus**, rien de plus
- * (aucun accord à demander).
- *  - issue #178 : réglage de monde `overrideVisibility` (core/forced.mjs `overridePublic`) — quand la dérogation n'est pas publique, le
- *    texte flottant ne part que chez celui qui force et chez les MJ, et le bandeau de la carte n'est montré qu'à eux ;
- *  - le MJ : l'alerte §364 (carte chuchotée aux MJ + bandeau), texte `DND5ECOMBAT.Force.Alerte` — réglage de monde `forcedAlerts` ;
- *  - la table : un texte flottant « Forcé » au-dessus du token, discret, sans son (`notice`, sorte `forced`) ;
- *  - la carte : le drapeau `flags.dnd5e-combat.overridden` (les raisons), posé par l'appelant sur la carte d'utilisation ou de jet et
- *    montré par ui/chat.mjs ;
- *  - hook public `dnd5e-combat.forced` `({ actor, item, reasons, targets, user })`, appelé avant tout : un voisin qui rend `false` prend
- *    l'avertissement à sa charge (ni alerte, ni texte flottant).
- * Appelé sur le client de celui qui force, au moment où il choisit.
+ * §408 (issue #44, batch 1): a rule overridden. User's rule (2026-11-11): every engine refusal opens a window that says
+ * why, offers to do it anyway, and **the player** decides; if they force it, the GM and the table are **warned**, nothing more
+ * (no agreement to ask for).
+ *  - issue #178: world setting `overrideVisibility` (core/forced.mjs `overridePublic`) — when the override is not public, the
+ *    floating text goes only to whoever forces and to the GMs, and the card's banner is shown only to them;
+ *  - the GM: the §364 alert (card whispered to the GMs + banner), text `DND5ECOMBAT.Force.Alerte` — world setting `forcedAlerts`;
+ *  - the table: a "Forced" floating text above the token, discreet, with no sound (`notice`, kind `forced`);
+ *  - the card: the flag `flags.dnd5e-combat.overridden` (the reasons), set by the caller on the use or roll card and
+ *    shown by ui/chat.mjs;
+ *  - public hook `dnd5e-combat.forced` `({ actor, item, reasons, targets, user })`, called first: a neighbor that returns
+ *    `false` takes the warning on itself (no alert, no floating text).
+ * Called on the client of whoever forces, at the moment they choose.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -19,14 +19,14 @@ import { REFUSAL_MODES, refusalOutcome, OVERRIDE_VISIBILITY_MODES, overridePubli
 import { log, loc, notice } from "./shared.mjs";
 
 /**
- * §408 : sur le client de celui qui passe outre un refus du moteur, avant tout avertissement : `({ actor, item, reasons, targets, user })`.
- * Annulable : `false` et le moteur ne prévient personne (ni texte flottant, ni alerte au MJ).
+ * §408: on the client of whoever overrides an engine refusal, before any warning: `({ actor, item, reasons, targets, user })`.
+ * Cancellable: `false` and the engine warns nobody (no floating text, no alert to the GM).
  */
 export const FORCED_HOOK = `${MODULE_ID}.forced`;
-/** Réglage de monde : prévenir le MJ quand un joueur passe outre (la table voit toujours le texte flottant). */
+/** World setting: warn the GM when a player overrides (the table always sees the floating text). */
 export const FORCED_ALERTS_SETTING = "forcedAlerts";
 
-/** Issue #178 : réglage de monde « Dérogations visibles par » — toute la table, pas celles du MJ, MJ seulement. */
+/** Issue #178: world setting "Overrides visible to" — the whole table, all but the GM's own, GM only. */
 export const OVERRIDE_VISIBILITY_SETTING = "overrideVisibility";
 
 function visibility() {
@@ -34,8 +34,8 @@ function visibility() {
 }
 
 /**
- * Issue #178 : ce client montre-t-il le bandeau « Règle passée outre » de cette carte ? Qui a forcé : l'auteur de la carte (elle est créée
- * sur le poste de celui qui agit).
+ * Issue #178: does this client show the "Rule overridden" banner of this card? Who forced: the card's author (it is created
+ * on the machine of whoever acts).
  * @param {ChatMessage} message
  */
 export function overriddenShownOn(message) {
@@ -43,13 +43,13 @@ export function overriddenShownOn(message) {
     viewerIsAuthor: !!message?.author && (message.author.id === game.user?.id) });
 }
 
-/** §417 : réglage de monde « Action impossible » — fenêtre, simple avertissement, refus strict pour les joueurs, aucun contrôle. */
+/** §417: world setting "Impossible action" — window, simple warning, strict refusal for players, no check. */
 export const REFUSAL_SETTING = "refusalMode";
 
-/** §417 : ce que devient un refus pour ce client (core/forced.mjs, `refusalOutcome`). */
+/** §417: what a refusal becomes for this client (core/forced.mjs, `refusalOutcome`). */
 export function refusal() {
   let mode = "level";
-  try { mode = game.settings.get(MODULE_ID, REFUSAL_SETTING); } catch { /* réglage pas encore déclaré */ }
+  try { mode = game.settings.get(MODULE_ID, REFUSAL_SETTING); } catch { /* setting not yet declared */ }
   return refusalOutcome(mode, { isGM: game.user?.isGM === true });
 }
 
@@ -57,34 +57,34 @@ function forcedAlertsOn() {
   try { return game.settings.get(MODULE_ID, FORCED_ALERTS_SETTING) !== false; } catch { return true; }
 }
 
-/** Le token qui agit pour cet acteur sur la scène affichée (celui de la carte si on l'a), ou null. */
+/** The token acting for this actor on the displayed scene (the card's, if we have it), or null. */
 function tokenOf(actor, token=null) {
   if ( token ) return token.document ?? token;
   return actor?.token ?? actor?.getActiveTokens?.(false, true)?.[0] ?? null;
 }
 
 /**
- * Prévient le MJ et la table qu'une règle a été passée outre.
+ * Warns the GM and the table that a rule was overridden.
  * @param {object} forced
- * @param {Actor5e|null} forced.actor         Qui agit.
- * @param {Item5e|string|null} [forced.item]  Ce qui est utilisé (ou son nom).
- * @param {string[]} forced.reasons            Les raisons de la fenêtre, déjà traduites.
- * @param {string[]} [forced.targets]          Les noms des cibles désignées.
+ * @param {Actor5e|null} forced.actor         Who acts.
+ * @param {Item5e|string|null} [forced.item]  What is used (or its name).
+ * @param {string[]} forced.reasons            The window's reasons, already translated.
+ * @param {string[]} [forced.targets]          The names of the designated targets.
  * @param {TokenDocument|Token|null} [forced.token]
- * @returns {Promise<boolean>}  vrai si l'avertissement est parti.
+ * @returns {Promise<boolean>}  true if the warning went out.
  */
 export async function reportForced({ actor, item=null, reasons, targets=[], token=null }) {
-  if ( !reasons?.length || !refusal().report ) return false;   // §417 : « aucun contrôle » — personne n'est prévenu
+  if ( !reasons?.length || !refusal().report ) return false;   // §417: "no check" — nobody is warned
   const itemName = (typeof item === "string") ? item : (item?.name ?? "");
   if ( Hooks.call(FORCED_HOOK, { actor, item, reasons, targets, user: game.user }) === false ) return false;
   log(`rule overridden by ${game.user.name}: ${itemName || "?"} (${actor?.name ?? "?"}) — ${reasons.join(" | ")}`);
   const where = tokenOf(actor, token);
-  // Issue #178 : publique, toute la table la voit ; sinon celui qui force et les MJ seulement. Un texte discret, sans son ni éclat
-  // (demande de l'utilisateur, 2026-11-21 : le retour sur le token était trop présent).
+  // Issue #178: public, the whole table sees it; otherwise whoever forces and the GMs only. A discreet text, with no sound or flash
+  // (user's request, 2026-11-21: the feedback on the token was too present).
   const open = overridePublic(visibility(), { byGM: game.user?.isGM === true });
   if ( where ) notice(where, { key: "Retour.Force" }, "forced", { all: true, gmOnly: !open, action: "overridden", outcome: "success", sound: null });
   if ( forcedAlertsOn() && gmAlertsOn() ) {
-    // §412 : un geste sans objet (un déplacement, une escalade) — « … pour {actor} : {reasons} », sans « — » vide.
+    // §412: a gesture with no object (a movement, a climb) — "… for {actor}: {reasons}", without an empty "—".
     const key = itemName ? (targets.length ? "Force.AlerteCibles" : "Force.Alerte") : "Force.AlerteSansObjet";
     const text = loc(key, {
       user: game.user.name, item: itemName, actor: actor?.name ?? "", targets: targets.join(", "), reasons: reasons.join(" · ") });
@@ -93,7 +93,7 @@ export async function reportForced({ actor, item=null, reasons, targets=[], toke
   return true;
 }
 
-/** Les raisons à porter sur la carte (drapeau `overridden`) : une liste courte, telle quelle. */
+/** The reasons to carry on the card (flag `overridden`): a short list, as is. */
 export function overriddenFlag(reasons) {
   return (reasons ?? []).map(r => String(r)).slice(0, 12);
 }

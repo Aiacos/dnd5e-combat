@@ -1,16 +1,16 @@
 /**
- * Distributions de scène : où se tiennent les tokens qu'un scénario suppose en place. Un scénario qui place ses cibles par
- * rapport à d'autres tokens (« le Bandit trois cases au-dessus du Magicien ») ne tient que si ceux-ci sont là où il a été
- * écrit ; `ctx.stage(…)` (tools/scenario.mjs) pose la distribution au début du scénario et remet chaque token où il était
- * à la fin — l'utilisateur peut laisser les tokens de son monde où il veut entre deux passes (SPEC §40.6).
+ * Scene distributions: where the tokens that a scenario assumes in place stand. A scenario that places its targets relative
+ * to other tokens ("the Bandit three cells above the Wizard") only holds if these are where it was
+ * written; `ctx.stage(…)` (tools/scenario.mjs) sets the distribution at the start of the scenario and puts each token back
+ * where it was at the end — the user can leave their world's tokens wherever they want between two passes (SPEC §40.6).
  *
- * `scene` : identifiant de la scène (ailleurs, rien n'est posé) ; `level` : niveau de la scène où se joue la distribution ;
- * `tokens` : nom → [x, y], coin haut-gauche du token, en pixels, élévation 0. Un token absent de la scène est ignoré.
+ * `scene`: identifier of the scene (elsewhere, nothing is placed); `level`: level of the scene where the distribution is played;
+ * `tokens`: name → [x, y], top-left corner of the token, in pixels, elevation 0. A token absent from the scene is ignored.
  */
 
 /**
- * Restored Keep (`dnd-6`), rez-de-chaussée : les « positions de référence » relevées au SPEC §11, celles avec lesquelles les
- * scénarios ont été écrits. Les Zombis et l'Âme-en-peine n'en sont pas : aucun scénario ne place ses cibles par rapport à eux.
+ * Restored Keep (`dnd-6`), ground floor: the "reference positions" surveyed in SPEC §11, those with which the
+ * scenarios were written. The Zombies and the Wraith are not among them: no scenario places its targets relative to them.
  */
 export const RESTORED_KEEP = Object.freeze({
   scene: "rklRestoredKeepC",
@@ -23,10 +23,11 @@ export const RESTORED_KEEP = Object.freeze({
 });
 
 /**
- * §83 : l'arène de test de `dnd-6` — une scène plate, un seul niveau, sans murs, aux dimensions et à la grille de Restored Keep (140 px,
- * 5 ft) : les coordonnées de référence ci-dessus y valent telles quelles. Un seul Zombi. Le lanceur (tools/scenario.mjs) y joue
- * tout scénario qui ne demande pas `scene: "keep"` (étages, planchers, escaliers), et y remet chaque token à sa place avant chacun.
- * Trouvée par son nom ; absente (autre monde), le lanceur joue sur la scène active, comme avant.
+ * §83: the test arena of `dnd-6` — a flat scene, a single level, no walls, with the dimensions and grid of Restored Keep (140 px,
+ * 5 ft): the reference coordinates above hold there as they are. A single Zombie. The runner (tools/scenario.mjs) plays there
+ * every scenario that does not ask for `scene: "keep"` (floors, stairs, staircases), and puts each token back in place before
+ * each one.
+ * Found by its name; absent (another world), the runner plays on the active scene, as before.
  */
 export const ARENA = Object.freeze({
   name: "Arène de test",
@@ -34,11 +35,12 @@ export const ARENA = Object.freeze({
 });
 
 /**
- * L'« Arène des sorts » (2026-10-22, `tools/arene-sorts.mjs`) : scène plate de 40 × 20 cases de 140 px (5 ft), pour les balayages
- * des sorts et des aptitudes. Positions en cases du canevas (coin haut-gauche, marge de la scène comprise). Le Lanceur et l'Allié côte à côte ; la Cible à 4 cases (20 ft,
- * dans toute portée sauf le contact), sa voisine collée à elle, les cibles typées (mort-vivant, Grande, artificielle) à 15 ft au
- * moins de la Cible pour qu'une zone de 10 ft centrée sur elle ne les prenne pas, la Cible lointaine à 150 ft ; l'Ennemi au contact,
- * au-dessus du Lanceur, pour les émanations (Parole radieuse, Esprits gardiens) ; le Héros (un personnage) à l'écart, hors des zones.
+ * The "Spell Arena" (2026-10-22, `tools/arene-sorts.mjs`): flat scene of 40 × 20 cells of 140 px (5 ft), for the sweeps
+ * of spells and features. Positions in canvas cells (top-left corner, scene margin included). The Caster and the Ally side by side;
+ * the Target 4 cells away (20 ft, within any range except touch), its neighbor right next to it, the typed targets (Undead, Large,
+ * artificial) at least 15 ft from the Target so that a 10 ft area centered on it does not catch them, the far Target at 150 ft;
+ * the Enemy in contact, above the Caster, for the Emanations (Radiant Word, Spirit Guardians); the Hero (a character) apart,
+ * out of the areas.
  */
 export const ARENE_SORTS = Object.freeze({
   name: "Arène des sorts",
@@ -50,9 +52,10 @@ export const ARENE_SORTS = Object.freeze({
 });
 
 /**
- * Issue #32 : l'« Arène du succès à un prix » (`tools/arene-prix.mjs`) — scène plate de 12 × 8 cases de 140 px (5 ft). Le Héros (le
- * Guerrier pré-tiré du Manuel : un personnage joueur, le seul à qui l'aide s'applique par défaut) au contact du Mannequin (999 PV,
- * CA 15) ; le Lanceur (PNJ sans item, Flamme sacrée prêtée par le scénario) à 4 cases du Héros, pour la sauvegarde. Positions en cases.
+ * Issue #32: the "Success at a Price Arena" (`tools/arene-prix.mjs`) — flat scene of 12 × 8 cells of 140 px (5 ft). The Hero (the
+ * Player's Handbook pre-made Fighter: a player character, the only one the aid applies to by default) in contact with the
+ * Dummy (999 HP, AC 15); the Caster (NPC without items, Sacred Flame lent by the scenario) 4 cells from the Hero, for the
+ * save. Positions in cells.
  */
 export const ARENE_PRIX = Object.freeze({
   name: "Arène du succès à un prix",
@@ -61,32 +64,33 @@ export const ARENE_PRIX = Object.freeze({
 });
 
 /**
- * §393 : l'« Arène des invocations » (`tools/arene-invocations.mjs`) — scène plate de 20 × 12 cases de 140 px (5 ft), pour ce que le
- * balayage des invocations ne peut pas tester dans l'Arène des sorts : ce qui vise une créature ou un objet. Le Lanceur (PNJ sans item,
- * emplacements 9 partout) ; à 2 cases le Cadavre (roturier mort : un humanoïde Moyen que darsh-loot sait relever — Doigt de mort,
- * Animation des morts sur un corps) et la Bête morte (loup mort : pas un humanoïde, refusée) ; le Héros (Barbare pré-tiré, porteur
- * d'armes : Arme élémentaire, enchantements) au contact du Lanceur ; la Victime (1 PV) à 4 cases. Les cases à droite restent libres
- * pour les créatures invoquées. Positions en cases.
+ * §393: the "Summoning Arena" (`tools/arene-invocations.mjs`) — flat scene of 20 × 12 cells of 140 px (5 ft), for what the
+ * summoning sweep cannot test in the Spell Arena: what targets a creature or an object. The Caster (NPC without items,
+ * slots 9 everywhere); 2 cells away the Corpse (dead commoner: a Medium Humanoid that darsh-loot can raise — Finger of Death,
+ * Animate Dead on a body) and the Dead Beast (dead wolf: not a Humanoid, refused); the Hero (pre-made Barbarian, weapon bearer:
+ * Elemental Weapon, enchantments) in contact with the Caster; the Victim (1 HP) 4 cells away. The cells on the right stay free
+ * for the summoned creatures. Positions in cells.
  */
 export const ARENE_INVOCATIONS = Object.freeze({
   name: "Arène des invocations",
   cols: 20, rows: 12, grid: 140,
   tokens: Object.freeze({ "Lanceur": [4, 6], "Héros": [4, 7], "Cadavre": [6, 6], "Bête morte": [6, 8], "Victime": [8, 5] }),
-  // Morts par construction : le lanceur de scénarios ne les relève pas (`standUpDowned`).
+  // Dead by construction: the scenario runner does not raise them (`standUpDowned`).
   corpses: Object.freeze(["Cadavre", "Bête morte"])
 });
 
 /**
- * Issue #42 : l'« Arène de la vision » (`tools/arene-vision.mjs`) — scène plate de 40 × 12 cases de 140 px (5 ft), en pleine lumière,
- * pour juger qui voit qui (règles) et ce que montre l'écran d'un joueur. Les observateurs (possédés par `claude player`) à gauche :
- * l'Humain (Druide pré-tiré, aucune vision dans le noir), l'Occultiste du diable (Occultiste pré-tiré, gnome, + Vision du diable et
- * Ténèbres), le Rôdeur elfe (vision dans le noir 60 ft), la Vision véritable (120 ft) ; la Vision aveugle (30 ft) à 25 ft de la Cible
- * dans les ténèbres, au centre des Ténèbres que pose le scénario (sphère de 15 ft) ; la Cible derrière les ténèbres, éclairée, de l'autre
- * côté ; les observateurs ajoutés ensuite (Vibrations 60 ft, Sens tout et Voir l'invisible à 120 ft, modes du cœur posés sur le token) ;
- * la Cible dans le noir (obscurité ordinaire posée par le scénario), la Cible invisible (état Invisible, en pleine lumière) ; la Cible
- * au loin, éclairée, en haut à gauche, qu'aucune ligne de vue ne fait passer par les Ténèbres (témoin). Positions en cases
- * du canevas : la marge de la scène (10 % : 4 colonnes, 2 lignes) est exclue de la vision par le cœur (`visibility.mjs`, `inBuffer`) —
- * un observateur posé dedans ne voit rien de la scène.
+ * Issue #42: the "Vision Arena" (`tools/arene-vision.mjs`) — flat scene of 40 × 12 cells of 140 px (5 ft), in full light,
+ * to judge who sees whom (rules) and what a player's screen shows. The observers (owned by `claude player`) on the left:
+ * the Human (pre-made Druid, no Darkvision), the Devil's Sight Warlock (pre-made Warlock, gnome, + Devil's Sight and
+ * Darkness), the Elf Ranger (Darkvision 60 ft), the Truesight (120 ft); the Blindsight (30 ft) 25 ft from the Target
+ * in the darkness, at the center of the Darkness cast by the scenario (15 ft Sphere); the Target behind the darkness, lit, on
+ * the other side; the observers added afterwards (Vibrations 60 ft, Sense All and See Invisible at 120 ft, core modes set on
+ * the token); the Target in the dark (ordinary darkness set by the scenario), the invisible Target (Invisible condition, in
+ * full light); the Target far away, lit, top left, that no line of sight passes through the Darkness (control). Positions in
+ * canvas cells:
+ * the scene margin (10%: 4 columns, 2 rows) is excluded from vision by the core (`visibility.mjs`, `inBuffer`) —
+ * an observer placed in it sees nothing of the scene.
  */
 export const ARENE_VISION = Object.freeze({
   name: "Arène de la vision",
@@ -97,19 +101,20 @@ export const ARENE_VISION = Object.freeze({
     "Cible dans les ténèbres": [17, 8], "Cible derrière les ténèbres": [23, 8], "Cible au loin": [10, 2],
     "Cible dans le noir": [14, 3], "Cible invisible": [10, 4]
   }),
-  // La cible au centre des Ténèbres que pose le scénario `vision-tenebres`.
+  // The target at the center of the Darkness cast by the `vision-tenebres` scenario.
   darknessOn: "Cible dans les ténèbres",
-  // L'obscurité ordinaire (région « Ajuster l'obscurité », sans sort) que pose le scénario autour de la Cible dans le noir : cases
-  // [x, y, largeur, hauteur], loin des observateurs et des Ténèbres.
+  // The ordinary darkness ("Adjust Darkness" region, no spell) that the scenario sets around the Target in the dark: cells
+  // [x, y, width, height], far from the observers and the Darkness.
   dark: Object.freeze([13, 2, 4, 3])
 });
 
 /**
- * Issue #44 (§408) : l'« Arène des refus » (`tools/arene-refus.mjs`) — scène plate de 36 × 10 cases de 140 px (5 ft), pour les refus du
- * contrôle de légalité et leur passage outre. Les pré-tirés niveau 1 du Manuel, personnages joueurs (`claude player` en est
- * propriétaire) : le Mage (bâton équipé, Rayon de givre 60 ft, Détection de la magie en rituel), le Clerc (masse et bouclier équipés,
- * amulette sacrée : les deux mains prises), le Guerrier (épée à deux mains). Le Mannequin (999 PV) au contact du Mage ; la Cible lointaine
- * à 31 cases (155 ft), hors de toute portée de sort mineur. Positions en cases du canevas, marge comprise (4 cases à gauche, 1 en haut).
+ * Issue #44 (§408): the "Refusal Arena" (`tools/arene-refus.mjs`) — flat scene of 36 × 10 cells of 140 px (5 ft), for the
+ * refusals of the legality check and their override. The level 1 pre-mades of the Player's Handbook, player characters
+ * (`claude player` owns them): the Mage (staff equipped, Ray of Frost 60 ft, Detect Magic as a ritual), the Cleric (mace and
+ * shield equipped, holy symbol amulet: both hands taken), the Fighter (two-handed sword). The Dummy (999 HP) in contact with
+ * the Mage; the far Target at 31 cells (155 ft), out of any cantrip range. Positions in canvas cells, margin included
+ * (4 cells on the left, 1 on top).
  */
 export const ARENE_REFUS = Object.freeze({
   name: "Arène des refus",
@@ -119,10 +124,10 @@ export const ARENE_REFUS = Object.freeze({
 });
 
 /**
- * §414 : l'« Arène de l'abjuration » (`tools/arene-abjuration.mjs`) — scène plate de 20 × 10 cases de 140 px (5 ft), pour l'Égide
- * arcanique dans des conditions de jeu : l'Abjurateur (Magicien pré-tiré monté au niveau 6, sous-classe Abjurateur, Int 18, 40 PV),
- * le Protégé (Guerrier pré-tiré, 60 PV) à 10 ft de lui, l'Ogre (gourdin 2d8 + 4 ; Grand, 2 × 2 cases : 7-8 × 6-7) qui touche
- * l'Abjurateur (en diagonale) et le Protégé (au-dessus) sans bouger. Positions en cases du canevas, marge comprise.
+ * §414: the "Abjuration Arena" (`tools/arene-abjuration.mjs`) — flat scene of 20 × 10 cells of 140 px (5 ft), for Arcane
+ * Ward in game conditions: the Abjurer (pre-made Wizard raised to level 6, Abjurer subclass, Int 18, 40 HP),
+ * the Protégé (pre-made Fighter, 60 HP) 10 ft from them, the Ogre (club 2d8 + 4; Large, 2 × 2 cells: 7-8 × 6-7) who hits
+ * the Abjurer (diagonally) and the Protégé (above) without moving. Positions in canvas cells, margin included.
  */
 export const ARENE_ABJURATION = Object.freeze({
   name: "Arène de l'abjuration",

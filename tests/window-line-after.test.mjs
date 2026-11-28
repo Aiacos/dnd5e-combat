@@ -3,9 +3,9 @@ import { createWindowLine } from "../module/scripts/core/window-line.mjs";
 
 const tick = () => new Promise(r => setTimeout(r, 0));
 
-// §422 : une fenêtre sans délai (un refus) passe après la question en cours, sans retenir les suivantes ; le compteur « ensuite ».
-describe("§422 : passer après la fenêtre en cours, compter celles qui attendent", () => {
-  it("`after` attend la fenêtre ouverte avant de s'ouvrir", async () => {
+// §422: a window without delay (a refusal) goes after the current question, without holding back the next ones; the "then" counter.
+describe("§422: go after the current window, count those that are waiting", () => {
+  it("`after` waits for the open window before opening", async () => {
     const inLine = createWindowLine({ wait: () => new Promise(() => {}) });   // pas de plafond
     const opened = [];
     let closeFirst;
@@ -18,21 +18,21 @@ describe("§422 : passer après la fenêtre en cours, compter celles qui attende
     expect(opened).toEqual(["question", "refus"]);
   });
 
-  it("`after` ne retient pas les questions suivantes : elles n'attendent pas qu'il se ferme", async () => {
+  it("`after` does not hold back the following questions: they do not wait for it to close", async () => {
     const inLine = createWindowLine({ wait: () => new Promise(() => {}) });
     const opened = [];
-    inLine.after(() => { opened.push("refus"); return new Promise(() => {}); });   // jamais fermé
+    inLine.after(() => { opened.push("refus"); return new Promise(() => {}); });   // never closed
     const question = inLine(async () => { opened.push("question"); return "q"; });
     expect(await question).toBe("q");
     expect(opened).toEqual(["refus", "question"]);
   });
 
-  it("sans rien d'ouvert, `after` s'ouvre aussitôt", async () => {
+  it("with nothing open, `after` opens right away", async () => {
     const inLine = createWindowLine({ wait: () => new Promise(() => {}) });
     expect(await inLine.after(async () => "tout de suite")).toBe("tout de suite");
   });
 
-  it("`waiting` compte les fenêtres qui n'ont pas encore leur tour", async () => {
+  it("`waiting` counts the windows that do not have their turn yet", async () => {
     const inLine = createWindowLine({ wait: () => new Promise(() => {}) });
     let closeFirst;
     const first = inLine(() => new Promise(r => { closeFirst = r; }));

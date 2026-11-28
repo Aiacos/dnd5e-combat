@@ -1,14 +1,14 @@
 /**
- * Niveaux et surfaces (P2, SPEC §14.2) sur une scène à niveaux (Restored Keep) : le Zombi est
- * descendu au niveau le plus bas, tête contre son plafond, juste sous le plancher de l'Ensorceleur.
- *  1. Mains brûlantes posée sur sa colonne depuis l'étage ne l'atteint pas : le plancher (Surface
- *     `move`) coupe la ligne d'effet — « zone posée sur personne », PV intacts.
- *  2. Trait de feu tiré sur lui depuis l'étage : abri total dans le verdict (CA nulle, raté d'office).
- * Remet le Zombi à son niveau, son élévation et ses PV. Déplacements par `move-token` (0.27.0).
- * Sans niveaux sur la scène (un seul niveau), le scénario se déclare non applicable.
+ * Levels and Surfaces (P2, SPEC §14.2) on a scene with levels (Restored Keep): the Zombie is
+ * lowered to the lowest level, head against its ceiling, just under the Sorcerer's floor.
+ *  1. Burning Hands placed on its column from the upper floor does not reach it: the floor (Surface
+ *     `move`) cuts the line of effect — "area placed on nobody", HP intact.
+ *  2. Fire Bolt shot at it from the upper floor: Total Cover in the verdict (AC nil, automatic miss).
+ * Restores the Zombie to its level, its elevation and its HP. Moves through `move-token` (0.27.0).
+ * Without levels on the scene (a single level), the scenario declares itself not applicable.
  */
 export default {
-  scene: "keep",   // §83 : étages et escaliers, dans Restored Keep
+  scene: "keep",   // §83: floors and stairs, in Restored Keep
   name: "niveaux — un plancher arrête la zone et l'attaque",
 
   async run(ctx) {
@@ -32,13 +32,13 @@ export default {
     };
     ctx.restore(() => move(home));
 
-    // Tête contre le plafond du niveau du dessous : une case de haut sous le plancher.
+    // Head against the ceiling of the level below: one cell high under the floor.
     const scene = await ctx.call("get-scene", {});
     const step = scene.grid?.distance ?? scene.scene?.grid?.distance ?? 5;
     const below = await move({ levelId: lowest.id, elevation: sorcLevel.elevation.base - step });
     ctx.expect(below.level === lowest.id, `Zombi descendu au niveau « ${lowest.name} », élévation ${below.elevation}`);
 
-    // 1. Zone depuis l'étage sur sa colonne.
+    // 1. Area from the upper floor on its column.
     const box = await ctx.box(zombi);
     const zone = await ctx.use({ tokenId: sorc.id, identifier: "burning-hands", activityType: "save", area: { shape: "rectangle", ...box }, collectMs: 3000 });
     ctx.expect(zone.used && !!zone.regionId, "Mains brûlantes posée sur la colonne du Zombi, depuis l'étage");
@@ -48,7 +48,7 @@ export default {
     ctx.expect(!r1?.targets?.some(t => t.name === "Zombi"), `le plancher arrête la zone (cibles : ${r1?.targets?.map(t => t.name).join(", ") || "aucune"})`);
     ctx.expect((await ctx.hp(zombi)) === hp0, "PV intacts");
 
-    // 2. Attaque à distance depuis l'étage : abri total.
+    // 2. Ranged attack from the upper floor: Total Cover.
     const shot = await ctx.use({ tokenId: sorc.id, identifier: "fire-bolt", activityType: "attack", targetTokenIds: [zombi.id] });
     ctx.expect(shot.used, "Trait de feu tiré sur le Zombi du dessous");
     const r2 = await ctx.settle(shot.usageMessageId);

@@ -1,24 +1,24 @@
 /**
- * Ce que le moteur fait d'un item, pour la pastille de la fiche (SPEC §9.2) : un classement lisible par le MJ,
- * pas une règle. Rien ici ne décide d'une résolution.
+ * What the engine does with an item, for the sheet badge (SPEC §9.2): a classification readable by the GM,
+ * not a rule. Nothing here decides a resolution.
  *
- *   rule     une règle propre au moteur (contenu déclaré, identifiant reconnu, variantes lues dans le texte)
- *   auto     le chemin commun : une activité qui jette, pose un effet, invoque, transforme ou lance un sort
- *   passive  aucun geste : des effets permanents (transfert) que dnd5e applique seul
- *   manual   rien de tout ça : une activité vide, ou pas d'activité du tout
- *   none     du matériel sans rien à jouer (butin, contenant, focaliseur) : pas de pastille, le drapeau reste
+ *   rule     a rule specific to the engine (declared content, recognized identifier, variants read from the text)
+ *   auto     the common path: an activity that rolls, places an effect, summons, transforms or casts a spell
+ *   passive  no gesture: permanent effects (transfer) that dnd5e applies on its own
+ *   manual   none of the above: an empty activity, or no activity at all
+ *   none     gear with nothing to play (loot, container, focus): no badge, the flag stays
  */
 
-/** Types d'activité de dnd5e 6 que le chemin commun résout sans rien de plus (data/activity/, `metadata.type`). */
+/** dnd5e 6 activity types that the common path resolves with nothing more (data/activity/, `metadata.type`). */
 export const AUTO_ACTIVITY_TYPES = Object.freeze(["attack", "save", "damage", "heal", "check", "summon", "enchant",
   "transform", "cast", "forward"]);
 
 /**
  * @param {object} desc
- * @param {string[]} [desc.rules]  ce que le moteur reconnaît en propre (clés du contenu, « multiattack »…)
+ * @param {string[]} [desc.rules]  what the engine recognizes on its own (content keys, "multiattack"…)
  * @param {Array<{type: string, roll?: boolean, effects?: number}>} [desc.activities]
- * @param {number} [desc.passiveEffects]  effets transférés actifs, ou ce que dnd5e calcule seul (la CA d'une armure)
- * @param {boolean} [desc.gear]  du matériel (objet, butin, contenant), pas une capacité ni un sort
+ * @param {number} [desc.passiveEffects]  active transferred effects, or what dnd5e computes on its own (an armor's AC)
+ * @param {boolean} [desc.gear]  gear (item, loot, container), not a capability or a spell
  * @returns {{level: "rule"|"auto"|"passive"|"manual"|"none", rules: string[]}}
  */
 export function automationOf({ rules=[], activities=[], passiveEffects=0, gear=false }={}) {
@@ -30,7 +30,7 @@ export function automationOf({ rules=[], activities=[], passiveEffects=0, gear=f
 }
 
 /**
- * Les signalements groupés par acteur, pour le bilan de fin de partie.
+ * The reports grouped by actor, for the end-of-game summary.
  * @param {Record<string, {actor: string, item: string, note?: string, at: number}>} entries
  * @returns {Array<{actor: string, items: Array<{key: string, item: string, note: string, at: number}>}>}
  */
@@ -46,7 +46,7 @@ export function reportsByActor(entries={}) {
     .map(([actor, items]) => ({ actor, items: items.sort((a, b) => a.item.localeCompare(b.item)) }));
 }
 
-/** Le bilan en texte brut, à coller dans une conversation. */
+/** The summary as plain text, to paste into a conversation. */
 export function reportsText(entries={}) {
   return reportsByActor(entries).map(({ actor, items }) =>
     [`${actor}`, ...items.map(i => `  - ${i.item}${i.note ? ` : ${i.note}` : ""}`)].join("\n")).join("\n");

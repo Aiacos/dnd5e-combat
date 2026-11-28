@@ -1,13 +1,13 @@
 /**
- * §187 : objets répandus au sol (Manuel des joueurs 2024), dans l'arène. Le Magicien répand l'objet sur la case voisine (sa
- * ressource dépensée : les chausse-trapes quittent son inventaire, les billes perdent leur utilisation), puis :
- *  1. la zone reste, avec son image au sol, et ne touche personne à la pose ;
- *  2. le Zombi, en marchant (`walk`) au travers, s'arrête sur sa première case ; la zone rejoue la sauvegarde ; un échec donne
- *     l'effet de l'objet (Vitesse 0 et 1 perforant ; À terre) — on recommence jusqu'à voir un échec et une réussite (10 essais au plus,
- *     chaque entrée compte hors combat) ;
- *  3. le Magicien, au contact, ramasse : la zone et l'image disparaissent, l'objet revient (chausse-trapes recréées ; billes : leur
- *     utilisation rendue).
- * Remet positions, PV, effets et items (le filet du lanceur), et l'horloge du monde (chaque ramassage l'avance de 10 minutes).
+ * §187: objects scattered on the ground (Player's Handbook 2024), in the arena. The Wizard scatters the object on the adjacent
+ * cell (its resource spent: the caltrops leave his inventory, the ball bearings lose their use), then:
+ *  1. the area stays, with its image on the ground, and touches no one at placement;
+ *  2. the Zombie, walking (`walk`) through it, stops on its first cell; the area replays the saving throw; a failure gives
+ *     the object's effect (Speed 0 and 1 piercing; Prone) — we start again until we see a failure and a success (10 tries at most,
+ *     each entry counts outside combat);
+ *  3. the Wizard, in contact, picks up: the area and the image disappear, the object comes back (caltrops recreated; ball
+ *     bearings: their use returned).
+ * Resets positions, HP, effects and items (the caster's safety net), and the world clock (each pickup advances it by 10 minutes).
  */
 const MODULE_ID = "dnd5e-combat";
 const EQUIPMENT = "Compendium.dnd-players-handbook.equipment.Item.";
@@ -27,7 +27,7 @@ export default {
     const { data: mageTok } = await ctx.call("get-scene-object", { type: "Token", objectId: mage.id });
     const itemsOf = async () => (await ctx.call("get-actor", { actorId: mageTok.actorId })).items ?? [];
 
-    // La case de l'objet : deux cases à l'ouest du Zombi ; le Magicien juste au-dessus (au contact).
+    // The object's cell: two cells west of the Zombie; the Wizard just above (in contact).
     const spot = { x: home.x - (2 * g), y: home.y };
     await ctx.call("move-token", { tokenId: mage.id, x: spot.x, y: spot.y - g });
     await pause(600);
@@ -46,7 +46,7 @@ export default {
       ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: used.regionId }).catch(() => {}));
       await pause(2000);
 
-      // 1. La zone reste, avec son image ; la ressource est dépensée.
+      // 1. The area stays, with its image; the resource is spent.
       const state = await ctx.engine("scatter", { tokenId: mage.id });
       const zone = state.zones.find(z => z.id === used.regionId);
       ctx.expect(!!zone, `${label} : la zone reste au sol (${state.zones.length} zone(s) d'objets répandus)`);
@@ -55,7 +55,7 @@ export default {
       const spent = (await itemsOf()).find(i => i.system?.identifier === identifier);
       ctx.expect(!spent || (Number(spent.system?.uses?.spent) > 0), `${label} : l'objet est dépensé (${spent ? `utilisation ${spent.system.uses.spent}/${spent.system.uses.max}` : "plus dans l'inventaire"})`);
 
-      // 2. Le Zombi la traverse : arrêt sur la première case, sauvegarde ; un échec et une réussite.
+      // 2. The Zombie crosses it: stop on the first cell, saving throw; a failure and a success.
       const seen = { fail: false, success: false };
       for ( let n = 0; (n < 10) && !(seen.fail && seen.success); n++ ) {
         await placeZombi();
@@ -66,7 +66,7 @@ export default {
         await ctx.call("move-token", { tokenId: zombi.id, x: home.x - (5 * g), y: home.y, action: "walk" }).catch(() => null);
         await pause(2500);
         const at = await ctx.position(zombi);
-        const first = { x: spot.x + ((size - 1) * g), y: spot.y };   // la case de la zone la plus proche du Zombi
+        const first = { x: spot.x + ((size - 1) * g), y: spot.y };   // the area cell closest to the Zombie
         if ( !ctx.expect((at.x === first.x) && (at.y === first.y), `${label} : le Zombi s'arrête sur la première case (${at.x}, ${at.y} ; attendu ${first.x}, ${first.y})`) ) return;
         const m = (await ctx.messagesSince(since)).find(x => (x.type === "usage") && (x.flags?.[MODULE_ID]?.areaTick ?? x.flags?.areaTick));
         if ( !ctx.expect(!!m, `${label} : la zone rejoue sa sauvegarde à l'entrée`) ) return;
@@ -90,7 +90,8 @@ export default {
       if ( status ) await ctx.removeStatusEffects(zombi, status).catch(() => {});
       await placeZombi();
 
-      // 2 bis. En combat, par le chemin du moteur (clic au sol : A*, une case par point) — s'il passe par la zone, il s'y arrête, une fois.
+      // 2 bis. In combat, via the engine's path (click on the ground: A*, one cell per point) — if it passes through the area,
+      // it stops there, once.
       if ( await ctx.startCombat([zombi]) ) {
         const since = await ctx.lastMessageId();
         await ctx.engine("move", { tokenId: zombi.id, point: { x: home.x - (4 * g) + (g / 2), y: home.y + (g / 2) } });
@@ -117,7 +118,7 @@ export default {
       await pause(1500);
       const t1 = (await ctx.engine("advanceTime", { seconds: 0 })).worldTime;
       ctx.expect((t1 - t0) === 600, `${label} : 10 minutes passent (${t1 - t0} s)`);
-      if ( t1 > t0 ) await ctx.engine("advanceTime", { seconds: t0 - t1 });   // l'horloge du monde de test reprend où elle était
+      if ( t1 > t0 ) await ctx.engine("advanceTime", { seconds: t0 - t1 });   // the test world's clock resumes where it was
       const after = await ctx.engine("scatter", { tokenId: mage.id });
       ctx.expect(!after.zones.some(z => z.id === used.regionId), `${label} : la zone a disparu`);
       const { data: tiles } = await ctx.call("list-scene-objects", { type: "Tile" }).catch(() => ({ data: null }));

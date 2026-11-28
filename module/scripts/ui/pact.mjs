@@ -1,7 +1,7 @@
 /**
- * §16.45 : la fenêtre du Pacte de la lame — une arme de l'inventaire ou « Invoquer une arme… » (compendium de dnd5e, corps à
- * corps courante ou de guerre). Le type de dégâts se choisit à chaque attaque (§16.45). L'interface demande ;
- * runtime/enchant.mjs (`pactWith`) lance.
+ * §16.45: the Pact of the Blade window — a weapon from the inventory or "Summon a weapon…" (dnd5e compendium, simple melee
+ * or martial). The damage type is chosen at each attack (§16.45). The interface asks;
+ * runtime/enchant.mjs (`pactWith`) casts.
  */
 
 import { ownPactWeapons, pickConjuredWeapon } from "../adapter/enchant.mjs";

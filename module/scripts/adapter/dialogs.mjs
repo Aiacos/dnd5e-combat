@@ -1,38 +1,38 @@
 /**
- * Les fenêtres du combat ne retiennent pas la partie (règle de table, demandée par l'utilisateur le
- * 2026-09-23) : réaction, choix de sauvegarde, choix d'effet, jet de sauvegarde d'un joueur — au bout du
- * délai (10 s par défaut, réglage de monde `combatWindowSeconds`), elles se résolvent seules. Un compte à
- * rebours visible le dit.
+ * Combat windows do not hold up the game (table rule, requested by the user on
+ * 2026-09-23): Reaction, save choice, effect choice, a player's saving throw — at the end of the
+ * timeout (10 s by default, world setting `combatWindowSeconds`), they resolve on their own. A visible
+ * countdown says so.
  *
- * Sur `DialogV2.wait` du cœur (client/applications/api/dialog.mjs:405) : `render` donne la fenêtre (le
- * compteur, la fermeture au bout du délai), `close` choisit ce que rend une fenêtre fermée — la réponse
- * par défaut si c'est le délai qui l'a fermée, null sinon.
+ * On the core's `DialogV2.wait` (client/applications/api/dialog.mjs:405): `render` gives the window (the
+ * counter, closing at the end of the timeout), `close` chooses what a closed window returns — the default
+ * answer if the timeout closed it, null otherwise.
  *
- * §290 : réglage de monde `combatWindowUnlimited` — les fenêtres n'ont plus de délai, le joueur prend son temps, et le MJ voit qui il
- * attend (ui/player-waits.mjs) ; « Forcer » fait sur le client du joueur ce que le délai aurait fait (`forceOpenWindows`). Un délai
- * donné explicitement (jets demandés par le MJ, §242) n'est pas touché.
+ * §290: world setting `combatWindowUnlimited` — windows have no timeout, the player takes their time, and the GM sees who they are
+ * waiting for (ui/player-waits.mjs); "Force" does on the player's client what the timeout would have done
+ * (`forceOpenWindows`). A timeout given explicitly (rolls requested by the GM, §242) is not touched.
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { markAwaiting } from "./awaiting.mjs";
 import { createWindowLine } from "../core/window-line.mjs";
 
-/** Délai des fenêtres du combat, en secondes. */
+/** Combat window timeout, in seconds. */
 export function combatWindowSeconds() {
   try { return Math.max(3, Number(game.settings.get(MODULE_ID, "combatWindowSeconds")) || 10); }
   catch { return 10; }
 }
 
-/** §290 : les fenêtres du combat sont-elles sans délai (le MJ force) ? */
+/** §290: are combat windows without timeout (the GM forces)? */
 export function windowsUnlimited() {
   try { return !!game.settings.get(MODULE_ID, "combatWindowUnlimited"); }
   catch { return false; }
 }
 
-/** §290 : sur ce client, ce que le délai ferait à chaque fenêtre ouverte sans délai. */
+/** §290: on this client, what the timeout would do to each window opened without timeout. */
 const forcers = new Set();
 
-/** §290 : le MJ force — chaque fenêtre du combat ouverte sur ce client se résout comme au bout du délai. Rend leur nombre. */
+/** §290: the GM forces — each combat window open on this client resolves as at the end of the timeout. Returns their number. */
 export function forceOpenWindows() {
   const all = [...forcers];
   forcers.clear();
@@ -44,13 +44,14 @@ export function forceOpenWindows() {
 }
 
 /**
- * Au bout du délai (`ms`), ou quand le MJ force si les fenêtres sont sans délai : `expire`. Rend la fonction qui désarme.
+ * At the end of the timeout (`ms`), or when the GM forces if windows have no timeout: `expire`.
+ * Returns the function that disarms.
  * @param {Function} expire
  * @param {number} ms
- * @param {boolean} [unlimited]  Sans délai (par défaut : le réglage).
+ * @param {boolean} [unlimited]  Without timeout (default: the setting).
  */
 export function expireLater(expire, ms, unlimited=windowsUnlimited()) {
-  // §381 : le MJ peut aussi forcer une fenêtre à délai (menu du token) ; elle se résout alors tout de suite, comme au bout du délai.
+  // §381: the GM can also force a timed window (token menu); it then resolves right away, as at the end of the timeout.
   let done = false;
   const once = () => { if ( done ) return; done = true; forcers.delete(once); clearTimeout(timer); expire(); };
   const timer = unlimited ? null : setTimeout(once, ms);
@@ -61,31 +62,31 @@ export function expireLater(expire, ms, unlimited=windowsUnlimited()) {
 const countdownText = n => game.i18n.format("DND5ECOMBAT.Delai.Auto", { n });
 
 /* -------------------------------------------- */
-/*  §422 : les fenêtres ouvertes sur ce poste    */
+/*  §422: the windows open on this station       */
 /* -------------------------------------------- */
 
 /**
- * §422 : sur ce client, quand une fenêtre du moteur s'y ouvre ou s'y ferme : `(prompts)`, `[{ id, awaitingId, actor, title, text,
- * buttons: [{ action, label, icon }], since }]`. Local : rien n'est diffusé (le texte d'une fenêtre ne quitte pas le poste où elle est
- * ouverte). La File du MJ s'en sert pour répondre depuis son panneau ; la même liste : `localPrompts()`.
+ * §422: on this client, when an engine window opens or closes there: `(prompts)`, `[{ id, awaitingId, actor, title, text,
+ * buttons: [{ action, label, icon }], since }]`. Local: nothing is broadcast (a window's text does not leave the station
+ * where it is open). The GM Queue uses it to answer from its panel; the same list: `localPrompts()`.
  */
 export const PROMPTS_HOOK = `${MODULE_ID}.localPrompts`;
 
 const prompts = new Map();
 
-/** Les fenêtres du moteur ouvertes sur ce poste, la plus ancienne d'abord. */
+/** The engine windows open on this station, the oldest first. */
 export function localPrompts() {
   return [...prompts.values()].map(({ choose, ...p }) => p).sort((a, b) => a.since - b.since);
 }
 
-/** Répond à la fenêtre `id` en cliquant son bouton `action` — exactement ce que ferait la souris. Rend false si elle n'existe plus. */
+/** Answers window `id` by clicking its `action` button — exactly what the mouse would do. Returns false if it no longer exists. */
 export function answerPrompt(id, action) {
   return prompts.get(id)?.choose(action) ?? false;
 }
 
 /**
- * Le texte d'un fragment HTML, lu dans un document **inerte** (`DOMParser`) : rien n'y charge ni ne s'y exécute (§471). Toute lecture de
- * texte d'un HTML qu'on n'a pas écrit soi-même passe par ici (gardien `texte-inerte`, tests/das-tests.json).
+ * The text of an HTML fragment, read in an **inert** document (`DOMParser`): nothing in it loads or runs (§471). Any reading of
+ * the text of HTML we did not write ourselves goes through here (guardian `texte-inerte`, tests/das-tests.json).
  * @param {string} html
  * @returns {string}
  */
@@ -110,7 +111,7 @@ function trackPrompt(dialog, config, { awaitingId=null, actor=null }={}) {
   return () => { if ( prompts.delete(id) ) Hooks.callAll(PROMPTS_HOOK, localPrompts()); };
 }
 
-/** §422 : la ligne « N autres demandes ensuite » d'une fenêtre ouverte — ce qui attend son tour dans la file de ce poste. */
+/** §422: the "N more requests after" line of an open window — what waits its turn in this station's queue. */
 const QUEUED = `<p class="dnd5e-combat-queued" hidden></p>`;
 function showQueued(dialog) {
   const line = dialog.element?.querySelector(".dnd5e-combat-queued");
@@ -121,12 +122,12 @@ function showQueued(dialog) {
 }
 
 /**
- * §422 : une fenêtre SANS délai (une décision du MJ, un refus), suivie comme les autres — sa ligne dans la File du MJ avec ses boutons,
- * et l'attente diffusée (`awaiting`) tant qu'elle est ouverte. `aside` : elle passe après la question en cours sur ce poste, sans
- * retenir les suivantes (core/window-line.mjs, `after`).
- * @param {object} config  Configuration de `DialogV2.wait`.
+ * §422: a window WITHOUT timeout (a GM decision, a refusal), tracked like the others — its line in the GM Queue with its buttons,
+ * and the broadcast wait (`awaiting`) while it is open. `aside`: it goes after the current question on this station, without
+ * holding back the following ones (core/window-line.mjs, `after`).
+ * @param {object} config  Configuration of `DialogV2.wait`.
  * @param {{awaiting?: {actor: Actor|null, kind: string, token?: object}|null, aside?: boolean}} [options]
- * @returns {Promise<*>}  Le bouton choisi ; null si on la ferme.
+ * @returns {Promise<*>}  The chosen button; null if it is closed.
  */
 export function promptWait(config, { awaiting=null, aside=false }={}) {
   const open = () => {
@@ -143,23 +144,23 @@ export function promptWait(config, { awaiting=null, aside=false }={}) {
 }
 
 /**
- * Une fenêtre à boutons qui se résout seule au bout du délai.
- * @param {object} config           Configuration de `DialogV2.wait` (window, content, buttons…).
+ * A button window that resolves itself when the delay runs out.
+ * @param {object} config           `DialogV2.wait` configuration (window, content, buttons…).
  * @param {object} [options]
- * @param {*} [options.fallback]    Ce que rend la fenêtre si le délai l'a fermée (l'action d'un bouton…).
- * @param {number} [options.seconds]  Un délai propre ; sans lui, le réglage du monde (§290 : peut-être sans délai).
- * @param {boolean} [options.front]  §282 : la fenêtre passe devant les autres à son ouverture.
- * @param {{actor: Actor|null, kind: string, token?: object}|null} [options.awaiting]  §381 : la table voit qu'on attend cette créature
- *   (sablier au-dessus de son token) tant que la fenêtre est ouverte.
- * @returns {Promise<*>}  Le bouton choisi ; `fallback` au bout du délai (ou forcée par le MJ) ; null si on la ferme soi-même.
+ * @param {*} [options.fallback]    What the window returns if the delay closed it (a button's action…).
+ * @param {number} [options.seconds]  Its own delay; without it, the world setting (§290: may be no delay).
+ * @param {boolean} [options.front]  §282: the window comes in front of the others when it opens.
+ * @param {{actor: Actor|null, kind: string, token?: object}|null} [options.awaiting]  §381: the table sees this creature awaited
+ *   (hourglass above its token) while the window is open.
+ * @returns {Promise<*>}  The chosen button; `fallback` when the delay runs out (or forced by the GM); null if it is closed by hand.
  */
 export function timedWait(config, { fallback=null, seconds=null, front=false, awaiting=null }={}) {
   const unlimited = (seconds === null) && windowsUnlimited();
   const shown = unlimited ? null : (seconds ?? combatWindowSeconds());
-  // §401 : à son tour — la fenêtre s'ouvre quand la précédente de ce poste est fermée ; son compte à rebours part à l'ouverture.
+  // §401: in turn — the window opens when the previous one of this seat is closed; its countdown starts when it opens.
   return inLine(() => {
     const release = awaiting ? markAwaiting(awaiting.actor ?? null, awaiting.kind,
-      { seconds: shown, token: awaiting.token ?? null, label: config?.window?.title ?? null }) : null;   // §426 : le titre, pour les MJ
+      { seconds: shown, token: awaiting.token ?? null, label: config?.window?.title ?? null }) : null;   // §426: the title, for GMs
     const track = { awaitingId: release?.id ?? null, actor: awaiting?.actor ?? null };
     const waiting = unlimited ? waitForForce(config, { fallback, front, track }) : countdownWait(config, { fallback, seconds: shown, front, track });
     return release ? waiting.finally(release) : waiting;
@@ -167,9 +168,9 @@ export function timedWait(config, { fallback=null, seconds=null, front=false, aw
 }
 
 /**
- * §401 : la file des fenêtres de ce poste (core/window-line.mjs) — les questions du moteur s'enchaînent au lieu de s'empiler. Une fenêtre
- * n'attend la précédente qu'un temps borné (le délai des fenêtres et 3 s ; 30 s quand elles sont sans délai) : au-delà, elle s'ouvre quand
- * même, pour qu'une question qui dépendrait d'une autre restée ouverte ne bloque jamais la partie.
+ * §401: the queue of windows of this seat (core/window-line.mjs) — the engine's questions chain up instead of piling up. A window
+ * waits for the previous one only for a bounded time (the windows' delay and 3 s; 30 s when they have no delay): beyond that,
+ * it opens anyway, so that a question depending on another one left open never blocks the game.
  */
 export const inLine = createWindowLine({ capMs: () => (windowsUnlimited() ? 30000 : (combatWindowSeconds() + 3) * 1000) });
 
@@ -218,16 +219,16 @@ export function showCountdown(app, { before=null }={}) {
   return () => clearInterval(timer);
 }
 
-/** Une fenêtre à compte à rebours : `fallback` au bout de `seconds`. */
+/** A window with a countdown: `fallback` after `seconds`. */
 function countdownWait(config, { fallback, seconds, front, track={} }) {
   let left = seconds;
   let timer = null;
   let timedOut = false;
   let disarm = () => {};
   let untrack = () => {};
-  // Barre de progression menée par le même minuteur que la fermeture (une animation CSS sur la durée
-  // dérive d'avec lui dans un onglet en arrière-plan) : à chaque seconde, elle part vers la valeur de la
-  // seconde suivante, avec une transition d'une seconde — fluide, et vide au moment où la fenêtre se ferme.
+  // Progress bar driven by the same timer as the closing (a CSS animation over the duration
+  // drifts from it in a background tab): every second, it heads toward the value of the
+  // next second, with a one-second transition — smooth, and empty when the window closes.
   const update = dialog => paintCountdown(dialog.element, left, seconds);
   const countdown = countdownMarkup(left);
   return foundry.applications.api.DialogV2.wait({
@@ -240,9 +241,9 @@ function countdownWait(config, { fallback, seconds, front, track={} }) {
       if ( timer ) return;
       untrack = trackPrompt(dialog, config, track);
       showQueued(dialog);
-      // §381 : le MJ force (menu du token) — comme au bout du délai.
+      // §381: the GM forces (token menu) — as when the delay runs out.
       disarm = expireLater(() => { clearInterval(timer); timedOut = true; dialog.close(); }, 0, true);
-      requestAnimationFrame(() => update(dialog));   // après la première peinture, sinon pas de transition
+      requestAnimationFrame(() => update(dialog));   // after the first paint, otherwise no transition
       timer = setInterval(() => {
         left -= 1;
         update(dialog);
@@ -262,7 +263,7 @@ function countdownWait(config, { fallback, seconds, front, track={} }) {
   });
 }
 
-/** §290 : une fenêtre sans délai — elle attend le joueur ; le MJ peut la forcer (elle rend alors `fallback`). */
+/** §290: a window without delay — it waits for the player; the GM can force it (it then returns `fallback`). */
 function waitForForce(config, { fallback, front, track={} }) {
   let forced = false;
   let disarm = () => {};
@@ -294,15 +295,16 @@ function waitForForce(config, { fallback, front, track={} }) {
 }
 
 /**
- * Ferme au bout du délai la fenêtre de jet de dnd5e d'un acteur (jet de sauvegarde d'un joueur) ; rend
- * une fonction pour annuler le minuteur. `onTimeout` est appelé si c'est le délai qui l'a fermée.
- * §290 : sans délai propre et fenêtres sans délai, c'est le MJ qui la ferme en forçant.
- * §381 : `awaiting` (une sorte, « roll ») — la table voit qu'on attend ce jet tant que le minuteur n'est ni échu ni annulé.
+ * Closes the dnd5e roll window of an actor (a player's saving throw) when the delay runs out; returns
+ * a function to cancel the timer. `onTimeout` is called if the delay is what closed it.
+ * §290: without its own delay and with no-delay windows, the GM closes it by forcing.
+ * §381: `awaiting` (a kind, "roll") — the table sees that this roll is awaited while the timer has neither expired nor been
+ * cancelled.
  */
 export function closeRollDialogAfter(actor, onTimeout, seconds=null, { awaiting=null }={}) {
   const unlimited = (seconds === null) && windowsUnlimited();
   seconds ??= combatWindowSeconds();
-  // §381 : la table voit qu'on attend ce jet, jusqu'à ce qu'il parte ou que la fenêtre soit fermée.
+  // §381: the table sees that this roll is awaited, until it is made or the window is closed.
   const release = (awaiting && (seconds > 0)) ? markAwaiting(actor, awaiting, { seconds: unlimited ? null : seconds }) : () => {};
   const disarm = expireLater(() => {
     release();

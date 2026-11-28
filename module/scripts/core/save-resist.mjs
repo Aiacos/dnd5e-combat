@@ -1,11 +1,11 @@
 /**
- * Un objet qui change une sauvegarde ratée en réussite (clé de contenu `saveResist`) : Bâton d'envoûtement — « si vous ratez un jet de
- * sauvegarde contre un sort d'enchantement qui ne cible que vous, vous pouvez changer cet échec en réussite ; vous ne pouvez plus
- * utiliser cette propriété avant l'aube ». Les utilisations sont celles de l'activité de l'objet. Fonctions pures.
+ * An item that turns a failed saving throw into a success (content key `saveResist`): Staff of Charming — "if you fail a saving
+ * throw against an enchantment spell that targets only you, you can turn your failure into a success; you can't use this
+ * property again until the next dawn". The uses are those of the item's activity. Pure functions.
  */
 
 /**
- * La règle vaut-elle contre ce qui impose la sauvegarde ?
+ * Does the rule apply against what imposes the saving throw?
  * @param {{activity: string, schools?: string[], singleTarget?: boolean}|null|undefined} rule
  * @param {{isSpell: boolean, school: string|null, targets: number}} against
  */
@@ -16,15 +16,15 @@ export function saveResistApplies(rule, { isSpell, school, targets }) {
 }
 
 /**
- * `saveReflect` : la même forme, pour une sauvegarde RÉUSSIE — « si vous réussissez un jet de sauvegarde contre un sort
- * d'enchantement qui ne cible que vous, vous pouvez utiliser votre Réaction pour dépenser 1 charge et retourner le sort contre son
- * lanceur, comme si vous l'aviez lancé ». Vaut-elle, avec une charge et une Réaction ?
+ * `saveReflect`: the same shape, for a SUCCEEDED saving throw — "if you succeed on a saving throw against an enchantment
+ * spell that targets only you, you can use your Reaction to expend 1 charge and turn the spell back on its caster, as if you had
+ * cast it". Does it apply, with a charge and a Reaction?
  */
 export function saveReflectApplies(rule, against, { charges, reaction }) {
   return saveResistApplies(rule, against) && (charges >= 1) && (reaction !== false);
 }
 
-/** Les erreurs de la clé. Vide = valide. */
+/** The key's errors. Empty = valid. */
 export function validateSaveResist(rule, at, isId, key="saveResist") {
   const ok = rule && (typeof rule === "object") && !Array.isArray(rule) && isId(rule.activity)
     && (!("schools" in rule) || (Array.isArray(rule.schools) && rule.schools.length && rule.schools.every(s => typeof s === "string")))

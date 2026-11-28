@@ -1,15 +1,16 @@
 /**
- * §195 (lot 3 de l'escalade) : le contenu par identifiant, sur la scène « Escalade » de `dnd-6` (mur vertical en x = 700, plafond en
- * Surface à 20 ft sur la moitié ouest, sol en Surface ; le Guerrier contre le mur, le Zombi au sud, le Paladin au nord).
- *  1. Athlète prêté au Guerrier : le MJ actif lui tient un effet de vitesse d'escalade égale à sa Vitesse ; vraie vitesse d'escalade
- *     (coût ×1) — en combat, 2 cases montées coûtent 10 ft. L'item retiré, l'effet tombe.
- *  2. Pattes d'araignée lancée sur lui-même : la vitesse d'escalade de l'effet est sa Vitesse (les données disaient 1).
- *  3. Mouvement acrobatique prêté au Zombi (sans armure) : « Courir sur le mur » hors combat et à son tour, pas au tour d'un autre ; il
- *     court 2 cases à son tour, puis tombe à la fin de son tour.
- *  4. Pantoufles d'araignée portées par le Guerrier : vitesse d'escalade et plafond ; une zone de Graisse lancée sur lui (le Paladin) :
- *     surface glissante, « Grimper au plafond » n'est plus proposé ; la Graisse retirée, il l'est de nouveau. Au plafond, glissé par le MJ
- *     au-dessus d'une flaque d'Huile, il tombe (« surface glissante »).
- * Remet les règles, les positions, le mode, l'échelle, les PV ; le filet du lanceur reprend le reste (items prêtés, effets).
+ * §195 (batch 3 of climbing): content by identifier, on the "Escalade" scene of `dnd-6` (vertical wall at x = 700, ceiling in
+ * Surface at 20 ft on the west half, floor in Surface; the Fighter against the wall, the Zombie to the south, the Paladin to
+ * the north).
+ *  1. Athlete lent to the Fighter: the active GM holds a climbing-speed effect for him equal to his Speed; real climb speed
+ *     (cost ×1) — in combat, 2 cells climbed cost 10 ft. The item removed, the effect ends.
+ *  2. Spider Climb cast on himself: the effect's climb speed is his Speed (the data said 1).
+ *  3. Acrobatic Movement lent to the Zombie (unarmored): "Run on the wall" out of combat and on its turn, not on another's turn; it
+ *     runs 2 cells on its turn, then falls at the end of its turn.
+ *  4. Slippers of Spider Climbing worn by the Fighter: climb speed and cap; a Grease area cast on him (the Paladin):
+ *     slippery surface, "Climb the ceiling" is no longer offered; Grease removed, it is again. On the ceiling, slid by the GM
+ *     above a pool of Oil, he falls ("slippery surface").
+ * Restores the rules, the positions, the mode, the scale, the HP; the runner's net takes the rest (lent items, effects).
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.";
@@ -33,8 +34,8 @@ export default {
     for ( const t of [hero, zombi] ) homes.set(t.id, { pos: await ctx.position(t), hp: await ctx.hp(t) });
     const state = t => ctx.engine("climbState", { tokenId: t.id });
     const waitFor = async (fn, tries=20) => { for ( let i = 0; i < tries; i++ ) { const v = await fn(); if ( v ) return v; await pause(400); } return null; };
-    // dnd5e retire lui-même « En chute » après une chute : on attend qu'il l'ait fait, et on n'y touche pas (le retirer par le connecteur
-    // en même temps que lui donne « ActiveEffect dnd5efalling0000 does not exist »).
+    // dnd5e itself removes "Falling" after a fall: we wait for it and do not touch it (removing it through the connector
+    // at the same time gives "ActiveEffect dnd5efalling0000 does not exist").
     const reset = async t => {
       const h = homes.get(t.id);
       await waitFor(async () => !(await state(t)).falling, 15);
@@ -52,7 +53,7 @@ export default {
     };
     const rules = await ctx.engine("setting", { key: "climbRules", value: "2024" });
     ctx.restore(() => ctx.engine("setting", { key: "climbRules", value: rules?.before ?? "2024" }));
-    // §246 : sans la rotation automatique du cœur, le token au plafond est retourné (`ceilingFlip`).
+    // §246: without the core's automatic rotation, the token on the ceiling is flipped (`ceilingFlip`).
     const facing = await ctx.engine("foreignSetting", { namespace: "core", key: "tokenAutoRotate", value: false });
     ctx.restore(() => ctx.engine("foreignSetting", { namespace: "core", key: "tokenAutoRotate", value: facing?.before ?? true }));
     ctx.restore(() => reset(hero));
@@ -74,7 +75,7 @@ export default {
       return (await current()) === order[0].id;
     };
 
-    // 1. Athlète : une vraie vitesse d'escalade, égale à la Vitesse.
+    // 1. Athlete: a real climb speed, equal to the Speed.
     let s = await state(hero);
     const walk = s.speed?.speed;
     if ( !ctx.expect(!s.speed?.native && (s.room?.multiplier === 2), `sans capacité : pas de vitesse d'escalade (×${s.room?.multiplier}, Vitesse ${walk})`) ) return;
@@ -93,7 +94,7 @@ export default {
     s = await waitFor(async () => { const now = await state(hero); return now.grants.length ? null : now; });
     ctx.expect(!!s && !s.speed?.native, `Athlète retiré : l'effet tombe (${s ? "plus de vitesse d'escalade" : "effet resté"})`);
 
-    // 2. Pattes d'araignée : la vitesse d'escalade de l'effet est la Vitesse.
+    // 2. Spider Climb: the effect's climb speed is the Speed.
     const spiderId = await ctx.ensureItem(hero, `${PHB}spells.Item.phbsplSpiderClim`, { system: { method: "atwill" } });
     await ctx.use({ tokenId: hero.id, itemId: spiderId, targetTokenIds: [hero.id], collectMs: 1500 });
     s = await waitFor(async () => { const now = await state(hero); return now.walksCeilings ? now : null; });
@@ -102,7 +103,7 @@ export default {
     await removeItem(hero, spiderId);
     await pause(800);
 
-    // 3. Mouvement acrobatique : courir sur le mur à son tour, tomber à la fin de son tour.
+    // 3. Acrobatic Movement: run on the wall on its turn, fall at the end of its turn.
     const acroId = await ctx.ensureItem(zombi, `${PHB}classes.Item.phbmnkAcrobaticM`);
     s = await waitFor(async () => { const now = await state(zombi); return now.canRun ? now : null; });
     if ( ctx.expect(!!s && s.walls.length, `Mouvement acrobatique, hors combat, contre le mur : « Courir sur le mur » proposé (${!!s})`) ) {
@@ -125,7 +126,7 @@ export default {
     await reset(zombi);
     await removeItem(zombi, acroId);
 
-    // 4. Pantoufles d'araignée et surface glissante.
+    // 4. Slippers of Spider Climbing and slippery surface.
     const slippersId = await ctx.ensureItem(hero, DMG, { system: { equipped: true, attuned: true } });
     s = await waitFor(async () => { const now = await state(hero); return (now.walksCeilings && now.speed?.native) ? now : null; });
     if ( !ctx.expect(!!s && s.canCeiling && !s.slippery, `Pantoufles portées : vitesse d'escalade ${s?.speed?.speed ?? "—"}, plafond proposé ${s?.canCeiling ?? "—"}`) ) return;
@@ -144,7 +145,7 @@ export default {
     if ( used.regionId ) await ctx.call("delete-scene-object", { type: "Region", objectId: used.regionId }).catch(() => {});
     s = await waitFor(async () => { const now = await state(hero); return now.canCeiling ? now : null; });
     ctx.expect(!!s && !s.slippery, `la Graisse retirée : « Grimper au plafond » de nouveau proposé (${!!s})`);
-    // Au plafond, glissé par le MJ au-dessus d'une flaque d'Huile (une région de l'item Huile, sans bornes de hauteur) : il tombe.
+    // On the ceiling, slid by the GM above a pool of Oil (a region of the Oil item, without height bounds): he falls.
     const up = await ctx.engine("climbCeiling", { tokenId: hero.id });
     if ( ctx.expect(up.done && up.onCeiling, `gagne le plafond par les Pantoufles (${up.after.elevation} ft)`) ) {
       await pause(1500);

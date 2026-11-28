@@ -1,7 +1,7 @@
 /**
- * §333, lot K12 de la repasse des créatures (suite). Arène des sorts : le Lanceur (PNJ) et l'« Ennemi au contact ».
- *  - Posture défensive (Amiral pirate, « adds 4 to its AC against melee attack rolls (including the triggering attack) ») prêtée au
- *    Lanceur : l'Ennemi le frappe au contact, la réaction est prise (`autoReact: "first"`) et l'effet « +4 CA » posé.
+ * §333, batch K12 of the creature pass (continued). Spell arena: the Caster (NPC) and the "Enemy in contact".
+ *  - Defensive Stance (Pirate Admiral, "adds 4 to its AC against melee attack rolls (including the triggering attack)") lent to the
+ *    Caster: the Enemy hits it in melee, the Reaction is taken (`autoReact: "first"`) and the "+4 AC" effect placed.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

@@ -4,8 +4,8 @@ import { readyPlanOf, readyTriggered, readyReach, READY_TRIGGERS } from "../modu
 const plan = (over={}) => ({ activity: "Actor.a.Item.b.Activity.c", name: "Épée longue", trigger: "enters", target: null, reach: { value: 5, units: "ft" }, ...over });
 const ok = { enemies: true, reactionAvailable: true, incapacitated: false, sees: true };
 
-describe("§211 Se tenir prêt", () => {
-  it("lit le plan du budget, pas un simple « prêt »", () => {
+describe("§211 Ready", () => {
+  it("reads the budget plan, not a simple \"ready\"", () => {
     expect(readyPlanOf({ readied: true })).toBeNull();
     expect(readyPlanOf({ readied: false })).toBeNull();
     expect(readyPlanOf({ readied: plan() })?.name).toBe("Épée longue");
@@ -13,7 +13,7 @@ describe("§211 Se tenir prêt", () => {
     expect(READY_TRIGGERS).toEqual(["enters", "attacks", "casts"]);
   });
 
-  it("déclenche sur le bon évènement, contre un ennemi, avec la Réaction", () => {
+  it("triggers on the right event, against an enemy, with the Reaction", () => {
     expect(readyTriggered(plan(), { kind: "enters", source: "T1" }, ok)).toBe(true);
     expect(readyTriggered(plan(), { kind: "attacks", source: "T1" }, ok)).toBe(false);
     expect(readyTriggered(plan(), { kind: "enters", source: "T1" }, { ...ok, enemies: false })).toBe(false);
@@ -23,12 +23,12 @@ describe("§211 Se tenir prêt", () => {
     expect(readyTriggered(plan(), { kind: "enters", source: "T1" }, { ...ok, sees: null })).toBe(true);
   });
 
-  it("une créature désignée : elle seule déclenche", () => {
+  it("a designated creature: only it triggers", () => {
     expect(readyTriggered(plan({ target: "T1" }), { kind: "enters", source: "T1" }, ok)).toBe(true);
     expect(readyTriggered(plan({ target: "T1" }), { kind: "enters", source: "T2" }, ok)).toBe(false);
   });
 
-  it("portée : allonge, portée normale, contact, personnelle, illimitée", () => {
+  it("range: reach, normal range, touch, personal, unlimited", () => {
     expect(readyReach({ melee: true, reach: 10, range: { units: "ft" } })).toEqual({ value: 10, units: "ft" });
     expect(readyReach({ melee: false, range: { value: 80, units: "ft" } })).toEqual({ value: 80, units: "ft" });
     expect(readyReach({ melee: false, range: { units: "touch" } })).toEqual({ value: 5, units: "ft" });

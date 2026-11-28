@@ -1,7 +1,7 @@
 /**
- * §436 : le diagnostic « Effets magiques non marqués ». Un acteur créé d'un bloc (ses objets ne passent pas par `preCreateItem`, comme
- * une fiche d'avant la migration 6.1) porte Bénédiction du Manuel des joueurs, dont l'effet n'a pas la marque `system.magical` : l'analyse
- * le trouve, la réparation (sauvegarde d'abord) le marque, une nouvelle analyse ne trouve plus rien. Acteur et sauvegarde retirés.
+ * §436: the "Unmarked magical effects" diagnostic. An actor created in one block (its items do not go through `preCreateItem`,
+ * like a sheet from before migration 6.1) carries the Player's Handbook's Bless, whose effect lacks the `system.magical` mark: the
+ * analysis finds it, the repair (backup first) marks it, a new analysis finds nothing more. Actor and backup removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const BLESS = "Compendium.dnd-players-handbook.spells.Item.phbsplBless00000";

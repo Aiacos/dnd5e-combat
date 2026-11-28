@@ -1,7 +1,7 @@
 /**
- * §16.47 : un sort qui fait cesser un état (`cures` : Restauration partielle — « un état parmi Aveuglé, Assourdi,
- * Paralysé ou Empoisonné »). L'interface choisit l'état (ui/cure.mjs) ; les effets qui le portent sont retirés — par le MJ
- * actif quand la cible n'appartient pas à l'auteur.
+ * §16.47: a spell that ends a condition (`cures`: Lesser Restoration — "one condition among Blinded, Deafened,
+ * Paralyzed or Poisoned"). The interface picks the condition (ui/cure.mjs); the effects carrying it are removed — by the active
+ * GM when the target does not belong to the author.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -28,10 +28,10 @@ async function removeStatus(targetUuid, status) {
 }
 
 /**
- * §471 : la requête d'un autre client qu'un MJ ne vaut que sur preuve — la carte d'utilisation (`usage`) qu'il a créée
- * pour une créature qu'il contrôle, dont l'objet porte la règle de cet acte et qui vise cette cible (ou son propre lanceur) — et dans
- * des bornes : un soin ne blesse pas et ne dépasse pas le maximum, des PV temporaires pas plus que la réserve ou le jet de la carte.
- * Rend les données à appliquer, ou null (refus de sécurité : non forçable).
+ * §471: a request from a client other than a GM is valid only with proof — the use card (`usage`) it created
+ * for a creature it controls, whose item carries this act's rule and which targets this target (or its own caster) — and within
+ * bounds: a heal does not hurt and does not exceed the maximum, Temporary Hit Points no more than the pool or the card's roll.
+ * Returns the data to apply, or null (security refusal: not forceable).
  * @returns {Promise<object|null>}
  */
 async function vetCure({ target, status, value=null, usage=null }, user) {
@@ -66,14 +66,14 @@ async function handleCure(payload, { user=null }={}) {
     payload = vetted;
   }
   const { target, status, value=null } = payload;
-  // §160 : « réduit d'un niveau l'Épuisement » (Restauration suprême).
+  // §160: "reduces the Exhaustion level by one" (Greater Restoration).
   if ( status === "exhaustion-1" ) {
     const actor = (await fromUuid(target))?.actor;
     const level = Number(actor?.system?.attributes?.exhaustion) || 0;
     if ( actor && level ) await actor.update({ "system.attributes.exhaustion": level - 1 });
     return level ? 1 : 0;
   }
-  // §160 : les actes sur la cible qui demandent le MJ (cible d'un autre) — PV, PV temporaires, malédictions.
+  // §160: the acts on the target that require the GM (another's target) — HP, Temporary Hit Points, curses.
   if ( status === "hp" ) { const actor = (await fromUuid(target))?.actor; if ( actor ) await actor.update({ "system.attributes.hp.value": value }); return 1; }
   if ( status === "temphp" ) {
     const actor = (await fromUuid(target))?.actor;
@@ -96,8 +96,9 @@ async function handleCure(payload, { user=null }={}) {
 }
 
 /**
- * §401 : Mot de pouvoir guérisseur — « si la créature est À terre, elle peut utiliser sa Réaction pour se relever ». Chez le MJ actif :
- * la question va au joueur de la cible (sinon au MJ) ; oui, À terre tombe et la Réaction est dépensée (en combat). Rend 1 si elle se relève.
+ * §401: Power Word Heal — "if the creature is Prone, it can use its Reaction to stand up". On the active GM:
+ * the question goes to the target's player (otherwise the GM); if yes, Prone is removed and the Reaction is spent (in combat).
+ * Returns 1 if it stands up.
  */
 async function standWithReaction(targetUuid, item) {
   const token = await fromUuid(targetUuid);
@@ -115,13 +116,13 @@ async function standWithReaction(targetUuid, item) {
   return 1;
 }
 
-/** Un acte sur la cible : ici si on la possède, sinon par le MJ actif. */
+/** An act on the target: here if we own it, otherwise by the active GM. */
 const onTarget = (target, status, value=null, usage=null) =>
   viaOwnerOrGM(!!target.actor?.isOwner, CURE_QUERY, handleCure, { target: target.uuid, status, value, usage }, { fallback: 0 });
 
-/** Fait cesser `status` sur le token `target` (TokenDocument). Épuisement : un niveau de moins (§160, Restauration suprême). */
+/** Ends `status` on the token `target` (TokenDocument). Exhaustion: one level less (§160, Greater Restoration). */
 export async function cureStatus(target, status, { usage=null }={}) {
-  // Sans MJ actif pour une cible d'un autre, la requête ne rend rien : rien n'a cessé. `usage` : la carte d'utilisation, preuve pour le MJ.
+  // Without an active GM for another's target, the request returns nothing: nothing ended. `usage`: the use card, the GM's proof.
   const n = Number(await onTarget(target, (status === "exhaustion") ? "exhaustion-1" : status, null, usage)) || 0;
   const label = game.i18n.localize(CONFIG.DND5E.conditionTypes[status]?.name ?? status);
   log(`${target.name}: ${label} ends (${n} effect(s))`);
@@ -130,9 +131,10 @@ export async function cureStatus(target, status, { usage=null }={}) {
 }
 
 /**
- * §296 : la réserve de l'activité (le jet de soin que dnd5e vient de lancer — son message `healing`, sinon la formule) répartie entre les
- * créatures choisies : en PV (`hp`), plafonnés à la moitié des PV maximum (`cap: "halfMax"` : Survivance) ou au maximum, ou en PV
- * temporaires (`temp` : Châtiment exaltant). Le jet de dnd5e n'est pas appliqué tel quel (adapter/usage.mjs, plan sans soin).
+ * §296: the activity's pool (the heal roll dnd5e has just made — its `healing` message, otherwise the formula) split among the
+ * chosen creatures: as HP (`hp`), capped at half the maximum HP (`cap: "halfMax"`: "Survivance") or at the maximum,
+ * or as Temporary Hit Points (`temp`: "Exalting Smite"). The dnd5e roll is not applied as is
+ * (adapter/usage.mjs, plan without heal).
  */
 async function sharePool(activity, pool, targets, results) {
   const usage = results?.message?.id ?? null;
@@ -154,7 +156,7 @@ async function sharePool(activity, pool, targets, results) {
     return Math.max(0, ceiling - (hp.value ?? 0));
   });
   let shares = splitPool(total, caps.map(c => (Number.isFinite(c) ? c : total)));
-  // §401 : « répartis comme vous le voulez » (`choose`) — l'auteur ajuste la répartition, plafonds tenus.
+  // §401: "divided as you wish" (`choose`) — the author adjusts the split, caps respected.
   if ( pool.choose && (targets.length > 1) ) shares = await chosenShares(activity, total, targets, shares, caps);
   for ( const [i, target] of targets.entries() ) {
     if ( !shares[i] ) continue;
@@ -168,8 +170,8 @@ async function sharePool(activity, pool, targets, results) {
 }
 
 /**
- * §401 : la répartition d'une réserve demandée à l'auteur (son joueur, sinon le MJ), préremplie avec `shares`. Rend les parts, chacune
- * plafonnée (`caps`) et leur somme au plus `total` ; sans réponse, `shares`.
+ * §401: the split of a pool asked of the author (their player, otherwise the GM), prefilled with `shares`. Returns the shares,
+ * each capped (`caps`) and their sum at most `total`; with no answer, `shares`.
  */
 async function chosenShares(activity, total, targets, shares, caps) {
   const actor = activity.actor;
@@ -187,27 +189,27 @@ async function chosenShares(activity, total, targets, shares, caps) {
 }
 
 /**
- * §53 : `curesAll` — tous les états listés cessent sur la cible (Élixir de santé : Aveuglé, Assourdi, Paralysé, Empoisonné ;
- * Potion de vitalité : Épuisement et Empoisonné). La cible : la première du message, sinon l'utilisateur (une potion bue).
+ * §53: `curesAll` — all the listed conditions end on the target (Elixir of Health: Blinded, Deafened, Paralyzed, Poisoned;
+ * Potion of Vitality: Exhaustion and Poisoned). The target: the first one of the message, otherwise the user (a potion drunk).
  */
 async function onPostUseAll(activity, usageConfig, results) {
   const entry = contentOf(activity?.item).entry;
   if ( !activity?.actor?.isOwner || !entry ) return;
   const usage = results?.message?.id ?? null;
-  // §160 : toutes les cibles du message (Guérison de groupe), sinon l'utilisateur (une potion bue).
+  // §160: all the message's targets ("Group Healing"), otherwise the user (a potion drunk).
   const listed = await Promise.all((results?.message?.system?.targets ?? []).map(t => fromUuid(t.token)));
   const targets = listed.filter(t => t?.actor);
   if ( !targets.length && usageTokenOf(activity)?.actor ) targets.push(usageTokenOf(activity));
-  // §160 : Délivrance des malédictions — les effets des sorts de malédiction cessent.
+  // §160: Remove Curse — the effects of curse spells end.
   if ( entry.endsCurses?.length ) for ( const target of targets ) {
     const n = await onTarget(target, "curses", entry.endsCurses, usage);
     log(`${activity.item.name}: ${n} curse effect(s) end on ${target.name}`);
   }
-  // §296 : une réserve à répartir (`healPool` : Survivance, Guérison de groupe, Cavalcade mécanique, Châtiment exaltant).
+  // §296: a pool to split (`healPool`: "Survivance", "Group Healing", "Mechanical Cavalcade", "Exalting Smite").
   const pool = entry.healPool;
   if ( pool?.activities?.includes(activity.id) && targets.length ) await sharePool(activity, pool, targets, results);
-  // §160 : Mot de pouvoir fortifiant — « 120 PV temporaires répartis à parts égales entre les créatures choisies ».
-  // §401 : « que vous répartissez » — parts égales proposées, l'auteur les ajuste.
+  // §160: Power Word Fortify — "120 Temporary Hit Points divided equally among the chosen creatures".
+  // §401: "that you divide" — equal shares proposed, the author adjusts them.
   if ( entry.tempHpPool && targets.length ) {
     const total = entry.tempHpPool;
     let shares = targets.map(() => Math.floor(total / targets.length));
@@ -215,12 +217,12 @@ async function onPostUseAll(activity, usageConfig, results) {
     for ( const [i, target] of targets.entries() ) if ( shares[i] ) await onTarget(target, "temphp", shares[i], usage);
     log(`${activity.item.name}: temporary HP — ${targets.map((t, i) => `${t.name} ${shares[i]}`).join(", ")}`);
   }
-  // §401 : se relever par sa Réaction (Mot de pouvoir guérisseur) — toujours par le MJ actif (le budget est un drapeau du combattant).
+  // §401: standing up with one's Reaction (Power Word Heal) — always by the active GM (the budget is a combatant flag).
   if ( entry.standsWithReaction ) for ( const target of targets ) {
     if ( target.actor.statuses?.has("prone") ) await viaOwnerOrGM(game.users.activeGM?.isSelf === true, CURE_QUERY, handleCure,
       { target: target.uuid, status: "standReaction", value: activity.item.name, usage }, { fallback: 0, timeout: 45000 });
   }
-  // §160 : Résurrection — « revient à la vie avec tous ses PV ».
+  // §160: Resurrection — "returns to life with all its HP".
   if ( entry.revivesFull ) for ( const target of targets ) {
     const hp = target.actor.system.attributes.hp;
     await onTarget(target, "hp", hp.effectiveMax ?? hp.max, usage);
@@ -242,9 +244,10 @@ async function onPostUseAll(activity, usageConfig, results) {
 }
 
 /**
- * K12 (§333) : un effet d'item qui porte l'état « exhaustion » (Maléfice déformant, Poids des années, Boire la sapience) ne monte pas le
- * niveau d'Épuisement dans dnd5e 6 — seul son effet propre (`dnd5eexhaustion0`) suit `system.attributes.exhaustion`. Le MJ actif
- * monte le niveau d'un cran (6 au plus) et retire l'effet de l'item, ou seulement son état s'il porte d'autres changements ou états.
+ * K12 (§333): an item effect that carries the condition "exhaustion" ("Warping Hex", "Weight of Years", "Drinking Wisdom")
+ * does not raise the Exhaustion level in dnd5e 6 — only its own effect (`dnd5eexhaustion0`)
+ * follows `system.attributes.exhaustion`. The active GM raises the level by one step (6 at most)
+ * and removes the item's effect, or only its condition if it carries other changes or conditions.
  */
 async function onExhaustionEffect(effect) {
   const actor = effect.parent;

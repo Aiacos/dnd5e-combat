@@ -1,17 +1,17 @@
 /**
- * File d'attente par clé. Plusieurs évènements touchant le même document arrivent presque en
- * même temps (sauvegardes simultanées, effets sur soi demandés par deux chemins) ; chacun lit un
- * flag, le modifie et le réécrit. Sans mise en série, la dernière écriture écrase les autres.
+ * Queue by key. Several events touching the same document arrive almost at
+ * the same time (simultaneous saves, self effects requested through two paths); each reads a
+ * flag, modifies it and writes it back. Without serialization, the last write overwrites the others.
  */
 const queues = new Map();
 
 export function enqueue(key, task) {
   const run = (queues.get(key) ?? Promise.resolve()).then(task, task);
-  // Le maillon de l'appelant, créé AVANT celui de la file : `await enqueue(k, A); suite()` reprend ainsi avant que la tâche
-  // suivante de la même clé ne commence, comme toujours. Rendre `run` lui-même ferait passer pour traitée (par le maillon de la
-  // file) l'erreur d'une tâche dont personne n'attend la promesse, et elle disparaîtrait sans trace.
+  // The caller's link, created BEFORE the queue's: `await enqueue(k, A); suite()` thus resumes before the next
+  // task of the same key starts, as always. Returning `run` itself would make the error of a task whose promise nobody awaits
+  // pass for handled (by the queue's link), and it would vanish without a trace.
   const out = run.then(value => value);
-  // Le maillon de la file ne se rejette jamais : une tâche qui échoue ne bloque pas les suivantes.
+  // The queue's link never rejects: a task that fails does not block the following ones.
   queues.set(key, run.then(() => {}, () => {}));
   return out;
 }

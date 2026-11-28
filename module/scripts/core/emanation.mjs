@@ -1,14 +1,14 @@
 /**
- * M7 (SPEC §18.11) : auras de monstre qui agissent — Aura de feu (dégâts à la fin du tour du porteur), Puanteur (sauvegarde
- * au début du tour d'une créature dedans). Ce que le contenu ne dit pas se lit dans le texte anglais d'origine de l'item :
- * « sauf s'il est Neutralisé », « autre qu'un Ghast », « immunisé … pendant 24 heures ». Fonctions pures, sans Foundry.
+ * M7 (SPEC §18.11): monster auras that act — Fire Aura (damage at the end of the bearer's turn), Stench (save
+ * at the start of the turn of a creature inside). What the content does not say is read in the item's original English text:
+ * "unless Incapacitated", "other than a Ghast", "immune … for 24 hours". Pure functions, without Foundry.
  */
 
 import { hostileSides } from "./factions.mjs";
 
 /**
- * Les moments d'une émanation : la fin du tour de son porteur, le début du tour d'une créature qui s'y trouve, la mort de
- * son porteur (§18.14, Mort explosive des Méphites, Convulsions du Balor).
+ * The moments of an Emanation: the end of its bearer's turn, the start of the turn of a creature inside it, the death of
+ * its bearer (§18.14, Death Burst of Mephits, Death Throes of the Balor).
  */
 export const EMANATION_MOMENTS = Object.freeze(["ownTurnEnd", "ownTurnStart", "turnStart", "death"]);
 
@@ -16,11 +16,11 @@ const plain = html => String(html ?? "").replace(/\[\[[^\]]*\]\]/g, "…").repla
   .replace(/\s+/g, " ");
 
 /**
- * Ce que le texte anglais d'une émanation précise.
- *  - `active` : « unless / while … doesn't have the Incapacitated condition » — éteinte si le porteur est Neutralisé ;
- *  - `kin` : « any creature (other than a Ghast) » — ceux qui portent la même émanation n'y sont pas soumis ;
- *  - `immunity` : « Success: The target is immune to this …'s Fear Aura for 24 hours » (`all: false`, ce porteur-là) ou
- *    « immune to the Stench of all ghasts for 1 hour » (`all: true`, toutes les émanations de ce nom).
+ * What the English text of an Emanation specifies.
+ *  - `active`: "unless / while … doesn't have the Incapacitated condition" — off if the bearer is Incapacitated;
+ *  - `kin`: "any creature (other than a Ghast)" — those that carry the same Emanation are not subject to it;
+ *  - `immunity`: "Success: The target is immune to this …'s Fear Aura for 24 hours" (`all: false`, that bearer only) or
+ *    "immune to the Stench of all ghasts for 1 hour" (`all: true`, all Emanations of that name).
  * @param {string} html
  * @returns {{active: boolean, kin: boolean, immunity: {hours: number, all: boolean}|null}}
  */
@@ -38,11 +38,12 @@ export function readEmanationText(html) {
 }
 
 /**
- * Qui l'émanation atteint, parmi des créatures dont on connaît la distance au porteur.
+ * Whom the Emanation reaches, among creatures whose distance to the bearer is known.
  * @param {{token: string, disposition: number, radius: number, affects: "any"|"enemy", inactive: boolean}} source
  * @param {Array<{token: string, disposition: number, distance: number, lineOfEffect?: boolean|null, kin?: boolean,
  *   immune?: boolean, sees?: boolean|null, out?: boolean}>} candidates
- *   `out` : hors jeu (mort, caché, objet piloté) ; `sees` : false exclut (l'émanation demande d'être vue), null n'exclut pas.
+ *   `out`: out of play (dead, hidden, piloted object); `sees`: false excludes (the Emanation requires being seen), null does
+ *   not exclude.
  * @returns {string[]}
  */
 export function emanationTargets(source, candidates) {
@@ -50,9 +51,9 @@ export function emanationTargets(source, candidates) {
   return candidates.filter(c => {
     if ( (c.token === source.token) || c.out || c.kin || c.immune ) return false;
     if ( !(c.distance <= source.radius + 1e-6) ) return false;
-    if ( c.lineOfEffect === false ) return false;   // une émanation est arrêtée par un abri total (§14.2)
+    if ( c.lineOfEffect === false ) return false;   // an Emanation is stopped by Total Cover (§14.2)
     if ( c.sees === false ) return false;
-    if ( source.affects === "enemy" ) return hostileSides(source, c);   // « de son choix » : les camps opposés
+    if ( source.affects === "enemy" ) return hostileSides(source, c);   // "of its choice": opposing sides
     return true;
   }).map(c => c.token);
 }

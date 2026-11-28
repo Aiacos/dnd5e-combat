@@ -1,7 +1,8 @@
 /**
- * Skip the turns of defeated NPCs (core/skip-defeated.mjs) — world setting `skipDefeatedNpcs`, on by default. On the active GM, when
- * the turn moves forward onto a defeated NPC, the combat goes on to the next creature that is not one; everyone sees « turn skipped »
- * over the creature (the GM only when its token is hidden). Going back in the tracker never skips: the GM may give a turn back by hand.
+ * Skip the turns of defeated NPCs (core/skip-defeated.mjs) — world setting `skipDefeatedNpcs`, on by default. On the
+ * active GM, when the turn moves forward onto a defeated NPC, the combat goes on to the next creature that is not one;
+ * everyone sees "turn skipped" over the creature (the GM only when its token is hidden). Going back in the tracker never
+ * skips: the GM may give a turn back by hand.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { skipTarget } from "../core/skip-defeated.mjs";

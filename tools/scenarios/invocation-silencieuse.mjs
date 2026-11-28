@@ -1,6 +1,7 @@
 /**
- * §552 (Discord "Summon spells", SpitFire, 2026-11-26): Find Familiar must reach the creature choice, and a summon that cannot place
- * anything must say why instead of staying silent. Arène de test (Magicien for the GM, Clerc for "claude player"), world `dnd-6`.
+ * §552 (Discord "Summon spells", SpitFire, 2026-11-26): Find Familiar must reach the creature choice, and a summon that cannot
+ * place anything must say why instead of staying silent. Arène de test (Magicien for the GM, Clerc for "claude player"),
+ * world `dnd-6`.
  *  1. GM, Player's Handbook Find Familiar as from the action bar (`configure: false`): DAS's "Choose the form" window opens, then
  *     dnd5e's compendium browser (CR mode: the creature is picked there). Closed without picking: no warning.
  *  2. GM, the same from the sheet (dnd5e's own usage window, a 1st-level slot): dnd5e's summon window opens. Closed.

@@ -1,25 +1,25 @@
 /**
- * §37.4 : effets portés tant qu'on est dans la zone d'un sort (clé de contenu `zoneEffects`, Silence : Assourdi, `silenced`, immunité
- * au tonnerre). Le cœur V14 le fait seul, une fois son comportement de région `applyActiveEffect` posé : copie des effets sur l'acteur
- * d'un token qui entre, retrait à sa sortie (client/data/region-behaviors/apply-active-effect.mjs, `origin` = uuid du comportement).
- * Vu en jeu le 2026-09-29 : les créatures déjà dans la zone à sa naissance « entrent » aussi, et la zone supprimée retire ses copies —
- * le moteur n'ajoute que le comportement. MJ actif.
+ * §37.4: effects borne while one is in a spell's area (content key `zoneEffects`, Silence: Deafened, `silenced`, thunder
+ * immunity). The V14 core does this alone, once its `applyActiveEffect` region behavior is placed: copying the effects
+ * onto the actor of a token that enters, removing them on exit (client/data/region-behaviors/apply-active-effect.mjs,
+ * `origin` = the behavior's uuid). Seen in play on 2026-09-29: the creatures already in the area at its birth also "enter",
+ * and the deleted area removes its copies — the engine only adds the behavior. Active GM.
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { contentOf } from "./content.mjs";
 import { fromPulseReached } from "../core/area.mjs";
 
-/** L'activité qui a posé la région (`flags.dnd5e.activity`), ou null. */
+/** The activity that placed the region (`flags.dnd5e.activity`), or null. */
 const activityOf = region => {
   const uuid = region.getFlag?.("dnd5e", "activity");
   return uuid ? fromUuidSync(uuid, { strict: false }) : null;
 };
 
 /**
- * §69 : la zone d'un sort `difficultTerrain` vient de naître sans comportement de terrain difficile (les données du Manuel des
- * joueurs premium l'ont perdu ; celles du SRD de dnd5e l'ont : spells24/1st-level/entangle.yml, `behaviors`) — on le pose, magique
- * (c'est un sort), avec ses types (data/region-behavior/difficult-terrain.mjs : `magical`, `types`). Rien si la région en a un.
+ * §69: the area of a `difficultTerrain` spell has just been born without a Difficult Terrain behavior (the premium Player's
+ * Handbook data lost it; those of dnd5e's SRD have it: spells24/1st-level/entangle.yml, `behaviors`) — we place it, magical
+ * (it is a spell), with its types (data/region-behavior/difficult-terrain.mjs: `magical`, `types`). Nothing if the region has one.
  * @returns {Promise<RegionBehavior|null>}
  */
 export async function holdDifficultTerrain(region) {
@@ -27,24 +27,24 @@ export async function holdDifficultTerrain(region) {
   const rule = contentOf(activity?.item).entry?.difficultTerrain;
   if ( !rule ) return null;
   const own = region.behaviors.filter(b => ["dnd5e.difficultTerrain", "modifyMovementCost"].includes(b.type));
-  // `fromPulse` (Tempête vengeresse : « tours 5 à 10 ») : pas encore — le comportement que la donnée porterait déjà est suspendu ;
-  // le moment venu (runtime/areas.mjs, au rejeu du lanceur), il est rétabli, ou posé ci-dessous.
+  // `fromPulse` (Storm of Vengeance: "turns 5 to 10"): not yet — the behavior the data would already carry is suspended;
+  // when the time comes (runtime/areas.mjs, on the caster's replay), it is restored, or placed below.
   if ( rule.fromPulse ) {
     const due = fromPulseReached(rule, region.getFlag?.(MODULE_ID, "area")?.pulses);
     for ( const behavior of own ) if ( behavior.disabled === due ) await behavior.update({ disabled: !due });
     if ( !due ) return null;
   }
   if ( own.length ) return null;
-  // §172 : un autre multiplicateur que ×2 (Mur d'épines : ×4) — le comportement « coût de déplacement » du cœur V14
-  // (client/data/region-behaviors/increase-movement-cost.mjs, `difficulties`). Tous les modes : le schéma ne garde que les siens (il
-  // est bâti avant que dnd5e retouche `CONFIG.Token.movement.actions` — filtrer comme lui n'en laissait aucun).
+  // §172: a multiplier other than ×2 (Wall of Thorns: ×4) — the V14 core's "movement cost" behavior
+  // (client/data/region-behaviors/increase-movement-cost.mjs, `difficulties`). All modes: the schema keeps only its own (it
+  // is built before dnd5e touches up `CONFIG.Token.movement.actions` — filtering like it left none).
   if ( rule.cost ) {
     const difficulties = Object.fromEntries(Object.keys(CONFIG.Token.movement.actions).map(action => [action, rule.cost]));
     const [behavior] = await region.createEmbeddedDocuments("RegionBehavior", [{ type: "modifyMovementCost", name: activity.item.name, system: { difficulties } }]);
     return behavior;
   }
-  // §403 : `enemiesOnly` — « terrain difficile pour vos ennemis » (Invocation d'élémentaires mineurs) : la disposition du lanceur
-  // passe sans frais (`ignoredDispositions` du comportement de dnd5e, data/region-behavior/difficult-terrain.mjs:27).
+  // §403: `enemiesOnly` — "Difficult Terrain for your enemies" (Conjure Minor Elementals): the caster's disposition
+  // passes at no cost (`ignoredDispositions` of dnd5e's behavior, data/region-behavior/difficult-terrain.mjs:27).
   const caster = rule.enemiesOnly ? (activity.actor?.token ?? activity.actor?.getActiveTokens?.(false, true)?.[0] ?? null) : null;
   const ignoredDispositions = caster ? [caster.disposition] : [];
   const [behavior] = await region.createEmbeddedDocuments("RegionBehavior", [{
@@ -54,7 +54,7 @@ export async function holdDifficultTerrain(region) {
 }
 
 /**
- * La zone d'un sort `zoneEffects` vient de naître : le comportement du cœur, avec les effets de l'activité.
+ * The area of a `zoneEffects` spell has just been born: the core behavior, with the activity's effects.
  * @returns {Promise<{behavior: RegionBehavior, effects: string[]}|null>}
  */
 export async function holdZoneEffects(region) {
@@ -62,7 +62,7 @@ export async function holdZoneEffects(region) {
   const item = activity?.item;
   if ( contentOf(item).entry?.zoneEffects !== true ) return null;
   if ( region.behaviors.some(b => b.type === "applyActiveEffect") ) return null;
-  // §126 : `getEffect()` de dnd5e 6 (le getter `effect` est déprécié) ; asynchrone pour un profil qui porte un `uuid`.
+  // §126: `getEffect()` of dnd5e 6 (the `effect` getter is deprecated); asynchronous for a profile that carries a `uuid`.
   const effects = (await Promise.all((activity.effects ?? []).map(e => e.getEffect?.() ?? item.effects.get(e._id)))).filter(Boolean);
   if ( !effects.length ) return null;
   const [behavior] = await region.createEmbeddedDocuments("RegionBehavior", [{
@@ -72,13 +72,13 @@ export async function holdZoneEffects(region) {
 }
 
 /**
- * §191 : les effets portés par la zone, remis en accord avec la position du token. Le comportement du cœur ne les retire qu'à une
- * sortie qu'il voit : un token téléporté (`blink`, Pas brumeux) ou déplacé de force (`displace`) hors de la Tempête radieuse de
- * Jallarzi restait Aveuglé, et en y revenant en recevait une seconde copie (vu le 2026-10-18). Pour chaque zone `zoneEffects` du
- * moteur : hors de la zone, ses copies (origine = le comportement) partent ; dedans, il en faut une par effet — les doublons partent,
- * les manquantes sont recréées comme le cœur les crée (apply-active-effect.mjs, `#getEffectsToCreate`). MJ actif.
+ * §191: the effects borne by the area, brought back in line with the token's position. The core behavior only removes them
+ * on an exit it sees: a token teleported (`blink`, Misty Step) or forcibly moved (`displace`) out of Jallarzi's Storm of
+ * Radiance stayed Blinded, and on coming back received a second copy (seen on 2026-10-18). For each engine `zoneEffects`
+ * area: outside the area, its copies (origin = the behavior) go; inside, there must be one per effect — duplicates go, the
+ * missing ones are recreated as the core creates them (apply-active-effect.mjs, `#getEffectsToCreate`). Active GM.
  * @param {TokenDocument} token
- * @returns {Promise<number>}  Le nombre de zones corrigées.
+ * @returns {Promise<number>}  The number of areas corrected.
  */
 export async function syncZoneEffects(token) {
   const actor = token?.actor;
@@ -123,10 +123,10 @@ export async function syncZoneEffects(token) {
 }
 
 /**
- * §261 : une zone instantanée qui laisse un terrain difficile derrière elle (`difficultTerrain.lingers`, Tempête de grêle : « la zone
- * devient un terrain difficile jusqu'à la fin de votre prochain tour ») — une copie de sa forme, sans les drapeaux de dnd5e (le moteur
- * ne la prend pas pour une zone de sort), avec le comportement de terrain difficile, visible de tous, notée pour être retirée à la fin
- * du prochain tour du lanceur (runtime/lingering.mjs). En combat seulement. MJ actif.
+ * §261: an instantaneous area that leaves Difficult Terrain behind it (`difficultTerrain.lingers`, Ice Storm: "the area
+ * becomes Difficult Terrain until the end of your next turn") — a copy of its shape, without dnd5e's flags (the engine does
+ * not take it for a spell area), with the Difficult Terrain behavior, visible to all, marked to be removed at the end of the
+ * caster's next turn (runtime/lingering.mjs). In combat only. Active GM.
  * @returns {Promise<RegionDocument|null>}
  */
 export async function leaveDifficultTerrain(region, activity, { caster, combat }) {

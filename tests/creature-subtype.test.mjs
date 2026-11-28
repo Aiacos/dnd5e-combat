@@ -6,8 +6,8 @@ import { validateEntry } from "../module/scripts/core/content.mjs";
 import { ITEM_FIXES } from "../module/scripts/content/item-fixes.mjs";
 import { holds } from "../module/scripts/core/triggers.mjs";
 
-describe("fait target.creatureSubtype : le sous-type d'une créature (Armure démoniaque)", () => {
-  it("sans égard à la casse ; une liste = l'un d'eux ; sans sous-type : non", () => {
+describe("fact target.creatureSubtype: a creature's subtype (Demon Armor)", () => {
+  it("case-insensitive; a list = any one of them; no subtype: no", () => {
     expect(subtypeMatches("Demon", "demon")).toBe(true);
     expect(subtypeMatches(" demon ", "Demon")).toBe(true);
     expect(subtypeMatches("Devil", "demon")).toBe(false);
@@ -16,7 +16,7 @@ describe("fait target.creatureSubtype : le sous-type d'une créature (Armure dé
     expect(subtypeMatches(null, "demon")).toBe(false);
     expect(subtypeMatches(undefined, [])).toBe(false);
   });
-  it("Armure démoniaque : Désavantage au jet d'attaque contre un démon, pas contre un diable", () => {
+  it("Demon Armor: Disadvantage on the attack roll against a demon, not against a devil", () => {
     const [rule] = ITEM_FIXES["demon-armor-enchanted"].triggers;
     expect(rule.on).toBe("preAttackRoll");
     expect(rule.do).toEqual([{ type: "disadvantage" }]);
@@ -25,7 +25,7 @@ describe("fait target.creatureSubtype : le sous-type d'une créature (Armure dé
     expect(holds(rule.if, facts("Devil"))).toBe(false);
     expect(holds(rule.if, facts(null))).toBe(false);
   });
-  it("Armure démoniaque : Désavantage aux sauvegardes qu'impose un démon, pas un diable", () => {
+  it("Demon Armor: Disadvantage on the saves a demon imposes, not a devil", () => {
     const rule = ITEM_FIXES["demon-armor-enchanted"].saveDisadvantageAgainst;
     expect(rule).toEqual({ subtypes: ["demon"] });
     expect(saveDisadvantageAgainstHolds(rule, "Demon")).toBe(true);

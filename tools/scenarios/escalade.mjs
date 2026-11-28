@@ -1,16 +1,16 @@
 /**
- * §192 (lot 1) : grimper aux murs, sur la scène « Escalade » de `dnd-6` (un mur vertical, un plafond en Surface à 20 ft sur la moitié
- * ouest, un sol en Surface, le Guerrier contre le mur, le Zombi juste au sud de lui, contre le mur aussi).
- *  1. Au sol près du mur : « Grimper » est possible ; sous un plafond à 20 ft, 3 cases au plus (tête comprise).
- *  2. Monter de 2 cases : élévation +10 ft, mode `climb`, statut « En escalade ».
- *  3. Marcher le long du mur à cette hauteur jusqu'au-dessus du Zombi (occupation en trois dimensions : sa case est libre à 10 ft).
- *  4. Se laisser tomber : la chute de dnd5e (carte « Fell 10 ft », 1d6 appliqué par le moteur, À terre), mode au sol, statut retiré.
- *  5. Mis À terre en escalade : il tombe (MJ actif), sans bouger lui-même.
- *  6. En combat (Vitesse 30, sans vitesse d'escalade) : 2 cases coûtent 20 ft (×2, le coût de dnd5e) ; il ne reste qu'une case ;
- *     en demander deux n'en monte qu'une ; puis plus rien.
- *  7. Règles « maison » : DD 15 Force (Athlétisme) pour grimper (un échec : pas de montée), puis à chaque tour en combat (la fenêtre
- *     de jet du MJ est répondue par le scénario ; fermée, le moteur lance sans fenêtre).
- * Remet le mode, l'élévation, les PV, les règles d'escalade ; le filet du lanceur reprend le reste.
+ * §192 (batch 1): climbing walls, on the "Escalade" scene of `dnd-6` (a vertical wall, a Surface ceiling at 20 ft on the west
+ * half, a Surface floor, the Fighter against the wall, the Zombie just south of him, against the wall too).
+ *  1. On the ground near the wall: "Climb" is possible; under a ceiling at 20 ft, 3 cells at most (head included).
+ *  2. Climb 2 cells: elevation +10 ft, `climb` mode, "Climbing" status.
+ *  3. Walk along the wall at that height to above the Zombie (three-dimensional occupancy: its cell is free at 10 ft).
+ *  4. Drop: dnd5e's fall ("Fell 10 ft" card, 1d6 applied by the engine, Prone), ground mode, status removed.
+ *  5. Knocked Prone while climbing: he falls (active GM), without moving himself.
+ *  6. In combat (Speed 30, no climb speed): 2 cells cost 20 ft (×2, dnd5e's cost); one cell remains;
+ *     asking for two climbs only one; then nothing.
+ *  7. "House" rules: DC 15 Strength (Athletics) to climb (a failure: no climb), then each turn in combat (the GM's roll window
+ *     is answered by the scenario; closed, the engine rolls without a window).
+ * Restores the mode, the elevation, the HP, the climbing rules; the runner's net takes the rest.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -36,7 +36,7 @@ export default {
     ctx.restore(() => ctx.engine("setting", { key: "climbRules", value: rules?.before ?? "2024" }));
     ctx.restore(reset);
     const statusesOf = async () => (await ctx.effects(hero)).filter(e => !e.disabled).flatMap(e => e.statuses ?? []);
-    /** La fenêtre de jet de dnd5e chez le MJ (règles maison) : on la valide ; introuvable, le moteur lance sans fenêtre au délai. */
+    /** dnd5e's roll window on the GM side (house rules): we validate it; if missing, the engine rolls windowless after the delay. */
     const answerRoll = async () => {
       for ( let i = 0; i < 15; i++ ) {
         const { windows = [] } = await ctx.call("list-dialogs", {}).catch(() => ({}));
@@ -53,7 +53,7 @@ export default {
       return false;
     };
 
-    // 1. Près du mur, au sol.
+    // 1. Near the wall, on the ground.
     let s = await state();
     if ( !ctx.expect(s.walls.length >= 1 && s.canClimb, `au sol contre un mur (${s.walls.length} mur), peut grimper`) ) return;
     ctx.expect((s.room?.max === 3) && (s.room?.ceiling === 15), `plafond à 20 ft : 3 cases au plus, pieds à 15 ft au plus (max ${s.room?.max}, plafond ${s.room?.ceiling})`);
@@ -68,7 +68,7 @@ export default {
     ctx.expect(s.climbing && s.status && s.canClimb, `en escalade : statut « En escalade » ${s.status ? "posé" : "absent"}, peut monter encore`);
     ctx.expect(s.room?.max === 1, `sous le plafond, une case de plus au plus (max ${s.room?.max})`);
 
-    // 3. Marche le long du mur, au-dessus du Zombi (sa case est libre à 10 ft : occupation en trois dimensions).
+    // 3. Walk along the wall, above the Zombie (its cell is free at 10 ft: three-dimensional occupancy).
     const zc = (await ctx.engine("movement", { tokenId: zombi.id })).position.cell;
     const along = await ctx.engine("move", { tokenId: hero.id, cell: zc });
     ctx.expect((along.after.cell.i === zc.i) && (along.after.cell.j === zc.j) && (along.after.elevation === up.after.elevation) && (along.after.movementAction === "climb"),
@@ -76,7 +76,7 @@ export default {
     const back = await ctx.engine("move", { tokenId: hero.id, cell: up.after.cell });
     ctx.expect((back.after.cell.i === up.after.cell.i) && (back.after.cell.j === up.after.cell.j) && (back.after.elevation === up.after.elevation), `revient à sa case, toujours à ${back.after.elevation} ft`);
 
-    // 4. Se laisser tomber : la chute de dnd5e, ses dégâts appliqués, À terre.
+    // 4. Drop: dnd5e's fall, its damage applied, Prone.
     await pause(1500);
     const since = await ctx.lastMessageId();
     const drop = await ctx.engine("dropDown", { tokenId: hero.id });
@@ -91,14 +91,14 @@ export default {
     ctx.expect(statuses.includes("prone") && !s.status && !s.falling, `À terre après des dégâts de chute ; plus « En escalade » ni « En chute » (${statuses.join(", ") || "aucun état"})`);
     await reset();
 
-    // 5. Mis À terre en pleine escalade : il tombe.
+    // 5. Knocked Prone mid-climb: he falls.
     const up2 = await ctx.engine("climb", { tokenId: hero.id, cells: 2 });
     if ( ctx.expect(up2.done && (up2.after.elevation === home.elevation + 10), `remonte de 2 cases (${up2.after.elevation} ft)`) ) {
       await pause(1500);
       await ctx.call("set-status", { tokenId: hero.id, statusId: "prone", active: true });
       let fell = null;
       for ( let i = 0; (i < 30) && !fell; i++ ) { await pause(500); const now = await state(); if ( now.position.elevation === home.elevation ) fell = now; }
-      // Les dégâts suivent la fin des dés 3D (waitForDice, 8 s au plus) : on les attend.
+      // Damage follows the end of the 3D dice (waitForDice, 8 s at most): we wait for it.
       let hp2 = await ctx.hp(hero);
       for ( let i = 0; (i < 24) && (hp2 >= hp0); i++ ) { await pause(500); hp2 = await ctx.hp(hero); }
       ctx.expect(!!fell && !fell.climbing && !fell.status, `mis À terre au mur : tombe au sol (élévation ${fell?.position.elevation ?? "—"}, mode ${fell?.position.movementAction ?? "—"}, statut escalade ${fell?.status ?? "—"})`);
@@ -106,7 +106,7 @@ export default {
     }
     await reset();
 
-    // 6. En combat : le budget du tour.
+    // 6. In combat: the turn's budget.
     await ctx.startCombat([hero]);
     await pause(1000);
     const m0 = await ctx.engine("movement", { tokenId: hero.id });
@@ -126,7 +126,7 @@ export default {
     ctx.ownCombat = null;
     await reset();
 
-    // 7. Règles « maison » : DD 15 pour grimper, puis à chaque tour.
+    // 7. "House" rules: DC 15 to climb, then each turn.
     await ctx.engine("setting", { key: "climbRules", value: "house" });
     const seen = { success: false, failure: false };
     for ( let n = 0; (n < 8) && !(seen.success && seen.failure); n++ ) {
@@ -138,8 +138,8 @@ export default {
       if ( r.done ) {
         seen.success = true;
         ctx.expect(now.climbing && (now.position.elevation === home.elevation + 5), `test réussi : grimpe (${now.position.elevation} ft)`);
-        // À chaque tour en combat : le test est redemandé au début de son tour — dès le début du combat (son tour commence), puis à
-        // chaque tour suivant. Fait : l'heure du dernier test a changé, ou le drapeau est parti avec la chute d'un échec.
+        // Each turn in combat: the check is asked again at the start of its turn — from the combat start (its turn begins), then
+        // each following turn. Done: the last check's time changed, or the flag left with the fall from a failure.
         const before = now.checkedAt;
         const since = await ctx.lastMessageId();
         await ctx.startCombat([hero]);
@@ -147,8 +147,8 @@ export default {
         for ( let i = 0; (i < 30) && !checked; i++ ) { await pause(500); const c = await state(); if ( c.checkedAt !== before ) checked = c; }
         ctx.expect(!!checked, `au début de son tour, le test est redemandé (${checked ? "fait" : "non fait"})`);
         if ( checked ) {
-          // La chute d'un échec prend du temps (statut d'escalade retiré par le MJ, fin d'animation, chute de dnd5e) : on attend l'un ou
-          // l'autre état stable, jusqu'à 12 s, plutôt qu'un délai fixe.
+          // A failure's fall takes time (climbing status removed by the GM, end of animation, dnd5e fall): we wait for either
+          // stable state, up to 12 s, rather than a fixed delay.
           let after = null, held = false, fallen = false;
           for ( let i = 0; i < 24; i++ ) {
             await pause(500);

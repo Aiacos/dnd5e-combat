@@ -1,35 +1,35 @@
 import { describe, it, expect } from "vitest";
 import { typeAllowed, blockedStatuses, immuneToAll, CREATURE_TYPES } from "../module/scripts/core/eligibility.mjs";
 
-describe("type de créature (§16.8)", () => {
-  it("« un Humanoïde » : oui pour un humanoïde, non pour un mort-vivant", () => {
+describe("creature type (§16.8)", () => {
+  it("\"a Humanoid\": yes for a humanoid, no for an Undead", () => {
     expect(typeAllowed(["humanoid"], "humanoid")).toBe(true);
     expect(typeAllowed(["humanoid"], "undead")).toBe(false);
   });
-  it("sans restriction, ou sans type connu : permis (jamais de refus par ignorance)", () => {
+  it("without restriction, or without a known type: allowed (never a refusal out of ignorance)", () => {
     expect(typeAllowed(null, "undead")).toBe(true);
     expect(typeAllowed([], "undead")).toBe(true);
     expect(typeAllowed(["beast"], null)).toBe(true);
   });
-  it("connaît les quatorze types de dnd5e", () => {
+  it("knows the fourteen dnd5e types", () => {
     expect(CREATURE_TYPES).toHaveLength(14);
     expect(CREATURE_TYPES).toContain("humanoid");
   });
 });
 
-describe("immunités aux états (§16.8)", () => {
-  it("les états bloqués d'un effet", () => {
+describe("condition immunities (§16.8)", () => {
+  it("the blocked conditions of an effect", () => {
     expect(blockedStatuses(["charmed", "incapacitated"], ["charmed", "poisoned"])).toEqual(["charmed"]);
     expect(blockedStatuses(["paralyzed"], [])).toEqual([]);
   });
-  it("une action qui ne fait que poser des effets bloqués n'affecte pas la créature", () => {
+  it("an action that only places blocked effects does not affect the creature", () => {
     expect(immuneToAll({ effects: [["charmed", "incapacitated"]] }, ["charmed"])).toBe("charmed");
     expect(immuneToAll({ effects: [["paralyzed"], ["charmed"]] }, ["charmed"])).toBeNull();   // un effet passe
   });
-  it("des dégâts, un soin ou une étape d'issue l'affectent quand même ; sans effet, rien à juger", () => {
+  it("damage, healing or an outcome step still affect it; without an effect, nothing to judge", () => {
     expect(immuneToAll({ damage: true, effects: [["poisoned"]] }, ["poisoned"])).toBeNull();
     expect(immuneToAll({ steps: true, effects: [["poisoned"]] }, ["poisoned"])).toBeNull();
     expect(immuneToAll({ effects: [] }, ["poisoned"])).toBeNull();
-    expect(immuneToAll({ effects: [[]] }, ["poisoned"])).toBeNull();   // un effet sans état n'est jamais bloqué
+    expect(immuneToAll({ effects: [[]] }, ["poisoned"])).toBeNull();   // an effect without a condition is never blocked
   });
 });

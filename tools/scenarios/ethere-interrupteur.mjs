@@ -1,9 +1,9 @@
 /**
- * §225 : l'interrupteur du MJ « Plan Éthéré automatisé » (réglage de monde `etherealPlane`). Arène, le Zombi Éthéré.
- *  1. Allumé : action de déplacement « ethereal », le Trait de feu ne l'affecte pas, le Guerrier ne le voit pas.
- *  2. Coupé : son action d'avant revient, le Trait de feu l'affecte, le Guerrier le voit ; personne n'a bougé, aucun dégât de retour.
- *  3. Rallumé : action « ethereal » de nouveau, non affecté.
- * Remet le réglage, l'état, les PV.
+ * §225: the GM's "Automated Ethereal Plane" switch (world setting `etherealPlane`). Arena, the Ethereal Zombie.
+ *  1. On: movement action "ethereal", Fire Bolt does not affect him, the Fighter does not see him.
+ *  2. Off: its previous action returns, Fire Bolt affects him, the Fighter sees him; nobody moved, no backlash damage.
+ *  3. Back on: action "ethereal" again, unaffected.
+ * Restores the setting, the condition, the HP.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -30,14 +30,14 @@ export default {
     };
     const sees = async () => (await ctx.engine("sees", { observerId: fighter.id, targetId: zombi.id })).sees;
 
-    // 1. Allumé.
+    // 1. On.
     await ctx.call("set-status", { tokenId: zombi.id, statusId: "ethereal", active: true });
     await pause(1500);
     ctx.expect((await action()) === "ethereal", `allumé : action « ethereal » (${await action()})`);
     ctx.expect((await fireBolt())?.unaffected?.reason === "plane", "allumé : le Trait de feu n'affecte pas le Zombi Éthéré");
     ctx.expect((await sees()) === false, "allumé : le Guerrier ne le voit pas");
 
-    // 2. Coupé.
+    // 2. Off.
     await ctx.engine("setting", { key: "etherealPlane", value: false });
     await pause(2000);
     const off = await action();
@@ -51,7 +51,7 @@ export default {
     if ( !t2?.hit ) ctx.expect((await ctx.hp(zombi)) === hpBefore, "coupé : aucun dégât de retour");
     await ctx.setHp(zombi, hp0);
 
-    // 3. Rallumé.
+    // 3. Back on.
     await ctx.engine("setting", { key: "etherealPlane", value: true });
     await pause(2000);
     ctx.expect((await action()) === "ethereal", `rallumé : action « ethereal » de nouveau (${await action()})`);

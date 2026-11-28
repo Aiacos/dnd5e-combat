@@ -1,12 +1,13 @@
 /**
- * §113 : une aide demandée pour un test de compétence ou d'outil (à la manière de BG3) — la demande part au joueur de l'aidant
- * (requête `user.query` du cœur ; à défaut le MJ actif), qui accepte ou refuse :
- *  - Assistance : l'aidant lance VRAIMENT le sort sur le testeur (sa concentration, l'effet de la compétence choisi d'avance,
- *    sans la question des 18 effets) ; l'effet natif ajoute le 1d4, à ce test et aux suivants tant que le sort dure ;
- *  - Inspiration bardique : le barde utilise pour de bon son Inspiration sur le testeur (une utilisation, l'effet « Inspiré ») ; le
- *    dé se lance après le test, s'il est raté (runtime/roll-bonus.mjs) ;
- *  - Soutien : rien n'est lancé, le test a l'Avantage (l'interface le pose dans la fenêtre du jet) et une carte le dit.
- * Celui qui demande et possède déjà l'aidant (le même joueur, ou le MJ sans joueur connecté) n'est pas questionné.
+ * §113: help requested for a skill or tool check (BG3 style) — the request goes to the helper's player
+ * (core `user.query` request; otherwise the active GM), who accepts or refuses:
+ *  - Guidance: the helper REALLY casts the spell on the tester (their Concentration, the skill effect chosen in advance,
+ *    without the 18-effects question); the native effect adds the 1d4, to this check and the following ones as long as the
+ *    spell lasts;
+ *  - Bardic Inspiration: the bard really uses their Inspiration on the tester (one use, the "Inspired" effect); the
+ *    die is rolled after the check, if it is missed (runtime/roll-bonus.mjs);
+ *  - Help: nothing is cast, the check has Advantage (the interface sets it in the roll window) and a card says so.
+ * The one who asks and already owns the helper (the same player, or the GM with no player connected) is not asked.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,16 +22,16 @@ import { log, loc, say, locEsc } from "./shared.mjs";
 
 export const SKILL_AID_QUERY = `${MODULE_ID}.skillAid`;
 
-/** Un test libre n'est pas un combat : on laisse à l'aidant le temps de lire. */
+/** A free check is not a combat: the helper is given time to read. */
 const answerSeconds = () => Math.max(20, combatWindowSeconds());
 
-/** Le nom du test : la compétence ou l'outil. */
+/** The name of the check: the skill or the tool. */
 export function testLabel({ skill=null, tool=null }) {
   if ( skill ) return game.i18n.localize(CONFIG.DND5E.skills?.[skill]?.label ?? skill);
   return globalThis.dnd5e?.documents?.Trait?.keyLabel?.(tool, { trait: "tool" }) ?? tool ?? "";
 }
 
-/** L'aide, sur le client qui possède l'aidant. Rend true si elle est donnée. */
+/** The help, on the client that owns the helper. Returns true if it is given. */
 async function perform({ kind, helper, tester, skill, tool }) {
   const actor = await fromUuid(helper);
   const target = await fromUuid(tester);
@@ -63,17 +64,17 @@ async function perform({ kind, helper, tester, skill, tool }) {
 }
 
 /**
- * Côté de l'aidant : la question, puis l'aide. « Non » au bout du délai.
+ * Helper side: the question, then the help. "No" at the end of the delay.
  * @param {{kind: "guidance"|"inspiration"|"help", helper: string, tester: string, skill: string|null, tool: string|null}} payload
- *   `helper` : uuid de l'acteur qui aide ; `tester` : uuid du token qui fait le test.
+ *   `helper`: uuid of the actor who helps; `tester`: uuid of the token making the check.
  */
 export async function handleSkillAidQuery(payload) {
   const actor = await fromUuid(payload.helper);
   const target = await fromUuid(payload.tester);
   if ( !actor || !target ) return false;
   const what = testLabel(payload);
-  // Lancer Assistance met fin à la concentration en cours (dnd5e la remplace sans fenêtre) : on le dit. §494 : seulement si la créature
-  // en tient déjà autant que sa limite (plusieurs concentrations à la fois : rien ne tombe en dessous).
+  // Casting Guidance ends the Concentration in progress (dnd5e replaces it without a window): we say so. §494: only if the
+  // creature already holds as many as its limit (several Concentrations at once: nothing drops below it).
   const held = Array.from(actor.concentration?.effects ?? []);
   const current = ((payload.kind === "guidance") && replacesConcentration(held.length, actor.system?.attributes?.concentration?.limit)) ? held[0] : null;
   const source = payload.kind === "inspiration" ? inspirationSourceOf(actor) : null;
@@ -88,15 +89,16 @@ export async function handleSkillAidQuery(payload) {
       { action: "yes", label: loc("AideTest.Accepter"), icon: "fa-solid fa-hand-holding-heart", default: true },
       { action: "no", label: loc("AideTest.Refuser"), icon: "fa-solid fa-xmark" }
     ]
-  }, { fallback: "no", seconds: windowsUnlimited() ? null : answerSeconds(), awaiting: { actor, kind: "choice" } });   // §290 : sans délai, le MJ force
+  }, { fallback: "no", seconds: windowsUnlimited() ? null : answerSeconds(), awaiting: { actor, kind: "choice" } });   // §290: no delay, the GM forces
   if ( answer !== "yes" ) return false;
   return perform(payload);
 }
 
 /**
- * Sur le client du testeur : demande l'aide à qui joue l'aidant. Rend true si elle est donnée (l'Assistance est alors lancée ;
- * son effet arrive un peu après, par la résolution du MJ actif).
- * @param {{kind: "guidance"|"inspiration"|"help", helper: Actor, tester: TokenDocument, skill?: string|null, tool?: string|null}} request
+ * On the tester's client: asks for help from whoever plays the helper. Returns true if it is given (Guidance is then
+ * cast; its effect arrives a little later, through the active GM's resolution).
+ * @param {{kind: "guidance"|"inspiration"|"help", helper: Actor, tester: TokenDocument,
+ *   skill?: string|null, tool?: string|null}} request
  */
 export async function requestSkillAid({ kind, helper, tester, skill=null, tool=null }) {
   const payload = { kind, helper: helper.uuid, tester: tester.uuid, skill, tool };
@@ -118,5 +120,5 @@ export async function requestSkillAid({ kind, helper, tester, skill=null, tool=n
 }
 
 export function registerSkillAid() {
-  CONFIG.queries[SKILL_AID_QUERY] = handleSkillAidQuery;   // sur tous les clients : c'est le joueur de l'aidant qui répond
+  CONFIG.queries[SKILL_AID_QUERY] = handleSkillAidQuery;   // on every client: the helper's player is the one who answers
 }

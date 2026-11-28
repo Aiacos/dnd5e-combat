@@ -1,12 +1,12 @@
 /**
- * §62 — L'ouïe et la brume à l'écran. Monde `ravenloft` : ce que Kaalisti voit du Zombi, par ses yeux (le MJ prend le contrôle
- * de son token, `api.mcp.perceived`), et ce que la légalité dit d'une cible cachée.
- *  1. Zombi Invisible : il reste à l'écran, avec le contour ondulant de l'ouïe.
- *  2. Nappe de brouillard (prêtée à Bramo, à volonté) posée sur le Zombi : à l'écran, contour de l'ouïe, pas vu normalement.
- *  3. Kaalisti Assourdi, Zombi dans la brume : plus rien à l'écran.
- *  4. Zombi caché (effet de Furtivité du moteur, DD 20) : plus rien à l'écran ; un Trait de feu de Kaalisti sur lui est refusé
- *     par la légalité (« caché : vous ne savez pas où il est »).
- * Se déclare non applicable si Kaalisti ne voit pas le Zombi au départ (scène trop sombre, murs).
+ * §62 — Hearing and mist on screen. World `ravenloft`: what Kaalisti sees of the Zombie, through their eyes (the GM takes control
+ * of their token, `api.mcp.perceived`), and what legality says about a hidden target.
+ *  1. Invisible Zombie: it stays on screen, with the wavering outline of hearing.
+ *  2. Fog Cloud (lent to Bramo, at will) placed on the Zombie: on screen, hearing outline, not seen normally.
+ *  3. Kaalisti Deafened, Zombie in the mist: nothing more on screen.
+ *  4. Hidden Zombie (the engine's Stealth effect, DC 20): nothing more on screen; a Fire Bolt from Kaalisti on it is refused
+ *     by legality ("hidden: you do not know where it is").
+ * Declares itself not applicable if Kaalisti does not see the Zombie at the start (scene too dark, walls).
  */
 const FOG_CLOUD = "Compendium.dnd-players-handbook.spells.Item.phbsplFogCloud00";
 const HEARING = [0.55, 0.8, 1, 1];
@@ -58,7 +58,7 @@ export default {
     await ctx.call("delete-scene-object", { type: "Region", objectId: used.regionId }).catch(() => {});
     await sleep(800);
 
-    // 4. Caché.
+    // 4. Hidden.
     const { data: tok } = await ctx.call("get-scene-object", { type: "Token", objectId: zombie.id });
     const target = tok.actorLink ? { documentType: "Actor", id: tok.actorId } : { uuid: `Scene.${sceneId}.Token.${zombie.id}.Actor.${tok.actorId}` };
     const hidden = await ctx.call("upsert-embedded-effect", { ...target, effectData: {

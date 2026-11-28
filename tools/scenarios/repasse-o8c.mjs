@@ -1,8 +1,8 @@
 /**
- * §346, lot O8c de la repasse des objets : lumière d'une arme enchantée, capuchon de la Lanterne à capuchon. Arène de test (Guerrier).
- *  1. Lanterne à capuchon allumée : 30/60 ft ; capuchon baissé : 0/5 ft ; levé : 30/60 ft de nouveau.
- *  2. Langue de feu posée sur une Épée longue : pas de lumière ; « Ablaze » posé : la lame éclaire (40/80 ft) ; retiré : plus de lumière.
- *  3. Épée sélène : une source portée (menu « Allumer »), 15/30 ft.
+ * §346, batch O8c of the item pass: light of an enchanted weapon, hood of the Hooded Lantern. Test arena (Fighter).
+ *  1. Hooded Lantern lit: 30/60 ft; hood lowered: 0/5 ft; raised: 30/60 ft again.
+ *  2. Flame Tongue placed on a Longsword: no light; "Ablaze" placed: the blade lights up (40/80 ft); removed: no more light.
+ *  3. Moon Sickle: a carried source ("Light" menu), 15/30 ft.
  */
 const PHB = "Compendium.dnd-players-handbook.equipment.Item.";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -24,14 +24,15 @@ export default {
     const near = (a, b) => Math.abs(a - b) < 0.6;
     const shows = async (bright, dim) => { await pause(600); const l = await light(); return near(l.bright, bright) && near(l.dim, dim) ? null : `${l.bright}/${l.dim}`; };
     const base = await light();
-    // Les rayons s'expriment dans l'unité de la scène (pieds dans l'Arène). Les mains libres : armes et boucliers rangés le temps du scénario.
+    // The radii are expressed in the scene's unit (feet in the Arena). Free hands: weapons and shields stowed for the
+    // duration of the scenario.
     const setItem = (id, data) => ctx.call("upsert-actor-item", { actorId, itemData: data, match: { path: "_id", value: id } });
     const inHand = ((await ctx.call("get-actor", { actorId })).items ?? []).filter(i => i.system?.equipped
       && ((i.type === "weapon") || ((i.type === "equipment") && (i.system?.type?.value === "shield")))).map(i => i._id);
     for ( const id of inHand ) await setItem(id, { "system.equipped": false });
     ctx.restore(async () => { for ( const id of inHand ) await setItem(id, { "system.equipped": true }); });
 
-    // 1. Lanterne à capuchon.
+    // 1. Hooded Lantern.
     await ctx.ensureItem(fighter, `${PHB}phbagOil00000000`, { system: { quantity: 1 } });
     const lantern = await ctx.ensureItem(fighter, `${PHB}phbagLanternHood`);
     const on = await ctx.engine("toggleLight", { actorId, itemId: lantern, on: true });
@@ -66,7 +67,7 @@ export default {
       ctx.expect(!bad, `les flammes éteintes, plus de lumière (${bad ?? "ok"})`);
     }
 
-    // 3. Épée sélène.
+    // 3. Moon Sickle.
     const moon = await ctx.ensureItem(fighter, `${DMG}dmgMoontouchedSw`);
     const lit = await ctx.engine("toggleLight", { actorId, itemId: moon, on: true });
     ctx.restore(() => ctx.engine("toggleLight", { actorId, itemId: moon, on: false }).catch(() => null));

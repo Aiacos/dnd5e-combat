@@ -1,8 +1,8 @@
 /**
- * M8 (SPEC §18.17) : Avaler / Engloutir vu depuis Foundry. L'item (contenu `swallow`, par identifiant) porte dans le Monster
- * Manual l'effet « avalé » (Aveuglé, Entravé et abri total — ou Agrippé pour le Tertre errant) qu'une de ses activités pose ;
- * une créature est avalée tant qu'elle porte cet effet. Ses activités : les dégâts à chaque tour (`damage`), et la sauvegarde
- * pour ne pas régurgiter (une `save` qui ne pose pas l'effet « avalé »).
+ * M8 (SPEC §18.17): Swallow / Engulf as seen from Foundry. The item (`swallow` content, by identifier) carries in the Monster
+ * Manual the "swallowed" effect (Blinded, Restrained and Total Cover — or Grappled for the Shambling Mound) that one of its
+ * activities applies; a creature is swallowed as long as it bears this effect. Its activities: the damage each turn (`damage`),
+ * and the save to avoid being regurgitated (a `save` that does not apply the "swallowed" effect).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,17 +15,17 @@ import { englishDescription } from "./multiattack.mjs";
 import { committedPosition } from "./turn.mjs";
 import { effectOfProfile } from "./usage.mjs";
 
-/** L'effet « avalé » d'un item : celui qui porte l'abri total, ou l'état Agrippé (Tertre errant). */
+/** The "swallowed" effect of an item: the one that carries Total Cover, or the Grappled condition (Shambling Mound). */
 const isSwallowedEffectData = e => e.statuses?.has?.("coverTotal") || e.statuses?.has?.("grappled");
 
 /**
  * @returns {{item: Item5e, entry: Activity|null, damage: Activity|null, regurgitate: Activity|null, escape: Activity|null,
  *   effectIds: Set<string>, damageAt: string|null, threshold: number|null, capacity: number|null, grappling: boolean,
  *   forbids: string|null, repeatsSave: boolean, moving: boolean, maxSize: string|null}|null}
- *   `entry` : l'activité qui pose l'effet « avalé » ; `escape` : le test d'évasion (`check`, Cube gélatineux).
- *   §45 : `entryPoses` — faux quand aucune activité du Monster Manual ne pose l'effet (Crapaud géant) : `entry` est alors
- *   l'action de l'item (« Expend Use »), et le moteur pose lui-même l'effet `effectId` sur la créature agrippée
- *   (runtime/swallow.mjs) ; `targetMaxSize` : la taille de ce qui s'avale.
+ *   `entry`: the activity that applies the "swallowed" effect; `escape`: the escape check (`check`, Gelatinous Cube).
+ *   §45: `entryPoses` — false when no Monster Manual activity applies the effect (Giant Toad): `entry` is then
+ *   the item's action ("Expend Use"), and the engine itself applies the `effectId` effect to the grappled creature
+ *   (runtime/swallow.mjs); `targetMaxSize`: the size of what it swallows.
  */
 export function swallowOf(item) {
   if ( !item || (contentOf(item).entry?.swallow !== true) ) return null;
@@ -34,8 +34,8 @@ export function swallowOf(item) {
   const activities = item.system.activities?.contents ?? [];
   const posesSwallow = a => (a.effects ?? []).some(ref => effectIds.has(ref._id ?? effectOfProfile(ref, item)?.id));
   const poses = activities.find(posesSwallow) ?? null;
-  // Crapaud géant (MM 2.x) : ses trois activités sont « Damage: Swallowed », « Escape Corpse » et « Expend Use » — aucune
-  // ne relie l'effet « avalé ». L'action sans effet de l'item tient lieu d'entrée.
+  // Giant Toad (MM 2.x): its three activities are "Damage: Swallowed", "Escape Corpse" and "Expend Use" — none
+  // links the "swallowed" effect. The item's effectless action stands in as the entry.
   const entry = poses ?? activities.find(a => (a.type === "utility") && ["action", "bonus"].includes(a.activation?.type)
     && !(a.effects ?? []).length) ?? null;
   const text = readSwallow(englishDescription(item));
@@ -45,10 +45,10 @@ export function swallowOf(item) {
     regurgitate: activities.find(a => (a.type === "save") && !posesSwallow(a) && a.save?.dc?.value) ?? null,
     escape: activities.find(a => a.type === "check") ?? null,
     ...text,
-    // La taille de ce qui s'avale : le texte (Crapaud), sinon la cible de l'activité (« Small or smaller », traduite par Babele).
+    // The size of what it swallows: the text (Toad), otherwise the activity's target ("Small or smaller", translated by Babele).
     targetMaxSize: text.targetMaxSize ?? sizeLimit(entry?.target?.affects?.special),
-    // §18.21 : « one Large or smaller creature Grappled by the behir » — la cible de l'activité le dit, pas le texte.
-    // Traduit par Babele dans un monde français (« … agrippée par le béhir »).
+    // §18.21: "one Large or smaller creature Grappled by the behir" — the activity's target says it, not the text.
+    // Translated by Babele in a French world ("… agrippée par le béhir").
     grappling: text.grappling || /\bGrappled\b|agripp/i.test(entry?.target?.affects?.special ?? "")
   };
 }
@@ -62,7 +62,7 @@ export function swallowItemOf(actor) {
   return null;
 }
 
-/** Cet effet rend-il sa créature avalée ? Rend l'item et l'acteur avaleur, ou null. */
+/** Does this effect make its creature swallowed? Returns the item and the swallowing actor, or null. */
 export function swallowedBy(effect) {
   if ( !effect?.active ) return null;
   const item = originItemOf(effect);
@@ -73,8 +73,8 @@ export function swallowedBy(effect) {
 
 
 /**
- * Le token avaleur d'un effet « avalé » : celui que nomme l'origine de l'effet (« Scene.<id>.Token.<id>.Actor… » — plusieurs
- * tokens non liés partagent un même acteur de base : trois Zombis dans `dnd-6`), sinon le premier token de l'acteur dans la scène.
+ * The swallowing token of a "swallowed" effect: the one named by the effect's origin ("Scene.<id>.Token.<id>.Actor…" — several
+ * unlinked tokens share one base actor: three Zombies in `dnd-6`), otherwise the first token of the actor in the scene.
  */
 export function swallowerTokenFor(effect, by, scene) {
   const origin = String(effect.system?.origin?.activity ?? effect.system?.origin?.item ?? effect.origin ?? "");
@@ -84,7 +84,7 @@ export function swallowerTokenFor(effect, by, scene) {
   return by?.swallower?.getActiveTokens?.(false, true)?.find(t => t.parent === scene) ?? null;
 }
 
-/** Les créatures qu'un token avaleur a dans le ventre : [{ token, effect }]. */
+/** The creatures a swallowing token has in its belly: [{ token, effect }]. */
 export function swallowedIn(swallowerToken) {
   const out = [];
   for ( const token of swallowerToken?.parent?.tokens ?? [] ) {
@@ -97,7 +97,7 @@ export function swallowedIn(swallowerToken) {
   return out;
 }
 
-/** L'avaleur d'un token avalé, dans sa scène : { token, effect, rule } ou null. */
+/** The swallower of a swallowed token, in its scene: { token, effect, rule } or null. */
 export function swallowerOf(token) {
   for ( const effect of token?.actor?.effects ?? [] ) {
     const by = swallowedBy(effect);
@@ -108,7 +108,7 @@ export function swallowerOf(token) {
   return null;
 }
 
-/** Le token avalé et son effet, pour un effet qui vient d'être posé. */
+/** The swallowed token and its effect, for an effect that has just been applied. */
 export function swallowedTokenOf(effect) {
   const actor = actorOfEffect(effect);
   if ( !actor ) return null;
@@ -116,9 +116,10 @@ export function swallowedTokenOf(effect) {
 }
 
 /**
- * Pose l'avalé au centre de l'espace de l'avaleur (un pas `displace` : ni attaque d'opportunité). La case est occupée par
- * l'avaleur : dnd5e, en automatisation du déplacement « complète », refuse d'y finir quand ils sont ennemis — `ignoreTokens`,
- * option de contrainte de dnd5e (canvas/token.mjs:92) que le cœur transmet (`constrainOptions`, documents/token.mjs:1723).
+ * Places the swallowed creature at the center of the swallower's space (a `displace` step: no Opportunity Attack either).
+ * The cell is occupied by the swallower: dnd5e, with "full" movement automation, refuses to end there when they are enemies —
+ * `ignoreTokens`, a dnd5e constraint option (canvas/token.mjs:92)
+ * that the core passes on (`constrainOptions`, documents/token.mjs:1723).
  */
 export async function placeInside(token, swallowerToken) {
   const grid = token.parent.grid;
@@ -129,7 +130,7 @@ export async function placeInside(token, swallowerToken) {
     { constrainOptions: { ignoreTokens: true }, [MODULE_ID]: { cleared: true, dragged: true } });
 }
 
-/** Fait suivre les avalés quand l'avaleur marche (même décalage). */
+/** Makes the swallowed follow when the swallower walks (same offset). */
 export async function carrySwallowed(swallowerToken, dx, dy, dz) {
   for ( const { token } of swallowedIn(swallowerToken) ) {
     const p = committedPosition(token);
@@ -138,13 +139,13 @@ export async function carrySwallowed(swallowerToken, dx, dy, dz) {
   }
 }
 
-/** Libère un avalé : l'effet « avalé » retiré, posé sur une case libre au contact de l'avaleur, À terre. */
-/** Les effets « avalé » que le moteur retire lui-même (release) : leur suppression ne relance pas la sortie. */
+/** Releases a swallowed creature: "swallowed" effect removed, placed on a free cell in contact with the swallower, Prone. */
+/** The "swallowed" effects the engine removes itself (release): their removal does not trigger the exit again. */
 export const releasing = new Set();
 
 /**
- * Libère un avalé : l'effet « avalé » retiré, posé sur une case libre au contact de l'avaleur ; À terre après une
- * régurgitation, une mort ou un recrachement, pas après une évasion (« escapes and enters the nearest unoccupied space »).
+ * Releases a swallowed creature: "swallowed" effect removed, placed on a free cell in contact with the swallower; Prone after a
+ * regurgitation, a death or a spitting out, not after an escape ("escapes and enters the nearest unoccupied space").
  */
 export async function release(token, effect, swallowerToken, { prone=true }={}) {
   if ( effect ) releasing.add(effect.uuid);
@@ -154,7 +155,7 @@ export async function release(token, effect, swallowerToken, { prone=true }={}) 
   if ( prone ) await token.actor?.toggleStatusEffect("prone", { active: true });
 }
 
-/** Sort un token de l'espace de l'avaleur, sur la case libre au contact la plus proche (s'il y est encore). */
+/** Moves a token out of the swallower's space, onto the nearest free cell in contact (if it is still there). */
 export async function moveOut(token, swallowerToken) {
   if ( !swallowerToken || !overlaps(token, swallowerToken) ) return;
   const spot = swallowerToken ? dragDestination(token, swallowerToken, { x: committedPosition(swallowerToken).x - (token.width * token.parent.grid.sizeX), y: committedPosition(swallowerToken).y }) : null;
@@ -164,7 +165,7 @@ export async function moveOut(token, swallowerToken) {
   }
 }
 
-/** Rectangle en pixels d'un token à sa position validée. */
+/** Pixel rectangle of a token at its validated position. */
 export function footprint(token, position=committedPosition(token)) {
   const grid = token.parent.grid;
   return { x: position.x, y: position.y, w: token.width * grid.sizeX, h: token.height * grid.sizeY };

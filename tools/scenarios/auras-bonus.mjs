@@ -1,10 +1,11 @@
 /**
- * §18.12 — auras à bonus du Monster Manual, effets réparés par le contenu. Monde `ravenloft`, capacités prêtées au Loup :
- *  1. Autorité (Capitaine hobgobelin) : le Zombi, allié à 1,50 m, reçoit la copie (12 changements, aucun état) ; sa
- *     sauvegarde contre la Flamme sacrée d'Alara se jette avec l'avantage (2d20), son Coup contre Bramo aussi ; éloigné de
- *     6 m, la copie tombe et la sauvegarde redevient 1d20. Le Loup (lui-même) a la sienne.
- *  2. Commandement des morts-vivants (Chevalier de la mort) : le Zombi (mort-vivant) la reçoit, l'Ours brun (bête) non.
- *  3. Aura de bravoure (Chevalier en quête) : la copie sur le Zombi rend immunisé à Charmé et Effrayé, sans les poser.
+ * §18.12 — Monster Manual bonus auras, effects repaired by the content. World `ravenloft`, abilities lent to the Wolf:
+ *  1. Leadership (Hobgoblin Captain): the Zombie, an ally within 1.50 m, receives the copy (12 changes, no condition); its
+ *     saving throw against Alara's Sacred Flame is rolled with Advantage (2d20), so is its Slam against Bramo; moved away to
+ *     6 m, the copy drops and the save goes back to 1d20. The Wolf (itself) has its own.
+ *  2. Command Undead (Death Knight): the Zombie (Undead) receives it, the Brown Bear (Beast) does not.
+ *  3. "Aura of Bravery" (Questing Knight): the copy on the Zombie makes it immune to Charmed and Frightened, without applying
+ *     them.
  */
 const CAPTAIN = "Compendium.dnd-monster-manual.actors.Actor.mmHobgoblinCapta";
 const DEATH_KNIGHT = "Compendium.dnd-monster-manual.actors.Actor.mmDeathKnight000";
@@ -16,7 +17,7 @@ export default {
   name: "auras à bonus — Autorité, Commandement des morts-vivants, Bravoure",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Missing from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise the dnd5e SRD 2024).
     await ctx.cast({ "Loup": "mmWolf0000000000", "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Loup", "Zombi", "Ours brun", "Alara", "Bramo"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Loup, Zombi, Ours brun, Alara ou Bramo absent : non applicable"); return; }
@@ -34,7 +35,7 @@ export default {
     }
     const { data: wolfTok } = await ctx.call("get-scene-object", { type: "Token", objectId: wolf.id });
 
-    /** Prête l'item `identifier` d'un acteur du compendium au Loup ; rend de quoi le retirer. */
+    /** Lends the `identifier` item of a compendium actor to the Wolf; returns what is needed to remove it. */
     const lend = async (uuid, identifier) => {
       const { data: source } = await ctx.call("get-compendium-entry", { uuid });
       const { _id, folder, ownership, _stats, ...itemData } = source.items.find(i => i.system?.identifier === identifier);
@@ -49,14 +50,14 @@ export default {
     const copyOf = async (t, key) => (await copies(t)).find(e => e.flags[MODULE_ID].aura.key === key) ?? null;
     const changesOf = e => e?.system?.changes ?? e?.changes ?? [];
 
-    // Loup au centre, Zombi et Ours à côté, Bramo à portée du Coup du Zombi.
+    // Wolf in the center, Zombie and Bear beside it, Bramo within range of the Zombie's Slam.
     const at = await ctx.position(wolf);
     await ctx.call("move-token", { tokenId: zombi.id, x: at.x + grid, y: at.y, elevation: at.elevation });
     await ctx.call("move-token", { tokenId: bear.id, x: at.x - grid, y: at.y, elevation: at.elevation });
     await ctx.call("move-token", { tokenId: bramo.id, x: at.x + 2 * grid, y: at.y, elevation: at.elevation });
     await sleep(1000);
 
-    /** La Flamme sacrée d'Alara sur le Zombi : la formule de sa sauvegarde. */
+    /** Alara's Sacred Flame on the Zombie: the formula of its saving throw. */
     const saveFormula = async () => {
       await ctx.setHp(zombi, 100);
       const since = await ctx.lastMessageId();
@@ -65,7 +66,7 @@ export default {
       return (await ctx.messagesSince(since)).find(m => m.type === "save")?.rolls?.[0]?.formula ?? "";
     };
 
-    // 1. Autorité.
+    // 1. Leadership.
     const removeAuthority = await lend(CAPTAIN, "aura-of-authority");
     const authority = await copyOf(zombi, "aura-of-authority");
     ctx.expect(!!authority, "Autorité : le Zombi, allié à 1,50 m, reçoit la copie");

@@ -1,16 +1,16 @@
 /**
- * Objets pilotés (SPEC §16.15, B19) : Arme spirituelle, Sphère de feu, Main de Bigby. Le lanceur les commande pendant
- * SON tour ; une commande coûte son action Bonus et ouvre un déplacement borné plus une utilisation.
+ * Piloted objects (SPEC §16.15, B19): Spiritual Weapon, Flaming Sphere, Bigby's Hand. The caster commands them during
+ * THEIR turn; a command costs their Bonus Action and opens a bounded movement plus one use.
  *
- *  - tour sauté : l'objet se range au combat juste après son lanceur (§16.13), mais le cœur passe son tour
- *    (`combatTurn` / `combatRound`, avant l'écriture du combat, sur le client qui avance) ; filet sur le MJ actif ;
- *  - commande offerte au lancement (`onCast`), à la création du token ;
- *  - un déplacement de l'objet ouvre (et paie) la commande du tour, sur le MJ actif (`moveToken`) — le plafond et le
- *    tour sont tenus avant, sur le client de celui qui bouge (runtime/actions.mjs) ;
- *  - son utilisation se paie avec le budget du lanceur (runtime/turn.mjs, `pilotUsage`) ;
- *  - l'objet retiré (`endsSpell`) met fin à la concentration du sort.
- * Les écritures d'un même objet passent l'une après l'autre : un déplacement en plusieurs segments suivi d'une attaque
- * ne paie qu'une commande.
+ *  - skipped turn: the object is placed in the combat right after its caster (§16.13), but the core skips its turn
+ *    (`combatTurn` / `combatRound`, before the combat is written, on the client that advances); safety net on the active GM;
+ *  - command offered at casting (`onCast`), at token creation;
+ *  - a movement of the object opens (and pays) the turn's command, on the active GM (`moveToken`) — the cap and the
+ *    turn are held before, on the client of whoever moves (runtime/actions.mjs);
+ *  - its use is paid with the caster's budget (runtime/turn.mjs, `pilotUsage`);
+ *  - the removed object (`endsSpell`) ends the spell's Concentration.
+ * The writes of one same object go one after the other: a movement in several segments followed by an attack
+ * pays only one command.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -35,7 +35,7 @@ import { areEnemies } from "../adapter/factions.mjs";
 import { lengthIn } from "../adapter/units.mjs";
 import { canSee } from "../adapter/vision.mjs";
 
-/** Une écriture à la fois par objet. */
+/** One write at a time per object. */
 const queues = new Map();
 export function serialized(tokenId, fn) {
   const run = (queues.get(tokenId) ?? Promise.resolve()).then(fn, fn);
@@ -44,8 +44,8 @@ export function serialized(tokenId, fn) {
 }
 
 /**
- * Paie le geste s'il ouvre une commande, et écrit l'état de la commande. Rend ce qu'il faut pour une annulation :
- * le budget d'avant et d'après, l'état de commande d'avant.
+ * Pays the gesture if it opens a command, and writes the command state. Returns what is needed for a cancellation:
+ * the budget before and after, the command state before.
  */
 async function charge(pilot, gesture) {
   const plan = commandPlan(pilot, gesture);
@@ -63,7 +63,7 @@ async function charge(pilot, gesture) {
   return { combatant: combatant.id, before, after, command: { token: commandKey(pilot), before: commandBefore } };
 }
 
-/** L'utilisation d'une activité de l'objet (carte d'utilisation), sur le MJ actif : payée au budget du lanceur. */
+/** The use of an object's activity (use card), on the active GM: paid from the caster's budget. */
 export function pilotUsage(message, pilot) {
   return serialized(commandKey(pilot), async () => {
     const spent = await charge(pilot, "use");
@@ -71,7 +71,7 @@ export function pilotUsage(message, pilot) {
   });
 }
 
-/** « Move Lights » utilisée (carte d'utilisation), sur le MJ actif : ouvre la commande de déplacement du tour. */
+/** "Move Lights" used (use card), on the active GM: opens the turn's movement command. */
 export function spellCommandUsage(message, pilot) {
   return serialized(commandKey(pilot), async () => {
     const spent = await charge(pilot, "move");
@@ -79,17 +79,17 @@ export function spellCommandUsage(message, pilot) {
   });
 }
 
-/** Annulation avant tout jet : l'état de commande d'avant revient (le budget, lui, est rendu par runtime/turn.mjs). */
+/** Cancellation before any roll: the earlier command state comes back (the budget itself is given back by runtime/turn.mjs). */
 export async function refundCommand(combatant, command) {
   if ( !combatant || !command?.token ) return;
   await combatant.setFlag(MODULE_ID, `commands.${command.token}`, command.before ?? { turn: "", paid: false, move: false, used: 0 });
 }
 
-/** L'objet piloté peut-il être renvoyé par ce client : il met fin au sort, et la concentration est à soi. */
+/** Can this client dismiss the piloted object: it ends the spell, and the Concentration is one's own. */
 export function canDismiss(tokenDoc) {
   const pilot = pilotOf(tokenDoc);
   if ( !pilot ) return false;
-  // Sans concentration (Duplicité : le lanceur la congédie quand il veut, sans action) : le propriétaire du lanceur.
+  // Without Concentration (Duplicity: the caster dismisses it whenever they want, with no action): the caster's owner.
   if ( !tokenDoc.getFlag(MODULE_ID, "summonedBy") ) return pilot.summoner.isOwner;
   if ( !tokenDoc.getFlag(MODULE_ID, "endsSpell") ) return false;
   const effect = fromUuidSync(tokenDoc.getFlag(MODULE_ID, "summonedBy"), { strict: false });
@@ -98,7 +98,7 @@ export function canDismiss(tokenDoc) {
 
 export const DISMISS_QUERY = `${MODULE_ID}.dismissSummon`;
 
-/** Côté MJ actif : retirer l'objet d'un lanceur que le demandeur possède. */
+/** Active GM side: remove the object from a caster that the requester owns. */
 async function handleDismiss({ token: tokenUuid }, { user }={}) {
   const token = await fromUuid(tokenUuid);
   const pilot = token ? pilotOf(token) : null;
@@ -108,19 +108,19 @@ async function handleDismiss({ token: tokenUuid }, { user }={}) {
   return true;
 }
 
-/** Une commande qui ne vise que l'objet (Main interposée) : son utilisation, comme un clic sur la fiche. */
+/** A command that targets only the object (Interposing Hand): its use, like a click on the sheet. */
 export async function useCommand(tokenDoc, activity, event=null) {
   tokenDoc.object?.control({ releaseOthers: true });
   return activity.use({ ...(event ? { event } : {}) });
 }
 
 /**
- * Renvoyer l'objet (§16.15) : c'est mettre fin au sort. La concentration supprimée retire elle-même ses objets (MJ actif,
- * runtime/concentration.mjs) — un joueur peut supprimer l'effet de son personnage, pas un token.
+ * Dismissing the object (§16.15): that is ending the spell. A deleted Concentration removes its own objects (active GM,
+ * runtime/concentration.mjs) — a player can delete their character's effect, not a token.
  */
 export async function dismissPilot(tokenDoc) {
   if ( !tokenDoc.getFlag(MODULE_ID, "summonedBy") ) {
-    // Pas de concentration à rompre : le token lui-même part, par le MJ actif (un joueur ne supprime pas de token).
+    // No Concentration to break: the token itself goes, by the active GM (a player does not delete tokens).
     if ( !canDismiss(tokenDoc) ) return false;
     return viaActiveGM(DISMISS_QUERY, handleDismiss, { token: tokenDoc.uuid }, { fallback: false });
   }
@@ -133,7 +133,7 @@ export async function dismissPilot(tokenDoc) {
 
 /* -------------------------------------------- */
 
-/** Le lanceur s'éloigne : ses objets `leash` restés hors de la portée du sort disparaissent. */
+/** The caster moves away: their `leash` objects left outside the spell's range disappear. */
 async function leashAround(casterToken) {
   const actor = casterToken.actor;
   if ( !actor ) return;
@@ -148,24 +148,24 @@ async function leashAround(casterToken) {
   }
 }
 
-/** Un déplacement de l'objet pendant le tour de son lanceur ouvre la commande du tour (MJ actif). */
+/** A movement of the object during its caster's turn opens the turn's command (active GM). */
 function onMoveToken(tokenDoc, movement) {
   const pilot = pilotOf(tokenDoc);
   if ( !pilot ) return leashAround(tokenDoc);
   const moved = movement.passed?.waypoints ?? [];
   if ( !moved.length || moved.every(w => CONFIG.Token.movement.actions[w.action]?.teleport) ) return;
-  // « Une lumière disparaît si elle sort de la portée du sort » (`leash`, Lumières dansantes), quel que soit le tour.
+  // "A light disappears if it leaves the spell's range" (`leash`, Dancing Lights), whatever the turn.
   if ( pilot.rule.leash && beyondSpellRange(pilot) ) {
     log(`${tokenDoc.name}: out of range of ${pilot.item.name}, disappears`);
     ui.notifications.info(loc("Pilote.HorsPortee", { name: tokenDoc.name, item: pilot.item.name }));
     return tokenDoc.delete();
   }
   const combatant = summonerCombatant(pilot);
-  if ( !combatant || !isOwnTurn(combatant) ) return;   // replacé par le MJ hors du tour : rien à payer
+  if ( !combatant || !isOwnTurn(combatant) ) return;   // repositioned by the GM outside the turn: nothing to pay
   return serialized(commandKey(pilot), () => charge(pilot, "move"));
 }
 
-/** L'objet est-il au-delà de la portée du sort, mesurée depuis son lanceur ? */
+/** Is the object beyond the spell's range, measured from its caster? */
 function beyondSpellRange(pilot) {
   const caster = summonerToken(pilot);
   const range = pilot.item.system.range ?? {};
@@ -174,19 +174,19 @@ function beyondSpellRange(pilot) {
   return distanceBetween(caster, pilot.token).value > limit + 1e-6;
 }
 
-/** À la création de l'objet, pendant le tour du lanceur : la commande offerte par le lancement (`onCast`). */
+/** At object creation, during the caster's turn: the command offered by the casting (`onCast`). */
 async function onCreateToken(tokenDoc) {
   const pilot = pilotOf(tokenDoc);
   if ( !pilot ) return;
-  // Un objet piloté n'est pas un allié (Tactique de meute, adapter/facts.mjs) ; l'illusion de la Duplicité a les traits
-  // du lanceur (un double visuel de celui-ci, `mimic`).
+  // A piloted object is not an ally (Pack Tactics, adapter/facts.mjs); the Duplicity illusion has the caster's features
+  // (a visual double of them, `mimic`).
   const update = { [`flags.${MODULE_ID}.object`]: true };
   const look = pilot.summon.mimic ? summonerToken(pilot) : null;
   if ( look?.texture?.src ) Object.assign(update, { "texture.src": look.texture.src, "ring.enabled": look.ring?.enabled ?? false,
     "ring.subject.texture": look.ring?.subject?.texture ?? null });
   const combatant = summonerCombatant(pilot);
   const ownTurn = !!combatant && isOwnTurn(combatant);
-  // §38.2 : le tour de la création (Troc du filou : l'action Bonus qui crée l'illusion compte aussi).
+  // §38.2: the turn of the creation ("Trickster's Swap": the Bonus Action that creates the illusion counts too).
   if ( ownTurn ) update[`flags.${MODULE_ID}.createdTurn`] = turnKey(combatant.combat);
   await tokenDoc.update(update);
   if ( !ownTurn ) return;
@@ -197,9 +197,9 @@ async function onCreateToken(tokenDoc) {
 }
 
 /**
- * L'objet retiré de la scène (supprimé à la main, détruit) : si le sort le déclare (`endsSpell`), sa concentration prend
- * fin — sauf s'il en reste un autre du même sort. La concentration qui tombe retire elle-même ses objets
- * (runtime/concentration.mjs) : l'effet est alors déjà parti, rien à faire ici.
+ * The object removed from the scene (deleted by hand, destroyed): if the spell declares it (`endsSpell`), its Concentration
+ * ends — unless another of the same spell remains. A Concentration that drops removes its own objects
+ * (runtime/concentration.mjs): the effect is then already gone, nothing to do here.
  */
 async function onDeleteToken(tokenDoc) {
   const effectUuid = tokenDoc.getFlag(MODULE_ID, "summonedBy");
@@ -218,14 +218,14 @@ async function onDeleteToken(tokenDoc) {
 }
 
 /**
- * Fin du tour d'une créature (§16.15, `summon.pulse`) : chaque objet qui agit autour de lui (Sphère de feu) la soumet à
- * son activité si elle est à `radius` ou moins — « toute créature qui termine son tour à 1,50 m de la sphère ». Le
- * lanceur compris ; pas l'objet lui-même. MJ actif.
+ * End of a creature's turn (§16.15, `summon.pulse`): each object that acts around itself (Flaming Sphere) subjects it to
+ * its activity if it is within `radius` or less — "any creature that ends its turn within 1.50 m of the sphere". The
+ * caster included; not the object itself. Active GM.
  */
 async function pulseAtTurnEnd(combat, prior) {
   const ended = combat.combatants.get(prior?.combatantId)?.token;
   if ( !ended?.actor || isPilotedCombatant(combat.combatants.get(prior.combatantId)) ) return;
-  const key = turnKeyAt(combat, prior);   // la fin d'un tour appartient au tour qui s'achève
+  const key = turnKeyAt(combat, prior);   // the end of a turn belongs to the turn that is ending
   for ( const source of ended.parent.tokens ) {
     const pulse = pulseOf(source);
     if ( !pulse || !(pulse.rule.on ?? ["turnEnd"]).includes("turnEnd") ) continue;
@@ -234,9 +234,9 @@ async function pulseAtTurnEnd(combat, prior) {
 }
 
 /**
- * §159 : début du tour d'une créature (`summon.pulse.on`) — `turnStart` : elle commence son tour à portée de l'invocation (Gardien
- * de la foi, Invocation d'élémentaire) ; `casterTurnStart` : c'est le tour du lanceur, l'invocation frappe UN ennemi à portée, le plus
- * proche (Chien de garde de Mordenkainen : « au début de votre tour, le chien tente de mordre un ennemi à 1,50 m de lui »). MJ actif.
+ * §159: start of a creature's turn (`summon.pulse.on`) — `turnStart`: it starts its turn within range of the summon (Guardian
+ * of Faith, Conjure Elemental); `casterTurnStart`: it is the caster's turn, the summon strikes ONE enemy in range, the nearest
+ * (Mordenkainen's Faithful Hound: "at the start of your turn, the hound tries to bite an enemy within 1.50 m of it"). Active GM.
  */
 async function pulseAtTurnStart(combat, prior, current) {
   const combatant = combat.combatants.get(current?.combatantId);
@@ -256,7 +256,7 @@ async function pulseAtTurnStart(combat, prior, current) {
   }
 }
 
-/** Ce que l'objet frappe : pas lui-même, pas un mort, pas un objet piloté ; `affects: "enemy"` : les ennemis du lanceur. */
+/** What the object strikes: not itself, not a dead creature, not a piloted object; `affects: "enemy"`: the caster's enemies. */
 function pulseCanHit(source, pulse, token) {
   if ( (token === source) || !token.actor || token.hidden || isObjectToken(token) ) return false;
   if ( token.actor.statuses.has(CONFIG.specialStatusEffects.DEFEATED) ) return false;
@@ -265,8 +265,8 @@ function pulseCanHit(source, pulse, token) {
 }
 
 /**
- * Le token du lanceur d'une invocation sur sa scène, ou null. §159 : une invocation non pilotée (Chien de garde, Gardien de la foi)
- * juge les ennemis d'après son lanceur aussi — sa propre disposition est souvent neutre.
+ * The caster's token of a summon on its scene, or null. §159: an unpiloted summon (Faithful Hound, Guardian of Faith)
+ * also judges enemies from its caster — its own disposition is often neutral.
  */
 function pulseCaster(source) {
   const pilot = pilotOf(source);
@@ -276,9 +276,9 @@ function pulseCaster(source) {
 }
 
 /**
- * §368 : `seenBy: "caster"` — « une créature que vous voyez » (Invocation d'animaux) : le lanceur doit voir la créature, par la
- * vision du moteur (Invisible, ténèbres, brume, caché, plan Éthéré…). Sans token du lanceur sur la scène, il ne voit rien ;
- * une vision qui ne peut pas se juger ici (canevas absent : null) ne bloque pas.
+ * §368: `seenBy: "caster"` — "a creature you can see" (Conjure Animals): the caster must see the creature, through the
+ * engine's vision (Invisible, Darkness, fog, Hidden, Ethereal Plane…). With no caster token on the scene, they see nothing;
+ * a vision that cannot be judged here (canvas absent: null) does not block.
  */
 function pulseSeen(source, pulse, token) {
   if ( pulse.rule.seenBy !== "caster" ) return true;
@@ -287,7 +287,7 @@ function pulseSeen(source, pulse, token) {
   return canSee(caster, token) !== false;
 }
 
-/** La créature est-elle à portée de l'objet — à une position donnée de l'un ou de l'autre ? */
+/** Is the creature within range of the object — at a given position of either? */
 function pulseReaches(source, pulse, token, { posSource, posToken }={}) {
   if ( !pulseCanHit(source, pulse, token) || (source.parent !== token.parent) ) return false;
   let radius = lengthIn(pulse.rule.radius, pulse.rule.units, token.parent.grid.units);
@@ -296,13 +296,13 @@ function pulseReaches(source, pulse, token, { posSource, posToken }={}) {
 
 const pulseTurnKey = () => game.combat?.started ? `${game.combat.id}.${game.combat.round}.${game.combat.turn}` : "hors-combat";
 
-/** « Une créature ne fait cette sauvegarde qu'une fois par tour » : mémoire sur le token de l'objet. MJ actif. */
+/** "A creature makes this saving throw only once per turn": memory on the object's token. Active GM. */
 function pulseOnce(source, pulse, token, moment, turn=pulseTurnKey()) {
   return serialized(`pulse:${source.id}`, async () => {
     const memory = source.getFlag(MODULE_ID, "pulse");
     const hit = (memory?.turn === turn) ? memory.hit : [];
     if ( hit.includes(token.id) ) return;
-    // Non vue : pas de sauvegarde, et son « une fois par tour » n'est pas dépensé.
+    // Not seen: no saving throw, and its "once per turn" is not spent.
     if ( !pulseSeen(source, pulse, token) ) return log(`${source.name}: ${token.name} not seen by the caster (${moment}), skipped`);
     await source.setFlag(MODULE_ID, "pulse", { turn, hit: [...hit, token.id] });
     log(`${source.name}: ${token.name} (${moment}, ${pulse.activity.item.name})`);
@@ -311,9 +311,9 @@ function pulseOnce(source, pulse, token, moment, turn=pulseTurnKey()) {
 }
 
 /**
- * Déplacements (MJ actif) : l'objet arrive à portée de créatures (`moves`), ou une créature arrive à portée d'un objet
- * (`enter`) — Invocation d'animaux : « chaque fois que la meute se déplace à 3 m d'une créature, et chaque fois qu'une
- * créature entre dans un espace à 3 m de la meute ».
+ * Movements (active GM): the object comes within range of creatures (`moves`), or a creature comes within range of an object
+ * (`enter`) — Conjure Animals: "whenever the pack moves within 3 m of a creature, and whenever a creature
+ * enters a space within 3 m of the pack".
  */
 async function pulseOnMove(tokenDoc, movement) {
   const from = movement.origin ? positionOf(movement.origin) : null;
@@ -323,7 +323,7 @@ async function pulseOnMove(tokenDoc, movement) {
     for ( const other of tokenDoc.parent.tokens ) {
       if ( !pulseReaches(tokenDoc, own, other) || pulseReaches(tokenDoc, own, other, { posSource: from }) ) continue;
       await pulseOnce(tokenDoc, own, other, "moves");
-      // §403 : Sphère de feu — rouler sur une créature l'arrête pour le tour (`stopsOnContact`) : plus de commande de déplacement.
+      // §403: Flaming Sphere — rolling onto a creature stops it for the turn (`stopsOnContact`): no more movement command.
       if ( own.rule.stopsOnContact && (tokenDoc.getFlag(MODULE_ID, "stoppedOn") !== currentTurnKey()) ) {
         await tokenDoc.setFlag(MODULE_ID, "stoppedOn", currentTurnKey());
         log(`${tokenDoc.name}: rolled into ${other.name}, stops for this turn`);
@@ -339,7 +339,7 @@ async function pulseOnMove(tokenDoc, movement) {
   }
 }
 
-/** §259 : une créature invoquée qui disparaît — un texte flottant et un son chez toute la table (§252), puis son combattant et son token. */
+/** §259: a summoned creature that disappears — floating text and a sound for the whole table (§252), then its combatant and its token. */
 async function vanish(token) {
   log(`${token.name} at 0 HP: vanishes`);
   notice(token, { key: "Retour.Disparait" }, "ended", { all: true, action: "spellEnds", outcome: "success" });
@@ -351,9 +351,9 @@ async function vanish(token) {
 }
 
 /**
- * §259 : Gardien de la foi — « le gardien disparaît quand il a infligé un total de 60 dégâts ». À chaque résolution d'une pulsation
- * (`areaTick.event: "pulse"`, adapter/areas.mjs), les dégâts appliqués s'ajoutent au total noté sur son token ; le plafond
- * (`summon.vanishesAfterDamage`) atteint, il disparaît. MJ actif.
+ * §259: Guardian of Faith — "the guardian vanishes when it has dealt a total of 60 damage". At each resolution of a pulse
+ * (`areaTick.event: "pulse"`, adapter/areas.mjs), the damage applied is added to the total noted on its token; the cap
+ * (`summon.vanishesAfterDamage`) reached, it disappears. Active GM.
  */
 async function onPulseResolution(resolution) {
   if ( resolution?.step !== STEPS.DONE ) return;
@@ -371,17 +371,17 @@ async function onPulseResolution(resolution) {
   await token.update({ [`flags.${MODULE_ID}`]: { pulseDamage: total, pulseCounted: counted } });
 }
 
-/** L'objet tombé à 0 PV (`endsAtZero`, Main de Bigby : « si elle tombe à 0 point de vie, le sort prend fin »). MJ actif. */
+/** The object dropped to 0 HP (`endsAtZero`, Bigby's Hand: "if it drops to 0 Hit Points, the spell ends"). Active GM. */
 async function onUpdateActor(actor, changes) {
   if ( foundry.utils.getProperty(changes, "system.attributes.hp.value") === undefined ) return;
   const token = actor.token ?? actor.getActiveTokens?.(false, true)?.[0] ?? null;
-  // §402 : `vanishesWhenHurt` — elle disparaît dès qu'elle subit des dégâts (Monture fantôme : « si elle subit des dégâts, elle
-  // disparaît ») ; apparue à pleins PV, des PV sous le maximum disent qu'elle en a subi.
+  // §402: `vanishesWhenHurt` — it disappears as soon as it takes damage (Phantom Steed: "if it takes damage, it
+  // disappears"); appeared at full HP, HP below the maximum say it took some.
   const hp = actor.system.attributes?.hp ?? {};
   const summoned = token ? summonItemOf(token) : null;
   if ( summoned && contentOf(summoned).entry?.summon?.vanishesWhenHurt && (Number(hp.value) < Number(hp.max)) ) return vanish(token);
   if ( (hp.value ?? 1) > 0 ) return;
-  // §259 : « elle disparaît lorsqu'elle tombe à 0 point de vie » — le token et son combattant partent, le sort continue.
+  // §259: "it disappears when it drops to 0 Hit Points" — the token and its combatant go, the spell continues.
   const origin = summoned;
   if ( origin && contentOf(origin).entry?.summon?.vanishesAtZero ) return vanish(token);
   if ( !token?.getFlag(MODULE_ID, "endsAtZero") ) return;
@@ -391,7 +391,7 @@ async function onUpdateActor(actor, changes) {
   await effect.delete();
 }
 
-/** Le lanceur Neutralisé : ses invocations `endsIfIncapacitated` cessent (Duplicité). MJ actif. */
+/** The caster Incapacitated: their `endsIfIncapacitated` summons cease (Duplicity). Active GM. */
 async function onIncapacitated(actor) {
   if ( !actor || !INCAPACITATING.some(s => actor.statuses?.has(s)) ) return;
   for ( const token of summonsOfWith(actor, "endsIfIncapacitated") ) {
@@ -401,8 +401,8 @@ async function onIncapacitated(actor) {
 }
 
 /**
- * §305 (repasse C10) : le lanceur mort, ses invocations `vanishesWithCaster` disparaissent (Appel de destrier, Compagnon primitif,
- * Compagnon réanimé). MJ actif.
+ * §305 (pass C10): the caster dead, their `vanishesWithCaster` summons disappear (Find Steed, Primal Companion,
+ * "Reanimated Companion"). Active GM.
  */
 async function onCasterDead(actor) {
   if ( !actor?.statuses?.has("dead") ) return;
@@ -414,7 +414,7 @@ async function onCasterDead(actor) {
 
 export const REST_QUERY = `${MODULE_ID}.restSummons`;
 
-/** §305 : côté MJ actif — au Repos long de l'acteur, ses invocations `endsOnLongRest` partent (Compagnon sauvage). */
+/** §305: active GM side — on the actor's Long Rest, their `endsOnLongRest` summons go (Wild Companion). */
 async function handleRestSummons({ actor: actorUuid }, { user=null }={}) {
   const actor = await fromUuid(actorUuid ?? "");
   // §472 : d'un joueur, seulement les invocations de son propre acteur.
@@ -431,14 +431,14 @@ function onRestCompleted(actor, result) {
   return viaActiveGM(REST_QUERY, handleRestSummons, { actor: actor.uuid }, { fallback: false });
 }
 
-/* ---- tour sauté ---- */
+/* ---- skipped turn ---- */
 
 const skipsOf = combat => combat.turns.map(isPilotedCombatant);
 
 /**
- * `combatTurn` / `combatRound` (client/documents/combat.mjs:285-294, 234-237, 313) : appelés avec les données de
- * l'écriture avant qu'elle parte, sur le client qui avance le combat. Le tour visé, s'il est celui d'un objet piloté,
- * passe au suivant (ou au précédent en reculant). Au bord du round, on laisse faire : le filet du MJ actif avance.
+ * `combatTurn` / `combatRound` (client/documents/combat.mjs:285-294, 234-237, 313): called with the write's data
+ * before it leaves, on the client that advances the combat. The targeted turn, if it is a piloted object's,
+ * moves to the next (or the previous when going back). At the round's edge, we let it be: the active GM's safety net advances.
  */
 function onCombatAdvance(combat, updateData, updateOptions) {
   if ( !Number.isInteger(updateData?.turn) ) return;
@@ -448,7 +448,7 @@ function onCombatAdvance(combat, updateData, updateOptions) {
   if ( (turn >= 0) && (turn < skip.length) ) updateData.turn = turn;
 }
 
-/** Filet (MJ actif) : le tour d'un objet piloté a quand même commencé (clic dans le suivi, bord du round). */
+/** Safety net (active GM): a piloted object's turn started anyway (click in the tracker, round edge). */
 async function onTurnChange(combat, prior, current) {
   const combatant = combat.combatants.get(current?.combatantId);
   if ( !isPilotedCombatant(combatant) || skipsOf(combat).every(Boolean) ) return;
@@ -475,7 +475,7 @@ export function registerPilot() {
   route("createActiveEffect", effect => onIncapacitated(effect.parent), { executor: true, label: "summon: ends on Incapacitated" });
   route("updateActiveEffect", effect => onIncapacitated(effect.parent), { executor: true, label: "summon: ends on Incapacitated" });
   CONFIG.queries[DISMISS_QUERY] = handleDismiss;
-  // §305 : invocations qui suivent leur lanceur dans la mort, ou partent au Repos long.
+  // §305: summons that follow their caster in death, or leave at the Long Rest.
   route("createActiveEffect", effect => onCasterDead(effect.parent), { executor: true, label: "summon: not removed with its dead caster" });
   CONFIG.queries[REST_QUERY] = handleRestSummons;
   route("dnd5e.restCompleted", onRestCompleted, { label: "summon: not dismissed at a Long Rest" });

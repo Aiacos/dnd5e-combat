@@ -1,13 +1,14 @@
 /**
- * §282 : Inspiration héroïque, monde `dnd-6`, Arène de test. Le Guerrier (personnage joueur) reçoit l'Inspiration héroïque et attaque le
- * Zombi à l'épée à deux mains. Personne ne possède le Guerrier en ligne : la question s'ouvre chez le MJ, au premier plan, avant tout autre
- * dé. Vérifie :
- *  - attaque : « Relancer » → une carte de relance, le total de la résolution = total du jet − ancien d20 + nouveau d20, le verdict rejugé
- *    sur ce total (touché ⇔ critique, ou total ≥ CA hors 1 naturel), l'Inspiration dépensée ;
- *  - dégâts : l'attaque gardée (« Garder le jet »), puis sur un coup, la question des dégâts → le premier dé relancé ; les dégâts appliqués
- *    au Zombi = total du jet de dégâts − ancien dé + nouveau dé ;
- *  - sans Inspiration : aucune question.
- * Met le réglage de client `heroicInspiration` du MJ sur « À chaque jet » le temps du scénario, puis le remet. Remet PV et Inspiration.
+ * §282: Heroic Inspiration, world `dnd-6`, Arène de test. The Fighter (player character) gets Heroic Inspiration and attacks the
+ * Zombi with the greatsword. Nobody owns the Fighter online: the question opens on the GM's side, in the foreground, before any
+ * other die. Checks:
+ *  - attack: "Reroll" → a reroll card, the resolution total = roll total − old d20 + new d20, the verdict rejudged
+ *    on that total (hit ⇔ critical, or total ≥ AC excluding a natural 1), the Inspiration spent;
+ *  - damage: the attack kept ("Keep the roll"), then on a hit, the damage question → the first die rerolled; the damage applied
+ *    to the Zombi = damage roll total − old die + new die;
+ *  - without Inspiration: no question.
+ * Sets the GM's client setting `heroicInspiration` to "On every roll" for the length of the scenario, then restores it.
+ * Restores HP and Inspiration.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -34,13 +35,13 @@ export default {
       await ctx.setHp(zombi, zhp);
       await ctx.call("move-token", { tokenId: fighter.id, x: pos.x, y: pos.y, elevation: pos.elevation ?? 0 }).catch(() => {});
     });
-    // Au contact du Zombi, pour l'épée.
+    // In contact with the Zombi, for the sword.
     const grid = await ctx.gridSize();
     await ctx.call("move-token", { tokenId: fighter.id, x: zpos.x - grid, y: zpos.y, elevation: 0 });
     await pause(800);
 
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
-    /** Répond à la question héroïque qui s'ouvre (`pick` : l'expression du bouton) ; rend le texte vu, ou null. */
+    /** Answers the heroic question that opens (`pick`: the button's expression); returns the text seen, or null. */
     const answer = async (ids, pick, ms=12000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
@@ -57,7 +58,7 @@ export default {
     const attack = () => ctx.use({ tokenId: fighter.id, itemId: sword, activityType: "attack", targetTokenIds: [zombi.id],
       usageConfig: { [MODULE_ID]: { confirmed: true } } });
 
-    // 1. Attaque relancée.
+    // 1. Attack rerolled.
     await setInspiration(true);
     await ctx.setHp(zombi, zhp);
     {
@@ -66,11 +67,11 @@ export default {
       const u = await attack();
       const seen = await answer(ids, /^\d+$/);   // un d20 : la tuile porte sa valeur
       ctx.expect(!!seen, `attaque : la question héroïque s'ouvre${seen ? ` (${seen.buttons.join(" / ")})` : ""}`);
-      // Reconnaissable : le titre la nomme, la règle est rappelée (fenêtre sobre depuis le 2026-10-30, sans bandeau).
+      // Recognizable: the title names it, the rule is recalled (plain window since 2026-10-30, no banner).
       ctx.expect(!!seen && /Heroic Inspiration|Inspiration héroïque/i.test(seen.text)
         && /Reroll a die you just rolled|Relancez un dé que vous venez de lancer/i.test(seen.text),
         `attaque : la fenêtre nomme l'Inspiration héroïque et rappelle la règle`);
-      // Les dégâts d'un coup posent leur propre question : garder.
+      // A hit's damage raises its own question: keep.
       const damageIds = await known();
       const later = answer(damageIds, /Garder|Keep/i, 15000);
       const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
@@ -83,8 +84,9 @@ export default {
       const t = r?.targets?.[0];
       const roll = r?.attack?.roll ?? {};
       ctx.expect(!!card, `attaque : carte de relance (d20 ${card?.old} → ${card?.new})`);
-      // §435 : avec Avantage ou Désavantage (le Guerrier À terre), « vous ne relancez qu'un seul des d20 » (PHB 2024, Tests d20) : le d20
-      // relancé remplace l'ancien, puis le plus haut (Avantage) ou le plus bas (Désavantage) des deux compte. Sans eux, un seul d20.
+      // §435: with Advantage or Disadvantage (the Fighter Prone), "you reroll only one of the d20s" (PHB 2024, D20 Tests): the d20
+      // rerolled replaces the old one, then the higher (Advantage) or the lower (Disadvantage) of the two counts.
+      // Without them, a single d20.
       const d20s = ((first?.dice ?? []).find(d => d.faces === 20)?.results ?? []).map(x => x?.result ?? x).filter(Number.isFinite);
       const keep = /d20(?:kl|dis)/.test(first?.formula ?? "") ? Math.min : /d20(?:kh|adv)/.test(first?.formula ?? "") ? Math.max : (...v) => v[0];
       const after = card ? d20s.map((v, i) => (i === d20s.indexOf(card.old)) ? card.new : v) : d20s;
@@ -96,7 +98,7 @@ export default {
       ctx.expect(!(await inspiredNow()), "attaque : l'Inspiration est dépensée");
     }
 
-    // 2. Dégâts relancés : l'attaque gardée, jusqu'à un coup.
+    // 2. Damage rerolled: the attack kept, up to a hit.
     let damaged = false;
     for ( let n = 0; (n < 12) && !damaged; n++ ) {
       await setInspiration(true);
@@ -106,9 +108,9 @@ export default {
       const before = await ctx.hp(zombi);
       const u = await attack();
       const kept = await answer(ids, /Garder|Keep/i);
-      // §435 : la question des dégâts s'ouvre aussitôt après (jet de dégâts enchaîné, sans Dice So Nice) — souvent avant qu'une nouvelle liste
-      // des fenêtres soit prise : elle s'y trouvait, exclue, jamais répondue. Seule la question de l'attaque est exclue.
-      const dmg = answer([...ids, kept?.id].filter(Boolean), /^\d+$/, 15000);   // le premier dé : sa tuile porte sa valeur
+      // §435: the damage question opens right after (chained damage roll, without Dice So Nice) — often before a new list of
+      // windows is taken: it was in it, excluded, never answered. Only the attack's question is excluded.
+      const dmg = answer([...ids, kept?.id].filter(Boolean), /^\d+$/, 15000);   // the first die: its tile carries its value
       const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
       const seen = await dmg;
       if ( !r?.targets?.[0]?.hit ) continue;
@@ -125,7 +127,7 @@ export default {
     }
     ctx.expect(damaged, "dégâts : un coup en douze essais");
 
-    // 3. Sans Inspiration : pas de question.
+    // 3. Without Inspiration: no question.
     await setInspiration(false);
     {
       const ids = await known();

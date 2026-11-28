@@ -1,7 +1,7 @@
 /**
- * §261 : le terrain qu'une zone instantanée laisse derrière elle (`difficultTerrain.lingers`, adapter/zone-effects.mjs) part à la fin du
- * prochain tour de son lanceur — au changement de tour qui clôt un tour du lanceur d'un round postérieur à la pose —, ou avec le combat.
- * MJ actif.
+ * §261: the terrain that an instantaneous area leaves behind (`difficultTerrain.lingers`, adapter/zone-effects.mjs) goes away
+ * at the end of its caster's next turn — at the turn change that closes a caster's turn of a round later than the placement —, or
+ * with the combat. Active GM.
  */
 
 import { MODULE_ID } from "../constants.mjs";

@@ -1,15 +1,15 @@
 /**
- * §345 : un enchantement qu'un coup qui touche consomme (`onHit: { whileEnchanted, spends: true }`) — la Dague venimeuse : « le poison
- * reste 1 minute ou jusqu'à ce qu'une attaque avec cette arme touche une créature ». Sur le MJ actif, au hook de sortie du moteur
- * `dnd5e-combat.resolution` (runtime/engine.mjs), une fois l'attaque tranchée et touchée.
+ * §345: an enchantment that a hit consumes (`onHit: { whileEnchanted, spends: true }`) — the Dagger of Venom: "the poison
+ * lasts 1 minute or until an attack with this weapon hits a creature". On the active GM, at the engine's output hook
+ * `dnd5e-combat.resolution` (runtime/engine.mjs), once the attack is resolved and hit.
  *
- * O9h (§363) : un enduit posé par un consommable (`coats` : Poison standard) — sur le client de l'utilisateur :
- *  - après l'activité qui enduit (`dnd5e.postUseActivity`), l'arme (ou les munitions) choisie reçoit la marque
- *    `flags.dnd5e-combat.coating` : les dés de l'activité `damage`, les types qui le délivrent, l'heure du monde où il sèche, les
- *    charges (1 pour une arme, `ammunition` pour des munitions) ; choix imposé par `{ "dnd5e-combat": { coatItem } }`, sinon la seule
- *    arme possible, sinon la question ;
- *  - au jet de dégâts (`dnd5e.preRollDamageV2`, après un coup) d'une arme, ou avec une munition, enduite et encore fraîche, dont le jet
- *    porte l'un de ces types : les dés s'ajoutent au jet, une charge part. Sec, l'enduit est retiré.
+ * O9h (§363): a coating applied by a consumable (`coats`: Basic Poison) — on the user's client:
+ *  - after the activity that coats (`dnd5e.postUseActivity`), the chosen weapon (or ammunition) receives the mark
+ *    `flags.dnd5e-combat.coating`: the dice of the `damage` activity, the types that deliver it, the world time when it dries,
+ *    the charges (1 for a weapon, `ammunition` for ammunition); choice imposed by `{ "dnd5e-combat": { coatItem } }`, otherwise
+ *    the only possible weapon, otherwise the question;
+ *  - on the damage roll (`dnd5e.preRollDamageV2`, after a hit) of a coated, still fresh weapon, or with ammunition, whose roll
+ *    carries one of these types: the dice are added to the roll, one charge goes. Dry, the coating is removed.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -38,7 +38,7 @@ async function onResolution(resolution) {
 /*  O9h : enduits (Poison standard)             */
 /* -------------------------------------------- */
 
-/** Ce que l'acteur peut enduire selon la règle (armes, munitions). */
+/** What the actor can coat according to the rule (weapons, ammunition). */
 function candidatesFor(actor, rule) {
   return coatingCandidates(Array.from(actor?.items ?? []).map(i => ({
     id: i.id, name: i.name, type: i.type, kind: i.system?.type?.value ?? null,
@@ -48,7 +48,7 @@ function candidatesFor(actor, rule) {
   })), rule);
 }
 
-/** Les dés et le type de l'activité de dégâts de l'enduit, ou null. */
+/** The dice and type of the coating's damage activity, or null. */
 function diceOf(item, activityId) {
   const part = item.system?.activities?.get?.(activityId)?.damage?.parts?.[0];
   const formula = part?.formula || ((part?.number && part?.denomination) ? `${part.number}d${part.denomination}${part.bonus ? ` + ${part.bonus}` : ""}` : null);
@@ -79,7 +79,7 @@ async function onCoatUsed(activity, usageConfig) {
   if ( token ) notice(token, loc("Enduit.Pose", { item: item.name, weapon: target.name }), "gain", { all: true });
 }
 
-/** L'item enduit de ce jet (la munition d'abord, puis l'arme) et son enduit, ou null. */
+/** The coated item of this roll (the ammunition first, then the weapon) and its coating, or null. */
 function coatedOf(activity, config) {
   const ref = config?.ammunition ?? config?.rolls?.[0]?.options?.ammunition ?? null;
   const ammo = (typeof ref === "string") ? activity.actor?.items?.get(ref) : ref;

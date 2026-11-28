@@ -1,16 +1,17 @@
 /**
- * Sorts de châtiment du Paladin (SPEC §25).
+ * The Paladin's smite spells (SPEC §25).
  *
- *  - Sur le client de l'auteur, au jet de dégâts d'un coup au corps à corps (adapter/messages.mjs, `rollDamageForAttack`) : la
- *    question (un bouton par sort et niveau possibles), l'emplacement ou l'utilisation gratuite dépensés (adapter/smite.mjs) ; puis
- *    ici (`dnd5e.preRollDamageV2`), les dés du sort ajoutés au jet, de son type — le critique les double comme les autres. Le jet
- *    porte `flags["dnd5e-combat"].smite`.
- *  - Sur le MJ actif, une fois l'attaque résolue (`dnd5e-combat.resolution`) : l'action Bonus dépensée, et la sauvegarde du sort
- *    (Tonitruant, Courroucé, Aveuglant, Étourdissant, Bannisseur) jouée sur la cible encore debout (adapter/areas.mjs,
- *    `strikeAgainst`).
- *    §42.2 : l'effet du sort posé sans sauvegarde sur la cible touchée (`smite.effect` : brûlure du Châtiment de fournaise,
- *    aveuglement du Châtiment de cécité), dont le contenu déclare la suite (dégâts au début du tour, sauvegarde répétée).
- * §402 : un châtiment à concentration la commence au coup, ses effets en dépendent. Limite : la lueur du Châtiment lumineux reste au MJ.
+ *  - On the author's client, at the damage roll of a melee hit (adapter/messages.mjs, `rollDamageForAttack`): the
+ *    question (one button per possible spell and level), the slot or free use spent (adapter/smite.mjs); then
+ *    here (`dnd5e.preRollDamageV2`), the spell's dice added to the roll, of its type — a Critical Hit doubles them like
+ *    the others. The roll carries `flags["dnd5e-combat"].smite`.
+ *  - On the active GM, once the attack is resolved (`dnd5e-combat.resolution`): the Bonus Action spent, and the spell's
+ *    saving throw (Thunderous, Wrathful, Blinding, Staggering, Banishing) played on the target still standing
+ *    (adapter/areas.mjs, `strikeAgainst`).
+ *    §42.2: the spell's effect placed without a saving throw on the target hit (`smite.effect`: the burning of Searing
+ *    Smite, the blinding of Blinding Smite), whose content declares what follows (damage at the start of the turn,
+ *    repeated saving throw).
+ * §402: a Concentration smite starts it at the hit, its effects depend on it. Limit: the glow of Shining Smite stays with the GM.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -29,8 +30,8 @@ import { rangedWeaponHit, smiteOptions, spendSmite } from "../adapter/smite.mjs"
 import { requestSave } from "./neighbours.mjs";
 
 /**
- * §402 : la concentration d'un châtiment qui en demande une (Frappe piégeuse, Châtiment courroucé…) — celles qui dépassent la limite
- * de l'acteur cessent d'abord (dnd5e : une seule à la fois), puis dnd5e l'ouvre sur l'activité de sauvegarde (ou la première).
+ * §402: the Concentration of a smite that requires one (Trapping Strike, Wrathful Smite…) — those that exceed the actor's
+ * limit end first (dnd5e: only one at a time), then dnd5e opens it on the saving throw activity (or the first one).
  */
 async function beginSmiteConcentration(actor, item, smite) {
   const activity = item.system.activities?.get(smite.save) ?? item.system.activities?.contents?.[0] ?? null;
@@ -48,11 +49,11 @@ function onPreRollDamage(config, dialog, message) {
   const activity = config.subject;
   if ( !smite || !activity || !config.rolls?.length ) return true;
   const type = smite.type;
-  if ( !smite.formula ) {   // §31 : une faveur sans dés (Renversement des coteaux) — seulement notée sur le jet
+  if ( !smite.formula ) {   // §31: a boon without dice ("Renversement des coteaux") — only noted on the roll
     foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.smite`, smite);
     return true;
   }
-  // §288 : « au lieu de subir les dégâts et les autres effets de l'attaque » (Flèche de foudre) — les dés de l'arme partent.
+  // §288: "instead of taking the damage and other effects of the attack" (Lightning Arrow) — the weapon's dice are dropped.
   if ( smite.replaces ) config.rolls.splice(0, config.rolls.length);
   config.rolls.push({ data: activity.getRollData(), parts: [smite.formula], options: { type, types: type ? [type] : [], properties: [] } });
   foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.smite`, smite);
@@ -63,8 +64,8 @@ function onPreRollDamage(config, dialog, message) {
 const seen = new Set();
 
 /**
- * §273 : ce qu'un châtiment déclenche chez son auteur (`afterSmite`) — un item de la fiche pose l'un de ses effets sur lui quand l'un des
- * châtiments nommés touche (Châtiment de protection : « chaque fois que vous lancez Châtiment divin », l'effet qui allume son aura).
+ * §273: what a smite triggers on its author (`afterSmite`) — an item on the sheet places one of its effects on them when one
+ * of the named smites hits (Smite of Protection: "whenever you cast Divine Smite", the effect that lights its aura).
  */
 async function afterSmite(actor, smiteItem) {
   const smiteId = identifierOf(smiteItem).id;
@@ -77,7 +78,8 @@ async function afterSmite(actor, smiteItem) {
 }
 
 /**
- * §288 : les dés d'une activité de l'item au niveau lancé, lancés dans le chat (Dice So Nice attendu). `{ total, type }`, ou null.
+ * §288: the dice of an activity of the item at the cast level, rolled in the chat (Dice So Nice awaited). `{ total, type }`,
+ * or null.
  */
 async function rollActivityDice(item, activityId, level, flavor, speaker) {
   const part = item.system.activities?.get(activityId)?.damage?.parts?.[0];
@@ -91,9 +93,9 @@ async function rollActivityDice(item, activityId, level, flavor, speaker) {
 }
 
 /**
- * §288 : Flèche de foudre — « chaque créature située dans un rayon de 3 m de la cible effectue ensuite un jet de sauvegarde de
- * Dextérité et subit 2d8 dégâts de foudre en cas d'échec, la moitié en cas de réussite » : un jet de dégâts pour toutes, la sauvegarde
- * de chacune (`requestSave`, DD du sort), les dégâts appliqués (résistances de dnd5e), un texte flottant et une carte. MJ actif.
+ * §288: Lightning Arrow — "each creature within 3 m of the target then makes a Dexterity saving throw and takes 2d8
+ * lightning damage on a failure, half as much on a success": one damage roll for all, each one's saving throw
+ * (`requestSave`, the spell's DC), the damage applied (dnd5e resistances), a floating text and a card. Active GM.
  */
 async function blastAround(item, level, target) {
   const rule = contentOf(item).entry?.smite;
@@ -121,9 +123,9 @@ async function blastAround(item, level, target) {
 }
 
 /**
- * §288 : Flèche de foudre sur un tir RATÉ — « au moment où votre attaque touche ou rate la cible » : la question à l'auteur (chez son
- * joueur), l'emplacement et l'action Bonus dépensés, la moitié des 4d8 sur la cible, puis l'éclat. Un tir touché passe par la question
- * des châtiments, au jet de dégâts (adapter/smite.mjs). MJ actif.
+ * §288: Lightning Arrow on a MISSED shot — "when your attack hits or misses the target": the question to the author (on
+ * their player), the slot and Bonus Action spent, half of the 4d8 on the target, then the burst. A shot that hits goes through
+ * the smite question, at the damage roll (adapter/smite.mjs). Active GM.
  */
 async function onMissed(resolution) {
   const activity = fromUuidSync(resolution.activity ?? "", { strict: false });
@@ -167,12 +169,12 @@ async function onResolution(resolution) {
   const actor = item?.actor;
   if ( !actor ) return;
   if ( smite.kind === "rider" ) return applyRider(smite, item, resolution);
-  // « Action Bonus, que vous prenez immédiatement après avoir touché ».
+  // "Bonus Action, which you take immediately after hitting".
   const combatant = combatantFor(actor);
   const budget = combatant ? readBudget(combatant) : null;
   if ( budget ) await writeBudget(combatant, { ...budget, bonus: Math.max(0, (budget.bonus ?? 1) - 1) });
   if ( (resolution.targets ?? []).some(t => (t.token === smite.target) && (t.hit === true)) ) await afterSmite(actor, item);
-  // §288 : l'éclat de Flèche de foudre, la cible touchée (même tombée).
+  // §288: the burst of Lightning Arrow, the target hit (even if down).
   if ( smite.blast ) {
     const struck = fromUuidSync(smite.target, { strict: false });
     if ( struck ) await blastAround(item, smite.level ?? Number(item.system.level), struck);
@@ -181,23 +183,23 @@ async function onResolution(resolution) {
   const target = fromUuidSync(smite.target, { strict: false });
   const hit = (resolution.targets ?? []).some(t => (t.token === smite.target) && (t.hit === true));
   if ( !target?.actor || !hit ) return;
-  // §176 : une cible tombée à 0 PV sous le coup ne subit ni l'effet ni la sauvegarde ; l'éclat (Grêle d'épines) touche pourtant
-  // ses voisines — « la cible et chaque créature à 1,50 m d'elle ».
+  // §176: a target dropped to 0 HP by the blow takes neither the effect nor the saving throw; the burst (Hail of Thorns) still
+  // hits its neighbours — "the target and each creature within 1.50 m of it".
   const burst = contentOf(item).entry?.smite?.burst;
   const down = (target.actor.system.attributes?.hp?.value ?? 0) <= 0;
   if ( down ) log(`${smite.name}: ${target.name} is at 0 Hit Points, no effect and no saving throw`);
   if ( down && !burst ) return;
-  // §402 : un châtiment à concentration (Frappe piégeuse) la commence maintenant — l'emplacement est dépensé sans `use()` de dnd5e,
-  // qui l'aurait ouverte ; les effets posés en dépendent et tombent avec elle.
+  // §402: a Concentration smite (Trapping Strike) starts it now — the slot is spent without dnd5e's `use()`,
+  // which would have opened it; the effects placed depend on it and drop with it.
   const concentration = (!down && item.requiresConcentration) ? await beginSmiteConcentration(actor, item, smite) : null;
-  // §42.2 : l'effet que le sort pose en touchant, sans sauvegarde (« Seared », « Blinded »), au niveau lancé.
+  // §42.2: the effect that the spell places on hitting, without a saving throw ("Seared", "Blinded"), at the cast level.
   if ( smite.effect && !down ) await placeItemEffect(item, smite.effect, target.actor, { scaling: smite.scaling ?? 0, dependentOn: concentration?.uuid ?? null });
   if ( !smite.save ) return;
   const save = item.system.activities?.get(smite.save);
   if ( !save ) return;
   const source = actor.getActiveTokens(false, true)[0] ?? null;
   if ( !source ) return;
-  // §262 : « si l'attaque réduit la cible à 50 points de vie ou moins » (Châtiment bannissant).
+  // §262: "if the attack reduces the target to 50 Hit Points or fewer" (Banishing Smite).
   const ceiling = contentOf(item).entry?.smite?.saveAtMostHp;
   const hp = target.actor.system.attributes?.hp?.value ?? 0;
   if ( !down && ceiling && (hp > ceiling) ) { log(`${smite.name}: ${target.name} still has ${hp} HP (> ${ceiling}), no saving throw`); return; }
@@ -205,7 +207,7 @@ async function onResolution(resolution) {
     log(`${smite.name}: ${target.name} makes their saving throw`);
     await strikeAgainst(save, source, target, { flavor: "DND5ECOMBAT.Chatiment.Carte", scaling: smite.scaling ?? 0, concentration: concentration?.id ?? null });
   }
-  // §164 : « la cible et chaque créature à 1,50 m d'elle » (Grêle d'épines).
+  // §164: "the target and each creature within 1.50 m of it" (Hail of Thorns).
   if ( !burst ) return;
   let radius = lengthIn(burst.radius, burst.units, target.parent.grid.units);
   for ( const other of target.parent.tokens ) {
@@ -217,15 +219,15 @@ async function onResolution(resolution) {
 }
 
 /**
- * §31 : après le coup, ce que la faveur pose sur la cible encore debout : l'effet de l'item (Froid mordant : Vitesse −3 m jusqu'au
- * début du prochain tour du goliath — contenu `effectEnds`), ou un état (Renversement des coteaux : À terre).
+ * §31: after the blow, what the boon places on the target still standing: the item's effect ("Froid mordant": Speed −3 m
+ * until the start of the goliath's next turn — `effectEnds` content), or a condition ("Renversement des coteaux": Prone).
  */
 async function applyRider(smite, item, resolution) {
   const target = fromUuidSync(smite.target, { strict: false });
   const hit = (resolution.targets ?? []).some(t => (t.token === smite.target) && (t.hit === true));
   if ( !target?.actor || !hit || ((target.actor.system.attributes?.hp?.value ?? 0) <= 0) ) return;
-  // §372 : posé comme l'effet d'un châtiment (`placeItemEffect` : origine et `_stats.duplicateSource`) — une règle qui vise CET effet de
-  // l'item (`maxNextHit` par id : Mise en danger) le reconnaît.
+  // §372: placed as the effect of a smite (`placeItemEffect`: origin and `_stats.duplicateSource`) — a rule that targets
+  // THIS effect of the item (`maxNextHit` by id: "Mise en danger") recognises it.
   if ( smite.effect ) {
     const placed = await placeItemEffect(item, smite.effect, target.actor);
     if ( placed ) log(`${smite.name}: "${placed.name}" placed on ${target.name}`);
@@ -234,7 +236,7 @@ async function applyRider(smite, item, resolution) {
     await target.actor.toggleStatusEffect(smite.status, { active: true });
     log(`${smite.name}: ${target.name} receives "${smite.status}"`);
   }
-  // §129 : la poussée de la faveur (Bagarreur de tavernes : 1,50 m), depuis l'auteur.
+  // §129: the boon's push ("Bagarreur de tavernes": 1.50 m), from the author.
   if ( smite.push ) {
     const source = item.actor?.getActiveTokens(false, true)[0] ?? null;
     if ( source ) {
@@ -242,7 +244,7 @@ async function applyRider(smite, item, resolution) {
       log(`${smite.name}: ${target.name} pushed ${cells} square(s) out of ${wanted}`);
     }
   }
-  // §78 : la sauvegarde de la faveur (Piqué : Force ou À terre), jouée sur la cible encore debout.
+  // §78: the boon's saving throw ("Piqué": Strength or Prone), played on the target still standing.
   const save = smite.save ? item.system.activities?.get(smite.save) : null;
   const source = save ? (item.actor?.getActiveTokens(false, true)[0] ?? null) : null;
   if ( save && source && ((target.actor.system.attributes?.hp?.value ?? 0) > 0) ) {

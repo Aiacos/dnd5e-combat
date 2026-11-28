@@ -1,38 +1,38 @@
 /**
- * Bottes d'arme (Weapon Mastery, Manuel des joueurs 2024 ; SPEC §21). dnd5e 6 note la botte employée sur le message d'attaque
- * (`system.mastery`) sans rien en faire ; le moteur en tire les conséquences. Fonctions pures.
+ * Weapon Mastery (Player's Handbook 2024; SPEC §21). dnd5e 6 notes the mastery used on the attack message
+ * (`system.mastery`) without doing anything with it; the engine draws the consequences. Pure functions.
  *
- *  - Enchaînement (cleave) : après un coup au corps à corps, une seconde attaque au corps à corps avec la même arme, contre une
- *    autre créature à l'allonge et à 1,50 m de la première ; ses dégâts n'ajoutent le modificateur de caractéristique que s'il
- *    est négatif. Une fois par tour.
- *  - Écorchure (graze) : une attaque ratée inflige quand même, du type de l'arme, autant de dégâts que le modificateur de
- *    caractéristique de l'attaque.
- *  - Coup double (nick) : tenu par le budget du tour (core/turn.mjs).
- *  - Poussée (push) : sur un coup, une cible de taille G au plus peut être éloignée de 3 m au plus en ligne droite.
- *  - Sape (sap) : sur un coup, Désavantage à la prochaine attaque de la cible, jusqu'au début du tour suivant de l'attaquant.
- *  - Ralentissement (slow) : sur un coup qui blesse, -3 m de Vitesse jusqu'au début du tour suivant de l'attaquant, sans cumul
- *    au-delà de 3 m.
- *  - Renversement (topple) : sur un coup, sauvegarde de Constitution (DD 8 + modificateur de l'attaque + bonus de maîtrise) ;
- *    ratée, la cible tombe À terre.
- *  - Ouverture (vex) : sur un coup qui blesse, Avantage à la prochaine attaque contre cette cible, jusqu'à la fin du tour
- *    suivant de l'attaquant.
+ *  - Cleave: after a melee hit, a second melee attack with the same weapon, against another creature within reach and within 5 feet
+ *    of the first; its damage adds the ability modifier only if it is
+ *    negative. Once per turn.
+ *  - Graze: a missed attack still deals, of the weapon's type, as much damage as the attack's ability
+ *    modifier.
+ *  - Nick: held by the turn budget (core/turn.mjs).
+ *  - Push: on a hit, a target of Large size or smaller can be pushed up to 10 feet away in a straight line.
+ *  - Sap: on a hit, Disadvantage on the target's next attack, until the start of the attacker's next turn.
+ *  - Slow: on a hit that deals damage, -10 feet of Speed until the start of the attacker's next turn, no stacking
+ *    beyond 10 feet.
+ *  - Topple: on a hit, Constitution saving throw (DC 8 + attack modifier + Proficiency Bonus);
+ *    on a failure, the target falls Prone.
+ *  - Vex: on a hit that deals damage, Advantage on the next attack against this target, until the end of the
+ *    attacker's next turn.
  */
 
 export const MASTERIES = Object.freeze(["cleave", "graze", "nick", "push", "sap", "slow", "topple", "vex"]);
 
-/** Rangs de taille de dnd5e, pour « de taille G ou moins ». */
+/** dnd5e size ranks, for "Large or smaller". */
 const SIZE_RANK = Object.freeze({ tiny: 0, sm: 1, med: 2, lg: 3, huge: 4, grg: 5 });
 
 /**
- * Ce que la botte fait après cette attaque, pour une cible.
+ * What the mastery does after this attack, for a target.
  * @param {string|null} mastery
  * @param {object} outcome
- * @param {boolean} outcome.hit          La cible a été touchée.
- * @param {boolean} outcome.damaged      Elle a perdu des PV (ou des PV temporaires).
- * @param {boolean} outcome.melee        Attaque au corps à corps (pas lancée).
- * @param {string|null} outcome.size     Sa taille (clé de dnd5e).
- * @param {boolean} outcome.down         Elle est à 0 PV.
- * @param {boolean} [outcome.cleaveSpent] Enchaînement déjà employé ce tour.
+ * @param {boolean} outcome.hit          The target was hit.
+ * @param {boolean} outcome.damaged      It lost HP (or Temporary Hit Points).
+ * @param {boolean} outcome.melee        Melee attack (not thrown).
+ * @param {string|null} outcome.size     Its size (dnd5e key).
+ * @param {boolean} outcome.down         It is at 0 HP.
+ * @param {boolean} [outcome.cleaveSpent] Cleave already used this turn.
  * @returns {"cleave"|"graze"|"push"|"sap"|"slow"|"topple"|"vex"|null}
  */
 export function masteryEffect(mastery, { hit, damaged, melee, size, down, cleaveSpent=false }) {
@@ -40,29 +40,29 @@ export function masteryEffect(mastery, { hit, damaged, melee, size, down, cleave
   if ( mastery === "graze" ) return hit ? null : "graze";
   if ( !hit ) return null;
   if ( mastery === "cleave" ) return (melee && !cleaveSpent) ? "cleave" : null;
-  if ( down ) return null;   // une créature à 0 PV : ni poussée, ni marque, ni sauvegarde
+  if ( down ) return null;   // a creature at 0 HP: no push, no mark, no saving throw
   if ( mastery === "push" ) return ((SIZE_RANK[size] ?? 2) <= SIZE_RANK.lg) ? "push" : null;
   if ( ["slow", "vex"].includes(mastery) ) return damaged ? mastery : null;
   return mastery;
 }
 
-/** Écorchure : les dégâts, égaux au modificateur (rien s'il est nul ou négatif). */
+/** Graze: the damage, equal to the modifier (nothing if it is zero or negative). */
 export const grazeDamage = mod => Math.max(0, Number(mod) || 0);
 
 /** Renversement : le DD de la sauvegarde de Constitution. */
 export const toppleDC = (mod, prof) => 8 + (Number(mod) || 0) + (Number(prof) || 0);
 
 /**
- * Enchaînement : les dégâts de la seconde attaque se lancent sans le modificateur de caractéristique, « sauf s'il est négatif ».
+ * Cleave: the second attack's damage is rolled without the ability modifier, "unless that modifier is negative".
  * @param {number} mod
  */
 export const cleaveModifier = mod => Math.min(0, Number(mod) || 0);
 
 /**
- * Quand une marque de botte tombe, au tour de celui qui l'a posée (`source`). Sape et Ralentissement : au début de son prochain
- * tour. Ouverture (et Attaques avisées du Guerrier, « studied ») : à la fin de son prochain tour — pas à la fin du tour même où
- * elle a été posée.
- * Témérité du Barbare (« reckless », §22) : au début de son prochain tour, comme la Sape.
+ * When a mastery mark falls, on the turn of whoever placed it (`source`). Sap and Slow: at the start of their next
+ * turn. Vex (and the Fighter's Studied Attacks, "studied"): at the end of their next turn — not at the end of the very
+ * turn in which it was placed.
+ * Barbarian's Recklessness ("reckless", §22): at the start of their next turn, like Sap.
  * @param {"sap"|"slow"|"vex"|"studied"|"reckless"} kind
  * @param {{moment: "turnStart"|"turnEnd", sourceTurn: boolean, turnKey: string|null, placedOn: string|null}} event
  */
@@ -77,16 +77,16 @@ export function markExpires(kind, { moment, sourceTurn, turnKey, placedOn }) {
 /* -------------------------------------------- */
 
 /**
- * Classes dont l'aptitude ne laisse changer qu'une botte après un Repos long (Guerrier : « change one of those weapon choices ») ;
- * les autres (Barbare, Paladin, Rôdeur, Roublard, don Maître d'armes) changent toutes les leurs.
+ * Classes whose feature lets only one mastery be changed after a Long Rest (Fighter: "change one of those weapon choices");
+ * the others (Barbarian, Paladin, Ranger, Rogue, Weapon Master feat) change all of theirs.
  */
 const ONE_CHANGE = Object.freeze(["fighter"]);
-/** Classes dont les bottes vont aux seules armes de corps à corps (Barbare : « Simple or Martial Melee weapons »). */
+/** Classes whose masteries go only to melee weapons (Barbarian: "Simple or Martial Melee weapons"). */
 const MELEE_ONLY = Object.freeze(["barbarian"]);
 
 /**
- * Les sources de bottes d'un acteur, une par item : les avancements « Trait » en mode « mastery » de ses classes et sous-classes
- * (jusqu'à son niveau de classe) et de ses dons (toujours). Le nombre d'un avancement : ses choix et ses dons d'office.
+ * An actor's mastery sources, one per item: the "Trait" advancements in "mastery" mode of its classes and subclasses
+ * (up to its class level) and of its feats (always). The number of an advancement: its choices and its automatic grants.
  * @param {Array<{item: string, label: string, identifier: string, kind: string, classLevel: number|null,
  *   advancements: Array<{level: number, count: number}>}>} items
  * @returns {Array<{item: string, label: string, identifier: string, count: number, melee: boolean, changes: number}>}
@@ -110,23 +110,23 @@ export const masterySlots = sources => (sources ?? []).reduce((n, s) => n + s.co
 /** Le nombre de bottes qu'un Repos long laisse changer. */
 export const restChanges = sources => (sources ?? []).reduce((n, s) => n + s.changes, 0);
 
-/** Combien de bottes d'avant ne sont plus choisies. */
+/** How many of the earlier masteries are no longer chosen. */
 export const removedCount = (before, after) => (before ?? []).filter(k => !(after ?? []).includes(k)).length;
 
 /**
- * §510 (Discord, Fanarie) : ce que le Repos long laisse encore changer une fois le choix en cours compté — le drapeau (`allowance`,
- * déjà diminué des changements enregistrés) moins les bottes que la sélection retire. Jamais négatif.
+ * §510 (Discord, Fanarie): what the Long Rest still lets one change once the current choice is counted — the flag (`allowance`,
+ * already reduced by the recorded changes) minus the masteries that the selection removes. Never negative.
  */
 export const allowanceLeft = (allowance, before, after) => Math.max(0, (Math.max(0, Number(allowance) || 0)) - removedCount(before, after));
 
 /**
- * Le choix `after` respecte-t-il les règles ? Raisons, dans l'ordre :
- *  - `notProficient` : une arme que l'acteur ne maîtrise pas (« with which you have proficiency ») ;
- *  - `tooMany` : plus de bottes que ses sources n'en donnent ;
- *  - `melee` : trop d'armes à distance pour les places qui les acceptent (Barbare : corps à corps seulement) ;
- *  - `changes` : plus de bottes retirées que ce que le Repos long permet (`allowance` ; hors repos, 0).
- * Une botte déjà choisie n'est pas rejugée pour `notProficient` (maîtrise perdue depuis) ; une arme absente de `weapons` (index pas
- * encore lu, arme d'un autre module) n'est jugée que sur le nombre.
+ * Does the choice `after` respect the rules? Reasons, in order:
+ *  - `notProficient`: a weapon that the actor is not proficient with ("with which you have proficiency");
+ *  - `tooMany`: more masteries than its sources give;
+ *  - `melee`: too many ranged weapons for the places that accept them (Barbarian: melee only);
+ *  - `changes`: more masteries removed than the Long Rest allows (`allowance`; outside a rest, 0).
+ * A mastery already chosen is not re-judged for `notProficient` (proficiency since lost); a weapon absent from `weapons` (index not
+ * yet read, weapon of another module) is judged only on the number.
  * @param {{before: string[], after: string[], weapons: Record<string, {melee: boolean, proficient: boolean}>,
  *   sources: object[], allowance: number}} input
  * @returns {{ok: boolean, reason: string|null, slots: number, removed: number}}

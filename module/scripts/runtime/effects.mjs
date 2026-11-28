@@ -1,4 +1,4 @@
-/** Les effets posés par un item, complétés selon son contenu (SPEC §16.38, adapter/effects.mjs). */
+/** The effects placed by an item, completed according to its content (SPEC §16.38, adapter/effects.mjs). */
 
 import { setRestExpiry, setTextExpiry } from "../adapter/effects.mjs";
 import { route } from "./router.mjs";
@@ -10,19 +10,19 @@ const EXPIRY_LABEL = {
 };
 
 /**
- * §146 : un effet qui naît déjà expiré. dnd5e applique l'effet d'une activité depuis sa source — et, quand l'item de la fiche l'a
- * perdu, depuis le compendium (`compendiumSource`), avec la date de début qui y est restée (`start.time` : 72 s pour la Rage du
- * Barbare pré-tiré) ; Foundry garde une date fournie (ActiveEffect#_preCreate : « Prefer user-defined duration data »). Une Rage de
- * 10 minutes « commencée » à 72 s est expirée dès sa création : au tour suivant, plus de +2 ni de résistances. Sur un acteur, un
- * effet dont la durée en secondes est déjà écoulée à sa création repart de maintenant. Un effet copié encore en cours (forme,
- * transfert) garde son début.
+ * §146: an effect that is born already expired. dnd5e applies an activity's effect from its source — and, when the sheet's item has
+ * lost it, from the compendium (`compendiumSource`), with the start date that stayed there (`start.time`: 72 s for the pre-made
+ * Barbarian's Rage); Foundry keeps a supplied date (ActiveEffect#_preCreate: "Prefer user-defined duration data"). A 10-minute Rage
+ * "started" at 72 s is expired as soon as it is created: on the next turn, no more +2 or Resistances. On an actor, an
+ * effect whose duration in seconds has already elapsed at its creation restarts from now. An effect copied while still running
+ * (form, transfer) keeps its start.
  */
 function freshStart(effect) {
   if ( !(effect.parent instanceof Actor) ) return;
   const start = Number(effect._source.start?.time);
   const d = effect._source.duration ?? {};
-  // Les unités de temps seulement : une durée en rounds ou en tours ne se compare pas à l'horloge du monde. Ne pas lire
-  // `duration.seconds` : en V14 c'est un raccourci déprécié du cœur (avertissement de compatibilité), nul hors de l'unité « seconds ».
+  // Time units only: a duration in rounds or turns cannot be compared with the world clock. Do not read
+  // `duration.seconds`: in V14 it is a deprecated core shortcut (compatibility warning), null outside the "seconds" unit.
   const seconds = (d.units === "seconds") ? Number(d.value) : (d.units === "minutes") ? Number(d.value) * 60
     : (d.units === "hours") ? Number(d.value) * 3600 : (d.units === "days") ? Number(d.value) * 86400 : NaN;
   if ( !Number.isFinite(start) || !(seconds > 0) || (start + seconds > game.time.worldTime) ) return;
@@ -35,7 +35,7 @@ export function registerEffects() {
   route("preCreateActiveEffect", effect => {
     const rest = setRestExpiry(effect);
     if ( rest ) log(`${effect.parent?.name ?? "?"}: ${effect.name} ends on a ${rest === "longRest" ? "Long Rest" : "Short Rest"}`);
-    // M4 (§18.7) : la durée écrite dans le texte (« jusqu'à la fin de son prochain tour »), pour un effet posé sans durée.
+    // M4 (§18.7): the duration written in the text ("until the end of its next turn"), for an effect placed without a duration.
     const turn = rest ? null : setTextExpiry(effect);
     if ( turn ) log(`${effect.parent?.name ?? "?"}: ${effect.name} ends ${EXPIRY_LABEL[turn]}`);
   }, { label: "effect: end on rest or next turn not applied" });

@@ -3,14 +3,14 @@ import { isMagicalSource, isMagicalUse, shouldMarkMagical, blockedByAntimagic, A
 import { SHIPPED } from "../module/scripts/content/index.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
-/** §436 : l'antimagie de dnd5e 6.1 — ce qui est magique, ce que le champ interdit, ce que le moteur marque. */
+/** §436: dnd5e 6.1's antimagic — what is magical, what the field forbids, what the engine marks. */
 describe("§436 : antimagie", () => {
-  it("les noms du système", () => {
+  it("the system's names", () => {
     expect(ANTIMAGIC_STATUS).toBe("antimagic");
     expect(ANTIMAGIC_BEHAVIOR).toBe("dnd5e.antimagic");
   });
 
-  it("une source magique : sort, parchemin, item mgc (règle de la migration de dnd5e), capacité dite magique", () => {
+  it("a magical source: spell, scroll, mgc item (dnd5e's migration rule), a so-called magical ability", () => {
     expect(isMagicalSource({ type: "spell" })).toBe(true);
     expect(isMagicalSource({ type: "consumable", subtype: "scroll" })).toBe(true);
     expect(isMagicalSource({ type: "consumable", subtype: "potion", properties: ["mgc"] })).toBe(true);
@@ -21,7 +21,7 @@ describe("§436 : antimagie", () => {
     expect(isMagicalSource(null)).toBe(false);
   });
 
-  it("une utilisation magique : un sort lancé, une activité d'objet magique, pas l'attaque d'une arme magique", () => {
+  it("a magical use: a cast spell, a magic item activity, not the attack of a magic weapon", () => {
     expect(isMagicalUse({ spellCast: true, item: { type: "spell" }, activityType: "attack" })).toBe(true);
     expect(isMagicalUse({ item: { type: "consumable", subtype: "potion", properties: ["mgc"] }, activityType: "heal" })).toBe(true);
     expect(isMagicalUse({ item: { type: "weapon", properties: ["mgc"] }, activityType: "attack" })).toBe(false);
@@ -32,20 +32,20 @@ describe("§436 : antimagie", () => {
     expect(isMagicalUse({ item: { type: "feat", magical: true }, activityType: "save" })).toBe(true);
   });
 
-  it("forçable : refusée par dnd5e seulement parce que le champ ôte la magie", () => {
+  it("forceable: refused by dnd5e only because the field removes magic", () => {
     const base = { inAntimagic: true, canUse: false, itemCanUse: true, requireMagic: true, magicAvailable: false, magicalUse: true };
     expect(blockedByAntimagic(base)).toBe(true);
     expect(blockedByAntimagic({ ...base, inAntimagic: false })).toBe(false);          // hors du champ
-    expect(blockedByAntimagic({ ...base, canUse: true })).toBe(false);                // dnd5e la permet : la légalité du moteur suffit
-    expect(blockedByAntimagic({ ...base, requireMagic: false })).toBe(false);         // cachée pour autre chose
+    expect(blockedByAntimagic({ ...base, canUse: true })).toBe(false);                // dnd5e allows it: engine legality is enough
+    expect(blockedByAntimagic({ ...base, requireMagic: false })).toBe(false);         // hidden for something else
     expect(blockedByAntimagic({ ...base, magicAvailable: true })).toBe(false);
-    expect(blockedByAntimagic({ ...base, otherHidden: true })).toBe(false);           // harmonisation, niveau… : le forçage n'y peut rien
+    expect(blockedByAntimagic({ ...base, otherHidden: true })).toBe(false);           // attunement, level…: forcing can do nothing
     expect(blockedByAntimagic({ ...base, itemCanUse: false })).toBe(false);
     expect(blockedByAntimagic({ ...base, magicalUse: false })).toBe(false);
     expect(blockedByAntimagic()).toBe(false);
   });
 
-  it("la marque magique : effet ordinaire d'une source magique, ni état, ni concentration, ni déjà marqué", () => {
+  it("the magic mark: ordinary effect of a magical source, neither a condition, nor Concentration, nor already marked", () => {
     const spell = { type: "spell" };
     expect(shouldMarkMagical({ type: "base" }, spell)).toBe(true);
     expect(shouldMarkMagical({}, spell)).toBe(true);
@@ -60,15 +60,15 @@ describe("§436 : antimagie", () => {
 });
 
 describe("§436 : le contenu de l'antimagie", () => {
-  it("capacités de monstres magiques, zones antimagie, durée du Cône", () => {
+  it("magical monster abilities, antimagic areas, duration of the Cone", () => {
     for ( const id of ["eye-rays", "teleport", "etherealness", "possession", "telekinetic-thrust", "shape-shift", "roar"] ) expect(SHIPPED[id].magical).toBe(true);
-    expect(SHIPPED["shape-shift"]?.magical).toBe(true);   // ajouté à la demande de l'utilisateur (2026-11-14)
+    expect(SHIPPED["shape-shift"]?.magical).toBe(true);   // added at the user's request (2026-11-14)
     expect(SHIPPED["antimagic-field"].antimagicZone).toBe(true);
     expect(SHIPPED["antimagic-cone"]).toMatchObject({ antimagicZone: true, zoneLasts: { seconds: 6 } });
     expect(SHIPPED["antimagic-field"].globe.everywhere).toBe(true);
   });
 
-  it("le schéma accepte les deux clés, et seulement à true", () => {
+  it("the schema accepts both keys, and only with true", () => {
     expect(validateEntry({ magical: true, antimagicZone: true })).toEqual([]);
     expect(validateEntry({ magical: "yes" }).length).toBeGreaterThan(0);
   });

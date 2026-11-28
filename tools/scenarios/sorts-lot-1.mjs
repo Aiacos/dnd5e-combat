@@ -1,26 +1,26 @@
 /**
- * Sorts de Clerc et de Druide de niveau 1 à 3 couverts mais jamais rejoués (SPEC §37.5), premier lot, monde `dnd-6`. Le Clerc reçoit
- * les sorts du Manuel des joueurs (à volonté, rien de consommé) et les lance depuis la colonne libre de Restored Keep (3080 × 4900) ;
- * le Guerrier se tient à son contact (3080 × 5040). Contrôles de cohérence :
- *  - Soins : PV regagnés = le jet (plafonné au maximum) ;
- *  - Lueur d'espoir : puis Soins → le maximum du jet ;
- *  - Prière de guérison : soigne ; relancée sur le même, rien (« ne peut en bénéficier qu'une fois par Repos long ») ;
- *  - Charme-personne : le Zombi (mort-vivant) n'est pas affecté ; le Bandit : Charmé ⇔ sauvegarde ratée ;
- *  - Apaisement des émotions : un seul effet, le choisi, sur le Bandit s'il rate ;
- *  - Couteau de glace : l'éclat fait sauvegarder le Bandit, touché ou non ;
- *  - Chauffer le métal : dégâts de feu au Bandit à la pose ;
- *  - Croissance d'épines : le Zombi traverse deux cases de la zone → un rejeu à 4d4 ;
- *  - Vision dans le noir : l'effet posé sur le Guerrier donne la vision dans le noir.
- * Remet positions, PV, effets, zones.
+ * Level 1 to 3 Cleric and Druid spells covered but never replayed (SPEC §37.5), first batch, world `dnd-6`. The Cleric receives
+ * the Player's Handbook spells (at will, nothing consumed) and casts them from the free column of Restored Keep (3080 × 4900);
+ * the Fighter stands in contact with him (3080 × 5040). Consistency checks:
+ *  - Cure Wounds: HP regained = the roll (capped at the maximum);
+ *  - Beacon of Hope: then Cure Wounds → the roll's maximum;
+ *  - Prayer of Healing: heals; recast on the same target, nothing ("can benefit from it only once per Long Rest");
+ *  - Charm Person: the Zombie (Undead) is not affected; the Bandit: Charmed ⇔ failed saving throw;
+ *  - Calm Emotions: a single effect, the chosen one, on the Bandit if he fails;
+ *  - Ice Knife: the burst makes the Bandit save, hit or not;
+ *  - Heat Metal: fire damage to the Bandit at placement;
+ *  - Spike Growth: the Zombie crosses two cells of the area → a replay at 4d4;
+ *  - Darkvision: the effect placed on the Fighter grants Darkvision.
+ * Puts back positions, HP, effects, areas.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const SPELLS = { cure: "phbsplCureWounds", prayer: "phbsplPrayerofHe", charm: "phbsplCharmPerso", calm: "phbsplCalmEmotio",
   beacon: "phbsplBeaconofHo", knife: "phbsplIceKnife00", heat: "phbsplHeatMetal0", spikes: "phbsplSpikeGrowt", darkvision: "phbsplDarkvision" };
-/** Le maximum d'une formule « 2d8 + 3 » (dés au maximum, constantes gardées). */
-// Chaque dé remplacé par son maximum, puis l'expression évaluée : depuis le §233, la formule arrive déjà maximisée (« (2 * 8) + 3 »),
-// parenthèses et produits compris — l'ancienne somme terme à terme en lisait 3.
+/** The maximum of a "2d8 + 3" formula (dice at maximum, constants kept). */
+// Each die replaced by its maximum, then the expression evaluated: since §233, the formula arrives already maximized
+// ("(2 * 8) + 3"), parentheses and products included — the former term-by-term sum read 3 from it.
 const maxOf = formula => {
   const expr = String(formula ?? "").replace(/(\d*)d(\d+)/g, (_, n, f) => String((Number(n) || 1) * Number(f)));
   return /^[\d\s+\-*/().]+$/.test(expr) ? Function(`return (${expr})`)() : NaN;
@@ -89,8 +89,8 @@ export default {
       ctx.expect(!errors.length, `${label} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
     /**
-     * Lance un sort du Clerc ; rend la résolution et les messages produits. `roll` : le jet de soin ou de dégâts que le moteur attend de
-     * l'auteur (le connecteur ne lance que les attaques) — le clic de la carte, `api.mcp.rollCard`.
+     * Casts a Cleric spell; returns the resolution and the messages produced. `roll`: the healing or damage roll that the engine
+     * expects from the author (the connector only rolls attacks) — the card's click, `api.mcp.rollCard`.
      */
     const cast = async (key, { roll=false, ...extra }={}) => {
       const since = await ctx.lastMessageId();
@@ -125,7 +125,7 @@ export default {
       const gained = await healed(fighter, 1);
       const expected = Math.min(maxOf(rollFormula(heal)), (await maxHp(fighter)) - 1);
       ctx.expect(!!heal && (gained === expected), `sous Lueur d'espoir : ${gained} PV regagnés, le maximum de « ${rollFormula(heal)} » (${expected})`);
-      // Le Guerrier n'a que peu de PV : le plafond peut masquer le maximum ; la trace du moteur le dit.
+      // The Fighter has few HP: the cap can mask the maximum; the engine's trace says so.
       const maxed = (await ctx.engineLog()).slice(-20).some(l => /soin au maximum|maximum healing/.test(l));
       ctx.expect(maxed, "le moteur a soigné au maximum (trace « soin au maximum »)");
     });
@@ -160,12 +160,12 @@ export default {
     });
 
     await part("Apaisement des émotions", async () => {
-      // Une zone ignore une créature à 0 PV (le Bandit de `dnd-6` l'est parfois, le lanceur ne relève pas les morts).
+      // An area ignores a creature at 0 HP (the `dnd-6` Bandit sometimes is one, the caster does not raise the dead).
       await tough();
       let posed = null;
       for ( let n = 1; (n <= 15) && !posed; n++ ) {
         await clearNew(bandit);
-        // Un sort à zone (Sphère de 6 m) : sans zone posée, le moteur attend la région — une petite zone sur le seul Bandit.
+        // An area spell (6 m Sphere): without a placed area, the engine waits for the region — a small area on the Bandit alone.
         const b = await ctx.position(bandit);
         const { r } = await cast("calm", { activityType: "save", area: { shape: "circle", x: b.x + grid / 2, y: b.y + grid / 2, radius: grid / 2 },
           usageConfig: { [MODULE_ID]: { choice: "cb3KFq1j9UkOUV2l" } } });
@@ -189,7 +189,7 @@ export default {
     await part("Chauffer le métal", async () => {
       await tough();
       const before = await ctx.hp(bandit);
-      // L'activité de dégâts de la pose (« Cast » : 2d8 de feu), qui enchaîne la sauvegarde (contenu `burst`).
+      // The placement's damage activity ("Cast": 2d8 fire), which chains the saving throw (content `burst`).
       const { msgs } = await cast("heat", { roll: true, activityId: "2jWlvr2titPfBMEm", targetTokenIds: [bandit.id] });
       await pause(1500);
       const damage = (await ctx.messagesSince(msgs[0]?.id ?? null)).concat(msgs).find(m => m.type === "damage");
@@ -198,15 +198,15 @@ export default {
     });
 
     await part("Croissance d'épines", async () => {
-      // La zone : trois colonnes sur trois cases (2940 → 3220, 5180 → 5460) ; le Zombi part de 5040 et descend de deux cases dedans.
-      // §84 : depuis le §69 la zone est un terrain difficile, et l'A* du moteur la contourne : une seule colonne laissait le Zombi
-      // passer à côté et n'y entrer qu'à la dernière case (2d4). Trois colonnes : aucun détour n'est moins cher que la traversée.
+      // The area: three columns of three cells (2940 → 3220, 5180 → 5460); the Zombie starts from 5040 and goes down two
+      // cells into it. §84: since §69 the area is Difficult Terrain, and the engine's A* goes around it: a single column let the
+      // Zombie pass beside it and enter only at the last cell (2d4). Three columns: no detour is cheaper than the crossing.
       await ctx.call("move-token", { tokenId: fighter.id, x: 2800, y: 5460, elevation: 0 });
       await ctx.call("move-token", { tokenId: zombi.id, x: 3080, y: 5040, elevation: 0 });
       await pause(700);
       await cast("spikes", { activityType: "damage", area: { shape: "rectangle", x: 2940, y: 5180, width: 3 * grid, height: 3 * grid } });
       const since = await ctx.lastMessageId();
-      // Le vrai déplacement du moteur (A*, trajet parcouru) : `move-token` déplace sur place, sans cases traversées.
+      // The engine's real movement (A*, path traveled): `move-token` moves in place, with no cells crossed.
       await ctx.engine("move", { tokenId: zombi.id, point: { x: 3080 + grid / 2, y: 5320 + grid / 2 } });
       let tick = null;
       for ( const stop = Date.now() + 15000; !tick && (Date.now() < stop); await pause(800) ) {

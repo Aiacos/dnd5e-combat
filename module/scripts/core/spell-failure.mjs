@@ -1,16 +1,16 @@
 /**
- * Lot 1 des chantiers du 2026-10-30 : échec d'un sort lancé sous un effet qui le gêne (Lenteur, PHB 2024 — « si elle lance un sort
- * avec une composante somatique, il y a 25 % de chances que le sort échoue »). Pur : les règles se lisent dans le contenu des items
- * d'origine des effets du lanceur (`spellFailure`), le jet se fait ailleurs.
+ * Batch 1 of the 2026-10-30 workstreams: failure of a spell cast under an effect that hinders it (Slow, PHB 2024 — "if it casts a
+ * spell with a Somatic component, there is a 25 percent chance that the spell fails"). Pure: the rules are read from the content of
+ * the source items of the caster's effects (`spellFailure`), the roll is made elsewhere.
  */
 
-/** Les composantes qu'une règle peut nommer (propriétés dnd5e d'un sort). */
+/** The components a rule can name (dnd5e spell properties). */
 export const SPELL_COMPONENTS = Object.freeze(["vocal", "somatic", "material"]);
 
 /**
- * La règle d'échec qui s'applique à un sort, ou null. `rules` : les `spellFailure` des effets du lanceur, avec le nom de l'item qui
- * les porte (`{ chance, component?, name }`) ; `properties` : les propriétés du sort lancé. La plus forte chance l'emporte (deux
- * Lenteurs ne se cumulent pas).
+ * The failure rule that applies to a spell, or null. `rules`: the `spellFailure` of the caster's effects, with the name of the
+ * item that carries them (`{ chance, component?, name }`); `properties`: the properties of the cast spell. The highest chance
+ * wins (two Slows do not stack).
  */
 export function failureFor(rules, properties) {
   const has = new Set(properties ?? []);
@@ -24,7 +24,7 @@ export function failureFor(rules, properties) {
   return best;
 }
 
-/** Le sort échoue-t-il sur ce jet de d100 ? (« 25 % de chances » : 1 à 25.) */
+/** Does the spell fail on this d100 roll? ("25 percent chance": 1 to 25.) */
 export function spellFailed(chance, d100) {
   return Number.isFinite(d100) && (d100 <= chance);
 }

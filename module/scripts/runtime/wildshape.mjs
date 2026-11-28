@@ -1,7 +1,7 @@
 /**
- * Forme sauvage en marche (SPEC §16.39) : le druide choisit une forme connue (ui/wildshape.mjs), l'activité est utilisée
- * (utilisation de Forme sauvage, action Bonus, carte), puis le MJ actif le transforme ; la forme prend fin par l'action Bonus
- * « Reprendre sa forme », à la fin de sa durée, ou quand le druide est Neutralisé ou tombe à 0 PV.
+ * Wild Shape in operation (SPEC §16.39): the druid chooses a known form (ui/wildshape.mjs), the activity is used
+ * (Wild Shape use, Bonus Action, card), then the active GM transforms them; the form ends through the Bonus Action
+ * "Resume Form", at the end of its duration, or when the druid is Incapacitated or drops to 0 HP.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,13 +14,13 @@ import { relaunchUse } from "./relaunch.mjs";
 export const TRANSFORM_QUERY = `${MODULE_ID}.transform`;
 export const REVERT_QUERY = `${MODULE_ID}.revertForm`;
 
-/** Côté MJ actif : transformer l'acteur, pour un joueur qui le possède. */
+/** Active GM side: transform the actor, for a player who owns it. */
 async function handleTransform({ actor: actorUuid, source: sourceUuid, activity: activityUuid }, { user }={}) {
   const actor = await fromUuid(actorUuid);
   const source = await fromUuid(sourceUuid);
   const activity = await fromUuid(activityUuid);
   if ( !actor || !source || !activity || (user && !actor.testUserPermission(user, "OWNER")) ) return false;
-  // §472 : d'un joueur, l'activité de Forme sauvage est celle de l'acteur, la forme l'une de ses formes connues, et son profil la permet.
+  // §472: from a player, the Wild Shape activity is the actor's, the form one of its known forms, and its profile allows it.
   if ( needsCheck(user) ) {
     const info = await formInfo(sourceUuid);
     if ( !isWildShape(activity) || (activity.actor?.uuid !== actor.uuid) || !knownForms(actor).forms.includes(sourceUuid)
@@ -34,10 +34,10 @@ async function handleTransform({ actor: actorUuid, source: sourceUuid, activity:
   return !!shaped;
 }
 
-/** Les retours en cours : à 0 PV, l'état Inconscient arrive aussitôt — deux déclencheurs, un seul retour. */
+/** Returns in progress: at 0 HP, the Unconscious condition arrives at once — two triggers, a single return. */
 const reverting = new Set();
 
-/** Côté MJ actif : revenir à la forme d'origine. */
+/** Active GM side: return to the original form. */
 async function handleRevert({ actor: actorUuid, reason=null }, { user }={}) {
   if ( reverting.has(actorUuid) ) return false;
   const actor = await fromUuid(actorUuid);
@@ -50,15 +50,15 @@ async function handleRevert({ actor: actorUuid, reason=null }, { user }={}) {
   } finally { reverting.delete(actorUuid); }
 }
 
-/** Par le MJ actif, ou ici si l'on est lui. */
+/** By the active GM, or here if we are them. */
 function asGM(query, handler, payload) {
   return viaActiveGM(query, handler, payload, { timeout: 20000, noGm: "Forme.SansMJ", fallback: false, label: "Wild Shape" });
 }
 
 /**
- * §16.39 : intention « prendre cette forme » (fenêtre des formes connues, ui/wildshape.mjs) — l'utilisation suspendue repart,
- * sans que dnd5e demande une créature (un profil qu'il ne connaît pas : `_finalizeUsage` n'ouvre alors pas le compendium,
- * documents/activity/transform.mjs:113-124), la forme choisie notée ; la transformation suit l'utilisation (ci-dessous).
+ * §16.39: intent "take this form" (known-forms window, ui/wildshape.mjs) — the suspended use restarts,
+ * without dnd5e asking for a creature (a profile it does not know: `_finalizeUsage` then does not open the compendium,
+ * documents/activity/transform.mjs:113-124), the chosen form noted; the transformation follows the use (below).
  * @param {Activity} activity
  * @param {[object, object, object]} usage
  * @param {string} formUuid
@@ -69,25 +69,25 @@ export function takeForm(activity, [config, dialog, message], formUuid) {
   return relaunchUse(activity, use, { ...(dialog ?? {}), configure: false }, message);
 }
 
-/** Intention « reprendre sa forme » (menu du clic droit) : l'action Bonus de la fiche transformée, légalité comprise. */
+/** Intent "resume your form" (right-click menu): the Bonus Action of the transformed sheet, legality included. */
 export function leaveForm(activity, event=null) {
   return activity.use(event ? { event } : {});
 }
 
 async function onPostUse(activity, usageConfig) {
   const ours = usageConfig?.[MODULE_ID] ?? {};
-  // Transformation : après l'utilisation (dépense, action Bonus, carte), sur la forme choisie.
+  // Transformation: after the use (expenditure, Bonus Action, card), into the chosen form.
   if ( ours.wildForm && isWildShape(activity) ) {
     await asGM(TRANSFORM_QUERY, handleTransform, { actor: activity.actor.uuid, source: ours.wildForm, activity: activity.uuid });
     return;
   }
-  // « Reprendre sa forme » : l'item posé sur la fiche transformée.
+  // "Resume Form": the item placed on the transformed sheet.
   if ( activity.item?.getFlag(MODULE_ID, "revertForm") ) {
     await asGM(REVERT_QUERY, handleRevert, { actor: activity.actor.uuid, reason: "Bonus Action" });
   }
 }
 
-/** Neutralisé ou 0 PV : la forme cesse. MJ actif. */
+/** Incapacitated or 0 HP: the form ends. Active GM. */
 async function endIfNeeded(actor, reason) {
   if ( !formShouldEnd(actor) ) return;
   await handleRevert({ actor: actor.uuid, reason });

@@ -1,138 +1,140 @@
 /**
- * Le registre de déclencheurs (SPEC §13, S3) : UN mécanisme pour tout ce qui « s'accroche à un
- * moment » — réactions, zones qui durent, dégâts bonus, et demain les déclencheurs de tour.
+ * The trigger registry (SPEC §13, S3): ONE mechanism for everything that "hooks onto a
+ * moment" — reactions, lasting areas, bonus damage, and tomorrow the turn triggers.
  *
- * Une DÉCLARATION vient d'un item (contenu livré avec le module, ou flag de l'item) :
- *   { on: moment | moment[], if?: condition, do: étape[] }
+ * A DECLARATION comes from an item (content shipped with the module, or item flag):
+ *   { on: moment | moment[], if?: condition, do: step[] }
  *
- * Un MOMENT est un nom (voir MOMENTS). Le runtime le publie en `Hooks.callAll("dnd5e-combat.<moment>")`
- * pour les consommateurs passifs, et demande au cœur quelles déclarations s'y accrochent.
+ * A MOMENT is a name (see MOMENTS). The runtime publishes it as `Hooks.callAll("dnd5e-combat.<moment>")`
+ * for passive consumers, and asks the core which declarations hook onto it.
  *
- * Une CONDITION est une structure, pas une expression : pas d'eval, rien à parser, et une
- * clé inconnue rend la condition fausse (jamais de silence heureux). Les FAITS sont fournis par
- * l'adaptateur : une valeur (comparée strictement) ou une fonction (appelée avec l'argument).
- *   { "activity.isAttack": true }                      fait = valeur
- *   { "target.hasEffectFrom": "hex" }                  fait = fonction, appelée avec "hex"
- *   { "activity.type": ["attack", "save"] }            valeur dans une liste
- *   { "target.hasStatus": ["prone", "restrained"] }    fait = fonction qui accepte une liste : l'un de ces états
- *   { all: [...] } · { any: [...] } · { not: ... }     combinaisons ; un objet à plusieurs clés = all
+ * A CONDITION is a structure, not an expression: no eval, nothing to parse, and an
+ * unknown key makes the condition false (never a happy silence). The FACTS are supplied by
+ * the adapter: a value (compared strictly) or a function (called with the argument).
+ *   { "activity.isAttack": true }                      fact = value
+ *   { "target.hasEffectFrom": "hex" }                  fact = function, called with "hex"
+ *   { "activity.type": ["attack", "save"] }            value in a list
+ *   { "target.hasStatus": ["prone", "restrained"] }    fact = function that accepts a list: one of these conditions
+ *   { all: [...] } · { any: [...] } · { not: ... }     combinations; an object with several keys = all
  *
- * Fonctions pures, aucune dépendance à Foundry.
+ * Pure functions, no dependency on Foundry.
  */
 
 import { factionRelation } from "./factions.mjs";
 
 /**
- * Issue #40 : les dégâts qu'un effet inflige à son porteur à un moment de tour (Frappe piégeuse : « au début de chacun de ses
- * tours ») ne valent plus pour une créature morte. Une créature à 0 PV qui fait des jets contre la mort n'est pas morte : elle les
- * subit (un échec au jet contre la mort). Un soin porté par le même chemin (Héroïsme) n'est pas écarté ici.
+ * Issue #40: the damage an effect deals to its bearer at a turn moment (Ensnaring Strike: "at the start of each of its
+ * turns") no longer applies to a dead creature. A creature at 0 HP making death saving throws is not dead: it takes the
+ * damage (a failed death saving throw). Healing carried by the same path (Heroism) is not discarded here.
  * @param {{dead: boolean, heals: boolean}} state
  */
 export const spareBearer = ({ dead, heals }) => !!dead && !heals;
 
-/** Les moments connus. Un moment de réaction ouvre une fenêtre ; les autres agissent d'eux-mêmes. */
+/** The known moments. A reaction moment opens a window; the others act by themselves. */
 export const MOMENTS = Object.freeze({
   isHit: "an attack just hit the creature (Shield: before damage; riposte, B9: on application)",
   isDamaged: "the creature just took damage (Hellish Rebuke; via an effect: Sleep ending, Dominate replaying its save)",
   leavesReach: "a hostile creature leaves reach (Opportunity Attack)",
-  // §133 : une créature hostile vient de prendre l'action Se désengager (Sentinelle : attaque d'opportunité). Faits : le réacteur en
-  // `self`, celle qui se désengage en `source`. Fenêtre sans attente, comme « blessé ».
+  // §133: a hostile creature has just taken the Disengage action (Sentinel: Opportunity Attack). Facts: the reactor in
+  // `self`, the one disengaging in `source`. Window with no waiting, like "wounded".
   enemyDisengages: "a hostile creature just took the Disengage action (Sentinel: reaction window; it is the source)",
   enter: "a creature enters the area, or the area moves onto it",
   turnStart: "the creature starts its turn in the area",
   turnEnd: "the creature ends its turn in the area",
   moves: "the creature moves within the area (per square traveled: Spike Growth; not on placement)",
   preDamageRoll: "the actor is about to roll an activity's damage (bonus damage: Hex)",
-  // Issues d'une résolution (SPEC §16, brique « déplacement forcé », « état posé ») : à l'application,
-  // sur chaque cible atteinte. `hit` : une attaque de l'item l'a touchée ; `failedSave` : elle a raté
-  // la sauvegarde de l'item (ou celle qu'une attaque touchée impose).
+  // Outcomes of a resolution (SPEC §16, brick "forced movement", "applied condition"): at application,
+  // on each target reached. `hit`: an attack from the item hit it; `failedSave`: it failed
+  // the item's save (or the one that a hitting attack imposes).
   hit: "an attack from the item just hit the target (on application: push, condition)",
   failedSave: "the target just failed the item's saving throw (on application: push, condition)",
-  // K1 (§334) : une réussite à la sauvegarde de l'item (marque d'immunité temporaire : « immune to this … for 24 hours »).
+  // K1 (§334): a success on the item's save (temporary immunity mark: "immune to this … for 24 hours").
   savedSave: "the target just succeeded on the item's saving throw (on application: temporary immunity mark)",
-  // Le tour de la créature elle-même, où qu'elle soit (brique « sauvegarde répétée ») : une déclaration
-  // `via: "effect"` s'y accroche pour toute créature portant un effet de l'item (Immobilisation de personne).
+  // The turn of the creature itself, wherever it is (brick "repeated save"): a declaration
+  // `via: "effect"` hooks onto it for any creature carrying an effect of the item (Hold Person).
   startOfTurn: "the creature starts its turn (declaration carried by an effect)",
   endOfTurn: "the creature ends its turn (declaration carried by an effect)",
-  // §334 : la créature qui a posé l'effet commence son tour (Submersion, Tourbillon : « at the start of each of the elemental's turns »).
+  // §334: the creature that applied the effect starts its turn (Whelm, Whirlwind: "at the start of each of the elemental's turns").
   originTurnStart: "the creature that placed the effect starts its turn (declaration carried by the effect: its bearer takes damage)",
-  // Brique « avantage conditionnel » (§16, B6) : sur le client de l'attaquant, avant le jet, pour chaque cible.
-  // Consultées : les items de l'attaquant, et les effets portés par l'attaquant ET par la cible (`via: "effect"`).
+  // "Conditional Advantage" brick (§16, B6): on the attacker's client, before the roll, for each target.
+  // Consulted: the attacker's items, and the effects carried by the attacker AND by the target (`via: "effect"`).
   preAttackRoll: "the actor is about to make an attack roll against the target (advantage, disadvantage)",
-  // Portes (§16, B5 bis) : une utilisation est suspendue avant d'avoir lieu.
+  // Gates (§16, B5 bis): a use is suspended before it takes place.
   castsSpell: "a hostile creature casts a spell within range and in sight (Counterspell: reaction window)",
-  // §19.6 : fenêtres sans attente, comme « blessé ».
+  // §19.6: windows with no waiting, like "wounded".
   isMissed: "an attack just missed the creature (Riposte, Disarming Attack: reaction window)",
   enemyTurnEnd: "a hostile creature ends its turn (reaction window; it is the source)",
-  // §157 : avant une utilisation SANS jet d'attaque qui la vise (chaque projectile de Projectile magique est une utilisation) — la
-  // créature visée peut réagir (Bouclier). Faits : le réacteur en `target` et `actor`, l'utilisateur en `source`.
+  // §157: before a use WITHOUT an attack roll that targets it (each Magic Missile dart is a use) — the
+  // targeted creature can react (Shield). Facts: the reactor in `target` and `actor`, the user in `source`.
   isTargeted: "a hostile creature is about to use an activity without attack roll that targets the creature (Shield against Magic Missile: reaction window)",
   isAttacked: "a creature is about to attack the bearer (Sanctuary: the attacker's saving throw, via an effect; §34: the target's reaction window, before the roll — Shadowy Dodge)",
-  // §34 : une créature hostile au réacteur s'apprête à faire un jet d'attaque, contre lui ou un allié : fenêtre de réaction avant le
-  // jet (Éclat protecteur). Les faits voient le réacteur en `self`, l'attaquant en `source`, la créature visée en `target`.
+  // §34: a creature hostile to the reactor is about to make an attack roll, against it or an ally: reaction window before the
+  // roll ("Protective Flash"). The facts see the reactor in `self`, the attacker in `source`, the targeted creature in `target`.
   enemyAttacks: "a hostile creature is about to make an attack roll (Warding Flare: reaction window, before the roll)",
-  // Le pendant : une créature alliée du réacteur (autre que lui) s'apprête à attaquer une créature qui lui est hostile (Présage
-  // cosmique, Fortune : un dé ajouté au jet). Mêmes faits : le réacteur en `self`, l'attaquant en `source`, la cible en `target`.
+  // The counterpart: a creature allied to the reactor (other than itself) is about to attack a creature hostile to it (Cosmic
+  // Omen, Fortune: a die added to the roll). Same facts: the reactor in `self`, the attacker in `source`, the target in `target`.
   allyAttacks: "an allied creature is about to make an attack roll against an enemy (Cosmic Omen, Weal: reaction window, before the roll)",
-  // §19.8 : fenêtre sans attente, comme « blessé » ; le fait `condition.gained` dit quel état.
+  // §19.8: window with no waiting, like "wounded"; the fact `condition.gained` says which condition.
   gainsCondition: "the creature just gained a condition (reflexive shape-change: reaction window)",
-  // Domaine de la Tombe : une AUTRE créature que celle qui réagit vient d'être touchée, avant les dégâts. Les faits voient
-  // la réactrice en `self`, la créature touchée en `target`, l'attaquant en `source`.
+  // Grave Domain: ANOTHER creature than the one reacting has just been hit, before damage. The facts see
+  // the reactor in `self`, the hit creature in `target`, the attacker in `source`.
   allyIsHit: "another creature was just hit (Sentinel at Death's Door: reaction window, before damage)",
-  // §38 : une AUTRE créature que le réacteur va subir des dégâts, montant connu, avant leur application (Égide projetée : la réserve
-  // du magicien les absorbe). Mêmes faits que `allyIsHit` : le réacteur en `self`, la créature en `target`, l'auteur en `source`.
+  // §38: ANOTHER creature than the reactor is about to take damage, amount known, before it is applied (Projected Ward: the
+  // wizard's reserve absorbs it). Same facts as `allyIsHit`: the reactor in `self`, the creature in `target`, the author in
+  // `source`.
   allyIsDamaged: "another creature is about to take damage (Projected Ward: reaction window, before application)",
-  // §236 : une créature hostile au réacteur vient de faire un jet d'attaque, touché ou raté, contre qui que ce soit (Âme de la vengeance).
-  // Les faits voient le réacteur en `target`, l'attaquant en `source`. Fenêtre sans attente, comme « raté ».
+  // §236: a creature hostile to the reactor has just made an attack roll, hit or miss, against anyone (Soul of Vengeance).
+  // The facts see the reactor in `target`, the attacker in `source`. Window with no waiting, like "missed".
   enemyAttacked: "a hostile creature just made an attack roll, hit or miss, against anyone (Soul of Vengeance: reaction window; it is the source)",
-  // §301 : la créature va subir les dégâts d'une chute (carte de chute de dnd5e, avant leur application) — Chute ralentie : le réacteur
-  // est la créature qui tombe (`self` = `target`). `allyFalls` : une AUTRE créature non hostile tombe (Feuille morte) — le réacteur en
-  // `self`, celle qui tombe en `target`.
+  // §301: the creature is about to take fall damage (dnd5e fall card, before it is applied) — Slow Fall: the reactor
+  // is the falling creature (`self` = `target`). `allyFalls`: ANOTHER non-hostile creature falls (Feather Fall) — the reactor in
+  // `self`, the falling one in `target`.
   falls: "the creature is about to take falling damage (Slow Fall: reaction window, before application)",
   allyFalls: "another creature is about to take falling damage (Feather Fall: reaction window, before application)",
-  // §487 : la créature vient de RÉUSSIR la sauvegarde imposée par l'activité d'une créature qui lui est hostile (Représailles du mage :
-  // « contre un sort » se filtre par `activity.isSpell`). Les faits voient le réacteur en `target`, l'auteur en `source`. Fenêtre sans
-  // attente, comme « raté » ; une Résistance légendaire compte comme une réussite. À ne pas confondre avec `savedSave` (issue de la
-  // sauvegarde de l'item lui-même, à l'application, sans réaction).
+  // §487: the creature has just SUCCEEDED on the save imposed by the activity of a creature hostile to it ("Mage's Reprisal":
+  // "against a spell" is filtered by `activity.isSpell`). The facts see the reactor in `target`, the author in `source`. Window
+  // with no waiting, like "missed"; a Legendary Resistance counts as a success. Not to be confused with `savedSave` (outcome of
+  // the item's own save, at application, without a reaction).
   savesAgainst: "the creature just succeeded on a saving throw against a hostile creature's activity (Mage's Retaliation: reaction window; it is the source)",
-  // §493 (B13) : la créature, prise dans la zone d'une activité d'une AUTRE créature (cône, ligne… : `activity.areaShape`), va en subir
-  // les dégâts, montant connu, avant leur application. Les faits voient le réacteur en `target` et `self`, l'auteur en `source`. Une
-  // réaction peut alors les annuler pour elle seule (`cancelForSelf`), au besoin seulement si l'auteur rate la sauvegarde qu'elle impose.
+  // §493 (B13): the creature, caught in the area of an activity of ANOTHER creature (Cone, Line…: `activity.areaShape`), is about
+  // to take its damage, amount known, before it is applied. The facts see the reactor in `target` and `self`, the author in
+  // `source`. A reaction can then cancel it for itself alone (`cancelForSelf`), if needed only if the author fails the save it
+  // imposes.
   inArea: "the creature, caught in another creature's area activity, is about to take its damage (Insect Shield: reaction window, before application; the author is the source)"
 });
 
-/** Les moments dont les déclarations sont portées par les EFFETS de la créature concernée (`via: "effect"`). */
-/** §34 : les fenêtres de réaction avant un jet d'attaque (Désavantage, dé retiré). */
+/** The moments whose declarations are carried by the EFFECTS of the creature concerned (`via: "effect"`). */
+/** §34: the reaction windows before an attack roll (Disadvantage, die removed). */
 export const PRE_ATTACK_WINDOWS = Object.freeze(["isAttacked", "enemyAttacks", "allyAttacks"]);
 
 export const BEARER_MOMENTS = Object.freeze(["startOfTurn", "endOfTurn", "isAttacked", "isDamaged", "isHit", "originTurnStart"]);
 
-/** §334 : les moments où le porteur d'un effet subit ses dégâts (`to: "bearer"`) — son tour, ou celui de l'origine de l'effet. */
+/** §334: the moments when an effect's bearer takes its damage (`to: "bearer"`) — its turn, or that of the effect's origin. */
 export const BEARER_DAMAGE_MOMENTS = Object.freeze(["startOfTurn", "endOfTurn", "originTurnStart"]);
 
-/** Les moments qui ne se publient qu'à l'application d'une résolution, par cible atteinte. */
+/** The moments published only when a resolution is applied, per target reached. */
 export const OUTCOME_MOMENTS = Object.freeze(["hit", "failedSave", "savedSave"]);
 
-/** Les moments du tour de la créature elle-même, sans zone. */
+/** The moments of the creature's own turn, without an area. */
 export const TURN_MOMENTS = Object.freeze(["startOfTurn", "endOfTurn"]);
 
-/** Les moments où une créature rejoue la sauvegarde d'un effet qu'elle porte (§16, B4) : son tour, ou des dégâts subis. */
+/** The moments when a creature replays the save of an effect it carries (§16, B4): its turn, or damage taken. */
 export const RESAVE_MOMENTS = Object.freeze([...TURN_MOMENTS, "isDamaged"]);
 
 /**
- * Une déclaration sous forme canonique : `on` toujours en liste, `if` et `do` toujours présents,
- * `via` : null (les items de l'acteur) ou "effect" (les effets que l'item a posés sur la créature).
+ * A declaration in canonical form: `on` always a list, `if` and `do` always present,
+ * `via`: null (the actor's items) or "effect" (the effects the item applied to the creature).
  */
 /**
- * Les déclarations `via: "effect"` qu'on peut restreindre selon la source des dégâts (`by`) : §65 `originSide`, le lanceur ou ses
- * alliés (Suggestion) ; §294 `otherActivity`, pas l'activité qui a posé l'effet (Calcination : « ces dégâts ne mettent pas fin au
- * renvoi »).
+ * The `via: "effect"` declarations that can be restricted by the source of the damage (`by`): §65 `originSide`, the caster or its
+ * allies (Suggestion); §294 `otherActivity`, not the activity that applied the effect ("Calcination": "this damage does not end
+ * the dismissal").
  */
 export const DAMAGED_BY = Object.freeze(["originSide", "otherActivity"]);
 
 /**
- * §294 : deux références d'activité désignent-elles la même ? UUID complets, ou un UUID et un id nu (`system.origin.activity` d'un
- * effet peut être l'un ou l'autre). Inconnue d'un côté : non.
+ * §294: do two activity references designate the same one? Full UUIDs, or a UUID and a bare id (an effect's
+ * `system.origin.activity` can be either). Unknown on one side: no.
  */
 export function sameActivity(a, b) {
   if ( !a || !b ) return false;
@@ -140,8 +142,8 @@ export function sameActivity(a, b) {
 }
 
 /**
- * §65 : des dégâts viennent-ils du lanceur de l'effet ou d'un de ses alliés ? Même acteur, ou tokens de même disposition
- * (amicale ou hostile ; une créature neutre n'est l'alliée de personne). Auteur inconnu : non.
+ * §65: does damage come from the effect's caster or one of its allies? Same actor, or tokens of the same disposition
+ * (friendly or hostile; a neutral creature is nobody's ally). Unknown author: no.
  * @param {{damager: string|null, origin: string|null, damagerDisposition?: number|null, originDisposition?: number|null}} who
  */
 export function damagedByOriginSide({ damager, origin, damagerDisposition=null, originDisposition=null, damagerSide=null, originSide=null }) {
@@ -158,7 +160,7 @@ export function normalize(declaration, extra={}) {
   return { ...extra, ...declaration, on: on.filter(Boolean), if: declaration.if ?? null, do: declaration.do ?? [], via: declaration.via ?? null };
 }
 
-/** La condition tient-elle, au vu des faits ? */
+/** Does the condition hold, given the facts? */
 export function holds(condition, facts={}) {
   if ( (condition === null) || (condition === undefined) || (condition === true) ) return true;
   if ( condition === false ) return false;
@@ -175,14 +177,14 @@ export function holds(condition, facts={}) {
   });
 }
 
-/** Les clés de faits qu'une condition utilise et que les faits ne fournissent pas (pour valider du contenu). */
+/** The fact keys that a condition uses and that the facts do not supply (to validate content). */
 export function unknownFacts(condition, facts={}) {
   const out = new Set();
   const walk = c => {
     if ( !c || (typeof c !== "object") ) return;
     if ( Array.isArray(c) ) return c.forEach(walk);
     for ( const [key, arg] of Object.entries(c) ) {
-      // `all` / `any` sans liste : la condition est mal formée, la clé est signalée plutôt que de lever une exception.
+      // `all` / `any` without a list: the condition is malformed, the key is reported rather than raising an exception.
       if ( ["all", "any"].includes(key) ) {
         if ( Array.isArray(arg) ) arg.forEach(walk);
         else if ( (arg !== null) && (arg !== undefined) ) out.add(key);
@@ -195,12 +197,12 @@ export function unknownFacts(condition, facts={}) {
   return Array.from(out);
 }
 
-/** Les déclarations (canoniques) qui s'accrochent à ce moment et dont la condition tient. */
+/** The (canonical) declarations that hook onto this moment and whose condition holds. */
 export function select(declarations, moment, facts={}) {
   return declarations.filter(d => d.on.includes(moment) && holds(d.if, facts));
 }
 
-/** Les étapes d'un type donné d'une déclaration. */
+/** The steps of a given type of a declaration. */
 export function stepsOf(declaration, type) {
   return declaration.do.filter(s => s.type === type);
 }

@@ -1,16 +1,17 @@
 /**
- * §436 : l'antimagie de dnd5e 6.1 tenue par le moteur, monde `dnd-6`, arène (comme `releve-sorts-8`). Sorts prêtés du Manuel des joueurs
- * (à volonté). Le Champ antimagie du Manuel n'a pas le comportement de région du SRD 6.1 : le moteur le lui ajoute, dnd5e pose alors
- * le statut `antimagic`.
- *  1. Bénédiction du Clerc sur le Guerrier, loin du champ : l'effet posé est marqué magique.
- *  2. Le Magicien lance le Champ : la région porte `dnd5e.antimagic`, le Magicien a le statut.
- *  3. Le Guerrier entre dans le champ : statut, Bénédiction suspendue ; il en sort : plus de statut, Bénédiction rétablie.
- *  4. Le Zombi, dehors, lance Flamme sacrée sur le Magicien : non affecté (raison `antimagic`), PV inchangés.
- *  4 bis. Poussée télékinétique (Manuel des monstres, capacité dite magique) : sans effet sur le Magicien ; refusée au Zombi dans le champ.
- *  5. Le Magicien lance Trait de feu (une cible ; Projectile magique ouvrirait d'abord la visée des projectiles) : fenêtre de légalité — « Renoncer » : rien ; « Utiliser quand même » : carte marquée
- *     `overridden` (la raison du champ), alerte au MJ.
- *  6. Le Guerrier, dans le champ, frappe le Bandit avec une arme non magique : aucun souci de légalité, l'attaque se résout.
- * Remet positions, effets, PV.
+ * §436: dnd5e 6.1 antimagic held by the engine, `dnd-6` world, arena (like `releve-sorts-8`). Spells lent from the Player's
+ * Handbook (at will). The Handbook's Antimagic Field lacks the SRD 6.1 region behavior: the engine adds it, dnd5e then places
+ * the `antimagic` status.
+ *  1. Cleric's Bless on the Fighter, far from the field: the applied effect is marked magical.
+ *  2. The Wizard casts the Field: the region carries `dnd5e.antimagic`, the Wizard has the status.
+ *  3. The Fighter enters the field: status, Bless suspended; he leaves it: no more status, Bless restored.
+ *  4. The Zombie, outside, casts Sacred Flame on the Wizard: unaffected (reason `antimagic`), HP unchanged.
+ *  4 bis. Telekinetic Thrust (Monster Manual, ability said to be magical): no effect on the Wizard;
+ *     refused to the Zombie in the field.
+ *  5. The Wizard casts Fire Bolt (one target; Magic Missile would first open projectile aiming): legality window —
+ *     "Give up": nothing; "Use anyway": card marked `overridden` (the field's reason), alert to the GM.
+ *  6. The Fighter, in the field, hits the Bandit with a nonmagical weapon: no legality issue, the attack resolves.
+ * Restores positions, effects, HP.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -74,7 +75,7 @@ export default {
     await place(zombi, m.x + 5 * grid, m.y);
     await place(bandit, m.x + 2 * grid, m.y);
 
-    // 1. Bénédiction, loin du champ.
+    // 1. Bless, far from the field.
     const blessId = await lend(cleric, "phbsplBless00000");
     const b = await ctx.use({ tokenId: cleric.id, itemId: blessId, targetTokenIds: [fighter.id], consume: false });
     if ( b.usageMessageId ) await ctx.settle(b.usageMessageId, { timeoutMs: 30000 }).catch(() => null);
@@ -85,7 +86,7 @@ export default {
 
     // 2. Le Champ.
     const field = await lend(mage, "phbsplAntimagicF");
-    // La pose sans clic du moteur (§47), comme à la table : le connecteur seul (`use-activity`) coupe la pose des gabarits.
+    // Engine placement without a click (§47), as at the table: the connector alone (`use-activity`) cuts template placement.
     const used = await ctx.engine("use", { tokenId: mage.id, itemId: field, activityType: "utility" });
     for ( const r of used.regions ?? [] ) ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: r.id }).catch(() => {}));
     if ( used.messageId ) await ctx.settle(used.messageId, { timeoutMs: 30000 }).catch(() => null);
@@ -113,7 +114,7 @@ export default {
     ctx.expect(!(await statuses(fighter)).has("antimagic") && blessed?.suppressed === false,
       `hors du champ : plus de statut, Bénédiction rétablie (suppressed=${blessed?.suppressed})`);
 
-    // 4. Flamme sacrée de l'extérieur sur le Magicien.
+    // 4. Sacred Flame from outside on the Wizard.
     const flame = await lend(zombi, "phbsplSacredFlam");
     const hp = await ctx.hp(mage);
     const f = await ctx.use({ tokenId: zombi.id, itemId: flame, targetTokenIds: [mage.id], consume: false });
@@ -122,8 +123,8 @@ export default {
     const log = (await ctx.engineLog()).filter(l => /unaffected/.test(l) && /\(antimagic/.test(l));
     ctx.expect(log.length > 0 && ((await ctx.hp(mage)) === hp), `Flamme sacrée sur le Magicien dans le champ → ${log.at(-1) ?? "rien au journal"}`);
 
-    // 4 bis. Une capacité de monstre dite magique (content/antimagic.mjs) : Poussée télékinétique de l'Esprit frappeur, du Manuel des
-    // monstres — de l'extérieur sur le Magicien : non affecté ; depuis le champ : le souci du champ.
+    // 4 bis. A monster ability said to be magical (content/antimagic.mjs): the Poltergeist's Telekinetic Thrust, from the Monster
+    // Manual — from outside on the Wizard: unaffected; from the field: the field's issue.
     const thrust = await ctx.ensureItem(zombi, "Compendium.dnd-monster-manual.actors.Actor.mmPoltergeist000.Item.mmTelekineticThr").catch(() => null);
     if ( thrust ) {
       const t = await ctx.use({ tokenId: zombi.id, itemId: thrust, targetTokenIds: [mage.id], consume: false });
@@ -137,13 +138,14 @@ export default {
       await place(zombi, m.x + 5 * grid, m.y);
     } else ctx.log("Manuel des monstres absent : capacité de monstre non jouée");
 
-    // 5. Trait de feu depuis le champ : refusé, forçable.
+    // 5. Fire Bolt from the field: refused, forceable.
     const missile = await lend(mage, "phbsplFireBolt00");
     const issues = await ctx.engine("issues", { tokenId: mage.id, itemId: missile });
     ctx.expect(issues.some(l => /no spell can be cast|aucun sort/i.test(l)), `le souci du champ (${issues.join(" ; ") || "aucun souci"})`);
     const alerts = messages => messages.filter(msg => msg.flags?.[MODULE_ID]?.gmAlert);
     const usages = messages => messages.filter(msg => (msg.type === "usage") && (msg.flags?.[MODULE_ID]?.overridden?.length));
-    // Comme un clic du moteur (`engine use`) : dnd5e 6.1 refuserait sèchement le sort (`requireMagic`), la fenêtre du moteur passe avant.
+    // Like an engine click (`engine use`): dnd5e 6.1 would flatly refuse the spell (`requireMagic`), the engine's window
+    // comes first.
     const attempt = async button => {
       const since = await ctx.lastMessageId();
       ctx.engine("use", { tokenId: mage.id, itemId: missile, activityType: "attack" }).catch(() => null);
@@ -151,7 +153,7 @@ export default {
       if ( !d ) return null;
       await ctx.call("answer-dialog", { id: d.id, button });
       if ( button === "go" ) {
-        // Une autre raison de la légalité (pas de cible désignée…) : passée outre aussi, la carte garde la raison du champ.
+        // Another legality reason (no target designated…): overridden too, the card keeps the field's reason.
         const more = await legality(mage, 2500);
         if ( more ) await ctx.call("answer-dialog", { id: more.id, button: "go" });
       }
@@ -172,7 +174,7 @@ export default {
       if ( card ) await ctx.settle(card._id ?? card.id, { timeoutMs: 30000 }).catch(() => null);
     }
 
-    // 6. Une attaque non magique dans le champ.
+    // 6. A nonmagical attack in the field.
     await place(fighter, m.x + grid, m.y);
     const weapon = await weaponOf(fighter);
     if ( ctx.expect(!!weapon, "le Guerrier a une arme de corps à corps non magique") ) {

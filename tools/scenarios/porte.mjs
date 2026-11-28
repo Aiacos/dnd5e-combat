@@ -1,9 +1,9 @@
 /**
- * Portes à distance (SPEC §18.24, §152) : le Guerrier ouvre puis ferme une porte à quatre cases de lui, comme l'entrée « Ouvrir » /
- * « Fermer » du menu (`api.mcp.door` → `setDoorOpen` → `approachDoor`). Il s'avance d'abord au contact, de son côté du mur, puis
- * agit. Le 2026-10-11 (§147 → §152), `approachDoor` lisait un `maxCost` jamais déclaré : toute porte hors de portée levait une
- * ReferenceError et le menu ne faisait rien.
- * Arène de test : une porte d'une case posée pour le scénario (x = 3360, le long de la rangée du Guerrier), retirée à la fin.
+ * Remote doors (SPEC §18.24, §152): the Fighter opens then closes a door four cells from them, like the "Open" /
+ * "Close" menu entry (`api.mcp.door` → `setDoorOpen` → `approachDoor`). They first advance into contact, on their side of the
+ * wall, then act. On 2026-10-11 (§147 → §152), `approachDoor` read a `maxCost` never declared: any door out of reach threw a
+ * ReferenceError and the menu did nothing.
+ * Test arena: a one-cell door placed for the scenario (x = 3360, along the Fighter's row), removed at the end.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 

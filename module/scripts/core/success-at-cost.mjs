@@ -1,23 +1,24 @@
 /**
- * Issue GitHub #32 : « Succès à un prix », aide optionnelle du Guide du maître 2024 (chapitre 2). Quand un test d20 échoue de 1 ou 2,
- * le MJ peut offrir la réussite assortie d'une complication qu'il décrit lui-même ; le joueur accepte ou refuse. Rien n'est décidé ici :
- * le calcul de ce qui peut être offert, sans Foundry.
+ * GitHub issue #32: "Success at a Cost", optional aid from the 2024 Dungeon Master's Guide (chapter 2). When a d20 test fails by
+ * 1 or 2, the GM can offer success along with a complication the GM describes; the player accepts or refuses. Nothing is
+ * decided here: the calculation of what can be offered, without Foundry.
  *
- * Règles retenues :
- *  - un échec de 1 à `margin` (2) sous le seuil, seuil connu (CA, DD) ;
- *  - une attaque sur un 1 naturel (échec automatique) ou contre un abri total n'est jamais proposée ; un coup obtenu à un prix n'est
- *    jamais critique ;
- *  - un jet sans seuil connu ne peut pas « rater de 1 ou 2 » : rien.
+ * Rules kept:
+ *  - a failure by 1 to `margin` (2) below the threshold, threshold known (AC, DC);
+ *  - an attack on a natural 1 (automatic miss) or against Total Cover is never offered; a hit obtained at a cost is
+ *    never a Critical Hit;
+ *  - a roll without a known threshold cannot "miss by 1 or 2": nothing.
  */
 
-/** L'écart maximal de l'aide (« de 1 ou 2 »). */
+/** The maximum margin of the aid ("by 1 or 2"). */
 export const AT_COST_MARGIN = 2;
 
-/** Les durées bornées de la pause (secondes) : 0 = pas de pause, seulement les boutons des cartes. */
+/** The bounded pause durations (seconds): 0 = no pause, only the card buttons. */
 export const AT_COST_HOLD = Object.freeze({ min: 0, max: 30, byDefault: 5 });
 
 /**
- * De combien le jet rate son seuil, quand c'est de 1 à `margin` ; 0 sinon (réussi, raté de plus, seuil inconnu).
+ * By how much the roll misses its threshold, when it is by 1 to `margin`; 0 otherwise (succeeded, missed by more, threshold
+ * unknown).
  * @param {number} total
  * @param {number|null} needed
  * @param {number} [margin]
@@ -29,26 +30,26 @@ export function nearMiss(total, needed, margin=AT_COST_MARGIN) {
 }
 
 /**
- * Les cibles d'une attaque jugée qu'un succès à un prix ferait toucher : ratées sur le total (pas un 1 naturel, pas un abri total, pas
- * une réaction qui change le coup en échec sans autre jet), de 1 à `margin`, et affectées.
+ * The targets of a judged attack that a success at a cost would make hit: missed on the total (not a natural 1, not Total
+ * Cover, not a Reaction that turns the hit into a miss without another roll), by 1 to `margin`, and affected.
  * @param {{total: number}} roll
  * @param {Array<{token: string, hit: boolean|null, reason: string|null, ac: number|null, unaffected?: any}>} targets
- * @param {number} margin  0 : l'aide est éteinte pour ce jet.
+ * @param {number} margin  0: the aid is off for this roll.
  * @returns {Array<{token: string, by: number}>}
  */
 export function nearMissTargets(roll, targets, margin) {
   if ( !(margin > 0) || !roll ) return [];
   return (targets ?? [])
     .filter(t => (t.hit === false) && (t.reason === "miss") && !t.unaffected)
-    // §489 : une cible contre qui l'attaquant a dû relancer (Parade) se juge sur le nouveau jet.
+    // §489: a target against whom the attacker had to reroll (Parry) is judged on the new roll.
     .map(t => ({ token: t.token, by: nearMiss((t.rerolled?.total ?? roll.total), t.ac, margin) }))
     .filter(t => t.by > 0);
 }
 
 /**
- * L'écart de l'aide pour un jet de cette créature : 0 si l'aide est éteinte ou si la créature n'est pas un personnage joueur — la
- * règle vise les joueurs (le MJ propose, le joueur choisit ; pour un PNJ, le MJ décide seul : décision de l'utilisateur, 2026-11-06).
- * `npc` reste ici pour une table qui le voudrait un jour ; aucun réglage ne le donne.
+ * The aid's margin for a roll by this creature: 0 if the aid is off or if the creature is not a player character — the
+ * rule targets players (the GM proposes, the player chooses; for an NPC, the GM decides alone: user decision, 2026-11-06).
+ * `npc` stays here for a table that would want it one day; no setting provides it.
  * @param {{enabled: boolean, npc: boolean, isCharacter: boolean}} facts
  */
 export function atCostMarginFor({ enabled, npc=false, isCharacter=false }) {
@@ -56,22 +57,22 @@ export function atCostMarginFor({ enabled, npc=false, isCharacter=false }) {
   return (isCharacter || npc) ? AT_COST_MARGIN : 0;
 }
 
-/** La durée de la pause, bornée ; une valeur illisible prend celle par défaut. */
+/** The pause duration, bounded; an unreadable value takes the default one. */
 export function holdSeconds(value) {
   const n = Number(value);
   if ( !Number.isFinite(n) ) return AT_COST_HOLD.byDefault;
   return Math.min(AT_COST_HOLD.max, Math.max(AT_COST_HOLD.min, Math.round(n)));
 }
 
-/** Le texte du prix, nettoyé : une ligne, 300 caractères au plus. Vide : null (le prix reste à dire à voix haute). */
+/** The cleaned price text: one line, 300 characters at most. Empty: null (the price is left to be said aloud). */
 export function cleanCost(text) {
   const s = String(text ?? "").replace(/\s+/g, " ").trim();
   return s ? s.slice(0, 300) : null;
 }
 
 /**
- * Un jet de groupe (§242) ou un jet natif à DD : la ligne peut-elle passer en réussite à un prix ? Lancée (total connu), pas encore
- * changée, et ratée de 1 à `margin`.
+ * A group roll (§242) or a native roll with a DC: can the row become a success at a cost? Rolled (total known), not yet
+ * changed, and missed by 1 to `margin`.
  * @param {{total: number|null, dc: number|null, atCost?: any}} row
  */
 export function rowAtCost({ total, dc, atCost=null }, margin=AT_COST_MARGIN) {

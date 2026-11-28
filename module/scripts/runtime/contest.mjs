@@ -1,9 +1,10 @@
 /**
- * §72 : le test en opposition (clé de contenu `contest` : `{ activity?, skill, against, effect, exclusive? }`) — Combat perspicace :
- * « un test de Sagesse (Perspicacité) contre une créature qu'il voit, en opposition au test de Charisme (Tromperie) de la cible ; en cas
- * de succès… ». À `dnd5e.postUseActivity`, sur le client de l'auteur : son jet, puis celui de la cible (chez son joueur s'il est
- * connecté, sinon ici), l'issue annoncée au chat ; gagné, l'effet `effect` de l'activité est posé sur la cible (`exclusive` : ceux posés
- * ailleurs par le même item tombent). Ce que l'effet donne (avantage, désavantage) se déclare à part (`triggers`, `preAttackRoll`).
+ * §72: the contest (content key `contest`: `{ activity?, skill, against, effect, exclusive? }`) — Insightful Fighting:
+ * "a Wisdom (Insight) check against a creature it can see, contested by the target's Charisma (Deception) check; on a
+ * success…". At `dnd5e.postUseActivity`, on the author's client: their roll, then the target's (on their player's if
+ * connected, otherwise here), the outcome announced in chat; on a win, the activity's `effect` is placed on the target
+ * (`exclusive`: those placed elsewhere by the same item drop). What the effect gives (Advantage, Disadvantage) is declared
+ * separately (`triggers`, `preAttackRoll`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,7 +16,7 @@ import { log, loc } from "./shared.mjs";
 export const CONTEST_QUERY = `${MODULE_ID}.contest`;
 const CONTEST_TIMEOUT = 30000;
 
-/** Le jet de la cible : chez son joueur s'il est connecté (requête), sinon sur ce client. */
+/** The target's roll: on their player's client if connected (request), otherwise on this client. */
 async function targetRoll(actor, skills) {
   const player = playerOwnerOf(actor);
   if ( player && (player !== game.user) ) {

@@ -18,7 +18,7 @@ la sélection sans rien jouer.
 | `abri-ignore-objet` |  | §521 | attackIgnoresCover (#245) |
 | `abri` |  |  | créature interposée, abri partiel +2 |
 | `actions-tour` |  | §15.2 | Pointe, Dague, Dague en main secondaire |
-| `activite-sous-effet` |  | §486 | §486 (brique B07) — `usageLimits.<activité>.whileEffect` / `unlessEffect` : une activité permise seulement sous un effet, ou seulement hors de lui (« Griffes (requiert Modificatio… |
+| `activite-sous-effet` |  | §486 | §486 (brick B07) — `usageLimits.<activité>.whileEffect` / `unlessEffect`: an activity allowed only under an effect, or only outside it ("Claws (requires Change Appearance)", a for… |
 | `agrandissement` |  | §16.58 | Agrandissement (token 2×2), Rapetissement, retour à la taille d'origine |
 | `alerte-mj` |  | §364 §366 §365 | bandeau, carte chuchotée, filtre d'activité, réglage |
 | `anneau-etoiles-filantes` |  | §550 | a lightning sphere's damage by the number created (4d12 for 1, 2d6 for 3) |
@@ -54,7 +54,7 @@ la sélection sans rien jouer.
 | `baguette-antimagie` |  | §448 | projectiles d'un objet : une charge, forçables dans le champ jusqu'au bout, un seul double clic |
 | `balayage-aptitudes` |  |  | balayage des dons et aptitudes du Manuel des joueurs (Arène des sorts) |
 | `balayage-enchantements` |  | §391 §77 §16.39 | balayage des enchantements et transformations à plusieurs profils (barre, sans emplacement) |
-| `balayage-invocations` |  | §389 §77 §384 §386 | §389 (issue #38) : balayage des invocations par les VRAIS chemins de lancement — les balayages de sorts et d'aptitudes (`tools/lib/balayage.mjs`) sautent les activités « summon »… |
+| `balayage-invocations` |  | §389 §77 §384 §386 | §389 (issue #38): sweep of summons through the REAL casting paths — the spell and feature sweeps (`tools/lib/balayage.mjs`) skip "summon" activities and cast everything with `conf… |
 | `balayage-sorts` |  | §406 | balayage des sorts du Manuel des joueurs (Arène des sorts) |
 | `bannissement` |  | §265 | la cible disparaît, puis revient (au plus proche si sa case est prise) |
 | `barbare` |  | §22 | Rage (entretien, fin), Bond instinctif, Témérité, Frénésie, Fureur divine, Rage implacable |
@@ -62,7 +62,7 @@ la sélection sans rien jouer.
 | `bottes-places` |  | §222 §510 | places selon la classe d'origine de l'aptitude (dnd5e 6.1, PHB 3.0) |
 | `bottes` |  | §21 | Écorchure, Sape, Ouverture, Ralentissement, Renversement, Poussée, Enchaînement |
 | `bouclier-de-feu` |  | §266 | l'effet fait briller le lanceur |
-| `bouclier-zone` |  | §493 | réaction contre un cône : la sauvegarde ratée du lanceur épargne la créature seule (§493, brique B13) |
+| `bouclier-zone` |  | §493 | (two spaces) as the scenario's title. const ITEM_NAME = |
 | `bourrasque` |  | §37.3 | poussée à la pose, rejeu en fin de tour |
 | `briques-367` |  | §367 | Marche dans l'ombre selon la lumière, Tempête de vengeance sans tir |
 | `briseur-concentration` |  | §133 §521 §523 | Tueur de mages, forme limitée à l'arme (#244, #240) |
@@ -79,7 +79,7 @@ la sélection sans rien jouer.
 | `college-esprits` |  | §96 | Esprits vengeur, brute, couard, diseur de bonne aventure, prêtre, de l'ombre ; Canalisation renforcée |
 | `compteur-action-fin` |  | §43 | Pétrification, Danse irrésistible d'Otto, Sommeil |
 | `concentration-zero` |  | §303 | 0 PV = fin de la Concentration (Mur de feu, Rayon de lune, mort sur le coup) |
-| `concentrations-multiples` |  | §494 | trois concentrations tenues ensemble, toutes perdues sur un jet raté ou Neutralisé (§494, brique B14) |
+| `concentrations-multiples` |  | §494 | indented by two spaces as the scenario title. const ITEM_NAME = |
 | `cones` |  | §182 | hors combat, une créature du MJ ne voit que devant elle |
 | `contresort` |  | §16 | un hostile contre le Rayon de givre du Magicien |
 | `cordon-de-fleches` |  | §75 | une sauvegarde à chaque entrée, quatre projectiles puis la fin |
@@ -94,7 +94,7 @@ la sélection sans rien jouer.
 | `degats-bonus` |  | §16 | Maître d'armes lourdes (+ maîtrise), Voile spirituel (+1d8 nécrotique à 10 ft) |
 | `degats-joueur` | Arène des refus | §507 | arme, Frappe assurée (§507) |
 | `degats-joueurs-au-clic` | Arène des refus | §524 | dégâts au clic pour les joueurs, d'office pour les créatures du MJ (#173) |
-| `deplacement-aleatoire` |  | §497 | Infestation : 1d4 visible, déplacement subi dans la direction tirée, rien si bloqué ou trop lent (§497, brique B17) |
+| `deplacement-aleatoire` |  | §497 | indented by two spaces as the scenario title. const ITEM_NAME = |
 | `deplacements-forces` | Arène des refus | §412 | saut trop long, Agrippé |
 | `deroulement-degats` |  | §419 §556 | au clic de l'auteur, validés par le MJ, les deux, d'office |
 | `deroulement-reactions` | Arène des refus | §418 | demander à chacun, aux joueurs seulement, jamais |
@@ -108,20 +108,20 @@ la sélection sans rien jouer.
 | `diagnostic-phb3` |  | §438 | sous-classes et objets du Manuel des joueurs 3.0.0 |
 | `diagnostic-traduction` |  | §203 | textes restés en anglais, traduction du compendium reprise |
 | `diagnostic` |  | §177 | analyse, réparation sauvegardée, restauration exacte |
-| `dissipation-bornee` |  | §496 | rien au-delà du niveau 3 (pas de test), la créature concentrée garde son sort par sa Réaction et un emplacement (§496, brique B16) |
+| `dissipation-bornee` |  | §496 | indented by two spaces as the scenario title. const ITEM_NAME = |
 | `dissipation` |  | §37.2 | d'office, par un test, par l'emplacement |
 | `donnees-sanctuaire-nature` |  | §454 §456 | Sanctuaire de dame Nature (effets perdus recréés) |
 | `dons-lot-7` |  | §289 | fins des dons sombres de Ravenloft, Seconde peau, Faveur de vigueur |
 | `dons-ravenloft` |  | §94 | Cri surnaturel, Symbiose, Survivant, Savoir d'une vie passée, Hurlement, Bond féroce, Chercher |
 | `dons-sombres` |  | §93 | 1 naturel (Anatomie aberrante, Guetteurs, Être symbiotique) |
-| `drain-mort` |  | §500 | maximum de PV drainé à 0 : la cible meurt et la table le voit (carte de chat, avis, son) ; pas de carte avant (§500, brique B20) |
+| `drain-mort` |  | §500 | indented by two spaces as the scenario title. const ITEM_NAME = |
 | `druide` |  | §30 §438 | Attaques primitives, Foulée sélène, Courroux des mers |
 | `duel-force` |  | §270 | fin quand le lanceur attaque un autre, ou qu'un allié blesse la cible |
 | `duree-texte` |  | §18.7 | Empoisonné jusqu'au début du prochain tour de l'attaquant |
 | `duree` |  | §16.37 | Lumière du jour prend fin avec l'heure du monde |
 | `ecarts-sorts-2` |  | §403 | écarts moyens des sorts, second lot (§403) |
 | `ecarts-sorts` |  | §402 | écarts moyens des sorts corrigés (§402) |
-| `echelle-etats` |  | §495 | Essai : empoisonné |
+| `echelle-etats` |  | §495 | indented by two spaces as the scenario title. const ITEM_NAME = |
 | `egide-abjurateur` | Arène de l'abjuration | §414 §16.11 §38 §156 | création, absorption, recharge, Lien protecteur, Égide projetée |
 | `egide-projetee` |  | §38 | l'égide du Magicien absorbe les dégâts du Guerrier |
 | `elevation` |  | §14.2 | une zone au sol épargne une créature en vol |
@@ -165,7 +165,7 @@ la sélection sans rien jouer.
 | `fins-et-durees` |  | §79 | Charme-monstre cesse sur les dégâts du lanceur, marque du Rayon traçant jusqu'à la fin de son tour |
 | `fins-generiques` |  | §258 | armure enfilée, personne d'affecté, lien trop loin |
 | `forme-gazeuse` |  | §269 | ni attaque ni sort |
-| `forme-limitee` |  | §498 | forme prise pour 10 rounds : retour automatique avec PV gardés et emplacements dépensés partagés, ou retour à la main par le menu (§498, brique B18) |
+| `forme-limitee` |  | §498 | indented by two spaces as the scenario title. const ITEM_NAME = |
 | `forme-sauvage` |  | §16.39 | prendre une forme, la quitter, la perdre à 0 PV |
 | `frappe-occulte` |  | §47 | proposée au toucher, emplacement de pacte, À terre, une fois par tour |
 | `frappe-piegeuse` |  | §206 | proposée après un coup d'arme, jet de Force, Avantage des créatures Grandes |
@@ -196,7 +196,7 @@ la sélection sans rien jouer.
 | `lancer-main-secondaire` |  | §240 §241 | au menu, action Bonus |
 | `lecture-48h` |  | §458 | le +2 à la fin de la lecture, une fois (onUsesSpent) |
 | `lenteur-attaque` |  | §267 | une seule attaque par action Attaquer |
-| `liane-traction` |  | §502 | Liane avide : la cible touchée est tirée vers la liane invoquée et agrippée par elle ; une seule à la fois, l'ancienne relâchée (§502, brique B22) |
+| `liane-traction` |  | §502 | indented by two spaces as the scenario title. const ITEM_NAME = |
 | `lot-c12-ravenloft` |  | §447 | Forme ombrale, Toucher de la mort, Courroux sauvage (aura, Représailles, fin), Seconde peau |
 | `lumiere-vive-scene` |  |  | la case de l'illumination globale dans la configuration de scène |
 | `lumieres-duree` |  | §121 | durée, extinction, huile, torche consumée |
@@ -218,7 +218,7 @@ la sélection sans rien jouer.
 | `moine` |  | §24 | Arts martiaux, Déluge de coups, main ouverte, Frappe étourdissante, Défense patiente, Pas du vent, Parade |
 | `monstres-toucher` |  | §18.4 | porte de taille (M3) et sauvegarde sœur (M2) |
 | `monture` |  | §490 | monter, déplacement commun, monture contrôlée et ordre, chute (§490, B08) |
-| `morsure-agrippe` |  | §504 | au lieu d'infliger les dégâts, l'attaquant agrippe la cible (DD 11 pour s'échapper) ; ou il inflige les dégâts, sans empoignade (§504, brique B24) |
+| `morsure-agrippe` |  | §504 | indented by two spaces as the scenario title. const ITEM_NAME = |
 | `mort-explosive` |  | §18.14 | le Méphite explose en mourant |
 | `mur-de-feu` |  | §169 §170 §171 | sans diagonale, opaque, face brûlante, traversée, anneau |
 | `murmures-fuite` |  | §147 §152 | Murmures dissonants : la fuite par la Réaction |
@@ -230,7 +230,7 @@ la sélection sans rien jouer.
 | `niveau-superieur-zones` |  | §406 | Boule de feu à retardement (§406) |
 | `niveaux-automatisation` |  | §117 §416 | attaque, sauvegarde, attaque d'opportunité, contenu, au niveau du monde |
 | `niveaux` | keep | §14.2 | un plancher arrête la zone et l'attaque |
-| `nuee-espace` |  | §505 | nuée : aucun PV temporaire reçu ; une capacité réservée aux créatures dans son espace, refusée (forçable) hors de lui (§505, brique B25) |
+| `nuee-espace` |  | §505 | indented by two spaces as the scenario title. const ITEM_NAME = |
 | `occultiste` |  | §29 | Décharge répulsive, Buveuse de vie, Âme radieuse, Défenses envoûtantes |
 | `ombre-ravenloft` |  | §447 | voir normalement à travers ses propres Ténèbres (Arène de la vision) |
 | `opportunite-mains-nues` |  | §428 | un personnage sans arme de mêlée en main |
@@ -264,8 +264,8 @@ la sélection sans rien jouer.
 | `protection-contre-la-mort` |  | §73 | à 1 PV au lieu de 0, puis le sort prend fin |
 | `protection-mal-bien` |  | §268 | ni Charmé ni Effrayé par un fiélon |
 | `rampe` |  | §17.2 | À terre : mode ramper posé et retiré |
-| `ravenloft-options` |  | §19.9 | Morsure vampirique, Attraction de la mort, Retour à la vie, Chemin vers la tombe, Sentinelle au seuil de la mort |
-| `reaction-perdue` |  | §501 | réactions multiples : Neutralisé ou Étourdi ne lui ôtent qu'une réaction chacun, avec un avis ; sans la règle, il ne réagit plus (§501, brique B21) |
+| `ravenloft-options` |  | §19.9 | … (+6) |
+| `reaction-perdue` |  | §501 | indented by two spaces as the scenario's title. const ITEM_NAME = |
 | `reduction` |  | §16.11 §156 §414 §415 | Égide arcanique, Esquive instinctive |
 | `refus-clics` | Arène des refus | §411 | attaque, menu, zone hors de portée, téléportation |
 | `regard-deux-esprits` |  |  | Gaze of Two Minds: spell range measured from the linked creature |
@@ -283,7 +283,7 @@ la sélection sans rien jouer.
 | `releve-sorts-8` |  | §163 | Champ antimagie, Coquille antivie |
 | `releve-sorts-9` |  | §164 §309 | Lévitation, Inversion de la gravité, Embruns, Vif carquois, élémentaire, céleste, Grêle d'épines |
 | `renvoi-choix` |  | §293 §438 | Renvoi des morts-vivants : liste des créatures à 9 m, Calcination à la place |
-| `renvoi-degats` |  | §499 | linceul : l'attaquant au corps à corps subit le même montant de dégâts résistés, rien à distance ni sans auteur, effet dissipé par des dégâts radiants (§499, brique B19) |
+| `renvoi-degats` |  | §499 | indented by two spaces as the scenario's title. const ITEM_NAME = |
 | `renvoi` |  | §16.25 | Calcination des morts-vivants |
 | `repasse-arc` |  | §353 | Arc du serment : Avantage, abri et longue portée contre l'ennemi juré |
 | `repasse-c1` |  | §295 | corrections déclaratives de la repasse (Arène des sorts) |
@@ -401,7 +401,7 @@ la sélection sans rien jouer.
 | `sorts-lot-4` |  | §286 | Nuée de météores, Tempête de feu, Chaîne d'éclairs (zones multiples, cibles choisies) |
 | `sorts-lot-5` |  | §287 | Rayon de soleil, Ténèbres qui dissipent les lumières de sort (lumières) |
 | `sorts-lot-6` |  | §288 | Flèche de foudre, Dissipation du mal et du bien, Dédale, Coup au but (données du PHB) |
-| `sorts-mineurs-seuls` |  | §503 | après une capacité, plus de sort ce tour sauf un sort mineur d'une action : Bénédiction refusée, Trait de feu permis (§503, brique B23) |
+| `sorts-mineurs-seuls` |  | §503 | indented by two spaces as the scenario's title. const ITEM_NAME = |
 | `sorts-restants` |  |  | Représailles infernales, Vigueur arcanique, Foulée brumeuse |
 | `sous-classes-ravenloft` |  | §95 §441 | Patron Mort-vivant, Sorcellerie de l'ombre, Fantôme, Gardien creux |
 | `soutien-intention` |  | §15.2 | avantage d'un allié, action préparée |

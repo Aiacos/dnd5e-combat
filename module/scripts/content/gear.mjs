@@ -1,105 +1,107 @@
 /**
- * Les objets du Manuel des joueurs 2024 (SPEC §49) : ce que dnd5e laisse à la main sur leurs effets.
+ * The items of the 2024 Player's Handbook (SPEC §49): what dnd5e leaves by hand on their effects.
  */
 
-/** L'effet « Burning. » / « Embrasement » que pose le feu grégeois (même id dans le Manuel des joueurs et ses copies). */
+/** The "Burning." / "Embrasement" effect placed by Alchemist's Fire (same id in the Player's Handbook and its copies). */
 const ALCHEMISTS_FIRE_BURNING = "HL12olRyPOCmmMQ5";
 
-/** Les activités de la trousse de soins dont la portée est « personnelle » (Manuel des joueurs, et une copie tierce courante) : au contact. */
+/** The Healer's Kit activities whose range is "personal" (Player's Handbook, and a common third-party copy): on touch. */
 const HEALERS_KIT_ACTIVITIES = ["bsWqOT06BB3Vb2hg", "1jlZEx9V2TITY9OT"];
 
-/** Flamme nue : lumière orangée qui vacille (animation « torch » du cœur). */
+/** Open flame: orange light that flickers (the core's "torch" animation). */
 const FLAME = { type: "torch", speed: 2, intensity: 2 };
 
 /** §121 : une heure (torche, bougie) ; une flasque d'huile, 6 heures. */
 const HOUR = { value: 1, units: "hour" };
 const OIL = { value: 6, units: "hour" };
-/** §346 : la Lanterne à capuchon, capuchon baissé — Lumière faible sur 1,50 m. */
+/** §346: the Hooded Lantern, hood lowered — Dim Light out to 1.50 m. */
 const HOOD = { bright: 0, dim: 5 };
 const BULLSEYE = { bright: 60, dim: 120, units: "ft", angle: 53, burn: OIL, fuel: "oil" };
 
 export const GEAR = Object.freeze({
-  // §52 : sources de lumière portées (Manuel des joueurs 2024) — rayon de la lumière vive, puis rayon EXTÉRIEUR de la faible.
-  // Bougie : « Lumière vive sur 1,50 m et faible sur 1,50 m de plus » ; Lampe : « vive sur 4,50 m et faible sur 9 m de plus » ;
-  // Lanterne à capuchon : « vive sur 9 m et faible sur 9 m de plus » ; §346 : « une action Bonus pour baisser le capuchon : Lumière faible
-  // sur 1,50 m » (`hooded`, menu de l'objet allumé) ;
-  // Lanterne sourde : « vive dans un cône de 18 m et faible sur 18 m de plus » ; Torche : « vive sur 6 m et faible sur 6 m de plus ».
-  // §121 : « une torche brûle 1 heure », « une bougie allumée […] pendant 1 heure » (l'unité brûlée disparaît) ; « une lampe [une
-  // lanterne] brûle de l'Huile » — « une flasque d'Huile brûle 6 heures […] ; pas forcément d'affilée : on peut l'éteindre et la
-  // rallumer jusqu'à 6 heures en tout ». La torche et la bougie aussi s'éteignent et se rallument (choix de l'utilisateur, 2026-10-10).
+  // §52: carried light sources (2024 Player's Handbook) — radius of the Bright Light, then OUTER radius of the dim.
+  // Candle: "Bright Light in a 1.50 m radius and Dim Light for an additional 1.50 m"; Lamp: "bright in a 4.50 m radius and dim
+  // for an additional 9 m"; Hooded Lantern: "bright in a 9 m radius and dim for an additional 9 m"; §346: "a Bonus Action to
+  // lower the hood: Dim Light in a 1.50 m radius" (`hooded`, menu of the lit item);
+  // Bullseye Lantern: "bright in an 18 m Cone and dim for an additional 18 m"; Torch: "bright in a 6 m radius and dim for an
+  // additional 6 m".
+  // §121: "a torch burns for 1 hour", "a lit candle […] for 1 hour" (the burned unit disappears); "a lamp [a
+  // lantern] burns Oil" — "a flask of Oil burns for 6 hours […]; not necessarily in a row: you can put it out and
+  // relight it up to 6 hours in all". The torch and the candle too can be put out and relit (user's choice, 2026-10-10).
   "candle": { carriedLight: { bright: 5, dim: 10, units: "ft", animation: FLAME, burn: HOUR } },
   "lamp": { carriedLight: { bright: 15, dim: 45, units: "ft", animation: FLAME, burn: OIL, fuel: "oil" } },
   "lantern-hooded": { carriedLight: { bright: 30, dim: 60, units: "ft", burn: OIL, fuel: "oil", hooded: HOOD } },
-  // O1 (§335) : une seconde Lanterne à capuchon du Manuel, en consommable, sous l'identifiant « hooded-lantern ».
+  // O1 (§335): a second Hooded Lantern from the Handbook, as a consumable, under the identifier "hooded-lantern".
   "hooded-lantern": { carriedLight: { bright: 30, dim: 60, units: "ft", burn: OIL, fuel: "oil", hooded: HOOD } },
-  // La lanterne sourde : « lantern-bullseye » dans le Manuel des joueurs, « bullseye-lantern » dans le SRD de dnd5e.
+  // The Bullseye Lantern: "lantern-bullseye" in the Player's Handbook, "bullseye-lantern" in dnd5e's SRD.
   "lantern-bullseye": { carriedLight: BULLSEYE },
   "bullseye-lantern": { carriedLight: BULLSEYE },
   "torch": { carriedLight: { bright: 20, dim: 40, units: "ft", animation: FLAME, burn: HOUR } },
-  // Boîte à amadou : « l'utiliser pour allumer une Bougie, une Lampe, une Lanterne ou une Torche […] prend une action Bonus ».
+  // Tinderbox: "using it to light a Candle, a Lamp, a Lantern or a Torch […] takes a Bonus Action".
   "tinderbox": { kindles: true },
-  // §187 : Chausse-trapes — « couvrir une case de 1,50 m à 1,50 m de soi ; une créature qui entre dans la zone pour la première fois
-  // d'un tour fait un JS de Dextérité DD 15 ou subit 1 dégât perforant et sa Vitesse tombe à 0 jusqu'au début de son prochain tour ;
-  // il faut 10 minutes pour les récupérer ». Billes — « une zone de 3 m de côté à 3 m de soi ; […] DD 10 ou À terre ; 10 minutes pour
-  // les récupérer ». La zone reste au sol (runtime/scatter.mjs) : qui y entre s'arrête sur sa première case, puis la sauvegarde.
+  // §187: Caltrops — "cover a 1.50 m by 1.50 m cell within 1.50 m of you; a creature that enters the area for the first time
+  // on a turn makes a DC 15 Dexterity save or takes 1 piercing damage and its Speed drops to 0 until the start of its next turn;
+  // it takes 10 minutes to pick them up". Ball Bearings — "an area 3 m on a side within 3 m of you; […] DC 10 or Prone; 10
+  // minutes to pick them up". The area stays on the ground (runtime/scatter.mjs): whoever enters it stops on its first cell, then
+  // the save.
   "caltrops": { scatter: true, triggers: [{ on: "enter", do: [{ type: "replay" }] }] },
   "ball-bearings": { scatter: true, triggers: [{ on: "enter", do: [{ type: "replay" }] }] },
-  // §54 : Huile — une sauvegarde de Dextérité ratée laisse la cible huilée pendant 1 minute ; tant qu'elle l'est, des dégâts de
-  // feu lui en infligent 5 de plus (runtime/oil.mjs). L'activité « Lancer »
-  // ne pose aucun effet : la marque « oiled » le porte.
-  // §188 : « lorsque vous effectuez l'action Attaque, vous pouvez remplacer l'une de vos attaques par le jet d'une flasque » (le lancer,
-  // pas l'étalage) ; « étaler […] une zone de 1,50 m de côté » qui, « embrasée, brûle jusqu'à la fin du tour 2 rounds après son
-  // allumage (12 secondes) et inflige 5 dégâts de feu à toute créature qui pénètre dans la zone ou y termine son tour, une fois par
-  // tour » (runtime/flammable.mjs).
+  // §54: Oil — a failed Dexterity save leaves the target oiled for 1 minute; as long as it is, fire damage
+  // deals 5 more to it (runtime/oil.mjs). The "Throw" activity
+  // places no effect: the "oiled" mark carries it.
+  // §188: "when you take the Attack action, you can replace one of your attacks with the throw of a flask" (the throw,
+  // not the spreading); "spreading […] a 1.50 m square area" which, "once lit, burns until the end of the turn 2 rounds after it is
+  // lit (12 seconds) and deals 5 fire damage to any creature that enters the area or ends its turn there, once per
+  // turn" (runtime/flammable.mjs).
   "oil": {
     triggers: [{ on: "failedSave", do: [{ type: "mark", mark: "oiled", label: "Marque.Huile", seconds: 60 }] }],
     replacesAttack: ["FoeoumkYcnAsGCRo"],
     flammable: { ground: true, damage: "5", type: "fire", rounds: 2, seconds: 12, on: ["enter", "turnEnd"] },
-    // §195 : la flaque est une surface glissante (« couverte de glace ou d'huile », Pantoufles d'araignée).
+    // §195: the puddle is a slippery surface ("covered in ice or oil", Slippers of Spider Climbing).
     slippery: true
   },
-  // §195 : Pantoufles d'araignée (Guide du maître) — « monter, descendre, traverser des surfaces verticales et marcher au plafond, les
-  // mains libres. Vous avez une vitesse d'escalade égale à votre Vitesse. Mais pas sur une surface glissante, couverte de glace ou d'huile
-  // par exemple ». Le plafond : core/climb.mjs ; la vitesse, absente des données, tenue par le MJ actif tant qu'elles sont portées et
-  // harmonisées (runtime/speed-grants.mjs). Limite : sur une surface glissante, cette vitesse d'escalade reste (seul le plafond est refusé).
+  // §195: Slippers of Spider Climbing (Dungeon Master's Guide) — "climb, descend, cross vertical surfaces and walk on the ceiling,
+  // hands free. You have a climb Speed equal to your Speed. But not on a slippery surface, covered in ice or oil
+  // for example". The ceiling: core/climb.mjs; the speed, absent from the data, kept by the active GM as long as they are worn and
+  // attuned (runtime/speed-grants.mjs). Limit: on a slippery surface, this climb speed remains (only the ceiling is refused).
   "slippers-of-spider-climbing": { notOnSlippery: true, grantsSpeeds: { climb: "walk" } },
-  // Cape d'arachnide : « une vitesse d'escalade égale à votre Vitesse » — l'effet des données écrit 1 (`upgrade`), comme Pattes
-  // d'araignée ; l'effet est transféré par l'item (pas créé sur l'acteur) : la Vitesse lui est accordée à côté, et l'`upgrade` garde la
-  // plus grande des deux.
+  // Cloak of Arachnida: "a climb Speed equal to your Speed" — the data's effect writes 1 (`upgrade`), like Spider
+  // Climb; the effect is transferred by the item (not created on the actor): the Speed is granted to it alongside, and the
+  // `upgrade` keeps the greater of the two.
   "cloak-of-arachnida": { grantsSpeeds: { climb: "walk" } },
-  // Yeux de l'aigle, Robe aux yeux (SRD 5.2) : « vous avez l'Avantage aux tests de Sagesse (Perception) qui reposent sur la vue » —
-  // la donnée n'en porte rien. À l'action Chercher, qui ne trouve que ce que le chercheur peut voir (core/search.mjs).
+  // Eyes of the Eagle, Robe of Eyes (SRD 5.2): "you have Advantage on Wisdom (Perception) checks that rely on sight" —
+  // the data carries nothing for it. At the Search action, which finds only what the searcher can see (core/search.mjs).
   "eyes-of-the-eagle": { searchBonus: { advantage: true } },
   "robe-of-eyes": { searchBonus: { advantage: true } },
-  // §53 : Élixir de santé — « les états suivants prennent fin : Aveuglé, Assourdi, Paralysé et Empoisonné » ; Potion de vitalité —
-  // « supprime tout niveau d'Épuisement et met fin à l'état Empoisonné » (les dés de vie au maximum pendant 24 h : au MJ).
+  // §53: Elixir of Health — "the following conditions end: Blinded, Deafened, Paralyzed and Poisoned"; Potion of Vitality —
+  // "removes any Exhaustion level and ends the Poisoned condition" (Hit Dice at their maximum for 24 h: left to the GM).
   "elixir-of-health": { curesAll: ["blinded", "deafened", "paralyzed", "poisoned"] },
   "potion-of-vitality": { curesAll: ["exhaustion", "poisoned"] },
-  // §208 : Bottes de saut et de célérité — « une fois à chacun de vos tours, sauter jusqu'à 9 m pour seulement 3 m de déplacement ».
+  // §208: Boots of Leaping and Speed — "once on each of your turns, jump up to 9 m for only 3 m of movement".
   "boots-of-striding-and-springing": { jump: { fixed: { distance: 30, cost: 10, from: "equipped" } } },
-  // §53 : Croissance — « l'effet "agrandir" du sort Agrandissement/rapetissement » ; Rapetissement — « l'effet "rapetisser" »
-  // (effets du sort, mêmes ids dans le Manuel des joueurs et le SRD : content/spells.mjs, SIZE_CHANGES).
+  // §53: Growth — "the \"enlarge\" effect of the Enlarge/Reduce spell"; Diminution — "the \"reduce\" effect"
+  // (the spell's effects, same ids in the Player's Handbook and the SRD: content/spells.mjs, SIZE_CHANGES).
   "potion-of-growth": { potionEffect: "Wi2E10l7n6Ka8k6u" },
-  // « Quand vous buvez cette potion, vous pouvez lancer la version de niveau 3 du sort Amitié avec les animaux » : sur une bête.
+  // "When you drink this potion, you can cast the level 3 version of the Animal Friendship spell": on a Beast.
   "potion-of-animal-friendship": { castTargets: true },
-  // Héroïsme : « 10 points de vie temporaires […] et l'effet du sort Bénédiction » — l'effet « Blessed » (dHNT1jBXfvYuNH16) de l'item
-  // n'est pas relié à l'activité de soin (gdyQxFAXH5PM9qy5) dans les données du Guide : on l'y relie.
+  // Heroism: "10 Temporary Hit Points […] and the effect of the Bless spell" — the item's "Blessed" effect (dHNT1jBXfvYuNH16)
+  // is not linked to the healing activity (gdyQxFAXH5PM9qy5) in the Guide's data: we link it there.
   "potion-of-heroism": { choice: { pool: { gdyQxFAXH5PM9qy5: ["dHNT1jBXfvYuNH16"] } } },
-  // Vol : « une vitesse de vol égale à votre Vitesse […] et vous pouvez faire du vol stationnaire » — l'effet « Flyer » ne donne que
-  // le vol stationnaire. Escalade : « une vitesse d'escalade égale à votre Vitesse » — l'effet « Climber » n'a aucun changement.
+  // Flight: "a fly Speed equal to your Speed […] and you can hover" — the "Flyer" effect gives only
+  // hovering. Climbing: "a climb Speed equal to your Speed" — the "Climber" effect has no change.
   "potion-of-flying": { effectChanges: { GIybtF2qEmtPCOZj: [{ key: "system.attributes.movement.fly", type: "upgrade", value: "@walk" }] } },
   "potion-of-climbing": { effectChanges: { D6fYii3nkDC4Tsbi: [{ key: "system.attributes.movement.climb", type: "upgrade", value: "@walk" }] } },
   "potion-of-diminution": { potionEffect: "NXdtOxX4HvPeodml" },
-  // Trousse de soins : une action Utiliser et une utilisation stabilisent une créature Inconsciente à 0 PV, sans test de
-  // Médecine — l'activité utilitaire de dnd5e ne fait rien (runtime/stabilize.mjs).
-  // Sa portée est « personnelle » dans le Manuel des joueurs (et une copie tierce courante) alors qu'elle vise une créature : au contact.
+  // Healer's Kit: a Utilize action and a use stabilize an Unconscious creature at 0 HP, without a
+  // Medicine check — dnd5e's utility activity does nothing (runtime/stabilize.mjs).
+  // Its range is "personal" in the Player's Handbook (and a common third-party copy) although it targets a creature: on touch.
   "healers-kit": {
     stabilizes: true,
     ranges: Object.fromEntries(HEALERS_KIT_ACTIVITIES.map(id => [id, { value: 5, units: "ft" }])),
     targets: { unaffectedIf: { any: [{ "target.atZero": false }, { "target.isDead": true }] } }
   },
-  // Feu grégeois : « la cible […] subit 1d4 dégâts de feu et commence à brûler » — l'effet posé n'a pas l'état `burning` de dnd5e
-  // (simple nom) : `burns` le déclare « En feu », la règle générale fait le reste (§212, runtime/burning.mjs : 1d4 de feu au début de
-  // chacun de ses tours, « Éteindre les flammes » par une action, À terre).
+  // Alchemist's Fire: "the target […] takes 1d4 fire damage and starts burning" — the applied effect lacks dnd5e's
+  // `burning` condition (a plain name): `burns` declares it "On Fire", the general rule does the rest (§212,
+  // runtime/burning.mjs: 1d4 fire at the start of each of its turns, "Extinguish the flames" with an action, Prone).
   "alchemists-fire": { burns: [ALCHEMISTS_FIRE_BURNING] }
 });

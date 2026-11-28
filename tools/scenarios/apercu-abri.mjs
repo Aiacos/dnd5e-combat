@@ -1,8 +1,8 @@
 /**
- * #33 : aperçu de l'abri (`api.ui.cover`, pastille au curseur). Lu côté MJ, il doit dire la même chose que le calcul du verdict
- * (`cover`), et en plus : « none » quand il n'y a rien, la source (« creature » pour un Guerrier interposé), l'état d'abri posé
- * à la main (source « manual », que le verdict laisse à dnd5e). Le filtre côté joueur (créatures invisibles non comptées) ne se
- * vérifie pas d'ici : à essayer avec `claude player`.
+ * #33: Cover preview (`api.ui.cover`, badge at the cursor). Read on the GM's side, it must say the same as the verdict computation
+ * (`cover`), and in addition: "none" when there is nothing, the source ("creature" for an interposed Fighter), the Cover state set
+ * by hand (source "manual", which the verdict leaves to dnd5e). The player-side filter (invisible creatures not counted) is not
+ * checked from here: to try with `claude player`.
  */
 import { coveringCell } from "./abri.mjs";
 
@@ -23,14 +23,14 @@ export default {
     const preview = () => ctx.engine("coverPreview", { attackerId: sorc.id, targetId: zombi.id, itemId });
     const verdict = () => ctx.engine("cover", { attackerId: sorc.id, targetId: zombi.id, itemId, effective: true });
 
-    // 1. Guerrier à sa place : l'aperçu = le verdict (« none » quand le verdict ne donne rien).
+    // 1. Fighter at his place: the preview = the verdict ("none" when the verdict gives nothing).
     let p = await preview();
     let v = await verdict();
     ctx.log(`à sa place : aperçu ${p?.degree} (${(p?.sources ?? []).join(", ") || "—"}), verdict ${v?.degree ?? "aucun"}`);
     ctx.expect(!!p && (p.degree === (v?.degree ?? "none")), "aperçu et verdict d'accord");
     if ( p?.degree === "none" ) ctx.expect(p.sources.length === 0, "dégagé : aucune source");
 
-    // 2. Guerrier interposé : abri partiel par créature.
+    // 2. Fighter interposed: Half Cover by creature.
     const size = await ctx.gridSize();
     const { tokens } = await ctx.scene();
     const cell = coveringCell({ sorc, zombi, guerrier, tokens, size });
@@ -45,7 +45,7 @@ export default {
     }
     else ctx.log("aucune case libre où le Guerrier couvrirait : étape 2 non applicable");
 
-    // 3. Abri posé à la main : rendu tel quel, source « manual » (le verdict le laisse à dnd5e : null).
+    // 3. Cover set by hand: returned as is, source "manual" (the verdict leaves it to dnd5e: null).
     await ctx.call("set-status", { tokenId: zombi.id, statusId: "coverThreeQuarters", active: true });
     ctx.restore(() => ctx.call("set-status", { tokenId: zombi.id, statusId: "coverThreeQuarters", active: false }).catch(() => {}));
     await new Promise(r => setTimeout(r, 400));

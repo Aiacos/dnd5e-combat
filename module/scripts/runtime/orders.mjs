@@ -1,13 +1,13 @@
 /**
- * Ordre imposé (SPEC §16.59) : Injonction. MJ actif.
- *  - La résolution close (`dnd5e-combat.resolution`, DONE), chaque cible qui a raté sa sauvegarde reçoit l'effet de l'ordre.
- *    L'ordre : celui que l'intention a fixé sur la carte (`flags["dnd5e-combat"].order`, un scénario), sinon demandé à
- *    l'auteur (adapter/choices.mjs, `askChoice` : son client, puis le MJ ; sans réponse, le premier).
- *  - Au début du tour de la cible (`combatTurnChange`), l'ordre s'exécute : À terre (Rampe), ce qu'elle tient lâché (Lâche),
- *    marche vers le lanceur ou loin de lui (Approche, Fuis, par l'A* du moteur), puis le tour s'achève — plus d'action,
- *    d'action Bonus ni de déplacement (budget : `stopped`). L'effet tombe à la fin de ce tour (contenu : `remove`).
- * Ce qui reste au MJ : une créature qui ne comprend pas l'ordre, l'ordre qui la mettrait en danger évident, les ordres hors
- * de la liste du sort.
+ * Imposed order (SPEC §16.59): Command. Active GM.
+ *  - The resolution closed (`dnd5e-combat.resolution`, DONE), each target that failed its saving throw receives the order's effect.
+ *    The order: the one the intent set on the card (`flags["dnd5e-combat"].order`, a scenario), otherwise asked of
+ *    the author (adapter/choices.mjs, `askChoice`: their client, then the GM; with no answer, the first).
+ *  - At the start of the target's turn (`combatTurnChange`), the order is carried out: Prone (Grovel), what it holds dropped
+ *    (Drop), walks toward the caster or away from them (Approach, Flee, by the engine's A*), then the turn ends — no more
+ *    action, Bonus Action or movement (budget: `stopped`). The effect falls at the end of that turn (content: `remove`).
+ * What stays with the GM: a creature that does not understand the order, the order that would put it in obvious danger,
+ * orders outside the spell's list.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -54,14 +54,14 @@ async function onResolution(resolution) {
   }
 }
 
-/** L'ordre s'exécute au début du tour de celui qui le porte. */
+/** The order is carried out at the start of the turn of whoever bears it. */
 async function obey(combatant) {
   const token = combatant?.token;
   const held = orderOn(token?.actor);
   if ( !held || held.done ) return;
   const plan = orderPlan(held.order);
   if ( !plan ) return;
-  // La remise à neuf du budget (runtime/turn.mjs, inscrite avant) part au même changement de tour : on la laisse arriver.
+  // The budget reset (runtime/turn.mjs, registered before) goes at the same turn change: we let it happen.
   await sleep(600);
   await held.effect.setFlag(MODULE_ID, "order", { ...held.effect.getFlag(MODULE_ID, "order"), done: true });
   const caster = held.from ? await fromUuid(held.from) : null;
@@ -70,7 +70,7 @@ async function obey(combatant) {
   if ( plan.drop ) {
     const dropped = await dropHeld(token);
     if ( dropped.items.length ) lines.push(loc(dropped.pile ? "Ordre.LacheTas" : "Ordre.LacheInventaire", { items: dropped.items.join(", ") }));
-    // §122 : ce qui n'est pas tombé (une attaque de créature) — lâché quand même, déséquipé.
+    // §122: what did not fall (a creature attack) — dropped anyway, unequipped.
     if ( dropped.kept?.length ) lines.push(loc("Ordre.LacheGarde", { items: dropped.kept.join(", ") }));
     if ( !dropped.items.length && !dropped.kept?.length ) lines.push(loc("Ordre.RienEnMain", { name: token.name }));
   }
@@ -84,7 +84,7 @@ async function obey(combatant) {
       if ( cells > 0 ) await walkToGap(token, caster, gapBetween(token, caster) + cells);
     }
   }
-  // Le combat a pu finir pendant la marche (fenêtre d'attaque d'opportunité, animation) : plus de tour à achever.
+  // The combat may have ended during the walk (Opportunity Attack window, animation): no turn left to end.
   const alive = !!game.combats.get(combatant.parent?.id)?.combatants.get(combatant.id);
   if ( alive && ((plan.ends === "always") || ((plan.ends === "ifArrived") && arrived)) ) {
     await writeBudget(combatant, { ...readBudget(combatant), action: 0, bonus: 0, stopped: true });

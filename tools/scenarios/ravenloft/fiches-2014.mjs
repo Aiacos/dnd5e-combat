@@ -1,13 +1,13 @@
 /**
- * Fiches au format 2014 (inventaire du 2026-10-03, monde `ravenloft` / `ravenloft-test2`) — deux défauts généraux corrigés :
- *  - Attaques multiples reconnues par l'identifiant RÉSOLU : Arrigal (« Multiattack » sans identifiant, texte anglais lisible :
- *    « makes two Shortsword attacks ») ouvre 2 attaques ; le Loup-garou (« Attaque multiple », texte français illisible) n'est
- *    plus bridé à une attaque (sans plan lisible, le moteur ne limite pas).
- *  - Sauvegarde au toucher au format 2014 : l'Épée courte d'Arrigal (« Hit: … and the target must make a DC 15 Constitution
- *    saving throw ») et les Griffes du Loup-garou (« Touché : … elle doit réussir un jet de sauvegarde de Force DD 13 »)
- *    enchaînent leur sauvegarde.
- * Arrigal et un Loup-garou sont posés près du Zombi le temps du scénario, puis retirés. Les jets sont aléatoires : on rejoue
- * jusqu'à toucher.
+ * 2014-format sheets (inventory of 2026-10-03, world `ravenloft` / `ravenloft-test2`) — two general defects fixed:
+ *  - Multiple attacks recognized by the RESOLVED identifier: Arrigal ("Multiattack" without identifier, readable English text:
+ *    "makes two Shortsword attacks") opens 2 attacks; the Werewolf ("Attaque multiple", unreadable French text) is no
+ *    longer capped at one attack (with no readable plan, the engine does not limit).
+ *  - Save on hit in the 2014 format: Arrigal's Shortsword ("Hit: … and the target must make a DC 15 Constitution
+ *    saving throw") and the Werewolf's Claws ("Hit: … it must succeed on a DC 13 Strength saving throw")
+ *    chain their save.
+ * Arrigal and a Werewolf are placed near the Zombie for the scenario, then removed. The rolls are random: we replay
+ * until a hit.
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -73,7 +73,7 @@ export default {
       return { spent: await spentOn(used.usageMessageId), res };
     };
 
-    // Arrigal : 2 attaques ouvertes ; l'Épée courte enchaîne sa sauvegarde.
+    // Arrigal: 2 attacks opened; the Shortsword chains its save.
     if ( !ctx.expect(await turnOf(arrigal), "tour d'Arrigal") ) return;
     const first = await strike(arrigal, sword);
     ctx.expect(!!first.spent?.after?.multi, `Arrigal : Attaques multiples ouvertes (${JSON.stringify(first.spent?.after?.multi?.plan?.options ?? null)})`);
@@ -83,7 +83,7 @@ export default {
     const swordSave = [first, second].map(s => s.res?.plan?.save).find(Boolean);
     ctx.expect(swordSave?.chained === true, `Épée courte : sauvegarde enchaînée au toucher (${swordSave?.abilities?.join("/") ?? "—"} DD ${swordSave?.dc ?? "—"})`);
 
-    // Loup-garou : plus bridé à une attaque ; les Griffes enchaînent leur sauvegarde de Force.
+    // Werewolf: no longer capped at one attack; the Claws chain their Strength save.
     if ( !ctx.expect(await turnOf(wolf), "tour du Loup-garou") ) return;
     const claw = await strike(wolf, claws);
     ctx.expect((claw.spent?.after?.attacks?.granted ?? 0) >= 2, `Loup-garou : plus d'une attaque par action (${claw.spent?.after?.attacks?.used}/${claw.spent?.after?.attacks?.granted})`);

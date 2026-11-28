@@ -2,21 +2,21 @@ import { describe, it, expect } from "vitest";
 import { areaLightRadii, tokenLightChanges, dispelledBy, sensesThrough, devilsSightSees, senseReaches, DEVILS_SIGHT, CORE_JUDGED, WORKS_BLIND, senseless, countsAsSight, LOCATING } from "../module/scripts/core/light.mjs";
 import { validateEntry, mergeEntries } from "../module/scripts/core/content.mjs";
 
-describe("lumière des zones", () => {
-  it("des ténèbres prennent le rayon de la zone, en source négative", () => {
+describe("light from areas", () => {
+  it("Darkness takes the area's radius, as a negative source", () => {
     expect(areaLightRadii({ darkness: true }, 15)).toEqual({ bright: 15, dim: 15, negative: true });
   });
-  it("une lumière garde ses rayons ; le rayon faible n'est jamais plus court que le vif", () => {
+  it("a light keeps its radii; the dim radius is never shorter than the bright one", () => {
     expect(areaLightRadii({ bright: 60, dim: 120 }, 60)).toEqual({ bright: 60, dim: 120, negative: false });
     expect(areaLightRadii({ bright: 20 }, 0)).toEqual({ bright: 20, dim: 20, negative: false });
   });
 });
 
-describe("lumière portée par un effet", () => {
+describe("light carried by an effect", () => {
   it("changements token.light en upgrade, sans rayon vif nul", () => {
     expect(tokenLightChanges({ dim: 10 })).toEqual([{ key: "token.light.dim", type: "upgrade", value: "10", phase: "initial" }]);
   });
-  it("reprend couleur et animation de l'objet invoqué", () => {
+  it("takes color and animation from the summoned object", () => {
     const keys = tokenLightChanges({ bright: 20, dim: 40, color: "#ff810a", animation: { type: "flame", speed: 1, intensity: 3 } })
       .map(c => `${c.key}=${c.value}/${c.type}`);
     expect(keys).toEqual(["token.light.bright=20/upgrade", "token.light.dim=40/upgrade", "token.light.color=#ff810a/override",
@@ -24,7 +24,7 @@ describe("lumière portée par un effet", () => {
   });
 });
 
-describe("Lumière du jour dissipe les Ténèbres", () => {
+describe("Daylight dispels Darkness", () => {
   const darkness = [
     { id: "proche", x: 100, y: 0, radius: 15, level: 2 },
     { id: "loin", x: 1000, y: 0, radius: 15, level: 2 },
@@ -40,21 +40,21 @@ describe("Lumière du jour dissipe les Ténèbres", () => {
 });
 
 describe("sens qui percent", () => {
-  it("la brume : vision aveugle et vibrations ; les ténèbres : aussi la vision véritable", () => {
+  it("fog: Blindsight and Tremorsense; Darkness: also Truesight", () => {
     expect(sensesThrough({ fog: true, darkness: false })).toEqual(["blindsight", "feelTremor", "senseAll", "senseInvisibility"]);
     expect(sensesThrough({ fog: true, darkness: true })).toEqual(["blindsight", "feelTremor", "senseAll", "senseInvisibility"]);
     expect(sensesThrough({ fog: false, darkness: true })).toEqual(["blindsight", "feelTremor", "senseAll", "senseInvisibility", "seeAll", "devilsSight"]);
     expect(sensesThrough({ fog: false, darkness: false })).toBe(null);
   });
 
-  it("issue #42 : les modes du cœur sans murs (vibrations, Sense All, Sense Invisibility) percent brume et ténèbres", () => {
+  it("issue #42: the core's modes without walls (Tremorsense, Sense All, Sense Invisibility) pierce fog and Darkness", () => {
     for ( const blocked of [{ fog: true, darkness: false }, { fog: false, darkness: true }] ) {
       for ( const id of CORE_JUDGED ) expect(sensesThrough(blocked)).toContain(id);
     }
-    expect(CORE_JUDGED).not.toContain("seeInvisibility");   // voir l'invisible est une vue : les ténèbres l'arrêtent
+    expect(CORE_JUDGED).not.toContain("seeInvisibility");   // seeing the invisible is sight: Darkness stops it
   });
 
-  it("issue #42 : la Vision du diable perce les ténèbres, pas la brume", () => {
+  it("issue #42: Devil's Sight pierces Darkness, not fog", () => {
     expect(sensesThrough({ fog: false, darkness: true })).toContain(DEVILS_SIGHT.mode);
     expect(sensesThrough({ fog: true, darkness: true })).not.toContain(DEVILS_SIGHT.mode);
     expect(DEVILS_SIGHT).toMatchObject({ identifier: "devils-sight", range: 120, units: "ft", mode: "devilsSight" });
@@ -62,7 +62,7 @@ describe("sens qui percent", () => {
 });
 
 describe("issue #42 : Vision du diable", () => {
-  it("voit à 120 ft, pas au-delà", () => {
+  it("sees at 120 ft, not beyond", () => {
     expect(devilsSightSees({ distance: 55, range: 120 })).toBe(true);
     expect(devilsSightSees({ distance: 120, range: 120 })).toBe(true);
     expect(devilsSightSees({ distance: 125, range: 120 })).toBe(false);
@@ -70,7 +70,7 @@ describe("issue #42 : Vision du diable", () => {
   it("sans invocation, rien", () => {
     expect(devilsSightSees({ distance: 5, range: 0 })).toBe(false);
   });
-  it("ni un Invisible, ni Aveuglé, ni à travers une brume ou un mur", () => {
+  it("not an Invisible creature, not Blinded, not through fog or a wall", () => {
     expect(devilsSightSees({ distance: 30, range: 120, invisible: true })).toBe(false);
     expect(devilsSightSees({ distance: 30, range: 120, blind: true })).toBe(false);
     expect(devilsSightSees({ distance: 30, range: 120, fog: true })).toBe(false);
@@ -81,37 +81,37 @@ describe("issue #42 : Vision du diable", () => {
   });
 });
 
-describe("issue #42 : sens qui percent, portée et ligne de vue", () => {
-  it("à portée et en vue", () => {
+describe("issue #42: senses that pierce, range and line of sight", () => {
+  it("in range and in sight", () => {
     expect(senseReaches({ distance: 25, range: 30 })).toBe(true);
     expect(senseReaches({ distance: 55, range: 30 })).toBe(false);
     expect(senseReaches({ distance: 25, range: 30, lineOfSight: false })).toBe(false);
   });
-  it("portée illimitée", () => {
+  it("unlimited range", () => {
     expect(senseReaches({ distance: 500, range: null })).toBe(true);
     expect(senseReaches({ distance: 500, range: Infinity })).toBe(true);
   });
-  it("Aveuglé : la vision véritable ne perce plus, la vision aveugle si", () => {
+  it("Blinded: Truesight no longer pierces, Blindsight does", () => {
     expect(senseReaches({ distance: 25, range: 120, sense: "seeAll", blind: true })).toBe(false);
     expect(senseReaches({ distance: 25, range: 120, sense: "seeAll", blind: false })).toBe(true);
     expect(senseReaches({ distance: 25, range: 30, sense: "blindsight", blind: true })).toBe(true);
     expect(senseReaches({ distance: 55, range: 30, sense: "blindsight", blind: true })).toBe(false);
   });
-  it("les sens qui ne sont pas une vue restent à un Aveuglé", () => {
+  it("senses that are not sight remain for a Blinded creature", () => {
     expect(WORKS_BLIND).toEqual(["blindsight", "feelTremor", "senseAll", "senseInvisibility"]);
     expect(WORKS_BLIND).not.toContain("seeAll");
     expect(WORKS_BLIND).not.toContain("devilsSight");
   });
 });
 
-describe("schéma de la clé light", () => {
-  it("accepte les formes livrées", () => {
+describe("schema of the light key", () => {
+  it("accepts the shipped forms", () => {
     for ( const light of [{ on: "area", darkness: true }, { on: "area", bright: 60, dim: 120, units: "ft", dispels: 3 },
       { on: "effect", dim: 10, units: "ft" }, { on: "summon", carried: true, single: true }] ) {
       expect(validateEntry({ light })).toEqual([]);
     }
   });
-  it("refuse ce qui ne tient pas", () => {
+  it("rejects what does not hold", () => {
     expect(validateEntry({ light: { on: "partout" } })).toContain("light.on: area, effect, summon, wall, caster");
     expect(validateEntry({ light: { on: "effect" } })).toContain("light: a light effect needs a radius");
     expect(validateEntry({ light: { on: "effect", dim: 10 } })).toContain("light.units: unit required");
@@ -128,14 +128,14 @@ describe("schéma de la clé light", () => {
     expect(validateEntry({ revealsInvisible: true })).toEqual([]);
     expect(validateEntry({ revealsInvisible: "oui" })).toEqual(["revealsInvisible: true or absent"]);
   });
-  it("une surcouche corrige un rayon sans redire le reste", () => {
+  it("an overlay fixes a radius without restating the rest", () => {
     expect(mergeEntries([{ light: { on: "effect", dim: 10, units: "ft" } }, { light: { dim: 20 } }]).light)
       .toEqual({ on: "effect", dim: 20, units: "ft" });
   });
 });
 
-describe("§52 : sources de lumière portées", () => {
-  it("un cône garde son angle, un cercle n'en a pas", () => {
+describe("§52: carried light sources", () => {
+  it("a Cone keeps its angle, a circle has none", () => {
     const cone = tokenLightChanges({ bright: 60, dim: 120, angle: 53 });
     expect(cone.find(c => c.key === "token.light.angle")?.value).toBe("53");
     expect(tokenLightChanges({ bright: 20, dim: 40 }).some(c => c.key === "token.light.angle")).toBe(false);
@@ -151,8 +151,8 @@ describe("§52 : sources de lumière portées", () => {
   });
 });
 
-describe("Inconscient : ni vue ni ouïe (réglage unconsciousSenses)", () => {
-  it("seulement Inconscient ET réglage coché", () => {
+describe("Unconscious: neither sight nor hearing (setting unconsciousSenses)", () => {
+  it("only Unconscious AND setting ticked", () => {
     expect(senseless({ unconscious: true, rule: true })).toBe(true);
     expect(senseless({ unconscious: true, rule: false })).toBe(false);
     expect(senseless({ unconscious: false, rule: true })).toBe(false);
@@ -160,15 +160,15 @@ describe("Inconscient : ni vue ni ouïe (réglage unconsciousSenses)", () => {
   });
 });
 
-describe("sens qui localisent sans voir", () => {
-  it("la perception des vibrations donne une position, pas une vue ; les autres modes comptent comme une vue", () => {
+describe("senses that locate without seeing", () => {
+  it("Tremorsense gives a position, not sight; the other modes count as sight", () => {
     expect(countsAsSight("feelTremor")).toBe(false);
     const sight = ["basicSight", "lightPerception", "blindsight", "seeAll", "senseAll", "senseInvisibility", DEVILS_SIGHT.mode];
     for ( const id of sight ) {
       expect(countsAsSight(id)).toBe(true);
     }
   });
-  it("elle perce toujours brume et ténèbres : c'est son verdict qui change, pas sa portée", () => {
+  it("it always pierces fog and Darkness: its verdict changes, not its range", () => {
     for ( const blocked of [{ fog: true, darkness: false }, { fog: false, darkness: true }] ) {
       expect(sensesThrough(blocked)).toContain("feelTremor");
     }

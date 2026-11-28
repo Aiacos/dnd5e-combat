@@ -1,12 +1,13 @@
 /**
- * La couche texte des capacités de PNJ (§322, `core/monster-text.mjs`), deux lectures du 2026-11-23 (§521), sur un vrai PNJ de l'Arène
- * de test (le Bandit) qui reçoit des traits d'essai — textes synthétiques, réduits aux tournures lues :
- *  - DF #250, Sensibilité au soleil : « While in sunlight, … has Disadvantage on ability checks and attack rolls » → au soleil, ses tests
- *    de caractéristique ont le Désavantage (`rollDisadvantage`), plus seulement ses attaques. Une phrase qui ne nomme que les jets
- *    d'attaque n'en donne pas. L'arène est en plein jour (`stealth` → lumière 2).
- *  - DF #251, durée en tours d'un effet sans état : « the target's Speed is halved until the end of its next turn » → l'entrée effective
- *    de l'item (`api.content.of`) donne à son unique effet sans état la fin « bearerTurnEnd » ; sans cette phrase, rien.
- * Remis en état : traits retirés.
+ * The NPC ability text layer (§322, `core/monster-text.mjs`), two readings of 2026-11-23 (§521), on a real NPC of the test Arena
+ * (the Bandit) who receives test traits — synthetic texts, reduced to the phrasings read:
+ *  - DF #250, Sunlight Sensitivity: "While in sunlight, … has Disadvantage on ability checks and attack rolls" → in sunlight, its
+ *    ability checks have Disadvantage (`rollDisadvantage`), not only its attacks. A sentence that names only attack rolls does not
+ *    give it. The arena is in full daylight (`stealth` → light 2).
+ *  - DF #251, duration in turns of an effect without a condition: "the target's Speed is halved until the end of its next turn" →
+ *    the item's effective entry (`api.content.of`) gives its only effect without a condition the end "bearerTurnEnd";
+ *    without that sentence, nothing.
+ * Reset: traits removed.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const EFFECT = "dastestslowfx001";
@@ -21,7 +22,7 @@ export default {
     const bandit = await ctx.token("Bandit");
     const { data: bTok } = await ctx.call("get-scene-object", { type: "Token", objectId: bandit.id });
     const script = async (code, args={}) => (await ctx.call("run-script", { code, args, waitMs: 15000 }))?.result;
-    /** Pose (ou remplace) un trait d'essai sur le Bandit ; rend son id. */
+    /** Places (or replaces) a test trait on the Bandit; returns its id. */
     const trait = async (identifier, itemData) => {
       const r = await ctx.call("upsert-actor-item", { actorId: bTok.actorId, itemData: { type: "feat", img: "icons/svg/aura.svg", ...itemData,
         system: { identifier, type: { value: "monster" }, ...(itemData.system ?? {}) } }, match: { path: "system.identifier", value: identifier } });
@@ -30,7 +31,7 @@ export default {
     };
     const drop = id => ctx.call("remove-embedded-item", { documentType: "Actor", id: bTok.actorId, itemId: id }).catch(() => {});
 
-    // --- Sensibilité au soleil -------------------------------------------------------------------------------------------------
+    // --- Sunlight Sensitivity ---------------------------------------------------------------------------------------------
     const light = (await ctx.engine("stealth", { tokenId: bandit.id }))?.light;
     ctx.log(`lumière sur le Bandit : ${light}`);
     if ( light === 2 ) {
@@ -53,7 +54,7 @@ export default {
     }
     else ctx.log("l'arène n'est pas en plein jour : partie soleil non applicable");
 
-    // --- Durée d'un effet sans état -----------------------------------------------------------------------------------------------
+    // --- Duration of an effect without a condition -----------------------------------------------------------------------------
     const slowData = html => ({ name: "Slowing Blast (essai)",
       system: { description: { value: html }, activities: { [ACTIVITY]: { _id: ACTIVITY, type: "save", name: "",
         activation: { type: "action" }, save: { ability: ["con"], dc: { calculation: "", formula: "12" } }, effects: [{ _id: EFFECT }] } } },

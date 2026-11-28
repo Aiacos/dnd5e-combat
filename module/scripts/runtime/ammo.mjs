@@ -1,14 +1,14 @@
 /**
- * §274 : le choix de la munition quand le jet d'attaque part sans la fenêtre de dnd5e (issue #23).
+ * §274: the choice of ammunition when the attack roll goes out without dnd5e's window (issue #23).
  *
- * `dnd5e.preRollAttackV2` (inscrit après la légalité, registerTurn : le mode d'attaque et la confirmation sont déjà posés), sur le
- * client qui lance :
- *  - une munition imposée (configuration d'utilisation `{ "dnd5e-combat": { ammunition } }`, portée par la carte comme le mode
- *    d'attaque §150, ou `rollAttack({ ammunition })` autre que la mémoire de dnd5e) est tirée telle quelle ;
- *  - sinon, la dernière munition retenue si elle reste utilisable, la seule utilisable s'il n'y en a qu'une ;
- *  - plusieurs utilisables et pas de fenêtre de dnd5e : une petite fenêtre demande, la dernière présélectionnée — le jet est
- *    suspendu (le hook est synchrone) puis relancé avec le choix, retenu sur l'arme (`setAmmo`).
- * Une créature du MJ sans joueur garde son choix sans rien demander ; réglage client `ammoPrompt` pour ne jamais demander.
+ * `dnd5e.preRollAttackV2` (registered after legality, registerTurn: the attack mode and the confirmation are already set), on the
+ * client that rolls:
+ *  - an imposed ammunition (use configuration `{ "dnd5e-combat": { ammunition } }`, carried by the card like the attack
+ *    mode §150, or `rollAttack({ ammunition })` other than dnd5e's memory) is drawn as is;
+ *  - otherwise, the last ammunition retained if it is still usable, the only usable one if there is just one;
+ *  - several usable and no dnd5e window: a small window asks, the last one preselected — the roll is
+ *    suspended (the hook is synchronous) then relaunched with the choice, remembered on the weapon (`setAmmo`).
+ * A GM creature without a player keeps its choice without asking; `ammoPrompt` client setting to never ask.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { route } from "./router.mjs";
@@ -18,27 +18,27 @@ import { ammoState, announceAmmoChange, setAmmo } from "../adapter/ammo.mjs";
 export const AMMO_PROMPT_SETTING = "ammoPrompt";
 const AMMO_CLASS = "dnd5e-combat-ammo";
 
-/** La munition imposée par l'appelant, ou null. */
+/** The ammunition imposed by the caller, or null. */
 function explicitAmmo(activity, config, message) {
   const own = config[MODULE_ID]?.ammunition;
   if ( own ) return own;
   const usageId = message?.data?.system?.origin ?? null;
   const carried = usageId ? game.messages.get(usageId)?.getFlag(MODULE_ID, "ammunition") : null;
   if ( carried ) return carried;
-  // `rollAttack` fusionne la mémoire de dnd5e dans sa configuration, ou à défaut la première munition (activity/attack.mjs:92-108) :
-  // seule une autre valeur est demandée.
+  // `rollAttack` merges dnd5e's memory into its configuration, or failing that the first ammunition (activity/attack.mjs:92-108):
+  // only another value is asked.
   const remembered = activity.item.getFlag("dnd5e", `last.${activity.id}.ammunition`);
   const byDefault = (remembered === undefined) ? (activity.item.system.ammunitionOptions?.[0]?.value ?? null) : remembered;
   return (config.ammunition && (config.ammunition !== byDefault)) ? config.ammunition : null;
 }
 
-/** Pose la munition dans la configuration du jet : `_buildAttackConfig` la lit (attack.mjs:247), le message aussi (options). */
+/** Puts the ammunition into the roll configuration: `_buildAttackConfig` reads it (attack.mjs:247), the message too (options). */
 function applyAmmo(config, id) {
   config.ammunition = id;
   if ( config.rolls?.[0]?.options ) config.rolls[0].options.ammunition = id;
 }
 
-/** Demander ici ? Pas pour une créature du MJ sans joueur, ni si ce client l'a coupé. */
+/** Ask here? Not for a GM creature without a player, nor if this client turned it off. */
 function shouldAsk(actor) {
   if ( !game.settings.get(MODULE_ID, AMMO_PROMPT_SETTING) ) return false;
   return !game.user.isGM || !!actor?.hasPlayerOwner;
@@ -49,7 +49,7 @@ function onPreRollAttack(config, dialog, message) {
   if ( !activity?.item || config[MODULE_ID]?.ammoChosen ) return true;
   const state = ammoState(activity.item, activity, { explicit: explicitAmmo(activity, config, message) });
   if ( !state?.options.length ) return true;
-  // La fenêtre de dnd5e s'ouvrira : sa liste « Munitions » présélectionne notre choix, le joueur y garde la main.
+  // dnd5e's window will open: its "Ammunition" list preselects our choice, the player keeps control there.
   const fast = dialog?.configure === false;
   if ( !state.ask || !fast || !shouldAsk(activity.actor) ) {
     if ( state.current ) applyAmmo(config, state.current);
@@ -61,14 +61,14 @@ function onPreRollAttack(config, dialog, message) {
     const { event, ability, attackMode, mastery, advantage, disadvantage } = config;
     activity.rollAttack({
       event, ability, attackMode, mastery, advantage, disadvantage, ammunition: id,
-      // Le mode est celui que la légalité a déjà tranché (lancer, deux mains) : il est repris tel quel.
+      // The mode is the one legality already decided (throw, two hands): it is taken as is.
       [MODULE_ID]: { ...(config[MODULE_ID] ?? {}), ammoChosen: true, ...(attackMode ? { modeChosen: true } : {}) }
     }, { configure: false }, message);
   });
   return false;
 }
 
-/** La fenêtre : une ligne par munition (icône, nom, reste), la présélection cochée ; Entrée confirme, double-clic aussi. */
+/** The window: one row per ammunition (icon, name, remaining), the preselection checked; Enter confirms, double-click too. */
 async function askAmmo(activity, state) {
   const lines = state.options.map(o => `
     <label class="${AMMO_CLASS}-line${o.quantity > 0 ? "" : " empty"}">

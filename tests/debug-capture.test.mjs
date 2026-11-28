@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
- * §380 (issue #36) : la capture du débogueur, sur une console et une fenêtre factices. Les erreurs de la suite sont gardées,
- * pas les autres ; une erreur d'un inscrit du routeur n'est comptée qu'une fois, avec son libellé ; un joueur envoie ses
- * nouveautés au MJ actif et les garde si l'envoi échoue.
+ * §380 (issue #36): the debugger's capture, on a fake console and window. The suite's errors are kept, not the others;
+ * an error from a router subscriber is counted only once, with its label; a player sends its new entries to the active GM
+ * and keeps them if sending fails.
  */
 const debug = await import("../module/scripts/runtime/debug.mjs");
 const { debugApi, installCapture, uninstallCapture, noteRouterError, noteRefused, trail, flush, receive, collectSections,
@@ -62,14 +62,14 @@ describe("capture (§380)", () => {
     expect(list.every(g => g.clients[0] === "u-gm")).toBe(true);
   });
 
-  it("une erreur répétée se compte", () => {
+  it("a repeated error is counted", () => {
     target.console.error(errorFrom("dnd5e-combat", "Token abcdefghij123456 missing"));
     target.console.error(errorFrom("dnd5e-combat", "Token ZZZZZZZZZZ999999 missing"));
     expect(debugApi.errors()).toHaveLength(1);
     expect(debugApi.total()).toBe(2);
   });
 
-  it("l'erreur d'un inscrit du routeur : son libellé et son hook, comptée une fois", () => {
+  it("a router subscriber's error: its label and its hook, counted once", () => {
     const err = errorFrom("dnd5e-combat");
     noteRouterError({ label: "Brutal Strike", hook: "dnd5e.rollDamage", level: "error" }, err);
     target.console.error("dnd5e-combat | Brutal Strike", err);
@@ -77,7 +77,7 @@ describe("capture (§380)", () => {
     expect(g).toMatchObject({ label: "Brutal Strike", hook: "dnd5e.rollDamage", count: 1, module: "dnd5e-combat" });
   });
 
-  it("fige la piste dans la nouvelle erreur", () => {
+  it("freezes the trail in the new error", () => {
     trail("use", "rage · utility");
     noteRefused({ hook: "preMoveToken", label: "turn budget" });
     target.console.error(errorFrom("dnd5e-combat"));
@@ -87,14 +87,14 @@ describe("capture (§380)", () => {
     expect(debugApi.trailList()).toHaveLength(2);
   });
 
-  it("les erreurs non attrapées et les promesses rejetées", () => {
+  it("uncaught errors and rejected promises", () => {
     target.listeners.error({ error: errorFrom("darsh-loot", "uncaught") });
     target.listeners.unhandledrejection({ reason: errorFrom("dnd5e-combat", "rejected") });
-    target.listeners.unhandledrejection({ reason: "plain" });       // sans pile ni préfixe : hors de la suite
+    target.listeners.unhandledrejection({ reason: "plain" });       // no stack or prefix: outside the suite
     expect(debugApi.errors().map(g => g.kind).sort()).toEqual(["error", "rejection"]);
   });
 
-  it("désinstallée : la console d'origine rendue, plus rien de relevé", () => {
+  it("uninstalled: the original console given back, nothing more surveyed", () => {
     const original = target.console.error;
     uninstallCapture();
     expect(target.console.error).not.toBe(original);
@@ -103,7 +103,7 @@ describe("capture (§380)", () => {
     expect(debugApi.errors()).toHaveLength(0);
   });
 
-  it("mode détaillé : les lignes de la suite seulement, et seulement allumé", () => {
+  it("verbose mode: the suite's lines only, and only when on", () => {
     target.console.log("dnd5e-combat | resolved");
     expect(debugApi.logs()).toHaveLength(0);
     debugApi.verbose(true);
@@ -114,7 +114,7 @@ describe("capture (§380)", () => {
     expect(target.seen.log).toHaveLength(4);
   });
 
-  it("un paquet de la suite : titre « DAS · », inscrit, ou modules pas encore lus", () => {
+  it("a suite packet: title \"DAS · \", subscriber, or modules not yet read", () => {
     expect(isSuitePackage("darsh-loot")).toBe(true);
     expect(isSuitePackage("other-mod")).toBe(false);
     expect(isSuitePackage("system:dnd5e")).toBe(false);
@@ -124,7 +124,7 @@ describe("capture (§380)", () => {
     expect(isSuitePackage("anything")).toBe(true);
   });
 
-  it("avant que les modules soient lisibles, une erreur attend le tri d'init", () => {
+  it("before the modules are readable, an error waits for the init sorting", () => {
     const saved = globalThis.game;
     delete globalThis.game;
     target.console.error(errorFrom("third-mod"));
@@ -137,7 +137,7 @@ describe("capture (§380)", () => {
 });
 
 describe("voisins (§380)", () => {
-  it("sections et dépôts", () => {
+  it("sections and repositories", () => {
     debugApi.register({ module: "darsh-dnd-ui", collect: () => ({ theme: "bg3" }) });
     debugApi.register({ module: "broken", collect: () => { throw new Error("nope"); } });
     expect(debugApi.register({})).toBe(false);
@@ -151,15 +151,15 @@ describe("voisins (§380)", () => {
   });
 });
 
-describe("remontée vers le MJ actif (§380)", () => {
-  it("envoie ce qui est nouveau, le garde si l'envoi échoue, rien sans MJ", async () => {
+describe("escalation to the active GM (§380)", () => {
+  it("sends what is new, keeps it if sending fails, nothing without a GM", async () => {
     const query = vi.fn().mockRejectedValueOnce(new Error("timeout")).mockResolvedValue(true);
     globalThis.game.user = { id: "u-p1" };
     globalThis.game.users = { activeGM: null };
     target.console.error(errorFrom("dnd5e-combat"));
-    expect(await flush()).toBe(false);                       // pas de MJ : gardé
+    expect(await flush()).toBe(false);                       // no GM: kept
     globalThis.game.users.activeGM = { isSelf: false, active: true, query };
-    expect(await flush()).toBe(false);                       // échec : gardé
+    expect(await flush()).toBe(false);                       // failure: kept
     expect(await flush()).toBe(true);
     expect(query).toHaveBeenCalledTimes(2);
     const [name, payload] = query.mock.calls[1];
@@ -170,7 +170,7 @@ describe("remontée vers le MJ actif (§380)", () => {
     expect(await flush()).toBe(false);                       // rien de nouveau
   });
 
-  it("le MJ fusionne avec le client d'origine", () => {
+  it("the GM merges with the originating client", () => {
     target.console.error(errorFrom("dnd5e-combat"));
     const [mine] = debugApi.errors();
     expect(receive({ userId: "u-p1", items: [{ ...mine, added: 3 }] })).toBe(true);
@@ -180,7 +180,7 @@ describe("remontée vers le MJ actif (§380)", () => {
     expect(g.clients).toEqual(["u-gm", "u-p1"]);
   });
 
-  it("chez le MJ actif lui-même, rien n'est envoyé", async () => {
+  it("on the active GM itself, nothing is sent", async () => {
     const query = vi.fn();
     globalThis.game.users = { activeGM: { isSelf: true, active: true, query } };
     target.console.error(errorFrom("dnd5e-combat"));
@@ -207,7 +207,7 @@ describe("rapport du runtime (§380)", () => {
     });
   }
 
-  it("rôles, monde et acteurs masqués, réglages simples, contexte d'un token sans son nom", () => {
+  it("roles, world and actors masked, simple settings, a token's context without its name", () => {
     table();
     globalThis.game.user = { id: "u-p1" };
     target.console.error(errorFrom("dnd5e-combat", "Zoé lost Ireena Kolyana in Curse of Strahd"));
@@ -227,7 +227,7 @@ describe("rapport du runtime (§380)", () => {
     expect(kept.report.errors[0].message).toBe("Error: Player 1 lost Ireena Kolyana in <world>");
   });
 
-  it("propose le dépôt du module mis en cause", () => {
+  it("proposes the repository of the module implicated", () => {
     table();
     target.console.error(errorFrom("darsh-loot"));
     const { report } = debug.buildDebugReport();
@@ -235,8 +235,8 @@ describe("rapport du runtime (§380)", () => {
   });
 });
 
-describe("bruit écarté (§380, vu en jeu côté joueur)", () => {
-  it("une notification répétée en console n'est pas une erreur ; l'enveloppe ne met pas le moteur en cause", () => {
+describe("noise discarded (§380, seen in play on the player side)", () => {
+  it("a repeated notification in the console is not an error; the wrapper does not implicate the engine", () => {
     const realError = globalThis.Error;
     const fake = frames => class extends realError { constructor(m) { super(m); this.stack = `Error\n${frames}`; } };
     const wrap = "    at c.warn (http://h/modules/dnd5e-combat/scripts/runtime/debug.mjs:144:65)";
@@ -250,8 +250,8 @@ describe("bruit écarté (§380, vu en jeu côté joueur)", () => {
   });
 });
 
-describe("entrée du menu contextuel (§380)", () => {
-  it("le MJ sur toute créature, un joueur sur les siennes ; retirée par le réglage de monde", async () => {
+describe("context-menu entry (§380)", () => {
+  it("the GM on any creature, a player on their own; removed by the world setting", async () => {
     const { debugMenuEntry } = await import("../module/scripts/ui/debug-report.mjs");
     let shown = true;
     Object.assign(globalThis.game, { i18n: { localize: k => k, format: k => k }, settings: { get: (ns, key) => (key === "debugMenu" ? shown : true) } });
@@ -269,7 +269,7 @@ describe("entrée du menu contextuel (§380)", () => {
   });
 });
 
-describe("modules hors de la suite et dépréciations", () => {
+describe("modules outside the suite and deprecations", () => {
   const pixiStack = "    at Fa (http://localhost:30000/scripts/pixi.min.js:12:34)\n"
     + "    at Object.get [as DisplacementFilter] (http://localhost:30000/scripts/pixi.min.js:869:471)\n"
     + "    at 956 (http://localhost:30000/modules/tokenmagic/module/bundle/tokenmagic.js:1:104936)";
@@ -288,12 +288,12 @@ describe("modules hors de la suite et dépréciations", () => {
   });
   afterEach(() => debug.setCaptureAll(false));
 
-  it("sans « tous les modules », un avertissement d'un autre module reste ignoré", () => {
+  it("without \"all modules\", a warning from another module stays ignored", () => {
     pixiWarn();
     expect(debugApi.errors()).toHaveLength(0);
   });
 
-  it("avec « tous les modules », le texte vient du groupe de console, la pile reste la pile, marqué hors suite et dépréciation", () => {
+  it("with \"all modules\": text from the console group, stack stays the stack, marked non-suite and deprecation", () => {
     debug.setCaptureAll(true);
     pixiWarn();
     const [g] = debugApi.errors();
@@ -303,7 +303,7 @@ describe("modules hors de la suite et dépréciations", () => {
     expect(g).toMatchObject({ kind: "warn", thirdParty: true, deprecation: true });
   });
 
-  // §467 : vu en jeu — « Roll All » de la frise appelle dnd5e, qu'un module tiers enveloppe avec une option dépréciée.
+  // §467: seen in play — the timeline's "Roll All" calls dnd5e, which a third-party module wraps with a deprecated option.
   const deprecatedVia = (owner, below) => {
     const err = new Error("The rollMode option of Combat#rollInitiative messageOptions is deprecated\nDeprecated since Version 14");
     err.stack = "Error: deprecated\n    at Object.logCompatibilityWarning (http://localhost:30000/scripts/foundry.mjs:1554:17)\n"
@@ -313,20 +313,20 @@ describe("modules hors de la suite et dépréciations", () => {
     return err;
   };
 
-  it("une dépréciation d'un module tiers n'est pas DAS, même si un module DAS est plus bas dans la pile", () => {
+  it("a third-party module's deprecation is not DAS, even if a DAS module is lower in the stack", () => {
     target.console.warn(deprecatedVia("third-dep-mod", "darsh-loot"));
-    expect(debugApi.errors()).toHaveLength(0);          // sans « tous les modules » : pas gardée, donc pas d'avis
+    expect(debugApi.errors()).toHaveLength(0);          // without "all modules": not kept, so no notice
     debug.setCaptureAll(true);
     target.console.warn(deprecatedVia("third-dep-mod", "darsh-loot"));
     expect(debugApi.errors()[0]).toMatchObject({ module: "third-dep-mod", thirdParty: true, deprecation: true });
   });
 
-  it("une dépréciation appelée par un module DAS reste DAS", () => {
+  it("a deprecation called by a DAS module stays DAS", () => {
     target.console.warn(deprecatedVia("darsh-loot", "darsh-loot"));
     expect(debugApi.errors()[0]).toMatchObject({ module: "darsh-loot", thirdParty: false, deprecation: true });
   });
 
-  it("une erreur de la suite n'est pas hors suite ; le groupe fermé ne colore plus les lignes suivantes", () => {
+  it("a suite error is not outside the suite; the closed group no longer colors the following lines", () => {
     debug.setCaptureAll(true);
     target.console.group("Something");
     target.console.groupEnd();
@@ -335,14 +335,14 @@ describe("modules hors de la suite et dépréciations", () => {
     expect(g).toMatchObject({ module: "darsh-loot", thirdParty: false, deprecation: false, message: "Error: boom" });
   });
 
-  it("dans un groupe ouvert, une ligne ordinaire garde son texte, précédé du libellé du groupe", () => {
+  it("in an open group, an ordinary line keeps its text, preceded by the group's label", () => {
     target.console.group("darsh-loot | sweep");
     target.console.warn("darsh-loot | odd value");
     target.console.groupEnd();
     expect(debugApi.errors()[0].message).toBe("darsh-loot | sweep — darsh-loot | odd value");
   });
 
-  it("par défaut seules les erreurs de la suite sont retenues ; un joueur transmet les marques au MJ", () => {
+  it("by default only the suite's errors are kept; a player passes the marks on to the GM", () => {
     debug.setCaptureAll(true);
     pixiWarn();
     target.console.error(errorFrom("darsh-loot"));
@@ -353,14 +353,14 @@ describe("modules hors de la suite et dépréciations", () => {
     expect(debugApi.errors()[0]).toMatchObject({ thirdParty: true, deprecation: true });
   });
 
-  it("uninstallCapture rend aussi les fonctions de groupe", () => {
+  it("uninstallCapture also restores the group functions", () => {
     expect(target.console.groupCollapsed.toString()).toContain("ConsoleGroup");
     uninstallCapture();
     for ( const name of ["group", "groupCollapsed", "groupEnd"] ) expect(target.console[name].toString()).not.toContain("ConsoleGroup");
   });
 });
 
-describe("pastille : erreurs DAS et hors DAS comptées à part, bruit du navigateur écarté", () => {
+describe("badge: DAS and non-DAS errors counted separately, browser noise discarded", () => {
   afterEach(() => debug.setCaptureAll(false));
 
   it("total(\"suite\") ne compte que les erreurs DAS, total(\"others\") les autres", () => {
@@ -374,7 +374,7 @@ describe("pastille : erreurs DAS et hors DAS comptées à part, bruit du navigat
     expect(debugApi.total()).toBe(3);
   });
 
-  it("ResizeObserver (fenêtre ou console) n'est jamais relevé, même avec « tous les modules »", () => {
+  it("ResizeObserver (window or console) is never reported, even with \"all modules\"", () => {
     debug.setCaptureAll(true);
     target.listeners.error({ message: "ResizeObserver loop completed with undelivered notifications." });
     target.listeners.error({ message: "ResizeObserver loop limit exceeded" });

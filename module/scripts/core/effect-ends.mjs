@@ -1,19 +1,20 @@
 /**
- * `effectEnds` (contenu) : un effet posé par un item tombe-t-il à ce changement de tour ? Fonction pure — le runtime lit les
- * acteurs et le tour où l'effet a été posé, la décision est ici.
+ * `effectEnds` (content): does an effect applied by an item end at this turn change? Pure function — the runtime reads the
+ * actors and the turn in which the effect was applied, the decision is here.
  *
- *  - `casterTurnStart` / `bearerTurnStart` : au début du tour du lanceur, du porteur ;
- *  - `casterTurnEnd` / `bearerTurnEnd` : « jusqu'à la fin de votre (son) prochain tour » — pas la fin du tour où l'effet a été
- *    posé ;
- *  - `currentTurnEnd` : « jusqu'à la fin du tour en cours » — la fin du tour où l'effet a été posé, à qui que soit ce tour.
+ *  - `casterTurnStart` / `bearerTurnStart`: at the start of the caster's, the bearer's turn;
+ *  - `casterTurnEnd` / `bearerTurnEnd`: "until the end of your (its) next turn" — not the end of the turn in which the effect was
+ *    applied;
+ *  - `currentTurnEnd`: "until the end of the current turn" — the end of the turn in which the effect was applied, whoever's
+ *    turn it is.
  *
- * @param {string} when                 le mode déclaré
+ * @param {string} when                 the declared mode
  * @param {object} turn
- * @param {boolean} turn.casterStarts   le tour qui commence est celui du lanceur
- * @param {boolean} turn.bearerStarts   … celui du porteur
- * @param {boolean} turn.casterEnded    le tour qui vient de finir était celui du lanceur
- * @param {boolean} turn.bearerEnded    … celui du porteur
- * @param {boolean} turn.placedInEnded  l'effet a été posé pendant le tour qui vient de finir
+ * @param {boolean} turn.casterStarts   the turn that is starting is the caster's
+ * @param {boolean} turn.bearerStarts   … the bearer's
+ * @param {boolean} turn.casterEnded    the turn that just ended was the caster's
+ * @param {boolean} turn.bearerEnded    … the bearer's
+ * @param {boolean} turn.placedInEnded  the effect was applied during the turn that just ended
  * @returns {boolean}
  */
 export function effectEndsNow(when, turn={}) {

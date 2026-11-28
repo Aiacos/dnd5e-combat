@@ -1,21 +1,21 @@
 /**
- * Les sorts et objets que le SRD 2024 renomme gardent l'id de document du livre, pas son identifiant : l'entrée écrite sous l'un
- * des deux identifiants doit valoir pour l'autre. Vu : le Coffre secret (entrée sous `secret-chest`) ne recevait rien quand l'item
- * venait du Manuel des joueurs (`leomunds-secret-chest`).
+ * The spells and items that the 2024 SRD renames keep the book's document id, not its identifier: the entry written under one of
+ * the two identifiers must hold for the other. Seen: the Secret Chest (entry under `secret-chest`) received nothing when the item
+ * came from the Player's Handbook (`leomunds-secret-chest`).
  */
 import { describe, it, expect } from "vitest";
 import { SHIPPED, SRD_ALIASES } from "../module/scripts/content/index.mjs";
 
-describe("identifiants du SRD et du livre : une entrée, les deux noms", () => {
-  it("le Coffre secret du Manuel reçoit l'entrée écrite sous l'identifiant du SRD", () => {
+describe("SRD and book identifiers: one entry, both names", () => {
+  it("the Handbook's Secret Chest receives the entry written under the SRD identifier", () => {
     expect(SHIPPED["secret-chest"]?.summon?.initiative).toBe("none");
     expect(SHIPPED["leomunds-secret-chest"]).toBe(SHIPPED["secret-chest"]);
   });
-  it("aucune paire de la table n'a l'entrée d'un seul côté", () => {
+  it("no pair in the table has the entry on one side only", () => {
     const oneSided = Object.entries(SRD_ALIASES).filter(([srd, book]) => !!SHIPPED[srd] !== !!SHIPPED[book]);
     expect(oneSided).toEqual([]);
   });
-  it("l'entrée écrite sous l'identifiant du livre vaut toujours pour celui du SRD", () => {
+  it("the entry written under the book's identifier always holds for the SRD's", () => {
     expect(SHIPPED["black-tentacles"]).toBe(SHIPPED["evards-black-tentacles"]);
   });
 });

@@ -1,18 +1,20 @@
 /**
- * §438 : ce qui sépare un objet d'une fiche de sa référence du Manuel des joueurs, depuis le Manuel 3.0.0 (identifiants du SRD de dnd5e
- * 6.1, activités et effets refaits). Pur : les deux côtés sont lus en objets simples (adapter : runtime/diagnostic/checks.mjs).
+ * §438: what separates an item on a sheet from its Player's Handbook reference, since Handbook 3.0.0 (dnd5e 6.1 SRD identifiers,
+ * activities and effects redone). Pure: both sides are read as simple objects (adapter: runtime/diagnostic/checks.mjs).
  *
- * Forme lue : `{ identifier, activities: { id: { type, effects: [id], damage: [formule], level: "min-max" } }, effects: { id: [changement] },
- * advancement: nombre }` — rien de ce qui est propre à la fiche (utilisations dépensées, préparation, nom traduit).
+ * Form read: `{ identifier, activities: { id: { type, effects: [id], damage: [formule], level: "min-max" } },
+ * effects: { id: [changement] },
+ * advancement: nombre }` — nothing that is specific to the sheet (spent uses, preparation, translated name).
  */
 
-/** Les deux listes ont-elles les mêmes éléments, dans n'importe quel ordre ? */
+/** Do the two lists have the same elements, in any order? */
 const sameSet = (a, b) => (a.length === b.length) && a.every(x => b.includes(x));
 
 /**
- * Les raisons de remplacer l'objet par sa référence, dans l'ordre : `identifier`, `activities` (ids ajoutés ou retirés), `effects` (idem),
- * `content` (mêmes ids, contenu différent : type, effets posés, dégâts, porte de niveau d'une activité ; changements d'un effet),
- * `advancement` (la référence porte des avancements que l'objet n'a pas — un choix à refaire sur la fiche). Rien : `[]`.
+ * The reasons to replace the item with its reference, in order: `identifier`, `activities` (ids added or removed), `effects`
+ * (same), `content` (same ids, different content: type, effects applied, damage, level range of an activity; changes of an
+ * effect), `advancement` (the reference carries advancements that the item does not — a choice to redo on the sheet).
+ * Nothing: `[]`.
  */
 export function phbDifferences(own, reference) {
   const out = [];
@@ -30,8 +32,8 @@ export function phbDifferences(own, reference) {
 }
 
 /**
- * La forme comparée d'un objet (données source, `toObject()` ou `_source`) : ce qui fait son automatisation, pas son état.
- * @param {object} data      `{ system, effects }` de l'objet.
+ * The compared form of an item (source data, `toObject()` or `_source`): what makes up its automation, not its state.
+ * @param {object} data      `{ system, effects }` of the item.
  */
 export function phbShape(data) {
   const system = data?.system ?? {};
@@ -75,12 +77,12 @@ export function withoutGrantedForwards(own, reference) {
   return { ...own, activities: Object.fromEntries(Object.entries(own.activities).filter(([id]) => !drop.includes(id))) };
 }
 
-/** Le `sourceItem` d'un sort donné par une sous-classe renommée (`subclass:<ancien>` → `subclass:<nouveau>`), sinon null. */
+/** The `sourceItem` of a spell given by a renamed subclass (`subclass:<ancien>` → `subclass:<nouveau>`), otherwise null. */
 export function renamedSourceItem(sourceItem, from, to) {
   return (sourceItem === `subclass:${from}`) ? `subclass:${to}` : null;
 }
 
-/** Une donnée d'objet cite-t-elle la sous-classe sous son ancien identifiant (`@scale.<id>.`, `@subclasses.<id>.`) ? */
+/** Does an item's data cite the subclass under its old identifier (`@scale.<id>.`, `@subclasses.<id>.`)? */
 export function citesSubclass(system, identifier) {
   const text = JSON.stringify(system ?? {});
   return text.includes(`@scale.${identifier}.`) || text.includes(`@subclasses.${identifier}.`);

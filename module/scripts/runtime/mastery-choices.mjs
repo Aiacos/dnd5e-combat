@@ -1,14 +1,14 @@
 /**
- * §222 : les bottes choisies — combien, lesquelles, quand les changer (les effets des bottes : runtime/mastery.mjs).
+ * §222: the chosen mastery properties — how many, which, when to change them (the properties' effects: runtime/mastery.mjs).
  *
- *  - **Limite** (réglage de monde `masteryRules`, actif par défaut) : sur le client qui modifie la fiche (`preUpdateActor`), un choix
- *    de bottes qui dépasse ce que donnent les classes et les dons, prend une arme que le personnage ne maîtrise pas, met une arme à
- *    distance dans une botte de Barbare, ou retire une botte hors du Repos long est retiré de la mise à jour (le reste passe), avec un
- *    avertissement. Le MJ n'est jamais retenu : un avertissement seul. La montée de niveau de dnd5e (`isAdvancement`) passe toujours.
- *  - **Repos long** (`dnd5e.restCompleted`, sur le client du repos) : le drapeau `masteryRest` note combien de bottes peuvent changer
- *    (Guerrier : une ; Barbare, Paladin, Rôdeur, Roublard, Maître d'armes : toutes les leurs), puis `dnd5e-combat.masteryRest` est
- *    publié : l'interface ouvre la fenêtre des bottes chez le joueur (ui/mastery.mjs). Chaque botte retirée en dépense une.
- *  - **Entrée en combat** (`combatStart`, MJ actif) : le drapeau tombe — les changements se font au sortir du repos.
+ *  - **Limit** (world setting `masteryRules`, on by default): on the client that edits the sheet (`preUpdateActor`), a choice
+ *    of properties that exceeds what classes and feats give, takes a weapon the character is not proficient with, puts a ranged
+ *    weapon in a Barbarian property, or removes a property outside a Long Rest is stripped from the update (the rest goes
+ *    through), with a warning. The GM is never held back: a warning only. dnd5e's level-up (`isAdvancement`) always goes through.
+ *  - **Long Rest** (`dnd5e.restCompleted`, on the rest's client): the `masteryRest` flag notes how many properties can change
+ *    (Fighter: one; Barbarian, Paladin, Ranger, Rogue, Weapon Master: all of theirs), then `dnd5e-combat.masteryRest` is
+ *    published: the interface opens the properties window for the player (ui/mastery.mjs). Each property removed spends one.
+ *  - **Entering combat** (`combatStart`, active GM): the flag drops — changes are made on leaving the rest.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -22,7 +22,7 @@ const PATH = "system.traits.weaponProf.mastery.value";
 
 export const masteryRulesOn = () => { try { return game.settings.get(MODULE_ID, MASTERY_RULES_SETTING) !== false; } catch { return true; } };
 
-/** Le choix proposé par une mise à jour (`changes` développé ou à plat), ou undefined. */
+/** The choice proposed by an update (`changes` expanded or flat), or undefined. */
 function proposed(changes) {
   if ( PATH in changes ) return changes[PATH];
   return foundry.utils.getProperty(changes, PATH);
@@ -35,8 +35,8 @@ function dropProposal(changes) {
 }
 
 /**
- * Juge un choix de bottes pour cet acteur : le verdict de core/mastery.mjs, avec ses sources, ses armes et ce que le Repos long
- * laisse changer. Exposé à l'interface (la fenêtre des bottes juge avant d'enregistrer).
+ * Judges a choice of mastery properties for this actor: the verdict of core/mastery.mjs, with its sources, its weapons and what the
+ * Long Rest lets change. Exposed to the interface (the properties window judges before saving).
  */
 export function judgeMasteries(actor, after) {
   return masteryVerdict({ before: chosenMasteries(actor), after: Array.from(after ?? []), weapons: weaponFacts(actor),
@@ -59,7 +59,7 @@ function onPreUpdateActor(actor, changes, options) {
     dropProposal(changes);
     return true;
   }
-  // Une botte retirée dépense ce que le Repos long laisse changer (le MJ aussi : il agit pour le joueur).
+  // A removed property spends what the Long Rest lets change (the GM too: they act for the player).
   if ( verdict.removed > 0 ) {
     const left = Math.max(0, restAllowanceOf(actor) - verdict.removed);
     foundry.utils.setProperty(changes, `flags.${MODULE_ID}.${MASTERY_REST_FLAG}`, { allowance: left });
@@ -74,7 +74,8 @@ async function onRestCompleted(actor, result, config) {
   const allowance = restChanges(sources);
   await actor.setFlag(MODULE_ID, MASTERY_REST_FLAG, { allowance });
   log(`${actor.name}: Long Rest, ${allowance} weapon mastery choice(s) may change`);
-  // §222 : sur chaque client propriétaire de l'acteur, après un Repos long qui lui laisse changer des bottes d'arme : `(actor)`. Lecture seule.
+  // §222: on each client that owns the actor, after a Long Rest that lets them change weapon mastery properties: `(actor)`.
+  // Read-only.
   Hooks.callAll(`${MODULE_ID}.masteryRest`, actor);
 }
 
@@ -89,10 +90,10 @@ export function registerMasteryChoices() {
     name: `DND5ECOMBAT.Reglage.${MASTERY_RULES_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${MASTERY_RULES_SETTING}.Aide`,
     scope: "world", config: true, type: Boolean, default: true
   });
-  // L'index des armes de base, lu une fois : le contrôle de `preUpdateActor` est synchrone.
+  // The index of base weapons, read once: the `preUpdateActor` check is synchronous.
   route("ready", () => baseWeapons().catch(err => console.error(`${MODULE_ID} | weapon index`, err)), { label: "weapon index not read" });
   route("preUpdateActor", onPreUpdateActor, { cancellable: true, label: "weapon mastery choice not checked" });
-  // Sur le client qui a lancé le repos (documents/actor/actor.mjs), propriétaire de l'acteur.
+  // On the client that started the rest (documents/actor/actor.mjs), owner of the actor.
   route("dnd5e.restCompleted", onRestCompleted, { label: "weapon mastery: Long Rest change not offered" });
   route("combatStart", onCombatStart, { executor: true, label: "weapon mastery: Long Rest change not closed" });
 }

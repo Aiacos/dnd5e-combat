@@ -1,6 +1,6 @@
 /**
- * O9h (§363) : briques des consommables et objets demandés par l'utilisateur — durée tirée (Poussière de disparition), enduit (Poison
- * standard), et le contenu déclaré (validé par le schéma).
+ * O9h (§363): building blocks for the consumables and items requested by the user — rolled duration (Dust of Disappearance),
+ * coating (Basic Poison), and the declared content (validated by the schema).
  */
 import { describe, it, expect } from "vitest";
 import { rollSimple, durationSeconds } from "../module/scripts/core/rolled-duration.mjs";
@@ -10,15 +10,15 @@ import { CONTENT } from "../module/scripts/content/index.mjs";
 
 const fixed = v => () => v;
 
-describe("O9h : durée tirée", () => {
-  it("lit les dés et les entiers", () => {
+describe("O9h: rolled duration", () => {
+  it("reads dice and integers", () => {
     expect(rollSimple("2d4", fixed(0))).toBe(2);
     expect(rollSimple("2d4", fixed(0.999))).toBe(8);
     expect(rollSimple("1d6 + 2", fixed(0))).toBe(3);
     expect(rollSimple("3")).toBe(3);
     expect(rollSimple("2d4 * 3")).toBeNull();
   });
-  it("convertit l'unité", () => {
+  it("converts the unit", () => {
     expect(durationSeconds({ formula: "2d4", units: "minutes" }, fixed(0))).toBe(120);
     expect(durationSeconds({ formula: "1d4", units: "hours" }, fixed(0.999))).toBe(14400);
     expect(durationSeconds({ seconds: 60 })).toBe(60);
@@ -36,11 +36,11 @@ describe("O9h : enduit d'arme", () => {
     { id: "e", name: "Arrows", type: "consumable", kind: "ammo", damageTypes: [], quantity: 20 },
     { id: "f", name: "Bolts", type: "consumable", kind: "ammo", damageTypes: [], quantity: 0 }
   ];
-  it("propose les armes qui délivrent, équipées d'abord, puis les munitions", () => {
+  it("offers the weapons that deliver, equipped first, then ammunition", () => {
     expect(coatingCandidates(items, rule).map(o => o.id)).toEqual(["c", "b", "e"]);
     expect(coatingCandidates(items, { damageTypes: ["piercing"] }).map(o => o.id)).toEqual(["b"]);
   });
-  it("vaut tant qu'il est frais, pour le bon type", () => {
+  it("applies while it is fresh, for the right type", () => {
     const coating = { until: 100, deliveredBy: ["piercing", "slashing"], charges: 1 };
     expect(coatingApplies(coating, { now: 50, types: ["slashing"] })).toBe("applies");
     expect(coatingApplies(coating, { now: 50, types: ["bludgeoning"] })).toBe("no");

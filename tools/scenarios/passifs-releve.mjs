@@ -1,13 +1,14 @@
 /**
- * Aptitudes passives du relevé des trous (SPEC §235), dans l'Arène des sorts : le Lanceur (PNJ sans classe : le sort prêté porte sa
- * classe, `sourceItem`), le Héros (Barbare pré-tiré : classe, Rage, armes), les Cibles. Chaque partie prête ses items et remet tout.
- *  - Incantation puissante (Druide) : Poussière d'étoile → les dégâts portent « @abilities.wis.mod » ; une dague → pas d'Attaque primitive ;
- *  - Incantation puissante (Clerc) : Flamme sacrée ratée → idem ;
- *  - Chasseur implacable : concentré sur la Marque du chasseur, 30 dégâts → pas de jet de concentration ; sans l'aptitude → un jet ;
- *  - Concentration fanatique : le Héros en Rage rate Éclat mental → relance proposée (réponse « Relancer »), une seule fois par Rage ;
- *  - Sorts psychiques : Décharge occulte → le type « psychique » est proposé, choisi, le jet est psychique ;
- *  - Athlète remarquable : coup critique du Héros (cible Paralysée au contact) à son tour → +moitié de Vitesse, désengagé ;
- *  - Inspiration de combat : le Lanceur inspire le Héros ; son coup → dé aux dégâts (réponse « oui ») ; touché → dé à la CA (Réaction,
+ * Passive features from the gaps survey (SPEC §235), in the Spell Arena: the Caster (NPC without a class: the lent spell
+ * carries its class, `sourceItem`), the Hero (pre-made Barbarian: class, Rage, weapons), the Targets. Each part lends its items
+ * and restores everything.
+ *  - Potent Spellcasting (Druid): Stardust → the damage carries "@abilities.wis.mod"; a dagger → no Primal Savagery;
+ *  - Potent Spellcasting (Cleric): Sacred Flame missed → same;
+ *  - Relentless Hunter: concentrating on Hunter's Mark, 30 damage → no Concentration roll; without the feature → a roll;
+ *  - Fanatical Focus: the Hero in Rage fails Mind Sliver → reroll offered (answer "Reroll"), only once per Rage;
+ *  - Psychic Spells: Eldritch Blast → the "psychic" type is offered, chosen, the roll is psychic;
+ *  - Remarkable Athlete: Critical Hit by the Hero (target Paralyzed in contact) on their turn → +half Speed, disengaged;
+ *  - Combat Inspiration: the Caster inspires the Hero; their hit → die to the damage (answer "yes"); hit → die to the AC (Reaction,
  *    `autoReact: "first"`).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
@@ -58,12 +59,13 @@ export default {
     const damageOf = async used => (await ctx.messagesSince(used.usageMessageId)).find(m => m.type === "damage") ?? null;
     const bonusesOf = m => m?.flags?.["dnd5e-combat"]?.bonuses ?? [];
     /**
-     * §438 : la Sagesse d'Incantation puissante, comptée une fois. Ancienne forme (Manuel 2.2.0, SRD 6.0) : une part du moteur. Forme du
-     * SRD 6.1 / Manuel 3.0.0 (`potent-spellcasting`) : l'effet de l'item (`dnd5e.bonus`) l'ajoute à la formule, le moteur se tait (§431).
+     * §438: Potent Spellcasting's Wisdom, counted once. Old form (Manual 2.2.0, SRD 6.0): a share of the engine. Form of SRD 6.1
+     * / Manual 3.0.0 (`potent-spellcasting`): the item's effect (`dnd5e.bonus`) adds it to the formula, the engine stays silent
+     * (§431).
      */
     const wisAdded = async (m, t) => {
-      // §438 suite : la part du moteur est écrite avec les données de l'acteur (« 3 », 1e2c134) et lancée comme un jet à part ; la part
-      // du système se lit dans le premier jet seul — sans quoi la part du moteur passait pour celle du système, et un double compte aussi.
+      // §438 continued: the engine's share is written with the actor's data ("3", 1e2c134) and rolled as a separate roll; the
+      // system's share is read in the first roll alone — otherwise the engine's share passed for the system's, and a double too.
       const mod = (await ctx.engine("stats", { tokenId: t.id }))?.mods?.wis;
       const engine = bonusesOf(m).filter(b => (b.formula === "@abilities.wis.mod") || (b.formula === String(mod))).length;
       const formula = (m?.rolls ?? []).map(r => r.formula).join(" + ").replace(/\s/g, "");
@@ -71,7 +73,7 @@ export default {
       const system = Number.isFinite(mod) && (mod > 0) && first.split("+").slice(1).some(t => t === String(mod)) ? 1 : 0;
       return { once: (engine + system) === 1, text: `moteur ${engine}, formule « ${formula} », Sagesse ${mod}` };
     };
-    /** Pendant `action`, répond aux fenêtres du MJ dont le texte correspond, par le premier bouton qui correspond. */
+    /** During `action`, answers the GM's windows whose text matches, with the first button that matches. */
     const answering = async (rules, action) => {
       const known = new Set(((await ctx.call("list-dialogs", {}).catch(() => null))?.windows ?? []).map(w => w.id));
       const seen = [];
@@ -107,7 +109,7 @@ export default {
     const adjacent = async (t, to) => { const p = await ctx.position(to); await ctx.call("move-token", { tokenId: t.id, x: p.x + grid, y: p.y, elevation: 0 }); await pause(800); };
 
     await part("Incantation puissante (Druide)", async () => {
-      // §438 : dnd5e 6.1 lit la classe du sort mineur par son `sourceItem` (« class:druid ») sur la fiche : la classe est prêtée.
+      // §438: dnd5e 6.1 reads the cantrip's class through its `sourceItem` ("class:druid") on the sheet: the class is lent.
       await lend(caster, `${CLASSES}phbdrdDruid00000`, { levels: 7 });
       await lend(caster, `${CLASSES}phbdrdElementalF`);
       await lend(caster, `${CLASSES}phbFuryPotentSpe`);
@@ -234,7 +236,7 @@ export default {
       const inspired = async () => (await ctx.effectsFrom(hero, "bardic-inspiration")).length > 0;
       await inspire();
       ctx.expect(await inspired(), "Inspiration de combat : le Héros est inspiré");
-      // Attaque : le dé aux dégâts d'un coup.
+      // Attack: the die to the damage of a hit.
       await adjacent(hero, target);
       const axe = await ctx.itemId(hero.id, "greataxe");
       let offense = null;
@@ -250,9 +252,9 @@ export default {
       await pause(1500);
       ctx.expect((await ctx.engineLog()).some(l => /Combat Inspiration: \+\d+ damage/.test(l)) && !(await inspired()),
         "Inspiration de combat : dé ajouté aux dégâts, inspiration dépensée");
-      // Défense : touché, la Réaction ajoute le dé à la CA.
+      // Defense: on a hit, the Reaction adds the die to the AC.
       await inspire();
-      // Les Cibles de l'arène n'ont aucun item : une dague prêtée.
+      // The arena's Targets have no item: a dagger lent.
       const club = await lend(target, "Compendium.dnd-players-handbook.equipment.Item.phbwepDagger0000", { equipped: true });
       let defended = false;
       for ( let n = 1; (n <= 15) && !defended && club; n++ ) {

@@ -1,10 +1,10 @@
 /**
- * Aura de feu « chaque créature » (DF #254 du 2026-11-23) : sous l'identifiant partagé `fire-aura` (« chaque créature de son choix » :
- * Azers, Salamandres), l'Élémentaire du feu et le Balor du SRD 5.2 brûlent CHAQUE créature de l'émanation, leurs alliés compris ; le
- * Balor sur 1,50 m (sa donnée disait 3 m). Arène de test : chaque créature est posée pour le scénario (Monster Manual 2024 ou SRD 2024),
- * hostile, avec le Zombi (hostile : son allié) et le Guerrier (son ennemi) à son contact. En combat, à la fin de son tour, la carte de
- * l'émanation vise les deux. L'entrée effective de son Aura de feu porte le nouvel identifiant.
- * Remis en état : positions, PV, combat, créatures posées.
+ * "Each creature" Fire Aura (DF #254 of 2026-11-23): under the shared identifier `fire-aura` ("each creature of its choice":
+ * Azers, Salamanders), the Fire Elemental and the SRD 5.2 Balor burn EVERY creature in the Emanation, their allies included;
+ * the Balor over 1.50 m (its data said 3 m). Test arena: each creature is placed for the scenario (Monster Manual 2024 or
+ * SRD 2024), hostile, with the Zombie (hostile: its ally) and the Fighter (its enemy) in contact with it. In combat, at the
+ * end of its turn, the Emanation card targets both. The effective entry of its Fire Aura carries the new identifier.
+ * Restored: positions, HP, combat, placed creatures.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -47,9 +47,9 @@ export default {
       const e = await auraEntry(beast.id);
       ctx.expect(e?.found && (e.identifier === c.identifier), `${c.name} : son Aura de feu est lue comme ${c.identifier} (${e?.identifier})`);
 
-      // La créature au milieu, le Guerrier à sa gauche, le Zombi à sa droite (au contact de son bord, quelle que soit sa taille).
+      // The creature in the middle, the Fighter on its left, the Zombie on its right (in contact with its edge, whatever its size).
       const x0 = wHome.x + (4 * grid), y0 = wHome.y;
-      // La largeur du token en cases, lue sur la scène (le Balor est Très grand : l'émanation de 1,50 m part de son bord).
+      // The token's width in cells, read from the scene (the Balor is Huge: the 1.50 m Emanation starts from its edge).
       const width = Math.max(1, Math.round((await ctx.call("get-scene-object", { type: "Token", objectId: beast.id }))?.data?.width ?? 1));
       await ctx.call("move-token", { tokenId: beast.id, x: x0, y: y0, elevation: 0 });
       await ctx.call("move-token", { tokenId: warrior.id, x: x0 - grid, y: y0, elevation: 0 });

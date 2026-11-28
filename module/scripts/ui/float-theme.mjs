@@ -1,9 +1,9 @@
 /**
- * §400 : la fenêtre « Thème des textes flottants » (MJ), outil de l'onglet « Textes flottants » des réglages DAS. Le thème se règle dans
- * l'« Atelier des textes flottants » (une page hors de Foundry) et s'importe ici en JSON (`das-float-theme`) : collé ou choisi comme
- * fichier, vérifié champ par champ (core/float-text.mjs, `floatThemeFrom`), enregistré pour la table (réglage de monde `floatTheme`, et les
- * réglages de rythme qu'il porte). S'y trouvent aussi l'export, le retour à l'allure d'origine, et l'essai de chaque sorte sur le token
- * sélectionné. `api.floats` fait de même sans fenêtre.
+ * §400: the "Floating Text Theme" window (GM), a tool of the "Floating texts" tab of the DAS settings. The theme is set in
+ * the "Floating Text Workshop" (a page outside Foundry) and imported here as JSON (`das-float-theme`): pasted or chosen as a
+ * file, checked field by field (core/float-text.mjs, `floatThemeFrom`), saved for the table (world setting `floatTheme`, and the
+ * pace settings it carries). Also there: the export, the return to the original look, and the trial of each kind on the
+ * selected token. `api.floats` does the same without a window.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,13 +15,13 @@ const windowId = "das-float-theme";
 const THEME_SETTING = "floatTheme";
 let ThemeClass = null;
 
-/** Le rythme que porte un export : les réglages du monde de l'onglet. */
+/** The pace an export carries: the world settings of the tab. */
 function currentGlobal() {
   const keys = ["floatDuration", "floatSpacing", "floatDistance", "floatScale", "floatDirection", "floatDice", "floatIcons", "floatAdvantage"];
   return Object.fromEntries(keys.map(k => { try { return [k, game.settings.get(MODULE_ID, k)]; } catch { return null; } }).filter(Boolean));
 }
 
-/** Le thème du monde, en JSON d'export. */
+/** The world's theme, as export JSON. */
 export function exportTheme() {
   let theme = {};
   try { theme = game.settings.get(MODULE_ID, THEME_SETTING) ?? {}; } catch {}
@@ -29,7 +29,7 @@ export function exportTheme() {
 }
 
 /**
- * Importe un thème (texte JSON ou objet) pour la table : allures et rythme. MJ seulement.
+ * Imports a theme (JSON text or object) for the table: looks and pace. GM only.
  * @returns {Promise<{kinds: number, problems: string[]}>}
  */
 export async function importTheme(json) {
@@ -42,19 +42,19 @@ export async function importTheme(json) {
   return { kinds: Object.keys(theme).length, problems };
 }
 
-/** Revient à l'allure d'origine (le thème vide). */
+/** Returns to the original look (the empty theme). */
 export async function resetTheme() {
   if ( !game.user.isGM ) throw new Error(loc("ThemeFlottant.MJSeul"));
   await game.settings.set(MODULE_ID, THEME_SETTING, {});
 }
 
-/** Le nom d’une sorte ; un type de dégâts prend le nom que lui donne dnd5e (`CONFIG.DND5E.damageTypes`). */
+/** A kind's name; a damage type takes the name dnd5e gives it (`CONFIG.DND5E.damageTypes`). */
 function kindLabel(kind) {
   if ( kind.startsWith("dmg-") ) return loc("ThemeFlottant.Degats", { type: CONFIG.DND5E?.damageTypes?.[kind.slice(4)]?.label ?? kind.slice(4) });
   return loc(`ThemeFlottant.Sorte.${kind}`);
 }
 
-/** Un exemple par sorte, pour l'essai : texte, et jet pour celles qui en portent un. */
+/** One example per kind, for the trial: text, and roll for those that carry one. */
 function sample(kind) {
   const rolled = { critical: 20, miss: 8, hit: 17, saveSuccess: 15, saveFail: 6, check: 14, checkSuccess: 18, checkFail: 9, initiative: 17, save: 12 };
   const texts = {
@@ -71,7 +71,7 @@ function sample(kind) {
   return { text: texts[kind] ?? kind, extra: (kind in rolled) ? { roll: rolled[kind], mode: (kind === "saveFail") ? "advantage" : null } : {} };
 }
 
-/** Essaie une sorte sur le token sélectionné (ou rien, avec un avis). */
+/** Tries a kind on the selected token (or nothing, with a notice). */
 export function tryKind(kind) {
   const token = canvas?.tokens?.controlled?.[0];
   if ( !token ) { ui.notifications.warn(loc("ThemeFlottant.SansToken")); return false; }
@@ -185,7 +185,7 @@ const ThemeApp = () => ThemeClass ??= class FloatThemeApp extends foundry.applic
   }
 };
 
-/** Ouvre la fenêtre (MJ). */
+/** Opens the window (GM). */
 export function openFloatTheme() {
   if ( !game.user.isGM ) return null;
   const app = foundry.applications.instances.get(windowId) ?? new (ThemeApp())();

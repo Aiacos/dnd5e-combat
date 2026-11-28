@@ -1,13 +1,13 @@
 /**
- * L'Occultiste du Manuel des joueurs 2024 (SPEC §29), monde `dnd-6`. L'Occultiste (niveau 1) reçoit, prêtés depuis le compendium du
- * Manuel des joueurs, Décharge répulsive, Pacte de la lame, Buveuse de vie, Âme radieuse et Défenses envoûtantes ; les
- * enchantements (Décharge répulsive sur la Décharge occulte, arme de pacte sur la dague) sont posés par `api.mcp.enchant`. Le
- * Bandit reçoit 300 PV. Vérifie :
- *  - Décharge répulsive : un rayon qui touche repousse le Bandit de 10 ft (deux cases) ;
- *  - Buveuse de vie : +1d6 nécrotiques au premier coup de l'arme de pacte du tour, pas au second ;
- *  - Âme radieuse : Flamme sacrée + le modificateur de Charisme ;
- *  - Défenses envoûtantes : le Bandit touche l'Occultiste → la réaction divise les dégâts et le Bandit fait sa sauvegarde.
- * Remet positions, PV, états ; retire les items prêtés et les enchantements.
+ * The 2024 Player's Handbook Warlock (SPEC §29), world `dnd-6`. The Warlock (level 1) receives, lent from the Player's Handbook
+ * compendium, Repelling Blast, Pact of the Blade, Lifedrinker, Radiant Soul and Beguiling Defenses; the
+ * enchantments (Repelling Blast on Eldritch Blast, pact weapon on the dagger) are placed through `api.mcp.enchant`. The
+ * Bandit receives 300 HP. Checks:
+ *  - Repelling Blast: a ray that hits pushes the Bandit back 10 ft (two cells);
+ *  - Lifedrinker: +1d6 necrotic on the first hit of the turn with the pact weapon, not on the second;
+ *  - Radiant Soul: Sacred Flame + the Charisma modifier;
+ *  - Beguiling Defenses: the Bandit hits the Warlock → the Reaction halves the damage and the Bandit makes its saving throw.
+ * Restores positions, HP, conditions; removes the lent items and the enchantments.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "dnd-players-handbook.classes";
@@ -91,8 +91,8 @@ export default {
       const repel = await lend("phbinvRepellingB");
       if ( !ctx.expect(!!(await enchant(repel, "OXhI1TDQxORrGAgc", blast)), "la Décharge occulte porte l'enchantement « Répulsive »") ) return;
       await tough();
-      // Restored Keep, colonne x = 3080 : de y = 5040 à 5460, quatre cases libres de murs (relevé du scénario `poussee`, sous la
-      // case d'origine du Magicien, 3080 × 4760). L'Occultiste en 4900, le Bandit en 5040, repoussé jusqu'en 5320.
+      // Restored Keep, column x = 3080: from y = 5040 to 5460, four cells free of walls (`poussee` scenario survey, below the
+      // Wizard's starting cell, 3080 × 4760). The Warlock at 4900, the Bandit at 5040, pushed back to 5320.
       await place(warlock, 3080, 4900);
       const pos0 = { x: 3080, y: 5040 };
       let checked = false;
@@ -144,8 +144,8 @@ export default {
       await pause(1500);
       const damage = (await ctx.messagesSince(since)).find(m => m.type === "damage");
       const bonuses = (damage?.flags?.[MODULE_ID]?.bonuses ?? []).map(b => `${b.formula} ${b.damageType}`);
-      // §438 : la part bonus est écrite avec les données de l'acteur (1e2c134 : « @abilities.wis.mod » → « 3 ») — la valeur attendue est
-      // lue sur la créature, et doit aussi être un jet de la carte (le moteur y ajoute sa part).
+      // §438: the bonus share is written with the actor's data (1e2c134: "@abilities.wis.mod" → "3") — the expected value is
+      // read on the creature, and must also be a roll of the card (the engine adds its share to it).
       const cha = String((await ctx.engine("stats", { tokenId: warlock.id }))?.mods?.cha);
       const rolls = (damage?.rolls ?? []).map(x => x.formula);
       ctx.expect([`@abilities.cha.mod radiant`, `${cha} radiant`].some(x => bonuses.includes(x)) && rolls.includes(cha), `Flamme sacrée : ${bonuses.join(", ")} ; jets ${rolls.join(" + ")} (Charisme ${cha})`);

@@ -1,12 +1,12 @@
 /**
- * §220 : le « Théâtre de l'esprit » — un bouton de la barre d'outils du MJ (contrôles des jetons) qui coupe toutes les automatisations
- * du moteur, pour une scène jouée sans plan de combat : plus de déplacement au clic, de menus, de budget de tour, de jets résolus,
- * de réactions, de zones, de vision simulée… dnd5e et le cœur reprennent la main, comme sans le moteur.
+ * §220: "Theater of the Mind" — a button in the GM toolbar (token controls) that switches off all the engine's automations,
+ * for a scene played without a combat map: no more click-to-move, menus, turn budget, resolved rolls,
+ * reactions, areas, simulated vision… dnd5e and the core take over again, as without the engine.
  *
- *  - Réglage de monde `theaterOfMind` (partagé : tous les clients suivent), basculé par le bouton du MJ ; chaque client en est averti.
- *  - Le routeur ne passe plus aucun hook (runtime/router.mjs, `paused`), sauf le démarrage (init, setup, ready) et ce bouton ; les
- *    écoutes posées hors du routeur (souris et clavier, modes de détection, tâches périodiques) lisent le même état.
- *  - Les voisins le suivent par le hook `dnd5e-combat.theater` (`active`) et `api.theater.active()`.
+ *  - World setting `theaterOfMind` (shared: all clients follow), toggled by the GM's button; each client is notified.
+ *  - The router no longer passes any hook (runtime/router.mjs, `paused`), except startup (init, setup, ready) and this button; the
+ *    listeners placed outside the router (mouse and keyboard, detection modes, periodic tasks) read the same state.
+ *  - Neighbors follow it through the `dnd5e-combat.theater` hook (`active`) and `api.theater.active()`.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,8 +16,8 @@ import { log, loc } from "./shared.mjs";
 
 export const THEATER_SETTING = "theaterOfMind";
 /**
- * §220 : sur chaque client, quand le MJ allume ou éteint le Théâtre de l'esprit (réglage de monde `theaterOfMind`) : `(active)`, booléen —
- * allumé, le moteur n'automatise plus rien. Lecture seule.
+ * §220: on each client, when the GM turns Theater of the Mind on or off (world setting `theaterOfMind`): `(active)`, boolean —
+ * on, the engine no longer automates anything. Read-only.
  */
 export const THEATER_HOOK = `${MODULE_ID}.theater`;
 
@@ -29,7 +29,7 @@ function applied(on, { announce=true }={}) {
   if ( announce ) ui.notifications?.info(loc(on ? "Theatre.Actif" : "Theatre.Inactif"));
 }
 
-/** Bascule le Théâtre de l'esprit (MJ). */
+/** Toggles Theater of the Mind (GM). */
 export async function setTheater(on) {
   if ( !game.user.isGM ) return false;
   await game.settings.set(MODULE_ID, THEATER_SETTING, !!on);
@@ -44,7 +44,7 @@ export function registerTheater() {
     scope: "world", config: true, type: Boolean, default: false,
     onChange: value => applied(value)
   });
-  // L'état du monde, lu dès que les réglages le sont (avant `ready` : les écoutes de `ready` le liront).
+  // The world's state, read as soon as the settings are (before `ready`: the `ready` listeners will read it).
   route("setup", () => setTheaterState(game.settings.get(MODULE_ID, THEATER_SETTING)), { always: true, label: "theatre of the mind: state not read" });
   route("ready", () => { if ( theaterActive() && game.user.isGM ) ui.notifications.info(loc("Theatre.Rappel")); },
     { always: true, label: "theatre of the mind: reminder" });

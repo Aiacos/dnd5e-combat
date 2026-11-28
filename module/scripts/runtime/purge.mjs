@@ -1,10 +1,10 @@
 /**
- * Purge du journal (SPEC §58) : au-delà de `chatPurgeMax` messages (réglage de monde, 0 = jamais), le MJ actif supprime les
- * plus anciens jusqu'à n'en garder que `chatPurgeKeep`. Suppression définitive — décidée par l'utilisateur le 2026-10-02.
+ * Log purge (SPEC §58): beyond `chatPurgeMax` messages (world setting, 0 = never), the active GM deletes the
+ * oldest ones until only `chatPurgeKeep` remain. Permanent deletion — decided by the user on 2026-10-02.
  *
- * Jamais supprimé : une action dont la résolution n'est pas close (ni `done`, ni `missed`, ni `undone`), ni les jets qui s'y
- * rattachent (`system.origin`) — le moteur les lit encore. Une carte d'utilisation supprimée emporte ses résumés natifs
- * (documents/chat-message.mjs:625-635, `_preDeleteOperation`) ; ses jets repliés (ui/compact.mjs) partent avec elle ici.
+ * Never deleted: an action whose resolution is not closed (neither `done`, nor `missed`, nor `undone`), nor the rolls attached
+ * to it (`system.origin`) — the engine still reads them. A deleted use card takes its native summaries with it
+ * (documents/chat-message.mjs:625-635, `_preDeleteOperation`); its collapsed rolls (ui/compact.mjs) go with it here.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -25,7 +25,7 @@ function setting(key) {
   try { return Math.max(0, Math.floor(Number(game.settings.get(MODULE_ID, key)) || 0)); } catch { return 0; }
 }
 
-/** Les messages du plus ancien au plus récent, sous la forme que lit core/purge.mjs. */
+/** The messages from oldest to newest, in the form core/purge.mjs reads. */
 function entries() {
   return game.messages.contents.map(m => {
     const resolution = current(m.getFlag(MODULE_ID, "resolution"));
@@ -41,7 +41,7 @@ async function purge() {
   if ( !ids.length ) return;
   running = true;
   try {
-    // Par lots : une seule opération de plusieurs centaines d'ids reste une seule requête, mais un seul rendu du journal par lot.
+    // In batches: a single operation of several hundred ids stays one request, but only one log render per batch.
     for ( let i = 0; i < ids.length; i += 100 ) {
       const batch = ids.slice(i, i + 100).filter(id => game.messages.has(id));
       if ( batch.length ) await ChatMessage.implementation.deleteDocuments(batch);
@@ -52,7 +52,7 @@ async function purge() {
   } finally { running = false; }
 }
 
-/** Une purge à la fin d'une rafale de messages, pas pendant. */
+/** A purge at the end of a burst of messages, not during it. */
 function schedule() {
   if ( setting(PURGE_MAX_SETTING) <= 0 ) return;
   if ( game.messages.size <= setting(PURGE_MAX_SETTING) ) return;

@@ -6,7 +6,7 @@ class Sidebar { hasFrame = false; }
 class TokenTab { hasFrame = false; }
 class DialogV2 { hasFrame = true; title = "Lancer quand même ?"; }
 
-describe("api.mcp.windows — les fenêtres, pas l'interface fixe du cœur", () => {
+describe("api.mcp.windows — the windows, not the core's fixed interface", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const stage = isGM => {
@@ -17,7 +17,7 @@ describe("api.mcp.windows — les fenêtres, pas l'interface fixe du cœur", () 
         vi.stubGlobal("foundry", { applications: { instances: new Map([["sidebar", sidebar], ["tokens-tab", tab], ["dialog-1", dialog]]) } });
   };
 
-  it("ne rend pas l'interface sans cadre (barre latérale, onglet des tokens) : la fermer laisserait `ui.chat.element` nul", () => {
+  it("does not render the frameless interface (sidebar, tokens tab): closing it would leave `ui.chat.element` null", () => {
     stage(true);
     expect(windows()).toEqual([{ id: "dialog-1", title: "Lancer quand même ?", className: "DialogV2" }]);
   });

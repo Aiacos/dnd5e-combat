@@ -1,14 +1,14 @@
 /**
- * Un effet qui porte un état se voit TOUJOURS sur le token (règle de table, demandée par l'utilisateur le
- * 2026-09-23). En V14, l'icône d'un effet sur le token dépend de son champ `showIcon`
- * (client/canvas/placeables/token.mjs:1870) : par défaut CONDITIONAL, montrée seulement si l'effet a une
- * durée. Un état coché dans le menu reçoit ALWAYS (`ActiveEffect.fromStatusEffect`,
- * client/documents/active-effect.mjs:136) ; un effet posé par une activité (Lutte, Bousculade, Furtivité,
- * la plupart des sorts de dnd5e) n'a pas de durée : son icône restait cachée alors que l'état était là.
+ * An effect that carries a condition is ALWAYS visible on the token (table rule, requested by the user on
+ * 2026-09-23). In V14, an effect's icon on the token depends on its `showIcon` field
+ * (client/canvas/placeables/token.mjs:1870): by default CONDITIONAL, shown only if the effect has a
+ * duration. A condition ticked in the menu gets ALWAYS (`ActiveEffect.fromStatusEffect`,
+ * client/documents/active-effect.mjs:136); an effect placed by an activity (Grapple, Shove, Hide,
+ * most of dnd5e's spells) has no duration: its icon stayed hidden while the condition was there.
  *
- *  - à la création et à la mise à jour, sur le client qui écrit : un effet avec des états reçoit ALWAYS ;
- *  - au chargement, le MJ actif corrige les effets existants (acteurs du monde, tokens des scènes).
- * Un effet explicitement réglé sur NEVER par son auteur n'est pas touché.
+ *  - on creation and update, on the client that writes: an effect with conditions gets ALWAYS;
+ *  - on load, the active GM fixes the existing effects (world actors, scene tokens).
+ * An effect explicitly set to NEVER by its author is left alone.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -30,7 +30,7 @@ function onPreUpdate(effect, changes) {
   changes.showIcon = SHOW().ALWAYS;
 }
 
-/** Les effets à corriger d'un acteur : des états, une icône conditionnelle. */
+/** An actor's effects to fix: conditions, a conditional icon. */
 const hiddenConditionEffects = actor => (actor?.effects ?? [])
   .filter(e => hasStatuses(e.statuses) && (e.showIcon === SHOW().CONDITIONAL));
 

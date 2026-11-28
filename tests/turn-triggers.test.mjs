@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
- * Le tour d'une créature commence ou finit : chacun des effets qu'elle porte joue ses étapes (sauvegarde rejouée, dégâts, fin de
- * l'effet). Un effet dont une étape échoue (document déjà supprimé, jet refusé) ne prive pas les autres effets de leur tour ; une
- * tâche de tour qui échoue en entier revient au routeur, qui la consigne sous son libellé.
+ * A creature's turn starts or ends: each of the effects it carries plays its steps (save replayed, damage, end of the
+ * effect). An effect with a failing step (document already deleted, roll refused) does not deprive the other effects of their turn;
+ * a turn task that fails entirely goes back to the router, which logs it under its label.
  */
 const routes = new Map();
 const inflict = vi.fn(async () => null);
@@ -44,7 +44,7 @@ afterEach(() => {
   delete globalThis.Hooks; delete globalThis.fromUuid; delete globalThis.ChatMessage; delete globalThis.game;
 });
 
-/** Un effet porté qui inflige ses dégâts à son porteur au début de son tour (`on`), posé par `item`. */
+/** A carried effect that deals its damage to its bearer at the start of its turn (`on`), placed by `item`. */
 function bearerDamage(name, { on="startOfTurn", remove=false }={}) {
   const effect = { uuid: `effect-${name}`, getFlag: () => null, delete: vi.fn(async () => {}) };
   documents.set(effect.uuid, effect);
@@ -54,7 +54,7 @@ function bearerDamage(name, { on="startOfTurn", remove=false }={}) {
   return { name, identifier: name, on: [on], do: steps, effect: effect.uuid, item: `item-${name}` };
 }
 
-/** Un combat à deux : la créature qui porte les effets, et le lanceur qui les a posés. */
+/** A two-creature combat: the creature that carries the effects, and the caster that placed them. */
 function fight(declarations) {
   const scene = { tokens: [] };
   const combatant = (id, actor) => {
@@ -75,8 +75,8 @@ const failOn = name => inflict.mockImplementation(async ({ flags }) => {
 });
 const inflicted = () => inflict.mock.calls.map(([{ flags }]) => flags.bearerDamage.item);
 
-describe("tour d'une créature : un effet qui échoue n'arrête pas les autres", () => {
-  it("début de tour, trois effets, le deuxième échoue : le premier et le troisième infligent leurs dégâts", async () => {
+describe("a creature's turn: an effect that fails does not stop the others", () => {
+  it("start of turn, three effects, the second fails: the first and the third deal their damage", async () => {
     const combat = fight([bearerDamage("epine"), bearerDamage("fleche-acide"), bearerDamage("cauchemar")]);
     failOn("fleche-acide");
     await routes.get("combatTurnChange")(combat, turn(0, "lanceur"), turn(1, "porteur"));
@@ -85,7 +85,7 @@ describe("tour d'une créature : un effet qui échoue n'arrête pas les autres",
     expect(String(errors.mock.calls[0][0])).toContain("fleche-acide");
   });
 
-  it("fin de tour : un effet qui ne se supprime pas (déjà parti) laisse les suivants finir", async () => {
+  it("end of turn: an effect that cannot be deleted (already gone) lets the following ones finish", async () => {
     const gone = bearerDamage("premier", { on: "endOfTurn", remove: true });
     const next = bearerDamage("second", { on: "endOfTurn", remove: true });
     documents.get(gone.effect).delete.mockRejectedValue(new Error("effet introuvable"));
@@ -95,7 +95,7 @@ describe("tour d'une créature : un effet qui échoue n'arrête pas les autres",
     expect(inflicted()).toEqual(["premier", "second"]);
   });
 
-  it("début du tour du lanceur : les dégâts de ses effets sur une autre créature, un par effet, malgré un échec", async () => {
+  it("start of the caster's turn: the damage of its effects on another creature, one per effect, despite a failure", async () => {
     const on = "originTurnStart";
     const combat = fight([bearerDamage("submersion", { on }), bearerDamage("tourbillon", { on })]);
     failOn("submersion");
@@ -104,26 +104,26 @@ describe("tour d'une créature : un effet qui échoue n'arrête pas les autres",
   });
 });
 
-describe("tour d'une créature : une tâche qui échoue revient au routeur", () => {
-  /** Une créature dont la lecture des déclarations échoue : la tâche de son tour échoue avant toute déclaration. */
+describe("a creature's turn: a task that fails goes back to the router", () => {
+  /** A creature whose declarations fail to read: its turn task fails before any declaration. */
   const unreadable = combat => Object.defineProperty(combat.combatants.get("porteur").actor, "declarations", {
     get() { throw new Error("déclarations illisibles"); }
   });
 
-  it("début de tour : la promesse rendue à l'inscription porte l'erreur", async () => {
+  it("start of turn: the promise returned at registration carries the error", async () => {
     const combat = fight([]);
     unreadable(combat);
     await expect(routes.get("combatTurnChange")(combat, turn(0, "lanceur"), turn(1, "porteur"))).rejects.toThrow("déclarations illisibles");
   });
 
-  it("début du tour du lanceur, effets posés sur une autre créature : de même", async () => {
+  it("start of the caster's turn, effects placed on another creature: likewise", async () => {
     const combat = fight([]);
     combat.combatants.get("porteur").actor.effects.size = 1;
     unreadable(combat);
     await expect(routes.get("combatTurnChange")(combat, turn(0, "porteur"), turn(1, "lanceur"))).rejects.toThrow("déclarations illisibles");
   });
 
-  it("tout se passe bien : la promesse se résout une fois les tâches finies", async () => {
+  it("all goes well: the promise resolves once the tasks are done", async () => {
     const combat = fight([bearerDamage("epine")]);
     await routes.get("combatTurnChange")(combat, turn(0, "lanceur"), turn(1, "porteur"));
     expect(inflicted()).toEqual(["epine"]);
@@ -132,14 +132,14 @@ describe("tour d'une créature : une tâche qui échoue revient au routeur", () 
 
 /* -------------------------------------------- */
 
-describe("§484 : un trait inflige ses dégâts à son porteur (sans effet posé)", () => {
-  /** Un trait de la créature : `to: "self"`, porté par l'item lui-même (`via: null`). */
+describe("§484: a trait deals its damage to its bearer (without a placed effect)", () => {
+  /** A creature trait: `to: "self"`, carried by the item itself (`via: null`). */
   function selfDamage(name) {
     documents.set(`item-${name}`, { uuid: `item-${name}`, name, system: { activities: new Map() } });
     return { name, identifier: name, on: ["startOfTurn"], via: null, if: null,
       do: [{ type: "damage", to: "self", formula: "20", damageType: "radiant" }], item: `item-${name}` };
   }
-  it("début de tour : la créature subit les dégâts de son trait, et les faits la connaissent comme `self`", async () => {
+  it("start of turn: the creature takes its trait's damage, and the facts know it as `self`", async () => {
     const combat = fight([]);
     const bearer = combat.combatants.get("porteur");
     bearer.actor.own = [selfDamage("brule-au-soleil")];
@@ -153,13 +153,13 @@ describe("§484 : un trait inflige ses dégâts à son porteur (sans effet posé
   });
 });
 
-describe("§484 : Désavantage déclaré aux tests et aux sauvegardes", () => {
+describe("§484: Disadvantage declared on checks and saves", () => {
   const rollOf = (hook, actor) => {
     const config = { subject: { documentName: "Actor", name: "créature", ...actor }, ability: "dex", rolls: [{ options: {} }] };
     routes.get(hook)(config);
     return config.rolls[0].options;
   };
-  it("un trait qui le déclare : Désavantage ; sinon rien", () => {
+  it("a trait that declares it: Disadvantage; otherwise nothing", () => {
     expect(rollOf("dnd5e.preRollAbilityCheckV2", { disadvantaged: ["Brûle au soleil"] }).disadvantage).toBe(true);
     expect(rollOf("dnd5e.preRollAbilityCheckV2", {}).disadvantage).toBeUndefined();
     expect(rollOf("dnd5e.preRollSavingThrowV2", { disadvantaged: ["Brûle au soleil"] }).disadvantage).toBe(true);

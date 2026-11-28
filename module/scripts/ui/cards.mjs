@@ -1,12 +1,12 @@
 /**
- * Choisir d'un clic parmi des cartes (une arme, une forme) : la fenêtre se ferme sur la carte cliquée. Les cartes refusées
- * (`.refused`) restent visibles, grisées, avec leur motif en infobulle. Partagé par le Pacte de la lame (ui/pact.mjs) et le
- * choix de l'arme à enchanter (ui/enchant.mjs).
+ * Choose by clicking among cards (a weapon, a form): the window closes on the clicked card. Refused cards
+ * (`.refused`) stay visible, greyed out, with their reason as a tooltip. Shared by the Pact of the Blade (ui/pact.mjs) and the
+ * choice of the weapon to enchant (ui/enchant.mjs).
  */
 
 import { esc } from "../runtime/shared.mjs";
 
-/** La carte d'une arme : portrait et nom ; `refusal` la grise, avec son motif. */
+/** A weapon card: portrait and name; `refusal` greys it out, with its reason. */
 export function weaponCard({ uuid, img, name, refusal=null }) {
   return `
     <div class="dnd5e-combat-form${refusal ? " refused" : ""}" data-uuid="${esc(uuid)}" title="${esc(refusal ?? name)}">
@@ -15,8 +15,8 @@ export function weaponCard({ uuid, img, name, refusal=null }) {
 }
 
 /**
- * La fenêtre de choix : `content` (les cartes, dans `.dnd5e-combat-forms`), un bouton `label` / `buttonIcon` qui valide. Rend le
- * `data-uuid` de la carte cliquée, ou null (fenêtre fermée).
+ * The choice window: `content` (the cards, in `.dnd5e-combat-forms`), a `label` / `buttonIcon` button that confirms. Returns the
+ * `data-uuid` of the clicked card, or null (window closed).
  */
 export async function pickCard({ title, icon, width, content, label, buttonIcon=icon }) {
   let picked = null;

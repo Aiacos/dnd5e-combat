@@ -1,13 +1,13 @@
 /**
- * Le Paladin et les sorts de châtiment (SPEC §25), monde `dnd-6`. Le Paladin (niveau 8, Châtiment divin et Vœu d'inimitié sur sa
- * fiche) reçoit, prêté depuis le compendium du Manuel des joueurs, le Châtiment de tonnerre ; le Bandit reçoit 300 PV. Vérifie :
- *  - Châtiment divin gratuit : la question au coup d'épée longue, +2d8 radiants au jet de dégâts, l'utilisation dépensée, l'action
- *    Bonus dépensée ;
- *  - Châtiment de tonnerre par un emplacement de niveau 2 : +3d6 tonnerre, l'emplacement dépensé, la sauvegarde de Force jouée sur
- *    le Bandit (À terre ⇔ ratée) ;
- *  - « Pas de châtiment » : rien d'ajouté, rien de dépensé ;
- *  - Vœu d'inimitié : l'attaque suivante contre la créature marquée a l'Avantage.
- * Remet positions, PV, emplacements, utilisations, états ; retire l'item prêté.
+ * The Paladin and the smite spells (SPEC §25), world `dnd-6`. The Paladin (level 8, Divine Smite and Vow of Enmity on their
+ * sheet) receives, lent from the Player's Handbook compendium, Thunderous Smite; the Bandit receives 300 HP. Checks:
+ *  - Free Divine Smite: the question on the longsword hit, +2d8 radiant to the damage roll, the use spent, the Bonus
+ *    Action spent;
+ *  - Thunderous Smite through a level 2 spell slot: +3d6 thunder, the slot spent, the Strength saving throw played on
+ *    the Bandit (Prone ⇔ failed);
+ *  - "No smite": nothing added, nothing spent;
+ *  - Vow of Enmity: the next attack against the marked creature has Advantage.
+ * Restores positions, HP, spell slots, uses, conditions; removes the lent item.
  */
 const MODULE_ID = "dnd5e-combat";
 const SPELLS = "dnd-players-handbook.spells";
@@ -57,7 +57,7 @@ export default {
       const { data } = await ctx.call("get-compendium-entry", { uuid });
       const { _id, folder, ownership, _stats, ...itemData } = data;
       setPath(itemData, "flags.dnd5e.sourceId", uuid);
-      // Préparé, comme sur la fiche d'un paladin : un sort non préparé ne se propose pas en châtiment (issue #144).
+      // Prepared, as on a paladin's sheet: an unprepared spell is not offered as a smite (issue #144).
       setPath(itemData, "system.prepared", 1);
       const r = await ctx.call("upsert-actor-item", { actorId: pal.actorId, itemData, match: { path: "flags.dnd5e.sourceId", value: uuid } });
       ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: pal.actorId, itemId: r.id }).catch(() => {}));
@@ -118,7 +118,7 @@ export default {
       const u = await ctx.use({ tokenId: attacker.id, itemId, activityType: "attack", targetTokenIds: [target.id], usageConfig: { [MODULE_ID]: usage } });
       return { since, usage: u.usageMessageId };
     };
-    /** Frappe jusqu'à toucher (10 essais) en répondant `button` à la question du châtiment ; rend le jet de dégâts et ce qui a été vu. */
+    /** Strikes until a hit (10 attempts), answering `button` to the smite question; returns the damage roll and what was seen. */
     const smiteHit = async button => {
       for ( let n = 0; n < 10; n++ ) {
         const ids = await known();
@@ -146,8 +146,8 @@ export default {
       ctx.expect((await budget())?.bonus === 0, `action Bonus dépensée (${(await budget())?.bonus})`);
     });
 
-    // §273 : Châtiment de protection — le Châtiment divin qui touche donne un Abri partiel au paladin et aux alliés de son Aura de
-    // protection, jusqu'au début de son prochain tour.
+    // §273: "Protection Smite" — the Divine Smite that hits gives Half Cover to the paladin and to the allies of their Aura of
+    // Protection, until the start of their next turn.
     await part("Châtiment de protection", async () => {
       const guerrier = tokens.find(t => t.name === "Guerrier");
       if ( !guerrier ) { ctx.log("Guerrier absent : partie sautée"); return; }
@@ -194,8 +194,8 @@ export default {
       ctx.expect(!!t?.save && (prone === !t.save.success), `Force ${t?.save?.total} (${t?.save?.success ? "réussie" : "ratée"}), À terre ${prone}`);
     });
 
-    // §262 : Châtiment bannissant — la sauvegarde de Charisme ne joue que si le coup laisse la cible à 50 PV ou moins. Un emplacement
-    // de niveau 5 prêté (`override` : le Paladin niveau 8 n'en a pas).
+    // §262: Banishing Smite — the Charisma saving throw is only played if the hit leaves the target at 50 HP or fewer. A level
+    // 5 spell slot lent (`override`: the level 8 Paladin has none).
     const banish = async (hp, expectSave) => {
       await tough(); await place(bandit, g.x + grid, g.y);
       if ( hp !== 300 ) await ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.attributes.hp.value": hp } });

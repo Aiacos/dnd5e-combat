@@ -1,12 +1,12 @@
 /**
- * §238 : « S'envoler » / « Atterrir » dans le menu de son propre token, selon les vitesses de sa fiche — Guerrier de `dnd-6` (Bramo
- * dans `ravenloft`), sur Restored Keep (niveaux et Surfaces).
- *  1. Sans Vitesse de vol : le menu ne propose rien pour le vol.
- *  2. Vitesse de vol prêtée (effet « fly (scénario) ») : « S'envoler » — décolle à 5 ft, mode vol, aucune vitesse accordée par le moteur.
- *  3. En vol : « Atterrir » — revient au sol, mode marche.
- *  4. En vol plus haut (champ d'élévation) : « Atterrir » le ramène à son sol, dans son niveau de départ.
- *  5. En combat : décoller coûte 5 ft de déplacement du tour.
- * Remet le mode, l'élévation et retire l'effet ; le filet du lanceur reprend le reste.
+ * §238: "Take off" / "Land" in the menu of one's own token, according to the speeds on its sheet — `dnd-6` Fighter (Bramo
+ * in `ravenloft`), on Restored Keep (levels and Surfaces).
+ *  1. Without a Fly Speed: the menu offers nothing for flight.
+ *  2. Fly Speed lent (effect "fly (scénario)"): "Take off" — takes off at 5 ft, fly mode, no speed granted by the engine.
+ *  3. In flight: "Land" — returns to the ground, walk mode.
+ *  4. Flying higher (elevation field): "Land" brings it back to its ground, in its starting level.
+ *  5. In combat: taking off costs 5 ft of the turn's movement.
+ * Resets the mode, the elevation and removes the effect; the runner's safety net handles the rest.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -38,8 +38,8 @@ export default {
       await ctx.call("move-token", { tokenId: pc.id, elevation: ground }).catch(() => {});
     });
 
-    // Le mode jamais choisi (`null` en source : le mode par défaut du cœur), comme un token qu'on vient de poser — le cas de l'Esprit
-    // bestial de l'air, premier retour de l'utilisateur (le menu restait vide).
+    // The mode never chosen (`null` in the source: the core's default mode), like a token just placed — the case of the Air
+    // Summon Beast, the user's first feedback (the menu stayed empty).
     await ctx.call("update-scene-object", { type: "Token", objectId: pc.id, data: { movementAction: null } }).catch(() => {});
     await pause(300);
 
@@ -78,7 +78,7 @@ export default {
     s = await waitFor(s => (s.mode === "walk") && (s.elevation === ground));
     ctx.expect(f.done && (s.elevation === ground) && (s.level === start.level), `atterrit de ${ground + 10} : élévation ${s.elevation}, niveau ${s.level}`);
 
-    // 4 bis. Interrupteur « Escalade et chutes » coupé (§224, le cas de `dnd-6`) : le menu propose toujours le vol.
+    // 4 bis. "Climbing and falling" switch off (§224, the `dnd-6` case): the menu still offers flight.
     const climbBefore = await ctx.engine("setting", { key: "climbSystem", value: false });
     ctx.restore(() => ctx.engine("setting", { key: "climbSystem", value: climbBefore?.before ?? true }));
     await pause(800);
@@ -93,7 +93,7 @@ export default {
     await ctx.engine("setting", { key: "climbSystem", value: true });
     await pause(800);
 
-    // 5. En combat : décoller se paie.
+    // 5. In combat: taking off has a cost.
     const zombi = tokens.find(t => (t.name === "Zombi") && !t.hidden);
     await ctx.startCombat(zombi ? [pc, zombi] : [pc]);
     await pause(800);

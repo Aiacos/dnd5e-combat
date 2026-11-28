@@ -1,6 +1,6 @@
 /**
- * §16.46 : Vigueur arcanique — après le lancer, combien de dés de vie dépenser (de 1 au maximum permis par le niveau
- * d'emplacement et par ceux qui restent). L'interface demande ; runtime/defenses.mjs soigne.
+ * §16.46: Arcane Vigor — after casting, how many Hit Dice to spend (from 1 up to the maximum allowed by the spell slot
+ * level and by those remaining). The interface asks; runtime/defenses.mjs heals.
  */
 
 import { hitDiceHealOf, hitDiceChoice } from "../adapter/defenses.mjs";

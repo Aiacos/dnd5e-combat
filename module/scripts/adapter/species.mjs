@@ -1,7 +1,7 @@
 /**
- * Traits d'espèce du Manuel des joueurs 2024 (SPEC §31) qui touchent aux PV : Acharnement (Orc, contenu `endurance`) — « si vous
- * tombez à 0 point de vie sans être tué sur le coup, vous pouvez en fait vous retrouver à 1 point de vie ; une fois par Repos
- * long » (les utilisations de l'item).
+ * Species traits of the 2024 Player's Handbook (SPEC §31) that touch HP: Relentless Endurance (Orc, content `endurance`) — "if you
+ * are reduced to 0 Hit Points but not killed outright, you can drop to 1 Hit Point instead; once per Long
+ * Rest" (the item's uses).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -10,9 +10,9 @@ import { spendItemUses } from "./uses.mjs";
 import { placeItemEffect } from "./effects.mjs";
 
 /**
- * §135 : Faveur de récupération, Dernier carré — « quand vous devriez tomber à 0 PV, vous pouvez tomber à 1 PV à la place et regagner
- * autant de PV que la moitié de votre maximum ; une fois par Repos long » (les utilisations de l'activité, `lastStandHeal`). Joué
- * d'office, comme l'Acharnement. Rend l'item, ou null.
+ * §135: "Recovery Boon", "Last Stand" — "when you would drop to 0 HP, you can drop to 1 HP instead and regain
+ * as many HP as half your maximum; once per Long Rest" (the activity's uses, `lastStandHeal`). Played
+ * automatically, like Relentless Endurance. Returns the item, or null.
  */
 function lastStandAtZero(actor, updates) {
   for ( const item of actor?.items ?? [] ) {
@@ -41,14 +41,14 @@ export function enduranceOf(actor) {
 }
 
 /**
- * `dnd5e.preApplyDamage`, avant le calcul des échecs à 0 PV : des dégâts qui font tomber la créature à 0 PV sans la tuer sur le
- * coup (le reste des dégâts au-delà de 0 est inférieur à son maximum de PV) la laissent à 1 PV ; l'utilisation est dépensée.
- * Rend l'item utilisé, ou null. `through` : les dégâts qui passent les PV temporaires.
+ * `dnd5e.preApplyDamage`, before the death save failures at 0 HP are computed: damage that drops the creature to 0 HP
+ * without killing it outright (the remainder of the damage beyond 0 is less than its HP maximum) leaves it at 1 HP; the use
+ * is spent. Returns the item used, or null. `through`: the damage that passes through Temporary Hit Points.
  */
 export function endureAtZero(actor, through, updates) {
   const hp = actor?.system?.attributes?.hp;
   if ( !hp || !(hp.value > 0) || (through < hp.value) ) return null;
-  if ( (through - hp.value) >= (hp.max ?? Infinity) ) return null;   // tué sur le coup
+  if ( (through - hp.value) >= (hp.max ?? Infinity) ) return null;   // killed outright
   const item = enduranceOf(actor);
   if ( !item ) return lastStandAtZero(actor, updates);
   updates["system.attributes.hp.value"] = 1;
@@ -60,9 +60,9 @@ export function endureAtZero(actor, through, updates) {
 }
 
 /**
- * §371 : ce qui suit le maintien à 1 PV (Esprit combatif : « des PV temporaires égaux à la moitié de votre maximum, vos points regagnés,
- * Résistance pendant une minute ») — PV temporaires dans la même mise à jour que les PV, s'ils dépassent ceux qui restent ; l'effet de
- * l'item et les utilisations rendues ensuite.
+ * §371: what follows being held at 1 HP (Fighting Spirit: "Temporary Hit Points equal to half your maximum, your points regained,
+ * Resistance for one minute") — Temporary Hit Points in the same update as the HP, if they exceed those that remain; the item's
+ * effect and the uses returned afterwards.
  */
 function afterEndurance(actor, item, { effect, tempHp, restores }, hp, updates) {
   if ( tempHp ) {

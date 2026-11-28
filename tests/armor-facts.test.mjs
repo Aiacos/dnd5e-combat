@@ -1,6 +1,6 @@
 /**
- * §491 : fait `target.wearsArmor` — la cible porte une armure (de corps), d'une catégorie, ou en métal. Exemple générique : une décharge
- * électrique qui a l'Avantage contre une cible en armure de métal.
+ * §491: fact `target.wearsArmor` — the target wears armor (body armor), of a category, or made of metal. Generic example: an
+ * electric discharge that has Advantage against a target in metal armor.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { wearsArmor, isMetal, validArmorArg, METAL_ARMOR } from "../module/scripts/core/armor.mjs";
@@ -11,14 +11,14 @@ const plate = { category: "heavy", base: "plate", identifier: "plate-armor" };
 const leather = { category: "light", base: "leather", identifier: "leather-armor" };
 const shield = { category: "shield", base: "shield", identifier: "shield" };
 
-describe("§491 : règle pure", () => {
-  it("les huit armures de base en métal, et pas les armures de cuir ni le bouclier", () => {
+describe("§491: pure rule", () => {
+  it("the eight base metal armors, and not leather armors or the shield", () => {
     for ( const base of ["chainshirt", "scalemail", "breastplate", "halfplate", "ringmail", "chainmail", "splint", "plate"] ) {
       expect(METAL_ARMOR.has(base)).toBe(true);
     }
     for ( const base of ["padded", "leather", "studded", "hide", "shield"] ) expect(METAL_ARMOR.has(base)).toBe(false);
   });
-  it("matière : le drapeau de l'item l'emporte, puis l'armure de base, puis l'identifiant", () => {
+  it("material: the item's flag wins, then the base armor, then the identifier", () => {
     expect(isMetal(plate)).toBe(true);
     expect(isMetal({ ...plate, metal: false })).toBe(false);
     expect(isMetal({ ...leather, metal: true })).toBe(true);
@@ -26,7 +26,7 @@ describe("§491 : règle pure", () => {
     expect(isMetal(shield)).toBe(false);
     expect(isMetal({ ...shield, metal: true })).toBe(true);
   });
-  it("true / false : une armure de corps, le bouclier seul ne compte pas", () => {
+  it("true / false: body armor, a shield alone does not count", () => {
     expect(wearsArmor([leather], true)).toBe(true);
     expect(wearsArmor([], true)).toBe(false);
     expect(wearsArmor([], false)).toBe(true);
@@ -34,20 +34,20 @@ describe("§491 : règle pure", () => {
     expect(wearsArmor([{ category: "natural" }], true)).toBe(false);
     expect(wearsArmor([{ category: "trinket" }], false)).toBe(true);
   });
-  it("une catégorie ou une liste de catégories", () => {
+  it("a category or a list of categories", () => {
     expect(wearsArmor([plate], "heavy")).toBe(true);
     expect(wearsArmor([leather], "heavy")).toBe(false);
     expect(wearsArmor([leather], ["light", "medium"])).toBe(true);
     expect(wearsArmor([leather, shield], "shield")).toBe(true);
   });
-  it("{ material: \"metal\" } : une pièce en métal, catégorie en plus si elle est donnée", () => {
+  it("{ material: \"metal\" }: a metal piece, plus a category if one is given", () => {
     expect(wearsArmor([plate], { material: "metal" })).toBe(true);
     expect(wearsArmor([leather, shield], { material: "metal" })).toBe(false);
     expect(wearsArmor([leather, { ...shield, metal: true }], { material: "metal" })).toBe(true);
     expect(wearsArmor([leather, { ...shield, metal: true }], { material: "metal", category: ["light", "medium", "heavy"] })).toBe(false);
     expect(wearsArmor([plate], { material: "metal", category: "heavy" })).toBe(true);
   });
-  it("une forme inconnue ne tient jamais", () => {
+  it("an unknown form never holds", () => {
     expect(wearsArmor([plate], "mithral")).toBe(false);
     expect(wearsArmor([plate], { material: "wood" })).toBe(false);
     expect(wearsArmor([plate], { colour: "black" })).toBe(false);
@@ -69,23 +69,23 @@ describe("§491 : le fait `target.wearsArmor`", () => {
     globalThis.foundry ??= { utils: { throttle: fn => fn, debounce: fn => fn, isNewerVersion: () => false } };
     globalThis.CONFIG ??= { DND5E: { movementUnits: { ft: { conversion: 1 } } }, specialStatusEffects: {}, queries: {} };
     globalThis.canvas = null;
-    await import("../module/scripts/adapter/running-water.mjs");   // même ordre de chargement que self-facts.test.mjs (cycle facts ↔ content)
+    await import("../module/scripts/adapter/running-water.mjs");   // same loading order as self-facts.test.mjs (facts ↔ content cycle)
     ({ factsFor, armorPieces } = await import("../module/scripts/adapter/facts.mjs"));
     KNOWN_FACTS = factsFor();
   });
 
-  /** Un item d'équipement dnd5e 6 réduit à ce que lit le fait. */
+  /** A dnd5e 6 equipment item reduced to what the fact reads. */
   const item = (value, baseItem, { equipped=true, identifier="", metal }={}) => ({
     type: "equipment", system: { equipped, identifier, type: { value, baseItem } },
     flags: (metal === undefined) ? {} : { "dnd5e-combat": { metal } }
   });
 
-  it("lit les items d'équipement équipés, pas ceux du sac ni les armes", () => {
+  it("reads equipped equipment items, not those in the bag or weapons", () => {
     const actor = { items: [item("heavy", "chainmail"), item("light", "leather", { equipped: false }),
       { type: "weapon", system: { equipped: true, type: { value: "martialM", baseItem: "longsword" } } }] };
     expect(armorPieces(actor)).toEqual([{ category: "heavy", base: "chainmail", identifier: "" }]);
   });
-  it("une cible en cotte de mailles porte une armure en métal ; en cuir, non ; son drapeau peut en décider", () => {
+  it("a target in chain mail wears metal armor; in leather, not; its flag can decide", () => {
     const metal = factsFor({ target: { items: [item("heavy", "chainmail")] } });
     const hide = factsFor({ target: { items: [item("medium", "hide")] } });
     const forged = factsFor({ target: { items: [item("medium", "hide", { metal: true })] } });
@@ -97,7 +97,7 @@ describe("§491 : le fait `target.wearsArmor`", () => {
   it("sans cible : ne porte rien", () => {
     expect(factsFor({})["target.wearsArmor"](false)).toBe(true);
   });
-  it("une déclaration d'Avantage sur la cible en métal est valide et tient", () => {
+  it("an Advantage declaration on the metal-armored target is valid and holds", () => {
     const entry = { triggers: [{ on: "preAttackRoll", if: { "activity.identifier": "das-test-shock", "target.wearsArmor": { material: "metal" } },
       do: [{ type: "advantage" }] }] };
     expect(validateEntry(entry, { facts: KNOWN_FACTS })).toEqual([]);

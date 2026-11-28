@@ -1,15 +1,15 @@
 /**
- * §498 (brique B18) — changement de forme à volonté (`changesForm`, §76) limité dans le temps, ressources partagées. Règles pures :
- *  - `revertAfter: { rounds | seconds, auto? }` : la durée de la forme, en secondes du temps du monde (un round = `roundTime`, 6 s ;
- *    le cœur avance le temps du monde à chaque round d'un combat, `Combat#nextRound`). `auto: false` : pas de retour automatique,
- *    seulement l'entrée « Reprendre sa forme » du menu et un rappel au MJ quand la durée est écoulée.
- *  - `shareSpellSlots: true` : les emplacements dépensés sous une forme le restent sous l'autre (dépensés = max − restants, par niveau
- *    et pour la magie de pacte ; la nouvelle forme garde au plus ses propres maximums).
+ * §498 (block B18) — change of form at will (`changesForm`, §76) limited in time, shared resources. Pure rules:
+ *  - `revertAfter: { rounds | seconds, auto? }`: the duration of the form, in seconds of world time (a round = `roundTime`, 6 s;
+ *    the core advances world time at each round of a combat, `Combat#nextRound`). `auto: false`: no automatic return,
+ *    only the "Revert to your form" entry of the menu and a reminder to the GM when the duration has elapsed.
+ *  - `shareSpellSlots: true`: spell slots spent under one form stay spent under the other (spent = max − remaining, per level
+ *    and for pact magic; the new form keeps at most its own maximums).
  */
 
 import { isObject } from "./content/shared.mjs";
 
-/** Les erreurs de `revertAfter` (suffixes à coller derrière `changesForm.revertAfter`). Vide = valide. */
+/** The errors of `revertAfter` (suffixes to append after `changesForm.revertAfter`). Empty = valid. */
 export function revertAfterErrors(r) {
   if ( !isObject(r) ) return [": { rounds } or { seconds }"];
   const errors = [];
@@ -22,7 +22,7 @@ export function revertAfterErrors(r) {
   return errors;
 }
 
-/** La durée de `revertAfter` en secondes du temps du monde (`roundTime` : la durée d'un round), ou null sans durée. */
+/** The duration of `revertAfter` in seconds of world time (`roundTime`: the duration of a round), or null with no duration. */
 export function revertSeconds(r, roundTime=6) {
   if ( !isObject(r) ) return null;
   if ( Number.isFinite(r.seconds) && (r.seconds > 0) ) return r.seconds;
@@ -30,18 +30,18 @@ export function revertSeconds(r, roundTime=6) {
   return null;
 }
 
-/** La forme a-t-elle dépassé sa durée ? `expiresAt` : temps du monde noté au changement (null : sans durée). */
+/** Has the form exceeded its duration? `expiresAt`: world time noted at the change (null: no duration). */
 export const formExpired = (expiresAt, now) => Number.isFinite(expiresAt) && Number.isFinite(now) && (now >= expiresAt);
 
-/** Les clés d'emplacements d'un `system.spells` de dnd5e : `spell1`…`spell9` et `pact`. */
+/** The slot keys of a dnd5e `system.spells`: `spell1`…`spell9` and `pact`. */
 const SLOT_KEY = /^(spell[1-9]|pact)$/;
 
 /**
- * Les emplacements de la nouvelle forme quand les dépensés se partagent : pour chaque niveau où elle en a (`max` > 0), ses restants =
- * max − dépensés par l'ancienne forme à ce niveau (au moins 0). Un niveau que l'ancienne forme n'a pas ne dépense rien.
- * @param {object} from  `system.spells` de la forme quittée ({ spell1: { value, max }, … })
- * @param {object} to    `system.spells` de la forme prise
- * @returns {Record<string, number>}  `{ "system.spells.spell1.value": n, … }`, seulement les niveaux qui changent
+ * The slots of the new form when spent slots are shared: for each level where it has any (`max` > 0), its remaining =
+ * max − spent by the old form at that level (at least 0). A level the old form does not have spends nothing.
+ * @param {object} from  `system.spells` of the form left ({ spell1: { value, max }, … })
+ * @param {object} to    `system.spells` of the form taken
+ * @returns {Record<string, number>}  `{ "system.spells.spell1.value": n, … }`, only the levels that change
  */
 export function sharedSlotUpdates(from, to) {
   const out = {};

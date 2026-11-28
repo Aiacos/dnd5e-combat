@@ -1,11 +1,11 @@
 /**
- * §298, lot C3 de la repasse terme par terme : coût d'action et budget du tour. Arène des sorts (Héros : Barbarien pré-tiré, Lanceur,
- * Cible). Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source) et remet tout.
- *  - Magie de guerre : le Héros (Attaque supplémentaire) attaque, puis lance Trait de feu (tour de magie de Magicien) — compté comme
- *    la seconde attaque de l'action Attaquer, pas comme une seconde action ;
- *  - Arme sacrée : l'utilisation ne coûte pas l'action du Héros ;
- * Le Pacte de la chaîne (même mécanisme, `usageLimits.cost`) n'est pas joué : Appel de familier ouvre le navigateur de compendium et
- * attend la pose de l'invocation. Le Contresort qui fait perdre l'action est joué par le scénario `contresort`.
+ * §298, batch C3 of the term-by-term pass: action cost and turn budget. Spell arena (Hero: pre-generated Barbarian, Caster,
+ * Target). Each part borrows its items from the Player's Handbook (with their source) and puts everything back.
+ *  - War Magic: the Hero (Extra Attack) attacks, then casts Fire Bolt (Wizard cantrip) — counted as
+ *    the second attack of the Attack action, not as a second action;
+ *  - Sacred Weapon: the use does not cost the Hero's action;
+ * The Pact of the Chain (same mechanism, `usageLimits.cost`) is not played: Find Familiar opens the compendium browser and
+ * waits for the summon to be placed. The Counterspell that makes the action be lost is played by the `contresort` scenario.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

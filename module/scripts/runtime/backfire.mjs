@@ -1,9 +1,9 @@
 /**
- * O9h (§363) : un objet qui peut se retourner contre son porteur (`backfire: { after, chance, activity, destroys? }` — Cor de dévastation :
- * « chaque fois que vous utilisez l'action Magie pour souffler dans le cor, il y a 20 % de chances qu'il explose : 10d6 dégâts de force
- * au souffleur, et le cor est détruit »). MJ actif, au hook de sortie du moteur `dnd5e-combat.resolution` (l'action tranchée), ou, faute
- * de résolution (personne dans la zone), un peu après la carte d'utilisation : un d100 en clair ; `chance` ou moins, l'activité de dégâts
- * `activity` frappe le porteur, puis l'objet est détruit.
+ * O9h (§363): an object that can turn against its bearer (`backfire: { after, chance, activity, destroys? }` — Horn of
+ * Blasting: "each time you use the Magic action to blow the horn, there is a 20% chance it explodes: 10d6 Force damage
+ * to the blower, and the horn is destroyed"). Active GM, at the engine's output hook `dnd5e-combat.resolution` (the action
+ * decided), or, lacking a resolution (nobody in the area), a little after the use card: a d100 in the clear; `chance` or less,
+ * the damage activity `activity` hits the bearer, then the object is destroyed.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,9 +15,9 @@ import { route } from "./router.mjs";
 import { enqueue } from "./queue.mjs";
 import { log, loc, notice } from "./shared.mjs";
 
-/** Les cartes d'utilisation déjà jugées (une seule fois par souffle). */
+/** The use cards already judged (once per blast). */
 const judged = new Set();
-/** Le délai laissé à une résolution avant de juger sans elle. */
+/** The delay left to a resolution before judging without it. */
 const FALLBACK_MS = 15000;
 
 function ruleOf(activity) {
@@ -63,9 +63,9 @@ function onUsage(message) {
   if ( (message.type !== "usage") || message.getFlag(MODULE_ID, "areaTick") || message.getFlag(MODULE_ID, "resave") ) return;
   const activity = message.getAssociatedActivity?.();
   if ( !ruleOf(activity) ) return;
-  // Sans résolution du moteur (personne dans le cône), le jet se fait quand même, un peu après.
+  // Without an engine resolution (nobody in the cone), the roll is made anyway, a little after.
   setTimeout(() => {
-    if ( game.messages.get(message.id)?.getFlag(MODULE_ID, "resolution") ) return;   // la résolution s'en charge
+    if ( game.messages.get(message.id)?.getFlag(MODULE_ID, "resolution") ) return;   // the resolution handles it
     enqueue(`backfire:${activity.item.uuid}`, () => judge(message.id, activity));
   }, FALLBACK_MS);
 }

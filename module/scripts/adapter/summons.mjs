@@ -1,11 +1,11 @@
 /**
- * Créatures invoquées (SPEC §16.13, B12), lues et écrites dans Foundry. Vérifié dans dnd5e 6.0.3 :
- *  - l'activité « summon » pose les tokens (documents/activity/summon.mjs, `placeSummons`) ; l'acteur invoqué porte
- *    `flags.dnd5e.summon.origin` = uuid de l'item de l'invocateur (`fetchExisting`, option `origin`) ;
- *  - le système ne les met pas au combat, et ne les retire pas quand la concentration tombe : un token n'est pas un
- *    « dépendant » (`ActiveEffect5e#getDependents` : effets, items, activités).
- * Le moteur, sur le MJ actif, à la création du token : le rattache à la concentration de l'invocateur sur cet item
- * (`flags["dnd5e-combat"].summonedBy` = uuid de l'effet), et l'ajoute au combat selon le contenu (`summon.initiative`).
+ * Summoned creatures (SPEC §16.13, B12), read and written in Foundry. Verified in dnd5e 6.0.3:
+ *  - the "summon" activity places the tokens (documents/activity/summon.mjs, `placeSummons`); the summoned actor carries
+ *    `flags.dnd5e.summon.origin` = uuid of the summoner's item (`fetchExisting`, option `origin`);
+ *  - the system does not put them in combat, and does not remove them when Concentration drops: a token is not a
+ *    "dependent" (`ActiveEffect5e#getDependents`: effects, items, activities).
+ * The engine, on the active GM, at token creation: attaches it to the summoner's Concentration on that item
+ * (`flags["dnd5e-combat"].summonedBy` = uuid of the effect), and adds it to combat according to the content (`summon.initiative`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,8 +16,8 @@ import { readTimeFactors } from "./areas.mjs";
 import { summonChoices, profilesAtLevel, mmActorId, srdMonsterId, actorIdOf } from "../core/summon.mjs";
 
 /**
- * §383 : ce qu'une activité « summon » laisse choisir à la pose (profils disponibles à ce niveau — `availableProfiles`,
- * documents/activity/summon.mjs —, tailles, types de créature). Tout faux pour une autre activité.
+ * §383: what a "summon" activity lets you choose at placement (profiles available at this level — `availableProfiles`,
+ * documents/activity/summon.mjs —, sizes, creature types). All false for another activity.
  */
 export function summonChoicesOf(activity) {
   if ( activity?.type !== "summon" ) return summonChoices();
@@ -26,16 +26,16 @@ export function summonChoicesOf(activity) {
 }
 
 /**
- * §386 : où chercher la créature d'un profil du SRD 2014, dans l'ordre (décision de l'utilisateur) : le Monster Manual 2024 (module
- * premium), puis les créatures du SRD 2024 livrées par dnd5e (`dnd5e.actors24`) — mêmes identifiants `mm…` dans les deux.
+ * §386: where to look for the creature of a 2014 SRD profile, in order (user's decision): the 2024 Monster Manual (premium
+ * module), then the 2024 SRD creatures shipped by dnd5e (`dnd5e.actors24`) — same `mm…` identifiers in both.
  */
 export const MM_ACTORS = "dnd-monster-manual.actors";
 export const SRD24_ACTORS = "dnd5e.actors24";
-/** §392 : les créatures du SRD 2014 de dnd5e — le dernier recours, et la cible des liens cassés du DMG. */
+/** §392: dnd5e's 2014 SRD creatures — the last resort, and the target of the DMG's broken links. */
 export const SRD14_ACTORS = "dnd5e.monsters";
 const REPAIR_PACKS = [MM_ACTORS, SRD24_ACTORS, "dnd-players-handbook.actors", "dnd-dungeon-masters-guide.actors"];
 
-/** §392 : l'uuid d'un acteur au même id qu'un lien cassé, dans le premier compendium d'acteurs qui l'a ; null sinon. */
+/** §392: the uuid of an actor with the same id as a broken link, in the first actor compendium that has it; null otherwise. */
 function repairedActorUuid(uuid) {
   const id = actorIdOf(uuid);
   if ( !id || !game.packs ) return null;
@@ -47,16 +47,16 @@ function repairedActorUuid(uuid) {
 const PREFERRED_PACKS = [MM_ACTORS, SRD24_ACTORS];
 
 /**
- * §386 (demande de l'utilisateur) : la créature à invoquer pour un profil qui désigne une créature du SRD 2014 de dnd5e
- * (`dnd5e.monsters` : les goules, blêmes, nécrophages et momies de Création de morts-vivants) — la même (nom anglais → `mmActorId`)
- * dans le Monster Manual 2024, sinon dans le SRD 2024 de dnd5e, sinon l'uuid du profil. Les index des compendiums sont
- * chargés au démarrage du monde.
+ * §386 (user's request): the creature to summon for a profile that designates a dnd5e 2014 SRD creature
+ * (`dnd5e.monsters`: the ghouls, ghasts, wights and mummies of Create Undead) — the same one (English name → `mmActorId`)
+ * in the 2024 Monster Manual, otherwise in dnd5e's 2024 SRD, otherwise the profile's uuid. The compendium indexes are
+ * loaded at world startup.
  */
 export function preferredSummonUuid(uuid) {
-  // §392 : un lien cassé vers une créature du SRD 2014 (le DMG pointe `dnd-dungeon-masters-guide.actors.Actor.<id>` pour un id qui
-  // n'existe que dans `dnd5e.monsters` : Hache des seigneurs nains, Sacs à malices, Cors du Valhalla… n'invoquaient rien).
-  // Les objets du SRD 2024 de dnd5e font l'inverse (`dnd5e.actors24.Actor.phbmobWeasel0000`, une créature du Manuel des joueurs) : le
-  // même id est cherché dans tous les compendiums d'acteurs, dans l'ordre de `REPAIR_PACKS`, puis les autres, le SRD 2014 en dernier.
+  // §392: a broken link to a 2014 SRD creature (the DMG points `dnd-dungeon-masters-guide.actors.Actor.<id>` to an id that
+  // exists only in `dnd5e.monsters`: Axe of the Dwarvish Lords, Bag of Tricks, Horn of Valhalla… summoned nothing).
+  // The 2024 SRD objects of dnd5e do the opposite (`dnd5e.actors24.Actor.phbmobWeasel0000`, a Player's Handbook creature): the
+  // same id is searched in all the actor compendiums, in the order of `REPAIR_PACKS`, then the others, the 2014 SRD last.
   let source = uuid;
   if ( uuid && !srdMonsterId(uuid) && !fromUuidSync(uuid, { strict: false }) ) source = repairedActorUuid(uuid) ?? uuid;
   if ( !srdMonsterId(source) ) return source;
@@ -70,8 +70,8 @@ export function preferredSummonUuid(uuid) {
 }
 
 /**
- * §386 : les profils d'une activité « summon » qui désignent une créature du SRD 2014 pointés sur celle du Monster Manual, sur la
- * COPIE de l'item que dnd5e utilise (comme le nombre, §385 ; `placeSummons` relit `profile.uuid`). Rend l'activité à jour.
+ * §386: the profiles of a "summon" activity that designate a 2014 SRD creature pointed at the Monster Manual one, on the
+ * COPY of the item that dnd5e uses (like the count, §385; `placeSummons` rereads `profile.uuid`). Returns the updated activity.
  */
 export function applyPreferredActors(activity) {
   const item = activity?.item;
@@ -93,28 +93,28 @@ export function applyPreferredActors(activity) {
 }
 
 /**
- * §385 : combien de créatures un profil pose au niveau `level` (sa formule `count` avec `@item.level` à ce niveau, comme `getPlacement`,
- * documents/activity/summon.mjs). Null si la formule n'est pas fixe (des dés : pas de choix proposé).
+ * §385: how many creatures a profile places at level `level` (its `count` formula with `@item.level` at that level, like
+ * `getPlacement`, documents/activity/summon.mjs). Null if the formula is not fixed (dice: no choice offered).
  */
 export function summonCountAt(activity, profile, level, formula=null) {
   try {
     const data = activity.getRollData?.() ?? {};
     const rollData = { ...data, item: { ...(data.item ?? {}), level } };
-    // §387 : une formule du contenu (`summon.chooseCount`) passe avant celle du profil.
+    // §387: a content formula (`summon.chooseCount`) takes precedence over the profile's.
     const roll = new Roll(String(formula || profile?.count || "1"), rollData);
     if ( !roll.isDeterministic ) return null;
     return Math.max(0, Math.floor(Number(roll.evaluateSync().total) || 0));
   } catch(err) { return null; }
 }
 
-/** §385 : les profils d'une activité « summon » permis au niveau `level`. */
+/** §385: the profiles of a "summon" activity allowed at level `level`. */
 export function summonProfilesAt(activity, level) {
   return profilesAtLevel(Array.from(activity?.profiles ?? []), level);
 }
 
 /**
- * §385 : les niveaux auxquels lancer : chaque emplacement qui reste (pacte compris), au moins du niveau du sort ; sans aucun, le niveau
- * du sort seul (`slot` null : le MJ lancera sans emplacement, §77). `{ slot, level, label }`.
+ * §385: the levels to cast at: each slot that remains (pact included), at least the spell's level; with none, the spell's level
+ * alone (`slot` null: the GM will cast without a slot, §77). `{ slot, level, label }`.
  */
 export function castLevelsOf(activity) {
   const base = Number(activity?.item?.system?.level) || 0;
@@ -130,9 +130,10 @@ export function castLevelsOf(activity) {
 }
 
 /**
- * §385 : le nombre choisi, écrit sur la COPIE de l'item que dnd5e utilise (`Activity#use` clone l'item ; la pose relit le profil :
- * `placeSummons` → `getPlacement`, `profile.count`) — vérifié en jeu : 1 goule posée au lieu de 3. Comme §77, `repairSelfUses`.
- * Rend l'activité à jour.
+ * §385: the chosen count, written on the COPY of the item that dnd5e uses (`Activity#use` clones the item; placement rereads
+ * the profile: `placeSummons` → `getPlacement`, `profile.count`) — verified in play: 1 ghoul placed instead of 3. Like §77,
+ * `repairSelfUses`.
+ * Returns the updated activity.
  */
 export function applySummonCount(activity, profileId, count) {
   const item = activity?.item;
@@ -147,10 +148,10 @@ export function applySummonCount(activity, profileId, count) {
 }
 
 /**
- * §198 : la durée propre d'une invocation sans concentration — celle de l'activité qui l'a posée (`flags.dnd5e.summon.activity`),
- * sinon celle du sort (Main du mage : 1 minute, issue #8). Null avec concentration (elle tombe avec elle, runtime/concentration.mjs) ;
- * une durée instantanée, permanente ou spéciale (Appel de destrier, Appel de familier) ne donne pas d'heure de fin (`expiryTime` ne
- * connaît que les unités de `CONFIG.DND5E.timeUnits`).
+ * §198: the own duration of a summon without Concentration — that of the activity that placed it (`flags.dnd5e.summon.activity`),
+ * otherwise the spell's (Mage Hand: 1 minute, issue #8). Null with Concentration (it ends with it, runtime/concentration.mjs);
+ * an instantaneous, permanent or special duration (Find Steed, Find Familiar) gives no end time (`expiryTime` only
+ * knows the units of `CONFIG.DND5E.timeUnits`).
  */
 function ownDurationOf(tokenDoc, item) {
   const activity = item.system?.activities?.get?.(tokenDoc?.actor?.getFlag?.("dnd5e", "summon.activity") ?? "") ?? null;
@@ -161,17 +162,17 @@ function ownDurationOf(tokenDoc, item) {
 }
 
 /**
- * §16.39 : une créature invoquée par un item qui déclare `summon.lasts` reçoit son heure de fin (`flags["dnd5e-combat"].expiresAt`,
- * heure du monde en secondes). §198 : sans `summon.lasts`, la durée propre du sort quand il n'a pas de concentration. MJ actif. Rend
- * l'heure notée, ou null.
+ * §16.39: a creature summoned by an item that declares `summon.lasts` gets its end time (`flags["dnd5e-combat"].expiresAt`,
+ * world time in seconds). §198: without `summon.lasts`, the spell's own duration when it has no Concentration. Active GM. Returns
+ * the time noted, or null.
  */
 export async function noteSummonExpiry(tokenDoc, now=game.time.worldTime) {
   const item = summonItemOf(tokenDoc);
-  // §305 : une invocation qui part au Repos long (Compagnon sauvage) n'a pas d'heure de fin.
+  // §305: a summon that leaves at the Long Rest (Wild Companion) has no end time.
   if ( item && (summonRuleOf(item)?.endsOnLongRest === true) ) return null;
   const lasts = item ? (summonRuleOf(item)?.lasts ?? ownDurationOf(tokenDoc, item)) : null;
   if ( !lasts ) return null;
-  // §107 : un familier rappelé de sa poche dimensionnelle garde l'heure de fin notée à son invocation.
+  // §107: a familiar recalled from its pocket dimension keeps the end time noted at its summoning.
   if ( Number.isFinite(tokenDoc.getFlag(MODULE_ID, "expiresAt")) ) return null;
   let value = Number(lasts.value);
   if ( !Number.isFinite(value) ) {
@@ -184,7 +185,7 @@ export async function noteSummonExpiry(tokenDoc, now=game.time.worldTime) {
   return at;
 }
 
-/** Les tokens invoqués dont l'heure de fin est passée, sur toutes les scènes. */
+/** The summoned tokens whose end time has passed, on all scenes. */
 export function expiredSummons(now=game.time.worldTime) {
   const out = [];
   for ( const scene of game.scenes ) {
@@ -197,9 +198,10 @@ export function expiredSummons(now=game.time.worldTime) {
 }
 
 /**
- * §230 : les invocations qu'une nouvelle remplace — celles du même item (`flags.dnd5e.summon.origin`, documents/activity/summon.mjs:264),
- * créées avant elle, sur toutes les scènes, quand le contenu de l'item dit `summon.replaces` (Appel de destrier). MJ actif.
- * @param {TokenDocument} tokenDoc  Le token qui vient d'être créé.
+ * §230: the summons that a new one replaces — those of the same item (`flags.dnd5e.summon.origin`,
+ * documents/activity/summon.mjs:264), created before it, on all scenes, when the item's content says `summon.replaces`
+ * (Find Steed). Active GM.
+ * @param {TokenDocument} tokenDoc  The token that has just been created.
  * @returns {TokenDocument[]}
  */
 export function replacedSummons(tokenDoc) {
@@ -218,15 +220,16 @@ export function replacedSummons(tokenDoc) {
   return out;
 }
 
-/** L'item qui a invoqué ce token, ou null. */
+/** The item that summoned this token, or null. */
 export function summonItemOf(tokenDoc) {
   const uuid = tokenDoc?.actor?.getFlag?.("dnd5e", "summon.origin");
   return uuid ? fromUuidSync(uuid, { strict: false }) : null;
 }
 
 /**
- * O8f (§349) : une invocation `summon.hostile` (Le Crâne, Parchemin d'invocation de titan) — token Hostile, et l'acteur invoqué (celui du
- * monde, dont hérite un token non lié) n'appartient plus à aucun joueur : dnd5e le crée au nom de qui invoque. MJ actif. Rend vrai si fait.
+ * O8f (§349): a `summon.hostile` summon ("The Skull", Scroll of Titan Summoning) — Hostile token, and the summoned actor
+ * (the world's, which an unlinked token inherits) no longer belongs to any player: dnd5e creates it in the summoner's name.
+ * Active GM. Returns true if done.
  */
 export async function makeSummonHostile(tokenDoc) {
   const item = summonItemOf(tokenDoc);
@@ -254,22 +257,22 @@ export function concentrationOn(item) {
 }
 
 /**
- * Rattache une créature invoquée à la concentration de son invocateur. Rend l'effet, ou null (pas de concentration).
+ * Attaches a summoned creature to its summoner's Concentration. Returns the effect, or null (no Concentration).
  * @param {TokenDocument} tokenDoc
  */
 export async function tieSummonToConcentration(tokenDoc) {
   const item = summonItemOf(tokenDoc);
   const effect = concentrationOn(item);
   if ( !effect ) return null;
-  // §16.15 : `endsSpell` — retirer cet objet mettra fin à la concentration (runtime/pilot.mjs). Noté sur le token : à sa
-  // suppression, l'acteur synthétique d'un token non lié n'est plus sûr.
+  // §16.15: `endsSpell` — removing this item will end Concentration (runtime/pilot.mjs). Noted on the token: at its
+  // deletion, the synthetic actor of an unlinked token is no longer reliable.
   const summon = summonRuleOf(item) ?? {};
   await tokenDoc.update({ [`flags.${MODULE_ID}`]: { summonedBy: effect.uuid,
     ...(summon.endsSpell ? { endsSpell: true } : {}), ...(summon.endsAtZero ? { endsAtZero: true } : {}) } });
   return effect;
 }
 
-/** Retire les créatures invoquées que maintenait un effet de concentration qui vient de tomber (et leurs combattants). */
+/** Removes the summoned creatures that a Concentration effect that has just ended maintained (and their combatants). */
 export async function removeSummonsOf(effectUuid) {
   let removed = 0;
   for ( const scene of game.scenes ) {
@@ -287,8 +290,8 @@ export async function removeSummonsOf(effectUuid) {
 }
 
 /**
- * Met une créature invoquée au combat où se trouve son invocateur, selon le contenu de l'item (`summon.initiative`) :
- * `after` = juste après lui ; `own` = elle lance sa propre initiative. Rend le combattant, ou null.
+ * Puts a summoned creature in the combat where its summoner is, according to the item's content (`summon.initiative`):
+ * `after` = right after them; `own` = it rolls its own Initiative. Returns the combatant, or null.
  * @param {TokenDocument} tokenDoc
  */
 export async function joinSummonerCombat(tokenDoc) {

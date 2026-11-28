@@ -1,14 +1,14 @@
 /**
- * §53 : les potions (consommables `type.value === "potion"`, Guide du maître et Manuel des joueurs).
+ * §53: potions (consumables `type.value === "potion"`, Dungeon Master's Guide and Player's Handbook).
  *
- * Une potion « donne l'effet d'un sort » par une activité « cast » : dnd5e crée une copie du sort sur l'acteur, marquée
- * `flags.dnd5e.cachedFor` (uuid relatif de l'activité d'incantation, activity/cast.mjs), puis l'utilise. Boire n'est pas lancer
- * un sort : ni Contresort, ni rage, ni composante verbale, ni concentration (« no Concentration required », Guide du maître) —
- * et l'effet est pour le buveur.
+ * A potion "gives the effect of a spell" through a "cast" activity: dnd5e creates a copy of the spell on the actor, marked
+ * `flags.dnd5e.cachedFor` (relative uuid of the casting activity, activity/cast.mjs), then uses it. Drinking is not casting
+ * a spell: no Counterspell, no rage, no verbal component, no concentration ("no Concentration required", Dungeon Master's Guide) —
+ * and the effect is for the drinker.
  *
- * La potion est le plus souvent détruite en étant bue (dépense de son unique utilisation) AVANT que la copie du sort soit créée :
- * on ne peut pas la relire ensuite. D'où la marque posée sur la copie à sa création (`flags.dnd5e-combat.fromPotion`), d'après
- * l'incantation notée quand la potion existait encore (`notePotionCast`, au `dnd5e.preUseActivity` de son activité « cast »).
+ * The potion is most often destroyed when drunk (spending its single use) BEFORE the spell copy is created:
+ * it cannot be read again afterwards. Hence the mark set on the copy when it is created (`flags.dnd5e-combat.fromPotion`), from
+ * the casting noted while the potion still existed (`notePotionCast`, at the `dnd5e.preUseActivity` of its "cast" activity).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,26 +16,26 @@ import { foldRiderStatuses } from "../core/effect-riders.mjs";
 import { contentOf, identifierOf } from "./content.mjs";
 import { originItemOf, comesFromItemEffect } from "./facts.mjs";
 
-/** Est-ce une potion ? */
+/** Is it a potion? */
 export const isPotion = item => (item?.type === "consumable") && (item.system?.type?.value === "potion");
 
-/** « idItem.idActivité » d'un `cachedFor`, ou null. */
+/** "itemId.activityId" of a `cachedFor`, or null. */
 function castKey(cachedFor) {
   const m = (typeof cachedFor === "string") ? cachedFor.match(/Item.([A-Za-z0-9]{16}).Activity.([A-Za-z0-9]{16})$/) : null;
   return m ? `${m[1]}.${m[2]}` : null;
 }
 
-/** Incantations de potions en cours : clé → { identifier, name } de la potion. */
+/** Potion castings in progress: key → { identifier, name } of the potion. */
 const pending = new Map();
 
-/** L'activité « cast » d'une potion va être utilisée : on retient la potion, la copie du sort naîtra après sa destruction. */
+/** A potion's "cast" activity is about to be used: the potion is remembered, the spell copy will appear after its destruction. */
 export function notePotionCast(activity) {
   if ( (activity?.type !== "cast") || !isPotion(activity.item) ) return false;
   pending.set(`${activity.item.id}.${activity.id}`, { identifier: identifierOf(activity.item).id, name: activity.item.name });
   return true;
 }
 
-/** `preCreateItem` d'une copie de sort : si elle vient d'une potion notée, elle en porte la marque. */
+/** `preCreateItem` of a spell copy: if it comes from a noted potion, it carries its mark. */
 export function stampCachedSpell(item, data) {
   const from = pending.get(castKey(data?.flags?.dnd5e?.cachedFor ?? item?.flags?.dnd5e?.cachedFor));
   if ( !from ) return false;
@@ -44,7 +44,7 @@ export function stampCachedSpell(item, data) {
 }
 
 /**
- * La potion qui a lancé cette copie de sort — `{ identifier, name }` (la marque, ou la potion encore sur la fiche) —, ou null.
+ * The potion that cast this spell copy — `{ identifier, name }` (the mark, or the potion still on the sheet) —, or null.
  */
 export function potionOfCast(item) {
   const stamped = item?.flags?.[MODULE_ID]?.fromPotion;
@@ -57,13 +57,13 @@ export function potionOfCast(item) {
 }
 
 /**
- * `preCreateActiveEffect` : un effet d'item que le contenu complète (`effectChanges` — Vol, Escalade : « une vitesse de vol / d'escalade
- * égale à votre Vitesse », que les données du Guide ne donnent pas). `@walk` : la vitesse au sol du porteur, lue à la pose.
- * Rend le nombre de changements ajoutés.
+ * `preCreateActiveEffect`: an item effect that the content completes (`effectChanges` — Fly, Climb: "a flying / climbing speed
+ * equal to your Speed", which the Guide's data do not give). `@walk`: the bearer's ground speed, read when applied.
+ * Returns the number of changes added.
  */
 /**
- * §96 : un effet d'item auquel le contenu ajoute des états (`effectStatuses` — Esprit couard : « Frightened » sans l'état dans la donnée).
- * Rend le nombre d'états ajoutés.
+ * §96: an item effect to which the content adds conditions (`effectStatuses` — Cowardly Spirit: "Frightened" without the
+ * condition in the data). Returns the number of conditions added.
  */
 export function completeEffectStatuses(effect) {
   if ( effect.parent?.documentName !== "Actor" ) return 0;
@@ -71,7 +71,7 @@ export function completeEffectStatuses(effect) {
   const key = rules ? Object.keys(rules).find(id => comesFromItemEffect(effect, id)) : null;
   if ( !key ) return 0;
   const current = Array.from(effect._source.statuses ?? []);
-  // §334 : `{ set }` remplace les états de la donnée.
+  // §334: `{ set }` replaces the data's conditions.
   if ( Array.isArray(rules[key]?.set) ) {
     effect.updateSource({ statuses: [...rules[key].set] });
     return rules[key].set.length;
@@ -82,8 +82,8 @@ export function completeEffectStatuses(effect) {
 }
 
 /**
- * §526 (issue #255) : un effet d'item posé sur une créature — les conditions qu'il demande en cavaliers deviennent ses propres états
- * (core/effect-riders.mjs), pour finir avec lui ; À terre reste à part. Rend les états repris.
+ * §526 (issue #255): an item effect applied to a creature — the conditions it asks for as riders become its own conditions
+ * (core/effect-riders.mjs), to end with it; Prone stays apart. Returns the conditions taken over.
  */
 export function foldEffectRiders(effect) {
   if ( (effect.parent?.documentName !== "Actor") || effect.transfer || !originItemOf(effect) ) return [];
@@ -106,13 +106,13 @@ export function completeEffectChanges(effect) {
   const key = rules ? Object.keys(rules).find(id => comesFromItemEffect(effect, id)) : null;
   if ( !key ) return 0;
   const walk = actor.system?.attributes?.movement?.walk ?? 0;
-  // §195 : `replace` retire d'abord le changement de même clé que l'effet porte déjà (Pattes d'araignée : sa formule ne donne pas la Vitesse).
+  // §195: `replace` first removes the change with the same key the effect already carries (Spider Climb: no Speed in its formula).
   const replaced = new Set(rules[key].filter(c => c.replace).map(c => c.key));
   const current = (effect._source.system?.changes ?? []).filter(x => !replaced.has(x.key));
-  // C12-e : `ifCaster` — un changement que seul un lanceur doté d'une aptitude donne (Maléfice occulte).
+  // C12-e: `ifCaster` — a change that only a caster with a given ability gives (Arcane Hex).
   const caster = originItemOf(effect)?.actor ?? null;
   const owns = id => !!caster?.items?.some?.(i => identifierOf(i).id === id);
-  // §433 : `unlessKey` — un changement que la donnée porte déjà sous une autre clé (« Hamstrung » du SRD de dnd5e 6.1 : `movement.bonus`).
+  // §433: `unlessKey` — a change the data already carries under another key ("Hamstrung" of the dnd5e 6.1 SRD: `movement.bonus`).
   const added = rules[key].filter(c => !current.some(x => (x.key === c.key) || (c.unlessKey && (x.key === c.unlessKey))) && (!c.ifCaster || owns(c.ifCaster)))
     .map(c => ({ key: c.key, type: c.type, value: String(c.value === "@walk" ? walk : c.value) }));
   if ( added.length ) effect.updateSource({ "system.changes": [...current, ...added] });
@@ -124,8 +124,8 @@ export function completeEffectChanges(effect) {
 /* -------------------------------------------- */
 
 /**
- * Issue #31 : l'activité propose-t-elle le choix action Bonus / action ? Une potion (`isPotion`) dont l'activité est un soin qui coûte
- * une action Bonus (donnée 2024). Une copie ancienne qui coûte déjà une action (règle 2014) n'est pas concernée.
+ * Issue #31: does the activity offer the choice Bonus Action / action? A potion (`isPotion`) whose activity is a heal that costs
+ * a Bonus Action (2024 data). An older copy that already costs an action (2014 rule) is not concerned.
  * @param {Activity} activity
  * @returns {boolean}
  */
@@ -133,21 +133,21 @@ export function offersPotionChoice(activity) {
   return !!activity && (activity.type === "heal") && isPotion(activity.item) && (activity.activation?.type === "bonus");
 }
 
-/** L'activité de soin d'une potion qui propose le choix (la première), ou null. */
+/** A potion's heal activity that offers the choice (the first one), or null. */
 export function potionChoiceActivity(item) {
   if ( !isPotion(item) ) return null;
   return Array.from(item.system?.activities ?? []).find(a => offersPotionChoice(a)) ?? null;
 }
 
-/** Une potion de soins à faire boire (menu) : une potion avec une activité de soin, quel qu'en soit le coût. */
+/** A healing potion to be drunk (menu): a potion with a heal activity, whatever its cost. */
 export function healingPotionActivity(item) {
   if ( !isPotion(item) || !((item.system?.quantity ?? 1) > 0) ) return null;
   return Array.from(item.system?.activities ?? []).find(a => a.type === "heal") ?? null;
 }
 
 /**
- * Les formules du soin d'une activité, et leur maximum (« ne lancez pas les dés ») : `{ formula, max }` ou null si la donnée n'en a pas.
- * `maximize` : la fonction pure qui met les dés à leur maximum (core/max-dice.mjs).
+ * An activity's heal formulas, and their maximum ("do not roll the dice"): `{ formula, max }` or null if the data have none.
+ * `maximize`: the pure function that sets the dice to their maximum (core/max-dice.mjs).
  */
 export function healingFormulaOf(activity, maximize) {
   try {

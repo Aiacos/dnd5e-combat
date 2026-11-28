@@ -4,13 +4,13 @@ import { validateEntry } from "../module/scripts/core/content.mjs";
 
 const v = entry => validateEntry(entry, { facts: {} });
 
-describe("§278 : mettre fin à un de ses états", () => {
-  it("la liste d'états reste la règle de fin de tour (§236)", () => {
+describe("§278: ending one of one's own conditions", () => {
+  it("the list of conditions stays the end-of-turn rule (§236)", () => {
     expect(ownConditionsRule(["charmed", "frightened"])).toEqual({ statuses: ["charmed", "frightened"], at: "turnEnd", exhaustion: false, uses: false });
     expect(v({ endsOwnConditions: ["charmed"] })).toEqual([]);
   });
 
-  it("au début du tour, un état de la liste, sinon un niveau d'Épuisement, contre une utilisation", () => {
+  it("at the start of the turn, a condition from the list, otherwise a level of Exhaustion, against a use", () => {
     const rule = ownConditionsRule({ statuses: ["paralyzed", "stunned"], at: "turnStart", exhaustion: true, uses: true });
     expect(pickOwnCondition(rule, { statuses: new Set(["stunned", "prone"]), exhaustion: 2, usesLeft: 1 })).toEqual({ status: "stunned" });
     expect(pickOwnCondition(rule, { statuses: new Set(["prone"]), exhaustion: 2, usesLeft: 1 })).toEqual({ exhaustion: true });
@@ -27,13 +27,13 @@ describe("§278 : mettre fin à un de ses états", () => {
 });
 
 describe("§278 : regagner au jet d'initiative", () => {
-  it("{ item, upTo } (§236) : les utilisations remontent à upTo au moins", () => {
+  it("{ item, upTo } (§236): uses go back up to at least upTo", () => {
     expect(initiativeRegain({ item: "bardic-inspiration", upTo: 2 }, { items: { "bardic-inspiration": { max: 5, spent: 5 } } }))
       .toEqual({ spent: { "bardic-inspiration": 3 }, exhaustion: null, pay: false });
     expect(initiativeRegain({ item: "bardic-inspiration", upTo: 2 }, { items: { "bardic-inspiration": { max: 5, spent: 2 } } })).toBe(null);
   });
 
-  it("plusieurs items en entier et un niveau d'Épuisement, contre une utilisation, seulement s'il y a à gagner", () => {
+  it("several items in full and a level of Exhaustion, against a use, only if there is something to gain", () => {
     const rule = { items: ["essai-a", "essai-b", "essai-c"], exhaustion: 1, uses: true };
     const items = { "essai-a": { max: 1, spent: 1 }, "essai-b": { max: 1, spent: 0 } };
     expect(initiativeRegain(rule, { items, exhaustion: 3, usesLeft: 1 })).toEqual({ spent: { "essai-a": 0 }, exhaustion: 2, pay: true });
@@ -49,18 +49,18 @@ describe("§278 : regagner au jet d'initiative", () => {
   });
 });
 
-describe("regainOnInitiative `{ items, activity }` — Métabolisme surnaturel (SRD 5.2, Moine 2)", () => {
+describe("regainOnInitiative `{ items, activity }` — Uncanny Metabolism (SRD 5.2, Monk 2)", () => {
   const rule = { items: ["monks-focus"], activity: "RfyAj9VDmzAJkTL3" };
-  it("proposé quand des points sont dépensés et qu'une utilisation reste ; rien n'est écrit par le moteur", () => {
+  it("offered when points are spent and a use remains; nothing is written by the engine", () => {
     expect(initiativeRegain(rule, { items: { "monks-focus": { max: 5, spent: 3 } }, usesLeft: 1 }))
       .toEqual({ spent: {}, exhaustion: null, pay: false, use: "RfyAj9VDmzAJkTL3", back: 3 });
   });
-  it("rien à regagner, ou plus d'utilisation : pas de question", () => {
+  it("nothing to regain, or no use left: no question", () => {
     expect(initiativeRegain(rule, { items: { "monks-focus": { max: 5, spent: 0 } }, usesLeft: 1 })).toBe(null);
     expect(initiativeRegain(rule, { items: { "monks-focus": { max: 5, spent: 3 } }, usesLeft: 0 })).toBe(null);
     expect(initiativeRegain(rule, { items: {}, usesLeft: 1 })).toBe(null);
   });
-  it("le schéma et l'entrée", async () => {
+  it("the schema and the entry", async () => {
     const { validateEntry } = await import("../module/scripts/core/content.mjs");
     const { CONTENT } = await import("../module/scripts/content/index.mjs");
     expect(validateEntry(CONTENT["uncanny-metabolism"])).toEqual([]);

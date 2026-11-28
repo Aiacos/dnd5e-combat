@@ -1,29 +1,30 @@
 /**
- * §274 : les munitions d'une arme, lues et retenues là où dnd5e les garde (issue #23).
- *  - les munitions possibles : `item.system.ammunitionOptions` (data/item/weapon.mjs:145, consommables « ammo » du sous-type de l'arme) ;
- *  - le choix retenu : `flags.dnd5e.last.<activité>.ammunition`, lu par `rollAttack` (activity/attack.mjs:94) et écrit par lui après
- *    le jet (attack.mjs:205) — écrire là, c'est mettre d'accord la fenêtre de dnd5e, le jet sans dialogue et la chance de toucher.
+ * §274: a weapon's ammunition, read and retained where dnd5e keeps it (issue #23).
+ *  - possible ammunition: `item.system.ammunitionOptions` (data/item/weapon.mjs:145, "ammo" consumables of the weapon subtype);
+ *  - the retained choice: `flags.dnd5e.last.<activité>.ammunition`, read by `rollAttack` (activity/attack.mjs:94) and
+ *    written by it after the roll (attack.mjs:205) — writing there brings the dnd5e window, the dialog-less roll
+ *    and the chance to hit into line.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { ammoChoice } from "../core/ammo.mjs";
 
-/** L'arme tire-t-elle des munitions ? */
+/** Does the weapon fire ammunition? */
 export function usesAmmo(item) {
   return (item?.type === "weapon") && (item.system.properties?.has?.("amm") === true) && !!item.actor;
 }
 
-/** Les activités d'attaque d'une arme (une seule en général). */
+/** A weapon's attack activities (usually only one). */
 function attackActivities(item) {
   return Array.from(item?.system.activities?.values?.() ?? []).filter(a => a.type === "attack");
 }
 
 /**
- * Les munitions qu'une arme peut tirer et celle que son prochain jet tirerait.
+ * The ammunition a weapon can fire and the one its next roll would fire.
  * @param {Item5e} item
- * @param {Activity} [activity]   L'activité d'attaque (la première de l'arme par défaut).
+ * @param {Activity} [activity]   The attack activity (the weapon's first by default).
  * @param {object} [options]
- * @param {string|null} [options.explicit]  Une munition imposée.
- * @returns {{options: Array<{id, name, img, quantity}>, current: string|null, ask: boolean}|null}  null : l'arme ne tire rien.
+ * @param {string|null} [options.explicit]  An imposed ammunition.
+ * @returns {{options: Array<{id, name, img, quantity}>, current: string|null, ask: boolean}|null}  null: the weapon fires nothing.
  */
 export function ammoState(item, activity=null, { explicit=null }={}) {
   if ( !usesAmmo(item) ) return null;
@@ -37,11 +38,11 @@ export function ammoState(item, activity=null, { explicit=null }={}) {
 }
 
 /**
- * Retient une munition pour les prochaines attaques de l'arme (toutes ses activités d'attaque), et l'annonce
- * (hook `dnd5e-combat.ammunition`, `(item, ammoId)`, sur chaque client par la mise à jour de l'item).
+ * Retains an ammunition for the weapon's next attacks (all its attack activities), and announces it
+ * (hook `dnd5e-combat.ammunition`, `(item, ammoId)`, on every client through the item update).
  * @param {Item5e} item
- * @param {string} ammoId   L'id d'un consommable de munition de la créature.
- * @returns {Promise<boolean>}  false : l'arme ne tire pas cette munition, ou l'item n'est pas modifiable.
+ * @param {string} ammoId   The id of one of the creature's ammunition consumables.
+ * @returns {Promise<boolean>}  false: the weapon does not fire this ammunition, or the item is not editable.
  */
 export async function setAmmo(item, ammoId) {
   if ( !usesAmmo(item) || !item.isOwner ) return false;
@@ -53,13 +54,13 @@ export async function setAmmo(item, ammoId) {
   return true;
 }
 
-/** `updateItem` : un changement de munition retenue, d'où qu'il vienne (DAS, fenêtre de dnd5e après le jet) → hook public. */
+/** `updateItem`: a change of retained ammunition, wherever it comes from (DAS, dnd5e window after the roll) → public hook. */
 export function announceAmmoChange(item, changes) {
   const last = changes?.flags?.dnd5e?.last;
   if ( !last || !usesAmmo(item) ) return;
   const changed = Object.values(last).some(v => v && (typeof v === "object") && ("ammunition" in v));
   if ( !changed ) return;
-  // §274 : sur chaque client, quand la munition retenue d'une arme change (DAS, ou la fenêtre de dnd5e après le jet) : `(item, ammoId)`,
-  // l'id de la munition que tirera le prochain jet, ou null. Lecture seule.
+  // §274: on every client, when a weapon's retained ammunition changes (DAS, or the dnd5e window after the roll):
+  // `(item, ammoId)`, the id of the ammunition the next roll will fire, or null. Read-only.
   Hooks.callAll(`${MODULE_ID}.ammunition`, item, ammoState(item)?.current ?? null);
 }

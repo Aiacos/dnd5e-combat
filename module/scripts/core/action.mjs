@@ -1,36 +1,36 @@
 /**
- * La machine d'action (SPEC §13, S2) : UNE résolution par action, quelle que soit l'activité.
+ * The action machine (SPEC §13, S2): ONE resolution per action, whatever the activity.
  *
- *     advance(résolution, évènement) → { résolution, commandes }
+ *     advance(resolution, event) → { resolution, commands }
  *
- * La résolution est une donnée sérialisable, portée par un seul message (le « porteur » : le
- * message d'utilisation, ou le message d'attaque quand le jet a été lancé hors carte). Le cœur
- * ne fait rien lui-même : il rend des COMMANDES que le runtime exécute (demander une réaction,
- * faire lancer des sauvegardes, appliquer), et reçoit en retour des ÉVÈNEMENTS. L'état est écrit
- * avant toute attente : un F5 du MJ pendant une fenêtre de réaction ne perd plus l'action.
+ * The resolution is serializable data, carried by a single message (the "carrier": the
+ * use message, or the attack message when the roll was made off the card). The core
+ * does nothing itself: it returns COMMANDS that the runtime executes (ask for a reaction,
+ * have saves rolled, apply), and receives EVENTS in return. The state is written
+ * before any wait: a GM F5 during a reaction window no longer loses the action.
  *
- * Le PLAN dit ce que l'activité demande ; une étape absente est sautée :
- *   attack   un jet d'attaque décide qui est touché
- *   damage   "author" : l'auteur lance les dégâts au signal (step = awaitingRolls)
- *            "system" : dnd5e les lance tout seul à l'utilisation (activités damage et heal)
- *   save     { ability, dc, onSave, activity, chained } — `chained` : sauvegarde imposée par une
- *            attaque qui touche ; elle ne réduit pas les dégâts de l'attaque
- *   effects  [{ id, activity, when: "always" | "failedSave" | "saved", margin? }] — `saved` : seulement sur une sauvegarde
- *            réussie (contenu `savedEffects` : Rayon affaiblissant) ; `margin: { min?, max? }` : seulement si la cible a raté
- *            de `min` ou plus (et de `max` au plus) — « si elle rate le jet de 5 ou plus » (§19.6, contenu `failMargins`)
- *   choice   { prompt, options: [{ id, label }] } — effets EXCLUSIFS : parmi `options` (des ids
- *            d'`effects`), l'auteur en choisit un avant l'application (Maléfice) ; les autres
- *            effets du plan ne sont pas concernés
- *   darts    nombre de projectiles qui touchent d'office, à répartir entre les cibles (Projectile magique, §16.27) :
- *            une cible touchée par N projectiles subit N fois les dégâts du jet ; seule, elle les prend tous ;
- *            plusieurs : l'auteur répartit (étape « allocate »)
- *   steps    [{ when: "always" | "failedSave", if?, type, … }] — étapes d'issue déclarées par le
- *            contenu (core/content.mjs : `move`, `status`, `damage`), exécutées à l'application sur chaque
- *            cible atteinte ; une étape `damage` à `onSave` reçoit `saved` (la cible a-t-elle réussi ?) pour sa part —
- *            cible atteinte, comme les effets ; `if` (en JSON : un flag éclaterait ses clés à points) est
- *            jugé par l'adaptateur au moment d'appliquer
+ * The PLAN says what the activity asks for; a missing step is skipped:
+ *   attack   an attack roll decides who is hit
+ *   damage   "author": the author rolls the damage on the signal (step = awaitingRolls)
+ *            "system": dnd5e rolls it by itself on use (damage and heal activities)
+ *   save     { ability, dc, onSave, activity, chained } — `chained`: save imposed by a
+ *            hitting attack; it does not reduce the attack's damage
+ *   effects  [{ id, activity, when: "always" | "failedSave" | "saved", margin? }] — `saved`: only on a successful
+ *            save (content `savedEffects`: Ray of Enfeeblement); `margin: { min?, max? }`: only if the target failed
+ *            by `min` or more (and by `max` at most) — "if it fails the roll by 5 or more" (§19.6, content `failMargins`)
+ *   choice   { prompt, options: [{ id, label }] } — EXCLUSIVE effects: among `options` (the ids
+ *            of `effects`), the author picks one before application (Hex); the other
+ *            effects in the plan are not concerned
+ *   darts    number of projectiles that hit automatically, to split among the targets (Magic Missile, §16.27):
+ *            a target hit by N projectiles takes N times the roll's damage; alone, it takes them all;
+ *            several: the author splits them (step "allocate")
+ *   steps    [{ when: "always" | "failedSave", if?, type, … }] — outcome steps declared by the
+ *            content (core/content.mjs: `move`, `status`, `damage`), executed on application on each
+ *            target reached; a `damage` step with `onSave` gets `saved` (did the target succeed?) for its share —
+ *            target reached, like effects; `if` (in JSON: a flag would split its dotted keys) is
+ *            judged by the adapter at the moment of applying
  *
- * Fonctions pures, aucune dépendance à Foundry.
+ * Pure functions, no dependency on Foundry.
  */
 
 import { resolveAttack, beatsAcBy } from "./attack.mjs";
@@ -38,7 +38,7 @@ import { nearMissTargets } from "./success-at-cost.mjs";
 import { criticalSplit } from "./critical-dice.mjs";
 import { SIZES, sizeAtLeast } from "./content/enums.mjs";
 
-/** Version du schéma écrit dans les flags. Une résolution d'une autre version est ignorée. */
+/** Version of the schema written in the flags. A resolution of another version is ignored. */
 export const RESOLUTION_VERSION = 2;
 
 export const STEPS = Object.freeze({
@@ -51,14 +51,14 @@ export const STEPS = Object.freeze({
 });
 
 /**
- * L'action est-elle réglée pour de bon : terminée ou manquée ? Pas une action annulée — sa carte peut resservir (le MJ relance),
- * elle garde donc ce qu'une carte réglée n'a plus à montrer (ui/chat.mjs, carte en rangées).
+ * Is the action truly settled: finished or missed? Not a cancelled action — its card may be reused (the GM rolls again),
+ * so it keeps what a settled card no longer has to show (ui/chat.mjs, row-based card).
  */
 export function settled(step) {
   return (step === STEPS.DONE) || (step === STEPS.MISSED);
 }
 
-/** Part des dégâts subie sur une sauvegarde réussie, selon `damage.onSave` de l'activité. */
+/** Share of the damage taken on a successful save, according to the activity's `damage.onSave`. */
 const ON_SAVE_MULTIPLIER = Object.freeze({ half: 0.5, none: 0, full: 1 });
 
 const same = resolution => ({ resolution, commands: [] });
@@ -67,17 +67,17 @@ const same = resolution => ({ resolution, commands: [] });
 /*  Lecture                                     */
 /* -------------------------------------------- */
 
-/** Une résolution de ce schéma, ou null. */
+/** A resolution of this schema, or null. */
 export function current(resolution) {
   return resolution?.v === RESOLUTION_VERSION ? resolution : null;
 }
 
 /**
- * §402 : la raison d'une réussite d'office tenant à la créature elle-même — son type (`types`), ou sa taille (`sizeAtLeast` : Filet
- * tombant, « réussit automatiquement si elle est de taille TG ou supérieure »). Une taille inconnue ne donne rien.
- * @param {{types?: string[], sizeAtLeast?: string}|null} rule  `saveAutoSuccess` de l'entrée.
+ * §402: the reason for an automatic success that comes from the creature itself — its type (`types`), or its size
+ * (`sizeAtLeast`: "Falling Net", "automatically succeeds if it is Huge or larger"). An unknown size gives nothing.
+ * @param {{types?: string[], sizeAtLeast?: string}|null} rule  `saveAutoSuccess` of the entry.
  * @param {{type?: string, size?: string}} creature
- * @returns {string|null}  « type:<type> », « size:<taille> », ou null.
+ * @returns {string|null}  "type:<type>", "size:<size>", or null.
  */
 export function creatureAutoSuccess(rule, { type, size }={}) {
   if ( rule?.types?.includes(type) ) return `type:${type}`;
@@ -85,11 +85,11 @@ export function creatureAutoSuccess(rule, { type, size }={}) {
   return null;
 }
 
-/** Ceux que l'action atteint : les cibles touchées s'il y a un jet d'attaque, toutes sinon — hors celles qu'elle ne peut pas affecter. */
+/** Those the action reaches: the targets hit if there is an attack roll, all otherwise — except those it cannot affect. */
 export function affectedTargets(resolution) {
   const reachable = resolution.targets.filter(t => !t.unaffected);
-  // §28 : Sort mineur appuyé — une cible manquée par le tour de magie subit quand même la moitié des dégâts. Un coup pris par une
-  // réplique (§16.25) ou arrêté par un abri total n'est pas un jet raté : rien pour cette cible.
+  // §28: Potent Cantrip — a target missed by the cantrip still takes half the damage. A hit taken by a
+  // duplicate (§16.25) or stopped by Total Cover is not a missed roll: nothing for this target.
   const missed = t => (t.hit === false) && (t.reason !== "duplicate") && (t.reason !== "cover");
   return resolution.plan.attack ? reachable.filter(t => (t.hit === true) || (resolution.plan.potent && missed(t))) : reachable;
 }
@@ -100,12 +100,12 @@ export function pendingSaves(resolution) {
   return affectedTargets(resolution).filter(t => t.save === null);
 }
 
-/** L'auteur de l'action doit-il lancer ses dégâts maintenant ? (lu sur son client, au signal du flag) */
+/** Must the author of the action roll their damage now? (read on their client, on the flag's signal) */
 export function wantsDamageRoll(resolution) {
   return (resolution.step === STEPS.AWAITING_ROLLS) && (resolution.plan.damage === "author") && !resolution.damageRoll;
 }
 
-/** Un coup critique à reporter sur le jet de dégâts. */
+/** A Critical Hit to carry over to the damage roll. */
 export function isCriticalHit(resolution) {
   return resolution.targets.some(t => t.hit && t.critical);
 }
@@ -132,15 +132,15 @@ export function damageFor(resolution, token) {
   return [...(roll.damages ?? []), ...critical];
 }
 
-/** L'auteur doit-il encore répartir ses projectiles (Projectile magique, plusieurs cibles) ? */
+/** Must the author still split their projectiles (Magic Missile, several targets)? */
 export function pendingAllocation(resolution) {
   return (resolution.plan.darts > 0) && !resolution.allocated && (resolution.step === STEPS.AWAITING_ROLLS)
     && (affectedTargets(resolution).length > 1);
 }
 
 /**
- * Une répartition valable : `count` projectiles, un entier positif par cible, la somme exacte ; sinon, au mieux : un chacun
- * dans l'ordre, le reste au premier.
+ * A valid split: `count` projectiles, a positive integer per target, the exact sum; otherwise, as best as possible: one each
+ * in order, the rest to the first.
  */
 export function allocateDarts(count, tokens, wanted={}) {
   const counts = Object.fromEntries(tokens.map(t => [t, Math.max(0, Math.floor(Number(wanted[t]) || 0))]));
@@ -151,14 +151,14 @@ export function allocateDarts(count, tokens, wanted={}) {
   return out;
 }
 
-/** §504 (B24) : les deux issues d'un choix `outcome` — les dégâts, ou une empoignade à leur place. */
+/** §504 (B24): the two outcomes of an `outcome` choice — the damage, or a grapple in its place. */
 export const OUTCOME_DAMAGE = "outcome.damage";
 export const OUTCOME_GRAPPLE = "outcome.grapple";
 
-/** L'auteur doit-il encore choisir l'effet à appliquer ? */
+/** Must the author still choose the effect to apply? */
 export function pendingChoice(resolution) {
   return !!resolution.plan.choice && (resolution.choice === null) && (resolution.step === STEPS.AWAITING_ROLLS)
-    && (affectedTargets(resolution).length > 0);   // une attaque qui rate tout le monde n'a rien à appliquer
+    && (affectedTargets(resolution).length > 0);   // an attack that misses everyone has nothing to apply
 }
 
 function readyToApply(resolution) {
@@ -169,54 +169,54 @@ function readyToApply(resolution) {
     && (!resolution.plan.damage || !!resolution.damageRoll);
 }
 
-/** Un effet ou une étape d'issue passe-t-il pour cette cible ? « saved » : seulement sur une réussite. */
-/** Esquive totale (§20) : une sauvegarde de Dextérité seule (pas au choix), non enchaînée à une attaque, pour la moitié des dégâts. */
-// §334 : `evasion: "any"` (Esquive de la Bête éclipsante) — toute sauvegarde à moitié des dégâts, pas seulement de Dextérité.
+/** Does an effect or an outcome step apply to this target? "saved": only on a success. */
+/** Evasion (§20): a Dexterity save only (not at choice), not chained to an attack, for half damage. */
+// §334: `evasion: "any"` (Displacer Beast's Evasion) — any save for half damage, not only Dexterity.
 const evasionApplies = (plan, kind) => !!plan.damage && !!plan.save && !plan.save.chained
   && ((kind === "any") || ((plan.save.ability === "dex") && ((plan.save.abilities ?? ["dex"]).every(a => a === "dex"))))
   && ((plan.save.onSave ?? "half") === "half");
 
 const passes = (when, saved) => (when === "always") || ((when === "saved") ? saved : !saved);
 
-/** De combien la cible a raté la sauvegarde (DD − total), ou null si elle l'a réussie ou n'en a pas fait. */
+/** By how much the target failed the save (DC − total), or null if it succeeded or made none. */
 function failMargin(target, plan) {
   if ( !target.save || (target.save.success === true) ) return null;
-  if ( target.save.auto ) return Infinity;   // échec d'office (Paralysé face à la Dextérité) : raté « de tout »
+  if ( target.save.auto ) return Infinity;   // automatic failure (Paralyzed against Dexterity): missed "by everything"
   if ( !Number.isFinite(plan.save?.dc) || !Number.isFinite(target.save.total) ) return null;
   return plan.save.dc - target.save.total;
 }
 
-/** L'écart demandé (`margin`) est-il tenu ? Sans écart demandé, oui. */
+/** Is the requested margin (`margin`) met? With no margin requested, yes. */
 const withinMargin = (margin, failed) => !margin || ((failed !== null) && (failed >= (margin.min ?? 0)) && (failed <= (margin.max ?? Infinity)));
 
 /**
- * Ce que chaque cible atteinte doit recevoir.
+ * What each target reached must receive.
  * @returns {Array<{token: string, actor: string, multiplier: number, effects: Array<{id: string, activity: string, if?: string}>,
  *   steps: object[]}>}
  */
 export function applicationPlan(resolution) {
   const { plan } = resolution;
   const exclusive = new Set((plan.choice?.options ?? []).map(o => o.id));   // parmi eux, seul l'effet choisi passe
-  // §401 : un choix par cible (`perTarget`) — `resolution.choice` est alors { token: id }.
+  // §401: one choice per target (`perTarget`) — `resolution.choice` is then { token: id }.
   const chosenFor = token => ((resolution.choice && (typeof resolution.choice === "object")) ? resolution.choice[token] : resolution.choice);
   return affectedTargets(resolution).map(t => {
     const saved = t.save?.success === true;
     const failed = failMargin(t, plan);
     let multiplier = plan.damage ? 1 : 0;
     if ( plan.damage && plan.save && !plan.save.chained && saved ) multiplier = ON_SAVE_MULTIPLIER[plan.save.onSave] ?? 0.5;
-    // §28 : Sort mineur appuyé — ratée ou sauvegardée, la cible d'un tour de magie subit la moitié des dégâts, « mais aucun effet
-    // supplémentaire ». Façonneur de sorts : la créature épargnée réussit d'office et ne subit rien.
+    // §28: Potent Cantrip — missed or saved, the target of a cantrip takes half the damage, "but no additional
+    // effect". Sculpt Spells: the spared creature succeeds automatically and takes nothing.
     const missed = plan.attack && (t.hit === false);
     const spared = (missed || (plan.save && saved)) && plan.potent;
     if ( plan.damage && spared ) multiplier = 0.5;
     if ( t.sculpted ) multiplier = 0;
-    // §20 : Esquive totale — une sauvegarde de Dextérité « pour ne subir que la moitié des dégâts » : rien sur une réussite, la
-    // moitié sur un échec.
+    // §20: Evasion — a Dexterity save "to take only half damage": nothing on a success, half
+    // on a failure.
     if ( t.evasion && evasionApplies(plan, t.evasion) ) multiplier = saved ? 0 : 0.5;
     if ( saved && (t.save?.interposed === true) && plan.damage ) multiplier = 0;   // §133 : Interposer le bouclier
-    if ( t.halved ) multiplier *= 0.5;   // Esquive instinctive (§16.11) : la moitié des dégâts de l'attaque, arrondie par dnd5e
-    multiplier *= (t.times ?? 1);         // Projectile magique (§16.27) : autant de fois les dégâts que de projectiles reçus
-    // §504 (B24) : l'empoignade choisie à la place des dégâts — aucun dégât, l'état Agrippé (DD d'évasion déclaré).
+    if ( t.halved ) multiplier *= 0.5;   // Uncanny Dodge (§16.11): half the attack's damage, rounded by dnd5e
+    multiplier *= (t.times ?? 1);         // Magic Missile (§16.27): as many times the damage as projectiles received
+    // §504 (B24): the grapple chosen in place of the damage — no damage, the Grappled condition (escape DC declared).
     const grapples = !!plan.choice?.outcome && (chosenFor(t.token) === OUTCOME_GRAPPLE);
     if ( grapples ) multiplier = 0;
     const grappleStep = grapples ? [{ type: "status", status: "grappled", ...(plan.choice.outcome.escapeDc ? { escapeDc: plan.choice.outcome.escapeDc } : {}) }] : [];
@@ -228,7 +228,7 @@ export function applicationPlan(resolution) {
       effects: spared ? [] : plan.effects
         .filter(e => passes(e.when, saved) && withinMargin(e.margin, failed))
         .filter(e => !exclusive.has(e.id) || (e.id === chosenFor(t.token)))
-        // Une condition sur la cible (M3 : porte de taille) voyage avec l'effet ; l'application la juge.
+        // A condition on the target (M3: size gate) travels with the effect; the application judges it.
         .map(({ id, activity, if: condition }) => (condition ? { id, activity, if: condition } : { id, activity })),
       steps: spared ? [] : [...(plan.steps ?? []).filter(s => passes(s.when, saved) && withinMargin(s.margin, failed)).map(({ when, ...step }) => (("onSave" in step) ? { ...step, saved } : step)), ...grappleStep]
     };
@@ -244,15 +244,15 @@ export function applicationPlan(resolution) {
  * @property {string} token
  * @property {string} actor
  * @property {string} name
- * @property {number|null} [ac]          CA ; null = abri total.
- * @property {boolean} [defenceless]     Paralysée ou inconsciente à 5 ft : un coup qui touche est critique.
- * @property {boolean} [canReact]        A une réaction à proposer si elle est touchée.
- * @property {number} [duplicates]       Répliques qui peuvent prendre le coup à sa place (Image miroir, §16.25) ; 0 si
- *                                       l'attaquant n'y est pas sensible (Aveuglé, vision aveugle, vision véritable).
- * @property {string|null} [autoFail]    État qui fait échouer d'office la sauvegarde du plan.
+ * @property {number|null} [ac]          AC; null = Total Cover.
+ * @property {boolean} [defenceless]     Paralyzed or Unconscious within 5 ft: a hit is a Critical Hit.
+ * @property {boolean} [canReact]        Has a reaction to offer if hit.
+ * @property {number} [duplicates]       Duplicates that can take the hit in its place (Mirror Image, §16.25); 0 if
+ *                                       the attacker is not sensitive to them (Blinded, Blindsight, Truesight).
+ * @property {string|null} [autoFail]    Condition that makes the plan's save fail automatically.
  * @property {{reason: "type"|"content"|"immune", detail?: string}|null} [unaffected]
- *           L'action ne peut pas l'affecter (§16.8 : type de créature, règle du contenu, immunité à tous ses effets) :
- *           elle reste dans la résolution pour qu'on le lise, mais ni sauvegarde, ni dégâts, ni effet.
+ *           The action cannot affect it (§16.8: creature type, content rule, Immunity to all its effects):
+ *           it stays in the resolution so that it can be read, but no save, no damage, no effect.
  */
 
 function blankTarget({ token, actor, name, ac=null, defenceless=false, canReact=false, autoFail=null, autoSucceed=null, cover=null, unaffected=null, duplicates=0, times=1, evasion=false, sculpted=false, noCrit=false }) {
@@ -261,19 +261,19 @@ function blankTarget({ token, actor, name, ac=null, defenceless=false, canReact=
 }
 
 /**
- * Ouvre la résolution d'une action.
+ * Opens the resolution of an action.
  * @param {object} data
  * @param {string} data.id
- * @param {string} data.carrier           Id du message qui porte la résolution.
- * @param {string|null} data.origin       Id du message d'utilisation, s'il existe.
- * @param {string} data.activity          UUID de l'activité.
- * @param {string|null} data.source       UUID de l'acteur qui agit.
- * @param {object} data.plan              Voir l'en-tête.
+ * @param {string} data.carrier           Id of the message that carries the resolution.
+ * @param {string|null} data.origin       Id of the use message, if it exists.
+ * @param {string} data.activity          UUID of the activity.
+ * @param {string|null} data.source       UUID of the actor that acts.
+ * @param {object} data.plan              See the header.
  * @param {TargetInput[]} data.targets
- * @param {object} [data.attack]          Jet d'attaque déjà lancé (porteur = message d'attaque) :
- *                                        `{ roll, messageId, targets }`, comme l'évènement `attackRolled`.
- * @param {string|null} [data.choice]     Effet exclusif déjà choisi par l'auteur (entrée « Lutte » du menu,
- *                                        §15.2) : la question ne sera pas posée. Ignoré s'il n'est pas une option.
+ * @param {object} [data.attack]          Attack roll already made (carrier = attack message):
+ *                                        `{ roll, messageId, targets }`, like the `attackRolled` event.
+ * @param {string|null} [data.choice]     Exclusive effect already chosen by the author ("Grapple" entry of the menu,
+ *                                        §15.2): the question will not be asked. Ignored if it is not an option.
  */
 export function open({ id, carrier, origin=null, activity, source=null, plan, targets, attack=null, choice=null, allocation=null }) {
   const resolution = {
@@ -289,13 +289,13 @@ export function open({ id, carrier, origin=null, activity, source=null, plan, ta
     pending: [],
     log: []
   };
-  // Répartition déjà faite (visée multiple, §16.27) : portée telle quelle, remise d'aplomb si besoin.
+  // Split already made (multiple aiming, §16.27): carried as is, put back in order if needed.
   if ( (resolution.plan.darts > 0) && allocation ) {
     const fixed = allocateDarts(resolution.plan.darts, resolution.targets.map(t => t.token), allocation);
     resolution.targets = resolution.targets.map(t => ({ ...t, times: fixed[t.token] ?? 0 }));
     resolution.allocated = true;
   }
-  // Une seule cible : elle reçoit tous les projectiles, sans question.
+  // A single target: it receives all the projectiles, no question.
   else if ( (resolution.plan.darts > 0) && (resolution.targets.length === 1) ) {
     resolution.targets = [{ ...resolution.targets[0], times: resolution.plan.darts }];
     resolution.allocated = true;
@@ -308,17 +308,17 @@ export function open({ id, carrier, origin=null, activity, source=null, plan, ta
 /*  Transitions                                 */
 /* -------------------------------------------- */
 
-/** Le jet d'attaque est connu : verdict par cible, puis fenêtre de réaction pour ceux qui en ont une. */
+/** The attack roll is known: verdict per target, then a reaction window for those who have one. */
 function judge(resolution, { roll, messageId, targets, critMargin=0, atCost=0 }) {
-  // Les cibles d'une attaque sont celles désignées au moment du jet, pas à l'utilisation.
+  // The targets of an attack are those designated at the moment of the roll, not at use.
   const judged = resolveAttack(roll, targets.map(blankTarget)).map(t => {
     const auto = t.hit && !t.critical && t.defenceless;
     if ( auto ) return plainHit({ ...t, critical: true, reason: "autoCritical" });
-    // §207 : « CA + 10 » (règle maison, réglage `critMargin` lu au jet).
+    // §207: "AC + 10" (house rule, `critMargin` setting read at the roll).
     return plainHit(beatsAcBy(t, roll, critMargin) ? { ...t, critical: true, reason: "beatsAc" } : t);
   });
   const pending = judged.filter(t => t.hit && t.canReact).map(t => ({ kind: "reaction", window: "isHit", token: t.token }));
-  // Issue #32 : `atCost` — l'écart du « succès à un prix » pour ce jet (0 : éteint), jugé après les réactions (afterReactions).
+  // Issue #32: `atCost` — the margin of the "success at a cost" for this roll (0: off), judged after reactions (afterReactions).
   const next = { ...resolution, attack: { roll, messageId, ...(critMargin > 0 ? { critMargin } : {}), ...(atCost > 0 ? { atCost } : {}) }, targets: judged, pending };
   if ( !pending.length ) return afterReactions(next);
   return {
@@ -328,27 +328,27 @@ function judge(resolution, { roll, messageId, targets, critMargin=0, atCost=0 })
 }
 
 /**
- * Une cible consultée a répondu : rejugée contre sa nouvelle CA si elle a réagi. `halve` : sa réaction divise les dégâts
- * de l'attaque par deux (Esquive instinctive, §16.11) — elle reste touchée.
+ * A consulted target has answered: rejudged against its new AC if it reacted. `halve`: its reaction halves the attack's
+ * damage (Uncanny Dodge, §16.11) — it stays hit.
  */
 function reactionResolved(resolution, { token, used=null, ac, halve=false, uncrit=false, duplicates=null, reduce=0, miss=false, roll=null }) {
   if ( resolution.step !== STEPS.AWAITING_REACTION ) return same(resolution);
   if ( !resolution.pending.some(p => (p.kind === "reaction") && (p.token === token)) ) return same(resolution);
   const targets = resolution.targets.map(t => {
     if ( (t.token !== token) || !used ) return t;
-    // §28 : Calque illusoire — l'attaque est changée en échec, sans autre jet.
-    // §489 : Parade d'un monstre — l'attaquant a relancé son jet (`roll`) : ce coup se rejuge avec le nouveau, pour cette cible seule.
+    // §28: Illusory Self — the attack is turned into a miss, with no other roll.
+    // §489: a monster's Parry — the attacker rerolled (`roll`): this hit is rejudged with the new roll, for this target only.
     const attackRoll = roll ?? resolution.attack.roll;
     const [judged] = miss ? [{ ...t, hit: false, critical: false, reason: "reaction" }] : resolveAttack(attackRoll, [{ ...t, ac }]);
-    // Le critique d'office (Paralysée à 5 ft) survit au rejugement, comme au premier verdict (judge).
+    // The automatic critical (Paralyzed within 5 ft) survives the rejudging, as at the first verdict (judge).
     const auto = (judged.hit && !judged.critical && t.defenceless) ? { ...judged, critical: true, reason: "autoCritical" } : judged;
-    // §207 : l'écart à la CA se rejuge contre la nouvelle CA (un Bouclier peut le faire tomber sous 10).
+    // §207: the margin over AC is rejudged against the new AC (a Shield can drop it below 10).
     const again = beatsAcBy(auto, attackRoll, resolution.attack.critMargin) ? { ...auto, critical: true, reason: "beatsAc" } : auto;
-    // §19 : une réaction peut faire naître des répliques pour ce coup (Ombres spectrales) — leur nombre est relu après elle.
+    // §19: a reaction can create duplicates for this hit ("Spectral Shades") — their number is reread after it.
     const count = Number.isInteger(duplicates) ? { duplicates } : {};
-    // §19.9 : un Coup critique perd ses effets de critique (Sentinelle au seuil de la mort).
+    // §19.9: a Critical Hit loses its critical effects (Sentinel at Death's Door).
     const plain = (uncrit && again.critical) ? { critical: false, uncritted: true } : {};
-    // §24 : Parade — un montant retiré aux dégâts de l'attaque.
+    // §24: Parry — an amount subtracted from the attack's damage.
     const reduced = ((reduce > 0) && (again.hit === true)) ? { reduced: reduce } : {};
     const rerolled = roll ? { rerolled: roll } : {};
     return plainHit({ ...again, ...count, ...plain, ...reduced, ...rerolled, reaction: used, halved: !!halve && again.hit === true });
@@ -357,22 +357,22 @@ function reactionResolved(resolution, { token, used=null, ac, halve=false, uncri
   return next.pending.length ? same(next) : afterReactions(next);
 }
 
-/** O9a (§354) : une cible qui ne subit pas de coup critique (Armure en adamantium) — le critique devient un coup normal. */
+/** O9a (§354): a target that takes no Critical Hit (Adamantine Armor) — the critical becomes a normal hit. */
 function plainHit(t) {
   return (t.noCrit && t.critical) ? { ...t, critical: false, uncritted: true } : t;
 }
 
-/** Répliques (Image miroir, §16.25) : un d6 par réplique restante ; un 3 ou plus, et c'est une réplique qui est touchée. */
+/** Duplicates (Mirror Image, §16.25): one d6 per remaining duplicate; a 3 or more, and a duplicate is the one hit. */
 export function duplicateTakesHit(dice) {
   return dice.some(d => d >= 3);
 }
 
 /**
- * Les réactions sont tranchées (Bouclier d'abord : un coup qu'il fait rater n'atteint pas les répliques). Une cible encore
- * touchée qui a des répliques les fait jouer — le runtime lance les dés et détruit la réplique touchée.
+ * The reactions are settled (Shield first: a hit it makes miss does not reach the duplicates). A target still hit
+ * that has duplicates has them play — the runtime rolls the dice and destroys the duplicate that was hit.
  */
 function afterReactions(resolution) {
-  // Issue #32 : succès à un prix — sur la CA finale (Bouclier compris), les cibles ratées de 1 ou 2 ; la question au MJ, une seule fois.
+  // Issue #32: success at a cost — on the final AC (Shield included), the targets missed by 1 or 2; the question to the GM, once.
   const near = (resolution.atCost === undefined) ? nearMissTargets(resolution.attack?.roll, resolution.targets, resolution.attack?.atCost ?? 0) : [];
   if ( near.length ) {
     return {
@@ -389,8 +389,8 @@ function afterReactions(resolution) {
 }
 
 /**
- * Issue #32 : le MJ a offert le succès à un prix et le joueur a répondu. Accepté : les cibles proposées sont touchées (jamais d'un coup
- * critique), le prix noté ; sinon l'échec reste. Puis la suite ordinaire (répliques, sauvegardes, dégâts) — une seule fois.
+ * Issue #32: the GM offered the success at a cost and the player answered. Accepted: the proposed targets are hit (never by a
+ * Critical Hit), the cost noted; otherwise the miss stands. Then the ordinary sequel (duplicates, saves, damage) — only once.
  */
 function atCostDecided(resolution, { accepted=false, cost=null }) {
   if ( (resolution.step !== STEPS.AWAITING_REACTION) || !resolution.pending.some(p => p.kind === "atCost") ) return same(resolution);
@@ -402,7 +402,7 @@ function atCostDecided(resolution, { accepted=false, cost=null }) {
   return next.pending.length ? same(next) : afterReactions(next);
 }
 
-/** Les dés des répliques d'une cible sont lancés : un coup détourné devient un raté, sans dégâts ni effet. */
+/** The dice of a target's duplicates are rolled: a deflected hit becomes a miss, with no damage or effect. */
 function duplicatesRolled(resolution, { token, dice=[], messageId=null }) {
   if ( resolution.step !== STEPS.AWAITING_REACTION ) return same(resolution);
   if ( !resolution.pending.some(p => (p.kind === "duplicates") && (p.token === token)) ) return same(resolution);
@@ -415,22 +415,22 @@ function duplicatesRolled(resolution, { token, dice=[], messageId=null }) {
   return next.pending.length ? same(next) : afterVerdict(next);
 }
 
-/** Le verdict est rendu (ou il n'y avait pas de jet d'attaque) : sauvegardes, dégâts, application. */
+/** The verdict is in (or there was no attack roll): saves, damage, application. */
 function afterVerdict(resolution) {
   const commands = [];
   if ( resolution.plan.attack ) commands.push({ type: "echo", on: "attack" });
   if ( !affectedTargets(resolution).length ) {
     return { resolution: { ...resolution, step: resolution.plan.attack ? STEPS.MISSED : STEPS.DONE }, commands };
   }
-  // Échecs d'office (paralysé, étourdi… sur Force ou Dextérité) : consignés d'emblée, aucun jet demandé.
+  // Automatic failures (paralyzed, stunned… on Strength or Dexterity): recorded at once, no roll requested.
   let next = { ...resolution, step: STEPS.AWAITING_ROLLS };
   if ( next.plan.save ) {
     const affected = new Set(affectedTargets(next).map(t => t.token));
-    // §28 (avant les échecs d'office) : Façonneur de sorts — les créatures épargnées « réussissent automatiquement leur jet de sauvegarde ».
+    // §28 (before the automatic failures): Sculpt Spells — the spared creatures "automatically succeed on their saving throw".
     next = { ...next, targets: next.targets.map(t => (affected.has(t.token) && t.sculpted && (t.save === null))
       ? { ...t, save: { total: null, success: true, messageId: null, auto: "sculpted" } } : t) };
-    // §402 : une réussite d'office par type de créature (`saveAutoSuccess` : Pétrification — « une Créature artificielle réussit
-    // automatiquement ») ; l'effet sur réussite reste posé, les dégâts suivent la règle de la sauvegarde.
+    // §402: an automatic success by creature type (`saveAutoSuccess`: Flesh to Stone — "a Construct automatically succeeds");
+    // the effect on a success stays applied, the damage follows the save's rule.
     next = { ...next, targets: next.targets.map(t => (affected.has(t.token) && t.autoSucceed && (t.save === null))
       ? { ...t, save: { total: null, success: true, messageId: null, auto: t.autoSucceed } } : t) };
     next = { ...next, targets: next.targets.map(t => (affected.has(t.token) && t.autoFail && (t.save === null))
@@ -438,20 +438,20 @@ function afterVerdict(resolution) {
     const waiting = pendingSaves(next);
     if ( waiting.length ) commands.push({ type: "requestSaves", targets: waiting.map(({ token, actor, name }) => ({ token, actor, name })) });
   }
-  // Projectiles à répartir (Projectile magique) : la question est posée à l'auteur, comme un choix d'effet.
+  // Projectiles to split (Magic Missile): the question is put to the author, like an effect choice.
   if ( pendingAllocation(next) ) {
     next = { ...next, pending: [...next.pending, { kind: "allocate" }] };
     commands.push({ type: "askAllocation", count: next.plan.darts, targets: affectedTargets(next).map(({ token, name }) => ({ token, name })) });
   }
-  // Effets exclusifs : la question est posée à l'auteur, l'état « en attente » est écrit avant (repris après un F5).
+  // Exclusive effects: the question is put to the author, the "pending" state is written beforehand (resumed after an F5).
   next = askChoiceWhenDue(next, commands);
   return settle(next, commands);
 }
 
 /**
- * La question du choix d'effet, quand son heure est venue. §401 : un choix par cible (`perTarget`) attend la fin des sauvegardes — la
- * question ne nomme que les cibles qui ont raté (celles qui réussissent ne reçoivent rien), et ne s'ouvre pas en même temps que les
- * fenêtres de sauvegarde ; si aucune n'a raté, il n'y a rien à demander.
+ * The effect-choice question, when its time has come. §401: a choice per target (`perTarget`) waits for the end of the saves —
+ * the question names only the targets that failed (those that succeed receive nothing), and does not open at the same time as the
+ * save windows; if none failed, there is nothing to ask.
  */
 function askChoiceWhenDue(next, commands) {
   if ( !pendingChoice(next) || next.pending.some(p => p.kind === "choice") ) return next;
@@ -467,7 +467,7 @@ function askChoiceWhenDue(next, commands) {
   return { ...next, pending: [...next.pending, { kind: "choice" }] };
 }
 
-/** L'auteur a réparti ses projectiles : la répartition est remise d'aplomb (somme exacte), puis portée par chaque cible. */
+/** The author has split their projectiles: the split is put back in order (exact sum), then carried by each target. */
 function allocated(resolution, { counts={} }) {
   if ( !pendingAllocation(resolution) ) return same(resolution);
   const tokens = affectedTargets(resolution).map(t => t.token);
@@ -476,11 +476,11 @@ function allocated(resolution, { counts={} }) {
   return settle({ ...resolution, targets, allocated: true, pending: resolution.pending.filter(p => p.kind !== "allocate") });
 }
 
-/** L'auteur a choisi l'effet : un id hors des options, ou une réponse qu'on n'attend pas, ne change rien. */
+/** The author has chosen the effect: an id outside the options, or an answer that is not expected, changes nothing. */
 function choiceMade(resolution, { id, choices=null }) {
   if ( !pendingChoice(resolution) ) return same(resolution);
   const known = x => resolution.plan.choice.options.some(o => o.id === x);
-  // §401 : un choix par cible — une cible sans réponse reçoit la première option.
+  // §401: one choice per target — a target with no answer receives the first option.
   if ( resolution.plan.choice.perTarget && choices && (typeof choices === "object") ) {
     const first = resolution.plan.choice.options[0]?.id ?? null;
     const map = Object.fromEntries(affectedTargets(resolution).map(t => [t.token, known(choices[t.token]) ? choices[t.token] : first]));
@@ -490,7 +490,7 @@ function choiceMade(resolution, { id, choices=null }) {
   return settle({ ...resolution, choice: id, pending: resolution.pending.filter(p => p.kind !== "choice") });
 }
 
-/** Tout est-il réuni ? Alors on applique — une seule fois. */
+/** Is everything in? Then apply — only once. */
 function settle(resolution, commands=[]) {
   if ( !readyToApply(resolution) ) return { resolution, commands };
   return {
@@ -499,20 +499,20 @@ function settle(resolution, commands=[]) {
   };
 }
 
-/** Le premier jet fait foi : un second jet du même acteur est ignoré, au MJ d'annuler et de corriger. */
+/** The first roll stands: a second roll by the same actor is ignored, it is up to the GM to cancel and correct. */
 function saveRolled(resolution, { actor, total, messageId, mode=null, resisted=false, interposed=false, atCost=null }) {
   if ( (resolution.step !== STEPS.AWAITING_ROLLS) || !resolution.plan.save ) return same(resolution);
   const waiting = pendingSaves(resolution).find(t => t.actor === actor);
   if ( !waiting ) return same(resolution);
-  // §18.9 : une Résistance légendaire change l'échec en réussite (le total reste celui du jet).
-  // §133 : `interposed` — Interposer le bouclier, réaction prise sur une réussite : aucun dégât.
-  // §231 : `mode` — le d20 lancé avec Avantage ou Désavantage, pour le retour visuel.
-  // Issue #32 : `atCost` — le succès à un prix accepté (`{ cost }`) change l'échec en réussite, le total restant celui du jet.
+  // §18.9: a Legendary Resistance turns the failure into a success (the total stays that of the roll).
+  // §133: `interposed` — Interpose Shield, reaction taken on a success: no damage.
+  // §231: `mode` — the d20 rolled with Advantage or Disadvantage, for the visual feedback.
+  // Issue #32: `atCost` — the success at an accepted cost (`{ cost }`) turns the failure into a success, total unchanged.
   const save = { total, success: resisted || !!atCost || (total >= resolution.plan.save.dc), messageId, ...(mode ? { mode } : {}), ...(resisted ? { resisted: true } : {}),
     ...(interposed ? { interposed: true } : {}), ...(atCost ? { atCost: { cost: atCost.cost ?? null } } : {}) };
-  // §487 : une réussite ouvre la fenêtre « réussit une sauvegarde contre » (Représailles du mage), sans attente.
+  // §487: a success opens the "succeeds on a save against" window ("Mage's Retaliation"), with no wait.
   const commands = save.success ? [{ type: "window", window: "savesAgainst", tokens: [waiting.token] }] : [];
-  // §401 : la dernière sauvegarde arrivée, le choix par cible peut être demandé.
+  // §401: once the last save has arrived, the per-target choice can be requested.
   const next = askChoiceWhenDue({ ...resolution, targets: resolution.targets.map(t => t === waiting ? { ...t, save } : t) }, commands);
   return settle(next, commands);
 }
@@ -527,10 +527,10 @@ function damageRolled(resolution, { messageId, damages, critical=null }) {
 }
 
 /**
- * Ce qui a été appliqué. `before` / `after` : PV lus par l'adaptateur (null si aucun dégât) ;
- * `effects` : UUID des effets créés. C'est ce journal qui permet l'annulation.
- * `extra` : dégâts subis hors des cibles, du fait de l'action (riposte, §16.9 : l'attaquant touche une créature sous
- * Bouclier de feu) — `{ token, actor, before, after, name }`, journalisés pour être annulés avec elle.
+ * What was applied. `before` / `after`: HP read by the adapter (null if no damage);
+ * `effects`: UUIDs of the effects created. This log is what makes cancelling possible.
+ * `extra`: damage taken outside the targets, because of the action (retort, §16.9: the attacker hits a creature under
+ * Fire Shield) — `{ token, actor, before, after, name }`, logged to be cancelled along with it.
  */
 function applied(resolution, { entries, extra=[] }) {
   if ( !resolution.applying || (resolution.step !== STEPS.AWAITING_ROLLS) ) return same(resolution);
@@ -559,7 +559,7 @@ function applied(resolution, { entries, extra=[] }) {
 }
 
 /**
- * Ce qu'il faut défaire pour annuler, du plus récent au plus ancien.
+ * What must be undone to cancel, from the most recent to the oldest.
  * @returns {{hp: Array<{actor: string, restore: object}>, effects: string[]}}
  */
 export function undoPlan(resolution) {
@@ -584,10 +584,10 @@ const TRANSITIONS = Object.freeze({
 /**
  * @param {object} resolution
  * @param {{type: string}} event
- * @returns {{resolution: object, commands: object[]}}  `resolution` est le MÊME objet si l'évènement ne change rien.
+ * @returns {{resolution: object, commands: object[]}}  `resolution` is the SAME object if the event changes nothing.
  */
 export function advance(resolution, event) {
-  // Seules les clés propres de la table sont des transitions : `constructor`, `toString`… s'y lisent par héritage.
+  // Only the table's own keys are transitions: `constructor`, `toString`… would be read there by inheritance.
   if ( !Object.hasOwn(TRANSITIONS, event?.type) ) return same(resolution);
   return TRANSITIONS[event.type](resolution, event);
 }

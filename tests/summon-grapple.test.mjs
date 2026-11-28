@@ -4,7 +4,7 @@ import { actionSound } from "../module/scripts/core/action-feedback.mjs";
 
 const pull = extra => ({ triggers: [{ on: "hit", do: [{ type: "move", mode: "pull", distance: 30, units: "ft", ...extra }] }] });
 
-describe("§502 (B22) : traction vers l'invocation, une seule créature agrippée", () => {
+describe("§502 (B22): pull toward the summon, a single grappled creature", () => {
   it("move { mode: \"pull\", toward: \"summon\" }", () => {
     expect(validateEntry(pull({ toward: "summon" }))).toEqual([]);
     expect(validateEntry(pull({ toward: "area" }))).toEqual([]);
@@ -21,7 +21,7 @@ describe("§502 (B22) : traction vers l'invocation, une seule créature agrippé
     expect(validateEntry({ grapples: { one: true, max: 2 } })).toEqual([expect.stringContaining("unknown key")]);
     expect(mergeEntries([{ grapples: { one: true } }, { grapples: { by: "summon" } }]).grapples).toEqual({ one: true, by: "summon" });
   });
-  it("la créature relâchée s'entend", () => {
+  it("the released creature is heard", () => {
     expect(actionSound("grappleReleased", "success")).toBeTruthy();
   });
 });

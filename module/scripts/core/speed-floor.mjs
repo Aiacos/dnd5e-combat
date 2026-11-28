@@ -1,13 +1,13 @@
 /**
- * §403 : Liberté de mouvement — « la Vitesse de la cible ne peut pas être réduite par la magie ». Les changements d'un effet qui
- * réduiraient une Vitesse : ajout négatif, multiplication par moins de 1, valeur imposée (« override », « downgrade » : Danse
- * irrésistible, Lenteur…) sur `system.attributes.movement.*`. Pur.
+ * §403: Freedom of Movement — "the target's Speed cannot be reduced by magic". The changes of an effect that
+ * would reduce a Speed: negative add, multiplication by less than 1, forced value ("override", "downgrade": Irresistible Dance,
+ * Slow…) on `system.attributes.movement.*`. Pure.
  */
 
-// §438 : dnd5e 6.1 (Manuel des joueurs 3.0.0) ajoute `movement.multiplier` (Lenteur : ×0,5) et `movement.bonus`, et le type « subtract ».
+// §438: dnd5e 6.1 (Player's Handbook 3.0.0) adds `movement.multiplier` (Slow: ×0.5) and `movement.bonus`, and the "subtract" type.
 const MOVEMENT = /^system\.attributes\.movement\.(walk|fly|swim|climb|burrow|speed|all|bonus|multiplier)$/;
 
-/** Ce changement réduit-il une Vitesse ? */
+/** Does this change reduce a Speed? */
 export function reducesSpeed(change) {
   if ( !MOVEMENT.test(change?.key ?? "") ) return false;
   const value = Number(change.value);
@@ -20,7 +20,7 @@ export function reducesSpeed(change) {
   }
 }
 
-/** Les changements sans ceux qui réduisent une Vitesse. */
+/** The changes without those that reduce a Speed. */
 export function withoutSpeedReductions(changes) {
   return (changes ?? []).filter(c => !reducesSpeed(c));
 }

@@ -1,14 +1,14 @@
 /**
- * §381 (issue #35) : le sablier au-dessus du token de la créature qu'on attend — une réaction, un choix, un jet ouvert chez un joueur ou
- * chez le MJ —, vu par toute la table sauf celui qui répond. Il se retourne tant que la fenêtre est ouverte, sans nom ni délai.
- * Il dit seulement que la table attend ce token, jamais ce que la fenêtre demande. (Essais du
- * 2026-11-06 : un anneau rose du délai, puis trois points qui ondulent ; l'utilisateur a gardé le sablier simple.)
+ * §381 (issue #35): the hourglass above the token of the creature being waited for — a Reaction, a choice, a roll open for a
+ * player or for the GM —, seen by the whole table except whoever answers. It flips while the window is open, no name or delay.
+ * It only says that the table is waiting for this token, never what the window asks. (Tests of
+ * 2026-11-06: a pink delay ring, then three waving dots; the user kept the plain hourglass.)
  *
- * Une fenêtre du MJ pour une créature sans joueur : selon `awaitingGm`, un bandeau « Le MJ décide… » sans désigner de créature (défaut),
- * le sablier sur le token, ou rien — le MJ voit toujours le sablier.
+ * A GM window for a creature with no player: according to `awaitingGm`, a "The GM decides…" banner that does not
+ * designate any creature (default), the hourglass on the token, or nothing — the GM always sees the hourglass.
  *
- * Chaque client dessine lui-même, dans `canvas.interface`, à la position affichée du token, et seulement s'il voit le token
- * (`Token#isVisible`). Rien n'est écrit dans un document. État : adapter/awaiting.mjs ; règles d'affichage : core/awaiting.mjs.
+ * Each client draws by itself, in `canvas.interface`, at the token's displayed position, and only if it sees the token
+ * (`Token#isVisible`). Nothing is written to a document. State: adapter/awaiting.mjs; display rules: core/awaiting.mjs.
  */
 
 import { awaitingAlive, awaitingPlacement } from "../core/awaiting.mjs";
@@ -20,12 +20,12 @@ import { loc } from "../runtime/shared.mjs";
 /** Le sablier de Font Awesome 6 (`hourglass-half`). */
 const HOURGLASS = "";
 const BANNER_ID = "das-awaiting-banner";
-/** Taille, en fraction d'une case ; durée d'un cycle (le sablier se retourne, puis s'écoule). */
+/** Size, as a fraction of a cell; duration of a cycle (the hourglass flips, then runs out). */
 const SIZE = 0.3;
 const CYCLE_MS = 2400;
 const FLIP_MS = 450;
 
-/** Les sabliers dessinés sur ce client : id de l'attente → vue. */
+/** The hourglasses drawn on this client: wait id → view. */
 const views = new Map();
 let layer = null;
 let ticking = false;
@@ -35,15 +35,15 @@ function layerOf() {
   if ( !layer || layer.destroyed || (layer.parent !== canvas.interface) ) {
     layer = canvas.interface.addChild(new PIXI.Container());
     layer.eventMode = "none";
-    // `canvas.interface` trie ses enfants : le calque des tokens y est à 200 (vu en jeu, V14) — au-dessus des contrôles, pour que le
-    // sablier et le nom ne passent pas sous l'image d'un token.
+    // `canvas.interface` sorts its children: the tokens layer is at 200 there (seen in play, V14) — above the controls, so the
+    // hourglass and the name do not pass under a token's image.
     layer.zIndex = 1050;
   }
   return layer;
 }
 
-/** Le dessin d'un sablier : disque sombre au filet blanc, sablier — rien d'autre, ni nom ni anneau de délai (l'utilisateur, 2026-11-06 :
- * il dit seulement que la table attend ce token). */
+/** The drawing of an hourglass: dark disc with a white rim, hourglass — nothing else, no name or delay ring (the user, 2026-11-06:
+ * it only says that the table is waiting for this token). */
 function build() {
   const size = canvas.grid.size;
   const r = Math.max(10, SIZE * size / 2);
@@ -59,7 +59,7 @@ function build() {
   return { root, glass, r, born: Date.now() };
 }
 
-/** Le retournement : un demi-tour au début de chaque cycle, puis le sablier s'écoule à l'arrêt. */
+/** The flip: a half turn at the start of each cycle, then the hourglass runs out standing still. */
 function flipAngle(view, now) {
   const t = (now - view.born) % CYCLE_MS;
   const turns = Math.floor((now - view.born) / CYCLE_MS);
@@ -89,7 +89,7 @@ function tick() {
     if ( !view ) views.set(entry.id, view = build());
     if ( view.root.parent !== layerOf() ) layerOf().addChild(view.root);
     view.root.visible = token.isVisible === true;
-    // Coin haut droit du token : la place des minuteries (au-dessus) et des textes qui défilent (au centre) reste libre.
+    // Top right corner of the token: the place of timers (above) and of scrolling texts (center) stays free.
     view.root.position.set(token.x + token.w - (view.r * 0.6), token.y + (view.r * 0.6));
     view.glass.rotation = flipAngle(view, now);
   }
@@ -98,7 +98,7 @@ function tick() {
   if ( !views.size && !entries.length ) stopTicking();
 }
 
-/** Le bandeau discret « Le MJ décide… » : une fenêtre du MJ pour une créature qu'on ne désigne pas. */
+/** The discreet "The GM decides…" banner: a GM window for a creature that is not designated. */
 function updateBanner(now, viewer) {
   const wanted = entries.some(e => awaitingAlive(e, now) && (awaitingPlacement(e, viewer) === "banner"));
   let banner = document.getElementById(BANNER_ID);
@@ -126,7 +126,7 @@ function stopTicking() {
 
 function onAwaiting(list) {
   entries = Array.isArray(list) ? list : [];
-  // Le bandeau est du HTML : posé ici aussi, sans attendre le ticker du canevas (arrêté dans un onglet en arrière-plan, vu en jeu).
+  // The banner is HTML: placed here too, without waiting for the canvas ticker (stopped in a background tab, seen in play).
   updateBanner(Date.now(), awaitingViewer());
   if ( entries.length ) startTicking();
   else { for ( const id of [...views.keys()] ) drop(id); document.getElementById(BANNER_ID)?.remove(); }
@@ -142,14 +142,14 @@ export function registerAwaitingUI() {
   route(AWAITING_HOOK, onAwaiting, { always: true, label: "awaiting: hourglass not drawn" });
   route("canvasReady", () => onAwaiting(awaitingList()), { always: true, label: "awaiting: hourglass not redrawn with the canvas" });
   route("canvasTearDown", clear, { always: true, label: "awaiting: hourglass not cleared with the canvas" });
-  // Un réglage d'affichage change (monde ou client) : redessiner (mode du MJ, masqué chez soi).
+  // A display setting changes (world or client): redraw (GM mode, hidden for oneself).
   route(AWAITING_SETTINGS_HOOK, () => {
     clear();
     onAwaiting(awaitingList());
   }, { always: true, label: "awaiting: hourglass not refreshed after a setting change" });
 }
 
-/** `api.ui.awaiting()` : les attentes en cours connues de ce client (forme publique), et ce que ce client en montre. */
+/** `api.ui.awaiting()`: the waits in progress known to this client (public form), and what this client shows of them. */
 export function awaitingState() {
   const viewer = awaitingViewer();
   return awaitingList().map(e => ({ ...e, shown: awaitingPlacement(e, viewer) }));

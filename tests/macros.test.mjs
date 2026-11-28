@@ -6,13 +6,13 @@ import { macroDocuments, stableId } from "../tools/packs.mjs";
 
 const DIR = path.resolve(import.meta.dirname, "..", "tools", "macros");
 
-describe("compendium « Outils du MJ » (§56)", () => {
-  it("chaque macro de tools/macros/ y figure, une seule fois", () => {
+describe("compendium \"GM Tools\" (§56)", () => {
+  it("each macro in tools/macros/ appears there, only once", () => {
     const files = fs.readdirSync(DIR).filter(f => f.endsWith(".js")).sort();
     expect(MACROS.map(m => m.file).sort()).toEqual(files);
   });
 
-  it("chaque macro se compile (corps de fonction asynchrone, comme une macro de script)", () => {
+  it("each macro compiles (async function body, like a script macro)", () => {
     const AsyncFunction = (async () => {}).constructor;
     for ( const doc of macroDocuments() ) expect(() => new AsyncFunction(doc.command), doc.name).not.toThrow();
   });
@@ -24,7 +24,7 @@ describe("compendium « Outils du MJ » (§56)", () => {
     expect(stableId("x")).toBe(stableId("x"));
   });
 
-  it("le module déclare le compendium", () => {
+  it("the module declares the compendium", () => {
     const manifest = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, "..", "module", "module.json"), "utf8"));
     expect(manifest.packs?.find(p => p.name === "outils")).toMatchObject({ type: "Macro", path: "packs/outils" });
   });

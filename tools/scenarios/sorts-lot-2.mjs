@@ -1,12 +1,13 @@
 /**
- * §284 : chantiers du 2026-10-30, lot 2 (effets vides dans la donnée), monde `dnd-6`, Arène de test. Le Clerc reçoit les sorts du
- * Manuel des joueurs (à volonté, rien de consommé). Vérifie :
- *  - Danse irrésistible d'Otto : sauvegarde ratée → Vitesses à 0, Désavantage aux attaques du Zombi, Avantage contre lui, Dex en
- *    Désavantage dans les changements ; sauvegarde réussie → danse courte, Vitesses à 0, aucune raison d'attaque ;
- *  - Épine mentale : sauvegarde ratée → le Zombi Invisible ou caché reste vu du Clerc, et l'Invisible ne gêne plus l'attaque du Clerc ;
- *  - Aliénation : sous son effet, un sort du Clerc a un souci de légalité, son arme non ;
- *  - Prémonition : Avantage aux attaques du porteur, Désavantage aux attaques contre lui.
- * Saut n'a rien à vérifier ici : `saut` le joue déjà (§208). Remet PV, effets, états.
+ * §284: work items of 2026-10-30, batch 2 (empty effects in the data), world `dnd-6`, Test Arena. The Cleric receives the
+ * spells of the Player's Handbook (at will, nothing consumed). Checks:
+ *  - Otto's Irresistible Dance: failed saving throw → Speeds to 0, Disadvantage on the Zombie's attacks, Advantage against
+ *    him, Dex at Disadvantage in the changes; successful saving throw → short dance, Speeds to 0, no attack reason;
+ *  - Mind Spike: failed saving throw → the Invisible or Hidden Zombie stays seen by the Cleric, and Invisible no longer
+ *    hampers the Cleric's attack;
+ *  - "Alienation": under its effect, a Cleric spell has a legality issue, his weapon does not;
+ *  - Foresight: Advantage on the bearer's attacks, Disadvantage on attacks against him.
+ * Jump has nothing to check here: `saut` already plays it (§208). Puts back HP, effects, conditions.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -58,7 +59,7 @@ export default {
       return r?.targets?.find(x => x.name === "Zombi") ?? null;
     };
     const reasons = (attacker, target, itemId) => ctx.engine("attackReasons", { attackerId: attacker.id, targetId: target.id, itemId });
-    /** Pose sur le Clerc l'effet d'un de ses propres sorts (origine = son item), comme un lanceur sur lui-même. */
+    /** Places on the Cleric the effect of one of his own spells (origin = his item), like a caster on himself. */
     const selfEffect = async (key, name) => {
       const r = await ctx.call("upsert-embedded-effect", { ...clericTarget, effectData: {
         name, img: "icons/svg/aura.svg", origin: `Actor.${ctok.actorId}.Item.${ids[key]}`, transfer: false } });
@@ -75,7 +76,7 @@ export default {
         const effects = await ctx.effects(zombi);
         const from = id => effects.find(e => !e.disabled && String(e._stats?.compendiumSource ?? e._stats?.duplicateSource ?? "").endsWith(`.ActiveEffect.${id}`));
         const speed = (await ctx.engine("stats", { tokenId: zombi.id }))?.speed ?? {};
-        const still = ["walk", "fly", "swim", "climb", "burrow"].every(m => speed[m] === 0);   // `jump`, `speed`, `max` : dérivés par dnd5e
+        const still = ["walk", "fly", "swim", "climb", "burrow"].every(m => speed[m] === 0);   // `jump`, `speed`, `max`: derived by dnd5e
         const r = { zombi: await reasons(zombi, cleric, slam), cleric: await reasons(cleric, zombi, ids.bolt) };
         const more = (side, kind) => r[side][kind].length - base[side][kind].length;
         if ( t.save.success ) {
@@ -105,7 +106,7 @@ export default {
       if ( !ctx.expect(t?.save?.success === false, "sauvegarde ratée obtenue") ) return;
       const unseen = r => r.disadvantage.some(k => /unseen|invisible/i.test(k));
       const sees = async () => (await ctx.engine("sees", { observerId: cleric.id, targetId: zombi.id }))?.sees === true;
-      /** Invisible puis caché (Furtivité du moteur, DD 30) : ce que voit le Clerc dans chaque cas. */
+      /** Invisible then Hidden (the engine's Stealth, DC 30): what the Cleric sees in each case. */
       const look = async () => {
         await ctx.call("set-status", { tokenId: zombi.id, statusId: "invisible", active: true });
         await pause(800);
@@ -122,7 +123,7 @@ export default {
       ctx.expect(!unseen(spiked.reasons), `Zombi Invisible : pas de Désavantage pour le Clerc (${JSON.stringify(spiked.reasons.disadvantage)})`);
       ctx.expect(spiked.invisibleSeen, "Zombi Invisible : toujours vu du Clerc");
       ctx.expect(spiked.hiddenSeen, "Zombi caché : toujours vu du Clerc");
-      // Sans l'Épine, l'Invisible et la Furtivité jouent de nouveau : la preuve que c'est bien elle.
+      // Without Mind Spike, Invisible and Stealth apply again: the proof that it is really the spell.
       for ( const e of await ctx.effects(zombi) ) {
         if ( !before.zombi.has(e._id ?? e.id) && /Spike|Épine/i.test(e.name ?? "") ) await ctx.call("remove-embedded-effect", { ...zombiTarget, effectId: e._id ?? e.id });
       }

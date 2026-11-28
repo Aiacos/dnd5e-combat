@@ -1,8 +1,8 @@
 /**
- * #33 : le texte de l'aperçu de l'abri (adapter/cover-preview.mjs), pur — la traduction est passée en argument.
- * Une ligne principale (« Dégagé », « Abri partiel +2 CA », « Abri total — bloqué », « Abri partiel ignoré (Tireur d'élite) »)
- * et une ligne de source (« par : obstacle, créature »), sans détail que le joueur ne connaîtrait pas : des catégories, et le
- * nom d'un sort de zone visible sur la scène.
+ * #33: the text of the cover preview (adapter/cover-preview.mjs), pure — the translation is passed as an argument.
+ * A main line ("Clear", "Half cover +2 AC", "Total cover — blocked", "Half cover ignored (Sharpshooter)")
+ * and a source line ("by: obstacle, creature"), with no detail the player would not know: categories, and the
+ * name of a zone spell visible on the scene.
  */
 
 /** L'ordre d'affichage des sources. */
@@ -10,7 +10,7 @@ const ORDER = ["manual", "wall", "surface", "creature", "grapple", "zone"];
 
 /**
  * @param {import("../adapter/cover-preview.mjs").CoverPreview} preview
- * @param {(key: string, data?: object) => string} t   Traduction d'une clé `Apercu.*` (sans l'espace de noms).
+ * @param {(key: string, data?: object) => string} t   Translation of an `Apercu.*` key (without the namespace).
  * @returns {{css: string, main: string, sub: string|null}|null}
  */
 export function coverPreviewText(preview, t) {

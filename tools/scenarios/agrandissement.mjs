@@ -1,10 +1,10 @@
 /**
- * Changer de taille (SPEC §16.58) : Agrandissement/rapetissement du Clerc (ajouté à volonté), sauvegarde de Constitution
- * rejouée jusqu'à l'échec.
- *  1. Agrandi, le Guerrier passe de Moyen à Grand ; dnd5e (réglage « Autosize ») écrit la taille sur le token : 1×1 → 2×2.
- *     L'effet retiré, il redevient Moyen et le token reprend 1×1.
- *  2. Rapetissé, le Zombi passe de Moyen à Petit (le token reste sur une case : dnd5e donne une case à une créature Petite).
- * Remet effets, PV et tailles.
+ * Changing size (SPEC §16.58): the Cleric's Enlarge/Reduce (added at will), Constitution saving throw
+ * replayed until failure.
+ *  1. Enlarged, the Fighter goes from Medium to Large; dnd5e ("Autosize" setting) writes the size on the token: 1×1 → 2×2.
+ *     With the effect removed, he is Medium again and the token returns to 1×1.
+ *  2. Reduced, the Zombie goes from Medium to Small (the token stays on one cell: dnd5e gives a Small creature one cell).
+ * Restores effects, HP and sizes.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -34,7 +34,7 @@ export default {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: t.id });
       return `${data.width}×${data.height}`;
     };
-    /** Lancé jusqu'à une sauvegarde ratée ; rend true si l'effet choisi est posé. */
+    /** Cast until a failed save; returns true if the chosen effect is applied. */
     const shrinkOrGrow = async (target, choice, name) => {
       for ( let n = 1; n <= 20; n++ ) {
         const used = await ctx.use({ tokenId: cleric.id, identifier: "enlarge-reduce", activityType: "save", consume: false,

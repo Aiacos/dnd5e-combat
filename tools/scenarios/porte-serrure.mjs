@@ -1,16 +1,16 @@
 /**
- * Serrures des portes (SPEC §244, issue #22) : une porte verrouillée posée pour le scénario dans l'Arène de test, à quatre cases du
- * Guerrier, avec un DD de crochetage 15, un DD de forçage 20 et une clé « Clé d'essai DAS ».
- *  1. Sans la clé, le menu propose Crocheter et Forcer ; réglage « un essai » : un crochetage raté (10) est noté, l'entrée le dit, un
- *     second essai est refusé ; les essais remis à zéro, un crochetage à 18 déverrouille (fermée), hook `doorUnlocked` « pick ».
- *  2. Reverrouillée : forcer à 25 l'ouvre, hooks `noise` et `doorUnlocked` « force ».
- *  3. Reverrouillée, porte « ne peut pas être forcée » : Forcer disparaît du menu.
- *  4. Le Guerrier reçoit la clé : « Déverrouiller (clé) » au menu, et elle ouvre sans jet.
- *  5. En combat, un vrai crochetage (dés du MJ) coûte l'action.
- *  6. Sans DD, le MJ tranche : la porte reste verrouillée, rien n'est noté.
- *  Chaque essai jugé publie `lockAttempt` (§247 : façon, issue, total). 7. Le menu de la porte (`api.ui.doorMenu`) entend un voisin
- *  par `doorMenu` : son entrée vient après celles de la serrure et avant celles du MJ ; le menu d'une case (`api.ui.groundMenu`) met
- *  celle d'un voisin (`groundMenu`, §243) en tête.
+ * Door locks (SPEC §244, issue #22): a locked door placed for the scenario in the test Arena, four cells from the
+ * Fighter, with a picking DC 15, a forcing DC 20 and a key "DAS test key".
+ *  1. Without the key, the menu offers Pick and Force; "one attempt" setting: a failed pick (10) is noted, the entry says so, a
+ *     second attempt is refused; the attempts reset to zero, a pick at 18 unlocks (closed), hook `doorUnlocked` "pick".
+ *  2. Locked again: forcing at 25 opens it, hooks `noise` and `doorUnlocked` "force".
+ *  3. Locked again, door "cannot be forced": Force disappears from the menu.
+ *  4. The Fighter receives the key: "Unlock (key)" in the menu, and it opens without a roll.
+ *  5. In combat, a real pick (the GM's dice) costs the action.
+ *  6. Without a DC, the GM decides: the door stays locked, nothing is noted.
+ *  Each judged attempt publishes `lockAttempt` (§247: manner, outcome, total). 7. The door menu (`api.ui.doorMenu`) hears one
+ *  of its neighbors through `doorMenu`: its entry comes after those of the lock and before those of the GM; a cell's menu
+ *  (`api.ui.groundMenu`) puts a neighbor's (`groundMenu`, §243) first.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const MODULE_ID = "dnd5e-combat";
@@ -24,7 +24,7 @@ export default {
     const fighter = await ctx.token("Guerrier").catch(() => null);
     const zombi = await ctx.token("Zombi").catch(() => null);
     if ( !fighter ) { ctx.log("Guerrier absent : non applicable"); return; }
-    // O9d (§357) : crocheter demande des outils de voleur — le Guerrier en reçoit pour le scénario.
+    // O9d (§357): picking requires thieves' tools — the Fighter receives some for the scenario.
     await ctx.ensureItem(fighter, "Compendium.dnd-players-handbook.equipment.Item.phbtulThievesToo");
     const grid = await ctx.gridSize();
     const home = await ctx.position(fighter);
@@ -75,14 +75,14 @@ export default {
     ctx.expect(forced?.fired?.some(f => f.hook === "noise") && forced?.fired?.some(f => (f.hook === "doorUnlocked") && (f.method === "force")),
       `hooks noise + doorUnlocked : ${JSON.stringify(forced?.fired)}`);
 
-    // 3. Ne peut pas être forcée.
+    // 3. Cannot be forced.
     await setLock({ ...lock, unforceable: true });
     await pause(300);
     const solid = await ctx.engine("lock", { tokenId: fighter.id, wallId, method: "force", total: 40 });
     ctx.expect((solid?.outcome === "failure") && (solid?.state === "locked") && (methods(solid) === "pick"),
       `porte non forçable : ${solid?.outcome}, ${solid?.state}, menu ${methods(solid)}`);
 
-    // 4. La clé.
+    // 4. The key.
     await setLock(lock);
     const keyItem = await ctx.call("upsert-actor-item", { actorId: fighter.actorId, itemData: { name: KEY, type: "loot" }, match: { path: "name", value: KEY } });
     const keyId = keyItem.itemId ?? keyItem.id ?? keyItem.item?._id;
@@ -98,7 +98,7 @@ export default {
     const shown = await ctx.engine("lock", { tokenId: fighter.id, wallId, method: "pick", total: 1 });
     ctx.expect(methods(shown).startsWith("key"), `avec la clé, le menu la propose : ${methods(shown)}`);
 
-    // 5. En combat, un vrai crochetage coûte l'action.
+    // 5. In combat, a real pick costs the action.
     if ( zombi ) {
       await ctx.call("update-scene-object", { type: "Wall", objectId: wallId, data: { [`flags.${MODULE_ID}.-=lockTries`]: null } });
       await ctx.startCombat([fighter, zombi]);

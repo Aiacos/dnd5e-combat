@@ -1,17 +1,17 @@
 /**
- * Compteur de sauvegardes répétées (SPEC §43.1) : « jusqu'à trois réussites ou trois échecs » — Contagion, Pétrification.
- * Les réussites et les échecs n'ont pas à se suivre ; seules comptent les sauvegardes REJOUÉES (pas celle du lancement).
- * Pur : l'état vit dans un flag de l'effet, le moteur l'écrit.
+ * Repeated-save counter (SPEC §43.1): "up to three successes or three failures" — Contagion, Flesh to Stone.
+ * Successes and failures need not be consecutive; only REPLAYED saves count (not the one at casting).
+ * Pure: the state lives in an effect flag, the engine writes it.
  */
 
 /**
- * L'état du compteur après une sauvegarde.
- * @param {{successes?: number, failures?: number}|null} state   L'état d'avant (flag de l'effet), ou rien.
- * @param {boolean} success                                      La sauvegarde vient-elle d'être réussie ?
- * @param {{successes: number, failures: number}} rule           Les seuils.
+ * The counter state after a save.
+ * @param {{successes?: number, failures?: number}|null} state   The previous state (effect flag), or nothing.
+ * @param {boolean} success                                      Has the save just succeeded?
+ * @param {{successes: number, failures: number}} rule           The thresholds.
  * @returns {{successes: number, failures: number, settled: boolean, outcome: "ended"|"settled"|null}}
- *   `ended` : le seuil de réussites est atteint, l'effet tombe ; `settled` : le seuil d'échecs est atteint, l'effet reste et
- *   plus aucune sauvegarde n'est rejouée.
+ *   `ended`: the success threshold is reached, the effect ends; `settled`: the failure threshold is reached, the effect stays and
+ *   no more saves are replayed.
  */
 export function tallyAfter(state, success, rule) {
   const successes = (Number(state?.successes) || 0) + (success ? 1 : 0);
@@ -20,17 +20,18 @@ export function tallyAfter(state, success, rule) {
   return { successes, failures, settled: outcome === "settled", outcome };
 }
 
-/** Le compteur est-il clos (seuil d'échecs atteint) ? Plus de sauvegarde à rejouer. */
+/** Is the counter closed (failure threshold reached)? No more saves to replay. */
 export const tallySettled = state => state?.settled === true;
 
 /**
- * §495 (brique B15) : échelle d'états sur sauvegardes répétées — un poison qui empire à chaque échec (empoisonné → ralenti → paralysé)
- * et recule à chaque réussite. Le palier 0 est l'effet posé lui-même ; les paliers 1…N sont ceux de la règle (`stages`).
- * @param {number|null} level                 Le palier d'avant (0 : l'effet seul).
- * @param {boolean} success                   La sauvegarde vient-elle d'être réussie ?
+ * §495 (brick B15): condition ladder on repeated saves — a poison that worsens with each failure (Poisoned → slowed → Paralyzed)
+ * and recedes with each success. Stage 0 is the applied effect itself; stages 1…N are those of the rule (`stages`).
+ * @param {number|null} level                 The previous stage (0: the effect alone).
+ * @param {boolean} success                   Has the save just succeeded?
  * @param {{count: number, onSuccess?: "down"|"end", natural20?: boolean, critEnds?: boolean}} rule
- *   `count` : le nombre de paliers ; `onSuccess` : « down » (par défaut) recule d'un palier — l'effet tombe s'il était au palier 0 —,
- *   « end » le fait tomber d'un coup ; `natural20` : la sauvegarde est un 20 naturel ; `critEnds` : un 20 naturel le fait tomber, même si le DD n'est pas atteint.
+ *   `count`: the number of stages; `onSuccess`: "down" (default) drops one stage — the effect ends if it was at stage 0 —,
+ *   "end" ends it at once; `natural20`: the save is a natural 20; `critEnds`: a natural 20 ends it, even if the DC is not
+ *   reached.
  * @returns {{level: number, outcome: "ended"|"up"|"down"|"same"}}
  */
 export function stageAfter(level, success, { count, onSuccess="down", natural20=false, critEnds=false }) {

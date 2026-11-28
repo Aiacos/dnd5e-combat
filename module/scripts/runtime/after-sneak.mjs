@@ -1,10 +1,10 @@
 /**
- * §95 : Lamentations d'outre-tombe (Fantôme, clé `afterSneak: { activity, radius, units }`) — « juste après avoir infligé les dégâts
- * de votre Attaque sournoise à une créature à votre tour, vous pouvez viser une seconde créature visible à 9 m de la première ;
- * lancez la moitié des dés de l'Attaque sournoise (arrondi au supérieur), dégâts nécrotiques ». Sur le MJ actif, à la résolution du
- * coup dont le jet de dégâts porte la marque d'Attaque sournoise (runtime/sneak.mjs) : la question à l'auteur (« Personne » d'abord),
- * puis l'activité de l'item (ses dés : `ceil(@scale.rogue.sneak-attack.number / 2)` de la donnée) utilisée sur la créature choisie
- * — une utilisation de l'item dépensée par dnd5e.
+ * §95: Wails from the Grave (Phantom, key `afterSneak: { activity, radius, units }`) — "immediately after you deal the damage
+ * of your Sneak Attack to a creature on your turn, you can target a second creature you can see within 9 m of the first;
+ * roll half the Sneak Attack dice (rounded up), Necrotic damage". On the active GM, when resolving the
+ * hit whose damage roll carries the Sneak Attack mark (runtime/sneak.mjs): the question to the author ("None" first),
+ * then the item's activity (its dice: `ceil(@scale.rogue.sneak-attack.number / 2)` from the data) used on the chosen creature
+ * — a use of the item spent by dnd5e.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -26,7 +26,7 @@ async function onResolution(resolution) {
   const actor = source?.actor;
   if ( !actor || !first?.parent ) return;
   const combatant = combatantFor(actor);
-  if ( combatant && !isOwnTurn(combatant) ) return;   // « à votre tour »
+  if ( combatant && !isOwnTurn(combatant) ) return;   // "on your turn"
   for ( const item of actor.items ) {
     const rule = contentOf(item).entry?.afterSneak;
     const activity = rule ? item.system.activities?.get(rule.activity) : null;

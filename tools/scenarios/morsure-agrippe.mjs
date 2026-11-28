@@ -1,22 +1,23 @@
 /**
- * §504 (B24) — « au lieu d'infliger des dégâts, la créature peut agripper la cible (DD 11 pour s'échapper) » : `choice: { outcome:
- * ["damage", "grapple"], grapple: { escapeDc: 11 } }`. Arène de test : Zombi (l'attaquant, acteur synthétique), Guerrier (la cible). Un
- * trait d'essai est prêté au Zombi : une attaque au corps à corps (+50 au toucher, 3 contondants fixes) ; sa règle est dans la surcouche
- * du monde (`overrideContent`, jamais en drapeau d'item). Le choix est donné d'avance à l'utilisation (`usageConfig.dnd5e-combat.choice`,
- * comme l'entrée du menu) : aucune fenêtre n'attend.
- *  1. Empoignade choisie : le Guerrier ne perd aucun PV, il est Agrippé, l'effet porte le DD d'évasion 11 ; la résolution note le choix.
- *  2. Dégâts choisis : le Guerrier perd 3 PV, il n'est pas agrippé.
- * Le Guerrier est d'abord posé au contact du Zombi (dans l'Arène il en est à deux cases : l'empoignade, jugée à l'allonge, serait rompue
- * aussitôt — échec du banc du 2026-11-20). La marque « Agrippe : … » de l'agrippeur est vérifiée aussi.
- * Un 1 naturel rate : chaque attaque est rejouée jusqu'à trois fois. Agrippé, trait, surcouche, PV, position remis. Toute fenêtre « le faire quand
- * même » est acceptée (« go »), toute autre fermée.
+ * §504 (B24) — "instead of dealing damage, the creature can grapple the target (DC 11 to escape)": `choice: { outcome:
+ * ["damage", "grapple"], grapple: { escapeDc: 11 } }`. Test arena: Zombie (the attacker, synthetic actor), Fighter (the target). A
+ * test trait is lent to the Zombie: a melee attack (+50 to hit, 3 fixed bludgeoning); its rule is in the world's overlay
+ * (`overrideContent`, never as an item flag). The choice is given in advance at use (`usageConfig.dnd5e-combat.choice`,
+ * like the menu entry): no window waits.
+ *  1. Grapple chosen: the Fighter loses no HP, they are Grappled, the effect carries the escape DC 11; the resolution notes the
+ *     choice.
+ *  2. Damage chosen: the Fighter loses 3 HP, they are not grappled.
+ * The Fighter is first placed in contact with the Zombie (in the Arena they are two cells away: the grapple, judged at reach,
+ * would be broken at once — test bench failure of 2026-11-20). The "Grapples: …" mark of the grappler is checked too.
+ * A natural 1 misses: each attack is replayed up to three times. Grappled, trait, overlay, HP, position restored. Any
+ * "do it anyway" window is accepted ("go"), any other closed.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
 const IDENTIFIER = "das-essai-morsure-agrippe";
 const ACTIVITY = "dasEssaiMorsAgr0";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name as a constant: the test bench and the reference take the first "name:" indented by two spaces as the scenario title.
 const ITEM_NAME = "Essai : morsure qui agrippe";
 const RULE = { choice: { outcome: ["damage", "grapple"], grapple: { escapeDc: 11 } } };
 const GRAPPLE = "outcome.grapple";
@@ -34,7 +35,7 @@ const [item] = await actor.createEmbeddedDocuments("Item", [{ name: args.name, t
       damage: { includeBase: false, parts: [{ number: null, denomination: null, bonus: "3", types: ["bludgeoning"], custom: { enabled: true, formula: "3" } }] } } } } }]);
 return { itemId: item.id };
 `;
-/** L'état du Guerrier : PV, Agrippé de cette attaque et son DD d'évasion ; la marque de l'agrippeur sur le Zombi. */
+/** The Fighter's state: HP, Grappled by this attack and its escape DC; the grappler's mark on the Zombie. */
 const READ = `
 const token = canvas.scene.tokens.get(args.target);
 const actor = token.actor;
@@ -56,7 +57,7 @@ export default {
     const fighter = await ctx.token("Guerrier");
     const script = async (code, args={}) => (await ctx.call("run-script", { code, args, waitMs: 20000 }))?.result ?? null;
 
-    // --- Fenêtres chez le MJ : aucune ne reste sans réponse --------------------------------------------------------------
+    // --- Windows at the GM: none stays unanswered ---------------------------------------------------------------------
     const seen = new Set(((await ctx.call("list-dialogs", {})).windows ?? []).map(w => w.id));
     const sweep = async (ms=800) => {
       const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...seen], waitMs: ms, details: true }).catch(() => null);
@@ -69,7 +70,7 @@ export default {
       }
     };
 
-    // Au contact : l'empoignade se juge à l'allonge de l'agrippeur.
+    // In contact: the grapple is judged at the grappler's reach.
     const size = await ctx.gridSize();
     ctx.restore(() => ctx.call("move-token", { tokenId: fighter.id, x: fighter.x, y: fighter.y }).catch(() => {}));
     await ctx.call("move-token", { tokenId: fighter.id, x: zombie.x + size, y: zombie.y });
@@ -86,7 +87,7 @@ export default {
     ctx.restore(() => ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: before }).catch(() => {}));
     await pause(800);
 
-    /** Une attaque avec l'issue `choice` donnée d'avance ; rend la résolution du coup qui touche, ou null. */
+    /** An attack with the `choice` outcome given in advance; returns the resolution of the hit, or null. */
     const bite = async choice => {
       for ( let shot = 1; shot <= 3; shot++ ) {
         const used = await ctx.use({ tokenId: zombie.id, itemId: lent.itemId, activityType: "attack", targetTokenIds: [fighter.id], consume: false,

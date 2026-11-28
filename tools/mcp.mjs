@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Appelle un tool du connecteur MCP universel par son transport HTTP (Streamable HTTP), sans
-// dépendre de la liste d'outils figée d'une session Claude : l'extension de bureau embarque sa
-// propre copie des définitions et ne voit pas les tools ajoutés depuis son empaquetage.
+// Calls a tool of the universal MCP connector through its HTTP transport (Streamable HTTP), without
+// depending on the frozen tool list of a Claude session: the desktop extension bundles its
+// own copy of the definitions and does not see tools added since it was packaged.
 //
-//   node tools/mcp.mjs <tool> '<json des paramètres>'      résultat sur stdout (JSON)
-//   node tools/mcp.mjs --list                               noms des tools du serveur
+//   node tools/mcp.mjs <tool> '<parameters json>'          result on stdout (JSON)
+//   node tools/mcp.mjs --list                               names of the server's tools
 //
-// Le serveur doit tourner (lancer-connecteur.bat) et le monde être ouvert chez le MJ.
-// Le client lui-même est dans lib/connector.mjs (partagé avec tools/scenario.mjs).
+// The server must be running (lancer-connecteur.bat) and the world open on the GM's side.
+// The client itself is in lib/connector.mjs (shared with tools/scenario.mjs).
 
 import { connect } from "./lib/connector.mjs";
 

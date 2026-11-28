@@ -1,17 +1,18 @@
 /**
- * §401 : la file des fenêtres d'un poste — une question du moteur (choix, réaction, répartition, jet demandé) attend que la précédente
- * soit fermée avant de s'ouvrir, pour que les fenêtres s'enchaînent au lieu de s'empiler. Une attente est plafonnée (`capMs`) : une
- * fenêtre qui en attendrait une autre restée ouverte (ou qui dépendrait d'elle) s'ouvre quand même au bout du plafond, comme avant la file.
- * Pur : les minuteries se passent en argument (testable hors de Foundry).
+ * §401: a client's window queue — an engine question (choice, reaction, split, requested roll) waits for the previous one to
+ * be closed before opening, so that windows chain instead of piling up. A wait is capped (`capMs`): a window that
+ * would wait for another left open (or that would depend on it) opens anyway at the end of the cap, as before the queue.
+ * Pure: timers are passed as arguments (testable outside Foundry).
  */
 
 /**
  * @param {object} [ports]
- * @param {() => number} [ports.capMs]  L'attente maximale d'une fenêtre derrière la précédente.
+ * @param {() => number} [ports.capMs]  The maximum wait of a window behind the previous one.
  * @param {(ms: number) => Promise<void>} [ports.wait]
  * @param {() => number} [ports.now]
- * @returns {(<T>(open: () => Promise<T>, label?: string) => Promise<T>) & { state: () => Array<{label: string, since: number, open: boolean}> }}
- *   Ouvre `open` à son tour ; rend ce qu'elle rend. `state()` : les entrées en cours (pour le débogage).
+ * @returns {(<T>(open: () => Promise<T>, label?: string) => Promise<T>) &
+ *   { state: () => Array<{label: string, since: number, open: boolean}> }}
+ *   Opens `open` in its turn; returns what it returns. `state()`: the entries in progress (for debugging).
  */
 export function createWindowLine({ capMs=() => 13000, wait=ms => new Promise(resolve => setTimeout(resolve, ms)), now=() => Date.now() }={}) {
   let last = Promise.resolve();
@@ -27,16 +28,16 @@ export function createWindowLine({ capMs=() => 13000, wait=ms => new Promise(res
     return turn.then(() => { entry.open = true; return open(); }).finally(() => { entries.delete(entry); release(); });
   }
   /**
-   * §422 : `open` après la fenêtre en cours (même plafond), sans prendre place dans la file — les suivantes ne l'attendent pas. Pour une
-   * fenêtre sans délai que l'utilisateur a provoquée lui-même (un refus) : elle ne s'empile pas sur une question, mais ne retient
-   * aucune des questions qui suivent.
+   * §422: `open` after the current window (same cap), without taking a place in the queue — the following ones do not wait
+   * for it. For a window without delay that the user triggered themselves (a refusal): it does not pile on top of a question, but
+   * holds back none of the questions that follow.
    */
   inLine.after = (open, label="") => {
     const entry = { label, since: now(), open: false, aside: true };
     entries.add(entry);
     return Promise.race([last, wait(capMs())]).then(() => { entry.open = true; return open(); }).finally(() => entries.delete(entry));
   };
-  /** §422 : combien de fenêtres attendent encore leur tour (pas encore ouvertes). */
+  /** §422: how many windows are still waiting for their turn (not yet open). */
   inLine.waiting = () => [...entries].filter(e => !e.open).length;
   inLine.state = () => [...entries].map(e => ({ ...e }));
   return inLine;

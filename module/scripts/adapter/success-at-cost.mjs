@@ -1,8 +1,8 @@
 /**
- * Issue #32 : « Succès à un prix » (Guide du maître 2024, chapitre 2), ce qui touche Foundry et les fenêtres — la fenêtre du MJ qui
- * décrit le prix, la question au joueur qui accepte ou refuse.
+ * Issue #32: "Success at a Cost" (2024 Dungeon Master's Guide, chapter 2), what touches Foundry and the windows — the GM's
+ * window that describes the price, the question to the player who accepts or refuses.
  *
- * Le prix est le texte du MJ : rien n'est appliqué d'office. Les suggestions de la fenêtre ne font que remplir le champ.
+ * The price is the GM's text: nothing is applied automatically. The window's suggestions only fill in the field.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -12,18 +12,18 @@ import { queryPlayer, waitLabel } from "./player-wait.mjs";
 
 export const AT_COST_QUERY = `${MODULE_ID}.successAtCost`;
 
-/** Le délai laissé au joueur pour répondre (secondes) ; au-delà, c'est un refus. */
+/** The time left to the player to answer (seconds); beyond it, it is a refusal. */
 export const AT_COST_ANSWER_SECONDS = 30;
 
-/** Les suggestions de prix de la fenêtre du MJ (clés `DND5ECOMBAT.APrix.Idee.<id>`). */
+/** The price suggestions of the GM's window (keys `DND5ECOMBAT.APrix.Idee.<id>`). */
 const IDEAS = Object.freeze(["prone", "drop", "alert", "advantage", "noise"]);
 
 const t = (key, data) => (data ? game.i18n.format(`DND5ECOMBAT.APrix.${key}`, data) : game.i18n.localize(`DND5ECOMBAT.APrix.${key}`));
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
 /**
- * Chez le MJ : la fenêtre qui décrit le prix. Rend `{ cost }` (texte, éventuellement vide) pour proposer, ou null pour laisser l'échec.
- * Sans délai : la résolution attend le MJ, qui a déjà choisi de s'en occuper.
+ * On the GM's side: the window that describes the price. Returns `{ cost }` (text, possibly empty) to offer it, or null to
+ * leave the failure. Without a timeout: the resolution waits for the GM, who has already chosen to deal with it.
  * @param {{name: string, what: string, total: number, needed: number, by: number}} candidate
  */
 export async function askCost({ name, what, total, needed, by }) {
@@ -43,7 +43,7 @@ export async function askCost({ name, what, total, needed, by }) {
       { action: "keep", label: t("LaisserEchec"), icon: "fa-solid fa-xmark", callback: () => null }
     ],
     rejectClose: false,
-    // Une suggestion remplit le champ (le MJ peut la reprendre à sa façon).
+    // A suggestion fills in the field (the GM can rework it in their own way).
     render: (event, dialog) => {
       const input = dialog.element?.querySelector?.("input[name=cost]");
       for ( const b of dialog.element?.querySelectorAll?.(".das-at-cost__idea") ?? [] ) {
@@ -54,23 +54,23 @@ export async function askCost({ name, what, total, needed, by }) {
   return (result && (typeof result === "object")) ? result : null;
 }
 
-/** Chez le joueur : la question, au premier plan. Rend `{ id: "yes" | "no" }`, ou null (fermée, délai). */
+/** On the player's side: the question, in the foreground. Returns `{ id: "yes" | "no" }`, or null (closed, timeout). */
 export function handleAtCostQuery({ actor, name, what, cost }) {
   const heading = `<p class="das-at-cost__rule">${esc(t("Regle"))}</p>`;
   return handleChoiceQuery({
     actor, item: t("Nom"), front: true, heading, icon: "fa-solid fa-scale-balanced", classes: ["das-at-cost"],
     seconds: AT_COST_ANSWER_SECONDS,
-    // Le prix sur sa propre ligne : le texte du MJ garde sa ponctuation.
+    // The price on its own line: the GM's text keeps its punctuation.
     prompt: cost ? `${esc(t("QuestionJoueur", { name, what }))}<span class="das-at-cost__cost">${esc(cost)}</span>`
       : esc(t("QuestionJoueurSansPrix", { name, what })),
-    // « Refuser » d'abord : sans réponse dans le délai, la fenêtre retient la première option — l'échec reste.
+    // "Refuse" first: without an answer within the timeout, the window picks the first option — the failure stays.
     options: [{ id: "no", label: t("Refuser"), icon: "fa-solid fa-xmark" }, { id: "yes", label: t("Accepter"), icon: "fa-solid fa-check" }]
   });
 }
 
 /**
- * Sur le MJ actif : la question au joueur connecté qui possède l'acteur. Sans joueur connecté (PNJ, joueur absent), c'est le MJ qui a
- * déjà tranché en proposant : accepté. Rend true (accepté) ou false.
+ * On the active GM: the question to the connected player who owns the actor. Without a connected player (NPC, absent
+ * player), it is the GM who has already decided by offering: accepted. Returns true (accepted) or false.
  * @param {Actor} actor
  * @param {{name: string, what: string, cost: string|null}} payload
  */

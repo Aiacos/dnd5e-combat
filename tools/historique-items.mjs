@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * Historique par item (2026-10-22) : pour chaque sort, don, aptitude et objet du Manuel des joueurs, tout ce que le dépôt sait de lui —
- * l'entrée du moteur, les sections du `SPEC.md` qui le citent, les commits qui ont touché son entrée de contenu ou ses scénarios, les
- * scénarios qui le jouent, son statut aux relevés (`RELEVE_SORTS.md`, `RELEVE_DONS.md`) et son dernier résultat de balayage
- * (`prive/balayages/`). Le `SPEC.md` est rangé par étape et nomme les items en français, sans identifiant : cet index le reprend
- * par item. Régénéré à la demande ; n'écrit que dans `prive/` (noms et renvois, aucun texte du livre).
- *   node tools/historique-items.mjs [dossier packs du Manuel] [dossier fr du PHB-fr]
- * Défauts : `F:/Foundry V14/Data/modules/dnd-players-handbook/packs`, `../Foundry dnd5 module trad player manuel du joueur/module/compendium/fr`.
+ * History per item (2026-10-22): for each spell, feat, feature and item of the Player's Handbook, everything the repository
+ * knows about it — the engine entry, the sections of `SPEC.md` that cite it, the commits that touched its content entry or its
+ * scenarios, the scenarios that play it, its status in the surveys (`RELEVE_SORTS.md`, `RELEVE_DONS.md`) and its latest sweep
+ * result (`prive/balayages/`). `SPEC.md` is organized by step and names the items in French, without an identifier: this index
+ * takes it up per item. Regenerated on demand; writes only in `prive/` (names and cross-references, no text of the book).
+ *   node tools/historique-items.mjs [Handbook packs folder] [PHB-fr fr folder]
+ * Defaults: `F:/Foundry V14/Data/modules/dnd-players-handbook/packs`,
+ * `../Foundry dnd5 module trad player manuel du joueur/module/compendium/fr`.
  */
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -36,7 +37,7 @@ for ( const pack of Object.keys(PACKS) ) {
   await db.close();
 }
 
-/* ---- le journal (l'ancien SPEC.md, découpé en tranches dans prive/journal/) en sections ---- */
+/* ---- the journal (the former SPEC.md, cut into slices in prive/journal/) into sections ---- */
 const tranches = readdirSync("prive/journal").filter(name => /^\d{3}-\d{3}\.md$/.test(name)).sort();
 const spec = tranches.map(name => readFileSync(join("prive/journal", name), "utf8")).join("").split("\n");
 const sections = [];
@@ -47,11 +48,11 @@ for ( const line of spec ) {
   if ( current ) current.text += `${line}\n`;
 }
 const escape = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-/** Les sections qui citent l'item : son identifiant entre accents graves, ou son nom (français ou anglais) avec sa majuscule. */
+/** The sections that cite the item: its identifier between backticks, or its name (French or English) with its capital letter. */
 function sectionsOf(item) {
   const patterns = [new RegExp(`\`${escape(item.identifier)}\``)];
   for ( const name of [item.fr, item.en] ) {
-    // Un nom d'un seul mot court est aussi un mot de la langue (« Lumière », « Rage ») : il ne compte qu'entre guillemets.
+    // A short single-word name is also a common word ("Lumière", "Rage"): it only counts between quotation marks.
     if ( !name ) continue;
     const single = !/\s/.test(name) && (name.length < 9);
     patterns.push(single ? new RegExp(`[«"“] ?${escape(name)} ?[»"”]`) : new RegExp(`(^|[^\\p{L}])${escape(name)}($|[^\\p{L}])`, "u"));
@@ -59,7 +60,7 @@ function sectionsOf(item) {
   return sections.filter(s => patterns.some(p => p.test(s.title) || p.test(s.text))).map(s => s.num);
 }
 
-/* ---- les commits qui ont touché une entrée de contenu ou un scénario ---- */
+/* ---- the commits that touched a content entry or a scenario ---- */
 const log = execFileSync("git", ["log", "-p", "--no-color", "--format=@@@%h %ad %s", "--date=short", "--", "module/scripts/content", "tools/scenarios"],
   { encoding: "utf8", maxBuffer: 1 << 30 });
 const commitsOf = new Map();
@@ -73,7 +74,7 @@ for ( const line of log.split("\n") ) {
   }
 }
 
-/* ---- scénarios, relevés, balayages ---- */
+/* ---- scenarios, surveys, sweeps ---- */
 const scenarioFiles = readdirSync("tools/scenarios", { recursive: true }).filter(f => f.endsWith(".mjs"));
 const scenarioText = scenarioFiles.map(f => [f.replace(/\.mjs$/, "").replace(/\\/g, "/"), readFileSync(join("tools/scenarios", f), "utf8")]);
 const status = new Map();

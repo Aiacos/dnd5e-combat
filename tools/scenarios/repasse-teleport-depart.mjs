@@ -1,13 +1,13 @@
 /**
- * §462 (tri « déplacement » de l'ATLAS) : téléportation de soi dont la zone frappe l'espace QUITTÉ, lue dans le texte des créatures
- * (`teleport.area: "left"`). Arène des sorts : le Lanceur (PNJ) reçoit la Téléportation mortelle de la Liche (Monster Manual : dégâts
- * nécrotiques à 3 m de l'espace quitté, portée de l'activité 60 ft). La Cible est à 1 case (dans la zone), la Cible voisine à 4 cases
- * (dehors).
- *  - l'utilisation pose d'office une émanation fixe (non rattachée) autour du Lanceur, sans pose à la souris ;
- *  - la Cible subit des dégâts, ni la Cible voisine ni le Lanceur ;
- *  - le Lanceur se téléporte ensuite à 4 cases (accepté), la zone reste où il était ; 14 cases (70 ft) refusées.
- * La visée interactive de la téléportation est coupée le temps du scénario (réglage `teleportPlanning`) : le saut passe par `teleportTo`,
- * le même chemin que le clic du joueur.
+ * §462 (ATLAS "movement" triage): self-teleport whose area hits the space LEFT, read from the creature text
+ * (`teleport.area: "left"`). Spell arena: the Caster (NPC) receives the Lich's Deathly Teleport (Monster Manual: necrotic damage
+ * within 3 m of the space left, activity range 60 ft). The Target is 1 cell away (inside the area), the neighboring Target 4 cells
+ * away (outside).
+ *  - using it outright places a fixed (non-attached) Emanation around the Caster, with no placement by mouse;
+ *  - the Target takes damage, neither the neighboring Target nor the Caster does;
+ *  - the Caster then teleports 4 cells (accepted), the area stays where it was; 14 cells (70 ft) refused.
+ * The interactive aiming of the teleport is switched off for the scenario (setting `teleportPlanning`): the jump goes
+ * through `teleportTo`, the same path as the player's click.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -49,7 +49,7 @@ export default {
     const item = (await ctx.call("upsert-actor-item", { actorId: caster.actorId, itemData, match: { path: "flags.dnd5e.sourceId", value: DEATHLY } })).id;
     lent.push(item);
 
-    // Deux rangées sous la Cible : le Lanceur, la Cible à 1 case, la Cible voisine à 4 cases.
+    // Two rows below the Target: the Caster, the Target 1 cell away, the neighboring Target 4 cells away.
     const start = { x: homes.get(caster.id).x, y: homes.get(caster.id).y + 2 * grid };
     await ctx.call("move-token", { tokenId: caster.id, x: start.x, y: start.y, elevation: 0 });
     await ctx.call("move-token", { tokenId: near.id, x: start.x + grid, y: start.y, elevation: 0 });

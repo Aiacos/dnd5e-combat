@@ -1,6 +1,6 @@
 /**
- * `saveDisadvantageAgainst` (core/eligibility.mjs) : un objet porté — équipé, et harmonisé s'il l'exige — qui donne le Désavantage aux
- * sauvegardes imposées par une créature d'un sous-type (Armure démoniaque).
+ * `saveDisadvantageAgainst` (core/eligibility.mjs): a carried object — equipped, and attuned if it requires it — that gives
+ * Disadvantage on saves imposed by a creature of a subtype (Demon Armor).
  */
 
 import { saveDisadvantageAgainstHolds } from "../core/eligibility.mjs";
@@ -8,7 +8,7 @@ import { contentOf } from "./content.mjs";
 
 const carried = item => (item.system?.equipped !== false) && ((item.system?.attunement !== "required") || (item.system?.attuned === true));
 
-/** L'objet porté par `actor` qui lui donne le Désavantage contre une sauvegarde imposée par `source`, ou null. */
+/** The object carried by `actor` that gives them Disadvantage against a save imposed by `source`, or null. */
 export function saveDisadvantageAgainst(actor, source) {
   const subtype = source?.system?.details?.type?.subtype;
   if ( !subtype || !actor || (actor === source) ) return null;

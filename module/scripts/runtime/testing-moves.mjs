@@ -1,6 +1,6 @@
 /**
- * Fonctions de test (api.mcp) : déplacements par le chemin du moteur — A*, escaliers, suivre, familier, vue, téléportation,
- * ruée, portes, menaces d'opportunité. Extrait de runtime/testing.mjs.
+ * Test functions (api.mcp): moves along the engine path — A*, stairs, follow, familiar, view, teleportation,
+ * rush, doors, Opportunity Attack threats. Extracted from runtime/testing.mjs.
  */
 
 import { strike } from "./storm.mjs";
@@ -33,7 +33,7 @@ import { pilotOf } from "../adapter/pilot.mjs";
 import { isEthereal } from "../adapter/plane.mjs";
 import { MODE_STATUSES } from "../adapter/conditions.mjs";
 
-/** Les escaliers et échelles de la scène, avec les cases qu'ils couvrent (centre dans la région). */
+/** The scene's stairs and ladders, with the cells they cover (center in the region). */
 export function stairs({ tokenId }) {
   const token = viewedToken({ tokenId });
   const grid = token.parent.grid;
@@ -49,7 +49,7 @@ export function stairs({ tokenId }) {
   });
 }
 
-/** Le chemin que prendrait le moteur, sans bouger. `maxCost` : plafond de coût (unité de la grille), sinon celui du tour. */
+/** The path the engine would take, without moving. `maxCost`: cost ceiling (grid unit), otherwise the turn's. */
 export function plan({ tokenId, cell, point, levelId, maxCost }) {
   const token = viewedToken({ tokenId });
   const target = cellArg(token, { cell, point });
@@ -66,7 +66,7 @@ export function plan({ tokenId, cell, point, levelId, maxCost }) {
   };
 }
 
-/** Le budget de déplacement du token dans le combat en cours (null hors combat). */
+/** The token's movement budget in the current combat (null outside combat). */
 export function movement({ tokenId }) {
   const token = viewedToken({ tokenId });
   const combatant = token.actor ? combatantFor(token.actor) : null;
@@ -79,10 +79,10 @@ export function movement({ tokenId }) {
 }
 
 /**
- * Déplace le token comme un clic de déplacement (`moveTo` : A*, portes, escaliers, attaques d'opportunité, budget), et
- * attend qu'il soit arrivé. Rend les positions avant / après et les fenêtres ouvertes pendant le déplacement (le
- * dialogue « Change Level » du cœur s'il s'est ouvert). §99 : `stopAfterMs` arrête la marche en route (comme un clic ailleurs),
- * `pauseAfterMs` met le jeu en pause en route (et l'en sort à l'arrivée).
+ * Moves the token like a move click (`moveTo`: A*, doors, stairs, Opportunity Attacks, budget), and waits until it has
+ * arrived. Returns the before / after positions and the windows opened during the move (the core's "Change Level"
+ * dialog if it opened). §99: `stopAfterMs` stops the walk en route (like a click elsewhere),
+ * `pauseAfterMs` pauses the game en route (and resumes it on arrival).
  */
 export async function move({ tokenId, cell, point, levelId, action, stopAfterMs, pauseAfterMs }) {
   const token = viewedToken({ tokenId });
@@ -104,9 +104,9 @@ export async function move({ tokenId, cell, point, levelId, action, stopAfterMs,
 }
 
 /**
- * §224 : un déplacement « à la main », comme le glisser ou le champ d'élévation du HUD — `token.move` d'un seul point (case `cell`, sinon
- * sur place) à `elevation` (sinon la sienne), dans le mode `action` (sinon le sien), sans l'A* du moteur ; rend les positions et les
- * états « En chute » / À terre après coup (on attend un peu : la chute de dnd5e se pose après le déplacement).
+ * §224: a "by hand" move, like dragging or the HUD elevation field — `token.move` of a single point (cell `cell`, otherwise in
+ * place) to `elevation` (otherwise its own), in the `action` mode (otherwise its own), without the engine's A*; returns the
+ * positions and the "Falling" / Prone conditions afterwards (we wait a bit: dnd5e's fall lands after the move).
  */
 export async function rawMove({ tokenId, cell=null, elevation=null, action=null, settleMs=1500 }) {
   const token = viewedToken({ tokenId });
@@ -119,12 +119,12 @@ export async function rawMove({ tokenId, cell=null, elevation=null, action=null,
     falling: token.actor?.statuses?.has("falling") === true, prone: token.actor?.statuses?.has("prone") === true };
 }
 
-/** §41.2 : où mène l'escalier sous ce point pour ce token (ce que lit le curseur et le menu). */
+/** §41.2: where the stairs under this point lead for this token (what the cursor and the menu read). */
 export function stairsAt({ tokenId, point }) {
   return stairsDestinations(viewedToken({ tokenId }), point);
 }
 
-/** §41.2 : prendre l'escalier sous ce point jusqu'à `levelId`, comme un clic dessus (sans le dialogue du cœur). */
+/** §41.2: take the stairs under this point to `levelId`, like a click on them (without the core's dialog). */
 export async function takeStairs({ tokenId, point, levelId }) {
   const token = viewedToken({ tokenId });
   const opened = new Set(foundry.applications.instances.keys());
@@ -133,27 +133,27 @@ export async function takeStairs({ tokenId, point, levelId }) {
   return { before, after: positionJson(token), viewedLevel: canvas.level?.id ?? null, newWindows: windows().filter(w => !opened.has(w.id)) };
 }
 
-/** §41.3 : l'ordre de suivre, de ne plus suivre, et qui suit qui. */
+/** §41.3: the order to follow, to stop following, and who follows whom. */
 export async function follow({ followerId, leaderId }) {
   return { following: await followIntent(viewedToken({ tokenId: followerId }), viewedToken({ tokenId: leaderId })) };
 }
 
-/** Le token `tokenId` (scène affichée) cesse de suivre son meneur (§41.3) → `{ stopped }`. */
+/** The token `tokenId` (displayed scene) stops following its leader (§41.3) → `{ stopped }`. */
 export async function unfollow({ tokenId }) {
   return { stopped: await unfollowIntent(viewedToken({ tokenId })) };
 }
 
-/** Qui le token `tokenId` suit, qui le suit, et sa position : `{ leader, followers, position }` (§41.3). Lecture seule. */
+/** Whom the token `tokenId` follows, who follows it, and its position: `{ leader, followers, position }` (§41.3). Read-only. */
 export function followState({ tokenId }) {
   const token = viewedToken({ tokenId });
   return { leader: leaderOf(token)?.id ?? null, followers: followersOf(token).map(t => t.id), position: positionJson(token) };
 }
 
 /**
- * §490 (B08) : monture et ordre à un compagnon. `action` : « state » (lecture), « mount » (`tokenId` monte `targetId`), « dismount »
- * (`tokenId` descend). `issues` : ce qui refuserait de monter, lu AVANT le geste (clés `Monture.Souci.*`). Un refus forçable ouvrirait la
- * fenêtre de légalité, à laquelle un scénario ne répond pas : le geste passe outre sans fenêtre (`force`, défaut vrai). Rend l'état des
- * deux tokens.
+ * §490 (B08): mount and order to a companion. `action`: "state" (read), "mount" (`tokenId` mounts `targetId`), "dismount"
+ * (`tokenId` dismounts). `issues`: what would refuse the mount, read BEFORE the gesture (keys `Monture.Souci.*`).
+ * A forceable refusal would open the legality window, which a scenario does not answer: the gesture overrides it without a window
+ * (`force`, default true). Returns the state of both tokens.
  */
 export async function mount({ action="state", tokenId, targetId=null, force=true }) {
   gmOnly();
@@ -168,13 +168,13 @@ export async function mount({ action="state", tokenId, targetId=null, force=true
 }
 
 /**
- * §107 : l'état d'un familier ou d'un maître — familier reconnu, vision, actions de base, poche dimensionnelle (le familier
- * gardé et ses PV ; `clear` la vide) ; et les gestes : congé (`tokenId` du familier), rappel (`tokenId` du maître, `point`).
+ * §107: the state of a familiar or master — recognized familiar, vision, basic actions, pocket dimension (the kept familiar and
+ * its HP; `clear` empties it); and the gestures: dismissal (`tokenId` of the familiar), recall (`tokenId` of the master, `point`).
  */
 export async function familiar({ tokenId, clear=false }) {
   const token = canvas.scene?.tokens.get(tokenId);
   if ( !token ) return { present: false };
-  if ( clear && game.user.isGM ) await emptyPocket(token.actor);   // remise en état d'un scénario
+  if ( clear && game.user.isGM ) await emptyPocket(token.actor);   // reset to a scenario's state
   const pocket = pocketOf(token.actor);
   return { present: true, familiar: isFamiliarToken(token), sight: token._source.sight?.enabled === true,
     basics: (token.actor?.items ?? []).map(basicActionOf).filter(Boolean).sort(), canPocket: canPocket(token), canRecall: canRecall(token),
@@ -182,12 +182,12 @@ export async function familiar({ tokenId, clear=false }) {
       items: (pocket.token.delta?.items ?? []).map(i => i.name) } : null };
 }
 
-/** §107 : le familier `tokenId` part dans sa poche dimensionnelle (comme l'entrée de menu) → `{ done }`. */
+/** §107: the familiar `tokenId` goes into its pocket dimension (like the menu entry) → `{ done }`. */
 export async function familiarPocket({ tokenId }) {
   return { done: await dismissFamiliar(viewedToken({ tokenId })) };
 }
 
-/** §107 : le maître `tokenId` rappelle son familier à `point` → `{ done, refusal, tokens }` (les familiers de la scène, avec leurs PV). */
+/** §107: the master `tokenId` recalls its familiar to `point` → `{ done, refusal, tokens }` (the scene's familiars, with their HP). */
 export async function familiarRecall({ tokenId, point }) {
   const token = viewedToken({ tokenId });
   const refusal = recallRefusal(token, point);
@@ -196,7 +196,7 @@ export async function familiarRecall({ tokenId, point }) {
     hp: t.actor?.system?.attributes?.hp?.value ?? null })) };
 }
 
-/** Affiche un niveau de la scène chez le MJ (un déplacement du moteur fait suivre la vue : le scénario la rend). */
+/** Displays a scene level for the GM (an engine move makes the view follow: the scenario restores it). */
 export async function view({ levelId }) {
   gmOnly();
   if ( !canvas.scene?.levels?.get?.(levelId) ) throw new Error(`level ${levelId} missing from the viewed scene`);
@@ -204,36 +204,36 @@ export async function view({ levelId }) {
   return { viewedLevel: canvas.level?.id ?? null };
 }
 
-/** §67 ter : le clic du moteur pendant la visée d'une téléportation (un point de la scène), sans la souris. */
+/** §67 ter: the engine's click during teleport aiming (a point of the scene), without the mouse. */
 export function teleportPick({ x, y }) {
   return { picked: teleportClick({ x, y }) };
 }
 
 /**
- * Une destination de téléportation de soi (Foulée brumeuse), comme la rendrait le clic de la planification du cœur : le
- * plan passe par le même point de contrôle (`dnd5e.teleport`, que le moteur tient : portée, case occupée, vue —
- * runtime/actions.mjs, `onTeleport`) ; accepté, le token se téléporte (action « blink »). Seul le clic lui-même (la
- * planification interactive du cœur) n'est pas joué.
+ * A self-teleport destination (Misty Step), as the core's planning click would return it: the
+ * plan goes through the same checkpoint (`dnd5e.teleport`, which the engine holds: range, occupied cell, view —
+ * runtime/actions.mjs, `onTeleport`); once accepted, the token teleports (action "blink"). Only the click itself (the
+ * core's interactive planning) is not played.
  */
 export async function teleport({ tokenId, itemId, x, y, passengers=[] }) {
   const token = viewedToken({ tokenId });
   const activity = token.actor?.items.get(itemId)?.system.activities?.find(a => selfTeleportOf(a)) ?? null;
   if ( !activity ) throw new Error("no self-teleport on this item");
-  // §264 : les passagers désignés comme le joueur le ferait — en les ciblant avant le saut.
+  // §264: the passengers designated as the player would — by targeting them before the jump.
   for ( const t of game.user.targets ) t.setTarget(false, { releaseOthers: false });
   for ( const id of passengers ) canvas.tokens.get(id)?.setTarget(true, { releaseOthers: false });
   const chosen = passengers.length ? await choosePassengers(token, selfTeleportOf(activity).passengers) : [];
   const from = { x: token._source.x, y: token._source.y, elevation: token._source.elevation ?? 0, level: token._source.level ?? null };
-  // Le même chemin que le clic du joueur (`teleportSelf`) : validation, `blink`, puis l'activité d'arrivée (`teleport.then`).
+  // The same path as the player's click (`teleportSelf`): validation, `blink`, then the arrival activity (`teleport.then`).
   const accepted = await teleportTo(activity, token, { x, y });
   if ( accepted ) await carryPassengers(token, chosen);
   if ( accepted ) await afterTeleport(activity, selfTeleportOf(activity));
-  // §92 : les options de la Foulée des fées, comme après le vrai geste — sans les attendre (le scénario répond à la question).
+  // §92: the Fey Step options, as after the real gesture — without waiting for them (the scenario answers the question).
   if ( accepted ) afterTeleportOptions(activity, token, from).catch(err => console.error(err));
   return { accepted, position: positionJson(token) };
 }
 
-/** §23 : qui menacerait d'une attaque d'opportunité un déplacement en ligne droite jusqu'à ce point (noms). */
+/** §23: who would threaten an Opportunity Attack on a straight-line move to this point (names). */
 export function threats({ tokenId, point }) {
   const token = viewedToken({ tokenId });
   const at = token.parent.grid.getTopLeftPoint(token.parent.grid.getOffset(point));
@@ -243,8 +243,8 @@ export function threats({ tokenId, point }) {
 }
 
 /**
- * §479 : pourquoi les créatures dont l'allonge serait quittée par ce déplacement en ligne droite n'ont pas d'attaque d'opportunité —
- * `[{ name, reason, notice }]`. `explain` : comme un vrai déplacement (journal du débogueur, alerte MJ une fois par combat).
+ * §479: why creatures whose reach would be left by this straight-line move have no Opportunity Attack —
+ * `[{ name, reason, notice }]`. `explain`: like a real move (debugger log, GM alert once per combat).
  */
 export function missedOpportunities({ tokenId, point, explain=false }) {
   const token = viewedToken({ tokenId });
@@ -253,7 +253,7 @@ export function missedOpportunities({ tokenId, point, explain=false }) {
   return lastOpportunityMisses().map(m => ({ name: fromUuidSync(m.token, { strict: false })?.name ?? m.token, reason: m.reason, notice: m.notice }));
 }
 
-/** §38.2 : l'échange de place du Troc du filou, comme l'entrée du menu (depuis l'illusion ou son lanceur) ; positions avant / après. */
+/** §38.2: the place swap of "Trickster's Swap", like the menu entry (from the illusion or its caster); before / after positions. */
 export async function transpose({ tokenId }) {
   const token = viewedToken({ tokenId });
   const at = t => ({ x: t._source.x, y: t._source.y });
@@ -263,9 +263,9 @@ export async function transpose({ tokenId }) {
 }
 
 /**
- * §57 : une ruée en ligne droite (Frappe du vent) vers une case donnée (coin haut-gauche), sans la visée : le même contrôle de la
- * case, les mêmes cibles, la même utilisation sans gabarit. `preview: true` : seulement les cibles et ce qui refuserait la case
- * (`problem`, clé de traduction ou null), rien de lancé.
+ * §57: a straight-line rush ("Wind Strike") toward a given cell (top-left corner), without aiming: the same cell check, the same
+ * targets, the same use without a template. `preview: true`: only the targets and what would refuse the cell
+ * (`problem`, translation key or null), nothing launched.
  */
 export async function dash({ tokenId, itemId, x, y, preview=false }) {
   gmOnly();
@@ -274,7 +274,7 @@ export async function dash({ tokenId, itemId, x, y, preview=false }) {
   if ( !activity ) throw new Error("no straight-line charge on this item");
   if ( preview ) {
     const to = { x, y, elevation: token._source.elevation ?? 0 };
-    // La limite de la visée (`dashRefusal`) : la Vitesse convertie dans l'unité de la scène.
+    // The aiming limit (`dashRefusal`): the Speed converted into the scene's unit.
     return { targets: dashTargets(token, to, lineDashOf(activity)).map(t => t.name),
       problem: dashProblem(token, to, dashLimit(token))?.[0] ?? null };
   }
@@ -287,8 +287,8 @@ export async function dash({ tokenId, itemId, x, y, preview=false }) {
 }
 
 /**
- * §152 : ouvrir ou fermer une porte comme l'entrée « Ouvrir / Fermer » du menu (`setDoorOpen` : s'avancer au contact par
- * `approachDoor`, puis agir). Rend l'état de la porte et la position du token après coup.
+ * §152: open or close a door like the "Open / Close" menu entry (`setDoorOpen`: move up to contact via
+ * `approachDoor`, then act). Returns the door's state and the token's position afterwards.
  */
 export async function door({ tokenId, wallId, open=true }) {
   const token = viewedToken({ tokenId });
@@ -299,9 +299,9 @@ export async function door({ tokenId, wallId, open=true }) {
 }
 
 /**
- * §244 : une serrure de porte. Sans `total`, le chemin du menu (s'avancer, payer l'action en combat, lancer le test, juger) ; avec
- * `total`, le jugement du MJ actif seul, pour un résultat voulu. Rend le verdict, l'état de la porte, les essais notés, les entrées du
- * menu et les hooks publics tirés pendant l'appel.
+ * §244: a door lock. Without `total`, the menu path (move up, pay the action in combat, roll the check, judge); with
+ * `total`, only the active GM's judgment, for a wanted result. Returns the verdict, the door's state, the noted attempts, the menu
+ * entries and the public hooks fired during the call.
  */
 export async function lock({ tokenId, wallId, method="pick", total=null }) {
   const token = viewedToken({ tokenId });
@@ -322,13 +322,13 @@ export async function lock({ tokenId, wallId, method="pick", total=null }) {
 }
 
 /* -------------------------------------------- */
-/*  §177 : diagnostic, pour les scénarios          */
+/*  §177: diagnostic, for scenarios                */
 
 /* -------------------------------------------- */
 /*  Escalade (§192)                             */
 /* -------------------------------------------- */
 
-/** L'état d'un grimpeur (ou d'un candidat) : murs touchés, mode, statut, ce qu'il peut monter, règles du monde ; §192 lot 2 : le plafond. */
+/** The state of a climber (or a candidate): walls touched, mode, status, what it can climb, world rules; §192 batch 2: the ceiling. */
 export function climbState({ tokenId }) {
   const token = viewedToken({ tokenId });
   const walls = wallsNear(token).map(w => w.id);
@@ -337,12 +337,12 @@ export function climbState({ tokenId }) {
   return { walls, canClimb: canClimb(token), climbing: isClimbing(token), status: token.actor?.statuses?.has(MODE_STATUSES.climbing.id) === true,
     rules: climbRules(), speed: climbingOf(token), room: room ? { ...room, remaining: finite(room.remaining) } : null, position: positionJson(token),
     falling: token.actor?.statuses?.has("falling") === true, checkedAt: token.getFlag(MODULE_ID, "climb")?.checkedAt ?? null,
-    // Lot 2 : au plafond ?, peut y aller ?, la capacité, le perchoir, le statut « Au plafond », le miroir vertical.
+    // Batch 2: on the ceiling?, can go there?, the capacity, the perch, the "On the ceiling" status, the vertical mirror.
     onCeiling: isOnCeiling(token), canCeiling: canClimbCeiling(token), walksCeilings: canWalkCeilings(token.actor),
     perch: ceilingPerchFor(token), ceiling: ceiling ? { perch: ceiling.perch, cells: ceiling.cells, affordable: ceiling.affordable } : null,
     ceilingStatus: token.actor?.statuses?.has(MODE_STATUSES.ceiling.id) === true, canDown: canClimbDown(token),
     scaleY: token._source.texture?.scaleY ?? 1, flip: token.getFlag(MODULE_ID, FLIP_FLAG) ?? null,
-    // Lot 3 (§195) : surface glissante, capacité au plafond ici, « Courir sur le mur », vitesses accordées par le contenu.
+    // Batch 3 (§195): slippery surface, ceiling capacity here, "Run on the wall", speeds granted by the content.
     slippery: inSlipperyZone(token), walksCeilingsHere: canWalkCeilingsAt(token), canRun: acrobaticFor(token),
     fallReason: climbFallReasonFor(token) ?? null, movementAction: token.movementAction ?? null, statuses: Array.from(token.actor?.statuses ?? []),
     acrobatic: token.getFlag(MODULE_ID, "climb")?.acrobatic === true,
@@ -351,7 +351,7 @@ export function climbState({ tokenId }) {
     api: climbStateOf(token) };
 }
 
-/** §209 : se hisser sur le rebord `dir` (« n », « s », « e », « w » ; le premier sinon), comme l'entrée de menu. */
+/** §209: pull up onto the ledge `dir` ("n", "s", "e", "w"; the first otherwise), like the menu entry. */
 export async function hoist({ tokenId, dir=null }) {
   const token = viewedToken({ tokenId });
   const before = positionJson(token);
@@ -363,7 +363,7 @@ export async function hoist({ tokenId, dir=null }) {
     climbing: isClimbing(token) };
 }
 
-/** §216 : « S'agripper au bord » vers `dir` (ou le premier bord), comme l'entrée de menu ; rend les bords proposés et la position. */
+/** §216: "Grab the edge" toward `dir` (or the first edge), like the menu entry; returns the proposed edges and the position. */
 export async function grab({ tokenId, dir=null }) {
   const token = viewedToken({ tokenId });
   const before = positionJson(token);
@@ -375,12 +375,12 @@ export async function grab({ tokenId, dir=null }) {
     climbing: isClimbing(token) };
 }
 
-/** §196 : `api.climb.holds` sur une case (`cell` : { i, j }) — le grimpeur y tiendrait-il ? */
+/** §196: `api.climb.holds` on a cell (`cell`: { i, j }) — would the climber hold there? */
 export function climbHolds({ tokenId, cell }) {
   return { holds: climbHoldsAt(viewedToken({ tokenId }), cell) };
 }
 
-/** §196 : `api.climb.toward` — grimper jusqu'à l'allonge d'une cible ; rend son résultat, les positions et l'écart (3D) avant / après. */
+/** §196: `api.climb.toward` — climb up to a target's reach; returns its result, the positions and the (3D) gap before / after. */
 export async function climbToward({ tokenId, targetId, reachCells=1 }) {
   const token = viewedToken({ tokenId });
   const target = viewedToken({ tokenId: targetId });
@@ -391,7 +391,7 @@ export async function climbToward({ tokenId, targetId, reachCells=1 }) {
   return { result, before, after, ...climbState({ tokenId }) };
 }
 
-/** Grimper de `cells` cases, comme l'entrée de menu (sans fenêtre), et attendre la montée ; `acrobatic` : « Courir sur le mur » (§195). */
+/** Climb `cells` cells, like the menu entry (without a window), and wait for the ascent; `acrobatic`: "Run on the wall" (§195). */
 export async function climb({ tokenId, cells, acrobatic=false }) {
   const token = viewedToken({ tokenId });
   const before = positionJson(token);
@@ -399,7 +399,7 @@ export async function climb({ tokenId, cells, acrobatic=false }) {
   return { done, before, after: positionJson(token), ...climbState({ tokenId }) };
 }
 
-/** §192 lot 2 : « Grimper au plafond », comme l'entrée de menu, et attendre la montée. */
+/** §192 batch 2: "Climb the ceiling", like the menu entry, and wait for the ascent. */
 export async function climbCeiling({ tokenId }) {
   const token = viewedToken({ tokenId });
   const before = positionJson(token);
@@ -408,7 +408,7 @@ export async function climbCeiling({ tokenId }) {
   return { done, before, after: positionJson(token), ...climbState({ tokenId }) };
 }
 
-/** §192 lot 2 : « Descendre le long du mur » de `cells` cases, comme l'entrée de menu (sans fenêtre). */
+/** §192 batch 2: "Climb down the wall" by `cells` cells, like the menu entry (without a window). */
 export async function climbDown({ tokenId, cells }) {
   const token = viewedToken({ tokenId });
   const before = positionJson(token);
@@ -419,9 +419,10 @@ export async function climbDown({ tokenId, cells }) {
 }
 
 /**
- * §192 lot 2 : ce que l'attaque de base de `tokenId` pense de `targetId` — écart en cases (3D), vide vertical, trop haut pour une
- * approche, et le verdict de portée ; `engage: true` lance l'attaque de base comme un clic sur l'ennemi (sans dialogue) et dit si le
- * token a bougé et si une carte a été créée. `approach: true` : `api.approach({ target })` (la marche de l'IA, §179) et son résultat.
+ * §192 batch 2: what `tokenId`'s basic attack thinks of `targetId` — gap in cells (3D), vertical gap, too high for an
+ * approach, and the range verdict; `engage: true` launches the basic attack like a click on the enemy (without a dialog) and says
+ * whether the token moved and whether a card was created. `approach: true`: `api.approach({ target })` (the AI's walk, §179)
+ * and its result.
  */
 export async function reachCheck({ tokenId, targetId, engage: doEngage=false, approach: doApproach=false }) {
   const token = viewedToken({ tokenId });
@@ -446,8 +447,8 @@ export async function reachCheck({ tokenId, targetId, engage: doEngage=false, ap
 }
 
 /**
- * §208 : un saut comme l'entrée de menu (« Sauter ici », « Sauter en hauteur ici »), vers le centre de `cell`. Rend les positions avant et
- * après, ce que le saut permettait (`options`, en pieds), les avertissements affichés, et le budget du tour (saut fixe, remboursement).
+ * §208: a jump like the menu entry ("Jump here", "High jump here"), toward the center of `cell`. Returns the before and
+ * after positions, what the jump allowed (`options`, in feet), the warnings shown, and the turn budget (fixed jump, refund).
  */
 export async function jump({ tokenId, cell, high=false }) {
   const token = viewedToken({ tokenId });
@@ -469,7 +470,7 @@ export async function jump({ tokenId, cell, high=false }) {
     statuses: Array.from(token.actor?.statuses ?? []) };
 }
 
-/** « Se laisser tomber » : chute volontaire, comme l'entrée de menu. */
+/** "Drop down": a voluntary fall, like the menu entry. */
 export async function dropDown({ tokenId }) {
   const token = viewedToken({ tokenId });
   const before = positionJson(token);
@@ -477,7 +478,7 @@ export async function dropDown({ tokenId }) {
   return { done, before, after: positionJson(token), hp: token.actor?.system?.attributes?.hp?.value ?? null, ...climbState({ tokenId }) };
 }
 
-/** §238 : ce que le menu propose pour le vol à un token (choix, libellés) ; `run` : le jouer, comme un clic sur l'entrée. */
+/** §238: what the menu offers a token for flight (choices, labels); `run`: play it, like a click on the entry. */
 export async function flight({ tokenId, run=false }) {
   const token = viewedToken({ tokenId });
   const choice = flightChoiceOf(token);
@@ -485,7 +486,7 @@ export async function flight({ tokenId, run=false }) {
   const done = run ? await takeFlight(token, choice) : null;
   return { choice, entries: flightEntries(token).map(e => e.label), done, before, after: positionJson(token),
     fly: Number(token.actor?.system?.attributes?.movement?.fly) || 0, falling: token.actor?.statuses?.has("falling") === true,
-    // Ce qui décide (`flightChoiceOf`) : pour comprendre un menu vide.
+    // What decides it (`flightChoiceOf`): to understand an empty menu.
     why: { owner: token.isOwner, creature: token.actor?.system?.isCreature !== false, pilot: !!pilotOf(token), ethereal: isEthereal(token),
       airborne: isAirborne(token), speeds: speedsOf(token.actor), bounds: { ...boundsUnder(token) }, altitude: game.settings.get(MODULE_ID, "altitude") } };
 }

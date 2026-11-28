@@ -1,9 +1,9 @@
 /**
- * §333, lot K12 de la repasse des créatures (suite). Arène des sorts : le Lanceur (PNJ), la Cible (999 PV), le Mort-vivant.
- *  - Protection ésotérique de Gennifer (Ravenloft, « If the target is an Undead creature, it has the Stunned condition ») : sur un
- *    échec, la Cible n'est pas Étourdie, le Mort-vivant l'est (`effectsIf` sur les effets d'une sauvegarde) ;
- *  - Disparition du Feu follet : l'Invisibilité tombe après un jet d'attaque (`breaksOn`, lu dans son texte ; celle de l'Esprit frappeur,
- *    même item, ne le dit pas).
+ * §333, batch K12 of the creature pass (continued). Spell arena: the Caster (NPC), the Target (999 HP), the Undead.
+ *  - Gennifer's Esoteric Protection (Ravenloft, "If the target is an Undead creature, it has the Stunned condition"): on a
+ *    failure, the Target is not Stunned, the Undead is (`effectsIf` on the effects of a saving throw);
+ *  - Will-o'-Wisp's Vanish: Invisibility drops after an attack roll (`breaksOn`, read in its text; the Poltergeist's,
+ *    same item, does not say so).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -75,7 +75,7 @@ export default {
       }
     }
 
-    // Disparition : Invisible, puis une attaque la rompt.
+    // Vanish: Invisible, then an attack breaks it.
     const t0 = await ctx.position(target);
     await ctx.call("move-token", { tokenId: caster.id, x: t0.x - grid, y: t0.y, elevation: 0 });
     await pause(800);

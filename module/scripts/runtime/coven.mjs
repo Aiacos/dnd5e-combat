@@ -1,6 +1,6 @@
 /**
- * Cercles (SPEC §19.5) : PV partagés et seconde phase, sur le MJ actif. La lecture et l'écriture sont dans adapter/coven.mjs,
- * le report des PV dans core/coven.mjs.
+ * Covens (SPEC §19.5): shared HP and second phase, on the active GM. Reading and writing are in adapter/coven.mjs,
+ * the HP carry-over in core/coven.mjs.
  */
 
 import { sharedHpItemOf, shareHp, isSharedWrite, transformsAtZero, enterSecondPhase, covenMembers, standsAtZero, standAtOne,
@@ -14,42 +14,42 @@ import { enqueue } from "./queue.mjs";
 import { route } from "./router.mjs";
 import { AFTER_ZERO_HP_MS } from "../adapter/death.mjs";
 
-/** Une file pour tous les cercles : deux écarts reportés l'un après l'autre ne s'écrasent pas. */
+/** One queue for all covens: two deltas carried over one after the other do not overwrite each other. */
 const QUEUE = "coven";
 
-/** Les créatures dont la seconde phase est en cours : un seul passage par créature. */
+/** The creatures whose second phase is under way: a single pass per creature. */
 const shifting = new Set();
 
-/** Un membre a perdu ou regagné des PV (dégâts, soins, barre du token) : les autres suivent. */
+/** A member lost or regained HP (damage, healing, token bar): the others follow. */
 function onHpChanged(actor, changes, changed) {
   if ( !changes?.hp || isSharedWrite(changed) || !sharedHpItemOf(actor) ) return;
-  const members = covenMembers(actor);   // maintenant : à 0 PV, la seconde phase va rendre ce token à une autre forme
+  const members = covenMembers(actor);   // now: at 0 HP, the second phase will return this token to another form
   return enqueue(QUEUE, async () => {
     const done = await shareHp(actor, changes.hp, members);
     for ( const d of done ) log(`coven: ${d.name} follows ${actor.name} (${changes.hp > 0 ? "+" : ""}${changes.hp} HP: ${d.before} → ${d.after})`);
   });
 }
 
-/** Un acteur vient de tomber à 0 PV : s'il a une seconde phase, il change de forme au lieu de tomber (§17.1 laisse faire). */
+/** An actor has just dropped to 0 HP: if it has a second phase, it changes form instead of falling (§17.1 lets it). */
 function onZero(actor) {
   if ( !actor || shifting.has(actor.uuid) || !(transformsAtZero(actor) || standsAtZero(actor)) ) return;
   shifting.add(actor.uuid);
   return enqueue(QUEUE, async () => {
     try {
-      // dnd5e pose Mort sur le client qui a écrit les PV (`updateDowned`) : on lui laisse le temps, la phase le retire.
+      // dnd5e sets Dead on the client that wrote the HP (`updateDowned`): we give it time, the phase removes it.
       await sleep(AFTER_ZERO_HP_MS);
       if ( (actor.system?.attributes?.hp?.value ?? 1) > 0 ) return;
-      // §19.6 : le dernier carré passe avant tout — il ne tombe pas.
+      // §19.6: the last stand comes before everything — it does not fall.
       const stood = await standAtOne(actor);
       if ( stood ) return log(`${stood}: ${actor.name} stays up at 1 HP`);
-      await burstAtZero(actor);   // §19.6 : explosion à 0 PV, avant la bascule
+      await burstAtZero(actor);   // §19.6: burst at 0 HP, before the switch
       const done = await enterSecondPhase(actor);
       if ( done ) log(`second phase: ${done.from} → ${done.to}`);
     } finally { shifting.delete(actor.uuid); }
   });
 }
 
-/** §19.6 : l'activité d'un dernier rempart vient d'être utilisée (réaction à 50 PV ou moins) : tout ce qui l'affectait prend fin. */
+/** §19.6: a last bulwark's activity has just been used (reaction at 50 HP or fewer): everything that affected it ends. */
 async function onLastStandUsed(activity) {
   const actor = activity?.actor;
   if ( !actor || !contentOf(activity.item).entry?.lastStand ) return;
@@ -58,7 +58,7 @@ async function onLastStandUsed(activity) {
   await say({ actor }, locEsc("EffetsPurges", { item: activity.item.name, name: actor.name }));
 }
 
-/** §76 : une forme révélée à volonté (`changesForm`) — l'échange de token de la seconde phase, après l'utilisation. */
+/** §76: a form revealed at will (`changesForm`) — the second phase's token swap, after the use. */
 function onFormChange(activity) {
   const actor = activity?.actor;
   if ( !actor || !formChangeOf(activity) || shifting.has(actor.uuid) ) return;
@@ -68,16 +68,16 @@ function onFormChange(activity) {
       const done = await changeForm(activity);
       if ( !done ) return;
       log(`shape change: ${done.from} → ${done.to}`);
-      // §498 : le changement de forme vu et entendu de toute la table.
+      // §498: the form change seen and heard by the whole table.
       notice(done.token, { key: "FormeRetour.Change", data: { name: done.to } }, "info", { all: true, action: "formChange", outcome: "success" });
     } finally { shifting.delete(actor.uuid); }
   });
 }
 
-/** §498 : la requête « reprendre sa forme d'origine » (menu du token, joueur propriétaire) vers le MJ actif. */
+/** §498: the "revert to original form" request (token menu, owning player) to the active GM. */
 export const REVERT_FORM_QUERY = `${MODULE_ID}.revertShape`;
 
-/** §498 : côté MJ actif — le token reprend sa forme d'origine (durée écoulée, ou à la demande de son propriétaire). */
+/** §498: active GM side — the token reverts to its original form (duration elapsed, or at its owner's request). */
 function handleRevertShape({ token: tokenUuid, reason="asked" }={}, { user }={}) {
   const document = fromUuidSync(tokenUuid ?? "", { strict: false });
   if ( !document || !formRevertOf(document) || !actsFor(user, document) ) return false;
@@ -96,19 +96,19 @@ function handleRevertShape({ token: tokenUuid, reason="asked" }={}, { user }={})
   });
 }
 
-/** §498 : intention « reprendre sa forme » (menu du clic droit sur son propre token) — par le MJ actif. */
+/** §498: "revert form" intent (right-click menu on one's own token) — by the active GM. */
 export function revertShape(token) {
   const document = token?.document ?? token;
   return viaActiveGM(REVERT_FORM_QUERY, handleRevertShape, { token: document?.uuid, reason: "asked" },
     { timeout: 20000, noGm: "FormeRetour.SansMJ", fallback: false, label: "shape change: return" });
 }
 
-/** §498 : le temps du monde a avancé (un round de combat, le temps qui passe) — les formes limitées arrivées à leur terme. */
+/** §498: world time has advanced (a combat round, time passing) — the limited forms that reached their end. */
 async function onWorldTime(worldTime) {
   for ( const document of expiredFormTokens(worldTime) ) {
     const snap = formRevertOf(document);
     if ( snap.auto !== false ) { await handleRevertShape({ token: document.uuid, reason: "duration elapsed" }); continue; }
-    // `auto: false` : le MJ décide — un rappel, une fois ; l'entrée « Reprendre sa forme » du menu reste.
+    // `auto: false`: the GM decides — a reminder, once; the "Revert form" menu entry remains.
     await markReminded(document);
     await say({ token: document }, locEsc("FormeRetour.Rappel", { name: document.name, item: snap.item ?? "" }),
       { formRevertDue: { token: document.uuid } }, { whisper: game.users.filter(u => u.isGM).map(u => u.id) });

@@ -1,10 +1,11 @@
 /**
- * §245, §257 (issue #21) : la vérification « D&D Beyond » du diagnostic, sur un acteur créé pour le test.
- *  - Une Armure d'Agathys du Manuel, marquée importée de DDB (`flags.ddbimporter`) et dont les activités ont reçu d'autres ids : la
- *    règle du moteur cite l'activité de riposte du Manuel, absente de la copie → signalée, avec le pack de l'objet officiel.
- *  - La même, marquée DDB mais avec les ids du Manuel : rien à signaler.
- *  - La copie aux ids changés, sans marque DDB : pas l'affaire de cette vérification.
- *  L'analyse n'écrit rien ; la réparation met l'objet officiel à la place, sans puis avec le verrou de DDB Importer.
+ * §245, §257 (issue #21): the "D&D Beyond" check of the diagnostic, on an actor created for the test.
+ *  - An Armor of Agathys from the Handbook, marked as imported from DDB (`flags.ddbimporter`) and whose activities received
+ *    other ids: the engine's rule cites the Handbook's retaliation activity, absent from the copy → reported, with the pack
+ *    of the official item.
+ *  - The same, marked DDB but with the Handbook's ids: nothing to report.
+ *  - The copy with changed ids, without a DDB mark: not this check's business.
+ *  The analysis writes nothing; the repair puts the official item in its place, without then with the DDB Importer lock.
  */
 const MODULE_ID = "dnd5e-combat";
 const PACK = "dnd-players-handbook.spells";
@@ -53,8 +54,8 @@ export default {
     const after = JSON.stringify((await ctx.call("get-actor", { actorId })).items?.map(i => [i.name, i.flags, Object.keys(i.system?.activities ?? {})]));
     ctx.expect(after === before, "l'analyse n'a rien écrit");
 
-    // La réparation : l'objet officiel à la place, même id, flags DDB gardés ; avec le verrou, `ignoreItemImport` et le nom DDB
-    // (pas de `definitionId` sur la copie de test : DDB Importer ne l'apparierait plus que par son nom).
+    // The repair: the official item in its place, same id, DDB flags kept; with the lock, `ignoreItemImport` and the DDB name
+    // (no `definitionId` on the test copy: DDB Importer would then only match it by its name).
     const packBefore = (await ctx.call("list-compendiums", {}).catch(() => [])) ?? [];
     const hadPack = JSON.stringify(packBefore).includes("world.das-backups");
     const backups = [];
@@ -64,7 +65,7 @@ export default {
     const renamedId = (await itemsOf()).find(i => i.name === "DAS DDB renamed")?._id;
     for ( const lock of [false, true] ) {
       if ( lock ) {
-        // Remettre la copie DDB aux ids changés, sous le même id, pour le second passage.
+        // Put the DDB copy with changed ids back, under the same id, for the second pass.
         await ctx.call("remove-embedded-item", { documentType: "Actor", id: actorId, itemId: renamedId });
         await ctx.engine("restoreItem", { actorId, itemData: { ...items[0], _id: renamedId } });
       }

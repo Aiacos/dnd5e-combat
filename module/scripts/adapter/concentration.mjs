@@ -1,23 +1,23 @@
 /**
- * Concentration. dnd5e 6.0.3 en gère déjà l'essentiel (vérifié dans la source) :
- *  - début de concentration à l'utilisation, remplacement de la précédente (activity/mixin.mjs:500)
- *  - à la perte de PV, carte `type: "prompt"` chuchotée aux propriétaires, avec un bouton de
- *    sauvegarde de concentration au bon DD (data/actor/templates/attributes.mjs:699-703,
- *    documents/actor/actor.mjs:1184-1199, DD par getConcentrationDC : actor.mjs:551)
- *  - sur la carte d'une sauvegarde ratée, bouton « Rompre la concentration »
+ * Concentration. dnd5e 6.0.3 already handles most of it (verified in the source):
+ *  - concentration starts on use, replacing the previous one (activity/mixin.mjs:500)
+ *  - on HP loss, a `type: "prompt"` card whispered to the owners, with a concentration
+ *    save button at the right DC (data/actor/templates/attributes.mjs:699-703,
+ *    documents/actor/actor.mjs:1184-1199, DC from getConcentrationDC: actor.mjs:551)
+ *  - on the card of a failed save, a "Break concentration" button
  *    (data/chat-message/save-message-data.mjs:162-167)
- *  - état mort ou neutralisé : carte proposant de mettre fin à la concentration
+ *  - dead or incapacitated condition: a card offering to end concentration
  *    (documents/active-effect.mjs:964-969, actor.mjs:1205-1216)
- *  - fin de concentration : l'effet est supprimé, et avec lui les effets posés sur les cibles
+ *  - end of concentration: the effect is deleted, and with it the effects placed on the targets
  *    (`flags.dnd5e.dependentOn`, active-effect.mjs:836-860)
- * Ce que le système ne fait pas : cliquer. Le moteur n'ajoute donc aucune règle, il déclenche
- * les mêmes appels publics que ces boutons. Seul manque réel : les régions d'un sort à
- * concentration ne sont pas retirées (une région ne peut pas être un « dépendant » du système).
- * Le moteur les retire à la SUPPRESSION de l'effet de concentration, vue par tous les clients —
- * pas sur `dnd5e.endConcentration`, hook local émis sur le seul client qui a mis fin (actor.mjs,
- * `Hooks.callAll` en fin d'`endConcentration`) : un joueur qui y met fin lui-même laissait la zone.
- * Le réglage « Désactiver le suivi de la concentration » coupe tout cela à la source : sans
- * carte native, le moteur n'a rien à déclencher.
+ * What the system does not do: click. The engine therefore adds no rule, it triggers
+ * the same public calls as those buttons. The only real gap: the regions of a concentration
+ * spell are not removed (a region cannot be a system "dependent").
+ * The engine removes them on the DELETION of the concentration effect, seen by all clients —
+ * not on `dnd5e.endConcentration`, a local hook emitted only on the client that ended it (actor.mjs,
+ * `Hooks.callAll` at the end of `endConcentration`): a player who ended it themselves left the area behind.
+ * The "Disable concentration tracking" setting cuts all this at the source: without the
+ * native card, the engine has nothing to trigger.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -28,14 +28,14 @@ import { contentOf, identifierOf } from "./content.mjs";
 import { originItemOf } from "./facts.mjs";
 import { concentrationRuleOf } from "../core/concentration.mjs";
 
-/** §141 : la requête « sauvegarde de concentration » envoyée au joueur connecté ; sa réponse. */
+/** §141: the "concentration save" request sent to the connected player; its answer. */
 export const CONCENTRATION_QUERY = `${MODULE_ID}.concentration`;
-export const CONCENTRATION_TIMEOUT = 40000;   // la fenêtre du jet est bornée par adapter/dialogs.mjs
+export const CONCENTRATION_TIMEOUT = 40000;   // the roll window is bounded by adapter/dialogs.mjs
 
 /**
- * Relevé des trous (2026-10-22) : l'item du porteur qui le dispense du jet de concentration après des dégâts (clé `keepsConcentration`,
- * Chasseur implacable), quand TOUTE sa concentration vient des items qu'il nomme ; null sinon. Une concentration sur un autre sort
- * garde son jet (il vaut pour toutes : dnd5e en demande un seul).
+ * Gap survey (2026-10-22): the bearer's item that exempts them from the concentration check after damage (key `keepsConcentration`,
+ * Relentless Hunter), when ALL their concentration comes from the items it names; null otherwise. A concentration on another spell
+ * keeps its check (it counts for all: dnd5e asks for just one).
  */
 export function concentrationKeptBy(actor) {
   const effects = Array.from(actor?.concentration?.effects ?? []);
@@ -47,14 +47,15 @@ export function concentrationKeptBy(actor) {
   }) ?? null;
 }
 
-/** §494 (B14) : la règle de concentration que portent les items de l'acteur (`concentration: { limit, loseAll }`), ou null. */
+/** §494 (B14): the concentration rule carried by the actor's items (`concentration: { limit, loseAll }`), or null. */
 export function concentrationRuleFor(actor) {
   return concentrationRuleOf(Array.from(actor?.items ?? []).map(i => contentOf(i).entry));
 }
 
 /**
- * §494 (B14) : « si elle perd sa concentration, elle les perd toutes » — après la rupture, ce qui en reste (un module qui aurait refusé
- * la fin d'une d'elles par `dnd5e.preEndConcentration`) est retiré sans passer par ce hook. Rend les effets retirés.
+ * §494 (B14): "if it loses concentration, it loses them all" — after the break, what remains of them (a module that would
+ * have refused the end of one of them via `dnd5e.preEndConcentration`) is removed without going through that hook. Returns the
+ * removed effects.
  */
 export async function loseRemainingConcentration(actor) {
   const left = Array.from(actor?.concentration?.effects ?? []).filter(e => !e.isDeleted);
@@ -65,13 +66,13 @@ export async function loseRemainingConcentration(actor) {
   return left;
 }
 
-/** Le nom du sort que tenait un effet de concentration (l'item d'origine, sinon l'effet). */
+/** The name of the spell a concentration effect held (the original item, otherwise the effect). */
 export function concentrationLabel(effect) {
   const item = effect?.getFlag?.("dnd5e", "item");
   return item?.data?.name ?? effect?.parent?.items?.get?.(item?.id)?.name ?? effect?.name ?? "?";
 }
 
-/** Le joueur connecté qui doit lancer pour cet acteur, ou null si c'est au moteur. */
+/** The connected player who must roll for this actor, or null if it is up to the engine. */
 export function rollerFor(actor) {
   return chooseRoller(game.users.map(u => ({
     id: u.id, active: u.active, isGM: u.isGM, owner: actor.testUserPermission(u, "OWNER")
@@ -92,7 +93,7 @@ export function readConcentrationPrompt(message) {
   return null;
 }
 
-/** Même appel que le bouton de la carte (enrichers.mjs:878-897), sans dialogue. */
+/** Same call as the card's button (enrichers.mjs:878-897), without a dialog. */
 export async function rollConcentration({ actor, dc, ability }, promptId) {
   const config = { target: dc };
   if ( ability ) config.ability = ability;
@@ -102,13 +103,14 @@ export async function rollConcentration({ actor, dc, ability }, promptId) {
 }
 
 /**
- * §141 : côté joueur — la fenêtre du jet de concentration s'ouvre sur SON écran, comme les sauvegardes demandées par le moteur
- * (adapter/saves.mjs, `handleSaveQuery`) ; ce sont ses dés. Au bout du délai, la fenêtre se ferme et le jet part seul. Rend true si le
- * jet est fait (la carte de demande est alors retirée par le MJ actif, `concentrationPrompt`), false sinon : la carte reste.
+ * §141: player side — the concentration roll window opens on THEIR screen, like the saves requested by the engine
+ * (adapter/saves.mjs, `handleSaveQuery`); it is their dice. At the end of the timeout, the window closes and the roll goes
+ * off by itself. Returns true if the roll is made (the request card is then removed by the active GM,
+ * `concentrationPrompt`), false otherwise: the card stays.
  * @param {{actor: string, dc: number, ability?: string, prompt: string}} payload
  */
 export async function handleConcentrationQuery({ actor: actorUuid, dc, ability=null, prompt }, { user=null }={}) {
-  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  // §472: only the GM sends this request in play; from a player, it drops (security refusal, not forceable).
   if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | concentration query from ${user.name} refused: only a GM sends it`); return false; }
   const actor = await fromUuid(actorUuid);
   if ( !actor ) return false;
@@ -119,7 +121,7 @@ export async function handleConcentrationQuery({ actor: actorUuid, dc, ability=n
     if ( ability ) config.ability = ability;
     return [config, { data: { flags: { [MODULE_ID]: { concentrationPrompt: prompt } } } }];
   };
-  // §401 : à son tour dans la file des fenêtres de ce poste.
+  // §401: in its turn in the queue of this client's windows.
   let rolls = await inLine(async () => {
     const cancel = closeRollDialogAfter(actor, () => { timedOut = true; }, null, { awaiting: "roll" });
     const [config, message] = args();
@@ -134,8 +136,8 @@ export async function handleConcentrationQuery({ actor: actorUuid, dc, ability=n
 }
 
 /**
- * @param {ChatMessage} message  Message de type "save".
- * @returns {{actor: Actor, failed: boolean, prompt: string|null}|null}  null si ce n'est pas une sauvegarde de concentration.
+ * @param {ChatMessage} message  Message of type "save".
+ * @returns {{actor: Actor, failed: boolean, prompt: string|null}|null}  null if it is not a concentration save.
  */
 export function readConcentrationSave(message) {
   if ( message.system?.type !== "concentration" ) return null;
@@ -148,11 +150,11 @@ export function readConcentrationSave(message) {
   };
 }
 
-/** Même effet que le bouton « Rompre la concentration » de la carte de sauvegarde. */
+/** Same effect as the "Break concentration" button of the save card. */
 const breaking = new Map();
 
 export async function breakConcentration(actor, saveMessage) {
-  // §303 : une rupture à la fois par créature — deux chemins (carte « fin », sauvegarde ratée, fin sur Neutralisé) arrivaient ensemble.
+  // §303: one break at a time per creature — two paths ("end" card, failed save, end on Incapacitated) arrived together.
   const key = actor?.uuid ?? "";
   const previous = breaking.get(key) ?? Promise.resolve();
   const run = previous.catch(() => {}).then(() => endNow(actor, saveMessage));
@@ -161,10 +163,10 @@ export async function breakConcentration(actor, saveMessage) {
 }
 
 async function endNow(actor, saveMessage) {
-  // Le lanceur tombé à 0 PV : sa concentration peut partir par un autre chemin au même moment (vu le 2026-10-12 : « ActiveEffect …
-  // does not exist! ») — elle est terminée, c'est ce qu'on voulait.
-  // §303 : déjà terminée par l'autre chemin (la carte « fin » de dnd5e et la sauvegarde ratée des mêmes dégâts) — rien à retirer, pas
-  // d'erreur « does not exist » dans la console.
+  // The caster dropped to 0 HP: their concentration can go by another path at the same moment (seen on 2026-10-12:
+  // "ActiveEffect … does not exist!") — it is ended, which is what we wanted.
+  // §303: already ended by the other path (dnd5e's "end" card and the failed save from the same damage) — nothing to remove, no
+  // "does not exist" error in the console.
   if ( !actor?.concentration?.effects?.size ) return [];
   const ended = await actor.endConcentration().catch(err => {
     if ( /does not exist/i.test(String(err?.message ?? err)) ) return [];
@@ -174,35 +176,35 @@ async function endNow(actor, saveMessage) {
   return ended ?? [];
 }
 
-/** L'effet de concentration ouvert par un message d'utilisation, ou null. */
+/** The concentration effect opened by a usage message, or null. */
 export function concentrationEffectOf(usageMessage) {
   const id = usageMessage?.system?.concentration;
   return id ? usageMessage.getAssociatedActor?.()?.effects.get(id) ?? null : null;
 }
 
-/** Rattache une région à l'effet de concentration qui la maintient. */
+/** Attaches a region to the concentration effect that maintains it. */
 export async function tieRegionToConcentration(region, effect) {
   await region.setFlag(MODULE_ID, "concentration", effect.uuid);
 }
 
-/** L'effet est-il une concentration (état spécial du cœur, que dnd5e pose : actor.mjs:258, active-effect.mjs:927) ? */
+/** Is the effect a concentration (special core condition, which dnd5e places: actor.mjs:258, active-effect.mjs:927)? */
 export function isConcentrationEffect(effect) {
   return !!effect?.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING);
 }
 
 /**
- * Une concentration désactivée (bascule de la fiche ou du HUD) n'est plus une concentration pour dnd5e
- * (`actor.concentration.effects` ne compte que les effets actifs), mais elle ne tombe pas : ses zones, ses
- * invocations et ses effets dépendants (`flags.dnd5e.dependentOn`, retirés à la seule suppression) restent.
- * Vu le 2026-09-25 : Rayon de lune « arrêté » par la bascule, zone restée sur la scène.
+ * A disabled concentration (toggle on the sheet or HUD) is no longer a concentration for dnd5e
+ * (`actor.concentration.effects` counts only active effects), but it does not fall: its areas,
+ * summons and dependent effects (`flags.dnd5e.dependentOn`, removed only on deletion) remain.
+ * Seen on 2026-09-25: Moonbeam "stopped" by the toggle, area left on the scene.
  * @param {ActiveEffect} effect
- * @param {object} changes  Différentiel de `updateActiveEffect`.
+ * @param {object} changes  Diff of `updateActiveEffect`.
  */
 export function concentrationDisabled(effect, changes) {
   return isConcentrationEffect(effect) && (changes?.disabled === true);
 }
 
-/** Retire les régions maintenues par un effet de concentration qui vient de tomber. */
+/** Removes the regions maintained by a concentration effect that has just fallen. */
 export async function removeRegionsOf(effectUuid) {
   let removed = 0;
   for ( const scene of game.scenes ) {

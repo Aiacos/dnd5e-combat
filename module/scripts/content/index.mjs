@@ -1,12 +1,12 @@
 /**
- * Le contenu livré avec le module, en une table par identifiant dnd5e (core/content.mjs pour le
- * schéma, SPEC §13.4 pour la surcouche). Mettre à jour ce dossier met à jour tous les acteurs
- * du monde, PJ et PNJ, sans rien écrire sur leurs fiches.
+ * The content shipped with the module, in one table per dnd5e identifier (core/content.mjs for the
+ * schema, SPEC §13.4 for the overlay). Updating this folder updates all the actors
+ * of the world, PCs and NPCs, without writing anything on their sheets.
  *
- * Un autre module peut ajouter sa propre table (créatures d'une campagne, options d'un supplément) : `registerTable(source,
- * table)`, appelée par l'API publique `api.content.register` ou le hook `dnd5e-combat.registerContent` (runtime/content.mjs).
- * Chaque table enregistrée est fusionnée par-dessus le contenu livré, entrée par entrée (`mergeEntries`), dans l'ordre des
- * enregistrements. `SHIPPED` reste le contenu livré seul ; `CONTENT` est le contenu en vigueur, que tout le moteur lit.
+ * Another module can add its own table (creatures of a campaign, options of a supplement): `registerTable(source,
+ * table)`, called by the public API `api.content.register` or the hook `dnd5e-combat.registerContent` (runtime/content.mjs).
+ * Each registered table is merged on top of the shipped content, entry by entry (`mergeEntries`), in the order of the
+ * registrations. `SHIPPED` stays the shipped content alone; `CONTENT` is the content in force, which the whole engine reads.
  */
 
 import { TRIGGERS } from "./triggers.mjs";
@@ -51,8 +51,8 @@ import { SOURCE_IDENTIFIERS } from "./sources.mjs";
 import { BURSTS, RECASTS, TURN_STARTS, BOLTS, OBSCURES, HEAL_MAX, DUPLICATES, SAVE_ADVANTAGES, ON_FELL, BONUS_ATTACKS, REACTIVE_SPELLS, FREE_SOMATIC, PROJECTILES, LEAPS } from "./bursts.mjs";
 
 /**
- * Les tables « par brique » : une table (`identifiant → valeur`, ou une liste d'identifiants : la valeur `true`) et la clé d'entrée
- * qu'elle remplit, dans l'ordre où elles s'écrivent. Clé `null` : la valeur est un morceau d'entrée, recopié tel quel (liens).
+ * The "per building block" tables: a table (`identifiant → valeur`, or a list of identifiers: the value `true`) and the entry key
+ * it fills, in the order in which they are written. Key `null`: the value is a piece of entry, copied as is (links).
  */
 export const BRICKS = Object.freeze([
   [TRIGGERS, "triggers"], [AURAS, "aura"], [EMANATIONS, "emanation"], [REGENERATIONS, "regeneration"],
@@ -72,9 +72,9 @@ export const BRICKS = Object.freeze([
 ].map(Object.freeze));
 
 /**
- * Les tables d'entrées complètes, fusionnées par-dessus les briques dans cet ordre (`mergeEntries`) : la fuite par la Réaction
- * (§147), les options de Ravenloft (§19.9), les classes et espèces du Manuel des joueurs (§20), les dons (§129), les sorts à
- * règles multiples (§37), les objets (§49), les corrections de leur donnée (§335).
+ * The complete entry tables, merged on top of the building blocks in this order (`mergeEntries`): the flight by Reaction
+ * (§147), the Ravenloft options (§19.9), the classes and species of the Player's Handbook (§20), the feats (§129), the spells with
+ * multiple rules (§37), the items (§49), the corrections to their data (§335).
  */
 export const ENTRY_TABLES = Object.freeze([
   FLEE_ON_FAILED_SAVE, CONTROL, RAVENLOFT, MONSTERS, ROGUE, FIGHTER, BARBARIAN, CANTRIPS, MONK, PALADIN, RANGER, CLERIC, WIZARD, WARLOCK,
@@ -82,24 +82,24 @@ export const ENTRY_TABLES = Object.freeze([
 ]);
 
 /**
- * Relevé des trous (2026-10-22) : les sorts que le SRD 2024 de dnd5e renomme (sans le nom du mage) gardent l'id de document et les ids
- * d'activité et d'effet du Manuel des joueurs (vérifié dans `packs/spells24`), mais pas son identifiant. Sans le Manuel premium, ces
- * sorts n'avaient aucune règle. Identifiant du SRD → identifiant du Manuel ; l'entrée écrite sous l'un vaut pour l'autre, et une
- * entrée propre à chacun, s'il y en a une, l'emporte.
- * (La Main de Bigby, `arcane-hand`, a la sienne : content/summons.mjs.)
+ * Gap survey (2026-10-22): the spells that the 2024 SRD of dnd5e renames (without the mage's name) keep the document id and the
+ * activity and effect ids of the Player's Handbook (checked in `packs/spells24`), but not its identifier. Without the premium
+ * Handbook, these spells had no rule. SRD identifier → Handbook identifier; the entry written under one holds for the other, and an
+ * entry of its own for each, if there is one, wins.
+ * (Bigby's Hand, `arcane-hand`, has its own: content/summons.mjs.)
  */
 export const SRD_ALIASES = Object.freeze({
   "black-tentacles": "evards-black-tentacles", "acid-arrow": "melfs-acid-arrow", "resilient-sphere": "otilukes-resilient-sphere",
   "arcane-sword": "mordenkainens-sword", "faithful-hound": "mordenkainens-faithful-hound",
   "magnificent-mansion": "mordenkainens-magnificent-mansion",
-  // §438 : le Manuel des joueurs 3.0.0 prend aussi ces identifiants du SRD.
+  // §438: Player's Handbook 3.0.0 also takes these SRD identifiers.
   "storm-of-radiance": "jallarzis-storm-of-radiance",
-  // Même trou, hors des sorts de mage déjà relevés : un sort et trois objets que le SRD 2024 renomme en gardant l'id de document et les
-  // ids d'activité et d'effet du livre (vérifié dans `dnd5e.spells24` et `dnd5e.equipment24`, dnd5e 6.1.0).
+  // Same gap, outside the mage spells already surveyed: one spell and three items that the 2024 SRD renames while keeping the
+  // document id and the book's activity and effect ids (checked in `dnd5e.spells24` and `dnd5e.equipment24`, dnd5e 6.1.0).
   "freezing-sphere": "otilukes-freezing-sphere", "iron-bands": "iron-bands-of-bilarro", "crawler-mucus": "carrion-crawler-mucus",
   "spiders-sting": "lolths-sting",
-  // Coffre secret : l'entrée est écrite sous l'identifiant du SRD ; le Manuel des joueurs garde le nom du mage (même id de document,
-  // mêmes ids d'activité, vérifié dans `dnd5e.spells24` et le module du Manuel).
+  // Secret Chest: the entry is written under the SRD identifier; the Player's Handbook keeps the mage's name (same document id,
+  // same activity ids, checked in `dnd5e.spells24` and the Handbook module).
   "secret-chest": "leomunds-secret-chest"
 });
 
@@ -115,7 +115,8 @@ function build() {
   for ( const source of ENTRY_TABLES ) {
     for ( const [id, entry] of Object.entries(source) ) table[id] = mergeEntries([table[id] ?? null, entry]);
   }
-  // Dans les deux sens : l'entrée écrite sous l'un des deux identifiants vaut pour l'autre, qui n'en a pas (une entrée propre l'emporte).
+  // In both directions: the entry written under one of the two identifiers holds for the other, which has none (an entry of
+  // its own wins).
   for ( const [srd, phb] of Object.entries(SRD_ALIASES) ) {
     if ( table[phb] && !table[srd] ) table[srd] = table[phb];
     else if ( table[srd] && !table[phb] ) table[phb] = table[srd];
@@ -123,17 +124,17 @@ function build() {
   return Object.freeze(table);
 }
 
-/** Le contenu livré avec le moteur, seul. */
+/** The content shipped with the engine, alone. */
 export const SHIPPED = build();
 
-/** Le contenu en vigueur : le contenu livré, plus les tables enregistrées. Même objet pour toute la session (lu par référence). */
+/** The content in force: the shipped content, plus the registered tables. Same object for the whole session (read by reference). */
 export const CONTENT = { ...SHIPPED };
 
-/** Les tables enregistrées par d'autres modules : `source` (id du module) → table `{ identifiant: entrée }`, dans l'ordre. */
+/** The tables registered by other modules: `source` (module id) → table `{ identifiant: entrée }`, in order. */
 const REGISTERED = new Map();
 
-/** Recompose `CONTENT` sur place : le contenu livré, puis chaque table enregistrée fusionnée par-dessus. */
-/** Combien de fois le contenu composé a été refait : une table enregistrée ou retirée. Pour qui garde une lecture du contenu. */
+/** Rebuilds `CONTENT` in place: the shipped content, then each registered table merged on top. */
+/** How many times the composed content was rebuilt: a table registered or removed. For whoever keeps a reading of the content. */
 let stamp = 0;
 export const tablesStamp = () => stamp;
 
@@ -147,10 +148,10 @@ function rebuild() {
 }
 
 /**
- * Enregistre (ou remplace) la table d'un module. Ne valide rien : runtime/content.mjs ne passe ici que des entrées valides.
- * @param {string} source  L'id du module qui l'apporte.
+ * Registers (or replaces) a module's table. Validates nothing: runtime/content.mjs passes only valid entries here.
+ * @param {string} source  The id of the module that brings it.
  * @param {Record<string, object>} table  `{ identifiant dnd5e: entrée }`.
- * @returns {string[]}  Les identifiants enregistrés.
+ * @returns {string[]}  The registered identifiers.
  */
 export function registerTable(source, table) {
   REGISTERED.set(source, Object.freeze({ ...table }));
@@ -158,7 +159,7 @@ export function registerTable(source, table) {
   return Object.keys(table);
 }
 
-/** Retire la table d'un module (et ses sources, §277). @returns {boolean} Si elle était enregistrée. */
+/** Removes a module's table (and its sources, §277). @returns {boolean} Whether it was registered. */
 export function unregisterTable(source) {
   const had = REGISTERED.delete(source);
   if ( REGISTERED_SOURCES.delete(source) ) rebuildSources();
@@ -167,12 +168,13 @@ export function unregisterTable(source) {
 }
 
 /**
- * §277 : les sources (id de document → identifiant) livrées (content/sources.mjs) puis enregistrées par d'autres modules, dans l'ordre
- * des enregistrements — la dernière l'emporte. Même objet pour toute la session (lu par référence, adapter/content.mjs `identifierOf`).
+ * §277: the sources (document id → identifier) shipped (content/sources.mjs) then registered by other modules, in the order
+ * of the registrations — the last one wins. Same object for the whole session (read by reference, adapter/content.mjs
+ * `identifierOf`).
  */
 export const SOURCES = { ...SOURCE_IDENTIFIERS };
 
-/** Les sources enregistrées : `source` (id du module) → `{ id de document: identifiant }`, dans l'ordre. */
+/** The registered sources: `source` (module id) → `{ id de document: identifiant }`, in order. */
 const REGISTERED_SOURCES = new Map();
 
 function rebuildSources() {
@@ -182,8 +184,8 @@ function rebuildSources() {
 }
 
 /**
- * §277 : enregistre (ou remplace, ou retire avec une table vide) les sources d'un module. Ne valide rien : runtime/content.mjs ne passe
- * ici que des paires valides. @returns {string[]} Les ids de documents enregistrés.
+ * §277: registers (or replaces, or removes with an empty table) a module's sources. Validates nothing: runtime/content.mjs passes
+ * only valid pairs here. @returns {string[]} The registered document ids.
  */
 export function registerSources(source, sources) {
   if ( sources && Object.keys(sources).length ) REGISTERED_SOURCES.set(source, Object.freeze({ ...sources }));
@@ -192,12 +194,12 @@ export function registerSources(source, sources) {
   return Object.keys(sources ?? {});
 }
 
-/** Les sources enregistrées : `{ source: { id de document: identifiant } }`. */
+/** The registered sources: `{ source: { id de document: identifiant } }`. */
 export function registeredSources() {
   return Object.fromEntries(Array.from(REGISTERED_SOURCES, ([source, map]) => [source, { ...map }]));
 }
 
-/** Ce qui est enregistré : `{ source: [identifiants] }`. */
+/** What is registered: `{ source: [identifiants] }`. */
 export function registeredTables() {
   return Object.fromEntries(Array.from(REGISTERED, ([source, table]) => [source, Object.keys(table)]));
 }

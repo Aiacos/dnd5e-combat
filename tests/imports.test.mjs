@@ -3,8 +3,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 /**
- * Un nom exporté par un fichier du moteur, appelé dans un autre fichier, doit y être importé ou défini. Le chargement des modules
- * (tests/load.test.mjs) ne le voit pas : un import oublié ne casse qu'au moment de l'appel, en jeu.
+ * A name exported by an engine file and called in another file must be imported or defined there. Module loading
+ * (tests/load.test.mjs) does not see it: a forgotten import only breaks at the time of the call, in game.
  */
 const ROOT = join(import.meta.dirname, "..", "module", "scripts");
 const files = dir => readdirSync(dir).flatMap(f => {
@@ -22,7 +22,7 @@ for ( const s of Object.values(source) ) {
 }
 
 describe("imports", () => {
-  it("chaque nom exporté appelé dans un fichier y est importé ou défini", () => {
+  it("every exported name called in a file is imported or defined there", () => {
     const missing = [];
     for ( const file of ALL ) {
       const s = source[file];
@@ -36,9 +36,9 @@ describe("imports", () => {
         const local = n.split(":").pop().split("=")[0].trim();
         if ( local ) known.add(local);
       }
-      // Paramètres de fonction : noms simples entre parenthèses avant `=>` ou une accolade.
+      // Function parameters: simple names in parentheses before `=>` or a brace.
       for ( const m of s.matchAll(/\(([^()]*)\)\s*(?:=>|\{)/g) ) for ( const n of m[1].split(/[,{}\s=]+/) ) if ( n ) known.add(n);
-      // …et ceux d'une signature `function` (sur sa ligne), même quand une valeur par défaut contient des parenthèses.
+      // …and those of a `function` signature (on its line), even when a default value contains parentheses.
       for ( const m of s.matchAll(/^\s*(?:export\s+)?(?:async\s+)?function\*?\s*[\w$]*\s*\((.*)$/gm) ) {
         for ( const n of m[1].matchAll(/([A-Za-z_$][\w$]*)(?=\s*[,=}])/g) ) known.add(n[1]);
       }
@@ -49,5 +49,5 @@ describe("imports", () => {
       }
     }
     expect(missing).toEqual([]);
-  }, 30000);   // parcourt tout le code du moteur : plus de 5 s sur la CI (2026-11-06)
+  }, 30000);   // walks all the engine code: more than 5 s on CI (2026-11-06)
 });

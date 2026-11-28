@@ -1,24 +1,26 @@
 /**
- * §396 : la correction du MJ — rattraper une erreur en partie (décision de l'utilisateur, 2026-11-07) : remettre un effet, des dégâts
- * ou une concentration supprimés par erreur, appliquer ce qui ne l'a pas été. Le MJ « relance » l'activité à la place du joueur, en
- * choisissant ce qui doit vraiment se produire (fenêtre : ui/correction.mjs).
+ * §396: the GM's correction — catching up on a mistake during play (user decision, 2026-11-07): putting back an effect, damage or
+ * a concentration removed by mistake, applying what was not applied. The GM "re-runs" the activity in the player's place,
+ * choosing what must really happen (window: ui/correction.mjs).
  *
- * Mode « cibles » (par défaut) : aucune utilisation de dnd5e, donc ni dialogue, ni jet d'attaque ou de sauvegarde, ni animation, ni son.
- *  - le niveau du sort : la copie mise à l'échelle de dnd5e (`Item5e#scaledClone`, chat-message.mjs:695) ;
- *  - la consommation, si demandée : `activity.consume` de dnd5e (mixin.mjs:328), comme une utilisation ;
- *  - la concentration, si demandée et si le sort l'exige : `Actor5e#beginConcentrating` (actor.mjs:1091) ;
- *  - une carte « Correction du MJ » (message `usage` : dnd5e y retrouve l'activité, le niveau et la concentration), chuchotée au MJ
- *    sauf case cochée ; le routeur la saute (`flags["dnd5e-combat"].correction`, adapter/vanilla-state.mjs) ;
- *  - par cible : l'issue choisie — attaque touchée (défaut), critique ou ratée ; sauvegarde ratée (défaut) ou réussie ;
- *  - les dégâts : aucun, au maximum, au minimum ou lancés (`getDamageConfig`, base-activity.mjs:839, puis `DamageRoll#evaluate`
- *    avec `maximize` / `minimize` du cœur), moitié ou rien sur une sauvegarde réussie selon `damage.onSave`, appliqués par
- *    `Actor5e#applyDamage` (résistances comprises) ;
- *  - les effets de l'activité (au niveau choisi, `applicableEffects`) par le plateau de dnd5e (`_applyEffectToActor`), qui les rattache
- *    à la concentration de la carte : la rompre les retire, comme en partie. Sur une sauvegarde réussie, seuls les profils `onSave`.
- * Ce que la correction pose redevient l'affaire de DAS (durées, sauvegardes répétées…).
+ * "Targets" mode (default): no dnd5e use, so no dialog, no attack or saving throw roll, no animation, no sound.
+ *  - the spell level: the dnd5e scaled copy (`Item5e#scaledClone`, chat-message.mjs:695);
+ *  - consumption, if requested: dnd5e's `activity.consume` (mixin.mjs:328), like a use;
+ *  - concentration, if requested and if the spell requires it: `Actor5e#beginConcentrating` (actor.mjs:1091);
+ *  - a "GM correction" card (`usage` message: dnd5e finds the activity, the level and the concentration there),
+ *    whispered to the GM unless the box is ticked; the router skips it
+ *    (`flags["dnd5e-combat"].correction`, adapter/vanilla-state.mjs);
+ *  - per target: the chosen outcome — attack hit (default), critical or miss; saving throw failed (default) or succeeded;
+ *  - damage: none, maximum, minimum or rolled (`getDamageConfig`, base-activity.mjs:839, then `DamageRoll#evaluate`
+ *    with the core's `maximize` / `minimize`), half or nothing on a successful save according to `damage.onSave`, applied by
+ *    `Actor5e#applyDamage` (Resistances included);
+ *  - the activity's effects (at the chosen level, `applicableEffects`) through dnd5e's tray (`_applyEffectToActor`), which
+ *    attaches them to the card's concentration: breaking it removes them, as in play.
+ *    On a successful save, only the `onSave` profiles.
+ * What the correction sets up becomes DAS's business again (durations, repeated saves…).
  *
- * Mode « zone » (sort à zone qui dure) : une vraie utilisation (`activity.use`), sans dialogue, la zone à poser par le MJ, rien de
- * résolu à la pose (`quietPose` sur la carte, runtime/engine-areas.mjs) ; la concentration et la consommation selon la fenêtre.
+ * "Zone" mode (lasting area spell): a real use (`activity.use`), without a dialog, the area to be placed by the GM, nothing
+ * resolved on placement (`quietPose` on the card, runtime/engine-areas.mjs); concentration and consumption according to the window.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -31,7 +33,7 @@ export const DAMAGE_MODES = Object.freeze(["none", "max", "min", "random"]);
 export const ATTACK_OUTCOMES = Object.freeze(["hit", "critical", "miss"]);
 export const SAVE_OUTCOMES = Object.freeze(["failed", "success"]);
 
-/** L'activité fait-elle un jet d'attaque, impose-t-elle une sauvegarde, a-t-elle des dégâts, des effets ? */
+/** Does the activity make an attack roll, impose a saving throw, have damage, effects? */
 export function correctionShape(activity) {
   const parts = activity?.damage?.parts ?? (activity?.healing ? [activity.healing] : []);
   const zone = !!activity?.target?.template?.type && !isInstantaneous(activity) && !!areaRulesOf(activity);
@@ -51,7 +53,7 @@ export function correctionShape(activity) {
   };
 }
 
-/** Les cibles : celles du MJ, ou le lanceur pour une activité sur soi. */
+/** The targets: the GM's, or the caster for a self activity. */
 export function correctionTargets(activity) {
   const mine = Array.from(game.user.targets ?? []).map(t => t.document);
   if ( mine.length ) return mine;
@@ -60,7 +62,7 @@ export function correctionTargets(activity) {
   return token ? [token] : [];
 }
 
-/** La clé d'emplacement d'un niveau : l'emplacement ordinaire s'il en a, sinon celui du pacte s'il est de ce niveau. */
+/** The slot key of a level: the ordinary slot if it has one, otherwise the pact slot if it is of that level. */
 function slotKey(actor, level) {
   const spells = actor?.system?.spells ?? {};
   if ( (spells[`spell${level}`]?.max ?? 0) > 0 ) return `spell${level}`;
@@ -68,7 +70,7 @@ function slotKey(actor, level) {
   return `spell${level}`;
 }
 
-/** Les jets de dégâts, déjà évalués (au maximum, au minimum ou au hasard). */
+/** The damage rolls, already evaluated (maximum, minimum or random). */
 async function rollDamage(activity, { mode, critical }) {
   const config = activity.getDamageConfig({ isCritical: critical });
   const rolls = [];
@@ -80,7 +82,7 @@ async function rollDamage(activity, { mode, critical }) {
   return rolls;
 }
 
-/** Les dégâts d'une cible, à partir des jets : entiers, moitié, ou rien. */
+/** A target's damage, from the rolls: full, half, or nothing. */
 function damagesFor(rolls, factor) {
   if ( !factor ) return [];
   return rolls.map(roll => ({
@@ -93,11 +95,11 @@ function damagesFor(rolls, factor) {
 const typeLabel = type => game.i18n.localize(CONFIG.DND5E.damageTypes?.[type]?.label ?? CONFIG.DND5E.healingTypes?.[type]?.label ?? type);
 
 /**
- * Applique une correction (MJ). Rend `{ ok, message, lines }` ou `{ ok: false, reason }`.
+ * Applies a correction (GM). Returns `{ ok, message, lines }` or `{ ok: false, reason }`.
  * @param {object} input
- * @param {string} input.activity       uuid de l'activité (sur la fiche du personnage).
- * @param {number|null} [input.level]   Niveau du sort.
- * @param {string[]} [input.targets]    uuids des tokens ; à défaut, les cibles du MJ ou le lanceur.
+ * @param {string} input.activity       uuid of the activity (on the character's sheet).
+ * @param {number|null} [input.level]   Spell level.
+ * @param {string[]} [input.targets]    uuids of the tokens; by default, the GM's targets or the caster.
  * @param {"none"|"max"|"min"|"random"} [input.damage="random"]
  * @param {"hit"|"critical"|"miss"} [input.attack="hit"]
  * @param {"failed"|"success"} [input.save="failed"]
@@ -105,7 +107,7 @@ const typeLabel = type => game.i18n.localize(CONFIG.DND5E.damageTypes?.[type]?.l
  * @param {boolean} [input.effects=true]
  * @param {boolean} [input.consume=false]
  * @param {"targets"|"zone"} [input.zone="targets"]
- * @param {boolean} [input.public=false]  La carte vue par toute la table.
+ * @param {boolean} [input.public=false]  The card seen by the whole table.
  */
 export async function applyCorrection(input) {
   if ( !game.user.isGM ) return { ok: false, reason: "gm" };
@@ -124,18 +126,18 @@ export async function applyCorrection(input) {
   const lines = [];
   let deltas = null;
 
-  // Consommation, comme une utilisation (emplacement du niveau choisi, ressources de l'activité).
+  // Consumption, like a use (slot of the chosen level, the activity's resources).
   if ( input.consume ) {
     const usageConfig = activity._prepareUsageConfig({ spell: Number.isFinite(level) && activity.requiresSpellSlot ? { slot: slotKey(actor, level) } : undefined, scaling });
     const consumeConfig = { data: {} };
     const updates = await activity.consume(usageConfig, consumeConfig);
     if ( updates === false ) return { ok: false, reason: "consume" };
-    // Ce que dnd5e a consommé (mixin.mjs:357, `system.deltas`) : « Annuler » le rend par `activity.refund` (mixin.mjs:385).
+    // What dnd5e consumed (mixin.mjs:357, `system.deltas`): "Undo" gives it back through `activity.refund` (mixin.mjs:385).
     deltas = consumeConfig.data.system?.deltas ?? null;
     lines.push(loc("Correction.Ligne.Consomme"));
   }
 
-  // Concentration du lanceur, au niveau choisi.
+  // The caster's concentration, at the chosen level.
   let concentration = null;
   if ( input.concentration !== false && shape.concentration && !game.settings.get("dnd5e", "disableConcentration") ) {
     concentration = await actor.beginConcentrating(activity, { "flags.dnd5e.scaling": scaling }) ?? null;
@@ -149,12 +151,12 @@ export async function applyCorrection(input) {
   const hits = !shape.attack || (attack !== "miss");
   const saved = shape.save && (save === "success");
 
-  // Dégâts : un seul jet pour toutes les cibles, comme en partie.
+  // Damage: a single roll for all targets, as in play.
   const rolls = (shape.damage && hits && (mode !== "none")) ? await rollDamage(activity, { mode, critical: shape.attack && (attack === "critical") }) : [];
   const onSave = activity.damage?.onSave ?? "half";
   const factor = saved ? ({ half: 0.5, full: 1 }[onSave] ?? 0) : 1;
 
-  // Effets au niveau choisi ; sur une sauvegarde réussie, seuls ceux qui s'appliquent quand même.
+  // Effects at the chosen level; on a successful save, only those that apply anyway.
   const profiles = (input.effects !== false && hits) ? (activity.applicableEffects ?? []).filter(p => !saved || p.onSave) : [];
   const refs = profiles.map(p => ({ id: p._id, activity: activity.uuid }));
 
@@ -179,7 +181,7 @@ export async function applyCorrection(input) {
     flags: { [MODULE_ID]: { correction: { activity: original.uuid, level, attack, save, damage: mode, by: game.user.id } } }
   });
 
-  // Ce que « Annuler » défera : les PV (en écart, pour ne pas écraser ce qui a changé depuis), les effets posés, la concentration.
+  // What "Undo" will undo: HP (as a delta, so as not to overwrite what has changed since), applied effects, concentration.
   const undo = { hp: [], effects: [], concentration: concentration?.uuid ?? null, statuses: [] };
   for ( const { token, damages } of perTarget ) {
     if ( refs.length ) undo.effects.push(...await applyEffectsToToken(message, token.uuid, refs));
@@ -196,7 +198,7 @@ export async function applyCorrection(input) {
   return { ok: true, message: message?.id ?? null, lines };
 }
 
-/** Mode « zone » : une vraie utilisation, sans dialogue, la zone posée par le MJ ; rien ne se résout à la pose. */
+/** "Zone" mode: a real use, without a dialog, the area placed by the GM; nothing resolves on placement. */
 async function correctZone(original, { level, input, whisper }) {
   const actor = original.actor;
   const usage = {
@@ -207,12 +209,14 @@ async function correctZone(original, { level, input, whisper }) {
     [MODULE_ID]: { confirmed: true, quietPose: true }
   };
   if ( !input.consume ) usage.consume = false;
-  // dnd5e choisit la visibilité de sa carte par le mode du message (mixin.mjs:787, `ChatMessage.applyMode` du cœur) : « gm » la chuchote au MJ.
+  // dnd5e chooses its card's visibility by the message mode (mixin.mjs:787, the core's `ChatMessage.applyMode`): "gm" whispers
+  // it to the GM.
   const regionsBefore = new Set(canvas.scene?.regions.map(r => r.id) ?? []);
   const effectsBefore = new Set(actor.effects.map(e => e.id));
   const results = await original.use(usage, { configure: false },
     { rollMode: whisper.length ? "gm" : "public", data: { flavor: loc("Correction.Carte") } });
-  // « Annuler » : la zone posée et la concentration reprise. Pas sous `correction` : la carte doit rester celle du moteur (la zone la lit).
+  // "Undo": the area placed and the concentration taken. Not under `correction`: the card must stay the engine's
+  // (the area reads it).
   const message = results?.message instanceof ChatMessage ? results.message : game.messages.get(results?.message?.id ?? "");
   if ( message ) {
     const regions = (canvas.scene?.regions ?? []).filter(r => !regionsBefore.has(r.id) && [r.getFlag("dnd5e", "item"), r.getFlag("dnd5e", "activity")]
@@ -229,16 +233,16 @@ const hpOf = actor => {
   return { value: Number(hp.value) || 0, temp: Number(hp.temp) || 0 };
 };
 
-/** Ce qu'« Annuler » défait sur une carte de correction, ou null (déjà annulée, rien à défaire). */
+/** What "Undo" undoes on a correction card, or null (already undone, nothing to undo). */
 export function undoOf(message) {
   if ( !message || message.getFlag(MODULE_ID, "correctionUndone") ) return null;
   return message.getFlag(MODULE_ID, "correction")?.undo ?? message.getFlag(MODULE_ID, "correctionUndo") ?? null;
 }
 
 /**
- * MJ : défait une correction — les PV rendus en écart (les dégâts reviennent, un soin est repris), Inconscient / Mort retirés s'ils
- * sont venus avec ces dégâts et que la créature a de nouveau des PV, les effets posés retirés, la concentration reprise rompue (et ce
- * qui en dépend, zone comprise), les régions de la zone retirées, la consommation rendue par dnd5e (`activity.refund`).
+ * GM: undoes a correction — HP given back as a delta (the damage comes back, a heal is taken back), Unconscious / Dead removed
+ * if they came with that damage and the creature has HP again, the applied effects removed, the resumed concentration broken
+ * (and what depends on it, area included), the area's regions removed, the consumption given back by dnd5e (`activity.refund`).
  */
 export async function undoCorrection(messageId) {
   if ( !game.user.isGM ) return false;
@@ -260,13 +264,14 @@ export async function undoCorrection(messageId) {
       if ( !had.includes(status) && actor.statuses.has(status) ) await actor.toggleStatusEffect(status, { active: false });
     }
   }
-  // Ce qui est déjà parti (rompu avec la concentration, retiré à la main) est ignoré.
+  // What has already gone (broken with the concentration, removed by hand) is ignored.
   const remove = async uuid => {
     const doc = fromUuidSync(uuid, { strict: false });
     if ( doc && !doc.isDeleted ) await doc.delete().catch(() => null);
   };
   for ( const uuid of undo.effects ?? [] ) await remove(uuid);
-  // La zone avant la concentration : rompre celle-ci la fait retirer par le moteur (runtime/concentration.mjs), en même temps que nous.
+  // The area before the concentration: breaking the latter makes the engine remove it (runtime/concentration.mjs),
+  // at the same time as us.
   for ( const uuid of undo.regions ?? [] ) await remove(uuid);
   if ( undo.concentration ) {
     const effect = fromUuidSync(undo.concentration, { strict: false });

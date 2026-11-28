@@ -1,13 +1,15 @@
 /**
- * §518 (Discord, SpitFire, 2026-11-22 : Restored Keep de Baileywiki) : tirer par une fenêtre. « Arène des refus » (`node tools/arene-refus.mjs`) :
- * le Mage (Trait de feu), le Mannequin à cinq cases à l'est, un mur « fenêtre » du cœur (déplacement et son pleins, vue et lumière
- * « proximité », seuil deux cases : `canvas/layers/walls.mjs:474`) nord-sud à une case devant le Mage.
- *  1. Mage près de la fenêtre : la cible est en vue (pas de refus « hors de vue »), aucun abri dû à la fenêtre ;
- *  2. le même mur choisi « mur plein » (une vitre fermée) : abri total ; remis « selon le réglage » ;
- *  3. Mage reculé de trois cases (au-delà du seuil) : hors de vue, abri total — comme la vision de Foundry ;
- *  4. de là, attaque forcée (fenêtre de légalité « hors de vue », « Utiliser quand même ») : la carte est marquée, l'abri total y vaut
- *     trois quarts (+5), le verdict n'est plus un échec d'office (« cover ») et, touché (CA du Mannequin ramenée à 1), les dégâts sont lancés.
- * Remet le Mage, le Mannequin (place, PV, CA), retire le mur.
+ * §518 (Discord, SpitFire, 2026-11-22: Baileywiki's Restored Keep): shooting through a window. "Arène des refus"
+ * (`node tools/arene-refus.mjs`): the Mage (Fire Bolt), the Dummy five cells to the east, a core "window" wall (movement and
+ * sound blocking, sight and light "proximity", threshold two cells: `canvas/layers/walls.mjs:474`) running north-south one cell
+ * in front of the Mage.
+ *  1. Mage near the window: the target is in sight (no "out of sight" refusal), no Cover due to the window;
+ *  2. the same wall set to "solid wall" (a closed pane): Total Cover; set back to "per setting";
+ *  3. Mage backed off three cells (beyond the threshold): out of sight, Total Cover — like Foundry's vision;
+ *  4. from there, forced attack ("out of sight" legality window, "Use anyway"): the card is marked, Total Cover counts there as
+ *     three-quarters (+5), the verdict is no longer an automatic failure ("cover") and, on a hit (Dummy's AC brought down to 1),
+ *     damage is rolled.
+ * Restores the Mage, the Dummy (place, HP, AC), removes the wall.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -35,14 +37,15 @@ export default {
       await blink(dummy, dHome.x, dHome.y).catch(() => {});
       await ctx.setHp(dummy, hp).catch(() => {});
     });
-    // CA du Mannequin ramenée à 1 le temps de l'essai : l'attaque forcée touche (sauf 1 naturel), on voit ses dégâts.
+    // Dummy's AC brought down to 1 for the test: the forced attack hits (barring a natural 1), we see its damage.
     const ac = await script(`const a = canvas.scene.tokens.get("${dummy.id}").actor; const before = foundry.utils.deepClone(a._source.system.attributes.ac);
       await a.update({ "system.attributes.ac.calc": "flat", "system.attributes.ac.flat": 1 }); return before;`);
     ctx.restore(() => script(`await canvas.scene.tokens.get("${dummy.id}").actor.update({ "system.attributes.ac": ${JSON.stringify(ac ?? {})} }); return true;`).catch(() => {}));
     await blink(dummy, home.x + (5 * g), home.y);
     await pause(1000);
 
-    // Un mur « fenêtre » du cœur, nord-sud, au bord est de la case devant le Mage (centre du Mage à 1,5 case : sous le seuil de 2 cases).
+    // A core "window" wall, north-south, at the east edge of the cell in front of the Mage (Mage's center at 1.5 cells: under the
+    // 2-cell threshold).
     const x = home.x + (2 * g);
     const distance = await script(`return canvas.dimensions.distance;`);
     const created = await ctx.call("create-walls", { walls: [{ c: [x, home.y - (3 * g), x, home.y + (4 * g)].map(Math.round),
@@ -60,26 +63,26 @@ export default {
       const activity = token.actor.items.get("${ray}").system.activities.find(a => a.type === "attack");
       return rangeStatus(token, target, activity)?.blind ?? null;`);
 
-    // 1. Près de la fenêtre.
+    // 1. Near the window.
     ctx.expect((await blind()) === false, "près de la fenêtre : le Mannequin est en vue (pas de refus « hors de vue »)");
     const near = await cover();
     ctx.expect(!near || near.degree === "none", `près de la fenêtre : aucun abri dû à la fenêtre (${near?.degree ?? "aucun"})`);
 
-    // 2. Le même mur choisi « mur plein » (une vitre fermée).
+    // 2. The same wall set to "solid wall" (a closed pane).
     const mode = value => ctx.call("update-scene-object", { type: "Wall", objectId: wallId, data: { "flags.dnd5e-combat.grateMode": value } }).then(() => pause(600));
     await mode("solid");
     const glass = await cover();
     ctx.expect(glass?.degree === "total", `mur choisi « mur plein » : abri total (${glass?.degree ?? "aucun"})`);
     await mode("auto");
 
-    // 3. Trois cases en arrière : la fenêtre est à 4,5 cases du centre du Mage, au-delà du seuil.
+    // 3. Three cells back: the window is 4.5 cells from the Mage's center, beyond the threshold.
     await blink(mage, home.x - (3 * g), home.y);
     await pause(1000);
     ctx.expect((await blind()) === true, "loin de la fenêtre : hors de vue (comme la vision de Foundry)");
     const far = await cover();
     ctx.expect(far?.degree === "total", `loin de la fenêtre : abri total (${far?.degree ?? "aucun"})`);
 
-    // 4. L'attaque forcée : « Utiliser quand même » dans la fenêtre de légalité, puis le verdict.
+    // 4. The forced attack: "Use anyway" in the legality window, then the verdict.
     const legality = async (ms=8000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, waitMs: 1000 }).catch(() => null);

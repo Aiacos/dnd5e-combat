@@ -1,20 +1,20 @@
 /**
- * Chercher (Search, SPEC §16.49, règles 2024) contre les créatures cachées : un test de Sagesse (Perception) contre le DD de
- * chaque cachette (le total de Discrétion, porté par l'effet de Furtivité). Ici : les verdicts, sans Foundry.
+ * Search (Search, SPEC §16.49, 2024 rules) against Hidden creatures: a Wisdom (Perception) check against the DC of
+ * each hiding place (the Stealth total, carried by the Stealth effect). Here: the verdicts, without Foundry.
  *
- * Par candidat, dans l'ordre :
- *  - `sensed` : l'observateur la perçoit déjà malgré l'état Invisible (vision aveugle, vision véritable…) → trouvée, sans jet ;
- *  - `seeable` faux : hors de vue (mur, plancher, brume, ténèbres qu'il ne perce pas — zone fortement obscurcie pour lui) →
- *    pas trouvée, quel que soit le jet ;
- *  - sinon le jet ; `disadvantage` : la cachette est en zone légèrement obscurcie pour lui (lumière perçue faible,
+ * Per candidate, in order:
+ *  - `sensed`: the observer already perceives it despite the Invisible condition (Blindsight, Truesight…) → found, no roll;
+ *  - `seeable` false: out of sight (wall, floor, fog, Darkness it cannot pierce — heavily obscured area for it) →
+ *    not found, whatever the roll;
+ *  - otherwise the roll; `disadvantage`: the hiding place is in a lightly obscured area for it (perceived light dim,
  *    core/illumination.mjs).
  *
- * Un seul test pour l'action. Si une cachette seulement est en lumière faible, le test est lancé avec le Désavantage et, pour
- * les cachettes en pleine lumière, on garde le PREMIER d20 : c'est exactement le test sans Désavantage.
+ * A single check for the action. If only one hiding place is in Dim Light, the check is rolled with Disadvantage and, for
+ * the hiding places in full light, the FIRST d20 is kept: that is exactly the check without Disadvantage.
  */
 
 /**
- * Le mode du test : Désavantage si une cachette à juger au jet est en zone légèrement obscurcie.
+ * The check's mode: Disadvantage if a hiding place to be judged by the roll is in a lightly obscured area.
  * @param {Array<{sensed?: boolean, seeable?: boolean, disadvantage?: boolean}>} candidates
  * @returns {"normal"|"disadvantage"}
  */
@@ -23,11 +23,11 @@ export function searchRollMode(candidates) {
 }
 
 /**
- * Ce que les traits et les objets ajoutent au test (clé `searchBonus`) : les dés, et l'item qui donne l'Avantage. Un équipement
- * qui n'est pas porté — ou pas harmonisé quand il l'exige — n'ajoute rien ; l'Avantage d'un item à utilisations demande qu'il en
- * reste une.
+ * What traits and items add to the check (key `searchBonus`): the dice, and the item that gives Advantage. Equipment
+ * that is not worn — or not attuned when it requires it — adds nothing; the Advantage of an item with uses requires that one
+ * be left.
  * @param {Array<{rule: {formula?: string, advantage?: true}|null, counts: boolean, usesMax?: number, usesLeft?: number}>} sources
- * @returns {{parts: string[], keen: object|null}}  `keen` : la source retenue pour l'Avantage (telle que passée)
+ * @returns {{parts: string[], keen: object|null}}  `keen`: the source retained for the Advantage (as passed)
  */
 export function searchBonuses(sources) {
   const active = (sources ?? []).filter(s => s.rule && s.counts);
@@ -36,9 +36,9 @@ export function searchBonuses(sources) {
 }
 
 /**
- * Le total sans Désavantage tiré d'un test lancé avec : le total, moins le d20 gardé, plus le premier d20.
- * @param {{total: number, d20: number[], kept: number|null}} roll   `d20` : les d20 lancés, dans l'ordre (hors relances) ;
- *                                                                  `kept` : celui qui compte dans `total`.
+ * The total without Disadvantage drawn from a check rolled with it: the total, minus the kept d20, plus the first d20.
+ * @param {{total: number, d20: number[], kept: number|null}} roll   `d20`: the d20 rolled, in order (rerolls excluded);
+ *                                                                  `kept`: the one that counts in `total`.
  * @returns {number}
  */
 export function normalTotal({ total, d20=[], kept=null }) {
@@ -47,9 +47,9 @@ export function normalTotal({ total, d20=[], kept=null }) {
 }
 
 /**
- * Les verdicts.
+ * The verdicts.
  * @param {Array<{id: string, dc: number, sensed?: boolean, seeable?: boolean, disadvantage?: boolean}>} candidates
- * @param {{total: number, d20?: number[], kept?: number|null}} roll   Le test tel que lancé (mode de `searchRollMode`).
+ * @param {{total: number, d20?: number[], kept?: number|null}} roll   The check as rolled (mode of `searchRollMode`).
  * @returns {Array<{id: string, found: boolean, reason: "senses"|"unseen"|"roll", total?: number, dc: number}>}
  */
 export function searchVerdicts(candidates, roll) {
@@ -63,16 +63,16 @@ export function searchVerdicts(candidates, roll) {
   });
 }
 
-/** Désavantage sur une valeur passive : −5 (règles 2024, glossaire du PHB). */
+/** Disadvantage on a passive value: −5 (2024 rules, PHB glossary). */
 export const PASSIVE_DISADVANTAGE = 5;
 
 /**
- * Perception passive (SPEC §16.51) : l'observateur remarque-t-il la créature cachée sans la chercher ? Perçue par ses sens →
- * oui ; hors de vue → non ; sinon sa Perception passive, −5 si la cachette est en zone légèrement obscurcie pour lui, contre
- * le DD de la cachette.
+ * Passive Perception (SPEC §16.51): does the observer notice the Hidden creature without searching for it? Perceived by its
+ * senses → yes; out of sight → no; otherwise its Passive Perception, −5 if the hiding place is in a lightly obscured area for
+ * it, against the DC of the hiding place.
  * @param {{passive: number, sensed?: boolean, seeable?: boolean, disadvantage?: boolean}} observer
  * @param {number} dc
- * @returns {{notices: boolean, score: number|null}}  `score` : la valeur comparée au DD (null sans comparaison).
+ * @returns {{notices: boolean, score: number|null}}  `score`: the value compared to the DC (null without a comparison).
  */
 export function passiveNotice({ passive, sensed=false, seeable=false, disadvantage=false }, dc) {
   if ( sensed ) return { notices: true, score: null };

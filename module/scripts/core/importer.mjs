@@ -1,22 +1,22 @@
 /**
- * Les importeurs d'objets que le diagnostic du monde connaît. Un objet importé peut porter ses activités et ses effets sous
- * d'autres ids que l'objet officiel : les règles du contenu qui citent les ids officiels ne les trouvent pas (§245). Le moteur ne
- * nomme que DDB Importer ; un autre module déclare le sien (`api.diagnostic.registerImporter`), reconnu par un flag que ses objets
- * portent.
- * Fonctions pures.
+ * The item importers the world diagnostic knows. An imported item can carry its activities and effects under
+ * other ids than the official item: content rules that cite the official ids do not find them (§245). The engine names
+ * only DDB Importer; another module declares its own (`api.diagnostic.registerImporter`), recognized by a flag its items
+ * carry.
+ * Pure functions.
  */
 
-/** L'importeur que le moteur connaît de lui-même. */
+/** The importer the engine knows by itself. */
 export const DDB_IMPORTER = Object.freeze({ id: "ddb", flag: "ddbimporter" });
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /**
- * Ce qui manque à la déclaration d'un importeur : `[]` si elle est bonne.
+ * What is missing from an importer's declaration: `[]` if it is good.
  * @param {{id: string, flag: string, name: string, hint?: string, icon?: string}} def
- *   `id` — minuscules et tirets ; `flag` — la clé de `item.flags` que portent ses objets ; `name`, `hint` — le nom et l'aide de sa
- *   vérification dans le diagnostic, déjà traduits ; `icon` — classes Font Awesome.
- * @param {Array<{id: string, flag: string}>} [known]  Les importeurs déjà déclarés par d'autres modules.
+ *   `id` — lowercase and hyphens; `flag` — the `item.flags` key its items carry; `name`, `hint` — the name and help of its
+ *   check in the diagnostic, already translated; `icon` — Font Awesome classes.
+ * @param {Array<{id: string, flag: string}>} [known]  The importers already declared by other modules.
  * @returns {string[]}
  */
 export function importerErrors(def, known=[]) {
@@ -36,12 +36,12 @@ export function importerErrors(def, known=[]) {
 }
 
 /**
- * Quel importeur a créé cet objet, d'après ses flags : DDB Importer d'abord, puis ceux déclarés, dans l'ordre. Un objet passé par
- * deux importeurs n'est donc compté qu'une fois — par DDB Importer s'il en est (sa synchronisation le recrée, sa réparation sait
- * le verrouiller).
- * @param {object|null|undefined} flags  les flags de l'objet
- * @param {Array<{id: string, flag: string}>} [importers]  les importeurs déclarés par d'autres modules
- * @returns {string|null}  l'id de l'importeur
+ * Which importer created this item, from its flags: DDB Importer first, then those declared, in order. An item that went through
+ * two importers is therefore counted only once — by DDB Importer if it is one (its synchronization recreates it, its repair
+ * knows how to lock it).
+ * @param {object|null|undefined} flags  the item's flags
+ * @param {Array<{id: string, flag: string}>} [importers]  the importers declared by other modules
+ * @returns {string|null}  the importer's id
  */
 export function importerOf(flags, importers=[]) {
   if ( !flags ) return null;

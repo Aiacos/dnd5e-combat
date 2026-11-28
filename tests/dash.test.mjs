@@ -4,17 +4,17 @@ import { validateEntry } from "../module/scripts/core/content.mjs";
 
 const keys = cells => cells.map(c => `${c.i},${c.j}`);
 
-describe("straightCells (§57, ruée en ligne droite)", () => {
-  it("en ligne : chaque case, départ et arrivée compris", () => {
+describe("straightCells (§57, straight-line dash)", () => {
+  it("in a line: every cell, start and end included", () => {
     expect(keys(straightCells({ i: 2, j: 1 }, { i: 2, j: 5 }))).toEqual(["2,1", "2,2", "2,3", "2,4", "2,5"]);
     expect(keys(straightCells({ i: 4, j: 0 }, { i: 1, j: 0 }))).toEqual(["4,0", "3,0", "2,0", "1,0"]);
   });
 
-  it("en diagonale : une case par pas", () => {
+  it("diagonally: one cell per step", () => {
     expect(keys(straightCells({ i: 0, j: 0 }, { i: 3, j: 3 }))).toEqual(["0,0", "1,1", "2,2", "3,3"]);
   });
 
-  it("en biais : un tracé continu (pas de trou entre deux positions)", () => {
+  it("slanted: a continuous path (no gap between two positions)", () => {
     const cells = straightCells({ i: 0, j: 0 }, { i: 2, j: 6 });
     expect(cells[0]).toEqual({ i: 0, j: 0 });
     expect(cells.at(-1)).toEqual({ i: 2, j: 6 });
@@ -23,7 +23,7 @@ describe("straightCells (§57, ruée en ligne droite)", () => {
     }
   });
 
-  it("le même tracé dans les deux sens", () => {
+  it("the same path in both directions", () => {
     const a = keys(straightCells({ i: 0, j: 0 }, { i: 3, j: 7 }));
     const b = keys(straightCells({ i: 3, j: 7 }, { i: 0, j: 0 })).reverse();
     expect(b).toEqual(a);
@@ -35,7 +35,7 @@ describe("straightCells (§57, ruée en ligne droite)", () => {
 });
 
 describe("lineDash (contenu)", () => {
-  it("portée positive et unité ; activité facultative", () => {
+  it("positive range and unit; optional activity", () => {
     expect(validateEntry({ lineDash: { reach: 5, units: "ft" } })).toEqual([]);
     expect(validateEntry({ lineDash: { reach: 5, units: "ft", activity: "pZRawQ5JyoxXkqPu" } })).toEqual([]);
     expect(validateEntry({ lineDash: { reach: 0, units: "", activity: "x", width: 1 } })).toEqual([

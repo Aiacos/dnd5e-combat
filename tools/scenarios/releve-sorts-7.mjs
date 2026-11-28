@@ -1,11 +1,12 @@
 /**
- * Murs posés par points (SPEC §162), monde `dnd-6`, arène, coin libre au nord-ouest. Le Magicien (sorts prêtés du Manuel des joueurs, à
- * volonté) pose les murs par `api.mcp.wall` — le chemin de la visée par points de l'interface, les clics remplacés par les points :
- *  - Mur de force, trois points : une région de deux segments « line », deux murs qui arrêtent le déplacement mais pas la vue ; la
- *    concentration retirée, région et murs disparaissent ;
- *  - Mur de feu, trois points sur 80 ft : la ligne coupée à 60 ft (sa longueur) ;
- *  - Mur prismatique : des murs qui arrêtent la vue, pas le déplacement ;
- *  - Cage de force (cube, pas une ligne) : les murs sur son pourtour.
+ * Walls placed by points (SPEC §162), world `dnd-6`, arena, free corner in the north-west. The Wizard (spells lent from the
+ * Player's Handbook, at will) places the walls with `api.mcp.wall` — the interface's point-targeting path, the clicks
+ * replaced by the points:
+ *  - Wall of Force, three points: a region of two "line" segments, two walls that stop movement but not sight; with the
+ *    concentration removed, region and walls disappear;
+ *  - Wall of Fire, three points over 80 ft: the line cut at 60 ft (its length);
+ *  - Prismatic Wall: walls that stop sight, not movement;
+ *  - Forcecage (cube, not a line): the walls around its perimeter.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -62,7 +63,7 @@ export default {
       ctx.expect(!(await exists(placed.regionId)) && !(await zoneWalls(placed.regionId)).length, "Mur de force : la concentration retirée, la région et ses murs disparaissent");
     }
 
-    // Mur de feu : 80 ft dessinés, 60 ft posés.
+    // Wall of Fire: 80 ft drawn, 60 ft placed.
     const fire = await lend("phbsplWallofFire");
     const fp = await ctx.engine("wall", { tokenId: mage.id, itemId: fire, points: [P(10, 28), P(18, 28), P(18, 36)] });
     await pause(2500);
@@ -73,7 +74,7 @@ export default {
     }
     await clear();
 
-    // Mur prismatique : la vue arrêtée, pas le déplacement.
+    // Prismatic Wall: sight stopped, not movement.
     const prism = await lend("phbsplPrismaticW");
     const pp = await ctx.engine("wall", { tokenId: mage.id, itemId: prism, activityId: "5f0JerdDSOQQXiTe", points: [P(12, 30), P(12, 34)] });
     await pause(2500);
@@ -83,7 +84,7 @@ export default {
       ctx.expect(walls.length && walls.every(w => (w.move === W.none) && (w.sight === W.sight)), `Mur prismatique : ${walls.length} mur(s), déplacement ${walls.map(w => w.move).join("/")}, vue ${walls.map(w => w.sight).join("/")}`);
     }
 
-    // Cage de force : un cube, les murs sur son pourtour.
+    // Forcecage: a cube, the walls around its perimeter.
     const cage = await lend("phbsplForcecage0");
     const used = await ctx.use({ tokenId: mage.id, itemId: cage, activityId: "gacP7LGiwvQBdnfU", consume: false,
       area: { shape: "rectangle", x: 20 * grid, y: 28 * grid, width: 4 * grid, height: 4 * grid } });

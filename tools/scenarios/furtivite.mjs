@@ -1,11 +1,12 @@
 /**
- * Furtivité (Hide, SPEC §15.2, règles 2024), le Magicien en combat avec le Zombi :
- *  1. Furtivité jusqu'à réussir le test de Discrétion DD 15 : un effet « caché » est posé, qui porte le DD pour le localiser
- *     (son total), sans l'état Invisible du cœur (§185) : le Zombi (ennemi) ne voit plus le Magicien, le Guerrier (allié) si ;
- *  2. une attaque à la Dague : la Furtivité cesse après le jet ;
- *  3. de nouveau caché, Rayon de givre (composante verbale) : elle cesse aussi.
- * Les conditions (hors de vue de tout ennemi) passent par la légalité : ce scénario les confirme d'office ;
- * elles se vérifient à part (enemiesSeeing). Remet PV, effets et items en place.
+ * Hide (SPEC §15.2, 2024 rules), the Wizard in combat with the Zombi:
+ *  1. Hide until the DC 15 Stealth check succeeds: a "hidden" effect is placed, which carries the DC to locate the Wizard
+ *     (its total), without the core's Invisible condition (§185): the Zombi (enemy) no longer sees the Wizard,
+ *     the Fighter (ally) does;
+ *  2. a Dagger attack: Hide ends after the roll;
+ *  3. hidden again, Ray of Frost (verbal component): it ends too.
+ * The conditions (out of sight of every enemy) go through legality: this scenario confirms them automatically;
+ * they are checked separately (enemiesSeeing). Restores HP, effects and items.
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -34,14 +35,15 @@ export default {
     ctx.expect(!!hide, `Furtivité posée sur le Magicien (${hide?.name ?? "absente"})`);
     if ( !hide ) return;
 
-    /** Furtivité jusqu'à réussir (au plus 20 essais : Discrétion +2 contre DD 15, 40 % de réussite). */
+    /** Hide until it succeeds (20 tries at most: Stealth +2 against DC 15, 40% success). */
     async function hideUntilHidden() {
       for ( let i = 0; i < 20; i++ ) {
         const used = await ctx.use({ tokenId: mage.id, itemId: hide._id, activityType: "utility" });
         for ( const until = Date.now() + 6000; Date.now() < until; await sleep(300) ) {
           if ( (await ctx.messagesSince(used.usageMessageId)).some(m => m.type === "check") ) break;
         }
-        // §252 : le verdict attend la fin des dés 3D (borné à 8 s) — on attend l'effet jusque-là, un échec n'en pose aucun.
+        // §252: the verdict waits for the 3D dice to finish (capped at 8 s) — we wait for the effect until then;
+        // a failure places none.
         for ( const until = Date.now() + 9000; Date.now() < until; await sleep(300) ) {
           const effects = await hiddenEffects();
           if ( effects.length ) return effects[0];
@@ -50,9 +52,9 @@ export default {
       return null;
     }
 
-    // 1. Caché.
+    // 1. Hidden.
     const hidden = await hideUntilHidden();
-    // §185 : l'effet ne porte plus l'état Invisible du cœur ; le moteur rend le token invisible à ses ennemis seuls.
+    // §185: the effect no longer carries the core's Invisible condition; the engine makes the token invisible to its enemies only.
     ctx.expect(!!hidden && !(hidden.statuses ?? []).includes("invisible"),
       `caché : effet « ${hidden?.name ?? "absent"} », DD ${hidden?.flags?.[MODULE_ID]?.hidden?.dc ?? "?"}, sans l'état Invisible du cœur`);
     if ( hidden ) {
@@ -63,14 +65,14 @@ export default {
     ctx.expect((hidden?.flags?.[MODULE_ID]?.hidden?.dc ?? 0) >= 15, "le DD pour le localiser est le total du test (≥ 15)");
     if ( !hidden ) return;
 
-    // 2. Attaque : fin de la Furtivité.
+    // 2. Attack: end of Hide.
     const stab = await ctx.use({ tokenId: mage.id, identifier: "dagger", activityType: "attack", targetTokenIds: [zombi.id] });
     await ctx.settle(stab.usageMessageId).catch(() => null);
     let left = [hidden];
     for ( const until = Date.now() + 5000; left.length && (Date.now() < until); await sleep(400) ) left = await hiddenEffects();
     ctx.expect(!left.length, "après le jet d'attaque, le Magicien n'est plus caché");
 
-    // 3. Sort à composante verbale : fin de la Furtivité.
+    // 3. Spell with a verbal component: end of Hide.
     const again = await hideUntilHidden();
     ctx.expect(!!again, "de nouveau caché");
     if ( !again ) return;

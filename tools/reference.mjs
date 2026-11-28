@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Régénère la référence du moteur dans `docs/reference/` : API publique, hooks, réglages, contenu, scénarios, et
- * `surface.json` (le contrat pour les voisins). Tout est relu dans le code (`tools/lib/reference.mjs`).
- *   npm run reference            écrit les pages
- *   node tools/reference.mjs --check   dit ce qui n'est plus à jour, sans rien écrire
+ * Regenerates the engine reference in `docs/reference/`: public API, hooks, settings, content, scenarios, and
+ * `surface.json` (the contract for the neighbors). Everything is re-read from the code (`tools/lib/reference.mjs`).
+ *   npm run reference            writes the pages
+ *   node tools/reference.mjs --check   says what is out of date, without writing anything
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";

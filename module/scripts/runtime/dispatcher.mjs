@@ -1,44 +1,42 @@
 /**
- * Le répartiteur (SPEC §13, S2) : il fait tourner la machine d'action du cœur.
+ * The dispatcher (SPEC §13, S2): it runs the core's action machine.
  *
- *   évènement → advance() → ÉCRIRE la résolution → exécuter les commandes → nouveaux évènements → …
+ *   event → advance() → WRITE the resolution → run the commands → new events → …
  *
- * L'écriture précède toujours l'exécution : une commande qui attend quelqu'un (fenêtre de
- * réaction) laisse derrière elle un état lisible et repris après un F5. Tout ce qui touche un
- * même porteur passe par une seule file, dans l'ordre d'arrivée.
+ * Writing always precedes execution: a command that waits for someone (reaction window) leaves behind a readable state, resumed
+ * after an F5. Everything that touches the same bearer goes through a single queue, in arrival order.
  *
- * Écritures regroupées (réglage « journal de chat allégé », `coalesce`) : chaque écriture du flag refait la
- * carte de chat chez tous les clients. Regroupées, les étapes qui s'enchaînent vite dans une même tâche ne
- * font qu'une écriture : la dernière reste en mémoire (`peek` la rend), part au plus tard `flushMs` après,
- * et toujours à la fin de la tâche. Une commande qui attend quelqu'un (réaction, sauvegarde, choix) laisse
- * donc son état lisible au bout de `flushMs` au lieu de tout de suite.
+ * Grouped writes ("light chat log" setting, `coalesce`): each write of the flag redoes the chat card on all clients.
+ * Grouped, the steps that follow each other quickly in the same task make only one write: the last stays in memory
+ * (`peek` returns it), goes out `flushMs` after at the latest, and always at the end of the task. A command that waits for
+ * someone (reaction, saving throw, choice) therefore leaves its state readable after `flushMs` instead of right away.
  *
- * `createDispatcher` ne référence aucun global : il se teste hors de Foundry, avec de faux ports.
+ * `createDispatcher` references no global: it is tested outside Foundry, with fake ports.
  */
 
 import { advance, open, current } from "../core/action.mjs";
 
 /**
  * @param {object} ports
- * @param {(carrierId: string) => object|null} ports.read             Résolution portée par un message.
+ * @param {(carrierId: string) => object|null} ports.read             Resolution carried by a message.
  * @param {(carrierId: string, resolution: object) => Promise} ports.write
  * @param {(command: object, carrierId: string, resolution: object) => Promise<object[]|void>} ports.execute
- *        Exécute une commande du cœur ; rend les évènements qu'elle produit tout de suite, s'il y en a.
- * @param {(key: string, task: Function) => Promise} ports.enqueue    File par clé.
- * @param {(resolution: object, event: object) => void} [ports.publish]  Sortie pour les consommateurs passifs (SPEC §5.6).
- * @param {() => boolean} [ports.coalesce]  Regrouper les écritures (relu à chaque écriture).
- * @param {number} [ports.flushMs]           Délai maximal d'une écriture regroupée.
+ *        Runs a core command; returns the events it produces right away, if any.
+ * @param {(key: string, task: Function) => Promise} ports.enqueue    Queue by key.
+ * @param {(resolution: object, event: object) => void} [ports.publish]  Output for passive consumers (SPEC §5.6).
+ * @param {() => boolean} [ports.coalesce]  Group the writes (re-read at each write).
+ * @param {number} [ports.flushMs]           Maximum delay of a grouped write.
  */
 export function createDispatcher({ read, write, execute, enqueue, publish=() => {}, coalesce=() => false, flushMs=250 }) {
 
-  /** Porteur → { resolution, timer } : la dernière résolution pas encore écrite. */
+  /** Bearer → { resolution, timer }: the last resolution not yet written. */
   const staged = new Map();
-  /** Porteur → dernière écriture partie : celles d'un même porteur arrivent dans l'ordre. */
+  /** Bearer → last write sent: those of the same bearer arrive in order. */
   const writing = new Map();
   /**
-   * §153 : porteur → résolution partie à l'écriture, pas encore sur le porteur. Sans elle, un lecteur placé entre le départ d'une
-   * écriture regroupée et son arrivée relisait l'ancien porteur (aucune résolution) : la première sauvegarde d'une zone, lancée dans
-   * cet intervalle, passait pour une sauvegarde libre et était perdue (Esprit couard, sans Dice So Nice pour retarder les jets).
+   * §153: bearer → resolution sent for writing, not yet on the bearer. Without it, a reader placed between the start of a
+   * grouped write and its arrival would re-read the old bearer (no resolution): the first saving throw of an area, launched in
+   * that interval, passed for a free saving throw and was lost ("Cowardly Spirit", without Dice So Nice to delay the rolls).
    */
   const inflight = new Map();
 
@@ -69,19 +67,19 @@ export function createDispatcher({ read, write, execute, enqueue, publish=() => 
     staged.set(carrierId, { resolution, timer });
   }
 
-  /** Une tâche de la file : ce qu'elle a changé est écrit avant qu'elle ne rende la main. */
+  /** A queue task: what it changed is written before it hands back control. */
   async function task(carrierId, fn) {
     try { return await fn(); }
     finally { await flush(carrierId); }
   }
 
-  /** Fait avancer une résolution déjà écrite, évènement après évènement. */
+  /** Advances an already written resolution, event after event. */
   async function pump(carrierId, resolution, events) {
     const queue = [...events];
     while ( queue.length ) {
       const event = queue.shift();
       const step = advance(resolution, event);
-      if ( step.resolution === resolution ) continue;   // évènement sans effet : rien à écrire, rien à faire
+      if ( step.resolution === resolution ) continue;   // event with no effect: nothing to write, nothing to do
       resolution = step.resolution;
       await store(carrierId, resolution);
       publish(resolution, event);
@@ -98,12 +96,12 @@ export function createDispatcher({ read, write, execute, enqueue, publish=() => 
 
   return {
     /**
-     * Ouvre une résolution sur un porteur. `build` est appelé DANS la file du porteur, et rend les
-     * données d'`open()` du cœur, ou null s'il n'y a rien à résoudre.
+     * Opens a resolution on a bearer. `build` is called INSIDE the bearer's queue, and returns the
+     * core's `open()` data, or null if there is nothing to resolve.
      */
     open(carrierId, build) {
       return enqueue(carrierId, () => task(carrierId, async () => {
-        if ( current(peek(carrierId)) ) return null;   // déjà ouverte (hook reçu deux fois)
+        if ( current(peek(carrierId)) ) return null;   // already open (hook received twice)
         const data = await build();
         if ( !data ) return null;
         const first = open({ ...data, carrier: carrierId });
@@ -114,9 +112,9 @@ export function createDispatcher({ read, write, execute, enqueue, publish=() => 
     },
 
     /**
-     * Soumet un évènement à la résolution d'un porteur. `event` peut être une fonction
-     * `(résolution) => évènement | null`, appelée DANS la file : elle voit l'état du moment.
-     * @returns {Promise<boolean>}  false si le porteur n'a pas de résolution, ou si l'évènement ne l'a pas changée.
+     * Submits an event to a bearer's resolution. `event` can be a function
+     * `(résolution) => évènement | null`, called INSIDE the queue: it sees the current state.
+     * @returns {Promise<boolean>}  false if the bearer has no resolution, or if the event did not change it.
      */
     send(carrierId, event) {
       return enqueue(carrierId, () => task(carrierId, async () => {
@@ -128,12 +126,12 @@ export function createDispatcher({ read, write, execute, enqueue, publish=() => 
       }));
     },
 
-    /** Attend que tout ce qui est en file pour ce porteur soit traité. */
+    /** Waits until everything queued for this bearer is processed. */
     drained(carrierId) {
       return enqueue(carrierId, async () => {});
     },
 
-    /** La résolution du moment : encore en mémoire (écritures regroupées) ou écrite sur le porteur. */
+    /** The current resolution: still in memory (grouped writes) or written on the bearer. */
     peek
   };
 }

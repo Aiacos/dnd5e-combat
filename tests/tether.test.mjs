@@ -2,11 +2,11 @@ import { describe, it, expect } from "vitest";
 import { tetherBreak } from "../module/scripts/core/tether.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
-describe("Trait ensorcelé : rupture du lien", () => {
-  it("à portée et sans abri total : tient", () => {
+describe("Enchanted trait: breaking the link", () => {
+  it("in range and without Total Cover: holds", () => {
     expect(tetherBreak({ distance: 60, maxRange: 60, totalCover: false })).toBe(null);
   });
-  it("au-delà de la portée", () => {
+  it("beyond the range", () => {
     expect(tetherBreak({ distance: 65, maxRange: 60, totalCover: false })).toBe("range");
   });
   it("abri total", () => {
@@ -17,14 +17,14 @@ describe("Trait ensorcelé : rupture du lien", () => {
   });
 });
 
-describe("schéma : ranges, tether", () => {
+describe("schema: ranges, tether", () => {
   it("valides", () => {
     expect(validateEntry({
       ranges: { dnd5eactivity000: { value: 60, units: "ft" } },
       tether: { attack: "dnd5eactivity000", activity: "ffuqn0xdclG9YAQt", range: { value: 60, units: "ft" } }
     })).toEqual([]);
   });
-  it("refusés", () => {
+  it("rejected", () => {
     expect(validateEntry({ ranges: { dnd5eactivity000: { value: 0, units: "ft" } } })).toEqual(["ranges.dnd5eactivity000: { value, units }"]);
     expect(validateEntry({ tether: { attack: "court", activity: "ffuqn0xdclG9YAQt", range: { value: 60, units: "ft" } } }))
       .toEqual(["tether.attack: activity id (16 characters) expected"]);

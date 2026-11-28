@@ -214,61 +214,65 @@ import { registerConnection, testConnection } from "./runtime/connection.mjs";
 import { registerConnectionTest, openConnectionTest } from "./ui/connection-test.mjs";
 
 /**
- * État global du module, exposé sur game.modules.get(MODULE_ID).api pour l'inspection.
- * `routes()` : qui écoute quel hook, dans quel ordre (runtime/router.mjs).
- * `content` : contenu livré, surcouche du monde (`set`), ce qu'un acteur déclare (`inspect`).
- * `reports` : les items signalés en partie par le MJ, et le panneau du bilan (ui/automation.mjs, SPEC §9.2).
- * `perf` : le relevé des temps du moteur sur ce client (§98, runtime/perf.mjs) — `table()`, `report()`, `longTasks()`, `reset()`.
- * `mcp` : fonctions de test appelées par le connecteur (`call-module-api`), arguments et résultats en JSON (runtime/testing.mjs).
- * `nonLethal` : `get(actor)`, `set(actor, on)` — les coups non létaux de l'acteur (§210, l'interrupteur de DAS UI) ; `knockedOut(actor)`.
- * `ui` : ce qu'une interface externe lit (§40.1, ui/api.mjs) — `budget(combatant)`, `movement(token)`, `issues(activity)`, `cost(activity)` (§137), `cell(activity)` (les deux en un calcul, §205),
- *   `ritual(activity)` (§139 : « none » / « ritual » / « ask »),
- *   `multiattackLeft(actor)`, `light(token)`, `globalLight()`. Le moteur ne connaît aucune interface.
- * `light(token)` : la lumière où se tient un token (ui/illumination.mjs) — le même que `ui.light`, gardé à ce nom.
- * `approach(token, { cells, level })` : faire marcher un token par le chemin du moteur jusqu'à la plus proche des cases
- *   données (§39.1) — pour les modules (fouille de Darsh Loot) ; le moteur n'en connaît aucun.
- * `stopWalks()` : arrêter les marches du moteur lancées par ce client (§102) — pour un module qui arrête tout (Darsh Loot : une
- *   découverte) ; seul le client qui a lancé une marche peut l'arrêter.
- * `budget.issues(actor, cost)` / `budget.spend(actor, cost)` : ce qui empêche une dépense du budget du tour, et la dépense
- *   (chez le MJ actif) — pour une action d'un module (§102). Hors combat : rien ne coûte.
- * `scrolls.spellOf(item)` : le sort d'un parchemin `{ identifier, level, school }` ou null (§48) — pour la macro de reprise des
- *   parchemins du monde (tools/macros/reprendre-parchemins.js).
- * `level()` : le niveau d'automatisation du monde, « essentials » | « assisted » | « full » (§117) ; `levelAtLeast(niveau)` ;
- *   `skippedRoutes()` : les écoutes non branchées à ce niveau.
- * §179 : `approach(token, { target, reachCells, seeing })` — s'approcher d'une cible jusqu'à une allonge ou une portée (en cases), en
- *   la voyant si demandé ; `path(token, { cells | target, reachCells, seeing }, { maxCost, extra })` → `{ arrives, moves, door }` ou null — un
- *   chemin sans le parcourir (`extra` : la Vitesse en plus, pour un Sprint) ; `basics.take(actor, "dash" | "disengage" | "dodge")` — l'action de base sans item (PNJ), par le budget.
- * §180 : `flee(token, from, { extra, dryRun })` → `{ moved, from, to, reason? }` — s'éloigner d'une menace aussi loin que le
- *   déplacement du tour le permet (plus `extra`), ou seulement tester (`dryRun`) ; `save(actor, { ability, dc, advantage,
- *   disadvantage, flavor })` → `{ total, d20, dc, success }` — une sauvegarde hors résolution, sans fenêtre ; `drop(token)` → `{ items,
- *   pile, kept }` — lâcher ce qu'on tient (comme l'ordre « Lâche »).
- * `vision.canSee(observer, target)` (§178) : l'observateur voit-il la cible, selon les règles de vision du moteur (lumière, murs,
- *   vision dans le noir, brume et ténèbres, Invisible — donc une Furtivité réussie —, Aveuglé) ? `true` / `false`, ou `null` quand on
- *   ne peut pas juger (vision simulée coupée, canevas absent, token non dessiné). Tokens ou documents ; lecture seule.
- * §196 : `climb` — l'escalade pour les voisins (runtime/climb.mjs `climbApi` : `state`, `holds`, `entries`, `up`, `run`, `ceiling`,
- *   `down`, `drop`, `toward` ; §224 : `enabled()`, `setEnabled(on)` — l'interrupteur du MJ, hook `dnd5e-combat.climbSystem`) ;
- *   `gap(a, b)` → `{ cells, vertical }` — l'écart de deux tokens en cases, en trois dimensions (la distance
- *   du moteur, des pieds à la tête : 0 superposés, 1 au contact) et son seul vide vertical (au plafond, en vol). Lecture seule.
- * §242 : `rolls` — jets demandés par le MJ à plusieurs personnages : `request({ actors, type, key, dc, hideDc, advantage, disadvantage,
- *   bonus, label, group })` → promesse du point final ; `open({ actors, values })` (la fenêtre, MJ) ; `tracker()` (le suivi, MJ) ;
- *   `force(messageId, actorUuid)` (MJ : lancer pour un joueur qui tarde) ; `view(messageId)` ; `mode(actor, request)` (l'Avantage /
- *   le Désavantage que le système donnera) ; `breakdown(actor,
- *   request)` (les tuiles de bonus) ; `title(request)`. Hooks `dnd5e-combat.groupRoll` (le point, à chaque résultat, sur chaque client) et
- *   `dnd5e-combat.groupRollPrompt` (une interface prend la fenêtre du joueur : runtime/group-roll.mjs).
- * `debug` : le débogueur (§380, runtime/debug.mjs) — `errors()`, `trailList()`, `logs()`, `verbose(on)`, `register({ module, repo, collect })`,
- *   `trail(module, kind, text)`, `onError(fn)`, `clear()`, `open({ token })` (la fenêtre) ; §388 : `testConnection(user)` (MJ : allers-retours et sonde du
- *   client d'un joueur → constats), `openConnectionTest(userId)` (sa fenêtre) ; hook `dnd5e-combat.debug` au `setup`, avec cette API.
- * `welcome.open()` : l'écran d'accueil (§177) ; `diagnostic.open({ check })` : le diagnostic du monde (vérifications, réparation après
- *   sauvegarde, restauration), sur une seule vérification si `check` est donné (macros « Outils du MJ ») ;
- *   `diagnostic.registerImporter({ id, flag, name, hint?, icon? })` : un autre module déclare son importeur d'objets, reconnu au flag
- *   que ses objets portent — le diagnostic gagne une vérification (id rendu) qui liste ceux dont la règle cite un id que l'objet n'a
- *   pas et les remplace par l'objet officiel ; `diagnostic.unregisterImporter(id)`.
+ * Global state of the module, exposed on game.modules.get(MODULE_ID).api for inspection.
+ * `routes()`: who listens to which hook, in what order (runtime/router.mjs).
+ * `content`: shipped content, world overlay (`set`), what an actor declares (`inspect`).
+ * `reports`: the items reported in part by the GM, and the summary panel (ui/automation.mjs, SPEC §9.2).
+ * `perf`: the engine's timing survey on this client (§98, runtime/perf.mjs) — `table()`, `report()`, `longTasks()`, `reset()`.
+ * `mcp`: test functions called by the connector (`call-module-api`), arguments and results in JSON (runtime/testing.mjs).
+ * `nonLethal`: `get(actor)`, `set(actor, on)` — the actor's non-lethal blows (§210, the DAS UI switch); `knockedOut(actor)`.
+ * `ui`: what an external interface reads (§40.1, ui/api.mjs) — `budget(combatant)`, `movement(token)`, `issues(activity)`,
+ *   `cost(activity)` (§137), `cell(activity)` (both in one calculation, §205),
+ *   `ritual(activity)` (§139: "none" / "ritual" / "ask"),
+ *   `multiattackLeft(actor)`, `light(token)`, `globalLight()`. The engine knows no interface.
+ * `light(token)`: the light where a token stands (ui/illumination.mjs) — the same as `ui.light`, kept under this name.
+ * `approach(token, { cells, level })`: make a token walk by the engine's path to the nearest of the given cells
+ *   (§39.1) — for modules (Darsh Loot's search); the engine knows none of them.
+ * `stopWalks()`: stop the engine walks started by this client (§102) — for a module that stops everything (Darsh Loot: a
+ *   discovery); only the client that started a walk can stop it.
+ * `budget.issues(actor, cost)` / `budget.spend(actor, cost)`: what prevents spending from the turn budget, and the spending
+ *   (on the active GM) — for a module's action (§102). Out of combat: nothing costs anything.
+ * `scrolls.spellOf(item)`: the spell of a scroll `{ identifier, level, school }` or null (§48) — for the macro that recovers the
+ *   world's scrolls (tools/macros/reprendre-parchemins.js).
+ * `level()`: the world's automation level, "essentials" | "assisted" | "full" (§117); `levelAtLeast(niveau)`;
+ *   `skippedRoutes()`: the listeners not wired at this level.
+ * §179: `approach(token, { target, reachCells, seeing })` — approach a target to within a reach or range (in cells), while
+ *   seeing it if requested; `path(token, { cells | target, reachCells, seeing }, { maxCost, extra })` → `{ arrives, moves, door }`
+ *   or null — a path without walking it (`extra`: the Speed in addition, for a Dash);
+ *   `basics.take(actor, "dash" | "disengage" | "dodge")` — the basic action without an item (NPC), through the budget.
+ * §180: `flee(token, from, { extra, dryRun })` → `{ moved, from, to, reason? }` — move away from a threat as far as the turn's
+ *   movement allows (plus `extra`), or only test (`dryRun`); `save(actor, { ability, dc, advantage,
+ *   disadvantage, flavor })` → `{ total, d20, dc, success }` — a save outside resolution, no window; `drop(token)` → `{ items,
+ *   pile, kept }` — drop what is held (like the "Drop it" order).
+ * `vision.canSee(observer, target)` (§178): does the observer see the target, according to the engine's vision rules
+ *   (light, walls, Darkvision, fog and Darkness, Invisible — hence a successful Stealth —, Blinded)? `true` / `false`,
+ *   or `null` when it cannot be judged (simulated vision off, canvas absent, token not drawn). Tokens or documents; read-only.
+ * §196: `climb` — climbing for neighbors (runtime/climb.mjs `climbApi`: `state`, `holds`, `entries`, `up`, `run`, `ceiling`,
+ *   `down`, `drop`, `toward`; §224: `enabled()`, `setEnabled(on)` — the GM's switch, hook `dnd5e-combat.climbSystem`);
+ *   `gap(a, b)` → `{ cells, vertical }` — the gap between two tokens in cells, in three dimensions (the engine's distance,
+ *   from feet to head: 0 overlapping, 1 in contact) and its vertical void alone (on the ceiling, in flight). Read-only.
+ * §242: `rolls` — GM-requested rolls from several characters: `request({ actors, type, key, dc, hideDc, advantage, disadvantage,
+ *   bonus, label, group })` → promise of the final tally; `open({ actors, values })` (the window, GM);
+ *   `tracker()` (the tracker, GM); `force(messageId, actorUuid)` (GM: roll for a player who is slow); `view(messageId)`;
+ *   `mode(actor, request)` (the Advantage / Disadvantage that the system will give); `breakdown(actor,
+ *   request)` (the bonus tiles); `title(request)`. Hooks `dnd5e-combat.groupRoll` (the tally, at each result, on every client) and
+ *   `dnd5e-combat.groupRollPrompt` (an interface takes over the player's window: runtime/group-roll.mjs).
+ * `debug`: the debugger (§380, runtime/debug.mjs) — `errors()`, `trailList()`, `logs()`, `verbose(on)`,
+ *   `register({ module, repo, collect })`, `trail(module, kind, text)`, `onError(fn)`, `clear()`, `open({ token })` (the window);
+ *   §388: `testConnection(user)` (GM: round trips and probe of a player's client → findings),
+ *   `openConnectionTest(userId)` (its window); hook `dnd5e-combat.debug` at `setup`, with this API.
+ * `welcome.open()`: the welcome screen (§177); `diagnostic.open({ check })`: the world diagnostic (checks, repair after
+ *   backup, restoration), on a single check if `check` is given ("GM Tools" macros);
+ *   `diagnostic.registerImporter({ id, flag, name, hint?, icon? })`: another module declares its item importer, recognized by the
+ *   flag its items carry — the diagnostic gains a check (id returned) that lists those whose rule cites an id the item does not
+ *   have and replaces them with the official item; `diagnostic.unregisterImporter(id)`.
  */
 const state = {
   active: false, reason: null, unitFactors: null, routes: describeRoutes, content: contentApi, reports: reportsApi, mastery: masteryApi,
-  // §272 : la minuterie se lance aussi par le connecteur (`timer` : token de la scène affichée, secondes, libellé) — elle vit dans ui/.
+  // §272: the timer is also started through the connector (`timer`: token of the displayed scene, seconds, label) —
+  // it lives in ui/.
   mcp: Object.freeze({ ...testApi,
-    /** Lance chez tous les clients une minuterie de `seconds` s au-dessus du token `tokenId` de la scène affichée → `{ id }`. */
+    /** Starts on every client a timer of `seconds` s above the token `tokenId` of the displayed scene → `{ id }`. */
     timer: ({ tokenId, seconds=5, label="" }={}) => ({ id: startTimer({ token: canvas.tokens.get(tokenId)?.document, seconds, label }).id }),
     /** §542: the load-time summon permissions check, as at `ready` → `{ gaps, opened, windowId }` (the window opened, or not). */
     summonAlert: async () => ({ ...(await checkSummonPermissions()), windowId: SUMMON_WINDOW_ID }) }), perf: perfApi,
@@ -279,55 +283,56 @@ const state = {
   welcome: { open: openWelcome }, releaseNotes: { open: openReleaseNotes }, diagnostic: Object.freeze({ open: openDiagnostic, registerImporter, unregisterImporter }), debug: Object.freeze({ ...debugApi, open: openDebugReport, testConnection, openConnectionTest }), settings: { open: openSettings, registerWindow },
   vision: { canSee: publicCanSee, locates: publicLocates, sensed: publicSensed, cone: publicCone, canHear: publicCanHear },
   factions: { ...factionsApi,
-    /** Ouvre (ou ramène devant) la fenêtre des factions sur ce client. */
+    /** Opens (or brings to the front) the factions window on this client. */
     open: () => openFactions() },
   sneak: stealthApi,
   climb: climbApi,
   ethereal: etherealApi,   // §225 : `is(token)`, `perceives(observer, target)`, `toggle(tokens?, active?)`
   correction: { ...correctionApi, open: openCorrection },   // §396 : `apply({ activity, level, targets, damage, attack, save, concentration, effects, consume, zone, public })`, `shape(activity)`, `open(item|activity)`
   combatLaunch: { ...launchApi, open: openCombatLaunch },   // §397 : `open()`, `candidates()`, `launch({ participants, npcAuto, grouped, playlist })`, `pending()`
-  // §436 : `use(itemOrActivity, usage, dialog, message)` — comme dnd5e, mais un sort refusé par le seul champ antimagie propose « le faire
-  // quand même » (alerte au MJ) ; `blocks(activity)` : refusée par le seul champ ?
+  // §436: `use(itemOrActivity, usage, dialog, message)` — like dnd5e, but a spell refused by the antimagic field alone
+  // offers "do it anyway" (alert to the GM); `blocks(activity)`: refused by the field alone?
   antimagic: antimagicApi,
   vanilla: vanillaApi,   // §395 : `use(itemOrActivity, { event })` — lancer par dnd5e seul ; `is(docOrConfig)` — vient-il d'un tel lancement ?
-  theater: theaterApi,   // §220 : Théâtre de l'esprit — `active()`, `set(on)` ; hook `dnd5e-combat.theater`
+  theater: theaterApi,   // §220: Theater of the Mind — `active()`, `set(on)`; hook `dnd5e-combat.theater`
   gm: { alert: alertGM, forced: reportForced },   // §408 : `api.gm.forced({ actor, item, reasons, targets, token })` ; hook `dnd5e-combat.forced`
     // §364 : alerte MJ (`api.gm.alert({ text, item, actor })`) ; hook `dnd5e-combat.gmAlert`
-  rolls: { ...rollsApi, open: openGroupRoll, tracker: openTracker },   // §242 : jets demandés par le MJ — hooks `groupRoll`, `groupRollPrompt`
-  combat: combatApi,   // §250 : évènements dans l'initiative — `addEvent`, `removeEvent`, `events`, `isEvent` ; hook `dnd5e-combat.eventTurn`
+  rolls: { ...rollsApi, open: openGroupRoll, tracker: openTracker },   // §242: GM-requested rolls — hooks `groupRoll`, `groupRollPrompt`
+  combat: combatApi,   // §250: events in the initiative — `addEvent`, `removeEvent`, `events`, `isEvent`; hook `dnd5e-combat.eventTurn`
   gap: publicGap,
   // §400 : textes flottants — `play(token, kind, text, { roll, mode })`, `open()`, `import(json)`, `export()`, `reset()`, `try(kind)`, `fonts()`
   floats: { play: playFloat, open: openFloatTheme, import: importTheme, export: exportTheme, reset: resetTheme, try: tryKind, fonts: floatFonts },
-  // §274 : munitions d'une arme — `options(item)` : `{ options: [{ id, name, img, quantity }], current, ask }` (null si l'arme n'en tire
-  // pas) ; `set(item, ammoId)` : la munition retenue pour ses prochaines attaques. Hook `dnd5e-combat.ammunition` `(item, ammoId)`.
+  // §274: a weapon's ammunition — `options(item)`: `{ options: [{ id, name, img, quantity }], current, ask }` (null if the
+  // weapon fires none); `set(item, ammoId)`: the ammunition kept for its next attacks.
+  // Hook `dnd5e-combat.ammunition` `(item, ammoId)`.
   ammo: {
     /**
-     * Les munitions que l'arme peut tirer et celle que son prochain jet tirerait : `{ options, current, ask }`, ou null si elle n'en tire
-     * pas.
+     * The ammunition the weapon can fire and the one its next roll would fire: `{ options, current, ask }`, or null if it fires
+     * none.
      */
     options: (item, activity=null) => ammoState(item, activity),
     set: setAmmo },
-  waits: { list: playerWaits,   // §290 : fenêtres sans délai, attentes du MJ
+  waits: { list: playerWaits,   // §290: windows without delay, GM waits
     /**
-     * MJ : force l'attente `id` (le client du joueur résout ses fenêtres comme au bout du délai) → vrai si l'attente existait ; faux pour
-     * un joueur.
+     * GM: forces the wait `id` (the player's client resolves its windows as at the end of the delay) → true if the wait existed;
+     * false for a player.
      */
     force: id => forceWait(id),
     open: openPlayerWaits },
-  // §421 : la File du MJ — ce qu'il doit décider, les joueurs attendus, les actions bloquées.
+  // §421: the GM Queue — what they must decide, the players awaited, the blocked actions.
   queue: { list: queue, force: forceLine, roll: rollBlocked, answer: answerLine, open: openPlayerWaits },
-  // §282 : Inspiration héroïque — `has(actor)`, `set(actor, on)` (MJ : la donne ou la retire, carte et retour à la table), `mode()` : le
-  // réglage de ce client (« on », « failure », « off »).
+  // §282: Heroic Inspiration — `has(actor)`, `set(actor, on)` (GM: grants or removes it, card and return to the table), `mode()`:
+  // this client's setting ("on", "failure", "off").
   heroic: { has: hasHeroic,
-    /** MJ : donne (`on` vrai) ou retire l'Inspiration héroïque d'un personnage joueur, avec une carte de chat → vrai si elle a changé. */
+    /** GM: grants (`on` true) or removes the Heroic Inspiration of a player character, with a chat card → true if it changed. */
     set: (actor, on) => (game.user.isGM ? setHeroic(actor, on) : false),
     mode: heroicMode },
-  // Issue #32 : succès à un prix — `enabled()`, `candidates()` (les pauses ouvertes chez le MJ actif), `offer(id, { cost? })`,
-  // `dismiss(id)`, `offerOnMessage(messageId, { what, cost? })`. Hook `dnd5e-combat.successAtCost` après chaque réponse.
+  // Issue #32: success at a cost — `enabled()`, `candidates()` (the pauses open on the active GM), `offer(id, { cost? })`,
+  // `dismiss(id)`, `offerOnMessage(messageId, { what, cost? })`. Hook `dnd5e-combat.successAtCost` after each answer.
   atCost: atCostApi
 };
 
-/** §196 : l'écart de deux tokens en cases (3D, et son vide vertical), pour un voisin qui juge une allonge — null s'il ne se mesure pas. */
+/** §196: the gap between two tokens in cells (3D, and its vertical void), for a neighbor judging a reach — null if unmeasurable. */
 function publicGap(a, b) {
   const da = a?.document ?? a;
   const db = b?.document ?? b;
@@ -335,16 +340,16 @@ function publicGap(a, b) {
   try { return { cells: gapCells(da, db), vertical: verticalGapCells(da, db) }; } catch { return null; }
 }
 
-/** §178 : la vision du moteur pour un voisin (lecture seule) — null quand la vision simulée est coupée ou ne peut pas juger. */
+/** §178: the engine's vision for a neighbor (read-only) — null when simulated vision is off or cannot judge. */
 function publicCanSee(observer, target) {
   if ( !isVisionAvailable() ) return null;
   return visionCanSee(observer?.document ?? observer, target?.document ?? target);
 }
 
 /**
- * La position de la cible est-elle connue de l'observateur : il la voit, ou un sens qui n'est pas une vue la localise
- * (perception des vibrations) ? Issue #107: such a sense also pinpoints a creature Hidden from the observer, which stays unseen
- * (`canSee` false) and Hidden. Lecture seule ; null quand la vision simulée est coupée ou ne peut pas juger.
+ * Is the target's position known to the observer: they see it, or a sense that is not sight locates it
+ * (Tremorsense)? Issue #107: such a sense also pinpoints a creature Hidden from the observer, which stays unseen
+ * (`canSee` false) and Hidden. Read-only; null when simulated vision is off or cannot judge.
  */
 function publicLocates(observer, target) {
   if ( !isVisionAvailable() ) return null;
@@ -352,100 +357,102 @@ function publicLocates(observer, target) {
 }
 
 /**
- * Ce qu'un sens déclaré par du contenu (`sense`) dit de la cible à l'observateur : `"sight"` (vue), `"locate"` (position connue,
- * pas vue), `"presence"` (présence sue, pas la position), `"aura"` (une aura sur la créature, qu'un autre sens doit déjà faire
- * voir : `reveals: "aura"`), ou null. Lecture seule ; null aussi quand la vision simulée est coupée.
+ * What a sense declared by content (`sense`) tells the observer about the target: `"sight"` (sight), `"locate"` (position known,
+ * not seen), `"presence"` (presence known, not the position), `"aura"`
+ * (an aura on the creature, which another sense must already make visible: `reveals: "aura"`), or null.
+ * Read-only; null also when simulated vision is off.
  */
 function publicSensed(observer, target) {
   if ( !isVisionAvailable() ) return null;
   return sensedThrough(observer?.document ?? observer, target?.document ?? target);
 }
 
-/** §186 : l'ouïe du moteur pour un voisin (lecture seule) — murs et planchers qui arrêtent le son, Assourdi, cible cachée ; sans portée. */
+/** §186: the engine's hearing for a neighbor (read-only) — walls and floors that stop sound, Deafened, hidden target; no range. */
 function publicCanHear(observer, target) {
   return hearingCanHear(observer?.document ?? observer, target?.document ?? target);
 }
 
-/** §182 : le cône de vision d'une créature (`{ angle, rotation }`, convention du cœur), ou null quand elle voit à 360°. */
+/** §182: a creature's vision cone (`{ angle, rotation }`, core convention), or null when it sees in 360°. */
 function publicCone(token) {
   return coneOf(token?.document ?? token);
 }
 
-/** Pourquoi le moteur doit rester en veille dans ce monde, ou null s'il peut tourner. */
+/** Why the engine must stay dormant in this world, or null if it can run. */
 function standbyReason() {
-  // SPEC §2 : exclusif vis-à-vis de Midi-QOL. En sa présence, on ne branche rien.
+  // SPEC §2: exclusive with respect to Midi-QOL. When it is present, nothing is wired.
   if ( game.modules.get("midi-qol")?.active ) return "midi-qol";
   if ( foundry.utils.isNewerVersion(MIN_SYSTEM_VERSION, game.system.version) ) return "system";
   return null;
 }
 
-// Les hooks se branchent dès `init` : le journal de chat rend les messages existants avant
-// `ready`, et un hook de rendu posé plus tard ne les voit pas (verdicts absents après un F5).
+// Hooks are wired from `init`: the chat log renders existing messages before
+// `ready`, and a render hook set up later does not see them (verdicts missing after an F5).
 Hooks.once("init", () => {
   game.modules.get(MODULE_ID).api = state;
   state.reason = standbyReason();
-  // §177 : l'accueil et le diagnostic, même en veille (le diagnostic nettoie justement les traces de Midi-QOL). Hors niveaux.
+  // §177: the welcome screen and the diagnostic, even when dormant (the diagnostic precisely cleans up Midi-QOL traces).
+  // Outside the levels.
   registerWelcome({ menu: !!state.reason });
-  registerConnection();   // §388 : un client répond au test de connexion du MJ, même en veille
-  registerDebug();   // §380 : le débogueur, même en veille et à tout niveau (la capture tourne depuis le chargement du script)
+  registerConnection();   // §388: a client answers the GM's connection test, even when dormant
+  registerDebug();   // §380: the debugger, even when dormant and at every level (capture runs from the script load)
   if ( state.reason ) return;
-  // L'ordre de ces appels est l'ordre d'appel des inscrits d'un même hook (runtime/router.mjs).
-  // Le moteur d'abord ; la souris (ui/pointer) avant la légalité (turn) : une activité sans cible
-  // passe en mode visée avant qu'on juge son budget ; le reste de l'interface en dernier.
-  // §117 : le niveau d'automatisation d'abord (son réglage en tête de la fenêtre) ; chaque fonction s'inscrit selon lui.
+  // The order of these calls is the call order of the listeners of a same hook (runtime/router.mjs).
+  // The engine first; the mouse (ui/pointer) before legality (turn): an activity without a target
+  // goes into aiming mode before its budget is judged; the rest of the interface last.
+  // §117: the automation level first (its setting at the top of the window); each function registers according to it.
   registerLevel();
-  gated(registerTheater);   // §220 : Théâtre de l'esprit — hors des niveaux d'automatisation : son bouton existe toujours
-  gated(registerVanilla);   // §395 : « sans DAS » — marque ce qui découle d'une action lancée sans DAS, avant toute autre inscription
-  gated(registerCorrection);   // §396 : correction du MJ — la zone remise ne résout rien à la pose
-  gated(registerClimbSystem);   // §224 : l'interrupteur de l'escalade et des chutes — avant l'altitude et l'escalade, qui le lisent
-  gated(registerFlow);   // §418 : les réglages du cadre « Déroulement » (réactions)
-  gated(registerPerf);   // §98 : le seuil du relevé des temps, avant que les hooks ne tournent
+  gated(registerTheater);   // §220: Theater of the Mind — outside the automation levels: its button always exists
+  gated(registerVanilla);   // §395: "without DAS" — marks what stems from a no-DAS action, before any other registration
+  gated(registerCorrection);   // §396: GM correction — the restored area resolves nothing on placement
+  gated(registerClimbSystem);   // §224: the climbing and falling switch — before altitude and climbing, which read it
+  gated(registerFlow);   // §418: the settings of the "Flow" frame (reactions)
+  gated(registerPerf);   // §98: the timing survey threshold, before the hooks run
   gated(registerContent);
-  gated(registerFactions);   // §181 : la table des factions, avant toute règle qui juge ami / ennemi
-  gated(registerStealthMode);   // §183 : mode furtif des PJ (sort du mode à l'entrée en combat)
+  gated(registerFactions);   // §181: the factions table, before any rule that judges friend / foe
+  gated(registerStealthMode);   // §183: PC stealth mode (leaves the mode on entering combat)
   gated(registerIcons);
   gated(registerEngine);
   gated(registerConcentration);
   gated(registerSpellWeapons);   // §554: spell weapons in the favorites, hook for neighbours (after concentration removes the traces)
-  gated(registerPilot);   // après la concentration : l'objet créé y est d'abord rattaché
-  gated(registerReduction);   // avant les 0 PV : ce que la réserve absorbe n'atteint pas la créature
+  gated(registerPilot);   // after concentration: the created item is first attached to it
+  gated(registerReduction);   // before 0 HP: what the pool absorbs does not reach the creature
   gated(registerDeath);
-  gated(registerCoven);   // après les 0 PV : la seconde phase remplace la chute que registerDeath ne pose plus (§19.5)
-  gated(registerAltitude);   // avant le plafond du tour et les attaques d'opportunité : ils jugent le chemin aligné sur le sol
+  gated(registerCoven);   // after 0 HP: the second phase replaces the fall that registerDeath no longer applies (§19.5)
+  gated(registerAltitude);   // before the turn ceiling and Opportunity Attacks: they judge the path aligned on the ground
   gated(registerActions);
-  gated(registerFollow);   // §41.3 : après les actions — le suivi marche par `approach`
-  gated(registerMount);    // §490 (B08) : monture (déplacement commun, chute, initiative) et ordre à un compagnon
-  gated(registerDoors);   // §244 : serrures des portes (réglage, requête au MJ actif)
-  gated(registerDoorLockUi);   // §244 : section « DAS · Serrure » de la configuration du mur
-  gated(registerWallGrateUi);   // §468 : section « DAS · Grille » de la configuration du mur
-  gated(registerSceneBrightUi);   // Discord (Fanarie, 2026-11-18) : case « Lumière vive » de l'illumination globale, cachée par V14
-  gated(registerCombatEvents);   // §250 : évènements dans l'initiative (un piège à son initiative)
+  gated(registerFollow);   // §41.3: after the actions — following walks by `approach`
+  gated(registerMount);    // §490 (B08): mount (shared movement, fall, Initiative) and order to a companion
+  gated(registerDoors);   // §244: door locks (setting, request to the active GM)
+  gated(registerDoorLockUi);   // §244: "DAS · Lock" section of the wall configuration
+  gated(registerWallGrateUi);   // §468: "DAS · Grate" section of the wall configuration
+  gated(registerSceneBrightUi);   // Discord (Fanarie, 2026-11-18): "Bright Light" checkbox of global illumination, hidden by V14
+  gated(registerCombatEvents);   // §250: events in the initiative (a trap on its initiative)
   gated(registerCombatOutcome);   // §555: combatEnded / creatureDefeated signals — Essentials, they only observe
   gated(registerSkipDefeated);   // 2026-11-28: the turn passes defeated NPCs (setting, on by default)
-  gated(registerRecast);   // avant la souris : une relance repasse par la visée et la légalité
+  gated(registerRecast);   // before the mouse: a recast goes back through aiming and legality
   gated(registerPointer);
-  gated(registerProjectiles);   // après la visée (les cibles sont désignées), avant la légalité
-  gated(registerUsage);   // §68 : avant la métamagie et la légalité — l'emplacement choisi est celui qu'elles liront
-  gated(registerMetamagic);   // §32 : avant registerTurn — le Sort accéléré change le coût que la légalité lit
-  gated(registerFreeCast);    // Intervention divine : avant registerTurn aussi — le sort retenu part sans coût d'action
-  gated(registerPotionChoice);   // issue #31 : potion de soins en action (soin maximal) — le coût, avant la légalité
-  gated(registerFormLock);   // B09 (§488) : juste avant la légalité — la tentative de changer de forme punie une fois, puis refusée
+  gated(registerProjectiles);   // after aiming (the targets are designated), before legality
+  gated(registerUsage);   // §68: before metamagic and legality — the chosen slot is the one they will read
+  gated(registerMetamagic);   // §32: before registerTurn — Quickened Spell changes the cost that legality reads
+  gated(registerFreeCast);    // Divine Intervention: before registerTurn too — the retained spell goes off at no action cost
+  gated(registerPotionChoice);   // issue #31: healing potion as an action (maximum healing) — the cost, before legality
+  gated(registerFormLock);   // B09 (§488): just before legality — the attempt to change form punished once, then refused
   gated(registerTurn);
-  gated(registerAmmo);   // §274 : après la légalité — le mode d'attaque et la confirmation sont posés quand la munition se choisit
-  gated(registerGates);   // après la légalité : une porte ne s'ouvre que pour une utilisation confirmée
-  gated(registerSummonHandover);   // §118 : après la légalité — une utilisation refusée ne réclame rien aux voisins
+  gated(registerAmmo);   // §274: after legality — the attack mode and the confirmation are set when the ammunition is chosen
+  gated(registerGates);   // after legality: a door opens only for a confirmed use
+  gated(registerSummonHandover);   // §118: after legality — a refused use claims nothing from neighbors
   gated(registerAutoTranslate);
-  gated(registerDataFixes);   // §335 : donnée premium fautive corrigée à la création (après la traduction)
-  gated(registerClock);   // §251 : horloge en temps réel hors combat (coupée par défaut)
-  gated(registerFlanking);   // §369 : prise en tenaille (règle optionnelle du DMG 2014), désactivée par défaut
-  gated(registerCriticals);   // §207 : options de coup critique (écart à la CA, table de critiques), désactivées par défaut   // §204 : traduction reprise à la création (objets et créatures restés dans la langue d'origine)
+  gated(registerDataFixes);   // §335: faulty premium data fixed at creation (after the translation)
+  gated(registerClock);   // §251: real-time clock out of combat (off by default)
+  gated(registerFlanking);   // §369: Flanking (optional rule of the 2014 DMG), disabled by default
+  gated(registerCriticals);   // §207: Critical Hit options (AC margin, critical table), disabled by default   // §204: translation reapplied at creation (items and creatures left in the original language)
   gated(registerReactions);
-  gated(registerPortent);   // §36 : Présage (Repos long, requête du devin)
+  gated(registerPortent);   // §36: Portent (Long Rest, diviner's request)
   gated(registerGrimoire);   // §139 : rituels sans emplacement, Restauration magique
-  gated(registerLeaves);   // §456 : un objet retiré de la fiche y laisse ses effets déclarés (Marque du sacrifice)
-  gated(registerUsesSpent);   // §458 : un objet aux utilisations épuisées (livre lu 48 heures) pose ses effets déclarés
-  gated(registerFlee);   // §147 : Murmures dissonants, la fuite par la Réaction
-  gated(registerReactionLoss);   // §501 (B21) : « elle ne perd qu'une réaction »
+  gated(registerLeaves);   // §456: an item removed from the sheet leaves its declared effects on it ("Mark of Sacrifice")
+  gated(registerUsesSpent);   // §458: an item with spent uses (book read for 48 hours) applies its declared effects
+  gated(registerFlee);   // §147: Dissonant Whispers, the flight by Reaction
+  gated(registerReactionLoss);   // §501 (B21): "it only loses one reaction"
   gated(registerDispel);   // §37.2 : Dissipation de la magie
   gated(registerInlineChecks);   // §536: inline journal checks to the requested-roll flow — before every other pre-roll listener
   gated(registerTriggers);
@@ -453,138 +460,138 @@ Hooks.once("init", () => {
   gated(registerSpace);
   gated(registerConditions);
   gated(registerAreas);
-  gated(registerBanish);   // §265 : le Bannissement réel (cible cachée, retour à la fin)
-  gated(registerPassengers);   // §264 : les passagers d'une téléportation (Porte dimensionnelle), posés par le MJ actif
-  gated(registerLingering);   // §261 : le terrain que laisse une zone instantanée (Tempête de grêle)
+  gated(registerBanish);   // §265: the real Banishment (target Hidden, return at the end)
+  gated(registerPassengers);   // §264: passengers of a teleportation (Dimension Door), placed by the active GM
+  gated(registerLingering);   // §261: the terrain left by an instantaneous area (Ice Storm)
   gated(registerContest);   // §72 : test en opposition (Combat perspicace)
-  gated(registerStorm);   // §70 : Appel de la foudre, le dé de l'orage déjà là
-  gated(registerSelfAreas);   // §47 : une zone « sur soi » se pose d'office sur le lanceur
+  gated(registerStorm);   // §70: Call Lightning, the storm die already there
+  gated(registerSelfAreas);   // §47: a "self" area is placed on the caster automatically
   gated(registerBursts);
-  gated(registerCoatings);   // §345 : la lame enduite (Dague venimeuse) perd son poison au premier coup qui touche
-  gated(registerGrants);   // C12-d : activités données à une autre créature (Souffle du dragon)
+  gated(registerCoatings);   // §345: the coated blade (Dagger of Venom) loses its poison on the first hit that lands
+  gated(registerGrants);   // C12-d: activities given to another creature (Dragon's Breath)
   gated(registerFelled);
   gated(registerWeaponFeed);
   gated(registerWrath);
-  gated(registerBackfire);   // O9h (§363) : Cor de dévastation
+  gated(registerBackfire);   // O9h (§363): Horn of Blasting
   gated(registerProtection);   // O9h (§363) : Parchemin de protection
   gated(registerZones);
   gated(registerAuras);
   gated(registerEmanations);
   gated(registerRegeneration);
-  gated(registerFortitude);   // §61 : Robustesse de la non-vie (la sauvegarde due part avec les PV, adapter/death.mjs)
-  gated(registerDamageTraits);   // trait qui répond à un type de dégâts subi (Gel, Aversion au feu)
-  gated(registerExtraTurns);   // des tours d'affilée (Arrêt du temps)
+  gated(registerFortitude);   // §61: Undead Fortitude (the save due goes off with the HP, adapter/death.mjs)
+  gated(registerDamageTraits);   // trait that answers a type of damage taken ("Frost", "Fire Aversion")
+  gated(registerExtraTurns);   // consecutive turns (Time Stop)
   gated(registerDamageByCount);   // damage by the number created (Ring of Shooting Stars)
   gated(registerDrain);
   gated(registerSpaceSharing);
   gated(registerObjectPassage);   // §255
   gated(registerEmpower);   // §19.9 : Morsure vampirique (Dhampir)
   gated(registerLifesteal);   // §120 : Caresse du vampire
-  gated(registerDischarge);   // §19.9 : Chemin vers la tombe, fin anticipée de la malédiction
-  gated(registerMastery);   // §21 : bottes d'arme (après registerTriggers : les marques consommées au même message d'attaque)
+  gated(registerDischarge);   // §19.9: Path to the Grave, early end of the curse
+  gated(registerMastery);   // §21: weapon mastery properties (after registerTriggers: marks consumed on the same attack message)
   gated(registerMasteryChoices);   // §222 : bottes choisies — limite, changement au Repos long
-  gated(registerSneak);   // §20 : Attaque sournoise (après registerAreas : le type de dégâts choisi est déjà posé), Frappes rusées
-  gated(registerFighter);   // §21 : Héros du champ d'honneur, styles Armes à deux mains et Armes de jet
-  gated(registerFeats);   // §129 : Sauvagerie martiale, Guérisseur
-  gated(registerEffectWhile);   // §130 : effets de don conditionnels (Défense, Duel…)
-  gated(registerMonk);   // §24 : Frappe étourdissante, Technique de la main ouverte
-  gated(registerSmite);   // §25 : sorts de châtiment (après registerSneak : les dés du châtiment suivent ceux de l'Attaque sournoise)
-  gated(registerFollowUps);   // §373 : activités proposées après un coup (après registerSmite : la faveur d'abord, puis la prise)
-  gated(registerManeuverDice);   // §89, §90 : dés de manœuvre (Fente, Feinte, Jeu de jambes évasif, Balayage, Chassé-croisé, Frappe commandée)
-  gated(registerSuccessAtCost);   // issue #32 : succès à un prix (réglages, question au joueur)
-  gated(registerHeroic);   // §282 : Inspiration héroïque — avant les dés d'après le jet (Embuscade, Inspiration bardique), qui l'attendent
-  gated(registerRollBonus);      // §90 : un dé ajouté à un test ou à l'initiative (Embuscade, Autorité naturelle, Évaluation tactique)
-  gated(registerNaturalOne);     // §93 : un 1 naturel à un Test d20 (Dons sombres de Ravenloft)
-  gated(registerRise);           // §95 : se relever à 0 PV (Cosse nécrotique, Force du tombeau, Courroux persistant)
-  gated(registerAfterSneak);     // §95 : après une Attaque sournoise (Lamentations d'outre-tombe)
-  gated(registerActivityChoice);   // §42.1 : le choix d'activité de dnd5e, répondu quand il n'y a rien à choisir
-  gated(registerCantrips);   // §23 : tours de magie (durées, soins bloqués, Glas, Frappe assurée)
-  gated(registerEndings);   // §42.2 : ce qui suit la fin d'un effet (léthargie de Hâte)
-  gated(registerActionEnd);   // §43.2 : une action met fin à un effet (requête au MJ actif)
-  gated(registerBarbarian);   // §22 : Rage entretenue, Rage implacable, Témérité (après la légalité : la question vient une fois l'usage confirmé)
+  gated(registerSneak);   // §20: Sneak Attack (after registerAreas: the chosen damage type is already set), Cunning Strike
+  gated(registerFighter);   // §21: "Hero of the Field of Honor", Great Weapon Fighting and Thrown Weapon Fighting styles
+  gated(registerFeats);   // §129: "Martial Savagery", Healer
+  gated(registerEffectWhile);   // §130: conditional feat effects (Defense, Dueling…)
+  gated(registerMonk);   // §24: Stunning Strike, Open Hand Technique
+  gated(registerSmite);   // §25: smite spells (after registerSneak: the smite dice follow those of Sneak Attack)
+  gated(registerFollowUps);   // §373: activities offered after a hit (after registerSmite: the favor first, then the hold)
+  gated(registerManeuverDice);   // §89, §90: maneuver dice (Lunging, Feinting, Evasive Footwork, Sweeping, Maneuvering, Commander's Strike)
+  gated(registerSuccessAtCost);   // issue #32: success at a cost (settings, question to the player)
+  gated(registerHeroic);   // §282: Heroic Inspiration — before the post-roll dice ("Ambush", Bardic Inspiration), which wait for it
+  gated(registerRollBonus);      // §90: a die added to a check or Initiative ("Ambush", "Natural Authority", "Tactical Assessment")
+  gated(registerNaturalOne);     // §93: a natural 1 on a D20 Test ("Dark Gifts of Ravenloft")
+  gated(registerRise);           // §95: rising at 0 HP ("Necrotic Husk", "Strength of the Grave", "Lingering Wrath")
+  gated(registerAfterSneak);     // §95: after a Sneak Attack ("Wailing from the Grave")
+  gated(registerActivityChoice);   // §42.1: dnd5e's activity choice, answered when there is nothing to choose
+  gated(registerCantrips);   // §23: cantrips (durations, blocked healing, Toll the Dead, True Strike)
+  gated(registerEndings);   // §42.2: what follows the end of an effect (Haste lethargy)
+  gated(registerActionEnd);   // §43.2: an action ends an effect (request to the active GM)
+  gated(registerBarbarian);   // §22: Persistent Rage, Relentless Rage, Reckless Attack (after legality: the question comes once use is confirmed)
   gated(registerSwallow);
   gated(registerBasics);
-  gated(registerAwaiting);   // §381 : qui la table attend — réglages, requête entre clients, déconnexions
-  gated(registerGmQueue);   // §421 : la File du MJ — forcer toute fenêtre d'un joueur, lancer pour un auteur parti
-  gated(registerPlayerWaits);   // §290 : fenêtres du combat sans délai — le réglage, et la requête « forcer » chez chaque joueur
+  gated(registerAwaiting);   // §381: who the table is waiting for — settings, request between clients, disconnections
+  gated(registerGmQueue);   // §421: the GM Queue — forcing any player window, rolling for an absent author
+  gated(registerPlayerWaits);   // §290: combat windows without delay — the setting, and the "force" request on each player
   gated(registerAnimations);   // §112 : l'application attend la fin de l'animation (Sequencer / BLFX)
   gated(registerFamiliars);   // §107 : vision et poche dimensionnelle des familiers (leurs actions de base : registerBasics)
   gated(registerGrapple);
   gated(registerProne);
-  gated(registerClimb);   // §192 : grimper aux murs, chute du grimpeur qui ne tient plus
-  gated(registerFalls);   // §208 : chute automatique (« En chute » de dnd5e, vol à Vitesse 0), Pas du vent
-  gated(registerKnockout);   // §210 : coups non létaux (réveil, premiers soins), surprise à l'initiative
+  gated(registerClimb);   // §192: climbing walls, fall of a climber who no longer holds
+  gated(registerFalls);   // §208: automatic fall (dnd5e "Falling", flying at Speed 0), Step of the Wind
+  gated(registerKnockout);   // §210: non-lethal blows (waking up, first aid), surprise on Initiative
   gated(registerReady);
   gated(registerBurning);
   gated(registerImprovised);
-  gated(registerArmorTraining);   // §214 : formation au port d'armure   // §213 : armes improvisées, demandées au MJ   // §212 : En feu — brûlures au début du tour, éteindre ses flammes, propagation   // §211 : Se tenir prêt — l'action préparée, son déclencheur, la Réaction
-  gated(registerSpeedGrants);   // §195 : vitesses que le contenu accorde (Athlète : escalade)
+  gated(registerArmorTraining);   // §214: armor training   // §213: improvised weapons, asked of the GM   // §212: Burning — burns at the start of the turn, putting out one's flames, spreading   // §211: Ready — the readied action, its trigger, the Reaction
+  gated(registerSpeedGrants);   // §195: speeds that content grants (Athlete: climb)
   gated(registerBreaks);
   gated(registerCure);
   gated(registerBlink);
   gated(registerWalls);
-  gated(registerWallSide);   // §169 : Mur de feu — côté brûlant, anneau fin, face brûlante
+  gated(registerWallSide);   // §169: Wall of Fire — burning side, thin ring, burning face
   gated(registerElevationSpells);
   gated(registerStabilize);   // §50 : trousse de soins
-  gated(registerPotions);   // §53 : sort d'une potion sans concentration
+  gated(registerPotions);   // §53: spell of a potion without Concentration
   gated(registerOil);   // §54 : l'huile s'enflamme
-  gated(registerScatter);   // §187 : chausse-trapes et billes répandues au sol
-  gated(registerFlammable);   // §188 : huile au sol, toile — zones qui s'embrasent
+  gated(registerScatter);   // §187: caltrops and ball bearings scattered on the ground
+  gated(registerFlammable);   // §188: oil on the ground, web — areas that ignite
   gated(registerHelp);
-  gated(registerSkillAid);   // §113 : Assistance et Soutien demandés pour un test de compétence (requête à l'aidant)
-  gated(registerGroupRoll);   // §242 : jets demandés par le MJ (requête au joueur, carte de demande de dnd5e)
-  gated(registerCombatLaunch);   // §397 : lancer un combat (pause, participants, initiative par la demande de jets, musique)
+  gated(registerSkillAid);   // §113: "Assist" and "Help" requested for a skill check (request to the helper)
+  gated(registerGroupRoll);   // §242: GM-requested rolls (request to the player, dnd5e request card)
+  gated(registerCombatLaunch);   // §397: starting a combat (pause, participants, Initiative via roll request, music)
   gated(registerHide);
   gated(registerSearch);
   gated(registerPassivePerception);
   gated(registerIllumination);
   gated(registerLights);
   gated(registerEffects);
-  gated(registerAntimagic);   // §436 : antimagie de dnd5e 6.1 (comportement du Champ du Manuel, effets magiques marqués)
+  gated(registerAntimagic);   // §436: dnd5e 6.1 antimagic (Handbook Field behavior, marked magical effects)
   gated(registerWildShape);
   gated(registerEnchant);
   gated(registerTether);
   gated(registerDefenses);
   gated(registerSize);
-  gated(registerCompulsion);   // §403 : Compulsion, la direction et la marche (après le budget, comme les ordres)
-  gated(registerOrders);   // après le budget (registerTurn) : un ordre achève le tour que la remise à neuf vient d'ouvrir
-  gated(registerControl);   // §285 : sorts de contrôle (panique, Confusion, Couronne du dément), même place que les ordres
+  gated(registerCompulsion);   // §403: Compulsion, the direction and the walk (after the budget, like orders)
+  gated(registerOrders);   // after the budget (registerTurn): an order finishes the turn that the reset has just opened
+  gated(registerControl);   // §285: control spells (panic, Confusion, Crown of Madness), same place as orders
   gated(registerCatalyst);   // §289 : Seconde peau, le changement involontaire
-  gated(registerCompact);   // §58 : avant registerChat — le résumé des dés précède le verdict
+  gated(registerCompact);   // §58: before registerChat — the dice summary precedes the verdict
   gated(registerChat);
-  gated(registerGmAlert);   // §364 : alerte MJ — la carte chuchotée
-  gated(registerForced);   // §408 : une règle passée outre — le MJ et la table prévenus
+  gated(registerGmAlert);   // §364: GM alert — the whispered card
+  gated(registerForced);   // §408: a rule overridden — the GM and the table notified
   gated(registerGmAlertUi);   // §364 : son bandeau chez le MJ
   gated(registerSummonPermissions);   // §542 (issue #43): a player who cannot summon is told why, and so is the GM
   gated(registerSummonPermissionsUi);   // §542: at load, the GM is told when players cannot summon
   gated(registerPurge);
   gated(registerFeedback);
-  gated(registerAwaitingUI);   // §381 : le sablier au-dessus du token qu'on attend, le bandeau « Le MJ décide… »
-  gated(registerTimers);   // §272 : minuteries au-dessus des tokens (fouille, désamorçage), vues de toute la table
+  gated(registerAwaitingUI);   // §381: the hourglass above the token being waited on, the "The GM is deciding…" banner
+  gated(registerTimers);   // §272: timers above tokens (search, disarming), seen by the whole table
   gated(registerTracker);
   gated(registerLightIndicator);
-  gated(registerPerception);   // §62 : la brume cache à l'écran, l'ouïe montre ce qu'on entend
-  gated(registerEtherealUI);   // §225 : le token Éthéré en fantôme, la scène grise vue de l'Éthéré
-  gated(registerEtherealMovement);   // §225, lot 3 : l'action de déplacement « Éthéré » (murs traversés)
+  gated(registerPerception);   // §62: fog hides on screen, hearing shows what is heard
+  gated(registerEtherealUI);   // §225: the Ethereal token as a ghost, the gray scene seen from the Ethereal Plane
+  gated(registerEtherealMovement);   // §225, batch 3: the "Ethereal" movement action (walls crossed)
   gated(registerVigor);
   gated(registerCureUi);
-  gated(registerWallSideUi);   // §171 : anneau de feu — vers l'intérieur ou vers l'extérieur
-  gated(registerKindleUi);   // §52 : boîte à amadou
+  gated(registerWallSideUi);   // §171: ring of fire — inward or outward
+  gated(registerKindleUi);   // §52: tinderbox
   gated(registerStandingMasteryUi);   // §537 : standing weapon mastery (Tactical Master)
-  gated(registerSkillAidUi);   // §113 : section « Aides » de la fenêtre de jet d'un test
-  gated(registerGroupRollUI);   // §242 : fenêtre de demande, dé de la barre d'outils, HUD du token, carte
-  gated(registerSuccessAtCostUI);   // issue #32 : pastille du MJ, boutons et marques des cartes
-  gated(registerPlayerWaitsUI);   // §290 : fenêtre de suivi du MJ (qui il attend, forcer)
-  gated(registerCombatLaunchUI);   // §397 : fenêtre « Lancer un combat » et son bouton
-  gated(registerCorrectionUi);   // §395 / §396 : « Lancer sans DAS » et « Correction du MJ » dans le menu d'un objet de la fiche
-  gated(registerGroupRollTracker);   // §242 : fenêtre de suivi du MJ (jets en cours, lancer pour un joueur qui tarde)
+  gated(registerSkillAidUi);   // §113: "Aids" section of a check's roll window
+  gated(registerGroupRollUI);   // §242: request window, toolbar die, token HUD, card
+  gated(registerSuccessAtCostUI);   // issue #32: GM badge, card buttons and marks
+  gated(registerPlayerWaitsUI);   // §290: GM tracking window (who they are waiting for, force)
+  gated(registerCombatLaunchUI);   // §397: "Start a combat" window and its button
+  gated(registerCorrectionUi);   // §395 / §396: "Launch without DAS" and "GM Correction" in a sheet item's menu
+  gated(registerGroupRollTracker);   // §242: GM tracking window (rolls in progress, roll for a player who is slow)
   gated(registerAutomation);
-  gated(registerMasteryUI);   // §222 : pastille de botte sur la fiche, fenêtre des bottes
-  gated(registerFactionsUI);   // §181 : fenêtre, outil de la barre, HUD du token
-  gated(registerStealthUI);   // §183 : raccourci du mode furtif, cônes dessinés chez le joueur
-  gated(registerDebugReport);   // §380 : fenêtre du rapport de bug, pastille, avis, entrée du menu
-  gated(registerConnectionTest);   // §388 : « Tester la connexion (DAS) » dans le menu de la liste des joueurs
-  gated(registerSettingsWindow);   // la fenêtre de réglages : en dernier, elle range au `setup` ce que les autres ont déclaré
+  gated(registerMasteryUI);   // §222: mastery badge on the sheet, mastery window
+  gated(registerFactionsUI);   // §181: window, toolbar tool, token HUD
+  gated(registerStealthUI);   // §183: stealth mode shortcut, cones drawn on the player's side
+  gated(registerDebugReport);   // §380: bug report window, badge, notice, menu entry
+  gated(registerConnectionTest);   // §388: "Test the connection (DAS)" in the player list menu
+  gated(registerSettingsWindow);   // the settings window: last, it sorts out at `setup` what the others declared
   state.active = true;
 });
 

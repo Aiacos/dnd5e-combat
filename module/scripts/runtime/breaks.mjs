@@ -1,12 +1,12 @@
 /**
- * §16.47 : effets qui cessent quand leur porteur agit (`breaksOn` : Invisibilité, PHB 2024 — « le sort prend fin
- * aussitôt après que la cible a effectué un jet d'attaque, infligé des dégâts ou lancé un sort »). Sur le client de
- * l'auteur, qui possède ses effets :
- *  - jet d'attaque : après le jet (`dnd5e.rollAttackV2`), qui a profité de l'invisibilité ;
- *  - sort ou utilisation à dégâts qui n'est pas une attaque : après l'utilisation (`dnd5e.postUseActivity`). Les effets
- *    de l'item utilisé lui-même ne tombent pas (se lancer Invisibilité ne la rompt pas) ;
- *  - §23 : jet de sauvegarde (`save`) : après le jet (`dnd5e.rollSavingThrow`, actor.mjs:1657), qui a subi l'effet (Éclat mental :
- *    « soustrait 1d4 au prochain jet de sauvegarde »).
+ * §16.47: effects that end when their bearer acts (`breaksOn`: Invisibility, PHB 2024 — "the spell ends
+ * immediately after the target makes an attack roll, deals damage, or casts a spell"). On the author's
+ * client, which owns its effects:
+ *  - attack roll: after the roll (`dnd5e.rollAttackV2`), which benefited from the invisibility;
+ *  - spell or use with damage that is not an attack: after the use (`dnd5e.postUseActivity`). The effects
+ *    of the item used itself do not fall (casting Invisibility on oneself does not break it);
+ *  - §23: saving throw (`save`): after the roll (`dnd5e.rollSavingThrow`, actor.mjs:1657), which suffered the effect (Mind Sliver:
+ *    "subtract 1d4 from the next saving throw").
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,11 +21,11 @@ import { isSpellCast } from "../adapter/scrolls.mjs";
 async function breakEffects(actor, moments, exceptItem=null, { before=null }={}) {
   if ( !actor?.isOwner || !moments.length ) return;
   const broken = actor.effects.filter(e => {
-    // Seulement les effets qui étaient là avant le geste : la sauvegarde qui POSE l'effet (Éclat mental) ne le consomme pas.
+    // Only the effects that were there before the gesture: the save that PLACES the effect (Mind Sliver) does not consume it.
     if ( before && ((e._stats?.createdTime ?? 0) > before) ) return false;
     const item = originItemOf(e);
     if ( !item || (exceptItem && (item.uuid === exceptItem.uuid)) ) return false;
-    // §438 : `breaksOnActivity` — seulement les effets posés par cette activité (Foulée évanescente, pas Nargué du même item).
+    // §438: `breaksOnActivity` — only the effects placed by this activity ("Evanescent Stride", not "Taunted" of the same item).
     const entry = contentOf(item).entry;
     const on = entry?.breaksOnActivity ? effectBreakMoments(entry, originActivityIdOf(e, item)) : (entry?.breaksOn ?? []);
     return moments.some(m => on.includes(m));
@@ -40,13 +40,13 @@ async function breakEffects(actor, moments, exceptItem=null, { before=null }={})
 }
 
 /**
- * §366 : `breaksOnOrigin` — sur le MJ actif, à chaque carte d'attaque, de dégâts (pas de soins) ou d'utilisation à sauvegarde : les
- * effets que l'auteur de la carte a posés (par un autre item) et dont l'item déclare ce moment tombent, sur toute créature de la scène.
+ * §366: `breaksOnOrigin` — on the active GM, at each attack, damage (not healing) or save-use card: the
+ * effects that the card's author placed (by another item) and whose item declares this moment fall, on any creature of the scene.
  */
 async function breakOnOrigin(message) {
   let moment = null;
-  // dnd5e 6 : quand l'item de la carte n'existe plus, `getAssociatedItem` passe par `getOriginatingMessage()`, qui peut rendre
-  // `system.origin` (des données, pas un message) — « Receiver must be an instance of class ChatMessage5e ». Lecture sans risque.
+  // dnd5e 6: when the card's item no longer exists, `getAssociatedItem` goes through `getOriginatingMessage()`, which may
+  // return `system.origin` (data, not a message) — "Receiver must be an instance of class ChatMessage5e". Safe read.
   const read = fn => { try { return fn() ?? null; } catch { return null; } };
   const activity = read(() => message.getAssociatedActivity?.());
   if ( message.type === "attack" ) moment = "attack";
@@ -86,8 +86,8 @@ export function registerBreaks() {
   route("dnd5e.postUseActivity", activity => {
     if ( !activity?.actor || (activity.type === "attack") ) return;
     const moments = breakMoments({ attack: false, damage: (activity.damage?.parts?.length ?? 0) > 0, spell: isSpellCast(activity.item) });
-    // §299 : « forcesSave » — l'utilisation impose un jet de sauvegarde (Voile psychique : « ou forcez une créature à faire un jet de
-    // sauvegarde »).
+    // §299: "forcesSave" — the use imposes a saving throw ("Psychic Veil": "or force a creature to make a saving
+    // throw").
     if ( activity.type === "save" ) moments.push("forcesSave");
     breakEffects(activity.actor, moments, activity.item).catch(err => console.error(`${MODULE_ID} | effect end`, err));
   }, { label: "effect ending on spell or damage not removed" });

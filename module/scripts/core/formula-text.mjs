@@ -1,8 +1,8 @@
 /**
- * Une formule de jet telle qu'on la montre à un joueur : ses références `@chemin` remplacées par leur valeur quand les données du
- * jet la donnent (« @scale.bard.inspiration » → « 1d10 »). Une référence sans valeur reste telle quelle. Fonction pure.
+ * A roll formula as shown to a player: its `@chemin` references replaced by their value when the roll data
+ * provides it ("@scale.bard.inspiration" → "1d10"). A reference with no value stays as it is. Pure function.
  * @param {string} formula
- * @param {object} data  les données de jet de l'acteur ou de l'activité
+ * @param {object} data  the roll data of the actor or of the activity
  * @returns {string}
  */
 export function formulaShown(formula, data) {

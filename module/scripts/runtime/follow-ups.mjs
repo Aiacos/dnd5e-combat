@@ -1,9 +1,9 @@
 /**
- * §373 : après un coup qui touche, des activités proposées gratuitement contre la cible (contenu `hitFollowUp`) — Cogneur : Agripper ou
- * Pousser de l'Attaque à mains nues en plus des dégâts ; Coup bas : les deux. Sur le MJ actif, une fois l'attaque résolue : la question
- * chez le joueur de l'auteur (`askChoice`), puis chaque activité choisie jouée contre la cible encore debout (`strikeAgainst` : la
- * sauvegarde et ses effets, comme une Frappe malicieuse), l'une après l'autre. À part de la fenêtre des faveurs (une seule par coup) :
- * une faveur (École des coups durs) et une prise se cumulent.
+ * §373: after a hit, activities offered for free against the target (content `hitFollowUp`) — Crusher: Grapple or
+ * Shove of the Unarmed Strike in addition to damage; "Low Blow": both. On the active GM, once the attack is resolved: the
+ * question to the author's player (`askChoice`), then each chosen activity played against the target still standing
+ * (`strikeAgainst`: the save and its effects, like a "Mischievous Strike"), one after another. Apart from the boons window
+ * (only one per hit): a boon ("School of Hard Knocks") and a grapple stack.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -19,8 +19,8 @@ import { log, loc } from "./shared.mjs";
 const seen = new Set();
 
 /**
- * Ce que l'auteur peut enchaîner après un coup de cette activité : la réunion des activités de ses items `hitFollowUp` qui valent pour ce
- * genre d'arme, et le plus grand nombre à prendre. `{ activities, choose }`, ou null.
+ * What the author can chain after a hit of this activity: the union of the activities of their `hitFollowUp` items that
+ * apply to this kind of weapon, and the greatest number to take. `{ activities, choose }`, or null.
  */
 export function followUpsFor(actor, activity) {
   const kind = weaponKind(activity);
@@ -40,7 +40,7 @@ export function followUpsFor(actor, activity) {
   return activities.size ? { activities: [...activities.values()], choose: Math.min(choose, activities.size) } : null;
 }
 
-/** Les réponses possibles : chaque activité seule, puis les combinaisons jusqu'à `choose`, des plus courtes aux plus longues. */
+/** The possible answers: each activity alone, then combinations up to `choose`, from shortest to longest. */
 export function followUpCombos(list, choose) {
   const out = [];
   const walk = (start, picked) => {
@@ -68,7 +68,7 @@ async function onResolution(resolution) {
   const choices = followUpCombos(offer.activities, offer.choose);
   const label = list => list.map(a => a.name || a.item.name).join(loc("Suite.Et"));
   const answer = await askChoice(actor, { actor: actor.uuid, item: activity.item?.name ?? "", prompt: loc("Suite.Question", { name: target.name }),
-    // « Rien de plus » d'abord : c'est la réponse par défaut d'une fenêtre restée sans réponse (askChoice prend la première).
+    // "Nothing more" first: it is the default answer of a window left unanswered (askChoice takes the first).
     options: [{ id: "none", label: loc("Suite.Aucune") }, ...choices.map((list, i) => ({ id: `c${i}`, label: label(list) }))] });
   const picked = String(answer?.id ?? "").startsWith("c") ? choices[Number(answer.id.slice(1))] : null;
   if ( !picked ) return;

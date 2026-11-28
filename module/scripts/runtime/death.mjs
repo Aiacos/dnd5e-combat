@@ -1,6 +1,6 @@
 /**
- * À 0 point de vie (SPEC §17) : dégâts à 0 PV, mort sur le coup, jet contre la mort au début du tour,
- * Stabilisé et Mort. La règle est dans core/death.mjs, la lecture et l'écriture dans adapter/death.mjs.
+ * At 0 Hit Points (SPEC §17): damage at 0 HP, instant death, death saving throw at the start of the turn,
+ * Stabilized and Dead. The rule is in core/death.mjs, reading and writing in adapter/death.mjs.
  */
 
 import {
@@ -12,15 +12,15 @@ import { route } from "./router.mjs";
 import { MODULE_ID } from "../constants.mjs";
 import { log, loc, notice } from "./shared.mjs";
 
-/** Le tour d'une créature à 0 PV commence : elle lance son jet contre la mort. */
+/** A creature's turn at 0 HP begins: it rolls its death saving throw. */
 function onTurnChange(combat, prior, current) {
   const token = combat.combatants.get(current?.combatantId)?.token;
   const actor = token?.actor;
   if ( !actor ) return;
-  // §17.1 : une créature restée à 0 PV sans son état (PV écrits avant le moteur, réglage du système) le reçoit.
+  // §17.1: a creature left at 0 HP without its condition (HP written before the engine, system setting) receives it.
   if ( (actor.system?.attributes?.hp?.value ?? 1) <= 0 ) ensureDowned(actor).catch(err => console.error(err));
   if ( !deathSaveDue(actor) ) return;
-  // Même file que les déclencheurs du tour de cette créature (runtime/triggers.mjs).
+  // Same queue as the triggers of this creature's turn (runtime/triggers.mjs).
   return enqueue(`turn:${token.uuid}`, async () => {
     if ( !deathSaveDue(actor) ) return;
     const who = await requestDeathSave(actor);
@@ -30,10 +30,10 @@ function onTurnChange(combat, prior, current) {
 
 export function registerDeath() {
   CONFIG.queries[DEATH_QUERY] = handleDeathSaveQuery;
-  // Sur le client qui applique les dégâts (il a le droit d'écrire l'acteur) : les échecs partent avec les dégâts.
+  // On the client that applies the damage (it has the right to write the actor): the failures leave with the damage.
   route("dnd5e.preApplyDamage", planDamageAtZero, { label: "0 HP: failures not counted" });
   route("dnd5e.applyDamage", async (actor, amount, options) => {
-    // §31 : Acharnement — la créature reste à 1 PV (adapter/species.mjs, via planDamageAtZero).
+    // §31: Relentless Endurance — the creature stays at 1 HP (adapter/species.mjs, via planDamageAtZero).
     const endured = options?.[MODULE_ID]?.endured;
     if ( endured ) {
       log(`${actor.name}: ${endured}, stays at 1 HP`);
@@ -43,21 +43,21 @@ export function registerDeath() {
     const outcome = await settleDamageAtZero(actor, amount, options);
     if ( outcome ) log(`${actor.name}: damage at 0 HP → ${outcome.stable ? "stabilized by the weapon" : outcome.dead ? `dead (${outcome.reason})` : `${outcome.failures} failure(s)`}`);
   }, { label: "0 HP: death or failure not applied" });
-  // Sur le client qui a lancé le jet (le joueur, ou le moteur).
+  // On the client that made the roll (the player, or the engine).
   route("dnd5e.rollDeathSaveV2", (rolls, { outcome, subject }) => settleDeathSave(subject, outcome),
     { label: "Death Saving Throw: Stable or Dead not applied" });
   route("combatTurnChange", onTurnChange, { executor: true, label: "Death Saving Throw not requested" });
   route("updateActor", async (actor, changed) => {
     const hp = foundry.utils.getProperty(changed, "system.attributes.hp.value");
     if ( hp > 0 ) return clearDeathMarks(actor);
-    // §17.1 : à 0 PV, l'état est obligatoire (le système ne le pose qu'en combat, et selon un réglage).
+    // §17.1: at 0 HP, the condition is mandatory (the system only sets it in combat, and according to a setting).
     if ( (hp !== undefined) || (foundry.utils.getProperty(changed, "system.attributes.death.failure") !== undefined) ) {
       const status = await ensureDowned(actor, { afterUpdate: true });
       if ( status ) log(`${actor.name}: 0 HP → ${status === "dead" ? "Dead" : "Unconscious"}`);
     }
   }, { executor: true, label: "Dead / Unconscious / Stable not applied or not removed" });
-  // Un token non lié dont on écrit les PV dans le token lui-même (`delta.system…`) : le cœur ne publie pas
-  // `updateActor` dans ce cas (client/documents/actor-delta.mjs:219 ne tourne que pour une mise à jour de l'ActorDelta).
+  // An unlinked token whose HP are written in the token itself (`delta.system…`): the core does not publish
+  // `updateActor` in that case (client/documents/actor-delta.mjs:219 runs only for an ActorDelta update).
   route("updateToken", async (token, changed) => {
     const hp = foundry.utils.getProperty(changed, "delta.system.attributes.hp.value");
     if ( (hp === undefined) || !token.actor ) return;

@@ -1,20 +1,20 @@
 /**
- * Enchanter l'arme d'une créature choisie (SPEC §16.41, clé `enchantTarget` : Arme élémentaire). dnd5e 6 applique un
- * enchantement par `EnchantActivity#applyEnchantment` (documents/activity/enchant.mjs:151) : durée de l'activité
- * (`getAppliedEffectChanges`, mixin.mjs:1205), lien à la concentration (`flags.dnd5e.dependentOn` : retiré quand elle tombe),
- * restrictions vérifiées (`canEnchant`, enchant.mjs:237 : pas une arme déjà magique…). Ce qui manquait : choisir la créature
- * et son arme (dnd5e attend un glisser-déposer sur la carte), et l'appliquer à l'arme d'un autre personnage (le MJ actif).
+ * Enchanting a chosen creature's weapon (SPEC §16.41, key `enchantTarget`: Elemental Weapon). dnd5e 6 applies an
+ * enchantment through `EnchantActivity#applyEnchantment` (documents/activity/enchant.mjs:151): the activity's duration
+ * (`getAppliedEffectChanges`, mixin.mjs:1205), link to Concentration (`flags.dnd5e.dependentOn`: removed when it drops),
+ * checked restrictions (`canEnchant`, enchant.mjs:237: not an already magical weapon…). What was missing: choosing the creature
+ * and its weapon (dnd5e expects a drag-and-drop onto the card), and applying it to another character's weapon (the active GM).
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { contentOf } from "./content.mjs";
 
-/** Ce que l'enchantement de cette activité vise (« weapon », « ownWeapon »), ou null. */
+/** What this activity's enchantment targets ("weapon", "ownWeapon"), or null. */
 export function enchantTargetOf(activity) {
   return (activity?.type === "enchant") && activity.item ? (contentOf(activity.item).entry?.enchantTarget ?? null) : null;
 }
 
-/** Les armes de cet acteur, et pour chacune ce qui l'empêche d'être enchantée (null si rien). */
+/** This actor's weapons, and for each what prevents it from being enchanted (null if nothing). */
 export function enchantableWeapons(activity, actor) {
   return (actor?.items ?? []).filter(i => i.type === "weapon").map(item => {
     const errors = activity.canEnchant?.(item) ?? [];
@@ -22,25 +22,25 @@ export function enchantableWeapons(activity, actor) {
   });
 }
 
-/** La règle de pacte de l'item (`pact`), ou null. */
+/** The item's pact rule (`pact`), or null. */
 export function pactRuleOf(item) {
   return item ? (contentOf(item).entry?.pact ?? null) : null;
 }
 
-/** §16.45 : ses propres armes que le pacte accepte (pas l'attaque à mains nues, qui est une arme « naturelle »). */
+/** §16.45: its own weapons that the pact accepts (not the Unarmed Strike, which is a "natural" weapon). */
 export function ownPactWeapons(activity) {
   return enchantableWeapons(activity, activity.actor).filter(w => fromUuidSync(w.uuid)?.system?.type?.value !== "natural");
 }
 
-/** §16.45 : l'arme de pacte se choisit dans le compendium de dnd5e — corps à corps, courante ou de guerre, non magique. */
+/** §16.45: the pact weapon is chosen from the dnd5e compendium — melee, simple or martial, non-magical. */
 export function pickConjuredWeapon() {
   const locked = { documentClass: "Item", types: new Set(["weapon"]), additional: { type: { simpleM: 1, martialM: 1 }, properties: { mgc: -1 } } };
   return dnd5e.applications.CompendiumBrowser.selectOne({ filters: { locked } });
 }
 
 /**
- * §16.45 : invoque l'arme dans l'inventaire (une copie de l'arme du compendium, marquée `flags["dnd5e-combat"].conjuredBy` = uuid
- * de l'item du pacte) ; les armes invoquées précédemment par ce pacte disparaissent. Sur le client du lanceur. Rend l'arme.
+ * §16.45: summons the weapon into the inventory (a copy of the compendium weapon, marked `flags["dnd5e-combat"].conjuredBy` = uuid
+ * of the pact item); weapons previously summoned by this pact disappear. On the caster's client. Returns the weapon.
  */
 export async function conjureWeapon(activity, sourceUuid) {
   const actor = activity.actor;
@@ -56,7 +56,7 @@ export async function conjureWeapon(activity, sourceUuid) {
   return item ?? null;
 }
 
-/** Applique l'enchantement choisi à l'arme (MJ actif : l'arme peut être celle d'un autre personnage). */
+/** Applies the chosen enchantment to the weapon (active GM: the weapon may be another character's). */
 export async function applyEnchantmentTo(activity, item, { profile, message=null, concentration=null }) {
   return activity.applyEnchantment(profile, item, { chatMessage: message, concentration, strict: true });
 }

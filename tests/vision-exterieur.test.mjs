@@ -3,35 +3,35 @@ import { readFileSync } from "node:fs";
 import { grantInMemoryModes, DEVILS_SIGHT_MODE, HEARING_MODE, SENSE_MODE } from "../module/scripts/core/light.mjs";
 
 /**
- * Issue #42, suite (Archibald, 0.281.0) : depuis l'EXTÉRIEUR des Ténèbres, l'occultiste à Vision du diable ne voyait que le contour de l'ouïe
- * et sa visée était refusée.
+ * Issue #42, continued (Archibald, 0.281.0): from OUTSIDE the Darkness, the warlock with Devil's Sight saw only the
+ * outline of hearing and their targeting was refused.
  */
-describe("issue #42 : modes donnés en mémoire après une préparation du token", () => {
-  it("les remet quand la préparation les a effacés, et le signale", () => {
+describe("issue #42: modes given in memory after a token preparation", () => {
+  it("puts them back when the preparation erased them, and reports it", () => {
     const modes = { basicSight: { enabled: true, range: 60 }, lightPerception: { enabled: true, range: null } };
     expect(grantInMemoryModes(modes, { devilsSight: 36, hearing: true })).toBe(true);
     expect(modes[DEVILS_SIGHT_MODE]).toEqual({ enabled: true, range: 36 });
     expect(modes[HEARING_MODE]).toEqual({ enabled: true, range: Infinity });
   });
 
-  it("répare le mode laissé sans « enabled » par un effet token.detectionModes.devilsSight.range", () => {
+  it("repairs the mode left without \"enabled\" by a token.detectionModes.devilsSight.range effect", () => {
     const modes = { basicSight: { enabled: true, range: 18 }, devilsSight: { range: 36 } };
     expect(grantInMemoryModes(modes, { devilsSight: 36, hearing: true })).toBe(true);
     expect(modes.devilsSight.enabled).toBe(true);
   });
 
-  it("ne signale rien quand tout est déjà là (pas de vue refaite pour rien)", () => {
+  it("reports nothing when everything is already there (no view redone for nothing)", () => {
     const modes = { basicSight: { enabled: true }, [DEVILS_SIGHT_MODE]: { enabled: true, range: 36 }, [HEARING_MODE]: { enabled: true, range: Infinity } };
     expect(grantInMemoryModes(modes, { devilsSight: 36, hearing: true })).toBe(false);
   });
 
-  it("l'ouïe reste le dernier mode, après la Vision du diable", () => {
+  it("hearing stays the last mode, after Devil's Sight", () => {
     const modes = { [HEARING_MODE]: { enabled: true, range: Infinity }, basicSight: { enabled: true } };
     expect(grantInMemoryModes(modes, { devilsSight: 36, hearing: true })).toBe(true);
     expect(Object.keys(modes).at(-1)).toBe(HEARING_MODE);
   });
 
-  it("le mode des sens déclarés : donné à qui en a un, avant l'ouïe, retiré quand il n'en a plus", () => {
+  it("the mode of declared senses: given to whoever has one, before hearing, removed when none remain", () => {
     const modes = { basicSight: { enabled: true }, [HEARING_MODE]: { enabled: true, range: Infinity } };
     expect(grantInMemoryModes(modes, { sense: true, hearing: true })).toBe(true);
     expect(modes[SENSE_MODE]).toEqual({ enabled: true, range: Infinity });
@@ -41,15 +41,15 @@ describe("issue #42 : modes donnés en mémoire après une préparation du token
     expect(modes[SENSE_MODE]).toBeUndefined();
   });
 
-  it("retire la Vision du diable quand l'invocation n'y est plus", () => {
+  it("removes Devil's Sight when the summon is no longer there", () => {
     const modes = { [DEVILS_SIGHT_MODE]: { enabled: true, range: 36 } };
     expect(grantInMemoryModes(modes, { devilsSight: 0 })).toBe(true);
     expect(modes[DEVILS_SIGHT_MODE]).toBeUndefined();
   });
 });
 
-describe("issue #42 : la ligne de vue de la visée ignore les bords des Ténèbres", () => {
-  // Voir la cible est l'affaire de `canSee` ; ces tests de « ligne de vue » ne doivent compter que les murs et les planchers.
+describe("issue #42: the targeting line of sight ignores the edges of the Darkness", () => {
+  // Seeing the target is `canSee`'s business; these "line of sight" tests must count only walls and floors.
   const files = ["module/scripts/runtime/actions.mjs", "module/scripts/adapter/movement.mjs"];
   for ( const file of files ) {
     it(`${file} : chaque hasLineOfSight passe throughDarkness`, () => {

@@ -1,12 +1,12 @@
 /**
- * Sources de lumière portées (SPEC §52). Items prêtés depuis le compendium du Manuel des joueurs.
- *  1. Lampe : son activité l'allume (Lumière vive 4,50 m, faible jusqu'à 13,50 m, flamme qui vacille), puis l'éteint.
- *  2. Lanterne sourde : un cône (angle).
- *  3. Torche (pas d'activité de lumière) : la boîte à amadou l'allume — seule source éteinte restante, d'office.
- *  4. La torche quitte la fiche : sa lumière s'éteint.
- * §121 : une source allumée se tient en main — les mains pleines (armes, bouclier équipés), la lampe est refusée ; le scénario
- * range alors armes et bouclier, et les rééquipe à la fin.
- * Remet la lumière ; retire les items prêtés.
+ * Carried light sources (SPEC §52). Items lent from the Player's Handbook compendium.
+ *  1. Lamp: its activity lights it (Bright Light 4.50 m, Dim Light up to 13.50 m, flickering flame), then puts it out.
+ *  2. Bullseye Lantern: a Cone (angle).
+ *  3. Torch (no light activity): the tinderbox lights it — the only remaining extinguished source, automatically.
+ *  4. The torch leaves the sheet: its light goes out.
+ * §121: a lit source is held in hand — with full hands (weapons, shield equipped), the lamp is refused; the scenario
+ * then stows weapons and shield, and re-equips them at the end.
+ * Restores the light; removes the lent items.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -37,7 +37,7 @@ export default {
       await pause(2000);
     };
 
-    // 1. Lampe. Les mains pleines d'abord, si le Guerrier l'est : refusée ; puis armes et bouclier rangés.
+    // 1. Lamp. Full hands first, if the Fighter's are: refused; then weapons and shield stowed.
     const lamp = await ctx.ensureItem(g, `${EQ}.Ekz3r0UKJ261oBJj`);
     const setItem = (id, data) => ctx.call("upsert-actor-item", { actorId, itemData: data, match: { path: "_id", value: id } });
     const hands = i => (i.type === "weapon") ? ((i.system?.type?.value === "natural") ? 0 : (i.system?.properties ?? []).includes("two") ? 2 : 1)
@@ -56,19 +56,19 @@ export default {
     l = await light();
     ctx.expect((l.bright === base.bright) && (l.dim === base.dim) && !(await lit()).length, `lampe éteinte : ${l.bright}/${l.dim}, plus d'effet`);
 
-    // 2. Lanterne sourde : un cône.
+    // 2. Bullseye Lantern: a Cone.
     const bullseye = await ctx.ensureItem(g, `${EQ}.KZUoiZrigDbovEu7`);
     await use(bullseye);
     l = await light();
     ctx.expect((l.bright === 60) && (l.dim === 120) && (l.angle === 53), `lanterne sourde : ${l.bright}/${l.dim} ft en cône de ${l.angle}°`);
-    // §121 : la macro intégrée de BLFX pour cette lanterne écrivait la lumière du token (drapeau `torchData` sur le token, equipmentMacros.js:6) ;
-    // darsh-animations la remplace, s'il est là. Le drapeau ne doit pas apparaître.
+    // §121: BLFX's built-in macro for this lantern wrote the token's light (flag `torchData` on the token, equipmentMacros.js:6);
+    // darsh-animations replaces it, if present. The flag must not appear.
     const blfx = (await ctx.call("get-scene-object", { type: "Token", objectId: g.id })).data.flags?.["boss-loot-assets-premium"] ?? {};
     ctx.expect(!Object.keys(blfx).some(k => /torchData|lantern/i.test(k)), `BLFX n'a pas écrit la lumière du token (${Object.keys(blfx).join(", ") || "aucun drapeau"})`);
     await use(bullseye);
 
-    // 3. Torche, par la boîte à amadou (la lampe et la lanterne sont éteintes : trois sources, donc un choix — on retire les deux
-    // premières pour que la torche reste seule et soit allumée d'office).
+    // 3. Torch, by the tinderbox (the lamp and the lantern are extinguished: three sources, hence a choice — we remove the
+    // first two so that the torch stays alone and is lit automatically).
     for ( const id of [lamp, bullseye] ) await ctx.call("remove-embedded-item", { documentType: "Actor", id: actorId, itemId: id }).catch(() => {});
     await pause(1000);
     const torch = await ctx.ensureItem(g, `${EQ}.gYKSyS7STTresmnS`);
@@ -77,7 +77,7 @@ export default {
     l = await light();
     ctx.expect((l.bright === 20) && (l.dim === 40), `boîte à amadou : torche allumée, ${l.bright}/${l.dim} ft`);
 
-    // 4. La torche quitte la fiche : sa lumière s'éteint.
+    // 4. The torch leaves the sheet: its light goes out.
     await ctx.call("remove-embedded-item", { documentType: "Actor", id: actorId, itemId: torch });
     await pause(2500);
     l = await light();

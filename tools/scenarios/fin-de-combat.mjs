@@ -1,8 +1,8 @@
 /**
- * §555: the `combatEnded` and `creatureDefeated` signals, on the active GM. « Arène des refus », Mage and Dummy. Checks:
- *  1. the Dummy gets the `dead` status during a combat: `creatureDefeated` once, cause « dead », with this combat;
+ * §555: the `combatEnded` and `creatureDefeated` signals, on the active GM. "Arène des refus", Mage and Dummy. Checks:
+ *  1. the Dummy gets the `dead` status during a combat: `creatureDefeated` once, cause "dead", with this combat;
  *  2. placed again while still dead (a second dead effect): nothing more; status removed then placed again: announced again;
- *  3. the tracker's « defeated » ticked on the Mage: `creatureDefeated`, cause « tracker »;
+ *  3. the tracker's "defeated" ticked on the Mage: `creatureDefeated`, cause "tracker";
  *  4. the combat ended: `combatEnded` once, round ≥ 1, both combatants listed, both defeated;
  *  5. a combat deleted before it began: no `combatEnded`.
  * Put back: statuses, tracker, hit points, combats.
@@ -50,7 +50,7 @@ export default {
     h = (await heard()).filter(e => e.hook === "creatureDefeated" && e.token === dummy.id);
     ctx.expect(h.length === 2, `relevé puis mort de nouveau : annoncé de nouveau (${h.length})`);
 
-    // 3. The tracker's « defeated » on the Mage.
+    // 3. The tracker's "defeated" on the Mage.
     await ctx.engine("combatOutcome", { action: "tracker", combatId: ctx.ownCombat, tokenId: mage.id });
     h = (await heard()).filter(e => e.hook === "creatureDefeated" && e.token === mage.id);
     ctx.log(JSON.stringify(h));

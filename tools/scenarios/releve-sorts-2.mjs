@@ -1,12 +1,12 @@
 /**
- * Relevé des sorts, lot 1, seconde moitié (SPEC §157), monde `dnd-6`, arène — sorts prêtés depuis le Manuel des joueurs :
- *  - Flèche acide de Melf ratée : la moitié des dégâts, pas d'acide persistant ;
- *  - Fracassement sur une Créature artificielle (le Zombi le devient le temps du test) : sauvegarde avec le Désavantage ;
- *  - Héroïsme (combat) : les PV temporaires reviennent au début du tour du Guerrier ;
- *  - Sommeil (combat, le Bandit) : à la fin de son tour, réussie → l'effet tombe, ratée → Inconscient ;
- *  - Hâte (combat) : au début de son tour, le Guerrier a l'action limitée ;
- *  - Bouclier contre Projectile magique (le Zombi le lance sur le Magicien, réaction prise d'office) : Bouclier posé, aucun dégât.
- * Remet positions, PV, effets, emplacements, type de créature, combat.
+ * Spell survey, batch 1, second half (SPEC §157), world `dnd-6`, arena — spells lent from the Player's Handbook:
+ *  - Melf's Acid Arrow missed: half damage, no lingering acid;
+ *  - Shatter on a Construct (the Zombie becomes one for the test): save with Disadvantage;
+ *  - Heroism (combat): the Temporary Hit Points return at the start of the Fighter's turn;
+ *  - Sleep (combat, the Bandit): at the end of its turn, succeeded → the effect ends, failed → Unconscious;
+ *  - Haste (combat): at the start of its turn, the Fighter has the limited action;
+ *  - Shield against Magic Missile (the Zombie casts it on the Wizard, reaction taken automatically): Shield placed, no damage.
+ * Restores positions, HP, effects, spell slots, creature type, combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -74,7 +74,7 @@ export default {
     const settled = async used => (await ctx.settle(used.usageMessageId, { timeoutMs: 45000 }).catch(() => null));
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId; };
-    /** Combat à l'ordre donné (initiatives 20, 15, 10…), tour du premier. */
+    /** Combat in the given order (initiatives 20, 15, 10…), the first one's turn. */
     const fight = async order => {
       await ctx.startCombat(order);
       const c = await state();
@@ -122,7 +122,7 @@ export default {
     await part("Héroïsme", async () => {
       const id = await lend(cleric, "phbsplHeroism000");
       if ( !ctx.expect(await fight([cleric, fighter]), "Héroïsme : tour du Clerc") ) return;
-      // Les PV temporaires attendent le clic « Soins » de la carte (api.mcp.rollCard), comme au scénario clerc.
+      // The Temporary Hit Points wait for the click on the card's "Healing" (api.mcp.rollCard), as in the cleric scenario.
       const u = await ctx.use({ tokenId: cleric.id, itemId: id, targetTokenIds: [fighter.id], consume: false });
       await pause(1500);
       await ctx.engine("rollCard", { messageId: u.usageMessageId }).catch(() => null);
@@ -169,7 +169,7 @@ export default {
       await next();
       const b = await ctx.engine("budget", { tokenId: fighter.id });
       ctx.expect(b?.limited === 1, `Hâte : début du tour du Guerrier, action limitée (${b?.limited}), action ${b?.action}`);
-      // B10 : l'action prise (Esquiver), l'action limitée permet Utiliser un objet non magique, pas un objet magique (action Magie).
+      // B10: the action taken (Dodge), the limited action allows Utilize on a nonmagical object, not a magic item (Magic action).
       const dodge = await ctx.itemId(fighter.id, "dnd5e-combat-dodge");
       if ( !ctx.expect(!!dodge, "Hâte : le Guerrier a l'action Esquiver") ) return;
       await settled(await ctx.use({ tokenId: fighter.id, itemId: dodge, consume: false }));

@@ -1,10 +1,10 @@
 /**
- * §493 (B13) : réaction d'une créature prise dans une zone (Bouclier d'insectes). Fonctions pures, aucune dépendance à Foundry.
+ * §493 (B13): reaction of a creature caught in an area ("Insect Shield"). Pure functions, no dependency on Foundry.
  */
 
 /**
- * La forme de la zone d'une activité (`target.template.type` de dnd5e, config.mjs `areaTargetTypes` : "cone", "line", "sphere",
- * "cube", "cylinder", "radius", "circle", "square", "wall"…), null sans zone.
+ * The shape of an activity's area (dnd5e's `target.template.type`, config.mjs `areaTargetTypes`: "cone", "line", "sphere",
+ * "cube", "cylinder", "radius", "circle", "square", "wall"…), null with no area.
  * @param {object|null} activity
  * @returns {string|null}
  */
@@ -14,8 +14,8 @@ export function areaShapeOf(activity) {
 }
 
 /**
- * La créature est-elle épargnée des dégâts de la zone ? Sans `ifSourceFails`, dès que la réaction est prise ; avec, seulement si la
- * sauvegarde de l'auteur est connue et ratée (sauvegarde absente, illisible ou réussie : les dégâts passent).
+ * Is the creature spared the area's damage? Without `ifSourceFails`, as soon as the reaction is taken; with it, only if the
+ * author's save is known and failed (save absent, unreadable or successful: the damage goes through).
  * @param {{taken: boolean, ifSourceFails?: boolean, sourceSave?: {success?: boolean}|null}} args
  */
 export function sparedFromArea({ taken, ifSourceFails=false, sourceSave=null }) {

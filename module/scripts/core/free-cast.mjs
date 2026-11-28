@@ -1,21 +1,21 @@
 /**
- * Intervention divine (Clerc 10, SRD 5.2) : « par une action Magie, choisissez un sort de clerc de niveau 5 ou moins qui ne se
- * lance pas par une Réaction ; dans la même action, vous le lancez sans dépenser d'emplacement ni avoir besoin de composantes
- * matérielles ». L'activité de l'aptitude retient le lancement gratuit ; le sort suivant qui convient le prend. Fonction pure.
+ * Divine Intervention (Cleric 10, SRD 5.2): "as a Magic action, choose a Cleric spell of level 5 or lower that does not
+ * take a Reaction to cast; as part of the same action, you cast it without expending a spell slot or needing Material
+ * components". The feature's activity holds the free cast; the next fitting spell takes it. Pure function.
  */
 
 /**
- * Ce sort prend-il le lancement gratuit retenu ?
+ * Does this spell take the held free cast?
  * @param {{maxLevel: number, class?: string}} rule
- * @param {{isSpell: boolean, level: number, activation?: string|null, sourceClass?: string|null}} spell  `level` : le niveau du
- *   sort ; `sourceClass` vide : inconnu, admis
+ * @param {{isSpell: boolean, level: number, activation?: string|null, sourceClass?: string|null}} spell  `level`: the level of the
+ *   spell; `sourceClass` empty: unknown, allowed
  */
 export function freeCastApplies(rule, { isSpell, level, activation=null, sourceClass=null }) {
   if ( !rule || !isSpell || !(level >= 1) || (level > rule.maxLevel) || (activation === "reaction") ) return false;
   return !rule.class || !sourceClass || (sourceClass === rule.class);
 }
 
-/** Le lancement retenu vaut-il encore ? Jusqu'à la fin du tour où il a été pris ; hors combat, une minute. */
+/** Is the held cast still valid? Until the end of the turn when it was taken; outside combat, one minute. */
 export function freeCastHeld(held, { turn=null, now=0 }={}) {
   if ( !held ) return false;
   if ( held.turn || turn ) return held.turn === turn;

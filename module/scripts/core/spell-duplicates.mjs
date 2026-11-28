@@ -1,29 +1,30 @@
 /**
- * Les sorts en double d'une fiche (vérification `spell-duplicates` du diagnostic, demande de l'utilisateur 2026-11-15).
+ * The duplicate spells of a sheet (`spell-duplicates` diagnostic check, user request 2026-11-15).
  *
- * Un module de préparation des sorts qui reconnaît un sort par l'uuid de son compendium d'origine (`_stats.compendiumSource`) ne
- * reconnaît pas le même sort venu d'un autre compendium (SRD 5.2 `dnd5e.spells24` contre Manuel des joueurs) : il en ajoute une seconde
- * copie, et la fiche porte deux fois le même sort. Vu au banc le 2026-11-15 : Guiding Bolt du SRD non préparé + copie du Manuel préparée.
+ * A spell-preparation module that recognizes a spell by the uuid of its source compendium (`_stats.compendiumSource`) does not
+ * recognize the same spell coming from another compendium (SRD 5.2 `dnd5e.spells24` versus Player's Handbook): it adds a second
+ * copy, and the sheet carries the same spell twice. Seen on the test bench on 2026-11-15: unprepared SRD Guiding Bolt +
+ * prepared Handbook copy.
  *
- * Un doublon : même identifiant dnd5e, même origine (classe — `classIdentifier`, ou « class:<id> » de `system.sourceItem` —, ou l'objet
- * qui l'a donné), même méthode. Ne sont jamais des doublons : les sorts innés, à volonté ou « rituel seulement » (méthodes `innate`,
- * `atwill`, `ritual`, qui existent légitimement à côté du sort de classe) et la copie qu'un objet lance (`flags.dnd5e.cachedFor`).
- * Le sort gardé : celui du compendium préféré (ordre de `preferred`), puis le plus préparé, puis celui qui porte le plus de réglages de
- * modules, puis le premier de la fiche. Il prend l'état de préparation le plus élevé du groupe et les portées de flags que seuls les
- * sorts retirés portaient (hors `skipFlags`).
+ * A duplicate: same dnd5e identifier, same origin (class — `classIdentifier`, or "class:<id>" of `system.sourceItem` —, or the item
+ * that granted it), same method. Never duplicates: innate, at-will or "ritual only" spells (methods `innate`,
+ * `atwill`, `ritual`, which legitimately exist alongside the class spell) and the copy an item casts (`flags.dnd5e.cachedFor`).
+ * The spell kept: the one from the preferred compendium (order of `preferred`), then the most prepared, then the one carrying
+ * the most module settings, then the first on the sheet. It takes the highest preparation state of the group and the flag
+ * scopes that only the removed spells carried (apart from `skipFlags`).
  *
- * Pur : reçoit des descriptions simples, sans document Foundry.
+ * Pure: receives plain descriptions, no Foundry document.
  */
 
-/** Méthodes dont un sort peut exister en plus du sort de classe. */
+/** Methods by which a spell can exist in addition to the class spell. */
 export const SIDE_METHODS = Object.freeze(["innate", "atwill", "ritual"]);
 
-/** Portées de flags qui ne passent pas d'un sort retiré au sort gardé (propres à chaque copie, ou au système). */
+/** Flag scopes that do not pass from a removed spell to the kept one (specific to each copy, or to the system). */
 export const SKIP_FLAGS = Object.freeze(["core", "dnd5e", "babele", "exportSource"]);
 
 /**
- * L'origine d'un sort pour le regroupement : « class:<id> », une autre origine écrite (« subclass:life », un objet), ou, sans rien,
- * la seule classe de lanceur de la fiche (`casterClasses`), sinon "".
+ * The origin of a spell for grouping: "class:<id>", another written origin ("subclass:life", an item), or, failing that,
+ * the sheet's only caster class (`casterClasses`), otherwise "".
  * @param {{classIdentifier?: string, sourceItem?: string}} spell
  * @param {string[]} [casterClasses]
  */
@@ -35,19 +36,19 @@ export function originKey({ classIdentifier="", sourceItem="" }={}, casterClasse
   return (casterClasses.length === 1) ? `class:${casterClasses[0]}` : "";
 }
 
-/** Rang d'un uuid d'origine dans la liste des compendiums préférés (préfixes) ; au-delà : aucun. */
+/** Rank of an origin uuid in the list of preferred compendiums (prefixes); beyond that: none. */
 function sourceRank(source, preferred) {
   const i = preferred.findIndex(p => String(source ?? "").startsWith(p));
   return (i < 0) ? preferred.length : i;
 }
 
 /**
- * Les groupes de doublons d'une fiche.
+ * The duplicate groups of a sheet.
  * @param {Array<{id: string, name?: string, identifier?: string, method?: string, prepared?: number, classIdentifier?: string,
  *   sourceItem?: string, source?: string, cachedFor?: string|null, flagScopes?: string[], sort?: number}>} spells
  * @param {{casterClasses?: string[], preferred?: string[], skipFlags?: string[]}} [options]
  * @returns {Array<{keep: object, remove: object[], prepared: number, raisePrepared: boolean, flagScopes: string[]}>}
- *   `flagScopes` : les portées de flags à recopier d'un sort retiré vers le gardé, avec l'id du sort qui les donne
+ *   `flagScopes`: the flag scopes to copy from a removed spell to the kept one, with the id of the spell that provides them
  *   (`[{ scope, from }]`).
  */
 export function spellDuplicates(spells, { casterClasses=[], preferred=[], skipFlags=SKIP_FLAGS }={}) {

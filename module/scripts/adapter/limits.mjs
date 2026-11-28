@@ -1,7 +1,7 @@
 /**
- * Limites d'utilisation d'une activité (SPEC §16.40, `usageLimits`), lues dans Foundry. « Déjà utilisée ce tour » : une marque
- * sur l'acteur (`flags["dnd5e-combat"].usedOnTurn.<id d'activité>` = clé du tour), posée après l'utilisation. La clé porte l'id
- * du combat (`currentTurnKey`) : la marque d'un combat précédent ne compte plus au même round et au même rang.
+ * Activity usage limits (SPEC §16.40, `usageLimits`), read in Foundry. "Already used this turn": a mark
+ * on the actor (`flags["dnd5e-combat"].usedOnTurn.<id d'activité>` = turn key), placed after the use. The key carries the combat
+ * id (`currentTurnKey`): a previous combat's mark no longer counts in the same round and at the same rank.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,9 +14,10 @@ import { readUnitFactors } from "./units.mjs";
 import { lightOfActor } from "./effect-while.mjs";
 
 /**
- * Guide 3.0.0 : une activité qu'un enchantement ajoute à l'arme (« rider ») y reçoit un id tiré au hasard (dnd5e, `EnchantmentData`,
- * `randomID`) et `flags.dnd5e.dependentOn` = l'id de l'effet d'enchantement. Son id d'origine : l'activité de même type et de même nom de
- * l'objet qui a posé l'enchantement (`system.origin.activity` de l'effet), quand il est encore là (sur la fiche, en général). Sinon null.
+ * Dungeon Master's Guide 3.0.0: an activity that an enchantment adds to the weapon ("rider") gets a random id there (dnd5e,
+ * `EnchantmentData`, `randomID`) and `flags.dnd5e.dependentOn` = the id of the enchantment effect. Its original id: the activity
+ * of the same type and name on the item that placed the enchantment (the effect's `system.origin.activity`), when it is still
+ * there (on the sheet, usually). Otherwise null.
  */
 export function riderOriginId(activity) {
   const effectId = activity?.flags?.dnd5e?.dependentOn;
@@ -31,10 +32,10 @@ export function riderOriginId(activity) {
 }
 
 /**
- * La règle de limite de cette activité, ou null — sous son id, ou, pour une activité ajoutée par un enchantement, sous son id
- * d'origine. Pour la copie d'un sort qu'une activité « cast » a lancée (`flags.dnd5e.cachedFor`, dnd5e activity/cast.mjs), la
- * condition de lumière de cette activité-là vaut aussi : c'est la copie que dnd5e utilise, pas l'activité de l'aptitude (Ne faire
- * qu'un avec les ombres). Les autres limites restent celles de l'activité utilisée.
+ * The limit rule of this activity, or null — under its id, or, for an activity added by an enchantment, under its original
+ * id. For the copy of a spell that a "cast" activity cast (`flags.dnd5e.cachedFor`, dnd5e activity/cast.mjs), the light
+ * condition of that activity applies too: it is the copy that dnd5e uses, not the feature's activity (One with Shadows).
+ * The other limits remain those of the activity used.
  */
 export function usageLimitOf(activity) {
   if ( !activity?.item ) return null;
@@ -45,7 +46,7 @@ export function usageLimitOf(activity) {
   return light ? { ...(own ?? {}), light } : own;
 }
 
-/** `usageLimits.<activité>.light` de l'activité « cast » qui a lancé cette copie de sort, ou null. */
+/** `usageLimits.<activité>.light` of the "cast" activity that cast this spell copy, or null. */
 function castLightOf(item) {
   const cached = item?.flags?.dnd5e?.cachedFor;
   const m = (typeof cached === "string") ? cached.match(/Item\.([A-Za-z0-9]{16})\.Activity\.([A-Za-z0-9]{16})$/) : null;
@@ -53,7 +54,7 @@ function castLightOf(item) {
   return caster ? (contentOf(caster).entry?.usageLimits?.[m[2]]?.light ?? null) : null;
 }
 
-/** Les utilisations restantes de l'item de cet identifiant chez l'acteur, ou null s'il n'en a pas. */
+/** The remaining uses of the item with this identifier on the actor, or null if it has none. */
 function remainingUses(actor, identifier) {
   const item = actor?.items?.find(i => identifierOf(i).id === identifier);
   const value = Number(item?.system?.uses?.value);
@@ -61,15 +62,15 @@ function remainingUses(actor, identifier) {
 }
 
 /**
- * §486 : l'acteur porte-t-il cet effet ? `ref` : l'identifiant d'un item dont un effet actif est porté (Modification d'apparence),
- * ou l'id d'un effet (celui d'un item de l'acteur activé, ou sa copie posée par le plateau d'effets de dnd5e).
+ * §486: does the actor carry this effect? `ref`: the identifier of an item whose Active Effect is carried (Alter Self),
+ * or the id of an effect (that of an activated item of the actor, or its copy placed by dnd5e's effects tray).
  */
 function carriesRef(actor, ref) {
   if ( carriesEffectFrom(actor, ref) ) return true;
   return Array.from(actor?.appliedEffects ?? actor?.effects ?? []).some(e => !e.disabled && !e.isSuppressed && comesFromItemEffect(e, ref));
 }
 
-/** §486 : le nom à montrer pour cet effet — celui de l'effet de l'acteur ou de ses items, sinon de l'item, sinon la référence. */
+/** §486: the name to show for this effect — that of the actor's or its items' effect, else the item's, else the reference. */
 function refName(actor, ref) {
   const effects = [...(actor?.effects ?? []), ...Array.from(actor?.items ?? []).flatMap(i => Array.from(i.effects ?? []))];
   const effect = effects.find(e => comesFromItemEffect(e, ref));
@@ -78,8 +79,8 @@ function refName(actor, ref) {
 }
 
 /**
- * Ce qui cloche pour cette utilisation (`notOwnTurn`, `oncePerTurn`, `notEmpty`, `moved`, `needsEffect`, `barredByEffect`),
- * l'item vide attendu et, §486, le nom de l'effet requis ou qui empêche.
+ * What is wrong for this use (`notOwnTurn`, `oncePerTurn`, `notEmpty`, `moved`, `needsEffect`, `barredByEffect`),
+ * the expected empty item and, §486, the name of the required or preventing effect.
  * @param {Activity} activity
  * @param {{inCombat: boolean, ownTurn: boolean}} turn
  */
@@ -90,15 +91,15 @@ export function usageLimitProblems(activity, { inCombat, ownTurn }) {
   const usedThisTurn = !!key && (activity.actor?.getFlag(MODULE_ID, `usedOnTurn.${activity.id}`) === key);
   const remaining = rule.whenEmpty ? remainingUses(activity.actor, rule.whenEmpty) : null;
   const item = rule.whenEmpty ? activity.actor?.items?.find(i => identifierOf(i).id === rule.whenEmpty)?.name ?? rule.whenEmpty : null;
-  // §20 : « si vous ne vous êtes pas déplacé pendant ce tour » (Visée stable) — le déplacement dépensé ce tour, hors téléportation.
+  // §20: "if you have not moved during this turn" (Steady Aim) — the movement spent this turn, excluding teleportation.
   const combatant = (rule.unmoved && inCombat) ? combatantFor(activity.actor) : null;
   const moved = !!combatant && ((movementOf(combatant, readUnitFactors())?.spent ?? 0) > 0);
-  // §486 : seulement sous un effet (l'un de la liste), ou hors de ceux-là.
+  // §486: only under an effect (one from the list), or outside those.
   const needed = effectRefs(rule.whileEffect);
   const barring = effectRefs(rule.unlessEffect);
   const underEffect = needed.length ? needed.some(r => carriesRef(activity.actor, r)) : null;
   const barredBy = barring.find(r => carriesRef(activity.actor, r)) ?? null;
-  // La lumière là où se tient l'utilisateur, pour une activité qui n'est permise que dans la pénombre ou les ténèbres.
+  // The light where the user stands, for an activity that is allowed only in Dim Light or Darkness.
   const light = rule.light ? lightOfActor(activity.actor) : null;
   const issues = usageLimitIssues(rule, { inCombat, ownTurn, usedThisTurn, remaining, moved, underEffect,
     barredByEffect: barring.length ? !!barredBy : null, light });
@@ -108,16 +109,16 @@ export function usageLimitProblems(activity, { inCombat, ownTurn }) {
 }
 
 /**
- * §16.40 : `lowestSlot` — l'activité dépense un emplacement dont le niveau se règle par `scaling` (consommation « spellSlots »,
- * cible niveau 1, mise à l'échelle par niveau) ; on le fixe sur le plus bas disponible et la fenêtre de dnd5e ne s'ouvre pas.
- * Rend false s'il ne reste aucun emplacement (l'utilisation est alors annulée), true sinon (ou sans objet).
+ * §16.40: `lowestSlot` — the activity spends a slot whose level is set by `scaling` ("spellSlots" consumption,
+ * target level 1, scaling by level); it is fixed on the lowest available and dnd5e's window does not open.
+ * Returns false if no slot is left (the use is then cancelled), true otherwise (or not applicable).
  */
 export function applyLowestSlot(activity, usageConfig, dialogConfig) {
   const rule = usageLimitOf(activity);
-  // `cost` : le coût de la règle 2024 (Flammes, Crosse des druides : action Bonus ; les données disent « action »), sauf si
-  // l'intention en a fixé un (Taille, commande d'objet piloté).
+  // `cost`: the cost of the 2024 rule ("Flames", "Druid's Staff": Bonus Action; the data say "action"), except if
+  // the intention set one ("Size", controlled object command).
   if ( rule?.cost && !usageConfig[MODULE_ID]?.cost ) usageConfig[MODULE_ID] = { ...(usageConfig[MODULE_ID] ?? {}), cost: rule.cost };
-  // `noDialog` : rien à choisir (Regain d'emplacement de sort : tout se consomme tel que déclaré).
+  // `noDialog`: nothing to choose (spell slot recovery: everything is consumed as declared).
   if ( rule?.noDialog && dialogConfig ) dialogConfig.configure = false;
   if ( !rule?.lowestSlot ) return true;
   const spells = activity.actor?.system?.spells ?? {};
@@ -132,8 +133,8 @@ export function applyLowestSlot(activity, usageConfig, dialogConfig) {
 }
 
 /**
- * §16.40 : ce qu'une carte d'utilisation a rendu ou dépensé (consommations de son activité, au niveau lancé), pour le retour
- * au-dessus du token (ui/feedback.mjs). Vide pour une activité qui ne rend rien.
+ * §16.40: what a use card returned or spent (consumptions of its activity, at the level cast), for the feedback
+ * above the token (ui/feedback.mjs). Empty for an activity that returns nothing.
  * @param {ChatMessage} message
  */
 export function resourceChangesOf(message) {
@@ -157,7 +158,7 @@ export function resourceChangesOf(message) {
   return resourceFeedback(targets);
 }
 
-/** Après l'utilisation : la marque « utilisée ce tour » (sur le client de l'utilisateur, qui possède l'acteur). */
+/** After the use: the "used this turn" mark (on the user's client, which owns the actor). */
 export async function markUsedThisTurn(activity) {
   const rule = usageLimitOf(activity);
   const key = currentTurnKey();

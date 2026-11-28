@@ -1,77 +1,81 @@
 /**
- * Le Moine du Manuel des joueurs 2024 (SPEC §24), module premium `dnd-players-handbook` 2.2.0 (pack `classes`, items `phbmnk…`).
- * Vocabulaire du PHB-fr (voir `translations/classes` du PHB-fr).
+ * The Monk of the Player's Handbook 2024 (SPEC §24), premium module `dnd-players-handbook` 2.2.0
+ * (pack `classes`, items `phbmnk…`).
+ * Vocabulary of the PHB-fr (see `translations/classes` of the PHB-fr).
  *
- * Ce que dnd5e fait déjà seul : Défense sans armure, Déplacement sans armure, le dé d'arts martiaux et la Dextérité des frappes à
- * mains nues (item « Unarmed Strike » du moine, activités d'enchantement des armes de moine), Esquive totale (§20), Attaque
- * supplémentaire (budget). Le moteur ajoute ce qui suit (runtime/monk.mjs, runtime/turn.mjs).
+ * What dnd5e already does by itself: Unarmored Defense, Unarmored Movement, the Martial Arts die and the Dexterity of Unarmed
+ * Strikes (the Monk's "Unarmed Strike" item, enchantment activities of Monk weapons), Evasion (§20), Extra Attack
+ * (budget). The engine adds what follows (runtime/monk.mjs, runtime/turn.mjs).
  */
 
 export const MONK = Object.freeze({
-  // §301 : Chute ralentie (niveau 4) — « votre Réaction quand vous tombez : réduisez les dégâts de chute de cinq fois votre niveau » —
-  // avant leur application (l'activité « soin » donne le montant retiré).
-  // Défense supérieure (Moine 18, SRD 5.2) : « pendant 1 minute ou jusqu'à ce que vous ayez l'état Neutralisé ».
+  // §301: Slow Fall (level 4) — "your Reaction when you fall: reduce the falling damage by five times your level" —
+  // before it is applied (the "healing" activity gives the amount removed).
+  // Superior Defense (Monk 18, SRD 5.2): "for 1 minute or until you have the Incapacitated condition".
   "superior-defense": { endsWhen: { incapacitated: "bearer" } },
-  // Déplacement sans armure (SRD 5.2) : « tant que vous ne portez pas d'armure et ne maniez pas de Bouclier ».
+  // Unarmored Movement (SRD 5.2): "while you are not wearing armor or wielding a Shield".
   "unarmored-movement": { effectWhile: { OEYjH4cLYd0VPaKm: { if: { unarmored: true } } } },
   "slow-fall": { triggers: [{ on: "falls", do: [{ type: "use", activity: "cWpSb7kUmzdpFoc4" }, { type: "reduce" }] }] },
-  // §123 : « touchez une créature » — Main guérisseuse (Guerrier de la miséricorde), Toucher du médecin (sa Main guérisseuse),
-  // Ultime miséricorde (« touchez le cadavre ») : « personnelles » dans les données du Manuel des joueurs, au contact en vrai.
+  // §123: "touch a creature" — Hand of Healing (Warrior of Mercy), Physician's Touch (its Hand of Healing),
+  // Hand of Ultimate Mercy ("touch the corpse"): "self" in the Player's Handbook data, touch in reality.
   "hand-of-healing": { ranges: { iDDZmeoYTIdWukLQ: { value: 5, units: "ft" }, ugC7uePiAZLSL55l: { value: 5, units: "ft" } },
-    // §438 : Manuel 3.0.0 — la Main guérisseuse du Toucher du médecin est l'activité `ugC7uePiAZLSL55l` de cet item (niveau 6, quand le
-    // Toucher du médecin arrive) ; l'item Toucher du médecin n'a plus d'activité.
+    // §438: Player's Handbook 3.0.0 — the Hand of Healing of Physician's Touch is the activity `ugC7uePiAZLSL55l` of this item
+    // (level 6, when Physician's Touch arrives); the Physician's Touch item no longer has an activity.
     cures: ["blinded", "deafened", "paralyzed", "poisoned", "stunned"], curesOn: "ugC7uePiAZLSL55l" },
-  // C12-f : Toucher du médecin — la Main guérisseuse « met aussi fin à l'un de ces états : Aveuglé, Assourdi, Paralysé, Empoisonné, Étourdi ».
+  // C12-f: Physician's Touch — the Hand of Healing "also ends one of these conditions:
+  // Blinded, Deafened, Paralyzed, Poisoned, Stunned".
   "physicians-touch": { ranges: { stWL2fvcxsh0HFw2: { value: 5, units: "ft" } }, cures: ["blinded", "deafened", "paralyzed", "poisoned", "stunned"], curesOn: "stWL2fvcxsh0HFw2" },
-  // C12-f : Incarnation élémentaire — « la Résistance à l'un de ces types, au choix » (la donnée pose les cinq) ; les clés de la foudre et du
-  // tonnerre de la donnée (`system.traits.dr`, sans `.value`) ne donnent rien : complétées.
+  // C12-f: "Elemental Embodiment" — "Resistance to one of these types, of your choice" (the data applies all five);
+  // the lightning and thunder keys of the data (`system.traits.dr`, without `.value`) give nothing: completed.
   "elemental-epitome": {
     effectChanges: { ZgNs0IRUKwUrZGn9: [{ key: "system.traits.dr.value", type: "add", value: "lightning" }], rajbPA9Inl0nYnlP: [{ key: "system.traits.dr.value", type: "add", value: "thunder" }] }
   },
-  // C12-g : « elle revient à la vie […] et les états Aveuglé, Assourdi, Paralysé, Empoisonné et Étourdi cessent » — Mort compris.
+  // C12-g: "it returns to life […] and the Blinded, Deafened, Paralyzed, Poisoned and Stunned conditions end" — Dead included.
   "hand-of-ultimate-mercy": { ranges: { XtgmW9115BzcLiFr: { value: 5, units: "ft" } }, curesAll: ["dead", "blinded", "deafened", "paralyzed", "poisoned", "stunned"] },
-  // C12-g : Concentration parfaite (Moine 15) — « quand vous jouez l'initiative et avez 3 points de concentration ou moins, vous remontez à 4 »
-  // (« si vous n'utilisez pas le Métabolisme surnaturel » : celui-ci est proposé d'abord, runtime/roll-bonus.mjs).
+  // C12-g: Perfect Focus (Monk 15) — "when you roll Initiative and have 3 Focus Points or fewer, you regain points up to 4"
+  // ("if you don't use Uncanny Metabolism": that one is offered first, runtime/roll-bonus.mjs).
   "perfect-focus": { regainOnInitiative: { item: "monks-focus", upTo: 4 } },
-  // Métabolisme surnaturel (Moine 2) — « quand vous jouez l'initiative, vous pouvez regagner tous vos points de crédo dépensés ;
-  // vous lancez alors votre dé d'arts martiaux et regagnez autant de points de vie, plus votre niveau de Moine ; une fois par
-  // repos long ». L'activité de l'item fait les trois (points rendus, soins, utilisation) : proposée s'il y a des points à regagner.
+  // Uncanny Metabolism (Monk 2) — "when you roll Initiative, you can regain all your expended Focus Points;
+  // you then roll your Martial Arts die and regain that many Hit Points, plus your Monk level; once per Long Rest".
+  // The item's activity does all three (points returned, healing, use): offered if there are points to regain.
   "uncanny-metabolism": { regainOnInitiative: { items: ["monks-focus"], activity: "RfyAj9VDmzAJkTL3" } },
-  // C12-a : Survivant discipliné (Moine 14) — « si vous ratez une sauvegarde, vous pouvez dépenser 1 point de concentration pour la relancer,
-  // et vous devez utiliser le nouveau jet » (l'activité dépense le point).
+  // C12-a: Disciplined Survivor (Monk 14) — "if you fail a saving throw, you can spend 1 Focus Point to reroll it,
+  // and you must use the new roll" (the activity spends the point).
   "disciplined-survivor": { rollBonus: { activity: "P38SXEOizo5QaG8h", on: ["save"], reroll: {} } },
-  // Arts martiaux : « vous pouvez faire une frappe à mains nues par une action Bonus ».
+  // Martial Arts: "you can make one Unarmed Strike as a Bonus Action".
   "martial-arts": { martialArts: true },
-  // Concentration du moine : Déluge de coups (2ghJTBhilLrFn9xT) — « 1 point : deux frappes à mains nues par une action Bonus » ;
-  // Défense patiente — gratuite : Se désengager (EFzidO6yAapw8d60) ; 1 point : Se désengager et Esquiver (7xj7b6e8tDznDSrE) ;
-  // Pas du vent — 1 point : Se désengager et Foncer ; sans point : Foncer seul. L'activité 0MuRZ0Ur95xQTKFq est la version payée
-  // dans le Manuel 2.2.0 et la version GRATUITE dans le SRD 5.2 et le Manuel 3.0.0 (le point y passe à `Iv2Y…`) : `{ paid, free }`
-  // tranche d'après ce que l'activité dépense, et le saut n'est doublé que pour la forme payée.
-  // §236 : Auto-restauration (niveau 10) — « à la fin de chacun de vos tours, vous pouvez mettre fin à l'un de ces états sur vous ».
+  // Monk's Focus: Flurry of Blows (2ghJTBhilLrFn9xT) — "1 point: two Unarmed Strikes as a Bonus Action";
+  // Patient Defense — free: Disengage (EFzidO6yAapw8d60); 1 point: Disengage and Dodge (7xj7b6e8tDznDSrE);
+  // Step of the Wind — 1 point: Disengage and Dash; no point: Dash alone. Activity 0MuRZ0Ur95xQTKFq is the paid version
+  // in Handbook 2.2.0 and the FREE version in SRD 5.2 and Handbook 3.0.0 (the point moves to `Iv2Y…` there): `{ paid, free }`
+  // chooses based on what the activity spends, and the jump is doubled only for the paid form.
+  // §236: Self-Restoration (level 10) — "at the end of each of your turns, you can end one of these conditions on yourself".
   "self-restoration": { endsOwnConditions: ["charmed", "frightened", "poisoned"] },
-  // §236 : Pas véloce (Main ouverte 11) — « quand vous prenez une action Bonus autre que Pas du vent, vous pouvez aussi utiliser Pas du
-  // vent juste après » : gratuit une fois ce tour-là (simplification : jusqu'à la fin du tour, pas seulement « juste après »).
-  // §295 : Credo accru (Moine 10) — « trois frappes à mains nues au Déluge de coups au lieu de deux ».
+  // §236: Fleet Step (Open Hand 11) — "when you take a Bonus Action other than Step of the Wind, you can also use Step of the
+  // Wind right after": free once that turn (simplification: until the end of the turn, not only "right after").
+  // §295: Heightened Focus (Monk 10) — "three Unarmed Strikes with Flurry of Blows instead of two".
   "heightened-focus": { flurryStrikes: 3 },
   "fleet-step": { fleetStep: { item: "monks-focus", activity: "0MuRZ0Ur95xQTKFq" } },
   "monks-focus": {
-    // §438 : Manuel 3.0.0 — à partir du niveau 10, le Déluge, la Défense patiente et le Pas du vent payés d'un point sont des activités
-    // « Heightened » de cet item (`r0ou…`, `KpoK…`, `R3sq…`), et le Pas du vent payé d'un point (`Iv2Y…`) est distinct du gratuit.
+    // §438: Player's Handbook 3.0.0 — from level 10, Flurry of Blows, Patient Defense and Step of the Wind paid with a point are
+    // "Heightened" activities of this item (`r0ou…`, `KpoK…`, `R3sq…`),
+    // and the Step of the Wind paid with one point (`Iv2Y…`) is distinct from the free one.
     flurry: { activity: ["2ghJTBhilLrFn9xT", "r0ou3Al6Dn3tgUC6"], strikes: 2 },
     basicActions: { EFzidO6yAapw8d60: "disengage", "7xj7b6e8tDznDSrE": ["disengage", "dodge"],
       "0MuRZ0Ur95xQTKFq": { paid: ["dash", "disengage"], free: "dash" },
       KpoKztsxm5yuJWk6: ["disengage", "dodge"], Iv2YrISquTZWEjjN: ["dash", "disengage"], R3sqnBDwAjve0FvW: ["dash", "disengage"] },
-    // §208 : Pas du vent par un point de focus — « et votre distance de saut est doublée pour le tour ».
+    // §208: Step of the Wind by a focus point — "and your jump distance is doubled for the turn".
     jump: { double: ["0MuRZ0Ur95xQTKFq", "Iv2YrISquTZWEjjN", "R3sqnBDwAjve0FvW"] }
   },
-  // Frappe étourdissante (niveau 5) : au plus une fois par tour, sur un coup d'arme de moine ou à mains nues, 1 point impose un JS
-  // de Constitution ; la cible qui le rate est Étourdie jusqu'au début du prochain tour du moine, celle qui le réussit voit sa
-  // Vitesse réduite de moitié et la prochaine attaque contre elle gagne l'Avantage, sur la même durée. Effets de l'item : Stunned (échec), Slowed (réussite).
-  // Paume vibratoire (Main ouverte 17) — « quand vous touchez une créature avec une attaque à mains nues, vous pouvez dépenser 4
-  // points de crédo pour déclencher des vibrations » : proposée sur le coup, l'effet « Lethal Vibrations » de l'item posé sur la
-  // cible ; « une seule créature à la fois » ; « quand vous y mettez fin, la cible fait un jet de sauvegarde de Constitution » —
-  // l'activité de sauvegarde de l'item (10d12 de force, la moitié sur une réussite), qui retire l'effet une fois résolue. Y mettre
-  // fin sans dégâts, et à la place d'une attaque de l'action Attaque, restent au joueur.
+  // Stunning Strike (level 5): at most once per turn, on a hit with a Monk weapon or Unarmed Strike, 1 point imposes a
+  // Constitution save; a target that fails it is Stunned until the start of the Monk's next turn, one that succeeds has its
+  // Speed halved and the next attack against it gains Advantage, for the same duration.
+  // Effects of the item: Stunned (failure), Slowed (success).
+  // Quivering Palm (Open Hand 17) — "when you hit a creature with an Unarmed Strike, you can spend 4
+  // Focus Points to start vibrations": offered on the hit, the item's "Lethal Vibrations" effect applied to the target;
+  // "one creature at a time"; "when you end it, the target makes a Constitution saving throw" — the item's save activity
+  // (10d12 force damage, half on a success), which removes the effect once resolved.
+  // Ending it without damage, and instead of an attack of the Attack action, remains with the player.
   "quivering-palm": { hitRider: { effect: "GnIJc9uI54mfAQz8", unarmed: true, pays: "monks-focus", cost: 4 },
     heldEffect: { effect: "GnIJc9uI54mfAQz8", single: true, endedBy: "lBn87Q4yyJXWzLqg" } },
   "stunning-strike": {
@@ -81,26 +85,26 @@ export const MONK = Object.freeze({
     triggers: [{ on: "preAttackRoll", via: "effect", fromEffect: "cj9HhBNKtF6iOsH4", if: { "target.hasEffect": "stunning-strike" },
       do: [{ type: "advantage" }, { type: "consume", side: "target" }] }]
   },
-  // Technique de la main ouverte (Main ouverte 3) : « chaque fois que vous touchez une créature d'une attaque du Déluge de coups » —
-  // Déstabiliser (pas d'attaque d'opportunité jusqu'au début de son prochain tour), Repousser (JS de Force ou 4,50 m), Renverser
-  // (JS de Dextérité ou À terre).
+  // Open Hand Technique (Open Hand 3): "whenever you hit a creature with an attack of Flurry of Blows" —
+  // Addle (no Opportunity Attacks until the start of its next turn), Push (Strength save or 4.50 m), Topple
+  // (Dexterity save or Prone).
   "open-hand-technique": {
     openHand: { addle: "1jdSaWanuRrdkVs3", push: "XoaS0RtDCGAqrQsf", topple: "5Qgc0K3TfuonkPIG" },
     noOpportunityAttacks: true,
     effectEnds: { uQ474o5Wsv3sEAJK: "bearerTurnStart" },
     triggers: [{ on: "failedSave", if: { "activity.id": "XoaS0RtDCGAqrQsf" }, do: [{ type: "move", mode: "push", distance: 15, units: "ft" }] }]
   },
-  // C12-e : Harmonisation élémentaire (Moine des Éléments 3), Frappe élémentaire — « sur un JS de Force raté, vous pouvez la pousser ou
-  // l'attirer de 3 m » : poussée de 3 m (l'attirer reste au joueur).
+  // C12-e: Elemental Attunement (Monk of the Elements 3), Elemental Strike — "on a failed Strength saving throw, you can push or
+  // pull it 3 m": push of 3 m (pulling it remains with the player).
   "elemental-attunement": { triggers: [{ on: "failedSave", if: { "activity.id": "vUWH2QBMG6gewncl" }, do: [{ type: "move", mode: "push", distance: 10, units: "ft" }] }] },
-  // Parade (Deflect Attacks, niveau 3) : « quand un jet d'attaque vous touche et que ses dégâts comptent des dégâts contondants,
-  // perforants ou tranchants, votre Réaction réduit les dégâts totaux de 1d10 + Dextérité + niveau de Moine » — l'activité « Reduce »
-  // (un soin dans les données) donne le montant, qui est retiré des dégâts de l'attaque au lieu de soigner.
-  // §195 : Mouvement acrobatique (niveau 9) — « sans armure ni bouclier, vous pouvez vous déplacer sur des surfaces verticales et sur les
-  // liquides pendant votre tour sans tomber pendant ce déplacement » : « Courir sur le mur » (runtime/climb.mjs), sans test, sans
-  // vitesse d'escalade ni plafond ; le moine qui finit son tour au mur tombe. Les liquides : non joués.
+  // Deflect Attacks (level 3): "when an attack roll hits you and its damage includes bludgeoning, piercing or slashing damage,
+  // your Reaction reduces the total damage by 1d10 + Dexterity + Monk level" — the "Reduce" activity
+  // (a heal in the data) gives the amount, which is removed from the attack's damage instead of healing.
+  // §195: Acrobatic Movement (level 9) — "without armor or shield, you can move along vertical surfaces and across
+  // liquids on your turn without falling during this move": "Run on the wall" (runtime/climb.mjs), without a check, without
+  // a climb Speed or ceiling; the Monk who ends the turn on the wall falls. Liquids: not played.
   "acrobatic-movement": { climbsOnTurn: true },
-  // C12-a : Parade d'énergie (Moine 13) — « contre des attaques de tout type de dégâts », pas seulement contondant, perforant, tranchant.
+  // C12-a: Deflect Energy (Monk 13) — "against attacks of any damage type", not only bludgeoning, piercing, slashing.
   "deflect-attacks": { triggers: [{ on: "isHit", if: { any: [{ "activity.dealsType": ["bludgeoning", "piercing", "slashing"] }, { "target.hasFeature": "deflect-energy" }] },
     do: [{ type: "use", activity: "rQwRKkuZ7WhnB7v7" }, { type: "reduce" }] }] }
 });

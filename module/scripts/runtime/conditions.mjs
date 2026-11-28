@@ -14,10 +14,10 @@ import { enqueue } from "./queue.mjs";
 import { normalizeTargetModes, attackModeAgainst } from "../core/target-modes.mjs";
 
 /**
- * Avant le dialogue du jet d'attaque, sur le client de l'attaquant : les états des deux créatures
- * et la situation (portée longue, tir au corps à corps) posent l'avantage ou le désavantage par
- * défaut. Le joueur voit ce choix dans le dialogue et peut le changer ; les raisons partent avec
- * le message pour être affichées sous le jet.
+ * Before the attack roll dialog, on the attacker's client: the conditions of the two creatures
+ * and the situation (long range, ranged attack in melee) set Advantage or Disadvantage by
+ * default. The player sees this choice in the dialog and can change it; the reasons go with
+ * the message to be displayed under the roll.
  */
 function onPreRollAttack(config, dialogConfig, messageConfig) {
   const activity = config.subject;
@@ -34,8 +34,8 @@ function onPreRollAttack(config, dialogConfig, messageConfig) {
     if ( c.vision ) log(`vision: ${origin.name} ${c.vision.attackerSees ? "sees" : "does not see"} ${targets[i].name}, who ${c.vision.targetSees ? "sees them" : "does not see them"}`);
   }
   const perTarget = contexts.map(attackModifiers);
-  // C12-e : Coup brutal — « vous renoncez à tout Avantage sur ce jet », qui « ne doit pas avoir le Désavantage » : avec un Désavantage,
-  // le Coup brutal ne vaut pas (la marque tombe, l'Avantage reste).
+  // C12-e: Brutal Strike — "you forgo any Advantage on this roll", which "must not have Disadvantage": with Disadvantage,
+  // Brutal Strike does not apply (the mark drops, the Advantage stays).
   const brutal = (activity.actor?.effects ?? []).find(e => e.getFlag(MODULE_ID, "brutalStrike")?.activity === activity.uuid);
   if ( brutal ) {
     if ( perTarget.some(p => p.disadvantage.length) || roll.options?.disadvantage ) {
@@ -48,7 +48,7 @@ function onPreRollAttack(config, dialogConfig, messageConfig) {
       log("attack: Brutal Strike, Advantage forgone");
     }
   }
-  // §34 : ce que les réactions d'avant le jet ont décidé (Esquive des ombres, Éclat protecteur : Désavantage ; dé retiré).
+  // §34: what the pre-roll reactions decided ("Shadow Evasion", "Protective Flash": Disadvantage; die removed).
   const reacted = takeAttackMods(activity.uuid);
   if ( reacted?.disadvantage ) for ( const p of perTarget ) p.disadvantage = [...p.disadvantage, { who: "reaction", key: reacted.names.join(", ") }];
   if ( reacted?.penalty ) {
@@ -56,14 +56,14 @@ function onPreRollAttack(config, dialogConfig, messageConfig) {
     roll.parts.push(`-${reacted.penalty}`);
     log(`attack: -${reacted.penalty} (${reacted.names.join(", ")})`);
   }
-  // §36 : Présage — le d20 vaut le jet noté (bornes du dé : core/portent.mjs, adapter/portent.mjs).
+  // §36: Portent — the d20 equals the noted roll (die bounds: core/portent.mjs, adapter/portent.mjs).
   if ( Number.isInteger(reacted?.foretold) ) {
     roll.options ??= {};
     Object.assign(roll.options, foretoldRange(reacted.foretold));
     log(`attack: Portent, d20 = ${reacted.foretold}`);
     foundry.utils.setProperty(messageConfig, `data.flags.${MODULE_ID}.foretold`, reacted.foretold);
   }
-  // §36 : dé ajouté par un allié (Présage cosmique, Fortune).
+  // §36: die added by an ally (Cosmic Omen, Fortune).
   if ( reacted?.bonus ) {
     roll.parts ??= [];
     roll.parts.push(`${reacted.bonus}`);
@@ -78,7 +78,7 @@ function onPreRollAttack(config, dialogConfig, messageConfig) {
   if ( !agreed ) ui.notifications.warn("DND5ECOMBAT.CiblesDivergentes", { localize: true });
   else if ( reasons.advantage.length || reasons.disadvantage.length ) {
     roll.options ??= {};
-    // On ajoute nos sources à celles du système ; il les combine lui-même (les deux = jet normal).
+    // We add our sources to the system's; it combines them itself (both = normal roll).
     if ( reasons.advantage.length ) roll.options.advantage = true;
     if ( reasons.disadvantage.length ) roll.options.disadvantage = true;
     log(`attack: ${mode === 1 ? "advantage" : mode === -1 ? "disadvantage" : "advantage and disadvantage cancel out"}`,
@@ -87,7 +87,7 @@ function onPreRollAttack(config, dialogConfig, messageConfig) {
   if ( !agreed || reasons.advantage.length || reasons.disadvantage.length ) {
     foundry.utils.setProperty(messageConfig, `data.flags.${MODULE_ID}.modifiers`, reasons);
   }
-  // §16.46 : ce que les déclarations ajoutent au jet (Voile défensif : « -1d4 »), pour la première cible.
+  // §16.46: what the declarations add to the roll ("Defensive Veil": "-1d4"), for the first target.
   const bonuses = declaredAttackBonuses(origin, targets[0], activity);
   if ( bonuses.length ) {
     roll.parts ??= [];
@@ -99,9 +99,9 @@ function onPreRollAttack(config, dialogConfig, messageConfig) {
 }
 
 /**
- * §17.3 : Effrayé (2024) — désavantage aux tests de caractéristique (compétences, outils, initiative : le crochet
- * `abilityCheck` de dnd5e, documents/actor/actor.mjs:1403 et :1913) tant que la source de la peur est en vue.
- * dnd5e ne le fait pas (`CONFIG.DND5E.conditionEffects` : rien pour `frightened`). Source inconnue : l'état s'applique.
+ * §17.3: Frightened (2024) — Disadvantage on ability checks (skills, tools, Initiative: the dnd5e hook
+ * `abilityCheck`, documents/actor/actor.mjs:1403 and :1913) as long as the source of the fear is in sight.
+ * dnd5e does not do it (`CONFIG.DND5E.conditionEffects`: nothing for `frightened`). Unknown source: the condition applies.
  */
 function onPreRollAbilityCheck(config) {
   const actor = config.subject;
@@ -115,10 +115,10 @@ function onPreRollAbilityCheck(config) {
 }
 
 /* -------------------------------------------- */
-/*  États de tour visibles sur le token         */
+/*  Turn conditions visible on the token        */
 /* -------------------------------------------- */
 
-/** Ce que le budget d'un combattant doit montrer sur son token. `dodging` est l'état natif du système. */
+/** What a combatant's budget must show on its token. `dodging` is the system's native condition. */
 function wantedStatuses(budget) {
   return {
     [TURN_STATUSES.reactionUsed.id]: !!budget && (budget.reaction < 1),
@@ -130,9 +130,9 @@ function wantedStatuses(budget) {
 }
 
 /**
- * En file par acteur, le budget relu au moment d'agir : deux mises à jour du combattant presque ensemble (Pas du vent : Foncer puis le
- * budget du Déluge) lançaient deux synchronisations, qui voyaient toutes deux l'état manquer et le créaient deux fois (« _id
- * dnd5edashing0000 already exists », scénario `moine`, 2026-10-20). `budgetOf` : le budget à montrer, ou null (plus rien).
+ * Queued per actor, the budget re-read at the moment of acting: two combatant updates almost together (Step of the Wind: Dash
+ * then the Flurry budget) launched two syncs, which both saw the condition missing and created it twice ("_id
+ * dnd5edashing0000 already exists", scenario `moine`, 2026-10-20). `budgetOf`: the budget to show, or null (nothing left).
  */
 function syncTurnStatuses(combatant, budgetOf) {
   const actor = combatant.actor;
@@ -143,10 +143,10 @@ function syncTurnStatuses(combatant, budgetOf) {
 }
 
 /**
- * §249 : l'Avantage ou le Désavantage donné par cible dans le message d'utilisation (`flags.dnd5e-combat.targetModes`, core/target-modes.mjs),
- * inversé sur le jet d'attaque contre elle. Lu sur le message d'origine du jet (`system.origin`, activity/attack.mjs:69), que l'attaquant ait
- * un token ou non (un piège). Le système combine nos sources aux siennes (les deux : jet normal). Des cibles qui ne s'accordent pas : rien
- * n'est posé, et l'avertissement des cibles divergentes.
+ * §249: the Advantage or Disadvantage given per target in the use message (`flags.dnd5e-combat.targetModes`,
+ * core/target-modes.mjs), inverted on the attack roll against it. Read from the roll's origin message (`system.origin`,
+ * activity/attack.mjs:69), whether the attacker has a token or not (a trap). The system combines our sources with its own
+ * (both: normal roll). Targets that do not agree: nothing is placed, and the warning about diverging targets.
  */
 function onGivenTargetModes(config, dialogConfig, messageConfig) {
   const roll = config.rolls?.[0];
@@ -165,9 +165,9 @@ function onGivenTargetModes(config, dialogConfig, messageConfig) {
 }
 
 /**
- * §480 : chez le MJ actif, à la création d'un jet d'attaque — un Désavantage décidé par le moteur, écarté à la main (touche d'Avantage ou
- * bouton de la fenêtre de jet de dnd5e) : la règle permet au MJ de trancher, rien n'est refusé, mais le MJ le sait (alerte MJ, réglage
- * `gmAlerts`). La carte le dit aussi à tous (ui/chat.mjs, `modifierLines`).
+ * §480: on the active GM, when an attack roll is created — a Disadvantage decided by the engine, removed by hand (Advantage key or
+ * button of dnd5e's roll window): the rule lets the GM decide, nothing is refused, but the GM knows (GM alert, setting
+ * `gmAlerts`). The card also says it to everyone (ui/chat.mjs, `modifierLines`).
  */
 function onAttackMessage(message) {
   if ( message.type !== "attack" ) return;
@@ -194,7 +194,7 @@ export function registerConditions() {
     if ( !changes.flags?.[MODULE_ID] ) return;
     return syncTurnStatuses(combatant, () => (combatant.combat?.started ? readBudget(combatant) : null));
   }, statuses);
-  // Fin du combat, ou combattant retiré : plus rien à montrer.
+  // End of combat, or combatant removed: nothing more to show.
   route("deleteCombat", combat => Promise.all(combat.combatants.map(c => syncTurnStatuses(c, () => null))), statuses);
   route("deleteCombatant", combatant => syncTurnStatuses(combatant, () => null), statuses);
 }

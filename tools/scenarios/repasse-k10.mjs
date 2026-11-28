@@ -1,8 +1,8 @@
 /**
- * §331, lot K10 de la repasse des créatures : l'Avantage conditionnel lu dans le texte (`monsterAdvantage`). Arène des sorts : le Lanceur
- * (PNJ) reçoit la Frénésie sanguinaire du Baron sahuagin et une Massue ; la Cible (999 PV).
- *  - Cible blessée (900 PV) : l'attaque se fait avec l'Avantage (deux d20, le meilleur gardé) ;
- *  - Cible indemne (999 PV) : sans Avantage.
+ * §331, batch K10 of the creature pass: the conditional Advantage read in the text (`monsterAdvantage`). Spell arena: the Caster
+ * (NPC) receives the Sahuagin Baron's Blood Frenzy and a Club; the Target (999 HP).
+ *  - Wounded Target (900 HP): the attack is made with Advantage (two d20, the best kept);
+ *  - Unharmed Target (999 HP): no Advantage.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -48,7 +48,7 @@ export default {
     const t = await ctx.position(target);
     await ctx.call("move-token", { tokenId: caster.id, x: t.x - grid, y: t.y, elevation: 0 });
     await pause(800);
-    /** Le jet d'attaque de l'utilisation : deux d20 (Avantage) ou un. */
+    /** The use's attack roll: two d20 (Advantage) or one. */
     const attackDice = async hp => {
       await ctx.setHp(target, hp);
       await pause(600);

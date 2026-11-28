@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createCanvasWait } from "../module/scripts/runtime/shared.mjs";
 
-/** Un canevas qui devient prêt après `after` millisecondes simulées. */
+/** A canvas that becomes ready after `after` simulated milliseconds. */
 function fakeCanvas(after) {
   let now = 0;
   return {
@@ -10,20 +10,20 @@ function fakeCanvas(after) {
   };
 }
 
-describe("attente du canevas (redessin d'un changement de niveau)", () => {
-  it("déjà prêt : aucune attente", async () => {
+describe("canvas wait (redraw after a level change)", () => {
+  it("already ready: no wait", async () => {
     const c = fakeCanvas(0);
     expect(await createCanvasWait(c.ports)()).toBe(true);
     expect(c.elapsed()).toBe(0);
   });
 
-  it("en cours de redessin : attend qu'il soit prêt", async () => {
+  it("being redrawn: waits until it is ready", async () => {
     const c = fakeCanvas(300);
     expect(await createCanvasWait(c.ports, 5000, 50)()).toBe(true);
     expect(c.elapsed()).toBe(300);
   });
 
-  it("jamais prêt : rend la main au bout du délai, et le dit", async () => {
+  it("never ready: gives control back at the end of the timeout, and says so", async () => {
     const c = fakeCanvas(Infinity);
     expect(await createCanvasWait(c.ports, 500, 50)()).toBe(false);
     expect(c.elapsed()).toBe(500);

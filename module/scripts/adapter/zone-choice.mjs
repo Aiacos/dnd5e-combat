@@ -1,8 +1,8 @@
 /**
- * §401 : « chaque créature de votre choix dans la zone » (Parole radieuse, Sommeil, Lenteur, Esprits gardiens…) — la question posée au
- * lanceur quand la zone est posée : la liste de ceux qu'elle peut affecter, cochés d'avance comme le moteur le ferait seul (ses ennemis,
- * au plus `zoneMax`). Même circuit que les autres questions (adapter/choices.mjs) : le joueur connecté qui possède le lanceur, sinon le
- * MJ actif ; sans réponse dans le délai, le choix d'office.
+ * §401: "each creature of your choice in the area" ("Radiant Word", Sleep, Slow, Spirit Guardians…) — the question put
+ * to the caster when the area is placed: the list of those it can affect, ticked in advance as the engine would do alone
+ * (its enemies, at most `zoneMax`). Same circuit as the other questions (adapter/choices.mjs): the connected player who
+ * owns the caster, otherwise the active GM; with no answer within the delay, the default choice.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,7 +15,7 @@ import { rollerFor } from "./concentration.mjs";
 export const ZONE_CHOICE_QUERY = `${MODULE_ID}.zoneChoice`;
 export const ZONE_CHOICE_SETTING = "zoneChoice";
 
-/** Au-delà, le MJ répond à la place du joueur (le délai de la fenêtre, plus la marge du réseau). */
+/** Beyond that, the GM answers in the player's place (the window's delay, plus the network margin). */
 const ZONE_CHOICE_TIMEOUT = 30000;
 
 export function registerZoneChoiceSetting() {
@@ -30,8 +30,8 @@ export function zoneChoiceMode() {
 }
 
 /**
- * La zone de cette activité est-elle « au choix » du lanceur ? La donnée le dit (`target.affects.choice`), ou le contenu, qui déclare
- * qui elle affecte quand la donnée se tait (`zoneAffects`, §86) — pas une zone « chaque ennemi » de la donnée (`affects.type`).
+ * Is this activity's area "at the caster's choice"? The data says so (`target.affects.choice`), or the content, which declares
+ * whom it affects when the data is silent (`zoneAffects`, §86) — not an "each enemy" area of the data (`affects.type`).
  */
 export function isChoiceZone(activity) {
   if ( !activity?.item ) return false;
@@ -42,9 +42,10 @@ export function isChoiceZone(activity) {
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
 /**
- * Côté du lanceur : une case par créature, les cochées d'avance comme le moteur. Rend les UUID cochés ; au bout du délai, le choix
- * d'office ; fermée sans valider, null (le MJ n'est pas consulté : le choix d'office tient).
- * @param {{actor: string, item: string, max: number|null, candidates: Array<{token: string, name: string, img: string, checked: boolean, enemy: boolean}>}} payload
+ * Caster side: one checkbox per creature, ticked in advance like the engine. Returns the ticked UUIDs; at the end of the
+ * delay, the default choice; closed without confirming, null (the GM is not consulted: the default choice stands).
+ * @param {{actor: string, item: string, max: number|null, candidates: Array<{token: string, name: string, img: string,
+ * checked: boolean, enemy: boolean}>}} payload
  * @returns {Promise<{tokens: string[]}|null>}
  */
 export async function handleZoneChoiceQuery({ actor: actorUuid, item, max=null, candidates=[] }) {
@@ -75,9 +76,10 @@ export async function handleZoneChoiceQuery({ actor: actorUuid, item, max=null, 
 }
 
 /**
- * Sur le MJ actif : demande au lanceur (son joueur, sinon le MJ lui-même). Rend les UUID retenus, ou null (le choix d'office tient).
+ * On the active GM: asks the caster (its player, otherwise the GM themselves). Returns the retained UUIDs, or null
+ * (the default choice stands).
  * @param {Actor} actor
- * @param {object} payload  Voir handleZoneChoiceQuery.
+ * @param {object} payload  See handleZoneChoiceQuery.
  */
 export async function askZoneChoice(actor, payload) {
   payload = { ...payload, actor: actor?.uuid ?? null };

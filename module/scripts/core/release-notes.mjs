@@ -1,21 +1,21 @@
 /**
- * §439 : le message de mise à jour — la partie pure (aucun global Foundry). Les notes elles-mêmes sont des données
- * (`content/releases.mjs`, une entrée par version publiée) ; ici, ce qu'on en tire pour un monde donné :
- *  - `notesBetween` : les notes des versions sorties depuis la dernière vue par le MJ ;
- *  - `lateModules`  : les modules de la suite installés en dessous de la version avec laquelle cette version a été testée ;
- *  - `compatibility`: Foundry, le système et les livres installés face aux versions testées ;
- *  - `activeRisks` / `recommendedChecks` : les risques écrits à la main et les vérifications du diagnostic conseillées, quand leur
- *    condition (`when`) est remplie dans ce monde ;
- *  - `validateReleases` : le garde-fou de release (tests/release-notes.test.mjs).
+ * §439: the update message — the pure part (no Foundry global). The notes themselves are data
+ * (`content/releases.mjs`, one entry per published version); here, what is drawn from them for a given world:
+ *  - `notesBetween`: the notes of the versions released since the last one seen by the GM;
+ *  - `lateModules`  : the suite modules installed below the version this version was tested with;
+ *  - `compatibility`: Foundry, the system and the installed books against the tested versions;
+ *  - `activeRisks` / `recommendedChecks`: the hand-written risks and the recommended diagnostic checks, when their
+ *    condition (`when`) is met in this world;
+ *  - `validateReleases`: the release safeguard (tests/release-notes.test.mjs).
  *
- * « Installé » (`installed`) : `{ foundry, system, modules: [{ id, title, version, active }] }`, lu par l'interface.
+ * "Installed" (`installed`): `{ foundry, system, modules: [{ id, title, version, active }] }`, read by the interface.
  */
 
 const VERSION = /^\d+(\.\d+)*$/;
 
 const parts = v => String(v ?? "").trim().split(".").map(s => Number.parseInt(s, 10) || 0);
 
-/** Compare deux versions « 0.283.0 », « 14.370 » : négatif si `a` est plus ancienne, 0 si égales, positif si plus récente. */
+/** Compares two versions "0.283.0", "14.370": negative if `a` is older, 0 if equal, positive if newer. */
 export function compareVersions(a, b) {
   const pa = parts(a), pb = parts(b);
   for ( let i = 0; i < Math.max(pa.length, pb.length); i++ ) {
@@ -26,8 +26,8 @@ export function compareVersions(a, b) {
 }
 
 /**
- * L'écart entre une version installée et la version testée : `null` si égales, sinon `{ way: "older" | "newer", level }`.
- * Seul le dernier nombre diffère (14.370 → 14.371, 6.1.0 → 6.1.2) : un correctif, `info`. Un nombre avant lui : `warn`.
+ * The gap between an installed version and the tested version: `null` if equal, otherwise `{ way: "older" | "newer", level }`.
+ * Only the last number differs (14.370 → 14.371, 6.1.0 → 6.1.2): a fix, `info`. A number before it: `warn`.
  */
 export function versionGap(installed, tested) {
   const diff = compareVersions(installed, tested);
@@ -39,12 +39,12 @@ export function versionGap(installed, tested) {
   return { way: diff < 0 ? "older" : "newer", level: first < last ? "warn" : "info" };
 }
 
-/** La note d'une version exacte, ou `null`. */
+/** The note of an exact version, or `null`. */
 export const noteOf = (releases, version) => releases.find(r => r.version === version) ?? null;
 
 /**
- * Les notes à montrer, de la plus récente à la plus ancienne : celles des versions après `seen` jusqu'à `current` comprise.
- * Sans `seen` (ouverture à la main) : les `limit` dernières jusqu'à `current`.
+ * The notes to show, from the most recent to the oldest: those of the versions after `seen` up to and including `current`.
+ * Without `seen` (opened by hand): the last `limit` ones up to `current`.
  */
 export function notesBetween(releases, { seen=null, current, limit=5 }={}) {
   const upTo = releases.filter(r => compareVersions(r.version, current) <= 0)
@@ -53,14 +53,14 @@ export function notesBetween(releases, { seen=null, current, limit=5 }={}) {
   return upTo.filter(r => compareVersions(r.version, seen) > 0);
 }
 
-/** Les versions testées qui valent pour `current` : celles de la note la plus récente qui ne la dépasse pas. */
+/** The tested versions that apply to `current`: those of the most recent note that does not exceed it. */
 export function testedFor(releases, current) {
   return notesBetween(releases, { current, limit: 1 })[0]?.tested ?? null;
 }
 
 const activeModule = (installed, id) => (installed?.modules ?? []).find(m => (m.id === id) && m.active) ?? null;
 
-/** Les modules de la suite actifs dans ce monde et plus anciens que la version testée : `[{ id, title, version, tested }]`. */
+/** The suite modules active in this world and older than the tested version: `[{ id, title, version, tested }]`. */
 export function lateModules(tested, installed) {
   const out = [];
   for ( const [id, min] of Object.entries(tested?.modules ?? {}) ) {
@@ -71,8 +71,8 @@ export function lateModules(tested, installed) {
 }
 
 /**
- * Foundry, le système et les livres face aux versions testées : `[{ kind: "foundry" | "system" | "book", id?, title, version, tested,
- * way, level }]`, seulement ce qui diffère. Un livre absent ou inactif n'est pas un écart.
+ * Foundry, the system and the books against the tested versions: `[{ kind: "foundry" | "system" | "book", id?, title, version,
+ * tested, way, level }]`, only what differs. A missing or inactive book is not a gap.
  */
 export function compatibility(tested, installed) {
   const out = [];
@@ -90,8 +90,8 @@ export function compatibility(tested, installed) {
 }
 
 /**
- * Une condition `when` : `{ module, min?, below? }` (ce module est actif, à partir de `min`, avant `below`) et / ou
- * `{ system: "6.1.0" }` (le système à partir de cette version). Sans condition : toujours vrai.
+ * A `when` condition: `{ module, min?, below? }` (this module is active, from `min`, before `below`) and / or
+ * `{ system: "6.1.0" }` (the system from this version). No condition: always true.
  */
 export function matches(when, installed) {
   if ( !when ) return true;
@@ -105,12 +105,12 @@ export function matches(when, installed) {
   return true;
 }
 
-/** Les risques écrits dans ces notes dont la condition est remplie : `[{ id, version }]`, sans doublon. */
+/** The risks written in these notes whose condition is met: `[{ id, version }]`, without duplicates. */
 export function activeRisks(notes, installed) {
   return unique(notes.flatMap(n => (n.risks ?? []).filter(r => matches(r.when, installed)).map(r => ({ id: r.id, version: n.version }))));
 }
 
-/** Les vérifications du diagnostic conseillées par ces notes, dans ce monde : `[{ id, version }]`, sans doublon. */
+/** The diagnostic checks recommended by these notes, in this world: `[{ id, version }]`, without duplicates. */
 export function recommendedChecks(notes, installed) {
   return unique(notes.flatMap(n => (n.checks ?? []).filter(c => matches(c.when, installed)).map(c => ({ id: c.id, version: n.version }))));
 }
@@ -120,7 +120,7 @@ function unique(list) {
   return list.filter(x => !seen.has(x.id) && seen.add(x.id));
 }
 
-/** Tout ce que la fenêtre montre, d'un coup. */
+/** Everything the window shows, at once. */
 export function releaseReport(releases, { seen=null, current, installed={} }={}) {
   const notes = notesBetween(releases, { seen, current });
   const tested = testedFor(releases, current);
@@ -133,15 +133,15 @@ export function releaseReport(releases, { seen=null, current, installed={} }={})
   };
 }
 
-/** Y a-t-il quelque chose à dire ? (une version sans note et un monde à jour : rien ne s'ouvre.) */
+/** Is there anything to say? (a version without a note and an up-to-date world: nothing opens.) */
 export const hasNews = report => !!(report.notes.length || report.late.length || report.compatibility.length || report.risks.length);
 
 /**
- * Le garde-fou : les défauts de la table des notes, en clair. `version` (celle de `module.json`) doit avoir sa note.
+ * The safeguard: the flaws of the notes table, in plain words. `version` (that of `module.json`) must have its note.
  * @param {object[]} releases
  * @param {object} [options]
- * @param {string} [options.version]      La version du manifeste.
- * @param {string[]} [options.checkIds]   Les vérifications que le diagnostic connaît.
+ * @param {string} [options.version]      The manifest's version.
+ * @param {string[]} [options.checkIds]   The checks the diagnostic knows.
  */
 export function validateReleases(releases, { version=null, checkIds=null }={}) {
   const problems = [];

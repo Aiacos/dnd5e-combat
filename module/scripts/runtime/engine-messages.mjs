@@ -1,6 +1,6 @@
 /**
- * Les messages du système devenus évènements d'une résolution : carte d'utilisation, jet d'attaque, jet de dégâts, sauvegarde,
- * Résistance légendaire. Extrait de runtime/engine.mjs.
+ * The system's messages turned into events of a resolution: use card, attack roll, damage roll, save,
+ * Legendary Resistance. Extracted from runtime/engine.mjs.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -26,19 +26,19 @@ import { strikeAgainst } from "../adapter/areas.mjs";
 import { askChoice } from "../adapter/choices.mjs";
 
 /* -------------------------------------------- */
-/*  Messages du système → évènements            */
+/*  System messages → events                    */
 /* -------------------------------------------- */
 
 export function onUsageMessage(message) {
-  // L'ouverture entre dans la file du porteur AVANT toute attente : un jet que le système enchaîne
-  // aussitôt (dégâts d'une activité `damage`, soin) arrive après elle, dans l'ordre.
+  // The opening enters the bearer's queue BEFORE any wait: a roll that the system chains
+  // immediately (damage of a `damage` activity, healing) arrives after it, in order.
   return dispatcher.open(message.id, async () => {
     await repairSaveAbility(message);
     const usage = readUsage(message);
     if ( !usage ) return null;
     if ( usage.plan.variant ) log(`attack variant: ${usage.plan.variant.name || usage.plan.variant.kind} (${usage.plan.variant.kind})`);
-    // §104 : un module qui fournit lui-même les cibles d'une activité à zone (Darsh Loot : la zone d'effet d'un piège) le dit
-    // par `flags.dnd5e-combat.givenTargets` sur le message d'utilisation : pas de gabarit à attendre, les cibles du message.
+    // §104: a module that itself supplies the targets of an area activity (Darsh Loot: a trap's area of effect) says so
+    // through `flags.dnd5e-combat.givenTargets` on the use message: no template to wait for, the message's targets.
     if ( usage.area && !message.getFlag(MODULE_ID, "areaTick") && !message.getFlag(MODULE_ID, "givenTargets") ) {
       log("area of effect: waiting for the template to be placed");
       return null;
@@ -48,14 +48,14 @@ export function onUsageMessage(message) {
 }
 
 /**
- * §33 : Inspiration bardique — un jet d'attaque qui rate une cible (ni 1 naturel, ni abri total) : l'attaquant inspiré peut ajouter
- * son dé au total, avant le verdict. Rend le jet, éventuellement augmenté.
+ * §33: Bardic Inspiration — an attack roll that misses a target (neither a natural 1 nor Total Cover): the inspired attacker may
+ * add their die to the total, before the verdict. Returns the roll, possibly increased.
  */
 async function inspiredAttack(message, roll, targets) {
   const actor = (await fromUuid(speakerTokenUuid(message) ?? ""))?.actor ?? message.getAssociatedActor?.() ?? null;
-  // §282 : l'Inspiration héroïque d'abord, sur tout jet (un 1 naturel aussi) — le nouveau d20 refait le critique et l'échec automatique.
+  // §282: Heroic Inspiration first, on any roll (a natural 1 too) — the new d20 redoes the Critical Hit and the automatic failure.
   roll = await heroicAttack(message, roll, targets, actor);
-  // §304 (repasse C9) : Visée sans pareille vaut aussi sur un 1 naturel — un raté comme un autre ; le coup touche, sans critique.
+  // §304 (pass C9): Peerless Aim also applies on a natural 1 — a miss like any other; the blow hits, without a Critical Hit.
   if ( roll.isFumble && actor ) {
     const acs = targets.filter(t => !t.unaffected).map(t => t.ac).filter(Number.isFinite);
     const needed = acs.length ? Math.min(...acs) : null;
@@ -63,7 +63,8 @@ async function inspiredAttack(message, roll, targets) {
       return { ...roll, isFumble: false, total: Math.max(roll.total, needed), inspired: Math.max(0, needed - roll.total) };
     }
   }
-  // Un 19 au seuil de critique abaissé qui rate reste rattrapable : seul le jet qui touche d'office (20 naturel) passe.
+  // A 19 at a lowered critical threshold that misses can still be recovered: only the roll that hits automatically (natural 20)
+  // passes.
   if ( roll.isFumble || hitsRegardless(roll) ) return roll;
   const missed = resolveAttack(roll, targets.filter(t => !t.unaffected)).filter(t => t.reason === "miss");
   if ( !missed.length ) return roll;
@@ -71,22 +72,22 @@ async function inspiredAttack(message, roll, targets) {
   const needed = Math.min(...missed.map(t => t.ac));
   const bonus = await offerInspiration(actor, { what: loc("Inspiration.Attaque"), total: roll.total, needed });
   if ( bonus ) log(`${actor.name}: Bardic Inspiration, attack ${roll.total} + ${bonus} = ${roll.total + bonus}`);
-  // §90 : Attaque précise — encore ratée, l'attaquant peut ajouter son propre dé (`rollBonus` sur "attack").
+  // §90: Precision Attack — still missed, the attacker may add their own die (`rollBonus` on "attack").
   const total = roll.total + bonus;
   const rules = actor.items.some(i => contentOf(i).entry?.rollBonus?.on?.includes("attack"));
   const precise = (rules && (total < needed))
     ? await offerRollBonus(actor, { kind: "attack", what: loc("Inspiration.Attaque"), total, needed,
       d20: roll.heroic?.kept ?? keptD20(message.rolls?.[0]), spell: message.getAssociatedActivity?.()?.item?.type === "spell" }) : 0;
   if ( precise ) log(`${actor.name}: die added to their attack, ${total} + ${precise} = ${total + precise}`);
-  // §135 : Faveur de prouesse martiale, Visée sans pareille — encore ratée : « vous pouvez toucher à la place ».
+  // §135: Boon of Combat Prowess, Peerless Aim — still missed: "you can hit instead".
   const peerless = ((total + precise) < needed) && await offerPeerlessAim(actor, { total: total + precise, needed }) ? needed - (total + precise) : 0;
   if ( !bonus && !precise && !peerless ) return roll;
   return { ...roll, total: total + precise + peerless, inspired: bonus + precise + peerless };
 }
 
 /**
- * §282 : Inspiration héroïque sur un jet d'attaque — « raté » quand une cible au moins n'est pas touchée (ou un 1 naturel), le seuil
- * dit étant la CA la plus basse des cibles ratées (sinon des cibles). Rend le jet, relancé ou non.
+ * §282: Heroic Inspiration on an attack roll — "missed" when at least one target is not hit (or a natural 1), the stated threshold
+ * being the lowest AC of the missed targets (otherwise of the targets). Returns the roll, rerolled or not.
  */
 async function heroicAttack(message, roll, targets, actor) {
   if ( !hasHeroic(actor) ) return roll;
@@ -97,7 +98,7 @@ async function heroicAttack(message, roll, targets, actor) {
     needed: acs.length ? Math.min(...acs) : null, failed: missed.length > 0 });
   if ( !after ) return roll;
   log(`${actor.name}: Heroic Inspiration, attack ${roll.total} → ${after.total}`);
-  // Le d20 gardé a changé : sans lui (`natural` retiré), un critique vaut un 20 naturel, comme avant.
+  // The kept d20 changed: without it (`natural` removed), a Critical Hit counts as a natural 20, as before.
   const { natural: _old, ...rest } = roll;
   return { ...rest, total: after.total, isCritical: after.critical, isFumble: after.fumble,
     ...(Number.isFinite(after.kept) ? { natural: after.kept } : {}), heroic: { old: after.old, kept: after.kept } };
@@ -105,18 +106,20 @@ async function heroicAttack(message, roll, targets, actor) {
 
 export async function onAttackMessage(message) {
   const attack = readAttackMessage(message);
-  if ( !attack?.targets.length ) {   // sans cible désignée, le jet reste un jet simple
+  if ( !attack?.targets.length ) {   // without a designated target, the roll stays a simple roll
     log("attack without a designated target: plain roll, nothing to resolve");
     return;
   }
   await waitForDice(message);
   const rolled = async plan => {
     const targets = await enrich(attack.targets, plan, speakerTokenUuid(message), attack.activity, message.rolls?.[0]?.options?.attackMode ?? message.system?.mode ?? null,
-      // §406 : l'id de la carte d'origine (`_source`) — `system.origin` est un ForeignDocumentField, sa lecture rend le message lui-même.
+      // §406: the id of the origin card (`_source`) — `system.origin` is a ForeignDocumentField, reading it returns the
+      // message itself.
       castLevelOfMessage(game.messages.get(message._source?.system?.origin ?? "") ?? message),
-      // §518 : une attaque passée outre un refus (hors de vue, portée…) — un abri total ne la rend plus nulle.
+      // §518: an attack passed through a refusal (out of sight, range…) — Total Cover no longer nullifies it.
       { forced: forcedThrough(message) || forcedThrough(game.messages.get(attack.origin ?? "")) });
-    // Issue #32 : l'écart du succès à un prix pour ce jet (0 : éteint, ou pas un personnage joueur) — jugé par le cœur après les réactions.
+    // Issue #32: the margin of success at a cost for this roll (0: off, or not a player character) — judged by the core after
+    // the Reactions.
     const attacker = (await fromUuid(speakerTokenUuid(message) ?? ""))?.actor ?? message.getAssociatedActor?.() ?? null;
     return { type: "attackRolled", roll: await inspiredAttack(message, attack.roll, targets), messageId: message.id, targets, critMargin: critMargin(),
       atCost: atCostMarginOf(attacker) };
@@ -125,7 +128,7 @@ export async function onAttackMessage(message) {
   const awaited = attack.origin && await dispatcher.send(attack.origin, resolution =>
     ((resolution.step === STEPS.AWAITING_ATTACK) && (resolution.activity === attack.activity)) ? rolled(resolution.plan) : null);
   if ( awaited ) return;
-  // Jet lancé hors carte, ou relancé depuis une carte déjà résolue : il se porte lui-même.
+  // Roll made outside a card, or rerolled from an already resolved card: it carries itself.
   await dispatcher.open(message.id, async () => {
     const usage = readUsage(message);
     if ( !usage?.plan.attack ) return null;
@@ -133,11 +136,11 @@ export async function onAttackMessage(message) {
   });
 }
 
-/** Ces dégâts sont-ils ceux de la résolution : son activité, ou une variante que son plan admet (M5, §18.8) ? */
+/** Is this damage the resolution's: its activity, or a variant its plan allows (M5, §18.8)? */
 const damageFits = (resolution, damage) => (resolution.activity === damage.activity)
   || (resolution.plan?.damageFrom ?? []).includes(damage.activity);
 
-/** Le porteur le plus récent qui attend encore les dégâts de cette activité. */
+/** The most recent bearer still awaiting this activity's damage. */
 function findAwaitingDamage(damage) {
   const messages = game.messages.contents;
   for ( let i = messages.length - 1; i >= Math.max(0, messages.length - LOOKBACK); i-- ) {
@@ -150,12 +153,12 @@ function findAwaitingDamage(damage) {
   return null;
 }
 
-/** Jet de dégâts ou de soin (même forme). */
+/** Damage or healing roll (same form). */
 export async function onDamageMessage(message) {
   const damage = readDamageMessage(message);
   if ( !damage ) return;
   await waitForDice(message);
-  // §282 : Inspiration héroïque — un dé de dégâts ou de soin relancé au choix ; sa part de l'agrégat bouge de la différence.
+  // §282: Heroic Inspiration — a damage or healing die rerolled at will; its share of the aggregate moves by the difference.
   const actor = (await fromUuid(speakerTokenUuid(message) ?? ""))?.actor ?? message.getAssociatedActor?.() ?? null;
   const heroic = hasHeroic(actor) ? await offerHeroicDamage(actor, message.rolls?.filter(r => (r instanceof CONFIG.Dice.DamageRoll) && !isCriticalExtra(r)) ?? []) : null;
   if ( heroic ) {
@@ -163,8 +166,8 @@ export async function onDamageMessage(message) {
     const part = damage.damages.find(d => (d.type === heroic.type) && sameProps(d)) ?? damage.damages.find(d => d.type === heroic.type);
     if ( part ) part.value = rerolledDamage(part.value, heroic.old, heroic.now);
   }
-  // Sort renforcé (Métamagie) : des dés de dégâts d'un sort relancés contre 1 point de sorcellerie ; mêmes parts de l'agrégat.
-  // Surcharge (Évocateur 14) d'abord : des dés au maximum n'ont plus rien à relancer.
+  // Empowered Spell (Metamagic): a spell's damage dice rerolled for 1 sorcery point; same aggregate shares.
+  // Overchannel (Evoker 14) first: dice at maximum have nothing left to reroll.
   const maxed = actor ? await offerOverchannel(actor, message, game.messages.get(damage.origin ?? "") ?? null) : [];
   for ( const delta of [...maxed, ...((actor && !maxed.length) ? await offerSpellDamageRerolls(actor, message) : [])] ) {
     const sameProps = d => (d.properties.size === delta.properties.length) && delta.properties.every(p => d.properties.has(p));
@@ -183,7 +186,7 @@ export async function onDamageMessage(message) {
 }
 
 /** Le porteur auquel se rapporte un jet de sauvegarde. */
-/** Issue #32 : cette sauvegarde est-elle attendue par une résolution du moteur (qui a sa propre pause) ? */
+/** Issue #32: is this save awaited by an engine resolution (which has its own pause)? */
 export function saveInResolution(message) {
   const save = readSaveMessage(message);
   const carrierId = save?.actor ? carrierOfSave(save) : null;
@@ -200,44 +203,44 @@ export async function onSaveMessage(message) {
   const carrierId = save?.actor ? carrierOfSave(save) : null;
   const carrier = game.messages.get(carrierId);
   const resolution = resolutionOn(carrier);
-  if ( !resolution ) return;   // sauvegarde libre, hors de toute résolution
+  if ( !resolution ) return;   // free save, outside any resolution
   await waitForDice(message);
   const dc = resolution.plan?.save?.dc;
-  // §282 : l'Inspiration héroïque d'abord (un personnage joueur : pas de Résistance légendaire à départager).
+  // §282: Heroic Inspiration first (a player character: no Legendary Resistance to arbitrate).
   const saver = await fromUuid(save.actor);
   const heroic = hasHeroic(saver) ? await offerHeroicD20(saver, { roll: message.rolls?.[0], what: loc("Inspiration.Sauvegarde"), needed: dc }) : null;
   if ( heroic ) save.total = heroic.total;
   const failed = Number.isFinite(dc) && (save.total < dc);
-  // Une intention peut imposer le choix (`legendary: "always" | "never"` sur l'utilisation : scénarios, macros), comme `saveChoice`.
+  // An intention can impose the choice (`legendary: "always" | "never"` on the use: scenarios, macros), like `saveChoice`.
   const forced = game.messages.get(resolution.origin ?? carrierId)?.getFlag(MODULE_ID, "legendary") ?? carrier.getFlag(MODULE_ID, "legendary");
   let resisted = failed ? await legendaryResistance(message, { dc, item: carrier.getAssociatedActivity?.()?.item?.name, forced }) : false;
-  // Bâton d'envoûtement : « si vous ratez un jet de sauvegarde contre un sort d'enchantement qui ne cible que vous, vous pouvez
-  // changer cet échec en réussite » (`saveResist`) — proposé au porteur, sur les utilisations de l'activité de l'objet.
+  // Staff of Charming: "if you fail a saving throw against an enchantment spell that targets only you, you can
+  // turn your failure into a success" (`saveResist`) — offered to the bearer, on uses of the item's activity.
   if ( failed && !resisted ) resisted = await declaredSaveResist(saver, carrier, resolution, { total: save.total, dc });
-  // §33 : Inspiration bardique — une sauvegarde ratée : la créature inspirée peut ajouter son dé.
+  // §33: Bardic Inspiration — a failed save: the inspired creature may add its die.
   let total = save.total;
   if ( failed && !resisted ) {
     const actor = await fromUuid(save.actor);
     const bonus = actor ? await offerInspiration(actor, { what: loc("Inspiration.Sauvegarde"), total, needed: dc }) : 0;
     if ( bonus ) { log(`${actor.name}: Bardic Inspiration, saving throw ${total} + ${bonus} = ${total + bonus}`); total += bonus; }
-    // §38 : Chance du ténébreux — encore ratée, la créature peut ajouter son propre dé (`rollBonus`).
+    // §38: Dark One's Own Luck — still missed, the creature may add its own die (`rollBonus`).
     const luck = (actor && (total < dc)) ? await offerRollBonus(actor, { kind: "save", what: loc("Inspiration.Sauvegarde"), total, needed: dc, statuses: saveStatuses(carrier, resolution), d20: heroic?.kept ?? keptD20(message.rolls?.[0]), ability: resolution.plan?.save?.ability ?? null }) : 0;
     if ( luck ) { log(`${actor.name}: die added to their saving throw, ${total} + ${luck} = ${total + luck}`); total += luck; }
   }
-  // Issue #32 : succès à un prix — encore ratée de 1 ou 2 après les aides : la pause du MJ, avant que rien ne soit appliqué.
+  // Issue #32: success at a cost — still missed by 1 or 2 after the aids: the GM's pause, before anything is applied.
   let atCost = null;
   if ( Number.isFinite(dc) && (total < dc) && !resisted ) {
     const saverDoc = saver ?? await fromUuid(save.actor);
     const answer = await holdForAtCost({ actor: saverDoc, token: saverDoc?.token ?? null, what: loc("Inspiration.Sauvegarde"), total, needed: dc, kind: "save" });
     if ( answer?.accepted ) atCost = { cost: answer.cost ?? null };
   }
-  // §133 : Maître des boucliers, Interposer le bouclier — une sauvegarde de Dextérité réussie contre des dégâts réduits de moitié : la
-  // Réaction pour n'en subir aucun.
+  // §133: Shield Master, Interpose Shield — a successful Dexterity save against damage halved: the
+  // Reaction to take none.
   const plan = resolution.plan ?? {};
   const halfDex = !!plan.damage && !!plan.save && !plan.save.chained && (plan.save.ability === "dex") && ((plan.save.onSave ?? "half") === "half");
   const interposed = (halfDex && Number.isFinite(dc) && ((total >= dc) || atCost)) ? await offerInterpose(await fromUuid(save.actor)) : false;
-  // Bâton d'envoûtement, Renvoyer l'enchantement : une sauvegarde réussie contre un sort d'enchantement qui ne cible que le
-  // porteur — sa Réaction et 1 charge pour retourner le sort contre son lanceur (`saveReflect`).
+  // Staff of Charming, Reflect Enchantment: a successful save against an enchantment spell that targets only the
+  // bearer — their Reaction and 1 charge to turn the spell back on its caster (`saveReflect`).
   const succeeded = Number.isFinite(dc) && !atCost && ((total >= dc) || !!resisted);
   const reflect = succeeded ? await declaredSaveReflect(saver, carrier, resolution) : null;
   await dispatcher.send(carrierId, { type: "saveRolled", actor: save.actor, total, messageId: message.id, ...(save.mode ? { mode: save.mode } : {}), ...(resisted ? { resisted: true } : {}),
@@ -245,7 +248,7 @@ export async function onSaveMessage(message) {
   if ( reflect ) await reflectSpell(reflect, saver, carrier);
 }
 
-/** `saveReflect` : proposé au porteur qui a une charge et sa Réaction ; accepté, la charge et la Réaction sont dépensées. */
+/** `saveReflect`: offered to the bearer who has a charge and their Reaction; accepted, the charge and the Reaction are spent. */
 async function declaredSaveReflect(saver, carrier, resolution) {
   const spell = carrier?.getAssociatedActivity?.()?.item;
   if ( !saver || !spell?.actor || (spell.actor === saver) ) return null;
@@ -274,8 +277,8 @@ async function declaredSaveReflect(saver, carrier, resolution) {
 }
 
 /**
- * Le sort retourné « comme si vous l'aviez lancé » : une copie du sort sur le porteur (son DD, sa caractéristique), marquée et
- * remplacée au renvoi suivant, dont l'activité joue contre le lanceur d'origine — rien d'autre n'est dépensé.
+ * The spell turned back "as if you had cast it": a copy of the spell on the bearer (their DC, their ability), marked and
+ * replaced at the next reflection, whose activity plays against the original caster — nothing else is spent.
  */
 async function reflectSpell(reflect, saver, carrier) {
   const original = carrier.getAssociatedActivity();
@@ -300,8 +303,8 @@ async function reflectSpell(reflect, saver, carrier) {
 }
 
 /**
- * §94 : les états qu'une sauvegarde évite (ceux des effets de l'activité) ou fait finir (l'effet d'une sauvegarde répétée) — Survivant,
- * « pour éviter ou mettre fin à l'état Charmé ou Effrayé ».
+ * §94: the conditions a save avoids (those of the activity's effects) or ends (the effect of a repeated save) — Survivor,
+ * "to avoid or end the Charmed or Frightened condition".
  */
 function saveStatuses(carrier, resolution) {
   const out = new Set();
@@ -312,7 +315,7 @@ function saveStatuses(carrier, resolution) {
   return Array.from(out);
 }
 
-/** `saveResist` : un objet porté change la sauvegarde ratée en réussite, sur les utilisations de son activité ; demandé, jamais forcé. */
+/** `saveResist`: a carried item turns the failed save into a success, on uses of its activity; asked, never forced. */
 async function declaredSaveResist(saver, carrier, resolution, { total, dc }) {
   const spell = carrier?.getAssociatedActivity?.()?.item;
   if ( !saver || !spell ) return false;
@@ -336,8 +339,8 @@ async function declaredSaveResist(saver, carrier, resolution, { total, dc }) {
 }
 
 /**
- * §18.9 : un PNJ qui rate une sauvegarde peut dépenser une Résistance légendaire (réglage : demander, toujours, jamais).
- * La dépense passe par le système (`resistSave`) ; la résolution compte la sauvegarde réussie.
+ * §18.9: an NPC who fails a save may spend a Legendary Resistance (setting: ask, always, never).
+ * The spending goes through the system (`resistSave`); the resolution counts the save as successful.
  */
 async function legendaryResistance(message, { dc, item, forced=null }) {
   const mode = forced ?? game.settings.get(MODULE_ID, "legendaryResistance");

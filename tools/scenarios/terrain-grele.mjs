@@ -1,7 +1,7 @@
 /**
- * §261 : Tempête de grêle — « la zone devient un terrain difficile jusqu'à la fin de votre prochain tour ». En combat, le Magicien la
- * lance sur le Zombi : la zone du sort part après la résolution, une région de terrain difficile la remplace ; elle reste au tour du
- * Zombi, et part quand le prochain tour du Magicien se termine.
+ * §261: Ice Storm — "the area becomes Difficult Terrain until the end of your next turn". In combat, the Wizard casts it on the
+ * Zombie: the spell's area leaves after the resolution, a Difficult Terrain region replaces it; it stays during the Zombie's
+ * turn, and leaves when the Wizard's next turn ends.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -17,7 +17,7 @@ export default {
     ctx.restore(() => ctx.setHp(zombi, hp));
     await ctx.setHp(zombi, 100);
     const storm = await ctx.ensureItem(mage, "Compendium.dnd-players-handbook.spells.Item.phbsplIceStorm00");
-    // La liste du connecteur ne rend pas les drapeaux : chaque région est relue.
+    // The connector's list does not return the flags: each region is read again.
     const lingering = async () => {
       const out = [];
       for ( const r of (await ctx.call("list-scene-objects", { type: "Region" })).objects?.Region ?? [] ) {
@@ -40,12 +40,12 @@ export default {
     const used = await ctx.use({ tokenId: mage.id, itemId: storm, activityType: "save", area: { shape: "circle", x: b.x + b.width / 2, y: b.y + b.height / 2, radius: 2 * grid } });
     ctx.expect(used.used, "Tempête de grêle lancée");
     await ctx.settle(used.usageMessageId, { timeoutMs: 30000 }).catch(() => null);
-    await pause(6000);   // la zone instantanée part après la résolution (et le délai des animations)
+    await pause(6000);   // the instant area leaves after the resolution (and the animation delay)
     let left = await lingering();
     ctx.expect(left.length === 1, `une région de terrain difficile reste (${left.length})`);
     ctx.expect(JSON.stringify(left[0] ?? {}).includes("dnd5e.difficultTerrain"), "avec le comportement « terrain difficile » de dnd5e");
 
-    await ctx.nextTurn(); await pause(2500);   // fin du tour du Magicien (round de la pose) → tour du Zombi
+    await ctx.nextTurn(); await pause(2500);   // end of the Wizard's turn (round of placement) → the Zombie's turn
     ctx.expect((await lingering()).length === 1, "au tour du Zombi, le terrain est toujours là");
     await ctx.nextTurn(); await pause(2500);   // tour suivant du Magicien
     ctx.expect((await lingering()).length === 1, "au prochain tour du Magicien, toujours là");

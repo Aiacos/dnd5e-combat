@@ -1,11 +1,11 @@
 /**
- * B04 (§18.13) — Régénération déclarée : `regeneration: { amount, stoppedBy, stoppedWhile }` posée en drapeaux sur l'item (couche
- * « item » du contenu), qui l'emporte sur la lecture du texte anglais. La Régénération du Troll (Monster Manual) prêtée à l'Ours brun,
- * déclarée : 7 PV, coupée par les dégâts radiants (et plus par le feu), sans effet au soleil.
- *  1. Au début de son tour, l'Ours regagne exactement 7 PV (`amount` à la place de la formule de l'activité).
- *  2. Un Trait de feu de Kaalisti le touche : le feu n'est plus déclaré, il régénère quand même.
- *  3. La scène en plein jour (illumination globale vive, obscurité 0) : au début de son tour, pas de régénération.
- * Initiative imposée : Kaalisti, puis l'Ours. La scène et l'Ours sont remis comme avant.
+ * B04 (§18.13) — Declared Regeneration: `regeneration: { amount, stoppedBy, stoppedWhile }` set as flags on the item (the
+ * "item" layer of the content), which takes precedence over reading the English text. The Troll's Regeneration (Monster
+ * Manual) lent to the Brown Bear, declared: 7 HP, stopped by radiant damage (and no longer by fire), no effect in sunlight.
+ *  1. At the start of its turn, the Bear regains exactly 7 HP (`amount` instead of the activity's formula).
+ *  2. Kaalisti's Fire Bolt hits it: fire is no longer declared, it regenerates anyway.
+ *  3. The scene in broad daylight (bright global illumination, darkness 0): at the start of its turn, no regeneration.
+ * Initiative forced: Kaalisti, then the Bear. The scene and the Bear are restored as before.
  */
 const TROLL = "Compendium.dnd-monster-manual.actors.Actor.mmTroll000000000";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -26,7 +26,7 @@ export default {
     ctx.restore(() => ctx.call("update-scene-object", { type: "Token", objectId: bear.id,
       data: { "delta.flags.dnd5e-combat.-=regenerationStopped": null } }).catch(() => {}));
 
-    // La Régénération du Troll, déclarée par les drapeaux de l'item.
+    // The Troll's Regeneration, declared by the item's flags.
     const { data: troll } = await ctx.call("get-compendium-entry", { uuid: TROLL });
     const { _id, folder, ownership, _stats, ...itemData } = troll.items.find(i => i.system?.identifier === "regeneration");
     itemData.flags = { ...(itemData.flags ?? {}), "dnd5e-combat": { regeneration: { amount: 7, stoppedBy: ["radiant"], stoppedWhile: ["sunlight"] } } };
@@ -34,7 +34,7 @@ export default {
     const itemId = up.itemId ?? up.id ?? up.item?._id ?? (await ctx.itemId(bear.id, "regeneration"));
     ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: tok.actorId, itemId }).catch(() => {}));
 
-    // La scène de nuit pour les parties 1 et 2 (pas de soleil), remise comme avant à la fin.
+    // The night scene for parts 1 and 2 (no sunlight), restored as before at the end.
     const env = (await ctx.call("get-scene", { sceneId })).environment ?? {};
     const was = { "environment.globalLight.enabled": env.globalLight?.enabled ?? false, "environment.globalLight.bright": env.globalLight?.bright ?? false,
       "environment.darknessLevel": env.darknessLevel ?? 0 };
@@ -54,12 +54,12 @@ export default {
     };
     if ( !ctx.expect(await turnOf(warlock), "tour de Kaalisti") ) return;
 
-    // 1. Le montant déclaré.
+    // 1. The declared amount.
     await ctx.setHp(bear, 10);
     await ctx.nextTurn(); await sleep(2500);
     ctx.expect((await ctx.hp(bear)) === 17, `début du tour de l'Ours : +7 PV déclarés (10 → ${await ctx.hp(bear)} PV)`);
 
-    // 2. Le feu n'est plus ce qui la coupe.
+    // 2. Fire is no longer what stops it.
     if ( !ctx.expect(await turnOf(warlock), "tour de Kaalisti") ) return;
     await ctx.setHp(bear, 12);   // l'Ours n'a que 22 PV max : 12 - feu + 7 reste en dessous
     let hit = false;
@@ -73,7 +73,7 @@ export default {
     await ctx.nextTurn(); await sleep(2500);
     ctx.expect((await ctx.hp(bear)) === burnt + 7, `brûlé, mais seuls les dégâts radiants sont déclarés : régénère (${burnt} → ${await ctx.hp(bear)} PV)`);
 
-    // 3. Au soleil : le trait ne fonctionne pas.
+    // 3. In sunlight: the trait does not work.
     if ( !ctx.expect(await turnOf(warlock), "tour de Kaalisti") ) return;
     await ctx.call("update-scene", { sceneId, sceneData: { "environment.globalLight.enabled": true, "environment.globalLight.bright": true, "environment.darknessLevel": 0 } });
     await sleep(2000);

@@ -1,18 +1,19 @@
 /**
- * Briseur de concentration (§133, DF #244 du 2026-11-23, §521) : la créature concentrée que l'auteur vient de blesser a le Désavantage
- * à son jet de concentration. La marque n'était jamais posée (l'acteur blessé arrivait par son uuid) : Tueur de mages ne faisait rien.
- * Arène de test, Guerrier et Zombi au contact. Le Zombi se concentre sur un Rayon de lune prêté (`concentrate`), le Guerrier frappe jusqu'à toucher ; le moteur lance
- * la sauvegarde de concentration du Zombi (runtime/concentration.mjs) : on lit son jet.
- *  1. témoin, sans rien : sauvegarde sans Désavantage ;
- *  2. un don `mage-slayer` (item d'essai minimal : c'est l'identifiant que lit le moteur) : Désavantage, quelle que soit l'arme ;
- *  Une marque restée d'un coup précédent est effacée avant chaque coup : celle d'un coup doit valoir pour SA sauvegarde (§523).
- *  3. sans le don, `concentrationBreaker: "item"` sur l'épée à deux mains (surcouche du monde, #240) : Désavantage avec l'épée,
- *     pas avec une dague.
- * Remis en état : PV, concentration du Zombi, don, dague prêtée, surcouche, position du Zombi.
+ * Concentration Breaker (§133, DF #244 of 2026-11-23, §521): the concentrating creature that the author has just wounded has
+ * Disadvantage on its Concentration check. The mark was never placed (the wounded actor arrived by its uuid): Mage Slayer
+ * did nothing. Test arena, Fighter and Zombie in contact. The Zombie concentrates on a lent Moonbeam (`concentrate`), the
+ * Fighter strikes until a hit; the engine rolls the Zombie's Concentration saving throw (runtime/concentration.mjs): its roll
+ * is read.
+ *  1. control, with nothing: saving throw without Disadvantage;
+ *  2. a `mage-slayer` feat (minimal test item: it is the identifier the engine reads): Disadvantage, whatever the weapon;
+ *  A mark left from a previous hit is erased before each hit: the one from a hit must hold for ITS saving throw (§523).
+ *  3. without the feat, `concentrationBreaker: "item"` on the greatsword (world overlay, #240): Disadvantage with the greatsword,
+ *     not with a dagger.
+ * Restored: HP, the Zombie's Concentration, feat, lent dagger, overlay, the Zombie's position.
  */
 const MODULE_ID = "dnd5e-combat";
 const DAGGER = "Compendium.dnd-players-handbook.equipment.Item.phbwepDagger0000";
-// Un sort à concentration prêté au Zombi : dnd5e refuse `beginConcentrating` sur un objet qui n'en demande pas.
+// A Concentration spell lent to the Zombie: dnd5e refuses `beginConcentrating` on an item that does not ask for it.
 const MOONBEAM = "Compendium.dnd-players-handbook.spells.Item.phbsplMoonbeam00";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -43,8 +44,8 @@ export default {
     const dagger = await ctx.ensureItem(warrior, DAGGER, { ready: true });
 
     /**
-     * Le Zombi concentré, le Guerrier frappe avec `identifier` jusqu'à toucher (20 essais) ; rend le jet de la sauvegarde de
-     * concentration qui suit : `{ mode, formula }` (`mode` : -1 Désavantage), ou null.
+     * The Zombie concentrating, the Fighter strikes with `identifier` until a hit (20 tries); returns the roll of the
+     * Concentration saving throw that follows: `{ mode, formula }` (`mode`: -1 Disadvantage), or null.
      */
     const strike = async (identifier, label) => {
       for ( let i = 0; i < 20; i++ ) {
@@ -76,7 +77,7 @@ export default {
     };
     const disadvantaged = s => !!s && ((s.mode === -1) || /kl/.test(s.formula));
 
-    // 1. Témoin.
+    // 1. Control.
     const plain = await strike("greatsword", "témoin");
     ctx.expect(!!plain && !disadvantaged(plain), `sans briseur : sauvegarde de concentration normale (${plain?.formula})`);
 
@@ -91,7 +92,7 @@ export default {
     ctx.expect(disadvantaged(slayerDagger), `Tueur de mages : aussi avec une autre arme (${slayerDagger?.formula})`);
     await ctx.call("remove-embedded-item", { documentType: "Actor", id: wTok.actorId, itemId: featId }).catch(() => {});
 
-    // 3. Limité à l'arme : l'épée à deux mains seulement.
+    // 3. Limited to the weapon: the greatsword only.
     const { before } = await ctx.engine("overrideContent", { identifier: "greatsword", entry: { concentrationBreaker: "item" } });
     ctx.restore(() => ctx.engine("overrideContent", { identifier: "greatsword", entry: before }).catch(() => {}));
     const sword = await strike("greatsword", "forme « item », épée");

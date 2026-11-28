@@ -1,8 +1,8 @@
 /**
- * §329, lot K8 de la repasse des créatures : poussées et tractions lues dans le texte des monstres (`monsterPushes`). Arène des sorts : le
- * Lanceur (PNJ) et la Cible.
- *  - Lancer de marteau du Géant du feu : au toucher, la Cible est repoussée de 15 ft (3 cases) ;
- *  - Tourbillon de l'Élémentaire de l'air : sur un échec, repoussée de 20 ft (4 cases).
+ * §329, batch K8 of the creature pass: pushes and pulls read in the monsters' text (`monsterPushes`). Spell arena: the
+ * Caster (NPC) and the Target.
+ *  - Fire Giant's Hurl Hammer: on a hit, the Target is pushed back 15 ft (3 cells);
+ *  - Air Elemental's Whirlwind: on a failure, pushed back 20 ft (4 cells).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -39,7 +39,7 @@ export default {
       return r.id;
     };
     const place = async () => {
-      // Deux rangées plus bas que la Cible : rien à l'est pour arrêter la poussée.
+      // Two rows lower than the Target: nothing to the east to stop the push.
       const t0 = { x: homes.get(target.id).x, y: homes.get(target.id).y + 2 * grid };
       await ctx.call("move-token", { tokenId: caster.id, x: t0.x - grid, y: t0.y, elevation: 0 });
       await ctx.call("move-token", { tokenId: target.id, x: t0.x, y: t0.y, elevation: 0 });

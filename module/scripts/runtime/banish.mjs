@@ -1,10 +1,10 @@
 /**
- * §265 : le Bannissement réel (`banishes`, audit CAT / CPR) — « la cible est transportée dans un demi-plan inoffensif » (Bannissement,
- * Châtiment bannissant). La donnée ne pose que l'état Neutralisé : la cible restait sur la carte, ciblable. Quand l'effet déclaré se pose,
- * le token et son combattant sont cachés (rien ne le vise, ne le voit, ne l'entend) ; quand il tombe (sort terminé, concentration rompue),
- * il réapparaît dans l'espace quitté, ou, s'il est occupé, dans l'espace libre le plus proche (« la cible réapparaît dans l'espace
- * qu'elle a quitté ou, si celui-ci est occupé, dans l'espace inoccupé le plus proche »). Le bannissement définitif d'une créature
- * d'un autre plan au bout d'une minute reste au MJ. MJ actif.
+ * §265: the real Banishment (`banishes`, CAT / CPR audit) — "the target is transported to a harmless demiplane"
+ * (Banishment, Banishing Smite). The data only sets the Incapacitated condition: the target stayed on the map, targetable.
+ * When the declared effect is placed, the token and its combatant are hidden (nothing targets it, sees it, hears it); when it
+ * falls (spell ended, Concentration broken), it reappears in the space it left, or, if occupied, in the nearest free space
+ * ("the target reappears in the space it left or, if that is occupied, in the nearest unoccupied space"). The permanent
+ * banishment of a creature from another plane after a minute is left to the GM. Active GM.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -19,7 +19,7 @@ import { log, notice } from "./shared.mjs";
 
 const FLAG = "banished";
 
-/** L'effet vient-il d'un item qui bannit, par l'un de ses effets déclarés ? */
+/** Does the effect come from an item that banishes, through one of its declared effects? */
 function banishing(effect) {
   if ( effect.parent?.documentName !== "Actor" ) return false;
   const ids = contentOf(originItemOf(effect)).entry?.banishes ?? [];
@@ -49,7 +49,7 @@ async function onCreateEffect(effect) {
 async function onDeleteEffect(effect) {
   if ( !banishing(effect) ) return;
   const actor = effect.parent;
-  // Un autre bannissement tient encore : elle reste là-bas.
+  // Another banishment still holds: it stays over there.
   if ( actor.effects.some(e => (e.id !== effect.id) && banishing(e)) ) return;
   for ( const token of tokensOf(actor) ) {
     const state = token.getFlag(MODULE_ID, FLAG);
@@ -71,8 +71,9 @@ async function onDeleteEffect(effect) {
 }
 
 /**
- * §402 : un renvoi sans retour par le moteur (étape d'issue `banish` : Parole divine — « renvoyée sur son plan d'origine », 24 heures, hors
- * de la partie) : le token et son combattant sont cachés comme un bannissement, sans effet qui le ramène ; le MJ le rend visible s'il revient.
+ * §402: a send-back with no return by the engine (outcome step `banish`: Divine Word — "sent back to its plane of origin",
+ * 24 hours, out of the game): the token and its combatant are hidden like a banishment, with no effect that brings it back;
+ * the GM makes it visible if it returns.
  */
 export async function banishToken(token) {
   if ( !token || token.getFlag(MODULE_ID, FLAG) ) return false;

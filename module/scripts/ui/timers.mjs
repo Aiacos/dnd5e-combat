@@ -1,13 +1,13 @@
 /**
- * §272 : minuteries au-dessus des tokens, vues de toute la table — un geste qui prend du temps (fouille, désamorçage…) montre, au-dessus
- * du token, un engrenage qui tourne et une jauge arrondie au filet blanc, remplie du dégradé du logo DAS (core/timers.mjs) ; les secondes
- * restantes à droite, sauf si la table les masque (réglage de monde `timerHideSeconds`).
+ * §272: timers above tokens, seen by the whole table — a gesture that takes time (searching, disarming…) shows, above
+ * the token, a turning gear and a rounded gauge with a white outline, filled with the DAS logo gradient (core/timers.mjs); the
+ * remaining seconds on the right, unless the table hides them (world setting `timerHideSeconds`).
  *
- * Chaque client la dessine lui-même, dans `canvas.interface`, au-dessus du token à sa position affichée, et seulement s'il voit le token
- * (`Token#isVisible` : caché par le MJ, hors de vue — rien). `start` la lance chez ce client et la diffuse aux autres (requête
- * `dnd5e-combat.timer`) ; `stop` l'arrête partout (geste interrompu). Rien n'est écrit dans un document.
+ * Each client draws it itself, in `canvas.interface`, above the token at its displayed position, and only if it sees the token
+ * (`Token#isVisible`: hidden by the GM, out of sight — nothing). `start` launches it on this client and broadcasts it to the
+ * others (request `dnd5e-combat.timer`); `stop` stops it everywhere (interrupted gesture). Nothing is written to a document.
  *
- * API pour les voisins : `api.ui.timer({ token, seconds, label?, icon?, id? })` → `{ id, done: Promise<void>, stop() }`.
+ * API for neighbours: `api.ui.timer({ token, seconds, label?, icon?, id? })` → `{ id, done: Promise<void>, stop() }`.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -18,7 +18,7 @@ import { loc } from "../runtime/shared.mjs";
 export const TIMER_QUERY = `${MODULE_ID}.timer`;
 export const TIMER_HIDE_SECONDS = "timerHideSeconds";
 
-/** Les minuteries en cours sur ce client, par id. */
+/** The timers running on this client, by id. */
 const timers = new Map();
 let layer = null;
 let gradient = null;
@@ -34,7 +34,7 @@ function layerOf() {
   return layer;
 }
 
-/** La texture du dégradé DAS (une bande de 256 × 1 px), créée une fois. */
+/** The DAS gradient texture (a 256 × 1 px strip), created once. */
 function gradientTexture() {
   if ( gradient && !gradient.destroyed ) return gradient;
   const c = document.createElement("canvas");
@@ -48,7 +48,7 @@ function gradientTexture() {
   return gradient;
 }
 
-/** Le dessin d'une minuterie : engrenage, fond, remplissage masqué en coins arrondis, filet blanc, secondes. */
+/** A timer's drawing: gear, background, fill masked with rounded corners, white outline, seconds. */
 function build(timer) {
   const size = canvas.grid.size;
   const w = TIMER_LAYOUT.width * size;
@@ -81,12 +81,12 @@ function build(timer) {
   return { root, icon, fill, seconds, width: w, height: h };
 }
 
-/** À chaque image : position au-dessus du token, visibilité, rotation de l'engrenage, remplissage, secondes ; fin. */
+/** At each frame: position above the token, visibility, gear rotation, fill, seconds; end. */
 function tick(ticker) {
   const now = Date.now();
   for ( const timer of [...timers.values()] ) {
-    // Le temps écoulé termine la minuterie même sans son token (supprimé, ou d'une scène que ce client ne regarde pas) : sinon `done`
-    // ne se résout jamais et le ticker tourne jusqu'au prochain changement de scène.
+    // Elapsed time ends the timer even without its token (deleted, or on a scene this client is not viewing): otherwise `done`
+    // never resolves and the ticker runs until the next scene change.
     const state = timerState(timer, now);
     if ( state.done ) { finish(timer.id); continue; }
     const token = canvas.tokens?.get(timer.tokenId);
@@ -122,13 +122,13 @@ function finish(id) {
   timer.resolve?.();
 }
 
-/** Chez ce client : une minuterie (ou son arrêt). */
+/** On this client: a timer (or its stop). */
 function receive({ action="start", id, token, seconds, label="", icon="gear", startedAt=null }={}) {
   if ( action === "stop" ) { finish(id); return true; }
   const doc = fromUuidSync(token ?? "", { strict: false });
   if ( !doc || !(seconds > 0) ) return false;
   finish(id);
-  // L'heure de départ de l'émetteur, si elle est plausible (horloges voisines), sinon maintenant.
+  // The sender's start time, if it is plausible (neighbouring clocks), otherwise now.
   const began = (Number.isFinite(startedAt) && (Math.abs(Date.now() - startedAt) < 5000)) ? startedAt : Date.now();
   timers.set(id, { id, tokenId: doc.id, seconds, label, icon, startedAt: began, view: null });
   startTicking();
@@ -143,7 +143,7 @@ function broadcast(payload) {
 }
 
 /**
- * Lance une minuterie au-dessus d'un token, chez tous les clients connectés.
+ * Starts a timer above a token, on all connected clients.
  * @param {{token: TokenDocument|Token|string, seconds: number, label?: string, icon?: string, id?: string}} options
  * @returns {{id: string, done: Promise<void>, stop: Function}}
  */

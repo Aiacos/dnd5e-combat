@@ -1,29 +1,29 @@
 /**
- * L'abri (SPEC §14.1, P1 b ; règles 2024 et méthode du DMG sur quadrillage) : depuis un coin de
- * l'espace de l'attaquant — le meilleur pour lui —, tracer une ligne vers chacun des quatre coins
- * de l'espace de la cible. Aucune ligne bloquée : pas d'abri ; une ou deux : abri partiel (+2 CA) ;
- * trois : abri supérieur (+5) ; quatre : abri total (intouchable). Une créature interposée
- * ne donne jamais plus qu'un abri partiel (2024), qu'elle soit alliée ou ennemie de la cible.
+ * Cover (SPEC §14.1, P1 b; 2024 rules and the DMG grid method): from a corner of
+ * the attacker's space — the best one for them —, draw a line to each of the four corners
+ * of the target's space. No line blocked: no cover; one or two: half cover (+2 AC);
+ * three: three-quarters cover (+5); four: total cover (untargetable). An interposed creature
+ * never gives more than half cover (2024), whether it is an ally or an enemy of the target.
  *
- * Géométrie en pixels ; ce qui bloque une ligne (murs, surfaces) est un prédicat fourni par
- * l'adaptateur. Les coins sont rentrés d'un peu (`inset`) : une ligne qui longe exactement un mur
- * ou frôle le coin d'une créature ne compte pas. Un coin que le mur sépare du centre de sa créature (case coupée par un mur de
- * grotte) est ramené devant le mur (§239). Fonctions pures, aucune dépendance à Foundry.
+ * Geometry in pixels; what blocks a line (walls, surfaces) is a predicate supplied by
+ * the adapter. The corners are inset slightly (`inset`): a line that runs exactly along a wall
+ * or grazes a creature's corner does not count. A corner that the wall separates from its creature's center (cell cut by a
+ * cave wall) is brought back in front of the wall (§239). Pure functions, no dependency on Foundry.
  */
 
-/** Tailles dont le corps, même mort, reste un obstacle (demande de l'utilisateur 2026-09-26). */
+/** Sizes whose body, even dead, remains an obstacle (user request 2026-09-26). */
 const CORPSE_COVER_SIZES = Object.freeze(["lg", "huge", "grg"]);
 
 /**
- * Le corps d'une créature interposée donne-t-il l'abri ? Vivante, toujours ; morte, seulement si elle est Grande ou plus
- * (un cadavre de taille moyenne ou moins, couché au sol, ne couvre pas).
+ * Does an interposed creature's body give cover? Alive, always; dead, only if it is Large or larger
+ * (a Medium or smaller corpse, lying on the ground, does not cover).
  * @param {{dead: boolean, size?: string}} body
  */
 export function bodyGivesCover({ dead, size }) {
   return !dead || CORPSE_COVER_SIZES.includes(size);
 }
 
-/** Les degrés d'abri et leur bonus à la CA ; `null` = intouchable. */
+/** The cover degrees and their bonus to AC; `null` = untargetable. */
 export const COVER = Object.freeze({
   none: { bonus: 0 },
   half: { bonus: 2 },
@@ -33,7 +33,7 @@ export const COVER = Object.freeze({
 
 const DEGREES = ["none", "half", "half", "threeQuarters", "total"];
 
-/** §172 : le plus fort de deux degrés d'abri. */
+/** §172: the stronger of two cover degrees. */
 export function strongerCover(a, b) {
   const rank = d => ["none", "half", "threeQuarters", "total"].indexOf(d);
   return rank(b) > rank(a) ? b : a;
@@ -47,7 +47,7 @@ export function strongerCover(a, b) {
  * @property {number} height
  */
 
-/** Le rectangle rentré de `inset` de chaque côté (jamais au-delà de son centre). */
+/** The rectangle inset by `inset` on each side (never beyond its center). */
 export function shrink(rect, inset) {
   const dx = Math.min(inset, rect.width / 2 - 1e-6);
   const dy = Math.min(inset, rect.height / 2 - 1e-6);
@@ -59,7 +59,7 @@ export function corners({ x, y, width, height }) {
   return [{ x, y }, { x: x + width, y }, { x, y: y + height }, { x: x + width, y: y + height }];
 }
 
-/** Le segment [a, b] traverse-t-il l'INTÉRIEUR du rectangle ? (Liang–Barsky ; longer un bord ne compte pas) */
+/** Does the segment [a, b] cross the INTERIOR of the rectangle? (Liang–Barsky; running along an edge does not count) */
 export function segmentCrossesRect(a, b, rect) {
   const eps = 1e-6;
   const x0 = rect.x + eps, y0 = rect.y + eps, x1 = rect.x + rect.width - eps, y1 = rect.y + rect.height - eps;
@@ -71,13 +71,13 @@ export function segmentCrossesRect(a, b, rect) {
     if ( p < 0 ) { if ( r > t1 ) return false; if ( r > t0 ) t0 = r; }
     else { if ( r < t0 ) return false; if ( r < t1 ) t1 = r; }
   }
-  return t1 - t0 > 1e-9;   // une simple tangence (un coin effleuré) ne compte pas
+  return t1 - t0 > 1e-9;   // a simple tangency (a brushed corner) does not count
 }
 
 /**
- * §239 : les coins (rentrés) d'un espace, chacun ramené par `clip` vers le centre quand un mur les sépare. Sur une carte dont les murs
- * ne suivent pas la grille (une grotte), le coin d'une case peut tomber derrière le mur : la ligne qui y mène serait bloquée quel que
- * soit l'attaquant, et la créature collée au mur aurait un demi-abri contre tout le monde (issue #14).
+ * §239: the (inset) corners of a space, each brought back by `clip` toward the center when a wall separates them. On a map whose
+ * walls do not follow the grid (a cave), a cell's corner can fall behind the wall: the line leading to it would be blocked whatever
+ * the attacker, and the creature against the wall would have half cover against everyone (issue #14).
  */
 function clipped(rect, inset, clip) {
   const points = corners(shrink(rect, inset));
@@ -87,7 +87,7 @@ function clipped(rect, inset, clip) {
 }
 
 /**
- * Le point de `centre` vers `corner` arrêté à `margin` avant l'obstacle `hit` (null : rien entre les deux, le coin reste).
+ * The point from `centre` toward `corner` stopped `margin` before the obstacle `hit` (null: nothing between, the corner stays).
  * @param {{x,y}} centre
  * @param {{x,y}} corner
  * @param {{x,y}|null} hit
@@ -101,15 +101,15 @@ export function pullBack(centre, corner, hit, margin) {
   return { x: centre.x + ((corner.x - centre.x) * k), y: centre.y + ((corner.y - centre.y) * k) };
 }
 
-/** §476 : les choix « grille » d'un mur (configuration du mur, section « DAS · Grille »). */
+/** §476: a wall's "grate" choices (wall configuration, "DAS · Grille" section). */
 export const GRATE_MODES = Object.freeze(["auto", "grate", "solid"]);
 
 /**
- * §476 (retour de Fanarie, 2026-11-18) : ce mur qui arrête le déplacement est-il une grille (§468) ?
- *  - le choix du mur l'emporte : « grate » (grille), « solid » (mur plein) ;
- *  - sinon (« auto ») : le réglage de monde `grateWalls` — tout mur qui ne bloque pas la vue est une grille, sauf un mur posé par
- *    un sort (Mur de force : drapeau `zone`) ou marqué éthéré (§225), qui reste plein.
- * Une fenêtre (vue « proximité ») ou un mur de terrain (vue « limitée ») bloquent la vue : jamais grille d'office.
+ * §476 (feedback from Fanarie, 2026-11-18): is this wall that stops movement a grate (§468)?
+ *  - the wall's choice wins: "grate", "solid" (solid wall);
+ *  - otherwise ("auto"): the world setting `grateWalls` — any wall that does not block sight is a grate, except a wall placed by
+ *    a spell (Wall of Force: `zone` flag) or marked ethereal (§225), which stays solid.
+ * A window ("proximity" sight) or a terrain wall ("limited" sight) blocks sight: never a grate by default.
  * @param {{mode?: string, auto?: boolean, blocksSight?: boolean, spellWall?: boolean}} wall
  * @returns {boolean}
  */
@@ -120,9 +120,10 @@ export function grateOf({ mode="auto", auto=false, blocksSight=true, spellWall=f
 }
 
 /**
- * §518 (Discord, SpitFire, 2026-11-22) : l'abri d'une attaque passée outre un refus (« attaquer quand même »). Un abri total vaut d'ordinaire
- * un échec d'office (CA `null`, core/attack.mjs) : forcée, l'attaque aurait été lancée pour rien, sans dégâts. Le refus forcé va jusqu'au
- * bout : l'obstacle protège encore, au plus fort des abris qui laissent attaquer — trois quarts (+5). Les autres degrés ne changent pas.
+ * §518 (Discord, SpitFire, 2026-11-22): the cover of an attack made despite a refusal ("attack anyway"). Total cover usually means
+ * an automatic miss (AC `null`, core/attack.mjs): forced, the attack would have been rolled for nothing, without damage. The forced
+ * refusal is carried through: the obstacle still protects, at the strongest of the covers that allow attacking —
+ * three-quarters (+5). The other degrees do not change.
  * @param {{degree: string, bonus: number|null}|null} cover
  * @returns {object|null}
  */
@@ -132,11 +133,12 @@ export function forcedCover(cover) {
 }
 
 /**
- * §518 (Discord, SpitFire, 2026-11-22 : Restored Keep de Baileywiki) : une fenêtre est-elle ouverte pour CET attaquant ? Une fenêtre
- * Foundry arrête le déplacement et laisse passer la vue de qui est près d'elle (vue « proximité », seuil : `canvas/layers/walls.mjs:474`,
- * `Edge#applyThreshold`). Quand la vue de l'attaquant la traverse (seuil atteint), il tire par l'ouverture : elle ne coupe pas ses lignes
- * d'abri. Le choix du mur l'emporte (« grille », « mur plein » : une vitre fermée) ; un mur de sort ne s'ouvre jamais.
- * @param {{mode?: string, spellWall?: boolean, seenThrough?: boolean}} wall  `seenThrough` : seuil de vue atteint depuis l'attaquant.
+ * §518 (Discord, SpitFire, 2026-11-22: Baileywiki's Restored Keep): is a window open for THIS attacker? A Foundry window
+ * stops movement and lets the sight of whoever is near it through ("proximity" sight, threshold: `canvas/layers/walls.mjs:474`,
+ * `Edge#applyThreshold`). When the attacker's sight passes through it (threshold reached), they shoot through the opening: it
+ * does not cut their cover lines. The wall's choice wins ("grate", "solid wall": a closed pane); a spell wall never opens.
+ * @param {{mode?: string, spellWall?: boolean, seenThrough?: boolean}} wall  `seenThrough`: sight threshold reached from
+ *                                                                            the attacker.
  * @returns {boolean}
  */
 export function windowOpen({ mode="auto", spellWall=false, seenThrough=false }={}) {
@@ -145,21 +147,21 @@ export function windowOpen({ mode="auto", spellWall=false, seenThrough=false }={
 }
 
 /**
- * L'abri dont une cible bénéficie contre un attaquant.
+ * The cover a target benefits from against an attacker.
  * @param {object} context
- * @param {Rect} context.attacker                     Espace de l'attaquant.
- * @param {Rect} context.target                       Espace de la cible.
- * @param {Rect[]} [context.bodies]                   Espaces des autres créatures (ni l'attaquant, ni la cible).
- * @param {(a: {x,y}, b: {x,y}) => boolean|string} [context.blocked]  Un obstacle (mur, surface) coupe-t-il la ligne ? Une chaîne
- *                                                    (« wall », « surface ») dit lequel (#33 : sources de l'abri) ; `true` vaut « wall ».
- *                                                    « grate » (§468) : seulement une grille — jamais plus qu'un abri supérieur.
- * @param {number} [context.inset]                    Retrait des coins et des corps, en pixels.
- * @param {(centre: {x,y}, corner: {x,y}) => {x,y}} [context.clipAttacker]  §239 : ramène un coin de l'attaquant du côté des murs
- *                                                    où se trouve son centre (un coin dans la roche n'est pas son espace).
- * @param {(centre: {x,y}, corner: {x,y}) => {x,y}} [context.clipTarget]    §239 : de même pour la cible.
+ * @param {Rect} context.attacker                     The attacker's space.
+ * @param {Rect} context.target                       The target's space.
+ * @param {Rect[]} [context.bodies]                   Spaces of the other creatures (neither the attacker nor the target).
+ * @param {(a: {x,y}, b: {x,y}) => boolean|string} [context.blocked]  Does an obstacle (wall, surface) cut the line? A string
+ *                                                    ("wall", "surface") says which (#33: cover sources); `true` means "wall".
+ *                                                    "grate" (§468): only a grate — never more than three-quarters cover.
+ * @param {number} [context.inset]                    Inset of the corners and bodies, in pixels.
+ * @param {(centre: {x,y}, corner: {x,y}) => {x,y}} [context.clipAttacker]  §239: moves an attacker's corner to the walls' side
+ *                                                    where its center is (a corner inside the rock is not its space).
+ * @param {(centre: {x,y}, corner: {x,y}) => {x,y}} [context.clipTarget]    §239: likewise for the target.
  * @returns {{degree: "none"|"half"|"threeQuarters"|"total", bonus: number|null, blockedLines: number, byCreature: boolean,
- *            sources: string[]}}  `sources` : tout ce qui coupe les lignes du coin retenu (« wall », « surface », « creature »),
- *            même ce qui ne décide pas du degré.
+ *            sources: string[]}}  `sources`: everything that cuts the lines of the chosen corner ("wall", "surface", "creature"),
+ *            even what does not decide the degree.
  */
 export function coverBetween({ attacker, target, bodies=[], blocked=() => false, inset=0, clipAttacker=null, clipTarget=null }) {
   const from = clipped(attacker, inset, clipAttacker);
@@ -173,8 +175,8 @@ export function coverBetween({ attacker, target, bodies=[], blocked=() => false,
     const kinds = new Set();
     for ( const b of to ) {
       const hit = blocked(a, b);
-      // §468 : une grille (barreaux, herse) coupe la ligne sans être un abri total — elle compte comme un mur pour le degré, plafonné
-      // à l'abri supérieur ; sa source reste « wall ».
+      // §468: a grate (bars, portcullis) cuts the line without being total cover — it counts as a wall for the degree, capped
+      // at three-quarters cover; its source stays "wall".
       if ( hit === "grate" ) { walls++; grates++; kinds.add("wall"); }
       else if ( hit ) { walls++; kinds.add((typeof hit === "string") ? hit : "wall"); }
       else if ( solids.some(r => segmentCrossesRect(a, b, r)) ) creatures++;
@@ -184,10 +186,10 @@ export function coverBetween({ attacker, target, bodies=[], blocked=() => false,
     let byCreature = false;
     if ( (degree === "none") && creatures ) { degree = "half"; byCreature = true; }
     const rank = DEGREES.indexOf(degree);
-    // #33 : une créature qui coupe aussi des lignes de ce coin est citée, même quand le mur décide du degré (les abris ne
-    // s'additionnent pas : seul le plus fort compte).
+    // #33: a creature that also cuts lines from this corner is cited, even when the wall decides the degree (covers do not
+    // add up: only the strongest counts).
     if ( creatures ) kinds.add("creature");
-    // L'attaquant choisit le coin qui laisse le moins d'abri à sa cible.
+    // The attacker chooses the corner that leaves the least cover to its target.
     if ( !best || (rank < best.rank) ) best = { rank, degree, blockedLines: walls + (byCreature ? creatures : 0), byCreature, sources: [...kinds] };
     if ( best.rank === 0 ) break;
   }

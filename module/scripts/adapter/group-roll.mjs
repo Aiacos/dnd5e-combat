@@ -1,11 +1,11 @@
 /**
- * §242 (issue #18) : ce que les jets demandés par le MJ lisent de dnd5e — le titre du test, les arguments du jet de dnd5e, le détail
- * des bonus (pour une interface qui les montre en tuiles, à la manière de BG3), et l'état de la carte de demande.
+ * §242 (issue #18): what the rolls requested by the GM read from dnd5e — the check title, the dnd5e roll arguments, the breakdown
+ * of bonuses (for an interface that shows them as tiles, BG3 style), and the state of the request card.
  *
- * La carte est celle de dnd5e (`type: "request"`, data/chat-message/request-message-data.mjs) : une ligne par personnage, son total,
- * réussite ou échec. Chaque jet porte nos flags `groupRollResult` / `groupRollActor` ; le MJ actif le relie à sa ligne
- * (runtime/group-roll.mjs). Le gestionnaire du bouton de la carte est le nôtre (`CONFIG.DND5E.requests`, config.mjs:4778), pour que le
- * joueur qui clique tombe sur la même fenêtre que s'il avait reçu la demande.
+ * The card is dnd5e's (`type: "request"`, data/chat-message/request-message-data.mjs): one row per character, its total,
+ * success or failure. Each roll carries our flags `groupRollResult` / `groupRollActor`; the active GM links it to its row
+ * (runtime/group-roll.mjs). The card button's handler is ours (`CONFIG.DND5E.requests`, config.mjs:4778), so that the
+ * player who clicks lands on the same window as if they had received the request.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -13,24 +13,24 @@ import { tally } from "../core/group-roll.mjs";
 import { inspirationOf } from "./inspiration.mjs";
 
 export const GROUP_FLAG = "groupRoll";
-/** La clé du gestionnaire dans `CONFIG.DND5E.requests` (le champ `handler` de la carte). */
+/** The handler's key in `CONFIG.DND5E.requests` (the card's `handler` field). */
 export const GROUP_HANDLER = `${MODULE_ID}.groupRoll`;
 
 const abilityLabel = key => game.i18n.localize(CONFIG.DND5E.abilities?.[key]?.label ?? key ?? "");
 const skillLabel = key => game.i18n.localize(CONFIG.DND5E.skills?.[key]?.label ?? key ?? "");
 export const toolLabel = key => globalThis.dnd5e?.documents?.Trait?.keyLabel?.(key, { trait: "tool" }) ?? key ?? "";
 
-/** La caractéristique du test : celle demandée, sinon celle de la compétence ou de l'outil (sur la fiche, à défaut dans la config). */
+/** The check's ability: the requested one, otherwise that of the skill or tool (on the sheet, failing that in the config). */
 export function abilityOf(request, actor=null) {
   if ( (request.type === "check") || (request.type === "save") ) return request.key;
-  // §397 : l'initiative se lance avec la caractéristique de la fiche (Dextérité par défaut).
+  // §397: Initiative is rolled with the sheet's ability (Dexterity by default).
   if ( request.type === "initiative" ) return actor?.system?.attributes?.init?.ability || CONFIG.DND5E.defaultAbilities?.initiative || "dex";
   if ( request.ability ) return request.ability;
   if ( request.type === "skill" ) return actor?.system?.skills?.[request.key]?.ability ?? CONFIG.DND5E.skills?.[request.key]?.ability ?? "";
   return actor?.system?.tools?.[request.key]?.ability ?? CONFIG.DND5E.tools?.[request.key]?.ability ?? "int";
 }
 
-/** Le titre du test, dans les mots de dnd5e : « Test de Sagesse (Perspicacité) », « Sauvegarde de Force »… */
+/** The check title, in dnd5e's words: "Wisdom (Insight) Check", "Strength Saving Throw"… */
 export function testTitle(request) {
   const ability = abilityLabel(abilityOf(request));
   switch ( request.type ) {
@@ -42,7 +42,7 @@ export function testTitle(request) {
   }
 }
 
-/** Le nom court de ce qu'on lance : la compétence, l'outil ou la caractéristique. */
+/** The short name of what is rolled: the skill, the tool or the ability. */
 export function keyLabel(request) {
   if ( request.type === "skill" ) return skillLabel(request.key);
   if ( request.type === "tool" ) return toolLabel(request.key);
@@ -50,22 +50,22 @@ export function keyLabel(request) {
   return abilityLabel(request.key);
 }
 
-/** L'acteur sait-il faire ce jet ? (un véhicule n'a pas de compétences, un groupe rien) */
+/** Can the actor make this roll? (a vehicle has no skills, a group has none) */
 export function canRoll(actor, request) {
   if ( !actor?.system?.abilities ) return false;
   return (request.type !== "skill") || !!actor.system.skills;
 }
 
 /**
- * Les trois arguments du jet de dnd5e (`config`, `dialog`, `message`) pour un acteur.
- * @param {object} request          La demande normalisée.
+ * The three dnd5e roll arguments (`config`, `dialog`, `message`) for an actor.
+ * @param {object} request          The normalized request.
  * @param {object} options
- * @param {string} options.requestId  L'id de la carte de demande.
+ * @param {string} options.requestId  The id of the request card.
  * @param {Actor} options.actor
- * @param {boolean} [options.showDc]  Le DD entre dans le jet (dnd5e l'affiche) ; non quand il est caché à celui qui lance.
- * @param {{advantage?: boolean, disadvantage?: boolean, mode?: "advantage"|"disadvantage"|null}} [options.extra]  Ce que l'interface
- *   ajoute (Soutien : l'Avantage) ; `mode` force l'Avantage ou le Désavantage, quoi que disent la demande et la fiche.
- * @param {object} [options.flags]  Drapeaux d'autres modules à poser sur le message du jet (jamais ceux du moteur).
+ * @param {boolean} [options.showDc]  The DC goes into the roll (dnd5e displays it); no when it is hidden from the roller.
+ * @param {{advantage?: boolean, disadvantage?: boolean, mode?: "advantage"|"disadvantage"|null}} [options.extra]  What the UI
+ *   adds (Help: Advantage); `mode` forces Advantage or Disadvantage, whatever the request and the sheet say.
+ * @param {object} [options.flags]  Flags from other modules to put on the roll message (never those of the engine).
  */
 export function rollArguments(request, { requestId, actor, showDc=true, extra={}, flags={} }) {
   const config = {};
@@ -73,7 +73,7 @@ export function rollArguments(request, { requestId, actor, showDc=true, extra={}
   else if ( request.type !== "initiative" ) config[request.type] = request.key;
   if ( request.ability && ((request.type === "skill") || (request.type === "tool")) ) config.ability = request.ability;
   if ( (extra.mode === "advantage") || (extra.mode === "disadvantage") ) {
-    // Forcé : les deux écrits, pour l'emporter sur la fiche (dnd5e fusionne `config` par-dessus, actor.mjs:1394).
+    // Forced: both written, to override the sheet (dnd5e merges `config` on top, actor.mjs:1394).
     config.advantage = extra.mode === "advantage";
     config.disadvantage = extra.mode === "disadvantage";
   }
@@ -81,21 +81,21 @@ export function rollArguments(request, { requestId, actor, showDc=true, extra={}
     let advantage = !!(request.advantage || extra.advantage);
     let disadvantage = !!(request.disadvantage || extra.disadvantage);
     if ( advantage && disadvantage ) advantage = disadvantage = false;
-    // Rien d'écrit quand c'est non : dnd5e fusionne `config` par-dessus l'Avantage que la fiche donne (actor.mjs:1394).
+    // Nothing written when it is no: dnd5e merges `config` on top of the Advantage the sheet gives (actor.mjs:1394).
     if ( advantage ) config.advantage = true;
     if ( disadvantage ) config.disadvantage = true;
   }
   if ( showDc && (request.dc !== null) ) config.target = request.dc;
-  // Les parties d'un jet s'ajoutent à celles de la fiche (`config.parts = [...config.parts, ...parts]`, actor.mjs:1499). Les options du jet
-  // le marquent comme jet demandé : les dés « après avoir vu le jet » (Inspiration bardique…) passent alors par la demande, qui les compte
-  // (runtime/group-roll.mjs), pas par runtime/roll-bonus.mjs.
+  // A roll's parts are added to those of the sheet (`config.parts = [...config.parts, ...parts]`, actor.mjs:1499). The roll options
+  // mark it as a requested roll: "after seeing the roll" dice (Bardic Inspiration…) then go through the request, which counts them
+  // (runtime/group-roll.mjs), not through runtime/roll-bonus.mjs.
   config.rolls = [{ ...(request.bonus ? { parts: [String(request.bonus)] } : {}), options: { [MODULE_ID]: { groupRoll: requestId } } }];
   const flavor = request.label ? `${request.label} — ${testTitle(request)}` : testTitle(request);
   const message = { data: {
     flavor,
-    // `flags` : ce qu'une interface ajoute au message du jet (Combat UI : `dice-so-nice.skip`, ses dés remplacent ceux de Dice So Nice).
-    // `groupRollPending` : le test n'est pas conclu tant que les dés d'après le jet (Inspiration bardique…) ne sont pas tranchés
-    // (runtime/group-roll.mjs `bonusAfterRoll` le lève) — la carte, le verdict du groupe et le suivi du MJ attendent.
+    // `flags`: what an interface adds to the roll message (Combat UI: `dice-so-nice.skip`, its dice replace those of Dice So Nice).
+    // `groupRollPending`: the check is not concluded until the after-the-roll dice (Bardic Inspiration…) are settled
+    // (runtime/group-roll.mjs `bonusAfterRoll` lifts it) — the card, the group verdict and the GM tracking wait.
     flags: { ...flags, [MODULE_ID]: { groupRollResult: requestId, groupRollActor: actor.uuid, groupRollAids: extra.aids ?? [],
       groupRollForced: extra.mode ?? null, groupRollPending: true } }
   } };
@@ -103,13 +103,13 @@ export function rollArguments(request, { requestId, actor, showDc=true, extra={}
 }
 
 /**
- * Ce que dnd5e combine pour ce jet : les chemins de la fiche, la catégorie de règles (`check` / `save`) et les données de jet (`roll` rempli
- * comme dnd5e le fait : actor.mjs:1376-1385 compétence/outil, :1600-1605 test/sauvegarde).
+ * What dnd5e combines for this roll: the sheet paths, the rules category (`check` / `save`) and the roll data (`roll` filled in
+ * as dnd5e does: actor.mjs:1376-1385 skill/tool, :1600-1605 check/save).
  */
 function rollContext(actor, request) {
   const ability = abilityOf(request, actor);
   const rollData = actor.getRollData({ roll: true });
-  // §397 : les chemins du jet d'initiative de dnd5e (actor.mjs:1858).
+  // §397: the paths of dnd5e's Initiative roll (actor.mjs:1858).
   if ( request.type === "initiative" ) {
     rollData.roll = { ...(rollData.roll ?? {}), ability, type: "initiative" };
     return { category: "check", rollData, paths: [`abilities.${ability}.check.roll`, "attributes.init.roll", "rolls.ability.check"] };
@@ -124,10 +124,10 @@ function rollContext(actor, request) {
 }
 
 /**
- * L'Avantage et le Désavantage que dnd5e appliquera de lui-même à ce jet (fiche, effets, états, règles appliquées) — la même combinaison
- * que dnd5e au moment du jet (`D20RollModificationField.combineFields`, data/shared/d20-roll-modification-field.mjs:59 ; chemins et règles
- * comme documents/actor/actor.mjs:1386 pour une compétence ou un outil, :1606 pour un test ou une sauvegarde). Ce que décide une écoute
- * `dnd5e.preRoll…` au moment du jet (une règle du moteur) n'y est pas.
+ * The Advantage and Disadvantage that dnd5e will apply by itself to this roll (sheet, effects, conditions, applied rules) —
+ * the same combination as dnd5e at roll time (`D20RollModificationField.combineFields`,
+ * data/shared/d20-roll-modification-field.mjs:59; paths and rules as documents/actor/actor.mjs:1386 for a skill or a tool,
+ * and :1606 for a check or a save). What a `dnd5e.preRoll…` listener decides at roll time (an engine rule) is not in it.
  * @returns {{advantage: boolean, disadvantage: boolean}}
  */
 export function systemModeOf(actor, request) {
@@ -144,7 +144,7 @@ export function systemModeOf(actor, request) {
   }
 }
 
-/** La méthode de jet de dnd5e pour ce type. */
+/** dnd5e's roll method for this type. */
 export function rollMethodOf(actor, type) {
   if ( type === "initiative" ) return actor?.getInitiativeRollConfig ? (config, dialog, message) => rollInitiativeOf(actor, config, dialog, message) : null;
   const name = { check: "rollAbilityCheck", save: "rollSavingThrow", skill: "rollSkill", tool: "rollToolCheck" }[type];
@@ -152,10 +152,10 @@ export function rollMethodOf(actor, type) {
 }
 
 /**
- * §397 : le jet d'initiative d'un acteur pour une demande — la configuration de dnd5e (`Actor5e#getInitiativeRollConfig`, actor.mjs:1846 :
- * caractéristique, maîtrise, bonus, Surpris, Désavantage d'un ennemi caché…), l'Avantage / le Désavantage de la demande, son bonus, puis
- * le jet construit par dnd5e (`D20Roll.build`, sa fenêtre si `configure`) et son message, porteur des drapeaux de la demande. Le résultat
- * devient l'initiative du combattant chez le MJ actif (runtime/group-roll.mjs `link`).
+ * §397: an actor's Initiative roll for a request — dnd5e's configuration (`Actor5e#getInitiativeRollConfig`, actor.mjs:1846:
+ * ability, proficiency, bonus, Surprised, Disadvantage from a hidden enemy…), the request's Advantage / Disadvantage, its bonus,
+ * then the roll built by dnd5e (`D20Roll.build`, its window if `configure`) and its message, carrying the request's flags. The
+ * result becomes the combatant's Initiative with the active GM (runtime/group-roll.mjs `link`).
  */
 async function rollInitiativeOf(actor, config, dialog, message) {
   const rollConfig = actor.getInitiativeRollConfig({
@@ -175,14 +175,14 @@ async function rollInitiativeOf(actor, config, dialog, message) {
 }
 
 /* -------------------------------------------- */
-/*  Détail des bonus                            */
+/*  Bonus breakdown                             */
 /* -------------------------------------------- */
 
 const DICE = /[+-]?\s*\d*d\d+(?:[a-z]+\d*)*/gi;
 const signed = n => (n >= 0 ? `+${n}` : `${n}`);
 const changesOf = effect => effect.system?.changes ?? effect.changes ?? [];
 
-/** Les chemins de bonus (chaînes de dnd5e 6, avec dés possibles) qui comptent pour ce jet. */
+/** The bonus paths (dnd5e 6 strings, dice possible) that count for this roll. */
 function bonusPaths(request, ability) {
   const check = [`abilities.${ability}.check.roll.bonus`, "rolls.ability.check.bonus"];
   switch ( request.type ) {
@@ -195,8 +195,8 @@ function bonusPaths(request, ability) {
 }
 
 /**
- * Les clés d'avant dnd5e 6 qu'un effet écrit encore (l'Assistance du PHB : `system.skills.slt.bonuses.check`, vu en jeu le 2026-10-24)
- * et que dnd5e convertit en appliquant l'effet (common.mjs:96 et suivantes).
+ * The pre-dnd5e 6 keys that an effect still writes (the PHB's Guidance: `system.skills.slt.bonuses.check`, seen in play on
+ * 2026-10-24) and that dnd5e converts when applying the effect (common.mjs:96 and following).
  */
 function legacyPath(path) {
   let m;
@@ -206,7 +206,7 @@ function legacyPath(path) {
   return null;
 }
 
-/** L'effet actif qui écrit ce chemin, ou null. */
+/** The Active Effect that writes this path, or null. */
 function effectWriting(actor, path) {
   const keys = [`system.${path}`, legacyPath(path) && `system.${legacyPath(path)}`].filter(Boolean);
   for ( const effect of actor.appliedEffects ?? [] ) {
@@ -216,7 +216,7 @@ function effectWriting(actor, path) {
   return null;
 }
 
-/** L'image d'un effet pour une tuile : celle de son objet d'origine (le sort d'Assistance), sinon la sienne. */
+/** An effect's image for a tile: that of its source item (the Guidance spell), otherwise its own. */
 function effectImage(effect) {
   let origin = null;
   try { origin = effect.origin ? fromUuidSync(effect.origin, { strict: false }) : null; } catch { origin = null; }
@@ -225,11 +225,11 @@ function effectImage(effect) {
 }
 
 /**
- * Le détail de ce qui s'ajoute au d20, lu sur la fiche préparée (effets compris) — pour une interface qui montre une tuile par
- * source, à la manière de BG3. Indicatif : le jet de dnd5e fait foi (une règle appliquée au moment du jet n'y paraît pas).
+ * The breakdown of what is added to the d20, read from the prepared sheet (effects included) — for an interface that shows one
+ * tile per source, BG3 style. Indicative: the dnd5e roll is authoritative (a rule applied at roll time does not show in it).
  * @returns {Array<{kind: "ability"|"proficiency"|"bonus"|"dice"|"exhaustion"|"request"|"inspiration", label: string, value: string,
- *   img?: string, key?: string, reserve?: boolean}>}  `key` : la caractéristique (tuile `ability`) ; `reserve` : un dé qui ne s'ajoute
- *   qu'après un échec, si le joueur le veut (l'Inspiration bardique déjà reçue) — hors du bonus total.
+ *   img?: string, key?: string, reserve?: boolean}>}  `key`: the ability (`ability` tile); `reserve`: a die that is added only
+ *   after a failure, if the player wants it (Bardic Inspiration already received) — outside the total bonus.
  */
 export function breakdownOf(actor, request) {
   const system = actor?.system;
@@ -249,7 +249,8 @@ export function breakdownOf(actor, request) {
   if ( prof && (Number(prof.multiplier) > 0) && (Number(prof.flat) !== 0) ) {
     tiles.push({ kind: "proficiency", label: keyLabel(request), value: signed(Number(prof.flat)), multiplier: Number(prof.multiplier) });
   }
-  // §397 : l'initiative garde son bonus sous `roll.bonus` (dnd5e 6 : `attributes.init.bonus` est obsolète) ; des dés y sont lus plus bas.
+  // §397: Initiative keeps its bonus under `roll.bonus` (dnd5e 6: `attributes.init.bonus` is obsolete); dice are read from it
+  // further down.
   const numeric = Number((request.type === "initiative") ? (source?.roll?.bonus || 0) : (source?.bonus ?? 0)) || 0;
   if ( numeric ) tiles.push({ kind: "bonus", label: game.i18n.localize("DND5E.Bonus"), value: signed(numeric) });
 
@@ -264,10 +265,10 @@ export function breakdownOf(actor, request) {
         img: effect ? effectImage(effect) : null });
     }
   }
-  // dnd5e 6 : les bonus portés par des « règles appliquées » d'effets (`check:bonus`, `save:bonus`, et `d20:bonus` pour tout Test d20 —
-  // documents/applied-rules.mjs:57-62), filtrées par leurs conditions comme au jet (`filterWith`). Leurs parts fixes sont déjà dans le bonus
-  // de la fiche (`ruleBonus`, creature.mjs:300) ; leurs dés n'y sont pas — c'est ainsi qu'une Assistance posée par une règle échappait
-  // aux tuiles (vu par l'utilisateur le 2026-10-24).
+  // dnd5e 6: the bonuses carried by effects' "applied rules" (`check:bonus`, `save:bonus`, and `d20:bonus` for any d20 Test —
+  // documents/applied-rules.mjs:57-62), filtered by their conditions as at the roll (`filterWith`). Their flat parts are
+  // already in the sheet's bonus (`ruleBonus`, creature.mjs:300); their dice are not — that is how a Guidance placed by a rule
+  // escaped the tiles (seen by the user on 2026-10-24).
   const Rules = globalThis.dnd5e?.documents?.AppliedRules;
   if ( Rules ) {
     const { category, rollData } = rollContext(actor, request);
@@ -286,7 +287,7 @@ export function breakdownOf(actor, request) {
   if ( reduction ) tiles.push({ kind: "exhaustion", label: game.i18n.localize(CONFIG.DND5E.conditionTypes?.exhaustion?.name ?? "Exhaustion"),
     value: signed(reduction) });
   if ( request.bonus ) tiles.push({ kind: "request", label: "", value: signed(request.bonus) });
-  // Une Inspiration bardique déjà reçue : elle ne s'ajoute qu'après un échec (PHB 2024), au choix du joueur.
+  // A Bardic Inspiration already received: it is added only after a failure (PHB 2024), at the player's choice.
   const inspiration = inspirationOf(actor);
   if ( inspiration ) tiles.push({ kind: "inspiration", label: inspiration.bard, value: `+${inspiration.formula}`, reserve: true,
     img: inspiration.source?.img ?? null });
@@ -297,13 +298,13 @@ export function breakdownOf(actor, request) {
 /*  La carte                                    */
 /* -------------------------------------------- */
 
-/** La demande portée par une carte, ou null. */
+/** The request carried by a card, or null. */
 export function requestOf(message) {
   return message?.getFlag?.(MODULE_ID, GROUP_FLAG) ?? null;
 }
 
 /**
- * L'état d'une carte de demande : chaque personnage (acteur, joueur, total) et le compte (core/group-roll.mjs `tally`).
+ * The state of a request card: each character (actor, player, total) and the tally (core/group-roll.mjs `tally`).
  * @param {ChatMessage} message
  * @returns {object|null}  `{ id, request, entries: [{actor, uuid, name, img, user, total, status, success, message}], …tally }`.
  */
@@ -314,19 +315,19 @@ export function viewOf(message) {
     const actor = fromUuidSync(t.actor);
     const result = t.result ?? null;
     const roll = result?.rolls?.[0] ?? null;
-    // Le dé ajouté après le jet (Inspiration bardique…) compte dans le total (runtime/group-roll.mjs `bonusAfterRoll`).
+    // The die added after the roll (Bardic Inspiration…) counts toward the total (runtime/group-roll.mjs `bonusAfterRoll`).
     const bonus = result?.getFlag?.(MODULE_ID, "groupRollBonus") ?? null;
-    // En décision (dé d'Inspiration bardique proposé, pas encore tranché) : pas encore de total, le test attend.
+    // Pending a decision (Bardic Inspiration die offered, not yet settled): no total yet, the check waits.
     const deciding = result?.getFlag?.(MODULE_ID, "groupRollPending") === true;
     const total = (Number.isFinite(roll?.total) && !deciding) ? roll.total + (Number(bonus?.total) || 0) : null;
-    // Ce que le jet a eu : Avantage / Désavantage (D20Roll#hasAdvantage, dice/d20-roll.mjs), aides accordées, mode forcé.
+    // What the roll had: Advantage / Disadvantage (D20Roll#hasAdvantage, dice/d20-roll.mjs), aids granted, forced mode.
     return { uuid: t.actor, actor, name: actor?.name ?? "?", img: actor?.img ?? null, user: t.user?.id ?? null, total,
       d20: roll?.d20?.total ?? null, message: result?.id ?? null,
       advantage: !!roll?.hasAdvantage, disadvantage: !!roll?.hasDisadvantage,
       aids: [...(result?.getFlag?.(MODULE_ID, "groupRollAids") ?? []), ...(bonus?.parts ?? []).filter(p => p.helper)],
       forced: result?.getFlag?.(MODULE_ID, "groupRollForced") ?? null, bonus: Number(bonus?.total) || 0, deciding,
       rolled: Number.isFinite(roll?.total) ? roll.total : null,
-      // Issue #32 : accepté en succès à un prix (le MJ l'a offert, le joueur a dit oui) — `{ cost }`.
+      // Issue #32: accepted as a success at a cost (the GM offered it, the player said yes) — `{ cost }`.
       atCost: result?.getFlag?.(MODULE_ID, "atCost") ?? null,
       by: result?.author?.id ?? null };
   });

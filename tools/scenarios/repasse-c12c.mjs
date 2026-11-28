@@ -1,10 +1,10 @@
 /**
- * §311, sous-lot C12-c de la repasse terme par terme : invocations, compagnons, formes. Arène des sorts (Lanceur, Cible).
- * Chaque partie prête ses items depuis le Manuel des joueurs et remet tout.
- *  - Compagnon primitif : en combat, la bête du Lanceur ne peut attaquer (souci « sur ordre ») tant que le Lanceur ne l'a pas commandée ;
- *    après « Command », plus de souci ;
- *  - Appel de familier : une attaque du familier est un souci (« un familier ne peut pas attaquer ») ;
- *  - Plénitude stellaire : l'effet de résistances est éteint hors de la Forme stellaire, allumé quand elle est active.
+ * §311, sub-batch C12-c of the term-by-term review: summons, companions, forms. Spells Arena (Caster, Target).
+ * Each part lends its items from the Player's Handbook and restores everything.
+ *  - Primal Companion: in combat, the Caster's beast cannot attack ("on command" concern) until the Caster has commanded it;
+ *    after "Command", no more concern;
+ *  - Find Familiar: a familiar's attack is a concern ("a familiar cannot attack");
+ *  - Full of Stars: the Resistances effect is off outside Starry Form, on when it is active.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -51,7 +51,7 @@ export default {
       try { await fn(); } catch ( err ) { ctx.expect(false, `${name} : ${err.message}`); }
       await reset();
     };
-    /** L'item d'attaque d'un token invoqué (non lié) : le premier qui porte une activité d'attaque. */
+    /** The attack item of a summoned token (unlinked): the first that carries an attack activity. */
     const attackOf = async tokenId => {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: tokenId });
       const items = data.actorLink ? ((await ctx.call("get-actor", { actorId: data.actorId })).items ?? []) : [...((await ctx.call("get-actor", { actorId: data.actorId })).items ?? []), ...(data.delta?.items ?? [])];
@@ -96,9 +96,9 @@ export default {
       const full = await lend(`${PHB}.classes.Item.phbdrdFullOfStar`);
       await pause(2000);
       const fullEffect = async () => ((await ctx.call("get-actor", { actorId: caster.actorId })).items ?? []).find(i => i._id === full)?.effects?.find(e => e._id === "Z3dPVHxaYqTIvLPg");
-      // §438 : Manuel 3.0.0, l'item Plénitude stellaire n'a plus d'effet ; les résistances sont des changements de l'effet « Starry Form »,
-      // à condition (`classes.druid.levels` ≥ 14) — dnd5e les applique lui-même. Le Lanceur reçoit un Druide 14 le temps de la partie, et
-      // les résistances se lisent sur les données préparées.
+      // §438: Handbook 3.0.0, the Full of Stars item no longer has an effect; the Resistances are changes of the
+      // "Starry Form" effect, conditional (`classes.druid.levels` ≥ 14) — dnd5e applies them itself. The Caster receives
+      // a level 14 Druid for the duration of the part, and the Resistances are read from the prepared data.
       if ( !(await fullEffect()) ) {
         await lend(`${PHB}.classes.Item.phbdrdDruid00000`, { "system.levels": 14 });
         await pause(1000);
@@ -121,8 +121,8 @@ export default {
         return;
       }
       ctx.expect((await fullEffect())?.disabled === true, "hors de la Forme stellaire : pas de résistances");
-      // « Consume Wild Shape » pose sur le druide une copie de l'effet « Starry Form » (effet d'activité : allumer celui de l'item ne
-      // s'applique pas à l'acteur dans dnd5e 6).
+      // "Consume Wild Shape" places on the druid a copy of the "Starry Form" effect (an activity effect: turning on the item's one
+      // does not apply to the actor in dnd5e 6).
       await ctx.engine("placeItemEffect", { tokenId: caster.id, casterId: caster.id, itemId: starry, effectId: "orMzu14BYojAQkUm" });
       let on = false;
       for ( let n = 0; (n < 20) && !on; n++ ) { await pause(500); on = (await fullEffect())?.disabled === false; }

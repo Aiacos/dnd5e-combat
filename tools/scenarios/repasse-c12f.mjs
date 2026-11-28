@@ -1,11 +1,11 @@
 /**
- * §310, sous-lot C12-f de la repasse terme par terme : dégâts, soins, PV. Arène des sorts (Lanceur, Allié, Cible, Ennemi au contact, Héros).
- * Chaque partie prête ses items depuis le Manuel des joueurs et remet tout.
- *  - Défenses envoûtantes : l'Ennemi au contact touche le Lanceur ; la réaction (prise d'office) fait sauvegarder l'Ennemi ; ratée, il
- *    subit autant de dégâts psychiques que le Lanceur en a subi ;
- *  - Désintégration : le Héros (un personnage) à 5 PV, sauvegarde ratée — Mort, pas Inconscient ;
- *  - Toucher du médecin : la Main guérisseuse sur l'Allié Empoisonné lui retire l'état ;
- *  - Modification de mémoire : la Cible sous « Memory Modification » subit des dégâts — l'effet tombe.
+ * §310, sub-batch C12-f of the term-by-term pass: damage, healing, HP. Spell arena (Caster, Ally, Target, Enemy in contact, Hero).
+ * Each part borrows its items from the Player's Handbook and puts everything back.
+ *  - Bewitching Defenses: the Enemy in contact hits the Caster; the Reaction (taken automatically) makes the Enemy save;
+ *    on a failure, it takes as much psychic damage as the Caster took;
+ *  - Disintegrate: the Hero (a character) at 5 HP, failed saving throw — Dead, not Unconscious;
+ *  - Physician's Touch: Healing Hand on the Poisoned Ally removes the condition from it;
+ *  - Modify Memory: the Target under "Memory Modification" takes damage — the effect drops.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -119,8 +119,8 @@ export default {
       await ctx.setHp(ally, 10);
       await ctx.call("set-status", { tokenId: ally.id, statusId: "poisoned", active: true });
       await pause(1000);
-      // §438 : Manuel 3.0.0, le Toucher du médecin n'a plus d'activité ; c'est la Main guérisseuse du niveau 6 de Moine
-      // (`ugC7uePiAZLSL55l`, item Mains guérisseuses) qui retire l'état. Le Lanceur reçoit un Moine 6 le temps de la partie.
+      // §438: Manual 3.0.0, Physician's Touch no longer has an activity; it is the level 6 Monk's Healing Hand
+      // (`ugC7uePiAZLSL55l`, item Healing Hands) that removes the condition. The Caster gets a Monk 6 for the duration of the part.
       const own = ((await ctx.call("get-actor", { actorId: caster.actorId })).items ?? []).find(i => i._id === touch);
       if ( own?.system?.activities?.stWL2fvcxsh0HFw2 ) {
         await cast({ tokenId: caster.id, itemId: touch, activityId: "stWL2fvcxsh0HFw2", targetTokenIds: [ally.id], consume: false });

@@ -1,6 +1,6 @@
 /**
- * §317, sous-lot C12-j de la repasse terme par terme : divers. Arène des sorts (Lanceur).
- *  - Source d'inspiration : sans l'aptitude, un Repos court ne rend pas les Inspirations bardiques ; avec, il les rend toutes.
+ * §317, sub-batch C12-j of the term-by-term pass: miscellaneous. Spell arena (Caster).
+ *  - Font of Inspiration: without the feature, a Short Rest does not restore Bardic Inspirations; with it, it restores them all.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

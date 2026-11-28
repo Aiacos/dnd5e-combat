@@ -1,10 +1,10 @@
 /**
- * Épuisement (règles 2024, porté par dnd5e 6 : `CONFIG.DND5E.conditionTypes.exhaustion` — 6 niveaux, −2 par niveau aux Tests d20,
- * −5 ft de Vitesse par niveau, Mort au niveau 6). Le moteur ne le recalcule pas : vérifier qu'il en tient compte là où il agit.
- *  - Niveau 2 : sauvegarde et test avec −4 ; jet d'attaque avec −4 ; Vitesse −10 ft (fiche, et plafond de déplacement du moteur en
- *    combat) ; les chances de toucher du moteur suivent.
- *  - Niveau 6 : l'état Mort.
- *  - Retour à 0 : plus de malus, plus de Mort.
+ * Exhaustion (2024 rules, carried by dnd5e 6: `CONFIG.DND5E.conditionTypes.exhaustion` — 6 levels, −2 per level on d20 Tests,
+ * −5 ft Speed per level, Death at level 6). The engine does not recompute it: check that it accounts for it where it acts.
+ *  - Level 2: save and check with −4; attack roll with −4; Speed −10 ft (sheet, and the engine's movement cap in
+ *    combat); the engine's hit chances follow.
+ *  - Level 6: the Dead condition.
+ *  - Back to 0: no more penalty, no more Dead.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -49,7 +49,7 @@ export default {
     ctx.expect(has(c2?.formula ?? "", 4), `test avec −4 (« ${c2?.formula} »)`);
     const a2 = await attackFormula();
     ctx.expect(has(a2, 4), `jet d'attaque avec −4 (« ${a2} »)`);
-    // En combat : le plafond de déplacement du moteur suit la Vitesse réduite.
+    // In combat: the engine's movement cap follows the reduced Speed.
     await ctx.startCombat([fighter, bandit]);
     await pause(1500);
     const cap = (await ctx.engine("budget", { tokenId: fighter.id }))?.cap ?? null;
@@ -59,14 +59,14 @@ export default {
 
     // Niveau 6 : Mort.
     await setExh(6); await pause(2000);
-    // dnd5e ajoute « dead » aux états CALCULÉS de l'effet d'Épuisement (ConditionData#prepareDerivedData), pas à sa donnée : lu sur
-    // l'acteur préparé (`actor.statuses`, ce que le moteur consulte).
+    // dnd5e adds "dead" to the COMPUTED conditions of the Exhaustion effect (ConditionData#prepareDerivedData), not to its
+    // data: read on the prepared actor (`actor.statuses`, what the engine consults).
     const st6 = (await ctx.engine("stats", { tokenId: fighter.id }))?.statuses ?? [];
     ctx.expect(st6.includes("dead"), `niveau 6 : l'état Mort (${st6.join(", ")})`);
     const dead6 = await ctx.engine("issues", { tokenId: fighter.id, itemId: sword }).catch(() => null);
     ctx.log(`niveau 6 : ce que le moteur dit d'une attaque du Guerrier : ${JSON.stringify(dead6)}`);
 
-    // Retour à 0.
+    // Back to 0.
     await setExh(0); await pause(2000);
     const st0 = (await ctx.engine("stats", { tokenId: fighter.id }))?.statuses ?? [];
     ctx.expect(!st0.includes("exhaustion"), `niveau 0 : plus d'Épuisement (${st0.join(", ") || "aucun état"})`);

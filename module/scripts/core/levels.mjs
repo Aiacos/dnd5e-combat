@@ -1,28 +1,28 @@
 /**
- * Les trois niveaux d'automatisation (SPEC §117), du plus léger au plus complet :
- *  - `essentials` (Essentiel) : déplacement à la souris, A*, menus contextuels, budget du tour, vision et lumière, interface ; les
- *    jets restent ceux de dnd5e (cartes natives, rien de résolu par le moteur) ;
- *  - `assisted` (Assisté) : + la résolution (attaque → touché → dégâts appliqués, sauvegardes, effets de l'activité) et les règles
- *    générales du PHB valables pour toute créature (états, abri, concentration, 0 PV, attaques d'opportunité, actions de base) ;
- *  - `full` (Intégral) : + le contenu par objet (sorts, aptitudes, capacités de monstres, créations d'autres modules).
+ * The three automation levels (SPEC §117), from lightest to most complete:
+ *  - `essentials` (Essential): mouse movement, A*, context menus, turn budget, vision and light, interface; rolls
+ *    stay those of dnd5e (native cards, nothing resolved by the engine);
+ *  - `assisted` (Assisted): + resolution (attack → hit → damage applied, saving throws, the activity's effects) and the general
+ *    PHB rules valid for any creature (conditions, Cover, Concentration, 0 HP, Opportunity Attacks, basic actions);
+ *  - `full` (Full): + per-item content (spells, features, monster abilities, creations from other modules).
  *
- * Chaque fonction du point d'entrée (`register…()` de dnd5e-combat.mjs) a son niveau minimal ; au-dessous, elle s'enregistre
- * quand même (réglages, requêtes) mais n'écoute aucun hook (runtime/router.mjs, `suspended`). Le test vérifie que chaque
- * `register…()` du point d'entrée figure ici.
+ * Each function of the entry point (`register…()` of dnd5e-combat.mjs) has its minimum level; below it, it registers
+ * anyway (settings, queries) but listens to no hook (runtime/router.mjs, `suspended`). The test checks that every
+ * `register…()` of the entry point appears here.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
 export const LEVELS = Object.freeze(["essentials", "assisted", "full"]);
 export const DEFAULT_LEVEL = "full";
 
-/** Le rang d'un niveau (inconnu : le niveau par défaut). */
+/** The rank of a level (unknown: the default level). */
 export function levelRank(level) {
   const i = LEVELS.indexOf(level);
   return i >= 0 ? i : LEVELS.indexOf(DEFAULT_LEVEL);
 }
 
-/** Le niveau `level` comprend-il ce qui demande `min` ? */
+/** Does the level `level` include what requires `min`? */
 export function atLeast(level, min) {
   return levelRank(level) >= levelRank(min);
 }
@@ -31,21 +31,21 @@ const E = "essentials";
 const A = "assisted";
 const F = "full";
 
-/** Le niveau minimal de chaque `register…()` du point d'entrée. */
+/** The minimum level of each `register…()` of the entry point. */
 export const FEATURE_LEVELS = Object.freeze({
-  // Toujours : le socle, le déplacement, la souris, le budget du tour, la vision, l'interface.
+  // Always: the base, movement, the mouse, the turn budget, vision, the interface.
   registerPerf: E, registerFlow: E, registerGmQueue: E, registerContent: E, registerIcons: E, registerAltitude: E, registerClimb: E, registerFalls: E, registerKnockout: E, registerTheater: E, registerVanilla: E, registerCorrection: E, registerCorrectionUi: E, registerCombatLaunch: E, registerCombatLaunchUI: E, registerClimbSystem: E, registerActions: E, registerFollow: E, registerDoors: E, registerDoorLockUi: E, registerWallGrateUi: E, registerSceneBrightUi: E, registerCombatEvents: E, registerCombatOutcome: E, registerSkipDefeated: E,
   registerPointer: E, registerTurn: E, registerFormLock: F, registerAmmo: E, registerVision: E, registerSpace: E, registerBasics: E,
   registerIllumination: E, registerPerception: E, registerEtherealUI: E, registerEtherealMovement: E, registerTracker: E, registerLightIndicator: E, registerFeedback: E, registerTimers: E,
   registerPurge: E, registerAutomation: E, registerSummonHandover: E, registerAutoTranslate: E, registerDataFixes: E, registerClock: E, registerCriticals: A, registerFlanking: A, registerFactions: E, registerFactionsUI: E, registerSettingsWindow: E, registerStealthMode: E, registerStealthUI: E, registerGroupRoll: E, registerGroupRollUI: E, registerInlineChecks: E, registerGroupRollTracker: E, registerGmAlert: E, registerForced: E, registerGmAlertUi: E, registerSummonPermissions: E, registerSummonPermissionsUi: E, registerPlayerWaits: E, registerPlayerWaitsUI: E, registerDebugReport: E, registerConnectionTest: E, registerAwaiting: E, registerAwaitingUI: E,
 
-  // Assisté : la résolution, et les règles générales qui valent pour toute créature.
+  // Assisted: resolution, and the general rules that apply to any creature.
   registerEngine: A, registerHeroic: A, registerSuccessAtCost: A, registerSuccessAtCostUI: A, registerConcentration: A, registerSpellWeapons: A, registerDeath: A, registerUsage: A, registerReactions: A, registerReady: A, registerBurning: A, registerImprovised: A, registerArmorTraining: A, registerMasteryChoices: A, registerMasteryUI: A, registerTriggers: A,
   registerConditions: A, registerAreas: A, registerLingering: A, registerPassengers: A, registerBanish: F, registerSelfAreas: A, registerZones: A, registerGrapple: A, registerProne: A,
   registerStabilize: A, registerHelp: A, registerHide: A, registerSearch: A, registerPassivePerception: A, registerEffects: A, registerAntimagic: A,
   registerAnimations: A, registerActivityChoice: A, registerCompact: A, registerChat: A,
 
-  // Intégral : ce que déclare le contenu, objet par objet.
+  // Full: what the content declares, item by item.
   registerPilot: F, registerReduction: F, registerCoven: F, registerRecast: F, registerProjectiles: F, registerMetamagic: F, registerFreeCast: F,
   registerGates: F, registerPortent: F, registerDispel: F, registerContest: F, registerStorm: F, registerBursts: F, registerCoatings: F, registerGrants: F,
   registerFelled: F, registerWeaponFeed: F, registerWrath: F, registerBackfire: F, registerProtection: F, registerAuras: F, registerEmanations: F, registerRegeneration: F, registerFortitude: F, registerDamageTraits: F, registerExtraTurns: F, registerDamageByCount: F, registerDrain: F,
@@ -57,7 +57,7 @@ export const FEATURE_LEVELS = Object.freeze({
   registerSize: F, registerOrders: F, registerCompulsion: F, registerControl: F, registerCatalyst: F, registerVigor: F, registerCureUi: F, registerWallSideUi: F, registerKindleUi: F, registerStandingMasteryUi: F, registerSkillAidUi: F
 });
 
-/** Le niveau minimal d'une fonction (absente de la table : Intégral, par prudence). */
+/** The minimum level of a function (absent from the table: Full, to be safe). */
 export function featureLevel(name) {
   return FEATURE_LEVELS[name] ?? F;
 }

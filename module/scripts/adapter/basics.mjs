@@ -1,8 +1,8 @@
 /**
- * Les items d'actions de base (content/actions.mjs) côté Foundry : les construire, les reconnaître,
- * savoir ce qui manque à un acteur. Un item « feat » à une activité « utilitaire » qui coûte une
- * action : dnd5e le lance comme n'importe quel autre, le moteur en tire l'effet sur le budget
- * (runtime/turn.mjs, `basicAction` du cœur).
+ * Basic action items (content/actions.mjs) on the Foundry side: building them, recognizing them,
+ * knowing what an actor lacks. A "feat" item with a "utility" activity that costs an
+ * action: dnd5e casts it like any other, the engine draws the effect on the budget from it
+ * (runtime/turn.mjs, the core's `basicAction`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -11,49 +11,49 @@ import { contentOf, identifierOf } from "./content.mjs";
 import { basicKindsFor, hasPaidForm } from "../core/basic-kinds.mjs";
 import { familiarBasicKinds } from "../core/familiar.mjs";
 
-/** La clé d'action de base d'un item (« dash »…), ou null. */
+/** The basic action key of an item ("dash"…), or null. */
 export function basicActionOf(item) {
   const kind = item?.getFlag?.(MODULE_ID, "basicAction") ?? null;
   return kind && BASIC_ACTIONS[kind] ? kind : null;
 }
 
-/** L'activité dépense-t-elle une ressource (utilisations, point de crédo…) selon sa donnée ? */
+/** Does the activity spend a resource (uses, creed point…) according to its data? */
 const spendsResource = activity => (activity?.consumption?.targets ?? []).length > 0;
 
 /**
- * Ce que le contenu déclare pour cette activité (`basicActions`), la forme payée ou gratuite choisie d'après ce qu'elle dépense
- * (core/basic-kinds.mjs) ; null si rien.
+ * What the content declares for this activity (`basicActions`), the paid or free form chosen from what it spends
+ * (core/basic-kinds.mjs); null if nothing.
  */
 export function declaredBasicsOf(activity) {
   if ( !activity?.item ) return null;
   return basicKindsFor(contentOf(activity.item).entry?.basicActions?.[activity.id] ?? null, spendsResource(activity));
 }
 
-/** Cette utilisation est-elle la forme gratuite d'une activité qui en a deux (le Pas du vent sans point : pas de saut doublé) ? */
+/** Is this use the free form of an activity that has two (Step of the Wind without a point: no doubled jump)? */
 export function isFreeForm(activity) {
   if ( !activity?.item ) return false;
   return hasPaidForm(contentOf(activity.item).entry?.basicActions?.[activity.id]) && !spendsResource(activity);
 }
 
 /**
- * L'action de base que prend une activité : celle de son item d'action de base, sinon celle que le contenu déclare pour elle
- * (`basicActions` : Ruse du Roublard, « Se cacher » par une action Bonus — §20).
+ * The basic action an activity takes: that of its basic action item, otherwise the one the content declares for it
+ * (`basicActions`: Rogue's Cunning Action, "Hide" as a Bonus Action — §20).
  */
 export function basicActionOfActivity(activity, chosen=null) {
   if ( !activity?.item ) return null;
   const declared = declaredBasicsOf(activity);
-  // §65 : une action au choix (Échappée agile) — celle que l'auteur a choisie à l'utilisation, sinon aucune.
+  // §65: an action of choice (Nimble Escape) — the one the author chose at use, otherwise none.
   if ( declared?.choose ) return declared.choose.includes(chosen) ? chosen : null;
   return basicActionOf(activity.item) ?? declared;
 }
 
-/** §65 : les actions de base parmi lesquelles l'auteur choisit à l'utilisation de cette activité, ou null. */
+/** §65: the basic actions among which the author chooses when using this activity, or null. */
 export function basicChoiceOf(activity) {
   const declared = declaredBasicsOf(activity);
   return Array.isArray(declared?.choose) ? declared.choose : null;
 }
 
-/** Attaque à mains nues 2024 : une arme « naturelle », une attaque et la sauvegarde « Lutte / Bousculade ». */
+/** 2024 Unarmed Strike: a "natural" weapon, an attack and the "Grapple / Shove" save. */
 function unarmedStrikeData(def, text) {
   const effectText = key => game.i18n.localize(`DND5ECOMBAT.Action.unarmed.Effet.${key}`);
   const target = { affects: { type: "creature", count: "1" }, prompt: false };
@@ -94,7 +94,7 @@ function unarmedStrikeData(def, text) {
   };
 }
 
-/** Les données d'item d'une action de base, dans la langue de ce client. */
+/** The item data of a basic action, in this client's language. */
 export function basicActionData(kind) {
   const def = BASIC_ACTIONS[kind];
   const text = key => game.i18n.localize(`DND5ECOMBAT.Action.${kind}.${key}`);
@@ -115,8 +115,8 @@ export function basicActionData(kind) {
 }
 
 /**
- * Les actions de base qu'un acteur n'a pas encore. Une attaque à mains nues de classe (Moine, Barbare) tient lieu de la nôtre.
- * §107 : un familier (`familiar`) n'a que celles qui n'attaquent pas.
+ * The basic actions an actor does not have yet. A class unarmed strike (Monk, Barbarian) stands in for ours.
+ * §107: a familiar (`familiar`) has only those that do not attack.
  */
 export function missingBasicActions(actor, { familiar=false }={}) {
   const owned = new Set(actor.items.map(basicActionOf).filter(Boolean));
@@ -127,26 +127,26 @@ export function missingBasicActions(actor, { familiar=false }={}) {
     .map(([kind]) => kind);
 }
 
-/** L'item d'attaque à mains nues d'un acteur (le nôtre ou celui d'une classe), ou undefined. */
+/** An actor's Unarmed Strike item (ours or a class's), or undefined. */
 const unarmedStrikeOf = actor => actor?.items.find(i => (i.type === "weapon") && (identifierOf(i).id === "unarmed-strike"));
 
-/** La sauvegarde « Lutte / Bousculade » de l'attaque à mains nues d'un acteur (la nôtre ou celle d'une classe), ou null. */
+/** The "Grapple / Shove" save of an actor's Unarmed Strike (ours or a class's), or null. */
 export function grappleShoveOf(actor) {
   return unarmedStrikeOf(actor)?.system.activities?.find(a => a.type === "save") ?? null;
 }
 
-/** L'attaque à mains nues d'un acteur, ou null. */
+/** An actor's Unarmed Strike, or null. */
 export function unarmedAttackOf(actor) {
   return unarmedStrikeOf(actor)?.system.activities?.find(a => a.type === "attack") ?? null;
 }
 
-/** L'activité de Soutien (action de base) d'un acteur, ou null. */
+/** An actor's Help activity (basic action), or null. */
 export function helpActivityOf(actor) {
   const item = actor?.items.find(i => basicActionOf(i) === "help");
   return item?.system.activities?.contents?.[0] ?? null;
 }
 
-/** Une poussée portée par un effet d'activité (« repoussé » de la Bousculade), ou null. */
+/** A push carried by an activity effect ("pushed" from the Shove), or null. */
 export function pushOf(effect) {
   return effect?.getFlag?.(MODULE_ID, "push") ?? effect?.flags?.[MODULE_ID]?.push ?? null;
 }

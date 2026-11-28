@@ -1,12 +1,12 @@
 /**
- * 2026-11-28 (user's request): the turn skips defeated NPCs — world setting `skipDefeatedNpcs`, on by default. On a temporary scene, a
- * hero (character) and three NPCs in initiative order: Hero 20, Goblin A at 0 HP 15, Goblin B dead 12, Ogre 10. Checks:
+ * 2026-11-28 (user's request): the turn skips defeated NPCs — world setting `skipDefeatedNpcs`, on by default. On a temporary
+ * scene, a hero (character) and three NPCs in Initiative order: Hero 20, Goblin A at 0 HP 15, Goblin B dead 12, Ogre 10. Checks:
  *  1. the setting exists, world, in the Combat tab of the DAS settings window, on by default (its default value as registered);
- *  2. setting on: « next turn » from the Hero lands on the Ogre (Goblin A at 0 HP and the dead Goblin B passed), same round;
+ *  2. setting on: "next turn" from the Hero lands on the Ogre (Goblin A at 0 HP and the dead Goblin B passed), same round;
  *  3. from the Ogre (last), the next turn goes to the Hero, next round: a player character is never passed, even at 0 HP;
  *  4. going back from the Ogre lands on Goblin B (back never skips);
- *  5. setting off: « next turn » from the Hero lands on Goblin A;
- *  6. every NPC defeated (the Ogre at 0 HP too): « next turn » from the Hero comes back to the Hero, next round, and stays there.
+ *  5. setting off: "next turn" from the Hero lands on Goblin A;
+ *  6. every NPC defeated (the Ogre at 0 HP too): "next turn" from the Hero comes back to the Hero, next round, and stays there.
  * Put back: the setting, the scene, the actors, the combat.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));

@@ -1,17 +1,17 @@
 /**
- * §139 : le grimoire du Magicien — rituels (Savoir rituel, et la règle générale des rituels) et Restauration magique. Ce qui se
- * calcule sans Foundry.
+ * §139: the Wizard's spellbook — rituals (Ritual Adept, and the general rule for rituals) and Arcane Recovery. What can be
+ * computed without Foundry.
  *
- * Fonctions pures, aucune dépendance à Foundry.
+ * Pure functions, no dependency on Foundry.
  */
 
 /**
- * Comment lancer un sort qui a l'étiquette Rituel (règle 2024 : « si vous l'avez préparé, vous pouvez le lancer en rituel : 10 minutes
- * de plus, sans dépenser d'emplacement » ; Savoir rituel du Magicien : « tout sort de votre grimoire qui a l'étiquette Rituel, même non
- * préparé, mais seulement en rituel »). Un rituel prend 10 minutes : jamais en combat.
+ * How to cast a spell that has the Ritual tag (2024 rule: "if you have it prepared, you can cast it as a ritual: 10 minutes
+ * longer, without expending a slot"; Wizard's Ritual Adept: "any spell in your spellbook that has the Ritual tag, even if not
+ * prepared, but only as a ritual"). A ritual takes 10 minutes: never in combat.
  * @param {{ritual: boolean, requiresSlot: boolean, inCombat: boolean, prepared: boolean, adept: boolean, slotLeft: boolean}} c
- *   `adept` : le lanceur a Savoir rituel et le sort vient de son grimoire ; `slotLeft` : un emplacement du niveau du sort ou plus.
- * @returns {"none"|"ritual"|"ask"}  « ritual » : en rituel d'office ; « ask » : rituel ou emplacement, au joueur.
+ *   `adept`: the caster has Ritual Adept and the spell comes from their spellbook; `slotLeft`: a slot of the spell's level or more.
+ * @returns {"none"|"ritual"|"ask"}  "ritual": automatically as a ritual; "ask": ritual or slot, up to the player.
  */
 export function ritualMode({ ritual, requiresSlot, inCombat, prepared, adept, slotLeft }) {
   if ( !ritual || !requiresSlot || inCombat ) return "none";
@@ -20,11 +20,11 @@ export function ritualMode({ ritual, requiresSlot, inCombat, prepared, adept, sl
 }
 
 /**
- * Où se compte l'utilisation d'une restauration d'emplacements, et s'il en reste : sur l'activité que la règle nomme (Ressourcement
- * du Druide : l'item n'a pas d'utilisations, chacune de ses deux activités a la sienne), sinon sur l'item (Restauration magique).
- * Sans compteur (`max` nul ou absent), elle n'est pas limitée.
+ * Where the use of a slot-restoring feature is counted, and whether any is left: on the activity the rule names (Druid's
+ * Natural Recovery: the item has no uses, each of its two activities has its own), otherwise on the item (Arcane Recovery).
+ * With no counter (`max` null or absent), it is not limited.
  * @param {{value?: number, max?: number|string}|null} itemUses
- * @param {{value?: number, max?: number|string}|null} activityUses  celles de l'activité nommée par la règle, s'il y en a une
+ * @param {{value?: number, max?: number|string}|null} activityUses  those of the activity named by the rule, if there is one
  * @returns {{on: "activity"|"item"|null, left: boolean}}
  */
 export function recoveryUses(itemUses, activityUses=null) {
@@ -35,8 +35,8 @@ export function recoveryUses(itemUses, activityUses=null) {
 }
 
 /**
- * Restauration magique : « des emplacements dépensés dont la somme des niveaux ne dépasse pas la moitié de votre niveau de Magicien
- * (arrondie au supérieur), aucun du 6e niveau ou plus ».
+ * Arcane Recovery: "expended slots with a combined level equal to no more than half your Wizard level
+ * (rounded up), none of which can be level 6 or higher".
  * @param {number} classLevel
  */
 export function recoveryBudget(classLevel) {
@@ -44,12 +44,12 @@ export function recoveryBudget(classLevel) {
 }
 
 /**
- * Les niveaux d'emplacement qu'on peut encore récupérer : dépensés (valeur sous le maximum), au plus `maxLevel` et au plus ce qui reste
- * du budget.
- * @param {Record<number, {value: number, max: number}>} slots  Par niveau.
- * @param {number} budget  Ce qui reste à récupérer, en niveaux.
+ * The slot levels that can still be recovered: spent (value below the maximum), at most `maxLevel` and at most what is left
+ * of the budget.
+ * @param {Record<number, {value: number, max: number}>} slots  By level.
+ * @param {number} budget  What is left to recover, in levels.
  * @param {number} [maxLevel=5]
- * @returns {number[]}  Croissants.
+ * @returns {number[]}  Ascending.
  */
 export function recoverableLevels(slots, budget, maxLevel=5) {
   const out = [];

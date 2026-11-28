@@ -1,15 +1,16 @@
 /**
- * Issue #32 : « Succès à un prix » (Guide du maître 2024, chapitre 2), réglage de monde éteint par défaut. Se joue dans l'« Arène du
- * succès à un prix » (`node tools/arene-prix.mjs` la monte) : le Héros (Guerrier pré-tiré, un personnage joueur) au contact du Mannequin
- * (999 PV, CA 15), le Lanceur (PNJ) à 4 cases. Les jets sont aléatoires : chaque partie relance jusqu'à tomber sur un raté de 1 ou 2.
- *  - attaque ratée de 1 ou 2, offerte et acceptée (aucun joueur connecté : le MJ tranche) : la pause s'ouvre, le coup touche « à un prix »,
- *    sans critique, les dégâts sont appliqués une seule fois, la carte publique est posée ;
- *  - attaque ratée de 1 ou 2, pastille fermée par le MJ : l'échec reste, aucun jet de dégâts ;
- *  - pause qui expire sans geste : l'échec reste ;
- *  - sauvegarde demandée par une résolution (Flamme sacrée du Lanceur) ratée de 1 ou 2, acceptée : réussie, aucun dégât ;
- *  - jet demandé par le MJ (§242, Athlétisme DD 15) raté de 1 ou 2 : la ligne passe en réussite à un prix, le verdict suit ;
- *  - aide éteinte : aucune pause.
- * Remet réglages, PV, positions (le lanceur de scénarios replace les tokens de l'arène avant).
+ * Issue #32: "Success at a Price" (Dungeon Master's Guide 2024, chapter 2), world setting off by default. Played in the
+ * "Success at a Price Arena" (`node tools/arene-prix.mjs` sets it up): the Hero (pre-generated Fighter, a player character) in
+ * contact with the Dummy (999 HP, AC 15), the Caster (NPC) 4 cells away. The rolls are random: each run rerolls until it gets
+ * a miss by 1 or 2.
+ *  - attack missed by 1 or 2, offered and accepted (no player connected: the GM decides): the pause opens, the hit lands
+ *    "at a price", no Critical Hit, the damage is applied once, the public card is posted;
+ *  - attack missed by 1 or 2, badge dismissed by the GM: the miss stands, no damage roll;
+ *  - pause that expires without input: the miss stands;
+ *  - saving throw requested by a resolution (the Caster's Sacred Flame) failed by 1 or 2, accepted: succeeds, no damage;
+ *  - roll requested by the GM (§242, Athletics DC 15) failed by 1 or 2: the row becomes a success at a price, the verdict follows;
+ *  - help off: no pause.
+ * Resets settings, HP, positions (the scenario runner puts the arena tokens back beforehand).
  */
 const MODULE_ID = "dnd5e-combat";
 const SACRED_FLAME = "Compendium.dnd-players-handbook.spells.Item.phbsplSacredFlam";
@@ -44,7 +45,7 @@ export default {
       ctx.expect(!errors.length, `${name} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
 
-    // L'arme du Guerrier pré-tiré : la première qui a une attaque.
+    // The pre-generated Fighter's weapon: the first one that has an attack.
     const actor = await ctx.call("get-actor", { actorId: hero.actorId });
     const weapon = (actor.items ?? []).find(i => (i.type === "weapon") && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"));
     if ( !ctx.expect(!!weapon, "le Héros a une arme") ) return;
@@ -59,8 +60,8 @@ export default {
     };
 
     /**
-     * Utilise une activité jusqu'à ce qu'une pause s'ouvre sur `on` (raté de 1 ou 2), puis `onPause(candidate)`. Rend
-     * `{ resolution, since, candidate }`, ou null après `tries` essais.
+     * Uses an activity until a pause opens on `on` (miss by 1 or 2), then `onPause(candidate)`. Returns
+     * `{ resolution, since, candidate }`, or null after `tries` attempts.
      */
     const nearMiss = async (use, on, onPause, tries=30) => {
       for ( let n = 0; n < tries; n++ ) {
@@ -126,7 +127,7 @@ export default {
       let hp0 = null;
       const cast = () => ctx.use({ tokenId: caster.id, itemId: flame, targetTokenIds: [hero.id] });
       const r = await nearMiss(cast, hero, async c => {
-        hp0 = await ctx.hp(hero);   // les essais d'avant ont pu infliger des dégâts
+        hp0 = await ctx.hp(hero);   // earlier attempts may have dealt damage
         ctx.expect(c.kind === "save", `pause sur une sauvegarde (${c.kind}, ${c.total} contre DD ${c.needed})`);
         await ctx.engine("atCost", { action: "offer", id: c.id, cost: "Test : votre arme tombe." });
       }, 40);

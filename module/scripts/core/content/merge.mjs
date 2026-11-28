@@ -1,17 +1,17 @@
 /**
- * La fusion des couches d'une entrée (module < surcouche du monde < flag de l'item). Fonctions pures, aucune dépendance à Foundry.
+ * The merging of the layers of an entry (module < world overlay < item flag). Pure functions, no dependency on Foundry.
  */
 
 import { isObject } from "./shared.mjs";
 
 /**
- * Comment une clé passe d'une couche à la suivante :
- *  - `replace`   la valeur de la couche la plus spécifique, telle quelle ;
- *  - `shallow`   un objet de réglage fusionné champ par champ (corriger un rayon sans redire le reste) ;
- *  - `copy`      un objet remplacé entier (une copie) ; `list` : une liste remplacée entière (une copie) ;
- *  - `deep`      une copie profonde (objets imbriqués) ;
- *  - `triggers`  la liste des déclarations, remplacée entière (une seule déclaration devient une liste) ;
- *  - `trace`     un objet fusionné champ par champ, ou une valeur simple qui le remplace.
+ * How a key passes from one layer to the next:
+ *  - `replace`   the value of the most specific layer, as is;
+ *  - `shallow`   a setting object merged field by field (fix a radius without restating the rest);
+ *  - `copy`      an object replaced whole (a copy); `list`: a list replaced whole (a copy);
+ *  - `deep`      a deep copy (nested objects);
+ *  - `triggers`  the list of declarations, replaced whole (a single declaration becomes a list);
+ *  - `trace`     an object merged field by field, or a simple value that replaces it.
  */
 const STRATEGIES = Object.freeze({
   replace: (prev, value) => value,
@@ -23,7 +23,7 @@ const STRATEGIES = Object.freeze({
   trace: (prev, value) => ((typeof value === "object") ? { ...((typeof prev === "object") ? prev : {}), ...value } : value)
 });
 
-/** La stratégie de chaque clé d'entrée (toutes celles de `ENTRY_KEYS`, tests/content.test.mjs), dans l'ordre où elles s'écrivent. */
+/** The strategy of each entry key (all those of `ENTRY_KEYS`, tests/content.test.mjs), in the order they are written. */
 export const MERGE = Object.freeze({
   triggers: "triggers", endsWhen: "shallow", banishes: "replace", singleAttack: "replace", spellFailure: "replace", untypedDamage: "replace", noAttacksOrSpells: "replace", noTeleport: "replace", noSpells: "replace", knownToOrigin: "replace", panic: "replace", confusion: "replace", noBonus: "replace", forcedAttack: "replace", upkeep: "replace", keepsProne: "replace", afterSmite: "replace", wardsConditions: "replace", aura: "shallow", onHit: "shallow", choice: "shallow", targets: "shallow", spellTargets: "replace", trace: "trace",
   enchantTarget: "replace", ranges: "shallow", tether: "shallow", pact: "shallow", damageShield: "shallow", rangedDefense: "replace", exclusiveWeapon: "replace", minRange: "replace", swornEnemy: "replace", markSplash: "replace", devours: "replace", critFeeds: "replace", maxSpellDamageVs: "replace", wrath: "replace", hardToPerceive: "replace", coats: "replace", castDuration: "replace", backfire: "replace", gmAlert: "replace", hitFollowUp: "replace",
@@ -70,13 +70,13 @@ export const MERGE = Object.freeze({
   cunningStrikes: "shallow"
 });
 
-/** Le rang de chaque clé dans `MERGE` : l'ordre des clés d'une entrée fusionnée. */
+/** The rank of each key in `MERGE`: the order of the keys of a merged entry. */
 const RANK = new Map(Object.keys(MERGE).map((key, rank) => [key, rank]));
 
 /**
- * Combine les couches, de la moins à la plus spécifique (module → monde → item), clé par clé selon `MERGE`.
+ * Combines the layers, from the least to the most specific (module → world → item), key by key according to `MERGE`.
  * @param {Array<object|null|undefined>} layers
- * @returns {object|null}  null si aucune couche ne dit rien.
+ * @returns {object|null}  null if no layer says anything.
  */
 export function mergeEntries(layers) {
   let out = null;
@@ -85,8 +85,8 @@ export function mergeEntries(layers) {
     const own = Object.keys(layer);
     if ( !own.length ) continue;
     out ??= {};
-    // Les clés de la couche (une poignée), pas les centaines de `MERGE` : appelée pour chaque item de chaque acteur (`contentOf`).
-    // Rangées dans l'ordre de `MERGE`, comme avant — l'ordre des clés de l'entrée fusionnée ne change pas.
+    // The keys of the layer (a handful), not the hundreds of `MERGE`: called for each item of each actor (`contentOf`).
+    // Arranged in the order of `MERGE`, as before — the key order of the merged entry does not change.
     const keys = own.filter(key => RANK.has(key));
     if ( keys.length > 1 ) keys.sort((a, b) => RANK.get(a) - RANK.get(b));
     for ( const key of keys ) out[key] = STRATEGIES[MERGE[key]](out[key], layer[key]);

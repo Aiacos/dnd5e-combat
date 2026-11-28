@@ -1,8 +1,8 @@
 /**
- * Lame assoiffée (SPEC §16.25) : l'action Attaquer de l'occultiste ouvre deux attaques. Monde `ravenloft` : Kaalisti, au
- * contact de Rahadin, à son tour de combat — la première attaque à l'épée à deux mains dépense l'action et en ouvre deux
- * (`attacks.granted`), la seconde est prise sans nouvelle action. Dans `dnd-6` (Kaalisti posée dans l'Arène de test), le Zombi
- * à défaut de Rahadin (audit de Kaalisti, 2026-10-29 : le scénario s'y déclarait non applicable).
+ * Thirsting Blade (SPEC §16.25): the warlock's Attack action opens two attacks. World `ravenloft`: Kaalisti, in
+ * contact with Rahadin, on their combat turn — the first greatsword attack spends the action and opens two
+ * (`attacks.granted`), the second is taken without a new action. In `dnd-6` (Kaalisti placed in the Arène de test), the Zombi
+ * in the absence of Rahadin (Kaalisti audit, 2026-10-29: the scenario declared itself not applicable there).
  */
 const MODULE_ID = "dnd5e-combat";
 const VICTIM = "Rahadin, chambellan du château";

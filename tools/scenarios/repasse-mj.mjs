@@ -1,8 +1,8 @@
 /**
- * §366 : repasse des parts laissées au MJ. Arène de test (Magicien, Bandit, Zombi).
- *  1. Amitié (`breaksOnOrigin`) : le Bandit charmé par le Magicien, puis le Magicien attaque le Zombi (Rayon de givre) → le
- *     Bandit n'est plus charmé.
- *  2. Le Bouffon : le Magicien tire la carte (effet de 72 h), puis Rayon de givre → Avantage déclaré par le contenu.
+ * §366: pass over the parts left to the GM. Test arena (Wizard, Bandit, Zombie).
+ *  1. Friends (`breaksOnOrigin`): the Bandit charmed by the Wizard, then the Wizard attacks the Zombie (Ray of Frost) → the
+ *     Bandit is no longer charmed.
+ *  2. The Jester: the Wizard draws the card (72 h effect), then Ray of Frost → Advantage declared by the content.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -32,7 +32,7 @@ export default {
     };
     const charmed = async () => (await ctx.effects(bandit)).some(e => (e.statuses ?? []).includes("charmed"));
 
-    // 1. Amitié
+    // 1. Friends
     const friends = await ctx.ensureItem(mage, `${PHB}phbsplFriends000`, { system: { method: "atwill" } });
     for ( let n = 1; (n <= 20) && !(await charmed()); n++ ) {
       const cast = await ctx.use({ tokenId: mage.id, itemId: friends, targetTokenIds: [bandit.id], consume: false });

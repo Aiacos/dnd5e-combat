@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { holds } from "../module/scripts/core/triggers.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 
-/** Les faits d'un attaquant, métamorphosé ou non, avec ou sans Fureur élémentaire améliorée. */
+/** The facts of an attacker, in Wild Shape or not, with or without improved Elemental Fury. */
 const facts = ({ shaped=false, weapon=false, attack=true, improved=false }={}) => ({
   "source.wildShaped": want => (shaped === want),
   "activity.isWeapon": weapon,
@@ -18,7 +18,7 @@ describe("§30 Druide : conditions du contenu", () => {
     expect(holds(d.if, facts({ shaped: true, attack: false }))).toBe(false);
     expect(d.do[0]).toMatchObject({ formula: "2d10", damageType: "radiant" });
   });
-  it("Attaques primitives : une arme, ou une attaque de Bête ; 1d8, 2d8 une fois améliorées", () => {
+  it("Primal Strike: a weapon, or a Beast attack; 1d8, 2d8 once improved", () => {
     const [basic, improved] = CONTENT["elemental-fury"].triggers;
     expect(holds(basic.if, facts({ weapon: true }))).toBe(true);
     expect(holds(basic.if, facts({ shaped: true }))).toBe(true);
@@ -27,7 +27,7 @@ describe("§30 Druide : conditions du contenu", () => {
     expect(holds(improved.if, facts({ weapon: true, improved: true }))).toBe(true);
     expect([basic.do[0].formula, improved.do[0].formula]).toEqual(["1d8", "2d8"]);
   });
-  it("Foulée sélène : téléportation, trace, Avantage consommé, fin de tour", () => {
+  it("\"Lunar Stride\": teleportation, trail, Advantage consumed, end of turn", () => {
     const e = CONTENT["moonlight-step"];
     expect(e.teleport).toMatchObject({ distance: 30, units: "ft" });
     expect(e.trace.activity).toBe("dnd5eactivity000");

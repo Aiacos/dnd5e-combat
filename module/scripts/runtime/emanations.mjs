@@ -1,8 +1,8 @@
 /**
- * M7 (SPEC §18.11) : les émanations des monstres agissent au fil des tours du combat. MJ actif.
- *  - fin du tour du porteur (`ownTurnEnd`, Aura de feu) : une carte, toutes les créatures atteintes ;
- *  - début du tour d'une créature (`turnStart`, Puanteur) : une carte par émanation qui l'atteint.
- * Une sauvegarde réussie laisse l'immunité que le texte promet (« pendant 24 heures »), lue à la résolution.
+ * M7 (SPEC §18.11): monsters' Emanations act over the course of the combat's turns. Active GM.
+ *  - end of the bearer's turn (`ownTurnEnd`, Fire Aura): one card, all the creatures reached;
+ *  - start of a creature's turn (`turnStart`, Stench): one card per Emanation that reaches it.
+ * A successful save leaves the Immunity the text promises ("for 24 hours"), read at resolution.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -26,16 +26,16 @@ import { samePlane } from "../adapter/plane.mjs";
 
 const defeated = actor => actor.statuses.has("dead") || actor.statuses.has(CONFIG.specialStatusEffects.DEFEATED);
 
-/** Hors jeu pour une émanation : sans acteur, caché, mort, ou objet piloté (Arme spirituelle). */
+/** Out of play for an Emanation: no actor, Hidden, dead, or a driven object (Spiritual Weapon). */
 const outOfPlay = token => !token.actor || token.hidden || defeated(token.actor) || isObjectToken(token);
 
-/** Qui l'émanation `emanation` de `source` atteint parmi `tokens`. `dying` : le porteur vient de mourir (`death`). */
+/** Who the Emanation `emanation` of `source` reaches among `tokens`. `dying`: the bearer has just died (`death`). */
 function reached(source, emanation, tokens, { dying=false }={}) {
   let radius = lengthIn(emanation.radius, emanation.units, source.parent.grid.units);
   const statuses = source.actor.statuses;
   const inactive = !dying && (outOfPlay(source) || (emanation.active && INCAPACITATING.some(s => statuses.has(s))));
   const candidates = tokens.filter(t => t.parent === source.parent).map(t => {
-    const out = (t === source) || outOfPlay(t) || !samePlane(source, t);   // §225 : ni d'un plan à l'autre
+    const out = (t === source) || outOfPlay(t) || !samePlane(source, t);   // §225: nor across planes
     const distance = out ? Infinity : distanceBetween(source, t).value;
     const near = distance <= radius + 1e-6;
     return {
@@ -51,7 +51,7 @@ function reached(source, emanation, tokens, { dying=false }={}) {
   return tokens.filter(t => wanted.has(t.uuid));
 }
 
-/** Une même émanation n'agit qu'une fois par moment et par tour (un tour rejoué en arrière ne la relance pas). */
+/** The same Emanation acts only once per moment and per turn (a turn replayed backwards does not relaunch it). */
 const done = new Set();
 function once(key) {
   if ( done.has(key) ) return false;
@@ -74,7 +74,7 @@ async function onTurnChange(combat, prior, current) {
   }
   if ( started?.actor && !outOfPlay(started) ) {
     const turn = `${combat.id}.${current.round}.${current.turn}`;
-    // §95 : au début du tour du porteur (Aura troublante du Gardien creux) — toutes les créatures atteintes, une carte.
+    // §95: at the start of the bearer's turn (Unsettling Aura of the "Hollow Guardian") — all the creatures reached, one card.
     for ( const emanation of emanationsOf(started.actor).filter(e => e.on === "ownTurnStart") ) {
       const targets = reached(started, emanation, started.parent.tokens.contents);
       if ( !targets.length || !once(`${turn}|${started.uuid}|${emanation.key}|ownStart`) ) continue;
@@ -93,13 +93,13 @@ async function onTurnChange(combat, prior, current) {
 }
 
 /**
- * §18.14 : l'état Mort vient d'être posé (par le moteur, §17.1, ou par dnd5e) — une émanation `death` part d'elle-même, une
- * fois par mort. La Mort d'office de dnd5e sur une créature qui régénère ne compte pas (§18.13, elle est retirée).
+ * §18.14: the Dead condition has just been set (by the engine, §17.1, or by dnd5e) — a `death` Emanation fires on its own, once
+ * per death. dnd5e's automatic Dead on a creature that regenerates does not count (§18.13, it is removed).
  */
 const exploded = new Set();
 async function onCreateEffect(effect) {
   await startedEmanation(effect);
-  const actor = actorOfEffect(effect);   // un token non lié : l'effet est dans son ActorDelta
+  const actor = actorOfEffect(effect);   // an unlinked token: the effect is in its ActorDelta
   if ( !actor || !effect.statuses?.has("dead") ) return;
   if ( effect.getFlag("dnd5e", "autoDowned") && regenerationOf(actor)?.survivesZero ) return;
   const source = actor.token ?? actor.getActiveTokens?.(false, true)?.[0] ?? null;
@@ -115,9 +115,9 @@ async function onCreateEffect(effect) {
 }
 
 /**
- * §447 : une émanation `atStart` agit aussi quand l'effet de son item arrive sur le porteur — Courroux sauvage, « quand vous vous
- * transformez et au début de chacun de vos tours suivants ». L'effet peut être sur l'acteur ou, transféré, sur un de ses items (l'enchantement
- * et ses effets compagnons : plusieurs effets arrivent ensemble, l'émanation n'agit qu'une fois en quelques secondes).
+ * §447: an `atStart` Emanation also acts when its item's effect arrives on the bearer — "Savage Wrath", "when you
+ * transform and at the start of each of your following turns". The effect may be on the actor or, transferred, on one of its items
+ * (the enchantment and its companion effects: several effects arrive together, the Emanation only acts once within a few seconds).
  */
 const started = new Map();
 async function startedEmanation(effect) {
@@ -139,13 +139,13 @@ async function startedEmanation(effect) {
 }
 
 /**
- * §19.6 : à 0 PV, une créature qui change de forme (seconde phase) ne reçoit pas l'état Mort — ses émanations « à la mort »
- * partent quand même, avant la bascule (explosion à 0 PV d'un boss).
+ * §19.6: at 0 HP, a creature that changes form (second phase) does not receive the Dead condition — its "on death" Emanations
+ * still fire, before the switch (a boss's explosion at 0 HP).
  */
 export async function burstAtZero(actor) {
   const source = actor?.token ?? actor?.getActiveTokens?.(false, true)?.[0] ?? null;
   if ( !source?.parent ) return;
-  // Une fois par chute : l'appelant (runtime/coven.mjs, `onZero`) ne passe qu'une fois par créature et par chute.
+  // Once per drop: the caller (runtime/coven.mjs, `onZero`) only goes through once per creature and per drop.
   for ( const emanation of emanationsOf(actor).filter(e => e.on === "death") ) {
     const targets = reached(source, emanation, source.parent.tokens.contents, { dying: true });
     log(`emanation ${emanation.item.name} (${source.name}), at 0 HP: ${targets.map(t => t.name).join(", ") || "nobody"}`);
@@ -153,7 +153,7 @@ export async function burstAtZero(actor) {
   }
 }
 
-/** Résolution tranchée d'une émanation : chaque cible qui a réussi sa sauvegarde reçoit l'immunité promise. */
+/** Decided resolution of an Emanation: each target that succeeded on its save receives the promised Immunity. */
 async function onResolution(resolution) {
   if ( resolution.step !== STEPS.DONE ) return;
   const tick = game.messages.get(resolution.carrier)?.getFlag(MODULE_ID, "areaTick");

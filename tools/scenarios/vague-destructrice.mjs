@@ -1,6 +1,6 @@
 /**
- * §263 : Vague destructrice — « chaque créature de votre choix prise dans l'Émanation » : le Paladin la lance avec le Guerrier (allié)
- * et le Bandit (ennemi) à côté de lui ; seul le Bandit fait la sauvegarde.
+ * §263: Destructive Wave — "each creature of your choice caught in the Emanation": the Paladin casts it with the Fighter
+ * (ally) and the Bandit (enemy) next to the Paladin; only the Bandit makes the saving throw.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 

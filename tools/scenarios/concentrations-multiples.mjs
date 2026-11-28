@@ -1,21 +1,21 @@
 /**
- * §494 (B14) — plusieurs concentrations à la fois, perdues ensemble. Arène de test, Magicien (token lié). Un trait d'essai lui est
- * prêté ; sa règle `concentration: { limit: 3, loseAll: true }` est posée dans la surcouche du monde (`overrideContent`, jamais en
- * drapeau d'item), AVANT l'item, pour que le moteur pose l'effet de limite à son arrivée (runtime/speed-grants.mjs).
- *  1. La limite préparée passe à 3 ; trois sorts à concentration tenus ensemble (Immobilisation de personne, Lueurs féeriques, Fou
- *     rire de Tasha : `concentrate`, sans lancer) ; en retirer un (le sort cesse) laisse les deux autres.
- *  2. 1 dégât (DD 10), rejoué jusqu'à avoir vu les deux issues (16 essais au plus) : réussi, les trois restent ; raté, les trois
- *     tombent ensemble (jamais une ou deux), et le journal du moteur annonce « all 3 concentrations lost ».
- *  3. Neutralisé : les trois tombent sans jet.
- *  4. Trait retiré : la limite revient à 1.
- * Concentration et états restés d'un scénario précédent retirés d'abord ; PV, sorts, trait, surcouche, états remis.
+ * §494 (B14) — several concentrations at once, lost together. Test arena, Wizard (linked token). A test feature is lent to the
+ * Wizard; its rule `concentration: { limit: 3, loseAll: true }` is placed in the world overlay (`overrideContent`, never as an
+ * item flag), BEFORE the item, so that the engine places the limit effect on arrival (runtime/speed-grants.mjs).
+ *  1. The prepared limit goes to 3; three Concentration spells held together (Hold Person, Faerie Fire, Tasha's Hideous
+ *     Laughter: `concentrate`, without casting); removing one (the spell ends) leaves the other two.
+ *  2. 1 damage (DC 10), replayed until both outcomes have been seen (16 tries at most): on a success, all three stay; on a failure,
+ *     all three end together (never one or two), and the engine log announces "all 3 concentrations lost".
+ *  3. Incapacitated: all three end without a roll.
+ *  4. Feature removed: the limit goes back to 1.
+ * Concentration and conditions left over from a previous scenario removed first; HP, spells, feature, overlay, conditions restored.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e.spells24.Item.";
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
 const IDENTIFIER = "das-essai-concentrations";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name as a constant: the test bench and the reference take the first "name:" indented by two spaces as the scenario title.
 const ITEM_NAME = "Essai : trois concentrations";
 const ITEM = { name: ITEM_NAME, type: "feat", img: "icons/svg/aura.svg",
   system: { identifier: IDENTIFIER, type: { value: "monster" }, description: { value: "<p>Essai §494.</p>" } } };
@@ -34,7 +34,7 @@ export default {
     const actorId = tok.actorId;
     const stats = () => ctx.engine("stats", { tokenId: mage.id });
 
-    // États et concentrations restés d'un scénario précédent : retirés d'abord (et à la fin).
+    // Conditions and concentrations left over from a previous scenario: removed first (and at the end).
     const clear = async () => {
       for ( const s of ["concentrating", "incapacitated", "unconscious", "dead", "prone", "stunned", "paralyzed"] ) {
         await ctx.removeStatusEffects(mage, s).catch(() => {});
@@ -45,7 +45,7 @@ export default {
     const hp0 = await ctx.hp(mage);
     ctx.restore(() => ctx.setHp(mage, hp0));
 
-    // --- Règle puis trait (l'ordre compte : la limite se pose à l'arrivée de l'item) ----------------------------------
+    // --- Rule then feature (order matters: the limit is placed when the item arrives) ----------------------------------
     const { before } = await ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: RULE });
     ctx.restore(() => ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: before }).catch(() => {}));
     await ctx.call("upsert-actor-item", { actorId, itemData: ITEM, match: { path: "system.identifier", value: IDENTIFIER } });
@@ -55,7 +55,7 @@ export default {
     const ids = [];
     for ( const s of SPELLS ) ids.push(await ctx.ensureItem(mage, `${SRD}${s}`));
 
-    /** Attend que la limite préparée vaille `want` (5 s au plus). */
+    /** Waits until the prepared limit equals `want` (5 s at most). */
     const limitIs = async want => {
       let s;
       for ( let i = 0; i < 20; i++ ) { s = await stats(); if ( s.concentration?.limit === want ) break; await pause(250); }
@@ -64,7 +64,7 @@ export default {
     const limit = await limitIs(3);
     if ( !ctx.expect(limit === 3, `le trait porte la limite de concentration à 3 (préparée : ${limit})`) ) return;
 
-    /** Les trois sorts tenus (ce qui manque est rouvert). */
+    /** The three spells held (whatever is missing is reopened). */
     const holdAll = async () => {
       await clear();
       await pause(300);
@@ -73,7 +73,7 @@ export default {
       return (await stats()).concentration?.held ?? [];
     };
 
-    // 1. Trois à la fois ; un sort qui cesse ne fait pas tomber les autres.
+    // 1. Three at once; a spell that ends does not bring down the others.
     let held = await holdAll();
     if ( !ctx.expect(held.length === 3, `trois concentrations tenues ensemble (${held.length})`) ) return;
     await ctx.call("remove-embedded-effect", { documentType: "Actor", id: actorId, effectId: held[0] });
@@ -81,7 +81,7 @@ export default {
     held = (await stats()).concentration?.held ?? [];
     ctx.expect(held.length === 2, `un sort qui cesse (effet retiré) laisse les deux autres (${held.length})`);
 
-    // 2. Jet de concentration : réussi, tout reste ; raté, tout tombe — jamais une partie.
+    // 2. Concentration save: on a success, everything stays; on a failure, everything ends — never just part.
     const max = (await stats()).hp?.max ?? hp0;
     const seen = { kept: false, lost: false, partial: [] };
     for ( let i = 0; (i < 16) && !(seen.kept && seen.lost); i++ ) {
@@ -90,14 +90,14 @@ export default {
       if ( held.length !== 3 ) { ctx.expect(false, `trois concentrations rouvertes avant le jet (${held.length})`); return; }
       const since = await ctx.lastMessageId();
       await ctx.engine("hurt", { tokenId: mage.id, amount: 1 });
-      // La sauvegarde du moteur (carte marquée `concentrationPrompt`), puis la fin éventuelle.
+      // The engine's save (card marked `concentrationPrompt`), then the possible end.
       let save = null;
       for ( let w = 0; (w < 40) && !save; w++ ) {
         await pause(300);
         save = (await ctx.messagesSince(since)).find(m => m.flags?.[MODULE_ID]?.concentrationPrompt) ?? null;
       }
       if ( !ctx.expect(!!save, `essai ${i + 1} : le moteur fait le jet de concentration (DD 10)`) ) return;
-      // Les fins se suivent (dnd5e les retire une à une) : on attend un état stable, tout ou rien (5 s au plus).
+      // The ends follow one another (dnd5e removes them one by one): we wait for a stable state, all or nothing (5 s at most).
       let after = [];
       for ( let w = 0; w < 10; w++ ) {
         await pause(500);
@@ -118,7 +118,7 @@ export default {
     ctx.expect(seen.lost, "jet raté : les trois concentrations tombent ensemble");
     ctx.expect(!seen.partial.length, `jamais une partie seulement (${seen.partial.length ? seen.partial.join(", ") : "aucune"})`);
 
-    // 3. Neutralisé : la concentration tombe sans jet — les trois.
+    // 3. Incapacitated: concentration ends without a roll — all three.
     await ctx.setHp(mage, max);
     held = await holdAll();
     if ( ctx.expect(held.length === 3, `trois concentrations rouvertes (${held.length})`) ) {
@@ -129,7 +129,7 @@ export default {
       await ctx.call("set-status", { tokenId: mage.id, statusId: "incapacitated", active: false }).catch(() => {});
     }
 
-    // 4. Le trait parti, la limite revient à celle de la fiche.
+    // 4. With the feature gone, the limit goes back to the sheet's.
     await clear();
     await removeTrait();
     const back = await limitIs(1);

@@ -3,9 +3,9 @@ import { contentOf, identifierOf } from "./content.mjs";
 import { askChoice } from "./choices.mjs";
 
 /**
- * §281 : ce que les items d'un agrippeur ajoutent à l'empoignade — `grappleSize` (`bonus` tailles de plus pour Agripper et Pousser,
- * `dragFree` : traîner sans surcoût une victime d'au plus tant de tailles de plus), `inescapable` (Désavantage contre sa prise),
- * `grappleCover` (abri contre les autres pendant qu'il agrippe).
+ * §281: what a grappler's items add to grappling — `grappleSize` (`bonus` sizes larger for Grapple and Shove,
+ * `dragFree`: dragging a victim up to this many sizes larger at no extra cost), `inescapable` (Disadvantage against its hold),
+ * `grappleCover` (Cover against others while it grapples).
  */
 export function grappleRulesOf(actor) {
   const out = { bonus: 0, dragFree: null, inescapable: false, cover: null };
@@ -23,13 +23,13 @@ export function grappleRulesOf(actor) {
   return out;
 }
 
-/** §374 : l'item que vise une consommation « itemUses » (id, ou identifiant que dnd5e n'a pas ramené à un id : DDB Importer), sinon l'item. */
+/** §374: the item an "itemUses" consumption targets (id, or identifier dnd5e did not reduce to an id: DDB Importer), else the item. */
 function usesItemOf(activity, target) {
   if ( !target ) return activity.item;
   return activity.actor?.items.get(target) ?? activity.actor?.items.find(i => identifierOf(i).id === target) ?? null;
 }
 
-/** §374 : ce que coûte l'activité — `[{ item, n }]` d'utilisations d'items, ou null si l'une manque. */
+/** §374: what the activity costs — `[{ item, n }]` of item uses, or null if one is missing. */
 function costOf(activity) {
   const out = [];
   for ( const t of activity.consumption?.targets ?? [] ) {
@@ -45,10 +45,10 @@ function costOf(activity) {
 }
 
 /**
- * §281, §374 : le Désavantage d'Inexorable contre cette sauvegarde ou ce test d'évasion — d'office (`true`), ou, payant, si
- * l'agrippeur (son joueur, sinon le MJ) le veut et peut payer ; la dépense faite. Sans réponse : non.
+ * §281, §374: the Disadvantage of Inescapable against this save or escape check — automatic (`true`), or, if paid, if
+ * the grappler (its player, otherwise the GM) wants it and can pay; the expense made. With no answer: no.
  * @param {Actor5e|null} grappler
- * @param {string} name  la créature qui fait le jet
+ * @param {string} name  the creature making the roll
  * @returns {Promise<boolean>}
  */
 export async function inescapableFor(grappler, name) {

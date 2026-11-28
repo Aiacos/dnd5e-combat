@@ -1,19 +1,19 @@
 /**
- * L'espace en trois dimensions (SPEC §14.2, P2) : hauteur d'une créature, tranche d'élévation
- * qu'elle occupe, écart vertical entre deux tranches, tranche d'élévation d'une zone d'effet
- * d'après sa forme, point d'origine d'une zone. Fonctions pures, aucune dépendance à Foundry.
+ * Space in three dimensions (SPEC §14.2, P2): a creature's height, the elevation slice
+ * it occupies, the vertical gap between two slices, the elevation slice of an area of effect
+ * from its shape, an area's point of origin. Pure functions, no dependency on Foundry.
  *
- * Unités : les élévations et les tailles de zone sont dans l'unité de la grille (celle des
- * élévations de token), la profondeur d'un token en cases (`depth` du cœur V14, un token va de
- * `elevation` à `elevation + depth × distance d'une case`, client/documents/token.mjs:3251).
+ * Units: elevations and area sizes are in the grid's unit (that of token
+ * elevations), a token's depth in cells (`depth` of the V14 core, a token goes from
+ * `elevation` to `elevation + depth × distance d'une case`, client/documents/token.mjs:3251).
  */
 
 /**
- * Hauteur d'une créature en cases. dnd5e 6 la renseigne d'après la taille quand la synchronisation
- * des tokens est active (`tokenSizeSync`, documents/actor/actor.mjs:428 : largeur, hauteur ET profondeur
- * = taille) ; sans elle, ou pour un token importé d'une version antérieure, `depth` reste à 1, sa
- * valeur par défaut : on tient alors une créature pour aussi haute que large — un Grand occupe un cube
- * de 10 ft. Une profondeur réglée sur le token (≠ 1, à la main ou par dnd5e) l'emporte.
+ * A creature's height in cells. dnd5e 6 fills it in from the size when token synchronization
+ * is active (`tokenSizeSync`, documents/actor/actor.mjs:428: width, height AND depth
+ * = size); without it, or for a token imported from an earlier version, `depth` stays at 1, its
+ * default value: a creature is then taken to be as tall as wide — a Large occupies a 10 ft
+ * Cube. A depth set on the token (≠ 1, by hand or by dnd5e) takes precedence.
  * @param {{width?: number, height?: number, depth?: number}} size
  * @returns {number}
  */
@@ -23,39 +23,39 @@ export function depthOf({ width=1, height=1, depth=1 }={}) {
 }
 
 /**
- * Tranche verticale occupée : des pieds à la tête.
- * @param {{elevation?: number, depth?: number}} position  `depth` en cases (voir `depthOf`).
- * @param {number} gridDistance  Distance d'une case, unité de la grille.
+ * Vertical slice occupied: from feet to head.
+ * @param {{elevation?: number, depth?: number}} position  `depth` in cells (see `depthOf`).
+ * @param {number} gridDistance  Distance of one cell, in the grid's unit.
  * @returns {{bottom: number, top: number}}
  */
 export function verticalExtent({ elevation=0, depth=1 }={}, gridDistance) {
   return { bottom: elevation, top: elevation + (depth * gridDistance) };
 }
 
-/** Écart vertical entre deux tranches : 0 quand elles se chevauchent. */
+/** Vertical gap between two slices: 0 when they overlap. */
 export function verticalGap(a, b) {
   return Math.max(0, b.bottom - a.top, a.bottom - b.top);
 }
 
 /**
- * Tranche d'élévation d'une zone d'effet, d'après la forme déclarée par dnd5e
- * (`CONFIG.DND5E.areaTargetTypes`) et l'élévation d'origine (celle du lanceur, faute de visée
- * verticale dans l'interface — dnd5e ne pose la zone qu'à plat, template-placement.mjs:138).
+ * Elevation slice of an area of effect, from the shape declared by dnd5e
+ * (`CONFIG.DND5E.areaTargetTypes`) and the origin elevation (the caster's, since the interface has no vertical
+ * aiming — dnd5e only places the area flat, template-placement.mjs:138).
  *
- *  - sphère (et cercle) : centrée sur l'élévation d'origine, rayon en haut comme en bas ;
- *  - émanation (`radius`) : autour du corps du lanceur, des pieds moins le rayon à la tête plus le rayon ;
- *  - cube (et carré) : posé sur l'élévation d'origine, aussi haut que large ;
- *  - cylindre : posé, de la hauteur déclarée (à défaut, aussi haut que son diamètre) ;
- *  - cône : à plat, mais un cône s'élargit — on lui donne la moitié de sa longueur en haut et en bas.
- *    Trop large près de l'origine, juste au bout : on préfère inclure de trop (le MJ annule)
- *    qu'oublier une créature en vol au bout du cône ;
- *  - ligne : à plat, de l'épaisseur du lanceur ou de sa largeur, la plus grande des deux ;
- *  - mur : posé, de sa hauteur (à défaut, de sa largeur) ; anneau : posé, de sa hauteur (à défaut, comme une sphère).
+ *  - Sphere (and circle): centered on the origin elevation, radius above and below;
+ *  - Emanation (`radius`): around the caster's body, from the feet minus the radius to the head plus the radius;
+ *  - Cube (and square): set on the origin elevation, as tall as wide;
+ *  - cylinder: set, of the declared height (otherwise as tall as its diameter);
+ *  - Cone: flat, but a Cone widens — it gets half its length above and below.
+ *    Too wide near the origin, just right at the end: better to include too much (the GM cancels)
+ *    than to forget a flying creature at the end of the Cone;
+ *  - Line: flat, of the caster's thickness or its width, whichever is greater;
+ *  - wall: set, of its height (otherwise its width); ring: set, of its height (otherwise like a Sphere).
  *
- * @param {{type: string, size?: number, width?: number, height?: number}} area  Unité de la grille.
- * @param {{elevation?: number, depth?: number}} origin  Position du lanceur (`depth` en cases).
+ * @param {{type: string, size?: number, width?: number, height?: number}} area  Grid unit.
+ * @param {{elevation?: number, depth?: number}} origin  Caster position (`depth` in cells).
  * @param {number} gridDistance
- * @returns {{bottom: number, top: number}|null}  null : forme inconnue ou sans taille, on ne touche à rien.
+ * @returns {{bottom: number, top: number}|null}  null: unknown shape or no size, nothing is touched.
  */
 export function regionElevationFor({ type, size, width, height }, { elevation=0, depth=1 }={}, gridDistance) {
   const has = v => Number.isFinite(v) && (v > 0);
@@ -87,12 +87,11 @@ export function regionElevationFor({ type, size, width, height }, { elevation=0,
 }
 
 /**
- * Point d'origine d'une zone, en pixels, d'après sa première forme (formes de région du cœur V14,
- * common/data/data.mjs) : centre d'un cercle ou d'une ellipse, origine d'un cône, d'une ligne ou
- * d'un anneau, centre d'un rectangle (son origine décalée par son ancre), origine ou centre de
- * masse d'un polygone, origine d'une forme « cases de grille » (14.370) quand elle en a une. Pour une émanation, une forme
- * de token ou une forme inconnue, `fallback` (le centre du token d'origine, que l'adaptateur connaît). Une forme « trou »
- * (`hole`, une case épargnée dans une Boule de feu prudente) n'est jamais l'origine : on prend la première forme pleine.
+ * Origin point of an area, in pixels, from its first shape (V14 core region shapes, common/data/data.mjs): center of a
+ * circle or an ellipse, origin of a Cone, a Line or a ring, center of a rectangle (its origin offset by its anchor), origin or
+ * center of mass of a polygon, origin of a "grid cells" shape (14.370) when it has one. For an Emanation, a token shape or an
+ * unknown shape, `fallback` (the center of the origin token, which the adapter knows). A "hole" shape
+ * (`hole`, a cell spared in a cautious Fireball) is never the origin: the first solid shape is taken.
  * @param {object[]} shapes
  * @param {{x: number, y: number}|null} fallback
  * @returns {{x: number, y: number}|null}
@@ -127,12 +126,12 @@ export function originPointOfShapes(shapes, fallback=null) {
 }
 
 /* -------------------------------------------- */
-/*  Une vraie sphère                            */
+/*  A true Sphere                               */
 /* -------------------------------------------- */
 
 /**
- * Distance d'un point à une boîte alignée sur les axes (0 si le point est dedans). Mêmes unités
- * partout : l'appelant convertit les élévations dans l'unité des x, y.
+ * Distance from a point to an axis-aligned box (0 if the point is inside). Same units
+ * throughout: the caller converts elevations into the unit of x, y.
  * @param {{x: number, y: number, z: number}} point
  * @param {{x0: number, x1: number, y0: number, y1: number, z0: number, z1: number}} box
  */
@@ -144,18 +143,18 @@ export function pointBoxDistance(point, box) {
 }
 
 /**
- * Une créature (sa boîte) est-elle dans une sphère ? La tranche d'élévation d'une région fait d'une
- * sphère un cylindre : dans les coins du cylindre, hors de la sphère, une créature est épargnée (P2).
+ * Is a creature (its box) inside a Sphere? A region's elevation slice turns a
+ * Sphere into a cylinder: in the corners of the cylinder, outside the Sphere, a creature is spared (P2).
  * @param {{x: number, y: number, z: number, radius: number}} sphere
- * @param {object} box  Voir `pointBoxDistance`.
+ * @param {object} box  See `pointBoxDistance`.
  */
 export function withinSphere(sphere, box) {
   return pointBoxDistance(sphere, box) <= sphere.radius + 1e-6;
 }
 
 /**
- * Deux positions se chevauchent-elles verticalement (des pieds à la tête) ? Un grimpeur à 10 ft au-dessus d'une case occupée n'en
- * occupe pas l'espace (§192 : occupation en trois dimensions). Tête contre pieds compte comme un contact.
+ * Do two positions overlap vertically (feet to head)? A climber 10 ft above an occupied cell does not
+ * occupy its space (§192: three-dimensional occupancy). Head against feet counts as contact.
  * @param {{elevation?: number, depth?: number}} a
  * @param {{elevation?: number, depth?: number}} b
  * @param {number} gridDistance
@@ -169,7 +168,7 @@ export function overlapsVertically(a, b, gridDistance) {
 /* -------------------------------------------- */
 
 /**
- * Le rectangle d'une forme « rectangle » de région, axes alignés (ancre comprise), ou null pour une autre forme.
+ * The rectangle of a "rectangle" region shape, axis-aligned (anchor included), or null for any other shape.
  * @param {{type: string, x: number, y: number, width: number, height: number, anchorX?: number, anchorY?: number}} shape
  * @returns {{x0: number, y0: number, x1: number, y1: number}|null}
  */
@@ -179,14 +178,14 @@ export function rectOfShape(shape) {
   return { x0, y0, x1: x0 + shape.width, y1: y0 + shape.height };
 }
 
-/** Le point est-il dans le rectangle (bords compris) ? */
+/** Is the point inside the rectangle (edges included)? */
 export function pointInRect(point, rect) {
   return !!rect && (point.x >= rect.x0 - 1e-6) && (point.x <= rect.x1 + 1e-6) && (point.y >= rect.y0 - 1e-6) && (point.y <= rect.y1 + 1e-6);
 }
 
 /**
- * §286 : des cubes « contigus » (Tempête de feu : « chaque cube doit être contigu à au moins un autre ») — tous reliés de proche en
- * proche par une face commune (un chevauchement compte, un coin seul non). Moins de deux rectangles : contigus.
+ * §286: "contiguous" Cubes (Fire Storm: "each cube must be contiguous to at least one other") — all linked step by step
+ * by a shared face (an overlap counts, a lone corner does not). Fewer than two rectangles: contiguous.
  * @param {Array<{x0: number, y0: number, x1: number, y1: number}>} rects
  */
 export function contiguousRects(rects) {
@@ -207,10 +206,10 @@ export function contiguousRects(rects) {
 }
 
 /**
- * §286 : une zone de plusieurs formes (Nuée de météores : quatre sphères ; Tempête de feu : dix cubes) prend une créature si UNE de
- * ses formes la contient et l'atteint — chaque forme a son point d'origine. Ce que la créature devient pour `areaTargets` :
- * `inVolume` (false : hors de toute forme), `lineOfEffect` (false : chaque forme qui la contient est arrêtée par un plancher).
- * @param {Array<{inShape: boolean|null, lineOfEffect: boolean|null}>} results  Une ligne par forme ; null : on ne sait pas.
+ * §286: an area of several shapes (Meteor Swarm: four Spheres; Fire Storm: ten Cubes) takes a creature if ONE of
+ * its shapes contains and reaches it — each shape has its own origin point. What the creature becomes for `areaTargets`:
+ * `inVolume` (false: outside every shape), `lineOfEffect` (false: every shape that contains it is stopped by a floor).
+ * @param {Array<{inShape: boolean|null, lineOfEffect: boolean|null}>} results  One row per shape; null: unknown.
  * @returns {{inVolume: boolean|null, lineOfEffect: boolean|null}}
  */
 export function anyShapeTakes(results) {

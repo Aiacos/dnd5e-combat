@@ -1,13 +1,13 @@
 /**
- * Engloutissement du Crapaud géant (SPEC §45). Monde `ravenloft` (ou tout monde où un « Crapaud géant » du Monster Manual
- * a une créature de taille M ou moins à son contact). Aucune activité de son item ne pose l'effet « englouti » : le moteur
- * le pose à l'action.
- *  1. Sans créature agrippée : l'Engloutissement n'avale rien.
- *  2. Morsure jusqu'à toucher : la créature est Agrippée.
- *  3. Engloutissement : Aveuglée, Entravée, abri total ; plus Agrippée ; posée dans l'espace du crapaud.
- *  4. Fin du tour du crapaud : une carte de dégâts d'acide pour l'engloutie.
- *  5. Le crapaud meurt : la créature est libérée, À terre, hors de lui.
- * La victime reçoit 200 PV le temps du scénario. Remet PV, états, positions et combat.
+ * Giant Toad's Swallow (SPEC §45). `ravenloft` world (or any world where a Monster Manual "Giant Toad"
+ * has a Medium or smaller creature in contact). No activity of its item places the "swallowed" effect: the engine
+ * places it on the action.
+ *  1. Without a grappled creature: the Swallow swallows nothing.
+ *  2. Bite until it hits: the creature is Grappled.
+ *  3. Swallow: Blinded, Restrained, Total Cover; no longer Grappled; placed in the toad's space.
+ *  4. End of the toad's turn: an acid damage card for the swallowed creature.
+ *  5. The toad dies: the creature is freed, Prone, outside of it.
+ * The victim receives 200 HP for the duration of the scenario. Restores HP, conditions, positions and combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -16,14 +16,14 @@ export default {
   name: "crapaud géant — Engloutissement posé par le moteur, acide en fin de tour, libéré à la mort",
 
   async run(ctx) {
-    // Absent de `dnd-6` : posé au contact du Zombi le temps du scénario (Monster Manual 2024, sinon SRD 2024).
+    // Absent from `dnd-6`: placed in contact with the Zombie for the scenario (Monster Manual 2024, otherwise SRD 2024).
     await ctx.cast({ "Crapaud géant": "mmGiantToad00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     const toad = tokens.find(t => /Crapaud géant|Giant Toad/i.test(t.name));
     if ( !toad ) { ctx.log("pas de Crapaud géant sur la scène : non applicable"); return; }
     const grid = await ctx.gridSize();
     const tp = await ctx.position(toad);
-    // La créature au contact : la plus proche du crapaud (Grand : deux cases de côté), à une case au plus de son bord.
+    // The creature in contact: the closest to the toad (Large: two cells wide), at most one cell from its edge.
     const gap = p => Math.max(Math.max(tp.x - (p.x + grid), p.x - (tp.x + (2 * grid))), Math.max(tp.y - (p.y + grid), p.y - (tp.y + (2 * grid))));
     let victim = null;
     for ( const t of tokens.filter(t => t.id !== toad.id) ) {
@@ -36,8 +36,8 @@ export default {
     const prey = victim.token;
     ctx.log(`victime : ${prey.name}`);
 
-    // Les PV lus sur l'acteur préparé : `ctx.hp` rend null pour un token non lié jamais blessé (rien dans son delta), et
-    // le scénario laissait alors le crapaud à 0 PV (vu le 2026-10-01).
+    // HP read from the prepared actor: `ctx.hp` returns null for an unlinked token never wounded (nothing in its delta), and
+    // the scenario then left the toad at 0 HP (seen on 2026-10-01).
     const hpOf = async t => (await ctx.engine("stats", { tokenId: t.id }))?.hp?.value ?? null;
     const toadHp = await hpOf(toad);
     const preyHp = await hpOf(prey);
@@ -77,12 +77,12 @@ export default {
     const act = { usageConfig: { [MODULE_ID]: { confirmed: true } } };
     const useSwallow = () => ctx.use({ tokenId: toad.id, itemId: swallow, activityId: "0A0cIyRNbphDR82L", ...act });
 
-    // 1. Rien d'agrippé : rien d'englouti.
+    // 1. Nothing grappled: nothing swallowed.
     await useSwallow();
     await pause(2500);
     ctx.expect(!(await statuses(prey)).has("coverTotal") && !(await inside()), "sans créature agrippée, l'Engloutissement n'avale rien");
 
-    // 2. Morsure jusqu'à toucher.
+    // 2. Bite until it hits.
     let held = false;
     for ( let n = 0; (n < 12) && !held; n++ ) {
       const u = await ctx.use({ tokenId: toad.id, itemId: bite, activityType: "attack", targetTokenIds: [prey.id], ...act });
@@ -116,7 +116,7 @@ export default {
     }
     ctx.expect((await statuses(prey)).has("coverTotal"), "toujours englouti après les dégâts");
 
-    // 5. Le crapaud meurt : libéré, À terre, dehors.
+    // 5. The toad dies: freed, Prone, outside.
     await ctx.setHp(toad, 0);
     await pause(4000);
     const s5 = await statuses(prey);

@@ -1,12 +1,12 @@
 /**
- * §70 : l'orage d'Appel de la foudre (clé de contenu `storm`).
+ * §70: the storm of Call Lightning (content key `storm`).
  *
- * Le sort pose d'abord le NUAGE — la zone de l'item (cylindre de 18 m de rayon) que dnd5e fait poser à l'incantation : il
- * reste, rattaché à la concentration, sans rien résoudre lui-même, habillé en orage (pluie et éclairs de FXMaster s'il est
- * actif, sinon une zone sombre ; la région elle-même n'est plus montrée). Puis l'ÉCLAIR : un cercle de 1,50 m (`bolt`)
- * visé sous le nuage, posé comme une zone de l'activité — c'est lui que la résolution lit (sauvegarde, dégâts), puis
- * retire. Chaque relance du sort (action Magie, sans emplacement, §16.21 `recast`) ne vise qu'un nouvel éclair sous le même
- * nuage. « Dehors, par temps d'orage » (+1d10) se demande à l'incantation et se note sur le nuage.
+ * The spell first places the CLOUD — the item's area (cylinder with an 18 m radius) that dnd5e has placed at casting: it
+ * stays, attached to Concentration, resolving nothing itself, dressed up as a storm (FXMaster rain and lightning if it is
+ * active, otherwise a dark area; the region itself is no longer shown). Then the BOLT: a 1.50 m circle (`bolt`)
+ * aimed under the cloud, placed like an area of the activity — it is what the resolution reads (save, damage), then
+ * removes. Each recast of the spell (Magic action, no slot, §16.21 `recast`) only aims a new bolt under the same
+ * cloud. "Outdoors, in stormy weather" (+1d10) is asked at casting and noted on the cloud.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,19 +14,19 @@ import { contentOf } from "./content.mjs";
 import { shapeCenter } from "../core/area.mjs";
 import { lengthIn } from "./units.mjs";
 
-/** La règle d'orage d'un item (`{ bonus }`), ou null. */
+/** An item's storm rule (`{ bonus }`), or null. */
 export const stormOf = item => (item ? contentOf(item).entry?.storm ?? null : null);
 
-/** Une région posée par un item à orage : le nuage, ou un éclair (`flags["dnd5e-combat"].bolt`). */
+/** A region placed by a storm item: the cloud, or a bolt (`flags["dnd5e-combat"].bolt`). */
 export const isBoltRegion = region => !!region?.getFlag?.(MODULE_ID, "bolt");
 
-/** Le nuage d'un item sur la scène affichée (la région de son activité qui n'est pas un éclair), ou null. */
+/** An item's cloud on the displayed scene (the region of its activity that is not a bolt), or null. */
 export function cloudOf(item, scene=canvas?.scene) {
   if ( !item || !scene ) return null;
   return scene.regions.find(r => (r.getFlag("dnd5e", "item") === item.uuid) && !isBoltRegion(r) && r.getFlag(MODULE_ID, "cloud")) ?? null;
 }
 
-/** Le centre et le rayon (pixels) du nuage. */
+/** The cloud's center and radius (pixels). */
 export function cloudCircle(cloud) {
   const shape = cloud?.shapes?.[0]?.toObject?.() ?? cloud?._source?.shapes?.[0];
   const center = shapeCenter(shape);
@@ -35,19 +35,19 @@ export function cloudCircle(cloud) {
   return { center, radius };
 }
 
-/** Le rayon de l'éclair, en pixels de la scène (règle `bolt` : 5 ft), plus une demi-case comme à la pose calée sur la grille. */
+/** The bolt's radius, in scene pixels (`bolt` rule: 5 ft), plus half a cell as at placement snapped to the grid. */
 export function boltRadiusPx(item, scene) {
   const rule = contentOf(item).entry?.bolt ?? { radius: 5, units: "ft" };
   let radius = lengthIn(rule.radius, rule.units, scene.grid.units);
   return ((radius / scene.grid.distance) * scene.grid.size) + (scene.grid.size / 2);
 }
 
-/** FXMaster actif : la pluie (particules) et les éclairs (filtre), dans la région seulement. */
+/** FXMaster active: the rain (particles) and the lightning (filter), in the region only. */
 function fxBehaviors(name) {
   if ( !game.modules.get("fxmaster")?.active ) return [];
   const rain = { density: 0.6, speed: 0.35, scale: 0.6, direction: 285, lifetime: 0.3, alpha: 0.9, splash: true, topDown: false,
     belowTokens: false, belowTiles: false, belowForeground: false, tint: { apply: false, value: "#FFFFFF" } };
-  // Des nuages clairs et légers (trop sombres teintés en gris, vu par l'utilisateur le 2026-10-04).
+  // Light, thin clouds (too dark tinted gray, seen by the user on 2026-10-04).
   const clouds = { density: 0.12, speed: 0.2, scale: 0.6, direction: 270, lifetime: 0.4, alpha: 0.35,
     belowTokens: false, belowTiles: false, belowForeground: false, tint: { apply: false, value: "#FFFFFF" } };
   const lightning = { frequency: 2500, spark_duration: 300, brightness: 1.4, belowTokens: false, belowTiles: false, belowForeground: false,
@@ -63,10 +63,10 @@ function fxBehaviors(name) {
 }
 
 /**
- * Habille le nuage tout juste posé : marqué (`cloud`, et `stormy` — l'orage était déjà là), porte l'orage de FXMaster, et la
- * région elle-même n'est montrée à personne (`LAYER` : seulement sur le calque des régions, pour la retrouver) — reposé APRÈS
- * l'ajout des comportements, l'essai du 2026-10-04 l'ayant relue « MJ » (`GAMEMASTER`) ; sans FXMaster, une zone sombre visible
- * de tous. Par celui qui l'a posé (propriétaire).
+ * Dresses up the cloud just placed: marked (`cloud`, and `stormy` — the storm was already there), carries FXMaster's storm, and the
+ * region itself is shown to nobody (`LAYER`: only on the regions layer, to find it again) — placed AFTER
+ * the behaviors are added, the 2026-10-04 trial having read it back as "GM" (`GAMEMASTER`); without FXMaster, a dark area visible
+ * to all. By whoever placed it (owner).
  */
 export async function dressCloud(cloud, { stormy=false }={}) {
   const item = fromUuidSync(cloud.getFlag("dnd5e", "item") ?? "", { strict: false });
@@ -87,8 +87,9 @@ export async function dressCloud(cloud, { stormy=false }={}) {
 }
 
 /**
- * Pose l'éclair au point visé (centre, pixels) : un cercle de l'activité, sous le nuage, de la hauteur du sol du lanceur à
- * celle du nuage — la résolution le lit comme toute zone posée (runtime/engine.mjs, `onRegionCreated`) puis le retire.
+ * Places the bolt at the aimed point (center, pixels): a circle of the activity, under the cloud, from the height of the
+ * caster's floor to that of the cloud — the resolution reads it like any placed area (runtime/engine.mjs, `onRegionCreated`)
+ * then removes it.
  */
 export async function placeBolt(activity, cloud, center) {
   const scene = cloud.parent;

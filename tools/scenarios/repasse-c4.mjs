@@ -1,14 +1,15 @@
 /**
- * §299, lot C4 de la repasse terme par terme : effets tenus par la Rage, fins quand le porteur ou le lanceur est Neutralisé. Arène des
- * sorts (Lanceur, Mort-vivant, Allié). L'Allié reçoit la classe de Barbare (niveau 11) et la Rage du Manuel, prêtées — le Héros (Barbare
- * pré-tiré) garde ses propres items intacts.
- * Chaque partie prête ses items et remet tout.
- *  - Rage aveugle : le Héros Effrayé entre en Rage → l'état cesse, l'immunité s'active ; la Rage finie, l'immunité se désactive ;
- *  - Rage du prédateur : posée pendant la Rage, la copie de l'Ours tombe avec elle ; §509 (Core#98) : une option prise, une seconde
- *    pendant la même Rage est un souci (forçable) ; avant l'option et après la Rage, aucun ;
- *  - Vitalité de l'Arbre : l'entrée en Rage donne des PV temporaires ;
- *  - Renvoi des morts-vivants : le Mort-vivant Renvoyé ne l'est plus quand le Lanceur devient Neutralisé ;
- *  - Vol draconique : l'Allié perd son vol quand il devient Neutralisé.
+ * §299, batch C4 of the term-by-term pass: effects held by Rage, ends when the bearer or the caster is Incapacitated. Spell
+ * arena (Caster, Undead, Ally). The Ally receives the Barbarian class (level 11) and the Manual's Rage, borrowed — the Hero
+ * (pre-generated Barbarian) keeps its own items intact.
+ * Each part borrows its items and puts everything back.
+ *  - Blind Rage: the Frightened Hero enters Rage → the condition ends, the immunity activates; once the Rage ends, the
+ *    immunity deactivates;
+ *  - Predator's Rage: placed during Rage, the Bear's copy drops with it; §509 (Core#98): one option taken, a second
+ *    during the same Rage is an issue (forceable); before the option and after the Rage, none;
+ *  - Vitality of the Tree: entering Rage gives Temporary Hit Points;
+ *  - Turn Undead: the Turned Undead no longer is when the Caster becomes Incapacitated;
+ *  - Dragon Flight: the Ally loses its flight when it becomes Incapacitated.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -49,7 +50,7 @@ export default {
     const unlend = async () => { for ( const [t, id] of lent.splice(0) ) await ctx.call("remove-embedded-item", { documentType: "Actor", id: t.actorId, itemId: id }).catch(() => {}); };
     const actorOf = t => ctx.call("get-actor", { actorId: t.actorId });
     const rageItem = async () => (await actorOf(hero)).items.find(i => i.system?.identifier === "rage");
-    /** Fin de la Rage : les copies de son effet retirées, l'effet de l'item désactivé, ses utilisations rendues. */
+    /** End of Rage: the copies of its effect removed, the item's effect deactivated, its uses restored. */
     const calm = async () => {
       const rage = await rageItem();
       if ( !rage ) return;
@@ -65,7 +66,7 @@ export default {
       await pause(1500);
     };
     const enrage = async () => { const rage = await rageItem(); await ctx.use({ tokenId: hero.id, itemId: rage._id }); await pause(3000); };
-    /** L'Allié en barbare : classe de niveau 11 et Rage, prêtées (remises à la fin du scénario, pas entre les parties). */
+    /** The Ally as a barbarian: level 11 class and Rage, borrowed (put back at the end of the scenario, not between parts). */
     const barbarian = async () => {
       const keep = [];
       for ( const [uuid, extra] of [[`${PHB}.classes.Item.phbbrbBarbarian0`, { "system.levels": 11 }], [`${PHB}.classes.Item.phbbrbRage000000`, { "system.uses.spent": 0 }]] ) {
@@ -101,7 +102,7 @@ export default {
       await reset();
     };
     const statuses = async t => (await ctx.engine("stats", { tokenId: t.id }))?.statuses ?? [];
-    /** Attend qu'une condition tienne (la mise en accord passe par la file du MJ actif), 8 s au plus. */
+    /** Waits until a condition holds (the alignment goes through the active GM's queue), 8 s at most. */
     const until = async test => { for ( let n = 0; n < 16; n++ ) { if ( await test() ) return true; await pause(500); } return false; };
     const itemEffect = async (t, id, effectId) => ((await actorOf(t)).items.find(i => i._id === id)?.effects ?? []).find(e => e._id === effectId);
 
@@ -120,7 +121,7 @@ export default {
     await part("Rage du prédateur", async () => {
       const item = await lend(hero, `${PHB}.classes.Item.phbbrbRageOfTheW`);
       await pause(1500);
-      // §509 (Core#98) : le souci « une seule option par Rage », lu par la légalité (api.mcp.issues).
+      // §509 (Core#98): the "only one option per Rage" issue, read through legality (api.mcp.issues).
       const second = async () => (await ctx.engine("issues", { tokenId: hero.id, itemId: item })).filter(l => /One option per Rage|Une seule option par Rage/i.test(l));
       await enrage();
       ctx.expect(!(await second()).length, "en Rage, avant toute option : pas de souci d'option");

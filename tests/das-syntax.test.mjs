@@ -1,23 +1,23 @@
 /**
- * Socle de tests DAS — SYNTAXE ET MANIFESTE. Fichier COPIÉ tel quel depuis le dépôt du moteur
- * (`tools/contract/das-syntax.test.mjs`) : ne pas le modifier ici. Dans le moteur, `node tools/contract/sync.mjs` le recopie
- * dans tous les modules ; ce qui est propre à un module va dans `tests/das-tests.json`, section `"manifest"`.
+ * DAS test base — SYNTAX AND MANIFEST. File COPIED as is from the engine repository
+ * (`tools/contract/das-syntax.test.mjs`): do not modify it here. In the engine, `node tools/contract/sync.mjs` copies it
+ * into all modules; what is specific to a module goes in `tests/das-tests.json`, section `"manifest"`.
  *
- * Vérifie, sans Foundry :
- *   1. chaque `.mjs` de `module/scripts/` s'analyse sans erreur de syntaxe (une coquille dans un fichier qu'aucun test
- *      n'importe empêche tout le module de se charger en jeu : vu sur DAS · Combat UI 0.25.2) ;
- *   2. chaque import relatif (`from "./x.mjs"`, `import("./x.mjs")`) vise un fichier qui existe, et chaque nom importé
- *      (`import { a } from`) est exporté par ce fichier — sous Vitest un nom absent devient `undefined` sans erreur ;
- *   3. chaque fichier cité par `module/module.json` existe : `esmodules`, `scripts`, `styles`, `languages`, et `packs`
- *      (un compendium construit par `npm run packs` n'est pas versionné : sa source se déclare dans `packSources`) ;
- *   4. le manifeste est cohérent : `id` (= `name` de package.json), `version` X.Y.Z, `compatibility` (minimum ≤ verified),
- *      `url` / `manifest` / `download` sur le même dépôt GitHub (`…/releases/latest/download/module.json` et `module.zip`),
- *      système `dnd5e` déclaré.
+ * Checks, without Foundry:
+ *   1. every `.mjs` of `module/scripts/` parses without a syntax error (a typo in a file that no test
+ *      imports prevents the whole module from loading in game: seen on DAS · Combat UI 0.25.2);
+ *   2. every relative import (`from "./x.mjs"`, `import("./x.mjs")`) targets a file that exists, and every imported name
+ *      (`import { a } from`) is exported by that file — under Vitest a missing name becomes `undefined` without an error;
+ *   3. every file cited by `module/module.json` exists: `esmodules`, `scripts`, `styles`, `languages`, and `packs`
+ *      (a compendium built by `npm run packs` is not versioned: its source is declared in `packSources`);
+ *   4. the manifest is consistent: `id` (= `name` of package.json), `version` X.Y.Z, `compatibility` (minimum ≤ verified),
+ *      `url` / `manifest` / `download` on the same GitHub repository (`…/releases/latest/download/module.json` and `module.zip`),
+ *      `dnd5e` system declared.
  *
- * Réglage (facultatif), `tests/das-tests.json` :
+ * Setting (optional), `tests/das-tests.json`:
  *   "manifest": {
- *     "packSources": { "outils": "tools/macros" },       // compendium → dossier (depuis la racine du dépôt) d'où il est construit
- *     "except": { "imports:ui/x.mjs → ./vieux.mjs": "raison" }   // exceptions nommées (clé = celle du message d'échec)
+ *     "packSources": { "outils": "tools/macros" },       // compendium → folder (from the repository root) it is built from
+ *     "except": { "imports:ui/x.mjs → ./vieux.mjs": "reason" }   // named exceptions (key = that of the failure message)
  *   }
  */
 import { describe, it, expect, vi } from "vitest";
@@ -26,8 +26,8 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const ROOT = join(import.meta.dirname, "..");
-// Ces tests lisent tout le code du module : sur le moteur (~510 fichiers), dans la passe complète où les autres fichiers de test
-// occupent tous les cœurs, plusieurs secondes. Même délai que le chargement du module (tests/load.test.mjs du moteur).
+// These tests read all the module's code: on the engine (~510 files), in the full pass where the other test files
+// occupy all the cores, several seconds. Same delay as loading the module (the engine's tests/load.test.mjs).
 vi.setConfig({ testTimeout: 60000 });
 const MODULE = join(ROOT, "module");
 const SCRIPTS = join(MODULE, "scripts");
@@ -36,7 +36,7 @@ const CONFIG = existsSync(configFile) ? JSON.parse(readFileSync(configFile, "utf
 const SETTINGS = CONFIG.manifest ?? {};
 const EXCEPT = SETTINGS.except ?? {};
 const used = new Set();
-/** Un défaut est-il une exception nommée du réglage ? */
+/** Is a default a named exception of the setting? */
 const excepted = key => { if ( key in EXCEPT ) { used.add(key); return true; } return false; };
 
 const posix = p => p.split(sep).join("/");
@@ -49,9 +49,9 @@ const rel = file => posix(relative(SCRIPTS, file));
 const lineOf = (text, index) => text.slice(0, index).split("\n").length;
 
 /**
- * Le code sans commentaires (remplacés par des espaces : positions et lignes restent justes). Avec `strings: false`, le
- * contenu des chaînes est blanchi aussi (les guillemets restent ; le texte d'un `${…}` d'un gabarit reste du code).
- * Les expressions régulières littérales sont reconnues (un `"` ou un `//` dedans n'ouvre rien).
+ * The code without comments (replaced by spaces: positions and lines stay correct). With `strings: false`, the
+ * content of strings is blanked too (quotes stay; the text of a `${…}` in a template stays code).
+ * Literal regular expressions are recognized (a `"` or a `//` inside does not open anything).
  */
 function clean(src, { strings = true } = {}) {
   let out = "";
@@ -59,14 +59,14 @@ function clean(src, { strings = true } = {}) {
   const blank = s => s.replace(/[^\n]/g, " ");
   const keep = s => strings ? s : blank(s);
   const regexAllowed = () => {
-    // Le dernier caractère significatif avant le `/` (lu à rebours : un `replace(/\s+$/)` sur tout le texte serait quadratique).
+    // The last significant character before the `/` (read backwards: a `replace(/\s+$/)` on the whole text would be quadratic).
     let k = out.length - 1;
     while ( (k >= 0) && /\s/.test(out[k]) ) k--;
     if ( k < 0 ) return true;
     if ( "(,=:[!&|?{};+-*%<>~^".includes(out[k]) ) return true;
     return /\b(return|typeof|case|in|of|new|delete|void|throw|else|yield|await)$/.test(out.slice(Math.max(0, k - 9), k + 1));
   };
-  const stack = [];   // pour chaque `${` ouvert dans un gabarit : la profondeur d'accolades à l'intérieur
+  const stack = [];   // for each `${` opened in a template: the brace depth inside
   while ( i < src.length ) {
     const c = src[i];
     const next = src[i + 1];
@@ -99,7 +99,7 @@ function clean(src, { strings = true } = {}) {
       out += c + keep(src.slice(i + 1, j)) + (closed ? c : ""); i = closed ? j + 1 : j;
     }
     else if ( (c === "`") || ((c === "}") && stack.length && (stack.at(-1) === 0)) ) {
-      // Début d'un gabarit, ou retour dans le gabarit à la fin d'un `${…}`.
+      // Start of a template, or return into the template at the end of a `${…}`.
       if ( c === "}" ) stack.pop();
       out += c;
       let j = i + 1;
@@ -120,14 +120,14 @@ function clean(src, { strings = true } = {}) {
   return out;
 }
 
-/** Code sans commentaires, chaînes gardées (pour lire les chemins d'import). */
+/** Code without comments, strings kept (to read the import paths). */
 const CODE = Object.fromEntries(FILES.map(f => [f, clean(readFileSync(f, "utf8"))]));
 
-describe("syntaxe des scripts du module", () => {
-  it("chaque fichier .mjs s'analyse sans erreur", () => {
+describe("syntax of the module's scripts", () => {
+  it("every .mjs file parses without error", () => {
     expect(FILES.length, "aucun fichier dans module/scripts/").toBeGreaterThan(0);
-    // Un seul processus pour tous les fichiers (vm.SourceTextModule analyse sans exécuter) ; `node --check` ensuite,
-    // sur les seuls fichiers en faute, pour la ligne.
+    // A single process for all the files (vm.SourceTextModule parses without executing); `node --check` afterwards,
+    // on the faulty files only, for the line.
     const script = `const vm = require("node:vm"), fs = require("node:fs");
       const bad = [];
       for ( const f of JSON.parse(fs.readFileSync(0, "utf8")) ) {
@@ -147,7 +147,7 @@ describe("syntaxe des scripts du module", () => {
   });
 });
 
-/** Les noms exportés par un fichier du module (`export * from` suivi). */
+/** The names exported by a module file (`export * from` followed). */
 function exportsOf(file, seen = new Set()) {
   const names = new Set();
   if ( seen.has(file) || !(file in CODE) ) return names;
@@ -175,7 +175,7 @@ function exportsOf(file, seen = new Set()) {
 }
 
 describe("imports relatifs du module", () => {
-  it("chaque import relatif vise un fichier qui existe", () => {
+  it("every relative import targets a file that exists", () => {
     const missing = [];
     for ( const file of FILES ) {
       const code = CODE[file];
@@ -195,7 +195,7 @@ describe("imports relatifs du module", () => {
     expect(missing, "imports vers des fichiers absents").toEqual([]);
   });
 
-  it("chaque nom importé est exporté par le fichier d'où on l'importe", () => {
+  it("every imported name is exported by the file it is imported from", () => {
     const missing = [];
     for ( const file of FILES ) {
       const code = CODE[file];
@@ -229,7 +229,7 @@ describe("manifeste module/module.json", () => {
   const manifestFile = join(MODULE, "module.json");
   const manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
 
-  it("chaque fichier cité existe", () => {
+  it("every cited file exists", () => {
     const missing = [];
     const check = (field, path, why = "") => {
       if ( !path ) return;
@@ -240,7 +240,7 @@ describe("manifeste module/module.json", () => {
     for ( const p of manifest.scripts ?? [] ) check("scripts", p);
     for ( const p of manifest.styles ?? [] ) check("styles", typeof p === "string" ? p : p?.src);
     for ( const l of manifest.languages ?? [] ) check(`languages (${l.lang})`, l.path);
-    // Un compendium ignoré par git (construit par `npm run packs`) n'existe pas sur la CI ni après un clone : on regarde sa source.
+    // A compendium ignored by git (built by `npm run packs`) does not exist on CI nor after a clone: its source is checked.
     const ignored = existsSync(join(ROOT, ".gitignore")) ? readFileSync(join(ROOT, ".gitignore"), "utf8").split(/\r?\n/)
       .map(l => l.trim().replace(/^\//, "").replace(/\/$/, "")).filter(l => l && !l.startsWith("#") && !/[*!?]/.test(l)) : [];
     for ( const pack of manifest.packs ?? [] ) {
@@ -257,7 +257,7 @@ describe("manifeste module/module.json", () => {
     expect(missing, "fichiers cités par module.json introuvables").toEqual([]);
   });
 
-  it("id, version, compatibilité, système et adresses cohérents", () => {
+  it("id, version, compatibility, system and addresses consistent", () => {
     const problems = [];
     const say = (key, text) => { if ( !excepted(`manifest:${key}`) ) problems.push(`module/module.json « ${key} » — ${text} (exception : "manifest:${key}")`); };
     const pkgFile = join(ROOT, "package.json");
@@ -282,9 +282,9 @@ describe("manifeste module/module.json", () => {
   });
 });
 
-describe("réglage tests/das-tests.json", () => {
-  it("chaque exception de la section manifest sert encore", async () => {
-    // Les autres tests de ce fichier ont tourné avant : une exception jamais rencontrée est périmée.
+describe("setting tests/das-tests.json", () => {
+  it("every exception of the manifest section is still used", async () => {
+    // The other tests of this file ran before: an exception never met is stale.
     const stale = Object.keys(EXCEPT).filter(k => !used.has(k));
     expect(stale, "exceptions qui ne servent plus → les retirer de tests/das-tests.json (manifest.except)").toEqual([]);
   });

@@ -1,13 +1,14 @@
 /**
- * §388 : le test de connexion et de compatibilité d'un joueur, en direct — les mesures, sur chaque client.
- *  - Le MJ envoie au client du joueur dix requêtes « ping » (`CONNECTION_PING_QUERY`) l'une après l'autre : temps d'aller-retour
- *    MJ → serveur → joueur → serveur → MJ, et l'horloge du joueur (écart d'horloge).
- *  - Puis une requête « sonde » (`CONNECTION_PROBE_QUERY`) : le client du joueur décrit ce qu'il a chargé et ce qu'il vit — versions,
- *    empreinte du code de chaque module de la suite (cache du navigateur), langue, droit de parcourir les fichiers (Babele), personnage,
- *    fenêtre cachée, son bloqué, Dice So Nice, carte graphique (rapport de support de Foundry), images par seconde mesurées 2 s, scène
- *    vue, erreurs DAS relevées, réglages DAS de cet ordinateur qui diffèrent du défaut.
- *  - Le MJ compare à son propre client (`core/connection.mjs`) et garde le dernier résultat par joueur (joint au rapport de bug).
- * Rien n'est écrit dans le monde ; les noms ne sortent pas (rôles « Player 1 »…).
+ * §388: a player's connection and compatibility test, live — the measurements, on each client.
+ *  - The GM sends the player's client ten "ping" requests (`CONNECTION_PING_QUERY`) one after another: round-trip time
+ *    GM → server → player → server → GM, and the player's clock (clock skew).
+ *  - Then a "probe" request (`CONNECTION_PROBE_QUERY`): the player's client describes what it has loaded and what it is
+ *    experiencing — versions, fingerprint of each suite module's code (browser cache), language, right to browse files (Babele),
+ *    character, hidden window, blocked sound, Dice So Nice, graphics card (Foundry's support report), frames per second measured
+ *    over 2 s, scene seen, DAS errors collected, DAS settings of this computer that differ from the default.
+ *  - The GM compares with their own client (`core/connection.mjs`) and keeps the last result per player (attached to the
+ *    bug report).
+ * Nothing is written to the world; names do not leave (roles « Player 1 »…).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -20,31 +21,31 @@ import { describeRoutes } from "./router.mjs";
 export const CONNECTION_PING_QUERY = `${MODULE_ID}.connectionPing`;
 export const CONNECTION_PROBE_QUERY = `${MODULE_ID}.connectionProbe`;
 export const CONNECTION_CONSENT_QUERY = `${MODULE_ID}.connectionConsent`;
-/** Réglage de monde (onglet Avancé) : le test existe. Coupé par défaut ; coupé, les clients refusent ses requêtes. */
+/** World setting (Advanced tab): the test exists. Off by default; off, the clients refuse its requests. */
 export const CONNECTION_SETTING = "connectionTest";
-/** Le temps laissé au joueur pour répondre, et la durée de son accord (le test entier tient dedans). */
+/** The time the player has to answer, and how long their consent lasts (the whole test fits within it). */
 export const CONSENT_MS = 60000;
 export const CONSENT_VALID_MS = 120000;
 export const PING_COUNT = 10;
 export const FPS_MS = 2000;
 
-const results = new Map();   // userId → dernier résultat
+const results = new Map();   // userId → last result
 const consent = { until: 0, prompt: null, pending: null, by: null };
 
-/** Le test est-il permis dans ce monde ? */
+/** Is the test allowed in this world? */
 export function connectionTestEnabled() {
   try { return !!game.settings.get(MODULE_ID, CONNECTION_SETTING); } catch { return false; }
 }
 
-/** L'interface fournit la fenêtre d'accord (ui/connection-test.mjs) : `async ({ gm }) => "allowed" | "refused" | "timeout"`. */
+/** The interface provides the consent window (ui/connection-test.mjs): `async ({ gm }) => "allowed" | "refused" | "timeout"`. */
 export function setConsentPrompt(fn) {
   consent.prompt = typeof fn === "function" ? fn : null;
 }
 
-/** Chez le joueur : demander son accord (une seule fenêtre à la fois). Accordé, les mesures sont permises pendant `CONSENT_VALID_MS`. */
+/** Player side: ask for their consent (one window at a time). Once granted, measurements are allowed during `CONSENT_VALID_MS`. */
 async function askConsent({ gm=null }={}, { user=null }={}) {
   if ( !connectionTestEnabled() ) return { answer: "disabled" };
-  // §472 : seul un MJ demande l'accord, sous son vrai nom ; l'accord ne vaut que pour lui.
+  // §472: only a GM asks for consent, under their real name; the consent only holds for them.
   if ( !fromTrusted(user) ) return { answer: "refused" };
   if ( user && !user.isSelf ) gm = user.name;
   if ( !consent.prompt ) return { answer: "refused" };
@@ -54,14 +55,14 @@ async function askConsent({ gm=null }={}, { user=null }={}) {
   return { answer };
 }
 
-/** Les mesures ne partent que pendant un accord en cours (une requête envoyée sans passer par la fenêtre est refusée). */
+/** The measurements only go out during an ongoing consent (a request sent without going through the window is refused). */
 function requireConsent(user=null) {
   if ( !connectionTestEnabled() || (Date.now() > consent.until) ) throw new Error("connection test not allowed by this player");
   if ( user && !user.isSelf && (consent.by !== user.id) ) throw new Error("connection test allowed to another user");
 }
 
-/** L'empreinte du code chargé d'un module de la suite : pour le moteur, ses inscriptions au routeur et ses requêtes ; pour un voisin,
- *  la forme de son API publique. Indépendante de la langue. */
+/** The fingerprint of a suite module's loaded code: for the engine, its router registrations and its queries; for a neighbour,
+ *  the shape of its public API. Independent of language. */
 export function codeFingerprint(id) {
   if ( id === MODULE_ID ) {
     const routes = Object.entries(describeRoutes()).flatMap(([hook, list]) => list.map(r => `${hook}:${r.label}`));
@@ -71,14 +72,14 @@ export function codeFingerprint(id) {
   return fingerprint(apiShape(game.modules.get(id)?.api));
 }
 
-/** Les modules de la suite actifs sur ce client, avec leur version et l'empreinte de leur code. */
+/** The suite modules active on this client, with their version and their code fingerprint. */
 function suiteModules() {
   return Array.from(game.modules).filter(m => m.active && isSuitePackage(m.id))
     .map(m => ({ id: m.id, version: m.version ?? null, code: codeFingerprint(m.id) }))
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
-/** Ce que le client du MJ sert de référence. */
+/** What the GM's client serves as the reference. */
 export function referenceClient() {
   return {
     foundry: game.version,
@@ -90,7 +91,7 @@ export function referenceClient() {
   };
 }
 
-/** Les réglages DAS de cet ordinateur (portée client) qui diffèrent de leur valeur par défaut, simples seulement. */
+/** This computer's DAS settings (client scope) that differ from their default value, simple ones only. */
 function clientSettings() {
   const values = {};
   for ( const [id, s] of game.settings.settings ) {
@@ -104,7 +105,7 @@ function clientSettings() {
   return safeSettings(values);
 }
 
-/** Les images par seconde du canevas, moyennées sur `ms`. Fenêtre cachée ou pas de canevas : `null`. */
+/** The canvas's frames per second, averaged over `ms`. Hidden window or no canvas: `null`. */
 async function measureFps(ms=FPS_MS) {
   const ticker = globalThis.canvas?.app?.ticker;
   if ( !ticker || document.hidden ) return null;
@@ -117,7 +118,7 @@ async function measureFps(ms=FPS_MS) {
   return Math.round(frames * 1000 / (performance.now() - t0));
 }
 
-/** Le rapport de support de Foundry (système, navigateur, carte graphique), s'il se lit. */
+/** Foundry's support report (system, browser, graphics card), if it can be read. */
 async function supportReport() {
   try { return await foundry.applications.sidebar.apps.SupportDetails.generateSupportReport(); }
   catch { return {}; }
@@ -132,14 +133,14 @@ function setting(ns, key) {
   try { return game.settings.get(ns, key); } catch { return undefined; }
 }
 
-/** Le nombre de fichiers de traduction que le MJ a publiés pour Babele (`null` : Babele absent). */
+/** The number of translation files the GM published for Babele (`null`: Babele absent). */
 function babelePublished() {
   if ( !game.modules.get("babele")?.active ) return null;
   const files = setting("babele", "translationFiles");
   return Array.isArray(files) ? files.length : null;
 }
 
-/** La sonde : ce client se décrit. `fps: false` : sans la mesure de 2 s. */
+/** The probe: this client describes itself. `fps: false`: without the 2 s measurement. */
 export async function probeClient({ fps=true }={}) {
   const support = await supportReport();
   const character = game.user.character;
@@ -177,10 +178,10 @@ export async function probeClient({ fps=true }={}) {
 }
 
 /**
- * Le test, chez le MJ : allers-retours puis sonde, comparés à son propre client.
+ * The test, on the GM's side: round trips then probe, compared with their own client.
  * @param {User|string} target
  * @param {object} [options]
- * @param {number} [options.count]     Nombre d'allers-retours.
+ * @param {number} [options.count]     Number of round trips.
  * @param {(step: string) => void} [options.progress]
  */
 export async function testConnection(target, { count=PING_COUNT, progress=() => {} }={}) {
@@ -210,9 +211,9 @@ export async function testConnection(target, { count=PING_COUNT, progress=() => 
   const pings = pingStats(samples);
   progress("probe");
   let probe = null;
-  try { probe = await user.query(CONNECTION_PROBE_QUERY, {}, { timeout: 20000 }); } catch { /* pas de réponse */ }
+  try { probe = await user.query(CONNECTION_PROBE_QUERY, {}, { timeout: 20000 }); } catch { /* no response */ }
   const reference = referenceClient();
-  // Les erreurs que ce joueur a déjà remontées au MJ actif (§380), si sa propre sonde n'a pas répondu.
+  // The errors this player has already reported to the active GM (§380), if their own probe did not answer.
   if ( probe && !probe.errors ) probe.errors = debugApi.errors().filter(g => g.clients.includes(user.id)).reduce((n, g) => n + g.count, 0);
   const result = {
     ...base,
@@ -223,7 +224,7 @@ export async function testConnection(target, { count=PING_COUNT, progress=() => 
   return result;
 }
 
-/** Les derniers résultats, une ligne par joueur testé (pour le rapport de bug) : rôle → aller-retour et constats non « ok ». */
+/** The latest results, one line per tested player (for the bug report): role → round trip and non-"ok" findings. */
 export function lastConnectionTests() {
   const out = {};
   for ( const r of results.values() ) {
@@ -234,7 +235,7 @@ export function lastConnectionTests() {
   return out;
 }
 
-/** À `init`, même en veille : le réglage et les trois requêtes auxquelles un client répond (accord, puis mesures sous accord). */
+/** At `init`, even when dormant: the setting and the three queries a client answers (consent, then measurements under consent). */
 export function registerConnection() {
   game.settings.register(MODULE_ID, CONNECTION_SETTING, {
     name: "DND5ECOMBAT.Reglage.connectionTest.Nom", hint: "DND5ECOMBAT.Reglage.connectionTest.Aide",

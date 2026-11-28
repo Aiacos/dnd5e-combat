@@ -1,17 +1,18 @@
 /**
- * §118 : une invocation lancée SUR des cibles, reprise par un module voisin. *Animation des morts* (PHB 2024) est une activité
- * « summon » (profils Squelette / Zombi) qui vise un cadavre ; *Doigt de mort* en a une seconde, « Relever un zombi ». dnd5e
- * poserait une créature neuve à côté ; un module qui sait transformer la cible elle-même (un cadavre relevé à sa place) le dit ici.
+ * §118: a summon cast ON targets, taken over by a neighbouring module. *Animate Dead* (PHB 2024) is a "summon" activity
+ * (Skeleton / Zombie profiles) that targets a corpse; *Finger of Death* has a second one, "Raise a zombie". dnd5e
+ * would place a new creature next to it; a module that knows how to transform the target itself (a corpse raised in its place)
+ * says so here.
  *
- * Sur le client qui lance, à `dnd5e.preUseActivity` (après la visée : les cibles sont désignées), le moteur appelle
- * `Hooks.callAll("dnd5e-combat.summonOnTargets", takers, { activity, caster, targets })`. Un module qui s'en charge pousse dans
- * `takers` une fonction `async ({ profile }) => boolean` (le profil choisi dans la fenêtre de dnd5e, `activity.profiles[]`) —
- * vrai : il s'en est chargé (fait, ou refusé avec son propre message). S'il y en a une, la pose de dnd5e est sautée
- * (`dnd5e.preSummon`, documents/activity/summon.mjs:138, annulé) ; à `dnd5e.postUseActivity` (mixin.mjs:307 : emplacement dépensé, carte publiée) les preneurs sont appelés dans l'ordre,
- * le premier qui répond vrai l'emporte. Si aucun n'aboutit (erreur ou faux), la pose ordinaire de dnd5e est relancée
- * (`placeSummons`), si ce client a le droit d'invoquer. La reprise ne dépend pas de ce droit (`canSummon`, summon.mjs:54 : création
- * de tokens + « Allow Summoning ») : un voisin peut faire faire l'invocation par le MJ. Le moteur ne nomme aucun module (même forme
- * que `dropItems`, adapter/orders.mjs).
+ * On the casting client, at `dnd5e.preUseActivity` (after the aiming: the targets are designated), the engine calls
+ * `Hooks.callAll("dnd5e-combat.summonOnTargets", takers, { activity, caster, targets })`. A module that takes charge pushes into
+ * `takers` a function `async ({ profile }) => boolean` (the profile chosen in dnd5e's window, `activity.profiles[]`) —
+ * true: it took charge (done, or refused with its own message). If there is one, dnd5e's placement is skipped
+ * (`dnd5e.preSummon`, documents/activity/summon.mjs:138, cancelled); at `dnd5e.postUseActivity` (mixin.mjs:307: slot spent, card
+ * published) the takers are called in order, the first that answers true wins. If none succeeds (error or false), dnd5e's
+ * ordinary placement is relaunched (`placeSummons`), if this client has the right to summon. The takeover does not depend on that
+ * right (`canSummon`, summon.mjs:54: token creation + "Allow Summoning"): a neighbour can have the GM do the summoning. The
+ * engine names no module (same shape as `dropItems`, adapter/orders.mjs).
  */
 import { MODULE_ID } from "../constants.mjs";
 import { summonOwnership } from "../core/summon.mjs";
@@ -21,9 +22,9 @@ import { contentOf } from "../adapter/content.mjs";
 import { relaunchUse } from "./relaunch.mjs";
 
 /**
- * Les invocations reprises en cours, par uuid d'activité (l'activité remise à l'échelle garde son id) : `{ takers, at }`. Une
- * utilisation annulée après la demande (légalité, fenêtre fermée) n'arrive jamais à `postUseActivity` : passé ce délai, la reprise
- * est oubliée et le bouton « Invoquer » de la carte pose de nouveau normalement.
+ * The summons taken over in progress, by activity uuid (the rescaled activity keeps its id): `{ takers, at }`. A use
+ * cancelled after the request (legality, window closed) never reaches `postUseActivity`: after this delay, the takeover
+ * is forgotten and the card's "Summon" button places normally again.
  */
 const claimed = new Map();
 const CLAIM_TTL_MS = 120_000;
@@ -41,14 +42,15 @@ function onPreUse(activity) {
   const targets = Array.from(game.user.targets).map(t => t.document).filter(t => t && (t !== caster));
   if ( !targets.length ) return;
   const takers = [];
-  // §118 : sur le client qui lance une invocation avec des cibles désignées : `(takers, { activity, caster, targets })`. Un module qui
-  // transforme les cibles pousse dans `takers` une `async ({ profile }) => boolean` ; la pose de dnd5e est alors sautée (voir l'en-tête).
+  // §118: on the client that casts a summon with designated targets: `(takers, { activity, caster, targets })`. A module that
+  // transforms the targets pushes into `takers` an `async ({ profile }) => boolean`; dnd5e's placement is then skipped (see
+  // the header).
   Hooks.callAll(`${MODULE_ID}.summonOnTargets`, takers, { activity, caster, targets });
   const kept = takers.filter(t => typeof t === "function");
   if ( kept.length ) claimed.set(activity.uuid, { takers: kept, at: Date.now() });
 }
 
-/** dnd5e s'apprête à poser l'invocation : un voisin l'a reprise, on ne pose rien. */
+/** dnd5e is about to place the summon: a neighbour has taken it over, we place nothing. */
 function onPreSummon(activity) {
   return liveClaim(activity) ? false : undefined;
 }
@@ -68,22 +70,23 @@ async function handOver(activity, options, profile, takers) {
     try { if ( (await take({ profile })) === true ) return; }
     catch(err) { console.warn(`${MODULE_ID} | summon on targets: a neighbouring module failed`, err); }
   }
-  // Personne n'a abouti : la pose ordinaire de dnd5e (plus rien n'est réclamé pour cette activité).
+  // Nobody succeeded: dnd5e's ordinary placement (nothing is claimed any more for this activity).
   if ( activity.canSummon && canvas.scene && profile ) await activity.placeSummons({ ...options, profile: profile._id });
 }
 
 /**
- * §197 : un MJ invoque depuis la fiche d'un joueur (Appel de destrier lancé « pour tester », issue #9) — dnd5e crée l'acteur à son nom
- * (`Actor5e.fetchExisting`, documents/actor/actor.mjs:461), et le joueur ne peut ni déplacer ni utiliser la créature. Après la pose
- * (`dnd5e.postSummon`, documents/activity/summon.mjs:217, sur le client qui invoque), les joueurs propriétaires du lanceur deviennent
- * propriétaires de l'acteur invoqué (l'acteur du monde : un token non lié en hérite). Un joueur qui invoque lui-même en est déjà
- * propriétaire : rien à faire.
+ * §197: a GM summons from a player's sheet (Find Steed cast "to test", issue #9) — dnd5e creates the actor in their name
+ * (`Actor5e.fetchExisting`, documents/actor/actor.mjs:461), and the player can neither move nor use the creature. After the
+ * placement
+ * (`dnd5e.postSummon`, documents/activity/summon.mjs:217, on the summoning client), the caster's owner players become
+ * owners of the summoned actor (the world actor: an unlinked token inherits it). A player who summons themself is already
+ * its owner: nothing to do.
  */
 async function onPostSummon(activity, profile, tokens) {
   if ( !game.user.isGM ) return;
   const caster = activity?.actor;
   if ( !caster ) return;
-  // O8f (§349) : une invocation hostile n'est à personne (adapter/summons.mjs, `makeSummonHostile`).
+  // O8f (§349): a hostile summon belongs to no one (adapter/summons.mjs, `makeSummonHostile`).
   if ( contentOf(activity.item).entry?.summon?.hostile === true ) return;
   const isGM = id => game.users.get(id)?.isGM === true;
   const seen = new Set();
@@ -108,16 +111,16 @@ export function registerSummonHandover() {
 }
 
 /**
- * §383 (issue #38) : intention « invoquer cette forme » (fenêtre « Choisir la forme », ui/summon-form.mjs) — l'utilisation suspendue
- * repart telle quelle (emplacement choisi dans la barre, consommations), sans la fenêtre de dnd5e, avec la forme choisie
- * (`usageConfig.summons`, lu par `placeSummons`, documents/activity/summon.mjs) et marquée choisie (`summonForm`) pour ne pas
- * redemander.
+ * §383 (issue #38): intention "summon this form" ("Choose the form" window, ui/summon-form.mjs) — the suspended use
+ * restarts as it is (slot chosen in the bar, consumptions), without dnd5e's window, with the chosen form
+ * (`usageConfig.summons`, read by `placeSummons`, documents/activity/summon.mjs) and marked chosen (`summonForm`) so as not to
+ * ask again.
  * @param {Activity} activity
  * @param {[object, object, object]} usage
  * @param {{ profile: string, creatureSize?: string, creatureType?: string, slot?: string, count?: number }} choice
  */
 export function castWithForm(activity, [config, dialog, message], choice) {
-  // §385 : le niveau (emplacement) et le nombre choisis dans la même fenêtre, quand elle les a demandés.
+  // §385: the level (slot) and the number chosen in the same window, when it asked for them.
   const { slot=undefined, count=null, ...summons } = choice ?? {};
   const use = { ...config, summons: { ...(config?.summons ?? {}), ...summons },
     ...(slot ? { spell: { ...(config?.spell ?? {}), slot } } : {}),
@@ -127,8 +130,9 @@ export function castWithForm(activity, [config, dialog, message], choice) {
 }
 
 /**
- * §391 : intention « prendre ce profil » (enchantement, transformation) — l'utilisation repart telle quelle, sans la fenêtre de dnd5e,
- * avec le profil choisi (`enchantmentProfile` ou `transform.profile`, documents/activity/enchant.mjs et transform.mjs) et marquée choisie.
+ * §391: intention "take this profile" (enchantment, transformation) — the use restarts as it is, without dnd5e's window,
+ * with the chosen profile (`enchantmentProfile` or `transform.profile`, documents/activity/enchant.mjs and transform.mjs) and
+ * marked chosen.
  */
 export function castWithProfile(activity, [config, dialog, message], choice) {
   const use = { ...config, ...choice, [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), summonForm: true } };

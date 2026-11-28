@@ -1,19 +1,19 @@
 /**
- * §244 : la serrure d'une porte (issue #22). Ce que le MJ règle dans la configuration du mur (section « DAS · Serrure », drapeau
- * `flags.dnd5e-combat.lock`) : un DD pour crocheter, un DD pour forcer (ou « ne peut pas être forcée »), une clé facultative (nom ou
- * identifiant d'objet). Un DD vide : le MJ tranche sur le résultat, comme avant. Les règles 2024 ne donnent pas de DD fixe ; les
- * repères du Guide du maître (Facile 10, Moyen 15, Difficile 20…) sont proposés dans le champ.
+ * §244: the lock of a door (issue #22). What the GM sets in the wall configuration (section "DAS · Lock", flag
+ * `flags.dnd5e-combat.lock`): a DC to pick, a DC to force (or "cannot be forced"), an optional key (item name or
+ * identifier). An empty DC: the GM rules on the result, as before. The 2024 rules give no fixed DC; the
+ * Dungeon Master's Guide benchmarks (Easy 10, Medium 15, Hard 20…) are suggested in the field.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
-/** Les façons d'ouvrir une serrure. */
+/** The ways of opening a lock. */
 export const LOCK_METHODS = Object.freeze(["pick", "force", "key"]);
 
-/** Les repères de DD du Guide du maître, proposés dans la configuration du mur. */
+/** The DC benchmarks of the Dungeon Master's Guide, suggested in the wall configuration. */
 export const LOCK_DC_PRESETS = Object.freeze([5, 10, 15, 20, 25, 30]);
 
-/** Réglage de monde `lockFailure` : un échec ne coûte rien (« free ») ou un seul essai par personnage et par façon (« once »). */
+/** World setting `lockFailure`: a failure costs nothing ("free") or only one attempt per character and per way ("once"). */
 export const LOCK_FAILURE_MODES = Object.freeze(["free", "once"]);
 
 const dcOf = value => {
@@ -23,7 +23,7 @@ const dcOf = value => {
 };
 
 /**
- * Le drapeau `lock` d'un mur, lu sans faire confiance à sa forme.
+ * A wall's `lock` flag, read without trusting its shape.
  * @param {object} [flag]
  * @returns {{pickDc: number|null, forceDc: number|null, unforceable: boolean, key: string}}
  */
@@ -40,7 +40,7 @@ export function normalizeLock(flag) {
 const fold = s => String(s ?? "").trim().toLocaleLowerCase();
 
 /**
- * Cet objet est-il la clé ? Même nom (sans la casse ni les espaces autour), ou même identifiant dnd5e.
+ * Is this item the key? Same name (ignoring case and surrounding spaces), or same dnd5e identifier.
  * @param {{name?: string, identifier?: string}} item
  * @param {string} key
  */
@@ -51,10 +51,10 @@ export function isKey(item, key) {
 }
 
 /**
- * Le verdict d'un essai : « success », « failure », ou « gm » quand la porte n'a pas de DD pour cette façon (le MJ tranche).
+ * The verdict of an attempt: "success", "failure", or "gm" when the door has no DC for this way (the GM rules).
  * @param {object} lock      normalizeLock
  * @param {"pick"|"force"} method
- * @param {number} total     Le total du test.
+ * @param {number} total     The total of the check.
  */
 export function judgeAttempt(lock, method, total) {
   if ( (method === "force") && lock.unforceable ) return "failure";
@@ -65,7 +65,7 @@ export function judgeAttempt(lock, method, total) {
 }
 
 /**
- * Les essais déjà faits sur une serrure (drapeau `lockTries` : { [personnage]: ["pick", "force"] }), lus proprement.
+ * The attempts already made on a lock (flag `lockTries`: { [character]: ["pick", "force"] }), read cleanly.
  * @param {object} [flag]
  * @returns {Record<string, string[]>}
  */
@@ -80,19 +80,19 @@ export function normalizeTries(flag) {
 }
 
 /**
- * La clé d'un personnage dans le drapeau des essais : son uuid sans points (une mise à jour Foundry déplie une clé à points en objets
- * imbriqués : « Actor.abc » deviendrait { Actor: { abc } }).
+ * A character's key in the attempts flag: its uuid without dots (a Foundry update unfolds a dotted key into nested
+ * objects: "Actor.abc" would become { Actor: { abc } }).
  */
 export function triesKey(uuid) {
   return String(uuid ?? "").replaceAll(".", "_");
 }
 
-/** Ce personnage a-t-il déjà essayé cette façon, quand le réglage n'accorde qu'un essai ? */
+/** Has this character already tried this way, when the setting grants only one attempt? */
 export function alreadyTried(tries, who, method, mode) {
   return (mode === "once") && (tries[who] ?? []).includes(method);
 }
 
-/** Les essais après un échec de `who` (réglage « un essai ») ; inchangés sinon. */
+/** The attempts after a failure of `who` ("one attempt" setting); unchanged otherwise. */
 export function recordTry(tries, who, method, mode) {
   if ( (mode !== "once") || !who ) return tries;
   const list = new Set(tries[who] ?? []);
@@ -101,15 +101,15 @@ export function recordTry(tries, who, method, mode) {
 }
 
 /**
- * Les entrées de serrure qu'un personnage voit devant une porte verrouillée, dans l'ordre du menu.
+ * The lock entries that a character sees in front of a locked door, in menu order.
  * @param {object} lock                normalizeLock
  * @param {object} state
- * @param {boolean} state.hasKey       Il porte la clé.
+ * @param {boolean} state.hasKey       It carries the key.
  * @param {Record<string, string[]>} state.tries
- * @param {string} state.who           Le personnage (son uuid).
- * @param {string} state.mode          Réglage `lockFailure`.
- * @param {boolean} [state.hasTools]   O9d (§357) : il porte des outils de voleur — sans eux, crocheter n'est pas proposé.
- * @returns {Array<{method: string, spent: boolean}>}  `spent` : essai déjà fait (l'entrée le dit, un clic le rappelle).
+ * @param {string} state.who           The character (its uuid).
+ * @param {string} state.mode          Setting `lockFailure`.
+ * @param {boolean} [state.hasTools]   O9d (§357): it carries thieves' tools — without them, picking is not offered.
+ * @returns {Array<{method: string, spent: boolean}>}  `spent`: attempt already made (the entry says so, a click reminds).
  */
 export function lockChoices(lock, { hasKey=false, tries={}, who="", mode="free", hasTools=true }={}) {
   const out = [];
@@ -119,10 +119,10 @@ export function lockChoices(lock, { hasKey=false, tries={}, who="", mode="free",
   return out;
 }
 
-/** L'état de porte après un succès : crochetée ou ouverte à la clé, elle est fermée ; forcée, elle s'ouvre. */
+/** The door state after a success: picked or opened with the key, it is closed; forced, it opens. */
 /**
- * §247 : la charge du hook public `dnd5e-combat.lockAttempt` (hors documents) — la façon, l'issue (`success`, `failure`, `gm`) et le
- * total du test (null pour la clé, ou un total illisible).
+ * §247: the payload of the public hook `dnd5e-combat.lockAttempt` (without documents) — the way, the outcome (`success`, `failure`,
+ * `gm`) and the check total (null for the key, or an unreadable total).
  */
 export function attemptReport(method, outcome, total) {
   const value = Number(total);

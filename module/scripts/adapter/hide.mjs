@@ -1,10 +1,10 @@
 /**
- * Furtivité (Hide, règles 2024, glossaire du PHB : « L'action Furtivité vous permet d'essayer de vous
- * cacher ») lue dans Foundry. Conditions : Visibilité nulle, ou abri supérieur / total, ET hors du champ
- * de vision de tout ennemi. Le moteur juge la seconde exactement (vision simulée, adapter/vision.mjs) ;
- * la première en découle — si aucun ennemi ne vous voit, c'est l'obscurité, un abri ou ses sens —, sauf
- * des ennemis qui ne voient de toute façon rien (Aveuglés) : au MJ de trancher.
- * Réussie, la Furtivité est un effet sur l'acteur, qui porte le DD pour vous localiser ; le moteur le rend invisible à ses ennemis (§185).
+ * Hide (2024 rules, PHB glossary: "The Hide action lets you try to hide") read from Foundry. Conditions: nil visibility, or
+ * three-quarters / Total Cover, AND out of the field of vision of every enemy. The engine judges the second exactly (simulated
+ * vision, adapter/vision.mjs); the first follows from it — if no enemy sees you, it is darkness, a Cover or one's senses —,
+ * except for enemies who see nothing anyway (Blinded): up to the GM to rule.
+ * When it succeeds, Hide is an effect on the actor, which carries the DC to locate you; the engine makes it invisible to its
+ * enemies (§185).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -18,8 +18,8 @@ import { screenedByLarger } from "../core/hide-screen.mjs";
 export const OUT_OF_ACTION = ["incapacitated", "unconscious", "paralyzed", "petrified", "stunned", "dead"];
 
 /**
- * Les ennemis actifs qui voient ce token, sur sa scène. null si la vision simulée est hors service
- * (on ne juge pas).
+ * The active enemies who see this token, on its scene. null if the simulated vision is out of service
+ * (no judgement is made).
  * @returns {TokenDocument[]|null}
  */
 export function enemiesSeeing(token) {
@@ -29,23 +29,24 @@ export function enemiesSeeing(token) {
     && areEnemies(token, other)
     && !OUT_OF_ACTION.some(s => other.actor.statuses.has(s)) && !other.actor.statuses.has(defeated)
     && (canLocate(other, token) === true));
-  // Discrétion naturelle : un ennemi qui ne voit le porteur qu'à travers une créature plus grande que lui ne l'empêche pas de se
-  // cacher.
+  // Naturally Stealthy: an enemy who sees the bearer only through a creature larger than them does not prevent them from
+  // hiding.
   if ( !seeing.length || !token.actor?.items?.some(i => contentOf(i).entry?.hidesBehindLarger === true) ) return seeing;
   const hider = { rect: rectOf(token), size: token.actor.system?.traits?.size };
   return seeing.filter(other => !screenedByLarger(rectOf(other), hider, coverBodies(other, token)
     .map(t => ({ rect: rectOf(t), size: t.actor.system?.traits?.size }))));
 }
 
-/** Les effets de Furtivité d'un acteur. */
+/** An actor's Hide effects. */
 export function hiddenEffectsOf(actor) {
   return (actor?.effects ?? []).filter(e => e.getFlag?.(MODULE_ID, "hidden"));
 }
 
-/** Données de l'effet de Furtivité réussie : l'état Invisible, et le DD pour vous localiser. */
+/** Data of the successful Hide effect: the Invisible condition, and the DC to locate you. */
 export function hiddenEffectData(dc, name) {
   return {
-    // §185 : pas l'état Invisible du cœur (il cachait aussi le token au groupe) ; le moteur le rend invisible à ses ennemis seuls.
+    // §185: not the core's Invisible condition (it also hid the token from the group); the engine makes it invisible to its
+    // enemies alone.
     name, img: "icons/svg/cowled.svg", transfer: false, disabled: false, statuses: [], changes: [],
     showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS,
     flags: { [MODULE_ID]: { hidden: { dc } } }

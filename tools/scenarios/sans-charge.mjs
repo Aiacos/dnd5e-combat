@@ -1,12 +1,12 @@
 /**
- * §77 : le Nuage fétide du Dretch (Monster Manual 2024) et le lancer sans charge du MJ. Le Dretch du monde (`mmDretch00000000`,
- * importé du compendium) est posé le temps du scénario au contact d'un token de la scène (la « cible »), en combat.
- *  - 1re utilisation : la charge 1/jour de l'item est dépensée (la donnée premium la cherchait sur l'activité : refusé) ;
- *    chaque créature à 3 m fait sa sauvegarde de Constitution ;
- *  - plus de charge : la fenêtre de légalité (refus forçable, §410 : elle a remplacé l'ancienne « Plus de charge » du MJ) s'ouvre —
- *    « Renoncer » n'utilise rien, « Utiliser quand même » lance sans rien consommer ;
- *  - la cible empoisonnée par le nuage, jusqu'à la fin de son tour suivant (`targetEnd` : la donnée disait « 1 tour » du cœur) : plus de
- *    Réaction ; son action prise, plus d'action Bonus.
+ * §77: the Dretch's Fetid Cloud (Monster Manual 2024) and the GM's cast without a charge. The world's Dretch (`mmDretch00000000`,
+ * imported from the compendium) is placed for the scenario in contact with a scene token (the "target"), in combat.
+ *  - 1st use: the item's 1/day charge is spent (the premium data looked for it on the activity: refused);
+ *    each creature within 3 m makes its Constitution saving throw;
+ *  - no charge left: the legality window (forceable refusal, §410: it replaced the GM's former "No more charge") opens —
+ *    "Give up" uses nothing, "Use anyway" casts without consuming anything;
+ *  - the target Poisoned by the cloud, until the end of its next turn (`targetEnd`: the data said the core's "1 turn"): no more
+ *    Reaction; its action taken, no more Bonus Action.
  */
 const DRETCH = "mmDretch00000000";
 const ITEM = "mmFetidCloud0000";
@@ -17,7 +17,7 @@ export default {
   name: "sans charge — Nuage fétide du Dretch, le MJ lance quand même",
 
   async run(ctx) {
-    // Absent de `dnd-6` : importé sous l'id de sa fiche (Monster Manual 2024, sinon SRD 2024), retiré à la fin.
+    // Absent from `dnd-6`: imported under the id of its sheet (Monster Manual 2024, otherwise SRD 2024), removed at the end.
     await ctx.ensureActor(DRETCH);
     const dretch = await ctx.call("get-actor", { actorId: DRETCH }).catch(() => null);
     if ( !dretch?.items?.some(i => i._id === ITEM) ) { ctx.log("pas de Dretch du Monster Manual dans le monde : non applicable"); return; }
@@ -41,23 +41,23 @@ export default {
     await ctx.startCombat([{ ...placed, actorId: placed.actorId ?? DRETCH }, target]);
 
     const saves = async since => (await ctx.messagesSince(since)).filter(m => /Constitution/i.test(m.flavor ?? ""));
-    // Par l'API de test du moteur (`activity.use`, ressources dépensées) : le geste d'un clic — `use-activity` du connecteur ne pose pas
-    // la zone sur soi.
-    // `legal` : sans la confirmation d'office de la fonction de test (`confirmed: true`, qui saute la fenêtre de légalité où le §410 a mis
-    // « plus d'utilisation ») — le geste d'un vrai clic, pour les lancers sans charge.
+    // Through the engine's test API (`activity.use`, resources spent): the gesture of a click — the connector's `use-activity`
+    // does not place the area on self.
+    // `legal`: without the test function's automatic confirmation (`confirmed: true`, which skips the legality window where
+    // §410 put "no more uses") — the gesture of a real click, for casts without a charge.
     const cloud = (legal=false) => ctx.call("call-module-api", { moduleId: MODULE_ID, fn: "use", args: { tokenId: placed.id, itemId: ITEM, activityType: "save", consume: true,
       ...(legal ? { extra: { confirmed: false } } : {}) }, waitMs: 1500 }).catch(e => ({ error: e.message }));
     const warning = async known => {
       for ( let k = 0; k < 12; k++ ) {
         await sleep(400);
-        // §410 : la fenêtre de légalité, titrée « … — <token> » (l'ancienne « Plus de charge » parlait de charge).
+        // §410: the legality window, titled "… — <token>" (the former "No more charge" talked about charge).
         const w = (await ctx.call("list-dialogs", {})).windows.find(x => !known.includes(x.id)
           && (String(x.title ?? "").endsWith(` — ${placed.name}`) || /charge/i.test(`${x.title} ${JSON.stringify(x.buttons ?? [])}`)));
         if ( w ) return w;
       }
       return null;
     };
-    /** Le bouton de cette fenêtre : par son texte, sinon par son action (`go` / `cancel` de la fenêtre de légalité). */
+    /** This window's button: by its text, otherwise by its action (`go` / `cancel` of the legality window). */
     const pick = (w, label, action) => (w.buttons ?? []).find(b => label.test(b.label ?? ""))?.action ?? action;
     const dialogs = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
 
@@ -75,7 +75,7 @@ export default {
     else ctx.expect((await saves(since)).length > 0, `1re utilisation : la charge de l'item est dépensée, sauvegardes de Constitution (${(await saves(since)).length})`);
     ctx.log((await ctx.engineLog()).filter(l => /utilisations de l'activité|activity's uses|charge/.test(l)).slice(-2).join(" / "));
 
-    // 2. Plus de charge : « Renoncer ».
+    // 2. No more charge: "Give up".
     known = await dialogs();
     since = await ctx.lastMessageId();
     await cloud(true);
@@ -85,7 +85,7 @@ export default {
     await sleep(2500);
     ctx.expect(!(await saves(since)).length, "« Renoncer » : rien n'est lancé");
 
-    // 3. « Lancer quand même », jusqu'à ce que la cible rate (20 essais au plus).
+    // 3. "Cast anyway", until the target fails (20 tries at most).
     let poisoned = null;
     for ( let n = 0; (n < 20) && !poisoned; n++ ) {
       known = await dialogs();
@@ -99,12 +99,12 @@ export default {
       poisoned = (await ctx.effects(target)).find(e => /Empoisonn|Poison/i.test(e.name));
     }
     if ( !ctx.expect(!!poisoned, `la cible rate et est Empoisonnée (${poisoned?.name})`) ) return;
-    // En combat, le moteur tient lui-même la fin de tour (runtime/cantrips.mjs : `placedOn`, durée du cœur remplacée, §42.2).
+    // In combat, the engine itself keeps the end of turn (runtime/cantrips.mjs: `placedOn`, core duration replaced, §42.2).
     const engineEnd = !!poisoned.flags?.["dnd5e-combat"]?.placedOn;
     ctx.expect((poisoned.duration?.expiry === "targetEnd") || engineEnd,
       `jusqu'à la fin de son tour suivant (${JSON.stringify(poisoned.duration ?? {})}${engineEnd ? ", fin de tour tenue par le moteur" : ""})`);
 
-    // 4. Empoisonnée par le nuage : ni Réaction, ni action Bonus après son action.
+    // 4. Poisoned by the cloud: no Reaction, no Bonus Action after its action.
     const ta = await ctx.call("get-actor", { actorId: target.actorId });
     const weapon = ta.items.find(i => Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"));
     const api = async (fn, args) => (await ctx.call("call-module-api", { moduleId: MODULE_ID, fn, args, waitMs: 5000 })).result;

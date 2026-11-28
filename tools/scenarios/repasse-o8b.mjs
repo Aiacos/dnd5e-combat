@@ -1,9 +1,9 @@
 /**
- * §345, lot O8b de la repasse des objets : sauvegarde de la cible au toucher. Arène de test (Guerrier, Zombi).
- *  1. Dague venimeuse non enduite : un coup qui touche n'impose aucune sauvegarde.
- *  2. Enduite (enchantement « Poison Coat ») : le coup qui touche impose la sauvegarde de Constitution DD 15, et le poison est retiré.
- *  3. Tueuse de géants posée sur une Épée longue, le Zombi devenu Géant le temps du test : touché, sauvegarde de Force DD 15, À terre
- *     ⇔ ratée (rejoué jusqu'à un échec).
+ * §345, batch O8b of the item pass: the target's saving throw on a hit. Test arena (Fighter, Zombie).
+ *  1. Dagger of Venom not coated: a hit imposes no saving throw.
+ *  2. Coated ("Poison Coat" enchantment): the hit imposes the Constitution saving throw DC 15, and the poison is removed.
+ *  3. Giant Slayer placed on a Longsword, the Zombie made a Giant for the duration of the test: on a hit, Strength saving throw
+ *     DC 15, Prone ⇔ failed (replayed until a failure).
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -29,7 +29,7 @@ export default {
     };
     ctx.restore(clearProne);
 
-    /** Attaque jusqu'au toucher (20 essais au plus) ; rend la cible de la résolution, ou null. */
+    /** Attacks until a hit (20 tries at most); returns the resolution's target, or null. */
     const hit = async itemId => {
       for ( let i = 0; i < 20; i++ ) {
         await ctx.setHp(zombi, hp0);
@@ -60,7 +60,7 @@ export default {
     ctx.expect(!!t?.save, `Dague enduite : touché, sauvegarde imposée (${t?.save?.ability ?? "-"} ${t?.save?.total ?? "?"} contre DD ${t?.save?.dc ?? "?"})`);
     ctx.expect((await coated(dagger)) === 0, "le coup qui touche retire le poison");
 
-    // 3. Tueuse de géants, le Zombi Géant.
+    // 3. Giant Slayer, the Giant Zombie.
     const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id });
     const type0 = data.delta?.system?.details?.type?.value ?? null;
     await ctx.call("update-scene-object", { type: "Token", objectId: zombi.id, data: { "delta.system.details.type.value": "giant" } });

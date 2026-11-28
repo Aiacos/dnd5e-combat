@@ -1,8 +1,8 @@
 /**
- * Murmures dissonants, la fuite (SPEC §147, §152) : en combat, le Barde vise le Zombi à une case de lui (hors d'allonge : pas
- * d'attaque d'opportunité) ; sauvegarde de Sagesse rejouée jusqu'à l'échec. La cible dépense sa Réaction et s'éloigne de toute sa
- * Vitesse (Zombi : 20 ft, quatre cases) par `walkToGap`, avec le plafond que lui donne la Réaction (`maxCost`, §152 : il était ignoré).
- * Coin libre de l'arène (x = 2100), loin de la distribution. Remet positions, PV, effets et combat.
+ * Dissonant Whispers, the flight (SPEC §147, §152): in combat, the Bard targets the Zombie one cell away (out of reach: no
+ * Opportunity Attack); Wisdom saving throw replayed until failure. The target spends its Reaction and moves away by its full
+ * Speed (Zombie: 20 ft, four cells) through `walkToGap`, with the cap its Reaction gives it (`maxCost`, §152: it was ignored).
+ * Free corner of the arena (x = 2100), away from the distribution. Restores positions, HP, effects and combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -41,7 +41,7 @@ export default {
     await ctx.call("move-token", { tokenId: zombi.id, ...spot.zombi });
     await pause(1000);
 
-    // Un combat, au tour du Barde : la Réaction du Zombi se lit dans son budget.
+    // A combat, on the Bard's turn: the Zombie's Reaction is read in its budget.
     await ctx.startCombat([bard, zombi]);
     const c = await ctx.combat();
     for ( const [t, value] of [[bard, 20], [zombi, 10]] ) {
@@ -59,8 +59,8 @@ export default {
       const u = await ctx.use({ tokenId: bard.id, identifier: "dissonant-whispers", activityType: "save", targetTokenIds: [zombi.id] });
       const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
       const t = r?.targets?.find(x => x.name === zombi.name);
-      if ( !t?.save || t.save.success ) continue;   // réussie : ni Réaction ni fuite, on relance
-      // La fuite suit la résolution close (MJ actif) : on attend que le Zombi ait fini de marcher.
+      if ( !t?.save || t.save.success ) continue;   // succeeded: neither Reaction nor flight, reroll
+      // The flight follows the closed resolution (active GM): wait until the Zombie has finished walking.
       let last = null;
       for ( let w = 0; w < 30; w++ ) {
         await pause(500);

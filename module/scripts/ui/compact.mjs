@@ -1,17 +1,18 @@
 /**
- * Carte unique (SPEC §58, réglage de monde `chatCompact`, activé par défaut) : une action ne laisse plus qu'une carte dans le
- * journal, celle de son utilisation — comme la carte fusionnée de Midi-QOL.
+ * Single card (SPEC §58, world setting `chatCompact`, on by default): an action leaves only one card in the
+ * log, that of its use — like Midi-QOL's merged card.
  *
- *  - Les messages de jet qu'une utilisation entraîne (`attack`, `damage`, `healing` de dnd5e 6, dont `system.origin` est
- *    l'id du message d'utilisation : activity/attack.mjs:158-166, activity/mixin.mjs:879-885) restent en base — Dice So Nice, les animations (BLFX), le moteur et l'annulation les lisent —
- *    mais sont **repliés** : `display: none` dans le journal et en surimpression, ni mis en page ni dessinés.
- *  - La carte d'utilisation reçoit le résumé de ces jets (attaque, dégâts par type) au-dessus du verdict par cible
- *    (ui/chat.mjs) ; un bouton « Détails » rouvre, sur ce client, les cartes repliées de cette action.
- *  - Les sauvegardes et tests, dnd5e les résume déjà dans la carte d'utilisation (réglage client `chatCardSummary`, activé
- *    par défaut : data/chat-message/usage-message-data.mjs:228, documents/chat-message.mjs:154) : on n'y touche pas.
- *  - Un jet n'apparaît sur la carte qu'une fois ses dés 3D arrêtés (`waitForDice`), comme le verdict.
+ *  - The roll messages that a use entails (`attack`, `damage`, `healing` of dnd5e 6, whose `system.origin` is
+ *    the id of the use message: activity/attack.mjs:158-166, activity/mixin.mjs:879-885) stay in the database — Dice So Nice,
+ *    the animations (BLFX), the engine and the cancellation read them — but are **collapsed**: `display: none` in the log and
+ *    in the overlay, neither laid out nor painted.
+ *  - The use card receives the summary of these rolls (attack, damage by type) above the verdict per target
+ *    (ui/chat.mjs); a "Details" button reopens, on this client, the collapsed cards of this action.
+ *  - Saving throws and checks, dnd5e already summarizes them in the use card (client setting `chatCardSummary`, on
+ *    by default: data/chat-message/usage-message-data.mjs:228, documents/chat-message.mjs:154): we leave them alone.
+ *  - A roll appears on the card only once its 3D dice have stopped (`waitForDice`), like the verdict.
  *
- * Rien n'est écrit : tout est rendu, sur chaque client. Désactiver le réglage rend le journal d'avant.
+ * Nothing is written: everything is rendered, on each client. Disabling the setting gives back the previous log.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,17 +24,17 @@ import { modifierLines, bonusLines, d20Nodes, fillLine, rowsEnabled } from "./ch
 
 export const CHAT_COMPACT_SETTING = "chatCompact";
 
-/** Types de message de jet qu'une action replie dans sa carte d'utilisation. */
+/** Roll message types that an action collapses into its use card. */
 const FOLDED_TYPES = new Set(["attack", "damage", "healing"]);
 
-/** Jets dont les dés 3D roulent encore : pas encore montrés sur la carte. */
+/** Rolls whose 3D dice are still rolling: not shown on the card yet. */
 const rolling = new Set();
-/** Cartes d'utilisation dont les jets sont dépliés sur ce client. */
+/** Use cards whose rolls are unfolded on this client. */
 const unfolded = new Set();
 
 const enabled = () => { try { return !!game.settings.get(MODULE_ID, CHAT_COMPACT_SETTING); } catch { return false; } };
 
-/** La carte d'utilisation où ce jet se replie, ou null. */
+/** The use card where this roll collapses, or null. */
 export function carrierOf(message) {
   if ( !FOLDED_TYPES.has(message?.type) ) return null;
   const origin = message._source?.system?.origin;
@@ -41,7 +42,7 @@ export function carrierOf(message) {
   return (carrier?.type === "usage") ? carrier : null;
 }
 
-/** Les jets repliés dans cette carte, dans l'ordre : ils viennent toujours après elle. */
+/** The rolls collapsed into this card, in order: they always come after it. */
 function foldedIn(carrier) {
   const all = game.messages.contents;
   const out = [];
@@ -55,7 +56,7 @@ function foldedIn(carrier) {
 
 const damageLabel = type => game.i18n.localize(CONFIG.DND5E.damageTypes[type]?.label ?? CONFIG.DND5E.healingTypes?.[type]?.label ?? type ?? "");
 
-/** « Attaque : 17 (d20 : 12, critique) » ; avec deux d20 (issue #47) : « Attaque : 9 (Désavantage : 4, 17) », le dé écarté barré. */
+/** "Attack: 17 (d20: 12, critical)"; with two d20s (issue #47): "Attack: 9 (Disadvantage: 4, 17)", the discarded die struck out. */
 function attackLine(message, carrier=null) {
   const roll = message.rolls?.[0];
   if ( !roll ) return null;
@@ -63,7 +64,7 @@ function attackLine(message, carrier=null) {
   const notes = [];
   const twoDice = d20Nodes(roll);
   if ( !twoDice && (d20 !== null) ) notes.push(loc("LabelValue", { label: "d20", value: d20 }));
-  // Un 19 au seuil de critique abaissé qui rate n'est ni « critique » ni vert : le verdict jugé sur ce jet tranche.
+  // A 19 at a lowered critical threshold that misses is neither "critical" nor green: the verdict judged on this roll decides.
   const resolution = carrier?.getFlag(MODULE_ID, "resolution");
   const natural = roll.d20?.total ?? d20;
   const mark = attackMark({ isCritical: roll.isCritical === true, isFumble: roll.isFumble === true,
@@ -72,12 +73,12 @@ function attackLine(message, carrier=null) {
   else if ( mark === "fumble" ) notes.push(loc("Compact.Echec"));
   const css = (mark === "critical") ? "hit" : ((mark === "fumble") ? "miss" : "note");
   const head = loc("LabelValue", { label: loc("Compact.Attaque"), value: roll.total });
-  // Deux d20 : « Attaque : 9 (Désavantage : 4, 17, critique) », le 17 barré.
+  // Two d20s: "Attack: 9 (Disadvantage: 4, 17, critical)", the 17 struck out.
   if ( twoDice ) return { css, title: roll.formula, nodes: [`${head} (`, ...twoDice, `${notes.map(n => `, ${n}`).join("")})`] };
   return { css, title: roll.formula, text: `${head}${notes.length ? ` (${notes.join(", ")})` : ""}` };
 }
 
-/** « Dégâts : 9 (6 tranchants + 3 feu) » — par type, comme le plateau de dégâts du système. */
+/** "Damage: 9 (6 slashing + 3 fire)" — by type, like the system's damage tray. */
 function damageLine(message) {
   const rolls = message.rolls ?? [];
   if ( !rolls.length ) return null;
@@ -96,19 +97,19 @@ function damageLine(message) {
 }
 
 /**
- * Les jets d'une action repliée, en blocs de dés comme sur la carte de Midi-QOL (ses gabarits `attack-roll.html` et
- * `damage-roll.html`, MIT) : une étiquette (Attaque, Avantage, Désavantage, Dégâts), la formule, le détail des dés qui se déplie
- * au clic, le total — teinté selon le verdict pour l'attaque, précédé de l'icône du type pour les dégâts. Pour la carte en
- * rangées (réglage `chatRows`). Le HTML est gardé par message tant qu'il ne change pas : la carte d'utilisation est redessinée
- * plusieurs fois par action.
+ * A collapsed action's rolls, as dice blocks like on the Midi-QOL card (its `attack-roll.html` and
+ * `damage-roll.html` templates, MIT): a label (Attack, Advantage, Disadvantage, Damage), the formula, the dice detail that unfolds
+ * on click, the total — tinted by the verdict for the attack, preceded by the type icon for damage. For the card in
+ * rows (setting `chatRows`). The HTML is kept per message as long as it does not change: the use card is redrawn
+ * several times per action.
  */
 const midiBlocks = new Map();
 
 const escapeHTML = text => foundry.utils.escapeHTML(String(text ?? ""));
 
 /**
- * Le détail des dés d'un jet, dans l'enveloppe repliable de dnd5e (que son gabarit fournit déjà, ou non selon la version), annoté
- * comme sur la carte de Midi-QOL : le nom de ce que vaut chaque terme constant d'une attaque, le type sous le total des dégâts.
+ * A roll's dice detail, in dnd5e's collapsible wrapper (which its template already provides, or not depending on the version),
+ * annotated like on the Midi-QOL card: the name of what each constant term of an attack is worth, the type under the damage total.
  */
 async function breakdownOf(rolls, message) {
   const parts = await Promise.all(rolls.map(roll => roll.getTooltip().catch(() => "")));
@@ -126,8 +127,8 @@ async function breakdownOf(rolls, message) {
 }
 
 /**
- * Les termes constants d'un jet d'attaque sans nom : le modificateur de la caractéristique du jet, puis le bonus de maîtrise, quand
- * leurs valeurs sont celles de l'acteur — sinon le terme reste sans nom (un bonus de situation n'est pas deviné).
+ * The unnamed constant terms of an attack roll: the roll's ability modifier, then the proficiency bonus, when
+ * their values are the actor's — otherwise the term stays unnamed (a situational bonus is not guessed).
  */
 function nameConstants(tip, roll, message) {
   const actor = message.speakerActor ?? ChatMessage.getSpeakerActor?.(message.speaker);
@@ -149,8 +150,8 @@ function nameConstants(tip, roll, message) {
 }
 
 /**
- * Le détail d'un jet de dégâts ou de soins, comme Midi-QOL le montre : quand il n'a qu'un groupe de dés, ses termes constants
- * rejoignent les dés et le total est celui du jet ; le type est écrit sous le total quand dnd5e ne l'a pas fait.
+ * The detail of a damage or healing roll, as Midi-QOL shows it: when it has only one dice group, its constant terms
+ * join the dice and the total is the roll's; the type is written under the total when dnd5e has not done so.
  */
 function nameDamage(tip, roll) {
   const dice = Array.from(tip.querySelectorAll(".tooltip-part:not(.constant-term)"));
@@ -174,15 +175,15 @@ function nameDamage(tip, roll) {
   for ( const total of tip.querySelectorAll(".total .label") ) if ( !total.textContent.trim() ) total.textContent = label;
 }
 
-/** L'étiquette d'un jet d'attaque : son mode. */
+/** An attack roll's label: its mode. */
 function attackLabel(roll) {
   const mode = roll.options?.advantageMode ?? 0;
   return game.i18n.localize((mode > 0) ? "DND5E.Advantage" : (mode < 0) ? "DND5E.Disadvantage" : "DND5E.Attack");
 }
 
 /**
- * Le verdict d'un jet d'attaque sur la carte, comme Midi-QOL le marque : `success` ou `failure` selon qu'une cible est touchée,
- * plus `critical` (coche double) ou `fumble` (deux croix).
+ * An attack roll's verdict on the card, as Midi-QOL marks it: `success` or `failure` depending on whether a target is hit,
+ * plus `critical` (double check) or `fumble` (two crosses).
  */
 function attackOutcome(roll, carrier) {
   const resolution = carrier?.getFlag(MODULE_ID, "resolution");
@@ -194,7 +195,7 @@ function attackOutcome(roll, carrier) {
   return hit ? { css: "success", icons: ["fa-check"] } : { css: "failure", icons: ["fa-xmark"] };
 }
 
-/** Les icônes des types d'un jet de dégâts ou de soins, celles de dnd5e. */
+/** The icons of a damage or healing roll's types, dnd5e's. */
 function damageIcons(rolls) {
   const types = [...new Set(rolls.map(roll => roll.options?.type).filter(Boolean))];
   const icons = types.map(type => {
@@ -240,8 +241,8 @@ async function midiBlockOf(message, carrier) {
 }
 
 /**
- * Pose dans `host` les blocs de dés de ces messages, dans l'ordre de la carte de Midi-QOL : l'attaque, les cibles touchées ou
- * ratées (la liste que ui/chat.mjs a posée plus bas sur la même carte y est remontée), puis les dégâts.
+ * Puts into `host` the dice blocks of these messages, in the order of the Midi-QOL card: the attack, the hit or missed targets
+ * (the list that ui/chat.mjs placed lower on the same card is moved up there), then the damage.
  */
 async function fillMidiBlocks(host, messages, carrier) {
   const blocks = (await Promise.all(messages.map(m => midiBlockOf(m, carrier).catch(() => null)))).filter(Boolean);
@@ -254,14 +255,14 @@ async function fillMidiBlocks(host, messages, carrier) {
   const hits = rows?.querySelector(":scope > .midi-qol-hits-display");
   if ( hits ) host.append(hits);
   host.append(damage.content);
-  // La section des sauvegardes ferme la zone, vide s'il n'y en a pas (elle y a son retrait, comme sur la carte de Midi-QOL).
+  // The saves section closes the area, empty if there are none (it has its indent there, as on the Midi-QOL card).
   const saves = rows?.querySelector(":scope > .midi-qol-saves-display") ?? document.createElement("div");
   saves.classList.add("midi-qol-saves-display");
   host.append(saves);
   gatherActions(host.closest(".message-content"));
 }
 
-/** Les boutons du moteur (détails des jets, annulation) sur une seule ligne, sous la zone de résultats. */
+/** The engine's buttons (roll details, cancellation) on a single line, under the results area. */
 function gatherActions(content) {
   const buttons = Array.from(content?.querySelectorAll(":scope > .dnd5e-combat-result > button") ?? []);
   if ( !buttons.length ) return;
@@ -269,7 +270,7 @@ function gatherActions(content) {
   bar.classList.add("dnd5e-combat-actions");
   bar.append(...buttons);
   content.append(bar);
-  // Les blocs vidés de leurs rangées et de leur bouton ne gardent pas leur place.
+  // Blocks emptied of their rows and of their button do not keep their place.
   for ( const div of content.querySelectorAll(":scope > .dnd5e-combat-result") ) {
     if ( !div.querySelector(":scope > :not(.midi-results:empty)") ) div.remove();
   }
@@ -282,18 +283,18 @@ function onBlockClick(event) {
   block.classList.toggle("expanded");
 }
 
-/** Le résumé des jets sur la carte d'utilisation, et le bouton qui les déplie. */
+/** The roll summary on the use card, and the button that unfolds them. */
 function renderSummary(carrier, html) {
   const folded = foldedIn(carrier);
   if ( !folded.length ) return;
-  // En rangées (`chatRows`) : les jets sont montrés en blocs de dés, comme sur la carte de Midi-QOL, pas par une ligne de texte.
+  // In rows (`chatRows`): the rolls are shown as dice blocks, like on the Midi-QOL card, not as a line of text.
   const native = rowsEnabled();
   const lines = [];
   for ( const m of folded ) {
     if ( rolling.has(m.id) ) continue;
     const line = native ? null : ((m.type === "attack") ? attackLine(m, carrier) : damageLine(m));
     if ( line ) lines.push(line);
-    // Ce que le moteur écrit sous ces jets (raisons d'Avantage, dégâts ajoutés) : sur la carte, puisqu'ils sont repliés.
+    // What the engine writes under these rolls (reasons for Advantage, added damage): on the card, since they are collapsed.
     const modifiers = m.getFlag(MODULE_ID, "modifiers");
     if ( modifiers ) lines.push(...modifierLines(modifiers, (m.type === "attack") ? m.rolls?.[0] : null));
     const bonuses = m.getFlag(MODULE_ID, "bonuses");
@@ -328,16 +329,16 @@ function renderSummary(carrier, html) {
     ui.chat?.updateMessage?.(carrier);
   });
   div.append(button);
-  // Avant le verdict par cible (ui/chat.mjs l'ajoute ensuite) : les dés, puis ce qu'ils ont fait.
+  // Before the verdict per target (ui/chat.mjs adds it afterwards): the dice, then what they did.
   html.querySelector(".message-content")?.append(div);
 }
 
-/** Replie ou déplie les cartes d'un jet déjà dans le DOM (journal, surimpression, fenêtre détachée). */
+/** Collapses or unfolds the cards of a roll already in the DOM (log, overlay, detached window). */
 function setFolded(message, folded) {
   for ( const li of document.querySelectorAll(`.chat-message[data-message-id="${message.id}"]`) ) li.classList.toggle("dnd5e-combat-folded", folded);
 }
 
-/** Redessine la carte d'utilisation (une fois par lot d'arrivées). */
+/** Redraws the use card (once per batch of arrivals). */
 const pendingRefresh = new Set();
 function refresh(carrier) {
   if ( pendingRefresh.has(carrier.id) ) return;
@@ -378,6 +379,6 @@ export function registerCompact() {
   route("ready", applyCompact, { label: "single card" });
   route("createChatMessage", onCreate, { label: "single card: roll not folded" });
   route("deleteChatMessage", message => { midiBlocks.delete(message.id); }, { label: "single card: dice blocks kept" });
-  // Inscrit AVANT ui/chat.mjs : le résumé des dés précède le verdict par cible.
+  // Registered BEFORE ui/chat.mjs: the dice summary precedes the verdict per target.
   route("dnd5e.renderChatMessage", onRender, { label: "single card: render" });
 }

@@ -1,19 +1,19 @@
 /**
- * §225 : le plan Éthéré, version simple — le statut `ethereal` de dnd5e tient lieu de plan, sur la même carte. Une créature dans
- * l'Éthéré limitrophe « ne peut affecter et être affectée que par ce qui est aussi sur le plan Éthéré » (Forme éthérée, Clignotement,
- * PHB 2024) : ni cible, ni attaque, ni attaque d'opportunité, ni réaction, ni zone, ni aura d'un plan à l'autre, et l'on ne se bloque
- * pas les cases. Lot 2 : la perception d'un plan à l'autre (`perceivesAcross`). Lot 3 : les murs se traversent, sauf ceux qui arrêtent
- * le voyage éthéré (`crossesEtherealWall`), le vertical coûte double (`etherealStepCost`). Lot 4 : le retour sur une case occupée
- * (`nearestFreeCell`, `shuntDamage`).
+ * §225: the Ethereal Plane, simple version — dnd5e's `ethereal` status stands in for a plane, on the same map. A creature in
+ * the Border Ethereal "can affect and be affected only by what is also on the Ethereal Plane" (Etherealness, Blink,
+ * PHB 2024): no target, no attack, no Opportunity Attack, no Reaction, no area, no aura from one plane to the other, and cells
+ * are not blocked. Batch 2: perception from one plane to the other (`perceivesAcross`). Batch 3: walls are crossed, except
+ * those that stop ethereal travel (`crossesEtherealWall`), vertical movement costs double (`etherealStepCost`). Batch 4: the
+ * return onto an occupied cell (`nearestFreeCell`, `shuntDamage`).
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
 export const ETHEREAL = "ethereal";
 
 /**
- * L'interrupteur du MJ (réglage de monde `etherealPlane`, runtime/ethereal.mjs) : coupé, toute créature est sur le plan matériel — l'état
- * `ethereal` de dnd5e ne fait plus rien que son icône. Tenu ici, sans import : l'A* et la vision le lisent aussi.
+ * The GM's switch (world setting `etherealPlane`, runtime/ethereal.mjs): off, every creature is on the Material Plane — dnd5e's
+ * `ethereal` condition does nothing more than show its icon. Held here, with no import: A* and vision read it too.
  */
 let enabled = true;
 export const etherealPlaneOn = () => enabled;
@@ -21,23 +21,24 @@ export function setEtherealPlaneState(value) {
   enabled = value !== false;
 }
 
-/** Le plan d'une créature d'après ses statuts : « ethereal » ou « material ». Sans statuts (un point, un objet), le plan matériel. */
+/** A creature's plane from its statuses: "ethereal" or "material". Without statuses (a point, an object), the Material Plane. */
 export function planeOf(statuses) {
   return (enabled && statuses?.has?.(ETHEREAL)) ? ETHEREAL : "material";
 }
 
-/** Deux créatures (leurs statuts) sur le même plan ? Ce qui n'a pas de statuts (null) est sur le plan matériel. */
+/** Two creatures (their statuses) on the same plane? What has no statuses (null) is on the Material Plane. */
 export function samePlane(statusesA, statusesB) {
   return planeOf(statusesA) === planeOf(statusesB);
 }
 
 /**
- * §225, lot 2 : une créature peut-elle en percevoir une autre d'un plan à l'autre ? Même plan : oui (le reste du test décide).
- *  - depuis le matériel vers l'Éthéré : seulement à portée d'une vue de l'Éthéré (`etherealSight` : Détection de l'invisibilité,
- *    Troisième œil — illimitée —, Vision éthérée 60 ft, Vision suprême à sa portée ; null : aucune) ;
- *  - depuis l'Éthéré vers le matériel : « vous percevez le plan que vous avez quitté … rien au-delà de 60 ft » (`limit`) ;
- *  - `visibleAcross` : la cible se voit d'un plan à l'autre (le fantôme du MM, « visible sur le plan matériel … et inversement »).
- * Distances dans la même unité.
+ * §225, batch 2: can a creature perceive another from one plane to the other? Same plane: yes (the rest of the test decides).
+ *  - from the Material to the Ethereal: only within range of an Ethereal sight (`etherealSight`: See Invisibility,
+ *    Third Eye — unlimited —, Ethereal Sight 60 ft, "Supreme Vision" at its range; null: none);
+ *  - from the Ethereal to the Material: "you perceive the plane you left … nothing beyond 60 ft" (`limit`);
+ *  - `visibleAcross`: the target is seen from one plane to the other (the MM's ghost, "visible on the Material Plane … and
+ *    vice versa").
+ * Distances in the same unit.
  */
 export function perceivesAcross({ observerPlane, targetPlane, distance, etherealSight=null, limit=Infinity, visibleAcross=false }) {
   if ( observerPlane === targetPlane ) return true;
@@ -46,7 +47,7 @@ export function perceivesAcross({ observerPlane, targetPlane, distance, ethereal
   return distance <= limit + 1e-6;
 }
 
-/** Les segments [a, b] et [c, d] se coupent-ils (extrémités comprises) ? Points `{ x, y }`. */
+/** Do the segments [a, b] and [c, d] intersect (endpoints included)? Points `{ x, y }`. */
 function segmentsCross(a, b, c, d) {
   const orient = (p, q, r) => Math.sign(((q.x - p.x) * (r.y - p.y)) - ((q.y - p.y) * (r.x - p.x)));
   const onSegment = (p, q, r) => (Math.min(p.x, q.x) <= r.x + 1e-9) && (r.x <= Math.max(p.x, q.x) + 1e-9)
@@ -58,22 +59,22 @@ function segmentsCross(a, b, c, d) {
 }
 
 /**
- * §225, lot 3 : un pas dans l'Éthéré, de `from` à `to`, franchit-il l'un de ces murs (ceux qui arrêtent le voyage éthéré : Mur de force,
- * Cage de force) ? `walls` : segments `[x0, y0, x1, y1]`. Tous les autres murs se traversent.
+ * §225, batch 3: does a step in the Ethereal, from `from` to `to`, cross one of these walls (those that stop ethereal travel:
+ * Wall of Force, Forcecage)? `walls`: segments `[x0, y0, x1, y1]`. All other walls are crossed.
  */
 export function crossesEtherealWall(from, to, walls) {
   return walls.some(([x0, y0, x1, y1]) => segmentsCross(from, to, { x: x0, y: y0 }, { x: x1, y: y1 }));
 }
 
-/** §225, lot 3 : « monter ou descendre coûte un pied de plus par pied » (Forme éthérée) — le coût d'un pas, sa part verticale doublée. */
+/** §225, batch 3: "moving up or down costs 1 extra foot per foot" (Etherealness) — the cost of a step, its vertical part doubled. */
 export function etherealStepCost(cost, verticalDistance) {
   return cost + Math.abs(verticalDistance);
 }
 
 /**
- * §225, lot 4 : la case libre la plus proche de `start` (`{ i, j }`), anneau par anneau (Tchebychev), la plus proche à vol d'oiseau dans
- * chaque anneau — pour le retour de l'Éthéré sur une case occupée (« repoussé vers l'espace inoccupé le plus proche »). `isFree(cell)` ;
- * `maxRings` borne la recherche. Rend `{ i, j, rings }`, `rings` 0 si la case de départ est libre, ou null.
+ * §225, batch 4: the free cell nearest to `start` (`{ i, j }`), ring by ring (Chebyshev), the nearest as the crow flies in
+ * each ring — for the return from the Ethereal onto an occupied cell ("pushed to the nearest unoccupied space"). `isFree(cell)`;
+ * `maxRings` bounds the search. Returns `{ i, j, rings }`, `rings` 0 if the starting cell is free, or null.
  */
 export function nearestFreeCell(start, isFree, maxRings=10) {
   if ( isFree(start) ) return { i: start.i, j: start.j, rings: 0 };
@@ -89,21 +90,21 @@ export function nearestFreeCell(start, isFree, maxRings=10) {
   return null;
 }
 
-/** §225, lot 4 : « des dégâts de force égaux à deux fois le nombre de pieds » du déplacement subi au retour (Forme éthérée). */
+/** §225, batch 4: "Force damage equal to twice the number of feet" of movement taken on return (Etherealness). */
 export function shuntDamage(feet) {
   return Math.max(0, Math.round(2 * feet));
 }
 
 /**
- * La lumière qu'un token porte (torche, sort) n'éclaire pas le plan matériel tant qu'il est dans l'Éthéré : rien de ce qu'il porte
- * n'y agit. Les règles ne le disent pas en toutes lettres — « n'affecter et n'être affecté que par ce qui est dans l'Éthéré »
- * (Forme éthérée) ; c'est aussi ce que fait le module Vision 5e. Ce qu'il faut faire des rayons PRÉPARÉS du token, en mémoire :
- *  - `shade` : il est Éthéré et émet — mettre ses rayons à zéro ;
- *  - `reprepare` : il ne l'est plus et ses rayons sont encore à zéro — faire repréparer ses données (ses vrais rayons, tels qu'ils
- *    sont maintenant : on ne remet pas ceux d'avant, la torche a pu s'éteindre entre-temps) ;
- *  - `refresh` : il ne l'est plus et la préparation de ses données a déjà remis ses rayons — seule sa source est à refaire ;
- *  - null : rien.
- * @param {{ethereal: boolean, dim: number, bright: number, shaded?: boolean}} state  `shaded` : on l'avait éteint.
+ * The light that a token carries (torch, spell) does not light the Material Plane while it is in the Ethereal: nothing it carries
+ * acts there. The rules do not say so in so many words — "affect and be affected only by what is in the Ethereal"
+ * (Etherealness); it is also what the Vision 5e module does. What to do with the token's PREPARED rays, in memory:
+ *  - `shade`: it is Ethereal and emits — set its rays to zero;
+ *  - `reprepare`: it no longer is and its rays are still at zero — have its data re-prepared (its real rays, as they
+ *    are now: the earlier ones are not restored, the torch may have gone out meanwhile);
+ *  - `refresh`: it no longer is and data preparation has already restored its rays — only its source is to be redone;
+ *  - null: nothing.
+ * @param {{ethereal: boolean, dim: number, bright: number, shaded?: boolean}} state  `shaded`: it had been turned off.
  * @returns {"shade"|"reprepare"|"refresh"|null}
  */
 export function etherealLight({ ethereal, dim=0, bright=0, shaded=false }) {

@@ -1,7 +1,7 @@
 /**
- * §314, sous-lot C12-h de la repasse terme par terme : déplacement. Arène des sorts (Lanceur, Cible).
- *  - Décharge répulsive posée sur Contact glacial (pas sur la Décharge occulte) : la Cible touchée recule de 3 m ;
- *  - Révélation charnelle, Envol scintillant : une Vitesse de vol égale à la Vitesse (la donnée la doublait).
+ * §314, sub-batch C12-h of the term-by-term pass: movement. Spell arena (Caster, Target).
+ *  - Repelling Blast placed on Chill Touch (not on Eldritch Blast): the Target that is hit is pushed back 3 m;
+ *  - Fleshly Revelation, Sparkling Flight: a flying Speed equal to the Speed (the data doubled it).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -58,7 +58,7 @@ export default {
       const repel = await lend(`${PHB}.classes.Item.phbinvRepellingB`);
       const { effectId } = await ctx.engine("enchant", { tokenId: caster.id, itemId: repel, activityId: "OXhI1TDQxORrGAgc", targetItemId: chill }).catch(err => ({ error: err.message }));
       if ( !ctx.expect(!!effectId, "Contact glacial porte l'enchantement « Répulsive »") ) return;
-      // Deux rangées plus bas : à l'est de la case d'origine de la Cible se tient la « Cible voisine », qui arrêterait la poussée.
+      // Two rows lower: east of the Target's origin cell stands the "Neighbouring Target", which would stop the push.
       const t0 = { x: homes.get(target.id).x, y: homes.get(target.id).y + 2 * grid };
       let checked = false;
       for ( let n = 0; (n < 20) && !checked; n++ ) {

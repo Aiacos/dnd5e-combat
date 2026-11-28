@@ -1,9 +1,9 @@
 /**
- * §334, restes du lot K10 de la repasse des créatures. Arène des sorts : le Lanceur (PNJ), la Cible (999 PV), l'« Ennemi au contact ».
- *  - Morsure du Requin géant (condition d'activation « with Advantage if the target doesn't have all its Hit Points ») : Avantage contre
- *    la Cible blessée, pas contre la Cible indemne ;
- *  - Déplacement de la Bête éclipsante prêté au Lanceur (« Attack rolls against the displacer beast have Disadvantage ») : l'Ennemi
- *    l'attaque avec le Désavantage.
+ * §334, leftovers of batch K10 of the creature pass. Spell arena: the Caster (NPC), the Target (999 HP), the "Enemy in contact".
+ *  - Giant Shark's Bite (activation condition "with Advantage if the target doesn't have all its Hit Points"): Advantage against
+ *    the wounded Target, not against the unharmed Target;
+ *  - Displacer Beast's Displacement lent to the Caster ("Attack rolls against the displacer beast have Disadvantage"): the Enemy
+ *    attacks it with Disadvantage.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

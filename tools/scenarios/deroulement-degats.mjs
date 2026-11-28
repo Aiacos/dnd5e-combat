@@ -1,13 +1,14 @@
 /**
- * §419 : le réglage « Dégâts et soins » (`damageFlow`, cadre « Déroulement ») — qui lance les dés et qui décide de les appliquer, sur un
- * Trait de feu de l'Ensorceleur contre le Zombi (Arène de test), tiré jusqu'à toucher :
- *  1. `click` : après le coup, la fenêtre de dégâts de dnd5e chez l'auteur (#173, §556 — avant : « Lancer les dégâts » de DAS) ; aucun
- *     jet tant qu'elle est ouverte ; « Normal » cliqué, les dégâts sont lancés et appliqués.
- *  2. `validate` : les dégâts sont lancés d'office, la fenêtre du MJ « Appliquer ? » s'ouvre, les PV n'ont pas bougé ; refusé, rien n'est
- *     appliqué et la résolution se clôt ; rejoué et accepté, les PV tombent.
- *  3. `clickValidate` : les deux fenêtres, dans l'ordre.
- *  4. `auto` : aucune fenêtre (le comportement de toujours).
- * Le scénario joue en MJ : l'auteur du tir et le MJ qui valide sont le même client. Le réglage est remis à sa valeur d'avant.
+ * §419: the "Damage and healing" setting (`damageFlow`, "Flow" frame) — who rolls the dice and who decides to apply them, on a
+ * Sorcerer's Fire Bolt against the Zombie (Test Arena), shot until it hits:
+ *  1. `click`: after the hit, the dnd5e damage window on the author's side (#173, §556 — before: DAS's "Roll damage"); no
+ *     roll while it is open; "Normal" clicked, the damage is rolled and applied.
+ *  2. `validate`: the damage is rolled automatically, the GM's "Apply?" window opens, HP have not moved; refused, nothing is
+ *     applied and the resolution closes; replayed and accepted, HP drop.
+ *  3. `clickValidate`: both windows, in order.
+ *  4. `auto`: no window (the behavior as always).
+ * The scenario plays as the GM: the shot's author and the validating GM are the same client.
+ * The setting is restored to its previous value.
  */
 const MODULE_ID = "dnd5e-combat";
 const TERMINAL = new Set(["done", "missed", "undone"]);
@@ -25,7 +26,7 @@ export default {
     const mode = value => ctx.engine("setting", { key: "damageFlow", value });
     ctx.restore(() => mode(before));
 
-    /** La fenêtre de l'auteur (bouton `roll`) ou celle du MJ (boutons `apply` / `refuse`), s'il y en a une. */
+    /** The author's window (button `roll`) or the GM's (buttons `apply` / `refuse`), if there is one. */
     // §556: the author's window is dnd5e's damage dialog (its "Normal" button), found and pressed on the GM client.
     const rollDialog = (press=false) => ctx.call("run-script", { code: `
       const app = [...foundry.applications.instances.values()].find(a => a.rendered && a.config?.["${MODULE_ID}"]?.dialog);
@@ -44,8 +45,8 @@ export default {
     ctx.restore(async () => { for ( let w, i = 0; (i < 6) && (w = await flowWindow()); i++ ) await answer(w, "refuse").catch(() => {}); });
 
     /**
-     * Tire jusqu'à toucher (huit essais). `answers` : la réponse à la fenêtre du MJ (« apply » ou « refuse »). Rend ce qui s'est passé :
-     * les fenêtres vues dans l'ordre, les jets de dégâts présents à l'ouverture de chacune, les PV à ce moment, la résolution finale.
+     * Shoots until it hits (eight tries). `answers`: the answer to the GM's window ("apply" or "refuse"). Returns what happened:
+     * the windows seen in order, the damage rolls present when each opened, the HP at that moment, the final resolution.
      */
     const shoot = async ({ validate="apply" }={}) => {
       for ( let i = 0; i < 8; i++ ) {
@@ -59,7 +60,7 @@ export default {
           if ( r && TERMINAL.has(r.step) ) break;
           const w = await flowWindow();
           if ( w ) {
-            await pause(1200);   // le temps qu'un jet enchaîné à tort arrive
+            await pause(1200);   // time for a wrongly chained roll to arrive
             const damageRolls = (await ctx.messagesSince(since)).filter(m => m.type === "damage").length;
             seen.push({ kind: w.kind, damageRolls, hp: await ctx.hp(zombi), text: w.text ?? "" });
             await answer(w, validate);
@@ -84,7 +85,7 @@ export default {
       ctx.expect((shot.r.step === "done") && (shot.damageRolls === 1) && (shot.hpAfter < hp0), `click : cliquée, un jet, dégâts appliqués (${hp0} → ${shot.hpAfter})`);
     }
 
-    // 2. Validés par le MJ : refusés, puis acceptés.
+    // 2. Validated by the GM: refused, then accepted.
     await mode("validate");
     shot = await shoot({ validate: "refuse" });
     if ( ctx.expect(!!shot, "validate : le Trait de feu touche") ) {

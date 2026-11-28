@@ -1,37 +1,37 @@
 /**
- * §397 : « Lancer un combat » (MJ) — la règle seule : qui la fenêtre propose, dans quelle liste et coché ou non, quelles initiatives se
- * partagent un jet, et quand le premier round peut commencer.
+ * §397: "Start a combat" (GM) — the rule alone: who the window offers, in which list and checked or not, which Initiatives
+ * share a roll, and when the first round can begin.
  *
- * Décisions de l'utilisateur (2026-11-07) :
- *  - « Joueurs » : ce que contrôlent les joueurs connectés et qui a une initiative (personnages, familiers, invocations), coché ;
- *  - « Vus par les joueurs » : les autres créatures qu'un token des joueurs voit, cochées ;
- *  - « Reste de la carte » : les autres, décochées — hors créatures à 0 PV, acteurs qui ne sont pas des créatures, pièges marqués,
- *    tokens d'un autre niveau de la scène ;
- *  - une invocation « juste après son maître » n'a pas son propre jet ; une invocation sans initiative (Serviteur invisible) n'est pas
- *    proposée ;
- *  - case « une initiative par type de créature » : les PNJ d'un même acteur partagent un jet.
+ * Decisions of the user (2026-11-07):
+ *  - "Players": what the connected players control and that has an Initiative (characters, familiars, summons), checked;
+ *  - "Seen by the players": the other creatures that a players' token sees, checked;
+ *  - "Rest of the map": the others, unchecked — except creatures at 0 HP, actors that are not creatures, marked traps,
+ *    tokens of another level of the scene;
+ *  - a summon "right after its master" has no roll of its own; a summon without Initiative (Unseen Servant) is not
+ *    offered;
+ *  - checkbox "one Initiative per creature type": the NPCs of the same actor share a roll.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
 /**
  * @typedef {object} LaunchEntry
- * @property {string} id                Id du token.
- * @property {string} actorKey          L'acteur (de base pour un token non lié) : sert au regroupement.
- * @property {boolean} player           Possédé par un joueur.
- * @property {boolean} online           Un de ses joueurs est connecté.
- * @property {boolean} creature         Une créature (personnage ou PNJ), pas un groupe, un véhicule, un piège.
- * @property {boolean} alive            Plus de 0 PV, pas mort.
- * @property {boolean} sameLevel        Au niveau affiché de la scène.
- * @property {boolean} notCombatant     Marqué « hors combat » (`flags.dnd5e-combat.notCombatant`).
- * @property {"own"|"after"|"none"|null} summon  La règle d'initiative d'une invocation, null sinon.
- * @property {boolean} seen             Un token des joueurs le voit.
+ * @property {string} id                Token id.
+ * @property {string} actorKey          The actor (the base one for an unlinked token): used for grouping.
+ * @property {boolean} player           Owned by a player.
+ * @property {boolean} online           One of its players is connected.
+ * @property {boolean} creature         A creature (character or NPC), not a group, a vehicle, a trap.
+ * @property {boolean} alive            More than 0 HP, not dead.
+ * @property {boolean} sameLevel        On the displayed level of the scene.
+ * @property {boolean} notCombatant     Marked "not in combat" (`flags.dnd5e-combat.notCombatant`).
+ * @property {"own"|"after"|"none"|null} summon  The Initiative rule of a summon, null otherwise.
+ * @property {boolean} seen             A players' token sees it.
  */
 
 /**
- * Range les tokens d'une scène dans les trois listes de la fenêtre.
+ * Sorts the tokens of a scene into the three lists of the window.
  * @param {LaunchEntry[]} entries
- * @returns {{players: LaunchEntry[], seen: LaunchEntry[], rest: LaunchEntry[]}}  Chaque entrée reçoit `checked`.
+ * @returns {{players: LaunchEntry[], seen: LaunchEntry[], rest: LaunchEntry[]}}  Each entry gets `checked`.
  */
 export function classify(entries) {
   const players = [];
@@ -49,8 +49,8 @@ export function classify(entries) {
 }
 
 /**
- * Les PNJ qui lancent eux-mêmes : un jet par combattant, ou par acteur quand `grouped`. Les invocations « après » leur maître ne lancent
- * pas. Rend `[{ roll, copies }]` : `roll` lance, `copies` reçoivent le même résultat.
+ * The NPCs that roll for themselves: one roll per combatant, or per actor when `grouped`. Summons "after" their master do not
+ * roll. Returns `[{ roll, copies }]`: `roll` rolls, `copies` receive the same result.
  * @param {Array<{id: string, actorKey: string, summon?: string|null}>} npcs
  * @param {boolean} grouped
  */
@@ -66,7 +66,7 @@ export function initiativeGroups(npcs, grouped) {
   return [...byActor.values()];
 }
 
-/** Tous les combattants ont-ils une initiative ? (le premier round peut commencer) */
+/** Do all the combatants have an Initiative? (the first round can begin) */
 export function allRolled(initiatives) {
   const list = initiatives ?? [];
   return list.length > 0 && list.every(n => Number.isFinite(n));

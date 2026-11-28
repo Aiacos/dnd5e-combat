@@ -1,8 +1,9 @@
 /**
- * Retour Discord (Fanarie, 2026-11-18) : Foundry V14 n'affiche plus la case « Lumière vive » de l'illumination globale
- * (`environment.globalLight.bright`) ; le Core la remet dans l'onglet Visibilité de la configuration de scène (ui/scene-bright.mjs).
- * Sur la scène affichée : la case est là, cochée selon la scène ; la cocher et enregistrer écrit `true`, la décocher `false`.
- * Remet la valeur de départ.
+ * Discord feedback (Fanarie, 2026-11-18): Foundry V14 no longer displays the global illumination "Bright Light" checkbox
+ * (`environment.globalLight.bright`); the Core puts it back in the Visibility tab of the scene configuration (ui/scene-bright.mjs).
+ * On the displayed scene: the box is there, ticked according to the scene; ticking it and saving writes `true`, unticking
+ * it `false`.
+ * Restores the starting value.
  */
 export default {
   name: "lumière vive — la case de l'illumination globale dans la configuration de scène",

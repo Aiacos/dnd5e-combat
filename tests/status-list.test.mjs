@@ -1,11 +1,11 @@
 /**
- * Faits `target.hasStatus` et `source.hasStatus` : un état, ou l'un d'une liste — la forme que donne l'en-tête de core/triggers.mjs.
- * Exemple générique : une morsure qui ne vaut que contre une créature Agrippée, Neutralisée ou Entravée.
+ * Facts `target.hasStatus` and `source.hasStatus`: one condition, or any of a list — the form given by the header of
+ * core/triggers.mjs. Generic example: a bite that only applies against a Grappled, Incapacitated or Restrained creature.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { holds } from "../module/scripts/core/triggers.mjs";
 
-describe("hasStatus : un état ou l'un d'une liste", () => {
+describe("hasStatus: one condition or any of a list", () => {
   let factsFor;
   beforeAll(async () => {
     globalThis.Hooks ??= { on() {}, once() {}, callAll() {}, call: () => true };
@@ -14,7 +14,7 @@ describe("hasStatus : un état ou l'un d'une liste", () => {
     globalThis.foundry ??= { utils: { throttle: fn => fn, debounce: fn => fn, isNewerVersion: () => false } };
     globalThis.CONFIG ??= { DND5E: { movementUnits: { ft: { conversion: 1 } } }, specialStatusEffects: {}, queries: {} };
     globalThis.canvas = null;
-    await import("../module/scripts/adapter/running-water.mjs");   // même ordre de chargement que armor-facts.test.mjs
+    await import("../module/scripts/adapter/running-water.mjs");   // same load order as armor-facts.test.mjs
     ({ factsFor } = await import("../module/scripts/adapter/facts.mjs"));
   });
 
@@ -22,22 +22,22 @@ describe("hasStatus : un état ou l'un d'une liste", () => {
   const free = { statuses: new Set() };
   const three = ["grappled", "incapacitated", "restrained"];
 
-  it("un seul état, comme avant", () => {
+  it("a single condition, as before", () => {
     expect(holds({ "target.hasStatus": "restrained" }, factsFor({ target: bound }))).toBe(true);
     expect(holds({ "target.hasStatus": "prone" }, factsFor({ target: bound }))).toBe(false);
     expect(holds({ "source.hasStatus": "restrained" }, factsFor({ source: bound }))).toBe(true);
   });
-  it("une liste : vrai dès que la créature a l'un des états", () => {
+  it("a list: true as soon as the creature has any of the conditions", () => {
     expect(holds({ "target.hasStatus": three }, factsFor({ target: bound }))).toBe(true);
     expect(holds({ "target.hasStatus": three }, factsFor({ target: free }))).toBe(false);
     expect(holds({ "source.hasStatus": three }, factsFor({ source: bound }))).toBe(true);
     expect(holds({ "target.hasStatus": [] }, factsFor({ target: bound }))).toBe(false);
   });
-  it("sous `not` : « ne vaut que contre une créature qui a l'un de ces états »", () => {
+  it("under `not`: \"only applies against a creature that has any of these conditions\"", () => {
     expect(holds({ not: { "target.hasStatus": three } }, factsFor({ target: free }))).toBe(true);
     expect(holds({ not: { "target.hasStatus": three } }, factsFor({ target: bound }))).toBe(false);
   });
-  it("sans créature : faux", () => {
+  it("without a creature: false", () => {
     expect(holds({ "target.hasStatus": three }, factsFor({}))).toBe(false);
   });
 });

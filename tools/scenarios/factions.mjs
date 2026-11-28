@@ -1,8 +1,8 @@
 /**
- * §181 : les factions. Le Bandit et le Zombi, tous deux Hostiles, sont alliés tant que rien n'est réglé ; mis dans des factions
- * hostiles l'une à l'autre, ils deviennent ennemis pour les règles du moteur (attaque d'opportunité), sans rien changer pour le
- * Guerrier. Puis : relation neutre, le Bandit frappe le Zombi → rancune sur la scène (hostiles) ; relation explicite avec les PJ →
- * la disposition du Bandit suit. Remet : réglage des factions, rancunes, flags, disposition, PV, positions.
+ * §181: the factions. The Bandit and the Zombie, both Hostile, are allies as long as nothing is set; put in factions
+ * hostile to each other, they become enemies for the engine's rules (Opportunity Attack), with no change for the
+ * Fighter. Then: neutral relation, the Bandit hits the Zombie → grudge on the scene (hostile); explicit relation with the PCs →
+ * the Bandit's disposition follows. Restores: factions setting, grudges, flags, disposition, HP, positions.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -16,7 +16,7 @@ export default {
     const guerrier = await ctx.token("Guerrier");
     const bandit = await ctx.token("Bandit");
     const f = args => ctx.engine("factions", args);
-    // Les cônes de vision (§182) ne sont pas le sujet : hors combat, le Zombi ne verrait pas le Bandit posé à côté de lui.
+    // Vision cones (§182) are not the subject: out of combat, the Zombie would not see the Bandit placed next to it.
     const cones = await ctx.engine("setting", { key: "visionCones", value: false });
     ctx.restore(() => ctx.engine("setting", { key: "visionCones", value: cones.before }));
 
@@ -27,27 +27,27 @@ export default {
     ctx.restore(() => ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { disposition: banditData.disposition } }));
     const hp0 = await ctx.hp(zombi);
     ctx.restore(() => ctx.setHp(zombi, hp0));
-    // Un monde de test qui aurait déjà des factions : on part d'un réglage vierge (le défaut, sans relation).
+    // A test world that already had factions: we start from a blank setting (the default, no relation).
     await f({ op: "restore", value: { factions: snap.value?.factions ?? [], relations: {} }, clear: true });
 
-    // Le Bandit au contact du Zombi, à sa droite.
+    // The Bandit in contact with the Zombie, to its right.
     const grid = await ctx.gridSize();
     const { data: z } = await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id });
     await ctx.stage({ tokens: { Bandit: [z.x + grid, z.y] } });
     await pause(400);
-    // Les attaques d'opportunité ne se jugent que dans un combat commencé.
+    // Opportunity Attacks are only judged in a combat that has started.
     await ctx.startCombat([zombi, bandit]);
     await pause(400);
     const away = { x: z.x + (grid * 5.5), y: z.y + (grid / 2) };
     const threatened = async () => (await ctx.engine("threats", { tokenId: bandit.id, point: away })).includes("Zombi");
 
-    // 1. Rien de réglé : la disposition décide (deux Hostiles = même camp).
+    // 1. Nothing set: the disposition decides (two Hostiles = same side).
     const before = await f({ op: "between", aId: bandit.id, bId: zombi.id });
     const pc = (await f({ op: "between", aId: guerrier.id, bId: zombi.id })).relation;
     ctx.expect(before.relation === "allied", `sans faction réglée : Bandit et Zombi « ${before.relation} » (attendu allied)`);
     ctx.expect(!(await threatened()), "sans faction réglée : le Zombi ne menace pas le Bandit qui s'éloigne");
 
-    // 2. Faction des bandits, hostile aux morts-vivants (le Zombi y est par la règle de type).
+    // 2. Bandits' faction, hostile to the Undead (the Zombie is in it by the type rule).
     const { id } = await f({ op: "add", name: "Bandits (test)" });
     await f({ op: "assign", tokenIds: [bandit.id], faction: id });
     const state = await f({ tokenIds: [bandit.id, zombi.id, guerrier.id] });
@@ -59,7 +59,7 @@ export default {
     ctx.expect(await threatened(), "le Zombi menace maintenant le Bandit qui s'éloigne (attaque d'opportunité)");
     ctx.expect((await f({ op: "between", aId: guerrier.id, bId: zombi.id })).relation === pc, `Guerrier ↔ Zombi inchangé (${pc})`);
 
-    // 3. Neutres ; le Bandit frappe le Zombi : rancune, ils redeviennent hostiles sur cette scène.
+    // 3. Neutral; the Bandit hits the Zombie: grudge, they become hostile again on this scene.
     await f({ op: "relation", a: id, b: "undead", relation: "neutral" });
     ctx.expect((await f({ op: "between", aId: bandit.id, bId: zombi.id })).relation === "neutral", "matrice neutre : neutres");
     ctx.expect(!(await threatened()), "neutres : pas d'attaque d'opportunité");
@@ -74,7 +74,7 @@ export default {
     }
     else ctx.log(`attaque du Bandit impossible (${used.error ?? "pas d'activité scimitar"}) : rancune non vérifiée`);
 
-    // 4. Relation explicite avec les PJ : la disposition du Bandit suit.
+    // 4. Explicit relation with the PCs: the Bandit's disposition follows.
     await f({ op: "relation", a: id, b: "party", relation: "neutral" });
     await pause(500);
     const after = await f({ tokenIds: [bandit.id] });

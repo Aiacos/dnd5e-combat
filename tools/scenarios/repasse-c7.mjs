@@ -1,11 +1,11 @@
 /**
- * §302, lot C7 de la repasse terme par terme : Avantage et Désavantage oubliés. Arène des sorts (Lanceur, Cible, Cible voisine).
- * Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source) et remet tout.
- *  - Contagion : la Cible « Infectée (Force) » fait sa sauvegarde de Force au Désavantage ;
- *  - Combattant clairvoyant : le Lanceur a l'Avantage contre la Cible liée, elle le Désavantage contre lui ;
- *  - Rayon affaiblissant : la Cible Affaiblie attaque au gourdin (Force) avec Désavantage ;
- *  - Vision suprême : le Lanceur à vision véritable n'a plus de Désavantage contre la Cible Invisible ;
- *  - Motif hypnotique : la Cible Aveuglée n'est pas affectée ; Sommeil : la Cible elfe (Transe) non plus.
+ * §302, batch C7 of the term-by-term pass: forgotten Advantage and Disadvantage. Spell arena (Caster, Target, Neighbouring Target).
+ * Each part borrows its items from the Player's Handbook (with their source) and puts everything back.
+ *  - Contagion: the "Infected (Strength)" Target makes its Strength saving throw with Disadvantage;
+ *  - Clairvoyant Combatant: the Caster has Advantage against the bound Target, it has Disadvantage against the Caster;
+ *  - Ray of Enfeeblement: the Enfeebled Target attacks with a club (Strength) with Disadvantage;
+ *  - Supreme Sight: the Caster with Truesight no longer has Disadvantage against the Invisible Target;
+ *  - Hypnotic Pattern: the Blinded Target is not affected; Sleep: the elf Target (Trance) neither.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

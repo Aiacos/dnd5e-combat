@@ -5,7 +5,7 @@ import {
 
 const opts = { clearance: 5, step: 5 };
 
-describe("mode et élévation", () => {
+describe("mode and elevation", () => {
   it("place le corps selon le mode", () => {
     expect(placementOf("walk")).toBe("ground");
     expect(placementOf("crawl")).toBe("ground");
@@ -22,7 +22,7 @@ describe("mode et élévation", () => {
     expect(modeRefusal("walk", {})).toBeNull();
   });
 
-  it("marcher et ramper collent au sol, voler reste à 5 ft au moins, fouir à −5 ft au plus", () => {
+  it("walking and crawling stick to the ground, flying stays at 5 ft or more, burrowing at −5 ft or less", () => {
     expect(coherentElevation("walk", 30, 0, 5)).toBe(0);
     expect(coherentElevation("crawl", -10, 20, 5)).toBe(20);
     expect(coherentElevation("fly", 0, 0, 5)).toBe(5);
@@ -35,14 +35,14 @@ describe("mode et élévation", () => {
 });
 
 describe("plafond", () => {
-  it("en vol, les pieds restent sous le plafond (tête comprise)", () => {
-    // Rez-de-chaussée de 0 à 15 ft, créature de 5 ft : pieds à 10 ft au plus.
+  it("in flight, the feet stay under the ceiling (head included)", () => {
+    // Ground floor from 0 to 15 ft, 5 ft creature: feet at 10 ft at most.
     expect(coherentElevation("fly", 15, 0, 5, 10)).toBe(10);
     expect(coherentElevation("fly", 8, 0, 5, 10)).toBe(8);
     expect(modeShift("walk", "fly", 0, 0, 5, 10)).toEqual({ elevation: 5, action: "fly" });
   });
 
-  it("un plafond trop bas ne l'emporte pas sur les 5 ft du vol", () => {
+  it("a ceiling that is too low does not override the 5 ft of flight", () => {
     expect(coherentElevation("fly", 0, 0, 5, 2)).toBe(5);
   });
 
@@ -51,27 +51,27 @@ describe("plafond", () => {
     expect(coherentElevation("burrow", 0, 0, 5, -20)).toBe(-5);
   });
 
-  it("alignPath borne un chemin en vol au plafond de chaque point", () => {
+  it("alignPath caps a flying path at the ceiling of each point", () => {
     const r = alignPath({ elevation: 10 }, [{ action: "fly", ground: 0, ceiling: 10, elevation: 20 }], { clearance: 5, step: 5 });
     expect(r.elevations).toEqual([10]);
   });
 });
 
 describe("changement de mode", () => {
-  it("décoller, atterrir, s'enfouir, remonter", () => {
+  it("take off, land, burrow, resurface", () => {
     expect(modeShift("walk", "fly", 0, 0, 5)).toEqual({ elevation: 5, action: "fly" });
     expect(modeShift("fly", "walk", 30, 0, 5)).toEqual({ elevation: 0, action: "fly" });
     expect(modeShift("walk", "burrow", 0, 0, 5)).toEqual({ elevation: -5, action: "burrow" });
     expect(modeShift("burrow", "walk", -15, 0, 5)).toEqual({ elevation: 0, action: "burrow" });
   });
 
-  it("rien à faire quand l'élévation convient déjà", () => {
+  it("nothing to do when the elevation already fits", () => {
     expect(modeShift("fly", "fly", 30, 0, 5)).toBeNull();
     expect(modeShift("walk", "crawl", 0, 0, 5)).toBeNull();
     expect(modeShift("walk", "fly", 20, 0, 5)).toBeNull();
   });
 
-  it("d'un mode libre vers le sol, en l'air : une chute, laissée à dnd5e", () => {
+  it("from a free mode to the ground, in the air: a fall, left to dnd5e", () => {
     expect(modeShift("climb", "walk", 15, 0, 5)).toBeNull();
   });
 });
@@ -79,22 +79,22 @@ describe("changement de mode", () => {
 describe("alignPath", () => {
   const walk = (ground, elevation=0) => ({ action: "walk", ground, elevation });
 
-  it("suit le sol à la marche, une marche de 5 ft au plus", () => {
+  it("follows the ground when walking, one step of 5 ft at most", () => {
     const r = alignPath({ elevation: 0 }, [walk(0), walk(5, 0), walk(5, 0), walk(0, 5)], opts);
     expect(r).toMatchObject({ elevations: [0, 5, 5, 0], kept: 4, issue: null, changed: true });
   });
 
-  it("ne change rien à un chemin déjà cohérent", () => {
+  it("changes nothing on a path that is already consistent", () => {
     expect(alignPath({ elevation: 0 }, [walk(0), walk(0)], opts).changed).toBe(false);
   });
 
-  it("refuse de monter plus haut qu'une marche sans grimper", () => {
+  it("refuses to go up higher than one step without climbing", () => {
     const r = alignPath({ elevation: 0 }, [walk(0), walk(10)], opts);
     expect(r.issue).toBe("tooHigh");
     expect(r.kept).toBe(1);
   });
 
-  it("s'arrête au bord du vide, sur le vide : c'est une chute", () => {
+  it("stops at the edge of the void, over the void: that is a fall", () => {
     const r = alignPath({ elevation: 20 }, [walk(20, 20), walk(0, 20), walk(0, 20)], opts);
     expect(r).toMatchObject({ elevations: [20, 20], kept: 2, issue: "falls" });
   });
@@ -104,7 +104,7 @@ describe("alignPath", () => {
     expect(r).toMatchObject({ elevations: [20, 0], issue: null });
   });
 
-  it("en vol, remonte au-dessus du sol sans jamais redescendre de lui-même", () => {
+  it("in flight, rises above the ground without ever descending on its own", () => {
     const r = alignPath({ elevation: 30 }, [
       { action: "fly", ground: 0, elevation: 30 }, { action: "fly", ground: 30, elevation: 30 }, { action: "fly", ground: 0, elevation: 35 }
     ], opts);
@@ -121,7 +121,7 @@ describe("alignPath", () => {
     expect(r).toMatchObject({ elevations: [15, 40], changed: false });
   });
 
-  it("l'A* ne franchit qu'une marche", () => {
+  it("the A* crosses only one step", () => {
     expect(groundStepAllowed(0, 5, 5)).toBe(true);
     expect(groundStepAllowed(0, 10, 5)).toBe(false);
     expect(groundStepAllowed(10, 0, 5)).toBe(false);
@@ -130,23 +130,23 @@ describe("alignPath", () => {
 
 describe("§238 : s'envoler, atterrir (menu)", () => {
   const base = { mode: "walk", airborne: false, flySpeed: 60, ground: 0, ceiling: Infinity, clearance: 5 };
-  it("au sol avec une Vitesse de vol : s'envoler", () => {
+  it("on the ground with a flying Speed: take off", () => {
     expect(flightChoice(base)).toBe("takeOff");
     expect(flightChoice({ ...base, mode: "crawl" })).toBe("takeOff");
   });
-  it("sans Vitesse de vol (ou ramenée à 0) : rien", () => {
+  it("without a flying Speed (or reduced to 0): nothing", () => {
     expect(flightChoice({ ...base, flySpeed: 0 })).toBeNull();
     expect(flightChoice({ ...base, flySpeed: undefined })).toBeNull();
   });
-  it("pas la place sous le plafond : rien", () => {
+  it("no room under the ceiling: nothing", () => {
     expect(flightChoice({ ...base, ceiling: 3 })).toBeNull();
     expect(flightChoice({ ...base, ceiling: 5 })).toBe("takeOff");
   });
-  it("en vol : atterrir, même sans vitesse lisible", () => {
+  it("in flight: land, even without a readable speed", () => {
     expect(flightChoice({ ...base, mode: "fly", airborne: true })).toBe("land");
     expect(flightChoice({ ...base, mode: "fly", airborne: true, flySpeed: 0 })).toBe("land");
   });
-  it("en l'air dans un mode au sol : atterrir s'il vole, sinon rien (c'est une chute)", () => {
+  it("in the air in a ground mode: land if it flies, otherwise nothing (it is a fall)", () => {
     expect(flightChoice({ ...base, airborne: true })).toBe("land");
     expect(flightChoice({ ...base, airborne: true, flySpeed: 0 })).toBeNull();
   });

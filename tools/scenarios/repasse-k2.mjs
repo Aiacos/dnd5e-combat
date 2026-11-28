@@ -1,10 +1,10 @@
 /**
- * §323, lot K2 de la repasse des créatures : la mort que le texte d'une capacité de monstre promet (`core/monster-text.mjs`,
- * `monsterDeaths`). Arène des sorts : le Lanceur (PNJ) reçoit des capacités prêtées depuis les fiches du Monster Manual et de Ravenloft ;
- * le Héros (un personnage) et la Cible (999 PV).
- *  - Poing putréfié (Momie) : un personnage réduit à 0 PV par le coup meurt (Mort, pas Inconscient) ;
- *  - Regard mortel (Guenaude aquatique) : à 20 PV ou moins, une sauvegarde ratée fait tomber à 0 PV — un personnage Inconscient, pas Mort ;
- *  - Toucher de la mort (Ankhtepot) : à 80 PV ou moins, Mort sans dégâts ; au-dessus, les dégâts seuls, pas l'effet Mort de la donnée.
+ * §323, batch K2 of the creature pass: the death that the text of a monster ability promises (`core/monster-text.mjs`,
+ * `monsterDeaths`). Spell arena: the Caster (NPC) receives abilities borrowed from the Monster Manual and Ravenloft sheets;
+ * the Hero (a character) and the Target (999 HP).
+ *  - Rotting Fist (Mummy): a character reduced to 0 HP by the hit dies (Dead, not Unconscious);
+ *  - Death Gaze (Sea Hag): at 20 HP or less, a failed saving throw drops to 0 HP — a character Unconscious, not Dead;
+ *  - Death Touch (Ankhtepot): at 80 HP or less, Dead without damage; above, the damage alone, not the data's Dead effect.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -62,7 +62,7 @@ export default {
       try { await fn(); } catch ( err ) { ctx.expect(false, `${name} : ${err.message}`); }
       await reset();
     };
-    // Le Lanceur au contact du Héros.
+    // The Caster in contact with the Hero.
     const beside = async () => {
       const h = homes.get(hero.id);
       await ctx.call("move-token", { tokenId: caster.id, x: h.x + grid, y: h.y, elevation: 0 });
@@ -84,7 +84,7 @@ export default {
       if ( !ctx.expect(hit, "le Poing touche le Héros (20 essais au plus)") ) return;
       await pause(2500);
       const st = await statuses(hero);
-      // La règle des 0 PV a pu poser Inconscient juste avant : Mort suffit (pas de jets contre la mort).
+      // The 0 HP rule may have placed Unconscious just before: Dead is enough (no death saving throws).
       ctx.expect(st.includes("dead"), `Héros réduit à 0 PV par le Poing : Mort (${st.join(", ")})`);
     });
 
@@ -116,7 +116,7 @@ export default {
       await pause(2500);
       const st = await statuses(hero);
       ctx.expect(st.includes("dead"), `Héros à 50 PV : Mort (${st.join(", ")})`);
-      // La Cible (999 PV) : les dégâts seuls.
+      // The Target (999 HP): the damage alone.
       const t = await ctx.position(target);
       await ctx.call("move-token", { tokenId: caster.id, x: t.x - grid, y: t.y, elevation: 0 });
       await pause(800);

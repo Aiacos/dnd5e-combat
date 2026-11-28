@@ -1,20 +1,19 @@
 /**
- * L'abri lu dans Foundry pour le cœur (core/cover.mjs) : espaces des tokens aux positions
- * VALIDÉES, murs par le lancer de rayon natif de type `move` (un obstacle physique donne l'abri —
- * une fenêtre bloque le déplacement, pas la vue ; un brouillard, l'inverse ; une porte ouverte ne
- * bloque rien : c'est le polygone du cœur qui le sait, `source-polygon.mjs:326`), corps des
- * autres créatures dessinées, non cachées — un mort ne couvre que s'il est Grand ou plus (core/cover.mjs, `bodyGivesCover`).
+ * Cover read in Foundry for the core (core/cover.mjs): token spaces at VALIDATED positions, walls by the native `move`-type
+ * ray cast (a physical obstacle gives cover — a window blocks movement, not sight; fog, the opposite; an open door blocks
+ * nothing: it is the core's polygon that knows, `source-polygon.mjs:326`), bodies of the other creatures drawn and not hidden —
+ * a dead creature gives cover only if Large or bigger (core/cover.mjs, `bodyGivesCover`).
  *
- * P2 (§14.2) : les rayons sont tirés **dans le niveau de l'attaquant** (`level` du polygone —
- * sans lui le cœur prend le niveau affiché, source-polygon.mjs:187) et, en plus des murs, contre
- * les **surfaces** (planchers, plafonds : régions à comportement `defineSurface`), par le lancer
- * de rayon 3D de la scène (`Scene#testSurfaceCollision`, client/documents/scene.mjs:810) entre la
- * hauteur des yeux de l'attaquant et celle de la cible (origine de déplacement du cœur :
- * pieds + moitié de la hauteur). Un plancher plein entre deux créatures est un abri total.
+ * P2 (§14.2): the rays are cast **within the attacker's level** (the polygon's `level` —
+ * without it the core takes the displayed level, source-polygon.mjs:187) and, besides walls, against
+ * **surfaces** (floors, ceilings: regions with the `defineSurface` behavior), by the scene's 3D ray cast
+ * (`Scene#testSurfaceCollision`, client/documents/scene.mjs:810) between the attacker's eye
+ * height and the target's (the core's movement origin:
+ * feet + half the height). A solid floor between two creatures is Total Cover.
  *
- * Calculé sur le MJ actif, au moment du verdict (runtime/engine.mjs, enrich) : une paire par cible.
- * Un état d'abri posé à la main par le MJ (`coverHalf`…) l'emporte : dnd5e l'a déjà compté dans
- * la CA, on ne recalcule pas.
+ * Computed on the active GM, at verdict time (runtime/engine.mjs, enrich): one pair per target.
+ * A cover condition placed by hand by the GM (`coverHalf`…) wins: dnd5e has already counted it in
+ * the AC, it is not recomputed.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -29,63 +28,62 @@ import { isDeadActor } from "./death.mjs";
 import { isObjectToken } from "./bodies.mjs";
 
 const COVER_STATUSES = ["coverHalf", "coverThreeQuarters", "coverTotal"];
-/** Retrait des coins, en fraction d'une case : une ligne qui longe un mur ne compte pas. */
+/** Corner inset, as a fraction of a cell: a line running along a wall does not count. */
 const INSET_FRACTION = 0.1;
 
 let available = false;
 export function setCoverAvailable(value) { available = !!value; }
 export function isCoverAvailable() { return available; }
 
-/** Ce que ce fichier demande au cœur, contrôlé une fois à `ready`. */
+/** What this file asks of the core, checked once at `ready`. */
 export function checkCoverApi() {
   return (typeof CONFIG.Canvas?.polygonBackends?.move?.testCollision === "function") ? [] : ["CONFIG.Canvas.polygonBackends.move.testCollision"];
 }
 
 /**
- * Le canevas de ce client peut-il juger l'abri sur cette scène ? Il faut qu'il soit prêt ET qu'il
- * affiche cette scène : les murs viennent des arêtes du canevas (le polygone `move`), les corps des
- * tokens dessinés. Pendant un changement de niveau, le cœur V14 redessine tout le canevas
- * (`Canvas#draw` → `tearDown`, client/canvas/board.mjs:1122-1151) : `canvas.ready` est faux le temps
- * du redessin — vu le 2026-09-23, une attaque à travers un plancher jugée « sans abri » pendant ce temps.
+ * Can this client's canvas judge cover in this scene? It must be ready AND display this scene: walls come from the canvas
+ * edges (the `move` polygon), bodies from the drawn tokens. During a level change, the V14 core redraws the whole canvas
+ * (`Canvas#draw` → `tearDown`, client/canvas/board.mjs:1122-1151): `canvas.ready` is false during
+ * the redraw — seen on 2026-09-23, an attack through a floor judged "no cover" during that time.
  */
 export function canJudgeCover(scene) {
   return available && !!canvas?.ready && !!scene && (canvas.scene === scene) && !checkCoverApi().length;
 }
 
-/** L'espace d'un token en pixels, à sa position validée (ou à `pos`). */
+/** A token's space in pixels, at its validated position (or at `pos`). */
 export function rectOf(doc, pos=committedPosition(doc)) {
   const grid = doc.parent.grid;
   return { x: pos.x, y: pos.y, width: Math.max(pos.width ?? 1, 0.5) * grid.sizeX, height: Math.max(pos.height ?? 1, 0.5) * grid.sizeY };
 }
 
-/** Hauteur des yeux d'un token à une position : pieds + moitié de sa hauteur (comme `getMovementOrigin` du cœur). */
+/** A token's eye height at a position: feet + half its height (like the core's `getMovementOrigin`). */
 export function eyeElevation(doc, pos=committedPosition(doc)) {
   return (pos.elevation ?? 0) + ((pos.depth ?? 1) * doc.parent.grid.distance / 2);
 }
 
-/** §468 : l'ancien drapeau d'un mur « grille » (case cochée en 0.284–0.286) — `true` vaut le choix « grate ». */
+/** §468: the old flag of a "grate" wall (checkbox ticked in 0.284–0.286) — `true` equals the "grate" choice. */
 export const GRATE_FLAG = "grate";
-/** §476 : le choix du mur — « auto » (selon le réglage de monde), « grate » (grille), « solid » (mur plein). */
+/** §476: the wall's choice — "auto" (per the world setting), "grate" (a grate), "solid" (solid wall). */
 export const GRATE_MODE_FLAG = "grateMode";
-/** §476 : réglage de monde — tout mur qui arrête le déplacement sans bloquer la vue est une grille (éteint par défaut). */
+/** §476: world setting — any wall that stops movement without blocking sight is a grate (off by default). */
 export const GRATE_SETTING = "grateWalls";
 
-/** §476 : le choix « grille » de ce WallDocument ; un mur coché avant la §476 (`grate: true`) reste une grille. */
+/** §476: this WallDocument's "grate" choice; a wall ticked before §476 (`grate: true`) remains a grate. */
 export function grateModeOf(doc) {
   const mode = doc?.getFlag?.(MODULE_ID, GRATE_MODE_FLAG);
   if ( GRATE_MODES.includes(mode) ) return mode;
   return (doc?.getFlag?.(MODULE_ID, GRATE_FLAG) === true) ? "grate" : "auto";
 }
 
-/** §476 : le réglage de monde « Murs grilles ». */
+/** §476: the "Grate walls" world setting. */
 export function grateWallsAuto() {
   try { return game.settings.get(MODULE_ID, GRATE_SETTING) === true; } catch { return false; }
 }
 
 /**
- * §468, §476 : ce mur est-il une grille ? (un WallDocument, ou le Wall dessiné ; autre chose — bord de scène — : non)
+ * §468, §476: is this wall a grate? (a WallDocument, or the drawn Wall; anything else (scene edge): no)
  * @param {object} wall
- * @param {{auto?: boolean, mode?: string}} [opts]  `auto` : la valeur du réglage de monde (lue sinon) ; `mode` : un choix à essayer.
+ * @param {{auto?: boolean, mode?: string}} [opts]  `auto`: the world setting's value (read otherwise); `mode`: a choice to try.
  */
 export function isGrate(wall, { auto=grateWallsAuto(), mode }={}) {
   const doc = wall?.document ?? wall;
@@ -96,16 +94,16 @@ export function isGrate(wall, { auto=grateWallsAuto(), mode }={}) {
 }
 
 /**
- * §468 : ce qui coupe le segment `from` → `to` dans le polygone de déplacement : `"wall"` (au moins un obstacle plein), `"grate"`
- * (seulement des grilles), ou false. Le mode « all » du cœur rend chaque point de contact avec ses arêtes
- * (clockwise-sweep.mjs:759-787) ; l'objet d'une arête de mur est son WallDocument (documents/wall.mjs:166). Une arête qui n'est
- * pas un mur (bord de scène…) compte comme pleine.
+ * §468: what cuts the segment `from` → `to` in the movement polygon: `"wall"` (at least one solid obstacle), `"grate"`
+ * (only grates), or false. The core's "all" mode returns each contact point with its edges
+ * (clockwise-sweep.mjs:759-787); the object of a wall edge is its WallDocument (documents/wall.mjs:166). An edge that is not
+ * a wall (scene edge…) counts as solid.
  */
 export function wallKindBetween(from, to, level, { observer=null }={}) {
   const hits = CONFIG.Canvas.polygonBackends.move.testCollision(from, to, { type: "move", mode: "all", level }) ?? [];
   if ( !Array.isArray(hits) || !hits.length ) return false;
   const auto = grateWallsAuto();
-  // §518 : vu de `observer` (l'attaquant), une fenêtre dont il est assez près pour voir au travers est ouverte : elle ne coupe rien.
+  // §518: seen from `observer` (the attacker), a window it is close enough to see through is open: it cuts nothing.
   const edges = hits.map(v => (v.edges?.size ? [...v.edges].filter(e => !(observer && isOpenWindow(e, observer))) : null));
   if ( edges.every(list => list && !list.length) ) return false;
   const solid = edges.some(list => !list || list.some(e => !isGrate(e.object, { auto })));
@@ -113,9 +111,10 @@ export function wallKindBetween(from, to, level, { observer=null }={}) {
 }
 
 /**
- * §518 : cette arête (de mur) est-elle une fenêtre ouverte pour cet observateur ? Le seuil de vue du cœur (`Edge#applyThreshold`,
- * canvas/geometry/edges/edge.mjs:220 : vue « proximité » à moins du seuil, ou « distance » au-delà), mesuré comme la vision d'un token
- * (`useThreshold`, sources/point-vision-source.mjs:293) : depuis son centre, moins son rayon (`Token#externalRadius`, token.mjs:3928).
+ * §518: is this edge (of a wall) an open window for this observer? The core's sight threshold (`Edge#applyThreshold`,
+ * canvas/geometry/edges/edge.mjs:220: "proximity" sight within the threshold, or "distance" beyond), measured like a token's
+ * vision (`useThreshold`, sources/point-vision-source.mjs:293): from its center, minus its radius
+ * (`Token#externalRadius`, token.mjs:3928).
  * @param {Edge} edge
  * @param {{x: number, y: number, externalRadius?: number}} observer
  */
@@ -126,20 +125,20 @@ export function isOpenWindow(edge, observer) {
     seenThrough: edge.applyThreshold("sight", observer, observer.externalRadius ?? 0) === true });
 }
 
-/** §518 : le point d'où un token voit, pour le seuil des fenêtres — le centre de son espace et son rayon (`Token#externalRadius`). */
+/** §518: the point a token sees from, for the window threshold — the center of its space and its radius (`Token#externalRadius`). */
 export function observerOf(doc, pos=committedPosition(doc)) {
   const r = rectOf(doc, pos);
   return { x: r.x + (r.width / 2), y: r.y + (r.height / 2), externalRadius: Math.min(r.width, r.height) / 2 };
 }
 
 /**
- * Le prédicat « la ligne de a à b est coupée » entre deux tokens : murs du niveau de `from`, à sa
- * hauteur d'yeux, et surfaces entre les hauteurs d'yeux des deux.
+ * The predicate "the line from a to b is cut" between two tokens: walls of `from`'s level, at its
+ * eye height, and surfaces between the two eye heights.
  * @param {TokenDocument} from
  * @param {TokenDocument} to
- * @param {object} [positions]  `posA`, `posB` : positions hypothétiques ; `windows` (§518) : une fenêtre que `from` voit au travers
- *                              (seuil de vue atteint) ne coupe pas la ligne — l'abri d'une attaque, pas la ligne d'effet.
- * @returns {(a: {x: number, y: number}, b: {x: number, y: number}) => false|"wall"|"surface"}  #33 : ce qui coupe la ligne.
+ * @param {object} [positions]  `posA`, `posB`: hypothetical positions; `windows` (§518): a window that `from` sees through
+ *                              (sight threshold reached) does not cut the line — an attack's cover, not the line of effect.
+ * @returns {(a: {x: number, y: number}, b: {x: number, y: number}) => false|"wall"|"surface"}  #33: what cuts the line.
  */
 export function rayBlocker(from, to, { posA, posB, windows=false }={}) {
   const scene = from.parent;
@@ -149,7 +148,7 @@ export function rayBlocker(from, to, { posA, posB, windows=false }={}) {
   const eyeB = eyeElevation(to, pb);
   const level = scene.levels?.get?.(pa.level ?? from._source.level) ?? undefined;
   const surfaces = typeof scene.testSurfaceCollision === "function";
-  const observer = windows ? observerOf(from, pa) : null;   // §518 : l'attaquant tire par une fenêtre ouverte pour lui
+  const observer = windows ? observerOf(from, pa) : null;   // §518: the attacker fires through a window open for them
   return (a, b) => {
     const wall = wallKindBetween({ x: a.x, y: a.y, elevation: eyeA }, { x: b.x, y: b.y, elevation: eyeA }, level, { observer });
     if ( wall === "wall" ) return "wall";
@@ -159,10 +158,10 @@ export function rayBlocker(from, to, { posA, posB, windows=false }={}) {
 }
 
 /**
- * §239 : ramène un coin de l'espace d'un token devant le premier mur qui le sépare de son centre (niveau du token, hauteur de ses
- * yeux), à `margin` pixels du point de contact — l'espace réel d'une créature dont la case est coupée par un mur de grotte.
+ * §239: pulls a corner of a token's space in front of the first wall that separates it from its center (token's level,
+ * eye height), to `margin` pixels from the contact point — the real space of a creature whose cell is cut by a cave wall.
  * @param {TokenDocument} doc
- * @param {object} [pos]      Position (défaut : la position validée).
+ * @param {object} [pos]      Position (default: the validated position).
  * @param {number} margin
  * @returns {(centre: {x: number, y: number}, corner: {x: number, y: number}) => {x: number, y: number}}
  */
@@ -179,15 +178,15 @@ export function spaceClipper(doc, pos, margin) {
 }
 
 /**
- * Les autres créatures qui peuvent s'interposer.
- * @param {boolean} [seenOnly]  #33 : seulement celles que ce client voit (aperçu d'un joueur : une créature invisible ou cachée
- *                              ne doit pas se trahir par l'abri qu'elle donne).
+ * The other creatures that can get in the way.
+ * @param {boolean} [seenOnly]  #33: only those this client sees (a player's preview: an invisible or hidden creature
+ *                              must not give itself away by the cover it provides).
  */
 function bodiesAround(attacker, target, seenOnly=false) {
   return coverBodies(attacker, target, seenOnly).map(t => rectOf(t));
 }
 
-/** #33 : les tokens des créatures qui peuvent s'interposer entre l'attaquant et la cible (voir `bodiesAround`). */
+/** #33: the tokens of the creatures that can get between the attacker and the target (see `bodiesAround`). */
 export function coverBodies(attacker, target, seenOnly=false) {
   return attacker.parent.tokens
     .filter(t => (t !== attacker) && (t !== target) && t.actor && !t.hidden && t.object && !isObjectToken(t)
@@ -195,17 +194,18 @@ export function coverBodies(attacker, target, seenOnly=false) {
       && bodyGivesCover({ dead: isDeadActor(t.actor), size: t.actor.system?.traits?.size }));
 }
 
-/** Une attaque à distance avec une arme (tir, ou arme lancée) ? */
+/** A ranged attack with a weapon (shot, or thrown weapon)? */
 export function isRangedWeaponAttack(activity, attackMode) {
   if ( (activity?.type !== "attack") || (activity.item?.type !== "weapon") ) return false;
-  // O8d (§347) : une arbalète (Deux mains) porte un mode « twoHanded » : le mode ne compte que s'il lance l'arme.
+  // O8d (§347): a crossbow (Two-Handed) carries a "twoHanded" mode: the mode counts only if it throws the weapon.
   if ( /ranged|thrown/.test(attackMode ?? "") ) return true;
   return activity.attack?.type?.value === "ranged";
 }
 
 /**
- * §172 : l'abri que donne une zone de sort `coverThrough` (Barrière de lames : trois quarts) quand la ligne d'un centre à l'autre la
- * traverse, ni l'attaquant ni la cible dedans ; le plus fort de ces zones avec le nom de son sort (#33), `{degree, name}`, ou null.
+ * §172: the cover given by a `coverThrough` spell zone (Blade Barrier: three-quarters) when the line from one center to the other
+ * crosses it, neither attacker nor target inside; the strongest of these zones with its spell's name (#33),
+ * `{degree, name}`, or null.
  */
 function zoneCoverDetail(attacker, target, posA, activity=null, attackMode=null) {
   const a = rectOf(attacker, posA ? { ...committedPosition(attacker), ...posA } : undefined);
@@ -217,7 +217,7 @@ function zoneCoverDetail(attacker, target, posA, activity=null, attackMode=null)
     const item = uuid ? fromUuidSync(uuid, { strict: false })?.item : null;
     const rule = item ? contentOf(item).entry?.coverThrough : null;
     if ( !rule ) continue;
-    // §173 : contre les seules attaques à distance avec une arme (Mur de vent : flèches, carreaux, armes lancées).
+    // §173: against ranged weapon attacks only (Wind Wall: arrows, bolts, thrown weapons).
     if ( (rule.against === "rangedWeapon") && !isRangedWeaponAttack(activity, attackMode) ) continue;
     const degree = rule.degree ?? rule;
     if ( attacker.testInsideRegion(region, posA ? { ...committedPosition(attacker), ...posA } : committedPosition(attacker))
@@ -229,18 +229,18 @@ function zoneCoverDetail(attacker, target, posA, activity=null, attackMode=null)
 }
 
 /**
- * L'abri de la cible contre l'attaquant, ou null s'il n'y a rien à ajouter (pas d'abri, abri déjà
- * posé à la main, calcul impossible).
+ * The target's cover against the attacker, or null if there is nothing to add (no cover, cover already
+ * placed by hand, calculation impossible).
  * @param {TokenDocument} attacker
  * @param {TokenDocument} target
  * @param {object} [options]
- * @param {object} [options.posA]     Position hypothétique de l'attaquant (au bout d'une approche).
- * @param {boolean} [options.quiet]   Pas de trace en console (calcul au survol).
- * @param {Activity} [options.activity]   §173 : l'attaque (un abri de zone peut ne valoir que contre les armes à distance).
+ * @param {object} [options.posA]     Hypothetical position of the attacker (at the end of an approach).
+ * @param {boolean} [options.quiet]   No console trace (hover calculation).
+ * @param {Activity} [options.activity]   §173: the attack (zone cover may apply only against ranged weapons).
  * @param {string} [options.attackMode]
- * @param {boolean} [options.seenOnly]  #33 : ne compter que les créatures que ce client voit (aperçu côté joueur).
+ * @param {boolean} [options.seenOnly]  #33: count only the creatures this client sees (player-side preview).
  * @returns {{degree: string, bonus: number|null, byCreature: boolean, sources: string[], zone: string|null}|null}
- *          #33 : `sources` — « wall », « surface », « creature », « zone » (`zone` : le nom du sort), « grapple ».
+ *          #33: `sources` — "wall", "surface", "creature", "zone" (`zone`: the spell's name), "grapple".
  */
 export function coverFor(attacker, target, { posA, quiet=false, activity=null, attackMode=null, seenOnly=false }={}) {
   if ( !attacker?.parent || (attacker.parent !== target?.parent) || !canJudgeCover(attacker.parent) ) return null;
@@ -253,14 +253,14 @@ export function coverFor(attacker, target, { posA, quiet=false, activity=null, a
     blocked: rayBlocker(attacker, target, { posA, windows: true }), inset,
     clipAttacker: spaceClipper(attacker, pa, inset), clipTarget: spaceClipper(target, undefined, inset)
   });
-  // §172 : une zone qui donne un abri à qui est derrière (Barrière de lames) — la ligne entre les deux la traverse.
+  // §172: a zone that gives cover to whoever is behind it (Blade Barrier) — the line between the two crosses it.
   let zone = null;
   const behind = zoneCoverDetail(attacker, target, posA, activity, attackMode);
   if ( behind && (strongerCover(cover.degree, behind.degree) !== cover.degree) ) {
     Object.assign(cover, { degree: behind.degree, bonus: COVER[behind.degree].bonus, byCreature: false, sources: ["zone"] });
     zone = behind.name;
   }
-  // §281 : Bouclier de chair — qui agrippe une créature a cet abri contre les attaques des créatures qu'il n'agrippe pas.
+  // §281: "Flesh Shield" — whoever grapples a creature has this cover against attacks by creatures it does not grapple.
   const held = grappleRulesOf(target.actor).cover;
   if ( held && (strongerCover(cover.degree, held) !== cover.degree) ) {
     const victims = victimsOf(target);
@@ -274,7 +274,7 @@ export function coverFor(attacker, target, { posA, quiet=false, activity=null, a
   return { degree: cover.degree, bonus: cover.bonus, byCreature: cover.byCreature, sources: cover.sources ?? [], zone };
 }
 
-/** #33 : l'état d'abri posé à la main sur la cible (`coverHalf`…), en degré, ou null. Le plus fort s'il y en a plusieurs. */
+/** #33: the cover condition placed by hand on the target (`coverHalf`…), as a degree, or null. The strongest of several. */
 export function manualCoverOf(target) {
   const statuses = target?.actor?.statuses;
   if ( !statuses ) return null;
@@ -284,11 +284,12 @@ export function manualCoverOf(target) {
 }
 
 /**
- * §200 : « Chemin dégagé vers la cible » (Manuel des joueurs 2024) — le point d'origine d'un sort ne peut pas être derrière un abri
- * total. Vrai si, depuis le centre ou un coin (rentré) de l'espace du lanceur, la ligne jusqu'au point ne traverse aucun mur qui
- * arrête le mouvement (une fenêtre fermée aussi : abri total) dans son niveau, à hauteur de ses yeux, ni plancher ou plafond (Surface).
- * §468 : un mur coché « grille » (barreaux, herse) n'arrête pas ce chemin — il n'est pas un abri total (retour de Fanarie, 2026-11-17).
- * null : impossible à dire (canevas absent ou sur une autre scène).
+ * §200: "Clear Path to Target" (Player's Handbook 2024) — a spell's point of origin cannot be behind Total Cover.
+ * True if, from the center or a (inset) corner of the caster's space, the line to the point crosses no wall that
+ * stops movement (a closed window too: Total Cover) in its level, at eye height, nor floor or ceiling (Surface).
+ * §468: a wall ticked "grate" (bars, portcullis) does not stop this path — it is not Total Cover
+ * (feedback from Fanarie, 2026-11-17).
+ * null: cannot tell (canvas absent or on another scene).
  * @param {TokenDocument} token
  * @param {{x: number, y: number}} point
  * @returns {boolean|null}
@@ -316,13 +317,13 @@ export function clearPathTo(token, point) {
 }
 
 /**
- * Ligne d'effet entre deux tokens (P2) : existe tant que l'un n'a pas un abri **total** vis-à-vis de
- * l'autre — murs et surfaces, sans les créatures (elles ne donnent jamais plus qu'un abri partiel).
- * C'est ce qui arrête une émanation (aura), une attaque d'opportunité à travers une trappe.
+ * Line of effect between two tokens (P2): exists as long as one does not have **Total** Cover from
+ * the other — walls and surfaces, without creatures (they never give more than half cover).
+ * This is what stops an Emanation (aura), an Opportunity Attack through a trapdoor.
  * @param {TokenDocument} from
  * @param {TokenDocument} to
- * @param {object} [positions]  `posA`, `posB` : positions hypothétiques.
- * @returns {boolean|null}  null : impossible à dire (canevas absent, scènes différentes).
+ * @param {object} [positions]  `posA`, `posB`: hypothetical positions.
+ * @returns {boolean|null}  null: cannot tell (canvas absent, different scenes).
  */
 export function hasLineOfEffect(from, to, positions={}) {
   if ( !canvas?.ready || !from?.parent || (from.parent !== to?.parent) || (canvas.scene !== from.parent) || checkCoverApi().length ) return null;

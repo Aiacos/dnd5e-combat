@@ -1,16 +1,16 @@
 /**
- * Sorts que dnd5e couvre seul (données du système, résolution du moteur), jamais essayés (issues #3 à #6, le 2026-09-27).
- * Le Clerc lance (sorts ajoutés à volonté pour le scénario, retirés à la fin). Valeurs calculées lues par `api.mcp.stats`,
- * soins lancés par `api.mcp.rollCard` (le clic « Soins » de la carte).
- *  - Bénédiction (Guerrier) : +1d4 aux attaques et aux sauvegardes. Imprécation (Zombi, sauvegarde ratée) : -1d4.
- *  - Bouclier de la foi (Guerrier) : CA +2. Peau d'écorce (Zombi, CA 8) : CA 17. Armure du mage (Magicien) : 13 + Dex.
- *  - Grande foulée (Guerrier) : vitesse +10 ft. Saut (Guerrier) : l'effet est posé (le reste se joue à la main).
- *  - Mot de guérison (Guerrier), Mot de guérison de groupe (Guerrier et Magicien) : le soin lancé est appliqué.
- *  - Blessure, Boule de feu (Zombi) : sauvegarde, dégâts entiers ou moitié.
- *  - Mot de radiance : Zombi et Guerrier au contact du Clerc, seul le Zombi (l'ennemi) est pris.
- *  - Amitié avec les animaux : le Zombi (mort-vivant) n'est pas charmé ; le Loup (bête), sur un échec, Charmé.
- *  - Injonction (Zombi) : la sauvegarde est demandée et tranchée (l'ordre se joue à la main).
- * Chaque partie remet PV, effets, états, positions et zones.
+ * Spells that dnd5e covers on its own (system data, engine resolution), never tried (issues #3 to #6, 2026-09-27).
+ * The Cleric casts (spells added at will for the scenario, removed at the end). Computed values read by `api.mcp.stats`,
+ * healing cast through `api.mcp.rollCard` (the card's "Healing" click).
+ *  - Bless (Fighter): +1d4 to attack rolls and saving throws. Bane (Zombie, failed saving throw): -1d4.
+ *  - Shield of Faith (Fighter): AC +2. Barkskin (Zombie, AC 8): AC 17. Mage Armor (Wizard): 13 + Dex.
+ *  - Longstrider (Fighter): speed +10 ft. Jump (Fighter): the effect is placed (the rest is played by hand).
+ *  - Healing Word (Fighter), Mass Healing Word (Fighter and Wizard): the healing cast is applied.
+ *  - Inflict Wounds, Fireball (Zombie): saving throw, full or half damage.
+ *  - Word of Radiance: Zombie and Fighter in contact with the Cleric, only the Zombie (the enemy) is taken.
+ *  - Animal Friendship: the Zombie (Undead) is not charmed; the Wolf (Beast), on a failure, Charmed.
+ *  - Command (Zombie): the saving throw is requested and settled (the order is played by hand).
+ * Each part puts back HP, effects, conditions, positions and areas.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e.spells24.Item.";
@@ -23,7 +23,7 @@ export default {
   name: "sorts couverts par dnd5e — bonus, CA, vitesse, soins, dégâts, cibles",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Absent from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise the dnd5e SRD 2024).
     await ctx.cast({ "Loup": "mmWolf0000000000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     const needed = ["Clerc", "Guerrier", "Zombi", "Magicien", "Loup"];
@@ -82,7 +82,7 @@ export default {
       await pause(1200);
       return { used, r };
     };
-    /** Rejoue jusqu'à ce que `target` rate sa sauvegarde (20 fois au plus) ; rend la dernière résolution. */
+    /** Replays until `target` fails its saving throw (20 times at most); returns the last resolution. */
     const untilFailed = async (identifier, target, extra={}) => {
       for ( let n = 1; n <= 20; n++ ) {
         const c = await cast(identifier, [target], extra);

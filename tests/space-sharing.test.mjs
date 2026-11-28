@@ -1,15 +1,15 @@
-/** §105 : partager la case d'une autre créature. */
+/** §105: sharing another creature's cell. */
 import { describe, it, expect, beforeAll } from "vitest";
 import { mayShareSpace, widerShare } from "../module/scripts/core/space-sharing.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
 describe("partage de case (§105)", () => {
-  it("entrer dans la case d'une créature, ou l'inverse pour une nuée", () => {
+  it("entering a creature's cell, or the reverse for a swarm", () => {
     expect(mayShareSpace("enter", null)).toBe(true);
     expect(mayShareSpace("mutual", null)).toBe(true);
-    expect(mayShareSpace(null, "mutual")).toBe(true);    // « and vice versa »
-    expect(mayShareSpace(null, "enter")).toBe(false);    // une Forme d'air ne s'ouvre pas aux autres
+    expect(mayShareSpace(null, "mutual")).toBe(true);    // "and vice versa"
+    expect(mayShareSpace(null, "enter")).toBe(false);    // an "Air Form" does not open to others
     expect(mayShareSpace(null, null)).toBe(false);
   });
 
@@ -19,7 +19,7 @@ describe("partage de case (§105)", () => {
     expect(widerShare("enter", null)).toBe("enter");
   });
 
-  it("contenu livré", () => {
+  it("shipped content", () => {
     expect(CONTENT["air-form"].sharesSpace).toBe("enter");
     expect(CONTENT.swarm.sharesSpace).toBe("mutual");
     for ( const id of ["air-form", "fire-form", "water-form", "gaseous-form", "swarm", "misty-form"] ) {
@@ -30,11 +30,11 @@ describe("partage de case (§105)", () => {
 });
 
 /**
- * Le chemin du moteur (adapter/path-world.mjs, `worldFor`) : les cases où l'on ne peut pas finir sont celles des autres tokens,
- * sauf ceux dont on peut partager la case. Ce que celui qui bouge sait faire ne dépend pas de l'autre : ses objets ne sont lus
- * qu'une fois par recherche, pas une fois par token de la scène.
+ * The engine's path (adapter/path-world.mjs, `worldFor`): the cells where one cannot end up are those of the other tokens,
+ * except those whose cell can be shared. What the mover can do does not depend on the other: its items are read only once
+ * per search, not once per scene token.
  */
-describe("partage de case dans le chemin du moteur (§105)", () => {
+describe("cell sharing in the engine's path (§105)", () => {
   let worldFor, sharesSpaceWith, shareKindOf;
   const SIZE = 100;
   const grid = { size: SIZE, sizeX: SIZE, sizeY: SIZE, distance: 5, units: "ft",
@@ -77,7 +77,7 @@ describe("partage de case dans le chemin du moteur (§105)", () => {
     ({ sharesSpaceWith, shareKindOf } = await import("../module/scripts/adapter/space-sharing.mjs"));
   }, 60000);
 
-  it("une scène de 40 tokens : les objets de celui qui bouge sont lus une fois, pas une fois par token", () => {
+  it("a scene of 40 tokens: the mover's items are read once, not once per token", () => {
     const scene = sceneOf();
     const mover = tokenOf(scene, actorOf(["longsword", "second-wind"]), { i: 0, j: 0 });
     for ( let n = 0; n < 39; n++ ) tokenOf(scene, actorOf(["claws"]), { i: 2 + (n % 7), j: 2 + Math.floor(n / 7) });
@@ -128,7 +128,7 @@ describe("partage de case dans le chemin du moteur (§105)", () => {
     finally { game.user.isGM = true; CONFIG.specialStatusEffects.DEFEATED = before; }
   });
 
-  it("mêmes cases interdites qu'en demandant token par token (`sharesSpaceWith`)", () => {
+  it("same forbidden cells as when asking token by token (`sharesSpaceWith`)", () => {
     const kinds = [["longsword"], ["air-form"], ["swarm"]];
     for ( const own of kinds ) {
       const scene = sceneOf();
@@ -142,24 +142,24 @@ describe("partage de case dans le chemin du moteur (§105)", () => {
     }
   });
 
-  it("rien n'est gardé d'une recherche à l'autre : une Forme d'air gagnée, perdue ou changée compte à la suivante", () => {
+  it("nothing is kept from one search to the next: an \"Air Form\" gained, lost or changed counts at the next one", () => {
     const scene = sceneOf();
     const mover = tokenOf(scene, actorOf(["longsword"]), { i: 0, j: 0 });
     tokenOf(scene, actorOf(["claws"]), { i: 3, j: 3 });
     const cell = { i: 3, j: 3 };
     expect(worldFor(mover).canEnd(cell)).toBe(false);
     const form = itemOf(mover.actor, "air-form", "form");
-    mover.actor.list.push(form);                       // objet ajouté
+    mover.actor.list.push(form);                       // item added
     expect(worldFor(mover).canEnd(cell)).toBe(true);
-    form.system.identifier = "plain-feature";          // objet changé
+    form.system.identifier = "plain-feature";          // item changed
     expect(worldFor(mover).canEnd(cell)).toBe(false);
     form.system.identifier = "air-form";
     expect(worldFor(mover).canEnd(cell)).toBe(true);
-    mover.actor.list.pop();                            // objet retiré
+    mover.actor.list.pop();                            // item removed
     expect(worldFor(mover).canEnd(cell)).toBe(false);
   });
 
-  it("`sharesSpaceWith` avec ce que sait faire celui qui bouge déjà lu : même réponse, ses objets ne sont pas relus", () => {
+  it("`sharesSpaceWith` with what the mover can do already read: same answer, its items are not re-read", () => {
     for ( const own of [["longsword"], ["air-form"], ["swarm"]] ) for ( const theirs of [["claws"], ["air-form"], ["swarm"]] ) {
       const scene = sceneOf();
       const mover = tokenOf(scene, actorOf(own), { i: 0, j: 0 });
@@ -170,7 +170,7 @@ describe("partage de case dans le chemin du moteur (§105)", () => {
       expect(sharesSpaceWith(mover, other, { moverKind }), `${own} / ${theirs}`).toBe(expected);
       expect(mover.actor.reads.items).toBe(0);
     }
-    // Sans acteur, ou d'un plan à l'autre (§225) : comme avant.
+    // Without an actor, or from one plane to another (§225): as before.
     const scene = sceneOf();
     const ghost = tokenOf(scene, actorOf(["longsword"]), { i: 0, j: 0 });
     ghost.actor.statuses.add("ethereal");

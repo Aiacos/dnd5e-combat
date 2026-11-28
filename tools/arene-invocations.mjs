@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * §393 : monte (ou remet en état) l'« Arène des invocations » d'un monde de test, par le connecteur — une scène dédiée aux
- * invocations qui visent : un cadavre à relever (Doigt de mort, Animation des morts sur un corps, darsh-loot), une bête morte qui ne
- * se relève pas, un porteur d'arme (Arme élémentaire, enchantements des objets), une victime à 1 PV. Utilisée par le scénario
- * `invocations-ciblees` et, avec `CIBLEES=1`, par le balayage `balayage-invocations`.
+ * §393: sets up (or restores) the "Summons Arena" of a test world, through the connector — a scene dedicated to
+ * targeting summons: a corpse to raise (Finger of Death, Animate Dead on a body, darsh-loot), a dead beast that does not
+ * rise, a weapon bearer (Elemental Weapon, object enchantments), a victim at 1 HP. Used by the scenario
+ * `invocations-ciblees` and, with `CIBLEES=1`, by the `balayage-invocations` sweep.
  *
- *   node tools/arene-invocations.mjs     crée ce qui manque, remet acteurs, états et tokens à leur état de référence
+ *   node tools/arene-invocations.mjs     creates what is missing, resets actors, conditions and tokens to their reference state
  *
- * Positions en cases : `ARENE_INVOCATIONS` (tools/lib/stages.mjs), rétablies par le lanceur de scénarios avant chaque scénario.
+ * Positions in cells: `ARENE_INVOCATIONS` (tools/lib/stages.mjs), restored by the scenario runner before each scenario.
  */
 import { buildArena } from "./lib/arena.mjs";
 import { ARENE_INVOCATIONS } from "./lib/stages.mjs";
@@ -22,11 +22,11 @@ const ACTORS = {
     attributes: { hp: { value: 999, max: 999 }, ac: { flat: 15, calc: "flat" }, spellcasting: "int", spell: { level: 20 } },
     spells: SLOTS, details: { cr: 12 } } },
   "Héros": { pack: PHB, base: "phbprgBarbarian0", keepItems: true, disposition: 1, system: { attributes: { hp: { value: 999, max: 999 } } } },
-  // Un roturier mort : humanoïde Moyen, 0 PV, état « Mort » — un cadavre pour darsh-loot.
+  // A dead commoner: Medium Humanoid, 0 HP, "Dead" condition — a corpse for darsh-loot.
   "Cadavre": { base: "mmCommoner000000", disposition: -1, statuses: ["dead"], system: { attributes: { hp: { value: 0, max: 4 } } } },
-  // Un loup mort : une bête, que ni Animation des morts ni Doigt de mort ne relèvent.
+  // A dead wolf: a Beast, which neither Animate Dead nor Finger of Death raise.
   "Bête morte": { base: "mmWolf0000000000", disposition: -1, statuses: ["dead"], system: { attributes: { hp: { value: 0, max: 11 } } } },
-  // Une victime vivante à 1 PV : un sort qui tue puis relève (Doigt de mort) la fait passer de vivante à cadavre.
+  // A living victim at 1 HP: a spell that kills then raises (Finger of Death) turns it from living to corpse.
   "Victime": { base: "mmCommoner000000", disposition: -1, system: { ...sturdy, attributes: { ...sturdy.attributes, hp: { value: 1, max: 4 } } } }
 };
 

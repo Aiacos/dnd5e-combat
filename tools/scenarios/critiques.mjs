@@ -1,9 +1,10 @@
 /**
- * §207 : les options de coup critique (issue GitHub #5), désactivées par défaut — Paladin de `dnd-6` contre le Bandit (300 PV, CA 5 le
- * temps du test). Vérifie : avec un écart de 10, un coup qui dépasse la CA de 10 sans 20 naturel est critique (« dépasse la CA ») et ses
- * dégâts sont doublés ; en mode « table », la table est tirée dans le chat et les dégâts sont ceux d'un coup normal, le coup restant noté
- * critique ; en mode « au choix », la question est posée, « Standard » double les dés, « Table » tire la table.
- * Remet réglages, CA, PV, positions ; met à la corbeille la table de test.
+ * §207: the Critical Hit options (GitHub issue #5), disabled by default — `dnd-6` Paladin against the Bandit (300 HP, AC 5
+ * for the duration of the test). Checks: with a margin of 10, a hit that beats the AC by 10 without a natural 20 is a
+ * Critical Hit ("beats the AC") and its damage is doubled; in "table" mode, the table is rolled in the chat and the damage
+ * is that of a normal hit, the hit still being noted as a Critical Hit; in "choice" mode, the question is asked,
+ * "Standard" doubles the dice, "Table" rolls the table.
+ * Restores settings, AC, HP, positions; trashes the test table.
  */
 const MODULE_ID = "dnd5e-combat";
 const SPELLS = "dnd-players-handbook.spells";
@@ -39,7 +40,7 @@ export default {
     const ac0 = bdata.delta?.system?.attributes?.ac ?? null;
     ctx.restore(() => ctx.call("update-scene-object", { type: "Token", objectId: bandit.id,
       data: ac0 === null ? { "delta.system.attributes.-=ac": null } : { "delta.system.attributes.ac": ac0 } }).catch(() => {}));
-    // CA 5 : un coup de l'épée longue (+6) atteint souvent CA + 10.
+    // AC 5: a longsword hit (+6) often reaches AC + 10.
     const softAc = () => ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.attributes.ac": { calc: "flat", flat: 5 } } });
     const setting = async (key, value) => { const r = await ctx.engine("setting", { key, value }); ctx.restore(() => ctx.engine("setting", { key, value: r.before })); return r; };
     const tough = () => ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.attributes.hp.max": 300, "delta.system.attributes.hp.value": 300 } });
@@ -116,7 +117,7 @@ export default {
       const u = await ctx.use({ tokenId: attacker.id, itemId, activityType: "attack", targetTokenIds: [target.id], usageConfig: { [MODULE_ID]: usage } });
       return { since, usage: u.usageMessageId };
     };
-    /** Frappe jusqu'à toucher (10 essais) en répondant `button` à la question du châtiment ; rend le jet de dégâts et ce qui a été vu. */
+    /** Strikes until it hits (10 tries) answering `button` to the penalty question; returns the damage roll and what was seen. */
     const smiteHit = async button => {
       for ( let n = 0; n < 10; n++ ) {
         const ids = await known();
@@ -132,7 +133,7 @@ export default {
     };
 
 
-    // Un coup qui dépasse la CA de 10 sans 20 naturel : 15 essais au plus, en répondant `button` si la question du critique vient.
+    // A hit that beats the AC by 10 without a natural 20: 15 tries at most, answering `button` if the Critical Hit question shows.
     const marginHit = async button => {
       for ( let n = 0; n < 15; n++ ) {
         const ids = await known();
@@ -149,7 +150,7 @@ export default {
     };
     const doubled = damage => (damage?.rolls ?? []).some(r => r.options?.isCritical === true || r.isCritical === true);
 
-    // Table de test, d'un seul résultat.
+    // Test table, with a single result.
     const table = await ctx.call("create-table", { tableData: { name: "DAS test critiques", formula: "1d1", replacement: true,
       results: [{ type: "text", range: [1, 1], name: "Coup sanglant (test)", description: "Coup sanglant (test)" }] } });
     const tableId = table?.id ?? table?.tableId ?? table?.table?._id;

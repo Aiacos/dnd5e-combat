@@ -13,8 +13,8 @@ const PHB = [
 ];
 const rule = { damageTypes: ["necrotic", "psychic", "radiant"], ability: "spellcasting", suffix: " (arme de pacte)" };
 
-describe("arme de pacte : l'enchantement réécrit", () => {
-  it("sans type imposé : les types ajoutés restent (choix à chaque attaque), Charisme, nom", () => {
+describe("pact weapon: the rewritten enchantment", () => {
+  it("without imposed type: the added types stay (choice at each attack), Charisma, name", () => {
     const out = rewritePactChanges(PHB, { ...rule, chosen: null });
     expect(out.filter(c => c.key === "system.damage.base.types").map(c => c.value)).toEqual(["necrotic", "psychic", "radiant"]);
     expect(out.find(c => c.key === "name").value).toBe(" (arme de pacte)");
@@ -28,7 +28,7 @@ describe("arme de pacte : l'enchantement réécrit", () => {
       { key: "system.damage.versatile.types", type: "override", value: "radiant", phase: "initial" }
     ]);
   });
-  it("schéma", () => {
+  it("schema", () => {
     expect(validateEntry({ enchantTarget: "ownWeapon", pact: { damageTypes: ["radiant"], ability: "spellcasting" } })).toEqual([]);
     expect(validateEntry({ pact: { damageTypes: [] } })).toEqual(["pact.damageTypes: list of damage types"]);
   });

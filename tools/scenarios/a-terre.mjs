@@ -1,9 +1,9 @@
 /**
- * L'état obligatoire à 0 PV (SPEC §17.1), **hors combat** (le système, lui, ne le pose qu'en combat) :
- *  1. un PNJ ordinaire (le Zombi) mis à 0 PV reçoit Mort ;
- *  2. un PJ (le Guerrier dans `dnd-6`, Bramo dans `ravenloft`) mis à 0 PV reçoit Inconscient et À terre ;
- *  3. ses PV remontent : Inconscient tombe (À terre reste, comme le veut la règle).
- * Remis en état : PV, compteurs, états.
+ * The mandatory condition at 0 HP (SPEC §17.1), **out of combat** (the system only applies it in combat):
+ *  1. an ordinary NPC (the Zombie) set to 0 HP gets Dead;
+ *  2. a PC (the Fighter in `dnd-6`, Bramo in `ravenloft`) set to 0 HP gets Unconscious and Prone;
+ *  3. its HP go back up: Unconscious drops (Prone stays, as the rule has it).
+ * Restored: HP, counters, conditions.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const DOWNED = ["unconscious", "incapacitated", "prone", "dead", "stable", "bloodied"];

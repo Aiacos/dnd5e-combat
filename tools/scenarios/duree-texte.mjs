@@ -1,9 +1,9 @@
 /**
- * M4 (SPEC §18.7) — la durée écrite dans le texte devient une expiration native de dnd5e. Monde `ravenloft` : la Morsure du
- * Mille-pattes géant (Monster Manual, prêtée au Loup le temps du scénario) pose Empoisonné « jusqu'au début du tour suivant
- * de la créature attaquante », sans durée dans ses données. Touché, l'Ours est Empoisonné avec `duration.expiry =
- * "sourceStart"` ; l'état tient pendant le tour de l'Ours et tombe au début du tour suivant du Loup (effet marqué
- * expiré par le cœur, pas supprimé).
+ * M4 (SPEC §18.7) — the duration written in the text becomes a native dnd5e expiry. `ravenloft` world: the Giant
+ * Centipede's Bite (Monster Manual, lent to the Wolf for the scenario) applies Poisoned "until the start of the attacking
+ * creature's next turn", with no duration in its data. On a hit, the Bear is Poisoned with `duration.expiry =
+ * "sourceStart"`; the condition holds during the Bear's turn and ends at the start of the Wolf's next turn (effect marked
+ * expired by the core, not deleted).
  */
 const CENTIPEDE = "Compendium.dnd-monster-manual.actors.Actor.mmGiantCentipede";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -12,12 +12,12 @@ export default {
   name: "durée écrite — Empoisonné jusqu'au début du prochain tour de l'attaquant",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Absent from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise dnd5e's SRD 2024).
     await ctx.cast({ "Loup": "mmWolf0000000000", "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Loup", "Ours brun"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Loup ou Ours brun absent : non applicable"); return; }
     const wolf = await ctx.token("Loup");
-    const bear = await ctx.token("Ours brun");   // pas le Zombi : immunisé contre Empoisonné
+    const bear = await ctx.token("Ours brun");   // not the Zombie: immune to Poisoned
     const grid = await ctx.gridSize();
     const home = await ctx.position(bear);
     const hp = await ctx.hp(bear);
@@ -29,7 +29,7 @@ export default {
     const at = await ctx.position(wolf);
     await ctx.call("move-token", { tokenId: bear.id, x: at.x - 2 * grid, y: at.y, elevation: at.elevation });
 
-    // La Morsure du Mille-pattes, prêtée au Loup (identifiant « bite » : on la reconnaît à son id).
+    // The Centipede's Bite, lent to the Wolf (identifier "bite": recognized by its id).
     const { data: centipede } = await ctx.call("get-compendium-entry", { uuid: CENTIPEDE });
     const { _id, folder, ownership, _stats, ...itemData } = centipede.items.find(i => i.system?.identifier === "bite");
     itemData.system.identifier = "centipede-bite";
@@ -46,8 +46,8 @@ export default {
     };
     for ( let i = 0; (i < 3) && ((await current()) !== wolf.id); i++ ) { await ctx.nextTurn(); await sleep(800); }
 
-    // Expiré, un effet n'est pas supprimé par le cœur V14 : il est marqué `duration.expired` (CONFIG.ActiveEffect.expiryAction =
-    // "update", client/config.mjs:2057), donc suspendu (`isSuppressed`), et l'acteur perd l'état.
+    // Expired, an effect is not deleted by the V14 core: it is marked `duration.expired` (CONFIG.ActiveEffect.expiryAction =
+    // "update", client/config.mjs:2057), hence suppressed (`isSuppressed`), and the actor loses the condition.
     const poison = async () => (await ctx.effects(bear)).find(e => !e.disabled && !e.duration?.expired && (e.statuses ?? []).includes("poisoned")) ?? null;
     let hit = false;
     for ( let i = 0; (i < 20) && !hit; i++ ) {
@@ -60,9 +60,9 @@ export default {
     await sleep(800);
     const effect = await poison();
     ctx.expect(!!effect, "l'Ours est Empoisonné");
-    // En combat, le moteur prend lui-même la fin de tour à sa charge (runtime/cantrips.mjs : `placedOn`, durée du cœur vidée, §42.2) ;
-    // hors de cette règle, l'expiration du cœur lue dans le texte (adapter/effects.mjs, `setTextExpiry`). Les deux vérifications
-    // suivantes disent si la fin tombe au bon moment.
+    // In combat, the engine itself handles the end of turn (runtime/cantrips.mjs: `placedOn`, core duration emptied, §42.2);
+    // outside that rule, the core expiry read from the text (adapter/effects.mjs, `setTextExpiry`). The next two checks
+    // say whether the end falls at the right moment.
     const engineEnd = !!effect?.flags?.["dnd5e-combat"]?.placedOn;
     ctx.expect((effect?.duration?.expiry === "sourceStart") || engineEnd,
       `durée lue dans le texte : expiration « ${effect?.duration?.expiry} »${engineEnd ? ", fin de tour tenue par le moteur" : ""} (attendu sourceStart ou la règle du moteur)`);

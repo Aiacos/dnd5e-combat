@@ -1,7 +1,7 @@
 /**
- * Les effets qu'un item pose, complétés à leur création selon son contenu (SPEC §16.38). `effectsExpire` : l'effet prend fin
- * au repos du porteur — l'expiration native de dnd5e (`duration.expiry` = « longRest » / « shortRest », retirée au repos par
- * documents/actor/actor.mjs:2378-2395), que le PHB ne règle pas sur « Guéris par prière ».
+ * The effects an item places, completed at creation according to its content (SPEC §16.38). `effectsExpire`: the effect ends
+ * on the bearer's rest — dnd5e's native expiration (`duration.expiry` = "longRest" / "shortRest", removed on rest by
+ * documents/actor/actor.mjs:2378-2395), which the PHB does not set on "Prayer of Healing".
  */
 
 import { contentOf } from "./content.mjs";
@@ -9,7 +9,7 @@ import { originItemOf } from "./facts.mjs";
 import { englishDescription } from "./multiattack.mjs";
 import { expiryFromText, namesStatus } from "../core/durations.mjs";
 
-/** À la création d'un effet (`preCreateActiveEffect`, sur le client qui l'écrit). Rend l'expiration posée, ou null. */
+/** On the creation of an effect (`preCreateActiveEffect`, on the client that writes it). Returns the expiration set, or null. */
 export function setRestExpiry(effect) {
   if ( effect.parent?.documentName !== "Actor" ) return null;
   const item = originItemOf(effect);
@@ -20,30 +20,30 @@ export function setRestExpiry(effect) {
 }
 
 /**
- * M4 (SPEC §18.7) : un effet posé sans durée prend celle que son texte écrit (« until the end of its next turn »), en
- * expiration native de dnd5e 6 (`targetEnd`…, core/durations.mjs). Lue dans la description de l'effet, sinon dans celle
- * de l'item d'origine (texte anglais d'origine sous Babele, sinon la description telle quelle). Rend l'expiration posée.
- * §77 : la durée « 1 tour » générique du cœur (`units: "turns"`, expiration `turnStart` / `turnEnd`) ne dit pas de qui : elle compte
- * les tours de combat de N'IMPORTE QUEL combattant (Nuage fétide du Dretch, Monster Manual 2024 : l'Empoisonné tombait au tour du
- * combattant suivant). Quand le texte dit qui, il prime.
+ * M4 (SPEC §18.7): an effect placed without a duration takes the one its text writes ("until the end of its next turn"), as
+ * dnd5e 6 native expiration (`targetEnd`…, core/durations.mjs). Read from the effect's description, otherwise from that
+ * of the origin item (original English text under Babele, otherwise the description as is). Returns the expiration set.
+ * §77: the core's generic "1 turn" duration (`units: "turns"`, expiration `turnStart` / `turnEnd`) does not say whose: it counts
+ * the combat turns of ANY combatant (Dretch's Fetid Cloud, Monster Manual 2024: the Poisoned condition ended on the next
+ * combatant's turn). When the text says whose, it takes precedence.
  */
 export function setTextExpiry(effect) {
   if ( effect.parent?.documentName !== "Actor" ) return null;
-  // La source, pas `effect.duration` : préparée par le cœur V14, une durée vide y vaut `value: Infinity`
+  // The source, not `effect.duration`: prepared by the V14 core, an empty duration is `value: Infinity` there
   // (client/documents/active-effect.mjs:292, `updateDuration`).
   const d = effect._source?.duration ?? {};
   const generic = (d.units === "turns") && ["turnStart", "turnEnd"].includes(d.expiry) && ((Number(d.value) || 0) <= 1);
   if ( !generic && (d.expiry || (Number.isFinite(d.value) && (d.value > 0))) ) return null;
   const item = originItemOf(effect);
-  if ( !item || effect.transfer ) return null;   // un effet passif d'un item de l'acteur n'est pas « posé »
+  if ( !item || effect.transfer ) return null;   // a passive effect of an actor's item is not "placed"
   const statuses = Array.from(effect.statuses ?? []);
-  // La description de l'effet qui nomme son état fait foi, même sans durée ; sinon l'item.
+  // The description of the effect that names its condition is authoritative, even without a duration; otherwise the item.
   let expiry = namesStatus(effect.description, statuses)
     ? expiryFromText(effect.description, statuses, { alone: true })
     : (expiryFromText(effect.description, statuses, { alone: true })
       ?? expiryFromText(englishDescription(item), statuses)
       ?? expiryFromText(item.system?.description?.value, statuses));
-  // §79 : la durée générique est déjà fausse — le texte de l'item, s'il n'écrit qu'une durée, vaut mieux qu'elle.
+  // §79: the generic duration is already wrong — the item's text, if it only writes a duration, is worth more than it.
   if ( !expiry && generic && !namesStatus(effect.description, statuses) ) {
     expiry = expiryFromText(englishDescription(item), statuses, { fallback: true });
   }
@@ -53,16 +53,17 @@ export function setTextExpiry(effect) {
 }
 
 /**
- * §42.2 : pose sur un acteur un effet d'un item, hors de la carte de dnd5e (effet qu'un châtiment pose en touchant, léthargie qui
- * suit la Hâte) — dans la forme que le plateau d'effets du système lui aurait donnée (applications/components/
- * effect-application.mjs:232-289) : origine, niveau de lancement, `_stats.duplicateSource` (ce que lit `comesFromItemEffect`).
- * Un effet déjà porté venant du même effet d'item est remplacé. MJ actif.
+ * §42.2: places an item's effect on an actor, outside the dnd5e card (an effect a smite places on a hit, lethargy that
+ * follows Haste) — in the form the system's effects panel would have given it (applications/components/
+ * effect-application.mjs:232-289): origin, casting level, `_stats.duplicateSource` (what `comesFromItemEffect` reads).
+ * An already-carried effect coming from the same item effect is replaced. Active GM.
  * @returns {Promise<ActiveEffect|null>}
  */
 /**
- * §438 : un effet de compendium (« effet distant » de dnd5e 6.1 : une activité qui pointe `Compendium.<pack>.ActiveEffect.<id>` au lieu
- * de porter l'effet — Manuel des joueurs 3.0.0, effets « AC +N » de Jeu de jambes évasif) posé sur l'acteur au nom de l'item, comme
- * `placeItemEffect` pose un effet de l'item : copie précédente retirée, origine = l'item, `compendiumSource` = l'effet du compendium.
+ * §438: a compendium effect (dnd5e 6.1 "remote effect": an activity that points to `Compendium.<pack>.ActiveEffect.<id>` instead
+ * of carrying the effect — Player's Handbook 3.0.0, "AC +N" effects of "Evasive Footwork") placed on the actor in the item's
+ * name, as `placeItemEffect` places an item effect: previous copy removed, origin = the item,
+ * `compendiumSource` = the compendium effect.
  */
 export async function placeRemoteEffect(item, uuid, actor) {
   const source = uuid ? await fromUuid(uuid) : null;
@@ -88,7 +89,7 @@ export async function placeItemEffect(item, effectId, actor, { scaling=0, depend
     disabled: false,
     transfer: false,
     origin: item.uuid,
-    // §402 : `dependentOn` — l'effet tombe avec la concentration du lanceur (dnd5e documents/mixins/dependent.mjs).
+    // §402: `dependentOn` — the effect falls with the caster's Concentration (dnd5e documents/mixins/dependent.mjs).
     flags: { dnd5e: { scaling, spellLevel: (Number(item.system?.level) || 0) + scaling, ...(dependentOn ? { dependentOn } : {}) } },
     system: { origin: { item: item.uuid } },
     _stats: { [sourceKey]: source.uuid }

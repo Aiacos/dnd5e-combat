@@ -1,9 +1,9 @@
 /**
- * La vision simulée et l'abri en marche (SPEC §14.1, P1) : les réglages de monde qui les
- * activent, l'auto-contrôle de l'API du cœur à `ready`, et la mise au rebut des sources de vision
- * mémoïsées quand l'environnement change. Les calculs sont dans adapter/vision.mjs (consommé par
- * adapter/conditions.mjs, sur le client de celui qui attaque) et adapter/cover.mjs (consommé par
- * runtime/engine.mjs, sur le MJ actif, au verdict).
+ * Simulated vision and cover in operation (SPEC §14.1, P1): the world settings that
+ * enable them, the core API's self-check at `ready`, and discarding the memoized vision sources
+ * when the environment changes. The computations are in adapter/vision.mjs (consumed by
+ * adapter/conditions.mjs, on the attacker's client) and adapter/cover.mjs (consumed by
+ * runtime/engine.mjs, on the active GM, at the verdict).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -29,20 +29,20 @@ export function registerVision() {
   });
   world(VISION_SETTING);
   world(COVER_SETTING);
-  // §182 : sur chaque client, quand le réglage des cônes de vision hors combat (créatures du MJ) ou celui de leurs angles par type de
-  // créature change : `dnd5e-combat.conesChanged`, sans argument — les cônes affichés se redessinent.
+  // §182: on every client, when the setting for vision cones out of combat (GM creatures) or the one for their angles by
+  // creature type changes: `dnd5e-combat.conesChanged`, no argument — the displayed cones are redrawn.
   world(CONES_SETTING, { onChange: () => Hooks.callAll(`${MODULE_ID}.conesChanged`) });
   world(ANGLES_SETTING, { type: String, default: DEFAULT_ANGLES_TEXT, onChange: () => Hooks.callAll(`${MODULE_ID}.conesChanged`) });
 
-  // Murs, lumières, scène (obscurité, niveaux), acteurs (sens, effets) : les sources sont à refaire.
+  // Walls, lights, scene (darkness, levels), actors (senses, effects): the sources must be rebuilt.
   const stale = { label: "vision: sources to rebuild" };
   for ( const hook of ["createWall", "updateWall", "deleteWall", "createAmbientLight", "updateAmbientLight",
     "deleteAmbientLight", "updateScene", "updateActor", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect"] ) {
     route(hook, () => invalidateVision(), stale);
   }
-  // Les sens déclarés lus sur un acteur (adapter/senses.mjs) : à relire quand un de ses items ou de ses effets change — l'effet
-  // d'un item (un enchantement) compte pour l'acteur qui porte l'item. Le tour et l'heure du monde peuvent suspendre un effet sans
-  // le modifier : tout est alors à relire.
+  // The declared senses read on an actor (adapter/senses.mjs): to re-read when one of its items or effects changes — an item's
+  // effect (an enchantment) counts for the actor carrying the item. The turn and the world time can suspend an effect without
+  // modifying it: everything is then to be re-read.
   const owner = doc => ((doc?.parent?.documentName === "Item") ? doc.parent.parent : doc?.parent) ?? null;
   const senses = { label: "vision: declared senses to read again" };
   const changed = ["createItem", "updateItem", "deleteItem", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect"];

@@ -1,14 +1,15 @@
 /**
- * §436 (suite) : le Cône antimagie du tyrannœil (Manuel des monstres), joué en combat. « Jusqu'au début du prochain tour du tyrannœil »,
- * la zone est un champ antimagie : le moteur lui donne le comportement `dnd5e.antimagic` du système (contenu `antimagicZone`) et la fait
- * tomber au début du tour suivant de son lanceur (`endsOnTurn`), pas au changement de round (l'heure du monde avance de 6 s avant son
- * tour quand il ne joue pas en premier). Monde `dnd-6`, arène ; le Zombi prête son corps au tyrannœil.
- *  1. Bénédiction du Clerc sur le Guerrier.
- *  2. Combat : le Guerrier joue avant le Zombi. Au tour du Zombi, le Cône posé sur le Guerrier : comportement, statut, Bénédiction
- *     suspendue.
- *  3. Tour suivant (nouveau round, tour du Guerrier) : le champ tient encore.
- *  4. Tour du Zombi : la zone tombe, plus de statut, Bénédiction rétablie.
- * Remet positions, effets, PV ; le combat est retiré.
+ * §436 (continued): the beholder's Antimagic Cone (Monster Manual), played in combat. "Until the start of the beholder's next
+ * turn", the area is an antimagic field: the engine gives it the system's `dnd5e.antimagic` behavior (`antimagicZone` content) and
+ * makes it
+ * drop at the start of its caster's next turn (`endsOnTurn`), not at the round change (world time advances 6 s before its
+ * turn when it does not play first). `dnd-6` world, arena; the Zombie lends its body to the beholder.
+ *  1. Cleric's Bless on the Fighter.
+ *  2. Combat: the Fighter plays before the Zombie. On the Zombie's turn, the Cone placed on the Fighter: behavior, status, Bless
+ *     suspended.
+ *  3. Next turn (new round, Fighter's turn): the field still holds.
+ *  4. Zombie's turn: the area drops, no more status, Bless restored.
+ * Restores positions, effects, HP; the combat is removed.
  */
 const CONE = "Compendium.dnd-monster-manual.features.Item.mmAntimagicCone0";
 const BLESS = "Compendium.dnd-players-handbook.spells.Item.phbsplBless00000";
@@ -51,7 +52,7 @@ export default {
     await place(fighter, z.x + 3 * grid, z.y);
     await place(cleric, z.x + 3 * grid, z.y + 3 * grid);
 
-    // 1. Bénédiction.
+    // 1. Bless.
     const blessId = await ctx.ensureItem(cleric, BLESS, { system: { method: "atwill" } });
     const b = await ctx.use({ tokenId: cleric.id, itemId: blessId, targetTokenIds: [fighter.id], consume: false });
     if ( b.usageMessageId ) await ctx.settle(b.usageMessageId, { timeoutMs: 30000 }).catch(() => null);
@@ -61,7 +62,7 @@ export default {
     const cone = await ctx.ensureItem(zombi, CONE).catch(err => { ctx.log(`Cône non prêté : ${err.message}`); return null; });
     if ( !cone ) { ctx.log("Manuel des monstres absent : non applicable"); return; }
 
-    // 2. Combat, le Guerrier avant le Zombi ; le Cône au tour du Zombi.
+    // 2. Combat, the Fighter before the Zombie; the Cone on the Zombie's turn.
     await ctx.startCombat([fighter, zombi]);
     const state = async () => ctx.combat();
     let c = await state();
@@ -93,7 +94,7 @@ export default {
     ctx.expect((await statuses(fighter)).has("antimagic") && (await bless())?.suppressed === true,
       `dans le cône : statut et Bénédiction suspendue (suppressed=${(await bless())?.suppressed})`);
 
-    // 3. Nouveau round, tour du Guerrier : l'heure du monde a avancé de 6 s, le champ tient.
+    // 3. New round, Fighter's turn: world time has advanced 6 s, the field holds.
     await ctx.nextTurn();
     await pause(2500);
     c = await state();

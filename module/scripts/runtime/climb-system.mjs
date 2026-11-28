@@ -1,18 +1,20 @@
 /**
- * §224 : l'interrupteur du système d'escalade et de chute — un bouton de la barre d'outils du MJ (contrôles des jetons), sur le modèle
- * du Théâtre de l'esprit (§220), qui coupe ou rallume tout ce que le moteur fait de la hauteur :
- *  - coupé : plus d'alignement du déplacement sur le sol (ni « Trop haut », ni « Dans le vide ! », ni montée refusée au joueur, ni niveau
- *    qui suit l'élévation : runtime/altitude.mjs), l'A* garde l'élévation du token (adapter/path-world.mjs), plus d'escalade (menus,
- *    `api.climb`, jets « maison », chutes du grimpeur : runtime/climb.mjs), plus de chute du moteur (chute automatique, chute avant de
- *    bouger, après un saut, à la fin d'un sort d'élévation : runtime/falls.mjs, `fallLikeDnd5e`) — et l'état « En chute » de dnd5e n'est
- *    plus posé (dnd5e le pose après chaque déplacement d'un token en l'air sans vol : documents/token.mjs:432-444) ;
- *  - au moment de couper, comme de rallumer, aucun token ne bouge : chacun garde son élévation, son mode, ses statuts ; c'est son
- *    prochain déplacement, système rallumé, qui sera aligné (ou tombera).
+ * §224: the climbing and falling system switch — a button in the GM toolbar (token controls), modelled on Theater of the Mind
+ * (§220), which turns off or on everything the engine does with height:
+ *  - off: no more aligning movement to the ground (no "Too high", no "In the void!", no climb refused to the player, no level
+ *    following elevation: runtime/altitude.mjs), the A* keeps the token's elevation (adapter/path-world.mjs), no more
+ *    climbing (menus, `api.climb`, "house" rolls, climber falls: runtime/climb.mjs), no more engine falls (automatic fall,
+ *    fall before moving, after a jump, at the end of an elevation spell: runtime/falls.mjs, `fallLikeDnd5e`) — and dnd5e's
+ *    "Falling" condition is no longer placed (dnd5e places it after every move of an airborne token without flight:
+ *    documents/token.mjs:432-444);
+ *  - when turning it off, as when turning it on, no token moves: each keeps its elevation, its mode, its statuses; it is its
+ *    next move, with the system back on, that will be aligned (or will fall).
  *
- *  - Réglage de monde `climbSystem` (activé par défaut), basculé par le bouton ; réglage de monde `climbSystemButton` : le bouton
- *    affiché ou non (le réglage reste dans la fenêtre « DAS · Core »). Chaque client en est averti.
- *  - Les voisins le suivent par le hook `dnd5e-combat.climbSystem` (`enabled`) et `api.climb.enabled()` / `api.climb.setEnabled(on)`.
- *  - Le réglage « Modes de déplacement et élévation » (`altitude`) reste : allumé, l'interrupteur le laisse décider ; coupé, il le domine.
+ *  - World setting `climbSystem` (enabled by default), toggled by the button; world setting `climbSystemButton`: the button
+ *    shown or not (the setting stays in the "DAS · Core" window). Every client is notified.
+ *  - Neighbours follow it through the hook `dnd5e-combat.climbSystem` (`enabled`) and
+ *    `api.climb.enabled()` / `api.climb.setEnabled(on)`.
+ *  - The "Movement modes and elevation" setting (`altitude`) stays: on, the switch lets it decide; off, it overrides it.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,8 +25,8 @@ import { log, loc } from "./shared.mjs";
 export const CLIMB_SYSTEM_SETTING = "climbSystem";
 export const CLIMB_BUTTON_SETTING = "climbSystemButton";
 /**
- * §224 : sur chaque client, quand le MJ bascule l'interrupteur de l'escalade et des chutes (réglage de monde `climbSystem`) : `(enabled)`,
- * booléen. Lecture seule.
+ * §224: on each client, when the GM toggles the climbing and falling switch (world setting `climbSystem`): `(enabled)`,
+ * boolean. Read-only.
  */
 export const CLIMB_SYSTEM_HOOK = `${MODULE_ID}.climbSystem`;
 
@@ -36,7 +38,7 @@ function applied(on, { announce=true }={}) {
   if ( announce ) ui.notifications?.info(loc(on ? "EscaladeSysteme.Actif" : "EscaladeSysteme.Inactif"));
 }
 
-/** Allume ou coupe le système d'escalade et de chute (MJ). */
+/** Turns the climbing and falling system on or off (GM). */
 export async function setClimbSystem(on) {
   if ( !game.user.isGM ) return false;
   await game.settings.set(MODULE_ID, CLIMB_SYSTEM_SETTING, !!on);
@@ -47,7 +49,7 @@ const buttonShown = () => {
   try { return game.settings.get(MODULE_ID, CLIMB_BUTTON_SETTING) !== false; } catch { return true; }
 };
 
-/** L'effet créé porte-t-il l'état « En chute » de dnd5e ? */
+/** Does the created effect carry dnd5e's "Falling" condition? */
 const isFallingEffect = (effect, data) => {
   const statuses = data?.statuses ?? effect?.statuses ?? [];
   return Array.from(statuses).includes("falling");
@@ -64,12 +66,12 @@ export function registerClimbSystem() {
     scope: "world", config: true, type: Boolean, default: true,
     onChange: () => ui.controls?.render?.({ reset: true })
   });
-  // L'état du monde, lu dès que les réglages le sont (avant `ready`).
+  // The world's state, read as soon as the settings are (before `ready`).
   route("setup", () => setClimbSystemState(game.settings.get(MODULE_ID, CLIMB_SYSTEM_SETTING)), { always: true, label: "climbing switch: state not read" });
-  // Système coupé : dnd5e ne pose plus « En chute » (après un déplacement en l'air, ou à la main) — sur le client qui le crée.
+  // System off: dnd5e no longer places "Falling" (after a move in the air, or by hand) — on the client that creates it.
   route("preCreateActiveEffect", (effect, data) => {
     if ( !isFallingEffect(effect, data) ) return true;
-    // §225 : dans l'Éthéré, pas de gravité — dnd5e poserait « En chute » à un token en l'air sans vol.
+    // §225: in the Ethereal, no gravity — dnd5e would place "Falling" on an airborne token without flight.
     const ethereal = effect.parent?.statuses?.has?.("ethereal") === true;
     if ( climbSystemOn() && !ethereal ) return true;
     log(`${effect.parent?.name ?? "?"}: Falling not applied (${ethereal ? "Ethereal Plane" : "climbing and falling off"})`);

@@ -1,8 +1,8 @@
 /**
- * §330, lot K9 de la repasse des créatures : portes de taille (sur une sauvegarde) et de type. Arène des sorts : le Lanceur (PNJ), la
- * Cible (taille M), la Grande cible (G), le Mort-vivant.
- *  - Coup de bouclier du Gladiateur (« si la cible est de taille M ou inférieure, À terre ») : la Cible tombe, la Grande cible non ;
- *  - Regard soporifique du Chacal-garou (« les Artificiels et Morts-vivants réussissent d'office ») : le Mort-vivant n'est pas affecté.
+ * §330, batch K9 of the creature pass: size gates (on a saving throw) and type gates. Spell arena: the Caster (NPC), the
+ * Target (size M), the Large Target (L), the Undead.
+ *  - Gladiator's Shield Bash ("if the target is Medium or smaller, Prone"): the Target falls, the Large Target does not;
+ *  - Jackalwere's Sleep Gaze ("Constructs and Undead succeed automatically"): the Undead is not affected.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

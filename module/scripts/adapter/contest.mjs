@@ -1,5 +1,5 @@
 /**
- * §72 : le test en opposition (clé `contest`) — ce qui touche à dnd5e : la règle de l'item, les jets de compétence, l'effet posé.
+ * §72: the contest (key `contest`) — what touches dnd5e: the item's rule, the skill checks, the applied effect.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -7,18 +7,18 @@ import { contentOf } from "./content.mjs";
 import { bestSkill } from "../core/contest.mjs";
 import { applyEffectsToToken } from "./saves.mjs";
 
-/** La règle `contest` qui vaut pour cette activité, ou null. */
+/** The `contest` rule that applies to this activity, or null. */
 export function contestOf(activity) {
   const rule = activity?.item ? contentOf(activity.item).entry?.contest : null;
   if ( !rule || (rule.activity && (rule.activity !== activity.id)) ) return null;
   return rule;
 }
 
-/** Les bonus totaux de compétence d'un acteur, par clé (`system.skills.<clé>.total`). */
+/** An actor's total skill bonuses, by key (`system.skills.<clé>.total`). */
 const skillBonuses = actor => Object.fromEntries(Object.entries(actor?.system?.skills ?? {}).map(([k, s]) => [k, Number(s?.total) || 0]));
 
 /**
- * Le jet de compétence d'un acteur, sans fenêtre (le meilleur parmi `skills`). Rend `{ skill, total }`, ou null.
+ * An actor's skill check, with no dialog (the best among `skills`). Returns `{ skill, total }`, or null.
  * @param {Actor5e} actor
  * @param {string[]} skills
  */
@@ -30,14 +30,15 @@ export async function rollContestSkill(actor, skills) {
   return Number.isFinite(total) ? { skill, total } : null;
 }
 
-/** Le joueur actif qui possède cet acteur (pas un MJ), ou null. */
+/** The active player who owns this actor (not a GM), or null. */
 export function playerOwnerOf(actor) {
   return game.users.find(u => u.active && !u.isGM && actor?.testUserPermission?.(u, "OWNER")) ?? null;
 }
 
 /**
- * Pose l'effet gagné sur la cible ; `exclusive` : retire d'abord ceux que le même item du même auteur a posés sur d'autres acteurs
- * de la scène (« jusqu'à ce qu'il utilise avec succès cette aptitude contre une cible différente »). Rend le nombre d'effets posés.
+ * Applies the won effect to the target; `exclusive`: first removes those that the same item from the same author placed on other
+ * actors in the scene ("until it successfully uses this feature against a different target").
+ * Returns the number of effects applied.
  */
 export async function applyContestWin(usageMessage, activity, targetToken, rule) {
   if ( rule.exclusive ) {
@@ -53,7 +54,7 @@ export async function applyContestWin(usageMessage, activity, targetToken, rule)
   return applied.length;
 }
 
-/** Annonce au chat : les deux jets et l'issue. */
+/** Chat announcement: the two rolls and the outcome. */
 export function announceContest({ actor, target, mine, theirs, outcome, item }) {
   const label = k => CONFIG.DND5E.skills?.[k]?.label ?? k;
   const verdict = game.i18n.localize(`DND5ECOMBAT.Opposition.${outcome === "win" ? "Gagne" : (outcome === "tie" ? "Egalite" : "Perdu")}`);

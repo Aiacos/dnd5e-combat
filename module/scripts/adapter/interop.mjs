@@ -1,23 +1,23 @@
 /**
- * Ce que d'autres modules automatisent aussi (SPEC §16.11, §156) : la règle appartient au moteur, qui doit marcher sans eux ; un
- * module d'animations ne garde que ses images et ses sons.
+ * What other modules also automate (SPEC §16.11, §156): the rule belongs to the engine, which must work without them; an
+ * animation module keeps only its images and sounds.
  *
- * BLFX (Boss Loot, « boss-loot-assets-premium » 3.5.2, scripts/macros/spell/customSpells2.js, `wardingBondCreateAE`) : le Lien
- * protecteur pose sur l'effet `flags["boss-loot-assets-premium"].blfxCustom` avec `trigger: "applyDamage"`, et son hook
- * `dnd5e.applyDamage` (scripts/hooks.js:710, `_applyDamage`) fait alors subir au lanceur les dégâts du porteur
- * (`wardingBondApplyDamage`). Le moteur partageant lui-même, ce déclencheur est désarmé : sa valeur change, le reste de la marque
- * (rayon persistant, retrait) est gardé. Rien n'est patché : on écrit un flag sur l'effet, comme BLFX lui-même.
+ * BLFX (Boss Loot, "boss-loot-assets-premium" 3.5.2, scripts/macros/spell/customSpells2.js, `wardingBondCreateAE`): Warding
+ * Bond places on the effect `flags["boss-loot-assets-premium"].blfxCustom` with `trigger: "applyDamage"`, and its hook
+ * `dnd5e.applyDamage` (scripts/hooks.js:710, `_applyDamage`) then makes the caster take the bearer's damage
+ * (`wardingBondApplyDamage`). The engine sharing it itself, this trigger is disarmed: its value changes, the rest of the mark
+ * (persistent ray, removal) is kept. Nothing is patched: we write a flag on the effect, like BLFX itself.
  */
 
 import { MODULE_ID } from "../constants.mjs";
 
 const BLFX = "boss-loot-assets-premium";
 
-/** La valeur que prend le déclencheur désarmé : `_applyDamage` ne retient que `"applyDamage"`. */
+/** The value the disarmed trigger takes: `_applyDamage` only keeps `"applyDamage"`. */
 export const DISARMED_TRIGGER = `${MODULE_ID}:applyDamage`;
 
 /**
- * Un autre module ferait-il aussi subir au lanceur les dégâts que cet effet partage ? Rend son nom, ou null.
+ * Would another module also make the caster take the damage that this effect shares? Returns its name, or null.
  * @param {ActiveEffect} effect
  */
 export function foreignDamageShare(effect) {
@@ -27,9 +27,9 @@ export function foreignDamageShare(effect) {
 }
 
 /**
- * Désarme le partage de dégâts d'un autre module sur cet effet. MJ actif.
+ * Disarms another module's damage sharing on this effect. Active GM.
  * @param {ActiveEffect} effect
- * @returns {Promise<string|null>}  Le module désarmé, ou null.
+ * @returns {Promise<string|null>}  The module disarmed, or null.
  */
 export async function disarmForeignDamageShare(effect) {
   const owner = foreignDamageShare(effect);
@@ -39,19 +39,19 @@ export async function disarmForeignDamageShare(effect) {
 }
 
 /**
- * §474 : DDB Importer (« ddb-importer », src/effects/enhancers/DDBEnhancers.ts, `_preUpdateActorHooks`) branche à son chargement,
- * si ses réglages de monde `allow-arcane-ward-enhancer` / `allow-warding-bond-enhancer` (vrais par défaut, cachés) le permettent, un
- * `preUpdateActor` qui refait l'Égide arcanique de tout magicien abjurateur (ClassFeatures/Wizard/ArcaneWard.ts, `applyDamage`) : il
- * relit la mise à jour des PV, déjà diminuée par l'égide du moteur (adapter/absorb.mjs), et la fait absorber une seconde fois par la
- * même réserve, que le moteur ne dépense qu'après l'écriture. Ce qui passait l'égide n'atteignait jamais le magicien. Même chose pour
- * le Lien protecteur que DDB pose lui-même (Spells/WardingBond.ts). Le moteur tenant ces règles, ces deux réglages sont coupés ;
- * DDB ne les relit qu'au chargement suivant. DDB déclare ses réglages après le `ready` du moteur (vu sur le banc le 2026-11-19 :
- * `game.settings.get` y lève encore) : on attend qu'ils existent.
+ * §474: DDB Importer ("ddb-importer", src/effects/enhancers/DDBEnhancers.ts, `_preUpdateActorHooks`) hooks on load,
+ * if its world settings `allow-arcane-ward-enhancer` / `allow-warding-bond-enhancer` (true by default, hidden) allow it, a
+ * `preUpdateActor` that redoes the Arcane Ward of every Abjurer wizard (ClassFeatures/Wizard/ArcaneWard.ts, `applyDamage`): it
+ * re-reads the HP update, already reduced by the engine's ward (adapter/absorb.mjs), and makes it absorb a second time by the
+ * same pool, which the engine spends only after the write. What got past the ward never reached the wizard. Same for
+ * the Warding Bond that DDB places itself (Spells/WardingBond.ts). The engine holding these rules, these two settings are
+ * turned off; DDB re-reads them only on the next load. DDB declares its settings after the engine's `ready` (seen on the test
+ * bench on 2026-11-19: `game.settings.get` still throws there): we wait for them to exist.
  */
 const DDB = "ddb-importer";
 const DDB_ENHANCERS = Object.freeze(["allow-arcane-ward-enhancer", "allow-warding-bond-enhancer"]);
 
-/** Les réglages de DDB Importer qui doublent une règle du moteur et sont encore actifs. */
+/** The DDB Importer settings that duplicate an engine rule and are still active. */
 export function foreignEnhancers() {
   if ( !game.modules.get(DDB)?.active ) return [];
   return DDB_ENHANCERS.filter(key => {
@@ -60,8 +60,8 @@ export function foreignEnhancers() {
 }
 
 /**
- * Coupe ces réglages, une fois que DDB les a déclarés (au plus `waitMs`). MJ actif.
- * @returns {Promise<string[]>}  Les réglages coupés.
+ * Turns these settings off, once DDB has declared them (at most `waitMs`). Active GM.
+ * @returns {Promise<string[]>}  The settings turned off.
  */
 export async function disarmForeignEnhancers({ waitMs=30000, stepMs=500 }={}) {
   if ( !game.modules.get(DDB)?.active ) return [];

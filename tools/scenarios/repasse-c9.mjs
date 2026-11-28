@@ -1,8 +1,8 @@
 /**
- * §304, lot C9 de la repasse terme par terme : dons, clauses secondaires. Arène des sorts (Lanceur, Cible).
- *  - Faveur du destin : l'utilisation dépensée revient au jet d'initiative.
- * Les autres corrections du lot (Visée sans pareille sur un 1 naturel, Forte carrure à l'évasion, Lien occulte contre le désarmement) ne
- * se forcent pas par un jet : tests unitaires et lecture du code (SPEC §304).
+ * §304, batch C9 of the term-by-term pass: feats, secondary clauses. Spell arena (Caster, Target).
+ *  - Boon of Fate: the spent use comes back on the Initiative roll.
+ * The other fixes of the batch (Peerless Aim on a natural 1, Stalwart at the escape, Eldritch Bond against disarming) cannot
+ * be forced by a roll: unit tests and code reading (SPEC §304).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

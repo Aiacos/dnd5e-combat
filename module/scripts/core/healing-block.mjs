@@ -1,14 +1,14 @@
 /**
- * §334, §505 : qui un item à `blocksHealing: true` empêche de regagner des points de vie. Pur : aucune dépendance à Foundry.
+ * §334, §505: who an item with `blocksHealing: true` prevents from regaining Hit Points. Pure: no dependency on Foundry.
  *
- *  - un item qui pose des effets (Contact glacial) : les porteurs de ces effets — pas son propriétaire, qui n'est que le lanceur ;
- *  - un trait sans aucun effet (Nuée : « The swarm can't regain Hit Points ») : la créature qui porte le trait. Sans effet à poser,
- *    la règle ne peut parler que d'elle.
+ *  - an item that places effects (Chill Touch): the bearers of those effects — not its owner, who is only the caster;
+ *  - a trait with no effect at all (Swarm: "The swarm can't regain Hit Points"): the creature that bears the trait. With no
+ *    effect to place, the rule can only speak of it.
  */
 
 /**
- * Le trait bloque-t-il les soins de la créature qui le porte ?
- * @param {{rule?: true|string[]|null, effects?: number}} trait  `rule` : `blocksHealing` de l'item ; `effects` : ses effets.
+ * Does the trait block the healing of the creature that bears it?
+ * @param {{rule?: true|string[]|null, effects?: number}} trait  `rule`: `blocksHealing` of the item; `effects`: its effects.
  * @returns {boolean}
  */
 export function traitBlocksHealing({ rule = null, effects = 0 } = {}) {

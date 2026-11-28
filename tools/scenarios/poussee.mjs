@@ -1,8 +1,8 @@
 /**
- * Brique « déplacement forcé » (SPEC §16), poussée sur échec de sauvegarde : Vague tonnante du Magicien,
- * zone posée sur le Zombi. Contenu `thunderwave` : `{ on: "failedSave", do: [{ type: "move", mode: "push",
- * distance: 10, units: "ft" }] }`. Sur un échec, le Zombi recule de deux cases (10 ft) à l'opposé du
- * Magicien ; sur une réussite, il ne bouge pas. Les dés sont aléatoires : on rejoue jusqu'à voir un échec.
+ * "Forced movement" brick (SPEC §16), push on a failed saving throw: the Wizard's Thunderwave,
+ * area placed on the Zombie. `thunderwave` content: `{ on: "failedSave", do: [{ type: "move", mode: "push",
+ * distance: 10, units: "ft" }] }`. On a failure, the Zombie moves back two cells (10 ft) away from the
+ * Wizard; on a success, it does not move. The dice are random: we replay until we see a failure.
  */
 export default {
   name: "poussée — Vague tonnante repousse le Zombi de 10 ft sur un échec",
@@ -16,8 +16,8 @@ export default {
     const grid = await ctx.gridSize();
     ctx.restore(() => ctx.setHp(zombi, hp0));
     ctx.restore(() => ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => {}));
-    // Deux cases au sud du Magicien : la seule ligne de la cour de Restored Keep où quatre cases sont libres de murs et
-    // de tokens (relevé le 2026-09-25) — ailleurs, un mur arrête la poussée après une case.
+    // Two cells south of the Wizard: the only row of the Restored Keep courtyard where four cells are free of walls and
+    // tokens (surveyed on 2026-09-25) — elsewhere, a wall stops the push after one cell.
     const pos0 = { x: magePos.x, y: magePos.y + 2 * grid, elevation: magePos.elevation };
 
     let failed = null;
@@ -31,7 +31,7 @@ export default {
       const target = r.targets.find(t => t.name === "Zombi");
       if ( !target?.save ) { ctx.expect(false, `le Zombi n'est pas une cible de la zone (${r.targets.map(t => t.name).join(", ")})`); return; }
       ctx.expect(r.plan.steps.length === 1 && r.plan.steps[0].type === "move", `le plan porte l'étape de poussée (${JSON.stringify(r.plan.steps)})`);
-      await new Promise(res => setTimeout(res, 1500));   // le déplacement suit l'application
+      await new Promise(res => setTimeout(res, 1500));   // the movement follows the application
       const pos = await ctx.position(zombi);
       const moved = Math.round(Math.hypot(pos.x - pos0.x, pos.y - pos0.y) / grid);
       if ( target.save.success ) {
@@ -43,7 +43,7 @@ export default {
     if ( !failed ) { ctx.expect(false, "aucun échec de sauvegarde en 20 essais"); return; }
     const { target, pos, moved } = failed;
     ctx.expect(moved === 2, `sauvegarde ratée (${target.save.total}) : le Zombi a reculé de ${moved} case(s) (attendu 2 = 10 ft)`);
-    // À l'opposé du Magicien : la distance au Magicien a grandi.
+    // Opposite the Wizard: the distance to the Wizard has grown.
     const before = Math.hypot(pos0.x - magePos.x, pos0.y - magePos.y);
     const after = Math.hypot(pos.x - magePos.x, pos.y - magePos.y);
     ctx.expect(after > before, `repoussé loin du Magicien (${Math.round(before)} → ${Math.round(after)} px)`);

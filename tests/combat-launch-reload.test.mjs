@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MODULE_ID } from "../module/scripts/constants.mjs";
 
 /**
- * §397 : le lancement en attente (pause de la table, message sous l'icône de pause) ne se lève qu'à la fermeture de la fenêtre du MJ.
- * Un MJ qui recharge sa page fenêtre ouverte n'a plus de fenêtre à fermer : au chargement, son lancement resté en attente est annulé.
+ * §397: the pending launch (table pause, message under the pause icon) is lifted only when the GM's window closes.
+ * A GM who reloads their page with the window open has no window left to close: on load, their launch left pending is cancelled.
  */
 const routes = new Map();
 vi.mock("../module/scripts/runtime/router.mjs", () => ({ route: (hook, handler) => routes.set(hook, handler) }));
@@ -30,18 +30,18 @@ beforeEach(() => {
 
 afterEach(() => { delete globalThis.game; delete globalThis.canvas; });
 
-describe("§397 : un lancement resté en attente après un rechargement", () => {
-  it("le MJ qui avait ouvert la fenêtre recharge : le lancement est annulé, la pause d'avant revient", async () => {
+describe("§397: a launch left pending after a reload", () => {
+  it("the GM who had opened the window reloads: the launch is cancelled, the earlier pause comes back", async () => {
     expect(await beginLaunch()).toBe(true);
     expect(launchApi.pending()).toBe(true);
     expect(game.paused).toBe(true);
-    // Le rechargement : la fenêtre n'existe plus, `ready` repasse.
+    // The reload: the window no longer exists, `ready` fires again.
     await routes.get("ready")?.();
     expect(launchApi.pending()).toBe(false);
     expect(game.paused).toBe(false);
   });
 
-  it("le jeu était déjà en pause avant : il le reste", async () => {
+  it("the game was already paused before: it stays so", async () => {
     game.paused = true;
     await beginLaunch();
     game.togglePause.mockClear();
@@ -50,7 +50,7 @@ describe("§397 : un lancement resté en attente après un rechargement", () => 
     expect(game.togglePause).not.toHaveBeenCalled();
   });
 
-  it("le lancement d'un autre MJ, dont la fenêtre est peut-être encore ouverte, n'est pas touché", async () => {
+  it("another GM's launch, whose window may still be open, is not touched", async () => {
     await beginLaunch();
     game.user = { id: "second", isGM: true };
     await routes.get("ready")?.();

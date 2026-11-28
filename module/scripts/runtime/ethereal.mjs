@@ -1,7 +1,7 @@
 /**
- * §225 : passer des créatures dans le plan Éthéré ou les en faire revenir — l'état `ethereal` de dnd5e, celui que le menu des états du
- * HUD du token pose aussi. Pour la macro du compendium « Outils du MJ » et les voisins : `api.ethereal.toggle(tokens, active)`. Lot 3 : l'action
- * de déplacement « Éthéré » (murs traversés).
+ * §225: moving creatures into the Ethereal Plane or bringing them back — dnd5e's `ethereal` condition, the one the token HUD's
+ * condition menu also sets. For the "GM Tools" compendium macro and neighbors: `api.ethereal.toggle(tokens, active)`. Batch 3: the
+ * "Ethereal" movement action (walls crossed).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -25,8 +25,9 @@ import { queryPlayer, waitLabel } from "../adapter/player-wait.mjs";
 const docOf = t => t?.document ?? t;
 
 /**
- * Bascule l'état Éthéré des tokens donnés (par défaut les tokens contrôlés). `active` : true / false force le sens ; sans lui, chaque
- * token passe de l'un à l'autre — sauf un groupe mixte, qui passe tout entier dans l'Éthéré.
+ * Toggles the Ethereal condition of the given tokens (by default the controlled tokens). `active`: true / false forces the
+ * direction; without it, each token flips from one to the other — except a mixed group, which goes entirely into the
+ * Ethereal Plane.
  * @returns {Promise<Array<{name: string, ethereal: boolean}>>}
  */
 export async function toggleEthereal(tokens=null, active=null) {
@@ -44,30 +45,31 @@ export async function toggleEthereal(tokens=null, active=null) {
 export const SETTING = "etherealPlane";
 
 export const etherealApi = Object.freeze({
-  /** L'automatisation du plan Éthéré est-elle allumée (réglage de monde `etherealPlane`) ? Hook `dnd5e-combat.etherealPlane`. */
+  /** Is Ethereal Plane automation on (world setting `etherealPlane`)? Hook `dnd5e-combat.etherealPlane`. */
   enabled: () => etherealPlaneOn(),
-  /** MJ : allume (`on` absent ou vrai) ou coupe l'automatisation du plan Éthéré → la promesse du réglage écrit ; null pour un joueur. */
+  /** GM: turns Ethereal Plane automation on (`on` absent or true) or off → the written setting's promise; null for a player. */
   setEnabled: on => (game.user.isGM ? game.settings.set(MODULE_ID, SETTING, on !== false) : null),
-  /** La créature (token, document ou acteur) est-elle dans le plan Éthéré (état `ethereal` de dnd5e) ? */
+  /** Is the creature (token, document or actor) in the Ethereal Plane (dnd5e `ethereal` condition)? */
   is: t => isEthereal(docOf(t)),
   /**
-   * L'observateur peut-il percevoir la cible quant au plan (même plan : oui ; sinon la règle du cœur) ? Le reste de la vue n'est pas jugé.
+   * Can the observer perceive the target as far as the plane goes (same plane: yes; otherwise the core's rule)?
+   * The rest of the view is not judged.
    */
   perceives: (observer, target) => perceivesPlane(docOf(observer), docOf(target)),
   toggle: toggleEthereal
 });
 
 /* -------------------------------------------- */
-/*  §225, lot 3 : se déplacer dans l'Éthéré      */
+/*  §225, batch 3: moving in the Ethereal Plane  */
 /* -------------------------------------------- */
 
 const ACTION = "ethereal";
 const PREVIOUS = "etherealPrevAction";
 
 /**
- * L'action de déplacement « Éthéré » du cœur V14 (`CONFIG.Token.movement.actions`, comme dnd5e y ajoute « fall ») : aucun mur ni
- * plancher ne l'arrête (`walls: null`, client/canvas/placeables/token.mjs:3005, :3218) — les murs de force sont refusés par le contrôle des
- * déplacements (runtime/move-gate.mjs) ; pas de terrain difficile ; monter ou descendre coûte le double. Choisie seulement par un token Éthéré.
+ * The "Ethereal" movement action of the V14 core (`CONFIG.Token.movement.actions`, as dnd5e adds "fall" there): no wall or
+ * floor stops it (`walls: null`, client/canvas/placeables/token.mjs:3005, :3218) — force walls are refused by the movement
+ * check (runtime/move-gate.mjs); no Difficult Terrain; going up or down costs double. Chosen only by an Ethereal token.
  */
 function registerAction() {
   const actions = CONFIG.Token?.movement?.actions;
@@ -87,7 +89,7 @@ function registerAction() {
   };
 }
 
-/** Les tokens de l'acteur, sur toutes les scènes. */
+/** The actor's tokens, on all scenes. */
 function tokensOf(actor) {
   if ( !actor ) return [];
   if ( actor.isToken ) return actor.token ? [actor.token] : [];
@@ -95,14 +97,14 @@ function tokensOf(actor) {
 }
 
 /**
- * L'état Éthéré posé ou retiré : le token prend l'action « Éthéré », puis reprend celle qu'il avait (gardée dans un flag). MJ actif.
- * L'option `altitude` : runtime/altitude.mjs ne traite pas ce changement de mode comme un décollage ou un atterrissage.
+ * The Ethereal condition set or removed: the token takes the "Ethereal" action, then goes back to the one it had (kept in a
+ * flag). Active GM. The `altitude` option: runtime/altitude.mjs does not treat this mode change as a takeoff or a landing.
  */
 async function syncAction(effect) {
-  if ( !etherealPlaneOn() || !effect?.statuses?.has?.("ethereal") ) return;   // coupé : l'état ne fait rien
+  if ( !etherealPlaneOn() || !effect?.statuses?.has?.("ethereal") ) return;   // off: the condition does nothing
   const actor = effect.parent?.documentName === "Actor" ? effect.parent : null;
   const blink = effect.getFlag?.(MODULE_ID, "blink") === true;
-  // Au tour suivant de la boucle : l'acteur synthétique d'un token non lié n'a ses nouveaux statuts qu'après le hook (ui/ethereal.mjs).
+  // On the next loop iteration: an unlinked token's synthetic actor only has its new statuses after the hook (ui/ethereal.mjs).
   await new Promise(resolve => setTimeout(resolve, 0));
   for ( const token of tokensOf(actor) ) {
     const inside = isEthereal(token);
@@ -115,21 +117,21 @@ async function syncAction(effect) {
         const previous = token.getFlag(MODULE_ID, PREVIOUS) ?? CONFIG.Token.movement.defaultAction;
         await token.update({ movementAction: previous, [`flags.${MODULE_ID}.${PREVIOUS}`]: new foundry.data.operators.ForcedDeletion() }, { [MODULE_ID]: { altitude: true } });
       }
-      // Lot 4 : le retour, une fois l'action d'avant remise (la chute en dépend : à pied, pas « ethereal »).
+      // Batch 4: the return, once the previous action is restored (the fall depends on it: on foot, not "ethereal").
       if ( token.object ) await enqueue(`ethereal-return:${token.uuid}`, () => returnToken(token, { blink }));
     }
   }
 }
 
 /**
- * L'interrupteur basculé (réglage de monde) : chaque client relit l'état, redessine la vue ; le MJ actif remet les actions de déplacement —
- * coupé, un token sur l'action « ethereal » reprend celle d'avant (sans quoi il traverserait encore les murs) ; rallumé, un token à l'état
- * Éthéré la reprend. Ni retour ni dégâts dans un sens comme dans l'autre : personne ne bouge.
+ * The switch toggled (world setting): each client re-reads the state and redraws the view; the active GM restores the
+ * movement actions — off, a token on the "ethereal" action goes back to its previous one (otherwise it would still cross
+ * walls); back on, a token in the Ethereal state takes it again. No return or damage either way: nobody moves.
  */
 async function applied(value) {
   setEtherealPlaneState(value);
   log(`Ethereal Plane automation ${value ? "on" : "off"}`);
-  // §225 : sur chaque client, quand le MJ allume ou coupe l'automatisation du plan Éthéré (réglage de monde) : `({ enabled })`. Lecture seule.
+  // §225: on each client, when the GM turns Ethereal Plane automation on or off (world setting): `({ enabled })`. Read-only.
   Hooks.callAll(`${MODULE_ID}.etherealPlane`, { enabled: etherealPlaneOn() });
   if ( canvas?.ready ) {
     canvas.perception.update({ refreshVision: true });
@@ -149,15 +151,15 @@ async function applied(value) {
 }
 
 export function registerEtherealMovement() {
-  CONFIG.queries[NEAR_SPACE_QUERY] = handleNearSpace;   // §401 : sur tous les clients — c'est le joueur du token qui choisit
+  CONFIG.queries[NEAR_SPACE_QUERY] = handleNearSpace;   // §401: on all clients — the token's player chooses
   game.settings.register(MODULE_ID, SETTING, {
     name: `DND5ECOMBAT.Reglage.${SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${SETTING}.Aide`,
     scope: "world", config: true, type: Boolean, default: true,
     onChange: value => applied(value)
   });
   route("setup", () => setEtherealPlaneState(game.settings.get(MODULE_ID, SETTING)), { always: true, label: "ethereal switch: state not read" });
-  // Dès `init`, comme dnd5e pour « fall » : les tokens sont construits avant `setup`, et leur champ `movementAction` refuse une action
-  // inconnue à ce moment (« ethereal is not a valid choice », vu en jeu).
+  // From `init`, as dnd5e does for "fall": tokens are built before `setup`, and their `movementAction` field refuses an unknown
+  // action at that point ("ethereal is not a valid choice", seen in play).
   registerAction();
   const label = { executor: true, label: "ethereal: movement action not switched" };
   for ( const hook of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"] ) route(hook, syncAction, label);
@@ -165,21 +167,21 @@ export function registerEtherealMovement() {
 }
 
 /* -------------------------------------------- */
-/*  §225, lot 4 : le retour sur le plan matériel  */
+/*  §225, batch 4: the return to the material plane */
 /* -------------------------------------------- */
 
 const SHUNT_RINGS = 12;
 
 /**
- * Lot 4 : la créature a quitté l'Éthéré (l'état retiré, quelle qu'en soit la cause ; appelé par `syncAction`) — si sa case est occupée,
- * elle est repoussée vers la case libre la plus proche (déplacement forcé, sans attaque d'opportunité) et subit deux fois les pieds
- * parcourus en dégâts de force (Forme éthérée) ; pas au retour de Clignotement (« vous revenez dans un espace inoccupé … à 3 m », l'effet
- * marqué `blink`). En l'air, à pied, elle tombe. MJ actif.
+ * Batch 4: the creature has left the Ethereal Plane (condition removed, whatever the cause; called by `syncAction`) — if its
+ * cell is occupied, it is pushed to the nearest free cell (forced movement, no Opportunity Attack) and takes twice the feet
+ * traveled as force damage (Etherealness); not at the return from Blink ("you return to an unoccupied space … within 3 m", the
+ * effect marked `blink`). In the air, on foot, it falls. Active GM.
  */
 async function returnToken(token, { blink }) {
   const grid = token.parent.grid;
-  // §401 : Clignotement — « un espace inoccupé de votre choix à 3 m ou moins de l'espace quitté » : demandé au joueur du token (sinon au
-  // MJ) ; sans réponse, l'espace quitté s'il est libre, sinon le plus proche (plus bas).
+  // §401: Blink — "an unoccupied space of your choice within 3 m of the space you left": asked of the token's player (otherwise the
+  // GM); with no answer, the space left if it is free, otherwise the nearest (lower down).
   if ( blink && await chooseBlinkSpace(token) ) return;
   if ( occupiedAt(token, token._source) ) {
     const start = cellOf(token);
@@ -203,12 +205,13 @@ async function returnToken(token, { blink }) {
       await actor.applyDamage([{ value: damage, type: "force" }]);
     }
   }
-  // Sans gravité dans l'Éthéré, la créature a pu y monter : revenue en l'air, à pied, elle tombe (règle du moteur, système allumé).
+  // Without gravity in the Ethereal Plane, the creature may have climbed there: back in the air, on foot, it falls
+  // (engine rule, system on).
   const ground = boundsUnder(token, token._source).ground;
   if ( ((token._source.elevation ?? 0) > ground + 1e-6) && (placementOf(token._source.movementAction) === "ground") ) await fallNow(token);
 }
 
-/** §401 : la question du retour de Clignotement, chez celui qui choisit. Rend vrai si le token a été posé sur la case choisie. */
+/** §401: the Blink return question, put to whoever chooses. Returns true if the token was placed on the chosen cell. */
 async function chooseBlinkSpace(token) {
   const payload = { token: token.uuid, distance: 10, units: "ft", mustMove: occupiedAt(token, token._source), item: loc("EspaceProche.Titre") };
   const userId = token.actor ? rollerFor(token.actor) : null;
@@ -224,9 +227,9 @@ async function chooseBlinkSpace(token) {
 }
 
 /**
- * §225, lot 4 : Saut éthéré, Foulée éthérée (contenu `etherealShift`) — la créature passe dans l'Éthéré ou en revient ; avec `others`,
- * les cibles désignées (sauf elle) prennent le même plan qu'elle. Sur le client de l'auteur, après l'utilisation : ses activités
- * n'ont ni effet ni état dans la donnée (« Expend Use » seulement).
+ * §225, batch 4: "Ethereal Jump", "Ethereal Stride" (content `etherealShift`) — the creature goes into the Ethereal Plane or comes
+ * back from it; with `others`, the designated targets (except it) take the same plane as it. On the author's client, after use:
+ * its activities have no effect or condition in the data ("Expend Use" only).
  */
 async function onShiftUsed(activity) {
   const rule = (etherealPlaneOn() && activity?.item) ? contentOf(activity.item).entry?.etherealShift : null;

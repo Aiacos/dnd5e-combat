@@ -1,26 +1,26 @@
 /**
- * Métamagie de l'Ensorceleur (SPEC §32). Chaque option du Manuel des joueurs 2024 est un item dont l'activité dépense les points de
- * Sorcellerie (dnd5e le fait) ; rien, dans le système, ne modifie ensuite le sort. Le moteur retient l'option choisie sur
- * l'acteur (`flags["dnd5e-combat"].metamagic`), la reporte sur la carte du sort suivant (`flags["dnd5e-combat"].metamagic`,
- * liste de genres), puis l'oublie.
+ * Sorcerer Metamagic (SPEC §32). Each option of the 2024 Player's Handbook is an item whose activity spends Sorcery
+ * Points (dnd5e does that); nothing in the system then modifies the spell. The engine remembers the chosen option on
+ * the actor (`flags["dnd5e-combat"].metamagic`), carries it over to the next spell's card (`flags["dnd5e-combat"].metamagic`,
+ * list of kinds), then forgets it.
  *
- * Genres tenus par le moteur : « quickened » (le sort d'une action se lance par une action Bonus), « careful » (des alliés
- * réussissent d'office leur sauvegarde, sans dégâts s'ils en auraient subi la moitié), « heightened » (une cible a le Désavantage
- * à sa sauvegarde), « distant » (portée doublée ; contact → 9 m), « subtle » (sans composante : pas de Contresort possible),
- * « extended » (durée doublée, Avantage aux sauvegardes de Concentration).
+ * Kinds held by the engine: "quickened" (a one-action spell is cast with a Bonus Action), "careful" (allies
+ * automatically succeed on their saving throw, taking no damage if they would have taken half), "heightened"
+ * (one target has Disadvantage on its saving throw), "distant" (range doubled; touch → 9 m), "subtle" (no components:
+ * no Counterspell possible), "extended" (duration doubled, Advantage on Concentration saving throws).
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { contentOf } from "./content.mjs";
 import { carriesEffectFrom } from "./facts.mjs";
 
-/** Le genre de Métamagie de cette activité (contenu `metamagic: { activity, kind }`), ou null. */
+/** The Metamagic kind of this activity (content `metamagic: { activity, kind }`), or null. */
 export function metamagicKindOf(activity) {
   const rule = activity?.item ? contentOf(activity.item).entry?.metamagic : null;
   return (rule && (rule.activity === activity.id)) ? rule.kind : null;
 }
 
-/** Les options retenues pour le prochain sort de l'acteur (au plus une minute). */
+/** The options retained for the actor's next spell (one minute at most). */
 export function pendingMetamagic(actor) {
   const flag = actor?.getFlag?.(MODULE_ID, "metamagic");
   if ( !flag?.kinds?.length ) return [];
@@ -39,18 +39,18 @@ export async function clearMetamagic(actor) {
 }
 
 /**
- * Les `metamagicRules` des items du lanceur (Sorcellerie incarnée, Apothéose arcanique), et si l'effet qu'elles demandent est sur
- * lui (la Sorcellerie innée active).
+ * The `metamagicRules` of the caster's items (Sorcery Incarnate, Arcane Apotheosis), and whether the effect they require is on
+ * them (Innate Sorcery active).
  */
 export function metamagicRulesOf(actor) {
   return Array.from(actor?.items ?? []).map(item => contentOf(item).entry?.metamagicRules).filter(Boolean)
     .map(rule => ({ ...rule, active: carriesEffectFrom(actor, rule.whileEffect) }));
 }
 
-/** Les options portées par la carte d'un sort. */
+/** The options carried by a spell's card. */
 export const usageMetamagic = message => message?.getFlag?.(MODULE_ID, "metamagic") ?? [];
 
-/** Sort ample : la portée d'un sort, doublée ; « contact » (ou moins de 1,50 m) devient 9 m. */
+/** Distant Spell: a spell's range, doubled; "touch" (or under 1.50 m) becomes 9 m. */
 export function distantRange(range) {
   if ( !range ) return range;
   if ( (range.units === "touch") || !(Number(range.value) > 0) ) return { ...range, value: 30, units: "ft" };

@@ -1,41 +1,41 @@
 /**
- * M8 (SPEC §18.16) : drain du maximum de points de vie (Absorption de vie des Nécrophage, Âme-en-peine, Spectre ; Trompe du
- * Chasme ; Coup du Golem d'argile ; Morsure et Drain sanguin des vampires ; Baiser drainant ; Parole funeste ; Drain
- * d'énergie de la Demi-liche) ; §105 : drain d'une valeur de caractéristique (Caresse dévitalisante de l'Ombre), et les fiches
- * au format 2014 ou écrites en français (Drain de vie d'une brume vampirique faite à la main). Ce que dit le texte anglais
- * d'origine, ou le texte français d'une fiche sans original. Fonctions pures, sans Foundry.
+ * M8 (SPEC §18.16): Hit Point maximum drain (Life Drain of the Wight, Wraith, Specter; Chasme's Proboscis; Clay Golem's Slam;
+ * Bite and Blood Drain of vampires; "Draining Kiss"; "Doom Word"; Demilich's Energy Drain); §105: ability score drain
+ * (Shadow's Draining Swipe), and sheets in 2014 format or written in French (Life Drain of a hand-made vampiric mist). What the
+ * original English text says, or the French text of a sheet without an original. Pure functions, without Foundry.
  */
 
 import { plainStatText as plain } from "./text.mjs";
 
-/** Types de dégâts nommés en français dans la phrase du drain. */
+/** Damage types named in French in the drain sentence. */
 const FRENCH_TYPES = { "nécrotiques": "necrotic", "nécrotique": "necrotic", "radiants": "radiant", "psychiques": "psychic" };
 
-/** Caractéristiques, par leur nom anglais et français. */
+/** Abilities, by their English and French names. */
 const ABILITIES = {
   strength: "str", dexterity: "dex", constitution: "con", intelligence: "int", wisdom: "wis", charisma: "cha",
   force: "str", "dextérité": "dex", sagesse: "wis", charisme: "cha"
 };
 
-/** La quantité drainée : un jet enrichi `[[/r 1d4]]`, ou des dés écrits en clair. */
+/** The drained amount: an enriched roll `[[/r 1d4]]`, or dice written in plain text. */
 const DICE = /\[\[\/r ([^\]#]+?)(?:#[^\]]*)?\]\](?:\{[^}]*\})?|(\d+d\d+(?:\s*[+-]\s*\d+)?)/.source;
 const ABILITY_EN = new RegExp(String.raw`\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) score (?:decreases|is reduced) by (?:${DICE})`, "i");
 const ABILITY_FR = new RegExp(String.raw`\bvaleur de (Force|Dextérité|Constitution|Intelligence|Sagesse|Charisme)(?: de la cible)? (?:est réduite|diminue|baisse) de (?:${DICE})`, "i");
 
 /**
- * - `equal` : « its Hit Point maximum decreases by an amount equal to the [Necrotic] damage taken » — `type` : ce type-là
- *   seulement (null : tous) ;
- * - `regains` : « and the vampire regains Hit Points equal to that amount » ;
- * - `fixed` : « the target's Hit Point maximum decreases by 14 ([[/r 4d6]]) » — une formule, sur une sauvegarde ratée ;
- * - `onFailedSave` : format 2014, « must succeed on a … saving throw or its Hit Point maximum is reduced by… » — la part
- *   égale aux dégâts ne se draine que si la sauvegarde que le toucher impose est ratée ;
- * - `ability` : « the target's Strength score decreases by [[/r 1d4]] » — { key, formula }, au toucher ;
- * - `floor` : §283, Contamination (PHB 2024) — « can't reduce a target's Hit Point maximum below 1 » : le maximum ne descend pas
- *   sous ce plancher (et le drain ne tue pas). La même phrase dit « the Necrotic damage it took » et « On a failed save, it takes … and
- *   its Hit Point maximum is reduced » : drain égal aux dégâts, sur la sauvegarde ratée.
- * Une réduction « every 24 hours » (malédictions de la Momie, du Slaad) n'est pas un drain de combat : ignorée.
+ * - `equal`: "its Hit Point maximum decreases by an amount equal to the [Necrotic] damage taken" — `type`: that type
+ *   only (null: all);
+ * - `regains`: "and the vampire regains Hit Points equal to that amount";
+ * - `fixed`: "the target's Hit Point maximum decreases by 14 ([[/r 4d6]])" — a formula, on a failed save;
+ * - `onFailedSave`: 2014 format, "must succeed on a … saving throw or its Hit Point maximum is reduced by…" — the part
+ *   equal to the damage is drained only if the save that the touch imposes is failed;
+ * - `ability`: "the target's Strength score decreases by [[/r 1d4]]" — { key, formula }, on a hit;
+ * - `floor`: §283, "Contamination" (PHB 2024) — "can't reduce a target's Hit Point maximum below 1": the maximum does not go
+ *   below this floor (and the drain does not kill). The same sentence says "the Necrotic damage it took" and "On a failed
+ *   save, it takes … and its Hit Point maximum is reduced": drain equal to the damage, on the failed save.
+ * A reduction "every 24 hours" (curses of the Mummy, of the Slaad) is not a combat drain: ignored.
  * @param {string} html
- * @returns {{equal: boolean, type: string|null, regains: boolean, fixed: string|null, onFailedSave: boolean, ability: {key: string, formula: string}|null, floor: number|null}}
+ * @returns {{equal: boolean, type: string|null, regains: boolean, fixed: string|null, onFailedSave: boolean,
+ *   ability: {key: string, formula: string}|null, floor: number|null}}
  */
 export function readDrain(html) {
   const raw = String(html ?? "").replace(/’/g, "'");
@@ -59,18 +59,18 @@ export function readDrain(html) {
   return { equal, type, regains, fixed, onFailedSave, ability, floor };
 }
 
-/** Ce qu'un drain peut encore ôter quand le maximum en vigueur est `max` et que le texte pose un plancher (null : tout). */
+/** What a drain can still remove when the current maximum is `max` and the text sets a floor (null: everything). */
 export const flooredDrain = (n, max, floor) => (Number.isFinite(floor) ? Math.max(0, Math.min(n, max - floor)) : n);
 
-/** Le texte dit-il un drain que le moteur sait jouer ? */
+/** Does the text describe a drain that the engine can play? */
 export const drains = rule => !!(rule && (rule.equal || rule.fixed || rule.ability));
 
 /**
- * La part drainée de dégâts calculés (valeurs finales par type, après résistances) : ceux du type nommé, ou tous les dégâts
- * (hors soins et PV temporaires) ; jamais plus que le total subi.
+ * The drained part of computed damage (final values by type, after Resistances): that of the named type, or all damage
+ * (excluding healing and Temporary Hit Points); never more than the total taken.
  * @param {Array<{type: string, value: number}>} damages
  * @param {string|null} type
- * @param {number} [amount]   Total subi.
+ * @param {number} [amount]   Total taken.
  */
 export function drainedAmount(damages, type, amount) {
   const skip = new Set(["healing", "temphp", "maximum"]);
@@ -79,11 +79,11 @@ export function drainedAmount(damages, type, amount) {
 }
 
 /**
- * L'effet qui porte un drain sur la cible : un seul par source et par grandeur drainée, dont le total grossit à chaque drain.
- * Maximum de PV : `hp.tempmax` (que dnd5e ajoute au maximum, data/actor/templates/attributes.mjs:468), jusqu'au repos long
- * (« until the target finishes a Long Rest ») ; caractéristique : jusqu'au repos long aussi (le Monster Manual 2024 ne dit
- * pas de durée ; choix de l'utilisateur, 2026-10-07).
- * @param {{kind: "hp"|string, total: number}} drain   `kind` : "hp", ou la clé de la caractéristique.
+ * The effect that carries a drain on the target: only one per source and per drained quantity, whose total grows with each drain.
+ * Hit Point maximum: `hp.tempmax` (which dnd5e adds to the maximum, data/actor/templates/attributes.mjs:468), until a Long Rest
+ * ("until the target finishes a Long Rest"); ability: until a Long Rest too (the 2024 Monster Manual gives no
+ * duration; user's choice, 2026-10-07).
+ * @param {{kind: "hp"|string, total: number}} drain   `kind`: "hp", or the ability key.
  * @returns {{key: string, change: number, expiry: "longRest"}}
  */
 export function drainEffectShape({ kind, total }) {
@@ -92,8 +92,8 @@ export function drainEffectShape({ kind, total }) {
 }
 
 /**
- * §120 : ce que l'auteur regagne (clé `lifesteal`, Caresse du vampire) — une part des dégâts de ce type infligés, arrondie à
- * l'entier inférieur (« la moitié des dégâts nécrotiques infligés »).
+ * §120: what the author regains (key `lifesteal`, Vampiric Touch) — a part of the damage of that type dealt, rounded down to
+ * the integer ("half the necrotic damage dealt").
  * @param {Array<{value: number, type: string}>} damages
  * @param {{damageType?: string, fraction?: number}} rule
  * @returns {number}

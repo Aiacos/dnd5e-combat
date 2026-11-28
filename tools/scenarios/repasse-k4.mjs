@@ -1,9 +1,10 @@
 /**
- * §325, lot K4 de la repasse des créatures : l'empoignade d'un monstre — l'allonge de la capacité qui agrippe et le DD d'évasion qu'elle
- * écrit (activité « Escape Check » du Monster Manual). Arène des sorts : le Lanceur (PNJ) reçoit des capacités prêtées, la Cible à 3 m.
- *  - Pince du Chuul (allonge 3 m) : la Cible agrippée à 3 m le reste (elle était relâchée aussitôt, portée des mains nues) ; DD d'évasion
- *    = Athlétisme passif du Lanceur, la formule de la donnée ;
- *  - Tentacule de l'Aboleth : DD d'évasion 14, celui de la donnée (et non 8 + For + maîtrise du Lanceur).
+ * §325, batch K4 of the creature pass: a monster's grapple — the reach of the ability that grapples and the escape DC it
+ * writes ("Escape Check" activity of the Monster Manual). Spell arena: the Caster (NPC) receives borrowed abilities, the
+ * Target at 3 m.
+ *  - Chuul's Pincer (reach 3 m): the Target grappled at 3 m stays so (it was released at once, unarmed-strike range); escape DC
+ *    = the Caster's passive Athletics, the data's formula;
+ *  - Aboleth's Tentacle: escape DC 14, the data's (and not 8 + Str + the Caster's proficiency).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -65,7 +66,7 @@ export default {
       return null;
     };
 
-    // Pince du Chuul, à 3 m.
+    // Chuul's Pincer, at 3 m.
     const pincer = await lend("Compendium.dnd-monster-manual.actors.Actor.mmChuul000000000.Item.mmPincer00000000");
     let state = await grab(pincer, 2);
     if ( ctx.expect(!!state, "la Pince touche la Cible à 3 m (20 essais au plus)") ) {

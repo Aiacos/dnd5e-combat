@@ -1,7 +1,8 @@
 /**
- * §554: Flame Blade ready to use — on the « Arène de test » of `dnd-6`, Sylaene (druid 5, a character with level 3 slots) against the
- * Zombi.
- *  1. Casting « Evoke Blade » opens the slot level window (§106: the level is a real choice), with « roll without dialog » on and off.
+ * §554: Flame Blade ready to use — on the « Arène de test » of `dnd-6`, Sylaene (druid 5, a character with level 3 slots)
+ * against the Zombi.
+ *  1. Casting « Evoke Blade » opens the slot level window (§106: the level is a real choice), with « roll without dialog »
+ *     on and off.
  *  2. Cast at level 2: trace, the attack in the sheet's favorites (marked as DAS's), `api.ui.spellWeapons` and the hook
  *     `dnd5e-combat.spellWeapon`; the attack rolls 3d6.
  *  3. Cast again at level 4: one trace, one favorite, the attack rolls 5d6 (§405).

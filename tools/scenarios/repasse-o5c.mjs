@@ -1,8 +1,8 @@
 /**
- * §341, lot O5c de la repasse des objets : options au toucher, critiques. Arène de test (Guerrier, Zombi).
- *  1. Anneau du bélier : touché, le Zombi est repoussé de 1,50 m.
- *  2. Règles attachées : Bâton percussif (faveur au toucher `hitRider`) ; Épée acérée posée sur une Épée longue (règle `-enchanted` :
- *     Épuisement sur un critique — un critique ne se force pas en scénario).
+ * §341, batch O5c of the item pass: on-hit options, Critical Hits. Test arena (Fighter, Zombie).
+ *  1. Ring of the Ram: on a hit, the Zombie is pushed back 5 ft.
+ *  2. Attached rules: Staff of Striking (on-hit boon `hitRider`); Sword of Sharpness placed on a Longsword (`-enchanted` rule:
+ *     Exhaustion on a Critical Hit — a Critical Hit cannot be forced in a scenario).
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -25,8 +25,8 @@ export default {
     ctx.restore(() => ctx.setHp(zombi, hp0));
     ctx.restore(() => ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => null));
 
-    // 1. Anneau du bélier.
-    const ram = await ctx.ensureItem(fighter, `${DMG}dmgRingOfTheRam0`, { ready: true });   // Guide 3.0.0 : activités visibles harmonisé
+    // 1. Ring of the Ram.
+    const ram = await ctx.ensureItem(fighter, `${DMG}dmgRingOfTheRam0`, { ready: true });   // Guide 3.0.0: activities visible if attuned
     let pushed = null;
     for ( let i = 0; (i < 20) && (pushed === null); i++ ) {
       await ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => null);
@@ -43,7 +43,7 @@ export default {
     const grid = await ctx.gridSize();
     ctx.expect((pushed !== null) && (Math.abs(pushed - grid) < grid / 2), `Anneau du bélier : touché, le Zombi recule d'une case (${pushed} px, case ${grid} px)`);
 
-    // 2. Règles attachées.
+    // 2. Attached rules.
     await ctx.ensureItem(fighter, `${DMG}dmgStaffOfStriki`, { ready: true });
     const sword = await ctx.ensureItem(fighter, `${PHB}phbwepLongsword0`);
     const sharp = await ctx.ensureItem(fighter, `${DMG}dmgSwordOfSharpn`);

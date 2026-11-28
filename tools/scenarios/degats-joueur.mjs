@@ -1,15 +1,15 @@
 /**
- * Dégâts d'une attaque lancée par un JOUEUR (§507). Le jet de dégâts part du client de l'auteur de l'action (runtime/engine.mjs,
- * `onResolutionFlag` : `message.isAuthor`), puis le MJ actif applique : c'est le chemin de toutes les tables, qu'aucun autre scénario
- * ne joue (ils lancent tout depuis le MJ). « Arène des refus » (`node tools/arene-refus.mjs`), vrai client joueur (« claude player »,
- * propriétaire du Mage des refus, ouvert par le banc de test : `players: true`). Vérifie :
- *  0. témoin : l'attaque d'arme du Mage lancée par le MJ blesse le Mannequin ;
- *  1. la même attaque lancée chez le joueur (cible posée, activité utilisée sans fenêtre) : la carte de dégâts est celle du joueur,
- *     et le MJ l'applique au Mannequin ;
- *  2. Frappe assurée lancée chez le joueur sur son arme : l'arme est enchantée, l'attaque de l'arme blesse, l'enchantement tombe
- *     après elle (Manuel des joueurs requis, sinon cette partie est non applicable).
- * Un coup peut rater (jusqu'à six essais) et un dé faible peut donner 0 (bâton du Mage : 1d8 − 1) : les PV sont relus d'après la
- * carte de dégâts. Remis en état : PV du Mannequin, sort prêté, enchantement.
+ * Damage from an attack made by a PLAYER (§507). The damage roll starts from the action author's client (runtime/engine.mjs,
+ * `onResolutionFlag`: `message.isAuthor`), then the active GM applies it: this is the path of all the tables, which no other
+ * scenario plays (they roll everything from the GM). "Refusal Arena" (`node tools/arene-refus.mjs`), real player client
+ * ("claude player", owner of the Refusal Mage, opened by the test bench: `players: true`). Checks:
+ *  0. control: the Mage's weapon attack made by the GM wounds the Dummy;
+ *  1. the same attack made on the player's side (target placed, activity used without a window): the damage card is the player's,
+ *     and the GM applies it to the Dummy;
+ *  2. True Strike cast on the player's side on their weapon: the weapon is enchanted, the weapon's attack wounds, the
+ *     enchantment ends after it (Player's Handbook required, otherwise this part is not applicable).
+ * A hit can miss (up to six tries) and a low die can give 0 (Mage's staff: 1d8 − 1): HP are read back from the
+ * damage card. Restored: the Dummy's HP, borrowed spell, enchantment.
  */
 const MODULE_ID = "dnd5e-combat";
 const SPELLS = "dnd-players-handbook.spells";
@@ -42,13 +42,14 @@ export default {
       { scene: sceneId, weapon: weaponUuid });
     ctx.log(`client joueur : ${JSON.stringify(who)}`);
     if ( !ctx.expect(!who.gm && who.owner && who.activeGM && who.active, "un client joueur propriétaire du Mage, un MJ actif, le Core actif") ) return;
-    // Le réglage « Dégâts et soins » d'un monde où il aurait été changé à la main : celui que ce scénario vérifie est le jet d'office.
+    // The "Damage and healing" setting of a world where it may have been changed by hand: the one this scenario checks is
+    // the automatic roll.
     if ( !["level", "auto"].includes(who.damageFlow) ) { ctx.log(`réglage « Dégâts et soins » = ${who.damageFlow} : non applicable`); return; }
     await ctx.asPlayer(`window.__dasErreurs = []; if ( !window.__dasEcoute ) { window.__dasEcoute = true;
       window.addEventListener("error", e => window.__dasErreurs.push(String(e.message)));
       window.addEventListener("unhandledrejection", e => window.__dasErreurs.push(String(e.reason?.message ?? e.reason))); } return true;`);
 
-    // Lancé chez le joueur : cible posée, activité utilisée sans fenêtre (comme un clic dans la barre ou sur la fiche).
+    // Cast on the player's side: target placed, activity used without a window (like a click in the bar or on the sheet).
     const playerUse = (itemUuid, activityType, dasFlags={}) => ctx.asPlayer(`
       try {
         canvas.tokens.get(args.dummy)?.setTarget(true, { releaseOthers: true });
@@ -59,7 +60,7 @@ export default {
       } catch(err) { return { error: String(err?.stack ?? err).slice(0, 600) }; }`,
       { item: itemUuid, type: activityType, dummy: dummy.id, flags: dasFlags });
 
-    // Une attaque du joueur : `{ hit, before, after, rolled, author }` (rolled : total de la carte de dégâts), ou null sur une erreur.
+    // A player's attack: `{ hit, before, after, rolled, author }` (rolled: total of the damage card), or null on an error.
     const playerAttack = async label => {
       await ctx.setHp(dummy, hp0);
       const since = await ctx.lastMessageId();
@@ -83,7 +84,7 @@ export default {
       ctx.expect((a.rolled !== null) && (a.after === a.before - a.rolled), `${label} : le MJ applique le jet du joueur (${a.before} − ${a.rolled} → ${a.after})`);
     };
 
-    // 0. Témoin : la même arme lancée par le MJ.
+    // 0. Control: the same weapon used by the GM.
     for ( let i = 1; i <= 6; i++ ) {
       await ctx.setHp(dummy, hp0);
       const u = await ctx.use({ tokenId: mage.id, itemId: weapon._id, targetTokenIds: [dummy.id], activityType: "attack", usageConfig: { [MODULE_ID]: { cost: "free" } } });
@@ -100,7 +101,7 @@ export default {
     for ( let i = 1; (i <= 6) && !a?.hit; i++ ) { a = await playerAttack(`attaque du joueur, essai ${i}`); if ( !a ) return; }
     if ( ctx.expect(!!a?.hit, "attaque du joueur : touché en six essais au plus") ) expectDamage("attaque du joueur", a);
 
-    // 2. Frappe assurée.
+    // 2. True Strike.
     const packs = await ctx.call("list-compendiums", {}).catch(() => null);
     if ( !JSON.stringify(packs ?? "").includes(SPELLS) ) { ctx.log("Manuel des joueurs absent : Frappe assurée non applicable"); return; }
     const tsId = await ctx.ensureItem(mage, `Compendium.${SPELLS}.Item.phbsplTrueStrike`);
@@ -118,7 +119,7 @@ export default {
       let on = e0;
       for ( const stop = Date.now() + 15000; (on <= e0) && (Date.now() < stop); await pause(500) ) on = await enchantments();
       if ( !ctx.expect(on > e0, `Frappe assurée, lancer ${k} : l'arme est enchantée (${e0} → ${on})`) ) return;
-      // La visée de l'attaque offerte s'ouvre chez le joueur (ui/pointer-offers.mjs) : refermée, l'attaque part comme au 1.
+      // The aiming of the offered attack opens on the player's side (ui/pointer-offers.mjs): closed, the attack goes off as in 1.
       await pause(1500);
       await ctx.asPlayer(`try { (await import("/modules/${MODULE_ID}/scripts/ui/pointer.mjs")).stopTargeting?.(); } catch {} return true;`);
       t = await playerAttack(`Frappe assurée, lancer ${k}`);

@@ -1,9 +1,9 @@
 /**
- * §95 : se relever à 0 PV (clé `atZero`, adapter/rise.mjs), sur le MJ actif. Les PV viennent de tomber à 0 sans tuer : la question à
- * la créature (« se relever ? », oui d'abord) ; la sauvegarde si la règle en demande une (Force du tombeau : Charisme, DD 5 + les dégâts
- * subis, relevés au `dnd5e.applyDamage`) ; puis l'activité, utilisée sur elle — ses consommations ou son soin la relèvent. Refusé ou
- * raté : elle tombe comme d'habitude (`ensureDowned`). Comme la Rage implacable (runtime/barbarian.mjs), l'état « à terre » n'est pas
- * posé tant que la décision n'est pas prise (adapter/death.mjs).
+ * §95: rise at 0 HP (`atZero` key, adapter/rise.mjs), on the active GM. The HP just dropped to 0 without killing: the question to
+ * the creature ("rise?", yes first); the save if the rule asks for one (Grave Strength: Charisma, DC 5 + the damage
+ * taken, read at `dnd5e.applyDamage`); then the activity, used on it — its consumptions or its healing raise it. Refused or
+ * failed: it drops as usual (`ensureDowned`). Like Relentless Rage (runtime/barbarian.mjs), the "prone" condition is not
+ * applied until the decision is made (adapter/death.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -33,7 +33,7 @@ function onZero(actor) {
   });
 }
 
-/** La décision et ce qui suit ; rend true si la créature doit tomber (refusé, sauvegarde ratée, toujours à 0 PV). */
+/** The decision and what follows; returns true if the creature must fall (refused, failed save, still at 0 HP). */
 async function decide(actor, item, rule, activity) {
   {
     const answer = await askChoice(actor, {
@@ -71,7 +71,7 @@ function onHp(actor, value) {
 }
 
 export function registerRise() {
-  // Les dégâts subis (Force du tombeau : DD 5 + les dégâts), sur le client qui les applique.
+  // The damage taken (Grave Strength: DC 5 + the damage), on the client that applies it.
   route("dnd5e.applyDamage", (actor, amount) => { if ( actor && (amount > 0) ) lastDamage.set(actor.uuid, amount); }, { label: "rise: damage not recorded" });
   route("updateActor", (actor, changed) => {
     const v = foundry.utils.getProperty(changed, "system.attributes.hp.value");

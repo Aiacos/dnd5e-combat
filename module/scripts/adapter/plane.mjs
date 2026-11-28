@@ -1,13 +1,13 @@
 /**
- * §225 : le plan d'une créature lu dans dnd5e 6.0 — le statut `ethereal` (config.mjs, `statusEffects.ethereal`, que posent Forme
- * éthérée, Clignotement, l'Huile d'éthéréalité ; dnd5e n'en fait rien d'autre que `neverBlockMovement`). Règle au cœur
+ * §225: a creature's plane read from dnd5e 6.0 — the `ethereal` status (config.mjs, `statusEffects.ethereal`, applied by
+ * Etherealness, Blink, Oil of Etherealness; dnd5e does nothing else with it than `neverBlockMovement`). Rule in the core
  * (core/plane.mjs).
  *
- * Lot 2, ce qui laisse voir l'Éthéré depuis le plan matériel :
- *  - « Ethereal Plane » dans les sens spéciaux (`system.attributes.senses.special`, chaîne libre) : Détection de l'invisibilité et le
- *    Troisième œil du Magicien l'y ajoutent dans leurs données (PHB 2024) — sans limite autre que la vue ;
- *  - Vision suprême (`senses.ranges.truesight`, data/shared/senses-field.mjs) : à sa portée ;
- *  - Vision éthérée (trait du MM, identifiant `ethereal-sight`) : 60 ft.
+ * Batch 2, what lets one see the Ethereal from the Material Plane:
+ *  - "Ethereal Plane" in the special senses (`system.attributes.senses.special`, free string): See Invisibility and the
+ *    Wizard's Third Eye add it to their data (PHB 2024) — no limit other than sight;
+ *  - Truesight (`senses.ranges.truesight`, data/shared/senses-field.mjs): within its range;
+ *  - Ethereal Sight (MM trait, identifier `ethereal-sight`): 60 ft.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,28 +16,28 @@ import { identifierOf } from "./content.mjs";
 import { distanceBetween } from "./turn.mjs";
 import { readUnitFactors, lengthIn } from "./units.mjs";
 
-/** Portées de règle, en pieds (convertis à la grille de la scène). */
-const ETHEREAL_SIGHT_FT = 60;   // Vision éthérée (MM 2024)
-const BORDER_VIEW_FT = 60;      // depuis l'Éthéré, « rien au-delà de 60 ft » (Forme éthérée, Clignotement)
+/** Rule ranges, in feet (converted to the scene's grid). */
+const ETHEREAL_SIGHT_FT = 60;   // Ethereal Sight (MM 2024)
+const BORDER_VIEW_FT = 60;      // from the Ethereal, "nothing beyond 60 ft" (Etherealness, Blink)
 const SPECIAL_SENSE = /ethereal|éthéré/i;
 
-/** Les statuts d'un token (document ou objet du canevas), d'un acteur, ou null. */
+/** The statuses of a token (document or canvas object), of an actor, or null. */
 function statusesOf(thing) {
   const actor = thing?.actor ?? ((thing?.documentName === "Actor") ? thing : null) ?? thing?.document?.actor ?? null;
   return actor?.statuses ?? null;
 }
 
-/** La créature (token ou acteur) est-elle dans le plan Éthéré ? */
+/** Is the creature (token or actor) on the Ethereal Plane? */
 export function isEthereal(thing) {
   return planeOf(statusesOf(thing)) === ETHEREAL;
 }
 
-/** Deux créatures (tokens ou acteurs) sur le même plan ? Ce qui n'est pas une créature (null, un point) est sur le plan matériel. */
+/** Two creatures (tokens or actors) on the same plane? Whatever is not a creature (null, a point) is on the Material Plane. */
 export function samePlane(a, b) {
   return samePlaneOf(statusesOf(a), statusesOf(b));
 }
 
-/** Jusqu'où l'acteur voit dans l'Éthéré depuis le plan matériel, dans l'unité de la grille ; null : il ne le voit pas. */
+/** How far the actor sees into the Ethereal Plane from the Material Plane, in grid units; null: it does not see it. */
 export function etherealSightOf(actor, gridUnits, factors=readUnitFactors()) {
   const senses = actor?.system?.attributes?.senses;
   if ( !senses ) return null;
@@ -51,14 +51,14 @@ export function etherealSightOf(actor, gridUnits, factors=readUnitFactors()) {
   return range;
 }
 
-/** Le fantôme du MM : sa Forme éthérée le laisse « visible sur le plan matériel … et inversement ». */
+/** The MM ghost: its Ethereal Form leaves it "visible on the Material Plane … and vice versa". */
 export function seenAcrossPlanes(actor) {
   return !!actor?.items?.some(i => (i.type === "feat") && (identifierOf(i).id === "etherealness"));
 }
 
 /**
- * L'observateur peut-il percevoir la cible, quant au plan (le reste de la vue décide ensuite) ? Tokens (documents).
- * Toujours vrai sur le même plan ; d'un plan à l'autre, la règle du cœur.
+ * Can the observer perceive the target, as far as the plane goes (the rest of the view decides afterwards)? Tokens (documents).
+ * Always true on the same plane; from one plane to another, the core's rule.
  */
 export function perceivesPlane(observer, target) {
   if ( !observer || !target || (observer === target) ) return true;
@@ -76,13 +76,13 @@ export function perceivesPlane(observer, target) {
   });
 }
 
-/** §225, lot 3 : les murs de la scène qui arrêtent le voyage éthéré (`flags.dnd5e-combat.ethereal`), sur ce niveau. Segments `c`. */
+/** §225, batch 3: the scene walls that stop ethereal travel (`flags.dnd5e-combat.ethereal`), on this level. `c` segments. */
 export function etherealWallsOf(scene, level=null) {
   return (scene?.walls ?? []).filter(w => (w.flags?.[MODULE_ID]?.ethereal === true)
     && (!level || !w.levels?.size || w.levels.has(level))).map(w => w.c);
 }
 
-/** §225, lot 3 : un pas d'un point à l'autre (centres) franchit-il un mur qui arrête le voyage éthéré ? */
+/** §225, batch 3: does a step from one point to the other (centers) cross a wall that stops ethereal travel? */
 export function etherealWallBetween(scene, from, to, level=null) {
   const walls = etherealWallsOf(scene, level);
   return walls.length > 0 && crossesEtherealWall(from, to, walls);

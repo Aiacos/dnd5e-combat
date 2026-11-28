@@ -1,12 +1,12 @@
 /**
- * §380 (issue #36) : la fenêtre « Rapport de bug DAS » — les erreurs relevées sur ce client (et, chez le MJ actif, celles que les
- * joueurs lui ont envoyées), une description, l'environnement, la piste des derniers gestes ; un aperçu complet et modifiable ; trois
- * sorties, chacune sur un clic : copier le Markdown, enregistrer un fichier (.md ou .json), ouvrir la page « New issue » de GitHub
- * pré-remplie. Rien ne part sans ce clic. Ouverte depuis l'onglet Général de la fenêtre DAS (MJ et joueurs) ou le menu contextuel
- * d'un token (le MJ sur toute créature, un joueur sur les siennes : le contexte de ce token est joint ; réglage de monde `debugMenu`
- * pour retirer cette entrée) ; `api.debug.open()`.
- * Retour visuel : une pastille du nombre d'erreurs sur le bouton « Réglages DAS » de la barre latérale, et un avis à la première
- * erreur DAS de la session (réglage client `debugNotify`).
+ * §380 (issue #36): the "DAS Bug Report" window — the errors recorded on this client (and, on the active GM, those the
+ * players sent to them), a description, the environment, the trail of the latest actions; a full, editable preview; three
+ * outputs, each on one click: copy the Markdown, save a file (.md or .json), open GitHub's "New issue" page
+ * pre-filled. Nothing leaves without that click. Opened from the General tab of the DAS window (GM and players) or the context menu
+ * of a token (the GM on any creature, a player on their own: that token's context is attached; world setting `debugMenu`
+ * to remove this entry); `api.debug.open()`.
+ * Visual feedback: a badge with the error count on the "DAS Settings" button of the sidebar, and a notice at the first
+ * DAS error of the session (client setting `debugNotify`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,7 +21,7 @@ export const DEBUG_NOTIFY_SETTING = "debugNotify";
 export const DEBUG_MENU_SETTING = "debugMenu";
 let notified = false;
 
-/** Les titres du Markdown : en anglais (la langue des issues), quelle que soit la langue de l'interface. */
+/** The Markdown headings: in English (the language of issues), whatever the interface language. */
 const LABELS = {};
 
 let ReportClass = null;
@@ -37,7 +37,7 @@ const ReportApp = () => ReportClass ??= class DebugReport extends foundry.applic
     }
   };
 
-  /** Ce que la personne a choisi : gardé entre deux rendus. */
+  /** What the person chose: kept between two renders. */
   choices = { description: "", selected: null, includeNames: false, includeFlagged: false, includeLogs: false, repo: null };
   token = null;
   built = null;
@@ -62,7 +62,7 @@ const ReportApp = () => ReportClass ??= class DebugReport extends foundry.applic
     const { report, markdown } = this.#build();
     const r = roles({ gm: loc("Debogueur.RoleMJ"), player: loc("Debogueur.RoleJoueur") });
     const who = id => (id ? (r.get(id) ?? "?") : "?");
-    // Les erreurs de la suite d'abord ; celles des autres modules (gardées par « tous les modules ») après, décochées par défaut.
+    // The suite's errors first; those of other modules (kept by "all modules") after, unchecked by default.
     const groups = debugApi.errors().sort((a, b) => Number(!!a.thirdParty) - Number(!!b.thirdParty));
     const selected = this.choices.selected ? new Set(this.choices.selected) : null;
     const badge = (on, key) => (on ? `<span class="das-debug__badge">${esc(loc(key))}</span>` : "");
@@ -79,7 +79,7 @@ const ReportApp = () => ReportClass ??= class DebugReport extends foundry.applic
     const repoOptions = repos.map(x => `<option value="${esc(x.repo)}" ${x.repo === repo ? "selected" : ""}>${esc(x.repo)}</option>`).join("");
     const box = (key, on, text) => `<label class="das-debug__option"><input type="checkbox" data-option="${key}" ${on ? "checked" : ""}> ${esc(text)}</label>`;
     let flaggedCount = 0;
-    try { flaggedCount = Object.keys(itemReports()).length; } catch { /* réglage illisible */ }
+    try { flaggedCount = Object.keys(itemReports()).length; } catch { /* setting unreadable */ }
     const verbose = debugApi.verbose();
     return `
       <p class="das-debug__intro">${esc(loc("Debogueur.Intro"))}</p>
@@ -117,7 +117,8 @@ const ReportApp = () => ReportClass ??= class DebugReport extends foundry.applic
 
   _onRender() {
     const root = this.element;
-    // Les choix se lisent sans tout redessiner : seul l'aperçu change (et la frappe dans l'aperçu n'est pas écrasée sans raison).
+    // Choices are read without redrawing everything: only the preview changes (and typing in the preview is not
+    // overwritten without reason).
     root.querySelector('[data-field="description"]')?.addEventListener("input", event => {
       this.choices.description = event.target.value;
       this.#updatePreview();
@@ -144,7 +145,7 @@ const ReportApp = () => ReportClass ??= class DebugReport extends foundry.applic
     if ( area ) area.value = markdown;
   }
 
-  /** Le texte qui part : l'aperçu tel que la personne l'a laissé. */
+  /** The text that goes out: the preview as the person left it. */
   #text() {
     return this.element?.querySelector('[data-field="preview"]')?.value ?? this.built?.markdown ?? "";
   }
@@ -209,7 +210,7 @@ const ReportApp = () => ReportClass ??= class DebugReport extends foundry.applic
   }
 };
 
-/** Ouvre la fenêtre (ou la ramène devant). `token` : le contexte joint, depuis le menu contextuel. */
+/** Opens the window (or brings it to the front). `token`: the attached context, from the context menu. */
 export function openDebugReport({ token=null }={}) {
   const open = foundry.applications.instances.get(WINDOW_ID);
   if ( open ) {
@@ -223,12 +224,12 @@ export function openDebugReport({ token=null }={}) {
   return app;
 }
 
-/** L'entrée du menu contextuel : le MJ sur toute créature, un joueur sur les siennes ; absente si le MJ l'a retirée (`debugMenu`). */
+/** The context menu entry: the GM on any creature, a player on their own; absent if the GM removed it (`debugMenu`). */
 export function debugMenuEntry(target) {
   const doc = target?.document ?? target;
   if ( !doc?.actor || !(game.user.isGM || doc.isOwner) ) return null;
   let shown = true;
-  try { shown = game.settings.get(MODULE_ID, DEBUG_MENU_SETTING); } catch { /* réglage pas encore déclaré */ }
+  try { shown = game.settings.get(MODULE_ID, DEBUG_MENU_SETTING); } catch { /* setting not yet declared */ }
   if ( !shown ) return null;
   return { icon: "fa-solid fa-bug", label: loc("Debogueur.Menu"), run: () => openDebugReport({ token: doc }) };
 }
@@ -238,9 +239,9 @@ export function debugMenuEntry(target) {
 /* -------------------------------------------- */
 
 /**
- * La pastille du bouton « Réglages DAS » : le nombre d'erreurs DAS relevées (répétitions comprises), en rouge. Les erreurs hors DAS
- * (gardées par « tous les modules ») ne la font pas monter : sans erreur DAS, une pastille grise discrète les compte à part.
- * Cachée à zéro.
+ * The badge of the "DAS Settings" button: the number of DAS errors recorded (repeats included), in red. Non-DAS errors
+ * (kept by "all modules") do not raise it: with no DAS error, a discreet grey badge counts them separately.
+ * Hidden at zero.
  */
 export function updateBadge() {
   const button = document.querySelector(".das-sidebar-settings");
@@ -261,11 +262,11 @@ export function updateBadge() {
 }
 
 function onError(group, isNew) {
-  updateBadge();   // la fenêtre ouverte n'est pas redessinée : l'aperçu retouché serait perdu (« Actualiser » le fait)
-  if ( group?.thirdParty ) return;   // une erreur hors DAS n'alarme pas : ni avis, seulement la pastille grise
+  updateBadge();   // the open window is not redrawn: the edited preview would be lost ("Refresh" does it)
+  if ( group?.thirdParty ) return;   // a non-DAS error raises no alarm: no notice, only the grey badge
   if ( !isNew || notified || !globalThis.ui?.notifications ) return;
   let on = true;
-  try { on = game.settings.get(MODULE_ID, DEBUG_NOTIFY_SETTING); } catch { /* réglage pas encore déclaré */ }
+  try { on = game.settings.get(MODULE_ID, DEBUG_NOTIFY_SETTING); } catch { /* setting not yet declared */ }
   if ( !on ) return;
   notified = true;
   ui.notifications.warn(loc("Debogueur.Avis"));
@@ -281,7 +282,7 @@ export function registerDebugReport() {
     scope: "world", config: true, type: Boolean, default: true
   });
   debugApi.onError((group, isNew) => {
-    // Une erreur levée avant `ready` attend : ni avis ni fenêtre tant que l'interface n'est pas là.
+    // An error thrown before `ready` waits: no notice or window until the interface is there.
     if ( game.ready ) onError(group, isNew);
   });
   route("ready", () => {

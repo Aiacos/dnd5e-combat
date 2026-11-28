@@ -1,46 +1,46 @@
 /**
- * M7 (SPEC §18.11) : auras de monstre qui agissent, par identifiant dnd5e (Monster Manual 2024). Le rayon est celui du
- * gabarit de l'activité (ou sa portée), « sauf s'il est Neutralisé », « autre qu'un … » et l'immunité après une
- * sauvegarde réussie se lisent dans le texte anglais d'origine (core/emanation.mjs).
+ * M7 (SPEC §18.11): monster auras that act, by dnd5e identifier (Monster Manual 2024). The radius is that of the
+ * activity's template (or its range); "unless it has the Incapacitated condition", "other than a …" and the Immunity after a
+ * successful save are read in the original English text (core/emanation.mjs).
  */
 
 export const EMANATIONS = Object.freeze({
-  // « À la fin de chacun de ses tours, chaque créature de son choix dans l'émanation subit … » : Salamandres, Azers (ceux-ci :
-  // « sauf s'il est Neutralisé »).
+  // "At the end of each of its turns, each creature of its choice in the Emanation takes …": Salamanders, Azers (the latter:
+  // "unless it has the Incapacitated condition").
   "fire-aura": { on: "ownTurnEnd", affects: "enemy" },
-  // Même identifiant « fire-aura », mais « chaque créature » (SRD 5.2) : l'Élémentaire du feu et le Balor brûlent aussi leurs
-  // alliés. Le Balor : une émanation de 1,50 m (5 ft), alors que le gabarit de son activité dit 10 (content/sources.mjs).
+  // Same identifier "fire-aura", but "each creature" (SRD 5.2): the Fire Elemental and the Balor burn their own allies too.
+  // The Balor: an Emanation of 1.50 m (5 ft), whereas its activity's template says 10 (content/sources.mjs).
   "mm-fire-aura-each": { on: "ownTurnEnd" },
   "mm-balor-fire-aura": { on: "ownTurnEnd", radius: 5, units: "ft" },
-  // Même forme, chaque créature : Rémorhaz, Gorgone d'airain.
+  // Same form, each creature: Remorhaz, Brass Gorgon.
   "heat-aura": { on: "ownTurnEnd" },
   "flame-aura": { on: "ownTurnEnd" },
-  // Sauvegarde de chaque créature dans l'émanation à la fin du tour du porteur : Manes (vaporeux).
+  // Save of each creature in the Emanation at the end of the bearer's turn: Manes (vaporous).
   "sickening-vapors": { on: "ownTurnEnd" },
-  // Sauvegarde d'une créature qui commence son tour dans l'émanation.
-  "stench": { on: "turnStart" },             // Blême, Hezrou, Troglodyte
-  "fetid-aura": { on: "turnStart" },         // Nuée de dretchs
-  "fear-aura": { on: "turnStart", affects: "enemy" },   // Diantrefosse : « any enemy that starts its turn in the aura »
+  // Save of a creature that starts its turn in the Emanation.
+  "stench": { on: "turnStart" },             // Ghast, Hezrou, Troglodyte
+  "fetid-aura": { on: "turnStart" },         // Swarm of Dretches
+  "fear-aura": { on: "turnStart", affects: "enemy" },   // Pit Fiend: "any enemy that starts its turn in the aura"
   "gibbering": { on: "turnStart" },          // Bouche gibbering : la sauvegarde seule, la table d1d8 reste au MJ
-  "vile-appearance": { on: "turnStart", sees: true },   // Guenaude aquatique : « and can see the hag's true form »
-  // K1 (§322), créatures de Ravenloft : même forme, « toute créature (tout ennemi) qui commence son tour dans l'émanation » — Caillot de
-  // zombis, Horreur indicible (« tant qu'elle n'est pas Neutralisée », immunité de 24 h, lues dans le texte), Propagateur de peste.
+  "vile-appearance": { on: "turnStart", sees: true },   // Sea Hag: "and can see the hag's true form"
+  // K1 (§322), Ravenloft creatures: same form, "any creature (any enemy) that starts its turn in the Emanation" — Zombie Clot,
+  // Unspeakable Horror ("while it is not Incapacitated", 24-hour Immunity, read in the text), Plague Spreader.
   "deathly-stench": { on: "turnStart" },
   "terrifying-aura": { on: "turnStart", affects: "enemy" },
   "viral-aura": { on: "turnStart" },
-  // M8 (§18.14) : à sa mort, l'émanation part d'elle-même — Méphites, Squelette flamboyant, Champignon à spores, Magmatique.
+  // M8 (§18.14): on its death, the Emanation goes off by itself — Mephits, Flaming Skeleton, Spore Fungus, Magmin.
   "death-burst": { on: "death" },
-  "death-throes": { on: "death" }                       // Balor : « explodes when it dies »
+  "death-throes": { on: "death" }                       // Balor: "explodes when it dies"
 });
 
-/** M8 (§18.13) : Régénération — Trolls, Slaads, Oni, Gardien du bouclier, Revenant (le texte dit le reste). */
+/** M8 (§18.13): Regeneration — Trolls, Slaadi, Oni, Shield Guardian, Revenant (the text says the rest). */
 export const REGENERATIONS = Object.freeze(["regeneration"]);
 
 /**
- * §65 : actions de base d'une capacité du Monster Manual, par une action Bonus (activité unique, même id dans tout le MM) :
- * « takes the Disengage or Hide action » (Échappée agile : gobelins, Panthère, Tigre, Tigre à dents de sabre), « takes the
- * Dash or Disengage action » (Agilité de l'immortel : rejetons et familiers vampires), « takes the Hide action » (Discrétion dans
- * les ombres : Ombre, dragons d'ombre…).
+ * §65: basic actions of a Monster Manual trait, through a Bonus Action (single activity, same id throughout the MM):
+ * "takes the Disengage or Hide action" (Nimble Escape: goblins, Panther, Tiger, Saber-Toothed Tiger), "takes the
+ * Dash or Disengage action" (Immortal's Agility: vampire spawn and familiars), "takes the Hide action" (Shadow Stealth:
+ * Shadow, shadow dragons…).
  */
 export const MONSTER_BASIC_ACTIONS = Object.freeze({
   "nimble-escape": { CcMi6Alf0pup7o81: { choose: ["disengage", "hide"] } },
@@ -48,20 +48,20 @@ export const MONSTER_BASIC_ACTIONS = Object.freeze({
   "shadow-stealth": { ydslIM9mBqNRGOnq: "hide" }
 });
 
-/** §61 : Robustesse de la non-vie — Zombi, Zombi ogre, Zombi tyrannœil (core/fortitude.mjs). */
+/** §61: Undead Fortitude — Zombie, Ogre Zombie, Beholder Zombie (core/fortitude.mjs). */
 export const FORTITUDES = Object.freeze(["undead-fortitude"]);
 
-/** M8 (§18.15) : ne provoque pas d'attaque d'opportunité (adapter/opportunity.mjs). */
+/** M8 (§18.15): does not provoke an Opportunity Attack (adapter/opportunity.mjs). */
 /**
- * M8 (§18.16) : drain du maximum de PV. « bite » et « slam » sont des identifiants partagés : seul l'item dont le texte
- * anglais dit la réduction draine (adapter/drain.mjs).
+ * M8 (§18.16): drain of the HP maximum. "bite" and "slam" are shared identifiers: only the item whose English text
+ * says the reduction drains (adapter/drain.mjs).
  */
 export const DRAINS = Object.freeze(["life-drain", "proboscis", "slam", "bite", "fell-word", "draining-kiss", "sanguine-drain", "energy-drain", "draining-swipe"]);
 
 /**
- * §105 : partager la case d'une autre créature. « enter » : entrer dans la case de n'importe quelle créature et s'y arrêter
- * (Forme d'air, de feu, d'eau ; Forme gazeuse, par son effet) ; « mutual » : aussi l'inverse, toute créature peut entrer dans
- * la sienne (« and vice versa » : Nuées ; Forme brumeuse, brume vampirique de 2014).
+ * §105: sharing another creature's cell. "enter": entering the cell of any creature and stopping there
+ * (Air, Fire, Water Form; Gaseous Form, through its effect); "mutual": the reverse too, any creature can enter
+ * its cell ("and vice versa": Swarms; Mist Form, the 2014 vampiric mist).
  */
 export const SPACE_SHARERS = Object.freeze({
   "air-form": "enter", "fire-form": "enter", "water-form": "enter", "gaseous-form": "enter",
@@ -73,8 +73,8 @@ export const SWALLOWS = Object.freeze(["swallow", "engulf"]);
 
 export const NO_OPPORTUNITY = Object.freeze({
   "agile": "always",                 // Cerf, Rat
-  "flyby": "flying",                 // Hibou, Chouette géante, Gargouille, Hippogriffe, Guêpe géante, Péryton, Ptéranodon…
-  // Actions : « moves up to its Speed without provoking Opportunity Attacks » (le texte doit le dire, voir Engulf).
+  "flyby": "flying",                 // Owl, Giant Owl, Gargoyle, Hippogriff, Giant Wasp, Peryton, Pteranodon…
+  // Actions: "moves up to its Speed without provoking Opportunity Attacks" (the text must say so, see Engulf).
   "feral-strike": "afterUse", "frenzied-rush": "afterUse", "smelting-charge": "afterUse", "trampling-charge": "afterUse",
   "entangling-trail": "afterUse", "stomp": "afterUse", "rumbling-movement": "afterUse", "engulf": "afterUse",
   "bubble-dash": "afterUse", "watery-rush": "afterUse", "swoop": "afterUse", "blazing-movement": "afterUse",

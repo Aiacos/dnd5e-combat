@@ -1,18 +1,18 @@
 /**
- * Abri (P1 b) : une créature interposée donne un abri partiel (+2 CA), calculé par le moteur au
- * verdict, sans rien poser sur le token. Le Guerrier est placé sur une case libre entre l'Ensorceleur et
- * le Zombi, choisie par la règle même du moteur (core/cover.mjs : depuis le meilleur coin de l'attaquant,
- * au moins une ligne coupée par le Guerrier), puis remis à sa place. Deviner « la case du milieu » ne
- * tenait pas : à un saut de cavalier, elle laisse à l'attaquant un coin dégagé. Le Zombi (CA 8) : on lit `cover` et la CA
- * corrigée dans la résolution, contre la CA que dnd5e a écrite sur le jet d'attaque.
+ * Cover (P1 b): an interposed creature gives Half Cover (+2 AC), computed by the engine at the
+ * verdict, without placing anything on the token. The Fighter is placed on a free cell between the Sorcerer and
+ * the Zombie, chosen by the engine's own rule (core/cover.mjs: from the attacker's best corner,
+ * at least one line cut by the Fighter), then put back in place. Guessing "the middle cell" did not
+ * hold: at a knight's move, it leaves the attacker a clear corner. The Zombie (AC 8): we read `cover` and the corrected AC
+ * in the resolution, against the AC that dnd5e wrote on the attack roll.
  */
 import { coverBetween } from "../../module/scripts/core/cover.mjs";
 
 const MODULE_ID = "dnd5e-combat";
 
 /**
- * Une case libre où le Guerrier donnerait un abri partiel au Zombi contre l'Ensorceleur, murs ignorés
- * (le moteur les comptera au verdict), la plus proche de la cible ; null s'il n'y en a pas.
+ * A free cell where the Fighter would give the Zombie Half Cover against the Sorcerer, walls ignored
+ * (the engine will count them at the verdict), the closest to the target; null if there is none.
  */
 export function coveringCell({ sorc, zombi, guerrier, tokens, size }) {
   const rect = t => ({ x: t.x, y: t.y, width: (t.width ?? 1) * size, height: (t.height ?? 1) * size });
@@ -43,8 +43,8 @@ export default {
     const hp0 = await ctx.hp(zombi);
     ctx.restore(() => ctx.setHp(zombi, hp0));
     const home = { x: guerrier.x, y: guerrier.y };
-    // `move-token` (connecteur ≥ 0.27, déplacement `displace`) : un `update-scene-object` de x/y est refusé sans
-    // erreur par le cœur dès qu'un mur sépare les deux cases (vu le 2026-09-23 sur Restored Keep).
+    // `move-token` (connector ≥ 0.27, `displace` movement): an `update-scene-object` of x/y is refused without
+    // an error by the core as soon as a wall separates the two cells (seen on 2026-09-23 on Restored Keep).
     const place = async (x, y) => {
       const moved = await ctx.call("move-token", { tokenId: guerrier.id, x, y });
       if ( !moved?.moved ) throw new Error(`Guerrier non déplacé en ${x},${y}`);
@@ -61,13 +61,13 @@ export default {
       return { rolledAc, verdictAc: t.ac, cover: t.cover, hit: t.hit, total: r.attack.roll.total, reason: t.reason };
     }
 
-    // Guerrier à sa place : l'abri, s'il y en a un, vient d'ailleurs (d'autres tokens peuvent être sur la ligne —
-    // dans dnd-6, Sorvina, Énorme, l'est souvent) ; on vérifie la cohérence, pas l'absence d'abri.
+    // Fighter at his place: the Cover, if there is any, comes from elsewhere (other tokens may be on the line —
+    // in dnd-6, Sorvina, Huge, often is); we check consistency, not the absence of Cover.
     await place(home.x, home.y);
     const open = await shoot("Guerrier à sa place");
     ctx.expect(open.verdictAc === open.rolledAc + (open.cover?.bonus ?? 0), `CA du verdict = CA du jet + abri (${open.rolledAc} + ${open.cover?.bonus ?? 0})`);
 
-    // Entre l'Ensorceleur et le Zombi, quelle que soit la disposition de la scène.
+    // Between the Sorcerer and the Zombie, whatever the scene's layout.
     const size = await ctx.gridSize();
     const { tokens } = await ctx.scene();
     const cell = coveringCell({ sorc, zombi, guerrier, tokens, size });

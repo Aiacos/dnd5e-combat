@@ -1,10 +1,10 @@
 /**
- * §212 : En feu et propagation des flammes — Arène, Guerrier, Magicien, Zombi (300 PV le temps du test).
- *  1. Brûlures : le Zombi en feu (état de dnd5e) subit 1d4 de feu au début de son tour.
- *  2. Éteindre : le Guerrier en feu éteint ses flammes (action) — plus en feu, À terre, l'action dépensée.
- *  3. Propagation (règles) : le Guerrier en feu entre dans une flaque d'huile — elle s'embrase.
- *  4. Propagation maison (`fireSpread`) : le Zombi entre dans une flaque en feu, s'y brûle, et prend feu ; sans le réglage, non.
- * Remet positions, PV, états, réglage, zones.
+ * §212: Burning and fire spread — Arena, Fighter, Wizard, Zombie (300 HP for the test).
+ *  1. Burns: the Zombie burning (dnd5e condition) takes 1d4 fire damage at the start of its turn.
+ *  2. Extinguish: the burning Fighter puts out his flames (action) — no longer burning, Prone, action spent.
+ *  3. Spread (rules): the burning Fighter enters a pool of oil — it ignites.
+ *  4. House spread (`fireSpread`): the Zombie enters a burning pool, burns in it, and catches fire; without the setting, no.
+ * Restores positions, HP, conditions, setting, areas.
  */
 const MODULE_ID = "dnd5e-combat";
 const EQUIPMENT = "Compendium.dnd-players-handbook.equipment.Item.";
@@ -67,7 +67,7 @@ export default {
     };
     const flammable = () => ctx.engine("flammable", { tokenId: mage.id });
     const zoneState = async id => (await flammable()).zones.find(z => z.id === id) ?? null;
-    /** Une flaque d'huile sur cette case (le Magicien la verse ; la flasque redonnée à chaque fois). */
+    /** An oil pool on this cell (the Wizard pours it; the flask given back each time). */
     const puddle = async spot => {
       await ctx.call("move-token", { tokenId: mage.id, x: spot.x - grid, y: spot.y }); await pause(600);
       const id = await ctx.ensureItem(mage, EQUIPMENT + "phbagOil00000000");
@@ -78,7 +78,7 @@ export default {
       return used.regionId ?? null;
     };
     const cellOf = pos => ({ i: Math.round(pos.y / grid), j: Math.round(pos.x / grid) });
-    /** Une case libre à `dy` cases sous le Guerrier, avec deux cases libres à l'est (pour s'élancer) et une à l'ouest (le Magicien). */
+    /** A free cell `dy` cells below the Fighter, with two free cells to the east (to run up) and one to the west (the Wizard). */
     const occupied = async () => (await ctx.call("list-scene-objects", { type: "Token" })).objects.Token
       .filter(t => ![hero.id, mage.id, zombie.id].includes(t.id)).map(t => `${Math.round(t.x / grid)},${Math.round(t.y / grid)}`);
     const freeSpot = async (dy, skip=[]) => {
@@ -120,7 +120,7 @@ export default {
       const id = await puddle(spot);
       if ( !ctx.expect(!!id, "flaque d'huile posée") ) return;
       await burn(hero, true); await pause(500);
-      // Hors combat, une flaque en feu s'éteint au bout de 12 s : on la regarde pendant la marche.
+      // Out of combat, a burning pool goes out after 12 s: we watch it during the walk.
       const walking = ctx.engine("move", { tokenId: hero.id, cell: cellOf(spot) });
       let lit = false;
       for ( let n = 0; (n < 40) && !lit; n++ ) { lit = !!(await zoneState(id))?.burning; if ( !lit ) await pause(500); }

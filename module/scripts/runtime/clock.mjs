@@ -1,8 +1,8 @@
 /**
- * §251 : l'horloge en temps réel (réglage de monde `realTimeClock`, coupé par défaut). Le MJ actif avance le temps du monde hors
- * combat, une seconde par seconde réelle, par pas d'un round (core/clock.mjs) : arrêtée pendant la pause et en combat (le cœur y
- * compte déjà 6 s par round), effacée devant un module qui fait déjà tourner l'horloge (Simple Timekeeping, Simple Calendar,
- * Calendaria…). Le moteur ne fait que lire le temps du monde partout ailleurs ; c'est le seul endroit où il le fait avancer de lui-même.
+ * §251: the real-time clock (world setting `realTimeClock`, off by default). The active GM advances world time out of
+ * combat, one second per real second, in steps of a round (core/clock.mjs): stopped while paused and in combat (the core already
+ * counts 6 s per round there), stood down in front of a module that already runs the clock (Simple Timekeeping, Simple Calendar,
+ * Calendaria…). The engine only reads world time everywhere else; this is the only place where it advances it by itself.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { clockHalt, clockTick, rivalClock } from "../core/clock.mjs";
@@ -21,7 +21,7 @@ const enabled = () => {
 
 const rival = () => rivalClock(id => game.modules.get(id)?.active === true);
 
-/** Pourquoi l'horloge du moteur ne tourne pas (null : elle tourne) — pour l'API et les scénarios. */
+/** Why the engine's clock is not running (null: it is running) — for the API and the scenarios. */
 export function clockState() {
   return clockHalt({ enabled: enabled(), executor: isExecutor(), rival: rival(), paused: game.paused === true,
     inCombat: game.combats?.some?.(c => c.started) === true });

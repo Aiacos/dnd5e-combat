@@ -1,11 +1,11 @@
 /**
- * §225, lot 3 : se déplacer dans le plan Éthéré. Arène, une boîte de quatre murs autour d'une case à trois cases du Guerrier.
- *  1. Matériel : l'A* du moteur ne trouve pas de chemin vers la case enfermée ; un déplacement du cœur (comme un glisser) y est arrêté.
- *  2. Éthéré : l'action de déplacement passe à « ethereal » ; l'A* y va tout droit, le déplacement du cœur aussi.
- *  3. Murs de force : les quatre murs de la boîte marqués `ethereal` arrêtent l'A* et le déplacement du cœur, même Éthéré.
- *  4. En l'air : le Guerrier Éthéré monte à 15 ft sans tomber (ni « En chute »), et redescend.
- *  5. Retour : l'état retiré, il reprend son action de déplacement d'avant.
- * Remet murs, position, état.
+ * §225, batch 3: moving in the Ethereal plane. Arena, a box of four walls around a cell three cells from the Fighter.
+ *  1. Material: the engine's A* finds no path to the enclosed cell; a core movement (like a slide) is stopped there.
+ *  2. Ethereal: the movement action becomes "ethereal"; the A* goes straight there, so does the core movement.
+ *  3. Walls of force: the box's four walls marked `ethereal` stop the A* and the core movement, even Ethereal.
+ *  4. In the air: the Ethereal Fighter rises to 15 ft without falling (nor "Falling"), and comes back down.
+ *  5. Return: the condition removed, he resumes his previous movement action.
+ * Restores walls, position, condition.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -31,13 +31,13 @@ export default {
       await ctx.call("move-token", { tokenId: fighter.id, ...home }).catch(() => {});
     });
     await pause(800);
-    const cell = { i: Math.round(box.y / grid), j: Math.round(box.x / grid) };   // carré : i la ligne, j la colonne
+    const cell = { i: Math.round(box.y / grid), j: Math.round(box.x / grid) };   // square: i the row, j the column
     const target = { x: box.x + (grid / 2), y: box.y + (grid / 2) };
     const inBox = p => (p.x === box.x) && (p.y === box.y);
     const coreMove = () => ctx.engine("rawMove", { tokenId: fighter.id, cell });
     const back = () => ctx.call("move-token", { tokenId: fighter.id, ...home });
 
-    // 1. Matériel.
+    // 1. Material.
     const material = await ctx.engine("plan", { tokenId: fighter.id, point: target });
     ctx.expect(!material.found || !material.arrives, `matériel : pas de chemin vers la case enfermée (${JSON.stringify({ found: material.found, arrives: material.arrives })})`);
     if ( cell ) {
@@ -46,7 +46,7 @@ export default {
       await back();
     }
 
-    // 2. Éthéré.
+    // 2. Ethereal.
     await ctx.call("set-status", { tokenId: fighter.id, statusId: "ethereal", active: true });
     await pause(1500);
     const mode = (await ctx.call("get-scene-object", { type: "Token", objectId: fighter.id })).data?.movementAction;
@@ -60,8 +60,8 @@ export default {
       await pause(500);
     }
 
-    // 3. Un mur de force.
-    // Les quatre : un seul ne suffit pas, l'Éthéré entrerait par un autre côté.
+    // 3. A wall of force.
+    // All four: one is not enough, the Ethereal would enter by another side.
     for ( const id of wallIds ) await ctx.call("update-scene-object", { type: "Wall", objectId: id, data: { [`flags.${MODULE_ID}.ethereal`]: true } });
     await pause(800);
     ctx.log(`murs de force vus : ${JSON.stringify(await ctx.engine("etherealWalls", { tokenId: fighter.id, point: target }))}`);

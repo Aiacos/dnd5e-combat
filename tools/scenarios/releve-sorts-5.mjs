@@ -1,16 +1,16 @@
 /**
- * Relevé des sorts, lot 4 : soins, états guéris, seuils de PV (SPEC §160), monde `dnd-6`, arène. Sorts prêtés du Manuel des joueurs
- * (à volonté) ; les dés de soins ou de dégâts laissés au système passent par `api.mcp.rollCard`.
- *  - Mot de pouvoir mortel : Zombi à 22 PV → Mort, PV 0 ; à 300 PV → les dégâts, pas Mort ;
- *  - Mot de pouvoir étourdissant : à 22 PV → Étourdi, pas « No Movement » ; à 300 → l'inverse ;
- *  - Parole divine (sauvegarde ratée) : à 15 PV → Mort ; à 35 → Aveuglé et Assourdi ; à 300 → rien ;
- *  - Guérison : Aveuglé et Empoisonné cessent ; Guérison de groupe : Empoisonné cesse sur deux cibles ;
- *  - Restauration suprême : Épuisement 2 → 1 ;
- *  - Délivrance des malédictions : le Maléfice du Magicien sur le Zombi cesse ;
- *  - Régénération (combat) : +1 PV au début du tour du Guerrier ;
- *  - Mot de pouvoir fortifiant : 60 PV temporaires à chacune de deux cibles ;
- *  - Résurrection : le Guerrier mort revient à ses PV max.
- * Remet PV, PV max, effets, états, Épuisement, combat.
+ * Spell survey, batch 4: healing, conditions cured, HP thresholds (SPEC §160), world `dnd-6`, arena. Spells lent from the
+ * Player's Handbook (at will); the healing or damage dice left to the system go through `api.mcp.rollCard`.
+ *  - Power Word Kill: Zombie at 22 HP → Dead, HP 0; at 300 HP → the damage, not Dead;
+ *  - Power Word Stun: at 22 HP → Stunned, not "No Movement"; at 300 → the reverse;
+ *  - Divine Word (failed save): at 15 HP → Dead; at 35 → Blinded and Deafened; at 300 → nothing;
+ *  - Heal: Blinded and Poisoned end; Mass Heal: Poisoned ends on two targets;
+ *  - Greater Restoration: Exhaustion 2 → 1;
+ *  - Remove Curse: the Wizard's Hex on the Zombie ends;
+ *  - Regenerate (combat): +1 HP at the start of the Fighter's turn;
+ *  - Power Word Fortify: 60 Temporary Hit Points to each of two targets;
+ *  - Resurrection: the dead Fighter returns at his max HP.
+ * Restores HP, max HP, effects, conditions, Exhaustion, combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -72,7 +72,7 @@ export default {
       await reset();
     };
     const lend = (t, id) => ctx.ensureItem(t, PHB + id, { system: { method: "atwill" } });
-    /** Utilise, clique les dés laissés au système, attend la résolution. */
+    /** Uses, clicks the dice left to the system, waits for the resolution. */
     const cast = async (caster, itemId, targets, extra={}) => {
       const used = await ctx.use({ tokenId: caster.id, itemId, targetTokenIds: targets.map(t => t.id), consume: false, ...extra });
       await pause(1500);
@@ -163,7 +163,7 @@ export default {
 
     await part("Délivrance des malédictions", async () => {
       const hex = await lend(mage, "phbsplHex0000000");
-      // Le moteur demande la caractéristique visée (fenêtre « Hex — … », effets au choix) : la première.
+      // The engine asks for the targeted ability (window "Hex — …", effects to choose from): the first one.
       const known = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
       const casting = cast(mage, hex, [zombi]);
       for ( let i = 0, answered = false; (i < 8) && !answered; i++ ) {
@@ -190,7 +190,7 @@ export default {
         await ctx.call("previous-turn", { combatId: ctx.ownCombat }); await pause(1200);
       }
       await cast(cleric, id, [fighter]);
-      await ctx.setHp(fighter, 1);   // le soin de la pose l'a remis au maximum : de la marge pour le PV du début de tour
+      await ctx.setHp(fighter, 1);   // the healing from the casting put him back at maximum: room for the start-of-turn HP
       await pause(1000);
       const after = await ctx.hp(fighter);
       await ctx.call("next-turn", { combatId: ctx.ownCombat }); await pause(3500);

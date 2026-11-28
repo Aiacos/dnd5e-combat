@@ -1,14 +1,14 @@
 /**
- * §120 : relancer un d20 d'initiative trop bas (clé `rerollInitiative`, Survivant — Hypervigilance : « quand vous lancez
- * l'initiative, vous pouvez relancer le d20 s'il fait 9 ou moins ; vous gardez le nouveau jet »). Fonctions pures, sans Foundry.
+ * §120: rerolling a too-low Initiative d20 (key `rerollInitiative`, Survivor — Hypervigilance: "when you roll
+ * Initiative, you can reroll the d20 if it shows 9 or lower; you keep the new roll"). Pure functions, no Foundry.
  */
 
 /**
- * Faut-il relancer, et quoi ? Le d20 du jet (avec Avantage ou Désavantage, celui qui est gardé) de `atMost` ou moins : on relance le
- * d20 du jet entier (mêmes dés, même garde), et l'initiative change de la différence.
+ * Should it be rerolled, and what? The d20 of the roll (with Advantage or Disadvantage, the one that is kept) at `atMost` or
+ * lower: the d20 of the whole roll is rerolled (same dice, same keep), and the Initiative changes by the difference.
  * @param {{atMost: number}} rule
- * @param {{number: number, kept: number, keep?: string|null}} d20   `kept` : la valeur gardée ; `keep` : "kh" / "kl" ou rien.
- * @returns {string|null}  La formule à relancer, ou null.
+ * @param {{number: number, kept: number, keep?: string|null}} d20   `kept`: the kept value; `keep`: "kh" / "kl" or nothing.
+ * @returns {string|null}  The formula to reroll, or null.
  */
 export function initiativeReroll(rule, d20) {
   if ( !rule || !d20 || !Number.isFinite(d20.kept) || (d20.kept > rule.atMost) ) return null;
@@ -16,5 +16,5 @@ export function initiativeReroll(rule, d20) {
   return `${n}d20${(n > 1) && d20.keep ? d20.keep : ""}`;
 }
 
-/** La nouvelle initiative : l'ancienne, moins l'ancien d20, plus le nouveau (bonus, départage et dés ajoutés gardés). */
+/** The new Initiative: the old one, minus the old d20, plus the new (bonus, tiebreaker and added dice kept). */
 export const rerolledInitiative = (initiative, oldD20, newD20) => initiative - oldD20 + newD20;

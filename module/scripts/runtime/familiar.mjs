@@ -1,21 +1,21 @@
 /**
- * Familiers (SPEC §107) : vision à l'invocation, et la poche dimensionnelle d'Appel de familier (PHB 2024) — « par une action
- * Magie, vous pouvez congédier temporairement le familier dans une poche dimensionnelle » ; « par une action Magie tant qu'il
- * est congédié temporairement, vous pouvez le faire réapparaître dans un espace inoccupé à 9 m ou moins de vous ». Les actions
- * de base du familier sont posées par runtime/basics.mjs.
+ * Familiars (SPEC §107): vision on summoning, and the pocket dimension of Find Familiar (PHB 2024) — "by taking the Magic
+ * action, you can temporarily dismiss the familiar to a pocket dimension"; "by taking the Magic action while it is
+ * temporarily dismissed, you can make it reappear in an unoccupied space within 9 m of you". The familiar's basic actions
+ * are set by runtime/basics.mjs.
  *
- *  - Les intentions (`dismissFamiliar`, `recallFamiliar`) partent du client de celui qui agit : contrôle souple (§6) du
- *    budget du maître en combat (son action, à son tour), puis requête au MJ actif — un joueur ne crée ni ne supprime de token
- *    dans le monde de la table.
- *  - Chez le MJ actif, le congé : ce que le familier porte tombe au sol par le hook `dnd5e-combat.dropItems` (un module voisin
- *    qui s'en charge, §40.3 ; sans voisin, les objets restent sur sa fiche, gardés avec lui), ses combattants sont retirés, son
- *    token est noté dans la poche du maître (adapter/familiar.mjs) puis supprimé, l'action du maître est dépensée.
- *  - Le rappel : la poche est vidée PUIS le token recréé à la case choisie (le delta revient avec lui : PV, effets, items) ;
- *    sa création passe par les routes ordinaires d'une invocation — il rentre au combat de son maître et y lance sa propre
- *    initiative (§16.13, `initiative: "own"`), son heure de fin (Compagnon sauvage) reste celle de l'invocation
+ *  - Intentions (`dismissFamiliar`, `recallFamiliar`) leave from the client of whoever acts: soft check (§6) of the
+ *    master's budget in combat (their action, on their turn), then a request to the active GM — a player neither creates nor
+ *    deletes tokens in the table's world.
+ *  - On the active GM, the dismissal: what the familiar carries drops to the ground via the `dnd5e-combat.dropItems` hook (a
+ *    neighboring module that handles it, §40.3; without a neighbor, the items stay on its sheet, kept with it), its combatants
+ *    are removed, its token is noted in the master's pocket (adapter/familiar.mjs) then deleted, the master's action is spent.
+ *  - The recall: the pocket is emptied THEN the token recreated at the chosen cell (the delta comes back with it: HP, effects,
+ *    items); its creation goes through the ordinary routes of a summon — it joins its master's combat and rolls its own
+ *    Initiative there (§16.13, `initiative: "own"`), its end time (Wild Companion) stays that of the summon
  *    (adapter/summons.mjs `noteSummonExpiry`).
- *  - Relancer le sort pendant que le familier est dans la poche en invoque un nouveau (dnd5e) : « un seul familier » — la
- *    poche se vide à la création du nouveau token.
+ *  - Recasting the spell while the familiar is in the pocket summons a new one (dnd5e): "only one familiar" — the
+ *    pocket is emptied when the new token is created.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -30,23 +30,23 @@ import { log, loc, notice, viaActiveGM, say, locEsc } from "./shared.mjs";
 export const POCKET_QUERY = `${MODULE_ID}.familiarPocket`;
 export const RECALL_QUERY = `${MODULE_ID}.familiarRecall`;
 
-/** Ce client peut-il congédier ce familier : il possède son maître (le MJ, toujours). */
+/** Can this client dismiss this familiar: it owns its master (the GM, always). */
 export function canPocket(tokenDoc) {
   return !!tokenDoc && isFamiliarToken(tokenDoc) && (masterOf(tokenDoc)?.isOwner === true);
 }
 
-/** Ce client peut-il rappeler le familier de ce maître : il le possède, et sa poche n'est pas vide. */
+/** Can this client recall this master's familiar: it owns it, and the pocket is not empty. */
 export function canRecall(masterToken) {
   return !!masterToken?.actor?.isOwner && !!pocketOf(masterToken.actor);
 }
 
-/** Le familier gardé dans la poche du maître de ce token : `{ name, img }`, ou null. */
+/** The familiar kept in the pocket of this token's master: `{ name, img }`, or null. */
 export function pocketedFamiliar(masterToken) {
   const pocket = pocketOf(masterToken?.actor);
   return pocket ? { name: pocket.name ?? pocket.token.name, img: pocket.img ?? null } : null;
 }
 
-/** Ce qui refuse la case sous ce point pour le rappel (texte court), ou null. */
+/** What refuses the cell under this point for the recall (short text), or null. */
 export function recallRefusal(masterToken, point) {
   const spot = recallSpot(masterToken, point);
   if ( !spot ) return loc("Familier.PocheVide");
@@ -55,7 +55,7 @@ export function recallRefusal(masterToken, point) {
   return null;
 }
 
-/** Mode souple (§6) : en combat, l'action du maître — on dit ce qui cloche, il décide. Rend vrai pour continuer. */
+/** Soft mode (§6): in combat, the master's action — we say what is wrong, they decide. Returns true to continue. */
 async function legalForMaster(master, title) {
   const issues = budgetIssues(master, POCKET_COST);
   if ( !issues.length ) return true;
@@ -68,7 +68,7 @@ function askGM(query, payload, here) {
 }
 
 /**
- * Intention : congédier ce familier dans sa poche dimensionnelle. Rend vrai si c'est fait.
+ * Intention: dismiss this familiar into its pocket dimension. Returns true if done.
  * @param {TokenDocument} tokenDoc
  */
 export async function dismissFamiliar(tokenDoc) {
@@ -79,8 +79,8 @@ export async function dismissFamiliar(tokenDoc) {
 }
 
 /**
- * Intention : rappeler le familier du maître de ce token, sous ce point. Rend vrai si c'est fait ; faux si la case est
- * refusée (la visée peut continuer) ou si l'on a renoncé.
+ * Intention: recall the familiar of this token's master, under this point. Returns true if done; false if the cell is
+ * refused (targeting can continue) or if it was given up.
  * @param {TokenDocument} masterToken
  * @param {{x: number, y: number}} point
  */
@@ -97,12 +97,12 @@ async function tell(actor, key, data, flag) {
   await say({ actor }, locEsc(key, data), { familiar: flag });
 }
 
-/** Côté MJ actif : le familier part dans la poche de son maître. */
+/** Active GM side: the familiar goes into its master's pocket. */
 export async function handlePocket({ token: tokenUuid }, { user }={}) {
   const token = await fromUuid(tokenUuid);
   const master = token ? masterOf(token) : null;
   if ( !master || (user && !master.testUserPermission(user, "OWNER")) ) return false;
-  // « Il laisse dans son espace tout ce qu'il portait » : à un module voisin de le poser au sol.
+  // "It leaves in its space everything it was carrying": up to a neighboring module to put it on the ground.
   const carried = carriedItemIds(token.actor?.items.contents.map(i => i.toObject()), MODULE_ID)
     .map(id => token.actor.items.get(id)).filter(Boolean);
   const dropped = carried.length ? await droppedByNeighbour(token, carried) : false;
@@ -119,7 +119,7 @@ export async function handlePocket({ token: tokenUuid }, { user }={}) {
   return true;
 }
 
-/** Côté MJ actif : le familier revient à la case choisie (refusée de nouveau ici si elle ne va plus). */
+/** Active GM side: the familiar returns to the chosen cell (refused again here if it no longer fits). */
 export async function handleRecall({ token: tokenUuid, point }, { user }={}) {
   const masterToken = await fromUuid(tokenUuid);
   const master = masterToken?.actor;
@@ -148,9 +148,10 @@ export async function handleRecall({ token: tokenUuid, point }, { user }={}) {
 }
 
 /**
- * Vision : le token du familier voit (`sight.enabled`) — son joueur voit par ses yeux. dnd5e (réglage `senseVisionSync`)
- * règle ensuite portée et mode d'après ses sens, sans toucher à `enabled` (documents/token.mjs:77-80, 123-134). Le hook `dnd5e.summonToken` passe les données du token
- * avant leur création, sur le client qui invoque (documents/activity/summon.mjs:192, créées à :204).
+ * Vision: the familiar's token sees (`sight.enabled`) — its player sees through its eyes. dnd5e (setting `senseVisionSync`)
+ * then sets range and mode from its senses, without touching `enabled` (documents/token.mjs:77-80, 123-134). The
+ * `dnd5e.summonToken` hook passes the token data before their creation, on the client that summons
+ * (documents/activity/summon.mjs:192, created at :204).
  */
 function onSummonToken(activity, profile, tokenData) {
   if ( !isFamiliarItem(activity?.item) ) return;
@@ -159,7 +160,7 @@ function onSummonToken(activity, profile, tokenData) {
   log(`${tokenData.name}: familiar, vision enabled`);
 }
 
-/** MJ actif : les familiers déjà posés sans vision (invoqués avant cette version) la reçoivent. */
+/** Active GM: familiars already placed without vision (summoned before this version) get it. */
 async function sightForPlaced() {
   for ( const scene of game.scenes ) {
     const updates = scene.tokens.filter(t => !t._source.sight?.enabled && isFamiliarToken(t)).map(t => ({ _id: t.id, "sight.enabled": true }));
@@ -174,7 +175,7 @@ export function registerFamiliars() {
   CONFIG.queries[RECALL_QUERY] = handleRecall;
   route("dnd5e.summonToken", onSummonToken, { label: "familiar: vision not enabled" });
   route("ready", sightForPlaced, { executor: true, label: "familiar: vision not enabled" });
-  // « Un seul familier » : un nouveau familier invoqué vide la poche (le rappel la vide AVANT de recréer le sien).
+  // "Only one familiar": a newly summoned familiar empties the pocket (the recall empties it BEFORE recreating its own).
   route("createToken", async tokenDoc => {
     const master = isFamiliarToken(tokenDoc) ? masterOf(tokenDoc) : null;
     if ( !pocketOf(master) ) return;

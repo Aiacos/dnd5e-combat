@@ -1,21 +1,21 @@
 /**
- * Portes (SPEC §16, B5 bis) : une utilisation est SUSPENDUE avant d'avoir lieu, quelqu'un répond, puis elle
- * reprend ou tombe. Même mécanique que la légalité (runtime/turn.mjs) : `dnd5e.preUseActivity` est synchrone,
- * on annule, on attend, on relance la même utilisation marquée `gated`. Sur le client de celui qui agit.
+ * Gates (SPEC §16, B5 bis): a use is SUSPENDED before it takes place, someone answers, then it
+ * resumes or falls. Same mechanism as legality (runtime/turn.mjs): `dnd5e.preUseActivity` is synchronous,
+ * we cancel, we wait, we relaunch the same use marked `gated`. On the client of the one who acts.
  *
- *  - `isAttacked` (Sanctuaire) : la cible porte un effet dont l'item déclare `{ type: "ward" }` — l'attaquant
- *    doit réussir la sauvegarde de l'activité sœur (Sagesse, DD du lanceur) ou perd son attaque / son sort
- *    nuisible. Il choisit une autre cible ou renonce : l'utilisation est annulée, il recommence s'il veut.
- *  - `castsSpell` (Contresort) : chaque créature hostile, à portée de sa réaction et qui voit le lanceur, est
- *    consultée (fenêtre de réaction, adapter/reactions.mjs) ; sa réaction vise le lanceur et suit son cours
- *    (sauvegarde de Constitution résolue par le moteur) ; ratée, le sort se dissipe — rien n'est lancé, rien
- *    n'est dépensé (règle 2024 : l'emplacement n'est pas perdu, l'action l'est — non comptée ici, limite).
- *    §66 : une réaction qui déclare `counter` (contresort à la manière de 2014) ne demande pas de sauvegarde : le sort, au niveau
- *    où il va être lancé, échoue d'office jusqu'au niveau du contresort, sinon sur un test de celui qui contre (DD 10 + niveau),
- *    fait chez lui (adapter/reactions.mjs) ; la porte lit sa réponse.
- *  - §283 : `spellFailure` (Lenteur) — avant même le Contresort, un sort lancé par le porteur d'un effet qui le gêne (composante
- *    somatique) échoue sur un d100 ≤ la chance : rien n'est lancé ni dépensé, comme un sort contré (même limite : l'action n'est pas
- *    comptée). Le jet est montré dans le chat, attendu (Dice So Nice), l'échec vu et entendu de toute la table.
+ *  - `isAttacked` (Sanctuary): the target bears an effect whose item declares `{ type: "ward" }` — the attacker
+ *    must succeed on the saving throw of the sibling activity (Wisdom, caster's DC) or loses their attack / harmful
+ *    spell. They choose another target or give up: the use is cancelled, they start again if they want.
+ *  - `castsSpell` (Counterspell): each hostile creature, within range of its Reaction and that sees the caster, is
+ *    consulted (reaction window, adapter/reactions.mjs); its Reaction targets the caster and runs its course
+ *    (Constitution saving throw resolved by the engine); on a failure, the spell dissipates — nothing is cast, nothing
+ *    is spent (2024 rule: the spell slot is not lost, the action is — not counted here, limit).
+ *    §66: a Reaction that declares `counter` (2014-style counterspell) asks for no saving throw: the spell, at the level
+ *    where it is about to be cast, fails automatically up to the level of the counterspell, otherwise on a check by the one
+ *    countering (DC 10 + level), made on their side (adapter/reactions.mjs); the gate reads its answer.
+ *  - §283: `spellFailure` (Slow) — even before Counterspell, a spell cast by the bearer of an effect that hampers it (somatic
+ *    component) fails on a d100 ≤ the chance: nothing is cast or spent, like a countered spell (same limit: the action is not
+ *    counted). The roll is shown in chat, awaited (Dice So Nice), the failure seen and heard by the whole table.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -48,19 +48,19 @@ import { isObjectToken } from "../adapter/bodies.mjs";
 import { relaunchUse } from "./relaunch.mjs";
 
 
-/** Une carte de chat qui dit ce que la porte a décidé (lue par les scénarios : flag `gate`) ; `details` : lignes de plus. */
+/** A chat card that says what the gate decided (read by the scenarios: flag `gate`); `details`: extra lines. */
 function tell(actor, key, data, gate, details=[]) {
   return say({ actor }, [locEsc(key, data), ...details], { gate });
 }
 
-/** Un sort qui « nuit » : attaque, ou activité qui inflige des dégâts. */
+/** A spell that "harms": an attack, or an activity that deals damage. */
 const isHarmful = activity => (activity.type === "attack") || ((activity.damage?.parts?.length ?? 0) > 0);
 
 /* -------------------------------------------- */
 /*  Sanctuaire : sauvegarde de l'attaquant       */
 /* -------------------------------------------- */
 
-/** Les protections (`ward`) que les cibles désignées opposent à cette utilisation. */
+/** The wards (`ward`) that the designated targets set against this use. */
 function wardsAgainst(activity, origin, targets) {
   if ( !isHarmful(activity) ) return [];
   const out = [];
@@ -74,12 +74,12 @@ function wardsAgainst(activity, origin, targets) {
   return out;
 }
 
-/** L'attaquant fait la sauvegarde de chaque protection ; false dès qu'il en rate une. */
+/** The attacker makes the saving throw of each ward; false as soon as they fail one. */
 async function passWards(activity, origin, wards) {
   for ( const { declaration, step, token } of wards ) {
-    // §298 (repasse C3) : Sanctuaire — « la créature doit choisir une nouvelle cible ou perdre l'attaque ou le sort ». Ratée contre cette
-    // cible, une nouvelle tentative contre elle dans le même tour est perdue d'office (l'action avec), sans nouvelle sauvegarde. En combat
-    // seulement : hors combat, il n'y a pas de tour qui remette la marque à zéro.
+    // §298 (pass C3): Sanctuary — "the creature must choose a new target or lose the attack or spell". Failed against this
+    // target, a new attempt against it in the same turn is lost automatically (the action with it), without a new saving throw.
+    // In combat only: out of combat, there is no turn to reset the mark.
     const mark = game.combat?.started ? `${token.uuid}|${currentTurnKey()}` : null;
     if ( mark && (origin.actor.getFlag(MODULE_ID, "wardFailed") === mark) ) {
       await tell(origin.actor, "PorteAttaquePerdue", { name: origin.name, target: token.name, item: declaration.name },
@@ -110,12 +110,12 @@ async function passWards(activity, origin, wards) {
 }
 
 /* -------------------------------------------- */
-/*  Contresort : fenêtre de réaction des hostiles */
+/*  Counterspell: reaction window of the hostiles */
 /* -------------------------------------------- */
 
 /**
- * §157 : les créatures visées par une utilisation sans jet d'attaque, hostiles à l'utilisateur, qui ont une réaction `isTargeted`
- * pour elle (Bouclier contre Projectile magique), avec leurs options.
+ * §157: the creatures targeted by a use with no attack roll, hostile to the user, that have an `isTargeted` Reaction
+ * for it (Shield against Magic Missile), with their options.
  */
 function targetedCandidates(activity, origin, targets, { isSpell=false, castLevel=null }={}) {
   const out = [];
@@ -132,14 +132,14 @@ function targetedCandidates(activity, origin, targets, { isSpell=false, castLeve
 }
 
 /**
- * §344 : une réaction qui annule le sort (Sceptre d'absorption, Bâton du thaumaturge) — seulement contre un sort de niveau 1 ou plus qui
- * ne vise que le porteur, sans zone ; son activité est jouée au niveau du sort (le Sceptre dépense autant de niveaux, le Bâton gagne
- * autant de charges).
+ * §344: a Reaction that cancels the spell (Rod of Absorption, "Staff of the Thaumaturge") — only against a spell of level 1 or
+ * higher that targets only the bearer, with no area; its activity is played at the spell's level (the Rod spends that many
+ * levels, the Staff gains that many charges).
  */
 function absorbOption(option, activity, targets, { isSpell, castLevel }) {
   if ( !isSpell ) return [];
   const reaction = fromUuidSync(option.activity ?? "", { strict: false });
-  // « Tant que vous tenez » : le Bâton est une arme, que la garde « porté » (adapter/triggers.mjs) laisse passer — tenu et harmonisé.
+  // "While you hold": the Staff is a weapon, which the "carried" guard (adapter/triggers.mjs) lets through — held and attuned.
   const item = reaction?.item;
   if ( !item || (item.system?.equipped === false) || ((item.system?.attunement === "required") && (item.system?.attuned !== true)) ) return [];
   const use = reaction?.consumption?.targets?.find(t => t.type === "itemUses");
@@ -150,8 +150,8 @@ function absorbOption(option, activity, targets, { isSpell, castLevel }) {
 }
 
 /**
- * §157 : chaque créature visée réagit, l'une après l'autre ; la réaction est résolue avant l'utilisation (son effet compte déjà).
- * §344 : false si une réaction a annulé le sort (absorbé).
+ * §157: each targeted creature reacts, one after the other; the Reaction is resolved before the use (its effect already counts).
+ * §344: false if a Reaction cancelled the spell (absorbed).
  */
 async function passTargeted(activity, origin, candidates, { auto }) {
   for ( const { token, actor, options } of candidates ) {
@@ -172,10 +172,10 @@ async function passTargeted(activity, origin, candidates, { auto }) {
 }
 
 /* -------------------------------------------- */
-/*  §283 : échec d'un sort (Lenteur)             */
+/*  §283: spell failure (Slow)                   */
 /* -------------------------------------------- */
 
-/** La règle d'échec que les effets du lanceur opposent à ce sort, ou null. */
+/** The failure rule that the caster's effects set against this spell, or null. */
 function failureAgainst(activity, actor) {
   const rules = [];
   for ( const effect of actor?.effects ?? [] ) {
@@ -187,7 +187,7 @@ function failureAgainst(activity, actor) {
   return rules.length ? failureFor(rules, activity.item.system?.properties) : null;
 }
 
-/** Le d100 de l'échec, montré et attendu ; true si le sort passe. */
+/** The failure d100, shown and awaited; true if the spell goes through. */
 async function passFailure(activity, origin, rule) {
   const roll = await new Roll("1d100").evaluate();
   const message = await roll.toMessage({
@@ -203,7 +203,7 @@ async function passFailure(activity, origin, rule) {
   return !failed;
 }
 
-/** Qui peut réagir au lancement de ce sort, avec quoi. `castLevel` : son niveau de lancement (faits `spell.castLevel…`, §481). */
+/** Who can react to the casting of this spell, and with what. `castLevel`: its casting level (facts `spell.castLevel…`, §481). */
 function counterCandidates(activity, origin, castLevel=null) {
   const out = [];
   const factors = readUnitFactors();
@@ -213,7 +213,7 @@ function counterCandidates(activity, origin, castLevel=null) {
     const actor = token.actor;
     const options = reactionOptions(actor, "castsSpell",
       matching("castsSpell", { actor, target: actor, source: origin.actor, activity, sourceToken: origin, targetToken: token, castLevel }));
-    // À portée de SA réaction (60 ft pour Contresort), mesurée en 3D.
+    // Within range of THEIR Reaction (60 ft for Counterspell), measured in 3D.
     const inRange = options.filter(o => {
       const reaction = fromUuidSync(o.activity, { strict: false });
       return !reaction || (rangeIssue(distanceBetween(token, origin), rangeOf(reaction), factors) === null);
@@ -224,8 +224,8 @@ function counterCandidates(activity, origin, castLevel=null) {
 }
 
 /**
- * Les candidats sont consultés l'un après l'autre ; true si le sort passe, false s'il est dissipé. `castLevel` : le niveau
- * auquel le sort va être lancé (§66, contresort à la manière de 2014).
+ * The candidates are consulted one after the other; true if the spell goes through, false if it is dispelled.
+ * `castLevel`: the level at which the spell is about to be cast (§66, 2014-style counterspell).
  */
 async function passCounters(activity, origin, candidates, { auto, castLevel }) {
   for ( const { token, actor, options } of candidates ) {
@@ -235,7 +235,7 @@ async function passCounters(activity, origin, candidates, { auto, castLevel }) {
       prompt: { key: "ReactionSort", data: { caster: origin.name, spell: activity.item.name } }
     });
     if ( !answer?.message ) continue;
-    // §66 : contresort à la manière de 2014 — pas de sauvegarde à attendre, celui qui contre a tranché chez lui.
+    // §66: 2014-style counterspell — no saving throw to wait for, the one countering decided on their side.
     if ( answer.counter ) {
       const c = answer.counter;
       const failed = c.dissipated === true;
@@ -268,9 +268,9 @@ async function passCounters(activity, origin, candidates, { auto, castLevel }) {
 /* -------------------------------------------- */
 
 /**
- * Un parchemin d'un niveau que le lecteur ne peut pas encore lancer : le test (DD 10 + niveau) de sa caractéristique d'incantation, ou
- * d'Intelligence (Arcanes) par Utilisation d'objets magiques ; raté, le sort disparaît du parchemin — l'action est perdue, le
- * parchemin aussi. Rend vrai si le sort part.
+ * A scroll of a level the reader cannot cast yet: the check (DC 10 + level) of their spellcasting ability, or of Intelligence
+ * (Arcana) via Use Magic Device; on a failure, the spell vanishes from the scroll — the action is lost, the scroll too.
+ * Returns true if the spell goes off.
  */
 async function passScrollCheck(activity, origin, reading) {
   const actor = origin.actor;
@@ -278,7 +278,7 @@ async function passScrollCheck(activity, origin, reading) {
     ? await actor.rollSkill({ skill: reading.skill, ability: reading.ability, target: reading.dc }, { configure: false })
     : await actor.rollAbilityCheck({ ability: reading.ability, target: reading.dc }, { configure: false });
   const total = rolls?.[0]?.total ?? null;
-  // Le verdict attend l'animation de Dice So Nice (règle DAS) : le message du test est le dernier de ce lecteur portant ce total.
+  // The verdict waits for the Dice So Nice animation (DAS rule): the check's message is the last of this reader bearing this total.
   const card = (total === null) ? null : game.messages.contents.findLast(m => (m.speaker?.actor === actor.id) && (m.rolls?.[0]?.total === total));
   if ( card ) await waitForDice(card);
   const ok = (total !== null) && (total >= reading.dc);
@@ -298,8 +298,8 @@ async function passScrollCheck(activity, origin, reading) {
 /* -------------------------------------------- */
 
 /**
- * « Quand une attaque avec une arme à distance vise une créature à 3 m ou moins de vous, la malédiction fait de vous la cible » : pour
- * chaque cible, le porteur le plus proche (vivant, ni l'attaquant ni déjà visé) prend sa place. Rend les remplacements { from, to }.
+ * "When a ranged weapon attack targets a creature within 3 m of you, the curse makes you the target": for each target, the
+ * nearest bearer (alive, neither the attacker nor already targeted) takes its place. Returns the replacements { from, to }.
  */
 function attractions(activity, origin, targets, attackMode) {
   if ( !isRangedWeaponAttack(activity, attackMode) || !targets.length ) return [];
@@ -330,7 +330,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
   if ( usageConfig[MODULE_ID]?.gated || !activity?.item || !canvas?.ready ) return true;
   const origin = usageToken(activity);
   if ( !origin?.actor ) return true;
-  // O8g (§350) : un parchemin hors de la liste de sorts du lecteur est inintelligible ; trop haut pour lui, un test d'abord.
+  // O8g (§350): a scroll outside the reader's spell list is unintelligible; too high for them, a check first.
   const reading = scrollReadingFor(activity, origin.actor);
   if ( reading?.access === "refused" ) {
     log(`${origin.name}: ${scrollActivityOf(activity)?.item?.name ?? activity.item.name} is unintelligible (${reading.identifier} is not on their spell lists)`);
@@ -339,7 +339,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
   }
   const scrollCheck = (reading?.access === "check") ? reading : null;
   let targets = Array.from(game.user.targets).map(t => t.document).filter(t => t !== origin);
-  // O8d (§347) : le porteur du Bouclier d'attraction devient la cible, avant toute autre fenêtre.
+  // O8d (§347): the bearer of the Shield of Missile Attraction becomes the target, before any other window.
   const attracted = (activity.type === "attack") ? attractions(activity, origin, targets, usageConfig[MODULE_ID]?.attackMode ?? null) : [];
   if ( attracted.length ) {
     swapTargets(Array.from(game.user.targets).map(t => t.id), attracted);
@@ -351,52 +351,52 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     targets = Array.from(game.user.targets).map(t => t.document).filter(t => t !== origin);
   }
   const wards = wardsAgainst(activity, origin, targets);
-  // Un sort lancé en réaction (Contresort lui-même, Bouclier) ne passe pas par cette porte : §403, sa propre porte avant qu'il parte
-  // (`passReactionSpell`, appelée par la fenêtre de réaction), qui permet le contre-Contresort.
-  // Commander les objets d'un sort déjà lancé (« Move Lights », §16.17) n'est pas lancer un sort : rien à contrer.
-  // §119 : un projectile enchaîné (Projectile magique, Rayon ardent) ou un rebond (Orbe chromatique) n'est pas un nouveau sort :
-  // le Contresort se joue au lancement, une fois (il se proposait de nouveau à chaque projectile enchaîné).
+  // A spell cast as a Reaction (Counterspell itself, Shield) does not go through this gate: §403, its own gate before it goes off
+  // (`passReactionSpell`, called by the reaction window), which allows the counter-Counterspell.
+  // Commanding the objects of an already cast spell ("Move Lights", §16.17) is not casting a spell: nothing to counter.
+  // §119: a chained projectile (Magic Missile, Scorching Ray) or a bounce (Chromatic Orb) is not a new spell:
+  // Counterspell is played at casting, once (it used to be offered again at each chained projectile).
   const ours = usageConfig[MODULE_ID] ?? {};
   const isSpell = isSpellCast(activity.item) && (activity.activation?.type !== "reaction") && !spellCommandOf(activity)
     && !ours.projectileOf && !ours.leap;
   const auto = usageConfig[MODULE_ID]?.autoReact ?? false;
-  // §32 : Sort subtil — « sans composante verbale, somatique ni matérielle » : personne ne voit le sort se lancer, pas de Contresort.
+  // §32: Subtle Spell — "without verbal, somatic or material components": nobody sees the spell being cast, no Counterspell.
   const subtle = (usageConfig[MODULE_ID]?.metamagic ?? []).includes("subtle");
   if ( isSpell && subtle ) log(`${origin.name} casts ${activity.item.name} with Subtle Spell: no Counterspell possible`);
-  // §481 : le niveau de lancement, d'après la configuration d'utilisation — connu des conditions des réactions (`spell.castLevelAtMost`).
+  // §481: the casting level, from the usage configuration — known to the reaction conditions (`spell.castLevelAtMost`).
   const castLevel = isSpell ? castLevelFor(activity, usageConfig) : null;
   let candidates = (isSpell && !subtle) ? counterCandidates(activity, origin, castLevel) : [];
   const failure = isSpell ? failureAgainst(activity, origin.actor) : null;
-  // `autoReact: "none"` (scénarios) : personne ne réagit — et l'utilisation n'est pas suspendue du tout, sinon
-  // l'appelant (connecteur) perd la main avant la relance (zone jamais posée, message jamais suivi).
+  // `autoReact: "none"` (scenarios): nobody reacts — and the use is not suspended at all, otherwise
+  // the caller (connector) loses control before the relaunch (area never placed, message never followed).
   if ( (auto === "none") && candidates.length ) {
     log(`${origin.name} casts ${activity.item.name}: ${candidates.map(c => c.token.name).join(", ")} — reaction declined automatically (scenario)`);
     candidates = [];
   }
-  // §34 : la fenêtre de réaction avant le jet d'attaque (Esquive des ombres, Éclat protecteur). Pas pour une attaque lancée en
-  // réaction (attaque d'opportunité : `flags.reaction` de sa carte) — la suspendre casserait la fenêtre qui l'a lancée.
+  // §34: the reaction window before the attack roll ("Shadow Dodge", Warding Flare). Not for an attack made as a
+  // Reaction (Opportunity Attack: `flags.reaction` of its card) — suspending it would break the window that launched it.
   const preAttack = (activity.type === "attack") && (activity.activation?.type !== "reaction") && (auto !== "none") && !messageConfig?.data?.flags?.[MODULE_ID]?.reaction;
   const reactors = preAttack ? attackReactors(activity, origin, targets) : [];
-  // §36 : Présage — un devin qui voit l'attaquant (ou l'attaquant lui-même) peut remplacer le d20 du jet ; « avant le jet ». Seulement
-  // quand les cibles sont désignées : le mode visée relance l'utilisation, la question serait posée deux fois.
+  // §36: Portent — a diviner who sees the attacker (or the attacker themself) can replace the roll's d20; "before the roll". Only
+  // when the targets are designated: aim mode relaunches the use, the question would be asked twice.
   const seers = (preAttack && targets.length) ? seersOf(origin) : [];
-  // §157 : une utilisation sans jet d'attaque qui vise des créatures (un projectile de Projectile magique) — leur fenêtre `isTargeted`.
-  // §344 : aussi un sort à jet d'attaque, pour les seules réactions qui l'annulent (Sceptre d'absorption).
+  // §157: a use with no attack roll that targets creatures (a Magic Missile projectile) — their `isTargeted` window.
+  // §344: also a spell with an attack roll, for the reactions alone that cancel it (Rod of Absorption).
   const targeted = (((activity.type !== "attack") || isSpell) && (auto !== "none") && targets.length)
     ? targetedCandidates(activity, origin, targets, { isSpell, castLevel }) : [];
   if ( !scrollCheck && !failure && !wards.length && !candidates.length && !reactors.length && !seers.length && !targeted.length ) return true;
 
-  // Les cibles du lanceur, à remettre avant la relance : une réaction jouée sur ce même client (le MJ qui contrôle
-  // les deux) les a remplacées par les siennes (vu le 2026-09-24 : le Rayon relancé sans cible, ou sur le lanceur).
+  // The caster's targets, to restore before the relaunch: a Reaction played on this same client (the GM who controls
+  // both) replaced them with its own (seen on 2026-09-24: the Ray relaunched with no target, or on the caster).
   const chosen = Array.from(game.user.targets).map(t => t.id);
-  // La relance est inscrite : qui enchaîne des utilisations (les projectiles d'un sort) l'attend au lieu de croire au refus.
+  // The relaunch is registered: whoever chains uses (a spell's projectiles) waits for it instead of believing the refusal.
   suspendUse(activity.uuid, (async () => {
     if ( scrollCheck && !(await passScrollCheck(activity, origin, scrollCheck)) ) return;
-    // §298 : le sort raté (Lenteur) ou contré ne part pas, mais son action est perdue.
+    // §298: the failed (Slow) or countered spell does not go off, but its action is lost.
     if ( failure && !(await passFailure(activity, origin, failure)) ) return wasteUse(activity);
     if ( wards.length && !(await passWards(activity, origin, wards)) ) return;
     if ( candidates.length && !(await passCounters(activity, origin, candidates, { auto, castLevel })) ) return wasteUse(activity);
-    // §344 : le sort absorbé se dissipe ; les ressources engagées sont perdues.
+    // §344: the absorbed spell dissipates; the committed resources are lost.
     if ( targeted.length && !(await passTargeted(activity, origin, targeted, { auto })) ) return wasteUse(activity);
     let mods = reactors.length ? await askAttackReactions(activity, origin, reactors, { auto }) : null;
     const foretold = seers.length ? await foretellFor(origin, { kind: "attack", item: activity.item.name, auto }) : null;
@@ -405,7 +405,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
       log(`${foretold.seer}: Portent, the d20 of ${origin.name}'s attack will be ${foretold.value}`);
     }
     if ( preAttack ) rememberAttackMods(activity.uuid, mods);
-    // O8d (§347) : un réacteur devenu la cible (Bouclier antiprojectiles) remplace la cible d'origine.
+    // O8d (§347): a reactor that became the target ("Anti-missile Shield") replaces the original target.
     if ( mods?.intercepts?.length ) {
       chosen.splice(0, chosen.length, ...swapTargets(chosen, mods.intercepts));
       for ( const { to } of mods.intercepts ) {
@@ -415,20 +415,20 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     }
     const now = Array.from(game.user.targets).map(t => t.id);
     if ( chosen.length && ((now.length !== chosen.length) || now.some(id => !chosen.includes(id))) ) {
-      // Token#setTarget, comme la réaction elle-même (adapter/reactions.mjs) : le cœur V14 n'a plus User#updateTokenTargets.
+      // Token#setTarget, like the Reaction itself (adapter/reactions.mjs): the V14 core no longer has User#updateTokenTargets.
       chosen.forEach((id, i) => canvas.tokens.get(id)?.setTarget(true, { releaseOthers: i === 0 }));
     }
-    // Une attaque demandée sans dialogue (clic rapide, connecteur) enchaîne son jet sans dialogue non plus :
-    // dnd5e relance `rollAttack` avec le sien (attack.mjs, _triggerSubsequentActions), turn.mjs lit l'intention.
+    // An attack requested without a dialog (quick click, connector) chains its roll without a dialog too:
+    // dnd5e relaunches `rollAttack` with its own (attack.mjs, _triggerSubsequentActions), turn.mjs reads the intent.
     if ( activity.type === "attack" ) {
       keepPendingAttack(activity, {
         mode: usageConfig[MODULE_ID]?.attackMode ?? null,
         fast: dialogConfig?.configure === false,
-        confirmed: usageConfig[MODULE_ID]?.confirmed === true   // la portée acceptée à l'utilisation vaut pour le jet
+        confirmed: usageConfig[MODULE_ID]?.confirmed === true   // the range accepted at use holds for the roll
       });
     }
-    // `subsequentActions: false` est le réglage d'un appelant qui comptait enchaîner lui-même le jet (connecteur,
-    // use-activity) : l'annulation lui a retiré la main, la relance laisse dnd5e enchaîner (sans dialogue, ci-dessus).
+    // `subsequentActions: false` is the setting of a caller that meant to chain the roll itself (connector,
+    // use-activity): the cancellation took control away from it, the relaunch lets dnd5e chain (without a dialog, above).
     const { subsequentActions, ...rest } = usageConfig;
     return relaunchUse(activity, { ...rest, [MODULE_ID]: { ...(usageConfig[MODULE_ID] ?? {}), confirmed: true, gated: true } }, dialogConfig, messageConfig);
   })().catch(err => { console.error(`${MODULE_ID} | gate interrupted`, err); return null; }));
@@ -436,14 +436,15 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
 }
 
 /**
- * §403 : contre-Contresort — « un sort lancé en réaction peut être contré ». Le sort de réaction d'un acteur (Contresort, Bouclier) est
- * soumis aux mêmes Contresorts que les autres, avant de partir ; contré, sa Réaction est perdue (`wasteUse`) et il ne part pas. Le lanceur
- * d'origine, qui a déjà lancé ce tour, n'a en général qu'une Réaction : la chaîne s'arrête d'elle-même.
+ * §403: counter-Counterspell — "a spell cast as a Reaction can be countered". An actor's Reaction spell (Counterspell, Shield)
+ * is subject to the same Counterspells as the others, before it goes off; countered, its Reaction is lost (`wasteUse`) and it does
+ * not go off. The original caster, who already cast this turn, usually has only one Reaction: the chain stops by itself.
  */
 async function passReactionSpell(activity, actor) {
   const origin = usageToken(activity) ?? actor?.token ?? actor?.getActiveTokens?.(false, true)?.[0] ?? null;
   if ( !origin?.parent || !canvas?.ready ) return true;
-  // §481 : le niveau du sort de réaction (celui de l'item, ou de la capacité qui le lance), connu des conditions `spell.castLevel…`.
+  // §481: the level of the Reaction spell (the item's, or that of the feature that casts it), known to the
+  // `spell.castLevel…` conditions.
   const castLevel = castLevelFor(activity);
   const candidates = counterCandidates(activity, origin, castLevel);
   if ( !candidates.length ) return true;

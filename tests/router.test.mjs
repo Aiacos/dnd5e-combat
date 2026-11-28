@@ -14,7 +14,7 @@ function setup({ executor=true }={}) {
 }
 
 describe("routeur de hooks", () => {
-  it("branche chaque hook une seule fois, quel que soit le nombre d'inscrits", () => {
+  it("attaches each hook only once, whatever the number of registrants", () => {
     const { hooks, router } = setup();
     router.on("createChatMessage", () => {});
     router.on("createChatMessage", () => {});
@@ -23,7 +23,7 @@ describe("routeur de hooks", () => {
     expect(hooks.get("moveToken")).toHaveLength(1);
   });
 
-  it("appelle les inscrits dans l'ordre d'inscription, avec les arguments du hook", () => {
+  it("calls the registrants in registration order, with the hook's arguments", () => {
     const { router, fire } = setup();
     const seen = [];
     router.on("h", (a, b) => seen.push(["un", a, b]));
@@ -32,7 +32,7 @@ describe("routeur de hooks", () => {
     expect(seen).toEqual([["un", 1, 2], ["deux", 1, 2]]);
   });
 
-  it("saute les inscrits réservés au MJ actif sur les autres clients", () => {
+  it("skips the registrants reserved for the active GM on the other clients", () => {
     const { router, fire } = setup({ executor: false });
     const seen = [];
     router.on("h", () => seen.push("mj"), { executor: true });
@@ -41,7 +41,7 @@ describe("routeur de hooks", () => {
     expect(seen).toEqual(["tous"]);
   });
 
-  it("une erreur synchrone est consignée et n'arrête pas les suivants", () => {
+  it("a synchronous error is logged and does not stop the following ones", () => {
     const { router, fire, errors } = setup();
     const seen = [];
     router.on("h", () => { throw new Error("boum"); }, { label: "premier" });
@@ -51,7 +51,7 @@ describe("routeur de hooks", () => {
     expect(errors).toEqual(["premier: boum"]);
   });
 
-  it("une promesse rejetée est consignée, sans être attendue", async () => {
+  it("a rejected promise is logged, without being awaited", async () => {
     const { router, fire, errors } = setup();
     const seen = [];
     router.on("h", async () => { throw new Error("tard"); }, { label: "lent" });
@@ -62,7 +62,7 @@ describe("routeur de hooks", () => {
     expect(errors).toEqual(["lent: tard"]);
   });
 
-  it("false n'annule que si l'inscrit est déclaré annulable, et arrête alors la chaîne", () => {
+  it("false cancels only if the registrant is declared cancelable, and then stops the chain", () => {
     const { router, fire } = setup();
     const seen = [];
     router.on("callAll", () => false);
@@ -76,7 +76,7 @@ describe("routeur de hooks", () => {
     expect(seen).toEqual(["suivant"]);
   });
 
-  it("décrit qui écoute quoi, dans l'ordre", () => {
+  it("describes who listens to what, in order", () => {
     const { router } = setup();
     router.on("h", () => {}, { label: "a", executor: true });
     router.on("h", () => {}, { label: "b", cancellable: true });
@@ -87,8 +87,8 @@ describe("routeur de hooks", () => {
   });
 });
 
-describe("§220 Théâtre de l'esprit", () => {
-  it("en pause, rien ne passe sauf le démarrage et les inscriptions « always »", async () => {
+describe("§220 Theater of the mind", () => {
+  it("when paused, nothing passes except the startup and the \"always\" registrations", async () => {
     const { createRouter } = await import("../module/scripts/runtime/router.mjs");
     const hooks = {};
     let paused = false;
@@ -105,7 +105,7 @@ describe("§220 Théâtre de l'esprit", () => {
 });
 
 describe("§395 Lancer sans DAS", () => {
-  it("le routeur passe les arguments du hook à `paused`, et relit l'état après un inscrit qui marque", async () => {
+  it("the router passes the hook's arguments to `paused`, and re-reads the state after a registrant that marks", async () => {
     const { createRouter } = await import("../module/scripts/runtime/router.mjs");
     const hooks = {};
     const router = createRouter({ subscribe: (h, fn) => { hooks[h] = fn; }, isExecutor: () => true, report: () => {},

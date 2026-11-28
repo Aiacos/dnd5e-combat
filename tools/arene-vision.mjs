@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 /**
- * Issue #42 : monte (ou remet en état) l'« Arène de la vision » d'un monde de test, par le connecteur — une scène plate en pleine
- * lumière pour juger la vision : des observateurs aux sens différents, possédés par `claude player` (pour voir la scène par ses yeux
- * dans le navigateur intégré), et des cibles dans, derrière et loin des Ténèbres que pose le scénario `vision-tenebres`.
+ * Issue #42: sets up (or resets) the "Vision Arena" of a test world, through the connector — a flat scene in full
+ * light for judging vision: observers with different senses, owned by `claude player` (to see the scene through their eyes
+ * in the built-in browser), and targets in, behind and far from the Darkness cast by the `vision-tenebres` scenario.
  *
- *   node tools/arene-vision.mjs     crée ce qui manque, remet acteurs, items et tokens à leur état de référence
+ *   node tools/arene-vision.mjs     creates what is missing, resets actors, items and tokens to their reference state
  *
- * Observateurs : Humain (Druide pré-tiré du Manuel, espèce Humain : aucune vision dans le noir), Occultiste du diable (Occultiste
- * pré-tiré, gnome : vision dans le noir 60 ft ; + l'invocation Vision du diable du Manuel et le sort Ténèbres, à volonté, pour le lancer
- * depuis la fiche), Rôdeur elfe (Rôdeur pré-tiré, elfe sylvestre : vision dans le noir 60 ft), Vision véritable (roturier, 120 ft),
- * Vision aveugle (roturier, 30 ft), Vibrations (roturier, 60 ft), Sens tout et Voir l'invisible (roturiers, modes du cœur « Sense All » et
- * « See Invisibility » à 120 ft posés sur le token). Cibles : roturiers hostiles à 999 PV, dont une Invisible. Positions : `ARENE_VISION` (tools/lib/stages.mjs).
+ * Observers: Human (pre-made Druid from the Player's Handbook, Human species: no Darkvision), Devil's Sight Warlock (pre-made
+ * Warlock, gnome: Darkvision 60 ft; + the Devil's Sight invocation from the Handbook and the Darkness spell, at will, to cast it
+ * from the sheet), Elf Ranger (pre-made Ranger, wood elf: Darkvision 60 ft), Truesight (commoner, 120 ft),
+ * Blindsight (commoner, 30 ft), Vibrations (commoner, 60 ft), Sense All and See Invisible (commoners, core modes "Sense All" and
+ * "See Invisibility" at 120 ft set on the token). Targets: hostile commoners with 999 HP, one of them Invisible.
+ * Positions: `ARENE_VISION` (tools/lib/stages.mjs).
  *
- * Ce qu'on lit ensuite : `api.mcp.visionMatrix` (règles + écran par les yeux de chaque observateur, chez le MJ) et `api.mcp.screenHere`
- * (ce que montre le client courant, chez un joueur).
+ * What is read afterwards: `api.mcp.visionMatrix` (rules + screen through each observer's eyes, on the GM's side)
+ * and `api.mcp.screenHere` (what the current client shows, on a player's side).
  */
 import { buildArena } from "./lib/arena.mjs";
 import { ARENE_VISION } from "./lib/stages.mjs";
@@ -22,8 +23,8 @@ const PHB = "Compendium.dnd-players-handbook.actors.";
 const DEVILS_SIGHT = "Compendium.dnd-players-handbook.classes.phbinvDevilsSigh";
 const DARKNESS = { uuid: "Compendium.dnd-players-handbook.spells.phbsplDarkness00", system: { method: "atwill", prepared: 1 } };
 const OWNERS = ["claude player"];
-// La vue activée sur chaque observateur : sans elle, un token ne donne aucune source de vision (le MJ qui le contrôle verrait tout, un
-// joueur ne verrait rien par lui) ; dnd5e y projette les sens de la fiche (`senseVisionSync`).
+// The view enabled on each observer: without it, a token gives no vision source (the GM who controls it would see everything, a
+// player would see nothing through it); dnd5e projects the sheet's senses onto it (`senseVisionSync`).
 const SIGHT = { sight: { enabled: true } };
 const sturdy = { attributes: { hp: { value: 999, max: 999 }, ac: { flat: 12, calc: "flat" } } };
 const senses = ranges => ({ ...sturdy, attributes: { ...sturdy.attributes, senses: { ranges } } });
@@ -31,13 +32,13 @@ const senses = ranges => ({ ...sturdy, attributes: { ...sturdy.attributes, sense
 const ACTORS = {
   "Humain": { pack: PHB, base: "phbprgDruid00000", keepItems: true, disposition: 1, owners: OWNERS, token: SIGHT, system: { attributes: { hp: { value: 300, max: 300 } } } },
   "Occultiste du diable": { pack: PHB, base: "phbprgWarlock000", keepItems: true, disposition: 1, owners: OWNERS, token: SIGHT, items: [DEVILS_SIGHT, DARKNESS],
-    // L'emplacement de pacte rendu à chaque remise : Maléfice (« une créature que vous voyez ») sert à juger le refus de cible.
+    // The pact slot given back at each reset: Hex ("a creature you can see") is used to judge the target refusal.
     system: { attributes: { hp: { value: 300, max: 300 } }, spells: { pact: { value: 1 } } } },
   "Rôdeur elfe": { pack: PHB, base: "phbprgRanger0000", keepItems: true, disposition: 1, owners: OWNERS, token: SIGHT, system: { attributes: { hp: { value: 300, max: 300 } } } },
   "Vision véritable": { base: "mmCommoner000000", disposition: 1, owners: OWNERS, token: SIGHT, system: senses({ truesight: 120 }) },
   "Vision aveugle": { base: "mmCommoner000000", disposition: 1, owners: OWNERS, token: SIGHT, system: senses({ blindsight: 30 }) },
   "Vibrations": { base: "mmCommoner000000", disposition: 1, owners: OWNERS, token: SIGHT, system: senses({ tremorsense: 60 }) },
-  // Deux modes génériques du cœur, qu'aucune fiche dnd5e ne donne : posés sur le token (client/config.mjs:1307-1337).
+  // Two generic core modes, which no dnd5e sheet provides: set on the token (client/config.mjs:1307-1337).
   "Sens tout": { base: "mmCommoner000000", disposition: 1, owners: OWNERS, system: sturdy,
     token: { sight: { enabled: true }, detectionModes: { senseAll: { enabled: true, range: 120 } } } },
   "Voir l'invisible": { base: "mmCommoner000000", disposition: 1, owners: OWNERS, system: sturdy,
@@ -49,8 +50,8 @@ const ACTORS = {
   "Cible au loin": { base: "mmCommoner000000", disposition: -1, system: sturdy }
 };
 
-// La lumière globale n'éclaire que jusqu'à une obscurité de 0,5 (`environment.globalLight.darkness.max`, common/documents/scene.mjs:119-130) :
-// la région « Ajuster l'obscurité » du scénario (obscurité 1) fait alors un vrai noir ordinaire.
+// Global light only illuminates up to a darkness of 0.5 (`environment.globalLight.darkness.max`,
+// common/documents/scene.mjs:119-130): the scenario's "Adjust Darkness" region (darkness 1) then makes a real ordinary dark.
 const SCENE = { environment: { globalLight: { darkness: { min: 0, max: 0.5 } } } };
 
 await buildArena({ stage: ARENE_VISION, folder: "DAS · Arène de la vision", flag: "vision", actors: ACTORS, scene: SCENE });

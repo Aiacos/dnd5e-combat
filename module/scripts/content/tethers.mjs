@@ -1,9 +1,9 @@
 /**
- * Liens (SPEC §16.43, clés `tether` et `ranges`). Trait ensorcelé (PHB 2024, portée 18 m, concentration 1 minute) : un arc de foudre
- * relie le lanceur à la cible ; aux tours suivants, une action Bonus lui inflige 1d12 de foudre sans jet, que la première attaque
- * ait touché ou non ; le lien se rompt si la cible quitte la portée ou se trouve derrière un abri total. dnd5e 6 (PHB 2.2.0) :
- * l'attaque (`dnd5eactivity000`, portée « personnelle » dans les données), l'effet « Foudre continue » posé au toucher
- * seulement, et « Bonus Action Damage » (`ffuqn0xdclG9YAQt`, 1d12, sans cible).
+ * Tethers (SPEC §16.43, keys `tether` and `ranges`). Witch Bolt (PHB 2024, range 18 m, Concentration 1 minute): a lightning arc
+ * links the caster to the target; on later turns, a Bonus Action deals 1d12 lightning to it without a roll, whether the first
+ * attack hit or not; the tether breaks if the target leaves range or is behind Total Cover. dnd5e 6 (PHB 2.2.0):
+ * the attack (`dnd5eactivity000`, "self" range in the data), the "Continuing Lightning" effect placed on a hit
+ * only, and "Bonus Action Damage" (`ffuqn0xdclG9YAQt`, 1d12, no target).
  */
 
 export const TETHERS = Object.freeze({

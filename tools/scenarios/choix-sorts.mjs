@@ -1,12 +1,12 @@
 /**
- * §401 : les choix que le texte d'un sort laisse au lanceur, posés au lanceur (ici le Lanceur, un PNJ : la question s'ouvre chez le MJ)
- * dans l'« Arène des sorts ». `PART=<mot>` ne joue que les parties dont le nom le contient.
- *  - Parole radieuse (« chaque créature de votre choix ») : l'Allié et l'Ennemi au contact dans l'émanation — la question s'ouvre (zone
- *    mêlée) ; cocher l'Allié le fait sauvegarder, la réponse par défaut ne prend que l'Ennemi ; réglage « jamais » : aucune question.
- *  - Fouet épineux (« jusqu'à 3 m ») : la distance demandée ; 1,50 m → une case.
- *  - Amélioration de caractéristique au niveau 3 (deux cibles, « une caractéristique différente pour chaque cible ») : deux questions.
- *  - Mot de pouvoir fortifiant (« 120 PV temporaires que vous répartissez ») : la répartition demandée, 100 / 20.
- *  - Mot de pouvoir guérisseur sur une cible À terre : « se relever par sa Réaction » demandé, oui → plus À terre.
+ * §401: the choices that a spell's text leaves to the caster, given to the caster (here the Caster, an NPC: the question opens on
+ * the GM's side) in the "Spell Arena". `PART=<mot>` only plays the parts whose name contains it.
+ *  - Word of Radiance ("each creature of your choice"): the Ally and the Enemy in contact within the Emanation — the question
+ *    opens (mixed area); ticking the Ally makes it save, the default answer only takes the Enemy; setting "never": no question.
+ *  - Thorn Whip ("up to 3 m"): the distance asked; 1.50 m → one cell.
+ *  - Enhance Ability at level 3 (two targets, "a different ability for each target"): two questions.
+ *  - Power Word Fortify ("120 Temporary Hit Points that you divide"): the split asked, 100 / 20.
+ *  - Power Word Heal on a Prone target: "stand up using its Reaction" asked, yes → no longer Prone.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -15,7 +15,7 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
 const only = (process.env.PART ?? "").toLowerCase();
 const wanted = name => !only || name.toLowerCase().includes(only);
 
-/** Lance `use` et répond aux fenêtres qui s'ouvrent chez le MJ pendant ce temps (`answer(dialog)` → paramètres d'answer-dialog, ou null). */
+/** Launches `use` and answers the windows that open on the GM's side meanwhile (`answer(dialog)` → answer-dialog parameters, or null). */
 async function usingWith(ctx, use, answer) {
   const seen = [];
   const known = new Set(((await ctx.call("list-dialogs", {}).catch(() => null))?.windows ?? []).map(w => w.id));
@@ -34,7 +34,7 @@ async function usingWith(ctx, use, answer) {
   return { used: await using, seen };
 }
 
-/** PV temporaires d'un token (delta d'un token non lié, sinon la fiche). */
+/** Temporary HP of a token (delta of an unlinked token, otherwise the sheet). */
 async function tempHp(ctx, token) {
   const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: token.id });
   const own = data.actorLink ? null : (data.delta?.system?.attributes?.hp?.temp ?? null);
@@ -48,7 +48,7 @@ async function setTempHp(ctx, token, value) {
   else await ctx.call("update-scene-object", { type: "Token", objectId: token.id, data: { "delta.system.attributes.hp.temp": value } });
 }
 
-/** Les champs-cases d'une fenêtre de choix de zone, avec le nom de la créature lu dans le libellé de la ligne. */
+/** The checkbox fields of an area choice window, with the creature's name read from the row's label. */
 const pickFields = d => (d.fields ?? []).filter(f => /^pick\d+$/.test(f.name ?? ""));
 
 export default {
@@ -75,7 +75,7 @@ export default {
       };
       const names = async r => (r?.targets ?? []).map(t => t.name).sort();
 
-      // 1. Cocher l'Allié : il fait partie des cibles.
+      // 1. Tick the Ally: it is among the targets.
       const a = await usingWith(ctx, cast, d => {
         const fields = pickFields(d);
         if ( !fields.length ) return null;
@@ -89,14 +89,14 @@ export default {
         ctx.expect(got.includes("Allié") && got.includes("Ennemi au contact"), `Allié coché : il sauvegarde avec l'Ennemi (${got.join(", ")})`);
       } else ctx.expect(false, `Parole radieuse non lancée : ${a.used?.reason}`);
 
-      // 2. Réponse par défaut : l'Ennemi seul.
+      // 2. Default answer: the Enemy alone.
       const b = await usingWith(ctx, cast, d => (pickFields(d).length ? { button: "ok" } : null));
       if ( b.used?.usageMessageId ) {
         const got = await names(await ctx.settle(b.used.usageMessageId));
         ctx.expect((got.length === 1) && (got[0] === "Ennemi au contact"), `réponse par défaut : l'Ennemi seul (${got.join(", ")})`);
       }
 
-      // 3. Réglage « jamais » : pas de question, l'Ennemi seul.
+      // 3. Setting "never": no question, the Enemy alone.
       await ctx.engine("setting", { key: "zoneChoice", value: "never" });
       const c = await usingWith(ctx, cast, () => null);
       ctx.expect(!c.seen.some(d => pickFields(d).length), "réglage « jamais » : aucune question");
@@ -108,7 +108,7 @@ export default {
       await pause(1500);
     }
 
-    // ---- Fouet épineux ----
+    // ---- Thorn Whip ----
     if ( wanted("fouet") ) {
       await ctx.ensureItem(caster, PHB("phbsplThornWhip0"));
       const home = await ctx.position(target);
@@ -131,14 +131,14 @@ export default {
       if ( !checked ) ctx.expect(false, "Fouet épineux : aucun toucher en 20 essais");
     }
 
-    // ---- Amélioration de caractéristique, deux cibles ----
+    // ---- Enhance Ability, two targets ----
     if ( wanted("amelioration") ) {
       await ctx.ensureItem(caster, PHB("phbsplEnhanceAbi"));
       const run = await usingWith(ctx, () => ctx.use({ tokenId: caster.id, identifier: "enhance-ability", targetTokenIds: [ally.id, hero.id],
         usageConfig: { spell: { slot: "spell3" } } }), d => {
         const buttons = (d.buttons ?? []).filter(b => /^pick\d+$/.test(b.action ?? ""));
         if ( !buttons.length ) return null;
-        // L'Allié : la première ; le Héros : la deuxième.
+        // The Ally: the first; the Hero: the second.
         return { button: /Héros/.test(d.content ?? d.text ?? "") ? buttons[1].action : buttons[0].action };
       });
       const asked = run.seen.filter(d => (d.buttons ?? []).some(b => /^pick\d+$/.test(b.action ?? "")));
@@ -172,7 +172,7 @@ export default {
       ctx.expect((got[0] === 100) && (got[1] === 20), `PV temporaires 100 / 20 (${got.join(" / ")})`);
     }
 
-    // ---- Mot de pouvoir guérisseur ----
+    // ---- Power Word Heal ----
     if ( wanted("guerisseur") ) {
       await ctx.ensureItem(caster, PHB("phbsplPowerWordH"));
       const hp0 = await ctx.hp(ally);
@@ -193,16 +193,17 @@ export default {
       ctx.expect(!prone, "la cible s'est relevée");
     }
 
-    // ---- Clignotement : le retour sur une case choisie ----
+    // ---- Blink: the return to a chosen cell ----
     if ( wanted("clignotement") ) {
       const home = await ctx.position(caster);
       ctx.restore(() => ctx.call("move-token", { tokenId: caster.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => {}));
       ctx.restore(() => ctx.call("set-status", { tokenId: caster.id, statusId: "ethereal", active: false }).catch(() => {}));
-      // Le d6 de fin de tour fait passer dans l'Éthéré (effet marqué `blink`) ; le début du tour suivant retire l'effet : le retour.
+      // The end-of-turn d6 sends it into the Ethereal (effect marked `blink`); the start of the next turn removes the effect:
+      // the return.
       await ctx.call("run-script", { code: `const a = canvas.tokens.get("${caster.id}").actor; const e = await a.toggleStatusEffect("ethereal", { active: true });
         await e.update({ "flags.dnd5e-combat.blink": true }); return e.id;` });
       await pause(1500);
-      // Une case à deux au nord-ouest (≤ 3 m en diagonale 5/5) : libre, en vue.
+      // A cell two away to the northwest (≤ 3 m diagonally 5/5): free, in sight.
       const goal = { x: home.x - grid, y: home.y - grid };
       const run = await usingWith(ctx, () => ctx.call("run-script", { code: `const a = canvas.tokens.get("${caster.id}").actor;
         const ids = a.effects.filter(e => e.getFlag("dnd5e-combat", "blink")).map(e => e.id); await a.deleteEmbeddedDocuments("ActiveEffect", ids); return ids.length;` }),

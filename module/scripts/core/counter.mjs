@@ -1,19 +1,19 @@
 /**
- * §66 : contresort à la manière de 2014 (SRD 5.1, « Counterspell ») — la réaction ne demande pas de sauvegarde au lanceur : un sort
- * du niveau du contresort ou moins échoue sans jet ; au-delà, celui qui contre fait un test de sa caractéristique d'incantation
- * contre un DD de 10 + le niveau du sort ; réussi, le sort échoue. Déclaré sur l'item qui contre (`counter: { level? }`,
- * core/content.mjs), joué par la porte `castsSpell` (runtime/gates.mjs). Le Contresort de 2024 (sauvegarde de Constitution du
- * lanceur) ne change pas.
+ * §66: Counterspell in the 2014 manner (SRD 5.1, "Counterspell") — the reaction does not ask the caster for a save: a spell
+ * of the counterspell's level or lower fails without a roll; above that, the one countering makes an ability check with their
+ * spellcasting ability against a DC of 10 + the spell's level; if it succeeds, the spell fails. Declared on the countering item
+ * (`counter: { level? }`, core/content.mjs), played by the `castsSpell` gate (runtime/gates.mjs). The 2024 Counterspell
+ * (Constitution save of the caster) does not change.
  *
- * Fonctions pures, aucune dépendance à Foundry.
+ * Pure functions, no dependency on Foundry.
  */
 
 const level = value => (Number.isFinite(Number(value)) && (value !== null) && (value !== "")) ? Math.max(0, Math.trunc(Number(value))) : null;
 
 /**
- * Le niveau auquel un sort est lancé, tel qu'on le connaît avant son lancement : le plus haut de son niveau, de son niveau mis à
- * l'échelle (`scaling`), de l'emplacement choisi (`slotLevel`) et du niveau que lui donne la capacité qui le lance
- * (`linkedLevel` : un sort lancé par une activité « cast », « Boule de feu (niveau 4) » d'un monstre).
+ * The level at which a spell is cast, as known before it is cast: the highest of its level, its scaled level
+ * (`scaling`), the chosen slot (`slotLevel`) and the level given to it by the feature that casts it
+ * (`linkedLevel`: a spell cast by a "cast" activity, a monster's "Fireball (level 4)").
  * @param {{level?: number, scaling?: number, slotLevel?: number|null, linkedLevel?: number|null}} data
  * @returns {number}
  */
@@ -24,10 +24,10 @@ export function castLevelOf({ level: base=0, scaling=0, slotLevel=null, linkedLe
 }
 
 /**
- * §481 : le niveau de lancement d'un sort, tel que les conditions des déclarations le lisent (`spell.castLevel`,
- * `spell.castLevelAtMost`, `spell.castLevelAtLeast`). `castLevel` quand le moment le connaît (porte `castsSpell` : d'après la
- * configuration d'utilisation, emplacement choisi compris) ; sinon celui que porte l'item (sort mis à l'échelle par dnd5e, sort
- * lancé par une activité « cast », parchemin). null hors d'un sort : une condition de niveau ne tient alors jamais.
+ * §481: the casting level of a spell, as the conditions of the declarations read it (`spell.castLevel`,
+ * `spell.castLevelAtMost`, `spell.castLevelAtLeast`). `castLevel` when the moment knows it (`castsSpell` gate: from the
+ * use configuration, chosen slot included); otherwise the one the item carries (spell scaled by dnd5e, spell
+ * cast by a "cast" activity, scroll). null outside a spell: a level condition then never holds.
  * @param {{castLevel?: number|null, isSpell?: boolean, level?: number|null, scaling?: number, linkedLevel?: number|null}} data
  * @returns {number|null}
  */
@@ -38,22 +38,22 @@ export function knownCastLevel({ castLevel=null, isSpell=false, level: base=null
   return castLevelOf({ level: base ?? 0, scaling, linkedLevel });
 }
 
-/** §481 : le sort est-il lancé au niveau `n` ou moins (« un sort de niveau 3 ou moins ») ? Faux quand le niveau est inconnu. */
+/** §481: is the spell cast at level `n` or lower ("a spell of level 3 or lower")? False when the level is unknown. */
 export function castLevelAtMost(castLevel, n) {
   const cast = level(castLevel), max = level(n);
   return (cast !== null) && (max !== null) && (cast <= max);
 }
 
-/** §481 : le sort est-il lancé au niveau `n` ou plus ? Faux quand le niveau est inconnu. */
+/** §481: is the spell cast at level `n` or higher? False when the level is unknown. */
 export function castLevelAtLeast(castLevel, n) {
   const cast = level(castLevel), min = level(n);
   return (cast !== null) && (min !== null) && (cast >= min);
 }
 
 /**
- * Ce qui arrive au sort contré : `auto` (il échoue sans jet) ou un test contre `dc`.
- * @param {number} castLevel     Niveau de lancement du sort contré.
- * @param {number} counterLevel  Niveau du contresort.
+ * What happens to the countered spell: `auto` (it fails without a roll) or a check against `dc`.
+ * @param {number} castLevel     Casting level of the countered spell.
+ * @param {number} counterLevel  Level of the counterspell.
  * @returns {{castLevel: number, level: number, auto: boolean, dc: number|null}}
  */
 export function counterPlan(castLevel, counterLevel) {
@@ -63,9 +63,9 @@ export function counterPlan(castLevel, counterLevel) {
 }
 
 /**
- * Le sort est-il dissipé ? D'office si le plan le dit ; sinon si le test a eu lieu et atteint le DD.
+ * Is the spell dispelled? Automatically if the plan says so; otherwise if the check took place and reaches the DC.
  * @param {{auto: boolean, dc: number|null}} plan
- * @param {number|null} total  Total du test de caractéristique (null : pas de test).
+ * @param {number|null} total  Total of the ability check (null: no check).
  */
 export function counterSucceeds(plan, total) {
   if ( plan?.auto ) return true;
@@ -73,10 +73,10 @@ export function counterSucceeds(plan, total) {
 }
 
 /**
- * §344 (lot O8) : absorber un sort qui ne vise que le porteur (Sceptre d'absorption, Bâton du thaumaturge) — « un sort qui ne cible que
- * vous et ne produit pas de zone d'effet ». Un sort d'au moins le niveau 1 (l'énergie stockée, ou les charges gagnées, valent son niveau),
- * une seule cible, pas de zone ; un objet qui paie par niveau (`costs` : le Sceptre) doit avoir assez d'utilisations.
- * L'activité de l'objet est jouée au niveau du sort : `scaling` = niveau − 1 (consommation « amount » de dnd5e : une par niveau).
+ * §344 (batch O8): absorbing a spell that targets only the bearer (Rod of Absorption, Staff of the Magi) — "a spell that
+ * targets only you and does not produce an area of effect". A spell of at least level 1 (the stored energy, or the charges
+ * gained, equal its level), a single target, no area; an item that pays per level (`costs`: the Rod) must have enough uses.
+ * The item's activity is played at the spell's level: `scaling` = level − 1 (dnd5e "amount" consumption: one per level).
  * @param {{castLevel: number, targets: number, area: boolean, costs?: boolean, usesLeft?: number|null}} data
  * @returns {{scaling: number}|null}
  */

@@ -1,9 +1,9 @@
 /**
- * À 0 point de vie (SPEC §17) : le Guerrier (PJ sans joueur) est mis à 0 PV dans un combat du scénario.
- *  1. Rayon de givre du Magicien sur lui, rejoué jusqu'à toucher : dégâts à 0 PV = un échec de jet de sauvegarde
- *     contre la mort (deux sur un coup critique), écrit par la résolution du moteur, et dit dans le chat.
- *  2. Début de son tour : le moteur lance son jet contre la mort (aucun joueur ne le possède).
- * Remis en état : PV, compteurs, états.
+ * At 0 Hit Points (SPEC §17): the Fighter (PC without player) is brought to 0 HP in a scenario combat.
+ *  1. The Wizard's Ray of Frost on the Fighter, replayed until a hit: damage at 0 HP = one failed death saving throw
+ *     (two on a Critical Hit), written by the engine's resolution, and said in the chat.
+ *  2. Start of its turn: the engine rolls its death saving throw (no player owns it).
+ * Reset: HP, counters, conditions.
  */
 const deathOf = async (ctx, token) => {
   const actor = await ctx.call("get-actor", { actorId: token.actorId });
@@ -30,7 +30,7 @@ export default {
     await ctx.setHp(guerrier, 0);
     await resetDeath();
 
-    // 1. Des dégâts à 0 PV, par une vraie résolution du moteur.
+    // 1. Damage at 0 HP, through a real engine resolution.
     let hit = null;
     for ( let i = 0; i < 20 && !hit; i++ ) {
       await resetDeath();
@@ -41,7 +41,7 @@ export default {
       if ( !target?.hit ) continue;
       await new Promise(res => setTimeout(res, 1500));
       const messages = await ctx.messagesSince(since);
-      // Un critique au moins égal aux PV max tue sur le coup (règle 2024) : cas non vérifié ici, coup rejoué.
+      // A Critical Hit at least equal to max HP kills outright (2024 rule): case not checked here, hit replayed.
       if ( messages.some(m => m.flags?.["dnd5e-combat"]?.death?.kind === "massive") ) {
         for ( const s of ["dead", "unconscious", "incapacitated", "prone"] ) await ctx.removeStatusEffects(guerrier, s);
         await ctx.setHp(guerrier, 0);
@@ -56,7 +56,7 @@ export default {
     const said = hit.messages.find(m => m.flags?.["dnd5e-combat"]?.death?.kind === "failure");
     ctx.expect(!!said, `le chat le dit (${said ? "carte « échec »" : "aucune carte"})`);
 
-    // 2. Début de son tour : le moteur lance son jet contre la mort.
+    // 2. Start of its turn: the engine rolls its death saving throw.
     await resetDeath();
     const combat = await ctx.combat();
     const turns = combat.turns ?? combat.combat?.turns ?? combat.combatants ?? [];
@@ -65,7 +65,7 @@ export default {
       await ctx.nextTurn();
       await new Promise(res => setTimeout(res, 2500));
       const death = await deathOf(ctx, guerrier);
-      // Un 20 naturel remet à 1 PV et les compteurs à zéro : c'est aussi un jet lancé.
+      // A natural 20 restores 1 HP and resets the counters to zero: it is also a roll made.
       if ( ((death.success + death.failure) > 0) || ((await ctx.hp(guerrier)) > 0) ) rolled = death;
     }
     ctx.expect(!!rolled, `au début de son tour, un jet contre la mort a été lancé (${rolled ? `${rolled.success} réussite / ${rolled.failure} échec` : "rien"})`);

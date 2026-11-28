@@ -1,11 +1,11 @@
 /**
- * §344, lot O8a de la repasse des objets : absorber un sort qui ne vise que le porteur. Arène de test (Guerrier, Zombi).
- *  1. Sceptre d'absorption tenu et harmonisé (le bâton rangé) : le Zombi lance Rayon affaiblissant (niveau 2) sur le Guerrier ; la
- *     réaction (prise d'office) annule le sort — pas d'effet — et le sceptre dépense 2 utilisations ; Éclair traçant (niveau 1) : aucun
- *     dégât, 1 utilisation.
- *  2. Mains brûlantes (zone) : rien n'est proposé, le sort part.
- *  3. Sceptre rangé : Éclair traçant n'est plus absorbé.
- *  4. Bâton du thaumaturge tenu : Blessure (niveau 1, sauvegarde) est annulé, le bâton gagne 1 charge.
+ * §344, batch O8a of the item pass: absorbing a spell that only targets the bearer. Test arena (Fighter, Zombie).
+ *  1. Rod of Absorption held and attuned (the staff stowed): the Zombie casts Ray of Enfeeblement (level 2) on the Fighter; the
+ *     Reaction (taken automatically) cancels the spell — no effect — and the rod spends 2 uses; Guiding Bolt (level 1): no
+ *     damage, 1 use.
+ *  2. Burning Hands (area): nothing is offered, the spell goes off.
+ *  3. Rod stowed: Guiding Bolt is no longer absorbed.
+ *  4. Staff of the Thaumaturge held: Wound (level 1, saving throw) is canceled, the staff gains 1 charge.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -37,7 +37,7 @@ export default {
     const set = (itemId, data) => ctx.call("upsert-actor-item", { actorId, itemData: data, match: { path: "_id", value: itemId } });
     const spent = async itemId => (await ctx.engine("itemData", { tokenId: fighter.id, itemId, paths: ["system.uses.spent"] }))?.["system.uses.spent"];
 
-    /** Le Zombi lance le sort sur le Guerrier (réactions prises d'office) ; rend les PV perdus. */
+    /** The Zombie casts the spell on the Fighter (Reactions taken automatically); returns the HP lost. */
     const cast = async (itemId, activityType, usage={}) => {
       await ctx.setHp(fighter, hp0);
       await ctx.use({ tokenId: zombi.id, itemId, activityType, targetTokenIds: [fighter.id], consume: false,
@@ -46,7 +46,7 @@ export default {
       return hp0 - await ctx.hp(fighter);
     };
 
-    // 1. Sceptre tenu et harmonisé, le bâton rangé.
+    // 1. Rod held and attuned, the staff stowed.
     await set(staff, { system: { equipped: false, attuned: false } });
     await set(rod, { system: { equipped: true, attuned: true, uses: { spent: 0 } } });
     await pause(400);
@@ -58,18 +58,18 @@ export default {
     ctx.expect(lost === 0, `Sceptre : Éclair traçant absorbé, aucun dégât (${lost})`);
     ctx.expect((await spent(rod)) === 1, `Sceptre : 1 niveau stocké (utilisations dépensées : ${await spent(rod)})`);
 
-    // 2. Une zone n'est pas absorbée.
+    // 2. An area is not absorbed.
     await set(rod, { system: { uses: { spent: 0 } } });
     lost = await cast(hands, "save");
     ctx.expect((await spent(rod)) === 0, `Sceptre : Mains brûlantes (zone) n'est pas absorbé (utilisations : ${await spent(rod)}, PV perdus : ${lost})`);
 
-    // 3. Sceptre rangé (le bâton aussi).
+    // 3. Rod stowed (the staff too).
     await set(rod, { system: { equipped: false, attuned: false, uses: { spent: 0 } } });
     await pause(400);
     lost = await cast(bolt, "attack");
     ctx.expect((await spent(rod)) === 0, `Sceptre rangé : rien d'absorbé (utilisations : ${await spent(rod)}, PV perdus : ${lost})`);
 
-    // 4. Bâton du thaumaturge tenu : charges gagnées.
+    // 4. Staff of the Thaumaturge held: charges gained.
     await set(staff, { system: { equipped: true, attuned: true, uses: { spent: 10 } } });
     await pause(400);
     lost = await cast(wounds, "save");

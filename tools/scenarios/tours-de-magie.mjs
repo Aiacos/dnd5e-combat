@@ -1,16 +1,17 @@
 /**
- * Tours de magie (SPEC §23), monde `dnd-6`. Le Magicien reçoit, prêtés depuis le compendium du Manuel des joueurs, Contact
- * glacial, Éclat mental, Poigne électrique, Glas, Amitié et Frappe assurée (il a Rayon de givre). Le Bandit reçoit 300 PV.
- * Vérifie :
- *  - Rayon de givre : la Vitesse du Bandit baisse de 10 ft, et revient au début du tour suivant du Magicien (pas avant) ;
- *  - Contact glacial : un soin ne rend rien au Bandit ; à la fin du tour suivant du Magicien, l'effet tombe et le soin agit ;
- *  - Éclat mental : sauvegarde d'Intelligence ratée → la sauvegarde suivante du Bandit porte « -1d4 », puis l'effet tombe ;
- *  - Poigne électrique : touché, le Bandit ne menace plus d'attaque d'opportunité le Magicien qui s'éloigne ;
- *  - Glas : contre le Bandit blessé, d12 même avec l'activité « Healthy Target » ; contre le Bandit indemne, d8 même avec « Damaged » ;
- *  - Amitié : le Zombi (mort-vivant) n'est pas affecté ; le Bandit charmé, puis blessé → l'effet tombe ;
- *  - Frappe assurée : la dague enchantée ; son attaque ; l'enchantement tombe après elle.
- * Pose la distribution de référence de Restored Keep (tools/lib/stages.mjs) : le Bandit se place par rapport au Magicien.
- * Remet positions, PV, effets ; retire les sorts prêtés.
+ * Cantrips (SPEC §23), world `dnd-6`. The Wizard receives, lent from the Player's Handbook compendium, Chill Touch,
+ * Mind Sliver, Shocking Grasp, Toll the Dead, Friends and True Strike (the Wizard has Ray of Frost). The Bandit receives 300 HP.
+ * Checks:
+ *  - Ray of Frost: the Bandit's Speed drops by 10 ft, and comes back at the start of the Wizard's next turn (not before);
+ *  - Chill Touch: healing restores nothing to the Bandit; at the end of the Wizard's next turn, the effect ends and healing works;
+ *  - Mind Sliver: failed Intelligence saving throw → the Bandit's next saving throw carries "-1d4", then the effect ends;
+ *  - Shocking Grasp: on a hit, the Bandit no longer threatens an Opportunity Attack against the Wizard moving away;
+ *  - Toll the Dead: against the wounded Bandit, d12 even with the "Healthy Target" activity; against the unhurt Bandit, d8
+ *    even with "Damaged";
+ *  - Friends: the Zombie (Undead) is not affected; the Charmed Bandit, then wounded → the effect ends;
+ *  - True Strike: the enchanted dagger; its attack; the enchantment ends after it.
+ * Sets up the Restored Keep reference layout (tools/lib/stages.mjs): the Bandit is placed relative to the Wizard.
+ * Resets positions, HP, effects; removes the lent spells.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -27,8 +28,8 @@ export default {
     if ( need.some(n => !tokens.some(t => t.name === n)) ) { ctx.log(`${need.join(", ")} requis : non applicable`); return; }
     const packs = await ctx.call("list-compendiums", {}).catch(() => null);
     if ( !JSON.stringify(packs ?? "").includes(SPELLS) ) { ctx.log("Manuel des joueurs absent : non applicable"); return; }
-    // Les cibles sont placées par rapport au Magicien : on pose la distribution de référence
-    // (les autres tokens compris : un voisin sur une case d'arrivée ou sur la ligne de vue fausse tout), remise à la fin.
+    // The targets are placed relative to the Wizard: the reference layout is set up
+    // (other tokens included: a neighbor on an arrival cell or on the line of sight spoils everything), reset at the end.
     await ctx.stage(RESTORED_KEEP);
     const mage = await ctx.token("Magicien");
     const bandit = await ctx.token("Bandit");
@@ -89,7 +90,7 @@ export default {
     const until = async (fn, ok, tries=20) => { for ( let i = 0; i < tries; i++ ) { const a = await fn(); if ( ok(a) ) return a; } return null; };
     const stats = t => ctx.engine("stats", { tokenId: t.id });
     const hasEffect = async (t, re) => (await ctx.effects(t)).some(e => re.test(e.name ?? ""));
-    /** Un effet posé depuis cet effet d'item (copie du plateau : `_stats.duplicateSource`). */
+    /** An effect placed from this item effect (copy from the board: `_stats.duplicateSource`). */
     const fromEffect = async (t, id) => (await ctx.effects(t)).some(e => String(e._stats?.duplicateSource ?? e._stats?.compendiumSource ?? "").endsWith(`.ActiveEffect.${id}`));
 
     const frost = await ctx.itemId(mage.id, "ray-of-frost");
@@ -102,7 +103,7 @@ export default {
       ctx.expect((await stats(bandit))?.speed?.walk === speed0 - 10, `Vitesse ${speed0} → ${(await stats(bandit))?.speed?.walk}`);
       await next();   // tour du Bandit
       ctx.expect((await stats(bandit))?.speed?.walk === speed0 - 10, "tour du Bandit : toujours ralenti");
-      await next();   // début du tour suivant du Magicien
+      await next();   // start of the Wizard's next turn
       ctx.expect((await stats(bandit))?.speed?.walk === speed0, `début du tour suivant du Magicien : Vitesse ${(await stats(bandit))?.speed?.walk}`);
     });
 
@@ -124,7 +125,7 @@ export default {
 
     const sliver = await spell("phbsplMindSliver");
     await part("Éclat mental", async () => {
-      // En combat : hors combat, V14 expire l'effet d'« 1 round » dès que l'heure du monde bouge (SPEC §23).
+      // In combat: out of combat, V14 expires the "1 round" effect as soon as the world time moves (SPEC §23).
       await tough(); await far();
       if ( !ctx.expect(await fight(), "combat : au tour du Magicien") ) return;
       const a = await until(() => use(sliver, bandit, { activityType: "save" }), x => x.failed === true);

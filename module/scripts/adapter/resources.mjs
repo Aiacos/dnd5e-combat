@@ -1,23 +1,24 @@
 /**
- * §410 (issue #44, lot 3) : ce qui manque à une utilisation — emplacement de sort, utilisations, quantité, préparation (règle pure :
- * core/resources.mjs). dnd5e ne le refuse qu'en dépensant, après `dnd5e.preUseActivity` (`Activity#use`, dnd5e.mjs:17696 ; emplacement
- * :18067 ; utilisations `_usesConsumption` :5016 ; matériaux `consumeMaterial` :4941 ; emplacements consommés `consumeSpellSlots` :4978) :
- * le moteur le juge avant, dans la fenêtre de légalité, et un joueur qui force relance sans rien dépenser (`forced` du §77,
+ * §410 (issue #44, batch 3): what is missing for a use — spell slot, uses, quantity, preparation (pure rule:
+ * core/resources.mjs). dnd5e only refuses it when spending, after `dnd5e.preUseActivity` (`Activity#use`, dnd5e.mjs:17696; slot
+ * :18067; uses `_usesConsumption` :5016; materials `consumeMaterial` :4941; consumed slots `consumeSpellSlots` :4978):
+ * the engine judges it before, in the legality window, and a player who forces re-rolls without spending anything (`forced` of §77,
  * runtime/usage.mjs).
  */
 
 import { isShort, plainCost, resourceIssues, slotLeft, awaitsPreparation } from "../core/resources.mjs";
 import { ritualModeOf } from "./grimoire.mjs";
 
-/** Le niveau d'un emplacement consommé par une cible « spellSlots » (sa cible, plus la montée par niveau). */
+/** The level of a slot consumed by a "spellSlots" target (its target, plus the increase per level). */
 function slotTargetLevel(target, scaling) {
   const base = Number(target.target) || 1;
   return base + ((target.scaling?.mode === "level") ? (Number(scaling) || 0) : 0);
 }
 
 /**
- * Les consommations de l'activité que dnd5e dépensera, avec ce qui reste : `{ index, kind, available, cost }`. Sans configuration (case
- * de la barre) : celles que dnd5e dépenserait par défaut (`_prepareUsageConfig`, dnd5e.mjs:17862 : hors combat, pas les « combat seul »).
+ * The activity's consumptions that dnd5e will spend, with what remains: `{ index, kind, available, cost }`. Without a
+ * configuration (bar cell): those dnd5e would spend by default (`_prepareUsageConfig`, dnd5e.mjs:17862: outside combat,
+ * not the "combat only" ones).
  */
 function spentTargets(activity, usageConfig) {
   const actor = activity.actor;
@@ -41,13 +42,13 @@ function spentTargets(activity, usageConfig) {
       out.push({ index, kind: "slot", available: slotLeft(actor?.system?.spells, level) ? 1 : 0, cost: 1 });
     }
   }
-  // Une limite sans maximum (« utilisations » vides) ne compte pas.
+  // A limit without a maximum (empty "uses") does not count.
   return out.filter(t => (t.kind !== "uses") || (Number(t.max) > 0) || (typeof t.max === "string" && t.max !== ""));
 }
 
 /**
- * Ce sort de la fiche attend-il d'être préparé (core/resources.mjs, `awaitsPreparation`) ? Lu sur l'item ; pas pour autre chose
- * qu'un sort (un parchemin se lance sans préparation).
+ * Does this sheet spell await preparation (core/resources.mjs, `awaitsPreparation`)? Read on the item; not for anything
+ * but a spell (a scroll is cast without preparation).
  * @param {Item} item
  */
 export function unpreparedSpell(item) {
@@ -57,10 +58,10 @@ export function unpreparedSpell(item) {
 }
 
 /**
- * Ce qui manque à cette utilisation. `keys` : les raisons (`noSlot`, `noUses`, `noQuantity`, `unprepared`) ; `skip` : ce qu'un joueur
- * qui force ne dépense pas (`spellSlot`, indexes de `resources`).
+ * What is missing for this use. `keys`: the reasons (`noSlot`, `noUses`, `noQuantity`, `unprepared`); `skip`: what a player
+ * who forces does not spend (`spellSlot`, indexes of `resources`).
  * @param {Activity} activity
- * @param {object|null} [usageConfig]  La configuration d'utilisation, quand on la connaît (`dnd5e.preUseActivity`).
+ * @param {object|null} [usageConfig]  The usage configuration, when known (`dnd5e.preUseActivity`).
  * @param {{recast?: boolean}} [options]
  * @returns {{keys: string[], skip: {spellSlot: boolean, resources: number[]}}}
  */
@@ -69,10 +70,10 @@ export function missingResources(activity, usageConfig=null, { recast=false }={}
   const item = activity?.item;
   const actor = activity?.actor;
   if ( !item || !actor || recast ) return none;
-  // Un parchemin, une copie de sort lancée par un objet (`cachedFor`) ou une activité liée (`cause`) ne dépensent pas d'emplacement.
+  // A scroll, a spell copy cast by an object (`cachedFor`) or a linked activity (`cause`) do not spend a slot.
   const linked = !!usageConfig?.cause?.activity || !!item.getFlag?.("dnd5e", "cachedFor") || !!item.getFlag?.("dnd5e", "spellLevel");
   const spell = item.type === "spell";
-  // Rituel possible (hors combat, §139) : pas d'emplacement nécessaire, la fenêtre du rituel en décide ensuite.
+  // Ritual possible (outside combat, §139): no slot needed, the ritual window decides afterwards.
   const ritual = spell && (ritualModeOf(activity) !== "none");
   const needsSlot = spell && !linked && !ritual && !!activity.requiresSpellSlot && !!activity.consumption?.spellSlot
     && (usageConfig?.consume !== false) && (usageConfig?.consume?.spellSlot !== false);
@@ -80,11 +81,11 @@ export function missingResources(activity, usageConfig=null, { recast=false }={}
   const left = needsSlot ? slotLeft(actor.system?.spells, level, usageConfig?.spell?.slot ?? null) : true;
   const targets = spentTargets(activity, usageConfig);
   const short = targets.filter(isShort);
-  // Préparé : une méthode qui se prépare (CONFIG.DND5E.spellcasting[…].prepares) demande `prepared` ; un rituel non préparé d'un Adepte
-  // des rituels passe par le mode rituel.
-  // Un sort mineur ne se prépare pas (`awaitsPreparation`).
+  // Prepared: a method that is prepared (CONFIG.DND5E.spellcasting[…].prepares) requires `prepared`; an unprepared ritual of
+  // a Ritual Adept goes through ritual mode.
+  // A cantrip is not prepared (`awaitsPreparation`).
   const unprepared = spell && !linked && unpreparedSpell(item) && !ritual;
-  // Un objet physique épuisé (la dernière javeline lancée, laissée sur la fiche à 0).
+  // A depleted physical object (the last javelin thrown, left on the sheet at 0).
   const empty = ["weapon", "consumable", "equipment", "tool"].includes(item.type) && (item.system.quantity !== undefined)
     && (Number(item.system.quantity) <= 0);
   const keys = resourceIssues({

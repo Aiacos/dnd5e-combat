@@ -1,16 +1,18 @@
 /**
- * Marques locales au client qui joue une réaction (SPEC §19.6) : ce que la réaction choisie promet au jet qui la suit, le temps
- * de ce jet. Par exemple une riposte : une attaque contre cet ennemi, avec l'avantage. L'activité de la
- * réaction est utilisée juste après (adapter/reactions.mjs, `handleReactionQuery`) et son jet d'attaque s'enchaîne sur ce même
- * client ; l'avantage y est déclaré (adapter/triggers.mjs, `declaredAttackModifiers`). La marque tombe au jet, ou d'elle-même.
+ * Marks local to the client that plays a reaction (SPEC §19.6): what the chosen reaction promises to the roll that follows
+ * it, for the duration of that roll. For example a riposte: an attack against that enemy, with Advantage. The reaction's
+ * activity is used right after (adapter/reactions.mjs, `handleReactionQuery`) and its attack roll follows on that same
+ * client; the Advantage is declared there (adapter/triggers.mjs, `declaredAttackModifiers`). The mark drops at the roll, or by
+ * itself.
  */
 
-/** Durée de vie d'une marque sans jet (réaction annulée, fenêtre fermée). */
+/** A mark's lifetime without a roll (reaction cancelled, window closed). */
 const LIFETIME_MS = 30000;
 
 /**
- * §438 suite : pose une marque et son minuteur. Une nouvelle marque sur la même activité remplace l'ancienne ET son minuteur —
- * sans quoi le minuteur d'une Riposte ratée effaçait la marque d'une Riposte suivante (le dé de supériorité perdu, vu au banc).
+ * §438 continued: places a mark and its timer. A new mark on the same activity replaces the old one AND its timer —
+ * without which the timer of a missed Riposte erased the mark of a following Riposte (the superiority die lost, seen on the
+ * test bench).
  */
 const timers = new WeakMap();
 function put(map, key, value, ms) {
@@ -29,20 +31,20 @@ function take(map, key) {
 
 const advantaged = new Map();
 
-/** L'activité `uuid`, utilisée en réaction, attaque avec l'avantage (au nom de `name`). */
+/** The activity `uuid`, used as a reaction, attacks with Advantage (in the name of `name`). */
 export function markReactionAdvantage(uuid, name) {
   put(advantaged, uuid, name, LIFETIME_MS);
 }
 
-/** Le nom de la réaction qui donne l'avantage à ce jet de l'activité `uuid`, ou null ; la marque est consommée. */
+/** The name of the reaction that gives Advantage to this roll of the activity `uuid`, or null; the mark is consumed. */
 export function takeReactionAdvantage(uuid) {
   return take(advantaged, uuid);
 }
 
-/** Sans la consommer : l'activité a-t-elle une marque d'avantage ? */
+/** Without consuming it: does the activity have an Advantage mark? */
 export const hasReactionAdvantage = uuid => advantaged.has(uuid);
 
-/** §134 : le pendant — une réaction jouée avec le Désavantage (attaque d'opportunité contre un porteur de Rapide). */
+/** §134: the counterpart — a reaction played with Disadvantage (Opportunity Attack against a "Swift" bearer). */
 const hampered = new Map();
 export function markReactionDisadvantage(uuid, name) {
   put(hampered, uuid, name, LIFETIME_MS);
@@ -55,8 +57,8 @@ export function takeReactionDisadvantage(uuid) {
 /* -------------------------------------------- */
 
 /**
- * §88 : Riposte du Maître de guerre — « si vous touchez, ajoutez le dé de supériorité aux dégâts de l'attaque » : la formule (déjà
- * lancée avec les données de l'acteur, « 1d8 ») promise au jet de dégâts de l'activité `uuid`, sur ce client ; consommée au jet.
+ * §88: Battle Master's Riposte — "if you hit, add the superiority die to the attack's damage": the formula (already
+ * rolled with the actor's data, "1d8") promised to the damage roll of the activity `uuid`, on this client; consumed at the roll.
  */
 const damaged = new Map();
 
@@ -65,12 +67,12 @@ export function markReactionDamage(uuid, formula, name) {
 }
 
 /**
- * §438 suite : le dé promis ne vaut que pour l'attaque de la réaction elle-même. Au premier jet d'attaque de l'arme marquée, la marque
- * attend les dégâts de CETTE attaque ; un deuxième jet d'attaque de la même arme avant tout jet de dégâts veut dire que la Riposte
- * n'en a pas eu (ratée), la marque tombe. Sans quoi une Riposte ratée laissait son dé au prochain coup de la même arme dans la minute.
- * Un raté ne la fait PAS tomber à son jet : Chanceux, l'Inspiration héroïque ou bardique, la réussite à un prix peuvent encore le
- * changer en coup au but après ce jet (ils relancent ou ajoutent sans nouveau jet d'attaque), et ses dégâts doivent garder le dé.
- * Rend vrai si la marque est tombée.
+ * §438 continued: the promised die applies only to the reaction's own attack. At the first attack roll of the marked weapon, the
+ * mark waits for the damage of THAT attack; a second attack roll of the same weapon before any damage roll means that the
+ * Riposte did not land (missed), the mark drops. Otherwise a missed Riposte left its die to the next hit of the same weapon
+ * within the minute. A miss does NOT make it drop at its roll: Lucky, Heroic or Bardic Inspiration, success at a cost can still
+ * turn it into a hit after that roll (they reroll or add without a new attack roll), and its damage must keep the die.
+ * Returns true if the mark dropped.
  */
 export function noteReactionAttack(uuid) {
   const mark = damaged.get(uuid);
@@ -80,7 +82,7 @@ export function noteReactionAttack(uuid) {
   return false;
 }
 
-/** La formule promise au jet de dégâts de l'activité `uuid`, ou null ; la marque est consommée. */
+/** The formula promised to the damage roll of the activity `uuid`, or null; the mark is consumed. */
 export function takeReactionDamage(uuid) {
   const mark = take(damaged, uuid);
   return mark ? { formula: mark.formula, name: mark.name } : null;

@@ -1,11 +1,11 @@
 /**
- * §162 : un mur posé par points (Mur de feu, Mur de force en panneaux, Barrière de lames…). Le joueur désigne deux points ou plus ; le
- * mur suit la ligne brisée, au plus sa longueur totale. Chaque segment devient une forme « line » de la région (origine, angle,
- * longueur, épaisseur — comme une ligne visée, adapter/self-area.mjs), et le moteur pose, le long de chacun, les murs du cœur que le sort
- * demande (`walls` du contenu). Géométrie pure, en pixels ; aucune dépendance à Foundry.
+ * §162: a wall placed by points (Wall of Fire, Wall of Force in panels, Blade Barrier…). The player picks two or more points; the
+ * wall follows the broken line, at most its total length. Each segment becomes a "line" shape of the region (origin, angle,
+ * length, thickness — like an aimed line, adapter/self-area.mjs), and the engine places, along each one, the core walls the spell
+ * requires (`walls` of the content). Pure geometry, in pixels; no dependency on Foundry.
  */
 
-/** Longueur d'une ligne brisée. */
+/** Length of a broken line. */
 export function polylineLength(points) {
   let total = 0;
   for ( let i = 1; i < points.length; i++ ) total += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
@@ -13,10 +13,10 @@ export function polylineLength(points) {
 }
 
 /**
- * La ligne brisée ramenée à `max` de long : les points au-delà sont retirés, le dernier segment raccourci. Les points confondus sont
- * écartés.
+ * The broken line brought down to `max` long: points beyond are removed, the last segment shortened. Coincident points are
+ * discarded.
  * @param {Array<{x: number, y: number}>} points
- * @param {number} max   Longueur maximale (Infinity : sans limite).
+ * @param {number} max   Maximum length (Infinity: no limit).
  * @returns {Array<{x: number, y: number}>}
  */
 export function clampPolyline(points, max=Infinity) {
@@ -35,9 +35,9 @@ export function clampPolyline(points, max=Infinity) {
 }
 
 /**
- * Les formes « line » d'une ligne brisée : une par segment, de l'épaisseur donnée.
+ * The "line" shapes of a broken line: one per segment, of the given thickness.
  * @param {Array<{x: number, y: number}>} points
- * @param {number} width   Épaisseur, en pixels.
+ * @param {number} width   Thickness, in pixels.
  * @returns {Array<{type: "line", x: number, y: number, rotation: number, length: number, width: number}>}
  */
 export function wallLineShapes(points, width) {
@@ -51,13 +51,13 @@ export function wallLineShapes(points, width) {
   return shapes;
 }
 
-/** L'axe d'une forme « line » : ses deux extrémités, arrondies au pixel (les murs du cœur ont des coordonnées entières). */
+/** The axis of a "line" shape: its two endpoints, rounded to the pixel (the core walls have integer coordinates). */
 export function lineAxis({ x, y, rotation, length }) {
   const r = (rotation * Math.PI) / 180;
   return [Math.round(x), Math.round(y), Math.round(x + (Math.cos(r) * length)), Math.round(y + (Math.sin(r) * length))];
 }
 
-/** Les arêtes d'un polygone fermé (`[x0, y0, x1, y1, …]`), en segments `[x1, y1, x2, y2]` arrondis. */
+/** The edges of a closed polygon (`[x0, y0, x1, y1, …]`), as rounded `[x1, y1, x2, y2]` segments. */
 export function polygonEdges(flat) {
   const n = Math.floor(flat.length / 2);
   const edges = [];
@@ -70,12 +70,12 @@ export function polygonEdges(flat) {
 }
 
 /* -------------------------------------------- */
-/*  Mur à face brûlante (§169)                  */
+/*  Burning-face wall (§169)                    */
 /* -------------------------------------------- */
 
 /**
- * §169 : chaque point aligné sur le précédent, sur l'axe où il s'en écarte le plus — un mur sans diagonale, le long des lignes de la
- * grille (une diagonale coupait des cases en biais : quelques-unes seulement étaient « dedans »).
+ * §169: each point aligned with the previous one, on the axis where it departs the most — a wall with no diagonal, along the grid
+ * lines (a diagonal cut cells at an angle: only a few were "inside").
  * @param {Array<{x: number, y: number}>} points
  * @returns {Array<{x: number, y: number}>}
  */
@@ -90,15 +90,15 @@ export function orthogonalize(points) {
 }
 
 /**
- * Le côté d'un segment où se trouve un point : +1 à gauche du sens de tracé (à l'écran, l'axe y vers le bas : la normale
- * `(dy, -dx)`), -1 à droite, 0 sur sa droite.
+ * The side of a segment on which a point lies: +1 to the left of the drawing direction (on screen, the y axis pointing down: the
+ * normal `(dy, -dx)`), -1 to the right, 0 on its line.
  */
 export function sideOfSegment([x1, y1, x2, y2], { x, y }) {
   const d = ((y2 - y1) * (x - x1)) - ((x2 - x1) * (y - y1));
   return Math.abs(d) < 1e-9 ? 0 : Math.sign(d);
 }
 
-/** Distance d'un point à un segment. */
+/** Distance from a point to a segment. */
 function distanceToSegment([x1, y1, x2, y2], { x, y }) {
   const dx = x2 - x1, dy = y2 - y1;
   const len2 = (dx * dx) + (dy * dy);
@@ -107,10 +107,10 @@ function distanceToSegment([x1, y1, x2, y2], { x, y }) {
 }
 
 /**
- * La géométrie d'un mur à face brûlante, tirée des formes de sa région : des segments (formes « line »), ou un anneau — la forme « ring »
- * du cœur V14 (gabarit « ring » de dnd5e, ou l'anneau fin que devient le disque d'un gabarit « cylinder »), ou ce disque lui-même (un
- * cercle, ou une ellipse ronde posée par coordonnées).
- * @param {object[]} shapes   Les formes de la région (données).
+ * The geometry of a burning-face wall, taken from the shapes of its region: segments ("line" shapes), or a ring — the "ring" shape
+ * of the V14 core (dnd5e "ring" template, or the thin ring that the disc of a "cylinder" template becomes), or that disc itself (a
+ * circle, or a round ellipse placed by coordinates).
+ * @param {object[]} shapes   The shapes of the region (data).
  * @returns {{lines: number[][]}|{ring: {x: number, y: number, radius: number}}|null}
  */
 export function wallGeometry(shapes, axisOf=lineAxis) {
@@ -118,7 +118,7 @@ export function wallGeometry(shapes, axisOf=lineAxis) {
   const lines = list.filter(s => s.type === "line");
   if ( lines.length ) return { lines: lines.map(s => axisOf(s)) };
   const ring = list.find(s => (s.type === "ring") && Number.isFinite(s.radius));
-  // Le milieu de la bande : de `radius - innerWidth` à `radius + outerWidth`.
+  // The middle of the band: from `radius - innerWidth` to `radius + outerWidth`.
   if ( ring ) return { ring: { x: ring.x, y: ring.y, radius: ring.radius + (((ring.outerWidth ?? 0) - (ring.innerWidth ?? 0)) / 2) } };
   const disc = list.map(s => ((s.type === "ellipse") && (s.radiusX === s.radiusY)) ? { ...s, type: "circle", radius: s.radiusX } : s)
     .find(s => (s.type === "circle") && Number.isFinite(s.radius) && !s.hole);
@@ -126,8 +126,9 @@ export function wallGeometry(shapes, axisOf=lineAxis) {
 }
 
 /**
- * Le côté brûlant par défaut : celui où le lanceur n'est pas — pour une ligne, l'autre côté du segment le plus proche de lui ; pour
- * un anneau, l'extérieur s'il est dedans, l'intérieur sinon. +1 : à gauche du tracé, ou l'intérieur de l'anneau ; -1 : l'inverse.
+ * The default burning side: the one where the caster is not — for a line, the other side of the segment nearest to it; for
+ * a ring, the outside if the caster is inside, the inside otherwise. +1: left of the drawing, or the inside of the ring;
+ * -1: the opposite.
  */
 export function defaultSide(geometry, caster) {
   if ( !geometry || !caster ) return 1;
@@ -137,8 +138,8 @@ export function defaultSide(geometry, caster) {
 }
 
 /**
- * Les formes de la face brûlante : `depth` pixels le long de chaque segment, du côté choisi (un polygone par segment) ; pour un
- * anneau, le disque intérieur (+1) ou la couronne de `depth` autour (-1, forme « ring »).
+ * The shapes of the burning face: `depth` pixels along each segment, on the chosen side (one polygon per segment); for a
+ * ring, the inner disc (+1) or the crown of `depth` around it (-1, "ring" shape).
  * @param {{lines: number[][]}|{ring: object}} geometry
  * @param {1|-1} side
  * @param {number} depth
@@ -158,7 +159,8 @@ export function sideShapes(geometry, side, depth) {
     const n = normal(l);
     return { type: "polygon", points: [x1, y1, x2, y2, x2 + n.x, y2 + n.y, x1 + n.x, y1 + n.y].map(v => Math.round(v)) };
   });
-  // Aux coins du tracé, le carré qui relie les deux bandes (au coin extérieur il manquait ; à l'intérieur, il tombe dans les bandes).
+  // At the corners of the drawing, the square that joins the two bands (it was missing at the outer corner;
+  // inside, it falls within the bands).
   for ( let i = 1; i < lines.length; i++ ) {
     const [, , px, py] = lines[i - 1];
     const [qx, qy] = lines[i];
@@ -169,21 +171,21 @@ export function sideShapes(geometry, side, depth) {
   return shapes;
 }
 
-/** L'anneau fin d'un mur circulaire : la forme « ring » du cœur, d'épaisseur `width`, centrée sur le rayon. */
+/** The thin ring of a circular wall: the core "ring" shape, of thickness `width`, centred on the radius. */
 export function ringShapes({ x, y, radius }, width) {
   const half = Math.max(1, width / 2);
   return [{ type: "ring", x, y, radius, innerWidth: Math.min(half, radius), outerWidth: half }];
 }
 
-/** Les deux segments se coupent-ils franchement (pas en bout, pas alignés) ? */
+/** Do the two segments cross cleanly (not at an end, not aligned)? */
 function segmentsCross([ax, ay, bx, by], [cx, cy, dx, dy]) {
   const o = (px, py, qx, qy, rx, ry) => Math.sign(((qx - px) * (ry - py)) - ((qy - py) * (rx - px)));
   return (o(ax, ay, bx, by, cx, cy) * o(ax, ay, bx, by, dx, dy) < 0) && (o(cx, cy, dx, dy, ax, ay) * o(cx, cy, dx, dy, bx, by) < 0);
 }
 
 /**
- * Un trajet (centres successifs) traverse-t-il le mur ? Une ligne : un pas qui coupe un segment ; un anneau : un pas qui passe d'un
- * côté du cercle à l'autre.
+ * Does a path (successive centres) cross the wall? A line: a step that cuts a segment; a ring: a step that goes from one side of
+ * the circle to the other.
  * @param {{lines: number[][]}|{ring: object}} geometry
  * @param {Array<{x: number, y: number}>} path
  */
@@ -201,9 +203,9 @@ export function crossesWall(geometry, path) {
 }
 
 /**
- * L'espace d'une créature (rectangle en pixels) touche-t-il le mur ? Un segment : il longe ou traverse le rectangle sur une longueur
- * (un coin seul ne compte pas) ; un anneau : le cercle passe dans le rectangle. C'est « dans la zone » à l'apparition du mur, des deux
- * côtés : sur la grille, un mur d'1 ft posé entre les cases ne couvre aucune case.
+ * Does a creature's space (rectangle in pixels) touch the wall? A segment: it runs along or crosses the rectangle over a length
+ * (a lone corner does not count); a ring: the circle passes through the rectangle. This is "in the area" when the wall appears, on
+ * both sides: on the grid, a 1 ft wall placed between cells covers no cell.
  * @param {{lines: number[][]}|{ring: object}} geometry
  * @param {{x: number, y: number, width: number, height: number}} rect
  */
@@ -216,7 +218,7 @@ export function touchesWall(geometry, { x, y, width, height }) {
     return (near < radius) && (far > radius);
   }
   return (geometry?.lines ?? []).some(([x1, y1, x2, y2]) => {
-    // Liang–Barsky : la part du segment dans le rectangle fermé.
+    // Liang–Barsky: the part of the segment inside the closed rectangle.
     let t0 = 0, t1 = 1;
     const dx = x2 - x1, dy = y2 - y1;
     for ( const [p, q] of [[-dx, x1 - x], [dx, (x + width) - x1], [-dy, y1 - y], [dy, (y + height) - y1]] ) {
@@ -229,15 +231,15 @@ export function touchesWall(geometry, { x, y, width, height }) {
   });
 }
 
-/** Les arêtes d'un cercle approché par `n` côtés (les murs du cœur d'un mur en anneau). */
+/** The edges of a circle approximated by `n` sides (the core walls of a ring wall). */
 export function circleEdges({ x, y, radius }, n=24) {
   const pts = Array.from({ length: n }, (_, i) => [x + (radius * Math.cos((2 * Math.PI * i) / n)), y + (radius * Math.sin((2 * Math.PI * i) / n))]);
   return pts.map((p, i) => [...p, ...pts[(i + 1) % n]].map(Math.round));
 }
 
 /**
- * §170 : où poser les lumières d'un mur — un point tous les `step` pixels le long de chaque segment (bouts compris), ou du cercle,
- * décalé de `offset` de chaque côté : le mur arrête la lumière, une source posée sur sa ligne n'éclairerait ni l'un ni l'autre côté.
+ * §170: where to place a wall's lights — one point every `step` pixels along each segment (ends included), or along the circle,
+ * offset by `offset` on each side: the wall stops light, a source placed on its line would light neither side.
  * @param {{lines: number[][]}|{ring: {x: number, y: number, radius: number}}} geometry
  * @returns {Array<{x: number, y: number}>}
  */
@@ -266,18 +268,18 @@ export function wallLightPoints(geometry, step, offset) {
 }
 
 /* -------------------------------------------- */
-/*  Mur épais posé sur les cases (§172)         */
+/*  Thick wall placed on cells (§172)           */
 /* -------------------------------------------- */
 
 /**
- * §172 : un mur d'une case d'épaisseur (Mur d'épines, Barrière de lames) se pose sur une rangée de cases — les points au centre des
- * cases, sans diagonale ; chaque segment est prolongé d'une demi-case à ses deux bouts, pour couvrir la première et la dernière case
- * en entier (aux coins, deux segments se recouvrent). La ligne de centres est d'abord bornée à `length - 2 × half` : le mur, bouts
- * compris, garde la longueur du sort.
- * @param {Array<{x: number, y: number}>} points   Centres de case.
- * @param {number} length   Longueur du sort, en pixels.
- * @param {number} width    Épaisseur, en pixels.
- * @param {number} half     Une demi-case, en pixels.
+ * §172: a wall one cell thick (Wall of Thorns, Blade Barrier) is placed on a row of cells — the points at the centre of the
+ * cells, no diagonal; each segment is extended by half a cell at both ends, to cover the first and last cell
+ * fully (at the corners, two segments overlap). The line of centres is first bounded to `length - 2 × half`: the wall, ends
+ * included, keeps the length of the spell.
+ * @param {Array<{x: number, y: number}>} points   Cell centres.
+ * @param {number} length   Spell length, in pixels.
+ * @param {number} width    Thickness, in pixels.
+ * @param {number} half     One half cell, in pixels.
  */
 export function cellWallShapes(points, length, width, half) {
   const line = clampPolyline(orthogonalize(points), Number.isFinite(length) ? Math.max(0, length - (2 * half)) : Infinity);
@@ -288,14 +290,14 @@ export function cellWallShapes(points, length, width, half) {
   });
 }
 
-/** L'anneau d'un mur épais tiré du disque de son gabarit : une bande de `width` à l'intérieur du cercle (son diamètre est celui du sort). */
+/** The ring of a thick wall taken from the disc of its template: a band of `width` inside the circle (its diameter is the spell's). */
 export function innerRingShapes({ x, y, radius }, width) {
   return [{ type: "ring", x, y, radius, innerWidth: Math.min(width, radius), outerWidth: 0 }];
 }
 
 /**
- * §173 : la zone à `distance` d'un mur fin, des deux côtés (Mur prismatique : l'aveuglement à 6 m) — un rectangle autour de chaque
- * segment, prolongé de `distance` à ses bouts ; pour un anneau, une bande de `distance` de part et d'autre du cercle.
+ * §173: the area at `distance` from a thin wall, on both sides (Prismatic Wall: the blinding at 6 m) — a rectangle around each
+ * segment, extended by `distance` at its ends; for a ring, a band of `distance` on either side of the circle.
  */
 export function auraShapes(geometry, distance) {
   if ( geometry?.ring ) {

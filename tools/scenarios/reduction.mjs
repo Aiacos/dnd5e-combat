@@ -1,15 +1,15 @@
 /**
- * Brique B14 « réduction et absorption de dégâts » (SPEC §16.11), le Zombi frappant au contact :
- *  1. Égide arcanique (PHB, donnée au Magicien le temps du scénario, créée par son activité « Hha69hPMTYWhDE4A ») :
- *     un coup qui touche est absorbé par la réserve (utilisations de l'item) avant les PV ; carte « absorbe » ;
- *     puis Armure du mage (abjuration, emplacement de niveau 1) la recharge de 2.
- *  2. Esquive instinctive (PHB, donnée au Roublard) : touché, le Roublard réagit (`autoReact: "first"`), les dégâts de
- *     l'attaque sont divisés par deux (arrondi inférieur). `autoReact` est recopié sur la carte par le client qui UTILISE
- *     l'attaque — celui du MJ qui porte le connecteur : il doit avoir le code ≥ 0.38.0 (F5).
- * Le Lien protecteur (partage des dégâts, §156) se vérifie dans `egide-abjurateur` (Arène de l'abjuration, §414) : ici, l'état des
- * tokens partagés de l'Arène de test faussait le résultat (§415).
- * Les items sont donnés AVANT d'inscrire les remises en état (qui s'exécutent de la dernière à la première) : les effets
- * tombent avant que leurs items ne soient retirés — une animation BLFX ne se retire que si l'item d'origine existe encore.
+ * Brick B14 "damage reduction and absorption" (SPEC §16.11), the Zombie striking in melee:
+ *  1. Arcane Ward (PHB, given to the Wizard for the scenario, created by its activity "Hha69hPMTYWhDE4A"):
+ *     a hit is absorbed by the pool (the item's uses) before HP; "absorbs" card;
+ *     then Mage Armor (abjuration, level 1 spell slot) recharges it by 2.
+ *  2. Uncanny Dodge (PHB, given to the Rogue): hit, the Rogue reacts (`autoReact: "first"`), the damage of
+ *     the attack is halved (rounded down). `autoReact` is copied onto the card by the client that USES
+ *     the attack — the GM's, which carries the connector: it must have code ≥ 0.38.0 (F5).
+ * The "Protective Link" (damage sharing, §156) is verified in `egide-abjurateur` (Abjuration Arena, §414): here, the state of the
+ * shared tokens of the Test Arena skewed the result (§415).
+ * The items are given BEFORE registering the restorations (which run from last to first): the effects
+ * fall before their items are removed — a BLFX animation is removed only if the original item still exists.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -27,15 +27,15 @@ export default {
     await ctx.ensureItem(rogue, "Compendium.dnd-players-handbook.classes.Item.phbrgeUncannyDod");
 
     const tokens = [mage, zombi, rogue];
-    const hp0 = new Map();   // PV d’origine : la remise en état
-    const startHp = new Map();   // PV de départ d’une attaque, quand ils diffèrent
+    const hp0 = new Map();   // original HP: for the restoration
+    const startHp = new Map();   // HP at the start of an attack, when they differ
     const effects0 = new Map();
     for ( const t of tokens ) {
       hp0.set(t.id, await ctx.hp(t));
       effects0.set(t.id, new Set((await ctx.effects(t)).map(e => e._id ?? e.id)));
     }
     const zHome = await ctx.position(zombi);
-    // Comme ctx.removeStatusEffects : acteur lié par son id, acteur de token par l'uuid de l'acteur synthétique.
+    // Like ctx.removeStatusEffects: linked actor by its id, token actor by the synthetic actor's uuid.
     const clearNew = async t => {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: t.id });
       const sceneId = (await ctx.scene()).sceneId;
@@ -56,7 +56,7 @@ export default {
       await ctx.call("move-token", { tokenId: zombi.id, x: p.x - grid, y: p.y, elevation: p.elevation });
       await pause(800);
     };
-    /** Le Zombi frappe `target` jusqu'à toucher ; rend la résolution et les messages qui ont suivi. */
+    /** The Zombie strikes `target` until it hits; returns the resolution and the messages that followed. */
     const strike = async (target, extra={}) => {
       for ( let i = 0; i < 20; i++ ) {
         for ( const t of [target, zombi] ) await ctx.setHp(t, startHp.get(t.id) ?? hp0.get(t.id));
@@ -76,13 +76,13 @@ export default {
       return { spent: Number(uses.spent) || 0, max: uses.max };
     };
 
-    // 1. Égide arcanique.
+    // 1. Arcane Ward.
     await ctx.use({ tokenId: mage.id, itemId: wardId, activityId: "Hha69hPMTYWhDE4A", consume: true });
     await pause(1200);
     const w0 = await wardUses();
     ctx.log(`égide créée : ${JSON.stringify(w0)}`);
     await nextTo(mage);
-    // PV pleins : un plancher à 0 fausserait « perd le reste » (vu le 2026-09-24 : Magicien à 3 PV, 9 − 5 → 3).
+    // Full HP: a floor at 0 would skew "loses the rest" (seen on 2026-09-24: Wizard at 3 HP, 9 − 5 → 3).
     const mageMax1 = ((await ctx.call("get-actor", { actorId: mage.actorId })).system ?? {}).attributes?.hp?.max ?? hp0.get(mage.id);
     startHp.set(mage.id, mageMax1);
     const hit = await strike(mage);
@@ -94,7 +94,7 @@ export default {
     ctx.expect(w1.spent === w0.spent + amount, `réserve dépensée d'autant (${w0.spent} → ${w1.spent})`);
     const lostMage = mageMax1 - await ctx.hp(mage);
     const struck = hit.messages.find(m => m.type === "damage")?.rolls?.reduce?.((sum, r) => sum + (r.total ?? 0), 0) ?? null;
-    // Plafonné à ses PV : un gros jet (critique, 17) dépasse ce qu'il peut perdre (vu le 2026-09-28 : 17 − 5 → 7 PV, tous).
+    // Capped at its HP: a big roll (critical, 17) exceeds what it can lose (seen on 2026-09-28: 17 − 5 → 7 HP, all of them).
     ctx.expect(lostMage === Math.min(mageMax1, Math.max(0, (struck ?? 0) - amount)), `le Magicien ne perd que le reste : ${lostMage} PV (${struck} lancés, ${amount} absorbés)`);
     await ctx.use({ tokenId: mage.id, identifier: "mage-armor", activityType: "utility", targetTokenIds: [mage.id] });
     await pause(1500);

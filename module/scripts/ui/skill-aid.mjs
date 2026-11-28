@@ -1,12 +1,13 @@
 /**
- * §113 : la section « Aides » de la fenêtre de jet d'un test de compétence ou d'outil (SkillToolRollConfigurationDialog de
- * dnd5e) — à la manière de BG3. Un bouton par aide possible (adapter/skill-aid.mjs) ; un clic envoie la demande à l'aidant
- * (runtime/skill-aid.mjs). Accordée :
- *  - Assistance : l'effet natif du sort arrive sur le testeur, puis la fenêtre se reconstruit — dnd5e relit la fiche à chaque
- *    reconstruction (`_buildSkillToolConfig`, documents/actor/actor.mjs:1466) et le 1d4 entre dans la formule ;
- *  - Inspiration bardique : on attend l'effet « Inspiré » sur le testeur ; le dé se proposera après le jet (runtime/roll-bonus.mjs) ;
- *  - Soutien : l'Avantage est posé sur la configuration de la fenêtre (`app.config`, relue à chaque reconstruction,
- *    applications/dice/roll-configuration-dialog.mjs:286-312) — le bouton Avantage devient celui par défaut.
+ * §113: the "Aids" section of the roll window of a skill or tool check (dnd5e's SkillToolRollConfigurationDialog) —
+ * BG3-style. One button per possible aid (adapter/skill-aid.mjs); a click sends the request to the helper
+ * (runtime/skill-aid.mjs). Once granted:
+ *  - Guidance: the spell's native effect lands on the tester, then the window rebuilds — dnd5e re-reads the sheet at each
+ *    rebuild (`_buildSkillToolConfig`, documents/actor/actor.mjs:1466) and the 1d4 enters the formula;
+ *  - Bardic Inspiration: we wait for the "Inspired" effect on the tester; the die will be offered after the roll
+ *    (runtime/roll-bonus.mjs);
+ *  - Support: Advantage is set on the window's configuration (`app.config`, re-read at each rebuild,
+ *    applications/dice/roll-configuration-dialog.mjs:286-312) — the Advantage button becomes the default one.
  */
 
 import { aidsFor, isGuided } from "../adapter/skill-aid.mjs";
@@ -16,11 +17,11 @@ import { requestSkillAid } from "../runtime/skill-aid.mjs";
 import { route } from "../runtime/router.mjs";
 import { loc, sleep, esc } from "../runtime/shared.mjs";
 
-/** Les demandes de chaque fenêtre (`{status: "pending"|"granted"|"refused", aid}`), gardées d'un rendu à l'autre. */
+/** The requests of each window (`{status: "pending"|"granted"|"refused", aid}`), kept from one render to the next. */
 const states = new WeakMap();
 const keyOf = aid => `${aid.kind}.${aid.token.id}`;
 
-/** Attend que l'effet de l'aide soit posé sur le testeur (la résolution passe par le MJ actif). */
+/** Waits for the aid's effect to be placed on the tester (resolution goes through the active GM). */
 async function untilApplied(test, ms=10000) {
   for ( let waited = 0; waited < ms; waited += 250 ) {
     if ( test() ) return true;
@@ -30,8 +31,8 @@ async function untilApplied(test, ms=10000) {
 }
 
 /**
- * §140 : tant qu'une aide est en attente, les boutons de jet sont bloqués — l'Assistance met quelques secondes à arriver (résolution du
- * MJ actif, animation comprise) : un clic sur « Normal » entre-temps lançait le d20 sans le 1d4.
+ * §140: while an aid is pending, the roll buttons are blocked — Guidance takes a few seconds to arrive (the active GM's
+ * resolution, animation included): a click on "Normal" in the meantime rolled the d20 without the 1d4.
  */
 function lockRoll(app) {
   const pending = Array.from(states.get(app)?.values() ?? []).some(s => s.status === "pending");
@@ -44,7 +45,7 @@ function lockRoll(app) {
 
 function grantAdvantage(app) {
   app.config.advantage = true;
-  // `advantageMode` : la formule affichée le montre ; le bouton cliqué décide toujours au final (_finalizeConfig).
+  // `advantageMode`: the displayed formula shows it; the button clicked always decides in the end (_finalizeConfig).
   const mode = CONFIG.Dice.D20Roll.ADV_MODE;
   for ( const roll of app.config.rolls ?? [] ) {
     roll.options ??= {};
@@ -55,7 +56,7 @@ function grantAdvantage(app) {
   app.render({ parts: ["buttons"] });
 }
 
-/** Une aide de cette sorte est-elle déjà demandée (en attente) ou accordée pour ce jet ? Une seule de chaque sorte (§242). */
+/** Is an aid of this kind already requested (pending) or granted for this roll? Only one of each kind (§242). */
 const kindTaken = (state, kind) => Array.from(state.values()).some(s => (s.aid.kind === kind) && (s.status !== "refused"));
 
 async function onAsk(app, aid, test) {
@@ -63,7 +64,7 @@ async function onAsk(app, aid, test) {
   const key = keyOf(aid);
   if ( state.get(key) || kindTaken(state, aid.kind) ) return;
   state.set(key, { status: "pending", aid });
-  if ( app.rendered ) app.render({ parts: ["formulas"] });   // partiel : le choix de caractéristique du formulaire reste
+  if ( app.rendered ) app.render({ parts: ["formulas"] });   // partial: the form's ability choice stays
   lockRoll(app);
   const granted = await requestSkillAid({ kind: aid.kind, helper: aid.helper, tester: aid.tester, ...test });
   if ( granted && (aid.kind === "guidance") ) await untilApplied(() => isGuided(app.config.subject, test.skill));
@@ -82,14 +83,14 @@ function onRender(app, element) {
   if ( !(actor instanceof Actor) || !actor.isOwner || (!test.skill && !test.tool) ) return;
   if ( !states.has(app) ) states.set(app, new Map());
   const state = states.get(app);
-  // Une aide demandée reste affichée même si elle ne serait plus proposée (l'Assistance posée retire l'offre).
+  // A requested aid stays displayed even if it would no longer be offered (Guidance placed removes the offer).
   const offered = aidsFor(actor, test);
   const asked = Array.from(state.values(), s => s.aid).filter(a => !offered.some(o => keyOf(o) === keyOf(a)));
   const aids = [...offered, ...asked];
   if ( !aids.length ) return element.querySelector(".dnd5e-combat-aids")?.remove();
   const buttons = aids.map(aid => {
     const own = state.get(keyOf(aid))?.status ?? "";
-    // Une autre aide de la même sorte en cours ou accordée : celle-ci n'est plus proposée.
+    // Another aid of the same kind in progress or granted: this one is no longer offered.
     const status = own || (kindTaken(state, aid.kind) ? "taken" : "");
     const label = loc({ guidance: aid.self ? "AideTest.AssistanceSoi" : "AideTest.Assistance", inspiration: "AideTest.Inspiration",
       help: "AideTest.Soutien" }[aid.kind], { name: aid.helper.name });
@@ -121,6 +122,6 @@ function onRender(app, element) {
 }
 
 export function registerSkillAidUi() {
-  // ApplicationV2 appelle un hook par classe de la lignée : celui de la fenêtre des tests de compétence et d'outil.
+  // ApplicationV2 calls one hook per class of the lineage: that of the skill and tool check window.
   route("renderSkillToolRollConfigurationDialog", onRender, { label: "check aids not offered", level: "warn" });
 }

@@ -1,13 +1,13 @@
 /**
- * Une action met fin à un effet (SPEC §43.2, contenu `actionEnds`).
+ * An action ends an effect (SPEC §43.2, content `actionEnds`).
  *
- *  - Le porteur : par « S'échapper » (action de base, menu de son propre token — runtime/grapple.mjs les ajoute à ce dont on
- *    s'échappe). `roll: "check"` : le test de l'item, comme une entrave ; `roll: "save"` : la sauvegarde du sort rejouée
- *    (carte de sauvegarde répétée : réussie, l'effet tombe) ; sans jet : l'effet tombe.
- *  - Une autre créature : par le menu contextuel du porteur (« Réveiller », « Libérer ») — elle vient au contact, y laisse son
- *    action, fait le test s'il y en a un.
- * L'effet d'une autre créature ne se retire pas depuis le client d'un joueur, et une carte de sauvegarde répétée se joue chez
- * le MJ : le MJ actif fait le geste (requête du cœur), après avoir relu la règle dans le contenu.
+ *  - The bearer: through "Escape" (basic action, menu of its own token — runtime/grapple.mjs adds them to what one
+ *    escapes from). `roll: "check"`: the item's check, like a restraint; `roll: "save"`: the spell's save replayed
+ *    (repeated save card: on success, the effect drops); with no roll: the effect drops.
+ *  - Another creature: through the bearer's context menu ("Wake", "Free") — it comes into contact, spends its
+ *    action there, makes the check if there is one.
+ * An effect of another creature is not removed from a player's client, and a repeated save card is played on the GM's side:
+ * the active GM makes the gesture (core request), after rereading the rule in the content.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -29,7 +29,7 @@ import { enqueue } from "./queue.mjs";
 
 export const ACTION_END_QUERY = `${MODULE_ID}.actionEnd`;
 
-/** MJ actif : l'effet tombe, ou sa sauvegarde est rejouée. La règle est relue ici — un client ne fait pas tomber n'importe quoi. */
+/** Active GM: the effect drops, or its save is replayed. The rule is reread here — a client cannot make just anything drop. */
 async function handleActionEnd({ effect: uuid }, { user=null }={}) {
   const effect = await fromUuid(uuid ?? "");
   const actor = effect?.parent;
@@ -37,7 +37,7 @@ async function handleActionEnd({ effect: uuid }, { user=null }={}) {
   const own = actionEndingsOf(actor, "bearer").find(e => e.effect === effect);
   const ending = own ?? actionEndingsOf(actor, "other").find(e => e.effect === effect);
   if ( !ending ) return false;
-  // §472 : d'un joueur, le porteur met fin à son propre effet ; un autre doit avoir une créature à lui sur la même scène.
+  // §472: from a player, the bearer ends their own effect; another must have a creature of theirs on the same scene.
   if ( needsCheck(user) ) {
     const scene = tokenOf(actor)?.parent ?? null;
     const allowed = (own && actsFor(user, actor))
@@ -56,9 +56,9 @@ async function handleActionEnd({ effect: uuid }, { user=null }={}) {
   log(`${ending.item.name}: "${effect.name}" ends on ${actor.name} (action)`);
   if ( token ) notice(token, effect.name, "effectOff");
   await effect.delete();
-  // §49 : « en vous infligeant l'état À terre et en vous roulant par terre » (feu grégeois).
+  // §49: "by inflicting the Prone condition on yourself and rolling on the ground" (Alchemist's Fire).
   if ( ending.rule.status ) await setStatus(actor, ending.rule.status, true);
-  // §288 : « elle s'évade et le sort prend fin » (Dédale) — la concentration du lanceur sur l'item.
+  // §288: "it escapes and the spell ends" (Maze) — the caster's Concentration on the item.
   if ( ending.rule.spell ) {
     const concentration = concentrationOn(ending.item);
     if ( concentration ) await ending.item.actor.endConcentration(concentration);
@@ -70,22 +70,22 @@ function askExecutor(effect) {
   return viaActiveGM(ACTION_END_QUERY, handleActionEnd, { effect: effect.uuid }, { noGm: "Fin.SansMJ", fallback: false });
 }
 
-/** Les effets du porteur qu'il fait cesser lui-même par une action. */
+/** The bearer's effects that it ends itself through an action. */
 export const ownEndingsOf = actor => actionEndingsOf(actor, "bearer");
 
-/** Les effets de `target` (TokenDocument) qu'une autre créature fait cesser par une action. */
+/** The effects of `target` (TokenDocument) that another creature ends through an action. */
 export const endingsOn = target => actionEndingsOf(target?.actor, "other");
 
 /**
- * Le porteur met fin à son effet — sauvegarde rejouée, ou fin sans jet. L'action est déjà payée (action de base « S'échapper »,
- * ou budget débité pour un PNJ : runtime/grapple.mjs). Le test d'un `roll: "check"` passe par l'évasion d'une entrave.
- * @returns {Promise<boolean>}  Le geste a-t-il été fait (pas : l'effet est-il tombé — une sauvegarde reste à jouer) ?
+ * The bearer ends their effect — save replayed, or end with no roll. The action is already paid ("Escape" basic action,
+ * or budget debited for an NPC: runtime/grapple.mjs). The check of a `roll: "check"` goes through escaping a restraint.
+ * @returns {Promise<boolean>}  Was the gesture made (not: did the effect drop — a save remains to be played)?
  */
 export async function endOwn(ending) {
   return (await askExecutor(ending.effect)) === true;
 }
 
-/** Paie l'action de `token` en combat ; false (et la raison dite) si elle n'est pas disponible. Le MJ n'est jamais retenu. */
+/** Pays `token`'s action in combat; false (and the reason stated) if it is not available. The GM is never held back. */
 export async function payAction(token) {
   const combatant = combatantFor(token.actor);
   if ( !combatant ) return true;
@@ -93,7 +93,7 @@ export async function payAction(token) {
   const before = readBudget(combatant);
   const own = isOwnTurn(combatant);
   const issues = checkUse(before, request, { isOwnTurn: own });
-  // §412 (issue #44, lot 5) : pas de refus sec — la fenêtre de légalité ; forcée, l'action est prise quand même (le MJ prévenu).
+  // §412 (issue #44, batch 5): no flat refusal — the legality window; forced, the action is taken anyway (the GM notified).
   if ( issues.length && !game.user.isGM
     && !(await askAnyway(loc("Force.TitreAction", { name: token.name }), issues.map(i => loc(`Souci.${i}`)), { actor: token.actor, token })) ) return false;
   await writeBudget(combatant, spendUse(before, request, { isOwnTurn: own, attacksPerAction: 1 }));
@@ -101,8 +101,8 @@ export async function payAction(token) {
 }
 
 /**
- * `token` met fin à un effet de `target` : il vient au contact, y laisse son action, fait le test s'il y en a un.
- * @returns {Promise<boolean>}  L'effet est-il tombé ?
+ * `token` ends an effect of `target`: it comes into contact, spends its action there, makes the check if there is one.
+ * @returns {Promise<boolean>}  Did the effect drop?
  */
 export async function endFor(token, target, ending) {
   const near = await joinToken(token, target);
@@ -124,9 +124,9 @@ export async function endFor(token, target, ending) {
 }
 
 /**
- * §288 : au début de son tour, le porteur d'un effet `turnStart` (Dédale : banni, son token caché ne s'offre plus au clic) se voit
- * proposer l'action qui y met fin — chez son joueur, sinon chez le MJ. Oui : l'action payée, le test de l'item (`check`), réussi, l'effet
- * tombe (et le sort avec, `spell`). Carte et texte flottant pour tous. MJ actif.
+ * §288: at the start of its turn, the bearer of a `turnStart` effect (Maze: banished, its hidden token no longer offers itself
+ * to a click) is offered the action that ends it — on their player's side, otherwise the GM's. Yes: the action paid, the
+ * item's check (`check`), on success, the effect drops (and the spell with it, `spell`). Card and floating text for all. Active GM.
  */
 async function offerAtTurnStart(combatant) {
   const actor = combatant?.actor;

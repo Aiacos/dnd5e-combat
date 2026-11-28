@@ -1,8 +1,9 @@
 /**
- * La classe d'un sort. dnd5e 6.0 l'écrit dans `system.sourceItem` (« class:druid », ou l'item d'une sous-classe) et la lit par
- * `classIdentifier` (data/item/spell.mjs:169-177, la migration de `sourceClass` : spell.mjs:424-431) ; le moteur lisait encore
- * `sourceClass`, qui n'existe plus — relevé des trous, 2026-10-22 : il retombait toujours sur « l'acteur a-t-il la classe ? », faux
- * pour un multiclassé. `classIdentifier` demande la classe sur la fiche ; sans elle, l'identifiant écrit (« class:… ») vaut. "" : aucune.
+ * A spell's class. dnd5e 6.0 writes it in `system.sourceItem` ("class:druid", or a subclass's item) and reads it through
+ * `classIdentifier` (data/item/spell.mjs:169-177, the `sourceClass` migration: spell.mjs:424-431); the engine still read
+ * `sourceClass`, which no longer exists — gap survey, 2026-10-22: it always fell back on "does the actor have the class?", wrong
+ * for a multiclass character. `classIdentifier` asks for the class on the sheet; without it, the written identifier
+ * ("class:…") counts. "": none.
  * @param {Item} item
  * @returns {string}
  */

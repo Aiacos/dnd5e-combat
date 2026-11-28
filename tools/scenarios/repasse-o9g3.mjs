@@ -1,8 +1,8 @@
 /**
- * §362, lot O9g de la repasse des objets : Bottes de rapidité. Arène de test (Guerrier, Zombi).
- *  Bottes créées depuis le Guide (la correction de donnée fait viser « soi » à « Click Heels »), portées et harmonisées, le Zombi désigné
- *  comme cible : avant, pas de Désavantage aux attaques d'opportunité ; « Click Heels » — l'effet est sur le Guerrier (pas sur le Zombi),
- *  sa Vitesse double, et les attaques d'opportunité contre lui ont le Désavantage.
+ * §362, batch O9g of the item pass: Boots of Speed. Test arena (Fighter, Zombie).
+ *  Boots created from the Guide (the data fix makes "Click Heels" target "self"), worn and attuned, the Zombie designated
+ *  as the target: before, no Disadvantage on Opportunity Attacks; "Click Heels" — the effect is on the Fighter (not on the Zombie),
+ *  its Speed doubles, and Opportunity Attacks against it have Disadvantage.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";

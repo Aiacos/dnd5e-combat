@@ -1,7 +1,7 @@
 /**
- * §358, lot O9e de la repasse des objets : défenses et réactions d'objets. Arène de test (Guerrier, Zombi, Ensorceleur).
- *  1. Bouclier gardesort tenu et harmonisé : le Trait de feu de l'Ensorceleur contre le Guerrier a le Désavantage ; rangé : non.
- * Bottes de rapidité et Épée de réponse : laissées au MJ pour l'instant (§358).
+ * §358, batch O9e of the item pass: item defenses and Reactions. Test arena (Fighter, Zombie, Sorcerer).
+ *  1. Spell-Guard Shield held and attuned: the Sorcerer's Fire Bolt against the Fighter has Disadvantage; stowed: no.
+ * Boots of Speed and Sword of Answering: left to the GM for now (§358).
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";

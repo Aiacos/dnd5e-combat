@@ -1,8 +1,8 @@
 /**
- * §337, lot O3 de la repasse des objets : fins d'effet, sauvegardes répétées, réveils. Arène de test (Clerc, Guerrier, Zombi).
- *  1. Baguette de paralysie sur le Zombi : Paralysé pour une minute (la donnée n'avait pas de durée) ; en combat, à la fin du tour du
- *     Zombi, la sauvegarde est rejouée (message « resave », moment endOfTurn).
- *  2. Huile de taggit sur le Guerrier : Inconscient et Empoisonné en deux effets ; blessé, il se réveille et reste Empoisonné.
+ * §337, batch O3 of the item pass: effect ends, repeated saving throws, wake-ups. Test arena (Cleric, Fighter, Zombie).
+ *  1. Wand of Paralysis on the Zombie: Paralyzed for one minute (the data had no duration); in combat, at the end of the
+ *     Zombie's turn, the saving throw is replayed ("resave" message, endOfTurn moment).
+ *  2. Taggit Oil on the Fighter: Unconscious and Poisoned as two effects; wounded, it wakes up and stays Poisoned.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -30,11 +30,11 @@ export default {
     };
     ctx.restore(clear);
     ctx.restore(() => ctx.setHp(fighter, hp0));
-    // Guide 3.0.0 : l'activité de la baguette n'est visible qu'harmonisée (`visibility.requireMagic`) — prêtée équipée et harmonisée.
+    // Guide 3.0.0: the wand's activity is only visible when attuned (`visibility.requireMagic`) — lent equipped and attuned.
     const wand = await ctx.ensureItem(cleric, `${DMG}dmgWandOfParalys`, { ready: true });
     const oil = await ctx.ensureItem(cleric, `${DMG}dmgOilOfTaggit00`);
 
-    /** L'activité de sauvegarde de l'objet sur la cible jusqu'à un échec ; rend la résolution ou null. */
+    /** The item's saving throw activity on the target until a failure; returns the resolution or null. */
     const until = async (itemId, target) => {
       for ( let i = 0; i < 20; i++ ) {
         await clear();

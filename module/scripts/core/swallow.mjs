@@ -1,16 +1,16 @@
 /**
- * M8 (SPEC §18.17) : Avaler / Engloutir (Béhir, Ver pourpre, Rémorhaz, Tarasque, Kraken, Crapaud et Grenouille géants ; Cube
- * gélatineux, Blob d'annihilation, Tertre errant). Ce que dit le texte anglais d'origine, et quand les dégâts tombent.
- * Fonctions pures, sans Foundry.
+ * M8 (SPEC §18.17): Swallow / Engulf (Behir, Purple Worm, Remorhaz, Tarrasque, Kraken, Giant Toad and Giant Frog; Gelatinous
+ * Cube, Blob of Annihilation, Shambling Mound). What the original English text says, and when the damage lands.
+ * Pure functions, no Foundry.
  */
 
 import { plainStatText as plain } from "./text.mjs";
 
 /**
- * - `damageAt` : « at the start of each of the behir's turns » (`ownerStart`), « at the start of each of its turns »
- *   (`targetStart` : Kraken, Blob, Tertre), « at the end of each of the toad's turns » (`ownerEnd`), « At the end of the
- *   frog's next turn » (`ownerEndOnce` : puis la grenouille le recrache) ; null si le texte n'en dit rien ;
- * - `threshold` : « If the behir takes 30 damage or more on a single turn from the swallowed creature » — régurgiter.
+ * - `damageAt`: "at the start of each of the behir's turns" (`ownerStart`), "at the start of each of its turns"
+ *   (`targetStart`: Kraken, Blob, Mound), "at the end of each of the toad's turns" (`ownerEnd`), "At the end of the
+ *   frog's next turn" (`ownerEndOnce`: then the frog spits it out); null if the text says nothing;
+ * - `threshold`: "If the behir takes 30 damage or more on a single turn from the swallowed creature" — regurgitate.
  * @param {string} html
  * @returns {{damageAt: string|null, threshold: number|null}}
  */
@@ -30,17 +30,17 @@ const SIZES = ["tiny", "sm", "med", "lg", "huge", "grg"];
 const SIZE_WORDS = { tiny: "tiny", small: "sm", medium: "med", large: "lg", huge: "huge", gargantuan: "grg" };
 
 /**
- * §18.21 : ce que le texte limite ou ajoute.
- *  - `capacity` : « can have only one creature swallowed at a time » (1), « up to four creatures swallowed at a time » (4),
- *    « only one creature Grappled by this action at a time » (Tertre) ; null sans limite écrite ;
- *  - `grappling` : « swallows a Medium or smaller target it is grappling » (la cible doit être agrippée par l'avaleur ; ailleurs
- *    le MM le dit dans la cible de l'activité, lue par l'adaptateur) ;
- *  - `forbids` : « it can't use Bite while it has a swallowed target » → le nom anglais de l'item interdit ;
- *  - `repeatsSave` : « repeats the save at the end of each of its turns » (Blob d'annihilation) ;
- *  - `moving` : « each creature whose space the cube enters for the first time during this move » — engloutir en marchant,
- *    `maxSize` : « can move through the spaces of Large or smaller creatures » (clé de taille dnd5e) ;
- *  - `targetMaxSize` : « swallows a Medium or smaller target it is grappling » (Crapaud géant, §45) — la taille de ce qui
- *    s'avale, quand le texte la dit (ailleurs c'est la cible de l'activité : `sizeLimit`).
+ * §18.21: what the text limits or adds.
+ *  - `capacity`: "can have only one creature swallowed at a time" (1), "up to four creatures swallowed at a time" (4),
+ *    "only one creature Grappled by this action at a time" (Mound); null with no written limit;
+ *  - `grappling`: "swallows a Medium or smaller target it is grappling" (the target must be grappled by the swallower; elsewhere
+ *    the MM says it in the activity's target, read by the adapter);
+ *  - `forbids`: "it can't use Bite while it has a swallowed target" → the English name of the forbidden item;
+ *  - `repeatsSave`: "repeats the save at the end of each of its turns" (Blob of Annihilation);
+ *  - `moving`: "each creature whose space the cube enters for the first time during this move" — engulfing while walking,
+ *    `maxSize`: "can move through the spaces of Large or smaller creatures" (dnd5e size key);
+ *  - `targetMaxSize`: "swallows a Medium or smaller target it is grappling" (Giant Toad, §45) — the size of what
+ *    gets swallowed, when the text states it (elsewhere it is the activity's target: `sizeLimit`).
  */
 function readSwallowLimits(text) {
   const count = text.match(/\b(?:only (one)|up to (\w+)) (?:creatures? |targets? )?(?:swallowed|engulfed|Grappled by this action) at a time\b/i);
@@ -55,8 +55,8 @@ function readSwallowLimits(text) {
 }
 
 /**
- * La taille maximale qu'écrit un texte : « Medium or smaller », ou sa traduction (« de taille M ou inférieure ») — clé de
- * taille dnd5e, ou null. `after` : ce qui doit précéder (rien : n'importe où dans le texte).
+ * The maximum size a text writes: "Medium or smaller", or its translation ("de taille M ou inférieure") — dnd5e size key,
+ * or null. `after`: what must come before it (nothing: anywhere in the text).
  */
 export function sizeLimit(text, after=null) {
   const source = String(text ?? "");
@@ -67,7 +67,7 @@ export function sizeLimit(text, after=null) {
   return fr ? ({ TP: "tiny", P: "sm", M: "med", G: "lg", TG: "huge", GIG: "grg" })[fr] ?? null : null;
 }
 
-/** Une créature de cette taille tient-elle sous la limite (clés de taille dnd5e) ? Sans limite, oui. */
+/** Does a creature of this size fit under the limit (dnd5e size keys)? With no limit, yes. */
 export function fitsSize(size, maxSize) {
   if ( !maxSize ) return true;
   const i = SIZES.indexOf(size);
@@ -75,9 +75,9 @@ export function fitsSize(size, maxSize) {
 }
 
 /**
- * Pendant un déplacement, dans quels espaces l'avaleur entre-t-il ? Rectangles en pixels : l'avaleur à chaque position
- * échantillonnée du trajet (départ exclu), les autres à leur place. Chevaucher au départ ne compte pas (« enters »).
- * @param {Array<{x: number, y: number, w: number, h: number}>} path   Positions de l'avaleur, départ compris.
+ * During a move, which spaces does the swallower enter? Rectangles in pixels: the swallower at each sampled position
+ * of the path (start excluded), the others in place. Overlapping at the start does not count ("enters").
+ * @param {Array<{x: number, y: number, w: number, h: number}>} path   Swallower positions, start included.
  * @param {Array<{id: string, x: number, y: number, w: number, h: number}>} others
  * @returns {string[]}
  */
@@ -88,11 +88,11 @@ export function enteredSpaces(path, others) {
 }
 
 /**
- * Qui subit les dégâts à ce changement de tour.
+ * Who takes the damage at this turn change.
  * @param {string|null} damageAt
  * @param {{ended: boolean, started: boolean, targetStarted: boolean, sameTurn: boolean}} at
- *   `ended` : le tour de l'avaleur s'achève ; `started` : il commence ; `targetStarted` : le tour de l'avalé commence ;
- *   `sameTurn` : l'avalé l'a été pendant le tour qui s'achève (« son tour SUIVANT » : pas encore).
+ *   `ended`: the swallower's turn ends; `started`: it starts; `targetStarted`: the swallowed creature's turn starts;
+ *   `sameTurn`: the creature was swallowed during the turn that is ending ("its NEXT turn": not yet).
  */
 export function swallowDamageNow(damageAt, { ended=false, started=false, targetStarted=false, sameTurn=false }) {
   if ( damageAt === "ownerStart" ) return started;
@@ -102,7 +102,7 @@ export function swallowDamageNow(damageAt, { ended=false, started=false, targetS
   return false;
 }
 
-/** Dégâts subis pendant un tour depuis l'intérieur : faut-il la sauvegarde pour ne pas régurgiter ? */
+/** Damage taken during a turn from the inside: is the save needed to avoid regurgitating? */
 export function mustRegurgitateSave(threshold, damageThisTurn) {
   return (threshold > 0) && (damageThisTurn >= threshold);
 }

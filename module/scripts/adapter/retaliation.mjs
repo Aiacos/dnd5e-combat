@@ -1,17 +1,17 @@
 /**
- * Riposte (SPEC §16.9, brique B9) : une créature touchée par une attaque en inflige des dégâts à l'attaquant — Bouclier
- * de feu, Armure d'Agathys, Forme corrosive. Lu et joué dans Foundry ; la règle (quand) est une déclaration du registre
- * (moment `isHit`, étape `damage` avec `to: "source"`), jugée AVANT l'application des dégâts de l'attaque (« tant que
- * vous avez ces PV temporaires » se juge au moment du coup), jouée APRÈS.
+ * Retaliation (SPEC §16.9, brick B9): a creature hit by an attack deals damage to the attacker in return — Fire
+ * Shield, Armor of Agathys, Acidic Form. Read and played in Foundry; the rule (when) is a registry declaration
+ * (moment `isHit`, `damage` step with `to: "source"`), judged BEFORE the attack's damage is applied ("while
+ * you have these Temporary Hit Points" is judged at the moment of the hit), played AFTER.
  *
- * Vérifié dans dnd5e 6.0.3 :
- *  - une activité de dégâts donne sa configuration de jet, mise à l'échelle par `item.scaledClone(scaling)` comme le fait
- *    le message d'utilisation (documents/chat-message.mjs, `getAssociatedItem`), par `getDamageConfig()`
- *    (data/activity/base-activity.mjs) : `rolls[] = { parts, data, options }` ;
- *  - un effet appliqué par le plateau garde le niveau de lancement : `flags.dnd5e.scaling` (effect-application.mjs,
- *    `_prepareEffectData`) — la trace du moteur (adapter/traces.mjs) l'écrit de même ;
- *  - `DamageRoll.toMessage(rolls, messageData)` (dice/basic-roll.mjs) : une carte de jet sans activité associée, que le
- *    moteur ne prend pas pour les dégâts d'une résolution (adapter/messages.mjs, `readDamageMessage`).
+ * Verified in dnd5e 6.0.3:
+ *  - a damage activity gives its roll configuration, scaled by `item.scaledClone(scaling)` as the use message
+ *    does (documents/chat-message.mjs, `getAssociatedItem`), through `getDamageConfig()`
+ *    (data/activity/base-activity.mjs): `rolls[] = { parts, data, options }`;
+ *  - an effect applied by the tray keeps the casting level: `flags.dnd5e.scaling` (effect-application.mjs,
+ *    `_prepareEffectData`) — the engine's trace (adapter/traces.mjs) writes it the same way;
+ *  - `DamageRoll.toMessage(rolls, messageData)` (dice/basic-roll.mjs): a roll card without an associated activity, which the
+ *    engine does not take for a resolution's damage (adapter/messages.mjs, `readDamageMessage`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,10 +21,10 @@ import { applyDamageToToken } from "./messages.mjs";
 import { describeTarget, cardScaling } from "./areas.mjs";
 
 /**
- * §86 : riposte par une sauvegarde (étape `save`, `to: "source"`) — l'attaquant fait la sauvegarde d'une activité de l'item
- * (Aura sacrée : Constitution, Aveuglé sur un échec). Même forme que `pulseAgainst` (adapter/areas.mjs) : un message d'utilisation
- * neuf de l'activité (au niveau de lancement de l'effet porté), l'attaquant pour seule cible, marqué `areaTick` — rien n'est
- * dépensé, la résolution de sauvegarde habituelle s'applique (DD du lanceur, effets sur un échec). MJ actif uniquement.
+ * §86: retaliation through a save (`save` step, `to: "source"`) — the attacker makes the save of one of the item's activities
+ * (Sacred Aura: Constitution, Blinded on a failure). Same form as `pulseAgainst` (adapter/areas.mjs): a brand-new use message
+ * of the activity (at the casting level of the carried effect), the attacker as the only target, marked `areaTick` — nothing is
+ * spent, the usual save resolution applies (caster's DC, effects on a failure). Active GM only.
  * @returns {Promise<ChatMessage|null>}
  */
 export async function saveRetaliation({ declaration, step }, { bearerToken, attackerToken }) {
@@ -40,20 +40,20 @@ export async function saveRetaliation({ declaration, step }, { bearerToken, atta
     type: "usage",
     speaker: ChatMessage.implementation.getSpeaker({ actor: item.actor ?? undefined }),
     flavor: game.i18n.format("DND5ECOMBAT.RiposteSauvegarde", { item: declaration.name ?? item.name, attacker: attackerToken.name, bearer: bearerToken?.name ?? "" }),
-    // §406 : la montée de l'effet porté sur la carte (`system.scaling`) — la résolution relit l'activité par `getAssociatedActivity({ scaled:
-    // true })`, qui la prend là ; `getCardData` ne la donne pas.
+    // §406: the carried effect's scaling on the card (`system.scaling`) — the resolution reads the activity again through
+    // `getAssociatedActivity({ scaled: true })`, which takes it from there; `getCardData` does not give it.
     system: { ...card, ...cardScaling(activity, effect), targets: [describeTarget(attackerToken)] },
     flags: { core: { canPopout: true }, [MODULE_ID]: { areaTick: { event: "retaliation", source: bearerToken?.uuid ?? null, token: attackerToken.uuid } } }
   });
 }
 
 /**
- * Les ripostes que déclenche une attaque qui touche, jugées avant ses dégâts.
+ * The retaliations triggered by an attack that hits, judged before its damage.
  * @param {object} context
- * @param {TokenDocument} context.bearerToken    La créature touchée.
- * @param {TokenDocument} context.attackerToken  L'attaquant.
- * @param {Activity} context.activity            L'activité d'attaque.
- * @param {string|null} context.attackMode       Mode d'attaque du jet (« thrown » : pas au corps à corps).
+ * @param {TokenDocument} context.bearerToken    The creature that was hit.
+ * @param {TokenDocument} context.attackerToken  The attacker.
+ * @param {Activity} context.activity            The attack activity.
+ * @param {string|null} context.attackMode       The roll's attack mode ("thrown": not melee).
  * @returns {Array<{declaration: object, step: object}>}
  */
 export function retaliationsFor({ bearerToken, attackerToken, activity, attackMode=null }) {
@@ -66,7 +66,7 @@ export function retaliationsFor({ bearerToken, attackerToken, activity, attackMo
     .filter(s => s.to === "source").map(step => ({ declaration: d, step })));
 }
 
-/** Les jets de dégâts d'une riposte : l'activité de dégâts de l'item (au niveau de lancement), ou la formule déclarée. */
+/** A retaliation's damage rolls: the item's damage activity (at the casting level), or the declared formula. */
 async function rollsFor({ declaration, step }, bearer) {
   const item = fromUuidSync(declaration.item ?? "", { strict: false });
   const effect = declaration.effect ? fromUuidSync(declaration.effect, { strict: false }) : null;
@@ -84,9 +84,9 @@ async function rollsFor({ declaration, step }, bearer) {
 }
 
 /**
- * Joue une riposte : jet de dégâts (carte visible de tous, au nom de la créature touchée), puis dégâts appliqués à
- * l'attaquant par la méthode du système (résistances et immunités comprises). MJ actif uniquement.
- * @returns {Promise<object|null>}  Entrée de journal (PV avant / après) pour l'annulation, ou null.
+ * Plays a retaliation: damage roll (card visible to all, in the name of the creature that was hit), then damage applied to
+ * the attacker through the system's method (Resistances and Immunities included). Active GM only.
+ * @returns {Promise<object|null>}  Log entry (HP before / after) for the undo, or null.
  */
 export async function retaliate(retaliation, { bearerToken, attackerToken }) {
   const bearer = bearerToken?.actor;
@@ -111,20 +111,20 @@ export async function retaliate(retaliation, { bearerToken, attackerToken }) {
 }
 
 /**
- * Dégâts lancés par le moteur et appliqués à une créature (SPEC §19) : les dégâts d'issue d'une résolution (moments hit,
- * failedSave : « Une cible subit 5 (2d4) dégâts nécrotiques supplémentaires si elle échoue ») et ceux du porteur d'un effet à
- * son tour (Flèche acide de Melf). Même chemin qu'une riposte : carte de jet visible de tous, puis `applyDamageToToken`
- * (résistances et immunités comprises). `step` : `{ formula, damageType }` ou `{ activity }` (activité de dégâts de
- * `item`, au niveau `scaling`). `multiplier` : 0,5 pour une sauvegarde réussie. MJ actif uniquement.
- * @returns {Promise<object|null>}  Entrée de journal (PV avant / après), ou null.
+ * Damage rolled by the engine and applied to a creature (SPEC §19): the outcome damage of a resolution (moments hit,
+ * failedSave: "A target takes an extra 5 (2d4) necrotic damage if it fails") and that of the bearer of an effect on
+ * their turn (Melf's Acid Arrow). Same path as a retaliation: roll card visible to all, then `applyDamageToToken`
+ * (Resistances and Immunities included). `step`: `{ formula, damageType }` or `{ activity }` (damage activity of
+ * `item`, at level `scaling`). `multiplier`: 0.5 for a successful save. Active GM only.
+ * @returns {Promise<object|null>}  Log entry (HP before / after), or null.
  */
 export async function inflict({ step, item=null, scaling=0, speaker, targetUuid, flavor, flags={}, multiplier=1, properties=["mgc"] }) {
   if ( !(multiplier > 0) ) return null;
   let rolls;
   if ( step.activity ) {
     const scaled = (scaling && item?.scaledClone) ? item.scaledClone(scaling) : item;
-    // §153 : une copie plus ancienne de l'item, sans l'activité déclarée (le Châtiment de fournaise des personnages pré-tirés du
-    // Manuel), prend l'activité qui porte les dés de dégâts — comme le châtiment lui-même (adapter/smite.mjs, §128).
+    // §153: an older copy of the item, without the declared activity (the pre-generated characters' "Furnace Smite" in the
+    // Handbook), takes the activity that carries the damage dice — like the smite itself (adapter/smite.mjs, §128).
     const dice = a => (a.damage?.parts ?? []).some(p => (p.number && p.denomination) || p.custom?.formula);
     const activity = scaled?.system?.activities?.get(step.activity)
       ?? scaled?.system?.activities?.find?.(a => a.getDamageConfig && dice(a)) ?? null;
@@ -136,7 +136,7 @@ export async function inflict({ step, item=null, scaling=0, speaker, targetUuid,
   }
   else {
     const data = item?.getRollData?.() ?? {};
-    // `properties` : magiques par défaut (sorts, capacités) ; §21 : Écorchure garde celles de l'arme (une arme ordinaire ne l'est pas).
+    // `properties`: magical by default (spells, features); §21: Graze keeps the weapon's (an ordinary weapon is not).
     rolls = [new CONFIG.Dice.DamageRoll(step.formula, data, { type: step.damageType, types: [step.damageType], properties })];
   }
   if ( !rolls.length ) return null;

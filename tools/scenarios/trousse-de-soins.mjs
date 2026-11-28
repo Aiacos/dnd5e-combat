@@ -1,9 +1,9 @@
 /**
- * Trousse de soins (SPEC §50). Item prêté depuis le compendium du Manuel des joueurs.
- *  1. Le Guerrier tombe à 0 PV (Inconscient) ; le Clerc, au contact, utilise la trousse : Stabilisé, annoncé au chat, une
- *     utilisation dépensée.
- *  2. Le Guerrier debout : la trousse ne stabilise rien.
- * Remet PV, états, utilisations ; retire l'item prêté (positions : filet de sécurité).
+ * Healer's Kit (SPEC §50). Item lent from the Player's Handbook compendium.
+ *  1. The Fighter drops to 0 HP (Unconscious); the Cleric, in contact, uses the kit: Stabilized, announced in chat, one use
+ *     spent.
+ *  2. The Fighter standing: the kit stabilizes nothing.
+ * Resets HP, conditions, uses; removes the lent item (positions: safety net).
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -40,12 +40,12 @@ export default {
       return item?.system?.uses?.spent ?? null;
     };
 
-    // Une trousse déjà sur la fiche garde son compteur d'utilisations.
+    // A kit already on the sheet keeps its use counter.
     const spent0 = await uses();
     ctx.restore(() => ctx.call("upsert-embedded-item", { documentType: "Actor", id: clerc.actorId,
       itemData: { "system.uses.spent": spent0 ?? 0 }, match: { path: "_id", value: kit } }).catch(() => {}));
 
-    // 1. À 0 PV : stabilisé.
+    // 1. At 0 HP: stabilized.
     await ctx.setHp(guerrier, 0);
     await pause(2500);
     ctx.expect((await statuses()).includes("unconscious") && !(await statuses()).includes("stable"), "le Guerrier à 0 PV est Inconscient, pas Stabilisé");
@@ -58,7 +58,7 @@ export default {
     ctx.expect(told, "la stabilisation est annoncée au chat");
     ctx.expect((await uses()) === (spentBefore ?? 0) + 1, `une utilisation de la trousse dépensée (${spentBefore} → ${await uses()})`);
 
-    // 2. Debout : rien à stabiliser.
+    // 2. Standing: nothing to stabilize.
     await clean();
     await pause(1500);
     await ctx.use({ tokenId: clerc.id, itemId: kit, activityType: "utility", targetTokenIds: [guerrier.id], consume: true });

@@ -1,9 +1,9 @@
 /**
- * B01 (§483) — Attaques multiples : plan déclaré (`multiattackPlan`, posé en flag sur l'item) et groupe à exclusion. L'Ours brun
- * du Monster Manual reçoit le plan de « makes two melee attacks, only one of which can be a Bite attack » : deux attaques de
- * mêlée, une seule Morsure (`kind:melee`, `except: ["identifier:bite"]`). À son tour : la Morsure ouvre les Attaques
- * multiples (1/2) ; une seconde Morsure ne tient pas dans le plan (la légalité la signale, le scénario la confirme d'office, le
- * plan reste à 1 utilisation) ; la Griffe y tient (2/2).
+ * B01 (§483) — Multiattack: declared plan (`multiattackPlan`, set as a flag on the item) and exclusion group. The Brown
+ * Bear from the Monster Manual receives the plan of "makes two melee attacks, only one of which can be a Bite attack":
+ * two melee attacks, a single Bite (`kind:melee`, `except: ["identifier:bite"]`). On its turn: the Bite opens Multiattack
+ * (1/2); a second Bite does not fit in the plan (legality flags it, the scenario confirms it automatically, the plan
+ * stays at 1 use); the Claw fits (2/2).
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -27,7 +27,7 @@ export default {
     const at = await ctx.position(bear);
     await ctx.call("move-token", { tokenId: zombi.id, x: at.x + 2 * grid, y: at.y, elevation: at.elevation });
 
-    // Le plan déclaré, sur l'item Attaques multiples de l'ours posé (flag de l'item : la couche la plus haute de `contentOf`).
+    // The declared plan, on the Multiattack item of the placed bear (item flag: the highest layer of `contentOf`).
     const flagged = await ctx.call("run-script", { code: `const item = canvas.tokens.get("${bear.id}").actor.items.find(i => i.system.identifier === "multiattack");
       if ( !item ) return null; await item.setFlag("${MODULE_ID}", "multiattackPlan", ${JSON.stringify(PLAN)}); return item.id;` });
     ctx.restore(() => ctx.call("run-script", { code: `const item = canvas.tokens.get("${bear.id}")?.actor?.items.find(i => i.system.identifier === "multiattack");

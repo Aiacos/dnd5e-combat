@@ -1,10 +1,10 @@
 /**
- * Relevé des sorts, lot 5b : barrières (SPEC §163), monde `dnd-6`, arène. Sorts prêtés du Manuel des joueurs (à volonté).
- *  - Champ antimagie (le Magicien) : Flamme sacrée du Zombi sur le Magicien → non affecté ; le Magicien ne peut lancer aucun sort
- *    (souci de légalité) ;
- *  - Coquille antivie (le Clerc) : le Zombi (Mort-vivant) y entre en marchant ; le Bandit (Humanoïde), non ; le Bandit, dehors, au
- *    contact du Guerrier qui est dedans, ne peut pas le frapper au corps à corps (la fenêtre de légalité le dit).
- * Remet positions, effets, combat.
+ * Spell survey, batch 5b: barriers (SPEC §163), world `dnd-6`, arena. Spells lent from the Player's Handbook (at will).
+ *  - Antimagic Field (the Wizard): the Zombie's Sacred Flame on the Wizard → not affected; the Wizard cannot cast any spell
+ *    (legality concern);
+ *  - Antilife Shell (the Cleric): the Zombie (Undead) walks into it; the Bandit (Humanoid) does not; the Bandit, outside, in
+ *    contact with the Fighter who is inside, cannot hit him in melee (the legality window says so).
+ * Restores positions, effects, combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -90,14 +90,14 @@ export default {
       const bAfter = await ctx.position(bandit);
       const inside = Math.hypot((bAfter.x - c.x) / grid, (bAfter.y - c.y) / grid) <= 2;
       ctx.expect(!inside, `Coquille antivie : le Bandit (Humanoïde) n'entre pas (${b.before?.x},${b.before?.y} → ${bAfter.x},${bAfter.y})`);
-      // §225 : pas davantage par un déplacement du cœur d'un seul tenant (un glisser) — seul `pending` était contrôlé.
+      // §225: no more by a core move in one piece (a drag) — only `pending` was checked.
       await place(bandit, c.x, c.y - 4 * grid);
       const cell = { i: Math.round((c.y - grid) / grid), j: Math.round(c.x / grid) };
       const dragged = await ctx.engine("rawMove", { tokenId: bandit.id, cell });
       const dAfter = dragged.after ?? await ctx.position(bandit);
       const draggedIn = Math.hypot((dAfter.x - c.x) / grid, (dAfter.y - c.y) / grid) <= 2;
       ctx.expect(!draggedIn, `Coquille antivie : le Bandit n'entre pas non plus d'un glisser (${dragged.before?.x},${dragged.before?.y} → ${dAfter.x},${dAfter.y})`);
-      // Le Guerrier dedans, au bord ; le Bandit dehors, à son contact.
+      // The Fighter inside, at the edge; the Bandit outside, in contact with him.
       await place(fighter, c.x + 2 * grid, c.y);
       await place(bandit, c.x + 3 * grid, c.y);
       const weapon = await weaponOf(bandit);

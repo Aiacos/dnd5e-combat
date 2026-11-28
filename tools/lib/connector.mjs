@@ -1,8 +1,8 @@
 /**
- * Client du connecteur MCP universel par son transport HTTP (Streamable HTTP), sans dépendre de
- * la liste d'outils figée d'une session Claude. Partagé par `tools/mcp.mjs` (un appel) et
- * `tools/scenario.mjs` (une suite d'appels). Le serveur doit tourner et le monde être ouvert chez
- * le MJ : c'est SON client qui exécute, avec le code du moteur qu'il a chargé (F5 après un pull).
+ * Client of the universal MCP connector through its HTTP transport (Streamable HTTP), without depending on
+ * the frozen tool list of a Claude session. Shared by `tools/mcp.mjs` (one call) and
+ * `tools/scenario.mjs` (a series of calls). The server must be running and the world open on
+ * the GM's side: it is THEIR client that executes, with the engine code it has loaded (F5 after a pull).
  */
 
 export const DEFAULT_URL = "http://localhost:31416/mcp";
@@ -23,7 +23,7 @@ export async function connect({ url=process.env.MCP_URL ?? DEFAULT_URL, client="
     if ( notification ) return null;
     const text = await response.text();
     if ( !response.ok ) throw new Error(`HTTP ${response.status} : ${text.slice(0, 300)}`);
-    // Réponse JSON directe, ou flux SSE dont la dernière ligne « data: » porte la réponse.
+    // Direct JSON response, or SSE stream whose last "data:" line carries the response.
     const payload = text.trimStart().startsWith("{") ? text
       : text.split("\n").filter(l => l.startsWith("data:")).map(l => l.slice(5).trim()).pop();
     const message = JSON.parse(payload);
@@ -35,15 +35,15 @@ export async function connect({ url=process.env.MCP_URL ?? DEFAULT_URL, client="
   await rpc("notifications/initialized", undefined, { notification: true });
 
   return {
-    /** Les noms des tools du serveur. */
+    /** The names of the server's tools. */
     async list() {
       const { tools } = await rpc("tools/list", {});
       return tools.map(t => t.name);
     },
 
     /**
-     * Appelle un tool. Rend l'objet JSON de la réponse (ou le texte brut). Une réponse en erreur
-     * du tool lève, avec son texte.
+     * Calls a tool. Returns the JSON object of the response (or the raw text). A tool's error
+     * response throws, with its text.
      */
     async call(tool, args={}) {
       const result = await rpc("tools/call", { name: tool, arguments: args });
@@ -54,15 +54,15 @@ export async function connect({ url=process.env.MCP_URL ?? DEFAULT_URL, client="
     },
 
     /**
-     * Ferme la session côté serveur (DELETE). Sans ça chaque appel laissait une session ouverte :
-     * 844 en une journée de tests, et le connecteur est tombé. Sans effet si déjà fermée.
+     * Closes the session on the server side (DELETE). Without it each call left a session open:
+     * 844 in one day of tests, and the connector went down. No effect if already closed.
      */
     async close() {
       if ( !sessionId ) return;
       const id = sessionId;
       sessionId = null;
       try { await fetch(url, { method: "DELETE", headers: { "Mcp-Session-Id": id } }); }
-      catch { /* serveur arrêté : rien à fermer */ }
+      catch { /* server stopped: nothing to close */ }
     }
   };
 }

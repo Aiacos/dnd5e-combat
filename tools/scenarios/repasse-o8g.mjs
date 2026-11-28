@@ -1,12 +1,12 @@
 /**
- * §350, lot O8g de la repasse des objets : lire un parchemin de sort (liste de classe, test au-dessus du niveau). Arène de test
- * (Guerrier, Magicien niveau 1, Roublard, Zombi). Parchemins faits comme dnd5e les fait depuis le Manuel des joueurs.
- *  1. Le Guerrier (sans liste de sorts) lit Projectile magique : inintelligible, rien ne part, le parchemin reste.
- *  2. Le Magicien lit Projectile magique (niveau 1) : le sort part, sans test.
- *  3. Le Magicien lit Immobilisation de monstre (niveau 5, au-dessus de ses emplacements) : test DD 15 ; raté, le sort s'efface et
- *     le parchemin part (rejoué jusqu'à un échec, pile de 10).
- *  4. Le Roublard avec Utilisation d'objets magiques (aptitude prêtée) : Soins (Clerc, niveau 1) part sans test ; Immobilisation
- *     de personne (niveau 2) demande un test d'Intelligence (Arcanes) DD 12.
+ * §350, batch O8g of the item pass: reading a spell scroll (class list, check above the level). Test arena
+ * (Fighter, level 1 Wizard, Rogue, Zombie). Scrolls made as dnd5e makes them from the Player's Handbook.
+ *  1. The Fighter (no spell list) reads Magic Missile: unintelligible, nothing goes off, the scroll stays.
+ *  2. The Wizard reads Magic Missile (level 1): the spell goes off, with no check.
+ *  3. The Wizard reads Hold Monster (level 5, above its spell slots): DC 15 check; on a failure, the spell fades and
+ *     the scroll goes (replayed until a failure, stack of 10).
+ *  4. The Rogue with Use Magic Device (lent feature): Cure Wounds (Cleric, level 1) goes off with no check; Hold Person
+ *     (level 2) asks for an Intelligence (Arcana) check DC 12.
  */
 const MODULE_ID = "dnd5e-combat";
 const SPELLS = "Compendium.dnd-players-handbook.spells.Item.";
@@ -32,7 +32,7 @@ export default {
       return s.itemId;
     };
     const quantity = async (token, itemId) => (await ctx.engine("itemData", { tokenId: token.id, itemId, paths: ["system.quantity"] }).catch(() => null))?.["system.quantity"] ?? 0;
-    /** Lit le parchemin sur le Zombi ; rend les lignes du journal du moteur écrites pendant la lecture qui nomment le lecteur. */
+    /** Reads the scroll on the Zombie; returns the engine log lines written during the reading that name the reader. */
     const read = async (token, itemId) => {
       const before = (await ctx.engineLog()).length;
       await ctx.use({ tokenId: token.id, itemId, activityType: "cast", consume: false, targetTokenIds: [zombi.id],

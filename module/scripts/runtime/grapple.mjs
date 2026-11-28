@@ -1,19 +1,19 @@
 /**
- * L'empoignade en jeu (SPEC §15.2, règles 2024, glossaire « Agrippé » et « Attaque à mains nues »).
+ * Grapples in play (SPEC §15.2, 2024 rules, glossary "Grappled" and "Unarmed Strike").
  *
- * Sur le MJ actif :
- *  - l'agrippeur porte une marque visible « Agrippe : <victime> », liée à l'effet Agrippé de la victime :
- *    posée avec lui, retirée avec lui ; supprimer la marque libère la victime (lâcher prise) ;
- *  - « Déplaçable » : quand l'agrippeur marche (pas une téléportation), sa victime le suit, à sa place
- *    relative ou sur la case libre à son contact la plus proche — jamais dans une autre créature ; un pas
- *    `displace`, sans attaque d'opportunité. Le surcoût (déplacement doublé) est dans le plafond du tour
- *    (runtime/actions.mjs) ;
- *  - l'empoignade cesse d'elle-même quand l'agrippeur est neutralisé ou que la distance dépasse sa
- *    portée (poussée, téléportation, victime qu'on n'a pas pu poser).
- * Pour toute créature agrippée : S'échapper (menu contextuel sur son token, ou item d'action de base) —
- * test d'Athlétisme ou d'Acrobaties, le meilleur, contre le DD de l'agrippeur, pour une action.
- * Vitesse 0 : dnd5e la pose déjà (`noMovement`, data/actor/templates/attributes.mjs:533-537) ; le moteur
- * refuse en plus le déplacement volontaire d'un agrippé avec un message clair (runtime/actions.mjs).
+ * On the active GM:
+ *  - the grappler bears a visible mark "Grapples: <victim>", tied to the victim's Grappled effect:
+ *    placed with it, removed with it; deleting the mark frees the victim (letting go);
+ *  - "Movable": when the grappler walks (not a teleport), their victim follows, at its relative
+ *    place or on the free cell nearest to their contact — never into another creature; a
+ *    `displace` step, with no Opportunity Attack. The extra cost (doubled movement) is in the turn's
+ *    cap (runtime/actions.mjs);
+ *  - the grapple ends by itself when the grappler is Incapacitated or when the distance exceeds their
+ *    reach (push, teleport, a victim that could not be placed).
+ * For any grappled creature: Escape (context menu on its token, or basic action item) —
+ * Athletics or Acrobatics check, the better, against the grappler's DC, for an action.
+ * Speed 0: dnd5e already sets it (`noMovement`, data/actor/templates/attributes.mjs:533-537); the engine
+ * also refuses a grappled creature's voluntary movement with a clear message (runtime/actions.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -41,16 +41,16 @@ import { log, loc, notice, rolledAndShown, tokenOfActor } from "./shared.mjs";
 /*  Tient-elle encore ?                         */
 /* -------------------------------------------- */
 
-/** Empoignades dont l'agrippeur est introuvable : signalées une fois, pas à chaque vérification. */
+/** Grapples whose grappler cannot be found: reported once, not at every check. */
 const unknownGrapplers = new Set();
 
-/** Retire les empoignades qui ne tiennent plus, sur la scène donnée. */
+/** Removes the grapples that no longer hold, on the given scene. */
 async function releaseBrokenGrapples(scene) {
   if ( !scene ) return;
   const factors = readUnitFactors();
   for ( const token of scene.tokens ) {
     for ( const effect of grappleEffectsOf(token.actor) ) {
-      // Acteur lié : ses effets suivent tous ses tokens ; on ne juge que dans la scène de l'empoignade.
+      // Linked actor: its effects follow all its tokens; we only judge within the grapple's scene.
       const where = grappleSceneOf(effect);
       if ( where && (where !== scene.id) ) continue;
       const facts = grappleFacts(effect, token, factors);
@@ -71,8 +71,8 @@ async function releaseBrokenGrapples(scene) {
 }
 
 /**
- * Vérification regroupée : les évènements arrivent en rafale (déplacement, effets d'aura, états de tour).
- * Les scènes à vérifier s'ACCUMULENT jusqu'au passage — la dernière demande ne remplace pas les autres.
+ * Batched check: events arrive in bursts (movement, aura effects, turn states).
+ * The scenes to check ACCUMULATE until the pass — the last request does not replace the others.
  */
 const pendingScenes = new Set();
 let timer = null;
@@ -86,7 +86,7 @@ function scheduleCheck(scenes) {
   }, 300);
 }
 
-/** Les scènes où un acteur a un token — toutes, pas seulement celle qu'affiche ce client (`Actor#getDependentTokens`). */
+/** The scenes where an actor has a token — all of them, not only the one this client displays (`Actor#getDependentTokens`). */
 function scenesOf(actor) {
   if ( actor.isToken ) return [actor.token?.parent];
   return (actor.getDependentTokens?.({ concreteOnly: true }) ?? []).map(t => t.parent);
@@ -96,7 +96,7 @@ function scenesOf(actor) {
 /*  La marque de l'agrippeur                    */
 /* -------------------------------------------- */
 
-/** Un Agrippé posé avec un agrippeur connu : la marque « Agrippe : <victime> » sur l'agrippeur. */
+/** A Grappled placed with a known grappler: the mark "Grapples: <victim>" on the grappler. */
 async function markGrappler(effect) {
   if ( !effect.statuses?.has("grappled") ) return;
   const grappler = grapplerOf(effect);
@@ -108,9 +108,9 @@ async function markGrappler(effect) {
 }
 
 /**
- * §502 (B22) : `grapples.one` — l'item n'agrippe qu'une créature à la fois. Un nouvel Agrippé venu de cet item relâche les autres
- * créatures qu'il tenait (leur effet Agrippé de cet item est retiré, la marque de l'agrippeur suit par `unlink`), avec un avis et un son
- * pour toute la table.
+ * §502 (B22): `grapples.one` — the item grapples only one creature at a time. A new Grappled from this item releases the
+ * other creatures it held (their Grappled effect from this item is removed, the grappler's mark follows via `unlink`), with a
+ * notice and a sound for the whole table.
  */
 async function onlyOneGrappled(effect) {
   if ( !effect.statuses?.has("grappled") ) return;
@@ -134,7 +134,7 @@ async function onlyOneGrappled(effect) {
   }
 }
 
-/** Un effet supprimé : l'Agrippé emporte la marque ; la marque (lâcher prise) emporte l'Agrippé. */
+/** An effect deleted: the Grappled takes the mark with it; the mark (letting go) takes the Grappled with it. */
 async function unlink(effect) {
   const grappling = effect.getFlag?.(MODULE_ID, "grappling");
   if ( grappling ) {
@@ -151,14 +151,14 @@ async function unlink(effect) {
   if ( marks.length ) await grappler.deleteEmbeddedDocuments("ActiveEffect", marks.map(m => m.id));
 }
 
-/** Les marques par lesquelles ce token agrippe cette victime (vide s'il ne l'agrippe pas). */
+/** The marks by which this token grapples this victim (empty if it does not grapple it). */
 export function holdsOf(grapplerToken, victimToken) {
   return grapplingMarksOf(grapplerToken?.actor).filter(m => m.getFlag(MODULE_ID, "grappling").target === victimToken?.uuid);
 }
 
 /**
- * §18.23 : relâcher sa victime (règles 2024 : quand on veut, sans action). La marque retirée emporte l'Agrippé de la
- * victime (`unlink`, sur le MJ actif) : le propriétaire de l'agrippeur n'a besoin d'aucun droit sur elle.
+ * §18.23: releasing one's victim (2024 rules: whenever you want, without an action). The removed mark takes the victim's
+ * Grappled with it (`unlink`, on the active GM): the grappler's owner needs no right on the victim.
  */
 export async function releaseGrapple(grapplerToken, victimToken) {
   const marks = holdsOf(grapplerToken, victimToken);
@@ -168,10 +168,10 @@ export async function releaseGrapple(grapplerToken, victimToken) {
 }
 
 /* -------------------------------------------- */
-/*  Traîner sa victime                          */
+/*  Dragging one's victim                       */
 /* -------------------------------------------- */
 
-/** L'agrippeur a marché : ses victimes suivent. Une téléportation ne traîne personne (l'empoignade cesse). */
+/** The grappler walked: their victims follow. A teleport drags no one (the grapple ends). */
 async function dragVictims(token, movement, operation) {
   if ( operation?.[MODULE_ID]?.dragged ) return;
   const victims = victimsOf(token);
@@ -185,7 +185,7 @@ async function dragVictims(token, movement, operation) {
   const dy = to.y - from.y;
   const dz = (to.elevation ?? 0) - (from.elevation ?? 0);
   for ( const victim of victims ) {
-    // §18.17 : le Tertre errant « engloutit » en agrippant — sa victime est DANS son espace, l'avalement la fait suivre.
+    // §18.17: the Shambling Mound "engulfs" by grappling — its victim is IN its space, the engulfing makes it follow.
     if ( swallowerOf(victim)?.token === token ) continue;
     const pos = committedPosition(victim);
     const spot = dragDestination(victim, token, { x: pos.x + dx, y: pos.y + dy });
@@ -197,12 +197,12 @@ async function dragVictims(token, movement, operation) {
 }
 
 /* -------------------------------------------- */
-/*  S'échapper                                  */
+/*  Escaping                                    */
 /* -------------------------------------------- */
 
 /**
- * §16.54 : se libérer d'une entrave par le test que son item écrit (Enchevêtrement : Force (Athlétisme) contre le DD de
- * sauvegarde des sorts du lanceur). La réussite retire l'effet de la créature, pas le sort : les autres restent pris.
+ * §16.54: freeing oneself from a restraint by the check its item writes (Entangle: Strength (Athletics) against the caster's
+ * spell save DC). Success removes the effect from the creature, not the spell: the others stay caught.
  */
 async function escapeRestraint(actor, { effect, item, ability, skill, dc }) {
   const rolls = await rolledAndShown(() => skill
@@ -218,14 +218,14 @@ async function escapeRestraint(actor, { effect, item, ability, skill, dc }) {
   return free;
 }
 
-/** §252 : l'issue d'une évasion, chez tous (texte flottant et son), après les dés 3D. */
+/** §252: the outcome of an escape, on everyone's side (floating text and sound), after the 3D dice. */
 function escapeNotice(actor, free) {
   const token = tokenOfActor(actor);
   if ( token ) notice(token, { key: free ? "Retour.Action.Libere" : "Retour.Action.Retenu" }, free ? "gain" : "refused",
     { all: true, action: "escape", outcome: free ? "success" : "failure" });
 }
 
-/** Plusieurs choses dont s'échapper (une empoignade et une entrave…) : laquelle ? La première sans réponse. */
+/** Several things to escape (a grapple and a restraint…): which one? The first with no answer. */
 async function pickEscape(actor, options) {
   const answer = await timedWait({
     window: { title: loc("Menu.Echapper"), icon: "fa-solid fa-person-running" },
@@ -235,17 +235,17 @@ async function pickEscape(actor, options) {
   return (answer === null) ? null : options[Number(answer)] ?? null;
 }
 
-/** Le test d'évasion, sur le client de celui qui s'échappe. true si libre. */
+/** The escape check, on the client of the one escaping. true if free. */
 async function attemptEscape(actor) {
-  // §18.21 : avalé par un item qui porte son propre test d'évasion (Cube gélatineux, Tertre errant).
+  // §18.21: swallowed by an item that carries its own escape check (Gelatinous Cube, Shambling Mound).
   const swallowed = await escapeSwallow(actor);
   if ( swallowed !== null ) return swallowed;
   const options = [
     ...grappleEffectsOf(actor).slice(0, 1).map(effect => ({ kind: "grapple", effect,
       label: loc("Entrave.Empoignade", { by: grapplerOf(effect)?.name ?? "?" }) })),
     ...escapableRestraintsOf(actor).map(r => ({ kind: "restraint", ...r, label: r.item.name })),
-    // §43.2 : les effets auxquels une action du porteur met fin (contenu `actionEnds`) — par le test de l'item (comme une
-    // entrave), par la sauvegarde du sort rejouée, ou sans jet.
+    // §43.2: the effects that an action of the bearer ends (content `actionEnds`) — by the item's check (like a
+    // restraint), by the replayed spell save, or without a roll.
     ...ownEndingsOf(actor).map(e => e.check
       ? { kind: "restraint", effect: e.effect, item: e.item, ...e.check, label: e.item.name }
       : { kind: "ending", ending: e, label: e.item.name })
@@ -260,10 +260,10 @@ async function attemptEscape(actor) {
   if ( dc === null ) { ui.notifications.warn(loc("Empoignade.DDInconnu", { name: actor.name })); return false; }
   const skills = actor.system.skills ?? {};
   const skill = ((skills.acr?.total ?? -Infinity) > (skills.ath?.total ?? -Infinity)) ? "acr" : "ath";
-  // §281 : Inexorable — l'agrippeur impose le Désavantage aux tests contre sa prise.
+  // §281: Inexorable — the grappler imposes Disadvantage on checks against their hold.
   const disadvantage = await inescapableFor(grapplerOf(effect), actor.name);
   if ( disadvantage ) log(`${actor.name}: Disadvantage on the escape check (${grapplerOf(effect)?.name})`);
-  // §304 (repasse C9) : Forte carrure du goliath — « Avantage aux tests pour mettre fin à l'état Agrippé » (drapeau de dnd5e posé par le trait).
+  // §304 (pass C9): Goliath Powerful Build — "Advantage on checks to end the Grappled condition" (dnd5e flag set by the trait).
   const advantage = actor.flags?.dnd5e?.powerfulBuild === true;
   if ( advantage ) log(`${actor.name}: Advantage on the escape check (Powerful Build)`);
   const rolls = await rolledAndShown(() => actor.rollSkill({ skill, target: dc, ...(disadvantage ? { disadvantage: true } : {}), ...(advantage ? { advantage: true } : {}) }, { configure: false }));
@@ -282,9 +282,9 @@ async function attemptEscape(actor) {
 }
 
 /**
- * S'échapper, pour toute créature agrippée (menu contextuel) : par son item d'action de base s'il en a un
- * (légalité et budget comme n'importe quel item), sinon — un PNJ — le test directement, et l'action
- * débitée du budget du tour.
+ * Escaping, for any grappled creature (context menu): via its basic action item if it has one
+ * (legality and budget like any item), otherwise — an NPC — the check directly, and the action
+ * debited from the turn's budget.
  * @param {TokenDocument} token
  * @param {{event?: Event}} [options]
  */
@@ -303,7 +303,7 @@ export async function escapeGrapple(token, { event=null }={}) {
   await attemptEscape(actor);
 }
 
-/** S'échapper par l'item, sur le client de l'auteur, après l'utilisation (la carte et le budget sont faits). */
+/** Escaping via the item, on the author's client, after the use (the card and the budget are done). */
 async function onPostUse(activity) {
   if ( basicActionOf(activity.item) !== "escape" ) return;
   await attemptEscape(activity.actor);
@@ -314,20 +314,21 @@ export function registerGrapple() {
   route("updateToken", (token, changes) => {
     if ( ["x", "y", "elevation", "level"].some(k => k in changes) ) scheduleCheck([token.parent]);
   }, check);
-  // §502 : un token retiré (la liane invoquée qui tenait une empoignade, `grapples.by: "summon"`) — l'empoignade se rejuge.
+  // §502: a removed token (the summoned vine that held a grapple, `grapples.by: "summon"`) — the grapple is judged again.
   route("deleteToken", token => scheduleCheck([token.parent]), check);
   for ( const hook of ["createActiveEffect", "updateActiveEffect", "deleteActiveEffect"] ) {
     route(hook, effect => {
-      const actor = actorOfEffect(effect);   // un token non lié : l'effet est dans son ActorDelta
+      const actor = actorOfEffect(effect);   // an unlinked token: the effect is in its ActorDelta
       if ( actor ) scheduleCheck(scenesOf(actor));
     }, check);
   }
   const marks = { executor: true, label: "grapple: grappler's mark" };
   route("createActiveEffect", effect => markGrappler(effect), marks);
-  // §504 : un état posé par le moteur (étape `status` : empoignade au lieu des dégâts, Main agrippante) reçoit son origine APRÈS sa création
-  // (adapter/apply-effects.mjs `applyStatusToToken`, le modèle `condition` n'en a pas) : la marque se pose à ce moment-là. Le diff que
-  // reçoit le hook ne porte pas la clé `origin` pour un effet `condition` (vu au banc, dnd5e 6.1.1 : seulement `flags`, `_stats`) : on
-  // regarde tout Agrippé mis à jour — `markGrappler` ne fait rien sans agrippeur connu ni si la marque existe déjà.
+  // §504: a condition placed by the engine (step `status`: grapple instead of damage, "Grasping Hand") gets its origin AFTER its
+  // creation (adapter/apply-effects.mjs `applyStatusToToken`, the `condition` model has none): the mark is placed at that moment.
+  // The diff the hook receives does not carry the `origin` key for a `condition` effect (seen on the bench, dnd5e 6.1.1: only
+  // `flags`, `_stats`): we look at every updated Grappled — `markGrappler` does nothing without a known grappler or if the mark
+  // already exists.
   route("updateActiveEffect", effect => (effect.statuses?.has?.("grappled") ? markGrappler(effect) : null), marks);
   route("createActiveEffect", effect => onlyOneGrappled(effect), { executor: true, label: "grapple: only one creature at a time not enforced" });
   route("deleteActiveEffect", effect => unlink(effect), marks);

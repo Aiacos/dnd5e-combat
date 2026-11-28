@@ -1,11 +1,13 @@
 /**
- * §303 : 0 PV = fin de la Concentration (demande de l'utilisateur, 2026-10-31 : « le Mur de feu ne disparaît pas quand le token meurt ou tombe à
- * 0 PV »). Arène de test, Magicien et Zombi. Pour chaque cas, le Magicien se concentre puis tombe à 0 PV par de vrais dégâts (`applyDamage`) :
- *  - Mur de feu posé par points : la Concentration tombe, la région du mur, sa face brûlante, ses murs du cœur et ses lumières aussi ;
- *  - Rayon de lune (zone posée par l'outil du connecteur) : la Concentration et la zone tombent ;
- *  - PV mis à 0 sur la fiche (sans dégâts), un PNJ (token non lié) tué, mort sur le coup (dégâts ≥ PV + PV max) : idem avec un Mur de feu ;
- *  - aucune erreur « ActiveEffect … does not exist » : la carte « fin » de dnd5e et la sauvegarde des mêmes dégâts ne la retirent plus deux fois.
- * Remet PV, états, positions ; retire ce qui resterait.
+ * §303: 0 HP = end of Concentration (user request, 2026-10-31: "the Wall of Fire does not disappear when the token dies or drops
+ * to 0 HP"). Test arena, Wizard and Zombie. For each case, the Wizard concentrates then drops to 0 HP through real damage
+ * (`applyDamage`):
+ *  - Wall of Fire placed by points: Concentration ends, and so do the wall's region, burning face, core walls and lights;
+ *  - Moonbeam (area placed by the connector's tool): Concentration and the area end;
+ *  - HP set to 0 on the sheet (no damage), an NPC (unlinked token) killed, killed outright (damage ≥ HP + max HP): same with
+ *    a Wall of Fire;
+ *  - no "ActiveEffect … does not exist" error: the dnd5e "end" card and the save from the same damage no longer remove it twice.
+ * Restores HP, conditions, positions; removes whatever remains.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -45,7 +47,7 @@ export default {
     await ctx.call("move-token", { tokenId: mage.id, x: 12 * grid, y: 30 * grid, elevation: 0 });
     await pause(800);
     const P = (gx, gy) => ({ x: gx * grid, y: gy * grid });
-    /** Attend que la condition tienne (12 s au plus). */
+    /** Waits until the condition holds (12 s at most). */
     const until = async test => { for ( let i = 0; i < 24; i++ ) { if ( await test() ) return true; await pause(500); } return false; };
     const checkGone = async (label) => {
       ctx.expect(await until(async () => (await concentrating()) === 0), `${label} : la Concentration tombe`);
@@ -78,7 +80,7 @@ export default {
     }
     await revive();
 
-    // 2 bis. PV mis à 0 directement (fiche, HUD), sans dégâts.
+    // 2 bis. HP set to 0 directly (sheet, HUD), without damage.
     await ctx.setHp(mage, 20);
     const direct = await ctx.engine("wall", { tokenId: mage.id, itemId: fire, points: [P(11, 37), P(17, 37)] });
     if ( ctx.expect(!!direct?.regionId, "Mur de feu posé (PV mis à 0 sur la fiche)") ) {
@@ -89,7 +91,7 @@ export default {
     }
     await revive();
 
-    // 2 ter. Un PNJ (token non lié) qui se concentre, tué.
+    // 2 ter. An NPC (unlinked token) that concentrates, killed.
     const zombi = await ctx.token("Zombi");
     const zHome = { pos: await ctx.position(zombi), hp: await ctx.hp(zombi) };
     ctx.restore(async () => {

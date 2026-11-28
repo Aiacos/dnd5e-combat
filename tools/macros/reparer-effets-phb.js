@@ -1,7 +1,7 @@
 /**
- * Raccourci vers le diagnostic du monde de DAS · Core (SPEC §177), ouvert sur la vérification « effets du Manuel des joueurs ».
- * La logique de cette macro vit désormais dans le module (runtime/diagnostic/checks.mjs, `phb-effects`) : analyse sans rien écrire,
- * réparation de ce que le MJ coche, après une sauvegarde vérifiée dans le compendium « DAS · Sauvegardes » (restaurable).
+ * Shortcut to the world diagnostic of DAS · Core (SPEC §177), opened on the "Player's Handbook effects" check.
+ * The logic of this macro now lives in the module (runtime/diagnostic/checks.mjs, `phb-effects`): analysis without writing
+ * anything, repair of what the GM ticks, after a backup verified in the "DAS · Sauvegardes" compendium (restorable).
  */
 const api = game.modules.get("dnd5e-combat")?.api;
 if ( !game.user.isGM ) return ui.notifications.warn(game.i18n.localize("DND5ECOMBAT.Diagnostic.MJSeul"));

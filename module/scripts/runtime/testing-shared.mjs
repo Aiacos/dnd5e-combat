@@ -1,16 +1,16 @@
 /**
- * Fonctions de test (api.mcp) : les aides communes — refus hors MJ, token de la scène affichée, case ou point, position en
- * JSON, fenêtres ouvertes chez le MJ. Extrait de runtime/testing.mjs.
+ * Test functions (api.mcp): shared helpers — non-GM refusal, token of the displayed scene, cell or point, position in
+ * JSON, windows open on the GM. Extracted from runtime/testing.mjs.
  */
 
 import { cellOf } from "../adapter/movement.mjs";
 
-/** Ces outils agissent en MJ : un client joueur qui les appellerait est refusé. */
+/** These tools act as the GM: a player client calling them is refused. */
 export function gmOnly() {
   if ( !game.user.isGM ) throw new Error("GM only");
 }
 
-/** Le token désigné, sur la scène affichée par le MJ. */
+/** The designated token, on the scene displayed by the GM. */
 export function viewedToken({ tokenId }) {
   gmOnly();
   const scene = canvas.scene;
@@ -21,7 +21,7 @@ export function viewedToken({ tokenId }) {
   return token;
 }
 
-/** La case visée : `cell` ({ i, j }) ou `point` ({ x, y } en pixels, comme un clic). */
+/** The aimed cell: `cell` ({ i, j }) or `point` ({ x, y } in pixels, like a click). */
 export function cellArg(token, { cell, point }) {
   if ( cell ) return { i: cell.i, j: cell.j };
   if ( point ) return token.parent.grid.getOffset(point);
@@ -30,7 +30,7 @@ export function cellArg(token, { cell, point }) {
 
 export const finite = n => (Number.isFinite(n) ? n : null);
 
-/** Position validée d'un token : ce que lit le moteur. */
+/** Validated position of a token: what the engine reads. */
 export function positionJson(token) {
   const { x, y, elevation, level } = token._source;
   return { x, y, elevation: elevation ?? 0, level: level ?? null, cell: cellOf(token), movementAction: token.movementAction ?? null };
@@ -40,9 +40,9 @@ export const waypointOf = ({ x, y, elevation, level, action, climb }) =>
   ({ x, y, elevation: finite(elevation), level: level ?? null, action: action ?? null, climb: finite(climb) });
 
 /**
- * Les fenêtres ouvertes chez le MJ (ApplicationV2) : pour retrouver un dialogue qu'un déplacement bloqué attend. L'interface fixe
- * du cœur (barre latérale, journal de discussion, onglet des tokens, barre de macros…) est aussi une ApplicationV2, sans cadre :
- * pas une fenêtre. Un balayage qui « ferme les fenêtres » fermait la barre latérale, et `ui.chat.element` restait nul jusqu'au F5.
+ * The windows open on the GM (ApplicationV2): to find a dialog that a blocked move is waiting for. The core's fixed interface
+ * (sidebar, chat log, tokens tab, macro bar…) is also an ApplicationV2, without a frame: not a window. A sweep that "closes the
+ * windows" closed the sidebar, and `ui.chat.element` stayed null until F5.
  */
 export function windows() {
   gmOnly();

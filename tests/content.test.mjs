@@ -10,8 +10,8 @@ const facts = Object.fromEntries(["activity.type", "activity.isAttack", "activit
   "target.hasSpeed", "target.wounded", "target.bloodied", "source.classLevelAtLeast", "target.nearSelf", "self.seesTarget", "target.hasNotActed", "source.onOwnTurn", "activity.dealsType", "source.hasFeature", "source.hasClassFeature", "activity.cantripOf", "activity.school", "activity.enchantedBy", "source.wildShaped", "activity.classSpell", "source.resists", "source.nearSelf", "self.seesSource", "self.hasEffect", "source.hasEffectFromTarget", "source.hasSense", "target.allied", "source.inSunlight", "self.inSunlight", "self.inRunningWater"].map(k => [k, true]));
 const MOMENTS_LIST = "isHit, isDamaged, leavesReach, enemyDisengages, enter, turnStart, turnEnd, moves, preDamageRoll, hit, failedSave, savedSave, startOfTurn, endOfTurn, originTurnStart, preAttackRoll, castsSpell, isMissed, enemyTurnEnd, isTargeted, isAttacked, enemyAttacks, allyAttacks, gainsCondition, allyIsHit, allyIsDamaged, enemyAttacked, falls, allyFalls, savesAgainst, inArea";
 
-describe("validation d'une entrée", () => {
-  it("accepte une entrée complète et bien formée", () => {
+describe("validation of an entry", () => {
+  it("accepts a complete, well-formed entry", () => {
     expect(validateEntry({
       triggers: [{ on: "preDamageRoll", if: { "activity.isAttack": true }, do: [{ type: "damage", formula: "1d6", damageType: "necrotic" }] }],
       aura: { radius: 10, units: "ft", affects: "ally", includeSelf: false, effect: "ljMTBKPVmEnLPX1b", radiusFormula: "@scale.paladin.aura" },
@@ -19,12 +19,12 @@ describe("validation d'une entrée", () => {
     }, { facts })).toEqual([]);
   });
 
-  it("refuse ce qui n'est pas un objet, et les clés inconnues", () => {
+  it("refuses what is not an object, and unknown keys", () => {
     expect(validateEntry("hex", { facts })).toHaveLength(1);
     expect(validateEntry({ reaction: { window: "isHit" } }, { facts })[0]).toMatch(/reaction: unknown key/);
   });
 
-  it("déclencheur : moment, étape, fait — chacun contrôlé", () => {
+  it("trigger: moment, step, fact — each one checked", () => {
     const errors = validateEntry({ triggers: [{ on: "onHit", if: { "moon.phase": "full" }, do: [{ type: "smite" }] }] }, { facts });
     expect(errors).toEqual([
       `triggers[0].on: unknown moment "onHit" (${MOMENTS_LIST})`,
@@ -36,10 +36,10 @@ describe("validation d'une entrée", () => {
       "triggers[0].do[0].formula: formula required", "triggers[0].do[0].damageType: damage type required"
     ]);
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "use", target: "ally" }] }] }, { facts })[0]).toMatch(/target/);
-    expect(validateEntry({ triggers: { on: "isHit", do: [{ type: "use" }] } }, { facts })).toEqual([]);   // une seule, sans liste
+    expect(validateEntry({ triggers: { on: "isHit", do: [{ type: "use" }] } }, { facts })).toEqual([]);   // a single one, no list
   });
 
-  it("§36 : « bonus » — un dé ajouté par une réaction avant le jet d'attaque d'un allié", () => {
+  it("§36: \"bonus\" — a die added by a reaction before an ally's attack roll", () => {
     const fortune = { on: "allyAttacks", do: [{ type: "use", activity: "nu3AqVu9lyqeFwr3" }, { type: "bonus", formula: "1d6" }] };
     expect(validateEntry({ triggers: [fortune] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ ...fortune, do: [fortune.do[0], { type: "bonus" }] }] }, { facts })).toEqual(["triggers[0].do[1].formula: formula required"]);
@@ -49,20 +49,20 @@ describe("validation d'une entrée", () => {
       .toEqual(["triggers[0].do: \"bonus\" requires the allyAttacks moment and a \"use\" reaction"]);
   });
 
-  it("§38 : `rollBonus` — l'activité et les jets concernés", () => {
+  it("§38: `rollBonus` — the activity and the rolls concerned", () => {
     expect(validateEntry({ rollBonus: { activity: "4A1lkH3i3azHU1YQ", on: ["save", "check"] } }, { facts })).toEqual([]);
     expect(validateEntry({ rollBonus: { activity: "4A1lkH3i3azHU1YQ", on: ["attack"] } }, { facts })).toEqual([]);
     expect(validateEntry({ rollBonus: { activity: "4A1lkH3i3azHU1YQ", on: ["check"], skills: ["ste"] } }, { facts })).toEqual([]);
     expect(validateEntry({ rollBonus: { activity: "4A1lkH3i3azHU1YQ", on: ["damage"] } }, { facts })).toEqual(["rollBonus: { activity (or reroll: { bonus, during }), on: [save | check | attack | initiative], skills?, statuses?, luck?: true, succeed?: true, abilities?, reroll?: { bonus?, advantage?: true, sets?: 1–20 }, failRefund?: true }"]);
     expect(validateEntry({ rollBonus: { activity: "4A1lkH3i3azHU1YQ", on: ["check"], skills: [] } }, { facts })).toHaveLength(1);
-    // Relevé des trous : `reroll` sans activité (Concentration fanatique) ; pas les deux, pas de bonus vide.
+    // Survey of the gaps: `reroll` without an activity (Fanatical Focus); not both, no empty bonus.
     expect(validateEntry({ rollBonus: { on: ["save"], reroll: { bonus: "@scale.barbarian.rage-damage", during: "rage" } } }, { facts })).toEqual([]);
     expect(validateEntry({ rollBonus: { on: ["save"] } }, { facts })).toHaveLength(1);
     expect(validateEntry({ rollBonus: { activity: "4A1lkH3i3azHU1YQ", on: ["save"], reroll: { bonus: "2", during: "rage" } } }, { facts })).toHaveLength(1);
     expect(validateEntry({ rollBonus: { on: ["save"], reroll: { bonus: "", during: "rage" } } }, { facts })).toHaveLength(1);
   });
 
-  it("§38 : « absorb » avec une réaction au moment allyIsDamaged, `use` sans consommation", () => {
+  it("§38: \"absorb\" with a reaction at the allyIsDamaged moment, `use` without consumption", () => {
     const ward = { on: "allyIsDamaged", do: [{ type: "use", activity: "THaODa86JJaeoWfL", consume: false }, { type: "absorb" }] };
     expect(validateEntry({ triggers: [ward] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ ...ward, on: "isDamaged" }] }, { facts }))
@@ -71,7 +71,7 @@ describe("validation d'une entrée", () => {
       .toEqual(["triggers[0].do[0].consume: false or absent"]);
   });
 
-  it("§37 : `choice.pool` (effets d'item proposés par une activité) et `resave` { keep, onFail: dodge }", () => {
+  it("§37: `choice.pool` (item effects offered by an activity) and `resave` { keep, onFail: dodge }", () => {
     expect(validateEntry({ choice: { effects: "one", pool: { PYFPZ4aLWjKJ1tLZ: ["m5aRx9iXnJi2WWPU", "pG5HdDpW8VELR1O3"] } } }, { facts })).toEqual([]);
     expect(validateEntry({ choice: { effects: "one", pool: { court: ["m5aRx9iXnJi2WWPU"] } } }, { facts }))
       .toEqual(["choice.pool: { <activity id>: [effect ids] } (16 characters)"]);
@@ -82,19 +82,19 @@ describe("validation d'une entrée", () => {
     expect(resave({ type: "resave", onFail: "flee" })).toEqual(["triggers[0].do[0].onFail: dodge"]);
   });
 
-  it("aura : rayon positif, camp connu, id d'effet à 16 caractères, pas de clé inventée", () => {
+  it("aura: positive radius, known side, effect id of 16 characters, no invented key", () => {
     expect(validateEntry({ aura: { radius: -5, affects: "friends", effect: "abc", color: "red" } }, { facts })).toEqual([
       "aura.radius: positive number", "aura.affects: ally, enemy, any, summoner", "aura.effect: effect id (16 characters)", "aura.color: unknown key"
     ]);
     expect(validateEntry({ aura: { radius: 10 } }, { facts })).toEqual([]);
   });
 
-  it("onHit : un id d'activité, ou « sole »", () => {
+  it("onHit: an activity id, or \"sole\"", () => {
     expect(validateEntry({ onHit: { save: "abc" } }, { facts })).toEqual(['onHit.save: activity id (16 characters), or "sole"']);
     expect(validateEntry({ onHit: "udF9lrpAQMvL0b9J" }, { facts })).toHaveLength(1);
   });
 
-  it("choice : effets « one », question facultative, rien d'autre", () => {
+  it("choice: \"one\" effects, optional question, nothing else", () => {
     expect(validateEntry({ choice: { effects: "one" } }, { facts })).toEqual([]);
     expect(validateEntry({ choice: { effects: "one", prompt: "Laquelle ?" } }, { facts })).toEqual([]);
     expect(validateEntry({ choice: { effects: "all" } }, { facts })).toEqual(["choice.effects: one"]);
@@ -114,12 +114,12 @@ describe("validation d'une entrée", () => {
     expect(mergeEntries([{ targets: { types: ["humanoid"] } }, { targets: { unaffectedIf: true } }])).toEqual({ targets: { types: ["humanoid"], unaffectedIf: true } });
   });
 
-  it("une valeur mal formée est refusée, jamais une exception", () => {
+  it("a malformed value is refused, never an exception", () => {
     expect(validateEntry({ rollBonus: 1 }, { facts })[0]).toMatch(/^rollBonus:/);
     expect(validateEntry({ targets: { unaffectedIf: { any: true } } }, { facts })).toEqual(["targets.unaffectedIf: unknown fact \"any\""]);
     expect(validateEntry({ ignoresResistance: { types: ["necrotic"], if: { all: "x" } } }, { facts }))
       .toEqual(["ignoresResistance.if: unknown fact \"all\""]);
-    // Chaque clé du schéma, avec des primitives puis avec les valeurs livrées dont une feuille ou une branche est remplacée.
+    // Every schema key, with primitives then with the shipped values of which a leaf or a branch is replaced.
     const samples = {};
     for ( const entry of Object.values(SHIPPED) ) for ( const [key, value] of Object.entries(entry) ) {
       if ( (samples[key] ??= []).length < 6 ) samples[key].push(value);
@@ -146,7 +146,7 @@ describe("validation d'une entrée", () => {
     expect([...thrown]).toEqual([]);
   });
 
-  it("une table entière est validée entrée par entrée, préfixée par l'identifiant", () => {
+  it("a whole table is validated entry by entry, prefixed by the identifier", () => {
     expect(validateTable({ hex: { triggers: [{ on: "nope", do: [{ type: "use" }] }] }, shield: { triggers: [{ on: "isHit", do: [{ type: "use" }] }] } }, { facts }))
       .toEqual([`hex.triggers[0].on: unknown moment "nope" (${MOMENTS_LIST})`]);
     expect(validateTable([], { facts })).toHaveLength(1);
@@ -156,7 +156,7 @@ describe("validation d'une entrée", () => {
 describe("surcouche : module < monde < item", () => {
   const module = { triggers: [{ on: "isHit", do: [{ type: "use" }] }], aura: { radius: 10, units: "ft", affects: "ally" } };
 
-  it("triggers est remplacé, aura et onHit sont fusionnés champ par champ", () => {
+  it("triggers is replaced, aura and onHit are merged field by field", () => {
     const merged = mergeEntries([module, { aura: { radius: 30 } }, { triggers: [{ on: "isDamaged", do: [{ type: "use" }] }], onHit: { save: "udF9lrpAQMvL0b9J" } }]);
     expect(merged).toEqual({
       triggers: [{ on: "isDamaged", do: [{ type: "use" }] }],
@@ -165,25 +165,25 @@ describe("surcouche : module < monde < item", () => {
     });
   });
 
-  it("une couche vide ou absente ne dit rien ; rien nulle part = null", () => {
+  it("an empty or absent layer says nothing; nothing anywhere = null", () => {
     expect(mergeEntries([module, null, undefined, {}])).toEqual(module);
     expect(mergeEntries([null, {}])).toBe(null);
   });
 
-  it("ne modifie pas les couches d'origine", () => {
+  it("does not modify the original layers", () => {
     const frozen = JSON.stringify(module);
     mergeEntries([module, { aura: { radius: 30 } }]);
     expect(JSON.stringify(module)).toBe(frozen);
   });
 });
 
-describe("contenu livré", () => {
-  it("est valide dans le schéma courant", () => {
+describe("shipped content", () => {
+  it("is valid in the current schema", () => {
     expect(CONTENT_VERSION).toBe(1);
     expect(validateTable(CONTENT, { facts })).toEqual([]);
   });
 
-  it("réunit déclencheurs et auras par identifiant", () => {
+  it("gathers triggers and auras by identifier", () => {
     expect(Object.keys(CONTENT).sort()).toEqual([
       "1-wand-of-the-war-mage-enchanted",
       "aberrant-anatomy", "abjure-foes", "absorb-elements", "absorption-ioun-stone", "acid", "acid-arrow", "acrobatic-movement",
@@ -380,11 +380,11 @@ describe("contenu livré", () => {
 });
 
 /*
- * Contenu d'un autre module (api.content.register / hook dnd5e-combat.registerContent, runtime/content.mjs). Exemple
- * synthétique : un module de campagne qui déclare ses créatures (cercle à PV partagés, seconde phase, dernier rempart) et
- * corrige une entrée livrée. Les tables réelles vivent dans leurs modules (privés) ; le moteur ne les connaît pas.
+ * Content of another module (api.content.register / hook dnd5e-combat.registerContent, runtime/content.mjs). Synthetic
+ * example: a campaign module that declares its creatures (coven with shared HP, second phase, last stand) and corrects a
+ * shipped entry. The real tables live in their (private) modules; the engine does not know them.
  */
-describe("contenu enregistré par un autre module", () => {
+describe("content registered by another module", () => {
   const TABLE = {
     "exemple-cercle": { sharedHp: true },
     "exemple-seconde-phase": { secondPhase: { activity: "phase2Transform0", keepConditions: false } },
@@ -393,22 +393,22 @@ describe("contenu enregistré par un autre module", () => {
     "aura-of-protection": { aura: { radius: 30 } }
   };
 
-  it("se valide dans le même schéma que le contenu livré", () => {
+  it("is validated in the same schema as the shipped content", () => {
     expect(validateTable(TABLE, { facts })).toEqual([]);
   });
 
-  it("fusionne par-dessus le contenu livré, puis se retire sans trace", () => {
+  it("merges on top of the shipped content, then is removed without a trace", () => {
     const before = JSON.stringify(CONTENT);
     expect(registerTable("module-exemple", TABLE)).toEqual(Object.keys(TABLE));
     expect(registeredTables()).toEqual({ "module-exemple": Object.keys(TABLE) });
     expect(CONTENT["exemple-cercle"]).toEqual({ sharedHp: true });
     expect(CONTENT["exemple-seconde-phase"].secondPhase).toEqual({ activity: "phase2Transform0", keepConditions: false });
-    // Une entrée livrée est corrigée champ par champ (mergeEntries), pas remplacée.
+    // A shipped entry is corrected field by field (mergeEntries), not replaced.
     expect(CONTENT["aura-of-protection"].aura).toEqual({ ...SHIPPED["aura-of-protection"].aura, radius: 30 });
     expect(SHIPPED["aura-of-protection"].aura.radius).toBe(10);
     expect(SHIPPED["exemple-cercle"]).toBeUndefined();
     expect(validateTable(CONTENT, { facts })).toEqual([]);
-    // Réenregistrer la même source remplace sa table.
+    // Registering the same source again replaces its table.
     registerTable("module-exemple", { "exemple-cercle": { sharedHp: true } });
     expect(CONTENT["exemple-seconde-phase"]).toBeUndefined();
     expect(unregisterTable("module-exemple")).toBe(true);
@@ -427,8 +427,8 @@ describe("contenu enregistré par un autre module", () => {
   });
 });
 
-describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde répétée", () => {
-  it("move : mode, distance positive, unité — et seulement à une issue", () => {
+describe("bricks (SPEC §16): outcome steps, replayed sister, repeated save", () => {
+  it("move: mode, positive distance, unit — and only at an outcome", () => {
     expect(validateEntry({ triggers: [{ on: "failedSave", do: [{ type: "move", mode: "push", distance: 10, units: "ft" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "hit", do: [{ type: "move", mode: "pull", distance: 10, units: "ft" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "failedSave", do: [{ type: "move", mode: "throw", distance: 0, units: 5 }] }] }, { facts })).toEqual([
@@ -438,31 +438,31 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
       .toEqual(["triggers[0].do: \"move\" requires an outcome moment (hit, failedSave, savedSave)"]);
   });
 
-  it("status : un état, à une issue", () => {
+  it("status: a condition, at an outcome", () => {
     expect(validateEntry({ triggers: [{ on: "failedSave", do: [{ type: "status", status: "prone" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "failedSave", do: [{ type: "status" }] }] }, { facts })).toEqual(["triggers[0].do[0].status: condition required"]);
     expect(validateEntry({ triggers: [{ on: "enter", do: [{ type: "status", status: "prone" }] }] }, { facts }))
       .toEqual(["triggers[0].do: \"status\" requires an outcome moment (hit, failedSave, savedSave)"]);
   });
 
-  it("replay : une sœur par id d'activité", () => {
+  it("replay: a sister per activity id", () => {
     expect(validateEntry({ triggers: [{ on: "turnStart", do: [{ type: "replay", activity: "dnd5eactivity000" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "turnStart", do: [{ type: "replay", activity: "abc" }] }] }, { facts }))
       .toEqual(["triggers[0].do[0].activity: activity id (16 characters) expected"]);
   });
 
-  it("resave : au tour de la créature, porté par l'effet", () => {
+  it("resave: on the creature's turn, carried by the effect", () => {
     expect(validateEntry({ triggers: [{ on: "endOfTurn", via: "effect", do: [{ type: "resave" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "endOfTurn", do: [{ type: "resave" }] }] }, { facts }))
       .toEqual(["triggers[0].do: \"resave\" requires moments among startOfTurn, endOfTurn, isDamaged and via: \"effect\""]);
     expect(validateEntry({ triggers: [{ on: "turnEnd", via: "effect", do: [{ type: "resave" }] }] }, { facts }))
       .toEqual(["triggers[0].do: \"resave\" requires moments among startOfTurn, endOfTurn, isDamaged and via: \"effect\""]);
     expect(validateEntry({ triggers: [{ on: "endOfTurn", via: "bearer", do: [{ type: "resave" }] }] }, { facts })[0]).toBe("triggers[0].via: effect");
-    // Domination, Fou rire : la sauvegarde se rejoue aussi quand la créature subit des dégâts.
+    // "Domination", Tasha's Hideous Laughter: the save is also replayed when the creature takes damage.
     expect(validateEntry({ triggers: [{ on: ["endOfTurn", "isDamaged"], via: "effect", do: [{ type: "resave" }] }] }, { facts })).toEqual([]);
   });
 
-  it("riposte (B9) : dégâts à l'attaquant, au seul moment isHit — formule et type, ou activité", () => {
+  it("retaliation (B9): damage to the attacker, at the isHit moment only — formula and type, or activity", () => {
     expect(validateEntry({ triggers: [{ on: "isHit", via: "effect", fromEffect: "YbUr13GTnMrootmf", if: { "activity.isMelee": true },
       do: [{ type: "damage", to: "source", formula: "2d8", damageType: "fire" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "damage", to: "source", activity: "OzlTY1z1gup4C2Qq" }] }] }, { facts })).toEqual([]);
@@ -474,7 +474,7 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
       .toEqual(["triggers[0].do[0].to: source, origin, bearer, self", "triggers[0].do[0].activity: only for a riposte (to: \"source\") or the bearer (to: \"bearer\", \"self\")"]);
   });
 
-  it("§19 : dégâts d'issue (moitié sur réussite) et dégâts du porteur à son tour", () => {
+  it("§19: outcome damage (half on a success) and the bearer's damage on its turn", () => {
     expect(validateEntry({ triggers: [{ on: "failedSave", do: [{ type: "damage", formula: "2d4", damageType: "necrotic", onSave: "half" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "hit", do: [{ type: "damage", formula: "2d8", damageType: "necrotic" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "hit", do: [{ type: "damage", formula: "2d8", damageType: "necrotic", onSave: "half" }] }] }, { facts }))
@@ -496,7 +496,7 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
       .toEqual({ savedEffects: ["yril8uhQgO1dR507"], ignoresCloseCombat: true });
   });
 
-  it("zone déplaçable (B18) : distance positive, unité", () => {
+  it("movable area (B18): positive distance, unit", () => {
     expect(validateEntry({ movable: { distance: 60, units: "ft" } }, { facts })).toEqual([]);
     expect(validateEntry({ movable: { distance: 30, units: "ft", cost: "none" } }, { facts })).toEqual([]);
     expect(validateEntry({ movable: { distance: 30, units: "ft", cost: "bonus" } }, { facts })).toEqual(['movable.cost: "none"']);
@@ -504,17 +504,17 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
       .toEqual(["movable.distance: positive number", "movable.units: unit required", "movable.speed: unknown key"]);
   });
 
-  it("invocation (B12) : initiative « after » ou « own », rien d'autre", () => {
+  it("summon (B12): Initiative \"after\" or \"own\", nothing else", () => {
     expect(validateEntry({ summon: { initiative: "after" } }, { facts })).toEqual([]);
     expect(validateEntry({ summon: { initiative: "first", count: 2 } }, { facts })).toEqual(["summon.initiative: \"after\", \"own\" or \"none\""]);
     expect(validateEntry({ summon: { initiative: "own", count: 2 } }, { facts })).toEqual(["summon.count: unknown key"]);
-    // §394 : une invocation ne se vise que si `targetedSummon` le demande ; `untargeted` ne se lit plus nulle part — le contenu livré
-    // ne le déclare plus, une table déjà écrite qui le porte reste valide.
+    // §394: a summon can be targeted only if `targetedSummon` asks for it; `untargeted` is no longer read anywhere — the shipped
+    // content no longer declares it, an already written table that carries it stays valid.
     expect(Object.keys(SHIPPED).filter(id => "untargeted" in (SHIPPED[id].summon ?? {}))).toEqual([]);
     expect(validateEntry({ summon: { initiative: "own", untargeted: true } }, { facts })).toEqual([]);
   });
 
-  it("marque consommée (B10) : un côté, au moment preAttackRoll, portée par un effet", () => {
+  it("consumed mark (B10): one side, at the preAttackRoll moment, carried by an effect", () => {
     expect(validateEntry({ triggers: [{ on: "preAttackRoll", via: "effect", do: [{ type: "advantage" }, { type: "consume", side: "target" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "preAttackRoll", do: [{ type: "consume", side: "both" }] }] }, { facts })).toEqual([
       "triggers[0].do[0].side: \"target\" or \"source\"",
@@ -522,7 +522,7 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
     ]);
   });
 
-  it("réduction (B14) : halve avec une réaction à isHit ; partage vers l'origine ; réserve", () => {
+  it("reduction (B14): halve with a reaction at isHit; sharing toward the origin; reserve", () => {
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "use" }, { type: "halve" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "halve" }] }] }, { facts }))
       .toEqual(["triggers[0].do: \"halve\" requires the isHit or allyIsHit moment and a \"use\" reaction"]);
@@ -535,14 +535,14 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
     ]);
   });
 
-  it("teleport (B11) : distance positive, unité, activité facultative", () => {
+  it("teleport (B11): positive distance, unit, optional activity", () => {
     expect(validateEntry({ teleport: { distance: 30, units: "ft" } }, { facts })).toEqual([]);
     expect(validateEntry({ teleport: { distance: 0, units: "", activity: "x", range: 1 } }, { facts })).toEqual([
       "teleport.distance: positive number", "teleport.units: unit required", "teleport.activity: activity id (16 characters) expected", "teleport.range: unknown key"
     ]);
   });
 
-  it("fromEffect : un id d'effet, avec via: \"effect\" ; trace : true", () => {
+  it("fromEffect: an effect id, with via: \"effect\"; trace: true", () => {
     expect(validateEntry({ triggers: [{ on: "isHit", fromEffect: "abc", do: [{ type: "use" }] }] }, { facts }))
       .toEqual(["triggers[0].fromEffect: effect id (16 characters)", "triggers[0].fromEffect: requires via: \"effect\""]);
     expect(validateEntry({ trace: true }, { facts })).toEqual([]);
@@ -550,7 +550,7 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
     expect(mergeEntries([{ trace: true }, { aura: { radius: 5 } }])).toEqual({ trace: true, aura: { radius: 5 } });
   });
 
-  it("remove (B8) : l'effet cesse à un moment du porteur, porté par l'effet", () => {
+  it("remove (B8): the effect ends at a moment of the bearer, carried by the effect", () => {
     expect(validateEntry({ triggers: [{ on: "isDamaged", via: "effect", do: [{ type: "remove" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "isDamaged", do: [{ type: "remove" }] }] }, { facts }))
       .toEqual(["triggers[0].do: \"remove\" requires bearer moments (startOfTurn, endOfTurn, isAttacked, isDamaged, isHit, originTurnStart) and via: \"effect\""]);
@@ -563,7 +563,7 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "advantage" }] }] }, { facts })).toEqual(["triggers[0].do: \"advantage\" requires the preAttackRoll moment"]);
   });
 
-  it("ward : au moment isAttacked, porté par l'effet, activité sœur facultative", () => {
+  it("ward: at the isAttacked moment, carried by the effect, optional sister activity", () => {
     expect(validateEntry({ triggers: [{ on: "isAttacked", via: "effect", do: [{ type: "ward" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "isAttacked", via: "effect", do: [{ type: "ward", activity: "6TdVnZPI3lxQrycI" }] }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "isAttacked", via: "effect", do: [{ type: "ward", activity: "x" }] }] }, { facts })).toEqual(["triggers[0].do[0].activity: activity id (16 characters) expected"]);
@@ -571,14 +571,14 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
     expect(validateEntry({ triggers: [{ on: "castsSpell", if: { "target.seesSource": true }, do: [{ type: "use", target: "source" }] }] }, { facts })).toEqual([]);
   });
 
-  it("le contenu livré emploie chaque brique au moins une fois", () => {
+  it("the shipped content uses each brick at least once", () => {
     expect(CONTENT["thunderwave"].triggers[0].do[0]).toEqual({ type: "move", mode: "push", distance: 10, units: "ft" });
     expect(CONTENT["thorn-whip"].triggers[0]).toMatchObject({ on: "hit", if: { "target.sizeAtMost": "lg" } });
     expect(CONTENT["stinking-cloud"].triggers[0].do[0].activity).toBe("dnd5eactivity000");
     expect(CONTENT["sleet-storm"].triggers.map(t => t.do[0].type)).toEqual(["replay", "status"]);
     expect(CONTENT["hold-person"].triggers[0]).toMatchObject({ on: "endOfTurn", via: "effect" });
     expect(CONTENT["great-weapon-master"].triggers[0].do[0].damageType).toBe("weapon");
-    // Vu en jeu : une attaque faite au tour d'un autre recevait aussi le bonus de maîtrise.
+    // Seen in play: an attack made on another creature's turn also received the proficiency bonus.
     expect(CONTENT["great-weapon-master"].triggers[0].if)
       .toMatchObject({ "activity.hasProperty": "hvy", "source.onOwnTurn": true });
     expect(CONTENT["faerie-fire"].triggers[0]).toMatchObject({ on: "preAttackRoll", via: "effect" });
@@ -590,19 +590,19 @@ describe("briques (SPEC §16) : étapes d'issue, sœur rejouée, sauvegarde rép
 });
 
 describe("surcouche : choice", () => {
-  it("est fusionné champ par champ, comme aura et onHit", () => {
+  it("is merged field by field, like aura and onHit", () => {
     const merged = mergeEntries([{ choice: { effects: "one" } }, { choice: { prompt: "Laquelle ?" } }]);
     expect(merged).toEqual({ choice: { effects: "one", prompt: "Laquelle ?" } });
   });
 
-  it("le contenu livré déclare Maléfice à effets exclusifs, et reste valide", () => {
+  it("the shipped content declares Hex with exclusive effects, and stays valid", () => {
     expect(CONTENT.hex.choice).toEqual({ effects: "one" });
     expect(validateTable(CONTENT, { facts })).toEqual([]);
   });
 });
 
-describe("éclat (§16.19) : schéma", () => {
-  it("activité, rayon, unité", () => {
+describe("burst (§16.19): schema", () => {
+  it("activity, radius, unit", () => {
     expect(validateEntry({ burst: { activity: "dnd5eactivity100", radius: 5, units: "ft" } }, { facts })).toEqual([]);
     expect(validateEntry({ burst: { activity: "x", radius: -1, units: "", around: 1 } }, { facts })).toEqual([
       "burst.activity: activity id (16 characters) expected", "burst.radius: non-negative number", "burst.units: unit required", "burst.around: unknown key"
@@ -610,7 +610,7 @@ describe("éclat (§16.19) : schéma", () => {
   });
 });
 
-describe("relance, éclat après dégâts, début de tour (§16.21) : schéma", () => {
+describe("reroll, burst after damage, start of turn (§16.21): schema", () => {
   it("recast, burst.from, atTurnStart", () => {
     expect(validateEntry({ recast: true, atTurnStart: { activity: "0vYjMbBcXaMfGWR2" }, burst: { activity: "dnd5eactivity000", radius: 0, units: "ft", from: ["YPEmwJHX7g68307N"] } }, { facts })).toEqual([]);
     expect(validateEntry({ recast: 1, atTurnStart: { activity: "x" }, burst: { activity: "dnd5eactivity000", radius: 0, units: "ft", from: [] } }, { facts })).toEqual([
@@ -619,14 +619,14 @@ describe("relance, éclat après dégâts, début de tour (§16.21) : schéma", 
   });
 });
 
-describe("brume et soins au maximum (§16.24) : schéma", () => {
+describe("mist and healing to the maximum (§16.24): schema", () => {
   it("obscures, healMax", () => {
     expect(validateEntry({ obscures: true, healMax: true }, { facts })).toEqual([]);
     expect(validateEntry({ obscures: 1, healMax: "oui" }, { facts })).toEqual(["obscures: true or { fromPulse }", "healMax: true or absent"]);
   });
 });
 
-describe("capacités des PJ (§16.25) : schéma", () => {
+describe("PC abilities (§16.25): schema", () => {
   it("duplicates, saveAdvantage, onFell", () => {
     expect(validateEntry({ duplicates: true, saveAdvantage: ["charmed"], onFell: { activity: "p3YSnjGDlLIbiLpC", radius: 10, units: "ft" } }, { facts })).toEqual([]);
     expect(validateEntry({ duplicates: 3, saveAdvantage: [], onFell: { radius: -1, units: "", extra: 1 } }, { facts })).toEqual(["duplicates: true or absent",
@@ -635,7 +635,7 @@ describe("capacités des PJ (§16.25) : schéma", () => {
   });
 });
 
-describe("Taille (§16.26) : schéma", () => {
+describe("Size (§16.26): schema", () => {
   it("bonusAttack", () => {
     expect(validateEntry({ bonusAttack: { after: ["critical", "felled"], melee: true } }, { facts })).toEqual([]);
     expect(validateEntry({ bonusAttack: { after: ["hit"] } }, { facts })).toEqual(["bonusAttack.after: list among critical, felled"]);
@@ -644,7 +644,7 @@ describe("Taille (§16.26) : schéma", () => {
   });
 });
 
-describe("projectiles (§16.27) : schéma", () => {
+describe("projectiles (§16.27): schema", () => {
   it("projectiles", () => {
     expect(validateEntry({ projectiles: { count: "2 + @item.level", attack: false } }, { facts })).toEqual([]);
     expect(validateEntry({ projectiles: { count: "" } }, { facts })).toEqual(["projectiles.count: formula expected"]);
@@ -653,7 +653,7 @@ describe("projectiles (§16.27) : schéma", () => {
   });
 });
 
-describe("rebond (§16.27) : schéma", () => {
+describe("bounce (§16.27): schema", () => {
   it("leap", () => {
     expect(validateEntry({ leap: { radius: 30, units: "ft", max: "@item.level" } }, { facts })).toEqual([]);
     expect(validateEntry({ leap: { radius: 30, units: "ft" } }, { facts })).toEqual(["leap: { radius, units, max }"]);
@@ -662,7 +662,7 @@ describe("rebond (§16.27) : schéma", () => {
 });
 
 describe("fusion des couches", () => {
-  it("garde toutes les clés du schéma que porte le contenu livré", () => {
+  it("keeps every schema key that the shipped content carries", () => {
     for ( const [id, entry] of Object.entries(CONTENT) ) {
       const merged = mergeEntries([entry]);
       for ( const key of Object.keys(entry) ) expect(merged, `${id}.${key}`).toHaveProperty(key);
@@ -698,7 +698,7 @@ describe("§19.9 : Dhampir et Domaine de la Tombe", () => {
     ]);
   });
 
-  it("oncePerTurn : seulement sur preDamageRoll ; uncrit : avec une réaction à isHit ou allyIsHit", () => {
+  it("oncePerTurn: only on preDamageRoll; uncrit: with a reaction at isHit or allyIsHit", () => {
     const part = [{ type: "damage", formula: "1d4", damageType: "necrotic" }];
     expect(validateEntry({ triggers: [{ on: "preDamageRoll", oncePerTurn: true, do: part }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "hit", oncePerTurn: true, do: [{ type: "status", status: "prone" }] }] }, { facts }))
@@ -708,13 +708,13 @@ describe("§19.9 : Dhampir et Domaine de la Tombe", () => {
       .toEqual(["triggers[0].do: \"uncrit\" requires the isHit or allyIsHit moment and a \"use\" reaction"]);
   });
 
-  it("§223 ask : dégâts bonus au choix, seulement sur preDamageRoll, avec l'activité dont une utilisation est dépensée", () => {
+  it("§223 ask: bonus damage of choice, only on preDamageRoll, with the activity of which one use is spent", () => {
     const part = [{ type: "damage", formula: "2d6", damageType: "psychic" }];
     expect(validateEntry({ triggers: [{ on: "preDamageRoll", ask: true, do: part }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "preDamageRoll", oncePerTurn: true, ask: { uses: "DMVf7FTyTC2HCAf9" }, do: part }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "preDamageRoll", ask: { uses: "court" }, do: part }] }, { facts }))
       .toEqual(["triggers[0].ask: true or { uses?: activity id (16 characters) or a list of them }"]);
-    // §438 : une liste (une activité par palier de niveau, Manuel 3.0.0) ; vide, refusée.
+    // §438: a list (one activity per level tier, Player's Handbook 3.0.0); empty, refused.
     expect(validateEntry({ triggers: [{ on: "preDamageRoll", ask: { uses: ["DMVf7FTyTC2HCAf9", "NGiX54LWGJGvMMwL"] }, do: part }] }, { facts })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "preDamageRoll", ask: { uses: [] }, do: part }] }, { facts })).toHaveLength(1);
     expect(validateEntry({ triggers: [{ on: "hit", ask: true, do: [{ type: "status", status: "prone" }] }] }, { facts }))
@@ -723,7 +723,7 @@ describe("§19.9 : Dhampir et Domaine de la Tombe", () => {
     expect(CONTENT["dreadful-strikes"].triggers[0].ask).toBeUndefined();
   });
 
-  it("le contenu livré porte les quatre capacités", () => {
+  it("the shipped content carries the four abilities", () => {
     expect(CONTENT["vampiric-bite"].empower.effect).toBe("j3fPDd7Xi1nx6Xk4");
     expect(CONTENT["circle-of-mortality"].triggers).toHaveLength(2);
     expect(CONTENT["circle-of-mortality"].healsDownedMax).toBe(true);
@@ -732,18 +732,18 @@ describe("§19.9 : Dhampir et Domaine de la Tombe", () => {
   });
 });
 
-describe("§67 : une réaction qui rejoint d'abord sa source (use … approach)", () => {
+describe("§67: a reaction that first joins its source (use … approach)", () => {
   it("approach : true, avec target source", () => {
     expect(validateEntry({ triggers: [{ on: "isDamaged", do: [{ type: "use", target: "source", approach: true }] }] })).toEqual([]);
   });
-  it("sans target source, ou autre valeur : refusé", () => {
+  it("without target source, or another value: refused", () => {
     expect(validateEntry({ triggers: [{ on: "isDamaged", do: [{ type: "use", approach: true }] }] }).length).toBeGreaterThan(0);
     expect(validateEntry({ triggers: [{ on: "isDamaged", do: [{ type: "use", target: "source", approach: "oui" }] }] }).length).toBeGreaterThan(0);
   });
 });
 
-describe("§67 quater : une activité à l'arrivée d'une téléportation (teleport.then)", () => {
-  it("then : un id d'activité", () => {
+describe("§67 quater: an activity on arrival of a teleport (teleport.then)", () => {
+  it("then: an activity id", () => {
     expect(validateEntry({ teleport: { distance: 15, units: "ft", activity: "abcdefghijklmnop", then: "ponmlkjihgfedcba" } })).toEqual([]);
     expect(validateEntry({ teleport: { distance: 15, units: "ft", then: "court" } })).toEqual([expect.stringContaining("then")]);
   });
@@ -765,7 +765,7 @@ describe("§69 : la fusion garde difficultTerrain", () => {
 });
 
 describe("§70 : orage (storm)", () => {
-  it("un objet, bonus en dés", () => {
+  it("an item, dice bonus", () => {
     expect(validateEntry({ storm: { bonus: "1d10" } })).toEqual([]);
     expect(validateEntry({ storm: {} })).toEqual([]);
     expect(validateEntry({ storm: { bonus: "beaucoup" } })).toEqual([expect.stringContaining("bonus")]);
@@ -773,7 +773,7 @@ describe("§70 : orage (storm)", () => {
   });
 });
 
-describe("§71 : stabilisée à 0 PV, effets sous condition", () => {
+describe("§71: stable at 0 HP, conditional effects", () => {
   it("stableAtZero : true ; effectsIf : une condition", () => {
     expect(validateEntry({ stableAtZero: true, effectsIf: { "target.atZero": true } }, { facts: { "target.atZero": () => true } })).toEqual([]);
     expect(validateEntry({ stableAtZero: "oui" })).toEqual([expect.stringContaining("stableAtZero")]);
@@ -785,7 +785,7 @@ describe("§71 : stabilisée à 0 PV, effets sous condition", () => {
 });
 
 describe("§72 : sneakAttack en objet", () => {
-  it("dés, toute arme, types", () => {
+  it("dice, any weapon, types", () => {
     expect(validateEntry({ sneakAttack: true })).toEqual([]);
     expect(validateEntry({ sneakAttack: { dice: "5d6", anyWeapon: true, alwaysVs: ["undead"] } })).toEqual([]);
     expect(validateEntry({ sneakAttack: { dice: "beaucoup" } })).toEqual([expect.stringContaining("dice")]);
@@ -794,7 +794,7 @@ describe("§72 : sneakAttack en objet", () => {
 });
 
 describe("§72 : contest", () => {
-  it("compétence, compétences opposées, effet", () => {
+  it("skill, opposed skills, effect", () => {
     expect(validateEntry({ contest: { activity: "zqYhGCNNd41uNShS", skill: "ins", against: ["dec"], effect: "abcdefghijklmnop", exclusive: true } })).toEqual([]);
     expect(validateEntry({ contest: { skill: "insight", against: [], effect: "x" } }).length).toBe(3);
     expect(mergeEntries([null, { contest: { skill: "ins", against: ["dec"], effect: "abcdefghijklmnop" } }]).contest.skill).toBe("ins");
@@ -809,14 +809,14 @@ describe("§72 : use sur soi", () => {
 });
 
 describe("§73 : wardsAtZero", () => {
-  it("true ou absent, fusionné", () => {
+  it("true or absent, merged", () => {
     expect(validateEntry({ wardsAtZero: true })).toEqual([]);
     expect(validateEntry({ wardsAtZero: 1 })).toEqual([expect.stringContaining("wardsAtZero")]);
     expect(mergeEntries([null, { wardsAtZero: true }]).wardsAtZero).toBe(true);
   });
 });
 
-describe("§74 : dégâts qui dépensent un effet", () => {
+describe("§74: damage that spends an effect", () => {
   it("spends : un id d'effet", () => {
     expect(validateEntry({ triggers: [{ on: "preDamageRoll", do: [{ type: "damage", formula: "1d8", damageType: "force", spends: "abcdefghijklmnop" }] }] })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "preDamageRoll", do: [{ type: "damage", formula: "1d8", damageType: "force", spends: "x" }] }] })).toEqual([expect.stringContaining("spends")]);
@@ -824,7 +824,7 @@ describe("§74 : dégâts qui dépensent un effet", () => {
 });
 
 describe("§75 : zoneCharges", () => {
-  it("entier positif, fusionné", () => {
+  it("positive integer, merged", () => {
     expect(validateEntry({ zoneCharges: 4 })).toEqual([]);
     expect(validateEntry({ zoneCharges: 0 })).toEqual([expect.stringContaining("zoneCharges")]);
     expect(mergeEntries([null, { zoneCharges: 4 }]).zoneCharges).toBe(4);
@@ -832,7 +832,7 @@ describe("§75 : zoneCharges", () => {
 });
 
 describe("§76 : changesForm", () => {
-  it("id d'activité, clés connues, fusionné", () => {
+  it("activity id, known keys, merged", () => {
     expect(validateEntry({ changesForm: { activity: "aaaaaaaaaaaaaaaa" } })).toEqual([]);
     expect(validateEntry({ changesForm: { activity: "court" } })).toEqual([expect.stringContaining("changesForm.activity")]);
     expect(validateEntry({ changesForm: { activity: "aaaaaaaaaaaaaaaa", quand: 1 } })).toEqual([expect.stringContaining("unknown key")]);
@@ -842,7 +842,7 @@ describe("§76 : changesForm", () => {
 
 describe("§498 (B18) : changesForm.revertAfter, shareSpellSlots", () => {
   const A = "aaaaaaaaaaaaaaaa";
-  it("durée en rounds ou en secondes, retour automatique ou non, partage des emplacements", () => {
+  it("duration in rounds or seconds, automatic return or not, sharing of slots", () => {
     expect(validateEntry({ changesForm: { activity: A, keepHp: true, revertAfter: { rounds: 10 }, shareSpellSlots: true } })).toEqual([]);
     expect(validateEntry({ changesForm: { activity: A, revertAfter: { seconds: 60, auto: false } } })).toEqual([]);
     expect(validateEntry({ changesForm: { activity: A, revertAfter: { rounds: 10, seconds: 60 } } })).toEqual([expect.stringContaining("exactly one")]);
@@ -852,7 +852,7 @@ describe("§498 (B18) : changesForm.revertAfter, shareSpellSlots", () => {
     expect(validateEntry({ changesForm: { activity: A, revertAfter: { rounds: 2, auto: "non" } } })).toEqual([expect.stringContaining("auto")]);
     expect(validateEntry({ changesForm: { activity: A, shareSpellSlots: 1 } })).toEqual([expect.stringContaining("shareSpellSlots")]);
   });
-  it("durée en secondes du temps du monde", () => {
+  it("duration in world-time seconds", () => {
     expect(revertSeconds({ rounds: 10 })).toBe(60);
     expect(revertSeconds({ rounds: 2 }, 10)).toBe(20);
     expect(revertSeconds({ seconds: 45 })).toBe(45);
@@ -861,7 +861,7 @@ describe("§498 (B18) : changesForm.revertAfter, shareSpellSlots", () => {
     expect(formExpired(100, 100)).toBe(true);
     expect(formExpired(null, 1e9)).toBe(false);
   });
-  it("les emplacements dépensés passent d'une forme à l'autre, dans la limite de ses maximums", () => {
+  it("spent slots pass from one form to the other, within the limit of its maximums", () => {
     const from = { spell1: { value: 1, max: 3 }, spell2: { value: 2, max: 2 }, spell3: { value: 0, max: 1 }, pact: { value: 0, max: 0 } };
     const to = { spell1: { value: 4, max: 4 }, spell2: { value: 0, max: 1 }, spell3: { value: 0, max: 0 }, spell4: { value: 1, max: 1 }, pact: { value: 2, max: 2 } };
     expect(sharedSlotUpdates(from, to)).toEqual({ "system.spells.spell1.value": 2, "system.spells.spell2.value": 1 });
@@ -870,30 +870,30 @@ describe("§498 (B18) : changesForm.revertAfter, shareSpellSlots", () => {
   });
 });
 
-describe("§78 : forme qui garde ses PV, faveur avec sauvegarde, interposition", () => {
+describe("§78: form that keeps its HP, boon with a save, interposition", () => {
   const A = "aaaaaaaaaaaaaaaa";
-  it("keepHp dans changesForm et secondPhase", () => {
+  it("keepHp in changesForm and secondPhase", () => {
     expect(validateEntry({ changesForm: { activity: A, keepHp: true } })).toEqual([]);
     expect(validateEntry({ secondPhase: { activity: A, keepHp: true } })).toEqual([]);
     expect(validateEntry({ changesForm: { activity: A, keepHp: 1 } })).toEqual([expect.stringContaining("keepHp")]);
   });
-  it("hitRider : save (id d'activité) et item (identifiant)", () => {
+  it("hitRider: save (activity id) and item (identifier)", () => {
     expect(validateEntry({ hitRider: { damage: A, save: A, item: "shortsword", oncePerTurn: true } })).toEqual([]);
     expect(validateEntry({ hitRider: { damage: A, save: "court" } })).toEqual([expect.stringContaining("hitRider")]);
   });
-  it("interpose : au moment allyIsDamaged, avec une réaction use", () => {
+  it("interpose: at the allyIsDamaged moment, with a use reaction", () => {
     expect(validateEntry({ triggers: [{ on: "allyIsDamaged", do: [{ type: "use" }, { type: "interpose" }] }] })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "use" }, { type: "interpose" }] }] })).toEqual([expect.stringContaining("interpose")]);
   });
 });
 
-describe("Frappe piégeuse (§206)", async () => {
+describe("Ensnaring Strike (§206)", async () => {
   const { sizeAtLeast } = await import("../module/scripts/core/content/enums.mjs");
-  it("taille G ou supérieure", () => {
+  it("Large size or bigger", () => {
     expect(["lg", "huge", "grg"].every(s => sizeAtLeast(s, "lg"))).toBe(true);
     expect(["tiny", "sm", "med", undefined, "xx"].some(s => sizeAtLeast(s, "lg"))).toBe(false);
   });
-  it("déclarée comme un châtiment sur toute attaque d'arme, avec l'Avantage par la taille", async () => {
+  it("declared as a smite on any weapon attack, with Advantage from size", async () => {
     const { SPELL_RULES } = await import("../module/scripts/content/spell-rules.mjs").catch(() => ({}));
     const entry = SPELL_RULES?.["ensnaring-strike"];
     if ( !entry ) return;
@@ -902,8 +902,8 @@ describe("Frappe piégeuse (§206)", async () => {
   });
 });
 
-describe("§277 : sources enregistrées avec une table", () => {
-  it("validateSources : id de document de 16 caractères → identifiant en kebab-case", () => {
+describe("§277: sources registered with a table", () => {
+  it("validateSources: document id of 16 characters → identifier in kebab-case", () => {
     expect(validateSources({ tiersDocument001: "exemple-poing" })).toEqual([]);
     expect(validateSources({ court: "exemple", tiersDocument001: "Pas Bon" })).toEqual([
       "sources.court: document id (16 characters), or actor id.item id, expected",
@@ -912,9 +912,9 @@ describe("§277 : sources enregistrées avec une table", () => {
     expect(validateSources([])).toEqual(["sources: an object { document id: identifier } expected"]);
   });
 
-  // §334 : un id d'item partagé entre créatures ne désigne pas une capacité ; la clé « acteur.item » la vise seule, comme dans
-  // content/sources.mjs. Un module tiers doit pouvoir l'enregistrer aussi.
-  it("validateSources : une clé « acteur.item » (deux ids de 16 caractères) est acceptée", () => {
+  // §334: an item id shared between creatures does not designate an ability; the key "actor.item" targets it alone, as in
+  // content/sources.mjs. A third-party module must be able to register it too.
+  it("validateSources: an \"actor.item\" key (two ids of 16 characters) is accepted", () => {
     expect(validateSources({ "tiersActeur00001.tiersItem0000001": "exemple-morsure" })).toEqual([]);
     expect(validateSources({ "tiersActeur00001.court": "exemple", "a.b.c": "exemple", "tiersActeur00001.": "exemple" })).toEqual([
       "sources.tiersActeur00001.court: document id (16 characters), or actor id.item id, expected",
@@ -923,7 +923,7 @@ describe("§277 : sources enregistrées avec une table", () => {
     ]);
   });
 
-  it("s'ajoutent aux sources livrées, la dernière l'emporte, et se retirent avec la table", () => {
+  it("are added to the shipped sources, the last one wins, and are removed with the table", () => {
     const shipped = { ...SOURCES };
     registerSources("premier", { exempleDocument1: "exemple-un", phbmnvParry00000: "autre-parade" });
     registerTable("premier", {});
@@ -940,44 +940,44 @@ describe("§277 : sources enregistrées avec une table", () => {
   });
 });
 
-describe("§334 : un module tiers enregistre une clé « acteur.item »", () => {
-  it("elle rejoint les sources sous cette clé, celle qu'identifierOf lit d'abord, et se retire avec la table", () => {
+describe("§334: a third-party module registers an \"actor.item\" key", () => {
+  it("it joins the sources under that key, the one identifierOf reads first, and is removed with the table", () => {
     const shipped = { ...SOURCES };
     const key = "tiersActeur00001.tiersItem0000001";
     expect(validateSources({ [key]: "exemple-morsure" })).toEqual([]);
     registerSources("tiers", { [key]: "exemple-morsure" });
     registerTable("tiers", {});
     expect(SOURCES[key]).toBe("exemple-morsure");
-    // L'id d'item seul, partagé entre créatures, ne désigne toujours rien.
+    // The item id alone, shared between creatures, still designates nothing.
     expect(SOURCES.tiersItem0000001).toBeUndefined();
     unregisterTable("tiers");
     expect(SOURCES).toEqual(shipped);
   });
 });
 
-describe("§293 : créatures de votre choix dans un rayon (pickTargets)", () => {
-  it("le Renvoi des morts-vivants déclare sa liste et la Calcination à la place", () => {
-    // §431 : et « Sear Undead » du Conduit divin (SRD de dnd5e 6.1), proposée si le clerc a l'item Calcination.
+describe("§293: creatures of your choice within a radius (pickTargets)", () => {
+  it("Turn Undead declares its list and Sear Undead instead", () => {
+    // §431: and "Sear Undead" of Channel Divinity (dnd5e 6.1 SRD), offered if the cleric has the Sear Undead item.
     expect(CONTENT["channel-divinity"].pickTargets).toMatchObject({ activities: ["aOptL5pMaj3WtR8S", "rprxorXdFoHbRERZ"], radius: 30, units: "ft",
       upgrade: [{ item: "sear-undead", activity: "fW3U8L8Ca9a6O9Wx" },
         { item: "channel-divinity-cleric", activity: "rprxorXdFoHbRERZ", requires: "sear-undead" }] });
     expect(CONTENT["sear-undead"].pickTargets.activities).toEqual(["fW3U8L8Ca9a6O9Wx"]);
   });
-  it("la déclaration est vérifiée", () => {
+  it("the declaration is checked", () => {
     expect(validateEntry({ pickTargets: { activities: ["aOptL5pMaj3WtR8S"], radius: 30, units: "ft" } })).toEqual([]);
     expect(validateEntry({ pickTargets: { activities: [], radius: 0, units: "km", upgrade: { item: "" }, extra: 1 } })).toHaveLength(5);
   });
 });
 
-describe("§294 : Calcination des morts-vivants — ses propres dégâts ne mettent pas fin au renvoi", async () => {
+describe("§294: Sear Undead — its own damage does not end the turning", async () => {
   const { sameActivity, DAMAGED_BY } = await import("../module/scripts/core/triggers.mjs");
-  it("la déclaration ne réagit qu'aux dégâts d'une autre activité", () => {
+  it("the declaration reacts only to the damage of another activity", () => {
     expect(CONTENT["sear-undead"].triggers).toEqual([{ on: "isDamaged", via: "effect", fromEffect: "OftTd0Eiwnls76cX", by: "otherActivity", do: [{ type: "remove" }] }]);
     expect(DAMAGED_BY).toContain("otherActivity");
     expect(validateEntry({ triggers: [{ on: "isDamaged", via: "effect", by: "otherActivity", do: [{ type: "remove" }] }] })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "endOfTurn", via: "effect", by: "otherActivity", do: [{ type: "remove" }] }] }).length).toBeGreaterThan(0);
   });
-  it("compare un UUID d'activité et un id nu", () => {
+  it("compares an activity UUID and a bare id", () => {
     const uuid = "Actor.y5Aji4lrsSLuq0TB.Item.GL3bjGsn60rEKt4U.Activity.fW3U8L8Ca9a6O9Wx";
     expect(sameActivity(uuid, uuid)).toBe(true);
     expect(sameActivity(uuid, "fW3U8L8Ca9a6O9Wx")).toBe(true);
@@ -986,7 +986,7 @@ describe("§294 : Calcination des morts-vivants — ses propres dégâts ne mett
   });
 });
 
-describe("§295 : repasse terme par terme, lot C1 (corrections déclaratives)", async () => {
+describe("§295: term-by-term review, batch C1 (declarative fixes)", async () => {
   const { versatileGrip } = await import("../module/scripts/core/attack.mjs");
   it("les fins d'effet suivent le texte", () => {
     expect(CONTENT["vicious-mockery"].effectEnds).toEqual({ suEeAQQXl0X2JqzF: "bearerTurnEnd" });
@@ -996,17 +996,17 @@ describe("§295 : repasse terme par terme, lot C1 (corrections déclaratives)", 
     expect(CONTENT["celestial-revelation"].effectEnds).toEqual({ "33dHubd4zYAkSAbE": "casterTurnEnd" });
     expect(CONTENT["gaseous-form"].endsWhen).toEqual({ zeroHp: true });
   });
-  it("les sauvegardes répétées oubliées", () => {
+  it("repeated saves forgotten", () => {
     for ( const id of ["natures-wrath", "rend-mind", "synaptic-static", "intimidating-presence", "beguiling-magic"] ) {
       expect(CONTENT[id].triggers).toEqual([{ on: "endOfTurn", via: "effect", do: [{ type: "resave" }] }]);
     }
     expect(CONTENT["intimidating-presence"].effectDurations).toEqual({ "3LofAPFLZJMQJirN": { seconds: 60 } });
     expect(CONTENT["mass-suggestion"].triggers).toEqual(CONTENT["suggestion"].triggers);
   });
-  it("cibles consentantes, effet au choix, dégâts retirés", () => {
+  it("willing targets, effect of choice, damage removed", () => {
     expect(CONTENT["enlarge-reduce"].willingFails).toBe(true);
     expect(CONTENT["levitate"].willingFails).toBe(true);
-    expect(CONTENT["levitate"].levitate).toBeTruthy();   // l'entrée d'origine n'est pas écrasée
+    expect(CONTENT["levitate"].levitate).toBeTruthy();   // the original entry is not overwritten
     expect(CONTENT["gaseous-form"].actionEnds).toBeTruthy();
     expect(CONTENT["beguiling-magic"].choice).toEqual({ effects: "one" });
     expect(CONTENT["imprisonment"].choice).toEqual({ effects: "one" });
@@ -1015,11 +1015,11 @@ describe("§295 : repasse terme par terme, lot C1 (corrections déclaratives)", 
     expect(CONTENT["contact-other-plane"].saveDamage).toEqual({ dnd5eactivity000: "none" });
     expect(CONTENT["stones-endurance"].triggers[0].do).toEqual([{ type: "use", activity: "vrWhAQ6Bj4gznxHq" }, { type: "reduce" }]);
   });
-  it("les sources reconnues sous l'identifiant de la règle", () => {
+  it("sources recognized under the rule's identifier", () => {
     expect(SOURCES.n2qsI3p9HBVQIjeK).toBe("hex");
     expect(SOURCES.phbrgeAssasinate).toBe("assassinate");
   });
-  it("les nouvelles clés sont vérifiées", () => {
+  it("the new keys are checked", () => {
     expect(validateEntry({ flurryStrikes: 3, effectDurations: { "3LofAPFLZJMQJirN": { seconds: 60 } }, grantsConditionImmunities: ["poisoned"] })).toEqual([]);
     expect(validateEntry({ flurryStrikes: 0 })).toHaveLength(1);
     expect(validateEntry({ effectDurations: { "3LofAPFLZJMQJirN": { rounds: 1 } } })).toHaveLength(1);
@@ -1030,7 +1030,7 @@ describe("§295 : repasse terme par terme, lot C1 (corrections déclaratives)", 
       expect(validateEntry(CONTENT[id])).toEqual([]);
     }
   });
-  it("Duel : une arme Polyvalente se prend à une main", () => {
+  it("Dueling: a Versatile weapon is held in one hand", () => {
     const modes = ["oneHanded", "twoHanded"];
     expect(versatileGrip({ mode: null, modes, explicit: false, otherHandBusy: false })).toBe("twoHanded");
     expect(versatileGrip({ mode: null, modes, explicit: false, otherHandBusy: false, prefersOneHand: true })).toBe("oneHanded");
@@ -1038,23 +1038,23 @@ describe("§295 : repasse terme par terme, lot C1 (corrections déclaratives)", 
   });
 });
 
-describe("§296 : repasse, lot C2 (« de votre choix », plafond, réserve)", async () => {
+describe("§296: review, batch C2 (\"of your choice\", cap, reserve)", async () => {
   const { splitPool } = await import("../module/scripts/core/pools.mjs");
   const { selectAreaTargets } = await import("../module/scripts/core/area.mjs");
-  it("une réserve se partage à parts égales, chaque part plafonnée, le reste aux autres", () => {
+  it("a reserve is shared in equal parts, each part capped, the rest to the others", () => {
     expect(splitPool(100, [Infinity, Infinity, Infinity, Infinity])).toEqual([25, 25, 25, 25]);
     expect(splitPool(50, [5, 100, 100])).toEqual([5, 23, 22]);
     expect(splitPool(10, [0, 3, 3])).toEqual([0, 3, 3]);
     expect(splitPool(7, [10, 10])).toEqual([4, 3]);
     expect(splitPool(0, [5])).toEqual([0]);
   });
-  it("une zone plafonnée garde les plus proches de son centre", () => {
+  it("a capped area keeps those closest to its center", () => {
     const c = (token, distance) => ({ token, distance, disposition: -1 });
     const chosen = selectAreaTargets([c("a", 50), c("b", 10), c("c", 30)], { origin: "x", originDisposition: 1, excludeOrigin: true, affects: "enemy", max: 2 });
     expect(chosen.map(t => t.token)).toEqual(["b", "c"]);
     expect(selectAreaTargets([c("a", 50), c("b", 10)], { origin: "x", originDisposition: 1, excludeOrigin: true, affects: "enemy" })).toHaveLength(2);
   });
-  it("les déclarations du lot", () => {
+  it("the batch's declarations", () => {
     expect(CONTENT["sleep"].zoneAffects).toBe("enemy");
     expect(CONTENT["slow"]).toMatchObject({ zoneAffects: "enemy", zoneMax: 6 });
     expect(CONTENT["preserve-life"].pickTargets).toMatchObject({ self: true, check: "allies", filter: "bloodied", radius: 30 });
@@ -1065,17 +1065,17 @@ describe("§296 : repasse, lot C2 (« de votre choix », plafond, réserve)", as
       expect(validateEntry(CONTENT[id], { facts })).toEqual([]);
     }
   });
-  it("les nouvelles clés sont vérifiées", () => {
+  it("the new keys are checked", () => {
     expect(validateEntry({ zoneMax: 0 })).toHaveLength(1);
     expect(validateEntry({ healPool: { activities: [], cap: "full" } })).toHaveLength(1);
     expect(validateEntry({ pickTargets: { activities: ["aOptL5pMaj3WtR8S"], radius: 30, units: "ft", max: 0, self: 1, check: "all", filter: "x" } })).toHaveLength(4);
   });
 });
 
-describe("§298 : repasse, lot C3 (coût d'action et budget du tour)", async () => {
+describe("§298: review, batch C3 (action cost and turn budget)", async () => {
   const { spendUse, checkUse, freshBudget } = await import("../module/scripts/core/turn.mjs");
   const own = { isOwnTurn: true, attacksPerAction: 3, turnKey: "1-0" };
-  it("un sort à la place de deux attaques (Magie de guerre améliorée) en prend deux", () => {
+  it("a spell in place of two attacks (Improved War Magic) takes two", () => {
     let b = freshBudget({ reactions: 1 });
     b = spendUse(b, { cost: "action", weaponAttack: true }, own);
     expect(b.attacks).toEqual({ granted: 3, used: 1 });
@@ -1091,7 +1091,7 @@ describe("§298 : repasse, lot C3 (coût d'action et budget du tour)", async () 
     expect(b.attacks).toEqual({ granted: 2, used: 1 });
     expect(checkUse(b, { cost: "action", weaponAttack: true }, { isOwnTurn: true })).toEqual([]);
   });
-  it("les déclarations du lot", () => {
+  it("the batch's declarations", () => {
     expect(CONTENT["war-magic"].spellsInAttack).toEqual({ maxLevel: 0, class: "wizard" });
     expect(CONTENT["improved-war-magic"].spellsInAttack).toEqual({ maxLevel: 2, class: "wizard", attacks: 2 });
     expect(CONTENT["valor-extra-attack"].spellsInAttack).toEqual({ maxLevel: 0 });
@@ -1105,15 +1105,15 @@ describe("§298 : repasse, lot C3 (coût d'action et budget du tour)", async () 
       expect(validateEntry(CONTENT[id], { facts })).toEqual([]);
     }
   });
-  it("les nouvelles clés sont vérifiées", () => {
+  it("the new keys are checked", () => {
     expect(validateEntry({ usageLimits: { Ew70lNTD8dR3vREt: { cost: "gratis" } } })).toHaveLength(1);
     expect(validateEntry({ spellsInAttack: { maxLevel: -1 } })).toHaveLength(1);
     expect(validateEntry({ spellsInAttack: { maxLevel: 0, attacks: 0 } })).toHaveLength(1);
   });
 });
 
-describe("§299 : repasse, lot C4 (aptitudes tenues par la Rage, fins sur Neutralisé)", () => {
-  it("les déclarations du lot", () => {
+describe("§299: review, batch C4 (abilities held by Rage, endings on Incapacitated)", () => {
+  it("the batch's declarations", () => {
     expect(CONTENT["mindless-rage"].duringRage).toEqual({ enable: ["Y9LOXK6Q4vot2cxi"], cures: ["charmed", "frightened"] });
     expect(CONTENT["rage-of-the-wilds"].duringRage).toEqual({ copiesEnd: true, oneOption: true });
     expect(CONTENT["primal-knowledge"].duringRage.post).toEqual(["ufbJRsGGW3REMmJm"]);
@@ -1126,15 +1126,15 @@ describe("§299 : repasse, lot C4 (aptitudes tenues par la Rage, fins sur Neutra
       expect(validateEntry(CONTENT[id], { facts })).toEqual([]);
     }
   });
-  it("les nouvelles clés sont vérifiées", () => {
+  it("the new keys are checked", () => {
     expect(validateEntry({ endsWhen: { incapacitated: "both" } })).toHaveLength(1);
     expect(validateEntry({ duringRage: { enable: ["court"], copiesEnd: 1 } })).toHaveLength(1);
     expect(validateEntry({ breaksOn: ["forcesSave"] })).toEqual([]);
   });
 });
 
-describe("§300 : repasse, lot C5 (zones, émanations, entrées)", () => {
-  it("les déclarations du lot", () => {
+describe("§300: review, batch C5 (areas, Emanations, entries)", () => {
+  it("the batch's declarations", () => {
     expect(CONTENT["spirit-guardians"].zoneBound).toBe(true);
     for ( const id of ["sleet-storm", "stinking-cloud"] ) expect(CONTENT[id].quietPose).toBe(true);
     // §531 (issue #142): SRD 5.2 — Spirit Guardians does nothing when it appears, only on entering / turn end.
@@ -1153,7 +1153,7 @@ describe("§300 : repasse, lot C5 (zones, émanations, entrées)", () => {
       expect(validateEntry(CONTENT[id], { facts })).toEqual([]);
     }
   });
-  it("les nouvelles clés sont vérifiées", () => {
+  it("the new keys are checked", () => {
     expect(validateEntry({ quietPose: 1 })).toHaveLength(1);
     expect(validateEntry({ zoneBound: "oui" })).toHaveLength(1);
     expect(validateEntry({ pickTargets: { activities: ["dnd5eactivity000"], radius: " ", units: "ft" } })).toHaveLength(1);
@@ -1161,8 +1161,8 @@ describe("§300 : repasse, lot C5 (zones, émanations, entrées)", () => {
   });
 });
 
-describe("§301 : repasse, lot C6 (réactions et fenêtres jamais proposées)", () => {
-  it("les déclarations du lot", () => {
+describe("§301: review, batch C6 (reactions and windows never offered)", () => {
+  it("the batch's declarations", () => {
     expect(CONTENT["interception"].triggers[0]).toMatchObject({ on: "allyIsHit", do: [{ type: "use", target: "target" }, { type: "reduce" }] });
     expect(CONTENT["psionic-power"].triggers.map(t => t.on)).toEqual(["isHit", "allyIsHit"]);
     expect(CONTENT["cutting-words"].triggers.map(t => Object.keys(t.if))).toEqual([["target.within", "target.seesSource"], ["source.nearSelf", "self.seesSource"]]);
@@ -1175,15 +1175,15 @@ describe("§301 : repasse, lot C6 (réactions et fenêtres jamais proposées)", 
       expect(validateEntry(CONTENT[id], { facts })).toEqual([]);
     }
   });
-  it("les nouvelles étapes sont contrôlées", () => {
+  it("the new steps are checked", () => {
     expect(validateEntry({ triggers: [{ on: "isHit", do: [{ type: "use" }, { type: "cancel" }] }] })).toHaveLength(1);
     expect(validateEntry({ triggers: [{ on: "falls", do: [{ type: "use" }, { type: "reduce" }] }] })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "falls", do: [{ type: "reduce" }] }] })).toHaveLength(1);
   });
 });
 
-describe("§302 : repasse, lot C7 (Avantage et Désavantage oubliés)", () => {
-  it("les déclarations du lot", () => {
+describe("§302: review, batch C7 (Advantage and Disadvantage forgotten)", () => {
+  it("the batch's declarations", () => {
     expect(Object.keys(CONTENT["contagion"].effectChanges)).toHaveLength(6);
     expect(CONTENT["contagion"].effectChanges.S8jxTZQbT8KKSg5V).toEqual([{ key: "system.abilities.str.save.roll.mode", type: "add", value: "-1" }]);
     expect(CONTENT["beguiling-twist"].saveAdvantage).toEqual(["charmed", "frightened"]);
@@ -1197,14 +1197,14 @@ describe("§302 : repasse, lot C7 (Avantage et Désavantage oubliés)", () => {
   });
 });
 
-describe("§303 : repasse, lot C8 (sorts à logique propre)", () => {
-  it("les déclarations du lot", () => {
+describe("§303: review, batch C8 (spells with their own logic)", () => {
+  it("the batch's declarations", () => {
     expect(CONTENT["aid"].effectsFirst).toBe(true);
     expect(CONTENT["cordon-of-arrows"].zoneCharges).toBe("2 * @item.level");
     expect(CONTENT["death-ward"].wardsAtZero).toBe(true);
     for ( const id of ["aid", "cordon-of-arrows", "death-ward"] ) expect(validateEntry(CONTENT[id], { facts })).toEqual([]);
   });
-  it("les nouvelles clés sont vérifiées", () => {
+  it("the new keys are checked", () => {
     expect(validateEntry({ effectsFirst: "oui" })).toHaveLength(1);
     expect(validateEntry({ zoneCharges: 0 })).toHaveLength(1);
     expect(validateEntry({ zoneCharges: " " })).toHaveLength(1);
@@ -1213,14 +1213,14 @@ describe("§303 : repasse, lot C8 (sorts à logique propre)", () => {
 });
 
 describe("§304 : repasse, lot C9 (dons : clauses secondaires)", () => {
-  it("les déclarations du lot", () => {
+  it("the batch's declarations", () => {
     expect(CONTENT["boon-of-fate"].regainOnInitiative).toEqual({ item: "boon-of-fate", upTo: 1 });
     expect(validateEntry(CONTENT["boon-of-fate"], { facts })).toEqual([]);
   });
 });
 
 describe("§305 : repasse, lot C10 (invocations, compagnons, familiers)", () => {
-  it("les déclarations du lot", () => {
+  it("the batch's declarations", () => {
     expect(CONTENT["find-steed"].summon.vanishesWithCaster).toBe(true);
     expect(CONTENT["wild-companion"].summon).toMatchObject({ endsOnLongRest: true, familiar: true });
     expect(CONTENT["wild-companion"].summon.lasts).toBeUndefined();
@@ -1233,27 +1233,27 @@ describe("§305 : repasse, lot C10 (invocations, compagnons, familiers)", () => 
   });
 });
 
-describe("§430 : Appel de destrier, données d'avant et d'après le SRD 6.1", () => {
-  it("la porte de la monture volante ne vise que l'ancienne activité « Summon Flying Steed »", () => {
+describe("§430: Find Steed, data from before and after SRD 6.1", () => {
+  it("the flying mount's gate targets only the old \"Summon Flying Steed\" activity", () => {
     const { minLevels } = CONTENT["find-steed"].summon;
-    // dnd5e 6.0.x et le PHB premium : deux activités, la volante (o4YsONnsS8rOOEaS) seulement à partir du niveau 4.
+    // dnd5e 6.0.x and the premium PHB: two activities, the flying one (o4YsONnsS8rOOEaS) only from level 4 on.
     expect(minLevels).toEqual({ o4YsONnsS8rOOEaS: 4 });
-    // SRD 6.1 : une seule activité (dnd5eactivity000), l'effet « Flying Steed » est filtré par dnd5e (level.min 4) — aucune porte ici.
+    // SRD 6.1: a single activity (dnd5eactivity000), the "Flying Steed" effect is filtered by dnd5e (level.min 4) — no gate here.
     expect(minLevels.dnd5eactivity000).toBeUndefined();
     expect(validateEntry(CONTENT["find-steed"], { facts })).toEqual([]);
   });
 });
 
-describe("§306 : repasse, lot C11 (Métamagie, magie des sous-classes)", () => {
-  it("les déclarations du lot", () => {
+describe("§306: review, batch C11 (Metamagic, subclass magic)", () => {
+  it("the batch's declarations", () => {
     expect(CONTENT["improved-illusions"].rangedFeat).toEqual({ kind: "spell", spellRange: { value: 60, units: "ft", school: "ill" } });
     expect(validateEntry(CONTENT["improved-illusions"], { facts })).toEqual([]);
     expect(validateEntry({ rangedFeat: { kind: "spell", spellRange: { value: 60, units: "ft", school: "" } } })).toHaveLength(1);
   });
 });
 
-describe("§308 : repasse, lot C12-e (sauvegardes, Avantage, dés ajoutés)", () => {
-  it("les déclarations du lot", () => {
+describe("§308: review, batch C12-e (saves, Advantage, added dice)", () => {
+  it("the batch's declarations", () => {
     for ( const id of ["brutal-strike", "improved-brutal-strike", "improved-brutal-strike-2", "defensive-tactics", "hex", "power-word-stun"] ) {
       expect(validateEntry(CONTENT[id], { facts }), id).toEqual([]);
     }
@@ -1266,7 +1266,7 @@ describe("§308 : repasse, lot C12-e (sauvegardes, Avantage, dés ajoutés)", ()
     expect(validateEntry(CONTENT["prismatic-spray"], { facts })).toEqual([]);
     expect(validateEntry(CONTENT["elemental-attunement"], { facts })).toEqual([]);
   });
-  it("les schémas refusent ce qui ne va pas", () => {
+  it("the schemas refuse what is wrong", () => {
     expect(validateEntry({ brutalStrike: { options: { x: {} } } })).toHaveLength(1);
     expect(validateEntry({ brutalStrike: { count: 0 } })).toHaveLength(1);
     expect(validateEntry({ noOpportunityAttacks: ["court"] })).toHaveLength(1);
@@ -1276,8 +1276,8 @@ describe("§308 : repasse, lot C12-e (sauvegardes, Avantage, dés ajoutés)", ()
   });
 });
 
-describe("§309 : repasse, lot C12-b (zones, émanations, auras)", () => {
-  it("les déclarations du lot", () => {
+describe("§309: review, batch C12-b (areas, Emanations, auras)", () => {
+  it("the batch's declarations", () => {
     for ( const id of ["conjure-celestial", "heat-metal", "jolt-to-life", "aura-of-warding", "aura-of-alacrity", "prismatic-wall", "dimension-door"] ) {
       expect(validateEntry(CONTENT[id], { facts }), id).toEqual([]);
     }
@@ -1287,7 +1287,7 @@ describe("§309 : repasse, lot C12-b (zones, émanations, auras)", () => {
     expect(CONTENT["jolt-to-life"].burst).toMatchObject({ activity: "hTK04U7m016p6lf6", from: ["xg84KvaBJVjFZQpV"], affects: "enemy" });
     expect(CONTENT["dimension-door"].teleport.unseen).toBe(true);
   });
-  it("les schémas refusent ce qui ne va pas", () => {
+  it("the schemas refuse what is wrong", () => {
     expect(validateEntry({ enterOnPose: "oui" })).toHaveLength(1);
     expect(validateEntry({ burst: { activity: "hTK04U7m016p6lf6", radius: 10, units: "ft", affects: "ally" } })).toHaveLength(1);
     expect(validateEntry({ triggers: [{ on: "failedSave", do: [{ type: "disarm", elseEffect: "court" }] }] })).toHaveLength(1);
@@ -1295,8 +1295,8 @@ describe("§309 : repasse, lot C12-b (zones, émanations, auras)", () => {
   });
 });
 
-describe("§310 : repasse, lot C12-f (dégâts, soins, PV)", () => {
-  it("les déclarations du lot", () => {
+describe("§310: review, batch C12-f (damage, healing, HP)", () => {
+  it("the batch's declarations", () => {
     for ( const id of ["beguiling-defenses", "disintegrate", "physicians-touch", "elemental-epitome", "modify-memory"] ) {
       expect(validateEntry(CONTENT[id], { facts }), id).toEqual([]);
     }
@@ -1304,14 +1304,14 @@ describe("§310 : repasse, lot C12-f (dégâts, soins, PV)", () => {
     expect(CONTENT["disintegrate"].killsAtZero).toBe(true);
     expect(CONTENT["elemental-epitome"].choice).toEqual({ effects: "one" });
   });
-  it("les schémas refusent ce qui ne va pas", () => {
+  it("the schemas refuse what is wrong", () => {
     expect(validateEntry({ retort: { damageType: "rien" } })).toHaveLength(1);
     expect(validateEntry({ killsAtZero: 1 })).toHaveLength(1);
   });
 });
 
 describe("§311 : repasse, lot C12-c (invocations, compagnons, formes)", () => {
-  it("les déclarations du lot", () => {
+  it("the batch's declarations", () => {
     for ( const id of ["primal-companion", "improved-circle-forms", "full-of-stars", "conjure-woodland-beings"] ) {
       expect(validateEntry(CONTENT[id], { facts }), id).toEqual([]);
     }
@@ -1328,8 +1328,8 @@ describe("§311 : repasse, lot C12-c (invocations, compagnons, formes)", () => {
   });
 });
 
-describe("§312 : repasse, lot C12-d (budget du tour, coûts)", () => {
-  it("les déclarations du lot", () => {
+describe("§312: review, batch C12-d (turn budget, costs)", () => {
+  it("the batch's declarations", () => {
     for ( const id of ["dragons-breath", "travel-along-the-tree", "abjure-foes"] ) expect(validateEntry(CONTENT[id], { facts }), id).toEqual([]);
     expect(CONTENT["dragons-breath"].grants).toEqual({ from: "dnd5eactivity000", activity: "61nfYLT1M7MOTibf" });
     expect(CONTENT["abjure-foes"].actionOrBonus).toBe(true);
@@ -1337,8 +1337,8 @@ describe("§312 : repasse, lot C12-d (budget du tour, coûts)", () => {
   });
 });
 
-describe("§313 : repasse, lot C12-g (états, durées, fins d'effet)", () => {
-  it("les déclarations du lot", () => {
+describe("§313: review, batch C12-g (conditions, durations, effect endings)", () => {
+  it("the batch's declarations", () => {
     for ( const id of ["mislead", "hand-of-ultimate-mercy", "perfect-focus", "searing-vengeance", "restoring-touch"] ) expect(validateEntry(CONTENT[id], { facts }), id).toEqual([]);
     expect(CONTENT["mislead"].summonEffectsOnCaster).toBe(true);
     expect(CONTENT["hand-of-ultimate-mercy"].curesAll).toContain("dead");
@@ -1347,24 +1347,24 @@ describe("§313 : repasse, lot C12-g (états, durées, fins d'effet)", () => {
   });
 });
 
-describe("§314 : repasse, lot C12-h (déplacement)", () => {
-  it("les déclarations du lot", () => {
+describe("§314: review, batch C12-h (movement)", () => {
+  it("the batch's declarations", () => {
     for ( const id of ["repelling-blast", "revelation-in-flesh"] ) expect(validateEntry(CONTENT[id], { facts }), id).toEqual([]);
     expect(CONTENT["eldritch-blast"]?.triggers ?? []).toEqual([]);
     expect(CONTENT["repelling-blast"].triggers[0].do).toEqual([{ type: "move", mode: "push", distance: 10, units: "ft" }]);
   });
 });
 
-describe("§315 : repasse, lot C12-i (vision, furtivité)", () => {
-  it("les déclarations du lot", () => {
+describe("§315: review, batch C12-i (vision, stealth)", () => {
+  it("the batch's declarations", () => {
     expect(validateEntry(CONTENT["skulker"], { facts })).toEqual([]);
     expect(CONTENT["skulker"].sniper).toBe(true);
     expect(validateEntry({ sniper: 1 })).toHaveLength(1);
   });
 });
 
-describe("§316 : repasse, lot C12-a (réactions et fenêtres)", () => {
-  it("les déclarations du lot", () => {
+describe("§316: review, batch C12-a (reactions and windows)", () => {
+  it("the batch's declarations", () => {
     for ( const id of ["magic-weapon", "alter-self", "persistent-rage", "deflect-attacks", "disciplined-survivor", "phantasmal-force"] ) {
       expect(validateEntry(CONTENT[id], { facts }), id).toEqual([]);
     }
@@ -1375,7 +1375,7 @@ describe("§316 : repasse, lot C12-a (réactions et fenêtres)", () => {
 });
 
 describe("§317 : repasse, lot C12-j (divers)", () => {
-  it("les déclarations du lot", () => {
+  it("the batch's declarations", () => {
     for ( const id of ["font-of-inspiration", "improved-warding-flare", "steel-wind-strike", "protection-from-evil-and-good"] ) {
       expect(validateEntry(CONTENT[id], { facts }), id).toEqual([]);
     }
@@ -1385,7 +1385,7 @@ describe("§317 : repasse, lot C12-j (divers)", () => {
   });
 });
 
-describe("§352 : étape status — around", () => {
+describe("§352: status step — around", () => {
   it("around : { radius, units }", () => {
     expect(validateEntry({ triggers: [{ on: "hit", do: [{ type: "status", status: "stunned", save: { ability: "con", dc: 17 }, around: { radius: 30, units: "ft" } }] }] })).toEqual([]);
     expect(validateEntry({ triggers: [{ on: "hit", do: [{ type: "status", status: "stunned", around: { radius: 0, units: "ft" } }] }] }).length).toBe(1);
@@ -1401,8 +1401,8 @@ describe("§353 : swornEnemy", () => {
   });
 });
 
-describe("§403 : écarts moyens, second lot", () => {
-  it("durationByLevel : Malédiction", async () => {
+describe("§403: average gaps, second batch", () => {
+  it("durationByLevel: Bestow Curse", async () => {
     const { durationAtLevel } = await import("../module/scripts/core/durations.mjs");
     const rule = CONTENT["bestow-curse"].durationByLevel;
     expect(durationAtLevel(rule, 3)).toBeNull();
@@ -1422,7 +1422,7 @@ describe("§403 : écarts moyens, second lot", () => {
 });
 
 describe("§403 : aura de l'invocateur", () => {
-  it("Invocation d'animaux : seul l'invocateur, à 1,50 m", async () => {
+  it("Conjure Animals: only the summoner, at 1.50 m", async () => {
     const { auraRecipients } = await import("../module/scripts/core/aura.mjs");
     expect(CONTENT["grant-save-advantage"].aura.affects).toBe("summoner");
     const source = { token: "pack", disposition: 1, inactive: false, radius: 5, affects: "summoner", includeSelf: false, value: 0, summoners: ["caster"] };
@@ -1432,8 +1432,8 @@ describe("§403 : aura de l'invocateur", () => {
   });
 });
 
-describe("§403 : Liberté de mouvement", () => {
-  it("les réductions de Vitesse se reconnaissent", async () => {
+describe("§403: Freedom of Movement", () => {
+  it("Speed reductions are recognized", async () => {
     const { reducesSpeed, withoutSpeedReductions } = await import("../module/scripts/core/speed-floor.mjs");
     expect(reducesSpeed({ key: "system.attributes.movement.speed", type: "add", value: -10 })).toBe(true);
     expect(reducesSpeed({ key: "system.attributes.movement.speed", type: "multiply", value: 0.5 })).toBe(true);
@@ -1448,7 +1448,7 @@ describe("§403 : Liberté de mouvement", () => {
 });
 
 describe("§403 : Bourrasque", () => {
-  it("vers le lanceur dans la ligne : le coût une fois de plus", async () => {
+  it("toward the caster in the line: the cost once more", async () => {
     const { windwardExtra } = await import("../module/scripts/core/windward.mjs");
     const caster = { x: 0, y: 0 };
     const toward = [{ x: 300, y: 0, inside: true }, { x: 200, y: 0, inside: true, cost: 5 }, { x: 100, y: 0, inside: true, cost: 5 }];

@@ -7,8 +7,8 @@
  *    (adapter/inline-check.mjs); every other roll goes on untouched.
  *  - **Who rolls**: the actors dnd5e chose for the link (controlled tokens, else the user's character), gathered per click (dnd5e
  *    rolls them one after the other).
- *  - **GM**: the request window (ui/group-roll.mjs) opens filled with the link's test, ability, DC and those actors; the GM may hide
- *    the DC, add a label, then « Request ».
+ *  - **GM**: the request window (ui/group-roll.mjs) opens filled with the link's test, ability, DC and those actors; the GM may
+ *    hide the DC, add a label, then "Request".
  *  - **Player**: the request card for their own characters, then the roll window (runtime/group-roll.mjs `requestOwnRoll`). Without
  *    an active GM nobody would link the rolls to the card: dnd5e's dialog opens as before.
  */

@@ -1,7 +1,7 @@
 /**
- * §265 : Bannissement — la cible qui rate sa sauvegarde quitte la carte (token et combattant cachés) ; le sort fini, elle revient dans
- * l'espace quitté, ou au plus proche libre s'il est pris. Le Magicien bannit le Zombi ; pendant ce temps le Guerrier prend sa case ;
- * la concentration rompue, le Zombi réapparaît à côté.
+ * §265: Banishment — the target that fails its saving throw leaves the map (token and combatant hidden); when the spell is over,
+ * it returns to the space it left, or to the nearest free one if it is taken. The Wizard banishes the Zombie; meanwhile the
+ * Fighter takes its cell; Concentration broken, the Zombie reappears next to it.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));

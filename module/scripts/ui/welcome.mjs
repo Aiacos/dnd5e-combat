@@ -1,12 +1,12 @@
 /**
- * L'écran d'accueil de la suite (SPEC §177) : ouvert chez le MJ actif au premier lancement du moteur dans un monde (réglage
- * `welcomeSeen`), et ensuite par le bouton « Accueil et diagnostic » des réglages du module. Ce réglage garde la version vue : quand
- * elle change, c'est le message de mise à jour qui s'ouvre (§439, ui/release-notes.mjs). Logo, mot de bienvenue, les trois
- * niveaux d'automatisation (§117) en grandes cartes, le diagnostic du monde, les liens. Aspect : celui du site (anthracite,
- * fuchsia, dégradé du logo).
+ * The suite's welcome screen (SPEC §177): opened for the active GM on the engine's first launch in a world (setting
+ * `welcomeSeen`), and afterwards by the "Welcome and diagnostic" button of the module settings. This setting keeps the version
+ * seen: when it changes, the update message opens instead (§439, ui/release-notes.mjs). Logo, welcome word, the three
+ * automation levels (§117) as large cards, the world diagnostic, the links. Look: that of the website (anthracite,
+ * fuchsia, logo gradient).
  *
- * Changer de niveau recharge le monde (réglage `requiresReload`, runtime/levels.mjs) : le MJ le confirme, tous les clients
- * rechargent (`game.socket.emit("reload")`, puis ce client).
+ * Changing level reloads the world (setting `requiresReload`, runtime/levels.mjs): the GM confirms it, all clients
+ * reload (`game.socket.emit("reload")`, then this client).
  */
 import { MODULE_ID } from "../constants.mjs";
 import { LEVELS } from "../core/levels.mjs";
@@ -25,10 +25,10 @@ const LINKS = Object.freeze({
 });
 const ICONS = Object.freeze({ essentials: "fa-solid fa-person-walking", assisted: "fa-solid fa-dice-d20", full: "fa-solid fa-wand-sparkles" });
 
-/** La classe de la fenêtre, créée au premier usage (le module se charge aussi hors de Foundry : tests/load.test.mjs). */
+/** The window class, created on first use (the module also loads outside Foundry: tests/load.test.mjs). */
 let WelcomeClass = null;
 export const WelcomeApp = () => WelcomeClass ??= class WelcomeApp extends foundry.applications.api.ApplicationV2 {
-  /** B6 : un seul exemplaire — le menu des réglages crée la fenêtre par `new` : il reçoit celle qui est déjà ouverte. */
+  /** B6: a single instance — the settings menu creates the window with `new`: it receives the one that is already open. */
   constructor(options={}) {
     const existing = foundry.applications.instances.get("das-welcome");
     if ( existing instanceof WelcomeApp ) return existing;
@@ -42,7 +42,7 @@ export const WelcomeApp = () => WelcomeClass ??= class WelcomeApp extends foundr
     position: { width: 860, height: "auto" }
   };
 
-  /** Le niveau en vigueur, ou null si le moteur est en veille (réglage non déclaré). */
+  /** The level in force, or null if the engine is idle (setting not declared). */
   #level() {
     try { return game.settings.get(MODULE_ID, LEVEL_SETTING); }
     catch { return null; }
@@ -134,14 +134,14 @@ export const WelcomeApp = () => WelcomeClass ??= class WelcomeApp extends foundr
 export const openWelcome = () => new (WelcomeApp())().render({ force: true });
 
 /**
- * Déclaré même en veille (Midi-QOL actif : le diagnostic sert justement à nettoyer ses traces). Le réglage `welcomeSeen` garde la
- * version du moteur vue par le MJ ; vide = jamais vu : l'accueil s'ouvre au premier `ready` chez le MJ actif ; une autre version que
- * celle du module : le message de mise à jour (§439).
+ * Declared even when idle (Midi-QOL active: the diagnostic is precisely for cleaning up its traces). The `welcomeSeen`
+ * setting keeps the engine version seen by the GM; empty = never seen: the welcome opens at the first `ready` for the active
+ * GM; a version other than the module's: the update message (§439).
  */
 export function registerWelcome({ menu=false }={}) {
   game.settings.register(MODULE_ID, SEEN_SETTING, { scope: "world", config: false, type: String, default: "" });
-  // Moteur actif : l'accueil s'ouvre depuis la fenêtre de réglages (ui/settings.mjs). En veille, la fenêtre n'existe pas : le bouton
-  // reste dans la liste de Foundry, pour que le diagnostic nettoie les traces de Midi-QOL.
+  // Engine active: the welcome opens from the settings window (ui/settings.mjs). When idle, the window does not exist: the button
+  // stays in Foundry's list, so the diagnostic cleans up Midi-QOL's traces.
   if ( menu && game.settings.registerMenu ) game.settings.registerMenu(MODULE_ID, "welcome", {
     name: "DND5ECOMBAT.Accueil.Menu.Nom", label: "DND5ECOMBAT.Accueil.Menu.Bouton", hint: "DND5ECOMBAT.Accueil.Menu.Aide",
     icon: "fa-solid fa-dragon", type: WelcomeApp(), restricted: true
@@ -150,7 +150,7 @@ export function registerWelcome({ menu=false }={}) {
   game.settings.register(MODULE_ID, ROTATION_SETTING, { scope: "world", config: false, type: Boolean, default: false });
   route("ready", () => {
     if ( !game.users.activeGM?.isSelf ) return;
-    // Un monde neuf n'a jamais eu l'ancien réglage d'orientation : rien à lui dire (§246).
+    // A new world never had the old orientation setting: nothing to tell it (§246).
     if ( !game.settings.get(MODULE_ID, SEEN_SETTING) ) return game.settings.set(MODULE_ID, ROTATION_SETTING, true).then(openWelcome);
     announceUpdate().catch(err => console.error(`${MODULE_ID} | release notes`, err));
     noticeDdb().catch(err => console.error(`${MODULE_ID} | DDB notice`, err));
@@ -159,8 +159,8 @@ export function registerWelcome({ menu=false }={}) {
 }
 
 /**
- * §245 : une seule notification au MJ actif quand des objets importés de D&D Beyond risquent de ne pas être automatisés (la liste est
- * dans le diagnostic, vérification « ddb »). Le nombre signalé est gardé : rien de plus tant qu'il n'augmente pas (un nouvel import).
+ * §245: a single notification to the active GM when items imported from D&D Beyond risk not being automated (the list is
+ * in the diagnostic, "ddb" check). The reported count is kept: nothing more until it increases (a new import).
  */
 async function noticeDdb() {
   const count = (await ddbItemsAtRisk()).length;
@@ -170,10 +170,10 @@ async function noticeDdb() {
 }
 
 /**
- * §246 (issue #20) : le réglage du moteur « Orienter les tokens dans le sens du mouvement » (`faceMovement`, actif par défaut) a été
- * retiré au profit de la « Rotation automatique des tokens » du cœur (`core.tokenAutoRotate`). Une seule fois, au MJ actif : si
- * l'ancien réglage n'avait pas été coupé (sa valeur gardée par le monde, lue telle quelle — il n'est plus déclaré) et que celui du
- * cœur l'est, le MJ choisit d'allumer celui du cœur. Sinon rien : les tokens tournaient et tournent encore.
+ * §246 (issue #20): the engine setting "Orient tokens in the direction of movement" (`faceMovement`, on by default) was
+ * removed in favour of the core's "Token Auto-Rotation" (`core.tokenAutoRotate`). Once only, for the active GM: if
+ * the old setting had not been turned off (its value kept by the world, read as is — it is no longer declared) and the core's
+ * is turned off, the GM chooses whether to turn on the core's. Otherwise nothing: the tokens rotated and still rotate.
  */
 async function noticeRotation() {
   if ( game.settings.get(MODULE_ID, ROTATION_SETTING) ) return;

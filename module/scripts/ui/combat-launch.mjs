@@ -1,7 +1,7 @@
 /**
- * §397 : la fenêtre « Lancer un combat » (MJ) et son bouton dans la barre d'outils des tokens (masquable : réglage `combatLaunchButton`).
- * La macro « Lancer un combat » du compendium « Outils du MJ » et `api.combatLaunch.open()` l'ouvrent aussi. Ouvrir met le jeu en pause
- * (runtime/combat-launch.mjs `beginLaunch`) ; fermer sans lancer la lève.
+ * §397: the "Start a combat" window (GM) and its button in the token toolbar (can be hidden: setting `combatLaunchButton`).
+ * The "Start a combat" macro of the "GM Tools" compendium and `api.combatLaunch.open()` open it too. Opening pauses the game
+ * (runtime/combat-launch.mjs `beginLaunch`); closing without starting lifts the pause.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -40,7 +40,7 @@ const LaunchApp = () => LaunchClass ??= class CombatLaunchApp extends foundry.ap
     return loc("Lancement.Titre");
   }
 
-  /** Une liste : une grille de vignettes — clic sur le portrait = participe ou non, « ! » = surpris (choix de l'utilisateur, 2026-11-07). */
+  /** A list: a grid of thumbnails — click on the portrait = takes part or not, "!" = surprised (user's choice, 2026-11-07). */
   #section(key, list) {
     const tiles = list.map(e => {
       const c = this.chosen.get(e.uuid) ?? { on: false, surprised: false };
@@ -143,7 +143,7 @@ const LaunchApp = () => LaunchClass ??= class CombatLaunchApp extends foundry.ap
   }
 };
 
-/** Ouvre la fenêtre (MJ) : la pause d'abord. */
+/** Opens the window (GM): the pause first. */
 export async function openCombatLaunch() {
   if ( !game.user.isGM ) return null;
   const open = foundry.applications.instances.get(windowId);

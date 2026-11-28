@@ -1,12 +1,13 @@
 /**
- * §196 (lot 4 de l'escalade) : ce que le moteur publie pour les voisins, sur la scène « Escalade » de `dnd-6` (mur vertical en x = 700,
- * plafond à 20 ft sur la moitié ouest ; le Guerrier contre le mur, le Zombi juste au sud de lui).
- *  1. `api.climb.state` d'un grimpeur à 10 ft : en escalade, hauteur 10, ×2 sans vitesse d'escalade, peut lâcher.
- *  2. `api.climb.holds` : le long du mur oui, une case à l'ouest (loin du mur) non.
- *  3. L'A* : marcher loin du mur à 10 ft est refusé (aucun chemin) ; le long du mur, à la même hauteur, permis.
- *  4. Glissé loin du mur par le MJ : il lâche prise et tombe (« plus de mur »).
- *  5. `api.climb.toward` : le Zombi, au pied du mur sous le Guerrier perché à 15 ft (hors d'allonge), grimpe juste assez pour l'atteindre.
- * Remet modes, élévations, PV et états ; le filet du lanceur reprend le reste.
+ * §196 (batch 4 of climbing): what the engine publishes for neighbors, on the "Escalade" scene of `dnd-6` (vertical wall at
+ * x = 700, ceiling at 20 ft on the west half; the Fighter against the wall, the Zombie just south of him).
+ *  1. `api.climb.state` of a climber at 10 ft: climbing, height 10, ×2 without climb speed, can let go.
+ *  2. `api.climb.holds`: along the wall yes, one cell to the west (far from the wall) no.
+ *  3. The A*: walking away from the wall at 10 ft is refused (no path); along the wall, at the same height, allowed.
+ *  4. Slid away from the wall by the GM: he lets go and falls ("no more wall").
+ *  5. `api.climb.toward`: the Zombie, at the foot of the wall under the Fighter perched at 15 ft (out of reach), climbs just
+ *     enough to reach him.
+ * Restores modes, elevations, HP and conditions; the runner's net takes the rest.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -38,7 +39,7 @@ export default {
     ctx.restore(reset);
     const state = token => ctx.engine("climbState", { tokenId: token.id });
 
-    // 1. L'état publié.
+    // 1. The published state.
     const up = await ctx.engine("climb", { tokenId: hero.id, cells: 2 });
     if ( !ctx.expect(up.done && (up.after.elevation === home.elevation + 10), `le Guerrier monte de 2 cases (${up.after.elevation} ft)`) ) return;
     await pause(1200);
@@ -62,7 +63,7 @@ export default {
     ctx.expect((along.after.cell.i === south.i) && (along.after.elevation === up.after.elevation), `le long du mur : permis (${along.after.cell.i}, ${along.after.cell.j}), ${along.after.elevation} ft`);
     await ctx.engine("move", { tokenId: hero.id, cell });
 
-    // 4. Glissé loin du mur par le MJ : il tombe.
+    // 4. Slid away from the wall by the GM: he falls.
     await pause(1200);
     const p = await ctx.position(hero);
     await ctx.call("move-token", { tokenId: hero.id, x: p.x - 100, y: p.y, elevation: p.elevation });
@@ -71,7 +72,7 @@ export default {
     ctx.expect(!!fell, `glissé loin du mur par le MJ : il lâche prise et tombe (élévation ${fell?.position.elevation ?? "—"}, mode ${fell?.position.movementAction ?? "—"})`);
     await reset();
 
-    // 5. Rejoindre une cible perchée : le Zombi grimpe juste assez.
+    // 5. Reaching a perched target: the Zombie climbs just enough.
     const perch = await ctx.engine("climb", { tokenId: hero.id, cells: 3 });
     if ( !ctx.expect(perch.done && (perch.after.elevation === home.elevation + 15), `le Guerrier se perche à ${perch.after.elevation} ft`) ) return;
     await pause(1200);

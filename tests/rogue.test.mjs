@@ -11,18 +11,18 @@ import { RESOLUTION_BASE } from "./helpers.mjs";
 describe("§20 Attaque sournoise : quand elle s'applique", () => {
   const ok = { weapon: true, finesse: true, rangedWeapon: false, advantageMode: 1, allyNear: false };
   it("arme de Finesse avec l'Avantage", () => expect(sneakAttackIssue(ok)).toBe(null));
-  it("arme à distance, sans Avantage mais un allié à 1,50 m de la cible", () => {
+  it("ranged weapon, without Advantage but an ally 1.50 m from the target", () => {
     expect(sneakAttackIssue({ ...ok, finesse: false, rangedWeapon: true, advantageMode: 0, allyNear: true })).toBe(null);
   });
-  it("allié à côté mais Désavantage : non", () => expect(sneakAttackIssue({ ...ok, advantageMode: -1, allyNear: true })).toBe("disadvantage"));
-  it("ni Avantage ni allié : non", () => expect(sneakAttackIssue({ ...ok, advantageMode: 0 })).toBe("noAdvantage"));
-  it("arme ni de Finesse ni à distance (hache, lance lancée) : non", () => expect(sneakAttackIssue({ ...ok, finesse: false })).toBe("weaponKind"));
-  it("un sort ou une attaque à mains nues : non", () => expect(sneakAttackIssue({ ...ok, weapon: false })).toBe("notWeapon"));
-  it("déjà utilisée ce tour : non", () => expect(sneakAttackIssue({ ...ok, spent: true })).toBe("spent"));
+  it("ally nearby but Disadvantage: no", () => expect(sneakAttackIssue({ ...ok, advantageMode: -1, allyNear: true })).toBe("disadvantage"));
+  it("neither Advantage nor ally: no", () => expect(sneakAttackIssue({ ...ok, advantageMode: 0 })).toBe("noAdvantage"));
+  it("weapon neither Finesse nor ranged (axe, thrown spear): no", () => expect(sneakAttackIssue({ ...ok, finesse: false })).toBe("weaponKind"));
+  it("a spell or an unarmed attack: no", () => expect(sneakAttackIssue({ ...ok, weapon: false })).toBe("notWeapon"));
+  it("already used this turn: no", () => expect(sneakAttackIssue({ ...ok, spent: true })).toBe("spent"));
 });
 
-describe("§20 Attaque sournoise : les dés", () => {
-  it("la formule de l'échelle, ou le niveau", () => {
+describe("§20 Sneak Attack: the dice", () => {
+  it("the scale formula, or the level", () => {
     expect(parseDice("3d6")).toEqual({ number: 3, faces: 6 });
     expect(parseDice(" 10d6 ")).toEqual({ number: 10, faces: 6 });
     expect(parseDice("@scale.rogue.sneak-attack")).toBe(null);
@@ -33,19 +33,19 @@ describe("§20 Attaque sournoise : les dés", () => {
   });
 });
 
-describe("§20 Frappes rusées", () => {
+describe("§20 Cunning Strike", () => {
   const options = [
     { key: "poison", cost: 1, available: false }, { key: "trip", cost: 1 }, { key: "withdraw", cost: 1 },
     { key: "daze", cost: 2 }, { key: "knockOut", cost: 6 }, { key: "obscure", cost: 3 }
   ];
-  it("seulement ce qu'on peut payer, et ce qui est possible (trousse d'empoisonneur)", () => {
+  it("only what can be paid for, and what is possible (poisoner's kit)", () => {
     expect(affordableStrikes(options, 3).map(o => o.key)).toEqual(["trip", "withdraw", "daze", "obscure"]);
     expect(affordableStrikes(options, 1).map(o => o.key)).toEqual(["trip", "withdraw"]);
   });
-  it("un effet au niveau 5 : le second est écarté", () => {
+  it("one effect at level 5: the second is dropped", () => {
     expect(settleStrikes(["trip", "withdraw"], affordableStrikes(options, 3), { dice: 3, max: 1 })).toEqual({ strikes: ["trip"], cost: 1, dice: 2 });
   });
-  it("deux effets au niveau 11, dans la limite des dés ; pas deux fois le même", () => {
+  it("two effects at level 11, within the limit of the dice; not the same twice", () => {
     const opts = affordableStrikes(options, 6);
     expect(settleStrikes(["trip", "withdraw"], opts, { dice: 6, max: 2 })).toEqual({ strikes: ["trip", "withdraw"], cost: 2, dice: 4 });
     expect(settleStrikes(["trip", "trip"], opts, { dice: 6, max: 2 })).toEqual({ strikes: ["trip"], cost: 1, dice: 5 });
@@ -54,8 +54,8 @@ describe("§20 Frappes rusées", () => {
   });
 });
 
-describe("§20 Assassinat : une créature qui n'a pas encore joué", () => {
-  it("premier round seulement, celles qui passent après le tour en cours", () => {
+describe("§20 Assassinate: a creature that has not yet played", () => {
+  it("first round only, those that come after the current turn", () => {
     expect(hasNotActedYet({ round: 1, turn: 0, targetTurn: 2 })).toBe(true);
     expect(hasNotActedYet({ round: 1, turn: 2, targetTurn: 1 })).toBe(false);
     expect(hasNotActedYet({ round: 1, turn: 2, targetTurn: 2 })).toBe(false);
@@ -73,10 +73,10 @@ describe("§20 Esquive totale", () => {
     return applicationPlan(resolution).map(e => e.multiplier);
   };
   const dex = { ability: "dex", dc: 15, onSave: "half", activity: "Act", chained: false };
-  it("sauvegarde de Dextérité pour la moitié : rien sur une réussite, la moitié sur un échec", () => {
+  it("Dexterity saving throw for half: nothing on a success, half on a failure", () => {
     expect(multipliers(dex, [T(1, { evasion: true }), T(2, { evasion: true }), T(3)], [20, 3, 20])).toEqual([0, 0.5, 0.5]);
   });
-  it("pas pour une autre caractéristique, ni pour une sauvegarde sans moitié", () => {
+  it("not for another ability, nor for a save without half", () => {
     expect(multipliers({ ...dex, ability: "con" }, [T(1, { evasion: true })], [3])).toEqual([1]);
     expect(multipliers({ ...dex, onSave: "none" }, [T(1, { evasion: true })], [20])).toEqual([0]);
     expect(multipliers({ ...dex, onSave: "none" }, [T(1, { evasion: true })], [3])).toEqual([1]);
@@ -85,7 +85,7 @@ describe("§20 Esquive totale", () => {
 
 describe("§20 Insaisissable", () => {
   const ctx = { attacker: ["hidden"], target: ["prone"], adjacent: true, ranged: false, declared: { advantage: ["Tactique de meute"], disadvantage: [] } };
-  it("aucune raison d'Avantage ne compte ; le Désavantage, si", () => {
+  it("no reason for Advantage counts; Disadvantage does", () => {
     expect(attackModifiers(ctx).advantage.length).toBeGreaterThan(0);
     const elusive = attackModifiers({ ...ctx, elusive: true, attacker: ["restrained"] });
     expect(elusive.advantage).toEqual([]);
@@ -93,22 +93,22 @@ describe("§20 Insaisissable", () => {
   });
 });
 
-describe("§20 Visée appliquée et Repli", () => {
-  it("« si vous ne vous êtes pas déplacé pendant ce tour » — en combat", () => {
+describe("§20 Steady Aim and Withdraw", () => {
+  it("\"if you haven't moved during this turn\" — in combat", () => {
     const state = { inCombat: true, ownTurn: true, usedThisTurn: false, remaining: null };
     expect(usageLimitIssues({ unmoved: true }, { ...state, moved: true })).toEqual(["moved"]);
     expect(usageLimitIssues({ unmoved: true }, { ...state, moved: false })).toEqual([]);
     expect(usageLimitIssues({ unmoved: true }, { ...state, inCombat: false, moved: true })).toEqual([]);
   });
-  it("Repli ouvre la moitié de la Vitesse en plus ; Foncer ne la double pas", () => {
+  it("Withdraw opens up half the Speed in addition; Dash does not double it", () => {
     expect(movementAllowance({ ...freshBudget(), bonusMove: 15 }, 30)).toBe(45);
     expect(movementAllowance({ ...freshBudget(), dashed: true, bonusMove: 15 }, 30)).toBe(75);
     expect(movementAllowance(freshBudget(), 30)).toBe(30);
   });
 });
 
-describe("§20 schéma et contenu du Roublard", () => {
-  it("les clés nouvelles", () => {
+describe("§20 Rogue schema and content", () => {
+  it("the new keys", () => {
     expect(validateEntry({ sneakAttack: true, evasion: true, elusive: true, holdsStill: true, cunningStrikeMax: 2 })).toEqual([]);
     expect(validateEntry({ sneakBonus: { formula: "@classes.rogue.levels", firstRound: true } })).toEqual([]);
     expect(validateEntry({ cunningStrikes: { trip: { cost: 1, activity: "dWcCw1vTWRMx4YzD", sizeAtMost: "lg" }, withdraw: { cost: 1, withdraw: true } } })).toEqual([]);
@@ -118,7 +118,7 @@ describe("§20 schéma et contenu du Roublard", () => {
     expect(validateEntry({ basicActions: { NiI5qEhg9TepZxMh: "fly" } })).toEqual(["basicActions.NiI5qEhg9TepZxMh: dash, disengage, dodge, hide, help (or a list)"]);
     expect(validateEntry({ usageLimits: { VGVYnecMRcu0f5Sq: { unmoved: true } } })).toEqual([]);
   });
-  it("le contenu livré", () => {
+  it("the shipped content", () => {
     expect(CONTENT["sneak-attack"].sneakAttack).toBe(true);
     expect(Object.keys(CONTENT["cunning-strike"].cunningStrikes)).toEqual(["poison", "trip", "withdraw"]);
     expect(Object.keys(CONTENT["devious-strikes"].cunningStrikes)).toEqual(["daze", "knockOut", "obscure"]);
@@ -128,7 +128,7 @@ describe("§20 schéma et contenu du Roublard", () => {
     expect(CONTENT.evasion.evasion).toBe(true);
     expect(CONTENT.elusive.elusive).toBe(true);
     expect(CONTENT.assassinate.sneakBonus).toEqual({ formula: "@classes.rogue.levels", firstRound: true });
-    // Esquive instinctive reste où elle était (table des déclencheurs).
+    // Uncanny Dodge stays where it was (trigger table).
     expect(CONTENT["uncanny-dodge"].triggers[0].on).toBe("isHit");
   });
 });
@@ -136,7 +136,7 @@ describe("§20 schéma et contenu du Roublard", () => {
 describe("§72 : Attaque sournoise d'un PNJ", () => {
   const base = { weapon: true, finesse: false, rangedWeapon: false, advantageMode: 0, allyNear: false };
   it("toute arme (anyWeapon), avec l'Avantage", () => expect(sneakAttackIssue({ ...base, anyWeapon: true, advantageMode: 1 })).toBe(null));
-  it("sans anyWeapon, une arme ni Finesse ni à distance : non", () => expect(sneakAttackIssue({ ...base, advantageMode: 1 })).toBe("weaponKind"));
-  it("contre un mort-vivant (freeTarget) : ni Avantage ni allié requis", () => expect(sneakAttackIssue({ ...base, anyWeapon: true, freeTarget: true })).toBe(null));
-  it("déjà utilisée ce tour : non, même contre un mort-vivant", () => expect(sneakAttackIssue({ ...base, anyWeapon: true, freeTarget: true, spent: true })).toBe("spent"));
+  it("no anyWeapon, weapon neither Finesse nor ranged: no", () => expect(sneakAttackIssue({ ...base, advantageMode: 1 })).toBe("weaponKind"));
+  it("against an Undead (freeTarget): no Advantage or ally required", () => expect(sneakAttackIssue({ ...base, anyWeapon: true, freeTarget: true })).toBe(null));
+  it("already used this turn: no, even against an Undead", () => expect(sneakAttackIssue({ ...base, anyWeapon: true, freeTarget: true, spent: true })).toBe("spent"));
 });

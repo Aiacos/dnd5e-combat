@@ -1,10 +1,10 @@
 /**
- * §61 — Robustesse de la non-vie. Monde `ravenloft` : le Zombi (sa capacité, ou celle du Zombi du Monster Manual prêtée), à 1 PV,
- * reçoit des Traits de feu de Kaalisti hors combat.
- *  - touché sans critique : une sauvegarde de Constitution, DD 5 + dégâts subis ; réussie, il reste à 1 PV, ni Mort ni
- *    Inconscient ; ratée, il est Mort à 0 PV ;
- *  - touché sur un critique : pas de sauvegarde, il est Mort.
- * Rejoue jusqu'à avoir vu un coup sans critique (20 essais au plus) ; le Zombi est remis à 1 PV entre deux essais.
+ * §61 — Undead Fortitude. World `ravenloft`: the Zombie (its ability, or the Monster Manual Zombie's, lent), at 1 HP,
+ * takes Fire Bolts from Kaalisti out of combat.
+ *  - hit without a Critical Hit: a Constitution saving throw, DC 5 + damage taken; succeeded, it stays at 1 HP, neither Dead nor
+ *    Unconscious; failed, it is Dead at 0 HP;
+ *  - hit by a Critical Hit: no saving throw, it is Dead.
+ * Replays until a hit without a Critical Hit has been seen (20 tries at most); the Zombie is put back to 1 HP between two tries.
  */
 const ZOMBIE = "Compendium.dnd-monster-manual.actors.Actor.mmZombie00000000";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -21,7 +21,7 @@ export default {
     ctx.restore(() => ctx.setHp(zombie, hp0));
     for ( const s of ["dead", "unconscious", "prone", "incapacitated"] ) ctx.restore(() => ctx.removeStatusEffects(zombie, s));
 
-    // La capacité : celle du Zombi, ou celle du Monster Manual prêtée le temps du scénario.
+    // The ability: the Zombie's, or the Monster Manual's lent for the duration of the scenario.
     const { data: tok } = await ctx.call("get-scene-object", { type: "Token", objectId: zombie.id });
     const items = (await ctx.call("get-actor", { actorId: tok.actorId })).items ?? [];
     if ( !items.some(i => i.system?.identifier === "undead-fortitude") ) {
@@ -49,7 +49,7 @@ export default {
       const r = await ctx.settle(bolt.usageMessageId).catch(() => null);
       const target = r?.targets?.[0];
       if ( !target?.hit ) continue;
-      await sleep(3500);   // dégâts, puis la sauvegarde jouée par le MJ actif
+      await sleep(3500);   // damage, then the saving throw played by the active GM
       const messages = await ctx.messagesSince(since);
       const save = messages.find(m => m.flags?.["dnd5e-combat"]?.fortitude);
       const hp = await ctx.hp(zombie);

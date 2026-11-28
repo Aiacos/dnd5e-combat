@@ -1,12 +1,12 @@
 /**
- * La fenêtre de réaction AVANT le jet d'attaque (SPEC §34), monde `dnd-6`. Le Bandit attaque le Guerrier ; à chaque partie, une
- * seule créature a de quoi réagir, prêté depuis le compendium du Manuel des joueurs :
- *  - Esquive des ombres (Rôdeur) au Guerrier, la cible : le jet du Bandit a le Désavantage ;
- *  - Éclat protecteur (Clerc) au Clerc, à 9 m du Bandit : le jet a le Désavantage ;
- *  - Présage cosmique (Druide), Péril, au Druide : 1d6 retiré du jet ;
- *  - §36 : Présage cosmique, Fortune — le Guerrier attaque le Bandit, le Druide ajoute 1d6 à son jet.
- * La réaction est prise d'office (`autoReact: "first"`) ; le connecteur rend la main dès que la porte suspend l'utilisation, la
- * suite se lit dans le chat. Remet positions, PV, utilisations ; retire les items prêtés.
+ * The Reaction window BEFORE the attack roll (SPEC §34), world `dnd-6`. The Bandit attacks the Fighter; in each game, only one
+ * creature has what it takes to react, lent from the Player's Handbook compendium:
+ *  - "Shadow Dodge" (Ranger) to the Fighter, the target: the Bandit's roll has Disadvantage;
+ *  - Warding Flare (Cleric) to the Cleric, 9 m from the Bandit: the roll has Disadvantage;
+ *  - Cosmic Omen (Druid), Woe, to the Druid: 1d6 subtracted from the roll;
+ *  - §36: Cosmic Omen, Weal — the Fighter attacks the Bandit, the Druid adds 1d6 to his roll.
+ * The Reaction is taken automatically (`autoReact: "first"`); the connector hands back control as soon as the gate suspends the
+ * use, the rest is read in the chat. Resets positions, HP, uses; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "dnd-players-handbook.classes";
@@ -32,15 +32,17 @@ export default {
     const druid = await ctx.token("Druide");
     const homes = new Map();
     for ( const t of [fighter, bandit, cleric, druid] ) homes.set(t.id, { pos: await ctx.position(t), hp: await ctx.hp(t) });
-    // Debout le temps du scénario : un Guerrier laissé À terre dans le monde (vu le 2026-11-18, depuis le 11/11) donne l'Avantage au Bandit,
-    // qui annule le Désavantage de la réaction — le jet restait « 1d20 » selon l'ordre de la passe. Remis comme trouvé à la fin.
+    // Standing for the length of the scenario: a Fighter left Prone in the world (seen on 2026-11-18, since 11/11) gives the Bandit
+    // Advantage, which cancels the Reaction's Disadvantage — the roll stayed "1d20" depending on the order of the pass. Restored as
+    // found at the end.
     for ( const t of [fighter, bandit] ) {
       if ( !(await ctx.effects(t)).some(e => (e.statuses ?? []).includes("prone")) ) continue;
       await ctx.removeStatusEffects(t, "prone");
       ctx.restore(() => ctx.call("set-status", { tokenId: t.id, statusId: "prone", active: true }).catch(() => {}));
       ctx.log(`${t.name} relevé le temps du scénario (À terre dans le monde)`);
     }
-    // Restored Keep, colonne x = 3080 : le Clerc et le Druide en 4760 et 4900 (à 9 m du Bandit), le Guerrier en 5040, le Bandit en 5180.
+    // Restored Keep, column x = 3080: the Cleric and the Druid at 4760 and 4900 (9 m from the Bandit), the Fighter at 5040, the
+    // Bandit at 5180.
     const spot = { cleric: { x: 3080, y: 4760 }, druid: { x: 3080, y: 4900 }, fighter: { x: 3080, y: 5040 }, bandit: { x: 3080, y: 5180 } };
     const place = async (t, p) => { await ctx.call("move-token", { tokenId: t.id, x: p.x, y: p.y, elevation: 0 }); await pause(600); };
     const lend = async (who, pack, id) => {
@@ -70,7 +72,7 @@ export default {
       const errors = await ctx.clientErrors();
       ctx.expect(!errors.length, `${name} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
-    /** Le Bandit attaque le Guerrier, réaction prise d'office ; rend la formule du jet et les cartes produites. */
+    /** The Bandit attacks the Fighter, Reaction taken automatically; returns the roll formula and the cards produced. */
     const banditAttacks = async () => {
       await place(cleric, spot.cleric); await place(druid, spot.druid); await place(fighter, spot.fighter); await place(bandit, spot.bandit);
       const since = await ctx.lastMessageId();
@@ -109,8 +111,8 @@ export default {
       await remove();
     });
 
-    // §36 : Fortune — le Guerrier attaque le Bandit ; le Druide, son allié à 1,50 m, ajoute 1d6 au jet (seule l'activité Fortune est
-    // proposée dans cette fenêtre, `autoReact: "first"` la prend).
+    // §36: Weal — the Fighter attacks the Bandit; the Druid, his ally within 1.50 m, adds 1d6 to the roll (only the Weal activity
+    // is offered in this window, `autoReact: "first"` takes it).
     await part("Fortune", async () => {
       const remove = await lend(druid, CLASSES, "phbdrdCosmicOmen");
       await place(cleric, spot.cleric); await place(druid, spot.druid); await place(fighter, spot.fighter); await place(bandit, spot.bandit);

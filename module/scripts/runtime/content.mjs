@@ -1,24 +1,24 @@
 /**
- * Le contenu en marche : le réglage de la surcouche du monde, le refus d'un flag faux à
- * l'écriture (SPEC §7 : « une clé inconnue lève une erreur à l'écriture, pas un silence en
- * jeu »), l'API d'inspection, et l'enregistrement du contenu d'autres modules.
+ * Content at runtime: the world overlay setting, the refusal of a wrong flag on
+ * write (SPEC §7: "an unknown key raises an error on write, not silence in
+ * play"), the inspection API, and the registration of other modules' content.
  *
- * Contenu d'un autre module (2026-10-03) — API publique, deux chemins équivalents :
+ * Content from another module (2026-10-03) — public API, two equivalent paths:
  *
  *   Hooks.once("dnd5e-combat.registerContent", register => register("mon-module", TABLE));
  *   game.modules.get("dnd5e-combat")?.api?.content.register("mon-module", TABLE);
  *
- * `TABLE` : `{ identifiant dnd5e: entrée }`, dans le schéma de core/content.mjs (le même que le contenu livré). Le hook est
- * appelé une fois, à `setup` (après tous les `init`) : s'y inscrire depuis son propre `init`. L'appel direct marche dès que l'API
- * existe (`init` du moteur passé) ; `api.content.registered()` dit ce qui est enregistré. Chaque entrée est validée comme le
- * contenu livré : une entrée fausse est écartée et dite dans la console, les autres sont prises. La table est fusionnée
- * par-dessus le contenu livré, entrée par entrée (`mergeEntries`) ; enregistrer de nouveau la même source la remplace.
- * Le moteur ne connaît aucun de ces modules : sans eux, il tourne avec son seul contenu.
+ * `TABLE`: `{ identifiant dnd5e: entrée }`, in the schema of core/content.mjs (the same as the shipped content). The hook is
+ * called once, at `setup` (after all the `init`s): register from your own `init`. The direct call works as soon as the API
+ * exists (engine `init` passed); `api.content.registered()` says what is registered. Each entry is validated like the
+ * shipped content: a wrong entry is discarded and reported in the console, the others are taken. The table is merged
+ * on top of the shipped content, entry by entry (`mergeEntries`); registering the same source again replaces it.
+ * The engine knows none of these modules: without them, it runs with its own content alone.
  *
- * §277 : `register(source, table, { sources })` — `sources` : `{ id de document: identifiant }`, pour des items qui n'ont pas
- * d'identifiant utilisable (un item premium sans identifiant, un item importé dont dnd5e a tiré l'identifiant du nom), reconnus par
- * l'id de leur source de compendium ou leur propre id, comme content/sources.mjs. Une paire fausse est écartée et dite ; les sources
- * suivent la table : réenregistrer la source les remplace, `unregister` les retire.
+ * §277: `register(source, table, { sources })` — `sources`: `{ id de document: identifiant }`, for items that have no
+ * usable identifier (a premium item without identifier, an imported item whose identifier dnd5e derived from the name),
+ * recognised by the id of their compendium source or their own id, like content/sources.mjs. A wrong pair is discarded and
+ * reported; the sources follow the table: re-registering the source replaces them, `unregister` removes them.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -31,10 +31,10 @@ import { buildSpellIndex, stampScroll } from "../adapter/scrolls.mjs";
 import { route } from "./router.mjs";
 import { log, loc } from "./shared.mjs";
 
-/** Le hook par lequel le moteur demande leur contenu aux autres modules (à `setup`). */
+/** The hook through which the engine asks other modules for their content (at `setup`). */
 export const REGISTER_HOOK = `${MODULE_ID}.registerContent`;
 
-/** Avant qu'un item soit créé ou modifié : ses flags du module doivent être valides, sinon l'écriture est refusée. */
+/** Before an item is created or modified: its module flags must be valid, otherwise the write is refused. */
 function checkItemFlags(item, data) {
   const flags = data?.flags?.[MODULE_ID];
   if ( !flags ) return true;
@@ -48,10 +48,10 @@ function checkItemFlags(item, data) {
 }
 
 /**
- * Enregistre la table de contenu d'un autre module (voir l'en-tête). Validée entrée par entrée comme le contenu livré.
- * @param {string} source                    L'id du module qui l'apporte.
+ * Registers another module's content table (see the header). Validated entry by entry like the shipped content.
+ * @param {string} source                    The id of the module that provides it.
  * @param {Record<string, object>} table     `{ identifiant dnd5e: entrée }`.
- * @param {{sources?: Record<string, string>}} [options]  §277 : `{ id de document: identifiant }`.
+ * @param {{sources?: Record<string, string>}} [options]  §277: `{ id de document: identifiant }`.
  * @returns {{source: string, accepted: string[], rejected: Record<string, string[]>, sources: string[], rejectedSources: string[]}}
  */
 export function registerExternal(source, table, { sources={} }={}) {
@@ -79,12 +79,12 @@ export function registerExternal(source, table, { sources={} }={}) {
   return { source, accepted: Object.keys(accepted), rejected, sources: Object.keys(goodSources), rejectedSources };
 }
 
-/** À `setup` : les autres modules donnent leur contenu par le hook, s'ils ne l'ont pas déjà fait par l'API. */
+/** At `setup`: other modules give their content through the hook, if they have not already done so through the API. */
 function collectExternal() {
   Hooks.callAll(REGISTER_HOOK, (source, table, options) => registerExternal(source, table, options));
 }
 
-/** À `ready` : le contenu en vigueur (livré et enregistré) et la surcouche du monde sont relus ; ce qui est faux est dit une fois. */
+/** At `ready`: the content in force (shipped and registered) and the world overlay are re-read; what is wrong is reported once. */
 function audit() {
   const shipped = validateTable(CONTENT, { facts: KNOWN_FACTS });
   if ( shipped.length ) console.error(`${MODULE_ID} | invalid shipped content`, shipped);
@@ -99,12 +99,12 @@ function audit() {
     + `${Object.keys(worldOverrides()).length} from the world`);
 }
 
-/** Exposé sur `game.modules.get("dnd5e-combat").api.content`. */
+/** Exposed on `game.modules.get("dnd5e-combat").api.content`. */
 export const contentApi = Object.freeze({
   version: CONTENT_VERSION,
-  /** Le contenu en vigueur : livré + enregistré par d'autres modules. */
+  /** The content in force: shipped + registered by other modules. */
   shipped: CONTENT,
-  /** §277 : le contenu livré avec le moteur, seul (sans les tables enregistrées) — pour dire qu'une table en recouvre une règle. */
+  /** §277: the content shipped with the engine, alone (without the registered tables) — to say that a table overlaps a rule. */
   builtin: SHIPPED,
   facts: Object.keys(KNOWN_FACTS),
   world: worldOverrides,
@@ -112,21 +112,21 @@ export const contentApi = Object.freeze({
   of: contentOf,
   identifierOf,
   inspect,
-  /** Les erreurs d'une entrée de contenu (`string[]`, vide = valide), contre le schéma `core/content/entry.mjs`. Ne change rien. */
+  /** The errors of a content entry (`string[]`, empty = valid), against the schema `core/content/entry.mjs`. Changes nothing. */
   validate: entry => validateEntry(entry, { facts: KNOWN_FACTS }),
-  /** §277 : les erreurs d'une table de sources `{ id de document: identifiant }` (vide = valide). */
+  /** §277: the errors of a sources table `{ id de document: identifiant }` (empty = valid). */
   validateSources,
-  /** `register(source, table, { sources? })` : le contenu d'un autre module (voir l'en-tête de runtime/content.mjs). */
+  /** `register(source, table, { sources? })`: another module's content (see the header of runtime/content.mjs). */
   register: registerExternal,
-  /** `unregister(source)` : retire la table d'un module, et ses sources. */
+  /** `unregister(source)`: removes a module's table, and its sources. */
   unregister: unregisterTable,
-  /** `{ source: [identifiants] }` : ce que d'autres modules ont enregistré. */
+  /** `{ source: [identifiants] }`: what other modules have registered. */
   registered: registeredTables,
-  /** §277 : `{ source: { id de document: identifiant } }` : les sources que d'autres modules ont enregistrées. */
+  /** §277: `{ source: { id de document: identifiant } }`: the sources other modules have registered. */
   sources: registeredSources,
   /**
-   * §114 : les recettes — les briques du schéma dites pour un outil sans code (core/recipes.mjs). `build(recettes, { identifier,
-   * base })` rend `{ entry, errors }` ; l'entrée se valide ensuite par `validate`, comme tout contenu.
+   * §114: the recipes — the schema's bricks told for a no-code tool (core/recipes.mjs). `build(recettes, { identifier,
+   * base })` returns `{ entry, errors }`; the entry is then validated by `validate`, like any content.
    */
   recipes: Object.freeze({
     version: RECIPES_VERSION,
@@ -141,15 +141,15 @@ export const contentApi = Object.freeze({
 });
 
 export function registerContent() {
-  // `onChange` : sur chaque client, quand le MJ écrit la surcouche — ce qui en a été lu est oublié (adapter/content.mjs).
+  // `onChange`: on each client, when the GM writes the overlay — what was read from it is forgotten (adapter/content.mjs).
   game.settings.register(MODULE_ID, OVERRIDES_SETTING, { scope: "world", config: false, type: Object, default: {},
     onChange: () => forgetWorldOverrides() });
   route("preCreateItem", (item, data) => checkItemFlags(item, data), { cancellable: true, label: "content: flags on creation" });
   route("preUpdateItem", (item, changes) => checkItemFlags(item, changes), { cancellable: true, label: "content: flags on update" });
   route("setup", collectExternal, { label: "content: other modules' tables" });
   route("ready", audit, { label: "content: audit" });
-  // §48 : un parchemin se reconnaît au sort qu'il contient — noté à sa création (dnd5e ne le garde pas), retrouvé par son nom
-  // pour les parchemins déjà faits (index des sorts des compendiums et du monde).
+  // §48: a scroll is recognised by the spell it contains — noted at its creation (dnd5e does not keep it), found by its name
+  // for the scrolls already made (index of the compendium and world spells).
   route("dnd5e.createScrollFromSpell", stampScroll, { label: "scroll: contained spell" });
   route("ready", () => buildSpellIndex().then(n => log(`spell index (scrolls): ${n} keys`)), { label: "scroll: spell index" });
 }

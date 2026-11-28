@@ -1,38 +1,38 @@
 /**
- * §369 (issue GitHub #27) : la prise en tenaille, règle optionnelle du DMG 2014 (absente du DMG 2024) — désactivée par défaut.
- * Une créature et un de ses alliés au contact d'un ennemi, de part et d'autre de lui, ont l'Avantage à leurs attaques au corps à
- * corps contre lui. « De part et d'autre » : la ligne qui joint le centre d'une case de l'un au centre d'une case de l'autre
- * traverse deux côtés opposés (ou deux coins opposés) de l'espace de l'ennemi ; pour une créature Grande ou plus, il suffit qu'une
- * de ses cases convienne.
+ * §369 (GitHub issue #27): flanking, an optional rule of the 2014 DMG (absent from the 2024 DMG) — off by default.
+ * A creature and one of its allies in contact with an enemy, on opposite sides of it, have Advantage on their melee attacks
+ * against it. "Opposite sides": the line joining the center of a cell of one to the center of a cell of the other crosses two
+ * opposite sides (or two opposite corners) of the enemy's space; for a Large or larger creature, it is enough that one of its
+ * cells qualifies.
  *
- * Grille carrée seulement. Les espaces sont des rectangles EN CASES ({x, y, w, h} : coin haut-gauche, largeur, hauteur) ; le
- * contact en hauteur (élévation) se juge à part, en 3D, par l'adaptateur. Pur : aucune dépendance à Foundry.
+ * Square grid only. Spaces are rectangles IN CELLS ({x, y, w, h}: top-left corner, width, height); contact in height (elevation)
+ * is judged separately, in 3D, by the adapter. Pure: no dependency on Foundry.
  */
 
 const EPS = 1e-6;
 
-/** Les modes du réglage `flanking`. */
+/** The modes of the `flanking` setting. */
 export const FLANKING_MODES = Object.freeze(["off", "advantage"]);
-/** Qui en profite (réglage `flankingSide`) : tout le monde, les PJ seulement, les PNJ seulement. */
+/** Who benefits (`flankingSide` setting): everyone, PCs only, NPCs only. */
 export const FLANKING_SIDES = Object.freeze(["all", "pc", "npc"]);
 
-/** Le centre de chaque case d'un espace (une demi-case au moins pour un Très petit). */
+/** The center of each cell of a space (at least half a cell for a Tiny creature). */
 export function cellCenters({ x, y, w=1, h=1 }) {
   const offsets = size => ((size < 1) ? [size / 2] : Array.from({ length: Math.max(1, Math.round(size)) }, (_, k) => k + 0.5));
   return offsets(h).flatMap(oy => offsets(w).map(ox => ({ x: x + ox, y: y + oy })));
 }
 
-/** La case de centre `c` touche-t-elle l'espace `box` (côté ou coin), sans le chevaucher ? */
+/** Does the cell centered on `c` touch the space `box` (side or corner), without overlapping it? */
 export function touchesBox(c, box) {
   const gapX = Math.max(box.x - (c.x + 0.5), (c.x - 0.5) - (box.x + box.w));
   const gapY = Math.max(box.y - (c.y + 0.5), (c.y - 0.5) - (box.y + box.h));
   if ( (gapX > EPS) || (gapY > EPS) ) return false;
-  return (gapX > -EPS) || (gapY > -EPS);   // chevauchement strict sur les deux axes : la case est dans l'espace
+  return (gapX > -EPS) || (gapY > -EPS);   // strict overlap on both axes: the cell is inside the space
 }
 
 /**
- * Le segment p → q traverse-t-il l'espace `box` d'un côté au côté opposé (ou d'un coin au coin opposé) ?
- * Découpe de Liang–Barsky, puis les côtés touchés à l'entrée et à la sortie.
+ * Does the segment p → q cross the space `box` from one side to the opposite side (or from a corner to the opposite corner)?
+ * Liang–Barsky clipping, then the sides touched at entry and at exit.
  */
 export function crossesOpposite(p, q, box) {
   const dx = q.x - p.x, dy = q.y - p.y;
@@ -56,8 +56,8 @@ export function crossesOpposite(p, q, box) {
 }
 
 /**
- * Deux créatures prennent-elles cet ennemi en tenaille ? Chacune doit avoir au moins une case au contact de son espace, et une
- * paire de ces cases doit être de part et d'autre.
+ * Do two creatures flank this enemy? Each must have at least one cell in contact with its space, and a pair of those cells
+ * must be on opposite sides.
  * @param {{x:number,y:number,w:number,h:number}} target
  * @param {{x:number,y:number,w:number,h:number}} a
  * @param {{x:number,y:number,w:number,h:number}} b
@@ -69,7 +69,7 @@ export function flanks(target, a, b) {
 }
 
 /**
- * Le réglage laisse-t-il cet attaquant profiter de la tenaille ?
+ * Does the setting let this attacker benefit from flanking?
  * @param {{mode: string, side: string, attackerIsPc: boolean}} options
  */
 export function flankingApplies({ mode, side="all", attackerIsPc }) {

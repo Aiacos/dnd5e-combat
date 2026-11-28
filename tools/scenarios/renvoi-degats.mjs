@@ -1,30 +1,31 @@
 /**
- * §499 (B19) — renvoyer à l'attaquant le montant de dégâts subi : `damage { to: "source", same: "resisted" }` au moment `isDamaged`
- * d'un effet porté, filtré par `activity.isMelee` ; et l'effet qui disparaît sur des dégâts radiants (`remove`, `damage.hasType`).
- * Arène de test : Guerrier (l'attaquant, son arme de corps à corps), Magicien (une attaque à distance, s'il en a une), Zombi (le
- * porteur, acteur synthétique du token). Un trait d'essai est prêté au Zombi et son effet posé sur lui (Résistance aux dégâts
- * tranchants, origine : le trait) ; la règle est dans la surcouche du monde (`overrideContent`, jamais en drapeau d'item).
- * Les dégâts sont appliqués par le client du MJ comme le fait le bouton d'une carte de dégâts (`applyDamage` avec un message d'origine
- * en mémoire qui nomme l'auteur et son activité) : montants exacts, aucun jet, aucune fenêtre.
- *  1. 10 tranchants de l'arme du Guerrier : le Zombi en subit 5 (résistance), le Guerrier 5 tranchants en retour (carte `returned`).
- *  2. 6 de feu de la même arme : rien n'est renvoyé (dégâts non résistés).
- *  3. 10 tranchants sans auteur (barre du token) : rien n'est renvoyé.
- *  4. 10 tranchants d'une attaque à distance du Magicien (s'il en a une) : rien n'est renvoyé (`activity.isMelee`).
- *  5. 1 radiant : l'effet disparaît.
- * Effet et trait retirés, PV du Zombi et du Guerrier remis, surcouche rendue.
+ * §499 (B19) — return to the attacker the amount of damage taken: `damage { to: "source", same: "resisted" }` at the
+ * `isDamaged` moment of a carried effect, filtered by `activity.isMelee`; and the effect that disappears on radiant
+ * damage (`remove`, `damage.hasType`).
+ * Test arena: Fighter (the attacker, his melee weapon), Wizard (a ranged attack, if he has one), Zombie (the
+ * bearer, synthetic actor of the token). A test trait is lent to the Zombie and its effect placed on it (Resistance to
+ * slashing damage, origin: the trait); the rule is in the world overlay (`overrideContent`, never in an item flag).
+ * The damage is applied by the GM's client as the button of a damage card does (`applyDamage` with an in-memory origin
+ * message naming the author and its activity): exact amounts, no roll, no window.
+ *  1. 10 slashing from the Fighter's weapon: the Zombie takes 5 (Resistance), the Fighter 5 slashing in return (card `returned`).
+ *  2. 6 fire from the same weapon: nothing is returned (damage not resisted).
+ *  3. 10 slashing with no author (token bar): nothing is returned.
+ *  4. 10 slashing from a ranged attack of the Wizard (if he has one): nothing is returned (`activity.isMelee`).
+ *  5. 1 radiant: the effect disappears.
+ * Effect and trait removed, Zombie's and Fighter's HP restored, overlay given back.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
 const IDENTIFIER = "das-essai-renvoi-degats";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name as a constant: the bench and the reference take the first "name:" indented by two spaces as the scenario's title.
 const ITEM_NAME = "Essai : linceul qui renvoie";
 const RULE = { triggers: [
   { on: "isDamaged", via: "effect", if: { "activity.isMelee": true }, do: [{ type: "damage", to: "source", same: "resisted" }] },
   { on: "isDamaged", via: "effect", if: { "damage.hasType": "radiant" }, do: [{ type: "remove" }] }
 ] };
 
-/** Prête le trait au Zombi (acteur synthétique) et pose son effet ; rend leurs ids. */
+/** Lends the trait to the Zombie (synthetic actor) and places its effect; returns their ids. */
 const SETUP = `
 const t = canvas.scene.tokens.get(args.tokenId);
 const actor = t.actor;
@@ -44,8 +45,8 @@ for ( const i of actor.items.filter(i => i.system?.identifier === args.identifie
 return true;
 `;
 /**
- * Applique `damages` au Zombi comme le bouton d'une carte : message d'origine en mémoire (auteur : le token `from`, activité `activity`).
- * Sans `from` : sans auteur, comme la barre du token.
+ * Applies `damages` to the Zombie like a card's button: in-memory origin message (author: the token `from`, activity `activity`).
+ * Without `from`: no author, like the token bar.
  */
 const HURT = `
 const target = canvas.scene.tokens.get(args.tokenId).actor;
@@ -59,7 +60,7 @@ if ( args.from ) {
 await target.applyDamage(args.damages.map(d => ({ ...d, properties: new Set() })), options);
 return true;
 `;
-/** PV des tokens, effet d'essai encore là, activités d'attaque de corps à corps et à distance de leurs armes. */
+/** Tokens' HP, test effect still there, melee and ranged attack activities of their weapons. */
 const READ = `
 const out = {};
 for ( const id of args.tokenIds ) {
@@ -93,7 +94,7 @@ export default {
     const script = async (code, args={}) => (await ctx.call("run-script", { code, args, waitMs: 20000 }))?.result ?? null;
     const args = { tokenId: zombie.id, identifier: IDENTIFIER, name: ITEM_NAME };
 
-    // --- Fenêtres chez le MJ : aucune ne reste sans réponse --------------------------------------------------------------
+    // --- Windows on the GM's side: none is left unanswered ---------------------------------------------------------------------
     const seen = new Set(((await ctx.call("list-dialogs", {})).windows ?? []).map(w => w.id));
     const sweep = async (ms=800) => {
       const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...seen], waitMs: ms, details: true }).catch(() => null);
@@ -106,7 +107,7 @@ export default {
       }
     };
 
-    // --- Lecture, PV de départ, remise en état --------------------------------------------------------------------------------
+    // --- Reading, starting HP, restoration ---------------------------------------------------------------------------------------
     const ids = [fighter.id, zombie.id];
     const read = () => script(READ, { tokenIds: ids, name: ITEM_NAME, melee: fighter.id, ranged: mage?.id ?? null });
     const start = await read();
@@ -121,9 +122,9 @@ export default {
     if ( !ctx.expect(!!lent?.effectId, `trait prêté au Zombi, effet posé (${JSON.stringify(lent)})`) ) return;
     await pause(800);
 
-    /** Un coup : `damages` appliqués au Zombi ; rend les PV perdus de chacun et la carte de renvoi, s'il y en a une. */
+    /** One blow: `damages` applied to the Zombie; returns each one's lost HP and the return card, if there is one. */
     const hit = async (damages, from=null, activity=null) => {
-      // PV pleins avant chaque coup : le Zombi ne tombe jamais (sa Ténacité de mort-vivant n'entre pas en jeu).
+      // Full HP before each blow: the Zombie never falls (its Undead Fortitude does not come into play).
       await ctx.setHp(zombie, start[zombie.id].max);
       await ctx.setHp(fighter, start[fighter.id].max);
       await pause(400);

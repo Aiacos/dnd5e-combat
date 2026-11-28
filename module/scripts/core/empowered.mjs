@@ -1,15 +1,15 @@
 /**
- * Sort renforcé (Métamagie, SRD 5.2) : « quand vous lancez les dégâts d'un sort, vous pouvez dépenser 1 point de sorcellerie
- * pour relancer un nombre de dés de dégâts allant jusqu'à votre modificateur de Charisme (au moins un) ; vous devez utiliser les
- * nouveaux jets ». Le moteur propose les dés qui valent la moitié de leur maximum ou moins, les plus bas d'abord. Fonctions pures.
+ * Empowered Spell (Metamagic, SRD 5.2): "when you roll damage for a spell, you can spend 1 Sorcery Point
+ * to reroll a number of the damage dice up to your Charisma modifier (minimum of one); you must use the
+ * new rolls". The engine offers the dice worth half their maximum or less, lowest first. Pure functions.
  */
 
 /**
- * Les dés à relancer : au plus `count`, parmi ceux qui valent la moitié de leur maximum ou moins, du plus bas (rapporté à ses
- * faces) au plus haut ; à égalité, le dé aux plus grandes faces (plus à gagner).
+ * The dice to reroll: at most `count`, among those worth half their maximum or less, from lowest (relative to its
+ * faces) to highest; on a tie, the die with the most faces (more to gain).
  * @param {Array<{value: number, faces: number}>} dice
  * @param {number} count
- * @returns {number[]}  les indices dans `dice`
+ * @returns {number[]}  the indices in `dice`
  */
 export function empoweredPicks(dice, count) {
   const limit = Math.max(1, Math.floor(Number(count) || 0));
@@ -20,10 +20,10 @@ export function empoweredPicks(dice, count) {
 }
 
 /**
- * Ce que la relance change à l'agrégat des dégâts, part par part (type et propriétés) : l'ancien total des dés relancés et le
- * nouveau.
- * @param {Array<{type: string|null, properties: string[], value: number}>} picked  les dés relancés
- * @param {number[]} rerolled                                                       leurs nouvelles valeurs, dans le même ordre
+ * What the reroll changes in the damage aggregate, part by part (type and properties): the old total of the rerolled dice and the
+ * new one.
+ * @param {Array<{type: string|null, properties: string[], value: number}>} picked  the rerolled dice
+ * @param {number[]} rerolled                                                       their new values, in the same order
  * @returns {Array<{type: string|null, properties: string[], old: number, now: number}>}
  */
 export function empoweredDeltas(picked, rerolled) {

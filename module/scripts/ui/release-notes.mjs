@@ -1,10 +1,10 @@
 /**
- * §439 : le message de mise à jour. Ouvert chez le MJ actif à la première ouverture d'un monde après un changement de version du
- * moteur (réglage de monde `welcomeSeen` : la dernière version vue, ui/welcome.mjs), et ensuite depuis l'accueil ou les réglages.
- * Quatre parties : les nouveautés des versions sorties depuis la dernière vue, les modules de la suite à mettre à jour, les écarts
- * de Foundry, de dnd5e et des livres avec les versions testées (et les risques écrits pour ces versions), les vérifications du
- * Diagnostic du monde conseillées. Les notes sont des données (content/releases.mjs), les règles sont pures
- * (core/release-notes.mjs) ; ici, seulement la lecture du monde et l'affichage. Aspect : celui de l'accueil (`das-screen`).
+ * §439: the update message. Opened for the active GM the first time a world is opened after an engine version change
+ * (world setting `welcomeSeen`: the last version seen, ui/welcome.mjs), and afterwards from the welcome screen or the settings.
+ * Four parts: the news of the versions released since the last one seen, the suite modules to update, the gaps
+ * between Foundry, dnd5e and the books and the tested versions (and the risks written for those versions), the recommended
+ * checks of the world Diagnostic. The notes are data (content/releases.mjs), the rules are pure
+ * (core/release-notes.mjs); here, only the reading of the world and the display. Look: that of the welcome screen (`das-screen`).
  */
 import { MODULE_ID } from "../constants.mjs";
 import { RELEASES } from "../content/releases.mjs";
@@ -19,7 +19,7 @@ const LEVEL_ICON = Object.freeze({ info: "fa-solid fa-circle-info", warn: "fa-so
 
 const currentVersion = () => game.modules.get(MODULE_ID)?.version ?? "";
 
-/** Ce monde : Foundry, le système, les modules avec leur version. */
+/** This world: Foundry, the system, the modules with their version. */
 function installed() {
   return {
     foundry: game.version,
@@ -28,13 +28,13 @@ function installed() {
   };
 }
 
-/** Le MJ a vu cette version : l'accueil et le message de mise à jour ne s'ouvrent plus seuls. */
+/** The GM has seen this version: the welcome screen and the update message no longer open by themselves. */
 export async function markSeen() {
   const version = currentVersion() || "1";
   if ( game.user.isGM && (game.settings.get(MODULE_ID, SEEN_SETTING) !== version) ) await game.settings.set(MODULE_ID, SEEN_SETTING, version);
 }
 
-/** La classe de la fenêtre, créée au premier usage (le module se charge aussi hors de Foundry : tests/load.test.mjs). */
+/** The window class, created on first use (the module also loads outside Foundry: tests/load.test.mjs). */
 let ReleaseNotesClass = null;
 export const ReleaseNotesApp = () => ReleaseNotesClass ??= class ReleaseNotesApp extends foundry.applications.api.ApplicationV2 {
   constructor(options={}) {
@@ -140,8 +140,8 @@ function footer() {
 }
 
 /**
- * Pour l'API, l'accueil et les réglages : ouvrir le message de mise à jour. `since` : la dernière version vue (les notes des versions
- * sorties depuis) ; sans elle, les dernières notes.
+ * For the API, the welcome screen and the settings: open the update message. `since`: the last version seen (the notes of the
+ * versions released since); without it, the latest notes.
  */
 export async function openReleaseNotes({ since=null }={}) {
   const existing = foundry.applications.instances.get("das-release-notes");
@@ -150,9 +150,9 @@ export async function openReleaseNotes({ since=null }={}) {
 }
 
 /**
- * Au `ready`, chez le MJ actif, quand le monde a déjà vu une version du moteur et que ce n'est plus celle-ci : le message s'ouvre s'il
- * a quelque chose à dire, et la version est notée vue à sa fermeture. Version plus ancienne que la vue (retour en arrière), ou rien à
- * dire : la version est notée, sans fenêtre. Rend vrai quand la fenêtre s'est ouverte.
+ * On `ready`, for the active GM, when the world has already seen an engine version and it is no longer this one: the message
+ * opens if it has something to say, and the version is recorded as seen when it is closed. A version older than the one seen
+ * (rollback), or nothing to say: the version is recorded, without a window. Returns true when the window opened.
  */
 export async function announceUpdate() {
   const seen = game.settings.get(MODULE_ID, SEEN_SETTING);

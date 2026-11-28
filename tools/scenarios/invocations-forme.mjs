@@ -1,21 +1,21 @@
 /**
- * §383 (issue #38) : une invocation à plusieurs formes lancée comme depuis la barre d'actions (sans la fenêtre de dnd5e) ouvre la
- * fenêtre « Choisir la forme » du moteur, et la forme choisie est celle que dnd5e invoque — pas la première d'office.
- *  1. Convocation de céleste : Défenseur (le second profil ; avant le correctif, Vengeur était pris sans rien demander).
- *  2. Convocation d'élémentaire : Feu (le troisième des quatre).
- * Le Magicien reçoit les sorts du Manuel des joueurs le temps du test ; rien n'est consommé ; les créatures posées sont retirées.
+ * §383 (issue #38): a multi-form summon cast as from the action bar (without dnd5e's window) opens the engine's "Choose the form"
+ * window, and the chosen form is the one that dnd5e summons — not the first by default.
+ *  1. Summon Celestial: Defender (the second profile; before the fix, Avenger was taken without asking).
+ *  2. Summon Elemental: Fire (the third of four).
+ * The Wizard gets the Player's Handbook spells for the length of the test; nothing is consumed; the placed creatures are removed.
  */
 const SPELLS = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// `index` : la forme choisie, par sa place (les noms suivent la langue du client du MJ : Defender / Défenseur avec le PHB-fr).
-// `fx` : un morceau du nom de l'animation d'apparition attendue quand BLFX et darsh-animations sont actifs (Céleste : l'entrée que
-// darsh-animations ajoute, BLFX n'en a pas ; Élémentaire : celle de BLFX).
+// `index`: the chosen form, by its position (the names follow the language of the GM's client: Defender / Défenseur with
+// the PHB-fr). `fx`: a piece of the name of the appearance animation expected when BLFX and darsh-animations are active
+// (Celestial: the entry that darsh-animations adds, BLFX has none; Elemental: BLFX's).
 const CASES = [
   { item: "phbsplSummonCele", index: 1, label: "Défenseur", fx: "holy_light2" },
   { item: "phbsplSummonElem", index: 2, label: "Feu", fx: null },
-  // Depuis la fiche, par le MJ, sans emplacement de niveau 5 (Kaalisti, Occultiste 5, dans le retour de table) : « Plus de charge »
-  // (§77) → « Lancer quand même », dont la relance sautait la fenêtre de dnd5e — Vengeur d'office.
+  // From the sheet, by the GM, without a level 5 slot (Kaalisti, Warlock 5, in the table feedback): "No more charge"
+  // (§77) → "Cast anyway", whose replay skipped dnd5e's window — Avenger by default.
   { item: "phbsplSummonCele", index: 1, label: "Défenseur (fiche, sans emplacement)", fx: null, sheet: true }
 ];
 
@@ -29,8 +29,8 @@ export default {
     const grid = await ctx.gridSize();
     const pos = await ctx.position(mage);
     const summoned = [];
-    // dnd5e crée un acteur du monde pour la créature invoquée quand il n'en a pas déjà un (`Actor5e.fetchExisting`) : ceux du test
-    // partent à la corbeille du connecteur.
+    // dnd5e creates a world actor for the summoned creature when it does not already have one (`Actor5e.fetchExisting`): the test's
+    // ones go to the connector's trash.
     const actorsBefore = new Set((await ctx.call("list-actors", {})).map(a => a.id));
     const actorsMade = new Set();
     ctx.restore(async () => {
@@ -42,7 +42,7 @@ export default {
       }
     });
 
-    // L'animation de Convocation de céleste vient de darsh-animations ≥ la version qui publie `previewSummon` (son SPEC §22).
+    // The Summon Celestial animation comes from darsh-animations ≥ the version that publishes `previewSummon` (its SPEC §22).
     const summonFx = !!(await ctx.call("call-module-api", { moduleId: "darsh-animations", fn: "previewSummon", args: {} }).catch(() => null));
     const slots6 = Number((await ctx.call("get-actor", { actorId: mage.actorId })).system?.spells?.spell6?.value) > 0;
     const slots5 = Number((await ctx.call("get-actor", { actorId: mage.actorId })).system?.spells?.spell5?.value) > 0;
@@ -79,7 +79,7 @@ export default {
       summoned.push(...placed.map(t => t.id));
       for ( const t of placed ) if ( t.actorId ) actorsMade.add(t.actorId);
       ctx.expect(placed.length > 0, `${source} : la créature est posée (${placed.map(t => t.name).join(", ") || "aucune"})`);
-      // L'apparition (darsh-animations, BLFX « After Summon ») : des effets Sequencer en cours peu après la pose.
+      // The appearance (darsh-animations, BLFX "After Summon"): Sequencer effects running shortly after placement.
       let files = [];
       for ( let i = 0; animated && !(fx && !summonFx) && (i < 10); i++ ) {
         await pause(400);
@@ -92,8 +92,8 @@ export default {
       await pause(2500);
     }
 
-    // §385 : Création de morts-vivants — sans corps à viser, la fenêtre demande combien de goules (1 à 3 au niveau 6) ; 1 choisie.
-    // Sans emplacement de niveau 6, le MJ passe ensuite par « Plus de charge » (le sort part à son propre niveau, §384).
+    // §385: Create Undead — with no body to target, the window asks how many ghouls (1 to 3 at level 6); 1 chosen.
+    // Without a level 6 slot, the GM then goes through "No more charge" (the spell goes at its own level, §384).
     const undead = await ctx.ensureItem(mage, SPELLS + "phbsplCreateUnde");
     await ctx.engine("castFromBar", { tokenId: mage.id, itemId: undead, sheet: true, x: pos.x + (4 * grid), y: pos.y + grid });
     let form = null;
@@ -123,14 +123,14 @@ export default {
       ctx.expect(captured?.summoned?.count === 1, `dnd5e pose le nombre choisi : ${captured?.summoned?.count ?? "rien"} (niveau ${captured?.summoned?.level ?? "?"})`);
       ctx.expect(placed.length === 1, `une seule goule posée (${placed.length})`);
       ctx.expect(captured?.summoned?.level === 6, `au niveau du sort, 6 (${captured?.summoned?.level})`);
-      // §386 : la goule du Monster Manual 2024 (sinon du SRD 2024), pas celle du SRD 2014 que désignent les données du sort.
+      // §386: the Monster Manual 2024 ghoul (otherwise the SRD 2024 one), not the SRD 2014 one that the spell's data designate.
       const mm = (await ctx.call("list-compendiums", {})).some(p => p.id === "dnd-monster-manual.actors");
       const wanted = mm ? "Compendium.dnd-monster-manual.actors." : "Compendium.dnd5e.actors24.";
       ctx.expect(String(captured?.summoned?.uuid ?? "").startsWith(wanted), `goule du ${mm ? "Monster Manual 2024" : "SRD 2024"} (${captured?.summoned?.uuid})`);
     }
 
-    // §387 : Animation des morts — sans os ni cadavre à viser, Squelette ou Zombi, et combien : au niveau 4, « niveau × 2 − 5 » = 3.
-    // Comme depuis la barre avec un emplacement de niveau 4 (rien n'est consommé) ; Zombi, 2 choisis.
+    // §387: Animate Dead — with no bones or corpse to target, Skeleton or Zombie, and how many: at level 4, "level × 2 − 5" = 3.
+    // As from the bar with a level 4 slot (nothing is consumed); Zombie, 2 chosen.
     const dead = await ctx.ensureItem(mage, SPELLS + "phbsplAnimateDea");
     const started = await ctx.engine("castFromBar", { tokenId: mage.id, itemId: dead, slot: "spell4", x: pos.x + grid, y: pos.y + (3 * grid) });
     const zombie = started.profiles.find(p => /zomb/i.test(p.name)) ?? started.profiles[1];

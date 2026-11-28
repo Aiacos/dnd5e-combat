@@ -1,15 +1,15 @@
 /**
- * Le Barbare (SPEC §22) : ce que dnd5e ne tient pas de la Rage, et la Témérité.
+ * The Barbarian (SPEC §22): what dnd5e does not hold of Rage, and Reckless Attack.
  *
- *  - Rage entretenue (MJ actif) : prendre la Rage, attaquer un ennemi, imposer une sauvegarde à un ennemi marquent le tour
- *    (`rageKept`) ; à la fin de son tour, une Rage ni entretenue ni nourrie d'une action Bonus prend fin (sauf Rage persistante).
- *    Elle prend fin aussi quand le barbare devient Neutralisé (Inconscient seulement avec Rage persistante). Prendre la Rage met
- *    fin à la concentration ; en Rage, un sort est un souci de légalité (runtime/turn.mjs).
- *  - Rage implacable (MJ actif) : à 0 PV en Rage, la sauvegarde de Constitution de l'item, lancée par le moteur ; réussie, les PV
- *    deviennent le double du niveau de Barbare (une utilisation dépensée : le DD monte de 5) ; ratée, la Rage cesse et il tombe.
- *  - Témérité (client de l'auteur) : à la première attaque de Force de son tour, la question ; l'utilisation est suspendue puis
- *    relancée avec la réponse (`usageConfig["dnd5e-combat"].reckless`, qu'une intention peut aussi donner d'avance). Oui : une
- *    marque « Témérité » (adapter/mastery.mjs) jusqu'au début de son prochain tour.
+ *  - Rage kept up (active GM): taking Rage, attacking an enemy, imposing a save on an enemy mark the turn
+ *    (`rageKept`); at the end of its turn, a Rage neither kept up nor fed by a Bonus Action ends (except Persistent Rage).
+ *    It also ends when the barbarian becomes Incapacitated (Unconscious only with Persistent Rage). Taking Rage ends
+ *    Concentration; in Rage, a spell is a legality matter (runtime/turn.mjs).
+ *  - Relentless Rage (active GM): at 0 HP in Rage, the item's Constitution save, rolled by the engine; if passed, HP
+ *    become twice the Barbarian level (a use spent: the DC rises by 5); if failed, Rage stops and they fall.
+ *  - Reckless Attack (author's client): on the first Strength attack of its turn, the question; the use is suspended then
+ *    relaunched with the answer (`usageConfig["dnd5e-combat"].reckless`, which an intent can also give in advance). Yes: a
+ *    "Reckless Attack" mark (adapter/mastery.mjs) until the start of its next turn.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -31,7 +31,7 @@ import { readUnitFactors } from "../adapter/units.mjs";
 import { STEPS } from "../core/action.mjs";
 import { relaunchUse } from "./relaunch.mjs";
 
-/** Une des cibles du message est-elle hostile à ce token ? */
+/** Is one of the message's targets hostile to this token? */
 function hostileTarget(message, token) {
   return (message.system?.targets ?? []).some(t => {
     const target = fromUuidSync(t.token ?? "", { strict: false });
@@ -57,17 +57,17 @@ async function onMessage(message) {
   if ( !actor ) return;
   if ( message.type === "usage" ) {
     const activity = message.getAssociatedActivity?.();
-    // Prendre la Rage : « vous ne pouvez pas maintenir de concentration ».
+    // Taking Rage: "you can't maintain Concentration".
     if ( activity?.item && contentOf(activity.item).entry?.rage ) {
       await keepRage(actor);
       if ( actor.concentration?.effects?.size ) await actor.endConcentration();
       return;
     }
-    // « Imposer un jet de sauvegarde à un ennemi ».
+    // "Impose a saving throw on an enemy".
     if ( isRaging(actor) && token && (activity?.type === "save") && hostileTarget(message, token) ) await keepRage(actor);
     return;
   }
-  // « Faire un jet d'attaque contre un ennemi ».
+  // "Make an attack roll against an enemy".
   if ( (message.type === "attack") && token && isRaging(actor) && hostileTarget(message, token) ) await keepRage(actor);
 }
 
@@ -76,7 +76,7 @@ function onTurnEnd(combat, prior) {
   const actor = combatant?.actor;
   if ( !actor || !isRaging(actor) || barbarianRule(actor, "persistentRage") ) return;
   const priorKey = turnKeyAt(combat, prior);
-  // « Prendre une action Bonus pour entretenir la Rage » : l'action Bonus dépensée à ce tour.
+  // "Take a Bonus Action to keep Rage up": the Bonus Action spent this turn.
   const bonusSpent = (readBudget(combatant)?.bonus ?? 1) < 1;
   if ( (rageKeptOn(actor) === priorKey) || bonusSpent ) return;
   return enqueue(`rage:${actor.uuid}`, () => stopRage(actor, "entretien"));
@@ -86,7 +86,7 @@ function onEffectCreated(effect) {
   const actor = effect.parent;
   if ( (actor?.documentName !== "Actor") || !effect.statuses?.size || !isRaging(actor) ) return;
   if ( !statusEndsRage(actor, effect.statuses) ) return;
-  // À 0 PV avec Rage implacable, la sauvegarde décide avant (l'Inconscient que dnd5e pose tombera si elle réussit).
+  // At 0 HP with Relentless Rage, the save decides first (the Unconscious that dnd5e sets will be removed if it succeeds).
   if ( ((actor.system.attributes?.hp?.value ?? 1) <= 0) && relentlessAtZero(actor) ) return;
   return enqueue(`rage:${actor.uuid}`, () => stopRage(actor, "etat"));
 }
@@ -108,7 +108,7 @@ function onZero(actor) {
     if ( Number.isFinite(total) && (total >= dc) ) {
       const hp = 2 * (actor.classes?.barbarian?.system?.levels ?? 1);
       await spendItemUses(found.item);
-      await actor.update({ "system.attributes.hp.value": hp });   // PV > 0 : Inconscient, échecs et Stabilisé retirés (runtime/death.mjs)
+      await actor.update({ "system.attributes.hp.value": hp });   // HP > 0: Unconscious, failures and Stable removed (runtime/death.mjs)
       const token = tokenOf(actor);
       if ( token ) notice(token, loc("Rage.Implacable", { name: actor.name, hp }), "gain");
       log(`Relentless Rage: ${actor.name} succeeds (${total} vs DC ${dc}) and stays up at ${hp} HP`);
@@ -121,10 +121,10 @@ function onZero(actor) {
 }
 
 /* -------------------------------------------- */
-/*  Témérité                                    */
+/*  Reckless Attack                             */
 /* -------------------------------------------- */
 
-/** Pose la marque de Témérité sur l'attaquant (son client, qui possède l'acteur). */
+/** Puts the Reckless Attack mark on the attacker (its client, which owns the actor). */
 async function beReckless(actor, token) {
   if ( !token || marksOn(actor, "reckless").length ) return;
   const found = barbarianRule(actor, "reckless");
@@ -146,8 +146,8 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     if ( recklessChoice(actor) === null ) record(decided).catch(err => console.error(`${MODULE_ID} | Reckless Attack`, err));
     return askBrutal(activity, token, decided, usageConfig, dialogConfig, messageConfig);
   }
-  if ( recklessChoice(actor) !== null ) return askBrutal(activity, token, recklessChoice(actor), usageConfig, dialogConfig, messageConfig);   // déjà décidé à ce tour
-  // Les cibles de l'utilisation suspendue repartent avec la relance (un appelant peut les avoir relâchées entre-temps).
+  if ( recklessChoice(actor) !== null ) return askBrutal(activity, token, recklessChoice(actor), usageConfig, dialogConfig, messageConfig);   // decided this turn
+  // The targets of the suspended use restart with the relaunch (a caller may have released them in the meantime).
   const targets = Array.from(game.user.targets);
   timedWait({
     window: { title: loc("Rage.Temerite.Titre", { name: actor.name }) },
@@ -171,12 +171,13 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
 /* -------------------------------------------- */
 
 /**
- * Coup brutal (Barbare 9) : « si vous utilisez Témérité, vous pouvez renoncer à tout Avantage sur un jet d'attaque fondé sur la Force de votre
- * choix, à votre tour ; s'il touche, la cible subit 1d10 dégâts supplémentaires du type de l'arme, et vous causez un effet de Coup brutal ».
- * Une fois par tour. Coup brutal amélioré (13) ajoute deux effets ; (17) : 2d10 (l'échelle de la sous-classe), deux effets différents.
- * Les options, leur poussée ou leur effet : le contenu (`brutalStrike`), réuni sur tous les items de l'acteur.
- * Le choix pose une marque sur le barbare, liée à l'activité : l'Avantage est abandonné au jet (runtime/conditions.mjs), les dégâts
- * ajoutés par sa déclaration (content/barbarian.mjs), les effets posés à la résolution par le MJ actif, puis la marque tombe.
+ * Brutal Strike (Barbarian 9): "if you use Reckless Attack, you can forgo any Advantage on one Strength-based attack roll of your
+ * choice on your turn; if it hits, the target takes 1d10 extra damage of the weapon's type, and you cause a Brutal Strike effect".
+ * Once per turn. Improved Brutal Strike (13) adds two effects; (17): 2d10 (the subclass's scale), two different effects.
+ * The options, their push or effect: the content (`brutalStrike`), gathered from all the actor's items.
+ * The choice puts a mark on the barbarian, tied to the activity: the Advantage is forgone at the roll (runtime/conditions.mjs),
+ * the damage added by its declaration (content/barbarian.mjs), the effects placed at resolution by the active GM, then the
+ * mark falls.
  */
 function brutalRules(actor) {
   const options = new Map();
@@ -190,7 +191,7 @@ function brutalRules(actor) {
   return options.size ? { options, count } : null;
 }
 
-/** §433 : l'item et l'effet d'une option — le premier des identifiants donnés qu'un item de Coup brutal de l'acteur porte. */
+/** §433: the item and effect of an option — the first of the given identifiers that a Brutal Strike item of the actor carries. */
 function brutalEffectOf(actor, option) {
   const items = [option.item, ...Array.from(actor?.items ?? []).filter(i => (i !== option.item) && contentOf(i).entry?.brutalStrike)];
   for ( const effect of [option.effect].flat() ) {
@@ -200,7 +201,7 @@ function brutalEffectOf(actor, option) {
   return null;
 }
 
-/** Les choix offerts : une option, ou deux différentes (Coup brutal amélioré, niveau 17). */
+/** The choices offered: one option, or two different ones (Improved Brutal Strike, level 17). */
 function brutalChoices(names, count) {
   if ( count < 2 ) return names.map(n => [n]);
   const out = [];
@@ -225,14 +226,14 @@ function askBrutal(activity, token, reckless, usageConfig, dialogConfig, message
   const rules = brutalRules(actor);
   if ( !rules ) return true;
   const decided = usageConfig?.[MODULE_ID]?.brutal;
-  // Décidé d'avance par une intention (`brutal: ["forceful"]`) : la marque part avant le message d'utilisation (le serveur traite les
-  // demandes dans l'ordre), donc avant le jet d'attaque.
+  // Decided in advance by an intent (`brutal: ["forceful"]`): the mark goes out before the use message (the server handles
+  // requests in order), so before the attack roll.
   if ( Array.isArray(decided) ) {
     if ( decided.length && (actor.getFlag(MODULE_ID, "brutalTurn") !== currentTurnKey()) ) markBrutal(actor, activity, decided).catch(err => console.error(`${MODULE_ID} | Brutal Strike`, err));
     return true;
   }
-  if ( (decided === false) || (decided === "marked") ) return true;   // « marked » : la marque est posée (relance après la question)
-  if ( actor.getFlag(MODULE_ID, "brutalTurn") === currentTurnKey() ) return true;   // une fois par tour
+  if ( (decided === false) || (decided === "marked") ) return true;   // "marked": the mark is placed (relaunch after the question)
+  if ( actor.getFlag(MODULE_ID, "brutalTurn") === currentTurnKey() ) return true;   // once per turn
   const choices = brutalChoices([...rules.options.keys()], rules.count);
   const targets = Array.from(game.user.targets);
   timedWait({
@@ -252,7 +253,7 @@ function askBrutal(activity, token, reckless, usageConfig, dialogConfig, message
   return false;
 }
 
-/** MJ actif : l'attaque marquée est résolue — sur un coup, les effets choisis ; puis la marque tombe. */
+/** Active GM: the marked attack is resolved — on a hit, the chosen effects; then the mark falls. */
 async function onBrutalResolution(resolution) {
   if ( (resolution?.step !== STEPS.DONE) || !resolution.plan?.attack ) return;
   const from = fromUuidSync(resolution.source ?? "", { strict: false });
@@ -274,7 +275,8 @@ async function onBrutalResolution(resolution) {
         log(`Brutal Strike, ${name}: ${target.name} pushed ${cells} square(s)`);
       }
       if ( option.effect ) {
-        // §433 : l'effet de l'option est sur l'item qui la déclare (Coup brutal amélioré) ou, dans le SRD de dnd5e 6.1, sur Coup brutal.
+        // §433: the option's effect is on the item that declares it (Improved Brutal Strike) or, in dnd5e 6.1's SRD, on Brutal
+        // Strike.
         const from = brutalEffectOf(actor, option);
         const placed = from ? await placeItemEffect(from.item, from.effect, target.actor) : null;
         log(placed ? `Brutal Strike, ${name}: effect placed on ${target.name}` : `Brutal Strike, ${name}: no effect of this option on ${actor.name}'s items`);
@@ -286,14 +288,14 @@ async function onBrutalResolution(resolution) {
 }
 
 /**
- * §299 (repasse C4) : les aptitudes tenues par la Rage (`duringRage`). Le MJ actif rapproche, à chaque changement d'effet de l'acteur,
- * ce qu'elles portent de l'état de Rage :
- *  - `enable` : effets transférés de l'item, actifs pendant la Rage seulement (Rage aveugle : immunité à Charmé et Effrayé) ;
- *  - `post` : effets de l'item posés sur le barbare pendant la Rage, retirés à sa fin (Savoir primal) ;
- *  - `copiesEnd` : les copies que les activités de l'item ont posées sur lui tombent avec la Rage (Rage du prédateur : l'Ours, le Loup) ;
- *  - `disable` : effets transférés que la donnée laisse actifs à tort (Rage de l'Ours, toujours active hors Rage) ;
- *  - `cures` : à l'entrée en Rage, ces états cessent (Rage aveugle) ;
- *  - `onStart` : l'activité de l'item jouée à l'entrée en Rage (Vitalité de l'Arbre : PV temporaires).
+ * §299 (pass C4): the abilities held by Rage (`duringRage`). The active GM brings in line, at each effect change of the actor,
+ * what they carry of the Rage state:
+ *  - `enable`: effects transferred from the item, active during Rage only ("Blind Rage": Immunity to Charmed and Frightened);
+ *  - `post`: item effects placed on the barbarian during Rage, removed at its end (Primal Knowledge);
+ *  - `copiesEnd`: the copies that the item's activities placed on them fall with Rage ("Predator's Rage": the Bear, the Wolf);
+ *  - `disable`: transferred effects that the data wrongly leaves active (Rage of the Bear, always active outside Rage);
+ *  - `cures`: on entering Rage, these conditions cease ("Blind Rage");
+ *  - `onStart`: the item's activity played on entering Rage (Vitality of the Tree: Temporary Hit Points).
  */
 const DURING_RAGE_FLAG = "duringRage";
 
@@ -301,8 +303,8 @@ async function syncDuringRage(actor) {
   if ( (actor?.documentName !== "Actor") || !game.users.activeGM?.isSelf ) return;
   const raging = isRaging(actor);
   const was = !!actor.getFlag(MODULE_ID, DURING_RAGE_FLAG);
-  // Plus aucune aptitude tenue par la Rage (retirée pendant une Rage) : la marque d'entrée ne doit pas survivre, sinon la prochaine entrée
-  // en Rage ne serait pas vue comme telle.
+  // No more abilities held by Rage (removed during a Rage): the entry mark must not survive, otherwise the next entry
+  // into Rage would not be seen as such.
   if ( !actor.items.some(i => contentOf(i).entry?.duringRage) ) {
     if ( was ) await actor.unsetFlag(MODULE_ID, DURING_RAGE_FLAG);
     return;
@@ -312,7 +314,7 @@ async function syncDuringRage(actor) {
     if ( !rule ) continue;
     const toggles = [...(rule.enable ?? []).map(id => [id, !raging]), ...(rule.disable ?? []).map(id => [id, true])]
       .map(([id, disabled]) => ({ effect: item.effects.get(id), disabled }))
-      // L'état de la donnée (`_source`) : dnd5e 6.0.6 prépare un effet porté par une activité comme actif (voir adapter/rage.mjs).
+      // The data state (`_source`): dnd5e 6.0.6 prepares an effect carried by an activity as active (see adapter/rage.mjs).
       .filter(t => t.effect && (t.effect._source.disabled !== t.disabled));
     if ( toggles.length ) await item.updateEmbeddedDocuments("ActiveEffect", toggles.map(t => ({ _id: t.effect.id, disabled: t.disabled })));
     for ( const id of rule.post ?? [] ) {
@@ -340,7 +342,7 @@ const laterDuringRage = actor => (actor?.documentName === "Actor")
   ? enqueue(`duringRage:${actor.uuid}`, () => syncDuringRage(actor)) : null;
 
 export function registerBarbarian() {
-  // Un item retiré ou ajouté (une aptitude tenue par la Rage) : la même mise en accord.
+  // An item removed or added (an ability held by Rage): the same reconciliation.
   for ( const hook of ["createItem", "deleteItem"] ) route(hook, item => laterDuringRage(item.parent), { executor: true, label: "features held by Rage not synced" });
   for ( const hook of ["createActiveEffect", "updateActiveEffect", "deleteActiveEffect"] ) {
     route(hook, effect => laterDuringRage((effect.parent?.documentName === "Item") ? effect.parent.parent : effect.parent),

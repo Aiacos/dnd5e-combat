@@ -1,11 +1,11 @@
 /**
- * §487 : moment « réussit une sauvegarde contre » (`savesAgainst`, brique B11). Un item synthétique prêté au Bandit, sa règle posée dans
- * la surcouche du monde (`api.mcp.overrideContent`) :
+ * §487: moment "succeeds on a save against" (`savesAgainst`, brick B11). A synthetic item lent to the Bandit, its rule placed in
+ * the world overlay (`api.mcp.overrideContent`):
  *   { on: "savesAgainst", if: { "activity.isSpell": true }, do: [{ type: "use", target: "source" }] }
- *  1. le Clerc lance Fléau (sort du SRD) sur le Bandit, `autoReact: "first"` : à chaque sauvegarde RÉUSSIE, le Bandit utilise l'item
- *     contre le Clerc (carte d'utilisation du Bandit, ciblant le Clerc) ; à chaque sauvegarde RATÉE, rien ;
- *  2. on rejoue jusqu'à avoir vu une réussite et un échec (20 essais au plus).
- * Remet effets, concentration, items prêtés et surcouche.
+ *  1. the Cleric casts Bane (SRD spell) on the Bandit, `autoReact: "first"`: on each SUCCESSFUL save, the Bandit uses the item
+ *     against the Cleric (the Bandit's use card, targeting the Cleric); on each FAILED save, nothing;
+ *  2. we replay until one success and one failure have been seen (20 tries at most).
+ * Puts back effects, Concentration, lent items and overlay.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e.spells24.Item.";
@@ -25,7 +25,7 @@ export default {
     const clerc = await ctx.token("Clerc");
     const bandit = await ctx.token("Bandit");
 
-    // --- Item et règle prêtés ----------------------------------------------------------------------------------------
+    // --- Lent item and rule ----------------------------------------------------------------------------------------
     const itemData = { name: "Essai : représailles", type: "feat", img: "icons/svg/explosion.svg",
       system: { identifier: IDENTIFIER, activities: { [ACTIVITY]: { _id: ACTIVITY, type: "utility", name: "Représailles",
         activation: { type: "reaction", value: 1 }, target: { affects: { type: "creature", count: "1" } } } } } };
@@ -44,7 +44,7 @@ export default {
     };
     ctx.restore(clear);
 
-    // --- Fléau jusqu'à une réussite et un échec ----------------------------------------------------------------------------
+    // --- Bane until one success and one failure ----------------------------------------------------------------------------
     const seen = { success: null, failure: null };
     for ( let i = 0; (i < 20) && (!seen.success || !seen.failure); i++ ) {
       await clear();

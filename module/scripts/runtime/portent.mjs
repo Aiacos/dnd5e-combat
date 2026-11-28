@@ -1,7 +1,7 @@
 /**
- * §36 : Présage du Devin. Les jets notés sont lancés au Repos long ; la question « remplacer ce d20 ? » est posée par la porte des
- * attaques (runtime/gates.mjs) et par la demande de sauvegardes (adapter/saves.mjs) ; le jet borné par runtime/conditions.mjs et
- * adapter/saves.mjs. Ici : le Repos long, et la requête à laquelle répond le client du devin.
+ * §36: Diviner's Portent. The noted rolls are made at the Long Rest; the question "replace this d20?" is asked by the attack
+ * gate (runtime/gates.mjs) and by the saving throw request (adapter/saves.mjs); the roll bounded by runtime/conditions.mjs and
+ * adapter/saves.mjs. Here: the Long Rest, and the query that the diviner's client answers.
  */
 
 import { PORTENT_QUERY, PORTENT_SETTING, handlePortentQuery, portentDice, rollPortent } from "../adapter/portent.mjs";
@@ -10,8 +10,8 @@ import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
 
 /**
- * `dnd5e.restCompleted` ne se déclenche que sur le client qui a lancé le repos (documents/actor/actor.mjs:2421) : pas d'`executor`,
- * c'est ce client-là, propriétaire de l'acteur, qui lance et note les d20.
+ * `dnd5e.restCompleted` only fires on the client that started the rest (documents/actor/actor.mjs:2421): no `executor`,
+ * it is that client, the actor's owner, that rolls and notes the d20s.
  */
 async function onRestCompleted(actor, result, config) {
   if ( (config?.type !== "long") || !actor?.isOwner || !portentDice(actor) ) return;
@@ -20,14 +20,14 @@ async function onRestCompleted(actor, result, config) {
 }
 
 export function registerPortent() {
-  // §38.4 : désactivé, le moteur ne propose plus le Présage (ni question, ni attaque suspendue) ; les d20 restent lancés et notés au
-  // Repos long, pour le jouer à la main.
+  // §38.4: disabled, the engine no longer offers Portent (no question, no suspended attack); the d20s are still rolled and
+  // noted at the Long Rest, to play it by hand.
   game.settings.register(MODULE_ID, PORTENT_SETTING, {
     name: "DND5ECOMBAT.Reglage.portent.Nom",
     hint: "DND5ECOMBAT.Reglage.portent.Aide",
     scope: "world", config: true, type: Boolean, default: true
   });
-  // Sur tous les clients : c'est celui du devin (son joueur, ou le MJ) qui répond.
+  // On all clients: it is the diviner's (their player, or the GM) that answers.
   CONFIG.queries[PORTENT_QUERY] = handlePortentQuery;
   route("dnd5e.restCompleted", onRestCompleted, { label: "Portent not rolled on Long Rest" });
 }

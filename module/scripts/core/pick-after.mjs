@@ -1,25 +1,25 @@
 /**
- * §438 : une manifestation suivie d'une sauvegarde « sur une créature de votre choix dans l'émanation » (Courroux des mers du Manuel
- * 3.0.0 : l'activité utilitaire « Manifest Ocean Spray » pose l'émanation, la sauvegarde est l'activité sœur). La règle 2024 enchaîne
- * les deux sous la même action Bonus (décision de l'utilisateur, 2026-11-14) : `pickTargets.after` nomme, pour l'activité qui manifeste,
- * l'activité qui suit et autour de qui l'on choisit (`self` : le lanceur ; `targets` : les créatures visées par la manifestation —
- * Courroux des mers « Another », niveau 14). Règles pures.
+ * §438: a manifestation followed by a save "on a creature of your choice in the Emanation" (Handbook 3.0.0's "Wrath of the
+ * Seas": the utility activity "Manifest Ocean Spray" places the Emanation, the save is the sibling activity). The 2024 rule chains
+ * the two under the same Bonus Action (user decision, 2026-11-14): `pickTargets.after` names, for the activity that manifests,
+ * the activity that follows and around whom one chooses (`self`: the caster; `targets`: the creatures targeted by the
+ * manifestation — "Wrath of the Seas" "Another", level 14). Pure rules.
  */
 
-/** Ce qui suit l'utilisation de cette activité, ou null. Une activité qui résout elle-même (forme 2.2.0 : la sauvegarde) n'enchaîne rien. */
+/** What follows the use of this activity, or null. An activity that resolves itself (2.2.0 form: the save) chains nothing. */
 export function chainedPickOf(rule, activityId, activityType) {
   const next = rule?.after?.[activityId] ?? null;
   return (next && (activityType === "utility")) ? next : null;
 }
 
-/** La liste de choix vaut-elle pour cette activité ? Pas pour la manifestation utilitaire, qui pose l'émanation au lieu de viser. */
+/** Does the choice list apply to this activity? Not to the utility manifestation, which places the Emanation, not a target. */
 export function picksFor(rule, activityId, activityType) {
   if ( !rule?.activities?.includes(activityId) ) return false;
   return !chainedPickOf(rule, activityId, activityType);
 }
 
 /**
- * La distance retenue d'une créature : la plus courte à l'un des centres, chacun avec son rayon. Rend null hors de toute émanation.
+ * The retained distance of a creature: the shortest to one of the centers, each with its radius. Null outside any Emanation.
  * @param {Array<{distance: number, radius: number}>} centers
  * @returns {number|null}
  */

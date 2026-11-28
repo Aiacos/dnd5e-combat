@@ -1,20 +1,20 @@
 /**
- * §197 : à qui appartient une créature invoquée. dnd5e crée l'acteur invoqué au nom de l'utilisateur qui invoque
- * (documents/activity/summon.mjs → `Actor5e.fetchExisting`) : un MJ qui lance le sort depuis la fiche d'un joueur en garde seul la
- * propriété, et le joueur ne peut ni déplacer ni utiliser sa monture (retour de table, issue #9). Les propriétaires (joueurs) du
- * lanceur deviennent aussi propriétaires de la créature.
+ * §197: who owns a summoned creature. dnd5e creates the summoned actor in the name of the user who summons
+ * (documents/activity/summon.mjs → `Actor5e.fetchExisting`): a GM who casts the spell from a player's sheet keeps sole
+ * ownership, and the player can neither move nor use their mount (table feedback, issue #9). The owners (players) of the
+ * caster also become owners of the creature.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
-/** Le niveau « Propriétaire » de Foundry (`CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER`). */
+/** Foundry's "Owner" level (`CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER`). */
 export const OWNER = 3;
 
 /**
- * La propriété à donner à l'acteur invoqué, ou null s'il n'y a rien à changer : la sienne, plus « Propriétaire » pour chaque joueur
- * qui possède le lanceur (pas le niveau par défaut, pas un MJ).
- * @param {Record<string, number>} casterOwnership   La propriété du lanceur.
- * @param {Record<string, number>} current           Celle de l'acteur invoqué.
+ * The ownership to give the summoned actor, or null if there is nothing to change: its own, plus "Owner" for each player
+ * who owns the caster (not the default level, not a GM).
+ * @param {Record<string, number>} casterOwnership   The caster's ownership.
+ * @param {Record<string, number>} current           That of the summoned actor.
  * @param {(userId: string) => boolean} isGM
  * @returns {Record<string, number>|null}
  */
@@ -28,10 +28,10 @@ export function summonOwnership(casterOwnership, current, isGM) {
 }
 
 /**
- * §383 (issue #38) : ce qu'une activité « summon » laisse choisir — plusieurs profils (Convocation de céleste : Vengeur / Défenseur),
- * plusieurs tailles (illusions) ou plusieurs types de créature (Appel de familier : céleste, fée, fiélon). dnd5e ne le demande que
- * dans sa fenêtre d'utilisation (applications/activity/summon-usage-dialog.mjs) ; un appel qui la saute (`configure: false` : barre
- * d'actions, manette) garde le premier de chaque, sans rien demander.
+ * §383 (issue #38): what a "summon" activity lets you choose — several profiles (Summon Celestial: Avenger / Defender),
+ * several sizes (illusions) or several creature types (Find Familiar: celestial, fey, fiend). dnd5e only asks for it
+ * in its usage window (applications/activity/summon-usage-dialog.mjs); a call that skips it (`configure: false`: action
+ * bar, gamepad) keeps the first of each, asking nothing.
  * @param {{ profiles?: number, sizes?: number, types?: number }} counts
  * @returns {{ profile: boolean, size: boolean, type: boolean, any: boolean }}
  */
@@ -43,21 +43,22 @@ export function summonChoices({ profiles=0, sizes=0, types=0 }={}) {
 }
 
 /**
- * §383 : faut-il ouvrir la fenêtre « Choisir la forme » du moteur à ce lancement ? Seulement si dnd5e ne la montre pas (`configure`
- * faux), qu'il y a un choix, que quelque chose sera invoqué (pose prévue, invocation forcée par le contenu, ou reprise sur des cibles),
- * et que l'appelant n'a ni déjà choisi (`chosen`) ni confirmé d'office (`confirmed` : relances du moteur, connecteur, scénarios).
+ * §383: should the engine's "Choose the form" window be opened for this cast? Only if dnd5e does not show it (`configure`
+ * false), there is a choice, something will be summoned (placement planned, summoning forced by the content, or resumption on
+ * targets), and the caller has neither already chosen (`chosen`) nor confirmed outright (`confirmed`: engine retries, connector,
+ * scenarios).
  */
 export function asksSummonForm({ configure, choices, willSummon, chosen=false, confirmed=false, otherChoice=false, always=false }) {
   if ( chosen || confirmed || otherChoice ) return false;
-  // §385 : « jusqu'à N » créatures (contenu `chooseCount`) — la fenêtre du moteur, même depuis la fiche : dnd5e ne demande pas combien.
+  // §385: "up to N" creatures (content `chooseCount`) — the engine's window, even from the sheet: dnd5e does not ask how many.
   if ( always ) return !!willSummon;
   if ( configure !== false ) return false;
   return !!choices?.any && !!willSummon;
 }
 
 /**
- * §385 : les profils d'invocation permis à un niveau de lancement (`level.min` / `level.max` du profil, comme `availableProfiles` de
- * dnd5e, documents/activity/summon.mjs, mais pour un autre niveau que celui de l'item).
+ * §385: the summoning profiles allowed at a casting level (`level.min` / `level.max` of the profile, like `availableProfiles` of
+ * dnd5e, documents/activity/summon.mjs, but for a level other than the item's).
  * @param {{_id: string, level?: {min?: number|null, max?: number|null}}[]} profiles
  * @param {number} level
  */
@@ -69,16 +70,16 @@ export function profilesAtLevel(profiles, level) {
   });
 }
 
-/** §385 : les nombres proposés, de 1 à `max` (rien à choisir sous 2). */
+/** §385: the numbers offered, from 1 to `max` (nothing to choose below 2). */
 export function countChoices(max) {
   const n = Math.floor(Number(max) || 0);
   return (n >= 2) ? Array.from({ length: n }, (_, i) => i + 1) : [];
 }
 
 /**
- * §386 (issue #38, demande de l'utilisateur) : l'identifiant d'une créature dans le compendium du Monster Manual 2024
- * (`dnd-monster-manual.actors`), d'après son nom anglais — « mm » + le nom en un mot, complété de zéros à 16 caractères
- * (« Ghoul » → `mmGhoul000000000`, « Ogre Zombie » → `mmOgreZombie0000`, « Ghast Gravecaller » → `mmGhastGravecall`).
+ * §386 (issue #38, user request): the identifier of a creature in the 2024 Monster Manual compendium
+ * (`dnd-monster-manual.actors`), from its English name — "mm" + the name in one word, padded with zeros to 16 characters
+ * ("Ghoul" → `mmGhoul000000000`, "Ogre Zombie" → `mmOgreZombie0000`, "Ghast Gravecaller" → `mmGhastGravecall`).
  * @param {string} name
  * @returns {string|null}
  */
@@ -89,24 +90,24 @@ export function mmActorId(name) {
   return `mm${core}`.padEnd(16, "0").slice(0, 16);
 }
 
-/** §386 : l'id d'acteur d'un uuid du compendium des monstres du SRD 2014 de dnd5e (`dnd5e.monsters`), ou null. */
+/** §386: the actor id from a uuid of dnd5e's 2014 SRD monster compendium (`dnd5e.monsters`), or null. */
 export function srdMonsterId(uuid) {
   const m = /^Compendium\.dnd5e\.monsters\.(?:Actor\.)?([A-Za-z0-9]{16})$/.exec(String(uuid ?? ""));
   return m ? m[1] : null;
 }
 
 /**
- * §391 (issue #38, suite) : faut-il ouvrir la fenêtre du moteur pour choisir un profil d'**enchantement** (Arme élémentaire : l'élément ;
- * Arme magique, armes +1/+2/+3 : le bonus) ou de **transformation** (Métamorphose suprême) ? Comme `asksSummonForm` : seulement quand
- * la fenêtre de dnd5e est sautée (`configure` faux : barre ; relance « Lancer quand même »), plusieurs profils, ni déjà choisi, ni
- * confirmé d'office, ni un chemin du moteur qui choisit lui-même (`own` : Forme sauvage).
+ * §391 (issue #38, continued): should the engine's window be opened to choose an **enchantment** profile (Elemental Weapon:
+ * the element; Magic Weapon, +1/+2/+3 weapons: the bonus) or a **transformation** profile (True Polymorph)? Like
+ * `asksSummonForm`: only when dnd5e's window is skipped (`configure` false: bar; retry "Cast anyway"), several profiles,
+ * neither already chosen, nor confirmed outright, nor an engine path that chooses by itself (`own`: Wild Shape).
  */
 export function asksProfile({ configure, profiles=0, chosen=false, confirmed=false, own=false }) {
   if ( (configure !== false) || chosen || confirmed || own ) return false;
   return profiles > 1;
 }
 
-/** §392 : l'id d'acteur (16 caractères) au bout d'un uuid de compendium (`Compendium.p.k.Actor.<id>` ou `Compendium.p.k.<id>`), ou null. */
+/** §392: the actor id (16 characters) at the end of a compendium uuid (`Compendium.p.k.Actor.<id>` or `Compendium.p.k.<id>`), or null. */
 export function actorIdOf(uuid) {
   const m = /^Compendium\.[^.]+\.[^.]+\.(?:Actor\.)?([A-Za-z0-9]{16})$/.exec(String(uuid ?? ""));
   return m ? m[1] : null;

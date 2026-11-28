@@ -1,8 +1,9 @@
 /**
- * §554: Flame Blade cast by a player — from a real player client (« claude player », opened by the test bench: `players: true`), the
- * player's own character (claude, a wizard with level 3 slots, token « Magicien » on the « Arène de test ») casts « Evoke Blade »:
- * the slot level window opens on the player's client, with « roll without dialog » on and off (§106). The window is closed without
- * casting. Its level 2 and 3 slots are refilled for the scenario. Off the bench (no player client), not applicable.
+ * §554: Flame Blade cast by a player — from a real player client (« claude player », opened by the test bench:
+ * `players: true`), the player's own character (claude, a wizard with level 3 slots, token « Magicien » on the
+ * « Arène de test ») casts « Evoke Blade »: the slot level window opens on the player's client, with « roll without dialog »
+ * on and off (§106). The window is closed without casting. Its level 2 and 3 slots are refilled for the scenario. Off the
+ * bench (no player client), not applicable.
  */
 const MODULE_ID = "dnd5e-combat";
 const FLAME_BLADE = "Compendium.dnd-players-handbook.spells.Item.phbsplFlameBlade";

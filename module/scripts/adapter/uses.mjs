@@ -1,14 +1,14 @@
 /**
- * Les utilisations d'un item (`system.uses` de dnd5e) dépensées par le moteur hors d'une activité : une réaction payée par un autre
- * item, un châtiment, un don qui sert une fois par repos…
+ * The uses of an item (dnd5e's `system.uses`) spent by the engine outside an activity: a Reaction paid for by another
+ * item, a Smite, a feat that works once per rest…
  */
 
 import { levelHidden } from "./level-gate.mjs";
 
 /**
- * §438 : ce qui tient le compte d'une activité qui se dépense — l'activité si elle a ses propres utilisations (Manuel 2.2.0 : Frappe
- * effroyable, `activityUses`), sinon l'item dont elle consomme les utilisations (Manuel 3.0.0 : `itemUses` sans cible = son item ; une
- * cible = cet item de l'acteur). `{ left, spend() }`, ou null.
+ * §438: what keeps the count of an activity that is spent — the activity if it has its own uses (Manual 2.2.0: Dreadful
+ * Strike, `activityUses`), otherwise the item whose uses it consumes (Manual 3.0.0: `itemUses` without a target = its item; a
+ * target = that item of the actor). `{ left, spend() }`, or null.
  */
 export function usesHolderOf(activity) {
   if ( !activity ) return null;
@@ -23,7 +23,7 @@ export function usesHolderOf(activity) {
   return { left: Math.max(0, Math.floor((Number(item.system.uses.value) || 0) / n)), spend: () => spendItemUses(item, n) };
 }
 
-/** §438 : la première activité de la liste que l'item porte et que la fiche montre à ce niveau (`ask.uses`), ou null. */
+/** §438: the first activity of the list that the item carries and that the sheet shows at this level (`ask.uses`), or null. */
 export function shownActivityOf(item, ids) {
   for ( const id of [ids].flat() ) {
     const a = item?.system?.activities?.get?.(id);
@@ -32,7 +32,7 @@ export function shownActivityOf(item, ids) {
   return null;
 }
 
-/** Dépenser `n` utilisations de l'item (`system.uses.spent`). Rend la promesse de la mise à jour. */
+/** Spend `n` uses of the item (`system.uses.spent`). Returns the update's promise. */
 export function spendItemUses(item, n=1) {
   return item.update({ "system.uses.spent": (Number(item.system.uses?.spent) || 0) + n });
 }

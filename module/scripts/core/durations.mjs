@@ -1,23 +1,23 @@
 /**
- * M4 (SPEC §18.7) : la durée d'un état écrite dans le texte — « until the end of its next turn », « jusqu'au début du tour
- * suivant du monstre » — traduite en expiration native de dnd5e 6 (`duration.expiry`, active-effect.mjs:112 et 881-908) :
- *  - `targetStart` / `targetEnd` : au début / à la fin du prochain tour de la créature qui porte l'effet ;
- *  - `sourceStart` / `sourceEnd` : au début / à la fin du prochain tour de celle qui l'a posé.
- * Le système saute le tour où l'effet a été posé : « la fin de son prochain tour » tient comme écrit.
+ * M4 (SPEC §18.7): the duration of a condition written in the text — "until the end of its next turn", "jusqu'au début du tour
+ * suivant du monstre" — translated into dnd5e 6 native expiry (`duration.expiry`, active-effect.mjs:112 and 881-908):
+ *  - `targetStart` / `targetEnd`: at the start / end of the next turn of the creature that carries the effect;
+ *  - `sourceStart` / `sourceEnd`: at the start / end of the next turn of the one that applied it.
+ * The system skips the turn in which the effect was applied: "the end of its next turn" holds as written.
  *
- * Qui est « son » ? En anglais « its » et « the target's » : le porteur (sur soi-même, porteur et source se confondent) ;
- * « the <monstre>'s », « the attacking creature's », « the user's », « your » : la source. En français (MM-fr, PHB-fr),
- * « son tour suivant », « son propre tour » et « de la cible » : le porteur ; « du tour suivant du / de la / de l' <X> »
- * et « votre » : la source.
+ * Who is "its"? In English "its" and "the target's": the bearer (on oneself, bearer and source coincide);
+ * "the <monster>'s", "the attacking creature's", "the user's", "your": the source. In French (MM-fr, PHB-fr),
+ * "son tour suivant", "son propre tour" and "de la cible": the bearer; "du tour suivant du / de la / de l' <X>"
+ * and "votre": the source.
  *
- * Pur : des chaînes.
+ * Pure: strings.
  */
 
 const PATTERNS = [
-  // Anglais. §79 : « before the end of your next turn » (Rayon traçant, Frappe occulte) borne l'effet comme « until ».
+  // English. §79: "before the end of your next turn" (Guiding Bolt, Eldritch Strike) bounds the effect like "until".
   { re: /(?:until|before) the (start|end) of (?:its|their|the target's) (?:own )?next turn/gi, who: "target" },
   { re: /(?:until|before) the (start|end) of (?:your|the (?!target's)[^.;,]{1,60}?'s) next turn/gi, who: "source" },
-  // Français.
+  // French.
   { re: /(?:jusqu'(?:au (début)|à la (fin))|avant (?:le (début)|la (fin))) de son (?:propre )?tour suivant/gi, who: "target" },
   { re: /(?:jusqu'(?:au (début)|à la (fin))|avant (?:le (début)|la (fin))) du (?:prochain )?tour (?:suivant )?de la cible/gi, who: "target" },
   { re: /(?:jusqu'(?:au (début)|à la (fin))|avant (?:le (début)|la (fin))) de votre (?:prochain )?tour(?: suivant)?/gi, who: "source" },
@@ -26,7 +26,7 @@ const PATTERNS = [
 
 const EDGE = { start: "Start", end: "End", "début": "Start", fin: "End" };
 
-/** Texte à plat : enrichers et balises retirés, apostrophes droites. */
+/** Flat text: enrichers and tags removed, straight apostrophes. */
 export function plainText(html) {
   return String(html ?? "")
     .replace(/&amp;/g, "&").replace(/&nbsp;/g, " ")
@@ -39,15 +39,16 @@ export function plainText(html) {
 }
 
 /**
- * Le texte nomme-t-il l'un de ces états ? La description propre d'un effet qui nomme son état fait foi, même sans durée :
- * on ne va pas chercher dans l'item la durée d'un autre effet du même état (Tyran de la mort : deux rayons posent Entravé).
+ * Does the text name one of these conditions? An effect's own description that names its condition is authoritative, even
+ * without a duration: we do not go looking in the item for the duration of another effect of the same condition
+ * (Death Tyrant: two rays apply Restrained).
  */
 export function namesStatus(html, statuses=[]) {
   const wanted = new Set(statuses.map(s => String(s).toLowerCase()));
   return [...plainText(html).matchAll(/«(\w+)»/g)].some(m => wanted.has(m[1].toLowerCase()));
 }
 
-/** Toutes les durées d'une phrase, dans l'ordre. */
+/** All the durations of a sentence, in order. */
 function expiriesIn(sentence) {
   const found = [];
   for ( const { re, who } of PATTERNS ) {
@@ -60,16 +61,17 @@ function expiriesIn(sentence) {
 }
 
 /**
- * L'expiration à poser d'après un texte, ou null s'il n'en dit rien de sûr.
- *  - Effet qui porte des états : seule compte la phrase qui en nomme un (`&Reference[Paralyzed]`). Une durée écrite
- *    ailleurs appartient à autre chose (Mot de pouvoir étourdissant : « Speed 0 until the start of your next turn » n'est
- *    pas la durée d'Étourdi ; Technique de la paume : la Renverse n'expire pas avec la Déroute).
- *  - Effet sans état : seulement si `alone` (le texte est la description de l'effet lui-même) et qu'il n'y a qu'une durée.
- *  - `fallback` (§79) : le texte de l'item d'un effet posé en « 1 tour » générique, durée déjà fausse — si aucune phrase ne
- *    nomme l'état de l'effet (ou qu'il n'en porte pas), la durée du texte quand il n'en écrit qu'une (Attaque menaçante :
- *    « Frightened » sans lien ; Chausse-trappes, Taillade, Présence zélée : effets sans état). Des durées différentes : rien.
+ * The expiry to set from a text, or null if it says nothing certain.
+ *  - Effect that carries conditions: only the sentence that names one counts (`&Reference[Paralyzed]`). A duration written
+ *    elsewhere belongs to something else (Power Word Stun: "Speed 0 until the start of your next turn" is not
+ *    the duration of Stunned; Open Hand Technique: the Topple does not expire with the Addle).
+ *  - Effect without a condition: only if `alone` (the text is the description of the effect itself) and there is only one duration.
+ *  - `fallback` (§79): the item text of an effect applied with a generic "1 turn", duration already wrong — if no sentence
+ *    names the effect's condition (or it carries none), the duration of the text when it writes only one (Menacing Attack:
+ *    "Frightened" without a link; Caltrops, "Slash", "Zealous Presence": effects without a condition). Different durations:
+ *    nothing.
  * @param {string} html
- * @param {string[]} [statuses]  états de l'effet (« paralyzed »…)
+ * @param {string[]} [statuses]  conditions of the effect ("paralyzed"…)
  * @param {{alone?: boolean, fallback?: boolean}} [options]
  * @returns {"targetStart"|"targetEnd"|"sourceStart"|"sourceEnd"|null}
  */
@@ -85,8 +87,8 @@ export function expiryFromText(html, statuses=[], { alone=false, fallback=false 
   if ( wanted.size ) {
     let named = false;
     for ( const sentence of sentences ) {
-      // La durée qui SUIT la mention de l'état (Psion githzerai : « (A) Charmed until the start… or (B) Prone » — la
-      // Renverse n'a pas la durée du Charme).
+      // The duration that FOLLOWS the mention of the condition (Githzerai Psion: "(A) Charmed until the start… or (B) Prone" — the
+      // Topple does not have the duration of the Charm).
       const mention = [...sentence.matchAll(/«(\w+)»/g)].find(m => wanted.has(m[1].toLowerCase()));
       if ( mention ) named = true;
       const found = mention ? expiriesIn(sentence.slice(mention.index)) : [];
@@ -98,10 +100,10 @@ export function expiryFromText(html, statuses=[], { alone=false, fallback=false 
 }
 
 /**
- * §403 : la durée et la concentration d'un sort selon l'emplacement (Malédiction : « niveau 4, Concentration jusqu'à 10 minutes ;
- * niveau 5+, sans Concentration, 8 heures (5–6) ou 24 heures (7–8) ; niveau 9, jusqu'à dissipation »). `rule` : paliers
- * `{ from, seconds?, concentration? }` ; le dernier dont `from` ≤ `level` s'applique. Rend null sous le premier palier, sinon
- * `{ seconds: number|null, concentration: boolean }` — `seconds` null : jusqu'à dissipation ; `concentration` vrai par défaut.
+ * §403: the duration and Concentration of a spell by slot (Bestow Curse: "level 4, Concentration up to 10 minutes;
+ * level 5+, no Concentration, 8 hours (5–6) or 24 hours (7–8); level 9, until dispelled"). `rule`: tiers
+ * `{ from, seconds?, concentration? }`; the last one whose `from` ≤ `level` applies. Returns null below the first tier, otherwise
+ * `{ seconds: number|null, concentration: boolean }` — `seconds` null: until dispelled; `concentration` true by default.
  * @param {Array<{from: number, seconds?: number, concentration?: boolean}>} rule
  * @param {number} level
  */

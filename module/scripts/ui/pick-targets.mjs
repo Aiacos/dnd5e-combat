@@ -1,7 +1,7 @@
 /**
- * §293 : la liste « créatures de votre choix dans un rayon de 9 m » (Renvoi des morts-vivants), sur le client de qui l'utilise — les
- * créatures qu'il voit à portée, ses ennemis cochés d'avance ; et, s'il a Calcination des morts-vivants, une case pour l'utiliser à la
- * place. Rend `{ tokens, upgrade }`, ou null (fenêtre fermée, ou rien de coché).
+ * §293: the list "creatures of your choice within 9 m" (Turn Undead), on the client of whoever uses it — the creatures it
+ * sees in range, its enemies ticked in advance; and, if it has Sear Undead, a checkbox to use it instead.
+ * Returns `{ tokens, upgrade }`, or null (window closed, or nothing ticked).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -41,7 +41,7 @@ export async function askPickTargets(activity, { centers=null, rule=null }={}) {
       { action: "ok", label: loc("Choisir.Valider"), icon: "fa-solid fa-check", default: true,
         callback: (event, button) => {
           const form = button.form;
-          // §296 : au-delà de `max`, les plus proches cochées seulement.
+          // §296: beyond `max`, only the nearest ones ticked.
           const picked = Array.from(form.querySelectorAll('input[name="pick"]:checked')).map(i => creatures[Number(i.value)]?.token).filter(Boolean)
             .slice(0, Number.isInteger(max) ? max : undefined);
           return { tokens: picked, upgrade: form.querySelector('input[name="upgrade"]')?.checked ? upgrade : null };
@@ -59,9 +59,9 @@ export async function askPickTargets(activity, { centers=null, rule=null }={}) {
 }
 
 /**
- * §438 : après une manifestation utilitaire (`pickTargets.after` : Courroux des mers 3.0.0, sur soi ou sur une autre créature), la liste de
- * l'activité qui suit s'ouvre aussitôt, autour du lanceur ou des créatures visées, et l'activité part sans action de plus (« quand vous
- * manifestez l'émanation… », sous la même action Bonus). Sur le client de qui a utilisé l'activité.
+ * §438: after a utility manifestation (`pickTargets.after`: Wrath of the Sea 3.0.0, on oneself or on another creature), the list
+ * of the following activity opens at once, around the caster or the targeted creatures, and the activity goes off at no extra
+ * action ("when you manifest the Emanation…", under the same Bonus Action). On the client of whoever used the activity.
  */
 export async function offerChainedPick(activity, results) {
   if ( !results || !activity?.item || !activity.actor?.isOwner ) return;

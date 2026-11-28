@@ -1,6 +1,6 @@
 /**
- * §380 : fonctions de test du débogueur, pour les scénarios (`api.mcp`, connecteur `call-module-api`). Une sonde fait échouer exprès un
- * inscrit du routeur ; `debugReport` rend le rapport tel que la fenêtre le construirait, avec l'adresse GitHub qu'elle ouvrirait.
+ * §380: debugger test functions, for scenarios (`api.mcp`, `call-module-api` connector). A probe deliberately makes a router
+ * subscriber fail; `debugReport` returns the report as the window would build it, with the GitHub address it would open.
  */
 
 import { issueUrl, reportJson } from "../core/debug.mjs";
@@ -8,7 +8,7 @@ import { buildDebugReport, debugApi, DEBUG_PROBE_HOOK, flush, reportRepos } from
 import { gmOnly } from "./testing-shared.mjs";
 import { testConnection } from "./connection.mjs";
 
-/** Fait échouer la sonde du routeur (`via: "route"`) ou rejette une promesse non attrapée (`via: "rejection"`). */
+/** Makes the router probe fail (`via: "route"`) or rejects an unhandled promise (`via: "rejection"`). */
 export function debugThrow({ message="test", via="route" }={}) {
   gmOnly();
   if ( via === "rejection" ) Promise.reject(new Error(`DAS debug probe: ${message}`));
@@ -17,8 +17,8 @@ export function debugThrow({ message="test", via="route" }={}) {
 }
 
 /**
- * Le rapport de ce client (MJ) : groupes relevés, Markdown, longueur du JSON et de l'adresse GitHub, dépôts proposés. Par défaut, comme
- * la fenêtre, sans les entrées hors de la suite ; `all` les retient toutes.
+ * This client's report (GM): groups captured, Markdown, length of the JSON and of the GitHub address, proposed repositories.
+ * By default, like the window, without the entries outside the suite; `all` keeps them all.
  */
 export function debugReport({ description="", includeNames=false, token=null, all=false }={}) {
   gmOnly();
@@ -37,14 +37,14 @@ export function debugReport({ description="", includeNames=false, token=null, al
   };
 }
 
-/** Efface ce que ce client a relevé (erreurs, piste, journal). */
+/** Clears what this client recorded (errors, trail, log). */
 export function debugClear() {
   gmOnly();
   debugApi.clear();
   return { total: debugApi.total() };
 }
 
-/** Le mode détaillé de ce client, et un envoi immédiat vers le MJ actif (sans effet chez lui). */
+/** This client's verbose mode, and an immediate send to the active GM (no effect on the GM itself). */
 export async function debugVerbose({ on }={}) {
   gmOnly();
   const verbose = debugApi.verbose(on);
@@ -52,7 +52,7 @@ export async function debugVerbose({ on }={}) {
   return { verbose };
 }
 
-/** §388 : le test de connexion d'un joueur connecté, comme l'entrée du menu de la liste des joueurs le lance (sans la fenêtre). */
+/** §388: the connection test of a connected player, as the player list menu entry launches it (without the window). */
 export async function connectionTest({ userId, count=5 }={}) {
   gmOnly();
   const user = game.users.get(userId) ?? game.users.find(u => u.active && !u.isGM);

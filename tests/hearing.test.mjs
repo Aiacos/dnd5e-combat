@@ -1,12 +1,12 @@
-/** §62 : l'ouïe — on sait où est une créature qu'on ne voit pas, sauf si elle est cachée. */
+/** §62: hearing — you know where a creature you cannot see is, unless it is Hidden. */
 import { describe, it, expect } from "vitest";
 import { hears, locationUnknown, hearingRange, beyondHearing } from "../module/scripts/core/hearing.mjs";
 
 describe("hears", () => {
-  it("par défaut, on entend", () => {
+  it("by default, you hear", () => {
     expect(hears({})).toBe(true);
   });
-  it("assourdi, cible cachée, cible morte ou mur qui arrête le son : on n'entend pas", () => {
+  it("Deafened, Hidden target, dead target or a wall that stops sound: you do not hear", () => {
     expect(hears({ deafened: true })).toBe(false);
     expect(hears({ hidden: true })).toBe(false);
     expect(hears({ silent: true })).toBe(false);
@@ -14,36 +14,36 @@ describe("hears", () => {
   });
 });
 
-describe("portée d'ouïe (réglage `hearingRange`, règle maison)", () => {
-  it("sans réglage, ou une formule qui ne donne pas un nombre : pas de portée", () => {
+describe("hearing range (`hearingRange` setting, house rule)", () => {
+  it("without the setting, or a formula that does not give a number: no range", () => {
     for ( const value of [null, undefined, NaN, Infinity, -5, "30", {}] ) expect(hearingRange(value), String(value)).toBe(null);
     expect(hearingRange(30)).toBe(30);
     expect(hearingRange(0)).toBe(0);
   });
-  it("sans portée, rien n'est trop loin ; avec, la limite est comprise", () => {
+  it("without a range, nothing is too far; with one, the limit is included", () => {
     expect(beyondHearing(1000, null)).toBe(false);
     expect(beyondHearing(1000, undefined)).toBe(false);
     expect(beyondHearing(30, 30)).toBe(false);
     expect(beyondHearing(35, 30)).toBe(true);
     expect(beyondHearing(5, 0)).toBe(true);
   });
-  it("au-delà de la portée, on n'entend pas", () => {
+  it("beyond the range, you do not hear", () => {
     expect(hears({ outOfRange: true })).toBe(false);
     expect(hears({ outOfRange: false })).toBe(true);
   });
 });
 
 describe("locationUnknown", () => {
-  it("cachée et non vue : position inconnue", () => {
+  it("Hidden and not seen: unknown position", () => {
     expect(locationUnknown({ hidden: true, sees: false })).toBe(true);
   });
-  it("cachée mais perçue (vision aveugle…) : on sait où elle est", () => {
+  it("Hidden but perceived (Blindsight…): you know where it is", () => {
     expect(locationUnknown({ hidden: true, sees: true })).toBe(false);
   });
-  it("invisible sans être cachée : on l'entend, on sait où elle est", () => {
+  it("Invisible without being Hidden: you hear it, you know where it is", () => {
     expect(locationUnknown({ hidden: false, sees: false })).toBe(false);
   });
-  it("la vision ne peut pas trancher : on laisse faire", () => {
+  it("sight cannot decide: we let it through", () => {
     expect(locationUnknown({ hidden: true, sees: null })).toBe(false);
   });
 });

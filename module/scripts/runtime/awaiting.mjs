@@ -1,7 +1,8 @@
 /**
- * §381 (issue #35) : qui la table attend — les réglages, la requête qui porte les attentes d'un client à l'autre, et ce qui les fait
- * tomber sans réponse : la déconnexion de celui qui répond (hook du cœur `userConnected`, client/documents/collections/users.mjs:137) et
- * l'oubli d'une attente sans nouvelles. Un client qui arrive demande les attentes en cours (`ready`).
+ * §381 (issue #35): whom the table is waiting for — the settings, the request that carries the waits from one client to
+ * another, and what makes them drop with no answer: the disconnection of whoever answers (core hook `userConnected`,
+ * client/documents/collections/users.mjs:137) and forgetting a wait with no news. An arriving client asks for the waits in
+ * progress (`ready`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -10,7 +11,7 @@ import { AWAITING_QUERY, changeAwaiting, pruneKnown, receiveAwaiting, refreshAwa
 import { route } from "./router.mjs";
 
 export const AWAITING_SETTINGS = Object.freeze({ show: "awaitingShow", gm: "awaitingGm", hide: "awaitingHide" });
-/** Un réglage d'affichage a changé, sur ce client (le dessin se refait). */
+/** A display setting changed, on this client (the drawing is redone). */
 export const AWAITING_SETTINGS_HOOK = `${MODULE_ID}.awaitingSettings`;
 
 let heartbeat = null;
@@ -31,7 +32,7 @@ export function registerAwaiting() {
   route("ready", () => {
     syncAwaiting();
     clearInterval(heartbeat);
-    // Rafraîchir ses attentes (les autres ne les oublient pas) et oublier celles des autres restées sans nouvelles.
+    // Refresh one's own waits (the others do not forget them) and forget those of the others left with no news.
     heartbeat = setInterval(() => {
       refreshAwaiting();
       pruneKnown();
@@ -42,7 +43,7 @@ export function registerAwaiting() {
   }, { label: "awaiting: a disconnected user's prompts not cleared", always: true });
 }
 
-/** Les réglages qui décident de ce que ce client montre (lus par ui/awaiting.mjs et `api.ui.awaiting`). */
+/** The settings that decide what this client shows (read by ui/awaiting.mjs and `api.ui.awaiting`). */
 export function awaitingViewer() {
   const get = (k, fallback) => { try { return game.settings.get(MODULE_ID, k); } catch { return fallback; } };
   return {

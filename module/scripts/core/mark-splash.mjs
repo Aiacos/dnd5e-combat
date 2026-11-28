@@ -1,14 +1,14 @@
 /**
- * Proie supérieure du chasseur (Rôdeur, Chasseur 11 — SRD 5.2) : « une fois par tour, quand vous infligez des dégâts à une créature
- * marquée par votre Marque du chasseur, vous pouvez aussi infliger les dégâts supplémentaires de ce sort à une autre créature que
- * vous voyez à 9 m ou moins de la première ». Fonctions pures.
+ * Superior Hunter's Prey (Ranger, Hunter 11 — SRD 5.2): "once per turn, when you deal damage to a creature
+ * marked by your Hunter's Mark, you can also deal the extra damage of that spell to a different creature that
+ * you can see within 30 feet of the first". Pure functions.
  */
 
 /**
- * Les créatures qui peuvent recevoir ces dégâts : pas la première, vues par le Rôdeur, ennemies, à portée de la première — de la
- * plus proche à la plus lointaine, `limit` au plus.
+ * The creatures that can receive this damage: not the first one, seen by the Ranger, enemies, within range of the first — from the
+ * nearest to the farthest, `limit` at most.
  * @param {Array<{id: string, name: string, distance: number, enemy: boolean, seen: boolean, first?: boolean}>} tokens
- *   `distance` : à la PREMIÈRE créature
+ *   `distance`: to the FIRST creature
  * @param {number} range
  * @param {number} [limit]
  */
@@ -17,12 +17,12 @@ export function splashTargets(tokens, range, limit=8) {
     .sort((a, b) => a.distance - b.distance).slice(0, limit);
 }
 
-/** Une fois par tour : le tour de la dernière utilisation n'est pas celui-ci (hors combat, pas de tour à compter). */
+/** Once per turn: the turn of the last use is not this one (outside combat, no turn to count). */
 export function splashAvailable(usedTurn, turn) {
   return (turn === null) || (usedTurn !== turn);
 }
 
-/** La formule des dégâts : celle de la règle, ou celle qu'une autre aptitude de la fiche lui substitue (Pourfendeur d'ennemis). */
+/** The damage formula: that of the rule, or the one that another feature on the sheet substitutes for it (Foe Slayer). */
 export function splashFormula(rule, features) {
   const has = new Set(features ?? []);
   const upgrade = (rule.upgrades ?? []).find(u => has.has(u.feature));

@@ -1,8 +1,8 @@
 /**
- * Zone qui dure : Rayon de lune du Magicien posé sur un Zombi, puis un combat où le Zombi finit
- * son tour dedans → le moteur rejoue le sort contre lui (déclencheur `turnEnd`, contenu
- * `moonbeam`) : sauvegarde lancée par le moteur, dégâts, PV cohérents. La pose elle-même ne fait
- * rien (personne n'entre) ; la zone reste tant que la concentration tient.
+ * Lasting area: the Wizard's Moonbeam placed on a Zombie, then a combat where the Zombie ends
+ * its turn inside → the engine replays the spell against it (`turnEnd` trigger, `moonbeam`
+ * content): saving throw rolled by the engine, damage, consistent HP. The placement itself does
+ * nothing (nobody enters); the area stays as long as Concentration holds.
  */
 export default {
   name: "zone qui dure — Rayon de lune, fin de tour du Zombi dedans",
@@ -12,8 +12,8 @@ export default {
     const zombi = await ctx.token("Zombi");
     const hp0 = await ctx.hp(zombi);
     ctx.restore(() => ctx.setHp(zombi, hp0));
-    // Le Zombi du Monster Manual n'a que 15 PV : un Rayon de lune raté (radiant, sans Robustesse de la non-vie) l'abat dès la
-    // pose, et il n'y a plus de fin de tour à observer. Des PV hauts le temps du test ; les comptes partent de là.
+    // The Monster Manual Zombie has only 15 HP: a failed Moonbeam (radiant, without Undead Fortitude) drops it right at
+    // placement, and there is no end of turn to observe. High HP for the test; the counts start from there.
     const hp1 = 100;
     await ctx.setHp(zombi, hp1);
 
@@ -22,17 +22,17 @@ export default {
     const used = await ctx.use({ tokenId: mage.id, identifier: "moonbeam", activityType: "save", area: { shape: "circle", ...centre, radius: box.width } });
     ctx.expect(used.used && !!used.regionId, "Rayon de lune posé sur le Zombi");
     if ( used.regionId ) ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: used.regionId }).catch(() => {}));
-    // La concentration posée sur le Magicien est retirée en fin de scénario (elle tient la zone).
+    // The Concentration placed on the Wizard is removed at the end of the scenario (it holds the area).
     ctx.restore(async () => {
       const actor = await ctx.call("get-actor", { actorId: mage.actorId });
       const effects = actor.effects ?? actor.actor?.effects ?? [];
-      for ( const e of effects.filter(e => /concentr/i.test(e.name ?? "")) ) {   // « Concentré: … » en FR, « Concentrating: … » en EN
+      for ( const e of effects.filter(e => /concentr/i.test(e.name ?? "")) ) {   // "Concentré: …" in FR, "Concentrating: …" in EN
         await ctx.call("remove-embedded-effect", { uuid: `Actor.${mage.actorId}`, effectId: e._id ?? e.id }).catch(() => {});
       }
     });
 
-    // À la pose, la zone agit sur ceux qu'elle recouvre déjà (SPEC §11, 0.3.0 : « Zombi et lanceur
-    // déjà touchés non rejoués ») : le Zombi subit la sauvegarde une première fois.
+    // At placement, the area acts on those it already covers (SPEC §11, 0.3.0: "Zombie and caster
+    // already hit not replayed"): the Zombie takes the saving throw a first time.
     const since = used.usageMessageId;
     const cast = await ctx.settle(since);
     const hitAtCast = cast.targets.find(t => t.name === "Zombi");
@@ -40,7 +40,7 @@ export default {
     const atCast = hitAtCast?.damage?.applied ?? 0;
 
     await ctx.startCombat([mage, zombi]);
-    // Deux tours : celui du Magicien, puis celui du Zombi ; à sa fin, le sort rejoue contre lui.
+    // Two turns: the Wizard's, then the Zombie's; at its end, the spell replays against it.
     let replayed = null;
     for ( let i = 0; i < 4 && !replayed; i++ ) {
       await ctx.nextTurn();

@@ -1,12 +1,13 @@
 /**
- * §436 (suite) : dans un Champ antimagie, un sort que dnd5e refuse sans aucun hook (`requireMagic`) reste forçable depuis la Barre de
- * DAS · Combat UI et depuis la fiche. Monde `dnd-6`, arène ; Champ antimagie et Trait de feu prêtés du Manuel des joueurs (à volonté).
- *  1. Le Magicien lance le Champ (pose sans clic du moteur) : statut `antimagic`.
- *  2. Barre (`darsh-dnd-ui` `api.mcp.barUse`, comme un clic sur la case) : Trait de feu → la fenêtre « le faire quand même » ;
- *     « Renoncer » : ni carte, ni alerte ; « Utiliser quand même » : carte marquée `overridden` (raison du champ), alerte au MJ.
- *  3. Fiche (`item.use`, comme un clic sur la fiche de dnd5e) : même fenêtre ; « Renoncer » : la carte de l'item, comme dnd5e l'aurait
- *     montrée, sans alerte ; « Utiliser quand même » : carte marquée, alerte au MJ.
- * Remet positions, effets, PV.
+ * §436 (continued): in an Antimagic Field, a spell that dnd5e refuses without any hook (`requireMagic`) stays forceable from the
+ * DAS · Combat UI bar and from the sheet. `dnd-6` world, arena; Antimagic Field and Fire Bolt lent from the Player's
+ * Handbook (at will).
+ *  1. The Wizard casts the Field (placement without engine click): status `antimagic`.
+ *  2. Bar (`darsh-dnd-ui` `api.mcp.barUse`, like a click on the cell): Fire Bolt → the "do it anyway" window;
+ *     "Give up": no card, no alert; "Use anyway": card marked `overridden` (the field's reason), alert to the GM.
+ *  3. Sheet (`item.use`, like a click on the dnd5e sheet): same window; "Give up": the item's card, as dnd5e would have
+ *     shown it, without alert; "Use anyway": card marked, alert to the GM.
+ * Restores positions, effects, HP.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -77,11 +78,11 @@ export default {
       if ( !d ) return null;
       await ctx.call("answer-dialog", { id: d.id, button });
       if ( button === "go" ) {
-        const more = await legality(2500);   // une autre raison (pas de cible désignée…) : passée outre aussi
+        const more = await legality(2500);   // another reason (no target designated…): overridden too
         if ( more ) await ctx.call("answer-dialog", { id: more.id, button: "go" });
       }
       if ( button !== "go" ) { await pause(2000); return ctx.messagesSince(since); }
-      // Sans cible désignée, le moteur choisit la cible avant de créer la carte : l'attendre (25 s au plus).
+      // Without a designated target, the engine chooses the target before creating the card: wait for it (25 s at most).
       for ( const stop = Date.now() + 25000; Date.now() < stop; ) {
         await pause(1500);
         const got = await ctx.messagesSince(since);

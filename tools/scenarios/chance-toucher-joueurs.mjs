@@ -1,14 +1,14 @@
 /**
- * Ce que la pastille de chance de toucher montre à un JOUEUR (réglage du monde `hitChancePlayers`, #247 / DF #249). « Arène des
- * refus » (`node tools/arene-refus.mjs`), vrai client joueur (« claude player », propriétaire du Mage des refus, ouvert par le banc de
- * test : `players: true`). La pastille est celle de l'aperçu du menu d'attaque (`previewMenuAttack`, ui/pointer-mouse.mjs), affichée chez le
- * joueur pour l'arme du Mage contre le Mannequin, à son contact. Vérifie, niveau par niveau :
- *  - `full` : le pourcentage et la CA ;
- *  - `percent` : le pourcentage, sans la CA ;
- *  - `advantage`, sans raison d'avantage ni de désavantage : aucune pastille ;
- *  - `advantage`, le Mage À terre : la ligne « Désavantage » et sa raison, sans pourcentage, sans CA, sans couleur ;
- *  - `off` : aucune pastille, même À terre.
- * Remis en état : le réglage du monde, l'aperçu de l'abri, le réglage du client joueur, l'état À terre.
+ * What the hit chance badge shows a PLAYER (world setting `hitChancePlayers`, #247 / DF #249). "Refusals Arena"
+ * (`node tools/arene-refus.mjs`), real player client ("claude player", owner of the Refusals Mage, opened by the test
+ * bench: `players: true`). The badge is that of the attack menu preview (`previewMenuAttack`, ui/pointer-mouse.mjs), shown on the
+ * player's side for the Mage's weapon against the Dummy, in contact. Checks, level by level:
+ *  - `full`: the percentage and the AC;
+ *  - `percent`: the percentage, without the AC;
+ *  - `advantage`, with no reason for Advantage or Disadvantage: no badge;
+ *  - `advantage`, the Mage Prone: the "Disadvantage" line and its reason, no percentage, no AC, no color;
+ *  - `off`: no badge, even Prone.
+ * Reset: the world setting, the cover preview, the player client's setting, the Prone condition.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,12 +28,12 @@ export default {
     if ( !ctx.expect(!!weapon, `le Mage a une arme équipée (${weapon?.name})`) ) return;
     const weaponUuid = `Actor.${mtok.actorId}.Item.${weapon._id}`;
 
-    // Réglages du monde : remis tels quels à la fin.
+    // World settings: restored as they were at the end.
     const level0 = (await ctx.engine("setting", { key: "hitChancePlayers" }))?.now ?? "full";
     const preview0 = (await ctx.engine("setting", { key: "coverPreview" }))?.now ?? false;
     ctx.restore(() => ctx.engine("setting", { key: "hitChancePlayers", value: level0 }));
     ctx.restore(() => ctx.engine("setting", { key: "coverPreview", value: preview0 }));
-    // Sans l'aperçu de l'abri : ses lignes s'affichent à tous les niveaux et masqueraient ce qui est vérifié ici.
+    // Without the cover preview: its lines show at every level and would mask what is checked here.
     await ctx.engine("setting", { key: "coverPreview", value: false });
     ctx.restore(() => ctx.call("set-status", { tokenId: mage.id, statusId: "prone", active: false }).catch(() => {}));
 
@@ -51,7 +51,7 @@ export default {
       ctx.restore(() => ctx.asPlayer(`await game.settings.set("${MODULE_ID}", "hitChance", ${JSON.stringify(who.before)}); return true;`));
     }
 
-    /** La pastille de l'aperçu d'attaque, chez le joueur : `{ shown, classes, lines: [{ kind, text }] }`. */
+    /** The badge of the attack preview, on the player's side: `{ shown, classes, lines: [{ kind, text }] }`. */
     const badge = () => ctx.asPlayer(`
       const ui = await import("/modules/${MODULE_ID}/scripts/ui/pointer-mouse.mjs");
       const hc = await import("/modules/${MODULE_ID}/scripts/ui/hitchance.mjs");

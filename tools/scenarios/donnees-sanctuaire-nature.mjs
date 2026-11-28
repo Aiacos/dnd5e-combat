@@ -1,10 +1,10 @@
 /**
- * §454 : Sanctuaire de dame Nature (Druide, Cercle de la Terre). Le compendium (SRD 6.1 `classes24`, Manuel des joueurs 3.0.0) a perdu
- * les quatre effets de l'aptitude ; `dataFixes` les recrée et fait pointer chaque activité « Place Sanctuary » vers l'effet de son
- * terrain. Un acteur de test reçoit l'aptitude du Manuel (sinon celle du SRD) : le MJ actif la corrige à la création — quatre effets
- * « Nature's Ward » (abri partiel + Résistance du terrain), une activité = un effet. §456 : Coup brutal du Manuel aussi (l'id orphelin de
- * « Sundering Blow » retiré), et l'analyse « Aptitudes et sorts du Manuel 3.0.0 » ne propose plus de remplacer ces deux objets corrigés
- * (elle compare à la référence corrigée). Acteur retiré.
+ * §454: Nature's Sanctuary (Druid, Circle of the Land). The compendium (SRD 6.1 `classes24`, Player's Handbook 3.0.0) lost
+ * the four effects of the feature; `dataFixes` recreates them and points each "Place Sanctuary" activity to the effect of its
+ * terrain. A test actor receives the Handbook's feature (otherwise the SRD's): the active GM fixes it on creation — four
+ * "Nature's Ward" effects (Half Cover + terrain Resistance), one activity = one effect. §456: the Handbook's Smite too
+ * (the orphan id of "Sundering Blow" removed), and the "Player's Handbook 3.0.0 features and spells" analysis no longer
+ * offers to replace these two fixed items (it compares with the fixed reference). Actor removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const SOURCES = ["Compendium.dnd-players-handbook.classes.Item.phbdrdNaturesSan", "Compendium.dnd5e.classes24.Item.phbdrdNaturesSan"];

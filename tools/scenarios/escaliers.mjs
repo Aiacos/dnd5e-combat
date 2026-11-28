@@ -1,23 +1,23 @@
 /**
- * Marcher d'un niveau à l'autre par le chemin du MOTEUR (P2 b, SPEC §14.2) sur une scène à niveaux et escaliers
- * (Restored Keep) — comme un clic de déplacement, par `call-module-api` (connecteur ≥ 0.28.0) et `api.mcp.move`.
- *  1. Hors combat : l'A* va à une case de l'autre niveau voisine d'un escalier — un seul pas `displace` sur l'escalier,
- *     avec sa hauteur (`climb`), puis de la marche. Le token arrive au niveau et à la case prévus, à l'élévation du plan,
- *     sans dialogue « Change Level » du cœur (on n'entre jamais dans un escalier en marchant), et la vue du MJ suit.
- *  2. Retour à la case de départ, même chemin en sens inverse.
- *  2 bis. Clic sur une case d'escalier de son propre niveau (§18.26) : le token s'arrête à côté et y entre en marchant, le
- *     cœur ouvre son dialogue « Change Level », le scénario y répond (connecteur ≥ 0.29.0 : list-dialogs, answer-dialog)
- *     et le token passe à l'autre niveau.
- *  3. En combat, posé à côté de l'escalier : un budget d'une unité sous la hauteur laisse l'escalier hors budget ; avec
- *     le budget du tour, la montée passe et sa hauteur est notée (`climbed`) et comptée comme dépensée.
- * Remet la vue du MJ sur son niveau ; le filet de sécurité replace le token. Sans escalier, non applicable.
+ * Walking from one level to another by the ENGINE's path (P2 b, SPEC §14.2) on a scene with levels and staircases
+ * (Restored Keep) — like a movement click, through `call-module-api` (connector ≥ 0.28.0) and `api.mcp.move`.
+ *  1. Out of combat: the A* goes to a cell of the other level next to a staircase — a single `displace` step on the staircase,
+ *     with its height (`climb`), then walking. The token arrives at the planned level and cell, at the plan's elevation,
+ *     without the core's "Change Level" dialog (one never enters a staircase by walking), and the GM's view follows.
+ *  2. Return to the starting cell, same path in reverse.
+ *  2 bis. Click on a staircase cell of its own level (§18.26): the token stops beside it and enters it by walking, the
+ *     core opens its "Change Level" dialog, the scenario answers it (connector ≥ 0.29.0: list-dialogs, answer-dialog)
+ *     and the token moves to the other level.
+ *  3. In combat, placed beside the staircase: a budget one unit under the height leaves the staircase out of budget; with
+ *     the turn's budget, the climb passes and its height is noted (`climbed`) and counted as spent.
+ * Restores the GM's view on its level; the safety net puts the token back. Without a staircase, not applicable.
  */
 const NAMES = ["Paladin", "Guerrier"];
 const NEIGHBOURS = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
 const MAX_CANDIDATES = 40;
 
 export default {
-  scene: "keep",   // §83 : étages et escaliers, dans Restored Keep
+  scene: "keep",   // §83: floors and staircases, in Restored Keep
   name: "escaliers — l'A* du moteur change de niveau par un escalier",
 
   async run(ctx) {
@@ -36,11 +36,11 @@ export default {
     const size = await ctx.gridSize();
     const centerOf = w => ({ x: w.x + (size / 2), y: w.y + (size / 2) });
 
-    // Les escaliers qui partent du niveau du token.
+    // The staircases that start from the token's level.
     const stairs = (await ctx.engine("stairs", { tokenId: walker.id })).filter(s => s.levels.includes(home.level) && (s.levels.length > 1));
     if ( !stairs.length ) { ctx.log(`aucun escalier au niveau « ${levelName(home.level)} » : non applicable`); return; }
 
-    // Une destination : case voisine d'un escalier, sur l'autre niveau, hors de l'escalier, que l'A* atteint en passant par lui.
+    // A destination: a cell next to a staircase, on the other level, off the staircase, that the A* reaches by going through it.
     let found = null;
     let tried = 0;
     search: for ( const s of stairs ) {
@@ -79,11 +79,11 @@ export default {
     ctx.expect((back.after.level === home.level) && (back.after.x === home.x) && (back.after.y === home.y), `revenu à la case de départ, niveau « ${levelName(back.after.level)} »`);
     ctx.expect(!back.newWindows.length, "aucun dialogue au retour");
 
-    // 2 bis. §18.26 : un clic sur l'escalier de son propre niveau — le token s'arrête à côté puis y entre en marchant, et le
-    // cœur ouvre son dialogue « Change Level » ; on y répond (connecteur ≥ 0.29.0 : list-dialogs, answer-dialog).
+    // 2 bis. §18.26: a click on the staircase of its own level — the token stops beside it then enters it by walking, and the
+    // core opens its "Change Level" dialog; we answer it (connector ≥ 0.29.0: list-dialogs, answer-dialog).
     const ownStairs = found.stairs.cells.find(c => (c.i !== home.cell.i) || (c.j !== home.cell.j));
-    // §167 : l'id du dialogue du cœur est le même pour un escalier et un token donnés (« dialog-<comportement>-<token> ») — un dialogue
-    // resté ouvert d'un passage précédent masquait le nouveau (exclu comme « déjà là »). On ferme d'abord ceux qui traînent.
+    // §167: the core dialog's id is the same for a given staircase and token ("dialog-<behavior>-<token>") — a dialog
+    // left open from a previous pass hid the new one (excluded as "already there"). We first close those that linger.
     for ( const w of (await ctx.call("list-dialogs", { dialogsOnly: true }).catch(() => ({ windows: [] }))).windows ?? [] ) {
       if ( String(w.id).startsWith("dialog-") && /Change Level|Changer de niveau/i.test(w.title ?? "") ) {
         await ctx.call("answer-dialog", { id: w.id, button: "no" }).catch(() => ctx.call("answer-dialog", { id: w.id, close: true }).catch(() => {}));
@@ -92,8 +92,9 @@ export default {
     const known = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
     let entering = await ctx.call("call-module-api", { moduleId: "dnd5e-combat", fn: "move", args: { tokenId: walker.id, cell: ownStairs, levelId: home.level }, waitMs: 500 });
     let dialog = null;
-    // §167 : par tranches de 2,5 s — fenêtre du MJ en arrière-plan, le navigateur ralentit ses minuteries et une attente de 8 s
-    // débordait le délai de 10 s du connecteur (« Timeout en attente de la reponse a list-dialogs ») ; un délai dépassé isolé n'arrête rien.
+    // §167: in slices of 2.5 s — GM window in the background, the browser slows its timers and an 8 s wait
+    // overran the connector's 10 s delay ("Timeout en attente de la reponse a list-dialogs"); an isolated exceeded delay stops
+    // nothing.
     for ( let n = 0; (n < 12) && !dialog && !entering.settled; n++ ) {
       dialog = (await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: known, waitMs: 2500 }).catch(() => null))?.windows?.[0] ?? null;
     }
@@ -108,7 +109,7 @@ export default {
       entering = (await ctx.call("call-module-api", { callId: entering.callId, waitMs: 2500 }).catch(() => null)) ?? entering;
     }
     if ( ctx.expect(entering.settled, "le déplacement s'achève après la réponse") ) {
-      // Le cœur change le niveau APRÈS la fin du pas (change-level.mjs, `#moveToken`) : on attend qu'il l'ait fait.
+      // The core changes the level AFTER the step ends (change-level.mjs, `#moveToken`): we wait for it to do so.
       let upstairs = entering.result.after;
       for ( let n = 0; (n < 20) && (upstairs.level !== level); n++ ) {
         await new Promise(r => setTimeout(r, 250));
@@ -117,7 +118,7 @@ export default {
       ctx.expect(upstairs.level === level, `passé au niveau « ${levelName(upstairs.level)} » par le dialogue du cœur`);
     }
 
-    // 3. En combat, depuis la case d'où part le pas d'escalier (sur le niveau de départ).
+    // 3. In combat, from the cell where the staircase step starts (on the starting level).
     const from = index > 0 ? plan.waypoints[index - 1] : home;
     const placed = await ctx.call("move-token", { tokenId: walker.id, x: from.x, y: from.y, levelId: home.level, elevation: home.elevation });
     if ( initialView ) await ctx.engine("view", { levelId: initialView });

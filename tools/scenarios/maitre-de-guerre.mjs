@@ -1,10 +1,10 @@
 /**
- * §87 — Manœuvres du Maître de guerre qui se jouent au toucher. Le Guerrier passe niveau 3 et reçoit, prêtés depuis le compendium du
- * Manuel des joueurs, le Maître de guerre (échelle des dés de supériorité : 4d8), la Supériorité martiale, le Croc-en-jambe et
- * l'Attaque provocante ; le Bandit (300 PV) au contact. Vérifie, pour chaque manœuvre :
- *  - au coup qui touche, la question propose les manœuvres ; choisie, +1d8 au jet de dégâts, un dé de supériorité dépensé ;
- *  - puis la sauvegarde de la manœuvre sur le Bandit : Croc-en-jambe — Force, À terre ⇔ ratée ; Attaque provocante — Sagesse,
- *    Provoqué ⇔ ratée, et aucun dégât de plus (la part de la sauvegarde n'est pas lancée : `noDamage`).
+ * §87 — Battle Master maneuvers played on a hit. The Fighter goes to level 3 and receives, lent from the Player's Handbook
+ * compendium, the Battle Master (superiority dice scale: 4d8), Combat Superiority, Trip Attack and Menacing Attack; the Bandit
+ * (300 HP) in contact. Checks, for each maneuver:
+ *  - on a hit, the question offers the maneuvers; once chosen, +1d8 to the damage roll, a superiority die spent;
+ *  - then the maneuver's saving throw on the Bandit: Trip Attack — Strength, Prone ⇔ failed; Menacing Attack — Wisdom,
+ *    Frightened ⇔ failed, and no extra damage (the save's share is not rolled: `noDamage`).
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.classes.Item";
@@ -31,7 +31,7 @@ export default {
     await ctx.call("move-token", { tokenId: bandit.id, x: g.x + grid, y: g.y, elevation: 0 });
     await pause(700);
 
-    // Niveau 3 de Guerrier, le temps du scénario.
+    // Fighter level 3, for the duration of the scenario.
     const actor = await ctx.call("get-actor", { actorId: fighter.actorId });
     const cls = (actor.items ?? []).find(i => (i.type === "class") && (i.system?.identifier === "fighter"));
     if ( !ctx.expect(!!cls, "le Guerrier a sa classe de guerrier") ) return;
@@ -61,8 +61,8 @@ export default {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
         for ( const d of r?.windows ?? [] ) {
-          // §516 : la fenêtre « Au toucher » de la Sauvagerie martiale du Guerrier (cochée d'avance) vient avant celle des manœuvres ;
-          // validée telle quelle, elle ne compte pas comme la réponse attendue.
+          // §516: the "On hit" window of the Fighter's "Martial Savagery" (ticked in advance) comes before the maneuvers' one;
+          // confirmed as is, it does not count as the expected answer.
           if ( /Savage Attacker|Sauvagerie martiale/i.test(`${d.title ?? ""} ${d.content ?? d.text ?? ""}`) ) {
             const s = (d.buttons ?? []).find(x => /Confirm|Frapper|Valider/i.test(x.label ?? ""));
             await ctx.call("answer-dialog", { id: d.id, button: s?.action ?? s?.label }).catch(() => {});
@@ -71,7 +71,7 @@ export default {
           }
           const b = (d.buttons ?? []).find(x => re.test(x.label ?? ""));
           if ( b ) { await ctx.call("answer-dialog", { id: d.id, button: b.action ?? b.label }); return { labels: (d.buttons ?? []).map(x => x.label) }; }
-          // Beaucoup d'options : une liste déroulante (adapter/choices.mjs, §113) et un bouton « Valider ».
+          // Many options: a dropdown list (adapter/choices.mjs, §113) and a "Confirm" button.
           for ( const f of (d.fields ?? []).filter(x => x.type === "select") ) {
             const o = (f.options ?? []).find(x => re.test(x.label ?? ""));
             if ( !o ) continue;
@@ -82,7 +82,7 @@ export default {
       }
       return null;
     };
-    /** Frappe jusqu'à toucher en choisissant la manœuvre ; rend ce qui a été vu. */
+    /** Strikes until a hit, choosing the maneuver; returns what was seen. */
     const maneuver = async re => {
       for ( let n = 0; n < 15; n++ ) {
         await tough(); await clearBandit();
@@ -131,7 +131,7 @@ export default {
       ctx.expect(!damages.length, `la sauvegarde n'ajoute pas de dégâts (${damages.length} jet(s) de plus)`);
     }
 
-    // 3. §88 : Parade et Riposte, en réaction aux attaques du Bandit (prises d'office : `autoReact: "first"`).
+    // 3. §88: Parry and Riposte, as Reactions to the Bandit's attacks (taken automatically: `autoReact: "first"`).
     await lend("phbmnvParry00000");
     await lend("phbmnvRiposte000");
     await pause(1200);
@@ -141,7 +141,7 @@ export default {
     const scimitar = await ctx.itemId(bandit.id, "scimitar");
     const banditAttack = async () => {
       await ctx.setHp(fighter, hp0); await tough(); await clearBandit();
-      // Dés remis à chaque attaque : les Ripostes des coups ratés les épuiseraient avant le coup qui touche (Parade).
+      // Dice reset at each attack: the Ripostes of missed hits would use them up before the hit (Parry).
       await ctx.call("upsert-actor-item", { actorId: fighter.actorId, itemData: { "system.uses.spent": 0 }, match: { path: "_id", value: superiority } });
       const before = await spent();
       const since = await ctx.lastMessageId();
@@ -149,16 +149,16 @@ export default {
         usageConfig: { [MODULE_ID]: { autoReact: "first" } } });
       const ids = await known();
       const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
-      // Une Riposte qui touche ouvre la question des manœuvres au toucher : « Rien », sans quoi ses dégâts attendent la fin du délai
-      // et tombent pendant la partie suivante.
-      await answer(ids, /^Rien$|^Aucune|^None/i, 9000);   // même délai que `swing` : le choix par défaut remplacerait le dé de la Riposte
+      // A Riposte that hits opens the on-hit maneuvers question: "Nothing", otherwise its damage waits for the end of the delay
+      // and lands during the next part.
+      await answer(ids, /^Rien$|^Aucune|^None/i, 9000);   // same delay as `swing`: the default choice would replace the Riposte's die
       await pause(3000);
-      // §438 suite : rien de cet essai ne doit tomber dans le suivant (des dégâts de Riposte arrivés après la borne de l'essai d'après
-      // étaient lus comme les siens) — le chat calme (aucun message nouveau pendant 3 s), toute question des manœuvres répondue.
+      // §438 continued: nothing from this attempt must land in the next one (Riposte damage arriving after the next attempt's
+      // boundary was read as its own) — the chat quiet (no new message for 3 s), every maneuvers question answered.
       await quiet(ids);
       return { r, since, before, after: await spent(), hit: r?.targets?.find(t => t.name === "Guerrier")?.hit ?? null };
     };
-    /** Attend que le chat ne bouge plus pendant 3 s (au plus 20 s), en répondant « Rien » à toute question des manœuvres. */
+    /** Waits until the chat stops moving for 3 s (20 s at most), answering "Nothing" to any maneuvers question. */
     async function quiet(ids) {
       let last = await ctx.lastMessageId(), still = Date.now();
       for ( const stop = Date.now() + 20000; (Date.now() < stop) && (Date.now() - still < 3000); ) {
@@ -168,7 +168,7 @@ export default {
         if ( now !== last ) { last = now; still = Date.now(); }
       }
     }
-    /** Les messages du Guerrier qui suivent sa Riposte (son attaque), jusqu'à son attaque suivante : l'attaque, puis ses dégâts. */
+    /** The Fighter's messages following their Riposte (their attack), up to their next attack: the attack, then its damage. */
     const riposteOf = msgs => {
       const mine = m => (m.alias === "Guerrier") || (m.speaker?.alias === "Guerrier");
       const at = msgs.findIndex(m => (m.type === "attack") && mine(m));
@@ -178,7 +178,7 @@ export default {
       return { counter: msgs[at], dmg: (end < 0 ? rest : rest.slice(0, end)).find(m => (m.type === "damage") && mine(m)) ?? null };
     };
 
-    // Parade : un coup qui touche — un dé dépensé, les dégâts réduits du jet de la Parade.
+    // Parry: a hit — a die spent, the damage reduced by the Parry roll.
     let parried = null;
     for ( let n = 0; (n < 20) && !parried; n++ ) { const a = await banditAttack(); if ( a.hit === true ) parried = a; }
     if ( ctx.expect(!!parried, "le Bandit touche le Guerrier (20 essais au plus)") ) {
@@ -191,8 +191,8 @@ export default {
       ctx.log(`carte de réaction : ${reaction ? "présente" : "non trouvée par le libellé"}`);
     }
 
-    // Riposte : un coup raté — un dé dépensé, une attaque du Guerrier contre le Bandit ; touché, +1d8 aux dégâts.
-    // Jusqu'à une Riposte qui touche (pour voir le dé aux dégâts) ; à défaut, la dernière qui a eu lieu.
+    // Riposte: a miss — a die spent, an attack by the Fighter against the Bandit; on a hit, +1d8 damage.
+    // Until a Riposte that hits (to see the die in the damage); failing that, the last one that took place.
     let riposted = null;
     for ( let n = 0; n < 25; n++ ) {
       const a = await banditAttack();
@@ -211,7 +211,7 @@ export default {
       } else ctx.log("la Riposte a raté : pas de jet de dégâts à contrôler");
     }
 
-    // 4. §89 : manœuvres à l'action Bonus (hors combat : le budget du tour n'est pas en jeu ici).
+    // 4. §89: Bonus Action maneuvers (out of combat: the turn budget is not at stake here).
     await lend("phbmnvFeintingAt");
     await lend("phbmnvLungingAtt");
     await lend("phbmnvEvasiveFoo");
@@ -223,8 +223,8 @@ export default {
     const swing = async () => {
       const since = await ctx.lastMessageId();
       const u = await ctx.use({ tokenId: fighter.id, itemId: sword, activityType: "attack", targetTokenIds: [bandit.id] });
-      // La question des manœuvres au toucher : rien. 9 s : passé le délai, son choix par défaut (Croc-en-jambe) partait et, une manœuvre
-      // par attaque, remplaçait le dé promis de la Feinte.
+      // The on-hit maneuvers question: nothing. 9 s: past the delay, its default choice (Trip Attack) went off and, one maneuver
+      // per attack, replaced the die promised to Feinting Attack.
       await answer(await known(), /^Rien$|^Aucune|^None/i, 9000);
       const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
       await pause(2500);
@@ -233,10 +233,10 @@ export default {
         damage: (msgs.find(m => m.type === "damage")?.rolls ?? []).map(x => x.formula).join(" | ") };
     };
 
-    // Feinte : sur le Bandit — aucun dégât, l'effet posé ; l'attaque suivante a l'Avantage ; touchée, +1d8.
+    // Feinting Attack: on the Bandit — no damage, the effect applied; the next attack has Advantage; if it hits, +1d8.
     const feint = await ctx.itemId(fighter.id, "feinting-attack");
-    // Les coups du Bandit (Parade, Riposte) ont pu laisser le Guerrier à 0 PV, donc À terre : son Désavantage annulerait l'Avantage de
-    // la Feinte. Il est relevé avant.
+    // The Bandit's hits (Parry, Riposte) may have left the Fighter at 0 HP, hence Prone: their Disadvantage would cancel the
+    // Advantage of Feinting Attack. They are stood up beforehand.
     await ctx.setHp(fighter, hp0);
     for ( const s of ["unconscious", "prone"] ) await ctx.call("set-status", { tokenId: fighter.id, statusId: s, active: false }).catch(() => {});
     await pause(800);
@@ -263,7 +263,7 @@ export default {
     }
     await ctx.removeEffectsNamed(bandit, /Feint/i);
 
-    // Fente : le dé promis au prochain coup au corps à corps.
+    // Lunging Attack: the die promised to the next melee hit.
     const lunge = await ctx.itemId(fighter.id, "lunging-attack");
     let lunged = null;
     for ( let n = 0; (n < 15) && !lunged; n++ ) {
@@ -279,7 +279,7 @@ export default {
       ctx.expect(!(await pendingFlag()), "Fente : la promesse est consommée");
     }
 
-    // Jeu de jambes évasif : la CA augmente du dé.
+    // Evasive Footwork: the AC increases by the die.
     await refill();
     const ac0 = (await ctx.engine("stats", { tokenId: fighter.id }))?.ac ?? null;
     ctx.restore(() => ctx.removeEffectsNamed(fighter, /Evasive|évasif/i));
@@ -288,22 +288,22 @@ export default {
     const ac1 = (await ctx.engine("stats", { tokenId: fighter.id }))?.ac ?? null;
     ctx.expect((ac0 !== null) && (ac1 > ac0) && (ac1 - ac0 <= 8), `Jeu de jambes évasif : CA ${ac0} → ${ac1} (+1d8)`);
 
-    // Ralliement : des PV temporaires au Clerc (allié).
+    // Rally: Temporary Hit Points to the Cleric (ally).
     const ally = tokens.find(t => t.name === "Clerc") ? await ctx.token("Clerc") : null;
     if ( ally ) {
       await refill();
       const a0 = await ctx.call("get-actor", { actorId: ally.actorId });
       const temp0 = a0.system?.attributes?.hp?.temp ?? 0;
       ctx.restore(() => ctx.call("update-actor", { actorId: ally.actorId, actorData: { "system.attributes.hp.temp": temp0 } }).catch(() => {}));
-      // Les PV temporaires ne se cumulent pas : sans remise à 0, un reste plus haut que le jet masquerait le Ralliement.
+      // Temporary Hit Points do not stack: without a reset to 0, a higher leftover than the roll would mask Rally.
       await ctx.call("update-actor", { actorId: ally.actorId, actorData: { "system.attributes.hp.temp": 0 } }).catch(() => {});
       const before = await spent();
-      // `consume: true` : le dé se dépense comme au clic ; le jet de soin est lancé par la carte (le connecteur coupe l'enchaînement
-      // de dnd5e : `subsequentActions: false`), comme `sorts-lot-1`.
+      // `consume: true`: the die is spent as on click; the healing roll is made by the card (the connector cuts dnd5e's chaining:
+      // `subsequentActions: false`), like `sorts-lot-1`.
       const u = await ctx.use({ tokenId: fighter.id, itemId: await ctx.itemId(fighter.id, "rally"), targetTokenIds: [ally.id], consume: true });
       await pause(800);
       if ( u.usageMessageId ) await ctx.engine("rollCard", { messageId: u.usageMessageId }).catch(() => null);
-      // Attendus jusqu'à 12 s (jet de soin par la carte, puis application par le MJ actif) plutôt qu'une pause fixe.
+      // Awaited up to 12 s (healing roll by the card, then application by the active GM) rather than a fixed pause.
       const tempNow = async () => (await ctx.call("get-actor", { actorId: ally.actorId })).system?.attributes?.hp?.temp ?? 0;
       for ( let n = 0; (n < 24) && !((await tempNow()) > 0); n++ ) await pause(500);
       const temp1 = await tempNow();

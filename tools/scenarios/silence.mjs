@@ -1,12 +1,12 @@
 /**
- * Silence (SPEC §37.4), monde `dnd-6`. Le Clerc reçoit Silence (Manuel des joueurs, à volonté) et pose la Sphère (6 m) sur le Zombi,
- * lui-même hors de la zone. Vérifie :
- *  - le Zombi, déjà dedans à la pose, porte l'effet (Assourdi, `silenced`) ;
- *  - il sort de la zone : l'effet part (comportement `applyActiveEffect` du cœur) ; il y revient : l'effet revient ;
- *  - la concentration du Clerc retirée : la zone disparaît, l'effet aussi ;
- *  - §226 : le Zombi désigné comme cible à l'utilisation ne reçoit pas de seconde copie (l'activité est utilitaire : avant, le moteur
- *    posait aussi ses effets sur chaque cible, une copie que la sortie de la zone ne retirait pas).
- * Remet positions, effets, zone et concentration.
+ * Silence (SPEC §37.4), world `dnd-6`. The Cleric receives Silence (Player's Handbook, at will) and places the Sphere (6 m) on the
+ * Zombie, itself outside the area. Checks:
+ *  - the Zombie, already inside at placement, carries the effect (Deafened, `silenced`);
+ *  - it leaves the area: the effect goes away (the core's `applyActiveEffect` behavior); it comes back: the effect comes back;
+ *  - the Cleric's Concentration removed: the area disappears, and so does the effect;
+ *  - §226: the Zombie designated as target on use does not receive a second copy (the activity is a utility: before, the engine
+ *    also placed its effects on each target, a copy that leaving the area did not remove).
+ * Puts back positions, effects, area and Concentration.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -52,8 +52,8 @@ export default {
     ctx.expect(atCast.length === 1 && (atCast[0].statuses ?? []).includes("deafened"),
       `déjà dedans à la pose, désigné comme cible : l'effet est porté, une seule fois (${atCast.map(e => `${e.name} [${(e.statuses ?? []).join(", ")}]`).join(" ; ")})`);
     const region = (await ctx.call("get-scene-object", { type: "Region", objectId: regionId })).data;
-    // §438 : Manuel 3.0.0 — la donnée porte son propre comportement (`dnd5e.applyActiveEffect`, l'effet « Silenced » du compendium
-    // d'effets) ; le moteur ne pose plus le sien (l'effet n'est porté qu'une fois, vérifié plus haut).
+    // §438: Handbook 3.0.0 — the data carries its own behavior (`dnd5e.applyActiveEffect`, the "Silenced" effect of the effects
+    // compendium); the engine no longer places its own (the effect is carried only once, checked above).
     const kinds = (region.behaviors ?? []).map(b => b.type);
     ctx.expect(kinds.some(t => ["applyActiveEffect", "dnd5e.applyActiveEffect"].includes(t)),
       `la région porte un comportement « appliquer un effet », du cœur ou de dnd5e (${kinds.join(", ")})`);
@@ -68,7 +68,7 @@ export default {
     const back = await silenced();
     ctx.expect(back.length === 1, `revenu dans la zone : l'effet revient (${back.length})`);
 
-    // Fin de la concentration : la zone disparaît, l'effet aussi.
+    // End of Concentration: the area disappears, and so does the effect.
     const target = await targetOf(cleric);
     for ( const e of (await added(cleric)).filter(e => (e.statuses ?? []).includes("concentrating")) ) {
       await ctx.call("remove-embedded-effect", { ...target, effectId: e._id ?? e.id });

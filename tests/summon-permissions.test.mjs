@@ -31,7 +31,7 @@ describe("summonGaps (§542, issue #43)", () => {
   });
 });
 
-describe("gapSignature / hasNewGap (« don't show again »)", () => {
+describe("gapSignature / hasNewGap (\"don't show again\")", () => {
   const all = summonGaps({ allowSummoning: false, players: [player("Ann")] });
 
   it("the signature lists the kinds, sorted, without the names", () => {

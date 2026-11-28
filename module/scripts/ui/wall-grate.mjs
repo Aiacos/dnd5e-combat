@@ -1,10 +1,10 @@
 /**
- * §468 : la section « DAS · Grille » de la configuration d'un mur (MJ seulement). Une grille (barreaux, herse, grillage) arrête le
- * déplacement, mais pas le chemin d'un sort (pose d'une zone, §200) ; une attaque à travers elle donne un abri supérieur, pas total.
- * §476 (retour de Fanarie) : un choix à trois positions — « selon le réglage du monde » (réglage `grateWalls` : tout mur qui ne bloque
- * pas la vue est une grille), « grille », « mur plein » —, écrit dans `flags.dnd5e-combat.grateMode` avec le reste du formulaire. Un
- * mur coché « grille » avant la §476 (`flags.dnd5e-combat.grate`) s'ouvre sur « grille ». L'aide dit ce que vaut « selon le réglage »
- * pour ce mur-là.
+ * §468: the "DAS · Grate" section of a wall's configuration (GM only). A grate (bars, portcullis, grating) stops
+ * movement, but not a spell's path (placing a zone, §200); an attack through it gives greater Cover, not Total Cover.
+ * §476 (Fanarie's feedback): a three-position choice — "according to the world setting" (setting `grateWalls`: any wall that
+ * does not block sight is a grate), "grate", "solid wall" —, written to `flags.dnd5e-combat.grateMode` with the rest of the form. A
+ * wall ticked "grate" before §476 (`flags.dnd5e-combat.grate`) opens on "grate". The help says what "according to the setting"
+ * is worth for that wall.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -33,7 +33,7 @@ function onRenderWallConfig(app, html) {
       <div class="form-fields"><select name="flags.${MODULE_ID}.${GRATE_MODE_FLAG}">${options}</select></div>
       <p class="hint">${esc(loc("Grille.Config.Aide"))} ${esc(loc(`Grille.Config.Auto.${auto ? "On" : "Off"}`, { verdict: loc(`Grille.Config.Verdict.${autoIs}`) }))}</p>
     </div>`;
-  // Avant la section « DAS · Serrure » (§244) si elle est là, sinon avant le pied du formulaire.
+  // Before the "DAS · Lock" section (§244) if it is there, otherwise before the form's footer.
   const anchor = root.querySelector(".dnd5e-combat-door-lock") ?? root.querySelector(".form-footer");
   if ( anchor ) anchor.before(fieldset);
   else root.append(fieldset);

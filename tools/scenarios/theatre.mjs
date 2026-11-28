@@ -1,9 +1,9 @@
 /**
- * §220 : le Théâtre de l'esprit — la bascule entre l'automatisation choisie et dnd5e seul (Arène, Guerrier contre le Zombi).
- *  1. Activé : le bouton est dans la barre d'outils des jetons du MJ, allumé ; une attaque du Guerrier ne produit aucune résolution du
- *     moteur (dnd5e seul : sa carte, son jet).
- *  2. Désactivé : la même attaque est résolue par le moteur.
- * Remet le réglage.
+ * §220: Theater of the Mind — the switch between the chosen automation and dnd5e alone (Arena, Fighter against the Zombie).
+ *  1. Enabled: the button is in the GM's token toolbar, lit; a Fighter attack produces no resolution from the engine
+ *     (dnd5e alone: its card, its roll).
+ *  2. Disabled: the same attack is resolved by the engine.
+ * Resets the setting.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));

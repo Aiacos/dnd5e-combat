@@ -1,8 +1,8 @@
 /**
- * §343, lot O7 de la repasse des objets : défenses passives. Arène de test (Guerrier, Zombi).
- *  1. Cape de déplacement portée par le Guerrier : le Zombi l'attaque avec le Désavantage ; rangée, plus de Désavantage.
- *  2. Bracelets de défense : avec l'armure du Guerrier, leur effet est désactivé (`effectWhile` « ni armure ni bouclier »).
- *  3. Anneau d'action libre porté et harmonisé : immunité à Paralysé et Entravé (effet tenu par le moteur).
+ * §343, batch O7 of the item pass: passive defenses. Test arena (Fighter, Zombie).
+ *  1. Cloak of Displacement worn by the Fighter: the Zombie attacks it with Disadvantage; stowed, no more Disadvantage.
+ *  2. Bracers of Defense: with the Fighter's armor, their effect is deactivated (`effectWhile` "neither armor nor shield").
+ *  3. Ring of Free Action worn and attuned: immunity to Paralyzed and Restrained (effect held by the engine).
  */
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -22,7 +22,7 @@ export default {
     const actorId = tok.actorId;
     const wear = (itemId, on) => ctx.call("upsert-actor-item", { actorId, itemData: { system: { equipped: on, attuned: on } }, match: { path: "_id", value: itemId } });
 
-    // 1. Cape de déplacement.
+    // 1. Cloak of Displacement.
     const cloak = await ctx.ensureItem(fighter, `${DMG}dmgCloakOfDispla`);
     const zombiItems = (await ctx.call("get-actor", { actorId: (await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id })).data.actorId })).items ?? [];
     const slam = zombiItems.find(i => Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"))?._id;
@@ -37,7 +37,7 @@ export default {
     const stored = await reasons();
     ctx.expect(!stored.some(r => r.startsWith("content")), `Cape rangée : plus de Désavantage (${stored.join(", ") || "aucun"})`);
 
-    // 2. Bracelets de défense avec une armure.
+    // 2. Bracers of Defense with armor.
     const bracers = await ctx.ensureItem(fighter, `${DMG}dmgBracersOfDefe`);
     await wear(bracers, true);
     const actor = await ctx.call("get-actor", { actorId });

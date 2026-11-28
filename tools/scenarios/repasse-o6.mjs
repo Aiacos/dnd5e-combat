@@ -1,10 +1,10 @@
 /**
- * §342, lot O6 de la repasse des objets : réactions d'objets. Arène de test (Clerc, Guerrier).
- *  1. Anneau d'esquive totale porté et harmonisé : le Guerrier rate la sauvegarde de Dextérité de Flamme sacrée ; le moteur lui propose
- *     l'anneau (fenêtre chez le MJ, le joueur n'étant pas connecté) ; accepté, la sauvegarde devient une réussite.
- *  2. L'anneau rangé (ni porté ni harmonisé) : un échec n'ouvre aucune fenêtre.
- *  3. Règles attachées : Bâton de l'acrobate, Gants piégeurs de projectiles, Pierres de Ioun d'absorption, Anneau de feuille morte (activité
- *     ajoutée à la création).
+ * §342, batch O6 of the item pass: item Reactions. Test arena (Cleric, Fighter).
+ *  1. Ring of Evasion worn and attuned: the Fighter fails the Dexterity saving throw against Sacred Flame; the engine offers it
+ *     the ring (window on the GM's side, the player not being connected); accepted, the saving throw becomes a success.
+ *  2. The ring stowed (neither worn nor attuned): a failure opens no window.
+ *  3. Attached rules: Staff of the Acrobat, Missile-Catching Gloves, Ioun Stones of Absorption, Ring of Feather Falling (activity
+ *     added on creation).
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -30,7 +30,7 @@ export default {
     const ring = await ctx.ensureItem(fighter, `${DMG}dmgRingOfEvasion`);
     const wear = on => ctx.call("upsert-actor-item", { actorId, itemData: { system: { equipped: on, attuned: on } }, match: { path: "_id", value: ring } });
 
-    /** Flamme sacrée sur le Guerrier jusqu'à un échec ; rend { asked, success } : une fenêtre de l'anneau s'est-elle ouverte, et l'issue. */
+    /** Sacred Flame on the Fighter until a failure; returns { asked, success }: did a ring window open, and the outcome. */
     const failOnce = async answer => {
       for ( let i = 0; i < 20; i++ ) {
         await ctx.setHp(fighter, hp0);
@@ -48,20 +48,20 @@ export default {
       return null;
     };
 
-    // 1. Porté et harmonisé.
+    // 1. Worn and attuned.
     await wear(true);
     await pause(400);
     const worn = await failOnce("pick1");
     ctx.expect(worn?.asked === true, "Anneau porté : la sauvegarde de Dextérité ratée ouvre la fenêtre de l'anneau");
     if ( worn?.asked ) ctx.expect(worn.success === true, `accepté, la sauvegarde est réussie (${worn.success})`);
 
-    // 2. Rangé.
+    // 2. Stowed.
     await wear(false);
     await pause(400);
     const stored = await failOnce("pick0");
     ctx.expect(stored && (stored.asked === false), "Anneau rangé : un échec n'ouvre aucune fenêtre");
 
-    // 3. Règles attachées.
+    // 3. Attached rules.
     for ( const id of ["dmgQuarterstaffO", "dmgGlovesOfMissi", "dmgAbsorptionIou", "dmgRingOfFeather"] ) await ctx.ensureItem(fighter, `${DMG}${id}`).catch(() => null);
     const rules = Object.fromEntries(((await ctx.engine("identify", { tokenId: fighter.id })) ?? []).map(r => [r.identifier, r]));
     for ( const [id, key] of [["quarterstaff-of-the-acrobat", "triggers"], ["gloves-of-missile-snaring", "triggers"], ["absorption-ioun-stone", "counter"],

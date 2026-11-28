@@ -5,11 +5,11 @@ import { validateEntry } from "../module/scripts/core/content.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 
 describe("mode du test de Chercher", () => {
-  it("Désavantage dès qu'une cachette à juger au jet est en lumière faible perçue", () => {
+  it("Disadvantage as soon as a hiding place to be judged by the roll is in perceived Dim Light", () => {
     expect(searchRollMode([{ seeable: true }])).toBe("normal");
     expect(searchRollMode([{ seeable: true }, { seeable: true, disadvantage: true }])).toBe("disadvantage");
   });
-  it("une cachette perçue par les sens ou hors de vue ne compte pas", () => {
+  it("a hiding place perceived by the senses or out of sight does not count", () => {
     expect(searchRollMode([{ sensed: true, seeable: true, disadvantage: true }, { seeable: false, disadvantage: true }])).toBe("normal");
   });
   it("aucune cachette : test normal", () => {
@@ -17,21 +17,21 @@ describe("mode du test de Chercher", () => {
   });
 });
 
-describe("total sans Désavantage", () => {
-  it("garde le premier d20 d'un test au Désavantage", () => {
-    // 2d20kl : 17 et 4, 4 gardé, +5 → 9 ; sans Désavantage : 17 + 5 = 22.
+describe("total without Disadvantage", () => {
+  it("keeps the first d20 of a check with Disadvantage", () => {
+    // 2d20kl: 17 and 4, 4 kept, +5 → 9; without Disadvantage: 17 + 5 = 22.
     expect(normalTotal({ total: 9, d20: [17, 4], kept: 4 })).toBe(22);
-    // Premier d20 gardé : identique.
+    // First d20 kept: identical.
     expect(normalTotal({ total: 8, d20: [3, 12], kept: 3 })).toBe(8);
   });
-  it("un test à un seul d20 est déjà sans Désavantage", () => {
+  it("a check with a single d20 is already without Disadvantage", () => {
     expect(normalTotal({ total: 14, d20: [], kept: null })).toBe(14);
   });
 });
 
 describe("verdicts", () => {
-  const roll = { total: 9, d20: [17, 4], kept: 4 };   // 9 au Désavantage, 22 sans
-  it("en pleine lumière, le total sans Désavantage ; en lumière faible, le total au Désavantage", () => {
+  const roll = { total: 9, d20: [17, 4], kept: 4 };   // 9 with Disadvantage, 22 without
+  it("in Bright Light, the total without Disadvantage; in Dim Light, the total with Disadvantage", () => {
     const v = searchVerdicts([
       { id: "a", dc: 15, seeable: true },
       { id: "b", dc: 15, seeable: true, disadvantage: true }
@@ -44,7 +44,7 @@ describe("verdicts", () => {
   it("atteindre le DD suffit", () => {
     expect(searchVerdicts([{ id: "a", dc: 14, seeable: true }], { total: 14 })[0].found).toBe(true);
   });
-  it("hors de vue : jamais trouvée ; perçue par les sens : trouvée sans jet", () => {
+  it("out of sight: never found; perceived by the senses: found without a roll", () => {
     const v = searchVerdicts([{ id: "a", dc: 5, seeable: false }, { id: "b", dc: 30, sensed: true }], { total: 20 });
     expect(v).toEqual([
       { id: "a", found: false, reason: "unseen", dc: 5 },
@@ -54,12 +54,12 @@ describe("verdicts", () => {
 });
 
 describe("Perception passive", () => {
-  it("atteindre le DD suffit ; −5 en lumière faible perçue", () => {
+  it("reaching the DC is enough; −5 in perceived Dim Light", () => {
     expect(passiveNotice({ passive: 15, seeable: true }, 15)).toEqual({ notices: true, score: 15 });
     expect(passiveNotice({ passive: 15, seeable: true, disadvantage: true }, 15)).toEqual({ notices: false, score: 10 });
     expect(passiveNotice({ passive: 20, seeable: true, disadvantage: true }, 15)).toEqual({ notices: true, score: 15 });
   });
-  it("hors de vue : jamais ; perçue par les sens : toujours", () => {
+  it("out of sight: never; perceived by the senses: always", () => {
     expect(passiveNotice({ passive: 30, seeable: false }, 5)).toEqual({ notices: false, score: null });
     expect(passiveNotice({ passive: 1, sensed: true }, 30)).toEqual({ notices: true, score: null });
   });
@@ -68,9 +68,9 @@ describe("Perception passive", () => {
   });
 });
 
-describe("ce qui s'ajoute au test de Chercher (searchBonus)", () => {
+describe("what adds to the Search check (searchBonus)", () => {
   const eyes = { rule: { advantage: true } };
-  it("un objet porté donne l'Avantage ; dans le sac, ou non harmonisé quand il l'exige, rien", () => {
+  it("a worn item gives Advantage; in the bag, or unattuned when it requires it, nothing", () => {
     const worn = { type: "equipment", system: { equipped: true, attunement: "" } };
     const packed = { type: "equipment", system: { equipped: false, attunement: "" } };
     const unattuned = { type: "equipment", system: { equipped: true, attunement: "required", attuned: false } };
@@ -81,19 +81,19 @@ describe("ce qui s'ajoute au test de Chercher (searchBonus)", () => {
     expect(keenOf(unattuned)).toBeNull();
     expect(keenOf(attuned)).toBe(attuned);
   });
-  it("un trait compte toujours ; son Avantage à utilisations demande qu'il en reste une", () => {
+  it("a feature always counts; its Advantage with uses requires that one remain", () => {
     const feat = { type: "feat", system: {} };
     expect(searchBonuses([{ ...eyes, counts: wornOrNotEquipment(feat) }]).keen).not.toBeNull();
     expect(searchBonuses([{ ...eyes, counts: true, usesMax: 2, usesLeft: 0 }]).keen).toBeNull();
     expect(searchBonuses([{ ...eyes, counts: true, usesMax: 2, usesLeft: 1 }]).keen).not.toBeNull();
   });
-  it("les dés s'additionnent, sans ceux d'un objet rangé", () => {
+  it("the dice add up, without those of a stowed item", () => {
     const sources = [{ rule: { formula: "1d4" }, counts: true }, { rule: { formula: "1d6" }, counts: false },
       { rule: null, counts: true }];
     expect(searchBonuses(sources)).toEqual({ parts: ["1d4"], keen: null });
     expect(searchBonuses([])).toEqual({ parts: [], keen: null });
   });
-  it("contenu : Yeux de l'aigle et Robe aux yeux", () => {
+  it("content: Eyes of the Eagle and Robe of Eyes", () => {
     for ( const id of ["eyes-of-the-eagle", "robe-of-eyes"] ) {
       expect(CONTENT[id].searchBonus, id).toEqual({ advantage: true });
       expect(validateEntry(CONTENT[id]), id).toEqual([]);

@@ -3,10 +3,10 @@ import { climbSystemOn, setClimbSystemState, whileClimbSystem } from "../module/
 import { SETTINGS_TABS } from "../module/scripts/core/settings-layout.mjs";
 import { FEATURE_LEVELS } from "../module/scripts/core/levels.mjs";
 
-describe("§224 : interrupteur du système d'escalade et de chute", () => {
+describe("§224: switch of the climbing and falling system", () => {
   afterEach(() => setClimbSystemState(true));
 
-  it("allumé par défaut ; seul `false` le coupe", () => {
+  it("on by default; only `false` turns it off", () => {
     expect(climbSystemOn()).toBe(true);
     setClimbSystemState(false);
     expect(climbSystemOn()).toBe(false);
@@ -14,7 +14,7 @@ describe("§224 : interrupteur du système d'escalade et de chute", () => {
     expect(climbSystemOn()).toBe(true);
   });
 
-  it("coupé : aucune entrée proposée, et rien n'est calculé", () => {
+  it("off: no entry offered, and nothing is computed", () => {
     setClimbSystemState(false);
     let called = 0;
     const entries = whileClimbSystem(() => { called++; return [{ label: "Grimper au mur" }]; });
@@ -22,14 +22,14 @@ describe("§224 : interrupteur du système d'escalade et de chute", () => {
     expect(called).toBe(0);
   });
 
-  it("allumé : les entrées telles quelles ; l'état peut être passé explicitement", () => {
+  it("on: the entries as they are; the state can be passed explicitly", () => {
     expect(whileClimbSystem(() => ["a", "b"])).toEqual(["a", "b"]);
     expect(whileClimbSystem(() => ["a"], false)).toEqual([]);
     setClimbSystemState(false);
     expect(whileClimbSystem(() => ["a"], true)).toEqual(["a"]);
   });
 
-  it("les deux réglages sont en tête de l'onglet Déplacement, et l'interrupteur existe à tout niveau d'automatisation", () => {
+  it("both settings are at the top of the Movement tab, and the switch exists at every automation level", () => {
     const movement = SETTINGS_TABS.find(t => t.id === "movement");
     expect(movement.keys.slice(0, 3)).toEqual(["climbSystem", "climbSystemButton", "altitude"]);
     expect(FEATURE_LEVELS.registerClimbSystem).toBe("essentials");

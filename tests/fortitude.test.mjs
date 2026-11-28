@@ -1,36 +1,36 @@
-/** §61 : Robustesse de la non-vie — sauvegarde de Constitution (DD 5 + dégâts) en tombant à 0 PV, sauf radiant ou critique. */
+/** §61: Undead Fortitude — Constitution save (DC 5 + damage) when dropping to 0 HP, except radiant or Critical Hit. */
 import { describe, it, expect } from "vitest";
 import { fortitudeSave } from "../module/scripts/core/fortitude.mjs";
 import { CONTENT } from "../module/scripts/content/index.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
 describe("fortitudeSave", () => {
-  it("tomber à 0 PV : sauvegarde de Constitution, DD 5 + dégâts subis", () => {
+  it("dropping to 0 HP: Constitution save, DC 5 + damage taken", () => {
     expect(fortitudeSave({ hp: 6, through: 9, taken: 9, types: ["slashing"] })).toEqual({ ability: "con", dc: 14 });
   });
-  it("tomber pile à 0 PV compte", () => {
+  it("dropping exactly to 0 HP counts", () => {
     expect(fortitudeSave({ hp: 6, through: 6, taken: 6 })).toEqual({ ability: "con", dc: 11 });
   });
-  it("les PV temporaires absorbés comptent dans le DD (dégâts subis), pas dans la chute", () => {
+  it("absorbed Temporary Hit Points count toward the DC (damage taken), not toward the drop", () => {
     expect(fortitudeSave({ hp: 4, through: 4, taken: 10 })?.dc).toBe(15);
     expect(fortitudeSave({ hp: 4, through: 3, taken: 10 })).toBeNull();
   });
-  it("rester au-dessus de 0 PV, ou y être déjà : rien", () => {
+  it("staying above 0 HP, or already being there: nothing", () => {
     expect(fortitudeSave({ hp: 10, through: 9, taken: 9 })).toBeNull();
     expect(fortitudeSave({ hp: 0, through: 5, taken: 5 })).toBeNull();
   });
-  it("dégâts radiants (même mêlés à d'autres) ou coup critique : pas de sauvegarde", () => {
+  it("radiant damage (even mixed with other damage) or a Critical Hit: no save", () => {
     expect(fortitudeSave({ hp: 5, through: 8, taken: 8, types: ["radiant"] })).toBeNull();
     expect(fortitudeSave({ hp: 5, through: 8, taken: 8, types: ["slashing", "radiant"] })).toBeNull();
     expect(fortitudeSave({ hp: 5, through: 8, taken: 8, types: ["slashing"], critical: true })).toBeNull();
   });
-  it("le DD ne garde que les dégâts entiers", () => {
+  it("the DC keeps only whole damage", () => {
     expect(fortitudeSave({ hp: 3, through: 7.5, taken: 7.5 })?.dc).toBe(12);
   });
 });
 
 describe("contenu", () => {
-  it("undead-fortitude porte la règle, et l'entrée est valide", () => {
+  it("undead-fortitude carries the rule, and the entry is valid", () => {
     expect(CONTENT["undead-fortitude"]?.fortitude).toBe(true);
     expect(validateEntry(CONTENT["undead-fortitude"])).toEqual([]);
   });

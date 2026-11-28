@@ -1,5 +1,5 @@
 /**
- * Validation d'une étape (`do`), d'une déclaration (`triggers`) et d'une aura. Fonctions pures, aucune dépendance à Foundry.
+ * Validation of a step (`do`), a declaration (`triggers`) and an aura. Pure functions, no dependency on Foundry.
  */
 
 import { CREATURE_TYPES } from "../eligibility.mjs";
@@ -8,9 +8,9 @@ import { ABILITIES, ATTACK_STEPS, AURA_AFFECTS, DAMAGE_ON_SAVE, DAMAGE_TO, FALL_
 import { isId, isObject } from "./shared.mjs";
 import { SAME_DAMAGE } from "../damage-return.mjs";
 
-/** §485 : `resave.own` — la sauvegarde d'un effet porté par le réacteur, que son joueur choisit (Indomptable). */
+/** §485: `resave.own` — the save of an effect borne by the reacting creature, which their player chooses (Indomitable). */
 export const RESAVE_OWN = Object.freeze(["choose"]);
-/** §485 : les fenêtres où `resave.own` se joue (runtime/resave-choice.mjs). */
+/** §485: the windows where `resave.own` plays out (runtime/resave-choice.mjs). */
 export const RESAVE_OWN_MOMENTS = Object.freeze(["enemyTurnEnd"]);
 
 function validateStep(step, at, errors) {
@@ -19,11 +19,11 @@ function validateStep(step, at, errors) {
   if ( step.type === "damage" ) {
     if ( ("to" in step) && !DAMAGE_TO.includes(step.to) ) errors.push(`${at}.to: ${DAMAGE_TO.join(", ")}`);
     if ( ("onSave" in step) && !DAMAGE_ON_SAVE.includes(step.onSave) ) errors.push(`${at}.onSave: ${DAMAGE_ON_SAVE.join(", ")}`);
-    // Une riposte (ou les dégâts du porteur) peut rejouer l'activité de dégâts de l'item ; un partage (to: "origin") sans
-    // formule reprend le montant subi.
+    // A retort (or the damage of the bearer) can replay the damage activity of the item; a share (to: "origin") with no
+    // formula takes up the amount taken.
     const fromActivity = ["source", "bearer", "self"].includes(step.to) && ("activity" in step);
     const same = (step.to === "origin") && !("formula" in step);
-    // §499 (B19) : `same` — la riposte renvoie le montant subi (au moment isDamaged), du type reçu ou de `damageType`.
+    // §499 (B19): `same` — the retort returns the amount taken (at the isDamaged moment), of the type received or of `damageType`.
     const returned = (step.to === "source") && ("same" in step);
     if ( "same" in step ) {
       if ( step.to !== "source" ) errors.push(`${at}.same: only for a riposte (to: "source")`);
@@ -33,23 +33,23 @@ function validateStep(step, at, errors) {
     }
     if ( !fromActivity && !same && !returned ) {
       if ( (typeof step.formula !== "string") || !step.formula.trim() ) errors.push(`${at}.formula: formula required`);
-      // §161 : une liste de types au choix pour des dégâts bonus (`preDamageRoll`).
+      // §161: a list of types to choose from for bonus damage (`preDamageRoll`).
       const typeOk = t => (typeof t === "string") && !!t;
       if ( !(typeOk(step.damageType) || (Array.isArray(step.damageType) && step.damageType.length && step.damageType.every(typeOk))) ) errors.push(`${at}.damageType: damage type required`);
     }
   }
-  // §74 : `spends` — des dégâts bonus qui dépensent un effet de l'item porté par l'auteur (Frappe du zéphyr : « une fois »).
+  // §74: `spends` — bonus damage that spends an item effect borne by the author (Zephyr Strike: "once").
   if ( (step.type === "damage") && ("spends" in step) && !isId(step.spends) ) errors.push(`${at}.spends: item effect id (16 characters) expected`);
-  // §133 : "target" — la créature visée par l'attaque qui ouvre la fenêtre (Protection : l'effet « Protégé » sur l'allié).
+  // §133: "target" — the creature targeted by the attack that opens the window (Protection: the "Protected" effect on the ally).
   if ( (step.type === "use") && ("target" in step) && !["source", "self", "target"].includes(step.target) ) errors.push(`${at}.target: "source", "self" or "target"`);
   if ( (step.type === "use") && ("advantage" in step) && (step.advantage !== true) ) errors.push(`${at}.advantage: true or absent`);
   if ( (step.type === "use") && ("consume" in step) && (step.consume !== false) ) errors.push(`${at}.consume: false or absent`);
-  // §489 : une utilisation qui ne coûte rien au budget (la riposte d'une Parade, partie de la réaction déjà prise).
+  // §489: a use that costs the budget nothing (the retort of a Parry, part of the Reaction already taken).
   if ( (step.type === "use") && ("free" in step) && (step.free !== true) ) errors.push(`${at}.free: true or absent`);
-  // §489 : la relance forcée n'a pas d'option.
+  // §489: the forced reroll has no option.
   if ( (step.type === "reroll") && Object.keys(step).some(k => k !== "type") ) errors.push(`${at}: "reroll" takes no option`);
   if ( (step.type === "use") && ("approach" in step) && ((step.approach !== true) || (step.target !== "source")) ) errors.push(`${at}.approach: true, with target: "source"`);
-  // §88 : attaque avec une arme de corps à corps de l'acteur (Riposte).
+  // §88: attack with a melee weapon of the actor (Riposte).
   if ( (step.type === "use") && ("weapon" in step) && ((step.weapon !== true) || (step.target !== "source")) ) errors.push(`${at}.weapon: true, with target: "source"`);
   if ( "margin" in step ) {
     const mg = step.margin;
@@ -64,12 +64,12 @@ function validateStep(step, at, errors) {
     if ( !formula && !(Number.isFinite(step.distance) && (step.distance > 0)) ) errors.push(`${at}.distance: positive number or formula`);
     if ( (typeof step.units !== "string") || !step.units ) errors.push(`${at}.units: unit required`);
     if ( ("follow" in step) && (typeof step.follow !== "boolean") ) errors.push(`${at}.follow: boolean`);
-    // §401 : « jusqu'à » — l'auteur choisit la distance (Fouet épineux : « vous pouvez la tirer jusqu'à 3 m »).
+    // §401: "up to" — the author chooses the distance (Thorn Whip: "you can pull it up to 3 m").
     if ( ("upTo" in step) && (step.upTo !== true) ) errors.push(`${at}.upTo: true or absent`);
-    // §466 : `toward: "area"` — une traction vers le centre de la zone de l'activité (Implosion), pas vers l'auteur.
-    // §502 (B22) : `toward: "summon"` — vers l'invocation de l'auteur (la liane de Liane avide).
+    // §466: `toward: "area"` — a pull toward the center of the area of the activity (Implosion), not toward the author.
+    // §502 (B22): `toward: "summon"` — toward the author's summon (the vine of "Greedy Vine").
     if ( ("toward" in step) && !(["area", "summon"].includes(step.toward) && (step.mode === "pull")) ) errors.push(`${at}.toward: "area" or "summon" (with mode "pull") or absent`);
-    // §497 : déplacement aléatoire (Infestation) — directions tirées au dé, case bloquée, Vitesse minimale.
+    // §497: random movement (Infestation) — directions rolled on a die, blocked cell, minimum Speed.
     const random = step.mode === "random";
     if ( ("directions" in step) && !(random && Array.isArray(step.directions) && step.directions.length
       && step.directions.every(d => MOVE_DIRECTIONS.includes(d)) && (new Set(step.directions).size === step.directions.length)) ) {
@@ -80,14 +80,14 @@ function validateStep(step, at, errors) {
     if ( random && (("upTo" in step) || ("follow" in step)) ) errors.push(`${at}: mode "random" takes neither upTo nor follow`);
   }
   if ( (step.type === "status") && ((typeof step.status !== "string") || !step.status) ) errors.push(`${at}.status: condition required`);
-  // §345 : `save` — l'état seulement si la cible rate cette sauvegarde (Tueuse de géants : Force DD 15 ou À terre).
+  // §345: `save` — the condition only if the target fails this save (Giant Slayer: Strength DC 15 or Prone).
   if ( (step.type === "status") && ("save" in step) && !(isObject(step.save) && (typeof step.save.ability === "string") && /^[a-z]{3}$/.test(step.save.ability)
     && Number.isFinite(step.save.dc) && (step.save.dc > 0)) ) errors.push(`${at}.save: { ability, dc }`);
-  // §352 : `around` — aussi chaque créature à cette distance de la cible, l'auteur excepté (Marteau de tonnerre).
+  // §352: `around` — also each creature within this distance of the target, the author excepted ("Thunder Hammer").
   if ( (step.type === "status") && ("around" in step) && !(isObject(step.around) && Number.isFinite(step.around.radius) && (step.around.radius > 0)
     && (typeof step.around.units === "string") && step.around.units) ) errors.push(`${at}.around: { radius, units }`);
   if ( (step.type === "lift") && !(Number.isFinite(step.height) && (step.height > 0) && (typeof step.units === "string") && step.units) ) errors.push(`${at}.height, units: elevation required`);
-  // §86 : riposte par une sauvegarde — vers l'attaquant, une activité de l'item.
+  // §86: retort by a save — toward the attacker, an activity of the item.
   if ( step.type === "save" ) {
     if ( step.to !== "source" ) errors.push(`${at}.to: "source"`);
     if ( !isId(step.activity) ) errors.push(`${at}.activity: activity id (16 characters) expected`);
@@ -97,7 +97,7 @@ function validateStep(step, at, errors) {
     if ( (typeof step.label !== "string") || !step.label ) errors.push(`${at}.label: translation key required`);
     if ( ("seconds" in step) && !(Number.isFinite(step.seconds) && (step.seconds > 0)) ) errors.push(`${at}.seconds: positive number`);
   }
-  // C12-b : `disarm` — l'effet de l'item posé à la place quand la cible n'a rien à lâcher (Métal brûlant).
+  // C12-b: `disarm` — the item effect applied instead when the target has nothing to drop (Heat Metal).
   if ( (step.type === "disarm") && ("elseEffect" in step) && !isId(step.elseEffect) ) errors.push(`${at}.elseEffect: effect id`);
   if ( (step.type === "consume") && !["target", "source"].includes(step.side) ) errors.push(`${at}.side: "target" or "source"`);
   if ( (step.type === "resave") && ("keep" in step) && (step.keep !== true) ) errors.push(`${at}.keep: true or absent`);
@@ -111,7 +111,7 @@ function validateStep(step, at, errors) {
       || !Object.keys(t).every(k => ["successes", "failures", "status"].includes(k)) ) errors.push(`${at}.tally: { successes, failures, status? } (positive integers, condition)`);
     if ( step.keep === true ) errors.push(`${at}.tally: not applicable with keep`);
   }
-  // §495 (brique B15) : échelle d'états — `stages: [{ effect?, status? }]`, `onSuccess`, `critEnds`.
+  // §495 (brick B15): condition ladder — `stages: [{ effect?, status? }]`, `onSuccess`, `critEnds`.
   if ( (step.type === "resave") && ("stages" in step) ) {
     const s = step.stages;
     const stageOk = x => isObject(x) && (("effect" in x) || ("status" in x)) && Object.keys(x).every(k => ["effect", "status"].includes(k))
@@ -121,24 +121,23 @@ function validateStep(step, at, errors) {
   }
   if ( (step.type === "resave") && ("onSuccess" in step) && (!("stages" in step) || !["down", "end"].includes(step.onSuccess)) ) errors.push(`${at}.onSuccess: "down" or "end", with stages`);
   if ( (step.type === "resave") && ("critEnds" in step) && (!("stages" in step) || (step.critEnds !== true)) ) errors.push(`${at}.critEnds: true or absent, with stages`);
-  // C12-e : une sauvegarde que la donnée n'a pas (Mot de pouvoir étourdissant : activité utilitaire) — sa caractéristique, au DD de
-  // sorts du lanceur.
+  // C12-e: a save the data lacks (Power Word Stun: utility activity) — its ability, at the caster's spell DC.
   if ( (step.type === "resave") && ("ability" in step) && !ABILITIES.includes(step.ability) ) errors.push(`${at}.ability: ${ABILITIES.join(", ")}`);
   if ( (step.type === "resave") && ("onFail" in step) && !RESAVE_ON_FAIL.includes(step.onFail) ) errors.push(`${at}.onFail: ${RESAVE_ON_FAIL.join(", ")}`);
-  // §485 : `own: "choose"` — le réacteur rejoue la sauvegarde d'un effet qu'il porte, choisi par son joueur (Indomptable). Seule
-  // `advantage` l'accompagne : le reste (compteur, caractéristique déclarée, issue) appartient à l'effet, pas à la réaction.
+  // §485: `own: "choose"` — the reacting creature replays the save of an effect they bear, chosen by their player (Indomitable).
+  // Only `advantage` goes with it: the rest (counter, declared ability, outcome) belongs to the effect, not to the reaction.
   if ( (step.type === "resave") && ("own" in step) ) {
     if ( !RESAVE_OWN.includes(step.own) ) errors.push(`${at}.own: ${RESAVE_OWN.join(", ")}`);
     const extra = Object.keys(step).filter(k => !["type", "own", "advantage"].includes(k));
     if ( extra.length ) errors.push(`${at}.own: no ${extra.join(", ")} with own (advantage only)`);
   }
   if ( (step.type === "attackBonus") && ((typeof step.formula !== "string") || !step.formula.trim()) ) errors.push(`${at}.formula: formula required`);
-  // §31 : ce qui s'ajoute au jet de l'activité de réduction (Endurance de la pierre : « ajoutez votre modificateur de Constitution »).
-  // §33 : un dé retiré au jet d'attaque (Mots cinglants : « soustrayez le résultat du jet ») — l'attaque est rejugée.
+  // §31: what is added to the roll of the reduction activity (Stone's Endurance: "add your Constitution modifier").
+  // §33: a die subtracted from the attack roll (Cutting Words: "subtract the result of the roll") — the attack is judged again.
   if ( ["penalty", "bonus"].includes(step.type) && ((typeof step.formula !== "string") || !step.formula.trim()) ) errors.push(`${at}.formula: formula required`);
   if ( (step.type === "reduce") && ("bonus" in step) && ((typeof step.bonus !== "string") || !step.bonus.trim()) ) errors.push(`${at}.bonus: formula`);
-  // §493 (B13) : `cancelForSelf` — les dégâts de la zone ne sont pas appliqués au réacteur ; `ifSourceFails` : seulement si l'auteur
-  // rate la sauvegarde que la réaction lui impose.
+  // §493 (B13): `cancelForSelf` — the damage of the area is not applied to the reacting creature; `ifSourceFails`: only if the
+  // author fails the save the reaction imposes on them.
   if ( step.type === "cancelForSelf" ) {
     if ( ("ifSourceFails" in step) && (step.ifSourceFails !== true) ) errors.push(`${at}.ifSourceFails: true or absent`);
     const extra = Object.keys(step).filter(k => !["type", "ifSourceFails"].includes(k));
@@ -152,45 +151,45 @@ export function validateTrigger(declaration, at, facts, errors) {
   if ( !d.on.length ) errors.push(`${at}.on: at least one moment`);
   for ( const m of d.on ) if ( !(m in MOMENTS) ) errors.push(`${at}.on: unknown moment "${m}" (${Object.keys(MOMENTS).join(", ")})`);
   if ( (d.via !== null) && !VIA.includes(d.via) ) errors.push(`${at}.via: ${VIA.join(", ")}`);
-  // `fromEffect` : la déclaration ne vaut que pour l'effet de l'item de cet id (Bouclier de feu : chaud OU froid).
+  // `fromEffect`: the declaration only applies to the item effect with this id (Fire Shield: warm OR cold).
   if ( "fromEffect" in declaration ) {
     if ( !isId(declaration.fromEffect) ) errors.push(`${at}.fromEffect: effect id (16 characters)`);
     if ( d.via !== "effect" ) errors.push(`${at}.fromEffect: requires via: "effect"`);
   }
-  // §65 : `by: "originSide"` — l'effet ne réagit qu'aux dégâts du lanceur ou de ses alliés (Suggestion) ; §294 `by: "otherActivity"` —
-  // pas à ceux de l'activité qui l'a posé (Calcination des morts-vivants).
+  // §65: `by: "originSide"` — the effect only reacts to damage from the caster or their allies (Suggestion);
+  // §294 `by: "otherActivity"` — not to that of the activity that applied it ("Calcination of the Undead").
   if ( "by" in declaration ) {
     if ( !DAMAGED_BY.includes(declaration.by) ) errors.push(`${at}.by: ${DAMAGED_BY.join(", ")}`);
     if ( (d.via !== "effect") || (d.on.length !== 1) || (d.on[0] !== "isDamaged") ) errors.push(`${at}.by: requires via: "effect" and isDamaged as the only moment`);
   }
-  // `oncePerTurn` : une part de dégâts bonus qui ne vaut qu'une fois par tour (Attraction de la mort : « une fois par tour »).
+  // `oncePerTurn`: a share of bonus damage that only applies once per turn ("Attraction of Death": "once per turn").
   if ( ("oncePerTurn" in declaration) && ((declaration.oncePerTurn !== true) || (d.on.length !== 1) || (d.on[0] !== "preDamageRoll")) ) {
     errors.push(`${at}.oncePerTurn: true, with preDamageRoll as the only moment`);
   }
-  // §223 (#12) : `ask` — une part de dégâts bonus que l'auteur choisit de mettre ou non avant le jet (Frappe effroyable) ; `uses` :
-  // l'activité de l'item dont elle dépense une utilisation, et sans laquelle elle n'est pas proposée.
+  // §223 (#12): `ask` — a share of bonus damage the author chooses to add or not before the roll (Dreadful Strikes); `uses`:
+  // the activity of the item it spends a use of, and without which it is not offered.
   if ( "ask" in declaration ) {
     const a = declaration.ask;
-    // §438 : `uses` peut lister plusieurs activités (Manuel 3.0.0 : une par palier de niveau) — la première que la fiche montre compte.
+    // §438: `uses` can list several activities (Handbook 3.0.0: one per level tier) — the first one the sheet shows counts.
     const ids = ("uses" in (isObject(a) ? a : {})) ? [a.uses].flat() : [];
     const ok = (a === true) || (isObject(a) && Object.keys(a).every(k => k === "uses") && (!("uses" in a) || (ids.length > 0 && ids.every(isId))));
     if ( !ok ) errors.push(`${at}.ask: true or { uses?: activity id (16 characters) or a list of them }`);
     if ( (d.on.length !== 1) || (d.on[0] !== "preDamageRoll") ) errors.push(`${at}.ask: preDamageRoll as the only moment`);
   }
-  // §129 : `free` — une fenêtre de réaction qui ne coûte pas la Réaction (Chanceux : un point de chance), proposée même si elle est prise.
+  // §129: `free` — a reaction window that does not cost the Reaction (Lucky: a luck point), offered even if it is taken.
   if ( ("free" in declaration) && (declaration.free !== true) ) errors.push(`${at}.free: true or absent`);
-  // §334 : `defends` — une déclaration `preAttackRoll` de l'item de la cible (Déplacement).
+  // §334: `defends` — a `preAttackRoll` declaration of the target's item (Displacement).
   if ( ("defends" in declaration) && ((declaration.defends !== true) || !(declaration.on ?? []).includes?.("preAttackRoll") && (declaration.on !== "preAttackRoll")) ) errors.push(`${at}.defends: true, with preAttackRoll`);
   if ( !Array.isArray(d.do) || !d.do.length ) errors.push(`${at}.do: at least one step`);
   else {
     d.do.forEach((s, i) => validateStep(s, `${at}.do[${i}]`, errors));
-    // Chaque étape va avec ses moments : une poussée n'a de sens qu'à une issue, une sauvegarde répétée qu'au tour.
+    // Each step goes with its moments: a push only makes sense on an outcome, a repeated save only on the turn.
     const outcome = d.on.some(m => OUTCOME_MOMENTS.includes(m));
     const resave = d.on.length && d.on.every(m => RESAVE_MOMENTS.includes(m));
     const bearer = d.on.length && d.on.every(m => BEARER_MOMENTS.includes(m));
     for ( const s of d.do ) {
       if ( isObject(s) && OUTCOME_STEPS.includes(s.type) && !outcome ) errors.push(`${at}.do: "${s.type}" requires an outcome moment (${OUTCOME_MOMENTS.join(", ")})`);
-      // §485 : `own` — une réaction de l'item lui-même (pas `via`), à la fin du tour d'un ennemi, avec son étape `use`.
+      // §485: `own` — a reaction of the item itself (not `via`), at the end of an enemy's turn, with its `use` step.
       if ( isObject(s) && (s.type === "resave") && ("own" in s) ) {
         if ( (d.on.length !== 1) || !RESAVE_OWN_MOMENTS.includes(d.on[0]) || (d.via !== null) || !d.do.some(x => isObject(x) && (x.type === "use")) ) {
           errors.push(`${at}.do: "resave" with own requires ${RESAVE_OWN_MOMENTS.join(", ")} as the only moment, no via, and a "use" reaction`);
@@ -199,36 +198,36 @@ export function validateTrigger(declaration, at, facts, errors) {
       }
       if ( isObject(s) && (s.type === "resave") && (!resave || (d.via !== "effect")) ) errors.push(`${at}.do: "resave" requires moments among ${RESAVE_MOMENTS.join(", ")} and via: "effect"`);
       if ( isObject(s) && (s.type === "remove") && (!bearer || (d.via !== "effect")) ) errors.push(`${at}.do: "remove" requires bearer moments (${BEARER_MOMENTS.join(", ")}) and via: "effect"`);
-      // §34 : le Désavantage peut aussi venir d'une réaction avant le jet (Esquive des ombres, Éclat protecteur).
+      // §34: the Disadvantage can also come from a reaction before the roll ("Shadow Dodge", "Protective Shard").
       const preAttackReaction = d.on.some(m => PRE_ATTACK_WINDOWS.includes(m)) && d.do.some(x => isObject(x) && (x.type === "use"));
       if ( isObject(s) && ATTACK_STEPS.includes(s.type) && !d.on.includes("preAttackRoll") && !((s.type === "disadvantage") && preAttackReaction) ) errors.push(`${at}.do: "${s.type}" requires the preAttackRoll moment`);
       if ( isObject(s) && (s.type === "consume") && (!d.on.includes("preAttackRoll") || (d.via !== "effect")) ) errors.push(`${at}.do: "consume" requires the preAttackRoll moment and via: "effect"`);
       if ( isObject(s) && (s.type === "ward") && (!d.on.includes("isAttacked") || (d.via !== "effect")) ) errors.push(`${at}.do: "ward" requires the isAttacked moment and via: "effect"`);
       if ( isObject(s) && (s.type === "damage") && (s.to === "source") && !("same" in s) && ((d.on.length !== 1) || (d.on[0] !== "isHit")) ) errors.push(`${at}.do: a riposte (to: "source") requires isHit as the only moment`);
-      // §499 : le montant subi n'est connu qu'une fois les dégâts appliqués — isDamaged, sur un effet porté.
+      // §499: the amount taken is only known once the damage is applied — isDamaged, on a borne effect.
       if ( isObject(s) && (s.type === "damage") && (s.to === "source") && ("same" in s) && ((d.on.length !== 1) || (d.on[0] !== "isDamaged") || (d.via !== "effect")) ) errors.push(`${at}.do: a riposte of the same amount (same) requires isDamaged as the only moment and via: "effect"`);
       if ( isObject(s) && (s.type === "damage") && (s.to === "origin") && ((d.on.length !== 1) || (d.on[0] !== "isDamaged") || (d.via !== "effect")) ) errors.push(`${at}.do: a damage share (to: "origin") requires isDamaged as the only moment and via: "effect"`);
       if ( isObject(s) && (s.type === "damage") && (s.to === "bearer") && (!d.on.length || !d.on.every(m => BEARER_DAMAGE_MOMENTS.includes(m)) || (d.via !== "effect")) ) errors.push(`${at}.do: the bearer's damage (to: "bearer") requires moments among ${BEARER_DAMAGE_MOMENTS.join(", ")} and via: "effect"`);
-      // §484 : les dégâts d'un trait à son porteur (`to: "self"`, Hypersensibilité au soleil) — à son tour, porté par l'item lui-même.
+      // §484: the damage of a trait to its bearer (`to: "self"`, Sunlight Sensitivity) — on their turn, borne by the item itself.
       if ( isObject(s) && (s.type === "damage") && (s.to === "self") && (!d.on.length || !d.on.every(m => TURN_MOMENTS.includes(m)) || (d.via !== null)) ) errors.push(`${at}.do: a trait's damage to its bearer (to: "self") requires moments among ${TURN_MOMENTS.join(", ")}, without via`);
       if ( isObject(s) && (s.type === "damage") && ("onSave" in s) && ((d.on.length !== 1) || (d.on[0] !== "failedSave") || ("to" in s)) ) errors.push(`${at}.do: "onSave" requires failedSave as the only moment, without "to"`);
-      // §301 : `reduce` aussi aux fenêtres de chute (Chute ralentie), comme `cancel` (Feuille morte).
+      // §301: `reduce` also at the fall windows (Slow Fall), like `cancel` ("Dead Leaf").
       const fallReaction = d.on.some(m => FALL_WINDOWS.includes(m)) && d.do.some(x => isObject(x) && (x.type === "use"));
       if ( isObject(s) && ["halve", "uncrit", "reduce", "miss", "penalty", "reroll", "resist"].includes(s.type) && !((s.type === "penalty") && preAttackReaction) && !((s.type === "reduce") && fallReaction) && (!d.on.some(m => HIT_WINDOWS.includes(m)) || !d.do.some(x => isObject(x) && (x.type === "use"))) ) errors.push(`${at}.do: "${s.type}" requires the isHit or allyIsHit moment and a "use" reaction`);
-      // §344 : `cancel` aussi à la fenêtre `isTargeted` (Sceptre d'absorption : le sort qui vise le porteur est annulé).
+      // §344: `cancel` also at the `isTargeted` window (Rod of Absorption: the spell that targets the bearer is canceled).
       const targetedReaction = d.on.includes("isTargeted") && d.do.some(x => isObject(x) && (x.type === "use"));
       if ( isObject(s) && (s.type === "cancel") && !fallReaction && !targetedReaction ) errors.push(`${at}.do: "cancel" requires the falls, allyFalls or isTargeted moment and a "use" reaction`);
-      // §493 (B13) : `cancelForSelf` — à la fenêtre `inArea`, avec sa réaction `use` ; `ifSourceFails` veut une réaction qui vise la source
-      // (l'activité dont la sauvegarde, imposée à l'auteur, décide).
+      // §493 (B13): `cancelForSelf` — at the `inArea` window, with its `use` reaction; `ifSourceFails` wants a reaction
+      // that targets the source (the activity whose save, imposed on the author, decides).
       if ( isObject(s) && (s.type === "cancelForSelf") ) {
         const uses = d.do.filter(x => isObject(x) && (x.type === "use"));
         if ( !d.on.includes("inArea") || !uses.length ) errors.push(`${at}.do: "cancelForSelf" requires the inArea moment and a "use" reaction`);
         else if ( (s.ifSourceFails === true) && !uses.some(x => x.target === "source") ) errors.push(`${at}.do: "cancelForSelf" with ifSourceFails requires a "use" reaction with target: "source"`);
       }
-      // O8d (§347) : `intercept` — le réacteur devient la cible de l'attaque (Bouclier antiprojectiles), avant le jet.
+      // O8d (§347): `intercept` — the reacting creature becomes the target of the attack (Arrow-Catching Shield), before the roll.
       if ( isObject(s) && (s.type === "intercept") && !(d.on.includes("enemyAttacks") && preAttackReaction) ) errors.push(`${at}.do: "intercept" requires the enemyAttacks moment and a "use" reaction`);
       if ( isObject(s) && (s.type === "absorb") && !(d.on.includes("allyIsDamaged") && d.do.some(x => isObject(x) && (x.type === "use"))) ) errors.push(`${at}.do: "absorb" requires the allyIsDamaged moment and a "use" reaction`);
-      // §375 : `redirect` — sur un coup raté, l'attaquant refait la même attaque contre une créature que le réacteur agrippe.
+      // §375: `redirect` — on a miss, the attacker makes the same attack again against a creature the reacting creature grapples.
       if ( isObject(s) && (s.type === "redirect") && !(d.on.includes("isMissed") && d.do.some(x => isObject(x) && (x.type === "use"))) ) errors.push(`${at}.do: "redirect" requires the isMissed moment and a "use" reaction`);
       if ( isObject(s) && (s.type === "interpose") && !(d.on.includes("allyIsDamaged") && d.do.some(x => isObject(x) && (x.type === "use"))) ) errors.push(`${at}.do: "interpose" requires the allyIsDamaged moment and a "use" reaction`);
       if ( isObject(s) && (s.type === "bonus") && !(d.on.includes("allyAttacks") && preAttackReaction) ) errors.push(`${at}.do: "bonus" requires the allyAttacks moment and a "use" reaction`);

@@ -1,10 +1,10 @@
 /**
- * Renvoi des morts-vivants par la Calcination (SPEC §16.25) : seuls les morts-vivants sont affectés (un humanoïde hostile
- * dans la zone ne l'est pas) ; un mort-vivant qui rate sa sauvegarde est Renvoyé (Effrayé, Neutralisé) et subit les
- * dégâts radiants, qui ne mettent pas fin au renvoi ; des dégâts subis ensuite y mettent fin.
- * Alara (la clerc de `dnd-6`, qui a la Calcination), un Zombi et un humanoïde du SRD 2024 posés pour l'occasion (`ctx.cast` ;
- * le monde `ravenloft` avait un « Zombie Plague Spreader » de Ravenloft et un PNJ de campagne), le Guerrier pour les dégâts
- * qui mettent fin au renvoi. Sans Alara : non applicable.
+ * Turning of the Undead by Sear Undead (SPEC §16.25): only the Undead are affected (a hostile Humanoid
+ * in the area is not); an Undead that fails its save is Turned (Frightened, Incapacitated) and takes the
+ * radiant damage, which does not end the turning; damage taken afterwards ends it.
+ * Alara (the `dnd-6` cleric, who has Sear Undead), a Zombie and a 2024 SRD Humanoid placed for the occasion (`ctx.cast`;
+ * the `ravenloft` world had a Ravenloft "Zombie Plague Spreader" and a campaign NPC), the Fighter for the damage
+ * that ends the turning. Without Alara: not applicable.
  */
 const UNDEAD = "Zombi du renvoi";
 const HUMANOID = "Cible humanoïde";
@@ -31,15 +31,15 @@ export default {
     const humanoid = cast[HUMANOID] ? await ctx.token(HUMANOID) : null;
     if ( humanoid ) await ctx.call("move-token", { tokenId: humanoid.id, x: at.x - (2 * grid), y: at.y });
 
-    // La Calcination, lancée jusqu'à ce que le mort-vivant rate sa sauvegarde (Sagesse 5 : presque toujours).
-    // §469 : sur une fiche au Manuel 3.0.0 (ou au SRD 6.1), l'item Calcination n'a plus d'activité : « Sear Undead » est sur le Conduit
-    // divin (content/cleric.mjs, SEAR_UNDEAD_61).
+    // Sear Undead, cast until the Undead fails its save (Wisdom 5: almost always).
+    // §469: on a sheet at Handbook 3.0.0 (or SRD 6.1), the Sear Undead item no longer has an activity: "Sear Undead" is on Channel
+    // Divinity (content/cleric.mjs, SEAR_UNDEAD_61).
     const items = (await ctx.call("get-actor", { actorId: alara.actorId })).items ?? [];
     const searItem = items.find(i => i.system?.identifier === "sear-undead");
     const oldForm = Object.keys(searItem?.system?.activities ?? {}).length > 0;
     const channel = items.find(i => i.system?.identifier === "channel-divinity-cleric");
-    // Nouvelle forme : sans zone (« les morts-vivants de votre choix à 9 m ») — le Renvoi du Conduit divin, la Calcination cochée à la
-    // place (comme renvoi-choix), le Zombi et l'humanoïde désignés.
+    // New form: with no area ("the Undead of your choice within 9 m") — Channel Divinity's Turn Undead, Sear Undead checked in
+    // its place (like renvoi-choix), the Zombie and the Humanoid designated.
     ctx.log(`Calcination : ${oldForm ? "activité de l'item Calcination (ancienne forme)" : "« Sear Undead » du Conduit divin, à la place du Renvoi"}`);
     const searUse = async () => {
       if ( oldForm ) return ctx.use({ tokenId: alara.id, identifier: "sear-undead", activityType: "save", consume: false,
@@ -50,7 +50,7 @@ export default {
     const center = { x: at.x + grid / 2, y: at.y + grid / 2 };
     let r = null;
     for ( let n = 1; n <= 6; n++ ) {
-      // Le Zombi du SRD n'a que 15 PV : son maximum est relevé (token non lié, retiré à la fin), sinon la Calcination le tue.
+      // The SRD Zombie has only 15 HP: its maximum is raised (unlinked token, removed at the end), otherwise Sear Undead kills it.
       await ctx.call("update-scene-object", { type: "Token", objectId: zombieId, data: { "delta.system.attributes.hp.max": 200 } });
       await ctx.setHp(zombie, 78);
       for ( const e of await ctx.effects(zombie) ) {
@@ -70,7 +70,7 @@ export default {
     const turned = async () => (await ctx.effects(zombie)).some(e => (e.statuses ?? []).includes("frightened"));
     ctx.expect(await turned(), "Renvoyé : l'effet tient malgré les dégâts de la Calcination");
 
-    // Des dégâts ensuite : le renvoi cesse (le Guerrier et son épée à deux mains, au contact).
+    // Damage afterwards: the turning ends (the Fighter and his two-handed sword, in melee).
     const fighter = tokens.some(t => t.name === "Guerrier") ? await ctx.token("Guerrier") : null;
     if ( !fighter ) return;
     await ctx.call("move-token", { tokenId: fighter.id, x: at.x + (3 * grid), y: at.y });

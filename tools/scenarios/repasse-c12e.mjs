@@ -1,15 +1,15 @@
 /**
- * §308, sous-lot C12-e de la repasse terme par terme : sauvegardes, Avantage, dés ajoutés. Arène des sorts (Lanceur, Cible, Héros).
- * Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source) et remet tout.
- *  - Coup brutal : le Héros (Barbare passé niveau 9) téméraire choisit Coup handicapant — le jet n'a pas l'Avantage ; sur un coup, la
- *    Cible porte « Hamstrung » et la marque du Coup brutal tombe ;
- *  - Tactiques défensives : touchée par le Lanceur, la Cible lui impose le Désavantage à ses autres attaques contre elle ce tour-ci ;
- *  - Maléfice occulte : l'effet de Maléfice (Sagesse) posé par un lanceur qui a l'aptitude donne le Désavantage aux sauvegardes de
- *    Sagesse ; sans l'aptitude, non ;
- *  - Mot de pouvoir étourdissant : la Cible à 100 PV est Étourdie ; à la fin de son tour, une sauvegarde de Constitution est rejouée ;
- *  - Fragilisation occulte : un coup d'arme du Lanceur marque la Cible ; sa sauvegarde contre la Flamme sacrée du Lanceur a le
- *    Désavantage, et la marque tombe ;
- *  - Vision ombreuse : dans une région d'obscurité, la Cible n'est plus vue par le Lanceur à vision dans le noir.
+ * §308, sub-batch C12-e of the term-by-term pass: saving throws, Advantage, added dice. Spell arena (Caster, Target, Hero).
+ * Each part borrows its items from the Player's Handbook (with their source) and puts everything back.
+ *  - Brutal Strike: the reckless Hero (Barbarian past level 9) picks Hamstring Blow — the roll does not have Advantage;
+ *    on a hit, the Target bears "Hamstrung" and the Brutal Strike mark drops;
+ *  - Defensive Tactics: hit by the Caster, the Target imposes Disadvantage on its other attacks against it this turn;
+ *  - Eldritch Hex: the Hex effect (Wisdom) placed by a caster who has the feature gives Disadvantage on Wisdom saving throws;
+ *    without the feature, it does not;
+ *  - Power Word Stun: the Target at 100 HP is Stunned; at the end of its turn, a Constitution saving throw is replayed;
+ *  - Eldritch Fragility: a weapon hit by the Caster marks the Target; its saving throw against the Caster's Sacred Flame has
+ *    Disadvantage, and the mark drops;
+ *  - Shadowy Vision: in a darkness region, the Target is no longer seen by the Caster with Darkvision.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -114,11 +114,11 @@ export default {
       await pause(1500);
       const effects = await ctx.effects(target);
       ctx.expect(effects.some(e => changesOf(e).includes("system.attributes.movement.speed") || /Hamstrung|handicap/i.test(e.name)), `la Cible porte « Hamstrung » (${effects.map(e => e.name).join(", ")})`);
-      // La marque tombe à la résolution, sur le MJ actif : attendue (6 s au plus) plutôt qu'une pause fixe.
+      // The mark drops on resolution, on the active GM: awaited (6 s at most) rather than a fixed pause.
       let dropped = false;
       for ( let n = 0; (n < 12) && !dropped; n++ ) { dropped = !(await ctx.effects(hero)).some(e => e.flags?.[MODULE_ID]?.brutalStrike); if ( !dropped ) await pause(500); }
       ctx.expect(dropped, "la marque du Coup brutal tombe après l'attaque");
-      // Sans Coup brutal, la Témérité donne bien l'Avantage.
+      // Without Brutal Strike, Recklessness does give Advantage.
       const b = await attack(hero, axe, target, { reckless: true, brutal: false });
       ctx.expect(b.mode === 1, `attaque suivante, sans Coup brutal : Avantage de la Témérité (mode ${b.mode})`);
     });
@@ -201,8 +201,8 @@ export default {
     await part("Vision ombreuse", async () => {
       await ctx.call("update-actor", { actorId: caster.actorId, actorData: { "system.attributes.senses.ranges.darkvision": 120 } });
       extra.push(() => ctx.call("update-actor", { actorId: caster.actorId, actorData: { "system.attributes.senses.ranges.darkvision": null } }));
-      // Une région d'obscurité ne donne que de la lumière faible sous la lumière globale (crépuscule) : la lumière globale est éteinte
-      // le temps de la partie, la scène est dans les ténèbres.
+      // A darkness region only gives Dim Light under the global light (twilight): the global light is turned off
+      // for the duration of the part, the scene is in Darkness.
       const env = (await ctx.call("get-scene", { sceneId })).environment ?? {};
       const was = env.globalLight?.enabled ?? true;
       await ctx.call("update-scene", { sceneId, sceneData: { "environment.globalLight.enabled": false } });

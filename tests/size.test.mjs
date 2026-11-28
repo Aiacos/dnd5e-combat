@@ -5,7 +5,7 @@ import { validateEntry } from "../module/scripts/core/content.mjs";
 const SIZES = ["tiny", "sm", "med", "lg", "huge", "grg"];
 
 describe("changer de taille (§16.58)", () => {
-  it("décale d'autant de catégories, borné aux extrêmes", () => {
+  it("shifts by that many categories, bounded at the extremes", () => {
     expect(shiftSize("med", 1, SIZES)).toBe("lg");
     expect(shiftSize("med", -1, SIZES)).toBe("sm");
     expect(shiftSize("grg", 1, SIZES)).toBe("grg");
@@ -15,7 +15,7 @@ describe("changer de taille (§16.58)", () => {
   it("taille inconnue : rien", () => {
     expect(shiftSize("colossal", 1, SIZES)).toBe(null);
   });
-  it("schéma : { id d'effet: crans }, entier non nul de -5 à 5", () => {
+  it("schema: { effect id: steps }, non-zero integer from -5 to 5", () => {
     expect(validateEntry({ resize: { Wi2E10l7n6Ka8k6u: 1, NXdtOxX4HvPeodml: -1 } }, { facts: {} })).toEqual([]);
     expect(validateEntry({ resize: { court: 1, NXdtOxX4HvPeodml: 0 } }, { facts: {} }))
       .toEqual(["resize.court: effect id (16 characters)", "resize.NXdtOxX4HvPeodml: non-zero integer, from -5 to 5"]);

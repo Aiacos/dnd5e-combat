@@ -1,14 +1,14 @@
 /**
- * §117, §416 : ce que chaque niveau d'automatisation promet, vérifié au niveau où le monde se trouve (lu dans le réglage
- * `automationLevel`). La passe complète le joue en « full » ; pour les deux autres, changer le réglage, recharger le client
- * (`node tools/reload.mjs`) et rejouer ce scénario seul — les autres supposent « full ».
+ * §117, §416: what each automation level promises, checked at the level the world is on (read from the setting
+ * `automationLevel`). The full run plays it at "full"; for the other two, change the setting, reload the client
+ * (`node tools/reload.mjs`) and replay this scenario alone — the others assume "full".
  *
- *                                       Essentiel            Assisté              Intégral
- *  1. attaque (Trait de feu)            jet seul, PV intacts  résolue, dégâts      résolue, dégâts
- *  2. sort à sauvegarde (Mains br.)     ni jet ni dégâts      sauvegarde, dégâts   sauvegarde, dégâts
- *  3. attaque d'opportunité             jamais jugée          jugée                jugée
- *  4. contenu par objet                 fermé                 fermé                ouvert
- *  5. action de base (mains nues)       choix exclusif connu à tous les niveaux : Lutte OU Bousculade, jamais les deux
+ *                                       Essential            Assisted             Full
+ *  1. attack (Fire Bolt)                roll only, HP intact  resolved, damage     resolved, damage
+ *  2. save spell (Burning H.)           no roll, no damage    saving throw, damage saving throw, damage
+ *  3. Opportunity Attack                never judged          judged               judged
+ *  4. content per item                  closed                closed               open
+ *  5. basic action (unarmed)            exclusive choice known at all levels: Grapple OR Shove, never both
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -33,7 +33,7 @@ export default {
     ctx.restore(() => ctx.setHp(zombi, hp0));
     const types = msgs => msgs.map(m => m.type).join(", ") || "aucun message";
 
-    // 1. Attaque : jusqu'à toucher (niveaux qui résolvent), une seule fois sinon.
+    // 1. Attack: until a hit (levels that resolve), only once otherwise.
     for ( let shot = 1; shot <= 6; shot++ ) {
       const before = await ctx.hp(zombi);
       const since = await ctx.lastMessageId();
@@ -53,7 +53,7 @@ export default {
       break;
     }
 
-    // 2. Sort à sauvegarde posé sur le Zombi.
+    // 2. Save spell placed on the Zombie.
     {
       await ctx.setHp(zombi, hp0);
       const since = await ctx.lastMessageId();
@@ -74,7 +74,7 @@ export default {
       }
     }
 
-    // 3. Attaque d'opportunité : le Zombi collé au Guerrier s'éloigne, en combat.
+    // 3. Opportunity Attack: the Zombie stuck to the Fighter moves away, in combat.
     {
       const grid = await ctx.gridSize();
       const home = await ctx.position(zombi);

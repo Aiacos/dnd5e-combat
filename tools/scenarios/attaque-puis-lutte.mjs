@@ -1,11 +1,11 @@
 /**
- * Attaque supplémentaire et Lutte / Bousculade (retour de table du 2026-10-16 : « l'interface considère parfois que le joueur
- * n'a plus d'action alors qu'il en reste une », classes à deux attaques). Le Paladin (niveau 8, Attaque supplémentaire) au contact
- * du Zombi :
- *  1. une attaque d'épée : l'action Attaquer est ouverte, une attaque reste (budget du moteur et `api.ui.budget`) ;
- *  2. la Bousculade de la Frappe à mains nues remplace la seconde attaque : aucun souci de légalité ;
- *  3. utilisée, elle consomme cette seconde attaque — plus rien ensuite.
- * Remet le Zombi et le Paladin à leur place (le filet du lanceur remet PV et effets).
+ * Extra Attack and Grapple / Shove (table feedback of 2026-10-16: "the interface sometimes considers that the player
+ * has no action left when one remains", classes with two attacks). The Paladin (level 8, Extra Attack) in melee contact
+ * with the Zombie:
+ *  1. a sword attack: the Attack action is open, one attack remains (engine budget and `api.ui.budget`);
+ *  2. the Unarmed Strike Shove replaces the second attack: no legality issue;
+ *  3. once used, it consumes that second attack — nothing left afterwards.
+ * Puts the Zombie and the Paladin back in place (the caster's safety net restores HP and effects).
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -30,7 +30,7 @@ export default {
     }
     if ( !ctx.expect(!!sword && !!unarmed, `épée longue et Frappe à mains nues sur le Paladin (${sword ?? "—"}, ${unarmed ?? "—"})`) ) return;
 
-    // 1. Une attaque d'épée.
+    // 1. A sword attack.
     const used = await ctx.use({ tokenId: paladin.id, itemId: sword, activityType: "attack", targetTokenIds: [zombi.id], consume: false,
       usageConfig: { [MODULE_ID]: { confirmed: true } } });
     await ctx.settle(used.usageMessageId).catch(() => null);
@@ -43,7 +43,7 @@ export default {
     const before = await ctx.engine("issues", { tokenId: paladin.id, itemId: unarmed, activityType: "save" });
     ctx.expect(!before.length, `Bousculade après une attaque : ${before.join(" ; ") || "aucun souci"}`);
 
-    // 2 bis. Un objet « Bousculer » à part (le « Bousculer » des exemples de Midi-QOL, gardé sur une fiche de joueur) : de même.
+    // 2 bis. A separate "Shove" item (the "Shove" from the Midi-QOL examples, kept on a player sheet): likewise.
     const shoveItem = await ctx.call("upsert-actor-item", { actorId: paladin.actorId, itemData: { name: "Bousculer (test)", type: "feat",
       system: { identifier: "shove", activities: { dnd5eShoveTest00: { _id: "dnd5eShoveTest00", type: "utility", activation: { type: "action" } } } } },
       match: { path: "system.identifier", value: "shove" } });
@@ -52,7 +52,7 @@ export default {
     const midi = await ctx.engine("issues", { tokenId: paladin.id, itemId: shoveId });
     ctx.expect(!midi.length, `objet « Bousculer » à part après une attaque : ${midi.join(" ; ") || "aucun souci"}`);
 
-    // 3. Utilisée, elle prend la seconde attaque.
+    // 3. Used, it takes the second attack.
     const shove = await ctx.use({ tokenId: paladin.id, itemId: unarmed, activityType: "save", targetTokenIds: [zombi.id], consume: false,
       usageConfig: { [MODULE_ID]: { confirmed: true, saveChoice: "best", choice: "dnd5eCombatPush0" } } });
     await ctx.settle(shove.usageMessageId).catch(() => null);

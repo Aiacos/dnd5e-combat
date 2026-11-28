@@ -1,12 +1,15 @@
 /**
- * Zone « sur soi » posée d'office (§47) : Esprits gardiens (PHB), prêté au lanceur (Alara dans `ravenloft`, sinon le Magicien),
- * utilisé comme au clic — pose de dnd5e comprise (`api.mcp.use`, pas `use-activity` du connecteur qui la coupe). dnd5e ouvre sa
- * fenêtre pour le niveau du sort, mais sans la case « Placer le gabarit ». Sans le moteur, dnd5e attendrait un clic sur un token ;
- * ici l'émanation naît d'elle-même, rattachée au lanceur (le Zombi, déplacé à côté, ne sauvegarde pas à la pose : §531).
- * Le même geste pour une capacité de créature (émanation sans emplacement) se joue dans le dépôt du module qui la livre.
- * §438 : Manuel 3.0.0 — l'émanation est posée par « Cast Spell » (`tevaatMC9LZxVPLS`).
+ * "Self" area placed automatically (§47): Spirit Guardians (PHB), lent to the caster (Alara in `ravenloft`, otherwise the Wizard),
+ * used as on click — dnd5e's placement included (`api.mcp.use`, not the connector's `use-activity`, which cuts it).
+ * dnd5e opens its window for the spell level, but without the "Place Template" checkbox. Without the engine,
+ * dnd5e would wait for a click on a token; here the Emanation appears on its own, attached to the caster (the Zombie,
+ * moved next to it, does not save at placement: §531).
+ * The same gesture for a creature ability (Emanation without a spell slot) is played in the repository of the
+ * module that ships it.
+ * §438: Manual 3.0.0 — the Emanation is placed by "Cast Spell" (`tevaatMC9LZxVPLS`).
  * §531 (issue #142): SRD 5.2 — nothing happens when the Emanation appears: the Zombie, already inside, makes no save at the cast;
- * it saves when the caster walks up and the attached Emanation enters its space ("whenever the Emanation enters a creature's space").
+ * it saves when the caster walks up and the attached Emanation enters its space
+ * ("whenever the Emanation enters a creature's space").
  */
 export default {
   name: "zone sur soi — émanation posée sur le lanceur sans clic (Esprits gardiens)",

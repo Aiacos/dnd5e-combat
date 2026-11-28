@@ -1,7 +1,7 @@
 /**
- * §105 : partager la case d'une autre créature, vu depuis Foundry. Une capacité de la fiche (contenu `sharesSpace`, par
- * identifiant : Forme d'air, Nuée…) vaut par sa présence ; un sort (Forme gazeuse) seulement par l'effet qu'il a posé — le
- * connaître ne suffit pas.
+ * §105: sharing another creature's cell, seen from Foundry. A sheet ability (content `sharesSpace`, by
+ * identifier: Air Form, Swarm…) counts by its presence; a spell (Gaseous Form) only by the effect it placed — knowing
+ * it is not enough.
  */
 
 import { contentOf } from "./content.mjs";
@@ -26,15 +26,15 @@ export function shareKindOf(actor) {
 }
 
 /**
- * Le token qui bouge peut-il traverser la case de l'autre et s'y arrêter ? Documents de token.
+ * Can the moving token pass through the other's cell and stop in it? Token documents.
  * @param {TokenDocument} mover
  * @param {TokenDocument} occupant
  * @param {object} [options]
- * @param {"enter"|"mutual"|null} [options.moverKind]  `shareKindOf(mover.actor)` déjà lu par l'appelant, qui compare le même
- *   token à tous ceux d'une scène (adapter/path-world.mjs) : ses objets ne sont pas relus pour chaque occupant.
+ * @param {"enter"|"mutual"|null} [options.moverKind]  `shareKindOf(mover.actor)` already read by the caller, which compares the
+ *   same token with all those of a scene (adapter/path-world.mjs): its items are not reread for each occupant.
  */
 export function sharesSpaceWith(mover, occupant, { moverKind }={}) {
   if ( !mover?.actor || !occupant?.actor ) return false;
-  if ( !samePlane(mover, occupant) ) return true;   // §225 : d'un plan à l'autre, on ne se gêne pas
+  if ( !samePlane(mover, occupant) ) return true;   // §225: from one plane to the other, they do not get in each other's way
   return mayShareSpace((moverKind !== undefined) ? moverKind : shareKindOf(mover.actor), shareKindOf(occupant.actor));
 }

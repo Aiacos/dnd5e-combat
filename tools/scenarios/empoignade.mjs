@@ -1,11 +1,11 @@
 /**
- * L'empoignade en jeu (SPEC §15.2, règles 2024) :
- *  1. le Magicien agrippe le Zombi (Lutte, rejouée jusqu'à un échec du Zombi) ;
- *  2. le Zombi agrippé attaque l'Ensorceleur : désavantage « attaquant Agrippé » ; attaque le Magicien,
- *     son agrippeur : pas ce désavantage ;
- *  3. le Magicien s'éloigne de trois cases : l'empoignade cesse d'elle-même (hors de portée) ;
- *  4. le Paladin agrippe le Magicien, qui tente S'échapper jusqu'à réussir : l'état Agrippé tombe.
- * Remet tokens, états, PV et items en place.
+ * Grappling in play (SPEC §15.2, 2024 rules):
+ *  1. the Wizard grapples the Zombie (Grapple, replayed until the Zombie fails);
+ *  2. the Grappled Zombie attacks the Sorcerer: Disadvantage "Grappled attacker"; attacks the Wizard,
+ *     its grappler: not that Disadvantage;
+ *  3. the Wizard moves three cells away: the grapple ends by itself (out of reach);
+ *  4. the Paladin grapples the Wizard, who tries to Escape until he succeeds: the Grappled condition ends.
+ * Puts tokens, conditions, HP and items back.
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -33,7 +33,7 @@ export default {
     for ( const t of [mage, paladin, zombi] ) ctx.restore(() => move(t, t.x, t.y));
     for ( const t of [zombi, mage] ) ctx.restore(() => ctx.removeStatusEffects(t, "grappled"));
 
-    /** Les états d'un token (effets du token, ou de l'acteur lié). */
+    /** A token's conditions (token effects, or those of the linked actor). */
     const statusesOf = async token => {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: token.id });
       const own = [...(data.delta?.effects ?? [])].flatMap(e => e.statuses ?? []);
@@ -49,8 +49,8 @@ export default {
     for ( const until = Date.now() + 6000; !unarmed && (Date.now() < until); await sleep(400) ) unarmed = await engineItem(mage, "unarmed");
     if ( !unarmed ) return ctx.expect(false, "attaque à mains nues posée sur le Magicien");
 
-    /** Lutte de `who` sur `target`, rejouée jusqu'à un échec. true si la cible est agrippée. */
-    // Jusqu'à 20 essais : une cible dans l'Aura de protection du Paladin rate rarement sa sauvegarde.
+    /** `who`'s Grapple on `target`, replayed until a failure. true if the target is grappled. */
+    // Up to 20 tries: a target within the Paladin's Aura of Protection rarely fails its save.
     async function grapple(who, target) {
       const item = await engineItem(who, "unarmed");
       const totals = [];
@@ -74,7 +74,7 @@ export default {
     ctx.expect(held, "le Magicien agrippe le Zombi");
     if ( !held ) return;
 
-    // 2. Désavantage du Zombi agrippé contre une autre cible que son agrippeur.
+    // 2. Disadvantage of the grappled Zombie against a target other than its grappler.
     const zombiWeapon = (await itemsOf(zombi)).find(i => Object.values(i.system?.activities ?? {}).some(a => a.type === "attack"));
     async function reasonsAgainst(target) {
       const used = await ctx.use({ tokenId: zombi.id, itemId: zombiWeapon._id, activityType: "attack", targetTokenIds: [target.id] });
@@ -83,21 +83,22 @@ export default {
       const mods = attack?.flags?.[MODULE_ID]?.modifiers ?? attack?.flags?.modifiers ?? null;
       return (mods?.disadvantage ?? []).map(r => `${r.who}.${r.key}`);
     }
-    // Le Magicien n'a que 7 PV : tombé inconscient sous un coup du Zombi, il lâcherait sa prise. Des PV temporaires le temps des deux attaques.
+    // The Wizard has only 7 HP: knocked Unconscious by a Zombie hit, he would release his hold. Temporary Hit Points for the
+    // duration of the two attacks.
     await ctx.call("update-actor", { actorId: mage.actorId, actorData: { "system.attributes.hp.temp": 50 } });
     ctx.restore(() => ctx.call("update-actor", { actorId: mage.actorId, actorData: { "system.attributes.hp.temp": 0 } }).catch(() => {}));
     const vsSorc = await reasonsAgainst(sorc);
     ctx.expect(vsSorc.includes("attacker.grappled"), `Zombi agrippé contre l'Ensorceleur : désavantage (${vsSorc.join(", ") || "aucun"})`);
     const vsMage = await reasonsAgainst(mage);
     ctx.expect(!vsMage.includes("attacker.grappled"), `Zombi agrippé contre le Magicien, son agrippeur : pas ce désavantage (${vsMage.join(", ") || "aucun"})`);
-    // Les coups du Zombi peuvent mettre le Magicien (7 PV) à terre, inconscient : on le remet sur pied avant qu'il marche.
+    // The Zombie's hits can knock the Wizard (7 HP) down, Unconscious: he is put back on his feet before he walks.
     const mageHp = hpBefore.get(mage.id);
     await ctx.call("update-actor", { actorId: mage.actorId, actorData: { "system.attributes.hp.temp": 0 } });
     await ctx.setHp(mage, mageHp);
     for ( const status of ["unconscious", "prone"] ) await ctx.removeStatusEffects(mage, status);
     await sleep(500);
 
-    // 2 bis. La marque de l'agrippeur, et le Zombi traîné quand le Magicien MARCHE.
+    // 2 bis. The grappler's mark, and the Zombie dragged when the Wizard WALKS.
     const marksOf = async token => ((await ctx.call("get-actor", { actorId: token.actorId })).effects ?? []).filter(e => e.flags?.[MODULE_ID]?.grappling);
     let marks = [];
     for ( const until = Date.now() + 4000; !marks.length && (Date.now() < until); await sleep(300) ) marks = await marksOf(mage);
@@ -105,24 +106,24 @@ export default {
     const posOf = async token => (await ctx.call("get-scene-object", { type: "Token", objectId: token.id })).data;
     const before = await posOf(zombi);
     const mageAt = await posOf(mage);
-    // Un déplacement ordinaire (marche), pas une téléportation : `move-token` avec l'action « walk ». Une mise à jour
-    // de x (`update-scene-object`) fait échouer le cœur V14 sur Restored Keep (« setting 'last' », segment parcouru vide
-    // dans `createTerrainMovementPath`, canvas/placeables/token.mjs:3831 — vu le 2026-09-25).
-    // Vers le sud : à l'est, le Bandit peut occuper la deuxième case (vu le 2026-09-25).
+    // An ordinary move (walk), not a teleport: `move-token` with the "walk" action. An update
+    // of x (`update-scene-object`) makes the V14 core fail on Restored Keep ("setting 'last'", empty traveled segment
+    // in `createTerrainMovementPath`, canvas/placeables/token.mjs:3831 — seen on 2026-09-25).
+    // Toward the south: to the east, the Bandit may occupy the second cell (seen on 2026-09-25).
     await ctx.call("move-token", { tokenId: mage.id, x: mageAt.x, y: mageAt.y + (2 * size), action: "walk" });
     let after = before;
     for ( const until = Date.now() + 5000; (after.x === before.x) && (after.y === before.y) && (Date.now() < until); await sleep(300) ) after = await posOf(zombi);
     const mageNow = await posOf(mage);
     ctx.expect(mageNow.y === mageAt.y + (2 * size), `le Magicien marche de deux cases (${mageAt.y} → ${mageNow.y})`);
-    // À sa place relative si elle est libre, sinon sur une case libre au contact (SPEC §15.2, `dragDestination`) :
-    // la scène peut avoir une créature sur le chemin — on exige seulement qu'il ait bougé et soit au contact.
+    // At its relative place if it is free, otherwise on a free cell in contact (SPEC §15.2, `dragDestination`):
+    // the scene may have a creature in the way — we only require that it moved and is in contact.
     const gap = Math.max(Math.abs(after.x - mageNow.x), Math.abs(after.y - mageNow.y)) / size;
     ctx.expect(((after.x !== before.x) || (after.y !== before.y)) && (gap === 1),
       `le Zombi agrippé suit, au contact du Magicien (${before.x},${before.y} → ${after.x},${after.y})`);
     await sleep(800);
     ctx.expect((await statusesOf(zombi)).includes("grappled"), "toujours agrippé après avoir été traîné");
 
-    // 3. Le Magicien se téléporte à 20 ft : pas de traînée, l'empoignade cesse, la marque tombe.
+    // 3. The Wizard teleports 20 ft away: no drag, the grapple ends, the mark falls.
     await move(mage, after.x + (4 * size), after.y);
     let still = true;
     for ( const until = Date.now() + 5000; still && (Date.now() < until); await sleep(400) ) still = (await statusesOf(zombi)).includes("grappled");
@@ -131,9 +132,9 @@ export default {
     ctx.expect(!marks.length, "la marque de l'agrippeur est retirée avec l'empoignade");
     await move(zombi, zombi.x, zombi.y);
 
-    // 4. Le Paladin agrippe le Magicien, qui s'échappe.
+    // 4. The Paladin grapples the Wizard, who escapes.
     const magePos = await posOf(mage);
-    await move(paladin, magePos.x + size, magePos.y);   // au contact du Magicien, à l'est
+    await move(paladin, magePos.x + size, magePos.y);   // in contact with the Wizard, to the east
     const caught = await grapple(paladin, mage);
     ctx.expect(caught, "le Paladin agrippe le Magicien");
     if ( !caught ) return;
@@ -142,8 +143,8 @@ export default {
     if ( !escape ) return;
     let free = false;
     let tries = 0;
-    // Chaque essai : on attend le test (message « check ») avant de juger — les dés 3D d'une fenêtre visible
-    // prennent 2 à 3 s, et un essai relancé trop tôt se superposait au précédent.
+    // Each try: we wait for the check ("check" message) before judging — the 3D dice of a visible window
+    // take 2 to 3 s, and a try relaunched too early overlapped the previous one.
     for ( ; (tries < 12) && !free; tries++ ) {
       const used = await ctx.use({ tokenId: mage.id, itemId: escape._id, activityType: "utility" });
       for ( const until = Date.now() + 6000; Date.now() < until; await sleep(300) ) {

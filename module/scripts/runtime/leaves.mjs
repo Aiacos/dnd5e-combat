@@ -1,11 +1,11 @@
 /**
- * §456 : `leavesEffects: [ids d'effets]` — quand l'item quitte la fiche (supprimé de l'acteur), ces effets de l'item sont posés sur
- * l'ancien porteur. Marque du sacrifice (Ravenloft) : « si cette Bénédiction est retirée, … Désavantage aux sauvegardes de Sagesse
- * pendant 24 heures » — la donnée porte l'effet « (Removed) » et demande au MJ de le poser à la main.
+ * §456: `leavesEffects: [ids d'effets]` — when the item leaves the sheet (deleted from the actor), these item effects are placed on
+ * the former bearer. Mark of the sacrifice (Ravenloft): "if this Blessing is removed, … Disadvantage on Wisdom saving throws
+ * for 24 hours" — the data carries the "(Removed)" effect and asks the GM to place it by hand.
  *
- * Pas lors d'un remplacement par le diagnostic (supprimer puis recréer le même objet, option `{ [MODULE_ID]: { replacing: true } }`).
- * Retour pour toute la table (règle DAS) : texte au-dessus du token et son chez chacun, carte de chat (vue même sans token sur la scène).
- * MJ actif.
+ * Not on a replacement by the diagnostic (delete then recreate the same object, option `{ [MODULE_ID]: { replacing: true } }`).
+ * Feedback for the whole table (DAS rule): text above the token and sound for everyone, chat card (seen even with no token on
+ * the scene). Active GM.
  */
 
 import { MODULE_ID } from "../constants.mjs";

@@ -1,7 +1,7 @@
 /**
- * §484 : faits sur la créature elle-même (`self.inSunlight`, `self.inBrightLight`, `self.inRunningWater`), dégâts qu'un trait inflige à
- * son porteur au début de son tour (`to: "self"`, sans effet posé) et Désavantage déclaré aux tests (`rollDisadvantage`). Exemple
- * générique : une créature qui brûle au soleil.
+ * §484: facts about the creature itself (`self.inSunlight`, `self.inBrightLight`, `self.inRunningWater`), damage that a trait
+ * deals to its bearer at the start of its turn (`to: "self"`, with no effect placed) and Disadvantage declared on checks
+ * (`rollDisadvantage`). Generic example: a creature that burns in sunlight.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import { validateEntry } from "../module/scripts/core/content.mjs";
@@ -15,16 +15,16 @@ const BURNS = {
 };
 
 describe("§484 : validation", () => {
-  it("un trait qui brûle son porteur au début de son tour, et le Désavantage aux tests : valides", () => {
+  it("a trait that burns its bearer at the start of its turn, and Disadvantage on checks: valid", () => {
     expect(validateEntry(BURNS, { facts })).toEqual([]);
   });
-  it("`to: \"self\"` : à son tour seulement, porté par l'item lui-même", () => {
+  it("`to: \"self\"`: on its turn only, carried by the item itself", () => {
     const at = (on, extra={}) => validateEntry({ triggers: [{ on, ...extra, do: [{ type: "damage", to: "self", formula: "1d6", damageType: "fire" }] }] }, { facts });
     expect(at("endOfTurn")).toEqual([]);
     expect(at("isHit").join()).toMatch(/to: "self"/);
     expect(at("startOfTurn", { via: "effect" }).join()).toMatch(/to: "self"/);
   });
-  it("`to: \"self\"` peut rejouer l'activité de dégâts de l'item", () => {
+  it("`to: \"self\"` can replay the item's damage activity", () => {
     expect(validateEntry({ triggers: [{ on: "startOfTurn", do: [{ type: "damage", to: "self", activity: "abcdefghijklmnop" }] }] }, { facts })).toEqual([]);
   });
   it("`rollDisadvantage` : jets connus, condition sur des faits connus", () => {
@@ -51,7 +51,7 @@ describe("§484 : eau courante et faits `self.*`", () => {
     ({ factsFor } = await import("../module/scripts/adapter/facts.mjs"));
   });
 
-  /** Une scène carrée de 100 px par case ; une région marquée couvre x < 300. */
+  /** A square scene of 100 px per cell; a marked region covers x < 300. */
   function sceneWith({ regionMarked=true, sceneMarked=false }={}) {
     const region = { getFlag: (scope, key) => ((scope === "dnd5e-combat") && (key === "runningWater") && regionMarked) || undefined,
       testPoint: p => p.x < 300 };
@@ -60,19 +60,19 @@ describe("§484 : eau courante et faits `self.*`", () => {
   }
   const tokenAt = (scene, x) => ({ parent: scene, x, y: 0, width: 1, height: 1, elevation: 0, _source: { x, y: 0, width: 1, height: 1, elevation: 0 } });
 
-  it("dans une région marquée : oui ; à côté : non", () => {
+  it("in a marked region: yes; next to it: no", () => {
     const scene = sceneWith();
     expect(inRunningWater(tokenAt(scene, 100))).toBe(true);
     expect(inRunningWater(tokenAt(scene, 500))).toBe(false);
   });
-  it("une région non marquée n'est pas de l'eau courante ; une scène marquée l'est partout", () => {
+  it("an unmarked region is not running water; a marked scene is, everywhere", () => {
     expect(inRunningWater(tokenAt(sceneWith({ regionMarked: false }), 100))).toBe(false);
     expect(inRunningWater(tokenAt(sceneWith({ regionMarked: false, sceneMarked: true }), 900))).toBe(true);
   });
   it("sans token : non", () => {
     expect(inRunningWater(null)).toBe(false);
   });
-  it("les faits regardent la créature `self` (son token donné)", () => {
+  it("the facts look at the creature `self` (its given token)", () => {
     const scene = sceneWith();
     const self = { name: "créature" };
     const wet = factsFor({ self, selfToken: tokenAt(scene, 100) });
@@ -81,7 +81,7 @@ describe("§484 : eau courante et faits `self.*`", () => {
     expect(dry["self.inRunningWater"](true)).toBe(false);
     expect(dry["self.inRunningWater"](false)).toBe(true);
   });
-  it("sans scène prête, ni soleil ni lumière vive ; sans `self`, faux", () => {
+  it("without a ready scene, neither sunlight nor Bright Light; without `self`, false", () => {
     const f = factsFor({ self: { name: "créature" }, selfToken: tokenAt(sceneWith(), 100) });
     expect(f["self.inSunlight"](true)).toBe(false);
     expect(f["self.inSunlight"](false)).toBe(true);

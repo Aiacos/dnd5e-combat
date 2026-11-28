@@ -1,12 +1,12 @@
 /**
- * Frappes bénies améliorées (Clerc 14, SRD 5.2), Incantation puissante : « quand vous lancez un sort mineur de clerc et infligez
- * des dégâts à une créature avec lui, vous pouvez insuffler de la vitalité à vous-même ou à une autre créature à 18 m ou moins :
- * elle gagne un nombre de points de vie temporaires égal à deux fois votre modificateur de Sagesse ». Fonctions pures.
+ * Improved Blessed Strikes (Cleric 14, SRD 5.2), Potent Spellcasting: "when you cast a cleric cantrip and deal
+ * damage to a creature with it, you can bestow vitality on yourself or on another creature within 18 m:
+ * it gains a number of Temporary Hit Points equal to twice your Wisdom modifier". Pure functions.
  */
 
 /**
- * La règle vaut-elle pour ce lancement ? Un sort mineur de la classe, des dégâts infligés à une créature au moins, et l'option
- * choisie (un des identifiants de `requires` sur la fiche, s'il y en a).
+ * Does the rule apply to this cast? A cantrip of the class, damage dealt to at least one creature, and the chosen option
+ * (one of the `requires` identifiers on the sheet, if any).
  * @param {{class: string, requires?: string[]}} rule
  * @param {{cantripOfClass: boolean, damaged: number, features: Iterable<string>}} cast
  */
@@ -17,10 +17,10 @@ export function vitalityApplies(rule, { cantripOfClass, damaged, features }) {
 }
 
 /**
- * Qui peut recevoir la vitalité : le lanceur d'abord, puis les créatures de son camp à portée, de la plus proche à la plus
- * lointaine, `limit` au plus (la fenêtre reste lisible).
+ * Who can receive the vitality: the caster first, then the creatures on its side within range, from the nearest to the
+ * farthest, `limit` at most (the window stays readable).
  * @param {Array<{id: string, name: string, distance: number, ally: boolean, self?: boolean}>} tokens
- * @param {number} range   dans l'unité des distances données
+ * @param {number} range   in the unit of the distances given
  * @param {number} [limit]
  */
 export function vitalityRecipients(tokens, range, limit=8) {
@@ -29,7 +29,7 @@ export function vitalityRecipients(tokens, range, limit=8) {
   return [...self, ...allies].slice(0, limit);
 }
 
-/** Les points de vie temporaires ne se cumulent pas : la valeur ne sert que si elle dépasse ceux que la créature a déjà. */
+/** Temporary Hit Points do not stack: the value only counts if it exceeds what the creature already has. */
 export function vitalityGain(amount, current) {
   const value = Math.max(0, Math.floor(Number(amount) || 0));
   return (value > (Number(current) || 0)) ? value : 0;

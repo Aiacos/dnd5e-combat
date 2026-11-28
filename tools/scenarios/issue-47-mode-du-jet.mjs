@@ -1,11 +1,13 @@
 /**
- * Issue #47 — le mode du jet d'attaque (Avantage, Désavantage, jet normal) : ce que le moteur décide, ce que dnd5e lance, et ce que
- * la carte unique en dit. L'Ensorceleur tire un Trait de feu sur le Zombi.
- *  - Zombi Invisible : Désavantage seul — deux d20, le plus bas gardé ; la ligne « Attaque » de la carte montre les deux dés
- *    (« 22 (Désavantage : 16, 19) », le 19 barré ; sans le dé écarté, « 22 (d20 : 16) » se lit comme un jet normal, ou comme deux dés dont le plus haut est pris).
- *  - Zombi Invisible et Aveuglé : Avantage et Désavantage s'annulent — un seul d20, les deux raisons et « s'annulent » sur la carte.
- *  - Zombi Aveuglé : Avantage seul — deux d20, le plus haut gardé, les deux dés sur la carte.
- * Les états sont retirés en fin de scénario. The card's dice rows (`chatRows`) are off for the run.
+ * Issue #47 — the attack roll mode (Advantage, Disadvantage, normal roll): what the engine decides, what dnd5e rolls, and what
+ * the single card says about it. The Sorcerer casts Fire Bolt at the Zombi.
+ *  - Invisible Zombi: Disadvantage alone — two d20, the lower kept; the card's "Attack" line shows both dice
+ *    ("22 (Disadvantage: 16, 19)", the 19 struck out; without the discarded die, "22 (d20: 16)" reads like a normal roll,
+ *    or like two dice of which the higher is taken).
+ *  - Invisible and Blinded Zombi: Advantage and Disadvantage cancel out — a single d20, the two reasons and "cancel out"
+ *    on the card.
+ *  - Blinded Zombi: Advantage alone — two d20, the higher kept, both dice on the card.
+ * The conditions are removed at the end of the scenario. The card's dice rows (`chatRows`) are off for the run.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -38,16 +40,16 @@ export default {
       const card = cards.find(c => c.id === used.usageMessageId) ?? null;
       const line = card?.rolls?.[0] ?? "";
       ctx.log(`mode ${roll?.options?.advantageMode} · ${roll?.formula} · carte : ${JSON.stringify(card?.rolls ?? null)}`);
-      // La carte du jet d'attaque elle-même (repliée par la carte unique, visible avec « Détails » ou sans carte unique).
+      // The attack roll card itself (folded by the single card, visible with "Details" or without a single card).
       const detail = cards.find(c => (c.type === "attack") && (c.origin === used.usageMessageId))?.verdict ?? [];
       return { mode: roll?.options?.advantageMode ?? null, formula: roll?.formula ?? "", line, lines: card?.rolls ?? [], detail,
         advantage: list("advantage"), disadvantage: list("disadvantage") };
     }
-    // Les nombres de la ligne « Attaque : 22 (d20 : 16 …) » après le total : un dé pour un jet normal, deux sinon.
+    // The numbers of the "Attack: 22 (d20: 16 …)" line after the total: one die for a normal roll, two otherwise.
     const diceShown = line => (line.match(/\(([^)]*)\)/)?.[1] ?? "").replace(/d20/g, "").match(/\d+/g) ?? [];
     const diceShownIn = text => text.match(/\d+/g) ?? [];
 
-    // 1. Désavantage seul.
+    // 1. Disadvantage alone.
     await status("invisible", true);
     const dis = await shoot();
     ctx.expect(dis.disadvantage.includes("target.unseen") && !dis.advantage.length, `Zombi invisible : Désavantage seul décidé (${dis.disadvantage.join(", ")})`);
@@ -55,7 +57,7 @@ export default {
     ctx.expect(diceShown(dis.line).length === 2, `la carte montre les deux d20 du Désavantage (« ${dis.line} »)`);
     ctx.expect(dis.detail.some(l => diceShownIn(l).length === 2), `la carte du jet d'attaque les montre aussi (${JSON.stringify(dis.detail)})`);
 
-    // 2. Avantage et Désavantage : jet normal.
+    // 2. Advantage and Disadvantage: normal roll.
     await status("blinded", true);
     const both = await shoot();
     ctx.expect(both.advantage.includes("attacker.unseen") && both.disadvantage.includes("target.unseen"), `Zombi invisible et aveuglé : les deux raisons (${[...both.advantage, ...both.disadvantage].join(", ")})`);

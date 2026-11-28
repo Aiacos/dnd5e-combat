@@ -1,21 +1,21 @@
 /**
- * #33 (suite) : la ligne de visée tracée de l'attaquant à sa cible pendant le ciblage — découpée en tronçons colorés. Pur.
- *  - « clear » (vert) : la partie dégagée ;
- *  - « cover » (orange) : à partir de l'obstacle qui donne un abri partiel ou supérieur ;
- *  - « blocked » (rouge) : à partir de l'obstacle qui donne un abri total, ou au-delà de la portée (inatteignable) ;
- *  - « unseen » (bleu) : la partie dégagée quand l'attaquant ne voit pas sa cible (invisible, cachée, dans le noir).
- * Les positions sont des fractions de la ligne (0 : l'attaquant, 1 : la cible).
+ * #33 (continued): the line of sight drawn from the attacker to their target during targeting — cut into colored segments. Pure.
+ *  - "clear" (green): the unobstructed part;
+ *  - "cover" (orange): from the obstacle that gives Half or Three-Quarters Cover;
+ *  - "blocked" (red): from the obstacle that gives Total Cover, or beyond the range (unreachable);
+ *  - "unseen" (blue): the unobstructed part when the attacker does not see their target (Invisible, Hidden, in the dark).
+ * Positions are fractions of the line (0: the attacker, 1: the target).
  */
 
 const RANK = { clear: 0, unseen: 0, cover: 1, blocked: 2 };
 
 /**
  * @param {object} state
- * @param {"none"|"half"|"threeQuarters"|"total"} state.degree   L'abri de la cible (aperçu).
- * @param {number|null} [state.obstacleAt]  Où la ligne rencontre ce qui donne l'abri (0–1) ; absent : au milieu.
- * @param {number|null} [state.rangeEnd]    Où finit la portée (0–1) ; null : la cible est à portée.
- * @param {boolean} [state.unreachable]     Toute la ligne est inatteignable (l'approche n'arrive pas).
- * @param {boolean} [state.unseen]          L'attaquant ne voit pas la cible.
+ * @param {"none"|"half"|"threeQuarters"|"total"} state.degree   The target's Cover (preview).
+ * @param {number|null} [state.obstacleAt]  Where the line meets what gives the Cover (0–1); absent: in the middle.
+ * @param {number|null} [state.rangeEnd]    Where the range ends (0–1); null: the target is in range.
+ * @param {boolean} [state.unreachable]     The whole line is unreachable (the approach does not get there).
+ * @param {boolean} [state.unseen]          The attacker does not see the target.
  * @returns {Array<{from: number, to: number, kind: "clear"|"unseen"|"cover"|"blocked"}>}
  */
 export function attackLineSegments({ degree="none", obstacleAt=null, rangeEnd=null, unreachable=false, unseen=false }) {
@@ -40,7 +40,7 @@ export function attackLineSegments({ degree="none", obstacleAt=null, rangeEnd=nu
 }
 
 /**
- * Où le segment [a, b] entre dans un rectangle (fraction 0–1), ou null s'il ne le traverse pas (Liang–Barsky).
+ * Where the segment [a, b] enters a rectangle (fraction 0–1), or null if it does not cross it (Liang–Barsky).
  * @param {{x: number, y: number}} a
  * @param {{x: number, y: number}} b
  * @param {{x: number, y: number, width: number, height: number}} rect

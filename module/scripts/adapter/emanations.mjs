@@ -1,7 +1,7 @@
 /**
- * M7 (SPEC §18.11) : les émanations qu'un acteur porte (contenu `emanation`, par identifiant), vues depuis Foundry — activité,
- * rayon (gabarit, sinon portée de l'activité), ce que dit le texte anglais d'origine — et l'immunité qu'une sauvegarde
- * réussie laisse sur la cible (un effet à durée, expiration native du cœur : `duration.units: "hours"`).
+ * M7 (SPEC §18.11): the Emanations an actor carries (content `emanation`, by identifier), seen from Foundry — activity,
+ * radius (template, otherwise the activity's range), what the original English text says — and the immunity that a successful
+ * save leaves on the target (an effect with a duration, native core expiration: `duration.units: "hours"`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -12,7 +12,7 @@ import { originItemOf } from "./facts.mjs";
 
 const ACTING = ["save", "damage", "attack"];
 
-/** L'activité qui agit : celle que le contenu nomme, sinon la première sauvegarde, puis dégâts, puis attaque. */
+/** The activity that acts: the one the content names, otherwise the first save, then damage, then attack. */
 function actingActivity(item, rule) {
   const activities = item.system.activities;
   if ( rule.activity ) return activities?.get(rule.activity) ?? null;
@@ -23,7 +23,7 @@ function actingActivity(item, rule) {
   return null;
 }
 
-/** Rayon de l'émanation : le contenu (valeur, ou §92 formule lue sur le porteur), le gabarit de l'activité, sa portée. */
+/** Emanation radius: the content (value, or §92 formula read on the bearer), the activity's template, its range. */
 function radiusOf(activity, rule) {
   if ( rule.radiusFormula ) {
     let r = NaN;
@@ -40,7 +40,7 @@ function radiusOf(activity, rule) {
 }
 
 /**
- * Les émanations d'un acteur.
+ * An actor's Emanations.
  * @returns {Array<{item: Item5e, activity: Activity, key: string, on: string, affects: string, sees: boolean,
  *   radius: number, units: string, active: boolean, kin: boolean, immunity: {hours: number, all: boolean}|null}>}
  */
@@ -49,8 +49,8 @@ export function emanationsOf(actor) {
   for ( const item of actor?.items ?? [] ) {
     const rule = contentOf(item).entry?.emanation;
     if ( !rule?.on ) continue;
-    // §92 : « pendant 10 minutes » (Ange vengeur) — seulement tant qu'un effet de l'item est sur le porteur.
-    // `appliedEffects` : ceux de l'acteur ET ceux que ses items lui transfèrent (Courroux sauvage : l'Armure ancestrale de l'enchantement).
+    // §92: "for 10 minutes" (Avenging Angel) — only while an effect of the item is on the bearer.
+    // `appliedEffects`: those of the actor AND those its items transfer to it ("Savage Wrath": the "Ancestral Armor" enchantment).
     if ( rule.whileActive && !(actor.appliedEffects ?? actor.effects ?? []).some(e => !e.disabled && !e.isSuppressed && (originItemOf(e)?.uuid === item.uuid)) ) continue;
     const activity = actingActivity(item, rule);
     const reach = activity ? radiusOf(activity, rule) : null;
@@ -64,12 +64,12 @@ export function emanationsOf(actor) {
   return out;
 }
 
-/** Cet acteur porte-t-il une émanation de ce nom (« autre qu'un Ghast ») ? */
+/** Does this actor carry an Emanation of this name ("other than a Ghast")? */
 export function carriesEmanation(actor, key) {
   return emanationsOf(actor).some(e => e.key === key);
 }
 
-/** Immunisé contre cette émanation (celle de ce porteur, ou toutes celles de ce nom) ? */
+/** Immune to this Emanation (this bearer's, or all those of this name)? */
 export function isImmuneTo(actor, key, sourceUuid) {
   return (actor?.effects ?? []).some(e => {
     const flag = e.active ? e.getFlag(MODULE_ID, "emanationImmune") : null;
@@ -78,8 +78,8 @@ export function isImmuneTo(actor, key, sourceUuid) {
 }
 
 /**
- * Sauvegarde réussie : « immunisé contre l'aura de ce … pendant 24 heures ». Un effet à durée sur la cible, qui dit contre
- * quoi ; le cœur le suspend quand le temps du monde a passé la durée. MJ actif.
+ * Successful save: "immune to the aura of this … for 24 hours". An effect with a duration on the target, saying against
+ * what; the core suspends it when world time has passed the duration. Active GM.
  * @param {Actor5e} actor
  * @param {{item: Item5e, key: string, immunity: {hours: number, all: boolean}}} emanation
  * @param {TokenDocument} source

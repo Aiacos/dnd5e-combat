@@ -1,10 +1,10 @@
 /**
- * §428 : l'attaque d'opportunité à mains nues. Règles 2024 : « une attaque de corps à corps avec une arme ou une attaque à mains nues » —
- * un personnage qui n'a qu'un arc en main garde donc la sienne. L'Attaque à mains nues que le moteur pose sur les personnages est créée
- * non équipée (adapter/basics.mjs) : elle compte quand même (`meleeAttacksOf`, adapter/reactions.mjs).
- *  1. Toutes les armes du Roublard rangées, sauf son arc : le Zombi qui quitte son allonge est menacé par lui.
- *  2. La fenêtre de réaction du Roublard propose l'Attaque à mains nues ; « ne pas réagir » : la Réaction reste.
- * L'équipement du Roublard et la place du Zombi sont remis.
+ * §428: the unarmed Opportunity Attack. 2024 rules: "a melee attack with a weapon or an Unarmed Strike" —
+ * a character holding only a bow therefore keeps theirs. The Unarmed Strike that the engine places on characters is created
+ * unequipped (adapter/basics.mjs): it counts anyway (`meleeAttacksOf`, adapter/reactions.mjs).
+ *  1. All the Rogue's weapons stowed, except their bow: the Zombie leaving their reach is threatened by them.
+ *  2. The Rogue's Reaction window offers the Unarmed Strike; "do not react": the Reaction remains.
+ * The Rogue's equipment and the Zombie's place are restored.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -20,7 +20,7 @@ export default {
     const at = await ctx.position(rogue);
     ctx.restore(() => ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => {}));
 
-    // Le Roublard ne tient que son arme à distance ; l'Attaque à mains nues reste comme elle est (rangée, en général).
+    // The Rogue holds only their ranged weapon; the Unarmed Strike stays as it is (stowed, usually).
     const gear = await script(`const a = canvas.tokens.get(args.id).actor; const weapons = a.items.filter(i => i.type === "weapon");
       const before = weapons.map(i => ({ id: i.id, equipped: i.system.equipped }));
       const ranged = weapons.find(i => [...i.system.activities].some(x => (x.type === "attack") && (x.attack?.type?.value === "ranged")));
@@ -37,12 +37,12 @@ export default {
     await ctx.startCombat([zombi, rogue]);
     await pause(800);
 
-    // 1. Qui menace le départ du Zombi ?
+    // 1. Who threatens the Zombie's departure?
     const away = { x: at.x + 5 * grid + grid / 2, y: at.y + grid / 2 };
     const threats = await ctx.engine("threats", { tokenId: zombi.id, point: away });
     ctx.expect(threats.includes("Roublard"), `le Roublard, sans arme de mêlée en main, menace quand même (${threats.join(", ") || "personne"})`);
 
-    // 2. La fenêtre propose l'Attaque à mains nues.
+    // 2. The window offers the Unarmed Strike.
     const moving = ctx.engine("move", { tokenId: zombi.id, point: away, stopAfterMs: 9000 }, { timeoutMs: 20000 }).catch(() => null);
     let offered = null;
     for ( const stop = Date.now() + 6000; !offered && (Date.now() < stop); ) {

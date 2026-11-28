@@ -1,12 +1,12 @@
 /**
- * PR #234: Gaze of Two Minds (`castFromBearer`). Arène de test (Magicien, Clerc, Zombi).
- *  1. Without the link, Poison Spray (30 ft) at the Zombi 60 ft away: out of range.
- *  2. Gaze of Two Minds is a touch; used on the adjacent Clerc, the Clerc carries the marker.
- *  3. Clerc 40 ft from the Magicien and 20 ft from the Zombi: in range (measured from the Clerc).
- *  4. Clerc 65 ft from the Magicien (beyond 60 ft), 5 ft from the Zombi: out of range again.
+ * PR #234: Gaze of Two Minds (`castFromBearer`). Test arena (Wizard, Cleric, Zombie).
+ *  1. Without the link, Poison Spray (30 ft) at the Zombie 60 ft away: out of range.
+ *  2. Gaze of Two Minds is a touch; used on the adjacent Cleric, the Cleric carries the marker.
+ *  3. Cleric 40 ft from the Wizard and 20 ft from the Zombie: in range (measured from the Cleric).
+ *  4. Cleric 65 ft from the Wizard (beyond 60 ft), 5 ft from the Zombie: out of range again.
  *     (The Gaze activity reads as a touch; the engine does not yet check touch ranges at all, for any activity.)
- *  5. In combat (Magicien then Clerc), the marker placed on the Magicien's turn survives the end of that turn and the
- *     Clerc's turn, and falls at the end of the Magicien's next turn.
+ *  5. In combat (Wizard then Cleric), the marker placed on the Wizard's turn survives the end of that turn and the
+ *     Cleric's turn, and falls at the end of the Wizard's next turn.
  */
 const GAZE = "Compendium.dnd5e.classes24.Item.phbinvGazeofTwoM";
 const SPRAY = "Compendium.dnd5e.spells24.Item.phbsplPoisonSpra";

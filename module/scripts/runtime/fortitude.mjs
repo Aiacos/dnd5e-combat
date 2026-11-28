@@ -1,8 +1,8 @@
 /**
- * Robustesse de la non-vie (Monster Manual 2024, §61) : Zombi, Zombi ogre, Zombi tyrannœil. Des dégâts qui font tomber la
- * créature à 0 PV — sauf radiants ou coup critique — lui font jeter une sauvegarde de Constitution de DD 5 + les dégâts subis ;
- * réussie, elle reste à 1 PV. La règle est dans core/fortitude.mjs ; la sauvegarde due est inscrite avec les PV
- * (adapter/death.mjs, `planDamageAtZero`), puis jouée ici par le MJ actif.
+ * Undead Fortitude (Monster Manual 2024, §61): Zombie, Ogre Zombie, Beholder Zombie. Damage that drops the creature to 0 HP —
+ * unless radiant or a Critical Hit — makes it roll a Constitution saving throw with DC 5 + the damage taken; on a success, it
+ * stays at 1 HP. The rule is in core/fortitude.mjs; the save due is recorded with the HP
+ * (adapter/death.mjs, `planDamageAtZero`), then played here by the active GM.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -13,14 +13,14 @@ import { enqueue } from "./queue.mjs";
 import { route } from "./router.mjs";
 import { log, loc, notice, sleep } from "./shared.mjs";
 
-/** Sur le client qui applique les dégâts : les types réellement subis, pour exclure les dégâts radiants. */
+/** On the client that applies the damage: the types actually taken, to exclude radiant damage. */
 function onCalculateDamage(actor, damages, options) {
   if ( !fortitudeOf(actor) ) return;
   const types = damages.filter(d => (d.value > 0) && d.type).map(d => d.type);
   (options[MODULE_ID] ??= {}).takenTypes = types;
 }
 
-/** La créature est tombée à 0 PV avec une sauvegarde en attente : le MJ actif la joue. */
+/** The creature dropped to 0 HP with a pending save: the active GM plays it. */
 function onZero(actor) {
   if ( !actor || !pendingFortitude(actor) ) return;
   return enqueue(`fortitude:${actor.uuid}`, async () => {
@@ -34,8 +34,8 @@ function onZero(actor) {
     const total = rolls?.[0]?.total;
     await clearFortitude(actor);
     if ( Number.isFinite(total) && (total >= dc) ) {
-      // PV > 0 : `clearDeathMarks` (adapter/death.mjs) retire les marques du moteur et Stabilisé ; l'état que dnd5e pose d'office à
-      // 0 PV (flag `autoDowned`) se retire ici.
+      // HP > 0: `clearDeathMarks` (adapter/death.mjs) removes the engine's marks and Stable; the condition that dnd5e sets
+      // automatically at 0 HP (flag `autoDowned`) is removed here.
       await actor.update({ "system.attributes.hp.value": 1 });
       const downed = actor.effects.filter(e => e.getFlag("dnd5e", "autoDowned")).map(e => e.id);
       if ( downed.length ) await actor.deleteEmbeddedDocuments("ActiveEffect", downed).catch(() => {});

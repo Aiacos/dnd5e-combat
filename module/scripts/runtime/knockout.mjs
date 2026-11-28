@@ -1,13 +1,14 @@
 /**
- * §210 : coups non létaux et surprise (lot 2 du relevé `prive/RELEVE_REGLES.md`).
- *  - Assommer : l'interrupteur « coups non létaux » (adapter/knockout.mjs) est lu à l'application des dégâts (adapter/death.mjs) ; ici, le
- *    réveil — la créature assommée qui regagne des PV n'est plus Inconsciente (elle reste À terre, comme le veut la règle) —, et les
- *    premiers soins : une créature au contact, test de Sagesse (Médecine) DD 10 sur le client de celui qui soigne, puis le réveil par le
- *    propriétaire ou le MJ actif.
- *  - Surprise : l'état « Surpris » de dnd5e donne déjà le Désavantage à l'initiative (config.mjs `conditionEffects.initiativeDisadvantage`) ;
- *    le moteur le retire une fois l'initiative de la créature lancée (il ne vaut que pour ce jet), et, avec le réglage `surpriseFromStealth`
- *    (actif par défaut), une créature qui ne perçoit pas un ennemi caché de la scène (Furtivité du moteur, `hiddenFrom`) lance son
- *    initiative avec le Désavantage — « un embusqué caché qui commence le combat surprend qui ne se doute de rien ».
+ * §210: non-lethal blows and surprise (batch 2 of the survey `prive/RELEVE_REGLES.md`).
+ *  - Knock out: the "non-lethal blows" switch (adapter/knockout.mjs) is read when damage is applied (adapter/death.mjs); here,
+ *    the waking — the knocked-out creature that regains HP is no longer Unconscious (it stays Prone, as the rule has it) —, and
+ *    the first aid: a creature in contact, Wisdom (Medicine) check DC 10 on the client of the one healing, then the waking by
+ *    the owner or the active GM.
+ *  - Surprise: dnd5e's "Surprised" condition already gives Disadvantage on Initiative
+ *    (config.mjs `conditionEffects.initiativeDisadvantage`); the engine removes it once the creature's Initiative is rolled (it
+ *    only applies to that roll), and, with the setting `surpriseFromStealth` (on by default), a creature that does not perceive a
+ *    hidden enemy on the scene (engine Hide, `hiddenFrom`) rolls its Initiative with Disadvantage — "a hidden ambusher who starts
+ *    the combat surprises whoever suspects nothing".
  */
 import { MODULE_ID } from "../constants.mjs";
 import { actsFor, needsCheck } from "../core/requests.mjs";
@@ -23,7 +24,7 @@ export const WAKE_QUERY = `${MODULE_ID}.wake`;
 /*  Assommer                                    */
 /* -------------------------------------------- */
 
-/** Réveille une créature assommée : plus Inconsciente, drapeau retiré. Rend false si elle ne l'était pas. Propriétaire ou MJ. */
+/** Wakes a knocked-out creature: no longer Unconscious, flag removed. Returns false if it was not. Owner or GM. */
 async function wake(actor, { reason="hp", by="" }={}) {
   if ( !isKnockedOut(actor) ) return false;
   await actor.unsetFlag(MODULE_ID, KNOCKED_OUT_FLAG);
@@ -33,10 +34,10 @@ async function wake(actor, { reason="hp", by="" }={}) {
   return true;
 }
 
-/** MJ actif (ou propriétaire) : réveiller la créature visée par des premiers soins réussis. La règle est relue ici. */
+/** Active GM (or owner): wake the creature targeted by successful first aid. The rule is re-read here. */
 async function handleWake({ target, by="", helper=null }, { user=null }={}) {
   const token = await fromUuid(target ?? "");
-  // §472 : d'un joueur, l'aidant est le sien et se tient sur la même scène ; son nom vient de sa fiche, pas des données.
+  // §472: from a player, the helper is theirs and stands on the same scene; its name comes from its sheet, not from the data.
   if ( needsCheck(user) ) {
     const aid = helper ? await fromUuid(helper) : null;
     if ( !aid?.actor || !actsFor(user, aid.actor) || (aid.parent !== token?.parent) ) { console.warn(`${MODULE_ID} | wake query from ${user.name} refused: no helper of theirs next to ${token?.name ?? target}`); return false; }
@@ -45,7 +46,7 @@ async function handleWake({ target, by="", helper=null }, { user=null }={}) {
   return token?.actor ? wake(token.actor, { reason: "aid", by }) : false;
 }
 
-/** MJ actif : PV regagnés → réveillée ; tombée à 0 malgré tout (nouveaux dégâts) → plus « assommée », les règles ordinaires reprennent. */
+/** Active GM: HP regained → woken; dropped to 0 anyway (new damage) → no longer "knocked out", the ordinary rules resume. */
 function onActorUpdate(actor, changes) {
   if ( !isKnockedOut(actor) ) return;
   const hp = foundry.utils.getProperty(changes, "system.attributes.hp.value");
@@ -54,11 +55,11 @@ function onActorUpdate(actor, changes) {
   if ( hp > 1 ) return wake(actor, { reason: "hp" });
 }
 
-/** Les premiers soins à une créature assommée au contact : test de Médecine DD 10 sur ce client, puis le réveil. */
+/** First aid to a knocked-out creature in contact: Medicine check DC 10 on this client, then the waking. */
 export async function firstAid(token, target) {
   const actor = token?.actor;
   if ( !actor || !isKnockedOut(target?.actor) ) return false;
-  // §252 : le verdict attend la fin des dés 3D, puis se voit et s'entend chez tous.
+  // §252: the verdict waits for the 3D dice to finish, then is seen and heard by all.
   const rolls = await rolledAndShown(() => actor.rollSkill({ skill: "med", ability: "wis", target: FIRST_AID_DC }, { configure: true }));
   const total = rolls?.[0]?.total;
   if ( !Number.isFinite(total) ) return false;
@@ -78,15 +79,15 @@ const surpriseFromStealth = () => {
   try { return game.settings.get(MODULE_ID, SURPRISE_SETTING) !== false; } catch { return true; }
 };
 
-/** Un ennemi caché de la scène que ce token ne perçoit pas ? (le premier, ou null) */
+/** A hidden enemy on the scene that this token does not perceive? (the first, or null) */
 function hiddenEnemyOf(token) {
   for ( const other of token?.parent?.tokens ?? [] ) if ( (other !== token) && hiddenFrom(token, other) ) return other;
   return null;
 }
 
 /**
- * `dnd5e.preConfigureInitiative` (sur le client qui lance) : surpris par un ennemi caché → Désavantage. Le token est celui de la scène du
- * combat en cours, sinon de la scène affichée.
+ * `dnd5e.preConfigureInitiative` (on the client that rolls): surprised by a hidden enemy → Disadvantage. The token is the one of
+ * the scene of the current combat, otherwise of the displayed scene.
  */
 function onConfigureInitiative(actor, rollConfig) {
   if ( !surpriseFromStealth() || !rollConfig?.options ) return;
@@ -99,7 +100,7 @@ function onConfigureInitiative(actor, rollConfig) {
   log(`${actor.name}: surprised (${hidden.name} is hidden from them), initiative with Disadvantage`);
 }
 
-/** MJ actif : l'initiative d'une créature Surprise est lancée — l'état a servi, il est retiré. */
+/** Active GM: the initiative of a Surprised creature is rolled — the condition has served, it is removed. */
 function onCombatantUpdate(combatant, changes) {
   if ( !("initiative" in changes) || (changes.initiative === null) ) return;
   const actor = combatant.actor;

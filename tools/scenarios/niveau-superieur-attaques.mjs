@@ -1,9 +1,9 @@
 /**
- * §404 : sorts d'attaque lancés avec un emplacement de niveau supérieur — joués dans l'« Arène des sorts ». Chaque sort est lancé deux
- * niveaux au-dessus du sien par le Lanceur sur la Cible (999 PV) ; au premier coup qui touche, la formule des dégâts doit avoir les
- * dés « Using a Higher-Level Spell Slot » (deux de plus). La Flèche acide de Melf : aussi sur un raté (la moitié des dégâts), et
- * l'effet « Lingering Acid » posé au toucher garde la montée (`flags.dnd5e.scaling`, que lisent ses dégâts de fin de tour).
- * `SORTS=<identifiant,…>` ne joue que ceux-là.
+ * §404: attack spells cast with a higher-level spell slot — played in the "Spell Arena". Each spell is cast two
+ * levels above its own by the Caster on the Target (999 HP); on the first hit, the damage formula must have the
+ * dice "Using a Higher-Level Spell Slot" (two more). Melf's Acid Arrow: also on a miss (half damage), and
+ * the "Lingering Acid" effect applied on a hit keeps the scaling (`flags.dnd5e.scaling`, read by its end-of-turn damage).
+ * `SORTS=<identifiant,…>` plays only those.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -12,7 +12,7 @@ const PHB = id => `Compendium.dnd-players-handbook.spells.Item.${id}`;
 const pause = ms => new Promise(r => setTimeout(r, ms));
 const only = (process.env.SORTS ?? "").split(",").map(s => s.trim()).filter(Boolean);
 
-// [identifiant, id PHB, niveau du sort, dés de base (nombre, faces)]
+// [identifier, PHB id, spell level, base dice (number, faces)]
 const SPELLS = [
   ["chromatic-orb", "phbsplChromaticO", 1, 3, 8],
   ["guiding-bolt", "phbsplGuidingBol", 1, 4, 6],
@@ -38,7 +38,7 @@ export default {
       await ctx.setHp(target, hp0);
     });
 
-    /** La formule du premier jet d'un message de dégâts. */
+    /** The formula of the first roll of a damage message. */
     const formulaOf = async id => {
       const m = (await ctx.call("list-chat-messages", { limit: 60 })).messages?.find(x => x.id === id);
       const raw = m?.rolls?.[0];
@@ -51,7 +51,7 @@ export default {
       await ctx.ensureItem(caster, PHB(phbId));
       const cast = level + UP;
       const want = `${number + UP}d${faces}`;
-      // Un critique double les dés (`8d4` pour une Flèche à 4d4) : le compte attendu, ou son double.
+      // A critical doubles the dice (`8d4` for an Arrow at 4d4): the expected count, or its double.
       const diceOk = formula => {
         const m = /^(\d+)d(\d+)/.exec(formula ?? "");
         return !!m && (Number(m[2]) === faces) && [number + UP, 2 * (number + UP)].includes(Number(m[1]));
@@ -84,12 +84,12 @@ export default {
       }
     }
 
-    // ---- §405 : une activité d'un sort qui ne dépense pas d'emplacement, au niveau de sa concentration ----
-    /** La montée notée sur un message d'utilisation (`system.scaling`), que `list-chat-messages` ne rend pas. */
+    // ---- §405: an activity of a spell that spends no slot, at its Concentration level ----
+    /** The scaling noted on a use message (`system.scaling`), which `list-chat-messages` does not return. */
     const usageScaling = async id => (await ctx.call("run-script", { code: `return game.messages.get("${id}")?.system?.scaling ?? 0;` }))?.result;
 
-    // Lame de feu : « Evoke Blade » lancée au niveau 4 dépense l'emplacement et pose la concentration ; l'attaque suivante (sans
-    // emplacement) doit lancer 5d6 + mod (3d6 au niveau 2, +1d6 par niveau au-dessus).
+    // Flame Blade: "Evoke Blade" cast at level 4 spends the slot and sets Concentration; the next attack (without a
+    // slot) must roll 5d6 + mod (3d6 at level 2, +1d6 per level above).
     if ( !only.length || only.includes("flame-blade") ) {
       ctx.restore(async () => { await ctx.removeEffectsFrom(caster, "flame-blade"); });
       await ctx.ensureItem(caster, PHB("phbsplFlameBlade"));

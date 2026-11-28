@@ -1,9 +1,10 @@
 /**
- * §479 : dire pourquoi une attaque d'opportunité n'est pas proposée (Discord, 2026-11-19).
- *  1. Le Zombi, laissé Neutre, à côté du Roublard qui s'en va : raison « notHostile », à dire au MJ.
- *  2. Le même déplacement, comme un vrai : une alerte MJ chuchotée nomme le Roublard et le Zombi ; rejoué, rien de plus (une fois par combat).
- *  3. Le Zombi Hostile : il menace le Roublard, aucune raison n'est donnée.
- * La disposition et la place du Zombi sont remises.
+ * §479: say why an Opportunity Attack is not offered (Discord, 2026-11-19).
+ *  1. The Zombie, left Neutral, next to the Rogue who is leaving: reason "notHostile", to tell the GM.
+ *  2. The same movement, like a real one: a whispered GM alert names the Rogue and the Zombie; replayed, nothing more (once per
+ *     combat).
+ *  3. The Hostile Zombie: it threatens the Rogue, no reason is given.
+ * The Zombie's disposition and place are restored.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -33,7 +34,7 @@ export default {
     const z = silent.find(m => m.name === zombi.name);
     ctx.expect(z?.reason === "notHostile" && z.notice === true, `Zombi Neutre : raison « notHostile », à dire au MJ (${JSON.stringify(silent)})`);
 
-    // 2. Comme un vrai déplacement : l'alerte MJ, une seule fois.
+    // 2. Like a real movement: the GM alert, only once.
     const count = () => script(`return game.messages.contents.filter(m => { const a = m.flags?.["dnd5e-combat"]?.gmAlert;
       return a && a.text.includes(args.mover) && a.text.includes(args.attacker); }).length;`, { mover: rogue.name, attacker: zombi.name });
     const before = await count();
@@ -46,7 +47,7 @@ export default {
     const again = await count();
     ctx.expect(again === after, `rejoué dans le même combat : pas de seconde alerte (${after} → ${again})`);
 
-    // 3. Hostile : l'attaque est proposée, aucune raison n'est donnée.
+    // 3. Hostile: the attack is offered, no reason is given.
     await script(`await canvas.scene.tokens.get(args.id).update({ disposition: -1 }); return true;`, { id: zombi.id });
     await pause(500);
     const threats = await ctx.engine("threats", { tokenId: rogue.id, point: away });

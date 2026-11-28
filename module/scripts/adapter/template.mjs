@@ -1,21 +1,22 @@
 /**
- * §86 : une zone que le contenu fait poser d'office (`selfZone`, par id d'activité). Présence royale de Yolande (« Surround Self »)
- * et Invocation d'êtres sylvestres (« Cast ») ont bien une émanation de 10 ft — héritée de la cible de l'item (`override: false`) —,
- * mais `target.prompt` est faux : dnd5e ne prévoit aucune pose (`create.measuredTemplate`, activity/mixin.mjs:451), donc ni zone ni
- * rejeu. Le contenu dit « pose-la » et donne le gabarit, qui ne sert que si la donnée n'en a pas. §91 : une activité qui n'est pas de
- * portée personnelle (Interdiction, au contact) fait poser ce gabarit à la souris (runtime/self-area.mjs, `withTemplate`). Lu par la pose sur soi
- * (adapter/self-area.mjs, runtime/self-area.mjs), la tranche d'élévation et la sphère (adapter/space.mjs), le plan (adapter/usage.mjs).
+ * §86: an area that the content has placed automatically (`selfZone`, by activity id). Yolande's Regal Presence ("Surround Self")
+ * and Conjure Woodland Beings ("Cast") do have a 10 ft Emanation — inherited from the item's target (`override: false`) —,
+ * but `target.prompt` is false: dnd5e provides no placement (`create.measuredTemplate`, activity/mixin.mjs:451), so neither
+ * area nor replay. The content says "place it" and gives the template, which is only used if the data has none. §91: an activity
+ * that is not of personal range ("Interdiction", touch) has this template placed with the mouse (runtime/self-area.mjs,
+ * `withTemplate`). Read by the self placement (adapter/self-area.mjs, runtime/self-area.mjs), the elevation slice and the sphere
+ * (adapter/space.mjs), the plan (adapter/usage.mjs).
  */
 
 import { contentOf } from "./content.mjs";
 
-/** Le gabarit que le contenu déclare pour cette activité, ou null. */
+/** The template that the content declares for this activity, or null. */
 function declaredZone(activity) {
   return activity?.item ? (contentOf(activity.item).entry?.selfZone?.[activity.id] ?? null) : null;
 }
 
 /**
- * Le gabarit de l'activité : celui de la donnée s'il a un type, sinon celui que le contenu déclare.
+ * The activity's template: the data's if it has a type, otherwise the one the content declares.
  * @param {Activity} activity
  * @returns {{type: string, size?: number, width?: number, height?: number, units?: string, count?: number|string,
  *   stationary?: boolean}|null}
@@ -28,8 +29,8 @@ export function templateOf(activity) {
 }
 
 /**
- * §91 : l'activité vue avec le gabarit fourni — pour la pose à la souris de dnd5e (`TemplatePlacement.fromActivity`, qui ne lit
- * que `target.template`, l'item, l'uuid, `getRollData` et `getUsageToken`). Rien n'est écrit : un mandataire en lecture.
+ * §91: the activity seen with the supplied template — for dnd5e's mouse placement (`TemplatePlacement.fromActivity`, which reads
+ * only `target.template`, the item, the uuid, `getRollData` and `getUsageToken`). Nothing is written: a read-only proxy.
  * @param {Activity} activity
  * @returns {Activity}
  */
@@ -44,7 +45,7 @@ export function withTemplate(activity) {
   });
 }
 
-/** Le contenu fait-il poser la zone de cette activité d'office, que dnd5e la prévoie ou non ? */
+/** Does the content have this activity's area placed automatically, whether or not dnd5e provides for it? */
 export function suppliesTemplate(activity) {
   return !!declaredZone(activity);
 }

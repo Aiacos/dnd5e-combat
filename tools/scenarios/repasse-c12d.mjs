@@ -1,7 +1,7 @@
 /**
- * §312, sous-lot C12-d de la repasse terme par terme : budget du tour, coûts. Arène des sorts (Lanceur, Allié).
- *  - Souffle du dragon : lancé par le Lanceur sur l'Allié (au contact), l'Allié reçoit « Exhale » sur sa fiche — au DD de sorts du Lanceur,
- *    au niveau lancé ; la concentration du Lanceur finie, la copie part.
+ * §312, sub-batch C12-d of the term-by-term pass: turn budget, costs. Spell arena (Caster, Ally).
+ *  - Dragon's Breath: cast by the Caster on the Ally (in contact), the Ally gets "Exhale" on its sheet — at the Caster's
+ *    spell save DC, at the level cast; once the Caster's Concentration ends, the copy goes.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -32,7 +32,7 @@ export default {
     for ( let n = 0; (n < 20) && !g; n++ ) { await pause(500); g = await granted(); }
     if ( !ctx.expect(!!g, "l'Allié reçoit « Exhale » sur sa fiche") ) return;
     const exhale = Object.values(g.system?.activities ?? {})[0];
-    // Le DD de sorts calculé du Lanceur (la lecture de la fiche par le connecteur ne rend que la donnée source).
+    // The Caster's computed spell save DC (the connector's reading of the sheet only returns the source data).
     const dc = (await ctx.engine("stats", { tokenId: caster.id }))?.spellDc ?? null;
     ctx.expect(Object.keys(g.system?.activities ?? {}).length === 1, "une seule activité : Exhale");
     ctx.expect((dc === null) ? (Number(exhale?.save?.dc?.formula) >= 10) : (exhale?.save?.dc?.formula === String(dc)),

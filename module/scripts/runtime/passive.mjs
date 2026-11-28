@@ -1,14 +1,14 @@
 /**
- * Perception passive contre la Furtivité (SPEC §16.51), sur le MJ actif. Règle 2024 : « le MJ se sert de la Perception
- * passive pour savoir si une créature remarque quelque chose sans faire consciemment de test de Sagesse (Perception) ». Un
- * ennemi dont la Perception passive atteint le DD de la cachette (−5 s'il la voit en zone légèrement obscurcie, rien s'il ne
- * peut pas la voir) la repère (core/search.mjs, `passiveNotice`).
+ * Passive Perception against Stealth (SPEC §16.51), on the active GM. 2024 rule: "the GM uses passive Perception
+ * to determine whether a creature notices something without consciously making a Wisdom (Perception) check". An
+ * enemy whose passive Perception reaches the DC of the hiding place (−5 if it sees it in a lightly obscured area, nothing if it
+ * cannot see it) spots it (core/search.mjs, `passiveNotice`).
  *
- * Jugé quand une créature se cache (effet de Furtivité créé) et à chaque déplacement validé — de la créature cachée, ou d'un
- * de ses ennemis —, sur la scène affichée par le MJ actif. Réglage de monde :
- *  - "auto" : la Furtivité est retirée ; le MJ et les propriétaires de la créature sont prévenus (message privé) ;
- *  - "gm"   : le MJ seul est prévenu (une fois par cachette et par observateur), il tranche ;
- *  - "off"  : rien.
+ * Judged when a creature hides (Stealth effect created) and at each validated movement — of the hidden creature, or of one
+ * of its enemies —, on the scene displayed by the active GM. World setting:
+ *  - "auto": the Stealth is removed; the GM and the creature's owners are notified (private message);
+ *  - "gm":   only the GM is notified (once per hiding place and per observer), they decide;
+ *  - "off":  nothing.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -20,19 +20,19 @@ import { route } from "./router.mjs";
 import { log, loc, notice, say, locEsc } from "./shared.mjs";
 
 const SETTING = "passivePerception";
-/** Mode "gm" : les paires (effet de Furtivité, observateur) déjà signalées, pour ne pas répéter le message à chaque pas. */
+/** Mode "gm": the (Stealth effect, observer) pairs already reported, so as not to repeat the message at each step. */
 const told = new Set();
 
 function recipients(actor, withOwners) {
   return game.users.filter(u => u.isGM || (withOwners && actor.testUserPermission(u, "OWNER"))).map(u => u.id);
 }
 
-/** Juge une créature cachée ; rend les observateurs qui la repèrent. */
+/** Judges a hidden creature; returns the observers that spot it. */
 async function judge(hidden) {
   const mode = game.settings.get(MODULE_ID, SETTING);
   const actor = hidden?.actor;
-  // §185 : en règles BG3, la détection est celle de runtime/stealth.mjs (un test à chaque entrée dans un champ de vision) ; Furtivité
-  // non gérée (issue #65) : personne n'est caché, rien à juger.
+  // §185: in BG3 rules, detection is that of runtime/stealth.mjs (a check on each entry into a field of view); Stealth
+  // not handled (issue #65): nobody is hidden, nothing to judge.
   if ( (mode === "off") || !actor || (stealthRules() !== "2024") ) return [];
   const dc = hiddenDcOf(actor);
   if ( dc === null ) return [];
@@ -52,7 +52,7 @@ async function judge(hidden) {
   return spotted;
 }
 
-/** Les créatures cachées de la scène à rejuger quand ce token a bougé : lui s'il est caché, sinon celles dont il est l'ennemi. */
+/** The scene's hidden creatures to rejudge when this token moved: it if it is hidden, otherwise those whose enemy it is. */
 function affectedBy(token) {
   if ( hiddenDcOf(token.actor) !== null ) return [token];
   return token.parent.tokens.filter(t => (t !== token) && (hiddenDcOf(t.actor) !== null));

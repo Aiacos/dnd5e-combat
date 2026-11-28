@@ -1,8 +1,8 @@
 /**
- * §436 : l'antimagie de dnd5e 6.1, lue dans Foundry. Le statut `antimagic` de l'acteur est la vérité (posé et retiré par le comportement
- * de région `dnd5e.antimagic`, dnd5e.mjs `AntimagicRegionBehaviorType`) ; dnd5e suspend lui-même les effets `system.magical`
- * (`ActiveEffect5e#isSuppressed`) et les bonus des objets magiques (`magicAvailable`). Ici : qui porte le statut, d'où il vient, où sont
- * les champs, ce qu'est une utilisation magique, et la marque `system.magical` que la migration de dnd5e poserait.
+ * §436: dnd5e 6.1's antimagic, read in Foundry. The actor's `antimagic` status is the truth (set and removed by the
+ * region behavior `dnd5e.antimagic`, dnd5e.mjs `AntimagicRegionBehaviorType`); dnd5e itself suspends `system.magical` effects
+ * (`ActiveEffect5e#isSuppressed`) and the bonuses of magic items (`magicAvailable`). Here: who carries the status, where it comes
+ * from, where the fields are, what a magical use is, and the `system.magical` mark that dnd5e's migration would set.
  */
 
 import { ANTIMAGIC_STATUS, ANTIMAGIC_BEHAVIOR, isMagicalSource, isMagicalUse, shouldMarkMagical, blockedByAntimagic } from "../core/antimagic.mjs";
@@ -10,10 +10,10 @@ import { isSpellCast } from "./scrolls.mjs";
 import { originItemOf } from "./facts.mjs";
 import { contentOf } from "./content.mjs";
 
-/** dnd5e connaît-il le comportement de région de l'antimagie (6.1 et plus) ? */
+/** Does dnd5e know the antimagic region behavior (6.1 and later)? */
 export const antimagicBehaviorKnown = () => !!CONFIG.RegionBehavior?.dataModels?.[ANTIMAGIC_BEHAVIOR];
 
-/** L'acteur porte-t-il le statut du système ? */
+/** Does the actor carry the system's status? */
 export const inAntimagic = actor => !!actor?.statuses?.has?.(ANTIMAGIC_STATUS);
 
 /** Les faits purs d'un item (core/antimagic.mjs). */
@@ -22,14 +22,14 @@ export const itemFacts = item => item ? {
   magical: contentOf(item).entry?.magical === true
 } : null;
 
-/** Une utilisation que le champ interdit et dont il protège : un sort lancé, ou une activité d'objet magique (pas une attaque d'arme). */
+/** A use that the field forbids and protects against: a cast spell, or a magic item activity (not a weapon attack). */
 export const magicalUse = activity => !!activity?.item
   && isMagicalUse({ spellCast: isSpellCast(activity.item), item: itemFacts(activity.item), activityType: activity.type });
 
 /**
- * dnd5e refuse-t-il cette activité seulement à cause du statut antimagie (core/antimagic.mjs `blockedByAntimagic`) ? Les autres raisons
- * de la cacher sont relues comme dnd5e (`Activity#isHidden`, dnd5e.mjs:18843) : item caché, origine dépendante inactive, harmonisation,
- * identification, niveau.
+ * Does dnd5e refuse this activity only because of the antimagic status (core/antimagic.mjs `blockedByAntimagic`)? The other reasons
+ * to hide it are re-read as dnd5e does (`Activity#isHidden`, dnd5e.mjs:18843): hidden item, inactive dependent origin, attunement,
+ * identification, level.
  */
 export function antimagicBlocks(activity) {
   const item = activity?.item;
@@ -43,12 +43,12 @@ export function antimagicBlocks(activity) {
     magicAvailable: item.system?.magicAvailable, otherHidden, magicalUse: magicalUse(activity) });
 }
 
-/** Les activités de cet item que seul le champ refuse (ordre de dnd5e). */
+/** The activities of this item that only the field refuses (dnd5e's order). */
 export const antimagicBlockedActivities = item => Array.from(item?.system?.activities ?? []).filter(antimagicBlocks);
 
 /**
- * Le nom à montrer pour le champ où se tient cet acteur, ou null s'il ne porte pas le statut : l'item qui a créé la région (son
- * comportement est l'origine de l'effet), sinon le nom de la région, sinon celui de l'effet.
+ * The name to show for the field where this actor stands, or null if it does not carry the status: the item that created the
+ * region (its behavior is the origin of the effect), otherwise the region's name, otherwise the effect's.
  */
 export function antimagicSourceName(actor) {
   if ( !inAntimagic(actor) ) return null;
@@ -60,29 +60,30 @@ export function antimagicSourceName(actor) {
   return item?.name ?? region?.name ?? effect?.name ?? game.i18n.localize("EFFECT.DND5E.StatusAntimagic");
 }
 
-/** Les régions de la scène qui portent un comportement antimagie actif. */
+/** The scene's regions that carry an active antimagic behavior. */
 export function antimagicRegions(scene) {
   return (scene?.regions ?? []).filter(r => r.behaviors?.some(b => (b.type === ANTIMAGIC_BEHAVIOR) && !b.disabled));
 }
 
 /**
- * La région antimagie qui contient ce token à `position` (`{ x, y, elevation }`, coin haut-gauche du token comme `_source`), ou null.
- * `testInsideRegion` du cœur, comme `isInside` (adapter/areas.mjs).
+ * The antimagic region that contains this token at `position` (`{ x, y, elevation }`, top-left corner of the token like
+ * `_source`), or null. The core's `testInsideRegion`, like `isInside` (adapter/areas.mjs).
  */
 export function antimagicRegionAt(token, position) {
   return antimagicRegions(token?.parent).find(r => token.testInsideRegion(r, position)) ?? null;
 }
 
-/** Cette région vient-elle d'une activité qui pose déjà le comportement du système (SRD 6.1) ? */
+/** Does this region come from an activity that already sets the system's behavior (SRD 6.1)? */
 export function regionHasAntimagic(region, activity) {
   if ( region.behaviors?.some(b => b.type === ANTIMAGIC_BEHAVIOR) ) return true;
   return Array.from(activity?.behaviors ?? []).some(b => b.type === "antimagic");
 }
 
 /**
- * La marque que la migration de dnd5e pose (`_migrateEffectMagical`) et qu'un item ajouté après elle n'a pas (Manuel des joueurs : aucun
- * des 294 effets de sorts marqués) : sur les effets d'un item magique en création. Rend le nombre d'effets marqués.
- * @param {Item} item   le document en création (`preCreateItem`)
+ * The mark that dnd5e's migration sets (`_migrateEffectMagical`) and that an item added after it does not have (Player's
+ * Handbook: none of the 294 marked spell effects): on the effects of a magic item being created.
+ * Returns the number of effects marked.
+ * @param {Item} item   the document being created (`preCreateItem`)
  */
 export function markItemEffects(item) {
   if ( !isMagicalSource(itemFacts(item)) ) return 0;
@@ -98,9 +99,9 @@ export function markItemEffects(item) {
 }
 
 /**
- * La même marque sur un effet posé sur un acteur dont l'item d'origine est magique (un sort appliqué, une copie d'aura, l'effet d'une
- * zone) : sans elle, dnd5e ne le suspend pas dans un champ. Rend true si l'effet est marqué.
- * @param {ActiveEffect} effect   le document en création (`preCreateActiveEffect`)
+ * The same mark on an effect placed on an actor whose origin item is magical (an applied spell, an aura copy, a zone's
+ * effect): without it, dnd5e does not suspend it in a field. Returns true if the effect is marked.
+ * @param {ActiveEffect} effect   the document being created (`preCreateActiveEffect`)
  */
 export function markAppliedEffect(effect) {
   if ( effect.parent?.documentName !== "Actor" ) return false;
@@ -112,8 +113,8 @@ export function markAppliedEffect(effect) {
 }
 
 /**
- * Diagnostic (§436) : les effets d'un item magique **déjà** sur une fiche sans la marque — ajoutés avant la migration 6.1 du monde, ou
- * hors d'elle. Rend leurs ids.
+ * Diagnostic (§436): the effects of a magic item **already** on a sheet without the mark — added before the world's 6.1
+ * migration, or outside it. Returns their ids.
  * @param {Item} item
  */
 export function unmarkedItemEffects(item) {
@@ -123,14 +124,14 @@ export function unmarkedItemEffects(item) {
     .map(e => e.id);
 }
 
-/** Diagnostic (§436) : les effets posés sur un acteur depuis un item magique, sans la marque. Rend leurs ids. */
+/** Diagnostic (§436): the effects placed on an actor from a magic item, without the mark. Returns their ids. */
 export function unmarkedAppliedEffects(actor) {
   return (actor?.effects ?? []).filter(e => e.system && ("magical" in e.system)
     && shouldMarkMagical({ type: e.type, magical: e.system.magical, statuses: e.statuses }, itemFacts(originItemOf(e))))
     .map(e => e.id);
 }
 
-/** Marquer ces effets d'un document (item ou acteur). Rend le nombre marqué. */
+/** Mark these effects of a document (item or actor). Returns the number marked. */
 export async function markEffects(doc, ids) {
   const present = ids.filter(id => doc.effects?.get(id));
   if ( present.length ) await doc.updateEmbeddedDocuments("ActiveEffect", present.map(_id => ({ _id, "system.magical": true })));

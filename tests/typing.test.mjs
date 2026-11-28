@@ -1,13 +1,13 @@
 /**
- * Pendant une visée, le moteur écoute le clavier du document (Entrée : lancer le sort de groupe ; Échap : annuler). Une touche
- * frappée dans un champ de saisie reste au champ — vu en jeu : Entrée dans le chat ne postait pas le message et lançait le sort.
+ * During targeting, the engine listens to the document keyboard (Enter: cast the group spell; Escape: cancel). A key
+ * typed in an input field stays with the field — seen in play: Enter in the chat did not post the message and cast the spell.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { typingIn } from "../module/scripts/core/typing.mjs";
 
-describe("typingIn — la cible d'une touche est-elle un champ de saisie", () => {
-  it("l'éditeur du chat (contenu éditable), une zone de texte, une liste, un champ de texte : oui", () => {
+describe("typingIn — is the target of a key an input field", () => {
+  it("the chat editor (editable content), a text area, a list, a text field: yes", () => {
     expect(typingIn({ tagName: "DIV", isContentEditable: true })).toBe(true);
     expect(typingIn({ tagName: "TEXTAREA" })).toBe(true);
     expect(typingIn({ tagName: "SELECT" })).toBe(true);
@@ -15,7 +15,7 @@ describe("typingIn — la cible d'une touche est-elle un champ de saisie", () =>
     expect(typingIn({ tagName: "INPUT", type: "number" })).toBe(true);
     expect(typingIn({ tagName: "input" })).toBe(true);
   });
-  it("le canevas, un bouton, une case à cocher : non", () => {
+  it("the canvas, a button, a checkbox: no", () => {
     expect(typingIn({ tagName: "CANVAS" })).toBe(false);
     expect(typingIn({ tagName: "BODY", isContentEditable: false })).toBe(false);
     expect(typingIn({ tagName: "BUTTON" })).toBe(false);
@@ -26,8 +26,8 @@ describe("typingIn — la cible d'une touche est-elle un champ de saisie", () =>
   });
 });
 
-describe("la visée ne prend pas les touches d'un champ de saisie", () => {
-  it("`onKeyDown` rend la main avant de lire Entrée ou Échap", () => {
+describe("targeting does not take the keys of an input field", () => {
+  it("`onKeyDown` yields before reading Enter or Escape", () => {
     const source = readFileSync(new URL("../module/scripts/ui/pointer-mouse.mjs", import.meta.url), "utf8");
     const body = source.slice(source.indexOf("export function onKeyDown(event) {"));
     expect(body.indexOf("if ( typingIn(event.target) ) return;")).toBeGreaterThan(0);

@@ -1,7 +1,7 @@
 /**
- * O1 (SPEC §335) : un objet premium dont la donnée est fausse (coût d'une activité, charges, DD, dégâts, effet porté) est corrigé dès sa
- * création par le MJ actif, à `createItem` / `createActor` (pour un acteur : ses objets, créés avec lui sans `createItem`). Ce qui existe
- * déjà se corrige par le diagnostic (« Données premium corrigées »). Réglage de monde `dataFixes`.
+ * O1 (SPEC §335): a premium item whose data is wrong (an activity's cost, charges, DC, damage, carried effect) is corrected
+ * as soon as it is created by the active GM, at `createItem` / `createActor` (for an actor: its items, created with it without
+ * `createItem`). What already exists is corrected by the diagnostic ("Premium data corrected"). World setting `dataFixes`.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { dataFixPlanOf, applyDataFixes } from "../adapter/data-fixes.mjs";

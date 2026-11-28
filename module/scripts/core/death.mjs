@@ -1,27 +1,27 @@
 /**
- * À 0 point de vie (règles 2024, PHB « Tomber à 0 point de vie »). Fonctions pures, aucune dépendance à Foundry.
+ * At 0 Hit Points (2024 rules, PHB "Dropping to 0 Hit Points"). Pure functions, no dependency on Foundry.
  *
- * Ce que dnd5e 6.0.3 fait déjà, et qui n'est PAS repris ici :
- *  - l'état Inconscient à 0 PV (qui porte Neutralisé et ajoute À terre), Mort pour un PNJ ordinaire, selon le
- *    réglage « Auto-Apply Downed » (documents/actor/actor.mjs, `updateDowned`), et leur retrait quand les PV remontent —
- *    mais **en combat seulement, et pas du tout avec le réglage « none »** : le moteur le garantit partout (§17.1,
- *    `downedStatus`) ;
- *  - le jet de sauvegarde contre la mort lui-même : succès et échecs comptés, 20 naturel = 1 PV, 1 naturel = deux
- *    échecs, trois succès = compteurs remis à zéro (data/actor/templates/attributes.mjs, `applyDeathSaveResult`).
+ * What dnd5e 6.0.3 already does, and is NOT taken over here:
+ *  - the Unconscious condition at 0 HP (which carries Incapacitated and adds Prone), Dead for an ordinary NPC, depending on the
+ *    "Auto-Apply Downed" setting (documents/actor/actor.mjs, `updateDowned`), and their removal when HP rises again —
+ *    but **in combat only, and not at all with the "none" setting**: the engine guarantees it everywhere (§17.1,
+ *    `downedStatus`);
+ *  - the death saving throw itself: successes and failures counted, natural 20 = 1 HP, natural 1 = two
+ *    failures, three successes = counters reset to zero (data/actor/templates/attributes.mjs, `applyDeathSaveResult`).
  *
- * Ce que le moteur ajoute (ici la règle, l'adaptateur l'écrit) :
- *  - « Dégâts à 0 point de vie » : un échec, deux sur un coup critique, la mort si les dégâts atteignent les PV max ;
- *  - « Mort sur le coup » : tomber à 0 PV avec un reste de dégâts au moins égal aux PV max ;
- *  - le jet contre la mort au début du tour, tant que la créature n'est ni stabilisée ni morte ;
- *  - Stabilisé après trois succès (le système remet les compteurs à zéro sans le dire), Mort après trois échecs.
+ * What the engine adds (here the rule, the adapter writes it):
+ *  - "Damage at 0 Hit Points": one failure, two on a Critical Hit, death if the damage reaches the max HP;
+ *  - "Instant Death": dropping to 0 HP with remaining damage at least equal to the max HP;
+ *  - the death save at the start of the turn, as long as the creature is neither stabilized nor dead;
+ *  - Stable after three successes (the system resets the counters without saying so), Dead after three failures.
  */
 
-/** Échecs qui tuent. */
+/** Failures that kill. */
 export const DEATH_FAILURES = 3;
 
 /**
- * La créature fait-elle des jets de sauvegarde contre la mort ? Les PJ, et les PNJ que dnd5e marque « importants »
- * (les autres meurent à 0 PV, c'est le système qui le pose).
+ * Does the creature make death saving throws? PCs, and the NPCs that dnd5e marks "important"
+ * (the others die at 0 HP, the system sets that).
  * @param {{type: string, important?: boolean}} actor
  */
 export function makesDeathSaves({ type, important=false }) {
@@ -29,26 +29,26 @@ export function makesDeathSaves({ type, important=false }) {
 }
 
 /**
- * Ce que des dégâts font à une créature du point de vue de la mort.
+ * What damage does to a creature from the point of view of death.
  * @param {object} state
- * @param {number} state.hp         PV avant les dégâts (hors PV temporaires).
- * @param {number} state.max        PV maximum.
- * @param {number} state.through    Dégâts qui passent les PV temporaires (après résistances).
+ * @param {number} state.hp         HP before the damage (excluding Temporary Hit Points).
+ * @param {number} state.max        Maximum HP.
+ * @param {number} state.through    Damage that gets past Temporary Hit Points (after Resistances).
  * @param {boolean} [state.critical]
- * @param {number} [state.failures] Échecs déjà subis.
- * @param {boolean} state.saves     La créature fait des jets contre la mort (`makesDeathSaves`).
+ * @param {number} [state.failures] Failures already suffered.
+ * @param {boolean} state.saves     The creature makes death saves (`makesDeathSaves`).
  * @returns {{failures: number|null, added: number, dead: boolean, reason: "massive"|"failures"|null, unstable: boolean}}
- *   `failures` : nouveau total d'échecs à écrire (null = inchangé) ; `unstable` : une créature stabilisée ne l'est plus.
+ *   `failures`: new total of failures to write (null = unchanged); `unstable`: a stabilized creature no longer is.
  */
 export function damageAtZero({ hp, max, through, critical=false, failures=0, saves }) {
   const none = { failures: null, added: 0, dead: false, reason: null, unstable: false };
   if ( !saves || !(through > 0) || !(max > 0) ) return none;
-  // Tomber à 0 : seul un reste au moins égal aux PV max tue ; sinon la créature perd connaissance (le système).
+  // Dropping to 0: only remaining damage at least equal to the max HP kills; otherwise the creature falls unconscious (the system).
   if ( hp > 0 ) {
     const remainder = through - hp;
     return (remainder > 0) && (remainder >= max) ? { ...none, dead: true, reason: "massive" } : none;
   }
-  // Déjà à 0 : des dégâts au moins égaux aux PV max tuent ; sinon un échec, deux sur un critique.
+  // Already at 0: damage at least equal to the max HP kills; otherwise one failure, two on a Critical Hit.
   if ( through >= max ) return { ...none, dead: true, reason: "massive", unstable: true };
   const added = critical ? 2 : 1;
   const total = Math.min(DEATH_FAILURES, failures + added);
@@ -56,10 +56,10 @@ export function damageAtZero({ hp, max, through, critical=false, failures=0, sav
 }
 
 /**
- * L'état qu'une créature à 0 PV doit porter et ne porte pas encore (§17.1, demande de l'utilisateur 2026-09-26 : « une
- * créature à 0 PV doit obligatoirement avoir l'état Mort ; un PJ, Inconscient, Neutralisé, À terre »). Mort pour qui ne
- * fait pas de jets contre la mort ou en a raté trois ; Inconscient sinon (dnd5e y ajoute Neutralisé et À terre).
- * `regenerates` (§18.13) : « le troll ne meurt que s'il commence son tour à 0 PV sans régénérer » — Inconscient d'ici là.
+ * The condition that a creature at 0 HP must carry and does not yet (§17.1, user request 2026-09-26: "a
+ * creature at 0 HP must necessarily have the Dead condition; a PC, Unconscious, Incapacitated, Prone"). Dead for whoever does not
+ * make death saves or has failed three; Unconscious otherwise (dnd5e adds Incapacitated and Prone to it).
+ * `regenerates` (§18.13): "the troll dies only if it starts its turn at 0 HP without regenerating" — Unconscious until then.
  * @param {{hp: number, saves: boolean, statuses: string[], failures?: number, regenerates?: boolean}} state
  * @returns {"dead"|"unconscious"|null}
  */
@@ -70,8 +70,8 @@ export function downedStatus({ hp, saves, statuses, failures=0, regenerates=fals
 }
 
 /**
- * La créature est-elle morte ? L'état Mort, ou 0 PV pour une créature qui ne fait pas de jets contre la mort (l'état
- * peut manquer un instant : il est posé après l'écriture des PV).
+ * Is the creature dead? The Dead condition, or 0 HP for a creature that does not make death saves (the condition
+ * may be missing for a moment: it is set after the HP write).
  * @param {{hp: number, saves: boolean, statuses: string[]}} state
  */
 export function isDead({ hp, saves, statuses }) {
@@ -79,7 +79,7 @@ export function isDead({ hp, saves, statuses }) {
 }
 
 /**
- * Faut-il un jet contre la mort au début de son tour ?
+ * Is a death save needed at the start of its turn?
  * @param {object} state
  * @param {number} state.hp
  * @param {boolean} state.saves     `makesDeathSaves`.
@@ -94,8 +94,8 @@ export function needsDeathSave({ hp, saves, statuses, failures=0, successes=0 })
 }
 
 /**
- * Ce que le moteur pose après un jet contre la mort, d'après l'issue que dnd5e lui donne
- * (`dnd5e.rollDeathSave` : "stable", "death", "revive" ou null).
+ * What the engine sets after a death save, from the outcome that dnd5e gives it
+ * (`dnd5e.rollDeathSave`: "stable", "death", "revive" or null).
  * @returns {"stable"|"dead"|null}
  */
 export function statusAfterDeathSave(outcome) {
@@ -105,8 +105,8 @@ export function statusAfterDeathSave(outcome) {
 }
 
 /**
- * §50 : peut-on stabiliser cette créature (trousse de soins : « stabiliser une créature Inconsciente à 0 point de vie ») ?
- * À 0 PV, ni morte ni déjà stable.
+ * §50: can this creature be stabilized (healer's kit: "stabilize an Unconscious creature at 0 Hit Points")?
+ * At 0 HP, neither dead nor already stable.
  * @param {{hp: number, statuses: string[]}} state
  */
 export function canStabilize({ hp, statuses }) {

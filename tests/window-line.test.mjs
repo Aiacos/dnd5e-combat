@@ -3,8 +3,8 @@ import { createWindowLine } from "../module/scripts/core/window-line.mjs";
 
 const tick = () => new Promise(r => setTimeout(r, 0));
 
-describe("§401 : la file des fenêtres d'un poste", () => {
-  it("une fenêtre attend que la précédente soit fermée", async () => {
+describe("§401: a station's window queue", () => {
+  it("a window waits for the previous one to close", async () => {
     const inLine = createWindowLine({ wait: () => new Promise(() => {}) });   // pas de plafond
     const opened = [];
     let closeFirst;
@@ -18,7 +18,7 @@ describe("§401 : la file des fenêtres d'un poste", () => {
     expect(opened).toEqual(["A", "B"]);
   });
 
-  it("trois fenêtres s'ouvrent dans l'ordre où elles ont été demandées", async () => {
+  it("three windows open in the order in which they were requested", async () => {
     const inLine = createWindowLine({ wait: () => new Promise(() => {}) });
     const order = [];
     const slow = name => () => new Promise(r => setTimeout(() => { order.push(name); r(name); }, 5));
@@ -26,10 +26,10 @@ describe("§401 : la file des fenêtres d'un poste", () => {
     expect(order).toEqual(["A", "B", "C"]);
   });
 
-  it("au bout du plafond, la fenêtre s'ouvre même si la précédente reste ouverte", async () => {
+  it("at the end of the ceiling, the window opens even if the previous one stays open", async () => {
     let fire;
     const inLine = createWindowLine({ wait: () => new Promise(r => { fire = r; }) });
-    inLine(() => new Promise(() => {}));   // jamais fermée
+    inLine(() => new Promise(() => {}));   // never closed
     const opened = [];
     const second = inLine(async () => { opened.push("B"); return "b"; });
     await tick();
@@ -38,7 +38,7 @@ describe("§401 : la file des fenêtres d'un poste", () => {
     expect(await second).toBe("b");
   });
 
-  it("une entrée jamais fermée ne retarde que la fenêtre qui la suit, pas toutes les suivantes", async () => {
+  it("an entry never closed only delays the window that follows it, not all the following ones", async () => {
     const fires = [];
     const inLine = createWindowLine({ wait: () => new Promise(r => { fires.push(r); }) });
     inLine(() => new Promise(() => {}), "fuite");
@@ -47,13 +47,13 @@ describe("§401 : la file des fenêtres d'un poste", () => {
     const third = inLine(async () => { opened.push("C"); return "c"; }, "C");
     await tick();
     expect(opened).toEqual([]);
-    fires[1]();   // le plafond de B (fires[0] : celui de la fuite, derrière une file vide)
+    fires[1]();   // B's ceiling (fires[0]: the leak's, behind an empty queue)
     expect(await second).toBe("b");
-    expect(await third).toBe("c");   // C n'attend que B, pas la fuite
+    expect(await third).toBe("c");   // C only waits for B, not the leak
     expect(inLine.state().map(e => e.label)).toEqual(["fuite"]);
   });
 
-  it("une fenêtre qui échoue libère la suivante", async () => {
+  it("a window that fails frees the next one", async () => {
     const inLine = createWindowLine({ wait: () => new Promise(() => {}) });
     const first = inLine(async () => { throw new Error("fermée"); });
     const second = inLine(async () => "b");

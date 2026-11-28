@@ -1,12 +1,12 @@
 /**
- * §436 : l'antimagie de dnd5e 6.1 (runtime/antimagic.mjs, adapter/antimagic.mjs).
- *  - `MAGICAL` : les capacités de monstres qui sont magiques sans être des sorts — aucune donnée ne les distingue (dnd5e n'a pas d'action
- *    Magie), d'où cette liste, relevée dans le Manuel des monstres 2024 (texte qui dit la capacité magique, téléportation, passage dans
- *    l'Éthéré, possession, charme). Une activité « lancer un sort » (`cast`) l'est toujours, sans liste. Ajoutés à la demande de
- *    l'utilisateur (2026-11-14) malgré le doute : le Changement de forme des lycanthropes et des vampires (`shape-shift`) et `roar`
- *    (identifiant porté par plusieurs monstres, que le Manuel ne dit magique que pour un seul : tous comptent comme magiques).
- *  - `ANTIMAGIC_ZONES` : les items dont la région devient un champ antimagie du système quand leur activité n'en pose pas.
- *  - `ANTIMAGIC_ZONE_LASTS` : le Cône antimagie dure jusqu'au début du tour suivant du tyrannoeil (un round).
+ * §436: dnd5e 6.1's antimagic (runtime/antimagic.mjs, adapter/antimagic.mjs).
+ *  - `MAGICAL`: monster abilities that are magical without being spells — no data distinguishes them (dnd5e has no Magic
+ *    action), hence this list, compiled from the 2024 Monster Manual (text that calls the ability magical, teleportation,
+ *    passing into the Ethereal Plane, possession, charm). A "cast a spell" activity (`cast`) always is, with no list. Added
+ *    at the user's request (2026-11-14) despite the doubt: the Shape-Shifting of lycanthropes and vampires (`shape-shift`)
+ *    and `roar` (identifier carried by several monsters, which the Manual calls magical for only one: all count as magical).
+ *  - `ANTIMAGIC_ZONES`: the items whose region becomes a system antimagic field when their activity places none.
+ *  - `ANTIMAGIC_ZONE_LASTS`: the Antimagic Cone lasts until the start of the beholder's next turn (one round).
  */
 
 export const MAGICAL = Object.freeze(Object.fromEntries([

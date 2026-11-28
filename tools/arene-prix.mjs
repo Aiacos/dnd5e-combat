@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Issue #32 : monte (ou remet en état) l'« Arène du succès à un prix » d'un monde de test, par le connecteur — la scène du scénario
- * `succes-a-un-prix` et des essais à la main : un personnage joueur (le Guerrier pré-tiré du Manuel, ses armes gardées), un Mannequin
- * qui ne meurt pas (999 PV, CA 15), un Lanceur PNJ sans item (Flamme sacrée prêtée par le scénario, Sagesse 20).
+ * Issue #32: sets up (or restores) the "Success at a Cost Arena" of a test world, through the connector — the scene of the scenario
+ * `succes-a-un-prix` and hand trials: a player character (the Handbook's pregenerated Fighter, weapons kept), a Dummy
+ * that does not die (999 HP, AC 15), an NPC Caster without items (Sacred Flame lent by the scenario, Wisdom 20).
  *
- *   node tools/arene-prix.mjs          crée ce qui manque, remet acteurs et tokens à leur état de référence
+ *   node tools/arene-prix.mjs          creates what is missing, resets actors and tokens to their reference state
  *
- * Idempotent : un acteur ou la scène se retrouve par son nom ; rien hors de son dossier n'est touché.
+ * Idempotent: an actor or the scene is found by its name; nothing outside its folder is touched.
  */
 import { connect } from "./lib/connector.mjs";
 import { ARENE_PRIX } from "./lib/stages.mjs";
@@ -48,7 +48,7 @@ try {
     actorData.effects = [];
     const found = existing.find(a => (a.name === name) && (a.folderId === folderId));
     if ( found ) {
-      // Remis à l'état de référence : PV, aucun item ni effet laissé par un scénario interrompu.
+      // Reset to the reference state: HP, no item or effect left by an interrupted scenario.
       const actor = await mcp.call("get-actor", { actorId: found.id });
       const own = new Set(baseItems.map(i => `${i.type}|${i.name}`));
       for ( const i of actor.items ?? [] ) {
@@ -56,7 +56,7 @@ try {
         await mcp.call("remove-embedded-item", { documentType: "Actor", id: found.id, itemId: i._id ?? i.id });
       }
       for ( const e of actor.effects ?? [] ) await mcp.call("remove-embedded-effect", { documentType: "Actor", id: found.id, effectId: e._id ?? e.id });
-      // L'espèce d'un personnage, désignée par id (`details.race`) : réalignée sur l'item d'espèce de la fiche.
+      // A character's species, designated by id (`details.race`): realigned on the sheet's species item.
       const race = spec.keepItems ? (actor.items ?? []).find(i => i.type === "race") : null;
       const system = race ? merge(structuredClone(spec.system), { details: { race: race._id ?? race.id } }) : spec.system;
       await mcp.call("update-actor", { actorId: found.id, actorData: { system, prototypeToken: actorData.prototypeToken } });
@@ -84,7 +84,7 @@ try {
     console.log(`scène « ${ARENE_PRIX.name} » créée (${scene.id})`);
   }
   else await mcp.call("update-scene", { sceneId: scene.id, sceneData });
-  // Un seul niveau, sans plafond (le niveau créé par défaut plafonne à 20 ft : §83).
+  // A single level, without a ceiling (the level created by default caps at 20 ft: §83).
   const levels = await mcp.call("list-levels", { sceneId: scene.id }).catch(() => null);
   const level = (levels?.levels ?? levels ?? [])[0];
   if ( level?.id ) await mcp.call("update-level", { sceneId: scene.id, levelId: level.id, name: "Sol", bottom: 0, top: null }).catch(err => console.log(`niveau : ${err.message}`));

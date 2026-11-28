@@ -1,7 +1,7 @@
 /**
- * §113 : ce que les créatures de la scène peuvent apporter au test de compétence ou d'outil d'un acteur — Assistance (le sort
- * `guidance`, lancé pour de bon par son lanceur), Inspiration bardique (donnée par un barde allié) et Soutien (Avantage). La règle est dans core/skill-aid.mjs ; ici, la lecture
- * des fiches et des tokens.
+ * §113: what the creatures of the scene can contribute to an actor's skill or tool check — Guidance (the spell
+ * `guidance`, actually cast by its caster), Bardic Inspiration (given by an allied bard) and Help (Advantage). The rule is in
+ * core/skill-aid.mjs; here, the reading of the sheets and the tokens.
  */
 
 import { AID_REACH, GUIDANCE_REACH, skillAids } from "../core/skill-aid.mjs";
@@ -17,21 +17,21 @@ import { areAllies } from "./factions.mjs";
 
 export const GUIDANCE = "guidance";
 
-/** Portée de l'Inspiration bardique quand la donnée n'en dit rien de mesurable : 18 m (règles 2024). */
+/** Range of Bardic Inspiration when the data says nothing measurable about it: 18 m (2024 rules). */
 const INSPIRATION_REACH = Object.freeze({ value: 60, units: "ft" });
 
-/** La portée de l'activité d'Inspiration du barde, convertible ; à défaut 18 m. */
+/** The range of the bard's Inspiration activity, convertible; 18 m by default. */
 function inspirationReach(activity, factors) {
   const r = activity ? rangeOf(activity) : null;
   return ((Number(r?.value) > 0) && Number.isFinite(factors[r.units])) ? { value: Number(r.value), units: r.units } : INSPIRATION_REACH;
 }
 
-/** Le sort Assistance de la fiche, ou null. Un parchemin ne compte pas : il s'use, on ne le propose pas d'office. */
+/** The Guidance spell on the sheet, or null. A scroll does not count: it is used up, so it is not offered by default. */
 export function guidanceSpellOf(actor) {
   return actor?.items?.find(i => (i.type === "spell") && (identifierOf(i).id === GUIDANCE) && (identifierOf(i).from !== "scroll")) ?? null;
 }
 
-/** L'activité du sort qui pose l'effet d'une compétence (l'utilitaire de dnd5e porte ses 18 effets), et l'id de cet effet. */
+/** The activity of the spell that places a skill's effect (dnd5e's utility carries its 18 effects), and the id of that effect. */
 export function guidanceEffectFor(spell, skill) {
   for ( const activity of spell?.system?.activities ?? [] ) {
     for ( const { _id } of activity.effects ?? [] ) {
@@ -43,7 +43,7 @@ export function guidanceEffectFor(spell, skill) {
   return null;
 }
 
-/** L'acteur a-t-il déjà une Assistance sur cette compétence ? */
+/** Does the actor already have a Guidance on this skill? */
 export function isGuided(actor, skill) {
   return Array.from(actor?.appliedEffects ?? []).some(effect => {
     if ( effect.disabled || effect.isSuppressed ) return false;
@@ -58,11 +58,11 @@ const proficientIn = (actor, { skill, tool }) => skill ? (Number(actor?.system?.
   : (Number(actor?.system?.tools?.[tool]?.value) >= 1);
 
 /**
- * Les aides possibles au test de `actor`, avec de quoi les proposer.
+ * The possible aids to `actor`'s check, with what is needed to offer them.
  * @param {Actor} actor
  * @param {{skill?: string|null, tool?: string|null}} test
- * @returns {Array<{kind: "guidance"|"inspiration"|"help", helper: Actor, token: TokenDocument, self: boolean, tester: TokenDocument,
- *   formula?: string}>}  `formula` : le dé d'une Inspiration bardique.
+ * @returns {Array<{kind: "guidance"|"inspiration"|"help", helper: Actor, token: TokenDocument, self: boolean,
+ *   tester: TokenDocument, formula?: string}>}  `formula`: a Bardic Inspiration die.
  */
 export function aidsFor(actor, { skill=null, tool=null }={}) {
   const token = tokenOf(actor);

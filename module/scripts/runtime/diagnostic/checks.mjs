@@ -1,9 +1,9 @@
 /**
- * Les vérifications du diagnostic (SPEC §177) : celles des macros « Outils du MJ » (tools/macros/, SPEC §56), dont elles reprennent
- * la logique à l'identique, découpée en tâches. Une vérification ne modifie rien : `scan()` rend des tâches
+ * The diagnostic's checks (SPEC §177): those of the "GM Tools" macros (tools/macros/, SPEC §56), whose logic they reproduce
+ * identically, split into tasks. A check modifies nothing: `scan()` returns tasks
  *   { check, root, where, text, apply?, preselect }
- * `root` : le document à sauvegarder avant de réparer (backup.mjs, `rootOf`) ; `apply()` répare et rend la phrase du compte rendu ;
- * une tâche sans `apply` est seulement signalée. Les textes sont ceux des macros (clés DND5ECOMBAT.Macro.*).
+ * `root`: the document to back up before repairing (backup.mjs, `rootOf`); `apply()` repairs and returns the report's sentence;
+ * a task without `apply` is only flagged. The texts are the macros' (keys DND5ECOMBAT.Macro.*).
  */
 import { MODULE_ID } from "../../constants.mjs";
 import { loc, esc } from "../shared.mjs";
@@ -28,31 +28,32 @@ import { brokenSourceLinks } from "../../core/source-links.mjs";
 import { invalidEffectIds, hasInvalidEffects } from "../../core/invalid-effects.mjs";
 
 /**
- * §202 : les effets d'une référence du compendium, prêts à recopier — un effet au nom d'origine (anglais) de l'objet prend le nom
- * traduit de la référence, pour une traduction qui ne traduit pas les noms d'effets (core/localize.mjs).
+ * §202: the effects of a compendium reference, ready to copy — an effect with the item's original (English) name
+ * takes the reference's translated name, for a translation that does not translate effect names (core/localize.mjs).
  */
 const effectsOf = (reference, effects=reference.effects) =>
   localizeEffectNames(effects.map(e => (e.toObject ? e.toObject() : e)), reference.flags?.babele?.originalName ?? null, reference.name);
 
 const tr = prefix => (key, data) => loc(`Macro.${prefix}.${key}`, data);
 
-/** §456 : un objet supprimé pour être recréé aussitôt (remplacement) — `leavesEffects` ne doit pas jouer (runtime/leaves.mjs). */
+/** §456: an item deleted to be recreated right away (replacement) — `leavesEffects` must not apply (runtime/leaves.mjs). */
 const replacing = () => ({ [MODULE_ID]: { replacing: true } });
 
 /**
- * §456 : la référence du compendium telle que le moteur la rend (ses `dataFixes` appliqués). Comparée brute, un objet corrigé sur la fiche
- * (Sanctuaire de dame Nature, Coup brutal) paraissait « différent du Manuel » : `phb3-items` le remplaçait, la correction le refaisait.
+ * §456: the compendium reference as the engine returns it (its `dataFixes` applied). Compared raw, an item corrected on the sheet
+ * ("Lady Nature's Sanctuary", Brutal Strike) seemed "different from the Player's Handbook": `phb3-items` replaced it,
+ * the correction redid it.
  */
 const fixedReference = doc => withDataFixes(doc.toObject(), contentOf(doc).entry?.dataFixes).data;
 
 /**
- * Les objets propres à un token non lié : ceux de la SOURCE de son delta. Côté client, `token.delta.items` énumère l'inventaire
- * fusionné (base + delta) : les anciennes macros traitaient ainsi aussi, à travers chaque token, les objets de l'acteur de base (vu en
- * jeu le 2026-10-13 : réparer l'acteur puis son token échouait sur un objet de base déjà retiré).
+ * The items belonging to an unlinked token: those of its delta's SOURCE. Client side, `token.delta.items` enumerates the merged
+ * inventory (base + delta): the old macros thus also processed, through each token, the base actor's items (seen in
+ * play on 2026-10-13: repairing the actor then its token failed on a base item already removed).
  */
 const ownItemIds = token => (token._source?.delta?.items ?? []).map(i => i._id);
 
-/** Tous les objets du monde : objets du monde, objets des fiches, objets propres aux tokens non liés (leur delta seulement). */
+/** All the world's items: world items, sheets' items, items belonging to unlinked tokens (their delta only). */
 function allItems() {
   const found = [];
   for ( const item of game.items ) found.push(item);
@@ -67,7 +68,7 @@ function allItems() {
   return found;
 }
 
-/** « Fiche — objet », ou « Monde — objet ». */
+/** "Sheet — item", or "World — item". */
 function whereOf(item) {
   const root = rootOf(item);
   return `<b>${esc(root?.type === "Item" ? loc("Diagnostic.Monde") : root?.name ?? "?")}</b> — ${esc(item.name)}`;
@@ -100,7 +101,7 @@ const deletion = flags => {
 };
 const badEffect = e => hasBad(e.flags) || (e.type !== "base" && e.type !== "enchantment")
   || (e.system?.changes ?? e.changes ?? []).some(c => MIDI.MACRO_KEY.test(c.key ?? ""));
-// §276 : un objet d'un autre module officiel (Ravenloft…) n'est pas « à reprendre » pour sa seule source.
+// §276: an item from another official module (Ravenloft…) is not "to be taken over" for its source alone.
 const needsWork = item => hasBad(item.flags) || item.effects.some(badEffect) || (item.effects.invalidDocumentIds?.size > 0)
   || (sourceKind(item._stats?.compendiumSource) === "other");
 const touchedByMidi = actor => hasBad(actor.flags) || actor.effects.some(e => hasBad(e.flags))
@@ -110,8 +111,8 @@ async function officialFor(item) {
   const src = item._stats?.compendiumSource ?? "";
   const kind = sourceKind(src);
   if ( (kind === "reference") || (kind === "premium") ) { const doc = await fromUuid(src).catch(() => null); if ( doc ) return doc; }
-  // §276 : jamais d'homonyme par identifiant pour un objet d'un autre module officiel — vu le 2026-10-28, le don « Survivant » de
-  // Ravenloft (identifiant `survivor`) remplacé par l'aptitude « Survivor » du Champion.
+  // §276: never a namesake by identifier for an item from another official module — seen on 2026-10-28, the feat
+  // "Survivor" from Ravenloft (identifier `survivor`) replaced by the Champion's "Survivor" feature.
   if ( kind === "premium" ) return null;
   const identifier = MIDI.RENAMED[item.system.identifier] ?? item.system.identifier;
   for ( const pack of MIDI.PACK_ORDER.map(id => game.packs.get(id)).filter(p => p?.documentName === "Item") ) {
@@ -174,7 +175,7 @@ export async function cleanActor(actor, dry, { onlyInvalid=false }={}) {
   }
   const ids = identifier => actor.items.filter(i => i.system.identifier === identifier);
   for ( const item of [...actor.items] ) {
-    // Un sort donné par un objet remplacé plus haut dans la boucle : dnd5e l'a retiré avec lui et recréé sous un autre id (#111).
+    // A spell given by an item replaced earlier in the loop: dnd5e removed it with it and recreated it under another id (#111).
     if ( !actor.items.has(item.id) ) continue;
     const id = item.system.identifier;
     const src = item._stats?.compendiumSource ?? "";
@@ -258,7 +259,7 @@ const cleanMidi = {
 };
 
 /* -------------------------------------------- */
-/*  2. Effets du Manuel des joueurs              */
+/*  2. Player's Handbook effects                 */
 /* -------------------------------------------- */
 
 const phbEffects = {
@@ -271,8 +272,8 @@ const phbEffects = {
       if ( !source || !SOURCES.test(source) ) continue;
       const reference = await fromUuid(source).catch(() => null);
       if ( !reference?.effects?.size ) continue;
-      // §438 : un objet d'une ancienne version dont l'identifiant ou les activités ont changé (Manuel 3.0.0) se remplace (`phb3-items`) ;
-      // y recopier les effets neufs mélangerait les deux formes.
+      // §438: an item from an older version whose identifier or activities changed (Handbook 3.0.0) is replaced (`phb3-items`);
+      // copying the new effects onto it would mix the two forms.
       if ( phbDifferences(phbShape(item.toObject()), phbShape(fixedReference(reference))).some(r => ["identifier", "activities"].includes(r)) ) continue;
       const missing = reference.effects.filter(e => !item.effects.has(e.id));
       if ( !missing.length ) continue;
@@ -328,9 +329,9 @@ const lostEffects = {
         apply: async () => {
           const item = fresh(scanned);
           if ( ref.effects.some(e => e.type === "enchantment") ) {
-            // Des effets d'enchantement ne s'ajoutent pas à un objet existant (dnd5e les refuse, data/active-effect/enchantment.mjs,
-            // `_preCreate`) : l'objet est remplacé par une copie neuve du compendium, qui garde nom, quantité, conteneur, prix,
-            // ordre et flags des autres modules.
+            // Enchantment effects are not added to an existing item (dnd5e refuses them, data/active-effect/enchantment.mjs,
+            // `_preCreate`): the item is replaced by a fresh copy from the compendium, which keeps name, quantity, container,
+            // price, order and flags of other modules.
             const data = game.items.fromCompendium(ref);
             data.name = item.name;
             data.effects = effectsOf(ref, data.effects ?? []);
@@ -384,7 +385,7 @@ const scrolls = {
     const tasks = [];
     for ( const scanned of allItems().filter(isScroll) ) {
       const item = scanned;
-      if ( item.system.activities?.some?.(a => a.type === "cast") ) continue;   // format actuel : rien à faire
+      if ( item.system.activities?.some?.(a => a.type === "cast") ) continue;   // current format: nothing to do
       const where = whereOf(item);
       const spell = scrollSpellOf(item);
       if ( !spell ) { tasks.push({ root: rootOf(item), where, text: t("LineNotFound", { where }) }); continue; }
@@ -436,32 +437,32 @@ const scrolls = {
 };
 
 /* -------------------------------------------- */
-/*  4 bis. Objets importés de D&D Beyond          */
+/*  4 bis. Items imported from D&D Beyond         */
 /* -------------------------------------------- */
 
 /**
- * §245 (issue #21) : un objet importé par DDB Importer (`flags.ddbimporter`) porte ses activités et ses effets sous d'autres ids que
- * l'objet officiel (Manuel, SRD). Une règle du contenu qui cite l'un de ces ids ne trouve rien : l'automatisation de l'objet peut ne
- * rien faire (l'Armure d'Agathys donnait ses PV temporaires, pas sa riposte). Le moteur ne s'y adapte pas, par décision : le
- * diagnostic les signale, sans rien réparer. Ne sont retenus que les objets dont la règle cite un id d'activité ou d'effet de l'objet
- * officiel absent de l'objet importé ; sans objet officiel dans le monde, les ids cités qui ont l'allure d'un id Foundry (16
- * caractères, au moins un chiffre).
+ * §245 (issue #21): an item imported by DDB Importer (`flags.ddbimporter`) carries its activities and effects under other ids
+ * than the official item (Handbook, SRD). A content rule that cites one of these ids finds nothing: the item's automation may do
+ * nothing (Armor of Agathys gave its Temporary Hit Points, not its retaliation). The engine does not adapt to it, by decision: the
+ * diagnostic flags them, without repairing anything. Only items whose rule cites an activity or effect id of the official item
+ * absent from the imported item are retained; with no official item in the world, the cited ids that look like a Foundry id (16
+ * characters, at least one digit).
  * @returns {Promise<Array<{item: Item, official: Item|null, viaMidi: boolean}>>}
  */
 export const ddbItemsAtRisk = () => importedItemsAtRisk(DDB_IMPORTER.id);
 
 /**
- * Les importeurs déclarés par d'autres modules (`registerImporter`), dans l'ordre : chacun a sa vérification, après « ddb ».
+ * The importers declared by other modules (`registerImporter`), in order: each has its check, after "ddb".
  * @type {Map<string, {id: string, flag: string, name: string, hint: string, icon: string}>}
  */
 const IMPORTERS = new Map();
 
 /**
- * Un autre module déclare son importeur d'objets : le diagnostic liste ceux de ses objets dont la règle cite un id que l'objet n'a
- * pas, et les remplace par l'objet officiel comme pour DDB Importer (même id, état de la fiche et flags de l'importeur gardés ;
- * pas de verrou). Une seconde déclaration du même `id` par le même appelant remplace la première.
- * @param {{id: string, flag: string, name: string, hint?: string, icon?: string}} def  voir core/importer.mjs, `importerErrors`
- * @returns {string}  l'id de sa vérification
+ * Another module declares its item importer: the diagnostic lists those of its items whose rule cites an id the item does not
+ * have, and replaces them with the official item as for DDB Importer (same id, sheet state and importer flags kept;
+ * no lock). A second declaration of the same `id` by the same caller replaces the first.
+ * @param {{id: string, flag: string, name: string, hint?: string, icon?: string}} def  see core/importer.mjs, `importerErrors`
+ * @returns {string}  the id of its check
  */
 export function registerImporter(def) {
   const errors = importerErrors(def, [...IMPORTERS.values()].filter(other => other.id !== def?.id));
@@ -471,14 +472,14 @@ export function registerImporter(def) {
   return importedCheckId(def.id);
 }
 
-/** L'importeur n'est plus déclaré. @returns {boolean} s'il l'était */
+/** The importer is no longer declared. @returns {boolean} whether it was */
 export function unregisterImporter(id) {
   return IMPORTERS.delete(id);
 }
 
 const importedCheckId = id => `imported-${id}`;
 
-/** @param {string} importer  l'id de l'importeur examiné (`importerOf`) */
+/** @param {string} importer  the id of the examined importer (`importerOf`) */
 async function importedItemsAtRisk(importer) {
   const out = [];
   const declared = [...IMPORTERS.values()];
@@ -494,7 +495,7 @@ async function importedItemsAtRisk(importer) {
     const reference = official ? idsOf(official) : null;
     const relevant = [...cited].filter(id => reference ? reference.has(id) : /\d/.test(id));
     if ( !relevant.some(id => !own.has(id)) ) continue;
-    // La vérification « Midi-QOL » remplace déjà cet objet par l'officiel (fiche touchée par Midi, objet à reprendre).
+    // The "Midi-QOL" check already replaces this item with the official one (sheet touched by Midi, item to take over).
     const actor = item.parent?.documentName === "Actor" ? item.parent : null;
     // Issue #112: `touchedByMidi` on purpose, not "listed by clean-midi" — a sheet listed only for an invalid effect has
     // nothing replaced by that check, so its items stay with this one.
@@ -505,20 +506,20 @@ async function importedItemsAtRisk(importer) {
 }
 
 /**
- * Les objets que la réparation ne remplace pas : classes, sous-classes et origines, et tout objet officiel à avancements — les choix
- * faits sur la fiche (compétences, dons, valeurs d'échelle…) vivent dans ses avancements et ne passent pas d'une version à l'autre.
+ * The items the repair does not replace: classes, subclasses and origins, and any official item with advancements — the choices
+ * made on the sheet (skills, feats, scale values…) live in its advancements and do not carry over from one version to the other.
  */
 const DDB_BY_HAND = new Set(["class", "subclass", "background", "race"]);
 const ddbRepairable = official => !DDB_BY_HAND.has(official.type)
   && !Object.keys(official._source?.system?.advancement ?? {}).length;
 
 /**
- * L'objet officiel à la place de l'objet importé, comme la vérification Midi-QOL (`midiReplacement` : même id, état de la fiche
- * gardé). `flags.ddbimporter` reste : DDB Importer apparie ses objets par `flags.ddbimporter.id` et le nom, ou par `id` +
- * `definitionId` (sorts, objets ; pas les aptitudes). Sans verrou, la synchro suivante le recrée en version DDB, sous le même id ;
- * avec le verrou (`ignoreItemImport`, l'option « Ignore this item » de DDB Importer), elle le laisse tel quel — et le garde même
- * retiré de D&D Beyond. Verrouillé, un objet sans `definitionId` garde son nom DDB, sans quoi la synchro ne le reconnaîtrait plus et
- * ajouterait la version DDB à côté.
+ * The official item in place of the imported item, like the Midi-QOL check (`midiReplacement`: same id, sheet state
+ * kept). `flags.ddbimporter` stays: DDB Importer matches its items by `flags.ddbimporter.id` and the name, or by `id` +
+ * `definitionId` (spells, items; not features). Without a lock, the next sync recreates it as the DDB version, under the same id;
+ * with the lock (`ignoreItemImport`, DDB Importer's "Ignore this item" option), it leaves it as is — and keeps it even removed
+ * from D&D Beyond. Locked, an item without `definitionId` keeps its DDB name, otherwise the sync would no longer recognize it and
+ * would add the DDB version next to it.
  */
 function ddbReplacement(item, doc, { lock=false }={}) {
   const data = midiReplacement(item, doc);
@@ -564,13 +565,13 @@ const ddb = {
 };
 
 /* -------------------------------------------- */
-/*  4 ter. Objets d'un importeur déclaré          */
+/*  4 ter. Items from a declared importer         */
 /* -------------------------------------------- */
 
 /**
- * La vérification d'un importeur déclaré par un autre module : comme « ddb », sans verrou (le moteur ne sait rien de sa
- * synchronisation). Les flags de l'importeur restent (`midiReplacement` garde les flags de l'objet) ; un objet du monde garde son
- * dossier. Son nom et son aide viennent de la déclaration (`name`, `hint`), pas des traductions du moteur.
+ * The check of an importer declared by another module: like "ddb", without a lock (the engine knows nothing about its
+ * synchronization). The importer's flags stay (`midiReplacement` keeps the item's flags); a world item keeps its
+ * folder. Its name and help come from the declaration (`name`, `hint`), not from the engine's translations.
  */
 function importedCheck(def) {
   return {
@@ -636,7 +637,7 @@ const pileBasics = {
 };
 
 /* -------------------------------------------- */
-/*  6. Fiches de créatures                       */
+/*  6. Creature sheets                           */
 /* -------------------------------------------- */
 
 const creatures = {
@@ -664,7 +665,7 @@ const creatures = {
           const what = t("WhatBasic", { to: BASIC[id] });
           tasks.push({ root: rootOf(item), where, text: what, preselect: true,
             apply: async () => {
-              // Une seule action de base du moteur par sorte : une seconde copie CPR de la même action est seulement retirée.
+              // A single base action of the engine per kind: a second CPR copy of the same action is only removed.
               const owner = fresh(actor);
               if ( !owner.items.some(i => i.getFlag(MODULE_ID, "basicAction") === BASIC[id]) ) {
                 await owner.createEmbeddedDocuments("Item", [basicActionData(BASIC[id])]);
@@ -680,17 +681,18 @@ const creatures = {
 };
 
 /* -------------------------------------------- */
-/*  7. Textes restés dans la langue d'origine     */
+/*  7. Texts left in the original language        */
 /* -------------------------------------------- */
 
 /**
- * §203 : reprendre la traduction actuelle des compendiums (celle de la langue de ce client, par Babele) pour les objets et acteurs
- * du monde qui en viennent et dont des textes sont restés dans la langue d'origine — importés avant l'installation d'une traduction,
- * ou par un client dans une autre langue, ou par un joueur sans droit de parcourir les fichiers (Babele ne traduit rien pour lui).
- * Babele garde sur chaque document traduit ses valeurs d'origine (`flags.babele.originalPayload`) : un champ n'est repris que s'il
- * vaut encore exactement l'original — un texte modifié à la main ne bouge pas (core/localize.mjs) ; les identifiants, les ids
- * d'activités et d'effets ne changent jamais (l'automatisation suit), un identifiant tiré du nom est figé. Les noms des tokens déjà posés
- * ne changent pas (ils ne sont pas dans la sauvegarde) ; ceux posés ensuite prennent le nom du token prototype.
+ * §203: take over the current translation of the compendiums (that of this client's language, through Babele) for the world's
+ * items and actors that come from them and whose texts were left in the original language — imported before a translation was
+ * installed, or by a client in another language, or by a player without the right to browse files
+ * (Babele translates nothing for them). Babele keeps its original values on each translated document
+ * (`flags.babele.originalPayload`): a field is only taken over if it still equals the original exactly — a hand-edited text
+ * does not move (core/localize.mjs); identifiers and the activity and effect ids never change (the automation follows),
+ * an identifier drawn from the name is frozen. The names of tokens already placed do not change (they are not in the backup);
+ * those placed afterwards take the prototype token's name.
  */
 const retranslate = {
   id: "retranslate", icon: "fa-solid fa-language",
@@ -714,13 +716,13 @@ const retranslate = {
 };
 
 /* -------------------------------------------- */
-/*  8. Donnée premium à corriger                  */
+/*  8. Premium data to correct                    */
 /* -------------------------------------------- */
 
 /**
- * O1 (§335) : les objets premium dont la donnée contredit la règle et que le moteur sait corriger (`dataFixes`, core/data-fixes.mjs) —
- * ce que le MJ actif fait à la création (runtime/data-fixes.mjs) pour ce qui existait déjà. Seuls les champs du plan changent ; une
- * valeur modifiée à la main (différente de l'origine déclarée) ne bouge pas.
+ * O1 (§335): the premium items whose data contradicts the rule and that the engine knows how to correct (`dataFixes`,
+ * core/data-fixes.mjs) — what the active GM does at creation (runtime/data-fixes.mjs) for what already existed.
+ * Only the plan's fields change; a value edited by hand (different from the declared origin) does not move.
  */
 const dataFixes = {
   id: "data-fixes", icon: "fa-solid fa-screwdriver-wrench",
@@ -744,13 +746,14 @@ const dataFixes = {
 };
 
 /* -------------------------------------------- */
-/*  9. Effets magiques non marqués (antimagie)    */
+/*  9. Unmarked magical effects (antimagic)       */
 /* -------------------------------------------- */
 
 /**
- * §436 : la marque `system.magical` que la migration de dnd5e 6.1 pose sur les effets d'un sort, d'un parchemin ou d'un item `mgc`, et
- * que le moteur pose à la création (runtime/antimagic.mjs) — sans elle, le statut `antimagic` ne suspend pas l'effet. Ici, ce qui était
- * déjà sur les fiches : les effets des items magiques, et les effets posés sur les acteurs depuis eux. Rien d'autre ne change.
+ * §436: the `system.magical` mark that dnd5e 6.1's migration puts on the effects of a spell, scroll or `mgc` item, and
+ * that the engine puts at creation (runtime/antimagic.mjs) — without it, the `antimagic` status does not suspend the effect.
+ * Here, what was already on the sheets: the effects of magic items, and the effects placed on actors from them.
+ * Nothing else changes.
  */
 const magicalEffects = {
   id: "magical-effects", icon: "fa-solid fa-wand-sparkles",
@@ -782,15 +785,15 @@ const magicalEffects = {
 /* -------------------------------------------- */
 
 /**
- * §438 : les fiches faites avec le Manuel des joueurs 2.2.0 gardent leurs objets tels qu'ils étaient ; dnd5e 6.1.0 ne migre qu'un
- * identifiant de sous-classe (Cercle de la Lune, `SubclassData.#migrateMoonIdentifier`) et le module du Manuel n'a aucun code de
- * migration. Deux vérifications, à la demande de l'utilisateur (2026-11-14) :
- *  - `phb3-subclasses` : l'identifiant d'une sous-classe du Manuel remis à celui de sa référence (`vengeance` → `oath-vengeance`), et
- *    les sorts qu'elle a donnés (`system.sourceItem` « subclass:<id> », dnd5e.mjs:23417) suivis. Cochée d'office. L'aperçu signale les
- *    objets qui citent encore l'ancien identifiant dans une formule (`@scale.fey.…` des anciennes Frappes effroyables) : à remplacer ;
- *  - `phb3-items` : les aptitudes et sorts du Manuel dont la référence a changé (identifiant, activités, effets, contenu, avancement)
- *    remplacés par elle — même id, état de la fiche gardé (utilisations, préparation, origine d'avancement) comme le nettoyage de
- *    Midi-QOL le fait. Une tâche par fiche, l'aperçu liste chaque objet et ce qui change ; rien n'est coché d'office.
+ * §438: the sheets made with Player's Handbook 2.2.0 keep their items as they were; dnd5e 6.1.0 only migrates one
+ * subclass identifier (Circle of the Moon, `SubclassData.#migrateMoonIdentifier`) and the Handbook module has no
+ * migration code. Two checks, at the user's request (2026-11-14):
+ *  - `phb3-subclasses`: the identifier of a Handbook subclass put back to its reference's (`vengeance` → `oath-vengeance`), and
+ *    the spells it gave (`system.sourceItem` "subclass:<id>", dnd5e.mjs:23417) followed. Ticked by default. The preview flags the
+ *    items that still cite the old identifier in a formula (`@scale.fey.…` of the old Dreadful Strikes): to be replaced;
+ *  - `phb3-items`: the Handbook features and spells whose reference changed (identifier, activities, effects, content, advancement)
+ *    replaced by it — same id, sheet state kept (uses, preparation, advancement origin) as the Midi-QOL cleanup
+ *    does. One task per sheet, the preview lists each item and what changes; nothing is ticked by default.
  */
 const PHB_ITEM = /^Compendium\.dnd-players-handbook\.(classes|feats|origins|spells)\.Item\./;
 const sourceOf = item => item._stats?.compendiumSource ?? item.flags?.dnd5e?.sourceId ?? "";
@@ -824,16 +827,16 @@ const phb3Subclasses = {
   }
 };
 
-/** L'objet du Manuel remplacé par sa référence : données de la référence, état de la fiche gardé (midiReplacement), plus sa classe. */
+/** The Handbook item replaced by its reference: the reference's data, sheet state kept (midiReplacement), plus its class. */
 function phb3Replacement(item, reference) {
   const data = midiReplacement(item, reference);
   const old = item.toObject().system ?? {};
   if ( old.classIdentifier && !data.system.classIdentifier ) data.system.classIdentifier = old.classIdentifier;
   const grant = spellGrantOf(item);
   if ( grant ) {
-    // §469 : un sort accordé par un avancement (Châtiment divin du Paladin, sort gratuit d'un don…) reçoit à l'octroi les réglages de cet
-    // avancement — utilisations gratuites, récupération, activité « lancer gratuitement » (dnd5e, spell-config.mjs:78-118, appelé par
-    // item-grant.mjs:119). La référence du compendium ne les a pas : on les réapplique comme dnd5e, l'usage dépensé gardé.
+    // §469: a spell granted by an advancement (Paladin's Divine Smite, a feat's free spell…) receives the settings of that
+    // advancement when granted — free uses, recovery, "cast for free" activity (dnd5e, spell-config.mjs:78-118, called by
+    // item-grant.mjs:119). The compendium reference does not have them: we reapply them as dnd5e does, the spent use kept.
     grant.configuration.spell.applySpellChanges(data, { ability: grant.value?.ability });
     if ( old.uses?.spent !== undefined ) foundry.utils.setProperty(data, "system.uses.spent", old.uses.spent);
   }
@@ -841,8 +844,8 @@ function phb3Replacement(item, reference) {
 }
 
 /**
- * §469 : l'avancement qui a accordé ce sort, s'il lui donne des réglages (`configuration.spell`) — retrouvé par le drapeau
- * `dnd5e.advancementOrigin` (« idObjet.idAvancement », advancement.mjs:385-391) sur la fiche du sort. Null sinon.
+ * §469: the advancement that granted this spell, if it gives it settings (`configuration.spell`) — found by the flag
+ * `dnd5e.advancementOrigin` ("itemId.advancementId", advancement.mjs:385-391) on the spell's sheet. Null otherwise.
  */
 function spellGrantOf(item) {
   if ( item.type !== "spell" ) return null;
@@ -851,13 +854,13 @@ function spellGrantOf(item) {
   return grant?.configuration?.spell?.applySpellChanges ? grant : null;
 }
 
-/** §469 : ce sort a-t-il perdu les utilisations gratuites que son avancement lui donne (remplacement d'avant le correctif) ? */
+/** §469: has this spell lost the free uses its advancement gives it (replacement from before the fix)? */
 function lostSpellGrant(item) {
   const uses = spellGrantOf(item)?.configuration.spell.uses;
   return !!(uses?.max && uses?.per && !item._source.system?.uses?.max);
 }
 
-/** Les objets du Manuel d'une fiche à revoir : `{ item, reference, reasons }` (référence null : elle n'existe plus). */
+/** The Handbook items of a sheet to review: `{ item, reference, reasons }` (reference null: it no longer exists). */
 async function phb3Outdated(actor) {
   const out = [];
   for ( const item of actor.items ) {
@@ -910,26 +913,27 @@ const phb3Items = {
 /* -------------------------------------------- */
 
 /**
- * Les sorts en double d'une fiche (core/spell-duplicates.mjs) : un module de préparation des sorts qui reconnaît un sort par l'uuid de
- * son compendium d'origine ajoute une seconde copie d'un sort venu d'un autre compendium (SRD contre Manuel). Le sort gardé : celui du
- * Manuel des joueurs (les listes de sorts de classe du Manuel citent ses sorts), sinon du SRD 5.2. Une tâche par fiche.
+ * A sheet's duplicate spells (core/spell-duplicates.mjs): a spell-preparation module that recognizes a spell by the uuid of
+ * its origin compendium adds a second copy of a spell from another compendium (SRD against Handbook).
+ * The spell kept: the one from the Player's Handbook (the Handbook's class spell lists cite its spells),
+ * otherwise from the SRD 5.2. One task per sheet.
  */
 const PREFERRED_SPELL_PACKS = Object.freeze(["Compendium.dnd-players-handbook.spells.", "Compendium.dnd5e.spells24."]);
 
-/** Le nom lisible du compendium d'où vient un sort, ou « créé à la main ». */
+/** The readable name of the compendium a spell comes from, or "created by hand". */
 function spellSourceLabel(spell) {
   const source = sourceOf(spell);
   if ( !source.startsWith("Compendium.") ) return loc("Macro.SpellDuplicates.NoSource");
   const id = source.split(".").slice(1, 3).join(".");
   const pack = game.packs.get(id);
   if ( !pack ) return id;
-  // Deux compendiums peuvent porter le même titre (« Spells » du Manuel et du SRD) : le paquet qui le livre les distingue.
+  // Two compendiums can have the same title ("Spells" of the Handbook and of the SRD): the package that ships it tells them apart.
   const { packageType, packageName } = pack.metadata;
   const owner = (packageType === "system") ? game.system?.title : (packageType === "module") ? game.modules.get(packageName)?.title : null;
   return owner ? `${owner} · ${pack.title}` : pack.title;
 }
 
-/** Les groupes de doublons d'une fiche, avec leurs documents. */
+/** A sheet's duplicate groups, with their documents. */
 function spellDuplicatesOf(actor) {
   const spells = actor.itemTypes?.spell ?? [];
   const described = spells.map(s => ({
@@ -982,16 +986,16 @@ const spellDuplicatesCheck = {
 };
 
 /* -------------------------------------------- */
-/*  Enchantements « ModifyItem » (enchantements-aptitudes.js) */
+/*  "ModifyItem" enchantments (enchantements-aptitudes.js) */
 /* -------------------------------------------- */
 
 /**
- * §453 : la progression « ModifyItem » de dnd5e 6.1 pose un enchantement de l'aptitude sur un autre objet de la fiche, seulement quand
- * elle s'applique et seulement sur les objets déjà là (dnd5e.mjs `ModifyItemAdvancement#apply`). Un sort appris après, ou une aptitude
- * remplacée par sa version du Manuel 3.0.0 (`phb3-items`), reste sans enchantement (core/modify-item.mjs). La réparation le pose comme
- * dnd5e : copie de l'effet de l'aptitude, `transfer`, marques `advancementOrigin` / `sourceId`, origine = l'aptitude (dnd5e crée alors
- * ses riders à la création de l'effet, `_onCreateOperation` → `collectRiders`), et l'inscrit dans `value.modified` de la progression,
- * riders compris, pour qu'une redescente de niveau le retire.
+ * §453: dnd5e 6.1's "ModifyItem" progression puts a feature's enchantment on another item of the sheet, only when
+ * it applies and only on items already there (dnd5e.mjs `ModifyItemAdvancement#apply`). A spell learned afterwards, or a feature
+ * replaced by its Handbook 3.0.0 version (`phb3-items`), stays without enchantment (core/modify-item.mjs). The repair puts it like
+ * dnd5e: copy of the feature's effect, `transfer`, `advancementOrigin` / `sourceId` marks, origin = the feature (dnd5e then
+ * creates its riders at the effect's creation, `_onCreateOperation` → `collectRiders`),
+ * and records it in the progression's `value.modified`, riders included, so that a level drop removes it.
  */
 async function modifyItemFeatures(actor) {
   const features = [];
@@ -1021,7 +1025,7 @@ async function missingEnchantmentsOf(actor) {
   return missingModifications(features, targetsOf, effectsOf);
 }
 
-/** Pose l'enchantement d'un changement sur l'objet visé, comme dnd5e, et l'inscrit dans la progression. */
+/** Puts a change's enchantment on the targeted item, as dnd5e does, and records it in the progression. */
 async function applyModification(actor, { feature, advancement, change, target }) {
   const own = actor.items.get(feature.id);
   const item = actor.items.get(target.id);
@@ -1037,7 +1041,7 @@ async function applyModification(actor, { feature, advancement, change, target }
   data.transfer = true;
   const [created] = await item.createEmbeddedDocuments("ActiveEffect", [data], { keepId: true });
   if ( !created ) return false;
-  // Les riders que dnd5e vient de créer (activités et effets de l'objet, objets de la fiche) dépendent de cet effet.
+  // The riders dnd5e has just created (the item's activities and effects, the sheet's items) depend on this effect.
   const updated = actor.items.get(item.id);
   const rel = doc => foundry.utils.buildRelativeUuid(doc, actor);
   const riders = [
@@ -1065,7 +1069,7 @@ const modifyItemCheck = {
         apply: async () => {
           const sheet = fresh(actor);
           const done = [];
-          // Relu au moment de réparer : une autre tâche, ou une montée de niveau, a pu le poser entre-temps.
+          // Re-read at repair time: another task, or a level-up, may have placed it in the meantime.
           for ( const m of await missingEnchantmentsOf(sheet) ) {
             if ( await applyModification(sheet, m) ) done.push(`✨ ${t("Line", { feature: esc(m.feature.name), target: esc(m.target.name),
               effect: esc(m.change.effectName || m.feature.name) })}`);
@@ -1151,11 +1155,11 @@ const sourceLinks = {
   }
 };
 
-/** Les vérifications, dans l'ordre où les macros les proposaient. */
+/** The checks, in the order the macros offered them. */
 export const CHECKS = Object.freeze([cleanMidi, phbEffects, lostEffects, scrolls, ddb, pileBasics, creatures,
   retranslate, dataFixes, magicalEffects, phb3Subclasses, phb3Items, spellDuplicatesCheck, modifyItemCheck, sourceLinks, summonPermissions]);
 
-/** Les vérifications du moment : celles du moteur, et, après « ddb », celle de chaque importeur déclaré par un autre module. */
+/** The current checks: the engine's, and, after "ddb", that of each importer declared by another module. */
 export function allChecks() {
   const declared = [...IMPORTERS.values()].map(importedCheck);
   if ( !declared.length ) return CHECKS;

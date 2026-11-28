@@ -1,11 +1,11 @@
 /**
- * §436 (suite) : le Champ antimagie du SRD de dnd5e 6.1 (compendium du système), dont l'activité pose elle-même le comportement de région
- * `antimagic` — le moteur ne lui en ajoute pas un second. Monde `dnd-6`, arène.
- *  1. Bénédiction du Clerc sur le Guerrier, loin.
- *  2. Le Magicien lance le Champ du SRD : un seul comportement `dnd5e.antimagic` sur la zone, statut sur le Magicien.
- *  3. Le Guerrier entre : statut, Bénédiction suspendue ; il sort : rétablie.
- *  4. Trait de feu du Magicien : le souci du champ (forçable, comme le Champ du Manuel).
- * Remet positions, effets, PV.
+ * §436 (continued): the Antimagic Field of dnd5e 6.1's SRD (system compendium), whose activity itself places the region behavior
+ * `antimagic` — the engine does not add a second one. `dnd-6` world, arena.
+ *  1. Cleric's Bless on the Fighter, far away.
+ *  2. The Wizard casts the SRD Field: a single `dnd5e.antimagic` behavior on the area, status on the Wizard.
+ *  3. The Fighter enters: status, Bless suspended; he leaves: restored.
+ *  4. The Wizard's Fire Bolt: the field's issue (forceable, like the Handbook's Field).
+ * Restores positions, effects, HP.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -58,14 +58,14 @@ export default {
     await place(fighter, m.x - 6 * grid, m.y);
     await place(cleric, m.x - 7 * grid, m.y);
 
-    // 1. Bénédiction.
+    // 1. Bless.
     const blessId = await ctx.ensureItem(cleric, PHB + "phbsplBless00000", { system: { method: "atwill" } });
     const b = await ctx.use({ tokenId: cleric.id, itemId: blessId, targetTokenIds: [fighter.id], consume: false });
     if ( b.usageMessageId ) await ctx.settle(b.usageMessageId, { timeoutMs: 30000 }).catch(() => null);
     await pause(1500);
     if ( !ctx.expect(!!(await bless()), "Bénédiction posée sur le Guerrier") ) return;
 
-    // 2. Le Champ du SRD.
+    // 2. The SRD Field.
     const field = await ctx.ensureItem(mage, srd, { system: { method: "atwill" } });
     const used = await ctx.engine("use", { tokenId: mage.id, itemId: field });
     for ( const r of used.regions ?? [] ) ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: r.id }).catch(() => {}));
@@ -90,7 +90,7 @@ export default {
     ctx.expect(!(await statuses(fighter)).has("antimagic") && (await bless())?.suppressed === false,
       `hors du champ : plus de statut, Bénédiction rétablie (suppressed=${(await bless())?.suppressed})`);
 
-    // 4. Trait de feu dans le champ : le souci du champ.
+    // 4. Fire Bolt in the field: the field's issue.
     const bolt = await ctx.ensureItem(mage, PHB + "phbsplFireBolt00", { system: { method: "atwill" } });
     const issues = await ctx.engine("issues", { tokenId: mage.id, itemId: bolt });
     ctx.expect(issues.some(l => /no spell can be cast|aucun sort/i.test(l)), `Trait de feu : le souci du champ (${issues.join(" ; ") || "aucun souci"})`);

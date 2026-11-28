@@ -1,9 +1,9 @@
 /**
- * B09 (§488) : un objet porté qui verrouille la forme de son porteur (`formLock: { worn: true, onAttempt?, forms? }`). Chaque tentative
- * de changer de forme — une activité de transformation (le refus est dans la légalité : runtime/turn.mjs `useIssues`), ou un effet de
- * forme allumé à la main sur la fiche — inflige au porteur les étapes `onAttempt` (des dégâts, jet visible de tous, par le MJ actif),
- * avec un avis et un son pour toute la table ; la tentative est refusée, et peut être forcée (fenêtre « Utiliser quand même », le MJ
- * prévenu). La suspension des traits (`suspends`) se lit là où le trait se lit (adapter/regeneration.mjs).
+ * B09 (§488): a worn item that locks its bearer's form (`formLock: { worn: true, onAttempt?, forms? }`). Each attempt
+ * to change form — a transformation activity (the refusal is in legality: runtime/turn.mjs `useIssues`), or a form effect
+ * turned on by hand on the sheet — inflicts the `onAttempt` steps on the bearer (damage, roll visible to all, by the active GM),
+ * with a notice and a sound for the whole table; the attempt is refused, and can be forced ("Use anyway" window, the GM
+ * warned). The suspension of traits (`suspends`) is read where the trait is read (adapter/regeneration.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -18,10 +18,10 @@ import { log, loc, notice, viaActiveGM } from "./shared.mjs";
 
 export const FORM_LOCK_QUERY = `${MODULE_ID}.formLock`;
 
-/** La tentative d'un acteur, chez le MJ actif : les étapes `onAttempt` du verrou qu'il porte, relu ici (rien n'est cru de la requête). */
+/** An actor's attempt, on the active GM: the `onAttempt` steps of the lock they carry, re-read here (the request is not trusted). */
 async function handleAttempt({ actor: actorUuid }={}, { user=null }={}) {
   const actor = actorUuid ? fromUuidSync(actorUuid, { strict: false }) : null;
-  // §472 : d'un joueur, seulement pour une créature qu'il possède (refus de sécurité, non forçable).
+  // §472: from a player, only for a creature they own (safety refusal, not forceable).
   if ( actor && needsCheck(user) && !actor.testUserPermission(user, "OWNER") ) {
     console.warn(`${MODULE_ID} | form lock query from ${user.name} refused: not the owner of ${actor.name}`);
     return false;
@@ -45,14 +45,14 @@ async function handleAttempt({ actor: actorUuid }={}, { user=null }={}) {
   return true;
 }
 
-/** Joue la tentative (par le MJ actif). */
+/** Plays the attempt (by the active GM). */
 export function punishAttempt(actor) {
   return viaActiveGM(FORM_LOCK_QUERY, handleAttempt, { actor: actor.uuid }, { fallback: false, label: "form lock: attempt not played" });
 }
 
 /**
- * Avant la légalité (inscrit juste avant `registerTurn`) : une activité de transformation que l'objet porté interdit — les étapes se
- * jouent une fois par tentative ; la relance confirmée (« Utiliser quand même ») ne les rejoue pas. Le refus lui-même : `useIssues`.
+ * Before legality (registered just before `registerTurn`): a transformation activity that the carried item forbids — the steps
+ * are played once per attempt; the confirmed retry ("Use anyway") does not replay them. The refusal itself: `useIssues`.
  */
 function onPreUseActivity(activity, usageConfig) {
   if ( usageConfig?.[MODULE_ID]?.confirmed || !formAttemptLock(activity) ) return;
@@ -60,8 +60,8 @@ function onPreUseActivity(activity, usageConfig) {
 }
 
 /**
- * Un effet de forme allumé à la main (Forme hybride, Forme de loup) chez un porteur du verrou : refusé, les étapes jouées, puis la fenêtre
- * « Utiliser quand même » — forcé, l'effet s'allume (option `formLockForced`, le MJ prévenu).
+ * A form effect turned on by hand (Hybrid Form, Wolf Form) on a bearer of the lock: refused, the steps played, then the
+ * "Use anyway" window — forced, the effect turns on (option `formLockForced`, the GM notified).
  */
 function onPreUpdateEffect(effect, changes, options) {
   if ( (foundry.utils.getProperty(changes, "disabled") !== false) || !effect.disabled ) return true;

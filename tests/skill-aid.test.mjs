@@ -5,35 +5,35 @@ const me = { id: "moi", self: true, inReach: true, able: true };
 const clerc = { id: "clerc", inReach: true, able: true, knowsGuidance: true, canCast: true, proficient: false };
 const roublard = { id: "roublard", inReach: true, able: true, proficient: true };
 
-describe("aides à un test de compétence (§113)", () => {
-  it("un allié à portée qui connaît Assistance, un allié qui maîtrise la compétence : Assistance d'abord", () => {
+describe("aids to a skill check (§113)", () => {
+  it("an ally in range who knows Assistance, an ally proficient in the skill: Assistance first", () => {
     expect(skillAids({ skill: "prc", candidates: [roublard, clerc, me] })).toEqual([
       { kind: "guidance", helper: "clerc" }, { kind: "help", helper: "roublard" }
     ]);
   });
-  it("le testeur qui connaît Assistance se la lance lui-même, en tête ; il ne se Soutient pas", () => {
+  it("the tester who knows Assistance applies it to themselves, first; they do not Support themselves", () => {
     const self = { ...me, knowsGuidance: true, proficient: true };
     expect(skillAids({ skill: "prc", candidates: [clerc, self] })).toEqual([
       { kind: "guidance", helper: "moi" }, { kind: "guidance", helper: "clerc" }
     ]);
   });
-  it("hors de portée, neutralisé ou réduit au silence : rien", () => {
+  it("out of range, Incapacitated or silenced: nothing", () => {
     expect(skillAids({ skill: "prc", candidates: [me, { ...clerc, inReach: false }, { ...roublard, able: false }] })).toEqual([]);
     expect(skillAids({ skill: "prc", candidates: [me, { ...clerc, canCast: false }] })).toEqual([]);
   });
-  it("déjà sous Assistance pour cette compétence : seul le Soutien reste", () => {
+  it("already under Assistance for this skill: only Support remains", () => {
     expect(skillAids({ skill: "prc", guided: true, candidates: [me, clerc, roublard] })).toEqual([{ kind: "help", helper: "roublard" }]);
   });
-  it("un test d'outil : le Soutien seulement (Assistance vise une compétence)", () => {
+  it("a tool check: Support only (Assistance targets a skill)", () => {
     expect(skillAids({ tool: "thief", candidates: [me, clerc, roublard] })).toEqual([{ kind: "help", helper: "roublard" }]);
   });
-  it("hors combat, Assistance a sa propre portée (7,50 m) : un allié trop loin pour le Soutien peut encore l'offrir", () => {
+  it("out of combat, Assistance has its own range (7.50 m): an ally too far for Support can still offer it", () => {
     const far = { ...clerc, proficient: true, inReach: false, inGuidanceReach: true };
     expect(skillAids({ skill: "prc", candidates: [me, far] })).toEqual([{ kind: "guidance", helper: "clerc" }]);
     expect(skillAids({ skill: "prc", candidates: [me, { ...far, inGuidanceReach: false }] })).toEqual([]);
     expect(GUIDANCE_REACH).toEqual({ value: 25, units: "ft" });
   });
-  it("Inspiration bardique : un allié barde à sa portée, pas soi-même, pas si le testeur est déjà inspiré", () => {
+  it("Bardic Inspiration: a bard ally in their range, not oneself, not if the tester is already inspired", () => {
     const barde = { id: "barde", inReach: false, able: true, inspires: true, inInspirationReach: true };
     expect(skillAids({ tool: "thief", candidates: [me, barde, roublard] })).toEqual([
       { kind: "inspiration", helper: "barde" }, { kind: "help", helper: "roublard" }
@@ -43,14 +43,14 @@ describe("aides à un test de compétence (§113)", () => {
     expect(skillAids({ skill: "prc", candidates: [me, { ...barde, inInspirationReach: false }] })).toEqual([]);
     expect(skillAids({ skill: "prc", inCombat: true, candidates: [me, barde] })).toEqual([{ kind: "inspiration", helper: "barde" }]);
   });
-  it("en combat, les mêmes aides, mais Assistance au contact seulement", () => {
+  it("in combat, the same aids, but Assistance on contact only", () => {
     expect(skillAids({ skill: "prc", inCombat: true, candidates: [me, clerc, roublard] })).toEqual([
       { kind: "guidance", helper: "clerc" }, { kind: "help", helper: "roublard" }
     ]);
     const far = { ...clerc, inReach: false, inGuidanceReach: true };
     expect(skillAids({ skill: "prc", inCombat: true, candidates: [me, far] })).toEqual([]);
   });
-  it("sans compétence ni outil : rien ; la portée du Soutien est le contact", () => {
+  it("without skill or tool: nothing; the range of Support is contact", () => {
     expect(skillAids({ candidates: [me, clerc, roublard] })).toEqual([]);
     expect(AID_REACH).toEqual({ value: 5, units: "ft" });
   });

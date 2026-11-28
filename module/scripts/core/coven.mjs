@@ -1,17 +1,17 @@
 /**
- * Cercles (SPEC §19.5) : des créatures qui partagent une même réserve de points de vie — tout dégât subi par l'un des membres
- * est retiré de la réserve commune, et des dégâts d'une même source subis par plusieurs membres comptent autant de fois. Chaque
- * membre garde ses PV, tenus égaux : l'ÉCART subi par l'un est reporté sur les autres — deux coups simultanés comptent deux
- * fois, sans qu'une écriture efface l'autre.
+ * Covens (SPEC §19.5): creatures that share one pool of Hit Points — any damage taken by one of the members
+ * is removed from the shared pool, and damage from one source taken by several members counts as many times. Each
+ * member keeps its HP, held equal: the DIFFERENCE taken by one is carried over to the others — two simultaneous hits count
+ * twice, without one write erasing the other.
  *
- * Fonctions pures, aucune dépendance à Foundry.
+ * Pure functions, no dependency on Foundry.
  */
 
 /**
- * Les PV d'un membre après l'écart subi par un autre, bornés à [0, max]. null : rien à écrire (déjà à 0 sous des dégâts,
- * ou valeur inchangée).
- * @param {{value: number, max: number}} hp  Les PV du membre.
- * @param {number} delta                     L'écart subi par l'autre (négatif : dégâts).
+ * A member's HP after the difference taken by another, clamped to [0, max]. null: nothing to write (already at 0 under damage,
+ * or value unchanged).
+ * @param {{value: number, max: number}} hp  The member's HP.
+ * @param {number} delta                     The difference taken by the other (negative: damage).
  */
 export function sharedValue(hp, delta) {
   if ( !Number.isFinite(delta) || (delta === 0) || !hp ) return null;

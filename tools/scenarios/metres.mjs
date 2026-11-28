@@ -1,12 +1,12 @@
 /**
- * Une scène en mètres (grille de 1,5 m, scène « metres » de `dnd-6`) : le moteur convertit les distances des fiches, écrites en
- * pieds (SPEC §5.7). Le Magicien et le Barde :
- *  1. en combat, la Vitesse et le plafond de déplacement du tour sont en mètres (30 ft → 9 m), et une marche de quatre cases en
- *     dépense 6 ;
- *  2. la dague lancée (6 m / 18 m) : pas de Désavantage à trois cases (4,5 m), Désavantage de portée longue à six (9 m) ;
- *  3. le Barde rendu Hostile le temps du test, au contact du Magicien : l'attaque à distance a le Désavantage du corps à corps,
- *     et quitter son allonge (1,5 m) est une menace d'attaque d'opportunité, rester au contact non.
- * Remet positions, disposition du Barde et combat.
+ * A scene in meters (1.5 m grid, scene "metres" of `dnd-6`): the engine converts the sheets' distances, written in
+ * feet (SPEC §5.7). The Wizard and the Bard:
+ *  1. in combat, the Speed and the turn's movement cap are in meters (30 ft → 9 m), and a walk of four cells
+ *     spends 6 of it;
+ *  2. the thrown dagger (6 m / 18 m): no Disadvantage at three cells (4.5 m), long-range Disadvantage at six (9 m);
+ *  3. the Bard made Hostile for the duration of the test, in contact with the Wizard: the ranged attack has the melee Disadvantage,
+ *     and leaving their reach (1.5 m) is an Opportunity Attack threat, staying in contact is not.
+ * Restores positions, the Bard's disposition and combat.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const close = (a, b) => Math.abs(a - b) < 1e-6;
@@ -26,7 +26,7 @@ export default {
     await pause(500);
     const dagger = await ctx.itemId(mage.id, "dagger");
 
-    // 1. Le déplacement, en mètres.
+    // 1. Movement, in meters.
     await ctx.startCombat([mage, bard]);
     const c = await ctx.combat();
     for ( const [t, value] of [[mage, 20], [bard, 10]] ) {
@@ -48,7 +48,7 @@ export default {
     await ctx.call("move-token", { tokenId: mage.id, x: at.x, y: at.y, elevation: 0 });
     await pause(800);
 
-    // 2. La portée de la dague lancée (20/60 ft = 6/18 m).
+    // 2. The range of the thrown dagger (20/60 ft = 6/18 m).
     const reasons = () => ctx.engine("attackReasons", { attackerId: mage.id, targetId: bard.id, itemId: dagger, attackMode: "thrown" });
     await ctx.call("move-token", { tokenId: bard.id, x: at.x + (3 * grid), y: at.y, elevation: 0 });
     await pause(800);
@@ -59,7 +59,7 @@ export default {
     const far = await reasons();
     ctx.expect(far.disadvantage.includes("situation.longRange"), `à 9 m : portée longue (${far.disadvantage.join(", ") || "aucun Désavantage"})`);
 
-    // 3. L'allonge du Barde (1,5 m), rendu Hostile le temps du test.
+    // 3. The Bard's reach (1.5 m), made Hostile for the duration of the test.
     const { data: bardData } = await ctx.call("get-scene-object", { type: "Token", objectId: bard.id });
     ctx.restore(() => ctx.call("update-scene-object", { type: "Token", objectId: bard.id, data: { disposition: bardData.disposition } }));
     await ctx.call("update-scene-object", { type: "Token", objectId: bard.id, data: { disposition: -1 } });

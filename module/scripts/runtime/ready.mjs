@@ -1,17 +1,18 @@
 /**
- * §211 : Se tenir prêt (Ready, règles 2024) — agir hors de son tour.
+ * §211: Ready (2024 rules) — acting outside one's turn.
  *
- *  - À son tour, l'action de base « Se tenir prêt » (content/actions.mjs) dépense l'action ; sur le client qui l'a prise, une fenêtre
- *    demande quoi préparer (une attaque, un sort qui se lance par une action), le déclencheur — un ennemi arrive à portée de l'action,
- *    un ennemi attaque, un ennemi lance un sort — et, au choix, la seule créature qui le déclenche (une cible du moment). Le plan est
- *    rangé dans le budget du tour (`readied`) : il expire au début du prochain tour du combattant, comme le budget.
- *  - Un sort préparé est lancé maintenant : l'emplacement choisi est dépensé, la créature se concentre dessus (effet marqué
- *    `readied`) ; la concentration rompue, le sort est perdu ; non libéré au début de son tour, aussi.
- *  - Le déclencheur survenu, la Réaction est proposée à celui qui s'est tenu prêt (`askReaction`), contre la créature qui l'a
- *    déclenché : « arrive à portée » se joue quand elle y est arrivée — son déplacement est coupé là, puis reprend
- *    (runtime/reactions.mjs, `splitForReady`) ; « attaque » et « lance un sort », une fois l'action de l'ennemi résolue (MJ actif).
- *    Refuser laisse le plan armé (« vous pouvez ignorer le déclencheur ») ; le libérer le sert (runtime/turn.mjs, `readiedRelease`).
- * Le déplacement préparé (« se déplacer jusqu'à sa Vitesse ») reste à la table.
+ *  - On one's turn, the basic action "Ready" (content/actions.mjs) spends the action; on the client that took it, a window
+ *    asks what to prepare (an attack, a spell cast with an action), the trigger — an enemy comes within range of the action,
+ *    an enemy attacks, an enemy casts a spell — and, optionally, the single creature that triggers it (a target of the
+ *    moment). The plan is stored in the turn's budget (`readied`): it expires at the start of the combatant's next turn,
+ *    like the budget.
+ *  - A readied spell is cast now: the chosen slot is spent, the creature concentrates on it (effect marked
+ *    `readied`); Concentration broken, the spell is lost; not released at the start of its turn, likewise.
+ *  - Once the trigger occurs, the Reaction is offered to the one who readied (`askReaction`), against the creature that
+ *    triggered it: "comes within range" plays when it has arrived — its move is cut there, then resumes
+ *    (runtime/reactions.mjs, `splitForReady`); "attack" and "casts a spell", once the enemy's action is resolved (active GM).
+ *    Declining leaves the plan armed ("you can ignore the trigger"); releasing it serves it (runtime/turn.mjs, `readiedRelease`).
+ * The readied move ("move up to your Speed") stays at the table.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -31,10 +32,10 @@ import { route } from "./router.mjs";
 import { esc, log, loc, notice, say, sleep } from "./shared.mjs";
 
 /* -------------------------------------------- */
-/*  Préparer                                    */
+/*  Prepare                                     */
 /* -------------------------------------------- */
 
-/** La fenêtre « Se tenir prêt » ; null si elle est fermée. */
+/** The "Ready" window; null if it is closed. */
 async function askPlan(actor, token) {
   const options = readyOptionsOf(actor);
   if ( !options.length ) { ui.notifications.warn(loc("Pret.Rien", { name: actor.name })); return null; }
@@ -75,7 +76,7 @@ async function askPlan(actor, token) {
   return (answer && (typeof answer === "object")) ? answer : null;
 }
 
-/** Le budget a-t-il déjà pris l'action « Se tenir prêt » (écrite par le MJ actif, runtime/turn.mjs) ? On l'attend un peu. */
+/** Has the budget already taken the "Ready" action (written by the active GM, runtime/turn.mjs)? We wait for it a little. */
 async function readiedRecorded(combatant) {
   for ( let waited = 0; waited < 6000; waited += 200 ) {
     if ( readBudget(combatant).readied ) return true;
@@ -84,7 +85,7 @@ async function readiedRecorded(combatant) {
   return false;
 }
 
-/** `dnd5e.postUseActivity`, sur le client qui a pris l'action : la fenêtre, puis le plan au budget. */
+/** `dnd5e.postUseActivity`, on the client that took the action: the window, then the plan in the budget. */
 async function onReadyUsed(activity) {
   if ( basicActionOf(activity?.item) !== "ready" ) return;
   const actor = activity.actor;
@@ -98,10 +99,10 @@ async function onReadyUsed(activity) {
 }
 
 /**
- * Range le plan au budget du combattant : un sort préparé est lancé maintenant (emplacement dépensé, Concentration). Aussi appelé par
- * les scénarios (`api.mcp.ready`). Rend le plan, ou null.
+ * Stores the plan in the combatant's budget: a readied spell is cast now (slot spent, Concentration). Also called by
+ * the scenarios (`api.mcp.ready`). Returns the plan, or null.
  * @param {Actor5e} actor
- * @param {{option: object, trigger: string, target?: string|null, slot?: string|null}} choice  `option` : de `readyOptionsOf`.
+ * @param {{option: object, trigger: string, target?: string|null, slot?: string|null}} choice  `option`: from `readyOptionsOf`.
  */
 export async function setReadyPlan(actor, { option, trigger, target: targetUuid=null, slot=null }) {
   const combatant = combatantFor(actor);
@@ -110,7 +111,7 @@ export async function setReadyPlan(actor, { option, trigger, target: targetUuid=
   const target = targetUuid ? await fromUuid(targetUuid) : null;
   const plan = { activity: option.activity, name: option.name, img: option.img, trigger, reach: option.reach,
     target: target?.uuid ?? null, targetName: target?.name ?? null, slot: null, held: null };
-  // Un sort préparé se lance maintenant : l'emplacement est dépensé, l'énergie retenue par la Concentration.
+  // A readied spell is cast now: the slot is spent, the energy held by Concentration.
   if ( option.spell ) {
     const spell = await fromUuid(option.activity);
     if ( option.level > 0 ) {
@@ -129,10 +130,10 @@ export async function setReadyPlan(actor, { option, trigger, target: targetUuid=
 }
 
 /* -------------------------------------------- */
-/*  Déclencheurs « attaque » et « lance un sort » */
+/*  "Attack" and "casts a spell" triggers */
 /* -------------------------------------------- */
 
-/** Attend que l'action née de ce message d'utilisation soit résolue (dégâts appliqués) ; sans résolution du moteur, un instant. */
+/** Waits until the action born of this use message is resolved (damage applied); without engine resolution, a moment. */
 async function actionSettled(usageId) {
   const related = () => game.messages.contents.map(m => current(m.getFlag(MODULE_ID, "resolution")))
     .filter(r => r && ((r.carrier === usageId) || (r.origin === usageId)));
@@ -144,7 +145,7 @@ async function actionSettled(usageId) {
   }
 }
 
-/** MJ actif : une créature vient d'utiliser une attaque ou un sort — ceux qui s'étaient tenus prêts contre cela réagissent après. */
+/** Active GM: a creature just used an attack or a spell — those who readied against that react afterwards. */
 async function onUsage(message) {
   if ( !game.combat?.started ) return;
   const activity = message.getAssociatedActivity?.();
@@ -169,7 +170,7 @@ async function onUsage(message) {
     if ( !plan || ((other.actor.system.attributes?.hp?.value ?? 0) <= 0) || ((source.actor?.system.attributes?.hp?.value ?? 0) <= 0) ) continue;
     const state = { enemies: areEnemies(other, source), sees: canSee(other, source) ?? true, ...reactionState(other.actor) };
     if ( !readyTriggered(plan, { kind, source: source.uuid }, state) ) continue;
-    // Hors de portée de l'action préparée : elle ne peut pas partir contre lui (la portée normale ; une portée illimitée passe).
+    // Out of range of the readied action: it cannot go off against it (the normal range; an unlimited range passes).
     if ( plan.reach ) {
       const reach = lengthIn(plan.reach.value, plan.reach.units, source.parent.grid.units, readUnitFactors());
       if ( distanceBetween(other, source).value > reach + 1e-6 ) { log(`${source.name} ${kind}: out of ${other.name}'s readied ${plan.name} range`); continue; }
@@ -182,7 +183,7 @@ async function onUsage(message) {
 /*  Fin du plan                                 */
 /* -------------------------------------------- */
 
-/** MJ actif, au début du tour d'un combattant : son sort préparé non libéré est perdu (le budget, lui, est remis à neuf). */
+/** Active GM, at the start of a combatant's turn: its unreleased readied spell is lost (the budget, though, is reset). */
 async function onTurnStart(combat, prior, now) {
   const actor = combat.combatants.get(now?.combatantId)?.actor;
   const held = (actor?.effects ?? []).filter(e => e.getFlag?.(MODULE_ID, "readied"));
@@ -193,13 +194,13 @@ async function onTurnStart(combat, prior, now) {
   log(`${actor.name}: readied spell not released before their turn, lost`);
 }
 
-/** MJ actif : la concentration qui retenait un sort préparé est rompue — le plan tombe (sauf s'il vient d'être libéré). */
+/** Active GM: the Concentration that held a readied spell is broken — the plan drops (unless it was just released). */
 async function onHeldEnded(effect) {
   if ( !effect.getFlag?.(MODULE_ID, "readied") ) return;
   const combatant = combatantFor(effect.parent);
   const plan = combatant ? readyPlanOf(readBudget(combatant)) : null;
   if ( !plan || (plan.held !== effect.uuid) ) return;
-  await sleep(1500);   // libéré : la carte d'utilisation retire le plan d'elle-même (runtime/turn.mjs)
+  await sleep(1500);   // released: the use card removes the plan by itself (runtime/turn.mjs)
   const still = readyPlanOf(readBudget(combatant));
   if ( !still || (still.held !== effect.uuid) || game.messages.contents.slice(-10).some(m => m.getFlag(MODULE_ID, "readiedRelease")
     && (m.getAssociatedActor?.() === effect.parent)) ) return;

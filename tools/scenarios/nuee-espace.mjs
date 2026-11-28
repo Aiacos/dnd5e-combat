@@ -1,24 +1,24 @@
 /**
- * §505 (B25) — la nuée : pas de PV temporaires (`blocksTempHp: true`), et une capacité réservée aux créatures dans son espace
- * (`targets.requires: { "target.sharesSpaceWithSource": true }`, refus de la fenêtre de légalité, forçable). Arène de test : Zombi (la
- * « nuée », acteur synthétique), Guerrier (posé dans sa case), Bandit (à côté). Un trait d'essai est prêté au Zombi : une activité
- * utilitaire de portée « soi-même » qui vise une créature ; sa règle est dans la surcouche du monde (`overrideContent`).
- *  1. PV temporaires : 10 PV temporaires appliqués au Zombi (comme la carte d'un soin « temphp ») — il n'en reçoit aucun ; la règle
- *     retirée, il les reçoit (témoin).
- *  2. Le trait sur le Guerrier (posé dans l'espace du Zombi — la règle porte aussi `sharesSpace: "mutual"`, comme la vraie nuée, sans
- *     quoi la collision des tokens l'arrête au contact) : aucune fenêtre de légalité, la carte d'utilisation est créée.
- *  3. Le trait sur le Bandit (hors de son espace) : la fenêtre de légalité s'ouvre et nomme le Bandit ; on renonce, aucune carte.
- * La légalité est demandée (`confirmed: false`) ; toute autre fenêtre est fermée. PV temporaires, positions, trait, surcouche remis.
+ * §505 (B25) — the swarm: no Temporary Hit Points (`blocksTempHp: true`), and a feature reserved for creatures in its space
+ * (`targets.requires: { "target.sharesSpaceWithSource": true }`, refusal from the legality window, forceable). Test arena:
+ * Zombie (the "swarm", synthetic actor), Fighter (placed in its cell), Bandit (next to it). A test trait is lent to the
+ * Zombie: a utility activity with "self" range that targets a creature; its rule is in the world overlay (`overrideContent`).
+ *  1. Temporary Hit Points: 10 Temporary Hit Points applied to the Zombie (like the card of a "temphp" heal) — it receives
+ *     none; the rule removed, it receives them (control).
+ *  2. The trait on the Fighter (placed in the Zombie's space — the rule also carries `sharesSpace: "mutual"`, like the real
+ *     swarm, without which token collision stops it on contact): no legality window, the use card is created.
+ *  3. The trait on the Bandit (outside its space): the legality window opens and names the Bandit; we give up, no card.
+ * Legality is asked (`confirmed: false`); any other window is closed. Temporary Hit Points, positions, trait, overlay restored.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
 const IDENTIFIER = "das-essai-nuee-espace";
 const ACTIVITY = "dasEssaiNueeEsp0";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name as a constant: the test bench and the reference take the first "name:" indented by two spaces as the scenario title.
 const ITEM_NAME = "Essai : nuée qui griffe";
-// `sharesSpace` comme la vraie nuée : sans lui, le déplacement du Guerrier sur la scène affichée s'arrête au contact du Zombi (collision
-// des tokens) et il n'est jamais dans son espace — échec du banc du 2026-11-20.
+// `sharesSpace` like the real swarm: without it, the Fighter's movement on the displayed scene stops on contact with the Zombie
+// (token collision) and they are never in its space — test bench failure of 2026-11-20.
 const RULE = { sharesSpace: "mutual", blocksTempHp: true, targets: { requires: { "target.sharesSpaceWithSource": true } } };
 
 const LEND = `
@@ -56,9 +56,9 @@ export default {
     const bandit = await ctx.token("Bandit");
     const script = async (code, args={}) => (await ctx.call("run-script", { code, args, waitMs: 20000 }))?.result ?? null;
 
-    // --- Fenêtres chez le MJ ---------------------------------------------------------------------------------------------------
+    // --- Windows at the GM ------------------------------------------------------------------------------------------------
     const seen = new Set(((await ctx.call("list-dialogs", {})).windows ?? []).map(w => w.id));
-    /** La fenêtre de légalité du Zombi (titre « … — Zombi »), ou null ; les autres fenêtres sont fermées. */
+    /** The Zombie's legality window (title "… — Zombie"), or null; the other windows are closed. */
     const legality = async (ms=6000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...seen], waitMs: 1000, details: true }).catch(() => null);
@@ -73,7 +73,7 @@ export default {
     };
     ctx.restore(async () => { const d = await legality(500); if ( d ) await ctx.call("answer-dialog", { id: d.id, button: "cancel" }).catch(() => {}); });
 
-    // --- Trait, règle, positions ------------------------------------------------------------------------------------------------
+    // --- Trait, rule, positions ---------------------------------------------------------------------------------------------
     const lent = await script(LEND, { attacker: zombie.id, identifier: IDENTIFIER, name: ITEM_NAME, activity: ACTIVITY });
     ctx.restore(() => script(LEND, { attacker: zombie.id, identifier: IDENTIFIER, remove: true }).catch(() => {}));
     if ( !ctx.expect(!!lent?.itemId, "trait prêté au Zombi") ) return;
@@ -95,7 +95,7 @@ export default {
     await ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: RULE });
     await pause(500);
 
-    // 2 et 3. La cible dans l'espace de la nuée, puis hors de lui.
+    // 2 and 3. The target in the swarm's space, then outside it.
     const placed = await script(PLACE, { tokenId: fighter.id, x: zombie.x, y: zombie.y });
     await pause(800);
     if ( !ctx.expect((placed?.x === zombie.x) && (placed?.y === zombie.y), `le Guerrier est dans la case du Zombi (${JSON.stringify(placed)} ; Zombi ${zombie.x},${zombie.y})`) ) return;

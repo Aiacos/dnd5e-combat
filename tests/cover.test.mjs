@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { coverBetween, segmentCrossesRect, corners, shrink, COVER } from "../module/scripts/core/cover.mjs";
 
-// Cases de 100 px. Attaquant en (0,0), cible deux cases à droite.
+// Cells of 100 px. Attacker at (0,0), target two cells to the right.
 const cell = (i, j, w=1, h=1) => ({ x: j * 100, y: i * 100, width: w * 100, height: h * 100 });
 const attacker = cell(0, 0);
 const target = cell(0, 3);
 
-/** Un mur vertical en x, entre y0 et y1 : bloque toute ligne qui le traverse. */
+/** A vertical wall at x, between y0 and y1: blocks every line that crosses it. */
 const wall = (x, y0, y1) => (a, b) => {
   if ( (a.x < x) === (b.x < x) ) return false;
   const t = (x - a.x) / (b.x - a.x);
@@ -14,75 +14,75 @@ const wall = (x, y0, y1) => (a, b) => {
   return (y >= y0) && (y <= y1);
 };
 
-describe("géométrie", () => {
-  it("un segment traverse un rectangle, pas s'il l'effleure ou le manque", () => {
+describe("geometry", () => {
+  it("a segment crosses a rectangle, not if it grazes it or misses it", () => {
     const r = cell(0, 1);
     expect(segmentCrossesRect({ x: 50, y: 50 }, { x: 250, y: 50 }, r)).toBe(true);
     expect(segmentCrossesRect({ x: 50, y: 150 }, { x: 250, y: 150 }, r)).toBe(false);   // passe dessous
     expect(segmentCrossesRect({ x: 0, y: 100 }, { x: 200, y: 100 }, r)).toBe(false);     // longe le bord
     expect(segmentCrossesRect({ x: 100, y: 0 }, { x: 100, y: 100 }, r)).toBe(false);     // longe le bord
-    expect(segmentCrossesRect({ x: 50, y: 50 }, { x: 80, y: 50 }, r)).toBe(false);       // s'arrête avant
+    expect(segmentCrossesRect({ x: 50, y: 50 }, { x: 80, y: 50 }, r)).toBe(false);       // stops before
   });
 
   it("coins et retrait", () => {
     expect(corners(cell(0, 0))).toEqual([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 100 }, { x: 100, y: 100 }]);
     expect(shrink(cell(0, 0), 10)).toEqual({ x: 10, y: 10, width: 80, height: 80 });
-    expect(shrink(cell(0, 0), 500).width).toBeGreaterThan(0);   // jamais au-delà du centre
+    expect(shrink(cell(0, 0), 500).width).toBeGreaterThan(0);   // never beyond the center
   });
 });
 
-describe("abri (règle du DMG, 2024)", () => {
-  it("à découvert : pas d'abri", () => {
+describe("cover (DMG rule, 2024)", () => {
+  it("in the open: no cover", () => {
     expect(coverBetween({ attacker, target })).toMatchObject({ degree: "none", bonus: 0, blockedLines: 0 });
   });
 
-  it("un mur qui coupe toutes les lignes : abri total, intouchable", () => {
+  it("a wall that cuts all lines: Total Cover, untouchable", () => {
     const cover = coverBetween({ attacker, target, blocked: wall(200, -1000, 1000), inset: 10 });
     expect(cover).toMatchObject({ degree: "total", bonus: null, blockedLines: 4 });
   });
 
-  it("un muret qui ne coupe que les lignes basses : demi-abri depuis le meilleur coin", () => {
-    // Mur en x=200 de y=40 à y=1000. Depuis le coin haut-droit (90,10) : seule la ligne vers (310,90)
-    // le coupe (y=50 en x=200) ; depuis les coins du bas, tout est coupé. Le meilleur coin donne un demi-abri.
+  it("a low wall that cuts only the low lines: Half Cover from the best corner", () => {
+    // Wall at x=200 from y=40 to y=1000. From the top-right corner (90,10): only the line toward (310,90)
+    // cuts it (y=50 at x=200); from the bottom corners, everything is cut. The best corner gives Half Cover.
     const cover = coverBetween({ attacker, target, blocked: wall(200, 40, 1000), inset: 10 });
     expect(cover.degree).toBe("half");
     expect(cover.bonus).toBe(COVER.half.bonus);
   });
 
-  it("trois lignes bloquées depuis le meilleur coin : abri de trois quarts", () => {
-    // Tout est bloqué sauf une ligne, du coin haut de l'attaquant vers le coin haut-gauche de la cible.
+  it("three lines blocked from the best corner: Three-Quarters Cover", () => {
+    // Everything is blocked except one line, from the attacker's top corner toward the target's top-left corner.
     const blocked = (a, b) => !((a.y === 10) && (b.y === 10) && (b.x === 310));
     const cover = coverBetween({ attacker, target, blocked, inset: 10 });
     expect(cover).toMatchObject({ degree: "threeQuarters", bonus: 5, blockedLines: 3 });
   });
 
-  it("l'attaquant choisit le coin qui laisse le moins d'abri", () => {
+  it("the attacker picks the corner that leaves the least cover", () => {
     // Bloque tout depuis les coins de gauche (x=10), rien depuis ceux de droite (x=90).
     const blocked = a => a.x === 10;
     expect(coverBetween({ attacker, target, blocked, inset: 10 }).degree).toBe("none");
   });
 
-  it("une créature interposée donne un demi-abri, jamais plus", () => {
-    // Un corps de deux cases de haut, entre les deux : toutes les lignes le traversent.
+  it("an interposed creature gives Half Cover, never more", () => {
+    // A body two cells tall, between the two: all lines cross it.
     const bodies = [cell(-1, 1, 1, 3)];
     const cover = coverBetween({ attacker, target, bodies, inset: 10 });
     expect(cover).toMatchObject({ degree: "half", bonus: 2, byCreature: true });
   });
 
-  it("un mur et une créature : l'abri du mur prime, la créature ne l'aggrave pas", () => {
+  it("a wall and a creature: the wall's cover takes precedence, the creature does not worsen it", () => {
     const cover = coverBetween({ attacker, target, bodies: [cell(0, 1)], blocked: wall(250, -1000, 1000), inset: 10 });
     expect(cover).toMatchObject({ degree: "total", byCreature: false });
   });
 
-  it("une créature qui n'est pas entre les deux ne compte pas", () => {
+  it("a creature that is not between the two does not count", () => {
     expect(coverBetween({ attacker, target, bodies: [cell(3, 3)], inset: 10 }).degree).toBe("none");
   });
 });
 
 import { bodyGivesCover } from "../module/scripts/core/cover.mjs";
 
-describe("un mort interposé", () => {
-  it("ne couvre que s'il est Grand ou plus", () => {
+describe("a dead creature interposed", () => {
+  it("covers only if it is Large or bigger", () => {
     expect(bodyGivesCover({ dead: false, size: "med" })).toBe(true);
     expect(bodyGivesCover({ dead: true, size: "med" })).toBe(false);
     expect(bodyGivesCover({ dead: true, size: "sm" })).toBe(false);
@@ -93,7 +93,7 @@ describe("un mort interposé", () => {
 
 import { pullBack } from "../module/scripts/core/cover.mjs";
 
-/** Le point où [a, b] coupe le segment [p, q], ou null. */
+/** The point where [a, b] cuts the segment [p, q], or null. */
 function intersection(a, b, p, q) {
   const d = ((b.x - a.x) * (q.y - p.y)) - ((b.y - a.y) * (q.x - p.x));
   if ( Math.abs(d) < 1e-12 ) return null;
@@ -102,19 +102,19 @@ function intersection(a, b, p, q) {
   return ((t >= 0) && (t <= 1) && (u >= 0) && (u <= 1)) ? { x: a.x + (t * (b.x - a.x)), y: a.y + (t * (b.y - a.y)) } : null;
 }
 
-describe("§239 : case coupée par un mur qui ne suit pas la grille (issue #14)", () => {
-  // Une grotte : un mur en diagonale coupe le coin haut-droit de la case de la cible, (1, 4) = x 400–500, y 100–200.
+describe("§239: cell cut by a wall that does not follow the grid (issue #14)", () => {
+  // A cave: a diagonal wall cuts the top-right corner of the target's cell, (1, 4) = x 400–500, y 100–200.
   const p = { x: 440, y: 100 }, q = { x: 500, y: 160 };
   const blocked = (a, b) => !!intersection(a, b, p, q);
   const clip = (centre, corner) => pullBack(centre, corner, intersection(centre, corner, p, q), 10);
   const cave = cell(1, 4);
-  const shooter = cell(4, 1);   // en diagonale, de l'autre côté de la salle
+  const shooter = cell(4, 1);   // diagonally, on the other side of the room
 
-  it("sans ramener les coins, le coin dans la roche donne un demi-abri", () => {
+  it("without pulling the corners back, the corner inside the rock gives Half Cover", () => {
     expect(coverBetween({ attacker: shooter, target: cave, blocked, inset: 10 }).degree).toBe("half");
   });
 
-  it("le coin ramené devant le mur : pas d'abri contre un tireur dans la salle", () => {
+  it("the corner pulled back in front of the wall: no cover against a shooter in the room", () => {
     const cover = coverBetween({ attacker: shooter, target: cave, blocked, inset: 10, clipAttacker: clip, clipTarget: clip });
     expect(cover).toMatchObject({ degree: "none", bonus: 0 });
   });
@@ -126,27 +126,27 @@ describe("§239 : case coupée par un mur qui ne suit pas la grille (issue #14)"
     expect(cover.degree).toBe("total");
   });
 
-  it("pullBack : arrêté avant l'obstacle, le coin intact sans obstacle", () => {
+  it("pullBack: stopped before the obstacle, the corner intact without an obstacle", () => {
     expect(pullBack({ x: 0, y: 0 }, { x: 100, y: 0 }, null, 10)).toEqual({ x: 100, y: 0 });
     expect(pullBack({ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 60, y: 0 }, 10)).toEqual({ x: 50, y: 0 });
     expect(pullBack({ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 5, y: 0 }, 10)).toEqual({ x: 0, y: 0 });
   });
 });
 
-describe("§468 : une grille (barreaux, herse) n'est pas un abri total", () => {
+describe("§468: a grate (bars, portcullis) is not Total Cover", () => {
   const grate = (x, y0, y1) => (a, b) => (wall(x, y0, y1)(a, b) ? "grate" : false);
 
-  it("une grille qui coupe toutes les lignes : abri supérieur (+5), pas total", () => {
+  it("a grate that cuts all lines: Three-Quarters Cover (+5), not total", () => {
     const cover = coverBetween({ attacker, target, blocked: grate(200, -1000, 1000), inset: 10 });
     expect(cover).toMatchObject({ degree: "threeQuarters", bonus: 5, blockedLines: 4, byCreature: false, sources: ["wall"] });
   });
 
-  it("une grille qui ne coupe que les lignes basses : demi-abri, comme un muret", () => {
+  it("a grate that cuts only the low lines: Half Cover, like a low wall", () => {
     const cover = coverBetween({ attacker, target, blocked: grate(200, 40, 1000), inset: 10 });
     expect(cover.degree).toBe("half");
   });
 
-  it("un mur plein derrière la grille : l'abri total revient", () => {
+  it("a solid wall behind the grate: Total Cover comes back", () => {
     const both = (a, b) => (wall(250, -1000, 1000)(a, b) ? "wall" : grate(200, -1000, 1000)(a, b));
     expect(coverBetween({ attacker, target, blocked: both, inset: 10 }).degree).toBe("total");
   });
@@ -154,31 +154,31 @@ describe("§468 : une grille (barreaux, herse) n'est pas un abri total", () => {
 
 import { grateOf, GRATE_MODES } from "../module/scripts/core/cover.mjs";
 
-describe("§476 : murs grilles d'office (réglage de monde) et choix du mur", () => {
-  it("trois choix, « auto » d'abord", () => {
+describe("§476: walls that are grates by default (world setting) and wall choice", () => {
+  it("three choices, \"auto\" first", () => {
     expect(GRATE_MODES).toEqual(["auto", "grate", "solid"]);
   });
 
-  it("réglage éteint : seul un mur choisi « grille » en est une", () => {
+  it("setting off: only a wall chosen \"grate\" is one", () => {
     expect(grateOf({ mode: "auto", auto: false, blocksSight: false })).toBe(false);
     expect(grateOf({ mode: "grate", auto: false, blocksSight: true })).toBe(true);
     expect(grateOf({})).toBe(false);
   });
 
-  it("réglage allumé : un mur qui laisse voir est une grille, un mur qui bloque la vue (fenêtre, terrain, plein) non", () => {
+  it("setting on: a wall that lets you see is a grate, a wall that blocks sight (window, terrain, solid) is not", () => {
     expect(grateOf({ mode: "auto", auto: true, blocksSight: false })).toBe(true);
     expect(grateOf({ mode: "auto", auto: true, blocksSight: true })).toBe(false);
   });
 
-  it("réglage allumé : un mur posé par un sort (Mur de force) ou éthéré reste plein", () => {
+  it("setting on: a wall placed by a spell (Wall of Force) or ethereal stays solid", () => {
     expect(grateOf({ mode: "auto", auto: true, blocksSight: false, spellWall: true })).toBe(false);
   });
 
-  it("le choix « mur plein » l'emporte sur le réglage (une vitre)", () => {
+  it("the choice \"solid wall\" takes precedence over the setting (a glass pane)", () => {
     expect(grateOf({ mode: "solid", auto: true, blocksSight: false })).toBe(false);
   });
 
-  it("un choix inconnu vaut « auto »", () => {
+  it("an unknown choice is \"auto\"", () => {
     expect(grateOf({ mode: "bizarre", auto: true, blocksSight: false })).toBe(true);
     expect(grateOf({ mode: "bizarre", auto: false, blocksSight: false })).toBe(false);
   });
@@ -186,18 +186,18 @@ describe("§476 : murs grilles d'office (réglage de monde) et choix du mur", ()
 
 import { windowOpen, forcedCover } from "../module/scripts/core/cover.mjs";
 
-describe("§518 : fenêtres (Discord, SpitFire) — ouvertes pour qui voit au travers ; attaque forcée malgré un abri total", () => {
-  it("une fenêtre dont l'attaquant atteint le seuil de vue est ouverte", () => {
+describe("§518: windows (Discord, SpitFire) — open for whoever sees through; forced attack despite Total Cover", () => {
+  it("a window whose sight threshold the attacker reaches is open", () => {
     expect(windowOpen({ seenThrough: true })).toBe(true);
     expect(windowOpen({ mode: "auto", seenThrough: true })).toBe(true);
   });
 
-  it("au-delà du seuil, la fenêtre reste un mur", () => {
+  it("beyond the threshold, the window stays a wall", () => {
     expect(windowOpen({ seenThrough: false })).toBe(false);
     expect(windowOpen({})).toBe(false);
   });
 
-  it("le choix du mur l'emporte (« mur plein » : une vitre fermée ; « grille » : jamais plus qu'un abri aux trois quarts)", () => {
+  it("the wall's choice takes precedence (\"solid wall\": a closed pane; \"grate\": never more than Three-Quarters Cover)", () => {
     expect(windowOpen({ mode: "solid", seenThrough: true })).toBe(false);
     expect(windowOpen({ mode: "grate", seenThrough: true })).toBe(false);
   });
@@ -206,19 +206,19 @@ describe("§518 : fenêtres (Discord, SpitFire) — ouvertes pour qui voit au tr
     expect(windowOpen({ spellWall: true, seenThrough: true })).toBe(false);
   });
 
-  it("une fenêtre ouverte ne coupe aucune ligne : aucun abri", () => {
+  it("an open window cuts no line: no cover", () => {
     const attacker = { x: 0, y: 0, width: 100, height: 100 };
     const target = { x: 500, y: 0, width: 100, height: 100 };
-    // La fenêtre entre les deux, ouverte pour l'attaquant : `blocked` ne la rend pas (adapter/cover.mjs, `wallKindBetween`).
+    // The window between the two, open for the attacker: `blocked` does not return it (adapter/cover.mjs, `wallKindBetween`).
     expect(coverBetween({ attacker, target, blocked: () => false, inset: 10 }).degree).toBe("none");
   });
 
-  it("forcée, un abri total devient trois quarts (+5) : l'attaque peut toucher", () => {
+  it("forced, Total Cover becomes Three-Quarters (+5): the attack can hit", () => {
     const cover = forcedCover({ degree: "total", bonus: null, sources: ["wall"] });
     expect(cover).toMatchObject({ degree: "threeQuarters", bonus: 5, forced: true, sources: ["wall"] });
   });
 
-  it("forcée, les autres abris ne changent pas", () => {
+  it("forced, the other covers do not change", () => {
     const half = { degree: "half", bonus: 2 };
     expect(forcedCover(half)).toBe(half);
     expect(forcedCover(null)).toBe(null);

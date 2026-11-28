@@ -1,9 +1,9 @@
 /**
- * Feu grégeois et l'état En feu (SPEC §49). Item prêté depuis le compendium du Manuel des joueurs.
- *  1. Le Magicien lance une fiole sur le Zombi jusqu'à une sauvegarde ratée : l'effet « Burning. » (HL12olRyPOCmmMQ5) est posé.
- *  2. Au début du tour du Zombi : 1d4 dégâts de feu (entre 1 et 4 PV perdus, résistances comprises s'il en a).
- *  3. Le Zombi éteint le feu par une action (« S'échapper » : fin d'effet par le porteur) : l'effet tombe, il est À terre.
- * Remet PV, effets, état À terre ; retire l'item prêté.
+ * Alchemist's Fire and the Burning condition (SPEC §49). Item lent from the Player's Handbook compendium.
+ *  1. The Wizard throws a vial at the Zombie until a failed save: the "Burning." effect (HL12olRyPOCmmMQ5) is applied.
+ *  2. At the start of the Zombie's turn: 1d4 fire damage (between 1 and 4 HP lost, Resistances included if it has any).
+ *  3. The Zombie puts out the fire with an action ("Escape": effect ended by the bearer): the effect ends, it is Prone.
+ * Restores HP, effects, Prone condition; removes the lent item.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -39,7 +39,7 @@ export default {
     });
 
     const fire = await ctx.ensureItem(mage, FIRE);
-    // Combat : le Magicien d'abord, le Zombi ensuite (son début de tour suit).
+    // Combat: the Wizard first, the Zombie next (its turn start follows).
     await ctx.startCombat([mage, zombi]);
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
@@ -48,7 +48,7 @@ export default {
     for ( let i = 0; (i < 3) && ((await current()) !== mage.id); i++ ) { await ctx.call("previous-turn", { combatId: ctx.ownCombat }); await pause(1500); }
     if ( !ctx.expect((await current()) === mage.id, "combat : au tour du Magicien") ) return;
 
-    // 1. La fiole, jusqu'à une sauvegarde ratée.
+    // 1. The vial, until a failed save.
     let lit = false;
     for ( let i = 0; (i < 20) && !lit; i++ ) {
       await clear();
@@ -63,7 +63,7 @@ export default {
     }
     if ( !ctx.expect(lit, "sauvegarde ratée : le Zombi est en feu (20 essais au plus)") ) return;
 
-    // 2. Début du tour du Zombi : 1d4 de feu.
+    // 2. Start of the Zombie's turn: 1d4 fire.
     const hpLit = await ctx.hp(zombi);
     await ctx.nextTurn();
     await pause(4000);
@@ -73,8 +73,8 @@ export default {
     ctx.expect((lost >= 1) && (lost <= 4), `début de tour : ${lost} PV de feu (1d4) — ${hpLit} → ${hpTurn}`);
     ctx.expect((await burning()).length > 0, "le feu continue tant qu'il n'est pas éteint");
 
-    // 3. Il s'éteint par une action : l'effet tombe, il est À terre.
-    // §212 : le feu grégeois suit la règle générale « En feu » — « Éteindre les flammes » (menu du token), plus « S'échapper ».
+    // 3. It puts itself out with an action: the effect ends, it is Prone.
+    // §212: Alchemist's Fire follows the general "Burning" rule — "Put Out the Flames" (token menu), no longer "Escape".
     const offered = await ctx.engine("burning", { tokenId: zombi.id });
     ctx.expect(offered.burning, "le Zombi est en feu au sens de la règle générale (il peut éteindre le feu)");
     await ctx.engine("burning", { tokenId: zombi.id, extinguish: true });

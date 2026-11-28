@@ -1,6 +1,6 @@
 /**
- * Le monde que voit l'A* du moteur (core/pathfind.mjs) : niveaux et escaliers (régions `changeLevel`), murs et portes, sol et
- * plafond, terrain difficile, régions à éviter. Extrait d'adapter/movement.mjs.
+ * The world the engine's A* sees (core/pathfind.mjs): levels and staircases (`changeLevel` regions), walls and doors, floor and
+ * ceiling, Difficult Terrain, regions to avoid. Extracted from adapter/movement.mjs.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -20,7 +20,7 @@ import { isEthereal, etherealWallBetween } from "./plane.mjs";
 /*  Niveaux                                     */
 /* -------------------------------------------- */
 
-/** Un niveau de la scène : élévation de base et rang `k` de sa case verticale. null si inconnu. */
+/** A scene level: base elevation and rank `k` of its vertical cell. null if unknown. */
 function levelInfo(scene, id) {
   const level = scene.levels?.get?.(id);
   if ( !level ) return null;
@@ -28,17 +28,17 @@ function levelInfo(scene, id) {
   return { id, level, base, k: Math.floor((base / scene.grid.distance) + 1e-8) };
 }
 
-/** Une tranche d'élévation de région (préparée, ±Infinity) contient-elle cette élévation ? */
+/** Does a region elevation slice (prepared, ±Infinity) contain this elevation? */
 const inRange = (region, elevation) => (elevation >= region.elevation.bottom) && (elevation <= region.elevation.top);
 
-/** Les actions de déplacement qui coûtent le double sans la vitesse correspondante (règles 2024 : escalade, nage, ramper). */
+/** The movement actions that cost double without the matching speed (2024 rules: climbing, swimming, crawling). */
 const DOUBLED_ACTIONS = { climb: "climb", swim: "swim", crawl: null };
 
 /**
- * Ce que coûte une action de déplacement, en multiple de la distance. dnd5e 6 remplace la table
- * du cœur (`CONFIG.Token.movement.actions`) par la sienne, sans `costMultiplier` mais avec un
- * `getCostFunction` : on ne l'appelle pas, on applique la règle — escalade, nage, ramper coûtent le
- * double, sauf avec la vitesse correspondante sur la fiche.
+ * What a movement action costs, as a multiple of the distance. dnd5e 6 replaces the core's
+ * table (`CONFIG.Token.movement.actions`) with its own, without `costMultiplier` but with a
+ * `getCostFunction`: we do not call it, we apply the rule — climbing, swimming, crawling cost
+ * double, except with the matching speed on the sheet.
  */
 function actionMultiplier(action, actor) {
   const config = CONFIG.Token.movement.actions[action];
@@ -49,11 +49,11 @@ function actionMultiplier(action, actor) {
 }
 
 /**
- * Les escaliers et échelles de la scène : régions à comportement `changeLevel` actif, les niveaux
- * qu'elles relient et le multiplicateur de coût de leur action (échelle : `climb`, ×2 sans vitesse
- * d'escalade ; plusieurs actions permises : la moins chère).
+ * The staircases and ladders of the scene: regions with an active `changeLevel` behavior, the levels
+ * they connect and the cost multiplier of their action (ladder: `climb`, ×2 without a climb
+ * speed; several actions allowed: the cheapest).
  * @param {Scene} scene
- * @param {Actor|null} [actor]  Celui qui se déplace, pour ses vitesses.
+ * @param {Actor|null} [actor]  The one who moves, for their speeds.
  * @returns {{region: RegionDocument, levels: string[], multiplier: number}[]}
  */
 export function stairsOf(scene, actor=null) {
@@ -70,11 +70,11 @@ export function stairsOf(scene, actor=null) {
 }
 
 /**
- * §41.2 : où mène l'escalier (l'échelle, l'ascenseur) sous ce point, pour ce token — les niveaux que relie une région
- * `changeLevel` qui contient le point, autres que le sien, du plus bas au plus haut. Vide : pas un escalier pour lui (autre
- * niveau affiché, région hors de sa tranche d'élévation, grille sans cases). Même lecture que l'A* (`stairsAt`, `transitions`).
+ * §41.2: where the staircase (ladder, elevator) under this point leads, for this token — the levels connected by a `changeLevel`
+ * region that contains the point, other than its own, from lowest to highest. Empty: not a staircase for it (other
+ * displayed level, region outside its elevation slice, grid without cells). Same reading as the A* (`stairsAt`, `transitions`).
  * @param {TokenDocument} token
- * @param {{x: number, y: number}} point  Point de la scène (la souris).
+ * @param {{x: number, y: number}} point  Scene point (the mouse).
  * @returns {{id: string, name: string, direction: "up"|"down"|"level"}[]}
  */
 export function stairsDestinations(token, point) {
@@ -96,9 +96,9 @@ export function stairsDestinations(token, point) {
 }
 
 /**
- * §17.2 : les régions de terrain difficile de dnd5e (`dnd5e.difficultTerrain`) qui ralentissent ce token — même tri que
- * le comportement (data/region-behavior/difficult-terrain.mjs, `_getTerrainEffects` : dispositions ignorées, terrain
- * ignoré par l'acteur, magique ou non). Le coût réel reste mesuré par le cœur ; ceci ne sert qu'à faire contourner.
+ * §17.2: dnd5e's Difficult Terrain regions (`dnd5e.difficultTerrain`) that slow this token — same sorting as
+ * the behavior (data/region-behavior/difficult-terrain.mjs, `_getTerrainEffects`: ignored dispositions, terrain
+ * ignored by the actor, magical or not). The real cost is still measured by the core; this only serves to make it route around.
  */
 export function difficultRegionsFor(token) {
   const ignored = token.actor?.system?.attributes?.movement?.ignoredDifficultTerrain ?? new Set();
@@ -119,8 +119,8 @@ export function difficultRegionsFor(token) {
 }
 
 /**
- * §103 : les régions qu'un module demande à l'A* d'éviter (`flags.dnd5e-combat.avoid`, Darsh Loot : un piège repéré) —
- * franchissables, mais à un coût tel que le chemin les contourne s'il le peut ; une destination dedans reste possible.
+ * §103: the regions a module asks the A* to avoid (`flags.dnd5e-combat.avoid`, Darsh Loot: a spotted trap) —
+ * passable, but at such a cost that the path goes around them if it can; a destination inside remains possible.
  */
 const AVOID_COST = 20;
 function avoidRegionsFor(token) {
@@ -128,24 +128,25 @@ function avoidRegionsFor(token) {
 }
 
 /**
- * Le monde tel que l'A* le voit, pour un token donné. Les réponses sont mises en cache : le monde
- * ne vit que le temps d'une recherche.
+ * The world as the A* sees it, for a given token. Answers are cached: the world
+ * only lives for the duration of one search.
  */
-const SEARCH_RADIUS = 80;   // cases : au-delà, on ne cherche pas
-// §209 : au mur, le chemin reste près du départ — hors combat rien ne le bornait, et l'A* d'un grimpeur faisait le tour d'un bâtiment le
-// long de ses murs (vu à Restored Keep : une cinquantaine de cases, porte comprise, pour une case voisine de l'autre côté du mur).
+const SEARCH_RADIUS = 80;   // cells: beyond that, we do not search
+// §209: at the wall, the path stays near the start — outside combat nothing bounded it, and a climber's A* went around a
+// building along its walls (seen at Restored Keep: about fifty cells, door included, for a neighboring cell on the other
+// side of the wall).
 const CLIMB_RADIUS = 12;
 
 /**
- * Issue #92 : où dnd5e peut-il trouver un occupant ? `TokenLayer5e` cherche dans le quadtree des tokens ceux dont le rectangle
- * touche la case, puis ne garde que ceux dont les cases occupées (`TokenDocument#getOccupiedGridSpaceOffsets`, position
- * enregistrée) contiennent la case demandée. Les rectangles sont relevés une fois (un pixel de marge) ; les cases occupées
- * d'un token ne sont calculées que si l'on demande une case que son rectangle touche.
+ * Issue #92: where can dnd5e find an occupant? `TokenLayer5e` searches the tokens quadtree for those whose rectangle
+ * touches the cell, then only keeps those whose occupied cells (`TokenDocument#getOccupiedGridSpaceOffsets`, recorded position)
+ * contain the requested cell. The rectangles are surveyed once (one pixel of margin); a token's occupied cells
+ * are only computed if a cell touched by its rectangle is requested.
  * @param {TokenLayer} layer
- * @param {Token} self        Le token qui se déplace (dnd5e l'écarte lui-même).
+ * @param {Token} self        The token that moves (dnd5e excludes it itself).
  * @param {SquareGrid} grid
- * @returns {((cell: {i: number, j: number}) => boolean)|null}  « un autre token occupe peut-être cette case » ; null : la
- *   couche ne se lit pas, on ne sait rien et l'on demande tout à dnd5e.
+ * @returns {((cell: {i: number, j: number}) => boolean)|null}  "another token may occupy this cell"; null: the
+ *   layer cannot be read, we know nothing and ask dnd5e for everything.
  */
 export function occupancyIndex(layer, self, grid) {
   const near = new Map();
@@ -164,7 +165,7 @@ export function occupancyIndex(layer, self, grid) {
   const occupied = new Map();
   const occupies = (other, key) => {
     if ( !occupied.has(other) ) {
-      let cells = null;   // null : ce token ne se lit pas — dnd5e répondra
+      let cells = null;   // null: this token cannot be read — dnd5e will answer
       try {
         const offsets = other.document.getOccupiedGridSpaceOffsets(other.document._source);
         cells = new Set(offsets.map(c => cellKey({ i: c.i, j: c.j })));
@@ -182,14 +183,14 @@ export function occupancyIndex(layer, self, grid) {
 }
 
 /**
- * Issue #92 : aucune arête (mur, bord de source) du niveau dans le rectangle d'un pas — le test de collision du cœur n'y
- * trouverait rien. Deux pixels de marge (le cœur arrondit l'origine et l'arrivée). Les bords de la scène ne sont pas dans le
- * quadtree des arêtes : le pas doit tenir tout entier dans le rectangle de la scène (un pas qui en sort ou y rentre les
- * percute). Sans le quadtree des arêtes : false.
- * @param {CanvasEdges|null} edges   Les arêtes du niveau (`Level#edges`).
+ * Issue #92: no edge (wall, source border) of the level in a step's rectangle — the core's collision test would
+ * find nothing there. Two pixels of margin (the core rounds the origin and the arrival). The scene's borders are not in the
+ * edges quadtree: the step must fit entirely inside the scene rectangle (a step that leaves or enters it
+ * hits them). Without the edges quadtree: false.
+ * @param {CanvasEdges|null} edges   The level's edges (`Level#edges`).
  * @param {{x: number, y: number}} from
  * @param {{x: number, y: number}} to
- * @param {PIXI.Rectangle} within    Le rectangle de la scène (`canvas.dimensions.sceneRect`).
+ * @param {PIXI.Rectangle} within    The scene's rectangle (`canvas.dimensions.sceneRect`).
  */
 export function noEdgeBetween(edges, from, to, within) {
   if ( typeof edges?.getEdges !== "function" ) return false;
@@ -203,9 +204,9 @@ export function noEdgeBetween(edges, from, to, within) {
 }
 
 /**
- * §18.25 : une porte que le chemin peut franchir en l'ouvrant — fermée, non verrouillée, et pour un joueur ni secrète (il
- * ne la voit pas) ni hors de son droit « WALL_DOORS » ou en pause (door-control.mjs, `_onMouseDown`). Le mur (placeable) ou
- * son document : en V14 l'arête d'un mur porte le DOCUMENT (`Edge#object`, client/documents/wall.mjs:164-166).
+ * §18.25: a door the path can cross by opening it — closed, unlocked, and for a player neither secret (they
+ * cannot see it) nor outside their "WALL_DOORS" right nor paused (door-control.mjs, `_onMouseDown`). The wall (placeable) or
+ * its document: in V14 a wall's edge carries the DOCUMENT (`Edge#object`, client/documents/wall.mjs:164-166).
  */
 export function passableDoor(wall) {
   const doc = wall?.document ?? wall;
@@ -245,10 +246,10 @@ export function worldFor(token, { throughDoors=false }={}) {
     return out;
   };
 
-  // Cases où l'on ne peut pas finir : celles de tout autre token visible et debout, sur son niveau, sauf celles qu'on peut
-  // partager (§105 : Forme d'air, Nuée — adapter/space-sharing.mjs). Un objet qui n'occupe pas son espace (Main de
-  // Bigby, §16.15) ne gêne personne et n'est gêné par personne. §192 : par case, les tranches verticales (pieds-tête) des
-  // tokens qui l'occupent — un grimpeur au-dessus d'une case occupée peut s'y arrêter.
+  // Cells where one cannot end: those of any other visible, standing token, on its level, except those that can be
+  // shared (§105: Air Form, Swarm — adapter/space-sharing.mjs). An object that does not occupy its space (Bigby's
+  // Hand, §16.15) bothers no one and is bothered by no one. §192: per cell, the vertical slices (feet-head) of the
+  // tokens that occupy it — a climber above an occupied cell can stop there.
   const intangible = isIntangible(token);
   // Issue #92: who stands where is indexed first, from positions alone. Whether a token found there really takes its cells (hidden,
   // defeated, an object that does not occupy its space, sharing — which reads every item of both sheets —, visible to a previewing
@@ -273,7 +274,7 @@ export function worldFor(token, { throughDoors=false }={}) {
       let slice = null;
       if ( !other.hidden && !isDefeated(other) && !isIntangible(other) ) {
         if ( moverKind === undefined ) moverKind = shareKindOf(token.actor);
-        const shown = !(preview && other.object && !other.object.visible);   // ne pas révéler un token invisible
+        const shown = !(preview && other.object && !other.object.visible);   // do not reveal an invisible token
         if ( !sharesSpaceWith(token, other, { moverKind }) && shown ) slice = positionOf(other._source);
       }
       slices.set(other, slice);
@@ -283,10 +284,10 @@ export function worldFor(token, { throughDoors=false }={}) {
 
   const layer = canvas.tokens;
   const backend = CONFIG.Canvas.polygonBackends.move;
-  // Issue #92 : sur terrain dégagé, le coût fixe d'un chemin était celui des questions posées à dnd5e pour chaque case
-  // (`isOccupiedGridSpaceBlocking`, `isOccupiedGridSpaceDifficult` : une recherche dans le quadtree des tokens, puis le hook).
-  // Là où aucun autre token n'occupe la case, dnd5e ne trouverait personne et sa réponse se réduit à son hook, appelé ici avec
-  // le même ensemble vide (un autre module peut toujours y ajouter un occupant).
+  // Issue #92: on open ground, the fixed cost of a path was that of the questions asked to dnd5e for each cell
+  // (`isOccupiedGridSpaceBlocking`, `isOccupiedGridSpaceDifficult`: a search in the tokens quadtree, then the hook).
+  // Where no other token occupies the cell, dnd5e would find nobody and its answer boils down to its hook, called here with
+  // the same empty set (another module can still add an occupant).
   const mayHold = occupancyIndex(layer, object, grid);
   const occupiedBlocking = (cell, k) => {
     const space = { ...cell, k };
@@ -312,20 +313,20 @@ export function worldFor(token, { throughDoors=false }={}) {
     }
     return blockedCache.get(id);
   };
-  // §41.3 : le test de collision d'un token lit les murs du niveau AFFICHÉ (`config.level ??= canvas.level`,
-  // geometry/shapes/source-polygon.mjs:187). Un token qui marche sur un niveau que ce client ne regarde pas — le suiveur
-  // resté en bas quand la vue du MJ a suivi le meneur à l'étage — est donc jugé sur les murs de son niveau à lui, par le
-  // polygone de ce niveau, comme une case d'un autre niveau ; sans ouvrir de porte (le test de porte est celui du token).
+  // §41.3: a token's collision test reads the walls of the DISPLAYED level (`config.level ??= canvas.level`,
+  // geometry/shapes/source-polygon.mjs:187). A token walking on a level this client is not looking at — the follower
+  // left downstairs when the GM's view followed the leader upstairs — is therefore judged on the walls of its own level, by the
+  // polygon of that level, like a cell of another level; without opening a door (the door test is the token's).
   const ownViewed = (canvas.level?.id ?? ownLevel) === ownLevel;
   const ownEdges = scene.levels?.get?.(ownLevel)?.edges ?? null;
-  // §225, lot 3 : dans le plan Éthéré, seuls les murs qui arrêtent le voyage éthéré (Mur de force, Cage de force) comptent.
+  // §225, batch 3: in the Ethereal Plane, only the walls that stop ethereal travel (Wall of Force, Forcecage) count.
   const ethereal = isEthereal(token);
-  /** Un mur entre deux cases voisines ? Dans le niveau du token par le test du token ; ailleurs par le polygone du niveau. */
+  /** A wall between two neighboring cells? In the token's level by the token's test; elsewhere by the level's polygon. */
   const wallBetween = (from, to) => {
     const c = center(to);
     if ( ethereal ) return etherealWallBetween(scene, center(from), c, to.level ?? ownLevel);
     if ( isOwn(to) && ownViewed ) {
-      // Issue #92 : aucune arête du niveau dans le rectangle du pas — rien à percuter, sans construire le polygone du cœur.
+      // Issue #92: no edge of the level in the step's rectangle — nothing to hit, without building the core's polygon.
       if ( noEdgeBetween(ownEdges, center(from), c, rect) ) return false;
       if ( !object.checkCollision(c, { origin: center(from), type: "move", mode: "any" }) ) return false;
       return !(throughDoors && doorBetween(from, to));
@@ -338,9 +339,9 @@ export function worldFor(token, { throughDoors=false }={}) {
   };
 
   /**
-   * §18.25 : la porte fermée qu'un pas franchit, si c'est tout ce qui l'arrête (dans le niveau du token), sinon null. Les
-   * points de collision du cœur (mode « all », clockwise-sweep.mjs `_testCollision`) portent les arêtes qui les font, et
-   * une arête de mur porte son mur (`Edge#object`).
+   * §18.25: the closed door a step crosses, if that is all that stops it (in the token's level), otherwise null. The
+   * core's collision points ("all" mode, clockwise-sweep.mjs `_testCollision`) carry the edges that make them, and
+   * a wall edge carries its wall (`Edge#object`).
    */
   const doorCache = new Map();
   const doorBetween = (from, to) => {
@@ -360,14 +361,14 @@ export function worldFor(token, { throughDoors=false }={}) {
     return doorCache.get(id);
   };
 
-  // Escaliers et échelles. Le comportement `changeLevel` du cœur ouvre son dialogue dès qu'un token ENTRE
-  // dans sa région en marchant (événement d'entrée, émis en cours de déplacement, change-level.mjs:57) :
-  // on n'y entre donc jamais en marchant. Le tronçon s'arrête sur une case voisine, et un seul pas de
-  // téléportation (`displace`, qui ne déclenche rien, change-level.mjs:62) pose le token sur l'escalier,
-  // déjà sur l'autre niveau. Ce pas coûte la case franchie plus la hauteur (multipliée pour une échelle).
+  // Staircases and ladders. The core's `changeLevel` behavior opens its dialog as soon as a token ENTERS
+  // its region by walking (entry event, emitted during movement, change-level.mjs:57):
+  // so one never enters it by walking. The segment stops on a neighboring cell, and a single teleportation
+  // step (`displace`, which triggers nothing, change-level.mjs:62) puts the token on the staircase,
+  // already on the other level. This step costs the cell crossed plus the height (multiplied for a ladder).
   const stairs = stairsOf(scene, token.actor);
   const stairsCache = new Map();
-  /** Les escaliers qui contiennent cette case, sur son niveau. */
+  /** The staircases that contain this cell, on its level. */
   const stairsAt = cell => {
     const id = `${cellKey(cell)}@${cell.level ?? ownLevel}`;
     if ( !stairsCache.has(id) ) {
@@ -380,10 +381,10 @@ export function worldFor(token, { throughDoors=false }={}) {
   };
   const inStairs = cell => stairsAt(cell).length > 0;
 
-  // §17.4 : le mode dit l'élévation de chaque point — au sol, le sol de la case ; en vol, 5 ft au-dessus au moins ; en
-  // fouissement, 5 ft dessous au moins. Au sol, une marche de 5 ft au plus : l'A* ne fait ni grimper ni sauter dans le vide.
-  // §224 : système d'escalade et de chute coupé — le chemin garde l'élévation du token (ni sol suivi, ni marche limitée, ni mur à tenir).
-  // §225, lot 3 : l'Éthéré « n'obéit pas aux lois de la gravité » — comme le système coupé, le chemin garde l'élévation.
+  // §17.4: the mode gives each point's elevation — on the ground, the cell's floor; flying, at least 5 ft above; burrowing,
+  // at least 5 ft below. On the ground, a step of 5 ft at most: the A* neither climbs nor jumps into the void.
+  // §224: climbing and falling system off — the path keeps the token's elevation (no followed floor, no limited step, no wall to
+  // hold). §225, batch 3: the Ethereal "does not obey the laws of gravity" — like the system off, the path keeps the elevation.
   const free = !climbSystemOn() || ethereal;
   const mode = effectiveMode(token);
   const placement = free ? null : placementOf(mode);
@@ -394,20 +395,21 @@ export function worldFor(token, { throughDoors=false }={}) {
     if ( !groundCache.has(id) ) groundCache.set(id, groundAt(scene, cell.level ?? ownLevel, center(cell)));
     return groundCache.get(id);
   };
-  // En vol, les pieds sous le plafond du niveau, tête comprise.
+  // Flying, feet under the level's ceiling, head included.
   const pointsOf = cell => {
     try { return [center(cell), ...token.getContainmentTestPoints({ ...token._source, ...grid.getTopLeftPoint(cell) })]; }
     catch { return [center(cell)]; }
   };
   const ceilingOf = cell => ceilingAt(scene, pointsOf(cell), groundOf(cell)) - (depth * grid.distance);
-  // §192 lot 2 : au plafond, on ne marche que sous un plafond à la même hauteur (sa tête contre lui) — plus besoin d'un mur.
+  // §192 batch 2: on the ceiling, one only walks under a ceiling at the same height (head against it) — no wall needed anymore.
   const onCeiling = !free && isOnCeiling(token);
   const ceilingHolds = cell => !onCeiling || (Math.abs(ceilingOf(cell) - ownElevation) < 1e-6);
-  // §196 (lot 4) : au mur, on ne marche que le long d'un mur à grimper (ou là où le sol remonte jusqu'à soi) — sans quoi un grimpeur
-  // à 10 ft s'éloignait du mur en l'air (clic, manette, `api.approach`). Mis en cache par case : `wallsNear` interroge les arêtes.
+  // §196 (batch 4): on the wall, one only walks along a wall to climb (or where the floor rises up to oneself) — otherwise a
+  // climber at 10 ft moved away from the wall in mid-air (click, gamepad, `api.approach`). Cached per cell: `wallsNear`
+  // queries the edges.
   const onWall = !free && !onCeiling && isClimbing(token) && (ownElevation > groundOf(start) + 1e-6);
-  // §209 : une porte n'est pas ouverte à la hauteur d'un grimpeur (un mur de niveau est plein du sol au plafond, son ouverture non) — à
-  // 5 ft ou plus au-dessus du sol, un pas qui la franchit est refusé, ouverte ou fermée.
+  // §209: a door is not open at a climber's height (a level wall is solid from floor to ceiling, its opening is not) — at
+  // 5 ft or more above the floor, a step crossing it is refused, open or closed.
   const doorAbove = onWall && ((ownElevation - groundOf(start)) >= grid.distance - 1e-6);
   const highDoorCache = new Map();
   const doorOnStep = (from, to) => {
@@ -439,8 +441,9 @@ export function worldFor(token, { throughDoors=false }={}) {
     }
     return wallCache.get(key);
   };
-  // §192 : en escalade, chaque point dit son élévation (celle du grimpeur) et son action — sans elles, la coupe au budget du tour
-  // (`constrainMovementPath`) mesurait le premier pas depuis le sol, et un grimpeur ne pouvait plus marcher le long du mur en combat.
+  // §192: when climbing, each point gives its elevation (the climber's) and its action — without them, the cut at the turn's
+  // budget (`constrainMovementPath`) measured the first step from the ground, and a climber could no longer walk along the
+  // wall in combat.
   const altitude = cell => placement
     ? { elevation: coherentElevation(mode, elevationOf(cell), groundOf(cell), clearance, (placement === "air") ? ceilingOf(cell) : Infinity), action: mode }
     : (((mode === "climb") || free) ? { elevation: elevationOf(cell), ...((mode === "climb") ? { action: mode } : {}) } : {});
@@ -473,7 +476,7 @@ export function worldFor(token, { throughDoors=false }={}) {
     const from = cell.level ?? ownLevel;
     const base = elevationOf(cell);
     const out = [];
-    // Depuis la case elle-même (on se tient déjà sur l'escalier) ou depuis une voisine.
+    // From the cell itself (one already stands on the staircase) or from a neighbor.
     const candidates = [{ cell, horizontal: 0 }];
     for ( const [di, dj] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]] ) {
       candidates.push({ cell: { i: cell.i + di, j: cell.j + dj, level: from }, horizontal: (di && dj) ? 1.001 : 1 });
@@ -500,7 +503,7 @@ export function worldFor(token, { throughDoors=false }={}) {
     canStep(from, to) {
       const c = center(to);
       if ( !rect.contains(c.x, c.y) || (cellDistance(start, to) > SEARCH_RADIUS) || blocked(to) ) return false;
-      if ( inStairs(to) && !inStairs(from) ) return false;   // on n'entre pas dans un escalier en marchant (voir ci-dessus)
+      if ( inStairs(to) && !inStairs(from) ) return false;   // we do not enter a staircase by walking (see above)
       if ( (placement === "ground") && ((from.level ?? ownLevel) === (to.level ?? ownLevel)) && !groundStepAllowed(groundOf(from), groundOf(to), clearance) ) return false;
       if ( !ceilingHolds(to) || !wallHolds(to) ) return false;
       if ( onWall && (cellDistance(start, to) > CLIMB_RADIUS) ) return false;
@@ -519,39 +522,39 @@ export function worldFor(token, { throughDoors=false }={}) {
       const mine = { elevation: altitude(cell).elevation ?? elevationOf(cell), depth };
       return !occupants.some(o => overlapsVertically(mine, o, grid.distance));
     },
-    // Terrain difficile : cases occupées (dnd5e) et régions ; les deux ne se cumulent pas (canvas/token.mjs:73).
+    // Difficult Terrain: occupied cells (dnd5e) and regions; the two do not stack (canvas/token.mjs:73).
     inStairs: cell => inStairs(cell),
-    /** Un pas de `from` à sa voisine `to` sans mur entre les deux (dans le niveau de `to`). */
+    /** A step from `from` to its neighbor `to` with no wall between the two (in the level of `to`). */
     wallFree: (from, to) => !wallBetween(from, to),
     doorBetween: (from, to) => (throughDoors && isOwn(to) && ownViewed ? doorBetween(from, to) : null),
-    // Une porte à ouvrir coûte une case de plus à l'A* : on ne la préfère qu'au détour qu'elle évite.
+    // A door to open costs one more cell to the A*: it is only preferred over the detour it avoids.
     stepCost: (from, to) => (throughDoors && isOwn(to) && ownViewed && doorBetween(from, to) ? 1 : 0)
       + ((difficultAt(to) || cellsOf(to).some(c => occupiedDifficult(c, kOf(to)))) ? 2 : 1)
       + (avoidAt(to) ? AVOID_COST : 0),
     transitions,
     waypoint: cell => ({ ...grid.getTopLeftPoint(cell), snapped: true, ...altitude(cell) }),
-    /** Le pas qui change de niveau : `displace` sur la case d'escalier `cell` du niveau `cell.level`, à sa base. */
+    /** The level-changing step: `displace` onto the staircase cell `cell` of level `cell.level`, at its base. */
     change: (cell, cost) => {
       const info = infoOf(cell.level);
-      // Sans le soupçon de la diagonale (0,001, core/pathfind.mjs) : un coût entier de cases, en unités de la grille.
+      // Without the diagonal's hint (0.001, core/pathfind.mjs): a whole cost in cells, in grid units.
       return { ...grid.getTopLeftPoint(cell), snapped: true, elevation: info.base, level: cell.level, action: "displace", climb: Math.round(cost) * grid.distance };
     },
-    /** Coût (en cases) de la transition de `from` vers la case d'escalier `to` d'un autre niveau. */
+    /** Cost (in cells) of the transition from `from` to staircase cell `to` of another level. */
     climbCost: (from, to) => (transitions(from).find(t => (t.cell.i === to.i) && (t.cell.j === to.j) && (t.cell.level === to.level))?.cost ?? 0)
   };
 }
 
-/** Cases d'un même escalier qu'on explore au plus, autour de la case cliquée. */
+/** Cells of a single staircase explored at most, around the clicked cell. */
 const MAX_STAIRS_CELLS = 64;
 
 /**
- * §18.26 : la case cliquée est-elle un escalier ou une échelle du niveau du token (et du niveau affiché) ? Alors on y va
- * EN MARCHANT pour que le cœur ouvre son dialogue de changement de niveau : l'A* va jusqu'à une case voisine hors de
- * l'escalier (`around`), puis un dernier pas entre dans la case d'escalier qui la touche (`entries`, par case voisine).
- * L'escalier se prend par N'IMPORTE laquelle de ses cases (celles qui touchent la case cliquée, de proche en proche), et
- * seulement sans mur entre la voisine et lui (vu le 2026-09-27 par le scénario `escaliers` sur Restored Keep : l'escalier
- * Est est muré sauf d'un côté, et sa première case n'a aucune voisine ouverte). null : pas un escalier, le token s'y tient
- * déjà, ou aucune entrée.
+ * §18.26: is the clicked cell a staircase or ladder of the token's level (and of the displayed level)? Then we go there
+ * BY WALKING so that the core opens its level-change dialog: the A* goes to a neighboring cell outside the
+ * staircase (`around`), then a last step enters the staircase cell that touches it (`entries`, per neighboring cell).
+ * The staircase is taken through ANY of its cells (those touching the clicked cell, step by step), and
+ * only with no wall between the neighbor and it (seen on 2026-09-27 by the `escaliers` scenario on Restored Keep: the East
+ * staircase is walled off except on one side, and its first cell has no open neighbor). null: not a staircase, the token already
+ * stands on it, or no entry.
  */
 export function stairsEntry(token, cell) {
   const grid = token.parent.grid;
@@ -561,7 +564,7 @@ export function stairsEntry(token, cell) {
   if ( (canvas.level?.id ?? level) !== level ) return null;
   if ( !world.inStairs({ ...cell, level }) || world.inStairs({ ...cellOf(token), level }) ) return null;
   const steps = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
-  // Les cases de l'escalier, de proche en proche depuis la case cliquée.
+  // The staircase's cells, step by step from the clicked cell.
   const stairs = new Map([[cellKey(cell), { i: cell.i, j: cell.j, level }]]);
   const queue = [stairs.get(cellKey(cell))];
   while ( queue.length && (stairs.size < MAX_STAIRS_CELLS) ) {

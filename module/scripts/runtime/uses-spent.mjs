@@ -1,13 +1,14 @@
 /**
- * §458 : `onUsesSpent: { activity?, effects }` — quand les utilisations de l'item sont épuisées, ces effets de l'item sont posés sur son
- * porteur, une fois. Les six livres du Guide (Manuels de vitalité, d'exercices physiques, de vivacité ; Traités de perspicacité,
- * d'autorité, de compréhension) : « Read » (`activity`, pour mémoire) coche une heure de lecture (48 utilisations) ; le +2 à la
- * caractéristique vient au bout des 48 heures, pas à chaque heure (la donnée l'oubliait, ou le posait à chaque lecture).
+ * §458: `onUsesSpent: { activity?, effects }` — when the item's uses are exhausted, these effects of the item are placed on its
+ * bearer, once. The six books of the Dungeon Master's Guide (Manual of Bodily Health, Manual of Gainful Exercise, Manual of
+ * Quickness of Action; Tome of Clear Thought, Tome of Leadership and Influence, Tome of Understanding): "Read" (`activity`, for
+ * the record) ticks off an hour of reading (48 uses); the +2 to the ability score comes after the full 48 hours, not at each hour
+ * (the data forgot it, or placed it at every reading).
  *
- * Sur la mise à jour du compteur (`updateItem`, `system.uses.spent`), MJ actif : au `dnd5e.postUseActivity`, l'item ne montre pas encore
- * l'utilisation qui vient d'être décomptée (vu au banc : 47 / 48 au moment du hook de la 48e lecture). « Reset Progress » remet le
- * compteur à zéro : il ne déclenche rien. Une seule fois : un effet déjà posé par ce livre (marque `usesSpent`) n'est pas reposé.
- * Retour pour toute la table : texte et son, carte de chat.
+ * On the counter update (`updateItem`, `system.uses.spent`), active GM: at `dnd5e.postUseActivity`, the item does not yet show
+ * the use that was just counted down (seen on the test bench: 47 / 48 at the hook of the 48th reading). "Reset Progress" sets the
+ * counter to zero: it triggers nothing. Only once: an effect already placed by this book (`usesSpent` mark) is not placed again.
+ * Feedback for the whole table: text and sound, chat card.
  */
 
 import { MODULE_ID } from "../constants.mjs";

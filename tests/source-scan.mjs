@@ -1,24 +1,24 @@
 /**
- * Lecture du code du module pour les gardiens (tests/circulation.test.mjs) : fichiers, commentaires retirés, appels avec leurs
- * arguments, fonction englobante. Pas un test : un outil des tests qui lisent la source, comme tests/layers.test.mjs.
+ * Reading the module code for the guardians (tests/circulation.test.mjs): files, comments removed, calls with their arguments,
+ * enclosing function. Not a test: a tool for the tests that read the source, like tests/layers.test.mjs.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 export const ROOT = join(import.meta.dirname, "../module/scripts");
 
-/** Les fichiers .mjs d'un dossier de module/scripts (sous-dossiers compris), chemins relatifs à module/scripts. */
+/** The .mjs files of a module/scripts folder (subfolders included), paths relative to module/scripts. */
 export function filesOf(dir) {
   return readdirSync(join(ROOT, dir)).flatMap(f => statSync(join(ROOT, dir, f)).isDirectory() ? filesOf(`${dir}/${f}`)
     : (f.endsWith(".mjs") ? [`${dir}/${f}`] : []));
 }
 
-/** Tous les fichiers du module, couches et point d'entrée. */
+/** All the module's files, layers and entry point. */
 export const allFiles = () => ["core", "content", "adapter", "runtime", "ui"].flatMap(filesOf);
 
 /**
- * Le code d'un fichier, commentaires remplacés par des espaces (les positions et les numéros de ligne restent justes). Les chaînes
- * sont gardées telles quelles ; un `//` dans une chaîne (une URL) n'est pas pris pour un commentaire.
+ * A file's code, comments replaced by spaces (positions and line numbers stay correct). Strings are kept as they are; a `//`
+ * in a string (a URL) is not taken for a comment.
  */
 export function code(file) {
   const src = readFileSync(join(ROOT, file), "utf8");
@@ -50,10 +50,10 @@ export function code(file) {
   return out;
 }
 
-/** Numéro de ligne (1…) d'une position. */
+/** Line number (1…) of a position. */
 export const lineAt = (text, index) => text.slice(0, index).split("\n").length;
 
-/** Le texte entre la parenthèse ouvrante à `open` et sa fermante (parenthèses équilibrées), sans elles. */
+/** The text between the opening parenthesis at `open` and its closing one (balanced parentheses), without them. */
 export function argsAt(text, open) {
   let depth = 0;
   for ( let i = open; i < text.length; i++ ) {
@@ -66,8 +66,8 @@ export function argsAt(text, open) {
 const TOP = /^(?:export\s+)?(?:async\s+)?function\*?\s+([A-Za-z_$][\w$]*)|^(?:export\s+)?(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=/gm;
 
 /**
- * La déclaration de premier niveau (fonction, constante) qui contient la position : `{ name, body }`. Le corps va de la
- * déclaration à la suivante — assez pour un gardien qui cherche un mot dans la fonction d'un appel.
+ * The top-level declaration (function, constant) that contains the position: `{ name, body }`. The body runs from the
+ * declaration to the next one — enough for a guardian looking for a word in the function of a call.
  */
 export function enclosing(text, index) {
   let found = { name: "(module)", start: 0 };
@@ -78,9 +78,9 @@ export function enclosing(text, index) {
 }
 
 /**
- * Chaque appel `.<méthode>(` d'un fichier : `{ file, line, method, args, fn }` (`fn` : la déclaration englobante).
+ * Each call `.<méthode>(` of a file: `{ file, line, method, args, fn }` (`fn`: the enclosing declaration).
  * @param {string} file
- * @param {RegExp} methods  Ex. /rollDamage|rollAttack/
+ * @param {RegExp} methods  E.g. /rollDamage|rollAttack/
  */
 export function callsIn(file, methods) {
   const text = code(file);

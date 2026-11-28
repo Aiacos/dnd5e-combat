@@ -1,9 +1,9 @@
 /**
- * Relevé des sorts du Manuel des joueurs (2024) : pour chaque sort, ce que portent ses données (activités, effets, durée,
- * concentration, zone), les listes de classe qui le donnent, et ce que le moteur déclare pour son identifiant (`CONTENT`).
- * Lit une COPIE des bases LevelDB du module premium (Foundry les verrouille), n'écrit rien dans le dépôt : le JSON (qui contient
- * le texte des sorts, contenu premium) va où on le demande, hors du dépôt.
- *   node tools/releve-sorts.mjs "F:/Foundry V14/Data/modules/dnd-players-handbook/packs" <sortie.json>
+ * Survey of the Player's Handbook (2024) spells: for each spell, what its data carries (activities, effects, duration,
+ * concentration, area), the class lists that grant it, and what the engine declares for its identifier (`CONTENT`).
+ * Reads a COPY of the LevelDB databases of the premium module (Foundry locks them), writes nothing to the repository: the JSON
+ * (which contains the spell text, premium content) goes where requested, outside the repository.
+ *   node tools/releve-sorts.mjs "F:/Foundry V14/Data/modules/dnd-players-handbook/packs" <output.json>
  */
 import { cpSync, mkdirSync, rmSync, readdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -26,7 +26,7 @@ async function read(pack, fn) {
 
 const text = html => String(html ?? "").replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim();
 
-// Listes de classe et de sous-classe : pages « spells » du journal du Manuel (uuid de chaque sort).
+// Class and subclass lists: "spells" pages of the Handbook journal (uuid of each spell).
 const lists = new Map();
 await read("content", (key, page) => {
   if ( !key.startsWith("!journal.pages!") || (page.type !== "spells") || !["class", "subclass"].includes(page.system?.type) ) return;

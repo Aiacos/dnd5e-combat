@@ -1,8 +1,8 @@
 /**
- * Trait qui répond à un type de dégâts subi (`onDamageTaken`, core/damage-traits.mjs) : Gel de l'Élémentaire de l'eau, Aversion au feu du
- * Golem de chair. Les types réellement subis se lisent au calcul des dégâts (`dnd5e.calculateDamage`, comme la Robustesse de la
- * non-vie) ; l'effet du trait est posé sur son porteur une fois les dégâts appliqués (`dnd5e.applyDamage`), par le client du MJ qui
- * les applique. Un effet déjà porté est remplacé : sa durée repart.
+ * A trait that responds to a type of damage taken (`onDamageTaken`, core/damage-traits.mjs): Water Elemental's Freeze,
+ * Flesh Golem's Fire Aversion. The types actually taken are read at the damage calculation (`dnd5e.calculateDamage`, like
+ * Undead Fortitude); the trait's effect is applied to its bearer once the damage is applied (`dnd5e.applyDamage`),
+ * by the GM's client that applies it. An effect already carried is replaced: its duration restarts.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -11,7 +11,7 @@ import { contentOf } from "../adapter/content.mjs";
 import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
 
-/** Les traits du porteur qui déclarent `onDamageTaken`. */
+/** The bearer's traits that declare `onDamageTaken`. */
 const traitsOf = actor => Array.from(actor?.items ?? []).map(item => ({ item, rule: contentOf(item).entry?.onDamageTaken ?? null }))
   .filter(t => t.rule);
 

@@ -1,19 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { manualModeOverride } from "../module/scripts/core/conditions.mjs";
 
-// §480 : un Désavantage du moteur écarté à la main au moment du jet.
-describe("Désavantage écarté à la main", () => {
+// §480: an engine Disadvantage dismissed by hand at the time of the roll.
+describe("Disadvantage dismissed by hand", () => {
   const dis = { agreed: true, advantage: [], disadvantage: [{ who: "target", key: "unseen" }] };
 
-  it("jet normal : écarté ; à l'Avantage : remplacé ; au Désavantage : rien", () => {
+  it("normal roll: dismissed; at Advantage: replaced; at Disadvantage: nothing", () => {
     expect(manualModeOverride(dis, { advantageMode: 0 })).toBe("cancelled");
     expect(manualModeOverride(dis, { advantageMode: 1 })).toBe("replaced");
     expect(manualModeOverride(dis, { advantageMode: -1 })).toBe(null);
   });
-  it("une vraie source d'Avantage (options.advantage) : le jet normal est la règle", () => {
+  it("a true source of Advantage (options.advantage): the normal roll is the rule", () => {
     expect(manualModeOverride(dis, { advantage: true, disadvantage: true, advantageMode: 0 })).toBe(null);
   });
-  it("rien sans Désavantage du moteur, avec un Avantage du moteur, ou des cibles qui ne s'accordent pas", () => {
+  it("nothing without an engine Disadvantage, with an engine Advantage, or with targets that disagree", () => {
     expect(manualModeOverride({ agreed: true, advantage: [], disadvantage: [] }, { advantageMode: 1 })).toBe(null);
     expect(manualModeOverride({ ...dis, advantage: [{ who: "attacker", key: "unseen" }] }, { advantageMode: 0 })).toBe(null);
     expect(manualModeOverride({ ...dis, agreed: false }, { advantageMode: 0 })).toBe(null);

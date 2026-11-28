@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 /**
- * Atlas de l'automatisation (2026-10-28) : chaque sort, don, aptitude, objet et capacité de créature des modules premium, avec ses champs
- * structurants (activation, portée, cibles, zone, durée, attaque, dégâts, soins, sauvegarde, effets, invocation, utilisations,
- * déplacement, règles du moteur) et, pour chacun, qui le prend en charge :
- *  - `das` : une règle du moteur (`CONTENT`, par identifiant) ;
- *  - `sys` : les données dnd5e de l'item, que le moteur résout de façon générique ;
- *  - `man` : le texte l'annonce, ni les données ni le moteur ne le portent (laissé au MJ) ;
- *  - `bad` : défaut de données (part de dégâts vide, effet lié absent).
- * Statut global : le relevé de lecture (`prive/RELEVE_SORTS.md`) quand il en a un, sinon déduit des champs. Versions : empreinte des
- * données premium, empreinte de l'entrée du moteur, dernier commit qui l'a touchée ; l'historique (empreintes et statuts, aucun texte)
- * est tenu dans `prive/atlas/historique.json`, une ligne de plus par item à chaque changement.
- * Lit une COPIE des bases LevelDB (Foundry les verrouille). Le JSON produit contient le texte premium : il va hors du dépôt.
- *   node tools/atlas.mjs <dossier de sortie> [dossier Data de Foundry]
- * Sortie : `atlas-<onglet>.json` (sorts, dons, aptitudes, objets, creatures), `atlas-briques.json` (§367), `atlas-resume.json`, la page
- * locale `atlas.html` (si `prive/` est là ; double-clic pour l'ouvrir), et `prive/ATLAS.md` (comptes, sans texte).
+ * Automation atlas (2026-10-28): each spell, feat, feature, item and creature ability of the premium modules, with its structuring
+ * fields (activation, range, targets, area, duration, attack, damage, healing, save, effects, summoning, uses,
+ * movement, engine rules) and, for each one, who handles it:
+ *  - `das`: an engine rule (`CONTENT`, by identifier);
+ *  - `sys`: the item's dnd5e data, which the engine resolves generically;
+ *  - `man`: the text announces it, neither the data nor the engine carries it (left to the GM);
+ *  - `bad`: data defect (empty damage part, missing linked effect).
+ * Overall status: the reading survey (`prive/RELEVE_SORTS.md`) when there is one, otherwise deduced from the fields. Versions:
+ * fingerprint of the premium data, fingerprint of the engine entry, last commit that touched it; the history (fingerprints and
+ * statuses, no text) is kept in `prive/atlas/historique.json`, one more line per item at each change.
+ * Reads a COPY of the LevelDB databases (Foundry locks them). The JSON produced contains the premium text: it goes outside the
+ * repository.
+ *   node tools/atlas.mjs <output folder> [Foundry Data folder]
+ * Output: `atlas-<onglet>.json` (spells, feats, features, items, creatures), `atlas-briques.json` (§367), `atlas-resume.json`,
+ * the local page `atlas.html` (if `prive/` is there; double-click to open it), and `prive/ATLAS.md` (counts, no text).
  */
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -51,7 +52,7 @@ async function read(dir, fn) {
   if ( !existsSync(dir) ) return;
   const copy = join(tmp, String(Math.random()).slice(2));
   mkdirSync(copy, { recursive: true });
-  // Les fichiers de la base seulement : LevelDB laisse parfois un dossier `lost/` (réparation), que la copie refusait (ERR_FS_EISDIR).
+  // Only the database files: LevelDB sometimes leaves a `lost/` folder (repair), which the copy refused (ERR_FS_EISDIR).
   for ( const f of readdirSync(dir) ) if ( (f !== "LOCK") && statSync(join(dir, f)).isFile() ) cpSync(join(dir, f), join(copy, f));
   const db = new ClassicLevel(copy, { valueEncoding: "json" });
   for await ( const [key, value] of db.iterator() ) fn(key, value);
@@ -63,7 +64,7 @@ const text = html => String(html ?? "").replace(/<[^>]+>/g, " ").replace(/&nbsp;
 const hash = v => createHash("sha1").update(JSON.stringify(v ?? null)).digest("hex").slice(0, 8);
 const units = { ft: "ft", mi: "mi", m: "m", km: "km", self: "personnelle", touch: "contact", spec: "spéciale", any: "illimitée" };
 
-/* ---- catégories des clés du moteur ---- */
+/* ---- engine key categories ---- */
 const CATS = {
   at: ["hitRider", "smite", "advantageIfFighting", "critMark", "halfOnMiss", "rangedFeat", "bonusAttack", "projectiles", "replacesAttack",
     "sneakAttack", "cunningStrikes", "cunningStrikeMax", "afterSneak", "sneakBonus", "savageAttacker", "piercer", "peerlessAim",
@@ -93,8 +94,8 @@ const CATS = {
   mv: ["teleport", "afterTeleport", "jump", "leap", "movesAfter", "swapPlaces", "transpose", "etherealShift", "climbsOnTurn", "fleetStep",
     "noOpportunity", "tether", "sharesSpace", "quickStand", "critMove", "haltOnReaction"]
 };
-// Événements de fin annoncés par le texte. `fixed` : une échéance que la durée d'un effet dnd5e suffit à porter ; `engine` : ce qui,
-// dans l'entrée de contenu du moteur, porte ce type de fin.
+// End events announced by the text. `fixed`: a deadline that the duration of a dnd5e effect is enough to carry; `engine`: what,
+// in the engine's content entry, carries this type of end.
 const END_EVENTS = [
   { id: "resave", label: "sauvegarde répétée", engine: /"resave"|"repeatsSave"/,
     re: /\brepeats? the save|\bmakes? (another|a new) [^.]{0,30}saving throw at the (end|start) of each of its turns|at the (end|start) of each of its turns, (it|the target|the creature) (can )?(makes?|repeats?)/i },
@@ -106,8 +107,9 @@ const END_EVENTS = [
     re: /\b(can )?(take|use) an action to [^.]{0,60}(end|escape|free)|\bas an action, [^.]{0,40}(end|escape)/i },
   { id: "distance", label: "fin hors de portée", engine: /"tether"|"effectEnds"|"apart"/,
     re: /\bends (early )?if [^.]{0,60}(more than|farther than|beyond) \d+ feet/i },
-  // 2026-10-29 (audit de Kaalisti) : un déclencheur qui retire l'effet (`"type":"remove"` : Suggestion blessée, Armure d'Agathys sans PV
-  // temporaires), le lien de Trait ensorcelé (`tether`) et les répliques d'Image miroir (`duplicates`) portent aussi une fin anticipée.
+  // 2026-10-29 (Kaalisti audit): a trigger that removes the effect (`"type":"remove"`: wounded Suggestion, Armor of Agathys with
+  // no Temporary Hit Points), the tether of Hexblade's Curse (`tether`) and the copies of Mirror Image (`duplicates`) also carry
+  // an early end.
   { id: "early", label: "fin anticipée (autre)", engine: /"effectEnds"|"breaksOn"|"zoneEnd"|"endsOwnConditions"|"concentrationBreaker"|"effectsExpire"|"endsWhen"|"type":"remove"|"tether"|"duplicates"/,
     re: /\b(spell|effect) ends (early )?(if|when|for)|\bends early\b/i },
   { id: "nextTurn", label: "fin du prochain tour", fixed: true, engine: /"effectEnds"|"atTurnStart"|"effectsExpire"/,
@@ -116,40 +118,40 @@ const END_EVENTS = [
     re: /\buntil the (start|end) of (your|its) turn\b/i }
 ];
 const END_STATUS = { das: "DAS", sys: "système", man: "manuel" };
-/** Clés de contenu qui ne portent pas de règle de jeu (correction de donnée, alerte au MJ, source). */
+/** Content keys that carry no game rule (data fix, GM alert, source). */
 const NOT_A_RULE = new Set(["source", "dataFixes", "gmAlert"]);
-// Passages qui nomment ce qu'un champ cherche sans l'annoncer (§450, §451) : retirés du texte avant le test de ce champ. Relevé sur
-// tous les modules premium : un filtre général (« not », « no », « isn't » avant la correspondance) ôterait de vrais dégâts et de vraies
-// sauvegardes (« isn't cast into the fissure but takes 4d6 Psychic damage ») ; chaque champ a donc ses formulations, précises.
+// Passages that name what a field looks for without announcing it (§450, §451): removed from the text before that field's test.
+// Surveyed on all premium modules: a general filter ("not", "no", "isn't" before the match) would remove real damage and real
+// saving throws ("isn't cast into the fissure but takes 4d6 Psychic damage"); each field therefore has its own, precise phrasings.
 const CANT = "(?:can['’]?t|cannot|can not|doesn['’]t|don['’]t|won['’]t|unable to|no longer)";
 const negated = parts => new RegExp(parts.join("|"), "gi");
 const NEGATED = {
-  // Interdiction (« can't regain… or gain Temporary Hit Points »), absence (« no [Concentration or] Temporary Hit Points »),
-  // condition d'attente (« until it regains any Hit Points »).
+  // Prohibition ("can't regain… or gain Temporary Hit Points"), absence ("no [Concentration or] Temporary Hit Points"),
+  // waiting condition ("until it regains any Hit Points").
   he: negated([
     `\\b${CANT}\\s+(?:\\w+\\s+){0,2}?(?:regain|gain|receive)\\b[^.;]{0,40}?hit points(?:,? (?:or|and) (?:gain|receive) temporary hit points)?`,
     "\\bno (?:\\w+ or )?temporary hit points\\b",
     "\\buntil (?:it|they|the \\w+) regains? any hit points\\b"]),
-  // « until you can't reach the creature to make a melee attack », « you can forgo making a ranged attack roll ».
+  // "until you can't reach the creature to make a melee attack", "you can forgo making a ranged attack roll".
   at: negated([`\\b(?:${CANT}|forgo)\\s+(?:[\\w’']+\\s+){0,4}?(?:make|making) (?:a|an|one) (?:melee|ranged) (?:weapon |spell )?attack(?: roll)?`]),
-  // Une limite de taille n'est pas une zone : « no larger than a 10-foot Cube », « can't exceed 50 contiguous 10-foot Cubes ».
+  // A size limit is not an area: "no larger than a 10-foot Cube", "can't exceed 50 contiguous 10-foot Cubes".
   ar: negated(["\\b(?:no|not) (?:larger|bigger) than [^.;]{0,30}?\\d+-foot(?:-\\w+)?[- ]\\w+",
     `\\b${CANT}\\s+exceed\\s+\\d+\\s+contiguous\\s+\\d+-foot[- ]\\w+`]),
-  // « creatures can't teleport », « no one can teleport », « can't enter or exit the area using teleportation ».
-  // §460 : un sort nommé par son lien (« @UUID[…]{Teleport} » dans une liste d'Incantation) est la ligne de ce sort, pas un déplacement de
-  // la capacité.
+  // "creatures can't teleport", "no one can teleport", "can't enter or exit the area using teleportation".
+  // §460: a spell named by its link ("@UUID[…]{Teleport}" in a Spellcasting list) is that spell's line, not a movement of
+  // the ability.
   mv: negated([`\\b(?:${CANT}|no one can)\\s+(?:[\\w’']+\\s+){0,6}?teleport\\w*`, "@UUID\\[[^\\]]*\\]\\{[^}]*\\}"]),
-  // « it can't be summoned again ».
+  // "it can't be summoned again".
   su: negated([`\\b${CANT}\\s+be\\s+(?:summon|conjur)\\w*`])
 };
-// Un délai avant de refaire une action (« can't take this action again until the start of its next turn », actions légendaires) n'est
-// pas la fin d'un effet ; « can't make Opportunity Attacks until the start of its next turn » en est une, et reste.
+// A delay before taking an action again ("can't take this action again until the start of its next turn", legendary actions) is not
+// the end of an effect; "can't make Opportunity Attacks until the start of its next turn" is one, and stays.
 const END_NEGATED = negated([`\\b${CANT}\\s+(?:take|use|do)\\s+(?:this action|this benefit|it|so|that)\\s+again\\s+until the (?:start|end) of (?:your|its|the \\w+['’]s) next turn`]);
 const notSaid = (desc, f) => (NEGATED[f] ? desc.replace(NEGATED[f], " ") : desc);
 const CAT_OF = new Map();
 for ( const [cat, keys] of Object.entries(CATS) ) for ( const k of keys ) if ( !CAT_OF.has(k) ) CAT_OF.set(k, cat);
 
-/* ---- relevés, balayages, scénarios, commits ---- */
+/* ---- surveys, sweeps, scenarios, commits ---- */
 const reading = new Map();
 if ( existsSync("prive/RELEVE_SORTS.md") ) {
   for ( const m of readFileSync("prive/RELEVE_SORTS.md", "utf8").matchAll(/^\| [^|]+ \| `([^`]+)` \| ([^|]+) \| ([^|]*) \|/gm) ) {
@@ -157,7 +159,7 @@ if ( existsSync("prive/RELEVE_SORTS.md") ) {
   }
 }
 const READING_TO = { moteur: "das", dnd5e: "sys", partiel: "part", trou: "man", "hors-combat": "off", manuel: "gm" };
-// Relevé des dons : ses lignes nomment les dons en français (parfois groupés, l'anglais entre parenthèses), sans identifiant.
+// Feat survey: its lines name the feats in French (sometimes grouped, the English in parentheses), with no identifier.
 const fold = s => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const featReading = new Map();
 if ( existsSync("prive/RELEVE_DONS.md") ) {
@@ -175,7 +177,7 @@ if ( existsSync("prive/RELEVE_DONS.md") ) {
     }
   }
 }
-// Identifiants que le code du moteur nomme hors des tables de contenu (Combat à deux armes, Maître d'armes…) : une règle DAS aussi.
+// Identifiers that the engine code names outside the content tables (Two-Weapon Fighting, Weapon Master…): a DAS rule too.
 const codeRefs = new Set();
 for ( const f of readdirSync("module/scripts", { recursive: true }).map(String).filter(f => f.endsWith(".mjs") && !/^content[\\/]/.test(f)) ) {
   for ( const m of readFileSync(join("module/scripts", f), "utf8").matchAll(/["'`]([a-z][a-z0-9]*(?:-[a-z0-9]+)+)["'`]/g) ) codeRefs.add(m[1]);
@@ -193,19 +195,19 @@ if ( existsSync("prive/balayages") ) {
     }
   }
 }
-// Repasse terme par terme (2026-10-31, `prive/repasse/verdicts.json`) : verdict par item (uuid), écarts, termes paraphrasés.
+// Term-by-term review (2026-10-31, `prive/repasse/verdicts.json`): verdict per item (uuid), discrepancies, paraphrased terms.
 const review = new Map();
 if ( existsSync("prive/repasse/verdicts.json") ) {
   for ( const v of JSON.parse(readFileSync("prive/repasse/verdicts.json", "utf8")).items ?? [] ) {
     review.set(v.uuid, v);
-    for ( const u of v.uuids ?? [] ) if ( !review.has(u) ) review.set(u, v);   // une capacité de créature relue une fois vaut pour ses copies
+    for ( const u of v.uuids ?? [] ) if ( !review.has(u) ) review.set(u, v);   // a creature ability read once applies to its copies
   }
 }
 const REVIEW_LABEL = { conforme: "conforme", "corrigé": "corrigé", partiel: "partiel", faux: "faux", mj: "MJ", "hors-combat": "hors combat", progression: "progression" };
 const scenarioFiles = readdirSync("tools/scenarios", { recursive: true }).filter(f => f.endsWith(".mjs"));
 const scenarioText = scenarioFiles.map(f => [f.replace(/\.mjs$/, "").replace(/\\/g, "/"), readFileSync(join("tools/scenarios", f), "utf8")]);
-// Index construit une fois (2026-11-15) : chercher `"ident"` dans chaque scénario pour chaque ligne prenait 4 s sur 11. Un identifiant
-// n'a pas de guillemet : `"ident"` apparaît dans un texte exactement quand ident est le texte entre deux guillemets consécutifs.
+// Index built once (2026-11-15): searching `"ident"` in each scenario for each line took 4 s out of 11. An identifier
+// has no quotation mark: `"ident"` appears in a text exactly when ident is the text between two consecutive quotation marks.
 const scenarioIndex = new Map();
 for ( const [name, t] of scenarioText ) {
   let prev = t.indexOf("\"");
@@ -224,7 +226,7 @@ let commit = null;
 for ( const line of log.split("\n") ) {
   if ( line.startsWith("@@@") ) { commit = line.slice(3); continue; }
   if ( !commit ) continue;
-  // Une entrée de premier niveau d'une table de contenu (deux espaces d'indentation), nue ou entre guillemets.
+  // A top-level entry of a content table (two spaces of indentation), bare or quoted.
   for ( const m of line.matchAll(/^[+-] {2}["']?([a-z][a-z0-9-]*)["']?\s*:/g) ) {
     if ( !commitsOf.has(m[1]) ) commitsOf.set(m[1], []);
     const list = commitsOf.get(m[1]);
@@ -269,7 +271,7 @@ for ( const mod of MODULES ) {
     const effects = new Map();
     await read(dir, (key, v) => {
       if ( key.startsWith("!items.effects!") || key.startsWith("!actors.items.effects!") ) {
-        // « item » ou « acteur.item » : les créatures du Manuel des monstres partagent leurs ids d'items.
+        // "item" or "actor.item": the Monster Manual creatures share their item ids.
         const owner = key.split("!")[2].split(".").slice(0, -1).join(".");
         if ( !effects.has(owner) ) effects.set(owner, []);
         effects.get(owner).push(v);
@@ -326,10 +328,10 @@ function activation(a) {
 }
 
 /**
- * L'identifiant sous lequel le moteur reconnaît l'item, comme `identifierOf` (adapter/content.mjs) : d'abord sa source de compendium
- * (content/sources.mjs — « acteur.item », puis l'id seul), puis `system.identifier`, puis le nom en kebab-case, que dnd5e écrit à la
- * création d'un item sans identifiant. Avant (§441) l'atlas ne lisait que `system.identifier` : les aptitudes Ravenloft sans identifiant
- * (Forme d'effroi, Morsure vampirique…) y paraissaient « dnd5e seul » alors que le moteur les automatise.
+ * The identifier under which the engine recognizes the item, like `identifierOf` (adapter/content.mjs): first its compendium
+ * source (content/sources.mjs — "actor.item", then the id alone), then `system.identifier`, then the kebab-case name, which dnd5e
+ * writes at the creation of an item without an identifier. Before (§441) the atlas only read `system.identifier`: the Ravenloft
+ * features with no identifier (Form of Dread, Vampiric Bite…) appeared there as "dnd5e only" although the engine automates them.
  */
 function kebab(name) {
   return String(name ?? "").replaceAll(/(\w+)([\\|/])(\w+)/g, "$1-$3").normalize("NFD").replace(/[̀-ͯ]/g, "")
@@ -340,8 +342,8 @@ function identOf(item, actorId) {
 }
 
 /**
- * §455 : la donnée telle que le Core la rend, `dataFixes` appliqués (core/data-fixes.mjs `withDataFixes`, comme à la création de l'objet et
- * par le diagnostic). L'empreinte de l'historique (`h`) reste celle de la donnée premium brute.
+ * §455: the data as the Core renders it, `dataFixes` applied (core/data-fixes.mjs `withDataFixes`, as at the creation of the item
+ * and by the diagnostic). The history fingerprint (`h`) remains that of the raw premium data.
  */
 function fixedForAtlas(item, effects, fixes) {
   const { data, fields } = withDataFixes({ ...item, effects }, fixes);
@@ -354,9 +356,9 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   const ident = identOf(rawItem, actorId);
   const shipped = CONTENT[ident];
   const { item, effects, fixed } = fixedForAtlas(rawItem, rawEffects, shipped?.dataFixes);
-  // §460 : sur une capacité de créature, le moteur joue aussi la couche « texte » (K1–K12, core/monster-layer.mjs) — fins, poussées,
-  // drains, absorptions lus dans le texte anglais —, sous le contenu livré (adapter/content.mjs, `contentOf`). L'atlas ne la lisait pas :
-  // ce qu'elle porte paraissait « porté par personne ».
+  // §460: on a creature ability, the engine also plays the "text" layer (K1–K12, core/monster-layer.mjs) — ends, pushes,
+  // drains, absorptions read from the English text —, under the shipped content (adapter/content.mjs, `contentOf`). The atlas
+  // did not read it: what it carries appeared as "carried by nobody".
   const html = owner ? String(item.system?.description?.value ?? "") : "";
   const textEntry = owner ? monsterTextLayer({ html, identifier: ident, swallow: !!shipped?.swallow,
     effects: effects.map(e => ({ id: e._id, statuses: e.statuses ?? [], changes: e.changes ?? e.system?.changes ?? [] })),
@@ -373,7 +375,7 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   const acts = Object.values(s.activities ?? {});
   const engine = entry ? Object.keys(entry).filter(k => k !== "source") : [];
   const inCode = !entry && codeRefs.has(ident);
-  // Le Core porte-t-il une règle pour cet item (entrée de contenu autre qu'une correction de donnée, ou code du moteur) ?
+  // Does the Core carry a rule for this item (a content entry other than a data fix, or engine code)?
   const coversRule = inCode || engine.some(k => !NOT_A_RULE.has(k));
   const desc = text(s.description?.value);
   const effectIds = new Set(effects.map(e => e._id));
@@ -422,21 +424,21 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   const effectNames = effects.map(e => `${e.name}${e.transfer ? " (passif)" : ""}${(e.changes ?? e.system?.changes ?? []).length ? ` [${(e.changes ?? e.system?.changes).length} chgt]` : ""}`);
   const others = [...new Set(acts.map(a => a.type).filter(t => !["attack", "save", "damage", "heal", "summon", "transform"].includes(t)))];
 
-  // Défauts de données.
+  // Data defects.
   const bad = [];
   if ( emptyDamage ) bad.push("part de dégâts vide");
   const posed = new Set(acts.flatMap(a => (a.effects ?? []).map(e => e._id)));
-  // §452 : la progression « ModifyItem » de dnd5e 6.1 (Manuel 3.0.0) pose un enchantement de l'item sur un autre item du personnage
-  // (Frappes renforcées → attaque à mains nues, Armes empoisonnées → Frappe rusée…) : cet effet est posé, sans activité.
+  // §452: the "ModifyItem" progression of dnd5e 6.1 (Handbook 3.0.0) sets an enchantment of the item on another item of the
+  // character (Enhanced Strikes → unarmed strike, Poisoned Weapons → Cunning Strike…): this effect is set, with no activity.
   for ( const adv of Object.values(s.advancement ?? {}) ) {
     if ( adv.type === "ModifyItem" ) for ( const c of adv.configuration?.changes ?? [] ) if ( c._id ) posed.add(c._id);
   }
-  // §438 : un « effet distant » de dnd5e 6.1 (`uuid` vers un compendium d'effets, Manuel 3.0.0) n'est pas sur l'item : pas un défaut.
+  // §438: a "remote effect" of dnd5e 6.1 (`uuid` to an effects compendium, Handbook 3.0.0) is not on the item: not a defect.
   for ( const a of acts ) for ( const e of a.effects ?? [] ) if ( !e.uuid && !effectIds.has(e._id) ) bad.push(`effet lié absent (${a.name || a.type})`);
   const entryText = entry ? JSON.stringify(entry) : "";
-  // §455 : un effet de la donnée que rien ne pose, sur un item dont le Core porte la règle par son propre mécanisme (Témérité, Aura de
-  // dévotion, Fragilisation occulte), n'est pas un défaut : une note. §457 : de même un effet que le moteur confie au MJ par une alerte
-  // (`gmAlert` : le +2 d'un livre au bout de 48 heures de lecture).
+  // §455: a data effect that nothing sets, on an item whose rule the Core carries through its own mechanism (Reckless Attack,
+  // Aura of Devotion, Eldritch Frailty), is not a defect: a note. §457: likewise an effect that the engine entrusts to the GM
+  // through an alert (`gmAlert`: the +2 of a book after 48 hours of reading).
   const notes = [];
   for ( const e of effects ) {
     if ( e.transfer || posed.has(e._id) || entryText.includes(e._id) || entryText.includes(JSON.stringify(e.name)) ) continue;
@@ -447,10 +449,10 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   }
   if ( fixed.length ) notes.push(`donnée corrigée par le moteur (dataFixes) : ${fixed.length} champ${fixed.length > 1 ? "s" : ""}`);
 
-  // Ce que le texte annonce, chaque champ testé sur le texte privé de ses passages niés (`NEGATED`). Soins (§450) : une interdiction
-  // (« can't regain Hit Points or gain Temporary Hit Points ») ou une condition (« until it regains any Hit Points ») n'annonce aucun
-  // soin — 49 capacités de créatures sur 82 comptaient ainsi (la nuée ×15, la note d'Incantation sur Changement de forme ×12, poisons
-  // et malédictions) ; « regains 1 Hit Point » (singulier) compte. Les autres champs (§451) : voir `NEGATED`.
+  // What the text announces, each field tested on the text stripped of its negated passages (`NEGATED`). Healing (§450): a
+  // prohibition ("can't regain Hit Points or gain Temporary Hit Points") or a condition ("until it regains any Hit Points")
+  // announces no healing — 49 creature abilities out of 82 counted that way (the swarm ×15, the Spellcasting note on Shapechange
+  // ×12, poisons and curses); "regains 1 Hit Point" (singular) counts. The other fields (§451): see `NEGATED`.
   const says = {
     at: /\b(melee|ranged) (weapon |spell )?attack roll|\bmake (a|an|one) (melee|ranged) (spell )?attack|\bspell attack\b/i.test(notSaid(desc, "at")),
     dm: /\b\d+d\d+\b[^.]{0,60}\bdamage\b|\bdamage equal to\b/i.test(desc),
@@ -470,8 +472,8 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
     announced.push(name);
   }
 
-  // Fin : la durée des effets dans les données (V14 : { value, units, expiry }), et chaque événement de fin annoncé par le texte,
-  // porté par le moteur, par la durée d'un effet (fin fixe), ou par rien.
+  // End: the duration of the effects in the data (V14: { value, units, expiry }), and each end event announced by the text,
+  // carried by the engine, by the duration of an effect (fixed end), or by nothing.
   const span = d => {
     if ( !d?.value || !d.units ) return "";
     if ( d.units !== "seconds" ) return `${d.value} ${{ rounds: "round", turns: "tour" }[d.units] ?? d.units}${d.value > 1 ? "s" : ""}`;
@@ -483,7 +485,7 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   const endText = desc.replace(END_NEGATED, " ");
   const ends = END_EVENTS.filter(e => e.re.test(endText)).map(e => ({ id: e.id, label: e.label,
     s: e.engine.test(entryText) ? "das" : (e.fixed && turnBound) ? "sys" : "man" }));
-  // Une fin anticipée déjà comptée sous un type précis ne compte pas deux fois.
+  // An early end already counted under a specific type is not counted twice.
   const endList = ends.filter(e => (e.id !== "early") || !ends.some(o => ["damage", "acts", "distance"].includes(o.id)));
 
   // Statuts par champ.
@@ -492,8 +494,8 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   const field = (key, sys, man, isBad=false) => { S[key] = isBad ? "bad" : das(key) ? "das" : sys ? "sys" : man ? "man" : ""; };
   field("at", attacks.length, says.at);
   field("dm", damages.length, says.dm && !damages.length, emptyDamage);
-  // §460 : un drain que le texte dit rendre au drainer (« regains Hit Points equal to that amount », runtime/drain.mjs) est un soin porté.
-  // `lifesteal` (runtime/lifesteal.mjs) rend aussi des PV à l'auteur.
+  // §460: a drain that the text says gives back to the drainer ("regains Hit Points equal to that amount", runtime/drain.mjs)
+  // is a carried heal. `lifesteal` (runtime/lifesteal.mjs) also gives HP back to the author.
   const healsBack = !!entry?.lifesteal || (!!entry?.drain && readDrain(owner ? html : (s.description?.value ?? "")).regains);
   S.he = healsBack ? "das" : null;
   if ( !healsBack ) field("he", heals.length, says.he);
@@ -504,18 +506,18 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   field("ef", effects.length, announced.length, bad.some(b => b.startsWith("effet")));
   field("su", summons.length, says.su && !summons.length && (tab !== "creatures"));
   field("us", uses.length, false);
-  // §460 : une poussée ou une traction déclarée (étape `move` d'un déclencheur, contenu ou texte K8) est un déplacement porté.
+  // §460: a declared push or pull (`move` step of a trigger, content or K8 text) is a carried movement.
   field("mv", false, says.mv);
   if ( (S.mv === "man") && /"type":"move"/.test(entryText) ) S.mv = "das";
-  // Fin : le pire des événements annoncés ; sans événement, la durée d'un effet suffit (système).
+  // End: the worst of the announced events; with no event, the duration of an effect is enough (system).
   S.fi = endList.some(e => e.s === "man") ? "man" : endList.some(e => e.s === "sys") ? "sys" : endList.length ? "das"
     : effectEnd.length ? "sys" : "";
   const script = engine.filter(k => !CAT_OF.has(k));
   S.sp = (script.length || inCode) ? "das" : "";
-  // Progressions dnd5e (caractéristiques, maîtrises, sorts accordés) : ce que le système applique seul à l'ajout de l'item.
+  // dnd5e progressions (abilities, proficiencies, granted spells): what the system applies by itself when the item is added.
   const advancements = [...new Set(Object.values(s.advancement ?? {}).map(a => ADVANCEMENT[a.type] ?? a.type))];
   S.pg = advancements.length ? "sys" : "";
-  // Un champ « man » que le moteur couvre par une règle générale (triggers, choice) reste à vérifier : le relevé de lecture tranche.
+  // A "man" field that the engine covers with a general rule (triggers, choice) remains to be checked: the survey settles it.
   const values = Object.values(S);
 
   // Statut global.
@@ -566,7 +568,8 @@ function describe({ item: rawItem, tab, mod, version, pack, owner, actorId, frEn
   };
 }
 
-// Repasse : `rp` verdict, `rpg` gravité la plus haute, `rpm` écarts (une ligne chacun), `rpt` termes à impact (JSON compact), `rpl` lot.
+// Review: `rp` verdict, `rpg` highest severity, `rpm` discrepancies (one line each), `rpt` terms with impact (compact JSON),
+// `rpl` batch.
 function reviewFields(v) {
   if ( !v ) return { rp: "", rpg: "", rpm: "", rpt: "", rpl: "" };
   const order = ["haute", "moyenne", "basse"];
@@ -617,8 +620,8 @@ for ( const tab of TABS ) {
   for ( const r of list ) if ( r.rp ) byReview[r.rp] = (byReview[r.rp] ?? 0) + 1;
   for ( const [key, n] of Object.entries(byReview) ) summary.push({ tab, kind: "repasse", key, n });
 }
-/* ---- briques (§367) : les clés de contenu, les moments et les étapes du moteur, d'après son code ---- */
-// Description : le commentaire de schéma de core/content.mjs (clés, étapes `{ type }`), le texte de MOMENTS (core/triggers.mjs).
+/* ---- building blocks (§367): the content keys, moments and steps of the engine, from its code ---- */
+// Description: the schema comment of core/content.mjs (keys, `{ type }` steps), the text of MOMENTS (core/triggers.mjs).
 function schemaDocs() {
   const lines = readFileSync("module/scripts/core/content.mjs", "utf8").split(/\r?\n/);
   const keys = new Map(), steps = new Map();
@@ -662,7 +665,7 @@ for ( const kind of ["clé", "moment", "étape"] ) {
   summary.push({ tab: "briques", kind: "briques", key: `${kind}:sans doc`, n: l.filter(b => !b.doc).length });
 }
 
-// La page locale ne lit que des lignes : les métadonnées du relevé en sont aussi.
+// The local page only reads lines: the survey's metadata are lines too.
 const meta = [["date", TODAY], ["engine", ENGINE_VERSION], ["previous", previous ?? ""], ["rows", String(rows.length)],
   ["modules", Object.values(versions).map(v => `${v.label} ${v.version}`).join(" · ")]];
 for ( const [key, v] of meta ) summary.push({ tab: "*", kind: "meta", key, n: 0, v });
@@ -716,8 +719,8 @@ writeFileSync("prive/ATLAS.md", md.join("\n"));
 console.log(`${rows.length} lignes → ${out}`);
 for ( const tab of TABS ) console.log(`  ${tab} : ${rows.filter(r => r.t === tab).length}`);
 
-// Page locale de l'atlas (2026-11-14, remplace le tableau de bord en ligne) : son code est dans les notes privées, qui la construisent
-// à côté des JSON (elle embarque leur texte). Sans `prive/`, seuls les JSON sont écrits.
+// Local atlas page (2026-11-14, replaces the online dashboard): its code is in the private notes, which build it
+// next to the JSON (it embeds their text). Without `prive/`, only the JSON are written.
 const PAGE = "prive/atlas/tableau-page.mjs";
 if ( existsSync(PAGE) ) {
   const { writePage } = await import(new URL(`../${PAGE}`, import.meta.url));

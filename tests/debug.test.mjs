@@ -15,17 +15,17 @@ const FIREFOX = `use@http://localhost:30000/modules/darsh-loot/scripts/a.mjs?v=3
 call@http://localhost:30000/scripts/foundry.mjs:1:1`;
 
 describe("piles d'appels (§380)", () => {
-  it("garde les lignes qui pointent vers un fichier, Chrome comme Firefox", () => {
+  it("keeps the lines that point to a file, Chrome and Firefox alike", () => {
     expect(stackFrames(CHROME)).toHaveLength(5);
     expect(stackFrames(FIREFOX)).toHaveLength(2);
     expect(stackFrames(undefined)).toEqual([]);
   });
 
-  it("liste les paquets cités, un système préfixé", () => {
+  it("lists the cited packages, a prefixed system", () => {
     expect(packagesOfStack(CHROME)).toEqual(["dnd5e-combat", "lib-wrapper", "system:dnd5e"]);
   });
 
-  it("attribue au premier paquet non ignoré", () => {
+  it("attributes to the first non-ignored package", () => {
     expect(attribute(CHROME)).toBe("dnd5e-combat");
     expect(attribute(CHROME, { ignore: ["dnd5e-combat/scripts/runtime/debug.mjs", "lib-wrapper"] })).toBe("dnd5e-combat");
     expect(attribute(CHROME, { ignore: ["dnd5e-combat", "lib-wrapper"] })).toBe("system:dnd5e");
@@ -45,7 +45,7 @@ describe("messages et signatures (§380)", () => {
     expect(errorIn(["a"])).toBeNull();
   });
 
-  it("ignore ce qui varie : identifiants, nombres, hôte, colonne, paramètres", () => {
+  it("ignores what varies: identifiers, numbers, host, column, parameters", () => {
     const a = signature({ message: "Token abcdefghij123456 at 12 ft", stack: CHROME });
     const b = signature({ message: "Token ZZZZZZZZZZ999999 at 30 ft",
       stack: CHROME.replace(/https:\/\/dandd\.forge-vtt\.com/g, "http://localhost:30000").replace(":12:3", ":12:40") });
@@ -67,7 +67,7 @@ describe("anneau et journal (§380)", () => {
     expect(r.size).toBe(0);
   });
 
-  it("compte une erreur répétée, garde la piste de la première, borne la pile", () => {
+  it("counts a repeated error, keeps the first one's trace, bounds the stack", () => {
     let t = 1000;
     const log = createErrorLog({ now: () => t });
     const long = Array.from({ length: 40 }, (_, i) => `    at f${i} (https://h/modules/m/a.mjs:${i}:1)`).join("\n");
@@ -83,7 +83,7 @@ describe("anneau et journal (§380)", () => {
     expect(log.total()).toBe(2);
   });
 
-  it("le delta n'envoie que ce qui a compté depuis le dernier envoi, et le MJ le fusionne", () => {
+  it("the delta sends only what counted since the last send, and the GM merges it", () => {
     const player = createErrorLog();
     const gm = createErrorLog();
     player.add({ message: "a" });
@@ -102,26 +102,26 @@ describe("anneau et journal (§380)", () => {
     expect(gm.get(d1[1].sig)).toMatchObject({ count: 1, clients: ["Player 1"] });
   });
 
-  it("au-delà de la limite, les groupes les moins récents partent", () => {
+  it("beyond the limit, the least recent groups go", () => {
     let t = 0;
     const log = createErrorLog({ limit: 3, now: () => ++t });
     ["a", "b", "c"].forEach(m => log.add({ message: m }));
-    log.add({ message: "a" });          // « a » redevient récent
+    log.add({ message: "a" });          // "a" becomes recent again
     log.add({ message: "d" });
     expect(log.list().map(g => g.message).sort()).toEqual(["a", "c", "d"]);
     expect(log.size).toBe(3);
   });
 });
 
-describe("confidentialité (§380)", () => {
-  it("met les utilisateurs en rôles", () => {
+describe("privacy (§380)", () => {
+  it("puts users into roles", () => {
     const users = [{ id: "u1", name: "Bob", isGM: false }, { id: "u2", name: "Raph", isGM: true }, { id: "u3", name: "Zoé", isGM: false }];
     expect(Object.fromEntries(roleLabels(users, { gm: "MJ", player: "Joueur" }))).toEqual({ u1: "Joueur 1", u2: "MJ", u3: "Joueur 2" });
     const two = roleLabels([...users, { id: "u4", name: "Co", isGM: true }]);
     expect([two.get("u2"), two.get("u4")]).toEqual(["GM 1", "GM 2"]);
   });
 
-  it("masque noms, monde, hôtes, paramètres, compte Forge et clés", () => {
+  it("masks names, world, hosts, parameters, Forge account and keys", () => {
     const scrub = createScrubber({ names: [["Zoé", "Player 2"], ["Curse of Strahd", "<world>"], ["Al", "Player 3"], ["Zoé Martin", "Player 2"]] });
     expect(scrub("Zoé Martin a lancé un sort ; zoé aussi")).toBe("Player 2 a lancé un sort ; Player 2 aussi");
     expect(scrub("Zoélie reste")).toBe("Zoélie reste");
@@ -136,12 +136,12 @@ describe("confidentialité (§380)", () => {
     expect(scrub(42)).toBe(42);
   });
 
-  it("nettoie toutes les chaînes d'un objet sans toucher aux clés", () => {
+  it("cleans all the strings of an object without touching the keys", () => {
     const scrub = createScrubber({ names: [["Zoé", "P2"]] });
     expect(scrubDeep({ Zoé: ["Zoé", { n: 1, s: "par Zoé" }], b: true }, scrub)).toEqual({ Zoé: ["P2", { n: 1, s: "par P2" }], b: true });
   });
 
-  it("ne montre que les réglages simples", () => {
+  it("shows only the simple settings", () => {
     expect(safeSettings({ a: true, b: 3, c: "full", d: "du texte libre", e: { x: 1 }, f: [1], g: NaN, h: "x".repeat(41), i: false },
       { exclude: ["i"] })).toEqual({ a: true, b: 3, c: "full" });
   });
@@ -156,7 +156,7 @@ const sample = () => {
 };
 
 describe("rapport (§380)", () => {
-  it("garde les erreurs choisies, en temps relatifs, nettoyées", () => {
+  it("keeps the chosen errors, in relative times, cleaned", () => {
     const errors = sample();
     const scrub = createScrubber({ names: [["Zoé", "Player 2"]] });
     const report = buildReport({ now: 12_000, description: "Zoé attacked", environment: { foundry: "14.369" }, errors,
@@ -173,7 +173,7 @@ describe("rapport (§380)", () => {
     expect(JSON.parse(reportJson(report))).toEqual(report);
   });
 
-  it("s'écrit en Markdown, piles en bloc de code, sans casser les blocs", () => {
+  it("is written in Markdown, stacks in a code block, without breaking the blocks", () => {
     const errors = sample();
     errors[0].message = "has ``` inside";
     const report = buildReport({ now: 12_000, environment: { foundry: "14.369", system: "dnd5e 6.0.6",
@@ -196,7 +196,7 @@ describe("rapport (§380)", () => {
 });
 
 describe("GitHub (§380)", () => {
-  it("lit le dépôt d'une adresse de module", () => {
+  it("reads the repository from a module address", () => {
     expect(githubRepo("https://github.com/Darshyne/dnd5e-combat")).toBe("Darshyne/dnd5e-combat");
     expect(githubRepo("https://github.com/Darshyne/darsh-loot.git")).toBe("Darshyne/darsh-loot");
     expect(githubRepo("github.com/a/b/issues")).toBe("a/b");
@@ -204,13 +204,13 @@ describe("GitHub (§380)", () => {
     expect(githubRepo(undefined)).toBeNull();
   });
 
-  it("propose le dépôt du module le plus mis en cause", () => {
+  it("suggests the repository of the most implicated module", () => {
     const repos = { "dnd5e-combat": "D/core", "darsh-loot": "D/loot" };
     expect(pickRepo([{ module: "darsh-loot", count: 5 }, { module: "dnd5e-combat", count: 2 }, { module: "x", count: 99 }], repos)).toBe("D/loot");
     expect(pickRepo([{ module: "x" }], repos, "D/core")).toBe("D/core");
   });
 
-  it("coupe le corps à une fin de ligne, ferme le bloc de code, ajoute la note", () => {
+  it("cuts the body at a line end, closes the code block, adds the note", () => {
     const body = ["intro", "```", ...Array.from({ length: 500 }, (_, i) => `    at frame${i} (/modules/m/a.mjs:${i}:1)`), "```"].join("\n");
     const cut = truncateForUrl(body, 2000, "Attach the file.");
     expect(encodeURIComponent(cut).length).toBeLessThanOrEqual(2000);
@@ -219,7 +219,7 @@ describe("GitHub (§380)", () => {
     expect(truncateForUrl("short", 2000, "note")).toBe("short");
   });
 
-  it("donne l'adresse « New issue » sous la longueur voulue", () => {
+  it("gives the \"New issue\" address under the wanted length", () => {
     const url = issueUrl({ repo: "Darshyne/dnd5e-combat", title: "Bug: Rage", body: "x\n".repeat(10_000), max: 7000, note: "Attach." });
     expect(url.startsWith("https://github.com/Darshyne/dnd5e-combat/issues/new?title=Bug%3A%20Rage&body=")).toBe(true);
     expect(url.length).toBeLessThanOrEqual(7000);
@@ -228,12 +228,12 @@ describe("GitHub (§380)", () => {
   });
 });
 
-describe("lisibilité du rapport (§380, après un vrai rapport)", () => {
-  it("durées en secondes, minutes ou heures", () => {
+describe("report readability (§380, after a real report)", () => {
+  it("durations in seconds, minutes or hours", () => {
     expect([formatAgo(4.4), formatAgo(59), formatAgo(2867.8), formatAgo(7500), formatAgo(NaN)]).toEqual(["4 s", "59 s", "47 min", "2 h 05", "?"]);
   });
 
-  it("le titre : la première ligne, sans « Error: », coupée à un mot", () => {
+  it("the title: the first line, without \"Error: \", cut at a word", () => {
     const deprec = "Error: foundry.utils.objectsEqual has been deprecated and renamed to foundry.utils.equals, which handles equality testing for more than just objects.\nDeprecated since Version 14";
     const t = errorTitle(deprec);
     expect(t.title.startsWith("foundry.utils.objectsEqual has been deprecated")).toBe(true);
@@ -244,12 +244,12 @@ describe("lisibilité du rapport (§380, après un vrai rapport)", () => {
     expect(errorTitle("TypeError: x is undefined")).toEqual({ title: "TypeError: x is undefined", whole: true });
   });
 
-  it("un seul MJ connecté s'appelle « GM », même avec un autre compte MJ hors ligne", () => {
+  it("a single connected GM is called \"GM\", even with another offline GM account", () => {
     const r = roleLabels([{ id: "a", isGM: true, active: true }, { id: "b", isGM: true, active: false }, { id: "c", isGM: false, active: true }]);
     expect([r.get("a"), r.get("b"), r.get("c")]).toEqual(["GM", "GM", "Player 1"]);
   });
 
-  it("le message n'est répété en bloc que s'il dit plus que le titre ; les réglages sont comptés", () => {
+  it("the message is repeated in a block only if it says more than the title; the settings are counted", () => {
     const log = createErrorLog({ now: () => 1000 });
     log.add({ message: "short one" });
     log.add({ message: "Error: first line\nsecond line" });
@@ -261,15 +261,15 @@ describe("lisibilité du rapport (§380, après un vrai rapport)", () => {
   });
 });
 
-describe("modules hors de la suite et dépréciations dans le rapport", () => {
-  it("les arguments de console à substitutions perdent leurs styles", () => {
+describe("modules outside the suite and deprecations in the report", () => {
+  it("console arguments with substitutions lose their styles", () => {
     expect(formatArgs(["%cPixiJS Deprecation Warning: %c%s", "color:red", "font-weight:normal", "moved"]))
       .toBe("PixiJS Deprecation Warning: moved");
     expect(formatArgs(["%d%% done", 50, "extra"])).toBe("50% done extra");
     expect(formatArgs(["%s and %s", "one"])).toBe("one and %s");
   });
 
-  it("reconnaît une pile seule et une dépréciation", () => {
+  it("recognizes a lone stack and a deprecation", () => {
     expect(isBareStack("    at Fa (http://x/scripts/pixi.min.js:12:34)\n    at y (http://x/modules/m/a.js:1:2)")).toBe(true);
     expect(isBareStack("Error\n    at f (http://x/a.js:1:1)")).toBe(true);
     expect(isBareStack("Firefox: f@http://x/a.js:1:1")).toBe(false);
@@ -280,7 +280,7 @@ describe("modules hors de la suite et dépréciations dans le rapport", () => {
     expect(isDeprecation("boom")).toBe(false);
   });
 
-  it("le journal garde les marques, à l'ajout comme à la fusion", () => {
+  it("the log keeps the marks, on add as on merge", () => {
     const log = createErrorLog({ now: () => 1 });
     const { group } = log.add({ kind: "warn", message: "m", stack: "", thirdParty: true, deprecation: true });
     expect(group).toMatchObject({ thirdParty: true, deprecation: true });
@@ -288,7 +288,7 @@ describe("modules hors de la suite et dépréciations dans le rapport", () => {
     expect(log.get("other")).toMatchObject({ thirdParty: true, deprecation: false });
   });
 
-  it("le Markdown range les autres modules dans une section repliée, après celles de la suite", () => {
+  it("the Markdown puts the other modules in a collapsed section, after those of the suite", () => {
     const errors = [
       { sig: "a", kind: "warn", module: "tokenmagic", message: "PixiJS Deprecation Warning: moved", thirdParty: true, deprecation: true,
         count: 1, first: 0, last: 0, clients: [], stack: [], trail: [] },
@@ -307,15 +307,15 @@ describe("modules hors de la suite et dépréciations dans le rapport", () => {
   });
 });
 
-describe("bruit du navigateur et totaux par origine", () => {
-  it("isBrowserNoise reconnaît ResizeObserver et rien d'autre", () => {
+describe("browser noise and totals by origin", () => {
+  it("isBrowserNoise recognizes ResizeObserver and nothing else", () => {
     expect(isBrowserNoise("ResizeObserver loop completed with undelivered notifications.")).toBe(true);
     expect(isBrowserNoise("Uncaught Error: ResizeObserver loop limit exceeded")).toBe(true);
     expect(isBrowserNoise("dnd5e-combat | ResizeObserver loop in my code")).toBe(false);
     expect(isBrowserNoise("boom")).toBe(false);
   });
 
-  it("total(which) sépare les erreurs de la suite des autres", () => {
+  it("total(which) separates the suite's errors from the others", () => {
     const log = createErrorLog();
     log.add({ kind: "error", message: "a", stack: "", module: "dnd5e-combat" });
     log.add({ kind: "warn", message: "b", stack: "", module: "tokenmagic", thirdParty: true });
@@ -324,17 +324,17 @@ describe("bruit du navigateur et totaux par origine", () => {
   });
 });
 
-describe("avis du moteur répétés en console (issue #238)", () => {
+describe("engine notices repeated in the console (issue #238)", () => {
   const templates = translationTexts({ DND5ECOMBAT: { Diagnostic: { DdbAvis: "DAS: {count} item(s) imported from D&D Beyond may not be automated." },
     Court: "Oui", Nom: "{name}", Portee: "<b>Hors</b> de portée de {name} pour cette attaque", Fixe: "Le combat n'a pas commencé." } });
   const own = noticeMatcher(templates);
-  it("reconnaît un avis rempli, même préfixé par un module qui réécrit les notifications", () => {
+  it("recognizes a filled-in notice, even prefixed by a module that rewrites notifications", () => {
     expect(own("DAS: 5 item(s) imported from D&D Beyond may not be automated.")).toBe(true);
     expect(own("[autre-module] DAS: 5 item(s) imported from D&D Beyond may not be automated.")).toBe(true);
     expect(own("Hors de portée de Gobelin pour cette attaque")).toBe(true);
     expect(own("Le combat n'a pas commencé.")).toBe(true);
   });
-  it("ne prend pas une vraie erreur, ni un modèle trop court pour être sûr", () => {
+  it("does not take a real error, nor a pattern too short to be sure", () => {
     expect(own("TypeError: Cannot read properties of undefined (reading 'x')")).toBe(false);
     expect(own("Oui")).toBe(false);
     expect(own("Gobelin")).toBe(false);

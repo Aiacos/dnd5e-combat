@@ -1,13 +1,13 @@
 /**
- * Relevé des sorts, lot 2 : zones qui durent (SPEC §158), monde `dnd-6`, arène. Le Magicien lance chaque sort (prêté du Manuel des
- * joueurs, à volonté) en une petite zone sur la cible seule, puis un combat (Magicien, cible) joue les tours :
- *  - la zone rejoue au moment dit (début ou fin du tour de la cible : un message d'utilisation `areaTick`) ;
- *  - Graisse : À terre ⇔ sauvegarde ratée ; Toile d'araignée : Entravé ⇔ ratée, pas de dégâts de feu, et un test pour s'en libérer ;
- *    Tentacules noirs d'Evard : Entravé, et le test pour s'en libérer ;
- *  - Brume mortelle : la zone s'éloigne de 3 m du lanceur au début de son tour ;
- *  - Tempête radieuse de Jallarzi : Aveuglé porté par la zone (retiré quand la cible en sort) ;
- *  - Nuage nauséabond (le Bandit : le Zombi est immunisé contre Empoisonné) : ratée au début de son tour → ni action ni action Bonus.
- * PV de la cible portés à 300 le temps du scénario. Remet positions, PV, effets, zones, combat.
+ * Spell survey, batch 2: lasting areas (SPEC §158), world `dnd-6`, arena. The Wizard casts each spell (lent from the Player's
+ * Handbook, at will) as a small area on the target alone, then a combat (Wizard, target) plays the turns:
+ *  - the area replays at the stated moment (start or end of the target's turn: a use message `areaTick`);
+ *  - Grease: Prone ⇔ failed save; Web: Restrained ⇔ failed, no fire damage, and a check to break free;
+ *    Evard's Black Tentacles: Restrained, and the check to break free;
+ *  - Cloudkill: the area moves 3 m away from the caster at the start of its turn;
+ *  - Jallarzi's Storm of Radiance: Blinded carried by the area (removed when the target leaves it);
+ *  - Stinking Cloud (the Bandit: the Zombie is immune to Poisoned): failed at the start of its turn → no action or Bonus Action.
+ * Target's HP raised to 300 for the scenario. Restores positions, HP, effects, areas, combat.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -29,7 +29,7 @@ export default {
       homes.set(t.id, { pos: await ctx.position(t), hp: await ctx.hp(t) });
       effects0.set(t.id, new Set((await ctx.effects(t)).map(e => e._id ?? e.id)));
     }
-    // Des PV pour encaisser une demi-douzaine de zones.
+    // HP to absorb half a dozen areas.
     for ( const t of [zombi, bandit] ) {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: t.id });
       const max0 = data.delta?.system?.attributes?.hp?.max ?? null;
@@ -79,7 +79,7 @@ export default {
     };
     const next = async () => { await ctx.call("next-turn", { combatId: ctx.ownCombat }); await pause(3500); };
     const statuses = async t => (await ctx.effects(t)).filter(e => !e.disabled).flatMap(e => e.statuses ?? []);
-    /** Pose le sort (`id` du Manuel) en une petite zone sur `target`, au tour du Magicien ; rend la résolution de la pose. */
+    /** Places the spell (the Handbook's `id`) as a small area on `target`, on the Wizard's turn; returns its resolution. */
     const cast = async (id, target, activityType="save") => {
       const itemId = await ctx.ensureItem(mage, PHB + id, { system: { method: "atwill" } });
       await tough(target);
@@ -93,7 +93,7 @@ export default {
       await pause(1500);
       return { used, r };
     };
-    /** Le rejeu de la zone sur la cible depuis `since` (message `areaTick`), sa résolution. */
+    /** The area's replay on the target since `since` (message `areaTick`), its resolution. */
     const replayOf = async (since, target) => {
       const m = (await ctx.messagesSince(since)).find(x => (x.type === "usage") && (x.flags?.[MODULE_ID]?.areaTick ?? x.flags?.areaTick));
       if ( !m ) return null;
@@ -102,14 +102,14 @@ export default {
       return r?.targets?.find(t => t.name === target.name) ?? { none: true };
     };
 
-    /** Rejeu en début (turnStart) ou en fin (turnEnd) du tour de la cible ; `status` : l'état posé sur une sauvegarde ratée. */
+    /** Replay at the start (turnStart) or end (turnEnd) of the target's turn; `status`: the condition placed on a failed save. */
     const zoneCase = (label, id, target, { at, status=null, activityType="save", after=null }) => part(label, async () => {
       const c = await cast(id, target, activityType);
       if ( !c?.used?.usageMessageId ) return;
       if ( status ) await ctx.removeStatusEffects(target, status).catch(() => {});
       const hp = await ctx.hp(target);
       const since = await ctx.lastMessageId();
-      await next();                              // tour de la cible (début : turnStart)
+      await next();                              // target's turn (start: turnStart)
       if ( at === "turnEnd" ) await next();       // fin de son tour
       const t = await replayOf(since, target);
       if ( !ctx.expect(!!t && !t.none, `${label} : la zone rejoue au ${at === "turnStart" ? "début" : "fin"} du tour de la cible`) ) return;
@@ -148,7 +148,7 @@ export default {
       };
       const before = await centre();
       const since = await ctx.lastMessageId();
-      await next(); await next();   // fin du tour du Zombi (rejeu), puis début du tour du Magicien (dérive)
+      await next(); await next();   // end of the Zombie's turn (replay), then start of the Wizard's turn (drift)
       const t = await replayOf(since, zombi);
       ctx.expect(!!t && !t.none, "Brume mortelle : la zone rejoue à la fin du tour du Zombi");
       const after = await centre();
@@ -167,15 +167,15 @@ export default {
     });
 
     await part("Nuage nauséabond", async () => {
-      // §438 : Manuel 3.0.0 — « Create Cloud » (utilitaire, `UNmK4NzLyiQsdD1S`) pose le nuage, la sauvegarde de début de tour est une
-      // sœur sans zone ; le Manuel 2.2.0 posait la zone par sa sauvegarde (« Cast and Save »).
+      // §438: Handbook 3.0.0 — "Create Cloud" (utility, `UNmK4NzLyiQsdD1S`) places the cloud, the start-of-turn save is a
+      // sibling with no area; Handbook 2.2.0 placed the area by its save ("Cast and Save").
       const cloudId = await ctx.ensureItem(mage, PHB + "phbsplStinkingCl", { system: { method: "atwill" } });
       const v3 = !!((await ctx.call("get-actor", { actorId: mage.actorId })).items ?? []).find(i => i._id === cloudId)?.system?.activities?.UNmK4NzLyiQsdD1S;
       const c = await cast("phbsplStinkingCl", bandit, v3 ? "utility" : "save");
       if ( !c?.used?.regionId ) return;
       for ( let n = 1; n <= 6; n++ ) {
         const since = await ctx.lastMessageId();
-        await next();   // début du tour du Bandit : la sauvegarde
+        await next();   // start of the Bandit's turn: the save
         const t = await replayOf(since, bandit);
         if ( !t || t.none ) { ctx.expect(false, "Nuage nauséabond : pas de rejeu au début du tour du Bandit"); return; }
         const b = await ctx.engine("budget", { tokenId: bandit.id });

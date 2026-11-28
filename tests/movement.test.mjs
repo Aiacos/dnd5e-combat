@@ -5,7 +5,7 @@ import {
 
 const key = c => `${c.i},${c.j}`;
 
-/** Monde de test : `#` = mur (case interdite), lettres = repères. */
+/** Test world: `#` = wall (forbidden cell), letters = landmarks. */
 function world(rows) {
   const blocked = new Set();
   const marks = {};
@@ -18,7 +18,7 @@ function world(rows) {
 }
 
 describe("findPath", () => {
-  it("va tout droit quand rien ne gêne", () => {
+  it("goes straight when nothing is in the way", () => {
     const w = world(["S....G"]);
     const r = findPath({ start: w.marks.S, goals: [w.marks.G], canStep: w.canStep });
     expect(r.path).toHaveLength(6);
@@ -38,7 +38,7 @@ describe("findPath", () => {
     expect(r.path.every(c => w.canStep(c, c))).toBe(true);
   });
 
-  it("rend null quand la cible est murée", () => {
+  it("returns null when the target is walled in", () => {
     const w = world([
       "S.#G",
       "..##"
@@ -46,7 +46,7 @@ describe("findPath", () => {
     expect(findPath({ start: w.marks.S, goals: [w.marks.G], canStep: w.canStep })).toBeNull();
   });
 
-  it("traverse une case où l'on ne peut pas s'arrêter, sans y finir", () => {
+  it("crosses a cell where one cannot stop, without ending there", () => {
     const w = world(["S.A.G"]);
     const canEnd = c => key(c) !== key(w.marks.A);
     const through = findPath({ start: w.marks.S, goals: [w.marks.G], canStep: w.canStep, canEnd });
@@ -54,7 +54,7 @@ describe("findPath", () => {
     expect(findPath({ start: w.marks.S, goals: [w.marks.A], canStep: w.canStep, canEnd })).toBeNull();
   });
 
-  it("paie le terrain difficile et l'évite si c'est plus court", () => {
+  it("pays for Difficult Terrain and avoids it if that is shorter", () => {
     const w = world([
       "S...G",
       "....."
@@ -66,7 +66,7 @@ describe("findPath", () => {
     expect(r.path.some(c => c.i === 1)).toBe(true);
   });
 
-  it("préfère la ligne droite à coût égal", () => {
+  it("prefers the straight line at equal cost", () => {
     const w = world([
       ".....",
       "S...G",
@@ -76,12 +76,12 @@ describe("findPath", () => {
     expect(r.path.every(c => c.i === 1)).toBe(true);
   });
 
-  it("s'arrête au garde-fou", () => {
+  it("stops at the safeguard", () => {
     const canStep = () => true;
     expect(findPath({ start: { i: 0, j: 0 }, goals: [{ i: 500, j: 500 }], canStep, maxNodes: 50 })).toBeNull();
   });
 
-  it("déjà arrivé : chemin d'une case", () => {
+  it("already arrived: a one-cell path", () => {
     const r = findPath({ start: { i: 2, j: 2 }, goals: [{ i: 2, j: 2 }], canStep: () => true });
     expect(r.path).toEqual([{ i: 2, j: 2 }]);
   });
@@ -92,23 +92,23 @@ describe("turningPoints", () => {
     const path = [{ i: 0, j: 0 }, { i: 0, j: 1 }, { i: 0, j: 2 }, { i: 1, j: 3 }, { i: 2, j: 4 }, { i: 2, j: 5 }];
     expect(turningPoints(path)).toEqual([{ i: 0, j: 0 }, { i: 0, j: 2 }, { i: 2, j: 4 }, { i: 2, j: 5 }]);
   });
-  it("cellDistance compte à huit voisins", () => {
+  it("cellDistance counts with eight neighbors", () => {
     expect(cellDistance({ i: 0, j: 0 }, { i: 3, j: -2 })).toBe(3);
   });
 });
 
 describe("approche d'une cible", () => {
-  it("écart entre emprises", () => {
+  it("gap between footprints", () => {
     const m = { i: 0, j: 0, w: 1, h: 1 };
     expect(footprintGap(m, { i: 0, j: 0, w: 1, h: 1 })).toBe(0);
     expect(footprintGap(m, { i: 1, j: 1, w: 1, h: 1 })).toBe(1);
     expect(footprintGap(m, { i: 0, j: 3, w: 1, h: 1 })).toBe(3);
-    // Grande créature 2×2 en (2,2) : la case (1,1) la touche en diagonale, (2,2) la chevauche.
+    // Large creature 2×2 at (2,2): the cell (1,1) touches it diagonally, (2,2) overlaps it.
     expect(footprintGap({ i: 1, j: 1, w: 1, h: 1 }, { i: 2, j: 2, w: 2, h: 2 })).toBe(1);
     expect(footprintGap({ i: 3, j: 3, w: 1, h: 1 }, { i: 2, j: 2, w: 2, h: 2 })).toBe(0);
   });
 
-  it("au contact : s'arrête à côté, jamais dessus", () => {
+  it("in contact: stops next to it, never on top", () => {
     const target = { i: 0, j: 5, w: 1, h: 1 };
     const { isGoal, heuristic } = approach(target, { w: 1, h: 1 }, 1);
     const r = findPath({ start: { i: 0, j: 0 }, isGoal, heuristic, canStep: () => true });
@@ -116,18 +116,18 @@ describe("approche d'une cible", () => {
     expect(isGoal({ i: 0, j: 5 })).toBe(false);
   });
 
-  it("avec allonge de deux cases : s'arrête plus tôt", () => {
+  it("with a reach of two cells: stops earlier", () => {
     const { isGoal, heuristic } = approach({ i: 0, j: 5, w: 1, h: 1 }, { w: 1, h: 1 }, 2);
     const r = findPath({ start: { i: 0, j: 0 }, isGoal, heuristic, canStep: () => true });
     expect(r.path.at(-1)).toEqual({ i: 0, j: 3 });
   });
 
-  it("déjà à portée : ne bouge pas", () => {
+  it("already in range: does not move", () => {
     const { isGoal, heuristic } = approach({ i: 0, j: 1, w: 1, h: 1 }, { w: 1, h: 1 }, 1);
     expect(findPath({ start: { i: 0, j: 0 }, isGoal, heuristic, canStep: () => true }).path).toHaveLength(1);
   });
 
-  it("case d'approche occupée : prend la suivante", () => {
+  it("approach cell occupied: takes the next one", () => {
     const { isGoal, heuristic } = approach({ i: 0, j: 5, w: 1, h: 1 }, { w: 1, h: 1 }, 1);
     const canEnd = c => key(c) !== "0,4";
     const r = findPath({ start: { i: 0, j: 0 }, isGoal, heuristic, canStep: () => true, canEnd });
@@ -136,7 +136,7 @@ describe("approche d'une cible", () => {
 });
 
 describe("attaque de base", () => {
-  it("la mêlée équipée d'abord", () => {
+  it("equipped melee first", () => {
     const pick = chooseBasicAttack([
       { id: "arc", melee: false, equipped: true, sort: 1 },
       { id: "epee", melee: true, equipped: true, sort: 2 },
@@ -144,21 +144,21 @@ describe("attaque de base", () => {
     ]);
     expect(pick.id).toBe("epee");
   });
-  it("à défaut de mêlée, la distance", () => {
+  it("failing melee, the range", () => {
     expect(chooseBasicAttack([{ id: "arc", melee: false, equipped: true, sort: 1 }]).id).toBe("arc");
     expect(chooseBasicAttack([])).toBeNull();
   });
 });
 
 describe("findPath — niveaux (P2)", () => {
-  // Deux niveaux superposés : « 0 » et « 1 ». Un escalier E relie la case (0,3) de l'un à l'autre.
+  // Two superimposed levels: "0" and "1". A staircase E links cell (0,3) of one to the other.
   const stairs = { i: 0, j: 3 };
   const world = {
     canStep: (from, to) => (to.i >= 0) && (to.j >= 0) && (to.i < 2) && (to.j < 6) && (to.level === from.level),
     transitions: cell => (cell.i === stairs.i) && (cell.j === stairs.j)
       ? [{ cell: { i: cell.i, j: cell.j, level: cell.level === "0" ? "1" : "0" }, cost: 4 }] : []
   };
-  it("rejoint une case d'un autre niveau par l'escalier, au coût de la hauteur", () => {
+  it("reaches a cell on another level by the staircase, at the cost of the height", () => {
     const r = findPath({ start: { i: 0, j: 0, level: "0" }, goals: [{ i: 1, j: 5, level: "1" }], ...world });
     expect(r).not.toBeNull();
     expect(r.path.map(c => `${c.i},${c.j}@${c.level}`)).toEqual(["0,0@0", "0,1@0", "0,2@0", "0,3@0", "0,3@1", "0,4@1", "1,5@1"]);
@@ -168,9 +168,9 @@ describe("findPath — niveaux (P2)", () => {
     const r = findPath({ start: { i: 0, j: 0, level: "0" }, goals: [{ i: 1, j: 5, level: "1" }], canStep: world.canStep });
     expect(r).toBeNull();
   });
-  it("une case garde son niveau ; les mêmes i, j sur deux niveaux sont deux cases", () => {
+  it("a cell keeps its level; the same i, j on two levels are two cells", () => {
     const r = findPath({ start: { i: 0, j: 0, level: "0" }, goals: [{ i: 0, j: 0, level: "1" }], ...world });
-    expect(r.path).toHaveLength(8);   // 4 cases à l'aller, l'escalier, 3 cases au retour
+    expect(r.path).toHaveLength(8);   // 4 cells out, the staircase, 3 cells back
     expect(r.path[0]).toEqual({ i: 0, j: 0, level: "0" });
     expect(r.path.at(-1)).toEqual({ i: 0, j: 0, level: "1" });
   });
@@ -181,13 +181,13 @@ describe("findPath — niveaux (P2)", () => {
   });
 });
 
-describe("findPath — voisines déjà atteintes", () => {
-  /** Générateur pseudo-aléatoire à graine : les mêmes grilles à chaque passe. */
+describe("findPath — neighbors already reached", () => {
+  /** Seeded pseudo-random generator: the same grids on every pass. */
   const rng = seed => () => (seed = ((seed * 1664525) + 1013904223) >>> 0) / 2 ** 32;
   const SIZE = 14;
   const inside = c => (c.i >= 0) && (c.j >= 0) && (c.i < SIZE) && (c.j < SIZE);
 
-  /** Une grille tirée au sort : des murs (cases interdites), du terrain difficile (2), des cloisons entre deux cases voisines. */
+  /** A randomly drawn grid: walls (forbidden cells), Difficult Terrain (2), partitions between two neighboring cells. */
   function randomWorld(seed) {
     const r = rng(seed);
     const wall = new Set(), slow = new Set(), fence = new Set();
@@ -207,7 +207,7 @@ describe("findPath — voisines déjà atteintes", () => {
     return { start, goal, canStep, stepCost };
   }
 
-  /** Le coût le plus bas par une recherche sans ruse (Dijkstra sur une liste), mêmes coûts que `findPath`. */
+  /** The lowest cost by a naive search (Dijkstra on a list), same costs as `findPath`. */
   function cheapest({ start, goal, canStep, stepCost }) {
     const dist = new Map([[key(start), 0]]);
     const todo = [start];
@@ -227,7 +227,7 @@ describe("findPath — voisines déjà atteintes", () => {
     return null;
   }
 
-  it("300 grilles tirées au sort : le coût reste le plus bas, le chemin se suit pas à pas", () => {
+  it("300 randomly drawn grids: the cost stays the lowest, the path can be followed step by step", () => {
     let found = 0;
     for ( let seed = 1; seed <= 300; seed++ ) {
       const w = randomWorld(seed);
@@ -246,24 +246,25 @@ describe("findPath — voisines déjà atteintes", () => {
       }
       expect(cost, `grille ${seed}`).toBe(r.cost);
     }
-    expect(found).toBeGreaterThan(100);   // le tirage laisse bien des chemins à trouver
+    expect(found).toBeGreaterThan(100);   // the draw leaves plenty of paths to find
   });
 
-  it("ne redemande pas un pas vers une case déjà atteinte à meilleur compte (un `canStep` = un lancer de rayon)", () => {
-    // Une salle fermée de 12 × 12, l'arrivée dehors : toutes les cases sont explorées avant de renoncer.
+  it("does not ask again for a step toward a cell already reached at a better cost (a `canStep` = a ray cast)", () => {
+    // A closed room of 12 × 12, the arrival outside: all cells are explored before giving up.
     const room = c => (c.i >= 0) && (c.j >= 0) && (c.i < 12) && (c.j < 12);
     const asked = [];
     const canStep = (from, to) => { asked.push(to); return room(to); };
     expect(findPath({ start: { i: 6, j: 6 }, goals: [{ i: 40, j: 40 }], canStep })).toBeNull();
-    // La case de départ est atteinte à coût nul : aucune voisine n'a à y revenir.
+    // The starting cell is reached at zero cost: no neighbor has to come back to it.
     expect(asked.filter(c => (c.i === 6) && (c.j === 6))).toHaveLength(0);
-    // Sans le raccourci : 8 demandes par case explorée (1152). Chaque case n'est plus demandée que tant qu'un pas peut l'améliorer.
+    // Without the shortcut: 8 requests per explored cell (1152).
+    // Each cell is now requested only as long as a step can improve it.
     expect(asked.length).toBeLessThan(144 * 4);
   });
 });
 
-describe("déplacement dépensé (§16.10)", () => {
-  it("une téléportation ou un déplacement forcé ne consomme pas de déplacement", () => {
+describe("movement spent (§16.10)", () => {
+  it("a teleportation or forced movement does not consume movement", () => {
     const history = [{ cost: 10 }, { cost: 30, teleport: true }, { cost: 5 }, { cost: 10, teleport: true }, { cost: NaN }];
     expect(spentMovement(history)).toEqual({ spent: 15, excluded: 40 });
   });
@@ -273,26 +274,26 @@ describe("déplacement dépensé (§16.10)", () => {
   });
 });
 
-describe("vitesse de l'action de déplacement (§229)", () => {
+describe("speed of the movement action (§229)", () => {
   const types = { walk: {}, burrow: {}, climb: { walkFallback: true }, fly: {}, jump: {}, swim: { walkFallback: true } };
   const wraith = { walk: 5, fly: 60, swim: 0, burrow: 0, climb: 0 };
-  it("en vol, la vitesse de vol ; à pied, la marche", () => {
+  it("flying, the flying speed; on foot, the walk", () => {
     expect(actionSpeed(wraith, "fly", types)).toBe(60);
     expect(actionSpeed(wraith, "walk", types)).toBe(5);
     expect(actionSpeed(wraith, null, types)).toBe(5);
   });
-  it("nage : la plus grande avec la marche ; vol sans vitesse de vol : 0, comme la règle de dnd5e", () => {
+  it("swim: the greater with the walk; fly without a flying speed: 0, like dnd5e's rule", () => {
     expect(actionSpeed({ walk: 30, swim: 0 }, "swim", types)).toBe(30);
     expect(actionSpeed({ walk: 30, swim: 40 }, "swim", types)).toBe(40);
     expect(actionSpeed({ walk: 30, fly: 0 }, "fly", types)).toBe(0);
   });
-  it("une action qui n'est pas un mode de dnd5e (Éthéré) : la marche", () => {
+  it("an action that is not a dnd5e mode (Ethereal): the walk", () => {
     expect(actionSpeed({ walk: 30 }, "ethereal", types)).toBe(30);
   });
 });
 
-describe("§461 : distance d'une téléportation déclarée", () => {
-  it("la distance de l'entrée, sinon la portée de l'activité en longueur, sinon rien", async () => {
+describe("§461: distance of a declared teleportation", () => {
+  it("the entry's distance, otherwise the activity's range in length, otherwise nothing", async () => {
     const { teleportReach } = await import("../module/scripts/core/movement.mjs");
     expect(teleportReach({ distance: 30, units: "ft" }, { value: 60, units: "ft" })).toEqual({ distance: 30, units: "ft" });
     expect(teleportReach({ activity: "aaaaaaaaaaaaaaaa" }, { value: "40", units: "ft" })).toEqual({ distance: 40, units: "ft" });
@@ -304,15 +305,15 @@ describe("§461 : distance d'une téléportation déclarée", () => {
   });
 });
 
-describe("aperçu du chemin et glisser du cœur", () => {
+describe("path preview and the core's drag", () => {
   const own = { foundPath: [], hidden: true };
   const drag = { foundPath: [], hidden: false };
-  it("entrée vide ou la sienne : l'aperçu peut la poser, la remplacer, l'effacer", () => {
+  it("empty entry or its own: the preview may place it, replace it, clear it", () => {
     expect(ownsPlannedMovement(undefined, null)).toBe(true);
     expect(ownsPlannedMovement(null, own)).toBe(true);
     expect(ownsPlannedMovement(own, own)).toBe(true);
   });
-  it("entrée d'un glisser (cœur, recherche de chemin) : l'aperçu n'y touche pas", () => {
+  it("a drag's entry (core, pathfinding): the preview does not touch it", () => {
     expect(ownsPlannedMovement(drag, own)).toBe(false);
     expect(ownsPlannedMovement(drag, undefined)).toBe(false);
     expect(ownsPlannedMovement({ ...own }, own)).toBe(false);

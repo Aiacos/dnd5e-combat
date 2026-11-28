@@ -1,21 +1,22 @@
 /**
- * §501 (brique B21) — « si elle devait perdre ses réactions, elle n'en perd qu'une » : `reactions: { perRound, loseOne: true }`. Règles
- * pures. Ce qui retire d'ordinaire les réactions (état Neutralisé, effet d'un item `noReactions`) ne bloque plus la créature : chaque
- * nouvel effet de ce genre lui ôte une seule réaction du round. Morte, inconsciente ou pétrifiée, elle ne réagit toujours pas.
+ * §501 (block B21) — "if it would lose its Reactions, it loses only one": `reactions: { perRound, loseOne: true }`. Pure
+ * rules. What usually removes Reactions (Incapacitated condition, effect of an item `noReactions`) no longer blocks the
+ * creature: each new effect of this kind removes a single Reaction from it for the round. Dead, unconscious or petrified, it
+ * still does not react.
  */
 
-/** Les états qui empêchent toujours de réagir, même avec `loseOne`. */
+/** The conditions that always prevent reacting, even with `loseOne`. */
 export const HARD_STOPS = Object.freeze(["dead", "unconscious", "petrified"]);
 
 /**
- * Les états qui retirent les réactions et que `loseOne` réduit à une réaction perdue : Neutralisé, et ceux qui l'emportent (dnd5e pose
- * Neutralisé en « rider » à part ; s'il est déjà là, l'effet d'Étourdi ou de Paralysé arrive seul).
+ * The conditions that remove Reactions and that `loseOne` reduces to one lost Reaction: Incapacitated, and those that override it
+ * (dnd5e puts Incapacitated as a separate "rider"; if it is already there, the Stunned or Paralyzed effect arrives alone).
  */
 export const SOFT_STOPS = Object.freeze(["incapacitated", "stunned", "paralyzed"]);
 
 /**
- * La créature ne peut-elle pas réagir ?
- * @param {{statuses?: Iterable<string>, blocked?: boolean, loseOne?: boolean}} state  `blocked` : un effet `noReactions` la vise.
+ * Can the creature not react?
+ * @param {{statuses?: Iterable<string>, blocked?: boolean, loseOne?: boolean}} state  `blocked`: a `noReactions` effect targets it.
  */
 export function cannotReact({ statuses=[], blocked=false, loseOne=false }={}) {
   const has = new Set(statuses);
@@ -25,8 +26,8 @@ export function cannotReact({ statuses=[], blocked=false, loseOne=false }={}) {
 }
 
 /**
- * Un effet qui vient d'être posé coûte-t-il une réaction à une créature `loseOne` ? Oui s'il porte un état qui retire les réactions
- * (`statuses`) ou s'il est un effet `noReactions` (`blocks`), et qu'elle n'est ni morte, ni inconsciente, ni pétrifiée.
+ * Does a newly applied effect cost a Reaction to a `loseOne` creature? Yes if it carries a condition that removes Reactions
+ * (`statuses`) or if it is a `noReactions` effect (`blocks`), and the creature is neither dead, nor unconscious, nor petrified.
  * @param {{statuses?: Iterable<string>, blocks?: boolean, actorStatuses?: Iterable<string>}} effect
  */
 export function costsReaction({ statuses=[], blocks=false, actorStatuses=[] }={}) {
@@ -36,7 +37,7 @@ export function costsReaction({ statuses=[], blocks=false, actorStatuses=[] }={}
   return blocks || SOFT_STOPS.some(s => own.has(s));
 }
 
-/** Le budget après une réaction perdue (jamais sous 0), et s'il y en avait une à perdre. */
+/** The budget after a lost Reaction (never below 0), and whether there was one to lose. */
 export function loseReaction(budget) {
   const before = Math.max(0, Number(budget?.reaction ?? 1) || 0);
   return { budget: { ...(budget ?? {}), reaction: Math.max(0, before - 1) }, lost: before > 0, left: Math.max(0, before - 1) };

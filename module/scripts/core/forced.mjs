@@ -1,15 +1,15 @@
 /**
- * §408 (issue #44, lot 1) : ce qu'un joueur a passé outre en confirmant la fenêtre de légalité. Pur : aucune dépendance à Foundry.
+ * §408 (issue #44, batch 1): what a player overrode by confirming the legality window. Pure: no dependency on Foundry.
  */
 
 /**
- * Les raisons vraiment passées outre. « Utiliser ma Réaction » hors de son tour (une attaque d'opportunité) règle les soucis de budget :
- * ce n'est pas forcer. Les autres raisons (portée, état, vue…) restent passées outre. Doublons retirés, ordre gardé.
+ * The reasons truly overridden. "Use my Reaction" outside one's turn (an Opportunity Attack) settles the budget problems:
+ * that is not forcing. The other reasons (range, condition, sight…) stay overridden. Duplicates removed, order kept.
  * @param {object} choice
- * @param {string[]} choice.lines         Toutes les raisons de la fenêtre.
- * @param {string[]} [choice.budgetLines] Celles qui viennent du budget du tour (tour, action dépensée…).
- * @param {string} choice.action          Le bouton choisi : "go", "reaction", autre (renoncé).
- * @returns {string[]}  vide quand rien n'a été passé outre.
+ * @param {string[]} choice.lines         All the reasons of the window.
+ * @param {string[]} [choice.budgetLines] Those that come from the turn budget (turn, action spent…).
+ * @param {string} choice.action          The button chosen: "go", "reaction", other (given up).
+ * @returns {string[]}  empty when nothing was overridden.
  */
 export function forcedReasons({ lines, budgetLines=[], action }) {
   if ( (action !== "go") && (action !== "reaction") ) return [];
@@ -18,10 +18,10 @@ export function forcedReasons({ lines, budgetLines=[], action }) {
 }
 
 /**
- * §411 : une raison de refus relevée au clic (visée, menu) part-elle avec l'utilisation (`issues`) ? Non quand la fenêtre de légalité ou
- * `engage` la relèvent elles-mêmes : portée, autre plan, Chaîne d'éclairs (cibles désignées), contact (`engage`). La ligne de vue part
- * seulement quand le geste ne passe pas par `engage` (`blind` : visée multiple d'un sort à cibles).
- * @param {string} kind  `outOfRange`, `blind`, `plane`, `chain`, `contact` ou `other`.
+ * §411: does a refusal reason found at click time (aiming, menu) go along with the use (`issues`)? Not when the legality window or
+ * `engage` find it themselves: range, other plane, Chain Lightning (designated targets), contact (`engage`). Line of sight goes
+ * only when the gesture does not go through `engage` (`blind`: multiple aiming of a spell with targets).
+ * @param {string} kind  `outOfRange`, `blind`, `plane`, `chain`, `contact` or `other`.
  * @param {{blind?: boolean}} [options]
  */
 export function forwardsIssue(kind, { blind=false }={}) {
@@ -29,24 +29,24 @@ export function forwardsIssue(kind, { blind=false }={}) {
   return !["outOfRange", "plane", "chain", "contact"].includes(kind);
 }
 
-/** §411 : les raisons d'une utilisation, réunies sans doublon (ordre gardé, vides retirés). */
+/** §411: the reasons of a use, gathered without duplicates (order kept, empties removed). */
 export function mergeIssues(...lists) {
   return [...new Set(lists.flat().filter(l => (typeof l === "string") && l))];
 }
 
-/** §412 : la clé d'un ensemble de raisons (clés stables), sans ordre ni doublon — la mémoire d'un refus forcé. */
+/** §412: the key of a set of reasons (stable keys), with no order or duplicates — the memory of a forced refusal. */
 export function forcedKey(keys) {
   return [...new Set((keys ?? []).filter(Boolean).map(String))].sort().join(",");
 }
 
-/** §417 : ce que devient un refus du moteur. `level` : selon le niveau d'automatisation — aujourd'hui la fenêtre, à tous les niveaux. */
+/** §417: what an engine refusal becomes. `level`: according to the automation level — today the window, at every level. */
 export const REFUSAL_MODES = Object.freeze(["level", "window", "notice", "strict", "off"]);
 
 /**
- * §417 : le réglage « Action impossible » traduit en gestes. `window` : la fenêtre s'ouvre ; `proceed` : true = l'action part sans
- * attendre, false = elle ne peut pas partir (fenêtre sans « utiliser quand même »), null = celui qui agit décide ; `warn` : un avis à
- * l'écran de celui qui agit ; `report` : le MJ et la table sont prévenus, la carte marquée. Le MJ garde toujours la main : en refus strict,
- * il a la fenêtre entière.
+ * §417: the "Impossible action" setting translated into gestures. `window`: the window opens; `proceed`: true = the action
+ * goes ahead without waiting, false = it cannot go ahead (window without "use anyway"), null = whoever acts decides; `warn`: a
+ * notice on the screen of whoever acts; `report`: the GM and the table are warned, the card marked. The GM always keeps
+ * control: on strict refusal, they get the whole window.
  * @param {string} mode
  * @param {{isGM?: boolean}} [who]
  */
@@ -59,8 +59,8 @@ export function refusalOutcome(mode, { isGM=false }={}) {
 }
 
 /**
- * §448 : la clé d'une question « le faire quand même » — son titre (item — acteur) et ses raisons. Deux demandes de même clé ouvertes à
- * la fois sur un poste sont un double clic : la seconde est ignorée (runtime/turn.mjs, `askAnyway`).
+ * §448: the key of a "do it anyway" question — its title (item — actor) and its reasons. Two requests with the same key open at
+ * once on a workstation are a double click: the second is ignored (runtime/turn.mjs, `askAnyway`).
  * @param {string} title
  * @param {string[]} lines
  */
@@ -69,16 +69,16 @@ export function askKey(title, lines=[]) {
 }
 
 /**
- * Issue #178 : qui voit qu'une règle a été passée outre (le texte flottant « Forcé », le bandeau de la carte). Réglage de monde
- * `overrideVisibility` : `all` (toute la table, le défaut, comme avant), `hideGM` (celles du MJ restent discrètes, celles des joueurs
- * publiques), `gmOnly` (aucune n'est montrée aux joueurs). Le MJ voit toujours tout, et celui qui a forcé voit sa propre marque.
+ * Issue #178: who sees that a rule was overridden (the "Forced" floating text, the card banner). World setting
+ * `overrideVisibility`: `all` (the whole table, the default, as before), `hideGM` (the GM's stay discreet, the players'
+ * are public), `gmOnly` (none is shown to players). The GM always sees everything, and whoever forced sees their own mark.
  */
 export const OVERRIDE_VISIBILITY_MODES = Object.freeze(["all", "hideGM", "gmOnly"]);
 
 /**
- * Issue #178 : la marque d'une dérogation est-elle publique (vue de toute la table) ?
- * @param {string} mode  `overrideVisibility` ; une valeur inconnue vaut `all`.
- * @param {{byGM?: boolean}} [who]  `byGM` : c'est un MJ qui a forcé.
+ * Issue #178: is the mark of an override public (seen by the whole table)?
+ * @param {string} mode  `overrideVisibility`; an unknown value counts as `all`.
+ * @param {{byGM?: boolean}} [who]  `byGM`: a GM forced it.
  */
 export function overridePublic(mode, { byGM=false }={}) {
   if ( mode === "gmOnly" ) return false;
@@ -87,7 +87,7 @@ export function overridePublic(mode, { byGM=false }={}) {
 }
 
 /**
- * Issue #178 : ce client montre-t-il la marque ? Un MJ et celui qui a forcé, toujours ; les autres selon `overridePublic`.
+ * Issue #178: does this client show the mark? A GM and whoever forced, always; the others according to `overridePublic`.
  * @param {string} mode
  * @param {{byGM?: boolean, viewerIsGM?: boolean, viewerIsAuthor?: boolean}} [who]
  */

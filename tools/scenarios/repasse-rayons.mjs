@@ -1,9 +1,9 @@
 /**
- * §334, rayons oculaires du Tyrannœil (identifiant propre `mm-beholder-eye-rays`). Arène des sorts : le Lanceur (PNJ), la Cible
- * (999 PV), le Mort-vivant.
- *  - Rayon pétrifiant : un premier échec rend Entravé, pas Pétrifié ;
- *  - Rayon ralentissant : un échec retire les Réactions et ne laisse qu'une action ou une action Bonus ;
- *  - Rayon de sommeil : le Mort-vivant n'est pas affecté.
+ * §334, Beholder's eye rays (own identifier `mm-beholder-eye-rays`). Spell arena: the Caster (NPC), the Target
+ * (999 HP), the Undead.
+ *  - Petrification Ray: a first failure makes Restrained, not Petrified;
+ *  - Slowing Ray: a failure removes Reactions and leaves only an action or a Bonus Action;
+ *  - Sleep Ray: the Undead is not affected.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

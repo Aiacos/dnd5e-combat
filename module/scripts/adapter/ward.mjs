@@ -1,16 +1,16 @@
 /**
- * §73 : Protection contre la mort (`death-ward`, clé de contenu `wardsAtZero`) — « la première fois que la cible devrait tomber à 0 point
- * de vie avant la fin du sort, elle tombe à 1 point de vie à la place, et le sort prend fin ». À `dnd5e.preApplyDamage`, avant tout
- * le reste de la mort (adapter/death.mjs, `planDamageAtZero`) : des dégâts qui la feraient tomber à 0 — même assez pour la tuer sur le
- * coup, puisqu'elle n'y tombe pas — la laissent à 1 PV, et l'effet du sort est retiré. « Un effet qui la tuerait sur le coup sans
- * infliger de dégâts » est annulé : au MJ.
+ * §73: Death Ward (`death-ward`, content key `wardsAtZero`) — "the first time the target would drop to 0 Hit Points
+ * before the spell ends, it drops to 1 Hit Point instead, and the spell ends". At `dnd5e.preApplyDamage`, before all
+ * the rest of death (adapter/death.mjs, `planDamageAtZero`): damage that would drop it to 0 — even enough to kill it
+ * outright, since it does not drop to it — leaves it at 1 HP, and the spell's effect is removed. "An effect that would kill it
+ * outright without dealing damage" is cancelled: up to the GM.
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { contentOf } from "./content.mjs";
 import { originItemOf } from "./facts.mjs";
 
-/** L'effet actif d'un sort `wardsAtZero` que porte l'acteur, ou null. */
+/** The Active Effect of a `wardsAtZero` spell that the actor bears, or null. */
 export function deathWardOf(actor) {
   for ( const effect of actor?.appliedEffects ?? actor?.effects ?? [] ) {
     if ( effect.disabled || effect.isSuppressed ) continue;
@@ -20,8 +20,8 @@ export function deathWardOf(actor) {
 }
 
 /**
- * Des dégâts qui feraient tomber la créature à 0 PV : elle reste à 1 PV (dans la même mise à jour), et l'effet tombe. Rend l'effet
- * retiré, ou null. `through` : les dégâts qui passent les PV temporaires.
+ * Damage that would drop the creature to 0 HP: it stays at 1 HP (in the same update), and the effect ends. Returns the
+ * removed effect, or null. `through`: the damage that gets past Temporary Hit Points.
  */
 export function wardAtZero(actor, through, updates) {
   const hp = actor?.system?.attributes?.hp;

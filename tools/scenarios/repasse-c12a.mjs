@@ -1,6 +1,6 @@
 /**
- * §316, sous-lot C12-a de la repasse terme par terme : réactions et fenêtres. Arène des sorts (Lanceur, Cible).
- *  - Rage persistante : les Rages dépensées reviennent au jet d'initiative, une fois (l'utilisation de l'aptitude) ;
+ * §316, sub-batch C12-a of the term-by-term review: reactions and windows. Spells Arena (Caster, Target).
+ *  - Persistent Rage: the spent Rages return at the Initiative roll, once (the use of the feature);
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

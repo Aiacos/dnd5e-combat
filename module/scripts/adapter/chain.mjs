@@ -1,28 +1,28 @@
 /**
- * §286 : Chaîne d'éclairs — « trois éclairs jaillissent alors de cette cible vers un maximum de trois autres cibles […] distantes de
- * 9 m ou moins de la première » (clé `chain` : `{ radius, units }`). Le nombre de cibles est celui de la donnée (`affects.count`,
- * « @item.level - 2 » : la visée de groupe le tient déjà, §16.33) ; la première cible est la première désignée.
+ * §286: Chain Lightning — "three bolts then leap from that target toward a maximum of three other targets […] 9 m or less
+ * from the first" (key `chain`: `{ radius, units }`). The number of targets is the data's (`affects.count`,
+ * "@item.level - 2": group targeting already holds it, §16.33); the first target is the first designated.
  */
 
 import { contentOf } from "./content.mjs";
 import { distanceBetween } from "./turn.mjs";
 import { lengthIn } from "./units.mjs";
 
-/** La règle de chaîne de l'item, ou null. */
+/** The item's chain rule, or null. */
 export function chainOf(item) {
   return item ? (contentOf(item).entry?.chain ?? null) : null;
 }
 
-/** La distance limite autour de la première cible, dans l'unité de sa scène. */
+/** The limit distance around the first target, in its scene's unit. */
 export function chainLimit(rule, first) {
   return lengthIn(rule.radius, rule.units, first.parent.grid.units);
 }
 
 /**
- * Les cibles secondaires trop loin de la première, dans l'ordre de la désignation.
+ * The secondary targets too far from the first, in designation order.
  * @param {Activity} activity
- * @param {TokenDocument[]} targets  La première d'abord.
- * @returns {TokenDocument[]}  [] sans règle, ou avec moins de deux cibles.
+ * @param {TokenDocument[]} targets  The first one first.
+ * @returns {TokenDocument[]}  [] without a rule, or with fewer than two targets.
  */
 export function chainOutliers(activity, targets) {
   const rule = chainOf(activity?.item);

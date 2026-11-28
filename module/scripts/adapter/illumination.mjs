@@ -1,19 +1,20 @@
 /**
- * Niveau de lumière lu sur le canevas (SPEC §16.48) : les sources du cœur passées au calcul pur de core/illumination.mjs.
+ * Light level read from the canvas (SPEC §16.48): the core's sources passed to the pure computation of core/illumination.mjs.
  *
- * - Lumière globale : `canvas.environment.globalLightSource`, active, et seulement si l'obscurité au point est dans sa plage
- *   `data.darkness` (même test que `EffectsCanvasGroup#testInsideLight`, client/canvas/groups/effects.mjs:331-337 ; l'obscurité
- *   d'une région « Ajuster l'obscurité » comprise, lue comme `getDarknessLevel`, effects.mjs:383, mais sans dépendre du rendu : `darknessLevelAt`). Vive si `data.bright > 0` : une
- *   lumière globale « faible » a `bright: 0, dim: maxR` (client/canvas/groups/environment.mjs:320-331). Crépuscule (§16.52) :
- *   une lumière globale vive compte comme faible au-delà du seuil d'obscurité `twilightDarkness` du monde.
- * - Lumières : `canvas.effects.lightSources`, actives (ni éteintes ni supprimées par des ténèbres dont elles partent,
- *   sources/base-effect-source.mjs:160), hors aperçu ; `testPoint` pour la zone éclairée (polygone, murs, surfaces et hauteur
- *   compris, base-effect-source.mjs:365 ; une lumière magique, `priority > 0`, n'a pas de borne verticale,
- *   point-light-source.mjs:94-103). Lumière vive : à `data.bright` px du centre, en cylindre comme le test du cœur.
- * - Ténèbres : `canvas.effects.darknessSources`, actives, hors aperçu, `testPoint` (point-darkness-source.mjs:114) — même
- *   filtre que `testInsideDarkness` (effects.mjs:367-372).
+ * - Global light: `canvas.environment.globalLightSource`, active, and only if the darkness at the point is within its range
+ *   `data.darkness` (same test as `EffectsCanvasGroup#testInsideLight`, client/canvas/groups/effects.mjs:331-337; the darkness
+ *   of an "Adjust Darkness" region included, read like `getDarknessLevel`, effects.mjs:383, but without depending on
+ *   rendering: `darknessLevelAt`). Bright if `data.bright > 0`: a "dim" global light has `bright: 0, dim: maxR`
+ *   (client/canvas/groups/environment.mjs:320-331). Twilight (§16.52): a bright global light counts as dim beyond the
+ *   world's darkness threshold `twilightDarkness`.
+ * - Lights: `canvas.effects.lightSources`, active (neither turned off nor suppressed by the Darkness they start in,
+ *   sources/base-effect-source.mjs:160), not previews; `testPoint` for the lit area (polygon, walls, surfaces and height
+ *   included, base-effect-source.mjs:365; a magical light, `priority > 0`, has no vertical bound,
+ *   point-light-source.mjs:94-103). Bright light: within `data.bright` px of the center, as a cylinder like the core's test.
+ * - Darkness: `canvas.effects.darknessSources`, active, not previews, `testPoint` (point-darkness-source.mjs:114) — same
+ *   filter as `testInsideDarkness` (effects.mjs:367-372).
  *
- * Les points sont des positions VALIDÉES (`_source`), jamais la position animée.
+ * The points are VALIDATED positions (`_source`), never the animated position.
  */
 
 import { tokenCenter } from "./turn.mjs";
@@ -23,9 +24,9 @@ import { devilsSightRange, inOwnDarkness } from "./vision.mjs";
 import { lengthIn } from "./units.mjs";
 
 /**
- * Le niveau de lumière en un point de la scène affichée.
+ * The light level at a point of the displayed scene.
  * @param {{x: number, y: number, elevation?: number}} point
- * @returns {{level: number, darkened: boolean}|null}  null : canevas absent.
+ * @returns {{level: number, darkened: boolean}|null}  null: no canvas.
  */
 export function lightAt(point) {
   if ( !canvas?.ready ) return null;
@@ -33,7 +34,7 @@ export function lightAt(point) {
   const effects = canvas.effects;
   const globalSource = canvas.environment.globalLightSource;
 
-  // Lumière globale, crépuscule compris (§16.52, réglage `twilightDarkness` : au-delà de ce seuil d'obscurité, vive → faible).
+  // Global light, twilight included (§16.52, `twilightDarkness` setting: beyond this darkness threshold, bright → dim).
   const global = globalSource ? globalLightLevel(
     { active: globalSource.active, bright: globalSource.data.bright, darkness: globalSource.data.darkness },
     darknessLevelAt(p), twilightThreshold()) : null;
@@ -55,11 +56,11 @@ export function lightAt(point) {
 }
 
 /**
- * L'obscurité en un point, régions « Ajuster l'obscurité » comprises (§221). Même parcours que `getDarknessLevel` du cœur
- * (client/canvas/groups/effects.mjs:383-398), mais la valeur se lit sur le getter `darknessLevel` du shader (mode, modificateur,
- * obscurité de la scène : client/canvas/rendering/shaders/region/adjust-darkness-level.mjs) et non sur son uniform, qui n'est
- * rempli qu'au rendu (`_preRender`) : une région qui n'a pas encore été dessinée — fenêtre en arrière-plan, région hors de
- * l'écran — y vaut 0, et le cœur la lit ainsi.
+ * The darkness at a point, "Adjust Darkness" regions included (§221). Same walk as the core's `getDarknessLevel`
+ * (client/canvas/groups/effects.mjs:383-398), but the value is read on the shader's `darknessLevel` getter (mode, modifier,
+ * scene darkness: client/canvas/rendering/shaders/region/adjust-darkness-level.mjs) and not on its uniform, which is only
+ * filled at render time (`_preRender`): a region that has not been drawn yet — window in the background, region off
+ * screen — is worth 0 there, and the core reads it that way.
  */
 function darknessLevelAt(p) {
   const meshes = canvas.effects.illumination?.darknessLevelMeshes?.children ?? [];
@@ -73,9 +74,9 @@ function darknessLevelAt(p) {
 }
 
 /**
- * Le niveau que donne la lumière globale à l'obscurité de la scène affichée (pas en un point : sans les régions « Ajuster
- * l'obscurité »), crépuscule compris — pour un affichage de scène (§40.2).
- * @returns {number|null}  `LIGHT.BRIGHT`, `LIGHT.DIM`, ou null (pas de canevas, lumière globale inactive ou hors de sa plage).
+ * The level that the global light gives to the darkness of the displayed scene (not at a point: without the "Adjust
+ * Darkness" regions), twilight included — for a scene display (§40.2).
+ * @returns {number|null}  `LIGHT.BRIGHT`, `LIGHT.DIM`, or null (no canvas, global light inactive or out of its range).
  */
 export function globalLight() {
   const source = canvas?.ready ? canvas.environment.globalLightSource : null;
@@ -84,7 +85,7 @@ export function globalLight() {
     canvas.environment.darknessLevel, twilightThreshold());
 }
 
-/** Le seuil de crépuscule du monde (1 : jamais), réglage de runtime/illumination.mjs. */
+/** The world's twilight threshold (1: never), setting of runtime/illumination.mjs. */
 function twilightThreshold() {
   try {
     const value = Number(game.settings.get(MODULE_ID, "twilightDarkness"));
@@ -92,7 +93,7 @@ function twilightThreshold() {
   } catch { return 1; }
 }
 
-/** Dans le rayon de lumière vive de la source (px), en cylindre ; une lumière magique n'a pas de borne verticale. */
+/** Within the source's bright light radius (px), as a cylinder; a magical light has no vertical bound. */
 function inBright(source, p) {
   const r = source.data.bright ?? 0;
   if ( !(r > 0) ) return false;
@@ -103,12 +104,12 @@ function inBright(source, p) {
   return Math.hypot(p.x - source.data.x, p.y - source.data.y) <= r;
 }
 
-/** Le centre d'un token à sa position validée, à hauteur de ses pieds (`tokenCenter`). */
+/** A token's center at its validated position, at the height of its feet (`tokenCenter`). */
 export const tokenPoint = doc => tokenCenter(doc);
 
 /**
- * §334 : ce token est-il au soleil ? La lumière globale de la scène (le jour) l'éclaire vivement là où il se tient — régions « Ajuster
- * l'obscurité » et crépuscule compris ; une torche ou un sort de lumière n'est pas le soleil (Sensibilité au soleil, faiblesses du vampire).
+ * §334: is this token in sunlight? The scene's global light (daylight) brightly lights where it stands — "Adjust
+ * Darkness" regions and twilight included; a torch or a light spell is not the sun (Sunlight Sensitivity, vampire weaknesses).
  */
 export function inSunlight(doc) {
   const globalSource = canvas?.ready ? canvas.environment.globalLightSource : null;
@@ -118,12 +119,12 @@ export function inSunlight(doc) {
     darknessLevelAt({ x: p.x, y: p.y, elevation: p.elevation ?? 0 }), twilightThreshold()) === 2;
 }
 
-/** Le niveau de lumière là où se tient ce token. */
+/** The light level where this token stands. */
 export function lightOnToken(doc) {
   return doc?.parent ? lightAt(tokenPoint(doc)) : null;
 }
 
-/** Une portée de sens de la fiche (`senses.ranges`, dnd5e data/shared/senses-field.mjs:15), unité de la grille, ou 0. */
+/** A sense range from the sheet (`senses.ranges`, dnd5e data/shared/senses-field.mjs:15), grid unit, or 0. */
 function senseRange(actor, key, grid) {
   const senses = actor?.system?.attributes?.senses;
   const value = Number(senses?.ranges?.[key]);
@@ -132,8 +133,8 @@ function senseRange(actor, key, grid) {
 }
 
 /**
- * Les sens de l'observateur qui portent jusqu'au point : vision dans le noir, vision véritable, Vision du diable. Distance 3D
- * de la grille, depuis le centre de l'observateur (comme `canSeePoint`, adapter/vision.mjs).
+ * The observer's senses that reach the point: Darkvision, Truesight, Devil's Sight. 3D grid distance
+ * from the observer's center (like `canSeePoint`, adapter/vision.mjs).
  */
 export function sensesToward(observer, point) {
   const grid = observer.parent.grid;
@@ -143,18 +144,18 @@ export function sensesToward(observer, point) {
   return {
     darkvision: reaches(senseRange(observer.actor, "darkvision", grid)),
     truesight: reaches(senseRange(observer.actor, "truesight", grid)),
-    // §447 : dans les Ténèbres de son propre sort (`seesThroughOwnDarkness`), il voit normalement, comme la Vision du diable.
+    // §447: in the Darkness of their own spell (`seesThroughOwnDarkness`), they see normally, like Devil's Sight.
     devilsSight: reaches(devilsSightRange(observer)) || inOwnDarkness(observer, point)
   };
 }
 
 /**
- * Ce que l'observateur perçoit en ce point : niveau réel, niveau perçu, et ce qu'il impose (Désavantage en Perception en
- * zone légèrement obscurcie, Aveuglé pour y voir en zone fortement obscurcie).
+ * What the observer perceives at this point: actual level, perceived level, and what it imposes (Disadvantage on Perception in
+ * a lightly obscured area, Blinded to see in a heavily obscured area).
  * @param {TokenDocument} observer
  * @param {{x: number, y: number, elevation?: number}} point
  * @returns {{level: number, darkened: boolean, perceived: number, obscured: string, perceptionDisadvantage: boolean,
- *            blinded: boolean}|null}  null : canevas absent.
+ *            blinded: boolean}|null}  null: no canvas.
  */
 export function perceivedAt(observer, point) {
   const light = lightAt(point);
@@ -163,7 +164,7 @@ export function perceivedAt(observer, point) {
   return { ...light, perceived, ...obscurement(perceived) };
 }
 
-/** Ce que l'observateur perçoit là où se tient la cible. */
+/** What the observer perceives where the target stands. */
 export function perceivedOnToken(observer, target) {
   return target?.parent ? perceivedAt(observer, tokenPoint(target)) : null;
 }

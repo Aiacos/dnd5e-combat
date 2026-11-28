@@ -1,17 +1,17 @@
 /**
- * §218 : chute d'un niveau vers un niveau inférieur, hors combat (la chute automatique n'agit qu'en combat par défaut), sur Restored
- * Keep : le toit de chaume de l'écurie est à 20 ft (Second Floor), la cour herbeuse à l'est est à 0 (First Floor).
- *  1. Saut : du toit, un saut en longueur vers la cour — le Guerrier retombe au-dessus du vide et tombe aussitôt jusqu'au sol de la
- *     cour, au rez-de-chaussée, avec les dégâts de chute de dnd5e (2d6 pour 20 ft) ; il était laissé « En chute » en l'air.
- *  2. Déplacer un token « En chute » : posé en l'air au-dessus de la cour, il tombe d'abord (dégâts compris) au lieu d'être recalé au
- *     sol en silence.
- * Remet position, niveau, PV, états.
+ * §218: fall from one level to a lower level, outside combat (automatic falling only acts in combat by default), on Restored
+ * Keep: the stable's thatch roof is at 20 ft (Second Floor), the grassy yard to the east is at 0 (First Floor).
+ *  1. Jump: from the roof, a long jump toward the yard — the Fighter lands above the void and immediately falls to the
+ *     ground of the yard, on the ground floor, with dnd5e's fall damage (2d6 for 20 ft); it was left "Falling" in the air.
+ *  2. Moving a "Falling" token: placed in the air above the yard, it first falls (damage included) instead of being snapped to the
+ *     ground silently.
+ * Resets position, level, HP, conditions.
  */
 const MODULE_ID = "dnd5e-combat";
 const FIRST = "rcWKCTvbgKJhN2DV";
 const SECOND = "DlCYcaprf0tbAual";
-const ROOF = { x: 4620, y: 4760 };        // le toit de chaume, au bord est
-const YARD = { i: 34, j: 34 };            // la cour, à l'est
+const ROOF = { x: 4620, y: 4760 };        // the thatch roof, at the east edge
+const YARD = { i: 34, j: 34 };            // the yard, to the east
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export default {
@@ -36,7 +36,7 @@ export default {
       await ctx.call("move-token", { tokenId: hero.id, x: home.x, y: home.y, elevation: home.elevation ?? 0, levelId: home.level }).catch(() => {});
     });
     const tokenNow = async () => (await ctx.call("list-scene-objects", { type: "Token" })).objects.Token.find(t => t.id === hero.id);
-    /** Attend l'arrivée au sol (la chute de dnd5e attend la fin de l'animation : jusqu'à 5 s, fenêtre en arrière-plan). */
+    /** Waits for the arrival on the ground (dnd5e's fall waits for the end of the animation: up to 5 s, background window). */
     const landed = async () => {
       for ( let n = 0; n < 30; n++ ) {
         const t = await tokenNow();
@@ -47,15 +47,15 @@ export default {
     const fell = async (label, since) => {
       await landed();
       const pos = await tokenNow();
-      // Les dégâts suivent la fin des dés 3D (waitForDice, 8 s au plus) : les attendre, sinon ils tombent après la remise à zéro
-      // de l'étape suivante (vu le 2026-10-28 : 13 → 13, puis 13 → 0).
+      // The damage follows the end of the 3D dice (waitForDice, 8 s at most): wait for them, otherwise they land after the reset
+      // of the next step (seen on 2026-10-28: 13 → 13, then 13 → 0).
       let hp = await ctx.hp(hero);
       for ( let i = 0; (i < 24) && (hp >= hp0); i++ ) { await pause(500); hp = await ctx.hp(hero); }
       ctx.expect((pos.elevation ?? 0) === 0 && (pos.level === FIRST), `${label} : au sol de la cour (${pos.elevation} ft, niveau ${pos.level})`);
       ctx.expect((hp0 - hp >= 2) && (hp0 - hp <= 12), `${label} : 2d6 de chute appliqués (${hp0} → ${hp})`);
     };
 
-    // 1. Le saut du toit vers la cour.
+    // 1. The jump from the roof to the yard.
     await ctx.call("move-token", { tokenId: hero.id, ...ROOF, elevation: 20, levelId: SECOND });
     await pause(1500);
     let since = await ctx.lastMessageId();
@@ -63,7 +63,7 @@ export default {
     ctx.expect(j.result?.done === true, `saut vers la cour (${JSON.stringify(j.result)}${j.warnings?.length ? ` — ${j.warnings.join(" ; ")}` : ""})`);
     await fell("après le saut", since);
 
-    // 2. Bouger un token « En chute » au-dessus de la cour.
+    // 2. Moving a "Falling" token above the yard.
     await reset();
     await ctx.call("move-token", { tokenId: hero.id, x: 4760, y: 4760, elevation: 20, levelId: SECOND });
     await pause(1500);
@@ -73,8 +73,8 @@ export default {
     await ctx.engine("move", { tokenId: hero.id, cell: { i: 34, j: 35 } }).catch(() => null);
     await fell("en bougeant un token en chute", since);
 
-    // 3. §219 : en combat, sans élan, Force 8 (un saut en longueur de 4 ft) — la case voisine est plus basse : un pas dans le vide, sans
-    //    limite de saut, une case de déplacement, puis la chute (le cas de l'Occultiste de l'utilisateur, refusé : « 4 ft au plus »).
+    // 3. §219: in combat, no run-up, Strength 8 (a 4 ft long jump) — the neighboring cell is lower: a step into the
+    //    void, with no jump limit, one cell of movement, then the fall (the user's Warlock case, refused: "4 ft at most").
     await reset();
     const str0 = (await ctx.call("get-actor", { actorId: hero.actorId })).system?.abilities?.str?.value ?? null;
     ctx.restore(() => ctx.call("update-actor", { actorId: hero.actorId, actorData: { "system.abilities.str.value": str0 } }).catch(() => {}));

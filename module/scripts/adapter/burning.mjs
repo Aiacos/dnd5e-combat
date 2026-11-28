@@ -1,14 +1,14 @@
 /**
- * §212 : En feu (danger « Burning » du glossaire 2024) — qui brûle. dnd5e a l'état `burning` (config.mjs, `statusEffects.burning`,
- * pseudo-état du HUD du token, sans mécanique) ; s'y ajoutent les effets qu'un item déclare « En feu » (`burns` : le feu grégeois, dont
- * l'effet n'a que son nom).
+ * §212: Burning ("Burning" hazard of the 2024 glossary) — who is on fire. dnd5e has the `burning` condition (config.mjs,
+ * `statusEffects.burning`, token HUD pseudo-condition with no mechanics); to it are added the effects an item declares "Burning"
+ * (`burns`: Alchemist's Fire, whose effect has only its name).
  */
 
 import { contentOf } from "./content.mjs";
 import { originItemOf, comesFromItemEffect } from "./facts.mjs";
 
 export const BURNING = "burning";
-/** « 1d4 dégâts de feu au début de chacun de ses tours ». */
+/** "1d4 fire damage at the start of each of its turns". */
 export const BURN_DAMAGE = Object.freeze({ formula: "1d4", type: "fire" });
 
 /** Cet effet met-il en feu son porteur ? */
@@ -19,11 +19,11 @@ export function isBurningEffect(effect) {
   return ids.some(id => comesFromItemEffect(effect, id));
 }
 
-/** Les effets qui mettent cet acteur en feu. */
+/** The effects that set this actor on fire. */
 export const burningEffectsOf = actor => (actor?.effects ?? []).filter(isBurningEffect);
 
 /** L'acteur est-il en feu ? */
 export const isBurning = actor => burningEffectsOf(actor).length > 0;
 
-/** Immunisé contre le feu (il ne prend pas feu par propagation) ? */
+/** Immune to fire (it does not catch fire by spreading)? */
 export const fireImmune = actor => !!actor?.system?.traits?.di?.value?.has?.("fire");

@@ -1,10 +1,10 @@
 /**
- * « Ne peut pas bénéficier de l'état Invisible » (SPEC §16.36, clé `revealsInvisible` : Poussière d'étoile, Lueurs
- * féeriques), jusque dans l'affichage. Le cœur V14 efface un token Invisible pour ceux qui ne le détectent pas, dès que
- * l'état est sur l'acteur ; le moteur, lui, ne patche pas les modes de détection. Tant que la créature est révélée, ses
- * effets qui donnent Invisible (sort d'Invisibilité, se cacher, état coché) sont donc **suspendus** — désactivés, marqués
- * `flags["dnd5e-combat"].veiled` — et réactivés quand la dernière révélation tombe. Le sort d'Invisibilité et sa
- * concentration continuent : c'est son bénéfice qui est suspendu, comme le dit la règle.
+ * "Cannot benefit from the Invisible condition" (SPEC §16.36, key `revealsInvisible`: Faerie Fire, Stardust),
+ * down to the display. The V14 core hides an Invisible token from those who do not detect it, as soon as the
+ * condition is on the actor; the engine does not patch the detection modes. As long as the creature is revealed, its
+ * effects that give Invisible (Invisibility spell, hiding, ticked condition) are therefore **suspended** — disabled, marked
+ * `flags["dnd5e-combat"].veiled` — and re-enabled when the last reveal falls. The Invisibility spell and its
+ * concentration go on: it is its benefit that is suspended, as the rule says.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,18 +14,18 @@ import { originItemOf } from "./facts.mjs";
 const INVISIBLE = "invisible";
 const statusesIn = effect => effect?.statuses instanceof Set ? effect.statuses : new Set(effect?.statuses ?? []);
 
-/** Un effet qui donne l'état Invisible ? */
+/** An effect that gives the Invisible condition? */
 export function grantsInvisible(effect) {
   return statusesIn(effect).has(INVISIBLE);
 }
 
-/** Un effet qui révèle son porteur (venu d'un item `revealsInvisible`) ? */
+/** An effect that reveals its bearer (from a `revealsInvisible` item)? */
 export function isRevealEffect(effect) {
   const item = originItemOf(effect);
   return !!item && (contentOf(item).entry?.revealsInvisible === true);
 }
 
-/** L'acteur porte-t-il une révélation active (hors `except`) ? */
+/** Does the actor carry an active reveal (apart from `except`)? */
 export function isRevealed(actor, except=null) {
   for ( const effect of actor?.appliedEffects ?? actor?.effects ?? [] ) {
     if ( (effect === except) || effect.disabled || effect.isSuppressed ) continue;
@@ -35,8 +35,8 @@ export function isRevealed(actor, except=null) {
 }
 
 /**
- * À la création d'un effet (`preCreateActiveEffect`, sur le client qui l'écrit) : un effet qui rend Invisible une créature
- * révélée naît suspendu. Rend true s'il l'a été.
+ * On creating an effect (`preCreateActiveEffect`, on the client that writes it): an effect that makes a revealed creature Invisible
+ * is born suspended. Returns true if it was.
  */
 export function veilOnCreate(effect) {
   const actor = effect.parent;
@@ -45,7 +45,7 @@ export function veilOnCreate(effect) {
   return true;
 }
 
-/** Une révélation arrive : les effets d'Invisibilité déjà là sont suspendus. MJ actif. Rend leur nombre. */
+/** A reveal arrives: the Invisibility effects already there are suspended. Active GM. Returns their number. */
 export async function veilExisting(actor) {
   const updates = (actor?.effects ?? []).filter(e => !e.disabled && grantsInvisible(e) && !isRevealEffect(e))
     .map(e => ({ _id: e.id, disabled: true, [`flags.${MODULE_ID}.veiled`]: true }));
@@ -53,7 +53,7 @@ export async function veilExisting(actor) {
   return updates.length;
 }
 
-/** La dernière révélation tombe (`gone` : l'effet qui part) : les effets suspendus reprennent. MJ actif. Rend leur nombre. */
+/** The last reveal falls (`gone`: the departing effect): the suspended effects resume. Active GM. Returns their number. */
 export async function unveil(actor, gone=null) {
   if ( !actor || isRevealed(actor, gone) ) return 0;
   const updates = (actor.effects ?? []).filter(e => e.getFlag(MODULE_ID, "veiled"))

@@ -1,14 +1,14 @@
 /**
- * Le Rôdeur du Manuel des joueurs 2024 (SPEC §26), monde `dnd-6`. Le Guerrier reçoit, prêtés depuis le compendium du Manuel des
- * joueurs, la classe de Rôdeur au niveau 5, la sous-classe Traqueur des ténèbres, Embuscade effrayante, Proie du chasseur et la
- * Marque du chasseur ; le Bandit reçoit 300 PV. Vérifie :
- *  - Marque du chasseur posée sur le Bandit : +1d6 force à chaque coup ;
- *  - Frappe effroyable (§223, #12) : proposée avant les dégâts ; refusée, rien ; acceptée, +2d6 psychiques et une utilisation dépensée,
- *    plus proposée au coup suivant du même tour ;
- *  - Tueur de colosses : +1d8 une fois par tour, seulement contre une cible blessée (pas au premier coup, le Bandit est indemne) ;
- *  - Tueur implacable (prêté ensuite) : la Marque passe à 1d10, sans le 1d6 ;
- *  - Chasseur précis (prêté ensuite) : l'attaque contre la créature marquée a l'Avantage.
- * Remet positions, PV, états ; retire les items prêtés.
+ * The Ranger from the 2024 Player's Handbook (SPEC §26), world `dnd-6`. The Fighter receives, lent from the Player's Handbook
+ * compendium, the Ranger class at level 5, the Gloom Stalker subclass, Dread Ambusher, Hunter's Prey and
+ * Hunter's Mark; the Bandit receives 300 HP. Checks:
+ *  - Hunter's Mark placed on the Bandit: +1d6 force on every hit;
+ *  - Dreadful Strike (§223, #12): offered before damage; refused, nothing; accepted, +2d6 psychic and one use spent,
+ *    no longer offered on the next hit of the same turn;
+ *  - Colossus Slayer: +1d8 once per turn, only against a wounded target (not on the first hit, the Bandit is unhurt);
+ *  - Relentless Hunter (lent afterwards): the Mark goes to 1d10, without the 1d6;
+ *  - Precise Hunter (lent afterwards): the attack against the marked creature has Advantage.
+ * Puts back positions, HP, conditions; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "dnd-players-handbook.classes";
@@ -49,7 +49,7 @@ export default {
       const { data } = await ctx.call("get-compendium-entry", { uuid });
       const { _id, folder, ownership, _stats, ...itemData } = data;
       setPath(itemData, "flags.dnd5e.sourceId", uuid);
-      // Issue #145 : un sort non préparé ne déclare plus rien (la Marque perdait son 1d6 de force) — le sort prêté est préparé.
+      // Issue #145: an unprepared spell no longer declares anything (the Mark lost its 1d6 force) — the lent spell is prepared.
       if ( itemData.type === "spell" ) setPath(itemData, "system.prepared", 1);
       const r = await ctx.call("upsert-actor-item", { actorId: hero.actorId, itemData, match: { path: "flags.dnd5e.sourceId", value: uuid } });
       ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: hero.actorId, itemId: r.id }).catch(() => {}));
@@ -96,8 +96,8 @@ export default {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: bandit.id });
       return (data.delta?.effects ?? []).some(e => /Marque du chasseur|Hunter's Mark/i.test(e.name));
     };
-    // §223 (#12) : la Frappe effroyable se propose dans la fenêtre « Au toucher » avant les dégâts ; `dread` y répond (true : cochée,
-    // false : « Rien de tout cela », null : aucune fenêtre attendue).
+    // §223 (#12): Dreadful Strike is offered in the "On Hit" window before damage; `dread` answers it (true: checked,
+    // false: "None of the above", null: no window expected).
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
     const hitDialog = async (ids, waitMs=8000) => {
       for ( const until = Date.now() + waitMs; Date.now() < until; ) {
@@ -110,15 +110,15 @@ export default {
     const dreadUses = async () => {
       const actor = await ctx.call("get-actor", { actorId: hero.actorId });
       const item = (actor.items ?? []).find(i => i.system?.identifier === "dread-ambusher");
-      // §438 : Manuel 3.0.0 — l'activité consomme les utilisations de l'item (les siennes sont vides).
+      // §438: Handbook 3.0.0 — the activity consumes the item's uses (its own are empty).
       const act = item?.system?.activities?.DMVf7FTyTC2HCAf9;
       const ownUses = (act?.uses?.max ?? "") !== "";
       return ownUses ? (act?.uses?.spent ?? null) : (item?.system?.uses?.spent ?? null);
     };
-    /** Attaque jusqu'à toucher (10 essais) ; rend le jet d'attaque, le jet de dégâts, ses dégâts bonus et la fenêtre vue. */
+    /** Attacks until it hits (10 tries); returns the attack roll, the damage roll, its bonus damage and the window seen. */
     const hit = async ({ fresh=false, dread=null }={}) => {
       for ( let n = 0; n < 10; n++ ) {
-        // Un raté de l'épée à deux mains blesse quand même (botte Écorchure) : le Bandit est remis indemne avant chaque essai.
+        // A miss with the greatsword still wounds (Graze mastery property): the Bandit is put back unhurt before each try.
         if ( fresh ) await tough();
         const since = await ctx.lastMessageId();
         const ids = await known();
@@ -152,13 +152,13 @@ export default {
       if ( !ctx.expect(await fight(), "combat : au tour du Guerrier") ) return;
       ctx.expect(await markBandit(), "le Bandit porte la Marque du chasseur");
       const spent0 = await dreadUses();
-      // Refusée au premier coup : ni dégâts psychiques ni utilisation dépensée.
+      // Refused on the first hit: no psychic damage and no use spent.
       const declined = await hit({ fresh: true, dread: false });
       if ( !ctx.expect(!!declined, "coup refusé (10 essais au plus)") ) return;
       ctx.expect(!!declined.dialog && !declined.bonuses.some(b => /dreadful-strike| psychic$/.test(b)) && declined.bonuses.includes("1d6 force"),
         `Frappe effroyable proposée (${declined.dialog?.title ?? "aucune fenêtre"}) et refusée : ${declined.bonuses.join(", ")}`);
       ctx.expect((await dreadUses()) === spent0, `refusée : aucune utilisation dépensée (${spent0})`);
-      // Acceptée au coup suivant du même tour : +2d6 psychiques, une utilisation dépensée.
+      // Accepted on the next hit of the same turn: +2d6 psychic, one use spent.
       const first = await hit({ fresh: true, dread: true });
       if ( !ctx.expect(!!first, "premier coup (10 essais au plus)") ) return;
       ctx.expect(first.bonuses.includes("1d6 force") && first.bonuses.some(b => /dreadful-strike psychic|^2d6 psychic$/.test(b)) && first.rolls.includes("2d6") && !first.bonuses.includes("1d8 slashing"),

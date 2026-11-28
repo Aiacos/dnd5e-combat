@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { readUsage } from "../module/scripts/adapter/usage.mjs";
 
-// §226 : les effets d'un item `zoneEffects` sont portés par sa zone (comportement `applyActiveEffect` du cœur) — l'utilisation ne les
-// pose jamais sur les cibles, quel que soit le type de l'activité. Exemples synthétiques, sans Foundry : `identifier` d'un sort livré
-// `zoneEffects` (Silence), un autre sans clé.
+// §226: the effects of a `zoneEffects` item are carried by its area (the core's `applyActiveEffect` behavior) — the use never
+// places them on the targets, whatever the activity's type. Synthetic examples, without Foundry: `identifier` of a shipped spell
+// `zoneEffects` (Silence), another one without the key.
 const saved = {};
 beforeAll(() => {
   for ( const key of ["game", "fromUuidSync"] ) saved[key] = globalThis[key];
@@ -24,12 +24,12 @@ const messageOf = activity => ({
   flags: {}, getFlag: () => undefined, getAssociatedActivity: () => activity, getAssociatedActor: () => null
 });
 
-describe("effets portés par la zone (§226)", () => {
-  it("utilitaire : un item `zoneEffects` n'a rien à résoudre, un autre pose ses effets", () => {
+describe("effects carried by the area (§226)", () => {
+  it("utility: a `zoneEffects` item has nothing to resolve, another places its effects", () => {
     expect(readUsage(messageOf(activityOf("silence", "utility")))).toBeNull();
     expect(readUsage(messageOf(activityOf("sans-zone", "utility")))?.plan.effects.map(e => e.id)).toEqual([effect._id]);
   });
-  it("sauvegarde, dégâts, soin : le plan reste, sans effets sur les cibles", () => {
+  it("save, damage, healing: the plan stays, without effects on the targets", () => {
     const save = { save: { ability: new Set(["con"]), dc: { value: 15 } }, damage: { parts: [{ number: 2, denomination: 10 }] } };
     const damage = { damage: { parts: [{ number: 2, denomination: 10 }] } };
     const heal = { healing: { formula: "1d8" } };

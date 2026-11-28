@@ -1,10 +1,10 @@
 /**
- * Ce qu'on sait d'un scénario sans le charger, lu dans son texte : son titre (`name`), sa scène (`scene`), son commentaire
- * d'en-tête et les § du journal qu'ils citent. Sert à la référence (`docs/reference/SCENARIOS.md`) et aux filtres du
- * lanceur (`node tools/scenario.mjs --list --grep zone`).
+ * What is known about a scenario without loading it, read from its text: its title (`name`), its scene (`scene`), its header
+ * comment and the § of the journal that they cite. Used by the reference (`docs/reference/SCENARIOS.md`) and by the runner's
+ * filters (`node tools/scenario.mjs --list --grep zone`).
  */
 
-/** `{ title, summary, doc, scene, refs }` d'après le texte d'un fichier de scénario. */
+/** `{ title, summary, doc, scene, refs }` from the text of a scenario file. */
 export function scenarioMeta(text) {
   const header = text.match(/^\s*\/\*\*?([\s\S]*?)\*\//);
   const doc = header ? header[1].split("\n").map(line => line.replace(/^\s*\*?\s?/, "")).join(" ").replace(/\s+/g, " ").trim() : "";
@@ -16,13 +16,13 @@ export function scenarioMeta(text) {
   return { title, summary, doc, scene, refs };
 }
 
-/** Minuscules sans accents, pour chercher « zone » dans « Zône » comme dans « zones ». */
+/** Lowercase without accents, to search "zone" in "Zône" as in "zones". */
 export const plain = text => String(text ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 /**
- * Un scénario passe-t-il les filtres ? `words` : il suffit d'un mot trouvé dans son nom de fichier, son titre ou son en-tête ;
- * `sections` : il cite l'un de ces § (« 239 » vaut pour §239 et §239.x) ; `scenes` : sa scène est l'une d'elles (« arene » : aucune
- * scène déclarée). Chaque famille de filtres donnée doit être satisfaite.
+ * Does a scenario pass the filters? `words`: one word found in its file name, its title or its header is enough;
+ * `sections`: it cites one of these § ("239" stands for §239 and §239.x); `scenes`: its scene is one of them ("arene": no
+ * scene declared). Each family of filters given must be satisfied.
  */
 export function matches(id, meta, { words=[], sections=[], scenes=[] }={}) {
   const haystack = plain(`${id} ${meta.title} ${meta.doc}`);

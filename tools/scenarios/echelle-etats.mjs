@@ -1,18 +1,18 @@
 /**
- * §495 (B15) — échelle d'états sur sauvegardes répétées, fin sur soin magique. Arène de test : Magicien (token lié), Clerc, Bandit (Humanoïde : le Zombi est immunisé à Empoisonné, la pose
- * l'épargnait — passe du banc du 2026-11-20).
- * Un trait d'essai est prêté au Magicien : une activité de sauvegarde (Con) qui pose « Essai : empoisonné » (Empoisonné), et un second
- * effet « Essai : ralenti » (palier 1). Sa règle est posée dans la surcouche du monde (`overrideContent`, jamais en drapeau d'item) :
- *   triggers: [{ on: "endOfTurn", via: "effect", fromEffect: <empoisonné>,
- *     do: [{ type: "resave", stages: [{ effect: <ralenti> }, { status: "paralyzed" }], critEnds: true }] }],
+ * §495 (B15) — condition ladder on repeated saves, ending on magical healing. Test arena: Wizard (linked token), Cleric, Bandit
+ * (Humanoid: the Zombie is immune to Poisoned, the application spared it — pass of the 2026-11-20 test bench).
+ * A test trait is lent to the Wizard: a save activity (Con) that applies "Essai : empoisonné" (Poisoned), and a second effect
+ * "Essai : ralenti" (stage 1). Its rule is placed in the world overlay (`overrideContent`, never as an item flag):
+ *   triggers: [{ on: "endOfTurn", via: "effect", fromEffect: <poisoned>,
+ *     do: [{ type: "resave", stages: [{ effect: <slowed> }, { status: "paralyzed" }], critEnds: true }] }],
  *   endsWhen: { healedByMagic: true }
- *  1. DD 30 : le Bandit rate la pose, puis chaque sauvegarde de fin de tour — palier 1 (« Essai : ralenti » posé, dépendant de
- *     l'effet), palier 2 (le ralenti retiré, Paralysé ajouté à l'effet), puis il reste au palier 2. Un 20 naturel fait tomber l'effet
- *     (`critEnds`) : vu dans le journal, le poison est reposé et la montée reprend.
- *  2. DD 1 : une réussite redescend au palier 1 (Paralysé retiré, ralenti reposé).
- *  3. Mot de guérison du Clerc sur le Bandit (soin magique) : l'effet tombe, le ralenti avec lui (dnd5e, `dependentOn`).
- * États et effets d'essai restés sur le Bandit (acteur synthétique, token non lié) retirés d'abord ; PV, trait, sort, surcouche, combat
- * remis. Toute fenêtre « le faire quand même » ouverte chez le MJ est acceptée (« go »), toute autre fermée.
+ *  1. DC 30: the Bandit fails the application, then each end-of-turn save — stage 1 ("Essai : ralenti" applied, dependent on
+ *     the effect), stage 2 (the slow removed, Paralyzed added to the effect), then it stays at stage 2. A natural 20 ends the
+ *     effect (`critEnds`): seen in the log, the poison is reapplied and the climb resumes.
+ *  2. DC 1: a success steps back down to stage 1 (Paralyzed removed, slow reapplied).
+ *  3. Healing Word from the Cleric on the Bandit (magical healing): the effect ends, the slow with it (dnd5e, `dependentOn`).
+ * Test conditions and effects left on the Bandit (synthetic actor, unlinked token) removed first; HP, trait, spell, overlay, combat
+ * restored. Any "do it anyway" window opened on the GM's side is accepted ("go"), any other closed.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e.spells24.Item.";
@@ -22,7 +22,7 @@ const IDENTIFIER = "das-essai-echelle";
 const ACTIVITY = "dasEssaiEchelle0";
 const BASE = "dasEssaiEchPoiso";
 const SLOW = "dasEssaiEchRalen";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name as a constant: the bench and the reference take the first "name:" indented by two spaces as the scenario title.
 const ITEM_NAME = "Essai : poison d'échelle";
 const item = dc => ({ name: ITEM_NAME, type: "feat", img: "icons/svg/poison.svg",
   system: { identifier: IDENTIFIER, type: { value: "monster" }, description: { value: "<p>Essai §495.</p>" },
@@ -44,7 +44,7 @@ export default {
     const mage = await ctx.token("Magicien");
     const clerc = await ctx.token("Clerc");
     const bandit = await ctx.token("Bandit");
-    // La cible doit pouvoir être Empoisonnée et Paralysée (immunités aux états de sa fiche de base).
+    // The target must be able to be Poisoned and Paralyzed (condition immunities of its base sheet).
     const { data: target } = await ctx.call("get-scene-object", { type: "Token", objectId: bandit.id });
     const immune = (await ctx.call("get-actor", { actorId: target.actorId }))?.system?.traits?.ci?.value ?? [];
     const blocked = ["poisoned", "paralyzed"].filter(s => immune.includes(s));
@@ -53,7 +53,7 @@ export default {
     if ( !tok.actorLink ) { ctx.log("Magicien non lié : non applicable (le trait prêté irait à l'acteur de base)"); return; }
     const actorId = tok.actorId;
 
-    // --- Fenêtres chez le MJ : aucune ne reste sans réponse --------------------------------------------------------------
+    // --- GM windows: none is left unanswered --------------------------------------------------------------
     const seen = new Set(((await ctx.call("list-dialogs", {})).windows ?? []).map(w => w.id));
     const sweep = async (ms=1500) => {
       const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...seen], waitMs: ms, details: true }).catch(() => null);
@@ -66,7 +66,7 @@ export default {
       }
     };
 
-    // --- Bandit propre (acteur synthétique) ------------------------------------------------------------------------------
+    // --- Clean Bandit (synthetic actor) ------------------------------------------------------------------------
     const clearBandit = async () => {
       await ctx.removeEffectsNamed(bandit, /^Essai :/);
       for ( const s of ["poisoned", "paralyzed", "incapacitated", "prone", "unconscious", "dead"] ) await ctx.removeStatusEffects(bandit, s).catch(() => {});
@@ -76,10 +76,10 @@ export default {
     const hp0 = await ctx.hp(bandit);
     ctx.restore(() => ctx.setHp(bandit, hp0));
 
-    // --- Trait prêté, puis règle --------------------------------------------------------------------------------------------
+    // --- Lent trait, then rule -----------------------------------------------------------------------------------
     const match = { path: "system.identifier", value: IDENTIFIER };
     await ctx.call("upsert-actor-item", { actorId, itemData: item(30), match });
-    // Le DD seul change ensuite (fusion sur l'item en place : son uuid, origine de l'effet porté, ne bouge pas).
+    // Only the DC changes next (merge on the item in place: its uuid, origin of the carried effect, does not move).
     const lend = dc => ctx.call("upsert-actor-item", { actorId, match,
       itemData: { system: { activities: { [ACTIVITY]: { save: { dc: { calculation: "", formula: String(dc) } } } } } } });
     const lent = await ctx.itemId(mage.id, IDENTIFIER);
@@ -114,7 +114,7 @@ export default {
     for ( let i = 0; (i < 3) && ((await current()) !== mage.id); i++ ) { await ctx.call("previous-turn", { combatId: ctx.ownCombat }); await pause(1500); }
     if ( !ctx.expect((await current()) === mage.id, "combat : au tour du Magicien") ) return;
 
-    /** Le poison posé (DD 30 : la sauvegarde rate toujours, sauf un 20 naturel qui ne compte pas ici). 5 essais. */
+    /** The poison applied (DC 30: the save always fails, except a natural 20 which does not count here). 5 tries. */
     const poison = async () => {
       for ( let i = 0; (i < 5) && !(await look()).base; i++ ) {
         const used = await ctx.use({ tokenId: mage.id, itemId: lent, activityType: "save", targetTokenIds: [bandit.id], consume: false });
@@ -124,7 +124,7 @@ export default {
       }
       return (await look()).base;
     };
-    /** Le Bandit joue son tour et le finit (au tour du Magicien avant et après) : rend la sauvegarde rejouée et le journal d'après. */
+    /** The Bandit plays and ends its turn (on the Wizard's turn before and after): returns the replayed save and the log after. */
     const banditTurn = async () => {
       const since = await ctx.lastMessageId();
       await ctx.nextTurn(); await pause(2000); await sweep(500);
@@ -143,7 +143,7 @@ export default {
       return { save, nat20 };
     };
 
-    // 1. Montée : DD 30.
+    // 1. Climb: DC 30.
     if ( !ctx.expect(!!(await poison()), "le Bandit rate la pose : « Essai : empoisonné » (Empoisonné)") ) return;
     let s = await look();
     ctx.expect(s.statuses.includes("poisoned") && (s.level === 0) && !s.slow, `palier 0 : Empoisonné, pas de ralenti (palier ${s.level})`);
@@ -195,7 +195,7 @@ export default {
       s = await look();
     }
 
-    // 3. Soin magique : Mot de guérison du Clerc.
+    // 3. Magical healing: Healing Word from the Cleric.
     if ( !ctx.expect(!!s.base, "l'effet est porté avant le soin") ) return;
     const max = (await ctx.engine("stats", { tokenId: bandit.id }).catch(() => null))?.hp?.max ?? hp0;
     await ctx.setHp(bandit, Math.max(1, max - 6));

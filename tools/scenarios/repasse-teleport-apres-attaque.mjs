@@ -1,11 +1,11 @@
 /**
- * §464 (tri « déplacement » de l'ATLAS) : téléportation de soi offerte une fois l'attaque jugée, touchée ou ratée (`teleport.after:
- * "attack"`, lue dans le texte). Arène des sorts : le Lanceur (PNJ) reçoit les Griffes de l'Esprit yugoloth (Manuel des joueurs,
- * invocation d'esprit fiélon : « aussitôt après que l'attaque touche ou rate, l'esprit peut se téléporter jusqu'à 9 m »).
- *  - l'utilisation de l'attaque ne téléporte pas (pas de visée à l'utilisation) ;
- *  - l'attaque jugée, la visée de la téléportation s'ouvre pour le Lanceur ;
- *  - un clic sur une case à 5 cases (25 ft) l'y téléporte.
- * C'est le geste du joueur : visée du moteur, clic (`teleportPick`), validation `dnd5e.teleport`.
+ * §464 ("movement" sort of the ATLAS): self-teleportation offered once the attack is judged, hit or miss (`teleport.after:
+ * "attack"`, read in the text). Spell arena: the Caster (NPC) receives the Yugoloth Spirit's Claws (Player's Handbook,
+ * Fiendish Spirit summon: "immediately after the attack hits or misses, the spirit can teleport up to 30 feet").
+ *  - the attack's use does not teleport (no aiming at use);
+ *  - the attack judged, the teleport aiming opens for the Caster;
+ *  - a click on a cell 5 cells away (25 ft) teleports it there.
+ * This is the player's gesture: engine aiming, click (`teleportPick`), `dnd5e.teleport` validation.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -39,7 +39,7 @@ export default {
     const claws = (await ctx.call("upsert-actor-item", { actorId: caster.actorId, itemData, match: { path: "flags.dnd5e.sourceId", value: CLAWS } })).id;
     lent.push(claws);
 
-    // Deux rangées sous leur place : la Cible au contact du Lanceur.
+    // Two rows below their place: the Target in contact with the Caster.
     const start = { x: homes.get(caster.id).x, y: homes.get(caster.id).y + 2 * grid };
     await ctx.call("move-token", { tokenId: caster.id, x: start.x, y: start.y, elevation: 0 });
     await ctx.call("move-token", { tokenId: target.id, x: start.x + grid, y: start.y, elevation: 0 });

@@ -1,12 +1,12 @@
 /**
- * §468 (retour de Fanarie, Discord, 2026-11-17) : un mur coché « grille » (`flags.dnd5e-combat.grate`) arrête le déplacement mais
- * pas le chemin d'un sort ni une attaque. Arène : l'Ensorceleur, le Zombi à 4 cases à l'est, un mur nord-sud entre les deux.
- *  - mur plein : la pose d'une Boule de feu sur le Zombi est refusée (« hidden », §200), abri total ;
- *  - le même mur coché grille : la pose est acceptée, abri supérieur (threeQuarters), ligne d'effet présente ;
- *  - la configuration du mur montre la section « DAS · Grille », sur « grille » (choix de la §476) ;
- *  - §476 : réglage de monde `grateWalls` — éteint, un mur qui laisse voir reste plein ; allumé, il devient une grille (pose acceptée,
- *    abri supérieur) ; un mur qui bloque la vue reste plein ; le choix « mur plein » du mur l'emporte.
- * Remet la position du Zombi, le réglage, et retire le mur.
+ * §468 (feedback from Fanarie, Discord, 2026-11-17): a wall ticked "grate" (`flags.dnd5e-combat.grate`) stops movement but
+ * not a spell's path or an attack. Arena: the Sorcerer, the Zombie 4 cells to the east, a north-south wall between them.
+ *  - solid wall: placing a Fireball on the Zombie is refused ("hidden", §200), Total Cover;
+ *  - the same wall ticked grate: placement is accepted, Three-Quarters Cover (threeQuarters), line of effect present;
+ *  - the wall configuration shows the "DAS · Grille" section, on "grille" (choice from §476);
+ *  - §476: world setting `grateWalls` — off, a wall that lets sight through stays solid; on, it becomes a grate
+ *    (placement accepted, Three-Quarters Cover); a wall that blocks sight stays solid; the wall's "solid wall" choice wins.
+ * Restores the Zombie's position, the setting, and removes the wall.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,7 +28,7 @@ export default {
     await pause(800);
     const z = await ctx.position(zombi);
 
-    // Un mur nord-sud à deux cases du lanceur, long de huit cases.
+    // A north-south wall two cells from the caster, eight cells long.
     const x = s.x + (2.5 * g);
     const created = await ctx.call("create-walls", { walls: [{ c: [x, s.y - (4 * g), x, s.y + (5 * g)].map(Math.round) }] });
     const wallId = (created?.walls ?? []).map(w => w.id ?? w._id).find(Boolean);
@@ -52,7 +52,7 @@ export default {
     const grateCover = await cover();
     ctx.expect(grateCover?.degree === "threeQuarters", `grille : abri supérieur (${grateCover?.degree ?? "aucun"})`);
 
-    // La section de la configuration du mur (MJ) : un mur coché avant la §476 s'ouvre sur « grille ».
+    // The wall configuration section (GM): a wall ticked before §476 opens on "grille".
     const sheet = async () => (await ctx.call("run-script", { code: `
       const wall = canvas.scene.walls.get("${wallId}");
       const app = wall.sheet; await app.render({ force: true });
@@ -66,7 +66,7 @@ export default {
     ctx.expect(ui?.found && (ui.value === "grate") && (ui.options?.join() === "auto,grate,solid"),
       `la configuration du mur montre le choix « grille » (auto / grille / mur plein), sur « grille » (${JSON.stringify(ui)})`);
 
-    // §476 (retour de Fanarie) : le réglage de monde « Murs grilles » — tout mur qui ne bloque pas la vue est une grille.
+    // §476 (feedback from Fanarie): the "Murs grilles" world setting — every wall that does not block sight is a grate.
     const setting = value => ctx.call("run-script", { code: value === undefined
       ? `return game.settings.get("dnd5e-combat", "grateWalls");`
       : `await game.settings.set("dnd5e-combat", "grateWalls", ${JSON.stringify(value)}); return game.settings.get("dnd5e-combat", "grateWalls");` });

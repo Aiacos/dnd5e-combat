@@ -1,10 +1,10 @@
 /**
- * Skip the turns of defeated NPCs (2026-11-28, user's request: « the carousel passes defeated NPCs automatically »). Pure.
+ * Skip the turns of defeated NPCs (2026-11-28, user's request: "the carousel passes defeated NPCs automatically"). Pure.
  *
  * When the turn moves forward onto a creature that is not a player character and is defeated (core/combat-outcome.mjs `isDefeated`:
  * dead, ticked defeated in the tracker, or at 0 HP), the turn goes on to the next creature that is not. Player characters are never
- * skipped (at 0 HP they make death saving throws), nor initiative events. Foundry's own « Skip defeated » combat setting only reads the
- * tracker and the dead status; this one also passes an NPC left at 0 HP.
+ * skipped (at 0 HP they make death saving throws), nor initiative events. Foundry's own "Skip defeated" combat setting only
+ * reads the tracker and the dead status; this one also passes an NPC left at 0 HP.
  */
 
 /**

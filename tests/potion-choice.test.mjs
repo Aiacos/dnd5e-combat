@@ -12,22 +12,22 @@ describe("potions de soins : action Bonus ou action (issue #31)", () => {
     expect(potionChoice({ inCombat: true, budget: { action: 1, bonus: 1 } })).toMatchObject({ ask: true, mode: null });
   });
 
-  it("en combat, une seule ressource libre : celle-là, d'office", () => {
+  it("in combat, a single free resource: that one, automatically", () => {
     expect(potionChoice({ inCombat: true, budget: { action: 1, bonus: 0 } })).toMatchObject({ ask: false, mode: "action",
       available: { bonus: false, action: true } });
     expect(potionChoice({ inCombat: true, budget: { action: 0, bonus: 1 } })).toMatchObject({ ask: false, mode: "bonus",
       available: { bonus: true, action: false } });
   });
 
-  it("en combat, rien de libre : la règle 2024 (la légalité dira ce qui manque)", () => {
+  it("in combat, nothing free: the 2024 rule (legality will say what is missing)", () => {
     expect(potionChoice({ inCombat: true, budget: { action: 0, bonus: 0 } })).toMatchObject({ ask: false, mode: "bonus" });
   });
 
-  it("budget inconnu en combat : les deux sont proposées", () => {
+  it("unknown budget in combat: both are offered", () => {
     expect(potionChoice({ inCombat: true, budget: null })).toMatchObject({ ask: true });
   });
 
-  it("un choix passé par l'appelant n'est gardé que s'il est connu", () => {
+  it("a choice passed by the caller is kept only if it is known", () => {
     expect(POTION_MODES).toEqual(["bonus", "action"]);
     expect(chosenPotionMode("action")).toBe("action");
     expect(chosenPotionMode("bonus")).toBe("bonus");
@@ -35,12 +35,12 @@ describe("potions de soins : action Bonus ou action (issue #31)", () => {
     expect(chosenPotionMode(undefined)).toBeNull();
   });
 
-  it("l'action coûte l'action ; l'action Bonus garde le coût de la donnée", () => {
+  it("the action costs the action; the Bonus Action keeps the data's cost", () => {
     expect(costForPotionMode("action")).toBe("action");
     expect(costForPotionMode("bonus")).toBeNull();
   });
 
-  it("le soin maximal des potions de guérison (formule mise au maximum avant le jet)", () => {
+  it("maximum healing of healing potions (formula set to maximum before the roll)", () => {
     const total = f => Function(`return ${maximizeDice(f)}`)();
     expect(total("2d4 + 2")).toBe(10);
     expect(total("4d4 + 4")).toBe(20);
@@ -48,7 +48,7 @@ describe("potions de soins : action Bonus ou action (issue #31)", () => {
     expect(total("10d4 + 20")).toBe(60);
   });
 
-  it("un son pour le soin maximal, vu et entendu de toute la table", () => {
+  it("a sound for maximum healing, seen and heard by the whole table", () => {
     expect(actionSound("potionMax", "success")).toBeTruthy();
     expect(actionSound("potionMax", "failure")).toBeNull();
   });

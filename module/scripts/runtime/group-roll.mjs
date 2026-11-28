@@ -1,24 +1,25 @@
 /**
- * §242 (issue #18) : jets demandés par le MJ à plusieurs personnages, à la manière de BG3.
+ * §242 (issue #18): rolls requested by the GM from several characters, BG3-style.
  *
- *  - **Demande** (MJ) : `requestGroupRoll({ actors, type, key, dc, hideDc, advantage, disadvantage, bonus, label, group })` pose la
- *    carte de demande de dnd5e (`type: "request"`), une ligne par personnage, puis fait lancer chacun : le joueur connecté qui le
- *    possède reçoit la demande sur son écran (requête `user.query`, comme les sauvegardes du moteur) ; ce client lance pour les PNJ et
- *    les personnages sans joueur connecté, sans fenêtre. Rend la promesse du point final (`viewOf`, adapter/group-roll.mjs).
- *  - **Chez le joueur** : avant d'ouvrir quoi que ce soit, le hook `dnd5e-combat.groupRollPrompt` (`Hooks.callAll`) laisse une
- *    interface voisine prendre la demande à son compte (fenêtre à la BG3) : elle met dans `prompt.result` la promesse de son issue
- *    (une valeur de retour ne suffirait pas : un voisin écoute souvent par `Hooks.on`, qui l'ignore) ; le prompt lui donne de quoi
- *    faire (`roll()`, `aids`, `askAid()`, `breakdown`, `signal`). Sans preneur, la fenêtre de jet
- *    de dnd5e s'ouvre, avec la section « Aides » du moteur (ui/skill-aid.mjs). Au délai (réglage `groupRollSeconds`, 0 : sans limite)
- *    la fenêtre se ferme et le jet part tout seul, comme une sauvegarde de concentration (§141). Fermée par le joueur : rien n'est
- *    lancé, le bouton de la carte reste.
- *  - **Résultats** : chaque jet porte `flags.dnd5e-combat.groupRollResult` (la carte) et `groupRollActor` ; le MJ actif le relie à
- *    sa ligne de la carte, un à la fois. Pas le lien de dnd5e (`flags.dnd5e.requestResult`, request-message-data.mjs:141-188) : il
- *    réécrit toutes les lignes à partir de l'état local à chaque jet, et deux jets presque simultanés s'écraseraient.
- *    À chaque changement de la carte, sur chaque client, le hook `dnd5e-combat.groupRoll` (`Hooks.callAll`) donne le point, filtré
- *    pour un joueur quand le DD est caché (core/group-roll.mjs `visibleTo`) ; `final: true` la première fois que tout le monde a lancé.
+ *  - **Request** (GM): `requestGroupRoll({ actors, type, key, dc, hideDc, advantage, disadvantage, bonus, label, group })` places
+ *    the dnd5e request card (`type: "request"`), one line per character, then has each one roll: the connected player who
+ *    owns it receives the request on their screen (`user.query` query, like the engine's saves); this client rolls for NPCs and
+ *    for characters with no connected player, without a window. Returns the promise of the final point (`viewOf`,
+ *    adapter/group-roll.mjs).
+ *  - **On the player's side**: before opening anything, the hook `dnd5e-combat.groupRollPrompt` (`Hooks.callAll`) lets a
+ *    neighboring interface take the request over (BG3-style window): it puts the promise of its outcome in `prompt.result`
+ *    (a return value would not suffice: a neighbor often listens via `Hooks.on`, which ignores it); the prompt gives it what it
+ *    needs (`roll()`, `aids`, `askAid()`, `breakdown`, `signal`). With no taker, dnd5e's roll window
+ *    opens, with the engine's "Aids" section (ui/skill-aid.mjs). At the delay (setting `groupRollSeconds`, 0: no limit)
+ *    the window closes and the roll goes off on its own, like a Concentration saving throw (§141). Closed by the player:
+ *    nothing is rolled, the card's button stays.
+ *  - **Results**: each roll carries `flags.dnd5e-combat.groupRollResult` (the card) and `groupRollActor`; the active GM links it to
+ *    its line of the card, one at a time. Not dnd5e's link (`flags.dnd5e.requestResult`, request-message-data.mjs:141-188): it
+ *    rewrites all the lines from the local state at each roll, and two nearly simultaneous rolls would overwrite each other.
+ *    At each change of the card, on each client, the hook `dnd5e-combat.groupRoll` (`Hooks.callAll`) gives the point, filtered
+ *    for a player when the DC is hidden (core/group-roll.mjs `visibleTo`); `final: true` the first time everyone has rolled.
  *
- * Le moteur ne nomme aucun module : un voisin pilote par `api.rolls.request` et affiche par les deux hooks.
+ * The engine names no module: a neighbor drives via `api.rolls.request` and displays via the two hooks.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -42,16 +43,17 @@ import { tokenArt } from "../adapter/token-art.mjs";
 export const GROUP_ROLL_QUERY = `${MODULE_ID}.groupRoll`;
 export const SECONDS_SETTING = "groupRollSeconds";
 
-/** Le délai laissé au joueur, en secondes ; 0 : sans limite. */
+/** The delay left to the player, in seconds; 0: no limit. */
 const answerSeconds = () => Math.max(0, Number(game.settings.get(MODULE_ID, SECONDS_SETTING)) || 0);
 
-/** Les promesses des demandes faites depuis ce client, par id de carte. */
+/** The promises of the requests made from this client, by card id. */
 const pending = new Map();
-/** Les cartes dont le point final a déjà été annoncé sur ce client. */
+/** The cards whose final point has already been announced on this client. */
 const announced = new Set();
 /**
- * Les demandes ouvertes sur ce client (`carte|acteur` → `{ rolling, taken }`) : si le jet de ce personnage arrive d'ailleurs (le MJ a cliqué
- * la carte, un autre propriétaire a lancé), la fenêtre se ferme sans relancer — vu en jeu le 2026-10-24 : deux jets pour une même ligne.
+ * The requests open on this client (`carte|acteur` → `{ rolling, taken }`): if this character's roll arrives from elsewhere (the GM
+ * clicked the card, another owner rolled), the window closes without rolling again — seen in play on 2026-10-24: two rolls for
+ * one line.
  */
 const open = new Map();
 const openKey = (messageId, actorUuid) => `${messageId}|${actorUuid}`;
@@ -60,7 +62,7 @@ const openKey = (messageId, actorUuid) => `${messageId}|${actorUuid}`;
 /*  Demande                                     */
 /* -------------------------------------------- */
 
-/** Acteurs, tokens ou uuid → acteurs distincts (un token non lié garde son acteur synthétique). */
+/** Actors, tokens or uuids → distinct actors (an unlinked token keeps its synthetic actor). */
 function actorsOf(list) {
   const out = new Map();
   for ( const entry of list ?? [] ) {
@@ -73,11 +75,11 @@ function actorsOf(list) {
 }
 
 /**
- * Pose la demande et fait lancer chacun. MJ seulement.
- * @param {object} options        La demande (core/group-roll.mjs `normalizeRequest`) et :
+ * Places the request and has each one roll. GM only.
+ * @param {object} options        The request (core/group-roll.mjs `normalizeRequest`) and:
  * @param {Array<Actor|Token|TokenDocument|string>} options.actors
- * @returns {Promise<object>}     Le point final (adapter/group-roll.mjs `viewOf`), quand tout le monde a lancé ou que la carte est
- *   supprimée (`cancelled: true`).
+ * @returns {Promise<object>}     The final point (adapter/group-roll.mjs `viewOf`), when everyone has rolled or the card is
+ *   deleted (`cancelled: true`).
  */
 export async function requestGroupRoll({ actors, ...input }={}) {
   if ( !game.user.isGM ) throw new Error(`${MODULE_ID} | group roll: only a GM can request rolls`);
@@ -88,7 +90,7 @@ export async function requestGroupRoll({ actors, ...input }={}) {
 
   const { message, targets, promise } = await postRequestCard(list, request);
 
-  // Les joueurs en parallèle ; ce client lance pour les autres, sans fenêtre.
+  // The players in parallel; this client rolls for the others, without a window.
   for ( const [i, actor] of list.entries() ) {
     const userId = targets[i].user;
     if ( userId ) askPlayer(userId, message, actor);
@@ -138,10 +140,10 @@ export async function requestOwnRoll({ actors, ...input }={}) {
   return promise;
 }
 
-/** La demande au joueur ; s'il ne répond pas (déconnecté), ce client lance pour lui. */
+/** The request to the player; if they do not answer (disconnected), this client rolls for them. */
 function askPlayer(userId, message, actor) {
   const seconds = answerSeconds();
-  // Sans limite côté joueur : la requête attend une heure (il peut aussi lancer plus tard depuis la carte).
+  // No limit on the player's side: the query waits an hour (they can also roll later from the card).
   const timeout = (seconds ? seconds + 30 : 3600) * 1000;
   game.users.get(userId).query(GROUP_ROLL_QUERY, { request: message.id, actor: actor.uuid }, { timeout })
     .then(answer => {
@@ -154,17 +156,17 @@ function askPlayer(userId, message, actor) {
     });
 }
 
-/** Le jet déjà relié à la ligne de cet acteur, ou null. */
+/** The roll already linked to this actor's line, or null. */
 function resultOf(message, actor) {
   return message?.system?.targets?.find(t => t.actor === actor.uuid)?.result ?? null;
 }
 
 /**
- * Le jet de dnd5e pour un acteur de la demande.
+ * dnd5e's roll for an actor of the request.
  * @param {ChatMessage} message
  * @param {Actor} actor
  * @param {{configure?: boolean, advantage?: boolean, disadvantage?: boolean}} [options]
- * @returns {Promise<ChatMessage|true|null>}  Le message du jet (true s'il n'est pas lisible), ou null (fenêtre fermée).
+ * @returns {Promise<ChatMessage|true|null>}  The roll's message (true if it is not readable), or null (window closed).
  */
 async function rollFor(message, actor, { configure=false, advantage=false, disadvantage=false, mode=null, aids=[], flags={}, deferBonus=false }={}) {
   const request = requestOf(message);
@@ -174,19 +176,19 @@ async function rollFor(message, actor, { configure=false, advantage=false, disad
     extra: { advantage, disadvantage, mode, aids }, flags });
   const rolls = await method(config, { configure }, messageConfig);
   if ( !rolls?.length ) return null;
-  // Le jet de dnd5e ne rend que ses `D20Roll` : le message se retrouve par nos flags (le plus récent pour cet acteur).
+  // dnd5e's roll returns only its `D20Roll`s: the message is found by our flags (the most recent for this actor).
   const posted = game.messages.contents.findLast(m => (m.getFlag(MODULE_ID, "groupRollResult") === message.id)
     && (m.getFlag(MODULE_ID, "groupRollActor") === actor.uuid));
-  // Les dés « après avoir vu le jet » : tout de suite, sauf quand l'interface les demande elle-même après avoir montré le résultat.
+  // The "after seeing the roll" dice: right away, except when the interface asks for them itself after showing the result.
   if ( posted && !deferBonus ) await bonusAfterRoll(message, actor, posted);
   return posted ?? true;
 }
 
 /**
- * Les dés que la créature ajoute après avoir vu son jet — un dé d'aptitude sur un test (Embuscade, Autorité naturelle… : runtime/roll-bonus.mjs
- * pour les jets libres), puis l'Inspiration bardique qu'elle porte, « quand elle rate un Test d20 » (tests et sauvegardes) — comptés dans le
- * total de la demande : flag `groupRollBonus` `{ total, parts }` sur le jet (le jet de dnd5e n'est pas réécrit). DD visible : rien sur une
- * réussite ; DD caché : la question ne le dit pas (et rien n'est proposé sur une réussite).
+ * The dice the creature adds after seeing its roll — an aptitude die on a check ("Ambush", "Natural Authority"…:
+ * runtime/roll-bonus.mjs for free rolls), then the Bardic Inspiration it bears, "when it fails a D20 Test" (checks and saving
+ * throws) — counted in the request's total: flag `groupRollBonus` `{ total, parts }` on the roll (dnd5e's roll is not rewritten).
+ * DC visible: nothing on a success; DC hidden: the question does not say it (and nothing is offered on a success).
  * @returns {Promise<{added: number, parts: Array<{kind: string, value: number, helper?: string, img?: string}>}>}
  */
 async function bonusAfterRoll(message, actor, posted) {
@@ -194,7 +196,7 @@ async function bonusAfterRoll(message, actor, posted) {
   if ( !(posted instanceof ChatMessage) || (posted.getFlag(MODULE_ID, "groupRollPending") !== true) ) return none;
   try { return await decideBonus(message, actor, posted); }
   finally {
-    // Tranché (ou rien à proposer) : le test se conclut — la carte, le verdict et le suivi du MJ le voient maintenant.
+    // Decided (or nothing to offer): the check concludes — the card, the verdict and the GM's tracking see it now.
     await posted.setFlag(MODULE_ID, "groupRollPending", false).catch(err => console.warn(`${MODULE_ID} | group roll: result not released`, err));
   }
 }
@@ -204,21 +206,21 @@ async function decideBonus(message, actor, posted) {
   const request = requestOf(message);
   const roll = posted?.rolls?.[0];
   if ( !request || !Number.isFinite(roll?.total) || posted.getFlag(MODULE_ID, "groupRollBonus") ) return none;
-  // §397 : l'initiative n'a pas de DD — aucun dé « après avoir vu le jet » n'est proposé (le jet donne l'ordre du tour, rien d'autre).
+  // §397: initiative has no DC — no "after seeing the roll" die is offered (the roll gives the turn order, nothing else).
   if ( request.type === "initiative" ) return none;
   const dc = request.dc;
   const shownDc = request.hideDc ? null : dc;
   const what = keyLabel(request);
   const parts = [];
   let added = 0;
-  // §282 : l'Inspiration héroïque d'abord, avant l'issue — un d20 relancé ; ce qui change (en plus ou en moins) compte dans la demande.
-  // DD caché : l'issue est connue du moteur, pas dite au joueur.
+  // §282: Heroic Inspiration first, before the outcome — a rerolled d20; what changes (up or down) counts in the request.
+  // DC hidden: the outcome is known to the engine, not told to the player.
   const heroic = await offerHeroicD20(actor, { roll, what: (request.type === "save") ? testTitle(request) : what, needed: shownDc,
     failed: (dc === null) ? null : (roll.total < dc) });
   if ( heroic?.delta ) { added += heroic.delta; parts.push({ kind: "heroic", value: heroic.delta, img: actor.img ?? null }); }
   if ( (dc !== null) && ((roll.total + added) >= dc) ) return finish();
-  // Hors combat, le joueur a le temps de lire : le délai de la demande (au moins 20 s), pas celui des fenêtres de combat (10 s — vu par
-  // l'utilisateur : la question se refermait avant qu'il puisse s'en servir).
+  // Out of combat, the player has time to read: the request's delay (at least 20 s), not that of the combat windows (10 s — seen by
+  // the user: the question closed before they could use it).
   const seconds = Math.max(20, answerSeconds() || 60);
   if ( request.type !== "save" ) {
     const n = await offerRollBonus(actor, { kind: "check", what, total: roll.total + added, needed: shownDc,
@@ -249,7 +251,7 @@ async function decideBonus(message, actor, posted) {
 /*  Chez celui qui lance                        */
 /* -------------------------------------------- */
 
-/** Attend que l'effet d'une aide soit posé (la résolution passe par le MJ actif). */
+/** Waits for an aid's effect to be placed (the resolution goes through the active GM). */
 async function untilApplied(test, ms=10000) {
   for ( let waited = 0; waited < ms; waited += 250 ) {
     if ( test() ) return true;
@@ -259,23 +261,23 @@ async function untilApplied(test, ms=10000) {
 }
 
 /**
- * La demande, sur le client qui lance pour `actor` : une interface voisine la prend, sinon la fenêtre de jet de dnd5e.
+ * The request, on the client that rolls for `actor`: a neighboring interface takes it, otherwise dnd5e's roll window.
  * @returns {Promise<"rolled"|"cancelled">}
  */
 export async function promptGroupRoll(message, actor) {
   if ( !requestOf(message) || !actor || resultOf(message, actor) ) return promptGroupRollNow(message, actor);
-  // §381 : la table voit qu'on attend ce jet (sablier au-dessus du token) jusqu'à ce qu'il parte, soit pris ailleurs ou expire.
+  // §381: the table sees that this roll is awaited (hourglass above the token) until it goes off, is taken elsewhere or expires.
   const seconds = answerSeconds();
-  // §424 : à son tour. Une demande de jet laisse passer la question du moteur déjà ouverte sur ce poste (réaction, sauvegarde, refus) :
-  // elle s'ouvre après, quelle que soit l'interface qui l'affiche (fenêtre de dnd5e ou fenêtre plein écran d'un voisin, qui a sa propre
-  // file et ne connaît pas celle du moteur). Elle ne retient pas les questions suivantes (`after`) : son délai est long (réglage
-  // `groupRollSeconds`), celui d'une réaction court — une réaction qui arrive pendant le jet s'ouvre aussitôt, par-dessus.
+  // §424: in its turn. A roll request lets the engine's question already open on this workstation go first (Reaction, saving
+  // throw, refusal): it opens after, whatever interface displays it (dnd5e's window or a neighbor's fullscreen window, which has
+  // its own queue and does not know the engine's). It does not hold back the following questions (`after`): its delay is long
+  // (setting `groupRollSeconds`), that of a Reaction short — a Reaction that arrives during the roll opens right away, on top.
   return inLine.after(() => {
-    // Lancé ailleurs pendant l'attente (le MJ a lancé pour lui) : rien à ouvrir.
+    // Rolled elsewhere during the wait (the GM rolled for them): nothing to open.
     if ( resultOf(game.messages.get(message.id) ?? message, actor) ) return "rolled";
-    // §425 : l'attente (le sablier, la ligne de la File du MJ) tombe dès que les dés sont partis, pas quand la fenêtre se ferme — une
-    // interface voisine garde la sienne ouverte sur le verdict, et le joueur n'est alors plus attendu. Une question posée après le jet
-    // (Inspiration héroïque, Inspiration bardique) pose sa propre attente.
+    // §425: the wait (the hourglass, the GM Queue line) drops as soon as the dice are gone, not when the window closes — a
+    // neighboring interface keeps its own open on the verdict, and the player is then no longer awaited. A question asked after
+    // the roll (Heroic Inspiration, Bardic Inspiration) places its own wait.
     const release = markAwaiting(actor, "roll", { seconds: seconds > 0 ? seconds : null });
     return promptGroupRollNow(message, actor, { onRolled: release }).finally(release);
   }, `group roll: ${actor.name}`);
@@ -287,13 +289,13 @@ async function promptGroupRollNow(message, actor, { onRolled=null }={}) {
   if ( resultOf(message, actor) ) return "rolled";
   const seconds = answerSeconds();
   const controller = new AbortController();
-  let done = null;   // le message du jet, une fois lancé
+  let done = null;   // the roll's message, once rolled
   const key = openKey(message.id, actor.uuid);
   const { promise: takenElsewhere, resolve: taken } = Promise.withResolvers();
   const entry = { rolling: false, taken: () => { controller.abort("taken"); closeRollDialogAfter(actor, () => {}, 0); taken("taken"); } };
   open.set(key, entry);
-  const granted = [];   // les aides accordées, notées sur le jet (fenêtre de suivi du MJ)
-  let deferred = false;   // l'interface demandera elle-même les dés d'après le jet (`afterRoll`)
+  const granted = [];   // the aids granted, noted on the roll (GM tracking window)
+  let deferred = false;   // the interface will ask for the after-roll dice itself (`afterRoll`)
   let bonus = null;
   const afterRoll = async () => {
     if ( bonus ) return bonus;
@@ -302,7 +304,7 @@ async function promptGroupRollNow(message, actor, { onRolled=null }={}) {
   };
   const roll = async ({ advantage=false, disadvantage=false, mode=null, configure=false, flags={}, deferBonus=false }={}) => {
     if ( done ) return done;
-    if ( resultOf(game.messages.get(message.id), actor) ) return null;   // déjà lancé ailleurs : pas de second jet
+    if ( resultOf(game.messages.get(message.id), actor) ) return null;   // already rolled elsewhere: no second roll
     entry.rolling = true;
     deferred = deferBonus;
     try { done = await rollFor(message, actor, { configure, advantage, disadvantage, mode, aids: granted, flags, deferBonus }); }
@@ -318,27 +320,28 @@ async function promptGroupRollNow(message, actor, { onRolled=null }={}) {
     const aids = ((test.skill || test.tool) && levelAtLeast("full")) ? aidsFor(actor, test) : [];
     const askedKinds = new Set();
     /**
-     * Ce que reçoit une interface voisine (hook `dnd5e-combat.groupRollPrompt`). Les champs :
-     *  `request` (DD retiré quand il est caché à ce client), `title`, `actor`, `breakdown` (adapter/group-roll.mjs `breakdownOf`),
-     *  `aids` (aides possibles d'un test de compétence ou d'outil, adapter/skill-aid.mjs `aidsFor`), `askAid(aid)` → true si accordée
-     *  (Soutien : passer alors `advantage: true` à `roll` ; une seule aide de chaque sorte par jet, la seconde rend false),
-     *  `mode` : l'Avantage / le Désavantage que dnd5e appliquera de lui-même (`{ advantage, disadvantage }`, fiche, effets, états),
-     *  `roll({ advantage, disadvantage, mode, flags })` → le message du jet (une fois) ; `mode` "advantage" | "disadvantage" force l'un
-     *  ou l'autre quoi que disent la demande et la fiche ; `flags` : drapeaux d'autres modules posés sur ce message ; `deferBonus` : les
-     *  dés d'après le jet (Inspiration bardique…) attendront `afterRoll()` → `{ added, parts }` (l'interface montre d'abord le résultat),
-     *  `deadline` (ms depuis l'époque, ou null), `signal` (annulé au délai — fermer sa fenêtre, le moteur lance — ou quand le jet arrive
-     *  d'ailleurs — fermer sa fenêtre, rien à lancer), `result` (à remplir).
+     * What a neighboring interface receives (hook `dnd5e-combat.groupRollPrompt`). The fields:
+     *  `request` (DC removed when hidden from this client), `title`, `actor`, `breakdown` (adapter/group-roll.mjs `breakdownOf`),
+     *  `aids` (possible aids for a skill or tool check, adapter/skill-aid.mjs `aidsFor`), `askAid(aid)` → true if granted
+     *  (Help: then pass `advantage: true` to `roll`; only one aid of each kind per roll, the second returns false),
+     *  `mode`: the Advantage / Disadvantage that dnd5e will apply by itself (`{ advantage, disadvantage }`, sheet, effects,
+     *  conditions), `roll({ advantage, disadvantage, mode, flags })` → the roll's message (once); `mode` "advantage" |
+     *  "disadvantage" forces one or the other whatever the request and the sheet say; `flags`: other modules' flags placed on
+     *  this message; `deferBonus`: the after-roll dice (Bardic Inspiration…) will wait for `afterRoll()` → `{ added, parts }`
+     *  (the interface shows the result first), `deadline` (ms since the epoch, or null), `signal` (aborted at the delay — close
+     *  your window, the engine rolls — or when the roll arrives from elsewhere — close your window, nothing to roll),
+     *  `result` (to fill).
      */
     const prompt = {
       request: request.hideDc && !game.user.isGM ? { ...request, dc: null } : { ...request },
       title: testTitle(request), message, actor, breakdown: breakdownOf(actor, request), aids, mode: systemModeOf(actor, request),
       askAid: async aid => {
-        // Une aide de chaque sorte par jet : deux Assistances ne se cumulent pas, une créature n'a qu'un dé d'Inspiration bardique à la
-        // fois, l'Avantage ne se cumule pas. Une sorte déjà demandée (en attente ou accordée) n'est plus demandée.
+        // One aid of each kind per roll: two Help actions do not stack, a creature has only one Bardic Inspiration die at a time,
+        // Advantage does not stack. A kind already requested (pending or granted) is not requested again.
         if ( askedKinds.has(aid.kind) ) return false;
         askedKinds.add(aid.kind);
         const ok = await requestSkillAid({ kind: aid.kind, helper: aid.helper, tester: aid.tester, ...test });
-        if ( !ok ) askedKinds.delete(aid.kind);   // refusée : une autre du même genre peut être demandée
+        if ( !ok ) askedKinds.delete(aid.kind);   // refused: another of the same kind can be requested
         else granted.push({ kind: aid.kind, helper: aid.helper.name, img: aid.token ? tokenArt(aid.token, aid.helper.img) : (aid.helper.img ?? null) });
         if ( ok && (aid.kind === "guidance") ) await untilApplied(() => isGuided(actor, test.skill));
         if ( ok && (aid.kind === "inspiration") ) await untilApplied(() => !!inspirationOf(actor));
@@ -346,14 +349,14 @@ async function promptGroupRollNow(message, actor, { onRolled=null }={}) {
       },
       roll, afterRoll, deadline: seconds ? Date.now() + (seconds * 1000) : null, signal: controller.signal, result: null
     };
-    // §242 : chez le joueur qui doit lancer, avant d'ouvrir la fenêtre de jet : `(prompt)` (champs décrits plus haut). Une interface qui
-    // prend la demande met dans `prompt.result` la promesse de son issue ; sans preneur, la fenêtre de dnd5e s'ouvre.
+    // §242: on the player who must roll, before opening the roll window: `(prompt)` (fields described above). An interface that
+    // takes the request puts the promise of its outcome in `prompt.result`; with no taker, dnd5e's window opens.
     Hooks.callAll(`${MODULE_ID}.groupRollPrompt`, prompt);
     const claimed = typeof prompt.result?.then === "function";
     if ( claimed ) {
       let timer = null;
-      // Le délai ne vaut que tant que le joueur n'a pas lancé : une fois les dés partis, la fenêtre attend la fin (le dé d'Inspiration
-      // bardique proposé après un échec — vu par l'utilisateur : la fenêtre se fermait avant qu'il puisse s'en servir).
+      // The delay only applies while the player has not rolled: once the dice are gone, the window waits for the end (the Bardic
+      // Inspiration die offered after a failure — seen by the user: the window closed before they could use it).
       const expired = seconds ? new Promise(r => {
         const check = () => { if ( entry.rolling || done ) return; r("expired"); };
         timer = setTimeout(check, seconds * 1000);
@@ -367,7 +370,7 @@ async function promptGroupRollNow(message, actor, { onRolled=null }={}) {
         log(`group roll: ${actor.name} already rolled elsewhere, window closed`);
         return "rolled";
       }
-      // Les dés d'après le jet que l'interface n'a pas demandés (fermée trop tôt) : maintenant.
+      // The after-roll dice that the interface did not ask for (closed too early): now.
       if ( done && deferred ) await afterRoll();
       if ( answer === "expired" ) {
         controller.abort("expired");
@@ -377,7 +380,7 @@ async function promptGroupRollNow(message, actor, { onRolled=null }={}) {
       return done ? "rolled" : "cancelled";
     }
 
-    // Sans preneur : la fenêtre de dnd5e (et sa section « Aides »), fermée au délai.
+    // With no taker: dnd5e's window (and its "Aids" section), closed at the delay.
     let timedOut = false;
     const cancel = seconds ? closeRollDialogAfter(actor, () => { timedOut = true; }, seconds) : () => {};
     ui.notifications.info(loc("JetGroupe.Demande", { name: actor.name, test: prompt.title }));
@@ -391,9 +394,9 @@ async function promptGroupRollNow(message, actor, { onRolled=null }={}) {
   }
 }
 
-/** La requête, chez le joueur. */
+/** The query, on the player's side. */
 async function handleGroupRollQuery({ request: id, actor: uuid }, { user=null }={}) {
-  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  // §472: only the GM sends this query in the game; from a player, it drops (security refusal, not forceable).
   if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | groupRoll query from ${user.name} refused: only a GM sends it`); return "cancelled"; }
   const message = game.messages.get(id);
   const actor = await fromUuid(uuid);
@@ -401,19 +404,19 @@ async function handleGroupRollQuery({ request: id, actor: uuid }, { user=null }=
   return promptGroupRoll(message, actor);
 }
 
-/** Le bouton de la carte (`CONFIG.DND5E.requests`) : la même fenêtre. Rien n'est rendu, pour que dnd5e ne relie pas le jet lui-même. */
+/** The card's button (`CONFIG.DND5E.requests`): the same window. Nothing is returned, so that dnd5e does not link the roll itself. */
 async function handleCardButton(actor, message) {
   await promptGroupRoll(message, actor);
   return null;
 }
 
 /* -------------------------------------------- */
-/*  Résultats                                   */
+/*  Results                                     */
 /* -------------------------------------------- */
 
 let linking = Promise.resolve();
 
-/** MJ actif : relie un jet à sa ligne de la carte, un à la fois (chaque écriture part de l'état écrit par la précédente). */
+/** Active GM: links a roll to its line of the card, one at a time (each write starts from the previous write's state). */
 function link(result) {
   const flag = result.getFlag(MODULE_ID, "groupRollResult");
   const actorUuid = result.getFlag(MODULE_ID, "groupRollActor");
@@ -424,7 +427,7 @@ function link(result) {
     const targets = message.system.toObject().targets ?? [];
     const index = targets.findIndex(t => t.actor === actorUuid);
     if ( (index < 0) || (targets[index].result === result.id) ) return;
-    // Le premier jet compte : un second (le MJ a cliqué la carte pendant que le joueur lançait) ne remplace pas le premier.
+    // The first roll counts: a second (the GM clicked the card while the player was rolling) does not replace the first.
     if ( targets[index].result ) {
       log(`group roll: a second roll for ${fromUuidSync(actorUuid)?.name ?? actorUuid} is ignored (the first one counts)`);
       return;
@@ -436,8 +439,9 @@ function link(result) {
 }
 
 /**
- * §397 : une demande d'initiative — le total devient l'initiative des combattants de cet acteur dans le combat de la demande (le combat
- * actif à défaut), puis dnd5e recharge ce qui revient à l'initiative (`Combat5e#_recoverUses`, combat.mjs:86, comme son propre jet).
+ * §397: an initiative request — the total becomes the initiative of this actor's combatants in the request's combat (the active
+ * combat otherwise), then dnd5e recharges what comes back on Initiative (`Combat5e#_recoverUses`, combat.mjs:86, like its own
+ * roll).
  */
 async function initiativeFrom(message, actorUuid, result) {
   const request = requestOf(message);
@@ -452,15 +456,15 @@ async function initiativeFrom(message, actorUuid, result) {
   log(`group roll: ${mine[0].name}'s initiative is ${total}`);
 }
 
-/** Le point d'une carte, annoncé sur ce client. */
+/** A card's point, announced on this client. */
 function announce(message, { cancelled=false }={}) {
   const view = viewOf(message);
   if ( !view ) return;
   const final = cancelled || (view.done && !announced.has(message.id));
   if ( final ) announced.add(message.id);
   const shown = visibleTo(view, { gm: game.user.isGM });
-  // §242 : sur chaque client, à chaque changement d'une carte de jets demandés : le point de la carte (DD retiré pour un joueur quand il
-  // est caché), avec `final` (vrai une fois, quand tous ont lancé ou que c'est annulé) et `cancelled`. Lecture seule.
+  // §242: on each client, at each change of a requested-rolls card: the card's point (DC removed for a player when it is
+  // hidden), with `final` (true once, when everyone has rolled or it is cancelled) and `cancelled`. Read-only.
   Hooks.callAll(`${MODULE_ID}.groupRoll`, { ...shown, final, cancelled });
   if ( final && pending.has(message.id) ) {
     pending.get(message.id)({ ...view, cancelled });
@@ -471,8 +475,9 @@ function announce(message, { cancelled=false }={}) {
 }
 
 /**
- * MJ : lance pour un personnage qui tarde (fenêtre de suivi). Sa fenêtre se ferme chez son joueur (le jet arrive d'ailleurs).
- * @returns {Promise<boolean>}  true si un jet a été fait.
+ * GM: rolls for a character who is lagging (tracking window). Their window closes on their player's side (the roll arrives
+ * from elsewhere).
+ * @returns {Promise<boolean>}  true if a roll was made.
  */
 export async function forceGroupRoll(messageId, actorUuid) {
   if ( !game.user.isGM ) return false;
@@ -484,7 +489,7 @@ export async function forceGroupRoll(messageId, actorUuid) {
   return !!rolled;
 }
 
-/** Le point d'une carte, pour un voisin (filtré pour un joueur quand le DD est caché). */
+/** A card's point, for a neighbor (filtered for a player when the DC is hidden). */
 export function groupRollView(messageId) {
   const view = viewOf(game.messages.get(messageId));
   return view ? visibleTo(view, { gm: game.user.isGM }) : null;
@@ -495,22 +500,22 @@ export const rollsApi = Object.freeze({
   view: groupRollView,
   force: forceGroupRoll,
   /**
-   * Les tuiles du bonus d'un acteur pour une demande (`{ type, key, … }` comme `request`) : `[{ kind, label, value, … }]`, indicatives ; []
-   * si la demande est invalide.
+   * The tiles of an actor's bonus for a request (`{ type, key, … }` like `request`): `[{ kind, label, value, … }]`, indicative; []
+   * if the request is invalid.
    */
   breakdown: (actor, input) => {
     const { request } = normalizeRequest(input);
     return request ? breakdownOf(actor, request) : [];
   },
   /**
-   * L'Avantage / le Désavantage que dnd5e donnera de lui-même à cet acteur pour la demande (fiche, effets, états) : `{ advantage,
-   * disadvantage }`.
+   * The Advantage / Disadvantage that dnd5e will give this actor by itself for the request (sheet, effects, conditions):
+   * `{ advantage, disadvantage }`.
    */
   mode: (actor, input) => {
     const { request } = normalizeRequest(input);
     return request ? systemModeOf(actor, request) : { advantage: false, disadvantage: false };
   },
-  /** Le titre du test demandé, dans les mots de dnd5e (« Test de Sagesse (Perspicacité) ») ; "" si la demande est invalide. */
+  /** The title of the requested check, in dnd5e's words ("Wisdom (Insight) Check"); "" if the request is invalid. */
   title: input => {
     const { request } = normalizeRequest(input);
     return request ? testTitle(request) : "";
@@ -522,11 +527,11 @@ export function registerGroupRoll() {
     name: `DND5ECOMBAT.Reglage.${SECONDS_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${SECONDS_SETTING}.Aide`,
     scope: "world", config: true, type: Number, default: 60, range: { min: 0, max: 300, step: 5 }
   });
-  CONFIG.queries[GROUP_ROLL_QUERY] = handleGroupRollQuery;   // sur tous les clients : c'est le joueur qui répond
-  // Le bouton de la carte de dnd5e appelle `CONFIG.DND5E.requests[handler](actor, message, data, { event })` (request-message-data.mjs:136) ;
-  // `CONFIG.DND5E` est posé par le `init` du système, qui passe avant celui des modules.
+  CONFIG.queries[GROUP_ROLL_QUERY] = handleGroupRollQuery;   // on all clients: the player is the one who answers
+  // The dnd5e card button calls `CONFIG.DND5E.requests[handler](actor, message, data, { event })` (request-message-data.mjs:136);
+  // `CONFIG.DND5E` is set by the system's `init`, which runs before the modules'.
   if ( CONFIG.DND5E?.requests ) CONFIG.DND5E.requests[GROUP_HANDLER] = handleCardButton;
-  // Hors Théâtre de l'esprit compris : c'est un outil du MJ, pas une règle.
+  // Outside, Theater of the Mind included: it is a GM tool, not a rule.
   route("createChatMessage", message => {
     if ( message.getFlag(MODULE_ID, "groupRollResult") ) {
       if ( isExecutor() ) link(message);
@@ -535,7 +540,7 @@ export function registerGroupRoll() {
     if ( requestOf(message) ) announce(message);
   }, { always: true, label: "group roll: result not processed" });
   route("updateChatMessage", message => {
-    // Le jet d'un personnage a changé (dé d'Inspiration bardique tranché, ajouté) : sa carte se redessine et le point repart.
+    // A character's roll changed (Bardic Inspiration die decided, added): its card is redrawn and the point restarts.
     const cardId = message.getFlag(MODULE_ID, "groupRollResult");
     if ( cardId ) {
       const card = game.messages.get(cardId);
@@ -546,7 +551,7 @@ export function registerGroupRoll() {
       return;
     }
     if ( !requestOf(message) ) return;
-    // Une demande ouverte ici dont le jet vient d'arriver d'ailleurs : sa fenêtre se ferme.
+    // A request open here whose roll has just arrived from elsewhere: its window closes.
     for ( const target of message.system?.targets ?? [] ) {
       const entry = open.get(openKey(message.id, target.actor));
       if ( entry && target.result && !entry.rolling ) entry.taken();

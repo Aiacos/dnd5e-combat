@@ -1,10 +1,10 @@
 /**
- * §276 : d'où vient un objet, pour les réparations du diagnostic (`runtime/diagnostic/checks.mjs`). Pur : aucune dépendance à Foundry.
- *  - "reference" : les compendiums de référence (Manuel des joueurs, Manuel des monstres, dnd5e) — ceux où l'on cherche un remplaçant ;
- *  - "premium"   : un autre module officiel (`dnd-…` : Ravenloft, Guide du maître…) — c'est déjà l'objet officiel, on ne le remplace
- *    jamais par un homonyme d'un autre livre (le « Survivant » de Ravenloft n'est pas le « Survivor » du Champion, même identifiant) ;
- *  - "other"     : un module tiers ou un import (CPR, D&D Beyond, monde) — à reprendre ;
- *  - "none"      : sans source.
+ * §276: where an item comes from, for the diagnostic's repairs (`runtime/diagnostic/checks.mjs`). Pure: no dependency on Foundry.
+ *  - "reference": the reference compendia (Player's Handbook, Monster Manual, dnd5e) — those where a replacement is looked for;
+ *  - "premium"  : another official module (`dnd-…`: Ravenloft, Dungeon Master's Guide…) — it is already the official item, it is
+ *    never replaced by a namesake from another book (Ravenloft's "Survivor" is not the Champion's "Survivor", same identifier);
+ *  - "other"    : a third-party module or an import (CPR, D&D Beyond, world) — to be taken over;
+ *  - "none"     : no source.
  */
 
 export const REFERENCE_SOURCE = /^Compendium\.(dnd-players-handbook|dnd-monster-manual|dnd5e)\./;

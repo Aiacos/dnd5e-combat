@@ -4,32 +4,32 @@ import { SOURCES } from "../module/scripts/content/index.mjs";
 
 const FEATURES = "Compendium.tiers.features.Item.tiersMorsure0001";
 
-describe("§334 : les clés de source d'un item, de la plus précise à la plus large", () => {
-  it("la source passe par l'acteur : « acteur.item » d'abord, comme avant", () => {
+describe("§334: an item's source keys, from the most precise to the broadest", () => {
+  it("the source goes through the actor: \"actor.item\" first, as before", () => {
     const itemSource = "Compendium.tiers.actors.Actor.tiersActeur00001.Item.tiersMorsure0001";
     expect(sourceKeys({ itemSource, itemId: "abcdefghijklmnop" }))
       .toEqual(["tiersActeur00001.tiersMorsure0001", "tiersMorsure0001", "abcdefghijklmnop"]);
   });
 
-  it("la source désigne le compendium des capacités : l'acteur se lit dans celui qui porte l'item", () => {
-    // La copie d'une fiche dans le monde (ou un token) : l'acteur garde l'id de sa fiche dans sa propre source.
+  it("the source designates the features compendium: the actor is read from the one that carries the item", () => {
+    // The copy of a sheet in the world (or a token): the actor keeps its sheet's id in its own source.
     expect(sourceKeys({ itemSource: FEATURES, itemId: "abcdefghijklmnop",
       actorSource: "Compendium.tiers.actors.Actor.tiersActeur00001", actorId: "mondeActeur00001" }))
       .toEqual(["features.tiersMorsure0001", "tiersActeur00001.tiersMorsure0001", "mondeActeur00001.tiersMorsure0001",
         "tiersMorsure0001", "abcdefghijklmnop"]);
-    // La fiche elle-même, dans son compendium : pas de source, son id est celui de la fiche.
+    // The sheet itself, in its compendium: no source, its id is the sheet's.
     expect(sourceKeys({ itemSource: FEATURES, itemId: "tiersMorsure0001", actorId: "tiersActeur00001" }))
       .toEqual(["features.tiersMorsure0001", "tiersActeur00001.tiersMorsure0001", "tiersMorsure0001"]);
   });
 
-  it("sans source ni acteur : l'id de l'item seul ; rien du tout : aucune clé", () => {
+  it("without source or actor: the item's id alone; nothing at all: no key", () => {
     expect(sourceKeys({ itemId: "abcdefghijklmnop" })).toEqual(["abcdefghijklmnop"]);
     expect(sourceKeys({ itemSource: "Compendium.tiers.items.Item.tiersObjet000001" }))
       .toEqual(["items.tiersObjet000001", "tiersObjet000001"]);
     expect(sourceKeys()).toEqual([]);
   });
 
-  it("les clés « acteur.item » livrées se trouvent pour un item dont la source désigne le compendium des capacités", () => {
+  it("the shipped \"actor.item\" keys are found for an item whose source designates the features compendium", () => {
     const scoped = Object.keys(SOURCES).filter(k => k.includes("."));
     expect(scoped.length).toBeGreaterThan(0);
     for ( const key of scoped ) {

@@ -1,8 +1,8 @@
 /**
- * §360, lot O9g de la repasse des objets. Arène de test (Guerrier).
- *  1. Anneau d'invisibilité (créé depuis le Guide : la correction de donnée lui ajoute son activité et son effet) porté et harmonisé :
- *     « Turn Invisible » rend le Guerrier Invisible.
- *  2. Le Bouffon : « Card Effect: Advantage » pose un effet de 72 h — Sagesse (Perception) avec l'Avantage.
+ * §360, batch O9g of the item pass. Test arena (Fighter).
+ *  1. Ring of Invisibility (created from the Guide: the data fix adds its activity and its effect) worn and attuned:
+ *     "Turn Invisible" makes the Fighter Invisible.
+ *  2. The Jester: "Card Effect: Advantage" places a 72 h effect — Wisdom (Perception) with Advantage.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";

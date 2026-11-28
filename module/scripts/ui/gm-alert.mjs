@@ -1,7 +1,8 @@
 /**
- * §364 : alerte MJ, côté écran — chaque carte d'alerte (runtime/gm-alert.mjs) s'affiche aussi chez chaque MJ dans un bandeau en haut de
- * l'écran, aux couleurs de DAS : le nom de l'objet et ce qu'il reste à gérer. Plusieurs alertes s'empilent ; un clic en ferme une ;
- * elles partent seules après `gmAlertSeconds` (0 : au clic seulement). Réglages de ce poste : `gmAlertBanner`, `gmAlertSeconds`.
+ * §364: GM alert, screen side — each alert card (runtime/gm-alert.mjs) is also displayed on each GM in a banner at the top of
+ * the screen, in DAS colors: the item's name and what remains to handle. Several alerts stack; a click closes one;
+ * they leave on their own after `gmAlertSeconds` (0: on click only). This workstation's settings: `gmAlertBanner`,
+ * `gmAlertSeconds`.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -22,7 +23,7 @@ function container() {
   return stack;
 }
 
-/** Montre une alerte dans le bandeau ; rend l'élément. */
+/** Shows an alert in the banner; returns the element. */
 export function showGmAlert({ text, item=null, actor=null }) {
   const line = document.createElement("div");
   line.className = "das-gm-alerts__line";

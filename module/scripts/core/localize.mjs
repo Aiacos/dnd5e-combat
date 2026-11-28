@@ -1,16 +1,16 @@
 /**
- * §202 : les effets recopiés d'un compendium par le diagnostic du monde (runtime/diagnostic/checks.mjs). L'effet d'un objet magique
- * porte d'ordinaire le nom de l'objet (« Walloping Ammunition » sur « Walloping Ammunition ») ; une traduction qui traduit le nom de
- * l'objet sans celui de ses effets laissait l'effet recopié en anglais (retour de table du 2026-10-18 : « Projectile percutant »,
- * enchantement « Walloping Ammunition »). Un effet qui porte le nom d'origine (anglais) de l'objet prend son nom affiché.
+ * §202: the effects copied from a compendium by the world diagnostic (runtime/diagnostic/checks.mjs). A magic item's effect
+ * usually bears the item's name ("Walloping Ammunition" on "Walloping Ammunition"); a translation that translates the item's name
+ * without that of its effects left the copied effect in English (table feedback of 2026-10-18: "Projectile percutant",
+ * enchantment "Walloping Ammunition"). An effect that bears the item's original (English) name takes its displayed name.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
 /**
- * @param {object[]} effects        Données d'effets (`toObject()`), modifiées sur une copie.
- * @param {string|null} originalName Le nom d'origine de l'objet de référence (`flags.babele.originalName`), ou null.
- * @param {string} displayName       Le nom de l'objet tel qu'il est montré (traduit).
+ * @param {object[]} effects        Effect data (`toObject()`), modified on a copy.
+ * @param {string|null} originalName The original name of the reference item (`flags.babele.originalName`), or null.
+ * @param {string} displayName       The item's name as shown (translated).
  * @returns {object[]}
  */
 export function localizeEffectNames(effects, originalName, displayName) {
@@ -19,38 +19,38 @@ export function localizeEffectNames(effects, originalName, displayName) {
 }
 
 /* -------------------------------------------- */
-/*  §203 : textes restés dans la langue d'origine */
+/*  §203: texts left in the original language */
 /* -------------------------------------------- */
 
-/** Un chemin pointé (« system.description.value ») dans des données simples. */
+/** A dotted path ("system.description.value") in plain data. */
 function at(data, path) {
   return path.split(".").reduce((o, k) => ((o == null) ? undefined : o[k]), data);
 }
 
-/** Les champs d'un objet que Babele traduit : clé de sa charge d'origine (`flags.babele.originalPayload`) → chemin. */
+/** The fields of an item that Babele translates: key of its original payload (`flags.babele.originalPayload`) → path. */
 export const ITEM_FIELDS = Object.freeze([
   ["name", "name"], ["description", "system.description.value"], ["chat", "system.description.chat"],
   ["udescription", "system.unidentified.description"], ["condition", "system.activation.condition"]
 ]);
-/** Ceux d'une activité (dnd5e 6.0), à l'intérieur de `system.activities.<id>`. */
+/** Those of an activity (dnd5e 6.0), inside `system.activities.<id>`. */
 export const ACTIVITY_FIELDS = Object.freeze([["name", "name"], ["condition", "activation.condition"], ["chatFlavor", "description.chatFlavor"]]);
 /** Ceux d'un acteur. */
 export const ACTOR_FIELDS = Object.freeze([["name", "name"], ["biography", "system.details.biography.value"]]);
 
 /**
- * Un champ resté dans la langue d'origine : sa valeur est encore exactement celle d'origine (non vide), et la référence traduite
- * en donne une autre. Un texte modifié à la main n'est jamais repris.
+ * A field left in the original language: its value is still exactly the original (non-empty), and the translated reference
+ * gives another. A hand-edited text is never taken back.
  */
 const stale = (now, original, translated) => (typeof original === "string") && (original !== "") && (now === original)
   && (typeof translated === "string") && (translated !== "") && (translated !== now);
 
 /**
- * §203 : ce qu'il faut réécrire dans un objet pour reprendre la traduction actuelle de sa référence du compendium.
- * @param {object} current     Les données de l'objet du monde (`toObject()`).
- * @param {object} original    La charge d'origine de la référence (`flags.babele.originalPayload`) : les valeurs non traduites.
- * @param {object} translated  Les données de la référence traduite (`toObject()`).
- * @returns {{ update: Object<string, string>, effects: object[], fields: string[] }}  `update` : chemins → valeurs ; `effects` :
- *   mises à jour d'effets ({ _id, name?, description? }) ; `fields` : les champs repris (pour le compte rendu).
+ * §203: what must be rewritten in an item to take back the current translation of its compendium reference.
+ * @param {object} current     The data of the world item (`toObject()`).
+ * @param {object} original    The original payload of the reference (`flags.babele.originalPayload`): the untranslated values.
+ * @param {object} translated  The data of the translated reference (`toObject()`).
+ * @returns {{ update: Object<string, string>, effects: object[], fields: string[] }}  `update`: paths → values; `effects`:
+ *   effect updates ({ _id, name?, description? }); `fields`: the fields taken back (for the report).
  */
 export function retranslateItem(current, original, translated) {
   const update = {};
@@ -69,7 +69,7 @@ export function retranslateItem(current, original, translated) {
       if ( stale(at(activity, path), orig[key], value) ) { update[`system.activities.${id}.${path}`] = value; fields.push(`activity.${key}`); }
     }
   }
-  // Les effets : Babele les traduit par leur nom d'origine. Celui de la référence qui porte le même id, ou le seul s'il n'y en a qu'un.
+  // The effects: Babele translates them by their original name. That of the reference with the same id, or the only one.
   const origEffects = Object.values(original.effects ?? {});
   const refEffects = translated.effects ?? [];
   const effects = [];
@@ -87,8 +87,8 @@ export function retranslateItem(current, original, translated) {
 }
 
 /**
- * §203 : la même chose pour un acteur (nom, biographie, nom de son token prototype quand il suivait le nom d'origine). Ses objets
- * sont repris un par un (`retranslateItem`).
+ * §203: the same for an actor (name, biography, name of its prototype token when it followed the original name). Its items
+ * are taken back one by one (`retranslateItem`).
  */
 export function retranslateActor(current, original, translated) {
   const update = {};
@@ -98,8 +98,8 @@ export function retranslateActor(current, original, translated) {
     const value = at(translated, path);
     if ( stale(at(current, path), original[key], value) ) { update[path] = value; fields.push(key); }
   }
-  // Le token prototype seulement quand la fiche porte son nom d'origine ou traduit : une fiche renommée à la main (« Gray Ooze
-  // Glob », tirée de la Vase grise) garde un token à son nom, pas celui de la créature d'origine.
+  // The prototype token only when the sheet bears its original or translated name: a sheet renamed by hand ("Gray Ooze
+  // Glob", drawn from the Gray Ooze) keeps a token under its own name, not that of the original creature.
   const token = translated.prototypeToken?.name || translated.name;
   const named = [original.name, translated.name].includes(current.name);
   if ( named && stale(current.prototypeToken?.name, original.name, token) ) { update["prototypeToken.name"] = token; fields.push("token"); }

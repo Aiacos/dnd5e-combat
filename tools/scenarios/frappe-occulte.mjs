@@ -1,10 +1,10 @@
 /**
- * Frappe occulte au toucher (§47 bis). Monde `ravenloft` : Kaalisti (Occultiste 5, Pacte de la lame, emplacement de pacte de
- * niveau 3) frappe Rahadin (à défaut, le Zombi) avec Porte-Fardeau, en combat.
- *  1. Au jet de dégâts du coup, la question propose la Frappe occulte : choisie → +(1 + niveau)d8 de force sur ce jet, un
- *     emplacement de pacte dépensé, la cible (taille M) À terre.
- *  2. Un second coup qui touche dans le même tour : la Frappe occulte n'est plus proposée (une fois par tour).
- * Non applicable sans Kaalisti. Remet l'emplacement, la marque du tour, les PV et l'état de la cible.
+ * Eldritch Smite on a hit (§47 bis). World `ravenloft`: Kaalisti (Warlock 5, Pact of the Blade, level 3 pact slot) hits Rahadin
+ * (failing that, the Zombi) with Porte-Fardeau, in combat.
+ *  1. On the hit's damage roll, the question offers Eldritch Smite: chosen → +(1 + level)d8 force on that roll, one pact slot
+ *     spent, the target (size M) Prone.
+ *  2. A second hit that lands in the same turn: Eldritch Smite is no longer offered (once per turn).
+ * Not applicable without Kaalisti. Restores the slot, the turn's mark, the HP and the target's condition.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -16,14 +16,15 @@ export default {
     const { tokens } = await ctx.scene();
     if ( !tokens.some(t => t.name === "Kaalisti") ) { ctx.log("Kaalisti absent : non applicable"); return; }
     const warlock = await ctx.token("Kaalisti");
-    // Une cible qui survit au coup (le Zombi, 22 PV au plus, mourait de l'épée et des 4d8 : à 0 PV, pas d'À terre) : Rahadin (M).
+    // A target that survives the hit (the Zombi, 22 HP at most, died from the sword and the 4d8: at 0 HP, no Prone):
+    // Rahadin (M).
     const target = tokens.find(t => /^Rahadin/.test(t.name)) ?? await ctx.token("Zombi");
     const actor = () => ctx.call("get-actor", { actorId: warlock.actorId });
     const pactValue = async () => Number((await actor()).system?.spells?.pact?.value) || 0;
     const slots0 = await pactValue();
     ctx.restore(() => ctx.call("update-actor", { actorId: warlock.actorId, actorData: { "system.spells.pact.value": slots0 } }).catch(() => {}));
     await ctx.call("update-actor", { actorId: warlock.actorId, actorData: { "system.spells.pact.value": 2 } });
-    // La marque « une fois par tour » d'une passe précédente (Kaalisti peut être dans un combat de l'utilisateur, qui n'avance pas).
+    // The "once per turn" mark from a previous run (Kaalisti may be in a user's combat, which does not advance).
     const clearOnce = () => ctx.call("update-actor", { actorId: warlock.actorId, actorData: { "flags.dnd5e-combat.oncePerTurn.-=eldritch-smite": null } }).catch(() => {});
     await clearOnce();
     ctx.restore(clearOnce);
@@ -41,7 +42,7 @@ export default {
     await ctx.startCombat([warlock, target]);
     const sword = await ctx.itemId(warlock.id, "greatsword");
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(x => x.id);
-    /** La question au toucher : rend ce qu'elle proposait, après avoir répondu par le bouton qui correspond à `pick`. */
+    /** The on-hit question: returns what it offered, after answering with the button that matches `pick`. */
     const answer = async (ids, pick, ms=8000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
@@ -54,7 +55,7 @@ export default {
       }
       return null;
     };
-    /** Kaalisti frappe jusqu'à toucher (10 essais) ; rend la question vue et le jet de dégâts. */
+    /** Kaalisti strikes until a hit (10 tries); returns the question seen and the damage roll. */
     const hits = async pick => {
       for ( let n = 0; n < 10; n++ ) {
         const ids = await known();
@@ -80,7 +81,7 @@ export default {
     const prone = (await ctx.engine("stats", { tokenId: target.id }))?.statuses?.includes("prone");
     ctx.expect(prone === true, `${target.name} est À terre (${prone})`);
 
-    // Toujours le tour de Kaalisti : un second coup ne la propose plus.
+    // Still Kaalisti's turn: a second hit no longer offers it.
     await ctx.call("set-status", { tokenId: target.id, statusId: "prone", active: false }).catch(() => {});
     const second = await hits(/Frappe occulte|Eldritch Smite/i);
     if ( !ctx.expect(!!second, "second coup qui touche (10 essais au plus)") ) return;

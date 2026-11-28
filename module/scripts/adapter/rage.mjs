@@ -1,12 +1,12 @@
 /**
- * La Rage du Barbare (SPEC §22) lue et écrite dans dnd5e 6.0. L'item Rage du Manuel des joueurs porte un effet transféré,
- * désactivé au repos (résistances contondant / perforant / tranchant, bonus aux dégâts de mêlée, Avantage aux tests et
- * sauvegardes de Force) ; l'activité « Expend Rage » l'active, pour 10 minutes. dnd5e ne tient ni la fin de la Rage à la fin du
- * tour suivant faute de l'avoir entretenue (règle 2024), ni sa fin quand le barbare est Neutralisé : le moteur le fait.
+ * The Barbarian's Rage (SPEC §22) read and written in dnd5e 6.0. The Rage item of the Player's Handbook carries a
+ * transferred effect, disabled at rest (Bludgeoning / Piercing / Slashing resistances, melee damage bonus, Advantage on
+ * Strength checks and saves); the "Expend Rage" activity enables it, for 10 minutes. dnd5e neither ends the Rage at the end
+ * of the next turn for lack of having maintained it (2024 rule), nor when the barbarian is Incapacitated: the engine does.
  *
- * Vu en jeu le 2026-09-28 : le moteur applique l'effet de l'activité comme le plateau d'effets de dnd5e, en COPIE sur l'acteur
- * (origine : l'item, `_stats.duplicateSource` : l'effet de l'item) ; l'effet de l'item, lui, peut aussi être activé à la main
- * depuis la fiche. La Rage est active si l'un ou l'autre l'est.
+ * Seen in play on 2026-09-28: the engine applies the activity's effect like dnd5e's effects tray, as a COPY on the actor
+ * (origin: the item, `_stats.duplicateSource`: the item's effect); the item's effect can also be enabled by hand
+ * from the sheet. The Rage is active if either one is.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,7 +16,7 @@ import { currentTurnKey } from "./turn.mjs";
 import { comesFromItemEffect } from "./triggers.mjs";
 import { originItemOf } from "./facts.mjs";
 
-/** L'item de Rage de l'acteur, sa règle et son effet, ou null. */
+/** The actor's Rage item, its rule and its effect, or null. */
 export function rageOf(actor) {
   for ( const item of actor?.items ?? [] ) {
     const rule = contentOf(item).entry?.rage;
@@ -27,11 +27,11 @@ export function rageOf(actor) {
 }
 
 /**
- * Les effets actifs de la Rage : la copie sur l'acteur, et l'effet de l'item s'il est vraiment activé.
- * §299 (repasse C4) : dnd5e 6.0.6 prépare un effet d'item que porte une activité (« effet d'activité » : celui de Rage, que pose « Expend
- * Rage ») comme `transfer = disabled = false` en mémoire, quel que soit l'état de la donnée (dnd5e.mjs:6929, `isOnActivity`) — il n'est
- * jamais transféré à l'acteur. Lire `effect.disabled` faisait voir tout barbare en Rage en permanence (« pas de sorts en Rage », Rage
- * aveugle active…). L'effet de l'item ne compte donc que si sa donnée le dit actif et qu'il n'est pas un effet d'activité.
+ * The Rage's Active Effects: the copy on the actor, and the item's effect if it is really enabled.
+ * §299 (pass C4): dnd5e 6.0.6 prepares an item effect carried by an activity ("activity effect": the Rage's, which "Expend
+ * Rage" applies) as `transfer = disabled = false` in memory, whatever the data's state (dnd5e.mjs:6929, `isOnActivity`) — it is
+ * never transferred to the actor. Reading `effect.disabled` made every barbarian look permanently in Rage ("no spells in
+ * Rage", blind Rage active…). The item's effect therefore counts only if its data say it is active and it is no activity effect.
  */
 function rageEffects(actor) {
   const rage = rageOf(actor);
@@ -47,7 +47,7 @@ export function isRaging(actor) {
   return rageEffects(actor).length > 0;
 }
 
-/** Une règle du contenu portée par un item de l'acteur (Rage persistante, Rage implacable…), ou null. */
+/** A content rule carried by one of the actor's items (Persistent Rage, Relentless Rage…), or null. */
 export function barbarianRule(actor, key) {
   for ( const item of actor?.items ?? [] ) {
     const rule = contentOf(item).entry?.[key];
@@ -56,13 +56,13 @@ export function barbarianRule(actor, key) {
   return null;
 }
 
-/** La Rage cesse-t-elle avec cet état ? Neutralisé (et ce qui le donne) ; Inconscient seulement, avec Rage persistante. */
+/** Does the Rage end with this condition? Incapacitated (and what grants it); Unconscious only, with Persistent Rage. */
 export function statusEndsRage(actor, statuses) {
   const list = barbarianRule(actor, "persistentRage") ? ["unconscious", "dead"] : INCAPACITATING;
   return [...statuses].some(s => list.includes(s));
 }
 
-/** Met fin à la Rage (l'effet de l'item désactivé). Rend true si elle était active. */
+/** Ends the Rage (the item's effect disabled). Returns true if it was active. */
 export async function endRage(actor) {
   const effects = rageEffects(actor);
   if ( !effects.length ) return false;
@@ -73,16 +73,16 @@ export async function endRage(actor) {
   return true;
 }
 
-/** La Rage vient d'être entretenue (ou prise) à ce tour de combat. */
+/** The Rage has just been maintained (or taken) on this combat turn. */
 export async function keepRage(actor) {
   const key = currentTurnKey();
   if ( key && actor?.isOwner && (actor.getFlag(MODULE_ID, "rageKept") !== key) ) await actor.setFlag(MODULE_ID, "rageKept", key);
 }
 
-/** La dernière fois que la Rage a été entretenue (clé de tour), ou null. */
+/** The last time the Rage was maintained (turn key), or null. */
 export const rageKeptOn = actor => actor?.getFlag(MODULE_ID, "rageKept") ?? null;
 
-/** Rage implacable : à 0 PV, en Rage, pas mort ; l'item et son activité de sauvegarde. */
+/** Relentless Rage: at 0 HP, in Rage, not dead; the item and its save activity. */
 export function relentlessAtZero(actor) {
   if ( !isRaging(actor) || actor.statuses?.has("dead") ) return null;
   const found = barbarianRule(actor, "relentless");
@@ -90,15 +90,15 @@ export function relentlessAtZero(actor) {
   return activity ? { item: found.item, activity } : null;
 }
 
-/** Témérité : la décision prise à ce tour (true, false), ou null si elle n'a pas encore été prise. */
+/** Recklessness: the decision made this turn (true, false), or null if it has not been made yet. */
 export function recklessChoice(actor) {
   const c = actor?.getFlag(MODULE_ID, "recklessTurn");
   return (c && (c.key === currentTurnKey())) ? c.reckless : null;
 }
 
 /**
- * Core#98 : les options déjà prises d'une aptitude à une option par Rage — les effets actifs que ses activités ont posés sur le
- * porteur (copies, non transférées, d'origine l'item ; elles tombent avec la Rage : `duringRage.copiesEnd`).
+ * Core#98: the options already taken of a one-option-per-Rage ability — the Active Effects that its activities placed on the
+ * bearer (copies, not transferred, origin the item; they fall with the Rage: `duringRage.copiesEnd`).
  * @returns {ActiveEffect[]}
  */
 export function rageOptionsTaken(item) {

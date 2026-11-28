@@ -4,8 +4,8 @@ import "../module/scripts/adapter/content.mjs";   // ordre des imports circulair
 const { stealthRules, isHidden } = await import("../module/scripts/adapter/stealth.mjs");
 
 /**
- * Issue #65 : un choix « off » pour le réglage `stealthRules` — le moteur ne gère pas la Furtivité (table narrative). Personne n'est
- * caché pour lui, même un token qui porte encore un effet de Furtivité posé avant le changement de réglage.
+ * Issue #65: an "off" choice for the `stealthRules` setting — the engine does not handle Stealth (narrative table). Nobody is
+ * Hidden for it, even a token that still carries a Stealth effect applied before the setting changed.
  */
 const withRules = value => {
   globalThis.game = { settings: { get: (module, key) => {
@@ -15,10 +15,10 @@ const withRules = value => {
 };
 const hiddenActor = () => ({ effects: [{ disabled: false, getFlag: (scope, key) => ((scope === "dnd5e-combat") && (key === "hidden")) ? { dc: 15 } : undefined }] });
 
-describe("Furtivité non gérée (issue #65)", () => {
+describe("Stealth not handled (issue #65)", () => {
   afterEach(() => { delete globalThis.game; });
 
-  it("le réglage rend « off », « bg3 » ou « 2024 » ; une valeur inconnue ou un réglage absent valent 2024", () => {
+  it("the setting returns \"off\", \"bg3\" or \"2024\"; an unknown value or a missing setting means 2024", () => {
     withRules("off");
     expect(stealthRules()).toBe("off");
     withRules("bg3");
@@ -29,12 +29,12 @@ describe("Furtivité non gérée (issue #65)", () => {
     expect(stealthRules()).toBe("2024");
   });
 
-  it("« off » : un acteur qui porte l'effet de Furtivité n'est pas caché pour le moteur", () => {
+  it("\"off\": an actor carrying the Stealth effect is not Hidden for the engine", () => {
     withRules("off");
     expect(isHidden({ actor: hiddenActor() })).toBe(false);
   });
 
-  it("2024 et BG3 : le même acteur est caché", () => {
+  it("2024 and BG3: the same actor is Hidden", () => {
     withRules("2024");
     expect(isHidden({ actor: hiddenActor() })).toBe(true);
     withRules("bg3");

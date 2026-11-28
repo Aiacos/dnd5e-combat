@@ -1,13 +1,13 @@
 /**
- * Actions de base et main secondaire (SPEC §15.2), sur le tour du Magicien, au contact du Zombi :
- *  1. au début du combat, le MJ pose sur le Magicien (personnage d'un joueur) les items Pointe,
- *     Désengagement, Esquive qui lui manquent ;
- *  2. Pointe par son item : l'action est dépensée, le déplacement du tour doublé (`dashed`) ;
- *  3. Dague au contact (arme Légère) : l'attaque ouvre la main secondaire (`lightAttack`) ;
- *  4. Dague en mode `offhand` choisi au jet (le chemin de la fiche et de la barre BG3) : le MJ corrige
- *     la dépense au jet d'attaque — l'action rendue, l'action Bonus débitée (`offhand`).
- * Le budget se lit sur la carte d'utilisation (`spent`, écrit par le MJ). Remet le Magicien à sa
- * place, les PV du Zombi, et retire les items que le moteur a posés pendant le scénario.
+ * Basic actions and off hand (SPEC §15.2), on the Wizard's turn, in contact with the Zombie:
+ *  1. at the start of combat, the GM places on the Wizard (a player's character) the Dash, Disengage and Dodge items
+ *     that he lacks;
+ *  2. Dash by its item: the action is spent, the turn's movement doubled (`dashed`);
+ *  3. Dagger in contact (Light weapon): the attack opens the off hand (`lightAttack`);
+ *  4. Dagger in `offhand` mode chosen at the roll (the sheet's and the BG3 bar's path): the GM corrects
+ *     the spending at the attack roll — the action returned, the Bonus Action debited (`offhand`).
+ * The budget is read on the use card (`spent`, written by the GM). Puts the Wizard back at its
+ * place, the Zombie's HP, and removes the items the engine placed during the scenario.
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -24,7 +24,7 @@ export default {
     const itemsOf = async () => (await ctx.call("get-actor", { actorId: mage.actorId })).items ?? [];
     const basics = items => items.filter(i => i.flags?.[MODULE_ID]?.basicAction);
 
-    // Au contact du Zombi, pour que la Dague soit une attaque de mêlée sans détour.
+    // In contact with the Zombie, so that the Dagger is a melee attack with no detour.
     const size = await ctx.gridSize();
     const home = { x: mage.x, y: mage.y };
     const moveMage = async (x, y) => {
@@ -34,8 +34,8 @@ export default {
     ctx.restore(() => moveMage(home.x, home.y));
     await moveMage(zombi.x + size, zombi.y);
 
-    // 1. Combat : les actions de base sont posées.
-    await ctx.startCombat([mage, zombi]);   // retire lui-même, à la fin, les items que le moteur aura posés
+    // 1. Combat: the basic actions are placed.
+    await ctx.startCombat([mage, zombi]);   // itself removes, at the end, the items the engine will have placed
     let placed = [];
     for ( const until = Date.now() + 6000; Date.now() < until; await sleep(400) ) {
       placed = basics(await itemsOf());
@@ -55,7 +55,7 @@ export default {
       await sleep(800);
     }
 
-    /** La dépense consignée par le MJ sur la carte d'utilisation (attend qu'elle arrive, ou sa correction). */
+    /** The spending logged by the GM on the use card (waits for it to arrive, or for its correction). */
     async function spentOn(usageMessageId, accept=() => true) {
       for ( const until = Date.now() + 6000; Date.now() < until; await sleep(400) ) {
         const message = (await ctx.messagesSince(usageMessageId)).find(m => m.id === usageMessageId)
@@ -71,15 +71,15 @@ export default {
     const s1 = await spentOn(dash.usageMessageId);
     ctx.expect(s1?.after?.dashed === true && s1.after.action === 0, `Pointe : action ${s1?.before?.action} → ${s1?.after?.action}, déplacement doublé (${s1?.after?.dashed})`);
 
-    // 3. Dague au contact : arme Légère, dans l'action Attaquer.
+    // 3. Dagger in contact: Light weapon, in the Attack action.
     const stab = await ctx.use({ tokenId: mage.id, identifier: "dagger", activityType: "attack", targetTokenIds: [zombi.id], usageConfig: { attackMode: "oneHanded" } });
     await ctx.settle(stab.usageMessageId).catch(() => null);
     const s2 = await spentOn(stab.usageMessageId);
     ctx.expect(s2?.after?.lightAttack === true, `Dague : attaque d'arme Légère consignée (lightAttack ${s2?.after?.lightAttack})`);
 
-    // 4. Dague en main secondaire, mode choisi au jet.
-    // dnd5e retient le dernier mode d'attaque de l'item (`flags.dnd5e.last`) : on le rend, sinon la dague resterait en main
-    // secondaire pour les scénarios suivants (dégâts sans modificateur, vu le 2026-09-28).
+    // 4. Dagger in off hand, mode chosen at the roll.
+    // dnd5e remembers the item's last attack mode (`flags.dnd5e.last`): we put it back, otherwise the dagger would stay in the
+    // off hand for the following scenarios (damage without modifier, seen on 2026-09-28).
     ctx.restore(async () => {
       const id = await ctx.itemId(mage.id, "dagger");
       const item = ((await ctx.call("get-actor", { actorId: mage.actorId })).items ?? []).find(i => i._id === id);

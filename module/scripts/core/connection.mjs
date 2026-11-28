@@ -1,11 +1,11 @@
 /**
- * §388 : le test de connexion et de compatibilité d'un joueur — la partie pure (aucun global Foundry).
- *  - `pingStats` : les allers-retours MJ → joueur → MJ (médiane, pire, irrégularité) et l'écart d'horloge, lu sur l'essai le plus court.
- *  - `fingerprint` / `apiShape` : l'empreinte du code vraiment chargé par un client. Les scripts des modules sont servis sans numéro de
- *    version dans l'adresse : un navigateur peut garder l'ancien code après une mise à jour. Même version annoncée, empreinte
- *    différente : le cache du navigateur.
- *  - `diagnose` : les constats, chacun `{ id, level, data }` (niveaux `ok` < `info` < `warn` < `bad`), traduits par l'interface.
- *  - `connectionMarkdown` : le texte à copier (Discord, issue), avec une fonction de traduction fournie.
+ * §388: a player's connection and compatibility test — the pure part (no Foundry global).
+ *  - `pingStats`: the GM → player → GM round trips (median, worst, irregularity) and the clock offset, read on the shortest trial.
+ *  - `fingerprint` / `apiShape`: the fingerprint of the code actually loaded by a client. Module scripts are served without a
+ *    version number in the address: a browser can keep the old code after an update. Same announced version, different
+ *    fingerprint: the browser cache.
+ *  - `diagnose`: the findings, each `{ id, level, data }` (levels `ok` < `info` < `warn` < `bad`), translated by the interface.
+ *  - `connectionMarkdown`: the text to copy (Discord, issue), with a supplied translation function.
  */
 
 import { hash } from "./debug.mjs";
@@ -21,7 +21,7 @@ export const THRESHOLDS = Object.freeze({
   textureWarn: 4096
 });
 
-/** Les rendus logiciels : pas de carte graphique utilisée (accélération matérielle coupée dans le navigateur). */
+/** Software renderers: no graphics card used (hardware acceleration turned off in the browser). */
 export const SOFTWARE_GPU = /swiftshader|llvmpipe|softpipe|microsoft basic render|software/i;
 
 const median = values => {
@@ -32,9 +32,9 @@ const median = values => {
 };
 
 /**
- * Les statistiques des essais. Chaque essai : `{ sent, received, remote }` (horloge du MJ à l'envoi et au retour, horloge du joueur à
- * la réponse) ; un essai perdu : `{ lost: true }`.
- * L'écart d'horloge (joueur − MJ) est lu sur l'essai le plus court, où le milieu de l'aller-retour est le plus sûr.
+ * The statistics of the trials. Each trial: `{ sent, received, remote }` (GM clock at sending and at return, player clock at
+ * the reply); a lost trial: `{ lost: true }`.
+ * The clock offset (player − GM) is read on the shortest trial, where the middle of the round trip is the most reliable.
  */
 export function pingStats(samples=[]) {
   const ok = samples.filter(s => !s.lost && Number.isFinite(s.sent) && Number.isFinite(s.received));
@@ -53,9 +53,9 @@ export function pingStats(samples=[]) {
 }
 
 /**
- * Les chemins des fonctions d'une API publique, jusqu'à `depth` niveaux (« ui.cost », « rolls.request »…), triés. Seuls les objets
- * simples sont parcourus : une instance (une barre, une fenêtre) porte un état vivant qui change d'un client à l'autre (vu en jeu :
- * `bar.pending`, `bar.popupRef`) et ferait croire à un autre code.
+ * The function paths of a public API, down to `depth` levels ("ui.cost", "rolls.request"…), sorted. Only plain objects
+ * are walked: an instance (a bar, a window) carries a live state that changes from one client to another (seen in play:
+ * `bar.pending`, `bar.popupRef`) and would suggest different code.
  */
 export function apiShape(api, depth=2, prefix="") {
   if ( !api || ((typeof api !== "object") && (typeof api !== "function")) || (depth <= 0) ) return [];
@@ -76,16 +76,16 @@ export function apiShape(api, depth=2, prefix="") {
 const isPlain = v => !!v && (typeof v === "object") && !Array.isArray(v)
   && [Object.prototype, null].includes(Object.getPrototypeOf(v));
 
-/** L'empreinte d'une liste de chaînes (ordre indifférent). Rien à lire : `null`. */
+/** The fingerprint of a list of strings (order does not matter). Nothing to read: `null`. */
 export function fingerprint(parts) {
   if ( !parts?.length ) return null;
   return hash([...parts].map(String).sort().join("\n"));
 }
 
 /**
- * Le joueur comparé au MJ : versions, modules actifs, code chargé.
- * @param {object} reference  Ce que le client du MJ dit de lui.
- * @param {object} probe      Ce que le client du joueur dit de lui.
+ * The player compared to the GM: versions, active modules, loaded code.
+ * @param {object} reference  What the GM's client says about itself.
+ * @param {object} probe      What the player's client says about itself.
  */
 export function compareClients(reference={}, probe={}) {
   const gmMods = new Map((reference.modules ?? []).map(m => [m.id, m]));
@@ -109,10 +109,10 @@ export function compareClients(reference={}, probe={}) {
 }
 
 /**
- * Les constats, du plus grave au moins grave (l'ordre de la liste à égalité).
+ * The findings, from the most serious to the least (list order on a tie).
  * @param {object} input
  * @param {object} input.pings      `pingStats(…)`.
- * @param {object} [input.probe]    Ce que le joueur a répondu (absent : il n'a pas répondu).
+ * @param {object} [input.probe]    What the player answered (absent: they did not answer).
  * @param {object} [input.reference]
  * @param {object} [input.thresholds]
  */
@@ -151,9 +151,9 @@ export function diagnose({ pings, probe=null, reference={}, thresholds=THRESHOLD
   if ( diff.missing.length || diff.extra.length ) add("moduleSet", "warn", { missing: diff.missing.join(", ") || "—", extra: diff.extra.join(", ") || "—" });
   if ( !stale.length && !cached.length && !diff.foundry && !diff.system ) add("versions", "ok", { count: (probe.modules ?? []).length });
 
-  // Pièges connus
-  // Babele (2.9.1) : seul un client MJ avec « Parcourir les fichiers » cherche les traductions ; il en publie la liste (réglages de monde
-  // `babele.translationFiles` / `mappingFiles`, à chaque `ready`, dans SA langue). Les autres clients lisent cette liste.
+  // Known pitfalls
+  // Babele (2.9.1): only a GM client with "Browse Files" looks for the translations; it publishes the list (world settings
+  // `babele.translationFiles` / `mappingFiles`, at each `ready`, in ITS language). The other clients read that list.
   const published = probe.babele && (probe.babeleBrowses === false);
   if ( published && (probe.babelePublished === 0) ) add("babeleEmpty", "warn");
   if ( probe.language && reference.language && (probe.language !== reference.language) ) {
@@ -177,7 +177,7 @@ export function diagnose({ pings, probe=null, reference={}, thresholds=THRESHOLD
   }
   if ( probe.browserFamily && (probe.browserFamily !== "chromium") ) add("browser", "info", { browser: probe.browserFamily });
 
-  // État de jeu
+  // Game state
   if ( probe.viewedScene && reference.viewedScene && (probe.viewedScene !== reference.viewedScene) ) add("scene", "info");
   if ( probe.errors > 0 ) add("errors", "warn", { count: probe.errors });
 
@@ -188,19 +188,19 @@ function sortFindings(list) {
   return list.map((f, i) => ({ f, i })).sort((a, b) => (LEVELS.indexOf(b.f.level) - LEVELS.indexOf(a.f.level)) || (a.i - b.i)).map(x => x.f);
 }
 
-/** Le niveau le plus grave d'une liste de constats. */
+/** The most serious level of a list of findings. */
 export function worstLevel(findings=[]) {
   return findings.reduce((w, f) => (LEVELS.indexOf(f.level) > LEVELS.indexOf(w) ? f.level : w), "ok");
 }
 
-/** Le nom du navigateur : la marque de `navigator.userAgentData` (sans les marques leurres « Not?A_Brand »), sinon le « user agent ». */
+/** The browser name: the brand from `navigator.userAgentData` (without decoy brands "Not?A_Brand"), else the "user agent". */
 export function browserName(brands=[], userAgent="") {
   const real = (brands ?? []).filter(b => !/not.?a.?brand/i.test(b.brand ?? ""));
   const pick = real.find(b => b.brand !== "Chromium") ?? real[0];
   return pick ? `${pick.brand} ${pick.version}` : userAgent;
 }
 
-/** La famille du navigateur, depuis son « user agent » : chromium, firefox, safari ou other. */
+/** The browser family, from its "user agent": chromium, firefox, safari or other. */
 export function browserFamily(userAgent="") {
   if ( /firefox\//i.test(userAgent) ) return "firefox";
   if ( /(chrome|chromium|crios|edg|opr|electron)\//i.test(userAgent) ) return "chromium";
@@ -211,9 +211,9 @@ export function browserFamily(userAgent="") {
 const ICON = { ok: "✅", info: "ℹ️", warn: "⚠️", bad: "❌" };
 
 /**
- * Le texte à copier.
+ * The text to copy.
  * @param {object} result  `{ role, at, pings, findings, probe }`.
- * @param {(key: string, data?: object) => string} t  La traduction d'une clé courte (« Titre », « Constat.ping »…).
+ * @param {(key: string, data?: object) => string} t  The translation of a short key ("Titre", "Constat.ping"…).
  */
 export function connectionMarkdown(result, t=(key) => key) {
   const lines = [`### ${t("Titre")} — ${result.role ?? "?"}`, ""];

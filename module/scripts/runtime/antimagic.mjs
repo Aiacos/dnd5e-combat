@@ -1,13 +1,15 @@
 /**
- * §436 : l'antimagie de dnd5e 6.1 tenue jusqu'au bout.
- *  - Le Champ antimagie du Manuel des joueurs n'a pas le comportement d'activité `antimagic` du SRD 6.1 : à la création de la région de
- *    son gabarit (MJ actif), le moteur y ajoute le comportement de région `dnd5e.antimagic` du système — dnd5e pose alors le statut
- *    `antimagic` sur qui entre, le retire à la sortie, et la région suit le lanceur. Seulement pour un item dont le contenu déclare
- *    `antimagicZone` (content/antimagic.mjs : Champ antimagie, Cône antimagie), et si dnd5e connaît ce comportement (6.1 et plus).
- *  - La marque `system.magical` que la migration de dnd5e pose sur les effets d'un sort, d'un parchemin ou d'un item `mgc`
- *    (`_migrateEffectMagical`) : sur un item magique ajouté à un acteur, et sur un effet posé sur un acteur depuis un tel item. Sans
- *    elle, `ActiveEffect5e#isSuppressed` ne suspend pas l'effet dans un champ.
- * Le reste lit le statut : légalité (runtime/turn.mjs), éligibilité (adapter/eligibility.mjs), téléportation (runtime/teleport.mjs).
+ * §436: dnd5e 6.1's antimagic held to the end.
+ *  - The Player's Handbook's Antimagic Field does not have the SRD 6.1 `antimagic` activity behavior: when the region of
+ *    its template is created (active GM), the engine adds the system's `dnd5e.antimagic` region behavior to it — dnd5e
+ *    then sets the `antimagic` status on whoever enters, removes it on exit, and the region follows the caster. Only for an
+ *    item whose content declares `antimagicZone` (content/antimagic.mjs: Antimagic Field, Antimagic Cone), and if dnd5e
+ *    knows this behavior (6.1 and later).
+ *  - The `system.magical` mark that dnd5e's migration puts on the effects of a spell, a scroll or an `mgc` item
+ *    (`_migrateEffectMagical`): on a magic item added to an actor, and on an effect put on an actor from such an item. Without
+ *    it, `ActiveEffect5e#isSuppressed` does not suspend the effect in a field.
+ * The rest reads the status: legality (runtime/turn.mjs), eligibility (adapter/eligibility.mjs),
+ * teleportation (runtime/teleport.mjs).
  */
 
 import { ANTIMAGIC_BEHAVIOR, ANTIMAGIC_STATUS } from "../core/antimagic.mjs";
@@ -22,7 +24,7 @@ import { MODULE_ID } from "../constants.mjs";
 import { askAnyway } from "./turn.mjs";
 import { overriddenFlag } from "./forced.mjs";
 
-/** La région d'un Champ antimagie sans le comportement du système : le lui donner. */
+/** The region of an Antimagic Field without the system's behavior: give it one. */
 async function onRegionCreated(region) {
   const itemUuid = region.getFlag?.("dnd5e", "item");
   if ( !itemUuid || !antimagicBehaviorKnown() ) return;
@@ -37,9 +39,10 @@ async function onRegionCreated(region) {
 }
 
 /**
- * Le Cône antimagie dure « jusqu'au début du prochain tour » du tyrannœil (`zoneLasts` : 6 s, la durée hors combat). En combat, l'heure du
- * monde avance au changement de round, avant son tour s'il ne joue pas en premier : la zone note son combattant et le round, et tombe
- * au début de son tour suivant (`onTurnChange`) ; `expiredRegions` (adapter/areas.mjs) l'attend tant que ce combat existe.
+ * The Antimagic Cone lasts "until the start of the next turn" of the beholder (`zoneLasts`: 6 s, the duration out of combat). In
+ * combat, world time advances at the round change, before its turn if it does not play first: the zone notes its combatant and
+ * the round, and ends at the start of its next turn (`onTurnChange`); `expiredRegions` (adapter/areas.mjs) waits for it as long
+ * as that combat exists.
  */
 async function markTurnEnd(region, item) {
   if ( !contentOf(item).entry?.zoneLasts ) return;
@@ -52,7 +55,7 @@ async function markTurnEnd(region, item) {
   log(`${item.name}: ends at the start of ${combatant.name}'s next turn`);
 }
 
-/** Début d'un tour : les zones antimagie de ce combattant posées à un round précédent prennent fin. */
+/** Start of a turn: this combatant's antimagic zones placed in an earlier round end. */
 async function onTurnChange(combat, prior, current) {
   const id = current?.combatantId;
   if ( !id ) return;
@@ -66,17 +69,17 @@ async function onTurnChange(combat, prior, current) {
 }
 
 /**
- * Forcer une utilisation que dnd5e refuse sèchement sous le statut : dnd5e 6.1 met `visibility.requireMagic` sur toute activité de sort
- * (dnd5e.mjs:21923, :23234) et cache une activité qui l'exige quand `magicAvailable` est faux (:18849) — `use()` s'arrête alors sur
- * « Using this activity isn't currently possible » (:18914), avant tout hook. Règle de la suite : un refus est forçable. Ici, avant
- * d'appeler `use`, la fenêtre de légalité du moteur (`askAnyway` : alerte au MJ, « Forcé » vu de tous) ; forcé, les effets du statut
- * sont désactivés le temps de l'utilisation puis rétablis, et la carte est marquée `overridden`. `use(extra)` reçoit les clés à fusionner
- * dans la configuration du moteur. Hors de ce cas, `use({})` tel quel.
- * §448 : une relance d'une utilisation déjà forcée (`forced`, visée de groupe après la fenêtre) ne redemande pas : le champ est levé.
+ * Force a use that dnd5e flatly refuses under the status: dnd5e 6.1 puts `visibility.requireMagic` on every spell activity
+ * (dnd5e.mjs:21923, :23234) and hides an activity that requires it when `magicAvailable` is false (:18849) — `use()` then
+ * stops on "Using this activity isn't currently possible" (:18914), before any hook. Suite rule: a refusal is forceable. Here,
+ * before calling `use`, the engine's legality window (`askAnyway`: alert to the GM, "Forced" seen by all); forced, the status's
+ * effects are disabled for the duration of the use then restored, and the card is marked `overridden`. `use(extra)` receives the
+ * keys to merge into the engine's configuration. Outside this case, `use({})` as is.
+ * §448: a relaunch of an already forced use (`forced`, group aim after the window) does not ask again: the field is lifted.
  * @param {Activity} activity
  * @param {(extra: object) => Promise<any>} use
  * @param {object} [options]
- * @param {boolean} [options.forced]  L'utilisation relancée a déjà été forcée (`antimagicForced` dans sa configuration).
+ * @param {boolean} [options.forced]  The relaunched use was already forced (`antimagicForced` in its configuration).
  */
 export async function useDespiteAntimagic(activity, use, { forced=false }={}) {
   const actor = activity?.actor;
@@ -91,9 +94,10 @@ export async function useDespiteAntimagic(activity, use, { forced=false }={}) {
 }
 
 /**
- * Les effets du statut antimagie de l'acteur désactivés le temps de `run`, puis rétablis : dnd5e accepte alors l'activité (`canUse`).
- * Aussi pour la relance de la légalité (runtime/turn.mjs) quand une autre raison est passée outre après le champ : sans cela, la relance
- * se heurterait au refus de dnd5e, sans carte (vu sur le banc le 2026-11-14 : Trait de feu sans cible désignée).
+ * The effects of the actor's antimagic status disabled for the duration of `run`, then restored: dnd5e then accepts the
+ * activity (`canUse`). Also for the relaunch of legality (runtime/turn.mjs) when another reason overrode after the field:
+ * without this, the relaunch would hit dnd5e's refusal, with no card (seen on the test bench on 2026-11-14: Fire Bolt
+ * with no target designated).
  */
 export async function withAntimagicLifted(actor, item, run) {
   const lifted = (actor?.effects ?? []).filter(e => e.statuses?.has(ANTIMAGIC_STATUS) && !e.disabled).map(e => e.id);
@@ -104,16 +108,17 @@ export async function withAntimagicLifted(actor, item, run) {
   try {
     return await run();
   } finally {
-    const still = lifted.filter(id => actor.effects.get(id));   // sorti du champ entre-temps : dnd5e a retiré l'effet
+    const still = lifted.filter(id => actor.effects.get(id));   // left the field in the meantime: dnd5e removed the effect
     if ( still.length ) await actor.updateEmbeddedDocuments("ActiveEffect", still.map(_id => ({ _id, disabled: false })));
   }
 }
 
 /**
- * `api.antimagic.use(subject, usage, dialog, message)` : utiliser un item ou une activité comme dnd5e (`item.use` / `activity.use`, mêmes
- * arguments), mais un sort ou une capacité magique que seul le champ refuse passe par la fenêtre « le faire quand même »
- * (`useDespiteAntimagic`). Pour la barre de Combat UI, qui appelle `activity.use` directement — dnd5e s'arrête avant tout hook. Un item
- * dont une activité reste permise suit dnd5e (son choix d'activité) ; sinon, la première activité que seul le champ refuse.
+ * `api.antimagic.use(subject, usage, dialog, message)`: use an item or an activity like dnd5e (`item.use` / `activity.use`, same
+ * arguments), but a spell or magical ability that only the field refuses goes through the "do it anyway" window
+ * (`useDespiteAntimagic`). For the Combat UI bar, which calls `activity.use` directly — dnd5e stops before any hook. An item
+ * one of whose activities remains allowed follows dnd5e (its activity choice); otherwise, the first activity that only the
+ * field refuses.
  * @param {Item|Activity} subject
  */
 export async function useAntimagic(subject, usage={}, dialog={}, message={}) {
@@ -130,14 +135,14 @@ export async function useAntimagic(subject, usage={}, dialog={}, message={}) {
     foundry.utils.isEmpty(extra) ? usage : { ...usage, [MODULE_ID]: { ...(usage?.[MODULE_ID] ?? {}), ...extra } }, dialog, message));
 }
 
-/** Le marqueur d'une carte d'item que le joueur a voulue telle quelle (refus du forçage) : la laisser passer. */
+/** The marker of an item card that the player wanted as it is (forcing refused): let it through. */
 const PLAIN_CARD = "antimagicPlainCard";
 
 /**
- * Depuis la fiche (et tout `item.use` sans activité permise) : dnd5e, ne trouvant aucune activité utilisable, affiche la carte de l'item
- * (`Item5e#use` → `displayCard`, dnd5e.mjs:36020). Si une activité n'est refusée que par le champ, la fenêtre « le faire quand même » à la
- * place ; refusée, la carte part comme dnd5e l'aurait montrée. « Afficher la carte » du menu de la fiche passe aussi par là (dnd5e ne les
- * distingue pas) : le refus rend la même carte.
+ * From the sheet (and any `item.use` with no allowed activity): dnd5e, finding no usable activity, displays the item's card
+ * (`Item5e#use` → `displayCard`, dnd5e.mjs:36020). If an activity is refused only by the field, the "do it anyway" window in
+ * its place; refused, the card goes out as dnd5e would have shown it. "Display card" in the sheet's menu also goes through here
+ * (dnd5e does not tell them apart): the refusal returns the same card.
  */
 function onPreDisplayCard(item, message) {
   if ( !item?.actor || message?.[MODULE_ID]?.[PLAIN_CARD] ) return true;
@@ -153,7 +158,7 @@ function onPreDisplayCard(item, message) {
 
 export const antimagicApi = Object.freeze({
   use: useAntimagic,
-  /** Cette activité n'est-elle refusée que par le champ (donc forçable) ? */
+  /** Is this activity refused only by the field (so forceable)? */
   blocks: activity => antimagicBlocks(activity)
 });
 

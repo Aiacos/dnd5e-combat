@@ -1,15 +1,15 @@
 /**
- * Ordre imposé (SPEC §16.59) : l'effet qui porte l'ordre sur la cible, et « Lâche » — ce que la créature tient : ses armes
- * et son bouclier équipés. Qui les pose au sol : un module voisin qui s'est proposé au hook `dnd5e-combat.dropItems`
- * (§40.3 — le moteur n'en connaît aucun) : ils tombent en tas à ses pieds et quittent sa fiche ; sans voisin, ils sont
- * seulement déséquipés (restés dans l'inventaire : « lâchés », à ramasser d'une action d'Utilisation d'un objet). Le repli
- * sur Item Piles a été retiré au §44.
+ * Imposed order (SPEC §16.59): the effect that carries the order on the target, and "Drop" — what the creature holds: its
+ * equipped weapons and shield. Who puts them on the ground: a neighboring module that offered itself on the
+ * `dnd5e-combat.dropItems` hook (§40.3 — the engine knows none): they fall in a pile at its feet and leave its sheet; without a
+ * neighbor, they are only unequipped (left in the inventory: "dropped", to be picked up with a Utilize action). The fallback
+ * on Item Piles was removed in §44.
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { identifierOf } from "./content.mjs";
 
-/** L'ordre qu'un acteur doit suivre : `{ effect, order, from }` (from : uuid du token du lanceur), ou null. */
+/** The order an actor must follow: `{ effect, order, from }` (from: uuid of the caster's token), or null. */
 export function orderOn(actor) {
   for ( const effect of actor?.effects ?? [] ) {
     const flag = effect.getFlag?.(MODULE_ID, "order");
@@ -18,7 +18,7 @@ export function orderOn(actor) {
   return null;
 }
 
-/** L'effet qui porte l'ordre, à créer sur la cible. Il cesse à la fin de son prochain tour (contenu : `remove` à endOfTurn). */
+/** The effect carrying the order, to create on the target. Ends at the end of its next turn (content: `remove` at endOfTurn). */
 export function orderEffectData({ item, activity, order, label, fromToken, message }) {
   return {
     name: game.i18n.format("DND5ECOMBAT.LabelValue", { label: item.name, value: label }),
@@ -30,8 +30,8 @@ export function orderEffectData({ item, activity, order, label, fromToken, messa
 }
 
 /**
- * Ce que la créature tient : armes et bouclier équipés — pas les armes naturelles (Coup, Morsure : type « natural »), ni la
- * Frappe à mains nues, qu'une classe pose équipée (Injonction « Lâche » ne fait pas lâcher ses poings).
+ * What the creature holds: equipped weapons and shield — not natural weapons (Slam, Bite: type "natural"), nor the
+ * Unarmed Strike, which a class puts equipped (Command "Drop" does not make it drop its fists).
  */
 export function heldItemsOf(actor) {
   return (actor?.items ?? []).filter(i => (i.system?.equipped === true)
@@ -40,16 +40,17 @@ export function heldItemsOf(actor) {
 }
 
 /**
- * §40.3 : un module voisin pose au sol ce qu'une créature lâche (Darsh Loot : un tas dans sa case). Le moteur appelle
- * `Hooks.callAll("dnd5e-combat.dropItems", takers, { token, items })` chez le MJ actif ; un module qui s'en charge pousse
- * dans `takers` une fonction `async () => boolean` — vrai : les objets ont quitté la fiche et sont au sol. La première qui
- * répond vrai l'emporte ; une erreur ou un refus laisse la suite (le simple déséquipement) faire. Sert aussi au familier qui
- * part dans sa poche dimensionnelle (§107).
+ * §40.3: a neighboring module puts on the ground what a creature drops (Darsh Loot: a pile in its cell). The engine calls
+ * `Hooks.callAll("dnd5e-combat.dropItems", takers, { token, items })` on the active GM's client; a module that handles it pushes
+ * into `takers` an `async () => boolean` function — true: the objects left the sheet and are on the ground. The first that
+ * answers true wins; an error or a refusal lets the rest (the plain unequipping) go ahead. Also used for the familiar that
+ * leaves into its pocket dimension (§107).
  */
 export async function droppedByNeighbour(token, items) {
   const takers = [];
-  // §40.3 : chez le MJ actif, quand une créature lâche ce qu'elle tient (ordre « Lâche », familier qui part dans sa poche) : `(takers,
-  // { token, items })`. Un module qui pose les objets au sol pousse dans `takers` une `async () => boolean` (vrai : c'est fait) ; sinon, simple déséquipement.
+  // §40.3: on the active GM's client, when a creature drops what it holds ("Drop" order, familiar that leaves into its pocket):
+  // `(takers, { token, items })`. A module that puts the objects on the ground pushes into `takers` an `async () => boolean`
+  // (true: it is done); otherwise, plain unequipping.
   Hooks.callAll(`${MODULE_ID}.dropItems`, takers, { token, items });
   for ( const take of takers ) {
     if ( typeof take !== "function" ) continue;
@@ -60,9 +61,9 @@ export async function droppedByNeighbour(token, items) {
 }
 
 /**
- * Lâche ce que la créature tient. Rend `{ items: [noms], pile: boolean, kept: [noms] }` — `items` : ce qui est au sol (avec un
- * voisin) ou lâché dans l'inventaire (sans) ; `kept` (§122) : avec un voisin, ce qui est resté sur la fiche (l'attaque d'une
- * créature, que Butin et commerce ne pose pas au sol), déséquipé.
+ * Drops what the creature holds. Returns `{ items: [noms], pile: boolean, kept: [noms] }` — `items`: what is on the ground (with a
+ * neighbor) or dropped in the inventory (without); `kept` (§122): with a neighbor, what stayed on the sheet (a creature's
+ * attack, which Loot and Trade does not put on the ground), unequipped.
  * @param {TokenDocument} token
  */
 export async function dropHeld(token) {
@@ -70,8 +71,8 @@ export async function dropHeld(token) {
   const held = heldItemsOf(actor);
   if ( !held.length ) return { items: [], pile: false, kept: [] };
   const names = held.map(i => i.name);
-  // Au sol, l'objet porte le nom de sa version « équipement » (dnd5e `gearPresentationData`, physical-item.mjs:413 : « Dague »
-  // plutôt que la « Dague ombrale » du Familier vampire), comme la fiche PNJ de dnd5e l'affiche.
+  // On the ground, the object carries the name of its "gear" version (dnd5e `gearPresentationData`, physical-item.mjs:413:
+  // "Dagger" rather than the "Umbral Dagger" of the Vampire Familiar), as dnd5e's NPC sheet displays it.
   const gearName = i => i.system?.gearPresentationData?.()?.name ?? i.name;
   if ( await droppedByNeighbour(token, held) ) {
     const stayed = held.filter(i => actor.items.has(i.id));

@@ -1,17 +1,17 @@
 /**
- * §493 (B13) — réaction contre une zone : la créature prise dans un cône ou une ligne impose une sauvegarde au lanceur ; ratée, elle
- * seule ne subit pas les dégâts. Exemple synthétique prêté au Zombi, sa règle posée dans la surcouche du monde (`overrideContent` ;
- * pas de drapeau d'item) :
+ * §493 (B13) — Reaction against an area: the creature caught in a Cone or a Line imposes a saving throw on the caster; on a
+ * failure, it alone avoids the damage. Synthetic example lent to the Zombie, its rule placed in the world overlay
+ * (`overrideContent`; no item flag):
  *   { on: "inArea", if: { "activity.isSpell": true, "activity.areaShape": ["cone", "line"] },
  *     do: [{ type: "use", target: "source" }, { type: "cancelForSelf", ifSourceFails: true }] }
- * L'item : une activité de sauvegarde en réaction, DD 17, Intelligence, Sagesse ou Charisme au choix du lanceur.
- *  1. L'Ensorceleur lance Mains brûlantes (cône), zone posée sur le Zombi, `autoReact: "first"` : la réaction part, la sauvegarde de
- *     l'Ensorceleur décide — ratée : carte « épargné », PV du Zombi inchangés ; réussie : carte « les dégâts passent », PV en baisse du
- *     montant appliqué. On rejoue jusqu'à avoir vu les deux issues (12 essais au plus).
- *  2. Boule de feu (sphère) sur le Zombi : aucune réaction, les dégâts passent.
- * Le réglage « Sauvegarde à plusieurs caractéristiques d'un PNJ » est mis sur « la meilleure » le temps du scénario (aucune fenêtre chez
- * le MJ), le Mage PNJ caché (son Contresort réagirait). États restés sur le Zombi et l'Ensorceleur retirés d'abord ; PV, items, réglage,
- * surcouche remis.
+ * The item: a Reaction saving-throw activity, DC 17, Intelligence, Wisdom or Charisma at the caster's choice.
+ *  1. The Sorcerer casts Burning Hands (Cone), area placed on the Zombie, `autoReact: "first"`: the Reaction goes off, the
+ *     Sorcerer's saving throw decides — failed: card "spared", Zombie HP unchanged; succeeded: card "the damage goes through",
+ *     HP down by the applied amount. We replay until both outcomes have been seen (12 tries at most).
+ *  2. Fireball (Sphere) on the Zombie: no Reaction, the damage goes through.
+ * The setting "Saving throw with several abilities of an NPC" is set to "the best" for the length of the scenario (no window on the
+ * GM's side), the NPC Mage hidden (its Counterspell would react). Conditions left on the Zombie and the Sorcerer removed first; HP,
+ * items, setting, overlay reset.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e.spells24.Item.";
@@ -19,7 +19,7 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
 
 const IDENTIFIER = "das-essai-bouclier-zone";
 const ACTIVITY = "dasEssaiBoucZone";
-// Noms en constantes : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Names as constants: the test bench and the reference take the first indented "name:" (two spaces) as the scenario's title.
 const ITEM_NAME = "Essai : bouclier de zone";
 const ITEM = { name: ITEM_NAME, type: "feat", img: "icons/creatures/invertebrates/fly-wasp-mosquito-green.webp",
   system: { identifier: IDENTIFIER, type: { value: "monster" }, activities: { [ACTIVITY]: { _id: ACTIVITY, type: "save",
@@ -38,25 +38,25 @@ export default {
     const sorc = await ctx.token("Ensorceleur");
     const zombi = await ctx.token("Zombi");
 
-    // États restés d'un scénario précédent (À terre, Inconscient…) : retirés d'abord, sur l'acteur du token.
+    // Conditions left over from a previous scenario (Prone, Unconscious…): removed first, on the token's actor.
     for ( const t of [sorc, zombi] ) for ( const s of ["dead", "unconscious", "prone", "incapacitated", "stunned", "paralyzed"] ) {
       await ctx.removeStatusEffects(t, s).catch(() => {});
     }
     const hp0 = await ctx.hp(zombi);
     ctx.restore(() => ctx.setHp(zombi, hp0));
 
-    // Personne d'autre ne réagit : le Mage PNJ caché le temps du scénario.
+    // No one else reacts: the NPC Mage hidden for the length of the scenario.
     for ( const other of tokens.filter(t => (t.name === "Mage") && !t.hidden) ) {
       await ctx.call("update-scene-object", { type: "Token", objectId: other.id, data: { hidden: true } });
       ctx.restore(() => ctx.call("update-scene-object", { type: "Token", objectId: other.id, data: { hidden: false } }).catch(() => {}));
     }
 
-    // Plusieurs caractéristiques au choix : la meilleure, sans fenêtre chez le MJ.
+    // Several abilities to choose from: the best, without a window on the GM's side.
     const choice0 = await ctx.call("get-setting", { namespace: MODULE_ID, key: "npcSaveChoice" }).then(r => r?.value ?? r).catch(() => "ask");
     await ctx.call("set-setting", { namespace: MODULE_ID, key: "npcSaveChoice", value: "best" });
     ctx.restore(() => ctx.call("set-setting", { namespace: MODULE_ID, key: "npcSaveChoice", value: (typeof choice0 === "string") ? choice0 : "ask" }).catch(() => {}));
 
-    // --- Item et règle prêtés ----------------------------------------------------------------------------------------
+    // --- Lent item and rule ----------------------------------------------------------------------------------------
     const { data: zTok } = await ctx.call("get-scene-object", { type: "Token", objectId: zombi.id });
     await ctx.call("upsert-actor-item", { actorId: zTok.actorId, itemData: ITEM, match: { path: "system.identifier", value: IDENTIFIER } });
     const lent = await ctx.itemId(zombi.id, IDENTIFIER);
@@ -64,14 +64,14 @@ export default {
     const { before } = await ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: RULE });
     ctx.restore(() => ctx.engine("overrideContent", { identifier: IDENTIFIER, entry: before }).catch(() => {}));
     await ctx.ensureItem(sorc, `${SRD}phbsplFireball00`, { system: { method: "atwill" } });
-    // Assez d'emplacements de niveau 1 pour rejouer Mains brûlantes, rendus à la fin.
+    // Enough level 1 slots to replay Burning Hands, returned at the end.
     const { data: sTok } = await ctx.call("get-scene-object", { type: "Token", objectId: sorc.id });
     const slots = (await ctx.call("get-actor", { actorId: sTok.actorId })).system?.spells?.spell1 ?? {};
     await ctx.call("update-actor", { actorId: sTok.actorId, actorData: { "system.spells.spell1.override": 20, "system.spells.spell1.value": 20 } });
     ctx.restore(() => ctx.call("update-actor", { actorId: sTok.actorId, actorData: {
       "system.spells.spell1.override": slots.override ?? null, "system.spells.spell1.value": slots.value ?? 0 } }).catch(() => {}));
 
-    /** Un sort de zone posé sur le Zombi (100 PV) ; rend la résolution, la carte « bouclier » éventuelle et les PV après. */
+    /** An area spell placed on the Zombie (100 HP); returns the resolution, the "shield" card if any and the HP afterwards. */
     const strike = async (identifier) => {
       await ctx.setHp(zombi, 100);
       await pause(400);
@@ -86,7 +86,7 @@ export default {
       return { r, shield, target, hp: await ctx.hp(zombi) };
     };
 
-    // 1. Mains brûlantes (cône) jusqu'à voir les deux issues de la sauvegarde du lanceur.
+    // 1. Burning Hands (Cone) until both outcomes of the caster's saving throw have been seen.
     const seen = { spared: null, hurt: null };
     for ( let i = 0; (i < 12) && (!seen.spared || !seen.hurt); i++ ) {
       const s = await strike("burning-hands");
@@ -107,7 +107,7 @@ export default {
       ctx.expect((hp < 100) && ((100 - hp) === target?.damage?.applied), `dégâts appliqués : 100 → ${hp} (${target?.damage?.applied ?? "?"})`);
     }
 
-    // 2. Boule de feu (sphère) : la condition « cône ou ligne » ne tient pas, aucune réaction.
+    // 2. Fireball (Sphere): the "Cone or Line" condition does not hold, no Reaction.
     const sphere = await strike("fireball");
     ctx.expect(!!sphere.r, "Boule de feu : résolution tranchée");
     ctx.expect(!sphere.shield, "Boule de feu (sphère) : aucune réaction du Zombi");

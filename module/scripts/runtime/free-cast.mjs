@@ -1,8 +1,8 @@
 /**
- * Un sort lancé « dans la même action », sans emplacement (clé `freeCast` : Intervention divine). L'activité de l'aptitude, qui
- * coûte l'action et l'utilisation, retient le lancement sur le lanceur (`flags["dnd5e-combat"].freeCast`) ; le sort suivant qui
- * convient part sans emplacement et sans coût d'action (core/free-cast.mjs), puis la retenue est oubliée. Les composantes
- * matérielles ne sont pas vérifiées par le moteur : rien à lever. Inscrit avant registerTurn, comme la Métamagie.
+ * A spell cast "in the same action", without a spell slot (key `freeCast`: Divine Intervention). The feature's activity, which
+ * costs the action and the use, holds the cast on the caster (`flags["dnd5e-combat"].freeCast`); the next fitting spell goes
+ * off without a slot and without an action cost (core/free-cast.mjs), then the hold is forgotten. Material components are not
+ * checked by the engine: nothing to lift. Registered before registerTurn, like Metamagic.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -17,7 +17,7 @@ const ruleOf = activity => {
   return (rule && (rule.activity === activity.id)) ? rule : null;
 };
 
-/** Le lancement gratuit que cet acteur retient encore, avec sa règle, ou null. */
+/** The free cast this actor still holds, with its rule, or null. */
 function heldBy(actor) {
   const held = actor?.getFlag?.(MODULE_ID, "freeCast");
   if ( !freeCastHeld(held, { turn: currentTurnKey(), now: game.time?.worldTime ?? 0 }) ) return null;

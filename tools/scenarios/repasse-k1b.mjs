@@ -1,8 +1,8 @@
 /**
- * §334, restes des lots K1 et K9 de la repasse des créatures. Arène des sorts : le Lanceur (PNJ), la Cible (999 PV), le Mort-vivant.
- *  - Regard soporifique du Chacal-garou (« Success: The target is immune to this jackalwere's Sleep Gaze for 24 hours ») : une réussite
- *    pose la marque d'immunité ; l'utilisation suivante laisse la Cible hors d'atteinte (ni sauvegarde, ni effet) ;
- *  - Gémissement funeste de la Banshie (« each creature … that isn't a Construct or an Undead ») : le Mort-vivant n'est pas affecté.
+ * §334, leftovers of batches K1 and K9 of the creature pass. Spell arena: the Caster (NPC), the Target (999 HP), the Undead.
+ *  - Jackalwere's Sleep Gaze ("Success: The target is immune to this jackalwere's Sleep Gaze for 24 hours"): a success
+ *    places the immunity mark; the next use leaves the Target out of reach (neither saving throw nor effect);
+ *  - Banshee's Wail ("each creature … that isn't a Construct or an Undead"): the Undead is not affected.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -60,7 +60,7 @@ export default {
       await pause(800);
     };
 
-    // Regard soporifique : réussite → immunité.
+    // Sleep Gaze: success → immunity.
     await beside(target);
     const gaze = await lend(`${MM}.mmJackalwere0000.Item.mmSleepGaze00000`);
     let saved = false;
@@ -87,7 +87,7 @@ export default {
       ctx.expect(!slept, "immunisée : ni sauvegarde ni sommeil sur 4 nouveaux regards");
     }
 
-    // Gémissement funeste : le Mort-vivant n'est pas affecté.
+    // Wail: the Undead is not affected.
     await beside(undead);
     const wail = await lend(`${MM}.mmBanshee0000000.Item.PgG2vKHFrfCXVlQZ`);
     await ctx.setHp(undead, 999);

@@ -1,7 +1,7 @@
 /**
- * §460 (tri des soins de l'ATLAS) : Absorption d'énergie du Jiangshi (Ravenloft) — la brique `lifesteal` sur une capacité de créature
- * à sauvegarde. Arène des sorts : le Lanceur (PNJ) reçoit la capacité prêtée depuis la fiche du compendium, la lance sur la Cible
- * (999 PV) ; sur un échec comme sur une réussite, il regagne autant de PV que les dégâts nécrotiques que la Cible a subis.
+ * §460 (sort of the ATLAS healing): Jiangshi's Drain Energy (Ravenloft) — the `lifesteal` brick on a creature ability
+ * with a saving throw. Spell arena: the Caster (NPC) receives the ability lent from the compendium sheet, casts it on the Target
+ * (999 HP); on a failure as on a success, it regains as much HP as the necrotic damage the Target took.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -35,7 +35,7 @@ export default {
       await ctx.call("remove-embedded-item", { documentType: "Actor", id: caster.actorId, itemId: lent.id }).catch(() => {});
     });
 
-    // À 3 cases de la Cible (portée 30 ft), le Lanceur à 1 PV pour que le soin se voie.
+    // 3 cells from the Target (range 30 ft), the Caster at 1 HP so that the healing shows.
     const t = await ctx.position(target);
     await ctx.call("move-token", { tokenId: caster.id, x: t.x - 3 * ARENE_SORTS.grid, y: t.y, elevation: 0 });
     await ctx.setHp(target, 999);

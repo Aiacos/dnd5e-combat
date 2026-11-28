@@ -3,14 +3,14 @@ import { healingTotal, withMaxRaise } from "../module/scripts/core/heal-raises-m
 import { CONTENT } from "../module/scripts/content/index.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
-describe("healRaisesMax : le soin tiré relève aussi les PV maximum (Festin des héros)", () => {
-  it("le total des parts de soin, et seulement d'elles", () => {
+describe("healRaisesMax: the healing rolled also raises maximum HP (Heroes' Feast)", () => {
+  it("the total of the healing parts, and only of them", () => {
     expect(healingTotal([{ type: "healing", value: 6 }, { type: "healing", value: 5 }])).toBe(11);
     expect(healingTotal([{ type: "fire", value: 9 }, { type: "healing", value: 4 }])).toBe(4);
     expect(healingTotal([])).toBe(0);
     expect(healingTotal(null)).toBe(0);
   });
-  it("la hausse s'ajoute aux changements de l'effet, et remplace une hausse déjà là", () => {
+  it("the increase adds to the effect's changes, and replaces an increase already there", () => {
     const base = [{ key: "system.traits.dr.value", type: "add", value: "poison" }];
     const once = withMaxRaise(base, 11);
     expect(once).toHaveLength(2);
@@ -18,7 +18,7 @@ describe("healRaisesMax : le soin tiré relève aussi les PV maximum (Festin des
     expect(withMaxRaise(once, 7).filter(c => c.key === "system.attributes.hp.tempmax")).toEqual([once[1]].map(c => ({ ...c, value: 7 })));
     expect(base).toHaveLength(1);
   });
-  it("Festin des héros la déclare, avec les effets posés d'abord", () => {
+  it("Heroes' Feast declares it, with the effects placed first", () => {
     expect(CONTENT["heroes-feast"]).toMatchObject({ effectsFirst: true, healRaisesMax: true });
     expect(validateEntry({ effectsFirst: true, healRaisesMax: true })).toEqual([]);
     expect(validateEntry({ healRaisesMax: 2 })).not.toEqual([]);

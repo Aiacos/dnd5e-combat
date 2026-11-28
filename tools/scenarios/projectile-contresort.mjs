@@ -1,8 +1,8 @@
 /**
- * §119 : Projectile magique et Contresort. Le moteur rejoue le sort pour chaque projectile enchaîné ; ces lancements passaient
- * aussi par la porte « castsSpell », et un Mage dont le MJ avait refusé le Contresort (réaction gardée) se le voyait reproposer
- * au projectile suivant (vu le 2026-10-10 : deux fenêtres, un projectile perdu). Le MJ refuse ici la fenêtre : elle ne doit
- * s'ouvrir qu'une fois, et les trois projectiles partir.
+ * §119: Magic Missile and Counterspell. The engine replays the spell for each chained missile; these casts also went
+ * through the "castsSpell" gate, and a Mage whose GM had declined the Counterspell (reaction kept) was offered it again
+ * on the next missile (seen on 2026-10-10: two windows, one missile lost). Here the GM declines the window: it must
+ * open only once, and the three missiles go off.
  */
 export default {
   name: "Projectile magique — Contresort refusé, une seule fenêtre (§119)",
@@ -12,21 +12,21 @@ export default {
     const zombi = await ctx.token("Zombi");
     const hp0 = await ctx.hp(zombi);
     ctx.restore(() => ctx.setHp(zombi, hp0));
-    // Le contre-lanceur : le Mage PNJ (MM 2024, hostile, Contresort à emplacement) s'il est sur la scène — ses
-    // emplacements de niveau 3 sont remis à 3 le temps du scénario (à zéro sur la fiche telle qu'importée, et dnd5e
-    // refuse l'utilisation sans emplacement) ; sinon le Zombi, avec un Contresort « à volonté ».
+    // The counter-caster: the NPC Mage (MM 2024, hostile, Counterspell with a slot) if it is on the scene — its
+    // level 3 spell slots are reset to 3 for the scenario (zero on the sheet as imported, and dnd5e
+    // refuses the use without a slot); otherwise the Zombie, with an "at will" Counterspell.
     const { tokens } = await ctx.scene();
     const mageNpc = tokens.find(t => (t.name === "Mage") && !t.hidden);
     if ( mageNpc ) {
-      // Le Mage du MM 2024 n'a pas d'emplacements (max 0) : Contresort en consomme un, dnd5e refuse sans. On lui en
-      // donne trois par surcharge (`override`), comme un MJ le ferait sur la fiche, et on rend tout à la fin.
+      // The MM 2024 Mage has no spell slots (max 0): Counterspell consumes one, dnd5e refuses without. We give it
+      // three by override (`override`), as a GM would on the sheet, and give everything back at the end.
       const spell3 = (await ctx.call("get-actor", { actorId: mageNpc.actorId })).system?.spells?.spell3 ?? {};
       const before = { "system.spells.spell3.value": spell3.value ?? 0, "system.spells.spell3.override": spell3.override ?? null };
       await ctx.call("update-actor", { actorId: mageNpc.actorId, actorData: { "system.spells.spell3.override": 3, "system.spells.spell3.value": 3 } });
       ctx.restore(() => ctx.call("update-actor", { actorId: mageNpc.actorId, actorData: before }).catch(() => {}));
-      // Le Mage de l'arène est un token NON LIÉ : sa Magie protectrice (§66, Contresort sans emplacement) vit dans sa copie, que les
-      // passes précédentes avaient épuisée (3/3 le 2026-10-06 — le filet de sécurité remet l'état du DÉBUT, déjà épuisé) : plus de
-      // Contresort proposé. On remet ses utilisations à zéro le temps du scénario, et on rend ce qu'il y avait.
+      // The arena Mage is an UNLINKED token: its Protective Magic (§66, Counterspell without a slot) lives in its copy, which the
+      // previous passes had exhausted (3/3 on 2026-10-06 — the safety net restores the state at the START, already exhausted):
+      // no more Counterspell offered. We reset its uses to zero for the scenario, and give back what was there.
       const { data: mageToken } = await ctx.call("get-scene-object", { type: "Token", objectId: mageNpc.id });
       const uuid = `Scene.${(await ctx.scene()).sceneId}.Token.${mageNpc.id}.Actor.${mageNpc.actorId}`;
       const protective = (mageToken.delta?.items ?? []).find(i => i.system?.identifier === "protective-magic");
@@ -36,14 +36,14 @@ export default {
         ctx.restore(() => ctx.call("upsert-embedded-item", { uuid, itemData: { "system.uses.spent": protective.system.uses.spent }, match }).catch(() => {}));
         ctx.log(`Magie protectrice du Mage (token) : ${protective.system.uses.spent} utilisation(s) dépensée(s) → 0 le temps du scénario`);
       }
-      // « En voyant le lanceur » : le Mage n'a pas de vision dans le noir (vue 0 ft) ; il voit par la lumière de la
-      // scène — ce que la vision simulée refusait avant la correction du 2026-09-24 (adapter/vision.mjs, lightRadius).
+      // "On seeing the caster": the Mage has no Darkvision (sight 0 ft); it sees by the light of the
+      // scene — which the simulated vision refused before the fix of 2026-09-24 (adapter/vision.mjs, lightRadius).
       ctx.log(`contre-lanceur : Mage (emplacements de niveau 3 : ${spell3.value ?? 0}/${spell3.override ?? "max 0"} → 3/3)`);
     } else {
       await ctx.ensureItem(zombi, "Compendium.dnd5e.spells24.Item.phbsplCounterspe", { system: { method: "atwill" } });
       ctx.log("contre-lanceur : Zombi (Contresort à volonté, pas de Mage sur la scène)");
     }
-    // §119 : Projectile magique, le MJ REFUSE le Contresort (sa réaction n'est pas dépensée) : la fenêtre ne doit s'ouvrir qu'une fois.
+    // §119: Magic Missile, the GM DECLINES the Counterspell (its reaction is not spent): the window must open only once.
     const ids = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
     const before = await ctx.lastMessageId();
     await ctx.use({ tokenId: mage.id, identifier: "magic-missile", targetTokenIds: [zombi.id], usageConfig: { "dnd5e-combat": { autoReact: false } } });
@@ -53,7 +53,7 @@ export default {
       for ( const d of r?.windows ?? [] ) {
         const text = `${d.title ?? ""} | ${(d.content ?? d.text ?? "").slice(0, 120)}`;
         const labels = (d.buttons ?? []).map(b => `${b.action ?? ""}:${b.label ?? ""}`);
-        const b = (d.buttons ?? []).find(x => x.action === "none") ?? null;   // « Ne pas réagir »
+        const b = (d.buttons ?? []).find(x => x.action === "none") ?? null;   // "Do not react"
         ctx.log(`fenêtre : ${text} — boutons ${labels.join(", ")} → ${b ? (b.action ?? b.label) : "fermée"}`);
         if ( b ) await ctx.call("answer-dialog", { id: d.id, button: b.action ?? b.label }).catch(() => {});
         else await ctx.call("answer-dialog", { id: d.id, close: true }).catch(() => {});

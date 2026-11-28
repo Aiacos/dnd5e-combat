@@ -1,16 +1,16 @@
 /**
- * §354, lot O9a de la repasse des objets : correctifs de contenu. Arène de test (Guerrier, Zombi, Clerc).
- *  1. Torche : l'attaque porte la maîtrise.
- *  2. Sur le Clerc (le Zombi est immunisé contre le poison) — Torpeur ratée : Empoisonné, Vitesse au sol divisée par deux ; Teinture pâle
- *     ratée : plus de soin.
- *  3. Pierre roulante ratée : À terre.
- *  4. Talisman du mal absolu (Fin ultime) raté : Mort, 0 PV.
- *  5. Voleuse de vie (Life Stealing) sur le Clerc (moins de 100 PV) : un échec le tue ; sur le Zombi (Mort-vivant) : jamais.
- *  6. Sceptre de suzeraineté : le Zombi Charmé, blessé par le Guerrier, ne l'est plus.
- *  7. Masse d'anéantissement (sauvegarde) sur le Zombi à 20 PV : ratée → Mort, réussie → Effrayé.
- *  8. Liens de fer de Bilarro : le Zombi Entravé peut tenter de s'en libérer (test DD 20).
- *  9. Armure en adamantium : un coup critique d'office (Guerrier Paralysé, Zombi au contact) devient un coup normal.
- * Les états posés sont retirés, les PV remis, l'enchantement de l'armure retiré.
+ * §354, batch O9a of the item pass: content fixes. Test arena (Fighter, Zombie, Cleric).
+ *  1. Torch: the attack carries proficiency.
+ *  2. On the Cleric (the Zombie is immune to poison) — failed Slumber: Poisoned, ground Speed halved; failed Pale Tincture:
+ *     no more healing.
+ *  3. Failed Rolling Stone: Prone.
+ *  4. Talisman of Ultimate Evil (Ultimate End) failed: Dead, 0 HP.
+ *  5. Life Stealing on the Cleric (under 100 HP): a failure kills it; on the Zombie (Undead): never.
+ *  6. Rod of Lordly Might: the Charmed Zombie, wounded by the Fighter, no longer is.
+ *  7. Sphere of Annihilation Mace (saving throw) on the Zombie at 20 HP: failed → Dead, succeeded → Frightened.
+ *  8. Bilarro's Iron Bands: the Restrained Zombie can try to break free (check DC 20).
+ *  9. Adamantine Armor: an automatic Critical Hit (Paralyzed Fighter, Zombie in contact) becomes a normal hit.
+ * The conditions placed are removed, the HP restored, the armor's enchantment removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -41,7 +41,7 @@ export default {
     ctx.restore(clean);
     const stats = async t => (await ctx.engine("stats", { tokenId: t.id })) ?? {};
     const has = async (t, s) => ((await stats(t)).statuses ?? []).includes(s);
-    /** Joue l'activité de l'item sur la cible ; rend la cible de la résolution. */
+    /** Plays the item's activity on the target; returns the resolution's target. */
     const play = async (itemId, activityId, target, user=fighter) => {
       const used = await ctx.use({ tokenId: user.id, itemId, ...(activityId ? { activityId } : { activityType: "attack" }), consume: false, targetTokenIds: [target.id],
         usageConfig: { [MODULE_ID]: { confirmed: true, autoReact: "none" } } }).catch(err => ({ error: err.message }));
@@ -49,7 +49,7 @@ export default {
       await pause(1500);
       return { t: r?.targets?.find(x => x.name === target.name) ?? null, used };
     };
-    /** Rejoue jusqu'à une sauvegarde ratée (12 essais) ; rend la cible. */
+    /** Replays until a failed saving throw (12 tries); returns the target. */
     const untilFail = async (itemId, activityId, target, before=async () => {}) => {
       for ( let i = 0; i < 12; i++ ) {
         await before();
@@ -59,12 +59,12 @@ export default {
       return null;
     };
 
-    // Les corrections de donnée à la création en service (réglage `dataFixes`), le temps du scénario.
+    // The data fixes on creation in service (`dataFixes` setting), for the duration of the scenario.
     const fixes = await ctx.engine("setting", { key: "dataFixes" });
     ctx.restore(() => ctx.engine("setting", { key: "dataFixes", value: fixes.before }));
     await ctx.engine("setting", { key: "dataFixes", value: true });
 
-    // 1. Torche (prêtée au Zombi : une torche déjà sur une fiche n'a reçu la correction que si elle a été créée depuis).
+    // 1. Torch (lent to the Zombie: a torch already on a sheet only got the fix if it was created since).
     const torch = await ctx.ensureItem(zombi, `${PHB}phbagTorch000000`);
     const { used } = await play(torch, "SouNhSdWdnznKCam", fighter, zombi);
     const attack = (await ctx.messagesSince(used.usageMessageId)).find(m => m.type === "attack");
@@ -81,10 +81,10 @@ export default {
     ctx.expect(!!t && (await has(cleric, "poisoned")) && (walk1 === Math.floor(walk0 / 2) || walk1 === walk0 / 2), `Torpeur ratée : Empoisonné, Vitesse ${walk0} → ${walk1}`);
     await clean();
     const pale = await ctx.ensureItem(fighter, `${DMG}dmgPaleTincture0`);
-    // Le Clerc à 20 PV d'abord (ses PV du monde peuvent être bas) : les 1d6 du poison ne le mettent pas à 0.
+    // The Cleric at 20 HP first (its world HP may be low): the poison's 1d6 do not put it at 0.
     t = await untilFail(pale, "Xm0k8JLnz00jgCg7", cleric, async () => { await clean(); await ctx.setHp(cleric, 20); });
     if ( ctx.expect(!!t, "Teinture pâle ratée") ) {
-      // Les dégâts du poison viennent d'être subis : le Clerc n'est pas à son maximum.
+      // The poison damage was just taken: the Cleric is not at its maximum.
       const healed = await ctx.engine("heal", { tokenId: cleric.id, amount: 2 });
       ctx.expect((healed.before > 0) && (healed.after === healed.before), `Teinture pâle : pas de soin tant qu'Empoisonné (${healed.before} → ${healed.after})`);
     }
@@ -96,20 +96,20 @@ export default {
     ctx.expect(!!t && (await has(zombi, "prone")), "Pierre roulante ratée : À terre");
     await clean();
 
-    // 4. Talisman du mal absolu.
-    // Guide 3.0.0 : les activités des objets à harmonisation ne sont visibles qu'harmonisés (`ready` : prêtés équipés et harmonisés).
+    // 4. Talisman of Ultimate Evil.
+    // Guide 3.0.0: the activities of attunement items are only visible when attuned (`ready`: lent equipped and attuned).
     const evil = await ctx.ensureItem(fighter, `${DMG}dmgTalismanOfUlt`, { ready: true });
     t = await untilFail(evil, "zknPGzuSFtET9BIe", zombi, clean);
     ctx.expect(!!t && (await has(zombi, "dead")) && ((await ctx.hp(zombi)) === 0), `Fin ultime ratée : Mort, 0 PV (${await ctx.hp(zombi)})`);
     await clean();
 
-    // 5. Voleuse de vie, posée sur une Dague prêtée au Guerrier (enchantement retiré à la fin).
+    // 5. Life Stealing, placed on a Dagger lent to the Fighter (enchantment removed at the end).
     const stealerSource = await ctx.ensureItem(fighter, `${DMG}dmgNineLivesStea`, { ready: true });
     const stealer = await ctx.ensureItem(fighter, `${PHB}phbwepDagger0000`);
     const { data: ftok } = await ctx.call("get-scene-object", { type: "Token", objectId: fighter.id });
     const nine = await ctx.engine("enchant", { tokenId: fighter.id, itemId: stealerSource, activityId: "9rvsI8e3iaHSuv1k", targetItemId: stealer }).catch(err => ({ error: err.message }));
     if ( nine?.effectId ) ctx.restore(() => ctx.engine("removeItemEffect", { actorId: ftok.actorId, itemId: stealer, effectId: nine.effectId }).catch(() => {}));
-    // La Dague enchantée demande l'harmonisation : équipée et harmonisée (son « Life Stealing » en dépend, Guide 3.0.0).
+    // The enchanted Dagger requires attunement: equipped and attuned (its "Life Stealing" depends on it, Guide 3.0.0).
     await ctx.call("upsert-actor-item", { actorId: ftok.actorId, itemData: { "system.equipped": true, "system.attuned": true }, match: { path: "_id", value: stealer } });
     await pause(500);
     const acts = Object.values((await ctx.engine("itemData", { tokenId: fighter.id, itemId: stealer, paths: ["system.activities"] }))?.["system.activities"] ?? {});
@@ -122,7 +122,7 @@ export default {
     ctx.expect(!t || !(await has(zombi, "dead")), "Voleuse de vie : le Zombi (Mort-vivant) ne meurt pas");
     await clean();
 
-    // 6. Sceptre de suzeraineté.
+    // 6. Rod of Lordly Might.
     const rod = await ctx.ensureItem(fighter, `${DMG}dmgRodOfRulershi`, { ready: true });
     t = await untilFail(rod, "DowAEvSCeMqJMEoR", zombi, clean);
     if ( ctx.expect(!!t && (await has(zombi, "charmed")), "Sceptre : le Zombi est Charmé") ) {
@@ -135,7 +135,7 @@ export default {
     }
     await clean();
 
-    // 7. Masse d'anéantissement.
+    // 7. Sphere of Annihilation Mace.
     const mace = await ctx.ensureItem(fighter, `${DMG}dmgMaceOfDisrupt`, { ready: true });
     let dead = false, scared = false;
     for ( let i = 0; (i < 12) && !(dead && scared); i++ ) {

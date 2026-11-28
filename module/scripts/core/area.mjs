@@ -1,31 +1,31 @@
 /**
- * Qui est affecté par une zone d'effet. dnd5e 6.0 pose la zone mais ne désigne aucune cible :
- * c'est au moteur de dire qui, parmi les tokens qu'elle recouvre, doit faire sa sauvegarde.
- * Fonctions pures, aucune dépendance à Foundry (SPEC §5.1).
+ * Who is affected by an area of effect. dnd5e 6.0 places the area but designates no target:
+ * it is up to the engine to say who, among the tokens it covers, must make their save.
+ * Pure functions, no dependency on Foundry (SPEC §5.1).
  */
 
 import { alliedSides } from "./factions.mjs";
 
 /**
  * @typedef {object} AreaCandidate
- * @property {string} token        UUID du token.
- * @property {string} actor        UUID de son acteur.
+ * @property {string} token        UUID of the token.
+ * @property {string} actor        UUID of its actor.
  * @property {string} name
- * @property {number} disposition  -1 hostile, 0 neutre, 1 amical (valeurs de Foundry), -2 secret.
- * @property {boolean} [defeated]  Créature hors de combat (morte), qu'une zone n'a plus à résoudre.
- * @property {boolean|null} [inVolume]  Pour une sphère : la créature est-elle dans la sphère et pas seulement dans
- *   le cylindre de la région (P2) ? false l'exclut ; null ou absent ne l'exclut pas.
- * @property {boolean|null} [lineOfEffect]  La zone l'atteint-elle (aucun plancher, aucun plafond entre son origine et
- *   la créature — P2, §14.2) ? false l'exclut ; null ou absent (impossible à dire) ne l'exclut pas.
+ * @property {number} disposition  -1 hostile, 0 neutral, 1 friendly (Foundry values), -2 secret.
+ * @property {boolean} [defeated]  Creature out of the fight (dead), which an area no longer has to resolve.
+ * @property {boolean|null} [inVolume]  For a sphere: is the creature in the sphere and not only in the region's
+ *   cylinder (P2)? false excludes it; null or absent does not exclude it.
+ * @property {boolean|null} [lineOfEffect]  Does the area reach it (no floor, no ceiling between its origin and
+ *   the creature — P2, §14.2)? false excludes it; null or absent (impossible to tell) does not exclude it.
  */
 
 /**
- * @param {AreaCandidate[]} candidates       Tokens recouverts par la zone.
+ * @param {AreaCandidate[]} candidates       Tokens covered by the area.
  * @param {object} options
- * @param {string|null} options.origin       UUID du token à l'origine de la zone.
+ * @param {string|null} options.origin       UUID of the token at the origin of the area.
  * @param {number|null} options.originDisposition
- * @param {boolean} options.excludeOrigin    Zone partant du lanceur (portée « soi ») : il n'en fait pas partie.
- * @param {string} [options.affects]         `target.affects.type` de l'activité : "ally", "enemy", ou tout autre = tout le monde.
+ * @param {boolean} options.excludeOrigin    Area starting from the caster ("self" range): they are not part of it.
+ * @param {string} [options.affects]         The activity's `target.affects.type`: "ally", "enemy", or anything else = everyone.
  * @returns {AreaCandidate[]}
  */
 export function selectAreaTargets(candidates, { origin, originDisposition, originSide=null, excludeOrigin, affects, max=null }) {
@@ -33,36 +33,36 @@ export function selectAreaTargets(candidates, { origin, originDisposition, origi
     if ( c.defeated || (c.lineOfEffect === false) || (c.inVolume === false) || (c.offPlane === true) ) return false;   // §225
     if ( c.token === origin ) return !excludeOrigin && (affects !== "enemy");
     if ( (affects !== "ally") && (affects !== "enemy") ) return true;
-    // Sans camp connu pour le lanceur, on ne devine pas : tout le monde est affecté, le MJ annulera au besoin.
+    // With no known side for the caster, we do not guess: everyone is affected, the GM will cancel if needed.
     if ( (originDisposition === null) || (originDisposition === undefined) ) return true;
     const sameSide = alliedSides(c, originSide ?? { disposition: originDisposition });   // §181 : factions, sinon dispositions
     return affects === "ally" ? sameSide : !sameSide;
   });
-  // §296 (repasse C2) : « jusqu'à six créatures de votre choix » (Lenteur, Soins de groupe) — `max`, les plus proches du centre de la zone.
+  // §296 (pass C2): "up to six creatures of your choice" (Slow, "Group Healing") — `max`, those closest to the area's center.
   if ( !(Number.isInteger(max) && (max > 0)) || (chosen.length <= max) ) return chosen;
   return [...chosen].sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity)).slice(0, max);
 }
 
 /**
- * §401 : ceux que la zone PEUT affecter, quel que soit le camp (ligne d'effet, volume, plan, vivants ; le lanceur selon la portée) —
- * la liste que la question « créatures de votre choix » propose.
+ * §401: those the area CAN affect, whatever the side (line of effect, volume, plane, living; the caster according to the range) —
+ * the list that the "creatures of your choice" question offers.
  * @param {AreaCandidate[]} candidates
- * @param {object} options  Comme `selectAreaTargets`.
+ * @param {object} options  As for `selectAreaTargets`.
  */
 export function eligibleAreaTargets(candidates, options) {
   return selectAreaTargets(candidates, { ...options, affects: "", max: null })
     .filter(c => (c.token !== options.origin) || (options.affects !== "enemy"));
 }
 
-/** §401 : les réglages de la question « créatures de votre choix » dans une zone. */
+/** §401: the settings of the "creatures of your choice" question in an area. */
 export const ZONE_CHOICE_MODES = Object.freeze(["mixed", "always", "never"]);
 
 /**
- * §401 : faut-il demander au lanceur quelles créatures la zone affecte ? `mixed` (défaut) : seulement si le choix d'office (alliés
- * épargnés, plafond `max`) laisse quelqu'un de côté ; `always` : dès qu'il y a quelqu'un ; `never` : jamais.
+ * §401: must the caster be asked which creatures the area affects? `mixed` (default): only if the automatic choice (allies
+ * spared, `max` cap) leaves someone out; `always`: whenever there is someone; `never`: never.
  * @param {string} mode
  * @param {Array<{token: string}>} eligible  `eligibleAreaTargets`.
- * @param {Array<{token: string}>} chosen    `selectAreaTargets` (le choix d'office).
+ * @param {Array<{token: string}>} chosen    `selectAreaTargets` (the automatic choice).
  */
 export function zoneChoiceNeeded(mode, eligible, chosen) {
   if ( (mode === "never") || !eligible.length ) return false;
@@ -72,8 +72,8 @@ export function zoneChoiceNeeded(mode, eligible, chosen) {
 }
 
 /**
- * §401 : qui une zone qui dure affecte, d'après le choix fait à sa pose (`picked` / `spared`) ; null si la créature n'était pas là
- * (la règle d'office décide alors).
+ * §401: whom a lasting area affects, from the choice made when it was placed (`picked` / `spared`); null if the creature
+ * was not there (the automatic rule then decides).
  * @param {{picked?: string[], spared?: string[]}} state
  * @param {string} token  UUID.
  * @returns {boolean|null}
@@ -89,35 +89,36 @@ export function pickedAtPose(state, token) {
 /* -------------------------------------------- */
 
 /**
- * Une zone qui dure rejoue son activité (sauvegarde, dégâts, effets) contre une créature à
- * certains moments, et au plus une fois par tour de jeu (règles 2024 : « une créature ne fait
- * cette sauvegarde qu'une fois par tour »).
+ * A lasting area replays its activity (save, damage, effects) against a creature at
+ * certain moments, and at most once per game turn (2024 rules: "a creature makes
+ * this save only once per turn").
  *
- * Moments connus :
- *  - "enter"      la créature entre dans la zone, ou la zone vient sur elle
- *  - "turnStart"  elle commence son tour dans la zone
- *  - "turnEnd"    elle y termine son tour
- *  - "moves"      elle s'y déplace : à chaque déplacement, sans limite par tour, et autant de fois que de cases
- *                 parcourues dans la zone (Croissance d'épines : « 2d4 par tranche de 1,50 m ») ; une zone qui
- *                 n'agit qu'ainsi n'agit pas à sa pose
+ * Known moments:
+ *  - "enter"      the creature enters the area, or the area comes onto it
+ *  - "turnStart"  it starts its turn in the area
+ *  - "turnEnd"    it ends its turn there
+ *  - "moves"      it moves there: on every movement, with no limit per turn, and as many times as cells
+ *                 traveled in the area (Spike Growth: "2d4 for every 5 feet"); an area that
+ *                 acts only this way does not act when placed
  *
  * @typedef {object} AreaState
- * @property {string[]} on        Moments où la zone agit.
- * @property {string} turnKey     Tour de jeu auquel `hit` se rapporte.
- * @property {string[]} hit       Tokens déjà touchés pendant ce tour de jeu.
+ * @property {string[]} on        Moments when the area acts.
+ * @property {string} turnKey     Game turn to which `hit` refers.
+ * @property {string[]} hit       Tokens already hit during this game turn.
  */
 
-/** Identifie un tour de jeu : tout change quand le tour passe. Hors combat, une seule clé. */
+/** Identifies a game turn: everything changes when the turn passes. Out of combat, a single key. */
 export function turnKeyOf(round, turn) {
   return (round === null) || (round === undefined) ? "hors-combat" : `${round}-${turn}`;
 }
 
 /**
- * Une propriété d'une zone qui ne vaut qu'à partir d'un tour de son lanceur (`fromPulse`, §367 : Tempête vengeresse — terrain
- * difficile, visibilité nulle et attaques à distance impossibles aux « tours 5 à 10 ») : vaut-elle déjà ? `rule` absente : non ;
- * sans `fromPulse` (`true`, `{}`) : dès la pose ; sinon dès le rejeu `fromPulse` du lanceur (`pulses` de l'état de la zone).
+ * A property of an area that applies only from a turn of its caster (`fromPulse`, §367: Storm of Vengeance — Difficult
+ * Terrain, no visibility and ranged attacks impossible on "turns 5 to 10"): does it already apply? `rule` absent: no;
+ * without `fromPulse` (`true`, `{}`): from placement; otherwise from the caster's `fromPulse` replay (`pulses` of the
+ * area's state).
  * @param {true|{fromPulse?: number}|null|undefined} rule
- * @param {number|null|undefined} pulses  Les rejeux du lanceur déjà faits sur cette zone.
+ * @param {number|null|undefined} pulses  The caster's replays already done on this area.
  * @returns {boolean}
  */
 export function fromPulseReached(rule, pulses) {
@@ -127,10 +128,10 @@ export function fromPulseReached(rule, pulses) {
 }
 
 /**
- * La zone peut-elle être déplacée maintenant (§16.14) ? Rayon de lune : « lors de vos tours suivants » — pas au tour même
- * où elle a été posée. Hors combat, toujours.
+ * Can the area be moved now (§16.14)? Moonbeam: "on your later turns" — not on the very turn
+ * it was placed. Out of combat, always.
  * @param {AreaState} area
- * @param {string} turnKey  Le tour en cours (`turnKeyOf`).
+ * @param {string} turnKey  The current turn (`turnKeyOf`).
  */
 export function canMoveArea(area, turnKey) {
   if ( !area ) return false;
@@ -139,8 +140,8 @@ export function canMoveArea(area, turnKey) {
 }
 
 /**
- * Les formes d'une région, translatées de (dx, dy) : cercles, ellipses, rectangles par leur `x, y`, polygones par leurs
- * `points` (x0, y0, x1, y1…). Les autres champs (rayon, élévation, trous) ne bougent pas.
+ * The shapes of a region, translated by (dx, dy): circles, ellipses, rectangles by their `x, y`, polygons by their
+ * `points` (x0, y0, x1, y1…). The other fields (radius, elevation, holes) do not move.
  * @param {object[]} shapes
  * @returns {object[]}
  */
@@ -156,7 +157,7 @@ export function translateShapes(shapes, dx, dy) {
   });
 }
 
-/** Le centre d'une forme (celui dont on mesure le déplacement), ou null. */
+/** The center of a shape (the one whose movement is measured), or null. */
 export function shapeCenter(shape) {
   if ( !shape ) return null;
   // §540: the core Emanation (dnd5e's Spirit Guardians, attached to its caster) has no position of its own, only its base's; a token
@@ -171,25 +172,26 @@ export function shapeCenter(shape) {
   return Number.isFinite(shape.x) ? { x: shape.x, y: shape.y } : null;
 }
 
-/** État de départ d'une zone : ceux qu'elle a touchés à la pose l'ont été pour ce tour. */
+/** Starting state of an area: those it hit when placed were hit for this turn. */
 export function openArea(on, turnKey, hit=[]) {
   return { on: [...on], turnKey, hit: [...hit] };
 }
 
 /**
- * La zone doit-elle agir sur ce token maintenant ?
+ * Must the area act on this token now?
  * @param {AreaState} area
  * @param {{event: string, token: string, turnKey: string}} context
  */
 export function shouldTrigger(area, { event, token, turnKey }) {
   if ( !area.on.includes(event) ) return false;
-  if ( event === "moves" ) return true;   // chaque déplacement compte, sans limite par tour
+  if ( event === "moves" ) return true;   // every movement counts, with no limit per turn
   return (area.turnKey !== turnKey) || !area.hit.includes(token);
 }
 
 /**
- * §80 : l'activité sœur que la zone rejoue à ce moment — la sienne propre quand la zone en joue plusieurs (`activities`, Faim de
- * Hadar : froid au début du tour, acide à la fin), sinon la seule (`activity`), sinon null (l'activité qui a posé la zone).
+ * §80: the sister activity that the area replays at this moment — its own when the area plays several (`activities`, Hunger of
+ * Hadar: cold at the start of the turn, acid at the end), otherwise the only one (`activity`), otherwise null (the activity
+ * that placed the area).
  * @param {AreaState & {activity?: string|null, activities?: Record<string, string>}} area
  * @param {string} event
  */
@@ -198,11 +200,12 @@ export function siblingFor(area, event) {
 }
 
 /**
- * §80 : sous quelle clé noter « déjà touché ce tour » : la créature, et l'activité quand la zone en joue une par moment — le froid
- * du début du tour n'empêche pas l'acide de la fin. Une zone à une seule activité garde « une fois par tour » (Rayon de lune).
+ * §80: under which key to note "already hit this turn": the creature, and the activity when the area plays one per moment —
+ * the cold of the start of the turn does not prevent the acid of the end. An area with a single activity keeps "once per
+ * turn" (Moonbeam).
  * @param {AreaState & {activities?: Record<string, string>}} area
  * @param {string} event
- * @param {string} token  UUID du token.
+ * @param {string} token  UUID of the token.
  */
 export function hitKey(area, event, token) {
   const own = area?.activities?.[event];
@@ -210,9 +213,9 @@ export function hitKey(area, event, token) {
 }
 
 /**
- * §80 : les activités sœurs d'une zone, par moment, à partir de ses déclarations `replay` ; seulement quand elles diffèrent d'un
- * moment à l'autre (sinon `activity` suffit et rien ne change pour Rayon de lune, Cordon de flèches, Nuage puant).
- * @param {Array<{on: string[], activity: string|null}>} replays  Pour chaque déclaration : ses moments, l'activité rejouée.
+ * §80: the sister activities of an area, per moment, from its `replay` declarations; only when they differ from one
+ * moment to another (otherwise `activity` suffices and nothing changes for Moonbeam, Cordon of Arrows, Stinking Cloud).
+ * @param {Array<{on: string[], activity: string|null}>} replays  For each declaration: its moments, the activity replayed.
  * @returns {Record<string, string>|null}
  */
 export function siblingsByMoment(replays) {
@@ -222,7 +225,7 @@ export function siblingsByMoment(replays) {
 }
 
 /**
- * §91 : l'entrée d'un `casterPulse` qui vaut pour le rejeu numéro `n` (1 = le premier tour après la pose), ou null.
+ * §91: the entry of a `casterPulse` that applies to replay number `n` (1 = the first turn after placement), or null.
  * @param {{by: {from: number, to?: number}[]}} rule
  * @param {number} n
  */
@@ -231,37 +234,37 @@ export function pulseFor(rule, n) {
 }
 
 /**
- * §91 : les cibles d'un rejeu plafonné (`max`) — les ennemis du lanceur d'abord, puis les autres, dans l'ordre donné.
+ * §91: the targets of a capped replay (`max`) — the caster's enemies first, then the others, in the given order.
  * @param {{disposition: number}[]} tokens
  * @param {number|null} casterDisposition
  * @param {number} [max]
  */
 export function pulseTargets(tokens, casterDisposition, max) {
-  // §181 : le lanceur peut venir comme un camp (`{ disposition, faction, uuid }`) ou comme une simple disposition.
+  // §181: the caster can come as a side (`{ disposition, faction, uuid }`) or as a plain disposition.
   const caster = ((casterDisposition !== null) && (typeof casterDisposition === "object")) ? casterDisposition : { disposition: casterDisposition };
   const hostile = t => (caster.disposition !== null) && (caster.disposition !== undefined) && !alliedSides(t, caster);
   const ordered = [...tokens.filter(hostile), ...tokens.filter(t => !hostile(t))];
   return max ? ordered.slice(0, max) : ordered;
 }
 
-/** Note qu'un token vient d'être touché. Changer de tour de jeu efface la mémoire du précédent. */
+/** Notes that a token has just been hit. Changing game turn erases the memory of the previous one. */
 export function markHit(area, { token, turnKey }) {
   const hit = area.turnKey === turnKey ? area.hit : [];
   return { ...area, turnKey, hit: hit.includes(token) ? hit : [...hit, token] };
 }
 
 /**
- * Cases parcourues DANS la zone (moment `moves`) : chaque pas dont l'arrivée est dans la zone — y entrer compte, en
- * sortir non.
- * @param {boolean[]} insideAtSteps  Pour chaque case d'arrivée du trajet, dans l'ordre (départ exclu).
+ * Cells traveled INSIDE the area (`moves` moment): each step whose arrival is in the area — entering counts, leaving
+ * does not.
+ * @param {boolean[]} insideAtSteps  For each arrival cell of the path, in order (departure excluded).
  */
 export function stepsInside(insideAtSteps) {
   return (insideAtSteps ?? []).filter(Boolean).length;
 }
 
 /**
- * §187 : la première case d'un trajet qui fait entrer dans l'une des zones (dedans à cette case, pas à la précédente), ou -1.
- * @param {boolean[][]} rows  Pour le départ puis chaque case du trajet, dans l'ordre : dedans ou non, zone par zone.
+ * §187: the first cell of a path that leads into one of the areas (inside at this cell, not at the previous one), or -1.
+ * @param {boolean[][]} rows  For the departure then each cell of the path, in order: inside or not, area by area.
  */
 export function firstEntry(rows) {
   for ( let k = 1; k < (rows?.length ?? 0); k++ ) {
@@ -271,24 +274,24 @@ export function firstEntry(rows) {
 }
 
 /**
- * §188 : une zone embrasée au tour `until` (round, tour) s'éteint à la fin de ce tour-là — « jusqu'à la fin du tour 2 rounds après son
- * allumage ». Vrai quand le tour qui vient de finir (`ended`) l'atteint ou le dépasse.
+ * §188: an area set ablaze on turn `until` (round, turn) goes out at the end of that turn — "until the end of the turn 2
+ * rounds after it was lit". True when the turn that has just ended (`ended`) reaches or passes it.
  */
 export function burnedOut(until, ended) {
   if ( !until || !ended || !Number.isFinite(ended.round) ) return false;
   return (ended.round > until.round) || ((ended.round === until.round) && ((ended.turn ?? 0) >= (until.turn ?? 0)));
 }
 
-/** La zone agit-elle à sa pose ? Non si elle n'agit qu'au déplacement (`moves`). */
+/** Does the area act when placed? No if it acts only on movement (`moves`). */
 export function actsOnPose(on) {
   return !on || on.some(m => m !== "moves");
 }
 
 /**
- * Un déplacement fait-il entrer dans la zone ? On regarde chaque point de passage, pas seulement
- * l'arrivée : traverser la zone compte.
+ * Does a movement lead into the area? We look at each waypoint, not only
+ * the arrival: crossing the area counts.
  * @param {boolean} insideAtOrigin
- * @param {boolean[]} insideAtWaypoints  Dans l'ordre du trajet, arrivée comprise.
+ * @param {boolean[]} insideAtWaypoints  In path order, arrival included.
  */
 export function entersArea(insideAtOrigin, insideAtWaypoints) {
   return !insideAtOrigin && insideAtWaypoints.some(Boolean);
@@ -343,11 +346,11 @@ export function positionBeforeAreaMove(position, { at=null, now=null, sliceBefor
 }
 
 /**
- * §16.37 : l'heure du monde (secondes) où finit une zone qui dure sans concentration (Lumière du jour : 1 heure), ou null si
- * sa durée ne se compte pas (instantanée, permanente, spéciale, inconnue).
- * @param {number} now                         Heure du monde, en secondes.
- * @param {{value: number|string, units: string}} duration  Durée de l'activité (dnd5e : `value`, `units`).
- * @param {Record<string, number>} minutesPer  Minutes par unité (CONFIG.DND5E.timeUnits.<unité>.conversion).
+ * §16.37: the world time (seconds) at which a lasting area without Concentration ends (Daylight: 1 hour), or null if
+ * its duration cannot be counted (instantaneous, permanent, special, unknown).
+ * @param {number} now                         World time, in seconds.
+ * @param {{value: number|string, units: string}} duration  The activity's duration (dnd5e: `value`, `units`).
+ * @param {Record<string, number>} minutesPer  Minutes per unit (CONFIG.DND5E.timeUnits.<unité>.conversion).
  */
 export function expiryTime(now, { value, units }={}, minutesPer={}) {
   const n = Number(value);

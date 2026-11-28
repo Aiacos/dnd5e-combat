@@ -1,8 +1,8 @@
 /**
- * `declaresKey` (adapter/content.mjs) : une couche de l'item porte-t-elle une clé ? — la question posée avant de composer l'entrée
- * entière (`contentOf`) quand on ne cherche qu'une clé rare sur tous les objets d'une fiche. La vue le fait à chaque
- * rafraîchissement (ui/perception.mjs, `grantAll` → `ownDarknessSight`, §447) pour chaque token doté de la vue.
- * Rien n'est gardé en mémoire : chaque réponse est relue sur les objets, la surcouche du monde et les tables du moment.
+ * `declaresKey` (adapter/content.mjs): does one of the item's layers carry a key? — the question asked before composing the
+ * whole entry (`contentOf`) when looking only for a rare key across all the objects of a sheet. The view does it at each
+ * refresh (ui/perception.mjs, `grantAll` → `ownDarknessSight`, §447) for every token with sight.
+ * Nothing is kept in memory: every answer is re-read from the objects, the world overlay and the tables of the moment.
  */
 import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { ENTRY_KEYS } from "../module/scripts/core/content.mjs";
@@ -12,7 +12,7 @@ import { CONTENT_VERSION } from "../module/scripts/core/content.mjs";
 const MODULE_ID = "dnd5e-combat";
 let contentOf, declaresKey, ownDarknessSight, forgetWorldOverrides;
 
-/** Le MJ écrit la surcouche du monde : le réglage change, son `onChange` fait oublier ce qui en avait été lu. */
+/** The GM writes the world overlay: the setting changes, its `onChange` makes it forget what had been read from it. */
 const writeOverrides = entries => { overrides = entries; forgetWorldOverrides(); };
 let overrides = {};
 let settingReads = 0;
@@ -46,8 +46,8 @@ beforeAll(async () => {
 
 beforeEach(() => { writeOverrides({}); settingReads = 0; });
 
-describe("declaresKey : jamais « non » pour une clé que l'entrée composée porte", () => {
-  it("contenu livré : chaque identifiant × chaque clé du schéma, comme `contentOf`", () => {
+describe("declaresKey: never \"no\" for a key that the composed entry carries", () => {
+  it("shipped content: every identifier × every schema key, like `contentOf`", () => {
     const actor = actorOf([]);
     let declared = 0;
     const wrong = [];
@@ -63,7 +63,7 @@ describe("declaresKey : jamais « non » pour une clé que l'entrée composée p
     expect(declared).toBeGreaterThan(800);
   });
 
-  it("chaque couche compte : flag de l'item, surcouche du monde, enchantement de l'item, texte d'une capacité de PNJ", () => {
+  it("every layer counts: item flag, world overlay, item enchantment, text of an NPC ability", () => {
     const actor = actorOf([]);
     const plain = itemOf(actor, "plain-feature");
     expect(declaresKey(plain, "seesThroughOwnDarkness")).toBe(false);
@@ -78,7 +78,7 @@ describe("declaresKey : jamais « non » pour une clé que l'entrée composée p
     expect(contentOf(plain).entry.seesThroughOwnDarkness).toBe(true);
     writeOverrides({});
 
-    // L'enchantement de la Langue de feu (`flame-tongue-enchanted`), reconnu par l'objet qui l'a posé.
+    // The Flame Tongue enchantment (`flame-tongue-enchanted`), recognized by the object that applied it.
     const source = itemOf(actor, "flame-tongue", { documentName: "Item" });
     globalThis.fromUuidSync = uuid => (uuid === "Actor.a.Item.flame-tongue" ? source : null);
     const enchantment = { id: "e1", type: "enchantment", disabled: false, isAppliedEnchantment: true,
@@ -100,24 +100,24 @@ describe("declaresKey : jamais « non » pour une clé que l'entrée composée p
   });
 });
 
-describe("§447 : voir à travers ses propres Ténèbres, relu à chaque demande", () => {
+describe("§447: seeing through one's own Darkness, re-read on every request", () => {
   const plain = Array.from({ length: 30 }, (_, n) => `plain-feature-${n}`);
 
-  it("un objet ajouté, changé, retiré compte à la demande suivante", () => {
+  it("an item added, changed, removed counts on the next request", () => {
     const actor = actorOf(plain);
     const token = tokenOf(actor);
     expect(ownDarknessSight(token)).toBeNull();
-    actor.items.push(itemOf(actor, "power-of-shadow"));           // ajouté
+    actor.items.push(itemOf(actor, "power-of-shadow"));           // added
     expect(ownDarknessSight(token)).toBe(actor);
-    actor.items.at(-1).system.identifier = "plain-renamed";       // changé
+    actor.items.at(-1).system.identifier = "plain-renamed";       // changed
     expect(ownDarknessSight(token)).toBeNull();
-    actor.items.at(-1).flags[MODULE_ID] = { seesThroughOwnDarkness: true };   // un flag posé sur l'objet
+    actor.items.at(-1).flags[MODULE_ID] = { seesThroughOwnDarkness: true };   // a flag set on the item
     expect(ownDarknessSight(token)).toBe(actor);
-    actor.items.pop();                                            // retiré
+    actor.items.pop();                                            // removed
     expect(ownDarknessSight(token)).toBeNull();
   });
 
-  it("la surcouche du monde et la table d'un autre module comptent dès qu'elles changent", () => {
+  it("the world overlay and another module's table count as soon as they change", () => {
     const actor = actorOf(plain);
     const token = tokenOf(actor);
     writeOverrides({ "plain-feature-7": { seesThroughOwnDarkness: true } });
@@ -130,7 +130,7 @@ describe("§447 : voir à travers ses propres Ténèbres, relu à chaque demande
     expect(ownDarknessSight(token)).toBeNull();
   });
 
-  it("un effet d'enchantement posé sur un objet, puis désactivé", () => {
+  it("an enchantment effect set on an item, then disabled", () => {
     registerTable("test-module", { "shadow-oil-enchanted": { seesThroughOwnDarkness: true } });
     const actor = actorOf(plain);
     const oil = itemOf(actor, "shadow-oil", { documentName: "Item" });
@@ -147,7 +147,7 @@ describe("§447 : voir à travers ses propres Ténèbres, relu à chaque demande
     globalThis.fromUuidSync = () => null;
   });
 
-  it("une fiche de 30 objets sans rien de tel : la surcouche du monde est lue une fois, pas une fois par objet", () => {
+  it("a sheet of 30 items with nothing of the kind: the world overlay is read once, not once per item", () => {
     const actor = actorOf(plain);
     expect(ownDarknessSight(tokenOf(actor))).toBeNull();
     expect(settingReads).toBe(1);
@@ -159,15 +159,15 @@ describe("§447 : voir à travers ses propres Ténèbres, relu à chaque demande
   });
 });
 
-describe("les clés d'entrée des flags d'un item", () => {
-  it("les mêmes clés, dans le même ordre, que le parcours du schéma entier — flags tirés au hasard", async () => {
+describe("the entry keys of an item's flags", () => {
+  it("the same keys, in the same order, as the walk of the whole schema — randomly drawn flags", async () => {
     const { entryKeysOf } = await import("../module/scripts/adapter/content.mjs");
     let seed = 7;
     const random = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
     for ( let n = 0; n < 500; n++ ) {
       const flags = {};
       const count = Math.floor(random() * 6);
-      // Des clés du schéma dans un ordre quelconque, mêlées à des flags qui ne sont pas des clés d'entrée.
+      // Schema keys in any order, mixed with flags that are not entry keys.
       for ( let k = 0; k < count; k++ ) flags[ENTRY_KEYS[Math.floor(random() * ENTRY_KEYS.length)]] = k;
       if ( random() < 0.5 ) flags.resolution = { step: "done" };
       if ( random() < 0.3 ) flags.toString = "x";
@@ -177,8 +177,8 @@ describe("les clés d'entrée des flags d'un item", () => {
   });
 });
 
-describe("la surcouche du monde n'est lue qu'une fois, jusqu'à ce que le réglage change", () => {
-  it("cent demandes, une lecture du réglage ; le réglage change : une de plus, et la nouvelle valeur", async () => {
+describe("the world overlay is read only once, until the setting changes", () => {
+  it("a hundred requests, one read of the setting; the setting changes: one more, and the new value", async () => {
     const { worldOverrides } = await import("../module/scripts/adapter/content.mjs");
     writeOverrides({ "plain-feature": { seesThroughOwnDarkness: true } });
     settingReads = 0;
@@ -190,7 +190,7 @@ describe("la surcouche du monde n'est lue qu'une fois, jusqu'à ce que le régla
     expect(settingReads).toBe(2);
   });
 
-  it("un autre `game.settings` (un autre monde) : ce qui avait été lu ne vaut plus", async () => {
+  it("another `game.settings` (another world): what had been read no longer holds", async () => {
     const { worldOverrides } = await import("../module/scripts/adapter/content.mjs");
     worldOverrides();
     const before = globalThis.game.settings;

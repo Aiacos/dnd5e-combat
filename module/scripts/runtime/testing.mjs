@@ -1,11 +1,11 @@
 /**
- * Fonctions de test exposées au connecteur MCP (`call-module-api`, connecteur ≥ 0.28.0) sous
- * `game.modules.get("dnd5e-combat").api.mcp` : ce que les scénarios (tools/scenarios/) ne peuvent pas
- * faire par les outils génériques — faire marcher un token par le chemin du MOTEUR (A*, escaliers,
- * budget), comme un clic. Arguments et résultats en JSON (ids, cases, points), jamais de document.
+ * Test functions exposed to the MCP connector (`call-module-api`, connector ≥ 0.28.0) under
+ * `game.modules.get("dnd5e-combat").api.mcp`: what scenarios (tools/scenarios/) cannot do
+ * with the generic tools — make a token walk along the ENGINE path (A*, stairs,
+ * budget), like a click. Arguments and results in JSON (ids, cells, points), never a document.
  *
- * Client du MJ seulement (celui qui exécute le connecteur), sur la scène qu'il affiche : l'A* lit le
- * canevas (murs, polygones des régions).
+ * GM client only (the one running the connector), on the scene it displays: the A* reads the
+ * canvas (walls, region polygons).
  */
 
 import { playerWaits } from "../adapter/player-wait.mjs";
@@ -42,7 +42,7 @@ import { visionMatrix, screenHere, setOwners, sightIssues, screenAfterUpdate, co
 import { range, ready, burning, actionEnd, attackReasons, budget, cover, coverPreview, effectOrigins, enchant, endings, factions, heal, hurt, identify, itemData, issues, naturalOne, overrideContent, perceived, portent, rollCheck, rollSave, saveChance, potionOptionsOf, flammable, scatter, sees, skillAid, skillAids, stats, stealth, use, sheetUse, masteries, masteryWindow, etherealWalls, groupRoll, groupRollState, groupRollBreakdown, groupRollForce, groupRollMode, placeItemEffect, concentrate, upkeep, stand, fortified, catalyst, grappleState , rangeCheck, attacksThisTurn } from "./testing-rules.mjs";
 import { placeRegionAt, rangedPlacement, chainCheck, tokenLight, damageTypes, owners, planning, storm, stormStrike, summonAt, wall, wallSide, castFromBar, summonCaptured } from "./testing-areas.mjs";
 
-/** Ferme une fenêtre (un dialogue fermé vaut « non » : le déplacement mis en pause par le cœur se termine). */
+/** Closes a window (a closed dialog counts as "no": the move paused by the core ends). */
 async function closeWindow({ id }) {
   gmOnly();
   const app = foundry.applications.instances.get(id);
@@ -52,9 +52,9 @@ async function closeWindow({ id }) {
 }
 
 /**
- * §391 : clique la carte n° `index` (les grisées exclues) d'une fenêtre du moteur à cartes (`.dnd5e-combat-form` : arme d'Arme
- * élémentaire, forme d'invocation, forme sauvage…), comme un joueur — le connecteur sait remplir un champ et cliquer un bouton, pas une
- * carte. Rend ce qui a été cliqué.
+ * §391: clicks card no. `index` (greyed ones excluded) of an engine card window (`.dnd5e-combat-form`: the weapon of Elemental
+ * Weapon, summoning form, Wild Shape…), like a player — the connector can fill a field and click a button, not a
+ * card. Returns what was clicked.
  */
 function clickCard({ id, index=0 }) {
   gmOnly();
@@ -66,15 +66,15 @@ function clickCard({ id, index=0 }) {
   return { clicked: true, cards: cards.length, uuid: card.dataset.uuid ?? card.dataset.profile ?? null };
 }
 
-/** Les items signalés en partie par le MJ (SPEC §9.2), pour le bilan relu par Claude. */
+/** The items partly reported by the GM (SPEC §9.2), for the summary reread by Claude. */
 function reports() {
   return { entries: itemReports(), text: reportsText(itemReports()) };
 }
 
 /**
- * Le clic sur « Dégâts » ou « Soins » d'une carte d'utilisation dont le moteur attend le jet de l'auteur (soins, dégâts
- * laissés au système) : ce que le connecteur ne fait pas seul (il ne lance que les attaques). Même chemin que le moteur
- * (adapter/messages.mjs, `rollDamageFor`) : le jet est rattaché à la carte, sur les cibles de la résolution.
+ * The click on "Damage" or "Healing" of a use card for which the engine awaits the author's roll (healing, damage
+ * left to the system): what the connector does not do alone (it only rolls attacks). Same path as the engine
+ * (adapter/messages.mjs, `rollDamageFor`): the roll is attached to the card, on the resolution's targets.
  */
 async function rollCard({ messageId }) {
   gmOnly();
@@ -87,8 +87,8 @@ async function rollCard({ messageId }) {
 }
 
 /**
- * §121 : allumer ou éteindre une source portée sans passer par son activité (la Torche n'en a pas), comme le menu de l'inventaire ;
- * rend le résultat et l'état de la source. `on` absent : l'inverse.
+ * §121: light or extinguish a carried source without going through its activity (the Torch has none), like the inventory menu;
+ * returns the result and the source's state. `on` absent: the opposite.
  */
 async function toggleLight({ actorId, itemId, on=null }) {
   gmOnly();
@@ -98,7 +98,7 @@ async function toggleLight({ actorId, itemId, on=null }) {
   return { ...result, state: item.actor?.items.get(itemId) ? carriedLightState(item) : null };
 }
 
-/** §346 : baisse (`down: true`) ou lève le capuchon d'une source allumée. */
+/** §346: lowers (`down: true`) or raises the hood of a lit source. */
 async function hood({ actorId, itemId, down=null }) {
   gmOnly();
   const item = game.actors.get(actorId)?.items.get(itemId);
@@ -106,7 +106,7 @@ async function hood({ actorId, itemId, down=null }) {
   return toggleHood(item, down);
 }
 
-/** §346 : retire un effet d'un item de l'acteur (un enchantement appliqué). */
+/** §346: removes an effect from an actor's item (an applied enchantment). */
 async function removeItemEffect({ actorId, itemId, effectId }) {
   gmOnly();
   const effect = game.actors.get(actorId)?.items.get(itemId)?.effects.get(effectId);
@@ -115,14 +115,14 @@ async function removeItemEffect({ actorId, itemId, effectId }) {
   return true;
 }
 
-/** §121 : l'état d'une source portée (allumée, temps restant, combustible), ou null si elle n'est plus là. */
+/** §121: the state of a carried source (lit, time left, fuel), or null if it is no longer there. */
 function lightState({ actorId, itemId }) {
   const item = game.actors.get(actorId)?.items.get(itemId);
   return item ? carriedLightState(item) : null;
 }
 
-/** §121 : faire passer le temps du monde (secondes, négatif pour revenir en arrière) ; rend le temps du monde. */
-/** §305 : un Repos long du token, sans fenêtre ni carte (le hook `dnd5e.restCompleted` part comme au repos d'un joueur). */
+/** §121: make world time pass (seconds, negative to go back); returns the world time. */
+/** §305: a Long Rest for the token, without a window or card (the `dnd5e.restCompleted` hook fires as on a player's rest). */
 async function longRest({ tokenId }) {
   gmOnly();
   const actor = canvas.scene?.tokens.get(tokenId)?.actor;
@@ -131,7 +131,7 @@ async function longRest({ tokenId }) {
   return { done: !!result };
 }
 
-/** C12-j : un Repos court du token, sans fenêtre (les dés de vie ne sont pas dépensés). */
+/** C12-j: a Short Rest for the token, without a window (Hit Dice are not spent). */
 async function shortRest({ tokenId }) {
   gmOnly();
   const actor = canvas.scene?.tokens.get(tokenId)?.actor;
@@ -140,7 +140,7 @@ async function shortRest({ tokenId }) {
   return { done: !!result };
 }
 
-/** MJ : avance le temps du monde de `seconds` secondes (`game.time.advance`) → `{ worldTime }`. */
+/** GM: advances world time by `seconds` seconds (`game.time.advance`) → `{ worldTime }`. */
 async function advanceTime({ seconds }) {
   gmOnly();
   await game.time.advance(Number(seconds) || 0);
@@ -148,9 +148,9 @@ async function advanceTime({ seconds }) {
 }
 
 /**
- * Rend un item à un acteur sous son identifiant d'origine (`keepId`), pour un scénario qui le lui a fait perdre (Lâche
- * d'Injonction posée en tas par un module voisin) : le connecteur crée toujours un nouvel identifiant, et le filet de sécurité du lanceur
- * retire les items qu'il ne connaissait pas.
+ * Gives an item back to an actor under its original identifier (`keepId`), for a scenario that made it lose it ("Coward of
+ * Command" dropped in a heap by a neighboring module): the connector always creates a new identifier, and the caster's safety net
+ * removes the items it did not know.
  */
 async function restoreItem({ actorId, itemData }) {
   gmOnly();
@@ -161,32 +161,33 @@ async function restoreItem({ actorId, itemData }) {
   return { restored: !!item, id: item?.id ?? null };
 }
 
-/** §98 : le relevé des temps du moteur sur le client du MJ (les `limit` lignes les plus coûteuses), et les tâches longues. */
+/** §98: the survey of the engine's timings on the GM's client (the `limit` costliest lines), and the long tasks. */
 function perf({ limit=20, reset=false }={}) {
   const out = { hooks: perfApi.report().slice(0, limit), longTasks: perfApi.longTasks() };
   if ( reset ) perfApi.reset();
   return out;
 }
 
-/** Heure de chargement du code du moteur dans ce client : change à chaque rechargement. */
+/** Load time of the engine code on this client: changes on every reload. */
 const BOOTED_AT = Date.now();
 
 /**
- * L'état du client qui exécute (le MJ du connecteur) : version et heure de chargement du moteur, et s'il est le MJ actif
- * — celui qui exécute le moteur (`game.users.activeGM`). `tools/reload.mjs` s'en sert pour savoir que le F5 a eu lieu.
+ * The state of the executing client (the connector's GM): engine version and load time, and whether it is the active GM
+ * — the one running the engine (`game.users.activeGM`). `tools/reload.mjs` uses it to know that the F5 happened.
  */
 function status() {
   return { version: game.modules.get(MODULE_ID)?.version ?? null, bootedAt: BOOTED_AT, ready: game.ready === true, hidden: document.hidden === true, worldTime: game.time?.worldTime ?? null,
     user: game.user.name, activeGM: game.users.activeGM?.id === game.user.id,
-    // §389 : la langue du client du MJ (les noms d'activité sans nom propre et Babele en dépendent) et le nombre de joueurs connectés.
+    // §389: the GM client's language (activity names without a proper name and Babele depend on it)
+    // and the number of connected players.
     lang: game.i18n?.lang ?? null, players: game.users.filter(u => u.active && !u.isGM).length };
 }
 
 /**
- * Lance une macro (par son uuid : monde ou compendium « Outils du MJ », §56) sans attendre sa fin : ses fenêtres se lisent et se
- * répondent ensuite par `list-dialogs` / `answer-dialog` du connecteur. Réservé au MJ.
+ * Launches a macro (by its uuid: world or "GM Tools" compendium, §56) without waiting for its end: its windows are read and
+ * answered afterwards through the connector's `list-dialogs` / `answer-dialog`. GM only.
  */
-/** O8g (§350) : un parchemin de sort fait comme dnd5e le fait depuis un compendium (`createScrollFromSpell`), donné à l'acteur du token. */
+/** O8g (§350): a spell scroll made as dnd5e does it from a compendium (`createScrollFromSpell`), given to the token's actor. */
 async function makeScroll({ tokenId, spellUuid, quantity=1 }) {
   gmOnly();
   const actor = canvas.scene?.tokens.get(tokenId)?.actor;
@@ -199,7 +200,7 @@ async function makeScroll({ tokenId, spellUuid, quantity=1 }) {
   return { itemId: created?.id ?? null, name: created?.name ?? null, activities: Array.from(created?.system.activities ?? []).map(a => a.type) };
 }
 
-/** O8g (§350) : ce que le moteur juge d'un parchemin pour son porteur (`scrollReadingFor`), activité par activité. */
+/** O8g (§350): what the engine judges of a scroll for its bearer (`scrollReadingFor`), activity by activity. */
 function scrollReading({ tokenId, itemId }) {
   const actor = canvas.scene?.tokens.get(tokenId)?.actor;
   const item = actor?.items.get(itemId);
@@ -208,8 +209,8 @@ function scrollReading({ tokenId, itemId }) {
     read: scrollReadOf(a), ready: globalThis.dnd5e?.registry?.spellLists?.ready ?? null, classes: Object.keys(actor.classes ?? {}) }));
 }
 
-/** O9g (§362) : l'item qui donne le Désavantage aux attaques d'opportunité contre ce token (Rapide, Bottes de rapidité), ou null. */
-/** O9h (§363) : la barrière qui empêche cette action d'atteindre sa cible (Coquille antivie, Parchemin de protection), ou null. */
+/** O9g (§362): the item that gives Disadvantage to Opportunity Attacks against this token (Speedy, Boots of Speed), or null. */
+/** O9h (§363): the barrier that stops this action from reaching its target (Antilife Shell, Scroll of Protection), or null. */
 function barrier({ attackerId, targetId, itemId, activityType=null }) {
   const attacker = canvas.scene?.tokens.get(attackerId);
   const target = canvas.scene?.tokens.get(targetId);
@@ -217,7 +218,7 @@ function barrier({ attackerId, targetId, itemId, activityType=null }) {
   return barrierBetween(attacker, target, activity)?.item?.name ?? null;
 }
 
-/** §364 : les alertes MJ affichées dans le bandeau de ce client (textes). */
+/** §364: the GM alerts shown in this client's banner (texts). */
 function gmAlerts() {
   return Array.from(document.querySelectorAll(".das-gm-alerts__line:not(.closing) .das-gm-alerts__text")).map(e => e.textContent);
 }
@@ -239,12 +240,12 @@ async function summonBlocked({ userId, tokenId, itemId, activityId=null, tell=tr
   return { blocker, messageId };
 }
 
-/** §134 : Rapide — le nom de l'item qui donne le Désavantage aux attaques d'opportunité contre l'acteur du token `tokenId`, ou null. */
+/** §134: Speedy — the name of the item that gives Disadvantage to Opportunity Attacks against token `tokenId`'s actor, or null. */
 function hampered({ tokenId }) {
   return hamperedBy(canvas.scene?.tokens.get(tokenId)?.actor ?? null);
 }
 
-/** MJ : exécute la macro `uuid` sans l'attendre (une erreur part en console) → `{ started }` (son nom). */
+/** GM: runs the macro `uuid` without waiting for it (an error goes to the console) → `{ started }` (its name). */
 async function runMacro({ uuid }={}) {
   gmOnly();
   const macro = await fromUuid(uuid);
@@ -254,8 +255,8 @@ async function runMacro({ uuid }={}) {
 }
 
 /**
- * Le F5 du client du MJ, pour qu'il relise le code du moteur après un changement : la réponse part avant le rechargement.
- * Réservé au MJ ; `call-module-api` n'existe que dans un monde où le réglage « Outils de test » du connecteur est activé.
+ * The GM client's F5, so that it rereads the engine code after a change: the response goes out before the reload.
+ * GM only; `call-module-api` exists only in a world where the connector's "Test tools" setting is enabled.
  */
 function reload() {
   gmOnly();
@@ -264,9 +265,9 @@ function reload() {
 }
 
 /**
- * L'inventaire des capacités du monde (acteurs du monde, pas les tokens non liés) : une ligne par identifiant et type d'item,
- * avec qui la porte, ce que le moteur en connaît (`rules` : les clés de contenu), ses activités, ses effets et le début de son
- * texte anglais d'origine. `types` filtre les types d'item (par défaut tout sauf l'équipement de base et le butin).
+ * The inventory of the world's capabilities (world actors, not unlinked tokens): one line per identifier and item type,
+ * with who carries it, what the engine knows of it (`rules`: the content keys), its activities, its effects and the start of its
+ * original English text. `types` filters the item types (by default everything except basic equipment and loot).
  */
 function inventory({ types=null, textLength=700 }={}) {
   const skip = new Set(["loot", "container", "class", "subclass", "background", "race"]);
@@ -294,8 +295,8 @@ function inventory({ types=null, textLength=700 }={}) {
 }
 
 /**
- * §220, §224 : les boutons du moteur dans la barre d'outils des jetons (`present`, `active`) et, pour un token, ce que l'escalade propose
- * dans son menu (libellés) — l'interrupteur de l'escalade lu par le scénario `escalade-interrupteur`.
+ * §220, §224: the engine's buttons in the token toolbar (`present`, `active`) and, for a token, what climbing offers
+ * in its menu (labels) — the climbing switch read by the `escalade-interrupteur` scenario.
  */
 function controls({ tokenId=null }={}) {
   const tools = ui.controls?.controls?.tokens?.tools ?? {};
@@ -306,9 +307,9 @@ function controls({ tokenId=null }={}) {
 }
 
 /**
- * §240 : les entrées du menu contextuel de `targetId` pour `tokenId` (pris en main le temps de la lecture), lues par l'API publique
- * `api.ui.tokenMenu` — `runtime/` n'importe pas `ui/`. `run` : lance l'entrée de ce libellé sans l'attendre (un jet peut ouvrir une
- * fenêtre) ; la prise en main d'avant revient quand elle a fini.
+ * §240: the context menu entries of `targetId` for `tokenId` (taken over while reading), read through the public API
+ * `api.ui.tokenMenu` — `runtime/` does not import `ui/`. `run`: launches the entry with this label without waiting for it
+ * (a roll may open a window); the previous control comes back when it has finished.
  */
 function menu({ tokenId, targetId, run=null }) {
   gmOnly();
@@ -324,7 +325,7 @@ function menu({ tokenId, targetId, run=null }) {
   try { entries = game.modules.get(MODULE_ID).api.ui.tokenMenu(target); }
   catch(err) { giveBack(); throw err; }
   const labels = entries.map(e => e.label);
-  // §411 : les entrées grisées et leur raison.
+  // §411: the greyed-out entries and their reason.
   const refused = Object.fromEntries(entries.filter(e => e.refused).map(e => [e.label, e.refused]));
   const entry = run ? entries.find(e => e.label === run) : null;
   if ( !entry ) {
@@ -337,9 +338,9 @@ function menu({ tokenId, targetId, run=null }) {
 }
 
 /**
- * §243, §247 : les entrées du menu d'une porte (`wallId`) ou d'une case (`x`, `y`) pour `tokenId`, lues par l'API publique
- * (`api.ui.doorMenu`, `api.ui.groundMenu`), avec celles des voisins. `probe` : une entrée d'essai ajoutée le temps de la lecture par
- * le hook du menu (`doorMenu` / `groundMenu`), pour vérifier qu'un voisin y est entendu ; le contexte reçu est rendu.
+ * §243, §247: the menu entries of a door (`wallId`) or a cell (`x`, `y`) for `tokenId`, read through the public API
+ * (`api.ui.doorMenu`, `api.ui.groundMenu`), with those of the neighbors. `probe`: a trial entry added for the time of the read by
+ * the menu hook (`doorMenu` / `groundMenu`), to check that a neighbor is heard there; the received context is returned.
  */
 function placeMenu({ tokenId, wallId=null, x=null, y=null, probe=null }) {
   gmOnly();
@@ -364,8 +365,8 @@ function placeMenu({ tokenId, wallId=null, x=null, y=null, probe=null }) {
 }
 
 /**
- * Un réglage du moteur (et de lui seul) : rend la valeur d'avant, pour qu'un scénario la remette ; `value` absent : lecture seule.
- * Réservé au MJ (§38.4 : le scénario `presage` désactive le Présage le temps d'une partie).
+ * A setting of the engine (and of it alone): returns the previous value, so a scenario can restore it; `value` absent: read-only.
+ * GM only (§38.4: the `presage` scenario disables Portent for the length of a game).
  */
 async function setting({ key, value }) {
   gmOnly();
@@ -375,7 +376,7 @@ async function setting({ key, value }) {
   return { key, before, now: game.settings.get(MODULE_ID, key) };
 }
 
-/** Les réglages de monde du moteur qui ne sont pas à leur valeur par défaut (lecture seule) : ce que la table a choisi. */
+/** The engine's world settings that are not at their default value (read-only): what the table chose. */
 function settingsChanged() {
   gmOnly();
   const out = {};
@@ -390,8 +391,9 @@ function settingsChanged() {
 }
 
 /**
- * Affiche une scène chez le MJ (`Scene#view`) : activer une scène déjà active ne change pas ce que le MJ regarde (vu le 2026-10-22 :
- * un balayage joué contre l'Arène de test, affichée, l'Arène des sorts étant active). Rend la scène affichée.
+ * Displays a scene for the GM (`Scene#view`): activating an already active scene does not change what the GM is looking at
+ * (seen on 2026-10-22: a sweep played against the Test Arena, displayed, while the Spell Arena was active).
+ * Returns the displayed scene.
  */
 async function viewScene({ sceneId }) {
   gmOnly();
@@ -402,17 +404,17 @@ async function viewScene({ sceneId }) {
 }
 
 /**
- * Un réglage de MONDE d'un autre module, lu et changé le temps d'une passe de scénarios (relevé des trous, 2026-10-22) : une horloge
- * qui avance le temps du monde hors combat (« Simple Timekeeping » de `dnd-6` : 600 s par intervalle, réglage `paused`) fait expirer
- * en quelques secondes toute durée d'une minute — concentration comprise, que dnd5e supprime alors hors combat (`_onUpdate`, effet
- * expiré). Rend `{ absent: true }` si le réglage n'existe pas (module absent ou inactif).
+ * A WORLD setting of another module, read and changed for the length of a scenario pass (survey of gaps, 2026-10-22): a clock
+ * that advances world time outside combat ("Simple Timekeeping" from `dnd-6`: 600 s per interval, `paused` setting) makes any
+ * one-minute duration expire within seconds — Concentration included, which dnd5e then removes outside combat
+ * (`_onUpdate`, expired effect). Returns `{ absent: true }` if the setting does not exist (module absent or inactive).
  */
-/** §251 : l'état de l'horloge en temps réel du moteur (null : elle tourne) et le temps du monde. */
+/** §251: the state of the engine's real-time clock (null: it is running) and the world time. */
 const clock = () => ({ halt: clockState(), worldTime: game.time.worldTime });
 
 /**
- * MJ : lit un réglage de monde d'un autre espace (`namespace.key`) et, avec `value`, l'écrit → `{ key, before, now }`, ou `{ absent: true
- * }`.
+ * GM: reads a world setting of another namespace (`namespace.key`) and, with `value`, writes it → `{ key, before, now }`, or
+ * `{ absent: true }`.
  */
 async function foreignSetting({ namespace, key, value }) {
   gmOnly();
@@ -425,11 +427,11 @@ async function foreignSetting({ namespace, key, value }) {
 }
 
 /**
- * Les effets et sons en cours de Sequencer (module tiers : les animations de Boss Loot / BLFX), et la fin de ceux qu'on désigne —
- * pour que le lanceur de scénarios termine ce qu'un scénario a fait naître (vu le 2026-09-29 : le son en boucle de l'Aspersion acide
- * restait après le scénario `presage`). `Sequencer.EffectManager.effects` / `.endEffects({ effects: [ids] })`,
- * `Sequencer.SoundManager.sounds` / `.endSounds({ sounds: [ids] })` (sequencer.js 4.2.3 : 10723, 10842, 11538, 11626, 30899-30900) ; les
- * autres clients sont prévenus par Sequencer. Sans Sequencer : rien.
+ * The running Sequencer effects and sounds (third-party module: Boss Loot / BLFX animations), and the ending of those designated —
+ * so that the scenario runner finishes what a scenario spawned (seen on 2026-09-29: the looping sound of Acid Splash
+ * stayed after the `presage` scenario). `Sequencer.EffectManager.effects` / `.endEffects({ effects: [ids] })`,
+ * `Sequencer.SoundManager.sounds` / `.endSounds({ sounds: [ids] })` (sequencer.js 4.2.3: 10723, 10842, 11538, 11626, 30899-30900);
+ * the other clients are notified by Sequencer. Without Sequencer: nothing.
  */
 async function sequencer({ end=null }={}) {
   const S = globalThis.Sequencer;
@@ -444,8 +446,8 @@ async function sequencer({ end=null }={}) {
 }
 
 /**
- * §58 : les dernières cartes du journal telles que le MJ les voit — type, repliée ou non (`display` calculé), résumé des jets
- * de la carte unique et verdict. Lecture seule.
+ * §58: the latest log cards as the GM sees them — type, collapsed or not (`display` computed), summary of the rolls
+ * of the single card and verdict. Read-only.
  */
 function chatCards({ count=6 }={}) {
   return game.messages.contents.slice(-count).map(m => {
@@ -463,15 +465,15 @@ function chatCards({ count=6 }={}) {
 const plainTask = t => ({ id: t.id, check: t.check, root: t.root ?? null, fixable: typeof t.apply === "function", preselect: !!t.preselect,
   where: String(t.where ?? "").replace(/<[^>]+>/g, ""), text: String(t.text ?? "").replace(/<[^>]+>/g, "") });
 
-/** Analyse (rien n'est écrit) : les tâches, sans leurs fonctions. */
+/** Analysis (nothing is written): the tasks, without their functions. */
 async function diagnosticScan({ checks=null }={}) {
   const scan = await scanWorld(checks);
   return Object.fromEntries(Object.entries(scan).map(([id, tasks]) => [id, tasks.map(plainTask)]));
 }
 
 /**
- * Répare les tâches réparables de ces vérifications dont la racine est l'un de ces uuid (toutes si `roots` est absent), avec ces
- * options de vérification (`{ [checkId]: { [optionId]: valeur } }`).
+ * Repairs the repairable tasks of these checks whose root is one of these uuids (all if `roots` is absent), with these
+ * check options (`{ [checkId]: { [optionId]: valeur } }`).
  */
 async function diagnosticRepair({ checks=null, roots=null, options={} }={}) {
   const scan = await scanWorld(checks);
@@ -480,30 +482,30 @@ async function diagnosticRepair({ checks=null, roots=null, options={} }={}) {
   return { backup, results: results.map(r => ({ ...plainTask(r.task), ok: r.ok, line: String(r.line).replace(/<[^>]+>/g, "") })) };
 }
 
-/** Les sauvegardes du diagnostic du monde, la plus récente d'abord : `[{ id, uuid, name, date, roots, checks }]`. */
+/** The world diagnostic's backups, most recent first: `[{ id, uuid, name, date, roots, checks }]`. */
 const diagnosticBackups = () => diagBackups();
 
-/** Après un scénario : retire ces entrées de sauvegarde, et le compendium s'il est vide et que le scénario l'a créé (`dropPack`). */
+/** After a scenario: removes these backup entries, and the compendium if it is empty and the scenario created it (`dropPack`). */
 async function diagnosticForget({ uuids=[], dropPack=false, actors=[] }={}) {
   for ( const uuid of uuids ) await (await fromUuid(uuid).catch(() => null))?.delete();
-  // Les acteurs que le scénario a créés (marqués `flags.dnd5e-combat.scenario`), jamais un autre.
+  // The actors the scenario created (marked `flags.dnd5e-combat.scenario`), never any other.
   for ( const id of actors ) { const a = game.actors.get(id); if ( a?.getFlag(MODULE_ID, "scenario") ) await a.delete(); }
   const pack = game.packs.get("world.das-backups");
   const left = pack ? (await pack.getIndex()).size : 0;
   if ( pack && dropPack && !left ) await pack.deleteCompendium();
   return { left, dropped: !!(pack && dropPack && !left) };
 }
-/** MJ : restaure la sauvegarde `uuid` du diagnostic, après avoir sauvegardé l'état actuel des mêmes documents → `{ lines, before }`. */
+/** GM: restores the diagnostic backup `uuid`, after saving the current state of the same documents → `{ lines, before }`. */
 const diagnosticRestore = ({ uuid }) => diagRestore(uuid);
 
 
-/** §293 : l'activité d'un item d'un token de la scène vue. */
+/** §293: the activity of an item of a token in the viewed scene. */
 function activityOn({ tokenId, itemId, activityId }) {
   const item = canvas.scene?.tokens.get(tokenId)?.actor?.items.get(itemId);
   return item?.system?.activities?.get(activityId) ?? null;
 }
 
-/** §293 : la liste « créatures de votre choix dans un rayon » qu'aurait la fenêtre (sans ce que voit l'utilisateur). */
+/** §293: the "creatures of your choice within a radius" list the window would have (without what the user sees). */
 function pickTargets(args) {
   const activity = activityOn(args);
   if ( !activity ) return { error: "activity not found" };
@@ -512,7 +514,7 @@ function pickTargets(args) {
     creatures: creatures.map(c => ({ id: c.token.id, name: c.token.name, enemy: c.enemy, checked: !!c.checked, distance: c.distance })) };
 }
 
-/** §293 : ce que fait « Utiliser » de la fenêtre — `targetIds` cochés, `upgrade` : la case de l'activité qui remplace. */
+/** §293: what the window's "Use" does — checked `targetIds`, `upgrade`: the checkbox of the activity that replaces it. */
 async function castPicked({ targetIds=[], upgrade=false, ...args }) {
   const activity = activityOn(args);
   if ( !activity ) return { error: "activity not found" };
@@ -522,31 +524,31 @@ async function castPicked({ targetIds=[], upgrade=false, ...args }) {
 }
 
 /** Ce que `api.mcp` expose. */
-/** §421 : la File du MJ — `{ mine, players, blocked, count, window }` (`window` : le panneau est-il ouvert ?). */
+/** §421: the GM's Queue — `{ mine, players, blocked, count, window }` (`window`: is the panel open?). */
 function gmQueueState() {
   return { ...queue(), window: !!foundry.applications.instances.get("das-player-waits") };
 }
-/** §421 : le MJ force la ligne `id` de « J'attends un joueur ». */
+/** §421: the GM forces the row `id` of "I'm waiting for a player". */
 const gmQueueForce = ({ id }) => forceLine(id);
-/** §421 : le MJ lance à la place d'un auteur parti le jet de la ligne `id` de « Bloqué ». */
+/** §421: the GM rolls, in place of an absent author, the roll of the row `id` of "Blocked". */
 const gmQueueRoll = ({ id }) => rollBlocked(id);
-/** §422 : le MJ répond depuis sa file — le bouton `action` de la fenêtre de la ligne `id` de « À moi de décider ». */
+/** §422: the GM answers from their queue — the `action` button of the window of the row `id` of "Up to me to decide". */
 const gmQueueAnswer = ({ id, action }) => answerLine(id, action);
 
-/** §290 : les attentes du MJ (fenêtres du combat sans délai) — `{ waits: [...], window: bool }`. */
+/** §290: the GM's waits (combat windows without a delay) — `{ waits: [...], window: bool }`. */
 function waits() {
   return { waits: playerWaits(), window: !!foundry.applications.instances.get("das-player-waits") };
 }
 
 /**
- * §381 (issue #35) : qui la table attend, pour les scénarios — `list` (les attentes connues de ce client), `open` (ouvre ici une fenêtre
- * à boutons marquée pour le token `tokenId`, de sorte `kind`, délai `seconds` ou celui du réglage ; rend tout de suite, la fenêtre reste
- * ouverte jusqu'à `answer-dialog` ou au délai), `result` (ce qu'a rendu la dernière fenêtre ouverte, `undefined` tant qu'elle est ouverte).
+ * §381 (issue #35): who the table is waiting for, for scenarios — `list` (this client's known waits), `open` (opens here a
+ * button window marked for token `tokenId`, of kind `kind`, delay `seconds` or the setting's; returns right away, the window stays
+ * open until `answer-dialog` or the delay), `result` (what the last opened window returned, `undefined` while it is open).
  */
 let awaitingProbe = { done: true, value: undefined };
 /**
- * §381 : `action` « list » (les attentes connues de ce client), « open » (une fenêtre sonde marquée pour `tokenId`) ou « result » (sa
- * réponse).
+ * §381: `action` "list" (this client's known waits), "open" (a probe window marked for `tokenId`) or "result" (its
+ * answer).
  */
 function awaiting({ action="list", tokenId=null, kind="reaction", seconds=null }={}) {
   if ( action === "list" ) return awaitingList();
@@ -564,15 +566,16 @@ function awaiting({ action="list", tokenId=null, kind="reaction", seconds=null }
   throw new Error(`unknown action: ${action}`);
 }
 
-/** §290 : forcer une attente (`{ id }`, ou la plus ancienne). */
+/** §290: force a wait (`{ id }`, or the oldest). */
 async function forcePlayerWait({ id=null }={}) {
   const target = id ?? playerWaits()[0]?.id;
   return { forced: target ? await forceWait(target) : false };
 }
 
 /**
- * Issue #32 : succès à un prix, pour les scénarios — `list` (les pauses ouvertes chez le MJ actif), `offer` (une pause prise ; `cost`
- * donné : sans la fenêtre du MJ), `dismiss`, `row` (une ligne d'un jet demandé, `card` + `tokenId`), `message` (un jet natif à DD).
+ * Issue #32: successes at a cost, for scenarios — `list` (the pauses open on the active GM), `offer` (a pause taken; `cost`
+ * given: without the GM's window), `dismiss`, `row` (a row of a requested roll, `card` + `tokenId`),
+ * `message` (a native roll with a DC).
  */
 async function atCost({ action="list", id=null, cost, card=null, tokenId=null, message=null }={}) {
   if ( action === "list" ) return atCostCandidates();
@@ -595,8 +598,9 @@ async function atCost({ action="list", id=null, cost, card=null, tokenId=null, m
 }
 
 /**
- * Discord (Fanarie, 2026-11-18) : la case « Lumière vive » remise dans la configuration de la scène affichée (ui/scene-bright.mjs).
- * Ouvre la fenêtre, lit la case ; `check` : la coche ou la décoche et enregistre le formulaire. Rend la case et la valeur enregistrée.
+ * Discord (Fanarie, 2026-11-18): the "Bright Light" checkbox put back in the displayed scene's configuration
+ * (ui/scene-bright.mjs). Opens the window, reads the checkbox; `check`: ticks or unticks it and saves the form.
+ * Returns the checkbox and the saved value.
  */
 async function sceneBright({ check=null }={}) {
   gmOnly();
@@ -616,8 +620,8 @@ async function sceneBright({ check=null }={}) {
 
 const outcomeWatch = { ids: null, heard: [] };
 /**
- * §555: records the `combatEnded` / `creatureDefeated` hooks on this client. `action`: « watch » (starts, clears), « read » (what was
- * heard), « stop » (stops, returns what was heard), « tracker » (ticks « defeated » for `tokenId` in `combatId`), « unstarted » (a combat
+ * §555: records the `combatEnded` / `creatureDefeated` hooks on this client. `action`: "watch" (starts, clears), "read" (what was
+ * heard), "stop" (stops, returns what was heard), "tracker" (ticks "defeated" for `tokenId` in `combatId`), "unstarted" (a combat
  * with `tokenId`, deleted before it began).
  */
 async function combatOutcome({ action="read", combatId=null, tokenId=null }={}) {

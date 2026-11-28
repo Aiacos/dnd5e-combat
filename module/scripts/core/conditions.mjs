@@ -1,66 +1,66 @@
 /**
- * Ce que les états (règles 2024) changent à un jet, quand cela dépend de DEUX créatures ou de la
- * situation. Fonctions pures, aucune dépendance à Foundry.
+ * What the conditions (2024 rules) change on a roll, when it depends on TWO creatures or on the
+ * situation. Pure functions, no dependency on Foundry.
  *
- * Un seul propriétaire par effet : tout ce qu'un état fait à celui qui le porte, dnd5e 6.0
- * l'applique déjà (CONFIG.DND5E.conditionEffects, config.mjs:3799-3819) et n'est PAS repris ici :
- * Empoisonné (désavantage aux attaques et aux tests), Entravé (désavantage aux sauvegardes de
- * Dextérité), Esquive (avantage aux sauvegardes de Dextérité), encombrement, épuisement,
- * initiative. Seule exception assumée : l'attaquant Entravé, À terre, Aveuglé ou Effrayé, que le
- * système ne traite pas.
+ * One owner per effect: everything a condition does to the one who bears it, dnd5e 6.0
+ * already applies (CONFIG.DND5E.conditionEffects, config.mjs:3799-3819) and is NOT taken up here:
+ * Poisoned (Disadvantage on attacks and checks), Restrained (Disadvantage on Dexterity saving throws),
+ * Dodge (Advantage on Dexterity saving throws), encumbrance, Exhaustion,
+ * Initiative. The only deliberate exception: the attacker Restrained, Prone, Blinded or Frightened, which the
+ * system does not handle.
  */
 
-/** États de l'attaquant qui lui donnent un désavantage à l'attaque. */
+/** Attacker conditions that give it Disadvantage on the attack. */
 const ATTACKER_DISADVANTAGE = ["blinded", "frightened", "prone", "restrained"];
-/** États de l'attaquant qui lui donnent un avantage à l'attaque. */
+/** Attacker conditions that give it Advantage on the attack. */
 const ATTACKER_ADVANTAGE = ["invisible"];
-/** États de la cible qui donnent un avantage à qui l'attaque. */
+/** Target conditions that give Advantage to whoever attacks it. */
 const TARGET_ADVANTAGE = ["blinded", "paralyzed", "petrified", "restrained", "stunned", "unconscious"];
-/** États de la cible qui donnent un désavantage à qui l'attaque. */
+/** Target conditions that give Disadvantage to whoever attacks it. */
 const TARGET_DISADVANTAGE = ["invisible", "dodging"];
-/** États qui font échouer d'office les sauvegardes de Force et de Dextérité. */
+/** Conditions that automatically fail Strength and Dexterity saving throws. */
 const AUTO_FAIL_SAVE = ["paralyzed", "petrified", "stunned", "unconscious"];
-/** États qui transforment en coup critique toute attaque qui touche à 5 ft ou moins. */
+/** Conditions that turn any attack that hits from 5 ft or less into a Critical Hit. */
 const AUTO_CRITICAL = ["paralyzed", "unconscious"];
 
 /**
  * @typedef {object} Reason
  * @property {"attacker"|"target"|"situation"|"content"} who
- * @property {string} key  Identifiant d'état dnd5e, clé de situation ("longRange", "closeCombat", "proneFar"),
- *                         ou, pour "content", le nom de l'item qui le déclare (SPEC §16, B6).
+ * @property {string} key  dnd5e condition identifier, situation key ("longRange", "closeCombat", "proneFar"),
+ *                         or, for "content", the name of the item that declares it (SPEC §16, B6).
  */
 
 /**
- * États que la VISION subsume quand on sait qui voit qui (règles 2024, « attaquants et cibles non
- * vus ») : Aveuglé et Invisible ne valent que par ce qu'ils font voir ou non — et une vision
- * aveugle voit un invisible. Sans faits de vision, ces états gardent leur effet forfaitaire.
+ * Conditions that VISION subsumes when we know who sees whom (2024 rules, "unseen attackers and
+ * targets"): Blinded and Invisible are worth only what they let one see or not — and Blindsight
+ * sees an invisible creature. Without vision facts, these conditions keep their flat effect.
  */
 const SUBSUMED_BY_VISION = ["blinded", "invisible"];
 
 /**
- * Sources d'avantage et de désavantage d'une attaque contre UNE cible.
+ * Sources of Advantage and Disadvantage of an attack against ONE target.
  * @param {object} context
- * @param {string[]} context.attacker       États de l'attaquant.
- * @param {string[]} context.target         États de la cible.
- * @param {boolean} context.adjacent        La cible est à 5 ft ou moins.
- * @param {boolean} context.ranged          Attaque à distance (arme à distance, arme lancée, sort à distance).
- * @param {boolean} [context.longRange]     Cible au-delà de la portée normale.
- * @param {boolean} [context.closeCombat]   Un ennemi valide se tient à 5 ft de l'attaquant.
+ * @param {string[]} context.attacker       Attacker conditions.
+ * @param {string[]} context.target         Target conditions.
+ * @param {boolean} context.adjacent        The target is 5 ft away or less.
+ * @param {boolean} context.ranged          Ranged attack (ranged weapon, thrown weapon, ranged spell).
+ * @param {boolean} [context.longRange]     Target beyond normal range.
+ * @param {boolean} [context.closeCombat]   A valid enemy stands 5 ft from the attacker.
  * @param {{attackerSees: boolean, targetSees: boolean}|null} [context.vision]
- *        Qui voit qui, si on le sait (P1) : attaquer sans voir = désavantage, attaquer sans être vu = avantage.
+ *        Who sees whom, if known (P1): attacking without seeing = Disadvantage, attacking without being seen = Advantage.
  * @param {boolean|null} [context.grappledElsewhere]
- *        Agrippé (règle 2024) : désavantage aux attaques contre toute cible autre que celui qui agrippe.
- *        true = l'attaquant est agrippé et la cible n'est pas son agrippeur ; null = inconnu (pas de désavantage).
+ *        Grappled (2024 rule): Disadvantage on attacks against any target other than the one grappling.
+ *        true = the attacker is Grappled and the target is not its grappler; null = unknown (no Disadvantage).
  * @param {boolean} [context.helped]
- *        Soutien (2024) : un allié de l'attaquant a distrait la cible — avantage.
+ *        Help (2024): an ally of the attacker distracted the target — Advantage.
  * @param {string|null} [context.flankedWith]
- *        Prise en tenaille (§369, règle optionnelle) : le nom de l'allié qui se tient de l'autre côté de la cible — avantage au
- *        corps à corps. null : pas de tenaille (ou règle désactivée).
+ *        Flanking (§369, optional rule): the name of the ally standing on the other side of the target — Advantage in
+ *        melee. null: no flanking (or rule disabled).
  * @param {boolean|null} [context.frightenedSourceSeen]
- *        Effrayé : « tant que la source de la peur est en vue ». false = aucune source connue n'est
- *        en vue, l'état ne gêne pas l'attaque ; null = source inconnue ou non jugée, l'état s'applique.
+ *        Frightened: "while the source of the fear is in line of sight". false = no known source is
+ *        in sight, the condition does not hinder the attack; null = source unknown or not judged, the condition applies.
  * @param {{advantage?: string[], disadvantage?: string[]}} [context.declared]
- *        Ce que le contenu déclare (§16, B6 : Lueurs féeriques, Tactique de meute…), par nom d'item.
+ *        What the content declares (§16, B6: Faerie Fire, Pack Tactics…), by item name.
  * @returns {{advantage: Reason[], disadvantage: Reason[]}}
  */
 export function attackModifiers({ attacker, target, adjacent, ranged, longRange=false, closeCombat=false, vision=null, frightenedSourceSeen=null, grappledElsewhere=null, helped=false, flankedWith=null, declared=null, elusive=false, untrainedArmor=false, heavyTooWeak=false }) {
@@ -76,7 +76,7 @@ export function attackModifiers({ attacker, target, adjacent, ranged, longRange=
   for ( const key of TARGET_ADVANTAGE ) if ( target.includes(key) && kept(key) ) advantage.push({ who: "target", key });
   for ( const key of TARGET_DISADVANTAGE ) {
     if ( !target.includes(key) || !kept(key) ) continue;
-    // Esquive (2024) : désavantage seulement si la cible voit l'attaquant.
+    // Dodge (2024): Disadvantage only if the target sees the attacker.
     if ( (key === "dodging") && vision && !vision.targetSees ) continue;
     disadvantage.push({ who: "target", key });
   }
@@ -86,24 +86,24 @@ export function attackModifiers({ attacker, target, adjacent, ranged, longRange=
   }
   if ( grappledElsewhere === true ) disadvantage.push({ who: "attacker", key: "grappled" });
   if ( helped === true ) advantage.push({ who: "situation", key: "helped" });
-  // §369 : prise en tenaille (règle optionnelle du DMG 2014, réglage `flanking`) — le nom de l'allié qui prend la cible à revers.
+  // §369: Flanking (optional rule of the 2014 DMG, setting `flanking`) — the name of the ally who catches the target from behind.
   if ( flankedWith && !ranged ) advantage.push({ who: "situation", key: "flanking", ally: String(flankedWith) });
-  // À terre : avantage pour qui est au contact, désavantage pour tous les autres.
+  // Prone: Advantage for whoever is adjacent, Disadvantage for all the others.
   if ( target.includes("prone") ) (adjacent ? advantage : disadvantage).push({ who: "target", key: adjacent ? "prone" : "proneFar" });
   if ( ranged && longRange ) disadvantage.push({ who: "situation", key: "longRange" });
   if ( ranged && closeCombat ) disadvantage.push({ who: "situation", key: "closeCombat" });
-  // §214 : armure portée sans formation — Désavantage aux attaques de Force ou de Dextérité.
+  // §214: armor worn without training — Disadvantage on Strength or Dexterity attacks.
   if ( untrainedArmor ) disadvantage.push({ who: "situation", key: "untrainedArmor" });
-  // O5a (§339) : arme Lourde maniée sans 13 en Force (corps à corps) ou en Dextérité (distance).
+  // O5a (§339): Heavy weapon wielded without 13 in Strength (melee) or in Dexterity (ranged).
   if ( heavyTooWeak ) disadvantage.push({ who: "situation", key: "heavyWeapon" });
-  // §20 : Insaisissable — « aucun jet d'attaque ne peut avoir l'Avantage contre vous » : les raisons d'avantage ne comptent plus.
+  // §20: Elusive — "no attack roll can have Advantage against you": the reasons for Advantage no longer count.
   if ( elusive ) return { advantage: [], disadvantage };
   return { advantage, disadvantage };
 }
 
 /**
- * Le mode du jet : dès qu'il y a au moins un avantage ET un désavantage, ils s'annulent tous,
- * quel que soit leur nombre.
+ * The roll's mode: as soon as there is at least one Advantage AND one Disadvantage, they all cancel out,
+ * whatever their number.
  * @returns {1|0|-1}
  */
 export function netMode({ advantage, disadvantage }) {
@@ -113,7 +113,7 @@ export function netMode({ advantage, disadvantage }) {
 }
 
 /**
- * Plusieurs cibles, un seul jet : on ne tranche que si toutes les cibles donnent le même mode.
+ * Several targets, one roll: we only decide if all the targets give the same mode.
  * @param {Array<{advantage: Reason[], disadvantage: Reason[]}>} perTarget
  * @returns {{mode: 1|0|-1, agreed: boolean}}
  */
@@ -124,13 +124,15 @@ export function combineTargets(perTarget) {
 }
 
 /**
- * §480 : le Désavantage décidé par le moteur, écarté à la main au moment du jet (Discord, Archibald, 2026-11-13). dnd5e laisse le joueur
- * choisir : la touche d'Avantage (Alt) le combine au Désavantage (les deux : jet normal, D20Roll.applyKeybindings), le bouton « Avantage »
- * ou « Normal » de la fenêtre de jet le remplace (D20RollConfigurationDialog#_finalizeConfig). Ni l'un ni l'autre ne pose
- * `options.advantage` : une vraie source d'Avantage (un effet, le moteur) le pose, et alors le jet normal est la règle.
- * @param {{agreed?: boolean, advantage?: object[], disadvantage?: object[]}|null} modifiers  Les raisons du moteur (flag `modifiers`).
- * @param {{advantage?: boolean, advantageMode?: number}|null} options  Les options du jet lancé.
- * @returns {"cancelled"|"replaced"|null}  Jet normal ou à l'Avantage malgré le Désavantage ; null sinon.
+ * §480: the Disadvantage decided by the engine, dismissed by hand at the moment of the roll (Discord, Archibald, 2026-11-13).
+ * dnd5e lets the player choose: the Advantage key (Alt) combines it with the Disadvantage (both: normal roll,
+ * D20Roll.applyKeybindings), the "Advantage" or "Normal" button of the roll window replaces it
+ * (D20RollConfigurationDialog#_finalizeConfig). Neither sets
+ * `options.advantage`: a real source of Advantage (an effect, the engine) sets it, and then the normal roll is the rule.
+ * @param {{agreed?: boolean, advantage?: object[], disadvantage?: object[]}|null} modifiers  The engine's reasons (flag
+ *   `modifiers`).
+ * @param {{advantage?: boolean, advantageMode?: number}|null} options  The options of the roll made.
+ * @returns {"cancelled"|"replaced"|null}  Normal roll or with Advantage despite the Disadvantage; null otherwise.
  */
 export function manualModeOverride(modifiers, options) {
   if ( !modifiers?.agreed || !modifiers.disadvantage?.length || modifiers.advantage?.length ) return null;
@@ -140,42 +142,42 @@ export function manualModeOverride(modifiers, options) {
   return null;
 }
 
-/** Une attaque qui touche cette cible est-elle d'office un coup critique ? */
+/** Is an attack that hits this target automatically a Critical Hit? */
 export function isAutoCritical(targetStatuses, adjacent) {
   return adjacent && AUTO_CRITICAL.some(s => targetStatuses.includes(s));
 }
 
 /**
- * L'état qui fait échouer d'office cette sauvegarde, ou null.
+ * The condition that automatically fails this saving throw, or null.
  * @param {string[]} statuses
- * @param {string} ability  Caractéristique de la sauvegarde ("str", "dex"…).
+ * @param {string} ability  Ability of the saving throw ("str", "dex"…).
  */
 export function autoFailSave(statuses, ability) {
   if ( !["str", "dex"].includes(ability) ) return null;
   return AUTO_FAIL_SAVE.find(s => statuses.includes(s)) ?? null;
 }
 
-/** États qui rendent impossible un sort à composante verbale (Silence 2024 : lancer un tel sort y est impossible). */
+/** Conditions that make a spell with a verbal component impossible (Silence 2024: casting such a spell is impossible). */
 const NO_VERBAL = ["silenced"];
 
 /**
- * L'état qui empêche de lancer ce sort, ou null. Seule la composante verbale est en cause : un sort
- * lancé par un objet qui en dispense (activité « cast », dnd5e 6 `documents/activity/cast.mjs:171-174`) passe.
+ * The condition that prevents casting this spell, or null. Only the verbal component is at issue: a spell
+ * cast by an item that waives it ("cast" activity, dnd5e 6 `documents/activity/cast.mjs:171-174`) goes through.
  * @param {string[]} statuses
- * @param {{spell: boolean, verbal: boolean}} use  L'item utilisé est-il un sort, et garde-t-il sa composante V ?
+ * @param {{spell: boolean, verbal: boolean}} use  Is the item used a spell, and does it keep its V component?
  */
 export function verbalSpellBlocked(statuses, { spell, verbal }) {
   if ( !spell || !verbal ) return null;
   return NO_VERBAL.find(s => statuses.includes(s)) ?? null;
 }
 
-/** États qui neutralisent (règles 2024 : Neutralisé, et les états qui l'entraînent). */
+/** Conditions that incapacitate (2024 rules: Incapacitated, and the conditions that cause it). */
 export const INCAPACITATING = Object.freeze(["incapacitated", "paralyzed", "petrified", "stunned", "unconscious", "dead"]);
 
 /**
- * Cette créature, à 5 ft de l'attaquant, lui donne-t-elle le désavantage à une attaque à distance ? (PHB 2024 « Attaques à
- * distance en combat rapproché » : « un ennemi qui vous voit et qui ne subit pas l'état Neutralisé ».) Un mort ne gêne
- * personne ; `seesAttacker` null (vision hors service) : on ne sait pas, elle gêne.
+ * Does this creature, 5 ft from the attacker, give it Disadvantage on a ranged attack? (2024 PHB "Ranged Attacks in Close
+ * Combat": "an enemy who can see you and who isn't under the Incapacitated condition".) A dead creature hinders
+ * no one; `seesAttacker` null (vision out of service): we don't know, it hinders.
  * @param {{hostile: boolean, statuses: string[], dead?: boolean, seesAttacker?: boolean|null}} other
  */
 export function hampersRangedAttack({ hostile, statuses, dead=false, seesAttacker=null }) {
@@ -185,11 +187,11 @@ export function hampersRangedAttack({ hostile, statuses, dead=false, seesAttacke
 }
 
 /**
- * Une empoignade tient-elle encore ? (règle 2024) Elle cesse si l'agrippeur est neutralisé ou si la
- * distance entre lui et la cible dépasse la portée de l'empoignade.
+ * Does a grapple still hold? (2024 rule) It ends if the grappler is Incapacitated or if the
+ * distance between it and the target exceeds the reach of the grapple.
  * @param {object} context
- * @param {string[]} context.grapplerStatuses  États de l'agrippeur.
- * @param {boolean} context.withinReach        La cible est-elle encore à portée de l'empoignade ?
+ * @param {string[]} context.grapplerStatuses  Conditions of the grappler.
+ * @param {boolean} context.withinReach        Is the target still within reach of the grapple?
  */
 export function grappleHolds({ grapplerStatuses, withinReach }) {
   if ( INCAPACITATING.some(s => grapplerStatuses.includes(s)) ) return false;
@@ -197,27 +199,27 @@ export function grappleHolds({ grapplerStatuses, withinReach }) {
 }
 
 /* -------------------------------------------- */
-/*  §17.3 : ce que les états interdisent        */
+/*  §17.3: what the conditions forbid           */
 /* -------------------------------------------- */
 
 /**
- * Neutralisé (2024) : « vous ne pouvez effectuer aucune action, action Bonus ni Réaction ». Aussi pour les états qui
- * l'entraînent (Étourdi, Paralysé, Pétrifié, Inconscient) et Mort.
- * §409 : aussi pour tout sort lancé (`castsSpell` : rituel, sort d'une minute ou plus) et toute activité longue (`longActivation` :
- * minute, heure, jour).
- * @param {{statuses: string[], cost: string|null, castsSpell?: boolean, longActivation?: boolean}} use  États de l'utilisateur, coût.
- * @returns {string[]}  ["incapacitated"], ["incapacitatedCasting"] (sort ou activité longue sans coût d'action), ou [].
+ * Incapacitated (2024): "you can't take any action, Bonus Action, or Reaction". Also for the conditions that
+ * cause it (Stunned, Paralyzed, Petrified, Unconscious) and Dead.
+ * §409: also for any spell cast (`castsSpell`: ritual, spell of one minute or more) and any long activity (`longActivation`:
+ * minute, hour, day).
+ * @param {{statuses: string[], cost: string|null, castsSpell?: boolean, longActivation?: boolean}} use  User's conditions, cost.
+ * @returns {string[]}  ["incapacitated"], ["incapacitatedCasting"] (spell or long activity without action cost), or [].
  */
 export function conditionUseIssues({ statuses, cost, noReactions=false, actionOrBonus=false, budget=null, castsSpell=false, longActivation=false }) {
-  // §409 (issue #44) : lancer un sort (rituel ou temps d'incantation d'une minute ou plus compris) ou une activité longue demande d'agir,
-  // tour après tour — un Neutralisé ne le peut pas, quel que soit le coût lu.
+  // §409 (issue #44): casting a spell (ritual or casting time of one minute or more included) or a long activity requires acting,
+  // turn after turn — an Incapacitated creature cannot, whatever the cost read.
   const acting = ["action", "bonus", "reaction"].includes(cost);
   if ( !acting && !castsSpell && !longActivation ) return [];
   if ( INCAPACITATING.some(s => statuses.includes(s)) ) return [acting ? "incapacitated" : "incapacitatedCasting"];
   if ( !acting ) return [];
-  // §16.47 : « ne peut pas prendre de Réaction » (Tentacules de Hadar).
+  // §16.47: "can't take a Reaction" (Arms of Hadar).
   if ( (cost === "reaction") && noReactions ) return ["noReactions"];
-  // §77 : « une action ou une action Bonus lors de son tour, pas les deux » (Nuage fétide du Dretch, Lenteur) — l'autre déjà dépensée.
+  // §77: "an action or a Bonus Action on its turn, not both" (Dretch's Fetid Cloud, Slow) — the other already spent.
   if ( actionOrBonus && budget ) {
     const actionTaken = (budget.action < 1) || ((budget.attacks?.used ?? 0) > 0);
     if ( ((cost === "action") && (budget.bonus < 1)) || ((cost === "bonus") && actionTaken) ) return ["actionOrBonus"];
@@ -226,8 +228,8 @@ export function conditionUseIssues({ statuses, cost, noReactions=false, actionOr
 }
 
 /**
- * Charmé (2024) : « vous ne pouvez pas attaquer celui qui vous a charmé ni le cibler avec une capacité infligeant des
- * dégâts ou un effet magique ».
+ * Charmed (2024): "you can't attack the charmer or target the charmer with damaging abilities or magical
+ * effects".
  * @param {{attack: boolean, damage: boolean, magical: boolean}} use
  */
 export function forbiddenAgainstCharmer({ attack, damage, magical }) {
@@ -235,8 +237,8 @@ export function forbiddenAgainstCharmer({ attack, damage, magical }) {
 }
 
 /**
- * « Une créature que vous pouvez voir » dans la description (anglais, ou français du PHB-fr : « une créature que vous
- * voyez », « parmi celles que vous voyez »). Un point ou un espace que l'on voit ne compte pas : seule la cible compte.
+ * "A creature that you can see" in the description (English, or French of the PHB-fr: "une créature que vous
+ * voyez", "parmi celles que vous voyez"). A point or space that one sees does not count: only the target counts.
  */
 const SIGHT_PATTERN = /\b(?:creatures?|targets?|one|ones)\b[^.<]{0,40}\b(?:that )?you can see\b|\b(?:cr[ée]atures?|cibles?|celles|ceux)\b[^.<]{0,40}\bque vous (?:voyez|pouvez voir)\b/i;
 export function requiresSight(text) {
@@ -244,24 +246,24 @@ export function requiresSight(text) {
 }
 
 /**
- * Effrayé (2024) : « vous ne pouvez pas vous rapprocher volontairement de la source de votre peur ». Un point du chemin
- * plus proche de la source que le départ suffit.
- * @param {number} start      Distance à la source au départ.
- * @param {number[]} steps    Distance à la source à chaque point du chemin.
+ * Frightened (2024): "you can't willingly move closer to the source of your fear". One point of the path
+ * closer to the source than the start is enough.
+ * @param {number} start      Distance to the source at the start.
+ * @param {number[]} steps    Distance to the source at each point of the path.
  */
 export function movesCloser(start, steps) {
   return steps.some(d => d < start - 1e-6);
 }
 
 /* -------------------------------------------- */
-/*  §16.47 : règles de sorts                    */
+/*  §16.47: spell rules                         */
 /* -------------------------------------------- */
 
 /**
- * Ce qu'une utilisation fait cesser parmi les effets `breaksOn` de son auteur : un jet d'attaque (au jet), une utilisation
- * à dégâts, un sort. Une attaque ne compte qu'au jet (l'invisibilité profite au jet lui-même).
+ * What a use ends among the `breaksOn` effects of its author: an attack roll (at the roll), a use
+ * with damage, a spell. An attack only counts at the roll (invisibility benefits the roll itself).
  * @param {{attack: boolean, damage: boolean, spell: boolean}} use
- * @returns {string[]}  Les moments atteints.
+ * @returns {string[]}  The moments reached.
  */
 export function breakMoments({ attack, damage, spell }) {
   const out = [];
@@ -272,10 +274,10 @@ export function breakMoments({ attack, damage, spell }) {
 }
 
 /**
- * §438 : les moments qui font cesser un effet d'item — ceux de l'item entier (`breaksOn`), plus ceux de l'activité qui l'a posé
- * (`breaksOnActivity`), quand elle est connue.
- * @param {object} entry              L'entrée de contenu de l'item d'origine.
- * @param {string|null} activityId    L'activité qui a posé l'effet.
+ * §438: the moments that end an item's effect — those of the whole item (`breaksOn`), plus those of the activity that placed it
+ * (`breaksOnActivity`), when known.
+ * @param {object} entry              The content entry of the original item.
+ * @param {string|null} activityId    The activity that placed the effect.
  * @returns {string[]}
  */
 export function effectBreakMoments(entry, activityId=null) {
@@ -284,22 +286,22 @@ export function effectBreakMoments(entry, activityId=null) {
   return [...out];
 }
 
-/** Les états de `cures` que la cible porte vraiment. */
+/** The conditions of `cures` that the target really has. */
 export function curable(statuses, cures) {
   return (cures ?? []).filter(s => statuses.includes(s));
 }
 
-/** « Si vous ou vos alliés la combattez » : la cible est en combat, hostile au lanceur. */
+/** "If you or your allies are fighting it": the target is in combat, hostile to the caster. */
 export function fightingAdvantage({ targetInCombat, hostile }) {
   return !!(targetInCombat && hostile);
 }
 
 /**
- * Réussite ou échec d'office d'une sauvegarde selon le type de la créature (`saveAutoSuccess.types`, `saveAutoFail.types`) :
- * Pétrification — une Créature artificielle réussit ; Flétrissement — une Plante rate. L'échec d'office prime s'il y a les deux.
- * @param {{success?: string[], fail?: string[]}} rules  les types déclarés par l'item
- * @param {string|null|undefined} type                   le type de la créature
- * @returns {{autoFail: string}|{autoSucceed: string}|null}  la raison, au format `type:<type>`
+ * Automatic success or failure of a saving throw according to the creature's type (`saveAutoSuccess.types`, `saveAutoFail.types`):
+ * Flesh to Stone — a Construct succeeds; Blight — a Plant fails. The automatic failure takes precedence if both apply.
+ * @param {{success?: string[], fail?: string[]}} rules  the types declared by the item
+ * @param {string|null|undefined} type                   the creature's type
+ * @returns {{autoFail: string}|{autoSucceed: string}|null}  the reason, in the format `type:<type>`
  */
 export function typeAutoSave({ success=[], fail=[] }={}, type) {
   if ( !type ) return null;

@@ -1,23 +1,23 @@
 /**
- * Téléportations de soi à l'utilisation (SPEC §16.10, clé `teleport` de core/content.mjs) : la distance que le texte
- * de la règle donne et que les données de l'item ne portent pas. Les sorts SRD du système ont une activité native
- * « teleport » (Foulée brumeuse, Porte dimensionnelle de spells24) ; ceux du module premium PHB, que la table utilise,
- * n'en ont pas (utilitaire, ou dégâts pour Porte dimensionnelle). Le moteur prend l'activité native quand elle existe.
+ * Self-teleports on use (SPEC §16.10, key `teleport` of core/content.mjs): the distance that the rule text
+ * gives and that the item's data do not carry. The system's SRD spells have a native "teleport" activity
+ * (Misty Step, Dimension Door of spells24); those of the PHB premium module, which the table uses,
+ * do not (utility, or damage for Dimension Door). The engine takes the native activity when it exists.
  *
- * Identifiants vérifiés dans l'extraction du PHB 2.2.0 (projet de traduction, work/phb-en).
+ * Identifiers checked in the PHB 2.2.0 extraction (translation project, work/phb-en).
  */
 
 export const TELEPORTS = Object.freeze({
-  // « Vous vous téléportez jusqu'à 9 m dans un espace inoccupé que vous voyez » (action bonus).
+  // "You teleport up to 9 m to an unoccupied space you can see" (Bonus Action).
   "misty-step": { distance: 30, units: "ft" },
-  // « …jusqu'à 150 m » ; §264 : « une créature consentante… à 1,50 m de vous… dans un espace à 1,50 m de votre destination ».
-  // C12-b : « un lieu que vous voyez, ou que vous décrivez » — derrière un mur, hors de vue : permis (`unseen`).
+  // "…up to 150 m"; §264: "a willing creature… within 1.50 m of you… to a space within 1.50 m of your destination".
+  // C12-b: "a place you can see, or one you describe" — behind a wall, out of sight: allowed (`unseen`).
   "dimension-door": { distance: 500, units: "ft", passengers: { count: 1, within: 5, units: "ft" }, unseen: true },
-  // Goliath, ascendance des géants des nuages : « jusqu'à 9 m dans un espace inoccupé que vous voyez ».
+  // Goliath, Cloud Giant's Jaunt: "up to 9 m to an unoccupied space you can see".
   "clouds-jaunt": { distance: 30, units: "ft" },
-  // Don du voyage dimensionnel, Pas clignotants : « …après l'action Attaque ou Magie, jusqu'à 9 m ».
+  // Boon of Dimensional Travel, Blinking Steps: "…after the Attack or Magic action, up to 9 m".
   "boon-of-dimensional-travel": { distance: 30, units: "ft" },
-  // C12-d : Voyage au gré de l'Arbre (Arbre-monde 10) — « par une action Bonus, téléportez-vous jusqu'à 18 m dans un espace inoccupé que
-  // vous voyez » (l'activité courte ; la longue, 45 m avec six passagers, reste au joueur).
+  // C12-d: Travel along the Tree (World Tree 10) — "as a Bonus Action, teleport up to 18 m to an unoccupied space you
+  // can see" (the short activity; the long one, 45 m with six passengers, is left to the player).
   "travel-along-the-tree": { distance: 60, units: "ft", activity: "4e13OzT2UzbhQICL" }
 });

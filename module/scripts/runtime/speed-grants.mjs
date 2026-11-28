@@ -1,16 +1,17 @@
 /**
- * §195 : les vitesses qu'un item donne sans effet dans ses données (`grantsSpeeds`, content/ — Athlète : « une vitesse d'escalade égale à
- * votre Vitesse »). Le MJ actif tient sur l'acteur un effet par item (drapeau `flags.dnd5e-combat.speedGrant` = l'id de l'item, origine =
- * l'item), de la même forme que les capacités de dnd5e qui donnent une vitesse (`system.attributes.movement.<vitesse>`, `upgrade`,
- * phase `initial` : Ailes draconiques, adapter/altitude.mjs) : créé quand l'item arrive, réécrit quand la Vitesse de base change, retiré
- * avec l'item. Un équipement ne la donne que porté (et harmonisé s'il le demande : Pantoufles d'araignée, Cape d'arachnide). La vitesse
- * d'escalade devient ainsi une vraie vitesse pour dnd5e (coût ×1, `walkFallback`) et pour le moteur
- * (`climbingOf(token).native`). Rien n'est écrit sur l'item.
- * §236 : de même les Résistances qu'un item donne sans effet (`grantsResistances`, Avatar de la bataille), dans le même effet.
- * §494 (B14) : de même la limite de concentrations d'un trait (`concentration: { limit }`, « trois sorts à la fois ») :
- * `system.attributes.concentration.limit`, « upgrade », que dnd5e lit pour remplacer une concentration ou en ouvrir une de plus.
- * Limite : « égale à votre Vitesse » est lue sur la Vitesse de base (fiche, sinon espèce), pas sur la Vitesse du moment (Rapidité, Grande
- * foulée ne s'y reportent pas).
+ * §195: the speeds that an item grants without an effect in its data (`grantsSpeeds`, content/ — Athlete: "a climbing
+ * speed equal to your Speed"). The active GM holds on the actor one effect per item (flag `flags.dnd5e-combat.speedGrant` =
+ * the item's id, origin = the item), of the same shape as the dnd5e features that grant a speed
+ * (`system.attributes.movement.<vitesse>`, `upgrade`, phase `initial`: Draconic Wings, adapter/altitude.mjs): created when
+ * the item arrives, rewritten when the base Speed changes, removed with the item. Equipment grants it only when worn (and
+ * attuned if it requires: Spider Climb Slippers, Cloak of Arachnida). The climbing speed thus becomes a real speed for
+ * dnd5e (cost ×1, `walkFallback`) and for the engine (`climbingOf(token).native`). Nothing is written on the item.
+ * §236: likewise the Resistances that an item grants without an effect (`grantsResistances`, Avatar of Battle), in the same
+ * effect.
+ * §494 (B14): likewise the Concentration limit of a trait (`concentration: { limit }`, "three spells at once"):
+ * `system.attributes.concentration.limit`, "upgrade", which dnd5e reads to replace a Concentration or open one more.
+ * Limit: "equal to your Speed" is read from the base Speed (sheet, otherwise species), not the Speed of the moment
+ * (Haste, Longstrider do not carry over).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,40 +24,40 @@ import { loc, log } from "./shared.mjs";
 
 export const SPEED_GRANT_FLAG = "speedGrant";
 
-/** La Vitesse de base de l'acteur : celle de sa fiche, sinon celle de son espèce, sinon la Vitesse préparée. */
+/** The actor's base Speed: that of their sheet, otherwise that of their species, otherwise the prepared Speed. */
 export function baseWalkOf(actor) {
   const movement = actor?.system?.attributes?.movement ?? {};
   const source = actor?._source?.system?.attributes?.movement ?? {};
   return Number(source.speeds?.walk ?? source.walk) || Number(movement.fromSpecies?.walk) || Number(movement.speeds?.walk ?? movement.walk) || 0;
 }
 
-/** Un équipement donne sa vitesse porté, et harmonisé s'il le demande ; un sort connu, jamais (son effet seul compte) ; une aptitude, toujours. */
+/** Equipment grants its speed when worn, and attuned if it requires; a known spell, never (its effect alone counts); a feature, always. */
 function worn(item) {
   if ( item.type === "spell" ) return false;
   if ( !["equipment", "weapon"].includes(item.type) ) return true;
   return !!item.system?.equipped && ((item.system?.attunement !== "required") || !!item.system?.attuned);
 }
 
-/** Les items de l'acteur qui donnent une vitesse, avec les changements voulus. */
+/** The actor's items that grant a speed, with the wanted changes. */
 function wantedOf(actor) {
   const walk = baseWalkOf(actor);
   const out = new Map();
   for ( const item of actor?.items ?? [] ) {
     const entry = contentOf(item).entry;
     if ( !(entry?.grantsSpeeds || entry?.grantsResistances || entry?.grantsConditionImmunities || entry?.concentration) || !worn(item) ) continue;
-    // §236 : les Résistances accordées (Avatar de la bataille) — la forme des données de dnd5e (Rage : `system.traits.dr.value`, « add »).
+    // §236: the Resistances granted (Avatar of Battle) — the shape of dnd5e's data (Rage: `system.traits.dr.value`, "add").
     const changes = [...grantedSpeedChanges(entry.grantsSpeeds ?? {}, walk),
       ...(entry.grantsResistances ?? []).map(type => ({ key: "system.traits.dr.value", type: "add", value: type })),
-      // §295 : immunités d'état (Protégé de dame Nature : Empoisonné).
+      // §295: condition Immunities ("Protégé de dame Nature": Poisoned).
       ...(entry.grantsConditionImmunities ?? []).map(status => ({ key: "system.traits.ci.value", type: "add", value: status })),
-      // §494 (B14) : la limite de concentrations simultanées.
+      // §494 (B14): the limit of simultaneous Concentrations.
       ...concentrationLimitChanges(entry.concentration)];
     if ( changes.length ) out.set(item.id, { item, changes, speed: !!entry.grantsSpeeds });
   }
   return out;
 }
 
-/** Les effets que le moteur a posés pour ces items. */
+/** The effects that the engine has placed for these items. */
 export const speedGrantEffects = actor => (actor?.effects ?? []).filter(e => e.getFlag?.(MODULE_ID, SPEED_GRANT_FLAG));
 
 async function sync(actor) {

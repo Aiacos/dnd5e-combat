@@ -38,40 +38,40 @@ import { areaShapeOf, sparedFromArea } from "../core/area-shield.mjs";
 import { turnResistanceChanges } from "../core/turn-resistance.mjs";
 import { attackDamageTypes } from "../adapter/smite.mjs";
 
-/** §134 : Rapide — le nom de l'item qui donne le Désavantage aux attaques d'opportunité contre cet acteur, ou null. */
+/** §134: Mobile — the name of the item that gives Disadvantage to Opportunity Attacks against this actor, or null. */
 export function hamperedBy(actor) {
   return Array.from(actor?.items ?? []).find(i => {
     const rule = contentOf(i).entry?.opportunityDisadvantage;
     if ( rule === true ) return true;
-    // O9g (§362) : Bottes de rapidité — tant que l'effet « talons claqués » posé par l'activité de l'item est sur le porteur.
+    // O9g (§362): Boots of Speed — as long as the "clicked heels" effect applied by the item's activity is on the bearer.
     return !!rule?.whileEffect && (actor.effects ?? []).some(e => !e.disabled && (originItemOf(e) === i) && comesFromItemEffect(e, rule.whileEffect));
   })?.name ?? null;
 }
 
-/** Les réactions qu'un acteur peut proposer dans une fenêtre, d'après le registre. `publish` : le moment a vraiment lieu. */
+/** The Reactions an actor can offer in a window, according to the registry. `publish`: the moment really takes place. */
 function reactionsOf(actor, window, context={}, { publish=false }={}) {
   const full = { actor, ...context };
   if ( publish ) announce(window, full);
   return reactionOptions(actor, window, matching(window, full));
 }
 
-/** Cette créature a-t-elle de quoi réagir si elle est touchée ? Consulté avant d'ouvrir une fenêtre : sans candidat, aucune attente. */
+/** Does this creature have anything to react with if hit? Consulted before opening a window: with no candidate, no waiting. */
 export async function canReactToHit(tokenUuid, { activity=null, source=null }={}) {
   const token = await fromUuid(tokenUuid);
   const actor = token?.actor;
-  // §74 : avec l'attaque quand on la connaît — sans elle, une condition sur l'attaque (« au corps à corps ») ne tenait jamais, et la
-  // fenêtre ne s'ouvrait pas (Parade du Monster Manual, vu le 2026-10-04).
+  // §74: with the attack when it is known — without it, a condition on the attack ("in melee") never held, and the
+  // window did not open (Parry from the Monster Manual, seen on 2026-10-04).
   const context = activity ? { activity, source, target: actor, targetToken: token } : {};
-  // §133 : les gardiens avec l'attaquant — sans lui, une condition sur sa position (Sentinelle : « une créature à 1,50 m de vous ») ne
-  // tenait jamais, et la fenêtre ne s'ouvrait pas quand la cible n'avait elle-même aucune réaction.
-  // Relevé des trous : l'Inspiration de combat d'un barde de la vaillance (adapter/inspiration.mjs) ouvre aussi la fenêtre.
+  // §133: the guardians with the attacker — without it, a condition on its position (Sentinel: "a creature within 5 feet of you")
+  // never held, and the window did not open when the target itself had no Reaction.
+  // Survey of the gaps: the Combat Inspiration of a Bard of Valor (adapter/inspiration.mjs) also opens the window.
   return !!actor && ((reactionsOf(actor, "isHit", context).length > 0) || (guardiansOf(token, tokenOf(source), activity).length > 0)
     || hasCombatInspiration(actor));
 }
 
 /**
- * §19.9 : qui peut réagir pour une AUTRE créature touchée (Sentinelle au seuil de la mort : soi-même, ou une créature En sang
- * visible à 18 m au plus). Parmi les créatures de la scène, vivantes, qui ne lui sont pas hostiles, autres que l'attaquant.
+ * §19.9: who can react for ANOTHER creature that is hit (Sentinel at the threshold of death: oneself, or a Bloodied creature
+ * visible within 60 feet at most). Among the scene's creatures, living, not hostile to it, other than the attacker.
  * @returns {Array<{token: TokenDocument, options: object[]}>}
  */
 function guardiansOf(hitToken, attackerToken, activity, { publish=false, resolution=null }={}) {
@@ -89,13 +89,13 @@ function guardiansOf(hitToken, attackerToken, activity, { publish=false, resolut
   return out;
 }
 
-/** C12-f : la sauvegarde de la réaction ratée par l'attaquant, sous une règle `retort` de son item — la riposte est notée sur le porteur. */
+/** C12-f: the save against the Reaction failed by the attacker, under a `retort` rule of its item — the retort is noted on the bearer. */
 async function noteRetort(actor, resolution, messageId, source) {
   const message = game.messages.get(messageId);
   const item = message?.getAssociatedActivity?.()?.item;
   const rule = item ? contentOf(item).entry?.retort : null;
   if ( !rule ) return;
-  // La résolution de la réaction peut être rendue avant que la sauvegarde soit jetée : on attend son résultat (10 s au plus).
+  // The Reaction's resolution may be returned before the save is rolled: we wait for its result (10 s at most).
   const saves = () => (game.messages.get(messageId)?.getFlag(MODULE_ID, "resolution")?.targets ?? []).filter(t => typeof t.save?.success === "boolean");
   for ( let n = 0; (n < 40) && !saves().length; n++ ) await sleep(250);
   if ( !saves().length ) { log(`${item.name}: the attacker's saving throw was not read, no damage back`); return; }
@@ -106,9 +106,9 @@ async function noteRetort(actor, resolution, messageId, source) {
 }
 
 /**
- * Étape `resist` : un effet sur le réacteur, qui lui donne la Résistance aux types de dégâts du coup qu'il vient de recevoir « et à
- * tout autre dégât du même type jusqu'à la fin du tour en cours » — retiré au changement de tour (drapeau `untilTurnChange`,
- * runtime/feats.mjs). Posé pendant la fenêtre « touché », donc avant le jet de dégâts : dnd5e l'applique de lui-même.
+ * `resist` step: an effect on the reactor, which gives it Resistance to the damage types of the blow it just received "and to
+ * any other damage of the same type until the end of the current turn" — removed on turn change (`untilTurnChange` flag,
+ * runtime/feats.mjs). Applied during the "hit" window, hence before the damage roll: dnd5e applies it by itself.
  */
 async function grantTurnResistance(actor, activity, answer) {
   const traits = actor.system?.traits ?? {};
@@ -123,15 +123,15 @@ async function grantTurnResistance(actor, activity, answer) {
 }
 
 /**
- * Commande `askReactions` de la machine d'action, fenêtre « touché » : chaque cible touchée qui a
- * de quoi réagir (Bouclier) est consultée, l'une après l'autre. La résolution est déjà écrite
- * (étape `awaitingReaction`) : on peut attendre. Si elle réagit, on laisse SA propre action se
- * résoudre (ses effets sur elle-même sont le plan de son message d'utilisation), puis on lit sa
- * nouvelle CA ; c'est le cœur qui rejuge.
+ * `askReactions` command of the action machine, "hit" window: each hit target that has
+ * something to react with (Shield) is consulted, one after the other. The resolution is already written
+ * (`awaitingReaction` step): we can wait. If it reacts, we let ITS own action
+ * resolve (its effects on itself are the plan of its use message), then we read its
+ * new AC; it is the core that re-judges.
  * @param {object} resolution
  * @param {string[]} tokens
- * @param {(carrierId: string) => Promise} drained  Attend la fin de la résolution d'un autre porteur.
- * @returns {Promise<object[]>}  Un évènement `reactionResolved` par cible consultée.
+ * @param {(carrierId: string) => Promise} drained  Waits for the end of another bearer's resolution.
+ * @returns {Promise<object[]>}  One `reactionResolved` event per consulted target.
  */
 export async function askHitReactions(resolution, tokens, drained, { auto=null }={}) {
   const events = [];
@@ -141,27 +141,27 @@ export async function askHitReactions(resolution, tokens, drained, { auto=null }
   for ( const tokenUuid of tokens ) {
     const target = resolution.targets.find(t => t.token === tokenUuid);
     const actor = (await fromUuid(tokenUuid))?.actor;
-    // `auto` (scénarios : `autoReact` de l'attaque) : "none" = personne ne réagit ; "first" = la première réaction, sans fenêtre.
+    // `auto` (scenarios: the attack's `autoReact`): "none" = nobody reacts; "first" = the first Reaction, with no window.
     const options = (actor && (auto !== "none")) ? reactionsOf(actor, "isHit", { source, target: actor, activity, resolution }, { publish: true }) : [];
     let answer = null;
-    let reactor = actor;   // §489 : celui qui a réagi (la cible, ou l'allié qui l'a fait pour elle)
+    let reactor = actor;   // §489: the one who reacted (the target, or the ally who did it for it)
     if ( options.length ) {
       log(`${target?.name} is hit: reaction window (${options.map(o => o.name).join(", ")})`);
       answer = await askReaction(actor, {
         actor: actor.uuid,
         prompt: { key: "ReactionTouche", data: { attacker, total: resolution.attack.roll.total } },
         options,
-        // §29 : une réaction qui vise l'attaquant (Défenses envoûtantes : sa sauvegarde de Sagesse).
+        // §29: a Reaction that targets the attacker (Beguiling Defenses: its Wisdom saving throw).
         target: options.some(o => o.targetSource) ? (tokenOf(source)?.uuid ?? null) : null,
         auto: auto === "first"
       });
     }
     if ( answer?.message ) await drained(answer.message);
-    // C12-f : Défenses envoûtantes (`retort`) — l'attaquant qui a raté la sauvegarde de la réaction subira, à l'application, des dégâts égaux
-    // à ceux que le porteur aura subis (après la moitié) : noté sur le porteur pour cette résolution (runtime/engine-commands.mjs).
+    // C12-f: Beguiling Defenses (`retort`) — the attacker who failed the Reaction's save will take, on application, damage equal
+    // to what the bearer will have taken (after halving): noted on the bearer for this resolution (runtime/engine-commands.mjs).
     if ( answer?.message && actor ) await noteRetort(actor, resolution, answer.message, source);
-    // §19.9 : si elle n'a pas elle-même réduit les dégâts, un allié peut le faire pour elle (Sentinelle au seuil de la mort) —
-    // le premier qui accepte ; sa réaction, ses utilisations.
+    // §19.9: if it did not reduce the damage itself, an ally can do it for it (Sentinel at the threshold of death) —
+    // the first who accepts; its Reaction, its uses.
     if ( !answer?.halve && !answer?.reduce && (auto !== "none") ) {
       const hitToken = await fromUuid(tokenUuid);
       const attackerToken = tokenOf(source);
@@ -171,37 +171,37 @@ export async function askHitReactions(resolution, tokens, drained, { auto=null }
           actor: guardian.token.actor.uuid,
           prompt: { key: "ReactionAllieTouche", data: { name: target?.name ?? "", attacker, total: resolution.attack.roll.total } },
           options: guardian.options,
-          // §133 : une riposte contre l'attaquant (Sentinelle) vise la source ; sinon la créature touchée (Sentinelle au seuil de la mort).
+          // §133: a retort against the attacker (Sentinel) targets the source; else the creature hit (Sentinel at death's door).
           target: guardian.options.some(o => o.targetSource) ? (attackerToken?.uuid ?? tokenUuid) : tokenUuid,
           auto: auto === "first"
         });
         if ( help?.message ) await drained(help.message);
-        // §301 : ou réduit (Interception, Champ protecteur).
+        // §301: or reduced (Interception, Protective Field).
         if ( !help?.halve && !help?.penalty && !help?.reduce && !help?.reroll ) continue;
         answer = help;
         reactor = guardian.token.actor;
         break;
       }
     }
-    // Relevé des trous : Inspiration de combat, Défense — si rien d'autre n'a réagi, le dé du barde de la vaillance ajouté à la CA.
+    // Survey of the gaps: Combat Inspiration, Defense — if nothing else reacted, the Bard of Valor's die added to the AC.
     const inspired = (!answer && (auto !== "none")) ? await offerCombatInspirationDefense(actor, { total: resolution.attack?.roll?.total,
       ac: await currentAc(tokenUuid) + (target?.cover?.bonus ?? 0), critical: target?.critical === true, auto: auto === "first" }) : 0;
     if ( inspired ) { answer = { name: game.i18n.localize("DND5ECOMBAT.Inspiration.Nom"), penalty: inspired }; log(`${target?.name}: Combat Inspiration, +${inspired} AC`); }
-    // §33 : Mots cinglants — le dé retiré au jet vaut autant de CA pour ce rejugement.
+    // §33: Cutting Words — the die subtracted from the roll is worth as much AC for this re-judging.
     const ac = await currentAc(tokenUuid) + (target?.cover?.bonus ?? 0) + (Number(answer?.penalty) || 0);   // l'abri du verdict reste acquis
     if ( answer?.penalty ) log(`${target?.name}: ${answer.name}, -${answer.penalty} to the attack roll`);
-    // §19.6 : Parade — +5 à la CA contre UNE seule attaque : la CA relue, les effets de l'item tombent (`forOneAttack`).
+    // §19.6: Parry — +5 to AC against ONE attack only: the AC re-read, the item's effects drop (`forOneAttack`).
     if ( answer?.used ) await dropOneAttackEffects(actor, answer.used);
     if ( answer ) log(`${target?.name} reacts (${answer.name}): AC ${target?.ac} -> ${ac}`);
     if ( answer?.halve ) log(`${target?.name}: ${answer.name}, the attack's damage is halved`);
-    // Défense supérieure du chasseur : la Résistance aux types de ce coup, posée avant les dégâts, jusqu'au changement de tour.
+    // Hunter's Superior Defense: the Resistance to this blow's types, applied before the damage, until the turn changes.
     if ( answer?.resist && actor ) await grantTurnResistance(actor, activity, answer);
-    // §19 : les répliques que la réaction a pu créer (Ombres spectrales) comptent pour ce coup.
+    // §19: the replicas the Reaction may have created (Spectral Shadows) count for this blow.
     const duplicates = answer ? duplicatesAgainst(actor, source) : null;
     if ( answer?.uncrit && target?.critical ) log(`${target?.name}: ${answer.name}, the Critical Hit becomes a normal hit`);
     if ( answer?.reduce ) log(`${target?.name}: ${answer.name}, the attack's damage is reduced by ${answer.reduce}`);
     if ( answer?.miss ) log(`${target?.name}: ${answer.name}, the attack automatically misses`);
-    // §489 : Parade d'un monstre — l'attaquant relance son jet et garde le nouveau ; le cœur rejuge ce coup avec lui.
+    // §489: a monster's Parry — the attacker rerolls its roll and keeps the new one; the core re-judges this blow with it.
     const roll = (answer?.reroll && !answer?.miss) ? await forceReroll(resolution, target, reactor, answer.name, ac) : null;
     events.push({ type: "reactionResolved", token: tokenUuid, used: answer?.name ?? null, ac, halve: answer?.halve === true,
       miss: answer?.miss === true,
@@ -212,10 +212,10 @@ export async function askHitReactions(resolution, tokens, drained, { auto=null }
 }
 
 /**
- * §38 : fenêtre « un allié va subir des dégâts » (Égide projetée) — avant l'application, pour une créature qui va perdre des PV : les
- * créatures de la scène qui ne lui sont pas hostiles, autres qu'elle et que l'auteur, vivantes, dont la réserve (`absorb`) est créée et
- * non vide, et dont une réaction absorbe. Le premier qui accepte l'emporte : l'uuid de l'item de sa réserve, que l'application passe à
- * dnd5e (adapter/absorb.mjs). MJ actif ; `auto` : l'outil de scénario `autoReact`.
+ * §38: "an ally is about to take damage" window (Projected Aegis) — before application, for a creature about to lose HP: the
+ * scene's creatures not hostile to it, other than it and the author, living, whose pool (`absorb`) is created and
+ * not empty, and one of whose Reactions absorbs. The first who accepts wins: the uuid of its pool's item, which the
+ * application passes to dnd5e (adapter/absorb.mjs). Active GM; `auto`: the `autoReact` scenario tool.
  * @returns {Promise<{item: string, reactor: string}|null>}
  */
 export async function askDamageGuardians(targetUuid, sourceUuid, activity, { auto=null }={}) {
@@ -228,8 +228,8 @@ export async function askDamageGuardians(targetUuid, sourceUuid, activity, { aut
     const actor = other.actor;
     if ( !actor || (other === hurtToken) || (other === attacker) || isObjectToken(other) ) continue;
     if ( areEnemies(other, hurtToken) || ((actor.system.attributes?.hp?.value ?? 0) <= 0) ) continue;
-    const pool = poolsOf(actor).find(p => p.pool > 0);   // d'abord le moins cher : sans égide pleine, pas d'absorption
-    // §78 : une Interposition ne demande pas de réserve.
+    const pool = poolsOf(actor).find(p => p.pool > 0);   // cheapest first: without a full aegis, no absorption
+    // §78: an Interposition does not require a pool.
     const options = reactionsOf(actor, "allyIsDamaged", { source: attacker?.actor ?? null, target, activity, self: actor, selfToken: other,
       sourceToken: attacker, targetToken: hurtToken }, { publish: true }).filter(o => (o.absorb && pool) || o.interpose);
     if ( !options.length ) continue;
@@ -248,12 +248,12 @@ export async function askDamageGuardians(targetUuid, sourceUuid, activity, { aut
 }
 
 /**
- * §493 (B13) : fenêtre « prise dans une zone » (`inArea`, Bouclier d'insectes) — avant l'application, pour une créature qui va perdre des
- * PV par l'activité à zone (`activity.areaShape`) d'une AUTRE créature. La créature elle-même réagit (une fois, vivante) ; une réaction
- * `cancelForSelf` l'épargne seule : d'office, ou (`ifSourceFails`) quand l'auteur rate la sauvegarde que la réaction lui impose — la
- * résolution de la réaction est attendue, comme celle du Contresort (runtime/gates.mjs). La carte de chat dit l'issue à tous ; un
- * retour flottant et un son l'accompagnent. MJ actif ; `auto` : l'outil de scénario `autoReact`.
- * @returns {Promise<{spared: boolean, by: string}|null>}  null : pas de réaction.
+ * §493 (B13): "caught in an area" window (`inArea`, Insect Shield) — before application, for a creature about to lose
+ * HP from an ANOTHER creature's area activity (`activity.areaShape`). The creature itself reacts (once, living); a
+ * `cancelForSelf` Reaction spares only it: outright, or (`ifSourceFails`) when the author fails the save the Reaction imposes
+ * on it — the Reaction's resolution is awaited, like that of Counterspell (runtime/gates.mjs). The chat card tells
+ * everyone the outcome; a floating feedback and a sound accompany it. Active GM; `auto`: the `autoReact` scenario tool.
+ * @returns {Promise<{spared: boolean, by: string}|null>}  null: no Reaction.
  */
 export async function askAreaReactions(targetUuid, sourceUuid, activity, { auto=null }={}) {
   if ( (auto === "none") || !areaShapeOf(activity) ) return null;
@@ -298,10 +298,10 @@ export async function askAreaReactions(targetUuid, sourceUuid, activity, { auto=
 }
 
 /**
- * §301 : fenêtres de chute, avant l'application des dégâts (carte de chute de dnd5e, runtime/climb.mjs) — d'abord la créature qui tombe
- * (`falls` : Chute ralentie réduit les dégâts du jet de son activité), puis les créatures de la scène qui ne lui sont pas hostiles, autres
- * qu'elle, vivantes (`allyFalls` : Feuille morte, qui les annule). La première qui annule l'emporte ; les réductions s'ajoutent.
- * MJ actif.
+ * §301: fall windows, before damage is applied (dnd5e fall card, runtime/climb.mjs) — first the creature that falls
+ * (`falls`: Slow Fall reduces the damage of its activity's roll), then the scene's creatures not hostile to it, other than
+ * it, living (`allyFalls`: Feather Fall, which cancels it). The first that cancels wins; the reductions add up.
+ * Active GM.
  * @returns {Promise<{reduce: number, cancel: boolean, by: string[]}>}
  */
 export async function askFallReactions(fallToken, damage) {
@@ -331,13 +331,13 @@ export async function askFallReactions(fallToken, damage) {
 }
 
 /**
- * Fenêtre « blessé » : sans incidence sur la résolution en cours, donc sans attente. La réaction
- * choisie (Représailles infernales) vise l'auteur des dégâts et suit son propre cours.
- * @param {string[]} tokenUuids  Cibles qui viennent de perdre des PV.
+ * "Hurt" window: no effect on the resolution in progress, hence no waiting. The chosen
+ * Reaction (Hellish Rebuke) targets the damage's author and follows its own course.
+ * @param {string[]} tokenUuids  Targets that just lost HP.
  * @param {string|null} sourceToken
  * @param {string} sourceName
- * @param {{activity?: string|null, damageTypes?: string[], auto?: string|null}} [hurt]  Ce qui a blessé : uuid de l'activité,
- *   types de dégâts ; `auto` : l'outil de scénario `autoReact` de l'utilisation, comme pour la fenêtre « touché ».
+ * @param {{activity?: string|null, damageTypes?: string[], auto?: string|null}} [hurt]  What hurt: activity uuid,
+ *   damage types; `auto`: the use's `autoReact` scenario tool, as for the "hit" window.
  */
 export function windowIsDamaged(tokenUuids, sourceToken, sourceName, { activity=null, damageTypes=[], auto=null }={}) {
   fireTargetWindow("isDamaged", tokenUuids, sourceToken, sourceName,
@@ -345,8 +345,8 @@ export function windowIsDamaged(tokenUuids, sourceToken, sourceName, { activity=
 }
 
 /**
- * Une fenêtre ouverte à chaque cible d'un coup (« blessé », « raté ») : sans attente, chacune de son côté ; une créature à 0 PV ne
- * réagit pas. `extra` : ce que la fenêtre ajoute aux faits (les types de dégâts) ; `what` : le mot du journal.
+ * A window opened for each target of a blow ("hurt", "missed"): without waiting, each on its own; a creature at 0 HP does not
+ * react. `extra`: what the window adds to the facts (the damage types); `what`: the log's word.
  */
 function fireTargetWindow(window, tokenUuids, sourceToken, sourceName, { activity=null, auto=null, extra={}, promptKey, what, hostile=false }) {
   if ( auto === "none" ) return;
@@ -355,7 +355,7 @@ function fireTargetWindow(window, tokenUuids, sourceToken, sourceName, { activit
     const actor = tokenDocument?.actor;
     if ( !actor || ((actor.system.attributes?.hp?.value ?? 0) <= 0) ) return;
     const attackerToken = await fromUuid(sourceToken ?? "");
-    // §487 : `hostile` — seulement contre une autre créature qui lui est hostile (la sauvegarde imposée par un allié n'ouvre rien).
+    // §487: `hostile` — only against another creature hostile to it (the save imposed by an ally opens nothing).
     if ( hostile && (!attackerToken || (attackerToken === tokenDocument) || !areEnemies(tokenDocument, attackerToken)) ) return;
     const used = activity ? await fromUuid(activity) : null;
     const options = reactionsOf(actor, window,
@@ -375,9 +375,9 @@ function fireTargetWindow(window, tokenUuids, sourceToken, sourceName, { activit
 }
 
 /**
- * §375 : Bouclier de chair — « la créature refait la même attaque, avec un nouveau jet, contre une créature que vous agrippez ». La même
- * activité, utilisée par le MJ actif pour l'attaquant, sans rien consommer ni coûter d'action ; le jet porte sa cible (comme une
- * attaque de réaction, §67 bis). Plusieurs créatures agrippées : le réacteur choisit (sans réponse, la première).
+ * §375: Flesh Shield — "the creature makes the same attack again, with a new roll, against a creature you are grappling". The same
+ * activity, used by the active GM for the attacker, consuming nothing and costing no action; the roll carries its target (like a
+ * Reaction attack, §67 bis). Several grappled creatures: the reactor chooses (with no answer, the first).
  */
 async function redirectAttack(activity, attacker, reactor) {
   if ( (activity?.type !== "attack") || !attacker?.actor || !reactor ) return;
@@ -396,9 +396,9 @@ async function redirectAttack(activity, attacker, reactor) {
 }
 
 /**
- * §19.8 : fenêtre « subit un état » (frappée par l'un de ces états, la créature se change en
- * bête et l'état cesse). Sans attente, comme « blessé ». La réaction prise, l'état cesse (étape
- * `endCondition`) : les effets qui le portent sont retirés. MJ actif.
+ * §19.8: "suffers a condition" window (struck by one of these conditions, the creature turns into a
+ * Beast and the condition ends). Without waiting, like "hurt". Once the Reaction is taken, the condition ends (`endCondition`
+ * step): the effects that carry it are removed. Active GM.
  */
 async function windowGainsCondition(effect) {
   const actor = effect.parent;
@@ -417,7 +417,7 @@ async function windowGainsCondition(effect) {
   }
 }
 
-/** Les effets qu'une réaction `forOneAttack` a posés sur son porteur : retirés, l'attaque jugée. */
+/** The effects a `forOneAttack` Reaction applied to its bearer: removed, the attack judged. */
 async function dropOneAttackEffects(actor, activityUuid) {
   const item = (await fromUuid(activityUuid))?.item;
   if ( !actor || !item || (contentOf(item).entry?.forOneAttack !== true) ) return;
@@ -429,17 +429,17 @@ async function dropOneAttackEffects(actor, activityUuid) {
 }
 
 /**
- * §19.6 : fenêtre « raté » — l'attaque vient de rater ces créatures (riposte, désarmement, pas brumeux). Sans
- * attente, comme « blessé » : la réaction vise l'attaquant et suit son propre cours.
+ * §19.6: "missed" window — the attack just missed these creatures (retort, disarm, misty step). Without
+ * waiting, like "hurt": the Reaction targets the attacker and follows its own course.
  */
 /* -------------------------------------------- */
 /*  §34 : avant le jet d'attaque                */
 /* -------------------------------------------- */
 
 /**
- * Ce que les réactions d'avant le jet (et le Présage, §36) ont décidé pour la prochaine attaque de cette activité (client de
- * l'attaquant). Chaque passage à la porte remplace ce qui restait (`mods` null : plus rien) ; un jet qui n'a pas suivi (fenêtre du jet
- * fermée) ne lègue rien à une attaque bien plus tard : au-delà de `ATTACK_MODS_TTL`, c'est oublié.
+ * What the pre-roll Reactions (and Portent, §36) decided for this activity's next attack (the attacker's
+ * client). Each pass through the gate replaces what was left (`mods` null: nothing more); a roll that did not follow (roll window
+ * closed) bequeaths nothing to an attack much later: beyond `ATTACK_MODS_TTL`, it is forgotten.
  */
 const attackMods = new Map();
 const ATTACK_MODS_TTL = 120000;
@@ -454,8 +454,8 @@ export function takeAttackMods(activityUuid) {
 }
 
 /**
- * Qui peut réagir avant ce jet d'attaque, et avec quoi : la cible elle-même (`isAttacked` : Esquive des ombres), et toute créature
- * de la scène alliée de la cible et hostile à l'attaquant, la cible comprise (`enemyAttacks` : Éclat protecteur). Vivantes.
+ * Who can react before this attack roll, and with what: the target itself (`isAttacked`: Shadow Dodge), and every creature
+ * in the scene allied with the target and hostile to the attacker, the target included (`enemyAttacks`: Protective Flare). Living.
  * @returns {Array<{token: TokenDocument, target: TokenDocument, options: object[]}>}
  */
 export function attackReactors(activity, origin, targets) {
@@ -473,11 +473,11 @@ export function attackReactors(activity, origin, targets) {
       if ( options.length && !out.some(o => o.token === other) ) out.push({ token: other, target, options });
     }
   }
-  // §36 : le pendant — toute créature de la scène du même camp que l'attaquant (autre que lui) et hostile à une cible (`allyAttacks` :
-  // Présage cosmique, Fortune). Une fenêtre par réacteur, contre la première cible qui lui est hostile. Un neutre n'a pas d'alliés.
+  // §36: the counterpart — every creature in the scene on the attacker's side (other than it) and hostile to a target
+  // (`allyAttacks`: Cosmic Omen, Fortune). One window per reactor, against the first target hostile to it. A neutral has no allies.
   for ( const other of origin.parent?.tokens ?? [] ) {
     if ( (other === origin) || !alive(other) || other.hidden || out.some(o => o.token === other) ) continue;
-    if ( !areSworn(other, origin) ) continue;   // §181 : factions, sinon même disposition non neutre
+    if ( !areSworn(other, origin) ) continue;   // §181: factions, otherwise same non-neutral disposition
     const target = targets.find(t => alive(t) && areEnemies(other, t));
     if ( !target ) continue;
     const options = reactionsOf(other.actor, "allyAttacks", { source: origin.actor, target: target.actor, activity, self: other.actor,
@@ -488,8 +488,8 @@ export function attackReactors(activity, origin, targets) {
 }
 
 /**
- * La fenêtre, réacteur après réacteur (chacun sa réaction, ses ressources) : rend ce qui vaut pour le jet — Désavantage, dés
- * retirés (`penalty`), dés ajoutés (`bonus`, §36) et les noms —, ou null si personne n'a réagi.
+ * The window, reactor after reactor (each its own Reaction, its resources): returns what applies to the roll — Disadvantage, dice
+ * subtracted (`penalty`), dice added (`bonus`, §36) and the names —, or null if nobody reacted.
  */
 export async function askAttackReactions(activity, origin, reactors, { auto=null }={}) {
   const mods = { disadvantage: false, penalty: 0, bonus: 0, names: [] };
@@ -498,12 +498,12 @@ export async function askAttackReactions(activity, origin, reactors, { auto=null
       actor: token.actor.uuid,
       prompt: { key: (token === target) ? "ReactionAvantAttaque" : "ReactionAvantAttaqueAllie", data: { attacker: origin.name, name: target.name } },
       options,
-      // §133 : une réaction qui vise la créature attaquée (Protection : l'effet « Protégé » sur l'allié).
+      // §133: a Reaction that targets the attacked creature (Protection: the "Protected" effect on the ally).
       target: options.some(o => o.targetSource) ? origin.uuid : (options.some(o => o.targetTarget) ? target.uuid : null),
       auto: auto === "first"
     });
     if ( !answer ) continue;
-    // O8d (§347) : le réacteur devient la cible (Bouclier antiprojectiles) ; la porte change les cibles avant la relance.
+    // O8d (§347): the reactor becomes the target (Missile Shield); the gate changes the targets before the relaunch.
     if ( answer.intercept && (token !== target) && !mods.intercepts?.some(i => i.from === target.id) ) {
       mods.intercepts = [...(mods.intercepts ?? []), { from: target.id, to: token.id }];
       log(`${token.name} reacts before ${origin.name}'s attack: ${answer.name}, becomes the target instead of ${target.name}`);
@@ -520,9 +520,10 @@ export async function askAttackReactions(activity, origin, reactors, { auto=null
 }
 
 /**
- * §133 : fenêtre « se désengage » — une créature vient de prendre l'action Se désengager : chaque créature de la scène qui lui est
- * hostile, vivante, peut réagir (Sentinelle : « juste après qu'une créature à 1,50 m de vous prend l'action Se désengager, vous pouvez
- * lui porter une attaque d'opportunité » — la distance est la condition de la déclaration). Sans attente, comme « blessé ». MJ actif.
+ * §133: "disengages" window — a creature just took the Disengage action: every creature in the scene hostile to it
+ * and alive can react (Sentinel: "right after a creature within 5 feet of you takes the Disengage action, you can
+ * make an Opportunity Attack against it" — the distance is the condition of the declaration). Without waiting, like
+ * "hurt". Active GM.
  */
 export function windowDisengaged(tokenDocument) {
   const mover = tokenDocument?.actor;
@@ -541,8 +542,8 @@ export function windowDisengaged(tokenDocument) {
 }
 
 /**
- * §236 : fenêtre « une créature hostile vient d'attaquer » — chaque créature de la scène hostile à l'attaquant, touchée ou non, visée ou
- * non (Âme de la vengeance : la créature sous le Vœu d'inimitié attaque). Sans attente.
+ * §236: "a hostile creature just attacked" window — every creature in the scene hostile to the attacker, hit or not, targeted or
+ * not (Soul of Vengeance: the creature under the Vow of Enmity attacks). Without waiting.
  */
 export function windowEnemyAttacked(sourceToken, sourceName, { activity=null, auto=null }={}) {
   const attacker = fromUuidSync(sourceToken ?? "", { strict: false });
@@ -552,33 +553,33 @@ export function windowEnemyAttacked(sourceToken, sourceName, { activity=null, au
 }
 
 /**
- * §487 : fenêtre « réussit une sauvegarde contre » — chaque créature qui vient de réussir la sauvegarde imposée par l'activité d'une
- * créature hostile (Représailles du mage ; « contre un sort » : `activity.isSpell`). Sans attente, comme « raté ».
+ * §487: "succeeds on a save against" window — every creature that just succeeded on the save imposed by the activity of a
+ * hostile creature (Mage's retaliation; "against a spell": `activity.isSpell`). Without waiting, like "missed".
  */
 export function windowSavesAgainst(tokenUuids, sourceToken, sourceName, { activity=null, auto=null }={}) {
   fireTargetWindow("savesAgainst", tokenUuids, sourceToken, sourceName, { activity, auto, promptKey: "ReactionSauvegarde", what: "saving against", hostile: true });
 }
 
 export function windowIsMissed(tokenUuids, sourceToken, sourceName, { activity=null, auto=null, resolution=null }={}) {
-  // §489 : avec la résolution — les faits `attack.fumble` / `attack.rerolled` (riposte d'une Parade sur un échec critique) la lisent.
+  // §489: with the resolution — the facts `attack.fumble` / `attack.rerolled` (retort of a Parry on a Critical Miss) read it.
   fireTargetWindow("isMissed", tokenUuids, sourceToken, sourceName, { activity, auto, promptKey: "ReactionRate", what: "missed",
     extra: resolution ? { resolution } : {} });
 }
 
 /**
- * §19.6 : fenêtre « un ennemi finit son tour » — chaque créature hostile à celle dont le tour s'achève peut réagir contre elle
- * (un ennemi qui finit son tour à 1,50 m de la créature). MJ actif, sans attente.
+ * §19.6: "an enemy ends its turn" window — every creature hostile to the one whose turn ends can react against it
+ * (an enemy that ends its turn within 5 feet of the creature). Active GM, without waiting.
  */
 function onEnemyTurnEnd(combat, prior) {
   const ended = combat.combatants.get(prior?.combatantId)?.token;
   if ( !ended?.actor || !ended.parent ) return;
-  // §492 : les faits « ce tour » (`source.attackedSelfThisTurn`) parlent du tour qui vient de finir, pas de celui qui commence.
+  // §492: the "this turn" facts (`source.attackedSelfThisTurn`) speak of the turn that just ended, not the one that begins.
   const endedKey = turnKeyAt(combat, prior);
   for ( const other of ended.parent.tokens ) {
     const actor = other.actor;
     if ( !actor || (other === ended) || isObjectToken(other) || !areEnemies(other, ended) ) continue;
     if ( (actor.system.attributes?.hp?.value ?? 0) <= 0 ) continue;
-    // §485 : `self` — le réacteur, pour ce qu'il porte (`self.hasSavableEffect` : Indomptable).
+    // §485: `self` — the reactor, for what it carries (`self.hasSavableEffect`: Indomitable).
     const options = reactionsOf(actor, "enemyTurnEnd",
       { source: ended.actor, target: actor, sourceToken: ended, targetToken: other, self: actor, selfToken: other, turnKey: endedKey },
       { publish: true });
@@ -590,7 +591,7 @@ function onEnemyTurnEnd(combat, prior) {
       options,
       target: options.some(o => o.targetSource) ? ended.uuid : null
     }).then(result => {
-      // §485 : la réaction prise rejoue la sauvegarde d'un effet porté — la règle relue dans les options envoyées, pas dans la réponse.
+      // §485: the Reaction taken replays the save of a carried effect — the rule re-read in the options sent, not in the response.
       const taken = result ? options.find(o => o.resave && (o.activity === result.used)) : null;
       return taken ? resaveChosen(actor, other, taken.resave, taken.name) : null;
     }).catch(err => console.error(`${MODULE_ID} | "enemy's end of turn" window interrupted`, err));
@@ -598,29 +599,29 @@ function onEnemyTurnEnd(combat, prior) {
 }
 
 /* -------------------------------------------- */
-/*  Attaque d'opportunité                       */
+/*  Opportunity Attack                          */
 /* -------------------------------------------- */
 
 /**
- * Qui menace d'une attaque d'opportunité un déplacement PRÉVU. Synchrone : appelé depuis
- * `preMoveToken`, sur le client de celui qui bouge. On suit le chemin case par case : quitter une
- * allonge en cours de route compte, pas seulement entre le départ et l'arrivée.
+ * Who threatens a PLANNED move with an Opportunity Attack. Synchronous: called from
+ * `preMoveToken`, on the mover's client. The path is followed cell by cell: leaving a
+ * reach along the way counts, not only between the start and the end.
  * @param {TokenDocument} token
- * @param {object[]} waypoints  Le chemin prévu, départ exclu.
- * §136 : aussi les Attaques réactives (Maître d'hast) contre une créature qui ENTRE dans l'allonge, rendues comme
- * `{ token, enters: true }` ; l'ensemble est rangé dans l'ordre du chemin (entrer puis sortir : l'Attaque réactive d'abord).
- * §479 : `explain` (un vrai déplacement, pas un aperçu ni un scénario qui interroge) — chaque créature dont le chemin quitte l'allonge
- * sans attaque d'opportunité est dite au journal du débogueur, et une raison qui surprend l'est au MJ (`explainMisses`).
- * @returns {Array<string|{token: string, enters: true}>}  UUID des tokens qui peuvent réagir.
+ * @param {object[]} waypoints  The planned path, start excluded.
+ * §136: also the Reactive Strikes (Polearm Master) against a creature that ENTERS the reach, returned as
+ * `{ token, enters: true }`; the set is sorted in path order (enter then leave: the Reactive Strike first).
+ * §479: `explain` (a real move, not a preview or a scenario that queries) — each creature whose path leaves the reach
+ * without an Opportunity Attack is reported in the debugger log, and a surprising reason is reported to the GM (`explainMisses`).
+ * @returns {Array<string|{token: string, enters: true}>}  UUIDs of the tokens that can react.
  */
 export function opportunityThreats(token, waypoints, { explain=false }={}) {
-  // §117, §416 : règle générale — niveau Assisté et au-dessus. Au niveau Essentiel, aucun chemin ne la juge (ni `preMoveToken`,
-  // ni la marche au clic de runtime/actions.mjs, qui passait encore par ici).
+  // §117, §416: general rule — Assisted level and above. At the Essential level, no path judges it (neither `preMoveToken`,
+  // nor the click-to-walk of runtime/actions.mjs, which still went through here).
   if ( !levelAtLeast("assisted") ) return [];
   if ( !game.combat?.started || !token.actor || !waypoints.length ) return [];
   const mover = combatantFor(token.actor);
   if ( !mover ) return [];
-  // §16.15 : un objet piloté (Arme spirituelle) n'est pas une créature qui quitte une allonge.
+  // §16.15: a piloted object (Spiritual Weapon) is not a creature that leaves a reach.
   if ( pilotOf(token) ) return [];
   const teleported = waypoints.some(w => CONFIG.Token.movement.actions[w.action]?.teleport || (w.action === "displace"));
   const factors = readUnitFactors();
@@ -635,12 +636,12 @@ export function opportunityThreats(token, waypoints, { explain=false }={}) {
   for ( const combatant of game.combat.combatants ) {
     const other = combatant.token;
     if ( !other?.actor || (other === token) || combatant.isDefeated || (other.parent !== token.parent) ) continue;
-    // Une victime traînée par cet agrippeur le suit : elle ne voit pas « partir » celui qui l'emporte.
+    // A victim dragged by this grappler follows it: it does not see the one carrying it off "leave".
     if ( dragged.includes(other) ) continue;
-    if ( pilotOf(other) ) continue;   // ni ne menace d'attaque d'opportunité
-    if ( !samePlane(other, token) ) continue;   // §225 : ni attaque d'opportunité ni action préparée d'un plan à l'autre
-    if ( opportunityBlocked(other.actor) ) continue;   // §23 : Poigne électrique
-    // §136 : Attaque réactive — l'allonge de l'arme d'hast tenue, pas celle de l'attaque d'opportunité.
+    if ( pilotOf(other) ) continue;   // nor does it threaten an Opportunity Attack
+    if ( !samePlane(other, token) ) continue;   // §225: no Opportunity Attack nor readied action from one plane to another
+    if ( opportunityBlocked(other.actor) ) continue;   // §23: Shocking Grasp
+    // §136: Reactive Strike — the reach of the held polearm weapon, not that of the Opportunity Attack.
     const strike = reactiveStrikesOf(other.actor);
     if ( strike.options.length ) {
       let strikeReach = lengthIn(strike.reach, strike.units, gridUnits, factors);
@@ -648,7 +649,7 @@ export function opportunityThreats(token, waypoints, { explain=false }={}) {
       strikers.push({ ...sideOf(other), token: other.uuid, enters,
         hasLineOfEffect: (enters >= 0) ? hasLineOfEffect(other, token, { posB: path[enters] }) : null, ...reactionState(other.actor) });
     }
-    // §211 : une action préparée « quand un ennemi arrive à portée » — l'allonge ou la portée de l'action préparée.
+    // §211: a readied action "when an enemy comes within range" — the reach or range of the readied action.
     const plan = readyPlanOf(readBudget(combatant));
     if ( plan?.reach && (plan.trigger === "enters") && !teleported ) {
       const enters = entersAt(path.map(pos => distanceBetween(other, token, { posB: pos }).value), lengthIn(plan.reach.value, plan.reach.units, gridUnits, factors));
@@ -668,14 +669,14 @@ export function opportunityThreats(token, waypoints, { explain=false }={}) {
       before: leaves >= 0 ? distances[leaves] : distances[0],
       after: leaves >= 0 ? distances[leaves + 1] : distances.at(-1),
       leaves, hasMeleeAttack: melee.options.length > 0,
-      // P2 : peut-elle frapper celui qui bouge, là où il quitte son allonge (plancher, trappe, mur plein) ?
+      // P2: can it strike the mover, where it leaves its reach (floor, trapdoor, solid wall)?
       hasLineOfEffect: ((leaves >= 0) || (distances[0] <= reach + 1e-6)) ? hasLineOfEffect(other, token, { posB: path[Math.max(leaves, 0)] }) : null,
-      seesMover: canSee(other, token) ?? true,   // P1 : « une créature que vous pouvez voir » (position d'avant le déplacement)
+      seesMover: canSee(other, token) ?? true,   // P1: "a creature that you can see" (position before the move)
       ...reactionState(other.actor)
     });
   }
   const moverSide = {
-    // §18.15 : Agile, Vol rasant — comme un Désengagement, pour ce déplacement.
+    // §18.15: Nimble, Skimming Flight — like a Disengage, for this move.
     ...sideOf(token), teleported,
     disengaged: (readBudget(mover).disengaged === true) || avoidsOpportunity(token.actor, token, waypoints)
   };
@@ -685,23 +686,24 @@ export function opportunityThreats(token, waypoints, { explain=false }={}) {
   const strikes = reachStrikers({ ...sideOf(token), teleported }, strikers)
     .map(uuid => ({ uuid, enters: true, at: strikers.find(o => o.token === uuid).enters - 1 }));
   if ( !strikes.length && !readied.length ) return attacks.map(a => a.uuid);
-  // §211 : une action préparée se joue quand la créature est arrivée (`at` : la première case à portée) — le déplacement est coupé là
-  // (`splitForReady`) ; elle passe après ce qui vient avant sur le chemin.
+  // §211: a readied action plays when the creature has arrived (`at`: the first cell in range) — the move is cut there
+  // (`splitForReady`); it goes after what comes before it on the path.
   return [...strikes, ...attacks, ...readied.map(r => ({ ...r, uuid: r.token, at: r.at - 0.5 }))].sort((a, b) => a.at - b.at)
     .map(a => (a.ready ? { token: a.uuid, ready: true, at: a.at + 0.5 } : a.enters ? { token: a.uuid, enters: true } : a.uuid));
 }
 
-/** §479 : les raisons du dernier chemin jugé (scénarios : `api.mcp.missedOpportunities`). */
+/** §479: the reasons for the last path judged (scenarios: `api.mcp.missedOpportunities`). */
 let lastMisses = [];
 export function lastOpportunityMisses() { return lastMisses; }
 
-/** §479 : ce qui a déjà été dit au MJ — une fois par combat, par créature et par raison (pas à chaque pas). */
+/** §479: what was already told to the GM — once per combat, per creature and per reason (not at every step). */
 const missesTold = new Set();
 
 /**
- * §479 : dire pourquoi une créature ne porte pas d'attaque d'opportunité quand ce déplacement quitte son allonge — au journal du
- * débogueur toujours, au MJ (alerte MJ, réglage `gmAlerts`) quand la raison surprend : un monstre resté Neutre, une créature sans
- * attaque de corps à corps utilisable, ou qui ne voit pas celle qui part (Discord, 2026-11-19 : « les attaques d'opportunité ne partent pas »).
+ * §479: say why a creature carries no Opportunity Attack when this move leaves its reach — in the
+ * debugger log always, to the GM (GM alert, `gmAlerts` setting) when the reason is surprising: a monster left Neutral, a
+ * creature with no usable melee attack, or that does not see the one leaving (Discord, 2026-11-19: "Opportunity Attacks
+ * don't fire").
  */
 function explainMisses(token, misses) {
   for ( const { token: uuid, reason, notice } of misses ) {
@@ -718,9 +720,10 @@ function explainMisses(token, misses) {
 }
 
 /**
- * §211 : la première action préparée que ce trajet déclenche, et où le couper — `first` : jusqu'à la case où la créature arrive à
- * portée, `rest` : la suite, à rejouer à part (ses propres menaces y seront revues), `before` : les menaces d'avant sur le chemin.
- * Les points sont ceux du chemin complet du cœur, case par case (`getCompleteMovementPath`). Null sans action préparée.
+ * §211: the first readied action this trip triggers, and where to cut it — `first`: up to the cell where the creature comes
+ * within range, `rest`: the remainder, to replay separately (its own threats will be reviewed there), `before`: the earlier
+ * threats on the path. The points are those of the core's complete path, cell by cell (`getCompleteMovementPath`). Null without a
+ * readied action.
  */
 export function splitForReady(token, waypoints, threats) {
   const at = threats.findIndex(t => t?.ready);
@@ -735,7 +738,7 @@ export function splitForReady(token, waypoints, threats) {
 export const OPPORTUNITY_QUERY = `${MODULE_ID}.opportunity`;
 const RESOLUTION_WAIT = 20000;
 
-/** Attend que l'attaque née d'un message d'utilisation soit jugée, dégâts appliqués compris. */
+/** Waits until the attack born of a use message is judged, damage applied included. */
 async function attackSettled(usageId) {
   const over = () => game.messages.contents.some(m => {
     const r = current(m.getFlag(MODULE_ID, "resolution"));
@@ -745,10 +748,10 @@ async function attackSettled(usageId) {
   while ( !over() && (Date.now() < until) ) await sleep(250);
 }
 
-/** Côté MJ actif : propose chaque attaque d'opportunité, l'une après l'autre, et attend son issue. */
+/** Active GM side: offers each Opportunity Attack, one after the other, and waits for its outcome. */
 async function handleOpportunityQuery({ token: tokenUuid, attackers }, { user=null }={}) {
   const token = await fromUuid(tokenUuid);
-  // §472 : d'un joueur, seulement pour son propre token qui bouge, et des attaquants de la même scène.
+  // §472: from a player, only for their own moving token, and attackers of the same scene.
   if ( needsCheck(user) ) {
     if ( !actsFor(user, token?.actor) || !Array.isArray(attackers) ) { console.warn(`${MODULE_ID} | opportunity query from ${user.name} refused: ${token?.name ?? tokenUuid} is not theirs`); return false; }
     attackers = attackers.filter(e => fromUuidSync((typeof e === "string") ? e : (e?.token ?? ""), { strict: false })?.parent === token.parent);
@@ -758,7 +761,7 @@ async function handleOpportunityQuery({ token: tokenUuid, attackers }, { user=nu
     const { token: uuid, enters=false } = (typeof entry === "string") ? { token: entry } : entry;
     const attacker = await fromUuid(uuid);
     if ( !attacker?.actor || !token ) continue;
-    // Une seule Réaction : celle prise par une fenêtre précédente de ce déplacement n'est plus là.
+    // Only one Reaction: the one taken by a previous window of this move is no longer there.
     if ( asked && !reactionState(attacker.actor).reactionAvailable ) continue;
     asked = true;
     if ( (typeof entry === "object") && entry.ready ) {
@@ -766,7 +769,7 @@ async function handleOpportunityQuery({ token: tokenUuid, attackers }, { user=nu
       continue;
     }
     if ( enters ) {
-      // §136 : Maître d'hast — réglée avant le déplacement, comme l'attaque d'opportunité (le coup tombe quand la créature arrive).
+      // §136: Polearm Master — settled before the move, like the Opportunity Attack (the blow lands when the creature arrives).
       log(`${token.name} is about to enter ${attacker.name}'s reach: Reactive Strike offered before the move`);
       const answer = await askReaction(attacker.actor, {
         actor: attacker.actor.uuid,
@@ -782,8 +785,8 @@ async function handleOpportunityQuery({ token: tokenUuid, attackers }, { user=nu
     const answer = await askReaction(attacker.actor, {
       actor: attacker.actor.uuid,
       prompt: { key: "ReactionOpportunite", data: { mover: token.name } },
-      // §16.26 : Mage de guerre — un sort visant la seule créature qui s'en va, au lieu de l'attaque.
-      // §134 : Rapide — « les attaques d'opportunité contre vous ont le Désavantage » : marqué sur l'attaque choisie.
+      // §16.26: War Mage — a spell targeting only the creature that leaves, instead of the attack.
+      // §134: Mobile — "Opportunity Attacks against you have Disadvantage": marked on the chosen attack.
       options: [...meleeAttacksOf(attacker.actor).options, ...reactiveSpellsOf(attacker.actor)].map(o => (hamperedBy(token.actor) ? { ...o, hampered: hamperedBy(token.actor) } : o)),
       target: token.uuid
     });
@@ -793,8 +796,8 @@ async function handleOpportunityQuery({ token: tokenUuid, attackers }, { user=nu
 }
 
 /**
- * §211 : propose à celui qui s'est tenu prêt de libérer son action, contre la créature qui l'a déclenchée (MJ actif ou celui qui la
- * demande). Le plan est relu dans son budget : servi, ou expiré entre-temps, il n'y a rien à proposer.
+ * §211: offers the one who held ready to release their action, against the creature that triggered it (active GM or the one who
+ * requests it). The plan is re-read in its budget: served, or expired in the meantime, there is nothing to offer.
  */
 export async function releaseReady(readier, trigger, kind) {
   const combatant = combatantFor(readier?.actor);
@@ -812,8 +815,8 @@ export async function releaseReady(readier, trigger, kind) {
 }
 
 /**
- * Règle les attaques d'opportunité AVANT le déplacement. Rend false si celui qui bouge n'est
- * plus en état de le faire (tombé à 0 PV).
+ * Settles the Opportunity Attacks BEFORE the move. Returns false if the mover is no
+ * longer able to do it (dropped to 0 HP).
  */
 export async function resolveOpportunity(token, attackers) {
   if ( !attackers.length ) return true;
@@ -830,8 +833,8 @@ export async function resolveOpportunity(token, attackers) {
 /* -------------------------------------------- */
 
 /**
- * §88 : Riposte — le dé de supériorité promis au jet de dégâts de l'arme qui riposte (adapter/reactions.mjs, `handleReactionQuery`),
- * sur le client qui réagit ; du type du premier jet (celui de l'arme).
+ * §88: Riposte — the superiority die promised to the damage roll of the weapon that ripostes (adapter/reactions.mjs,
+ * `handleReactionQuery`), on the client that reacts; of the type of the first roll (the weapon's).
  */
 function onReactionDamage(config) {
   const activity = config?.subject;
@@ -845,18 +848,19 @@ function onReactionDamage(config) {
 
 export function registerReactions() {
   route("dnd5e.preRollDamageV2", onReactionDamage, { cancellable: true, label: "riposte: superiority die" });
-  // §438 suite : une Riposte ratée ne laisse pas son dé au coup suivant de la même arme (pas au jet raté : une relance peut le changer).
+  // §438 continued: a missed Riposte does not leave its die to the next blow of the same weapon (not at the missed roll:
+  // a reroll may change it).
   route("dnd5e.rollAttackV2", (rolls, { subject }={}) => {
     if ( subject?.uuid && noteReactionAttack(subject.uuid) ) log(`riposte: ${subject.item?.name ?? subject.name} — the promised die drops (a new attack)`);
   }, { label: "riposte: die not dropped after a miss" });
   route("combatTurnChange", (combat, prior) => onEnemyTurnEnd(combat, prior), { executor: true, label: "\"enemy's end of turn\" window not opened" });
-  // Sur tous les clients : c'est celui qui réagit qui répond à la requête.
+  // On every client: the one that reacts is the one that answers the query.
   CONFIG.queries[REACTION_QUERY] = handleReactionQuery;
-  setReactionApproach(reactionApproach);   // §67 : la réaction qui rejoint d'abord sa source
+  setReactionApproach(reactionApproach);   // §67: the Reaction that first joins its source
 
-  // Les attaques d'opportunité se règlent avant le déplacement (runtime/actions.mjs, preMoveToken).
+  // Opportunity Attacks are settled before the move (runtime/actions.mjs, preMoveToken).
   CONFIG.queries[OPPORTUNITY_QUERY] = handleOpportunityQuery;
-  // §19.8 : « subit un état » — un effet porteur d'état vient d'être posé sur une créature.
+  // §19.8: "suffers a condition" — an effect carrying a condition was just applied to a creature.
   route("createActiveEffect", effect => (effect.statuses?.size ? windowGainsCondition(effect) : null),
     { executor: true, label: "\"suffers a condition\" window not opened" });
 }

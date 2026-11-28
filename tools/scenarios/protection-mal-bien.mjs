@@ -1,7 +1,7 @@
 /**
- * §268 : Protection contre le Mal et le Bien — « la cible ne peut être Charmée ni Effrayée par elles » (aberrations, célestes,
- * élémentaires, fées, fiélons, morts-vivants). Le Magicien protège le Guerrier ; le Mage (PNJ), donné pour fiélon le temps du test,
- * lui lance Charme-personne : le Guerrier n'est pas affecté. Redevenu humanoïde, le Mage le charme sur une sauvegarde ratée.
+ * §268: Protection from Evil and Good — "the target cannot be Charmed or Frightened by them" (aberrations, celestials,
+ * elementals, fey, fiends, Undead). The Wizard protects the Fighter; the Mage (NPC), given as a fiend for the test,
+ * casts Charm Person on him: the Fighter is not affected. Back to Humanoid, the Mage charms him on a failed save.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 

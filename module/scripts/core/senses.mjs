@@ -1,28 +1,29 @@
 /**
- * Sens déclarés par du contenu (clé `sense`) et ce qui en protège (clé `wardsDetection`). Règle pure.
+ * Senses declared by content (key `sense`) and what protects against them (key `wardsDetection`). Pure rule.
  *
- * Un sens qui n'est pas une vue donne la position d'une créature sans la faire voir : la cible reste non vue pour l'attaque et
- * pour ce qui exige de la voir. Un sens de genre `sight` compte comme une vue. Certains ne donnent que la présence
- * (`reveals: "presence"`), sans la position.
+ * A sense that is not sight gives a creature's position without letting it be seen: the target stays unseen for the attack and
+ * for whatever requires seeing it. A sense of kind `sight` counts as sight. Some only give presence
+ * (`reveals: "presence"`), without the position.
  *
- * L'adaptateur (adapter/senses.mjs) lit la scène : distance, mur entre les deux, faits sur la cible, protections qu'elle porte.
+ * The adapter (adapter/senses.mjs) reads the scene: distance, wall between the two, facts about the target, protections it carries.
  */
 
 import { holds } from "./triggers.mjs";
 
-/** Les verdicts d'un sens, du plus faible au plus fort. */
+/** The verdicts of a sense, from weakest to strongest. */
 export const SENSE_VERDICTS = Object.freeze(["aura", "presence", "locate", "sight"]);
 
 /**
- * Ce qu'un sens peut révéler au lieu de la position (`reveals`) : `presence` — la présence est sue, pas la position ; `aura` — rien
- * de plus que ce qui est déjà vu : la créature visible qui porte ce que le sens détecte est marquée (Détection de la magie).
+ * What a sense can reveal instead of the position (`reveals`): `presence` — the presence is known, not the position;
+ * `aura` — nothing more than what is already seen: the visible creature that carries what the sense detects is marked
+ * (Detect Magic).
  */
 export const SENSE_REVEALS = Object.freeze(["presence", "aura"]);
 
-/** Les genres de sens : `locate` — position connue, pas une vue ; `sight` — compte comme une vue. */
+/** The kinds of sense: `locate` — position known, not sight; `sight` — counts as sight. */
 export const SENSE_KINDS = Object.freeze(["locate", "sight"]);
 
-/** Les sens que porte une entrée de contenu : `sense` est un sens ou une liste. */
+/** The senses a content entry carries: `sense` is a sense or a list. */
 export function sensesIn(entry) {
   const declared = entry?.sense;
   if ( !declared ) return [];
@@ -30,10 +31,11 @@ export function sensesIn(entry) {
 }
 
 /**
- * La cible est-elle protégée contre ce sens ? `wards` : ce que ses protections arrêtent — une école de magie (les sorts de cette
- * école ne la trouvent pas), ou `magic` (aucune détection magique ne la trouve). Un sens sans `magic` est naturel : rien ne
- * l'arrête.
- * @param {{magic?: string|true}} sense  `magic` : l'école du sort qui le donne, ou true pour un effet magique sans école.
+ * Is the target protected against this sense? `wards`: what its protections stop — a school of magic (spells of this
+ * school do not find it), or `magic` (no magical detection finds it). A sense without `magic` is natural: nothing
+ * stops it.
+ * @param {{magic?: string|true}} sense  `magic`: the school of the spell that grants it, or true for a magical effect with no
+ *   school.
  * @param {string[]} wards
  */
 export function wardedAgainst(sense, wards) {
@@ -41,23 +43,23 @@ export function wardedAgainst(sense, wards) {
   return wards.includes("magic") || ((typeof sense.magic === "string") && wards.includes(sense.magic));
 }
 
-/** Ce qu'une vue déclarée peut percer (`through`) : des ténèbres. Jamais une brume, qui arrête toute vue. */
+/** What a declared sight can pierce (`through`): Darkness. Never fog, which stops all sight. */
 export const SENSE_THROUGH = Object.freeze(["darkness"]);
 
-/** Ce dont un sens peut dépendre (`needs`) : il s'éteint tant que son porteur est Aveuglé (`sight`) ou Assourdi (`hearing`). */
+/** What a sense can depend on (`needs`): it goes out while its bearer is Blinded (`sight`) or Deafened (`hearing`). */
 export const SENSE_NEEDS = Object.freeze(["sight", "hearing"]);
 
 /**
- * Ce qu'un sens dit d'une cible : `"sight"`, `"locate"`, `"presence"`, `"aura"`, ou null.
+ * What a sense says about a target: `"sight"`, `"locate"`, `"presence"`, `"aura"`, or null.
  *
- * Un sens qui localise ne dépend ni de la lumière ni de l'état Invisible. Une vue (`kind: "sight"`), si : elle ne voit pas une
- * cible Invisible, une brume l'arrête toujours, et des ténèbres aussi, sauf si elle les perce (`through: ["darkness"]`).
+ * A sense that locates depends neither on light nor on the Invisible condition. A sight (`kind: "sight"`), yes: it does not see an
+ * Invisible target, fog always stops it, and Darkness too, unless it pierces it (`through: ["darkness"]`).
  * @param {{kind: string, range: number, walls?: false, reveals?: "presence", magic?: string|true, through?: string[],
- *   needs?: "sight"|"hearing"}} sense  `range` : dans l'unité de `distance`.
+ *   needs?: "sight"|"hearing"}} sense  `range`: in the unit of `distance`.
  * @param {{distance: number, walled: boolean, matches: boolean, wards: string[], blind?: boolean, deaf?: boolean,
- *   invisible?: boolean, fog?: boolean, darkness?: boolean}} facts  `walled` : un mur les sépare ; `matches` : la cible est de
- *   celles que le sens détecte ; `wards` : ce dont la cible est protégée ; `blind`, `deaf` : le porteur est Aveuglé, Assourdi ;
- *   `invisible` : la cible est Invisible pour lui ; `fog`, `darkness` : une zone qui bloque la vue entre eux, ou autour de l'un.
+ *   invisible?: boolean, fog?: boolean, darkness?: boolean}} facts  `walled`: a wall separates them; `matches`: the target is one
+ *   of those the sense detects; `wards`: what the target is protected from; `blind`, `deaf`: the bearer is Blinded, Deafened;
+ *   `invisible`: the target is Invisible to them; `fog`, `darkness`: an area that blocks sight between them, or around one of them.
  */
 export function senseVerdict(sense, { distance, walled, matches, wards, blind=false, deaf=false, invisible=false, fog=false,
   darkness=false }) {
@@ -82,12 +84,12 @@ export function bestVerdict(verdicts) {
 }
 
 /**
- * `detectedAs` : pour les sens, une créature peut compter aussi comme d'autres types que le sien (elle « est perçue comme » un
- * mort-vivant). Ce que le sens détecte (`detects`) tient-il pour la cible telle qu'elle est, ou comme l'un de ces types ? Jamais
- * pour autre chose que les sens : ni l'attaque ni la sauvegarde ne lisent ces types.
- * @param {object|null} detects  La condition du sens (core/triggers.mjs `holds`) ; absente : toute créature.
- * @param {object} facts  Les faits sur la cible.
- * @param {string[]} [alsoTypes]  Les types sous lesquels elle est aussi perçue.
+ * `detectedAs`: for senses, a creature can also count as other types than its own (it "is perceived as" an
+ * Undead). Does what the sense detects (`detects`) hold for the target as it is, or as one of these types? Never
+ * for anything but senses: neither the attack nor the saving throw reads these types.
+ * @param {object|null} detects  The sense's condition (core/triggers.mjs `holds`); absent: any creature.
+ * @param {object} facts  The facts about the target.
+ * @param {string[]} [alsoTypes]  The types under which it is also perceived.
  */
 export function detectsTarget(detects, facts, alsoTypes=[]) {
   if ( holds(detects, facts) ) return true;
@@ -95,11 +97,11 @@ export function detectsTarget(detects, facts, alsoTypes=[]) {
 }
 
 /**
- * `senseNeeds` : les sens de la fiche (modes de détection : `blindsight`…) éteints en ce moment, parce qu'ils dépendent de la vue
- * ou de l'ouïe de leur porteur et qu'il est Aveuglé ou Assourdi — une vision aveugle par écholocalisation.
- * @param {Array<Record<string, "sight"|"hearing">>} needs  Les `senseNeeds` des items du porteur.
+ * `senseNeeds`: the sheet's senses (detection modes: `blindsight`…) turned off right now, because they depend on their
+ * bearer's sight or hearing and they are Blinded or Deafened — a Blindsight by echolocation.
+ * @param {Array<Record<string, "sight"|"hearing">>} needs  The `senseNeeds` of the bearer's items.
  * @param {{blind?: boolean, deaf?: boolean}} state
- * @returns {string[]}  Les ids des modes éteints.
+ * @returns {string[]}  The ids of the modes turned off.
  */
 export function mutedSenses(needs, { blind=false, deaf=false }={}) {
   const muted = new Set();
@@ -112,21 +114,21 @@ export function mutedSenses(needs, { blind=false, deaf=false }={}) {
 }
 
 /**
- * Réglage `anonymousLocated` : une créature perçue sans être vue — entendue (`heard`) ou localisée par un sens (`located`) —
- * est-elle montrée sans son image ni son nom ? Sa position est connue, pas son identité. Une aura (`aura`) se pose sur ce qui
- * est vu : jamais.
- * @param {"heard"|"located"|"aura"|null} kind  Ce pour quoi le token est affiché sur ce client.
- * @param {boolean} rule  Le réglage du monde.
+ * Setting `anonymousLocated`: is a creature perceived without being seen — heard (`heard`) or located by a sense (`located`) —
+ * shown without its image or its name? Its position is known, not its identity. An aura (`aura`) is placed on what is seen:
+ * never.
+ * @param {"heard"|"located"|"aura"|null} kind  What the token is displayed for on this client.
+ * @param {boolean} rule  The world setting.
  */
 export function hidesIdentity(kind, rule) {
   return !!rule && ((kind === "heard") || (kind === "located"));
 }
 
 /**
- * Une créature affichée par un sens déclaré porte-t-elle la marque « localisée, pas vue » ? Oui si aucun des observateurs de ce
- * client ne la VOIT par un sens déclaré (`sight` : une vue à travers les murs) — vue, elle garde le contour, sans la marque ni
- * le Désavantage qu'elle annonce.
- * @param {Array<"sight"|"locate"|"presence"|"aura"|null>} verdicts  Ce que les sens déclarés de chaque observateur disent d'elle.
+ * Does a creature displayed by a declared sense carry the "located, not seen" mark? Yes if none of this client's observers
+ * SEES it through a declared sense (`sight`: sight through walls) — seen, it keeps the outline, without the mark or
+ * the Disadvantage it announces.
+ * @param {Array<"sight"|"locate"|"presence"|"aura"|null>} verdicts  What each observer's declared senses say about it.
  */
 export function onlyLocated(verdicts) {
   return !(verdicts ?? []).includes("sight");

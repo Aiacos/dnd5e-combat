@@ -1,8 +1,8 @@
 /**
- * §123-§124 : relevé des activités du Manuel des joueurs à portée « personnelle » qui visent pourtant une autre créature (sans
- * zone) — un défaut de données qui, sans règle du moteur, soignait le lanceur ou partait sans cible. Lit une COPIE des bases
- * LevelDB du module premium (Foundry les verrouille), n'écrit rien ; donne pour chaque activité son activation, si le moteur a une
- * règle pour l'objet, et ce que `rangeUnitsOf` (adapter/content.mjs) en fait.
+ * §123-§124: survey of the Player's Handbook activities with a "personal" range that nonetheless target another creature
+ * (without an area) — a data defect that, without an engine rule, healed the caster or went off without a target. Reads a COPY of
+ * the LevelDB databases of the premium module (Foundry locks them), writes nothing; gives for each activity its activation, whether
+ * the engine has a rule for the item, and what `rangeUnitsOf` (adapter/content.mjs) makes of it.
  *   node tools/releve-portee-personnelle.mjs "F:/Foundry V14/Data/modules/dnd-players-handbook/packs"
  */
 import { cpSync, mkdirSync, rmSync, readdirSync, mkdtempSync } from "node:fs";

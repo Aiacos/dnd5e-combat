@@ -1,15 +1,16 @@
 /**
- * §393 : le montage commun des arènes de test (une scène plate, vide, éclairée ; des acteurs d'essai dans un dossier à eux ; leurs
- * tokens à des cases fixes), tiré de `tools/arene-sorts.mjs` pour servir aussi à `tools/arene-invocations.mjs`. Idempotent : un acteur
- * se retrouve par son nom dans son dossier, la scène par son nom ; rien hors du dossier n'est touché.
+ * §393: the shared setup of the test arenas (a flat, empty, lit scene; test actors in a folder of their own; their
+ * tokens on fixed cells), taken from `tools/arene-sorts.mjs` to also serve `tools/arene-invocations.mjs`. Idempotent: an actor
+ * is found by its name in its folder, the scene by its name; nothing outside the folder is touched.
  *
- *   spec : { stage (tools/lib/stages.mjs), folder, flag (flags.dnd5e-combat.arena), actors: { nom: { pack, base, keepItems,
+ *   spec: { stage (tools/lib/stages.mjs), folder, flag (flags.dnd5e-combat.arena), actors: { name: { pack, base, keepItems,
  *            disposition, system, statuses } } }
- * `statuses` : les états posés sur le token après la pose (« dead » : un cadavre que darsh-loot reconnaît).
- * `owners` : noms d'utilisateurs qui possèdent l'acteur (issue #42 : `claude player`, pour voir la scène par ses yeux).
- * `scene` (à côté de `actors`) : données ajoutées à la scène.
- * `token` : données du token posé et du prototype (issue #42 : `{ sight: { enabled: true } }`, pour qu'un roturier ait une vue).
- * `items` : uuids (ou { uuid, system }) d'items de compendium ajoutés à la fiche (issue #42 : la Vision du diable du Manuel des joueurs), gardés à la remise.
+ * `statuses`: the conditions set on the token after placement ("dead": a corpse that darsh-loot recognizes).
+ * `owners`: names of users who own the actor (issue #42: `claude player`, to see the scene through their eyes).
+ * `scene` (next to `actors`): data added to the scene.
+ * `token`: data of the placed token and of the prototype (issue #42: `{ sight: { enabled: true } }`, so a commoner has a view).
+ * `items`: uuids (or { uuid, system }) of compendium items added to the sheet (issue #42: the Player's Handbook's Devil's
+ * Sight), kept at reset.
  */
 import { connect } from "./connector.mjs";
 
@@ -37,10 +38,10 @@ try {
     const { _id, folder: f, ownership, _stats, items, effects, ...rest } = data;
     const actorData = merge(rest, { name, system: spec.system, prototypeToken: { name, actorLink: true, disposition: spec.disposition,
       displayName: 30, appendNumber: false, prependAdjective: false, ...(spec.token ?? {}) } });
-    // Les ids d'items gardés : `details.race` d'un personnage désigne son espèce par id — sans elle, plus de Vitesse (prepareRace).
+    // The item ids kept: a character's `details.race` designates its species by id — without it, no more Speed (prepareRace).
     const extra = [];
     for ( const entry of spec.items ?? [] ) {
-      // Un uuid, ou { uuid, system } : le système remplacé en partie (un sort à volonté).
+      // A uuid, or { uuid, system }: the system partly replaced (an at-will spell).
       const { uuid, system: patch } = (typeof entry === "string") ? { uuid: entry } : entry;
       const { data: item } = await mcp.call("get-compendium-entry", { uuid });
       const { _id: _i, folder: _f, ownership: _o, ...itemData } = item;
@@ -52,20 +53,20 @@ try {
     actorData.effects = [];
     const found = existing.find(a => (a.name === name) && (a.folderId === folderId));
     if ( found ) {
-      // Remis à l'état de référence : PV, emplacements, aucun item ni effet laissé par un balayage interrompu.
+      // Reset to the reference state: HP, slots, no item or effect left by an interrupted sweep.
       const actor = await mcp.call("get-actor", { actorId: found.id });
-      // Un acteur qui garde ses items ne perd que ceux qu'un balayage ou un scénario a prêtés (absents de sa base).
+      // An actor that keeps its items only loses those that a sweep or a scenario lent (absent from its base).
       const own = new Set(baseItems.map(i => `${i.type}|${i.name}`));
       for ( const i of actor.items ?? [] ) {
         if ( own.has(`${i.type}|${i.name}`) ) continue;
         await mcp.call("remove-embedded-item", { documentType: "Actor", id: found.id, itemId: i._id ?? i.id });
       }
       for ( const e of actor.effects ?? [] ) await mcp.call("remove-embedded-effect", { documentType: "Actor", id: found.id, effectId: e._id ?? e.id });
-      // L'espèce d'un personnage, désignée par id (`details.race`) : réalignée sur l'item d'espèce de la fiche.
+      // A character's species, designated by id (`details.race`): realigned on the sheet's species item.
       const race = spec.keepItems ? (actor.items ?? []).find(i => i.type === "race") : null;
       const system = race ? mergeCopy(spec.system, { details: { race: race._id ?? race.id } }) : spec.system;
       await mcp.call("update-actor", { actorId: found.id, actorData: { system, prototypeToken: actorData.prototypeToken } });
-      // Un item ajouté (`items`) qu'un essai aurait retiré revient.
+      // An added item (`items`) that a trial would have removed comes back.
       const present = new Set((actor.items ?? []).map(i => `${i.type}|${i.name}`));
       for ( const item of extra ) {
         if ( !present.has(`${item.type}|${item.name}`) ) await mcp.call("upsert-embedded-item", { documentType: "Actor", id: found.id, itemData: item });
@@ -80,7 +81,7 @@ try {
     }
   }
 
-  // Les propriétaires (`owners`) : le connecteur ignore `ownership` — la fonction de test du moteur s'en charge (« Outils de test »).
+  // The owners (`owners`): the connector ignores `ownership` — the engine's test function handles it ("Test tools").
   for ( const [name, spec] of Object.entries(ACTORS) ) {
     if ( !spec.owners?.length ) continue;
     await mcp.call("call-module-api", { moduleId: "dnd5e-combat", fn: "setOwners", args: { actorId: ids[name], users: spec.owners } })
@@ -95,7 +96,7 @@ try {
     environment: { darknessLevel: 0, darknessLock: true, globalLight: { enabled: true, bright: true } },
     flags: { "dnd5e-combat": { arena: flag } }
   };
-  // Issue #42 : ce qu'une arène ajoute à la scène (la plage d'obscurité de la lumière globale, pour qu'une région sombre le soit).
+  // Issue #42: what an arena adds to the scene (the darkness range of the global light, so that a dark region is dark).
   merge(sceneData, sceneExtra);
   if ( !scene ) {
     const r = await mcp.call("create-scene", { name: stage.name, kind: "battlemap", width: cols * grid, height: rows * grid, gridSize: grid, padding: 0.1, sceneData });
@@ -103,7 +104,7 @@ try {
     console.log(`scène « ${stage.name} » créée (${scene.id})`);
   }
   else await mcp.call("update-scene", { sceneId: scene.id, sceneData });
-  // Un seul niveau, sans plafond (le niveau créé par défaut plafonne à 20 ft : §83).
+  // A single level, with no ceiling (the level created by default is capped at 20 ft: §83).
   const levels = await mcp.call("list-levels", { sceneId: scene.id }).catch(() => null);
   const level = (levels?.levels ?? levels ?? [])[0];
   if ( level?.id ) await mcp.call("update-level", { sceneId: scene.id, levelId: level.id, name: "Sol", bottom: 0, top: null }).catch(err => console.log(`niveau : ${err.message}`));
@@ -122,7 +123,7 @@ try {
       console.log(`token « ${name} » posé`);
     }
   }
-  // Les états de référence (un cadavre : « dead »), posés sur l'acteur lié — idempotent.
+  // The reference conditions (a corpse: "dead"), set on the linked actor — idempotent.
   for ( const [name, spec] of Object.entries(ACTORS) ) {
     for ( const statusId of spec.statuses ?? [] ) {
       await mcp.call("set-status", { actorId: ids[name], statusId, active: true }).catch(err => console.log(`état ${statusId} de « ${name} » : ${err.message}`));

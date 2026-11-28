@@ -1,12 +1,12 @@
 /**
- * Projectiles (SPEC §16.27), sur une seule cible (aucune question de répartition) :
- *  - Projectile magique (Bramo) : les projectiles touchent d'office — chacun est un lancement à part, avec ses dégâts ;
- *  - Rayon ardent et Décharge occulte (Kaalisti) : une attaque par rayon — le premier est le lancement, les autres sont
- *    enchaînés par le moteur (cartes marquées `projectileOf`), sans emplacement ni action.
- * Monde `ravenloft` (Bramo, Kaalisti, Rahadin) ; ailleurs, non applicable.
+ * Projectiles (SPEC §16.27), on a single target (no distribution question):
+ *  - Magic Missile (Bramo): the missiles hit automatically — each is a separate cast, with its damage;
+ *  - Scorching Ray and Eldritch Blast (Kaalisti): one ray attack each — the first is the cast, the others are
+ *    chained by the engine (cards marked `projectileOf`), with no spell slot or action.
+ * World `ravenloft` (Bramo, Kaalisti, Rahadin); elsewhere, not applicable.
  */
 const MODULE_ID = "dnd5e-combat";
-// La victime : un humanoïde du SRD 2024 posé pour le scénario (le monde `ravenloft` avait un PNJ de campagne).
+// The victim: a 2024 SRD Humanoid placed for the scenario (the `ravenloft` world had a campaign NPC).
 const VICTIM = "Cible humanoïde";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -24,7 +24,7 @@ export default {
     const at = await ctx.position(bramo);
     await ctx.call("move-token", { tokenId: victim.id, x: at.x + (3 * grid), y: at.y });
 
-    // Rayons : chaque rayon a sa carte et son jet.
+    // Rays: each ray has its card and its roll.
     for ( const identifier of ["scorching-ray", "eldritch-blast"] ) {
       await ctx.setHp(victim, 150);
       const since = await ctx.lastMessageId();
@@ -49,7 +49,7 @@ export default {
       ctx.expect(!spent.length, `${identifier} : les rayons enchaînés ne dépensent rien`);
     }
 
-    // Projectile magique : chaque projectile est un lancement à part, avec ses propres dégâts.
+    // Magic Missile: each missile is a separate cast, with its own damage.
     await ctx.setHp(victim, 150);
     const since = await ctx.lastMessageId();
     const mm = await ctx.use({ tokenId: bramo.id, identifier: "magic-missile", activityType: "damage", consume: false, targetTokenIds: [victim.id] });

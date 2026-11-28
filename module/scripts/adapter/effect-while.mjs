@@ -1,7 +1,7 @@
 /**
- * §130 : ce que l'effet d'un don doit savoir de son porteur (core/feats.mjs, `effectHolds`) — l'armure portée (dnd5e la calcule :
- * `system.attributes.ac.equippedArmor`), les armes maniées (équipées, hors armes naturelles et Attaque à mains nues), le combat,
- * les valeurs de caractéristique.
+ * §130: what a feat's effect must know about its bearer (core/feats.mjs, `effectHolds`) — the armor worn (dnd5e computes it:
+ * `system.attributes.ac.equippedArmor`), the weapons wielded (equipped, excluding natural weapons and Unarmed Strike), combat,
+ * the ability scores.
  */
 
 import { combatantFor } from "./turn.mjs";
@@ -9,7 +9,7 @@ import { identifierOf } from "./content.mjs";
 import { lightAt } from "./illumination.mjs";
 import { LIGHT_NAMES } from "../core/illumination.mjs";
 
-/** §135 : la lumière au centre du token du porteur (« dark », « dim », « bright »), ou null sans token ni canevas. */
+/** §135: the light at the center of the bearer's token ("dark", "dim", "bright"), or null without a token or canvas. */
 export function lightOfActor(actor) {
   const token = actor?.getActiveTokens?.(false, true)?.[0];
   if ( !token?.parent ) return null;
@@ -23,8 +23,8 @@ const RANGED = ["simpleR", "martialR"];
 
 /** @returns {{armor: string|null, weapons: Array<{melee: boolean, twoHanded: boolean}>, inCombat: boolean, abilities: Record<string, number>}} */
 /**
- * C12-c : les identifiants des items d'où viennent les effets actifs de l'acteur, transférés compris — `allApplicableEffects` du cœur :
- * `appliedEffects` ne garde que les effets qui changent quelque chose (« Starry Form » n'a aucun changement).
+ * C12-c: the identifiers of the items the actor's Active Effects come from, transferred ones included — the core's
+ * `allApplicableEffects`: `appliedEffects` only keeps effects that change something ("Starry Form" has no change).
  */
 function effectOrigins(actor) {
   const out = new Set();
@@ -43,10 +43,10 @@ export function effectFacts(actor) {
   const weapons = (actor?.items ?? []).filter(i => (i.type === "weapon") && i.system.equipped && (i.system.type?.value !== "natural")
     && (identifierOf(i).id !== "unarmed-strike")).map(w => ({ melee: !RANGED.includes(w.system.type?.value), twoHanded: !!w.system.properties?.has?.("two") }));
   const abilities = Object.fromEntries(Object.entries(actor?.system?.abilities ?? {}).map(([k, v]) => [k, Number(v?.value) || 0]));
-  // O7 (§343) : un bouclier équipé (Bracelets de défense).
+  // O7 (§343): an equipped shield (Bracers of Defense).
   const shield = !!actor?.system?.attributes?.ac?.equippedShield;
   return { armor, shield, weapons, inCombat: !!combatantFor(actor)?.parent?.started, abilities, get light() { return lightOfActor(actor); },
-    // C12-c : sous une Forme sauvage (l'acteur métamorphosé de dnd5e) ; les identifiants des items d'où viennent ses effets actifs.
+    // C12-c: under a Wild Shape (dnd5e's polymorphed actor); the identifiers of the items its Active Effects come from.
     wildShaped: !!actor?.isPolymorphed,
     get effectsFrom() { return effectOrigins(actor); } };
 }

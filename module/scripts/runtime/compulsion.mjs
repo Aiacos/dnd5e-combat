@@ -1,15 +1,17 @@
 /**
- * §403 : Compulsion (Injonction, PHB 2024) — « tant que le sort dure, vous pouvez prendre une action Bonus pour désigner une direction
- * horizontale. Chaque cible charmée doit utiliser autant de déplacement que possible pour aller dans cette direction à son prochain
- * tour… Après s'être déplacée ainsi, elle refait le JS de Sagesse ». MJ actif, en combat.
- *  - Au début du tour du lanceur qui se concentre sur le sort, s'il a encore son action Bonus et qu'au moins une créature porte l'effet
- *    du sort : la question « quelle direction ? » (aucune, ou l'une des huit de la grille ; adapter/choices.mjs, `askChoice` : son
- *    joueur, puis le MJ ; sans réponse, aucune). Une direction dépense l'action Bonus et se note sur l'effet de chaque cible
- *    (`flags.dnd5e-combat.compelled.dir`). Simplification : la question vient au début du tour, pas à n'importe quel moment.
- *  - Au début du tour d'une cible ainsi désignée : elle marche aussi loin que son déplacement le permet dans cette direction, par
- *    l'A* du moteur (murs contournés, attaques d'opportunité, bord de la scène), puis l'effet note `moved`.
- *  - La sauvegarde de fin de tour (`resave` avec `ifCompelled`, runtime/triggers.mjs) n'est rejouée qu'après cette marche.
- * Ce qui reste au MJ : « elle peut prendre son action avant de se déplacer », un déplacement qui la mettrait en danger évident.
+ * §403: Compulsion (PHB 2024) — "while the spell lasts, you can take a Bonus Action to designate a horizontal
+ * direction. Each charmed target must use as much movement as possible to go in that direction on its next
+ * turn… After moving this way, it repeats the Wisdom saving throw". Active GM, in combat.
+ *  - At the start of the turn of the caster concentrating on the spell, if they still have their Bonus Action and at least
+ *    one creature bears the spell's effect: the question "which direction?" (none, or one of the eight on the grid;
+ *    adapter/choices.mjs, `askChoice`: their player, then the GM; without an answer, none). A direction spends the Bonus Action and
+ *    is noted on each
+ *    target's effect (`flags.dnd5e-combat.compelled.dir`). Simplification: the question comes at the start of the turn, not at
+ *    any moment.
+ *  - At the start of the turn of a target so designated: it walks as far as its movement allows in that direction, through
+ *    the engine's A* (walls bypassed, Opportunity Attacks, scene edge), then the effect notes `moved`.
+ *  - The end-of-turn save (`resave` with `ifCompelled`, runtime/triggers.mjs) is only replayed after this walk.
+ * What is left to the GM: "it can take its action before moving", a move that would put it in obvious danger.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -25,7 +27,7 @@ import { route } from "./router.mjs";
 import { enqueue } from "./queue.mjs";
 import { log, loc, notice, sleep } from "./shared.mjs";
 
-/** Les effets du sort `item` portés par les créatures de la scène — pas la concentration du lanceur, ni rien sur le lanceur. */
+/** The effects of spell `item` borne by the scene's creatures — not the caster's Concentration, nor anything on the caster. */
 function compelledEffects(item, scene) {
   const out = [];
   for ( const token of scene?.tokens ?? [] ) {
@@ -38,7 +40,7 @@ function compelledEffects(item, scene) {
   return out;
 }
 
-/** Au début du tour du lanceur : désigner une direction (action Bonus). */
+/** At the start of the caster's turn: designate a direction (Bonus Action). */
 async function direct(combatant) {
   const actor = combatant?.actor;
   const scene = combatant?.token?.parent;
@@ -47,7 +49,7 @@ async function direct(combatant) {
     if ( !contentOf(item).entry?.compels || !concentrationOn(item) ) continue;
     const held = compelledEffects(item, scene);
     if ( !held.length ) continue;
-    // La remise à neuf du budget part au même changement de tour (runtime/turn.mjs) : on la laisse arriver.
+    // The budget refresh happens on the same turn change (runtime/turn.mjs): we let it arrive.
     await sleep(600);
     const budget = readBudget(combatant);
     if ( !((budget?.bonus ?? 0) >= 1) ) { log(`${item.name}: ${actor.name} has no Bonus Action left to direct its targets`); return; }
@@ -65,7 +67,7 @@ async function direct(combatant) {
   }
 }
 
-/** Au début du tour d'une cible désignée : autant de déplacement que possible dans la direction. */
+/** At the start of a designated target's turn: as much movement as possible in the direction. */
 async function obey(combatant) {
   const token = combatant?.token;
   const effect = (token?.actor?.effects ?? []).find(e => e.getFlag?.(MODULE_ID, "compelled")?.dir && !e.disabled);

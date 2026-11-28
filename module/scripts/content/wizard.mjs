@@ -1,47 +1,48 @@
 /**
- * Le Magicien du Manuel des joueurs 2024 (SPEC §28), module premium `dnd-players-handbook` 2.2.0 (pack `classes`, items `phbwzd…`).
- * Déjà là : Égide arcanique et Égide projetée de l'Abjurateur (§16.11, content/absorbs.mjs).
+ * The Wizard of the 2024 Player's Handbook (SPEC §28), premium module `dnd-players-handbook` 2.2.0 (pack `classes`, items
+ * `phbwzd…`). Already there: Arcane Ward and Projected Ward of the Abjurer (§16.11, content/absorbs.mjs).
  *
- * Ce que dnd5e fait déjà seul : Érudition, Mémorisation de sort, Maîtrise des sorts et Sorts de prédilection (enchantements
- * « toujours préparé »), Troisième œil (effets), Créatures fantasmagoriques (convocations). §139 : Restauration magique et Savoir
- * rituel ci-dessous (dnd5e n'en fait rien : la copie du Manuel n'a qu'une activité « Récupérer » qui dépense l'utilisation).
+ * What dnd5e already does by itself: Scholar, Memorize Spell, Spell Mastery and Signature Spells ("always prepared"
+ * enchantments), Third Eye (effects), "Illusory Creatures" (summonings). §139: Arcane Recovery and Ritual Adept
+ * below (dnd5e does nothing with them: the Handbook's copy only has a "Recover" activity that spends the use).
  */
 
 export const WIZARD = Object.freeze({
-  // §139 : Savoir rituel — « tout sort de votre grimoire qui a l'étiquette Rituel, même non préparé, mais seulement en rituel »
-  // (runtime/grimoire.mjs : hors combat, sans emplacement).
+  // §139: Ritual Adept — "any spell in your spellbook that has the Ritual tag, even unprepared, but only as a ritual"
+  // (runtime/grimoire.mjs: out of combat, no slot).
   "ritual-adept": { ritualAdept: { class: "wizard" } },
-  // §139 : Restauration magique — au Repos court, des emplacements dépensés dont la somme des niveaux ne dépasse pas la moitié du
-  // niveau de Magicien (arrondie au supérieur), aucun du 6e niveau ou plus ; une fois par Repos long (l'utilisation de l'item).
+  // §139: Arcane Recovery — on a Short Rest, expended slots whose levels add up to no more than half the Wizard level
+  // (rounded up), none of level 6 or higher; once per Long Rest (the item's use).
   "arcane-recovery": { slotRecovery: { class: "wizard", maxLevel: 5 } },
-  // Façonneur de sorts (Évocateur 3) : « désignez jusqu'à 1 + le niveau du sort créatures : elles réussissent automatiquement leur
-  // jet de sauvegarde et ne subissent aucun dégât » — le moteur désigne les alliés du lanceur (même disposition).
+  // Sculpt Spells (Evoker 3): "choose up to 1 + the spell's level creatures: they automatically succeed on their
+  // saving throw and take no damage" — the engine picks the caster's allies (same disposition).
   "sculpt-spells": { sculptSpells: true },
-  // Sort mineur appuyé (Évocateur 6) : « ratez votre jet d'attaque ou la cible réussit son jet de sauvegarde : la moitié des
-  // dégâts, mais aucun effet supplémentaire ».
+  // Potent Cantrip (Evoker 6): "you miss with an attack roll or the target succeeds on its saving throw: half
+  // damage, but no additional effect".
   "potent-cantrip": { potentCantrip: true },
-  // Surcharge (Évocateur 14) — « un sort de magicien lancé avec un emplacement de niveau 1 à 5 qui inflige des dégâts : les dégâts
-  // maximaux au tour où vous le lancez ; dès la deuxième fois avant un Repos long, 2d12 dégâts nécrotiques par niveau de
-  // l'emplacement (+1d12 par niveau à chaque fois), qui ignorent la Résistance et l'Immunité ». Proposée après le jet de dégâts ;
-  // le compteur est celui de l'item (ses utilisations, remises à zéro au Repos long). Un sort sans classe notée est admis.
+  // Overchannel (Evoker 14) — "a wizard spell cast with a level 1 to 5 slot that deals damage: maximum damage on the
+  // turn you cast it; from the second time before a Long Rest, 2d12 necrotic damage per level of the slot (+1d12 per level each
+  // time), which ignores Resistance and Immunity". Offered after the damage roll; the counter is the item's (its uses,
+  // reset to zero on a Long Rest). A spell with no class noted is allowed.
   "overchannel": { overchannel: { class: "wizard", maxLevel: 5, die: 12 } },
-  // Évocation améliorée (Évocateur 10) : « ajoutez votre modificateur d'Intelligence à un jet de dégâts » d'un sort d'Évocation.
+  // Empowered Evocation (Evoker 10): "add your Intelligence modifier to a damage roll" of an Evocation spell.
   "empowered-evocation": { triggers: [{ on: "preDamageRoll", if: { "activity.isSpell": true, "activity.school": "evo" },
     do: [{ type: "damage", formula: "@abilities.int.mod", damageType: "weapon" }] }] },
-  // Calque illusoire (Illusionniste 10) : en Réaction, un jet d'attaque qui touchait le magicien est changé en échec —
-  // l'activité « Interposer » (une utilisation par repos court).
+  // Illusory Self (Illusionist 10): as a Reaction, an attack roll that hit the wizard is turned into a miss —
+  // the "Interpose" activity (one use per Short Rest).
   "illusory-self": { triggers: [{ on: "isHit", do: [{ type: "use", activity: "DEHSJ0MTQQkQ99wp" }, { type: "miss" }] }] },
-  // Résistance aux sorts (Abjurateur 14) : Avantage aux sauvegardes contre la magie des sorts ; la Résistance aux dégâts des
-  // sorts reste au MJ (dnd5e n'a pas de type « dégâts de sort »).
+  // Spell Resistance (Abjurer 14): Advantage on saves against spell magic; Resistance to spell damage
+  // is left to the GM (dnd5e has no "spell damage" type).
   "spell-resistance": { saveAdvantage: ["magic"] },
-  // Égide projetée (Abjurateur 6, `phbwzdProjectedW`) : en Réaction, l'Égide arcanique du magicien prend sur elle les dégâts subis
-  // par une créature visible à 9 m ou moins (§38) — l'activité « Project Ward » (réaction, 1 utilisation de l'égide dans les
-  // données) est utilisée sans rien consommer : c'est la réserve qui paie, du montant absorbé.
+  // Projected Ward (Abjurer 6, `phbwzdProjectedW`): as a Reaction, the wizard's Arcane Ward takes on the damage dealt
+  // to a visible creature within 30 ft (§38) — the "Project Ward" activity (reaction, 1 use of the ward in the
+  // data) is used without consuming anything: the pool pays, for the amount absorbed.
   "projected-ward": { triggers: [{ on: "allyIsDamaged", if: { "target.nearSelf": { distance: 30, units: "ft" }, "self.seesTarget": true },
     do: [{ type: "use", activity: "THaODa86JJaeoWfL", consume: false }, { type: "absorb" }] }] },
-  // Présage (Devin 3) : deux d20 tirés à chaque Repos long et gardés en réserve ; chacun peut tenir lieu du résultat d'un Test d20
-  // du devin ou d'une créature qu'il voit, choix fait avant le jet, au plus une fois par tour (§36) — le moteur les lance au Repos long et propose de remplacer le jet
-  // d'attaque ou la sauvegarde qu'il voit venir. Présage supérieur (Devin 14) : trois d20 ; le plus grand nombre l'emporte.
+  // Portent (Diviner 3): two d20s rolled on each Long Rest and kept in reserve; each can replace the result of a D20 Test
+  // of the diviner or of a creature they see, chosen before the roll, at most once per turn (§36) — the engine rolls them on a
+  // Long Rest and offers to replace the attack roll or the save they see coming. Greater Portent (Diviner 14): three d20s; the
+  // highest number wins.
   "portent": { portent: { dice: 2 } },
   "greater-portent": { portent: { dice: 3 } }
 });

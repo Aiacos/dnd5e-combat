@@ -1,11 +1,11 @@
 /**
- * Le moteur : il traduit ce qui se passe dans Foundry en ÉVÈNEMENTS pour la machine d'action
- * (core/action.mjs), et exécute les COMMANDES qu'elle rend. Aucune règle ici : le cœur décide,
- * les adaptateurs lisent et écrivent, le répartiteur (runtime/dispatcher.mjs) tient l'ordre.
+ * The engine: it translates what happens in Foundry into EVENTS for the action machine
+ * (core/action.mjs), and executes the COMMANDS it returns. No rule here: the core decides,
+ * the adapters read and write, the dispatcher (runtime/dispatcher.mjs) keeps the order.
  *
- * Le PORTEUR d'une résolution est le message d'utilisation de l'activité. Un jet d'attaque lancé
- * hors carte (ou relancé depuis une carte déjà résolue) n'en a pas : le message d'attaque est
- * alors son propre porteur.
+ * A resolution's BEARER is the activity's use message. An attack roll made
+ * outside a card (or rerolled from an already resolved card) has none: the attack message is
+ * then its own bearer.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -42,38 +42,38 @@ import { COMMANDS } from "./engine-commands.mjs";
 import { onAttackMessage, onDamageMessage, onSaveMessage, onUsageMessage } from "./engine-messages.mjs";
 import { onRegionCreated } from "./engine-areas.mjs";
 
-/** Combien de messages récents on remonte quand un jet ne dit pas à quelle action il se rapporte. */
+/** How many recent messages we go back when a roll does not say which action it relates to. */
 export const LOOKBACK = 50;
 
-/** La résolution d'un porteur, y compris celle pas encore écrite (écritures regroupées, runtime/dispatcher.mjs). */
+/** A bearer's resolution, including one not yet written (grouped writes, runtime/dispatcher.mjs). */
 export const resolutionOn = message => message ? current(dispatcher.peek(message.id)) : null;
 
-/** Réglage « journal de chat allégé » : écritures de la résolution regroupées (ici) et cartes hors écran non dessinées (ui/chat.mjs). */
+/** "Lightened chat log" setting: resolution writes grouped (here) and off-screen cards not drawn (ui/chat.mjs). */
 export const CHAT_LIGHT_SETTING = "chatLight";
 
-/** Le token qui parle dans un message, ou null. */
+/** The token that speaks in a message, or null. */
 export function speakerTokenUuid(message) {
   const { scene, token } = message?.speaker ?? {};
   return scene && token ? `Scene.${scene}.Token.${token}` : null;
 }
 
-/** Les propriétés de dégâts sont un Set côté système, un tableau dans un flag. */
+/** Damage properties are a Set on the system side, an array in a flag. */
 export const serializeDamages = damages => damages.map(d => ({ ...d, properties: Array.from(d.properties ?? []) }));
-/** La créature porte-t-elle un effet d'un item `healMax` (Lueur d'espoir) — effet posé ou transféré ? */
+/** Does the creature carry an effect from a `healMax` item (Beacon of Hope) — effect placed or transferred? */
 /**
- * §160 : le palier de PV (`hpTiers` du contenu) qui vaut pour cette cible, lu sur ses PV actuels (avant les dégâts) : l'entrée du plan
- * réécrite (dégâts retirés si `damage: false`, effets réduits à `effects`) et les états à poser. Null sans paliers.
+ * §160: the HP tier (content `hpTiers`) that applies to this target, read from its current HP (before the damage): the plan entry
+ * rewritten (damage removed if `damage: false`, effects reduced to `effects`) and the conditions to place. Null without tiers.
  */
 export function hpTierFor(item, actor, entry, plan=null, activity=null, saveFailed=false) {
-  // K2 (§323) : un palier réservé à certaines activités de l'item (un rayon parmi les Rayons oculaires) ne vaut que pour elles.
+  // K2 (§323): a tier reserved to certain activities of the item (a ray among the Eye Rays) only applies to them.
   const tiers = (item ? contentOf(item).entry?.hpTiers : null)?.filter(t => !t.activities || (activity && t.activities.includes(activity.id)));
   if ( !tiers?.length || !actor ) return null;
   const hp = Number(actor.system?.attributes?.hp?.value ?? 0);
   const tier = tiers.find(t => !("atMost" in t) || (hp <= t.atMost));
-  // §402 : hors des paliers, les étapes d'issue restent (Parole divine : un Fiélon à plus de 50 PV qui rate est quand même renvoyé).
+  // §402: outside the tiers, the outcome steps remain (Divine Word: a Fiend with more than 50 HP that fails is still sent back).
   if ( !tier ) return { hp, statuses: [], entry: { ...entry, multiplier: 0, effects: [], steps: entry.steps ?? [] } };
-  // Un sort à sauvegarde (Parole divine) ne pose ses états que sur une sauvegarde ratée : la cible qui a réussi n'a reçu aucun effet.
-  // K2 (§323) : une sauvegarde sans effet (Regard mortel) — l'échec se lit sur la résolution de la cible (`saveFailed`).
+  // A spell with a save (Divine Word) only places its conditions on a failed save: the target that succeeded received no effect.
+  // K2 (§323): a save with no effect ("Deadly Gaze") — the failure is read on the target's resolution (`saveFailed`).
   const failed = !plan?.save || saveFailed || ((entry.effects ?? []).length > 0);
   return { hp, statuses: failed ? (tier.statuses ?? []) : [], zero: failed && (tier.zero === true), entry: {
     ...entry,
@@ -83,9 +83,9 @@ export function hpTierFor(item, actor, entry, plan=null, activity=null, saveFail
 }
 
 /**
- * §161 : le niveau auquel le sort du message est lancé — celui de l'item, plus la montée d'emplacement que dnd5e note sur le message
- * d'utilisation (`system.scaling`, dnd5e.mjs:17956). §406 : elle était lue dans `flags.dnd5e.scaling` du message, que dnd5e 6 n'écrit
- * plus (la migration la retire, dnd5e.mjs:94993) — toujours le niveau de base.
+ * §161: the level at which the message's spell is cast — the item's, plus the slot upcast that dnd5e notes on the use
+ * message (`system.scaling`, dnd5e.mjs:17956). §406: it was read from the message's `flags.dnd5e.scaling`, which dnd5e 6 no longer
+ * writes (the migration removes it, dnd5e.mjs:94993) — always the base level.
  */
 export function castLevelOfMessage(message) {
   const item = message?.getAssociatedActivity?.()?.item ?? message?.getAssociatedItem?.() ?? null;
@@ -93,22 +93,23 @@ export function castLevelOfMessage(message) {
   return Number(item.system?.level ?? 0) + (Number(message.system?.scaling) || 0);
 }
 
-/** §164 : les couleurs d'Embruns prismatiques — 1 à 5, un type de dégâts ; 6, indigo ; 7, violet. */
+/** §164: the colors of Prismatic Spray — 1 to 5, a damage type; 6, indigo; 7, violet. */
 const PRISM_TYPES = Object.freeze({ 1: "fire", 2: "acid", 3: "lightning", 4: "poison", 5: "cold" });
 
 /**
- * §164 : Embruns prismatiques (`prismatic`) — un d8 par cible ; sur un 8, deux rayons (les 8 relancés). Rend les couleurs tirées,
- * l'entrée du plan réduite à leurs effets (sans dégâts s'il n'y a que de l'indigo ou du violet) et les types de dégâts. Null sans la règle.
+ * §164: Prismatic Spray (`prismatic`) — a d8 per target; on an 8, two rays (the 8s rerolled). Returns the colors rolled,
+ * the plan entry reduced to their effects (without damage if there is only indigo or violet) and the damage types. Null without
+ * the rule.
  */
 export async function prismaticFor(item, entry, activity=null, plan=null) {
   const rule = item ? contentOf(item).entry?.prismatic : null;
   if ( !rule ) return null;
-  // L'activité qui a fait le jet : un rejeu de zone par une sœur garde, dans ses drapeaux, l'activité de la pose — celle de la
-  // sauvegarde du plan dit la sœur (Mur prismatique : la « Traversal Save »).
+  // The activity that made the roll: an area replay by a sibling keeps, in its flags, the placement's activity — the one of the
+  // plan's save says the sibling (Prismatic Wall: the "Traversal Save").
   const ids = [activity?.id, String(plan?.save?.activity ?? "").split(".").pop()].filter(Boolean);
   if ( rule.activities && !rule.activities.some(id => ids.includes(id)) ) return null;
   const d8 = async () => (await new Roll("1d8").evaluate()).total;
-  // §173 : le Mur prismatique traversé — toutes les couches à la fois (une sauvegarde pour toutes : simplification).
+  // §173: the Prismatic Wall crossed — all the layers at once (one save for all: simplification).
   let colors = rule.all ? [1, 2, 3, 4, 5, 6, 7] : [await d8()];
   if ( colors[0] === 8 ) {
     colors = [];
@@ -128,23 +129,24 @@ export function healsMax(actor) {
 }
 
 /**
- * §19.9 : Retour à la vie (Domaine de la Tombe) — les dés de soin d'un sort ou d'une Conduit divin valent leur maximum quand la
- * créature soignée est à 0 PV. Le soigneur porte un item `healsDownedMax`, la cible est à 0 PV.
+ * §19.9: Return to Life (Grave Domain) — the healing dice of a spell or a Channel Divinity are at their maximum when the
+ * healed creature is at 0 HP. The healer carries a `healsDownedMax` item, the target is at 0 HP.
  */
 export function healsDownedToMax(healer, activity, target) {
   if ( !healer || !activity?.item ) return false;
   const kind = isSpellCast(activity.item) || identifierOf(activity.item).id?.startsWith("channel-divinity");
   if ( !kind ) return false;
-  // §27 : Guérison suprême — le maximum de chaque dé, quelle que soit la créature soignée.
+  // §27: Supreme Healing — the maximum of each die, whatever the creature healed.
   if ( healer.items.some(i => contentOf(i).entry?.supremeHealing === true) ) return true;
   return ((target?.system?.attributes?.hp?.value ?? 1) <= 0) && healer.items.some(i => contentOf(i).entry?.healsDownedMax === true);
 }
 
 /**
- * §233 : au jet d'un soin (sur le client du soigneur), quand chaque cible désignée le reçoit au maximum (`healsMax`, `healsDownedToMax` :
- * Retour à la vie du Cercle de mortalité, Guérison suprême, Lueur d'espoir), les dés deviennent leur maximum AVANT le jet — « ne lancez pas
- * ces dés ». Avant, dnd5e lançait les dés (Conduit divin : Étincelle divine) et le moteur n'appliquait le maximum qu'aux PV rendus : la carte
- * montrait un jet ordinaire. L'application garde son maximum (`maximizedHealing`, sans effet sur une formule déjà sans dés).
+ * §233: on a healing roll (on the healer's client), when each designated target receives it at maximum (`healsMax`,
+ * `healsDownedToMax`: Circle of Mortality's Return to Life, Supreme Healing, Beacon of Hope), the dice become their maximum
+ * BEFORE the roll — "do not roll these dice". Before, dnd5e rolled the dice (Channel Divinity: Divine Spark) and the engine only
+ * applied the maximum to the HP restored: the card showed an ordinary roll. The application keeps its maximum
+ * (`maximizedHealing`, no effect on a formula already without dice).
  */
 function onPreRollHealing(config) {
   const activity = config?.subject;
@@ -159,19 +161,19 @@ function onPreRollHealing(config) {
 }
 
 /**
- * §27 : Disciple de la Vie et Guérisseur béni — « un sort lancé par un emplacement qui restitue des points de vie » : 2 + le
- * niveau de l'emplacement (l'activité est celle du sort au niveau lancé). Rend { disciple, healer } (0 si le soigneur n'a pas
- * l'aptitude), ou null hors de ce cas.
+ * §27: Disciple of Life and Blessed Healer — "a spell cast with a slot that restores hit points": 2 + the
+ * slot's level (the activity is that of the spell at the level cast). Returns { disciple, healer } (0 if the healer lacks
+ * the feature), or null outside this case.
  */
 export function slotHealBonus(healer, activity) {
   const item = activity?.item;
-  // §406 : le niveau de l'emplacement — `system.level` reste celui du sort sur une copie mise à l'échelle (`scaledClone` n'écrit que
-  // `flags.dnd5e.scaling`, dnd5e.mjs:35309 ; `@item.level` l'ajoute, dnd5e.mjs:34568).
+  // §406: the slot's level — `system.level` stays the spell's on a scaled copy (`scaledClone` only writes
+  // `flags.dnd5e.scaling`, dnd5e.mjs:35309; `@item.level` adds it, dnd5e.mjs:34568).
   const level = spellCastLevel(item);
   if ( !healer || (item?.type !== "spell") || (level < 1) || !["spell", "pact", undefined, ""].includes(item.system.method) ) return null;
   const has = key => healer.items.some(i => contentOf(i).entry?.[key] === true);
-  // §433 : le SRD de dnd5e 6.1 fait de Disciple de la vie un enchantement du sort de soin (« 2 + @item.level » sur `healing.bonus`) — un
-  // sort qui le porte a déjà son bonus dans la formule : le moteur n'ajoute pas le sien.
+  // §433: dnd5e 6.1's SRD makes Disciple of Life an enchantment of the healing spell ("2 + @item.level" on `healing.bonus`) — a
+  // spell that carries it already has its bonus in the formula: the engine does not add its own.
   const enchantedBy = enchantmentSourcesOf(item);
   const inFormula = healer.items.some(i => (contentOf(i).entry?.discipleOfLife === true) && enchantedBy.includes(identifierOf(i).id));
   const bonus = { disciple: (has("discipleOfLife") && !inFormula) ? 2 + level : 0, healer: has("blessedHealer") ? 2 + level : 0 };
@@ -180,7 +182,7 @@ export function slotHealBonus(healer, activity) {
 
 export const deserializeDamages = damages => damages.map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
 
-/** Le temps qu'une zone instantanée reste visible après sa résolution (animations d'autres modules comprises). */
+/** The time an instant area stays visible after its resolution (other modules' animations included). */
 export const TRANSIENT_LINGER_MS = 4000;
 
 export const dispatcher = createDispatcher({
@@ -193,20 +195,20 @@ export const dispatcher = createDispatcher({
     if ( resolution.step === STEPS.DONE ) log("action resolved →", resolution.targets.map(t =>
       `${t.name}:${t.save ? ` save ${t.save.success ? "succeeded" : "failed"}${t.save.total === null ? " automatically" : ` (${t.save.total})`}` : ""}`
       + `${t.damage ? ` ${t.damage.applied} HP` : ""}${t.effects.length ? ` ${t.effects.length} effect(s)` : ""}`).join(" ; "));
-    // SPEC §5.6 : à chaque étape d'une résolution (verdict, sauvegardes, dégâts, effets…), sur le client qui l'exécute (le MJ actif) :
-    // `(resolution, event)` — l'état de la résolution et ce qui l'a fait avancer. Sortie en lecture seule pour les animations, un journal de
-    // combat, le connecteur MCP.
+    // SPEC §5.6: at each step of a resolution (verdict, saves, damage, effects…), on the client that runs it (the active GM):
+    // `(resolution, event)` — the state of the resolution and what advanced it. Read-only output for animations, a combat log,
+    // the MCP connector.
     Hooks.callAll(`${MODULE_ID}.resolution`, resolution, event);
   }
 });
 
 /* -------------------------------------------- */
-/*  Ce que le cœur ne peut pas lire lui-même    */
+/*  What the core cannot read by itself         */
 /* -------------------------------------------- */
 
 /**
- * §518 : cette carte (ou la carte d'utilisation dont elle vient) est-elle passée outre un refus du moteur ? `forcedThrough` (fenêtre de
- * légalité, runtime/turn.mjs) ou `overridden` (raisons portées sur la carte, §408).
+ * §518: did this card (or the use card it comes from) go past an engine refusal? `forcedThrough` (legality window,
+ * runtime/turn.mjs) or `overridden` (reasons carried on the card, §408).
  * @param {ChatMessage} message
  */
 export function forcedThrough(message) {
@@ -215,15 +217,15 @@ export function forcedThrough(message) {
 }
 
 /**
- * Complète des cibles avec ce qui dépend des états et de la situation (core/conditions.mjs) :
- * échec d'office à la sauvegarde du plan, coup critique d'office, réaction possible si touchée.
+ * Completes targets with what depends on conditions and the situation (core/conditions.mjs):
+ * automatic failure on the plan's save, automatic Critical Hit, Reaction possible if hit.
  */
 export async function enrich(targets, plan, originUuid, activityUuid=null, attackMode=null, castLevel=null, { forced=false }={}) {
   const activity = activityUuid ? await fromUuid(activityUuid) : null;
   const origin = plan.attack && originUuid ? await fromUuid(originUuid) : null;
   const factors = origin ? readUnitFactors() : null;
-  // L'abri se lit sur le canevas : on attend la fin d'un redessin (changement de niveau) plutôt que de
-  // juger « sans abri » faute de canevas. S'il ne vient pas, ou s'il montre une autre scène, on le dit.
+  // Cover is read from the canvas: we wait for a redraw to finish (level change) rather than
+  // judging "no cover" for lack of a canvas. If it does not come, or shows another scene, we say so.
   if ( origin && isCoverAvailable() && targets.length ) {
     await whenCanvasReady();
     if ( !canJudgeCover(origin.parent) ) {
@@ -232,21 +234,21 @@ export async function enrich(targets, plan, originUuid, activityUuid=null, attac
     }
   }
   const out = [];
-  // §28 : Façonneur de sorts — les alliés du lanceur (même disposition, lui excepté), dans l'ordre, jusqu'à `plan.sculpt`.
+  // §28: Sculpt Spells — the caster's allies (same disposition, the caster excepted), in order, up to `plan.sculpt`.
   const caster = activity?.actor ?? null;
   const casterToken = caster?.getActiveTokens?.(false, true)?.[0] ?? null;
   let sculpts = plan.sculpt ?? 0;
   for ( const target of targets ) {
     const token = await fromUuid(target.token);
     const statuses = statusesOf(token);
-    // P1 (b) : l'abri corrige la CA avant le verdict — rien n'est posé sur la cible (SPEC §14.1, tranché).
-    // §131 : un don de tir (Tireur d'élite, Sniper de sorts) ignore l'abri partiel ou aux trois quarts.
+    // P1 (b): cover corrects the AC before the verdict — nothing is placed on the target (SPEC §14.1, decided).
+    // §131: a shooting feat (Sharpshooter, Spell Sniper) ignores half Cover or three-quarters Cover.
     const cover = (origin && token && (target.ac !== null) && (target.ac !== undefined)) ? coverAgainst(origin, token, activity, attackMode, { forced }) : null;
-    // O8d (§347) : un bonus de CA contre les seules attaques à distance (Bouclier antiprojectiles).
+    // O8d (§347): an AC bonus against ranged attacks only ("Anti-Projectile Shield").
     const shield = (origin && activity && token && isRangedAttack(activity, attackMode)) ? rangedAcBonus(token.actor) : 0;
     let ac = cover ? ((cover.bonus === null) ? null : target.ac + cover.bonus) : target.ac;
     if ( shield && (ac !== null) && (ac !== undefined) ) ac += shield;
-    // §16.8 : type de créature, règle du contenu, immunité à tous les effets — la cible reste lisible, hors d'atteinte.
+    // §16.8: creature type, content rule, immunity to all effects — the target stays readable, out of reach.
     const unaffected = await unaffectedBy(activity, plan, token, { castLevel });
     if ( unaffected ) log(`${target.name}: unaffected by ${activity?.item?.name ?? "the action"} (${unaffected.reason}${unaffected.detail ? `: ${unaffected.detail}` : ""})`);
     out.push({
@@ -255,14 +257,14 @@ export async function enrich(targets, plan, originUuid, activityUuid=null, attac
       cover,
       autoFail: plan.save ? autoFailSave(statuses, plan.save.ability) : null,
       defenceless: !!origin && !!token && isAutoCritical(statuses, areAdjacent(origin, token, factors)),
-      // §74 : l'attaque et son auteur sont connus ici — une réaction qui en dépend (Parade : « au corps à corps ») est comptée.
+      // §74: the attack and its author are known here — a Reaction that depends on it (Parry: "in melee") is counted.
       canReact: plan.attack ? await canReactToHit(target.token, { activity, source: origin?.actor ?? null }) : false,
       duplicates: plan.attack ? duplicatesAgainst(token?.actor, origin?.actor) : 0,
-      // §20 : Esquive totale (Roublard, Moine, monstres) — jugée à l'application (core/action.mjs, `applicationPlan`).
+      // §20: Evasion (Rogue, Monk, monsters) — judged at application (core/action.mjs, `applicationPlan`).
       evasion: !!plan.save && (evades(token?.actor) || ((avoids(token?.actor) || magicEvasionAgainst(token?.actor, activity)) ? "any" : false)),
       sculpted: (sculpts > 0) && !!token && !!casterToken && (token.actor !== caster) && areAllies(token, casterToken)
         && (sculpts-- > 0),
-      // O9a (§354) : « tout coup critique contre vous devient un coup normal » (armure en adamantium portée : propriété `ada` de dnd5e).
+      // O9a (§354): "any Critical Hit against you becomes a normal hit" (adamantine armor worn: dnd5e `ada` property).
       noCrit: !!plan.attack && wearsAdamantine(token?.actor),
       unaffected
     });
@@ -271,9 +273,9 @@ export async function enrich(targets, plan, originUuid, activityUuid=null, attac
 }
 
 /**
- * §232 : une sauvegarde qu'une créature consentante peut rater d'office (contenu `willingFails` : Sphère résiliente d'Otiluke, « une
- * créature non consentante doit réussir… »). Pour chaque cible qui n'est pas ennemie du lanceur, le lanceur (son joueur, sinon le MJ)
- * dit si elle consent ; consentante, sa sauvegarde est ratée d'office (`autoFail: "willing"`, sans jet). Sans réponse : non consentante.
+ * §232: a save that a willing creature can fail automatically (content `willingFails`: Otiluke's Resilient Sphere, "an
+ * unwilling creature must succeed…"). For each target that is not an enemy of the caster, the caster (their player, else the GM)
+ * says whether it consents; if willing, its save is failed automatically (`autoFail: "willing"`, no roll). No answer: unwilling.
  */
 async function askWilling(activity, targets, casterToken) {
   const item = activity?.item;
@@ -293,45 +295,45 @@ async function askWilling(activity, targets, casterToken) {
   return out;
 }
 
-/** Données d'`open()` du cœur pour un message, ou null s'il n'y a rien à résoudre. */
+/** The core's `open()` data for a message, or null if there is nothing to resolve. */
 export async function openingFor(message, usage, extra={}) {
   if ( !usage.plan.attack && !usage.targets.length ) {
     log(usage.area ? "area placed on nobody: nothing to resolve" : "no target designated: left to the card buttons");
     return null;
   }
   const { area, ...data } = usage;
-  // Un effet exclusif choisi d'avance par le clic (menu : « Lutte », « Bousculade : à terre »…) : pas de question.
+  // An exclusive effect chosen in advance by the click (menu: "Grapple", "Shove: Prone"…): no question.
   const choice = game.messages.get(usage.origin ?? message.id)?.getFlag(MODULE_ID, "choice") ?? message.getFlag(MODULE_ID, "choice") ?? null;
-  // §16.27 : la répartition des projectiles faite à la visée multiple (Projectile magique).
+  // §16.27: the split of projectiles made at multiple targeting (Magic Missile).
   const pairs = game.messages.get(usage.origin ?? message.id)?.getFlag(MODULE_ID, "allocation");   // [[token, nombre], …]
   const allocation = Array.isArray(pairs) ? Object.fromEntries(pairs) : null;
   let targets = await enrich(usage.targets, usage.plan, speakerTokenUuid(message), usage.activity, null, castLevelOfMessage(message),
     { forced: forcedThrough(message) });
-  // §169 : un rejeu sans sauvegarde (Mur de feu traversé, fin de tour du côté brûlant) — les dégâts pleins, d'office.
+  // §169: a replay without a save (Wall of Fire crossed, end of turn on the burning side) — full damage, automatically.
   if ( usage.plan.save && message.getFlag(MODULE_ID, "areaTick")?.noSave ) targets = targets.map(t => ({ ...t, autoFail: "noSave" }));
   if ( usage.plan.save ) {
     const activity = fromUuidSync(usage.activity, { strict: false });
-    // §402 : le token qui parle d'abord — un PNJ non lié n'a pas de token « actif » par son acteur synthétique.
+    // §402: the token that speaks first — an unlinked NPC has no "active" token through its synthetic actor.
     targets = await askWilling(activity, targets, fromUuidSync(speakerTokenUuid(message) ?? "", { strict: false })
       ?? activity?.actor?.getActiveTokens?.(false, true)?.[0] ?? null);
-    // Résistance supérieure à la magie (`saveAutoSuccessAgainst`) : le porteur réussit d'office contre un sort ou un effet magique.
+    // "Superior Magic Resistance" (`saveAutoSuccessAgainst`): the bearer succeeds automatically against a spell or magical effect.
     targets = targets.map(t => {
       if ( t.autoFail || t.autoSucceed ) return t;
       const bearer = fromUuidSync(t.token, { strict: false })?.actor ?? fromUuidSync(t.actor, { strict: false });
       const trait = autoSaveAgainst(bearer, activity);
       return trait ? { ...t, autoSucceed: `trait:${trait}` } : t;
     });
-    // §402 : `saveAutoSuccess` — `types` : ces types de créature réussissent d'office (Pétrification : Créatures artificielles) ;
-    // `fighting` : une créature que le lanceur combat aussi (en combat, ennemie : Discours captivant, Faux amis).
-    // `sizeAtLeast` : une créature au moins de cette taille (Filet tombant).
+    // §402: `saveAutoSuccess` — `types`: these creature types succeed automatically ("Petrification": Constructs);
+    // `fighting`: a creature the caster is also fighting (in combat, an enemy: "Captivating Speech", "False Friends").
+    // `sizeAtLeast`: a creature of at least this size ("Falling Net").
     const rule = contentOf(activity?.item).entry?.saveAutoSuccess ?? null;
-    // Le token qui parle (un PNJ non lié n'a pas de token « actif » par son acteur synthétique).
+    // The token that speaks (an unlinked NPC has no "active" token through its synthetic actor).
     const caster = rule?.fighting ? (fromUuidSync(speakerTokenUuid(message) ?? "", { strict: false })
       ?? activity?.actor?.getActiveTokens?.(false, true)?.[0] ?? null) : null;
-    // Un combat commencé (pas forcément celui qu'affiche ce client) où les deux se trouvent, ennemis l'un de l'autre.
+    // A combat that has started (not necessarily the one this client shows) where both are present, enemies of each other.
     const fighting = token => !!(caster && token && areEnemies(caster, token) && game.combats.some(c => c.started
       && c.combatants.some(k => k.tokenId === token.id) && c.combatants.some(k => k.tokenId === caster.id)));
-    // `saveAutoFail` — ces types ratent d'office (Flétrissement : une Plante).
+    // `saveAutoFail` — these types fail automatically ("Withering": a Plant).
     const failRule = contentOf(activity?.item).entry?.saveAutoFail ?? null;
     if ( rule || failRule ) targets = targets.map(t => {
       if ( t.autoFail ) return t;
@@ -349,12 +351,12 @@ export async function openingFor(message, usage, extra={}) {
 }
 
 /* -------------------------------------------- */
-/*  Annulation, dégâts de l'auteur, reprise     */
+/*  Cancellation, the author's damage, resumption */
 /* -------------------------------------------- */
 
 /**
- * Annule ce qu'une résolution a appliqué. `message` est le message qui affiche le bouton : le
- * porteur, ou le message de dégâts qui en redit le résultat. MJ actif uniquement.
+ * Cancels what a resolution applied. `message` is the message that shows the button: the
+ * bearer, or the damage message that restates its result. Active GM only.
  */
 export async function undo(message) {
   if ( !isExecutor() ) return;
@@ -369,25 +371,25 @@ export async function undo(message) {
 }
 
 /**
- * Sur le client de l'AUTEUR de l'action : dès que la résolution passe à une étape qui attend ses
- * dégâts, il les lance. On réagit à un signal, pas à un délai, et chacun lance ses propres dés
- * (SPEC, principe 2). `step` n'est dans le diff que lorsqu'il change : une étape ne relance rien.
+ * On the AUTHOR's client of the action: as soon as the resolution moves to a step that awaits their
+ * damage, they roll it. We react to a signal, not to a delay, and each one rolls their own dice
+ * (SPEC, principle 2). `step` is in the diff only when it changes: a step relaunches nothing.
  */
 function onResolutionFlag(message, changes) {
   const diff = changes.flags?.[MODULE_ID]?.resolution;
   if ( !diff || !("step" in diff) || !message.isAuthor ) return;
   const resolution = resolutionOn(message);
   if ( !resolution || !wantsDamageRoll(resolution) ) return;
-  // §90 : une résolution que traverse une fenêtre de réaction repasse par « jets attendus » avant que le premier jet ne soit
-  // enregistré — et la question des faveurs au jet (adapter/smite.mjs) le retarde : sans ce garde, un second jet partait (Parade : laissé
-  // au plateau ; Riposte : appliqué, sans le dé de la manœuvre). Un jet par résolution ; un échec le libère.
+  // §90: a resolution that a reaction window passes through goes back through "awaited rolls" before the first roll is
+  // recorded — and the question about roll boons (adapter/smite.mjs) delays it: without this guard, a second roll went out
+  // (Parry: left to the board; Riposte: applied, without the maneuver's die). One roll per resolution; a failure releases it.
   if ( damageRolling.has(resolution.id) ) return;
   damageRolling.add(resolution.id);
-  // §419 : réglage « Dégâts », au clic — l'auteur lance lui-même. §524 : « au clic pour les joueurs » — ce client est celui de l'auteur
-  // (`message.isAuthor`) : un joueur clique, le MJ enchaîne.
+  // §419: "Damage" setting, on click — the author rolls themself. §524: "on click for players" — this client is the author's
+  // (`message.isAuthor`): a player clicks, the GM chains on.
   // #173 (§556): the author's window is dnd5e's own damage dialog (situational bonus, Critical / Normal, roll mode) — "required" in
-  // the click modes; otherwise "offered", shown only on a client that turned "Rolls without dialog" off. Closed or timed out, the roll
-  // still goes with the default button (adapter/damage-dialog.mjs): a hit has damage.
+  // the click modes; otherwise "offered", shown only on a client that turned "Rolls without dialog" off. Closed or timed out,
+  // the roll still goes with the default button (adapter/damage-dialog.mjs): a hit has damage.
   const dialog = damageDialog(damageFlow({ playerAuthor: !game.user.isGM }));
   log(dialog === "required" ? "damage roll: dnd5e's dialog for the author" : "chained damage roll");
   rollDamageFor(message, resolution, isCriticalHit(resolution), mixedCriticalTokens(resolution), { dialog }).catch(err => {
@@ -397,12 +399,12 @@ function onResolutionFlag(message, changes) {
   });
 }
 
-/** Les résolutions dont le jet de dégâts enchaîné est parti, sur ce client. */
+/** The resolutions whose chained damage roll has gone out, on this client. */
 const damageRolling = new Set();
 
 /**
- * §421 : les jets de dégâts ou de soins qu'une résolution attend d'un auteur qui n'est plus connecté — personne ne les lancera. Lus dans
- * les derniers messages : `{ messageId, userId, userName, actor, actorName, item, heal }`.
+ * §421: the damage or healing rolls that a resolution awaits from an author who is no longer connected — nobody will roll them.
+ * Read from the latest messages: `{ messageId, userId, userName, actor, actorName, item, heal }`.
  */
 export function blockedRolls() {
   const stuck = [];
@@ -418,9 +420,10 @@ export function blockedRolls() {
 }
 
 /**
- * §421 : le MJ actif lance, à la place d'un auteur parti, le jet que sa résolution attend. Ce sont les dés du MJ ; la résolution reprend
- * comme si l'auteur les avait lancés. Rend false si rien n'est dû, si l'auteur est là, ou si le jet est déjà parti.
- * @param {string} messageId  Le message qui porte la résolution.
+ * §421: the active GM rolls, in place of a departed author, the roll its resolution awaits. These are the GM's dice;
+ * the resolution resumes as if the author had rolled them. Returns false if nothing is due, if the author is present,
+ * or if the roll has already gone out.
+ * @param {string} messageId  The message that carries the resolution.
  */
 export async function rollForAbsent(messageId) {
   if ( !isExecutor() ) return false;
@@ -438,9 +441,9 @@ export async function rollForAbsent(messageId) {
 }
 
 /**
- * Après un F5 du MJ : une fenêtre de réaction ouverte n'a plus personne pour l'écouter. La
- * résolution, elle, est écrite : on la referme en rejugeant chaque cible contre sa CA du moment
- * (si le Bouclier a été lancé entre-temps, il compte).
+ * After a GM F5: an open reaction window has nobody left to listen to it. The
+ * resolution itself is written: we close it by re-judging each target against its AC of the moment
+ * (if Shield was cast in the meantime, it counts).
  */
 async function resume() {
   for ( const message of game.messages.contents.slice(-LOOKBACK) ) {
@@ -453,7 +456,7 @@ async function resume() {
       continue;
     }
     if ( resolution && pendingChoice(resolution) ) {
-      // Un choix d'effet resté sans réponse (F5, joueur parti) : la question est reposée.
+      // An effect choice left unanswered (F5, player gone): the question is asked again.
       log("resume: effect choice pending, question asked again");
       const command = { type: "askChoice", prompt: resolution.plan.choice.prompt ?? null, options: resolution.plan.choice.options, ...(resolution.plan.choice.roll ? { roll: true } : {}) };
       const [event] = await COMMANDS.askChoice(command, message, resolution);
@@ -461,14 +464,14 @@ async function resume() {
       continue;
     }
     if ( resolution?.step !== STEPS.AWAITING_REACTION ) continue;
-    // Issue #32 : une pause de succès à un prix restée ouverte (F5 du MJ) : l'échec reste.
+    // Issue #32: a success-at-a-price pause left open (GM F5): the failure stands.
     if ( resolution.pending.some(p => p.kind === "atCost") ) {
       log("resume: success at a cost not offered before the reload, the failure stands");
       await dispatcher.send(message.id, { type: "atCostDecided", accepted: false });
       continue;
     }
     log(`resume: reaction window closed (${resolution.pending.length} pending)`);
-    // Des répliques dont les dés n'ont pas été lancés : on les lance.
+    // Replies whose dice have not been rolled: we roll them.
     const duplicates = resolution.pending.filter(p => p.kind === "duplicates").map(p => p.token);
     if ( duplicates.length ) {
       for ( const event of await COMMANDS.rollDuplicates({ tokens: duplicates }, message, resolution) ) await dispatcher.send(message.id, event);
@@ -485,7 +488,7 @@ async function resume() {
 
 /* -------------------------------------------- */
 
-/** Les messages de jet du système qui font avancer une résolution. */
+/** The system's roll messages that advance a resolution. */
 const MESSAGE_HANDLERS = Object.freeze({
   usage: onUsageMessage, attack: onAttackMessage, damage: onDamageMessage, healing: onDamageMessage, save: onSaveMessage
 });
@@ -497,14 +500,14 @@ export function registerEngine() {
   });
   CONFIG.queries[TARGETS_QUERY] = handleTargetsQuery;
   CONFIG.queries[SAVE_QUERY] = handleSaveQuery;
-  CONFIG.queries[CHOICE_QUERY] = handleChoiceQuery;   // sur tous les clients : c'est l'auteur qui répond
+  CONFIG.queries[CHOICE_QUERY] = handleChoiceQuery;   // on all clients: the author answers
   CONFIG.queries[ALLOCATION_QUERY] = handleAllocationQuery;
-  // §401 : « créatures de votre choix » dans une zone — c'est le lanceur qui répond.
+  // §401: "creatures of your choice" in an area — the caster answers.
   registerZoneChoiceSetting();
   CONFIG.queries[ZONE_CHOICE_QUERY] = handleZoneChoiceQuery;
   route("updateChatMessage", onResolutionFlag, { label: "chained damage roll" });
   route("dnd5e.preRollDamageV2", onPreRollHealing, { cancellable: true, label: "healing dice at their maximum" });
-  // Une résolution qui échoue ne doit jamais bloquer le jeu : les boutons et plateaux du système restent utilisables.
+  // A resolution that fails must never block the game: the system's buttons and boards stay usable.
   const failure = { executor: true, notify: "DND5ECOMBAT.ResolutionInterrompue" };
   route("createRegion", onRegionCreated, { ...failure, label: "area resolution interrupted" });
   route("createChatMessage", message => MESSAGE_HANDLERS[message.type]?.(message), { ...failure, label: "resolution interrupted" });

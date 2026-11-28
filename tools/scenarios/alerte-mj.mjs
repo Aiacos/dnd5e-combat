@@ -1,9 +1,9 @@
 /**
- * §364–§366 : alerte MJ. Arène de test (Magicien, Zombi).
- *  1. Télékinésie (table des alertes, §365) lancée par le Magicien : une carte chuchotée aux MJ, marquée `gmAlert`, et le texte dans
- *     le bandeau du MJ.
- *  2. Bâton du thaumaturge : « Spell Absorption » alerte, une autre activité (l'attaque) non (le filtre `activities`).
- *  3. Réglage de monde « Alertes MJ » éteint : « Spell Absorption » ne poste plus aucune carte.
+ * §364–§366: GM alert. Test arena (Wizard, Zombie).
+ *  1. Telekinesis (alert table, §365) cast by the Wizard: a card whispered to the GMs, marked `gmAlert`, and the text in
+ *     the GM's banner.
+ *  2. Staff of the Magi: "Spell Absorption" alerts, another activity (the attack) does not (the `activities` filter).
+ *  3. "GM Alerts" world setting off: "Spell Absorption" no longer posts any card.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -26,7 +26,7 @@ export default {
     await ctx.engine("setting", { key: "gmAlertBanner", value: true }).catch(() => null);
     const alertsSince = async id => (await ctx.messagesSince(id)).filter(m => m.flags?.[MODULE_ID]?.gmAlert);
 
-    // 1. Télékinésie
+    // 1. Telekinesis
     const tk = await ctx.ensureItem(mage, `${PHB}phbsplTelekinesi`, { system: { method: "atwill" } });
     const cast = await ctx.use({ tokenId: mage.id, itemId: tk, targetTokenIds: [zombi.id], consume: false });
     await pause(2500);
@@ -37,9 +37,9 @@ export default {
     const shown = await ctx.engine("gmAlerts", {});
     ctx.expect((shown ?? []).some(t => /9 m|30 ft/.test(t)), `dans le bandeau du MJ (${(shown ?? []).join(" / ") || "rien"})`);
 
-    // 2. Bâton du thaumaturge : le filtre d'activité
+    // 2. Staff of the Magi: the activity filter
     if ( JSON.stringify((await ctx.call("list-compendiums", {}).catch(() => null)) ?? "").includes("dnd-dungeon-masters-guide.equipment") ) {
-      const staff = await ctx.ensureItem(mage, `${DMG}dmgStaffOfTheMag`, { ready: true });   // Guide 3.0.0 : activités visibles harmonisé
+      const staff = await ctx.ensureItem(mage, `${DMG}dmgStaffOfTheMag`, { ready: true });   // DMG 3.0.0: activities visible, attuned
       const absorb = await ctx.use({ tokenId: mage.id, itemId: staff, activityId: "QcfPhLX9LBvOnShu", consume: false, targetTokenIds: [] });
       await pause(2500);
       ctx.expect((await alertsSince(absorb.usageMessageId)).length === 1, "Bâton : « Spell Absorption » alerte");
@@ -49,10 +49,10 @@ export default {
       ctx.expect(!(await alertsSince(strike.usageMessageId)).length, "Bâton : son attaque n'alerte pas");
     }
 
-    // 3. Réglage éteint (Bâton : « Spell Absorption »)
+    // 3. Setting off (Staff: "Spell Absorption")
     const on = await ctx.engine("setting", { key: "gmAlerts", value: false });
     ctx.restore(() => ctx.engine("setting", { key: "gmAlerts", value: on.before }));
-    const staff = await ctx.ensureItem(mage, `${DMG}dmgStaffOfTheMag`, { ready: true });   // Guide 3.0.0 : activités visibles harmonisé
+    const staff = await ctx.ensureItem(mage, `${DMG}dmgStaffOfTheMag`, { ready: true });   // DMG 3.0.0: activities visible, attuned
     const off = await ctx.use({ tokenId: mage.id, itemId: staff, activityId: "QcfPhLX9LBvOnShu", consume: false, targetTokenIds: [] });
     await pause(2500);
     const silent = await alertsSince(off.usageMessageId);

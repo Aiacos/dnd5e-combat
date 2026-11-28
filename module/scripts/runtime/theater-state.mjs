@@ -1,14 +1,14 @@
 /**
- * §220 : l'état « Théâtre de l'esprit » — toutes les automatisations du moteur coupées (runtime/theater.mjs). Dans un fichier à part,
- * sans import : le routeur le lit à chaque hook (runtime/router.mjs), et le routeur est importé par presque tout le moteur.
+ * §220: the "Theater of the Mind" state — all of the engine's automations switched off (runtime/theater.mjs). In a separate file,
+ * without imports: the router reads it on every hook (runtime/router.mjs), and the router is imported by almost all the engine.
  */
 
 let active = false;
 
-/** Le Théâtre de l'esprit est-il actif (les automatisations coupées) ? */
+/** Is Theater of the Mind active (automations switched off)? */
 export const theaterActive = () => active;
 
-/** Tenu par runtime/theater.mjs, d'après le réglage de monde. */
+/** Held by runtime/theater.mjs, from the world setting. */
 export function setTheaterState(on) {
   active = !!on;
 }

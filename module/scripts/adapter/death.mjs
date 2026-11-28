@@ -1,18 +1,18 @@
 /**
- * À 0 point de vie, lu et écrit dans Foundry pour le cœur (core/death.mjs). Vérifié dans dnd5e 6.0.3 :
- *  - `Actor5e#applyDamage` appelle `dnd5e.preApplyDamage(actor, amount, updates, options)` avec `Hooks.call`
- *    AVANT l'écriture, sur le client qui applique : ajouter une clé à `updates` l'écrit dans la même mise à jour
- *    (documents/actor/actor.mjs, `applyDamage`). `amount` : dégâts après résistances, avant PV temporaires ;
- *    `options.origin` ou `options.originatingMessage` : le message de dégâts, qui porte le critique.
- *  - à 0 PV, une mise à jour qui ne change que les PV ne change rien (PV bornés à 0) : sans cette clé, rien n'est
- *    écrit, et `updateDowned` (qui pose Inconscient / Mort) ne tourne que si les PV changent.
- *  - `rollDeathSave` compte succès et échecs et appelle `dnd5e.rollDeathSaveV2(rolls, { outcome, updates, subject })`
- *    (`outcome` : "stable", "death", "revive" ou null), mais ne pose pas Stabilisé ; Mort, oui, quand l'écriture
- *    des trois échecs passe par `onUpdateDeathSaves` (data/actor/templates/attributes.mjs) et que le réglage le permet.
- *  - le réglage de monde `autoApplyDowned` ("none", "deadOnly", "npcs", "all") dit si le système pose ces états ;
- *    le moteur suit la même règle pour Mort (actor.mjs, `updateDowned`). Stabilisé est toujours posé : c'est ce qui
- *    dit au moteur de ne plus demander de jet.
- * Les états posés ici portent `flags["dnd5e-combat"].death` : le moteur les retire quand les PV remontent.
+ * At 0 Hit Points, read and written in Foundry for the core (core/death.mjs). Verified in dnd5e 6.0.3:
+ *  - `Actor5e#applyDamage` calls `dnd5e.preApplyDamage(actor, amount, updates, options)` with `Hooks.call`
+ *    BEFORE the write, on the client that applies: adding a key to `updates` writes it in the same update
+ *    (documents/actor/actor.mjs, `applyDamage`). `amount`: damage after Resistances, before Temporary Hit Points;
+ *    `options.origin` or `options.originatingMessage`: the damage message, which carries the critical.
+ *  - at 0 HP, an update that changes only the HP changes nothing (HP clamped to 0): without this key, nothing is
+ *    written, and `updateDowned` (which sets Unconscious / Dead) only runs if the HP change.
+ *  - `rollDeathSave` counts successes and failures and calls `dnd5e.rollDeathSaveV2(rolls, { outcome, updates, subject })`
+ *    (`outcome`: "stable", "death", "revive" or null), but does not set Stable; Dead, yes, when the write
+ *    of the three failures goes through `onUpdateDeathSaves` (data/actor/templates/attributes.mjs) and the setting allows it.
+ *  - the world setting `autoApplyDowned` ("none", "deadOnly", "npcs", "all") says whether the system sets these conditions;
+ *    the engine follows the same rule for Dead (actor.mjs, `updateDowned`). Stable is always set: it is what
+ *    tells the engine to stop asking for a roll.
+ * The conditions set here carry `flags["dnd5e-combat"].death`: the engine removes them when the HP rise.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -33,8 +33,8 @@ import { risingAtZero } from "./rise.mjs";
 import { isWildShaped } from "./wildshape.mjs";
 
 /**
- * Le temps laissé à dnd5e pour poser son état à 0 PV (Mort, Inconscient) sur le client qui a écrit les PV (`updateDowned`,
- * data/actor/templates/attributes.mjs:732) avant qu'une règle du moteur ne le lise ou ne le remplace.
+ * The time left to dnd5e to set its 0 HP condition (Dead, Unconscious) on the client that wrote the HP (`updateDowned`,
+ * data/actor/templates/attributes.mjs:732) before an engine rule reads or replaces it.
  */
 export const AFTER_ZERO_HP_MS = 400;
 
@@ -47,38 +47,38 @@ function savesOf(actor) {
   return makesDeathSaves({ type: actor?.type, important: !!actor?.system?.traits?.important });
 }
 
-/** §18.13 : une Régénération qui fait survivre à 0 PV jusqu'au début du tour (Troll, Revenant). */
+/** §18.13: a Regeneration that keeps one alive at 0 HP until the start of the turn (Troll, Revenant). */
 const regeneratesAtZero = actor => !!regenerationOf(actor)?.survivesZero;
 
 /**
- * §71 : tombée à 0 PV sous une arme `stableAtZero` (Dague des ombres du Familier de vampire : « elle se retrouve Stabilisée ») —
- * flag écrit dans la MÊME mise à jour que les PV (`planDamageAtZero`), lu par tous les clients avant de poser Mort ou Inconscient.
+ * §71: dropped to 0 HP under a `stableAtZero` weapon ("Shadow Dagger of the Vampire Familiar": "it ends up Stable") —
+ * flag written in the SAME update as the HP (`planDamageAtZero`), read by all clients before setting Dead or Unconscious.
  */
 const keptStable = actor => !!actor?.getFlag?.(MODULE_ID, "stableAtZero");
 
-/** Survit à 0 PV sans jets contre la mort : Régénération, ou stabilisée par l'arme qui l'y a fait tomber. */
+/** Survives at 0 HP without death saving throws: Regeneration, or stabilized by the weapon that dropped it there. */
 const survivesZero = actor => regeneratesAtZero(actor) || keptStable(actor);
 
-/** L'item des dégâts (message de dégâts de dnd5e, `options.originatingMessage`), ou null. */
+/** The damage's item (dnd5e damage message, `options.originatingMessage`), or null. */
 function damageItemOf(options) {
   const message = options?.originatingMessage ?? options?.origin;
   return message?.getAssociatedActivity?.()?.item ?? message?.getAssociatedItem?.() ?? null;
 }
 
-/** L'acteur est-il mort ? (core/death.mjs, `isDead`) — pour l'abri et le tir au contact. */
+/** Is the actor dead? (core/death.mjs, `isDead`) — for cover and shooting in close combat. */
 export function isDeadActor(actor) {
   const hp = actor?.system?.attributes?.hp;
   if ( !actor || !hp ) return !!actor?.statuses?.has("dead");
   return isDead({ hp: hp.value, saves: savesOf(actor) || survivesZero(actor) || transformsAtZero(actor) || standsAtZero(actor) || !!pendingFortitude(actor) || risingAtZero(actor), statuses: Array.from(actor.statuses) });
 }
 
-/** Le message de dégâts est-il un coup critique ? */
+/** Is the damage message a Critical Hit? */
 function isCriticalDamage(options) {
   // #269 (§545): the engine's verdict for this target, when the engine applies (adapter/messages.mjs, `applyDamageToToken`).
   const own = options?.[MODULE_ID]?.criticalHit;
   if ( typeof own === "boolean" ) return own;
   const message = options?.originatingMessage ?? options?.origin;
-  // §207 : un critique traité par la table (dégâts normaux) reste un coup critique.
+  // §207: a critical handled by the table (normal damage) remains a Critical Hit.
   return !!message?.rolls?.some?.(r => r.isCritical || r.options?.isCritical) || !!message?.getFlag?.(MODULE_ID, "criticalHit");
 }
 
@@ -91,9 +91,9 @@ async function announce(actor, key, data, kind) {
 }
 
 /**
- * Pose un état du système (« dead », « stable ») marqué par le moteur, s'il n'y est pas déjà. Le système peut
- * poser Mort au même moment (`updateDowned`, dès qu'une mise à jour des PV voit trois échecs) : l'identifiant de
- * l'état est fixe (`keepId`), la seconde création échoue, et c'est sans conséquence.
+ * Sets a system condition ("dead", "stable") marked by the engine, if it is not already there. The system may
+ * set Dead at the same moment (`updateDowned`, as soon as an HP update sees three failures): the condition's identifier
+ * is fixed (`keepId`), the second creation fails, and it is harmless.
  */
 export async function setDeathStatus(actor, id) {
   if ( actor.statuses.has(id) ) return null;
@@ -106,9 +106,10 @@ export async function setDeathStatus(actor, id) {
 }
 
 /**
- * Retire des effets un à un, sans échouer sur un effet déjà retiré ailleurs entre-temps (§18.18) : `deleteEmbeddedDocuments`
- * refuse toute l'opération si l'un d'eux n'existe plus (« ActiveEffect … does not exist »), et l'erreur partait dans la
- * console — vu quand le filet de sécurité des scénarios retirait la Mort d'un boss en même temps que le moteur (§18.7).
+ * Removes effects one by one, without failing on an effect already removed elsewhere in the meantime (§18.18):
+ * `deleteEmbeddedDocuments` refuses the whole operation if one of them no longer exists ("ActiveEffect … does not exist"),
+ * and the error went to the console — seen when the scenarios' safety net removed Dead from a boss at the same time as the
+ * engine (§18.7).
  */
 async function deleteEffects(actor, ids) {
   for ( const id of ids ) {
@@ -119,7 +120,7 @@ async function deleteEffects(actor, ids) {
 }
 
 async function removeStable(actor) {
-  // §16.47 : quelle que soit sa source (le moteur, ou le sort Stabilisation).
+  // §16.47: whatever its source (the engine, or the spell Spare the Dying).
   const ids = actor.effects.filter(e => e.statuses.has("stable")).map(e => e.id);
   await deleteEffects(actor, ids);
 }
@@ -131,9 +132,9 @@ async function markDead(actor, reason, data={}) {
 }
 
 /**
- * §18.13 : la Mort que dnd5e pose d'office sur un PNJ à 0 PV en combat (`updateDowned`, flag `autoDowned`,
- * documents/actor/actor.mjs:3671-3682) ne vaut pas pour une créature qui peut encore régénérer. dnd5e la repose à chaque
- * écriture des PV, de façon asynchrone : on la retire aussi à sa création (runtime/regeneration.mjs). Rend true si retirée.
+ * §18.13: the Dead that dnd5e automatically sets on an NPC at 0 HP in combat (`updateDowned`, flag `autoDowned`,
+ * documents/actor/actor.mjs:3671-3682) does not apply to a creature that can still regenerate. dnd5e sets it again on each
+ * HP write, asynchronously: it is also removed at its creation (runtime/regeneration.mjs). Returns true if removed.
  */
 export async function dropAutoDead(actor) {
   if ( !survivesZero(actor) ) return false;
@@ -144,18 +145,18 @@ export async function dropAutoDead(actor) {
 }
 
 /**
- * §17.1 : à 0 PV, Mort ou Inconscient (qui entraîne Neutralisé et À terre, `CONFIG.DND5E.conditionTypes.unconscious`,
- * riders posés par dnd5e à la création, documents/active-effect.mjs `_onCreateOperation`), quel que soit le réglage
- * « Auto-Apply Downed » et même hors combat. Marqué par le moteur : retiré quand les PV remontent. MJ actif.
+ * §17.1: at 0 HP, Dead or Unconscious (which brings Incapacitated and Prone, `CONFIG.DND5E.conditionTypes.unconscious`,
+ * riders set by dnd5e at creation, documents/active-effect.mjs `_onCreateOperation`), whatever the "Auto-Apply Downed" setting
+ * and even out of combat. Marked by the engine: removed when the HP rise. Active GM.
  * @returns {Promise<"dead"|"unconscious"|null>}
  */
 export async function ensureDowned(actor, { afterUpdate=false }={}) {
   const hp = actor?.system?.attributes?.hp;
   if ( !hp ) return null;
-  // §19.5 : une créature à seconde phase ne tombe pas, elle change de forme (runtime/coven.mjs).
-  // §22 : Rage implacable — la sauvegarde de Constitution décide d'abord (runtime/barbarian.mjs) ; §61 : Robustesse de la non-vie.
-  // §155 : en Forme sauvage, 0 PV met fin à la forme (runtime/wildshape.mjs), qui supprime l'acteur transformé — y poser Inconscient
-  // croisait cette suppression (« The Actor … does not exist »).
+  // §19.5: a creature with a second phase does not fall, it changes form (runtime/coven.mjs).
+  // §22: Relentless Rage — the Constitution save decides first (runtime/barbarian.mjs); §61: Undead Fortitude.
+  // §155: in Wild Shape, 0 HP ends the form (runtime/wildshape.mjs), which deletes the transformed actor —
+  // setting Unconscious on it crossed with that deletion ("The Actor … does not exist").
   if ( (hp.value <= 0) && isWildShaped(actor) ) return null;
   if ( (hp.value <= 0) && (transformsAtZero(actor) || standsAtZero(actor) || relentlessAtZero(actor) || pendingFortitude(actor) || risingAtZero(actor)) ) return null;
   const regenerates = (hp.value <= 0) && survivesZero(actor);
@@ -163,11 +164,11 @@ export async function ensureDowned(actor, { afterUpdate=false }={}) {
   const status = downedStatus({ hp: hp.value, saves: savesOf(actor), statuses: Array.from(actor.statuses),
     failures: actor.system.attributes.death?.failure ?? 0, regenerates });
   if ( !status ) return null;
-  // PV qui viennent d'être écrits, en combat : dnd5e pose lui-même cet état, avec le même id (`keepId`), sur le client qui a
-  // écrit (`updateDowned`, data/actor/templates/attributes.mjs:732 ; actor.mjs:3652-3682). Les deux créations se
-  // croisaient et celle de dnd5e échouait dans la console (« _id dnd5edead0000000 already exists », vu le 2026-09-26). On
-  // lui laisse un instant, et on ne pose l'état que s'il manque encore : une écriture des PV dans le delta d'un token non lié
-  // (outil, macro) ne passe pas par `updateDowned`, et rien d'autre ne le poserait.
+  // HP that have just been written, in combat: dnd5e itself sets this condition, with the same id (`keepId`), on the client that
+  // wrote (`updateDowned`, data/actor/templates/attributes.mjs:732; actor.mjs:3652-3682). The two creations
+  // crossed and dnd5e's failed in the console ("_id dnd5edead0000000 already exists", seen on 2026-09-26). We
+  // give it a moment, and only set the condition if it is still missing: an HP write in an unlinked token's delta
+  // (tool, macro) does not go through `updateDowned`, and nothing else would set it.
   if ( afterUpdate && !regenerates && (systemDowned(actor) === status) ) {
     await new Promise(resolve => setTimeout(resolve, AFTER_ZERO_HP_MS));
     if ( actor.statuses.has(status) ) return null;
@@ -176,7 +177,7 @@ export async function ensureDowned(actor, { afterUpdate=false }={}) {
   return status;
 }
 
-/** L'état que dnd5e pose de lui-même à 0 PV (`updateDowned`, réglage « Auto-Apply Downed »), ou null. */
+/** The condition that dnd5e sets itself at 0 HP (`updateDowned`, "Auto-Apply Downed" setting), or null. */
 function systemDowned(actor) {
   const mode = globalThis.dnd5e?.settings?.autoApplyDowned ?? "none";
   if ( (mode === "none") || !actor.inCombat ) return null;
@@ -190,49 +191,49 @@ function systemDowned(actor) {
 }
 
 /* -------------------------------------------- */
-/*  Dégâts                                      */
+/*  Damage                                      */
 /* -------------------------------------------- */
 
 /**
- * `dnd5e.preApplyDamage` (synchrone) : écrit les échecs dans la mise à jour des dégâts et garde dans
- * `options` ce qu'il faudra poser après. Sur le client qui applique les dégâts.
+ * `dnd5e.preApplyDamage` (synchronous): writes the failures into the damage update and keeps in
+ * `options` what will have to be set afterwards. On the client that applies the damage.
  */
 export function planDamageAtZero(actor, amount, updates, options) {
   const hp = actor?.system?.attributes?.hp;
   const death = actor?.system?.attributes?.death;
   if ( !hp || !death || !(amount > 0) || actor.statuses.has("dead") ) return;
-  if ( transformsAtZero(actor) || standsAtZero(actor) ) return;   // §19.5-6 : ni échec ni mort, la seconde phase ou l'amulette vient
-  // §16.11 : ce qu'une réserve (Égide arcanique) a absorbé, inscrit plus tôt dans ce même hook, n'atteint pas la créature.
+  if ( transformsAtZero(actor) || standsAtZero(actor) ) return;   // §19.5-6: no failure or death; second phase or amulet takes over
+  // §16.11: what a reserve (Arcane Ward) absorbed, recorded earlier in this same hook, does not reach the creature.
   const incoming = Math.max(0, amount - (options?.[MODULE_ID]?.absorbed ?? 0));
   const through = incoming - Math.min(hp.temp ?? 0, incoming);
-  // §210 : un coup de mêlée non létal — à 1 PV au lieu de 0, Inconsciente (posé après, `settleDamageAtZero`).
+  // §210: a non-lethal melee hit — to 1 HP instead of 0, Unconscious (set afterwards, `settleDamageAtZero`).
   const knocker = knockOutAtZero(actor, through, updates, options);
   if ( knocker ) {
     options[MODULE_ID] = { ...(options[MODULE_ID] ?? {}), knockedOut: knocker };
     return;
   }
-  // §73 : Protection contre la mort — à 1 PV au lieu de 0 (même tuée sur le coup : elle n'y tombe pas), le sort prend fin.
+  // §73: Death Ward — to 1 HP instead of 0 (even killed outright: it does not fall to 0), the spell ends.
   const warded = wardAtZero(actor, through, updates);
   if ( warded ) {
     options[MODULE_ID] = { ...(options[MODULE_ID] ?? {}), endured: warded.name };
     return;
   }
-  // §31 : Acharnement (Orc) — à 1 PV au lieu de 0, sans échec ni mort (sauf tué sur le coup).
+  // §31: Relentless Endurance (Orc) — to 1 HP instead of 0, with no failure or death (unless killed outright).
   const endured = endureAtZero(actor, through, updates);
   if ( endured ) {
     options[MODULE_ID] = { ...(options[MODULE_ID] ?? {}), endured: endured.name };
     return;
   }
-  // §71 : une arme qui stabilise ce qu'elle fait tomber — ni échec ni mort ; flag écrit avec les PV, Stabilisé posé après.
+  // §71: a weapon that stabilizes what it drops — no failure or death; flag written with the HP, Stable set afterwards.
   if ( (hp.value > 0) && (through >= hp.value) && contentOf(damageItemOf(options)).entry?.stableAtZero ) {
     updates[`flags.${MODULE_ID}.stableAtZero`] = true;
     options[MODULE_ID] = { ...(options[MODULE_ID] ?? {}), death: { stable: true } };
     return;
   }
-  // Déjà à 0 et gardée en vie par une telle arme : de nouveaux dégâts suivent la règle ordinaire (un PNJ meurt).
+  // Already at 0 and kept alive by such a weapon: new damage follows the ordinary rule (an NPC dies).
   if ( (hp.value <= 0) && keptStable(actor) && (through > 0) ) updates[`flags.${MODULE_ID}.stableAtZero`] = new foundry.data.operators.ForcedDeletion();
   const critical = isCriticalDamage(options);
-  // §61 : Robustesse de la non-vie — la sauvegarde due part avec les PV ; ni échec ni mort tant qu'elle n'est pas jouée.
+  // §61: Undead Fortitude — the save due goes out with the HP; no failure or death until it is played.
   const taken = incoming;
   if ( planFortitude(actor, { hp: hp.value, through, taken, types: options?.[MODULE_ID]?.takenTypes ?? [], critical }, updates) ) return;
   const outcome = damageAtZero({ hp: hp.value, max: hp.max, through, critical, failures: death.failure ?? 0, saves: savesOf(actor) });
@@ -241,9 +242,9 @@ export function planDamageAtZero(actor, amount, updates, options) {
   options[MODULE_ID] = { ...(options[MODULE_ID] ?? {}), death: { ...outcome, critical, through, max: hp.max, before: hp.value } };
 }
 
-/** `dnd5e.applyDamage` : pose Mort, retire Stabilisé, et le dit dans le chat. */
+/** `dnd5e.applyDamage`: sets Dead, removes Stable, and says so in the chat. */
 export async function settleDamageAtZero(actor, amount, options) {
-  // §210 : assommée — Inconsciente à 1 PV, jusqu'à des PV regagnés ou des premiers soins (runtime/knockout.mjs).
+  // §210: knocked out — Unconscious at 1 HP, until HP are regained or first aid (runtime/knockout.mjs).
   const knocker = options?.[MODULE_ID]?.knockedOut;
   if ( knocker ) {
     await actor.setFlag(MODULE_ID, KNOCKED_OUT_FLAG, { by: knocker });
@@ -254,7 +255,7 @@ export async function settleDamageAtZero(actor, amount, options) {
   const outcome = options?.[MODULE_ID]?.death;
   if ( !outcome ) return null;
   if ( outcome.stable ) {
-    // §71 : Stabilisé, et la Mort que dnd5e pose d'office sur un PNJ à 0 PV (`autoDowned`) retirée — Inconscient à la place.
+    // §71: Stable, and the Dead that dnd5e automatically sets on an NPC at 0 HP (`autoDowned`) removed — Unconscious instead.
     await setDeathStatus(actor, "stable");
     await dropAutoDead(actor);
     await ensureDowned(actor);
@@ -278,8 +279,8 @@ export async function settleDamageAtZero(actor, amount, options) {
 /* -------------------------------------------- */
 
 /**
- * §50 : stabiliser une créature à 0 PV (trousse de soins) — comme trois succès aux jets contre la mort : Stabilisé posé par le
- * moteur (retiré quand les PV remontent ou qu'elle subit des dégâts), annoncé au chat. Rend false si rien n'est à faire.
+ * §50: stabilize a creature at 0 HP (healer's kit) — like three successes on death saving throws: Stable set by the
+ * engine (removed when the HP rise or it takes damage), announced in the chat. Returns false if there is nothing to do.
  */
 export async function stabilize(actor, { by="", with: tool="" }={}) {
   const hp = actor?.system?.attributes?.hp?.value ?? 1;
@@ -289,7 +290,7 @@ export async function stabilize(actor, { by="", with: tool="" }={}) {
   return true;
 }
 
-/** `dnd5e.rollDeathSaveV2` : Stabilisé après trois succès, Mort après trois échecs. Sur le client qui a lancé. */
+/** `dnd5e.rollDeathSaveV2`: Stable after three successes, Dead after three failures. On the client that rolled. */
 export async function settleDeathSave(actor, outcome) {
   const status = statusAfterDeathSave(outcome);
   if ( status === "stable" ) {
@@ -300,7 +301,7 @@ export async function settleDeathSave(actor, outcome) {
   return null;
 }
 
-/** La créature doit-elle lancer un jet contre la mort ? */
+/** Must the creature roll a death saving throw? */
 export function deathSaveDue(actor) {
   const hp = actor?.system?.attributes?.hp;
   const death = actor?.system?.attributes?.death;
@@ -310,16 +311,16 @@ export function deathSaveDue(actor) {
 }
 
 /**
- * Côté joueur : la fenêtre du jet contre la mort s'ouvre sur SON écran, ce sont ses dés. Le jet n'est pas
- * facultatif : fenêtre fermée ou délai écoulé, il part sans fenêtre, toujours sur son client.
+ * Player side: the death saving throw window opens on THEIR screen; it is their dice. The roll is not
+ * optional: window closed or timeout elapsed, it goes without a window, always on their client.
  */
 export async function handleDeathSaveQuery({ actor: actorUuid }, { user=null }={}) {
-  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  // §472: only the GM sends this request in play; from a player, it is dropped (security refusal, not forceable).
   if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | deathSave query from ${user.name} refused: only a GM sends it`); return false; }
   const actor = await fromUuid(actorUuid);
   if ( !actor?.isOwner || !deathSaveDue(actor) ) return false;
   ui.notifications.info(t("DemandeJoueur", { name: actor.name }));
-  // §401 : à son tour dans la file des fenêtres de ce poste.
+  // §401: in turn in the queue of this station's windows.
   let rolls = await inLine(async () => {
     const cancel = closeRollDialogAfter(actor, () => {}, null, { awaiting: "roll" });
     try { return await actor.rollDeathSave({}, { configure: true }); }
@@ -330,8 +331,8 @@ export async function handleDeathSaveQuery({ actor: actorUuid }, { user=null }={
 }
 
 /**
- * Au début du tour : le joueur connecté qui possède la créature lance chez lui ; sinon (PNJ important, PJ sans
- * joueur, joueur qui ne répond pas) le moteur lance. MJ actif uniquement.
+ * At the start of the turn: the connected player who owns the creature rolls on their side; otherwise (important NPC, PC without a
+ * player, a player who does not respond) the engine rolls. Active GM only.
  */
 export async function requestDeathSave(actor) {
   const userId = rollerFor(actor);
@@ -345,13 +346,13 @@ export async function requestDeathSave(actor) {
 }
 
 /* -------------------------------------------- */
-/*  Retour à la vie                             */
+/*  Return to life                              */
 /* -------------------------------------------- */
 
-/** Les PV remontent : les états Mort et Stabilisé que le moteur avait posés tombent. MJ actif uniquement. */
+/** The HP rise: the Dead and Stable conditions that the engine had set drop off. Active GM only. */
 export async function clearDeathMarks(actor) {
   if ( !(actor?.system?.attributes?.hp?.value > 0) ) return 0;
-  // Mort et Stabilisé posés par le moteur ; Stabilisé, quelle que soit sa source (Stabilisation, §16.47).
+  // Dead and Stable set by the engine; Stable, whatever its source (Spare the Dying, §16.47).
   const ids = actor.effects.filter(e => e.getFlag(MODULE_ID, "death") || e.statuses.has("stable")).map(e => e.id);
   await deleteEffects(actor, ids);
   if ( keptStable(actor) ) await actor.unsetFlag(MODULE_ID, "stableAtZero");   // §71

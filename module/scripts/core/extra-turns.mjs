@@ -1,25 +1,25 @@
 /**
- * Des tours d'affilée (clé de contenu `extraTurns`) : Arrêt du temps — « vous jouez 1d4 + 1 tours d'affilée, pendant lesquels vous
- * pouvez utiliser des actions et vous déplacer normalement ». Le compte restant est noté sur le lanceur ; à la fin de chacun de ses
- * tours, tant qu'il en reste, le combat revient à lui au lieu de passer au suivant. Fonctions pures.
+ * Consecutive turns (content key `extraTurns`): Time Stop — "you take 1d4 + 1 turns in a row, during which you
+ * can use actions and move normally". The remaining count is noted on the caster; at the end of each of its
+ * turns, as long as some remain, combat comes back to it instead of moving on to the next. Pure functions.
  */
 
 /**
- * Le tour qui vient de finir doit-il être rejoué par le même combattant ?
- * @param {{combat: string, left: number}|null|undefined} state  Ce que porte le combattant dont le tour finit.
- * @param {{combat: string, forward: boolean}} change         Le combat, et si le tracker a avancé (pas un retour arrière du MJ).
+ * Must the turn that just ended be replayed by the same combatant?
+ * @param {{combat: string, left: number}|null|undefined} state  What the combatant whose turn ends carries.
+ * @param {{combat: string, forward: boolean}} change         The combat, and whether the tracker moved on (not a GM step-back).
  */
 export function takesAnotherTurn(state, { combat, forward }) {
   return !!state && (state.combat === combat) && (state.left > 0) && (forward === true);
 }
 
-/** Le tracker a-t-il avancé de `prior` à `current` ? (round suivant, ou même round et tour plus loin) */
+/** Has the tracker moved forward from `prior` to `current`? (next round, or same round and later turn) */
 export function movedForward(prior, current) {
   if ( !prior || !current ) return false;
   return (current.round > prior.round) || ((current.round === prior.round) && (current.turn > prior.turn));
 }
 
-/** Les erreurs de la clé. Vide = valide. */
+/** The key's errors. Empty = valid. */
 export function validateExtraTurns(rule, at) {
   const ok = rule && (typeof rule === "object") && !Array.isArray(rule) && (typeof rule.formula === "string") && rule.formula.trim()
     && Object.keys(rule).every(k => k === "formula");

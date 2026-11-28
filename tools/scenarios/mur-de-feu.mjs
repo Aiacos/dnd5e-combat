@@ -1,16 +1,16 @@
 /**
- * Mur de feu (SPEC §169), monde `dnd-6`, arène, coin libre au nord-ouest. Le Magicien (sort prêté du Manuel des joueurs, à volonté) pose
- * le mur par `api.mcp.wall` (la visée par points, les clics remplacés par les points) :
- *  - en L, un point hors de l'axe : la ligne redressée (pas de diagonale), deux segments, des murs du cœur qui arrêtent la vue, pas le
- *    déplacement ; le côté brûlant à l'opposé du Magicien (au sud), sa face brûlante posée (3 m) ;
- *  - le Zombi, au sud contre le mur, fait la sauvegarde à l'apparition ;
- *  - à son tour, il traverse le mur vers le nord : dégâts sans sauvegarde ; il repasse au sud : rien (une fois par tour) ; il finit son
- *    tour au sud : dégâts sans sauvegarde ;
- *  - la face retournée passe au nord ;
- *  - §170 : des lumières de chaque côté (10/20 ft), retirées avec le mur ; le bruit de feu si darsh-animations est actif ;
- *  - en anneau autour du Zombi : le disque posé devient un anneau fin (forme « ring »), ses murs sur le rayon ; la fenêtre « de quel
- *    côté » (§171) répondue « vers l'extérieur » : la couronne autour brûle ; retourné vers l'intérieur, le Zombi y finit son tour : dégâts.
- * Remet positions, PV, combat ; les régions et murs posés tombent avec la remise en état du lanceur.
+ * Wall of Fire (SPEC §169), world `dnd-6`, arena, free corner to the northwest. The Wizard (spell lent from the Player's
+ * Handbook, at will) places the wall through `api.mcp.wall` (aiming by points, the clicks replaced by the points):
+ *  - L-shaped, a point off the axis: the line straightened (no diagonal), two segments, core walls that block sight, not
+ *    movement; the burning side opposite the Wizard (south), its burning face placed (3 m);
+ *  - the Zombie, to the south against the wall, makes the saving throw on appearance;
+ *  - on its turn, it crosses the wall to the north: damage without a saving throw; it crosses back south: nothing (once per
+ *    turn); it ends its turn to the south: damage without a saving throw;
+ *  - the flipped face goes to the north;
+ *  - §170: lights on each side (10/20 ft), removed with the wall; the fire sound if darsh-animations is active;
+ *  - as a ring around the Zombie: the placed disc becomes a thin ring ("ring" shape), its walls on the radius; the "which
+ *    side" window (§171) answered "outward": the crown around burns; flipped inward, the Zombie ends its turn there: damage.
+ * Restores positions, HP, combat; the regions and walls placed fall with the caster's restoration.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -54,7 +54,7 @@ export default {
       return (await current()) === token.id;
     };
     if ( !ctx.expect(await turnOf(mage), "tour du Magicien") ) return;
-    // La fin de tour passe par la résolution du MJ actif (jet, carte, animation) : attendre les dégâts, 15 s au plus.
+    // The end of the turn goes through the active GM's resolution (roll, card, animation): wait for the damage, 15 s at most.
     const burnt = async before => {
       let hp = await ctx.hp(zombi);
       for ( const stop = Date.now() + 15000; (hp >= before) && (Date.now() < stop); hp = await ctx.hp(zombi) ) await pause(500);
@@ -73,7 +73,7 @@ export default {
       `sans diagonale : ${lines.map(l => `${Math.round(l.rotation)}° ${Math.round(l.length / grid * 5)} ft`).join(", ")}`);
     ctx.expect((s.walls.length === 2) && s.walls.every(w => (w.move === 0) && (w.sight === 20)), `opaque : ${s.walls.length} murs, déplacement ${s.walls.map(w => w.move).join("/")}, vue ${s.walls.map(w => w.sight).join("/")}`);
     ctx.expect(s.side === -1, `côté brûlant à l'opposé du Magicien (côté ${s.side})`);
-    // §170 : la lumière, des deux côtés ; le bruit (darsh-animations, s'il est actif).
+    // §170: the light, on both sides; the sound (darsh-animations, if active).
     const above = s.lights.filter(l => l.y < 33 * grid).length, below = s.lights.filter(l => l.y > 33 * grid).length;
     ctx.expect((above > 0) && (below > 0) && s.lights.every(l => (l.bright === 10) && (l.dim === 20)), `lumière : ${s.lights.length} sources (${above} au nord, ${below} au sud), 10/20 ft`);
     ctx.log(`bruit de feu : ${s.sounds} son(s) d'ambiance`);
@@ -86,7 +86,7 @@ export default {
     let hp = await ctx.hp(zombi);
     ctx.expect(hp < 100, `apparition : le Zombi subit le feu (${100 - hp} PV)`);
 
-    // 2. Traversée, une fois par tour ; fin de tour du côté brûlant.
+    // 2. Crossing, once per turn; end of turn on the burning side.
     if ( !ctx.expect(await turnOf(zombi), "tour du Zombi") ) return;
     await ctx.engineLog();
     let before = await ctx.hp(zombi);
@@ -111,11 +111,11 @@ export default {
     const ended = await hits(/face brûlante|burning side.*Zombi \(turnEnd\)|Zombi \(turnEnd\)/);
     ctx.expect(ended.length && (hp < before), `fin de tour du côté brûlant : dégâts (${before - hp} PV)`);
 
-    // 3. Retournée.
+    // 3. Flipped.
     s = await ctx.engine("wallSide", { regionId: placed.regionId, flip: true });
     const north = (s.burning?.shapes ?? []).some(x => x.type === "polygon" && x.points.some((v, i) => (i % 2) && (v < 33 * grid)));
     ctx.expect((s.side === 1) && north, `retournée : la face brûlante au nord (côté ${s.side})`);
-    // Le coin extérieur (au nord-est du coin du L) : couvert par le carré qui relie les deux bandes.
+    // The outer corner (northeast of the L's corner): covered by the square that joins the two bands.
     const covers = (poly, x, y) => { const xs = poly.points.filter((_, i) => !(i % 2)), ys = poly.points.filter((_, i) => i % 2);
       return (x > Math.min(...xs)) && (x < Math.max(...xs)) && (y > Math.min(...ys)) && (y < Math.max(...ys)); };
     ctx.expect((s.burning?.shapes ?? []).some(x => (x.type === "polygon") && covers(x, 18 * grid, 32 * grid)), "retournée : le coin extérieur du L est couvert");
@@ -125,19 +125,19 @@ export default {
     const lightsLeft = (await sceneObjects("AmbientLight")).filter(l => s.lights.some(x => (x.x === l.x) && (x.y === l.y))).length;
     ctx.expect(!lightsLeft, `le mur retiré, ses lumières aussi (${lightsLeft} restante(s))`);
 
-    // 4. En anneau autour du Zombi, le Magicien dehors.
+    // 4. As a ring around the Zombie, the Wizard outside.
     if ( !ctx.expect(await turnOf(mage), "tour du Magicien (anneau)") ) return;
     await place(zombi, 14, 34);
     const centre = { x: 14.5 * grid, y: 34.5 * grid };
     const item = ((await ctx.call("get-actor", { actorId: mage.actorId })).items ?? []).find(i => i._id === fire);
-    // Le Manuel des joueurs pose un disque (« cylinder »), dnd5e un anneau (« ring ») ; la pose par coordonnées, un disque.
+    // The Player's Handbook places a disc ("cylinder"), dnd5e a ring ("ring"); placing by coordinates, a disc.
     const ring = Object.entries(item?.system?.activities ?? {}).find(([, a]) => ["cylinder", "ring"].includes(a.target?.template?.type))?.[0];
     if ( !ctx.expect(!!ring, "anneau : activité trouvée") ) return;
     const known = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
     const used = await ctx.use({ tokenId: mage.id, itemId: fire, activityId: ring, consume: false, area: { shape: "circle", ...centre, radius: 2 * grid } });
     if ( !ctx.expect(!!used.regionId, "anneau : région posée") ) return;
     regions.push(used.regionId);
-    // §171 : la fenêtre « de quel côté » s'ouvre chez qui l'a posé (ici le MJ) — vers l'extérieur.
+    // §171: the "which side" window opens for whoever placed it (here the GM) — outward.
     let asked = null;
     for ( let i = 0; (i < 10) && !asked; i++ ) {
       asked = (await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: known, waitMs: 1000 }).catch(() => null))?.windows?.[0] ?? null;

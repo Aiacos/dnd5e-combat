@@ -1,11 +1,11 @@
 /**
- * §213 : Armes improvisées, demandées au MJ — Arène, Guerrier contre le Zombi (300 PV le temps du test), au contact. Le client du MJ
- * joue les deux côtés : la fenêtre du joueur (objet, geste), puis celle du MJ (décision).
- *  1. Acceptée en arme improvisée : une arme temporaire « (improvisée) » de type `improv`, 1d4 du type choisi, sans maîtrise ; son
- *     attaque part contre le Zombi ; elle disparaît à la fin du tour.
- *  2. Refusée : pas d'arme, pas d'attaque.
- *  3. Acceptée comme un gourdin : l'arme temporaire a les dégâts et le type du gourdin.
- * Remet positions, PV, items temporaires.
+ * §213: Improvised weapons, requested from the GM — Arena, Fighter against the Zombie (300 HP for the length of the test), in
+ * melee contact. The GM's client plays both sides: the player's window (item, gesture), then the GM's (decision).
+ *  1. Accepted as an improvised weapon: a temporary "(improvised)" weapon of type `improv`, 1d4 of the chosen type, no proficiency;
+ *     its attack goes against the Zombie; it disappears at the end of the turn.
+ *  2. Refused: no weapon, no attack.
+ *  3. Accepted as a club: the temporary weapon has the club's damage and type.
+ * Resets positions, HP, temporary items.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -66,7 +66,7 @@ export default {
       return (await current()) === hero.id;
     };
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
-    /** Attend la fenêtre dont le titre répond à `title`, la remplit et clique `button`. */
+    /** Waits for the window whose title matches `title`, fills it in and clicks `button`. */
     const fill = async (ids, title, fields, button, ms=15000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
@@ -77,7 +77,7 @@ export default {
       }
       return null;
     };
-    /** Demande une arme improvisée ; `verdict` : les champs et le bouton du MJ. Rend ce qui a été vu et les messages produits. */
+    /** Requests an improvised weapon; `verdict`: the GM's fields and button. Returns what was seen and the messages produced. */
     const ask = async (object, mode, verdict) => {
       const since = await ctx.lastMessageId();
       const ids = await known();

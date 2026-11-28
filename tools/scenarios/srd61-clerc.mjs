@@ -1,14 +1,14 @@
 /**
- * §434 : Disciple de la vie du SRD de dnd5e 6.1 joué en jeu (§433, point 6). Le SRD 6.1 en fait un enchantement du sort de soin
- * (`2 + @item.level` sur le soin de l'activité) ; le moteur, qui ajoutait lui-même 2 + le niveau du sort, ne doit plus le faire pour un
- * sort enchanté. Arène de test : le Clerc passe niveau 3 (emplacements de niveau 2) et reçoit, prêtés depuis `dnd5e.classes24` et
- * `dnd5e.spells24` (SRD 6.1, pas le Manuel), Guérison suprême (dés au maximum : le montant se lit exactement) et Soins. Le Guerrier,
- * à côté, reçoit 60 PV max de plus et tombe à 1 PV avant chaque soin. Vérifie que le soin rendu vaut :
- *  - Disciple de la vie du SRD 6.1, Soins enchanté par son activité : niveau 1 → 16 + Sagesse + 3, niveau 2 → 32 + Sagesse + 4 (le bonus
- *    une seule fois) ; le sort porte l'enchantement ;
- *  - Disciple de la vie du SRD 6.1, Soins non enchanté : 16 + Sagesse + 3 (le moteur ajoute le bonus) ;
- *  - ancienne forme (le même item sans son activité ni son effet d'enchantement, comme une fiche faite avant dnd5e 6.1) : 16 + Sagesse + 3.
- * Remet niveau, PV ; retire les items prêtés.
+ * §434: SRD 6.1 dnd5e Disciple of Life played in game (§433, point 6). SRD 6.1 makes it an enchantment of the healing spell
+ * (`2 + @item.level` on the activity's healing); the engine, which itself added 2 + the spell's level, must no longer do so for an
+ * enchanted spell. Test arena: the Cleric goes to level 3 (level 2 spell slots) and receives, lent from `dnd5e.classes24` and
+ * `dnd5e.spells24` (SRD 6.1, not the Handbook), Supreme Healing (dice at maximum: the amount reads exactly) and Cure Wounds.
+ * The Fighter, next to him, receives 60 more max HP and drops to 1 HP before each healing. Checks that the healing equals:
+ *  - SRD 6.1 Disciple of Life, Cure Wounds enchanted by its activity: level 1 → 16 + Wisdom + 3, level 2 → 32 + Wisdom + 4
+ *    (the bonus only once); the spell carries the enchantment;
+ *  - SRD 6.1 Disciple of Life, Cure Wounds not enchanted: 16 + Wisdom + 3 (the engine adds the bonus);
+ *  - old form (the same item without its activity or its enchantment effect, like a sheet made before dnd5e 6.1): 16 + Wisdom + 3.
+ * Puts back level, HP; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e";
@@ -50,7 +50,7 @@ export default {
     if ( !ctx.expect(!!cls, "le Clerc a sa classe de clerc") ) return;
     await ctx.call("upsert-actor-item", { actorId: cleric.actorId, itemData: { "system.levels": 3 }, match: { path: "_id", value: cls._id } });
     ctx.restore(() => ctx.call("upsert-actor-item", { actorId: cleric.actorId, itemData: { "system.levels": cls.system.levels }, match: { path: "_id", value: cls._id } }).catch(() => {}));
-    // Les emplacements dépensés remis à plein à la fin.
+    // The spent spell slots put back to full at the end.
     ctx.restore(() => ctx.call("update-actor", { actorId: cleric.actorId, actorData: { "system.spells.spell1.value": 9, "system.spells.spell2.value": 9 } }).catch(() => {}));
 
     const lend = async (uuid, edit=null) => {
@@ -78,7 +78,7 @@ export default {
       const errors = await ctx.clientErrors();
       ctx.expect(!errors.length, `${name} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
-    /** Soins sur le Guerrier à 1 PV, à ce niveau d'emplacement ; rend les PV gagnés et la formule du jet. */
+    /** Cure Wounds on the Fighter at 1 HP, at this spell slot level; returns the HP gained and the roll's formula. */
     const heal = async (cure, level) => {
       await ctx.call("update-actor", { actorId: cleric.actorId, actorData: { [`system.spells.spell${level}.value`]: 2 } });
       await ctx.setHp(fighter, 1);
@@ -99,7 +99,8 @@ export default {
     await part("Disciple de la vie (SRD 6.1), Soins enchanté", async () => {
       const disciple = await lend(DISCIPLE);
       const cure = await lend(`${SRD}.spells24.Item.phbsplCureWounds`, d => { d.system.prepared = 1; });
-      // En jeu, le joueur dépose le sort sur la carte de l'activité (dnd5e : EnchantActivity#applyEnchantment) ; `enchant` fait le même appel.
+      // In game, the player drops the spell on the activity's card (dnd5e: EnchantActivity#applyEnchantment);
+      // `enchant` makes the same call.
       await ctx.engine("enchant", { tokenId: cleric.id, itemId: disciple, activityId: "7BzRpy5Nw0guVN1y", targetItemId: cure, profile: PROFILE });
       await pause(1500);
       const item = ((await ctx.call("get-actor", { actorId: cleric.actorId })).items ?? []).find(i => i._id === cure);

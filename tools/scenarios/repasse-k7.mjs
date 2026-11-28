@@ -1,9 +1,9 @@
 /**
- * §328, lot K7 de la repasse des créatures : ce qu'une capacité de monstre inflige tour après tour, les soins qu'elle bloque, l'absorption
- * d'un type de dégâts (`monsterRecurring`). Arène des sorts : le Lanceur (PNJ) et l'« Ennemi au contact ».
- *  - Spores du Vrock : l'Ennemi Empoisonné subit les dégâts de l'activité « Damage While Poisoned » au début de son tour ;
- *  - Poing putréfié de la Momie : l'Ennemi maudit ne regagne pas de PV ;
- *  - Absorption de l'acide du Golem d'argile (prêtée au Lanceur) : l'acide le soigne au lieu de le blesser.
+ * §328, batch K7 of the creature pass: what a monster ability inflicts turn after turn, the healing it blocks, the absorption
+ * of a damage type (`monsterRecurring`). Spell arena: the Caster (NPC) and the "Enemy in contact".
+ *  - Vrock's Spores: the Poisoned Enemy takes the damage of the "Damage While Poisoned" activity at the start of its turn;
+ *  - Mummy's Rotting Fist: the cursed Enemy does not regain HP;
+ *  - Clay Golem's Acid Absorption (lent to the Caster): acid heals it instead of hurting it.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -52,7 +52,7 @@ export default {
       for ( const id of lent.splice(0) ) await ctx.call("remove-embedded-item", { documentType: "Actor", id: caster.actorId, itemId: id }).catch(() => {});
     });
 
-    // Spores : Empoisonné, puis dégâts au début du tour de l'Ennemi.
+    // Spores: Poisoned, then damage at the start of the Enemy's turn.
     const spores = await lend(`${MM}.mmVrock000000000.Item.mmSpores00000000`);
     await ctx.startCombat([caster, enemy]);
     const s = await ctx.combat();
@@ -81,7 +81,7 @@ export default {
     if ( ctx.ownCombat ) { await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {}); ctx.ownCombat = null; }
     await clear();
 
-    // Poing putréfié : la cible maudite ne regagne pas de PV.
+    // Rotting Fist: the cursed target does not regain HP.
     const fist = await lend(`${MM}.mmMummy000000000.Item.mmRottingFist000`);
     let cursed = false;
     for ( let i = 0; (i < 20) && !cursed; i++ ) {

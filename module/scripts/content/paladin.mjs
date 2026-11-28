@@ -1,111 +1,116 @@
 /**
- * Le Paladin du Manuel des joueurs 2024 (SPEC §25), et les sorts de châtiment. Items du module premium `dnd-players-handbook` 2.2.0
- * (packs `classes` : `phbpdn…`, `spells`). Aura de protection : déjà là (§16, content/auras.mjs).
+ * The Paladin of the Player's Handbook 2024 (SPEC §25), and the smite spells. Items of the premium module
+ * `dnd-players-handbook` 2.2.0 (packs `classes`: `phbpdn…`, `spells`).
+ * Aura of Protection: already there (§16, content/auras.mjs).
  *
- * Ce que dnd5e fait déjà seul : Imposition des mains (soin, retrait du poison — sauf la portée, ci-dessous), Frappes radiantes (effet : +1d8 radiants aux
- * attaques d'arme de corps à corps), Arme sacrée (enchantement : Charisme à l'attaque, dégâts radiants au choix), Châtiment divin
- * gratuit une fois par repos long (l'utilisation de l'item de sort).
+ * What dnd5e already does by itself: Lay On Hands (healing, poison removal — except the range, below), Radiant Strikes
+ * (effect: +1d8 radiant to melee weapon attacks),
+ * Sacred Weapon (enchantment: Charisma to the attack, radiant damage of choice), free Divine Smite once per Long Rest (the
+ * use of the spell item).
  *
- * `smite` (§25) : un sort de châtiment se lance « immédiatement après avoir touché une cible avec une arme de corps à corps ou une
- * frappe à mains nues », par une action Bonus. Le moteur le propose au jet de dégâts de ce coup : `damage` est l'activité de dégâts
- * du sort (ses dés, au niveau lancé, s'ajoutent au jet et sont doublés sur un critique), `fiends` celle qui vaut contre un Fiélon ou
- * un Mort-vivant (Châtiment divin), `save` la sauvegarde que la cible fait ensuite (À terre, Effrayé, Aveuglé…).
+ * `smite` (§25): a smite spell is cast "immediately after hitting a target with a melee weapon or an Unarmed
+ * Strike", as a Bonus Action. The engine offers it at the damage roll of that hit: `damage` is the spell's damage activity
+ * (its dice, at the cast level, are added to the roll and doubled on a Critical Hit), `fiends` the one that applies against
+ * a Fiend or an Undead (Divine Smite), `save` the saving throw the target then makes (Prone, Frightened, Blinded…).
  */
 
-/** « Vous et vos alliés dans votre Aura de protection » : même rayon que l'aura de protection (niveau 18 : 9 m). */
+/** "You and your allies in your Aura of Protection": same radius as the Aura of Protection (level 18: 9 m). */
 const auraImmunity = status => ({ includeSelf: true, affects: "ally", radiusFormula: "@scale.paladin.aura", radius: 10, units: "ft",
   changes: [{ key: "system.traits.ci.value", value: status, type: "add" }] });
 
-/** Les activités d'Imposition des mains du Manuel des joueurs : Soin, Retrait du poison. */
+/** The Lay On Hands activities of the Player's Handbook: Heal, Remove Poison. */
 const LAY_ON_HANDS = ["gXZh9aGHcywV9huC", "K6UeXQwTyDHWvis8"];
 
-/** Perception divine : l'emplacement des Célestes, Fiélons et Morts-vivants à 18 m — tant que dure l'effet du Conduit divin. */
+/** Divine Sense: the location of Celestials, Fiends and Undead within 18 m — as long as the effect of Channel Divinity lasts. */
 const DIVINE_SENSE = { sense: { kind: "locate", range: 60, units: "ft", via: "effect", fromEffect: "hr8wnlgs3uXphCnI", walls: false,
   magic: true, detects: { "target.creatureType": ["celestial", "fiend", "undead"] } } };
 
 export const PALADIN = Object.freeze({
-  // Le Conduit divin du paladin : `channel-divinity-paladin` (SRD de dnd5e 6.1), `channel-divinity` (Manuel des joueurs).
+  // The Paladin's Channel Divinity: `channel-divinity-paladin` (dnd5e 6.1 SRD), `channel-divinity` (Player's Handbook).
   "channel-divinity-paladin": DIVINE_SENSE,
   "channel-divinity": DIVINE_SENSE,
-  // §123 : Imposition des mains — « touchez une créature (vous y compris) » ; les données du Manuel des joueurs disent « personnelle »,
-  // et le moteur soignait toujours le paladin. Au contact : la visée s'ouvre, on clique la créature (soi compris).
-  // §296 : Châtiment exaltant — « 2d8 + niveau de Paladin PV temporaires répartis entre des créatures de votre choix à 9 m, vous compris ».
+  // §123: Lay On Hands — "touch a creature (yourself included)"; the Player's Handbook data say "self",
+  // and the engine always healed the paladin. On touch: targeting opens, you click the creature (self included).
+  // §296: Inspiring Smite — "2d8 + Paladin level Temporary Hit Points distributed among creatures of your choice within 9 m,
+  // yourself included".
   "inspiring-smite": { pickTargets: { activities: ["oBkPCmC2KsH2WUJp"], radius: 30, units: "ft", self: true, check: "allies" },
     healPool: { activities: ["oBkPCmC2KsH2WUJp"], temp: true } },
-  // §298 : Arme sacrée — « lorsque vous prenez l'action Attaque, vous pouvez dépenser une utilisation de Conduit divin » : sans coût
-  // d'action (la donnée dit « action », le paladin ne pouvait plus attaquer ce tour-là).
+  // §298: Sacred Weapon — "when you take the Attack action, you can expend a use of Channel Divinity": no action cost
+  // (the data says "action", the paladin could no longer attack that turn).
   "sacred-weapon": { usageLimits: { Ew70lNTD8dR3vREt: { cost: "free" } } },
-  // §295 : « 5 points de la réserve pour retirer l'état Empoisonné » — l'activité « Remove Poison » paie sans rien retirer.
-  // C12-g : Toucher restaurateur (Paladin 14) — « vous pouvez aussi mettre fin à un ou plusieurs de ces états : Aveuglé, Charmé, Assourdi,
-  // Effrayé, Paralysé, Étourdi » : un au choix (plusieurs, au joueur, pour 5 points chacun).
+  // §295: "5 points from the pool to remove the Poisoned condition" — the "Remove Poison" activity pays without removing anything.
+  // C12-g: Restoring Touch (Paladin 14) — "you can also end one or more of these conditions: Blinded, Charmed, Deafened,
+  // Frightened, Paralyzed, Stunned": one of your choice (several, up to the player, for 5 points each).
   "restoring-touch": { ranges: { PgTPWedvQHDlQ7LQ: { value: 5, units: "ft" } }, cures: ["blinded", "charmed", "deafened", "frightened", "paralyzed", "stunned"], curesOn: "PgTPWedvQHDlQ7LQ" },
   "lay-on-hands": { ranges: Object.fromEntries(LAY_ON_HANDS.map(id => [id, { value: 5, units: "ft" }])), cures: ["poisoned"], curesOn: "K6UeXQwTyDHWvis8" },
-  // §124 : Champion ancestral et Nimbe sacré — « imprégnez votre Aura de protection » : la transformation (son effet) est pour le
-  // paladin, même si les données disent « une créature ». Pas de visée.
+  // §124: Elder Champion and Holy Nimbus — "imbue your Aura of Protection": the transformation (its effect) is for the
+  // paladin, even though the data say "a creature". No targeting.
   "elder-champion": { ranges: { qRy5KFVY3qomQlp5: { units: "self" } } },
   "holy-nimbus": { ranges: { k6gGbWQBoLTgqbSG: { units: "self" } } },
-  // Sorts de châtiment (PHB 2024) — Châtiment divin : 2d8 radiants (+1d8 par niveau), 3d8 contre un Fiélon ou un Mort-vivant.
+  // Smite spells (PHB 2024) — Divine Smite: 2d8 radiant (+1d8 per level), 3d8 against a Fiend or an Undead.
   "divine-smite": { smite: { damage: "dnd5eactivity200", fiends: "dnd5eactivity000" } },
-  // §273 : Châtiment de protection (paladin, PHB 2024) — « chaque fois que vous lancez Châtiment divin, vous-même et vos
-  // alliés bénéficiez d'un Abri partiel dans votre Aura de protection, jusqu'au début de votre tour suivant ». La donnée n'a qu'un effet
-  // passif éteint (« Smite of Protection », état Abri partiel, à allumer à la main) : le Châtiment divin qui touche le pose sur le
-  // paladin jusqu'au début de son prochain tour, et une aura du rayon de l'Aura de protection en pose une copie aux alliés.
+  // §273: Smite of Protection (paladin, PHB 2024) — "whenever you cast Divine Smite, you and your
+  // allies gain Half Cover within your Aura of Protection, until the start of your next turn". The data has only an inactive
+  // passive effect ("Smite of Protection", Half Cover condition, to be turned on by hand):
+  // the Divine Smite that hits applies it to the paladin until the start of the paladin's next turn, and an aura with the
+  // radius of the Aura of Protection applies a copy to the allies.
   "smite-of-protection": {
     afterSmite: { effect: "EyWEQv8qPwbXyDmA", smites: ["divine-smite"] },
     effectEnds: { EyWEQv8qPwbXyDmA: "casterTurnStart" },
     aura: { whileActive: true, includeSelf: true, affects: "ally", radiusFormula: "@scale.paladin.aura", radius: 10, units: "ft", effect: "EyWEQv8qPwbXyDmA" }
   },
-  // Châtiment de fournaise (1d6 feu ; §42.2 : la brûlure qui dure, effet « Seared », posée au coup — sa suite dans content/triggers.mjs),
-  // Châtiment lumineux (2d6 radiants ; la marque « Shining » reste au MJ).
+  // Searing Smite (1d6 fire; §42.2: the lasting burn, "Seared" effect, applied on the hit — its follow-up in
+  // content/triggers.mjs), Shining Smite (2d6 radiant; the "Shining" mark remains with the GM).
   "searing-smite": { smite: { damage: "M4KS57lcf4K6fUMU", effect: "A0tTvLeRetrC708K" } },
-  // §157 : l'effet « Shining » (pBjrcT286iCAQrjm : ne peut être Invisible) posé sur la cible touchée ; l'Avantage contre elle et sa
-  // lumière : content/spell-rules.mjs, content/lights.mjs.
+  // §157: the "Shining" effect (pBjrcT286iCAQrjm: cannot be Invisible) applied to the target hit; the Advantage against it and its
+  // light: content/spell-rules.mjs, content/lights.mjs.
   "shining-smite": { smite: { damage: "dnd5eactivity000", effect: "pBjrcT286iCAQrjm" } },
-  // Châtiment tonitruant (2d6 tonnerre ; JS de Force ou À terre), Châtiment courroucé (1d6 nécrotiques ; JS de Sagesse ou Effrayé),
-  // Châtiment étourdissant (4d6 psychiques ; JS de Sagesse),
-  // Châtiment bannisseur (5d10 de force ; JS de Charisme ou banni).
+  // Thunderous Smite (2d6 thunder; Strength save or Prone), Wrathful Smite (1d6 necrotic; Wisdom save or Frightened),
+  // Staggering Smite (4d6 psychic; Wisdom save),
+  // Banishing Smite (5d10 force; Charisma save or banished).
   "thunderous-smite": { smite: { damage: "dnd5eactivity000", save: "dnd5eactivity100" } },
   "wrathful-smite": { smite: { damage: "7g4z2R5Xozd8TESe", save: "dnd5eactivity000" } },
-  // Châtiment de cécité (3d8 radiants) : Aveuglé sans sauvegarde au coup — sa sauvegarde (dnd5eactivity100) est celle de fin de
-  // tour, qui reste au MJ comme l'état.
-  // §42.2 : l'aveuglement (« Blinded »), posé au coup ; la sauvegarde de fin de tour dans content/triggers.mjs.
+  // Blinding Smite (3d8 radiant): Blinded without a save on the hit — its save (dnd5eactivity100) is the end-of-turn one,
+  // which remains with the GM like the condition.
+  // §42.2: the blinding ("Blinded"), applied on the hit; the end-of-turn save in content/triggers.mjs.
   "blinding-smite": { smite: { damage: "dnd5eactivity000", effect: "5FPaEGhqJ5yPP2Ln" } },
   "staggering-smite": { smite: { damage: "AMwFB1wsbzWYakK4", save: "dnd5eactivity000" } },
-  // §262 : « si l'attaque réduit la cible à 50 points de vie ou moins, celle-ci doit réussir un jet de sauvegarde de Charisme ».
+  // §262: "if the attack reduces the target to 50 Hit Points or fewer, it must succeed on a Charisma saving throw".
   "banishing-smite": { smite: { damage: "CXmmXBTfen6D6LXY", save: "dnd5eactivity000", saveAtMostHp: 50 } },
 
-  // C12-b : Aura de protection contre la magie (Serment des anciens 7) — « vous et vos alliés dans votre Aura de protection avez la
-  // Résistance aux dégâts nécrotiques, psychiques et radiants » : la donnée ne la donne qu'au paladin (effet transféré) ; une copie aux
-  // alliés de l'aura.
+  // C12-b: Aura of Warding (Oath of the Ancients 7) — "you and your allies in your Aura of Protection have Resistance to
+  // necrotic, psychic and radiant damage": the data gives it only to the paladin (transferred effect); a copy to the aura's
+  // allies.
   "aura-of-warding": { aura: { includeSelf: false, affects: "ally", radiusFormula: "@scale.paladin.aura", radius: 10, units: "ft", effect: "eJVeoCZ0lno8xK6O" } },
-  // C12-b : Aura d'alacrité (Serment de gloire 7) — « votre Vitesse augmente de 3 m ; un allié qui entre dans votre Aura de protection ou
-  // y commence son tour gagne 3 m de Vitesse jusqu'à la fin de son prochain tour » : +3 m tant qu'il est dans l'aura (simplification),
-  // vous compris (la clé de la donnée, `movement.speed`, est une valeur dérivée que dnd5e réécrit : sans effet).
+  // C12-b: Aura of Alacrity (Oath of Glory 7) — "your Speed increases by 3 m; an ally that enters your Aura of Protection or
+  // starts its turn there gains 3 m of Speed until the end of its next turn": +3 m while in the aura (simplification),
+  // yourself included (the data's key, `movement.speed`, is a derived value that dnd5e rewrites: no effect).
   "aura-of-alacrity": { aura: { includeSelf: true, affects: "ally", radiusFormula: "@scale.paladin.aura", radius: 10, units: "ft",
     changes: [{ key: "system.attributes.movement.walk", value: "10", type: "add" }] } },
-  // Aura de courage (niveau 10) : immunité à Effrayé ; Aura de dévotion (Serment de dévotion 7) : immunité à Charmé.
+  // Aura of Courage (level 10): immunity to Frightened; Aura of Devotion (Oath of Devotion 7): immunity to Charmed.
   "aura-of-courage": { aura: auraImmunity("frightened") },
   "aura-of-devotion": { aura: auraImmunity("charmed") },
-  // Vœu d'inimitié (Serment de vengeance 3) : le paladin attaque la créature visée avec l'Avantage — l'effet « Vow of Enmity »
-  // qu'elle porte, venu du paladin.
-  // §236 : Âme de la vengeance (Vengeance 15) — « juste après qu'une créature sous l'effet de votre Vœu d'inimitié a touché ou raté un jet
-  // d'attaque, vous pouvez prendre une Réaction pour lui porter une attaque au corps à corps si elle est à portée » (à 1,50 m : l'allonge
-  // ordinaire ; une arme à allonge n'est pas comptée).
+  // Vow of Enmity (Oath of Vengeance 3): the paladin attacks the target creature with Advantage — the "Vow of Enmity" effect
+  // it carries, coming from the paladin.
+  // §236: Soul of Vengeance (Vengeance 15) — "immediately after a creature under the effect of your Vow of Enmity hits or
+  // misses with an attack roll, you can take a Reaction to make a melee attack against it if it is within range"
+  // (at 1.50 m: the ordinary reach; a weapon with reach is not counted).
   "soul-of-vengeance": { triggers: [{ on: "enemyAttacked", if: { "source.hasEffectFromTarget": "vow-of-enmity", "target.within": { distance: 5, units: "ft" } },
     do: [{ type: "use", target: "source", weapon: true }] }] },
   "vow-of-enmity": { triggers: [{ on: "preAttackRoll", via: "effect", if: { "target.hasEffectFrom": "vow-of-enmity" }, do: [{ type: "advantage" }] }] },
-  // Abjuration des ennemis (niveau 9) : « Effrayé pendant 1 minute ou jusqu'à ce qu'elle subisse des dégâts ».
+  // Abjure Foes (level 9): "Frightened for 1 minute or until it takes damage".
   "abjure-foes": { triggers: [{ on: "isDamaged", via: "effect", do: [{ type: "remove" }] }] },
-  // §92 : Ange vengeur (Serment de vengeance 20), Aura terrifiante — tant que l'Ange vengeur est actif (son effet sur le paladin), un
-  // ennemi qui commence son tour dans l'Aura de protection fait la sauvegarde de Sagesse d'« Aura terrifiante », Effrayé pendant 1 minute
-  // « ou jusqu'à ce qu'il subisse des dégâts » ; « les jets d'attaque contre la créature Effrayée ont l'Avantage ». Le vol : l'effet de
-  // la donnée.
+  // §92: Avenging Angel (Oath of Vengeance 20), Frightful Aura — as long as Avenging Angel is active
+  // (its effect on the paladin), an enemy that starts its turn in the Aura of Protection makes the Wisdom save of
+  // "Frightful Aura", Frightened for 1 minute "or until it takes damage"; "attack rolls against the Frightened creature have
+  // Advantage". The flight: the data's effect.
   "avenging-angel": {
     emanation: { on: "turnStart", affects: "enemy", activity: "UV3wzKmXpqDjWDAy", radiusFormula: "@scale.paladin.aura", radius: 10, units: "ft", whileActive: true },
     triggers: [
       { on: "isDamaged", via: "effect", fromEffect: "ucmM8P37dhbuz8eK", do: [{ type: "remove" }] },
       { on: "preAttackRoll", via: "effect", fromEffect: "ucmM8P37dhbuz8eK", if: { "target.hasEffect": "avenging-angel" }, do: [{ type: "advantage" }] },
-      // §438 : Manuel 3.0.0 — l'aura pose l'Effrayé commun du compendium `dnd5e.effects` (`OpCz3oGBfDZfxAlt`), pas un effet de l'item.
+      // §438: Player's Handbook 3.0.0 — the aura applies the common Frightened of the `dnd5e.effects` compendium
+      // (`OpCz3oGBfDZfxAlt`), not an effect of the item.
       { on: "isDamaged", via: "effect", fromEffect: "OpCz3oGBfDZfxAlt", do: [{ type: "remove" }] },
       { on: "preAttackRoll", via: "effect", fromEffect: "OpCz3oGBfDZfxAlt", if: { "target.hasEffect": "avenging-angel" }, do: [{ type: "advantage" }] }
     ]

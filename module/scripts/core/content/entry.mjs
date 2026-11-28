@@ -1,5 +1,5 @@
 /**
- * Validation d'une entrée de contenu (`validateEntry`) et d'une table entière (`validateTable`). Fonctions pures, aucune dépendance à Foundry.
+ * Validation of a content entry (`validateEntry`) and of a whole table (`validateTable`). Pure functions, no dependency on Foundry.
  */
 
 import { CREATURE_TYPES } from "../eligibility.mjs";
@@ -27,9 +27,9 @@ import { validateCommands, validateMount } from "../mount.mjs";
 import { validateAura, validateTrigger } from "./steps.mjs";
 import { SENSE_KINDS, SENSE_THROUGH, SENSE_NEEDS, SENSE_REVEALS } from "../senses.mjs";
 /**
- * Les erreurs d'une entrée. Vide = valide.
+ * The errors of an entry. Empty = valid.
  * @param {object} entry
- * @param {{facts: object, at?: string}} options  `facts` : les clés de faits que l'adaptateur fournit.
+ * @param {{facts: object, at?: string}} options  `facts`: the fact keys that the adapter supplies.
  * @returns {string[]}
  */
 export function validateEntry(entry, { facts={}, at="" }={}) {
@@ -45,15 +45,15 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     if ( !isObject(entry.onHit) || !(isId(entry.onHit.save) || (entry.onHit.save === "sole")) ) {
       errors.push(`${at}onHit.save: activity id (16 characters), or "sole"`);
     }
-    // §345 : `whileEnchanted` — seulement tant que l'item porte cet enchantement (profil, id d'effet) ; `spends` : un coup qui touche y
-    // met fin (Dague venimeuse : « le poison reste jusqu'à ce qu'une attaque avec cette arme touche »).
+    // §345: `whileEnchanted` — only while the item bears this enchantment (profile, effect id); `spends`: a hit that lands ends
+    // it (Dagger of Venom: "the poison remains until an attack with this weapon hits").
     else {
       if ( ("whileEnchanted" in entry.onHit) && !isId(entry.onHit.whileEnchanted) ) errors.push(`${at}onHit.whileEnchanted: effect id (16 characters)`);
       if ( ("spends" in entry.onHit) && ((entry.onHit.spends !== true) || !("whileEnchanted" in entry.onHit)) ) errors.push(`${at}onHit.spends: true, with whileEnchanted`);
       for ( const key of Object.keys(entry.onHit) ) if ( !["save", "whileEnchanted", "spends"].includes(key) ) errors.push(`${at}onHit.${key}: unknown key`);
     }
   }
-  // O8d (§347) : défenses contre les seules attaques à distance (Bouclier antiprojectiles, Bouclier d'attraction).
+  // O8d (§347): defenses against ranged attacks only (Arrow-Catching Shield, Shield of Missile Attraction).
   if ( "rangedDefense" in entry ) {
     const r = entry.rangedDefense;
     if ( !isObject(r) || !Object.keys(r).length ) errors.push(`${at}rangedDefense: { ac?, resistance?, attract? }`);
@@ -64,21 +64,21 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       for ( const key of Object.keys(r) ) if ( !["ac", "resistance", "attract"].includes(key) ) errors.push(`${at}rangedDefense.${key}: unknown key`);
     }
   }
-  // O8e (§348) : Désavantage avec les autres armes — toujours (`true`), ou tant qu'une créature vivante porte l'effet `whileEffect` de l'item.
+  // O8e (§348): Disadvantage with other weapons — always (`true`), or while a living creature bears the item's `whileEffect`.
   if ( "exclusiveWeapon" in entry ) {
     const x = entry.exclusiveWeapon;
     const ok = (x === true) || (isObject(x) && isId(x.whileEffect) && (Object.keys(x).length === 1));
     if ( !ok ) errors.push(`${at}exclusiveWeapon: true or { whileEffect: effect id }`);
   }
-  // O8h (§351) : portée minimale d'une arme (armes de siège : « ne peut pas toucher une cible à 18 m ou moins »).
+  // O8h (§351): minimum range of a weapon (siege weapons: "cannot hit a target 18 m away or less").
   if ( "minRange" in entry ) {
     const m = entry.minRange;
     if ( !isObject(m) || !(Number.isFinite(m.value) && (m.value > 0)) || (typeof m.units !== "string") || !m.units
       || Object.keys(m).some(k => !["value", "units"].includes(k)) ) errors.push(`${at}minRange: { value: positive number, units }`);
   }
-  // §353 : l'ennemi juré (Arc du serment) — la cible qui porte cet effet de l'arme.
-  // §371 : `endurance` — true, ou ce qui suit le maintien à 1 PV : un effet de l'item posé sur le porteur, des PV temporaires, les
-  // utilisations d'items rendues (par identifiant).
+  // §353: the sworn enemy (Oathbow) — the target that bears this effect of the weapon.
+  // §371: `endurance` — true, or what follows being held at 1 HP: an effect of the item placed on the bearer, Temporary Hit Points,
+  // item uses restored (by identifier).
   if ( "endurance" in entry ) {
     const x = entry.endurance;
     const ok = (x === true) || (isObject(x) && Object.keys(x).length && Object.keys(x).every(k => ["effect", "tempHp", "restores"].includes(k))
@@ -89,13 +89,13 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   if ( ("swornEnemy" in entry) && !(isObject(entry.swornEnemy) && isId(entry.swornEnemy.effect) && (Object.keys(entry.swornEnemy).length === 1)) ) {
     errors.push(`${at}swornEnemy: { effect: effect id }`);
   }
-  // §355 : armes qui nourrissent leur porteur (Noirtranchant, Épée voleuse de vie) ; dégâts de sort maximisés contre des types (Demonomicon).
+  // §355: weapons that feed their bearer (Blackrazor, Life Stealer); spell damage maximized against types (Demonomicon).
   if ( ("devours" in entry) && (entry.devours !== true) ) errors.push(`${at}devours: true or absent`);
   if ( ("critFeeds" in entry) && !(isObject(entry.critFeeds) && Number.isInteger(entry.critFeeds.amount) && (entry.critFeeds.amount > 0)
     && (Object.keys(entry.critFeeds).length === 1)) ) errors.push(`${at}critFeeds: { amount: positive integer }`);
   if ( ("maxSpellDamageVs" in entry) && !(Array.isArray(entry.maxSpellDamageVs) && entry.maxSpellDamageVs.length
     && entry.maxSpellDamageVs.every(t => CREATURE_TYPES.includes(t))) ) errors.push(`${at}maxSpellDamageVs: non-empty list of creature types`);
-  // §356 : arme maudite qui s'empare de son porteur quand on le blesse.
+  // §356: cursed weapon that takes hold of its bearer when one is hurt.
   if ( "wrath" in entry ) {
     const w = entry.wrath;
     const ok = isObject(w) && ["berserk", "vengeance"].includes(w.kind) && isObject(w.save) && /^[a-z]{3}$/.test(w.save.ability ?? "")
@@ -176,7 +176,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     }
   }
   if ( ("healsDownedMax" in entry) && (entry.healsDownedMax !== true) ) errors.push(`${at}healsDownedMax: true or absent`);
-  // §366 : les effets de l'item cessent quand leur LANCEUR fait ceci (Amitié).
+  // §366: the item's effects end when their CASTER does this (Friends).
   if ( "breaksOnOrigin" in entry ) {
     const b = entry.breaksOnOrigin;
     if ( !Array.isArray(b) || !b.length || !b.every(m => ["attack", "damage", "forcesSave"].includes(m)) ) errors.push(`${at}breaksOnOrigin: list among attack, damage, forcesSave`);
@@ -185,7 +185,8 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     const b = entry.breaksOn;
     if ( !Array.isArray(b) || !b.length || !b.every(m => BREAK_MOMENTS.includes(m)) ) errors.push(`${at}breaksOn: list among ${BREAK_MOMENTS.join(", ")}`);
   }
-  // §438 : `breaksOn` limité aux effets posés par une activité (Foulée évanescente : l'Invisible tombe, la Provocation du même item reste).
+  // §438: `breaksOn` limited to the effects placed by an activity ("Vanishing Stride": the Invisible ends,
+  // the Taunt of the same item stays).
   if ( "breaksOnActivity" in entry ) {
     const b = entry.breaksOnActivity;
     if ( !isObject(b) || !Object.keys(b).length ) errors.push(`${at}breaksOnActivity: { <activity id>: moments }`);
@@ -215,7 +216,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       && (!("sizeAtLeast" in a) || SIZES.includes(a.sizeAtLeast));
     if ( !ok ) errors.push(`${at}saveAutoSuccess: { types?: [creature types], fighting?: true, sizeAtLeast?: size }`);
   }
-  // L'inverse : ces types de créature ratent d'office (Flétrissement : « une Plante rate automatiquement la sauvegarde »).
+  // The reverse: these creature types fail automatically (Blight: "a Plant automatically fails the saving throw").
   if ( "saveAutoFail" in entry ) {
     const a = entry.saveAutoFail;
     const ok = isObject(a) && (Object.keys(a).length === 1) && Array.isArray(a.types) && a.types.length
@@ -277,10 +278,10 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       for ( const key of Object.keys(p) ) if ( !["activity", "keepConditions", "keepHp"].includes(key) ) errors.push(`${at}secondPhase.${key}: unknown key`);
     }
   }
-  // §502 (B22) : `grapples: { one?: true, by?: "summon" }` — une seule créature agrippée à la fois par cet item ; l'empoignade tenue par
-  // l'invocation de l'agrippeur (sa distance se juge depuis elle).
-  // §503 (B23) : `afterUse: { onlyCantrips: true | { castTime: "action" | "bonus" }, activity? }` — après cette utilisation, plus de sort
-  // ce tour sauf un sort mineur (de ce temps d'incantation).
+  // §502 (B22): `grapples: { one?: true, by?: "summon" }` — only one creature grappled at a time by this item; the grapple held by
+  // the grappler's summon (its distance is judged from it).
+  // §503 (B23): `afterUse: { onlyCantrips: true | { castTime: "action" | "bonus" }, activity? }` — after this use, no more spells
+  // this turn except a cantrip (of that casting time).
   if ( "afterUse" in entry ) {
     const a = entry.afterUse;
     const oc = a?.onlyCantrips;
@@ -308,7 +309,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     else {
       if ( ("keepConditions" in p) && (typeof p.keepConditions !== "boolean") ) errors.push(`${at}changesForm.keepConditions: boolean`);
       if ( ("keepHp" in p) && (typeof p.keepHp !== "boolean") ) errors.push(`${at}changesForm.keepHp: boolean`);
-      // §498 (B18) : retour à la forme d'origine au bout d'une durée, emplacements de sort partagés entre les deux formes.
+      // §498 (B18): return to the original form after a duration, spell slots shared between the two forms.
       if ( "revertAfter" in p ) for ( const e of revertAfterErrors(p.revertAfter) ) errors.push(`${at}changesForm.revertAfter${e}`);
       if ( ("shareSpellSlots" in p) && (typeof p.shareSpellSlots !== "boolean") ) errors.push(`${at}changesForm.shareSpellSlots: boolean`);
       for ( const key of Object.keys(p) ) if ( !["activity", "keepConditions", "keepHp", "revertAfter", "shareSpellSlots"].includes(key) ) errors.push(`${at}changesForm.${key}: unknown key`);
@@ -334,12 +335,12 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       if ( !Number.isInteger(steps) || !steps || (Math.abs(steps) > 5) ) errors.push(`${at}resize.${id}: non-zero integer, from -5 to 5`);
     }
   }
-  // §501 (B21) : `loseOne` — ce qui retirerait ses réactions ne lui en ôte qu'une.
+  // §501 (B21): `loseOne` — what would remove its Reactions takes only one from it.
   if ( ("reactions" in entry) && !(isObject(entry.reactions) && Number.isInteger(entry.reactions.perRound) && (entry.reactions.perRound >= 1)
     && Object.keys(entry.reactions).every(k => ["perRound", "loseOne"].includes(k)) && (!("loseOne" in entry.reactions) || (entry.reactions.loseOne === true))) ) {
     errors.push(`${at}reactions: { perRound, loseOne? } (integer ≥ 1, loseOne: true)`);
   }
-  // §496 (B16) : `true` (Dissipation de 2024), ou une dissipation bornée { upTo, beyond: "none" | "check", keepBySlot? }.
+  // §496 (B16): `true` (2024 Dispel Magic), or a bounded dispel { upTo, beyond: "none" | "check", keepBySlot? }.
   if ( ("dispel" in entry) && (entry.dispel !== true) ) {
     const d = entry.dispel;
     const ok = isObject(d) && Object.keys(d).every(k => ["upTo", "beyond", "keepBySlot"].includes(k))
@@ -360,8 +361,8 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     if ( !isObject(b) || !Object.keys(b).length ) errors.push(`${at}basicActions: { activity id: ${BASIC_ACTION_KINDS.join(" | ")} }`);
     else for ( const [id, kind] of Object.entries(b) ) {
       if ( !isId(id) ) errors.push(`${at}basicActions.${id}: activity id (16 characters)`);
-      // §24 : plusieurs actions pour une activité (Défense patiente : Se désengager et Esquiver) ; §65 : une au choix.
-      // Deux formes selon ce que l'activité dépense (`{ paid, free }`, core/basic-kinds.mjs) : chacune un genre ou une liste.
+      // §24: several actions for one activity (Patient Defense: Disengage and Dodge); §65: one of the player's choice.
+      // Two forms depending on what the activity spends (`{ paid, free }`, core/basic-kinds.mjs): each a kind or a list.
       if ( hasPaidForm(kind) ) {
         const kindsOk = v => { const list = [v].flat(); return !!list.length && list.every(k => BASIC_ACTION_KINDS.includes(k)); };
         const ok = Object.keys(kind).every(k => ["paid", "free"].includes(k)) && Object.values(kind).every(kindsOk);
@@ -378,12 +379,12 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       if ( !kinds.length || !kinds.every(k => BASIC_ACTION_KINDS.includes(k)) ) errors.push(`${at}basicActions.${id}: ${BASIC_ACTION_KINDS.join(", ")} (or a list)`);
     }
   }
-  // B04 : `regeneration` — true (lecture du texte anglais) ou la forme déclarée (core/regeneration.mjs).
+  // B04: `regeneration` — true (reading of the English text) or the declared form (core/regeneration.mjs).
   if ( "regeneration" in entry ) errors.push(...validateRegeneration(entry.regeneration, DAMAGE_TYPES).map(e => `${at}${e}`));
-  // B09 (§488) : `formLock` — true (la zone, §403) ou le verrou porté ; `suspends` — les traits que l'objet porté suspend.
+  // B09 (§488): `formLock` — true (the area, §403) or the lock carried; `suspends` — the traits that the worn item suspends.
   if ( "formLock" in entry ) errors.push(...validateFormLock(entry.formLock, DAMAGE_TYPES).map(e => `${at}${e}`));
   if ( "suspends" in entry ) errors.push(...validateSuspends(entry.suspends).map(e => `${at}${e}`));
-  // K2 (§323) : `killsAtZero` — true, ou réservé à des types de créature, une taille au plus, des activités de l'item.
+  // K2 (§323): `killsAtZero` — true, or restricted to creature types, a size at most, activities of the item.
   if ( ("killsAtZero" in entry) && (entry.killsAtZero !== true) ) {
     const k = entry.killsAtZero;
     const ok = isObject(k) && Object.keys(k).every(x => ["types", "sizeAtMost", "activities"].includes(x))
@@ -393,19 +394,20 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     if ( !ok ) errors.push(`${at}killsAtZero: true or { types?, sizeAtMost?, activities? }`);
   }
   for ( const key of ["singleAttack", "noAttacksOrSpells", "healRaisesMax", "spellAttacksMiss", "noTeleport", "saveIgnoresCover", "noSpells", "knownToOrigin", "upkeep", "keepsProne", "wardsAtZero", "stableAtZero", "zoneEffects", "advantageIfFighting", "fortitude", "drain", "swallow", "ignoresCloseCombat", "sharedHp", "forOneAttack", "evasion", "avoidance", "elusive", "holdsStill", "grantsAction", "studiedAttacks", "heroicWarrior", "greatWeaponFighting", "persistentRage", "reckless", "oneAttack", "martialArts", "supremeHealing", "discipleOfLife", "blessedHealer", "potentCantrip", "sculptSpells", "stabilizes", "kindles", "castTargets", "halfOnMiss", "seesInvisible", "scatter", "climbsCeilings", "climbsOnTurn", "slippery", "notOnSlippery", "encloses", "willingFails", "critMove", "combatInspiration", "quietPose", "zoneBound", "effectsFirst", "hitDefense", "enterOnPose", "summonEffectsOnCaster", "sniper", "hidesBehindLarger", "checkPoses", "magicEvasion", "compels", "keepsSpeed", "windward", "magical", "antimagicZone", "seesThroughOwnDarkness"] ) if ( (key in entry) && (entry[key] !== true) ) errors.push(`${at}${key}: true or absent`);
-  // Comme `saveIgnoresCover` pour une sauvegarde : les attaques de l'item ignorent l'abri partiel et aux trois quarts (`"half"` : le
-  // partiel seul).
+  // Like `saveIgnoresCover` for a saving throw: the item's attacks ignore half cover and three-quarters cover (`"half"`: half
+  // cover only).
   if ( ("attackIgnoresCover" in entry) && ![true, "half"].includes(entry.attackIgnoresCover) ) {
     errors.push(`${at}attackIgnoresCover: true, "half" or absent`);
   }
-  // §225, lot 4 : passer du plan matériel à l'Éthéré ou inversement (Saut éthéré) ; `others` : les cibles désignées suivent (Foulée éthérée).
+  // §225, batch 4: passing from the material plane to the Ethereal or the reverse (Ethereal Jaunt); `others`: the designated
+  // targets follow ("Ethereal Stride").
   if ( ("etherealShift" in entry) && !((entry.etherealShift === true) || (isObject(entry.etherealShift)
     && Object.keys(entry.etherealShift).every(k => k === "others") && (entry.etherealShift.others === true))) ) {
     errors.push(`${at}etherealShift: true or { others: true }`);
   }
   validateSenses(entry, at, facts, errors);
   validateExtras(entry, at, errors);
-  // §367 : la fin d'un effet de l'item fait utiliser une activité de l'item autour de son porteur (Esprit de l'ombre).
+  // §367: the end of an item's effect makes an activity of the item be used around its bearer ("Shadow Spirit").
   if ( "endActivity" in entry ) {
     const e = entry.endActivity;
     if ( !isObject(e) || !Object.keys(e).length ) errors.push(`${at}endActivity: { effect id: { activity, radius, units } }`);
@@ -415,7 +417,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
         || !Object.keys(r).every(k => ["activity", "radius", "units"].includes(k)) ) errors.push(`${at}endActivity.${id}: { activity, radius, units }`);
     }
   }
-  // §367 : pas d'attaque à distance avec une arme dans la zone de l'item (Tempête de vengeance), dès le rejeu `fromPulse` du lanceur.
+  // §367: no ranged attack with a weapon in the item's area (Storm of Vengeance), from the caster's `fromPulse` replay.
   if ( ("noRangedWeapons" in entry) && !((entry.noRangedWeapons === true) || (isObject(entry.noRangedWeapons)
     && Number.isInteger(entry.noRangedWeapons.fromPulse) && (entry.noRangedWeapons.fromPulse > 0)
     && (Object.keys(entry.noRangedWeapons).length === 1))) ) errors.push(`${at}noRangedWeapons: true or { fromPulse }`);
@@ -430,12 +432,12 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   if ( ("cures" in entry) && (!Array.isArray(entry.cures) || !entry.cures.length || !entry.cures.every(s => (typeof s === "string") && s)) ) {
     errors.push(`${at}cures: list of condition identifiers`);
   }
-  // Relevé des trous (2026-10-22) : les sorts dont les dégâts ne rompent pas la concentration (Chasseur implacable : Marque du chasseur).
+  // Survey of gaps (2026-10-22): the spells whose damage does not break Concentration (Relentless Hunter: Hunter's Mark).
   if ( ("keepsConcentration" in entry) && (!Array.isArray(entry.keepsConcentration) || !entry.keepsConcentration.length
     || !entry.keepsConcentration.every(s => (typeof s === "string") && s)) ) errors.push(`${at}keepsConcentration: list of item identifiers`);
-  // §494 (brique B14) : plusieurs concentrations à la fois, perdues ensemble.
+  // §494 (brick B14): several Concentrations at once, lost together.
   if ( "concentration" in entry ) errors.push(...validateConcentrationRule(entry.concentration).map(e => `${at}${e}`));
-  // Relevé des trous : les sorts de cette classe qui infligent des dégâts peuvent prendre ces types (Sorts psychiques : psychique).
+  // Survey of gaps: this class's spells that deal damage can take these types (Psionic Spells: psychic).
   if ( "spellDamageTypes" in entry ) {
     const d = entry.spellDamageTypes;
     if ( !isObject(d) || (("class" in d) && ((typeof d.class !== "string") || !d.class)) || !Array.isArray(d.types) || !d.types.length
@@ -443,25 +445,25 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       || !Object.keys(d).every(k => ["class", "types", "from", "cost"].includes(k)) ) {
       errors.push(`${at}spellDamageTypes: { class?, types } (class identifier — absent: any spell —, damage types)`);
     }
-    // Sort transmuté : `from` — le sort doit infliger l'un de ces types ; `cost` — l'activité de l'item qui paie le changement.
+    // Transmuted Spell: `from` — the spell must deal one of these types; `cost` — the item's activity that pays for the change.
     else if ( (("from" in d) && !(Array.isArray(d.from) && d.from.length && d.from.every(t => (typeof t === "string") && t)))
       || (("cost" in d) && !isId(d.cost)) ) {
       errors.push(`${at}spellDamageTypes: from: [damage types], cost: activity id (16 characters)`);
     }
   }
-  // Relevé des trous, §236 : listes de chaînes (états retirés en fin de tour, types de résistance, caractéristiques plancher).
+  // Survey of gaps, §236: lists of strings (conditions removed at end of turn, Resistance types, floor abilities).
   const strings = v => Array.isArray(v) && v.length && v.every(s => (typeof s === "string") && s);
   for ( const key of ["grantsResistances", "scoreFloor"] ) {
     if ( (key in entry) && !strings(entry[key]) ) errors.push(`${at}${key}: list of identifiers`);
   }
-  // Sort renforcé : après le jet de dégâts d'un sort, l'activité (qui paie) relance jusqu'à `count` dés (core/empowered.mjs).
+  // Empowered Spell: after a spell's damage roll, the activity (which pays) rerolls up to `count` dice (core/empowered.mjs).
   if ( ("spellDamageRerolls" in entry) && !(isObject(entry.spellDamageRerolls) && isId(entry.spellDamageRerolls.activity)
     && (typeof entry.spellDamageRerolls.count === "string") && !!entry.spellDamageRerolls.count.trim()
     && Object.keys(entry.spellDamageRerolls).every(k => ["activity", "count"].includes(k))) ) {
     errors.push(`${at}spellDamageRerolls: { activity, count: formula }`);
   }
-  // Survivant (Champion 18) : une activité de soins de l'item utilisée au début de chaque tour du porteur, s'il est Ensanglanté
-  // (`bloodied`) ; le d20 à partir duquel une sauvegarde contre la mort vaut un 20 naturel (core/self-care.mjs).
+  // Survivor (Champion 18): a healing activity of the item used at the start of each of the bearer's turns, if Bloodied
+  // (`bloodied`); the d20 from which a death saving throw counts as a natural 20 (core/self-care.mjs).
   if ( ("turnStartHeal" in entry) && !(isObject(entry.turnStartHeal) && isId(entry.turnStartHeal.activity)
     && (!("bloodied" in entry.turnStartHeal) || (entry.turnStartHeal.bloodied === true))
     && Object.keys(entry.turnStartHeal).every(k => ["activity", "bloodied"].includes(k))) ) {
@@ -471,7 +473,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     && (entry.deathSaveCritical <= 19)) ) {
     errors.push(`${at}deathSaveCritical: integer from 2 to 19 (the lowest d20 that counts as a 20)`);
   }
-  // §278 : la liste d'états, ou { statuses?, at?, exhaustion?, uses? } (core/self-care.mjs).
+  // §278: the list of conditions, or { statuses?, at?, exhaustion?, uses? } (core/self-care.mjs).
   if ( "endsOwnConditions" in entry ) {
     const e = entry.endsOwnConditions;
     const ok = Array.isArray(e) ? strings(e) : (isObject(e) && Object.keys(e).every(k => ["statuses", "at", "exhaustion", "uses"].includes(k))
@@ -479,7 +481,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       && ["exhaustion", "uses"].every(k => !(k in e) || (e[k] === true)) && (strings(e.statuses) || (e.exhaustion === true)));
     if ( !ok ) errors.push(`${at}endsOwnConditions: list of statuses, or { statuses?, at?: turnStart|turnEnd, exhaustion?: true, uses?: true }`);
   }
-  // §278 : { item, upTo } (§236), ou { items?, exhaustion?, uses? }, ou { items, activity } (une activité de l'item, proposée).
+  // §278: { item, upTo } (§236), or { items?, exhaustion?, uses? }, or { items, activity } (an activity of the item, offered).
   if ( "regainOnInitiative" in entry ) {
     const r = entry.regainOnInitiative;
     const legacy = isObject(r) && (typeof r.item === "string") && r.item && Number.isInteger(r.upTo) && (r.upTo > 0)
@@ -508,7 +510,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   if ( ("curesAll" in entry) && (!Array.isArray(entry.curesAll) || !entry.curesAll.length || !entry.curesAll.every(s => (typeof s === "string") && s)) ) {
     errors.push(`${at}curesAll: list of condition identifiers`);
   }
-  // §285 : sorts de contrôle.
+  // §285: control spells.
   for ( const key of ["confusion", "noBonus", "forcedAttack"] ) if ( (key in entry) && !isId(entry[key]) ) errors.push(`${at}${key}: effect id (16 characters)`);
   if ( "panic" in entry ) {
     const p = entry.panic;
@@ -516,7 +518,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     if ( !isObject(p) || (("effect" in p) && !isId(p.effect)) || (("drop" in p) && (p.drop !== true)) || (("endsAt" in p) && !okEnd(p.endsAt))
       || !Object.keys(p).every(k => ["effect", "drop", "endsAt"].includes(k)) ) errors.push(`${at}panic: { effect?: <effect id>, drop?: true, endsAt?: { distance, units } }`);
   }
-  // O1 (§335) : corrections de la donnée premium d'un objet (core/data-fixes.mjs).
+  // O1 (§335): fixes to the premium data of an item (core/data-fixes.mjs).
   if ( "dataFixes" in entry ) errors.push(...validateDataFixes(entry.dataFixes, at));
   if ( "spellFixes" in entry ) {
     if ( !isObject(entry.spellFixes) ) errors.push(`${at}spellFixes: { cast activity id: [fixes] }`);
@@ -526,30 +528,30 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     }
   }
   if ( ("includesOrigin" in entry) && (entry.includesOrigin !== true) ) errors.push(`${at}includesOrigin: true or absent`);
-  // K7 (§328) : `absorbsDamage` — types de dégâts que le porteur change en soin (Absorption de l'acide du Golem d'argile).
+  // K7 (§328): `absorbsDamage` — damage types the bearer turns into healing (Acid Absorption of the Clay Golem).
   if ( ("absorbsDamage" in entry) && !(Array.isArray(entry.absorbsDamage) && entry.absorbsDamage.length
     && entry.absorbsDamage.every(s => (typeof s === "string") && /^[a-z]+$/.test(s))) ) errors.push(`${at}absorbsDamage: list of damage types`);
   // C12-j : `regainOnShortRest` — identifiants d'items dont les utilisations reviennent au Repos court.
   if ( ("regainOnShortRest" in entry) && !(Array.isArray(entry.regainOnShortRest) && entry.regainOnShortRest.length
     && entry.regainOnShortRest.every(s => (typeof s === "string") && s)) ) errors.push(`${at}regainOnShortRest: list of item identifiers`);
-  // C12-d : `grants` — l'activité `activity` de l'item donnée aux cibles de l'activité `from` (Souffle du dragon).
+  // C12-d: `grants` — the item's `activity` activity given to the targets of the `from` activity (Dragon's Breath).
   if ( ("grants" in entry) && !(isObject(entry.grants) && isId(entry.grants.from) && isId(entry.grants.activity)
     && Object.keys(entry.grants).every(k => ["from", "activity"].includes(k))) ) errors.push(`${at}grants: { from, activity } (activity ids)`);
-  // C12-f : `retort` — les dégâts subis renvoyés à l'attaquant qui rate la sauvegarde de la réaction (Défenses envoûtantes).
+  // C12-f: `retort` — the damage taken is sent back to the attacker who fails the save of the reaction ("Bewitching Defenses").
   if ( ("retort" in entry) && !(isObject(entry.retort) && DAMAGE_TYPES.includes(entry.retort.damageType) && Object.keys(entry.retort).every(k => k === "damageType")) ) {
     errors.push(`${at}retort: { damageType }`);
   }
-  // §334 : `noReactions`, `actionOrBonus` — de même, tous les effets ou ceux-là (Rayon ralentissant).
-  // §505 (B25) : `blocksTempHp` — de même (un trait porté par la créature, ou les effets de l'item).
+  // §334: `noReactions`, `actionOrBonus` — likewise, all the effects or only those ("Slowing Ray").
+  // §505 (B25): `blocksTempHp` — likewise (a trait carried by the creature, or the effects of the item).
   for ( const key of ["noReactions", "actionOrBonus", "blocksHealing", "blocksTempHp"] ) {
     if ( (key in entry) && (entry[key] !== true) && !(Array.isArray(entry[key]) && entry[key].length && entry[key].every(isId)) ) errors.push(`${at}${key}: true or list of effect ids`);
   }
-  // C12-e : `noOpportunityAttacks` — tous les effets de l'item, ou ceux-là (Coup chancelant).
+  // C12-e: `noOpportunityAttacks` — all the effects of the item, or only those ("Staggering Blow").
   if ( ("noOpportunityAttacks" in entry) && (entry.noOpportunityAttacks !== true)
     && !(Array.isArray(entry.noOpportunityAttacks) && entry.noOpportunityAttacks.length && entry.noOpportunityAttacks.every(isId)) ) {
     errors.push(`${at}noOpportunityAttacks: true or a list of effect ids`);
   }
-  // C12-e : Coup brutal — ses options (poussée ou effet de l'item), le nombre d'options par coup.
+  // C12-e: Brutal Strike — its options (push or item effect), the number of options per hit.
   if ( "brutalStrike" in entry ) {
     const b = entry.brutalStrike;
     const okOption = o => isObject(o) && Object.keys(o).every(k => ["push", "effect"].includes(k)) && (("push" in o) || ("effect" in o))
@@ -589,7 +591,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       for ( const key of Object.keys(p) ) if ( !["damageTypes", "ability"].includes(key) ) errors.push(`${at}pact.${key}: unknown key`);
     }
   }
-  // §124 : « self » (sans valeur) — une capacité que les données disent viser une créature, mais qui ne vise que le lanceur.
+  // §124: "self" (no value) — an ability the data says targets a creature, but that only targets the caster.
   const isRange = r => isObject(r) && (((r.units === "self") && !("value" in r))
     || (Number.isFinite(r.value) && (r.value > 0) && (typeof r.units === "string") && !!r.units));
   if ( "ranges" in entry ) {
@@ -632,7 +634,8 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       if ( (typeof t?.units !== "string") || !t.units ) errors.push(`${at}selfZone.${id}.units: unit required`);
     }
   }
-  // §279 : dégâts maximaux promis par une activité, ou sur la prochaine attaque qui touche le porteur d'un effet ; types en plus d'une arme.
+  // §279: maximum damage promised by an activity, or on the next attack that hits the bearer of an effect;
+  // types in addition to a weapon's.
   const kinds = w => Array.isArray(w) && w.length && w.every(k => WEAPON_KINDS.includes(k));
   if ( "maxDamage" in entry ) {
     const m = entry.maxDamage;
@@ -641,9 +644,9 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       errors.push(`${at}maxDamage: { activity, weapons?: [${WEAPON_KINDS.join("|")}], refundOnHit?: true }`);
     }
   }
-  // §372 : un id d'effet — seul le porteur de CET effet de l'item (Mise en danger, pas l'effet de Provocation du même item).
+  // §372: an effect id — only the bearer of THIS effect of the item ("Put in Danger", not the "Taunt" effect of the same item).
   if ( ("maxNextHit" in entry) && (entry.maxNextHit !== true) && !isId(entry.maxNextHit) ) errors.push(`${at}maxNextHit: true, an effect id, or absent`);
-  // §281 : l'empoignade de l'auteur — plus grand pour Agripper et Pousser, traîner sans surcoût, Désavantage contre sa prise, abri.
+  // §281: the author's grapple — larger for Grapple and Shove, drag at no extra cost, Disadvantage against its hold, cover.
   if ( "grappleSize" in entry ) {
     const g = entry.grappleSize;
     if ( !isObject(g) || !Object.keys(g).length || !Object.keys(g).every(k => ["bonus", "dragFree"].includes(k))
@@ -651,7 +654,8 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       errors.push(`${at}grappleSize: { bonus?: positive integer, dragFree?: integer }`);
     }
   }
-  // §374 : { activity } — le Désavantage se paie, au choix de l'agrippeur, avec ce que coûte cette activité de l'item (Inexorable : 1 Moxie).
+  // §374: { activity } — the Disadvantage is paid, at the grappler's choice, with what this item activity costs
+  // ("Inexorable": 1 Moxie).
   if ( ("inescapable" in entry) && (entry.inescapable !== true) && !(isObject(entry.inescapable) && isId(entry.inescapable.activity)
     && (Object.keys(entry.inescapable).length === 1)) ) errors.push(`${at}inescapable: true, { activity } or absent`);
   if ( ("grappleCover" in entry) && !["half", "threeQuarters"].includes(entry.grappleCover) ) errors.push(`${at}grappleCover: half | threeQuarters`);
@@ -733,7 +737,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     }
   }
   if ( "summon" in entry ) validateSummon(entry.summon, `${at}summon`, errors);
-  // §490 (B08) : monture et ordre à un compagnon.
+  // §490 (B08): mount and command to a companion.
   if ( "mount" in entry ) errors.push(...validateMount(entry.mount, `${at}mount`));
   if ( "commands" in entry ) errors.push(...validateCommands(entry.commands, `${at}commands`));
   if ( "burst" in entry ) {
@@ -749,7 +753,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     }
   }
   if ( ("recast" in entry) && (entry.recast !== true) ) errors.push(`${at}recast: true or absent`);
-  // `obscures` : true, ou seulement à partir d'un rejeu du lanceur (`{ fromPulse }`, Tempête vengeresse).
+  // `obscures`: true, or only from a replay by the caster (`{ fromPulse }`, Storm of Vengeance).
   const fog = entry.obscures;
   const fogFromPulse = isObject(fog) && (Object.keys(fog).length === 1) && Number.isInteger(fog.fromPulse) && (fog.fromPulse > 0);
   if ( ("obscures" in entry) && (fog !== true) && !fogFromPulse ) errors.push(`${at}obscures: true or { fromPulse }`);
@@ -768,7 +772,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
         && rule.light.every(l => ["dark", "dim", "bright"].includes(l))) ) {
         errors.push(`${at}usageLimits.${id}.light: list among dark, dim, bright`);
       }
-      // §298 : « free » — l'utilisation ne coûte rien au budget (Arme sacrée : « lorsque vous prenez l'action Attaque »).
+      // §298: "free" — the use costs the budget nothing (Sacred Weapon: "when you take the Attack action").
       if ( ("cost" in rule) && !["action", "bonus", "reaction", "free"].includes(rule.cost) ) errors.push(`${at}usageLimits.${id}.cost: action, bonus, reaction, free`);
       // §486 : seulement sous un effet, ou hors de lui — identifiant d'item ou id d'effet, seul ou en liste non vide.
       for ( const key of ["whileEffect", "unlessEffect"] ) {
@@ -788,8 +792,9 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   }
   if ( ("saveAdvantage" in entry) && (!Array.isArray(entry.saveAdvantage) || !entry.saveAdvantage.length
     || !entry.saveAdvantage.every(s => (typeof s === "string") && s)) ) errors.push(`${at}saveAdvantage: list of condition identifiers`);
-  // §208 : ce qui change le saut — élan plus court (Athlète), la Dextérité (Monte-en-l'air), un saut fixe une fois par tour (sort *Saut* :
-  // porté par l'effet du sort ; Bottes : objet équipé), la distance doublée après ces activités (Pas du vent). Pieds.
+  // §208: what changes the jump — shorter run-up (Athlete), Dexterity (Second-Story Work), a fixed jump once per turn
+  // (spell *Jump*: carried by the effect of the spell; Boots: equipped item), the distance doubled after these activities
+  // (Step of the Wind). Feet.
   if ( "jump" in entry ) {
     const j = entry.jump;
     const fixedOk = f => isObject(f) && Number.isFinite(f.distance) && (f.distance > 0) && Number.isFinite(f.cost) && (f.cost >= 0)
@@ -802,8 +807,8 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       errors.push(`${at}jump: { runUp?: feet, useDex?: true, fixed?: { distance, cost, from?: "effect"|"equipped" }, double?: [activity ids] }`);
     }
   }
-  // §206 : « une créature de taille G ou supérieure a l'Avantage à ce jet » (Frappe piégeuse).
-  // §212 : les effets de l'item qui valent « En feu » (feu grégeois) — ids d'effet, au format d'un `_id`.
+  // §206: "a Large or larger creature has Advantage on this roll" (Ensnaring Strike).
+  // §212: the item effects that count as "Burning" (Alchemist's Fire) — effect ids, in the format of an `_id`.
   if ( ("burns" in entry) && !(Array.isArray(entry.burns) && entry.burns.length && entry.burns.every(id => /^[A-Za-z0-9]{16}$/.test(id))) ) errors.push(`${at}burns: [effect ids]`);
   if ( ("untypedDamage" in entry) && !DAMAGE_TYPES.includes(entry.untypedDamage) ) errors.push(`${at}untypedDamage: one of ${DAMAGE_TYPES.join(", ")}`);
   if ( "spellFailure" in entry ) {
@@ -874,12 +879,12 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     && (!("damageType" in entry.lifesteal) || ((typeof entry.lifesteal.damageType === "string") && entry.lifesteal.damageType))
     && (!("fraction" in entry.lifesteal) || ((typeof entry.lifesteal.fraction === "number") && (entry.lifesteal.fraction > 0) && (entry.lifesteal.fraction <= 1)))
     && Object.keys(entry.lifesteal).every(k => ["damageType", "fraction"].includes(k))) ) errors.push(`${at}lifesteal: { damageType?, fraction? (0 < f <= 1) }`);
-  // §135 : faveurs épiques.
+  // §135: Epic Boons.
   for ( const key of ["peerlessAim", "fortifiedHealing", "overwhelmingStrike", "spellRecall"] ) if ( (key in entry) && (entry[key] !== true) ) errors.push(`${at}${key}: true or absent`);
   if ( ("lastStandHeal" in entry) && !(isObject(entry.lastStandHeal) && isId(entry.lastStandHeal.activity)
     && Object.keys(entry.lastStandHeal).every(k => k === "activity")) ) errors.push(`${at}lastStandHeal: { activity } (activity id)`);
-  // §134 : dons du lot 5.
-  // §139 : le grimoire du Magicien.
+  // §134: feats of batch 5.
+  // §139: the Wizard's spellbook.
   if ( ("ritualAdept" in entry) && !(entry.ritualAdept && (typeof entry.ritualAdept.class === "string")) ) errors.push(`${at}ritualAdept: { class }`);
   if ( ("slotRecovery" in entry) && !(entry.slotRecovery && (typeof entry.slotRecovery.class === "string")
     && ((entry.slotRecovery.maxLevel === undefined) || Number.isInteger(entry.slotRecovery.maxLevel))
@@ -888,13 +893,13 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     errors.push(`${at}slotRecovery: { class, maxLevel?, activity? }`);
   }
   for ( const key of ["elementalAdept", "quickSearch", "reactiveStrike", "fleeOnFailedSave", "hardToPerceive"] ) if ( (key in entry) && (entry[key] !== true) ) errors.push(`${at}${key}: true or absent`);
-  // O9g (§362) : `{ whileEffect }` — seulement tant que cet effet de l'item s'applique (Bottes de rapidité, talons claqués).
+  // O9g (§362): `{ whileEffect }` — only while this effect of the item applies (Boots of Speed, clicked heels).
   if ( ("opportunityDisadvantage" in entry) && (entry.opportunityDisadvantage !== true)
     && !(isObject(entry.opportunityDisadvantage) && isId(entry.opportunityDisadvantage.whileEffect) && (Object.keys(entry.opportunityDisadvantage).length === 1)) ) {
     errors.push(`${at}opportunityDisadvantage: true or { whileEffect: effect id }`);
   }
   if ( "ignoresResistance" in entry ) {
-    // §447 : `from` (ces activités de l'item, ou le sort qu'elles font lancer), `if` (une condition sur l'auteur et l'activité).
+    // §447: `from` (these activities of the item, or the spell they make cast), `if` (a condition on the author and the activity).
     const r = entry.ignoresResistance;
     if ( !(isObject(r) && Array.isArray(r.types) && r.types.length && r.types.every(t => (typeof t === "string") && t)
       && (!("from" in r) || (Array.isArray(r.from) && r.from.length && r.from.every(isId)))
@@ -905,7 +910,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     else if ( r.if ) for ( const key of unknownFacts(r.if, facts) ) errors.push(`${at}ignoresResistance.if: unknown fact "${key}"`);
   }
   if ( "rollDisadvantage" in entry ) {
-    // §484 : le porteur fait ces jets avec le Désavantage, quand la condition tient sur lui (`self.*` : Hypersensibilité au soleil).
+    // §484: the bearer makes these rolls with Disadvantage, when the condition holds on them (`self.*`: Sunlight Sensitivity).
     const r = entry.rollDisadvantage;
     if ( !(isObject(r) && Array.isArray(r.on) && r.on.length && r.on.every(o => ROLL_DISADVANTAGE_ON.includes(o))
       && (!("if" in r) || isObject(r.if)) && Object.keys(r).every(k => ["on", "if"].includes(k))) ) {
@@ -926,7 +931,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     && (typeof entry.quickStand.units === "string") && entry.quickStand.units && Object.keys(entry.quickStand).every(k => ["value", "units"].includes(k))) ) {
     errors.push(`${at}quickStand: { value, units }`);
   }
-  // §133 : réactions de don.
+  // §133: feat reactions.
   if ( ("haltOnReaction" in entry) && !(isObject(entry.haltOnReaction) && isId(entry.haltOnReaction.effect)
     && Object.keys(entry.haltOnReaction).every(k => k === "effect")) ) errors.push(`${at}haltOnReaction: { effect } (effect id)`);
   if ( ("concentrationBreaker" in entry) && ![true, "item"].includes(entry.concentrationBreaker) ) {
@@ -975,7 +980,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
       errors.push(`${at}effectWhile: { <effect id>: { if: { armor?: [light|medium|heavy], oneHanded?: true, inCombat?: true, abilityAtLeast? }, changes? } }`);
     }
   }
-  // §129 : dons d'origine du Manuel des joueurs.
+  // §129: origin feats of the Player's Handbook.
   for ( const key of ["savageAttacker", "initiativeSwap", "healingRerolls"] ) {
     if ( (key in entry) && (entry[key] !== true) ) errors.push(`${at}${key}: true or absent`);
   }
@@ -996,7 +1001,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   if ( "casterPulse" in entry ) {
     const p = entry.casterPulse;
     const int = (n, min) => Number.isInteger(n) && (n >= min);
-    // §158 : `by` vide avec `away` — la zone ne fait que dériver (Brume mortelle, Nuage incendiaire : « s'éloigne de 3 m »).
+    // §158: empty `by` with `away` — the area only drifts (Cloudkill, Incendiary Cloud: "moves 3 m away").
     if ( !isObject(p) || !["turnStart", "turnEnd"].includes(p.at) || !Array.isArray(p.by) || (!p.by.length && !p.away) ) errors.push(`${at}casterPulse: { at: turnStart|turnEnd, by: [ … ] (or [] with away), ground? }`);
     else {
       for ( const flag of ["ground", "untilSpent"] ) if ( (flag in p) && (p[flag] !== true) ) errors.push(`${at}casterPulse.${flag}: true or absent`);
@@ -1018,10 +1023,10 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
   return errors;
 }
 
-/** Les erreurs d'une table entière `{ identifiant: entrée }`. */
+/** The errors of a whole `{ identifiant: entrée }` table. */
 /**
- * `sense` : un sens que l'item donne (ou une liste) ; `wardsDetection` : ce dont les effets de l'item protègent leur porteur.
- * Schéma : core/content.mjs.
+ * `sense`: a sense the item grants (or a list); `wardsDetection`: what the effects of the item protect their bearer from.
+ * Schema: core/content.mjs.
  */
 function validateSenses(entry, at, facts, errors) {
   if ( "sense" in entry ) {
@@ -1082,10 +1087,10 @@ export function validateTable(table, { facts={} }={}) {
 }
 
 /**
- * §277 : les erreurs d'une table de sources `{ id de document: identifiant }` — les correspondances qu'un module enregistre avec sa
- * table (`api.content.register(source, table, { sources })`) pour des items qui n'ont pas d'identifiant utilisable, comme
- * content/sources.mjs. Clé : l'id du document (16 caractères), ou « id d'acteur.id d'item » quand l'id d'item est partagé entre
- * créatures (§334 : `identifierOf` lit cette clé d'abord) ; valeur : un identifiant en kebab-case.
+ * §277: the errors of a table of sources `{ id de document: identifiant }` — the mappings a module registers with its
+ * table (`api.content.register(source, table, { sources })`) for items that have no usable identifier, like
+ * content/sources.mjs. Key: the id of the document (16 characters), or "actor id.item id" when the item id is shared between
+ * creatures (§334: `identifierOf` reads this key first); value: an identifier in kebab-case.
  * @returns {string[]}
  */
 export function validateSources(sources) {
@@ -1101,7 +1106,7 @@ export function validateSources(sources) {
   return errors;
 }
 
-/** §258 : `endsWhen: { armor?, apart?, zeroHp?, unaffected?, spell?, healedByMagic? }` (§495) — les fins génériques d'un sort ou d'un effet (core/endings.mjs). */
+/** §258: `endsWhen: { armor?, apart?, zeroHp?, unaffected?, spell?, healedByMagic? }` (§495) — the generic endings of a spell or an effect (core/endings.mjs). */
 function validateEndsWhen(w, at, errors) {
   if ( !isObject(w) || !Object.keys(w).length ) return errors.push(`${at}: { armor?, apart?, zeroHp?, unaffected?, spell? }`);
   for ( const key of Object.keys(w) ) if ( !["armor", "apart", "zeroHp", "unaffected", "spell", "casterTargetsOther", "allyDamages", "incapacitated", "healedByMagic"].includes(key) ) errors.push(`${at}.${key}: unknown key`);
@@ -1115,7 +1120,7 @@ function validateEndsWhen(w, at, errors) {
     }
   }
   if ( ("zeroHp" in w) && (w.zeroHp !== true) && !["bearer", "caster", "either"].includes(w.zeroHp) ) errors.push(`${at}.zeroHp: true, bearer, caster, either`);
-  // §299 : Neutralisé (ou mort) — le porteur, le lanceur, ou l'un ou l'autre.
+  // §299: Incapacitated (or dead) — the bearer, the caster, or either one.
   if ( ("incapacitated" in w) && !["bearer", "caster", "either"].includes(w.incapacitated) ) errors.push(`${at}.incapacitated: bearer, caster, either`);
   if ( ("unaffected" in w) && !ENDS_UNAFFECTED.includes(w.unaffected) ) errors.push(`${at}.unaffected: ${ENDS_UNAFFECTED.join(", ")}`);
   for ( const flag of ["spell", "casterTargetsOther", "allyDamages", "healedByMagic"] ) if ( (flag in w) && (w[flag] !== true) ) errors.push(`${at}.${flag}: true or absent`);

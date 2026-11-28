@@ -1,17 +1,17 @@
 /**
- * Murs fins posés par points (SPEC §173), monde `dnd-6`, arène, coin libre au nord-ouest. Le Magicien (sorts prêtés du Manuel des
- * joueurs, à volonté) pose les murs par `api.mcp.wall` (la visée par points, les clics remplacés par les points) :
- *  - Mur de vent : un point hors de l'axe redressé ; le Zombi, contre le mur, fait la sauvegarde à l'apparition ; l'arc du Guerrier sur
- *    le Bandit, derrière le mur : abri total ; son fléau : rien ;
- *  - Mur de glace : le Zombi, contre le mur, fait la sauvegarde ; le déplacement arrêté ;
- *  - Mur de pierre : la vue et le déplacement arrêtés ;
- *  - Mur de force : en globe (pose par coordonnées), un anneau fin ;
- *  - Mur prismatique : sa lumière (30 m), sa zone d'aveuglement à 6 m des deux côtés, abri total au travers ; le Zombi qui le traverse :
- *    les couches à la fois.
- * Remet positions, PV, combat.
+ * Thin walls placed by points (SPEC §173), world `dnd-6`, arena, free corner to the northwest. The Wizard (spells lent from
+ * the Player's Handbook, at will) places the walls through `api.mcp.wall` (aiming by points, the clicks replaced by the points):
+ *  - Wall of Wind: a point off the straightened axis; the Zombie, against the wall, makes the saving throw on appearance; the
+ *    Fighter's bow on the Bandit, behind the wall: Total Cover; their flail: nothing;
+ *  - Wall of Ice: the Zombie, against the wall, makes the saving throw; the movement stopped;
+ *  - Wall of Stone: sight and movement stopped;
+ *  - Wall of Force: as a globe (placed by coordinates), a thin ring;
+ *  - Prismatic Wall: its light (30 m), its blinding zone at 6 m on both sides, Total Cover through it; the Zombie crossing it:
+ *    the layers at once.
+ * Restores positions, HP, combat.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
-const BOW = "2Qu6b1ILyNRgXXfR", FLAIL = "z2c5wcJfxlGg83xo";   // l'arc court et le fléau d'armes du Guerrier de `dnd-6`
+const BOW = "2Qu6b1ILyNRgXXfR", FLAIL = "z2c5wcJfxlGg83xo";   // the Fighter's shortbow and flail in `dnd-6`
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export default {
@@ -109,7 +109,7 @@ export default {
       await remove(used.regionId);
     }
 
-    // 5. Mur prismatique : loin du Zombi, puis il le traverse.
+    // 5. Prismatic Wall: far from the Zombie, then it crosses it.
     await place(zombi, 14, 37);
     id = await pose("Mur prismatique", await lend("phbsplPrismaticW"), [P(11, 35), P(18, 35)]);
     if ( id ) {
@@ -127,7 +127,7 @@ export default {
         await ctx.engineLog();
         const before = await ctx.hp(zombi);
         await ctx.engine("move", { tokenId: zombi.id, point: { x: 14.5 * grid, y: 34.5 * grid } });
-        // La résolution attend la fin des animations (les cinq impacts du prisme, à la suite) : on attend que les PV tombent.
+        // The resolution waits for the animations to end (the prism's five impacts, in a row): wait until the HP drop.
         let hp = before;
         const log = [];
         for ( let i = 0; (i < 30) && (hp === before); i++ ) { await pause(1000); log.push(...(await ctx.engineLog())); hp = await ctx.hp(zombi); }

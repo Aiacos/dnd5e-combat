@@ -1,41 +1,41 @@
 /**
- * §228 : les textes qui défilent au-dessus des tokens (retour visuel, ui/feedback.mjs) — leur rythme et ce qu'ils montrent, réglés par
- * le MJ pour la table (onglet « Textes flottants »). Retour de table du 2026-10-21 : trop rapides, trop serrés, souvent illisibles.
+ * §228: the texts that scroll above tokens (visual feedback, ui/feedback.mjs) — their pace and what they show, set by the GM
+ * for the table ("Floating texts" tab). Table feedback of 2026-10-21: too fast, too tight, often unreadable.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
-/** La catégorie de réglage de chaque sorte de fait (core/feedback.mjs, ui/feedback.mjs). */
+/** The setting category of each kind of fact (core/feedback.mjs, ui/feedback.mjs). */
 export const FLOAT_CATEGORIES = Object.freeze({
   hit: "floatHits",
   critical: "floatAttacks", miss: "floatAttacks",
   cover: "floatCover",
   saveSuccess: "floatSaves", saveFail: "floatSaves",
   reaction: "floatReactions",
-  prompt: "floatPrompts", refused: "floatPrompts", forced: "floatPrompts",   // §408 : une règle passée outre
+  prompt: "floatPrompts", refused: "floatPrompts", forced: "floatPrompts",   // §408: a rule overridden
   ended: "floatEffects", unaffected: "floatEffects", duplicate: "floatEffects",
   gain: "floatResources", spend: "floatResources",
   strike: "floatStrikes",
   check: "floatChecks", checkSuccess: "floatChecks", checkFail: "floatChecks",
   initiative: "floatInitiative",   // §400, lot 2
-  save: "floatSaves"   // §400 : une sauvegarde de la fiche sans DD connu
+  save: "floatSaves"   // §400: a save from the sheet with no known DC
 });
 
-/** Les réglages de catégorie, dans l'ordre de la fenêtre, avec leur valeur par défaut. */
+/** The category settings, in the order of the window, with their default value. */
 export const FLOAT_CATEGORY_DEFAULTS = Object.freeze({
   floatAttacks: true, floatHits: false, floatAdvantage: true, floatSaves: true, floatChecks: true, floatCover: true, floatReactions: true, floatStrikes: true,
   floatEffects: true, floatResources: true, floatPrompts: true, floatInitiative: true
 });
 
-/** Le rythme par défaut : durée (s), écart entre deux textes d'un même token (s), course (cases), taille (%). */
+/** The default pace: duration (s), gap between two texts of the same token (s), travel (cells), size (%). */
 export const FLOAT_DEFAULTS = Object.freeze({ duration: 4, spacing: 1, distance: 1.5, scale: 100, direction: "down" });
 
-/** Les sortes dont le pictogramme est celui d'un dé (le résultat du jet, réglage `floatDice`). */
+/** The kinds whose icon is that of a die (the roll result, `floatDice` setting). */
 const ROLLED = new Set(["hit", "critical", "miss", "saveSuccess", "saveFail", "check", "checkSuccess", "checkFail", "initiative", "save"]);
 
 /**
- * §400 : la sorte du texte d'une sauvegarde lancée par dnd5e hors du moteur (fiche, concentration, jet contre la mort) — réussie, ratée, ou
- * neutre (`save`) sans DD connu ; même lecture que `checkKind`.
+ * §400: the kind of the text of a save rolled by dnd5e outside the engine (sheet, concentration, death save) — success, failure, or
+ * neutral (`save`) with no known DC; same reading as `checkKind`.
  * @returns {"save"|"saveSuccess"|"saveFail"}
  */
 export function saveKind(roll) {
@@ -43,8 +43,8 @@ export function saveKind(roll) {
 }
 
 /**
- * §292 : la sorte du texte d'un test de caractéristique, de compétence ou d'outil lancé par dnd5e, d'après son d20 — réussi ou raté
- * quand le jet porte un DD (`options.target`, dice/d20-roll.mjs `isSuccess` / `isFailure`), sinon le seul total.
+ * §292: the kind of the text of an ability check, skill check or tool check rolled by dnd5e, from its d20 — success or failure
+ * when the roll carries a DC (`options.target`, dice/d20-roll.mjs `isSuccess` / `isFailure`), otherwise the total alone.
  * @param {{total: number, target?: number|null, isSuccess?: boolean, isFailure?: boolean}} roll
  * @returns {"check"|"checkSuccess"|"checkFail"}
  */
@@ -57,13 +57,13 @@ export function checkKind(roll) {
 }
 
 /**
- * Ce qu'une ligne affiche : son texte, le nombre du jet et les pictogrammes — ou null si sa catégorie est coupée. Un coup qui touche
- * sans critique n'a pas de texte propre : il ne s'affiche que par son jet (`floatDice`) ou par « Touché » (`floatHits`).
+ * What a line shows: its text, the roll number and the icons — or null if its category is off. A hit that lands without a
+ * critical has no text of its own: it shows only through its roll (`floatDice`) or through "Hit" (`floatHits`).
  * @param {{kind: string, roll?: number|null}} fact
- * @param {string|null} text        Le texte localisé du fait (« Raté »), ou null.
- * §231 : le mode du d20 (`fact.mode`), « Avantage » / « Désavantage » (`modeText`), s'ajoute au jet quand `floatAdvantage` le veut —
- * sans le total (`floatDice` coupé), il précède le verdict. `mode` dans la ligne : pour la couleur du mot.
- * @param {object} options          `show` (catégorie → booléen), `dice`, `icons`, `hitText` (« Touché »), `modeText` (mode → mot).
+ * @param {string|null} text        The localized text of the fact ("Miss"), or null.
+ * §231: the d20 mode (`fact.mode`), "Advantage" / "Disadvantage" (`modeText`), is added to the roll when `floatAdvantage`
+ * asks for it — without the total (`floatDice` off), it comes before the verdict. `mode` in the line: for the color of the word.
+ * @param {object} options          `show` (category → boolean), `dice`, `icons`, `hitText` ("Hit"), `modeText` (mode → word).
  * @returns {{text: string, roll: number|null, dieIcon: boolean, icon: string|null, mode: string|null}|null}
  */
 export function floatLine(fact, text, { show={}, dice=true, icons=true, hitText=null, modeText={} }={}) {
@@ -82,10 +82,10 @@ export function floatLine(fact, text, { show={}, dice=true, icons=true, hitText=
 }
 
 /**
- * §231 : le libellé d'une ligne — total du jet et mode (« 17 avec Avantage »), puis le texte : « 17 avec Avantage · Raté ».
+ * §231: the label of a line — roll total and mode ("17 with Advantage"), then the text: "17 with Advantage · Miss".
  * @param {{text: string, roll: number|null, mode: string|null}} line
- * @param {Record<string, string>} modeText  mode → « Avantage » / « Désavantage ».
- * @param {string} [joiner]  Le mot entre le total et le mode (« avec »).
+ * @param {Record<string, string>} modeText  mode → "Advantage" / "Disadvantage".
+ * @param {string} [joiner]  The word between the total and the mode ("with").
  */
 export function floatLabel(line, modeText={}, joiner="") {
   const mode = line.mode ? modeText[line.mode] : null;
@@ -93,14 +93,14 @@ export function floatLabel(line, modeText={}, joiner="") {
   return [head || null, line.text || null].filter(Boolean).join(" · ");
 }
 
-/** Pictogrammes propres à une sorte (icônes du cœur : public/icons/svg). */
+/** Icons specific to a kind (core icons: public/icons/svg). */
 const ICONS = { cover: "icons/svg/shield.svg", reaction: "icons/svg/lightning.svg", critical: "icons/svg/explosion.svg", saveFail: "icons/svg/skull.svg" };
 
 /**
- * Une image de l'animation, à l'avancement `p` (0 → 1) : le texte apparaît (15 % du temps, en grandissant), reste lisible, puis
- * s'efface sur le dernier tiers seulement — le cœur, lui, l'efface pendant toute sa course (interface.mjs, `createScrollingText`).
- * La course est lissée sur toute la durée.
- * @returns {{alpha: number, offset: number, scale: number}}  `offset` : part de la course faite (0 → 1).
+ * One frame of the animation, at progress `p` (0 → 1): the text appears (15 % of the time, growing), stays readable, then
+ * fades out over the last third only — the core fades it during its whole travel (interface.mjs, `createScrollingText`).
+ * The travel is smoothed over the whole duration.
+ * @returns {{alpha: number, offset: number, scale: number}}  `offset`: part of the travel done (0 → 1).
  */
 export function floatFrame(p) {
   const t = Math.min(1, Math.max(0, Number(p) || 0));
@@ -111,13 +111,13 @@ export function floatFrame(p) {
 }
 
 /**
- * Les délais d'apparition d'une salve de textes : chaque token a sa file, un texte attend que le précédent du même token ait pris
- * `spacing` secondes d'avance (y compris ceux encore en cours d'une salve précédente, `busyUntil`).
- * @param {string[]} tokens          Le token de chaque texte, dans l'ordre.
- * @param {number} spacing           Secondes.
- * @param {number} now               Horloge en ms.
- * @param {Map<string, number>} busyUntil  Par token, l'heure (ms) où le suivant peut partir ; mise à jour.
- * @returns {number[]}  Le délai (ms) de chaque texte.
+ * The appearance delays of a burst of texts: each token has its queue, a text waits until the previous one of the same token has
+ * taken `spacing` seconds of lead (including those still running from a previous burst, `busyUntil`).
+ * @param {string[]} tokens          The token of each text, in order.
+ * @param {number} spacing           Seconds.
+ * @param {number} now               Clock in ms.
+ * @param {Map<string, number>} busyUntil  Per token, the time (ms) when the next one may start; updated.
+ * @returns {number[]}  The delay (ms) of each text.
  */
 export function floatDelays(tokens, spacing, now, busyUntil) {
   const gap = Math.max(0, Number(spacing) || 0) * 1000;
@@ -129,18 +129,18 @@ export function floatDelays(tokens, spacing, now, busyUntil) {
 }
 
 /* -------------------------------------------- */
-/*  §400 : le thème des textes flottants         */
+/*  §400: the floating text theme                */
 /* -------------------------------------------- */
 
 /*
- * §400 : chaque sorte de texte a son allure (police, couleur, contour, halo, pictogramme et son cadre, apparition, trajet), réglée pour la
- * table par un JSON importé (l'« Atelier des textes flottants », format `das-float-theme`). Les PV (`damage`, `healing`, `temp`) et les
- * effets qui commencent ou cessent (`effectOn`, `effectOff`) sont dessinés par le moteur quand ses textes flottants remplacent ceux du
- * système (réglage `floatSystem`). Les `dmg-<type>` (dégâts par type) et l'hexagone qui tourne (`spin`) sont gardés à l'import pour les
- * lots suivants, sans effet pour l'instant.
+ * §400: each kind of text has its own look (font, color, outline, glow, icon and its frame, appearance, path), set for the
+ * table by an imported JSON (the "Floating text workshop", format `das-float-theme`). HP (`damage`, `healing`, `temp`) and
+ * effects that start or end (`effectOn`, `effectOff`) are drawn by the engine when its floating texts replace those of the
+ * system (`floatSystem` setting). The `dmg-<type>` (damage by type) and the spinning hexagon (`spin`) are kept on import for
+ * the next batches, with no effect for now.
  */
 
-/** Les pictogrammes du thème : un nom de l'atelier → une icône du cœur (public/icons/svg). Un chemin d'image est aussi accepté. */
+/** The theme icons: a workshop name → a core icon (public/icons/svg). An image path is also accepted. */
 export const FLOAT_ICONS = Object.freeze({
   none: null, d20: "icons/svg/d20.svg", shield: "icons/svg/shield.svg", lightning: "icons/svg/lightning.svg", explosion: "icons/svg/explosion.svg",
   skull: "icons/svg/skull.svg", sun: "icons/svg/sun.svg", hand: "icons/svg/holy-shield.svg", sword: "icons/svg/sword.svg", heart: "icons/svg/heal.svg",
@@ -148,7 +148,7 @@ export const FLOAT_ICONS = Object.freeze({
   minus: "icons/svg/downgrade.svg", star: "icons/svg/aura.svg", target: "icons/svg/target.svg"
 });
 
-/** L'allure de départ de chaque sorte : celle du moteur avant le thème (ui/feedback.mjs, STYLES et pictogrammes). */
+/** The starting look of each kind: that of the engine before the theme (ui/feedback.mjs, STYLES and icons). */
 const BASE = {
   critical: ["#ffd24a", 30, "explosion"], miss: ["#d0d0d0", 24, "none"], hit: ["#ffffff", 22, "none"], cover: ["#9ecbff", 20, "shield"],
   reaction: ["#c49bff", 22, "lightning"], saveSuccess: ["#8fd18f", 22, "none"], saveFail: ["#e07a6a", 22, "skull"],
@@ -156,19 +156,19 @@ const BASE = {
   ended: ["#9ecbff", 20, "none"], gain: ["#8fd18f", 22, "none"], spend: ["#ffb347", 20, "none"], strike: ["#e0453a", 26, "none"],
   heroic: ["#ffd24a", 28, "none"], atCost: ["#e0a050", 26, "none"], check: ["#f0e6c8", 22, "none"], checkSuccess: ["#8fd18f", 22, "none"],
   checkFail: ["#e07a6a", 22, "none"], initiative: ["#f0e6c8", 22, "none"], save: ["#f0e6c8", 22, "none"],
-  // §400 : ce que le système dessinait (dnd5e `tokenHPColors`, documents/actor/actor.mjs:3557 ; cœur, active-effect.mjs:1039).
+  // §400: what the system drew (dnd5e `tokenHPColors`, documents/actor/actor.mjs:3557; core, active-effect.mjs:1039).
   damage: ["#ff3030", 28, "none"], healing: ["#30ff50", 28, "none"], temp: ["#66ccff", 26, "none"],
   effectOn: ["#f0e6c8", 22, "none"], effectOff: ["#a8a29a", 20, "none"],
-  // §400, lot 3 : les dégâts par type (dnd5e `CONFIG.DND5E.damageTypes`), à la couleur du type — mêmes teintes que l’atelier.
+  // §400, batch 3: damage by type (dnd5e `CONFIG.DND5E.damageTypes`), in the color of the type — same hues as the workshop.
   "dmg-acid": ["#a5e03a", 28, "none"], "dmg-bludgeoning": ["#ece6da", 28, "none"], "dmg-cold": ["#8fdcff", 28, "none"],
   "dmg-fire": ["#ff7a2a", 28, "none"], "dmg-force": ["#e866d8", 28, "none"], "dmg-lightning": ["#5e8bff", 28, "none"],
   "dmg-necrotic": ["#5fcf9f", 28, "none"], "dmg-piercing": ["#ece6da", 28, "none"], "dmg-poison": ["#4fcf5f", 28, "none"],
   "dmg-psychic": ["#ff7cc0", 28, "none"], "dmg-radiant": ["#ffe47a", 28, "none"], "dmg-slashing": ["#ece6da", 28, "none"],
   "dmg-thunder": ["#b39bff", 28, "none"]
 };
-/** §400, lot 3 : les types de dégâts qui ont leur sorte (`dmg-<type>`). */
+/** §400, batch 3: the damage types that have their own kind (`dmg-<type>`). */
 export const DAMAGE_KINDS = Object.freeze(Object.keys(BASE).filter(k => k.startsWith("dmg-")).map(k => k.slice(4)));
-/** Les sortes que le thème connaît, dans l'ordre de la fenêtre. */
+/** The kinds the theme knows, in the order of the window. */
 export const FLOAT_KINDS = Object.freeze(Object.keys(BASE));
 
 const SEGMENTS = {
@@ -178,26 +178,26 @@ const RANGES = { size: [10, 64], tracking: [0, 0.4], strokeW: [0, 10], glow: [0,
 const COLORS = ["color", "stroke", "glowColor", "badgeColor", "badgeBorder", "okColor", "failColor"];
 const FLAGS = ["show", "upper", "italic", "spin", "strike"];
 
-/** L'allure par défaut d'une sorte (police du cœur, Signika). */
+/** The default look of a kind (core font, Signika). */
 export function floatStyleDefault(kind) {
   const [color, size, icon] = BASE[kind] ?? ["#f0e6c8", 22, "none"];
-  // §400, lot 3 : les PV perdus partent en arc sur le côté, en gras, avec un rebond (BG3) ; le reste défile comme avant.
+  // §400, batch 3: lost HP go off in an arc to the side, in bold, with a bounce (BG3); the rest scrolls as before.
   const hit = (kind === "damage") || kind.startsWith("dmg-");
   return { show: true, color, size, font: "Signika", weight: hit ? 700 : 600, upper: false, tracking: 0, italic: false, stroke: "#000000", strokeW: 4,
     glow: 0, glowColor: color, icon, badge: "none", badgeColor: "#1a1a1a", badgeBorder: color, entrance: hit ? "pop" : "grow", motion: hit ? "arc" : "float", spread: 1,
     spin: false, spinMs: 900, okColor: "#3f9cff", failColor: "#e0453a",
-    // §400 : un état perdu est barré — la barre traverse le texte de gauche à droite (demande de l’utilisateur).
+    // §400: a lost condition is struck through — the bar crosses the text from left to right (user request).
     strike: kind === "effectOff" };
 }
 
-/** Une couleur `#rrggbb`, ou null. */
+/** A `#rrggbb` color, or null. */
 function hexColor(value) {
   return ((typeof value === "string") && /^#[0-9a-f]{6}$/i.test(value)) ? value.toLowerCase() : null;
 }
 
 /**
- * Une allure lue d'un JSON : chaque champ vérifié, borné, ou ignoré ; ce qui manque garde la valeur par défaut. Les noms de police de
- * l'atelier (« Signika (Foundry) ») sont ramenés à la famille ; une police inconnue de ce monde (`fonts`) est refusée.
+ * A look read from a JSON: each field checked, bounded, or ignored; what is missing keeps the default value. The workshop's font
+ * names ("Signika (Foundry)") are reduced to the family; a font unknown to this world (`fonts`) is refused.
  * @param {object} raw
  * @param {string} kind
  * @param {{fonts?: string[]}} [options]
@@ -232,14 +232,14 @@ export function floatStyleFrom(raw, kind, { fonts=null }={}) {
   return { style, problems };
 }
 
-/** Les réglages de rythme qu'un thème peut porter, avec leurs bornes (celles des réglages du monde, ui/feedback.mjs). */
+/** The pace settings a theme can carry, with their bounds (those of the world settings, ui/feedback.mjs). */
 export const FLOAT_GLOBAL_RANGES = Object.freeze({
   floatDuration: [1, 10], floatSpacing: [0.2, 3], floatDistance: [0.5, 4], floatScale: [50, 250]
 });
 
 /**
- * Un thème importé : le JSON de l'atelier (`format: "das-float-theme"`) ou un objet `{ types }`. Rend les allures des sortes (une sorte que
- * le moteur ne dessine pas encore, comme `dmg-fire`, est gardée pour plus tard), les réglages de rythme bornés, et ce qui a été refusé.
+ * An imported theme: the workshop's JSON (`format: "das-float-theme"`) or a `{ types }` object. Returns the looks of the kinds
+ * (a kind the engine does not draw yet, like `dmg-fire`, is kept for later), the bounded pace settings, and what was refused.
  * @param {object|string} json
  * @param {{fonts?: string[]}} [options]
  * @returns {{theme: Record<string, object>, global: Record<string, number|string|boolean>, problems: string[]}}
@@ -267,20 +267,20 @@ export function floatThemeFrom(json, { fonts=null }={}) {
   return { theme, global, problems };
 }
 
-/** Le thème d'export : toutes les sortes connues, avec leur allure courante. */
+/** The export theme: all known kinds, with their current look. */
 export function floatThemeExport(theme={}, global={}) {
   const types = {};
   for ( const kind of new Set([...FLOAT_KINDS, ...Object.keys(theme)]) ) types[kind] = { ...floatStyleDefault(kind), ...(theme[kind] ?? {}) };
   return { format: "das-float-theme", version: 1, global, types };
 }
 
-/** L'allure d'une sorte d'après le thème du monde (ce qui manque : la valeur par défaut). */
-/** §400 : une sorte que l’atelier ne connaît pas prend, si le thème ne la définit pas, l’allure d’une voisine (même hexagone). */
+/** The look of a kind according to the world theme (what is missing: the default value). */
+/** §400: a kind the workshop does not know takes, if the theme does not define it, the look of a neighbor (same hexagon). */
 const STYLE_FALLBACK = Object.freeze({ save: "saveSuccess" });
 /**
- * §400 : les tests de caractéristique, de compétence et d’outil ont toujours l’allure des sauvegardes (demande de l’utilisateur : même
- * animation) — réussi comme une sauvegarde réussie, raté comme une ratée, sans DD comme une sauvegarde sans DD. Leur issue garde sa couleur
- * de bordure (`floatOutcome` lit la sorte du test).
+ * §400: ability checks, skill checks and tool checks always have the look of saves (user request: same animation) — success like a
+ * successful save, failure like a failed one, with no DC like a save with no DC. Their outcome keeps its border color
+ * (`floatOutcome` reads the kind of the check).
  */
 const STYLE_ALIAS = Object.freeze({ check: "save", checkSuccess: "saveSuccess", checkFail: "saveFail" });
 
@@ -293,8 +293,8 @@ export function floatStyleOf(theme, kind) {
 const easeInOut = x => 0.5 - (Math.cos(Math.PI * x) / 2);
 
 /**
- * Le décalage d'un texte à l'avancement `p` (0 → 1), selon son trajet : `float` court `travel` (px, signé), `anchor` reste en place,
- * `arc` part sur le côté (`side` ±1, `spread` px), monte de `rise` px puis retombe de `drop` px.
+ * The offset of a text at progress `p` (0 → 1), according to its path: `float` runs `travel` (px, signed), `anchor` stays in place,
+ * `arc` goes off to the side (`side` ±1, `spread` px), rises by `rise` px then falls back by `drop` px.
  * @returns {{dx: number, dy: number}}
  */
 export function floatOffset(p, motion, { travel=0, side=1, spread=0, rise=0, drop=0 }={}) {
@@ -304,7 +304,7 @@ export function floatOffset(p, motion, { travel=0, side=1, spread=0, rise=0, dro
   return { dx: 0, dy: travel * easeInOut(t) };
 }
 
-/** L'échelle et le glissement d'apparition à l'avancement `p`, selon l'entrée choisie (`grow` : celle de `floatFrame`). */
+/** The scale and the appearance slide at progress `p`, according to the chosen entrance (`grow`: that of `floatFrame`). */
 export function floatEntrance(p, entrance) {
   const t = Math.min(1, Math.max(0, Number(p) || 0));
   if ( entrance === "pop" ) return { scale: (t < 0.1) ? 0.4 + easeInOut(t / 0.1) : (t < 0.2) ? 1.4 - (0.4 * easeInOut((t - 0.1) / 0.1)) : 1, dx: 0 };
@@ -314,10 +314,11 @@ export function floatEntrance(p, entrance) {
 }
 
 /**
- * §400 : le texte d'un changement de PV, comme dnd5e le choisit (documents/actor/actor.mjs:3532, `_displayTokenEffect`) : dégâts si les
- * PV baissent, soins s'ils montent, PV temporaires sinon ; la taille suit la part des PV max (dnd5e : 16 → 48 px, ici × 0,6 → 1,8).
+ * §400: the text of an HP change, as dnd5e chooses it (documents/actor/actor.mjs:3532, `_displayTokenEffect`): damage if
+ * HP go down, healing if they go up, Temporary Hit Points otherwise; the size follows the share of max HP
+ * (dnd5e: 16 → 48 px, here × 0.6 → 1.8).
  * @param {{hp: number, temp: number, total: number}} changes
- * @param {number} max   PV max.
+ * @param {number} max   Max HP.
  * @returns {{kind: "damage"|"healing"|"temp", value: number, factor: number}|null}
  */
 export function hpFloat(changes, max) {
@@ -332,8 +333,8 @@ export function hpFloat(changes, max) {
 }
 
 /**
- * §400, lot 2 : l’issue d’un jet, pour la bordure de l’hexagone qui tourne — « ok » (bleu par défaut), « fail » (rouge), ou null (neutre :
- * test sans DD, initiative), la bordure gardant alors sa couleur.
+ * §400, batch 2: the outcome of a roll, for the border of the spinning hexagon — "ok" (blue by default), "fail" (red),
+ * or null (neutral: check with no DC, Initiative), the border then keeping its color.
  * @param {string} kind
  * @returns {"ok"|"fail"|null}
  */
@@ -343,14 +344,14 @@ export function floatOutcome(kind) {
   return null;
 }
 
-/** §400, lot 2 : la sorte porte-t-elle un jet (son total va dans l’hexagone) ? */
+/** §400, batch 2: does the kind carry a roll (its total goes in the hexagon)? */
 export function floatRolled(kind) {
   return ROLLED.has(kind);
 }
 
 /**
- * §400, lot 2 : la phase de l’hexagone à `ms` millisecondes : il tourne pendant `spinMs` (`angle` en radians, un tour par seconde environ),
- * puis se révèle — `pulse` (1,4 → 1 sur 240 ms) et `text` (opacité du texte, 0 → 1 sur 260 ms).
+ * §400, batch 2: the phase of the hexagon at `ms` milliseconds: it spins for `spinMs` (`angle` in radians, about one turn
+ * per second), then reveals itself — `pulse` (1.4 → 1 over 240 ms) and `text` (text opacity, 0 → 1 over 260 ms).
  * @returns {{spinning: boolean, angle: number, pulse: number, text: number}}
  */
 export function spinPhase(ms, spinMs) {
@@ -361,9 +362,9 @@ export function spinPhase(ms, spinMs) {
 }
 
 /**
- * §400, lot 3 : les dégâts subis, par type, d’après le résultat de dnd5e après immunités, résistances et vulnérabilités
- * (documents/actor/actor.mjs, `calculateDamage` : chaque partie a sa `value` finale et son `type`). Les soins, PV temporaires et maximum
- * sont écartés ; un même type est additionné ; le plus fort d’abord.
+ * §400, batch 3: the damage taken, by type, from dnd5e's result after Immunities, Resistances and Vulnerabilities
+ * (documents/actor/actor.mjs, `calculateDamage`: each part has its final `value` and its `type`). Healing, Temporary Hit
+ * Points and maximum are discarded; the same type is summed; the highest first.
  * @param {Array<{type: string, value: number}>} damages
  * @returns {Array<{type: string, value: number}>}
  */
@@ -377,14 +378,14 @@ export function damageParts(damages) {
   return [...sums].map(([type, value]) => ({ type, value })).sort((a, b) => b.value - a.value);
 }
 
-/** §400, lot 3 : la sorte d’un type de dégâts — la sienne s’il en a une, sinon « damage ». */
+/** §400, batch 3: the kind of a damage type — its own if it has one, otherwise "damage". */
 export function damageKind(type) {
   return DAMAGE_KINDS.includes(type) ? `dmg-${type}` : "damage";
 }
 
 /**
- * §400 : la part du texte barrée à `ms` millisecondes de son apparition — la barre attend que le texte soit là (`delay`), puis le traverse
- * de gauche à droite en `length` ms, en ralentissant à la fin.
+ * §400: the struck-through part of the text at `ms` milliseconds after it appears — the bar waits until the text is there
+ * (`delay`), then crosses it from left to right over `length` ms, slowing down at the end.
  * @returns {number}  0 → 1.
  */
 export function strikeProgress(ms, { delay=350, length=450 }={}) {
@@ -393,8 +394,9 @@ export function strikeProgress(ms, { delay=350, length=450 }={}) {
 }
 
 /**
- * §400 : le nom nu d'une fin d'effet, pour reconnaître deux annonces de la même fin — le retrait non barré s'écrit « −(Nom) ».
- * @returns {string}  En minuscules.
+ * §400: the bare name of an effect ending, to recognize two announcements of the same ending — the non-struck removal
+ * is written "−(Name)".
+ * @returns {string}  In lowercase.
  */
 export function floatEndName(text) {
   return String(text).replace(/^[−+]\((.*)\)$/, "$1").toLocaleLowerCase();

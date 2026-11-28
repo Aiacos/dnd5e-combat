@@ -1,12 +1,12 @@
 /**
- * Issue #255 : après le Dard du pseudodragon (Monster Manual 2024 ou SRD 2024), une fois l'effet du Dard parti (dégâts : « Sting ends …
- * who just took damage », `mm-pseudodragon-sting`), la cible ne doit plus être Inconsciente — rester À terre est juste (se réveiller ne
- * relève pas). Arène de test : un pseudodragon posé pour le scénario, hostile, au contact du Guerrier ; il pique jusqu'à ce que la
- * sauvegarde soit ratée (20 essais), puis le Guerrier subit 1 dégât contondant.
- * Second cas (commentaire d'Aiacos sur #255) : un effet d'item qui ne porte aucun état et demande « Effrayé » en cavalier
- * (`system.rider.statuses`), posé sur le Guerrier comme le moteur pose un effet d'item (`placeItemEffect`) : l'état est porté par
- * l'effet lui-même, aucun « Effrayé » à part ; l'effet retiré, le Guerrier n'est plus Effrayé (§526).
- * Remis en état : effets et PV du Guerrier, position, créature posée.
+ * Issue #255: after the Pseudodragon's Sting (Monster Manual 2024 or SRD 2024), once the Sting's effect is gone (damage:
+ * "Sting ends … who just took damage", `mm-pseudodragon-sting`), the target must no longer be Unconscious — staying Prone is
+ * correct (waking up does not lift it). Test arena: a pseudodragon placed for the scenario, hostile, in contact with the
+ * Fighter; it stings until the save fails (20 tries), then the Fighter takes 1 bludgeoning damage.
+ * Second case (Aiacos's comment on #255): an item effect that carries no condition and asks for "Frightened" as a rider
+ * (`system.rider.statuses`), placed on the Fighter as the engine places an item effect (`placeItemEffect`): the condition is
+ * carried by the effect itself, no separate "Frightened"; with the effect removed, the Fighter is no longer Frightened (§526).
+ * Restored: the Fighter's effects and HP, position, placed creature.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -40,7 +40,7 @@ export default {
     const sting = ((await ctx.call("get-actor", { actorId: pTok.actorId })).items ?? []).find(i => /sting/i.test(i.name));
     if ( !ctx.expect(!!sting, `le pseudodragon a son Dard (${sting?.name})`) ) return;
 
-    // Trace : chaque effet d'état créé sans origine chez le MJ, avec d'où vient la création.
+    // Trace: each condition effect created without an origin on the GM side, with where the creation comes from.
     await script(`window.__dasTrace = []; if ( !window.__dasTraceHook ) window.__dasTraceHook = Hooks.on("preCreateActiveEffect", (e) => {
       if ( e.statuses?.size && !e.origin ) window.__dasTrace.push({ name: e.name, statuses: [...e.statuses],
         stack: new Error().stack.split("\\n").slice(2, 16).map(l => l.trim()).join(" | ").slice(0, 1500) }); }); return true;`);
@@ -72,7 +72,7 @@ export default {
     ctx.expect(!after.some(e => e.statuses.includes("unconscious")), `le Guerrier n'est plus Inconscient (${after.map(e => e.name).join(", ") || "aucun état"})`);
     ctx.expect(after.some(e => e.statuses.includes("prone")), "il reste À terre (se réveiller ne relève pas)");
 
-    // --- Effrayé demandé en cavalier ---------------------------------------------------------------------------------------------
+    // --- Frightened requested as a rider -----------------------------------------------------------------------------------------
     await clean();
     await script(`const a = canvas.tokens.get(args.id)?.actor; const ids = a.effects.filter(e => e.statuses.has("frightened")).map(e => e.id);
       if ( ids.length ) await a.deleteEmbeddedDocuments("ActiveEffect", ids); return true;`, { id: warrior.id });

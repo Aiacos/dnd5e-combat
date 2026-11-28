@@ -1,14 +1,15 @@
 /**
- * Les auras de sort du Manuel des joueurs 3.0.0 suivent leur porteur (§438, suite), monde `dnd-6`, arène.
- * L'aura est une émanation rattachée au token du lanceur (`attachment.token`) : dnd5e la pose (Manteau du croisé), ou le moteur
- * quand le Manuel coupe la pose (`target.prompt: false` : Aura de pureté, Aura de vie, Cercle de pouvoir). Foundry déplace la zone
- * avec le token, et le comportement `applyActiveEffect` de dnd5e donne puis retire l'effet.
+ * Player's Handbook 3.0.0 spell auras follow their bearer (§438, continued), world `dnd-6`, arena.
+ * The aura is an Emanation attached to the caster's token (`attachment.token`): dnd5e places it (Crusader's Mantle), or the engine
+ * when the Handbook cuts the placement (`target.prompt: false`: Aura of Purity, Aura of Life, Circle of Power).
+ * Foundry moves the area with the token, and dnd5e's `applyActiveEffect` behavior then grants and removes the effect.
  *
- * Pour chaque aura, le Guerrier ne bouge pas, à 10 cases du Paladin :
- *  - l'aura lancée, rien sur le Guerrier, la zone est rattachée au Paladin ;
- *  - le Paladin vient à 1,50 m du Guerrier → la zone a suivi (sa base est à la position du Paladin), l'effet est sur le Guerrier ;
- *  - le Paladin repart → l'effet quitte le Guerrier, la zone a suivi encore.
- * Ne joue que la forme 3.0.0 (activité à comportement de zone) ; sur une fiche 2.2.0, non applicable. Remet positions et effets.
+ * For each aura, the Fighter does not move, 10 cells from the Paladin:
+ *  - aura cast, nothing on the Fighter, the area is attached to the Paladin;
+ *  - the Paladin comes within 1.50 m of the Fighter → the area followed (its base is at the Paladin's position),
+ *    the effect is on the Fighter;
+ *  - the Paladin leaves → the effect leaves the Fighter, the area followed again.
+ * Plays only the 3.0.0 form (activity with area behavior); on a 2.2.0 sheet, not applicable. Resets positions and effects.
  */
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -41,7 +42,7 @@ export default {
     };
     let regions = [];
     const reset = async () => {
-      // La concentration d'abord : sa fin retire la zone, et dnd5e retire alors lui-même les effets de son comportement.
+      // Concentration first: its end removes the area, and dnd5e then removes the effects of its behavior itself.
       for ( const t of all ) await clearNew(t, e => (e.statuses ?? []).includes("concentrating") || /^Concentrat/i.test(e.name ?? ""));
       await pause(1500);
       for ( const id of regions ) await ctx.call("delete-scene-object", { type: "Region", objectId: id }).catch(() => {});
@@ -57,7 +58,7 @@ export default {
     ctx.restore(reset);
     const place = async (t, x, y) => { await ctx.call("move-token", { tokenId: t.id, x, y, elevation: 0 }); await pause(2500); };
     const regionOf = async id => (await ctx.call("get-scene-object", { type: "Region", objectId: id }).catch(() => null))?.data ?? null;
-    /** La base de l'émanation est-elle à la position du token ? */
+    /** Is the Emanation's base at the token's position? */
     const follows = (region, pos) => (region?.shapes ?? []).some(s => (s.type === "emanation")
       && (Math.abs((s.base?.x ?? NaN) - pos.x) < 1) && (Math.abs((s.base?.y ?? NaN) - pos.y) < 1));
 
@@ -82,7 +83,7 @@ export default {
         ctx.expect(follows(region, await ctx.position(pal)), `${label} : la zone est posée sur le Paladin`);
         ctx.expect(!(await on()), `${label} : rien sur le Guerrier hors de l'aura`);
 
-        // Le porteur vient au Guerrier, qui ne bouge pas.
+        // The bearer comes to the Fighter, who does not move.
         await place(pal, far.x + grid, far.y);
         region = await regionOf(regionId);
         ctx.expect(follows(region, await ctx.position(pal)), `${label} : le Paladin avance → la zone l'a suivi`);

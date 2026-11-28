@@ -1,20 +1,22 @@
 /**
- * Attaque sournoise et Frappes rusées du Roublard (SPEC §20).
+ * The Rogue's Sneak Attack and Cunning Strikes (SPEC §20).
  *
- *  - Sur le client de l'auteur, au jet de dégâts d'une attaque (`dnd5e.preRollDamageV2`) : si l'Attaque sournoise s'applique
- *    (core/sneak.mjs : arme de Finesse ou à distance, Avantage ou allié à 1,50 m de la cible sans Désavantage, une fois par tour),
- *    ses dés s'ajoutent au jet, du type de l'arme — moins ceux des Frappes rusées choisies juste avant (adapter/messages.mjs,
- *    `rollDamageForAttack`) —, avec les parts de plus (Assassinat au premier round). Le critique les double comme les autres.
- *    Le jet porte `flags["dnd5e-combat"].sneak` : l'item, les dés lancés, les Frappes choisies, la cible.
- *  - Sur le MJ actif, une fois l'attaque résolue et ses dégâts appliqués (`dnd5e-combat.resolution`) : chaque Frappe rusée
- *    « a lieu aussitôt après que les dégâts de l'attaque ont été infligés » — sa sauvegarde joue sur la cible (Poison,
- *    Croc-en-jambe, Hébétement, Assommer, Aveugler : adapter/areas.mjs, `strikeAgainst`), ou Repli ouvre à l'auteur un
- *    déplacement de la moitié de sa Vitesse sans attaque d'opportunité.
- *  - §223 (#16) : réglage de monde « Attaque sournoise : automatique / demander ». En mode « demander », l'auteur décide sur ce coup
- *    dans la fenêtre des Frappes rusées (adapter/sneak.mjs, `askHitOptions`) ; refusée, elle reste disponible pour un autre coup du tour.
- *    L'activité de dégâts de l'item (« Soi-même » dans les données du Manuel des joueurs : elle frappait le roublard) ne se lance plus :
- *    elle dit que l'Attaque sournoise viendra au prochain coup éligible et, en mode « demander », la réserve pour ce coup (sans question).
- * Limite : un jet de dégâts lancé hors du moteur (bouton de la carte) a l'Attaque sournoise, sans question de Frappe rusée.
+ *  - On the author's client, at the damage roll of an attack (`dnd5e.preRollDamageV2`): if Sneak Attack applies
+ *    (core/sneak.mjs: Finesse or ranged weapon, Advantage or an ally within 1.50 m of the target without Disadvantage, once
+ *    per turn), its dice are added to the roll, of the weapon's type — minus those of the Cunning Strikes chosen just before
+ *    (adapter/messages.mjs, `rollDamageForAttack`) —, with the extra parts (Assassinate in the first round). A Critical Hit
+ *    doubles them like the others.
+ *    The roll carries `flags["dnd5e-combat"].sneak`: the item, the dice rolled, the Strikes chosen, the target.
+ *  - On the active GM, once the attack is resolved and its damage applied (`dnd5e-combat.resolution`): each Cunning Strike
+ *    "takes place immediately after the attack's damage is dealt" — its saving throw plays on the target (Poison,
+ *    Trip, Daze, Knock Out, Blind: adapter/areas.mjs, `strikeAgainst`), or Withdraw opens for the author a
+ *    move of half their Speed without Opportunity Attacks.
+ *  - §223 (#16): world setting "Sneak Attack: automatic / ask". In "ask" mode, the author decides on this hit
+ *    in the Cunning Strikes window (adapter/sneak.mjs, `askHitOptions`); if declined, it stays available for another hit
+ *    of the turn. The item's damage activity ("Self" in the Player's Handbook data: it hit the rogue) is no longer rolled:
+ *    it says that Sneak Attack will come on the next eligible hit and, in "ask" mode, reserves it for that hit (without a
+ *    question).
+ * Limit: a damage roll made outside the engine (card button) has Sneak Attack, without a Cunning Strike question.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -32,7 +34,7 @@ import { enqueue } from "./queue.mjs";
 import { log, loc, notice } from "./shared.mjs";
 import { restoreHiding } from "./hide.mjs";
 
-/** Libellés des raisons pour lesquelles l'Attaque sournoise ne s'applique pas (journal seulement). */
+/** Labels for the reasons why Sneak Attack does not apply (log only). */
 const WHY = Object.freeze({
   spent: "already used this turn", notWeapon: "not a weapon attack", weaponKind: "weapon neither Finesse nor Ranged",
   disadvantage: "Disadvantage on the roll", noAdvantage: "neither Advantage nor an ally within 5 feet of the target"
@@ -43,18 +45,18 @@ function onPreRollDamage(config, dialog, message) {
   const actor = activity?.actor;
   if ( !actor || !config.rolls?.length ) return true;
   const origin = foundry.utils.getProperty(message ?? {}, "data.system.origin") ?? null;
-  // Le jet de dégâts peut être celui d'une variante (M5) : l'attaque est celle du jet d'attaque rattaché au même message.
+  // The damage roll may be that of a variant (M5): the attack is the one of the attack roll attached to the same message.
   const attackMessage = attackMessageFor(origin, activity);
   const attack = attackMessage ? (fromUuidSync(attackMessage.system?.activity?.uuid ?? "", { strict: false }) ?? activity) : null;
   const sneak = attack ? sneakAttackFor(attack, attackMessage) : null;
   if ( !sneak ) return true;
   if ( sneak.issue ) { log(`Sneak Attack: no (${WHY[sneak.issue] ?? sneak.issue})`); return true; }
-  // §223 : l'auteur l'a gardée pour un autre coup (réglage « demander »).
+  // §223: the author kept it for another hit ("ask" setting).
   if ( config[MODULE_ID]?.sneak === false ) { log("Sneak Attack: kept for another hit"); return true; }
 
   const options = affordableStrikes(strikeOptionsOf(actor, sneak.target), sneak.dice.number);
   const { strikes, dice } = settleStrikes(config[MODULE_ID]?.strikes ?? [], options, { dice: sneak.dice.number, max: strikeMaxOf(actor) });
-  // Du type de l'arme : celui que porte le premier jet (le type choisi, pour une arme qui en propose plusieurs).
+  // Of the weapon's type: the one the first roll carries (the type chosen, for a weapon that offers several).
   const type = config.rolls[0]?.options?.type ?? Array.from(attack.item?.system?.damage?.base?.types ?? [])[0] ?? null;
   const data = activity.getRollData();
   const push = (formula, rollData=data) => config.rolls.push({ data: rollData, parts: [formula], options: { type, types: type ? [type] : [], properties: [] } });
@@ -72,12 +74,12 @@ function onPreRollDamage(config, dialog, message) {
 }
 
 /* -------------------------------------------- */
-/*  Après les dégâts : les Frappes rusées       */
+/*  After the damage: the Cunning Strikes       */
 /* -------------------------------------------- */
 
 const seen = new Set();
 
-/** Repli : « aussitôt après l'attaque, vous vous déplacez jusqu'à la moitié de votre Vitesse sans provoquer d'attaque d'opportunité ». */
+/** Withdraw: "immediately after the attack, you move up to half your Speed without provoking Opportunity Attacks". */
 async function withdraw(sourceToken) {
   const combatant = sourceToken?.actor ? combatantFor(sourceToken.actor) : null;
   const own = combatant && (game.combat?.combatant?.id === combatant.id);
@@ -92,9 +94,10 @@ async function withdraw(sourceToken) {
 }
 
 /**
- * §236 : Faufilement suprême, Attaque furtive — « si vous avez l'état Invisible de l'action Se cacher, cette attaque n'y met pas fin si vous
- * finissez le tour derrière un abri aux trois quarts ou total ». Le jet d'attaque a déjà retiré l'état caché (runtime/hide.mjs, qui garde ce
- * qu'il a retiré) : il est rendu, et la fin du tour juge l'abri (runtime/hide.mjs, `stealthAttackCheck`).
+ * §236: Superior Sneak, Stealth Attack — "if you have the Invisible condition from the Hide action, this attack does not
+ * end it if you finish the turn behind Three-Quarters or Total Cover". The attack roll has already removed the hidden
+ * state (runtime/hide.mjs, which keeps what it removed): it is given back, and the end of the turn judges the Cover
+ * (runtime/hide.mjs, `stealthAttackCheck`).
  */
 async function stealthAttack(sourceToken) {
   const actor = sourceToken?.actor;
@@ -119,7 +122,7 @@ async function onResolution(resolution) {
     if ( !option ) continue;
     if ( option.withdraw ) { await withdraw(source); continue; }
     if ( option.keepsHidden ) { await stealthAttack(source); continue; }
-    // Une cible tombée à 0 PV sous les dégâts n'a plus de sauvegarde à faire.
+    // A target dropped to 0 HP by the damage no longer has a saving throw to make.
     if ( (target.actor.system.attributes?.hp?.value ?? 0) <= 0 ) { log(`${option.label}: ${target.name} is at 0 Hit Points, not applicable`); continue; }
     log(`${option.label}: ${target.name} makes their saving throw (${source.name}'s Cunning Strike)`);
     await strikeAgainst(option.activity, source, target);
@@ -127,18 +130,18 @@ async function onResolution(resolution) {
 }
 
 /* -------------------------------------------- */
-/*  §223 : l'activité de l'item                 */
+/*  §223: the item's activity                   */
 /* -------------------------------------------- */
 
 /**
- * L'activité de dégâts de l'Attaque sournoise (`dnd5e.preUseActivity`, sur le client de celui qui l'utilise) : jamais lancée — ses
- * données la font viser le roublard. Elle dit à la place quand l'Attaque sournoise viendra, et en mode « demander » la réserve pour le
- * prochain coup éligible de ce tour.
+ * The Sneak Attack damage activity (`dnd5e.preUseActivity`, on the client of whoever uses it): never rolled — its
+ * data make it target the rogue. It says instead when Sneak Attack will come, and in "ask" mode reserves it for the
+ * next eligible hit of this turn.
  */
 function onPreUseActivity(activity) {
   const actor = activity?.actor;
   if ( (activity?.type !== "damage") || !actor || !contentOf(activity.item).entry?.sneakAttack ) return true;
-  // L'activité du hook est celle d'un clone de l'item (dnd5e, documents/activity/mixin.mjs:229) : comparée par id.
+  // The hook's activity is that of a clone of the item (dnd5e, documents/activity/mixin.mjs:229): compared by id.
   if ( sneakItemOf(actor)?.id !== activity.item?.id ) return true;
   let text;
   if ( sneakSpent(actor) ) text = loc("Sournoise.ActiviteDejaUtilisee");

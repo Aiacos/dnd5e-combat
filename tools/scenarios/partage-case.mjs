@@ -1,8 +1,8 @@
 /**
- * §105 — partager la case d'une autre créature. Loup et Zombi côte à côte :
- *  1. sans capacité, le Loup ne peut pas finir dans la case du Zombi (le moteur ne trouve pas de chemin qui y arrive) ;
- *  2. Forme d'air (Élémentaire de l'air) prêtée au Loup : il y entre et s'y arrête — chemin du moteur, puis vrai déplacement ;
- *  3. Nuée (Nuée de rats) prêtée au Zombi : « and vice versa », le Loup sans capacité entre dans la case de la nuée.
+ * §105 — sharing another creature's cell. Wolf and Zombie side by side:
+ *  1. without a feature, the Wolf cannot end in the Zombie's cell (the engine finds no path that gets there);
+ *  2. Air Form (Air Elemental) lent to the Wolf: it enters and stops there — engine path, then real movement;
+ *  3. Swarm (Swarm of Rats) lent to the Zombie: "and vice versa", the Wolf without a feature enters the swarm's cell.
  */
 const AIR = "Compendium.dnd-monster-manual.actors.Actor.mmAirElemental00";
 const RATS = "Compendium.dnd-monster-manual.actors.Actor.mmSwarmOfRats000";
@@ -11,7 +11,7 @@ export default {
   name: "partage de case — Forme d'air, Nuée",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Absent from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise dnd5e's 2024 SRD).
     await ctx.cast({ "Loup": "mmWolf0000000000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Loup", "Zombi"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Loup ou Zombi absent : non applicable"); return; }
@@ -44,7 +44,7 @@ export default {
       return !!w && (Math.round(w.x / grid) === cell.j) && (Math.round(w.y / grid) === cell.i);
     };
 
-    // 1. Sans capacité.
+    // 1. Without a feature.
     const blocked = await planTo(cellOfZombi);
     ctx.expect(!(blocked.found && blocked.arrives && endsAt(blocked, cellOfZombi)), "sans capacité : pas d'arrivée dans la case du Zombi");
 
@@ -59,7 +59,7 @@ export default {
     const back = walked.before;
     await ctx.call("move-token", { tokenId: wolf.id, x: back.x, y: back.y, elevation: back.elevation });
 
-    // 3. Nuée au Zombi : l'inverse.
+    // 3. Swarm on the Zombie: the reverse.
     await lend(RATS, "swarm", zombi);
     const swarm = await planTo(cellOfZombi);
     ctx.expect(swarm.found && swarm.arrives && endsAt(swarm, cellOfZombi), "Nuée : le Loup peut finir dans la case de la nuée");

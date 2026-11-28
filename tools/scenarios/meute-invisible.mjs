@@ -1,9 +1,9 @@
 /**
- * §368 (issue #30), monde `dnd-6`, arène. Invocation d'animaux : « chaque fois que la meute se déplace à 3 m d'une créature
- * que vous voyez » — le lanceur doit voir la créature.
- *  - le Zombi Invisible : la meute arrive à côté de lui → pas de sauvegarde (journal « not seen by the caster ») ;
- *  - le Magicien sous Détection de l'invisibilité : même passage → la sauvegarde de la meute (areaTick `pulse`).
- * En combat (vision à 360°, pas de cône). Remet positions, PV, effets, combat ; la meute est retirée.
+ * §368 (issue #30), world `dnd-6`, arena. Summon Beast: "whenever the pack moves within 10 feet of a creature
+ * you can see" — the caster must see the creature.
+ *  - the Invisible Zombie: the pack arrives next to it → no saving throw (journal "not seen by the caster");
+ *  - the Wizard under See Invisibility: same passage → the pack's saving throw (areaTick `pulse`).
+ * In combat (360° vision, no cone). Restores positions, HP, effects, combat; the pack is removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -71,7 +71,7 @@ export default {
       return (await current()) === order[0].id;
     };
 
-    /** La meute posée à 5 cases à l'est du Zombi, puis déplacée à côté de lui : la sauvegarde a-t-elle eu lieu ? */
+    /** The pack placed 5 cells east of the Zombie, then moved next to it: did the saving throw take place? */
     const packPasses = async label => {
       const id = await lend("phbsplConjureAni");
       const z = await ctx.position(zombi);
@@ -83,7 +83,7 @@ export default {
       const logBefore = (await ctx.engineLog()).length;
       await ctx.call("move-token", { tokenId: pack.id, x: z.x + grid, y: z.y, elevation: 0 });
       await pause(5000);
-      // Seule la sauvegarde du Zombi compte : un autre token de l'arène (le Bandit) peut se trouver à portée de la meute.
+      // Only the Zombie's saving throw counts: another token of the arena (the Bandit) may be within the pack's range.
       const onZombi = m => [...(m.targets ?? []), ...(m.flags?.[MODULE_ID]?.resolution?.targets ?? [])].some(t => String(t.token ?? "").endsWith(zombi.id));
       const tick = (await ctx.messagesSince(since)).find(m => (m.type === "usage") && (m.flags?.[MODULE_ID]?.areaTick?.event === "pulse") && onZombi(m));
       const skipped = (await ctx.engineLog()).slice(logBefore).some(l => /Zombi not seen by the caster/.test(l));

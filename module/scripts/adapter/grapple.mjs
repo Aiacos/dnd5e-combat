@@ -1,9 +1,9 @@
 /**
- * L'empoignade lue dans Foundry (SPEC §15.2, règles 2024) : l'état Agrippé est un effet (celui de la
- * Lutte, content/actions.mjs, ou celui de l'item du Barbare, du Moine, d'un monstre) ; son agrippeur se
- * lit dans l'origine que dnd5e écrit en l'appliquant (`system.origin.activity`,
- * applications/components/effect-application.mjs:252-259). Un Agrippé posé à la main n'a pas
- * d'agrippeur connu : ni désavantage ciblé, ni fin automatique, ni DD d'évasion — le MJ tranche.
+ * Grappling read in Foundry (SPEC §15.2, 2024 rules): the Grappled condition is an effect (that of the
+ * Grapple, content/actions.mjs, or that of the Barbarian's, Monk's, or a monster's item); its grappler is
+ * read from the origin dnd5e writes when applying it (`system.origin.activity`,
+ * applications/components/effect-application.mjs:252-259). A Grappled placed by hand has no
+ * known grappler: no targeted disadvantage, no automatic end, no escape DC — the GM decides.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,22 +14,22 @@ import { pilotOfActor, summonTokenFor } from "./pilot.mjs";
 import { contentOf } from "./content.mjs";
 import { originItemOf } from "./facts.mjs";
 
-/** §502 : la règle `grapples` de l'item d'où vient un effet Agrippé, ou null. */
+/** §502: the `grapples` rule of the item a Grappled effect comes from, or null. */
 export const grapplesRuleOf = item => (item ? (contentOf(item).entry?.grapples ?? null) : null);
 
-/** Les effets actifs qui rendent cet acteur Agrippé. */
+/** The Active Effects that make this actor Grappled. */
 export function grappleEffectsOf(actor) {
   return (actor?.effects ?? []).filter(e => !e.disabled && e.statuses?.has("grappled"));
 }
 
 /**
- * L'acteur qui agrippe, d'après l'origine de l'effet ; null si inconnu. Si l'item qui a servi n'existe
- * plus (attaque à mains nues retirée), l'acteur se lit encore au début de l'UUID de l'activité
- * (`Actor.<id>.Item.…`, `Scene.<id>.Token.<id>.Actor.<id>.Item.…`) : l'empoignade reste jugeable.
+ * The grappling actor, from the effect's origin; null if unknown. If the item that was used no longer
+ * exists (Unarmed Strike removed), the actor is still read at the start of the activity's UUID
+ * (`Actor.<id>.Item.…`, `Scene.<id>.Token.<id>.Actor.<id>.Item.…`): the grapple remains judgeable.
  */
 export function grapplerOf(effect) {
-  // Un état posé par le moteur (étape `status`, Main agrippante §16.15) garde son origine dans le champ `origin` du
-  // cœur : le modèle d'effet `condition` de dnd5e n'a pas de `system.origin` (adapter/saves.mjs, applyStatusToToken).
+  // A condition placed by the engine (step `status`, "Grasping Hand" §16.15) keeps its origin in the core's `origin`
+  // field: dnd5e's `condition` effect model has no `system.origin` (adapter/saves.mjs, applyStatusToToken).
   const activityUuid = effect?.system?.origin?.activity ?? (effect?.origin?.includes?.(".Activity.") ? effect.origin : null);
   if ( !activityUuid ) return null;
   try {
@@ -42,8 +42,8 @@ export function grapplerOf(effect) {
 }
 
 /**
- * L'attaquant, agrippé, vise-t-il une autre créature que son agrippeur ? (désavantage, règle 2024)
- * @returns {boolean|null}  null : pas agrippé, ou agrippeur inconnu.
+ * Does the attacker, grappled, target a creature other than its grappler? (disadvantage, 2024 rule)
+ * @returns {boolean|null}  null: not grappled, or grappler unknown.
  */
 export function grappledElsewhere(attackerToken, targetToken) {
   const effects = grappleEffectsOf(attackerToken?.actor);
@@ -55,13 +55,13 @@ export function grappledElsewhere(attackerToken, targetToken) {
 }
 
 /**
- * La scène où l'empoignade a eu lieu : celle de la carte de la Lutte (`system.origin.message`, son
- * `speaker.scene`). null si inconnue. Un acteur LIÉ porte ses effets sur tous ses tokens, dans toutes les
- * scènes : l'empoignade ne se juge que là où elle a été faite (vu le 2026-09-23 : Paladin et Magicien ont
- * aussi des tokens sur une autre scène, à 20 ft l'un de l'autre, et l'empoignade y était « rompue »).
+ * The scene where the grapple took place: that of the Grapple card (`system.origin.message`, its
+ * `speaker.scene`). null if unknown. A LINKED actor carries its effects on all its tokens, in all
+ * scenes: the grapple is only judged where it was made (seen on 2026-09-23: the Paladin and the Wizard also
+ * have tokens on another scene, 20 ft from each other, and the grapple was "broken" there).
  */
 export function grappleSceneOf(effect) {
-  // §504 : un état posé par le moteur (étape `status`) n'a pas de message d'origine ; sa scène est notée sur l'effet.
+  // §504: a condition placed by the engine (step `status`) has no origin message; its scene is noted on the effect.
   const noted = effect?.getFlag?.(MODULE_ID, "scene");
   if ( noted ) return noted;
   const messageUuid = effect?.system?.origin?.message;
@@ -71,11 +71,11 @@ export function grappleSceneOf(effect) {
 }
 
 /**
- * K4 (§325) : le DD d'évasion que la capacité écrit — l'activité « Escape Check » du Monster Manual (`check`), un nombre (14) ou une
- * formule (« @skills.ath.passive »), sur l'item qui a posé l'empoignade. null s'il n'y en a pas.
+ * K4 (§325): the escape DC the feature writes — the Monster Manual's "Escape Check" activity (`check`), a number (14) or a
+ * formula ("@skills.ath.passive"), on the item that placed the grapple. null if there is none.
  */
 function declaredEscapeDc(effect) {
-  // §504 (B24) : un DD écrit sur l'effet par la règle qui l'a posé (empoignade au lieu des dégâts).
+  // §504 (B24): a DC written on the effect by the rule that placed it (grapple instead of damage).
   const own = Number(effect?.getFlag?.(MODULE_ID, "escapeDc"));
   if ( Number.isFinite(own) && (own > 0) ) return own;
   const item = originItemOf(effect);
@@ -92,12 +92,12 @@ function declaredEscapeDc(effect) {
   } catch { return null; }
 }
 
-/** DD pour s'échapper d'une empoignade : celui que la capacité écrit (K4), sinon 8 + Force + maîtrise de l'agrippeur (`abilities.str.dc`). null si inconnu. */
+/** DC to escape a grapple: the one the feature writes (K4), otherwise 8 + Strength + the grappler's proficiency (`abilities.str.dc`). null if unknown. */
 export function escapeDcOf(effect) {
   const declared = declaredEscapeDc(effect);
   if ( declared ) return declared;
   const grappler = grapplerOf(effect);
-  // Main agrippante (§16.15) : « DD d'évasion égal à votre DD de sort » — celui du lanceur de la main.
+  // "Grasping Hand" (§16.15): "escape DC equal to your spell save DC" — that of the hand's caster.
   const summoner = grappler ? pilotOfActor(grappler)?.summoner : null;
   if ( summoner ) {
     const spellDc = summoner.system?.attributes?.spell?.dc;
@@ -108,8 +108,8 @@ export function escapeDcOf(effect) {
 }
 
 /**
- * Portée d'une empoignade : l'allonge de l'attaque à mains nues de l'agrippeur, 5 ft à défaut — K4 (§325) : ou celle de la capacité
- * qui a posé l'empoignade, si elle est plus longue (Pince du Chuul, Liane étrangleuse : 10 ft ; Pseudopode du Shoggoth : 15 ft).
+ * Reach of a grapple: the reach of the grappler's Unarmed Strike, 5 ft by default — K4 (§325): or that of the feature
+ * that placed the grapple, if longer (Chuul's Pincer, "Strangling Vine": 10 ft; Shoggoth's Pseudopod: 15 ft).
  */
 function grappleReachOf(grappler, effect=null) {
   const range = unarmedAttackOf(grappler)?.item?.system?.range;
@@ -122,8 +122,8 @@ function grappleReachOf(grappler, effect=null) {
 }
 
 /**
- * Le token d'un acteur dans une scène donnée — pas celle qu'affiche ce client (`getActiveTokens` ne voit
- * que la scène affichée : un MJ sur une autre scène ne trouvait pas l'agrippeur, vu le 2026-09-23).
+ * A token of an actor in a given scene — not the one this client displays (`getActiveTokens` only sees the
+ * displayed scene: a GM on another scene did not find the grappler, seen on 2026-09-23).
  */
 function tokenIn(scene, actor) {
   if ( actor.isToken ) return (actor.token?.parent === scene) ? actor.token : null;
@@ -131,13 +131,13 @@ function tokenIn(scene, actor) {
 }
 
 /**
- * Faits d'une empoignade pour le cœur (`grappleHolds`) : états de l'agrippeur et distance.
- * null si l'agrippeur est inconnu ou n'a pas de token sur la scène de l'agrippé.
+ * Facts of a grapple for the core (`grappleHolds`): the grappler's conditions and the distance.
+ * null if the grappler is unknown or has no token on the grappled creature's scene.
  */
 export function grappleFacts(effect, grappledToken, factors) {
   const grappler = grapplerOf(effect);
-  // §502 (B22) : `grapples.by: "summon"` — l'empoignade est tenue par l'invocation de l'agrippeur (la liane) : elle tient tant que
-  // celle-ci est sur la scène et n'est pas neutralisée, à toute distance de l'agrippeur.
+  // §502 (B22): `grapples.by: "summon"` — the grapple is held by the grappler's summon (the vine): it holds as long as
+  // that one is on the scene and not incapacitated, at any distance from the grappler.
   const item = originItemOf(effect);
   if ( grappler && (grapplesRuleOf(item)?.by === "summon") ) {
     const anchor = summonTokenFor(grappler, item, grappledToken.parent, grappledToken);
@@ -156,12 +156,12 @@ export function grappleFacts(effect, grappledToken, factors) {
 /*  L'agrippeur : sa marque, ses victimes       */
 /* -------------------------------------------- */
 
-/** Les marques « Agrippe : … » d'un acteur agrippeur (une par victime). */
+/** The "Grapples: …" marks of a grappler actor (one per victim). */
 export function grapplingMarksOf(actor) {
   return (actor?.effects ?? []).filter(e => e.getFlag?.(MODULE_ID, "grappling"));
 }
 
-/** Données de la marque posée sur l'agrippeur : icône toujours visible, liée à l'effet Agrippé de la victime. */
+/** Data of the mark placed on the grappler: an always-visible icon, linked to the victim's Grappled effect. */
 export function grapplingMarkData(name, victimToken, grappleEffect) {
   return {
     name, img: "systems/dnd5e/icons/svg/statuses/grappled.svg", transfer: false, disabled: false, statuses: [], changes: [],
@@ -171,9 +171,9 @@ export function grapplingMarkData(name, victimToken, grappleEffect) {
 }
 
 /**
- * L'acteur qui porte un effet. Piège V14, vu le 2026-09-23 : pour un token NON LIÉ, l'effet vit dans le
- * delta du token (`ActorDelta`), et le hook `createActiveEffect` le reçoit avec ce delta pour parent
- * (client/data/client-backend.mjs:164) — pas l'acteur synthétique.
+ * The actor that carries an effect. V14 trap, seen on 2026-09-23: for an UNLINKED token, the effect lives in the
+ * token's delta (`ActorDelta`), and the `createActiveEffect` hook receives it with that delta as parent
+ * (client/data/client-backend.mjs:164) — not the synthetic actor.
  */
 export function actorOfEffect(effect) {
   const parent = effect?.parent;
@@ -181,14 +181,15 @@ export function actorOfEffect(effect) {
   return (parent?.documentName === "Actor") ? parent : null;
 }
 
-/** Le token d'un acteur agrippé, dans la scène de l'empoignade (ou celle de son premier token). */
+/** The token of a grappled actor, in the grapple's scene (or that of its first token). */
 export function grappledTokenOf(effect) {
-  if ( effect?.parent?.documentName === "ActorDelta" ) return effect.parent.parent ?? null;   // le token du delta
+  if ( effect?.parent?.documentName === "ActorDelta" ) return effect.parent.parent ?? null;   // the delta's token
   const actor = actorOfEffect(effect);
   if ( !actor ) return null;
   if ( actor.isToken ) return actor.token;
   const sceneId = grappleSceneOf(effect);
-  // §504 : sinon, la scène du token de l'agrippeur — un acteur lié a des tokens sur plusieurs scènes (le premier n'est pas le bon).
+  // §504: otherwise, the scene of the grappler's token — a linked actor has tokens on several scenes (the first is not the right
+  // one).
   const grappler = sceneId ? null : grapplerOf(effect);
   const scene = (sceneId && game.scenes.get(sceneId)) || (grappler?.isToken ? grappler.token?.parent : null)
     || (grappler ? (game.scenes.find(s => s.tokens.some(t => t.actorLink && (t.actorId === grappler.id) && s.tokens.some(v => v.actorLink && (v.actorId === actor.id)))) ?? null) : null);
@@ -196,12 +197,12 @@ export function grappledTokenOf(effect) {
   return actor.getDependentTokens?.({ concreteOnly: true })[0] ?? null;
 }
 
-/** Rang de taille numérique d'un acteur (dnd5e : `CONFIG.DND5E.actorSizes[...].numerical`, M = 2). */
+/** Numeric size rank of an actor (dnd5e: `CONFIG.DND5E.actorSizes[...].numerical`, M = 2). */
 export function sizeRankOf(actor) {
   return CONFIG.DND5E.actorSizes?.[actor?.system?.traits?.size]?.numerical ?? 2;
 }
 
-/** Les victimes qu'un token agrippeur traîne en marchant (tokens), d'après ses marques. */
+/** The victims a grappler token drags while walking (tokens), from its marks. */
 export function victimsOf(grapplerToken) {
   return grapplingMarksOf(grapplerToken?.actor)
     .map(mark => fromUuidSync(mark.getFlag(MODULE_ID, "grappling").target))

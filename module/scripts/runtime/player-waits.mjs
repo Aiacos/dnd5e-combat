@@ -1,10 +1,11 @@
 /**
- * §290 : les fenêtres du combat sans délai (demande de l'utilisateur, 2026-10-30). Réglage de monde `combatWindowUnlimited` : une
- * question posée à un joueur (réaction, choix, sauvegarde…) attend sa réponse sans compte à rebours ; le MJ voit qui il attend
- * (ui/player-waits.mjs, ouverte d'elle-même au bout du délai des fenêtres) et peut **forcer** : la fenêtre se ferme chez le joueur avec la
- * réponse que le délai aurait donnée. Un joueur qui se déconnecte compte comme une absence de réponse (adapter/player-wait.mjs).
+ * §290: combat windows without delay (user's request, 2026-10-30). World setting `combatWindowUnlimited`: a
+ * question asked to a player (Reaction, choice, saving throw…) waits for their answer with no countdown; the GM sees who they
+ * are waiting for (ui/player-waits.mjs, opens by itself at the end of the windows' delay) and can **force**: the window closes
+ * on the player's side with the answer the delay would have given. A player who disconnects counts as no answer
+ * (adapter/player-wait.mjs).
  *
- * Retour à la table quand le MJ force : texte au-dessus du token du personnage et son, chez chaque client.
+ * Feedback to the table when the GM forces: text above the character's token and sound, on each client.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -12,7 +13,7 @@ import { FORCE_WINDOWS_QUERY, forcePlayerWait, handleForceWindows, playerWaits }
 import { log, notice, tokenOfActor } from "./shared.mjs";
 
 /**
- * Le MJ force l'attente `id` (fenêtre de suivi, menu du token, `api.waits.force`).
+ * The GM forces the wait `id` (tracker window, token menu, `api.waits.force`).
  * @param {string} id
  */
 export async function forceWait(id) {
@@ -34,5 +35,5 @@ export function registerPlayerWaits() {
     name: "DND5ECOMBAT.Reglage.combatWindowUnlimited.Nom", hint: "DND5ECOMBAT.Reglage.combatWindowUnlimited.Aide",
     scope: "world", config: true, type: Boolean, default: false
   });
-  CONFIG.queries[FORCE_WINDOWS_QUERY] = handleForceWindows;   // sur tous les clients : c'est celui du joueur qui ferme ses fenêtres
+  CONFIG.queries[FORCE_WINDOWS_QUERY] = handleForceWindows;   // on all clients: it is the player's that closes their windows
 }

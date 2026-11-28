@@ -1,4 +1,4 @@
-/** Données partagées par plusieurs tests (pas un fichier de test : Vitest ne lit que les `*.test.mjs`). */
+/** Data shared by several tests (not a test file: Vitest reads only the `*.test.mjs`). */
 
-/** Une résolution minimale : identifiants du message porteur, de l'origine, de l'activité et de la source. */
+/** A minimal resolution: identifiers of the carrying message, the origin, the activity and the source. */
 export const RESOLUTION_BASE = Object.freeze({ id: "r", carrier: "M", origin: "M", activity: "Act", source: "Src" });

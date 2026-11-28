@@ -1,12 +1,12 @@
 /**
- * §250 : évènements dans l'initiative — une entrée temporaire du combat qui n'est pas une créature (un piège, une action d'antre, la fin
- * d'un sort, des renforts) : un combattant sans token ni acteur, à l'initiative fixe, marqué `flags.dnd5e-combat.event`. Le moteur ne le
- * prend jamais pour une créature (aucune règle ne lit son acteur : il n'en a pas). Quand vient son tour, le MJ actif émet
- * `dnd5e-combat.eventTurn` (`{ combat, combatant, key, data }`) : c'est le voisin qui l'a posé qui agit, puis passe le tour. Il sort du
- * combat seul après son dernier round (`rounds`), à la fin de son tour.
+ * §250: events in the Initiative — a temporary combat entry that is not a creature (a trap, a lair action, the end of a spell,
+ * reinforcements): a combatant with no token or actor, at a fixed Initiative, marked `flags.dnd5e-combat.event`. The engine never
+ * takes it for a creature (no rule reads its actor: it has none). When its turn comes, the active GM emits
+ * `dnd5e-combat.eventTurn` (`{ combat, combatant, key, data }`): the neighbour that placed it acts, then passes the turn. It leaves
+ * the combat on its own after its last round (`rounds`), at the end of its turn.
  *
- * API publique (`api.combat`) : `addEvent({ combat, name, img, initiative, rounds, key, data, hidden })` → le combattant ;
- * `removeEvent(keyOrCombatant, combat)` ; `events(combat)` ; `isEvent(combatant)`. MJ seulement pour écrire.
+ * Public API (`api.combat`): `addEvent({ combat, name, img, initiative, rounds, key, data, hidden })` → the combatant;
+ * `removeEvent(keyOrCombatant, combat)`; `events(combat)`; `isEvent(combatant)`. GM only to write.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { route } from "./router.mjs";
@@ -14,20 +14,20 @@ import { log } from "./shared.mjs";
 import { eventRounds, eventEnded } from "../core/combat-events.mjs";
 
 /**
- * §250 : chez le MJ actif, quand vient le tour d'un évènement de l'initiative (`api.combat.addEvent`) : `({ combat, combatant, key, data
- * })` — au module qui l'a posé d'agir, puis de passer le tour. Une fois par tour.
+ * §250: on the active GM, when the turn of an Initiative event comes (`api.combat.addEvent`): `({ combat, combatant, key, data
+ * })` — for the module that placed it to act, then pass the turn. Once per turn.
  */
 export const EVENT_TURN_HOOK = `${MODULE_ID}.eventTurn`;
 
-/** Un évènement du combat (pas une créature) ? */
+/** An event of the combat (not a creature)? */
 export const isEvent = combatant => !!combatant?.getFlag?.(MODULE_ID, "event");
 
-/** Les évènements d'un combat. */
+/** The events of a combat. */
 export const events = (combat=game.combat) => (combat?.combatants ?? []).filter(isEvent);
 
 /**
- * Ajouter un évènement au combat. `rounds` : combien de rounds il joue à partir du round courant (1 par défaut : ce round seulement ;
- * null : jusqu'à ce qu'on le retire). Un évènement de même `key` déjà là est remplacé.
+ * Add an event to the combat. `rounds`: how many rounds it plays from the current round (1 by default: this round only;
+ * null: until removed). An event with the same `key` already there is replaced.
  * @returns {Promise<Combatant|null>}
  */
 export async function addEvent({ combat=game.combat, name, img=null, initiative=20, rounds=1, key=null, data={}, hidden=false }={}) {
@@ -45,7 +45,7 @@ export async function addEvent({ combat=game.combat, name, img=null, initiative=
   return created ?? null;
 }
 
-/** Retirer un évènement (par sa clé ou le combattant). */
+/** Remove an event (by its key or the combatant). */
 export async function removeEvent(target, combat=game.combat) {
   if ( !game.user.isGM || !combat ) return 0;
   const ids = events(combat).filter(c => (c === target) || (c.id === target) || (c.getFlag(MODULE_ID, "event")?.key === target)).map(c => c.id);
@@ -53,19 +53,19 @@ export async function removeEvent(target, combat=game.combat) {
   return ids.length;
 }
 
-/** Chez le MJ actif, à chaque changement de tour : l'évènement dont c'est le tour est annoncé ; celui qui vient de finir son dernier round sort. */
+/** On the active GM, at each turn change: the event whose turn it is is announced; the one that just finished its last round leaves. */
 async function onTurnChange(combat, prior, current) {
   const previous = combat.combatants.get(prior?.combatantId);
   if ( isEvent(previous) && eventEnded(previous.getFlag(MODULE_ID, "event"), prior?.round) ) {
     await removeEvent(previous, combat);
   }
-  // Un round sauté (le MJ avance de deux rounds) : ce qui a fini depuis longtemps sort aussi.
+  // A skipped round (the GM advances two rounds): what finished long ago leaves too.
   const stale = events(combat).filter(c => (c !== combat.combatant) && eventEnded(c.getFlag(MODULE_ID, "event"), (combat.round ?? 1) - 1));
   for ( const c of stale ) await removeEvent(c, combat);
   announce(combat);
 }
 
-/** Au début du combat : le premier tour est peut-être celui d'un évènement. */
+/** At the start of combat: the first turn may be an event's. */
 function onCombatStart(combat) {
   announce(combat);
 }
@@ -90,8 +90,8 @@ export function registerCombatEvents() {
   route("combatTurnChange", onTurnChange, { executor: true, label: "initiative event not announced" });
   route("combatStart", onCombatStart, { executor: true, label: "initiative event not announced" });
   route("deleteCombat", combat => { for ( const k of [...announced] ) if ( k.startsWith(`${combat.id}:`) ) announced.delete(k); });
-  // §256 : dnd5e récupère les usages de chaque combattant au début, à chaque tour et à la fin du combat (`recoverCombatUses`) en
-  // écrivant sur son acteur — un évènement n'en a pas : sans ce refus, une erreur à chaque fois (« performBulkUpdate » de null).
+  // §256: dnd5e recovers each combatant's uses at the start, at each turn and at the end of combat (`recoverCombatUses`) by
+  // writing on its actor — an event has none: without this refusal, an error every time ("performBulkUpdate" of null).
   route("dnd5e.preCombatRecovery", combatant => (isEvent(combatant) ? false : undefined),
     { cancellable: true, always: true, label: "initiative event: no combat recovery" });
 }

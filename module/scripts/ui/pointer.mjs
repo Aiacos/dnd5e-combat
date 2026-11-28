@@ -1,16 +1,16 @@
 /**
- * La souris, dans l'esprit de BG3 (SPEC §11, étape 6 bis ; §13.3 : `ui/` lit l'état, émet des
- * intentions, ne décide rien) :
+ * The mouse, in the spirit of BG3 (SPEC §11, step 6 bis; §13.3: `ui/` reads the state, emits
+ * intentions, decides nothing):
  *
- *  - clic gauche au sol : se déplacer (aperçu du chemin en combat)
- *  - clic gauche sur un ennemi, en combat : attaque de base
- *  - clic droit : menu contextuel (au sol : se déplacer, sauter ; sur un token : attaques, observer)
- *  - mode visée : une attaque ou un sort choisi sans cible attend un clic sur sa cible
+ *  - left click on the ground: move (path preview in combat)
+ *  - left click on an enemy, in combat: base attack
+ *  - right click: context menu (on the ground: move, jump; on a token: attacks, observe)
+ *  - aim mode: an attack or spell chosen without a target waits for a click on its target
  *
- * Chaque clic devient un appel de `runtime/actions.mjs` (`moveTo`, `jumpTo`, `engage`), qui
- * porte le plafond du tour et les attaques d'opportunité. Rien n'est patché : la souris est
- * écoutée sur le document (phase de capture, donc avant PIXI), et un clic n'est « avalé » que
- * lorsque le moteur le prend à son compte.
+ * Each click becomes a call to `runtime/actions.mjs` (`moveTo`, `jumpTo`, `engage`), which
+ * carries the turn's ceiling and the Opportunity Attacks. Nothing is patched: the mouse is
+ * listened to on the document (capture phase, so before PIXI), and a click is only "swallowed"
+ * when the engine takes it for itself.
  */
 
 import { mergeIssues } from "../core/forced.mjs";
@@ -69,15 +69,15 @@ export { menuEntriesFor, doorMenuFor, groundMenuFor } from "./pointer-menu.mjs";
 export const setting = key => game.settings.get(MODULE_ID, key);
 export const inCombat = () => game.combat?.started === true;
 
-/** Le token qui agit : le seul token contrôlé, s'il est à soi. */
+/** The token that acts: the only controlled token, if it is one's own. */
 export function actingToken() {
   const controlled = canvas.tokens?.controlled ?? [];
   return ((controlled.length === 1) && controlled[0].document.isOwner) ? controlled[0].document : null;
 }
 
 /**
- * Une intention à la fois : un second clic pendant qu'une action se joue est ignoré. `generation` : une intention libérée par
- * `releaseMouse` (changement de scène) qui finirait plus tard ne libère pas celle qui l'a remplacée.
+ * One intention at a time: a second click while an action is playing is ignored. `generation`: an intention released by
+ * `releaseMouse` (scene change) that would finish later does not release the one that replaced it.
  */
 export let busy = false;
 let running = null;
@@ -95,13 +95,13 @@ export function exclusive(fn) {
   return current;
 }
 
-/** Le canevas a été démonté pour une autre scène (pas pour un autre niveau de la même). */
+/** The canvas was torn down for another scene (not for another level of the same one). */
 let sceneLeft = false;
 
 /**
- * B12 : quand le canevas est démonté pour une autre scène (le MJ change de scène), une marche en cours n'aboutit jamais —
- * le `move` du cœur ou son animation attend un token qui n'est plus affiché — et la souris restait occupée jusqu'au F5.
- * On arrête les marches et on libère la souris.
+ * B12: when the canvas is torn down for another scene (the GM changes scene), a walk in progress never completes —
+ * the core's `move` or its animation waits for a token that is no longer displayed — and the mouse stayed busy until F5.
+ * The walks are stopped and the mouse is released.
  */
 function releaseMouse() {
   forgetAllWalks();
@@ -111,9 +111,9 @@ function releaseMouse() {
 }
 
 /**
- * §99 : un clic pendant que le token marche (déplacement, approche d'une attaque, d'une porte) l'arrête à la prochaine case
- * libre — l'intention en cours s'arrête là (pas d'attaque au bout) — puis `then`, s'il y en a un, part comme un nouveau clic.
- * Rend faux si le token ne marchait pas : le clic est alors ignoré, comme tout clic pendant une action.
+ * §99: a click while the token walks (movement, approach to an attack, to a door) stops it at the next free cell
+ * — the current intention stops there (no attack at the end) — then `then`, if there is one, goes off like a new click.
+ * Returns false if the token was not walking: the click is then ignored, like any click during an action.
  */
 export function interruptWalk(token, then=null) {
   if ( !busy || !stopWalking(token) ) return false;
@@ -131,36 +131,36 @@ export function observe(target) {
 }
 
 /* -------------------------------------------- */
-/*  Mode visée                                  */
+/*  Aiming mode                                 */
 /* -------------------------------------------- */
 
 export let targeting = null;
 /**
- * §16.27 : visée multiple d'un sort à projectiles (Projectile magique, Rayon ardent, Décharge occulte) — après le choix du
- * niveau, chaque clic sur une créature lui envoie un projectile (la même peut être cliquée plusieurs fois) ; un compteur
- * suit le curseur ; au dernier, le sort part. `{ token, activity, count, picks, usage }`.
+ * §16.27: multiple aiming of a projectile spell (Magic Missile, Scorching Ray, Eldritch Blast) — after the level is chosen,
+ * each click on a creature sends it a projectile (the same one can be clicked several times); a counter follows the cursor;
+ * on the last one, the spell goes off. `{ token, activity, count, picks, usage }`.
  */
 export let picking = null;
-/** §16.14 : une zone à déplacer attend la case où la poser (`{ activity }`), par la pose du cœur (placeZone). */
+/** §16.14: a zone to move waits for the cell to place it on (`{ activity }`), via the core's placement (placeZone). */
 export let placing = null;
-/** §57 : une ruée en ligne droite (Frappe du vent) attend le clic sur sa case d'arrivée (`{ token, activity, usage }`). */
+/** §57: a straight-line rush ("Wind Strike") waits for the click on its arrival cell (`{ token, activity, usage }`). */
 export let dashing = null;
-/** §107 : le rappel d'un familier attend le clic sur la case où il réapparaît (`{ token }` : le token du maître). */
+/** §107: a familiar's recall waits for the click on the cell where it reappears (`{ token }`: the master's token). */
 export let recalling = null;
-/** Ouvre l'attente du rappel d'un familier (le clic sur la case, `startRecall`). */
+/** Opens the wait for a familiar's recall (the click on the cell, `startRecall`). */
 export function openRecall(token) {
   recalling = { token };
 }
-/** Teinte de l'aperçu quand la case est hors de portée du déplacement. */
+/** Tint of the preview when the cell is out of movement range. */
 const TOO_FAR_COLOR = "#d03030";
 
-/** §119 : la consigne de la visée ouverte (le texte de sa notification), que le bandeau garde à l'écran. */
+/** §119: the instruction of the open aiming (the text of its notification), which the banner keeps on screen. */
 let promptText = null;
 
 /**
- * Fin d'une pose : `placing` n'est remis à null que s'il est encore celui de cette pose. Une pose attend la souris (`await`) ;
- * pendant ce temps une autre visée peut s'ouvrir (`stopTargeting` annule la pose, puis une offre ou un autre sort pose son propre
- * état), que la fin de l'ancienne ne doit pas effacer.
+ * End of a placement: `placing` is reset to null only if it is still the one of this placement. A placement waits for the
+ * mouse (`await`); meanwhile another aiming may open (`stopTargeting` cancels the placement, then an offer or another spell
+ * sets its own state), which the end of the old one must not erase.
  */
 function endPlacing(mine) {
   if ( placing !== mine ) return false;
@@ -168,7 +168,7 @@ function endPlacing(mine) {
   return true;
 }
 
-/** §118 : quelle visée est ouverte, pour les voisins. */
+/** §118: which aiming is open, for neighbouring modules. */
 function targetingKind() {
   if ( picking ) return picking.group ? "group" : "projectiles";
   if ( targeting ) return "target";
@@ -179,11 +179,11 @@ function targetingKind() {
 }
 
 /**
- * §118 : la visée que ce client attend, pour les modules voisins (`api.ui.targeting()`) — tant qu'elle est ouverte, le clic
- * gauche est au moteur, quel que soit ce qu'il y a sous la souris (cadavre, coffre, marchand). `{ token, activity, identifier }`
- * (uuids du token qui agit et de l'activité, identifiant dnd5e de son item), ou null.
- * §119 : plus `kind` (`target`, `projectiles`, `group`, `dash`, `recall`, `area`), `item` (nom de l'item), `prompt` (la consigne
- * traduite, ou null), et pour une visée multiple ou de groupe `picked` / `total` (sinon null).
+ * §118: the aiming this client is waiting for, for neighbouring modules (`api.ui.targeting()`) — while it is open, the left
+ * click belongs to the engine, whatever is under the mouse (corpse, chest, merchant). `{ token, activity, identifier }`
+ * (uuids of the acting token and of the activity, dnd5e identifier of its item), or null.
+ * §119: plus `kind` (`target`, `projectiles`, `group`, `dash`, `recall`, `area`), `item` (item name), `prompt` (the translated
+ * instruction, or null), and for a multiple or group aiming `picked` / `total` (otherwise null).
  */
 export function pendingTargeting() {
   const open = picking ?? targeting ?? dashing ?? recalling ?? placing;
@@ -195,9 +195,9 @@ export function pendingTargeting() {
 }
 
 /**
- * §118 : publie un changement de visée — hook `dnd5e-combat.targeting`, `(state)` (celui de `pendingTargeting`, null à la
- * fermeture), sur ce client seulement. Différé d'une microtâche : certains chemins posent la classe avant l'état.
- * §119 : aussi à chaque créature choisie ou retirée d'une visée multiple (`picked` change) ; et le bandeau suit.
+ * §118: publishes an aiming change — hook `dnd5e-combat.targeting`, `(state)` (that of `pendingTargeting`, null on
+ * close), on this client only. Deferred by a microtask: some paths set the class before the state.
+ * §119: also on each creature chosen or removed in a multiple aiming (`picked` changes); and the banner follows.
  */
 let announcedTargeting = null;
 function announceTargeting() {
@@ -208,14 +208,15 @@ function announceTargeting() {
     const key = state ? `${state.token}|${state.activity}|${state.kind}|${state.picked}|${state.prompt}` : null;
     if ( key === announcedTargeting ) return;
     announcedTargeting = key;
-    // §118 : sur ce client seulement, à chaque changement de la visée qu'il attend : `(state)`, celui de `api.ui.targeting()`, null à la fermeture.
+    // §118: on this client only, at each change of the aiming it is waiting for: `(state)`, that of `api.ui.targeting()`,
+    // null on close.
     Hooks.callAll(`${MODULE_ID}.targeting`, state);
   });
 }
 
 /**
- * §119 : la consigne d'une visée qui s'ouvre — gardée par le bandeau tant que la visée dure ; la notification seulement sans
- * bandeau (réglage coupé), pour ne pas l'afficher deux fois.
+ * §119: the instruction of an aiming that opens — kept by the banner while the aiming lasts; the notification only without a
+ * banner (setting off), so as not to show it twice.
  */
 export function promptTargeting(text) {
   promptText = text;
@@ -224,10 +225,10 @@ export function promptTargeting(text) {
 }
 
 /**
- * §119 : bandeau de visée (issue #4 : la notification passe, et rien ne disait plus que le moteur attendait des clics) — en haut
- * de l'écran tant qu'une visée est ouverte : la consigne, et pour une visée multiple le compteur. Réglage par client
- * (`targetingBanner`) ; un voisin qui a son propre affichage peut le masquer (`.dnd5e-combat-banner`) ou le déplacer
- * (variable CSS `--dnd5e-combat-banner-top`). Ne prend aucun clic.
+ * §119: aiming banner (issue #4: the notification fades, and nothing told you any more that the engine was waiting for clicks) —
+ * at the top of the screen while an aiming is open: the instruction, and for a multiple aiming the counter. Per-client setting
+ * (`targetingBanner`); a neighbour with its own display can hide it (`.dnd5e-combat-banner`) or move it
+ * (CSS variable `--dnd5e-combat-banner-top`). Takes no click.
  */
 let banner = null;
 function renderBanner(state) {
@@ -256,9 +257,9 @@ export function markTargeting() {
 }
 
 /**
- * Ouvre la visée d'une activité : la cible de `token` se choisit d'un clic, puis `activity.use(...usage)`. `prompt` : la consigne du
- * bandeau ; `notice` : un retour flottant au-dessus de `noticeOn` (le token qui agit, d'ordinaire) ; `reticle` : le texte qui suit la
- * souris. `fresh` (par défaut) : la visée en cours se ferme d'abord.
+ * Opens the aiming of an activity: the target of `token` is chosen with a click, then `activity.use(...usage)`. `prompt`: the
+ * banner instruction; `notice`: a floating feedback above `noticeOn` (the acting token, usually); `reticle`: the text that
+ * follows the mouse. `fresh` (default): the current aiming is closed first.
  */
 export function openTargeting(token, activity, usage, { prompt, notice=null, noticeOn=token, reticle=null, fresh=true }) {
   if ( fresh ) stopTargeting();
@@ -269,22 +270,22 @@ export function openTargeting(token, activity, usage, { prompt, notice=null, not
   if ( reticle ) showReticle(reticle);
 }
 
-/** Les options de fenêtre d'une utilisation, sans la fenêtre de dnd5e (le choix est déjà fait). */
+/** The window options of a use, without the dnd5e window (the choice is already made). */
 const noDialog = dialogConfig => ({ ...(dialogConfig ?? {}), configure: false });
 
-/** Qui l'activité vise d'un clic (core/targeting.mjs), ou null si elle ne se vise pas ainsi. */
+/** Whom the activity aims at with a click (core/targeting.mjs), or null if it is not aimed that way. */
 function ruleOf(activity) {
-  // §394 : une invocation ne se vise que si le contenu le demande (Doigt de mort : le cadavre). Ses données désignent souvent
-  // l'objet lui-même (Tapis volant, Driftglobe) ou une case libre (Bouteille d'éfrit) : le moteur attendait un clic impossible.
-  // (§385 : `summon.untargeted`, Création de morts-vivants, en est désormais un cas particulier.)
+  // §394: a summon is aimed only if the content asks for it (Finger of Death: the corpse). Its data often designate
+  // the item itself (Carpet of Flying, Driftglobe) or a free cell (Efreeti Bottle): the engine waited for an impossible click.
+  // (§385: `summon.untargeted`, Create Undead, is now a special case of it.)
   if ( (activity?.type === "summon") && !contentOf(activity.item).entry?.targetedSummon ) return null;
-  // §16.41 : l'arme d'une créature, soi compris (Arme élémentaire : dnd5e vise un « objet »).
+  // §16.41: the weapon of a creature, oneself included (Elemental Weapon: dnd5e aims at an "object").
   if ( enchantTargetOf(activity) === "weapon" ) return { self: true, side: null };
-  // §53 : le sort qu'une potion fait lancer est pour le buveur (adapter/usage.mjs) — rien à viser.
+  // §53: the spell a potion makes you cast is for the drinker (adapter/usage.mjs) — nothing to aim.
   if ( potionCastsOnDrinker(activity?.item) ) return null;
-  // §101 : une potion « au toucher » se boit sans cible (le buveur), ou va à la créature déjà désignée — pas de visée.
+  // §101: a "touch" potion is drunk without a target (the drinker), or goes to the creature already designated — no aiming.
   if ( isPotion(activity?.item) && (activity.range?.units === "touch") ) return null;
-  // §123 : la portée corrigée par le contenu (Imposition des mains : « personnelle » dans les données, au contact en vrai).
+  // §123: the range corrected by the content (Lay on Hands: "personal" in the data, touch in truth).
   return activity ? targetRule({ type: activity.type, affects: activity.target?.affects?.type, rangeUnits: rangeUnitsOf(activity),
     template: activity.target?.template?.type }) : null;
 }
@@ -295,20 +296,20 @@ function needsTarget(activity) {
 
 const TARGET_REFUSALS = { self: "Retour.PasSoi", notAlly: "Retour.PasAllie", notEnemy: "Retour.PasEnnemi" };
 
-/** Le type de cible de l'activité refuse-t-il cette créature (soi-même, mauvais camp) ? Le texte du refus, ou null. */
+/** Does the activity's target type refuse this creature (oneself, wrong side)? The refusal text, or null. */
 export function targetTypeRefusal(me, hover, activity) {
   const why = targetRefusal(ruleOf(activity), { isSelf: hover === me, relation: relationForTargeting(me, hover) });
   return why ? loc(TARGET_REFUSALS[why]) : null;
 }
 
 /**
- * `dnd5e.preUseActivity`, AVANT le contrôle de légalité (ordre des `register…()`) : une activité
- * qui vise quelqu'un, lancée sans cible, passe en mode visée ; l'utilisation est suspendue et
- * repartira, mêmes configurations, au clic sur la cible.
+ * `dnd5e.preUseActivity`, BEFORE the legality check (order of the `register…()`): an activity
+ * that aims at someone, cast without a target, goes into aiming mode; the use is suspended and
+ * restarts, same configurations, on the click on the target.
  */
 function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
-  // §16.27 : un sort à projectiles se vise projectile par projectile, après le choix du niveau. Pas pour un appelant qui
-  // confirme d'office (connecteur, scénarios : cibles données), ni pour un projectile enchaîné ou un rebond.
+  // §16.27: a projectile spell is aimed projectile by projectile, after the level is chosen. Not for a caller that
+  // confirms outright (connector, scenarios: targets given), nor for a chained projectile or a bounce.
   const ours = usageConfig[MODULE_ID] ?? {};
   if ( projectilesOf(activity?.item) && !ours.confirmed && !ours.picks && !ours.projectileOf && !ours.leap && canvas.ready ) {
     const token = activity.getUsageToken?.() ?? activity.actor?.getActiveTokens()[0]?.document;
@@ -319,7 +320,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
       return false;
     }
   }
-  // §70 : Appel de la foudre — « dehors, par temps d'orage ? » avant l'incantation (pas à la relance : le nuage est là).
+  // §70: Call Lightning — "outdoors, in stormy weather?" before the casting (not on the recast: the cloud is there).
   const storm = stormOf(activity?.item);
   if ( storm && !ours.recast && !("stormy" in ours) && !ours.confirmed && canvas.ready && activity.actor?.isOwner && !cloudOf(activity.item) ) {
     closeSheetFor(activity);
@@ -329,7 +330,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
       .catch(err => console.error(`${MODULE_ID} | storm`, err));
     return false;
   }
-  // §16.35 : un sort de lumière qui invoque un objet (Lumière) — au sol ou sur soi, et la couleur, avant de lancer.
+  // §16.35: a light spell that summons an object (Light) — on the ground or on oneself, and the colour, before casting.
   if ( lightChoiceOf(activity) && !ours.lightChoice && !ours.confirmed && canvas.ready && activity.actor?.isOwner ) {
     closeSheetFor(activity);
     stopTargeting();
@@ -339,8 +340,9 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
       .catch(err => console.error(`${MODULE_ID} | light choice`, err));
     return false;
   }
-  // §293 : « chaque créature de votre choix dans un rayon » (Renvoi des morts-vivants) — la liste des créatures à portée, cochées, et
-  // la case de l'activité qui le remplace (Calcination) ; puis l'activité part sur les cochées, sans zone ni visée au clic.
+  // §293: "each creature of your choice within a radius" (Turn Undead) — the list of creatures in range, ticked, and
+  // the checkbox of the activity that replaces it (Sear Undead); then the activity goes off on the ticked ones,
+  // with no area or click aiming.
   if ( pickTargetsOf(activity) && !ours.picked && !ours.confirmed && canvas.ready && activity.actor?.isOwner ) {
     closeSheetFor(activity);
     stopTargeting();
@@ -349,12 +351,12 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
       .catch(err => console.error(`${MODULE_ID} | creatures of your choice`, err));
     return false;
   }
-  // §391 (issue #38) : un enchantement ou une transformation à plusieurs profils lancé sans la fenêtre de dnd5e (barre, « Lancer quand
-  // même ») — le profil (l'élément d'Arme élémentaire, le bonus d'une arme +1/+2/+3…) se choisit dans la fenêtre du moteur, avant ses
-  // chemins propres (Pacte de la lame, Arme élémentaire). La Forme sauvage a déjà la sienne (§16.39).
-  // Les chemins du moteur qui relancent eux-mêmes sans la fenêtre de dnd5e : l'arme d'une créature déjà désignée (Arme élémentaire,
-  // Arme magique : `enchantWith`, `configure: false`) et le Pacte de la lame (`pactWith`) — sans ceci, l'élément n'était jamais
-  // demandé quand une cible était déjà désignée (balayage des enchantements).
+  // §391 (issue #38): an enchantment or a transformation with several profiles cast without the dnd5e window (bar, "Cast anyway") —
+  // the profile (the element of Elemental Weapon, the bonus of a +1/+2/+3 weapon…) is chosen in the engine's window, before its own
+  // paths (Pact of the Blade, Elemental Weapon). Wild Shape already has its own (§16.39).
+  // The engine paths that recast by themselves without the dnd5e window: the weapon of an already designated creature
+  // (Elemental Weapon, Magic Weapon: `enchantWith`, `configure: false`) and Pact of the Blade (`pactWith`) — without this, the
+  // element was never asked for when a target was already designated (enchantment sweep).
   const enchantKind = (activity?.type === "enchant") ? enchantTargetOf(activity) : null;
   const skipsDialog = (dialogConfig?.configure === false) || (enchantKind === "ownWeapon")
     || ((enchantKind === "weapon") && (!!ours.engaged || (game.user.targets.size > 0)));
@@ -368,8 +370,8 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
       .catch(err => console.error(`${MODULE_ID} | profile choice`, err));
     return false;
   }
-  // §16.41 : Arme élémentaire — le niveau et l'élément (fenêtre de dnd5e), puis la créature (visée), puis son arme.
-  // §16.45 : Pacte de la lame — ses armes ou une arme invoquée, et le type de dégâts ; pas de créature à viser.
+  // §16.41: Elemental Weapon — the level and the element (dnd5e window), then the creature (aiming), then its weapon.
+  // §16.45: Pact of the Blade — its weapons or a summoned weapon, and the damage type; no creature to aim at.
   if ( (enchantTargetOf(activity) === "ownWeapon") && !ours.enchantItem && !ours.confirmed && activity.actor?.isOwner ) {
     closeSheetFor(activity);
     stopTargeting();
@@ -397,7 +399,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     }).catch(err => console.error(`${MODULE_ID} | enchantment`, err));
     return false;
   }
-  // §16.39 : Forme sauvage, Formes du cercle — la forme se choisit parmi les formes connues, avant de lancer.
+  // §16.39: Wild Shape, Circle Forms — the form is chosen among the known forms, before casting.
   if ( isWildShape(activity) && !ours.wildForm && !ours.confirmed && canvas.ready && activity.actor?.isOwner ) {
     closeSheetFor(activity);
     stopTargeting();
@@ -406,15 +408,15 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
       .catch(err => console.error(`${MODULE_ID} | Wild Shape`, err));
     return false;
   }
-  // §383 (issue #38) : une invocation à plusieurs formes (Convocation de céleste : Vengeur / Défenseur), tailles ou types, lancée
-  // sans la fenêtre de dnd5e (barre d'actions, manette : `configure: false`) — la forme se choisit dans la fenêtre du moteur, chez
-  // celui qui lance, puis l'utilisation repart avec elle. Lumière a sa propre fenêtre (§16.35).
-  // §385 : « jusqu'à N » créatures (`summon.chooseCount`) — toujours cette fenêtre, avec le nombre et, depuis la fiche, le niveau.
+  // §383 (issue #38): a summon with several forms (Summon Celestial: Avenger / Defender), sizes or types, cast
+  // without the dnd5e window (action bar, gamepad: `configure: false`) — the form is chosen in the engine's window, on the
+  // caster's side, then the use restarts with it. Light has its own window (§16.35).
+  // §385: "up to N" creatures (`summon.chooseCount`) — always this window, with the number and, from the sheet, the level.
   const chooseRule = (activity?.type === "summon") ? contentOf(activity.item).entry?.summon?.chooseCount : null;
   const chooseCount = !!chooseRule;
   if ( (activity?.type === "summon") && canvas.ready && activity.actor?.isOwner && !lightChoiceOf(activity)
     && asksSummonForm({ configure: dialogConfig?.configure, choices: summonChoicesOf(activity), chosen: !!ours.summonForm,
-      // §410 : une relance « forcée » sans ressource (fenêtre de légalité, §77) est confirmée mais n'a pas encore choisi sa forme.
+      // §410: a "forced" recast without a resource (legality window, §77) is confirmed but has not yet chosen its form.
       confirmed: !!ours.confirmed && !ours.forced, otherChoice: !!ours.lightChoice, always: chooseCount,
       willSummon: !!usageConfig.create?.summons || !!contentOf(activity.item).entry?.placesSummons || (game.user.targets.size > 0) }) ) {
     closeSheetFor(activity);
@@ -426,7 +428,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
       .catch(err => console.error(`${MODULE_ID} | summon form`, err));
     return false;
   }
-  // §57 : une ruée en ligne droite (Frappe du vent) — la case d'arrivée se vise au lieu de poser le gabarit de ligne.
+  // §57: a straight-line rush ("Wind Strike") — the arrival cell is aimed instead of placing the line template.
   if ( lineDashOf(activity) && !ours.dash && !ours.confirmed && canvas.ready ) {
     const token = activity.getUsageToken?.() ?? activity.actor?.getActiveTokens()[0]?.document;
     if ( token?.object && token.isOwner ) {
@@ -438,7 +440,7 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
       return false;
     }
   }
-  // §162 : un mur (gabarit « wall ») se pose par points — le niveau d'abord, puis deux points ou plus ; l'activité part avec eux.
+  // §162: a wall ("wall" template) is placed by points — the level first, then two or more points; the activity goes off with them.
   const wall = (ours.aimed || ours.confirmed || !canvas.ready || (usageConfig.create?.measuredTemplate !== true)) ? null : wallAreaOf(activity);
   if ( wall && wall.token.object && wall.token.isOwner ) {
     closeSheetFor(activity);
@@ -455,8 +457,8 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     }).catch(err => console.error(`${MODULE_ID} | wall placement`, err));
     return false;
   }
-  // §59 : un cône, une ligne ou un cube de portée personnelle (souffle, Mains brûlantes, Éclair, Vague tonnante) — le niveau
-  // d'abord, puis la zone suit la souris autour du lanceur ; le clic la pose et lance l'activité.
+  // §59: a Cone, Line or Cube with personal range (breath, Burning Hands, Lightning Bolt, Thunderwave) — the level
+  // first, then the area follows the mouse around the caster; the click places it and casts the activity.
   const aim = (ours.aimed || ours.confirmed || !canvas.ready || (usageConfig.create?.measuredTemplate !== true) || lineDashOf(activity))
     ? null : aimedAreaOf(activity);
   if ( aim && aim.token.object && aim.token.isOwner ) {
@@ -474,8 +476,8 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     }).catch(err => console.error(`${MODULE_ID} | area targeting`, err));
     return false;
   }
-  // §16.14 : relancer un sort dont la zone déplaçable est déjà là (Rayon de lune) la déplace : on vise la case, rien n'est
-  // lancé. Pas pour un appelant qui confirme d'office (connecteur, relance après la légalité) : lui lance vraiment.
+  // §16.14: recasting a spell whose movable area is already there (Moonbeam) moves it: the cell is aimed, nothing is
+  // cast. Not for a caller that confirms outright (connector, recast after legality): that one really casts.
   const zone = usageConfig[MODULE_ID]?.confirmed ? null : movableZoneOf(activity);
   if ( zone ) {
     stopTargeting();
@@ -483,18 +485,18 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
     return false;
   }
   if ( !usageConfig[MODULE_ID]?.engaged && !usageConfig[MODULE_ID]?.confirmed ) closeSheetFor(activity);
-  // §125 : une action que le moteur lance sur les cibles qu'il a choisies (visée, projectiles, groupe) — retenues jusqu'à leur relâchement.
+  // §125: an action the engine casts on the targets it has chosen (aiming, projectiles, group) — held until they are released.
   if ( ours.engaged || ours.picks || ours.projectileOf ) noteInFlight(activity);
-  // §189 : une action de feu tirée sur une flaque d'huile, une toile — sans créature ciblée, rien à viser.
+  // §189: a fire action shot at an oil slick, a web — without a targeted creature, nothing to aim.
   if ( !setting("targetingMode") || usageConfig[MODULE_ID]?.engaged || usageConfig[MODULE_ID]?.confirmed || ours.igniteZone ) return true;
-  // §125 : les cibles d'une action précédente pas encore réglée (son animation, ses jets) ne servent pas à une autre — vu : un Mot
-  // de guérison lancé juste après une Moquerie cruelle a soigné le Zombi encore ciblé. Relâchées, et la visée s'ouvre.
+  // §125: the targets of a previous action not yet settled (its animation, its rolls) are not used for another — seen: a Healing
+  // Word cast right after a Vicious Mockery healed the Zombie still targeted. Released, and the aiming opens.
   if ( leftoverTargets(activity) ) { clearTargets(); log(`${activity.item?.name}: previous action's targets released, targeting opened`); }
   if ( !canvas.ready || game.user.targets.size || !needsTarget(activity) ) return true;
   const token = activity.getUsageToken?.() ?? activity.actor?.getActiveTokens()[0]?.document;
   if ( !token?.object || !token.isOwner ) return true;
   stopTargeting();
-  // §16.33 : un sort à plusieurs cibles (Bénédiction, Prière de guérison…) — le niveau d'abord, puis un clic par créature.
+  // §16.33: a spell with several targets (Bless, Prayer of Healing…) — the level first, then one click per creature.
   if ( maySeveral(activity) ) {
     startGroup(token, activity, usageConfig, dialogConfig, messageConfig).catch(err => console.error(`${MODULE_ID} | group targeting`, err));
     return false;
@@ -504,8 +506,8 @@ function onPreUseActivity(activity, usageConfig, dialogConfig, messageConfig) {
 }
 
 /**
- * §15.1 : choisir une attaque ou un sort ferme la fiche de personnage, pour dégager la vue (visée
- * comprise). Réglage par client. Les autres activités (soin d'une potion, utilitaire) la laissent.
+ * §15.1: choosing an attack or a spell closes the character sheet, to clear the view (aiming
+ * included). Per-client setting. Other activities (potion healing, utility) leave it.
  */
 function closeSheetFor(activity) {
   if ( !setting("closeSheetOnUse") || ((activity.type !== "attack") && !isSpellCast(activity.item)) ) return;
@@ -514,11 +516,11 @@ function closeSheetFor(activity) {
 }
 
 /**
- * §16.14 : la nouvelle position d'une zone se choisit par la pose interactive du cœur V14
- * (`RegionLayer#placeRegion`, client/canvas/layers/regions.mjs:688, `create: false` : rien n'est créé, la forme placée
- * est rendue) — celle que dnd5e emploie pour poser le sort (canvas/template-placement.mjs:24). L'aperçu est donc la zone
- * elle-même sous la souris, calée sur la grille comme à la pose ; rouge au-delà de la distance permise, où le clic est
- * refusé. Clic droit ou Échap : le cœur annule. La souris du moteur s'efface pendant la pose.
+ * §16.14: the new position of a zone is chosen with the V14 core's interactive placement
+ * (`RegionLayer#placeRegion`, client/canvas/layers/regions.mjs:688, `create: false`: nothing is created, the placed shape
+ * is returned) — the one dnd5e uses to place the spell (canvas/template-placement.mjs:24). The preview is thus the zone
+ * itself under the mouse, snapped to the grid as at placement; red beyond the allowed distance, where the click is
+ * refused. Right click or Escape: the core cancels. The engine's mouse is hidden during placement.
  */
 async function placeZone(activity, zone) {
   const source = zone.region.toObject();
@@ -539,26 +541,26 @@ async function placeZone(activity, zone) {
         doc.updateSource({ color: far(s) ? TOO_FAR_COLOR : source.color });
         preview.renderFlags.set({ refreshState: true });
       },
-      // §411 : trop loin, la pose n'est plus refusée — `moveZone` le dit dans sa fenêtre, et l'on peut forcer.
+      // §411: too far, the placement is no longer refused — `moveZone` says so in its window, and one can force.
     });
     const point = placed?.shapes?.length ? shapeCenter(placed.shapes[0].toObject()) : null;
     if ( !point ) return ui.notifications.info(loc("Visee.Annulee"));
     let settled = true;
     await exclusive(async () => { settled = await moveZone(activity, point); });
-    // Renoncé devant la fenêtre : la pose se rouvre, comme l'ancien refus.
+    // Given up at the window: the placement reopens, like the old refusal.
     if ( settled === false ) { endPlacing(mine); return placeZone(activity, movableZoneOf(activity) ?? zone); }
   } catch(err) { console.error(`${MODULE_ID} | area move`, err); }
   finally { endPlacing(mine); announceTargeting(); }
 }
 
 /**
- * §59 : la visée d'un cône, d'une ligne ou d'un cube autour du lanceur, par la pose de région du cœur (`RegionLayer#placeRegion`,
- * client/canvas/layers/regions.mjs:688) : `onMove` remplace le déplacement par défaut (regions.mjs:1037-1043) — le sommet
- * reste sur le bord du lanceur, seule la direction suit la souris ; un cube reste accolé au lanceur (`aimedShapeData`) ; la molette ne tourne rien
- * (`onRotate` rend false, regions.mjs:991). Clic gauche : `then(shape)` ; clic droit ou Échap : rien.
+ * §59: the aiming of a Cone, Line or Cube around the caster, via the core's region placement (`RegionLayer#placeRegion`,
+ * client/canvas/layers/regions.mjs:688): `onMove` replaces the default movement (regions.mjs:1037-1043) — the apex
+ * stays on the caster's edge, only the direction follows the mouse; a Cube stays attached to the caster (`aimedShapeData`);
+ * the wheel rotates nothing (`onRotate` returns false, regions.mjs:991). Left click: `then(shape)`; right click or Escape: nothing.
  * @param {Activity} activity
  * @param {{shape: "cone"|"line", token: TokenDocument}} area
- * @param {(shape: object) => any} then  Ce qui suit le clic, avec la forme visée.
+ * @param {(shape: object) => any} then  What follows the click, with the aimed shape.
  */
 async function aimArea(activity, area, then) {
   if ( !canvas.ready ) return;
@@ -592,13 +594,13 @@ async function aimArea(activity, area, then) {
   finally { endPlacing(mine); announceTargeting(); }
 }
 
-/** La longueur en pieds (unités de la grille) pour le bandeau. */
+/** The length in feet (grid units) for the banner. */
 const gridUnits = px => Math.round((px / canvas.dimensions.size) * canvas.dimensions.distance);
 
 /**
- * §162 : la pose d'un mur par points. Clic gauche : un point (au coin de case le plus proche, la longueur restante bornée) ; le segment
- * suivant suit la souris ; clic droit ou Entrée : terminé (deux points au moins) ; Échap : rien. Le mur se termine seul quand sa
- * longueur est atteinte. `then(points)` reçoit la ligne brisée, en pixels.
+ * §162: placing a wall by points. Left click: a point (at the nearest cell corner, the remaining length capped); the next
+ * segment follows the mouse; right click or Enter: done (two points at least); Escape: nothing. The wall ends by itself when its
+ * length is reached. `then(points)` receives the polyline, in pixels.
  * @param {Activity} activity
  * @param {{token: TokenDocument, length: number, width: number}} area  `wallAreaOf`.
  * @param {(points: Array<{x: number, y: number}>) => any} then
@@ -611,9 +613,9 @@ async function aimWall(activity, area, then) {
   const g = new PIXI.Graphics();
   canvas.controls.addChild(g);
   const color = Number(foundry.utils.Color.from(game.user.color)) || 0xff6400;
-  // §172 : un mur épais se pose de centre de case en centre de case ; sa ligne de centres est plus courte d'une case que le mur.
+  // §172: a thick wall is placed from cell center to cell center; its line of centers is one cell shorter than the wall.
   const max = (area.cells ? area.lineLength : area.length) || Infinity;
-  // §169 : sans diagonale — le point suit l'axe où il s'écarte le plus du précédent.
+  // §169: no diagonal — the point follows the axis where it strays furthest from the previous one.
   const snap = p => {
     const v = canvas.grid.getSnappedPoint(p, { mode: area.cells ? CONST.GRID_SNAPPING_MODES.CENTER : CONST.GRID_SNAPPING_MODES.VERTEX });
     return (area.orthogonal && points.length) ? orthogonalize([points.at(-1), v])[1] : v;
@@ -674,9 +676,9 @@ async function aimWall(activity, area, then) {
 }
 
 /**
- * §70 : après une utilisation d'Appel de la foudre — à l'incantation, le nuage que dnd5e vient de poser est habillé en orage ;
- * puis (incantation comme relance) l'éclair se vise sous le nuage : un cercle de 1,50 m suit la souris sans sortir du nuage,
- * le clic le pose (la résolution le lit), clic droit ou Échap : pas d'éclair (la carte reste sans résolution).
+ * §70: after a use of Call Lightning — at casting, the cloud dnd5e has just placed is dressed up as a storm;
+ * then (casting as recast) the bolt is aimed under the cloud: a 1.50 m circle follows the mouse without leaving the cloud,
+ * the click places it (the resolution reads it), right click or Escape: no bolt (the card stays without resolution).
  */
 export async function stormAfterUse(activity, usageConfig) {
   const ours = usageConfig?.[MODULE_ID] ?? {};
@@ -686,7 +688,7 @@ export async function stormAfterUse(activity, usageConfig) {
     if ( !cloud ) return;
     await dressStorm(activity, cloud, { stormy: ours.stormy === true });
   }
-  // §469 : l'incantation n'a posé que le nuage (Manuel 3.0.0) — l'éclair vient de son activité, utilisée à la suite, qui revient ici.
+  // §469: the casting placed only the cloud (Manual 3.0.0) — the bolt comes from its activity, used next, which returns here.
   const bolt = strikeActivityOf(activity);
   if ( bolt && (bolt !== activity) ) return void await launchStrike(activity, bolt, usageConfig);
   await aimBolt(activity, cloud);
@@ -725,7 +727,7 @@ async function aimBolt(activity, cloud) {
   finally { endPlacing(mine); announceTargeting(); setBoltAim(null); }
 }
 
-/** §59 : le bouton « Placer la zone » de la carte d'un cône ou d'une ligne de portée personnelle — la même visée. */
+/** §59: the "Place the zone" button of the card of a Cone or Line with personal range — the same aiming. */
 function onPreTemplate(activity) {
   if ( lineDashOf(activity) ) return;
   // §162 : un mur, par points.
@@ -741,12 +743,12 @@ function onPreTemplate(activity) {
 }
 
 /**
- * §190 : une sphère, un cylindre, un cube lancé « en un point à portée » (Aspersion d'acide, Boule de feu) — la pose de dnd5e
- * (`TemplatePlacement.fromActivity`) n'a pas de portée. Juste avant la création (`dnd5e.createMeasuredTemplate`,
- * canvas/template-placement.mjs:175, annulable), une zone hors de portée n'est pas créée : le message le dit et la pose se rouvre.
- * La pose reste celle de dnd5e, attendue par l'utilisation : ce qui lit la zone à `postUseActivity` la trouve (le nuage d'Appel
- * de la foudre, que la 0.242.1 avait cassé en posant la zone après coup). Un nuage d'orage n'est pas vérifié (sa visée de l'éclair
- * suit l'utilisation) ; les zones que le moteur crée lui-même (`enginePlaced`) non plus.
+ * §190: a Sphere, cylinder or Cube cast "at a point within range" (Acid Splash, Fireball) — dnd5e's placement
+ * (`TemplatePlacement.fromActivity`) has no range. Just before creation (`dnd5e.createMeasuredTemplate`,
+ * canvas/template-placement.mjs:175, cancellable), an out-of-range zone is not created: the message says so and the
+ * placement reopens. The placement stays dnd5e's, awaited by the use: what reads the zone at `postUseActivity` finds it (the Call
+ * Lightning cloud, which 0.242.1 had broken by placing the zone afterwards). A storm cloud is not checked (its bolt aiming
+ * follows the use); nor are the zones the engine creates itself (`enginePlaced`).
  */
 function onCreateTemplate(activity, regionData) {
   if ( stormOf(activity?.item) ) return;
@@ -754,14 +756,14 @@ function onCreateTemplate(activity, regionData) {
   const area = rangedAreaOf(activity);
   if ( !area ) return;
   const shapes = (regionData ?? []).flatMap(d => d.shapes ?? []);
-  // §200 : « Chemin dégagé vers la cible » — pas de point d'origine derrière un mur (Boule de feu lancée derrière un mur, retour de
-  // table du 2026-10-18). §286 : chaque gabarit d'une zone multiple ; Tempête de feu — « chaque cube contigu à au moins un autre ».
+  // §200: "Clear path to the target" — no point of origin behind a wall (Fireball cast behind a wall, table feedback of
+  // 2026-10-18). §286: each template of a multiple zone; Fire Storm — "each cube contiguous to at least one other".
   const problem = rangedPlacementProblem(area, shapes);
   if ( !problem ) return;
   const key = { far: "Zone.HorsPortee", hidden: "Zone.SansChemin", apart: "Zone.NonContigue" }[problem];
-  // §411 (issue #44, lot 4) : plus de refus sec — la fenêtre le dit ; forcé, la zone est créée là où elle a été posée (comme dnd5e l'aurait
-  // fait, canvas/template-placement.mjs:175-187), le MJ prévenu ; renoncé, la pose se rouvre comme avant. Le hook est synchrone : on annule,
-  // on demande, puis on crée.
+  // §411 (issue #44, batch 4): no more flat refusal — the window says so; forced, the zone is created where it was placed (as
+  // dnd5e would have done, canvas/template-placement.mjs:175-187), the GM notified; given up, the placement reopens as before.
+  // The hook is synchronous: we cancel, we ask, then we create.
   const data = foundry.utils.deepClone(regionData).map(d => foundry.utils.mergeObject(d, { [`flags.${MODULE_ID}.forcedPlacement`]: true }, { inplace: false }));
   askAnyway(`${activity.item.name} — ${activity.actor?.name ?? ""}`, [loc(key, { item: activity.item.name, max: area.max, units: area.units })],
     { actor: activity.actor, item: activity.item, token: activity.getUsageToken?.() ?? null }).then(async go => {
@@ -773,15 +775,15 @@ function onCreateTemplate(activity, regionData) {
 }
 
 /**
- * La fenêtre d'utilisation de dnd5e (niveau d'emplacement…), sans lancer : rend la configuration choisie et le niveau, ou
- * null si la fenêtre a été fermée.
+ * The dnd5e use window (spell slot level…), without casting: returns the chosen configuration and the level, or
+ * null if the window was closed.
  */
 async function configureFirst(activity, usageConfig, dialogConfig) {
   let config = usageConfig;
   if ( (dialogConfig?.configure !== false) && activity._requiresConfigurationDialog?.(usageConfig) && dialogConfig?.applicationClass ) {
     try { config = (await dialogConfig.applicationClass.create(activity, usageConfig, dialogConfig.options ?? {})) ?? usageConfig; }
     catch(err) {
-      // Fenêtre fermée : dnd5e rejette sans erreur (activity-usage-dialog.mjs:556) — rien n'est lancé. Une vraie erreur se journalise.
+      // Window closed: dnd5e rejects without error (activity-usage-dialog.mjs:556) — nothing is cast. A real error is logged.
       if ( err ) console.warn(`${MODULE_ID} | usage dialog of ${activity.item?.name}`, err);
       return null;
     }
@@ -791,7 +793,7 @@ async function configureFirst(activity, usageConfig, dialogConfig) {
   return { config, level };
 }
 
-/** §16.33 : l'activité peut-elle viser plusieurs créatures (nombre de cibles > 1, ou qui dépend du niveau) ? Pas une attaque. */
+/** §16.33: can the activity aim at several creatures (number of targets > 1, or depending on the level)? Not an attack. */
 function maySeveral(activity) {
   if ( activity.type === "attack" ) return false;
   const formula = activity.target?.override ? activity._source?.target?.affects?.count : activity.item?._source?.system?.target?.affects?.count;
@@ -799,15 +801,15 @@ function maySeveral(activity) {
 }
 
 /**
- * §16.33 : visée de groupe — le niveau d'abord (il fixe le nombre de cibles : Invisibilité surclassée), puis un clic par
- * créature, un second clic la retire ; au dernier, ou sur Entrée, le sort part sur toutes. Une seule cible possible à ce
- * niveau : la visée ordinaire.
+ * §16.33: group aiming — the level first (it sets the number of targets: upcast Invisibility), then one click per
+ * creature, a second click removes it; on the last one, or on Enter, the spell goes off on all. Only one possible target at this
+ * level: the ordinary aiming.
  */
 async function startGroup(token, activity, usageConfig, dialogConfig, messageConfig) {
   const chosen = await configureFirst(activity, usageConfig, dialogConfig);
   if ( !chosen ) return;
   const usage = [chosen.config, noDialog(dialogConfig), messageConfig];
-  // §296 : Sort jumeau — « augmente de 1 le niveau effectif du sort » : une cible de plus que l'emplacement dépensé.
+  // §296: Twinned Spell — "increases the spell's effective level by 1": one more target than the slot spent.
   const twinned = pendingMetamagic(activity.actor).includes("twinned");
   const count = targetCount(activity, { level: twinned ? ((chosen.level ?? Number(activity.item?.system?.level) ?? 0) + 1) : chosen.level });
   clearTargets();
@@ -821,23 +823,23 @@ async function startGroup(token, activity, usageConfig, dialogConfig, messageCon
   promptTargeting(loc("Cibles.Choisir", { item: activity.item.name, count }));
 }
 
-/** §16.33 : la visée de groupe est close (complète, ou Entrée) — le sort part sur les créatures choisies. */
+/** §16.33: the group aiming is closed (complete, or Enter) — the spell goes off on the chosen creatures. */
 export function finishGroup() {
   if ( !(picking?.group || picking?.unique) || !picking.picks.length ) return;
-  if ( !picking.group ) return launchPicks();   // §403 : projectiles « une par créature », clos avant le compte
+  if ( !picking.group ) return launchPicks();   // §403: projectiles "one per creature", closed before the count
   const { activity, usage, picks } = picking;
   stopTargeting();
   exclusive(() => castOnTargets(activity, usage, picks));
 }
 
-/** Le niveau d'emplacement d'abord (la fenêtre de dnd5e, sans lancer), puis la visée multiple. */
+/** The slot level first (the dnd5e window, without casting), then the multiple aiming. */
 async function startPicking(token, activity, usageConfig, dialogConfig, messageConfig) {
   const chosen = await configureFirst(activity, usageConfig, dialogConfig);
   if ( !chosen ) return;
   const { config, level } = chosen;
   const count = projectileCount(activity, { level });
   clearTargets();
-  // §403 : Frappe du vent d'acier — « jusqu'à cinq créatures », une attaque contre chacune (`onePerTarget`).
+  // §403: Steel Wind Strike — "up to five creatures", one attack against each (`onePerTarget`).
   const unique = !!projectilesOf(activity.item)?.onePerTarget;
   picking = { token, activity, count, picks: [], unique, usage: [config, noDialog(dialogConfig), messageConfig] };
   markTargeting();
@@ -851,10 +853,10 @@ function counterText() {
 }
 
 /**
- * Réticule d'invite (demande de l'utilisateur, 2026-09-25 : « grossir le curseur cible et le faire pulser ») : quand le moteur
- * ouvre lui-même une visée (rebond, Taille, sort de début de tour, visée multiple), un grand anneau qui pulse suit la souris,
- * le motif en dessous ; rouge sur une cible refusée. Un curseur ne s'anime pas : c'est un élément, le curseur du cœur est
- * masqué sur le canevas le temps de l'invite (styles, `dnd5e-combat-prompt`).
+ * Prompt reticle (user's request, 2026-09-25: "enlarge the target cursor and make it pulse"): when the engine
+ * itself opens an aiming (bounce, "Size", start-of-turn spell, multiple aiming), a large pulsing ring follows the mouse,
+ * the reason below; red on a refused target. A cursor does not animate: it is an element, the core's cursor is
+ * hidden on the canvas for the duration of the prompt (styles, `dnd5e-combat-prompt`).
  */
 export let reticle = null;
 
@@ -896,23 +898,24 @@ function stopPicking() {
 }
 
 /**
- * Une visée multiple abandonnée (clic droit, Échap) relâche les créatures déjà choisies : sinon l'attaque suivante partait
- * aussitôt sur elles, sans visée (vu en jeu le 2026-10-10, §119 — Échap les laissait ciblées, le clic droit non).
+ * An abandoned multiple aiming (right click, Escape) releases the creatures already chosen: otherwise the next attack went
+ * straight at them, without aiming (seen in play on 2026-10-10, §119 — Escape left them targeted, right click did not).
  */
-/** Un clic sur une créature pendant la visée multiple : un projectile de plus pour elle ; au dernier, le sort part. */
+/** A click on a creature during multiple aiming: one more projectile for it; on the last one, the spell goes off. */
 export function pickTarget(hover) {
   if ( !picking || !hover?.object ) return;
-  // §16.33 : en visée de groupe, une créature ne compte qu'une fois — la recliquer la retire.
+  // §16.33: in group aiming, a creature counts only once — clicking it again removes it.
   if ( (picking.group || picking.unique) && picking.picks.includes(hover.uuid) ) {
     picking.picks.splice(picking.picks.indexOf(hover.uuid), 1);
     hover.object.setTarget(false, { releaseOthers: false, groupSelection: true });
     announceTargeting();
     return setReticleLabel(counterText());
   }
-  // §286 : Chaîne d'éclairs — après la première, chaque cible à 9 m d'elle.
+  // §286: Chain Lightning — after the first, each target within 9 m of it.
   const chained = (picking.group && picking.picks.length && chainOf(picking.activity.item)) ? { [MODULE_ID]: { chainFrom: picking.picks[0] } } : null;
-  // §411 (issue #44, lot 4) : une créature refusée (hors de portée, mauvais type…) compte quand même — son refus est dit au départ, dans la
-  // fenêtre de légalité (Renoncer, ou faire quand même : le MJ prévenu). Ce que la légalité ne relève pas part avec l'utilisation (`issues`).
+  // §411 (issue #44, batch 4): a refused creature (out of range, wrong type…) counts anyway — its refusal is stated at the
+  // start, in the legality window (Give up, or do it anyway: the GM notified). What legality does not flag goes with the use
+  // (`issues`).
   const refusal = refusalFor(picking.token, hover, picking.activity, chained);
   if ( refusal ) {
     const issues = refusalIssues(picking.token, hover, picking.activity, chained, { blind: true });
@@ -932,11 +935,11 @@ export function pickTarget(hover) {
   launchPicks();
 }
 
-/** Les projectiles désignés partent : le premier comme une attaque cliquée, les autres enchaînés par le moteur. */
+/** The designated projectiles go off: the first like a clicked attack, the others chained by the engine. */
 function launchPicks() {
   const { token, activity, usage: [config, dialog, message], picks } = picking;
   stopTargeting();
-  // Rayons : le premier part comme une attaque cliquée (jet enchaîné, attaque rapide), les autres seront enchaînés par le moteur.
+  // Rays: the first goes off like a clicked attack (chained roll, quick attack), the others will be chained by the engine.
   if ( projectilesOf(activity.item)?.attack ) {
     const first = fromUuidSync(picks[0], { strict: false });
     const usage = [{ ...config, [MODULE_ID]: { ...(config[MODULE_ID] ?? {}), picks } }, dialog, message];
@@ -961,12 +964,12 @@ export function stopTargeting() {
 }
 
 /**
- * §16.21 : au début du tour d'un lanceur, une activité à proposer (`atTurnStart`, Aura de vitalité) tant que la
- * concentration du sort tient — la visée s'ouvre sur le client de celui qui joue ce combattant ; clic droit pour passer.
+ * §16.21: at the start of a caster's turn, an activity to offer (`atTurnStart`, Aura of Vitality) as long as the
+ * spell's Concentration holds — the aiming opens on the client of whoever plays that combatant; right click to skip.
  */
 let offeredTurn = null;
 function offerTurnStart(combat, prior, current) {
-  // Le cœur peut appeler `combatTurnChange` deux fois pour un même passage (changement de round) : une offre par tour.
+  // The core may call `combatTurnChange` twice for the same passage (round change): one offer per turn.
   const key = `${combat.id}.${current?.round}.${current?.turn}`;
   if ( key === offeredTurn ) return;
   offeredTurn = key;
@@ -974,12 +977,12 @@ function offerTurnStart(combat, prior, current) {
   const actor = combatant?.actor;
   const token = combatant?.token;
   if ( !actor?.isOwner || !token?.object ) return;
-  if ( game.user.isGM && combatant.players?.some(u => u.active && !u.isGM) ) return;   // le joueur est là : c'est à lui
+  if ( game.user.isGM && combatant.players?.some(u => u.active && !u.isGM) ) return;   // the player is there: it is up to them
   for ( const item of actor.items ) {
     const rule = contentOf(item).entry?.atTurnStart;
     const activity = rule ? item.system.activities?.get(rule.activity) : null;
     if ( !activity || !concentrationOn(item) ) continue;
-    // §16.43 : l'action suivante d'un lien n'a de sens que tant qu'une créature est liée ; on la montre.
+    // §16.43: the next action of a link makes sense only while a creature is linked; we show it.
     const bound = (tetherOfActivity(activity)?.role === "follow") ? tetheredToken(item) : undefined;
     if ( bound === null ) continue;
     if ( bound ) floatNotice(bound, item.name, "prompt");
@@ -988,12 +991,12 @@ function offerTurnStart(combat, prior, current) {
   }
 }
 
-/** #33 : rejoue le survol (bridé) quand l'aperçu de l'abri est en service. */
+/** #33: replays the hover (throttled) when the Cover preview is in service. */
 const coverReplay = foundry.utils.debounce(() => {
   if ( game.settings.get(MODULE_ID, "coverPreview") || game.settings.get(MODULE_ID, "attackLine") ) replayHover();
 }, 120);
 
-/** À inscrire AVANT `registerTurn()` : la visée suspend une utilisation avant que sa légalité soit jugée. */
+/** To register BEFORE `registerTurn()`: the aiming suspends a use before its legality is judged. */
 export function registerPointer() {
   registerHitChance();
   registerAttackLine();
@@ -1001,7 +1004,7 @@ export function registerPointer() {
     name: `DND5ECOMBAT.Reglage.${key}.Nom`, hint: `DND5ECOMBAT.Reglage.${key}.Aide`, ...data });
   client("clickToMove", { type: String, default: "off",
     choices: { always: "DND5ECOMBAT.Reglage.clickToMove.always", combat: "DND5ECOMBAT.Reglage.clickToMove.combat", off: "DND5ECOMBAT.Reglage.clickToMove.off" } });
-  // 2026-10-22 (retour de table) : « jamais » par défaut, comme le clic-déplacement — le clic droit propose toujours l'attaque.
+  // 2026-10-22 (table feedback): "never" by default, like click-to-move — right click always offers the attack.
   client("clickToAttack", { type: String, default: "off",
     choices: { always: "DND5ECOMBAT.Reglage.clickToAttack.always", combat: "DND5ECOMBAT.Reglage.clickToAttack.combat", off: "DND5ECOMBAT.Reglage.clickToAttack.off" } });
   client("targetingMode", { type: Boolean, default: true });
@@ -1013,10 +1016,10 @@ export function registerPointer() {
   client("closeSheetOnUse", { type: Boolean, default: true });
   client("teleportPlanning", { type: Boolean, default: true });
   client("targetingBanner", { type: Boolean, default: true, onChange: () => announceTargeting() });
-  // §208 : « Sauter en hauteur ici » dans le menu contextuel — bêta, décidé par le MJ pour la table, désactivé par défaut.
+  // §208: "Jump high here" in the context menu — beta, decided by the GM for the table, disabled by default.
   game.settings.register(MODULE_ID, HIGH_JUMP_MENU_SETTING, { scope: "world", config: true, type: Boolean, default: false,
     name: `DND5ECOMBAT.Reglage.${HIGH_JUMP_MENU_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${HIGH_JUMP_MENU_SETTING}.Aide` });
-  // §210 : l'interrupteur des coups non létaux dans le menu contextuel de son token — masqué par défaut.
+  // §210: the non-lethal blows switch in its token's context menu — hidden by default.
   game.settings.register(MODULE_ID, NONLETHAL_MENU_SETTING, { scope: "world", config: true, type: Boolean, default: false,
     name: `DND5ECOMBAT.Reglage.${NONLETHAL_MENU_SETTING}.Nom`, hint: `DND5ECOMBAT.Reglage.${NONLETHAL_MENU_SETTING}.Aide` });
 
@@ -1034,21 +1037,21 @@ export function registerPointer() {
   route("createChatMessage", onFlurryUsed, { label: "Flurry of Blows: targeting not opened" });
   route("canvasTearDown", (board, options) => {
     stopTargeting(); closeMenu(); forgetHover();
-    // B12 : seulement si l'on quitte la scène — un changement de niveau redessine aussi le canevas (scene.mjs:273), en pleine
-    // marche d'un escalier (`walkMoves`), et cette marche-là doit continuer.
+    // B12: only if we leave the scene — a level change also redraws the canvas (scene.mjs:273), in the middle of
+    // walking a staircase (`walkMoves`), and that walk must continue.
     sceneLeft = (options?.nextScene ?? null) !== board.scene;
     if ( sceneLeft ) releaseMouse();
   }, { label: "mouse: reset" });
   route("canvasReady", () => { if ( sceneLeft ) stopDeadMovements(); sceneLeft = false; }, { label: "dead movements stopped" });
   route("controlToken", () => clearPreview(), { label: "path preview cleared" });
-  // #33 : l'aperçu de l'abri suit un token qui bouge ou change d'état d'abri sous une souris immobile.
+  // #33: the Cover preview follows a token that moves or changes Cover state under a motionless mouse.
   route("updateToken", (doc, change) => {
     if ( ("x" in change) || ("y" in change) || ("elevation" in change) || ("level" in change) ) coverReplay();
   }, { label: "cover preview: not refreshed after a move" });
   route("createActiveEffect", () => coverReplay(), { label: "cover preview: not refreshed after a cover status" });
   route("deleteActiveEffect", () => coverReplay(), { label: "cover preview: not refreshed after a cover status" });
   route("ready", () => {
-    // §220 : pendant le Théâtre de l'esprit, la souris et le clavier reviennent au cœur.
+    // §220: during Theater of the Mind, the mouse and keyboard go back to the core.
     const live = fn => event => (theaterActive() ? undefined : fn(event));
     document.addEventListener("pointerdown", live(onPointerDown), true);
     document.addEventListener("pointerup", live(onPointerUp), true);
@@ -1061,6 +1064,6 @@ export function registerPointer() {
     document.addEventListener("keydown", live(onMenuShift), true);
     document.addEventListener("keyup", live(onMenuShift), true);
   }, { label: "mouse: listeners not attached" });
-  // §220 : en passant en Théâtre de l'esprit, l'aperçu de chemin s'efface.
+  // §220: when switching to Theater of the Mind, the path preview is erased.
   route(`${MODULE_ID}.theater`, active => { if ( active ) clearPreview(); }, { always: true, label: "theatre of the mind: path preview cleared" });
 }

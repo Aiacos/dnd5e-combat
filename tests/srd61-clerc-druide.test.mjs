@@ -4,12 +4,12 @@ import { validateEntry } from "../module/scripts/core/content.mjs";
 import { SHIPPED } from "../module/scripts/content/index.mjs";
 
 /**
- * §431 : le SRD de dnd5e 6.1 renomme les options d'Impacts bénis (Clerc) et de Fureur élémentaire (Druide) — les deux Incantations
- * puissantes s'appellent `potent-spellcasting` — et déplace l'activité de Calcination des morts-vivants sur le Conduit divin. Les
- * anciennes fiches (Manuel premium, SRD 6.0) gardent les anciens identifiants : les deux formes comptent.
+ * §431: the dnd5e 6.1 SRD renames the options of Blessed Strikes (Cleric) and Elemental Fury (Druid) — the two Potent Spellcasting
+ * are both called `potent-spellcasting` — and moves the Sear Undead activity onto Channel Divinity.
+ * Older sheets (premium Handbook, SRD 6.0) keep the old identifiers: both forms count.
  */
 
-/** Un acteur de test : ses classes et ses items (identifiant, classe d'origine, activités). */
+/** A test actor: its classes and its items (identifier, origin class, activities). */
 const actorWith = (classes, items) => {
   const actor = { classes: Object.fromEntries(classes.map(c => [c, { identifier: c }])) };
   actor.items = items.map(({ id, cls=null, requirements="", activities=[] }) => {
@@ -21,7 +21,7 @@ const actorWith = (classes, items) => {
   return actor;
 };
 
-describe("§431 : la classe d'une aptitude au même identifiant (potent-spellcasting)", async () => {
+describe("§431: the class of a feature with the same identifier (potent-spellcasting)", async () => {
   const { featureClassOf, hasClassFeature } = await import("../module/scripts/adapter/content.mjs");
 
   it("lit system.classIdentifier (6.1), puis l'item racine de l'avancement (6.0), puis requirements s'il nomme une classe de l'acteur", () => {
@@ -32,7 +32,7 @@ describe("§431 : la classe d'une aptitude au même identifiant (potent-spellcas
     expect(featureClassOf({ system: { requirements: "Druide" }, actor: { classes: { druid: {} } } })).toBe(null);
   });
 
-  it("l'option du Druide ne compte pas pour le Clerc, et l'inverse ; classe inconnue : celle de l'acteur", () => {
+  it("the Druid's option does not count for the Cleric, and vice versa; unknown class: the actor's", () => {
     const multi = actorWith(["cleric", "druid"], [{ id: "potent-spellcasting", cls: "druid" }]);
     expect(hasClassFeature(multi, "potent-spellcasting", "druid")).toBe(true);
     expect(hasClassFeature(multi, "potent-spellcasting", "cleric")).toBe(false);
@@ -43,23 +43,23 @@ describe("§431 : la classe d'une aptitude au même identifiant (potent-spellcas
       ["elemental-fury-potent-spellcasting", "potent-spellcasting"], "druid")).toBe(true);
   });
 
-  it("§433 : un PNJ sans classe qui porte l'option — le texte `requirements` dit laquelle", () => {
+  it("§433: a classless NPC that carries the option — the `requirements` text says which", () => {
     const npc = actorWith([], [{ id: "potent-spellcasting", requirements: "Druid" }]);
     expect(featureClassOf(npc.items[0])).toBe("druid");
     expect(hasClassFeature(npc, "potent-spellcasting", "druid")).toBe(true);
     expect(hasClassFeature(npc, "potent-spellcasting", "cleric")).toBe(false);
-    // Un texte qui n'est pas un nom de classe seul (« Druid 7 », vide) ne dit rien.
+    // A text that is not a lone class name ("Druid 7", empty) says nothing.
     expect(featureClassOf(actorWith([], [{ id: "potent-spellcasting", requirements: "Circle of the Land" }]).items[0])).toBe(null);
     expect(hasClassFeature(actorWith([], [{ id: "potent-spellcasting" }]), "potent-spellcasting", "druid")).toBe(false);
   });
 });
 
-describe("§431 : Impact divin et Attaque primitive retirés par l'une ou l'autre forme de l'option", () => {
+describe("§431: Divine Strike and Primal Strike removed by either form of the option", () => {
   const facts = (features, classFeatures=[]) => ({ "activity.isWeapon": () => true, "source.wildShaped": () => false, "activity.isAttack": () => true,
     "source.hasFeature": f => features.includes(f),
     "source.hasClassFeature": ({ id, class: cls }) => classFeatures.some(([i, c]) => [id].flat().includes(i) && (c === cls)) });
 
-  it("le Clerc : ancien identifiant, ou `potent-spellcasting` du Clerc — pas celui du Druide", () => {
+  it("the Cleric: old identifier, or the Cleric's `potent-spellcasting` — not the Druid's", () => {
     const [basic] = SHIPPED["blessed-strikes"].triggers;
     expect(holds(basic.if, facts([]))).toBe(true);
     expect(holds(basic.if, facts(["blessed-strikes-potent-spellcasting"]))).toBe(false);
@@ -67,7 +67,7 @@ describe("§431 : Impact divin et Attaque primitive retirés par l'une ou l'autr
     expect(holds(basic.if, facts([], [["potent-spellcasting", "druid"]]))).toBe(true);
   });
 
-  it("le Druide : ancien identifiant, ou `potent-spellcasting` du Druide — pas celui du Clerc", () => {
+  it("the Druid: old identifier, or the Druid's `potent-spellcasting` — not the Cleric's", () => {
     const [basic] = SHIPPED["elemental-fury"].triggers;
     expect(holds(basic.if, facts([]))).toBe(true);
     expect(holds(basic.if, facts(["elemental-fury-potent-spellcasting"]))).toBe(false);
@@ -75,13 +75,13 @@ describe("§431 : Impact divin et Attaque primitive retirés par l'une ou l'autr
     expect(holds(basic.if, facts([], [["potent-spellcasting", "cleric"]]))).toBe(true);
   });
 
-  it("aucune entrée `potent-spellcasting` : dnd5e 6.1 ajoute lui-même la Sagesse (effet de l'item), pas de bonus compté deux fois", () => {
+  it("no `potent-spellcasting` entry: dnd5e 6.1 itself adds Wisdom (item effect), no bonus counted twice", () => {
     expect(SHIPPED["potent-spellcasting"]).toBeUndefined();
     expect(SHIPPED["blessed-strikes-potent-spellcasting"].triggers).toHaveLength(1);
     expect(SHIPPED["elemental-fury-potent-spellcasting"].triggers).toHaveLength(1);
   });
 
-  it("Fureur élémentaire améliorée : la portée des sorts mineurs demande l'une ou l'autre forme", () => {
+  it("Improved Elemental Fury: the cantrip range requires either form", () => {
     expect(SHIPPED["improved-elemental-fury"].cantripRange.requires).toEqual(["elemental-fury-potent-spellcasting", "potent-spellcasting"]);
     const add = { value: 300, units: "ft" };
     expect(validateEntry({ cantripRange: { class: "druid", add, requires: ["a", "b"] } })).toEqual([]);
@@ -95,7 +95,7 @@ describe("§431 : Calcination des morts-vivants, ancienne et nouvelle forme", as
   const TURN = "aOptL5pMaj3WtR8S", SEAR_OLD = "fW3U8L8Ca9a6O9Wx", SEAR_61 = "rprxorXdFoHbRERZ";
   const rule = SHIPPED["channel-divinity-cleric"].pickTargets;
 
-  it("la liste s'ouvre aussi pour « Sear Undead » du Conduit divin (6.1), et la déclaration est valide", () => {
+  it("the list also opens for the Channel Divinity \"Sear Undead\" (6.1), and the declaration is valid", () => {
     expect(rule.activities).toEqual([TURN, SEAR_61]);
     expect(SHIPPED["channel-divinity"].pickTargets.activities).toEqual([TURN, SEAR_61]);
     expect(validateEntry({ pickTargets: rule })).toEqual([]);
@@ -103,13 +103,13 @@ describe("§431 : Calcination des morts-vivants, ancienne et nouvelle forme", as
     expect(validateEntry({ pickTargets: { ...rule, upgrade: [{ item: "x", activity: SEAR_61, requires: "" }] } })).toHaveLength(1);
   });
 
-  it("ancienne forme : l'activité de l'item Calcination", () => {
+  it("old form: the activity of the Sear Undead item", () => {
     const actor = actorWith(["cleric"], [{ id: "channel-divinity-cleric", activities: [TURN] }, { id: "sear-undead", activities: [SEAR_OLD] }]);
     const turn = actor.items[0].system.activities.get(TURN);
     expect(upgradeOf(turn, rule)?.id).toBe(SEAR_OLD);
   });
 
-  it("forme 6.1 : l'activité du Conduit divin, seulement avec l'item Calcination (niveau 5), jamais elle-même", () => {
+  it("6.1 form: the Channel Divinity activity, only with the Sear Undead item (level 5), never itself", () => {
     const at5 = actorWith(["cleric"], [{ id: "channel-divinity-cleric", activities: [TURN, SEAR_61] }, { id: "sear-undead" }]);
     expect(upgradeOf(at5.items[0].system.activities.get(TURN), rule)?.id).toBe(SEAR_61);
     expect(upgradeOf(at5.items[0].system.activities.get(SEAR_61), rule)).toBe(null);
@@ -117,7 +117,7 @@ describe("§431 : Calcination des morts-vivants, ancienne et nouvelle forme", as
     expect(upgradeOf(at3.items[0].system.activities.get(TURN), rule)).toBe(null);
   });
 
-  it("« Sear Undead » 6.1 ne vise que les morts-vivants, et ses propres dégâts ne font pas tomber « Turned »", () => {
+  it("\"Sear Undead\" 6.1 targets only Undead, and its own damage does not end \"Turned\"", () => {
     expect(SHIPPED["channel-divinity-cleric"].targets.unaffectedIf["activity.id"]).toEqual([TURN, SEAR_61]);
     expect(SHIPPED["channel-divinity-cleric"].triggers.find(t => t.on === "isDamaged")).toMatchObject({ fromEffect: "iUeSbfduM7K8XrCF", by: "otherActivity" });
   });

@@ -1,12 +1,12 @@
 /**
- * §204 : un objet ou un acteur créé depuis un compendium traduit (Babele) prend tout de suite la traduction de ce qui est resté
- * dans la langue d'origine — ce que le diagnostic « Textes restés dans la langue d'origine » répare après coup (§203). Cas vus :
- * un joueur sans droit de parcourir les fichiers (Babele ne traduit rien chez lui), un client réglé dans une autre langue, une
- * traduction qui ne traduit pas les noms d'effets (« Projectile percutant », enchantement « Walloping Ammunition »).
+ * §204: an item or an actor created from a translated compendium (Babele) immediately takes the translation of what stayed
+ * in the original language — what the "Texts left in the original language" diagnostic repairs after the fact (§203). Cases
+ * seen: a player without the right to browse files (Babele translates nothing for them), a client set to another language, a
+ * translation that does not translate effect names ("Projectile percutant", enchantment "Walloping Ammunition").
  *
- * Fait par le MJ actif, dans la langue de son client, à `createItem` / `createActor` (pour un acteur : lui et ses objets, créés
- * avec lui sans `createItem`). Même règle que le diagnostic (adapter/retranslate.mjs) : seuls les textes encore identiques à
- * l'original changent ; identifiants et ids d'activités et d'effets ne bougent pas. Réglage de monde `autoTranslate`.
+ * Done by the active GM, in the language of their client, on `createItem` / `createActor` (for an actor: it and its items, created
+ * with it without `createItem`). Same rule as the diagnostic (adapter/retranslate.mjs): only texts still identical to
+ * the original change; identifiers and activity and effect ids do not move. `autoTranslate` world setting.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { referenceReader, retranslationOf, applyRetranslation, sourceOf } from "../adapter/retranslate.mjs";
@@ -17,7 +17,7 @@ export const AUTO_TRANSLATE_SETTING = "autoTranslate";
 
 const enabled = () => !!game.babele && game.settings.get(MODULE_ID, AUTO_TRANSLATE_SETTING);
 
-/** Le document existe-t-il encore ? Lecture du compendium faite, il a pu être supprimé entre-temps. */
+/** Does the document still exist? Compendium read done, it may have been deleted in the meantime. */
 function exists(doc) {
   try { return !!fromUuidSync(doc.uuid, { strict: false }); } catch { return false; }
 }
@@ -27,8 +27,8 @@ async function retranslate(docs) {
   for ( const doc of docs ) {
     const plan = await retranslationOf(doc, reference);
     if ( !plan.fields.length ) continue;
-    // Forme sauvage à 0 PV (scénario `forme-sauvage`, banc de test 2026-11-11) : l'acteur transformé est retiré pendant la
-    // lecture de la référence, et sa mise à jour échouait (« The Actor … does not exist in actors »). Rien à traduire.
+    // Wild Shape at 0 HP (scenario `forme-sauvage`, test bench 2026-11-11): the transformed actor is removed during the
+    // reading of the reference, and its update failed ("The Actor … does not exist in actors"). Nothing to translate.
     if ( !exists(doc) ) continue;
     try { await applyRetranslation(doc, plan); }
     catch(err) { if ( exists(doc) ) throw err; continue; }
@@ -38,7 +38,7 @@ async function retranslate(docs) {
 
 function onCreateItem(item) {
   if ( !enabled() ) return;
-  // Sans source propre ni fiche venue d'un compendium : rien à reprendre (lecture évitée pour les objets faits main).
+  // No own source nor sheet from a compendium: nothing to take over (read avoided for handmade items).
   if ( !sourceOf(item) && !sourceOf(item.parent) ) return;
   return retranslate([item]);
 }

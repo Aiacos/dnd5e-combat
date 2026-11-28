@@ -2,19 +2,20 @@ import { describe, it, expect } from "vitest";
 import { SHIPPED } from "../module/scripts/content/index.mjs";
 
 /**
- * Issue #42 : les déclarations de contenu dont dépendent la vue et l'ouïe (adapter/vision.mjs `blockingRegions`, adapter/hearing.mjs) —
- * une zone qui obscurcit, des ténèbres magiques, un silence. Changer l'une d'elles change ce que voit et entend chaque créature.
+ * Issue #42: the content declarations that sight and hearing depend on (adapter/vision.mjs `blockingRegions`,
+ * adapter/hearing.mjs) — an area that obscures, magical Darkness, a silence. Changing one of them changes what each creature
+ * sees and hears.
  */
-describe("issue #42 : zones qui coupent la vue ou le son", () => {
-  it("Nappe de brouillard obscurcit (brume), Ténèbres sont des ténèbres magiques", () => {
+describe("issue #42: areas that cut off sight or sound", () => {
+  it("Fog Cloud obscures (mist), Darkness is magical Darkness", () => {
     expect(SHIPPED["fog-cloud"]?.obscures).toBe(true);
     expect(SHIPPED["darkness"]?.light?.darkness).toBe(true);
   });
-  it("Silence fait le silence et porte ses effets dans la zone (Assourdi)", () => {
+  it("Silence makes silence and carries its effects in the area (Deafened)", () => {
     expect(SHIPPED["silence"]?.silences).toBe(true);
     expect(SHIPPED["silence"]?.zoneEffects).toBe(true);
   });
-  it("une zone qui obscurcit ne fait pas le silence, des ténèbres non plus", () => {
+  it("an area that obscures does not make silence, nor does Darkness", () => {
     expect(SHIPPED["fog-cloud"]?.silences).toBeUndefined();
     expect(SHIPPED["darkness"]?.silences).toBeUndefined();
   });

@@ -1,7 +1,7 @@
 /**
- * Conversion de longueurs, sans dépendance à Foundry (SPEC §5.7).
- * `factors[u]` est la longueur d'une unité `u` dans une unité de référence commune
- * (dnd5e : le pied). Convertir revient à passer par cette référence.
+ * Length conversion, without dependency on Foundry (SPEC §5.7).
+ * `factors[u]` is the length of a unit `u` in a common reference unit
+ * (dnd5e: the foot). Converting means going through this reference.
  */
 
 /**
@@ -22,11 +22,11 @@ export function convertLength(value, from, to, factors) {
 }
 
 /**
- * Une distance mesurée sur la scène est-elle dans une portée exprimée dans une autre unité ?
- * dnd5e convertit en simplifié (5 ft = 1,5 m, facteur 10/3) : 30 ft valent exactement 9 m.
- * L'epsilon n'absorbe que l'erreur de virgule flottante, pas une case de plus.
- * @param {{value: number, units: string}} measured   distance mesurée, unité de la grille
- * @param {{value: number, units: string}} range      portée de l'activité
+ * Is a distance measured on the scene within a range expressed in another unit?
+ * dnd5e converts in simplified form (5 ft = 1.5 m, factor 10/3): 30 ft are exactly 9 m.
+ * The epsilon absorbs only floating-point error, not one cell more.
+ * @param {{value: number, units: string}} measured   measured distance, grid unit
+ * @param {{value: number, units: string}} range      range of the activity
  * @param {Record<string, number>} factors
  */
 export function isWithinRange(measured, range, factors) {

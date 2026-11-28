@@ -1,4 +1,4 @@
-/** §381 (issue #35) : qui la table attend — diffusion entre clients (adapter/awaiting.mjs), sur des faux clients. */
+/** §381 (issue #35): who the table is waiting for — broadcast between clients (adapter/awaiting.mjs), on fake clients. */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { AWAITING_HOOK, AWAITING_QUERY, awaitingList, changeAwaiting, markAwaiting, receiveAwaiting, syncAwaiting, whileAwaiting }
@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 describe("diffusion des attentes", () => {
-  it("une fenêtre ouverte : publiée ici et envoyée aux autres sans ce qu'elle demande ; sa fin la retire partout", () => {
+  it("an open window: published here and sent to the others without what it asks; its end removes it everywhere", () => {
     const release = markAwaiting(actor, "reaction", { seconds: 10 });
     expect(awaitingList()).toMatchObject([{ userId: "u1", userName: "Alice", token: "Scene.s.Token.t", actor: "Actor.pal", kind: "reaction", player: true, gm: false, seconds: 10 }]);
     expect(sent[0]).toMatchObject({ name: AWAITING_QUERY, payload: { type: "add" } });
@@ -37,7 +37,7 @@ describe("diffusion des attentes", () => {
     expect(sent.filter(s => s.payload.type === "remove")).toHaveLength(1);
   });
 
-  it("whileAwaiting retire l'attente même quand la fenêtre échoue", async () => {
+  it("whileAwaiting removes the wait even when the window fails", async () => {
     await expect(whileAwaiting(actor, "choice", async () => { expect(awaitingList()).toHaveLength(1); throw new Error("fermée"); })).rejects.toThrow("fermée");
     expect(awaitingList()).toEqual([]);
   });
@@ -52,14 +52,14 @@ describe("diffusion des attentes", () => {
     expect(awaitingList()).toEqual([]);
   });
 
-  it("une déconnexion retire toutes les attentes de ce client", () => {
+  it("a disconnection removes all the waits of that client", () => {
     receiveAwaiting({ type: "add", entry: { id: "a", userId: "u2", since: Date.now() } }, { user: other });
     receiveAwaiting({ type: "add", entry: { id: "b", userId: "u2", since: Date.now() } }, { user: other });
     changeAwaiting({ type: "drop", userId: "u2" });
     expect(awaitingList()).toEqual([]);
   });
 
-  it("un client qui arrive demande les attentes ouvertes ailleurs ; ici, on lui rend les siennes", async () => {
+  it("a client that arrives asks for the waits open elsewhere; here, it is given its own", async () => {
     remote = [{ id: "r", userId: "u2", userName: "Bob", kind: "choice", since: Date.now() }];
     await syncAwaiting();
     expect(awaitingList().map(e => e.id)).toEqual(["r"]);

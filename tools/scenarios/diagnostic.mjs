@@ -1,13 +1,13 @@
 /**
- * Le diagnostic du monde (§177), de bout en bout, sur un acteur créé pour le test (marqué `flags.dnd5e-combat.scenario`) :
- *  - l'acteur porte des traces de Midi-QOL (flag sur la fiche, Trait de feu du Manuel des joueurs marqué Midi, objet maison
- *    marqué DAE) ;
- *  - l'analyse le trouve sans rien écrire ;
- *  - la réparation le sauvegarde d'abord (entrée du compendium « DAS · Sauvegardes », relue et vérifiée), puis nettoie : flags
- *    retirés, Trait de feu remplacé par l'officiel avec le même id ;
- *  - la restauration le remet exactement comme avant (flags revenus, mêmes objets, mêmes ids), après une sauvegarde « avant
- *    restauration ».
- * Remet tout : acteur, entrées de sauvegarde, et le compendium s'il n'existait pas avant.
+ * The world diagnostic (§177), end to end, on an actor created for the test (marked `flags.dnd5e-combat.scenario`):
+ *  - the actor carries Midi-QOL traces (flag on the sheet, Player's Handbook Fire Bolt marked Midi, homebrew item
+ *    marked DAE);
+ *  - the analysis finds it without writing anything;
+ *  - the repair backs it up first ("DAS · Backups" compendium entry, read back and verified), then cleans: flags
+ *    removed, Fire Bolt replaced by the official one with the same id;
+ *  - the restoration puts it back exactly as before (flags back, same items, same ids), after a "before
+ *    restoration" backup.
+ * Restores everything: actor, backup entries, and the compendium if it did not exist before.
  */
 const MODULE_ID = "dnd5e-combat";
 const FIRE_BOLT = "Compendium.dnd-players-handbook.spells.Item.phbsplFireBolt00";
@@ -16,7 +16,7 @@ export default {
   name: "diagnostic — analyse, réparation sauvegardée, restauration exacte",
 
   async run(ctx) {
-    // `ctx.engine` reprend un appel long (sauvegarde, restauration) par son callId : le connecteur rend la main au bout de 8 s.
+    // `ctx.engine` resumes a long call (backup, restoration) by its callId: the connector hands control back after 8 s.
     const api = (fn, args={}) => ctx.engine(fn, args, { timeoutMs: 120000 });
     const packBefore = (await ctx.call("list-compendiums", {}).catch(() => [])) ?? [];
     const hadPack = JSON.stringify(packBefore).includes("world.das-backups");
@@ -47,13 +47,13 @@ export default {
     const flagsOf = a => Object.keys(a.flags ?? {}).sort().join(",");
     ctx.log(`avant : flags ${flagsOf(before)} ; objets ${itemIds(before)}`);
 
-    // 1. Analyse : rien n'est écrit.
+    // 1. Analysis: nothing is written.
     const scan = await api("diagnosticScan", { checks: ["clean-midi"] });
     const task = (scan["clean-midi"] ?? []).find(t => t.root?.uuid === uuid);
     ctx.expect(!!task?.fixable, `analyse : la fiche est trouvée, réparable (${task?.text ?? "rien"})`);
     ctx.expect(flagsOf(await read()) === flagsOf(before), "analyse : rien n'est écrit");
 
-    // 2. Réparation, après sauvegarde.
+    // 2. Repair, after backup.
     const repaired = await api("diagnosticRepair", { checks: ["clean-midi"], roots: [uuid] });
     if ( repaired.backup?.uuid ) backups.push(repaired.backup.uuid);
     ctx.expect(!!repaired.backup?.uuid, `réparation : sauvegarde faite d'abord (${repaired.backup?.name ?? "aucune"})`);
@@ -64,7 +64,7 @@ export default {
     ctx.expect(!!boltAfter && !boltAfter.flags?.["midi-qol"], "réparation : Trait de feu sans flag Midi");
     ctx.expect(itemIds(after) === itemIds(before), "réparation : mêmes ids d'objets (remplacement sur place)");
 
-    // 3. La sauvegarde est là, et contient la fiche.
+    // 3. The backup is there, and contains the sheet.
     const list = await api("diagnosticBackups");
     const entry = list.find(b => b.uuid === repaired.backup?.uuid);
     ctx.expect(!!entry && entry.roots.some(r => r.uuid === uuid), `sauvegarde listée avec la fiche (${entry?.name ?? "absente"})`);
@@ -81,8 +81,8 @@ export default {
     const amulet = (back.items ?? []).find(i => i.name === "Amulette maison");
     ctx.expect(amulet?.flags?.dae?.macro === "x", "restauration : flag DAE de l'objet maison revenu");
 
-    // Partie 2 : un token non lié — sa copie propre de l'acteur (delta) est sauvegardée et restaurée à part de l'acteur du monde.
-    // Un tas d'Item Piles avec une action de base posée par erreur : sur l'acteur du monde, et une autre sur le token seulement.
+    // Part 2: an unlinked token — its own copy of the actor (delta) is backed up and restored apart from the world actor.
+    // An Item Piles heap with a base action placed by mistake: on the world actor, and another on the token only.
     const basic = which => ({ name: `Basic ${which}`, type: "feat", flags: { [MODULE_ID]: { basicAction: which } } });
     const pile = await ctx.call("create-actor", { actorData: {
       name: "DAS diagnostic tas (test)", type: "npc", prototypeToken: { actorLink: false },

@@ -1,12 +1,12 @@
 /**
- * §409 (issue #44, lot 2) : composante somatique et main libre ; lanceur Neutralisé. « Arène des refus » (`node tools/arene-refus.mjs`),
- * pré-tirés niveau 1 du Manuel, personnages joueurs (réglage `somaticHands` à « pc »).
- *  1. Le Clerc, masse et bouclier en main, lance Flamme sacrée (V, S) : la fenêtre dit « pas de main libre » et nomme les deux objets.
- *  2. Le Mage, bâton (Polyvalent) d'une main, lance Rayon de givre (V, S) : une main libre, aucune fenêtre.
- *  3. Le Clerc reçoit Mage de guerre : Flamme sacrée passe sans fenêtre.
- *  4. Réglage « pas de contrôle » : sans Mage de guerre, le Clerc lance sans fenêtre.
- *  5. Le Mage, Neutralisé, lance Alarme (1 minute, rituel ; prêté) : la fenêtre dit qu'un Neutralisé ne lance pas de sort, même sans
- *     coût d'action.
+ * §409 (issue #44, batch 2): somatic component and free hand; Incapacitated caster. "Arène des refus"
+ * (`node tools/arene-refus.mjs`), level 1 pregens from the Manual, player characters (setting `somaticHands` at "pc").
+ *  1. The Cleric, mace and shield in hand, casts Sacred Flame (V, S): the window says "no free hand" and names the two objects.
+ *  2. The Mage, quarterstaff (Versatile) in one hand, casts Ray of Frost (V, S): one free hand, no window.
+ *  3. The Cleric gets War Caster: Sacred Flame goes through without a window.
+ *  4. Setting "no check": without War Caster, the Cleric casts without a window.
+ *  5. The Mage, Incapacitated, casts Alarm (1 minute, ritual; lent): the window says an Incapacitated creature does not cast
+ *     spells, even with no action cost.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.";
@@ -23,7 +23,7 @@ export default {
     const flame = await ctx.itemId(cleric.id, "sacred-flame");
     const ray = await ctx.itemId(mage.id, "ray-of-frost");
 
-    /** La fenêtre de légalité de ce token, ou null après `ms`. */
+    /** The legality window of this token, or null after `ms`. */
     const legality = async (name, ms=6000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, waitMs: 1000 }).catch(() => null);
@@ -39,7 +39,7 @@ export default {
       }
     });
     const textOf = d => [d?.title, d?.content, d?.text, ...(d?.lines ?? [])].filter(Boolean).join(" ");
-    /** Lance ; rend la fenêtre (refermée par « Renoncer ») ou null si l'utilisation est passée sans fenêtre. */
+    /** Casts; returns the window (closed again by "Give up") or null if the use went through without a window. */
     const attempt = async (token, itemId, activityType, target) => {
       await ctx.call("use-activity", { tokenId: token.id, itemId, activityType, configure: false,
         ...(target ? { targetTokenIds: [target.id] } : {}), usageConfig: { [MODULE_ID]: { autoReact: "none" } } });
@@ -55,7 +55,7 @@ export default {
     const said = textOf(d);
     ctx.expect(/free hand|main libre/i.test(said) && /Mace|Masse/.test(said) && /Shield|Bouclier/.test(said), `elle dit « pas de main libre » et nomme les objets (${said.slice(0, 200)})`);
 
-    // 2. Bâton d'une main.
+    // 2. Quarterstaff in one hand.
     d = await attempt(mage, ray, "attack", dummy);
     ctx.expect(!d, `Mage, bâton d'une main : aucune fenêtre${d ? ` (${textOf(d).slice(0, 160)})` : ""}`);
 
@@ -66,14 +66,14 @@ export default {
     await ctx.call("remove-embedded-item", { documentType: "Actor", id: (await ctx.call("get-scene-object", { type: "Token", objectId: cleric.id })).data.actorId,
       itemId: await ctx.itemId(cleric.id, "war-caster") }).catch(() => {});
 
-    // 4. Réglage éteint.
+    // 4. Setting off.
     await ctx.call("set-setting", { namespace: MODULE_ID, key: "somaticHands", value: "off" });
     ctx.restore(() => ctx.call("set-setting", { namespace: MODULE_ID, key: "somaticHands", value: "pc" }).catch(() => {}));
     d = await attempt(cleric, flame, "save", dummy);
     ctx.expect(!d, `« pas de contrôle » : Flamme sacrée sans fenêtre${d ? ` (${textOf(d).slice(0, 160)})` : ""}`);
     await ctx.call("set-setting", { namespace: MODULE_ID, key: "somaticHands", value: "pc" });
 
-    // 5. Neutralisé, sort d'une minute (rituel).
+    // 5. Incapacitated, one-minute spell (ritual).
     const alarm = await ctx.ensureItem(mage, PHB + "spells.Item.phbsplAlarm00000", { system: { method: "atwill" } });
     await ctx.call("set-status", { tokenId: mage.id, statusId: "incapacitated", active: true });
     ctx.restore(() => ctx.call("set-status", { tokenId: mage.id, statusId: "incapacitated", active: false }).catch(() => {}));

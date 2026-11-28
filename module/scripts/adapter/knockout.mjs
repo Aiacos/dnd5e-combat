@@ -1,8 +1,8 @@
 /**
- * §210 : assommer une créature (règles 2024, glossaire « Knocking Out a Creature ») — « quand vous feriez tomber une créature à 0 PV avec
- * une attaque au corps à corps, vous pouvez la laisser à 1 PV à la place ; elle est Inconsciente […] jusqu'à ce qu'elle regagne des PV
- * ou qu'on lui donne les premiers soins (Sagesse (Médecine) DD 10) ». Le choix se fait d'avance, comme dans Baldur's Gate 3 : un
- * interrupteur « coups non létaux » par acteur (`flags.dnd5e-combat.nonLethal`, la Barre de DAS UI et le menu du token).
+ * §210: knocking out a creature (2024 rules, glossary "Knocking Out a Creature") — "when you would reduce a creature to 0 HP
+ * with a melee attack, you can leave it at 1 HP instead; it is Unconscious […] until it regains HP or is given first aid
+ * (Wisdom (Medicine) DC 10)". The choice is made in advance, as in Baldur's Gate 3: a "non-lethal blows" switch per actor
+ * (`flags.dnd5e-combat.nonLethal`, the DAS UI Bar and the token menu).
  */
 import { MODULE_ID } from "../constants.mjs";
 
@@ -10,13 +10,13 @@ export const NON_LETHAL_FLAG = "nonLethal";
 export const KNOCKED_OUT_FLAG = "knockedOut";
 export const FIRST_AID_DC = 10;
 
-/** Les coups de cet acteur sont-ils non létaux ? */
+/** Are this actor's blows non-lethal? */
 export const isNonLethal = actor => actor?.getFlag?.(MODULE_ID, NON_LETHAL_FLAG) === true;
 
-/** La créature est-elle assommée (Inconsciente à 1 PV par un coup non létal) ? */
+/** Is the creature knocked out (Unconscious at 1 HP from a non-lethal blow)? */
 export const isKnockedOut = actor => !!actor?.getFlag?.(MODULE_ID, KNOCKED_OUT_FLAG);
 
-/** Active ou coupe les coups non létaux de cet acteur. */
+/** Turns this actor's non-lethal blows on or off. */
 export async function setNonLethal(actor, on) {
   if ( !actor?.isOwner ) return false;
   await actor.setFlag(MODULE_ID, NON_LETHAL_FLAG, !!on);
@@ -24,8 +24,8 @@ export async function setNonLethal(actor, on) {
 }
 
 /**
- * Le coup de ce message de dégâts est-il une attaque au corps à corps non létale ? Rend son auteur (l'acteur), ou null. Une arme de mêlée
- * lancée ne compte pas (attaque à distance), une Attaque à mains nues si.
+ * Is the blow of this damage message a non-lethal melee attack? Returns its author (the actor), or null. A thrown melee
+ * weapon does not count (ranged attack), an Unarmed Strike does.
  */
 export function nonLethalAttackerOf(options) {
   const message = options?.originatingMessage ?? options?.origin;
@@ -39,8 +39,8 @@ export function nonLethalAttackerOf(options) {
 }
 
 /**
- * `dnd5e.preApplyDamage` : des dégâts non létaux qui feraient tomber la créature à 0 PV la laissent à 1 PV. Rend le nom de l'auteur, ou
- * null. `through` : les dégâts qui passent les PV temporaires.
+ * `dnd5e.preApplyDamage`: non-lethal damage that would reduce the creature to 0 HP leaves it at 1 HP. Returns the author's
+ * name, or null. `through`: the damage that gets past Temporary Hit Points.
  */
 export function knockOutAtZero(actor, through, updates, options) {
   const hp = actor?.system?.attributes?.hp;

@@ -1,12 +1,13 @@
 /**
- * §411 (issue #44, lot 4) : les refus des clics — clic d'attaque, menu contextuel, pose d'une zone de sort, téléportation — ouvrent la
- * fenêtre de légalité au lieu d'un refus sec ; forcé, le geste part, le MJ est prévenu. « Arène des refus » (`node tools/arene-refus.mjs`).
- *  1. Clic d'attaque (le chemin d'`engage`, comme la souris) : Trait de feu du Mage sur la Cible lointaine (155 ft) — fenêtre « hors de
- *     portée » ; renoncé, rien ; forcé, la carte part, marquée, une alerte MJ, le Mage n'a pas bougé.
- *  2. Menu contextuel : l'entrée « Lancer » de la javeline du Guerrier sur la Cible lointaine est grisée, avec sa raison (`refused`).
- *  3. Boule de feu posée hors de portée (`dnd5e.createMeasuredTemplate`, comme la pose de dnd5e) : fenêtre « hors de portée » ; forcée,
- *     la zone est créée là où elle a été posée, marquée `forcedPlacement`, une alerte MJ.
- *  4. Foulée brumeuse vers la case du Mannequin (occupée) : fenêtre « espace inoccupé » ; forcée, le Mage y est téléporté.
+ * §411 (issue #44, batch 4): refusals on clicks — attack click, context menu, placing a spell area, teleportation —
+ * open the legality window instead of a flat refusal; forced, the gesture goes through, the GM is warned.
+ * "Refusals Arena" (`node tools/arene-refus.mjs`).
+ *  1. Attack click (the `engage` path, like the mouse): the Mage's Fire Bolt on the Distant Target (155 ft) — "out of
+ *     range" window; declined, nothing; forced, the card goes off, marked, a GM alert, the Mage has not moved.
+ *  2. Context menu: the "Throw" entry of the Fighter's javelin on the Distant Target is greyed out, with its reason (`refused`).
+ *  3. Fireball placed out of range (`dnd5e.createMeasuredTemplate`, like dnd5e's placement): "out of range" window; forced,
+ *     the area is created where it was placed, marked `forcedPlacement`, a GM alert.
+ *  4. Misty Step toward the Dummy's cell (occupied): "unoccupied space" window; forced, the Mage is teleported there.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -21,8 +22,8 @@ export default {
     const fighter = await ctx.token("Guerrier des refus");
     const dummy = await ctx.token("Mannequin des refus");
     const far = await ctx.token("Cible lointaine des refus");
-    // Trait de feu (120 ft), pas le Rayon de givre de `regle-forcee` : forcer la portée la tient pour acquise 60 s, par activité et cibles
-    // (`acknowledge`, runtime/turn.mjs) — le scénario suivant ne verrait plus sa fenêtre.
+    // Fire Bolt (120 ft), not the Ray of Frost of `regle-forcee`: forcing the range takes it as acknowledged for 60 s, per activity
+    // and targets (`acknowledge`, runtime/turn.mjs) — the next scenario would no longer see its window.
     const ray = await ctx.ensureItem(mage, `${PHB}phbsplFireBolt00`);
     const fireball = await ctx.ensureItem(mage, `${PHB}phbsplFireball00`);
     const misty = await ctx.ensureItem(mage, `${PHB}phbsplMistyStep0`);
@@ -51,7 +52,7 @@ export default {
     const alerts = messages => messages.filter(m => m.flags?.[MODULE_ID]?.gmAlert);
     const marked = messages => messages.filter(m => m.flags?.[MODULE_ID]?.overridden?.length);
 
-    // 1. Clic d'attaque hors de portée : `engage`, le chemin du clic gauche et du menu.
+    // 1. Attack click out of range: `engage`, the path of the left click and of the menu.
     const engage = () => script(`const { engage } = await import("/modules/${MODULE_ID}/scripts/runtime/actions.mjs");
       const token = canvas.scene.tokens.get("${mage.id}"); const target = canvas.scene.tokens.get("${far.id}");
       const activity = token.actor.items.get("${ray}").system.activities.find(a => a.type === "attack");
@@ -76,8 +77,8 @@ export default {
     const moved = await where(mage);
     ctx.expect((moved.x === home.x) && (moved.y === home.y), `forcé : le Mage attaque d'où il est (${moved.x},${moved.y})`);
 
-    // 2. Menu contextuel : l'attaque refusée reste, grisée, avec sa raison. La javeline du Guerrier, équipée le temps de l'essai (son
-    //    lancer, à 120 ft au plus, ne se juge pas en cherchant un chemin).
+    // 2. Context menu: the refused attack stays, greyed out, with its reason. The Fighter's javelin, equipped for the duration of
+    //    the test (its throw, at 120 ft at most, is not judged by looking for a path).
     const javelin = await ctx.itemId(fighter.id, "javelin");
     const fighterActor = (await ctx.call("get-scene-object", { type: "Token", objectId: fighter.id })).data.actorId;
     const equip = on => ctx.call("upsert-actor-item", { actorId: fighterActor, itemData: { "system.equipped": on }, match: { path: "_id", value: javelin } });
@@ -88,7 +89,8 @@ export default {
     ctx.expect(refused.some(([label, why]) => /javelin|javeline/i.test(label) && /range|portée/i.test(why)),
       `menu : la javeline lancée sur la Cible lointaine est grisée (${JSON.stringify(menu?.refused ?? {}).slice(0, 200)})`);
 
-    // 3. Boule de feu posée sur la Cible lointaine (155 ft, portée 150 ft) — la pose de dnd5e passe par `dnd5e.createMeasuredTemplate`.
+    // 3. Fireball placed on the Distant Target (155 ft, range 150 ft) — dnd5e's placement goes through
+    // `dnd5e.createMeasuredTemplate`.
     const target = await where(far);
     const place = () => script(`const token = canvas.scene.tokens.get("${mage.id}");
       const activity = token.actor.items.get("${fireball}").system.activities.find(a => a.target?.template?.type);
@@ -113,12 +115,13 @@ export default {
     ctx.expect(created?.length === 1, `forcée : la zone est créée, marquée (${created?.length})`);
     after = await ctx.messagesSince(since);
     ctx.expect(alerts(after).length === 1, `forcée : une alerte MJ (${alerts(after).length})`);
-    // Une pose rouverte par « Renoncer » attend la souris : elle n'est pas essayée ici (le geste ouvre la pose de dnd5e).
+    // A placement reopened by "Give up" waits for the mouse: it is not tried here (the gesture opens dnd5e's placement).
 
-    // 4. Foulée brumeuse vers une case occupée (celle du Mannequin).
+    // 4. Misty Step toward an occupied cell (the Dummy's).
     const spot = await where(dummy);
     since = await ctx.lastMessageId();
-    // La visée qu'ouvre l'utilisation (`teleportSelf`, ui/pointer-offers.mjs) ; le connecteur, lui, n'enchaîne pas les actions qui suivent.
+    // The targeting that the use opens (`teleportSelf`, ui/pointer-offers.mjs); the connector, for its part,
+    // does not chain the actions that follow.
     await script(`const { teleportSelf } = await import("/modules/${MODULE_ID}/scripts/runtime/teleport.mjs");
       const activity = canvas.scene.tokens.get("${mage.id}").actor.items.get("${misty}").system.activities.contents[0];
       teleportSelf(activity).catch(err => console.error(err)); return true;`);

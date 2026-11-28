@@ -1,8 +1,8 @@
 /**
- * §365 : alertes MJ — ce que l'automatisation d'une capacité laisse au MJ, signalé à l'utilisation de l'item (bandeau en haut de son
- * écran, carte chuchotée : runtime/gm-alert.mjs). Identifiant → règle `gmAlert` (`key` : le texte `DND5ECOMBAT.AlerteMJ.<key>`,
- * `activities` : seulement à l'utilisation de ces activités). Les objets du relevé des objets ont la leur dans content/item-fixes.mjs.
- * Ne figure ici que ce qui passe par une utilisation (un sort lancé, une activité) : un trait passif n'a pas de moment où alerter.
+ * §365: GM alerts — what the automation of an ability leaves to the GM, signaled when the item is used (banner at the top of its
+ * screen, whispered card: runtime/gm-alert.mjs). Identifier → `gmAlert` rule (`key`: the text `DND5ECOMBAT.AlerteMJ.<key>`,
+ * `activities`: only when these activities are used). The items of the item survey have theirs in content/item-fixes.mjs.
+ * Only what goes through a use (a spell cast, an activity) is listed here: a passive trait has no moment at which to alert.
  */
 
 export const GM_ALERTS = Object.freeze({
@@ -41,5 +41,5 @@ export const GM_ALERTS = Object.freeze({
   "mist-walker": { key: "MarcheBrumes" },
   "feral-pounce": { key: "BondFeroce" },
   "ghost-walk": { key: "MarcheFantome" }
-  // §447 : Courroux sauvage n'a plus d'alerte — la transformation (enchantement de la donnée) et les Représailles rôdeuses sont jouées.
+  // §447: Wild Fury no longer has an alert — the transformation (the data's enchantment) and the Prowling Reprisals are played.
 });

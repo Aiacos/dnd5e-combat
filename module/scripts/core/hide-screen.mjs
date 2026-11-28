@@ -1,13 +1,13 @@
 /**
- * Discrétion naturelle (Halfelin, SRD 5.2) : « vous pouvez prendre l'action Se cacher même quand vous n'êtes masqué que par une
- * créature d'au moins une taille de plus que vous ». Le moteur demande, pour se cacher, qu'aucun ennemi ne vous voie ; une créature ne
- * coupe pas la vue. Pour le porteur de ce trait, un ennemi dont la ligne de vue passe par l'espace d'une telle créature ne compte
- * plus. Fonctions pures : des points et des rectangles en pixels.
+ * Naturally Stealthy (Halfling, SRD 5.2): "you can take the Hide action even when you are obscured only by a
+ * creature that is at least one size larger than you". To hide, the engine requires that no enemy sees you; a creature does not
+ * block sight. For the bearer of this trait, an enemy whose line of sight passes through the space of such a creature no longer
+ * counts. Pure functions: points and rectangles in pixels.
  */
 
 const SIZES = ["tiny", "sm", "med", "lg", "huge", "grg"];
 
-/** `size` est-elle d'au moins `steps` tailles au-dessus de `than` ? Taille inconnue : non. */
+/** Is `size` at least `steps` sizes above `than`? Unknown size: no. */
 export function largerBy(size, than, steps=1) {
   const a = SIZES.indexOf(size), b = SIZES.indexOf(than);
   return (a >= 0) && (b >= 0) && (a - b >= steps);
@@ -30,11 +30,11 @@ export function segmentCrossesRect(p, q, rect) {
 const center = rect => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
 
 /**
- * L'observateur ne voit-il le porteur qu'à travers une créature d'au moins une taille de plus que lui ? La ligne d'un centre à l'autre
- * doit traverser l'espace de cette créature.
- * @param {{x: number, y: number, width: number, height: number}} observer  l'espace de l'observateur
- * @param {{rect: object, size: string}} hider                             l'espace et la taille de qui se cache
- * @param {Array<{rect: object, size: string}>} bodies                     les autres créatures debout de la scène
+ * Does the observer see the bearer only through a creature at least one size larger than them? The line from one center to
+ * the other must cross the space of that creature.
+ * @param {{x: number, y: number, width: number, height: number}} observer  the observer's space
+ * @param {{rect: object, size: string}} hider                             the space and size of whoever hides
+ * @param {Array<{rect: object, size: string}>} bodies                     the other standing creatures in the scene
  */
 export function screenedByLarger(observer, hider, bodies) {
   const from = center(observer), to = center(hider.rect);

@@ -1,6 +1,6 @@
 /**
- * Après une action : cibles relâchées, et les offres qui rouvrent une visée (Enchaînement, Déluge de coups, attaque enchantée,
- * Rebond, attaque Bonus), fin de tour. Extrait d'ui/pointer.mjs.
+ * After an action: targets released, and the offers that reopen an aim (Cleave, Flurry of Blows, enchanted attack,
+ * Bounce, Bonus Action attack), end of turn. Extracted from ui/pointer.mjs.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -19,7 +19,7 @@ import { openTargeting, reticle, setting, stormAfterUse } from "./pointer.mjs";
 import { offerChainedPick } from "./pick-targets.mjs";
 
 /* -------------------------------------------- */
-/*  Cibles relâchées                            */
+/*  Targets released                            */
 /* -------------------------------------------- */
 
 function releaseTargets() {
@@ -33,8 +33,8 @@ export function clearTargets() {
 }
 
 /**
- * §125 : les cibles qu'une action lancée par le moteur emporte (`{ activity, ids }`), jusqu'à leur relâchement à la fin de sa résolution.
- * Une autre activité lancée entre-temps sur exactement ces cibles les a héritées : ce sont des restes.
+ * §125: the targets that an action launched by the engine carries (`{ activity, ids }`), until their release at the end of its
+ * resolution. Another activity launched in the meantime on exactly these targets inherited them: these are leftovers.
  */
 let inFlight = null;
 const targetIds = () => Array.from(game.user.targets).map(t => t.document.uuid).sort();
@@ -49,8 +49,8 @@ export function leftoverTargets(activity) {
 }
 
 /**
- * Une action jugée (attaque touchée et dégâts appliqués, ratée, sauvegardes réglées) : son auteur relâche ses cibles. `released` :
- * les messages déjà traités, bornés aux plus récents (une longue session ne les garde pas tous).
+ * An action judged (attack hit and damage applied, missed, saves settled): its author releases their targets. `released`:
+ * the messages already handled, bounded to the most recent (a long session does not keep them all).
  */
 const released = new Set();
 const RELEASED_KEPT = 200;
@@ -69,9 +69,9 @@ export function onResolutionSettled(message) {
 }
 
 /**
- * §464 : « aussitôt après que l'attaque touche ou rate, l'esprit peut se téléporter jusqu'à 9 m » (Griffes de l'esprit yugoloth) — l'attaque
- * jugée, la visée de la téléportation s'ouvre chez son auteur (Échap : rester). La validation, le refus forçable et le retour pour la table
- * sont ceux de toute téléportation de soi (runtime/teleport.mjs).
+ * §464: "right after the attack hits or misses, the spirit can teleport up to 9 m" (Yugoloth spirit's mind claws) — once the
+ * attack is judged, the teleportation aim opens for its author (Esc: stay). The validation, the forceable refusal and the return
+ * for the table are those of any self-teleportation (runtime/teleport.mjs).
  */
 function offerTeleportAfterAttack(message, resolution) {
   if ( !resolution.plan?.attack || !setting("teleportPlanning") ) return;
@@ -88,9 +88,9 @@ function offerTeleportAfterAttack(message, resolution) {
 }
 
 /**
- * §21 : Enchaînement (botte d'arme) — l'attaque au corps à corps a touché et le jet portait la botte : la visée s'ouvre chez
- * l'auteur pour une seconde attaque avec la même arme, sans coût, contre une créature à 1,50 m de la première et à l'allonge.
- * Une fois par tour de combat. Clic droit pour y renoncer.
+ * §21: Cleave (mastery property) — the melee attack hit and the roll carried the mastery property: the aim opens for the
+ * author for a second attack with the same weapon, at no cost, against a creature within 1,50 m of the first and within reach.
+ * Once per combat turn. Right click to give up.
  */
 function offerCleave(message, resolution) {
   if ( !resolution.plan?.attack || message.getFlag(MODULE_ID, "cleave") ) return;
@@ -112,13 +112,13 @@ function offerCleave(message, resolution) {
 }
 
 /**
- * §24 : Déluge de coups — tant qu'il reste des frappes gratuites au budget du tour, la visée de la frappe à mains nues s'ouvre chez
- * l'auteur : après l'activation du Déluge, puis après chaque frappe résolue. Clic droit pour y renoncer.
+ * §24: Flurry of Blows — as long as free strikes remain in the turn's budget, the unarmed strike's aim opens for
+ * the author: after the Flurry's activation, then after each resolved strike. Right click to give up.
  */
 function offerFlurry(actor) {
   const combatant = actor ? combatantFor(actor) : null;
   if ( !combatant || !isOwnTurn(combatant) || !((readBudget(combatant)?.flurry ?? 0) > 0) ) return;
-  // §27 : Prêtre de guerre — l'attaque ouverte se fait avec l'arme de corps à corps équipée, sinon à mains nues.
+  // §27: War Priest — the attack opened is made with the equipped melee weapon, otherwise unarmed.
   const weapon = readBudget(combatant).flurryAny
     ? actor.items.find(i => (i.type === "weapon") && i.system.equipped && (identifierOf(i).id !== "unarmed-strike")) : null;
   const strike = weapon ?? actor.items.find(i => (i.type === "weapon") && (identifierOf(i).id === "unarmed-strike"));
@@ -130,20 +130,20 @@ function offerFlurry(actor) {
     { prompt: loc(`${label}.Visee`, { n: readBudget(combatant).flurry }), notice: loc(`${label}.Retour`), reticle: loc(`${label}.Retour`) });
 }
 
-/** §24 : l'activation du Déluge de coups (carte d'utilisation de l'auteur) : la première frappe se vise aussitôt, budget écrit. */
+/** §24: the activation of Flurry of Blows (the author's use card): the first strike is aimed at once, budget written. */
 export function onFlurryUsed(message) {
   if ( (message.type !== "usage") || !message.author?.isSelf ) return;
   const activity = message.getAssociatedActivity?.();
   const rule = activity?.item ? contentOf(activity.item).entry?.flurry : null;
   if ( !rule || ![rule.activity].flat().includes(activity.id) ) return;
-  // Le budget est écrit par le MJ actif juste après la carte : on lui laisse un instant.
+  // The budget is written by the active GM right after the card: it is given a moment.
   setTimeout(() => offerFlurry(activity.actor), 800);
 }
 
 /**
- * §23 : Frappe assurée — « vous faites une attaque avec l'arme utilisée pour lancer le sort » : dès que l'enchantement (contenu
- * `oneAttack`) est posé sur l'arme, la visée de son attaque s'ouvre chez celui qui joue la créature (le joueur connecté, sinon le
- * MJ actif), sans coût — le sort a payé l'action. L'enchantement tombe après l'attaque (runtime/cantrips.mjs).
+ * §23: True Strike — "you make an attack with the weapon used to cast the spell": as soon as the enchantment (content
+ * `oneAttack`) is placed on the weapon, the aim of its attack opens for whoever plays the creature (the connected player, otherwise
+ * the active GM), at no cost — the spell paid the action. The enchantment drops after the attack (runtime/cantrips.mjs).
  */
 export function offerEnchantedAttack(effect) {
   const weapon = effect.parent;
@@ -159,9 +159,9 @@ export function offerEnchantedAttack(effect) {
 }
 
 /**
- * §16.27 : Orbe chromatique — l'attaque a touché et les dés de dégâts montrent un double : la visée s'ouvre chez l'auteur pour
- * faire bondir l'orbe (même activité, sans emplacement ni action, même type de dégâts, au niveau du lancement). La cible est
- * validée à l'utilisation (runtime/projectiles.mjs) : à 9 m de la dernière, jamais visée. Clic droit pour y renoncer.
+ * §16.27: Chromatic Orb — the attack hit and the damage dice show a double: the aim opens for the author to
+ * make the orb bounce (same activity, no slot or action, same damage type, at the casting level). The target is
+ * validated at use (runtime/projectiles.mjs): within 9 m of the last one, never aimed. Right click to give up.
  */
 function offerLeap(message, resolution) {
   if ( !resolution.plan?.attack ) return;
@@ -194,10 +194,10 @@ function offerLeap(message, resolution) {
 }
 
 /**
- * §16.26 : Taille (Maître d'armes lourdes) — après un coup critique, ou une créature tombée à 0 PV, d'une arme (de corps à
- * corps si la règle le dit), sur le client de l'auteur : la visée s'ouvre pour attaquer de nouveau avec la même arme, pour
- * l'action Bonus (`cost: "bonus"`, que la légalité et le budget lisent). À son tour, en combat, l'action Bonus encore là ;
- * clic droit pour y renoncer.
+ * §16.26: Hew (Great Weapon Master) — after a Critical Hit, or a creature dropped to 0 HP, with a weapon (melee
+ * if the rule says so), on the author's client: the aim opens to attack again with the same weapon, for the
+ * Bonus Action (`cost: "bonus"`, which legality and the budget read). On their turn, in combat, the Bonus Action still there;
+ * right click to give up.
  */
 function offerBonusAttack(message, resolution) {
   if ( !resolution.plan?.attack ) return;
@@ -220,7 +220,7 @@ function offerBonusAttack(message, resolution) {
       notice: loc("Retour.Taille"), reticle: loc("Retour.Taille") });
 }
 
-/** Fin de tour : celui qui jouait ce combattant relâche ses cibles. */
+/** End of turn: whoever played this combatant releases their targets. */
 export function onTurnChange(combat, prior) {
   const combatant = combat.combatants.get(prior?.combatantId);
   if ( !combatant?.isOwner || (game.user.isGM && combatant.hasPlayerOwner) ) return;
@@ -230,27 +230,28 @@ export function onTurnChange(combat, prior) {
 /* -------------------------------------------- */
 
 /**
- * §16.10 : une téléportation de soi (activité native « teleport » à portée « soi », ou item qui la déclare : Foulée
- * brumeuse, Porte dimensionnelle) ouvre la visée de la destination dès l'utilisation, sur le client de celui qui l'a
- * utilisée — le TODO de dnd5e 6 (`_triggerSubsequentActions`, teleport.mjs).
+ * §16.10: a self-teleportation (native "teleport" activity at "self" range, or an item that declares it: Misty
+ * Step, Dimension Door) opens the destination aim as soon as it is used, on the client of whoever used
+ * it — the TODO of dnd5e 6 (`_triggerSubsequentActions`, teleport.mjs).
  */
 export function onPostUseActivity(activity, usageConfig, results) {
-  // §438 : la sauvegarde qui suit une manifestation (Courroux des mers 3.0.0), sous la même action.
+  // §438: the save that follows a manifestation (Wrath of the Sea 3.0.0), under the same action.
   if ( results ) offerChainedPick(activity, results).catch(err => console.error(`${MODULE_ID} | chained choice`, err));
   if ( results && stormOf(activity?.item) ) return void stormAfterUse(activity, usageConfig).catch(err => console.error(`${MODULE_ID} | storm`, err));
-  // §464 : une téléportation « après l'attaque » attend que l'attaque soit jugée (`offerTeleportAfterAttack`).
+  // §464: a teleportation "after the attack" waits for the attack to be judged (`offerTeleportAfterAttack`).
   if ( !results || !setting("teleportPlanning") || !selfTeleportOf(activity) || selfTeleportOf(activity).after ) return;
-  if ( usageConfig?.subsequentActions === false ) return;   // un appelant qui enchaîne lui-même (connecteur, scénarios)
+  if ( usageConfig?.subsequentActions === false ) return;   // a caller that chains by itself (connector, scenarios)
   teleportSelf(activity).catch(err => console.error(`${MODULE_ID} | teleportation`, err));
 }
 
 /**
- * §16.34 : les jets d'attaque, de dégâts et de soins partent sans la fenêtre de configuration de dnd5e (réglage par joueur,
- * activé par défaut) — ceux que dnd5e enchaîne après l'utilisation (activity/attack.mjs:69, heal.mjs:61, damage.mjs:52), depuis
- * la fiche, le HUD ou le bouton de la carte. Avantage et désavantage viennent du moteur ; le mode d'attaque (« lancer ») est
- * présélectionné par runtime/turn.mjs.
- * #173 (§556): it also covers the damage the engine rolls itself (adapter/messages.mjs), which offers dnd5e's dialog — except when the
- * world's "Damage and healing" setting asks the author to roll (`dialog: "required"`): the dialog then shows anyway.
+ * §16.34: attack, damage and healing rolls go off without dnd5e's configuration window (per-player setting,
+ * on by default) — those that dnd5e chains after the use (activity/attack.mjs:69, heal.mjs:61, damage.mjs:52), from
+ * the sheet, the HUD or the card button. Advantage and Disadvantage come from the engine; the attack mode ("throw") is
+ * preselected by runtime/turn.mjs.
+ * #173 (§556): it also covers the damage the engine rolls itself (adapter/messages.mjs), which offers dnd5e's dialog —
+ * except when the world's "Damage and healing" setting asks the author to roll (`dialog: "required"`): the dialog then
+ * shows anyway.
  */
 export function onPreRollDamage(config, dialog) {
   if ( config?.[MODULE_ID]?.dialog === "required" ) return;

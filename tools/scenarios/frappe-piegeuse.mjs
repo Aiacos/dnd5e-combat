@@ -1,9 +1,9 @@
 /**
- * §206 : la Frappe piégeuse (Ensnaring Strike, PHB 2024) se propose comme un châtiment, après un coup d'arme au corps à corps comme à
- * distance (issue GitHub #10). Le Paladin de `dnd-6` reçoit le sort, prêté depuis le compendium du Manuel des joueurs ; le Bandit
- * reçoit 300 PV. Vérifie : la question après le coup d'épée, l'emplacement dépensé, le jet de Force (Entravé ⇔ raté) sans Avantage pour
- * une créature Moyenne ; avec l'Avantage quand le Bandit est Grand ; la proposition après un coup de javeline lancée.
- * Remet positions, PV, taille, emplacements, quantité de javelines, états ; retire l'item prêté.
+ * §206: Ensnaring Strike (PHB 2024) is offered like a smite, after a weapon hit in melee as well as at range (GitHub issue #10).
+ * The Paladin of `dnd-6` gets the spell, lent from the Player's Handbook compendium; the Bandit gets 300 HP. Checks: the question
+ * after the sword hit, the slot spent, the Strength save (Restrained ⇔ failed) without Advantage for a Medium creature; with
+ * Advantage when the Bandit is Large; the offer after a thrown javelin hit.
+ * Restores positions, HP, size, slots, javelin quantity, conditions; removes the lent item.
  */
 const MODULE_ID = "dnd5e-combat";
 const SPELLS = "dnd-players-handbook.spells";
@@ -57,7 +57,7 @@ export default {
       const { data } = await ctx.call("get-compendium-entry", { uuid });
       const { _id, folder, ownership, _stats, ...itemData } = data;
       setPath(itemData, "flags.dnd5e.sourceId", uuid);
-      // Préparé, comme sur la fiche d'un paladin : un sort non préparé ne se propose pas en châtiment (issue #144).
+      // Prepared, as on a paladin's sheet: an unprepared spell is not offered as a smite (issue #144).
       setPath(itemData, "system.prepared", 1);
       const r = await ctx.call("upsert-actor-item", { actorId: pal.actorId, itemData, match: { path: "flags.dnd5e.sourceId", value: uuid } });
       ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: pal.actorId, itemId: r.id }).catch(() => {}));
@@ -71,11 +71,11 @@ export default {
     const remettre = async () => {
       for ( const [id, h] of homes ) {
         const t = tokens.find(x => x.id === id);
-        // Entravé d'abord : une créature entravée ne se replace pas.
+        // Restrained first: a restrained creature is not repositioned.
         await ctx.removeStatusEffects(t, "prone"); await ctx.call("set-status", { tokenId: id, statusId: "prone", active: false }).catch(() => {});
         await ctx.removeEffectsNamed(t, /Vow|Vœu|Voeu|Inimitié|Enmity|Ensnar|Entrav|piég|Sap|Slow|Sape|Ralenti/i);
         await ctx.call("set-status", { tokenId: id, statusId: "restrained", active: false }).catch(() => {});
-        // L'effet de la Frappe piégeuse peut survivre un instant (il part avec la concentration) : on réessaie jusqu'au retour.
+        // The Ensnaring Strike effect may survive for a moment (it leaves with Concentration): retry until it is gone.
         for ( let k = 0; k < 4; k++ ) {
           const r = await ctx.call("move-token", { tokenId: id, x: h.pos.x, y: h.pos.y, elevation: h.pos.elevation ?? 0 }).catch(() => null);
           if ( (r?.after?.x === h.pos.x) && (r?.after?.y === h.pos.y) ) break;
@@ -129,7 +129,7 @@ export default {
       const u = await ctx.use({ tokenId: attacker.id, itemId, activityType: "attack", targetTokenIds: [target.id], usageConfig: { [MODULE_ID]: usage } });
       return { since, usage: u.usageMessageId };
     };
-    /** Frappe jusqu'à toucher (10 essais) en répondant `button` à la question du châtiment ; rend le jet de dégâts et ce qui a été vu. */
+    /** Strikes until a hit (10 tries) answering `button` to the smite question; returns the damage roll and what was seen. */
     const smiteHit = async (button, { item=sword, usage={} }={}) => {
       for ( let n = 0; n < 10; n++ ) {
         const ids = await known();
@@ -145,7 +145,7 @@ export default {
     };
 
 
-    /** Le jet de Force de la Frappe piégeuse : la carte de sauvegarde du moteur, sa résolution, l'état Entravé. */
+    /** The Strength save of Ensnaring Strike: the engine's save card, its resolution, the Restrained condition. */
     const saveOf = async res => {
       let save = null;
       for ( const stop = Date.now() + 15000; !save && (Date.now() < stop); await pause(500) ) {

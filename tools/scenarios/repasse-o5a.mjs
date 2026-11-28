@@ -1,8 +1,8 @@
 /**
- * §339, lot O5a de la repasse des objets : propriétés Lourde et Chargement. Arène de test (Guerrier, Zombi).
- *  1. Lourde : l'Épée à deux mains du Guerrier avec 10 en Force donne le Désavantage (raison `heavyWeapon`) ; avec 13, non.
- *  2. Chargement : avec deux attaques par action (Attaque supplémentaire), un premier tir d'Arbalète légère passe ; un second tir dans la
- *     même action Attaquer est signalé (« loading »).
+ * §339, batch O5a of the item pass: the Heavy and Loading properties. Test arena (Fighter, Zombie).
+ *  1. Heavy: the Fighter's Greatsword with 10 in Strength gives Disadvantage (reason `heavyWeapon`); with 13, it does not.
+ *  2. Loading: with two attacks per action (Extra Attack), a first Light Crossbow shot goes through; a second shot in the
+ *     same Attack action is flagged ("loading").
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.equipment.Item.";
@@ -37,7 +37,7 @@ export default {
 
     // 2. Chargement.
     const bow = await ctx.ensureItem(fighter, `${PHB}phbwepLightCross`);
-    // Attaque supplémentaire, le temps du test (le moteur la reconnaît par son identifiant).
+    // Extra Attack, for the duration of the test (the engine recognises it by its identifier).
     const extra = await ctx.call("upsert-actor-item", { actorId, itemData: { name: "Extra Attack (test)", type: "feat", system: { identifier: "extra-attack" } },
       match: { path: "system.identifier", value: "extra-attack" } });
     const extraId = extra.itemId ?? extra.id ?? extra.item?._id;

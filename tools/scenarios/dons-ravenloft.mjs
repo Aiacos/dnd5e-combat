@@ -1,12 +1,14 @@
 /**
- * §94 — Dons et traits d'espèce de Ravenloft (module premium `dnd-ravenloft-horrors-within`, pack `options`), prêtés au Guerrier.
- *  - Cri surnaturel (Murmures rassemblés) : le Bandit attaque, la réaction est prise d'office — CA + maîtrise contre cette attaque.
- *  - Symbiose entretenue (Être symbiotique) : Terreur du Magicien jusqu'à une sauvegarde ratée — la question, un dé de vie dépensé.
- *  - Se ressaisir (Survivant) : même chose, contre Effrayé — la question, l'utilisation dépensée.
- *  - Savoir d'une vie passée (Né-de-nouveau) : un test, la question, +1d6.
- *  - Hurlement (Lupin) : le Bandit (ennemi) fait sa sauvegarde, pas le Clerc (allié) ; raté : ses attaques au Désavantage.
- *  - Bond féroce (Lupin) : un coup à mains nues qui touche — la Bousculade proposée, Force ou Dextérité, À terre ⇔ ratée.
- *  - Chercher (Guetteurs + Œil vif) : le test de Perception avec +1d4 et l'Avantage.
+ * §94 — Ravenloft feats and species traits (premium module `dnd-ravenloft-horrors-within`, pack `options`), lent to the
+ * Fighter.
+ *  - Unnatural Cry (Gathered Whispers): the Bandit attacks, the Reaction is taken automatically — AC + proficiency against
+ *    that attack.
+ *  - Sustained Symbiosis (Symbiotic Being): the Wizard's Terror until a failed save — the question, a Hit Die spent.
+ *  - Pull Yourself Together (Survivor): same thing, against Frightened — the question, the use spent.
+ *  - Lore of a Past Life (Reborn): a check, the question, +1d6.
+ *  - Howl (Lupin): the Bandit (enemy) makes its save, not the Cleric (ally); failed: its attacks at Disadvantage.
+ *  - Savage Leap (Lupin): an unarmed hit that lands — the Shove offered, Strength or Dexterity, Prone ⇔ failed.
+ *  - Search (Watchers + Keen Eye): the Perception check with +1d4 and Advantage.
  */
 const MODULE_ID = "dnd5e-combat";
 const RHW = "dnd-ravenloft-horrors-within.options";
@@ -61,7 +63,7 @@ export default {
         for ( const d of r?.windows ?? [] ) {
           const b = (d.buttons ?? []).find(x => re.test(x.label ?? ""));
           if ( b ) { await ctx.call("answer-dialog", { id: d.id, button: b.action ?? b.label }); return { labels: (d.buttons ?? []).map(x => x.label) }; }
-          // Beaucoup d'options : une liste déroulante (adapter/choices.mjs, §113) et un bouton « Valider ».
+          // Many options: a dropdown list (adapter/choices.mjs, §113) and a "Confirm" button.
           for ( const f of (d.fields ?? []).filter(x => x.type === "select") ) {
             const o = (f.options ?? []).find(x => re.test(x.label ?? ""));
             if ( !o ) continue;
@@ -96,7 +98,7 @@ export default {
     }
     await whispers.remove();
 
-    // 2 et 3. Symbiose, puis Survivant : Terreur jusqu'à une sauvegarde ratée.
+    // 2 and 3. Symbiosis, then Survivor: Terror until a failed save.
     const fear = await ctx.ensureItem(mage, FEAR);
     const failFear = async (re, ms) => {
       for ( let n = 0; n < 20; n++ ) {
@@ -115,7 +117,7 @@ export default {
     };
     const symb = await lend("rhwSymbioticBein");
     const hdSpent = async () => ((await actor()).items ?? []).filter(i => i.type === "class").reduce((n, i) => n + (Number(i.system?.hd?.spent) || 0), 0);
-    // Le dé de vie dépensé n'est pas suivi par le filet de sécurité : remis ici, avant et après.
+    // The Hit Die spent is not tracked by the safety net: restored here, before and after.
     const classes = ((await actor()).items ?? []).filter(i => i.type === "class").map(i => ({ id: i._id, spent: Number(i.system?.hd?.spent) || 0 }));
     const setHd = async spent => { for ( const c of classes ) await ctx.call("upsert-actor-item", { actorId: fighter.actorId, itemData: { "system.hd.spent": spent ?? c.spent }, match: { path: "_id", value: c.id } }); };
     ctx.restore(() => setHd(null));
@@ -141,7 +143,7 @@ export default {
     await surv.remove();
     await clearFighter();
 
-    // 4. Savoir d'une vie passée.
+    // 4. Lore of a Past Life.
     const past = await lend("rhwKnowledgefraL");
     const ids4 = await known();
     const since4 = await ctx.lastMessageId();
@@ -157,7 +159,7 @@ export default {
     for ( let n = 0; (n < 12) && !howled; n++ ) {
       await ctx.removeEffectsNamed(bandit, /Disadvantage|Désavantage|Hurlement|Howl/i);
       const fb = await ctx.box(fighter);
-      // Le connecteur ne pose pas le gabarit (au clic, la zone de 4,50 m se pose sur le Guerrier) : posé ici.
+      // The connector does not place the template (on click, the 4.50 m area is placed on the Fighter): placed here.
       const u = await ctx.use({ tokenId: fighter.id, itemId: howl.id, activityType: "save", area: { shape: "circle", x: fb.x + fb.width / 2, y: fb.y + fb.height / 2, radius: 3.5 * grid } });
       if ( u.regionId ) ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: u.regionId }).catch(() => {}));
       const r = await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
@@ -179,7 +181,7 @@ export default {
     await ctx.removeEffectsNamed(bandit, /Disadvantage|Désavantage|Hurlement|Howl/i);
     await howl.remove();
 
-    // 6. Bond féroce.
+    // 6. Savage Leap.
     const pounce = await lend("rhwFeralPounce7E");
     let shoved = null;
     for ( let n = 0; (n < 15) && !shoved; n++ ) {
@@ -203,7 +205,7 @@ export default {
     }
     await pounce.remove();
 
-    // 7. Chercher, avec Guetteurs (+1d4) et Œil vif (Avantage).
+    // 7. Search, with Watchers (+1d4) and Keen Eye (Advantage).
     await lend("rhwWatchersGH8OL");
     await lend("rhwSharpEyev8PBf");
     await ctx.startCombat([fighter, bandit]);

@@ -1,16 +1,18 @@
 /**
- * §395 : « Lancer sans DAS » — une utilisation passe par dnd5e seul, et tout ce qui en découle jusqu'à sa fin (décision de
- * l'utilisateur, 2026-11-07 : zone qui dure, concentration, effets, cartes, jets). MJ et joueurs, par le menu du clic droit d'un objet
- * de la fiche (ui/item-menu.mjs) ou d'une case de la barre d'une interface voisine (`api.vanilla.use`).
+ * §395: "Cast without DAS" — a use goes through dnd5e alone, and everything that follows from it until its end (decision of
+ * the user, 2026-11-07: lasting area, Concentration, effects, cards, rolls). GM and players, through the right-click menu
+ * of an item on the sheet (ui/item-menu.mjs) or a cell of the bar of a neighboring interface (`api.vanilla.use`).
  *
- * Le routeur saute toutes les inscriptions non `always` d'un hook dont les arguments viennent d'une telle action
- * (adapter/vanilla-state.mjs, `concernsVanilla`). Ce fichier pose le marqueur là où dnd5e ne garde pas de lien vers la carte :
- *  - la configuration d'utilisation porte `{ "dnd5e-combat": { vanilla: true } }` (posée par `useWithoutDas`) ; au
- *    `dnd5e.preUseActivity`, la carte d'utilisation reçoit le drapeau (`messageConfig.data.flags`) et l'activité est notée sur ce client ;
- *  - l'effet de concentration (`dnd5e.preBeginConcentrating`, actor.mjs:1104 : les données de l'effet), la zone posée
- *    (`preCreateRegion` / `preCreateMeasuredTemplate` : `flags.dnd5e.activity`, `origin`, `item`) et la créature invoquée
- *    (`dnd5e.preSummonToken`, summon.mjs:178 : les données du token) reçoivent le drapeau tant que l'activité est notée.
- * Ces inscriptions sont `always` (elles marquent même quand la suite du hook se tait) et `marks` (les suivantes relisent l'état).
+ * The router skips every non-`always` registration of a hook whose arguments come from such an action
+ * (adapter/vanilla-state.mjs, `concernsVanilla`). This file sets the marker where dnd5e keeps no link to the card:
+ *  - the use configuration carries `{ "dnd5e-combat": { vanilla: true } }` (set by `useWithoutDas`); at
+ *    `dnd5e.preUseActivity`, the use card receives the flag (`messageConfig.data.flags`)
+ *    and the activity is noted on this client;
+ *  - the Concentration effect (`dnd5e.preBeginConcentrating`, actor.mjs:1104: the effect data), the placed area
+ *    (`preCreateRegion` / `preCreateMeasuredTemplate`: `flags.dnd5e.activity`, `origin`, `item`) and the summoned creature
+ *    (`dnd5e.preSummonToken`, summon.mjs:178: the token data) receive the flag as long as the activity is noted.
+ * These registrations are `always` (they mark even when the rest of the hook stays silent) and `marks` (the following ones
+ * re-read the state).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,10 +23,10 @@ import { markPending, clearPending, isPending, isVanilla } from "../adapter/vani
 const FLAG = `flags.${MODULE_ID}.vanilla`;
 
 /**
- * Utilise un objet ou une activité par dnd5e seul (§395). Un objet à plusieurs activités ouvre le choix de dnd5e.
- * @param {Item|object} subject  Item5e ou activité.
+ * Uses an item or an activity through dnd5e alone (§395). An item with several activities opens dnd5e's choice.
+ * @param {Item|object} subject  Item5e or activity.
  * @param {object} [options]
- * @param {Event} [options.event]  L'évènement d'origine (Alt / Ctrl lus par dnd5e : avantage / désavantage).
+ * @param {Event} [options.event]  The originating event (Alt / Ctrl read by dnd5e: Advantage / Disadvantage).
  */
 export async function useWithoutDas(subject, { event=null }={}) {
   if ( !subject?.use ) return null;
@@ -43,7 +45,7 @@ function onPreConcentrate(_actor, _item, effectData, activity) {
   if ( effectData && isPending(activity?.uuid) ) foundry.utils.setProperty(effectData, FLAG, true);
 }
 
-/** Une zone ou un gabarit créés par ce client pour une activité lancée sans DAS. */
+/** An area or template created by this client for an activity cast without DAS. */
 function onPreCreatePlaced(doc, _data, _options, userId) {
   if ( userId !== game.user.id ) return;
   const f = doc.flags?.dnd5e ?? {};

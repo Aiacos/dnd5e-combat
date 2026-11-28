@@ -1,30 +1,30 @@
 /**
- * §181 : les factions — qui est l'ennemi de qui, au-delà de la disposition du token.
+ * §181: factions — who is whose enemy, beyond the token's disposition.
  *
- * Un « camp » (side) est ce que l'adaptateur sait d'un token : `{ disposition, faction, uuid, stance }`. La relation entre deux
- * camps vient de la table des factions (réglage de monde + rancunes de la scène) quand **les deux** ont une faction et que la
- * table dit quelque chose de ce couple ; sinon chaque règle garde exactement sa comparaison de dispositions d'avant. Ainsi un
- * monde sans faction, ou un couple que la table laisse à « suivre la disposition », ne change en rien.
+ * A "side" is what the adapter knows of a token: `{ disposition, faction, uuid, stance }`. The relation between two
+ * sides comes from the faction table (world setting + scene grudges) when **both** have a faction and the
+ * table says something about that pair; otherwise each rule keeps exactly its previous comparison of dispositions. So a
+ * world without factions, or a pair that the table leaves at "follow the disposition", changes nothing.
  *
- * La table est injectée par l'adaptateur (`useFactionTable`), comme l'aléa : le cœur ne lit aucun réglage.
+ * The table is injected by the adapter (`useFactionTable`), like randomness: the core reads no setting.
  */
 
 import { relationOf } from "./targeting.mjs";
 
-/** Deux dispositions sont-elles opposées (Amical contre Hostile) ? Un neutre (0) ou un secret (-2) ne provoque ni ne subit rien. */
+/** Are two dispositions opposed (Friendly vs Hostile)? A neutral (0) or a secret (-2) neither provokes nor suffers anything. */
 export function areHostile(a, b) {
   return ((a === 1) && (b === -1)) || ((a === -1) && (b === 1));
 }
 
-/** La faction implicite des PJ et de ce que possède un joueur. */
+/** The implicit faction of PCs and of what a player owns. */
 export const PARTY = "party";
 
-/** Les trois relations qu'une case de la matrice peut porter ; absente = suivre la disposition. */
+/** The three relations a matrix cell can carry; absent = follow the disposition. */
 export const RELATIONS = Object.freeze(["hostile", "neutral", "allied"]);
 
 /**
- * Factions génériques proposées (dépôt public : par type de créature, aucun nom de créature). Le nom se traduit par
- * `DCOMBAT.Factions.Generic.<id>`. Elles ne s'appliquent que si le MJ garde les règles par type (réglage `factionRules`).
+ * Suggested generic factions (public repository: by creature type, no creature name). The name is translated by
+ * `DCOMBAT.Factions.Generic.<id>`. They apply only if the GM keeps the per-type rules (`factionRules` setting).
  */
 export const GENERIC_FACTIONS = Object.freeze([
   { id: "wildlife", color: "#6b8e23", rules: { types: ["beast"] } },
@@ -37,27 +37,27 @@ export const GENERIC_FACTIONS = Object.freeze([
 ]);
 
 /**
- * Relations suggérées entre factions génériques (bouton de la matrice, jamais appliquées d'office) : les morts-vivants, les
- * aberrations et les fiélons haïssent tout ce qui n'est pas eux ; le reste s'ignore.
+ * Suggested relations between generic factions (matrix button, never applied by default): the Undead,
+ * aberrations and fiends hate everything that is not themselves; the rest ignore each other.
  */
 const HATERS = new Set(["undead", "aberrations", "fiends"]);
 
 const EMPTY = Object.freeze({ factions: [], relations: {}, grudges: [] });
 let TABLE = EMPTY;
 
-/** La clé d'un couple, indépendante de l'ordre. */
+/** The key of a pair, independent of order. */
 export function pairKey(a, b) {
   return a < b ? `${a}|${b}` : `${b}|${a}`;
 }
 
-/** Un id de faction : lettres, chiffres, tirets ; pas vide. */
+/** A faction id: letters, digits, hyphens; not empty. */
 export function validFactionId(id) {
   return (typeof id === "string") && /^[a-z0-9][a-z0-9-]{0,63}$/i.test(id);
 }
 
 /**
- * Remettre d'aplomb ce que le réglage contient (le MJ, un import, une ancienne version) : factions valides et uniques, relations
- * connues entre factions connues, `party` toujours présente en tête.
+ * Put back in order what the setting contains (the GM, an import, an old version): valid and unique factions, known relations
+ * between known factions, `party` always present at the head.
  * @param {object} raw
  * @returns {{factions: object[], relations: Object<string, string>}}
  */
@@ -83,7 +83,7 @@ export function normalizeFactions(raw) {
   return { factions, relations };
 }
 
-/** Les relations suggérées pour ces factions (§181) : à fusionner sous celles que le MJ a déjà posées. */
+/** The suggested relations for these factions (§181): to merge under those the GM has already set. */
 export function suggestedRelations(factions) {
   const ids = factions.map(f => f.id).filter(id => id !== PARTY);
   const out = {};
@@ -95,8 +95,8 @@ export function suggestedRelations(factions) {
 }
 
 /**
- * La faction qu'une règle donne à une créature, d'après ses faits (type, sous-type, identifiant de l'acteur) : la première qui
- * correspond, dans l'ordre de la liste ; un identifiant l'emporte sur un sous-type, qui l'emporte sur un type.
+ * The faction that a rule gives a creature, from its facts (type, subtype, actor identifier): the first that
+ * matches, in list order; an identifier wins over a subtype, which wins over a type.
  * @param {object[]} factions
  * @param {{type?: string, subtype?: string, identifier?: string}} facts
  * @returns {string|null}
@@ -118,8 +118,8 @@ export function factionByRules(factions, { type, subtype, identifier }={}) {
 }
 
 /**
- * La table que le cœur consulte. `relations` : clé `pairKey` → relation ; `grudges` : couples `[a, b]` d'ids de faction ou
- * d'uuid de token devenus hostiles sur la scène (rancune). Appelée par l'adaptateur à chaque changement.
+ * The table that the core consults. `relations`: `pairKey` key → relation; `grudges`: `[a, b]` pairs of faction ids or
+ * token uuids that became hostile on the scene (grudge). Called by the adapter on each change.
  */
 export function useFactionTable(table) {
   TABLE = table ? { factions: table.factions ?? [], relations: table.relations ?? {}, grudges: table.grudges ?? [] } : EMPTY;
@@ -130,7 +130,7 @@ export function factionTable() {
   return TABLE;
 }
 
-/** Une rancune lie-t-elle ces deux camps ? Par faction ou par token. */
+/** Does a grudge link these two sides? By faction or by token. */
 function grudged(a, b, grudges) {
   if ( !grudges.length ) return false;
   const ids = s => [s.faction, s.uuid ?? ((typeof s.token === "string") ? s.token : null)].filter(Boolean);
@@ -139,7 +139,7 @@ function grudged(a, b, grudges) {
 }
 
 /**
- * La relation des factions entre deux camps, ou null quand elle ne dit rien (il faut alors suivre la disposition).
+ * The factions' relation between two sides, or null when it says nothing (the disposition must then be followed).
  * @param {{faction?: string|null, uuid?: string|null, stance?: string|null}} a
  * @param {typeof a} b
  * @param {object} [table]
@@ -149,7 +149,7 @@ export function factionRelation(a, b, table=TABLE) {
   if ( !a || !b ) return null;
   const same = !!a.faction && (a.faction === b.faction);
   if ( grudged(a, b, table.grudges ?? []) ) return "hostile";
-  // Une créature qui s'est rendue (darsh-npc, moral) n'est l'ennemie de personne hors de sa faction.
+  // A creature that has surrendered (darsh-npc, morale) is nobody's enemy outside its faction.
   if ( !same && ((a.stance === "neutral") || (b.stance === "neutral")) ) return "neutral";
   if ( !a.faction || !b.faction ) return null;
   if ( same ) return a.faction === PARTY ? null : "allied";
@@ -164,8 +164,8 @@ export function hostileSides(a, b) {
 }
 
 /**
- * §479 : l'un Neutre (0), l'autre Amical ou Hostile, sans relation de faction entre eux — le cas où une règle « entre camps opposés »
- * (attaque d'opportunité) ne se déclenche pas et surprend : un monstre resté Neutre.
+ * §479: one Neutral (0), the other Friendly or Hostile, with no faction relation between them — the case where a "between opposing
+ * sides" rule (Opportunity Attack) does not trigger and surprises: a monster that stayed Neutral.
  */
 export function neutralFacing(a, b) {
   if ( factionRelation(a, b) ) return false;
@@ -173,15 +173,15 @@ export function neutralFacing(a, b) {
   return ((da === 0) && (Math.abs(db) === 1)) || ((db === 0) && (Math.abs(da) === 1));
 }
 
-/** Même camp ? Sans relation de faction : même disposition. */
+/** Same side? Without a faction relation: same disposition. */
 export function alliedSides(a, b) {
   const r = factionRelation(a, b);
   return r ? r === "allied" : (a?.disposition === b?.disposition);
 }
 
 /**
- * Pour le ciblage (`targeting.mjs` `relationOf`) : « same », « opposed » ou « neutral ». Sans relation de faction, la règle
- * des dispositions d'avant (un neutre ou un secret : « neutral »).
+ * For targeting (`targeting.mjs` `relationOf`): "same", "opposed" or "neutral". Without a faction relation, the previous
+ * rule on dispositions (a neutral or a secret: "neutral").
  */
 export function targetRelation(a, b) {
   const r = factionRelation(a, b);
@@ -189,7 +189,7 @@ export function targetRelation(a, b) {
   return r === "allied" ? "same" : (r === "hostile" ? "opposed" : "neutral");
 }
 
-/** La disposition qu'une relation explicite avec les PJ impose (1, 0, -1), ou null quand elle suit le token. */
+/** The disposition that an explicit relation with the PCs imposes (1, 0, -1), or null when it follows the token. */
 export function dispositionFor(faction, table=TABLE) {
   if ( !faction || (faction === PARTY) ) return null;
   const value = table.relations?.[pairKey(faction, PARTY)];

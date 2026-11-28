@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MODULE_ID } from "../module/scripts/constants.mjs";
 
 /**
- * §397 : le message du lancement sous l'icône de pause. dnd5e n'habille le bandeau de pause (son emblème, sa police) que s'il est
- * le seul inscrit à `renderGamePause` : le moteur ne s'y inscrit donc pas, et écrit son message après le rendu du bandeau.
+ * §397: the launch message under the pause icon. dnd5e dresses the pause banner (its emblem, its font) only if it is
+ * the only one registered on `renderGamePause`: the engine therefore does not register there,
+ * and writes its message after the banner renders.
  */
 const routes = new Map();
 vi.mock("../module/scripts/runtime/router.mjs", () => ({
@@ -33,7 +34,7 @@ beforeEach(() => {
       set: async (scope, key, value) => settings.set(`${scope}.${key}`, value)
     }
   };
-  // Le bandeau du cœur : chaque rendu remet le texte du système.
+  // The core's banner: each render puts back the system's text.
   globalThis.ui = { pause: {
     renders: 0,
     element: { querySelector: selector => ((selector === "figcaption") ? caption : null) },
@@ -48,29 +49,29 @@ const fire = async hook => { for ( const handler of routes.get(hook) ?? [] ) awa
 const pending = value => settings.set(`${MODULE_ID}.${LAUNCH_STATE}`, { pending: value });
 
 describe("§397 : le bandeau de pause pendant le choix des participants", () => {
-  it("aucune inscription à renderGamePause : dnd5e reste seul sur ce hook et habille le bandeau", () => {
+  it("no registration on renderGamePause: dnd5e stays alone on that hook and dresses the banner", () => {
     expect(routes.has("renderGamePause")).toBe(false);
   });
 
-  it("lancement en attente, jeu en pause : le message du lancement, après le rendu du bandeau", async () => {
+  it("launch pending, game paused: the launch message, after the banner renders", async () => {
     pending(true);
     await fire("pauseGame");
     expect(ui.pause.renders).toBe(1);
     expect(caption.innerText).toBe("«DND5ECOMBAT.Lancement.Pause»");
   });
 
-  it("l'état du lancement change (réglage de monde, reçu par tous les clients) : le bandeau suit", async () => {
+  it("the launch state changes (world setting, received by all clients): the banner follows", async () => {
     const { onChange } = registered.get(`${MODULE_ID}.${LAUNCH_STATE}`);
     pending(true);
     await onChange();
     expect(caption.innerText).toBe("«DND5ECOMBAT.Lancement.Pause»");
-    // Le choix fait ou annulé : le bandeau redessiné garde le texte du système.
+    // The choice made or cancelled: the redrawn banner keeps the system's text.
     pending(false);
     await onChange();
     expect(caption.innerText).toBe("Game Paused");
   });
 
-  it("un client qui recharge pendant le choix retrouve le message ; hors pause, rien n'est écrit", async () => {
+  it("a client that reloads during the choice finds the message again; out of pause, nothing is written", async () => {
     pending(true);
     await fire("ready");
     expect(caption.innerText).toBe("«DND5ECOMBAT.Lancement.Pause»");

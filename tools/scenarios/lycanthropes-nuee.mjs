@@ -1,12 +1,13 @@
 /**
- * Deux règles de monstres du 2026-11-23 (§521) :
- *  - DF #252, Lycanthropes : la Morsure du loup-garou (Monster Manual 2024 ou SRD 2024, `mmWerewolf000000.mmBite0000000000`) ne maudit
- *    qu'un Humanoïde — l'entrée effective de l'item (`api.content.of`) porte `effectsIf: { "target.creatureType": "humanoid" }`. La
- *    Morsure d'un loup ordinaire, sous l'identifiant partagé `bite`, n'en porte pas. Lu sur les vraies fiches posées pour le scénario.
- *  - DF #248, Nuée : un trait `swarm` sans effet vaut pour la créature qui le porte — ni points de vie regagnés, ni points de vie
- *    temporaires. Le Zombi de l'Arène de test reçoit un trait d'essai `swarm` (c'est l'identifiant que lit le moteur) : un soin de 10 ne
- *    change rien, 10 PV temporaires non plus ; sans le trait, les deux passent.
- * Remis en état : PV et PV temporaires du Zombi, trait retiré, créatures posées retirées.
+ * Two monster rules of 2026-11-23 (§521):
+ *  - DF #252, Lycanthropes: the Werewolf's Bite (Monster Manual 2024 or SRD 2024, `mmWerewolf000000.mmBite0000000000`)
+ *    curses only a Humanoid — the item's effective entry (`api.content.of`) carries
+ *    `effectsIf: { "target.creatureType": "humanoid" }`. The Bite of an ordinary wolf, under the shared identifier `bite`,
+ *    does not. Read on the real sheets placed for the scenario.
+ *  - DF #248, Swarm: a `swarm` feature without effect applies to the creature that carries it — no Hit Points regained,
+ *    no Temporary Hit Points. The Test Arena's Zombi gets a test `swarm` feature (the identifier the engine reads): a healing
+ *    of 10 changes nothing, 10 Temporary Hit Points neither; without the feature, both go through.
+ * Restored: the Zombi's HP and Temporary HP, feature removed, placed creatures removed.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -15,7 +16,7 @@ export default {
 
   async run(ctx) {
     const script = async (code, args={}) => (await ctx.call("run-script", { code, args, waitMs: 15000 }))?.result;
-    /** L'entrée effective de chaque item d'un token qui porte une activité d'attaque nommée « Bite » / identifiant `bite`. */
+    /** The effective entry of each item of a token that carries an attack activity named "Bite" / identifier `bite`. */
     const biteEntry = tokenId => script(`
       const actor = canvas.tokens.get(args.id)?.actor;
       const api = game.modules.get("dnd5e-combat").api;
@@ -42,7 +43,7 @@ export default {
     }
     else ctx.log("pas de loup ordinaire parmi les fiches : comparaison non applicable");
 
-    // --- Nuée ----------------------------------------------------------------------------------------------------------------
+    // --- Swarm ------------------------------------------------------------------------------------------------------------
     const { tokens } = await ctx.scene();
     if ( !tokens.some(t => t.name === "Zombi") ) { ctx.log("Zombi absent : partie nuée non applicable"); return; }
     const zombi = await ctx.token("Zombi");
@@ -54,7 +55,7 @@ export default {
     ctx.restore(() => setTemp(temp0).catch(() => {}));
     ctx.restore(() => ctx.setHp(zombi, hp0));
 
-    /** Un soin de 10 et 10 PV temporaires (`applyDamage`) : rend ce qui a changé. */
+    /** A healing of 10 and 10 Temporary HP (`applyDamage`): returns what changed. */
     const tryHeal = async label => {
       await ctx.setHp(zombi, 5);
       await setTemp(0);

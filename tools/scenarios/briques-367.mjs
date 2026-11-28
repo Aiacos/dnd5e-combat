@@ -1,11 +1,11 @@
 /**
- * §367 : trois briques. Arène de test.
- *  1. Marche dans l'ombre (`teleport.maxLight`, Ravenloft) prêtée au Guerrier : en plein jour, refusée (souci et destination) ; dans une
- *     région d'obscurité, acceptée vers une case obscure, refusée vers une case éclairée.
- *  2. Tempête de vengeance (`noRangedWeapons: { fromPulse: 4 }`) posée par le Magicien sur le Bandit : l'arbalète légère du Bandit sans
- *     souci avant le tour 5 ; le compteur de la zone mis à 4 (le tour 5), le souci « attaques à distance avec une arme impossibles » ;
- *     son cimeterre, non.
- * (Esprit de l'ombre, `endActivity` : scénario `college-esprits`.)
+ * §367: three bricks. Test arena.
+ *  1. "Shadow Walk" (`teleport.maxLight`, Ravenloft) lent to the Fighter: in broad daylight, refused (issue and destination); in a
+ *     darkness region, accepted toward a dark cell, refused toward a lit cell.
+ *  2. Storm of Vengeance (`noRangedWeapons: { fromPulse: 4 }`) placed by the Wizard on the Bandit: the Bandit's light crossbow
+ *     with no issue before turn 5; the area's counter set to 4 (turn 5), the issue "ranged attacks with a weapon impossible";
+ *     his scimitar, no.
+ * ("Shadow Spirit", `endActivity`: scenario `college-esprits`.)
  */
 const RHW = "dnd-ravenloft-horrors-within.options";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -61,7 +61,7 @@ export default {
       ctx.expect(out.accepted === false, "dans le noir, vers une case éclairée : refusée");
     } else ctx.log("module Ravenloft absent : Marche dans l'ombre non jouée");
 
-    // 2. Tempête de vengeance.
+    // 2. Storm of Vengeance.
     const z = await ctx.box(bandit);
     const storm = await ctx.ensureItem(mage, `${PHB}phbsplStormofVen`, { system: { method: "atwill" } });
     const used = await ctx.use({ tokenId: mage.id, itemId: storm, activityType: "save", consume: false,

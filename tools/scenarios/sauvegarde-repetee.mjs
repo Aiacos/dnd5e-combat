@@ -1,16 +1,16 @@
 /**
- * Brique « sauvegarde répétée » (SPEC §16) : Immobilisation de personne (ajoutée au Magicien le temps du
- * scénario) sur le Guerrier — un Humanoïde, comme le sort l'exige (§16.8 : sur le Zombi, mort-vivant, il n'a aucun
- * effet) —, jusqu'à un échec (Paralysé posé). Puis un combat : à la FIN de chaque tour du Guerrier,
- * le moteur rejoue la sauvegarde (message d'utilisation marqué `resave`) ; réussie, l'effet est retiré ;
- * ratée, il reste. Contenu `hold-person` : `{ on: "endOfTurn", via: "effect", do: [{ type: "resave" }] }`.
+ * "Repeated saving throw" brick (SPEC §16): Hold Person (added to the Wizard for the
+ * scenario) on the Fighter — a Humanoid, as the spell requires (§16.8: on the Zombie, an Undead, it has no
+ * effect) —, until a failure (Paralyzed placed). Then a combat: at the END of each of the Fighter's turns,
+ * the engine rolls the saving throw again (use message marked `resave`); succeeded, the effect is removed;
+ * failed, it stays. Content `hold-person`: `{ on: "endOfTurn", via: "effect", do: [{ type: "resave" }] }`.
  */
 export default {
   name: "sauvegarde répétée — Immobilisation de personne, fin de tour du Guerrier",
 
   async run(ctx) {
     const mage = await ctx.token("Magicien");
-    const guerrier = await ctx.token("Guerrier");   // PJ sans joueur : le moteur jette pour lui
+    const guerrier = await ctx.token("Guerrier");   // PC without a player: the engine rolls for him
     ctx.restore(() => ctx.removeStatusEffects(guerrier, "paralyzed"));
     ctx.restore(async () => {
       for ( const e of (await ctx.effects(mage)).filter(e => /concentr/i.test(e.name ?? "")) ) {
@@ -36,8 +36,8 @@ export default {
     const since = held.r.origin;
     let removed = false;
     let resaves = 0;
-    // Le Guerrier (Sagesse +0) réussit ~40 % de ses sauvegardes de Sagesse : trente tours (quinze essais) laissent moins d'un
-    // risque sur mille de ne jamais réussir (six échecs de suite vus le 2026-09-24 avec douze tours).
+    // The Fighter (Wisdom +0) succeeds on ~40 % of his Wisdom saving throws: thirty turns (fifteen tries) leave under one
+    // chance in a thousand of never succeeding (six failures in a row seen on 2026-09-24 with twelve turns).
     for ( let turn = 0; turn < 30 && !removed; turn++ ) {
       await ctx.nextTurn();
       await new Promise(res => setTimeout(res, 2500));

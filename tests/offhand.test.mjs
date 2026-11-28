@@ -7,14 +7,14 @@ const sword = { cost: "action", weaponAttack: true, usesSpellSlot: false, lightW
 const offhand = { cost: "action", weaponAttack: true, usesSpellSlot: false, lightWeapon: true, offhand: true };
 const offhandNick = { ...offhand, nick: true };
 
-describe("attaque de la main secondaire (§15.2, propriété Légère)", () => {
-  it("sans attaque d'arme Légère ce tour : signalée", () => {
+describe("off-hand attack (§15.2, Light property)", () => {
+  it("without a Light weapon attack this turn: flagged", () => {
     expect(checkUse(freshBudget(), offhand, mine)).toEqual(["noLightAttack"]);
     const afterSword = spendUse(freshBudget(), sword, mine);
     expect(checkUse(afterSword, offhand, mine)).toEqual(["noLightAttack"]);
   });
 
-  it("après une attaque à la dague : l'action Bonus, et elle seule", () => {
+  it("after a dagger attack: the Bonus Action, and only that", () => {
     const b = spendUse(freshBudget(), dagger, mine);
     expect(b.lightAttack).toBe(true);
     expect(checkUse(b, offhand, mine)).toEqual([]);
@@ -55,13 +55,13 @@ describe("attaque de la main secondaire (§15.2, propriété Légère)", () => {
     expect(checkUse(legacy, offhandNick, mine)).toEqual(["lightExtraUsed"]);
   });
 
-  it("hors de son tour : signalée", () => {
+  it("outside its turn: flagged", () => {
     const b = spendUse(freshBudget(), dagger, mine);
     expect(checkUse(b, offhandNick, { isOwnTurn: false })).toContain("notYourTurn");
     expect(checkUse(b, offhand, { isOwnTurn: false })).toContain("notYourTurn");
   });
 
-  it("annulée avant tout jet : Coup double et action Bonus reviennent", () => {
+  it("cancelled before any roll: \"Double Strike\" and the Bonus Action come back", () => {
     const b = spendUse(freshBudget(), dagger, mine);
     const nick = spendUse(b, offhandNick, mine);
     expect(refundUse(nick, b, nick)).toEqual(b);
@@ -70,8 +70,8 @@ describe("attaque de la main secondaire (§15.2, propriété Légère)", () => {
   });
 });
 
-describe("actions de base par leur item (Pointe, Désengagement, Esquive)", () => {
-  it("dépensent l'action et posent l'état du tour", () => {
+describe("basic actions by their item (Dash, Disengage, Dodge)", () => {
+  it("spend the action and set the turn state", () => {
     const dashed = basicAction(freshBudget(), "dash");
     expect(dashed.action).toBe(0);
     expect(dashed.dashed).toBe(true);
@@ -80,7 +80,7 @@ describe("actions de base par leur item (Pointe, Désengagement, Esquive)", () =
     expect(basicAction(freshBudget(), "dodge").dodging).toBe(true);
   });
 
-  it("confirmée sans action restante (mode souple) : l'état est posé quand même", () => {
+  it("confirmed with no action left (lenient mode): the state is set anyway", () => {
     const spent = { ...freshBudget(), action: 0 };
     expect(basicAction(spent, "dash")).toMatchObject({ action: 0, dashed: true });
   });

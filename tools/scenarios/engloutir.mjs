@@ -1,12 +1,12 @@
 /**
- * §18.21 — compléter Avaler / Engloutir. `dnd-6` (Zombi, Guerrier) ou `ravenloft` (Zombi, Bramo) : capacités du Monster Manual
- * prêtées au Zombi, un personnage joueur pour cible (il reçoit l'action de base S'échapper en combat).
- *  1. Engloutissement du Cube gélatineux : l'action utilisée, le Zombi marche à travers la case du PJ → une carte de
- *     sauvegarde pour lui ; ratée : englouti (dans l'espace du Zombi) ; réussie : il n'est pas dans l'espace du Zombi.
- *  2. Englouti : S'échapper (action de base) → test d'Athlétisme contre le DD du cube ; réussi : libre, hors du Zombi, debout.
- *  3. Avalement du Béhir sur le PJ qui n'est PAS agrippé par le Zombi : sauvegarde ratée, mais l'effet est refusé.
- *  4. Engloutissement du Blob d'annihilation : englouti, puis à la fin de son tour, une sauvegarde répétée ; réussie → sorti.
- * Les jets sont aléatoires : on rejoue (20 essais au plus).
+ * §18.21 — complete Swallow / Engulf. `dnd-6` (Zombie, Fighter) or `ravenloft` (Zombie, Bramo): Monster Manual abilities
+ * lent to the Zombie, a player character as target (it receives the basic Escape action in combat).
+ *  1. Gelatinous Cube's Engulf: the action used, the Zombie walks through the PC's cell → a save card
+ *     for it; failed: engulfed (in the Zombie's space); succeeded: it is not in the Zombie's space.
+ *  2. Engulfed: Escape (basic action) → Athletics check against the cube's DC; succeeded: free, out of the Zombie, standing.
+ *  3. Behir's Swallow on the PC who is NOT grappled by the Zombie: failed save, but the effect is refused.
+ *  4. Blob of Annihilation's Engulf: engulfed, then at the end of its turn, a repeated save; succeeded → out.
+ * Rolls are random: we replay (20 tries at most).
  */
 const CUBE = "Compendium.dnd-monster-manual.actors.Actor.mmGelatinousCube";
 const BEHIR = "Compendium.dnd-monster-manual.actors.Actor.mmBehir000000000";
@@ -29,8 +29,8 @@ export default {
       ctx.restore(() => ctx.setHp(t, hp));
       for ( const s of ["prone", "restrained", "blinded", "grappled", "suffocation"] ) ctx.restore(() => ctx.removeStatusEffects(t, s));
     }
-    // Assez de PV pour survivre à l'Engloutissement : à 13 PV, un jet de 13 le mettait à 0, À terre, et « s'échappe : debout »
-    // échouait sur un dé (vu le 2026-09-28). +30 PV max le temps du scénario.
+    // Enough HP to survive Engulf: at 13 HP, a roll of 13 put him at 0, Prone, and "escapes: standing"
+    // failed on a die roll (seen on 2026-09-28). +30 max HP for the scenario's duration.
     const { data: pcTok } = await ctx.call("get-scene-object", { type: "Token", objectId: pc.id });
     if ( pcTok.actorLink ) {
       const bonus0 = (await ctx.call("get-actor", { actorId: pc.actorId })).system?.attributes?.hp?.bonuses?.overall ?? "";
@@ -44,8 +44,8 @@ export default {
       const { _id, folder, ownership, _stats, ...itemData } = source.items.find(i => i.system?.identifier === identifier);
       const up = await ctx.call("upsert-actor-item", { actorId: zTok.actorId, itemData, match: { path: "system.identifier", value: identifier } });
       const itemId = up.itemId ?? up.id ?? up.item?._id ?? (await ctx.itemId(zombi.id, identifier));
-      // Retirer de l'acteur de base ne suffit pas : dès que le moteur a touché l'item par le token, le delta en garde une copie
-      // (même id) — qui garderait l'Engloutissement au Zombi pour la suite du scénario.
+      // Removing it from the base actor is not enough: once the engine has touched the item through the token, the delta keeps a
+      // copy (same id) — which would keep Engulf on the Zombie for the rest of the scenario.
       const remove = async () => {
         await ctx.call("remove-embedded-item", { documentType: "Actor", id: zTok.actorId, itemId }).catch(() => {});
         await ctx.call("remove-embedded-item", { uuid: `Scene.${(await ctx.scene()).sceneId}.Token.${zombi.id}.Actor.${zTok.actorId}`, itemId }).catch(() => {});
@@ -81,7 +81,7 @@ export default {
     const cube = await lend(CUBE, "engulf");
     if ( !ctx.expect(await turnOf(zombi), "tour du Zombi") ) return;
     const at = await ctx.position(zombi);
-    // Une ligne de quatre cases où seul le PJ se trouvera (la scène de `dnd-6` a d'autres créatures : le Bandit était sur le trajet).
+    // A line of four cells where only the PC will be (the `dnd-6` scene has other creatures: the Bandit was in the way).
     const others = (await ctx.call("list-scene-objects", { types: ["Token"] })).objects.Token.filter(t => ![zombi.id, pc.id].includes(t.id));
     const occupied = (x, y) => others.some(t => (x < t.x + (t.width ?? 1) * grid) && (x + grid > t.x) && (y < t.y + (t.height ?? 1) * grid) && (y + grid > t.y));
     const dir = [[1, 0], [-1, 0], [0, 1], [0, -1]].find(([dx, dy]) => [1, 2, 3, 4].every(k => !occupied(at.x + k * dx * grid, at.y + k * dy * grid))) ?? [1, 0];
@@ -95,8 +95,8 @@ export default {
       const since = await ctx.lastMessageId();
       const used = await ctx.use({ tokenId: zombi.id, itemId: cube.itemId, activityId: cube.activities.save, targetTokenIds: [] });
       await ctx.settle(used.usageMessageId).catch(() => null);
-      // `move-token` (displace) : l'engloutissement suit le trajet, quel que soit le mode. Un pas `walk` par écriture de x/y
-      // plante dans le cœur sur Restored Keep (« setting 'last' », token.mjs:3831 : tous les points intermédiaires).
+      // `move-token` (displace): the engulfing follows the path, whatever the mode. A `walk` step by writing x/y
+      // crashes in the core on Restored Keep ("setting 'last'", token.mjs:3831: all the intermediate points).
       await ctx.call("move-token", { tokenId: zombi.id, ...cell(4), elevation: at.elevation });
       await sleep(2500);
       const card = (await cards(since, "engulf"))[0];
@@ -115,7 +115,7 @@ export default {
     }
     if ( !ctx.expect(engulfed, "englouti au moins une fois") ) return;
 
-    // 2. S'échapper, au tour du PJ.
+    // 2. Escape, on the PC's turn.
     if ( !ctx.expect(await turnOf(pc), `tour de ${pcName}`) ) return;
     const actor = await ctx.call("get-actor", { actorId: pc.actorId });
     const escape = (actor.items ?? []).find(i => i.flags?.[MODULE_ID]?.basicAction === "escape");
@@ -132,7 +132,7 @@ export default {
     await cube.remove();
     await sleep(800);
 
-    // 3. Avalement du Béhir sur une cible qui n'est pas agrippée par le Zombi.
+    // 3. Behir's Swallow on a target that is not grappled by the Zombie.
     await free();
     await ctx.call("move-token", { tokenId: pc.id, x: (await ctx.position(zombi)).x + grid, y: (await ctx.position(zombi)).y });
     const behir = await lend(BEHIR, "swallow");
@@ -148,7 +148,7 @@ export default {
     await behir.remove();
     await sleep(800);
 
-    // 4. Blob : sauvegarde répétée à la fin du tour de l'englouti.
+    // 4. Blob: repeated save at the end of the engulfed creature's turn.
     await free();
     const blob = await lend(BLOB, "engulf");
     let held = false;

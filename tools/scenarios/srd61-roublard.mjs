@@ -1,15 +1,15 @@
 /**
- * §434 : Frappe rusée (Poison) et Frappes sournoises (Assommer) du SRD de dnd5e 6.1 jouées en jeu (§433, point 3). Leurs activités ne
- * posent plus un effet de l'item mais l'effet commun du compendium `dnd5e.effects` (Empoisonné `wAnw5y4atBxNJHUP`, Inconscient
- * `HjLkxDzLNBogspf9`). Arène de test : le Roublard passe niveau 5, puis 14, et reçoit, prêtés depuis `dnd5e.classes24` et
- * `dnd5e.equipment24` (SRD 6.1, pas le Manuel), Frappe rusée, Frappes sournoises et une trousse d'empoisonneur. Le Guerrier se tient
- * à côté du Bandit (Attaque sournoise), le Bandit reçoit 300 PV ; son bonus de sauvegarde de Constitution est réglé pour décider de
- * chaque jet (−30 : raté ; +30 : réussi). En combat (Roublard, Bandit, Guerrier) :
- *  - Poison : le Bandit est Empoisonné ; à la fin de son tour, la sauvegarde est rejouée (message `resave`) — ratée, il le reste ;
- *    réussie au tour suivant, l'effet tombe ;
- *  - Assommer : le Bandit est Inconscient ; à la fin de son tour, la sauvegarde est rejouée — ratée, il le reste ; des dégâts, et
- *    l'effet tombe ; un second Assommer, la sauvegarde de fin de tour réussie : l'effet tombe.
- * Remet positions, PV, états, niveau, bonus ; retire les items prêtés.
+ * §434: SRD 6.1 dnd5e Poison (Cunning Strike) and Knock Out (Devious Strikes) played in game (§433, point 3). Their activities no
+ * longer place an item effect but the compendium's common effect `dnd5e.effects` (Poisoned `wAnw5y4atBxNJHUP`, Unconscious
+ * `HjLkxDzLNBogspf9`). Test arena: the Rogue goes to level 5, then 14, and receives, lent from `dnd5e.classes24` and
+ * `dnd5e.equipment24` (SRD 6.1, not the Handbook), Cunning Strike, Devious Strikes and a Poisoner's Kit. The Fighter stands
+ * next to the Bandit (Sneak Attack), the Bandit receives 300 HP; his Constitution saving throw bonus is set to decide
+ * each roll (−30: failed; +30: succeeded). In combat (Rogue, Bandit, Fighter):
+ *  - Poison: the Bandit is Poisoned; at the end of his turn, the saving throw is replayed (message `resave`) — failed, he stays so;
+ *    succeeded on the next turn, the effect ends;
+ *  - Knock Out: the Bandit is Unconscious; at the end of his turn, the saving throw is replayed — failed, he stays so; damage, and
+ *    the effect ends; a second Knock Out, the end-of-turn saving throw succeeded: the effect ends.
+ * Puts back positions, HP, conditions, level, bonus; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e";
@@ -38,7 +38,7 @@ export default {
     for ( const t of [rogue, bandit, fighter] ) homes.set(t.id, { pos: await ctx.position(t), hp: await ctx.hp(t) });
     const r0 = homes.get(rogue.id).pos;
 
-    // Les alliés rangés sous le Roublard (voir `roublard`) écartés le temps du scénario.
+    // The allies lined up under the Rogue (see `roublard`) moved aside for the scenario.
     for ( const name of ["Moine", "Druide", "Rôdeur", "Barde"] ) {
       const t = (await ctx.scene()).tokens.find(x => x.name === name);
       if ( !t ) continue;
@@ -54,7 +54,7 @@ export default {
       data: { ...(max0 === null ? { "delta.system.attributes.hp.-=max": null } : { "delta.system.attributes.hp.max": max0 }),
         "delta.system.abilities.con.save.roll.bonus": conSave0 } }).catch(() => {}));
     const tough = () => ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.attributes.hp.max": 300, "delta.system.attributes.hp.value": 300 } });
-    /** Le bonus de sauvegarde de Constitution du Bandit : « -30 » le fait rater, « 30 » réussir. */
+    /** The Bandit's Constitution saving throw bonus: "-30" makes him fail, "30" succeed. */
     const conSave = async bonus => { await ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.abilities.con.save.roll.bonus": bonus } }); await pause(500); };
     const place = async (t, x, y) => { await ctx.call("move-token", { tokenId: t.id, x, y, elevation: 0 }); await pause(600); };
 
@@ -107,7 +107,7 @@ export default {
       }
       return null;
     };
-    /** Une attaque du Roublard, la frappe choisie dans la question ; rend si elle touche, la question et le message d'avant. */
+    /** A Rogue attack, the strike chosen in the question; returns whether it hits, the question and the message from before. */
     const attack = async strikes => {
       const since = await ctx.lastMessageId();
       const ids = await known();
@@ -133,7 +133,7 @@ export default {
       for ( let n = 0; n < 20; n++ ) { const a = await attack(strikes); if ( a.hit ) return a; }
       return null;
     };
-    /** La sauvegarde de la frappe, jouée par le moteur après les dégâts : sa carte et son résultat. */
+    /** The strike's saving throw, played by the engine after the damage: its card and its result. */
     const strikeSave = async since => {
       let card = null;
       for ( const until = Date.now() + 15000; !card && (Date.now() < until); await pause(500) ) {
@@ -145,7 +145,7 @@ export default {
       return r;
     };
     const has = async status => ((await ctx.engine("stats", { tokenId: bandit.id }).catch(() => null))?.statuses ?? []).includes(status);
-    /** L'effet du Bandit qui porte cet état : son origine et son effet source, pour le journal. */
+    /** The effect on the Bandit that carries this condition: its origin and its source effect, for the log. */
     const describe = async status => {
       const e = (await ctx.effects(bandit)).find(x => (x.statuses ?? []).includes(status));
       return e ? `« ${e.name} » (origine ${e.origin ?? e.system?.origin?.item ?? "?"}, source ${e._stats?.compendiumSource ?? e._stats?.duplicateSource ?? "?"})` : "aucun effet";
@@ -160,7 +160,7 @@ export default {
       for ( let i = 0; (i < 4) && ((await current()) !== rogue.id); i++ ) { await ctx.call("previous-turn", { combatId: ctx.ownCombat }).catch(() => ctx.nextTurn()); await pause(1500); }
       return (await current()) === rogue.id;
     };
-    /** Avance jusqu'à la fin du prochain tour du Bandit ; rend la carte `resave` qui a suivi et son résultat. */
+    /** Advances to the end of the Bandit's next turn; returns the `resave` card that followed and its result. */
     const endOfBanditTurn = async () => {
       for ( let i = 0; (i < 4) && ((await current()) !== bandit.id); i++ ) { await ctx.nextTurn(); await pause(1500); }
       const since = await ctx.lastMessageId();

@@ -1,11 +1,11 @@
 /**
- * Les actions qu'un joueur commande à la souris ou au clavier (SPEC §11, étape 6 bis) — se
- * déplacer, sauter, engager une cible — et ce qui borne tout déplacement, quelle qu'en soit la
- * source : le plafond du tour et les attaques d'opportunité réglées AVANT de bouger.
+ * The actions a player commands with the mouse or keyboard (SPEC §11, step 6 bis) — moving,
+ * jumping, engaging a target — and what bounds every movement, whatever its
+ * source: the turn ceiling and Opportunity Attacks settled BEFORE moving.
  *
- * `ui/pointer.mjs` traduit les clics en appels d'ici ; il ne décide rien. Ici, rien n'est lu du
- * DOM : ce qu'une intention a d'optionnel (mode « lancer », jet sans dialogue) arrive en argument.
- * Rien n'est patché : `preMoveToken` est un hook public du cœur.
+ * `ui/pointer.mjs` translates clicks into calls here; it decides nothing. Here, nothing is read from
+ * the DOM: what is optional in an intent ("throw" mode, roll with no dialog) arrives as an argument.
+ * Nothing is patched: `preMoveToken` is a public hook of the core.
  */
 
 import { mergeIssues } from "../core/forced.mjs";
@@ -48,8 +48,8 @@ export { dashLimit, dashPreview, dashProblem, dashRefusal, dashStrike, dashTarge
 /* -------------------------------------------- */
 
 /**
- * Plafond de coût du tour (historique compris), ou Infinity hors combat. Un agrippeur qui traîne sa victime
- * (Agrippé, « Déplaçable ») paie double ce qui lui reste, sauf victime TP ou de deux crans plus petite.
+ * Turn cost ceiling (history included), or Infinity out of combat. A grappler dragging its victim
+ * (Grappled, "Movable") pays double what it has left, unless the victim is Tiny or two sizes smaller.
  */
 export function movementCap(token) {
   const pilot = pilotOf(token);
@@ -59,26 +59,27 @@ export function movementCap(token) {
   const movement = movementOf(combatant, readUnitFactors());
   if ( !movement ) return Infinity;
   const budget = readBudget(combatant);
-  // §16.59 : un tour achevé par un ordre (Injonction : Rampe, Halte…) — plus un pas.
+  // §16.59: a turn finished by an order (Command: Grovel, Halt…) — not one more step.
   if ( budget.stopped ) return movement.spent + historyCosts(token).excluded;
-  // §17.2 : le cœur ne connaît que son historique ; la hauteur des escaliers et le relevé s'en retirent ici.
-  // §208 : un saut fixe (9 m pour 3 m) rend la différence au plafond, comparé à l'historique du cœur qui compte toute la distance.
-  // §403 : le surcoût de la Bourrasque (`windward`) s'en retire aussi.
+  // §17.2: the core only knows its history; the stairs' height and the survey are subtracted here.
+  // §208: a fixed jump (9 m for 3 m) returns the difference to the ceiling, compared with the core's history,
+  // which counts the whole distance.
+  // §403: the Gust of Wind extra cost (`windward`) is subtracted too.
   const cap = movementAllowance(budget, movement.speed) - (Number(budget.climbed) || 0) - (Number(budget.stood) || 0) + (Number(budget.jumped) || 0)
     - (Number(budget.windward) || 0);
-  // Le plafond se compare à l'historique du CŒUR, qui compte aussi les téléportations (§16.10) : on les y rajoute.
+  // The ceiling is compared with the CORE's history, which also counts teleportations (§16.10): they are added back here.
   const excluded = historyCosts(token).excluded;
   const victims = victimsOf(token);
   if ( !victims.length ) return cap + excluded;
-  // §281 : un agrippeur que le contenu grandit (Poids lourd) traîne sans surcoût une victime de sa taille ou plus petite.
+  // §281: a grappler that content makes larger ("Heavyweight") drags a victim of its size or smaller without extra cost.
   const rules = grappleRulesOf(token.actor);
   return dragAllowance(cap, movement.spent, dragMultiplierWith(sizeRankOf(token.actor), victims.map(v => sizeRankOf(v.actor)),
     { bonus: rules.bonus, freeUpTo: rules.dragFree })) + excluded;
 }
 
 /**
- * §16.15 : un objet piloté se déplace de la distance d'une commande, pendant le tour de son lanceur, si une commande est
- * ouverte ou si le lanceur peut encore la payer. Sinon il ne bouge plus (plafond = ce qu'il a déjà parcouru).
+ * §16.15: a piloted object moves the distance of one command, during its caster's turn, if a command is
+ * open or if the caster can still pay for it. Otherwise it no longer moves (ceiling = what it has already traveled).
  */
 export function pilotMove(token, pilot) {
   const plan = commandPlan(pilot, "move");
@@ -86,7 +87,7 @@ export function pilotMove(token, pilot) {
   const { spent, excluded } = historyCosts(token);
   const stuck = issue => ({ cap: spent + excluded, issue });
   if ( !plan.ownTurn ) return stuck("PasSonTour");
-  // §403 : Sphère de feu — « si vous la faites rouler sur une créature… la sphère s'arrête de bouger ce tour-ci » (runtime/pilot.mjs).
+  // §403: Flaming Sphere — "if you roll it over a creature… the sphere stops moving this turn" (runtime/pilot.mjs).
   if ( token.getFlag?.(MODULE_ID, "stoppedOn") === currentTurnKey() ) return stuck("Arretee");
   if ( plan.pay && !((readBudget(plan.combatant)[plan.pay] ?? 0) > 0) ) return stuck("PasDeCommande");
   return { cap: commandDistance(pilot, readUnitFactors()) + excluded, issue: null };
@@ -94,27 +95,27 @@ export function pilotMove(token, pilot) {
 
 const pilotCap = (token, pilot) => pilotMove(token, pilot).cap;
 
-/** Une autre créature (visible, non vaincue, dont on ne peut pas partager la case — §105) occupe-t-elle l'emprise du token à cette position ? */
+/** Does another creature (visible, not defeated, whose cell one cannot share — §105) occupy the token's footprint at this position? */
 export function occupiedAt(token, position) {
-  // §16.15 : la Main de Bigby « n'occupe pas son espace » — ni elle ne gêne, ni elle n'est gênée.
+  // §16.15: Bigby's Hand "does not occupy its space" — it neither obstructs nor is obstructed.
   if ( isIntangible(token) ) return false;
   const mine = { ...cellOf(token, position), ...sizeOf(token) };
-  // §192 : en trois dimensions — un grimpeur au-dessus d'une case occupée n'y est pas (tranche des pieds à la tête).
+  // §192: in three dimensions — a climber above an occupied cell is not in it (slice from feet to head).
   const slice = positionOf({ ...token._source, ...position });
   const distance = token.parent.grid.distance;
   const defeated = CONFIG.specialStatusEffects.DEFEATED;
-  // L'emprise d'abord (un calcul de cases), la tranche ensuite (une soustraction) : les tests qui lisent le contenu des objets
-  // (intangible, espace partagé) ne visent que les tokens qui touchent la case. Dans l'ordre inverse, chaque pas d'une marche
-  // coûtait ~16 ms sur l'Arène (mesuré le 2026-10-17).
+  // The footprint first (a cell computation), the slice second (a subtraction): the tests that read the content of items
+  // (intangible, shared space) only target tokens that touch the cell. In the reverse order, each step of a walk
+  // cost ~16 ms on the Arena (measured on 2026-10-17).
   return token.parent.tokens.some(other => (other !== token) && !other.hidden
     && (footprintGap(mine, footprintOf(other)) === 0) && overlapsVertically(slice, positionOf(other._source), distance)
     && !other.actor?.statuses?.has(defeated) && (other.object?.visible !== false) && !isIntangible(other) && !sharesSpaceWith(token, other));
 }
 
-/** Agrippé : Vitesse 0 (dnd5e la pose déjà) — le moteur le dit au lieu de « déplacement épuisé ». */
+/** Grappled: Speed 0 (dnd5e already sets it) — the engine says so instead of "movement exhausted". */
 export const isGrappled = token => token.actor?.statuses?.has("grappled") === true;
 
-/** Portée d'une activité en cases, pour un mode d'attaque. null : pas de portée à tenir (soi-même, illimitée). */
+/** Range of an activity in cells, for an attack mode. null: no range to hold (self, unlimited). */
 export function reachCells(activity, mode=null) {
   const range = rangeOf(activity, mode ?? "melee");
   const grid = canvas.scene.grid;
@@ -129,17 +130,17 @@ export function reachCells(activity, mode=null) {
 }
 
 /**
- * §192 (lot 2) : l'écart entre deux tokens en cases, en trois dimensions — la distance du moteur (`distanceBetween`, des pieds à la
- * tête, règle de diagonale de la scène) ramenée en cases : 0 superposés ou au contact vertical, 1 à une case (5 ft)… Le même compte
- * que `footprintGap` au sol, et une cible accrochée au plafond (pieds à 15 ft) compte ses 10 ft de vide. `positions` : `posA` / `posB`,
- * une position d'arrivée ou un point de passage.
+ * §192 (batch 2): the gap between two tokens in cells, in three dimensions — the engine's distance (`distanceBetween`, from feet
+ * to head, the scene's diagonal rule) converted to cells: 0 overlapping or in vertical contact, 1 at one cell (5 ft)…
+ * The same count as `footprintGap` on the ground, and a target hanging from the ceiling (feet at 15 ft) counts its 10 ft of void.
+ * `positions`: `posA` / `posB`, an arrival position or a waypoint.
  */
 export function gapCells(a, b, positions={}) {
   const { value } = distanceBetween(a, b, positions);
   return Math.max(0, Math.round((value / a.parent.grid.distance) - 1e-6));
 }
 
-/** §192 : le vide vertical entre deux tokens (de la tête de l'un aux pieds de l'autre), en cases ; 0 quand leurs tranches se chevauchent. */
+/** §192: the vertical void between two tokens (from the head of one to the feet of the other), in cells; 0 when their slices overlap. */
 export function verticalGapCells(a, b, { posA, posB }={}) {
   const distance = a.parent.grid.distance;
   const pa = posA ? { ...committedPosition(a), ...posA } : committedPosition(a);
@@ -148,12 +149,12 @@ export function verticalGapCells(a, b, { posA, posB }={}) {
 }
 
 /**
- * §192 : la cible est-elle hors d'atteinte par le seul vide vertical (au plafond, en vol) ? Alors aucune approche au sol n'y mène :
- * on ne marche pas pour se coller dessous. `reach` : l'allonge en cases (`reachCells`).
+ * §192: is the target out of reach by the vertical void alone (on the ceiling, in flight)? Then no approach on the ground
+ * leads there: one does not walk to stand underneath. `reach`: the reach in cells (`reachCells`).
  */
 export const tooHighFor = (token, target, reach) => !!reach && (verticalGapCells(token, target) > reach.normal + 1e-6);
 
-/** Les attaques d'arme d'un acteur, et celle qu'un clic sur un ennemi déclenche. */
+/** A creature's weapon attacks, and the one that a click on an enemy triggers. */
 export function weaponAttacks(actor) {
   const out = [];
   for ( const item of actor?.items ?? [] ) {
@@ -168,29 +169,29 @@ export function weaponAttacks(actor) {
 }
 
 /**
- * L'attaque que déclenche un clic sur un ennemi : l'arme de base, ou pour un objet piloté (§16.15) la première attaque
- * de ses commandes (« Move and Attack » de l'Arme spirituelle).
+ * The attack that a click on an enemy triggers: the base weapon, or for a piloted object (§16.15) the first attack
+ * of its commands ("Move and Attack" of Spiritual Weapon).
  */
 export function basicAttack(actor) {
   const weapon = chooseBasicAttack(weaponAttacks(actor));
   if ( weapon ) return weapon;
   const pilot = pilotOfActor(actor);
-  // §241 : aucune arme équipée — l'attaque à mains nues (la main vide des jeux d'armes d'une interface).
+  // §241: no weapon equipped — the unarmed attack (the empty hand of an interface's weapon sets).
   const activity = pilot ? commandActivities(pilot).find(a => a.type === "attack") : unarmedAttackOf(actor);
   return activity ? { id: activity.uuid, activity, melee: activity.attack?.type?.value !== "ranged" } : null;
 }
 
-/** Hostilité : factions, sinon dispositions (§181). Un objet piloté (disposition « secrète ») prend le camp de son lanceur. */
+/** Hostility: factions, otherwise dispositions (§181). A piloted object ("secret" disposition) takes its caster's side. */
 export function hostileTo(me, other) {
   const pilot = pilotOf(me);
   return areEnemies(pilot ? (summonerToken(pilot) ?? me) : me, other);
 }
 
-/** §225 : une créature d'un autre plan (Éthéré) ne peut être ni visée ni touchée — le refus en clair, ou null. */
+/** §225: a creature of another plane (Ethereal) can be neither targeted nor touched — the refusal in plain text, or null. */
 export function planeRefusal(token, target) {
   if ( !target || (target === token) ) return null;
   if ( !samePlane(token, target) ) return loc("Retour.AutrePlan");
-  // §232 : une sphère d'Otiluke entre les deux (l'un est dedans).
+  // §232: an Otiluke's Resilient Sphere between the two (one is inside).
   const sphere = enclosureBetween(token.actor, target.actor);
   return sphere ? loc("Retour.Enferme", { item: sphere.name }) : null;
 }
@@ -200,15 +201,15 @@ export function planeRefusal(token, target) {
 /* -------------------------------------------- */
 
 /**
- * Les attaques d'opportunité d'abord, le déplacement ensuite (déjà contrôlé : preMoveToken ne redemande pas). `flags` : ce
- * que l'opération de déplacement porte en plus sous la clé du module (`follow`, §41.3), lisible dans `updateToken`.
+ * Opportunity Attacks first, the movement second (already checked: preMoveToken does not ask again). `flags`: what
+ * the movement operation carries in addition under the module key (`follow`, §41.3), readable in `updateToken`.
  */
 async function walkSafely(token, plan, flags={}) {
   if ( plan.waypoints.length ) {
     previewPath(token, null);
     const threats = opportunityThreats(token, plan.waypoints, { explain: true });
-    // §211 : une action préparée déclenchée en route — marcher jusqu'à la case où l'on arrive à portée, la laisser jouer, repartir
-    // (la suite revue comme une nouvelle marche). Pas à travers un escalier : là, elle se joue avant, comme une attaque d'opportunité.
+    // §211: a readied action triggered along the way — walk to the cell where one arrives within range, let it play, set off again
+    // (the rest reviewed as a new walk). Not through a staircase: there, it plays before, like an Opportunity Attack.
     const split = plan.waypoints.some(w => w.action === "displace") ? null : splitForReady(token, plan.waypoints, threats);
     if ( split ) {
       if ( !(await resolveOpportunity(token, split.before)) ) return false;
@@ -222,21 +223,22 @@ async function walkSafely(token, plan, flags={}) {
 }
 
 /**
- * Aller au point cliqué, sur le niveau affiché — ou sur `level` (niveau de la scène), que seuls les scénarios passent
- * (runtime/testing.mjs) : le MJ du scénario ne regarde pas forcément le niveau d'arrivée.
+ * Go to the clicked point, on the displayed level — or on `level` (scene level), which only scenarios pass
+ * (runtime/testing.mjs): the scenario's GM is not necessarily looking at the arrival level.
  */
 export async function moveTo(token, point, { action=null, level=null, forced=false }={}) {
-  // §412 (issue #44, lot 5) : Agrippé, déplacement épuisé — la fenêtre de légalité ; forcé, le trajet sans plafond, marqué `forcedMove`.
+  // §412 (issue #44, batch 5): Grappled, movement exhausted — the legality window; forced, the path with no ceiling,
+  // marked `forcedMove`.
   const force = async lines => (await askAnyway(loc("Deplacement.Titre", { name: token.name }), lines, { actor: token.actor, token }))
     ? moveTo(token, point, { action, level, forced: true }) : undefined;
   if ( !forced && isGrappled(token) ) return force([loc("Empoignade.Immobile", { name: token.name })]);
-  // §218 : « En chute » en l'air — il tombe d'abord (dégâts compris), le déplacement se refait une fois au sol.
+  // §218: Falling in the air — it falls first (damage included), the movement is redone once on the ground.
   if ( fallingAloft(token) ) { await fallNow(token); return; }
   const cell = cellUnder(token, point);
-  // §18.26 : un clic sur un escalier — aller à côté, puis y entrer en marchant : le cœur demande alors monter ou descendre.
+  // §18.26: a click on a staircase — go next to it, then enter it by walking: the core then asks to go up or down.
   const stairs = (!level || (level === token._source.level)) ? stairsEntry(token, cell) : null;
   const to = stairs ? { cells: stairs.around, level: stairs.level } : { cell, ...(level ? { level } : {}) };
-  // §18.25 : le chemin peut passer par une porte fermée — on marche jusqu'à elle, on l'ouvre, on repart (quelques portes au plus).
+  // §18.25: the path may go through a closed door — walk to it, open it, set off again (a few doors at most).
   for ( let opened = 0; opened <= MAX_DOORS_PER_MOVE; opened++ ) {
     const plan = planPath(token, to, { maxCost: forced ? Infinity : movementCap(token), throughDoors: opened < MAX_DOORS_PER_MOVE });
     if ( !plan ) return ui.notifications.warn(loc("Deplacement.AucunChemin"));
@@ -247,31 +249,31 @@ export async function moveTo(token, point, { action=null, level=null, forced=fal
     }
     if ( action ) plan.waypoints.forEach(w => { w.action = action; });
     if ( plan.waypoints.length && !(await walkSafely(token, plan, forced ? { forcedMove: true } : {})) ) return;
-    // Pas de porte, ou le déplacement du tour s'épuise avant elle : on s'arrête là.
+    // No door, or the turn's movement runs out before it: stop there.
     if ( !plan.door || !plan.arrives ) return;
     await plan.door.update({ ds: CONST.WALL_DOOR_STATES.OPEN });
   }
 }
 
 /**
- * §39.1 : marche publique (`api.approach`), pour les modules qui veulent faire aller un token quelque part par le chemin
- * du moteur — A*, portes ouvertes en chemin, attaques d'opportunité, budget du tour — sans qu'il connaisse le module :
- * ils donnent les cases d'arrivée admises (coin haut-gauche du token, sur le niveau `level` ou le sien), le moteur va à la
- * plus proche qu'il atteint. Même boucle que `moveTo`. Aucun effet si le client ne possède pas le token.
+ * §39.1: public walk (`api.approach`), for modules that want a token to go somewhere by the engine's path
+ * — A*, doors opened on the way, Opportunity Attacks, turn budget — without it knowing the module:
+ * they give the permitted arrival cells (top-left corner of the token, on level `level` or its own), the engine goes to the
+ * nearest one it reaches. Same loop as `moveTo`. No effect if the client does not own the token.
  * @param {TokenDocument} token
  * @param {{ cells: {i: number, j: number}[], level?: string|null }} to
  * @returns {Promise<{ arrived: boolean, reason?: "notOwner"|"noCells"|"grappled"|"noPath"|"stopped"|"exhausted" }>}
  */
 export async function approach(token, { cells, level=null, target=null, reachCells=1, seeing=false }={}) {
-  // §179 : s'approcher d'une cible jusqu'à une allonge ou une portée donnée (en cases), « en la voyant » si demandé — la zone
-  // d'approche de `planPath` (celle d'une attaque), ouverte aux voisins.
+  // §179: approach a target to a given reach or range (in cells), "while seeing it" if requested — the approach
+  // zone of `planPath` (that of an attack), open to neighbors.
   if ( target ) return approachTarget(token, target, { reachCells, seeing });
   if ( !token?.isOwner ) return { arrived: false, reason: "notOwner" };
   if ( !Array.isArray(cells) || !cells.length ) return { arrived: false, reason: "noCells" };
   if ( isGrappled(token) ) return { arrived: false, reason: "grappled" };
   const wanted = cells.map(({ i, j }) => ({ i, j }));
   const to = { cells: wanted, ...(level ? { level } : {}) };
-  // Arrivé : sur une des cases ET sur le bon niveau (§41.3 : la même case, un étage plus haut, n'est pas l'arrivée).
+  // Arrived: on one of the cells AND on the right level (§41.3: the same cell, one floor up, is not arrival).
   const onGoal = () => {
     if ( level && ((token._source.level ?? null) !== level) ) return false;
     const here = cellOf(token);
@@ -291,18 +293,18 @@ export async function approach(token, { cells, level=null, target=null, reachCel
 }
 
 /**
- * §179 : marcher vers une cible jusqu'à `reachCells` cases d'elle (1 = au contact), sur son niveau ; `seeing` : seulement jusqu'à
- * une case d'où on la voit (un tireur). Portes, attaques d'opportunité et budget du tour comme toute marche du moteur.
+ * §179: walk toward a target to within `reachCells` cells of it (1 = in contact), on its level; `seeing`: only up to
+ * a cell from which it is seen (a shooter). Doors, Opportunity Attacks and turn budget like any engine walk.
  * @returns {Promise<{ arrived: boolean, reason?: "notOwner"|"grappled"|"noPath"|"stopped"|"exhausted" }>}
  */
 async function approachTarget(token, target, { reachCells=1, seeing=false }={}) {
   if ( !token?.isOwner ) return { arrived: false, reason: "notOwner" };
   if ( isGrappled(token) ) return { arrived: false, reason: "grappled" };
   const reach = Math.max(1, Math.round(reachCells) || 1);
-  // §192 : en trois dimensions — une cible au plafond n'est pas « à portée » depuis la case sous elle.
+  // §192: in three dimensions — a target on the ceiling is not "in range" from the cell under it.
   const there = () => ((token._source.level ?? null) === (target._source.level ?? null)) && (gapCells(token, target) <= reach);
   if ( there() ) return { arrived: true };
-  // §192 : hors d'atteinte par le vide vertical seul (au plafond, en vol) : aucune marche au sol n'y mène, on ne bouge pas.
+  // §192: out of reach by the vertical void alone (on the ceiling, in flight): no walk on the ground leads there, we do not move.
   if ( tooHighFor(token, target, { normal: reach }) ) return { arrived: false, reason: "tooHigh" };
   for ( let opened = 0; opened <= MAX_DOORS_PER_MOVE; opened++ ) {
     const plan = planPath(token, { target, reachCells: reach, seeing }, { maxCost: movementCap(token), throughDoors: opened < MAX_DOORS_PER_MOVE });
@@ -317,10 +319,10 @@ async function approachTarget(token, target, { reachCells=1, seeing=false }={}) 
 }
 
 /**
- * §179 : un chemin sans le parcourir — vers des cases (`cells`, `level`) ou une cible (`target`, `reachCells`, `seeing`). `maxCost` :
- * le plafond de coût à tester (défaut : ce qui reste au token ce tour, Infinity hors combat), dans l'unité de la grille, cumulé avec
- * l'historique du tour ; `extra` : un supplément au plafond du tour (sa Vitesse : « arriverait-il en Sprintant ? »). Rend
- * `{ arrives, moves, door }` — `arrives` : le but est atteint dans le plafond —, ou null s'il n'y a pas de chemin.
+ * §179: a path without walking it — toward cells (`cells`, `level`) or a target (`target`, `reachCells`, `seeing`). `maxCost`:
+ * the cost ceiling to test (default: what remains to the token this turn, Infinity out of combat), in the grid's unit, added to
+ * the turn's history; `extra`: a supplement to the turn ceiling (its Speed: "would it arrive by Dashing?"). Returns
+ * `{ arrives, moves, door }` — `arrives`: the goal is reached within the ceiling —, or null if there is no path.
  */
 export function pathTo(token, { cells=null, level=null, target=null, reachCells=1, seeing=false }={}, { maxCost=null, extra=0 }={}) {
   const doc = token?.document ?? token;
@@ -334,10 +336,10 @@ export function pathTo(token, { cells=null, level=null, target=null, reachCells=
 }
 
 /**
- * §41.3 : rejoindre un autre token — aller au contact, où qu'il soit sur la scène (un autre niveau compris), par le chemin
- * du moteur : la zone d'approche d'une cible (`planPath` avec `target`, comme pour une attaque au contact — une estimation
- * juste, là où une liste de cases autour de lui épuisait la recherche d'un niveau à l'autre), portes ouvertes en chemin,
- * attaques d'opportunité, budget du tour. `flags` : ce que l'opération de déplacement porte (`follow`, voir `walkSafely`).
+ * §41.3: join another token — go into contact, wherever it is on the scene (another level included), by the engine's
+ * path: the approach zone of a target (`planPath` with `target`, as for a melee attack — a correct estimate,
+ * where a list of cells around it exhausted the search from one level to another), doors opened on the way,
+ * Opportunity Attacks, turn budget. `flags`: what the movement operation carries (`follow`, see `walkSafely`).
  * @returns {Promise<{ arrived: boolean, reason?: "notOwner"|"grappled"|"noPath"|"stopped"|"exhausted" }>}
  */
 export async function joinToken(token, target, flags={}) {
@@ -359,9 +361,9 @@ export async function joinToken(token, target, flags={}) {
 }
 
 /**
- * §41.3 : refaire un trajet déjà fait par un autre token (la piste d'un meneur : ses étapes, changement de niveau compris),
- * sans recherche de chemin — attaques d'opportunité et budget du tour comme toute marche du moteur. Rend false si le
- * déplacement a été refusé ou interrompu.
+ * §41.3: redo a trip already made by another token (a leader's trail: its steps, level changes included),
+ * without pathfinding — Opportunity Attacks and turn budget like any engine walk. Returns false if the
+ * movement was refused or interrupted.
  */
 export async function followTrail(token, waypoints, flags={}) {
   if ( !token?.isOwner || !waypoints?.length || isGrappled(token) ) return false;
@@ -369,10 +371,10 @@ export async function followTrail(token, waypoints, flags={}) {
 }
 
 /**
- * §18.26 : marcher jusqu'à la case voisine de l'escalier, puis un pas de marche ordinaire dans la case d'escalier qui la
- * touche (`stairs.entries`, adapter/movement.mjs `stairsEntry`) — pas un `displace`, qui ne déclencherait pas le comportement
- * `changeLevel` du cœur (change-level.mjs:57-62). Le budget du tour et les attaques d'opportunité de ce dernier pas passent
- * par `preMoveToken` comme tout déplacement.
+ * §18.26: walk to the cell next to the staircase, then one ordinary walking step into the staircase cell that
+ * touches it (`stairs.entries`, adapter/movement.mjs `stairsEntry`) — not a `displace`, which would not trigger the core's
+ * `changeLevel` behavior (change-level.mjs:57-62). The turn budget and Opportunity Attacks of this last step go
+ * through `preMoveToken` like any movement.
  */
 async function enterStairs(token, plan, stairs, cell, action) {
   if ( action ) plan.waypoints.forEach(w => { w.action = action; });
@@ -384,10 +386,10 @@ async function enterStairs(token, plan, stairs, cell, action) {
 }
 
 /**
- * §41.2 : prendre l'escalier (l'échelle, l'ascenseur) sous ce point jusqu'au niveau `level`, d'un seul geste — l'A* marche
- * jusqu'à côté et pose le token sur l'escalier de l'autre niveau par un pas `displace` (adapter/movement.mjs), sans le
- * dialogue du cœur ; la hauteur est comptée au budget du tour, les attaques d'opportunité jouées. Le cœur ne change pas
- * la vue d'un MJ avec son token (change-level.mjs:109) : on le fait ici, comme lui.
+ * §41.2: take the staircase (ladder, elevator) under this point up to level `level`, in a single gesture — A* walks
+ * to the side and puts the token on the staircase of the other level by a `displace` step (adapter/movement.mjs), without the
+ * core's dialog; the height is counted against the turn budget, Opportunity Attacks played. The core does not change
+ * a GM's view with their token (change-level.mjs:109): we do it here, like it.
  */
 export async function takeStairs(token, point, level) {
   const origin = token._source.level;
@@ -397,16 +399,16 @@ export async function takeStairs(token, point, level) {
   }
 }
 
-/** §18.25 : portes qu'un seul clic de déplacement ouvre en chemin. */
+/** §18.25: doors that a single movement click opens on the way. */
 const MAX_DOORS_PER_MOVE = 3;
 
 /**
- * §208 : sauter jusqu'à la case visée, en longueur (`high` faux) ou en hauteur (`high` vrai : monter sur une surface plus haute — estrade,
- * rebord —, dans la limite du saut en hauteur). Distances des règles 2024 (core/jump.mjs) : élan lu dans l'historique en combat, Athlète,
- * Monte-en-l'air, Pas du vent, et le saut fixe une fois par tour (sort Saut, Bottes : 9 m pour 3 m, la différence rendue au budget).
- * Chaque pied coûte un pied (dnd5e : le mode « jump » sans multiplicateur ni terrain difficile). Arrivée en terrain difficile : test de
- * Dextérité (Acrobaties) DD 10, sinon À terre. Un saut en longueur garde sa hauteur : s'il arrive au-dessus d'un sol plus bas, dnd5e pose
- * « En chute » et la chute suit (runtime/falls.mjs). Sur le client de celui qui saute.
+ * §208: jump to the aimed cell, in length (`high` false) or in height (`high` true: climb onto a higher surface — platform,
+ * ledge —, within the high jump limit). Distances from the 2024 rules (core/jump.mjs): run-up read from the history in
+ * combat, Athlete, Second-Story Work, Step of the Wind, and the fixed jump once per turn (Jump spell, Boots: 9 m for 3 m, the
+ * difference returned to the budget). Each foot costs a foot (dnd5e: the "jump" mode with no multiplier or Difficult Terrain).
+ * Arriving in Difficult Terrain: Dexterity (Acrobatics) check DC 10, otherwise Prone. A long jump keeps its height: if it arrives
+ * above lower ground, dnd5e sets "Falling" and the fall follows (runtime/falls.mjs). On the jumper's client.
  */
 export async function jumpTo(token, point, { high=false, configure=true, highOffered=false, forced=false }={}) {
   const grid = canvas.scene.grid;
@@ -422,10 +424,10 @@ export async function jumpTo(token, point, { high=false, configure=true, highOff
   const rise = ft(ground - here);
   const options = jumpOptionsOf(token);
   const info = { rise, ground, horizontal, high: options.high, long: options.long, runningStart: options.runningStart };
-  // Un refus : le message, et ce que l'appelant peut lire (raison, mesures).
+  // A refusal: the message, and what the caller can read (reason, measurements).
   const refuse = (key, data) => { ui.notifications.warn(loc(key, data)); return { done: false, reason: key, ...info }; };
-  // §412 (issue #44, lot 5) : une limite de règle (trop haut, trop long, pas assez de déplacement) — la fenêtre de légalité ; forcé, le
-  // même saut sans ces limites (`forced`), marqué `forcedMove`, le MJ prévenu. Renoncé : ce que l'appelant lisait d'un refus.
+  // §412 (issue #44, batch 5): a rule limit (too high, too long, not enough movement) — the legality window; forced, the
+  // same jump without these limits (`forced`), marked `forcedMove`, the GM notified. Waived: what the caller read from a refusal.
   const overLimit = async (key, data) => {
     if ( !(await askAnyway(loc("Saut.Titre", { name: token.name }), [loc(key, data)], { actor: token.actor, token })) ) return { done: false, reason: key, ...info };
     return jumpTo(token, point, { high, configure, highOffered, forced: true });
@@ -435,41 +437,43 @@ export async function jumpTo(token, point, { high=false, configure=true, highOff
   let jump;
   if ( high ) {
     if ( rise <= 1e-6 ) return refuse("Saut.RienAMonter");
-    // La hauteur se saute ; le déplacement horizontal, lui, se paie à part.
+    // Height is jumped; horizontal movement, for its part, is paid separately.
     let up = jumpCost(rise, options.high, options.fixed);
     if ( !up.ok && !forced ) return overLimit("Saut.TropHaut", { max: fmt(up.limit), elan: loc(options.runningStart ? "Saut.AvecElan" : "Saut.SansElan") });
     if ( !up.ok ) up = { ok: true, cost: rise, fixed: null };
     jump = { ...up, cost: up.cost + horizontal, distance: rise + horizontal };
     elevation = ground;
   } else if ( (horizontal <= ft(grid.distance) + 1e-6) && (rise <= -ft(grid.distance) + 1e-6) ) {
-    // §219 : un pas dans le vide — la case voisine est plus basse d'au moins une case (du bord d'un toit, d'un étage vers la cour) : on
-    // s'y jette sans sauter (pas de limite de saut, pas de Bottes), au prix d'une case de déplacement, et la chute suit (dégâts compris).
+    // §219: a step into the void — the neighboring cell is lower by at least one cell (from a roof edge, from a floor toward the
+    // yard): one throws oneself in without jumping (no jump limit, no Boots), at the cost of one cell of movement,
+    // and the fall follows (damage included).
     jump = { ok: true, cost: horizontal, distance: horizontal, fixed: null, stepOff: true };
   } else {
-    // L'entrée « Sauter en hauteur ici » n'est proposée que si le réglage de monde l'affiche (bêta) : le refus n'y renvoie qu'alors.
+    // The "Jump high here" entry is only offered if the world setting displays it (beta): the refusal is only returned then.
     if ( rise > 1e-6 ) return refuse(highOffered ? "Saut.PlusHaut" : "Saut.PlusHautSansMenu");
     jump = { ...jumpCost(horizontal, options.long, options.fixed), distance: horizontal };
     if ( !jump.ok && !forced ) return overLimit("Saut.TropLong", { max: fmt(jump.limit), elan: loc(options.runningStart ? "Saut.AvecElan" : "Saut.SansElan") });
     if ( !jump.ok ) jump = { ok: true, cost: horizontal, distance: horizontal, fixed: null };
   }
-  // Le déplacement qu'il reste ce tour (le même compte que l'anneau de l'interface : plafond du moteur moins l'historique du cœur).
+  // The movement that remains this turn (the same count as the interface ring: engine ceiling minus the core's history).
   if ( options.combatant ) {
     const { spent, excluded } = historyCosts(token);
     const left = movementCap(token) - spent - excluded;
     if ( !forced && (toGrid(jump.cost) > left + 1e-6) ) return overLimit("Saut.PasAssez", { cost: fmt(jump.cost), left: `${Math.floor(left * 10) / 10} ${units}` });
   }
-  // Saut fixe : le cœur comptera toute la distance ; la différence est rendue, et le saut fixe est pris pour le tour.
+  // Fixed jump: the core will count the whole distance; the difference is returned, and the fixed jump is taken for the turn.
   const refund = (jump.fixed && options.combatant) ? Math.max(0, toGrid(jump.distance - jump.cost)) : 0;
   if ( jump.fixed && options.combatant ) {
     const b = readBudget(options.combatant);
     await writeBudget(options.combatant, { ...b, fixedJump: true, jumped: (Number(b.jumped) || 0) + refund });
   }
   const dest = { ...top, elevation, snapped: true, action: "jump" };
-  // Saut en hauteur : s'élever d'abord sur place, puis avancer à cette hauteur — en ligne droite depuis le sol, la trajectoire passait
-  // sous le bord de la surface visée, que le cœur tient pour pleine par en dessous (le déplacement était refusé).
+  // High jump: rise first on the spot, then advance at that height — in a straight line from the ground, the trajectory passed
+  // under the edge of the aimed surface, which the core treats as solid from below (the movement was refused).
   const rising = high ? [{ x: from.x, y: from.y, elevation, snapped: true, action: "jump" }] : [];
-  // §219 : vers plus bas d'au moins une case, depuis un toit à ciel ouvert — par-dessus le « garde-fou » que les cartes à niveaux posent au
-  // bord des toits (Restored Keep : le mur du bord est du toit de l'écurie, sur Second Floor). D'une pièce couverte, ses murs arrêtent.
+  // §219: toward lower by at least one cell, from an open-air roof — over the "guardrail" that level maps place at the
+  // edge of roofs (Restored Keep: the edge wall belongs to the stable roof, on Second Floor).
+  // From a covered room, its walls stop it.
   const overWalls = !high && (rise <= -ft(grid.distance) + 1e-6) && !Number.isFinite(boundsUnder(token, from).ceiling);
   const moved = await walkSafely(token, { waypoints: [...rising, dest], beyond: [], arrives: true }, { ...(overWalls ? { overWalls: true } : {}), ...(forced ? { forcedMove: true } : {}) });
   if ( (moved === false) && jump.fixed && options.combatant ) {
@@ -480,17 +484,17 @@ export async function jumpTo(token, point, { high=false, configure=true, highOff
   if ( (moved === false) && jump.stepOff ) return { done: false, reason: "moveRefused", ...info };
   log(jump.stepOff ? `${token.name}: steps off the edge (${Math.round(-rise)} ft drop)`
     : `${token.name}: ${high ? "high" : "long"} jump, ${Math.round(jump.distance)} ft for ${Math.round(jump.cost)} ft${jump.fixed ? " (fixed jump)" : ""}${options.runningStart ? "" : ", standing"}`);
-  // §218 : retombé au-dessus du vide (sauté d'un toit, d'un étage vers la cour) — la chute suit aussitôt, en combat comme hors combat,
-  // d'un niveau à l'autre, dégâts compris (la chute de dnd5e).
+  // §218: landed above the void (jumped from a roof, from a floor toward the yard) — the fall follows at once, in combat or out,
+  // from one level to another, damage included (dnd5e's fall).
   if ( (token._source.elevation ?? 0) > groundUnder(token) + 1e-6 ) {
     log(`${token.name}: lands over a drop — falls`);
     if ( await fallNow(token) ) return { done: true, reason: null, fell: true, stepOff: !!jump.stepOff, fixed: jump.fixed, cost: jump.cost, ...info };
   }
-  // Arrivée en terrain difficile : Dextérité (Acrobaties) DD 10, sinon À terre.
+  // Arriving in Difficult Terrain: Dexterity (Acrobatics) DC 10, otherwise Prone.
   const center = { x: top.x + ((token.width ?? 1) * grid.sizeX / 2), y: top.y + ((token.height ?? 1) * grid.sizeY / 2) };
   if ( landsOnDifficult(token, center, elevation) ) {
     ui.notifications.info(loc("Saut.Atterrissage", { name: token.name, dc: LANDING_DC }));
-    // §252 : la chute attend la fin des dés 3D, puis se voit et s'entend chez tous.
+    // §252: the fall waits for the 3D dice to finish, then is seen and heard by everyone.
     const rolls = await rolledAndShown(() => token.actor.rollSkill({ skill: "acr", ability: "dex", target: LANDING_DC }, { configure }));
     const total = rolls?.[0]?.total;
     if ( Number.isFinite(total) && (total < LANDING_DC) ) {
@@ -502,8 +506,8 @@ export async function jumpTo(token, point, { high=false, configure=true, highOff
 }
 
 /**
- * §18.24 : les cases d'où un token touche une porte, de son côté du mur (le côté opposé s'il est exactement dessus : les deux).
- * Le long du mur, une case par pas de grille, décalée d'une demi-emprise perpendiculairement.
+ * §18.24: the cells from which a token touches a door, on its side of the wall (the opposite side if it is exactly on it: both).
+ * Along the wall, one cell per grid step, offset by half a footprint perpendicularly.
  */
 function doorSideCells(token, wall) {
   const grid = token.parent.grid;
@@ -531,8 +535,8 @@ function doorSideCells(token, wall) {
 }
 
 /**
- * §18.24 : s'avancer au contact d'une porte avant d'y agir (ouvrir, fermer, crocheter, forcer). Comme un geste de contact
- * (§18.22), on ne bouge que si l'on y arrive ce tour-ci. true : au contact (ou grille sans cases, où l'on agit sur place).
+ * §18.24: move up to a door before acting on it (open, close, pick, force). Like a contact gesture
+ * (§18.22), one only moves if one gets there this turn. true: in contact (or a grid with no cells, where one acts on the spot).
  */
 export async function approachDoor(token, wall, { forced=false }={}) {
   const grid = token.parent.grid;
@@ -541,7 +545,8 @@ export async function approachDoor(token, wall, { forced=false }={}) {
   if ( !cells.length ) return true;
   const here = cellOf(token);
   if ( cells.some(c => (c.i === here.i) && (c.j === here.j)) ) return true;
-  // §412 (issue #44, lot 5) : Agrippé, hors d'atteinte ce tour-ci — la fenêtre de légalité ; forcé, le trajet sans plafond (`forcedMove`).
+  // §412 (issue #44, batch 5): Grappled, out of reach this turn — the legality window; forced, the path with no ceiling
+  // (`forcedMove`).
   const force = async line => (await askAnyway(loc("Deplacement.Titre", { name: token.name }), [line], { actor: token.actor, token }))
     && approachDoor(token, wall, { forced: true });
   if ( !forced && isGrappled(token) ) return force(loc("Empoignade.Immobile", { name: token.name }));
@@ -550,15 +555,15 @@ export async function approachDoor(token, wall, { forced=false }={}) {
   if ( !plan.arrives && !forced ) return force(loc("Porte.HorsDatteinte"));
   if ( !plan.waypoints.length ) return true;
   if ( !(await walkSafely(token, plan, forced ? { forcedMove: true } : {})) ) return false;
-  // Arrêté en route (attaque d'opportunité qui renverse, contrainte du cœur) : on n'agit pas à distance.
+  // Stopped along the way (Opportunity Attack that knocks down, core constraint): one does not act from a distance.
   const at = cellOf(token);
   return cells.some(c => (c.i === at.i) && (c.j === at.j));
 }
 
 /**
- * §16.59 : marcher jusqu'à être à `gap` cases de `anchor` (0 : au contact — Approche ; plus : Fuis), par l'A* du moteur,
- * dans le budget du tour, pas à pas (attaques d'opportunité comprises). Hors d'atteinte : aussi près que possible.
- * Rend true si le token est arrivé à cet écart.
+ * §16.59: walk until `gap` cells from `anchor` (0: in contact — Approach; more: Flee), by the engine's A*,
+ * within the turn budget, step by step (Opportunity Attacks included). Out of reach: as close as possible.
+ * Returns true if the token arrived at that gap.
  */
 export async function walkToGap(token, anchor, gap, { maxCost=null }={}) {
   const grid = token.parent.grid;
@@ -568,20 +573,21 @@ export async function walkToGap(token, anchor, gap, { maxCost=null }={}) {
   const bounds = { i0: top.i, j0: top.j, i1: bottom.i, j1: bottom.j };
   const cells = cellsAtGap(footprintOf(anchor), sizeOf(token), gap, bounds);
   if ( !cells.length || isGrappled(token) ) return false;
-  // §147 : `maxCost` — un déplacement hors du budget du tour (la Réaction de Murmures dissonants : la Vitesse entière).
+  // §147: `maxCost` — a movement outside the turn budget (the Dissonant Whispers Reaction: the whole Speed).
   const plan = planPath(token, { cells, level: token._source.level ?? undefined }, { maxCost: maxCost ?? movementCap(token) });
   if ( plan?.waypoints?.length ) await walkSafely(token, plan);
   return footprintDistance(footprintOf(token), footprintOf(anchor)) === gap;
 }
 
-/** Écart actuel au sol, en cases, entre deux tokens (0 : au contact) — en deux dimensions : la fuite (§180) se mesure sur la carte. */
+/** Current ground gap, in cells, between two tokens (0: in contact) — in two dimensions: the flight (§180) is measured on the map. */
 export const gapBetween = (a, b) => Math.max(0, footprintDistance(footprintOf(a), footprintOf(b)));
 
 /**
- * §180 : s'éloigner d'une menace (un voisin : la fuite d'un PNJ). « Aussi loin que le déplacement du tour le permet » — plus `extra`
- * (la Vitesse : un Sprint pris d'abord) —, par l'A* du moteur et sa marche (attaques d'opportunité, budget). Les écarts sont essayés
- * du plus loin au plus près (`fleeGaps`, comme Murmures dissonants §147). `dryRun` : seulement dire si un écart plus grand est
- * joignable, sans bouger. Rend `{ moved, from, to, reason? }` (`reason` : `notOwner` | `grappled` | `noMovement` | `cornered`).
+ * §180: move away from a threat (a neighbor: an NPC's flight). "As far as the turn's movement allows" — plus `extra`
+ * (the Speed: a Dash taken first) —, by the engine's A* and its walk (Opportunity Attacks, budget). The gaps are tried
+ * from farthest to nearest (`fleeGaps`, like Dissonant Whispers §147). `dryRun`: only say whether a greater gap is
+ * reachable, without moving. Returns `{ moved, from, to, reason? }`
+ * (`reason`: `notOwner` | `grappled` | `noMovement` | `cornered`).
  */
 export async function fleeFrom(token, anchor, { extra=0, dryRun=false }={}) {
   token = token?.document ?? token;
@@ -615,13 +621,13 @@ export async function fleeFrom(token, anchor, { extra=0, dryRun=false }={}) {
   return { moved: false, from, to: from, reason: "cornered" };
 }
 
-/** Mode d'attaque imposé par un clic (« lancer »), lu au jet d'attaque (runtime/turn.mjs). Vie courte. */
+/** Attack mode imposed by a click ("throw"), read at the attack roll (runtime/turn.mjs). Short-lived. */
 const pendingAttacks = new Map();
 
 /**
- * Une utilisation relancée par une porte (runtime/gates.mjs) garde ce qu'on avait décidé : jet sans dialogue, mode,
- * et la confirmation déjà donnée (« Attaquer quand même » à l'utilisation) — sinon le contrôle de portée du jet
- * redemanderait, sans minuteur (vu le 2026-09-24 : « Magicien est hors de portée » après une porte de Sanctuaire).
+ * A use replayed by a gate (runtime/gates.mjs) keeps what had been decided: roll with no dialog, mode,
+ * and the confirmation already given ("Attack anyway" at use) — otherwise the roll's range check
+ * would ask again, with no timer (seen on 2026-09-24: "Wizard is out of range" after a Sanctuary gate).
  */
 export function keepPendingAttack(activity, { mode=null, fast=false, confirmed=false }={}) {
   pendingAttacks.set(activity.uuid, { mode, fast, confirmed, at: Date.now() });
@@ -634,26 +640,26 @@ export function takePendingAttack(activity) {
 }
 
 /**
- * Désigne la cible, s'approche s'il le faut, puis utilise l'activité : les jets viennent après
- * le déplacement. Si le tour ne permet pas d'arriver à portée, on avance et on s'arrête là.
+ * Designates the target, approaches if needed, then uses the activity: the rolls come after
+ * the movement. If the turn does not allow arriving within range, one advances and stops there.
  * @param {TokenDocument} token
  * @param {TokenDocument} target
  * @param {Activity} activity
  * @param {object} [options]
- * @param {string|null} [options.mode]   Mode d'attaque imposé (« thrown »).
- * @param {boolean} [options.fast]       Jet d'attaque sans dialogue.
- * @param {Array} [options.usage]        [usageConfig, dialogConfig, messageConfig] d'une utilisation suspendue (visée).
- * @param {string} [options.choice]      Effet exclusif choisi d'avance (id d'effet de l'activité) : la question
- *                                       de l'effet ne sera pas posée (§15.2, « Lutte », « Bousculade : à terre »).
- * @param {Event} [options.event]        Le clic qui a lancé l'action : dnd5e y lit les touches d'avantage et de
- *                                       désavantage (Alt / Ctrl, dice/d20-roll.mjs:83-84) ; il passe au jet par
- *                                       `usageConfig.event` (activity/attack.mjs:69). Sans effet si l'utilisation
- *                                       suspendue porte déjà le sien.
+ * @param {string|null} [options.mode]   Attack mode imposed ("thrown").
+ * @param {boolean} [options.fast]       Attack roll with no dialog.
+ * @param {Array} [options.usage]        [usageConfig, dialogConfig, messageConfig] of a suspended use (aiming).
+ * @param {string} [options.choice]      Exclusive effect chosen in advance (activity effect id): the question
+ *                                       about the effect will not be asked (§15.2, "Grapple", "Shove: Prone").
+ * @param {Event} [options.event]        The click that launched the action: dnd5e reads the Advantage and
+ *                                       Disadvantage keys there (Alt / Ctrl, dice/d20-roll.mjs:83-84); it goes to the roll through
+ *                                       `usageConfig.event` (activity/attack.mjs:69). No effect if the suspended
+ *                                       use already carries its own.
  */
 /**
- * §16.29 (décision de l'utilisateur, 2026-09-25) : seule une attaque au corps à corps s'approche de sa cible (clic sur un
- * ennemi : s'avancer puis frapper) — et un objet piloté, qui agit au contact. Un sort, une arme à distance ou lancée ne
- * déplacent jamais la créature : hors de portée, le clic est refusé.
+ * §16.29 (user decision, 2026-09-25): only a melee attack approaches its target (click on an
+ * enemy: advance then strike) — and a piloted object, which acts in contact. A spell, a ranged or thrown weapon never
+ * moves the creature: out of range, the click is refused.
  */
 export function approaches(activity, mode=null) {
   if ( pilotOfActor(activity?.actor) ) return true;
@@ -663,9 +669,9 @@ export function approaches(activity, mode=null) {
 }
 
 /**
- * §18.22 : les gestes de contact des actions de base — attaque à mains nues, Lutte / Bousculade, Soutien. Ils s'approchent
- * de leur cible comme une attaque au corps à corps, mais seulement si elle est valide et atteignable ce tour-ci : sinon,
- * on ne bouge pas.
+ * §18.22: the contact gestures of the basic actions — unarmed attack, Grapple / Shove, Help. They approach
+ * their target like a melee attack, but only if it is valid and reachable this turn: otherwise,
+ * we do not move.
  */
 export function contactAction(activity) {
   const item = activity?.item;
@@ -673,8 +679,8 @@ export function contactAction(activity) {
 }
 
 /**
- * Pourquoi un geste de contact ne vaut pas contre cette cible (texte court), ou null. Soutien : un ennemi ; Lutte /
- * Bousculade : une créature d'au plus une taille de plus que soi (Manuel des joueurs 2024, attaque à mains nues).
+ * Why a contact gesture does not hold against this target (short text), or null. Help: an enemy; Grapple /
+ * Shove: a creature at most one size larger than oneself (2024 Player's Handbook, unarmed strike).
  */
 export function contactRefusal(token, target, activity) {
   if ( !contactAction(activity) ) return null;
@@ -686,42 +692,42 @@ export function contactRefusal(token, target, activity) {
 }
 
 /**
- * Où en est une cible pour une activité qui ne s'approche pas : `out` au-delà de la portée longue, `blind` à portée d'une
- * arme à distance ou d'un sort mais sans ligne de vue. null : pas de portée à tenir.
- * Issue #42 (suite) : la ligne de vue SANS les bords des sources de ténèbres (`throughDarkness`) — murs et planchers seuls. Voir la
- * cible est l'affaire de `canSee` (Vision du diable, ouïe au Désavantage) ; les bords des Ténèbres refusaient toute cible dedans ou
- * derrière, curseur « interdit », même à l'occultiste qui la voyait.
+ * Where a target stands for an activity that does not approach: `out` beyond long range, `blind` within range of a
+ * ranged weapon or a spell but without line of sight. null: no range to hold.
+ * Issue #42 (continued): line of sight WITHOUT the edges of Darkness sources (`throughDarkness`) — walls and floors only.
+ * Seeing the target is `canSee`'s business (Devil's Sight, hearing at Disadvantage); the edges of Darkness refused any target
+ * inside or behind, "forbidden" cursor, even to the warlock who saw it.
  */
 export function rangeStatus(token, target, activity, mode=null) {
   const reach = reachCells(activity, mode);
   if ( !reach ) return null;
-  const gap = gapCells(token, target);   // §192 : en trois dimensions (une cible au plafond est hors d'allonge)
+  const gap = gapCells(token, target);   // §192: in three dimensions (a target on the ceiling is out of reach)
   const out = gap > reach.long;
   const blind = !out && (reach.normal > 1) && !hasLineOfSight(tokenCenter(token), target, undefined, { throughDarkness: true, externalRadius: token.object?.externalRadius ?? 0 });
   return { out, blind, gap, reach };
 }
 
 /**
- * §67 : une réaction qui rejoint d'abord la source (« se déplacer jusqu'à sa vitesse vers l'attaquant et l'attaquer »).
- * Hors d'allonge de l'activité, le réacteur s'approche — sa Vitesse entière, quoi qu'il ait dépensé à son tour (c'est
- * la réaction qui donne ce déplacement), sans attaque d'opportunité (`cleared`, comme un déplacement forcé). Hors combat, pas
- * de budget à lire : la Vitesse seule. Rend true si la cible est à portée ensuite.
- * @param {Actor5e} actor            Celui qui réagit.
- * @param {TokenDocument} target     La source de la fenêtre.
- * @param {Activity} activity        L'activité de réaction.
+ * §67: a reaction that first joins the source ("move up to your Speed toward the attacker and attack it").
+ * Out of the activity's reach, the reactor approaches — its whole Speed, whatever it spent on its turn (the
+ * reaction gives this movement), with no Opportunity Attack (`cleared`, like a forced movement). Out of combat, no
+ * budget to read: the Speed alone. Returns true if the target is then within range.
+ * @param {Actor5e} actor            The one reacting.
+ * @param {TokenDocument} target     The window's source.
+ * @param {Activity} activity        The reaction activity.
  */
 export async function reactionApproach(actor, target, activity) {
   const token = actor?.token ?? actor?.getActiveTokens?.(false, true)?.[0] ?? null;
   const reach = reachCells(activity);
   if ( !token?.isOwner || !target || !reach ) return false;
   if ( gapCells(token, target) <= reach.normal ) return true;
-  if ( tooHighFor(token, target, reach) ) return false;   // §192 : au plafond, hors d'atteinte — on ne se déplace pas pour rien
-  // Hors combat (pas de budget de tour), la Vitesse seule, comptée depuis l'historique du cœur tel qu'il est.
+  if ( tooHighFor(token, target, reach) ) return false;   // §192: on the ceiling, out of reach — no moving for nothing
+  // Out of combat (no turn budget), the Speed alone, counted from the core's history as it is.
   const combatant = combatantFor(actor);
   const movement = combatant ? movementOf(combatant, readUnitFactors())
     : { spent: historyCosts(token).spent, ...(speedOf(actor, readUnitFactors(), token._source?.movementAction ?? null, token.parent) ?? { speed: 0 }) };
   if ( !(movement?.speed > 0) || isGrappled(token) ) return false;
-  // Le plafond se compare à l'historique du cœur (ce tour-ci) : ce qui est déjà fait, plus la Vitesse que donne la réaction.
+  // The ceiling is compared with the core's history (this turn): what is already done, plus the Speed the reaction gives.
   const maxCost = movement.spent + movement.speed + historyCosts(token).excluded;
   const plan = planPath(token, { target, reachCells: reach.normal }, { maxCost });
   if ( !plan?.waypoints.length ) return false;
@@ -731,35 +737,37 @@ export async function reactionApproach(actor, target, activity) {
 }
 
 export async function engage(token, target, activity, { mode=null, fast=false, usage=null, event=null, choice=null, issues=[] }={}) {
-  // §150 : le mode qu'un voisin a mis dans la configuration d'utilisation (`{ "dnd5e-combat": { attackMode } }` : la main secondaire de la
-  // Barre) — sans lui, il se perdait entre la visée et le jet.
+  // §150: the mode a neighbor put in the use configuration (`{ "dnd5e-combat": { attackMode } }`: the Bar's off-hand
+  // attack) — without it, it was lost between aiming and the roll.
   mode ??= usage?.[0]?.[MODULE_ID]?.attackMode ?? null;
-  // §411 (issue #44, lot 4) : un refus n'est plus sec. Ce qui cloche est dit dans la fenêtre de légalité (runtime/turn.mjs, `issues`), comme
-  // pour la même attaque lancée depuis la fiche ; forcé, on attaque d'où l'on est, sans s'approcher. `coverRange` : la raison dit déjà la
-  // portée (la légalité ne la redit pas).
+  // §411 (issue #44, batch 4): a refusal is no longer flat. What is wrong is said in the legality window (runtime/turn.mjs,
+  // `issues`), as for the same attack launched from the sheet; forced, one attacks from where one is, without approaching.
+  // `coverRange`: the reason already states the range (legality does not repeat it).
   const lines = [...issues];
   let coverRange = false;
   const refuse = (line, { range=true }={}) => { lines.push(line); if ( range ) coverRange = true; };
-  // §18.22 : un geste de contact sur une cible qui ne s'y prête pas ; §225 : d'un plan à l'autre (la légalité le dit : `otherPlane`).
+  // §18.22: a contact gesture on a target that does not lend itself to it; §225: from one plane to another
+  // (legality says so: `otherPlane`).
   const contact = contactRefusal(token, target, activity);
   if ( contact ) refuse(loc("LabelValue", { label: target.name, value: contact }), { range: false });
   const otherPlane = !!planeRefusal(token, target);
-  // Hors du corps à corps, on ne bouge pas : hors de portée (la légalité le dit), ou hors de vue.
+  // Outside melee, one does not move: out of range (legality says so), or out of sight.
   if ( !approaches(activity, mode) ) {
     const status = rangeStatus(token, target, activity, mode);
     if ( status?.blind ) refuse(loc("Souci.noLineOfSight", { name: target.name }), { range: false });
   }
-  // §16.15 : un objet piloté agit au contact — la portée de « Roll » (9 m) est celle de son déplacement, pas de son effet.
+  // §16.15: a piloted object acts in contact — the range of "Roll" (9 m) is that of its movement, not of its effect.
   const reach = pilotOfActor(activity.actor) ? { normal: 1, long: 1 } : reachCells(activity, mode);
-  // §192 : une cible que le vide vertical seul met hors d'allonge (au plafond, en vol) — l'approche au sol n'y mène pas.
+  // §192: a target that the vertical void alone puts out of reach (on the ceiling, in flight) —
+  // the ground approach does not lead there.
   const tooHigh = !!reach && approaches(activity, mode) && tooHighFor(token, target, reach);
   if ( tooHigh ) refuse(loc("Escalade.HorsDallonge", { name: target.name }));
   target.object?.setTarget(true, { releaseOthers: true });
-  // Une cible refusée d'emblée (contact, autre plan, trop haut) : pas d'approche pour rien.
+  // A target refused outright (contact, other plane, too high): no approach for nothing.
   if ( reach && approaches(activity, mode) && !tooHigh && !contact && !otherPlane ) {
     const gap = gapCells(token, target);
-    // P1 : à distance, on ne s'approche que jusqu'à une case d'où l'on VOIT la cible — et si l'on est
-    // déjà à portée sans la voir, on cherche une telle case.
+    // P1: at range, one only approaches to a cell from which one SEES the target — and if one is
+    // already within range without seeing it, one looks for such a cell.
     const ranged = reach.normal > 1;
     const seeing = ranged;
     const blind = ranged && (gap <= reach.normal) && !hasLineOfSight(tokenCenter(token), target, undefined, { throughDarkness: true, externalRadius: token.object?.externalRadius ?? 0 });   // issue #42 : comme `rangeStatus`
@@ -768,7 +776,7 @@ export async function engage(token, target, activity, { mode=null, fast=false, u
       const withinLong = !blind && (gap <= reach.long);
       if ( !plan && blind ) refuse(loc("Deplacement.CibleHorsDeVue", { name: target.name }));
       else if ( !plan && !withinLong ) refuse(loc("Deplacement.AucunChemin"));
-      // §18.22 : un geste de contact ne s'avance pas pour rien — hors d'atteinte ce tour-ci, on reste sur place.
+      // §18.22: a contact gesture does not advance for nothing — out of reach this turn, one stays in place.
       else if ( contactAction(activity) && !plan?.arrives && !withinLong ) refuse(loc("Deplacement.CibleHorsDatteinte", { name: target.name }));
       else if ( plan?.arrives || !withinLong ) {
         if ( plan && !(await walkSafely(token, plan)) ) return;
@@ -778,29 +786,29 @@ export async function engage(token, target, activity, { mode=null, fast=false, u
   }
   pendingAttacks.set(activity.uuid, { mode, fast, at: Date.now() });
   const [usageConfig, dialogConfig, original] = usage ?? [{}, {}, {}];
-  // dnd5e fige les cibles dans la configuration du message dès la première utilisation
-  // (activity/mixin.mjs:239-242) : à ce moment-là il n'y en avait pas. On les laisse se relire.
+  // dnd5e freezes the targets in the message configuration from the first use
+  // (activity/mixin.mjs:239-242): at that moment there were none. We let them be read again.
   const messageConfig = foundry.utils.deepClone(original ?? {});
   if ( messageConfig.data?.system ) delete messageConfig.data.system.targets;
-  // Le mode choisi par le clic (« lancer », « main secondaire ») : la légalité le lit à l'utilisation, le
-  // budget sur la carte (runtime/turn.mjs) — la main secondaire coûte l'action Bonus, pas l'action.
+  // The mode chosen by the click ("throw", "off-hand"): legality reads it at use, the
+  // budget on the card (runtime/turn.mjs) — the off-hand attack costs the Bonus Action, not the action.
   if ( mode ) foundry.utils.setProperty(messageConfig, `data.flags.${MODULE_ID}.attackMode`, mode);
   if ( choice ) foundry.utils.setProperty(messageConfig, `data.flags.${MODULE_ID}.choice`, choice);
   const config = { ...usageConfig, [MODULE_ID]: { ...usageConfig?.[MODULE_ID], engaged: true, ...(mode ? { attackMode: mode } : {}), ...(choice ? { choice } : {}),
     ...(lines.length ? { issues: mergeIssues(usageConfig?.[MODULE_ID]?.issues ?? [], lines), issuesCoverRange: coverRange || !!usageConfig?.[MODULE_ID]?.issuesCoverRange } : {}) } };
   if ( event && !config.event ) config.event = event;
-  // §436 : sous le statut `antimagic`, dnd5e refuserait sèchement un sort — la fenêtre du moteur d'abord, forçable.
+  // §436: under the `antimagic` status, dnd5e would flatly refuse a spell — the engine's window first, forceable.
   await useDespiteAntimagic(activity, extra => activity.use({ ...config, [MODULE_ID]: { ...config[MODULE_ID], ...extra } }, dialogConfig, messageConfig),
     { forced: !!config[MODULE_ID].antimagicForced });
 }
 
 /**
- * §16.33 : intention « lancer sur ces créatures » (visée de groupe, ui/pointer.mjs) — l'utilisation suspendue repart, le
- * niveau déjà choisi, avec les créatures désignées pour cibles. dnd5e fige les cibles de la carte dès la première utilisation
- * (activity/mixin.mjs:239-242) : on les laisse se relire.
+ * §16.33: intent "cast on these creatures" (group aim, ui/pointer.mjs) — the suspended use restarts, with the
+ * level already chosen, with the designated creatures as targets. dnd5e freezes the card's targets from the first use
+ * (activity/mixin.mjs:239-242): we let them be re-read.
  * @param {Activity} activity
- * @param {[object, object, object]} usage  Configurations d'utilisation, de fenêtre et de message.
- * @param {string[]} picks                  Uuids des tokens.
+ * @param {[object, object, object]} usage  Use, dialog and message configurations.
+ * @param {string[]} picks                  UUIDs of the tokens.
  */
 export async function castOnTargets(activity, [config, dialog, message], picks) {
   for ( const t of Array.from(game.user.targets) ) t.setTarget(false, { releaseOthers: false });
@@ -819,6 +827,6 @@ export function registerActions() {
   route("dnd5e.preCreateMeasuredTemplate", onDashTemplate, { cancellable: true, label: "straight-line dash: no area" });
   route("preMoveToken", onPreMoveToken, { cancellable: true, label: "movement: cap and opportunity attacks" });
   route("moveToken", (token, movement) => noteWindward(token, movement), { executor: true, label: "Gust of Wind: extra cost not counted" });
-  // §99 : la pause arrête les marches du moteur lancées depuis ce client (chacun arrête les siennes, Hooks.callAll partout).
+  // §99: the pause stops the engine's walks launched from this client (each stops its own, Hooks.callAll everywhere).
   route("pauseGame", paused => { if ( paused ) stopAllWalks(); }, { label: "pause: walks stopped" });
 }

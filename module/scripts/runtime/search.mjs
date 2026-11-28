@@ -1,11 +1,11 @@
 /**
- * Chercher (Search, SPEC §16.49, règles 2024), sur le client de celui qui cherche — comme la Furtivité (runtime/hide.mjs),
- * c'est lui qui lance le dé :
- *  - l'item Chercher utilisé : les créatures cachées hostiles de la scène sont jugées (adapter/search.mjs) ; un test de
- *    Sagesse (Perception), au Désavantage si l'une d'elles est en zone légèrement obscurcie pour lui (core/search.mjs) ;
- *  - une créature trouvée cesse d'être cachée (« si un ennemi vous trouve ») : son effet de Furtivité est retiré — par le MJ
- *    actif quand elle n'appartient pas à celui qui cherche.
- * Chercher un objet ou un indice reste au MJ : le test est lancé de toute façon.
+ * Search (SPEC §16.49, 2024 rules), on the searcher's client — like Stealth (runtime/hide.mjs),
+ * it is the one who rolls the die:
+ *  - the Search item used: the hostile Hidden creatures of the scene are judged (adapter/search.mjs); a Wisdom
+ *    (Perception) check, at Disadvantage if one of them is in a Lightly Obscured area for it (core/search.mjs);
+ *  - a creature found stops being Hidden ("if an enemy finds you"): its Stealth effect is removed — by the active
+ *    GM when it does not belong to the searcher.
+ * Searching for an object or a clue stays with the GM: the check is rolled anyway.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -26,7 +26,7 @@ export const SEARCH_QUERY = `${MODULE_ID}.search`;
 
 async function removeHiding(targetUuid, searcherUuid=null, user=null) {
   const target = await fromUuid(targetUuid);
-  // §472 : d'un joueur, seulement un ennemi caché de son propre fouilleur, sur la même scène (refus de sécurité, non forçable).
+  // §472: from a player, only a Hidden enemy of their own searcher, on the same scene (safety refusal, not forceable).
   if ( needsCheck(user) ) {
     const searcher = searcherUuid ? await fromUuid(searcherUuid) : null;
     if ( !searcher?.actor || !target?.actor || !actsFor(user, searcher.actor) || (searcher.parent !== target.parent)
@@ -53,11 +53,11 @@ async function onPostUse(activity) {
   if ( !actor || !searcher ) return;
   const candidates = searchCandidates(searcher);
   const mode = searchRollMode(candidates);
-  // §94 : ce que les traits ajoutent à la fouille — un dé (Guetteurs), l'Avantage (Œil vif, une utilisation de l'item s'il en reste).
-  // Un objet (Yeux de l'aigle, Robe aux yeux) ne compte que porté, et harmonisé s'il l'exige.
+  // §94: what traits add to the search — a die (Lookouts), Advantage (Keen Eye, one use of the item if any remain).
+  // An object (Eyes of the Eagle, Robe of Eyes) only counts when worn, and attuned if it requires it.
   const { parts, keen } = searchBonuses(actor.items.map(i => ({ item: i, rule: contentOf(i).entry?.searchBonus ?? null,
     counts: wornOrNotEquipment(i), usesMax: i.system.uses?.max, usesLeft: i.system.uses?.value })));
-  // §252 : le verdict attend la fin des dés 3D, puis se voit et s'entend chez tous.
+  // §252: the verdict waits for the 3D dice to finish, then is seen and heard by everyone.
   const rolls = await rolledAndShown(() => actor.rollSkill({ skill: "prc", disadvantage: mode === "disadvantage",
     ...(keen ? { advantage: true } : {}), ...(parts.length ? { rolls: [{ parts }] } : {}) }, { configure: false }));
   const roll = rolls?.[0];
@@ -67,7 +67,7 @@ async function onPostUse(activity) {
   log(`search: ${actor.name} (${roll.total}, ${mode}) - `
     + (verdicts.map(v => `${byId.get(v.id)?.name} DC ${v.dc}: ${v.found ? "found" : "no"} (${v.reason}${v.total !== undefined ? ` ${v.total}` : ""})`).join("; ") || "no hidden creature"));
   const found = verdicts.filter(v => v.found).map(v => byId.get(v.id)).filter(Boolean);
-  // Œil vif : « si le test échoue, l'utilisation n'est pas dépensée ».
+  // Keen Eye: "if the check fails, the use is not expended".
   if ( keen && found.length && Number(keen.item.system.uses?.max) ) await spendItemUses(keen.item);
   if ( parts.length || keen ) log(`search: ${[...parts, ...(keen ? [`Advantage (${keen.item.name})`] : [])].join(", ")}`);
   for ( const token of found ) {

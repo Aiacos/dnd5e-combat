@@ -1,10 +1,10 @@
 /**
- * « Lâche » sur un monstre (SPEC §16.59, §40.3 ; Butin et commerce 0.15.1) : un Familier vampire du Monster Manual (importé le temps
- * du scénario, lié) tient sa Dague ombrale — de l'équipement (« Équipement : Dagues (10) »), source la Dague du Manuel des joueurs — et
- * une arme de test sans la propriété `gear` (une attaque de créature). Le Clerc lui ordonne « Lâche ».
- *  - Les dagues tombent en tas sous leur version « équipement » : « Dagger » ×10, la Dague du Manuel des joueurs, pas l'attaque.
- *  - L'attaque de créature ne tombe pas : elle reste sur la fiche, déséquipée.
- * Sans Butin et commerce (aucun voisin au hook `dropItems`) : non applicable. Remet tout (acteur, token, tas, combat).
+ * "Drop" on a monster (SPEC §16.59, §40.3; Loot & Trade 0.15.1): a Monster Manual Vampire Familiar (imported for the length of
+ * the scenario, linked) holds its Dague ombrale — equipment ("Équipement : Dagues (10)"), source the Player's Handbook Dagger — and
+ * a test weapon without the `gear` property (a creature attack). The Cleric orders it "Drop".
+ *  - The daggers fall in a pile under their "equipment" version: "Dagger" ×10, the Player's Handbook Dagger, not the attack.
+ *  - The creature attack does not fall: it stays on the sheet, unequipped.
+ * Without Loot & Trade (no neighbor on the `dropItems` hook): not applicable. Restores everything (actor, token, pile, combat).
  */
 const MODULE_ID = "dnd5e-combat";
 const FAMILIAR = "Compendium.dnd-monster-manual.actors.Actor.mmVampireFamilia";
@@ -26,10 +26,10 @@ export default {
     await ctx.ensureItem(cleric, "Compendium.dnd5e.spells24.Item.phbsplCommand000", { system: { method: "atwill" } });
     const grid = await ctx.gridSize();
 
-    // Le familier, lié (ses objets se lisent sur l'acteur), et une attaque de test sans `gear`.
+    // The familiar, linked (its items are read on the actor), and a test attack without `gear`.
     const { _id, folder, ownership, _stats, ...data } = entry.data;
     const created = await ctx.call("create-actor", { actorData: { ...data, name: NAME, prototypeToken: { ...(data.prototypeToken ?? {}), actorLink: true, name: NAME, disposition: -1 },
-      // Marqué comme acteur d'essai : Butin et commerce le retire avec son token (`api.mcp.removeTestActors`).
+      // Marked as a test actor: Loot & Trade removes it with its token (`api.mcp.removeTestActors`).
       flags: { ...(data.flags ?? {}), "darsh-loot": { test: true } } } });
     const actorId = created?.id ?? created?.actor?.id;
     ctx.restore(async () => {
@@ -41,13 +41,13 @@ export default {
     await ctx.call("upsert-actor-item", { actorId, itemData: { name: "Lame d'ombre (attaque de test)", type: "weapon",
       system: { type: { value: "simpleM" }, equipped: true, quantity: 1, identifier: "test-shadow-blade" } } });
     const claw = (await items()).find(i => i.system?.identifier === "test-shadow-blade");
-    // dnd5e pose `gear` sur tout objet physique d'un PNJ : retiré, c'est une attaque de créature.
+    // dnd5e puts `gear` on every physical item of an NPC: removed, it is a creature attack.
     const props = (claw.system?.properties ?? []).filter(p => p !== "gear");
     await ctx.call("upsert-actor-item", { actorId, match: { path: "_id", value: claw._id }, itemData: { "system.properties": props } });
     const clawProps = (await items()).find(i => i._id === claw._id)?.system?.properties ?? [];
     ctx.expect(!clawProps.includes("gear"), `l'attaque de test n'a pas la propriété gear (${clawProps.join(", ")})`);
 
-    // Placé au sud du Clerc (Restored Keep, colonne libre relevée par le scénario `injonction`).
+    // Placed south of the Cleric (Restored Keep, free column surveyed by the `injonction` scenario).
     const anchor = { x: 3080, y: 4900, elevation: 0 };
     const c = await ctx.position(cleric);
     if ( (c.x !== anchor.x) || (c.y !== anchor.y) ) await ctx.call("move-token", { tokenId: cleric.id, ...anchor });
@@ -57,7 +57,7 @@ export default {
     const famToken = ((await ctx.call("list-scene-objects", { types: ["Token"] })).objects?.Token ?? []).find(t => t.name === NAME);
     const fam = { id: famToken.id, actorId, name: NAME };
 
-    // Les tas créés : relevés pour la vérification et la remise en état.
+    // The piles created: noted for the check and the restoration.
     const KINDS = ["Region", "Tile"];
     const objects = async () => (await ctx.call("list-scene-objects", { types: KINDS })).objects ?? {};
     const before = await objects();
@@ -70,7 +70,7 @@ export default {
       }
     });
 
-    // L'Injonction « Lâche », jusqu'à une sauvegarde ratée.
+    // The "Drop" Command, until a failed save.
     let posed = false;
     for ( let n = 1; (n <= 20) && !posed; n++ ) {
       const used = await ctx.use({ tokenId: cleric.id, identifier: "command", activityType: "save", consume: false,
@@ -81,7 +81,7 @@ export default {
     }
     if ( !ctx.expect(posed, "Lâche : le familier rate sa sauvegarde, l'ordre est posé") ) return;
 
-    // Au tour du familier, l'ordre s'exécute.
+    // On the familiar's turn, the order is carried out.
     await ctx.startCombat([cleric, fam]);
     const cb = await ctx.combat();
     for ( const [t, value] of [[cleric, 20], [fam, 10]] ) {
@@ -101,7 +101,7 @@ export default {
     const made = await fresh();
     ctx.expect(made.Region.length === 1, `un tas au sol (${made.Region.length})`);
     const pile = made.Region[0] ? await ctx.call("call-module-api", { moduleId: "darsh-loot", fn: "zoneState", args: { regionId: made.Region[0].id } }).catch(() => null) : null;
-    // Le tas range ses objets dans un acteur Groupe (`system.actor` du comportement).
+    // The pile stores its items in a Group actor (`system.actor` of the behavior).
     const storeUuid = pile?.result?.behaviors?.[0]?.system?.actor ?? "";
     const store = storeUuid ? await ctx.call("get-actor", { actorId: storeUuid.split(".").at(-1) }).catch(() => null) : null;
     const content = (store?.items ?? []).map(i => `${i.name} x${i.system?.quantity} [${i.system?.identifier}] ${i._stats?.compendiumSource ?? ""}`);

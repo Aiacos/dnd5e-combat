@@ -1,10 +1,11 @@
 /**
- * §322, lot K1 de la repasse des créatures : la fin des états d'une capacité de monstre, lue dans son texte anglais d'origine
- * (`core/monster-text.mjs`). Arène des sorts : le Lanceur (PNJ) reçoit des capacités prêtées depuis les fiches du Monster Manual, contre
- * l'« Ennemi au contact ».
- *  - Spores pacificatrices (Myconide adulte) : Étourdi, sauvegarde rejouée à la fin de chacun de ses tours ; réussie, l'état tombe ;
- *  - Regard soporifique (Chacal-garou) : Inconscient, tombe dès que la cible subit des dégâts ;
- *  - Regard pétrifiant (Basilic) : premier échec Entravé, sauvegarde à la fin de son prochain tour ; second échec, Pétrifié.
+ * §322, batch K1 of the creature pass: the end of the conditions of a monster ability, read in its original English text
+ * (`core/monster-text.mjs`). Spell arena: the Caster (NPC) receives abilities borrowed from the Monster Manual sheets, against
+ * the "Enemy in contact".
+ *  - Pacifying Spores (Adult Myconid): Stunned, saving throw replayed at the end of each of its turns; on a success, the
+ *    condition drops;
+ *  - Sleep Gaze (Jackalwere): Unconscious, drops as soon as the target takes damage;
+ *  - Petrifying Gaze (Basilisk): first failure Restrained, saving throw at the end of its next turn; second failure, Petrified.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -40,7 +41,7 @@ export default {
       lent.push(r.id);
       return r.id;
     };
-    // Les effets de l'Ennemi qui viennent de ces capacités, par leur identifiant (api.mcp.effectOrigins).
+    // The Enemy's effects that come from these abilities, by their identifier (api.mcp.effectOrigins).
     const IDENTS = ["pacifying-spores", "sleep-gaze", "petrifying-gaze"];
     const fromIdent = async ident => ctx.effectsFrom(target, ident);
     const clear = async () => {
@@ -64,7 +65,7 @@ export default {
       try { await fn(); } catch ( err ) { ctx.expect(false, `${name} : ${err.message}`); }
       await reset();
     };
-    /** Utilise la sauvegarde jusqu'à un échec de la cible (20 essais) ; rend l'id du message d'utilisation. */
+    /** Uses the saving throw until the target fails (20 tries); returns the id of the use message. */
     const untilFail = async (itemId, activityId, extra={}) => {
       for ( let i = 0; i < 20; i++ ) {
         await clear();

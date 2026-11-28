@@ -1,18 +1,19 @@
 /**
- * B09 (§488) : le verrou de forme porté par un objet et les traits qu'un objet porté suspend. Fonctions pures, aucune dépendance à Foundry.
+ * B09 (§488): the form lock carried by an item and the traits a worn item suspends. Pure functions, no dependency on Foundry.
  *
- * - `formLock: true` (§403) : la zone qui dure de l'item interdit d'y changer de forme (Rayon de lune) — adapter/areas.mjs.
- * - `formLock: { worn: true, onAttempt?, forms? }` : tant que l'objet est porté, son porteur ne peut pas changer de forme ; chaque
- *   tentative est refusée (forçable) et lui inflige les étapes `onAttempt` (des dégâts, `to: "bearer"`). Une tentative : une activité
- *   « transform » de dnd5e, l'activité d'un changement de forme déclaré (`changesForm`), toute activité d'un item dont l'identifiant
- *   est dans `forms`, ou l'activation à la main d'un effet porté par un tel item (les formes d'une fiche faites d'effets à allumer).
- * - `suspends: [clé, …]` : tant que l'objet est porté, ces traits de son porteur ne fonctionnent pas (une clé d'entrée : `regeneration`).
+ * - `formLock: true` (§403): the area that lasts from the item forbids changing form in it (Moonbeam) — adapter/areas.mjs.
+ * - `formLock: { worn: true, onAttempt?, forms? }`: while the item is worn, its bearer cannot change form; each
+ *   attempt is refused (forceable) and inflicts the `onAttempt` steps on them (damage, `to: "bearer"`). An attempt: a dnd5e
+ *   "transform" activity, the activity of a declared change of form (`changesForm`), any activity of an item whose identifier
+ *   is in `forms`, or the manual activation of an effect carried by such an item (the forms of a sheet made of effects to
+ *   switch on).
+ * - `suspends: [clé, …]`: while the item is worn, these traits of its bearer do not work (an entry key: `regeneration`).
  */
 
-/** Les traits qu'un objet porté sait suspendre : ceux que le moteur relit en tenant compte de `suspends` (adapter/form-lock.mjs). */
+/** The traits a worn item can suspend: those the engine rereads taking `suspends` into account (adapter/form-lock.mjs). */
 export const SUSPENDABLE = Object.freeze(["regeneration"]);
 
-/** Les erreurs de `formLock` (vide = valide). `damageTypes` : les types de dégâts connus, ou null pour ne pas les vérifier. */
+/** The errors of `formLock` (empty = valid). `damageTypes`: the known damage types, or null to skip checking them. */
 export function validateFormLock(value, damageTypes=null) {
   if ( value === true ) return [];
   if ( !value || (typeof value !== "object") || Array.isArray(value) ) return ["formLock: true (zone) or { worn: true, onAttempt?, forms? }"];
@@ -49,7 +50,7 @@ export function validateSuspends(value) {
   return ok ? [] : [`suspends: non-empty list among ${SUSPENDABLE.join(", ")}`];
 }
 
-/** Le verrou porté d'une entrée, normalisé — `{ onAttempt, forms }` —, ou null (pas de verrou, ou celui d'une zone). */
+/** The lock carried by an entry, normalized — `{ onAttempt, forms }` —, or null (no lock, or that of an area). */
 export function wornFormLock(entry) {
   const lock = entry?.formLock;
   if ( !lock || (lock === true) || (lock.worn !== true) ) return null;
@@ -57,14 +58,14 @@ export function wornFormLock(entry) {
 }
 
 /**
- * Un objet est-il « porté » ? Un objet qui s'équipe (arme, équipement, consommable…) l'est s'il est équipé ; un objet qui ne s'équipe
- * pas (une capacité de la fiche qui représente l'objet) l'est tant qu'il est sur la fiche.
+ * Is an item "worn"? An item that is equipped (weapon, equipment, consumable…) is worn if equipped; an item that is not
+ * equipped (a feature on the sheet that stands for the item) is worn as long as it is on the sheet.
  */
 export const isWorn = ({ equippable, equipped }) => !equippable || (equipped === true);
 
 /**
- * Une activité est-elle une tentative de changer de forme ? `type` : celui de l'activité ; `identifier` : celui de son item ;
- * `declaredChange` : l'item déclare `changesForm` pour cette activité ; `forms` : les identifiants que le verrou nomme.
+ * Is an activity an attempt to change form? `type`: that of the activity; `identifier`: that of its item;
+ * `declaredChange`: the item declares `changesForm` for this activity; `forms`: the identifiers the lock names.
  */
 export function isFormAttempt({ type, identifier=null, declaredChange=false }, forms=[]) {
   if ( (type === "transform") || declaredChange ) return true;

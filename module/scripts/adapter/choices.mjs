@@ -1,8 +1,8 @@
 /**
- * La question « quel effet ? » posée à l'auteur d'une action aux effets exclusifs (SPEC §7, étape
- * `choice` ; Maléfice). Même circuit que les réactions (adapter/reactions.mjs) : la requête
- * `user.query` du cœur de Foundry va au joueur connecté qui possède l'acteur, à défaut le MJ actif
- * répond lui-même. Une réponse est REQUISE : sans réponse du joueur, le MJ est consulté à son tour.
+ * The "which effect?" question asked to the author of an action with exclusive effects (SPEC §7, stage
+ * `choice`; Hex). Same circuit as reactions (adapter/reactions.mjs): the Foundry core's
+ * `user.query` request goes to the connected player who owns the actor, failing that the active GM
+ * answers themselves. An answer is REQUIRED: with no answer from the player, the GM is consulted in turn.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,26 +14,27 @@ import { rollerFor } from "./concentration.mjs";
 
 export const CHOICE_QUERY = `${MODULE_ID}.choice`;
 
-/** Délai laissé au joueur ; au-delà, le MJ choisit. */
-const CHOICE_TIMEOUT = 20000;   // au-delà du délai de la fenêtre (adapter/dialogs.mjs)
+/** Time left to the player; beyond it, the GM chooses. */
+const CHOICE_TIMEOUT = 20000;   // beyond the window's timeout (adapter/dialogs.mjs)
 
-/** §137 : une question sans délai (un choix fait une fois, à l'arrivée d'un don) — la requête attend le joueur jusque-là. */
+/** §137: a question with no timeout (a choice made once, when a feat is gained) — the request waits for the player until then. */
 const UNTIMED_TIMEOUT = 600000;
 
-/** Au-delà de ce nombre d'options, une liste déroulante plutôt qu'un bouton par option. */
+/** Beyond this number of options, a dropdown list rather than one button per option. */
 const LIST_ABOVE = 6;
 
 /**
- * Côté de celui qui choisit : une fenêtre, un bouton par option.
- * @param {{actor: string, item: string, prompt: string|null, options: Array<{id: string, label: string, icon?: string, class?: string, tooltip?: string, caption?: string}>, untimed?: boolean, seconds?: number}} payload
- *   `untimed` (§137) : pas de délai ni de compte à rebours ; fermée sans choisir, rien n'est choisi. `seconds` (§242) : un délai propre au
- *   lieu de celui des fenêtres de combat (un test demandé hors combat laisse au joueur le temps de lire). `front` (§282) : la fenêtre
- *   passe devant les autres (Inspiration héroïque, posée avant les autres questions d'après le jet). `heading` (HTML sûr), `icon`
- *   (icône du titre), `classes` : l'habillage d'une question qui doit se reconnaître d'un coup d'œil (§282).
- * @returns {Promise<{id: string}|null>}  null si la fenêtre est fermée sans choisir.
+ * On the side of whoever chooses: a window, one button per option.
+ * @param {{actor: string, item: string, prompt: string|null, options: Array<{id: string, label: string, icon?: string,
+ *   class?: string, tooltip?: string, caption?: string}>, untimed?: boolean, seconds?: number}} payload
+ *   `untimed` (§137): no timeout or countdown; closed without choosing, nothing is chosen. `seconds` (§242): its own timeout
+ *   instead of that of combat windows (a check asked outside combat gives the player time to read). `front` (§282): the window
+ *   goes in front of the others (Heroic Inspiration, placed before the other questions, based on the roll).
+ *   `heading` (safe HTML), `icon` (title icon), `classes`: the dressing of a question that must stand out at a glance (§282).
+ * @returns {Promise<{id: string}|null>}  null if the window is closed without choosing.
  */
 export async function handleChoiceQuery({ actor: actorUuid, item, prompt, options, untimed=false, seconds=null, front=false, heading=null, icon=null, classes=[] }, { user=null }={}) {
-  // §472 : d'un joueur, pas d'en-tête ni d'habillage (réservés aux questions du moteur posées par le MJ) ; Foundry nettoie la fenêtre.
+  // §472: from a player, no header or dressing (reserved for engine questions asked by the GM); Foundry sanitizes the window.
   if ( needsCheck(user) ) {
     heading = null;
     classes = [];
@@ -41,15 +42,15 @@ export async function handleChoiceQuery({ actor: actorUuid, item, prompt, option
   }
   const actor = await fromUuid(actorUuid);
   const question = `${heading ?? ""}<p>${prompt ?? game.i18n.localize("DND5ECOMBAT.ChoixEffet")}</p>`;
-  // §113 : au-delà de quelques options (Assistance : 18 compétences), une liste déroulante — un bouton par option faisait une
-  // fenêtre plus haute que l'écran.
+  // §113: beyond a few options (Assistance: 18 skills), a dropdown list — one button per option made a
+  // window taller than the screen.
   const many = options.length > LIST_ABOVE;
   const buttons = many
     ? [{ action: "list", label: game.i18n.localize("DND5ECOMBAT.ChoixValider"), icon: "fa-solid fa-check", default: true,
       callback: (event, button) => `pick${button.form?.elements?.pick?.value ?? 0}` }]
     : options.map((o, i) => ({ action: `pick${i}`, label: o.label, icon: o.icon ?? "fa-solid fa-hand-pointer", default: i === 0,
-      // §282 : l'habillage d'une option (un dé à relancer) — classe, infobulle, et une légende sous l'étiquette (variable CSS, le cœur
-      // n'écrit l'étiquette qu'en texte).
+      // §282: the dressing of an option (a die to reroll) — class, tooltip, and a caption under the label (CSS variable, the core
+      // writes the label as text only).
       ...(o.class ? { class: o.class } : {}), ...(o.tooltip ? { tooltip: o.tooltip } : {}),
       ...(o.caption ? { style: { "--caption": JSON.stringify(String(o.caption)) } } : {}) }));
   const list = many ? `<select name="pick" class="dnd5e-combat-choice-list" autofocus>${options
@@ -61,8 +62,8 @@ export async function handleChoiceQuery({ actor: actorUuid, item, prompt, option
     content: `${question}${list}`,
     buttons
   };
-  // Sans réponse dans le délai : la première option. §137 : sans délai, la fenêtre attend.
-  // §381 : la table voit qu'on attend ce choix (sablier au-dessus du token), jamais ce qu'il est.
+  // With no answer within the timeout: the first option. §137: without timeout, the window waits.
+  // §381: the table sees that this choice is awaited (hourglass above the token), never what it is.
   const picked = untimed ? await inLine(() => whileAwaiting(actor, "choice", () => foundry.applications.api.DialogV2.wait({ ...config, rejectClose: false })))
     : await timedWait(config, { fallback: "pick0", front, awaiting: { actor, kind: "choice" }, ...(Number(seconds) > 0 ? { seconds: Number(seconds) } : {}) });
   const option = options[Number(String(picked ?? "").replace("pick", ""))];
@@ -70,10 +71,10 @@ export async function handleChoiceQuery({ actor: actorUuid, item, prompt, option
 }
 
 /**
- * Sur le MJ actif : demande à l'auteur, puis au MJ si l'auteur ne répond pas. Sur le client de l'auteur lui-même (§90 : un test
- * qu'il vient de lancer), la question est posée ici.
+ * On the active GM: asks the author, then the GM if the author does not answer. On the author's own client (§90: a check
+ * they just rolled), the question is asked here.
  * @param {Actor} actor
- * @param {object} payload  Voir handleChoiceQuery.
+ * @param {object} payload  See handleChoiceQuery.
  * @returns {Promise<{id: string}|null>}
  */
 export async function askChoice(actor, payload) {
@@ -84,7 +85,7 @@ export async function askChoice(actor, payload) {
     const timeout = payload.untimed ? UNTIMED_TIMEOUT : (Number(payload.seconds) > 0 ? (Number(payload.seconds) + 15) * 1000 : CHOICE_TIMEOUT);
     try { answer = await queryPlayer(game.users.get(userId), CHOICE_QUERY, payload, { timeout, actor, label: waitLabel("Choix", { item: payload.item ?? "" }) }); }
     catch(err) { console.warn(`${MODULE_ID} | choice for ${actor.name}: no answer from the player`, err); }
-    // §137 : une question sans délai reste au joueur — fermée sans choisir, le MJ n'est pas consulté à sa place.
+    // §137: a question with no timeout stays with the player — closed without choosing, the GM is not consulted in their place.
     if ( payload.untimed ) return answer;
   }
   return answer ?? handleChoiceQuery(payload);

@@ -1,7 +1,7 @@
 /**
- * §332, lot K11 de la repasse des créatures : pas de moitié des dégâts sur une sauvegarde réussie quand le texte n'en donne pas
- * (`monsterSaveDamage`). Arène des sorts : le Lanceur (PNJ) reçoit le Regard glaçant du Yéti abominable ; la Cible (999 PV).
- *  - Cible qui réussit sa sauvegarde : aucun dégât (la donnée disait « moitié »).
+ * §332, batch K11 of the creature pass: no half damage on a successful saving throw when the text gives none
+ * (`monsterSaveDamage`). Spell arena: the Caster (NPC) receives the Abominable Yeti's Chilling Gaze; the Target (999 HP).
+ *  - Target that succeeds on its saving throw: no damage (the data said "half").
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

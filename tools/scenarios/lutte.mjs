@@ -1,11 +1,11 @@
 /**
- * Lutte et Bousculade (SPEC §15.2), le Magicien au contact du Zombi :
- *  1. au début du combat, l'attaque à mains nues du moteur est posée sur le Magicien ;
- *  2. Bousculade « repoussé », choisie d'avance (comme l'entrée du menu) : aucune question ; si le Zombi
- *     rate sa sauvegarde (Force ou Dextérité, sa meilleure), il recule d'une case, loin du Magicien ;
- *     s'il la réussit, il ne bouge pas. Rejoué jusqu'à un échec (au plus 8 essais) ;
- *  3. Lutte « agrippé » : jusqu'à un échec, l'état Agrippé est posé sur le Zombi.
- * Remet le Zombi et le Magicien à leur place, retire l'état et les items posés pendant le scénario.
+ * Grapple and Shove (SPEC §15.2), the Wizard in contact with the Zombi:
+ *  1. at the start of the combat, the engine's unarmed strike is placed on the Wizard;
+ *  2. Shove "pushed", chosen in advance (like the menu entry): no question; if the Zombi
+ *     fails its save (Strength or Dexterity, its best), it moves back one cell, away from the Wizard;
+ *     if it succeeds, it does not move. Replayed until a failure (8 tries at most);
+ *  3. Grapple "grappled": until a failure, the Grappled condition is placed on the Zombi.
+ * Restores the Zombi and the Wizard to their place, removes the condition and the items placed during the scenario.
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -29,9 +29,9 @@ export default {
     ctx.restore(() => move(mage, mage.x, mage.y));
     ctx.restore(() => move(zombi, zombi.x, zombi.y));
     ctx.restore(() => ctx.removeStatusEffects(zombi, "grappled"));
-    await move(mage, zombi.x + size, zombi.y);   // à l'est du Zombi : une poussée l'envoie vers l'ouest
+    await move(mage, zombi.x + size, zombi.y);   // east of the Zombi: a push sends it west
 
-    await ctx.startCombat([mage, zombi]);   // retire lui-même, à la fin, les items que le moteur aura posés
+    await ctx.startCombat([mage, zombi]);   // itself removes, at the end, the items the engine will have placed
     let unarmed = null;
     for ( const until = Date.now() + 6000; !unarmed && (Date.now() < until); await sleep(400) ) {
       unarmed = basics(await itemsOf()).find(i => i.flags[MODULE_ID].basicAction === "unarmed");
@@ -48,7 +48,7 @@ export default {
       return { r, t, failed: t?.save?.success === false };
     }
 
-    // 2. Bousculade : repoussé.
+    // 2. Shove: pushed.
     let pushed = false;
     for ( let i = 0; (i < 8) && !pushed; i++ ) {
       const { r, t, failed } = await attempt("dnd5eCombatPush0");
@@ -67,7 +67,7 @@ export default {
     }
     if ( !pushed ) ctx.log("le Zombi a réussi 8 sauvegardes de suite : poussée non observée");
 
-    // 3. Lutte : agrippé.
+    // 3. Grapple: grappled.
     let grappled = false;
     for ( let i = 0; (i < 8) && !grappled; i++ ) {
       const { r, t, failed } = await attempt("dnd5eCombatGrapl");

@@ -1,28 +1,28 @@
 /**
- * Monture et ordre à un compagnon (§490, brique B08) — règles pures, aucune dépendance à Foundry.
+ * Mount and command to a companion (§490, block B08) — pure rules, no dependency on Foundry.
  *
- * Deux clés de contenu :
- *  - `mount: { rider?, controlled? }` sur un item de la MONTURE : la créature peut être montée. `rider` (id d'acteur, 16 caractères) :
- *    seul cet acteur la monte ; absent : toute créature alliée plus petite d'au moins une taille (Manuel 2024, « Combat monté »).
- *    `controlled` (défaut vrai) : monture contrôlée — elle agit au tour de son cavalier (son initiative est mise juste après lui) et
- *    ne prend que les actions Foncer, Se désengager et Esquiver, sauf si son cavalier la commande à ce round (`commands`).
- *    `controlled: false` : monture indépendante, qui garde son initiative et ses actions ; seul le déplacement est commun.
- *  - `commands: { actor | identifier, distance, units, cost? }` sur l'item du MAÎTRE qui donne l'ordre : à son utilisation, les
- *    compagnons désignés à portée sont commandés pour ce round. `actor` : id d'acteur du compagnon ; `identifier` : identifiant d'un
- *    item qu'il porte. `cost` (défaut « bonus ») : le coût de l'ordre, quand l'activité de la fiche n'en dit pas.
- * Le lien monture–cavalier tombe quand l'un d'eux est À terre, Neutralisé (ou pire) ou à 0 PV : le cavalier tombe À terre à côté.
+ * Two content keys:
+ *  - `mount: { rider?, controlled? }` on an item of the MOUNT: the creature can be mounted. `rider` (actor id, 16 characters):
+ *    only that actor mounts it; absent: any allied creature at least one size smaller (Player's Handbook 2024, "Mounted Combat").
+ *    `controlled` (default true): controlled mount — it acts on its rider's turn (its Initiative is set right after theirs) and
+ *    takes only the Dash, Disengage and Dodge actions, unless its rider commands it this round (`commands`).
+ *    `controlled: false`: independent mount, which keeps its Initiative and its actions; only movement is shared.
+ *  - `commands: { actor | identifier, distance, units, cost? }` on the MASTER's item that gives the order: on its use, the
+ *    designated companions in range are commanded for this round. `actor`: the companion's actor id; `identifier`: identifier of an
+ *    item it carries. `cost` (default "bonus"): the cost of the order, when the sheet's activity does not say.
+ * The mount–rider link breaks when either is Prone, Incapacitated (or worse) or at 0 HP: the rider falls Prone beside it.
  */
 
 import { isId, isObject } from "./content/shared.mjs";
 import { SIZES } from "./content/enums.mjs";
 import { INCAPACITATING } from "./conditions.mjs";
 
-/** Les actions de base qu'une monture contrôlée peut prendre sans ordre (Manuel 2024, « Contrôler une monture »). */
+/** The basic actions a controlled mount can take without an order (Player's Handbook 2024, "Controlling a Mount"). */
 export const MOUNT_FREE_ACTIONS = Object.freeze(["dash", "disengage", "dodge"]);
-/** Les coûts d'un ordre. */
+/** The costs of an order. */
 export const COMMAND_COSTS = Object.freeze(["action", "bonus", "free"]);
 
-/** Les erreurs de la clé `mount` (vide = valide). */
+/** The errors of the `mount` key (empty = valid). */
 export function validateMount(mount, at="mount") {
   if ( !isObject(mount) ) return [`${at}: { rider?: actor id, controlled?: boolean }`];
   const errors = [];
@@ -32,7 +32,7 @@ export function validateMount(mount, at="mount") {
   return errors;
 }
 
-/** Les erreurs de la clé `commands` (vide = valide). */
+/** The errors of the `commands` key (empty = valid). */
 export function validateCommands(commands, at="commands") {
   if ( !isObject(commands) ) return [`${at}: { actor | identifier, distance, units, cost? }`];
   const errors = [];
@@ -49,11 +49,11 @@ export function validateCommands(commands, at="commands") {
   return errors;
 }
 
-/** La monture est-elle contrôlée par son cavalier (défaut : oui) ? */
+/** Is the mount controlled by its rider (default: yes)? */
 export const isControlled = rule => !!rule && (rule.controlled !== false);
 
 /**
- * Pourquoi ce cavalier ne peut pas monter cette créature, ou null.
+ * Why this rider cannot mount this creature, or null.
  * @param {{rule: object|null, riderActorIds: string[], riderSize: string, mountSize: string, enemies: boolean, adjacent: boolean,
  *   alreadyRidden: boolean, riding: boolean, riderStatuses?: string[], mountStatuses?: string[]}} p
  * @returns {"notMount"|"notRider"|"tooBig"|"enemy"|"far"|"ridden"|"riding"|"cannot"|null}
@@ -75,7 +75,7 @@ export function mountProblem({ rule, riderActorIds=[], riderSize, mountSize, ene
 
 const sizeIndex = size => SIZES.indexOf(SIZES.includes(size) ? size : "med");
 
-/** L'état qui fait tomber le cavalier (ou interdit de monter) : À terre, Neutralisé ou pire. Rend l'état, ou null. */
+/** The condition that makes the rider fall (or forbids mounting): Prone, Incapacitated or worse. Returns it, or null. */
 export function bondBreaker(statuses=[]) {
   return ["prone", ...INCAPACITATING].find(s => statuses.includes(s)) ?? null;
 }
@@ -94,8 +94,8 @@ export function bondBroken({ rider, mount }) {
 }
 
 /**
- * Une activité de la monture est-elle refusée faute d'ordre ? Contrôlée, en combat, une action qui n'est ni Foncer, ni Se désengager,
- * ni Esquiver, sans ordre de ce round.
+ * Is a mount activity refused for lack of an order? Controlled, in combat, an action that is neither Dash, nor Disengage,
+ * nor Dodge, with no order this round.
  * @param {{rule: object|null, ridden: boolean, inCombat: boolean, activation: string|null, basicAction: string|null,
  *   commandedRound: number|null, round: number|null}} p
  */
@@ -106,10 +106,10 @@ export function needsCommand({ rule, ridden, inCombat, activation, basicAction, 
 }
 
 /**
- * Le coin haut-gauche (pixels) où poser le cavalier au centre de l'espace de sa monture.
- * @param {{x: number, y: number}} mountAt  coin haut-gauche de la monture
- * @param {{w: number, h: number}} mountSize  taille en cases de la monture
- * @param {{w: number, h: number}} riderSize  taille en cases du cavalier
+ * The top-left corner (pixels) where to place the rider at the center of its mount's space.
+ * @param {{x: number, y: number}} mountAt  top-left corner of the mount
+ * @param {{w: number, h: number}} mountSize  size of the mount in cells
+ * @param {{w: number, h: number}} riderSize  size of the rider in cells
  * @param {{sizeX: number, sizeY: number}} grid
  */
 export function riderSeat(mountAt, mountSize, riderSize, grid) {

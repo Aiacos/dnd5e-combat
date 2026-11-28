@@ -28,33 +28,33 @@ import { originItemOf } from "../adapter/facts.mjs";
 import { tokenArt } from "../adapter/token-art.mjs";
 const currentTurnKey = () => turnKeyOf(game.combat?.started ? game.combat.round : null, game.combat?.turn);
 
-/** Le token peut-il subir la zone ? Pas celui qui l'a posée depuis lui-même, pas un mort. */
+/** Can the token suffer the zone? Not the creature that placed it from itself, not a dead one. */
 function isAffectable(token, state) {
   if ( !token?.actor || (token.uuid === state.exclude) ) return false;
-  if ( isObjectToken(token) ) return false;   // un objet piloté ou un tas au sol n'est pas une créature (§16.15, §16.60)
+  if ( isObjectToken(token) ) return false;   // a driven object or a pile on the ground is not a creature (§16.15, §16.60)
   if ( token.actor.statuses.has(CONFIG.specialStatusEffects.DEFEATED) ) return false;
-  // §225 : une zone n'agit que sur son plan, celui de son lanceur.
+  // §225: a zone only acts on its plane, that of its caster.
   const caster = state.source ? fromUuidSync(state.source, { strict: false }) : null;
   if ( caster && !samePlane(caster, token) ) return false;
-  // §401 : le choix du lanceur à la pose (« créatures de votre choix ») pour ceux qui étaient dedans.
+  // §401: the caster's choice at placement ("creatures of your choice") for those who were inside.
   const picked = pickedAtPose(state, token.uuid);
   if ( picked !== null ) return picked;
-  // §16.23 : même règle qu'à la pose (core/area.mjs, selectAreaTargets) — alliés ou ennemis du lanceur seulement.
+  // §16.23: same rule as at placement (core/area.mjs, selectAreaTargets) — allies or enemies of the caster only.
   if ( !["ally", "enemy"].includes(state.affects) || (state.originDisposition === null) || (state.originDisposition === undefined) ) return true;
   const sameSide = alliedSides(sideOf(token), state.originSide ?? { disposition: state.originDisposition });   // §181
   return state.affects === "ally" ? sameSide : !sameSide;
 }
 
 /**
- * La zone agit sur un token, si ses règles le veulent et s'il n'a pas déjà été touché ce tour.
- * Les écritures de la mémoire « déjà touché » sont mises en série par région.
+ * The zone acts on a token, if its rules want it and it has not already been hit this turn.
+ * Writes to the "already hit" memory are serialized per region.
  */
 function tick(region, token, event, turnKey=currentTurnKey(), { times=1 }={}) {
   return enqueue(`area:${region.id}`, async () => {
     const state = readAreaState(region);
     if ( !state?.usage || !isAffectable(token, state) ) return;
-    // §187 : hors combat, chaque entrée sur des chausse-trapes compte (pas de « tour » qui remettrait la mémoire à zéro).
-    // §188 : de même pour une zone en feu.
+    // §187: out of combat, each entry onto Caltrops counts (no "turn" that would reset the memory).
+    // §188: likewise for a zone on fire.
     if ( (state.scatter || state.burning) && !game.combat?.started ) turnKey = `free:${Date.now()}`;
     const context = { event, token: hitKey(state, event, token.uuid), turnKey };
     if ( !shouldTrigger(state, context) ) return;
@@ -63,14 +63,14 @@ function tick(region, token, event, turnKey=currentTurnKey(), { times=1 }={}) {
     await writeAreaState(region, { ...state, ...markHit(state, context) });
     log(`${region.name}: ${token.name} (${event})`);
     announce(event, { actor: token.actor, target: token.actor, region: region.uuid, usage: state.usage });
-    // §188 : une zone en feu brûle (ses dégâts de feu) au lieu de rejouer son activité.
+    // §188: a zone on fire burns (its fire damage) instead of replaying its activity.
     if ( state.burning ) return burnTick(region, token, state.burning);
     const chosen = conditionalReplay(usageMessage, event, token) ?? siblingFor(state, event);   // §164
-    // §169 : après son apparition, le mur à face brûlante blesse sans sauvegarde (traversée, fin de tour du côté brûlant).
+    // §169: after its appearance, the wall with a burning face hurts without a save (crossing, end of turn on the burning side).
     const noSave = !!(wallSideRuleOf(region) || region.getFlag(MODULE_ID, "sideOf"));
     await replayAgainst(usageMessage, token, { region: region.uuid, event, ...(times > 1 ? { times } : {}), ...(noSave ? { noSave } : {}) }, { activity: chosen });
-    // §75 : une zone à nombre de déclenchements (`zoneCharges` : Cordon de flèches, 4 projectiles) tombe au dernier.
-    // §303 : ou une formule du niveau de lancement (Cordon de flèches : « 2 × niveau », données de l'activité mise à l'échelle).
+    // §75: a zone with a number of triggers (`zoneCharges`: Cordon of Arrows, 4 projectiles) ends at the last.
+    // §303: or a formula of the casting level (Cordon of Arrows: "2 × level", data of the scaled activity).
     const declared = contentOf(usageMessage.getAssociatedActivity?.()?.item).entry?.zoneCharges;
     const scaled = (typeof declared === "string") ? usageMessage.getAssociatedActivity?.({ scaled: true }) : null;
     const charges = scaled ? (Number(Roll.safeEval(Roll.replaceFormulaData(declared, scaled.getRollData?.() ?? {}))) || 0) : declared;
@@ -88,16 +88,17 @@ function tick(region, token, event, turnKey=currentTurnKey(), { times=1 }={}) {
 }
 
 /**
- * C12-b : la zone vient d'apparaître (`enterOnPose`) — chaque créature qu'elle recouvre y « entre » (Invocation de céleste : soignée ou
- * brûlée dès l'apparition du Cylindre, pas à sa première fin de tour). Une fois par tour, comme toute entrée.
+ * C12-b: the zone has just appeared (`enterOnPose`) — each creature it covers "enters" it (Summon Celestial: healed or
+ * burned as soon as the Cylinder appears, not at its first end of turn). Once per turn, like any entry.
  */
 export function enterAllInside(region) {
   for ( const token of region.parent?.tokens ?? [] ) if ( isInside(token, region) ) tick(region, token, "enter");
 }
 
 /**
- * Au sol (Tremblement de terre : « au contact du sol ») : pas plus haut que le bas de son niveau (V14), 0 sur une scène sans niveaux.
- * La zone, elle, a reçu une tranche d'élévation (runtime/space.mjs) qui descend sous le sol : son bas ne dit rien.
+ * On the ground (Earthquake: "in contact with the ground"): no higher than the bottom of its level (V14), 0 on a scene
+ * without levels. The zone itself received an elevation slice (runtime/space.mjs) that goes below the ground: its bottom
+ * says nothing.
  */
 function grounded(token) {
   const pos = committedPosition(token);
@@ -106,8 +107,8 @@ function grounded(token) {
 }
 
 /**
- * §91 : la zone agit au tour de son lanceur (`casterPulse`) — le rejeu numéro n (1 = le premier tour après la pose), l'activité
- * de l'entrée qui le couvre, sur ce qui est dedans (au plus `max`, les ennemis d'abord), ou utilisée par le lanceur (`use`).
+ * §91: the zone acts on its caster's turn (`casterPulse`) — replay number n (1 = the first turn after placement), the activity
+ * of the entry that covers it, on what is inside (at most `max`, enemies first), or used by the caster (`use`).
  */
 function casterPulse(region, caster, at) {
   return enqueue(`area:${region.id}`, async () => {
@@ -119,20 +120,20 @@ function casterPulse(region, caster, at) {
     if ( !rule || (rule.at !== at) ) return;
     const n = (Number(state.pulses) || 0) + 1;
     await writeAreaState(region, { ...state, pulses: n });
-    // Ce qui ne vaut qu'à partir de ce tour du lanceur (`fromPulse`, Tempête vengeresse) : le terrain difficile se pose, la vue
-    // se recalcule (la zone obscurcit désormais).
+    // What only holds from this turn of the caster (`fromPulse`, Storm of Vengeance): Difficult Terrain is placed, the vision
+    // is recomputed (the zone now obscures).
     const whole = contentOf(item).entry ?? {};
     if ( whole.difficultTerrain?.fromPulse === n ) await holdDifficultTerrain(region);
     if ( whole.obscures?.fromPulse === n ) invalidateVision();
     const entry = pulseFor(rule, n);
     const sibling = entry ? item.system.activities?.get(entry.activity) : null;
-    // Tsunami : le mur s'éloigne du lanceur avant de frapper ; §158 : Brume mortelle, Nuage incendiaire ne font que dériver (les
-    // créatures que la zone recouvre en arrivant y « entrent » : le rejeu de l'entrée suit).
+    // Tsunami: the wall moves away from the caster before striking; §158: Cloudkill, Incendiary Cloud only drift (the
+    // creatures that the zone covers on arrival "enter" it: the entry replay follows).
     if ( rule.away ) await driftAway(region, caster, rule.away);
     if ( !sibling ) { if ( !rule.away ) log(`${region.name}: caster's turn ${n}, nothing to replay`); return; }
     if ( entry.pay ) await payWithoutUse(sibling);
     if ( entry.use ) {
-      // §406 : au niveau du lancement (message d'utilisation de la zone), sans emplacement de plus.
+      // §406: at the casting level (use message of the zone), with no extra spell slot.
       await sibling.use({ [MODULE_ID]: { confirmed: true }, create: { measuredTemplate: false }, consume: { spellSlot: false },
         ...castLevelUsage(item.system.level, usageMessage.system?.scaling) }, { configure: false }, { create: false });
       log(`${region.name}: caster's turn ${n}, "${sibling.name}" used`);
@@ -140,8 +141,8 @@ function casterPulse(region, caster, at) {
     }
     const inside = region.parent.tokens.filter(t => isInside(t, region) && isAffectable(t, state) && (!rule.ground || grounded(t)));
     let tokens = pulseTargets(inside.map(t => ({ ...sideOf(t), doc: t })), sideOf(caster), entry.max).map(t => t.doc);
-    // §403 : « six éclairs… sur six créatures de votre choix sous le nuage » (Tempête vengeresse, tour 3) — plus de créatures que
-    // d'éclairs, ou des alliés dessous : le lanceur choisit (fenêtre de zone au choix, cochée d'office comme avant).
+    // §403: "six lightning bolts… on six creatures of your choice beneath the cloud" (Storm of Vengeance, turn 3) — more
+    // creatures than bolts, or allies beneath: the caster chooses (zone window with choice, checked by default as before).
     if ( Number.isInteger(entry.max) && (zoneChoiceMode() !== "never")
       && ((inside.length > tokens.length) || tokens.some(t => !areEnemies(caster, t)) || (zoneChoiceMode() === "always")) ) tokens = await pickPulseTargets(caster, item, entry.max, inside, tokens);
     if ( !tokens.length ) log(`${region.name}: caster's turn ${n}, nobody in the area`);
@@ -149,18 +150,18 @@ function casterPulse(region, caster, at) {
       log(`${region.name}: caster's turn ${n}, "${sibling.name}" on ${tokens.map(t => t.name).join(", ")}`);
       await pulseAll(usageMessage, tokens, sibling, region);
     }
-    // « Une fois que la hauteur du mur est de 0 m, le sort prend fin » : l'item n'a plus d'utilisation.
+    // "Once the wall's height is 0 m, the spell ends": the item has no more uses.
     if ( rule.untilSpent && !((Number(item.system.uses?.value) || 0) > 0) ) {
       log(`${region.name}: no uses left, the spell ends`);
       const effect = concentrationOn(item);
-      // La concentration emporte sa zone (runtime/concentration.mjs) ; sans elle, la zone est retirée ici.
+      // Concentration takes its zone with it (runtime/concentration.mjs); without it, the zone is removed here.
       if ( effect ) await item.actor?.endConcentration?.(effect);
       else if ( region.parent?.regions.get(region.id) ) await region.delete().catch(() => {});
     }
   });
 }
 
-/** §403 : le lanceur choisit au plus `max` créatures dans la zone ; sans réponse, le choix d'office. */
+/** §403: the caster chooses at most `max` creatures in the zone; with no answer, the default choice. */
 async function pickPulseTargets(caster, item, max, inside, chosen) {
   const checked = new Set(chosen.map(t => t.uuid));
   const candidates = inside.map(t => ({ token: t.uuid, name: t.name, img: tokenArt(t), checked: checked.has(t.uuid), enemy: areEnemies(caster, t) }));
@@ -171,7 +172,7 @@ async function pickPulseTargets(caster, item, max, inside, chosen) {
   return inside.filter(t => keep.has(t.uuid));
 }
 
-/** §91 : la zone s'éloigne du lanceur de `distance` (Tsunami : 15 m à chacun de ses tours). */
+/** §91: the zone moves away from the caster by `distance` (Tsunami: 15 m on each of its turns). */
 async function driftAway(region, caster, { distance, units }) {
   const center = zoneCenter(region);
   if ( !center ) return;
@@ -187,9 +188,9 @@ async function driftAway(region, caster, { distance, units }) {
 }
 
 /**
- * §91 : la zone qui dure d'un item à `zoneEnd` vient de tomber (concentration rompue, durée écoulée, retirée) — le lanceur utilise
- * l'activité (sans rien consommer ni fenêtre), puis sa zone est posée au centre de celle qui tombe ; la résolution de zone habituelle
- * suit. MJ actif.
+ * §91: the zone that lasts from an item with `zoneEnd` has just ended (Concentration broken, duration elapsed, removed) — the
+ * caster uses the activity (consuming nothing, no window), then their zone is placed at the center of the one that ends; the
+ * usual zone resolution follows. Active GM.
  */
 async function onZoneEnd(region) {
   const state = readAreaState(region);
@@ -201,22 +202,22 @@ async function onZoneEnd(region) {
   const point = zoneCenter(region);
   if ( !activity || !caster?.parent || !point ) return;
   log(`${region.name}: the area ends, "${activity.name}"`);
-  // §406 : au niveau du lancement — la concentration est tombée avec la zone, rien d'autre ne garde la montée (Boule de feu à
-  // retardement lancée au niveau 9 : 12d6 + 2d6, pas 12d6).
+  // §406: at the casting level — Concentration ended with the zone, nothing else keeps the upcast (Delayed Blast Fireball
+  // cast at level 9: 12d6 + 2d6, not 12d6).
   const used = await activity.use({ [MODULE_ID]: { confirmed: true }, create: { measuredTemplate: false }, consume: false,
     ...castLevelUsage(item.system.level, usageMessage.system?.scaling) }, { configure: false });
   if ( !used ) return;
   await placeAreaAt(activity, caster, point);
 }
 
-/** Fin du tour de l'un, début du tour de l'autre. */
+/** End of one's turn, start of the other's turn. */
 function onTurnChange(combat, prior, current) {
   const scene = combat.scene ?? canvas.scene;
   const ended = combat.combatants.get(prior?.combatantId)?.token;
   const started = combat.combatants.get(current?.combatantId)?.token;
   for ( const region of lastingRegions(scene) ) {
-    // La fin d'un tour appartient au tour qui s'achève : une créature déjà touchée pendant ce
-    // tour-là (à la pose, en entrant) ne l'est pas de nouveau en le terminant. Vu en jeu.
+    // The end of a turn belongs to the turn that ends: a creature already hit during that
+    // turn (at placement, on entering) is not hit again when ending it. Seen in play.
     if ( ended && (ended.parent === scene) && isInside(ended, region) ) {
       tick(region, ended, "turnEnd", turnKeyOf(prior.round, prior.turn));
     }
@@ -227,13 +228,13 @@ function onTurnChange(combat, prior, current) {
 }
 
 /**
- * §100 bis : les cases parcourues dans une zone `moves`, par token, le temps d'un déplacement que le cœur découpe en morceaux
- * (points de contrôle d'une marche du moteur, §99 ; régions) : un seul rejeu à la fin, pas un par morceau.
+ * §100 bis: the cells traversed in a `moves` zone, per token, for the duration of a move that the core splits into chunks
+ * (checkpoints of an engine walk, §99; regions): a single replay at the end, not one per chunk.
  * @type {Map<TokenDocument, {chain: string, counts: Map<RegionDocument, number>}>}
  */
 const crossings = new Map();
 
-/** Le rejeu des cases notées pour ce token (fin du déplacement, ou déplacement arrêté). */
+/** The replay of the cells noted for this token (end of the move, or move stopped). */
 function settleCrossings(token) {
   const pending = crossings.get(token);
   if ( !pending ) return;
@@ -243,24 +244,24 @@ function settleCrossings(token) {
   }
 }
 
-/** Un token se déplace : entre-t-il dans une zone, la traverse-t-il, et combien de cases y parcourt-il ? */
+/** A token moves: does it enter a zone, cross it, and how many cells does it travel in it? */
 function onMoveToken(token, movement) {
   const chain = movement.chain?.[0] ?? movement.id;
-  if ( crossings.get(token)?.chain !== chain ) settleCrossings(token);   // un autre déplacement : le précédent est clos
+  if ( crossings.get(token)?.chain !== chain ) settleCrossings(token);   // another move: the previous one is closed
   const regions = lastingRegions(token.parent);
   if ( regions.length ) {
     const waypoints = [...(movement.passed?.waypoints ?? []), movement.destination].filter(Boolean).map(position);
     let steps = null;
     for ( const region of regions ) {
-      // §169, §173 : un mur fin — on « y entre » aussi en le traversant (un anneau peut passer par des centres de case).
+      // §169, §173: a thin wall — one also "enters" it by crossing it (a ring can pass through cell centers).
       if ( isThinWall(region) ) {
         steps ??= passedCells(token, movement);
         if ( steps.length && crossesWallRegion(region, token, [position(movement.origin), ...steps]) ) tick(region, token, "enter");
       }
       const before = isInside(token, region, position(movement.origin));
       if ( entersArea(before, waypoints.map(w => isInside(token, region, w))) ) tick(region, token, "enter");
-      // §16.20 : « pour chaque tranche de 1,50 m parcourue » dans la zone — case par case le long du trajet réellement
-      // parcouru (téléportation exclue), un seul rejeu aux dés multipliés.
+      // §16.20: "for each 1.50 m traveled" in the zone — cell by cell along the path actually
+      // traveled (teleportation excluded), a single replay with multiplied dice.
       if ( !readAreaState(region)?.on?.includes("moves") ) continue;
       steps ??= passedCells(token, movement);
       const n = stepsInside(steps.map(p => isInside(token, region, p)));
@@ -270,12 +271,12 @@ function onMoveToken(token, movement) {
       crossings.set(token, entry);
     }
   }
-  // Le cœur enchaînera un autre morceau (`pending`) : on attend la fin pour rejouer.
+  // The core will chain another chunk (`pending`): we wait for the end to replay.
   if ( (token.movement?.id === movement.id) && (token.movement.state === "pending") ) return;
   settleCrossings(token);
 }
 
-/** Les cases d'arrivée du trajet parcouru par ce segment, départ exclu (vides pour une téléportation). */
+/** The arrival cells of the path traveled by this segment, start excluded (empty for a teleportation). */
 function passedCells(token, movement) {
   const passed = movement.passed?.waypoints ?? [];
   if ( !passed.length || passed.every(w => CONFIG.Token.movement.actions[w.action]?.teleport) ) return [];
@@ -284,13 +285,13 @@ function passedCells(token, movement) {
 }
 
 /**
- * Dés multipliés (§16.20) : un rejeu `moves` porte `times` dans sa configuration de jet (adapter/messages.mjs) ; chaque
- * terme « XdY » devient « (X × n)dY » — « 2d4 par tranche » parcourue.
+ * Multiplied dice (§16.20): a `moves` replay carries `times` in its roll configuration (adapter/messages.mjs); each
+ * "XdY" term becomes "(X × n)dY" — "2d4 per increment" traveled.
  */
 function onPreRollDamage(config) {
-  // §16.27 : le type de dégâts choisi par l'auteur (Orbe chromatique), pour chaque jet qui le permet.
+  // §16.27: the damage type chosen by the author (Chromatic Orb), for each roll that allows it.
   const damageType = config?.[MODULE_ID]?.damageType;
-  // Relevé des trous : Sorts psychiques — le type en plus remplace celui des parts du sort (pas des dégâts bonus ajoutés ensuite).
+  // Survey of gaps: Psychic Spells — the extra type replaces that of the spell's parts (not of bonus damage added afterwards).
   const retyped = damageType && spellRetypes(config.subject).includes(damageType);
   if ( damageType ) for ( const roll of config.rolls ?? [] ) {
     const types = roll.options?.types ?? [];
@@ -306,10 +307,11 @@ function onPreRollDamage(config) {
 }
 
 /**
- * La zone elle-même se déplace (Rayon de lune) : elle « entre » sur ceux qu'elle recouvre désormais.
- * §300 (repasse C5) : pas sur ceux qu'elle recouvrait déjà — Esprits gardiens suit son lanceur : à chaque pas, toute créature restée dans
- * l'émanation refaisait sa sauvegarde (« quand l'émanation entre dans l'espace d'une créature »). Le centre de la zone est noté dans son
- * état (`at`) ; un token qui, ramené du même déplacement, était déjà dedans n'y entre pas. Sans centre noté (zone d'avant), comme avant.
+ * The zone itself moves (Moonbeam): it "enters" those it now covers.
+ * §300 (pass C5): not those it already covered — Spirit Guardians follows its caster: at each step, every creature that stayed in
+ * the Emanation redid its save ("when the Emanation enters a creature's space"). The zone's center is noted in its
+ * state (`at`); a token that, brought back from the same move, was already inside does not enter. With no center noted
+ * (earlier zone), as before.
  * §551: the elevation slice is noted too (`slice`), and the shift is `positionBeforeAreaMove` (core/area.mjs), which also fixes its
  * direction (a step towards a creature at the edge now makes it enter).
  */
@@ -335,9 +337,9 @@ function onUpdateRegion(region, changes) {
 }
 
 /**
- * §300 (repasse C5) : un effet d'un item `zoneBound` ne tient que dans une zone de cet item — Esprits gardiens : « la Vitesse d'une
- * créature est divisée par deux dans l'émanation ». L'effet posé par la sauvegarde est retiré à la créature qui n'est plus dans aucune
- * zone de l'item (elle sort, la zone s'éloigne, la zone finit) ; y revenir rejoue la zone, qui le repose. MJ actif.
+ * §300 (pass C5): an effect of a `zoneBound` item only holds in a zone of that item — Spirit Guardians: "a creature's Speed is
+ * halved in the Emanation". The effect placed by the save is removed from the creature that is in no zone of the item any more
+ * (it leaves, the zone moves away, the zone ends); coming back replays the zone, which places it again. Active GM.
  */
 function releaseZoneBound(scene, tokens=null) {
   if ( !scene ) return;
@@ -349,24 +351,24 @@ function releaseZoneBound(scene, tokens=null) {
       const gone = [];
       for ( const effect of actor.effects ) {
         const item = originItemOf(effect);
-        // Pas l'item du lanceur sur lui-même (sa Concentration), seulement ce que la zone a posé sur une autre créature.
+        // Not the caster's item on themselves (their Concentration), only what the zone placed on another creature.
         if ( !item || (item.actor === actor) || (contentOf(item).entry?.zoneBound !== true) ) continue;
-        // §438 : un effet posé par un comportement de zone de dnd5e (`system.origin.behavior` : la Vitesse divisée par deux des Esprits
-        // gardiens du Manuel 3.0.0) — dnd5e le retire lui-même à la sortie ; le retirer aussi faisait une erreur du serveur.
+        // §438: an effect placed by a dnd5e zone behavior (`system.origin.behavior`: the halved Speed of the Spirit
+        // Guardians of the Player's Handbook 3.0.0) — dnd5e removes it itself on exit; removing it too caused a server error.
         if ( effect.system?.origin?.behavior ) continue;
         if ( zones.some(z => (z.item === item.uuid) && isInside(token, z.region)) ) continue;
         gone.push(effect.id);
       }
       if ( !gone.length ) continue;
       const left = gone.filter(id => actor.effects.has(id));
-      // Un à un : un effet retiré entre-temps (par dnd5e, par un autre client) ne fait pas échouer les autres.
+      // One by one: an effect removed in the meantime (by dnd5e, by another client) does not make the others fail.
       for ( const id of left ) if ( actor.effects.has(id) ) await actor.deleteEmbeddedDocuments("ActiveEffect", [id]).catch(() => null);
       log(`${token.name}: out of the area, ${left.length} effect(s) bound to it removed`);
     }
   });
 }
 
-/** Une invocation renvoyée : ses combattants, puis son token. MJ actif. */
+/** A summon sent back: its combatants, then its token. Active GM. */
 async function dismissSummon(token, why) {
   const name = token.name;
   for ( const combat of game.combats ) {
@@ -377,9 +379,9 @@ async function dismissSummon(token, why) {
   log(`${name}: ${why}, dismissed`);
 }
 
-/** §16.37 : l'heure du monde avance (repos, voyage, rounds de combat) — les zones échues disparaissent. MJ actif. */
+/** §16.37: world time advances (rest, travel, combat rounds) — expired zones disappear. Active GM. */
 async function onWorldTime(worldTime) {
-  // §16.39 : les créatures invoquées pour une durée (Compagnon sauvage) — et leurs combattants.
+  // §16.39: creatures summoned for a duration (Wild Companion) — and their combatants.
   for ( const token of expiredSummons(worldTime) ) await dismissSummon(token, "duration elapsed");
   const gone = expiredRegions(worldTime);
   for ( const region of gone ) {
@@ -398,23 +400,23 @@ export function registerAreas() {
     const at = await noteExpiry(region);
     if ( at !== null ) log(`area "${region.name}": ends at world time ${at} (in ${at - game.time.worldTime} s)`);
   }, { executor: true, label: "area: duration not recorded" });
-  // §37.4 : effets portés dans la zone (Silence) — le comportement du cœur, qui pose et retire seul.
+  // §37.4: effects carried in the zone (Silence) — the core's behavior, which places and removes by itself.
   route("createRegion", async region => {
     const held = await holdZoneEffects(region);
     if ( held ) log(`area "${region.name}": ${held.effects.join(", ")} carried inside`);
   }, { executor: true, label: "area: carried effects not applied" });
-  // §69 : terrain difficile perdu par les données (Enchevêtrement du Manuel des joueurs premium…).
+  // §69: Difficult Terrain lost by the data (Entangle of the premium Player's Handbook…).
   route("createRegion", async region => {
     const behavior = await holdDifficultTerrain(region);
     if ( behavior ) log(`area "${region.name}": difficult terrain applied`);
   }, { executor: true, label: "area: difficult terrain not applied" });
   route("updateWorldTime", onWorldTime, { executor: true, label: "area: duration elapsed, not removed" });
   route("deleteRegion", onZoneEnd, { executor: true, label: "area: ended without its activity (zoneEnd)" });
-  // §300 : les effets tenus par une zone (`zoneBound`) tombent hors d'elle.
+  // §300: the effects held by a zone (`zoneBound`) fall outside it.
   route("deleteRegion", region => releaseZoneBound(region.parent), { executor: true, label: "area: bound effects not removed" });
   route("moveToken", token => {
     if ( (token.movement?.state === "pending") || !lastingRegions(token.parent).length ) return;
-    // Comme `syncZoneEffects` : une seconde plus tard, le déplacement est tout à fait posé.
+    // Like `syncZoneEffects`: a second later, the move is fully settled.
     setTimeout(() => releaseZoneBound(token.parent, [token])?.catch(err => console.error(`${MODULE_ID} | bound effects`, err)), 1000);
   }, { executor: true, label: "area: bound effects not removed" });
   route("createToken", async tokenDoc => {
@@ -427,8 +429,8 @@ export function registerAreas() {
   }, { executor: true, label: "summon: previous one not replaced" });
   route("combatTurnChange", onTurnChange, trigger);
   route("moveToken", onMoveToken, trigger);
-  // §191 : les effets portés par une zone (Silence, Tempête radieuse) suivent la position, téléportation comprise — après le
-  // comportement du cœur, qui agit à l'entrée et à la sortie qu'il voit (une seconde plus tard : sa création ou son retrait est fait).
+  // §191: the effects carried by a zone (Silence, "Radiant Storm") follow the position, teleportation included — after the
+  // core's behavior, which acts on the entry and exit it sees (a second later: its creation or removal is done).
   route("moveToken", token => {
     if ( !token.parent?.regions.some(r => r.behaviors.some(b => b.type === "applyActiveEffect")) ) return;
     setTimeout(() => {
@@ -436,8 +438,8 @@ export function registerAreas() {
         .catch(err => console.error(`${MODULE_ID} | area effects`, err));
     }, 1000);
   }, { executor: true, label: "area: carried effects not realigned" });
-  // Un déplacement arrêté entre deux morceaux (`stopMovement`, appelé sur tous les clients, documents/token.mjs:792) : les cases
-  // déjà parcourues comptent.
+  // A move stopped between two chunks (`stopMovement`, called on all clients, documents/token.mjs:792): the cells
+  // already traveled count.
   route("stopToken", settleCrossings, trigger);
   route("updateRegion", onUpdateRegion, trigger);
   route("dnd5e.preRollDamageV2", onPreRollDamage, { cancellable: true, label: "damage: dice multiplied (area), type chosen" });

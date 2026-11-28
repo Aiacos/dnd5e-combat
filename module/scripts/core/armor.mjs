@@ -1,34 +1,34 @@
 /**
- * §491 : « la cible porte une armure (en métal) » — fait `target.wearsArmor` (adapter/facts.mjs). Règle pure : l'adaptateur décrit les
- * pièces équipées de l'acteur (`armorPieces`), ce module dit si elles répondent à la condition.
+ * §491: "the target wears armor (metal)" — fact `target.wearsArmor` (adapter/facts.mjs). Pure rule: the adapter describes the
+ * pieces the actor has equipped (`armorPieces`), this module says whether they meet the condition.
  *
- * dnd5e n'a pas de matière (config.mjs `armorTypes` : light, medium, heavy, natural, shield ; `armorIds` : l'armure de base). La matière
- * se lit donc par l'armure de base (`system.type.baseItem`, sinon l'identifiant de l'item), dans la table ci-dessous ; un item peut
- * l'imposer lui-même par `flags["dnd5e-combat"].metal` (true / false), pour une armure de campagne ou un bouclier.
+ * dnd5e has no material (config.mjs `armorTypes`: light, medium, heavy, natural, shield; `armorIds`: the base armor). The material
+ * is therefore read from the base armor (`system.type.baseItem`, otherwise the item's identifier), in the table below; an item can
+ * impose it itself through `flags["dnd5e-combat"].metal` (true / false), for a campaign armor or a shield.
  */
 
-/** Catégories d'armure portée (dnd5e `armorTypes`, sans « natural » : une armure naturelle ne se porte pas). */
+/** Categories of worn armor (dnd5e `armorTypes`, without "natural": natural armor is not worn). */
 export const ARMOR_CATEGORIES = Object.freeze(["light", "medium", "heavy", "shield"]);
 
-/** Les catégories qui font « porter une armure » quand la condition ne nomme rien (`true`) : le bouclier n'en est pas une. */
+/** The categories that count as "wearing armor" when the condition names nothing (`true`): a shield is not one. */
 const BODY = Object.freeze(["light", "medium", "heavy"]);
 
 /**
- * Armures de base en métal, par clé de dnd5e `armorIds` et par identifiant d'item (SRD 5.2 / PHB 2024). Le bouclier n'y est pas : il
- * peut être de bois ; un bouclier de métal se marque par le drapeau de l'item.
+ * Metal base armors, by dnd5e `armorIds` key and by item identifier (SRD 5.2 / PHB 2024). The shield is not in it: it
+ * can be made of wood; a metal shield is marked by the item's flag.
  */
 export const METAL_ARMOR = Object.freeze(new Set([
   "chainshirt", "scalemail", "breastplate", "halfplate", "ringmail", "chainmail", "splint", "plate",
   "chain-shirt", "scale-mail", "half-plate", "half-plate-armor", "ring-mail", "chain-mail", "splint-armor", "plate-armor"
 ]));
 
-/** Cette pièce est-elle en métal ? Le drapeau de l'item d'abord, puis l'armure de base, puis l'identifiant. */
+/** Is this piece made of metal? The item's flag first, then the base armor, then the identifier. */
 export function isMetal(piece) {
   if ( typeof piece?.metal === "boolean" ) return piece.metal;
   return METAL_ARMOR.has(piece?.base ?? "") || METAL_ARMOR.has(piece?.identifier ?? "");
 }
 
-/** La forme d'une condition `target.wearsArmor` est-elle valide ? (pour la validation du contenu) */
+/** Is the form of a `target.wearsArmor` condition valid? (for content validation) */
 export function validArmorArg(arg) {
   if ( typeof arg === "boolean" ) return true;
   const cats = v => [v].flat().length && [v].flat().every(c => ARMOR_CATEGORIES.includes(c));
@@ -42,12 +42,12 @@ export function validArmorArg(arg) {
 }
 
 /**
- * Les pièces répondent-elles à la condition ?
- *  - `true` / `false` : porte (ou non) une armure de corps — légère, intermédiaire ou lourde ;
- *  - `"heavy"` / `["medium", "heavy"]` / `"shield"` : une pièce de l'une de ces catégories ;
- *  - `{ material: "metal" }` : une pièce en métal (bouclier compris s'il est marqué métal) ; `{ material: "metal", category: "heavy" }` : les deux.
- * Une forme inconnue ne tient jamais.
- * @param {Array<{category: string, base?: string, identifier?: string, metal?: boolean}>} pieces  les pièces équipées
+ * Do the pieces meet the condition?
+ *  - `true` / `false`: wears (or not) a body armor — light, medium or heavy;
+ *  - `"heavy"` / `["medium", "heavy"]` / `"shield"`: a piece of one of these categories;
+ *  - `{ material: "metal" }`: a metal piece (shield included if marked metal); `{ material: "metal", category: "heavy" }`: both.
+ * An unknown form never holds.
+ * @param {Array<{category: string, base?: string, identifier?: string, metal?: boolean}>} pieces  the equipped pieces
  * @param {boolean|string|string[]|{material?: "metal", category?: string|string[]}} want
  * @returns {boolean}
  */

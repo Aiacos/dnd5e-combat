@@ -1,9 +1,9 @@
 /**
- * Le niveau d'automatisation du monde (SPEC §117, core/levels.mjs) : Essentiel, Assisté, Intégral.
+ * The world's automation level (SPEC §117, core/levels.mjs): Essential, Assisted, Full.
  *
- * Un réglage de monde, enregistré le PREMIER — la fenêtre des réglages du cœur liste ceux d'un module dans leur ordre
- * d'inscription (client/applications/settings/config.mjs:71), il s'y lit donc en tête. Il est lu une fois, au chargement : en
- * changer recharge le monde (`requiresReload`), car il décide de ce qui s'inscrit sur les hooks.
+ * A world setting, registered FIRST — the core's settings window lists a module's settings in their order of
+ * registration (client/applications/settings/config.mjs:71), so it reads at the top. It is read once, at load: changing it
+ * reloads the world (`requiresReload`), because it decides what is registered on the hooks.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { LEVELS, DEFAULT_LEVEL, atLeast, featureLevel } from "../core/levels.mjs";
@@ -20,12 +20,12 @@ export function automationLevel() {
   return current;
 }
 
-/** Le niveau en vigueur comprend-il ce qui demande `min` ? */
+/** Does the current level include what requires `min`? */
 export function levelAtLeast(min) {
   return atLeast(current, min);
 }
 
-/** À appeler en tout premier, pendant `init` : déclare le réglage, lit le niveau, ouvre ou ferme le contenu. */
+/** To call first of all, during `init`: declares the setting, reads the level, opens or closes the content. */
 export function registerLevel() {
   game.settings.register(MODULE_ID, LEVEL_SETTING, {
     name: "DND5ECOMBAT.Niveau.Nom", hint: "DND5ECOMBAT.Niveau.Aide",
@@ -39,8 +39,8 @@ export function registerLevel() {
 }
 
 /**
- * Inscrit une fonction du point d'entrée selon le niveau : à son niveau ou au-dessus, normalement ; au-dessous, sans ses
- * écoutes (ses réglages et ses requêtes restent déclarés, pour qui les lit).
+ * Registers an entry-point function according to the level: at its level or above, normally; below, without its listeners
+ * (its settings and queries stay declared, for whoever reads them).
  */
 export function gated(register) {
   return levelAtLeast(featureLevel(register.name)) ? register() : withoutRoutes(register.name, register);

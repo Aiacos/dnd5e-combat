@@ -1,7 +1,7 @@
 /**
- * M5 (SPEC §18.8) : les variantes d'attaque d'un item vues depuis Foundry — noms anglais d'origine des activités (Babele les
- * garde dans `flags.babele.originalPayload.activities[<id>].name`), faits de l'attaquant et de la cible, charge lue dans
- * l'historique de déplacement du tour que tient le cœur V14 (`TokenDocument#movementHistory`, vidé au début du tour).
+ * M5 (SPEC §18.8): an item's attack variants as seen from Foundry — original English names of the activities (Babele keeps them
+ * in `flags.babele.originalPayload.activities[<id>].name`), attacker and target facts, charge read from
+ * the turn's movement history that the V14 core keeps (`TokenDocument#movementHistory`, cleared at the start of the turn).
  */
 
 import { variantsOf, chooseVariant, advantageVariant, straightChargeFeet } from "../core/variants.mjs";
@@ -11,12 +11,12 @@ import { originItemOf } from "./facts.mjs";
 import { committedPosition } from "./turn.mjs";
 import { lengthIn } from "./units.mjs";
 
-/** Le nom anglais d'une activité : celui d'avant Babele, sinon le sien. */
+/** The English name of an activity: the pre-Babele one, otherwise its own. */
 function englishName(item, activity) {
   return item?.flags?.babele?.originalPayload?.activities?.[activity.id]?.name ?? activity.name ?? "";
 }
 
-/** Les variantes d'attaque d'un item, ou null. */
+/** An item's attack variants, or null. */
 export function variantPlanOf(item) {
   if ( !item?.system?.activities ) return null;
   const activities = Array.from(item.system.activities.values?.() ?? []).map(a => ({
@@ -51,7 +51,7 @@ export function chargedFeet(attacker, target) {
   return straightChargeFeet(path, centerCells(committedPosition(target), grid.size), cellFeet);
 }
 
-/** La cible est-elle agrippée par l'attaquant (effet Agrippé dont l'origine est un item de l'attaquant) ? */
+/** Is the target grappled by the attacker (Grappled effect whose origin is an item of the attacker)? */
 function grappledBy(target, attacker) {
   for ( const effect of target?.effects ?? [] ) {
     if ( !effect.active || !effect.statuses?.has("grappled") ) continue;
@@ -63,8 +63,8 @@ function grappledBy(target, attacker) {
 }
 
 /**
- * La variante que cette attaque devrait prendre avant le jet, ou null (garder l'activité).
- * On ne change que l'attaque de BASE : une variante choisie à la main est respectée.
+ * The variant that this attack should take before the roll, or null (keep the activity).
+ * Only the BASE attack is changed: a variant chosen by hand is respected.
  * @param {Activity} activity
  * @param {TokenDocument} attackerToken
  * @param {TokenDocument|null} targetToken
@@ -86,14 +86,14 @@ export function useTimeVariant(activity, attackerToken, targetToken) {
   return chosen ? { activity: chosen, kind: plan.variants.find(v => v.id === id).kind } : null;
 }
 
-/** La variante « Attack with Advantage » d'une attaque de base, ou null. */
+/** The "Attack with Advantage" variant of a base attack, or null. */
 export function advantageVariantOf(activity) {
   const plan = variantPlanOf(activity?.item);
   const id = (plan && (activity.id === plan.base)) ? advantageVariant(plan) : null;
   return id ? activity.item.system.activities.get(id) : null;
 }
 
-/** Les dégâts d'une attaque de base dont le jet avait l'avantage se lancent sur sa variante « with Advantage ». */
+/** The damage of a base attack whose roll had Advantage is rolled on its "with Advantage" variant. */
 export function damageVariant(activity, attackRoll) {
   const plan = variantPlanOf(activity?.item);
   if ( !plan || (activity.id !== plan.base) ) return null;

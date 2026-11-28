@@ -1,15 +1,16 @@
 /**
- * §290 : fenêtres du combat sans délai, monde `dnd-6`, Arène de test. Demande un joueur **connecté** dont le personnage est sur la scène
- * (en pratique `claude player` et le Paladin, depuis le navigateur intégré) ; sans lui, non applicable. Le Clerc lance Flamme sacrée sur ce
- * personnage : sa sauvegarde est demandée au joueur. Vérifie :
- *  - le MJ note l'attente (joueur, personnage, quoi) ;
- *  - aucun compte à rebours : au-delà du délai des fenêtres, la question attend toujours, et la fenêtre de suivi s'est ouverte chez le MJ ;
- *  - « Forcer » : la fenêtre se ferme chez le joueur, son jet part sans dialogue, l'attente disparaît, la fenêtre de suivi se ferme.
- * `HOLD=<ms>` garde l'attente ouverte ce temps-là avant de forcer (pour regarder les deux écrans). Remet les deux réglages.
+ * §290: combat windows without delay, world `dnd-6`, test Arena. Requires a **connected** player whose character is on the scene
+ * (in practice `claude player` and the Paladin, from the built-in browser); without one, not applicable. The Cleric casts Sacred
+ * Flame on that character: its save is requested from the player. Checks:
+ *  - the GM notes the wait (player, character, what);
+ *  - no countdown: beyond the windows' delay, the question still waits, and the follow-up window opened on the GM's side;
+ *  - "Force": the window closes on the player's side, its roll goes without a dialog, the wait disappears, the follow-up window
+ *    closes.
+ * `HOLD=<ms>` keeps the wait open that long before forcing (to watch both screens). Restores both settings.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-const DELAY = 4;   // secondes : le délai des fenêtres pendant le scénario
+const DELAY = 4;   // seconds: the windows' delay during the scenario
 
 export default {
   name: "fenetres-sans-delai — le MJ voit qui il attend, et force",
@@ -60,7 +61,7 @@ export default {
     ctx.expect(!after.waits.some(w => w.id === wait.id), "l'attente a disparu");
     ctx.expect(!after.window, "la fenêtre de suivi s'est fermée");
 
-    // Une fenêtre à boutons (§282, Inspiration héroïque après la sauvegarde) : sans compte à rebours, forcée → « Garder le jet ».
+    // A button window (§282, Heroic Inspiration after the save): no countdown, forced → "Keep the roll".
     const inspired = async () => !!(await ctx.call("get-actor", { actorId: target.actorId }))?.system?.attributes?.inspiration;
     const was = await inspired();
     ctx.restore(() => ctx.call("update-actor", { actorId: target.actorId, actorData: { "system.attributes.inspiration": was } }));

@@ -1,28 +1,28 @@
 /**
- * Issue #104 : `canSee` ne rejoue que les modes de détection que le moteur connaît et juge. Un mode inscrit par un autre module
- * (une « ouïe » à portée) répondait « oui » pour une créature Invisible toute proche : elle passait pour vue, et l'attaque
- * perdait son Désavantage.
+ * Issue #104: `canSee` only replays the detection modes that the engine knows and judges. A mode registered by another module
+ * (a "hearing" within range) answered "yes" for an Invisible creature right nearby: it counted as seen, and the attack
+ * lost its Disadvantage.
  */
 import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { JUDGED_MODES, judgedModes, CORE_JUDGED, DEVILS_SIGHT, sensesThrough } from "../module/scripts/core/light.mjs";
 
-describe("judgedModes — les modes d'un token que le moteur juge", () => {
+describe("judgedModes — the modes of a token that the engine judges", () => {
   const own = { basicSight: { range: 60 }, lightPerception: { range: null }, blindsight: { range: 30 }, seeAll: { range: 10 },
     feelTremor: { range: 60 }, devilsSight: { range: 120 }, hearing: { range: 15 }, thermalVision: { range: 60 } };
 
-  it("garde ceux du cœur, de dnd5e et du moteur ; écarte ceux d'un autre module", () => {
+  it("keeps those of the core, of dnd5e and of the engine; drops those of another module", () => {
     expect(Object.keys(judgedModes(own)).sort())
       .toEqual(["basicSight", "blindsight", "devilsSight", "feelTremor", "lightPerception", "seeAll"]);
     expect(judgedModes(own).blindsight).toBe(own.blindsight);
   });
 
-  it("la liste couvre tout ce que le moteur nomme ailleurs", () => {
+  it("the list covers everything the engine names elsewhere", () => {
     for ( const id of [...CORE_JUDGED, DEVILS_SIGHT.mode, ...sensesThrough({ fog: false, darkness: true })] ) {
       expect(JUDGED_MODES, id).toContain(id);
     }
   });
 
-  it("« See Invisibility » du cœur, coché à la main par le MJ, est jugé : à l'écran comme aux règles", () => {
+  it("\"See Invisibility\" of the core, ticked by hand by the GM, is judged: on screen as in the rules", () => {
     expect(JUDGED_MODES).toContain("seeInvisibility");
     expect(Object.keys(judgedModes({ seeInvisibility: { range: 60 }, hearing: { range: 15 } }))).toEqual(["seeInvisibility"]);
   });
@@ -33,9 +33,9 @@ describe("judgedModes — les modes d'un token que le moteur juge", () => {
   });
 });
 
-describe("canSee — un mode de détection d'un autre module ne fait pas voir", () => {
+describe("canSee — a detection mode from another module does not grant sight", () => {
   let canSee;
-  const answers = {};   // id du mode → ce que son test répond
+  const answers = {};   // mode id → what its test answers
   const asked = [];
   const REGISTERED = ["basicSight", "lightPerception", "blindsight", "hearing"];
   const grid = { size: 100, sizeX: 100, sizeY: 100, units: "ft", distance: 5 };
@@ -64,7 +64,7 @@ describe("canSee — un mode de détection d'un autre module ne fait pas voir", 
   }, 60000);
   beforeEach(() => { asked.length = 0; for ( const id of Object.keys(answers) ) delete answers[id]; });
 
-  it("une « ouïe » inscrite par un autre module répond oui : la cible n'est pas vue, et ce mode n'est pas interrogé", () => {
+  it("a \"hearing\" registered by another module answers yes: the target is not seen, and that mode is not queried", () => {
     const observer = tokenDoc("o", 0, { basicSight: { enabled: true, range: 60 }, hearing: { enabled: true, range: 15 } });
     const target = tokenDoc("t", 100, {});
     answers.hearing = true;
@@ -73,7 +73,7 @@ describe("canSee — un mode de détection d'un autre module ne fait pas voir", 
     expect(asked).toContain("basicSight");
   });
 
-  it("un mode que le moteur juge répond oui : la cible est vue", () => {
+  it("a mode that the engine judges answers yes: the target is seen", () => {
     const observer = tokenDoc("o2", 0, { basicSight: { enabled: true, range: 60 }, blindsight: { enabled: true, range: 30 },
       hearing: { enabled: true, range: 15 } });
     const target = tokenDoc("t2", 100, {});

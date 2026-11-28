@@ -1,31 +1,32 @@
 /**
- * §208 : le saut des règles 2024 (glossaire du Manuel des joueurs, « Long Jump » et « High Jump » ; relevé `prive/RELEVE_REGLES.md`).
- *  - Saut en longueur : jusqu'à la valeur de Force en pieds avec élan (au moins 3 m à pied juste avant), la moitié sans élan.
- *  - Saut en hauteur : 3 + modificateur de Force pieds (0 au moins) avec élan, la moitié sans.
- *  - Chaque pied de saut coûte un pied de déplacement.
- *  - Atterrir en terrain difficile : test de Dextérité (Acrobaties) DD 10, sinon À terre.
- * Ce qui le change, par le contenu (`jump`) : Athlète (élan de 1,50 m), Monte-en-l'air (la Dextérité au lieu de la Force), Pas du vent
- * (distance doublée pour le tour), sort *Saut* et Bottes de saut et de célérité (une fois par tour, jusqu'à 9 m pour 3 m de déplacement).
- * Toutes les longueurs sont en pieds ; la conversion vers la grille est faite par l'appelant.
+ * §208: jumping under the 2024 rules (Player's Handbook glossary, "Long Jump" and "High Jump"; survey `prive/RELEVE_REGLES.md`).
+ *  - Long Jump: up to the Strength score in feet with a running start (at least 10 feet on foot just before), half without.
+ *  - High Jump: 3 + Strength modifier feet (at least 0) with a running start, half without.
+ *  - Each foot of jump costs a foot of movement.
+ *  - Landing in Difficult Terrain: Dexterity (Acrobatics) check DC 10, otherwise Prone.
+ * What changes it, through content (`jump`): Athlete (5-foot running start), Jumper (Dexterity instead of Strength), Step of
+ * the Wind (distance doubled for the turn), the *Jump* spell and Boots of Striding and Springing (once per turn, up to 30 feet
+ * for 10 feet of movement).
+ * All lengths are in feet; conversion to the grid is done by the caller.
  *
- * Pur : aucune dépendance à Foundry.
+ * Pure: no dependency on Foundry.
  */
 
-/** L'élan demandé par les règles, en pieds. */
+/** The running start the rules ask for, in feet. */
 export const RUN_UP = 10;
-/** Le DD du test d'atterrissage en terrain difficile. */
+/** The DC of the landing check in Difficult Terrain. */
 export const LANDING_DC = 10;
 
 const modOf = score => Math.floor(((Number(score) || 10) - 10) / 2);
 
 /**
- * Les distances de saut, en pieds (arrondies à l'inférieur).
+ * The jump distances, in feet (rounded down).
  * @param {object} data
- * @param {number} data.str            Valeur de Force.
- * @param {number} [data.dex]          Valeur de Dextérité.
- * @param {boolean} [data.useDex]      La Dextérité peut remplacer la Force (Monte-en-l'air) : la meilleure des deux.
- * @param {boolean} data.runningStart  Élan pris.
- * @param {boolean} [data.double]      Distance doublée (Pas du vent).
+ * @param {number} data.str            Strength score.
+ * @param {number} [data.dex]          Dexterity score.
+ * @param {boolean} [data.useDex]      Dexterity can replace Strength (Jumper): the better of the two.
+ * @param {boolean} data.runningStart  Running start taken.
+ * @param {boolean} [data.double]      Distance doubled (Step of the Wind).
  * @returns {{long: number, high: number, score: number}}
  */
 export function jumpLimits({ str, dex=10, useDex=false, runningStart, double=false }) {
@@ -38,12 +39,12 @@ export function jumpLimits({ str, dex=10, useDex=false, runningStart, double=fal
 }
 
 /**
- * Ce que coûte un saut de `distance` pieds et s'il est permis. Un saut « fixe » (sort *Saut*, Bottes) : une fois par tour, jusqu'à
- * `fixed.distance` pour `fixed.cost` — pris s'il permet le saut ou le rend moins cher.
- * @param {number} distance        La longueur (ou la hauteur) du saut, en pieds.
- * @param {number} limit           La limite ordinaire (`jumpLimits`), en pieds.
- * @param {{distance: number, cost: number}|null} [fixed]  Le saut fixe disponible ce tour, ou null.
- * @returns {{ok: boolean, cost: number, fixed: boolean, limit: number}}  `cost` en pieds ; `limit` : la plus grande distance permise.
+ * What a jump of `distance` feet costs and whether it is allowed. A "fixed" jump (*Jump* spell, Boots): once per turn, up to
+ * `fixed.distance` for `fixed.cost` — taken if it allows the jump or makes it cheaper.
+ * @param {number} distance        The length (or height) of the jump, in feet.
+ * @param {number} limit           The ordinary limit (`jumpLimits`), in feet.
+ * @param {{distance: number, cost: number}|null} [fixed]  The fixed jump available this turn, or null.
+ * @returns {{ok: boolean, cost: number, fixed: boolean, limit: number}}  `cost` in feet; `limit`: the greatest distance allowed.
  */
 export function jumpCost(distance, limit, fixed=null) {
   const d = Math.max(0, Number(distance) || 0);
@@ -53,8 +54,8 @@ export function jumpCost(distance, limit, fixed=null) {
 }
 
 /**
- * L'élan : la dernière marche du token, juste avant le saut, fait-elle au moins `needed` pieds ? `steps` : les longueurs des derniers
- * pas, du plus ancien au plus récent, et le mode de chacun ; la marche compte depuis la fin, tant que le token marchait.
+ * The running start: does the token's last walk, just before the jump, cover at least `needed` feet? `steps`: the lengths of
+ * the last steps, from oldest to most recent, and the mode of each; the walk counts from the end, as long as the token was walking.
  * @param {{distance: number, action: string|null}[]} steps
  * @param {number} needed
  */

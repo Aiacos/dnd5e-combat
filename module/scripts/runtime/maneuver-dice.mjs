@@ -1,34 +1,36 @@
 /**
- * §89 : dés de manœuvre joués à l'action Bonus (Maître de guerre).
+ * §89: maneuver dice played as a Bonus Action (Battle Master).
  *
- *  - `pendingDie` `{ activity, against }` : utiliser l'activité PROMET son dé (la première part de dégâts, lue avec les données de
- *    l'acteur : « 1d8 ») au prochain jet de dégâts d'une attaque de l'auteur, dans ce tour — au corps à corps (`"melee"`, Fente :
- *    « si vous touchez d'une attaque au corps à corps ce tour-ci ») ou contre la créature désignée à l'utilisation (`"target"`, Feinte :
- *    « si cette attaque touche »). Promesse portée par l'acteur (`flags.dnd5e-combat.pendingDie`) ; ajoutée au jet de dégâts sur le
- *    client de l'auteur (`dnd5e.preRollDamageV2`, du type du premier jet), puis effacée. Contre une cible : une attaque ratée contre
- *    elle l'efface aussi (« votre prochain jet d'attaque ») — sur le MJ actif, à la résolution. Hors du tour où elle est née : rien.
- *  - `rolledAc` `{ activity, effect }` : utiliser l'activité lance le dé de son `roll` (Jeu de jambes évasif : « lancez le dé et
- *    ajoutez-le à votre CA jusqu'au début de votre prochain tour ») et pose l'effet de l'item sur l'auteur, le bonus de CA écrit
- *    dedans (l'effet de la donnée est vide).
- * Le dé lui-même est payé par la consommation de l'activité (un dé de supériorité), comme dnd5e le fait.
+ *  - `pendingDie` `{ activity, against }`: using the activity PROMISES its die (the first damage part, read with the actor's data:
+ *    "1d8") to the next damage roll of an attack by the author, in this turn — in melee (`"melee"`, Lunging Attack: "if you hit
+ *    with a melee attack this turn") or against the creature designated at use (`"target"`, Feinting Attack: "if this attack
+ *    hits"). Promise carried by the actor (`flags.dnd5e-combat.pendingDie`); added to the damage roll on the author's client
+ *    (`dnd5e.preRollDamageV2`, of the type of the first roll), then cleared. Against a target: a missed attack against them also
+ *    clears it ("your next attack roll") — on the active GM, at resolution. Outside the turn where it was born: nothing.
+ *  - `rolledAc` `{ activity, effect }`: using the activity rolls the die of its `roll` (Evasive Footwork: "roll the die and add
+ *    it to your AC until the start of your next turn") and places the item's effect on the author, the AC bonus written in it
+ *    (the data's effect is empty).
+ * The die itself is paid by the activity's consumption (a superiority die), as dnd5e does.
  *
- * §90, sur le MJ actif (il déplace et écrit pour d'autres que l'auteur) :
- *  - `sweep` (Balayage) : après un coup au corps à corps (arme, mains nues), l'auteur peut infliger le dé de l'activité, du type des
- *    dégâts du coup, à une autre créature à 1,50 m de la cible touchée et à son allonge, que le jet aurait touchée ; l'activité paie
- *    sans être utilisée (sa carte de dégâts toucherait sa propre cible).
- *  - `swapPlaces` (Chassé-croisé) : l'auteur et la créature visée, à 1,50 m, échangent leurs places — elle par une téléportation,
- *    lui par un pas (1,50 m de son déplacement), tous deux sans attaque d'opportunité ; `rolledAc.to: "choose"` : le dé à la CA de
- *    l'un ou de l'autre, au choix de l'auteur.
- *  - `commandStrike` (Frappe commandée) : la créature visée reçoit l'ordre (`commanded` dans le budget de son tour : sa prochaine
- *    attaque d'arme ce tour-ci se paie par sa Réaction, runtime/turn.mjs) et le dé promis à ses dégâts (`pendingDie`, `against: "any"`).
+ * §90, on the active GM (it moves and writes for creatures other than the author):
+ *  - `sweep` (Sweeping Attack): after a melee hit (weapon, unarmed), the author can deal the activity's die, of the type of the
+ *    hit's damage, to another creature within 1.50 m of the hit target and within reach, that the roll would have hit; the
+ *    activity pays without being used (its damage card would hit its own target).
+ *  - `swapPlaces` ("Criss-Cross"): the author and the target creature, 1.50 m apart, swap places — it by a teleportation,
+ *    the author by a step (1.50 m of their movement), both without Opportunity Attack; `rolledAc.to: "choose"`: the die to the AC
+ *    of one or the other, at the author's choice.
+ *  - `commandStrike` (Commander's Strike): the target creature receives the order (`commanded` in its turn budget: its next
+ *    weapon attack this turn is paid with its Reaction, runtime/turn.mjs) and the die promised to its damage (`pendingDie`,
+ *    `against: "any"`).
  *
- * §279, dégâts maximaux :
- *  - `maxDamage` `{ activity, weapons?, refundOnHit? }` : utiliser l'activité promet le maximum des dés à la prochaine attaque de l'auteur
- *    ce tour-ci avec une arme de ces genres (`weapons` : "unarmed" ou un type d'arme de dnd5e, adapter/messages.mjs `weaponKind`) — la
- *    promesse est portée comme `pendingDie` (`flags.dnd5e-combat.maxDamage`) ; touchée, les dés du jet de dégâts valent leur maximum et,
- *    avec `refundOnHit`, les utilisations que l'activité a coûtées reviennent ; ratée, elle est perdue (sur le MJ actif, à la résolution).
- *  - `maxNextHit: true` : une créature qui porte un effet de l'item subit le maximum des dés de la prochaine attaque qui la touche, puis
- *    l'effet cesse (sur le MJ actif, à la résolution).
+ * §279, maximum damage:
+ *  - `maxDamage` `{ activity, weapons?, refundOnHit? }`: using the activity promises the maximum of the dice to the author's next
+ *    attack this turn with a weapon of these kinds (`weapons`: "unarmed" or a dnd5e weapon type, adapter/messages.mjs
+ *    `weaponKind`) — the promise is carried like `pendingDie` (`flags.dnd5e-combat.maxDamage`); if it hits, the damage roll's dice
+ *    are at their maximum and, with `refundOnHit`, the uses that the activity cost come back; if it misses, it is lost (on the
+ *    active GM, at resolution).
+ *  - `maxNextHit: true`: a creature carrying an effect of the item takes the maximum of the dice of the next attack that hits it,
+ *    then the effect ends (on the active GM, at resolution).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -51,9 +53,10 @@ const FLAG = "pendingDie";
 const MAX_FLAG = "maxDamage";
 
 /**
- * Le bonus de CA d'un dé lancé (`rolledAc`) posé sur `recipient`. L'effet modèle de l'item (Manuel 2.2.0, vide dans la donnée) reçoit le
- * total. §438 : le Manuel 3.0.0 n'a plus d'effet sur l'item ; l'activité pointe douze effets « AC +N » de son compendium — celui dont le
- * bonus vaut le total est posé. Rien ne convient : rien (le joueur garde les boutons de la carte).
+ * The AC bonus of a rolled die (`rolledAc`) placed on `recipient`. The item's template effect (Player's Handbook 2.2.0, empty in
+ * the data) receives the total. §438: Player's Handbook 3.0.0 no longer has an effect on the item; the activity points to twelve
+ * "AC +N" effects of its compendium — the one whose bonus equals the total is placed. None fits: nothing (the player keeps the
+ * card's buttons).
  */
 async function placeAcBonus(activity, rule, recipient, total, name=null) {
   const own = await placeItemEffect(activity.item, rule.effect, recipient);
@@ -71,7 +74,7 @@ async function placeAcBonus(activity, rule, recipient, total, name=null) {
   return null;
 }
 
-/** La formule de la première part de dégâts de l'activité, lue avec les données de l'acteur. */
+/** The formula of the first damage part of the activity, read with the actor's data. */
 function dieOf(activity) {
   const part = activity?.damage?.parts?.[0];
   const raw = part?.custom?.enabled ? part.custom.formula : ((part?.number && part?.denomination) ? `${part.number}d${part.denomination}` : null);
@@ -91,7 +94,7 @@ async function onPostUse(activity, usageConfig, results) {
       log(`${activity.item.name}: +${formula} promised to the next hit ${pending.against === "target" ? "against the target" : "in melee"} this turn`);
     }
   }
-  // §279 : la promesse du maximum (Coup de massue), avec ce que l'activité a coûté, pour le rendre sur un coup.
+  // §279: the maximum promise ("Club Blow"), with what the activity cost, to give it back on a hit.
   if ( entry.maxDamage?.activity === activity.id ) {
     const refund = (activity.consumption?.targets ?? []).filter(t => t.type === "itemUses")
       .map(t => ({ item: t.target || activity.item.id, value: Number(t.value) || 1 }));
@@ -103,30 +106,30 @@ async function onPostUse(activity, usageConfig, results) {
   if ( rolled && activity.roll?.formula ) {
     const roll = await new Roll(activity.roll.formula, activity.getRollData()).evaluate();
     await roll.toMessage({ speaker: ChatMessage.implementation.getSpeaker({ actor }), flavor: `${activity.item.name} : ${activity.roll.name || "CA"}` });
-    // Après la résolution de l'utilitaire, qui pose l'effet de la donnée (vide) : on le remplace par le nôtre, le bonus écrit dedans.
+    // After the utility resolves, which places the data's (empty) effect: we replace it with ours, the bonus written in it.
     await sleep(1500);
     const effect = await placeAcBonus(activity, rolled, actor, roll.total);
     if ( effect ) log(`${activity.item.name}: +${roll.total} to ${actor.name}'s AC`);
   }
 }
 
-/** §279 : la promesse du maximum vaut-elle pour cette attaque (même tour, genre d'arme) ? */
+/** §279: does the maximum promise apply to this attack (same turn, weapon kind)? */
 function maxPromiseFits(promise, activity) {
   if ( !promise || (activity?.type !== "attack") ) return false;
   return !promise.weapons || promise.weapons.includes(weaponKind(activity));
 }
 
-/** §279 : les créatures visées portent-elles un effet d'un item `maxNextHit` ? Rend ces effets. */
+/** §279: do the target creatures carry an effect of a `maxNextHit` item? Returns those effects. */
 function maxNextHitEffects(actor) {
   return (actor?.appliedEffects ?? []).filter(e => {
     const item = originItemOf(e);
     const rule = item ? contentOf(item).entry?.maxNextHit : null;
-    // §372 : un id d'effet — seulement la copie de CET effet de l'item (`_stats.duplicateSource`, posée par placeItemEffect).
+    // §372: an effect id — only the copy of THIS item effect (`_stats.duplicateSource`, placed by placeItemEffect).
     return (rule === true) || (!!rule && [e._stats?.duplicateSource, e._stats?.compendiumSource].some(u => String(u ?? "").endsWith(`.ActiveEffect.${rule}`)));
   });
 }
 
-/** §279 : sur le client de l'auteur, au jet de dégâts d'un coup — les dés au maximum (Coup de massue, Mise en danger). */
+/** §279: on the author's client, at the damage roll of a hit — the dice at their maximum ("Club Blow", "Endangering"). */
 function maximizeOnHit(config, message) {
   const activity = config?.subject;
   const actor = activity?.actor;
@@ -143,7 +146,7 @@ function maximizeOnHit(config, message) {
   if ( !promised ) return;
   actor.unsetFlag(MODULE_ID, MAX_FLAG).catch(() => {});
   for ( const { item: id, value } of promise.refund ?? [] ) {
-    // Une cible de consommation par identifiant (données de DDB Importer : « moxie ») plutôt que par id.
+    // A consumption target by identifier (DDB Importer data: "moxie") rather than by id.
     const item = actor.items.get(id) ?? actor.items.find(i => identifierOf(i).id === id);
     const spent = Number(item?.system?.uses?.spent) || 0;
     if ( item && spent ) item.update({ "system.uses.spent": Math.max(0, spent - value) }).catch(() => {});
@@ -158,7 +161,7 @@ function onPreRollDamage(config, dialog, message) {
   if ( !pending || !config.rolls?.length || (activity.type !== "attack") ) return true;
   if ( pending.turn !== currentTurnKey() ) { actor.unsetFlag(MODULE_ID, FLAG).catch(() => {}); return true; }
   if ( (pending.against === "melee") && (activity.attack?.type?.value !== "melee") ) return true;
-  // §90 : l'ordre de la Frappe commandée vaut pour une attaque avec une arme ou à mains nues.
+  // §90: the Commander's Strike order applies to an attack with a weapon or unarmed.
   if ( (pending.against === "any") && !["weapon", "unarmed"].includes(activity.attack?.type?.classification) ) return true;
   if ( pending.against === "target" ) {
     const targets = foundry.utils.getProperty(message ?? {}, "data.system.targets") ?? [];
@@ -171,10 +174,10 @@ function onPreRollDamage(config, dialog, message) {
   return true;
 }
 
-/** Feinte : une attaque RATÉE contre la cible désignée éteint la promesse (« votre prochain jet d'attaque contre elle »). §90 : Balayage. */
+/** Feinting: a MISSED attack on the designated target clears the promise ("your next attack roll against it"). §90: Sweeping Attack. */
 async function onResolution(resolution) {
-  // Une attaque qui rate tout le monde finit en MISSED, pas en DONE (core/action.mjs, `afterVerdict`) : sans ce cas, la Feinte ratée
-  // gardait son dé pour le coup suivant (vu le 2026-10-26, scénario `maitre-de-guerre`).
+  // An attack that misses everyone ends in MISSED, not DONE (core/action.mjs, `afterVerdict`): without this case, the missed
+  // Feinting Attack kept its die for the next hit (seen on 2026-10-26, scenario `maitre-de-guerre`).
   if ( ![STEPS.DONE, STEPS.MISSED].includes(resolution?.step) || !resolution.plan?.attack ) return;
   const source = fromUuidSync(resolution.source ?? "", { strict: false });
   const actor = source?.actor ?? source;
@@ -190,12 +193,12 @@ async function onResolution(resolution) {
 }
 
 /* -------------------------------------------- */
-/*  §90 : Balayage, Chassé-croisé, Frappe commandée */
+/*  §90: Sweeping Attack, "Criss-Cross", Commander's Strike */
 /* -------------------------------------------- */
 
 const within = (a, b, value) => distanceBetween(a, b).value <= (value + 1e-6);
 
-/** Balayage : le coup au corps à corps a touché ; une autre créature que le jet aurait touchée, à 1,50 m de la cible et à l'allonge. */
+/** Sweeping Attack: the melee attack hit; another creature the roll would have hit, within 1.50 m of the target and within reach. */
 async function sweep(resolution, actor, attacker) {
   const attack = fromUuidSync(resolution.activity ?? "", { strict: false });
   if ( (attack?.type !== "attack") || (attack.attack?.type?.value !== "melee") || !["weapon", "unarmed"].includes(attack.attack?.type?.classification) ) return;
@@ -235,7 +238,7 @@ async function sweep(resolution, actor, attacker) {
   }
 }
 
-/** Chassé-croisé : les places échangées ; true si c'est fait. */
+/** "Criss-Cross": the places swapped; true if done. */
 async function swapPlaces(item, self, other) {
   const grid = self.parent.grid;
   if ( !other || (other === self) || !within(self, other, grid.distance) ) { notice(self, loc("ChasseCroise.Loin", { item: item.name })); return false; }
@@ -252,7 +255,7 @@ async function swapPlaces(item, self, other) {
   return true;
 }
 
-/** Chassé-croisé : le dé de l'activité, ajouté à la CA de l'auteur ou de l'autre. */
+/** "Criss-Cross": the activity's die, added to the AC of the author or of the other. */
 async function chosenAc(activity, rule, self, other) {
   const actor = activity.actor;
   if ( !activity.roll?.formula ) return;
@@ -268,7 +271,7 @@ async function chosenAc(activity, rule, self, other) {
   log(`${activity.item.name}: +${roll.total} to ${recipient.name}'s AC`);
 }
 
-/** Frappe commandée : l'ordre noté dans le budget de la créature visée, le dé promis à ses dégâts. */
+/** Commander's Strike: the order noted in the target creature's budget, the die promised to its damage. */
 async function commandStrike(activity, actor, ally) {
   if ( !ally?.actor || (ally.actor === actor) ) return;
   const formula = dieOf(activity);
@@ -282,7 +285,7 @@ async function commandStrike(activity, actor, ally) {
   log(`${activity.item.name}: ${ally.name} can attack with its Reaction (+${formula})`);
 }
 
-/** Sur le MJ actif : la carte d'utilisation d'une activité de Chassé-croisé ou de Frappe commandée. */
+/** On the active GM: the use card of a "Criss-Cross" or Commander's Strike activity. */
 async function onUsageCard(message) {
   if ( message.type !== "usage" ) return;
   const activity = message.getAssociatedActivity?.();
@@ -296,8 +299,8 @@ async function onUsageCard(message) {
 }
 
 /**
- * §279, sur le MJ actif : une attaque ratée qui répondait à la promesse du maximum la perd ; une créature touchée qui portait un effet
- * `maxNextHit` le perd (son coup de maximum est passé).
+ * §279, on the active GM: a missed attack that answered the maximum promise loses it; a hit creature that carried a `maxNextHit`
+ * effect loses it (its maximum hit has passed).
  */
 async function settleMaxDamage(resolution, actor) {
   const promise = actor?.getFlag?.(MODULE_ID, MAX_FLAG);

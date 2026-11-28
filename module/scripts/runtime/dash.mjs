@@ -1,5 +1,5 @@
 /**
- * Ruée en ligne droite (SPEC §57, Frappe du vent) : case d'arrivée, créatures traversées, utilisation sans gabarit. Extrait de
+ * Straight-line rush (SPEC §57, "Wind Strike"): arrival cell, creatures passed through, use without a template. Extracted from
  * runtime/actions.mjs.
  */
 
@@ -18,17 +18,17 @@ import { occupiedAt } from "./actions.mjs";
 import { relaunchUse } from "./relaunch.mjs";
 
 /* -------------------------------------------- */
-/*  Ruée en ligne droite (§57)                  */
+/*  Straight-line rush (§57)                    */
 /* -------------------------------------------- */
 
-/** La ruée en ligne droite qu'une activité déclare (`lineDash`), ou null. */
+/** The straight-line rush an activity declares (`lineDash`), or null. */
 export function lineDashOf(activity) {
   const rule = activity?.item ? contentOf(activity.item).entry?.lineDash : null;
   if ( !rule || (rule.activity && (rule.activity !== activity.id)) ) return null;
   return rule;
 }
 
-/** « Une distance maximale égale à sa vitesse » : la Vitesse de marche, dans l'unité de la scène (null : aucune). */
+/** "A maximum distance equal to its speed": the walking Speed, in the scene's unit (null: none). */
 export function dashLimit(token) {
   const movement = token.actor?.system.attributes?.movement;
   const walk = Number(movement?.speeds?.walk ?? movement?.walk);
@@ -37,8 +37,8 @@ export function dashLimit(token) {
 }
 
 /**
- * Ce qui interdit cette case d'arrivée, ou null : trop loin, sur place, occupée, hors de vue, ou un mur sur la ligne droite
- * (la ruée passe les créatures, pas les murs). Rend `[clé de notification, clé du retour au curseur]`.
+ * What forbids this arrival cell, or null: too far, in place, occupied, out of sight, or a wall on the straight line
+ * (the rush passes creatures, not walls). Returns `[clé de notification, clé du retour au curseur]`.
  */
 export function dashProblem(token, to, limit) {
   if ( (cellOf(token, to).i === cellOf(token).i) && (cellOf(token, to).j === cellOf(token).j) ) return ["Ruee.SurPlace", null];
@@ -53,9 +53,9 @@ export function dashProblem(token, to, limit) {
 }
 
 /**
- * Les créatures à `reach` ou moins d'un espace que la créature traverse de sa case à `to` (« chaque créature située à 1,50 m
- * ou moins d'un espace qu'il traverse ») : vivantes, non masquées, sur son niveau — alliés compris, elle-même exceptée.
- * Distance du moteur (3D, diagonales de la grille) depuis chaque position du tracé.
+ * The creatures at `reach` or less from a space the creature passes through from its cell to `to` ("each creature located 1.50 m
+ * or less from a space it passes through"): alive, not hidden, on its level — allies included, itself excepted.
+ * Engine distance (3D, grid diagonals) from each position of the path.
  */
 export function dashTargets(token, to, rule) {
   const grid = token.parent.grid;
@@ -69,8 +69,8 @@ export function dashTargets(token, to, rule) {
 }
 
 /**
- * Ce qui refuse cette case d'arrivée (coin haut-gauche) à la ruée de cette activité, en clair, ou null : la case est bonne.
- * Pour la visée (ui/pointer.mjs), qui le montre au survol et garde la visée ouverte sur un clic refusé.
+ * What refuses this arrival cell (top-left corner) for this activity's rush, in plain text, or null: the cell is fine.
+ * For aiming (ui/pointer.mjs), which shows it on hover and keeps the aim open on a refused click.
  * @returns {{text: string, short: string}|null}
  */
 export function dashRefusal(activity, destination) {
@@ -80,14 +80,14 @@ export function dashRefusal(activity, destination) {
   const problem = dashProblem(token, { x: destination.x, y: destination.y, elevation: token._source.elevation ?? 0 }, limit);
   if ( !problem ) return null;
   const text = loc(problem[0], { distance: limit, units: token.parent.grid.units });
-  // §412 : trop loin, case prise, pas en vue — des règles, forçables ; sur place, un mur sur le trajet — non.
+  // §412: too far, cell taken, not in sight — rules, forceable; in place, a wall on the path — not.
   return { text, short: problem[1] ? loc(problem[1]) : text, forceable: DASH_FORCEABLE.has(problem[0]), occupied: problem[0] === "Teleport.CaseOccupee" };
 }
 
-/** §412 : les refus de ruée qu'on peut forcer. */
+/** §412: the rush refusals that can be forced. */
 const DASH_FORCEABLE = new Set(["Teleport.TropLoin", "Teleport.CaseOccupee", "Teleport.NonVue"]);
 
-/** Les créatures qu'une ruée vers cette case toucherait (aperçu au survol). */
+/** The creatures a rush to this cell would touch (preview on hover). */
 export function dashPreview(activity, destination) {
   const token = usageTokenOf(activity);
   const rule = lineDashOf(activity);
@@ -96,22 +96,22 @@ export function dashPreview(activity, destination) {
 }
 
 /**
- * Intention « ruée en ligne droite » (Frappe du vent), la case d'arrivée choisie (un clic de la visée, ui/pointer.mjs ; une case
- * donnée par un scénario) : l'activité est utilisée SANS gabarit, avec pour cibles les créatures près du trajet ; le
- * déplacement se fait après l'utilisation (`onDashUsed` : la légalité a pu la suspendre puis la relancer).
- * NB : la planification du cœur (`Token#planMovement`) ne convient pas ici — elle ne se valide qu'en GLISSANT le token
- * (client/canvas/placeables/token.mjs:5093, `_prepareDragLeftDropUpdates`), pas d'un clic sur la case.
+ * "Straight-line rush" intent ("Wind Strike"), the chosen arrival cell (an aiming click, ui/pointer.mjs; a cell given by a
+ * scenario): the activity is used WITHOUT a template, with the creatures near the path as targets; the
+ * movement happens after the use (`onDashUsed`: legality may have suspended it and then relaunched it).
+ * NB: the core's planning (`Token#planMovement`) is not suitable here — it is only validated by DRAGGING the token
+ * (client/canvas/placeables/token.mjs:5093, `_prepareDragLeftDropUpdates`), not by a click on the cell.
  * @param {Activity} activity
- * @param {[object, object, object]} usage   Configurations d'utilisation, de dialogue et de message reçues.
- * @param {{x: number, y: number}} destination  Case d'arrivée (coin haut-gauche).
- * @returns {Promise<boolean>}  true si l'activité a été lancée.
+ * @param {[object, object, object]} usage   Use, dialog and message configurations received.
+ * @param {{x: number, y: number}} destination  Arrival cell (top-left corner).
+ * @returns {Promise<boolean>}  true if the activity was launched.
  */
 export async function dashStrike(activity, [config, dialog, message]=[], destination, { forced=false }={}) {
   const rule = lineDashOf(activity);
   const token = usageTokenOf(activity);
   if ( !rule || !token || !destination ) return false;
   const refusal = dashRefusal(activity, destination);
-  // §412 : forcée (la fenêtre a déjà été vue, ui/pointer-mouse.mjs), une ruée refusée pour une règle part quand même.
+  // §412: forced (the window was already seen, ui/pointer-mouse.mjs), a rush refused for a rule goes ahead anyway.
   if ( refusal && !(forced && refusal.forceable) ) throw new Error(refusal.text);
   const to = { x: destination.x, y: destination.y, elevation: token._source.elevation ?? 0 };
   const targets = dashTargets(token, to, rule);
@@ -126,7 +126,7 @@ export async function dashStrike(activity, [config, dialog, message]=[], destina
   return !!results;
 }
 
-/** L'utilisation faite (légalité comprise), la créature se rue : `blink`, ni attaque d'opportunité, ni murs, ni budget. */
+/** The use done (legality included), the creature rushes: `blink`, no Opportunity Attack, no walls, no budget. */
 export async function onDashUsed(activity, usageConfig, results) {
   const dash = usageConfig?.[MODULE_ID]?.dash;
   if ( !dash || !results ) return;
@@ -136,7 +136,7 @@ export async function onDashUsed(activity, usageConfig, results) {
     { ...(dash.occupied ? { constrainOptions: { ignoreTokens: true } } : {}), [MODULE_ID]: { cleared: true } });
 }
 
-/** Le bouton « Placer la zone » de la carte d'une ruée : rien à poser, les cibles sont déjà sur la carte. */
+/** The "Place the area" button on a rush's card: nothing to place, the targets are already on the card. */
 export function onDashTemplate(activity) {
   if ( !lineDashOf(activity) ) return;
   ui.notifications.info(loc("Ruee.PasDeZone", { item: activity.item.name }));
@@ -144,11 +144,11 @@ export function onDashTemplate(activity) {
 }
 
 /**
- * §38.2 : intention « échanger de place avec l'illusion » (Troc du filou), depuis l'illusion ou son lanceur : deux téléportations
- * croisées (`blink` : ni attaque d'opportunité, ni commande facturée — runtime/pilot.mjs ignore une téléportation), qui passent les
- * contrôles de déplacement du moteur (`cleared`) ; le tour de l'échange est noté sur l'illusion (une fois par tour).
+ * §38.2: "swap places with the illusion" intent ("Trickster's Swap"), from the illusion or its caster: two crossed teleportations
+ * (`blink`: no Opportunity Attack, no billed command — runtime/pilot.mjs ignores a teleportation), which pass the engine's
+ * movement checks (`cleared`); the swap's turn is noted on the illusion (once per turn).
  * @param {TokenDocument} token
- * @returns {Promise<boolean>}  true si l'échange a eu lieu.
+ * @returns {Promise<boolean>}  true if the swap took place.
  */
 export async function transpose(token) {
   const pair = transposeOf(token);

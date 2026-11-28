@@ -1,10 +1,10 @@
 /**
- * §289 : Seconde peau (Ravenloft), Changement involontaire — « après avoir vécu le catalyseur, au début de votre prochain tour, faites un
- * jet de sauvegarde de Charisme (DD 13 + bonus de maîtrise). Raté : vous utilisez aussitôt Forme alternative pour lancer Modification
- * d'apparence sans emplacement. Si vous avez déjà dépensé ce bénéfice, vous avez l'état Étourdi jusqu'au début de votre prochain tour. »
- * Le catalyseur se juge à la table : le MJ le déclare par le menu du token (`armCatalyst`) ; au début du tour suivant du porteur (aussitôt
- * hors combat), le MJ actif joue la sauvegarde (`requestSave`), puis le lancement gratuit ou l'effet « Étourdi » de l'item (`effectEnds` le
- * fait tomber au début de son tour suivant). Carte et texte flottant pour tous.
+ * §289: "Second Skin" (Ravenloft), Involuntary Change — "after experiencing the catalyst, at the start of your next turn, make a
+ * Charisma saving throw (DC 13 + proficiency bonus). Failure: you immediately use Alternate Form to cast Alter Self
+ * without a slot. If you have already spent this benefit, you have the Stunned condition until the start of your next turn."
+ * The catalyst is judged at the table: the GM declares it through the token menu (`armCatalyst`); at the start of the
+ * bearer's next turn (right away out of combat), the active GM rolls the save (`requestSave`), then the free casting or the
+ * item's "Stunned" effect (`effectEnds` makes it fall at the start of its following turn). Card and floating text for everyone.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,7 +21,7 @@ import { log, loc, locEsc, notice, say, viaActiveGM } from "./shared.mjs";
 const FLAG = "catalyst";
 export const CATALYST_QUERY = `${MODULE_ID}.catalyst`;
 
-/** L'item du porteur qui déclare un catalyseur, et sa règle — `{ item, rule }`, ou null. */
+/** The bearer's item that declares a catalyst, and its rule — `{ item, rule }`, or null. */
 export function catalystOf(actor) {
   for ( const item of actor?.items ?? [] ) {
     const rule = contentOf(item).entry?.catalyst;
@@ -30,10 +30,10 @@ export function catalystOf(actor) {
   return null;
 }
 
-/** Le catalyseur est-il déjà déclaré, en attente du début du tour ? */
+/** Is the catalyst already declared, waiting for the start of the turn? */
 export const catalystArmed = actor => !!actor?.getFlag(MODULE_ID, FLAG);
 
-/** MJ actif : la sauvegarde et ce qui suit. */
+/** Active GM: the save and what follows. */
 async function resolveCatalyst(actor) {
   const found = catalystOf(actor);
   if ( actor.getFlag(MODULE_ID, FLAG) ) await actor.unsetFlag(MODULE_ID, FLAG);
@@ -51,8 +51,8 @@ async function resolveCatalyst(actor) {
     log(`${item.name}: ${actor.name} resists the change (${result.total} vs DC ${dc})`);
     return { success: true };
   }
-  // Le lancement gratuit, s'il reste : l'activité de Forme alternative. §295 : son utilisation (« une fois par Repos long ») est comptée
-  // sur l'activité dans la donnée de Ravenloft, l'item n'en a pas — l'item seulement à défaut.
+  // The free casting, if any remains: the Alternate Form activity. §295: its use ("once per Long Rest") is counted
+  // on the activity in the Ravenloft data, the item has none — the item only as a fallback.
   const cast = item.system.activities?.get(rule.cast);
   const uses = Number(cast?.uses?.max) ? cast.uses : item.system.uses;
   const left = Number(uses?.max) ? (Number(uses.value) || 0) : 0;
@@ -69,9 +69,9 @@ async function resolveCatalyst(actor) {
   return { success: false, outcome };
 }
 
-/** MJ actif : le catalyseur noté ; hors combat, la sauvegarde aussitôt. */
+/** Active GM: the catalyst noted; out of combat, the save right away. */
 async function handleCatalyst({ actor: uuid }, { user=null }={}) {
-  // §472 : seul le MJ envoie cette requête dans le jeu ; d'un joueur, elle tombe (refus de sécurité, non forçable).
+  // §472: only the GM sends this request in play; from a player, it is dropped (security refusal, not forceable).
   if ( !fromTrusted(user) ) { console.warn(`${MODULE_ID} | catalyst query from ${user.name} refused: only a GM sends it`); return null; }
   const actor = await fromUuid(uuid ?? "");
   if ( !actor || !catalystOf(actor) ) return null;
@@ -85,7 +85,7 @@ async function handleCatalyst({ actor: uuid }, { user=null }={}) {
   return resolveCatalyst(actor);
 }
 
-/** Le MJ déclare le catalyseur vécu (menu du token). */
+/** The GM declares the catalyst experienced (token menu). */
 export function armCatalyst(actor) {
   return viaActiveGM(CATALYST_QUERY, handleCatalyst, { actor: actor.uuid }, { fallback: null });
 }

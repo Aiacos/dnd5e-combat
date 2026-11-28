@@ -3,11 +3,11 @@ import { SHIPPED } from "../module/scripts/content/index.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { holds } from "../module/scripts/core/triggers.mjs";
 
-/** Relevé des trous (2026-10-22, SPEC §235) : les aptitudes passives qui n'avaient aucun effet. */
-describe("aptitudes passives du relevé des trous", () => {
+/** Gap survey (2026-10-22, SPEC §235): the passive features that had no effect. */
+describe("passive features from the gap survey", () => {
   const facts = { "activity.cantripOf": true, "activity.isWeapon": true, "source.hasFeature": true, "source.wildShaped": true, "activity.isAttack": true };
 
-  it("Incantation puissante : le modificateur de Sagesse aux tours de magie de la classe, Druide et Clerc", () => {
+  it("Potent Spellcasting: the Wisdom modifier on the class's cantrips, Druid and Cleric", () => {
     for ( const [id, cls] of [["elemental-fury-potent-spellcasting", "druid"], ["blessed-strikes-potent-spellcasting", "cleric"]] ) {
       const [d] = SHIPPED[id].triggers;
       expect(d).toMatchObject({ on: "preDamageRoll", if: { "activity.cantripOf": cls } });
@@ -15,7 +15,7 @@ describe("aptitudes passives du relevé des trous", () => {
     }
   });
 
-  it("Attaque primitive et Impact divin : pas pour qui a l'option Incantation puissante", () => {
+  it("Primal Strike and Divine Strike: not for whoever has the Potent Spellcasting option", () => {
     for ( const [id, option] of [["elemental-fury", "elemental-fury-potent-spellcasting"], ["blessed-strikes", "blessed-strikes-potent-spellcasting"]] ) {
       for ( const d of SHIPPED[id].triggers ) {
         const facts = has => ({ "activity.isWeapon": () => true, "source.wildShaped": () => false, "activity.isAttack": () => true,
@@ -26,7 +26,7 @@ describe("aptitudes passives du relevé des trous", () => {
     }
   });
 
-  it("Chasseur implacable, Concentration fanatique, Sorts psychiques, Athlète remarquable, Inspiration de combat", () => {
+  it("Relentless Hunter, Fanatical Focus, Psychic Spells, Remarkable Athlete, Combat Inspiration", () => {
     expect(SHIPPED["relentless-hunter"].keepsConcentration).toEqual(["hunters-mark"]);
     expect(SHIPPED["fanatical-focus"].rollBonus).toEqual({ on: ["save"], reroll: { bonus: "@scale.barbarian.rage-damage", during: "rage" } });
     expect(SHIPPED["psychic-spells"].spellDamageTypes).toEqual({ class: "warlock", types: ["psychic"] });
@@ -34,7 +34,7 @@ describe("aptitudes passives du relevé des trous", () => {
     expect(SHIPPED["combat-inspiration"].combatInspiration).toBe(true);
   });
 
-  it("les nouvelles clés refusent les formes fausses", () => {
+  it("the new keys refuse wrong shapes", () => {
     expect(validateEntry({ keepsConcentration: ["hunters-mark"] }, { facts })).toEqual([]);
     expect(validateEntry({ keepsConcentration: [] }, { facts })).toHaveLength(1);
     expect(validateEntry({ keepsConcentration: "hunters-mark" }, { facts })).toHaveLength(1);
@@ -46,7 +46,7 @@ describe("aptitudes passives du relevé des trous", () => {
     expect(validateEntry({ combatInspiration: 1 }, { facts })).toHaveLength(1);
   });
 
-  it("§236 : niveaux 9 à 20 — déclarations et formes", () => {
+  it("§236: levels 9 to 20 — declarations and shapes", () => {
     expect(SHIPPED["self-restoration"].endsOwnConditions).toEqual(["charmed", "frightened", "poisoned"]);
     expect(SHIPPED["fleet-step"].fleetStep).toEqual({ item: "monks-focus", activity: "0MuRZ0Ur95xQTKFq" });
     expect(SHIPPED["superior-inspiration"].regainOnInitiative).toEqual({ item: "bardic-inspiration", upTo: 2 });

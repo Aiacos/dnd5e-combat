@@ -1,9 +1,9 @@
 /**
- * Chance d'échec d'une sauvegarde (SPEC §15.3, dette réglée le 2026-09-27) : ce que la pastille calcule doit être le jet que
- * la cible fera. Le Clerc lance (à volonté) Injonction (Sagesse) et Immobilisation de personne (Sagesse) sur le Zombi et le
- * Guerrier : le bonus calculé (`api.mcp.saveChance`) = la partie fixe du vrai jet (total − dé), le DD = celui du plan ; puis
- * Bénédiction sur le Guerrier : le calcul porte +1d4 et la chance d'échec baisse ; enfin le Zombi Paralysé rate d'office
- * une sauvegarde de Dextérité (Tempête de neige) : 100 %.
+ * Chance of failing a saving throw (SPEC §15.3, debt settled on 2026-09-27): what the badge computes must be the roll the
+ * target will make. The Cleric casts (at will) Command (Wisdom) and Hold Person (Wisdom) on the Zombie and the Fighter: the
+ * computed bonus (`api.mcp.saveChance`) = the fixed part of the real roll (total − die), the DC = the plan's; then Bless on the
+ * Fighter: the computation carries +1d4 and the chance of failing drops; finally the Paralyzed Zombie automatically fails a
+ * Dexterity saving throw ("Snowstorm"): 100 %.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e.spells24.Item.";
@@ -33,14 +33,14 @@ export default {
     ctx.restore(cleanup);
     const chance = async (target, identifier) => ctx.engine("saveChance", { casterId: cleric.id, targetId: target.id, itemId: await ctx.itemId(cleric.id, identifier) });
 
-    /** Le vrai jet : lancé, lu ; rend { total, die, dc }. */
+    /** The real roll: rolled, read; returns { total, die, dc }. */
     const realSave = async (target, identifier) => {
       const used = await ctx.use({ tokenId: cleric.id, identifier, activityType: "save", consume: false, targetTokenIds: [target.id],
         usageConfig: { [MODULE_ID]: { order: "halt" } } });
       const r = await ctx.settle(used.usageMessageId).catch(() => null);
       const save = (await ctx.messagesSince(used.usageMessageId)).find(m => (m.type === "save") && (m.alias === target.name));
       const roll = rollOf(save);
-      // Le connecteur rend les jets résumés (`dice` : faces et résultats), plus leurs `terms` (vu le 2026-09-28).
+      // The connector returns the summarized rolls (`dice`: faces and results), plus their `terms` (seen on 2026-09-28).
       const die = (roll?.terms ?? roll?.dice)?.find(t => (t.class === "D20Die") || (t.faces === 20))?.results?.find(x => x.active !== false)?.result ?? null;
       await pause(800);
       await cleanup();
@@ -56,17 +56,17 @@ export default {
       ctx.log(`${identifier} sur ${target.name} : ${Math.round(c.fail * 100)} % d'échec (DD ${c.dc}, ${c.ability} ${c.bonus})`);
     }
 
-    // Bénédiction : +1d4 au calcul, la chance d'échec baisse.
+    // Bless: +1d4 in the computation, the chance of failing drops.
     const before = await chance(fighter, "command");
     await ctx.use({ tokenId: cleric.id, identifier: "bless", consume: false, targetTokenIds: [fighter.id] });
-    // L'effet arrive à la fin de l'animation : on l'attend (10 s au plus).
+    // The effect arrives at the end of the animation: we wait for it (10 s at most).
     for ( const until = Date.now() + 10000; (Date.now() < until) && !(await ctx.effectsFrom(fighter, "bless")).length; ) await pause(500);
     const blessed = await chance(fighter, "command");
     ctx.expect(blessed?.dice?.some(d => (d.faces === 4) && (d.sign !== -1)) && (blessed.fail < before.fail),
       `Bénédiction : +1d4 compté, échec ${Math.round(before.fail * 100)} % → ${Math.round(blessed.fail * 100)} %`);
     await cleanup();
 
-    // Paralysé : sauvegarde de Dextérité ratée d'office.
+    // Paralyzed: Dexterity saving throw automatically failed.
     await ctx.call("set-status", { tokenId: zombi.id, statusId: "paralyzed", active: true });
     await pause(1000);
     const para = await chance(zombi, "sleet-storm");

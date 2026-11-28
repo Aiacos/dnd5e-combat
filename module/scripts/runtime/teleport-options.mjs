@@ -1,9 +1,9 @@
 /**
- * §92 : ce qu'un trait ajoute à une téléportation de soi (clé `afterTeleport: { spells, options }`) — la Foulée des fées du
- * Protecteur Archifée : « chaque fois que vous lancez [Foulée brumeuse], vous pouvez choisir l'un des effets supplémentaires » ;
- * l'Échappatoire brumeuse en ajoute deux. La téléportation faite (runtime/actions.mjs, `teleportSelf`), sur le client de celui qui
- * se téléporte : la question (« Aucun » d'abord), puis l'activité choisie, utilisée — sur la créature elle-même, ou (`around`) sur
- * les créatures à 1,50 m de la case quittée (`"left"`) ou de la case d'arrivée (`"arrival"`), elle exceptée.
+ * §92: what a trait adds to a self-teleportation (key `afterTeleport: { spells, options }`) — the Steps of the Fey of the
+ * Archfey Protector: "whenever you cast [Misty Step], you can choose one of the additional effects";
+ * Misty Escape adds two. Once the teleportation is done (runtime/actions.mjs, `teleportSelf`), on the client of whoever
+ * teleports: the question ("None" first), then the chosen activity, used — on the creature itself, or (`around`) on
+ * the creatures within 1.50 m of the cell left (`"left"`) or of the arrival cell (`"arrival"`), it excepted.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,7 +14,7 @@ import { loc, log } from "./shared.mjs";
 import { lengthIn } from "../adapter/units.mjs";
 import { levelHidden } from "../adapter/level-gate.mjs";
 
-/** Les options que les traits de l'acteur ajoutent à cette téléportation. */
+/** The options that the actor's traits add to this teleportation. */
 function optionsFor(actor, spell) {
   const out = [];
   for ( const item of actor?.items ?? [] ) {
@@ -22,14 +22,14 @@ function optionsFor(actor, spell) {
     if ( !rule?.spells?.includes(spell) ) continue;
     for ( const option of rule.options ?? [] ) {
       const activity = item.system.activities?.get(option.activity);
-      // §438 : une option d'un niveau que l'acteur n'a pas (Manuel 3.0.0 : Échappatoire brumeuse, niveau 6 des Pas féeriques) : non.
+      // §438: an option of a level the actor does not have (Player's Handbook 3.0.0: Misty Escape, level 6 of Steps of the Fey): no
       if ( activity && !levelHidden(activity) ) out.push({ ...option, activity, item });
     }
   }
   return out;
 }
 
-/** Les créatures à 1,50 m d'une case (le token y étant posé par hypothèse), lui excepté. */
+/** The creatures within 1.50 m of a cell (the token being placed there by hypothesis), it excepted. */
 function around(token, at) {
   const scene = token.parent;
   let reach = lengthIn(5, "ft", scene.grid.units);
@@ -37,9 +37,9 @@ function around(token, at) {
 }
 
 /**
- * @param {Activity} activity   L'activité qui a téléporté (le sort).
+ * @param {Activity} activity   The activity that teleported (the spell).
  * @param {TokenDocument} token
- * @param {{x: number, y: number, elevation: number, level?: string}} from  La case quittée.
+ * @param {{x: number, y: number, elevation: number, level?: string}} from  The cell left.
  */
 export async function afterTeleportOptions(activity, token, from) {
   const actor = token?.actor;
@@ -58,9 +58,9 @@ export async function afterTeleportOptions(activity, token, from) {
   canvas.tokens.setTargets(targets.map(t => t.id));
   log(`${chosen.item.name}: ${chosen.activity.name}${chosen.around ? ` on ${targets.map(t => t.name).join(", ") || "nobody"}` : ""}`);
   if ( chosen.around && !targets.length ) return;
-  // §438 : les créatures sont déjà désignées (`around`) — pas de gabarit à poser (la Foulée narquoise et la Foulée effroyable du Manuel
-  // 3.0.0 portent un rayon de 1,50 m : dnd5e attendait un clic sur le canevas).
-  // Les cibles du message (`givenTargets`, §104) : le moteur n'attend pas de zone.
+  // §438: the creatures are already designated (`around`) — no template to place ("Foulée narquoise" and "Foulée effroyable" of
+  // Player's Handbook 3.0.0 carry a radius of 1.50 m: dnd5e was waiting for a click on the canvas).
+  // The message's targets (`givenTargets`, §104): the engine does not wait for an area.
   await chosen.activity.use({ [MODULE_ID]: { confirmed: true }, ...(chosen.around ? { create: { measuredTemplate: false } } : {}) }, { configure: false },
     chosen.around ? { data: { flags: { [MODULE_ID]: { givenTargets: true } } } } : {})
     .catch(err => console.error(`${MODULE_ID} | teleport option`, err));

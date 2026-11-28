@@ -1,15 +1,15 @@
 /**
- * §53 : les potions — le sort qu'une potion fait lancer ne demande pas de concentration (« no Concentration required », Guide
- * du maître : Clairvoyance, Rapetissement, Forme gazeuse, Croissance, Lecture des pensées, Rapidité ; les données du Rapetissement,
- * de la Clairvoyance… ne retirent pas toutes la propriété). Le reste : adapter/usage.mjs (pour le buveur), adapter/scrolls.mjs
- * (pas un sort lancé), ui/pointer.mjs (rien à viser).
+ * §53: potions — the spell a potion casts does not require Concentration ("no Concentration required", Dungeon Master's
+ * Guide: Clairvoyance, Reduce, Gaseous Form, Enlarge, Detect Thoughts, Haste; the data for Reduce,
+ * Clairvoyance… do not all remove the property). The rest: adapter/usage.mjs (for the drinker), adapter/scrolls.mjs
+ * (not a cast spell), ui/pointer.mjs (nothing to aim).
  */
 
 import { potionOfCast, notePotionCast, stampCachedSpell, completeEffectChanges, completeEffectStatuses, foldEffectRiders } from "../adapter/potions.mjs";
 import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
 
-/** `dnd5e.preUseActivity` (après la préparation de l'utilisation, mixin.mjs:500) : pas de concentration à commencer. */
+/** `dnd5e.preUseActivity` (after the use is prepared, mixin.mjs:500): no Concentration to begin. */
 function onPreUse(activity, usageConfig) {
   const potion = potionOfCast(activity?.item);
   if ( !potion || !usageConfig?.concentration?.begin ) return;
@@ -18,8 +18,8 @@ function onPreUse(activity, usageConfig) {
 }
 
 export function registerPotions() {
-  // L'activité « cast » ne passe pas par `dnd5e.preUseActivity` mais par `dnd5e.preUseLinkedSpell` (activity/cast.mjs:71-90) :
-  // la potion existe encore, la copie du sort n'est pas créée.
+  // The "cast" activity does not go through `dnd5e.preUseActivity` but through `dnd5e.preUseLinkedSpell` (activity/cast.mjs:71-90):
+  // the potion still exists, the spell copy is not created.
   route("dnd5e.preUseLinkedSpell", activity => { notePotionCast(activity); }, { label: "potion: casting not noted" });
   route("dnd5e.preUseActivity", onPreUse, { label: "potion: concentration not removed" });
   route("preCreateActiveEffect", effect => {

@@ -3,10 +3,10 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 /**
- * Le module se LIE-t-il sous Node comme dans le navigateur ? Vitest transforme les fichiers et laisse passer ce qu'un navigateur
- * refuse à l'import (le 2026-09-28 : `import { ROGUE }` en double dans content/index.mjs — le moteur ne se chargeait plus chez
- * le MJ, tous les tests passaient). Hors de Foundry, l'import s'arrête au premier global absent (`foundry`, `Hooks`…) : c'est
- * attendu ; une SyntaxError ou un export introuvable, non.
+ * Does the module LINK under Node as in the browser? Vitest transforms the files and lets through what a browser refuses at
+ * import (on 2026-09-28: a duplicate `import { ROGUE }` in content/index.mjs — the engine no longer loaded for the GM, all
+ * tests passed). Outside Foundry, the import stops at the first missing global (`foundry`, `Hooks`…): that is
+ * expected; a SyntaxError or a missing export is not.
  */
 describe("liaison du module", () => {
   it("dnd5e-combat.mjs se lie sans erreur de syntaxe ni d'export", () => {

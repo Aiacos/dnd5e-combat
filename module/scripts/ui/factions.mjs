@@ -1,13 +1,13 @@
 /**
- * §181 : la fenêtre des factions (MJ) — la matrice des relations, et l'affectation par glisser-déposer.
+ * §181: the factions window (GM) — the relations matrix, and assignment by drag and drop.
  *
- * - **Matrice** : une ligne et une colonne par faction ; un clic sur une case fait tourner la relation du couple :
- *   « = » (suivre la disposition) → hostile → neutre → alliée → « = ». La matrice est symétrique.
- * - **Affecter** : glisser un acteur de la barre latérale sur la ligne d'une faction (vaut pour tous ses tokens) ; glisser la
- *   pastille d'une faction sur un token de la scène (ce token seulement) ; bouton « sélection » d'une ligne (tokens contrôlés) ;
- *   la zone « Aucune » retire l'affectation (retour aux règles par type).
- * - **Éditer** : nom, couleur, règles par type / sous-type / identifiant, supprimer ; « Relations suggérées ».
- * - Un bouton du HUD du token ouvre la liste des factions ; un outil de la barre des tokens ouvre la fenêtre.
+ * - **Matrix**: one row and one column per faction; a click on a cell cycles the pair's relation:
+ *   "=" (follow the disposition) → hostile → neutral → allied → "=". The matrix is symmetric.
+ * - **Assign**: drag an actor from the sidebar onto a faction's row (applies to all its tokens); drag a
+ *   faction's badge onto a scene token (that token only); a row's "selection" button (controlled tokens);
+ *   the "None" zone removes the assignment (back to the per-type rules).
+ * - **Edit**: name, color, rules by type / subtype / identifier, delete; "Suggested relations".
+ * - A token HUD button opens the faction list; a token toolbar tool opens the window.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { route } from "../runtime/router.mjs";
@@ -22,17 +22,17 @@ const ICON = { hostile: "fa-solid fa-swords", neutral: "fa-solid fa-minus", alli
 
 let FactionsClass = null;
 /**
- * B6 : la fenêtre ouverte, quel que soit le chemin (bouton de la barre d'outils, HUD, menu des réglages) — un seul exemplaire,
- * celui que le cœur tient pour cet id (`foundry.applications.instances`).
+ * B6: the open window, whatever the path (toolbar button, HUD, settings menu) — a single instance,
+ * the one the core holds for this id (`foundry.applications.instances`).
  */
 const WINDOW_ID = "das-factions";
 const openWindow = () => foundry.applications.instances.get(WINDOW_ID) ?? null;
 
-/** Les tokens contrôlés sur le canevas, en documents. */
+/** The controlled tokens on the canvas, as documents. */
 const selected = () => (canvas?.tokens?.controlled ?? []).map(t => t.document);
 
 export const FactionsApp = () => FactionsClass ??= class FactionsApp extends foundry.applications.api.ApplicationV2 {
-  /** B6 : un seul exemplaire — le menu des réglages crée la fenêtre par `new` : il reçoit celle qui est déjà ouverte. */
+  /** B6: a single instance — the settings menu creates the window with `new`: it receives the one already open. */
   constructor(options={}) {
     const existing = openWindow();
     if ( existing instanceof FactionsApp ) return existing;
@@ -158,7 +158,7 @@ export const FactionsApp = () => FactionsClass ??= class FactionsApp extends fou
       ui.notifications.info(loc("Factions.Enregistre"));
       rerender();
     });
-    // Glisser une pastille (vers un token de la scène) ; déposer un acteur sur une ligne ou sur « Aucune ».
+    // Drag a badge (onto a scene token); drop an actor on a row or on "None".
     root.querySelectorAll("[data-drag-faction]").forEach(el => el.addEventListener("dragstart", ev => {
       ev.dataTransfer.setData("text/plain", JSON.stringify({ type: DRAG_TYPE, faction: el.dataset.dragFaction }));
     }));
@@ -192,12 +192,12 @@ export const FactionsApp = () => FactionsClass ??= class FactionsApp extends fou
 
 };
 
-/** Ouvrir (ou ramener devant) la fenêtre. */
+/** Open (or bring to the front) the window. */
 export function openFactions() {
   return new (FactionsApp())().render({ force: true });
 }
 
-/** Une pastille déposée sur la scène : le token sous le curseur rejoint la faction. */
+/** A badge dropped on the scene: the token under the cursor joins the faction. */
 function onDropCanvas(canvasRef, data) {
   if ( (data?.type !== DRAG_TYPE) || !game.user.isGM ) return;
   const token = canvas.tokens.placeables.filter(t => t.visible && t.bounds.contains(data.x, data.y))
@@ -207,7 +207,7 @@ function onDropCanvas(canvasRef, data) {
   return false;
 }
 
-/** Le HUD du token (MJ) : un bouton à la couleur de sa faction, qui ouvre la liste. */
+/** The token HUD (GM): a button in its faction's color, which opens the list. */
 function onTokenHUD(hud, html) {
   if ( !game.user.isGM || !iconsShown() ) return;
   const token = hud.document;
@@ -245,8 +245,8 @@ function onTokenHUD(hud, html) {
 }
 
 /**
- * Les icônes de faction (outil de la barre des tokens, bouton du HUD de token) : un réglage de monde, décoché par défaut — le MJ
- * les affiche s'il s'en sert (décision de l'utilisateur, 2026-10-18).
+ * Faction icons (token toolbar tool, token HUD button): a world setting, unchecked by default — the GM
+ * displays them if they use them (user's decision, 2026-10-18).
  */
 const ICONS_SETTING = "factionIcons";
 const iconsShown = () => game.settings.get(MODULE_ID, ICONS_SETTING) === true;
@@ -257,7 +257,7 @@ export function registerFactionsUI() {
     scope: "world", config: true, type: Boolean, default: false,
     onChange: () => ui.controls?.render({ reset: true })
   });
-  // La fenêtre des factions s'ouvre depuis la fenêtre de réglages (onglet Vision et furtivité, ui/settings.mjs).
+  // The factions window opens from the settings window (Vision and Stealth tab, ui/settings.mjs).
   route("getSceneControlButtons", controls => {
     const tokens = controls.tokens;
     if ( !tokens?.tools || !game.user.isGM || !iconsShown() ) return;

@@ -1,9 +1,9 @@
 /**
- * §353 : Arc du serment contre l'ennemi juré (reporté du lot O5 puis O8e). Arène de test (Guerrier, Zombi, Clerc). L'Arc est posé sur
- * un Arc court du Guerrier (portée 80/320 ft).
- *  1. Avant le serment : le Clerc entre le Guerrier et le Zombi donne un abri au Zombi ; pas d'Avantage.
- *  2. « Swear Oath » sur le Zombi : Avantage au tir de l'Arc, l'abri ignoré ; un tir de l'Arc sur le Clerc, pas d'Avantage.
- *  3. Le Zombi à 17 cases (85 ft, longue portée) : pas de Désavantage de longue portée contre l'ennemi juré.
+ * §353: Oathbow against the sworn enemy (carried over from batch O5 then O8e). Test arena (Fighter, Zombie, Cleric). The Bow is
+ * placed on a Shortbow of the Fighter (range 80/320 ft).
+ *  1. Before the oath: the Cleric between the Fighter and the Zombie gives the Zombie Cover; no Advantage.
+ *  2. "Swear Oath" on the Zombie: Advantage on the Bow's shot, the Cover ignored; a shot of the Bow at the Cleric, no Advantage.
+ *  3. The Zombie at 17 cells (85 ft, long range): no long-range Disadvantage against the sworn enemy.
  */
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
 const PHB = "Compendium.dnd-players-handbook.equipment.Item.";
@@ -29,7 +29,7 @@ export default {
 
     const oathbow = await ctx.ensureItem(fighter, `${DMG}dmgOathbow000000`);
     const bow = await ctx.ensureItem(fighter, `${PHB}phbwepShortbow00`);
-    // L'Arc court peut être celui du Guerrier : son état est noté, et l'enchantement retiré à la fin (ses ajouts partent avec lui).
+    // The Shortbow may be the Fighter's: its state is noted, and the enchantment removed at the end (its additions leave with it).
     const was = await ctx.engine("itemData", { tokenId: fighter.id, itemId: bow, paths: ["system.equipped", "system.attuned"] });
     ctx.restore(() => set(bow, { system: { equipped: was?.["system.equipped"] ?? false, attuned: was?.["system.attuned"] ?? false } }).catch(() => {}));
     const done = await ctx.engine("enchant", { tokenId: fighter.id, itemId: oathbow, activityId: "hQyhQEtRT1J0ks2q", targetItemId: bow }).catch(err => ({ error: err.message }));
@@ -57,7 +57,7 @@ export default {
     r = await reasons(cleric);
     ctx.expect(!swornAdv(r), `tir sur le Clerc : pas d'Avantage (${(r?.advantage ?? []).join(", ") || "aucun"})`);
 
-    // 3. Longue portée.
+    // 3. Long range.
     await ctx.call("move-token", { tokenId: cleric.id, x: at.x, y: at.y + 3 * g, elevation: 0 });
     await ctx.call("move-token", { tokenId: zombi.id, x: at.x + 17 * g, y: at.y, elevation: 0 });
     await pause(1000);

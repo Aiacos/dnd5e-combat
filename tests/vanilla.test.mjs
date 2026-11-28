@@ -4,7 +4,7 @@ import { isVanilla, concernsVanilla, markPending, clearPending, isPending, reset
 const ID = "dnd5e-combat";
 const flagged = (extra={}) => ({ flags: { [ID]: { vanilla: true } }, ...extra });
 
-describe("§395 : ce qui vient d'une action lancée sans DAS", () => {
+describe("§395: what comes from an action cast without DAS", () => {
   const messages = new Map();
   const uuids = new Map();
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe("§395 : ce qui vient d'une action lancée sans DAS", () => {
   });
   afterEach(() => { delete globalThis.game; delete globalThis.fromUuidSync; });
 
-  it("la configuration d'utilisation, un document marqué, une configuration de message marquée", () => {
+  it("the use configuration, a marked document, a marked message configuration", () => {
     expect(isVanilla({ [ID]: { vanilla: true } })).toBe(true);
     expect(isVanilla(flagged())).toBe(true);
     expect(isVanilla({ data: flagged() })).toBe(true);
@@ -23,7 +23,7 @@ describe("§395 : ce qui vient d'une action lancée sans DAS", () => {
     expect(isVanilla(null)).toBe(false);
   });
 
-  it("un jet rattaché à la carte marquée, et les dégâts appliqués depuis ce jet", () => {
+  it("a roll attached to the marked card, and the damage applied from that roll", () => {
     messages.set("use1", flagged());
     const damage = { system: { origin: "use1" } };
     messages.set("dmg1", damage);
@@ -34,7 +34,7 @@ describe("§395 : ce qui vient d'une action lancée sans DAS", () => {
     expect(isVanilla({ system: { origin: "autre" } })).toBe(false);
   });
 
-  it("un effet posé par la carte, ou rattaché à une concentration marquée", () => {
+  it("an effect placed by the card, or attached to a marked Concentration", () => {
     messages.set("use1", flagged());
     expect(isVanilla({ system: { origin: { message: "ChatMessage.use1" } } })).toBe(true);
     uuids.set("Actor.a.ActiveEffect.c", flagged());
@@ -42,7 +42,7 @@ describe("§395 : ce qui vient d'une action lancée sans DAS", () => {
     expect(isVanilla({ flags: { dnd5e: { dependentOn: "Actor.a.ActiveEffect.x" } } })).toBe(false);
   });
 
-  it("une activité notée sur ce client, le temps de poser sa zone ou son invocation", () => {
+  it("an activity noted on this client, while its area or summon is placed", () => {
     markPending(["Item.i.Activity.a", "Item.i"], 1000);
     expect(isPending("Item.i.Activity.a", 1000 + PENDING_MS - 1)).toBe(true);
     expect(isPending("Item.i.Activity.a", 1000 + PENDING_MS + 1)).toBe(false);
@@ -53,12 +53,12 @@ describe("§395 : ce qui vient d'une action lancée sans DAS", () => {
     expect(isVanilla({ uuid: "Item.i.Activity.a" })).toBe(false);
   });
 
-  it("le routeur se tait pour les arguments concernés, la carte de correction comprise (elle seule)", () => {
+  it("the router stays silent for the arguments concerned, the correction card included (it alone)", () => {
     messages.set("fix", { flags: { [ID]: { correction: true } } });
     expect(concernsVanilla([{ a: 1 }, flagged()])).toBe(true);
     expect(concernsVanilla([[flagged()]])).toBe(true);
     expect(concernsVanilla([messages.get("fix")])).toBe(true);
-    // Un effet posé par la correction redevient l'affaire de DAS.
+    // An effect placed by the correction becomes DAS's business again.
     expect(concernsVanilla([{ system: { origin: { message: "ChatMessage.fix" } } }])).toBe(false);
     expect(concernsVanilla([{ a: 1 }])).toBe(false);
   });

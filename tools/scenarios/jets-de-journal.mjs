@@ -1,7 +1,8 @@
 /**
- * Inline journal checks open the engine's requested roll (§536, world setting `inlineChecksEngine`). « Arène des refus », real player
- * client (« claude player », owner of the Mage des refus, opened by the test bench: `players: true`). A temporary journal holds
- * `[[/check wis prc 11]]`, `[[/save dex 14]]` and `[[/concentration]]`; its links are clicked like a mouse click.
+ * Inline journal checks open the engine's requested roll (§536, world setting `inlineChecksEngine`). « Arène des refus »,
+ * real player client (« claude player », owner of the Mage des refus, opened by the test bench: `players: true`).
+ * A temporary journal holds `[[/check wis prc 11]]`, `[[/save dex 14]]` and `[[/concentration]]`; its links are clicked
+ * like a mouse click.
  *  1. Setting off (GM, Mage controlled): dnd5e's roll dialog opens, not the engine's request window.
  *  2. Setting on (GM): the request window opens filled — Perception, Wisdom, DC 11, the Mage ticked — and no dnd5e dialog.
  *  3. Setting on (GM), the save link: the window says Dexterity save, DC 14.

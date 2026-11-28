@@ -1,10 +1,11 @@
 /**
- * §356 : les armes maudites qui s'emparent de leur porteur quand on le blesse (contenu `wrath: { kind, save }`), MJ actif :
- *  - à `dnd5e.damageActor`, quand une autre créature vient de blesser le porteur d'une telle arme harmonisée (l'auteur noté des
- *    dégâts, runtime/triggers.mjs `recordDamager`) — et en combat pour la vengeance —, la sauvegarde est lancée ; ratée, une marque est
- *    posée sur le porteur (« Folie furieuse » / « Vengeance », contre l'auteur des dégâts), vue de toute la table ;
- *  - au début du tour du porteur, la marque tombe si la colère prend fin (`wrathEnds`).
- * Ce que la marque impose (attaquer la créature la plus proche, ou celle qui l'a blessé) reste au joueur et au MJ, qui en est alerté (§364).
+ * §356: cursed weapons that take hold of their bearer when it is wounded (content `wrath: { kind, save }`), active GM:
+ *  - at `dnd5e.damageActor`, when another creature has just wounded the bearer of such an attuned weapon (the damage's author
+ *    noted, runtime/triggers.mjs `recordDamager`) — and in combat for vengeance —, the saving throw is rolled; if failed, a mark
+ *    is placed on the bearer ("Furious Madness" / "Vengeance", against the damage's author), seen by the whole table;
+ *  - at the start of the bearer's turn, the mark falls if the wrath ends (`wrathEnds`).
+ * What the mark imposes (attack the nearest creature, or the one that wounded them) stays with the player and the GM,
+ * who is alerted (§364).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,7 +24,7 @@ import { log, loc, notice } from "./shared.mjs";
 const FRESH_MS = 10000;
 const markOf = actor => (actor?.effects ?? []).find(e => e.getFlag(MODULE_ID, "wrath")) ?? null;
 
-/** L'arme maudite harmonisée de l'acteur et sa règle, ou null. */
+/** The attuned cursed weapon of the actor and its rule, or null. */
 function wrathOf(actor) {
   for ( const item of actor?.items ?? [] ) {
     const rule = contentOf(item).entry?.wrath;
@@ -51,12 +52,12 @@ async function onDamaged(actor, changes) {
   log(`${found.item.name}: ${actor.name} — ${label}`);
   const shown = token?.document ?? token;
   if ( shown ) notice(shown, label, "refused", { all: true, action: "wrath" });
-  // §364 : ce que la marque impose (attaquer la créature la plus proche, ou celle qui l'a blessé) reste au MJ — il en est alerté.
+  // §364: what the mark imposes (attack the nearest creature, or the one that wounded them) stays with the GM — who is alerted.
   await alertGM({ text: loc(found.rule.kind === "berserk" ? "AlerteMJ.FolieFurieuse" : "AlerteMJ.Vengeance", { actor: actor.name, item: found.item.name }),
     item: found.item, actor });
 }
 
-/** Au début du tour du porteur : la colère prend-elle fin ? */
+/** At the start of the bearer's turn: does the wrath end? */
 async function onTurn(combat, prior, current) {
   const actor = combat.combatants.get(current?.combatantId)?.actor;
   const mark = markOf(actor);

@@ -1,12 +1,14 @@
 /**
- * §485 : rejouer en réaction la sauvegarde d'un effet porté (Indomptable de monstres tiers). Un item synthétique prêté au Bandit,
- * sa règle posée dans la surcouche du monde (`api.mcp.overrideContent`) :
- *   { on: "enemyTurnEnd", if: { "self.hasSavableEffect": true }, do: [{ type: "use", target: "self" }, { type: "resave", own: "choose" }] }
- *  1. le Bandit rate deux sauvegardes (Fléau du Clerc, Lueurs féeriques du Magicien, sorts du SRD) ;
- *  2. le Magicien finit son tour : la fenêtre de réaction du Bandit s'ouvre chez le MJ, puis la question « quelle sauvegarde ? » avec deux
- *     options ; la seconde choisie, une carte de sauvegarde répétée (moment « reaction ») pour CET effet ; réussie, il tombe, l'autre reste ;
- *  3. les effets retirés, le Magicien refinit son tour : plus de fenêtre (rien à rejouer).
- * Remet effets, concentration, items prêtés et surcouche.
+ * §485: replaying, as a Reaction, the save of a carried effect (Indomitable of third-party monsters). A synthetic item lent to
+ * the Bandit, its rule placed in the world overlay (`api.mcp.overrideContent`):
+ *   { on: "enemyTurnEnd", if: { "self.hasSavableEffect": true },
+ *     do: [{ type: "use", target: "self" }, { type: "resave", own: "choose" }] }
+ *  1. the Bandit fails two saves (the Cleric's Bane, the Wizard's Faerie Fire, SRD spells);
+ *  2. the Wizard ends their turn: the Bandit's Reaction window opens on the GM's side, then the question "which save?" with two
+ *     options; the second one chosen, a repeated save card (moment "reaction") for THAT effect; on a success, it ends, the
+ *     other stays;
+ *  3. the effects removed, the Wizard ends their turn again: no more window (nothing to replay).
+ * Restores effects, Concentration, lent items and overlay.
  */
 const MODULE_ID = "dnd5e-combat";
 const SRD = "Compendium.dnd5e.spells24.Item.";
@@ -28,7 +30,7 @@ export default {
     const clerc = await ctx.token("Clerc");
     const bandit = await ctx.token("Bandit");
 
-    // --- Item et règle prêtés ----------------------------------------------------------------------------------------
+    // --- Lent item and rule ------------------------------------------------------------------------------------------------
     const itemData = { name: "Essai : indomptable", type: "feat", img: "icons/svg/upgrade.svg",
       system: { identifier: IDENTIFIER, activities: { [ACTIVITY]: { _id: ACTIVITY, type: "utility", name: "Indomptable",
         activation: { type: "reaction", value: 1 }, target: { affects: { type: "self" } } } } } };
@@ -53,7 +55,7 @@ export default {
       await clear();
     });
 
-    /** Lance jusqu'à ce que le Bandit porte l'effet du sort (sauvegarde ratée), 20 essais au plus. */
+    /** Casts until the Bandit carries the spell's effect (failed save), 20 tries at most. */
     const until = async (caster, identifier, extra={}) => {
       for ( let i = 0; i < 20; i++ ) {
         if ( (await carried()).some(e => e.identifier === identifier) ) return true;
@@ -67,7 +69,7 @@ export default {
       return (await carried()).some(e => e.identifier === identifier);
     };
 
-    // --- 1. Deux effets à sauvegarde ratée ------------------------------------------------------------------------------
+    // --- 1. Two effects with a failed save ---------------------------------------------------------------------------------
     await clear();
     if ( !ctx.expect(await until(clerc, "bane"), "le Bandit rate sa sauvegarde contre le Fléau") ) return;
     if ( !ctx.expect(await until(mage, "faerie-fire", { area: { shape: "rectangle", ...(await ctx.box(bandit)) } }),
@@ -75,7 +77,7 @@ export default {
     const two = await carried();
     ctx.expect(new Set(two.map(e => e.identifier)).size === 2, `deux effets portés (${two.map(e => e.identifier).join(", ")})`);
 
-    // --- 2. Fin du tour du Magicien : réaction, choix, sauvegarde ----------------------------------------------------------
+    // --- 2. End of the Wizard's turn: Reaction, choice, save ---------------------------------------------------------------
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
     await ctx.startCombat([mage, bandit]);
@@ -87,7 +89,7 @@ export default {
     if ( !ctx.expect((await current()) === mage.id, "combat : au tour du Magicien") ) return;
 
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
-    /** La prochaine fenêtre qui a ce bouton, dans `ms`. */
+    /** The next window that has this button, within `ms`. */
     const dialogWith = async (ids, action, ms=15000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: ids, waitMs: 1500, details: true }).catch(() => null);
@@ -126,7 +128,7 @@ export default {
     else if ( save?.success === false ) ctx.expect(after.some(e => e.id === chosen?.id) && after.some(e => e.id === other?.id), `sauvegarde ratée (${save.total}) : les deux effets restent`);
     else ctx.expect(false, "la sauvegarde répétée est résolue");
 
-    // --- 3. Plus rien à rejouer : pas de fenêtre ---------------------------------------------------------------------------
+    // --- 3. Nothing left to replay: no window ----------------------------------------------------------------------------
     await clear();
     await pause(800);
     await ctx.nextTurn(); await pause(2000);   // tour du Bandit

@@ -1,7 +1,7 @@
 /**
- * §334, restes du lot K10 de la repasse des créatures : la charge exigée. Arène des sorts : le Lanceur (PNJ) et la Cible (999 PV).
- *  - Défenses de l'Éléphant (« moved 20+ feet straight toward it immediately before the hit, the target has the Prone condition ») :
- *    sans charge, un toucher ne met pas la Cible À terre.
+ * §334, leftovers of batch K10 of the creature pass: the required charge. Spell arena: the Caster (NPC) and the Target (999 HP).
+ *  - Elephant's Tusks ("moved 20+ feet straight toward it immediately before the hit, the target has the Prone condition"):
+ *    without a charge, a hit does not knock the Target Prone.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

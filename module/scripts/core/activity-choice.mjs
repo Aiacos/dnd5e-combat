@@ -1,38 +1,38 @@
 /**
- * Quelle activité utiliser quand dnd5e demande « laquelle ? » (SPEC §42.1). Un item à plusieurs activités ouvre le choix
- * d'activité de dnd5e à chaque utilisation ; souvent ce choix n'en est pas un — une seule activité se lance, les autres sont
- * des suites que le moteur joue lui-même (les dégâts de froid de l'Armure d'Agathys, la sauvegarde du Sanctuaire), ou la
- * réponse est un fait (Glas : la cible est-elle blessée ?). Ici, la décision, sans Foundry ; null = laisser la question.
+ * Which activity to use when dnd5e asks "which one?" (SPEC §42.1). An item with several activities opens dnd5e's activity
+ * choice on every use; often this choice is no choice at all — a single activity is cast, the others are follow-ups that the
+ * engine plays itself (the cold damage of Armor of Agathys, the save of Sanctuary), or the answer is a fact (Toll the Dead:
+ * is the target wounded?). Here, the decision, without Foundry; null = leave the question.
  *
- * On ne répond à la place du joueur que pour un item que le moteur connaît (`known`) : pour un sort qu'il ne joue pas, la
- * fenêtre reste le moyen d'atteindre ses suites à la main.
+ * We answer in the player's place only for an item the engine knows (`known`): for a spell it does not play, the
+ * window stays the way to reach its follow-ups by hand.
  */
 
 /**
  * @param {object} query
- * @param {{id: string, timed: boolean, slot: boolean}[]} query.activities  Les activités que la fenêtre propose. `timed` : elle
- *   a un temps d'incantation (action, action Bonus, réaction, minute…) — une suite déclenchée par le moteur n'en a pas ;
- *   `slot` : elle dépense l'emplacement de sort ; `free` : elle lance le sort sans emplacement sur des utilisations qui restent
- *   (l'« Incantation gratuite » d'Initié à la magie, d'un don ou d'une espèce).
- * @param {number} [query.level]      Niveau du sort (0 : tour de magie, ou pas un sort).
- * @param {boolean} [query.known]     Le moteur a une règle pour cet item.
- * @param {boolean} [query.running]   Le sort est déjà en cours pour ce lanceur (concentration, effet posé).
- * @param {{healthy: string, wounded: string}|null} [query.byWounds]  Glas : l'activité selon les PV de la cible.
- * @param {boolean} [query.wounded]   Les cibles désignées sont toutes blessées.
- * @param {boolean} [query.slotLeft]  Le lanceur a encore un emplacement du niveau du sort ou plus (§230 : ne décide plus de
- *   l'incantation gratuite, gardé pour les appelants).
- * @returns {string|null}  L'identifiant de l'activité à utiliser, ou null : la question reste posée.
+ * @param {{id: string, timed: boolean, slot: boolean}[]} query.activities  The activities the window offers. `timed`: it
+ *   has a casting time (action, Bonus Action, reaction, minute…) — a follow-up triggered by the engine has none;
+ *   `slot`: it spends the spell slot; `free`: it casts the spell without a slot on uses that remain
+ *   (the "Free Casting" of Magic Initiate, of a feat or of a species).
+ * @param {number} [query.level]      Level of the spell (0: cantrip, or not a spell).
+ * @param {boolean} [query.known]     The engine has a rule for this item.
+ * @param {boolean} [query.running]   The spell is already ongoing for this caster (Concentration, effect applied).
+ * @param {{healthy: string, wounded: string}|null} [query.byWounds]  Toll the Dead: the activity according to the target's HP.
+ * @param {boolean} [query.wounded]   The designated targets are all wounded.
+ * @param {boolean} [query.slotLeft]  The caster still has a slot of the spell's level or higher (§230: no longer decides
+ *   free casting, kept for the callers).
+ * @returns {string|null}  The identifier of the activity to use, or null: the question stays asked.
  */
 export function activityToUse({ activities=[], level=0, known=false, running=false, byWounds=null, wounded=false, entry=null,
   slotLeft=true }={}) {
   const has = id => activities.some(a => a.id === id);
-  // §45 : l'item désigne lui-même l'activité qu'on lance (Avaler / Engloutir : celle qui avale ; les dégâts à chaque tour et
-  // la sortie du cadavre sont joués par le moteur).
+  // §45: the item itself designates the activity that is cast (Swallow / Engulf: the one that swallows; the damage each turn and
+  // the exit of the corpse are played by the engine).
   if ( entry && has(entry) ) return entry;
-  // §46 : une attaque, seule activité de l'item à coûter une action (action, action Bonus, réaction…), dont les autres ne
-  // sont que des suites — la sauvegarde que le coup impose (Griffe de la Goule : le moteur l'enchaîne, §18.4), un test
-  // d'évasion, des dégâts à part. Vaut pour tout item, connu du moteur ou non : les suites restent dans la liste des
-  // activités de la fiche.
+  // §46: an attack, the only activity of the item that costs an action (action, Bonus Action, reaction…), whose others are only
+  // follow-ups — the save that the hit imposes ("Ghoul's Claw": the engine chains it, §18.4), an escape
+  // check, separate damage. Holds for any item, known to the engine or not: the follow-ups stay in the list of the
+  // sheet's activities.
   const costly = activities.filter(a => a.cost);
   if ( (costly.length === 1) && (costly[0].type === "attack") ) return costly[0].id;
   if ( byWounds ) {
@@ -41,16 +41,16 @@ export function activityToUse({ activities=[], level=0, known=false, running=fal
   }
   if ( !known ) return null;
   const timed = activities.filter(a => a.timed);
-  // §127 : une incantation gratuite qui reste (Initié à la magie…) — le Sommeil d'un Moine de niveau 1 partait sur l'emplacement qu'il
-  // n'a pas. §230 (retour de table, Fidèle destrier : « consomme toujours un sort même la première fois ») : l'incantation gratuite
-  // d'abord, emplacements restants ou non ; plusieurs incantations gratuites, le joueur choisit. L'emplacement reste atteignable par
-  // la liste des activités de la fiche (et Maj + clic de dnd5e, qui prend la première activité).
-  const free = activities.filter(a => a.free);   // « forward » de dnd5e : sans temps d'incantation propre
+  // §127: a free casting that remains (Magic Initiate…) — the Sleep of a level 1 Monk went to the slot they
+  // do not have. §230 (table feedback, "Faithful Steed": "always consumes a spell even the first time"): the free casting
+  // first, remaining slots or not; several free castings, the player chooses. The slot stays reachable through
+  // the sheet's activity list (and dnd5e's Shift + click, which takes the first activity).
+  const free = activities.filter(a => a.free);   // dnd5e's "forward": with no casting time of its own
   if ( free.length && !running && (level > 0) ) return (free.length === 1) ? free[0].id : null;
-  // Une seule activité se lance : les autres sont des suites.
+  // A single activity is cast: the others are follow-ups.
   if ( timed.length === 1 ) return timed[0].id;
-  // Un sort à emplacements pas encore lancé : l'incantation est la seule à dépenser l'emplacement, les autres (déplacer la
-  // marque, réchauffer le métal, les dégâts de l'action Bonus) n'ont de sens qu'une fois le sort en cours — là, on demande.
+  // A slotted spell not yet cast: the casting is the only one to spend the slot, the others (moving the
+  // mark, heating the metal, the Bonus Action damage) only make sense once the spell is ongoing — there, we ask.
   if ( running || !(level > 0) ) return null;
   const casts = timed.filter(a => a.slot);
   return (casts.length === 1) ? casts[0].id : null;

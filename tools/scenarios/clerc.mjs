@@ -1,13 +1,13 @@
 /**
- * Le Clerc du Manuel des joueurs 2024 (SPEC §27), monde `dnd-6`. Le Clerc (niveau 1) reçoit, prêtés depuis le compendium du Manuel
- * des joueurs, Impacts bénis (et leur version améliorée), Prêtre de guerre, Disciple de la Vie, Guérisseur béni, Guérison suprême et
- * Soins ; le Bandit reçoit 300 PV. Vérifie :
- *  - Impact divin : +1d8 radiants au premier coup d'arme du tour, pas au second ; 2d8 avec Impacts bénis améliorés ;
- *  - Incantation puissante (déclarations de l'item remplacées par son flag) : Flamme sacrée + le modificateur de Sagesse ;
- *  - Prêtre de guerre : l'activité (action Bonus) ouvre une attaque d'arme gratuite, l'action reste ;
- *  - Soins (niveau 1) sur le Guerrier : maximum des dés (Guérison suprême) + 3 (Disciple de la Vie) ; le Clerc regagne 3 PV
- *    (Guérisseur béni).
- * Remet positions, PV, états ; retire les items prêtés.
+ * The Player's Handbook 2024 Cleric (SPEC §27), world `dnd-6`. The Cleric (level 1) receives, lent from the Player's Handbook
+ * compendium, Blessed Strikes (and their improved version), War Priest, Disciple of Life, Blessed Healer, Supreme Healing and
+ * Cure Wounds; the Bandit receives 300 HP. Checks:
+ *  - Divine Strike: +1d8 radiant on the first weapon hit of the turn, not on the second; 2d8 with improved Blessed Strikes;
+ *  - Potent Spellcasting (item declarations replaced by its flag): Sacred Flame + the Wisdom modifier;
+ *  - War Priest: the activity (Bonus Action) opens a free weapon attack, the action remains;
+ *  - Cure Wounds (level 1) on the Fighter: maximum of the dice (Supreme Healing) + 3 (Disciple of Life); the Cleric regains 3 HP
+ *    (Blessed Healer).
+ * Resets positions, HP, conditions; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "dnd-players-handbook.classes";
@@ -84,7 +84,7 @@ export default {
     };
     const budget = () => ctx.engine("budget", { tokenId: cleric.id });
     const mace = await ctx.itemId(cleric.id, "mace");
-    /** Attaque à la masse jusqu'à toucher (10 essais) ; rend les dégâts bonus du jet. */
+    /** Mace attack until a hit (10 tries); returns the roll's bonus damage. */
     const hit = async () => {
       for ( let n = 0; n < 10; n++ ) {
         const since = await ctx.lastMessageId();
@@ -128,8 +128,8 @@ export default {
       const damage = (await ctx.messagesSince(since)).find(m => m.type === "damage");
       const bonuses = (damage?.flags?.[MODULE_ID]?.bonuses ?? []).map(b => `${b.formula} ${b.damageType}`);
       const rolls = (damage?.rolls ?? []).map(r => r.formula);
-      // §438 : la part bonus est écrite avec les données de l'acteur (1e2c134 : « @abilities.wis.mod » → « 3 ») — la valeur attendue est
-      // lue sur la créature, et doit aussi être un jet de la carte (le moteur y ajoute sa part).
+      // §438: the bonus part is written with the actor's data (1e2c134: "@abilities.wis.mod" → "3") — the expected value is
+      // read from the creature, and must also be a roll on the card (the engine adds its part to it).
       const wis = String((await ctx.engine("stats", { tokenId: cleric.id }))?.mods?.wis);
       ctx.expect([`@abilities.wis.mod radiant`, `${wis} radiant`].some(x => bonuses.includes(x)) && rolls.includes(wis), `Flamme sacrée : ${bonuses.join(", ")} ; jets ${rolls.join(" + ")} (Sagesse ${wis})`);
       await unlend(strikes);
@@ -157,7 +157,7 @@ export default {
       await lend(CLASSES, "phbclcSupremeHea");
       const cure = await lend(SPELLS, "phbsplCureWounds");
       await place(fighter, g.x + grid, g.y);
-      // Assez de PV max pour voir le montant entier (le Guerrier n'en a que 13).
+      // Enough max HP to see the whole amount (the Fighter only has 13).
       await ctx.call("update-actor", { actorId: fighter.actorId, actorData: { "system.attributes.hp.bonuses.overall": "30" } });
       ctx.restore(() => ctx.call("update-actor", { actorId: fighter.actorId, actorData: { "system.attributes.hp.bonuses.overall": "" } }).catch(() => {}));
       await pause(500);
@@ -168,7 +168,7 @@ export default {
       const wis = (await ctx.engine("stats", { tokenId: cleric.id }))?.mods?.wis ?? 0;
       const since = await ctx.lastMessageId();
       const u = await ctx.use({ tokenId: cleric.id, itemId: cure, activityType: "heal", targetTokenIds: [fighter.id], usageConfig: { [MODULE_ID]: { confirmed: true } } });
-      // Le soin attend le clic « Soins » de la carte (api.mcp.rollCard), comme au scénario ravenloft-options.
+      // The heal waits for the "Cure Wounds" click on the card (api.mcp.rollCard), as in the ravenloft-options scenario.
       await pause(1500);
       await ctx.engine("rollCard", { messageId: u.usageMessageId });
       await ctx.settle(u.usageMessageId, { timeoutMs: 45000 }).catch(() => null);

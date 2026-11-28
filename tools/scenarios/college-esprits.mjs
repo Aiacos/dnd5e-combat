@@ -1,12 +1,13 @@
 /**
- * §96 — Collège des esprits (module premium `dnd-ravenloft-horrors-within`, pack `options`) : les Esprits d'outre-tombe prêtés au Barde.
- *  - Esprit vengeur sur le Clerc : aucun dégât au Clerc ; le Bandit qui le touche au corps à corps subit des dégâts de force.
- *  - Esprit brute (émanation de 9 m autour du Bandit) : le Clerc (allié) épargné ; Force, À terre ⇔ ratée.
- *  - Esprit couard : Sagesse ; Effrayé (l'état ajouté à l'effet) ⇔ ratée.
- *  - Esprit diseur de bonne aventure sur le Clerc : son attaque a l'Avantage.
- *  - Esprit prêtre : le Clerc Empoisonné — soigné, et l'état choisi prend fin.
- *  - Esprit de l'ombre sur le Clerc : Invisible ; il attaque — l'invisibilité prend fin.
- *  - Canalisation renforcée : Murmures dissonants (emplacement) — +1d6 au jet de dégâts.
+ * §96 — College of Spirits (premium module `dnd-ravenloft-horrors-within`, pack `options`): the "Spirits from Beyond the
+ * Grave" lent to the Bard.
+ *  - "Vengeful Spirit" on the Cleric: no damage to the Cleric; the Bandit who hits him in melee takes force damage.
+ *  - "Brute Spirit" (9 m Emanation around the Bandit): the Cleric (ally) spared; Strength, Prone ⇔ failed.
+ *  - "Coward Spirit": Wisdom; Frightened (the condition added to the effect) ⇔ failed.
+ *  - "Fortune-teller Spirit" on the Cleric: his attack has Advantage.
+ *  - "Priest Spirit": the Poisoned Cleric — healed, and the chosen condition ends.
+ *  - "Shadow Spirit" on the Cleric: Invisible; he attacks — the invisibility ends.
+ *  - "Empowered Channeling": Dissonant Whispers (slot) — +1d6 on the damage roll.
  */
 const MODULE_ID = "dnd5e-combat";
 const RHW = "dnd-ravenloft-horrors-within.options";
@@ -57,7 +58,7 @@ export default {
         for ( const d of r?.windows ?? [] ) {
           const b = (d.buttons ?? []).find(x => re.test(x.label ?? ""));
           if ( b ) { await ctx.call("answer-dialog", { id: d.id, button: b.action ?? b.label }); return { labels: (d.buttons ?? []).map(x => x.label) }; }
-          // Beaucoup d'options : une liste déroulante (adapter/choices.mjs, §113) et un bouton « Valider ».
+          // Many options: a drop-down list (adapter/choices.mjs, §113) and a "Validate" button.
           for ( const f of (d.fields ?? []).filter(x => x.type === "select") ) {
             const o = (f.options ?? []).find(x => re.test(x.label ?? ""));
             if ( !o ) continue;
@@ -143,7 +144,7 @@ export default {
     ctx.expect(atk?.rolls?.[0]?.options?.advantageMode === 1, `Esprit diseur de bonne aventure : l'attaque du Clerc a l'Avantage (mode ${atk?.rolls?.[0]?.options?.advantageMode})`);
     await clearAll();
 
-    // 5. Esprit prêtre.
+    // 5. Priest Spirit.
     const priest = await lend("rhwCSPriestSpi36");
     await ctx.call("set-status", { tokenId: cleric.id, statusId: "poisoned", active: true });
     await ctx.setHp(cleric, Math.max(1, c0 - 6));
@@ -152,7 +153,7 @@ export default {
     const used5 = await u5;
     await pause(800);
     if ( used5.usageMessageId ) await ctx.engine("rollCard", { messageId: used5.usageMessageId }).catch(() => null);
-    // Un seul état de la liste présent : il prend fin d'office, sans question (ui/cure.mjs).
+    // Only one condition from the list present: it ends automatically, without a question (ui/cure.mjs).
     await pause(3500);
     ctx.expect(!(await statuses(cleric)).includes("poisoned"), "Esprit prêtre : Empoisonné prend fin");
     ctx.expect((await ctx.hp(cleric)) > Math.max(1, c0 - 6), "Esprit prêtre : le Clerc soigné");
@@ -167,7 +168,8 @@ export default {
     await ctx.use({ tokenId: cleric.id, identifier: "mace", activityType: "attack", targetTokenIds: [bandit.id] });
     await pause(4000);
     ctx.expect(!(await statuses(cleric)).includes("invisible"), "il attaque : l'invisibilité prend fin");
-    // §367 : « Emanate and End » — la sauvegarde de Constitution des créatures à 1,50 m du Clerc (le Bandit et le Zombi, au contact).
+    // §367: "Emanate and End" — the Constitution save of the creatures within 1.50 m of the Cleric
+    // (the Bandit and the Zombie, in contact).
     const emanation = (await ctx.messagesSince(beforeEnd)).find(m => (m.type === "usage") && JSON.stringify(m.flags ?? {}).includes("abooAkpLL09oe1T8"));
     ctx.expect(!!emanation, "Esprit de l'ombre : l'émanation à la fin de l'invisibilité");
     if ( emanation ) {
@@ -177,7 +179,7 @@ export default {
     }
     await clearAll();
 
-    // 7. Canalisation renforcée.
+    // 7. Enhanced Channeling.
     await lend("rhwCSEmpoweredtO");
     const whispers = await ctx.ensureItem(bard, `${SPELLS}.phbsplDissonantW`);
     let empowered = null;

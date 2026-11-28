@@ -1,7 +1,8 @@
 /**
- * §501 (brique B21) — « si elle devait perdre ses réactions, elle n'en perd qu'une » (`reactions: { perRound, loseOne: true }`). La lecture
- * (« peut-elle réagir ? ») est dans adapter/reactions.mjs `reactionState` ; ici, à la pose d'un effet qui retirerait ses réactions
- * (Neutralisé, ou un effet `noReactions`), la créature en combat perd UNE réaction du round, vue et entendue de toute la table. MJ actif.
+ * §501 (brick B21) — "if it would lose its reactions, it only loses one" (`reactions: { perRound, loseOne: true }`). The reading
+ * ("can it react?") is in adapter/reactions.mjs `reactionState`; here, when an effect is applied that would remove its reactions
+ * (Incapacitated, or a `noReactions` effect), the creature in combat loses ONE Reaction of the round, seen and heard by the
+ * whole table. Active GM.
  */
 
 import { costsReaction, loseReaction } from "../core/reaction-loss.mjs";
@@ -12,7 +13,7 @@ import { enqueue } from "./queue.mjs";
 import { route } from "./router.mjs";
 import { log, notice } from "./shared.mjs";
 
-/** Une seule réaction perdue par moment : un état et ses « riders » (Paralysé puis Neutralisé) arrivent en deux effets. */
+/** Only one Reaction lost per moment: a condition and its "riders" (Paralyzed then Incapacitated) arrive as two effects. */
 const SAME_BLOW_MS = 1500;
 const lastLoss = new Map();
 
@@ -21,7 +22,7 @@ function onEffectCreated(effect) {
   if ( (actor?.documentName !== "Actor") || !losesOnlyOneReaction(actor) ) return;
   if ( !costsReaction({ statuses: Array.from(effect.statuses ?? []), blocks: blocksReactions(effect), actorStatuses: Array.from(actor.statuses ?? []) }) ) return;
   const combatant = combatantFor(actor);
-  if ( !combatant ) return;   // hors combat, la réaction est toujours là : rien à perdre
+  if ( !combatant ) return;   // out of combat, the Reaction is always there: nothing to lose
   return enqueue(`reaction-loss:${actor.uuid}`, async () => {
     const now = Date.now();
     if ( (now - (lastLoss.get(actor.uuid) ?? 0)) < SAME_BLOW_MS ) return;

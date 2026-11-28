@@ -1,7 +1,7 @@
 /**
- * M8 (SPEC §18.13) : Régénération au début du tour de la créature, coupée pour son prochain tour par les dégâts que son texte
- * nomme (Acide ou Feu pour le Troll). Un troll à 0 PV ne meurt qu'au début d'un tour où il ne régénère pas
- * (adapter/death.mjs le garde Inconscient d'ici là).
+ * M8 (SPEC §18.13): Regeneration at the start of the creature's turn, cut off for its next turn by the damage its text
+ * names (Acid or Fire for the Troll). A troll at 0 HP only dies at the start of a turn where it does not regenerate
+ * (adapter/death.mjs keeps it Unconscious until then).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -14,20 +14,20 @@ import { contentOf } from "../adapter/content.mjs";
 import { route } from "./router.mjs";
 import { log } from "./shared.mjs";
 
-/** Sur le client qui applique les dégâts : les types réellement subis, gardés pour après l'écriture. */
+/** On the client that applies the damage: the types actually taken, kept for after the write. */
 function onCalculateDamage(actor, damages, options) {
   const regeneration = regenerationOf(actor);
   if ( !regeneration?.stoppedBy.length && !regeneration?.silveredBy?.length && !regeneration?.critical && !regeneration?.stoppedByItems?.length ) return;
   const hurt = damages.filter(d => (d.value > 0) && d.type);
   const types = hurt.map(d => d.type);
-  // §78 : une arme argentée (propriété « sil » du jet, dnd5e : DamageDescription.properties).
+  // §78: a silvered weapon ("sil" property of the roll, dnd5e: DamageDescription.properties).
   const silvered = hurt.filter(d => d.properties?.has?.("sil")).map(d => d.type);
-  // K2 (§323) : un coup critique — le jet de dégâts du message d'origine l'est.
+  // K2 (§323): a Critical Hit — the original message's damage roll is one.
   // #269 (§545): the engine's verdict for this target first (an attack on several targets is not critical for all of them).
   const own = options?.[MODULE_ID]?.criticalHit;
   const critical = (typeof own === "boolean") ? own
     : (options?.origin?.rolls ?? []).some(r => r?.isCritical === true || r?.options?.isCritical === true);
-  // B04 : l'objet des dégâts (eau bénite), par son identifiant.
+  // B04: the damage's item (holy water), by its identifier.
   const item = regeneration.stoppedByItems?.length ? damageItemIdentifier(options) : null;
   if ( types.length ) Object.assign((options[MODULE_ID] ??= {}), { damageTypes: types, silveredTypes: silvered, critical, damageItem: item });
 }
@@ -50,11 +50,11 @@ function onTurnChange(combat, prior, current) {
   const regeneration = regenerationOf(actor);
   if ( !regeneration ) return;
   return enqueue(`turn:${token.uuid}`, async () => {
-    // La Mort d'office de dnd5e, si elle est encore là, n'est pas une mort (adapter/death.mjs, dropAutoDead).
+    // dnd5e's automatic Dead, if it is still there, is not a death (adapter/death.mjs, dropAutoDead).
     await dropAutoDead(actor);
     const hp = actor.system.attributes?.hp?.value ?? 0;
     const stopped = isStopped(actor);
-    // B04 : au soleil, dans une eau courante (`stoppedWhile`) — le trait ne fonctionne pas ce tour-ci.
+    // B04: in sunlight, in running water (`stoppedWhile`) — the trait does not work this turn.
     const held = heldBy(token, regeneration);
     const what = regenerationAtTurnStart({ hp, stopped, held: held.length > 0, dead: actor.statuses.has("dead"), ...regeneration });
     if ( stopped ) await clearStopped(actor);
@@ -68,9 +68,9 @@ function onTurnChange(combat, prior, current) {
   });
 }
 
-/** dnd5e vient de poser sa Mort d'office sur une créature qui régénère : Inconscient à la place. MJ actif. */
+/** dnd5e just applied its automatic Dead to a creature that regenerates: Unconscious instead. Active GM. */
 async function onCreateEffect(effect) {
-  const actor = actorOfEffect(effect);   // un token non lié : l'effet est dans son ActorDelta
+  const actor = actorOfEffect(effect);   // an unlinked token: the effect is in its ActorDelta
   if ( !actor || !effect.getFlag("dnd5e", "autoDowned") || !effect.statuses.has("dead") ) return;
   if ( await dropAutoDead(actor) ) {
     await ensureDowned(actor);
@@ -79,8 +79,8 @@ async function onCreateEffect(effect) {
 }
 
 /**
- * K7 (§328) : absorption — « chaque fois qu'il subit des dégâts de foudre, il regagne autant de PV » (golems) : avant que dnd5e compte
- * résistances et immunités, ces dégâts deviennent un soin (`dnd5e.preCalculateDamage`, documents/actor/actor.mjs:870).
+ * K7 (§328): absorption — "whenever it takes lightning damage, it regains HP equal to the damage" (golems): before dnd5e counts
+ * Resistances and Immunities, this damage becomes healing (`dnd5e.preCalculateDamage`, documents/actor/actor.mjs:870).
  */
 function onPreCalculateDamage(actor, damages) {
   const types = new Set(Array.from(actor?.items ?? []).flatMap(i => contentOf(i).entry?.absorbsDamage ?? []));

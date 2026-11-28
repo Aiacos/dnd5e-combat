@@ -1,7 +1,7 @@
 /**
- * #110, #111 : une tâche du diagnostic dont le document a été retiré par une réparation précédente de la même passe. dnd5e supprime
- * avec un objet les sorts qu'il donnait et les recrée sous un autre id ; le nettoyage de Midi-QOL remplace l'objet, et la tâche
- * suivante portait sur un sort qui n'existe plus. Elle est passée, pas échouée, et rien n'est écrit sur le document de l'analyse.
+ * #110, #111: a diagnostic task whose document was removed by an earlier repair of the same pass. dnd5e deletes the spells
+ * an item gave along with it and recreates them under another id; Midi-QOL's cleanup replaces the item, and the next task was
+ * about a spell that no longer exists. It is skipped, not failed, and nothing is written to the analysis document.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
@@ -20,8 +20,8 @@ beforeEach(() => {
 
 afterEach(() => { vi.restoreAllMocks(); vi.resetModules(); });
 
-describe("fresh — le document d'une tâche au moment de réparer", () => {
-  it("rend le document relu, pas celui de l'analyse", async () => {
+describe("fresh — the document of a task at the moment of repair", () => {
+  it("returns the re-read document, not the analysis one", async () => {
     const { fresh } = await import("../module/scripts/runtime/diagnostic/fresh.mjs");
     const scanned = { uuid: "Actor.a.Item.i", documentName: "Item", parent: { documentName: "Actor", isToken: false } };
     const now = { uuid: "Actor.a.Item.i" };
@@ -29,14 +29,14 @@ describe("fresh — le document d'une tâche au moment de réparer", () => {
     expect(fresh(scanned)).toBe(now);
   });
 
-  it("lève VanishedError pour un document retiré, au lieu de rendre celui de l'analyse", async () => {
+  it("throws VanishedError for a removed document, instead of returning the analysis one", async () => {
     const { fresh, VanishedError } = await import("../module/scripts/runtime/diagnostic/fresh.mjs");
     const scanned = { uuid: "Actor.a.Item.gone", documentName: "Item", parent: { documentName: "Actor", isToken: false } };
     expect(() => fresh(scanned)).toThrow(VanishedError);
     try { fresh(scanned); } catch(err) { expect(err.vanished).toBe(true); }
   });
 
-  it("l'objet d'un acteur de token se relit par le token ; retiré, il lève aussi", async () => {
+  it("the item of a token actor is re-read through the token; removed, it throws too", async () => {
     const { fresh, VanishedError } = await import("../module/scripts/runtime/diagnostic/fresh.mjs");
     const kept = { id: "k" };
     const actorNow = { items: new Map([["k", kept]]) };
@@ -49,8 +49,8 @@ describe("fresh — le document d'une tâche au moment de réparer", () => {
   });
 });
 
-describe("repairTasks — une tâche sans document est passée", () => {
-  it("ne compte pas comme un échec, n'écrit rien, et les tâches suivantes sont réparées", async () => {
+describe("repairTasks — a task without a document is skipped", () => {
+  it("does not count as a failure, writes nothing, and the following tasks are repaired", async () => {
     vi.doMock("../module/scripts/runtime/diagnostic/checks.mjs", () => ({ CHECKS: [] }));
     vi.doMock("../module/scripts/runtime/diagnostic/backup.mjs", () => ({
       createBackup: async () => ({ uuid: "Compendium.world.das-backups.Adventure.b", name: "backup" }),
@@ -78,14 +78,14 @@ describe("repairTasks — une tâche sans document est passée", () => {
     expect(results[1].line).toBe("marked");
     expect(spell.update).not.toHaveBeenCalled();
     expect(other.update).toHaveBeenCalledTimes(1);
-    // Seule la vraie erreur est journalisée (le journal d'erreurs de DAS en fait un rapport).
+    // Only the real error is logged (DAS's error log turns it into a report).
     expect(error).toHaveBeenCalledTimes(1);
     expect(error.mock.calls[0][0]).toContain("magical-effects.2");
   });
 });
 
-describe("cleanActor — un objet retiré plus haut dans la boucle est passé (#111)", () => {
-  it("ne supprime pas une seconde fois le sort que dnd5e a retiré avec l'objet qui le donnait", async () => {
+describe("cleanActor — an item removed earlier in the loop is skipped (#111)", () => {
+  it("does not delete a second time the spell that dnd5e removed along with the item that gave it", async () => {
     vi.doUnmock("../module/scripts/runtime/diagnostic/checks.mjs");
     vi.doUnmock("../module/scripts/runtime/diagnostic/backup.mjs");
     vi.doUnmock("../module/scripts/core/backup.mjs");

@@ -1,17 +1,18 @@
 /**
- * §492 : qui a attaqué qui, pendant le tour de combat en cours — règle pure. Le registre vit sur le Combat (adapter/attacked-this-turn.mjs) ;
- * il ne garde qu'un tour : la première attaque d'un autre tour repart d'un registre vide.
+ * §492: who attacked whom, during the current combat turn — pure rule. The registry lives on the Combat
+ * (adapter/attacked-this-turn.mjs); it keeps only one turn: the first attack of another turn starts from an empty registry.
  *
- * Registre : `{ turn: "<combat>.<round>.<turn>", attacks: [{ source, target, kinds: ["melee"?, "ranged"?] }] }` (uuids d'acteurs : un token
- * non lié a le sien). Une liste, pas un objet par paire : `setFlag` fusionne les objets, une liste se remplace entière.
- * Le fait `source.attackedSelfThisTurn` le lit : « quand une créature hostile termine son tour après l'avoir attaquée au corps à corps ».
+ * Registry: `{ turn: "<combat>.<round>.<turn>", attacks: [{ source, target, kinds: ["melee"?, "ranged"?] }] }` (actor uuids: an
+ * unlinked token has its own). A list, not an object per pair: `setFlag` merges objects, a list is replaced whole.
+ * The fact `source.attackedSelfThisTurn` reads it: "when a hostile creature ends its turn after attacking it in melee".
  */
 
 export const ATTACK_KINDS = Object.freeze(["melee", "ranged"]);
 
 /**
- * Le genre d'une attaque : « melee » pour une attaque d'activité de type mêlée qui n'est ni lancée ni tirée (même règle que dnd5e,
- * data/activity/attack-data.mjs, `getRollData` : `roll.attack.type`, et que le fait `activity.isMelee`), « ranged » sinon ; null hors attaque.
+ * The kind of an attack: "melee" for a melee-type activity attack that is neither thrown nor fired (same rule as dnd5e,
+ * data/activity/attack-data.mjs, `getRollData`: `roll.attack.type`, and as the fact `activity.isMelee`), "ranged" otherwise;
+ * null outside an attack.
  */
 export function attackKindOf({ activityType=null, attackType=null, attackMode=null }={}) {
   if ( activityType !== "attack" ) return null;
@@ -20,8 +21,8 @@ export function attackKindOf({ activityType=null, attackType=null, attackMode=nu
 }
 
 /**
- * Le registre après une attaque. Un autre tour efface le précédent ; une paire garde chaque genre une fois.
- * @returns {object|null}  Le nouveau registre, ou null s'il n'y a rien à noter (tour, source, cible ou genre inconnus).
+ * The registry after an attack. Another turn erases the previous one; a pair keeps each kind once.
+ * @returns {object|null}  The new registry, or null if there is nothing to note (unknown turn, source, target or kind).
  */
 export function recordAttack(log, { turn, source, targets=[], kind }) {
   if ( !turn || !source || !ATTACK_KINDS.includes(kind) ) return null;
@@ -37,15 +38,15 @@ export function recordAttack(log, { turn, source, targets=[], kind }) {
   return { turn, attacks };
 }
 
-/** Les genres d'attaque de `source` contre `target` pendant ce tour (`[]` : aucune, ou registre d'un autre tour). */
+/** The attack kinds of `source` against `target` during this turn (`[]`: none, or the registry of another turn). */
 export function attacksDuring(log, { turn, source, target }) {
   if ( !turn || !source || !target || (log?.turn !== turn) ) return [];
   return [...((log.attacks ?? []).find(a => (a.source === source) && (a.target === target))?.kinds ?? [])];
 }
 
 /**
- * La condition : `true` (une attaque, quel qu'en soit le genre), `false` (aucune), `"melee"` / `"ranged"` ou une liste de genres (l'un
- * d'eux au moins).
+ * The condition: `true` (an attack, whatever its kind), `false` (none), `"melee"` / `"ranged"` or a list of kinds (at least one
+ * of them).
  */
 export function attackedMatches(kinds, want) {
   if ( !validAttackedArg(want) ) return false;
@@ -54,7 +55,7 @@ export function attackedMatches(kinds, want) {
   return kinds.some(k => wanted.includes(k));
 }
 
-/** La valeur de la condition est-elle valable ? (Validation du contenu.) */
+/** Is the value of the condition valid? (Content validation.) */
 export function validAttackedArg(want) {
   if ( typeof want === "boolean" ) return true;
   const list = [want].flat();

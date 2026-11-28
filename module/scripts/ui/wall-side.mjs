@@ -1,7 +1,7 @@
 /**
- * §171 : un anneau de feu posé (Mur de feu, variante anneau) — chez celui qui l'a posé, de quel côté il brûle : vers l'intérieur (ce qui
- * est dedans brûle) ou vers l'extérieur (ce qui est dedans est protégé). Fermer la fenêtre garde le côté du moteur (celui où le lanceur
- * n'est pas). L'interface demande ; runtime/wall-side.mjs écrit, par le MJ actif.
+ * §171: a placed ring of fire (Wall of Fire, ring variant) — for the one who placed it, which side it burns: inward (what
+ * is inside burns) or outward (what is inside is protected). Closing the window keeps the engine's side (the one where the caster
+ * is not). The interface asks; runtime/wall-side.mjs writes, via the active GM.
  */
 
 import { wallSideRuleOf, wallGeometryOf } from "../adapter/wall-side.mjs";
@@ -9,7 +9,7 @@ import { flipWallSide } from "../runtime/wall-side.mjs";
 import { route } from "../runtime/router.mjs";
 import { loc } from "../runtime/shared.mjs";
 
-/** Rend +1 (vers l'intérieur), -1 (vers l'extérieur) ou null (fenêtre fermée). */
+/** Returns +1 (inward), -1 (outward) or null (window closed). */
 async function askRingSide(name) {
   const answer = await foundry.applications.api.DialogV2.wait({
     window: { title: name, icon: "fa-solid fa-fire" },

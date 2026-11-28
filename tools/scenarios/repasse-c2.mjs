@@ -1,10 +1,11 @@
 /**
- * §296, lot C2 de la repasse terme par terme : « de votre choix », plafond de créatures, réserve à répartir. Arène des sorts (Lanceur,
- * Allié, Cible, Cible voisine). Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source) et remet tout.
- *  - Lenteur et Sommeil : l'Allié pris dans la zone n'est ni visé ni affecté ;
- *  - Survivance : la liste ne propose que les créatures En sang (l'Allié), cochées ; la réserve (100, formule d'essai) le soigne jusqu'à la
- *    moitié de ses PV maximum, pas au-delà ;
- *  - Guérison de groupe : 700 PV répartis entre l'Allié et le Lanceur — chacun remonte à son maximum, pas 700 chacun.
+ * §296, batch C2 of the term-by-term pass: "of your choice", creature cap, pool to distribute. Spell arena (Caster,
+ * Ally, Target, Neighbouring Target). Each part borrows its items from the Player's Handbook (with their source) and puts
+ * everything back.
+ *  - Slow and Sleep: the Ally caught in the area is neither targeted nor affected;
+ *  - Survivance: the list only offers the Bloodied creatures (the Ally), ticked; the pool (100, test formula) heals it up to half
+ *    of its maximum HP, no further;
+ *  - Mass Healing Word: 700 HP distributed between the Ally and the Caster — each goes up to its maximum, not 700 each.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -66,7 +67,7 @@ export default {
     const settled = async used => (used?.usageMessageId ? ctx.settle(used.usageMessageId, { timeoutMs: 40000 }).catch(() => null) : null);
     const has = async (t, id) => (await ctx.effectsFrom(t, id)).length > 0;
     const named = r => (r?.targets ?? []).map(x => x.name ?? x.token ?? "?");
-    /** L'Allié collé à la Cible, côté opposé à la Cible voisine. */
+    /** The Ally stuck to the Target, on the side opposite the Neighbouring Target. */
     const allyBesideTarget = async () => {
       const p = await ctx.position(target);
       await ctx.call("move-token", { tokenId: ally.id, x: p.x, y: p.y + grid, elevation: 0 });
@@ -93,7 +94,7 @@ export default {
     });
 
     await part("Survivance", async () => {
-      // Le Lanceur n'a pas de niveau de Clerc : la réserve d'essai vaut 100. L'activité dépense une utilisation de Conduit divin.
+      // The Caster has no Cleric level: the test pool is 100. The activity spends one use of Channel Divinity.
       await lend(caster, `${PHB}.classes.Item.phbclcChannelDiv`, { "system.uses.max": "9", "system.uses.spent": 0 });
       const item = await lend(caster, `${PHB}.classes.Item.phbclcPreserveLi`, {
         "system.activities.dnd5eactivity000.healing.custom": { enabled: true, formula: "100" } });

@@ -1,7 +1,7 @@
 /**
- * §334, restes de la repasse des créatures. Arène des sorts : le Lanceur (PNJ) et l'« Ennemi au contact ».
- *  - Esquive de la Bête éclipsante (`avoidance`) prêtée au Lanceur : l'Ennemi lui lance le Rocher du Singe géant (sauvegarde de
- *    Dextérité, moitié des dégâts) ; une réussite n'inflige rien, un échec la moitié.
+ * §334, leftovers of the creature pass. Spell arena: the Caster (NPC) and the "Enemy in contact".
+ *  - Displacer Beast's Avoidance (`avoidance`) lent to the Caster: the Enemy throws the Giant Ape's Rock at it (Dexterity
+ *    saving throw, half damage); a success inflicts nothing, a failure half.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

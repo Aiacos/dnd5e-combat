@@ -1,16 +1,16 @@
 /**
- * §418 : le « Déroulement » — comment le moteur s'y prend, à côté du niveau d'automatisation qui dit ce qu'il fait (§417). Les règles
- * pures de ses réglages. Pur : aucune dépendance à Foundry.
+ * §418: the "Flow" — how the engine goes about it, next to the automation level that says what it does (§417). The pure
+ * rules of its settings. Pure: no dependency on Foundry.
  */
 
-/** Réglage « Réactions ». `level` : selon le niveau d'automatisation — aujourd'hui « demander à chacun », dès que le niveau les juge. */
+/** "Reactions" setting. `level`: according to the automation level — today "ask everyone", as soon as the level judges them. */
 export const REACTION_MODES = Object.freeze(["level", "ask", "players", "off"]);
 
 /**
- * Le moteur propose-t-il cette réaction ? `ask` : à chacun (le joueur, ou le MJ pour ses créatures) ; `players` : seulement pour un
- * personnage de joueur — le MJ déclenche lui-même celles de ses créatures ; `off` : jamais, les réactions se jouent à la main.
+ * Does the engine offer this Reaction? `ask`: to everyone (the player, or the GM for their creatures); `players`: only for a
+ * player character — the GM triggers those of their creatures themselves; `off`: never, Reactions are played by hand.
  * @param {string} mode
- * @param {{playerOwned?: boolean}} [who]  L'acteur qui réagirait appartient-il à un joueur ?
+ * @param {{playerOwned?: boolean}} [who]  Does the actor that would react belong to a player?
  */
 export function offersReaction(mode, { playerOwned=false }={}) {
   const m = (!REACTION_MODES.includes(mode) || (mode === "level")) ? "ask" : mode;
@@ -20,18 +20,18 @@ export function offersReaction(mode, { playerOwned=false }={}) {
 }
 
 /**
- * Réglage « Dégâts » (§419). `level` : selon le niveau d'automatisation — aujourd'hui lancés et appliqués d'office, dès que le niveau
- * résout les actions.
+ * "Damage" setting (§419). `level`: according to the automation level — today rolled and applied automatically, as soon as
+ * the level resolves actions.
  */
 export const DAMAGE_MODES = Object.freeze(["level", "auto", "click", "validate", "clickValidate", "clickPlayers", "clickPlayersValidate"]);
 
 /**
- * Les deux gestes que le réglage peut demander autour d'un jet de dégâts ou de soins : `click` — l'auteur lance lui-même ses dés (une
- * fenêtre, un bouton) au lieu du jet enchaîné ; `validate` — le MJ confirme avant que le résultat ne soit appliqué.
- * §524 (issue #173) : `clickPlayers` / `clickPlayersValidate` — au clic seulement quand l'auteur est un joueur ; les créatures que joue le
- * MJ restent automatiques. La validation, elle, vaut pour tous.
+ * The two gestures the setting can ask for around a damage or healing roll: `click` — the author rolls their own dice (a
+ * window, a button) instead of the chained roll; `validate` — the GM confirms before the result is applied.
+ * §524 (issue #173): `clickPlayers` / `clickPlayersValidate` — on click only when the author is a player; creatures played by the
+ * GM stay automatic. Validation, however, applies to everyone.
  * @param {string} mode
- * @param {{playerAuthor?: boolean}} [who]  L'auteur de l'action est-il un joueur (pas un MJ) ?
+ * @param {{playerAuthor?: boolean}} [who]  Is the author of the action a player (not a GM)?
  * @returns {{click: boolean, validate: boolean}}
  */
 export function damageSteps(mode, { playerAuthor=false }={}) {

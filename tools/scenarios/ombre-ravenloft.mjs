@@ -1,10 +1,10 @@
 /**
- * §447 — Pouvoir de l'ombre (Sorcellerie de l'ombre, Ravenloft), Yeux des ténèbres : « si un sort que vous lancez crée des Ténèbres, vous
- * voyez normalement à travers » (`seesThroughOwnDarkness`). Dans l'« Arène de la vision » (`node tools/arene-vision.mjs` d'abord) :
- *  1. L'Humain reçoit Pouvoir de l'ombre et le sort Ténèbres, et les lance sur la Cible dans les ténèbres : il voit (règles et écran) la
- *     cible dans ses Ténèbres et celle derrière ; le Rôdeur elfe (vision dans le noir) ne voit toujours ni l'une ni l'autre.
- *  2. Ses Ténèbres levées, l'Occultiste du diable lance les siennes au même endroit : l'Humain n'y voit plus (ce ne sont pas les siennes).
- * Sans l'Arène de la vision ou sans le module Ravenloft : non applicable.
+ * §447 — Shadow Power (Shadow Sorcery, Ravenloft), Eyes of the Dark: "if a spell you cast creates Darkness, you
+ * see normally through it" (`seesThroughOwnDarkness`). In the "Vision Arena" (`node tools/arene-vision.mjs` first):
+ *  1. The Human receives Shadow Power and the Darkness spell, and casts it on the Target in the darkness: they see (rules and
+ *     screen) the target in their Darkness and the one behind; the Elf Ranger (Darkvision) still sees neither.
+ *  2. Their Darkness lifted, the Fiend Warlock casts theirs in the same place: the Human no longer sees there (it is not theirs).
+ * Without the Vision Arena or without the Ravenloft module: not applicable.
  */
 import { ARENE_VISION } from "../lib/stages.mjs";
 
@@ -29,7 +29,7 @@ export default {
     ctx.restore(() => ctx.removeEffectsNamed(human, /concentr/i));
     ctx.restore(() => ctx.removeEffectsNamed(warlock, /concentr/i));
 
-    // Pouvoir de l'ombre prêté à l'Humain (son effet lui donne aussi la vision dans le noir à 120 ft), et le sort Ténèbres.
+    // Shadow Power lent to the Human (its effect also gives them Darkvision at 120 ft), and the Darkness spell.
     const uuid = `Compendium.${RHW}.Item.rhwSSPowerofShNG`;
     const { data } = await ctx.call("get-compendium-entry", { uuid });
     const { _id, folder, ownership, _stats, ...itemData } = data;
@@ -44,7 +44,7 @@ export default {
     const box = await ctx.box(tokens[ARENE_VISION.darknessOn]);
     const centre = { x: box.x + (box.width / 2), y: box.y + (box.height / 2) };
 
-    // 1. Les Ténèbres de l'Humain.
+    // 1. The Human's Darkness.
     const dark = await ctx.use({ tokenId: human.id, identifier: "darkness", area: { shape: "circle", ...centre, radius: 3 * grid } });
     if ( !ctx.expect(dark.used && !!dark.regionId, "Ténèbres de l'Humain posées") ) return;
     ctx.restore(() => ctx.call("delete-scene-object", { type: "Region", objectId: dark.regionId }).catch(() => {}));
@@ -57,13 +57,13 @@ export default {
       ctx.expect(["seen", "outline"].includes(c?.screen), `l'Humain : ${t} affichée (écran : ${c?.screen})`);
       ctx.expect(cell(own, "Rôdeur elfe", t)?.rules.sees === false, `le Rôdeur elfe ne voit pas ${t} (ces Ténèbres ne sont pas les siennes)`);
     }
-    // La visée : Ténèbres de l'Humain, une cible dedans — le moteur ne la refuse pas « pas en vue ».
+    // The aiming: the Human's Darkness, a target inside — the engine does not refuse it as "not in sight".
     const HEX = PHB + "phbsplHex0000000";
     await ctx.ensureItem(human, HEX, { system: { method: "atwill" } });
     const aim = await ctx.engine("sightIssues", { tokenId: human.id, identifier: "hex", targetIds: [tokens["Cible dans les ténèbres"].id] });
     ctx.expect(!aim.unseen.length, `l'Humain peut viser dans ses Ténèbres (refusées : ${aim.unseen.join(", ") || "aucune"})`);
 
-    // 2. Les Ténèbres d'un autre : plus de passe-droit.
+    // 2. Someone else's Darkness: no more free pass.
     await ctx.call("delete-scene-object", { type: "Region", objectId: dark.regionId }).catch(() => {});
     await ctx.removeEffectsNamed(human, /concentr/i);
     const other = await ctx.use({ tokenId: warlock.id, identifier: "darkness", area: { shape: "circle", ...centre, radius: 3 * grid } });

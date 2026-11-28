@@ -1,16 +1,16 @@
 /**
- * Bottes d'arme (SPEC §21), monde `dnd-6`. Le Guerrier maîtrise l'épée à deux mains (Écorchure), le fléau (Sape) et la javeline
- * (Ralentissement) ; l'épée change de botte le temps d'une partie (Enchaînement, Poussée, Renversement, Ouverture). Le Bandit reçoit
- * 300 PV. Vérifie :
- *  - Écorchure : sur un raté, le Bandit perd le modificateur de Force du Guerrier ;
- *  - Sape : touché, le Bandit porte la marque ; sa prochaine attaque a le Désavantage, et la marque tombe ;
- *  - Ouverture : touché et blessé, la prochaine attaque du Guerrier contre lui a l'Avantage, et la marque tombe ;
- *  - Ralentissement : la Vitesse du Bandit baisse de 10 ft, une seule fois ;
- *  - Renversement : la sauvegarde de Constitution du Bandit (DD 8 + For + maîtrise), À terre ⇔ ratée ;
- *  - Poussée : la question s'ouvre ; « Repousser » l'éloigne de 10 ft ;
- *  - Enchaînement : la seconde attaque (drapeau `cleave`, sans coût) lance ses dégâts sans le modificateur de Force ;
- *  - en combat : Sape tombe au début du tour suivant du Guerrier, Ouverture à la fin de son tour suivant.
- * Remet l'épée, positions, PV, états.
+ * Weapon masteries (SPEC §21), world `dnd-6`. The Fighter masters the greatsword (Graze), the flail (Sap) and the javelin
+ * (Slow); the sword changes mastery for the length of a game (Cleave, Push, Topple, Vex). The Bandit receives
+ * 300 HP. Checks:
+ *  - Graze: on a miss, the Bandit loses the Fighter's Strength modifier;
+ *  - Sap: on a hit, the Bandit bears the mark; his next attack has Disadvantage, and the mark drops;
+ *  - Vex: hit and wounded, the Fighter's next attack against him has Advantage, and the mark drops;
+ *  - Slow: the Bandit's Speed drops by 10 ft, only once;
+ *  - Topple: the Bandit's Constitution saving throw (DC 8 + Str + proficiency), Prone ⇔ failed;
+ *  - Push: the question opens; "Push away" moves him 10 ft away;
+ *  - Cleave: the second attack (flag `cleave`, no cost) rolls its damage without the Strength modifier;
+ *  - in combat: Sap drops at the start of the Fighter's next turn, Vex at the end of his next turn.
+ * Resets the sword, positions, HP, conditions.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -42,7 +42,7 @@ export default {
       data: max0 === null ? { "delta.system.attributes.hp.-=max": null } : { "delta.system.attributes.hp.max": max0 } }).catch(() => {}));
     const tough = () => ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.attributes.hp.max": 300, "delta.system.attributes.hp.value": 300 } });
 
-    // `move-token` (déplacement « displace ») : un update de x/y est contraint par les murs de la scène.
+    // `move-token` ("displace" move): an update of x/y is constrained by the scene's walls.
     const place = async (t, x, y) => { await ctx.call("move-token", { tokenId: t.id, x, y, elevation: 0 }); await pause(700); };
     const remettre = async () => {
       for ( const [id, h] of homes ) {
@@ -63,15 +63,15 @@ export default {
       ctx.expect(!errors.length, `${name} : aucune erreur dans la console du MJ${errors.length ? ` — ${errors.map(e => e.message ?? e.text).join(" | ").slice(0, 300)}` : ""}`);
     };
 
-    // §516 : la fenêtre « Au toucher » de la Sauvagerie martiale du Guerrier (cochée d'avance) s'ouvre avant toute autre question ;
-    // validée telle quelle, elle ne compte pas comme une réponse du scénario.
+    // §516: the Fighter's "Martial Savagery" window "On hit" (checked in advance) opens before any other question;
+    // validated as is, it does not count as an answer from the scenario.
     const savageDialog = d => /Savage Attacker|Sauvagerie martiale/i.test(`${d.title ?? ""} ${d.content ?? d.text ?? ""}`);
     const confirmSavage = async d => {
       const b = (d.buttons ?? []).find(x => /Confirm|Frapper|Valider/i.test(x.label ?? ""));
       await ctx.call("answer-dialog", { id: d.id, button: b?.action ?? b?.label }).catch(() => {});
     };
 
-    /** Une attaque ; rend la résolution, les messages, le mode et le verdict. */
+    /** An attack; returns the resolution, the messages, the mode and the verdict. */
     const attack = async (attacker, itemId, target, usage={}) => {
       const since = await ctx.lastMessageId();
       const known = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
@@ -155,7 +155,7 @@ export default {
     });
 
     await part("Poussée", async () => {
-      // Vers le bas : à droite du Guerrier, un mur arrête la poussée dans Restored Keep.
+      // Downward: to the right of the Fighter, a wall stops the push in Restored Keep.
       await tough(); await place(bandit, g.x, g.y + grid); await setMastery("push");
       const known = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
       const since = await ctx.lastMessageId();
@@ -208,9 +208,9 @@ export default {
       if ( !ctx.expect(!!s && !!v, "fléau et épée (Ouverture) : touché") ) return;
       const kinds = async () => [...(await effects(bandit)), ...(await effects(fighter))].map(e => e.flags[MODULE_ID].mastery.kind).sort().join(",");
       ctx.expect((await kinds()) === "sap,vex", `marques posées : ${await kinds()}`);
-      await ctx.nextTurn(); await pause(2500);   // fin du tour du Guerrier (celui de la pose), tour du Bandit
+      await ctx.nextTurn(); await pause(2500);   // end of the Fighter's turn (the one of the placing), the Bandit's turn
       ctx.expect((await kinds()) === "sap,vex", `tour du Bandit : toujours ${await kinds()}`);
-      await ctx.nextTurn(); await pause(2500);   // début du tour suivant du Guerrier
+      await ctx.nextTurn(); await pause(2500);   // start of the Fighter's next turn
       ctx.expect((await kinds()) === "vex", `début du tour suivant du Guerrier : la Sape tombe (${await kinds() || "rien"})`);
       await ctx.nextTurn(); await pause(2500);   // fin du tour suivant du Guerrier
       ctx.expect((await kinds()) === "", `fin de son tour suivant : l'Ouverture tombe (${await kinds() || "rien"})`);

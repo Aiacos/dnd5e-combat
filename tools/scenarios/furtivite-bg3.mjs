@@ -1,11 +1,12 @@
 /**
- * §184 : la Furtivité « BG3 ». Le Zombi regarde vers le bas ; le Guerrier (armure lourde : Discrétion au Désavantage) en mode furtif :
- *  1. dans son dos : pas vu, aucun test ;
- *  2. devant lui en pleine lumière : repéré aussitôt (le Zombi le voit désormais) ;
- *  3. dans une zone d'obscurité (région « Ajuster l'obscurité » du cœur), le mode remis à zéro : à chaque entrée dans sa vue, un test ;
- *     un échec = doute, deux = repéré — on entre et ressort jusqu'à être repéré (ou quatorze entrées sans deux échecs, cohérent aussi) ;
- *  4. sortir du mode efface les repérages.
- * Remet : réglages, mode furtif, positions, rotation, région.
+ * §184: "BG3" Stealth. The Zombi faces down; the Fighter (heavy armor: Disadvantage on Stealth) in stealth mode:
+ *  1. behind it: not seen, no check;
+ *  2. in front of it in full light: spotted at once (the Zombi now sees the Fighter);
+ *  3. in a darkness area (the core's "Adjust darkness" region), mode reset: on each entry into its view, a check;
+ *     one failure = doubt, two = spotted — enter and leave until spotted (or fourteen entries without two failures,
+ *     also consistent);
+ *  4. leaving the mode clears the spottings.
+ * Restores: settings, stealth mode, positions, rotation, region.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -23,7 +24,7 @@ export default {
       const r = await ctx.engine("setting", { key, value });
       ctx.restore(() => ctx.engine("setting", { key, value: r.before }));
     }
-    // Seuls le Zombi (l'ennemi qui regarde), le Guerrier et le Clerc (un allié) : un autre ennemi le repérerait aussi.
+    // Only the Zombi (the enemy that looks), the Fighter and the Cleric (an ally): another enemy would spot the Fighter too.
     for ( const t of tokens.filter(t => !["Zombi", "Guerrier", "Clerc"].includes(t.name)) ) {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: t.id });
       if ( data.hidden ) continue;
@@ -49,7 +50,7 @@ export default {
     if ( ally ) ctx.expect((await ctx.engine("sees", { observerId: ally.id, targetId: rogue.id })).sees === true, "un allié (le Clerc) le voit toujours");
     ctx.expect((await ctx.engine("sees", { observerId: zombi.id, targetId: rogue.id })).sees === false, "le Zombi ne le voit pas");
 
-    // 2. Devant, en pleine lumière.
+    // 2. In front, in full light.
     s = await go(front);
     if ( s.light !== 2 ) ctx.log(`lumière au point : ${s.light} (l'arène n'est pas en plein jour ?)`);
     else {
@@ -57,7 +58,7 @@ export default {
       ctx.expect((await ctx.engine("sees", { observerId: zombi.id, targetId: rogue.id })).sees === true, "le Zombi le voit désormais");
     }
 
-    // 3. Dans le noir : une région d'obscurité autour du Roublard et de la ligne de vue.
+    // 3. In the dark: a darkness region around the Rogue and the line of sight.
     const region = await ctx.call("create-region", { sceneId, name: "Obscurité (essai)", color: "#000000",
       shapes: [{ type: "rectangle", x: z.x - (grid * 3), y: z.y - (grid * 5), width: grid * 7, height: grid * 11 }],
       behaviors: [{ type: "adjustDarknessLevel", name: "Obscurité", system: { mode: 0, modifier: 1 } }] });
@@ -83,7 +84,7 @@ export default {
     }
     else ctx.expect((s.views?.Zombi?.fails ?? 0) <= 1, "pas repéré : au plus un échec");
 
-    // 4. Attaquer depuis la furtivité, dans son dos : Avantage (il ne le voit pas), puis on sort du mode.
+    // 4. Attacking from stealth, from behind: Advantage (it does not see the attacker), then leave the mode.
     await st("set", { on: false });
     await st("set", { on: true });
     await go([z.x, z.y - grid]);

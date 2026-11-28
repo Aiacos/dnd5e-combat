@@ -1,17 +1,17 @@
 /**
- * Objets pilotés (SPEC §16.15, B19), lus et écrits dans Foundry : Arme spirituelle, Sphère de feu, Main de Bigby.
+ * Piloted objects (SPEC §16.15, B19), read and written in Foundry: Spiritual Weapon, Flaming Sphere, Bigby's Hand.
  *
- * Vérifié dans dnd5e 6.0.3 et le PHB 2.2.0 :
- *  - le sort a une activité « summon » ; l'acteur invoqué porte `flags.dnd5e.summon.origin` = uuid de l'item du lanceur
- *    (documents/activity/summon.mjs:145, 261) ; c'est le joueur qui l'importe et pose le token : il en est propriétaire ;
- *  - ses activités de commande ont l'activation « bonus » (« Move and Attack » de l'Arme spirituelle : attaque de sort au
- *    corps à corps à 5 ft, bonus d'attaque recopié du lanceur par `match.attacks`, summon.mjs:408 ; dégâts
- *    `(@flags.dnd5e.summon.level - 1)d8 + @flags.dnd5e.summon.mod`) ;
- *  - l'Arme spirituelle n'a aucune vitesse et une disposition « secrète » (-2) : la distance d'une commande vient du
- *    contenu, l'hostilité se juge d'après le lanceur.
+ * Verified in dnd5e 6.0.3 and PHB 2.2.0:
+ *  - the spell has a "summon" activity; the summoned actor carries `flags.dnd5e.summon.origin` = uuid of the caster's item
+ *    (documents/activity/summon.mjs:145, 261); the player imports it and places the token: they own it;
+ *  - its command activities have the "bonus" activation (the Spiritual Weapon's "Move and Attack": melee spell attack at
+ *    5 ft, attack bonus copied from the caster by `match.attacks`, summon.mjs:408; damage
+ *    `(@flags.dnd5e.summon.level - 1)d8 + @flags.dnd5e.summon.mod`);
+ *  - the Spiritual Weapon has no speed and a "secret" disposition (-2): a command's distance comes from the
+ *    content, hostility is judged from the caster.
  *
- * L'état de la commande du tour vit sur le combattant du LANCEUR (`flags["dnd5e-combat"].commands.<id du token>`),
- * écrit par le MJ actif ; un état d'un autre tour ne compte pas (core/pilot.mjs, `currentCommand`).
+ * The state of the turn's command lives on the CASTER's combatant (`flags["dnd5e-combat"].commands.<id du token>`),
+ * written by the active GM; a state from another turn does not count (core/pilot.mjs, `currentCommand`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,7 +23,7 @@ import { lengthIn } from "./units.mjs";
 import { isObjectToken } from "./bodies.mjs";
 
 /**
- * L'objet piloté que ce token représente, ou null.
+ * The piloted object that this token represents, or null.
  * @param {TokenDocument} tokenDoc
  * @returns {{token: TokenDocument, item: Item, summoner: Actor, rule: object, endsSpell: boolean}|null}
  */
@@ -35,32 +35,32 @@ export function pilotOf(tokenDoc) {
   return { token: tokenDoc, item, summoner: item.actor, rule: summon.pilot, summon, endsSpell: summon.endsSpell === true };
 }
 
-/** L'objet piloté d'un acteur invoqué (son token sur la scène), ou null. */
+/** The piloted object of a summoned actor (its token on the scene), or null. */
 export function pilotOfActor(actor) {
   if ( !actor?.getFlag?.("dnd5e", "summon.origin") ) return null;
   const token = actor.token ?? actor.getActiveTokens?.(false, true)?.[0] ?? null;
   return token ? pilotOf(token) : null;
 }
 
-/** Le combattant du lanceur (celui qui paie les commandes), ou null hors combat. */
+/** The caster's combatant (the one who pays for the commands), or null outside combat. */
 export function summonerCombatant(pilot) {
   return pilot ? combatantFor(pilot.summoner) : null;
 }
 
-/** Le token (TokenDocument) du lanceur sur la scène de l'objet, ou null. */
+/** The caster's token (TokenDocument) on the object's scene, or null. */
 export function summonerToken(pilot) {
   const tokens = pilot?.summoner?.getActiveTokens?.(false, true) ?? [];
   return tokens.find(t => t.parent === pilot.token.parent) ?? tokens[0] ?? null;
 }
 
-/** Clé du tour en cours d'un combat. */
+/** Key of a combat's current turn. */
 export function turnKey(combat) {
   return combat ? `${combat.id}.${combat.round}.${combat.turn}` : "";
 }
 
 /**
- * Sous quelle clé la commande est tenue : le token, ou pour une commande partagée (`shared`, Lumières dansantes) le sort —
- * l'effet de concentration qui tient les objets, à défaut l'item. Une clé sans point : c'est un chemin de flag.
+ * Under which key the command is held: the token, or for a shared command (`shared`, Dancing Lights) the spell —
+ * the Concentration effect that holds the objects, failing that the item. A key without a dot: it is a flag path.
  */
 export function commandKey(pilot) {
   if ( !pilot.rule.shared ) return pilot.token.id;
@@ -68,13 +68,13 @@ export function commandKey(pilot) {
   return effect ? `fx${effect}` : `it${pilot.item.id}`;
 }
 
-/** Les objets du même sort sur la scène de celui-ci (lui compris). */
+/** The objects of the same spell on its scene (itself included). */
 export function groupTokens(pilot) {
   const origin = pilot.item.uuid;
   return pilot.token.parent.tokens.filter(t => t.actor?.getFlag("dnd5e", "summon.origin") === origin);
 }
 
-/** L'état de la commande de cet objet, tel qu'écrit (peut dater d'un autre tour). */
+/** The command state of this object, as written (may date from another turn). */
 export function readCommand(combatant, pilot) {
   return combatant?.getFlag(MODULE_ID, `commands.${commandKey(pilot)}`) ?? null;
 }
@@ -84,7 +84,7 @@ export async function writeCommand(combatant, pilot, state) {
 }
 
 /**
- * Ce que coûterait ce geste maintenant, et l'état qui en résulterait.
+ * What this gesture would cost now, and the state that would result.
  * @param {object} pilot
  * @param {"move"|"use"} gesture
  * @returns {{combatant: Combatant|null, ownTurn: boolean, pay: string|null, next: object|null}}
@@ -94,19 +94,19 @@ export function commandPlan(pilot, gesture) {
   if ( !combatant ) return { combatant: null, ownTurn: true, pay: null, next: null };
   const key = turnKey(combatant.combat);
   const { pay, next } = planCommand(readCommand(combatant, pilot), gesture, pilot.rule.cost, key);
-  // `free` (Invocation d'animaux : « quand vous vous déplacez à votre tour, vous pouvez aussi déplacer la meute ») : rien à payer.
+  // `free` (Conjure Animals: "when you move on your turn, you can also move the pack"): nothing to pay.
   return { combatant, ownTurn: isOwnTurn(combatant), pay: (pay === "free") ? null : pay, next };
 }
 
-/** Distance d'une commande, dans l'unité de la grille. */
+/** Distance of a command, in grid units. */
 export function commandDistance(pilot, factors) {
   const units = pilot.token.parent?.grid.units ?? pilot.rule.units;
   return lengthIn(pilot.rule.distance, pilot.rule.units, units, factors);
 }
 
 /**
- * Les activités qu'une commande fait jouer à l'objet : celles de ses items dont l'activation est celle d'une commande
- * (l'action Bonus), qui visent autre chose que l'objet lui-même.
+ * The activities a command makes the object play: those of its items whose activation is that of a command
+ * (the Bonus Action), which target something other than the object itself.
  * @returns {Activity[]}
  */
 export function commandActivities(pilot, { self=false }={}) {
@@ -116,8 +116,8 @@ export function commandActivities(pilot, { self=false }={}) {
       if ( activity.activation?.type !== pilot.rule.cost ) continue;
       if ( !["attack", "save", "damage", "heal", "utility"].includes(activity.type) ) continue;
       if ( (activity.range?.units === "self") !== self ) continue;
-      // Un utilitaire qui vise ailleurs (« Move » de l'Œil magique) n'est pas une action contre une créature : le
-      // déplacement de l'objet se fait au clic.
+      // A utility that targets elsewhere (the Arcane Eye's "Move") is not an action against a creature: the
+      // object's movement is done by clicking.
       if ( !self && (activity.type === "utility") ) continue;
       out.push(activity);
     }
@@ -125,18 +125,18 @@ export function commandActivities(pilot, { self=false }={}) {
   return out;
 }
 
-/** Libellé d'une commande : l'item, et l'activité s'il en a plusieurs (« Grasping Hand (Crush) »). */
+/** Label of a command: the item, and the activity if it has several ("Grasping Hand (Crush)"). */
 export function commandLabel(activity) {
   const item = activity.item;
   return ((item.system.activities?.size ?? 0) > 1) && activity.name ? `${item.name} (${activity.name})` : item.name;
 }
 
-/** Ce que l'objet fait autour de lui (`summon.pulse`) : la règle et l'activité de son item, ou null. */
+/** What the object does around itself (`summon.pulse`): the rule and the activity of its item, or null. */
 export function pulseOf(tokenDoc) {
   const item = summonItemOf(tokenDoc);
   const rule = summonRuleOf(item)?.pulse ?? null;
   if ( !rule ) return null;
-  // §164 : plusieurs identifiants possibles (Invocation d'élémentaire : un item par élément).
+  // §164: several possible identifiers (Conjure Elemental: one item per element).
   const own = tokenDoc.actor?.items.find(i => [rule.item].flat().includes(identifierOf(i).id));
   const activity = own?.system.activities?.find(a => ["save", "attack", "damage"].includes(a.type)) ?? null;
   return activity ? { rule, activity } : null;
@@ -146,14 +146,15 @@ export function pulseOf(tokenDoc) {
 export function isIntangible(tokenDoc) {
   const pilot = pilotOf(tokenDoc);
   if ( pilot ) return pilot.rule.occupies === false;
-  // §255 : un objet sans pilote (piège posé, `flags.dnd5e-combat.object`) n'occupe pas son espace — ni il ne gêne, ni il n'est gêné.
+  // §255: an object without a pilot (placed trap, `flags.dnd5e-combat.object`) does not occupy its space —
+  // it neither hinders nor is hindered.
   return isObjectToken(tokenDoc);
 }
 
 /**
- * L'activité du SORT qui commande ses objets (« Move Lights » de Lumières dansantes : utilitaire à l'action Bonus) : son
- * utilisation ouvre la commande du tour au lieu d'être une dépense à part. Rend le pilote d'un des objets sur la scène
- * du lanceur, ou null.
+ * The activity of the SPELL that commands its objects (Dancing Lights' "Move Lights": a utility at Bonus Action): its
+ * use opens the turn's command instead of being a separate expense. Returns the pilot of one of the objects on the
+ * caster's scene, or null.
  */
 export function spellCommandOf(activity) {
   const item = activity?.item;
@@ -167,10 +168,10 @@ export function spellCommandOf(activity) {
 }
 
 /**
- * §502 (B22) : le token d'une invocation de `actor` sur la scène `scene`, vers laquelle tirer (`move { toward: "summon" }`) ou qui tient
- * une empoignade (`grapples.by: "summon"`) : de préférence une invocation de cet item (`flags.dnd5e.summon.origin` = son uuid), sinon
- * n'importe laquelle de l'acteur (la Liane avide d'un monstre est lancée par la copie du sort, l'attaque vient d'un autre item) ; la plus
- * proche de `near` s'il y en a plusieurs. null sans invocation.
+ * §502 (B22): the token of a summon of `actor` on the scene `scene`, to pull toward (`move { toward: "summon" }`) or that holds
+ * a grapple (`grapples.by: "summon"`): preferably a summon of this item (`flags.dnd5e.summon.origin` = its uuid), otherwise
+ * any of the actor's (a monster's Grasping Vine is cast by the spell copy, the attack comes from another item); the
+ * nearest to `near` if there are several. null without a summon.
  */
 export function summonTokenFor(actor, item, scene, near=null) {
   if ( !actor || !scene ) return null;
@@ -188,7 +189,7 @@ export function summonTokenFor(actor, item, scene, near=null) {
   return pool.slice().sort((a, b) => d(a) - d(b))[0];
 }
 
-/** Les tokens des invocations de cet acteur dont la règle dit `key` (`castFrom`, `endsIfIncapacitated`…), toutes scènes. */
+/** The tokens of this actor's summons whose rule says `key` (`castFrom`, `endsIfIncapacitated`…), all scenes. */
 export function summonsOfWith(actor, key) {
   const out = [];
   if ( !actor ) return out;
@@ -204,16 +205,16 @@ export function summonsOfWith(actor, key) {
   return out;
 }
 
-/** Le combattant d'un objet piloté joue-t-il ? Non : il agit pendant le tour de son lanceur. */
+/** Does a piloted object's combatant play? No: it acts during its caster's turn. */
 export function isPilotedCombatant(combatant) {
   return !!combatant?.token && !!pilotOf(combatant.token);
 }
 
 /**
- * §38.2 : Troc du filou — depuis l'illusion ou depuis son lanceur, la paire qui peut échanger sa place maintenant : le lanceur porte un
- * item `transpose` qui vise l'item de l'invocation (identifiant), et la règle du tour le permet (core/pilot.mjs, `canTranspose`).
- * `createdTurn` / `transposedTurn` : drapeaux de l'illusion (tour de sa création, tour du dernier échange). null sinon.
- * @param {TokenDocument} token  L'illusion, ou le lanceur.
+ * §38.2: "Trickster's Swap" — from the illusion or from its caster, the pair that can swap places now: the caster carries a
+ * `transpose` item that targets the summon's item (identifier), and the turn's rule allows it (core/pilot.mjs, `canTranspose`).
+ * `createdTurn` / `transposedTurn`: the illusion's flags (turn of its creation, turn of the last swap). null otherwise.
+ * @param {TokenDocument} token  The illusion, or the caster.
  * @returns {{caster: TokenDocument, illusion: TokenDocument, pilot: object, turnKey: string|null}|null}
  */
 export function transposeOf(token) {

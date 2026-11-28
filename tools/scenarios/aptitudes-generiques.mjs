@@ -1,12 +1,15 @@
 /**
- * §278–§281 : briques génériques ajoutées pour le contenu d'autres modules (un pack d'automatisation de classe tierce). Items de test
- * synthétiques prêtés au Guerrier, leurs règles posées dans la surcouche du monde (`api.mcp.overrideContent`), retirés à la fin :
- *  1. regain à l'initiative (§278) : les utilisations d'un item reviennent, un niveau d'Épuisement part, une utilisation payée ;
- *  2. fin d'état au début du tour (§278) : Effrayé retiré au début du tour du Guerrier, puis un niveau d'Épuisement ;
- *  3. dégâts maximaux promis (§279) : une activité promet le maximum à la prochaine attaque ; touchée, dés au maximum, coût rendu ;
- *  4. prochain coup au maximum (§279) : le Zombi porte un effet d'un item `maxNextHit` — le coup suivant fait le maximum, l'effet part ;
- *  5. empoignade (§281) : la sauvegarde contre la Lutte du Guerrier a le Désavantage (`inescapable`), et le Guerrier qui agrippe le
- *     Zombi a un demi-abri contre l'Ensorceleur, pas contre le Zombi (`grappleCover`).
+ * §278–§281: generic bricks added for the content of other modules (a third-party class automation pack). Synthetic test items
+ * lent to the Fighter, their rules placed in the world overlay (`api.mcp.overrideContent`), removed at the end:
+ *  1. regain at Initiative (§278): an item's uses come back, a level of Exhaustion goes away, a use paid;
+ *  2. condition ending at the start of the turn (§278): Frightened removed at the start of the Fighter's turn, then a level of
+ *     Exhaustion;
+ *  3. promised maximum damage (§279): an activity promises the maximum on the next attack; on a hit, dice at maximum, cost
+ *     returned;
+ *  4. next hit at maximum (§279): the Zombie carries an effect from a `maxNextHit` item — the next hit does the maximum,
+ *     the effect goes away;
+ *  5. grapple (§281): the saving throw against the Fighter's Grapple has Disadvantage (`inescapable`), and the Fighter who
+ *     grapples the Zombie has Half Cover against the Sorcerer, not against the Zombie (`grappleCover`).
  */
 const MODULE_ID = "dnd5e-combat";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -40,7 +43,7 @@ export default {
     const size = await ctx.gridSize();
     const scene = await ctx.scene();
 
-    // --- Items et règles prêtés --------------------------------------------------------------------------------------
+    // --- Lent items and rules ----------------------------------------------------------------------------------------
     const ids = {};
     for ( const [key, it] of Object.entries(ITEMS) ) {
       const itemData = { name: it.name, type: "feat", img: "icons/svg/upgrade.svg",
@@ -64,7 +67,7 @@ export default {
     ctx.restore(() => ctx.removeStatusEffects(zombi, "grappled").catch(() => {}));
     await ctx.call("move-token", { tokenId: hero.id, x: zombi.x - size, y: zombi.y });
 
-    // --- 1. Regain à l'initiative ------------------------------------------------------------------------------------
+    // --- 1. Regain on Initiative ------------------------------------------------------------------------------------
     await ctx.call("update-actor", { actorId: hero.actorId, actorData: { "system.attributes.exhaustion": 2 } });
     await ctx.startCombat([hero, zombi, sorc]);
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
@@ -76,7 +79,7 @@ export default {
     ctx.expect(afterInit.system?.attributes?.exhaustion === 1, `initiative : un niveau d'Épuisement retiré (${afterInit.system?.attributes?.exhaustion})`);
     ctx.expect((await itemOf("pugnace"))?.system?.uses?.spent === 1, "initiative : « pugnace » dépense son utilisation");
 
-    // --- 2. Fin d'état au début du tour ------------------------------------------------------------------------------
+    // --- 2. Condition ending at the start of the turn ----------------------------------------------------------------
     await ctx.call("set-status", { tokenId: hero.id, statusId: "frightened", active: true });
     const heroTurn = async () => {
       for ( let i = 0; i < 4; i++ ) {
@@ -94,7 +97,7 @@ export default {
     await heroTurn();
     ctx.expect((await actorOf()).system?.attributes?.exhaustion === 0, `tour suivant, sans état : l'Épuisement baisse (${(await actorOf()).system?.attributes?.exhaustion})`);
 
-    // --- 3. Dégâts maximaux promis -----------------------------------------------------------------------------------
+    // --- 3. Promised maximum damage ----------------------------------------------------------------------------------
     const weapon = (await actorOf()).items.find(i => (i.type === "weapon") && i.system?.equipped
       && Object.values(i.system?.activities ?? {}).some(a => a.type === "attack" && a.attack?.type?.value === "melee"));
     if ( !weapon ) return ctx.expect(false, "le Guerrier a une arme de corps à corps équipée");

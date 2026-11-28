@@ -1,38 +1,38 @@
 /**
- * §395 : « Lancer sans DAS » — une action passe par dnd5e seul, comme pendant le Théâtre de l'esprit (§220), mais pour elle seule et
- * tout ce qui en découle jusqu'à sa fin (décision de l'utilisateur, 2026-11-07).
+ * §395: "Cast without DAS" — an action goes through dnd5e alone, as during Theater of the Mind (§220), but for it alone and
+ * everything that follows from it until its end (user decision, 2026-11-07).
  *
- * Le marqueur est `flags["dnd5e-combat"].vanilla` : posé sur la configuration d'utilisation par l'appelant, recopié sur la carte
- * d'utilisation, l'effet de concentration, les zones et les créatures invoquées (runtime/vanilla.mjs). Ce qui en découle se reconnaît
- * par les liens que dnd5e garde déjà : un jet par la carte d'origine (`system.origin`, `options.originatingMessage`), un effet posé
- * par la carte (`system.origin.message`) ou rattaché à une concentration marquée (`flags.dnd5e.dependentOn`).
+ * The marker is `flags["dnd5e-combat"].vanilla`: set on the use configuration by the caller, copied onto the use card,
+ * the Concentration effect, the areas and the summoned creatures (runtime/vanilla.mjs). What follows from it is recognized
+ * by the links dnd5e already keeps: a roll through the originating card (`system.origin`, `options.originatingMessage`), an
+ * effect applied by the card (`system.origin.message`) or attached to a marked Concentration (`flags.dnd5e.dependentOn`).
  *
- * `flags["dnd5e-combat"].correction` (§396, carte « Correction du MJ ») est sautée par le routeur, elle seule : ce que la correction
- * pose (effets, concentration) redevient l'affaire de DAS.
+ * `flags["dnd5e-combat"].correction` (§396, "GM Correction" card) is skipped by the router, it alone: what the correction
+ * applies (effects, Concentration) becomes DAS's business again.
  *
- * Sans import, comme theater-state.mjs : le routeur le lit à chaque hook. Les globaux (`game`, `fromUuidSync`) ne sont lus qu'à l'appel,
- * et seulement quand un lien est à suivre : le fichier se teste hors de Foundry.
+ * Without imports, like theater-state.mjs: the router reads it at each hook. The globals (`game`, `fromUuidSync`) are read
+ * only at call time, and only when a link is to be followed: the file can be tested outside Foundry.
  */
 
 const ID = "dnd5e-combat";
 
-/** Durée pendant laquelle une activité lancée sans DAS marque ce qu'elle crée sur ce client (zone posée, invocation…). */
+/** Duration during which an activity cast without DAS marks what it creates on this client (placed area, summon…). */
 export const PENDING_MS = 120000;
 
-/** uuid d'activité ou d'objet → échéance (ms). Local au client qui lance : c'est lui qui crée la concentration, la zone, l'invocation. */
+/** activity or item uuid → deadline (ms). Local to the casting client: it is the one that creates the Concentration, area, summon. */
 const pending = new Map();
 
-/** Note qu'une activité (et son objet) vient d'être lancée sans DAS sur ce client. */
+/** Records that an activity (and its item) has just been cast without DAS on this client. */
 export function markPending(uuids, now=Date.now()) {
   for ( const uuid of uuids ) if ( uuid ) pending.set(uuid, now + PENDING_MS);
 }
 
-/** Une utilisation ordinaire de cette activité / de cet objet : ce qu'elle crée redevient l'affaire de DAS. */
+/** An ordinary use of this activity / item: what it creates becomes DAS's business again. */
 export function clearPending(uuids) {
   for ( const uuid of uuids ) pending.delete(uuid);
 }
 
-/** Cette activité ou cet objet a-t-il été lancé sans DAS il y a peu, sur ce client ? */
+/** Was this activity or item cast without DAS a short while ago, on this client? */
 export function isPending(uuid, now=Date.now()) {
   if ( !uuid || !pending.size ) return false;
   const until = pending.get(uuid);
@@ -41,14 +41,14 @@ export function isPending(uuid, now=Date.now()) {
   return true;
 }
 
-/** Vide l'état (tests). */
+/** Clears the state (tests). */
 export function resetVanilla() {
   pending.clear();
 }
 
 const flagsOf = x => x?.flags?.[ID] ?? x?._source?.flags?.[ID] ?? null;
 
-/** Le document ou les données portent-ils le marqueur « sans DAS » ? */
+/** Do the document or the data carry the "without DAS" marker? */
 export function hasVanillaFlag(x) {
   return !!flagsOf(x)?.vanilla;
 }
@@ -63,7 +63,7 @@ const lookupMessage = ref => {
 
 const lookupUuid = uuid => ((typeof uuid === "string") ? globalThis.fromUuidSync?.(uuid, { strict: false }) ?? null : null);
 
-/** Ce message, ou la carte dont il découle (un jet de dégâts de la carte d'utilisation), est-il marqué ? */
+/** Is this message, or the card it derives from (a damage roll of the use card), marked? */
 function messageVanilla(ref) {
   const message = lookupMessage(ref);
   if ( !message ) return false;
@@ -73,41 +73,41 @@ function messageVanilla(ref) {
 }
 
 /**
- * Ce document, ces données ou cette configuration viennent-ils d'une action lancée sans DAS ? Suit les liens de dnd5e vers la carte
- * d'origine ou la concentration (un niveau, pas de chaîne).
+ * Does this document, these data or this configuration come from an action cast without DAS? Follows dnd5e's links to the
+ * originating card or the Concentration (one level, no chain).
  */
 export function isVanilla(x) {
   if ( !x || (typeof x !== "object") ) return false;
   if ( x[ID]?.vanilla ) return true;                       // configuration d'utilisation
-  if ( hasVanillaFlag(x) ) return true;                    // document marqué, données de création
+  if ( hasVanillaFlag(x) ) return true;                    // marked document, creation data
   if ( hasVanillaFlag(x.data) ) return true;               // configuration de message (`data.flags`)
-  if ( pending.size && (isPending(x.uuid) || isPending(x.subject?.uuid)) ) return true;   // activité en cours, config de jet
+  if ( pending.size && (isPending(x.uuid) || isPending(x.subject?.uuid)) ) return true;   // activity in progress, roll config
   const system = x.system ?? x.data?.system ?? null;
   const origin = system?.origin;
   if ( origin ) {
-    // Jet rattaché à sa carte (attack.mjs:69, damage.mjs:52 : `system.origin` = id du message ; ChatMessage5e le résout en document).
+    // Roll attached to its card (attack.mjs:69, damage.mjs:52: `system.origin` = message id; ChatMessage5e resolves it).
     if ( (typeof origin === "string") || (origin.documentName === "ChatMessage") ) {
       if ( messageVanilla(origin) ) return true;
     }
-    // Effet posé par la carte (effect-application.mjs:253 : `system.origin.message`).
+    // Effect applied by the card (effect-application.mjs:253: `system.origin.message`).
     else if ( origin.message && messageVanilla(origin.message) ) return true;
   }
-  // Un Roll (basic-roll.mjs:177), les options de applyDamage (chat-message.mjs:502 : le message de dégâts, lui-même issu de la carte).
+  // A Roll (basic-roll.mjs:177), the options of applyDamage (chat-message.mjs:502: the damage message, derived from the card).
   const originating = x.options?.originatingMessage ?? x.originatingMessage;
   if ( originating && messageVanilla(originating) ) return true;
-  const dependentOn = x.flags?.dnd5e?.dependentOn;   // effet rattaché à une concentration (effect-application.mjs:247)
+  const dependentOn = x.flags?.dnd5e?.dependentOn;   // effect attached to a Concentration (effect-application.mjs:247)
   if ( dependentOn && hasVanillaFlag(lookupUuid(dependentOn)) ) return true;
   return false;
 }
 
-/** Faut-il que le routeur se taise pour ces arguments de hook ? Les quatre premiers, et le premier élément d'une liste (des jets). */
+/** Must the router stay silent for these hook arguments? The first four, and the first element of a list (of rolls). */
 export function concernsVanilla(args) {
   const n = Math.min(args?.length ?? 0, 4);
   for ( let i = 0; i < n; i++ ) {
     const a = args[i];
     if ( Array.isArray(a) ) { if ( a.length && isVanilla(a[0]) ) return true; continue; }
     if ( isVanilla(a) ) return true;
-    if ( flagsOf(a)?.correction ) return true;              // §396 : la carte de correction elle-même
+    if ( flagsOf(a)?.correction ) return true;              // §396: the correction card itself
   }
   return false;
 }

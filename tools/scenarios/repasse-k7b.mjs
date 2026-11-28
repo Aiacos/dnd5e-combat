@@ -1,13 +1,13 @@
 /**
- * §334, restes du lot K7 de la repasse des créatures : dégâts « at the start of each of the …'s turns » (`originTurnStart`). Arène des
- * sorts : le Lanceur (PNJ) et l'« Ennemi au contact ».
- *  - Submersion de l'Élémentaire de l'eau : l'Ennemi qui rate est Agrippé ; au début du tour suivant du Lanceur, il subit les dégâts
- *    de l'activité « turnStart » de la capacité.
+ * §334, leftovers of batch K7 of the creature pass: damage "at the start of each of the …'s turns" (`originTurnStart`). Spell
+ * arena: the Caster (NPC) and the "Enemy in contact".
+ *  - Water Elemental's Whelm: the Enemy that fails is Grappled; at the start of the Caster's next turn, it takes the damage
+ *    of the ability's "turnStart" activity.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
 const MM = "Compendium.dnd-monster-manual.actors.Actor";
-// §435 : la Submersion a son identifiant propre (« mm-whelm », content/sources.mjs) — « whelm » est le marteau légendaire du Guide.
+// §435: Whelm has its own identifier ("mm-whelm", content/sources.mjs) — "whelm" is the Guide's legendary hammer.
 const WHELM = new Set(["mm-whelm", "whelm"]);
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -70,7 +70,7 @@ export default {
     await ctx.nextTurn();   // tour de l'Ennemi : rien
     await pause(2500);
     const mid = await ctx.hp(enemy);
-    await ctx.nextTurn();   // début du tour du Lanceur : dégâts
+    await ctx.nextTurn();   // start of the Caster's turn: damage
     await pause(4000);
     const after = await ctx.hp(enemy);
     ctx.expect(mid === 999, `au tour de l'Ennemi : pas de dégâts (${mid})`);

@@ -1,22 +1,22 @@
 /**
- * Monture et ordre à un compagnon (§490, brique B08). Règles pures : core/mount.mjs ; lectures : adapter/mount.mjs.
+ * Mount and command to a companion (§490, brick B08). Pure rules: core/mount.mjs; reads: adapter/mount.mjs.
  *
- *  - Monter / Descendre : entrées du menu contextuel (cavalier sur sa monture, ou sur lui-même une fois monté). En combat, la moitié
- *    de la Vitesse du cavalier (budget `stood`, comme se relever : Manuel 2024, « Monter et descendre »). Un refus de règle (pas son
- *    cavalier, trop grand, pas au contact, À terre, plus assez de déplacement) se force par la fenêtre de légalité ; « déjà monté »,
- *    « déjà montée » et « pas une monture » restent secs. Les écritures (drapeaux, déplacements, initiative) : MJ actif, par la requête
- *    `MOUNT_QUERY` (l'expéditeur doit posséder le cavalier).
- *  - Déplacement commun (MJ actif) : la monture marche, le cavalier est reposé au centre de son espace ; le cavalier déplacé (son
- *    joueur le prend en main), la monture le suit du même écart puis il est rassis. Pas `displace`, cases prises ignorées.
- *  - Monture contrôlée : son initiative est mise juste après celle de son cavalier (au montage, au lancement du combat, quand celle
- *    du cavalier change) ; sans ordre de ce round, elle ne prend que Foncer, Se désengager, Esquiver (runtime/turn.mjs, souci
+ *  - Mount / Dismount: context menu entries (rider on their mount, or on themselves once mounted). In combat, half of the
+ *    rider's Speed (`stood` budget, like standing up: Player's Handbook 2024, "Mounting and Dismounting"). A rule refusal (not
+ *    their rider, too big, not in contact, Prone, not enough movement left) can be forced through the legality window;
+ *    "already mounted", "already ridden" and "not a mount" stay dry. Writes (flags, movements, Initiative): active GM, via
+ *    the query `MOUNT_QUERY` (the sender must own the rider).
+ *  - Joint movement (active GM): the mount walks, the rider is set back at the center of its space; the rider moved (their
+ *    player takes it in hand), the mount follows by the same offset then they are reseated. Not `displace`, taken cells ignored.
+ *  - Controlled mount: its Initiative is set right after its rider's (on mounting, at combat start, when the rider's
+ *    changes); with no command this round, it only takes Dash, Disengage, Dodge (runtime/turn.mjs, issue
  *    `mountNotCommanded`).
- *  - Chute : le cavalier ou la monture À terre, Neutralisé (ou pire) ou à 0 PV — le lien tombe, le cavalier est posé à côté, À terre.
- *  - Ordre (`commands`) : à l'utilisation de l'item, les compagnons désignés à portée sont commandés pour ce round
- *    (`flags.dnd5e-combat.commanded`) ; aucun à portée : la légalité le dit (souci `commandFar`, forçable) et l'ordre forcé vaut
- *    pour tous les compagnons désignés de la scène.
- * Chaque geste : un texte flottant vu de tous et un son (`notice … all`, actions `mount`, `dismount`, `thrown`, `command` du hook
- * `dnd5e-combat.feedback`, que darsh-animations peut animer).
+ *  - Fall: the rider or the mount Prone, Incapacitated (or worse) or at 0 HP — the link drops, the rider is placed beside, Prone.
+ *  - Command (`commands`): on use of the item, the designated companions in range are commanded for this round
+ *    (`flags.dnd5e-combat.commanded`); none in range: legality says so (issue `commandFar`, forceable) and the forced command
+ *    applies to all designated companions of the scene.
+ * Each gesture: floating text seen by all and a sound (`notice … all`, actions `mount`, `dismount`, `thrown`, `command` of the hook
+ * `dnd5e-combat.feedback`, which darsh-animations can animate).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -34,9 +34,9 @@ import { route } from "./router.mjs";
 import { isExecutor, loc, log, notice, viaActiveGM } from "./shared.mjs";
 
 export const MOUNT_QUERY = `${MODULE_ID}.mount`;
-/** Les raisons qui ne se forcent pas : il n'y a rien à monter, ou la place est prise. */
+/** The reasons that cannot be forced: there is nothing to mount, or the place is taken. */
 const HARD = ["notMount", "riding", "ridden"];
-/** Les options d'un déplacement fait par la monture elle-même (pas de boucle entre les deux tokens). */
+/** The options of a movement made by the mount itself (no loop between the two tokens). */
 const SYNC = { [MODULE_ID]: { mountSync: true, cleared: true, dragged: true } };
 
 const tokenDoc = t => t?.document ?? t ?? null;
@@ -46,7 +46,7 @@ const scenesTokens = scene => scene?.tokens?.contents ?? [];
 /*  Monter, descendre                           */
 /* -------------------------------------------- */
 
-/** Le déplacement qui reste au cavalier ce tour (null hors combat) et ce que coûte monter ou descendre, ou le souci. */
+/** The movement the rider has left this turn (null out of combat) and what mounting or dismounting costs, or the issue. */
 function halfSpeedCost(rider) {
   const combatant = combatantFor(rider.actor);
   if ( !combatant ) return { combatant: null, cost: 0, issue: null };
@@ -56,7 +56,7 @@ function halfSpeedCost(rider) {
   return { combatant, cost, issue: issue ? "mountNoMovement" : null };
 }
 
-/** L'entrée de menu « Monter » / « Descendre » pour `token` (en main) sur `target`, ou null. */
+/** The menu entry "Mount" / "Dismount" for `token` (in hand) on `target`, or null. */
 export function mountEntry(token, target) {
   const rider = tokenDoc(token), other = tokenDoc(target);
   if ( !rider?.isOwner || !other ) return null;
@@ -71,15 +71,15 @@ export function mountEntry(token, target) {
     ...(problem ? { refused: loc(`Monture.Souci.${problem}`, { name: other.name }) } : {}), run: () => mountUp(rider, other) };
 }
 
-/** Les raisons (clés `Monture.Souci.*`) qui refusent à `rider` de monter `mount` maintenant (vide : rien ne cloche). */
+/** The reasons (keys `Monture.Souci.*`) that refuse `rider` to mount `mount` now (empty: nothing wrong). */
 export function mountIssues(riderToken, mountToken) {
   const rider = tokenDoc(riderToken), mount = tokenDoc(mountToken);
   return [mountProblemFor(rider, mount), halfSpeedCost(rider).issue].filter(Boolean);
 }
 
 /**
- * Monter `mount` (sur le client de qui possède le cavalier). Rend true si le cavalier est en selle. `force` : passer outre sans fenêtre
- * (l'API de test, qui ne répond pas aux fenêtres).
+ * Mount `mount` (on the client of whoever owns the rider). Returns true if the rider is in the saddle. `force`: override with no
+ * window (the test API, which does not answer windows).
  */
 export async function mountUp(riderToken, mountToken, { force=false }={}) {
   const rider = tokenDoc(riderToken), mount = tokenDoc(mountToken);
@@ -94,7 +94,7 @@ export async function mountUp(riderToken, mountToken, { force=false }={}) {
   return done === true;
 }
 
-/** Descendre de sa monture (sur le client de qui possède le cavalier). */
+/** Dismount (on the client of whoever owns the rider). */
 export async function dismount(riderToken, { force=false }={}) {
   const rider = tokenDoc(riderToken);
   const mount = mountOf(rider);
@@ -108,7 +108,7 @@ export async function dismount(riderToken, { force=false }={}) {
   return done === true;
 }
 
-/** MJ actif : la requête d'un joueur (ou du MJ lui-même). L'expéditeur doit posséder le cavalier. */
+/** Active GM: the query of a player (or of the GM itself). The sender must own the rider. */
 async function handleMountQuery({ action, rider: riderUuid, mount: mountUuid }={}, { user }={}) {
   const rider = fromUuidSync(riderUuid ?? "", { strict: false });
   if ( !rider || (rider.documentName !== "Token") || !actsFor(user, rider) ) return false;
@@ -136,8 +136,8 @@ async function seat(rider, mount) {
 }
 
 /**
- * Défait le lien (MJ actif) et pose le cavalier sur une case libre au contact de la monture. `reason` : « dismount » (descendre),
- * « thrown » (chute : À terre). Rend true.
+ * Undoes the link (active GM) and places the rider on a free cell in contact with the mount. `reason`: "dismount" (dismounting),
+ * "thrown" (fall: Prone). Returns true.
  */
 async function unseat(rider, { reason="dismount", status=null }={}) {
   const mount = mountOf(rider);
@@ -158,10 +158,10 @@ async function unseat(rider, { reason="dismount", status=null }={}) {
 }
 
 /* -------------------------------------------- */
-/*  Initiative de la monture contrôlée          */
+/*  Initiative of the controlled mount          */
 /* -------------------------------------------- */
 
-/** MJ actif : la monture contrôlée de ce cavalier passe juste après lui dans l'initiative (si elle y est). */
+/** Active GM: this rider's controlled mount goes right after them in the Initiative (if it is in it). */
 async function followRider(mount) {
   const rider = riderOf(mount);
   const combat = game.combat;
@@ -176,7 +176,7 @@ async function followRider(mount) {
   log(`${mount.name} acts right after ${rider.name} (initiative ${value})`);
 }
 
-/** Les montures montées d'un combat. */
+/** The mounted mounts of a combat. */
 const riddenIn = combat => scenesTokens(combat?.scene ?? canvas?.scene).filter(t => riderOf(t));
 
 function onCombatant(combatant, changes, options) {
@@ -188,7 +188,7 @@ function onCombatant(combatant, changes, options) {
 }
 
 /* -------------------------------------------- */
-/*  Déplacement commun                          */
+/*  Joint movement                              */
 /* -------------------------------------------- */
 
 async function onMoveToken(token, movement, operation) {
@@ -197,7 +197,7 @@ async function onMoveToken(token, movement, operation) {
   if ( rider ) return seat(rider, token);
   const mount = mountOf(token);
   if ( !mount ) return;
-  // Le cavalier a bougé seul : la monture le suit du même écart, puis il se rassied.
+  // The rider moved alone: the mount follows by the same offset, then they sit back down.
   const from = movement?.origin ?? movement?.passed?.waypoints?.[0];
   if ( !from ) return;
   const to = committedPosition(token);
@@ -211,7 +211,7 @@ async function onMoveToken(token, movement, operation) {
 /*  Chute                                        */
 /* -------------------------------------------- */
 
-/** MJ actif : un état ou des PV ont changé chez cet acteur — le lien de ses couples tombe-t-il ? */
+/** Active GM: a condition or HP changed on this actor — does the link of its pairs drop? */
 async function checkBond(actor) {
   if ( !actor ) return;
   for ( const token of actor.getActiveTokens?.(false, true) ?? [] ) {
@@ -223,7 +223,7 @@ async function checkBond(actor) {
   }
 }
 
-/** MJ actif : un token retiré de la scène — son partenaire est libéré (sans chute). */
+/** Active GM: a token removed from the scene — its partner is freed (no fall). */
 async function onDeleteToken(token) {
   for ( const other of scenesTokens(token.parent) ) {
     if ( other.getFlag(MODULE_ID, MOUNTED_ON) === token.id ) await other.unsetFlag(MODULE_ID, MOUNTED_ON);
@@ -232,10 +232,10 @@ async function onDeleteToken(token) {
 }
 
 /* -------------------------------------------- */
-/*  Ordre à un compagnon                        */
+/*  Command to a companion                      */
 /* -------------------------------------------- */
 
-/** Les compagnons que l'ordre de cette activité toucherait : à portée, ou tous s'il n'y en a aucun (ordre forcé). */
+/** The companions this activity's command would affect: in range, or all if there are none (forced command). */
 export function commandTargets(activity) {
   const rule = commandRuleOf(activity?.item);
   const master = rule ? masterTokenOf(activity.actor) : null;
@@ -244,7 +244,7 @@ export function commandTargets(activity) {
   return { rule, master: tokenDoc(master), inRange: all.filter(c => c.inRange).map(c => c.token), all: all.map(c => c.token) };
 }
 
-/** Les activités d'ordre (`commands`) de ce maître qui désignent ce compagnon : pour le menu de ce dernier. */
+/** This master's command activities (`commands`) that designate this companion: for the latter's menu. */
 export function commandActivitiesFor(masterToken, companionToken) {
   const master = tokenDoc(masterToken), companion = tokenDoc(companionToken);
   if ( !master?.actor || !companion || (master === companion) ) return [];
@@ -258,7 +258,7 @@ export function commandActivitiesFor(masterToken, companionToken) {
   return out;
 }
 
-/** Sur le client de l'auteur : l'ordre donné, transmis au MJ actif (qui écrit sur le compagnon). */
+/** On the author's client: the command given, passed on to the active GM (who writes on the companion). */
 async function onPostUse(activity) {
   const { rule, master, inRange, all } = commandTargets(activity);
   if ( !rule || !master ) return;
@@ -268,7 +268,7 @@ async function onPostUse(activity) {
     round: game.combat?.round ?? null }, { noGm: "Monture.SansMJ", fallback: false, label: "command: request" });
 }
 
-/** MJ actif : marque les compagnons commandés pour ce round. L'expéditeur doit posséder le maître. */
+/** Active GM: marks the companions commanded for this round. The sender must own the master. */
 async function handleCommandQuery({ master: masterUuid, companions=[], round=null }={}, { user }={}) {
   const master = fromUuidSync(masterUuid ?? "", { strict: false });
   if ( !master || !actsFor(user, master) ) return false;
@@ -282,7 +282,7 @@ async function handleCommandQuery({ master: masterUuid, companions=[], round=nul
   return true;
 }
 
-/** La requête unique : monter, descendre, ordonner. */
+/** The single query: mount, dismount, command. */
 function handleQuery(payload, context) {
   return (payload?.action === "command") ? handleCommandQuery(payload, context) : handleMountQuery(payload, context);
 }
@@ -300,7 +300,7 @@ export function registerMount() {
   route("dnd5e.postUseActivity", activity => onPostUse(activity), { label: "command: companion not commanded" });
 }
 
-/** Pour l'API de test : l'état du couple de ce token. */
+/** For the test API: the state of this token's pair. */
 export function mountState(token) {
   const t = tokenDoc(token);
   return { mountedOn: mountOf(t)?.id ?? null, ridden: riderOf(t)?.id ?? null, rule: mountRuleOf(t?.actor) ?? null,

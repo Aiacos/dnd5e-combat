@@ -1,9 +1,9 @@
 /**
- * §203 : le diagnostic reprend la traduction des compendiums pour les textes restés dans la langue d'origine. Sur un acteur créé
- * pour le test, venu d'une créature traduite du Manuel des monstres mais resté en anglais (nom, token prototype), qui porte un
- * Projectile percutant tout en anglais (nom, description, activités, enchantement) et dont un texte a été modifié à la main :
- * « Textes restés dans la langue d'origine » les trouve ; réparé (sauvegarde d'abord), tout est en français sauf le texte modifié.
- * Remet tout : acteur, entrées de sauvegarde, et le compendium s'il n'existait pas avant.
+ * §203: the diagnostic redoes the compendium translation for texts left in the original language. On an actor created
+ * for the test, coming from a translated Monster Manual creature but left in English (name, prototype token), which carries a
+ * fully English Ammunition of Impact (name, description, activities, enchantment) and in which one text was edited by hand:
+ * "Texts left in the original language" finds them; repaired (backup first), everything is in French except the edited text.
+ * Restores everything: actor, backup entries, and the compendium if it did not exist before.
  */
 const MODULE_ID = "dnd5e-combat";
 const WALLOPING = "Compendium.dnd-dungeon-masters-guide.equipment.Item.dmgWallopingAmmu";
@@ -25,11 +25,11 @@ export default {
     const backups = [];
     const actors = [];
     ctx.restore(() => api("diagnosticForget", { uuids: backups, dropPack: !hadPack, actors }));
-    // §204 : sans quoi la fiche serait traduite dès sa création, avant l'analyse.
+    // §204: otherwise the sheet would be translated as soon as it is created, before the analysis.
     const auto = await api("setting", { key: "autoTranslate", value: false });
     ctx.restore(() => api("setting", { key: "autoTranslate", value: auto.before }));
 
-    // L'objet remis dans sa langue d'origine, à partir des valeurs que Babele garde ; son texte de carte modifié à la main.
+    // The item put back in its original language, from the values Babele keeps; its card text edited by hand.
     const { _id, folder, ownership, _stats, ...itemData } = foundry_clone(item.data);
     itemData.name = itemOrig.name;
     itemData.system.description.value = itemOrig.description;
@@ -44,14 +44,15 @@ export default {
     const origEffect = Object.values(itemOrig.effects ?? {})[0];
     for ( const e of itemData.effects ?? [] ) if ( origEffect ) e.name = origEffect.name;
     itemData._stats = { compendiumSource: WALLOPING };
-    // Un second objet sans identifiant enregistré (dnd5e le tire du nom) : renommé, il doit garder celui tiré du nom anglais.
+    // A second item without a recorded identifier (dnd5e derives it from the name): renamed, it must keep the one
+    // derived from the English name.
     const bare = foundry_clone(itemData);
     bare.system.identifier = "";
     const bareId = slug(itemOrig.name);
 
     const created = await ctx.call("create-actor", { actorData: {
       name: actorOrig.name, type: "npc", prototypeToken: { name: actorOrig.name },
-      // La source par l'ancien drapeau, que la vérification lit aussi : le connecteur ne transmet pas `_stats` à la création.
+      // The source through the old flag, which the check also reads: the connector does not pass `_stats` on creation.
       flags: { core: { sourceId: SKIRMISHER }, [MODULE_ID]: { scenario: "diagnostic-traduction" } }, items: [itemData, bare]
     } });
     const actorId = created.id ?? created.actorId ?? created.actor?._id;
@@ -73,7 +74,7 @@ export default {
     const pinned = (after.items ?? []).find(i => i !== it);
     ctx.expect(pinned?.system?.identifier === bareId, `identifiant figé avant de renommer (${pinned?.name} : « ${pinned?.system?.identifier} », attendu « ${bareId} »)`);
     ctx.expect(it?.name === item.data.name, `nom de l'objet traduit (${it?.name})`);
-    // Foundry nettoie le HTML à l'enregistrement : comparé par son début, et plus jamais l'anglais.
+    // Foundry cleans the HTML on save: compared by its start, and never English again.
     const desc = it?.system?.description?.value ?? "";
     ctx.expect((desc !== itemOrig.description) && desc.startsWith(item.data.system.description.value.slice(0, 30)), `description de l'objet traduite (${desc.slice(0, 50)})`);
     ctx.expect(it?.system?.description?.chat === HAND, "le texte modifié à la main n'a pas bougé");

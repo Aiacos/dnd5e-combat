@@ -1,7 +1,7 @@
 /**
- * Porte « isAttacked » (SPEC §16, B5 bis) : Sanctuaire (module PHB, donné au Magicien le temps du scénario)
- * lancé sur lui-même ; le Zombi l'attaque → sur le client de l'attaquant, sauvegarde de Sagesse contre le DD du
- * Magicien ; ratée → l'attaque n'a pas lieu ; réussie → elle part. On rejoue jusqu'à voir les deux issues.
+ * "isAttacked" gate (SPEC §16, B5 bis): Sanctuary (PHB module, given to the Wizard for the scenario)
+ * cast on himself; the Zombie attacks him → on the attacker's client, a Wisdom saving throw against the Wizard's
+ * DC; failed → the attack does not happen; succeeded → it goes ahead. We replay until both outcomes are seen.
  */
 export default {
   name: "sanctuaire — le Zombi doit réussir une sauvegarde pour attaquer le Magicien",
@@ -11,7 +11,7 @@ export default {
     const zombi = await ctx.token("Zombi");
     const hp0 = await ctx.hp(mage);
     ctx.restore(() => ctx.setHp(mage, hp0));
-    // Le Zombi au contact du Magicien : un coup au contact à 20 ft n'est pas une attaque, c'est un dialogue de portée.
+    // The Zombie in contact with the Wizard: a melee hit at 20 ft is not an attack, it is a range dialog.
     const grid = await ctx.gridSize();
     const zHome = await ctx.position(zombi);
     const magePos = await ctx.position(mage);
@@ -22,7 +22,7 @@ export default {
     const cast = await ctx.use({ tokenId: mage.id, identifier: "sanctuary", activityType: "utility", targetTokenIds: [mage.id] });
     await ctx.settle(cast.usageMessageId).catch(() => null);
     await new Promise(r => setTimeout(r, 1500));
-    // L'effet par l'identifiant du sort qui l'a posé, pas par son nom (« Protégé » / « Warded » selon la langue du MJ).
+    // The effect by the id of the spell that placed it, not by its name ("Protégé" / "Warded" depending on the GM's language).
     const shielded = (await ctx.effectsFrom(mage, "sanctuary")).length > 0;
     ctx.expect(shielded, `effet de Sanctuaire posé sur le Magicien (${(await ctx.effects(mage)).map(e => e.name).join(", ")})`);
     ctx.restore(async () => {

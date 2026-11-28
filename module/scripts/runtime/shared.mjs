@@ -1,4 +1,4 @@
-/** Ce que tout le runtime partage (SPEC §13, S1) : une seule définition de chaque chose. */
+/** What the whole runtime shares (SPEC §13, S1): a single definition of each thing. */
 
 import { MODULE_ID } from "../constants.mjs";
 import { actionSound, noticeText } from "../core/action-feedback.mjs";
@@ -6,35 +6,35 @@ import { actionSound, noticeText } from "../core/action-feedback.mjs";
 export const log = (...args) => console.log(`${MODULE_ID} |`, ...args);
 
 /**
- * §252 : sur chaque client qui doit montrer un avis du moteur au-dessus d'un token (refus, invite, retour d'une action) : `({ token, text,
- * kind })` — `token` un uuid, `text` déjà traduit. L'interface du moteur l'écrit en texte flottant.
+ * §252: on each client that must show an engine notice above a token (refusal, prompt, return of an action): `({ token, text,
+ * kind })` — `token` a uuid, `text` already translated. The engine's interface writes it as floating text.
  */
 export const NOTICE_HOOK = `${MODULE_ID}.notice`;
 /**
- * §252 : sur le client qui agit, pour une action vue de toute la table, juste avant de jouer son son : `({ token, action, outcome, kind,
- * text, sound })`. Annulable : `false` empêche le son seulement (le texte flottant est déjà parti chez tous).
+ * §252: on the acting client, for an action seen by the whole table, just before playing its sound: `({ token, action,
+ * outcome, kind, text, sound })`. Cancellable: `false` prevents the sound only (the floating text already went out to everyone).
  */
 export const FEEDBACK_HOOK = `${MODULE_ID}.feedback`;
-/** §252 : la requête qui fait dessiner un avis chez un autre client (ui/feedback.mjs l'enregistre). */
+/** §252: the query that makes a notice be drawn on another client (ui/feedback.mjs registers it). */
 export const NOTICE_QUERY = `${MODULE_ID}.notice`;
 
 /**
- * Un avis du moteur au-dessus d'un token (refus, invite : « Déjà visé », « Trop loin »), sur ce client : publié pour
- * l'interface (ui/feedback.mjs), qui l'écrit en texte défilant. Le runtime ne connaît pas l'interface.
+ * An engine notice above a token (refusal, prompt: "Already targeted", "Too far"), on this client: published for the
+ * interface (ui/feedback.mjs), which writes it as scrolling text. The runtime does not know the interface.
  *
- * §252 (règles DAS du 2026-10-27) : `all: true` en fait le retour d'une **action** pour toute la table — le texte est dessiné chez
- * chaque client connecté (requête `NOTICE_QUERY`) et un son est diffusé à tous. `text` peut alors être `{ key, data }` (clé sans le
- * préfixe `DND5ECOMBAT.`), traduit chez chacun. Le son : `sound` s'il est donné (null : aucun), sinon celui de `action` / `outcome`
- * (core/action-feedback.mjs). Avant de le jouer, le hook public `dnd5e-combat.feedback` `({ token, action, outcome, kind, text, sound })`
- * est appelé sur ce client seulement (`Hooks.call`) : un module voisin qui joue lui-même son animation et son son rend `false`, et le
- * moteur se tait. Les refus et les invites restent locaux (`all` faux).
+ * §252 (DAS rules of 2026-10-27): `all: true` makes it the feedback of an **action** for the whole table — the text is drawn on
+ * every connected client (`NOTICE_QUERY` query) and a sound is played for everyone. `text` can then be `{ key, data }` (key
+ * without the `DND5ECOMBAT.` prefix), translated on each client. The sound: `sound` if given (null: none), otherwise the one
+ * for `action` / `outcome` (core/action-feedback.mjs). Before playing it, the public hook `dnd5e-combat.feedback`
+ * `({ token, action, outcome, kind, text, sound })` is called on this client only (`Hooks.call`): a neighbouring module that
+ * plays its own animation and sound returns `false`, and the engine stays silent. Refusals and prompts stay local (`all` false).
  */
 export function notice(token, text, kind="refused", { all=false, gmOnly=false, action=null, outcome=null, sound=undefined }={}) {
   const uuid = token?.uuid ?? token?.document?.uuid ?? token ?? null;
   if ( !uuid ) return;
   Hooks.callAll(NOTICE_HOOK, { token: uuid, text: noticeText(text, loc), kind });
   if ( !all ) return;
-  // Issue #178 : `gmOnly` — le texte part chez les MJ seulement, et le son reste sur ce poste.
+  // Issue #178: `gmOnly` — the text goes to the GMs only, and the sound stays on this machine.
   for ( const user of game.users ) {
     if ( !user.active || user.isSelf || (gmOnly && !user.isGM) ) continue;
     user.query(NOTICE_QUERY, { token: uuid, text, kind }, { timeout: 5000 }).catch(() => {});
@@ -44,23 +44,23 @@ export function notice(token, text, kind="refused", { all=false, gmOnly=false, a
   if ( (allowed !== false) && src ) foundry.audio.AudioHelper.play({ src, volume: 0.8, loop: false }, !gmOnly)?.catch?.(() => {});
 }
 
-/** §252 : chez un autre client, l'avis qu'une action de la table lui fait voir (requête `NOTICE_QUERY`). */
+/** §252: on another client, the notice that an action of the table shows it (`NOTICE_QUERY` query). */
 export function receiveNotice({ token, text, kind }={}) {
   if ( token ) Hooks.callAll(NOTICE_HOOK, { token, text: noticeText(text, loc), kind });
   return true;
 }
 
-/** Un texte échappé pour du HTML (noms d'acteurs, d'objets…). */
+/** A text escaped for HTML (actor names, item names…). */
 export const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
-/** Une traduction dont les textes insérés (noms d'acteurs, d'objets…) sont échappés : pour une carte de chat. */
+/** A translation whose inserted texts (actor names, item names…) are escaped: for a chat card. */
 export const locEsc = (key, data={}) =>
   loc(key, Object.fromEntries(Object.entries(data).map(([k, v]) => [k, (typeof v === "string") ? esc(v) : v])));
 
 /**
- * Une carte de chat du moteur : une ligne par paragraphe (`lines`, du HTML déjà sûr — `locEsc` pour y mettre des noms), dite par
- * `speaker` (`{ actor }` ou `{ token }` pour `getSpeaker`, ou `{ alias }`), avec ses `flags` du moteur et, s'il le faut, en aparté
- * (`whisper` : ids d'utilisateurs).
+ * An engine chat card: one line per paragraph (`lines`, already-safe HTML — `locEsc` to put names in it), spoken by
+ * `speaker` (`{ actor }` or `{ token }` for `getSpeaker`, or `{ alias }`), with its engine `flags` and, if needed, as a whisper
+ * (`whisper`: user ids).
  */
 export function say(speaker, lines, flags=null, { whisper=null }={}) {
   const data = {
@@ -77,15 +77,16 @@ export const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export const loc = (key, data) => data ? game.i18n.format(`DND5ECOMBAT.${key}`, data) : game.i18n.localize(`DND5ECOMBAT.${key}`);
 
-/** SPEC §5.3 : le MJ actif est l'unique exécutant du moteur. */
+/** SPEC §5.3: the active GM is the sole executor of the engine. */
 export function isExecutor() {
   return game.users.activeGM?.isSelf === true;
 }
 
 /**
- * Faire `handler(payload)` chez le MJ actif : ici si l'on est lui, sinon par la requête `query` (`CONFIG.queries`). Sans MJ actif :
- * l'avertissement `noGm` (clé de traduction, s'il y en a une) et `fallback`. Une requête sans réponse (délai, erreur) rend
- * `fallback`, journalisée sous `label` s'il est donné. Une erreur du traitement local, elle, remonte.
+ * Run `handler(payload)` on the active GM: here if we are that GM, otherwise through the `query` request
+ * (`CONFIG.queries`). Without an active GM: the `noGm` warning (translation key, if there is one) and `fallback`. A request
+ * with no answer (timeout, error) returns `fallback`, logged under `label` if given. An error in the local handling, however,
+ * propagates.
  * @param {string} query
  * @param {(payload: object) => any} handler
  * @param {object} payload
@@ -105,8 +106,8 @@ export async function viaActiveGM(query, handler, payload, { timeout=10000, noGm
 }
 
 /**
- * Un acte sur un document : ici si ce client le possède (`isOwner`), sinon par le MJ actif (`query`), sans avertissement. Pas de MJ
- * actif, ou pas de réponse : `fallback`.
+ * An act on a document: here if this client owns it (`isOwner`), otherwise through the active GM (`query`), without a
+ * warning. No active GM, or no answer: `fallback`.
  */
 export async function viaOwnerOrGM(isOwner, query, handler, payload, { timeout=10000, fallback=null }={}) {
   if ( isOwner ) return handler(payload);
@@ -115,18 +116,18 @@ export async function viaOwnerOrGM(isOwner, query, handler, payload, { timeout=1
   return gm.query(query, payload, { timeout }).catch(() => fallback);
 }
 
-/** Au-delà, on juge sans attendre le canevas (et on le dit). */
+/** Beyond that, we rule without waiting for the canvas (and we say so). */
 export const CANVAS_WAIT_MAX_MS = 5000;
 
 /**
- * Attend que le canevas ait fini de se dessiner (changement de niveau ou de scène : le cœur V14
- * redessine tout, `canvas.ready` faux le temps du redessin). Borné. Sans global : testable.
+ * Waits until the canvas has finished drawing (change of level or scene: the V14 core
+ * redraws everything, `canvas.ready` false during the redraw). Bounded. No global: testable.
  * @param {object} ports
  * @param {() => boolean} ports.isReady
  * @param {(ms: number) => Promise} ports.sleep
  * @param {number} [maxMs]
  * @param {number} [stepMs]
- * @returns {() => Promise<boolean>}  true : prêt (tout de suite ou après attente) ; false : pas prêt à temps.
+ * @returns {() => Promise<boolean>}  true: ready (immediately or after waiting); false: not ready in time.
  */
 export function createCanvasWait({ isReady, sleep }, maxMs=CANVAS_WAIT_MAX_MS, stepMs=50) {
   return async function whenCanvasReady() {
@@ -143,24 +144,24 @@ export const whenCanvasReady = createCanvasWait({
   sleep
 });
 
-/** Au-delà, on continue sans les dés 3D : une animation qui ne se joue pas ne retient pas le jeu. */
+/** Beyond that, we go on without the 3D dice: an animation that does not play does not hold up the game. */
 export const DICE_WAIT_MAX_MS = 8000;
 
 /**
- * Principe 2 : rien ne s'applique avant que les dés se soient arrêtés. Les dés 3D (Dice So Nice, Dicer…) restent optionnels,
- * et son attente est bornée (SPEC §12, blocage vu le 2026-09-22) : `waitFor3DAnimationByMessageID`
- * ne rend la main qu'au hook `diceSoNiceRollComplete` du message (main.js, 6.2.9), qui ne vient
- * jamais si le rendu est suspendu — fenêtre en arrière-plan, onglet masqué. Sans global : testable.
+ * Principle 2: nothing applies before the dice have stopped. The 3D dice (Dice So Nice, Dicer…) stay optional,
+ * and waiting for them is bounded (SPEC §12, blockage seen on 2026-09-22): `waitFor3DAnimationByMessageID`
+ * only returns at the message's `diceSoNiceRollComplete` hook (main.js, 6.2.9), which
+ * never comes if rendering is suspended — background window, hidden tab. No global: testable.
  * @param {object} ports
- * @param {(id: string) => Promise|null} ports.animation  Attente de l'animation d'un message ; null si pas de dés 3D.
- * @param {() => boolean} ports.isHidden                  La fenêtre est-elle sans rendu ?
+ * @param {(id: string) => Promise|null} ports.animation  Wait for a message's animation; null if there are no 3D dice.
+ * @param {() => boolean} ports.isHidden                  Is the window not rendering?
  * @param {(ms: number) => Promise} ports.sleep
- * @param {(why: string) => void} [ports.report]          Consigne qu'on a continué sans attendre.
+ * @param {(why: string) => void} [ports.report]          Records that we went on without waiting.
  * @param {number} [maxMs]
  */
 export function createDiceWait({ animation, isHidden, sleep, report=() => {} }, maxMs=DICE_WAIT_MAX_MS) {
   return async function waitForDice(message) {
-    if ( isHidden() ) return report("window in the background");   // sans rendu, l'animation ne se jouera pas
+    if ( isHidden() ) return report("window in the background");   // without rendering, the animation will not play
     const pending = animation(message.id);
     if ( !pending ) return;
     const outcome = await Promise.race([pending.then(() => "done"), sleep(maxMs).then(() => "late")]);
@@ -185,9 +186,9 @@ export const waitForDice = createDiceWait({
 });
 
 /**
- * §252 : lancer un jet de dnd5e (`roll`, qui rend ses jets) puis attendre la fin des dés 3D de son message (`waitForDice`, borné) avant de
- * rendre la main — le verdict ne part qu'après. dnd5e ne rend que les jets : le message est le dernier message de jet de ce client créé
- * pendant le jet.
+ * §252: make a dnd5e roll (`roll`, which returns its rolls) then wait for the 3D dice of its message to finish
+ * (`waitForDice`, bounded) before returning — the verdict only goes out after. dnd5e only returns the rolls: the message is
+ * the last roll message of this client created during the roll.
  */
 export async function rolledAndShown(roll) {
   const known = new Set(game.messages.keys());

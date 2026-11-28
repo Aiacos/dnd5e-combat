@@ -1,8 +1,8 @@
 /**
- * Robustesse de la non-vie (§61) vue depuis Foundry : l'item qui la porte (contenu `fortitude`, par identifiant) et la sauvegarde
- * en attente. Les dégâts qui la déclenchent sont lus dans `dnd5e.preApplyDamage` (adapter/death.mjs, `planDamageAtZero`) : la
- * sauvegarde due part dans la même écriture que les PV, en drapeau de l'acteur, et le MJ actif la joue ensuite
- * (runtime/fortitude.mjs). Tant qu'elle attend, la créature n'est ni Morte ni Inconsciente (`ensureDowned`).
+ * Undead Fortitude (§61) seen from Foundry: the item that carries it (content `fortitude`, by identifier) and the pending
+ * save. The damage that triggers it is read in `dnd5e.preApplyDamage` (adapter/death.mjs, `planDamageAtZero`): the
+ * due save goes out in the same write as the HP, as an actor flag, and the active GM then plays it
+ * (runtime/fortitude.mjs). While it waits, the creature is neither Dead nor Unconscious (`ensureDowned`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -20,8 +20,8 @@ export function fortitudeOf(actor) {
 export const pendingFortitude = actor => actor?.getFlag(MODULE_ID, FLAG) ?? null;
 
 /**
- * `dnd5e.preApplyDamage` : si ces dégâts font tomber l'acteur à 0 PV et que la règle s'applique, la sauvegarde due est inscrite
- * dans `updates` (écrite avec les PV). Rend la sauvegarde, ou null.
+ * `dnd5e.preApplyDamage`: if this damage drops the actor to 0 HP and the rule applies, the due save is recorded
+ * in `updates` (written with the HP). Returns the save, or null.
  */
 export function planFortitude(actor, hit, updates) {
   const item = fortitudeOf(actor);

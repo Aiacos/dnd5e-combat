@@ -1,19 +1,19 @@
 /**
- * Retour visuel au-dessus des tokens, façon BG3 (SPEC §15.3) : « Critique ! », « Raté », l'abri, la
- * réaction, la sauvegarde — à la manière du texte défilant du cœur (`canvas.interface.createScrollingText`,
- * client/canvas/groups/interface.mjs:174), celui que dnd5e utilise pour les PV
- * (documents/actor/actor.mjs:3557). Les PV eux-mêmes restent au système.
+ * Visual feedback above tokens, BG3 style (SPEC §15.3): "Critical!", "Miss", Cover, the
+ * Reaction, the saving throw — in the manner of the core's scrolling text (`canvas.interface.createScrollingText`,
+ * client/canvas/groups/interface.mjs:174), the one dnd5e uses for HP
+ * (documents/actor/actor.mjs:3557). The HP themselves stay with the system.
  *
- * Consommateur passif : le hook `dnd5e-combat.resolution` n'est publié que chez le MJ actif, qui
- * exécute le moteur ; ici chaque client lit la résolution sur le drapeau du message, qu'il reçoit
- * comme tout le monde, et n'écrit que ce qui a changé depuis l'état précédent (core/feedback.mjs).
- * Rien n'est décidé, rien n'est écrit dans le monde.
+ * Passive consumer: the `dnd5e-combat.resolution` hook is published only on the active GM, who
+ * runs the engine; here each client reads the resolution on the message's flag, which it receives
+ * like everyone, and writes only what changed since the previous state (core/feedback.mjs).
+ * Nothing is decided, nothing is written to the world.
  *
- * §228 : le moteur dessine ses textes lui-même (un conteneur dans `canvas.interface`, animé par `CanvasAnimation` du cœur) au lieu du
- * texte défilant du cœur, qui efface son texte pendant toute sa course et n'accepte pas d'image : rythme, course, taille, ce qui
- * s'affiche et pictogrammes (dé et total du jet) sont réglés par le MJ pour la table (onglet « Textes flottants »). Le réglage du cœur
- * « texte défilant » (`core.scrollingStatusText`) reste respecté. Les PV perdus ou rendus restent ceux de dnd5e
- * (documents/actor/actor.mjs:3557, `_displayTokenEffect`) : leur rythme n'est pas réglable sans patcher le système.
+ * §228: the engine draws its texts itself (a container in `canvas.interface`, animated by the core's `CanvasAnimation`) instead of
+ * the core's scrolling text, which erases its text throughout its run and accepts no image: pace, run, size, what
+ * is displayed and pictograms (die and roll total) are set by the GM for the table ("Floating texts" tab). The core setting
+ * "scrolling text" (`core.scrollingStatusText`) is still respected. HP lost or restored stay dnd5e's
+ * (documents/actor/actor.mjs:3557, `_displayTokenEffect`): their pace cannot be set without patching the system.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -26,26 +26,27 @@ import { resourceChangesOf } from "../adapter/limits.mjs";
 import { keyLabel } from "../adapter/group-roll.mjs";
 import { d20Mode } from "../adapter/messages.mjs";
 
-/** Dernier état vu, par message. */
+/** Last state seen, per message. */
 const seen = new Map();
-/** Un message qu'on n'a jamais vu passer : on n'en montre les faits que s'il est récent (pas un vieux message rejoué). */
+/** A message we have never seen go by: its facts are shown only if it is recent (not an old message replayed). */
 const FRESH_MS = 120000;
-/** Par token, l'heure (ms) où son prochain texte peut partir (core/float-text.mjs, `floatDelays`). */
+/** Per token, the time (ms) when its next text may start (core/float-text.mjs, `floatDelays`). */
 const busyUntil = new Map();
-/** Le conteneur des textes, recréé avec le canevas. */
+/** The texts' container, recreated with the canvas. */
 let layer = null;
 
 /**
- * §400 : l'allure de chaque sorte vient du thème du monde (réglage `floatTheme`, importé en JSON depuis l'atelier ; core/float-text.mjs,
- * `floatStyleOf`). Sans thème, celle d'avant : invite orange (Rebond !), refus rouge (Trop loin), fin d'effet bleue, ressource rendue verte,
- * dépensée orange, dégâts en plus rouges (§223), Inspiration héroïque dorée (§282), succès à un prix ambré (issue #32), tests (§292).
+ * §400: the look of each kind comes from the world's theme (setting `floatTheme`, imported as JSON from the workshop;
+ * core/float-text.mjs, `floatStyleOf`). Without a theme, the previous one: orange prompt (Bounce!), red refusal (Too far), blue
+ * effect end, green resource returned, orange spent, red extra damage (§223), golden Heroic Inspiration (§282), amber success
+ * at a cost (issue #32), checks (§292).
  */
 const THEME_SETTING = "floatTheme";
-/** §400 : le réglage de monde qui met les textes du moteur à la place de ceux du système ; et la trace d'avoir coupé ceux du cœur. */
+/** §400: the world setting that puts the engine's texts in place of the system's; and the trace of having turned off the core's. */
 export const FLOAT_SYSTEM = "floatSystem";
 const CORE_MUTED = "floatCoreMuted";
 let themeCache = null;
-/** Par token, le côté du dernier texte en arc : ils alternent gauche / droite. */
+/** Per token, the side of the last arc text: they alternate left / right. */
 const lastSide = new Map();
 
 function theme() {
@@ -54,24 +55,24 @@ function theme() {
   return themeCache;
 }
 
-/** Les textes flottants du moteur sont-ils ceux de la table (réglage de monde) ? */
+/** Are the engine's floating texts the table's (world setting)? */
 export function floatsActive() {
   try { return !!game.settings.get(MODULE_ID, FLOAT_SYSTEM); } catch { return true; }
 }
 
 /** Une couleur `#rrggbb` en nombre PIXI. */
-// Le noir vaut 0 : seul un texte illisible retombe sur le blanc.
+// Black is 0: only an unreadable text falls back to white.
 const hexNumber = c => { const n = Number.parseInt(String(c ?? "#ffffff").slice(1), 16); return Number.isFinite(n) ? n : 0xffffff; };
 
 function textOf(f) {
-  if ( f.kind?.startsWith?.("dmg-") ) return f.text;   // §400, lot 3 : dégâts par type
+  if ( f.kind?.startsWith?.("dmg-") ) return f.text;   // §400, batch 3: damage by type
   switch ( f.kind ) {
     case "critical": return loc("Retour.Critique");
     case "miss": return loc("Retour.Rate");
-    case "hit": return null;   // §228 : « Touché » ou le jet seul (core/float-text.mjs, `floatLine`)
+    case "hit": return null;   // §228: "Hit" or the roll alone (core/float-text.mjs, `floatLine`)
     case "cover": return (f.degree === "total") ? loc("Retour.AbriTotal") : loc(`Abri.${f.degree}`);
     case "reaction": return f.name;
-    case "saveSuccess": return f.text ?? loc("Retour.SauvegardeReussie");   // §400 : une sauvegarde de la fiche porte son libellé
+    case "saveSuccess": return f.text ?? loc("Retour.SauvegardeReussie");   // §400: a sheet save carries its label
     case "saveFail": return f.text ?? loc(f.auto ? "Retour.SauvegardeRateeOffice" : "Retour.SauvegardeRatee");
     case "duplicate": return loc("Retour.Replique");
     case "unaffected": return loc("Retour.NonAffecte");
@@ -82,13 +83,13 @@ function textOf(f) {
   return null;
 }
 
-/** Un réglage du module, ou sa valeur par défaut s'il n'est pas (encore) enregistré. */
+/** A module setting, or its default value if it is not (yet) registered. */
 function option(key, fallback) {
   try { return game.settings.get(MODULE_ID, key) ?? fallback; }
   catch { return fallback; }
 }
 
-/** Les réglages de la table (§228), lus à chaque salve : un changement du MJ vaut tout de suite. */
+/** The table's settings (§228), read at each volley: a GM change applies immediately. */
 function floatOptions() {
   const show = Object.fromEntries(Object.entries(FLOAT_CATEGORY_DEFAULTS).map(([key, value]) => [key, !!option(key, value)]));
   return {
@@ -103,9 +104,9 @@ function floatOptions() {
 }
 
 /**
- * Le conteneur des textes, dans le groupe d'interface (au-dessus du groupe primaire, où sont dessinés les tokens) et, §400, au-dessus de
- * tous ses calques : tokens (200), contrôles (1000) et texte défilant du cœur (1100, config.mjs `zIndexScrollingText`) — un texte n'est
- * jamais masqué par un token.
+ * The texts' container, in the interface group (above the primary group, where tokens are drawn) and, §400, above
+ * all its layers: tokens (200), controls (1000) and the core's scrolling text (1100, config.mjs `zIndexScrollingText`) — a text is
+ * never hidden by a token.
  */
 function layerOf() {
   if ( !layer || layer.destroyed || (layer.parent !== canvas.interface) ) {
@@ -117,7 +118,7 @@ function layerOf() {
   return layer;
 }
 
-/** Une image du cœur (blanche), à la hauteur du texte et teinte de sa couleur. */
+/** A core image (white), at the text's height and tinted with its color. */
 async function iconSprite(src, size, tint) {
   const texture = await foundry.canvas.loadTexture(src).catch(() => null);
   if ( !texture ) return null;
@@ -127,7 +128,7 @@ async function iconSprite(src, size, tint) {
   return sprite;
 }
 
-/** §400 : le cadre d'un pictogramme (hexagone pointe en haut, ou cercle), rempli et bordé aux couleurs du thème. */
+/** §400: a pictogram's frame (hexagon point up, or circle), filled and bordered in the theme's colors. */
 function badgeShape(kind, size, fill, border, weight=1) {
   const g = new PIXI.Graphics();
   g.lineStyle(Math.max(1.2, size * 0.04) * weight, border, 1).beginFill(fill, 1);
@@ -141,8 +142,8 @@ function badgeShape(kind, size, fill, border, weight=1) {
 }
 
 /**
- * §400 : le d20 de l'atelier, en traits fins (demande de l'utilisateur : plus simple que l'icône du cœur) — le contour à dix côtés vu de
- * face, le triangle de la face avant et ses arêtes, dessinés à `size` px (dessin d'origine sur 24 px).
+ * §400: the workshop's d20, in fine strokes (user's request: simpler than the core's icon) — the ten-sided outline seen from the
+ * front, the front face's triangle and its edges, drawn at `size` px (original drawing on 24 px).
  */
 function d20Shape(size, color) {
   const k = size / 24;
@@ -157,7 +158,7 @@ function d20Shape(size, color) {
   return g;
 }
 
-/** §400 : le pictogramme du thème (un nom de l'atelier ou un chemin), éventuellement dans son cadre ; le d20 est celui de l'atelier. */
+/** §400: the theme's pictogram (a workshop name or a path), possibly in its frame; the d20 is the workshop's. */
 async function themedIcon(style, fontSize) {
   const src = FLOAT_ICONS[style.icon] ?? ((style.icon in FLOAT_ICONS) ? null : style.icon);
   if ( !src ) return null;
@@ -172,8 +173,9 @@ async function themedIcon(style, fontSize) {
 }
 
 /**
- * §400 : un son de l'hexagone (module/sounds : générés avec ElevenLabs, choisis par l'utilisateur), sur le canal Interface de ce client — chacun
- * entend les textes qu'il voit, rien n'est diffusé. Réglages de ce poste : `floatSounds`, `floatSoundVolume`. Rend la promesse du son.
+ * §400: a sound for the hexagon (module/sounds: generated with ElevenLabs, chosen by the user), on this client's Interface
+ * channel — each hears the texts they see, nothing is broadcast. This workstation's settings: `floatSounds`,
+ * `floatSoundVolume`. Returns the sound's promise.
  */
 function floatSound(name, { loop=false }={}) {
   let volume = 0;
@@ -187,9 +189,9 @@ function floatSound(name, { loop=false }={}) {
 }
 
 /**
- * §400 : un seul son à la fois (demande de l’utilisateur : une initiative de toute la table tournait en cacophonie) — un seul cliquetis,
- * partagé par les hexagones qui tournent (il part avec le premier, s’arrête avec le dernier), et un seul son d’issue par salve : un
- * autre qui arrive moins de `RESULT_GAP` ms après le précédent se tait.
+ * §400: one sound at a time (user's request: a whole table's initiative turned into a cacophony) — a single clatter,
+ * shared by the spinning hexagons (it starts with the first, stops with the last), and a single outcome sound per volley: another
+ * arriving less than `RESULT_GAP` ms after the previous one stays silent.
  */
 const spinning = new Set();
 let rattle = null;
@@ -213,9 +215,10 @@ function resultSound(name) {
 }
 
 /**
- * §400, lot 2 : l’hexagone de jet (façon BG3) — fond et bordure du thème, le pictogramme de dé au centre. `step(phase)` (core/float-text.mjs,
- * `spinPhase`) : pendant le lancer, l’hexagone et le dé tournent ; à la révélation, le dé laisse la place au total, la bordure prend la
- * couleur de l’issue (`okColor` / `failColor`, gardée pour un jet neutre) et s’épaissit, et l’ensemble bat une fois.
+ * §400, batch 2: the roll hexagon (BG3 style) — theme background and border, the die pictogram at the center.
+ * `step(phase)` (core/float-text.mjs, `spinPhase`): during the throw, the hexagon and die spin; at the reveal, the die gives
+ * way to the total, the border takes the outcome's color (`okColor` / `failColor`, kept for a neutral roll) and thickens,
+ * and the whole thing pulses once.
  * @returns {Promise<{box: PIXI.Container, step: Function}>}
  */
 async function spinner(look, fontSize, roll, kind) {
@@ -237,7 +240,7 @@ async function spinner(look, fontSize, roll, kind) {
   const outcome = floatOutcome(kind);
   const border = hexNumber((outcome === "ok") ? look.okColor : (outcome === "fail") ? look.failColor : look.badgeBorder);
   let revealed = false;
-  // §400 : le cliquetis de dé partagé tant que l'hexagone tourne, puis le son de l'issue (carillon, coup sourd, claquement neutre).
+  // §400: the die clatter shared while the hexagon spins, then the outcome sound (chime, thud, neutral click).
   const id = Symbol("spinner");
   const quiet = () => rattleOff(id);
   const step = phase => {
@@ -264,13 +267,13 @@ async function spinner(look, fontSize, roll, kind) {
 }
 
 /**
- * Une ligne (pictogrammes, total du jet, texte) près du token, puis son animation, à l'allure de sa sorte dans le thème (§400) : police,
- * contour, halo, pictogramme encadré, apparition, et trajet — défile (vers le bas depuis le pied, ou vers le haut depuis la tête), reste
- * au-dessus de la tête, ou part en arc sur le côté (les arcs d'un même token alternent gauche / droite).
+ * A line (pictograms, roll total, text) near the token, then its animation, in the look of its kind in the theme (§400): font,
+ * outline, halo, framed pictogram, appearance, and path — scrolls (down from the feet, or up from the head), stays
+ * above the head, or goes off in an arc to the side (a token's arcs alternate left / right).
  */
 async function drawLine(token, line, kind, options, { factor=1, roll=null, waitFor=null }={}) {
   const look = floatStyleOf(theme(), kind);
-  // §400 : un texte qui suit un jet attend la fin des dés 3D (`waitFor`) — sauf l'hexagone, qui tourne pendant qu'ils roulent.
+  // §400: a text that follows a roll waits for the 3D dice to finish (`waitFor`) — except the hexagon, which spins while they roll.
   const spinning = look.spin && floatRolled(kind) && Number.isFinite(roll);
   if ( waitFor && !spinning ) await waitFor.catch(() => {});
   const fontSize = Math.round(look.size * options.scale * factor);
@@ -278,13 +281,14 @@ async function drawLine(token, line, kind, options, { factor=1, roll=null, waitF
   const { PreciseText } = foundry.canvas.containers;
   const textStyle = { fill, fontSize, fontFamily: look.font, fontWeight: String(look.weight), fontStyle: look.italic ? "italic" : "normal",
     letterSpacing: look.tracking * fontSize, stroke: hexNumber(look.stroke), strokeThickness: look.strokeW };
-  // Un halo : l'ombre portée du texte, sans décalage, floutée. Sans halo, l'ombre légère du cœur (config.mjs `canvasTextStyle`).
+  // A halo: the text's drop shadow, no offset, blurred. Without a halo, the core's light shadow (config.mjs `canvasTextStyle`).
   if ( look.glow > 0 ) Object.assign(textStyle, { dropShadow: true, dropShadowBlur: look.glow, dropShadowColor: hexNumber(look.glowColor),
     dropShadowDistance: 0, dropShadowAlpha: 1, padding: Math.ceil(look.glow * 1.5) });
   const style = PreciseText.getTextStyle(textStyle);
   const parts = [];
-  // §400, lot 2 : un jet dont la sorte a l'hexagone qui tourne — le dé tourne, puis le total s'inscrit au centre et la bordure prend la
-  // couleur de l'issue ; le texte vient ensuite. Le total y est montré même sans « Résultat des dés » : c'est le sens de l'hexagone.
+  // §400, batch 2: a roll whose kind has the spinning hexagon — the die spins, then the total is written at the center and
+  // the border takes the outcome's color; the text comes afterwards. The total is shown there even without "Dice result":
+  // that is the point of the hexagon.
   const spin = (look.spin && floatRolled(kind) && Number.isFinite(roll)) ? await spinner(look, fontSize, roll, kind) : null;
   if ( spin ) parts.push(spin.box);
   else {
@@ -299,9 +303,9 @@ async function drawLine(token, line, kind, options, { factor=1, roll=null, waitF
   const text = label ? new PreciseText(label, style) : null;
   if ( text ) parts.push(text);
   if ( !parts.length || !canvas?.ready || !token.visible ) return;
-  // Côte à côte, centrés verticalement.
+  // Side by side, vertically centered.
   const box = new PIXI.Container();
-  box.name = kind;   // la sorte, lisible par les outils de test
+  box.name = kind;   // the kind, readable by test tools
   const gap = fontSize * 0.25;
   const height = Math.max(...parts.map(p => p.height));
   let x = 0;
@@ -315,8 +319,8 @@ async function drawLine(token, line, kind, options, { factor=1, roll=null, waitF
   const { x: cx, y: cy } = token.center;
   const grid = canvas.grid.size;
   const motion = look.motion;
-  // Le point de départ : défile vers le bas depuis le pied (dnd5e écrivait les PV depuis le centre en montant, actor.mjs:3557), vers
-  // le haut depuis la tête ; reste au-dessus de la tête ; l'arc part du haut du token.
+  // The starting point: scrolls down from the feet (dnd5e wrote HP from the center going up, actor.mjs:3557), up
+  // from the head; stays above the head; the arc starts from the top of the token.
   const up = (motion === "anchor") || ((motion === "float") && options.up);
   const start = (motion === "anchor") ? cy - (token.h / 2) - (grid * 0.05)
     : (motion === "arc") ? cy - (token.h * 0.25)
@@ -338,7 +342,8 @@ async function drawLine(token, line, kind, options, { factor=1, roll=null, waitF
     await spinWithDice(box, { spin, text, waitFor, look, options, motion, path, x0, start, scale: s, fontSize });
     return;
   }
-  // §400 : un état perdu, barré de gauche à droite une fois le texte apparu — la barre à la couleur du texte, sur un trait sombre.
+  // §400: a lost condition, struck through from left to right once the text has appeared — the bar in the text's color,
+  // on a dark stroke.
   const strike = (look.strike && text) ? box.addChild(new PIXI.Graphics()) : null;
   const drawStrike = k => {
     const pad = Number(text.style?.padding) || 0;
@@ -352,7 +357,7 @@ async function drawLine(token, line, kind, options, { factor=1, roll=null, waitF
     strike.lineStyle(thick, fill, 1).moveTo(x1, y).lineTo(x1 + w, y);
   };
   const state = { p: 0 };
-  // L’hexagone tourne puis se révèle : le texte reste lisible au moins 2,2 s après.
+  // The hexagon spins then reveals itself: the text stays readable at least 2.2 s afterwards.
   const duration = spin ? Math.max(options.duration * 1000, look.spinMs + 2200) : options.duration * 1000;
   if ( spin && text ) text.alpha = 0;
   try {
@@ -376,15 +381,16 @@ async function drawLine(token, line, kind, options, { factor=1, roll=null, waitF
     });
   } finally {
     spin?.dispose?.();
-    // Les textures des pictogrammes sont celles du cache du cœur : on ne les détruit pas.
+    // Pictogram textures are those of the core's cache: we do not destroy them.
     if ( !box.destroyed ) box.destroy({ children: true, texture: false });
   }
 }
 
 /**
- * §400 : l'hexagone d'un jet calé sur Dice So Nice — il apparaît au lancer et tourne tant que les dés 3D roulent (`waitFor`, borné par
- * `waitForDice`), `spinMs` au moins ; puis il se révèle et le texte reste lisible le temps réglé (2,2 s au moins), et s'efface sur son
- * dernier tiers. Animé par le ticker du canevas, la durée totale n'étant pas connue d'avance.
+ * §400: the hexagon of a roll timed to Dice So Nice — it appears at the throw and spins as long as the 3D dice roll
+ * (`waitFor`, bounded by `waitForDice`), `spinMs` at least; then it reveals itself and the text stays readable for the set
+ * time (2.2 s at least), and fades over its last third. Animated by the canvas ticker, the total duration not being
+ * known in advance.
  */
 function spinWithDice(box, { spin, text, waitFor, look, options, motion, path, x0, start, scale, fontSize }) {
   const ease = x => 0.5 - (Math.cos(Math.PI * x) / 2);
@@ -421,17 +427,17 @@ function spinWithDice(box, { spin, text, waitFor, look, options, motion, path, x
 }
 
 /**
- * §400 : la fin des dés 3D d'un message de jet. Dice So Nice ne marque le message comme animé (`_dice3danimating`) qu'après sa propre
- * prise en charge, juste après la création : demandée trop tôt, l'attente rendait la main tout de suite, une fois sur deux (vu en jeu).
+ * §400: the end of a roll message's 3D dice. Dice So Nice only marks the message as animated (`_dice3danimating`) after its own
+ * handling, just after creation: asked too early, the wait returned immediately, one time in two (seen in play).
  */
 function diceDone(message) {
   return new Promise(resolve => setTimeout(resolve, 120)).then(() => waitForDice(message));
 }
 
 /**
- * §400 : une fin d’effet annoncée deux fois — l’avis du moteur « Fin : Sommeil » (`ended`) et le retrait de l’effet « Sommeil » barré
- * (`effectOff`) — ne s’affiche qu’une fois : sur un même token, à moins de `END_WINDOW` ms, la seconde dont le texte contient le nom de
- * la première (ou l’inverse) est écartée.
+ * §400: an effect end announced twice — the engine's notice "End: Sleep" (`ended`) and the removal of the struck-out "Sleep" effect
+ * (`effectOff`) — is shown only once: on the same token, within `END_WINDOW` ms, the second, whose text contains the name of
+ * the first (or the reverse), is dropped.
  */
 const recentEnds = [];
 const END_WINDOW = 2000;
@@ -440,18 +446,18 @@ function duplicateEnd(f) {
   const now = Date.now();
   while ( recentEnds.length && ((now - recentEnds[0].at) > END_WINDOW) ) recentEnds.shift();
   const plain = floatEndName(f.text);
-  // Deux annonces de la même fin (l'avis du moteur et le retrait de l'effet), quelle que soit leur sorte.
+  // Two announcements of the same end (the engine's notice and the effect's removal), whatever their kind.
   const twin = recentEnds.find(e => (e.token === f.token) && (e.plain.includes(plain) || plain.includes(e.plain)));
   recentEnds.push({ token: f.token, kind: f.kind, plain, at: now });
   return !!twin;
 }
 
 function show(feedback, { burst=false }={}) {
-  // §400 : les textes du moteur dépendent de son interrupteur de monde (qui coupe ceux du cœur), plus du réglage du cœur.
+  // §400: the engine's texts depend on its world switch (which turns off the core's), no longer on the core setting.
   if ( !canvas?.ready || !floatsActive() ) return;
   feedback = feedback.filter(f => !duplicateEnd(f));
   const options = floatOptions();
-  // §400, lot 3 : les dégâts d'un même coup partent presque ensemble (un tiers de l'écart réglé).
+  // §400, batch 3: the damage of a single blow goes out almost together (a third of the set gap).
   if ( burst ) options.spacing *= 0.3;
   const lines = [];
   for ( const f of feedback ) {
@@ -459,23 +465,23 @@ function show(feedback, { burst=false }={}) {
     if ( !token?.visible || token.document.isSecret ) continue;
     if ( floatStyleOf(theme(), f.kind).show === false ) continue;
     const raw = textOf(f);
-    // « abri partiel » vient d'une clé partagée avec le chat
+    // "partial Cover" comes from a key shared with the chat
     const line = floatLine(f, raw ? raw.charAt(0).toLocaleUpperCase() + raw.slice(1) : null, options);
     if ( line ) lines.push({ f, token, line });
   }
   const delays = floatDelays(lines.map(l => l.f.token), options.spacing, Date.now(), busyUntil);
   lines.forEach(({ f, token, line }, i) => setTimeout(() => {
     if ( !canvas?.ready || !token.visible ) return;
-    // §41.3 : si la vue change pendant le défilement (un escalier : autre niveau, le canevas est redessiné), le texte part avec le
-    // canevas. Rien à rattraper.
+    // §41.3: if the view changes during the scroll (a staircase: another level, the canvas is redrawn), the text goes with the
+    // canvas. Nothing to catch up.
     drawLine(token, line, f.kind, options, { factor: f.factor ?? 1, roll: Number.isFinite(f.roll) ? f.roll : null, waitFor: f.waitFor ?? null }).catch(() => {});
   }, delays[i]));
 }
 
 /**
- * §282 : l'éclat de l'Inspiration héroïque utilisée, sur le token, chez chaque client (l'avis voyage par `notice(…, { all: true })`) — un
- * soleil doré qui grandit et tourne, deux anneaux qui s'élargissent, ~1,4 s. Dessiné même sans textes flottants : c'est le retour visuel
- * de l'action.
+ * §282: the flash of a used Heroic Inspiration, on the token, on each client (the notice travels through
+ * `notice(…, { all: true })`) — a golden sun that grows and spins, two rings that widen, ~1.4 s. Drawn even without
+ * floating texts: it is the action's visual feedback.
  */
 export async function heroicBurst(token, { color=0xffd24a, icon="icons/svg/sun.svg" }={}) {
   const placeable = (typeof token === "string") ? fromUuidSync(token)?.object : (token?.object ?? token);
@@ -513,23 +519,23 @@ export async function heroicBurst(token, { color=0xffd24a, icon="icons/svg/sun.s
 }
 
 /**
- * Un avis au-dessus d'un token, sur ce client : invite (« Rebond ! »), refus (« Déjà visé »), fin d'effet. Les invites et
- * refus sont ceux de qui agit — lui seul les voit, comme la visée qu'ils accompagnent.
+ * A notice above a token, on this client: prompt ("Bounce!"), refusal ("Already targeted"), effect end. Prompts and
+ * refusals are those of the one who acts — only they see them, like the aiming they accompany.
  */
 export function floatNotice(token, text, kind="prompt") {
   if ( !text || !game.settings.get(MODULE_ID, "feedbackText") || !canvas?.ready ) return;
   show([{ token: token?.uuid ?? token, kind, text }]);
 }
 
-/** Le texte d'un changement de ressource (`resourceChangesOf`) : « +1 emplacement niv. 2 », « −1 Forme sauvage ». */
+/** The text of a resource change (`resourceChangesOf`): "+1 level 2 slot", "−1 Wild Shape". */
 function resourceText(c) {
   const sign = c.kind === "gain" ? "+" : "−";
   return c.type === "spellSlots" ? loc("Retour.Emplacement", { sign, n: c.n, level: c.level }) : loc("Retour.Utilisation", { sign, n: c.n, item: c.name ?? "" });
 }
 
 /**
- * À la création d'un message, chez tout le monde : §16.40, ce qu'une utilisation a rendu ou dépensé (Regain sauvage), au-dessus du
- * token de l'utilisateur ; et un effet qui cesse sur dégâts (runtime/triggers.mjs, message `ended`), au-dessus de celui qui le portait.
+ * On a message's creation, on everyone: §16.40, what a use returned or spent (Wild Resurgence), above the
+ * user's token; and an effect that ends on damage (runtime/triggers.mjs, `ended` message), above its bearer.
  */
 function onCreateMessage(message) {
   if ( (message.type === "usage") && game.settings.get(MODULE_ID, "feedbackText") && canvas?.ready
@@ -551,9 +557,9 @@ function onCreateMessage(message) {
 }
 
 /**
- * §223 : chez tout le monde, au jet de dégâts d'un coup qui porte l'Attaque sournoise (runtime/sneak.mjs, drapeau `sneak`) ou des
- * dégâts bonus choisis par l'auteur (runtime/triggers.mjs, drapeau `bonuses`, parts `ask` : Frappe effroyable) : leur nom, en rouge,
- * au-dessus de la cible — comme une sauvegarde ratée.
+ * §223: on everyone, at the damage roll of a blow that carries Sneak Attack (runtime/sneak.mjs, `sneak` flag) or
+ * bonus damage chosen by the author (runtime/triggers.mjs, `bonuses` flag, `ask` parts: Dreadful Strike): their name, in red,
+ * above the target — like a failed save.
  */
 function showStrikes(message) {
   if ( !game.settings.get(MODULE_ID, "feedbackText") || !canvas?.ready || ((Date.now() - (message.timestamp ?? 0)) > FRESH_MS) ) return;
@@ -569,10 +575,10 @@ function showStrikes(message) {
 }
 
 /**
- * §292 : chez tout le monde, un test de caractéristique, de compétence ou d'outil lancé par dnd5e (message `check`, check-message-data.mjs
- * — §400 : l'initiative aussi, à part) : « 15 · Athlétisme », et avec un DD connu du jet (`options.target` : un DD caché aux joueurs n'en pose pas,
- * adapter/group-roll.mjs) « 15 · Athlétisme · Réussite ». Au-dessus du token qui a lancé, après les dés 3D ; un jet privé ou aveugle ne
- * s'affiche que chez qui peut le lire (`isContentVisible`).
+ * §292: on everyone, an ability, skill or tool check rolled by dnd5e (`check` message, check-message-data.mjs
+ * — §400: initiative too, separately): "15 · Athletics", and with a DC known for the roll (`options.target`: a DC hidden
+ * from players sets none, adapter/group-roll.mjs) "15 · Athletics · Success". Above the token that rolled, after the 3D
+ * dice; a private or blind roll is only shown to whoever can read it (`isContentVisible`).
  */
 async function showCheck(message) {
   if ( !game.settings.get(MODULE_ID, "feedbackText") || !canvas?.ready || ((Date.now() - (message.timestamp ?? 0)) > FRESH_MS) ) return;
@@ -582,7 +588,7 @@ async function showCheck(message) {
   const actor = message.getAssociatedActor?.();
   const token = message.getAssociatedToken?.() ?? actor?.token ?? actor?.getActiveTokens?.(false, true)?.[0];
   if ( !token ) return;
-  // §400, lot 2 : l’initiative, son total au-dessus du token (réglage « Afficher : initiative »).
+  // §400, batch 2: initiative, its total above the token (setting "Show: initiative").
   if ( data.type === "initiative" ) {
     show([{ token: token.uuid, kind: "initiative", roll: roll.total, mode: d20Mode(roll), text: loc("Retour.Initiative"), waitFor: diceDone(message) }]);
     return;
@@ -595,22 +601,22 @@ async function showCheck(message) {
 }
 
 /**
- * §400 : chez tout le monde, une sauvegarde lancée par dnd5e hors d'une résolution du moteur (message `save`, data/chat-message/
- * save-message-data.mjs) — depuis la fiche, la concentration, un jet contre la mort : « 14 · Dextérité · Sauvegarde réussie », réussie ou
- * ratée quand le jet porte un DD (`options.target` ; 10 pour un jet contre la mort). Une sauvegarde rattachée à une carte du moteur
- * (`system.origin` porteur d'une résolution, adapter/saves.mjs) est déjà montrée par la résolution : pas deux fois. Après les dés 3D ; un jet
- * privé ou aveugle ne s'affiche que chez qui peut le lire.
+ * §400: on everyone, a saving throw rolled by dnd5e outside an engine resolution (`save` message, data/chat-message/
+ * save-message-data.mjs) — from the sheet, concentration, a death saving throw: "14 · Dexterity · Save succeeded", success or
+ * failure when the roll carries a DC (`options.target`; 10 for a death saving throw). A save attached to an engine card
+ * (`system.origin` bearing a resolution, adapter/saves.mjs) is already shown by the resolution: not twice. After the 3D
+ * dice; a private or blind roll is only shown to whoever can read it.
  */
 async function showSave(message) {
   if ( !game.settings.get(MODULE_ID, "feedbackText") || !canvas?.ready || ((Date.now() - (message.timestamp ?? 0)) > FRESH_MS) ) return;
   const data = message.system ?? {};
   const roll = message.rolls?.[0];
   if ( !roll || !message.isContentVisible ) return;
-  // `system.origin` est un champ de document de dnd5e (data/chat-message/roll-message-data.mjs:38) : il rend le message, pas son id — l’id
-  // se lit dans la source. Sans cela, la relance du Châtiment de fournaise s’affichait deux fois (vu par l’utilisateur).
+  // `system.origin` is a dnd5e document field (data/chat-message/roll-message-data.mjs:38): it returns the message, not its id —
+  // the id is read in the source. Without this, the reroll of Searing Smite was displayed twice (seen by the user).
   const originId = message._source?.system?.origin ?? data.origin?.id ?? data.origin?._id ?? ((typeof data.origin === "string") ? data.origin : null);
-  // Le moteur peut marquer sa carte un instant après la création du jet (relance du Châtiment de fournaise : `resave` à la création,
-  // `resolution` juste après) : la marque de relance suffit, sinon on redemande après un court délai.
+  // The engine may mark its card a moment after the roll is created (Searing Smite reroll: `resave` at creation,
+  // `resolution` just after): the reroll mark is enough, otherwise we ask again after a short delay.
   const byEngine = () => { const o = originId ? game.messages.get(originId) : null; return !!(o?.getFlag(MODULE_ID, "resolution") || o?.getFlag(MODULE_ID, "resave") || o?.getFlag(MODULE_ID, "areaTick")); };
   if ( byEngine() ) return;
   if ( originId ) {
@@ -641,9 +647,9 @@ function onUpdateMessage(message, changes) {
 }
 
 /**
- * §400 : les PV perdus, rendus ou temporaires, à la place du texte de dnd5e (documents/actor/actor.mjs:3532, `_displayTokenEffect`, coupé
- * avec le réglage du cœur) : même choix de sorte et de taille (`hpFloat`), chez chaque client — le hook est publié par la mise à jour de
- * l'acteur partout (data/actor/templates/attributes.mjs:715). dnd5e fait toujours luire l'anneau du token.
+ * §400: HP lost, restored or temporary, in place of dnd5e's text (documents/actor/actor.mjs:3532, `_displayTokenEffect`, turned off
+ * with the core setting): same choice of kind and size (`hpFloat`), on each client — the hook is published by the actor update
+ * everywhere (data/actor/templates/attributes.mjs:715). dnd5e still makes the token ring glow.
  */
 function onHpChange(actor, changes) {
   if ( !floatsActive() || !canvas?.ready || !game.settings.get(MODULE_ID, "feedbackText") ) return;
@@ -653,8 +659,8 @@ function onHpChange(actor, changes) {
   const tokens = (actor.isToken ? [actor.token] : actor.getActiveTokens(true, true)).filter(Boolean);
   const generic = () => show(tokens.map(t => ({ token: t.uuid, kind: hp.kind, text: hp.value.signedString(), factor: hp.factor })));
   if ( hp.kind !== "damage" ) return generic();
-  // §400, lot 3 : des dégâts — le détail par type, relayé par le client qui les a appliqués, arrive avant ou juste après la mise à jour des
-  // PV ; on l'attend un court instant. Sans détail (dégâts saisis à la main, détail perdu) : un seul nombre, comme dnd5e.
+  // §400, batch 3: damage — the per-type detail, relayed by the client that applied it, arrives before or just after the HP
+  // update; we wait for it a short moment. Without detail (damage entered by hand, detail lost): a single number, like dnd5e.
   setTimeout(() => {
     const entry = pendingDamage.get(actor.uuid);
     pendingDamage.delete(actor.uuid);
@@ -669,10 +675,10 @@ function onHpChange(actor, changes) {
 }
 
 /**
- * §400, lot 3 : le détail des dégâts par type, pris au calcul de dnd5e chez le client qui les applique (`dnd5e.calculateDamage` : chaque
- * partie a sa valeur après immunités, résistances et vulnérabilités, documents/actor/actor.mjs:957) et relayé à toute la table juste avant
- * la mise à jour des PV (`dnd5e.preApplyDamage`, actor.mjs:819) — les aperçus de dnd5e (carte de dégâts) calculent aussi, mais
- * n'appliquent pas, et ne sont pas relayés. Rien n'est écrit sur l'acteur.
+ * §400, batch 3: the damage detail by type, taken from dnd5e's calculation on the client that applies it (`dnd5e.calculateDamage`:
+ * each part has its value after Immunities, Resistances and Vulnerabilities, documents/actor/actor.mjs:957) and relayed to the
+ * whole table just before the HP update (`dnd5e.preApplyDamage`, actor.mjs:819) — dnd5e's previews (damage card) also
+ * calculate, but do not apply, and are not relayed. Nothing is written on the actor.
  */
 const DAMAGE_QUERY = `${MODULE_ID}.damageParts`;
 const DAMAGE_WAIT = 250;
@@ -680,7 +686,7 @@ const pendingDamage = new Map();
 const lastCalculated = new Map();
 
 function onCalculateDamage(actor, damages) {
-  // Le tableau lui-même : un autre écouteur peut encore le modifier (partage, réduction) avant l’application.
+  // The array itself: another listener can still modify it (split, reduction) before application.
   if ( actor?.uuid ) lastCalculated.set(actor.uuid, damages);
 }
 
@@ -703,25 +709,27 @@ function receiveDamageParts({ actor, parts }={}) {
 }
 
 /**
- * §400 : un effet qui commence ou cesse, à la place du texte du cœur (documents/active-effect.mjs:995-1052, `_displayScrollingStatus`) :
- * mêmes conditions — un effet qui modifie l'acteur, un état ou des changements, sans `animate: false` — et même texte « +(Nom) » / « −(Nom) ».
+ * §400: an effect that starts or ends, in place of the core's text
+ * (documents/active-effect.mjs:995-1052, `_displayScrollingStatus`): same conditions — an effect that modifies the actor, a
+ * condition or changes, without `animate: false` — and same text "+(Name)" / "−(Name)".
  */
 function onEffect(effect, options, enabled) {
   if ( !floatsActive() || !canvas?.ready || !game.settings.get(MODULE_ID, "feedbackText") || (options?.animate === false) ) return;
   const actor = effect.target;
-  // Le cœur ne montre qu’un effet qui pose un état ou change l’acteur ; §400 : aussi un effet à durée (sort, châtiment : la fournaise
-  // n’avait de texte ni à la pose ni au retrait — vu par l’utilisateur). Un effet posé inactif (suspendu) ne s’annonce pas.
+  // The core shows only an effect that applies a condition or changes the actor; §400: also a timed effect (spell, smite: Searing
+  // Smite had no text at application or removal — seen by the user). An effect applied inactive (suspended) is not announced.
   if ( !(actor instanceof Actor) || !(effect.statuses?.size || effect.system?.changes?.length || effect.isTemporary) ) return;
   if ( enabled && !effect.active ) return;
-  // §400 : barré, l’état perdu se lit à son seul nom ; sans la barre, « −(Nom) » comme le cœur.
+  // §400: struck through, the lost condition is read by its name alone; without the bar, "−(Name)" like the core.
   const struck = !enabled && floatStyleOf(theme(), "effectOff").strike;
   const text = struck ? effect.name : `${enabled ? "+" : "−"}(${effect.name})`;
   show(actor.getActiveTokens(true).map(t => ({ token: t.document.uuid, kind: enabled ? "effectOn" : "effectOff", text })));
 }
 
 /**
- * §400 : le MJ actif accorde le réglage du cœur « texte défilant » (monde) à l'interrupteur du moteur : textes du moteur → ceux du cœur et
- * du système (PV de dnd5e, effets, comportement de région « texte défilant ») coupés ; le moteur coupé → rendus, s'il les avait coupés lui-même.
+ * §400: the active GM aligns the core setting "scrolling text" (world) with the engine's switch: engine texts → the core's and
+ * the system's (dnd5e HP, effects, region behavior "scrolling text") turned off; engine off → restored, if it had turned
+ * them off itself.
  */
 async function syncCoreText() {
   if ( !isExecutor() ) return;
@@ -737,7 +745,7 @@ async function syncCoreText() {
   }
 }
 
-/** §400 : les polices libres (OFL) livrées pour le thème, chargées par le cœur avec les siennes avant le canevas (game.mjs:1065). */
+/** §400: the free fonts (OFL) shipped for the theme, loaded by the core with its own before the canvas (game.mjs:1065). */
 const FONTS = {
   "Cinzel": [{ urls: [`modules/${MODULE_ID}/fonts/cinzel.ttf`], weight: "400 900" }],
   "Cormorant Garamond": [{ urls: [`modules/${MODULE_ID}/fonts/cormorant-garamond.ttf`], weight: "300 700" }],
@@ -745,14 +753,14 @@ const FONTS = {
     { urls: [`modules/${MODULE_ID}/fonts/alegreya-sc-bold.ttf`], weight: "700" }]
 };
 
-/** Les familles de polices de ce monde : celles du cœur et des modules, et celles que le MJ a ajoutées (Polices supplémentaires). */
+/** This world's font families: the core's and the modules', and those the GM added (Additional Fonts). */
 export function floatFonts() {
   let added = {};
   try { added = game.settings.get("core", "fonts") ?? {}; } catch {}
   return [...new Set([...Object.keys(CONFIG.fontDefinitions ?? {}), ...Object.keys(added)])].sort((a, b) => a.localeCompare(b));
 }
 
-/** §400 : rejoue une sorte sur un token (essai depuis la fenêtre du thème, `api.floats.play`). */
+/** §400: replays a kind on a token (trial from the theme window, `api.floats.play`). */
 export function playFloat(token, kind, text, extra={}) {
   const placeable = (typeof token === "string") ? fromUuidSync(token)?.object : (token?.object ?? token);
   if ( !placeable ) return false;
@@ -763,7 +771,7 @@ export function playFloat(token, kind, text, extra={}) {
 
 export function registerFeedback() {
   if ( CONFIG.fontDefinitions ) for ( const [family, fonts] of Object.entries(FONTS) ) CONFIG.fontDefinitions[family] ??= { editor: true, fonts };
-  // §400 : l'interrupteur de la table, le thème, et la trace d'avoir coupé le texte du cœur.
+  // §400: the table's switch, the theme, and the trace of having turned off the core's text.
   game.settings.register(MODULE_ID, FLOAT_SYSTEM, { scope: "world", config: true, type: Boolean, default: true,
     name: `DND5ECOMBAT.Reglage.${FLOAT_SYSTEM}.Nom`, hint: `DND5ECOMBAT.Reglage.${FLOAT_SYSTEM}.Aide`, onChange: () => syncCoreText() });
   game.settings.register(MODULE_ID, CORE_MUTED, { scope: "world", config: false, type: Boolean, default: false });
@@ -776,7 +784,7 @@ export function registerFeedback() {
     name: "DND5ECOMBAT.Reglage.floatSounds.Nom", hint: "DND5ECOMBAT.Reglage.floatSounds.Aide" });
   game.settings.register(MODULE_ID, "floatSoundVolume", { scope: "client", config: true, type: Number, default: 40,
     range: { min: 0, max: 100, step: 5 }, name: "DND5ECOMBAT.Reglage.floatSoundVolume.Nom", hint: "DND5ECOMBAT.Reglage.floatSoundVolume.Aide" });
-  // Le MJ actif n'est connu qu'un peu après `ready` (`game.users.activeGM`) : le réglage du cœur s'accorde ensuite.
+  // The active GM is only known a little after `ready` (`game.users.activeGM`): the core setting is aligned afterwards.
   route("ready", () => { setTimeout(() => syncCoreText().catch(() => {}), 1500); }, { always: true, label: "floating texts: system texts muted" });
   route("dnd5e.damageActor", onHpChange, { always: true, label: "floating texts: hit points" });
   route("dnd5e.healActor", onHpChange, { always: true, label: "floating texts: hit points" });
@@ -784,7 +792,7 @@ export function registerFeedback() {
   route("deleteActiveEffect", (e, o) => { if ( e.modifiesActor ) onEffect(e, o, false); }, { always: true, label: "floating texts: effect" });
   route("updateActiveEffect", (e, changed, o) => { if ( "disabled" in (changed ?? {}) ) onEffect(e, o, e.active); },
     { always: true, label: "floating texts: effect" });
-  // §228 : le rythme et le contenu des textes, pour la table (MJ).
+  // §228: the pace and content of the texts, for the table (GM).
   const world = (key, data) => game.settings.register(MODULE_ID, key, { scope: "world", config: true,
     name: `DND5ECOMBAT.Reglage.${key}.Nom`, hint: `DND5ECOMBAT.Reglage.${key}.Aide`, ...data });
   world("floatDuration", { type: Number, default: FLOAT_DEFAULTS.duration, range: { min: 1, max: 10, step: 0.5 } });
@@ -801,13 +809,13 @@ export function registerFeedback() {
   route(`${MODULE_ID}.notice`, n => {
     floatNotice(n.token, n.text, n.kind);
     if ( n.kind === "heroic" ) heroicBurst(n.token).catch(() => {});
-    // Issue #32 : le succès à un prix accepté — le même éclat, ambré, avec la balance.
+    // Issue #32: the accepted success at a cost — the same flash, amber, with the scales.
     if ( n.kind === "atCost" ) heroicBurst(n.token, { color: 0xe0a050, icon: "icons/svg/aura.svg" }).catch(() => {});
-    // §408 : « Forcé » n'a plus d'éclat (issue #178, demande de l'utilisateur 2026-11-21 : trop présent) — le texte seul, discret.
+    // §408: "Forced" no longer has a flash (issue #178, user's request 2026-11-21: too prominent) — the text alone, discreet.
   }, { label: "visual feedback: engine notice" });
-  // §252 : l'avis d'une action d'un autre client (runtime/shared.mjs, `notice(…, { all: true })`), dessiné ici.
+  // §252: the notice of an action from another client (runtime/shared.mjs, `notice(…, { all: true })`), drawn here.
   CONFIG.queries[NOTICE_QUERY] = receiveNotice;
-  // §400, lot 3 : le détail des dégâts par type.
+  // §400, batch 3: the damage detail by type.
   CONFIG.queries[DAMAGE_QUERY] = receiveDamageParts;
   route("dnd5e.calculateDamage", onCalculateDamage, { always: true, label: "floating texts: damage by type" });
   route("dnd5e.preApplyDamage", onPreApplyDamage, { always: true, label: "floating texts: damage by type" });

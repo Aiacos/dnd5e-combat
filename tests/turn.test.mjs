@@ -13,38 +13,38 @@ const shield = { cost: "reaction", weaponAttack: false, usesSpellSlot: true };
 const mine = { isOwnTurn: true, attacksPerAction: 1 };
 const theirs = { isOwnTurn: false, attacksPerAction: 1 };
 
-describe("coût", () => {
-  it("ne compte que action, action bonus et réaction", () => {
+describe("cost", () => {
+  it("only counts action, Bonus Action and Reaction", () => {
     expect(["action", "bonus", "reaction", "minute", "legendary", "special", ""].map(costOf))
       .toEqual(["action", "bonus", "reaction", null, null, null, null]);
   });
-  it("une activité hors budget ne pose jamais de problème et ne coûte rien", () => {
+  it("an activity outside the budget never causes a problem and costs nothing", () => {
     const free = { cost: null, weaponAttack: false, usesSpellSlot: false };
     expect(checkUse(freshBudget(), free, theirs)).toEqual([]);
     expect(spendUse(freshBudget(), free, mine)).toEqual(freshBudget());
   });
 });
 
-describe("légalité", () => {
-  it("tout est permis en début de tour", () => {
+describe("legality", () => {
+  it("everything is allowed at the start of the turn", () => {
     expect(checkUse(freshBudget(), spell, mine)).toEqual([]);
   });
-  it("signale une action déjà dépensée", () => {
+  it("flags an action already spent", () => {
     expect(checkUse(spendUse(freshBudget(), cantrip, mine), cantrip, mine)).toEqual(["noAction"]);
   });
-  it("signale une action hors de son tour, mais pas une réaction", () => {
+  it("flags an action outside its turn, but not a Reaction", () => {
     expect(checkUse(freshBudget(), sword, theirs)).toEqual(["notYourTurn"]);
     expect(checkUse(freshBudget(), shield, theirs)).toEqual([]);
   });
-  it("signale une réaction déjà dépensée", () => {
+  it("flags a Reaction already spent", () => {
     expect(checkUse(spendUse(freshBudget(), shield, theirs), shield, theirs)).toEqual(["noReaction"]);
   });
-  it("règle 2024 : un seul sort à emplacement par tour", () => {
+  it("2024 rule: only one spell slot spell per turn", () => {
     const after = spendUse(freshBudget(), bonusSpell, mine);
     expect(checkUse(after, spell, mine)).toEqual(["slotAlreadyCast"]);
     expect(checkUse(after, cantrip, mine)).toEqual([]);
   });
-  it("Bouclier au tour d'un autre n'entame pas le sort de son propre tour", () => {
+  it("Shield on another's turn does not use up the spell of its own turn", () => {
     const after = spendUse(freshBudget(), shield, theirs);
     expect(after.slotCast).toBe(false);
   });
@@ -53,41 +53,41 @@ describe("légalité", () => {
 describe("action Attaquer et attaques multiples", () => {
   const fighter = { isOwnTurn: true, attacksPerAction: 2 };
 
-  it("la première attaque paie l'action et ouvre les suivantes", () => {
+  it("the first attack pays for the action and opens the following ones", () => {
     const after = spendUse(freshBudget(), sword, fighter);
     expect(after).toMatchObject({ action: 0, attacks: { granted: 2, used: 1 } });
     expect(checkUse(after, sword, fighter)).toEqual([]);
   });
-  it("la deuxième attaque ne coûte plus rien, la troisième est signalée", () => {
+  it("the second attack costs nothing more, the third is flagged", () => {
     const after = spendUse(spendUse(freshBudget(), sword, fighter), sword, fighter);
     expect(after.attacks).toEqual({ granted: 2, used: 2 });
     expect(checkUse(after, sword, fighter)).toEqual(["noAction"]);
   });
-  it("une attaque supplémentaire ne couvre pas un sort", () => {
+  it("an extra attack does not cover a spell", () => {
     expect(checkUse(spendUse(freshBudget(), sword, fighter), cantrip, fighter)).toEqual(["noAction"]);
   });
-  it("sans attaque supplémentaire, une seule attaque", () => {
+  it("without Extra Attack, a single attack", () => {
     expect(checkUse(spendUse(freshBudget(), sword, mine), sword, mine)).toEqual(["noAction"]);
   });
-  it("une dépense confirmée au-delà du budget ne descend pas sous zéro", () => {
+  it("a confirmed expense beyond the budget does not go below zero", () => {
     const after = spendUse(spendUse(freshBudget(), cantrip, mine), cantrip, mine);
     expect(after.action).toBe(0);
   });
 });
 
-describe("Foncer, corrections, déplacement", () => {
-  it("Foncer coûte l'action et double le déplacement", () => {
+describe("Dash, corrections, movement", () => {
+  it("Dash costs the action and doubles movement", () => {
     const after = dash(freshBudget());
     expect(after).toMatchObject({ action: 0, dashed: true });
     expect(movementAllowance(after, 9)).toBe(18);
     expect(movementAllowance(freshBudget(), 9)).toBe(9);
   });
-  it("Se désengager coûte l'action, une seule fois", () => {
+  it("Disengage costs the action, only once", () => {
     const after = disengage(freshBudget());
     expect(after).toMatchObject({ action: 0, disengaged: true });
     expect(disengage(after)).toBe(after);
   });
-  it("Esquiver coûte l'action, une seule fois", () => {
+  it("Dodge costs the action, only once", () => {
     const after = dodge(freshBudget());
     expect(after).toMatchObject({ action: 0, dodging: true });
     expect(dodge(after)).toBe(after);
@@ -96,7 +96,7 @@ describe("Foncer, corrections, déplacement", () => {
     const spent = spendUse(freshBudget(), cantrip, mine);
     expect(dash(spent)).toBe(spent);
   });
-  it("une pastille se corrige à la main dans les deux sens", () => {
+  it("a pip is corrected by hand in both directions", () => {
     const off = toggleResource(freshBudget(), "bonus");
     expect(off.bonus).toBe(0);
     expect(toggleResource(off, "bonus").bonus).toBe(1);
@@ -109,29 +109,29 @@ describe("Foncer, corrections, déplacement", () => {
   });
 });
 
-describe("portée", () => {
+describe("range", () => {
   const factors = { ft: 1, m: 10 / 3 };
   const m = value => ({ value, units: "m" });
 
-  it("un arc en pieds dans un monde métrique : portée normale, longue, hors de portée", () => {
+  it("a bow in feet in a metric world: normal range, long range, out of range", () => {
     const bow = { value: 80, long: 320, units: "ft" };   // 24 m / 96 m
     expect(rangeIssue(m(24), bow, factors)).toBeNull();
     expect(rangeIssue(m(25.5), bow, factors)).toBe("longRange");
     expect(rangeIssue(m(97.5), bow, factors)).toBe("outOfRange");
   });
-  it("une allonge de 1,5 m atteint la case voisine, pas la suivante", () => {
+  it("a reach of 1.5 m hits the neighboring cell, not the next one", () => {
     const reach = { value: 1.5, units: "m" };
     expect(rangeIssue(m(1.5), reach, factors)).toBeNull();
     expect(rangeIssue(m(3), reach, factors)).toBe("outOfRange");
   });
-  it("ne dit rien d'une portée sans valeur (soi, contact, spéciale)", () => {
+  it("says nothing about a range without a value (self, touch, special)", () => {
     expect(rangeIssue(m(30), { value: null, units: "self" }, factors)).toBeNull();
     expect(rangeIssue(m(30), { value: 10, units: "spec" }, factors)).toBeNull();
   });
 });
 
-describe("coût gratuit (§16.27)", () => {
-  it("un rayon enchaîné ou un rebond ne demande rien, même hors tour ou après un sort à emplacement", () => {
+describe("free cost (§16.27)", () => {
+  it("a chained ray or a bounce asks for nothing, even off-turn or after a spell slot spell", () => {
     const budget = { ...freshBudget(), action: 0, slotCast: true };
     expect(checkUse(budget, { cost: "free", usesSpellSlot: true, weaponAttack: false }, { isOwnTurn: false })).toEqual([]);
   });
@@ -140,7 +140,7 @@ describe("coût gratuit (§16.27)", () => {
 import { standUpCost } from "../module/scripts/core/turn.mjs";
 
 describe("§17.2 : se relever", () => {
-  it("coûte la moitié de la vitesse, s'il en reste assez", () => {
+  it("costs half the speed, if enough remains", () => {
     expect(standUpCost({ speed: 30, remaining: 30 })).toEqual({ cost: 15, issue: null });
     expect(standUpCost({ speed: 30, remaining: 15 })).toEqual({ cost: 15, issue: null });
     expect(standUpCost({ speed: 30, remaining: 10 })).toEqual({ cost: 15, issue: "noMovement" });
@@ -149,8 +149,8 @@ describe("§17.2 : se relever", () => {
   });
 });
 
-describe("§19.6 : plusieurs réactions par round, une par tour", () => {
-  it("trois réactions, mais pas deux dans le même tour de jeu", () => {
+describe("§19.6: several Reactions per round, one per turn", () => {
+  it("three Reactions, but not two in the same game turn", () => {
     let b = freshBudget({ reactions: 3 });
     const r = { cost: "reaction", weaponAttack: false, usesSpellSlot: false };
     expect(checkUse(b, r, { isOwnTurn: false, turnKey: "c.1.0" })).toEqual([]);
@@ -159,7 +159,7 @@ describe("§19.6 : plusieurs réactions par round, une par tour", () => {
     expect(checkUse(b, r, { isOwnTurn: false, turnKey: "c.1.0" })).toEqual(["noReaction"]);
     expect(checkUse(b, r, { isOwnTurn: false, turnKey: "c.1.1" })).toEqual([]);
   });
-  it("une seule réaction : la règle ordinaire", () => {
+  it("a single Reaction: the ordinary rule", () => {
     let b = freshBudget();
     const r = { cost: "reaction", weaponAttack: false, usesSpellSlot: false };
     b = spendUse(b, r, { isOwnTurn: false, attacksPerAction: 1, turnKey: "c.1.0" });
@@ -167,10 +167,10 @@ describe("§19.6 : plusieurs réactions par round, une par tour", () => {
   });
 });
 
-describe("§157 : action limitée de Hâte", () => {
+describe("§157: Haste's limited action", () => {
   const hasted = () => ({ ...freshBudget(), limited: 1 });
   const extra = { isOwnTurn: true, attacksPerAction: 2 };
-  it("l'action prise, une seule attaque d'arme de plus — même avec Attaque supplémentaire", () => {
+  it("the action taken, a single extra weapon attack — even with Extra Attack", () => {
     let b = spendUse(hasted(), sword, extra);
     b = spendUse(b, sword, extra);
     expect(b.action).toBe(0);
@@ -184,7 +184,7 @@ describe("§157 : action limitée de Hâte", () => {
     const b = { ...spendUse(hasted(), cantrip, mine) };
     expect(checkUse(b, cantrip, mine)).toEqual(["noAction"]);
   });
-  it("Foncer, Se désengager, Se cacher — pas Esquiver", () => {
+  it("Dash, Disengage, Hide — not Dodge", () => {
     const b = { ...hasted(), action: 0 };
     expect(checkUse(b, { ...cantrip, basic: "dash" }, mine)).toEqual([]);
     expect(checkUse(b, { ...cantrip, basic: "hide" }, mine)).toEqual([]);
@@ -199,7 +199,7 @@ describe("§157 : action limitée de Hâte", () => {
     expect(spendUse(b, kit, mine)).toMatchObject({ limited: 0, action: 0 });
     expect(checkUse({ ...b, limited: 0 }, kit, mine)).toEqual(["noAction"]);
   });
-  it("l'action d'abord, la limitée ensuite ; rendue avec une annulation", () => {
+  it("the action first, the limited one next; returned with a cancellation", () => {
     const before = hasted();
     const after = spendUse(before, cantrip, mine);
     expect(after).toMatchObject({ action: 0, limited: 1 });
@@ -208,10 +208,10 @@ describe("§157 : action limitée de Hâte", () => {
   });
 });
 
-describe("§236 : Pas véloce", () => {
+describe("§236: Swift Step", () => {
   const rage = { cost: "bonus", weaponAttack: false, usesSpellSlot: false, fleetStep: "opens" };
   const step = { cost: "bonus", weaponAttack: false, usesSpellSlot: false, fleetStep: "free" };
-  it("une action Bonus ouvre Pas du vent, gratuit une fois", () => {
+  it("a Bonus Action opens Step of the Wind, free once", () => {
     const after = spendUse(freshBudget(), rage, mine);
     expect(after.bonus).toBe(0);
     expect(after.fleetStep).toBe(true);
@@ -221,11 +221,11 @@ describe("§236 : Pas véloce", () => {
     expect(stepped.bonus).toBe(0);
     expect(checkUse(stepped, step, mine)).toEqual(["noBonus"]);
   });
-  it("Pas du vent lui-même n'ouvre rien ; sans la règle, rien ne change", () => {
+  it("Step of the Wind itself opens nothing; without the rule, nothing changes", () => {
     expect(spendUse(freshBudget(), step, mine).fleetStep).toBeFalsy();
     expect(spendUse(freshBudget(), { ...rage, fleetStep: null }, mine).fleetStep).toBeFalsy();
   });
-  it("une utilisation annulée rend le Pas du vent offert, ou le referme", () => {
+  it("a cancelled use gives back the offered Step of the Wind, or closes it again", () => {
     const before = spendUse(freshBudget(), rage, mine);
     const after = spendUse(before, step, mine);
     expect(refundUse(after, before, after).fleetStep).toBe(true);
@@ -236,14 +236,14 @@ describe("§236 : Pas véloce", () => {
 import { tooClose } from "../module/scripts/core/range.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
-describe("O8h (§351) : portée minimale des armes de siège", () => {
+describe("O8h (§351): minimum range of siege weapons", () => {
   const factors = { ft: 1, m: 1 / 0.3 };
-  it("à 18 m ou moins : trop près ; au-delà : non", () => {
+  it("at 18 m or less: too close; beyond: no", () => {
     expect(tooClose({ value: 60, units: "ft" }, { value: 60, units: "ft" }, factors)).toBe(true);
     expect(tooClose({ value: 30, units: "ft" }, { value: 60, units: "ft" }, factors)).toBe(true);
     expect(tooClose({ value: 65, units: "ft" }, { value: 60, units: "ft" }, factors)).toBe(false);
   });
-  it("sans portée minimale ou unité inconnue : jamais trop près", () => {
+  it("without a minimum range or an unknown unit: never too close", () => {
     expect(tooClose({ value: 5, units: "ft" }, null, factors)).toBe(false);
     expect(tooClose({ value: 5, units: "ft" }, { value: 60, units: "league" }, factors)).toBe(false);
   });
@@ -254,8 +254,8 @@ describe("O8h (§351) : portée minimale des armes de siège", () => {
   });
 });
 
-describe("§402 : chaque Foncer ajoute la Vitesse", () => {
-  it("Repli expéditif (Foncer en action Bonus) puis Foncer avec l'action : trois fois la Vitesse", async () => {
+describe("§402: each Dash adds the Speed", () => {
+  it("Swift Retreat (Dash as a Bonus Action) then Dash with the action: three times the Speed", async () => {
     const { basicAction, movementAllowance, freshBudget, addDash } = await import("../module/scripts/core/turn.mjs");
     const bonusDash = addDash(freshBudget());
     expect(movementAllowance(bonusDash, 30)).toBe(60);
@@ -275,11 +275,11 @@ describe("sens du passage de tour", () => {
     expect(turnWentBack(at(1, 0), at(1, 1))).toBe(false);
     expect(turnWentBack(at(1, 2), at(2, 0))).toBe(false);
   });
-  it("tour précédent, round précédent : le combat recule", () => {
+  it("previous turn, previous round: the combat goes back", () => {
     expect(turnWentBack(at(1, 2), at(1, 1))).toBe(true);
     expect(turnWentBack(at(2, 0), at(1, 2))).toBe(true);
   });
-  it("lancement du combat, même tour, données absentes : rien n'a reculé", () => {
+  it("combat start, same turn, missing data: nothing went back", () => {
     expect(turnWentBack({ round: null, turn: null }, at(1, 0))).toBe(false);
     expect(turnWentBack({ round: 0, turn: null }, at(1, 0))).toBe(false);
     expect(turnWentBack(at(1, 1), at(1, 1))).toBe(false);

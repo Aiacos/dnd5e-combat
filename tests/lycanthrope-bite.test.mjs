@@ -9,7 +9,7 @@ describe("Lycanthropes — the curse: a Humanoid, and 24 hours of immunity after
     mmWerewolf000000: "werewolf" };
   const facts = { "target.creatureType": () => true, "target.hasMark": () => true };
 
-  it("la Morsure de chaque lycanthrope a son identifiant propre, hors de « bite »", () => {
+  it("each lycanthrope's Bite has its own identifier, apart from \"bite\"", () => {
     for ( const [actor, kind] of Object.entries(BITES) ) {
       expect(SOURCE_IDENTIFIERS[`${actor}.mmBite0000000000`], actor).toBe(`mm-${kind}-bite`);
     }
@@ -33,7 +33,7 @@ describe("Lycanthropes — the curse: a Humanoid, and 24 hours of immunity after
     expect(new Set([...marks, CONTENT["mm-wereboar-gore"].triggers[0].do[0].mark]).size).toBe(5);
   });
 
-  it("elle ne porte pas le drain de l'identifiant « bite » (aucun lycanthrope ne réduit le maximum de points de vie)", () => {
+  it("it does not carry the drain of the \"bite\" identifier (no lycanthrope reduces the maximum Hit Points)", () => {
     expect(CONTENT.bite?.drain).toBe(true);
     for ( const kind of Object.values(BITES) ) expect(CONTENT[`mm-${kind}-bite`].drain).toBeUndefined();
   });

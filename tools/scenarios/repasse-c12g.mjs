@@ -1,10 +1,10 @@
 /**
- * §313, sous-lot C12-g de la repasse terme par terme : états, durées, fins d'effet. Arène des sorts (Lanceur, Allié, Cible).
- * Chaque partie prête ses items depuis le Manuel des joueurs et remet tout.
- *  - Double illusoire : le double invoqué, c'est le Lanceur qui devient Invisible (et non le double) ;
- *  - Main de l'ultime miséricorde : l'Allié Mort et Empoisonné revient à la vie, sans l'état ;
- *  - Toucher restaurateur : l'Allié Effrayé ne l'est plus ;
- *  - Concentration parfaite : le Lanceur (Moine 15) à 1 point de concentration remonte à 4 au jet d'initiative.
+ * §313, sub-batch C12-g of the term-by-term pass: conditions, durations, effect ends. Spell arena (Caster, Ally, Target).
+ * Each part borrows its items from the Player's Handbook and puts everything back.
+ *  - Illusory Double: the summoned double, it is the Caster who becomes Invisible (not the double);
+ *  - Hand of Ultimate Mercy: the Dead and Poisoned Ally comes back to life, without the condition;
+ *  - Restorative Touch: the Frightened Ally no longer is;
+ *  - Perfect Focus: the Caster (Monk 15) at 1 focus point goes back up to 4 on the Initiative roll.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -81,7 +81,7 @@ export default {
     await part("Main de l'ultime miséricorde", async () => {
       const mercy = await lend(caster, `${PHB}.classes.Item.phbmnkHandOfUlti`, { "system.uses.spent": 0 });
       await ctx.setHp(ally, 0);
-      // À 0 PV, le moteur pose lui-même Mort sur un PNJ : ne le poser que s'il manque.
+      // At 0 HP, the engine itself places Dead on an NPC: only place it if it is missing.
       await pause(1200);
       if ( !(await statuses(ally)).includes("dead") ) await ctx.call("set-status", { tokenId: ally.id, statusId: "dead", active: true });
       await ctx.call("set-status", { tokenId: ally.id, statusId: "poisoned", active: true });

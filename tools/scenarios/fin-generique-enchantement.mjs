@@ -1,10 +1,10 @@
 /**
- * Fins génériques et enchantements (DF #246 du 2026-11-23, §521) : une fin générique (`endsWhen`) sur un item qui a une activité
- * « enchant » retirait ses définitions d'enchantement — les profils que l'activité propose (Gourdin magique : quatre) — alors que rien
- * n'était enchanté. Arène de test, Magicien : Gourdin magique prêté (SRD 2024 de dnd5e), une règle `endsWhen: { incapacitated: "bearer" }`
- * posée dans la surcouche du monde sur son identifiant, puis le Magicien Neutralisé : les profils restent. Témoin : le même item compte
- * bien ses profils avant.
- * Remis en état : état Neutralisé, surcouche, sort prêté.
+ * Generic ends and enchantments (DF #246 of 2026-11-23, §521): a generic end (`endsWhen`) on an item that has an
+ * "enchant" activity removed its enchantment definitions — the profiles the activity offers (Shillelagh: four) — although nothing
+ * was enchanted. Test Arena, Wizard: Shillelagh lent (dnd5e 2024 SRD), a rule `endsWhen: { incapacitated: "bearer" }`
+ * placed in the world overlay on its identifier, then the Wizard Incapacitated: the profiles remain. Control: the same item counts
+ * its profiles before.
+ * Restored: Incapacitated condition, overlay, lent spell.
  */
 const SHILLELAGH = "Compendium.dnd5e.spells24.Item.phbsplShillelagh";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));

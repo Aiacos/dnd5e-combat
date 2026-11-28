@@ -1,22 +1,22 @@
 /**
- * Une zone « sur soi » se pose d'office sur le lanceur (SPEC §47), sans fenêtre ni clic.
+ * A "self" area is placed automatically on the caster (SPEC §47), with no window or click.
  *
- *  - `dnd5e.preUseActivity` : dnd5e prévoit la pose (`create.measuredTemplate`, documents/activity/mixin.mjs:451), et cette
- *    seule case suffit à ouvrir sa fenêtre d'utilisation (`_requiresConfigurationDialog`, mixin.mjs:688-694 : « Placer le
- *    gabarit »). On la décoche et on la masque (`display.create`, applications/activity/activity-usage-dialog.mjs:329) : la
- *    fenêtre ne s'ouvre plus que s'il y a autre chose à y choisir (emplacement, concentration…).
- *  - `dnd5e.postUseActivity` : l'utilisation faite, la région est créée par le moteur (adapter/self-area.mjs), là où dnd5e
- *    l'aurait posée dans `_finalizeUsage` (mixin.mjs:832) — après la carte, comme lui.
- *  - `dnd5e.preCreateMeasuredTemplate` (Hooks.call, canvas/template-placement.mjs:115) : le bouton « Placer la zone » de la
- *    carte passe encore par la pose interactive ; on la refuse et l'on crée la région nous-mêmes.
- * Ces hooks sont synchrones : la création part en arrière-plan — dnd5e ne lit rien de la zone après (`results.templates`), la
- * résolution suit `createRegion`.
+ *  - `dnd5e.preUseActivity`: dnd5e provides for the placement (`create.measuredTemplate`, documents/activity/mixin.mjs:451),
+ *    and this one checkbox is enough to open its use window (`_requiresConfigurationDialog`, mixin.mjs:688-694: "Place
+ *    Template"). We uncheck it and hide it (`display.create`, applications/activity/activity-usage-dialog.mjs:329): the
+ *    window only opens if there is something else to choose in it (slot, Concentration…).
+ *  - `dnd5e.postUseActivity`: the use done, the region is created by the engine (adapter/self-area.mjs), where dnd5e
+ *    would have placed it in `_finalizeUsage` (mixin.mjs:832) — after the card, like it.
+ *  - `dnd5e.preCreateMeasuredTemplate` (Hooks.call, canvas/template-placement.mjs:115): the "Place Area" button of the
+ *    card still goes through interactive placement; we refuse it and create the region ourselves.
+ * These hooks are synchronous: the creation goes to the background — dnd5e reads nothing of the area afterwards
+ * (`results.templates`), the resolution follows `createRegion`.
  *
- * Sur le client de celui qui utilise l'activité, joueur compris.
+ * On the client of whoever uses the activity, player included.
  *
- * §59 : un cône ou une ligne de portée personnelle se vise autour du lanceur (la visée est dans ui/pointer.mjs, avant la
- * légalité) ; le clic relance l'utilisation par `castAimed`, la forme visée dans `usageConfig["dnd5e-combat"].aimed`, sans la
- * case « Placer le gabarit » ; la région est créée ici à `dnd5e.postUseActivity`, comme la zone sur soi.
+ * §59: a Cone or Line with self range is aimed around the caster (the aiming is in ui/pointer.mjs, before
+ * legality); the click relaunches the use through `castAimed`, the aimed shape in `usageConfig["dnd5e-combat"].aimed`, without the
+ * "Place Template" checkbox; the region is created here at `dnd5e.postUseActivity`, like the self area.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -37,8 +37,8 @@ function place(activity, area) {
 }
 
 function onPreUse(activity, usageConfig, dialogConfig) {
-  // §463 : la zone d'une téléportation « à l'arrivée » ne se pose pas à l'utilisation : après le saut (runtime/teleport.mjs,
-  // `afterTeleport`), autour de la créature arrivée.
+  // §463: the area of an "on arrival" teleportation is not placed on use: after the jump (runtime/teleport.mjs,
+  // `afterTeleport`), around the creature that arrived.
   if ( teleportAreaOf(activity) === "arrival" ) {
     usageConfig.create = { ...(usageConfig.create ?? {}), measuredTemplate: false };
     if ( dialogConfig ) {
@@ -47,18 +47,18 @@ function onPreUse(activity, usageConfig, dialogConfig) {
     }
     return;
   }
-  // §86 : un gabarit fourni par le contenu — dnd5e n'a rien prévu de poser (pas de type de zone dans la donnée).
+  // §86: a template supplied by the content — dnd5e provided nothing to place (no area type in the data).
   const supplied = suppliesTemplate(activity);
-  // §91 : fourni, et pas sur soi (portée de contact ou à distance : Interdiction) — posé à la souris après l'utilisation, comme dnd5e
-  // le ferait ; sauf si l'appelant a lui-même renoncé à la pose (`measuredTemplate: false` : outils de test, qui posent la zone).
+  // §91: supplied, and not self (touch or ranged range: Forbiddance) — placed with the mouse after use, as dnd5e
+  // would; unless the caller itself gave up the placement (`measuredTemplate: false`: test tools, which place the area).
   if ( supplied && !selfAreaOf(activity) ) {
     if ( usageConfig?.create?.measuredTemplate !== false ) (usageConfig[MODULE_ID] ??= {}).pointZone = true;
     return;
   }
-  // §438 : une activité dont la zone porte des comportements de dnd5e (`behaviors` : l'aura de l'effet, la Vitesse divisée par deux)
-  // n'a d'effet que par sa zone ; le Manuel 3.0.0 en laisse certaines à `target.prompt: false` (Aura de pureté, Aura de vie), que dnd5e
-  // ne poserait pas (dnd5e.mjs:19142, `measuredTemplate ??= type && prompt`) : sur soi, l'émanation est posée quand même — sauf zone
-  // déjà fournie par l'appelant (`areaPlaced` : outils de test).
+  // §438: an activity whose area carries dnd5e behaviors (`behaviors`: the effect's aura, Speed halved)
+  // only has an effect through its area; the Player's Handbook 3.0.0 leaves some at `target.prompt: false` (Aura of Purity,
+  // Aura of Life), which dnd5e would not place (dnd5e.mjs:19142, `measuredTemplate ??= type && prompt`): on self, the
+  // Emanation is placed anyway — unless the area was already supplied by the caller (`areaPlaced`: test tools).
   const behavioral = (activity?.target?.prompt === false) && (activity?.applicableBehaviors?.length > 0)
     && !usageConfig?.[MODULE_ID]?.areaPlaced;
   if ( ((usageConfig?.create?.measuredTemplate !== true) && !supplied && !behavioral) || !selfAreaOf(activity) ) return;
@@ -71,12 +71,12 @@ function onPreUse(activity, usageConfig, dialogConfig) {
 }
 
 /**
- * §59 : intention « lancer vers cette direction » — la forme visée (ui/pointer.mjs) ; l'utilisation repart sans la case
- * « Placer le gabarit » et sans fenêtre (le niveau a été choisi avant la visée), la zone est posée à `postUseActivity`.
+ * §59: intent "cast toward this direction" — the aimed shape (ui/pointer.mjs); the use restarts without the
+ * "Place Template" checkbox and without a window (the level was chosen before the aiming), the area is placed at `postUseActivity`.
  * @param {Activity} activity
- * @param {[object, object, object]} usage  Configurations d'utilisation, de dialogue et de message reçues.
- * @param {object} shapeData                La forme visée (`aimedShapeData`).
- * @returns {Promise<boolean>}  true si l'activité a été lancée.
+ * @param {[object, object, object]} usage  Use, dialog and message configurations received.
+ * @param {object} shapeData                The aimed shape (`aimedShapeData`).
+ * @returns {Promise<boolean>}  true if the activity was launched.
  */
 export async function castAimed(activity, [config, dialog, message]=[], shapeData) {
   const use = { ...(config ?? {}), create: { ...(config?.create ?? {}), measuredTemplate: false },
@@ -85,7 +85,7 @@ export async function castAimed(activity, [config, dialog, message]=[], shapeDat
 }
 
 /**
- * §59 : intention « poser la zone visée » sans relancer l'activité (bouton « Placer la zone » de la carte).
+ * §59: intent "place the aimed area" without relaunching the activity (card's "Place Area" button).
  * @param {Activity} activity
  * @param {object} shapeData
  */
@@ -103,7 +103,7 @@ function placeAimedShape(activity, area, shapeData) {
   });
 }
 
-/** §162 : pose le mur dessiné (points) — intention de la visée par points (ui/pointer.mjs). */
+/** §162: places the drawn wall (points) — intent of the point-by-point aiming (ui/pointer.mjs). */
 export function placeWall(activity, points) {
   const area = wallAreaOf(activity);
   if ( !area ) return Promise.resolve(null);
@@ -118,7 +118,7 @@ export function placeWall(activity, points) {
 
 function onPostUse(activity, usageConfig, results) {
   const aimed = usageConfig?.[MODULE_ID]?.aimed;
-  // §162 : un mur visé par points.
+  // §162: a wall aimed by points.
   if ( aimed?.type === "wall" ) {
     if ( results ) placeWall(activity, aimed.points ?? []);
     return;
@@ -138,11 +138,11 @@ function onPostUse(activity, usageConfig, results) {
 }
 
 function onPreTemplate(activity) {
-  // §254 : une source de lumière portée n'a pas de zone — sa lumière est sur le token (§121). Le bouton « Placer le gabarit » de sa carte
-  // ferait poser à dnd5e une émanation rattachée au porteur.
+  // §254: a carried light source has no area — its light is on the token (§121). The "Place Template" button of its card
+  // would make dnd5e place an Emanation attached to the bearer.
   if ( carriedLightOf(activity?.item) ) return false;
-  // §463 : le bouton « Placer la zone » d'une téléportation à zone d'arrivée (visée coupée, saut fait à la main) : autour du token, là où
-  // il est.
+  // §463: the "Place Area" button of a teleportation with an arrival area (aiming cut off, jump done by hand): around the
+  // token, where it is.
   if ( teleportAreaOf(activity) === "arrival" ) {
     const token = activity.getUsageToken?.() ?? null;
     if ( token ) placeArrivalArea(activity, token).catch(err => console.error(`${MODULE_ID} | arrival area not placed`, err));

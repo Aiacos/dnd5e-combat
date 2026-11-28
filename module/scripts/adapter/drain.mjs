@@ -1,13 +1,13 @@
 /**
- * M8 (SPEC §18.16, §105) : le drain vu depuis Foundry — l'item (son texte anglais d'origine, ou le texte d'une fiche sans
- * original, dit le drain : « bite » et « slam » sont des identifiants partagés, et une fiche faite à la main n'a pas
- * d'identifiant), et l'EFFET qui le porte sur la cible.
+ * M8 (SPEC §18.16, §105): drain seen from Foundry — the item (its original English text, or the text of a sheet without
+ * an original, states the drain: "bite" and "slam" are shared identifiers, and a hand-made sheet has no
+ * identifier), and the EFFECT that carries it on the target.
  *
- * L'effet (§105, demande du 2026-10-07) : un effet actif par source et par grandeur, visible sur le token, dont le total
- * grossit à chaque drain — `hp.tempmax` ajouté au maximum par dnd5e (data/actor/templates/attributes.mjs:468), ou la valeur
- * de caractéristique. Il expire au repos par l'expiration native de dnd5e (`duration.expiry` « longRest »,
- * config.mjs:4750, retirés par `Actor5e#rest`, documents/actor/actor.mjs:2378). Avant le §105, le maximum baissait par le type
- * de dégâts `maximum` (actor.mjs:877, 940-950), invisible sur la fiche hors du champ « PV max temporaires ».
+ * The effect (§105, request of 2026-10-07): one Active Effect per source and per quantity, visible on the token, whose total
+ * grows with each drain — `hp.tempmax` added to the maximum by dnd5e (data/actor/templates/attributes.mjs:468), or the ability
+ * score. It expires on rest through dnd5e's native expiration (`duration.expiry` "longRest",
+ * config.mjs:4750, removed by `Actor5e#rest`, documents/actor/actor.mjs:2378). Before §105, the maximum went down through
+ * the damage type `maximum` (actor.mjs:877, 940-950), invisible on the sheet outside the "temporary max HP" field.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -21,12 +21,12 @@ export function drainOf(item) {
   return drains(rule) ? rule : null;
 }
 
-/** L'item d'où viennent des dégâts : le message d'origine (`originatingMessage` des boutons de carte, `origin` du moteur). */
+/** The item damage comes from: the origin message (`originatingMessage` of card buttons, `origin` of the engine). */
 export function damageSourceItem(options) {
   return damageSourceMessage(options)?.getAssociatedActivity?.()?.item ?? damageSourceMessage(options)?.getAssociatedItem?.() ?? null;
 }
 
-/** Le message d'origine de dégâts. */
+/** The origin message of the damage. */
 export function damageSourceMessage(options) {
   return options?.originatingMessage ?? options?.origin ?? null;
 }
@@ -38,12 +38,13 @@ export function effectiveMax(actor) {
 }
 
 /**
- * Pose (ou grossit) l'effet de drain sur l'acteur. `kind` : "hp", ou la clé d'une caractéristique.
- * Les PV suivent le maximum : dnd5e les borne à l'affichage (attributes.mjs:469) mais garde la valeur écrite, qui
- * reviendrait à l'expiration de l'effet ; on écrit donc la valeur bornée.
+ * Places (or grows) the drain effect on the actor. `kind`: "hp", or the key of an ability.
+ * HP follow the maximum: dnd5e caps them for display (attributes.mjs:469) but keeps the written value, which
+ * would come back when the effect expires; so the capped value is written.
  * @param {Actor5e} actor
- * @param {{kind: string, n: number, item: Item5e|{name: string, img?: string, uuid?: string}, name: (total: number) => string}} drain
- * @returns {Promise<number>}   Ce qui reste de la grandeur drainée (maximum de PV en vigueur, ou valeur de caractéristique).
+ * @param {{kind: string, n: number, item: Item5e|{name: string, img?: string, uuid?: string},
+ *   name: (total: number) => string}} drain
+ * @returns {Promise<number>}   What remains of the drained quantity (current HP maximum, or ability score).
  */
 export async function applyDrainEffect(actor, { kind, n, item, name }) {
   if ( n > 0 ) {

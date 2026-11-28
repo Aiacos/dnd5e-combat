@@ -1,21 +1,21 @@
 /**
- * §499 (brique B19) — renvoyer à l'attaquant le montant de dégâts subi : étape `damage { to: "source", same: true | "resisted",
- * damageType? }` au moment `isDamaged` d'un effet porté (`via: "effect"`). Règles pures.
+ * §499 (block B19) — return the damage amount taken to the attacker: the `damage { to: "source", same: true | "resisted",
+ * damageType? }` step at the `isDamaged` moment of a carried effect (`via: "effect"`). Pure rules.
  *
- * Les parts subies se lisent au calcul des dégâts de dnd5e (`dnd5e.calculateDamage`, après immunités, résistances et
- * vulnérabilités) : `{ type, value, multiplier }`. `same: true` renvoie toutes les parts ; `same: "resisted"` seulement celles que la
- * créature a réduites de moitié (multiplicateur entre 0 et 1 : « si elle résiste ainsi à des dégâts, l'attaquant subit le même
- * montant »). `damageType` : un type imposé (sinon le type reçu).
+ * The parts taken are read from dnd5e's damage calculation (`dnd5e.calculateDamage`, after Immunities, Resistances and
+ * Vulnerabilities): `{ type, value, multiplier }`. `same: true` returns all the parts; `same: "resisted"` only those that the
+ * creature halved (multiplier between 0 and 1: "if it resists damage this way, the attacker takes the same
+ * amount"). `damageType`: an imposed type (otherwise the received type).
  */
 
 /** Les valeurs de `same`. */
 export const SAME_DAMAGE = Object.freeze([true, "resisted"]);
 
-/** Les types qui soignent : jamais renvoyés. */
+/** The types that heal: never returned. */
 const HEALING = new Set(["healing", "temphp", "maximum"]);
 
 /**
- * Les parts subies, en données simples, à partir de la liste calculée par dnd5e (entrées `{ type, value, active: { multiplier } }`).
+ * The parts taken, as plain data, from the list computed by dnd5e (entries `{ type, value, active: { multiplier } }`).
  * @param {object[]} damages
  * @returns {{type: string, value: number, multiplier: number}[]}
  */
@@ -26,7 +26,7 @@ export function takenParts(damages) {
 }
 
 /**
- * Les dégâts à renvoyer : un par type, sommés. `same: "resisted"` : seulement les parts résistées. `damageType` : tout sous ce type.
+ * The damage to return: one per type, summed. `same: "resisted"`: only the resisted parts. `damageType`: all of it under that type.
  * @param {{type: string, value: number, multiplier?: number}[]} parts
  * @param {{same?: true|"resisted", damageType?: string|null}} [options]
  * @returns {{type: string, value: number}[]}

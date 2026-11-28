@@ -6,13 +6,13 @@ import { CONTENT } from "../module/scripts/content/index.mjs";
 const SIX = ["acid", "cold", "fire", "lightning", "poison", "thunder"];
 const transmuted = { types: SIX, from: SIX, cost: "FT1V43gRA47fCA51", payable: true };
 
-describe("types de dégâts offerts à un sort (spellDamageTypes)", () => {
-  it("Sort transmuté : un sort de feu peut prendre les cinq autres types, en payant ; pas le sien", () => {
+describe("damage types offered to a spell (spellDamageTypes)", () => {
+  it("Transmuted Spell: a fire spell can take the five other types, by paying; not its own", () => {
     const offers = retypeOffers([transmuted], ["fire"]);
     expect(offers.map(o => o.type)).toEqual(["acid", "cold", "lightning", "poison", "thunder"]);
     expect(offers.every(o => o.cost === "FT1V43gRA47fCA51")).toBe(true);
   });
-  it("un sort qui n'inflige aucun type de la liste n'est pas concerné (nécrotique, radiant, force)", () => {
+  it("a spell that deals no type from the list is not concerned (necrotic, radiant, force)", () => {
     expect(retypeOffers([transmuted], ["necrotic"])).toEqual([]);
     expect(retypeOffers([transmuted], ["force"])).toEqual([]);
   });
@@ -23,11 +23,11 @@ describe("types de dégâts offerts à un sort (spellDamageTypes)", () => {
     expect(retypeOffers([{ types: ["psychic"] }], ["fire"])).toEqual([{ type: "psychic", cost: null }]);
     expect(retypeOffers([{ types: ["psychic"] }], ["psychic"])).toEqual([]);
   });
-  it("le même type offert deux fois : la règle gratuite l'emporte", () => {
+  it("the same type offered twice: the free rule wins", () => {
     const both = retypeOffers([{ types: ["cold"], cost: "aaaaaaaaaaaaaaaa", payable: true }, { types: ["cold"] }], ["fire"]);
     expect(both).toEqual([{ type: "cold", cost: null }]);
   });
-  it("contenu et schéma", () => {
+  it("content and schema", () => {
     expect(CONTENT["transmuted-spell"].spellDamageTypes).toEqual({ types: SIX, from: SIX, cost: "FT1V43gRA47fCA51" });
     expect(validateEntry(CONTENT["transmuted-spell"])).toEqual([]);
     expect(validateEntry({ spellDamageTypes: { types: ["cold"], from: [] } })).toHaveLength(1);

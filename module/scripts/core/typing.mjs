@@ -1,15 +1,15 @@
 /**
- * Une touche frappée dans un champ de saisie appartient au champ : le moteur, qui écoute le clavier de tout le document pendant une
- * visée (Entrée lance un sort de groupe, Échap annule), ne doit pas la lui prendre — sinon un message tapé dans le chat pendant la
- * visée n'est pas envoyé et le sort part à sa place. Fonction pure : elle ne lit que ce qu'on lui donne de la cible de l'événement.
+ * A key struck in an input field belongs to the field: the engine, which listens to the keyboard of the whole document during
+ * aiming (Enter casts a group spell, Esc cancels), must not take it from the field — otherwise a message typed in the chat
+ * during aiming is not sent and the spell goes off instead. Pure function: it reads only what it is given about the event's target.
  */
 
-/** Les `<input>` qui ne reçoivent pas de texte : une touche n'y « écrit » rien. */
+/** The `<input>` types that do not receive text: a key "writes" nothing there. */
 const NOT_TEXT = new Set(["button", "checkbox", "radio", "range", "color", "file", "image", "reset", "submit"]);
 
 /**
- * La cible d'un événement clavier est-elle un champ où l'on écrit : zone de texte, liste, champ de texte, ou contenu éditable
- * (l'éditeur du chat) ?
+ * Is the target of a keyboard event a field where one writes: text area, list, text field, or editable content
+ * (the chat editor)?
  * @param {{tagName?: string, type?: string, isContentEditable?: boolean}|null} target
  */
 export function typingIn(target) {

@@ -1,9 +1,9 @@
 /**
- * §306, lot C11 de la repasse terme par terme : magie des sous-classes. Arène des sorts (Lanceur, Cible).
- * Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source) et remet tout.
- *  - Troisième œil, Détection de l'invisibilité : le Lanceur voit la Cible Invisible (plus de Désavantage « cible non vue ») ;
- *  - Illusions améliorées : la portée de Force fantasmagorique (Illusion, 18 m) passe à 36 m.
- * Briseur de sorts (bonus de maîtrise au test de Dissipation) : tests unitaires et lecture du code (SPEC §306).
+ * §306, batch C11 of the term-by-term review: subclass magic. Spells Arena (Caster, Target).
+ * Each part lends its items from the Player's Handbook (with their source) and restores everything.
+ *  - Third Eye, See Invisibility: the Caster sees the Invisible Target (no more "target not seen" Disadvantage);
+ *  - Improved Illusions: the range of Phantasmal Force (Illusion, 18 m) goes to 36 m.
+ * Spell Breaker (proficiency bonus on the Dispel check): unit tests and code reading (SPEC §306).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -56,13 +56,14 @@ export default {
       await ctx.call("set-status", { tokenId: target.id, statusId: "invisible", active: true });
       await pause(1200);
       const before = await ctx.engine("attackReasons", { attackerId: caster.id, targetId: target.id, itemId: club });
-      // §438 : Manuel 2.2.0, activité « utility » `lbwgWyEQ7Zc9kz1N` ; Manuel 3.0.0, activité « cast » `AJ9aBhuLHOiy0mqg` (lance Voir l'invisible).
+      // §438: Handbook 2.2.0, "utility" activity `lbwgWyEQ7Zc9kz1N`; Handbook 3.0.0, "cast" activity
+      // `AJ9aBhuLHOiy0mqg` (casts See Invisibility).
       const acts = Object.keys(((await ctx.call("get-actor", { actorId: caster.actorId })).items ?? []).find(i => i._id === eye)?.system?.activities ?? {});
       const see = ["lbwgWyEQ7Zc9kz1N", "AJ9aBhuLHOiy0mqg"].find(id => acts.includes(id));
       if ( !ctx.expect(!!see, `Troisième œil : une activité Voir l'invisible (${acts.join(", ")})`) ) return;
       await ctx.use({ tokenId: caster.id, itemId: eye, activityId: see, targetTokenIds: [caster.id] });
       await pause(2500);
-      // La forme 3.0.0 lance le sort (copie puis utilisation) : l'effet arrive plus tard — attendu 10 s au plus.
+      // The 3.0.0 form casts the spell (copy then use): the effect arrives later — awaited 10 s at most.
       for ( let i = 0; (i < 10) && !(await ctx.effects(caster)).some(e => /See Invisib|invisibilit/i.test(e.name ?? "")); i++ ) await pause(1000);
       const after = await ctx.engine("attackReasons", { attackerId: caster.id, targetId: target.id, itemId: club });
       ctx.expect(before.disadvantage.includes("target.unseen"), `sans le Troisième œil, la Cible Invisible n'est pas vue (${before.disadvantage.join(", ")})`);

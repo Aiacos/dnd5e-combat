@@ -1,10 +1,10 @@
 /**
- * M8 (SPEC §18.13) — Régénération. Monde `ravenloft` : la Régénération du Troll (Monster Manual) prêtée à l'Ours brun.
- *  1. Au début de son tour, l'Ours regagne des PV.
- *  2. Un Trait de feu de Kaalisti le touche : au tour suivant, pas de régénération.
- *  3. À 0 PV il est Inconscient, pas Mort (la Mort d'office de dnd5e est retirée) ; au début de son tour il régénère.
- *  4. À 0 PV et brûlé : au début de son tour, il meurt.
- * Initiative imposée : Kaalisti, puis l'Ours.
+ * M8 (SPEC §18.13) — Regeneration. World `ravenloft`: the Troll's Regeneration (Monster Manual) lent to the Brown Bear.
+ *  1. At the start of its turn, the Bear regains HP.
+ *  2. Kaalisti's Fire Bolt hits it: on the next turn, no regeneration.
+ *  3. At 0 HP it is Unconscious, not Dead (dnd5e's automatic Death is removed); at the start of its turn it regenerates.
+ *  4. At 0 HP and burned: at the start of its turn, it dies.
+ * Initiative forced: Kaalisti, then the Bear.
  */
 const TROLL = "Compendium.dnd-monster-manual.actors.Actor.mmTroll000000000";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -13,7 +13,7 @@ export default {
   name: "régénération — soin au début du tour, coupée par le feu, troll à 0 PV",
 
   async run(ctx) {
-    // Absents de `dnd-6` : posés le temps du scénario depuis leur fiche (Monster Manual 2024, sinon SRD 2024 de dnd5e).
+    // Absent from `dnd-6`: placed for the scenario from their sheet (Monster Manual 2024, otherwise dnd5e's SRD 2024).
     await ctx.cast({ "Ours brun": "mmBrownBear00000" }, { near: "Zombi" });
     const { tokens } = await ctx.scene();
     if ( !["Ours brun", "Kaalisti"].every(n => tokens.some(t => t.name === n)) ) { ctx.log("Ours brun ou Kaalisti absent : non applicable"); return; }
@@ -39,7 +39,7 @@ export default {
       await ctx.call("set-initiative", { combatantId: combat.combatants.find(x => x.tokenId === token.id).id, value, combatId: ctx.ownCombat });
     }
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
-    /** Avance jusqu'au début du tour de ce token. */
+    /** Advances to the start of this token's turn. */
     const turnOf = async token => {
       for ( let i = 0; (i < 3) && ((await current()) !== token.id); i++ ) { await ctx.nextTurn(); await sleep(1500); }
       return (await current()) === token.id;
@@ -47,12 +47,12 @@ export default {
     const statuses = async () => new Set((await ctx.effects(bear)).filter(e => !e.disabled).flatMap(e => e.statuses ?? []));
     if ( !ctx.expect(await turnOf(warlock), "tour de Kaalisti") ) return;
 
-    // 1. Soin au début du tour.
+    // 1. Healing at the start of the turn.
     await ctx.setHp(bear, 10);
     await ctx.nextTurn(); await sleep(2500);
     ctx.expect((await ctx.hp(bear)) > 10, `début du tour de l'Ours : régénère (10 → ${await ctx.hp(bear)} PV)`);
 
-    // 2. Brûlé : pas de régénération au tour suivant.
+    // 2. Burned: no regeneration on the next turn.
     const burn = async () => {
       for ( let i = 0; i < 20; i++ ) {
         const bolt = await ctx.use({ tokenId: warlock.id, identifier: "fire-bolt", activityType: "attack", targetTokenIds: [bear.id] });
@@ -69,7 +69,7 @@ export default {
     await ctx.nextTurn(); await sleep(2500);
     ctx.expect((await ctx.hp(bear)) === burnt, `brûlé : pas de régénération ce tour-ci (${burnt} → ${await ctx.hp(bear)} PV)`);
 
-    // 3. À 0 PV : Inconscient, puis régénère.
+    // 3. At 0 HP: Unconscious, then regenerates.
     if ( !ctx.expect(await turnOf(warlock), "tour de Kaalisti") ) return;
     await ctx.setHp(bear, 0);
     await sleep(2000);
@@ -79,7 +79,7 @@ export default {
     st = await statuses();
     ctx.expect(((await ctx.hp(bear)) > 0) && !st.has("dead") && !st.has("unconscious"), `début de son tour : régénère et se relève (${await ctx.hp(bear)} PV, ${[...st].join(", ")})`);
 
-    // 4. À 0 PV et brûlé : meurt au début de son tour.
+    // 4. At 0 HP and burned: dies at the start of its turn.
     if ( !ctx.expect(await turnOf(warlock), "tour de Kaalisti") ) return;
     await ctx.setHp(bear, 1);
     if ( !ctx.expect(await burn(), "Trait de feu : touché") ) return;

@@ -1,6 +1,6 @@
 /**
- * Plafond de déplacement des joueurs (`preMoveToken`) : budget du tour, attaques d'opportunité avant le pas, laisses des
- * objets pilotés. Extrait de runtime/actions.mjs.
+ * Movement cap for players (`preMoveToken`): turn budget, Opportunity Attacks before the step, leashes of
+ * piloted objects. Extracted from runtime/actions.mjs.
  */
 
 import { barrierCrossed } from "../adapter/barriers.mjs";
@@ -22,18 +22,18 @@ import { windwardCost } from "../adapter/windward.mjs";
 import { isGrappled, movementCap, occupiedAt, pilotMove } from "./actions.mjs";
 
 /* -------------------------------------------- */
-/*  Plafond de déplacement (joueurs)            */
+/*  Movement cap (players)                      */
 /* -------------------------------------------- */
 
 /**
- * Un joueur ne dépasse pas le déplacement de son tour et ne finit pas sur une case prise, quelle
- * que soit la façon de bouger (clic, glisser, clavier). Le MJ n'est jamais retenu.
+ * A player does not exceed their turn's movement and does not end on a taken cell, whatever
+ * the way of moving (click, drag, keyboard). The GM is never held back.
  */
 export function onPreMoveToken(token, movement, operation) {
   if ( !token.actor ) return true;
-  // §412 (issue #44, lot 5) : un refus de règle n'est plus sec. Le déplacement est suspendu (`preMoveToken` est synchrone), la fenêtre de
-  // légalité dit pourquoi chez qui bouge ; forcé, le même trajet repart marqué `forcedMove` (ces règles ne le rejugent pas : attaques
-  // d'opportunité et chausse-trapes, si), le MJ et la table prévenus.
+  // §412 (issue #44, batch 5): a rule refusal is no longer dry. The movement is suspended (`preMoveToken` is synchronous), the
+  // legality window says why on the mover's side; forced, the same path restarts marked `forcedMove` (these rules do not rejudge
+  // it: Opportunity Attacks and caltrops, yes), the GM and the table notified.
   const flags = operation?.[MODULE_ID] ?? continuedFlags(token, movement);
   if ( !flags?.forcedMove ) {
     const issues = moveIssues(token, movement);
@@ -42,28 +42,28 @@ export function onPreMoveToken(token, movement, operation) {
       return false;
     }
   }
-  // §187 : chausse-trapes, billes — qui y entre s'arrête sur leur première case (le reste du trajet n'est pas joué).
+  // §187: caltrops, ball bearings — whoever enters stops on their first cell (the rest of the path is not played).
   if ( !scatterStop(token, movement, operation) ) return false;
-  // §117 : les attaques d'opportunité sont une règle générale — niveau Assisté et au-dessus ; au niveau Essentiel, on marche.
+  // §117: Opportunity Attacks are a general rule — Assisted level and above; at Essential level, we walk.
   return levelAtLeast("assisted") ? opportunityFirst(token, movement, operation) : true;
 }
 
 /**
- * §412 : ce qui retient ce déplacement — `[{ key, line }]` (clé stable, phrase de la fenêtre). §163 Coquille antivie (MJ compris : ce sont ses
- * créatures qu'elle repousse), §225 Mur de force dans l'Éthéré, §402 laisse (MJ compris : c'est la créature qui est tenue) ; pour un joueur
- * seulement (le MJ n'est jamais retenu) : Effrayé, objet piloté trop seul / trop loin / hors de son tour, case prise, Agrippé, déplacement du
- * tour épuisé.
+ * §412: what holds back this movement — `[{ key, line }]` (stable key, window sentence). §163 Antilife Shell (GM included: it
+ * pushes back their creatures), §225 Wall of Force in the Ethereal Plane, §402 leash (GM included: it is the creature that is
+ * held); for a player only (the GM is never held back): Frightened, piloted object too alone / too far / out of its turn, taken
+ * cell, Grappled, turn movement used up.
  */
 export function moveIssues(token, movement) {
   const issues = [];
-  // §163 : téléportation et déplacement forcé (`displace`) : pas une marche. §225 : tout le trajet — un déplacement d'un seul tenant (glisser,
-  // clavier) n'a rien dans `pending`, tout est dans `passed` (vu en jeu) ; seul `pending` était lu, si bien qu'un glisser entrait dans la Coquille.
+  // §163: teleportation and forced movement (`displace`): not a walk. §225: the whole path — a one-piece movement (drag, keyboard)
+  // has nothing in `pending`, everything is in `passed` (seen in play); only `pending` was read, so a drag entered the Shell.
   const steps = [...movement.passed.waypoints, ...movement.pending.waypoints]
     .filter(w => !CONFIG.Token.movement.actions[w.action]?.teleport && (w.action !== "displace"));
   const fence = steps.length ? barrierCrossed(token, steps.map(w => positionOf(w))) : null;
   if ( fence ) issues.push({ key: "barrier", line: loc("Deplacement.Barriere", { name: token.name, item: fence.item.name }) });
-  // §225, lot 3 : dans l'Éthéré, les murs se traversent (action « ethereal », `walls: null`), sauf ceux qui arrêtent le voyage éthéré
-  // (Mur de force, Cage de force) — MJ compris.
+  // §225, batch 3: in the Ethereal Plane, walls are crossed (action "ethereal", `walls: null`), except those that stop ethereal
+  // travel (Wall of Force, Forcecage) — GM included.
   if ( steps.length && isEthereal(token) ) {
     const origin = movement.origin ?? token._source;
     const centers = [origin, ...steps].map(p => token.getCenterPoint({ ...token._source, ...p }));
@@ -71,26 +71,26 @@ export function moveIssues(token, movement) {
       issues.push({ key: "forceWall", line: loc("Ethere.MurDeForce", { name: token.name }) });
     }
   }
-  // §402 : une laisse (Duel forcé) — pas de pas volontaire au-delà de sa distance du lanceur.
+  // §402: a leash (Compelled Duel) — no voluntary step beyond its distance from the caster.
   const held = steps.length ? leashBroken(token, steps) : null;
   if ( held ) issues.push({ key: "leash", line: loc("Deplacement.Laisse", { name: token.name, source: held.source.name, item: held.item.name }) });
   if ( !game.user.isGM ) issues.push(...playerIssues(token, movement));
   return issues;
 }
 
-/** Souvenir des refus forcés, par token et raisons : un trajet au clavier (un pas par touche) ne redemande pas la même chose (60 s). */
+/** Memory of forced refusals, per token and reasons: a keyboard path (one step per key) does not ask the same thing again (60 s). */
 const forcedMoves = new Map();
 const FORCED_MOVE_MS = 60000;
 
 /**
- * §412 : un refus de déplacement d'un autre point de contrôle (`preMoveToken` de l'escalade) — la même fenêtre, la même relance. Synchrone pour
- * l'appelant : il rend `false` aussitôt.
+ * §412: a movement refusal from another checkpoint (`preMoveToken` of the climb) — the same window, the same relaunch.
+ * Synchronous for the caller: it returns `false` at once.
  */
 export function forceMoveLater(token, movement, issues) {
   askToForceMove(token, movement, issues).catch(err => console.error(`${MODULE_ID} | forced movement`, err));
 }
 
-/** §412 : « Faire quand même » ? Forcé : le même trajet repart marqué `forcedMove` (et `ignoreTokens` pour une case prise). */
+/** §412: "Do it anyway"? Forced: the same path restarts marked `forcedMove` (and `ignoreTokens` for a taken cell). */
 async function askToForceMove(token, movement, issues) {
   const memo = `${token.uuid}|${forcedKey(issues.map(i => i.key))}`;
   const remembered = (Date.now() - (forcedMoves.get(memo) ?? 0)) < FORCED_MOVE_MS;
@@ -106,19 +106,19 @@ async function askToForceMove(token, movement, issues) {
 }
 
 /**
- * Les attaques d'opportunité se règlent AVANT le déplacement : s'il y en a, le déplacement est
- * suspendu (`preMoveToken` est synchrone), les attaques sont jouées, puis le même déplacement
- * repart, marqué comme déjà contrôlé. Vaut pour le clic, le glisser et le clavier, MJ compris.
+ * Opportunity Attacks are settled BEFORE the movement: if there are any, the movement is
+ * suspended (`preMoveToken` is synchronous), the attacks are played, then the same movement
+ * restarts, marked as already checked. Applies to click, drag and keyboard, GM included.
  */
 function opportunityFirst(token, movement, operation) {
-  // §99 : un morceau de marche du moteur que le cœur enchaîne lui-même n'a plus les options du moteur — il est déjà contrôlé.
+  // §99: a piece of the engine's walk that the core chains itself no longer has the engine's options — it is already checked.
   if ( (operation?.[MODULE_ID] ?? continuedFlags(token, movement))?.cleared ) return true;
   const waypoints = [...movement.passed.waypoints, ...movement.pending.waypoints];
   const threats = opportunityThreats(token, waypoints, { explain: true });
   if ( !threats.length ) return true;
   (async () => {
-    // §211 : une action préparée déclenchée en route — le token va jusqu'à la case où il arrive à portée, l'action est proposée, puis
-    // la suite repart comme un nouveau déplacement (ses menaces revues depuis là).
+    // §211: a readied action triggered en route — the token goes up to the cell where it comes in range, the action is
+    // offered, then the rest restarts as a new movement (its threats reviewed from there).
     const split = splitForReady(token, waypoints, threats);
     if ( split ) {
       if ( !(await resolveOpportunity(token, split.before)) ) return;
@@ -140,12 +140,12 @@ function opportunityFirst(token, movement, operation) {
 }
 
 /**
- * §17.3 : Effrayé — « vous ne pouvez pas vous rapprocher volontairement de la source de votre peur ». Un déplacement forcé
- * ou une téléportation (`displace`, actions `teleport`) n'est pas volontaire au sens du moteur : il passe.
+ * §17.3: Frightened — "you can't willingly move closer to the source of your fear". A forced movement
+ * or a teleportation (`displace`, actions `teleport`) is not voluntary in the engine's sense: it passes.
  */
 function approachesFear(token, movement) {
   if ( !token.actor?.statuses?.has("frightened") ) return null;
-  // Tout le trajet, comme pour les barrières (§225) : un glisser ou un pas au clavier n'a rien dans `pending`, tout est dans `passed`.
+  // The whole path, as for barriers (§225): a drag or a keyboard step has nothing in `pending`, everything is in `passed`.
   const steps = [...movement.passed.waypoints, ...movement.pending.waypoints]
     .filter(w => !CONFIG.Token.movement.actions[w.action]?.teleport && (w.action !== "displace"));
   if ( !steps.length ) return null;
@@ -156,7 +156,7 @@ function approachesFear(token, movement) {
   return null;
 }
 
-/** §402 : la laisse que ce trajet dépasse (une case au-delà de la distance, plus loin qu'au départ), ou null. */
+/** §402: the leash that this path exceeds (a cell beyond the distance, farther than at the start), or null. */
 function leashBroken(token, steps) {
   for ( const leash of leashesOf(token) ) {
     const limit = lengthIn(leash.distance, leash.units, token.parent.grid.units);
@@ -174,7 +174,7 @@ function playerIssues(token, movement) {
   const issues = [];
   const fear = approachesFear(token, movement);
   if ( fear ) issues.push({ key: "frightened", line: loc("Deplacement.Effraye", { name: token.name, source: fear.name }) });
-  // « Une lumière doit rester à 6 m d'une autre » (`cluster`, §16.17) vaut aussi pour un pas `displace` (escalier de l'A*).
+  // "A light must stay within 6 m of another" (`cluster`, §16.17) also applies to a `displace` step (the A* staircase).
   const pilot = pilotOf(token);
   if ( pilot?.rule.cluster && !nearAnother(token, pilot, movement.destination) ) {
     issues.push({ key: "cluster", line: loc("Pilote.TropSeul", { name: token.name, max: pilot.rule.cluster.distance, units: pilot.rule.cluster.units }) });
@@ -189,7 +189,7 @@ function playerIssues(token, movement) {
   if ( pilot ) return [...issues, ...pilotIssues(token, movement, pilot)];
   if ( !combatantFor(token.actor) ) return issues;
   const allowance = movementCap(token);
-  // §403 : Bourrasque — vers le lanceur dans la Ligne, chaque mètre en coûte deux (le surcoût des pas déjà faits est dans le budget).
+  // §403: Gust of Wind — toward the caster in the Line, each meter costs two (extra cost of steps already made is in the budget).
   const total = movement.history.cost + movement.passed.cost + movement.pending.cost
     + windwardCost(token, movement.origin ?? token._source, [...movement.passed.waypoints, ...movement.pending.waypoints]);
   if ( total > allowance + 1e-6 ) issues.push({ key: "exhausted", line: loc("Deplacement.Epuise") });
@@ -197,8 +197,8 @@ function playerIssues(token, movement) {
 }
 
 /**
- * §403 : Bourrasque — après un pas, le MJ actif ajoute au budget du tour (`windward`) le surcoût de ce qui a été parcouru vers le lanceur
- * dans la Ligne ; `movementCap` le retire du plafond. Téléportation et déplacement forcé : pas une marche.
+ * §403: Gust of Wind — after a step, the active GM adds to the turn budget (`windward`) the extra cost of what was covered
+ * toward the caster in the Line; `movementCap` subtracts it from the cap. Teleportation and forced movement: not a walk.
  */
 export async function noteWindward(token, movement) {
   const combatant = token?.actor ? combatantFor(token.actor) : null;
@@ -211,7 +211,7 @@ export async function noteWindward(token, movement) {
   log(`${token.name}: ${extra} more movement spent against the wind`);
 }
 
-/** §16.15 : un objet piloté ne bouge qu'au tour de son lanceur, dans la distance d'une commande qu'il peut payer. */
+/** §16.15: a piloted object only moves on its caster's turn, within the distance of a command it can pay for. */
 function pilotIssues(token, movement, pilot) {
   const { cap, issue } = pilotMove(token, pilot);
   const names = { name: token.name, summoner: pilot.summoner.name };
@@ -221,7 +221,7 @@ function pilotIssues(token, movement, pilot) {
   return [];
 }
 
-/** À l'arrivée, l'objet reste-t-il à `tether` de son lanceur (Duplicité : 36 m) ? Vrai sans lanceur sur la scène. */
+/** On arrival, does the object stay within `tether` of its caster (Duplicity: 36 m)? True with no caster on the scene. */
 function withinTether(token, pilot, destination) {
   const caster = summonerToken(pilot);
   if ( !pilot.rule.tether || !caster || (caster.parent !== token.parent) || !destination ) return true;
@@ -229,7 +229,7 @@ function withinTether(token, pilot, destination) {
   return distanceBetween(caster, token, { posB: positionOf(destination) }).value <= limit + 1e-6;
 }
 
-/** À l'arrivée, l'objet est-il à `cluster` d'un autre objet du même sort ? Vrai s'il est seul. */
+/** On arrival, is the object within `cluster` of another object of the same spell? True if it is alone. */
 function nearAnother(token, pilot, destination) {
   const others = groupTokens(pilot).filter(t => t !== token);
   if ( !others.length || !destination ) return true;

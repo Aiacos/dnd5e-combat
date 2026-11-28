@@ -1,13 +1,13 @@
 /**
- * §225 : le plan Éthéré, lot 1 — une créature Éthérée n'affecte et n'est affectée que par ce qui est aussi dans l'Éthéré. Arène.
- *  1. Le Zombi Éthéré : le Trait de feu de l'Ensorceleur ne l'affecte pas (« plane »), PV intacts.
- *  2. Le Zombi Éthéré : une zone (Sommeil, réduite à sa case) ne l'affecte pas.
- *  3. Les deux Éthérés : le Trait de feu l'affecte de nouveau (même plan).
- *  4. En combat, le Guerrier au contact : le Zombi Éthéré qui s'éloigne ne provoque pas d'attaque d'opportunité ; matériel, si.
- *  5. Le Guerrier peut finir son déplacement sur la case du Zombi Éthéré ; pas sur celle du Zombi matériel.
- *  6. Perception (lot 2) : le Guerrier ne voit pas le Zombi Éthéré ; le Magicien, sous Détection de l'invisibilité, si ; le Zombi
- *     Éthéré voit le Guerrier à côté de lui, plus au-delà de 60 ft.
- * Remet positions, PV, états, combat.
+ * §225: the Ethereal plane, batch 1 — an Ethereal creature affects and is affected only by what is also in the Ethereal. Arena.
+ *  1. The Ethereal Zombie: the Sorcerer's Fire Bolt does not affect it ("plane"), HP intact.
+ *  2. The Ethereal Zombie: an area (Sleep, reduced to its cell) does not affect it.
+ *  3. Both Ethereal: Fire Bolt affects it again (same plane).
+ *  4. In combat, the Fighter in contact: the Ethereal Zombie moving away provokes no Opportunity Attack; material, yes.
+ *  5. The Fighter can end his movement on the Ethereal Zombie's cell; not on the material Zombie's.
+ *  6. Perception (batch 2): the Fighter does not see the Ethereal Zombie; the Wizard, under See Invisibility, does; the Ethereal
+ *     Zombie sees the Fighter next to it, no longer beyond 60 ft.
+ * Restores positions, HP, conditions, combat.
  */
 const SPELLS = "Compendium.dnd5e.spells24.Item.";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -42,7 +42,7 @@ export default {
       return r.targets.find(t => t.name === "Zombi");
     };
 
-    // 1. Le Zombi Éthéré, l'Ensorceleur non.
+    // 1. The Zombie is Ethereal, the Sorcerer is not.
     await ethereal(zombi, true);
     await pause(500);
     const t1 = await fireBolt();
@@ -50,11 +50,11 @@ export default {
     await pause(800);
     ctx.expect((await ctx.hp(zombi)) === hp0, `PV du Zombi intacts (${await ctx.hp(zombi)} / ${hp0})`);
 
-    // 2. Une zone posée du plan matériel.
+    // 2. An area placed from the material plane.
     await ctx.ensureItem(mage, SPELLS + "phbsplSleep00000");
     const box = await ctx.box(zombi);
     const sleep = await ctx.use({ tokenId: mage.id, identifier: "sleep", activityType: "save", area: { shape: "rectangle", ...box } });
-    // Seul dans la zone et sur un autre plan, le Zombi n'en est pas une cible : pas de résolution à attendre.
+    // Alone in the area and on another plane, the Zombie is not a target of it: no resolution to wait for.
     await pause(3000);
     const saves = (await ctx.messagesSince(sleep.usageMessageId)).filter(m => (m.type === "save") || /save/i.test(m.flags?.dnd5e?.roll?.type ?? ""));
     ctx.expect(!saves.length, `Sommeil : aucune sauvegarde demandée au Zombi Éthéré (${saves.length})`);
@@ -62,7 +62,7 @@ export default {
     ctx.expect(!statuses.includes("unconscious") && !statuses.includes("incapacitated"), `Sommeil : le Zombi Éthéré n'est pas touché (${statuses.join(", ") || "aucun état"})`);
     await ctx.removeStatusEffects(mage, "concentrating").catch(() => {});
 
-    // 3. Même plan : l'Ensorceleur Éthéré aussi.
+    // 3. Same plane: the Ethereal Sorcerer too.
     await ethereal(sorc, true);
     await pause(500);
     const t3 = await fireBolt();
@@ -70,7 +70,7 @@ export default {
     await ethereal(sorc, false);
     await ctx.setHp(zombi, hp0);
 
-    // 4. Attaque d'opportunité : le Guerrier au contact du Zombi.
+    // 4. Opportunity Attack: the Fighter in contact with the Zombie.
     await ctx.call("move-token", { tokenId: fighter.id, x: home.zombi.x - grid, y: home.zombi.y });
     await ctx.startCombat([fighter, zombi]);
     await pause(800);
@@ -84,7 +84,7 @@ export default {
     await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {});
     ctx.ownCombat = null;
 
-    // 5. La case du Zombi.
+    // 5. The Zombie's cell.
     const onZombi = { x: home.zombi.x + (grid / 2), y: home.zombi.y + (grid / 2) };
     const blocked = await ctx.engine("plan", { tokenId: fighter.id, point: onZombi });
     ctx.expect(!blocked.found || !blocked.arrives, `Zombi matériel : le Guerrier ne finit pas sur sa case (${JSON.stringify({ found: blocked.found, arrives: blocked.arrives })})`);
@@ -93,7 +93,7 @@ export default {
     const free = await ctx.engine("plan", { tokenId: fighter.id, point: onZombi });
     ctx.expect(free.found && free.arrives, `Zombi Éthéré : le Guerrier peut finir sur sa case (${JSON.stringify({ found: free.found, arrives: free.arrives })})`);
 
-    // 6. Perception : le Zombi est encore Éthéré, le Guerrier toujours à côté de lui.
+    // 6. Perception: the Zombie is still Ethereal, the Fighter still next to it.
     const sees = async (a, b) => (await ctx.engine("sees", { observerId: a.id, targetId: b.id })).sees;
     ctx.expect((await sees(fighter, zombi)) === false, "le Guerrier ne voit pas le Zombi Éthéré");
     ctx.expect((await sees(zombi, fighter)) === true, "le Zombi Éthéré voit le Guerrier à côté de lui");

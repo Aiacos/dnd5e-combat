@@ -1,7 +1,7 @@
 /**
- * Les modes de détection donnés en mémoire (ouïe d'un Aveuglé, Vision du diable — ui/perception.mjs, `grantOn`) : le client refait
- * la scène entière, donc les données préparées de TOUS ses tokens, après la création, la mise à jour ou la suppression d'un de
- * ses documents. Ces modes doivent revenir sur chaque token de la scène affichée, pas seulement sur le token mis à jour.
+ * The detection modes granted in memory (hearing of a Blinded creature, Devil's Sight — ui/perception.mjs, `grantOn`): the client
+ * rebuilds the whole scene, hence the prepared data of ALL its tokens, after the creation, update or deletion of one of
+ * its documents. These modes must return on every token of the displayed scene, not only on the updated token.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 
@@ -10,7 +10,7 @@ const fire = (hook, ...args) => (hooks[hook] ?? []).forEach(fn => fn(...args));
 const scene = { tokens: [] };
 const elsewhere = { tokens: [] };
 
-/** Un token de scène avec une source de vision ; `reset` refait ses modes depuis la source, comme `TokenDocument#reset`. */
+/** A scene token with a vision source; `reset` rebuilds its modes from the source, like `TokenDocument#reset`. */
 function tokenOn(parent, { sight=true }={}) {
   const doc = { parent, sight: { enabled: sight }, actor: null, object: null, detectionModes: {},
     reset() { doc.detectionModes = { basicSight: { enabled: true, range: 60 } }; } };
@@ -41,7 +41,7 @@ beforeAll(async () => {
   fire("setup");
 }, 60000);
 
-describe("les modes en mémoire après un changement sur la scène", () => {
+describe("the in-memory modes after a change on the scene", () => {
   it.each([["updateToken"], ["createDrawing"], ["updateDrawing"], ["deleteTile"], ["updateWall"]])(
     "%s : la scène est refaite, chaque token retrouve l'ouïe — sans refaire la vue", hook => {
       scene.tokens.length = 0;
@@ -52,11 +52,11 @@ describe("les modes en mémoire après un changement sur la scène", () => {
       fire(hook, changed, {}, {}, "user");
       expect(observer.detectionModes.dasHearing).toEqual({ enabled: true, range: Infinity });
       expect(bystander.detectionModes.dasHearing).toEqual({ enabled: true, range: Infinity });
-      expect(sightless.detectionModes.dasHearing).toBeUndefined();        // pas de source de vision : rien à donner
+      expect(sightless.detectionModes.dasHearing).toBeUndefined();        // no vision source: nothing to grant
       if ( !hook.endsWith("Token") ) expect(canvas.refreshes).toBe(before);
     });
 
-  it("un document d'une autre scène ne touche pas aux tokens de la scène affichée, ni aux siens", () => {
+  it("a document from another scene does not touch the displayed scene's tokens, nor its own", () => {
     scene.tokens.length = 0;
     const observer = tokenOn(scene), far = tokenOn(elsewhere);
     observer.reset();

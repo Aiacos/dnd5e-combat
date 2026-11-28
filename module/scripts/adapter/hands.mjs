@@ -1,11 +1,11 @@
 /**
- * §409 (issue #44, lot 2) : ce que la créature tient en main pour incanter, et le refus « pas de main libre » d'un sort à composante
- * somatique (règle pure : core/hands.mjs).
+ * §409 (issue #44, batch 2): what the creature holds in hand to cast, and the "no free hand" refusal of a spell with a
+ * somatic component (pure rule: core/hands.mjs).
  *
- * En main : ce qui est **équipé** (darsh-dnd-ui équipe le jeu d'armes en main) — armes (hors armes naturelles et mains nues), boucliers,
- * sources de lumière allumées, focaliseurs tenus. Un focaliseur est une arme à la propriété « Focaliseur » (`foc`, dnd5e config.mjs :
- * le Bâton) ou un objet reconnu par dnd5e comme focaliseur (`CONFIG.DND5E.focusTypes`, par l'id de son document de compendium : cristal,
- * orbe, baguette, branche de gui…). L'amulette et l'emblème se portent : ils ne prennent pas de main.
+ * In hand: what is **equipped** (darsh-dnd-ui equips the weapon set in hand) — weapons (except natural weapons and unarmed
+ * strikes), shields, lit light sources, held foci. A focus is a weapon with the "Focus" property (`foc`, dnd5e config.mjs:
+ * the Staff) or an item recognized by dnd5e as a focus (`CONFIG.DND5E.focusTypes`, by its compendium document id: crystal,
+ * orb, wand, sprig of mistletoe…). The amulet and the emblem are worn: they take no hand.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,13 +15,13 @@ import { pendingMetamagic } from "./metamagic.mjs";
 import { isSpellCast } from "./scrolls.mjs";
 import { somaticBlocked, handsCheckedFor } from "../core/hands.mjs";
 
-/** Réglage de monde : à qui s'applique le contrôle des mains — "pc" (défaut), "all", "off". */
+/** World setting: who the hand check applies to — "pc" (default), "all", "off". */
 export const SOMATIC_HANDS_SETTING = "somaticHands";
 
-/** Les focaliseurs portés, pas tenus (symbole sacré en amulette ou en emblème). */
+/** Foci that are worn, not held (holy symbol as an amulet or an emblem). */
 const WORN_FOCUS = new Set(["amulet", "emblem"]);
 
-/** Ids de document des focaliseurs tenus que dnd5e connaît (`CONFIG.DND5E.focusTypes.<type>.itemIds`). */
+/** Document ids of the held foci that dnd5e knows (`CONFIG.DND5E.focusTypes.<type>.itemIds`). */
 function heldFocusIds() {
   const ids = new Set();
   for ( const type of Object.values(CONFIG.DND5E?.focusTypes ?? {}) ) {
@@ -32,7 +32,7 @@ function heldFocusIds() {
   return ids;
 }
 
-/** L'id du document de compendium d'où vient l'item (« phbafcCrystal000 »), ou null. */
+/** The compendium document id the item comes from ("phbafcCrystal000"), or null. */
 function sourceId(item) {
   const source = item?._stats?.compendiumSource ?? item?.flags?.core?.sourceId ?? null;
   return source ? String(source).split(".").pop() : null;
@@ -64,8 +64,8 @@ function settingOf() {
 }
 
 /**
- * Le refus « pas de main libre » de cette utilisation, ou null. Lancer un sort par un objet qui en dispense : la copie « cast » de dnd5e
- * ne garde que les composantes restantes (`spell.properties`, dnd5e.mjs:21874, :22118) — elle n'a plus `somatic`.
+ * The "no free hand" refusal for this use, or null. Casting a spell through an item that waives it: dnd5e's "cast" copy
+ * keeps only the remaining components (`spell.properties`, dnd5e.mjs:21874, :22118) — it no longer has `somatic`.
  * @param {Activity} activity
  * @returns {{items: string[]}|null}
  */
@@ -81,7 +81,7 @@ export function somaticBlockOf(activity) {
     material: !!props?.has?.("material"),
     held: castingHands(actor),
     freeSomatic: (actor.items ?? []).some(i => contentOf(i).entry?.freeSomatic === true),
-    // Sort subtil : « sans composante verbale, somatique ni matérielle » (Métamagie, retenue sur l'ensorceleur jusqu'au sort suivant).
+    // Subtle spell: "without verbal, somatic or material components" (Metamagic, held on the sorcerer until the next spell).
     waived: (item.type === "spell") && pendingMetamagic(actor).includes("subtle")
   });
 }

@@ -1,9 +1,9 @@
 /**
- * Raccourci vers le diagnostic du monde de DAS · Core (SPEC §177), ouvert sur la vérification « sorts en double » : deux copies du même
- * sort sur une fiche (même identifiant, même classe, même méthode), souvent laissées par un module de préparation des sorts qui ne
- * reconnaît pas un sort venu d'un autre compendium (SRD contre Manuel des joueurs). La logique vit dans le module
- * (runtime/diagnostic/checks.mjs, `spell-duplicates`) : analyse sans rien écrire, réparation de ce que le MJ coche, après une sauvegarde
- * vérifiée dans le compendium « DAS · Sauvegardes » (restaurable).
+ * Shortcut to the world diagnostic of DAS · Core (SPEC §177), opened on the "duplicate spells" check: two copies of the same
+ * spell on a sheet (same identifier, same class, same method), often left by a spell-preparation module that does not
+ * recognize a spell coming from another compendium (SRD versus Player's Handbook). The logic lives in the module
+ * (runtime/diagnostic/checks.mjs, `spell-duplicates`): analysis without writing anything, repair of what the GM ticks, after a
+ * backup verified in the "DAS · Sauvegardes" compendium (restorable).
  */
 const api = game.modules.get("dnd5e-combat")?.api;
 if ( !game.user.isGM ) return ui.notifications.warn(game.i18n.localize("DND5ECOMBAT.Diagnostic.MJSeul"));

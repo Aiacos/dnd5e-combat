@@ -1,14 +1,14 @@
 /**
- * §438 : le diagnostic « Manuel des joueurs 3.0.0 ». Un acteur créé d'un bloc imite une fiche faite avec le Manuel 2.2.0 : classe de
- * Paladin, Serment de vengeance sous son ancien identifiant (`vengeance`), Marque du chasseur donnée par la sous-classe
- * (`system.sourceItem` « subclass:vengeance »), Coup brutal sans ses deux options du niveau 13 (l'ancienne forme, avant que le 3.0.0 y
- * range les activités de Coup brutal amélioré). Vérifie :
- *  - `phb3-subclasses` : la sous-classe est trouvée, cochée d'office ; la réparation (sauvegarde d'abord) la renomme `oath-vengeance` et
- *    le sort suit (`subclass:oath-vengeance`) ;
- *  - `phb3-items` : la fiche est proposée, non cochée, Coup brutal dans l'aperçu ; la réparation remet les activités de la référence, même
- *    id d'objet ; la classe et les autres objets ne bougent pas ;
- *  - une nouvelle analyse ne trouve plus rien ; la restauration de la sauvegarde rend l'ancien identifiant.
- * Acteur et sauvegardes retirés. Ne joue rien sans le Manuel 3.0.0.
+ * §438: the "Player's Handbook 3.0.0" diagnostic. An actor created in one go imitates a sheet made with Handbook 2.2.0: Paladin
+ * class, Oath of Vengeance under its old identifier (`vengeance`), Hunter's Mark given by the subclass
+ * (`system.sourceItem` "subclass:vengeance"), Smite without its two level 13 options (the old form, before 3.0.0 stored
+ * the Improved Smite activities there). Checks:
+ *  - `phb3-subclasses`: the subclass is found, checked automatically; the repair (backup first) renames it `oath-vengeance` and
+ *    the spell follows (`subclass:oath-vengeance`);
+ *  - `phb3-items`: the sheet is offered, unchecked, Smite in the preview; the repair puts back the reference's activities, same
+ *    item id; the class and the other items do not move;
+ *  - a new analysis finds nothing; restoring the backup gives back the old identifier.
+ * Actor and backups removed. Plays nothing without Handbook 3.0.0.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook";
@@ -74,7 +74,7 @@ export default {
     ctx.expect(!!oath && !(await byId("vengeance")), "la sous-classe s'appelle « oath-vengeance »");
     ctx.expect(mark?.system?.sourceItem === "subclass:oath-vengeance", `le sort suit sa sous-classe (${mark?.system?.sourceItem})`);
 
-    // 2. Objets — la fiche juste avant (le moteur a pu y ajouter ses actions de base après la création).
+    // 2. Items — the sheet just before (the engine may have added its base actions after creation).
     const beforeItems = await sheet();
     const r2 = await api("diagnosticRepair", { checks: ["phb3-items"], roots: [root] });
     if ( r2.backup?.uuid ) backups.push(r2.backup.uuid);
@@ -88,7 +88,7 @@ export default {
     scan = await api("diagnosticScan", { checks });
     ctx.expect(!checks.some(c => (scan[c] ?? []).some(t => t.root?.uuid === root)), "une nouvelle analyse ne trouve plus rien");
 
-    // 3. Restauration de la première sauvegarde (avant le renommage)
+    // 3. Restoring the first backup (before the renaming)
     if ( r1.backup?.uuid ) {
       const back = await api("diagnosticRestore", { uuid: r1.backup.uuid });
       if ( back?.before?.uuid ) backups.push(back.before.uuid);

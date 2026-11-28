@@ -1,19 +1,19 @@
 /**
- * §438 : deux règles du Core avec les items du Manuel des joueurs 3.0.0 (prêtés depuis `dnd-players-handbook`). Arène des sorts (Lanceur,
- * Cible, Héros). Vérifie :
- *  - Coup brutal : l'échelle `@scale.barbarian.brutal-strike` n'existe plus (elle est sur l'aptitude, `@scale.brutal-strike.damage`) ;
- *    les dégâts du moteur restent 1d10 au niveau 9 et 2d10 au niveau 17, lus sur le niveau de Barbare ;
- *  - Affinité élémentaire : avec l'aptitude seule (forme 2.2.0, sans effet), le moteur ajoute le Charisme aux dégâts de feu d'un sort ;
- *    avec l'aptitude 3.0.0 du type (`elemental-affinity-fire`, dont l'effet ajoute déjà le Charisme), il ne l'ajoute plus.
- * Ne joue rien sans le Manuel 3.0.0 (l'aptitude `phbscrElemAffFir` n'existe pas avant). Remet niveaux, positions, PV, résistances,
- * effets ; retire les items prêtés.
+ * §438: two Core rules with the Player's Handbook 3.0.0 items (lent from `dnd-players-handbook`). Spell Arena (Caster,
+ * Target, Hero). Checks:
+ *  - Brutal Strike: the `@scale.barbarian.brutal-strike` scale no longer exists (it is on the feature,
+ *    `@scale.brutal-strike.damage`); the engine's damage stays 1d10 at level 9 and 2d10 at level 17, read on the Barbarian level;
+ *  - Elemental Affinity: with the feature alone (2.2.0 form, no effect), the engine adds Charisma to a spell's fire damage;
+ *    with the type's 3.0.0 feature (`elemental-affinity-fire`, whose effect already adds Charisma), it no longer adds it.
+ * Plays nothing without Manual 3.0.0 (the `phbscrElemAffFir` feature does not exist before). Restores levels, positions, HP,
+ * Resistances, effects; removes the lent items.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-/** Les d10 d'une formule, nombre évalué (`(1 + floor(9 / 17))d10` → « 1d10 ») ; null sans d10. */
+/** The d10s of a formula, number evaluated (`(1 + floor(9 / 17))d10` → "1d10"); null without a d10. */
 function brutalDice(formula) {
   const m = String(formula).replace(/\s/g, "").match(/(\d+|\((?:[^()]|\([^()]*\))*\))d10/);
   if ( !m ) return null;

@@ -1,27 +1,29 @@
 /**
- * Ce que chaque joueur voit à l'écran (§62), aligné sur la vision simulée des règles (adapter/vision.mjs) :
- *  - une zone qui bloque la vue (Nappe de brouillard, Ténèbres : `blockedBetween`) cache, pour les modes de détection fondés sur
- *    la vue, ce qui est dedans ou derrière — sauf pour les sens qui la percent (`sensesThrough`) ;
- *  - une créature qu'on ne voit pas mais qu'on ENTEND (invisible, dans la brume ; ni cachée, ni morte, pas derrière un mur qui
- *    arrête le son, observateur non Assourdi : adapter/hearing.mjs) s'affiche avec un contour ondulant, comme la perception des
- *    vibrations du cœur : on sait où elle est, on peut la viser (au désavantage).
+ * What each player sees on screen (§62), aligned with the simulated vision of the rules (adapter/vision.mjs):
+ *  - an area that blocks sight (Fog Cloud, Darkness: `blockedBetween`) hides, for the sight-based detection modes, what is
+ *    inside or behind it — except for the senses that pierce it (`sensesThrough`);
+ *  - a creature that is not seen but HEARD (invisible, in fog; not hidden, not dead, not behind a wall that
+ *    stops sound, observer not Deafened: adapter/hearing.mjs) is shown with a wavy outline, like the Tremorsense of the
+ *    core: its position is known, and it can be targeted (at Disadvantage).
  *
- * Par les points d'extension du cœur : chaque mode de détection de `CONFIG.Canvas.detectionModes` est remplacé, à `setup`, par
- * une sous-classe de sa propre classe (même id, mêmes données) — rien n'est patché. La vue de base et la perception de la lumière
- * sont testées pour chaque source avant les modes spéciaux (canvas/groups/visibility.mjs, `testVisibility`) : l'ouïe passe par
- * la perception de la lumière, en dernier recours, après avoir laissé les modes spéciaux de l'observateur répondre. Les sources
- * jetables de la vision simulée (`dnd5e-combat.…`) n'entendent pas : pour les règles, entendre n'est pas voir.
+ * Through the core's extension points: each detection mode of `CONFIG.Canvas.detectionModes` is replaced, at `setup`, by
+ * a subclass of its own class (same id, same data) — nothing is patched. Basic sight and light perception
+ * are tested for each source before the special modes (canvas/groups/visibility.mjs, `testVisibility`): hearing goes through
+ * light perception, as a last resort, after letting the observer's special modes answer. The disposable sources
+ * of the simulated vision (`dnd5e-combat.…`) do not hear: for the rules, hearing is not seeing.
  *
- * Issue #42 :
- *  - les sens qui percent les ténèbres (vision aveugle, vision véritable) se jugent ici par leur portée et une ligne de vue SANS les bords
- *    des sources de ténèbres : le test du cœur les comptait, et rien ne se voyait dans des Ténèbres ;
- *  - un mode de détection « Vision du diable » (`devilsSight`), enregistré à `setup` et donné EN MÉMOIRE (rien n'est écrit) aux tokens
- *    dont l'acteur a l'invocation (`devils-sight`), à chaque mise en place des sources de vision (`initializeVisionSources`) : la cible
- *    à 120 ft s'affiche nette, comme vue normalement — la règle est celle de `canSee` (adapter/vision.mjs, `devilsSightSeesToken`) ;
- *  - l'ouïe d'un observateur Aveuglé passe par un mode spécial donné en mémoire (`dasHearing`) : le cœur saute la perception de la
- *    lumière d'une source aveuglée, et un personnage Aveuglé ne voyait plus ce qu'il entend ;
- *  - une créature entendue (contour) porte une petite oreille au-dessus de son token, et, au survol, « Entendu, pas vu » : de loin, le
- *    contour d'un token à anneau passait pour une créature vue. (L'anneau dynamique ne se retire pas côté client sans patcher le cœur.)
+ * Issue #42:
+ *  - the senses that pierce Darkness (Blindsight, Truesight) are judged here by their range and a line of sight WITHOUT the
+ *    edges of the Darkness sources: the core's test counted them, and nothing could be seen inside Darkness;
+ *  - a "Devil's Sight" detection mode (`devilsSight`), registered at `setup` and given IN MEMORY (nothing is written) to the
+ *    tokens whose actor has the summon (`devils-sight`), at each setup of the vision sources (`initializeVisionSources`): the
+ *    target at 120 ft is shown sharp, as if seen normally — the rule is that of `canSee` (adapter/vision.mjs,
+ *    `devilsSightSeesToken`);
+ *  - the hearing of a Blinded observer goes through a special mode given in memory (`dasHearing`): the core skips the light
+ *    perception of a blinded source, and a Blinded character no longer saw what it hears;
+ *  - a heard creature (outline) carries a small ear above its token, and, on hover, "Heard, not seen": from afar, the
+ *    outline of a ring token passed for a seen creature. (The dynamic ring cannot be removed client-side without patching
+ *    the core.)
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -38,9 +40,9 @@ import { theaterActive } from "../runtime/theater-state.mjs";
 import { perceivesPlane } from "../adapter/plane.mjs";
 import { loc } from "../runtime/shared.mjs";
 
-const SIMULATED = `${MODULE_ID}.`;   // préfixe des sources de vision jetables (adapter/vision.mjs, SOURCE_PREFIX)
+const SIMULATED = `${MODULE_ID}.`;   // prefix of the disposable vision sources (adapter/vision.mjs, SOURCE_PREFIX)
 const SIGHT = 0;                      // DetectionMode.DETECTION_TYPES.SIGHT
-const OWN_DARKNESS_RANGE = 9999;      // §447 : portée du mode « Vision du diable » de qui ne voit qu'à travers ses propres Ténèbres (le test l'ignore)
+const OWN_DARKNESS_RANGE = 9999;      // §447: range of the "Devil's Sight" mode of one who only sees through their own Darkness
 
 let hearingFilter = null;
 function filter() {
@@ -56,7 +58,7 @@ function sensedFilter() {
   });
 }
 
-/** Les deux documents d'un test : l'observateur (sa source de vision) et la cible, si c'est un token. */
+/** The two documents of a test: the observer (its vision source) and the target, if it is a token. */
 function pair(visionSource, object) {
   const Token = foundry.canvas.placeables.Token;
   if ( !(object instanceof Token) ) return null;
@@ -65,10 +67,10 @@ function pair(visionSource, object) {
 }
 
 /**
- * Ce qu'une brume ou des ténèbres entre l'observateur et la cible font à ce mode : `"blocked"` (la vue ne passe pas), `"pierce"` (un sens
- * qui perce des ténèbres, jugé par le moteur : portée et ligne de vue sans les bords des ténèbres — issue #42), ou null (rien entre les
- * deux, ou le test du cœur suffit : les modes sans murs, `CORE_JUDGED` — vibrations, Sense All, Sense Invisibility ; un sens qui perce
- * une brume seule).
+ * What a fog or darkness between the observer and the target does to this mode: `"blocked"` (sight does not pass),
+ * `"pierce"` (a sense that pierces darkness, judged by the engine: range and line of sight without the edges of the darkness —
+ * issue #42), or null (nothing between the two, or the core's test is enough: the modes without walls, `CORE_JUDGED` —
+ * vibrations, Sense All, Sense Invisibility; a sense that pierces fog alone).
  */
 function blockFor(id, visionSource, object) {
   if ( !isVisionAvailable() ) return null;
@@ -80,7 +82,7 @@ function blockFor(id, visionSource, object) {
   return (CORE_JUDGED.includes(id) || !blocked.darkness) ? null : "pierce";
 }
 
-/** Un mode spécial de l'observateur (vision aveugle, voir l'invisible…) la détecte-t-il ? Il a priorité : son propre rendu. */
+/** Does a special mode of the observer (Blindsight, seeing the invisible…) detect it? It has priority: its own rendering. */
 function specialDetects(visionSource, config) {
   const doc = visionSource.object.document;
   const modes = CONFIG.Canvas.detectionModes;
@@ -88,7 +90,7 @@ function specialDetects(visionSource, config) {
     && (modes[id]?.testVisibility(visionSource, mode, config) === true));
 }
 
-/** On ne la voit pas, mais on l'entend : contour ondulant. */
+/** It is not seen, but it is heard: wavy outline. */
 function heard(visionSource, config) {
   if ( !isVisionAvailable() || String(visionSource?.sourceId ?? "").startsWith(SIMULATED) ) return false;
   const p = pair(visionSource, config.object);
@@ -99,7 +101,7 @@ function heard(visionSource, config) {
 }
 
 const reported = new Set();
-/** Une erreur de la brume ou de l'ouïe, dite une fois (avec sa pile) : l'affichage retombe sur le cœur. */
+/** An error from the fog or from hearing, reported once (with its stack): the display falls back to the core. */
 function reportOnce(err) {
   const key = String(err?.message ?? err);
   if ( reported.has(key) ) return;
@@ -107,15 +109,15 @@ function reportOnce(err) {
   console.error(`${MODULE_ID} | perception (mist, hearing, plane): ${key}\n${err?.stack ?? ""}`);
 }
 
-/** §225 : la cible est-elle hors de portée de perception de l'observateur, d'un plan à l'autre (Éthéré) ? */
+/** §225: is the target out of the observer's perception range, from one plane to another (Ethereal)? */
 function offPlane(visionSource, object) {
   const p = pair(visionSource, object);
   return !!p && !perceivesPlane(p.observer, p.target);
 }
 
 /**
- * La sous-classe d'un mode de détection : aucun ne perçoit d'un plan à l'autre sans vue de l'Éthéré (§225) ; la vue s'arrête à la
- * brume ; la perception de la lumière entend en dernier recours.
+ * The subclass of a detection mode: none perceives from one plane to another without sight of the Ethereal (§225); sight stops
+ * at fog; light perception hears as a last resort.
  */
 function extend(id, mode) {
   const Base = mode.constructor;
@@ -123,21 +125,21 @@ function extend(id, mode) {
   const listens = id === "lightPerception";
   const Extended = class extends Base {
     testVisibility(visionSource, tokenMode, config) {
-      // §220 : Théâtre de l'esprit — le test du cœur seul.
+      // §220: Theater of the Mind — the core's test alone.
       if ( theaterActive() ) return super.testVisibility(visionSource, tokenMode, config);
       try { if ( offPlane(visionSource, config.object) ) return false; }
       catch(err) { reportOnce(err); }
-      // Réglage `unconsciousSenses` : un observateur Inconscient ne perçoit plus rien, par aucun mode.
+      // Setting `unconsciousSenses`: an Unconscious observer perceives nothing any more, by any mode.
       try { if ( isSenseless(visionSource?.object?.document) ) return false; }
       catch(err) { reportOnce(err); }
-      // `senseNeeds` : ce sens de la fiche dépend de l'ouïe ou de la vue de son porteur, Assourdi ou Aveuglé — éteint.
+      // `senseNeeds`: this sheet sense depends on the hearing or sight of its bearer, Deafened or Blinded — switched off.
       try { if ( mutedSensesOf(visionSource?.object?.document).includes(id) ) return false; }
       catch(err) { reportOnce(err); }
-      // Ce que le moteur ajoute ne doit jamais casser l'affichage du cœur : une erreur → le test du cœur seul, et la pile une fois.
+      // What the engine adds must never break the core's display: an error → the core's test alone, and the stack once.
       let block = null;
       try { block = blockFor(id, visionSource, config.object); }
       catch(err) { reportOnce(err); }
-      // Issue #42 : un sens qui perce des ténèbres (vision aveugle, vision véritable) — le test du cœur compte leurs bords comme des murs.
+      // Issue #42: a sense that pierces darkness (Blindsight, Truesight) — the core's test counts their edges as walls.
       if ( (block === "pierce") && (id !== DEVILS_SIGHT.mode) ) {
         if ( !tokenMode.enabled ) return false;
         try {
@@ -147,9 +149,9 @@ function extend(id, mode) {
         catch(err) { reportOnce(err); }
       }
       if ( !sight && !listens ) return super.testVisibility(visionSource, tokenMode, config);
-      // Issue #42 : un observateur qui voit l'Invisible (Détection de l'invisibilité) — la vue de base du cœur refuse toute cible Invisible
-      // (detection-mode.mjs `_canDetect`) ; on lui présente la cible dévoilée, comme les règles (`asSeenBy`).
-      const original = config;   // l'ouïe pose son filtre sur le vrai token, jamais sur la vue dévoilée
+      // Issue #42: an observer who sees the Invisible ("Detection of Invisibility") — the core's basic sight refuses any
+      // Invisible target (detection-mode.mjs `_canDetect`); the target is presented unveiled, as in the rules (`asSeenBy`).
+      const original = config;   // hearing puts its filter on the real token, never on the unveiled view
       if ( sight ) {
         try {
           const p = pair(visionSource, config.object);
@@ -170,19 +172,20 @@ function extend(id, mode) {
 }
 
 /**
- * Issue #42 : le mode de détection « Vision du diable ». Une vue (`SIGHT`) bornée par les murs, qui ne s'arrête pas aux ténèbres : son test
- * est celui des règles (`devilsSightSeesToken` : 120 ft, ligne de vue sans les bords des ténèbres, ni Invisible, ni Aveuglé, ni brume).
- * Pas proposé dans la configuration du token (donné par l'invocation).
+ * Issue #42: the "Devil's Sight" detection mode. A sight (`SIGHT`) bounded by walls, which does not stop at darkness: its
+ * test is that of the rules (`devilsSightSeesToken`: 120 ft, line of sight without the edges of the darkness, not Invisible,
+ * not Blinded, no fog). Not offered in the token configuration (given by the summon).
  *
- * Issue #42, suite (0.281.1) : un filtre — le token teinté de rouge, avec un liseré rouge sombre (`DEVILS_SIGHT_OUTLINE`, `devilsSightFilter`) :
- * un token net veut dire « vue normale » (choix de l'utilisateur). Sans filtre, le cœur ne le
- * dessinait que sous le voile de vision : la zone vue par l'observateur s'arrête au bord des Ténèbres (leurs bords sont des murs de vue),
- * et la cible restait une silhouette noire, quoique « visible » et ciblable. Le cœur ne consulte ce mode que si la vue de base et la
- * perception de la lumière ont échoué : en pleine vue, aucun liseré.
+ * Issue #42, follow-up (0.281.1): a filter — the token tinted red, with a dark red edge (`DEVILS_SIGHT_OUTLINE`,
+ * `devilsSightFilter`): a sharp token means "normal sight" (the user's choice). Without a filter, the core only
+ * drew it under the vision veil: the area seen by the observer stops at the edge of the Darkness (its edges are sight
+ * walls), and the target stayed a black silhouette, although "visible" and targetable. The core consults this mode only if
+ * basic sight and light perception have failed: in full sight, no edge.
  */
 /**
- * Le filtre de la Vision du diable : le contour du cœur (`OutlineOverlayFilter`, sans knockout ni ondulation, épaisseur fixe) dont le shader
- * teinte aussi le token en rouge (`tintOutlineShader`). Si le shader du cœur a changé, le contour seul (et un avertissement, une fois).
+ * The Devil's Sight filter: the core's outline (`OutlineOverlayFilter`, without knockout or waviness, fixed thickness) whose
+ * shader also tints the token red (`tintOutlineShader`). If the core's shader has changed, the outline alone (and a warning,
+ * once).
  */
 function devilsSightFilter() {
   const Outline = foundry.canvas.rendering.filters.OutlineOverlayFilter;
@@ -197,8 +200,8 @@ function devilsSightFilter() {
   const filter = Filter.create({
     outlineColor: [...DEVILS_SIGHT_OUTLINE.outlineColor], knockout: DEVILS_SIGHT_OUTLINE.knockout, wave: DEVILS_SIGHT_OUTLINE.wave
   });
-  filter.thickness = DEVILS_SIGHT_OUTLINE.thickness;   // un accesseur du filtre, pas un uniform (rendering/filters/outline-overlay.mjs:156)
-  filter.animated = false;                              // épaisseur fixe : le contour du cœur « respire » sinon (outline-overlay.mjs:170)
+  filter.thickness = DEVILS_SIGHT_OUTLINE.thickness;   // a filter accessor, not a uniform (rendering/filters/outline-overlay.mjs:156)
+  filter.animated = false;                              // fixed thickness: else the core's outline "breathes" (outline-overlay.mjs:170)
   return filter;
 }
 
@@ -220,26 +223,26 @@ function devilsSightMode() {
 }
 
 /**
- * Issue #42 : le mode « Vision du diable » donné en mémoire aux tokens qui ont une source de vision et dont l'acteur a l'invocation — comme
- * dnd5e projette les sens de la fiche (documents/token.mjs `applySenseOverrides`), sans rien écrire. Les données préparées du token sont
- * refaites à chaque mise à jour ; le cœur rappelle ce hook à chaque mise en place des sources (groups/visibility.mjs:192).
+ * Issue #42: the "Devil's Sight" mode given in memory to the tokens that have a vision source and whose actor has the summon
+ * — as dnd5e projects the sheet's senses (documents/token.mjs `applySenseOverrides`), writing nothing. The token's prepared
+ * data is redone at each update; the core calls this hook again at each setup of the sources (groups/visibility.mjs:192).
  */
 function grantModes(sources) {
   for ( const source of sources?.values?.() ?? [] ) grantOn(source.object?.document);
 }
 
 /**
- * Les modes en mémoire d'un token. Aussi rejoué sur TOUS les tokens de la scène à chaque rafraîchissement de la vue (`grantAll`,
- * `sightRefresh`) : un état posé ou retiré (Aveuglé : `Token#_onApplyStatusEffect` ne refait que la source de ce token,
- * placeables/token.mjs:4580), un acteur ou un token mis à jour refont les données préparées sans remettre en place toutes les sources —
- * ces modes disparaissaient jusqu'à la mise en place suivante (vu le 2026-11-08 : un Rôdeur Aveuglé à la main n'entendait rien).
+ * The in-memory modes of a token. Also replayed on ALL the tokens of the scene at each vision refresh (`grantAll`,
+ * `sightRefresh`): a condition set or removed (Blinded: `Token#_onApplyStatusEffect` only redoes that token's source),
+ * an actor or a token updated redo the prepared data without setting up all the sources again —
+ * these modes disappeared until the next setup (seen on 2026-11-08: a Blinded Ranger set by hand heard nothing).
  */
 function grantOn(doc) {
   if ( !doc?.detectionModes || !doc.sight?.enabled ) return false;
   blindIfSenseless(doc.object);
-  // Avant les modes en mémoire : il lit ceux que dnd5e a projetés de la fiche.
+  // Before the in-memory modes: it reads those that dnd5e projected from the sheet.
   grantField(doc);
-  // L'ouïe d'un Aveuglé en DERNIER (core/light.mjs `grantInMemoryModes`) : le cœur essaie les modes spéciaux dans l'ordre.
+  // The hearing of a Blinded observer LAST (core/light.mjs `grantInMemoryModes`): the core tries the special modes in order.
   return grantInMemoryModes(doc.detectionModes, grantedSenses(doc));
 }
 
@@ -258,7 +261,7 @@ function grantedSenses(doc) {
   const modes = CONFIG.Canvas.detectionModes;
   const devilsRange = devilsSightRange(doc);
   const senses = {
-    // §447 : qui voit à travers ses propres Ténèbres reçoit aussi ce mode (sa règle, `devilsSightSeesToken`, n'y met pas de limite).
+    // §447: whoever sees through their own Darkness also gets this mode (its rule, `devilsSightSeesToken`, sets no limit).
     devilsSight: modes[DEVILS_SIGHT.mode] ? (devilsRange || (ownDarknessSight(doc) ? OWN_DARKNESS_RANGE : 0)) : 0,
     sense: !!modes[SENSE_MODE] && (declaredSensesOf(doc.actor).length > 0),
     hearing: !!modes[HEARING_MODE],
@@ -270,22 +273,22 @@ function grantedSenses(doc) {
 }
 
 /**
- * Le champ de vue d'un sens (core/light.mjs `fieldOfView`), posé en mémoire sur la vue PRÉPARÉE du token — portée, mode de vision,
- * image — comme dnd5e y projette la vision dans le noir : la carte se voit jusqu'à la portée de la vision véritable, de la vision
- * aveugle ou de la Vision du diable. Rien n'est écrit ; la préparation des données du token efface tout, ce hook le remet. Changé,
- * la source de vision de ce token est refaite (elle seule). Ce que ce champ ne fait pas, faute de remplacer la source de vision du
- * cœur : percer une source de ténèbres, ou servir à un observateur Aveuglé — là, seuls les tokens sont montrés, comme avant.
+ * The field of view of a sense (core/light.mjs `fieldOfView`), set in memory on the token's PREPARED sight — range, vision
+ * mode, image — as dnd5e projects Darkvision there: the map is seen up to the range of Truesight, Blindsight
+ * or Devil's Sight. Nothing is written; the preparation of the token's data erases everything, this hook puts it back. When
+ * changed, this token's vision source is redone (it alone). What this field does not do, for lack of replacing the core's
+ * vision source: pierce a darkness source, or serve a Blinded observer — there, only the tokens are shown, as before.
  */
 function grantField(doc) {
   const modes = doc.detectionModes;
-  // Un sens éteint (`senseNeeds` : une vision aveugle par l'ouïe, son porteur Assourdi) ne fait pas de champ de vue non plus.
+  // A switched-off sense (`senseNeeds`: a Blindsight through hearing, its bearer Deafened) makes no field of view either.
   const muted = mutedSensesOf(doc);
   const enabled = id => (!muted.includes(id) && (modes[id]?.enabled ?? true) && (modes[id]?.range > 0)) ? modes[id].range : 0;
   const field = fieldOfView({ darkvision: enabled("basicSight"), seeAll: enabled("seeAll"), blindsight: enabled("blindsight"),
     devilsSight: CONFIG.Canvas.visionModes?.[FIELD_MODES.devilsSight.id] ? grantedSenses(doc).devilsRange : 0 });
   if ( !field || !CONFIG.Canvas.visionModes?.[field.visionMode] ) {
-    // Le sens n'est plus là (la préparation du token a remis la vue de la fiche) : la source qui porte encore son champ
-    // est refaite.
+    // The sense is no longer there (the token's preparation put back the sheet's sight): the source that still carries its field
+    // is redone.
     const stale = doc.object?.vision?.visionMode?.id;
     if ( stale && FIELD_IDS.includes(stale) && !doc.object.destroyed ) doc.object.initializeVisionSource();
     return;
@@ -300,7 +303,7 @@ function grantField(doc) {
 
 const FIELD_IDS = Object.values(FIELD_MODES).map(mode => mode.id);
 
-/** Les modes de vision des champs de vue (`FIELD_MODES`), absents de la configuration des tokens : le moteur les choisit. */
+/** The vision modes of the fields of view (`FIELD_MODES`), absent from the token configuration: the engine chooses them. */
 function fieldModes() {
   const VisionMode = foundry.canvas.perception.VisionMode;
   const shader = foundry.canvas.rendering.shaders.ColorAdjustmentsSamplerShader;
@@ -317,12 +320,13 @@ function fieldModes() {
 }
 
 /**
- * Issue #42, suite (Archibald, 0.281.0) : la préparation des données d'un token (`TokenDocument#reset`) refait `detectionModes` depuis la
- * source — les modes en mémoire disparaissent, et rien ne refait la vue avant le prochain `sightRefresh` (une cible qui bouge ne le
- * déclenche pas) : la cible dans les Ténèbres passait au contour de l'ouïe. Un effet qui vise le token (`token.…`, celui du joueur sur
- * `token.detectionModes.devilsSight.range`) fait refaire le token à CHAQUE mise à jour de l'acteur (`_onRelatedUpdate`,
- * documents/token.mjs:3810) et laissait `{ range }` sans `enabled`. Le hook de la mise à jour vient après cette préparation : on redonne
- * les modes aux tokens touchés, et, s'il en manquait, la vue se refait.
+ * Issue #42, follow-up (Archibald, 0.281.0): the preparation of a token's data (`TokenDocument#reset`) redoes
+ * `detectionModes` from the source — the in-memory modes disappear, and nothing redoes the view before the next
+ * `sightRefresh` (a moving target does not trigger it): the target in Darkness fell back to the hearing outline. An effect
+ * that targets the token (`token.…`, the player's one on `token.detectionModes.devilsSight.range`) makes the token redo at
+ * EACH update of the actor (`_onRelatedUpdate`, documents/token.mjs:3810) and left `{ range }` without `enabled`. The update
+ * hook comes after this preparation: the modes are given again to the touched tokens, and, if any were missing, the view is
+ * redone.
  */
 function regrant(docs) {
   if ( !canvas?.ready ) return;
@@ -333,17 +337,17 @@ function regrant(docs) {
 }
 
 /**
- * Les documents que porte une scène. Le client refait la scène entière (`Scene#reset`, donc les données préparées de TOUS ses
- * tokens) après la création, la mise à jour ou la suppression de l'un d'eux — un dessin déplacé, un autre token qui bouge —, sans
- * toujours refaire la vue : les modes en mémoire de chaque token disparaissaient jusqu'au `sightRefresh` suivant, et la créature
- * entendue n'était plus dessinée (vu le 2026-11-19 : un token déplacé, un dessin créé).
+ * The documents a scene carries. The client redoes the whole scene (`Scene#reset`, so the prepared data of ALL its
+ * tokens) after the creation, update or deletion of one of them — a moved drawing, another token that moves —, without
+ * always redoing the view: the in-memory modes of each token disappeared until the next `sightRefresh`, and the heard creature
+ * was no longer drawn (seen on 2026-11-19: a moved token, a created drawing).
  */
 function sceneDocumentNames() {
   const embedded = Object.keys(CONFIG.Scene?.documentClass?.metadata?.embedded ?? {});
   return embedded.length ? embedded : ["AmbientLight", "AmbientSound", "Drawing", "Note", "Region", "Tile", "Token", "Wall"];
 }
 
-/** Les modes en mémoire de tous les tokens de la scène affichée, redonnés sans refaire la vue : le hook précède le rendu. */
+/** The in-memory modes of all the tokens of the displayed scene, given again without redoing the view: the hook precedes render. */
 function regrantScene(doc) {
   if ( !canvas?.ready || (doc?.parent !== canvas.scene) ) return;
   for ( const token of canvas.scene.tokens ?? [] ) if ( token !== doc ) grantOn(token);
@@ -354,9 +358,9 @@ function tokensOfActor(actor) {
 }
 
 /**
- * Réglage `unconsciousSenses` : la source de vision d'un Inconscient est aveuglée (`blinded.unconscious`, point-vision-source.mjs:172-182) —
- * son écran passe en mode « cécité », comme Aveuglé. Le cœur ne remet que ses propres clés (`blind`, `burrow`, placeables/token.mjs:936) :
- * la nôtre reste jusqu'au réveil ; changée, la source est refaite (elle seule).
+ * Setting `unconsciousSenses`: an Unconscious creature's vision source is blinded (`blinded.unconscious`,
+ * point-vision-source.mjs:172-182) — its screen goes into "blindness" mode, like Blinded. The core only puts back its own keys
+ * (`blind`, `burrow`, placeables/token.mjs:936): ours stays until waking; when changed, the source is redone (it alone).
  */
 function blindIfSenseless(token) {
   const vision = token?.vision;
@@ -373,11 +377,12 @@ function grantAll() {
 }
 
 /**
- * Issue #42 : l'ouïe d'un observateur Aveuglé. Le cœur saute la vue de base et la perception de la lumière d'une source aveuglée
- * (groups/visibility.mjs, `if ( visionSource.isBlinded ) continue`) — or l'ouïe passe par la perception de la lumière (`heard`) : un
- * personnage Aveuglé ne voyait plus à l'écran les créatures qu'il entend. Ce mode spécial (SOUND, ni murs ni angle : `canHear` juge
- * murs de son, surdité, cible cachée ou morte), donné en mémoire à chaque token avec une source de vision, n'agit que pour une source
- * aveuglée et jamais pour les sources jetables des règles (entendre n'est pas voir) ; le cœur pose son filtre, le contour de l'ouïe.
+ * Issue #42: the hearing of a Blinded observer. The core skips basic sight and the light perception of a blinded source
+ * (groups/visibility.mjs, `if ( visionSource.isBlinded ) continue`) — yet hearing goes through light perception (`heard`): a
+ * Blinded character no longer saw on screen the creatures it hears. This special mode (SOUND, no walls or angle: `canHear`
+ * judges sound walls, deafness, hidden or dead target), given in memory to each token with a vision source, only acts for a
+ * blinded source and never for the rules' disposable sources (hearing is not seeing); the core puts its filter, the hearing
+ * outline.
  */
 function hearingMode() {
   const DetectionMode = foundry.canvas.perception.DetectionMode;
@@ -395,13 +400,13 @@ function hearingMode() {
 }
 
 /**
- * Les sens déclarés par du contenu (clé `sense` : Détection du mal et du bien, Perception divine…). Leur règle est celle du moteur
- * (`sensedThrough` : portée, ce que le sens détecte, mur s'il en tient compte, protections de la cible) : la créature dont la
- * position est connue se dessine avec un contour, où qu'elle soit — ces sens ne sont pas une vue, ni brume ni ténèbres ne les
- * arrêtent. Une simple présence (`reveals: "presence"`) ne dessine rien : la position n'est pas connue ; une aura
- * (`reveals: "aura"`) marque la créature déjà vue (`refreshMark`). Une créature cachée de l'observateur n'est montrée que par un
- * sens qui la localise (issue #107 : sa case est connue, elle reste non vue et Cachée), jamais par une vue déclarée. Jamais pour les sources jetables des règles, qui lisent `sensedBy`
- * elles-mêmes.
+ * The senses declared by content (key `sense`: Detect Evil and Good, "Divine Perception"…). Their rule is the engine's
+ * (`sensedThrough`: range, what the sense detects, wall if it counts it, the target's protections): the creature whose
+ * position is known is drawn with an outline, wherever it is — these senses are not sight, neither fog nor darkness stops them.
+ * A mere presence (`reveals: "presence"`) draws nothing: the position is not known; an aura
+ * (`reveals: "aura"`) marks the creature already seen (`refreshMark`). A creature hidden from the observer is only shown by a
+ * sense that locates it (issue #107: its cell is known, it stays unseen and Hidden), never by a declared sight. Never for the
+ * rules' disposable sources, which read `sensedBy` themselves.
  */
 function senseMode() {
   const DetectionMode = foundry.canvas.perception.DetectionMode;
@@ -420,7 +425,7 @@ function senseMode() {
     type: DetectionMode.DETECTION_TYPES.OTHER, walls: false, angle: false });
 }
 
-/** À `setup` : après le cœur et le système (dnd5e ajoute ses modes à `init`). */
+/** At `setup`: after the core and the system (dnd5e adds its modes at `init`). */
 function installModes() {
   const modes = CONFIG.Canvas.detectionModes;
   modes[DEVILS_SIGHT.mode] ??= devilsSightMode();
@@ -436,7 +441,7 @@ function installModes() {
   }
 }
 
-/** Ce qui change ce qu'on voit ou entend sans bouger un token : une brume posée ou levée, se cacher, être assourdi. */
+/** What changes what is seen or heard without moving a token: a fog placed or lifted, hiding, being deafened. */
 function refreshVisibility() {
   if ( !canvas?.ready ) return;
   canvas.perception.update({ refreshVision: true });
@@ -446,9 +451,10 @@ function refreshVisibility() {
 export function registerPerception() {
   route("setup", installModes, { label: "perception: detection modes not installed" });
   route("initializeVisionSources", grantModes, { label: "perception: Devil's Sight or blind hearing not granted" });
-  // À chaque rafraîchissement de la vue : `restrictVisibility` demande `refreshVisibility` à chaque token puis appelle `sightRefresh`
-  // (groups/visibility.mjs:809-828) — les tokens n'appliquent ce drapeau qu'après. Les modes en mémoire sont donc là au moment du test,
-  // quoi qu'ait refait le cœur entre-temps (données préparées refaites après un état, un acteur, un token mis à jour).
+  // At each vision refresh: `restrictVisibility` asks each token for `refreshVisibility` then calls
+  // `sightRefresh` (groups/visibility.mjs:809-828) — the tokens only apply this flag afterwards. The in-memory modes are
+  // therefore there at the time of the test, whatever the core redid in the meantime (prepared data redone after a condition,
+  // an actor, a token updated).
   route("sightRefresh", grantAll, { label: "perception: Devil's Sight or blind hearing not granted again" });
   const again = { label: "perception: Devil's Sight or blind hearing not granted after an update" };
   route("updateActor", actor => regrant(tokensOfActor(actor)), again);
@@ -469,13 +475,13 @@ export function registerPerception() {
 }
 
 /* -------------------------------------------- */
-/*  Issue #42 : l'oreille des créatures entendues */
+/*  Issue #42: the ear of the heard creatures */
 /* -------------------------------------------- */
 
-/** L'oreille de Font Awesome 6 (`ear-listen`) ; la cible d'une créature localisée par un sens déclaré (`location-crosshairs`). */
+/** Font Awesome 6's ear (`ear-listen`); the target of a creature located by a declared sense (`location-crosshairs`). */
 const EAR = "\uf2a2";
 const LOCATED = "\uf601";
-const MAGIC = "\uf0d0";   // `wand-magic` : l'aura d'une créature vue qui porte de la magie (`reveals: "aura"`)
+const MAGIC = "\uf0d0";   // `wand-magic`: the aura of a seen creature that carries magic (`reveals: "aura"`)
 const MARKS = Object.freeze({
   heard: Object.freeze({ glyph: EAR, label: "Vision.Entendu", line: 0x8ccdff, fill: 0xd6ecff }),
   located: Object.freeze({ glyph: LOCATED, label: "Vision.Localise", line: 0xc79bff, fill: 0xe8d9ff }),
@@ -488,12 +494,12 @@ function markLayerOf() {
   if ( !markLayer || markLayer.destroyed || (markLayer.parent !== canvas.interface) ) {
     markLayer = canvas.interface.addChild(new PIXI.Container());
     markLayer.eventMode = "none";
-    markLayer.zIndex = 1040;   // au-dessus du calque des tokens (200), sous le sablier (1050, ui/awaiting.mjs)
+    markLayer.zIndex = 1040;   // above the tokens layer (200), below the hourglass (1050, ui/awaiting.mjs)
   }
   return markLayer;
 }
 
-/** Une pastille sombre au filet de la couleur du contour (ouïe, sens déclaré), son signe ; au survol, « Entendu, pas vu ». */
+/** A dark badge with a rim in the outline's color (hearing, declared sense), its sign; on hover, "Heard, not seen". */
 function buildMark(kind) {
   const look = MARKS[kind];
   const r = Math.max(9, canvas.grid.size * 0.13);
@@ -512,12 +518,12 @@ function buildMark(kind) {
   label.anchor.set(0, 0.5);
   label.position.set(r + 4, 0);
   label.visible = false;
-  // Une aura : un halo pâle autour du token, tracé à sa taille à chaque rafraîchissement (`refreshMark`).
+  // An aura: a pale halo around the token, drawn at its size at each refresh (`refreshMark`).
   const ring = look.ring ? new PIXI.Graphics() : null;
   if ( ring ) root.addChild(ring);
-  // Réglage `anonymousLocated` : la silhouette qui tient lieu d'image à une créature perçue sans être vue — l'icône de token par
-  // défaut du cœur, à la taille du token, sous le contour du sens : qui la perçoit sans la voir sait où elle est, pas ce qu'elle
-  // est.
+  // Setting `anonymousLocated`: the silhouette that stands in for the image of a creature perceived without being seen —
+  // the core's default token icon, at the token's size, under the sense's outline: whoever perceives it without seeing it
+  // knows where it is, not what it is.
   const stand = look.ring ? null : new PIXI.Sprite(PIXI.Texture.from(CONFIG.Token.documentClass.DEFAULT_ICON));
   if ( stand ) { stand.anchor.set(0.5); stand.visible = false; root.addChild(stand); }
   root.addChild(back, ear, label);
@@ -532,36 +538,36 @@ function dropMark(id) {
 }
 
 /**
- * Le token est-il affiché parce qu'on l'entend (le contour de l'ouïe) ou parce qu'un sens déclaré le localise (son contour), sur ce
- * client ? Le filtre d'abord : tant que rien n'a été entendu ni localisé il n'existe pas, et `Token#isVisible` relance le test de
- * visibilité entier du cœur à chaque lecture — or on passe ici à chaque `refreshToken` et `hoverToken` de chaque token.
+ * Is the token shown because it is heard (the hearing outline) or because a declared sense locates it (its outline), on this
+ * client? The filter first: as long as nothing has been heard or located it does not exist, and `Token#isVisible` reruns the
+ * core's whole visibility test at each read — and we come through here at each `refreshToken` and `hoverToken` of each token.
  */
 function perceivedAs(token) {
   if ( !token || token.destroyed ) return null;
   const watchers = auraWatchers();
   if ( (!hearingFilter && !senseFilter && !watchers.length) || (token.isVisible !== true) ) return null;
   if ( hearingFilter && (token.detectionFilter === hearingFilter) ) return "heard";
-  // Vue à travers un mur par une vue déclarée (`kind: "sight"`) : le contour, pas la marque « pas vue ».
+  // Seen through a wall by a declared sight (`kind: "sight"`): the outline, not the "not seen" mark.
   if ( senseFilter && (token.detectionFilter === senseFilter) ) {
     const verdicts = viewers().map(doc => (doc === token.document) ? null : sensedThrough(doc, token.document));
     return onlyLocated(verdicts) ? "located" : null;
   }
-  // Une aura ne se pose que sur ce qui est vu : pas sur un token affiché par un mode spécial (son filtre), pas sur l'observateur.
+  // An aura is only placed on what is seen: not on a token shown by a special mode (its filter), not on the observer.
   if ( !watchers.length || token.detectionFilter ) return null;
   return watchers.some(doc => (doc !== token.document) && (sensedThrough(doc, token.document) === "aura")) ? "aura" : null;
 }
 
 /**
- * Les tokens par lesquels ce client voit et dont l'acteur a un sens qui montre une aura (`reveals: "aura"`, Détection de la magie).
- * Relus quand la vue, un effet ou un objet change (`forgetAuraWatchers`) : `refreshMark` passe ici pour chaque token à chaque
- * rafraîchissement, et presque aucun acteur n'a un tel sens.
+ * The tokens through which this client sees and whose actor has a sense that shows an aura (`reveals: "aura"`, Detect Magic).
+ * Read again when the view, an effect or an item changes (`forgetAuraWatchers`): `refreshMark` comes through here for each
+ * token at each refresh, and almost no actor has such a sense.
  */
 let watchers = null;
 function auraWatchers() {
   return watchers ??= viewers().filter(doc => declaredSensesOf(doc.actor).some(sense => sense.reveals === "aura"));
 }
 
-/** Les tokens par lesquels ce client voit (ses sources de vision, sans les sources jetables des règles). */
+/** The tokens through which this client sees (its vision sources, without the rules' disposable sources). */
 let viewing = null;
 function viewers() {
   if ( viewing ) return viewing;
@@ -577,22 +583,22 @@ function forgetAuraWatchers() {
   viewing = null;
 }
 
-/** Réglage `anonymousLocated` du monde ; faux tant qu'il n'est pas lisible. */
+/** World setting `anonymousLocated`; false as long as it is not readable. */
 function anonymousRule() {
   try { return game.settings.get(MODULE_ID, "anonymousLocated") === true; } catch { return false; }
 }
 
 /**
- * Réglage `anonymousLocated` : l'image, le nom, les barres, les icônes d'état et le bord d'un token perçu sans être vu sont retirés
- * de l'affichage de ce client, à chaque rafraîchissement (le cœur en remet une partie à chaque `refreshState`). Rien n'est écrit,
- * la classe du token n'est pas remplacée ; dès qu'il n'est plus anonyme, on demande au cœur de tout redessiner.
+ * Setting `anonymousLocated`: the image, name, bars, condition icons and border of a token perceived without being seen are
+ * removed from this client's display, at each refresh (the core puts part of them back at each `refreshState`). Nothing is
+ * written, the token's class is not replaced; as soon as it is no longer anonymous, the core is asked to redraw everything.
  */
 const veiled = new Set();
-const VEILED_PARTS = ["nameplate", "bars", "effects", "border"];   // le bord : sa couleur dit l'attitude de la créature
+const VEILED_PARTS = ["nameplate", "bars", "effects", "border"];   // the border: its color tells the creature's attitude
 function veil(token, on) {
   if ( on ) {
     veiled.add(token.id);
-    // Pas son alpha : le maillage du cœur le recalcule à chaque image (occlusion).
+    // Not its alpha: the core's mesh recomputes it at each frame (occlusion).
     if ( token.mesh ) token.mesh.visible = false;
     for ( const part of VEILED_PARTS ) if ( token[part] ) token[part].visible = false;
     return;
@@ -614,7 +620,7 @@ function refreshMark(token) {
   if ( mark && (mark.kind !== kind) ) { dropMark(token.id); mark = null; }
   if ( !mark ) marks.set(token.id, mark = buildMark(kind));
   if ( mark.root.parent !== markLayerOf() ) markLayerOf().addChild(mark.root);
-  // Coin haut gauche du token (le sablier prend le haut droit, les minuteries le dessus).
+  // Top left corner of the token (the hourglass takes the top right, the timers the top).
   mark.root.position.set(token.x + (mark.r * 0.6), token.y + (mark.r * 0.6));
   mark.label.visible = !!token.hover;
   const anonymous = hidesIdentity(kind, anonymousRule());
@@ -625,7 +631,7 @@ function refreshMark(token) {
       mark.stand.width = token.w ?? 0;
       mark.stand.height = token.h ?? 0;
       mark.stand.position.set(((token.w ?? 0) / 2) - (mark.r * 0.6), ((token.h ?? 0) / 2) - (mark.r * 0.6));
-      // Le contour par lequel le cœur dessine ce token (ouïe, sens déclaré) : le même, sur la silhouette.
+      // The outline with which the core draws this token (hearing, declared sense): the same one, on the silhouette.
       const outline = token.detectionFilter ?? null;
       if ( mark.stand.filters?.[0] !== outline ) mark.stand.filters = outline ? [outline] : null;
     }
@@ -645,7 +651,7 @@ function clearMarks() {
   markLayer = null;
 }
 
-/** Issue #42 : chaque client pose l'oreille sur les tokens qu'il entend, à leur position affichée ; rien n'est écrit. */
+/** Issue #42: each client puts the ear on the tokens it hears, at their displayed position; nothing is written. */
 function registerHeardMarks() {
   const opts = { label: "perception: hearing mark not drawn" };
   route("refreshToken", token => refreshMark(token), opts);

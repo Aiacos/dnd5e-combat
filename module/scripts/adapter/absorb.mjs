@@ -1,19 +1,20 @@
 /**
- * Réserve qui absorbe les dégâts (SPEC §16.11, B14 : Égide arcanique), lue et écrite dans Foundry. Le contenu déclare
- * `absorb` sur l'item (core/content.mjs) ; les PV de la réserve sont les utilisations de l'item (`system.uses` :
- * `value` restant, `max` = 2 × niveau de magicien + mod. d'Int dans le PHB) ; la réserve n'existe qu'une fois créée
- * (`activeAfter` : l'activité « créer l'égide », une utilisation par repos long, dépensée).
+ * Pool that absorbs damage (SPEC §16.11, B14: Arcane Ward), read and written in Foundry. The content declares
+ * `absorb` on the item (core/content.mjs); the pool's HP are the item's uses (`system.uses`:
+ * `value` remaining, `max` = 2 × wizard level + Int mod. in the PHB); the pool only exists once created
+ * (`activeAfter`: the "create the ward" activity, one use per Long Rest, spent).
  *
- * Vérifié dans dnd5e 6.0.3 : `dnd5e.preApplyDamage(actor, amount, updates, options)` est appelé avant l'écriture, sur le
- * client qui applique (documents/actor/actor.mjs, `applyDamage`) : `updates` se réécrit ; `amount` = dégâts après
- * résistances, avant PV temporaires. L'égide prend les dégâts « à la place » de la créature : avant ses PV temporaires.
+ * Verified in dnd5e 6.0.3: `dnd5e.preApplyDamage(actor, amount, updates, options)` is called before the write, on the
+ * client that applies (documents/actor/actor.mjs, `applyDamage`): `updates` is rewritten; `amount` = damage after
+ * Resistances, before Temporary Hit Points. The ward takes the damage "in place of" the creature: before its
+ * Temporary Hit Points.
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { contentOf } from "./content.mjs";
 import { spendItemUses } from "./uses.mjs";
 
-/** Les réserves actives d'un acteur : `{ item, rule, pool }`. */
+/** The active pools of an actor: `{ item, rule, pool }`. */
 export function poolsOf(actor) {
   const out = [];
   for ( const item of actor?.items ?? [] ) {
@@ -21,7 +22,7 @@ export function poolsOf(actor) {
     if ( !rule ) continue;
     if ( rule.activeAfter ) {
       const creator = item.system.activities?.get(rule.activeAfter);
-      if ( !(creator?.uses?.spent > 0) ) continue;   // pas encore créée depuis le dernier repos
+      if ( !(creator?.uses?.spent > 0) ) continue;   // not yet created since the last rest
     }
     const pool = Number(item.system.uses?.value) || 0;
     out.push({ item, rule, pool });
@@ -30,8 +31,8 @@ export function poolsOf(actor) {
 }
 
 /**
- * §38 : la réserve active d'un AUTRE acteur, désignée par l'uuid de son item (Égide projetée : l'égide du magicien prend les
- * dégâts d'un allié), ou null si elle n'existe pas ou n'est pas créée.
+ * §38: the active pool of ANOTHER actor, designated by its item's uuid (Projected Ward: the wizard's ward takes an ally's
+ * damage), or null if it does not exist or has not been created.
  */
 export function poolOfItem(uuid) {
   const item = uuid ? fromUuidSync(uuid, { strict: false }) : null;
@@ -39,10 +40,11 @@ export function poolOfItem(uuid) {
 }
 
 /**
- * `dnd5e.preApplyDamage` : la réserve absorbe ce qu'elle peut, la mise à jour des PV est recalculée sur le reste.
- * Ce qui a été absorbé est gardé dans `options` (la dépense de la réserve, après l'écriture ; les 0 PV, §17).
- * `options["dnd5e-combat"].absorbInto` (§38) : l'uuid de l'item d'une réserve d'un autre acteur, qui absorbe la première (« si ces
- * dégâts réduisent l'égide à 0 PV, la créature protégée subit le reste » ; `amount` est déjà après résistances, comme le veut le texte).
+ * `dnd5e.preApplyDamage`: the pool absorbs what it can, the HP update is recomputed on the remainder.
+ * What was absorbed is kept in `options` (the pool's spending, after the write; the 0 HP, §17).
+ * `options["dnd5e-combat"].absorbInto` (§38): the item uuid of another actor's pool, which absorbs the first ("if this
+ * damage reduces the ward to 0 HP, the protected creature takes the remainder"; `amount` is already after Resistances,
+ * as the text requires).
  */
 export function absorbDamage(actor, amount, updates, options) {
   if ( !(amount > 0) ) return;
@@ -59,7 +61,7 @@ export function absorbDamage(actor, amount, updates, options) {
   }
   if ( !spent.length ) return;
   const absorbed = amount - left;
-  // Même calcul que `applyDamage`, sur ce qui reste : les PV temporaires d'abord, puis les PV (bornés à 0).
+  // Same calculation as `applyDamage`, on what remains: Temporary Hit Points first, then HP (clamped to 0).
   const temp = hp.temp ?? 0;
   const deltaTemp = Math.min(temp, left);
   const deltaHp = Math.min(hp.value, left - deltaTemp);
@@ -68,7 +70,7 @@ export function absorbDamage(actor, amount, updates, options) {
   options[MODULE_ID] = { ...(options[MODULE_ID] ?? {}), absorbed: (options[MODULE_ID]?.absorbed ?? 0) + absorbed, pools: spent };
 }
 
-/** `dnd5e.applyDamage` : la réserve dépense ce qu'elle a absorbé, et le chat le dit. */
+/** `dnd5e.applyDamage`: the pool spends what it absorbed, and the chat says so. */
 export async function spendPools(actor, options) {
   const pools = options?.[MODULE_ID]?.pools ?? [];
   for ( const { item: uuid, name, take, before } of pools ) {
@@ -76,7 +78,7 @@ export async function spendPools(actor, options) {
     if ( !item ) continue;
     await spendItemUses(item, take);
     await ChatMessage.implementation.create({
-      speaker: ChatMessage.implementation.getSpeaker({ actor: item.actor ?? actor }),   // §38 : l'égide projetée parle pour son magicien
+      speaker: ChatMessage.implementation.getSpeaker({ actor: item.actor ?? actor }),   // §38: the projected ward speaks for its wizard
       content: `<p>${game.i18n.format("DND5ECOMBAT.Absorbe", { item: name, n: take, rest: Math.max(0, before - take) })}</p>`,
       flags: { [MODULE_ID]: { absorbed: { item: item.system.identifier, actor: actor.uuid, amount: take, rest: Math.max(0, before - take) } } }
     });
@@ -85,9 +87,9 @@ export async function spendPools(actor, options) {
 }
 
 /**
- * La réserve est créée (`activeAfter` : l'activité « créer l'égide » vient d'être utilisée) : elle part pleine, comme le
- * veut la règle. L'activité du PHB rend `@item.uses.max` utilisations, mais l'item du compendium arrive avec 11
- * utilisations dépensées pour un maximum de 5 au niveau 1 (vu en jeu le 2026-09-24) : rendre le maximum ne la remplit pas.
+ * The pool is created (`activeAfter`: the "create the ward" activity has just been used): it starts full, as the rule
+ * requires. The PHB activity returns `@item.uses.max` uses, but the compendium item arrives with 11
+ * uses spent for a maximum of 5 at level 1 (seen in play on 2026-09-24): returning the maximum does not fill it.
  */
 async function fillOnCreate(message, item) {
   const rule = item ? contentOf(item).entry?.absorb : null;
@@ -98,9 +100,9 @@ async function fillOnCreate(message, item) {
 }
 
 /**
- * Un sort lancé avec un emplacement recharge les réserves qui le demandent (`recharge: { school, perLevel }` : Égide
- * arcanique : un sort d'abjuration la recharge du double du niveau de l'emplacement). MJ actif uniquement.
- * @param {ChatMessage} message  Le message d'utilisation (`type: "usage"`).
+ * A spell cast with a spell slot recharges the pools that ask for it (`recharge: { school, perLevel }`: Arcane
+ * Ward: an abjuration spell recharges it by twice the slot's level). Active GM only.
+ * @param {ChatMessage} message  The use message (`type: "usage"`).
  * @returns {Promise<Array<{name: string, gained: number}>>}
  */
 export async function rechargePools(message) {
@@ -109,7 +111,7 @@ export async function rechargePools(message) {
   await fillOnCreate(message, spell);
   const level = Number(message.system?.level) || 0;
   if ( !spell || !actor || (spell.type !== "spell") || (level < 1) ) return [];
-  // « Avec un emplacement » : ni tour de magie, ni rituel, ni sort « à volonté » ou par utilisations d'objet.
+  // "With a spell slot": not a cantrip, nor a ritual, nor an "at will" spell or one cast from item uses.
   const method = spell.system?.method ?? spell.system?.preparation?.mode;
   if ( method && !["spell", "prepared", "always", "pact"].includes(method) ) return [];
   const out = [];

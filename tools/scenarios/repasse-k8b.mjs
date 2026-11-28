@@ -1,8 +1,8 @@
 /**
- * §334, restes du lot K8 de la repasse des créatures : poussées à la tournure active (`monsterPushes`). Arène des sorts : le
- * Lanceur (PNJ) et la Cible.
- *  - Marteau de guerre du Chef brutal (« pushes the target up to 10 feet straight away from itself ») : au toucher, la Cible est
- *    repoussée de 10 ft (2 cases).
+ * §334, leftovers of batch K8 of the creature pass: pushes with the active wording (`monsterPushes`). Spell arena: the
+ * Caster (NPC) and the Target.
+ *  - Brute Chief's Warhammer ("pushes the target up to 10 feet straight away from itself"): on a hit, the Target is
+ *    pushed back 10 ft (2 cells).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -39,7 +39,7 @@ export default {
       return r.id;
     };
     const place = async () => {
-      // Deux rangées plus bas que la Cible : rien à l'est pour arrêter la poussée.
+      // Two rows lower than the Target: nothing to the east to stop the push.
       const t0 = { x: homes.get(target.id).x, y: homes.get(target.id).y + 2 * grid };
       await ctx.call("move-token", { tokenId: caster.id, x: t0.x - grid, y: t0.y, elevation: 0 });
       await ctx.call("move-token", { tokenId: target.id, x: t0.x, y: t0.y, elevation: 0 });

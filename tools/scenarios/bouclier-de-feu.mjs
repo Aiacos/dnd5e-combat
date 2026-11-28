@@ -1,6 +1,6 @@
 /**
- * §266 : Bouclier de feu — « les flammes émettent une Lumière vive dans un rayon de 3 m et une Lumière faible sur 3 m de plus ».
- * Le Magicien le lance (bouclier chaud ou froid, au choix de la fenêtre) : l'effet posé porte la lumière du token.
+ * §266: Fire Shield — "the flames shed Bright Light in a 3 m radius and Dim Light for 3 m beyond that".
+ * The Wizard casts it (warm or cold shield, chosen in the window): the placed effect carries the token's light.
  */
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -13,7 +13,7 @@ export default {
     await ctx.ensureItem(mage, "Compendium.dnd-players-handbook.spells.Item.phbsplFireShield", { system: { method: "atwill" } });
     const known = (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
     const use = ctx.use({ tokenId: mage.id, identifier: "fire-shield", targetTokenIds: [mage.id] });
-    // La fenêtre « un seul effet » : le premier bouton.
+    // The "single effect" window: the first button.
     for ( let i = 0; i < 10; i++ ) {
       const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: known, waitMs: 1000, details: true }).catch(() => null);
       const d = r?.windows?.[0];

@@ -1,9 +1,9 @@
 /**
- * §303, lot C8 de la repasse terme par terme : sorts à logique propre. Arène des sorts (Lanceur, Allié, Cible).
- * Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source) et remet tout.
- *  - Protection contre la mort : la Cible protégée, à 50 PV, subit Mot de pouvoir mortel — elle n'est pas tuée, la protection tombe ;
- *  - Aide : l'Allié à pleins PV gagne les 5 PV actuels en plus de son maximum relevé.
- * La Concentration qui tombe à 0 PV est jouée par le scénario `concentration-zero` (Arène de test).
+ * §303, batch C8 of the term-by-term pass: spells with their own logic. Spell arena (Caster, Ally, Target).
+ * Each part borrows its items from the Player's Handbook (with their source) and puts everything back.
+ *  - Death Ward: the warded Target, at 50 HP, suffers Power Word Kill — it is not killed, the ward drops;
+ *  - Aid: the Ally at full HP gains the 5 current HP on top of its raised maximum.
+ * Concentration dropping at 0 HP is played by the `concentration-zero` scenario (Test arena).
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -58,7 +58,7 @@ export default {
       try { await fn(); } catch ( err ) { ctx.expect(false, `${name} : ${err.message}`); }
       await reset();
     };
-    /** Utilise, clique les dés laissés au système (dégâts, soin), attend la résolution. */
+    /** Uses, clicks the dice left to the system (damage, healing), waits for the resolution. */
     const cast = async (itemId, targets) => {
       const used = await ctx.use({ tokenId: caster.id, itemId, targetTokenIds: targets.map(t => t.id), consume: false });
       await pause(1500);

@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Issue #44 (§408) : monte (ou remet en état) l'« Arène des refus » d'un monde de test, par le connecteur — la scène du scénario
- * `regle-forcee` et des essais à la main des refus du contrôle de légalité (fenêtre, « Utiliser quand même », alerte au MJ). Les
- * pré-tirés niveau 1 du Manuel des joueurs, leurs objets gardés, en personnages joueurs dont `claude player` est propriétaire (le
- * côté joueur se vérifie au navigateur intégré) : Mage (Magicien), Clerc (masse et bouclier en main), Guerrier (épée à deux mains).
- * Un Mannequin hostile qui ne meurt pas (999 PV, CA 15) au contact du Mage ; une Cible lointaine à 155 ft.
+ * Issue #44 (§408): sets up (or restores) the "Refusals Arena" of a test world, through the connector — the scene of the scenario
+ * `regle-forcee` and hand trials of the legality check's refusals (window, "Use anyway", GM alert). The level 1
+ * Player's Handbook pregenerated characters, their items kept, as player characters owned by `claude player` (the
+ * player side is checked in the built-in browser): Mage (Wizard), Cleric (mace and shield in hand), Fighter (two-handed sword).
+ * A hostile Dummy that does not die (999 HP, AC 15) in melee with the Mage; a Distant Target at 155 ft.
  *
- *   node tools/arene-refus.mjs         crée ce qui manque, remet acteurs et tokens à leur état de référence
+ *   node tools/arene-refus.mjs         creates what is missing, resets actors and tokens to their reference state
  *
- * Idempotent : un acteur ou la scène se retrouve par son nom ; rien hors de son dossier n'est touché.
+ * Idempotent: an actor or the scene is found by its name; nothing outside its folder is touched.
  */
 import { connect } from "./lib/connector.mjs";
 import { ARENE_REFUS } from "./lib/stages.mjs";
@@ -16,7 +16,7 @@ import { ARENE_REFUS } from "./lib/stages.mjs";
 const MM = "Compendium.dnd-monster-manual.actors.";
 const PHB = "Compendium.dnd-players-handbook.actors.";
 const FOLDER = "DAS · Arène des refus";
-/** Le joueur de test de `dnd-6` : propriétaire des personnages, pour vérifier la fenêtre de son côté. */
+/** The test player of `dnd-6`: owner of the characters, to check the window on their side. */
 const PLAYER = "claude player";
 
 const HP = { attributes: { hp: { value: 300, max: 300 } } };
@@ -57,7 +57,7 @@ try {
     actorData.effects = [];
     const found = existing.find(a => (a.name === name) && (a.folderId === folderId));
     if ( found ) {
-      // Remis à l'état de référence : PV, aucun item ni effet laissé par un scénario interrompu.
+      // Reset to the reference state: HP, no item or effect left by an interrupted scenario.
       const actor = await mcp.call("get-actor", { actorId: found.id });
       const own = new Set(baseItems.map(i => `${i.type}|${i.name}`));
       for ( const i of actor.items ?? [] ) {
@@ -65,10 +65,10 @@ try {
         await mcp.call("remove-embedded-item", { documentType: "Actor", id: found.id, itemId: i._id ?? i.id });
       }
       for ( const e of actor.effects ?? [] ) await mcp.call("remove-embedded-effect", { documentType: "Actor", id: found.id, effectId: e._id ?? e.id });
-      // L'espèce d'un personnage, désignée par id (`details.race`) : réalignée sur l'item d'espèce de la fiche.
+      // A character's species, designated by id (`details.race`): realigned on the sheet's species item.
       const race = spec.keepItems ? (actor.items ?? []).find(i => i.type === "race") : null;
       const system = race ? merge(structuredClone(spec.system), { details: { race: race._id ?? race.id } }) : structuredClone(spec.system);
-      // Emplacements de sort du pré-tiré remis (un scénario peut les avoir vidés).
+      // The pregenerated character's spell slots reset (a scenario may have emptied them).
       if ( rest.system?.spells ) system.spells = rest.system.spells;
       await mcp.call("update-actor", { actorId: found.id, actorData: { system, ownership, prototypeToken: actorData.prototypeToken } });
       ids[name] = found.id;
@@ -81,14 +81,15 @@ try {
     }
   }
 
-  // `create-actor` / `update-actor` du connecteur ne posent pas `ownership` : le joueur de test en devient propriétaire par un script.
+  // The connector's `create-actor` / `update-actor` do not set `ownership`: the test player becomes owner through a script.
   if ( playerId ) {
     const names = Object.entries(ACTORS).filter(([, spec]) => spec.player).map(([name]) => name);
     await mcp.call("run-script", { code: `for ( const id of ${JSON.stringify(names.map(n => ids[n]))} ) await game.actors.get(id)?.update({ ownership: { ${JSON.stringify(playerId)}: 3 } }); return true;` })
       .catch(err => console.log(`propriété du joueur : ${err.message} (réglage « Outils de test » requis)`));
   }
 
-  // Emplacements de sort pleins : le pré-tiré stocke `value` à 0, le maximum est calculé par dnd5e (un scénario peut aussi les avoir vidés).
+  // Full spell slots: the pregenerated character stores `value` at 0, dnd5e computes the maximum (a scenario may have
+  // emptied them too).
   await mcp.call("run-script", { code: `for ( const id of ${JSON.stringify(Object.values(ids))} ) { const a = game.actors.get(id); if ( !a?.system?.spells ) continue;
     const u = {}; for ( const [k, s] of Object.entries(a.system.spells) ) if ( s?.max ) u[\`system.spells.\${k}.value\`] = s.max; if ( Object.keys(u).length ) await a.update(u); } return true;` })
     .catch(err => console.log(`emplacements : ${err.message} (réglage « Outils de test » requis)`));
@@ -107,7 +108,7 @@ try {
     console.log(`scène « ${ARENE_REFUS.name} » créée (${scene.id})`);
   }
   else await mcp.call("update-scene", { sceneId: scene.id, sceneData });
-  // Un seul niveau, sans plafond (le niveau créé par défaut plafonne à 20 ft : §83).
+  // A single level, without a ceiling (the level created by default caps at 20 ft: §83).
   const levels = await mcp.call("list-levels", { sceneId: scene.id }).catch(() => null);
   const level = (levels?.levels ?? levels ?? [])[0];
   if ( level?.id ) await mcp.call("update-level", { sceneId: scene.id, levelId: level.id, name: "Sol", bottom: 0, top: null }).catch(err => console.log(`niveau : ${err.message}`));

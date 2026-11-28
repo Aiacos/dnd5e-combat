@@ -11,7 +11,7 @@ const roll = (total, extra={}) => ({ total, isCritical: false, isFumble: false, 
 const types = commands => commands.map(c => c.type === "echo" ? `echo:${c.on}` : c.type);
 const FIRE = [{ type: "fire", value: 8, properties: [] }];
 
-/** Enchaîne des évènements et rend la résolution finale et toutes les commandes émises. */
+/** Chains events and returns the final resolution and all the emitted commands. */
 function play(first, ...events) {
   let { resolution, commands } = first;
   const all = [...commands];
@@ -25,8 +25,8 @@ function play(first, ...events) {
 
 const hp = (before, after, temp=[0, 0]) => ({ before: { value: before, temp: temp[0] }, after: { value: after, temp: temp[1] } });
 
-describe("schéma", () => {
-  it("écrit sa version, et ignore une résolution d'un autre schéma", () => {
+describe("schema", () => {
+  it("writes its version, and ignores a resolution of another schema", () => {
     const { resolution } = open({ ...base, plan: { attack: true }, targets: [T(1)] });
     expect(resolution.v).toBe(RESOLUTION_VERSION);
     expect(current(resolution)).toBe(resolution);
@@ -45,7 +45,7 @@ describe("attaque", () => {
     expect(wantsDamageRoll(resolution)).toBe(false);
   });
 
-  it("prend les cibles du jet, pas celles de l'utilisation", () => {
+  it("takes the roll's targets, not those of the use", () => {
     const { resolution } = play(open({ ...base, plan, targets: [T(1)] }),
       { type: "attackRolled", roll: roll(15), messageId: "Atk", targets: [T(2), T(3, { ac: 18 })] });
     expect(resolution.targets.map(t => [t.token, t.hit])).toEqual([["T2", true], ["T3", false]]);
@@ -53,28 +53,28 @@ describe("attaque", () => {
     expect(wantsDamageRoll(resolution)).toBe(true);
   });
 
-  it("se clôt en « raté » si personne n'est touché, et le dit sur le message d'attaque", () => {
+  it("closes as \"miss\" if nobody is hit, and says so on the attack message", () => {
     const { resolution, commands } = play(open({ ...base, plan, targets: [T(1)] }),
       { type: "attackRolled", roll: roll(5), messageId: "Atk", targets: [T(1)] });
     expect(resolution.step).toBe(STEPS.MISSED);
     expect(types(commands)).toEqual(["echo:attack"]);
   });
 
-  it("une cible sans défense à 5 ft subit un coup critique d'office", () => {
+  it("a defenseless target at 5 ft takes a Critical Hit automatically", () => {
     const { resolution } = play(open({ ...base, plan, targets: [] }),
       { type: "attackRolled", roll: roll(13), messageId: "Atk", targets: [T(1, { defenceless: true }), T(2)] });
     expect(resolution.targets.map(t => [t.critical, t.reason])).toEqual([[true, "autoCritical"], [false, "ac"]]);
     expect(isCriticalHit(resolution)).toBe(true);
   });
 
-  it("O9a (§354) : une cible qui ne subit pas de critique (Armure en adamantium) — un coup normal, même sans défense", () => {
+  it("O9a (§354): a target that takes no Critical Hit (Adamantine Armor) — a normal hit, even defenseless", () => {
     const { resolution } = play(open({ ...base, plan, targets: [] }),
       { type: "attackRolled", roll: roll(13), messageId: "Atk", targets: [T(1, { defenceless: true, noCrit: true })] });
     expect(resolution.targets[0]).toMatchObject({ hit: true, critical: false, uncritted: true });
     expect(isCriticalHit(resolution)).toBe(false);
   });
 
-  it("applique aux seules cibles touchées, puis ouvre la fenêtre « blessé » et nettoie", () => {
+  it("applies to the hit targets only, then opens the \"wounded\" window and cleans up", () => {
     const opened = play(open({ ...base, plan, targets: [] }),
       { type: "attackRolled", roll: roll(15), messageId: "Atk", targets: [T(1), T(2, { ac: 18 })] },
       { type: "damageRolled", messageId: "Dmg", damages: FIRE });
@@ -88,14 +88,14 @@ describe("attaque", () => {
     ]);
   });
 
-  it("porteur = message d'attaque (jet hors carte) : jugé dès l'ouverture", () => {
+  it("bearer = attack message (roll outside a card): judged on opening", () => {
     const { resolution } = open({ ...base, carrier: "Atk", origin: null, plan, targets: [],
       attack: { roll: roll(15), messageId: "Atk", targets: [T(1)] } });
     expect(resolution.step).toBe(STEPS.AWAITING_ROLLS);
     expect(resolution.attack.messageId).toBe("Atk");
   });
 
-  it("un effet au toucher (Contact glacial, Empoignade) ne va qu'à ceux qui sont touchés", () => {
+  it("an effect on hit (Chill Touch, Grapple) goes only to those who are hit", () => {
     const withEffect = { attack: true, damage: null, effects: [{ id: "E", activity: "Act", when: "always" }] };
     const { commands } = play(open({ ...base, plan: withEffect, targets: [] }),
       { type: "attackRolled", roll: roll(15), messageId: "Atk", targets: [T(1), T(2, { ac: 18 })] });
@@ -104,7 +104,7 @@ describe("attaque", () => {
     ] });
   });
 
-  it("M3 : la condition de taille voyage avec l'effet jusqu'à l'application (Morsure du Loup)", () => {
+  it("M3: the size condition travels with the effect until application (Wolf's Bite)", () => {
     const gate = JSON.stringify({ "target.sizeAtMost": "med" });
     const plan = { attack: true, damage: null, effects: [{ id: "P", activity: "Act", when: "always", if: gate }] };
     const { commands } = play(open({ ...base, plan, targets: [] }),
@@ -113,72 +113,72 @@ describe("attaque", () => {
   });
 });
 
-describe("fenêtre de réaction « touché »", () => {
+describe("\"hit\" reaction window", () => {
   const plan = { attack: true, damage: "author" };
   const attacked = () => play(open({ ...base, plan, targets: [] }),
     { type: "attackRolled", roll: roll(15), messageId: "Atk", targets: [T(1, { canReact: true }), T(2, { canReact: true, ac: 18 }), T(3)] });
 
-  it("s'écrit AVANT d'attendre : étape et demandes en cours sont dans la résolution", () => {
+  it("is written BEFORE waiting: step and pending requests are in the resolution", () => {
     const { resolution, commands } = attacked();
     expect(resolution.step).toBe(STEPS.AWAITING_REACTION);
-    expect(resolution.pending).toEqual([{ kind: "reaction", window: "isHit", token: "T1" }]);   // T2 n'est pas touché
+    expect(resolution.pending).toEqual([{ kind: "reaction", window: "isHit", token: "T1" }]);   // T2 is not hit
     expect(commands).toEqual([{ type: "askReactions", window: "isHit", tokens: ["T1"] }]);
     expect(wantsDamageRoll(resolution)).toBe(false);
   });
 
-  it("Bouclier : rejugé contre la nouvelle CA, le coup devient un raté", () => {
+  it("Shield: rejudged against the new AC, the hit becomes a miss", () => {
     const { resolution } = play(attacked(), { type: "reactionResolved", token: "T1", used: "Bouclier", ac: 17 });
     expect(resolution.targets[0]).toMatchObject({ hit: false, reaction: "Bouclier", ac: 17 });
     expect(resolution.pending).toEqual([]);
-    expect(resolution.step).toBe(STEPS.AWAITING_ROLLS);   // T3 reste touché
+    expect(resolution.step).toBe(STEPS.AWAITING_ROLLS);   // T3 stays hit
   });
 
-  it("un critique touche malgré le Bouclier", () => {
+  it("a Critical Hit hits despite the Shield", () => {
     const { resolution } = play(open({ ...base, plan, targets: [] }),
       { type: "attackRolled", roll: roll(25, { isCritical: true }), messageId: "Atk", targets: [T(1, { canReact: true })] },
       { type: "reactionResolved", token: "T1", used: "Bouclier", ac: 30 });
     expect(resolution.targets[0]).toMatchObject({ hit: true, critical: true });
   });
 
-  it("sans réaction, le verdict ne bouge pas", () => {
+  it("without a reaction, the verdict does not move", () => {
     const { resolution, commands } = play(attacked(), { type: "reactionResolved", token: "T1", used: null, ac: 12 });
     expect(resolution.targets[0].hit).toBe(true);
     expect(types(commands)).toEqual(["askReactions", "echo:attack"]);
   });
 
-  it("ignore une réponse qu'on n'attend pas", () => {
+  it("ignores an answer that is not expected", () => {
     const { resolution } = attacked();
     expect(advance(resolution, { type: "reactionResolved", token: "T3", used: "Bouclier", ac: 30 }).resolution).toBe(resolution);
   });
 });
 
-describe("répliques (Image miroir, §16.25)", () => {
+describe("duplicates (Mirror Image, §16.25)", () => {
   const plan = { attack: true, damage: "author" };
   const attacked = targets => play(open({ ...base, plan, targets: [] }),
     { type: "attackRolled", roll: roll(15), messageId: "Atk", targets });
 
-  it("une cible touchée qui a des répliques les fait jouer ; ratée ou sans répliques, rien", () => {
+  it("a hit target that has duplicates makes them play; missed or without duplicates, nothing", () => {
     const { resolution, commands } = attacked([T(1, { duplicates: 3 }), T(2, { duplicates: 3, ac: 18 }), T(3)]);
     expect(resolution.step).toBe(STEPS.AWAITING_REACTION);
     expect(resolution.pending).toEqual([{ kind: "duplicates", token: "T1" }]);
     expect(commands).toEqual([{ type: "rollDuplicates", tokens: ["T1"] }]);
   });
 
-  it("un 3 ou plus : une réplique prend le coup, la cible est ratée", () => {
+  it("a 3 or more: a duplicate takes the hit, the target is missed", () => {
     const { resolution } = play(attacked([T(1, { duplicates: 2 }), T(3)]), { type: "duplicatesRolled", token: "T1", dice: [1, 4] });
     expect(resolution.targets[0]).toMatchObject({ hit: false, critical: false, reason: "duplicate", duplicate: { dice: [1, 4], taken: true } });
     expect(affectedTargets(resolution).map(t => t.token)).toEqual(["T3"]);
     expect(resolution.step).toBe(STEPS.AWAITING_ROLLS);
   });
 
-  it("que des 1 et des 2 : le coup porte ; seule, la cible ratée clôt l'action", () => {
+  it("only 1s and 2s: the blow lands; alone, the missed target closes the action", () => {
     const kept = play(attacked([T(1, { duplicates: 3 })]), { type: "duplicatesRolled", token: "T1", dice: [1, 2, 2] });
     expect(kept.resolution.targets[0]).toMatchObject({ hit: true, duplicate: { taken: false } });
     const lost = play(attacked([T(1, { duplicates: 1 })]), { type: "duplicatesRolled", token: "T1", dice: [6] });
     expect(lost.resolution.step).toBe(STEPS.MISSED);
   });
 
-  it("Bouclier d'abord : un coup qu'il fait rater n'atteint pas les répliques", () => {
+  it("Shield first: a hit it makes miss does not reach the duplicates", () => {
     const shielded = play(attacked([T(1, { canReact: true, duplicates: 3 })]), { type: "reactionResolved", token: "T1", used: "Bouclier", ac: 17 });
     expect(shielded.resolution.step).toBe(STEPS.MISSED);
     expect(types(shielded.commands)).not.toContain("rollDuplicates");
@@ -186,37 +186,37 @@ describe("répliques (Image miroir, §16.25)", () => {
     expect(through.commands.at(-1)).toEqual({ type: "rollDuplicates", tokens: ["T1"] });
   });
 
-  it("ignore des dés qu'on n'attend pas", () => {
+  it("ignores dice that are not expected", () => {
     const { resolution } = attacked([T(1, { duplicates: 3 })]);
     expect(advance(resolution, { type: "duplicatesRolled", token: "T9", dice: [6] }).resolution).toBe(resolution);
     expect(advance(resolution, { type: "reactionResolved", token: "T1", used: "Bouclier", ac: 30 }).resolution).toBe(resolution);
   });
 });
 
-describe("projectiles répartis (Projectile magique, §16.27)", () => {
+describe("distributed projectiles (Magic Missile, §16.27)", () => {
   const plan = { attack: false, damage: "system", darts: 4 };
   const FORCE = [{ type: "force", value: 3, properties: [] }];
 
-  it("une seule cible reçoit tous les projectiles, sans question", () => {
+  it("a single target receives all the projectiles, without a question", () => {
     const { resolution, commands } = play(open({ ...base, plan, targets: [T(1)] }), { type: "damageRolled", messageId: "Dmg", damages: FORCE });
     expect(pendingAllocation(resolution)).toBe(false);
     expect(commands.at(-1).entries[0]).toMatchObject({ token: "T1", multiplier: 4 });
   });
 
-  it("plusieurs cibles : l'auteur répartit, chaque cible subit autant de fois les dégâts", () => {
+  it("several targets: the author distributes, each target takes the damage that many times", () => {
     const opened = open({ ...base, plan, targets: [T(1), T(2)] });
     expect(opened.commands).toEqual([{ type: "askAllocation", count: 4, targets: [{ token: "T1", name: "Cible 1" }, { token: "T2", name: "Cible 2" }] }]);
     const { commands } = play(opened, { type: "damageRolled", messageId: "Dmg", damages: FORCE }, { type: "allocated", counts: { T1: 3, T2: 1 } });
     expect(commands.at(-1).entries.map(e => [e.token, e.multiplier])).toEqual([["T1", 3], ["T2", 1]]);
   });
 
-  it("une répartition fausse est remise d'aplomb : un chacun, le reste au premier", () => {
+  it("a wrong distribution is straightened out: one each, the rest to the first", () => {
     expect(allocateDarts(4, ["A", "B"], { A: 5, B: 2 })).toEqual({ A: 3, B: 1 });
     expect(allocateDarts(3, ["A", "B"], { A: 0, B: 3 })).toEqual({ A: 0, B: 3 });
     expect(allocateDarts(2, ["A", "B", "C"], {})).toEqual({ A: 1, B: 1, C: 0 });
   });
 
-  it("n'applique rien tant que la répartition manque", () => {
+  it("applies nothing while the distribution is missing", () => {
     const { resolution, commands } = play(open({ ...base, plan, targets: [T(1), T(2)] }), { type: "damageRolled", messageId: "Dmg", damages: FORCE });
     expect(types(commands)).not.toContain("apply");
     expect(pendingAllocation(resolution)).toBe(true);
@@ -229,7 +229,7 @@ describe("sauvegarde", () => {
   const plan = { save, damage: "author", effects };
   const opened = () => open({ ...base, plan, targets: [T(1), T(2)] });
 
-  it("demande les sauvegardes dès l'ouverture, et signale à l'auteur de lancer ses dégâts", () => {
+  it("asks for the saves on opening, and tells the author to roll their damage", () => {
     const { resolution, commands } = opened();
     expect(resolution.step).toBe(STEPS.AWAITING_ROLLS);
     expect(commands).toEqual([{ type: "requestSaves", targets: [
@@ -238,38 +238,38 @@ describe("sauvegarde", () => {
     expect(wantsDamageRoll(resolution)).toBe(true);
   });
 
-  it("réussit à partir du DD ; le premier jet fait foi ; un inconnu est ignoré", () => {
+  it("succeeds from the DC; the first roll counts; an unknown is ignored", () => {
     let { resolution } = play(opened(), { type: "saveRolled", actor: "A1", total: 15, messageId: "s1" });
     expect(resolution.targets[0].save).toEqual({ total: 15, success: true, messageId: "s1" });
     expect(advance(resolution, { type: "saveRolled", actor: "A1", total: 2, messageId: "s2" }).resolution).toBe(resolution);
     expect(advance(resolution, { type: "saveRolled", actor: "A9", total: 2, messageId: "s3" }).resolution).toBe(resolution);
   });
 
-  it("§18.9 : Résistance légendaire — l'échec compte comme une réussite, le total reste celui du jet", () => {
+  it("§18.9: Legendary Resistance — the failure counts as a success, the total stays that of the roll", () => {
     const { commands, resolution } = play(opened(), { type: "damageRolled", messageId: "D", damages: FIRE },
       { type: "saveRolled", actor: "A1", total: 4, messageId: "s1", resisted: true }, { type: "saveRolled", actor: "A2", total: 3, messageId: "s2" });
     expect(resolution.targets[0].save).toEqual({ total: 4, success: true, messageId: "s1", resisted: true });
     expect(commands.at(-1).entries.map(e => e.multiplier)).toEqual([0.5, 1]);
   });
 
-  it("§487 : une réussite ouvre la fenêtre « réussit une sauvegarde contre », sur ce seul token, un échec non", () => {
+  it("§487: a success opens the \"succeeds on a saving throw against\" window, on that token only, a failure does not", () => {
     const ok = advance(opened().resolution, { type: "saveRolled", actor: "A1", total: 15, messageId: "s1" });
     expect(ok.commands).toEqual([{ type: "window", window: "savesAgainst", tokens: ["T1"] }]);
     const ko = advance(opened().resolution, { type: "saveRolled", actor: "A2", total: 14, messageId: "s2" });
     expect(ko.commands.filter(c => c.type === "window")).toEqual([]);
-    // Résistance légendaire : la créature réussit, la fenêtre s'ouvre aussi.
+    // Legendary Resistance: the creature succeeds, the window opens too.
     const lr = advance(opened().resolution, { type: "saveRolled", actor: "A2", total: 3, messageId: "s3", resisted: true });
     expect(lr.commands).toEqual([{ type: "window", window: "savesAgainst", tokens: ["T2"] }]);
   });
 
-  it("sert deux tokens du même acteur l'un après l'autre", () => {
+  it("serves two tokens of the same actor one after the other", () => {
     const twins = [T(1), { ...T(2), actor: "A1" }];
     const { resolution } = play(open({ ...base, plan, targets: twins }),
       { type: "saveRolled", actor: "A1", total: 20, messageId: "s1" }, { type: "saveRolled", actor: "A1", total: 3, messageId: "s2" });
     expect(resolution.targets.map(t => t.save.success)).toEqual([true, false]);
   });
 
-  it("attend toutes les sauvegardes ET le jet de dégâts, dans n'importe quel ordre, et n'applique qu'une fois", () => {
+  it("waits for all the saves AND the damage roll, in any order, and applies only once", () => {
     const a = play(opened(), { type: "damageRolled", messageId: "D", damages: FIRE }, { type: "saveRolled", actor: "A1", total: 20, messageId: "s1" });
     expect(types(a.commands)).toEqual(["requestSaves", "window"]);
     const b = play(a, { type: "saveRolled", actor: "A2", total: 3, messageId: "s2" });
@@ -278,7 +278,7 @@ describe("sauvegarde", () => {
     expect(advance(b.resolution, { type: "damageRolled", messageId: "D2", damages: FIRE }).resolution).toBe(b.resolution);
   });
 
-  it("moitié des dégâts sur réussite, tout sur échec ; l'effet « failedSave » épargne qui réussit", () => {
+  it("half damage on a success, all on a failure; the \"failedSave\" effect spares whoever succeeds", () => {
     const { commands } = play(opened(), { type: "damageRolled", messageId: "D", damages: FIRE },
       { type: "saveRolled", actor: "A1", total: 20, messageId: "s1" }, { type: "saveRolled", actor: "A2", total: 3, messageId: "s2" });
     expect(commands.at(-1).entries).toEqual([
@@ -287,7 +287,7 @@ describe("sauvegarde", () => {
     ]);
   });
 
-  it("§19 : un effet « saved » ne va qu'à qui réussit (Rayon affaiblissant) ; une étape à onSave sait si la cible a réussi", () => {
+  it("§19: a \"saved\" effect goes only to whoever succeeds (Ray of Enfeeblement); an onSave step knows who succeeded", () => {
     const withSaved = { save, damage: null, effects: [{ id: "EF", activity: "Act", when: "failedSave" }, { id: "ES", activity: "Act", when: "saved" }],
       steps: [{ when: "always", type: "damage", formula: "2d4", damageType: "necrotic", onSave: "half" }, { when: "failedSave", type: "status", status: "prone" }] };
     const { commands } = play(open({ ...base, plan: withSaved, targets: [T(1), T(2)] }),
@@ -308,7 +308,7 @@ describe("sauvegarde", () => {
     }
   });
 
-  it("échec d'office : aucun jet demandé, dégâts entiers ; un jet arrivé ensuite est ignoré", () => {
+  it("automatic failure: no roll requested, full damage; a roll arriving afterwards is ignored", () => {
     const { resolution, commands } = open({ ...base, plan, targets: [T(1, { autoFail: "paralyzed" }), T(2)] });
     expect(resolution.targets[0].save).toEqual({ total: null, success: false, messageId: null, auto: "paralyzed" });
     expect(commands[0].targets.map(t => t.token)).toEqual(["T2"]);
@@ -316,7 +316,7 @@ describe("sauvegarde", () => {
     expect(advance(resolution, { type: "saveRolled", actor: "A1", total: 20, messageId: "s" }).resolution).toBe(resolution);
   });
 
-  it("cible non affectée (§16.8 : pas un humanoïde) : ni sauvegarde, ni effet ; seule elle, l'action est close", () => {
+  it("unaffected target (§16.8: not a Humanoid): no save, no effect; alone, the action is closed", () => {
     const off = { reason: "type", detail: "humanoid" };
     const { resolution, commands } = open({ ...base, plan: { save, effects }, targets: [T(1, { unaffected: off }), T(2)] });
     expect(resolution.targets[0].unaffected).toEqual(off);
@@ -329,7 +329,7 @@ describe("sauvegarde", () => {
     expect(alone.commands).toEqual([]);
   });
 
-  it("Esquive instinctive (§16.11) : la réaction divise les dégâts de l'attaque par deux, la cible reste touchée", () => {
+  it("Uncanny Dodge (§16.11): the reaction halves the attack's damage, the target stays hit", () => {
     const plan = { attack: true, damage: "author" };
     let { resolution, commands } = play(open({ ...base, plan, targets: [] }),
       { type: "attackRolled", roll: roll(25), messageId: "a", targets: [T(1, { canReact: true }), T(2)] });
@@ -341,7 +341,7 @@ describe("sauvegarde", () => {
     expect(entries.map(e => e.multiplier)).toEqual([0.5, 1]);
   });
 
-  it("Sentinelle au seuil de la mort (§19.9) : moitié des dégâts, et le coup critique n'est plus qu'un coup", () => {
+  it("Sentinel at Death's Door (§19.9): half damage, and the Critical Hit is no more than a hit", () => {
     const plan = { attack: true, damage: "author" };
     let { resolution } = play(open({ ...base, plan, targets: [] }),
       { type: "attackRolled", roll: roll(25, { isCritical: true }), messageId: "a", targets: [T(1, { canReact: true })] });
@@ -351,7 +351,7 @@ describe("sauvegarde", () => {
     expect(isCriticalHit(resolution)).toBe(false);
   });
 
-  it("une réaction qui ne change rien au critique d'office (Paralysée à 5 ft) le laisse critique", () => {
+  it("a reaction that changes nothing about the automatic Critical Hit (Paralyzed at 5 ft) leaves it a Critical Hit", () => {
     const plan = { attack: true, damage: "author" };
     let { resolution } = play(open({ ...base, plan, targets: [] }),
       { type: "attackRolled", roll: roll(25), messageId: "a", targets: [T(1, { canReact: true, defenceless: true })] });
@@ -360,7 +360,7 @@ describe("sauvegarde", () => {
     expect(resolution.targets[0]).toMatchObject({ hit: true, critical: true, halved: true });
   });
 
-  it("riposte (§16.9) : les dégâts subis par l'attaquant sont journalisés, et défaits avec l'action", () => {
+  it("riposte (§16.9): the damage taken by the attacker is logged, and undone with the action", () => {
     let { resolution } = play(open({ ...base, plan: { attack: true, damage: "author" }, targets: [] }),
       { type: "attackRolled", roll: roll(25), messageId: "a", targets: [T(1)] },
       { type: "damageRolled", messageId: "d", damages: FIRE });
@@ -374,7 +374,7 @@ describe("sauvegarde", () => {
     expect(resolution.targets[0].damage.applied).toBe(8);
   });
 
-  it("attaque sur une cible non affectée : le jet a lieu, mais rien ne l'atteint", () => {
+  it("attack on an unaffected target: the roll happens, but nothing reaches it", () => {
     const { resolution } = play(open({ ...base, plan: { attack: true, damage: "author" }, targets: [] }),
       { type: "attackRolled", roll: roll(25), messageId: "a", targets: [T(1, { unaffected: { reason: "immune", detail: "charmed" } })] });
     expect(resolution.targets[0].hit).toBe(true);
@@ -382,14 +382,14 @@ describe("sauvegarde", () => {
     expect(resolution.step).toBe(STEPS.MISSED);
   });
 
-  it("sans dégâts et tout le monde en échec d'office : appliqué dès l'ouverture", () => {
+  it("without damage and everyone automatically failing: applied on opening", () => {
     const { commands } = open({ ...base, plan: { save, effects }, targets: [T(1, { autoFail: "stunned" })] });
     expect(types(commands)).toEqual(["apply"]);
     expect(commands[0].entries[0].multiplier).toBe(0);
   });
 });
 
-describe("attaque qui impose une sauvegarde (morsure empoisonnée)", () => {
+describe("attack that imposes a save (poisoned bite)", () => {
   const plan = {
     attack: true, damage: "author",
     save: { ability: "con", dc: 13, onSave: "none", activity: "Poison", chained: true },
@@ -398,13 +398,13 @@ describe("attaque qui impose une sauvegarde (morsure empoisonnée)", () => {
   const bitten = () => play(open({ ...base, plan, targets: [] }),
     { type: "attackRolled", roll: roll(15), messageId: "Atk", targets: [T(1), T(2), T(3, { ac: 18 })] });
 
-  it("ne demande la sauvegarde qu'à ceux qui sont touchés, après le verdict", () => {
+  it("asks for the save only from those who are hit, after the verdict", () => {
     const { commands } = bitten();
     expect(types(commands)).toEqual(["echo:attack", "requestSaves"]);
     expect(commands[1].targets.map(t => t.token)).toEqual(["T1", "T2"]);
   });
 
-  it("la sauvegarde réussie évite le poison, pas les dégâts de la morsure", () => {
+  it("the successful save avoids the poison, not the bite's damage", () => {
     const { commands } = play(bitten(), { type: "damageRolled", messageId: "D", damages: FIRE },
       { type: "saveRolled", actor: "A1", total: 18, messageId: "s1" }, { type: "saveRolled", actor: "A2", total: 4, messageId: "s2" });
     expect(commands.at(-1).entries).toEqual([
@@ -413,22 +413,22 @@ describe("attaque qui impose une sauvegarde (morsure empoisonnée)", () => {
     ]);
   });
 
-  it("la cible ratée ne lance rien", () => {
+  it("the missed target rolls nothing", () => {
     const { resolution } = bitten();
     expect(advance(resolution, { type: "saveRolled", actor: "A3", total: 1, messageId: "s" }).resolution).toBe(resolution);
     expect(affectedTargets(resolution).map(t => t.token)).toEqual(["T1", "T2"]);
   });
 });
 
-describe("dégâts, soins et utilitaires sans jet pour toucher", () => {
-  it("activité « damage » : le système lance, l'auteur n'a rien à faire, tout le monde encaisse", () => {
+describe("damage, healing and utilities with no attack roll", () => {
+  it("\"damage\" activity: the system rolls, the author has nothing to do, everyone takes it", () => {
     const { resolution, commands } = play(open({ ...base, plan: { damage: "system" }, targets: [T(1)] }),
       { type: "damageRolled", messageId: "D", damages: FIRE });
     expect(wantsDamageRoll(resolution)).toBe(false);
     expect(commands.at(-1).entries).toEqual([{ token: "T1", actor: "A1", multiplier: 1, effects: [], steps: [] }]);
   });
 
-  it("soin : des PV rendus s'écrivent comme une perte négative, et n'ouvrent pas la fenêtre « blessé »", () => {
+  it("healing: HP restored are written as a negative loss, and do not open the \"wounded\" window", () => {
     const healed = play(open({ ...base, plan: { damage: "system", heal: true }, targets: [T(1)] }),
       { type: "damageRolled", messageId: "D", damages: [{ type: "healing", value: 7, properties: [] }] });
     const { resolution, commands } = advance(healed.resolution, { type: "applied", entries: [{ token: "T1", actor: "A1", ...hp(5, 12), effects: [] }] });
@@ -436,7 +436,7 @@ describe("dégâts, soins et utilitaires sans jet pour toucher", () => {
     expect(types(commands)).toEqual(["echo:damage", "cleanup"]);
   });
 
-  it("Bénédiction : des effets seuls sont posés dès l'ouverture", () => {
+  it("Bless: effects alone are placed on opening", () => {
     const { commands } = open({ ...base, plan: { effects: [{ id: "Beni", activity: "Act", when: "always" }] }, targets: [T(1), T(2)] });
     expect(types(commands)).toEqual(["apply"]);
     expect(commands[0].entries.map(e => e.effects)).toEqual([[{ id: "Beni", activity: "Act" }], [{ id: "Beni", activity: "Act" }]]);
@@ -453,7 +453,7 @@ describe("journal et annulation", () => {
       { token: "T2", actor: "A2", ...hp(20, 12), effects: ["Actor.A2.ActiveEffect.x"] }
     ] });
 
-  it("consigne PV perdus (temporaires compris) et effets créés, puis sait tout défaire, du plus récent au plus ancien", () => {
+  it("records HP lost (temporary included) and effects created, then can undo everything, from most recent to oldest", () => {
     const { resolution } = done();
     expect(resolution.targets.map(t => t.damage.applied)).toEqual([4, 8]);
     expect(undoPlan(resolution)).toEqual({
@@ -462,13 +462,13 @@ describe("journal et annulation", () => {
     });
   });
 
-  it("une cible sans dégâts appliqués n'a pas d'entrée de PV au journal", () => {
+  it("a target with no damage applied has no HP entry in the log", () => {
     const { resolution } = play(open({ ...base, plan: { effects: [{ id: "E", activity: "Act", when: "always" }] }, targets: [T(1)] }),
       { type: "applied", entries: [{ token: "T1", actor: "A1", before: null, after: null, effects: ["fx"] }] });
     expect(resolution.log).toEqual([{ at: "applyEffect", token: "T1", actor: "A1", effect: "fx" }]);
   });
 
-  it("n'accepte plus rien une fois close ; s'annule une fois, et le redit sur le message de dégâts", () => {
+  it("accepts nothing more once closed; is cancelled once, and says so again on the damage message", () => {
     const { resolution } = done();
     expect(advance(resolution, { type: "saveRolled", actor: "A1", total: 1, messageId: "z" }).resolution).toBe(resolution);
     const { resolution: cancelled, commands } = advance(resolution, { type: "undone" });
@@ -477,7 +477,7 @@ describe("journal et annulation", () => {
     expect(advance(cancelled, { type: "undone" }).resolution).toBe(cancelled);
   });
 
-  it("ne modifie jamais la résolution d'origine", () => {
+  it("never modifies the original resolution", () => {
     const { resolution } = open({ ...base, plan: { save, damage: "author" }, targets: [T(1)] });
     const frozen = JSON.stringify(resolution);
     advance(resolution, { type: "saveRolled", actor: "A1", total: 20, messageId: "s" });
@@ -485,13 +485,13 @@ describe("journal et annulation", () => {
     expect(JSON.stringify(resolution)).toBe(frozen);
   });
 
-  it("un évènement inconnu ne change rien", () => {
+  it("an unknown event changes nothing", () => {
     const { resolution } = open({ ...base, plan: { attack: true }, targets: [] });
     expect(advance(resolution, { type: "nimporte" }).resolution).toBe(resolution);
   });
 });
 
-describe("choix d'effet (effets exclusifs, Maléfice)", () => {
+describe("effect choice (exclusive effects, Hex)", () => {
   const options = [{ id: "Str", label: "Force" }, { id: "Dex", label: "Dextérité" }, { id: "Con", label: "Constitution" }];
   const effects = [
     { id: "Str", activity: "Act", when: "always" }, { id: "Dex", activity: "Act", when: "always" },
@@ -500,7 +500,7 @@ describe("choix d'effet (effets exclusifs, Maléfice)", () => {
   const plan = { effects, choice: { prompt: null, options } };
   const cast = () => open({ ...base, plan, targets: [T(1)] });
 
-  it("demande le choix à l'auteur avant d'appliquer, et l'écrit en attente", () => {
+  it("asks the author for the choice before applying, and writes it as pending", () => {
     const { resolution, commands } = cast();
     expect(resolution.step).toBe(STEPS.AWAITING_ROLLS);
     expect(resolution.choice).toBe(null);
@@ -508,7 +508,7 @@ describe("choix d'effet (effets exclusifs, Maléfice)", () => {
     expect(commands).toEqual([{ type: "askChoice", prompt: null, options }]);
   });
 
-  it("applique le seul effet choisi, plus ceux qui ne sont pas au choix", () => {
+  it("applies only the chosen effect, plus those that are not up for choice", () => {
     const { resolution, commands } = play(cast(), { type: "choiceMade", id: "Dex" });
     expect(resolution.choice).toBe("Dex");
     expect(resolution.pending).toEqual([]);
@@ -518,24 +518,24 @@ describe("choix d'effet (effets exclusifs, Maléfice)", () => {
     ], steps: [] }]);
   });
 
-  it("choix fait d'avance (menu « Lutte ») : aucune question, l'effet choisi s'applique", () => {
+  it("choice made in advance (\"Grapple\" menu): no question, the chosen effect applies", () => {
     const { resolution, commands } = open({ ...base, plan, targets: [T(1)], choice: "Con" });
     expect(resolution.choice).toBe("Con");
     expect(types(commands)).toEqual(["apply"]);
     expect(commands.at(-1).entries[0].effects).toEqual([{ id: "Con", activity: "Act" }, { id: "Aut", activity: "Act" }]);
   });
 
-  it("choix d'avance hors des options : ignoré, la question est posée", () => {
+  it("advance choice outside the options: ignored, the question is asked", () => {
     const { resolution, commands } = open({ ...base, plan, targets: [T(1)], choice: "Cha" });
     expect(resolution.choice).toBe(null);
     expect(types(commands)).toEqual(["askChoice"]);
   });
 
-  it("§401 : avec une sauvegarde, le choix par cible attend la dernière et ne nomme que les cibles qui ont raté", () => {
+  it("§401: with a save, the per-target choice waits for the last one and names only the targets that failed", () => {
     const failEffects = effects.map(e => ({ ...e, when: "fail" }));
     const per = { effects: failEffects, save: { ability: "cha", dc: 13, onSave: "none" }, choice: { prompt: null, options, perTarget: true } };
     const opened = open({ ...base, plan: per, targets: [T(1), T(2)] });
-    expect(types(opened.commands)).not.toContain("askChoice");   // pas en même temps que les fenêtres de sauvegarde
+    expect(types(opened.commands)).not.toContain("askChoice");   // not at the same time as the save windows
     let step = advance(opened.resolution, { type: "saveRolled", actor: "A1", total: 5, messageId: "s1" });
     expect(types(step.commands)).not.toContain("askChoice");
     step = advance(step.resolution, { type: "saveRolled", actor: "A2", total: 20, messageId: "s2" });
@@ -545,40 +545,40 @@ describe("choix d'effet (effets exclusifs, Maléfice)", () => {
     expect(byToken).toEqual({ T1: ["Dex", "Aut"], T2: [] });
   });
 
-  it("§401 : toutes les cibles réussissent — aucune question, rien n'est posé", () => {
+  it("§401: all the targets succeed — no question, nothing is asked", () => {
     const per = { effects: effects.map(e => ({ ...e, when: "fail" })), save: { ability: "cha", dc: 13, onSave: "none" }, choice: { prompt: null, options, perTarget: true } };
     const opened = open({ ...base, plan: per, targets: [T(1)] });
     const step = advance(opened.resolution, { type: "saveRolled", actor: "A1", total: 20, messageId: "s1" });
     expect(types(step.commands)).toEqual(["window", "apply"]);
   });
 
-  it("§401 : un choix par cible — la question nomme chaque cible, chacune reçoit le sien", () => {
+  it("§401: one choice per target — the question names each target, each receives its own", () => {
     const per = { effects, choice: { prompt: null, options, perTarget: true } };
     const opened = open({ ...base, plan: per, targets: [T(1), T(2)] });
     expect(opened.commands).toEqual([{ type: "askChoice", prompt: null, options, perTarget: [{ token: "T1", name: "Cible 1" }, { token: "T2", name: "Cible 2" }] }]);
     const { resolution, commands } = play(opened, { type: "choiceMade", choices: { T1: "Str", T2: "Cha" } });
-    expect(resolution.choice).toEqual({ T1: "Str", T2: "Str" });   // T2 : hors des options → la première
+    expect(resolution.choice).toEqual({ T1: "Str", T2: "Str" });   // T2: outside the options → the first
     const byToken = Object.fromEntries(commands.at(-1).entries.map(e => [e.token, e.effects.map(x => x.id)]));
     expect(byToken).toEqual({ T1: ["Str", "Aut"], T2: ["Str", "Aut"] });
     const other = play(open({ ...base, plan: per, targets: [T(1), T(2)] }), { type: "choiceMade", choices: { T1: "Dex", T2: "Con" } });
     expect(Object.fromEntries(other.commands.at(-1).entries.map(e => [e.token, e.effects[0].id]))).toEqual({ T1: "Dex", T2: "Con" });
   });
 
-  it("ignore un id hors des options, et une réponse qu'on n'attend pas", () => {
+  it("ignores an id outside the options, and an answer that is not expected", () => {
     const { resolution } = cast();
     expect(advance(resolution, { type: "choiceMade", id: "Cha" }).resolution).toBe(resolution);
     const { resolution: chosen } = play(cast(), { type: "choiceMade", id: "Str" });
     expect(advance(chosen, { type: "choiceMade", id: "Dex" }).resolution).toBe(chosen);
   });
 
-  it("sans `choice` dans le plan, tous les effets s'appliquent comme avant", () => {
+  it("without `choice` in the plan, all the effects apply as before", () => {
     const { resolution, commands } = open({ ...base, plan: { effects }, targets: [T(1)] });
     expect(resolution.plan.choice).toBe(null);
     expect(types(commands)).toEqual(["apply"]);
     expect(commands[0].entries[0].effects).toHaveLength(4);
   });
 
-  it("avec une attaque : le choix n'est demandé qu'une fois le verdict rendu, et seulement si quelqu'un est touché", () => {
+  it("with an attack: the choice is asked only once the verdict is given, and only if someone is hit", () => {
     const attackPlan = { attack: true, effects, choice: { prompt: "Laquelle ?", options } };
     const missed = play(open({ ...base, plan: attackPlan, targets: [T(1)] }), { type: "attackRolled", roll: roll(5), messageId: "R", targets: [T(1)] });
     expect(missed.resolution.step).toBe(STEPS.MISSED);
@@ -589,11 +589,11 @@ describe("choix d'effet (effets exclusifs, Maléfice)", () => {
   });
 });
 
-describe("étapes d'issue du plan (SPEC §16 : move, status)", () => {
+describe("outcome steps of the plan (SPEC §16: move, status)", () => {
   const push = { when: "failedSave", type: "move", mode: "push", distance: 10, units: "ft" };
   const pull = { when: "always", type: "move", mode: "pull", distance: 10, units: "ft", if: { "target.sizeAtMost": "lg" } };
 
-  it("une sauvegarde : l'étape « failedSave » ne va qu'à ceux qui ont raté, sans son « when »", () => {
+  it("a save: the \"failedSave\" step goes only to those who failed, without its \"when\"", () => {
     const first = open({ ...base, plan: { save: { ability: "con", dc: 13, onSave: "half" }, damage: "author", steps: [push] }, targets: [T(1), T(2)] });
     const { resolution, commands } = play(first,
       { type: "saveRolled", actor: "A1", total: 5, messageId: "s1" },
@@ -605,7 +605,7 @@ describe("étapes d'issue du plan (SPEC §16 : move, status)", () => {
     expect(resolution.plan.steps).toEqual([push]);
   });
 
-  it("une attaque : l'étape « always » va à chaque cible touchée, avec sa condition", () => {
+  it("an attack: the \"always\" step goes to each hit target, with its condition", () => {
     const first = open({ ...base, plan: { attack: true, damage: "author", steps: [pull] }, targets: [T(1), T(2)] });
     const { commands } = play(first,
       { type: "attackRolled", roll: roll(15), messageId: "a", targets: [T(1, { ac: 10 }), T(2, { ac: 20 })] },
@@ -615,17 +615,17 @@ describe("étapes d'issue du plan (SPEC §16 : move, status)", () => {
     expect(apply.entries[0].steps).toEqual([{ type: "move", mode: "pull", distance: 10, units: "ft", if: { "target.sizeAtMost": "lg" } }]);
   });
 
-  it("sans étapes : une liste vide, jamais absente", () => {
+  it("without steps: an empty list, never absent", () => {
     const { resolution } = open({ ...base, plan: { attack: true }, targets: [T(1)] });
     expect(resolution.plan.steps).toEqual([]);
   });
 });
 
-describe("§19.6 : écart de sauvegarde (« si elle rate le jet de 5 ou plus »)", () => {
+describe("§19.6: save margin (\"if it fails the save by 5 or more\")", () => {
   const save = { ability: "con", dc: 19, onSave: "none", activity: "Act", chained: false };
   const plan = { save, damage: null, effects: [{ id: "EF", activity: "Act", when: "failedSave", margin: { min: 5 } }, { id: "EH", activity: "Act", when: "failedSave", margin: { max: 4 } }],
     steps: [{ when: "failedSave", type: "status", status: "prone", margin: { min: 5 } }] };
-  it("raté de 5 : l'effet à 5 et l'étape ; raté de 2 : seulement l'effet à 4 au plus ; réussi : rien", () => {
+  it("missed by 5: the effect at 5 and the step; missed by 2: only the effect at 4 at most; succeeded: nothing", () => {
     const { commands } = play(open({ ...base, plan, targets: [T(1), T(2), T(3)] }),
       { type: "saveRolled", actor: "A1", total: 14, messageId: "s1" }, { type: "saveRolled", actor: "A2", total: 17, messageId: "s2" },
       { type: "saveRolled", actor: "A3", total: 20, messageId: "s3" });
@@ -638,9 +638,9 @@ describe("§19.6 : écart de sauvegarde (« si elle rate le jet de 5 ou plus »)
   });
 });
 
-describe("critique en dépassant la CA (§207)", () => {
+describe("Critical Hit by exceeding the AC (§207)", () => {
   const plan = { attack: true, damage: "author" };
-  it("22 contre CA 12 avec un écart de 10 : critique, par cible ; sans écart, un simple coup", () => {
+  it("22 against AC 12 with a margin of 10: Critical Hit, per target; without margin, a simple hit", () => {
     const { resolution } = play(open({ ...base, plan, targets: [] }),
       { type: "attackRolled", roll: roll(22), messageId: "Atk", targets: [T(1), T(2, { ac: 15 })], critMargin: 10 });
     expect(resolution.targets.map(t => [t.hit, t.critical, t.reason])).toEqual([[true, true, "beatsAc"], [true, false, "ac"]]);
@@ -649,7 +649,7 @@ describe("critique en dépassant la CA (§207)", () => {
       { type: "attackRolled", roll: roll(22), messageId: "Atk", targets: [T(1)] }).resolution;
     expect(plain.targets[0]).toMatchObject({ hit: true, critical: false, reason: "ac" });
   });
-  it("un Bouclier qui fait remonter la CA annule l'écart, le coup touche encore", () => {
+  it("a Shield that raises the AC cancels the margin, the blow still hits", () => {
     const { resolution } = play(open({ ...base, plan, targets: [] }),
       { type: "attackRolled", roll: roll(22), messageId: "Atk", targets: [T(1, { canReact: true })], critMargin: 10 },
       { type: "reactionResolved", token: "T1", used: "Bouclier", ac: 17 });
@@ -657,8 +657,8 @@ describe("critique en dépassant la CA (§207)", () => {
   });
 });
 
-describe("§402 : réussite d'office par type", () => {
-  it("une cible marquée autoSucceed est consignée réussie sans jet", async () => {
+describe("§402: automatic success by type", () => {
+  it("a target marked autoSucceed is recorded as succeeded without a roll", async () => {
     const { open, STEPS } = await import("../module/scripts/core/action.mjs");
     const r = open({ id: "r", activity: "a", source: "s", origin: "m", plan: { save: { ability: "con", dc: 15 }, effects: [] },
       targets: [{ token: "t1", actor: "a1", name: "Golem", autoSucceed: "type:construct" }, { token: "t2", actor: "a2", name: "Orc" }] });
@@ -669,8 +669,8 @@ describe("§402 : réussite d'office par type", () => {
   });
 });
 
-describe("évènement inconnu", () => {
-  it("un type hérité de Object.prototype n'est pas une transition : la résolution revient telle quelle", () => {
+describe("unknown event", () => {
+  it("a type inherited from Object.prototype is not a transition: the resolution comes back as is", () => {
     const { resolution } = open({ ...base, plan: { attack: true }, targets: [T(1)] });
     for ( const type of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__", "inconnu", undefined] ) {
       expect(advance(resolution, { type })).toEqual({ resolution, commands: [] });

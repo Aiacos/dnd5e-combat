@@ -1,14 +1,14 @@
 /**
- * Chance de toucher (SPEC §15.3, façon BG3) : la probabilité qu'un jet d'attaque touche une CA,
- * avec les règles du d20 de dnd5e — 1 naturel rate toujours, un naturel au seuil de critique ou
- * au-dessus touche toujours (et est critique), avantage et désavantage s'annulent. Le bonus peut
- * porter des dés (Bénédiction : +1d4), dont on calcule la loi exacte. Fonctions pures, aucune
- * dépendance à Foundry.
+ * Hit chance (SPEC §15.3, BG3 style): the probability that an attack roll hits an AC,
+ * with dnd5e's d20 rules — a natural 1 always misses, a natural roll at or above the critical threshold
+ * always hits (and is a Critical Hit), Advantage and Disadvantage cancel out. The bonus may
+ * carry dice (Bless: +1d4), whose exact distribution is computed. Pure functions, no
+ * dependency on Foundry.
  */
 
 /**
- * Loi du d20 naturel selon le mode : probabilité de chaque face 1..20 (indice 0 inutilisé).
- * @param {1|0|-1} mode  1 : avantage (le plus haut de deux), -1 : désavantage (le plus bas).
+ * Distribution of the natural d20 by mode: probability of each face 1..20 (index 0 unused).
+ * @param {1|0|-1} mode  1: Advantage (the higher of two), -1: Disadvantage (the lower).
  * @returns {number[]}
  */
 export function d20Law(mode=0) {
@@ -22,7 +22,7 @@ export function d20Law(mode=0) {
 }
 
 /**
- * Loi de la somme d'un bonus fixe et de dés : Map valeur → probabilité.
+ * Distribution of the sum of a fixed bonus and dice: Map value → probability.
  * @param {number} flat
  * @param {Array<{number: number, faces: number, sign?: 1|-1}>} dice
  * @returns {Map<number, number>}
@@ -45,16 +45,16 @@ export function bonusLaw(flat=0, dice=[]) {
 }
 
 /**
- * Chance de toucher une CA.
+ * Chance to hit an AC.
  * @param {object} attack
- * @param {number|null} attack.ac                 CA à battre (abri compris) ; null : intouchable (abri total).
- * @param {number} [attack.bonus]                 Partie fixe du bonus d'attaque.
- * @param {Array<{number: number, faces: number, sign?: 1|-1}>} [attack.dice]  Dés du bonus.
- * @param {1|0|-1} [attack.mode]                  Avantage, jet normal, désavantage.
- * @param {number} [attack.critical]              Seuil de critique (20 par défaut).
- * @param {boolean} [attack.autoCritical]         Tout coup qui touche est critique (Paralysé, Inconscient au contact).
- * @param {number} [attack.margin]                §207 : un coup dont le total atteint CA + `margin` est critique (0 : non).
- * @returns {{hit: number, critical: number}}     Probabilités entre 0 et 1 ; `critical` est comprise dans `hit`.
+ * @param {number|null} attack.ac                 AC to beat (Cover included); null: untouchable (Total Cover).
+ * @param {number} [attack.bonus]                 Fixed part of the attack bonus.
+ * @param {Array<{number: number, faces: number, sign?: 1|-1}>} [attack.dice]  Dice of the bonus.
+ * @param {1|0|-1} [attack.mode]                  Advantage, normal roll, Disadvantage.
+ * @param {number} [attack.critical]              Critical threshold (20 by default).
+ * @param {boolean} [attack.autoCritical]         Every hit is a Critical Hit (Paralyzed, Unconscious in melee).
+ * @param {number} [attack.margin]                §207: a hit whose total reaches AC + `margin` is a Critical Hit (0: no).
+ * @returns {{hit: number, critical: number}}     Probabilities between 0 and 1; `critical` is included in `hit`.
  */
 export function hitChance({ ac, bonus=0, dice=[], mode=0, critical=20, autoCritical=false, margin=0 }) {
   if ( (ac === null) || (ac === undefined) ) return { hit: 0, critical: 0 };
@@ -66,7 +66,7 @@ export function hitChance({ ac, bonus=0, dice=[], mode=0, critical=20, autoCriti
   for ( let n = 1; n <= 20; n++ ) {
     const p = d20[n];
     if ( n === 1 ) continue;
-    // Le 20 naturel touche toujours ; un seuil abaissé (19) n'est un critique que si le total atteint la CA (core/attack.mjs).
+    // A natural 20 always hits; a lowered threshold (19) is a Critical Hit only if the total reaches the AC (core/attack.mjs).
     if ( n === 20 ) { hit += p; crit += p; continue; }
     for ( const [value, q] of extra ) {
       if ( n + value < ac ) continue;
@@ -81,17 +81,17 @@ export function hitChance({ ac, bonus=0, dice=[], mode=0, critical=20, autoCriti
 const clamp01 = x => Math.min(1, Math.max(0, x));
 
 /**
- * Chance qu'une sauvegarde échoue (§15.3, dette réglée le 2026-09-27) : d20 + bonus < DD. Pas de réussite ni d'échec
- * automatique au dé naturel pour une sauvegarde (règles 2024 : seul le jet d'attaque a son 1 et son 20) ; un état peut
- * la faire échouer d'office (Paralysé en Force ou Dextérité), une immunité la rendre sans objet.
+ * Chance that a saving throw fails (§15.3, debt settled on 2026-09-27): d20 + bonus < DC. No automatic success or failure
+ * on the natural die for a saving throw (2024 rules: only the attack roll has its 1 and its 20); a condition can
+ * make it fail automatically (Paralyzed on Strength or Dexterity), an Immunity make it moot.
  * @param {object} save
  * @param {number} save.dc
- * @param {number} [save.bonus]                   Partie fixe du bonus de sauvegarde.
- * @param {Array<{number: number, faces: number, sign?: 1|-1}>} [save.dice]  Dés du bonus (Bénédiction, Imprécation).
+ * @param {number} [save.bonus]                   Fixed part of the saving throw bonus.
+ * @param {Array<{number: number, faces: number, sign?: 1|-1}>} [save.dice]  Dice of the bonus (Bless, Bane).
  * @param {1|0|-1} [save.mode]
  * @param {boolean} [save.autoFail]
  * @param {boolean} [save.immune]
- * @returns {number}  Probabilité d'échec, entre 0 et 1.
+ * @returns {number}  Probability of failure, between 0 and 1.
  */
 export function saveFailChance({ dc, bonus=0, dice=[], mode=0, autoFail=false, immune=false }) {
   if ( immune ) return 0;
@@ -105,20 +105,20 @@ export function saveFailChance({ dc, bonus=0, dice=[], mode=0, autoFail=false, i
   return clamp01(fail);
 }
 
-/** Pourcentage entier à afficher : jamais 0 ni 100 tant que le résultat n'est pas certain. */
+/** Whole percentage to display: never 0 or 100 as long as the result is not certain. */
 export function asPercent(p) {
   if ( p <= 0 ) return 0;
   if ( p >= 1 ) return 100;
   return Math.min(99, Math.max(1, Math.round(p * 100)));
 }
 
-/** Ce que les joueurs peuvent voir de la pastille (réglage `hitChancePlayers`) ; le MJ voit tout (« full »). */
+/** What players can see of the badge (`hitChancePlayers` setting); the GM sees everything ("full"). */
 export const HIT_CHANCE_LEVELS = Object.freeze(["full", "percent", "advantage", "off"]);
 
 /**
- * Ce qu'un niveau montre d'une attaque : le pourcentage (et le critique), la CA de la cible, les raisons d'avantage et de
- * désavantage. « advantage » (#247) : les raisons seules — le joueur sait que son jet aura l'avantage, et pourquoi, sans rien
- * apprendre de la défense de la cible. Un niveau inconnu ne montre rien.
+ * What a level shows of an attack: the percentage (and the Critical Hit), the target's AC, the reasons for Advantage and
+ * Disadvantage. "advantage" (#247): the reasons alone — the player knows their roll will have Advantage, and why, without
+ * learning anything of the target's defense. An unknown level shows nothing.
  * @param {string} level
  * @returns {{percent: boolean, ac: boolean, reasons: boolean}}
  */

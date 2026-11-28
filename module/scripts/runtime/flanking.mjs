@@ -1,6 +1,6 @@
 /**
- * §369 (issue GitHub #27) : les réglages de monde de la prise en tenaille (adapter/flanking.mjs), désactivée par défaut. Aucun
- * écouteur : la tenaille se lit à chaque attaque, dans le contexte d'Avantage (adapter/conditions.mjs `attackContext`).
+ * §369 (GitHub issue #27): the world settings of flanking (adapter/flanking.mjs), disabled by default. No
+ * listener: flanking is read at each attack, in the Advantage context (adapter/conditions.mjs `attackContext`).
  */
 import { MODULE_ID } from "../constants.mjs";
 import { FLANKING_SETTING, FLANKING_SIDE_SETTING, FLANKING_CONGA_SETTING } from "../adapter/flanking.mjs";

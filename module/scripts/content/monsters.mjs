@@ -1,8 +1,8 @@
 /**
- * K12 (SPEC §333) : défauts de la donnée du Monster Manual 2024 que le texte ne suffit pas à corriger, par identifiant dnd5e.
- * Ids d'effets relevés dans le pack `actors` du module premium.
+ * K12 (SPEC §333): defects in the Monster Manual 2024 data that the text alone cannot fix, by dnd5e identifier.
+ * Effect ids taken from the `actors` pack of the premium module.
  */
-/** « Désavantage aux jets d'attaque et aux tests de caractéristique » : une source de Désavantage par caractéristique. */
+/** "Disadvantage on attack rolls and ability checks": one source of Disadvantage per ability. */
 const ATTACK_AND_CHECK_DISADVANTAGE = Object.freeze(["str", "dex", "con", "int", "wis", "cha"].flatMap(a => ["attack", "check"]
   .map(roll => ({ key: `system.abilities.${a}.${roll}.roll.mode`, value: -1, priority: null, type: "add" }))));
 
@@ -17,40 +17,42 @@ const lycanthropeCurse = kind => ({
 });
 
 export const MONSTERS = Object.freeze({
-  // Miasme nocif (dragons verts) : l'effet vise `system.armor.value`, sans effet sur une créature ; −2 à la CA.
+  // "Noxious Miasma" (green dragons): the effect targets `system.armor.value`, which does nothing on a creature; −2 to AC.
   "noxious-miasma": { effectChanges: { TSWsGeApnMgxOyIF: [{ key: "system.attributes.ac.bonus", type: "add", value: "-2" }] } },
-  // Frappe draconique (Dracomancien githyanki) : l'effet de la donnée pose À terre ; le texte dit Effrayé (lu dans le texte, §334).
+  // "Draconic Strike" (githyanki dragonmancer): the data's effect applies Prone; the text says Frightened
+  // (read from the text, §334).
   "draconic-strike": { dropsEffects: ["3EaKpE9izXLyKuZ0"] },
-  // §334, restes de K1 à K9.
-  // Dévorer l'intellect, Vol de poussière funéraire : l'état dure « jusqu'à la fin du prochain tour » de la créature.
+  // §334, leftovers from K1 to K9.
+  // Devour Intellect, "Grave Dust Theft": the condition lasts "until the end of the creature's next turn".
   "devour-intellect": { effectEnds: { ZaYIN5Q0TftqUIDM: "casterTurnEnd" } },
   "grave-dust-flight": { effectEnds: { j48yvRFstRgyvy4r: "casterTurnEnd" } },
-  // Souffle affaiblissant (dragons d'or) : Désavantage aux tests de Force et −3 aux dégâts (la donnée : −1d4 aux tests de Force).
+  // Weakening Breath (gold dragons): Disadvantage on Strength checks and −3 to damage (the data: −1d4 to Strength checks).
   "weakening-breath": { effectChanges: { wpkp78XzdLs9q2C3: [
     { key: "system.abilities.str.bonuses.check", type: "add", value: "0", replace: true },
     { key: "system.abilities.str.check.roll.mode", type: "add", value: "-1" },
     { key: "system.abilities.str.save.roll.mode", type: "add", value: "-1" },
     ...["mwak", "rwak", "msak", "rsak"].map(k => ({ key: `system.bonuses.${k}.damage`, type: "add", value: "-3" }))
   ] } },
-  // Nuée (§505) : « The swarm can't regain Hit Points or gain Temporary Hit Points » — le trait, sans effet, vaut pour la nuée.
-  // (Son espace partagé : content/emanations.mjs, `SPACE_SHARERS`.)
+  // Swarm (§505): "The swarm can't regain Hit Points or gain Temporary Hit Points" — the trait, with no effect, applies to
+  // the swarm.
+  // (Its shared space: content/emanations.mjs, `SPACE_SHARERS`.)
   "swarm": { blocksHealing: true, blocksTempHp: true },
-  // Absorption de vie (Feu follet) : seulement une créature à 0 PV.
+  // Life Drain (Will-o'-Wisp): only a creature at 0 HP.
   "consume-life": { targets: { unaffectedIf: { "target.atZero": false } } },
-  // Identifiants propres (content/sources.mjs, clé « acteur.item ») : « sting » et « bite » sont partagés.
-  // Dard (Pseudodragon) : Inconscient tant qu'Empoisonné (l'effet cité par l'activité n'existe pas), réveillé par des dégâts.
+  // Own identifiers (content/sources.mjs, key "actor.item"): "sting" and "bite" are shared.
+  // Sting (Pseudodragon): Unconscious while Poisoned (the effect cited by the activity does not exist), woken by damage.
   "mm-pseudodragon-sting": { effectStatuses: { q8stMoNP0ENULsOn: ["unconscious"] },
     triggers: [{ on: "isDamaged", via: "effect", fromEffect: "q8stMoNP0ENULsOn", do: [{ type: "remove" }] }] },
-  // Morsure (Homoncule) : Empoisonné jusqu'à la fin de son prochain tour ; raté de 5 ou plus, Inconscient, réveillé par des dégâts.
+  // Bite (Homunculus): Poisoned until the end of its next turn; failed by 5 or more, Unconscious, woken by damage.
   "mm-homunculus-bite": { effectEnds: { V1AmhFqcodun54W7: "casterTurnEnd" }, failMargins: { "1xPlmvipGrfrNiPY": { min: 5 } },
     triggers: [{ on: "isDamaged", via: "effect", fromEffect: "1xPlmvipGrfrNiPY", do: [{ type: "remove" }] }] },
-  // Faiblesse au soleil (Ombre, SRD 5.2) : « tant qu'elle est à la lumière du soleil, l'ombre a le Désavantage aux Tests de d20 » —
-  // jets d'attaque, tests de caractéristique et jets de sauvegarde. La lecture du texte ne connaît que « … aux jets d'attaque ».
+  // Sunlight Weakness (Shadow, SRD 5.2): "while in sunlight, the shadow has Disadvantage on d20 Tests" —
+  // attack rolls, ability checks and saving throws. The text reading knows only "… on attack rolls".
   "sunlight-weakness": { rollDisadvantage: { on: ["check", "save"], if: { "self.inSunlight": true } },
     triggers: [{ on: "preAttackRoll", if: { "source.inSunlight": true }, do: [{ type: "disadvantage" }] }] },
-  // Faiblesses du vampire (Vampire, Vampirien ; SRD 5.2) : 20 dégâts radiants s'il commence son tour au soleil, le Désavantage aux
-  // jets d'attaque et aux tests de caractéristique tant qu'il y est, 20 dégâts d'acide s'il finit son tour dans l'eau courante. Le
-  // trait a plusieurs rubriques : la lecture du texte n'en tirait que les jets d'attaque. L'interdit et le pieu restent au MJ.
+  // Vampire Weaknesses (Vampire, Vampire Spawn; SRD 5.2): 20 radiant damage if it starts its turn in sunlight, Disadvantage on
+  // attack rolls and ability checks while it is there, 20 acid damage if it ends its turn in running water. The trait has
+  // several headings: the text reading drew only the attack rolls from it. Forbiddance and Stake to the Heart remain with the GM.
   "vampire-weakness": { rollDisadvantage: { on: ["check"], if: { "self.inSunlight": true } },
     triggers: [{ on: "preAttackRoll", if: { "source.inSunlight": true }, do: [{ type: "disadvantage" }] },
       { on: "startOfTurn", if: { "self.inSunlight": true },
@@ -61,19 +63,19 @@ export const MONSTERS = Object.freeze({
   // in its data: it holds for the triggering attack only. `mm-riposte` is its own identifier (sources.mjs, K6 §327), apart from the
   // Battle Master's `riposte`.
   "mm-riposte": { forOneAttack: true },
-  // Perception de la magie (Chuul, SRD 5.2) : « le chuul perçoit la magie dans un rayon de 36 m ; ce trait fonctionne par ailleurs
-  // comme le sort Détection de la magie, sans être lui-même magique » — permanent, sans effet à porter.
+  // Sense Magic (Chuul, SRD 5.2): "the chuul senses magic within 36 m of itself; this trait otherwise works like the Detect Magic
+  // spell, but is not itself magical" — permanent, no effect to carry.
   "sense-magic": { sense: { kind: "locate", range: 120, units: "ft", reveals: "aura", detects: { "target.carriesMagic": true } } },
-  // Résistance supérieure à la magie (Rakshasa, SRD 5.2) : « le rakshasa réussit automatiquement ses jets de sauvegarde contre
-  // les sorts et autres effets magiques, et les jets d'attaque des sorts le ratent automatiquement ».
+  // Superior Magic Resistance (Rakshasa, SRD 5.2): "the rakshasa automatically succeeds on saving throws against
+  // spells and other magical effects, and spell attack rolls against it automatically miss".
   "greater-magic-resistance": { saveAutoSuccessAgainst: ["magic"], spellAttacksMiss: true },
-  // Gel (Élémentaire de l'eau, SRD 5.2) : « s'il subit des dégâts de froid, sa Vitesse diminue de 6 m jusqu'à la fin de son
-  // prochain tour » — l'effet est dans la donnée, rien ne le posait. Sa durée de donnée (un tour, au début du tour) le ferait
-  // tomber un tour trop tôt : `effectEnds` le tient jusqu'à la fin du prochain tour du porteur.
+  // Freeze (Water Elemental, SRD 5.2): "if it takes cold damage, its Speed decreases by 6 m until the end of its next turn" —
+  // the effect is in the data, nothing applied it. Its data duration (one turn, at the start of the turn) would make it
+  // end one turn too early: `effectEnds` keeps it until the end of the bearer's next turn.
   "freeze": { onDamageTaken: { types: ["cold"], effect: "B3otZdkyUcUlgrmk" },
     effectEnds: { B3otZdkyUcUlgrmk: "bearerTurnEnd" } },
-  // Aversion au feu (Golem de chair, SRD 5.2) : « s'il subit des dégâts de feu, il a le Désavantage aux jets d'attaque et aux tests
-  // de caractéristique jusqu'à la fin de son prochain tour » — l'effet « Averse » de la donnée est vide.
+  // Aversion of Fire (Flesh Golem, SRD 5.2): "if it takes fire damage, it has Disadvantage on attack rolls and ability checks
+  // until the end of its next turn" — the data's "Averse" effect is empty.
   "aversion-to-fire": { onDamageTaken: { types: ["fire"], effect: "kJYNjmfI0RpvF7CQ" },
     effectEnds: { kJYNjmfI0RpvF7CQ: "bearerTurnEnd" },
     dataFixes: [{ effect: "kJYNjmfI0RpvF7CQ", path: "system.changes", from: [], value: ATTACK_AND_CHECK_DISADVANTAGE }] },
@@ -84,24 +86,24 @@ export const MONSTERS = Object.freeze({
   "mm-wererat-bite": lycanthropeCurse("wererat"),
   "mm-weretiger-bite": lycanthropeCurse("weretiger"),
   "mm-werewolf-bite": lycanthropeCurse("werewolf"),
-  // Ravenloft. Brochette psychique (Ancien) : Épuisement et Étourdi seulement pour une cible Charmée.
+  // Ravenloft. "Psychic Skewer" (Ancient): Exhaustion and Stunned only for a Charmed target.
   "psychic-skewer": { effectsIf: { "target.hasStatus": "charmed" } },
-  // Voile d'ombre (Saidra) : Invisible jusqu'au début de son prochain tour, tombe dès qu'elle inflige des dégâts.
+  // Shadow Veil (Saidra): Invisible until the start of its next turn, ends as soon as it deals damage.
   "shadow-veil": { breaksOn: ["damage"], effectEnds: { "3FJI2gtOiaXvSxrs": "bearerTurnStart" } },
-  // Aiguille d'argent (Carrionette) : la malédiction ne vise qu'un Humanoïde.
+  // Silver Needle (Carrionette): the curse targets only a Humanoid.
   "silver-needle": { effectsIf: { "target.creatureType": "humanoid" } },
-  // Esquive (Bête éclipsante) : rien sur une réussite, la moitié sur un échec, pour toute sauvegarde à moitié des dégâts.
+  // Evasion (Displacer Beast): nothing on a success, half on a failure, for any saving throw that halves damage.
   "avoidance": { avoidance: true },
-  // Peau barbelée (Diable barbelé, SRD 5.2) : au début de chacun de ses tours, 1d10 perforants à toute créature qu'il agrippe ou qui
-  // l'agrippe.
+  // Barbed Hide (Barbed Devil, SRD 5.2): at the start of each of its turns, 1d10 piercing damage to any creature it grapples or
+  // that grapples it.
   "barbed-hide": { grappleDamage: { formula: "1d10", damageType: "piercing", grapplers: true } },
-  // Absorption de vie (Nécrophage) : la donnée laisse les dégâts sans type ; nécrotiques.
+  // Life Drain (Wight): the data leaves the damage untyped; necrotic.
   "mm-wight-life-drain": { untypedDamage: "necrotic" },
-  // Rayons oculaires (Tyrannœil, Tyran de la mort ; identifiant propre, content/sources.mjs) : chaque rayon par son effet ou son
-  // activité. Charme et sommeil tombent aux dégâts ; paralysie rejouée en fin de tour ; pétrification : Entravé au premier échec,
-  // Pétrifié au second (l'effet « Restrained » de la donnée porte Pétrifié, son double Pétrifié est écarté) ; ralentissement : ni
-  // Réaction ni « action et action Bonus » (sa copie de vitesse écartée) ; énervation : pas de soins tant qu'Empoisonné ; durées
-  // « jusqu'à la fin de son prochain tour » ; le rayon de sommeil épargne Artificiels et Morts-vivants.
+  // Eye Rays (Beholder, Death Tyrant; own identifier, content/sources.mjs): each ray by its effect or its
+  // activity. Charm and sleep end on damage; paralysis replayed at end of turn; petrification: Restrained on the first failure,
+  // Petrified on the second (the data's "Restrained" effect carries Petrified, its duplicate Petrified is discarded);
+  // slowing: neither Reaction nor "action and Bonus Action" (its speed copy discarded); enervation: no healing while Poisoned;
+  // durations "until the end of its next turn"; the sleep ray spares Constructs and Undead.
   "mm-beholder-eye-rays": {
     triggers: [
       { on: "isDamaged", via: "effect", fromEffect: "OZBZrDI0m8zZSCxq", do: [{ type: "remove" }] },
@@ -115,35 +117,35 @@ export const MONSTERS = Object.freeze({
     effectEnds: { okGmSea9t9idzzrp: "bearerTurnEnd", XvZO30AwVhzcboC7: "bearerTurnEnd", "1zE4l88npB9r24MV": "bearerTurnEnd", "5tr2oDlFLN7khXBT": "casterTurnStart" },
     targets: { unaffectedIf: { "activity.id": "CSKrXM1Pkhlf23et", any: [{ "target.creatureType": "construct" }, { "target.creatureType": "undead" }] } }
   },
-  // Lance de glace (Diable gelé) : ni action Bonus ni Réaction (lue dans le texte), Vitesse −10 ft jusqu'à la fin de son prochain tour ;
-  // « se déplacer ou agir, pas les deux » reste au MJ.
+  // Ice Spear (Ice Devil): neither Bonus Action nor Reaction (read from the text), Speed −10 ft until the end of its next turn;
+  // "move or act, not both" remains with the GM.
   "ice-spear": { noBonus: "273sG6C6R7qUcL2v", effectChanges: { "273sG6C6R7qUcL2v": [{ key: "system.attributes.movement.walk", type: "add", value: "-10" }] } },
-  // Réactions de monstres dont le déclencheur ne suffit pas (§334) — l'effet de la réponse avec les briques de Réaction.
-  // Fuite toxique (Yochlol) : la moitié des dégâts du coup, puis la sauvegarde du nuage ; la téléportation reste au MJ.
+  // Monster Reactions whose trigger is not enough (§334) — the effect of the response with the Reaction building blocks.
+  // "Toxic Escape" (Yochlol): half of the hit's damage, then the cloud's saving throw; the teleportation remains with the GM.
   "toxic-escape": { triggers: [{ on: "isHit", do: [{ type: "use", activity: "f6zHSW2bzTmUO9oR" }, { type: "halve" }] }] },
-  // Prévoyance limitée (Cyclope sentinelle) : Désavantage au jet d'attaque contre lui.
+  // "Limited Foresight" ("Sentinel Cyclops"): Disadvantage on the attack roll against it.
   "limited-foresight": { triggers: [{ on: "isAttacked", do: [{ type: "use", activity: "oNKuSb8WamcMktfk" }, { type: "disadvantage" }] }] },
-  // Ravenloft. Parer le coup (Laurie Weathermay) : les dégâts du coup réduits par le jet de l'activité.
+  // Ravenloft. "Parry the Blow" (Laurie Weathermay): the damage of the hit is reduced by the activity's roll.
   "deflect-blow": { triggers: [{ on: "isHit", do: [{ type: "use", activity: "qvWn7DuBd5mmvZ1M" }, { type: "reduce" }] }] },
-  // Réactif (Marilith) : une Réaction à chaque tour du combat.
+  // Reactive (Marilith): one Reaction on each turn of the combat.
   "reactive": { reactions: { perRound: 20 } },
-  // Têtes réactives (Hydre, SRD 5.2) : « pour chaque tête au-delà de la première, l'hydre dispose d'une Réaction supplémentaire,
-  // qui ne sert qu'aux attaques d'opportunité » — cinq têtes : cinq Réactions par round (elle n'a pas d'autre Réaction). Le compte
-  // suit les cinq têtes du bloc de statistiques ; les têtes mortes ou repoussées restent au MJ.
+  // Reactive Heads (Hydra, SRD 5.2): "for each head beyond the first, the hydra has an additional Reaction,
+  // which can be used only for Opportunity Attacks" — five heads: five Reactions per round (it has no other Reaction). The count
+  // follows the five heads of the stat block; dead or driven-off heads remain with the GM.
   "reactive-heads": { reactions: { perRound: 5 } },
-  // Disparition : rien ici. Plusieurs monstres portent le même item (identifiant, ids) sans la même règle ; celle du Feu follet
-  // tombe après un jet d'attaque — lu dans son texte (core/monster-text.mjs, `monsterBreaksOn`).
-  // Ravenloft. Protection ésotérique (Gennifer) : Étourdi seulement pour un Mort-vivant.
+  // Disappearance: nothing here. Several monsters carry the same item (identifier, ids) without the same rule;
+  // that of the Will-o'-Wisp drops after an attack roll — read from its text (core/monster-text.mjs, `monsterBreaksOn`).
+  // Ravenloft. "Esoteric Protection" (Gennifer): Stunned only for an Undead.
   "esoteric-ward": { effectsIf: { "target.creatureType": "undead" } },
-  // Déformation du corps (Émissaire stellaire inférieur) : Étourdi « jusqu'au début de son prochain tour » — celui de la cible.
+  // "Warp Body" ("Lesser Star Emissary"): Stunned "until the start of its next turn" — the target's.
   "warp-body": { effectEnds: { TWb6uCeWCkVjk9eZ: "bearerTurnStart" } },
-  // Savoir interdit (Azalin Rex) : Étourdi « jusqu'à la fin du prochain tour d'Azalin ».
+  // "Forbidden Lore" (Azalin Rex): Stunned "until the end of Azalin's next turn".
   "forbidden-knowledge": { effectEnds: { uOo6EccSwmKB7CUp: "casterTurnEnd" } },
-  // Forme tourbillonnante (Porte-parole du gibet) : entre dans la case d'une créature et s'y arrête.
+  // "Whirling Form" ("Gibbet Speaker"): enters a creature's cell and stops there.
   "whirling-form": { sharesSpace: "enter" },
-  // Chair qui se défait (Désossé) : se déplace ensuite sans provoquer d'attaque d'opportunité.
+  // "Unraveling Flesh" ("Boneless"): then moves without provoking Opportunity Attacks.
   "unraveling-flesh": { noOpportunity: "afterUse" },
-  // §460, Ravenloft. Absorption d'énergie (Jiangshi) : sur un échec comme sur une réussite, il regagne autant de PV que les dégâts
-  // nécrotiques subis par la cible (runtime/lifesteal.mjs). Le gain de Vitesse de vol et l'action Bonus offerte restent au MJ.
+  // §460, Ravenloft. Energy Absorption (Jiangshi): on a failure as on a success, it regains as many HP as the necrotic damage
+  // taken by the target (runtime/lifesteal.mjs). The Fly Speed gain and the Bonus Action offered remain with the GM.
   "consume-energy": { lifesteal: { damageType: "necrotic" } }
 });

@@ -1,23 +1,24 @@
 /**
- * §497 (B17) — déplacement aléatoire : étape `move`, mode `random`. Arène de test : Magicien (token lié), Bandit (token non lié).
- * Un trait d'essai est prêté au Magicien : une activité de sauvegarde (Con, DD 30 : le Bandit la rate toujours) sans effet. Sa règle est
- * posée dans la surcouche du monde (`overrideContent`, jamais en drapeau d'item), changée d'un cas à l'autre :
- *  1. `{ mode: "random", directions: ["n", "s", "e", "w"], distance: 5, units: "ft", ifBlocked: "stay", minSpeed: 5 }` (Infestation) :
- *     un 1d4 montré dans le chat ; son message porte `flags.dnd5e-combat.randomMove` (face, direction, cases). La direction est celle de
- *     la face (1 n, 2 s, 3 e, 4 o) et le Bandit a bougé d'autant de cases dans cette direction (0 si la case était prise ou murée).
- *     Le résultat se lit sur le jet : on n'espère aucune valeur.
- *  2. `minSpeed: 5000` : sa Vitesse est trop faible — ni jet ni déplacement, le journal du moteur le dit.
- *  3. `distance: 5000, ifBlocked: "stay"` : aucune direction n'est libre si loin — jet, rien ne bouge, `blocked`.
- *  4. `distance: 5000` sans `ifBlocked` (par défaut `stop`) : aussi loin que possible — le déplacement suit les cases notées.
- * États laissés sur le Bandit (acteur synthétique) retirés d'abord ; PV, position, trait, surcouche remis. Toute fenêtre « le faire quand
- * même » ouverte chez le MJ est acceptée (« go »), toute autre fermée.
+ * §497 (B17) — random movement: `move` step, `random` mode. Test arena: Wizard (linked token), Bandit (unlinked token).
+ * A test feature is lent to the Wizard: a save activity (Con, DC 30: the Bandit always fails it) with no effect. Its rule is
+ * placed in the world overlay (`overrideContent`, never as an item flag), changed from one case to the next:
+ *  1. `{ mode: "random", directions: ["n", "s", "e", "w"], distance: 5, units: "ft", ifBlocked: "stay", minSpeed: 5 }`
+ *     (Infestation): a 1d4 shown in the chat; its message carries `flags.dnd5e-combat.randomMove` (face, direction, cells).
+ *     The direction is that of the face (1 n, 2 s, 3 e, 4 w) and the Bandit moved that many cells in that direction
+ *     (0 if the cell was taken or walled).
+ *     The result is read from the roll: no value is expected.
+ *  2. `minSpeed: 5000`: its Speed is too low — no roll or movement, the engine log says so.
+ *  3. `distance: 5000, ifBlocked: "stay"`: no direction is free that far — roll, nothing moves, `blocked`.
+ *  4. `distance: 5000` without `ifBlocked` (default `stop`): as far as possible — the movement follows the recorded cells.
+ * Conditions left on the Bandit (synthetic actor) removed first; HP, position, feature, overlay restored. Any "do it anyway"
+ * window open on the GM's side is accepted ("go"), any other is closed.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
 const IDENTIFIER = "das-essai-aleatoire";
 const ACTIVITY = "dasEssaiAleaSave";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name as a constant: the test bench and the reference take the first "name:" indented by two spaces as the scenario title.
 const ITEM_NAME = "Essai : nuée qui disperse";
 const ITEM = { name: ITEM_NAME, type: "feat", img: "icons/svg/hazard.svg",
   system: { identifier: IDENTIFIER, type: { value: "monster" }, description: { value: "<p>Essai §497.</p>" },
@@ -41,7 +42,7 @@ export default {
     const actorId = tok.actorId;
     const grid = await ctx.gridSize();
 
-    // --- Fenêtres chez le MJ : aucune ne reste sans réponse --------------------------------------------------------------
+    // --- Windows on the GM's side: none stays unanswered ------------------------------------------------------------------
     const seen = new Set(((await ctx.call("list-dialogs", {})).windows ?? []).map(w => w.id));
     const sweep = async (ms=1500) => {
       const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...seen], waitMs: ms, details: true }).catch(() => null);
@@ -54,7 +55,7 @@ export default {
       }
     };
 
-    // --- Bandit propre (acteur synthétique), à sa place -------------------------------------------------------------------
+    // --- Clean Bandit (synthetic actor), in place -------------------------------------------------------------------------
     const clearBandit = async () => {
       await ctx.removeEffectsNamed(bandit, /^Essai :/).catch(() => {});
       for ( const s of ["grappled", "restrained", "paralyzed", "incapacitated", "stunned", "prone", "unconscious", "dead"] ) {
@@ -69,7 +70,7 @@ export default {
     const goHome = () => ctx.call("move-token", { tokenId: bandit.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => {});
     ctx.restore(goHome);
 
-    // --- Trait prêté, puis règle --------------------------------------------------------------------------------------------
+    // --- Feature lent, then rule ------------------------------------------------------------------------------------------
     await ctx.call("upsert-actor-item", { actorId, itemData: ITEM, match: { path: "system.identifier", value: IDENTIFIER } });
     const lent = await ctx.itemId(mage.id, IDENTIFIER);
     ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: actorId, itemId: lent }).catch(() => {}));
@@ -83,7 +84,7 @@ export default {
       await pause(500);
     };
 
-    /** Le Bandit à sa place, le trait utilisé sur lui ; rend la sauvegarde, le message `randomMove` (ou null) et le déplacement en cases. */
+    /** The Bandit in place, the feature used on it; returns the save, the `randomMove` message (or null) and the movement in cells. */
     const cast = async ({ expectRoll=true }={}) => {
       await goHome();
       await pause(800);
@@ -118,7 +119,7 @@ export default {
     }
     ctx.expect((await ctx.engineLog()).some(l => /random: Bandit rolls \d/.test(l)), "le journal du moteur dit le jet (« random: Bandit rolls … »)");
 
-    // 2. Trop lent : ni jet, ni déplacement.
+    // 2. Too slow: no roll, no movement.
     await rule({ ...STEP, minSpeed: 5000 });
     res = await cast({ expectRoll: false });
     ctx.expect(res.save?.success === false, "DD 30 : sauvegarde ratée");
@@ -126,7 +127,7 @@ export default {
     ctx.expect((res.di === 0) && (res.dj === 0), `Vitesse sous minSpeed : le Bandit n'a pas bougé (${res.di}, ${res.dj})`);
     ctx.expect((await ctx.engineLog()).some(l => /random: Bandit not moved — speed/.test(l)), "le journal du moteur dit « not moved — speed … »");
 
-    // 3. Tout ou rien : 5000 ft ne tiennent dans aucune direction.
+    // 3. All or nothing: 5000 ft fit in no direction.
     await rule({ ...STEP, distance: 5000, minSpeed: 5 });
     res = await cast();
     if ( ctx.expect(!!res.flag, "ifBlocked stay : le jet est montré") ) {
@@ -134,7 +135,7 @@ export default {
       ctx.expect((res.di === 0) && (res.dj === 0), `ifBlocked stay : le Bandit reste (${res.di}, ${res.dj})`);
     }
 
-    // 4. Aussi loin que possible (par défaut).
+    // 4. As far as possible (default).
     const { ifBlocked, ...far } = STEP;
     await rule({ ...far, distance: 5000 });
     res = await cast();

@@ -1,9 +1,9 @@
 /**
- * Raccourci vers le diagnostic du monde de DAS · Core (SPEC §177), ouvert sur la vérification « enchantements des aptitudes » (§453) :
- * une aptitude du Manuel des joueurs 3.0.0 qui améliore un autre objet de la fiche (progression « ModifyItem » de dnd5e 6.1 : Frappes
- * renforcées, Armes empoisonnées, Main de mage subtile…) ne le fait qu'une fois, quand elle est acquise, sur les objets déjà là. La
- * logique vit dans le module (runtime/diagnostic/checks.mjs, `modify-item`) : analyse sans rien écrire, réparation de ce que le MJ coche,
- * après une sauvegarde vérifiée dans le compendium « DAS · Sauvegardes » (restaurable).
+ * Shortcut to the world diagnostic of DAS · Core (SPEC §177), opened on the "feature enchantments" check (§453):
+ * a Player's Handbook 3.0.0 feature that upgrades another item of the sheet (dnd5e 6.1 "ModifyItem" progression: Enhanced
+ * Strikes, Poisoned Weapons, Subtle Mage Hand…) only does so once, when it is acquired, on the items already there. The
+ * logic lives in the module (runtime/diagnostic/checks.mjs, `modify-item`): analysis without writing anything, repair of what
+ * the GM ticks, after a backup verified in the "DAS · Sauvegardes" compendium (restorable).
  */
 const api = game.modules.get("dnd5e-combat")?.api;
 if ( !game.user.isGM ) return ui.notifications.warn(game.i18n.localize("DND5ECOMBAT.Diagnostic.MJSeul"));

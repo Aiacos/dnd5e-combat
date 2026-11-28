@@ -1,10 +1,10 @@
 /**
- * Image fixe d'un token pour une balise `<img>` (2026-11-13) : une texture de token peut être une vidéo (`.webm` de JB2A posé par
- * DAS · Animations sur une invocation, ou par un MJ), qu'une `<img>` montre cassée. Pour une vidéo : sa vignette si le cœur l'a déjà
- * calculée (`game.video.thumbs`, client/helpers/media/video-helper.mjs:190), sinon l'image de l'acteur, sinon l'icône par défaut.
- * Même test que le cœur (`VideoHelper.hasVideoExtension`, video-helper.mjs:100).
+ * Still image of a token for an `<img>` tag (2026-11-13): a token texture can be a video (JB2A `.webm` placed by
+ * DAS · Animations on a summon, or by a GM), which an `<img>` shows broken. For a video: its thumbnail if the core has already
+ * computed it (`game.video.thumbs`, client/helpers/media/video-helper.mjs:190), otherwise the actor's image, otherwise the
+ * default icon. Same test as the core (`VideoHelper.hasVideoExtension`, video-helper.mjs:100).
  * @param {TokenDocument|Token} token
- * @param {string|null} [fallback]   image à préférer à celle de l'acteur
+ * @param {string|null} [fallback]   image to prefer over the actor's
  * @returns {string}
  */
 export function tokenArt(token, fallback = null) {

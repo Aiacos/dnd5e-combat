@@ -1,8 +1,8 @@
 /**
- * §293 : lancer une activité « créatures de votre choix dans un rayon » (Renvoi des morts-vivants) sur les créatures cochées dans la liste
- * (ui/pick-targets.mjs) — ou, la case cochée, l'activité qui la remplace (Calcination des morts-vivants) sur les mêmes. Les cochées
- * deviennent les cibles de l'utilisateur ; la zone de l'activité n'est pas posée (`measuredTemplate: false`) et la résolution prend les
- * cibles du message (`givenTargets`, §104) au lieu d'attendre une zone.
+ * §293: cast an activity "creatures of your choice within a radius" (Turn Undead) on the creatures checked in the list
+ * (ui/pick-targets.mjs) — or, with the box checked, the activity that replaces it (Destroy Undead) on the same ones. The checked
+ * ones become the user's targets; the activity's area is not placed (`measuredTemplate: false`) and the resolution takes the
+ * message's targets (`givenTargets`, §104) instead of waiting for an area.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -11,12 +11,12 @@ import { targetDescriptorsOf } from "../adapter/pick-targets.mjs";
 import { relaunchUse } from "./relaunch.mjs";
 
 /**
- * @param {Activity} activity                 L'activité utilisée.
- * @param {[object, object, object]} usage     Ses configurations d'utilisation, de dialogue et de message.
+ * @param {Activity} activity                 The activity used.
+ * @param {[object, object, object]} usage     Its use, dialog and message configurations.
  * @param {object} choice
- * @param {TokenDocument[]} choice.tokens       Les créatures cochées.
- * @param {Activity|null} [choice.upgrade]      L'activité qui la remplace, si la case est cochée.
- * @returns {Promise<object|null>}  Les résultats de l'utilisation (dnd5e), ou null si elle n'est pas partie.
+ * @param {TokenDocument[]} choice.tokens       The checked creatures.
+ * @param {Activity|null} [choice.upgrade]      The activity that replaces it, if the box is checked.
+ * @returns {Promise<object|null>}  The results of the use (dnd5e), or null if it did not go through.
  */
 export async function castOnPicked(activity, [config, dialog, message]=[], { tokens, upgrade=null }) {
   for ( const t of Array.from(game.user.targets) ) t.setTarget(false, { releaseOthers: false, groupSelection: true });
@@ -24,7 +24,7 @@ export async function castOnPicked(activity, [config, dialog, message]=[], { tok
   const used = upgrade ?? activity;
   const use = { ...(config ?? {}), create: { ...(config?.create ?? {}), measuredTemplate: false },
     [MODULE_ID]: { ...(config?.[MODULE_ID] ?? {}), picked: true } };
-  // Le message de l'utilisation suspendue porte des cibles vides (prises avant le choix) : celles cochées les remplacent.
+  // The suspended use's message carries empty targets (taken before the choice): the checked ones replace them.
   const msg = foundry.utils.mergeObject(message ?? {}, { data: { system: { targets: targetDescriptorsOf(tokens) },
     flags: { [MODULE_ID]: { givenTargets: true } } } }, { inplace: false });
   log(`${used.item?.name ?? used.name}: ${tokens.length} creature(s) chosen (${tokens.map(t => t.name).join(", ")})${upgrade ? ", in place of " + (activity.item?.name ?? activity.name) : ""}`);

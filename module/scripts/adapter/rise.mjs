@@ -1,8 +1,8 @@
 /**
- * §95 : se relever à 0 PV (clé `atZero`) — Cosse nécrotique (Patron Mort-vivant : Résurrection impie), Puissance de l'ombre (Force du
- * tombeau), Puissance ancestrale (Courroux persistant, sous Courroux sauvage). L'item, sa règle et son activité, tant que la créature
- * est à 0 PV, pas morte, qu'il reste de quoi payer et que la condition tient ; une créature qui a déjà décidé (refusé, raté) est
- * notée jusqu'à ce que ses PV remontent.
+ * §95: rising at 0 HP (key `atZero`) — Necrotic Husk (Undead Patron: Unholy Resurrection), Shadow's Power (Strength of the
+ * Grave), Ancestral Power (Persistent Fury, under Savage Fury). The item, its rule and its activity, as long as the creature
+ * is at 0 HP, not dead, there is enough to pay and the condition holds; a creature that has already decided (refused, failed) is
+ * noted until its HP go back up.
  */
 
 import { contentOf } from "./content.mjs";
@@ -12,13 +12,13 @@ import { usesLeftFor } from "./inspiration.mjs";
 const settled = new Set();
 const pending = new Set();
 
-/** La question ou la sauvegarde est en cours : la créature ne tombe pas encore (adapter/death.mjs). */
+/** The question or the save is in progress: the creature does not fall yet (adapter/death.mjs). */
 export const beginRise = actor => pending.add(actor.uuid);
 export const endRise = actor => pending.delete(actor.uuid);
-/** Se relèvera peut-être : une règle disponible, ou une décision en cours. */
+/** May rise: an available rule, or a decision in progress. */
 export const risingAtZero = actor => !!actor && (pending.has(actor.uuid) || !!riseAtZeroOf(actor));
 
-/** La créature a décidé (relevée, refusé, sauvegarde ratée) : plus de question jusqu'à ce que ses PV remontent. */
+/** The creature has decided (risen, refused, save failed): no more questions until its HP go back up. */
 export const settleRise = actor => settled.add(actor.uuid);
 export const resetRise = actor => settled.delete(actor.uuid);
 

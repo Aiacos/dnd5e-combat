@@ -1,8 +1,8 @@
 /**
- * Qui une action peut affecter (SPEC §16.8), lu dans Foundry pour le cœur (core/eligibility.mjs) : le type de la
- * créature (`system.details.type.value`), ses immunités aux états (`system.traits.ci.value`), les états des effets
- * de l'action (`getEffect()`, dnd5e 6 : un effet peut être une référence de compendium), et ce que le contenu
- * déclare (`targets.types`, `targets.unaffectedIf`).
+ * Who an action can affect (SPEC §16.8), read from Foundry for the core (core/eligibility.mjs): the creature's type
+ * (`system.details.type.value`), its condition immunities (`system.traits.ci.value`), the conditions of the action's effects
+ * (`getEffect()`, dnd5e 6: an effect can be a compendium reference), and what the content
+ * declares (`targets.types`, `targets.unaffectedIf`).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -17,9 +17,9 @@ import { samePlane } from "./plane.mjs";
 import { inAntimagic, magicalUse, antimagicSourceName } from "./antimagic.mjs";
 
 /**
- * §161 : Globe d'invulnérabilité — « un sort de niveau 5 ou moins lancé de l'extérieur ne peut affecter quoi que ce soit dans
- * l'Émanation » (contenu `globe: { radius, units, maxLevel }`, tenu par un effet du lanceur du globe, concentration comprise). Rend le
- * globe qui protège la cible de ce sort, ou null. `castLevel` : le niveau auquel le sort est lancé.
+ * §161: Globe of Invulnerability — "a spell of level 5 or lower cast from outside cannot affect anything inside the
+ * Emanation" (content `globe: { radius, units, maxLevel }`, held by an effect of the globe's caster, Concentration included).
+ * Returns the globe that protects the target from this spell, or null. `castLevel`: the level the spell is cast at.
  */
 function globeAgainst(activity, token, castLevel) {
   if ( !isSpellCast(activity?.item) || !token?.parent ) return null;
@@ -33,7 +33,7 @@ function globeAgainst(activity, token, castLevel) {
       if ( !rule || (castLevel > rule.maxLevel) ) continue;
       let radius = lengthIn(rule.radius, rule.units, token.parent.grid.units, factors);
       const inside = t => !!t && (distanceBetween(holder, t).value <= radius + 1e-6);
-      // §163 : `everywhere` (Champ antimagie) — d'où que vienne le sort.
+      // §163: `everywhere` (Antimagic Field) — wherever the spell comes from.
       if ( inside(token) && (rule.everywhere || !inside(caster)) ) return item;
     }
   }
@@ -42,26 +42,26 @@ function globeAgainst(activity, token, castLevel) {
 
 const effectKey = e => e._id ?? e.uuid;
 
-/** Ce que le contenu dit des cibles de cette activité (`targets`), ou null. */
+/** What the content says about this activity's targets (`targets`), or null. */
 export function targetRuleOf(activity) {
   if ( !activity?.item ) return null;
   const own = contentOf(activity.item).entry?.targets ?? null;
-  // La copie d'un sort qu'une activité « cast » a lancée (`flags.dnd5e.cachedFor`) : ce que l'item d'origine dit de ses cibles.
+  // The copy of a spell that a "cast" activity cast (`flags.dnd5e.cachedFor`): what the original item says about its targets.
   const cached = activity.item.flags?.dnd5e?.cachedFor;
   const m = (typeof cached === "string") ? cached.match(/Item\.([A-Za-z0-9]{16})\.Activity\.([A-Za-z0-9]{16})$/) : null;
   const caster = m ? activity.item.actor?.items?.get(m[1]) : null;
   return caster ? castTargetRule(own, contentOf(caster).entry?.spellTargets, m[2]) : own;
 }
 
-/** Les types permis, si la créature n'en est pas ; sinon null. */
+/** The allowed types, if the creature is not one of them; otherwise null. */
 export function wrongTypeFor(activity, actor) {
   const types = targetRuleOf(activity)?.types;
   return typeAllowed(types, creatureTypeOf(actor)) ? null : types;
 }
 
 /**
- * §293 : la règle du contenu (`targets` : type exigé, `unaffectedIf`) écarte-t-elle cette créature ? Synchrone, sans plan ni immunités :
- * ce que la liste « créatures de votre choix » ne propose pas (Renvoi des morts-vivants : un humanoïde).
+ * §293: does the content rule (`targets`: required type, `unaffectedIf`) rule out this creature? Synchronous, without plane
+ * or immunities: what the "creatures of your choice" list does not offer (Turn Undead: a Humanoid).
  */
 export function excludedByRule(activity, token) {
   const actor = token?.actor;
@@ -72,8 +72,8 @@ export function excludedByRule(activity, token) {
 }
 
 /**
- * §505 (B25) : la condition que le contenu exige de chaque cible (`targets.requires` : « une créature dans l'espace de la nuée ») est-elle
- * manquée pour ce token ? `origin` : le token de l'auteur.
+ * §505 (B25): is the condition the content requires of each target (`targets.requires`: "a creature in the swarm's space")
+ * missed for this token? `origin`: the author's token.
  */
 export function missesTargetRequirement(activity, token, origin=null) {
   const rule = targetRuleOf(activity)?.requires;
@@ -81,13 +81,13 @@ export function missesTargetRequirement(activity, token, origin=null) {
   return !holds(rule, factsFor({ source: activity.actor ?? null, target: token.actor, activity, sourceToken: origin, targetToken: token }));
 }
 
-/** « un humanoïde », « une bête ou un humanoïde » : les types en clair, par les libellés de dnd5e. */
+/** "a Humanoid", "a Beast or Humanoid": the types in plain words, through dnd5e's labels. */
 export function typesLabel(types) {
   return (types ?? []).map(t => game.i18n.localize(CONFIG.DND5E.creatureTypes?.[t]?.label ?? t).toLowerCase())
     .join(` ${game.i18n.localize("DND5ECOMBAT.Ou")} `);
 }
 
-/** Les états d'un effet du plan (`{ id, activity }`, core/action.mjs). */
+/** The conditions of an effect of the plan (`{ id, activity }`, core/action.mjs). */
 async function statusesOfRef(ref) {
   const activity = await fromUuid(ref.activity ?? "");
   const profile = activity?.effects?.find(e => effectKey(e) === ref.id);
@@ -96,24 +96,24 @@ async function statusesOfRef(ref) {
 }
 
 /**
- * Pourquoi l'action ne peut pas affecter la créature de ce token, ou null : type interdit, règle du contenu, ou
- * immunité à chacun de ses effets quand elle ne fait rien d'autre (core/eligibility.mjs, `immuneToAll`).
- * §225 : d'abord le plan — une créature dans l'Éthéré n'est affectée que par ce qui vient de l'Éthéré, et inversement.
+ * Why the action cannot affect the creature of this token, or null: forbidden type, content rule, or
+ * immunity to each of its effects when it does nothing else (core/eligibility.mjs, `immuneToAll`).
+ * §225: the plane first — a creature in the Ethereal Plane is only affected by what comes from the Ethereal, and conversely.
  * @returns {Promise<{reason: "plane"|"enclosed"|"antimagic"|"globe"|"type"|"content"|"immune", detail?: string}|null>}
  */
 export async function unaffectedBy(activity, plan, token, { castLevel=null }={}) {
   const actor = token?.actor;
   if ( !actor || !activity ) return null;
   if ( activity.actor && !samePlane(activity.actor, actor) ) return { reason: "plane" };
-  // §232 : une sphère d'Otiluke entre l'auteur et la cible — ni dedans vers dehors, ni dehors vers dedans.
+  // §232: an Otiluke's sphere between the author and the target — neither from inside to outside, nor from outside to inside.
   const sphere = enclosureBetween(activity.actor, actor);
   if ( sphere ) return { reason: "enclosed", detail: sphere.name };
-  // §436 : le statut `antimagic` de dnd5e 6.1 — ni sort ni objet magique n'affecte qui se tient dans le champ, d'où qu'ils viennent.
+  // §436: dnd5e 6.1's `antimagic` status — neither spell nor magic item affects whoever stands in the field, from anywhere.
   if ( inAntimagic(actor) && magicalUse(activity) ) return { reason: "antimagic", detail: antimagicSourceName(actor) };
   const globe = globeAgainst(activity, token, castLevel ?? Number(activity.item?.system?.level ?? 0));
   if ( globe ) return { reason: "globe", detail: globe.name };
-  // Résistance supérieure à la magie : « les jets d'attaque des sorts la ratent automatiquement » (`spellAttacksMiss`) — la cible
-  // est hors d'atteinte du sort, sous le nom du trait qui la protège.
+  // Superior Magic Resistance: "spell attack rolls automatically miss it" (`spellAttacksMiss`) — the target
+  // is out of the spell's reach, under the name of the trait that protects it.
   if ( plan.attack && (activity.item?.type === "spell") ) {
     const proof = Array.from(actor.items ?? []).find(i => contentOf(i).entry?.spellAttacksMiss === true);
     if ( proof ) return { reason: "globe", detail: proof.name };
@@ -130,7 +130,7 @@ export async function unaffectedBy(activity, plan, token, { castLevel=null }={})
   return immune ? { reason: "immune", detail: immune } : null;
 }
 
-/** Un effet que la créature ne peut pas recevoir (immunité à l'un de ses états) : ses états bloqués, sinon vide. */
+/** An effect the creature cannot receive (immunity to one of its conditions): its blocked conditions, otherwise empty. */
 export function blockedFor(effect, actor, source=null) {
   const immune = conditionImmunitiesAgainst(actor, source);
   const blocked = Array.from(effect?.statuses ?? []).filter(s => immune.includes(s));

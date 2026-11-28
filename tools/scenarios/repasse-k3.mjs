@@ -1,11 +1,11 @@
 /**
- * §324, lot K3 de la repasse des créatures : un seul des effets d'une capacité de monstre, quand le texte le dit (`monsterChoice`), et
- * deux défauts de donnée corrigés par contenu. Arène des sorts : le Lanceur (PNJ) reçoit des capacités prêtées depuis les fiches du
- * Monster Manual et de Ravenloft, contre l'« Ennemi au contact ».
- *  - Lame du chaos (Slaad de la mort) : un seul état tiré au d4, le jet visible ;
- *  - Cimeterre (Amiral pirate) : Charmé OU Empoisonné, au choix du MJ (la fenêtre est répondue) ;
- *  - Domination d'esprit (Aboleth) : l'effet Charmé est enfin posé sur un échec ;
- *  - Malédiction funeste (Vagabond des Brumes) : Aveuglé ET Assourdi.
+ * §324, batch K3 of the creature pass: only one of the effects of a monster ability, when the text says so (`monsterChoice`),
+ * and two data defects fixed by content. Spell arena: the Caster (NPC) receives abilities borrowed from the Monster Manual and
+ * Ravenloft sheets, against the "Enemy in contact".
+ *  - Blade of Chaos (Death Slaad): a single condition drawn on a d4, the roll visible;
+ *  - Scimitar (Pirate Admiral): Charmed OR Poisoned, at the GM's choice (the window is answered);
+ *  - Dominate Mind (Aboleth): the Charmed effect is finally placed on a failure;
+ *  - Dire Curse (Mistwalker): Blinded AND Deafened.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -58,7 +58,7 @@ export default {
       await clear();
       await pause(600);
     };
-    /** Attaque jusqu'à un toucher (20 essais), en répondant au besoin à la fenêtre de choix (premier bouton). */
+    /** Attacks until a hit (20 tries), answering the choice window if needed (first button). */
     const hitWith = async (itemId, activityId, { answer=false }={}) => {
       for ( let i = 0; i < 20; i++ ) {
         await clear();
@@ -112,7 +112,7 @@ export default {
 
     await part("Domination d'esprit", async () => {
       const dominate = await lend("Compendium.dnd-monster-manual.actors.Actor.mmAboleth0000000.Item.yiiKNaJ2svcUWqLi");
-      // La donnée porte un gabarit : la zone est posée sur l'Ennemi.
+      // The data carries a template: the area is placed on the Enemy.
       const since = await untilFail(dominate, "zdXAMnjaOcsVmLZP", { area: { shape: "rectangle", ...(await ctx.box(target)) } });
       if ( !ctx.expect(!!since, "l'Ennemi rate la sauvegarde (20 essais au plus)") ) return;
       const st = (await fromIdent("dominate-mind")).flatMap(e => e.statuses);

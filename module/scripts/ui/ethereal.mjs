@@ -1,11 +1,11 @@
 /**
- * §225, lot 2 : ce que l'Éthéré change à l'écran, sur chaque client, sans rien écrire.
- *  - un token Éthéré s'affiche en fantôme (transparent) pour qui le perçoit — « les créatures qui s'y trouvent paraissent
- *    fantomatiques » (Détection de l'invisibilité) ; pour les autres, les modes de détection le cachent (ui/perception.mjs) ;
- *  - quand le point de vue du client est Éthéré (ses tokens contrôlés, sinon, pour un joueur, son personnage), la scène passe en
- *    gris — « le plan que vous avez quitté … en nuances de gris » (Clignotement, Forme éthérée) — et les tokens Éthérés ne sont plus
- *    des fantômes : c'est le plan matériel qui l'est. Un voisin qui dessine une vue plus riche la prend en répondant false au hook
- *    `dnd5e-combat.etherealView` (`{ active }`) : le moteur retire alors son gris.
+ * §225, batch 2: what the Ethereal changes on screen, on each client, writing nothing.
+ *  - an Ethereal token is displayed as a ghost (transparent) for whoever perceives it — "creatures there appear
+ *    ghostly" (See Invisibility); for the others, the detection modes hide it (ui/perception.mjs);
+ *  - when the client's point of view is Ethereal (its controlled tokens, otherwise, for a player, their character), the scene turns
+ *    grey — "the plane you left … in shades of grey" (Blink, Etherealness) — and Ethereal tokens are no longer
+ *    ghosts: it is the Material Plane that is. A neighbor that draws a richer view takes it by answering false to the hook
+ *    `dnd5e-combat.etherealView` (`{ active }`): the engine then removes its grey.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -18,7 +18,7 @@ const GHOST_ALPHA = 0.45;
 
 let gray = null;
 
-/** Les tokens d'où ce client regarde : les contrôlés, sinon ceux du personnage d'un joueur. */
+/** The tokens this client looks from: the controlled ones, otherwise those of a player's character. */
 function viewpoint() {
   const controlled = canvas?.tokens?.controlled ?? [];
   if ( controlled.length || game.user.isGM ) return controlled;
@@ -28,8 +28,8 @@ function viewpoint() {
 let ghost = null;
 
 /**
- * Le fantôme : un filtre de transparence sur l'image du token, posé ou retiré à chaque rafraîchissement. Pas `mesh.alpha`, que le cœur
- * recalcule et qu'un voisin réécrit après nous (DAS · Shadows & Ambience, perspective d'élévation : vu en jeu).
+ * The ghost: a transparency filter on the token image, applied or removed at each refresh. Not `mesh.alpha`, which the core
+ * recomputes and a neighbor rewrites after us (DAS · Shadows & Ambience, elevation perspective: seen in play).
  */
 function onRefresh(token) {
   shadeLight(token);
@@ -45,11 +45,11 @@ function onRefresh(token) {
 }
 
 /**
- * Un token Éthéré n'éclaire pas (core/plane.mjs `etherealLight`) : ses rayons préparés sont mis à zéro en mémoire, sur chaque
- * client, et sa source de lumière refaite — rien n'est écrit, la torche reste sur la fiche et se rallume au retour. La préparation
- * des données du token remet ses rayons à chaque mise à jour : on repasse ici à chaque rafraîchissement du token.
+ * An Ethereal token does not light (core/plane.mjs `etherealLight`): its prepared radii are set to zero in memory, on each
+ * client, and its light source rebuilt — nothing is written, the torch stays on the sheet and relights on return. The token
+ * data preparation resets its radii at each update: we pass here again at each token refresh.
  */
-const shaded = new Set();   // ids des tokens éteints par nous
+const shaded = new Set();   // ids of the tokens we turned off
 function shadeLight(token) {
   const doc = token?.document;
   const light = doc?.light;
@@ -69,15 +69,16 @@ function shadeLight(token) {
   token.initializeLightSource();
 }
 
-/** Le point de vue de ce client est-il dans l'Éthéré ? */
+/** Is this client's point of view in the Ethereal? */
 const viewpointEthereal = () => viewpoint().some(t => isEthereal(t.document));
 
-/** La scène en gris quand le point de vue est Éthéré — sauf si un voisin prend la vue à son compte. */
+/** The scene in grey when the point of view is Ethereal — unless a neighbor takes the view over. */
 function updateView() {
   if ( !canvas?.ready || !canvas.stage ) return;
   const on = !theaterActive() && viewpointEthereal();
-  // §225 : sur ce client, à chaque recalcul de sa vue (contrôle d'un token, état Éthéré posé ou retiré) : `({ active })` — son point de vue
-  // est-il dans l'Éthéré ? Annulable : `false` et le moteur ne grise pas la scène (le voisin dessine sa propre vue).
+  // §225: on this client, at each recomputation of its view (control of a token, Ethereal condition applied or removed):
+  // `({ active })` — is its point of view in the Ethereal? Cancellable: `false` and the engine does not grey the scene
+  // (the neighbor draws its own view).
   const claimed = Hooks.call(`${MODULE_ID}.etherealView`, { active: on }) === false;
   const filters = (canvas.stage.filters ?? []).filter(f => f !== gray);
   if ( on && !claimed ) {
@@ -91,9 +92,9 @@ function updateView() {
 }
 
 /**
- * Un état posé ou retiré : l'opacité des tokens, qui voit qui, et la vue. Au tour suivant de la boucle : au moment du hook, l'acteur
- * synthétique d'un token non lié n'a pas encore ses nouveaux statuts (vu en jeu : le test du cœur disait « caché », le token restait
- * affiché).
+ * A condition applied or removed: the tokens' opacity, who sees whom, and the view. On the loop's next tick: at the time of the
+ * hook, the synthetic actor of an unlinked token does not have its new statuses yet (seen in play: the core test said "hidden",
+ * the token stayed displayed).
  */
 function refreshAll(effect) {
   if ( !canvas?.ready || !(effect?.statuses?.has?.("ethereal")) ) return;
@@ -108,7 +109,7 @@ function refreshAll(effect) {
 export function registerEtherealUI() {
   route("refreshToken", onRefresh, { label: "ethereal: ghost not drawn" });
   const label = { label: "ethereal: view not updated" };
-  // Changer de point de vue change aussi qui est un fantôme.
+  // Changing point of view also changes who is a ghost.
   const viewChanged = () => {
     updateView();
     for ( const token of canvas?.tokens?.placeables ?? [] ) token.renderFlags.set({ refreshState: true });

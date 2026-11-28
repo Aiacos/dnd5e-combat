@@ -1,19 +1,20 @@
 /**
- * §397 : « Lancer un combat » (MJ, demande de l'utilisateur, 2026-11-07). La règle de tri est dans core/combat-launch.mjs, la fenêtre dans
+ * §397: "Launch a combat" (GM, user request, 2026-11-07). The sorting rule is in core/combat-launch.mjs, the window in
  * ui/combat-launch.mjs.
  *
- *  1. `beginLaunch` : le jeu se met en pause pour toute la table, avec « Un combat commence, tenez-vous prêts » sous l'icône de pause
- *     (le bandeau du cœur, client/applications/ui/game-pause.mjs, réécrit après son rendu : `showLaunchCaption`) ; la fenêtre
- *     s'ouvre chez le MJ.
- *  2. `launchCandidates` : les tokens de la scène, rangés (joueurs connectés, vus par les joueurs, reste de la carte).
- *  3. `launchCombat` : le combat de la scène (créé au besoin), ses combattants — un PNJ que les joueurs ne voient pas entre caché dans
- *     la frise (`hidden`) et apparaît dès qu'un token des joueurs le voit ; l'état Surpris de dnd5e sur les surpris (Désavantage à
- *     l'initiative, retiré une fois le jet fait : runtime/knockout.mjs) ; la musique ; la pause levée ; l'initiative — les joueurs par la
- *     demande de jets du MJ (type « initiative », runtime/group-roll.mjs : la fenêtre de jet d'une interface voisine, délai, suivi),
- *     les PNJ par dnd5e si demandé ; une invocation « juste après son maître » reçoit son initiative dès que le maître a la sienne
- *     (`initiativeAfter`) ; le premier round commence seul quand tout le monde a lancé.
- *  4. À la fin de ce combat, la musique d'avant reprend.
- * L'état (en attente, combat lancé, musique d'avant) est un réglage de monde caché : tous les clients le lisent.
+ *  1. `beginLaunch`: the game pauses for the whole table, with "A combat begins, get ready" under the pause icon
+ *     (the core's banner, client/applications/ui/game-pause.mjs, rewritten after its render: `showLaunchCaption`); the window
+ *     opens on the GM's side.
+ *  2. `launchCandidates`: the scene's tokens, sorted (connected players, seen by the players, rest of the map).
+ *  3. `launchCombat`: the scene's combat (created if needed), its combatants — an NPC the players do not see enters hidden in
+ *     the tracker (`hidden`) and appears as soon as a player token sees it; dnd5e's Surprised condition on the surprised
+ *     (Disadvantage on Initiative, removed once the roll is made: runtime/knockout.mjs); the music; the pause lifted;
+ *     Initiative — the players through the GM's roll request (type "initiative", runtime/group-roll.mjs: a neighbouring
+ *     interface's roll window, timeout, follow-up), the NPCs by dnd5e if requested; a summon "right after its master" gets
+ *     its Initiative as soon as the master has theirs (`initiativeAfter`);
+ *     the first round starts on its own when everyone has rolled.
+ *  4. When that combat ends, the previous music resumes.
+ * The state (pending, combat launched, previous music) is a hidden world setting: every client reads it.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -35,14 +36,14 @@ const HIDDEN_FLAG = "revealWhenSeen";
 const state = () => { try { return game.settings.get(MODULE_ID, LAUNCH_STATE) ?? {}; } catch { return {}; } };
 const setState = changes => game.settings.set(MODULE_ID, LAUNCH_STATE, { ...state(), ...changes });
 
-/** La règle d'initiative d'une invocation (content/summons.mjs `summon.initiative`), null pour une créature ordinaire. */
+/** A summon's Initiative rule (content/summons.mjs `summon.initiative`), null for an ordinary creature. */
 function summonRule(tokenDoc) {
   const item = summonItemOf(tokenDoc);
   if ( !item ) return null;
   return contentOf(item).entry?.summon?.initiative ?? "own";
 }
 
-/** Le maître d'une invocation : son token sur la scène, ou null. */
+/** A summon's master: its token on the scene, or null. */
 function masterToken(tokenDoc) {
   const actor = summonItemOf(tokenDoc)?.actor;
   return actor?.getActiveTokens?.(false, true)?.find(t => t.parent === tokenDoc.parent) ?? null;
@@ -58,14 +59,14 @@ const ownersOnline = actor => game.users.some(u => !u.isGM && u.active && actor.
 const sameLevel = token => !canvas.level || !token.level || (token.level === canvas.level.id);
 
 /**
- * Les tokens qui « voient pour les joueurs » : toutes les créatures des joueurs sur la scène, connectés ou non (un personnage dont le
- * joueur est absent voit quand même ce qui l'entoure).
+ * The tokens that "see for the players": all the players' creatures on the scene, connected or not (a character whose
+ * player is absent still sees what surrounds it).
  */
 function playerTokens(scene) {
   return scene.tokens.filter(t => t.actor?.hasPlayerOwner && isCreature(t.actor) && alive(t.actor));
 }
 
-/** Les tokens de la scène, rangés pour la fenêtre (core/combat-launch.mjs `classify`). */
+/** The scene's tokens, sorted for the window (core/combat-launch.mjs `classify`). */
 export function launchCandidates(scene=canvas.scene) {
   if ( !scene ) return { players: [], seen: [], rest: [] };
   const observers = playerTokens(scene);
@@ -89,20 +90,20 @@ export function launchCandidates(scene=canvas.scene) {
   return classify(entries);
 }
 
-/** MJ : la pause pour toute la table, avec son message. */
+/** GM: the pause for the whole table, with its message. */
 export async function beginLaunch() {
   if ( !game.user.isGM ) return false;
   if ( !canvas.scene ) { ui.notifications.warn(loc("Lancement.SansScene")); return false; }
   const running = game.combats.find(c => c.started && (c.scene?.id === canvas.scene.id));
   if ( running ) { ui.notifications.warn(loc("Lancement.DejaEnCours")); return false; }
-  // `by` : le MJ qui a ouvert la fenêtre — s'il recharge sa page, c'est son client qui lève l'attente (`ready`).
+  // `by`: the GM who opened the window — if they reload their page, their client lifts the wait (`ready`).
   await setState({ pending: true, wasPaused: game.paused, by: game.user.id });
   game.togglePause(true, { broadcast: true });
   log("combat launch: game paused, choosing the participants");
   return true;
 }
 
-/** MJ : la fenêtre fermée sans lancer — la pause d'avant revient. */
+/** GM: the window closed without launching — the previous pause comes back. */
 export async function cancelLaunch() {
   if ( !game.user.isGM || !state().pending ) return;
   const was = state().wasPaused;
@@ -111,7 +112,7 @@ export async function cancelLaunch() {
   log("combat launch: cancelled");
 }
 
-/** La musique en cours (playlists et pistes), pour la reprendre à la fin du combat. */
+/** The music currently playing (playlists and tracks), to resume it at the end of the combat. */
 function playingNow() {
   return game.playlists.filter(p => p.playing).map(p => ({ playlist: p.id, sounds: p.sounds.filter(s => s.playing).map(s => s.id) }));
 }
@@ -138,12 +139,12 @@ async function restoreMusic(music) {
 }
 
 /**
- * MJ : lance le combat.
+ * GM: launches the combat.
  * @param {object} input
  * @param {Array<{uuid: string, surprised?: boolean}>} input.participants
- * @param {boolean} [input.npcAuto=true]       Les PNJ lancent leur initiative tout seuls.
- * @param {boolean} [input.grouped=false]     Une initiative par type de créature.
- * @param {string|null} [input.playlist]      La playlist de combat.
+ * @param {boolean} [input.npcAuto=true]       NPCs roll their Initiative on their own.
+ * @param {boolean} [input.grouped=false]     One Initiative per creature type.
+ * @param {string|null} [input.playlist]      The combat playlist.
  * @returns {Promise<Combat|null>}
  */
 export async function launchCombat({ participants=[], npcAuto=true, grouped=false, playlist=null }={}) {
@@ -174,7 +175,7 @@ export async function launchCombat({ participants=[], npcAuto=true, grouped=fals
   game.togglePause(false, { broadcast: true });
   log(`combat launch: ${tokens.length} participant(s)${music ? ", combat music on" : ""}`);
 
-  // L'initiative : les joueurs par la demande de jets, les PNJ par dnd5e, les invocations « après » quand leur maître a la sienne.
+  // Initiative: the players through the roll request, the NPCs by dnd5e, the "after" summons when their master has theirs.
   const ids = new Set(tokens.map(p => p.token.id));
   const members = combat.combatants.filter(c => ids.has(c.tokenId));
   const rule = c => summonRule(c.token);
@@ -200,7 +201,7 @@ export async function launchCombat({ participants=[], npcAuto=true, grouped=fals
   return combat;
 }
 
-/** Les invocations « juste après leur maître » : leur initiative suit celle du maître dès qu'il l'a. */
+/** The summons "right after their master": their Initiative follows the master's as soon as it has one. */
 async function followSummons(combat) {
   const updates = [];
   for ( const c of combat.combatants ) {
@@ -214,13 +215,13 @@ async function followSummons(combat) {
   if ( updates.length ) await combat.updateEmbeddedDocuments("Combatant", updates);
 }
 
-/** Les combats dont le premier round est demandé au serveur, pas encore confirmé. */
+/** The combats whose first round is requested from the server, not yet confirmed. */
 const starting = new Set();
 
 /**
- * Le premier round, dès que tout le monde a lancé. `combat.started` ne change qu'à la réponse du serveur, et une réponse qui porte
- * plusieurs initiatives (PNJ groupés, invocations qui suivent leur maître) passe ici une fois par combattant : le départ en cours
- * est noté, pour ne pas commencer le combat plusieurs fois.
+ * The first round, as soon as everyone has rolled. `combat.started` only changes on the server's response, and a response that
+ * carries several Initiatives (grouped NPCs, summons that follow their master) comes through here once per combatant: the start
+ * in progress is noted, so as not to start the combat several times.
  */
 async function startWhenReady(combat) {
   if ( !combat || combat.started || starting.has(combat.id) || (state().combat !== combat.id) ) return;
@@ -231,7 +232,7 @@ async function startWhenReady(combat) {
   log("combat launch: everyone rolled, round 1 starts");
 }
 
-/** Un PNJ caché dans la frise faute d'être vu : il apparaît dès qu'un token des joueurs le voit. */
+/** An NPC hidden in the tracker for lack of being seen: it appears as soon as a player token sees it. */
 async function revealSeen(combat) {
   if ( !combat?.scene || (state().combat !== combat.id) ) return;
   const observers = playerTokens(combat.scene);
@@ -244,10 +245,10 @@ async function revealSeen(combat) {
 }
 
 /**
- * Le bandeau de pause : le message du lancement pendant le choix des participants. Écrit après le rendu du bandeau, sans
- * s'inscrire à `renderGamePause` : dnd5e n'habille le bandeau (son emblème, sa police) que s'il est le seul inscrit à ce hook
- * (`if ( Hooks.events.renderGamePause.length > 1 ) return;`) — un inscrit de plus, et toute la table voyait en permanence le
- * bandeau nu du cœur.
+ * The pause banner: the launch message during the choice of participants. Written after the banner's render, without
+ * subscribing to `renderGamePause`: dnd5e only dresses up the banner (its emblem, its font) if it is the only subscriber to that
+ * hook (`if ( Hooks.events.renderGamePause.length > 1 ) return;`) — one more subscriber, and the whole table permanently saw the
+ * core's bare banner.
  */
 function showLaunchCaption() {
   if ( !state().pending || !game.paused ) return;
@@ -255,9 +256,9 @@ function showLaunchCaption() {
   if ( caption ) caption.innerText = loc("Lancement.Pause");
 }
 
-/** Redessine le bandeau de pause (le texte du système revient), puis y remet le message du lancement s'il y a lieu. */
+/** Redraws the pause banner (the system's text comes back), then puts the launch message back on it if applicable. */
 async function refreshPause() {
-  try { await ui.pause?.render?.(); } catch { /* pas de bandeau sur ce client */ }
+  try { await ui.pause?.render?.(); } catch { /* no banner on this client */ }
   showLaunchCaption();
 }
 
@@ -269,12 +270,12 @@ export function registerCombatLaunch() {
     scope: "world", config: true, type: Boolean, default: true, onChange: () => ui.controls?.render?.({ reset: true })
   });
   game.settings.register(MODULE_ID, LAUNCH_PLAYLIST, { scope: "client", config: false, type: String, default: "" });
-  // La pause mise ou levée, et le client qui (re)charge pendant le choix : le bandeau vient d'être redessiné par le cœur.
+  // The pause set or lifted, and the client that (re)loads during the choice: the banner has just been redrawn by the core.
   for ( const hook of ["pauseGame", "ready"] ) {
     route(hook, () => { refreshPause(); }, { always: true, label: "combat launch: pause message not shown" });
   }
-  // L'attente ne se lève qu'à la fermeture de la fenêtre : un MJ qui recharge fenêtre ouverte n'en a plus, la pause et son message
-  // resteraient jusqu'au prochain lancement. Un état d'avant `by` : le MJ actif s'en charge.
+  // The wait only lifts when the window closes: a GM who reloads with the window open no longer has one, the pause and its message
+  // would stay until the next launch. A state from before `by`: the active GM takes care of it.
   route("ready", () => {
     const { pending, by } = state();
     if ( pending && (by ? by === game.user.id : isExecutor()) ) return cancelLaunch();
@@ -298,5 +299,5 @@ export function registerCombatLaunch() {
 }
 
 export const launchApi = Object.freeze({ candidates: launchCandidates, begin: beginLaunch, cancel: cancelLaunch, launch: launchCombat,
-  /** Un lancement de combat est-il en cours (pause posée par `begin`, participants pas encore choisis) ? Réglage de monde, tout client. */
+  /** Is a combat launch in progress (pause placed by `begin`, participants not yet chosen)? World setting, any client. */
   pending: () => !!state().pending });

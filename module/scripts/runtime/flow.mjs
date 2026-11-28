@@ -1,25 +1,25 @@
 /**
- * §418 : les réglages du cadre « Déroulement » qui n'ont pas d'autre maison (le refus : runtime/forced.mjs, §417). Déclarés à tous les
- * niveaux d'automatisation : la fenêtre de réglages les montre toujours, et ce qui les lit (adapter/reactions.mjs) ne tourne qu'à partir
- * du niveau qui juge la règle.
+ * §418: the "Flow" frame settings that have no other home (the refusal: runtime/forced.mjs, §417). Declared at all
+ * automation levels: the settings window always shows them, and what reads them (adapter/reactions.mjs) only runs from
+ * the level that judges the rule.
  */
 import { MODULE_ID } from "../constants.mjs";
 import { REACTION_MODES, DAMAGE_MODES, damageSteps } from "../core/flow.mjs";
 
-/** Réglage de monde « Réactions » : demander à chacun, aux joueurs seulement, ou jamais. Lu par `askReaction` (adapter/reactions.mjs). */
+/** World setting "Reactions": ask everyone, players only, or never. Read by `askReaction` (adapter/reactions.mjs). */
 export const REACTION_SETTING = "reactionPrompts";
 
-/** §419 : réglage de monde « Dégâts » — lancés d'office ou au clic de l'auteur, appliqués d'office ou validés par le MJ. */
+/** §419: world setting "Damage" — rolled automatically or on the author's click, applied automatically or validated by the GM. */
 export const DAMAGE_SETTING = "damageFlow";
 
 /**
- * §419 : ce que le réglage « Dégâts » demande (core/flow.mjs, `damageSteps`). §524 : `playerAuthor` — l'auteur de l'action est un
- * joueur ; lu sur le client de l'auteur, c'est l'utilisateur de ce client quand il n'est pas MJ.
+ * §419: what the "Damage" setting asks (core/flow.mjs, `damageSteps`). §524: `playerAuthor` — the action's author is a
+ * player; read on the author's client, it is this client's user when not a GM.
  * @param {{playerAuthor?: boolean}} [who]
  */
 export function damageFlow({ playerAuthor=false }={}) {
   let mode = "level";
-  try { mode = game.settings.get(MODULE_ID, DAMAGE_SETTING); } catch { /* réglage pas encore déclaré */ }
+  try { mode = game.settings.get(MODULE_ID, DAMAGE_SETTING); } catch { /* setting not yet declared */ }
   return damageSteps(mode, { playerAuthor });
 }
 

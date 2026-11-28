@@ -1,6 +1,6 @@
 /**
- * §70 : la question d'Appel de la foudre à l'incantation — « dehors, par temps d'orage ? » (l'orage en cours passe sous votre
- * contrôle, dégâts +1d10). Rend true, false, ou null si la fenêtre est fermée (rien n'est lancé).
+ * §70: the Call Lightning question at casting — "outdoors, in stormy weather?" (the ongoing storm comes under your
+ * control, damage +1d10). Returns true, false, or null if the window is closed (nothing is cast).
  */
 
 import { loc } from "../runtime/shared.mjs";

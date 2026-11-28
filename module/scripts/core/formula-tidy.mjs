@@ -1,13 +1,13 @@
 /**
- * §438 : une formule de dés lisible. Le Manuel 3.0.0 a retiré des échelles que le contenu remplace par des formules sur le niveau de
- * classe (`2d(6 + 2 * min(1, floor(@classes.ranger.levels / 11)))`) : une fois les données remplacées, chaque groupe de nombres entre
- * parenthèses (avec `floor`, `ceil`, `round`, `min`, `max`) est calculé — `2d(6 + 2 * min(1, floor(5 / 11)))` → `2d6`. Rien d'autre ne
- * change (dés, `@` restants, texte). Pur.
+ * §438: a readable dice formula. The Handbook 3.0.0 removed scales that the content replaces with formulas on the class
+ * level (`2d(6 + 2 * min(1, floor(@classes.ranger.levels / 11)))`): once the data is substituted, each group of numbers in
+ * parentheses (with `floor`, `ceil`, `round`, `min`, `max`) is computed — `2d(6 + 2 * min(1, floor(5 / 11)))` → `2d6`. Nothing else
+ * changes (dice, remaining `@`, text). Pure.
  */
 
 const GROUP = /(floor|ceil|round|min|max)?\(([\d\s+\-*/.,]*)\)/;
 
-/** Un groupe calculable : « min(1, 2) » → 1 ; « (6 + 2) » → 8 ; null s'il ne l'est pas. */
+/** A computable group: "min(1, 2)" → 1; "(6 + 2)" → 8; null if it is not. */
 function evaluate(fn, inner) {
   const parts = inner.split(",").map(p => p.trim());
   if ( parts.some(p => !/^[\d\s+\-*/.]+$/.test(p)) ) return null;

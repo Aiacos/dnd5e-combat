@@ -1,16 +1,18 @@
 /**
- * §177, §203: the World diagnostic on the whole world, not on a test actor — what a GM does after an update. Written after the
- * 2026-11-25 study (tri-demandes/DIAGNOSTIC-REPARATION.md): the GM's repair on `dnd-6` made 1,476 fixes (1,472 translations), a user
- * reported an error at repair time, and the bench never exercised the translation check because its client is in English.
+ * §177, §203: the World diagnostic on the whole world, not on a test actor — what a GM does after an update. Written after
+ * the 2026-11-25 study (tri-demandes/DIAGNOSTIC-REPARATION.md): the GM's repair on `dnd-6` made 1,476 fixes (1,472
+ * translations), a user reported an error at repair time, and the bench never exercised the translation check because its
+ * client is in English.
  *
- *  1. The GM client is switched to French and reloaded: `retranslate` works in the language of the client that runs it (Babele).
- *  2. A world just repaired has almost nothing left to repair. If the analysis finds no fixable task, the world is first put back to
- *     the state before the GM's last repair (the most recent entry of « DAS · Sauvegardes », restored — that restore is itself backed
- *     up first). No backup and nothing to repair: not applicable.
- *  3. Analysis of every check: no check fails. Repair of every fixable task (pre-selected or not, `phb3-items` included): backup made
- *     and verified first, no task fails, no error in the console. A new analysis finds nothing fixable left.
- *  4. Everything is put back: the state before the scenario is restored from its own backup (no line fails), the backup entries the
- *     scenario created are deleted, the client goes back to its language.
+ *  1. The GM client is switched to French and reloaded: `retranslate` works in the language of the client that runs it
+ *     (Babele).
+ *  2. A world just repaired has almost nothing left to repair. If the analysis finds no fixable task, the world is first put
+ *     back to the state before the GM's last repair (the most recent entry of « DAS · Sauvegardes », restored — that restore is
+ *     itself backed up first). No backup and nothing to repair: not applicable.
+ *  3. Analysis of every check: no check fails. Repair of every fixable task (pre-selected or not, `phb3-items` included):
+ *     backup made and verified first, no task fails, no error in the console. A new analysis finds nothing fixable left.
+ *  4. Everything is put back: the state before the scenario is restored from its own backup (no line fails), the backup
+ *     entries the scenario created are deleted, the client goes back to its language.
  *
  * Long (about 4 minutes on `dnd-6-test`, 235 sheets): full pass only, never in the smoke pass.
  */

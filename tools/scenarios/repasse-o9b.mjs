@@ -1,10 +1,10 @@
 /**
- * §355, lot O9b de la repasse des objets : dégâts et soins conditionnels d'armes. Arène de test (Guerrier, Zombi, Clerc, Ensorceleur).
- *  1. Fléau d'ébène (Ravenloft) : les 3d6 nécrotiques sur le Clerc (Humanoïde), pas sur le Zombi (Mort-vivant).
- *  2. Noirtranchant : le Clerc à 1 PV, touché, tombe — tué, le Guerrier gagne son maximum de PV en PV temporaires.
- *  3. Épée voleuse de vie (posée sur une Épée longue) : un coup critique d'office (Clerc Paralysé au contact) — 15 PV temporaires.
- *  4. Demonomicon d'Iggwilv porté par l'Ensorceleur : Trait de feu sur le Zombi devenu Fiélon — dégâts au maximum.
- * PV, PV temporaires, états et type du Zombi remis ; l'enchantement de l'Épée longue retiré.
+ * §355, batch O9b of the item pass: conditional weapon damage and healing. Test arena (Fighter, Zombie, Cleric, Sorcerer).
+ *  1. Ebony Bane (Ravenloft): the 3d6 necrotic on the Cleric (Humanoid), not on the Zombie (Undead).
+ *  2. Blackrazor: the Cleric at 1 HP, hit, goes down — killed, the Fighter gains its maximum HP as Temporary Hit Points.
+ *  3. Vampiric Sword (placed on a Longsword): an automatic Critical Hit (Paralyzed Cleric in contact) — 15 Temporary Hit Points.
+ *  4. Iggwilv's Demonomicon carried by the Sorcerer: Fire Bolt on the Zombie made a Fiend — maximum damage.
+ * The Zombie's HP, Temporary Hit Points, conditions and type restored; the Longsword's enchantment removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -39,7 +39,7 @@ export default {
     ctx.restore(() => ctx.engine("setting", { key: "dataFixes", value: fiddle.before }));
     await ctx.engine("setting", { key: "dataFixes", value: true });
 
-    /** Attaque jusqu'au toucher ; rend la cible et les lignes du message de dégâts. */
+    /** Attacks until a hit; returns the target and the lines of the damage message. */
     const hit = async (itemId, target, before=async () => {}) => {
       for ( let i = 0; i < 15; i++ ) {
         await before();
@@ -55,16 +55,16 @@ export default {
       return null;
     };
 
-    // 1. Fléau d'ébène.
+    // 1. Ebony Bane.
     if ( packs.includes("dnd-ravenloft-horrors-within.items") ) {
       const ebon = await ctx.ensureItem(fighter, `${RAV}rhwEbonbane00000`);
       let h = await hit(ebon, zombi, clean);
       ctx.expect(!!h && !/3d6/.test(h.formulas), `Fléau d'ébène sur le Zombi : pas de 3d6 nécrotiques (${h?.formulas ?? "raté"})`);
       h = await hit(ebon, cleric, clean);
       ctx.expect(!!h && /3d6/.test(h.formulas), `Fléau d'ébène sur le Clerc : 3d6 nécrotiques (${h?.formulas ?? "raté"})`);
-      // Défaut connu de la donnée (pas du moteur) : la description porte « [[/damage twoHanded average]] », que l'enrichisseur de dnd5e lit
-      // comme une formule (« twohanded » n'est pas un mode d'attaque une fois mis en minuscules) — une erreur à chaque rendu. Seule celle-là
-      // est tolérée ici.
+      // Known defect of the data (not the engine's): the description carries "[[/damage twoHanded average]]", which dnd5e's
+      // enricher reads as a formula ("twohanded" is not an attack mode once lowercased) — an error on every render. Only that
+      // one is tolerated here.
       const errors = (await ctx.clientErrors()).map(e => JSON.stringify(e));
       ctx.expect(errors.every(e => /twoHanded/.test(e)), `Fléau d'ébène : aucune autre erreur que celle de sa description (${errors.length} vue(s))`);
     } else ctx.log("Ravenloft absent : Fléau d'ébène sauté");
@@ -82,7 +82,7 @@ export default {
     }
     await clean();
 
-    // 3. Épée voleuse de vie.
+    // 3. Vampiric Sword.
     const source = await ctx.ensureItem(fighter, `${DMG}dmgSwordOfLifeSt`);
     const sword = await ctx.ensureItem(fighter, `${PHB}phbwepLongsword0`);
     const done = await ctx.engine("enchant", { tokenId: fighter.id, itemId: source, activityId: "IvHRnKPwz1WWjFkN", targetItemId: sword }).catch(err => ({ error: err.message }));

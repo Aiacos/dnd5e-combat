@@ -1,21 +1,21 @@
 /**
- * La chance de toucher lue dans Foundry pour le cœur (core/hitchance.mjs, SPEC §15.3) : ce que le
- * jet d'attaque de dnd5e ferait, sans le lancer.
+ * The hit chance read from Foundry for the core (core/hitchance.mjs, SPEC §15.3): what the dnd5e
+ * attack roll would do, without rolling it.
  *
- *  - bonus : `AttackActivityData#getAttackData` (data/activity/attack-data.mjs:274), celui-là même
- *    que le jet utilise (documents/activity/attack.mjs:258), avec le mode d'attaque, la
- *    caractéristique et la munition que le jet retiendrait (derniers choix mémorisés sur l'item,
- *    attack.mjs:92-117). Les dés du bonus (Bénédiction) sont lus terme à terme ;
- *  - avantage, désavantage : ceux du système (`D20RollModificationField.combineFields`, les
- *    mêmes champs que attack.mjs:121-124 — Empoisonné, effets actifs, règles appliquées) plus
- *    ceux du moteur (adapter/conditions.mjs, les mêmes qu'au jet) ; les deux à la fois = jet normal ;
- *  - seuil de critique : `criticalThreshold` de l'activité (attack-data.mjs:130) ;
- *  - CA : celle que dnd5e écrit sur le jet (`attributes.ac.value`), plus l'abri du moteur
- *    (adapter/cover.mjs), comme au verdict (runtime/engine.mjs) ; un état d'abri posé à la main est
- *    déjà dans la CA.
+ *  - bonus: `AttackActivityData#getAttackData` (data/activity/attack-data.mjs:274), the very one
+ *    the roll uses (documents/activity/attack.mjs:258), with the attack mode, the
+ *    ability and the ammunition that the roll would pick (last choices remembered on the item,
+ *    attack.mjs:92-117). The bonus dice (Bless) are read term by term;
+ *  - Advantage, Disadvantage: those of the system (`D20RollModificationField.combineFields`, the
+ *    same fields as attack.mjs:121-124 — Poisoned, Active Effects, applied rules) plus
+ *    those of the engine (adapter/conditions.mjs, the same as at the roll); both at once = normal roll;
+ *  - critical threshold: `criticalThreshold` of the activity (attack-data.mjs:130);
+ *  - AC: the one that dnd5e writes on the roll (`attributes.ac.value`), plus the engine's Cover
+ *    (adapter/cover.mjs), as at the verdict (runtime/engine.mjs); a Cover condition set by hand is
+ *    already in the AC.
  *
- * Non compris : Chanceux (halfelin), Précision elfique, réactions de la
- * cible (Bouclier).
+ * Not included: Lucky (Halfling), Elven Accuracy, Reactions of the
+ * target (Shield).
  */
 
 import { hitChance, saveFailChance } from "../core/hitchance.mjs";
@@ -31,8 +31,8 @@ import { effectOfProfile } from "./usage.mjs";
 import { ammoState } from "./ammo.mjs";
 
 /**
- * Le bonus d'une formule, séparé en partie fixe et dés. null si la formule a autre chose qu'une
- * somme de nombres et de dés simples (multiplication, dés modifiés…).
+ * A formula's bonus, split into a flat part and dice. null if the formula has anything other than a
+ * sum of numbers and simple dice (multiplication, modified dice…).
  * @returns {{flat: number, dice: Array<{number: number, faces: number, sign: 1|-1}>}|null}
  */
 export function splitBonus(formula, data) {
@@ -64,7 +64,7 @@ export function splitBonus(formula, data) {
   return { flat, dice };
 }
 
-/** Le mode d'attaque, la caractéristique et la munition que le jet retiendrait. */
+/** The attack mode, the ability and the ammunition that the roll would pick. */
 function rollChoices(activity, attackMode=null) {
   const item = activity.item;
   const last = item.getFlag?.("dnd5e", `last.${activity.id}`) ?? {};
@@ -75,18 +75,18 @@ function rollChoices(activity, attackMode=null) {
 }
 
 /**
- * Chance qu'une attaque touche une cible.
+ * Chance that an attack hits a target.
  * @param {TokenDocument} attacker
  * @param {TokenDocument} target
- * @param {Activity} activity           Une activité d'attaque.
+ * @param {Activity} activity           An attack activity.
  * @param {object} [options]
  * @param {string|null} [options.attackMode]
- * @param {object} [options.posA]       Position de l'attaquant au bout de son approche.
- * @param {{advantage?: boolean, disadvantage?: boolean}} [options.keys]  Touches d'avantage et de
- *   désavantage de dnd5e (Alt / Ctrl par défaut), que le système ajoute au jet (dice/d20-roll.mjs:83-84).
+ * @param {object} [options.posA]       The attacker's position at the end of their approach.
+ * @param {{advantage?: boolean, disadvantage?: boolean}} [options.keys]  dnd5e's Advantage and
+ *   Disadvantage keys (Alt / Ctrl by default), which the system adds to the roll (dice/d20-roll.mjs:83-84).
  * @returns {{hit: number, critical: number, ac: number|null, baseAc: number|null, cover: object|null,
  *            mode: 1|0|-1, advantage: object[], disadvantage: object[], system: {advantage: boolean, disadvantage: boolean}}|null}
- *   null : pas une attaque, ou rien d'assez sûr pour l'afficher.
+ *   null: not an attack, or nothing certain enough to display.
  */
 export function hitChanceOf(attacker, target, activity, { attackMode=null, posA, keys={} }={}) {
   if ( (activity?.type !== "attack") || !attacker?.actor || !target?.actor ) return null;
@@ -113,8 +113,8 @@ export function hitChanceOf(attacker, target, activity, { attackMode=null, posA,
   const mode = netMode({ advantage: advantage ? [1] : [], disadvantage: disadvantage ? [1] : [] });
 
   const cover = coverAgainst(attacker, target, activity, choices.attackMode, { posA, quiet: true,
-    seenOnly: !game.user?.isGM });   // §131 ; #33 : un joueur ne compte que les créatures qu'il voit
-  // O8d (§347) : bonus de CA contre les attaques à distance (Bouclier antiprojectiles).
+    seenOnly: !game.user?.isGM });   // §131; #33: a player only counts the creatures they see
+  // O8d (§347): AC bonus against ranged attacks ("Anti-missile Shield").
   const shield = context.ranged ? rangedAcBonus(target.actor) : 0;
   const ac = cover ? ((cover.bonus === null) ? null : baseAc + cover.bonus + shield) : baseAc + shield;
   const chance = hitChance({
@@ -129,14 +129,14 @@ export function hitChanceOf(attacker, target, activity, { attackMode=null, posA,
 }
 
 /**
- * Chance qu'une cible rate la sauvegarde d'une activité (§15.3) : ce que ferait son jet de sauvegarde, sans le lancer —
- * construit comme dnd5e le construit (`Actor5e#rollSavingThrow` → `#rollD20Test`, dnd5e 6.0.3) : champs
- * `abilities.<car>.save.roll` et `rolls.ability.save` combinés (bonus de règle, avantage, désavantage), parts
- * (modificateur, maîtrise, bonus, abri en Dextérité) par `D20Roll.constructParts`, réduction d'état (épuisement) par
- * `addConditionRollReduction` ; plus ce que le moteur y met (adapter/saves.mjs, `saveRollArguments`) : le bonus propre de
- * l'activité, l'avantage de `saveAdvantageAgainst` (Résistance à la magie, Ascendance féerique…) et de `fightingAdvantageFor`
- * (Charme-personne). Échec d'office : `autoFailSave` ; sans objet : immunité à tous les états posés, sans dégâts.
- * Plusieurs caractéristiques au choix (Lutte) : la meilleure pour la cible, comme elle la choisirait.
+ * Chance that a target fails an activity's saving throw (§15.3): what its saving throw would do, without rolling it —
+ * built as dnd5e builds it (`Actor5e#rollSavingThrow` → `#rollD20Test`, dnd5e 6.0.3): fields
+ * `abilities.<car>.save.roll` and `rolls.ability.save` combined (rule bonus, Advantage, Disadvantage), parts
+ * (modifier, proficiency, bonus, Cover on Dexterity) by `D20Roll.constructParts`, condition reduction (Exhaustion) by
+ * `addConditionRollReduction`; plus what the engine puts in it (adapter/saves.mjs, `saveRollArguments`): the activity's own
+ * bonus, the Advantage from `saveAdvantageAgainst` (Magic Resistance, Fey Ancestry…) and from `fightingAdvantageFor`
+ * (Charm Person). Automatic failure: `autoFailSave`; moot: Immunity to all the conditions applied, no damage.
+ * Several abilities to choose from (Grapple): the best one for the target, as it would choose it.
  * @returns {{fail: number, dc: number, ability: string, bonus: number, dice: object[], mode: 1|0|-1, autoFail: string|null,
  *   immune: boolean, legendary: number, advantage: string[], disadvantage: string[]}|null}
  */

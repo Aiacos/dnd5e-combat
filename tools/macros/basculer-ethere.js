@@ -1,6 +1,6 @@
 /**
- * §225 : fait passer les tokens sélectionnés dans le plan Éthéré, ou les en fait revenir (l'état « Éthéré » de dnd5e, le même que dans
- * le menu des états du HUD du token). Un groupe mixte passe tout entier dans l'Éthéré.
+ * §225: moves the selected tokens into the Ethereal plane, or brings them back (dnd5e's "Ethereal" condition, the same as in
+ * the token HUD's conditions menu). A mixed group goes entirely into the Ethereal.
  */
 const api = game.modules.get("dnd5e-combat")?.api;
 if ( !api?.ethereal?.toggle ) return ui.notifications.error(game.i18n.localize("DND5ECOMBAT.Diagnostic.MoteurRequis"));

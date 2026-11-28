@@ -1,17 +1,17 @@
 /**
- * §496 (B16) — dissipation bornée : `dispel: { upTo: 3, beyond: "none", keepBySlot: true }`. Arène de test : Magicien (token lié),
- * Clerc, Guerrier. Un trait d'essai est prêté au Magicien (une activité utilitaire qui vise une créature) ; sa règle est posée dans la
- * surcouche du monde (`overrideContent`, jamais en drapeau d'item). Le Clerc reçoit Bénédiction (à volonté) et bénit le Guerrier ; le
- * Magicien vise ensuite le Guerrier avec le trait.
- *  1. Bénédiction lancée au niveau 4 (au-delà du plafond 3) : rien, sans test — carte `dispel` : `resisted` [{ beyond: true, total: null }],
- *     Bénédiction toujours sur le Guerrier, aucune question au Clerc.
- *  2. Bénédiction au niveau 1, le Clerc la garde : la question « garder ? » s'ouvre chez le MJ (le Clerc n'a pas de joueur connecté),
- *     on choisit l'emplacement de niveau 1 (`pick1`) — carte `kept` [{ slot: 1 }], Bénédiction et concentration toujours là, un
- *     emplacement de niveau 1 en moins.
- *  3. Bénédiction au niveau 1, le Clerc la laisse finir (`pick0`) : carte `ended`, Bénédiction et concentration retirées, emplacements
- *     inchangés.
- * Bénédiction et concentration restées d'un passage précédent retirées d'abord (acteurs synthétiques compris) ; emplacements du Clerc,
- * trait, sort, surcouche remis. Toute fenêtre « le faire quand même » ouverte chez le MJ est acceptée (« go »), toute autre fermée.
+ * §496 (B16) — bounded dispel: `dispel: { upTo: 3, beyond: "none", keepBySlot: true }`. Test arena: Wizard (linked token),
+ * Cleric, Fighter. A test feature is lent to the Wizard (a utility activity that targets a creature); its rule is placed in the
+ * world overlay (`overrideContent`, never as an item flag). The Cleric receives Bless (at will) and blesses the Fighter; the
+ * Wizard then targets the Fighter with the feature.
+ *  1. Bless cast at level 4 (beyond the cap 3): nothing, no check — `dispel` card: `resisted` [{ beyond: true, total: null }],
+ *     Bless still on the Fighter, no question to the Cleric.
+ *  2. Bless at level 1, the Cleric keeps it: the "keep?" question opens on the GM's side (the Cleric has no connected player),
+ *     we choose the level 1 slot (`pick1`) — card `kept` [{ slot: 1 }], Bless and concentration still there, one
+ *     level 1 spell slot fewer.
+ *  3. Bless at level 1, the Cleric lets it end (`pick0`): card `ended`, Bless and concentration removed, spell slots
+ *     unchanged.
+ * Bless and concentration left over from a previous pass removed first (synthetic actors included); the Cleric's spell slots,
+ * feature, spell, overlay restored. Any "do it anyway" window open on the GM's side is accepted ("go"), any other is closed.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -19,7 +19,7 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
 
 const IDENTIFIER = "das-essai-dissipation-bornee";
 const ACTIVITY = "dasEssaiDissBorn";
-// Nom en constante : le banc et la référence prennent le premier « name: » indenté de deux espaces pour le titre du scénario.
+// Name as a constant: the test bench and the reference take the first "name:" indented by two spaces as the scenario title.
 const ITEM_NAME = "Essai : dissipation bornée";
 const ITEM = { name: ITEM_NAME, type: "feat", img: "icons/magic/symbols/runes-star-pentagon-blue.webp",
   system: { identifier: IDENTIFIER, type: { value: "monster" }, description: { value: "<p>Essai §496.</p>" },
@@ -40,7 +40,7 @@ export default {
     const { data: mTok } = await ctx.call("get-scene-object", { type: "Token", objectId: mage.id });
     if ( !mTok.actorLink ) { ctx.log("Magicien non lié : non applicable (le trait prêté irait à l'acteur de base)"); return; }
 
-    // --- Fenêtres chez le MJ : aucune ne reste sans réponse --------------------------------------------------------------
+    // --- Windows on the GM's side: none stays unanswered ------------------------------------------------------------------
     const seen = new Set(((await ctx.call("list-dialogs", {})).windows ?? []).map(w => w.id));
     const sweep = async (ms=1500) => {
       const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...seen], waitMs: ms, details: true }).catch(() => null);
@@ -52,7 +52,7 @@ export default {
         await ctx.call("answer-dialog", { id: w.id, ...(button ? { button } : {}) }).catch(() => {});
       }
     };
-    /** La question « garder le sort ? » (titre : le nom du trait), répondue par `button` ; rend vrai si elle a été vue. */
+    /** The "keep the spell?" question (title: the feature's name), answered with `button`; returns true if it was seen. */
     const answerKeep = async (button, ms=12000) => {
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
         const r = await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: [...seen], waitMs: 1500, details: true }).catch(() => null);
@@ -69,7 +69,7 @@ export default {
       return false;
     };
 
-    // --- Acteurs : cible directe (acteur lié) ou acteur synthétique du token --------------------------------------------------
+    // --- Actors: direct target (linked actor) or the token's synthetic actor ---------------------------------------------
     const targetOf = async t => {
       const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: t.id });
       return data.actorLink ? { documentType: "Actor", id: data.actorId } : { uuid: `Scene.${sceneId}.Token.${t.id}.Actor.${data.actorId}` };
@@ -82,7 +82,7 @@ export default {
     await clean();
     ctx.restore(clean);
 
-    // --- Emplacements du Clerc : 4 de niveau 1, remis à la fin --------------------------------------------------------------
+    // --- Cleric's spell slots: 4 of level 1, restored at the end -----------------------------------------------------------
     const { data: cTok } = await ctx.call("get-scene-object", { type: "Token", objectId: cleric.id });
     const clericLinked = !!cTok.actorLink;
     const slotsOf = async () => {
@@ -98,7 +98,7 @@ export default {
     await setSlots(4, 4);
     ctx.restore(() => setSlots(slots0.value, slots0.override).catch(() => {}));
 
-    // --- Trait prêté, puis règle ----------------------------------------------------------------------------------------------
+    // --- Feature lent, then rule ----------------------------------------------------------------------------------------------
     await ctx.call("upsert-actor-item", { actorId: mTok.actorId, itemData: ITEM, match: { path: "system.identifier", value: IDENTIFIER } });
     const lent = await ctx.itemId(mage.id, IDENTIFIER);
     ctx.restore(() => ctx.call("remove-embedded-item", { documentType: "Actor", id: mTok.actorId, itemId: lent }).catch(() => {}));
@@ -116,7 +116,7 @@ export default {
       await pause(1200);
       return { on: await blessOn(), conc: await concentrating() };
     };
-    /** Le trait sur le Guerrier ; `keep` : la réponse à la question « garder ? » (null : aucune question attendue). */
+    /** The feature on the Fighter; `keep`: the answer to the "keep?" question (null: no question expected). */
     const dispel = async (keep=null) => {
       const since = await ctx.lastMessageId();
       await ctx.use({ tokenId: mage.id, itemId: lent, activityType: "utility", consume: false, targetTokenIds: [fighter.id] });

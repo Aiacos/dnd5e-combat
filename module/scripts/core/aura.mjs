@@ -1,36 +1,36 @@
 /**
- * Auras passives (Aura de protection du paladin) : un effet que des créatures reçoivent tant
- * qu'elles se tiennent près d'une autre, et perdent en s'éloignant. dnd5e 6.0 ne sait le faire
- * que pour une zone posée par une activité ; son Aura de protection officielle ne touche que le
- * paladin. Fonctions pures, aucune dépendance à Foundry.
+ * Passive auras (the Paladin's Aura of Protection): an effect that creatures receive as long
+ * as they stand near another, and lose when moving away. dnd5e 6.0 can only do this
+ * for an area placed by an activity; its official Aura of Protection only affects the
+ * paladin. Pure functions, no dependency on Foundry.
  */
 
 import { alliedSides } from "./factions.mjs";
 
 /**
  * @typedef {object} AuraSource
- * @property {string} token          UUID du token porteur de l'aura.
- * @property {string} key            Identifiant de l'aura (deux auras de même nom ne se cumulent pas).
+ * @property {string} token          UUID of the token bearing the aura.
+ * @property {string} key            Identifier of the aura (two auras with the same name do not stack).
  * @property {number} disposition
- * @property {boolean} inactive      Porteur neutralisé ou mort : l'aura est éteinte.
- * @property {number} radius         Dans la même unité que les distances fournies.
+ * @property {boolean} inactive      Bearer Incapacitated or dead: the aura is off.
+ * @property {number} radius         In the same unit as the distances supplied.
  * @property {"ally"|"enemy"|"any"|"summoner"} affects
- * @property {string[]} [summoners]  §403 : avec `summoner`, les tokens de celui qui a invoqué le porteur.
- * @property {boolean} includeSelf   Le porteur reçoit-il lui aussi la copie ? (non s'il a déjà l'effet d'origine)
- * @property {number} value          Force de l'aura, pour départager deux auras de même nom.
- * @property {string[]} [types]      Seulement ces types de créature (« les morts-vivants de son choix »).
+ * @property {string[]} [summoners]  §403: with `summoner`, the tokens of whoever summoned the bearer.
+ * @property {boolean} includeSelf   Does the bearer receive the copy too? (no if it already has the original effect)
+ * @property {number} value          Strength of the aura, to tell apart two auras with the same name.
+ * @property {string[]} [types]      Only these creature types ("the Undead of its choice").
  */
 
 /**
- * Qui reçoit l'aura d'une source, parmi des tokens dont on connaît la distance à cette source.
- * `lineOfEffect` : false exclut (abri total entre les deux), null ou absent n'exclut pas ; `type` : type de créature.
+ * Who receives the aura of a source, among tokens whose distance to that source is known.
+ * `lineOfEffect`: false excludes (Total Cover between the two), null or absent does not exclude; `type`: creature type.
  */
 export function auraRecipients(source, candidates) {
   if ( source.inactive ) return [];
   return candidates.filter(c => {
     if ( c.token === source.token ) return source.includeSelf;
     if ( c.distance > source.radius + 1e-6 ) return false;
-    // Une émanation est arrêtée par un abri total (règles 2024) : plancher, plafond, mur plein — P2 (§14.2).
+    // An Emanation is stopped by Total Cover (2024 rules): floor, ceiling, solid wall — P2 (§14.2).
     if ( c.lineOfEffect === false ) return false;
     if ( source.types?.length && !source.types.includes(c.type) ) return false;
     if ( source.affects === "summoner" ) return (source.summoners ?? []).includes(c.token);
@@ -41,8 +41,8 @@ export function auraRecipients(source, candidates) {
 }
 
 /**
- * Ce que chaque token doit porter, toutes sources confondues. Deux auras de même nom ne se
- * cumulent pas : la plus forte l'emporte (règles 2024, « effets de même nom »).
+ * What each token must bear, all sources combined. Two auras with the same name do not
+ * stack: the stronger one wins (2024 rules, "effects with the same name").
  * @param {Array<{source: AuraSource, recipients: string[]}>} auras
  * @returns {Array<{target: string, key: string, source: string, value: number}>}
  */
@@ -57,7 +57,7 @@ export function wantedAuraEffects(auras) {
 }
 
 /**
- * Écart entre les copies d'aura qui existent et celles qu'on veut.
+ * Difference between the aura copies that exist and those we want.
  * @param {Array<{id: string, target: string, key: string, source: string, value: number}>} existing
  * @param {Array<{target: string, key: string, source: string, value: number}>} wanted
  * @returns {{create: object[], update: object[], remove: object[]}}

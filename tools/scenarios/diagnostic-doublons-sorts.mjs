@@ -1,10 +1,10 @@
 /**
- * §449 : le diagnostic « Sorts en double ». Un acteur porte Guiding Bolt deux fois pour la même classe — la copie du SRD 5.2 préparée,
- * portant un réglage du moteur, et celle du Manuel des joueurs non préparée (ce qu'un module de préparation laisse quand il ne reconnaît
- * pas le sort du SRD) —, plus des sorts qui ne sont PAS des doublons : une copie « rituel seulement », Bless donné par une sous-classe à
- * côté de Bless de classe, Bane seul. L'analyse trouve le seul doublon ; la réparation (sauvegarde d'abord) garde la copie du Manuel,
- * préparée, avec le réglage de l'autre, et supprime celle du SRD ; le reste ne bouge pas ; une nouvelle analyse ne trouve plus rien.
- * Acteur et sauvegarde retirés.
+ * §449: the "Duplicate spells" diagnostic. An actor carries Guiding Bolt twice for the same class — the prepared SRD 5.2 copy,
+ * carrying an engine setting, and the unprepared Player's Handbook one (what a preparation module leaves when it does not recognize
+ * the SRD spell) —, plus spells that are NOT duplicates: a "ritual only" copy, Bless given by a subclass next to the class's
+ * Bless, Bane alone. The analysis finds the only duplicate; the repair (backup first) keeps the Handbook copy, prepared,
+ * with the other one's setting, and deletes the SRD one; the rest does not move; a new analysis finds nothing.
+ * Actor and backup removed.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";
@@ -21,7 +21,7 @@ export default {
     const hadPack = JSON.stringify((await ctx.call("list-compendiums", {}).catch(() => [])) ?? "").includes("world.das-backups");
     ctx.restore(() => api("diagnosticForget", { uuids: backups, dropPack: !hadPack, actors }));
 
-    /** Un sort d'un compendium, prêt à poser sur la fiche avec son origine (`_stats.compendiumSource`) et des retouches. */
+    /** A compendium spell, ready to place on the sheet with its origin (`_stats.compendiumSource`) and tweaks. */
     const spell = async (uuid, system, flags={}) => {
       const { data } = await ctx.call("get-compendium-entry", { uuid });
       const { _id, folder, ownership, _stats, ...d } = JSON.parse(JSON.stringify(data));

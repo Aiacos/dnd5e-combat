@@ -1,6 +1,6 @@
 /**
- * §259 : « la monture disparaît si elle tombe à 0 point de vie » (Appel de destrier), comme les créatures des sorts d'invocation du
- * PHB 2024. Le Paladin invoque sa monture, puis elle est mise à 0 PV : son token disparaît.
+ * §259: "the mount disappears if it drops to 0 Hit Points" (Find Steed), like the creatures of the PHB 2024 summon spells.
+ * The Paladin summons their mount, then it is put at 0 HP: its token disappears.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -29,7 +29,7 @@ export default {
     await pause(1500);
     ctx.expect(await present(st.id), "elle est sur la scène");
     const { data } = await ctx.call("get-scene-object", { type: "Token", objectId: st.id });
-    // Une monture liée est un acteur du monde, réutilisé par la prochaine invocation : ses PV sont remis.
+    // A linked mount is a world actor, reused by the next summon: its HP are restored.
     const before = data.actorLink ? (await ctx.call("get-actor", { actorId: data.actorId })).system?.attributes?.hp?.value : null;
     if ( before ) ctx.restore(() => ctx.call("update-actor", { actorId: data.actorId, actorData: { "system.attributes.hp.value": before } }).catch(() => {}));
     await ctx.setHp({ id: st.id, actorId: data.actorId, name: "monture" }, 0);

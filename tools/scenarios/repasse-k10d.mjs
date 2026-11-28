@@ -1,7 +1,7 @@
 /**
- * §334, restes du lot K10 de la repasse des créatures : la sensibilité au soleil. Arène des sorts (lumière globale vive, obscurité 0 :
- * le jour) : le Lanceur (PNJ) et la Cible.
- *  - Sensibilité au soleil du Drider prêtée au Lanceur : ses attaques ont le Désavantage au soleil.
+ * §334, leftovers of batch K10 of the creature pass: Sunlight Sensitivity. Spell arena (global light bright, darkness 0:
+ * daytime): the Caster (NPC) and the Target.
+ *  - Drider's Sunlight Sensitivity lent to the Caster: its attacks have Disadvantage in sunlight.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 

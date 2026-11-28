@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { actionSound, noticeText, CORE_SOUNDS } from "../module/scripts/core/action-feedback.mjs";
 
 describe("§252 retour d'action pour toute la table", () => {
-  it("donne un son du cœur par action et par issue", () => {
+  it("gives a core sound per action and per outcome", () => {
     expect(actionSound("pick", "success")).toBe(CORE_SOUNDS.unlock);
     expect(actionSound("force", "failure")).toBe(CORE_SOUNDS.thud);
     expect(actionSound("land", "success")).toBeNull();
@@ -13,7 +13,7 @@ describe("§252 retour d'action pour toute la table", () => {
     for ( const src of Object.values(CORE_SOUNDS) ) expect(src).toMatch(/^sounds\/.+\.ogg$/);
   });
 
-  it("traduit un texte `{ key, data }` chez chaque client, garde une chaîne telle quelle", () => {
+  it("translates a `{ key, data }` text on each client, keeps a string as it is", () => {
     const localize = (key, data) => `${key}:${data?.n ?? ""}`;
     expect(noticeText("Déjà traduit", localize)).toBe("Déjà traduit");
     expect(noticeText({ key: "Retour.Action.Cache" }, localize)).toBe("Retour.Action.Cache:");

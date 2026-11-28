@@ -1,6 +1,6 @@
 /**
- * La règle `heldEffect` (Paume vibratoire) : un effet de l'item qu'une seule créature porte à la fois, et qu'une activité de l'item
- * fait cesser une fois résolue. MJ actif.
+ * The `heldEffect` rule (Quivering Palm): an effect of the item that only one creature bears at a time, and that an activity of the
+ * item ends once resolved. Active GM.
  */
 
 import { STEPS } from "../core/action.mjs";
@@ -10,7 +10,7 @@ import { originItemOf } from "../adapter/facts.mjs";
 import { comesFromItemEffect } from "../adapter/triggers.mjs";
 import { log } from "./shared.mjs";
 
-/** Les effets de la scène posés depuis cet effet de cet item. */
+/** The scene's effects placed from this effect of this item. */
 function heldEffectsOf(item, effectId) {
   const out = [];
   for ( const token of canvas?.scene?.tokens ?? [] ) {
@@ -22,7 +22,7 @@ function heldEffectsOf(item, effectId) {
   return out;
 }
 
-/** Un effet tenu vient d'être posé : les autres porteurs le perdent (« une seule créature à la fois »). */
+/** A held effect has just been placed: the other bearers lose it ("only one creature at a time"). */
 export async function onHeldEffectCreated(effect) {
   if ( effect.parent?.documentName !== "Actor" ) return;
   const item = originItemOf(effect);
@@ -37,7 +37,7 @@ export async function onHeldEffectCreated(effect) {
 
 const seen = new Set();
 
-/** L'activité qui met fin à l'effet est résolue : l'effet tombe, où qu'il soit. */
+/** The activity that ends the effect is resolved: the effect drops, wherever it is. */
 export async function onHeldEffectEnded(resolution) {
   if ( (resolution?.step !== STEPS.DONE) || seen.has(resolution.id) ) return;
   const activity = fromUuidSync(resolution.activity ?? "", { strict: false });

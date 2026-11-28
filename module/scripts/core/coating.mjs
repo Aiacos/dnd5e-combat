@@ -1,12 +1,12 @@
 /**
- * O9h (§363) : les enduits d'arme (Poison standard : « une arme ou jusqu'à trois munitions »). Pur : aucune dépendance à Foundry.
+ * O9h (§363): weapon coatings (Basic Poison: "a weapon or up to three pieces of ammunition"). Pure: no dependency on Foundry.
  */
 
 /**
- * Les items qui peuvent recevoir l'enduit : armes (hors armes naturelles) dont un type de dégâts le délivre, et munitions.
+ * The items that can receive the coating: weapons (except natural weapons) with a damage type that delivers it, and ammunition.
  * @param {Array<{id, name, type, kind, damageTypes: string[], equipped: boolean, quantity: number}>} items
  * @param {{ damageTypes: string[], ammunition?: number }} rule
- * @returns {Array<{id, name, ammunition: boolean}>}  Armes équipées d'abord.
+ * @returns {Array<{id, name, ammunition: boolean}>}  Equipped weapons first.
  */
 export function coatingCandidates(items, rule) {
   const delivers = i => (i.damageTypes ?? []).some(t => rule.damageTypes.includes(t));
@@ -17,7 +17,7 @@ export function coatingCandidates(items, rule) {
 }
 
 /**
- * L'enduit vaut-il pour ce jet de dégâts ? « dry » (sec ou épuisé : à retirer), « applies », ou « no » (le jet n'a pas le bon type).
+ * Does the coating apply to this damage roll? "dry" (dried or spent: to remove), "applies", or "no" (the roll has the wrong type).
  * @param {{ until: number, deliveredBy: string[], charges?: number }} coating
  * @param {{ now: number, types: string[] }} roll
  */

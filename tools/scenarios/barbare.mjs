@@ -1,15 +1,15 @@
 /**
- * Le Barbare du Manuel des joueurs 2024 (SPEC §22), monde `dnd-6`. Le Guerrier reçoit, prêtées depuis le compendium du Manuel des
- * joueurs, la classe de Barbare au niveau 11 (bonus de Rage +3) et Rage, Témérité, Bond instinctif, Rage implacable, Frénésie et
- * Fureur divine. Le Bandit reçoit 300 PV. Vérifie :
- *  - Rage : l'effet de l'item s'active ; action Bonus dépensée ; Bond instinctif : la moitié de la Vitesse en plus, pas désengagé ;
- *  - entretien : une Rage entretenue par une attaque tient à la fin du tour ; sans rien, elle prend fin ;
- *  - Neutralisé (Étourdi) : la Rage prend fin ;
- *  - Témérité : la question s'ouvre à la première attaque de Force du tour ; « Témérité » : Avantage à ses attaques, Avantage contre
- *    lui ; pas de seconde question dans le tour ;
- *  - Frénésie (en Rage, téméraire) : le premier coup du tour porte 3d6 de plus, pas le second ; Fureur divine : 1d6 + 5 radiants ;
- *  - Rage implacable : à 0 PV en Rage, la sauvegarde de Constitution ; réussie ⇔ 22 PV.
- * Remet positions, PV, niveau ; retire les items prêtés.
+ * The Player's Handbook 2024 Barbarian (SPEC §22), world `dnd-6`. The Fighter receives, lent from the Player's Handbook
+ * compendium, the Barbarian class at level 11 (Rage bonus +3) and Rage, Reckless Attack, Instinctive Pounce, Relentless
+ * Rage, Frenzy and Divine Fury. The Bandit receives 300 HP. Checks:
+ *  - Rage: the item's effect activates; Bonus Action spent; Instinctive Pounce: half the Speed more, not Disengaged;
+ *  - upkeep: a Rage maintained by an attack holds at the end of the turn; with nothing, it ends;
+ *  - Incapacitated (Stunned): the Rage ends;
+ *  - Reckless Attack: the question opens at the first Strength attack of the turn; "Reckless Attack": Advantage on his attacks,
+ *    Advantage against him; no second question in the turn;
+ *  - Frenzy (in Rage, reckless): the first hit of the turn carries 3d6 more, not the second; Divine Fury: 1d6 + 5 radiant;
+ *  - Relentless Rage: at 0 HP in Rage, the Constitution saving throw; success ⇔ 22 HP.
+ * Resets positions, HP, level; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "dnd-players-handbook.classes";
@@ -64,7 +64,7 @@ export default {
     const relentless = await lend("phbbrbRelentless");
 
     const itemOf = async id => ((await ctx.call("get-actor", { actorId: hero.actorId })).items ?? []).find(i => i._id === id);
-    // En Rage : l'effet de l'item activé, ou sa copie posée sur l'acteur par le moteur (origine : l'item).
+    // In Rage: the item's active effect, or its copy placed on the actor by the engine (origin: the item).
     const raging = async () => ((await itemOf(rage))?.effects?.some(e => !e.disabled) === true)
       || (await ctx.effects(hero)).some(e => !e.disabled && String(e._stats?.duplicateSource ?? "").includes(`Item.${rage}.`));
     const endRageNow = async () => {
@@ -109,7 +109,7 @@ export default {
       for ( let i = 0; (i < 3) && ((await current()) !== hero.id); i++ ) { await ctx.call("previous-turn", { combatId: ctx.ownCombat }); await pause(1500); }
       return (await current()) === hero.id;
     };
-    /** Jusqu'au tour suivant du héros (le tour du Bandit passe). */
+    /** Until the hero's next turn (the Bandit's turn goes by). */
     const nextHeroTurn = async () => { await ctx.nextTurn(); await pause(2000); await ctx.nextTurn(); await pause(2500); };
     const budget = () => ctx.engine("budget", { tokenId: hero.id });
     const enrage = async () => { await ctx.use({ tokenId: hero.id, itemId: rage }); await pause(2500); };
@@ -144,7 +144,7 @@ export default {
       await attack(hero, sword, bandit, { reckless: false });
       await nextHeroTurn();
       ctx.expect(await raging(), "entretenue par une attaque : toujours en Rage à son tour suivant");
-      await nextHeroTurn();   // ce tour-ci, rien : elle tombe à la fin du précédent
+      await nextHeroTurn();   // this turn, nothing: it drops at the end of the previous one
       ctx.expect(!(await raging()), "un tour sans rien : la Rage a pris fin");
     });
 
@@ -165,8 +165,8 @@ export default {
       const d = (await ctx.call("list-dialogs", { dialogsOnly: true, excludeIds: known, waitMs: 6000 }).catch(() => null))?.windows?.find(w => /Témérité|Reckless/i.test(w.title ?? ""));
       if ( !ctx.expect(!!d, "première attaque de Force : la question de Témérité s'ouvre") ) return;
       await ctx.call("answer-dialog", { id: d.id, button: "yes" });
-      // L'utilisation suspendue est relancée avec la réponse (le jet d'attaque, lui, est enchaîné par dnd5e en jeu ; le connecteur
-      // coupe cet enchaînement).
+      // The suspended use is relaunched with the answer (the attack roll is chained by dnd5e in play; the connector
+      // cuts that chaining).
       let relaunched = null;
       for ( const stop = Date.now() + 15000; !relaunched && (Date.now() < stop); await pause(500) ) relaunched = (await ctx.messagesSince(since)).find(m => m.type === "usage");
       ctx.expect(!!relaunched && (relaunched.targets ?? []).some(t => t.name === "Bandit"), "l'utilisation est relancée, le Bandit toujours visé");
@@ -188,7 +188,7 @@ export default {
       await enrage();
       const first = await until(() => attack(hero, sword, bandit, { reckless: true }));
       if ( !ctx.expect(!!first, "premier coup (20 essais au plus)") ) return;
-      // 3d6 de plus, doublés sur un coup critique.
+      // 3d6 more, doubled on a Critical Hit.
       ctx.expect(/\|(3|6)d6$/.test(first.damage.replace(/[()\s]/g, "")), `Frénésie : 3d6 de plus « ${first.damage} »`);
       const second = await until(() => attack(hero, sword, bandit));
       ctx.expect(!!second && !second.damage.includes("|"), `second coup du tour : rien de plus « ${second?.damage} »`);
@@ -201,7 +201,7 @@ export default {
       await enrage();
       const hit = await until(() => attack(hero, sword, bandit, { reckless: false }));
       if ( !ctx.expect(!!hit, "coup (20 essais au plus)") ) return;
-      // 1d6, doublé (2d6) sur un coup critique.
+      // 1d6, doubled (2d6) on a Critical Hit.
       ctx.expect(/[12]d6\+5|[12]d6\+floor/.test(hit.damage.replace(/\s/g, "")), `Fureur divine : 1d6 + 5 « ${hit.damage} »`);
     });
 

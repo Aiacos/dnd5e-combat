@@ -1,36 +1,37 @@
 /**
- * §19.9 : la morsure qui renforce (contenu `empower`, Morsure vampirique du Dhampir) vue depuis dnd5e 6.
+ * §19.9: the empowering bite (content `empower`, the Dhampir's Vampiric Bite) seen from dnd5e 6.
  *
- * Vérifié dans dnd5e 6.0.3 :
- *  - les utilisations d'un item : `system.uses.value` = max - spent (data/shared/uses-field.mjs), qu'on dépense en écrivant
- *    `system.uses.spent` ;
- *  - un changement d'effet `system.bonuses.mwak.attack` (et rwak, msak, rsak) s'ajoute au jet d'attaque, et
- *    `system.bonuses.abilities.check` aux tests de caractéristique et de compétence : c'est ce que porte l'effet
- *    « Strengthened Attack or Check » du module Ravenloft, avec `@abilities.con.mod` en valeur — remplacée ici par le montant.
+ * Verified in dnd5e 6.0.3:
+ *  - an item's uses: `system.uses.value` = max - spent (data/shared/uses-field.mjs), spent by writing
+ *    `system.uses.spent`;
+ *  - an effect change `system.bonuses.mwak.attack` (and rwak, msak, rsak) adds to the attack roll, and
+ *    `system.bonuses.abilities.check` to ability checks and skill checks: this is what the effect
+ *    "Strengthened Attack or Check" of the Ravenloft module carries, with `@abilities.con.mod` as value —
+ *    replaced here by the amount.
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { contentOf } from "./content.mjs";
 import { creatureTypeOf } from "./facts.mjs";
 
-/** La règle `empower` d'un item, ou null. */
+/** An item's `empower` rule, or null. */
 export function empowerOf(item) {
   return item ? (contentOf(item).entry?.empower ?? null) : null;
 }
 
-/** La créature mordue peut-elle renforcer ? (ni Créature artificielle, ni Mort-vivant) */
+/** Can the bitten creature be empowered? (neither a Construct nor an Undead) */
 export function feedsOn(rule, actor) {
   return !!actor && !(rule.excludeTypes ?? []).includes(creatureTypeOf(actor));
 }
 
 export const usesLeft = item => Math.max(0, item?.system?.uses?.value ?? 0);
 
-/** Les effets de renforcement en cours d'un acteur (ceux que le moteur a posés). */
+/** An actor's empowerment effects in progress (those the engine placed). */
 export const boostsOf = actor => (actor?.effects ?? []).filter(e => e.getFlag(MODULE_ID, "consumeOn"));
 
 /**
- * L'effet de renforcement de l'item, ses changements valant `n` : jusqu'au prochain jet d'attaque ou test de caractéristique,
- * une minute au plus. Rend les données à créer, ou null si l'item n'a pas l'effet.
+ * The item's empowerment effect, its changes worth `n`: until the next attack roll or ability check,
+ * one minute at most. Returns the data to create, or null if the item has no such effect.
  */
 export function boostData(item, rule, n) {
   const effect = item.effects.get(rule.effect);
@@ -45,7 +46,7 @@ export function boostData(item, rule, n) {
     disabled: false,
     transfer: false,
     origin: item.uuid,
-    // La durée est celle de l'effet de l'item (60 secondes) ; le cœur V14 date son début à la création (`start`).
+    // The duration is the item effect's (60 seconds); the V14 core dates its start at creation (`start`).
     duration: { value: 60, units: "seconds" },
     [`flags.${MODULE_ID}.consumeOn`]: ["attack", "check"],
     [`flags.${MODULE_ID}.boost`]: { item: item.uuid, amount: n }

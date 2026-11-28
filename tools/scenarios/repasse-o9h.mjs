@@ -1,17 +1,19 @@
 /**
- * §363, lot O9h de la repasse des objets : les briques demandées par l'utilisateur. Arène de test (Guerrier, Zombi, Clerc).
- * `ONLY=poison,othur` ne joue que les parties dont le nom contient l'un de ces mots.
- *  - poison : Poison standard — « Coat Weapon » enduit l'Épée à deux mains ; le coup suivant ajoute 1d4 poison, l'enduit tombe.
- *  - othur : Fumées d'othur — ratée, l'effet suivi est posé ; au début du tour du Clerc, la sauvegarde est rejouée.
- *  - pugilistes : Potion des pugilistes — un effet de 10 minutes ; la Frappe à mains nues ajoute 1d6 force.
- *  - résistance : Potion de résistance donnée au Clerc — c'est lui qui reçoit la Résistance au feu, pas le Guerrier.
- *  - perle : Perle de force — le Zombi raté est enfermé ; l'attaque du Guerrier ne l'atteint plus.
- *  - cor : Cor de dévastation — après le souffle, le jet d'explosion ; forcé à 100 % : dégâts au Guerrier, cor détruit.
- *  - parchemin : Parchemin de protection (Morts-vivants), lu et consommé — 5 minutes ; le Zombi n'entre pas, ne frappe pas dedans ;
- *    le Guerrier va au contact : l'émanation tombe.
- *  - poussière : Poussière de disparition — le Guerrier et le Clerc (à 3 m) Invisibles, même durée de 2 à 8 minutes ; pas le Zombi.
- *  - huile : Huile d'insaisissabilité — Liberté de mouvement 8 heures ; Graisse au sol 8 heures.
- *  - dynamite : la liasse d'un bâton fait 3d6.
+ * §363, batch O9h of the item pass: the bricks requested by the user. Test arena (Fighter, Zombie, Cleric).
+ * `ONLY=poison,othur` only plays the parts whose name contains one of these words.
+ *  - poison: Basic Poison — "Coat Weapon" coats the Greatsword; the next hit adds 1d4 poison, the coating drops.
+ *  - othur: Burnt Othur Fumes — failed, the tracked effect is placed; at the start of the Cleric's turn, the saving throw is
+ *    replayed.
+ *  - pugilistes: Potion of Pugilism — a 10-minute effect; the Unarmed Strike adds 1d6 force.
+ *  - résistance: Potion of Resistance given to the Cleric — it is the one who gets the fire Resistance, not the Fighter.
+ *  - perle: Pearl of Power — the failed Zombie is enclosed; the Fighter's attack no longer reaches it.
+ *  - cor: Horn of Blasting — after the blast, the explosion roll; forced to 100%: damage to the Fighter, horn destroyed.
+ *  - parchemin: Scroll of Protection (Undead), read and consumed — 5 minutes; the Zombie does not enter, does not strike inside;
+ *    the Fighter goes into contact: the Emanation drops.
+ *  - poussière: Dust of Disappearance — the Fighter and the Cleric (at 3 m) Invisible, same duration of 2 to 8 minutes;
+ *    not the Zombie.
+ *  - huile: Oil of Slipperiness — Freedom of Movement 8 hours; Grease on the ground 8 hours.
+ *  - dynamite: the bundle of one stick does 3d6.
  */
 const MODULE_ID = "dnd5e-combat";
 const DMG = "Compendium.dnd-dungeon-masters-guide.equipment.Item.";
@@ -48,7 +50,7 @@ export default {
     const fixes = await ctx.engine("setting", { key: "dataFixes" });
     ctx.restore(() => ctx.engine("setting", { key: "dataFixes", value: fixes.before }));
     await ctx.engine("setting", { key: "dataFixes", value: true });
-    /** L'item du compendium, recréé à neuf (les réparations de données se font à la création). */
+    /** The compendium's item, recreated brand new (data repairs happen on creation). */
     const fresh = async (token, uuid) => {
       const { data: tok } = await ctx.call("get-scene-object", { type: "Token", objectId: token.id });
       const { data } = await ctx.call("get-compendium-entry", { uuid });
@@ -67,7 +69,7 @@ export default {
       await pause(1500);
       return { used, r };
     };
-    /** Attaque jusqu'au toucher ; rend les formules des jets de dégâts. */
+    /** Attacks until a hit; returns the damage roll formulas. */
     const hitWith = async (itemId, target) => {
       for ( let i = 0; i < 15; i++ ) {
         await ctx.setHp(target, target === zombi ? hpZ : hpC);
@@ -81,7 +83,7 @@ export default {
       }
       return null;
     };
-    /** La durée d'un effet en secondes (V14 : `duration.value` en `units`). */
+    /** The duration of an effect in seconds (V14: `duration.value` in `units`). */
     const secs = e => e?.duration?.seconds ?? ((e?.duration?.units === "seconds") ? e.duration.value : null);
     const data = (itemId, paths, token=fighter) => ctx.engine("itemData", { tokenId: token.id, itemId, paths });
     const only = (process.env.ONLY ?? "").split(",").map(s => s.trim()).filter(Boolean);
@@ -122,12 +124,12 @@ export default {
       for ( const [t, v] of [[fighter, 20], [cleric, 5]] ) await ctx.call("set-initiative", { combatantId: started.combatants.find(x => x.tokenId === t.id).id, value: v, combatId: ctx.ownCombat });
       await pause(800);
       const hpBefore = await ctx.hp(cleric);
-      await ctx.nextTurn();   // le Clerc : début de son tour
+      await ctx.nextTurn();   // the Cleric: start of its turn
       await pause(6000);
       const effectNow = (await added(cleric)).find(e => /Othur/i.test(e.name ?? ""));
       const tally = effectNow?.flags?.[MODULE_ID]?.tally;
       ctx.expect(!!tally && ((tally.successes + tally.failures) === 1), `au début de son tour, il rejoue la sauvegarde, comptée (${JSON.stringify(tally ?? null)})`);
-      // Une sauvegarde rejouée ratée : 1d6 poison (le Clerc nain résiste au poison : le moteur le dit, les PV peuvent ne pas bouger).
+      // A replayed saving throw failed: 1d6 poison (the dwarf Cleric resists poison: the engine says so, the HP may not move).
       let failed = !!tally && (tally.failures > 0);
       for ( let i = 0; (i < 4) && !failed; i++ ) {
         await ctx.nextTurn(); await ctx.nextTurn(); await pause(6000);
@@ -190,8 +192,8 @@ export default {
       const cone = { shape: "circle", x: at.x + 2.5 * g, y: at.y + g / 2, radius: g / 2 };
       const { used } = await use(fighter, horn, "FMTcQOb5MZKBohdN", [zombi.id], { area: cone });
       await pause(2500);
-      // §438 suite : seule la carte du jet compte (elle porte `roll`) — sur une explosion (20 %), la carte des dégâts porte aussi le drapeau
-      // `backfire` ({ item }), et le scénario y voyait un deuxième jet (vu deux fois de suite à la passe du 2026-11-14).
+      // §438 continued: only the roll card counts (it carries `roll`) — on an explosion (20%), the damage card also carries the
+      // flag `backfire` ({ item }), and the scenario saw a second roll there (seen twice in a row on the 2026-11-14 pass).
       const rolled = (await ctx.messagesSince(used.usageMessageId)).filter(m => Number.isFinite(m.flags?.[MODULE_ID]?.backfire?.roll));
       ctx.expect(rolled.length === 1, `Cor de dévastation : un jet d'explosion après le souffle (${rolled.map(m => JSON.stringify(m.flags[MODULE_ID].backfire)).join(" ; ") || "aucun"})`);
       const exploded = rolled[0]?.flags?.[MODULE_ID]?.backfire?.blows;
@@ -213,7 +215,7 @@ export default {
     await part("parchemin", async () => {
       await place(3);
       const scroll = await fresh(fighter, `${DMG}dmgScrollOfProte`);
-      // Le connecteur coupe les actions qui suivent l'utilisation (`subsequentActions`) : l'enchantement de soi est posé comme dnd5e le ferait.
+      // The connector cuts the actions that follow the use (`subsequentActions`): the self-enchantment is placed as dnd5e would.
       await ctx.engine("enchant", { tokenId: fighter.id, itemId: scroll, activityId: "SLT3PkMx7Cq6Rnon", targetItemId: scroll, profile: "JvE43pQh6FVZ42qp" }).catch(err => ctx.log(err.message));
       await pause(1500);
       const effects = (await data(scroll, ["effects"]))?.effects ?? [];

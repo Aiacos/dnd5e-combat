@@ -1,14 +1,14 @@
 /**
- * Le Moine du Manuel des joueurs 2024 (SPEC §24), monde `dnd-6`. Le Guerrier reçoit, prêtées depuis le compendium du Manuel des
- * joueurs, la classe de Moine au niveau 5 (5 points de concentration) et Arts martiaux, Concentration du moine, Frappe
- * étourdissante, Technique de la main ouverte et Parade. Le Bandit reçoit 300 PV. Vérifie :
- *  - Arts martiaux : l'action dépensée (épée à deux mains), la frappe à mains nues se paie de l'action Bonus ;
- *  - Déluge de coups : un point, deux frappes à mains nues gratuites (l'action reste), cartes marquées « Déluge » ;
- *    Technique de la main ouverte au premier coup (Renverser : À terre ⇔ sauvegarde ratée) ;
- *  - Frappe étourdissante : la question, un point, la sauvegarde (Étourdi ⇔ ratée), pas de seconde question dans le tour ;
- *  - Défense patiente (1 point) : Se désengager et Esquiver ; Pas du vent : sans point Foncer seul, d'un point Foncer et Se désengager ;
- *  - Parade : le Bandit touche le moine → la réaction réduit les dégâts du montant de son jet, sans soigner.
- * Remet positions, PV, états ; retire les items prêtés.
+ * The 2024 Player's Handbook Monk (SPEC §24), world `dnd-6`. The Fighter receives, lent from the Player's Handbook
+ * compendium, the level 5 Monk class (5 Focus Points) and Martial Arts, Monk's Focus, Stunning
+ * Strike, Open Hand Technique and Deflect Attacks. The Bandit receives 300 HP. Checks:
+ *  - Martial Arts: the action spent (greatsword), the unarmed strike is paid with the Bonus Action;
+ *  - Flurry of Blows: one point, two free unarmed strikes (the action remains), cards marked "Flurry";
+ *    Open Hand Technique on the first hit (Topple: Prone ⇔ failed saving throw);
+ *  - Stunning Strike: the question, one point, the saving throw (Stunned ⇔ failed), no second question in the turn;
+ *  - Patient Defense (1 point): Disengage and Dodge; Step of the Wind: no point Dash alone, one point Dash and Disengage;
+ *  - Deflect Attacks: the Bandit hits the monk → the Reaction reduces the damage by the amount of its roll, without healing.
+ * Restores positions, HP, conditions; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "dnd-players-handbook.classes";
@@ -92,7 +92,7 @@ export default {
     };
     const budget = () => ctx.engine("budget", { tokenId: monk.id });
     const known = async () => (await ctx.call("list-dialogs", {})).windows.map(w => w.id);
-    /** Répond aux questions qui s'ouvrent pendant `ms` : `answers` = [motif du titre ou du texte, motif du bouton]. */
+    /** Answers the questions that open during `ms`: `answers` = [title or text pattern, button pattern]. */
     const answerAll = async (ids, answers, ms=9000) => {
       const seen = [];
       for ( const stop = Date.now() + ms; Date.now() < stop; ) {
@@ -132,7 +132,7 @@ export default {
     await part("Déluge de coups, main ouverte", async () => {
       await tough(); await place(bandit, g.x + grid, g.y);
       if ( !ctx.expect(await fight(), "combat : au tour du moine") ) return;
-      await ctx.use({ tokenId: monk.id, itemId: focus, activityId: "2ghJTBhilLrFn9xT", consume: true });   // le connecteur ne consomme pas par défaut
+      await ctx.use({ tokenId: monk.id, itemId: focus, activityId: "2ghJTBhilLrFn9xT", consume: true });   // the connector doesn't consume by default
       await pause(2500);
       const b = await budget();
       ctx.expect(b?.flurry === 2 && b?.bonus === 0 && (await spent()) === 1, `Déluge : ${b?.flurry} frappes, action Bonus ${b?.bonus}, points dépensés ${await spent()}`);
@@ -193,15 +193,15 @@ export default {
       await pause(2000);
       const b = await budget();
       ctx.expect(b?.disengaged === true && b?.dodging === true && b?.bonus === 0, `Défense patiente : désengagé ${b?.disengaged}, esquive ${b?.dodging}`);
-      // §79 : l'Esquive (état du moteur, l'effet de l'item n'est pas posé) tient pendant le tour du Bandit et tombe au début du
-      // prochain tour du moine.
+      // §79: Dodge (engine condition, the item's effect is not applied) holds during the Bandit's turn and falls at the start
+      // of the monk's next turn.
       const dodging = async () => (await ctx.effects(monk)).some(e => !e.disabled && (e.statuses ?? []).includes("dodging"));
       await ctx.nextTurn(); await pause(1500);
       ctx.expect(await dodging(), "au tour du Bandit, le moine esquive toujours");
       await ctx.nextTurn(); await pause(2000);
       ctx.expect(!(await dodging()), "au prochain tour du moine, l'Esquive est tombée");
-      // DF #151 : `0MuRZ0Ur95xQTKFq` est le Pas du vent payé dans le Manuel 2.2.0, le GRATUIT (Foncer seul) dans le SRD 5.2 et le
-      // Manuel 3.0.0, où le payé est `Iv2YrISquTZWEjjN`.
+      // DF #151: `0MuRZ0Ur95xQTKFq` is the paid Step of the Wind in Manual 2.2.0, the FREE one (Dash alone) in SRD 5.2 and
+      // Manual 3.0.0, where the paid one is `Iv2YrISquTZWEjjN`.
       const { data: fdata } = await ctx.call("get-compendium-entry", { uuid: `Compendium.${PHB}.Item.phbmnkMonksFocus` });
       const paidApart = !!fdata?.system?.activities?.Iv2YrISquTZWEjjN;
       if ( paidApart ) {

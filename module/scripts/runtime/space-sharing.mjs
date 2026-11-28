@@ -1,10 +1,10 @@
 /**
- * §105 : partager la case d'une autre créature. dnd5e décide qui bloque un déplacement dans
- * `TokenLayer5e#isOccupiedGridSpaceBlocking` (canvas/layers/tokens.mjs:10-49 : seuls les alliés, les créatures de deux tailles
- * d'écart et les Très petites se traversent) et publie ensuite `dnd5e.determineOccupiedGridSpaceBlocking(gridSpace, token,
- * options, found)`, dont l'ensemble `found` se modifie (tokens.mjs:36-47) : on en retire l'occupant dont on peut partager la
- * case. Le chemin contraint de dnd5e (canvas/token.mjs:113-118) et l'A* du moteur (adapter/movement.mjs, `blocked`) lisent
- * cette même fonction ; la fin de déplacement (« jamais sur une case occupée ») lit `sharesSpaceWith` elle-même.
+ * §105: share another creature's cell. dnd5e decides who blocks a move in
+ * `TokenLayer5e#isOccupiedGridSpaceBlocking` (canvas/layers/tokens.mjs:10-49: only allies, creatures two sizes
+ * apart and Tiny ones can be passed through) and then publishes `dnd5e.determineOccupiedGridSpaceBlocking(gridSpace, token,
+ * options, found)`, whose `found` set can be modified (tokens.mjs:36-47): we remove from it the occupant whose cell we can
+ * share. dnd5e's constrained path (canvas/token.mjs:113-118) and the engine's A* (adapter/movement.mjs, `blocked`) read
+ * that same function; the end of a move ("never on an occupied cell") reads `sharesSpaceWith` itself.
  */
 
 import { sharesSpaceWith } from "../adapter/space-sharing.mjs";
@@ -23,9 +23,9 @@ export function registerSpaceSharing() {
 }
 
 /**
- * §255 : un objet (piège posé, arme spirituelle : `flags.dnd5e-combat.object`) n'est pas une créature — il ne bloque pas le passage et
- * ne rend pas sa case difficile, quel que soit le niveau d'automatisation. dnd5e le jugeait créature d'un autre camp : un piège repéré,
- * redevenu visible, fermait le couloir (glisser du cœur et chemin du moteur).
+ * §255: an object (placed trap, spiritual weapon: `flags.dnd5e-combat.object`) is not a creature — it does not block passage
+ * and does not make its cell difficult, whatever the automation level. dnd5e judged it a creature of another side: a
+ * spotted trap, visible again, closed the corridor (core drag and engine path).
  */
 function dropObjects(gridSpace, token, options, found) {
   if ( !found?.size ) return;

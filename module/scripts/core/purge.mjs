@@ -1,13 +1,13 @@
 /**
- * Purge du journal (SPEC §58) : quels messages supprimer, sans Foundry.
+ * Log purge (SPEC §58): which messages to delete, without Foundry.
  */
 
 /**
- * Au-delà de `max` messages, les plus anciens à supprimer pour revenir à `keep` — sauf une action encore ouverte et ses jets.
- * Une carte d'utilisation supprimée emporte ses jets (`origin`), même plus récents que la coupe : rien ne reste orphelin.
- * @param {{id: string, origin: string|null, open: boolean}[]} messages  Du plus ancien au plus récent.
- * @param {{max: number, keep: number}} limits                           `max` ≤ 0 : jamais.
- * @returns {string[]}  Les ids à supprimer.
+ * Beyond `max` messages, the oldest to delete to get back to `keep` — except an action still open and its rolls.
+ * A deleted use card takes its rolls with it (`origin`), even newer than the cut: nothing is left orphaned.
+ * @param {{id: string, origin: string|null, open: boolean}[]} messages  From oldest to newest.
+ * @param {{max: number, keep: number}} limits                           `max` ≤ 0: never.
+ * @returns {string[]}  The ids to delete.
  */
 export function planPurge(messages, { max, keep }) {
   if ( !(max > 0) || (messages.length <= max) ) return [];

@@ -1,9 +1,9 @@
 /**
- * Forme sauvage (SPEC §16.39), la partie qui se calcule sans Foundry. Règles du PHB 2024 (druide) :
- *  - formes connues : 4 au niveau 2, 6 au niveau 4, 8 au niveau 8 (colonne « Formes connues ») ;
- *  - une forme se prend dans ses formes connues, dans les limites du profil de l'activité — FP maximal, type (Bête), et
- *    pas de vitesse de vol avant le niveau 8 (dnd5e : `profiles[].cr`, `types`, `movement` exclu).
- * Fonctions pures.
+ * Wild Shape (SPEC §16.39), the part computed without Foundry. 2024 PHB rules (druid):
+ *  - known forms: 4 at level 2, 6 at level 4, 8 at level 8 ("Known Forms" column);
+ *  - a form is taken from the known forms, within the limits of the activity's profile — maximum CR, type (Beast), and
+ *    no flying speed before level 8 (dnd5e: `profiles[].cr`, `types`, `movement` excluded).
+ * Pure functions.
  */
 
 /** Le nombre de formes connues d'un druide de ce niveau. */
@@ -15,9 +15,9 @@ export function knownFormsMax(druidLevel) {
 }
 
 /**
- * Pourquoi cette forme n'est pas permise par ce profil, ou null.
- * @param {{cr: number|null, type: string|null, fly: number}} form        La créature (FP, type, vitesse de vol).
- * @param {{maxCr: number|null, types: string[], noMovement: string[]}} limits  Le profil de l'activité.
+ * Why this form is not allowed by this profile, or null.
+ * @param {{cr: number|null, type: string|null, fly: number}} form        The creature (CR, type, flying speed).
+ * @param {{maxCr: number|null, types: string[], noMovement: string[]}} limits  The activity's profile.
  * @returns {"cr"|"type"|"fly"|null}
  */
 export function formRefusal(form, { maxCr=null, types=[], noMovement=[] }={}) {
@@ -27,7 +27,7 @@ export function formRefusal(form, { maxCr=null, types=[], noMovement=[] }={}) {
   return null;
 }
 
-/** La forme doit-elle prendre fin ? « Elle cesse si vous êtes Neutralisé ou si vous mourez » (et à 0 PV, on tombe). */
+/** Must the form end? "It ends if you are Incapacitated or if you die" (and at 0 HP, you drop out of it). */
 export function formMustEnd({ hp, statuses=[] }, incapacitating=[]) {
   if ( Number.isFinite(hp) && (hp <= 0) ) return true;
   return statuses.some(s => incapacitating.includes(s));
@@ -37,16 +37,16 @@ export function formMustEnd({ hp, statuses=[] }, incapacitating=[]) {
 /*  Cercle de la Lune : deux identifiants (§432) */
 /* -------------------------------------------- */
 
-/** Les deux identifiants de la sous-classe : `moon` (Manuel des joueurs 2.2.0), `circle-moon` (préréglage de dnd5e 6.1). */
+/** The two identifiers of the subclass: `moon` (Player's Handbook 2.2.0), `circle-moon` (dnd5e 6.1 preset). */
 const MOON_IDS = Object.freeze(["circle-moon", "moon"]);
 const MOON_LEVELS = /@subclasses\.(circle-moon|moon)\.levels/g;
 const BOTH_LEVELS = `max(${MOON_IDS.map(id => `@subclasses.${id}.levels`).join(", ")})`;
 
 /**
- * §432 : une formule du préréglage de Forme sauvage (CA minimale, PV temporaires) qui lit le niveau du Cercle de la Lune sous un
- * seul des deux identifiants — rendue lisant le plus grand des deux. dnd5e 6.0 écrit `@subclasses.moon.levels`, dnd5e 6.1
- * `@subclasses.circle-moon.levels`, et la sous-classe du Manuel des joueurs s'appelle toujours `moon` : en 6.1, le druide de la Lune
- * perdait sa CA minimale et ses PV temporaires. Une formule qui nomme déjà les deux, ou aucun, revient telle quelle.
+ * §432: a Wild Shape preset formula (minimum AC, Temporary Hit Points) that reads the Circle of the Moon level under only one of
+ * the two identifiers — returned reading the greater of the two. dnd5e 6.0 writes `@subclasses.moon.levels`, dnd5e 6.1
+ * `@subclasses.circle-moon.levels`, and the Player's Handbook subclass is still called `moon`: in 6.1, the Moon druid
+ * lost their minimum AC and Temporary Hit Points. A formula that already names both, or neither, comes back unchanged.
  */
 export function moonLevelsFormula(formula) {
   if ( typeof formula !== "string" ) return formula;
@@ -55,7 +55,7 @@ export function moonLevelsFormula(formula) {
   return formula.replace(MOON_LEVELS, BOTH_LEVELS);
 }
 
-/** §432 : les listes de sorts gardées sous la forme (`subclass:circle-moon`) — avec celle de l'autre identifiant, si l'une y est. */
+/** §432: the spell lists kept under the form (`subclass:circle-moon`) — with that of the other identifier, if one is there. */
 export function moonSpellLists(lists) {
   const all = Array.from(lists ?? []);
   const keys = MOON_IDS.map(id => `subclass:${id}`);

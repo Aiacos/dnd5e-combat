@@ -1,14 +1,14 @@
 /**
- * §224 : l'interrupteur du système d'escalade et de chute, sur la scène « Escalade » de `dnd-6` (le Guerrier contre le mur, le Zombi
- * juste au sud, contre le mur aussi).
- *  1. Système allumé : le Guerrier grimpe de 2 cases (10 ft, mode `climb`) ; le menu propose l'escalade.
- *  2. Coupé (réglage `climbSystem`) : le bouton du MJ est éteint ; personne ne bouge — le Guerrier reste au mur à 10 ft, sans chute ;
- *     le menu ne propose plus rien d'escalade, ni au Guerrier ni au Zombi.
- *  3. Coupé : le Zombi (marche, sans vol) monte sur place à 15 ft, comme par le champ d'élévation du HUD — gardé, sans « En chute » ;
- *     il avance d'une case à cette hauteur (glisser) puis d'une autre au clic (A* du moteur) — toujours à 15 ft.
- *  4. Rallumé : personne ne bouge (Zombi à 15 ft, Guerrier au mur) ; le menu propose de nouveau l'escalade ; le déplacement suivant du
- *     Zombi est aligné sur le sol (le MJ n'est pas retenu : posé au sol, sans chute).
- * Remet le réglage, les modes, les élévations, les états ; le filet du lanceur reprend le reste.
+ * §224: the climbing and falling system switch, on the "Escalade" scene of `dnd-6` (the Fighter against the wall, the Zombie
+ * just to the south, against the wall too).
+ *  1. System on: the Fighter climbs 2 cells (10 ft, `climb` mode); the menu offers climbing.
+ *  2. Off (`climbSystem` setting): the GM's button is off; nobody moves — the Fighter stays on the wall at 10 ft, no fall;
+ *     the menu no longer offers anything climbing, neither to the Fighter nor to the Zombie.
+ *  3. Off: the Zombie (walks, no flight) rises in place to 15 ft, like the HUD's elevation field — kept, without "Falling";
+ *     it moves one cell at that height (slide) then another on click (the engine's A*) — still at 15 ft.
+ *  4. Back on: nobody moves (Zombie at 15 ft, Fighter on the wall); the menu offers climbing again; the Zombie's next
+ *     move is aligned to the ground (the GM is not held: set on the ground, no fall).
+ * Restores the setting, the modes, the elevations, the conditions; the runner's net takes the rest.
  */
 const MODULE_ID = "dnd5e-combat";
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -40,7 +40,7 @@ export default {
     const state = t => ctx.engine("climbState", { tokenId: t.id });
     const menu = t => ctx.engine("controls", { tokenId: t.id });
 
-    // 1. Allumé : grimper.
+    // 1. On: climb.
     await setSystem(true);
     let m = await menu(hero);
     ctx.expect(m.climbSystem && (m.climbEntries?.length > 0), `allumé : le menu du Guerrier propose l'escalade (${(m.climbEntries ?? []).join(", ") || "rien"})`);
@@ -50,7 +50,7 @@ export default {
       `grimpe de 2 cases : élévation ${up.after.elevation}, mode ${up.after.movementAction}`) ) return;
     await pause(1200);
 
-    // 2. Coupé : rien ne bouge, plus d'escalade au menu.
+    // 2. Off: nothing moves, no more climbing in the menu.
     await setSystem(false);
     m = await menu(hero);
     ctx.expect(m.climbSystem === false, "coupé : `api.climb.enabled()` faux");
@@ -63,12 +63,12 @@ export default {
     const mz = await menu(zombi);
     ctx.expect(mz.climbEntries?.length === 0, `aucune entrée d'escalade pour le Zombi non plus (${(mz.climbEntries ?? []).join(", ") || "aucune"})`);
 
-    // 3. Coupé : hauteur libre pour le Zombi, en marche.
+    // 3. Off: free height for the Zombie, on foot.
     const raise = await ctx.engine("rawMove", { tokenId: zombi.id, elevation: 15, action: "walk" });
     ctx.expect((raise.after.elevation === 15) && (raise.after.movementAction === "walk") && !raise.falling,
       `le Zombi monte sur place à 15 ft en marche : ${raise.after.elevation} ft, mode ${raise.after.movementAction}, ${raise.falling ? "En chute !" : "sans chute"}`);
     const zc = raise.after.cell;
-    const away = { i: zc.i, j: zc.j - 1 };   // à l'ouest : le mur est à l'est
+    const away = { i: zc.i, j: zc.j - 1 };   // to the west: the wall is to the east
     const drag = await ctx.engine("rawMove", { tokenId: zombi.id, cell: away });
     ctx.expect((drag.after.cell.j === away.j) && (drag.after.elevation === 15) && !drag.falling,
       `glissé d'une case à cette hauteur : case (${drag.after.cell.i}, ${drag.after.cell.j}), ${drag.after.elevation} ft, ${drag.falling ? "En chute !" : "sans chute"}`);
@@ -78,7 +78,7 @@ export default {
     ctx.expect((click.after.cell.j === away.j - 1) && (click.after.elevation === 15) && !zs.falling,
       `au clic (A* du moteur), une case de plus : ${click.after.elevation} ft, case (${click.after.cell.i}, ${click.after.cell.j}), ${zs.falling ? "En chute !" : "sans chute"}`);
 
-    // 4. Rallumé : personne ne bouge ; l'escalade revient ; le déplacement suivant suit le sol.
+    // 4. Back on: nobody moves; climbing returns; the next move follows the ground.
     await setSystem(true);
     const z1 = await state(zombi);
     s = await state(hero);

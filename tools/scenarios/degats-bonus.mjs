@@ -1,11 +1,11 @@
 /**
- * Brique « dégâts bonus » (B2, SPEC §16, écrite en 0.31.0, vérifiée ici) sur deux déclarations de l'inventaire :
- *  - Maître d'armes lourdes (`great-weapon-master`, PHB) : le Guerrier touche le Zombi à l'épée à deux mains (Lourde) →
- *    le jet de dégâts porte en plus son bonus de maîtrise, du type de l'arme ;
- *  - Voile spirituel (`spirit-shroud`, Tasha : absent de `dnd-6`) : un item minimal portant cet identifiant et un effet
- *    transféré au Magicien — c'est tout ce que lit la déclaration (`source.hasEffect`) — puis Rayon de givre sur le Zombi à
- *    5 ft → +1d8 nécrotique ; le même tir à 15 ft ne le porte pas.
- * Les jets sont aléatoires : on rejoue jusqu'à toucher.
+ * "Bonus damage" building block (B2, SPEC §16, written in 0.31.0, verified here) on two declarations of the inventory:
+ *  - Great Weapon Master (`great-weapon-master`, PHB): the Fighter hits the Zombie with the two-handed sword (Heavy) →
+ *    the damage roll additionally carries its proficiency bonus, of the weapon's type;
+ *  - Spirit Shroud (`spirit-shroud`, Tasha: absent from `dnd-6`): a minimal item carrying that identifier and an effect
+ *    transferred to the Wizard — that is all the declaration reads (`source.hasEffect`) — then Ray of Frost on the Zombie at
+ *    5 ft → +1d8 necrotic; the same shot at 15 ft does not carry it.
+ * The rolls are random: we replay until a hit.
  */
 export default {
   name: "dégâts bonus — Maître d'armes lourdes (+ maîtrise), Voile spirituel (+1d8 nécrotique à 10 ft)",
@@ -20,7 +20,7 @@ export default {
     ctx.restore(() => ctx.setHp(zombi, hp0));
     ctx.restore(() => ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => {}));
 
-    /** Tire jusqu'à toucher ; rend la résolution et la formule du jet de dégâts. */
+    /** Shoots until it hits; returns the resolution and the damage roll formula. */
     const hitWith = async (token, identifier, activityType) => {
       for ( let i = 0; i < 20; i++ ) {
         await ctx.setHp(zombi, hp0);
@@ -30,18 +30,18 @@ export default {
         const target = r.targets.find(t => t.name === "Zombi");
         if ( !target?.hit ) continue;
         const damage = (await ctx.messagesSince(since)).find(m => m.type === "damage");
-        // Les dégâts bonus s'ajoutent comme un jet à part dans le même message (runtime/triggers.mjs) : tous les jets.
+        // Bonus damage is added as a separate roll in the same message (runtime/triggers.mjs): all the rolls.
         return { r, target, formula: (damage?.rolls ?? []).map(x => x.formula).join(" | "), damages: r.damageRoll?.damages ?? [] };
       }
       return null;
     };
 
-    // --- Maître d'armes lourdes -------------------------------------------------------------------------------------
+    // --- Great Weapon Master -------------------------------------------------------------------------------------
     await ctx.ensureItem(warrior, "Compendium.dnd-players-handbook.feats.Item.phbftGreatWeapon");
     const wPos = await ctx.position(warrior);
     await ctx.call("move-token", { tokenId: zombi.id, x: wPos.x + grid, y: wPos.y, elevation: wPos.elevation });
     const prof = (await ctx.call("get-actor", { actorId: warrior.actorId })).system?.attributes?.prof ?? 2;
-    // Le bonus ne vaut qu'à son tour (`source.onOwnTurn`, content/triggers.mjs) : un combat, au tour du Guerrier.
+    // The bonus only applies on its own turn (`source.onOwnTurn`, content/triggers.mjs): a combat, on the Fighter's turn.
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
     const current = async () => { const c = await state(); return c.combatants?.find(x => x.id === c.currentCombatantId)?.tokenId ?? null; };
     await ctx.startCombat([warrior, zombi]);

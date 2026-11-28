@@ -1,11 +1,11 @@
 /**
- * §214 : Formation au port d'armure — ce que dnd5e ne fait pas (adapter/armor-training.mjs).
- *  - Armure sans formation : Désavantage aux tests de caractéristique (compétences, initiative comprises) et aux sauvegardes de Force et
- *    de Dextérité (`dnd5e.preRollAbilityCheckV2`, `dnd5e.preRollSavingThrowV2`, sur le client qui lance) ; aux attaques de Force ou de
- *    Dextérité, c'est une raison de Désavantage du moteur (core/conditions.mjs, « Armure sans formation ») ; lancer un sort est un souci
- *    de légalité (runtime/turn.mjs).
- *  - Bouclier sans formation : pas de bonus de CA — le MJ actif pose sur le personnage un effet marqué qui retire le bonus du bouclier
- *    (`system.attributes.ac.bonus`), et le retire dès que la formation ou le bouclier change.
+ * §214: Armor Training — what dnd5e does not do (adapter/armor-training.mjs).
+ *  - Armor without training: Disadvantage on ability checks (skills, Initiative included) and on Strength and
+ *    Dexterity saving throws (`dnd5e.preRollAbilityCheckV2`, `dnd5e.preRollSavingThrowV2`, on the client that rolls); on
+ *    Strength or Dexterity attacks, it is an engine Disadvantage reason (core/conditions.mjs, "Armor without training");
+ *    casting a spell is a legality matter (runtime/turn.mjs).
+ *  - Shield without training: no AC bonus — the active GM puts a marked effect on the character that removes the shield's bonus
+ *    (`system.attributes.ac.bonus`), and removes it as soon as the training or the shield changes.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -15,7 +15,7 @@ import { log, loc } from "./shared.mjs";
 
 const SHIELD_FLAG = "untrainedShield";
 
-/** Sur le client qui lance : Désavantage au test ou à la sauvegarde de Force ou de Dextérité en armure sans formation. */
+/** On the client that rolls: Disadvantage on the Strength or Dexterity check or save in armor without training. */
 function onPreRoll(config) {
   const actor = config?.subject;
   const roll = config?.rolls?.[0];
@@ -27,7 +27,7 @@ function onPreRoll(config) {
   return true;
 }
 
-/** MJ actif : l'effet « bouclier sans formation » suit le bouclier porté et la formation du personnage. */
+/** Active GM: the "shield without training" effect follows the shield worn and the character's training. */
 async function syncShield(actor) {
   if ( actor?.type !== "character" ) return;
   const shield = untrainedShield(actor);
@@ -51,7 +51,7 @@ async function syncShield(actor) {
 }
 
 const queued = new Set();
-/** Une seule mise à jour à la fois par acteur (plusieurs hooks peuvent tomber ensemble). */
+/** A single update at a time per actor (several hooks may fall together). */
 function resync(actor) {
   if ( !actor || queued.has(actor.uuid) ) return;
   queued.add(actor.uuid);

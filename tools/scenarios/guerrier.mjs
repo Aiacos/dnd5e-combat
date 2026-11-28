@@ -1,14 +1,14 @@
 /**
- * Le Guerrier du Manuel des joueurs 2024 (SPEC §21), monde `dnd-6`. Le Guerrier (nain, niveau 1) reçoit, prêtées depuis le
- * compendium du Manuel des joueurs, Fougue, Décalage tactique, Attaques avisées, Héros du champ d'honneur et les styles Armes à
- * deux mains et Armes de jet. Le Bandit reçoit 300 PV. Vérifie :
- *  - Fougue : une action de plus au budget ;
- *  - Décalage tactique : Second souffle (action Bonus) → la moitié de la Vitesse en plus, désengagé ;
- *  - Attaques avisées : après un raté, la prochaine attaque contre le Bandit a l'Avantage ;
- *  - Héros du champ d'honneur : l'Inspiration héroïque au début de son tour ;
- *  - Armes à deux mains : les dés de l'épée à deux mains en « min3 » ;
- *  - Armes de jet : +2 à la javeline lancée.
- * Remet positions, PV, inspiration ; retire les items prêtés.
+ * The 2024 Player's Handbook Fighter (SPEC §21), world `dnd-6`. The Fighter (dwarf, level 1) gets, lent from the
+ * Player's Handbook compendium, Action Surge, Tactical Shift, Studied Attacks, Heroic Warrior and the Great Weapon Fighting and
+ * Thrown Weapon Fighting styles. The Bandit gets 300 HP. Checks:
+ *  - Action Surge: one more action in the budget;
+ *  - Tactical Shift: Second Wind (Bonus Action) → half the Speed more, disengaged;
+ *  - Studied Attacks: after a miss, the next attack against the Bandit has Advantage;
+ *  - Heroic Warrior: Heroic Inspiration at the start of its turn;
+ *  - Great Weapon Fighting: the greatsword's dice at "min3";
+ *  - Thrown Weapon Fighting: +2 on the thrown javelin.
+ * Restores positions, HP, inspiration; removes the lent items.
  */
 const MODULE_ID = "dnd5e-combat";
 const CLASSES = "dnd-players-handbook.classes";
@@ -47,7 +47,7 @@ export default {
       data: max0 === null ? { "delta.system.attributes.hp.-=max": null } : { "delta.system.attributes.hp.max": max0 } }).catch(() => {}));
     const tough = () => ctx.call("update-scene-object", { type: "Token", objectId: bandit.id, data: { "delta.system.attributes.hp.max": 300, "delta.system.attributes.hp.value": 300 } });
 
-    // `move-token` (déplacement « displace ») : un update de x/y est contraint par les murs de la scène.
+    // `move-token` ("displace" movement): an x/y update is constrained by the scene's walls.
     const place = async (t, x, y) => { await ctx.call("move-token", { tokenId: t.id, x, y, elevation: 0 }); await pause(700); };
     const remettre = async () => {
       for ( const [id, h] of homes ) {
@@ -138,7 +138,7 @@ export default {
       if ( !ctx.expect(await fight(), "combat : au tour du Guerrier") ) return;
       await ctx.call("update-actor", { actorId: fighter.actorId, actorData: { "system.attributes.inspiration": false } });
       await ctx.nextTurn(); await pause(1500);
-      await ctx.nextTurn(); await pause(2500);   // début du tour suivant du Guerrier
+      await ctx.nextTurn(); await pause(2500);   // start of the Fighter's next turn
       const a = await ctx.call("get-actor", { actorId: fighter.actorId });
       ctx.expect(a.system?.attributes?.inspiration === true, `Inspiration héroïque au début de son tour (${a.system?.attributes?.inspiration})`);
     });
@@ -154,8 +154,8 @@ export default {
     await lend(FEATS, "phbfstThrownWeap");
     await part("Armes de jet", async () => {
       await tough(); await place(bandit, g.x + 3 * grid, g.y);
-      // Un module voisin peut faire quitter la main à l'arme lancée (Darsh Loot : plantée dans la cible ou tombée en tas) : elle
-      // est rendue avant chaque essai, sous son identifiant. Le filet de sécurité du lanceur retire le tas et la copie plantée.
+      // A neighboring module can make the thrown weapon leave the hand (Darsh Loot: stuck in the target or fallen in a pile): it
+      // is given back before each try, under its identifier. The caster's safety net removes the pile and the stuck copy.
       const data = (actor0.items ?? []).find(i => i._id === javelin);
       const rearm = async () => {
         const items = (await ctx.call("get-actor", { actorId: fighter.actorId })).items ?? [];

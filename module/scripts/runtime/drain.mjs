@@ -1,10 +1,10 @@
 /**
- * M8 (SPEC §18.16) : le maximum de PV baisse du montant des dégâts subis (Absorption de vie…), ou d'une formule sur une
- * sauvegarde ratée (Drain d'énergie) ; le vampire regagne ce qu'il draine ; réduit à 0, le maximum tue (règles 2024).
- * §105 : le drain est un EFFET sur la cible (adapter/drain.mjs) ; une valeur de caractéristique se draine aussi au toucher
- * (Caresse dévitalisante de l'Ombre : Force −1d4, mort à 0) ; au format 2014 (« must succeed on … or its Hit Point maximum is
- * reduced… »), la part égale aux dégâts ne se draine que sur la sauvegarde ratée que le toucher impose — tranchée APRÈS
- * l'application des dégâts de l'attaque (vu en jeu le 2026-10-07) : la part se garde au calcul, et se draine à la résolution.
+ * M8 (SPEC §18.16): maximum HP drops by the amount of damage taken (Life Drain…), or by a formula on a failed
+ * save (Energy Drain); the vampire regains what it drains; reduced to 0, the maximum kills (2024 rules).
+ * §105: the drain is an EFFECT on the target (adapter/drain.mjs); an ability score is also drained on a hit
+ * (Shadow's Strength Drain: Strength −1d4, death at 0); in the 2014 format ("must succeed on … or its Hit Point maximum is
+ * reduced…"), the part equal to the damage is only drained on the failed save that the hit imposes — decided AFTER
+ * the attack's damage is applied (seen in play on 2026-10-07): the part is kept at calculation, and drained at resolution.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,7 +16,7 @@ import { tokenOf } from "../adapter/facts.mjs";
 import { route } from "./router.mjs";
 import { loc, log, locEsc, notice, say } from "./shared.mjs";
 
-/** Le libellé de l'effet, total compris. */
+/** The effect's label, total included. */
 function effectName(item, kind) {
   if ( kind === "hp" ) return total => loc("Drain.EffetPV", { item: item.name, n: total });
   const ability = CONFIG.DND5E.abilities[kind]?.label ?? kind;
@@ -24,13 +24,13 @@ function effectName(item, kind) {
 }
 
 /**
- * Format 2014 : la part drainée en attente de la sauvegarde, par message d'utilisation et acteur ciblé. Sur le client qui
- * applique les dégâts (le MJ actif, pour une action du moteur), lue par la résolution sur le même client.
+ * 2014 format: the drained part waiting for the save, per use message and targeted actor. On the client that
+ * applies the damage (the active GM, for an engine action), read by the resolution on the same client.
  */
 const pending = new Map();
 const pendingKey = (messageId, actorUuid) => `${messageId}|${actorUuid}`;
 
-/** Sur le client qui applique les dégâts : la part drainée, gardée pour après l'écriture des PV. */
+/** On the client that applies the damage: the drained part, kept for after the HP are written. */
 function onCalculateDamage(actor, damages, options) {
   const item = damageSourceItem(options);
   const rule = drainOf(item);
@@ -45,17 +45,18 @@ function onCalculateDamage(actor, damages, options) {
 }
 
 async function drain(actor, kind, n, { item, source=null, regains=false, floor=null }) {
-  // §283 : Contamination — le maximum ne descend pas sous son plancher.
+  // §283: Contamination — the maximum does not go below its floor.
   if ( kind === "hp" ) n = flooredDrain(n, effectiveMax(actor), floor);
   if ( n <= 0 ) return;
-  // §500 : vivante avant le drain — la mort qu'il cause s'annonce (une seule fois : les PV ramenés à 0 par l'effet peuvent aussi la poser).
+  // §500: alive before the drain — the death it causes is announced (only once: the HP brought to 0 by the effect can also
+  // set it).
   const alive = !actor.statuses?.has?.("dead");
   const left = await applyDrainEffect(actor, { kind, n, item, name: effectName(item, kind) });
   log(`${actor.name}: ${item.name} — ${kind === "hp" ? "Hit Point maximum" : kind} -${n} (${left})`);
   if ( left <= 0 ) {
-    // §500 : l'effet vient de ramener les PV à 0 — dnd5e pose Mort lui-même, avec le même id (`updateDowned`, `keepId`), sur le client
-    // qui a écrit. Les deux créations se croisaient (« _id dnd5edead0000000 already exists » dans la console, banc du 2026-11-20) :
-    // comme `ensureDowned` (adapter/death.mjs), on lui laisse un instant et on ne pose l'état que s'il manque encore.
+    // §500: the effect has just brought HP to 0 — dnd5e sets Dead itself, with the same id (`updateDowned`, `keepId`), on the
+    // client that wrote. The two creations crossed ("_id dnd5edead0000000 already exists" in the console, test bench of
+    // 2026-11-20): like `ensureDowned` (adapter/death.mjs), we give it a moment and only set the condition if it is still missing.
     if ( (kind === "hp") && !actor.statuses?.has?.("dead") ) await new Promise(resolve => setTimeout(resolve, AFTER_ZERO_HP_MS));
     if ( !actor.statuses?.has?.("dead") ) await setDeathStatus(actor, "dead");
     log(`${actor.name}: ${kind === "hp" ? "Hit Point maximum" : kind} at 0 → Dead`);
@@ -69,8 +70,8 @@ async function drain(actor, kind, n, { item, source=null, regains=false, floor=n
 }
 
 /**
- * §500 (B20) : la mort par drain, vue et entendue de toute la table (règle DAS : un retour pour chaque action) — carte de chat
- * (drapeau `drainDeath`) et avis au-dessus du token avec son, chez chaque client.
+ * §500 (B20): death by drain, seen and heard by the whole table (DAS rule: feedback for every action) — chat card
+ * (flag `drainDeath`) and a notice above the token with sound, on every client.
  */
 async function announceDrainDeath(actor, kind, item) {
   const what = (kind === "hp") ? loc("Drain.MaxPV") : (CONFIG.DND5E.abilities[kind]?.label ?? kind);
@@ -88,10 +89,10 @@ async function onApplyDamage(actor, amount, options) {
 }
 
 /**
- * À la résolution tranchée, MJ actif : la part égale aux dégâts d'une fiche au format 2014, sur la sauvegarde ratée (à défaut
- * de la part gardée au calcul, les PV perdus) ; le Drain d'énergie (« Failure: The target's Hit Point maximum decreases by 14 (4d6) »)
- * sur une sauvegarde ratée ; le drain d'une caractéristique sur une attaque qui touche (ou une sauvegarde ratée, pour une
- * activité sans attaque).
+ * At the decided resolution, active GM: the part equal to the damage of a 2014-format sheet, on the failed save (failing
+ * the part kept at calculation, the HP lost); Energy Drain ("Failure: The target's Hit Point maximum decreases by 14 (4d6)")
+ * on a failed save; the drain of an ability on an attack that hits (or a failed save, for an
+ * activity without an attack).
  */
 async function onResolution(resolution) {
   if ( resolution.step !== STEPS.DONE ) return;

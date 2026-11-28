@@ -1,11 +1,11 @@
 /**
- * §52 : la boîte à amadou (`kindles`) — « l'utiliser pour allumer une Bougie, une Lampe, une Lanterne ou une Torche […] prend une
- * action Bonus ». Après l'utilisation, la source à allumer (ou à éteindre) : d'office s'il n'y en a qu'une, sinon au choix.
- * L'interface demande ; runtime/lights.mjs allume.
+ * §52: the tinderbox (`kindles`) — "using it to light a Candle, a Lamp, a Lantern or a Torch […] takes a Bonus
+ * Action". After the use, the source to light (or to put out): automatically if there is only one, otherwise by choice.
+ * The interface asks; runtime/lights.mjs lights it.
  *
- * §121 : le menu du clic droit d'une source dans l'inventaire de dnd5e (`dnd5e.getItemContextOptions`,
- * applications/components/inventory.mjs:636) — « Allumer » / « Éteindre », avec le temps restant. La Torche du Manuel des joueurs
- * n'a qu'une activité d'attaque : c'est par là (ou la boîte à amadou, ou le HUD) qu'on l'allume. Sans coût d'action.
+ * §121: the right-click menu of a source in dnd5e's inventory (`dnd5e.getItemContextOptions`,
+ * applications/components/inventory.mjs:636) — "Light" / "Extinguish", with the time remaining. The Player's Handbook Torch
+ * has only an attack activity: that is how it is lit (or with the tinderbox, or the HUD). No action cost.
  */
 
 import { contentOf } from "../adapter/content.mjs";
@@ -18,7 +18,7 @@ import { log, loc, notice } from "../runtime/shared.mjs";
 async function onPostUse(activity) {
   const actor = activity?.actor;
   if ( !contentOf(activity?.item).entry?.kindles || !actor?.isOwner ) return;
-  // §346 : une lumière qui suit un enchantement (Langue de feu) ne s'allume pas à l'amadou.
+  // §346: a light that follows an enchantment (Flame Tongue) is not lit with a tinderbox.
   const sources = carriedLightsOf(actor).filter(i => !carriedLightOf(i).whileEnchanted);
   const token = tokenOf(actor);
   if ( !sources.length ) return notice(token, loc("Amadou.Rien"));
@@ -38,12 +38,12 @@ async function onPostUse(activity) {
   if ( result.changed ) log(`${actor.name}: ${chosen.name} ${result.lit ? "lit" : "put out"} (${activity.item.name})`);
 }
 
-/** §121 : « Allumer » / « Éteindre » dans le menu d'une source portée de l'inventaire. */
+/** §121: "Light" / "Extinguish" in the menu of a carried source in the inventory. */
 function onItemContext(item, options) {
   const rule = carriedLightOf(item);
   if ( !rule || rule.whileEnchanted || !item.actor?.isOwner || !Array.isArray(options) ) return;
   const lit = !!carriedLightEffect(item);
-  // §346 : le capuchon d'une source allumée (Lanterne à capuchon).
+  // §346: the hood of a lit source (Hooded Lantern).
   if ( lit && rule.hooded ) {
     const down = hoodedDown(item);
     options.push({ label: loc(down ? "Lumiere.MenuLeverCapuchon" : "Lumiere.MenuBaisserCapuchon"), icon: down ? "fa-solid fa-sun" : "fa-solid fa-moon",

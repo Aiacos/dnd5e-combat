@@ -1,27 +1,28 @@
 /**
- * Défenses de sorts (SPEC §16.46), lues et écrites dans Foundry.
- *  - Résistance : quand le moteur applique des dégâts (par type, avant résistances et PV temporaires), le porteur d'un effet
- *    de l'item retire `formula` aux dégâts du type protégé — le profil se reconnaît à `system.origin.profile` de l'effet appliqué (applications/components/effect-application.mjs:255) ; une fois par tour de
- *    combat (marque sur l'effet).
- *  - Vigueur arcanique : dés de vie dépensés (`system.hd.spent` des classes), soin lancé et appliqué.
+ * Spell defenses (SPEC §16.46), read and written in Foundry.
+ *  - Resistance: when the engine applies damage (by type, before Resistances and Temporary Hit Points), the bearer of an effect
+ *    from the item removes `formula` from the protected type's damage — the profile is recognized by the effect's
+ *    `system.origin.profile` as applied (applications/components/effect-application.mjs:255); once per combat
+ *    turn (mark on the effect).
+ *  - Arcane Vigor: Hit Dice spent (`system.hd.spent` of the classes), heal cast and applied.
  */
 
 import { MODULE_ID } from "../constants.mjs";
 import { reduceDamageOfType, hitDiceAllowed, halveUnresisted } from "../core/defenses.mjs";
 import { contentOf } from "./content.mjs";
 import { originItemOf } from "./facts.mjs";
-// La clé porte l'id du combat : la marque « une fois par tour » d'un combat précédent ne compte plus.
+// The key carries the combat id: the "once per turn" mark from a previous combat no longer counts.
 import { currentTurnKey } from "./turn.mjs";
 
-/** Un objet porté qui protège (§65) : équipé, et harmonisé s'il exige une harmonisation. */
+/** A worn item that protects (§65): equipped, and attuned if it requires attunement. */
 function worn(item) {
   if ( !item?.system?.equipped ) return false;
   return (item.system.attunement !== "required") || !!item.system.attuned;
 }
 
 /**
- * Les boucliers de dégâts que porte l'acteur : `{ effect, type, rule }` — `effect` est le document qui garde la marque « une fois
- * par tour » et donne son nom : l'effet de l'item, ou l'item porté lui-même (`worn`).
+ * The damage shields that the actor carries: `{ effect, type, rule }` — `effect` is the document that keeps the "once per
+ * turn" mark and gives its name: the item's effect, or the worn item itself (`worn`).
  */
 function shieldsOf(actor) {
   const out = [];
@@ -33,8 +34,8 @@ function shieldsOf(actor) {
     if ( effect.disabled || effect.isSuppressed ) continue;
     const rule = contentOf(originItemOf(effect))?.entry?.damageShield;
     if ( !rule?.effects ) continue;
-    // Le profil d'origine : noté par dnd5e sur l'effet appliqué (`system.origin.profile`, effect-application.mjs:255), sinon
-    // la source de la copie.
+    // The origin profile: noted by dnd5e on the applied effect (`system.origin.profile`, effect-application.mjs:255), otherwise
+    // the copy's source.
     const source = String(effect._stats?.duplicateSource ?? effect._stats?.compendiumSource ?? "");
     const profile = effect.system?.origin?.profile ?? source.split(".").pop();
     const type = rule.effects[profile];
@@ -44,9 +45,9 @@ function shieldsOf(actor) {
 }
 
 /**
- * Réduit les dégâts du type protégé, au moment où le moteur les applique (adapter/messages.mjs, `applyDamageToToken`) : un vrai
- * jet de dé (le cœur V14 ne lance pas un dé de façon synchrone : un 1d4 évalué dans `dnd5e.preCalculateDamage` valait 0), une
- * seule fois par coup (le hook sert aussi aux aperçus de la carte de chat). Rend `{ damages, done: [{ name, type, reduced,
+ * Reduces the protected type's damage, at the moment the engine applies it (adapter/messages.mjs, `applyDamageToToken`): a real
+ * die roll (the V14 core does not roll a die synchronously: a 1d4 evaluated in `dnd5e.preCalculateDamage` was worth 0), only
+ * once per hit (the hook also serves the chat card previews). Returns `{ damages, done: [{ name, type, reduced,
  * rolled }] }`.
  */
 export async function applyDamageShields(actor, damages) {
@@ -66,13 +67,13 @@ export async function applyDamageShields(actor, damages) {
   return { damages: out, done };
 }
 
-/** La règle de soin par dés de vie de cette activité (`hitDiceHeal`), ou null. */
+/** The Hit Dice healing rule of this activity (`hitDiceHeal`), or null. */
 export function hitDiceHealOf(activity) {
   const rule = activity?.item ? contentOf(activity.item).entry?.hitDiceHeal : null;
   return (rule && (rule.activity === activity.id)) ? rule : null;
 }
 
-/** Ce que l'acteur peut dépenser : la plus grande taille disponible, combien il en reste, combien la règle permet. */
+/** What the actor can spend: the largest size available, how many remain, how many the rule allows. */
 export function hitDiceChoice(activity, slotLevel) {
   const hd = activity.actor?.system?.attributes?.hd;
   const die = hd?.largestAvailable ?? "d0";
@@ -83,8 +84,8 @@ export function hitDiceChoice(activity, slotLevel) {
 }
 
 /**
- * Dépense `count` dés de vie de taille `die` et soigne l'acteur de leur total + le modificateur d'incantation (données de
- * l'activité, `@mod`). Sur le client du lanceur (son personnage). Rend le jet.
+ * Spends `count` Hit Dice of size `die` and heals the actor by their total + the spellcasting modifier (activity data,
+ * `@mod`). On the caster's client (their character). Returns the roll.
  */
 export async function spendHitDiceToHeal(activity, die, count) {
   const actor = activity.actor;
@@ -104,35 +105,35 @@ export async function spendHitDiceToHeal(activity, die, count) {
 }
 
 /* -------------------------------------------- */
-/*  O8d (§347) : défenses contre les attaques à distance */
+/*  O8d (§347): defenses against ranged attacks */
 /* -------------------------------------------- */
 
-/** Les règles `rangedDefense` des items que l'acteur porte (et a harmonisés s'il le faut). */
+/** The `rangedDefense` rules of the items the actor carries (and has attuned if needed). */
 export function rangedDefensesOf(actor) {
   return Array.from(actor?.items ?? []).filter(worn).map(i => contentOf(i).entry?.rangedDefense).filter(Boolean);
 }
 
-/** Bonus de CA contre un jet d'attaque à distance (Bouclier antiprojectiles : +2, en plus du bonus du bouclier). */
+/** AC bonus against a ranged attack roll (Arrow-Catching Shield: +2, on top of the shield's bonus). */
 export function rangedAcBonus(actor) {
   return rangedDefensesOf(actor).reduce((sum, r) => sum + (Number(r.ac) || 0), 0);
 }
 
-/** Résistance aux dégâts d'une attaque avec une arme à distance (Bouclier d'attraction) : les dégâts réduits, sinon tels quels. */
+/** Resistance to ranged weapon attack damage (Shield of Missile Attraction): the reduced damage, otherwise unchanged. */
 export function resistRangedWeapon(actor, damages) {
   if ( !rangedDefensesOf(actor).some(r => r.resistance === true) ) return { damages, reduced: 0 };
   const traits = actor.system?.traits ?? {};
   return halveUnresisted(damages, { resisted: traits.dr?.value ?? [], immune: traits.di?.value ?? [] });
 }
 
-/** O9a (§354) : l'acteur porte-t-il une armure en adamantium (propriété `ada` de dnd5e, sur une armure équipée) ? */
+/** O9a (§354): does the actor wear adamantine armor (dnd5e `ada` property, on equipped armor)? */
 export function wearsAdamantine(actor) {
   return Array.from(actor?.items ?? []).some(i => (i.type === "equipment") && i.system?.equipped && (i.system?.type?.value !== "shield")
     && (i.system?.properties?.has?.("ada") === true));
 }
 
 /**
- * O9g (§361) : « les tests de Sagesse (Perception) pour vous percevoir ont le Désavantage » (Cape elfique, portée et harmonisée : contenu
- * `hardToPerceive`) — la Perception passive contre ce porteur perd 5 (règle du Désavantage sur un score passif).
+ * O9g (§361): "Wisdom (Perception) checks made to perceive you have Disadvantage" (Cloak of Elvenkind, worn and attuned: content
+ * `hardToPerceive`) — passive Perception against this bearer loses 5 (the Disadvantage rule on a passive score).
  */
 export function hardToPerceive(actor) {
   return Array.from(actor?.items ?? []).some(i => worn(i) && (contentOf(i).entry?.hardToPerceive === true));

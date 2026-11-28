@@ -1,11 +1,11 @@
 /**
- * §188 : les zones inflammables (`flammable`, content/) — l'Huile étalée au sol, la Toile d'araignée. Une zone s'embrase :
- *  a. quand une créature qui s'y tient subit des dégâts de feu ;
- *  b. quand une zone de feu (une activité qui inflige du feu) est posée par-dessus ;
- *  c. par l'entrée « Allumer » du menu de son propre token, au contact, avec une source de lumière portée allumée ou une boîte à
- *     amadou.
- * Embrasée, elle inflige ses dégâts de feu aux moments dits (une fois par tour ; hors combat, à chaque entrée), éclaire, et disparaît à
- * la fin du même tour `rounds` rounds plus tard (`seconds` hors combat). La Toile libère alors ceux qu'elle entravait.
+ * §188: flammable areas (`flammable`, content/) — Oil spread on the ground, Spider Web. An area ignites:
+ *  a. when a creature standing in it takes fire damage;
+ *  b. when a fire area (an activity that deals fire damage) is placed over it;
+ *  c. through the "Light" entry of its own token's menu, in contact, with a lit carried light source or a
+ *     tinderbox.
+ * Ignited, it deals its fire damage at the stated moments (once per turn; out of combat, on each entry), gives light, and
+ * disappears at the end of the same turn `rounds` rounds later (`seconds` out of combat). The Web then frees those it restrained.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -26,15 +26,15 @@ import { catchFireFromZone } from "./burning.mjs";
 import { relaunchUse } from "./relaunch.mjs";
 
 export const IGNITE_QUERY = `${MODULE_ID}.ignite`;
-/** Lumière d'une flaque en feu : celle d'un feu de camp (vive 3 m, faible 6 m de plus), vacillante. */
+/** Light of a burning puddle: that of a campfire (Bright 3 m, Dim 6 m more), flickering. */
 const FIRE_LIGHT = { bright: 10, dim: 20, color: "#ff9329", alpha: 0.5, animation: { type: "torch", speed: 3, intensity: 3 } };
 
-/** La règle d'inflammabilité de l'item d'une activité, ou null. */
+/** The flammability rule of an activity's item, or null. */
 export function flammableOf(activity) {
   return contentOf(activity?.item).entry?.flammable ?? null;
 }
 
-/** La règle d'une zone posée par un item inflammable (état de la zone, sinon l'item de la région). */
+/** The rule of an area placed by a flammable item (the area's state, else the region's item). */
 function ruleOfRegion(region) {
   const state = readAreaState(region);
   if ( state?.flammable ) return state.flammable;
@@ -42,14 +42,14 @@ function ruleOfRegion(region) {
   return contentOf(item).entry?.flammable ?? null;
 }
 
-/** Les zones inflammables pas encore en feu de cette scène. */
+/** This scene's flammable areas not yet on fire. */
 export function unlitZones(scene) {
   return lastingRegions(scene).filter(r => ruleOfRegion(r) && !readAreaState(r)?.burning);
 }
 
-/** Une activité inflige-t-elle du feu (zone de feu, §188 b) ? */
+/** Does an activity deal fire damage (fire area, §188 b)? */
 function dealsFire(activity) {
-  // L'étalage d'huile porte « 5 feu » dans la donnée (la flaque en feu) : poser une flaque n'en allume pas une autre.
+  // The oil spread carries "5 fire" in its data (the burning puddle): placing a puddle does not light another.
   if ( contentOf(activity?.item).entry?.flammable ) return false;
   return (activity?.damage?.parts ?? []).some(p => Array.from(p.types ?? []).includes("fire"));
 }
@@ -58,7 +58,7 @@ function dealsFire(activity) {
 /*  Embrasement                                 */
 /* -------------------------------------------- */
 
-/** Le centre d'une région (pixels), d'après le rectangle de ses formes. */
+/** A region's center (pixels), from the rectangle of its shapes. */
 function centerOf(region) {
   const xs = [];
   const ys = [];
@@ -72,8 +72,8 @@ function centerOf(region) {
 }
 
 /**
- * La zone s'embrase. MJ actif. En combat, elle s'éteint à la fin du même tour `rounds` rounds plus tard ; hors combat, après `seconds`
- * (minuterie, et l'heure du monde en filet : `expiresAt`, runtime/areas.mjs).
+ * The area ignites. Active GM. In combat, it goes out at the end of the same turn `rounds` rounds later; out of combat,
+ * after `seconds` (timer, and world time as a safety net: `expiresAt`, runtime/areas.mjs).
  */
 export async function ignite(region, cause="") {
   return enqueue(`area:${region.id}`, async () => {
@@ -104,14 +104,14 @@ export async function ignite(region, cause="") {
   });
 }
 
-/** Embraser par une requête au MJ actif (un joueur ne peut pas modifier une région). */
+/** Ignite through a request to the active GM (a player cannot modify a region). */
 export function igniteViaGM(region, cause="") {
   return viaActiveGM(IGNITE_QUERY, handleIgnite, { region: region.uuid, cause }, { noGm: "Embrase.SansMJ", fallback: false, label: "flammable: ignite" });
 }
 
 async function handleIgnite({ region: uuid, cause }, { user=null }={}) {
   const region = await fromUuid(uuid);
-  // §472 : d'un joueur, il lui faut une créature sur la scène de la zone (contact, flamme portée, sort de feu à portée).
+  // §472: from a player, it needs a creature on the area's scene (contact, carried flame, fire spell in range).
   if ( region && needsCheck(user) && !region.parent?.tokens.some(t => t.actor && actsFor(user, t.actor)) ) {
     console.warn(`${MODULE_ID} | ignite query from ${user.name} refused: no creature of theirs on the scene of ${region.name}`);
     return false;
@@ -120,8 +120,8 @@ async function handleIgnite({ region: uuid, cause }, { user=null }={}) {
 }
 
 /**
- * §188 b : une zone de feu vient d'être posée — elle embrase les zones inflammables qu'elle recouvre (un point d'une case de la zone
- * inflammable dans la zone de feu). MJ actif (pose de zone).
+ * §188 b: a fire area has just been placed — it ignites the flammable areas it covers (a point of a cell of the
+ * flammable area inside the fire area). Active GM (area placement).
  */
 export async function igniteUnder(fireRegion, activity) {
   if ( !levelAtLeast("full") || !dealsFire(activity) ) return 0;
@@ -133,7 +133,7 @@ export async function igniteUnder(fireRegion, activity) {
   return n;
 }
 
-/** Deux régions se recouvrent-elles ? Les centres des cases de la première, testés dans la seconde. */
+/** Do two regions overlap? The centers of the first one's cells, tested in the second. */
 function overlaps(zone, other) {
   const grid = zone.parent.grid;
   const center = centerOf(zone);
@@ -150,12 +150,12 @@ function overlaps(zone, other) {
 }
 
 /* -------------------------------------------- */
-/*  Brûler                                      */
+/*  Burn                                        */
 /* -------------------------------------------- */
 
 /**
- * La zone en feu agit sur un token (runtime/areas.mjs, à la place du rejeu) : ses dégâts lancés, montrés, appliqués (résistances de
- * dnd5e ; une créature huilée prend ses 5 de plus, runtime/oil.mjs). MJ actif.
+ * The burning area acts on a token (runtime/areas.mjs, in place of the replay): its damage rolled, shown, applied (dnd5e
+ * Resistances; an oiled creature takes its extra 5, runtime/oil.mjs). Active GM.
  */
 export async function burnTick(region, token, burning) {
   const item = fromUuidSync(region.getFlag("dnd5e", "item") ?? "", { strict: false });
@@ -168,11 +168,11 @@ export async function burnTick(region, token, burning) {
   await waitForDice(message);
   await token.actor?.applyDamage([{ value: roll.total, type: burning.type }]);
   log(`${name}: ${token.name} burns, ${roll.total} ${burning.type}`);
-  // §212 : propagation maison — brûlée par la zone, la créature prend feu (réglage `fireSpread`).
+  // §212: house propagation — burned by the area, the creature catches fire (setting `fireSpread`).
   await catchFireFromZone(token, name);
 }
 
-/** Le tour vient de changer : les zones dont le feu atteint son terme s'éteignent (après les brûlures de fin de tour, même file). */
+/** The turn has just changed: areas whose fire reaches its end go out (after end-of-turn burns, same queue). */
 function onTurnChange(combat, prior) {
   const scene = combat.scene ?? canvas.scene;
   if ( !prior || !Number.isFinite(prior.round) ) return;
@@ -187,7 +187,7 @@ function onTurnChange(combat, prior) {
   }
 }
 
-/** Le combat se termine : un feu qui comptait en tours s'éteint avec lui. */
+/** Combat ends: a fire that counted in turns goes out with it. */
 async function onCombatEnd(combat) {
   const scene = combat.scene ?? canvas.scene;
   for ( const region of lastingRegions(scene) ) {
@@ -195,7 +195,7 @@ async function onCombatEnd(combat) {
   }
 }
 
-/** La zone part (éteinte, brûlée, retirée) : sa lumière aussi ; la Toile libère ceux qu'elle entravait (`frees`). */
+/** The area leaves (extinguished, burned, removed): its light too; the Web frees those it restrained (`frees`). */
 async function onRegionDeleted(region) {
   const burning = readAreaState(region)?.burning;
   if ( !burning ) return;
@@ -213,12 +213,12 @@ async function onRegionDeleted(region) {
 }
 
 /* -------------------------------------------- */
-/*  Allumer : dégâts de feu reçus, flamme       */
+/*  Light: fire damage taken, flame             */
 /* -------------------------------------------- */
 
 const lastFire = new WeakMap();
 
-/** §188 a : une créature dans une zone inflammable subit des dégâts de feu — la zone s'embrase. */
+/** §188 a: a creature in a flammable area takes fire damage — the area ignites. */
 async function onFireApplied(actor, amount) {
   const fire = lastFire.get(actor);
   lastFire.delete(actor);
@@ -230,13 +230,13 @@ async function onFireApplied(actor, amount) {
   }
 }
 
-/** Ce token a-t-il de quoi allumer : une source portée allumée (torche, lampe…), ou une boîte à amadou ? */
+/** Does this token have something to light with: a lit carried source (torch, lamp…), or a tinderbox? */
 function hasFlame(actor) {
   return carriedLightsOf(actor).some(i => { const e = carriedLightEffect(i); return e && !e.disabled; })
     || (actor?.items ?? []).some(i => contentOf(i).entry?.kindles === true);
 }
 
-/** §188 c : les zones inflammables que ce token peut allumer — sur la zone ou au contact, avec une flamme. */
+/** §188 c: the flammable areas this token can light — on the area or in contact, with a flame. */
 export function ignitableNear(token) {
   if ( !token?.actor || isObjectToken(token) || !levelAtLeast("full") || !hasFlame(token.actor) ) return [];
   const grid = token.parent.grid;
@@ -246,7 +246,7 @@ export function ignitableNear(token) {
   return unlitZones(token.parent).filter(r => around.some(p => isInside(token, r, p)));
 }
 
-/** Les entrées du menu de son propre token : « Allumer : Huile ». */
+/** The entries of its own token's menu: "Light: Oil". */
 export function igniteEntries(token) {
   if ( !token?.isOwner ) return [];
   return ignitableNear(token).map(region => {
@@ -260,9 +260,9 @@ export function igniteEntries(token) {
 /* -------------------------------------------- */
 
 /**
- * §189 : en visée d'une action de feu à cible unique (Trait de feu), la zone inflammable pas encore en feu sous ce point — `{ zone }`,
- * `{ zone, refused: "outOfRange" }` au-delà de la portée (la longue, s'il y en a une ; « au contact » : 1,50 m), ou null. Appelée
- * seulement quand aucune créature n'est sous la souris : un token sur la zone reste la cible.
+ * §189: when aiming a single-target fire action (Fire Bolt), the flammable area not yet on fire under this point — `{ zone }`,
+ * `{ zone, refused: "outOfRange" }` beyond range (the long one, if any; "contact": 1.5 m), or null. Called
+ * only when no creature is under the mouse: a token on the area stays the target.
  */
 export function fireTargetAt(token, activity, point) {
   if ( !token?.parent || !point || !levelAtLeast("full") || !dealsFire(activity) ) return null;
@@ -279,7 +279,8 @@ export function fireTargetAt(token, activity, point) {
     const center = centerOf(zone);
     const from = tokenCenter(token);
     const distance = center ? grid.measurePath([{ x: from.x, y: from.y }, center]).distance : 0;
-    // Du bord de l'espace du lanceur à la case de la zone la plus proche : leurs demi-largeurs sont retirées de la distance des centres.
+    // From the edge of the caster's space to the nearest cell of the area: their half-widths are subtracted
+    // from the distance between centers.
     const half = (grid.distance ?? 5) / 2;
     const body = ((committedPosition(token).width || 1) * (grid.distance ?? 5)) / 2;
     if ( (distance - half - body) > limit + 1e-6 ) return { zone, refused: "outOfRange" };
@@ -288,12 +289,12 @@ export function fireTargetAt(token, activity, point) {
 }
 
 /**
- * §189 : l'action de feu part sur la zone visée — son utilisation (coût, emplacement, carte), sans créature ciblée ni jet enchaîné, puis
- * la zone s'embrase. `usage` : les configurations suspendues par la visée.
+ * §189: the fire action goes off on the targeted area — its use (cost, slot, card), with no targeted creature or chained roll,
+ * then the area ignites. `usage`: the configurations suspended by targeting.
  */
 export async function igniteWithActivity(token, activity, usage, zone) {
   const [config={}, dialog={}, message={}] = usage ?? [];
-  // Aucune créature ciblée : l'action part sur la zone seule.
+  // No targeted creature: the action goes off on the area alone.
   for ( const t of [...(game.user.targets ?? [])] ) t.setTarget(false, { releaseOthers: false });
   const results = await relaunchUse(activity, { ...config, subsequentActions: false, [MODULE_ID]: { ...(config[MODULE_ID] ?? {}), igniteZone: zone.uuid } },
     { ...dialog, configure: false }, message);
@@ -306,7 +307,7 @@ export async function igniteWithActivity(token, activity, usage, zone) {
 /*  Pose                                        */
 /* -------------------------------------------- */
 
-/** §188 : ce qu'une zone inflammable posée au sol garde (Huile) : sa règle et l'image de l'objet. MJ actif. */
+/** §188: what a flammable area placed on the ground keeps (Oil): its rule and the object's image. Active GM. */
 export async function groundFlammableState(region, activity) {
   const rule = flammableOf(activity);
   const tile = await groundTile(region, activity?.item?.img);

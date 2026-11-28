@@ -1,9 +1,9 @@
 /**
- * §147 : la fuite par la Réaction (Murmures dissonants : « sur un échec, elle doit immédiatement utiliser sa Réaction, si elle le peut,
- * pour s'éloigner de vous aussi loin que sa Vitesse le permet »). MJ actif, à la résolution close (`dnd5e-combat.resolution`, DONE) :
- * chaque cible qui a raté sa sauvegarde, en vie, ni Neutralisée, Réaction disponible, la dépense et s'éloigne du lanceur par l'A* du
- * moteur — jusqu'à l'écart le plus grand que sa Vitesse atteint (`fleeGaps` : du plus loin au plus près, le premier joignable). C'est un
- * vrai déplacement : il provoque les attaques d'opportunité (`walkToGap` → `walkSafely`). Le « chemin le plus sûr » reste au MJ.
+ * §147: fleeing through the Reaction (Dissonant Whispers: "on a failed save, it must immediately use its Reaction, if available,
+ * to move away from you as far as its Speed allows"). Active GM, at closed resolution (`dnd5e-combat.resolution`, DONE):
+ * each target that failed its save, alive, not Incapacitated, Reaction available, spends it and moves away from the caster via the
+ * engine's A* — to the greatest gap its Speed reaches (`fleeGaps`: from farthest to nearest, the first reachable). It is a
+ * real movement: it provokes Opportunity Attacks (`walkToGap` → `walkSafely`). The "safest path" is left to the GM.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -36,7 +36,7 @@ async function flee(token, caster, item) {
   if ( cells <= 0 ) return;
   if ( budget ) await writeBudget(combatant, { ...budget, reaction: Math.max(0, (budget.reaction ?? 1) - 1), reactedAt: currentTurnKey() });
   notice(token, loc("Fuite.Retour"), "reaction");
-  // La Réaction donne la Vitesse entière, hors du budget du tour : le plafond se compte depuis l'historique du cœur tel qu'il est.
+  // The Reaction gives the full Speed, outside the turn's budget: the cap is counted from the core's history as it stands.
   const history = historyCosts(token);
   const maxCost = history.spent + history.excluded + speed;
   const from = gapBetween(token, caster);
@@ -45,7 +45,7 @@ async function flee(token, caster, item) {
       log(`${item.name}: ${token.name} flees from ${caster.name} with its Reaction (${from} → ${gap} squares)`);
       return;
     }
-    // Un pas a pu être fait sans atteindre l'écart visé (mur, attaque d'opportunité) : on ne repart pas.
+    // A step may have been taken without reaching the targeted gap (wall, Opportunity Attack): we do not set off again.
     if ( gapBetween(token, caster) !== from ) return;
   }
   log(`${item.name}: ${token.name} cannot get further from ${caster.name}`);

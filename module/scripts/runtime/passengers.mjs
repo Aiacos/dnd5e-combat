@@ -1,11 +1,11 @@
 /**
- * §264 : téléportation avec passager (`teleport.passengers`, audit CAT / CPR) — Porte dimensionnelle : « vous pouvez aussi téléporter une
- * créature consentante ; elle doit se trouver à 1,50 m de vous et se téléporte dans un espace à 1,50 m de votre destination ».
- *  - Avant le saut, sur le client du lanceur : les créatures non hostiles à portée (`within`) ; celles qu'il cible déjà sont prises
- *    d'office, sinon une fenêtre lui demande lesquelles (au plus `count`), ou personne.
- *  - Après le saut, par le MJ actif (le lanceur ne possède pas forcément le token de son allié) : chacune est posée au contact du
- *    lanceur, à la même place relative si la case est libre, sinon à la plus proche (`dragDestination`, comme une victime traînée).
- *    Texte flottant chez toute la table.
+ * §264: teleportation with a passenger (`teleport.passengers`, CAT / CPR audit) — Dimension Door: "you can also teleport one
+ * willing creature; it must be within 1.50 m of you and teleports to a space within 1.50 m of your destination".
+ *  - Before the jump, on the caster's client: the non-hostile creatures in range (`within`); those they already target are taken
+ *    automatically, otherwise a window asks them which ones (at most `count`), or nobody.
+ *  - After the jump, by the active GM (the caster does not necessarily own their ally's token): each is placed in contact with
+ *    the caster, at the same relative place if the cell is free, otherwise at the nearest (`dragDestination`, like a dragged
+ *    victim). Floating text for the whole table.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -18,10 +18,10 @@ import { loc, log, notice, viaActiveGM } from "./shared.mjs";
 import { actsFor, needsCheck } from "../core/requests.mjs";
 
 export const PASSENGERS_QUERY = `${MODULE_ID}.teleportPassengers`;
-/** §472 : au plus autant de passagers demandés par un joueur (Porte dimensionnelle en emmène un). */
+/** §472: at most as many passengers as requested by a player (Dimension Door takes one along). */
 const MAX_PASSENGERS = 8;
 
-/** Les créatures qu'une téléportation peut emmener : non hostiles, vivantes, à portée du lanceur. */
+/** The creatures a teleportation can take along: non-hostile, alive, in range of the caster. */
 function candidates(token, rule) {
   const limit = lengthIn(rule.within ?? 5, rule.units ?? "ft", token.parent.grid.units);
   return token.parent.tokens.filter(t => (t !== token) && t.actor && !isObjectToken(t) && !t.hidden
@@ -30,7 +30,8 @@ function candidates(token, rule) {
 }
 
 /**
- * Qui part avec le lanceur ? Rend les tokens choisis (au plus `count`), avec leur place relative au lanceur avant le saut.
+ * Who leaves with the caster? Returns the chosen tokens (at most `count`), with their position relative to the caster before
+ * the jump.
  * @returns {Promise<{token: TokenDocument, dx: number, dy: number}[]>}
  */
 export async function choosePassengers(token, rule) {
@@ -52,11 +53,11 @@ export async function choosePassengers(token, rule) {
   return chosen.map(t => ({ token: t, dx: t._source.x - from.x, dy: t._source.y - from.y }));
 }
 
-/** MJ actif : pose chaque passager au contact du lanceur arrivé. */
+/** Active GM: places each passenger in contact with the caster who has arrived. */
 async function handleCarry({ caster, passengers }, { user=null }={}) {
   const casterDoc = fromUuidSync(caster ?? "", { strict: false });
   if ( !casterDoc ) return 0;
-  // §472 : d'un joueur, seulement son propre lanceur, et des passagers que la règle permet (non hostiles, vivants, partis d'à côté de lui).
+  // §472: from a player, only their own caster, and passengers the rule allows (non-hostile, alive, who left from beside them).
   const untrusted = needsCheck(user);
   if ( untrusted && !actsFor(user, casterDoc.actor) ) {
     console.warn(`${MODULE_ID} | teleportPassengers query from ${user.name} refused: ${casterDoc.name} is not theirs`);
@@ -83,7 +84,7 @@ async function handleCarry({ caster, passengers }, { user=null }={}) {
   return moved;
 }
 
-/** Après le saut : les passagers rejoignent le lanceur (par le MJ actif). */
+/** After the jump: the passengers join the caster (by the active GM). */
 export async function carryPassengers(token, chosen) {
   if ( !chosen?.length ) return 0;
   return viaActiveGM(PASSENGERS_QUERY, handleCarry,

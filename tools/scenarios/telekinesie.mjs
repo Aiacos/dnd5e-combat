@@ -1,8 +1,8 @@
 /**
- * Brique « déplacement forcé » (B3, écrite en 0.31.0, vérifiée ici) : Télékinésiste (`telekinetic`, don du PHB, ajouté au
- * Magicien le temps du scénario) — « Poussée télékinésique » : sauvegarde de Force, ou la cible est repoussée de 5 ft.
- * Contenu : `{ on: "failedSave", do: [{ type: "move", mode: "push", distance: 5, units: "ft" }] }`. On rejoue jusqu'à un
- * échec : le Zombi recule d'une case, à l'opposé du Magicien.
+ * "Forced movement" building block (B3, written in 0.31.0, verified here): Telekinetic (`telekinetic`, PHB feat, added to the
+ * Wizard for the scenario's duration) — "Telekinetic Shove": Strength saving throw, or the target is pushed 5 ft.
+ * Content: `{ on: "failedSave", do: [{ type: "move", mode: "push", distance: 5, units: "ft" }] }`. We replay until a
+ * failure: the Zombie moves back one cell, away from the Wizard.
  */
 export default {
   name: "télékinésie — Poussée télékinésique repousse le Zombi de 5 ft sur un échec",
@@ -17,8 +17,8 @@ export default {
     ctx.restore(() => ctx.call("move-token", { tokenId: zombi.id, x: home.x, y: home.y, elevation: home.elevation }).catch(() => {}));
     await ctx.ensureItem(mage, "Compendium.dnd-players-handbook.feats.Item.phbftTelekinetic");
     const mPos = await ctx.position(mage);
-    // Deux cases au sud : la colonne sous la case d'origine du Magicien est libre de murs et de tokens (relevé du scénario
-    // `poussee`). À l'ouest, un mur arrête la poussée (2026-09-25) ; à l'est, l'Occultiste occupe la case suivante (2026-09-28).
+    // Two cells south: the column below the Wizard's origin cell is free of walls and tokens (survey of the scenario
+    // `poussee`). To the west, a wall stops the push (2026-09-25); to the east, the Warlock occupies the next cell (2026-09-28).
     const pos0 = { x: mPos.x, y: mPos.y + 2 * grid, elevation: mPos.elevation };
 
     for ( let i = 0; i < 20; i++ ) {

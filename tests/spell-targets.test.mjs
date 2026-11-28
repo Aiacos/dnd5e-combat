@@ -4,25 +4,25 @@ import { ITEM_FIXES } from "../module/scripts/content/item-fixes.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 import { holds } from "../module/scripts/core/triggers.mjs";
 
-describe("spellTargets : ce que l'item qui lance un sort dit de ses cibles (Anneau d'influence animale)", () => {
+describe("spellTargets: what the item that casts a spell says about its targets (Ring of Animal Influence)", () => {
   const ring = ITEM_FIXES["ring-of-animal-influence"].spellTargets;
-  it("Terreur lancée par l'anneau : les Bêtes seulement", () => {
+  it("Fear cast by the ring: Beasts only", () => {
     const rule = castTargetRule(null, ring, "kn4eCuLZrcps7ujc");
     expect(rule).toEqual({ types: ["beast"] });
     expect(typeAllowed(rule.types, "beast")).toBe(true);
     expect(typeAllowed(rule.types, "undead")).toBe(false);
   });
-  it("les autres sorts de l'anneau, ou le sort lancé autrement : la règle du sort, inchangée", () => {
+  it("the ring's other spells, or the spell cast otherwise: the spell's rule, unchanged", () => {
     expect(castTargetRule(null, ring, "Y0cSjJs5olZWdSgZ")).toBeNull();
     expect(castTargetRule({ types: ["humanoid"] }, ring, null)).toEqual({ types: ["humanoid"] });
     expect(castTargetRule({ types: ["humanoid"] }, undefined, "kn4eCuLZrcps7ujc")).toEqual({ types: ["humanoid"] });
   });
-  it("ce que l'item déclare l'emporte, clé par clé", () => {
+  it("what the item declares wins, key by key", () => {
     const own = { types: ["humanoid"], unaffectedIf: { "target.hasStatus": "deafened" } };
     expect(castTargetRule(own, ring, "kn4eCuLZrcps7ujc"))
       .toEqual({ types: ["beast"], unaffectedIf: { "target.hasStatus": "deafened" } });
   });
-  it("la clé est validée", () => {
+  it("the key is validated", () => {
     expect(validateEntry({ spellTargets: ring })).toEqual([]);
     expect(validateEntry({ spellTargets: { tooShort: { types: ["beast"] } } })).not.toEqual([]);
     expect(validateEntry({ spellTargets: { kn4eCuLZrcps7ujc: { types: ["animal"] } } })).not.toEqual([]);

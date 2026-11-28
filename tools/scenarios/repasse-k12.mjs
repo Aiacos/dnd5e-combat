@@ -1,12 +1,12 @@
 /**
- * §333, lot K12 de la repasse des créatures : capacités propres lues dans le texte. Arène des sorts : le Lanceur (PNJ), la Cible
- * (999 PV), l'« Ennemi au contact ».
- *  - Décharge aquatique du Plieur de vagues (attaque sans effet) : au toucher, la Cible tombe À terre ;
- *  - Filet collant du Kuo-toa (l'activité ne cite pas l'effet) : sur un échec, la Cible est Entravée ;
- *  - Renvoi de sort du Spectateur (donnée : tous les dégâts sur une réussite) : une réussite n'inflige rien ;
- *  - Sape du Yithien (« Hit Points maximum », pluriel) : sur un échec, le maximum de PV de la Cible baisse ;
- *  - Miasme nocif du Dragon vert adulte (action légendaire « can't take this action again until the start of its next turn ») :
- *    verrouillée après usage, rendue au début du tour du Lanceur.
+ * §333, batch K12 of the creature pass: own abilities read in the text. Spell arena: the Caster (NPC), the Target
+ * (999 HP), the "Enemy in contact".
+ *  - Wave Bender's Water Discharge (attack without effect): on a hit, the Target falls Prone;
+ *  - Kuo-toa's Sticky Net (the activity does not name the effect): on a failure, the Target is Restrained;
+ *  - Spectator's Spell Reflection (data: all the damage on a success): a success inflicts nothing;
+ *  - Yithian's Sap ("Hit Points maximum", plural): on a failure, the Target's maximum HP drops;
+ *  - Adult Green Dragon's Noxious Miasma (legendary action "can't take this action again until the start of its next turn"):
+ *    locked after use, restored at the start of the Caster's turn.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -70,7 +70,7 @@ export default {
     await ctx.call("move-token", { tokenId: caster.id, x: t0.x - grid, y: t0.y, elevation: 0 });
     await pause(800);
 
-    // Décharge aquatique : au toucher, À terre.
+    // Water Discharge: on a hit, Prone.
     const burst = await lend(`${MM}.mmMerfolkWaveben.Item.mmAquaticBurst00`);
     let checked = false;
     for ( let i = 0; (i < 20) && !checked; i++ ) {
@@ -85,7 +85,7 @@ export default {
     }
     ctx.expect(checked, "la Décharge aquatique touche (20 essais au plus)");
 
-    // Filet collant : sur un échec, Entravé.
+    // Sticky Net: on a failure, Restrained.
     const net = await lend(`${MM}.mmKuotoa00000000.Item.BnRLQOEcoPDYB7fx`);
     checked = false;
     for ( let i = 0; (i < 20) && !checked; i++ ) {
@@ -101,7 +101,7 @@ export default {
     ctx.expect(checked, "la Cible rate la sauvegarde du Filet collant (20 essais au plus)");
     await clear();
 
-    // Renvoi de sort : une réussite n'inflige rien.
+    // Spell Reflection: a success inflicts nothing.
     const reflect = await lend(`${MM}.mmSpectator00000.Item.mmSpellReflectio`);
     checked = false;
     for ( let i = 0; (i < 20) && !checked; i++ ) {
@@ -117,7 +117,7 @@ export default {
     }
     ctx.expect(checked, "la Cible réussit la sauvegarde du Renvoi de sort (20 essais au plus)");
 
-    // Sape du Yithien : le maximum de PV baisse.
+    // Yithian's Sap: the maximum HP drops.
     if ( packs.includes("dnd-ravenloft-horrors-within.actors") ) {
       const sup = await lend("Compendium.dnd-ravenloft-horrors-within.actors.Actor.rhwYithian000000.Item.SOwEgdjXcYSEXaSo");
       checked = false;
@@ -138,7 +138,7 @@ export default {
       await clear();
     }
 
-    // Miasme nocif : verrou jusqu'au début du tour du Lanceur.
+    // Noxious Miasma: lock until the start of the Caster's turn.
     await ctx.call("update-actor", { actorId: caster.actorId, actorData: { "system.resources.legact.max": 3, "system.resources.legact.spent": 0 } });
     const miasma = await lend(`${MM}.mmAdultGreenDrag.Item.mmNoxiousMiasma0`);
     await ctx.startCombat([caster, enemy]);

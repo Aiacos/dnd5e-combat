@@ -3,8 +3,8 @@ import { parseMultiattack, fitMultiattack, attackCount, expandPlan, multiattackS
 import { freshBudget, checkUse, spendUse, refundUse } from "../module/scripts/core/turn.mjs";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
-// Textes anglais de la forme de ceux du Monster Manual 2024 : créatures du SRD 5.2, ou textes synthétiques de même
-// grammaire (noms de créatures et d'attaques inventés) pour les créatures hors SRD.
+// English texts of the same form as the 2024 Monster Manual's: SRD 5.2 creatures, or synthetic texts of the same
+// grammar (invented creature and attack names) for creatures outside the SRD.
 const TEXT = {
   ghoul: "<p>The [[lookup @name lowercase]] makes two [[/item .mmClaw0000000000]] attacks.</p>",
   dragon: "<p>The [[lookup @name lowercase]] makes three [[/item Rend]] attacks. It can replace one attack with a use of [[/item Spellcasting]] to cast <em>@UUID[Compendium.dnd-players-handbook.spells.Item.phbsplMelfsAcidA]{Melf's Acid Arrow}</em> (level 3 version).</p>",
@@ -26,42 +26,42 @@ const TEXT = {
 const ACID = "spell:Compendium.dnd-players-handbook.spells.Item.phbsplMelfsAcidA";
 
 describe("lecture du texte anglais", () => {
-  it("N fois la même attaque", () => {
+  it("N times the same attack", () => {
     expect(parseMultiattack(TEXT.ghoul)).toEqual({ options: [[{ n: 2, refs: ["id:mmClaw0000000000"] }]], replace: [], extra: [] });
   });
 
-  it("par nom, et remplacement par un sort précis (dragon)", () => {
+  it("by name, and replacement by a specific spell (dragon)", () => {
     expect(parseMultiattack(TEXT.dragon)).toEqual({ options: [[{ n: 3, refs: ["name:rend"] }]], replace: [{ n: 1, refs: [ACID], of: null }], extra: [] });
   });
 
-  it("combinaison libre, mélange fixe", () => {
+  it("free combination, fixed mix", () => {
     expect(parseMultiattack(TEXT.assassin).options).toEqual([[{ n: 3, refs: ["id:jLa5l9pntsTVrMKH", "id:dL4668G7zXeC5zyY"] }]]);
     expect(parseMultiattack(TEXT.gnawer).options).toEqual([[{ n: 1, refs: ["id:mmGnawingBite000"] }, { n: 2, refs: ["id:mmFlail000000000"] }]]);
   });
 
-  it("remplacement d'une attaque désignée, de n'importe quelle attaque", () => {
+  it("replacement of a designated attack, of any attack", () => {
     expect(parseMultiattack(TEXT.chimera).replace).toEqual([{ n: 1, refs: ["id:mmFireBreath0000"], of: ["name:claw"] }]);
     expect(parseMultiattack(TEXT.lasher).replace).toEqual([{ n: ANY, refs: ["id:mmDreadWhisper00"], of: null }]);
   });
 
-  it("options : « …, or it makes two C attacks », « three A attacks or two B attacks » (noms en clair)", () => {
+  it("options: \"…, or it makes two C attacks\", \"three A attacks or two B attacks\" (names in plain text)", () => {
     expect(parseMultiattack(TEXT.barbed).options).toHaveLength(2);
     expect(parseMultiattack(TEXT.stoneSpirit).options).toEqual([[{ n: 3, refs: ["name:stone maul"] }], [{ n: 2, refs: ["name:rock burst"] }]]);
   });
 
-  it("(A) souffle ou (B) sort ; sort désigné par son activité d'incantation", () => {
+  it("(A) breath or (B) spell; spell designated by its casting activity", () => {
     expect(parseMultiattack(TEXT.brass).replace[0].refs).toEqual(["name:sleep breath", "spell:Compendium.dnd-players-handbook.spells.Item.phbsplScorchingR"]);
     expect(parseMultiattack(TEXT.cloudGiant).replace[0].refs).toEqual(["activity:NdueMCpXRc7fLDFa"]);
   });
 
-  it("usage en plus, utilisations répétées, têtes de l'Hydre", () => {
+  it("extra use, repeated uses, the Hydra's heads", () => {
     expect(parseMultiattack(TEXT.glabrezu).extra).toEqual([{ refs: ["id:mmPummel00000000", "id:mmSpellcasting00"] }]);
     expect(parseMultiattack(TEXT.sporeling)).toEqual({ options: [[{ n: 1, refs: ["name:slam"] }]], replace: [], extra: [{ refs: ["name:calming spores"] }] });
     expect(parseMultiattack(TEXT.watcher).options).toEqual([[{ n: 3, refs: ["id:XDw7TpLSibnKMcZI"] }]]);
     expect(parseMultiattack(TEXT.hydra).options).toEqual([[{ n: ANY, refs: ["id:mmBite0000000000"] }]]);
   });
 
-  it("coquilles du MM : « makes » absent, point collé", () => {
+  it("MM typos: \"makes\" missing, stuck period", () => {
     expect(parseMultiattack(TEXT.weretiger)?.options[0][0].n).toBe(2);
     expect(parseMultiattack(TEXT.youngBronze)?.replace).toHaveLength(1);
   });
@@ -72,14 +72,14 @@ describe("lecture du texte anglais", () => {
     expect(parseMultiattack("")).toBeNull();
   });
 
-  it("nombre d'attaques affiché : l'option la plus longue", () => {
+  it("displayed number of attacks: the longest option", () => {
     expect(attackCount(parseMultiattack(TEXT.barbed))).toBe(2);
     expect(attackCount(parseMultiattack(TEXT.stoneSpirit))).toBe(3);
   });
 });
 
-// Phrases inventées, de la forme des traductions (Manuel des monstres en français, fiches écrites à la main) : aucun texte de livre.
-describe("lecture d'un texte traduit (français, portugais)", () => {
+// Invented sentences, in the shape of translations (Monster Manual in French, hand-written sheets): no book text.
+describe("reading a translated text (French, Portuguese)", () => {
   const NAMES = [["Lame grise", "id:lameGrise000000a"], ["Lame", "id:lame000000000000"], ["Croc d'ombre", "id:crocOmbre0000000"],
     ["Hurlement", "id:hurlement0000000"], ["Morsure", "id:morsure000000000"]];
   const read = (html, names=NAMES) => parseMultiattack(html, { names });
@@ -90,13 +90,13 @@ describe("lecture d'un texte traduit (français, portugais)", () => {
     expect(read("<p>O golem realiza duas ataques.</p>").options).toEqual([[{ n: 2, refs: [ANY_ATTACK] }]]);
   });
 
-  it("noms en clair reconnus par la fiche, le plus long d'abord ; et/ou ; remplacement par une capacité", () => {
+  it("plain-text names recognized by the sheet, the longest first; and/or; replacement by an ability", () => {
     const plan = read("<p>Le chevalier effectue trois attaques avec ses armes Lame grise et/ou Croc d’ombre. Il peut remplacer une attaque par sa capacité Hurlement.</p>");
     expect(plan.options).toEqual([[{ n: 3, refs: ["id:lameGrise000000a", "id:crocOmbre0000000"] }]]);
     expect(plan.replace).toEqual([{ n: 1, refs: ["id:hurlement0000000"], of: null }]);
   });
 
-  it("enrichers, groupes successifs, « réparties entre », options, usage en plus", () => {
+  it("enrichers, successive groups, \"split between\", options, extra use", () => {
     expect(read("<p>Le [[lookup @name lowercase]] effectue une attaque de [[/item .aaaaaaaaaaaaaaaa]], une attaque de [[/item .bbbbbbbbbbbbbbbb]] et une de [[/item .cccccccccccccccc]].</p>").options)
       .toEqual([[{ n: 1, refs: ["id:aaaaaaaaaaaaaaaa"] }, { n: 1, refs: ["id:bbbbbbbbbbbbbbbb"] }, { n: 1, refs: ["id:cccccccccccccccc"] }]]);
     expect(read("<p>Il effectue deux attaques, réparties à sa guise entre [[/item .aaaaaaaaaaaaaaaa]] et [[/item .bbbbbbbbbbbbbbbb]].</p>").options)
@@ -106,7 +106,7 @@ describe("lecture d'un texte traduit (français, portugais)", () => {
     expect(read("<p>Il effectue deux attaques de Morsure et recourt à Hurlement.</p>").extra).toEqual([{ refs: ["id:hurlement0000000"] }]);
   });
 
-  it("remplacement : l'une de ces attaques, n'importe laquelle, une attaque désignée ; portugais", () => {
+  it("replacement: one of these attacks, any one, a designated attack; Portuguese", () => {
     expect(read("<p>Il effectue deux attaques de Morsure. Il peut remplacer l'une de ces attaques par une utilisation de Hurlement.</p>").replace)
       .toEqual([{ n: 1, refs: ["id:hurlement0000000"], of: null }]);
     expect(read("<p>Il effectue deux attaques de Morsure. Il peut remplacer n'importe quelle attaque par Hurlement.</p>").replace[0].n).toBe(ANY);
@@ -116,7 +116,7 @@ describe("lecture d'un texte traduit (français, portugais)", () => {
       .toEqual({ options: [[{ n: 2, refs: ["id:morsure000000000"] }]], replace: [{ n: 1, refs: ["id:hurlement0000000"], of: null }], extra: [] });
   });
 
-  it("anglais en prose : « makes two attacks », noms en minuscules, total puis détail, remplacement lu en clair", () => {
+  it("English in prose: \"makes two attacks\", lowercase names, total then detail, replacement read in plain text", () => {
     expect(parseMultiattack("<p>The knight makes two attacks.</p>").options).toEqual([[{ n: 2, refs: [ANY_ATTACK] }]]);
     const names = [["Grey Blade", "id:lameGrise000000a"], ["Shadow Fang", "id:crocOmbre0000000"], ["Howl", "id:hurlement0000000"]];
     expect(parseMultiattack("<p>The knight makes three attacks with his blades grey blade and/or shadow fang. He can replace one attack with his howl.</p>", { names }))
@@ -127,11 +127,11 @@ describe("lecture d'un texte traduit (français, portugais)", () => {
       .toEqual([{ n: 1, refs: ["id:hurlement0000000"], of: null }]);
   });
 
-  it("le texte anglais garde la priorité", () => {
+  it("the English text keeps priority", () => {
     expect(read(TEXT.ghoul)).toEqual(parseMultiattack(TEXT.ghoul));
   });
 
-  it("le plan tient : deux attaques quelconques, pas trois ; Hurlement à la place d'une", () => {
+  it("the plan holds: any two attacks, not three; Howl in place of one", () => {
     const plan = read("<p>Le chevalier effectue deux attaques. Il peut remplacer une attaque par Hurlement.</p>");
     const lame = ["id:lame000000000000", ANY_ATTACK], croc = ["id:crocOmbre0000000", ANY_ATTACK], cri = ["id:hurlement0000000"];
     expect(fitMultiattack(plan, [lame, croc])).toEqual({ attacks: 2 });
@@ -142,34 +142,34 @@ describe("lecture d'un texte traduit (français, portugais)", () => {
   });
 });
 
-describe("ce qui tient dans le plan", () => {
+describe("what fits in the plan", () => {
   const rend = ["id:mmRend0000000000", "name:rend"];
   const acid = ["id:cachedspell0000", "id:mmSpellcasting00", "activity:castcastcastcast", ACID, "name:melf's acid arrow"];
   const dragon = parseMultiattack(TEXT.dragon);
 
-  it("trois Déchirures, pas quatre", () => {
+  it("three Rends, not four", () => {
     expect(fitMultiattack(dragon, [rend, rend, rend])).toEqual({ attacks: 3 });
     expect(fitMultiattack(dragon, [rend, rend, rend, rend])).toBeNull();
   });
 
-  it("un sort à la place d'une attaque, une seule fois", () => {
+  it("a spell in place of an attack, only once", () => {
     expect(fitMultiattack(dragon, [rend, acid, rend])).toEqual({ attacks: 3 });
     expect(fitMultiattack(dragon, [rend, acid, rend, rend])).toBeNull();
     expect(fitMultiattack(dragon, [acid, acid])).toBeNull();
   });
 
-  it("une utilisation étrangère au plan ne tient pas", () => {
+  it("a use foreign to the plan does not hold", () => {
     expect(fitMultiattack(dragon, [["id:mmFireBreath0000", "name:fire breath"]])).toBeNull();
   });
 
-  it("mélange fixe : une Morsure et deux Rossées, dans n'importe quel ordre", () => {
+  it("fixed mix: one Bite and two Beatings, in any order", () => {
     const plan = parseMultiattack(TEXT.gnawer);
     const bite = ["id:mmGnawingBite000"], thrash = ["id:mmFlail000000000"];
     expect(fitMultiattack(plan, [thrash, bite, thrash])).toEqual({ attacks: 3 });
     expect(fitMultiattack(plan, [bite, bite])).toBeNull();
   });
 
-  it("remplacement désigné : le Souffle de la Chimère prend la place de la Griffe, pas de la Morsure", () => {
+  it("designated replacement: the Chimera's Breath takes the place of the Claw, not of the Bite", () => {
     const ram = ["id:mmRam00000000000", "name:ram"], bite = ["id:mmBite0000000000", "name:bite"];
     const claw = ["id:mmClaw0000000000", "name:claw"], breath = ["id:mmFireBreath0000", "name:fire breath"];
     const plan = expandPlan(parseMultiattack(TEXT.chimera), [ram, bite, claw, breath]);
@@ -178,7 +178,7 @@ describe("ce qui tient dans le plan", () => {
     expect(fitMultiattack(plan, [ram, claw, breath])).toBeNull();
   });
 
-  it("options : on ne mélange pas les deux (Diable barbelé)", () => {
+  it("options: the two are not mixed (Barbed Devil)", () => {
     const plan = parseMultiattack(TEXT.barbed);
     const claws = ["id:mmClaws000000000"], tail = ["id:mmTail0000000000"], flame = ["id:mmHurlFlame00000"];
     expect(fitMultiattack(plan, [flame, flame])).toEqual({ attacks: 2 });
@@ -186,7 +186,7 @@ describe("ce qui tient dans le plan", () => {
     expect(fitMultiattack(plan, [claws, flame])).toBeNull();
   });
 
-  it("usage en plus : compté à part, une fois", () => {
+  it("extra use: counted separately, once", () => {
     const plan = parseMultiattack(TEXT.glabrezu);
     const pincer = ["id:mmPincer00000000"], pummel = ["id:mmPummel00000000"];
     expect(fitMultiattack(plan, [pincer, pummel, pincer])).toEqual({ attacks: 2 });
@@ -206,19 +206,19 @@ describe("budget du tour (M1)", () => {
   const breath = { cost: "action", weaponAttack: false, usesSpellSlot: false, multiattack: plan, keys: ["id:mmFireBreath0000", "name:fire breath"] };
   const multi = { cost: "action", weaponAttack: false, usesSpellSlot: false, multiattack: plan, keys: ["id:mmMultiattack000"], opensMultiattack: true };
 
-  it("la première Déchirure paie l'action et ouvre les trois attaques ; les deux suivantes sont couvertes", () => {
+  it("the first Rend pays for the action and opens the three attacks; the next two are covered", () => {
     let b = spendUse(freshBudget(), rend, ctx);
     expect(b.action).toBe(0);
     expect(b.attacks).toEqual({ granted: 3, used: 1 });
     expect(checkUse(b, rend, ctx)).toEqual([]);
     b = spendUse(b, rend, ctx);
-    expect(checkUse(b, acid, ctx)).toEqual([]);          // le sort à la place de la troisième
+    expect(checkUse(b, acid, ctx)).toEqual([]);          // the spell in place of the third
     b = spendUse(b, acid, ctx);
     expect(b.attacks).toEqual({ granted: 3, used: 3 });
-    expect(checkUse(b, rend, ctx)).toEqual(["noAction"]);  // une quatrième : au-delà
+    expect(checkUse(b, rend, ctx)).toEqual(["noAction"]);  // a fourth: beyond
   });
 
-  it("ce qui n'est pas dans le plan coûte l'action, comme ailleurs", () => {
+  it("what is not in the plan costs the action, as elsewhere", () => {
     const b = spendUse(freshBudget(), breath, ctx);
     expect(b.action).toBe(0);
     expect(b.multi).toBeNull();
@@ -232,7 +232,7 @@ describe("budget du tour (M1)", () => {
     expect(checkUse(b, rend, ctx)).toEqual([]);
   });
 
-  it("une utilisation annulée sort du plan ; la première annulée le referme et rend l'action", () => {
+  it("a canceled use leaves the plan; the first canceled one closes it again and returns the action", () => {
     const b0 = freshBudget();
     const b1 = spendUse(b0, rend, ctx);
     const b2 = spendUse(b1, rend, ctx);
@@ -263,15 +263,15 @@ describe("ce qui reste (§18.19, HUD)", () => {
     { id: "Breath", uses: [breath] }, { id: "Tail", uses: [tail] }
   ];
 
-  it("rien d'utilisé : tout le plan reste, l'étranger n'en est pas", () => {
+  it("nothing used: the whole plan remains, the foreign one is not part of it", () => {
     expect(multiattackStatus(chimera, [], candidates)).toEqual({ left: ["Ram", "Bite", "Claw", "Breath"], spent: [] });
   });
 
-  it("Coup de bélier et Morsure faits : la Griffe ou le Souffle à sa place", () => {
+  it("Ram and Bite done: the Claw or the Breath in its place", () => {
     expect(multiattackStatus(chimera, [ram, bite], candidates)).toEqual({ left: ["Claw", "Breath"], spent: ["Ram", "Bite"] });
   });
 
-  it("le Souffle a pris la place de la Griffe : il ne reste que le Coup de bélier et la Morsure", () => {
+  it("the Breath took the place of the Claw: only the Ram and the Bite remain", () => {
     expect(multiattackStatus(chimera, [breath], candidates)).toEqual({ left: ["Ram", "Bite"], spent: ["Claw", "Breath"] });
   });
 
@@ -282,38 +282,38 @@ describe("ce qui reste (§18.19, HUD)", () => {
 });
 
 describe("isMultiattackId : les Attaques multiples de toute fiche", () => {
-  it("MM 2024, fiche sans identifiant (nom anglais), traductions, nom à précision", () => {
+  it("MM 2024, sheet without identifier (English name), translations, name with qualifier", () => {
     for ( const id of ["multiattack", "attaque-multiple", "attaques-multiples", "multiattaque", "multiattack-human-or-hybrid-form-only",
       "cos-rahadin-attaques-multiples", "cos-ithuriel-etoile-attaques-multiples"] ) {
       expect(isMultiattackId(id)).toBe(true);
     }
   });
-  it("pas une autre capacité", () => {
+  it("not another ability", () => {
     for ( const id of ["multiattacker", "attaque", "bite", "", null, undefined] ) expect(isMultiattackId(id)).toBe(false);
   });
 });
 
-// B01 : formes que la lecture perdait (phrases inventées, de la grammaire du Monster Manual ; noms en clair).
-describe("B01 : formes en noms clairs, « or uses X twice », « only one of which »", () => {
+// B01: forms that the reading lost (invented sentences, from the Monster Manual grammar; plain names).
+describe("B01: forms with plain names, \"or uses X twice\", \"only one of which\"", () => {
   const read = html => parseMultiattack(`<p>The [[lookup @name lowercase]] ${html}</p>`);
 
-  it("« two melee attacks or uses X twice » : deux options, la mêlée n'est plus perdue", () => {
+  it("\"two melee attacks or uses X twice\": two options, the melee is no longer lost", () => {
     expect(read("makes two melee attacks or uses Arc Bolt twice.").options).toEqual([[{ n: 2, refs: [MELEE_ATTACK] }], [{ n: 2, refs: ["name:arc bolt"] }]]);
-    // Forme du MM (enrichers) : l'option « uses … twice » s'ajoute à la première.
+    // Monster Manual form (enrichers): the "uses … twice" option is added to the first.
     expect(parseMultiattack("<p>The [[lookup @name lowercase]] makes three [[/item Glow Blade]] attacks or uses [[/item Glow Burst]] twice.</p>").options)
       .toEqual([[{ n: 3, refs: ["name:glow blade"] }], [{ n: 2, refs: ["name:glow burst"] }]]);
   });
 
-  it("« one A attack and one B attack » en noms clairs : deux groupes, pas un seul", () => {
+  it("\"one A attack and one B attack\" with plain names: two groups, not just one", () => {
     expect(read("makes one Claws attack and one Root attack.").options).toEqual([[{ n: 1, refs: ["name:claws"] }, { n: 1, refs: ["name:root"] }]]);
     expect(read("makes one Bite attack and two Rend attacks.").options).toEqual([[{ n: 1, refs: ["name:bite"] }, { n: 2, refs: ["name:rend"] }]]);
   });
 
-  it("« two attacks: one with its A and one with its B » : le détail, pas deux attaques quelconques", () => {
+  it("\"two attacks: one with its A and one with its B\": the detail, not two arbitrary attacks", () => {
     expect(read("makes two attacks: one with its Claws and one with its Root.").options).toEqual([[{ n: 1, refs: ["name:claws"] }, { n: 1, refs: ["name:root"] }]]);
   });
 
-  it("« two melee attacks, only one of which can be a bite attack » : au plus une Morsure", () => {
+  it("\"two melee attacks, only one of which can be a bite attack\": at most one Bite", () => {
     const plan = read("makes two melee attacks, only one of which can be a bite attack.");
     expect(plan.options).toEqual([[{ n: 1, refs: [MELEE_ATTACK] }, { n: 1, refs: [MELEE_ATTACK], except: ["name:bite"] }]]);
     const bite = ["name:bite", MELEE_ATTACK], claw = ["name:claw", MELEE_ATTACK], bolt = ["name:bolt", "kind:ranged"];
@@ -325,14 +325,14 @@ describe("B01 : formes en noms clairs, « or uses X twice », « only one of whi
     expect(attackCount(plan)).toBe(2);
   });
 
-  it("l'exclusion s'élargit comme les clés (nom ↔ id)", () => {
+  it("the exclusion widens like the keys (name ↔ id)", () => {
     const plan = expandPlan(read("makes two attacks, only one of which can be a Bite attack."), [["id:bbbbbbbbbbbbbbbb", "name:bite"]]);
     expect(plan.options[0][1].except).toEqual(["name:bite", "id:bbbbbbbbbbbbbbbb"]);
     expect(fitMultiattack(plan, [["id:bbbbbbbbbbbbbbbb", ANY_ATTACK], ["id:bbbbbbbbbbbbbbbb", ANY_ATTACK]])).toBeNull();
   });
 });
 
-describe("B01 : plan déclaré (`multiattackPlan`)", () => {
+describe("B01: declared plan (`multiattackPlan`)", () => {
   const plan = { options: [[{ n: 2, refs: [MELEE_ATTACK] }], [{ n: 2, refs: ["identifier:arc-bolt"] }]] };
 
   it("valide : options, groupes, remplacement, usage en plus", () => {
@@ -341,7 +341,7 @@ describe("B01 : plan déclaré (`multiattackPlan`)", () => {
       replace: [{ n: 1, refs: ["id:aaaaaaaaaaaaaaaa"], of: ["identifier:claws"] }], extra: [{ refs: ["kind:attack"] }] })).toEqual([]);
   });
 
-  it("refusé : forme, nombre, clé inconnue, sorte d'attaque inconnue", () => {
+  it("refused: shape, number, unknown key, unknown attack kind", () => {
     expect(validatePlan(null)).toHaveLength(1);
     expect(validatePlan({ options: [] })).toHaveLength(1);
     expect(validatePlan({ options: [[{ n: 0, refs: ["kind:melee"] }]] })).toHaveLength(1);
@@ -351,12 +351,12 @@ describe("B01 : plan déclaré (`multiattackPlan`)", () => {
     expect(validatePlan({ options: [[{ n: 1, refs: ["kind:melee"] }]], extras: [] })).toHaveLength(1);
   });
 
-  it("clé de contenu : acceptée par `validateEntry`, refusée mal formée", () => {
+  it("content key: accepted by `validateEntry`, refused when malformed", () => {
     expect(validateEntry({ multiattackPlan: plan })).toEqual([]);
     expect(validateEntry({ multiattackPlan: { options: [[{ n: 2, refs: ["melee"] }]] } })).toHaveLength(1);
   });
 
-  it("complété et joué comme un plan lu", () => {
+  it("completed and played like a read plan", () => {
     const p = declaredPlan(plan);
     expect(p).toEqual({ options: plan.options, replace: [], extra: [] });
     expect(fitMultiattack(p, [["identifier:arc-bolt"], ["identifier:arc-bolt"]])).toEqual({ attacks: 2 });

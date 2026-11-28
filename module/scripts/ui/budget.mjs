@@ -1,7 +1,7 @@
 /**
- * Le budget du tour tel que l'interface le montre (SPEC §6, §9.1) — le tracker de combat — et ce
- * qu'un clic y demande. Une interface externe lit le même budget par `api.ui` (ui/api.mjs, §40.1). Aucune règle ici : le budget
- * vient d'adapter/turn.mjs, les changements de core/turn.mjs.
+ * The turn budget as the interface shows it (SPEC §6, §9.1) — the combat tracker — and what a click on it asks for.
+ * An external interface reads the same budget through `api.ui` (ui/api.mjs, §40.1). No rule here: the budget comes from
+ * adapter/turn.mjs, the changes from core/turn.mjs.
  */
 
 import { dash, disengage, dodge, toggleResource, movementAllowance } from "../core/turn.mjs";
@@ -12,23 +12,23 @@ import { loc } from "../runtime/shared.mjs";
 
 export const RESOURCES = ["action", "bonus", "reaction"];
 
-/** Les gestes communs du tour, dans l'ordre d'affichage : clé, libellé, drapeau du budget qui dit « déjà fait ». */
+/** The common turn gestures, in display order: key, label, budget flag that says "already done". */
 export const COMMONS = [["dash", "Foncer", "dashed"], ["disengage", "SeDesengager", "disengaged"], ["dodge", "Esquiver", "dodging"]];
 
-/** Un joueur voit le budget de ses combattants et de ceux des autres joueurs, pas celui des PNJ du MJ. */
+/** A player sees the budget of their own combatants and those of other players, not that of the GM's NPCs. */
 export const budgetVisible = combatant => !!combatant?.actor && (combatant.isOwner || combatant.hasPlayerOwner);
 
 const round = n => Math.round(n * 10) / 10;
 
 /**
- * Ce que l'interface affiche du budget d'un combattant.
+ * What the interface shows of a combatant's budget.
  * @param {Combatant} combatant
  */
 export function budgetView(combatant) {
   const budget = readBudget(combatant);
   const editable = combatant.isOwner;
   const ownTurn = isOwnTurn(combatant);
-  // Une action reste disponible tant que l'action Attaquer a des attaques à donner.
+  // An action stays available as long as the Attack action has attacks left to give.
   const attacksLeft = budget.attacks.used < budget.attacks.granted;
   const resources = RESOURCES.map(key => ({
     key, label: loc(`Pastille.${key}`),
@@ -36,7 +36,7 @@ export function budgetView(combatant) {
   }));
   let attacks = null;
   if ( (budget.attacks.granted > 1) && (budget.attacks.granted < 99) ) {
-    // §18.19 : Attaques multiples ouvertes — ce qui reste, nommé.
+    // §18.19: Multiple Attacks open — what remains, named.
     const status = budget.multi ? multiattackLeft(combatant.actor, budget.multi) : null;
     attacks = {
       used: budget.attacks.used, granted: budget.attacks.granted,
@@ -53,13 +53,13 @@ export function budgetView(combatant) {
   }
   const commons = COMMONS.map(([key, label, flag]) => ({
     key, label: loc(label), done: !!budget[flag],
-    // Pendant son tour seulement, et contre une action.
+    // During its turn only, and against an action.
     enabled: editable && ownTurn && !budget[flag] && (budget.action >= 1)
   }));
   return { editable, ownTurn, resources, attacks, movement, commons };
 }
 
-/** Un clic du propriétaire : corriger une ressource (`action`, `bonus`, `reaction`) ou faire un geste commun. */
+/** A click by the owner: correct a resource (`action`, `bonus`, `reaction`) or make a common gesture. */
 export async function applyBudgetIntent(combatant, key) {
   if ( !combatant?.isOwner ) return;
   const current = readBudget(combatant);

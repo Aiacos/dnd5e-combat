@@ -1,13 +1,13 @@
 /**
- * Cercles (SPEC §19.5), lus et écrits dans Foundry : PV partagés (contenu `sharedHp`) et seconde phase (`secondPhase`).
+ * Covens (SPEC §19.5), read and written in Foundry: shared HP (content `sharedHp`) and second phase (`secondPhase`).
  *
- * Vérifié dans dnd5e 6.0.3 :
- *  - `dnd5e.damageActor` / `dnd5e.healActor` (data/actor/templates/attributes.mjs:679-716, `onUpdateHP`) : sur tous les clients,
- *    avec l'écart de PV (`changes.hp`) et la mise à jour d'origine (`changed`) ; `options.dnd5e.concentrationCheck === false`
- *    évite le jet de concentration (ligne 700) — chaque membre d'un cercle maintient sa propre concentration ;
- *  - l'activité « transform » (data/activity/transform-data.mjs) : `profiles[].uuid` (la forme) — la donnée native qui dit
- *    « devient cette créature ». Le moteur ne passe pas par `Actor5e#transformInto` (documents/actor/actor.mjs:2846) : pour un
- *    acteur lié (un PNJ unique), il crée un nouvel acteur « X (Y) » à chaque fois.
+ * Verified in dnd5e 6.0.3:
+ *  - `dnd5e.damageActor` / `dnd5e.healActor` (data/actor/templates/attributes.mjs:679-716, `onUpdateHP`): on all clients,
+ *    with the HP difference (`changes.hp`) and the original update (`changed`); `options.dnd5e.concentrationCheck === false`
+ *    skips the Concentration check (line 700) — each member of a coven maintains their own Concentration;
+ *  - the "transform" activity (data/activity/transform-data.mjs): `profiles[].uuid` (the form) — the native data that says
+ *    "becomes this creature". The engine does not go through `Actor5e#transformInto` (documents/actor/actor.mjs:2846): for a
+ *    linked actor (a unique NPC), it creates a new actor "X (Y)" every time.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -17,15 +17,15 @@ import { contentOf, identifierOf } from "./content.mjs";
 import { tokenOf } from "./facts.mjs";
 import { spendItemUses } from "./uses.mjs";
 
-/** Le flag que porte une écriture de PV reportée : elle ne se reporte pas à son tour. */
+/** The flag carried by a reported HP write: it is not reported in turn. */
 const SYNC = "hpSync";
 
-/** L'item qui fait partager les PV (`sharedHp`), ou null. */
+/** The item that makes HP shared (`sharedHp`), or null. */
 export function sharedHpItemOf(actor) {
   return actor?.items?.find(i => contentOf(i).entry?.sharedHp === true) ?? null;
 }
 
-/** La seconde phase d'un acteur : l'item, son activité « transform », la forme (uuid) ; ou null. */
+/** An actor's second phase: the item, its "transform" activity, the form (uuid); or null. */
 export function secondPhaseOf(actor) {
   for ( const item of actor?.items ?? [] ) {
     const rule = contentOf(item).entry?.secondPhase;
@@ -37,7 +37,7 @@ export function secondPhaseOf(actor) {
   return null;
 }
 
-/** §76 : le changement de forme à volonté que déclare l'item de cette activité (`changesForm`, l'activité elle-même), ou null. */
+/** §76: the at-will form change that this activity's item declares (`changesForm`, the activity itself), or null. */
 export function formChangeOf(activity) {
   const item = activity?.item;
   const rule = contentOf(item).entry?.changesForm;
@@ -47,16 +47,16 @@ export function formChangeOf(activity) {
     declared: true, revertAfter: rule.revertAfter ?? null, shareSpellSlots: rule.shareSpellSlots === true } : null;
 }
 
-/** À 0 PV, la créature change-t-elle de forme au lieu de tomber ? */
+/** At 0 HP, does the creature change form instead of falling? */
 export const transformsAtZero = actor => !!secondPhaseOf(actor);
 
-/** Une écriture que le partage a faite lui-même, ou la transformation (qui réécrit les PV de la forme) : à ne pas reporter. */
+/** A write that the sharing itself made, or the transformation (which rewrites the form's HP): not to be reported. */
 export function isSharedWrite(changed) {
   return foundry.utils.hasProperty(changed ?? {}, `flags.${MODULE_ID}.${SYNC}`)
     || foundry.utils.hasProperty(changed ?? {}, "flags.dnd5e.isPolymorphed");
 }
 
-/** Les autres membres du cercle de cet acteur, sur la scène de son token : un acteur par membre. */
+/** The other members of this actor's coven, in its token's scene: one actor per member. */
 export function covenMembers(actor) {
   const item = sharedHpItemOf(actor);
   const token = tokenOf(actor);
@@ -77,9 +77,9 @@ export function covenMembers(actor) {
 }
 
 /**
- * Reporte sur les autres membres l'écart de PV que `actor` vient de subir. MJ actif. `members` : relevés au moment du coup — à 0 PV,
- * la seconde phase peut avoir déjà rendu le token de `actor` à sa nouvelle forme (vu en jeu le 2026-09-26 : le coup fatal
- * porté à un membre ne passait plus aux autres).
+ * Reports to the other members the HP difference that `actor` has just taken. Active GM. `members`: surveyed at the time
+ * of the hit — at 0 HP, the second phase may already have given `actor`'s token back its new form (seen in play on 2026-09-26:
+ * the fatal blow dealt to one member no longer passed to the others).
  * @returns {Promise<Array<{name: string, before: number, after: number}>>}
  */
 export async function shareHp(actor, delta, members=covenMembers(actor)) {
@@ -95,12 +95,12 @@ export async function shareHp(actor, delta, members=covenMembers(actor)) {
   return done;
 }
 
-/** Les états qui disent la chute ou les PV : la nouvelle forme ne les reprend pas. */
+/** The conditions that say the fall or the HP: the new form does not take them over. */
 const LEFT_BEHIND = new Set(["dead", "unconscious", "bloodied", "concentrating"]);
 
 /**
- * Les états que la nouvelle forme garde (par défaut, elle conserve ceux de la forme précédente) : un effet à état
- * posé à la main ou par une autre créature (Paralysé d'un sort, Empoisonné…), pas un effet de ses propres items.
+ * The conditions that the new form keeps (by default, it keeps those of the previous form): a condition effect
+ * placed by hand or by another creature (Paralyzed from a spell, Poisoned…), not an effect from its own items.
  */
 function keptConditions(actor) {
   return actor.effects.filter(e => {
@@ -111,7 +111,7 @@ function keptConditions(actor) {
   }).map(e => { const data = e.toObject(); delete data._id; return data; });
 }
 
-/** L'acteur du monde de la forme : lui-même, celui importé de ce compendium, ou importé maintenant (même id). */
+/** The world actor of the form: itself, the one imported from this compendium, or imported now (same id). */
 async function worldActorFor(uuid) {
   const doc = await fromUuid(uuid).catch(() => null);
   if ( !doc ) return null;
@@ -122,9 +122,10 @@ async function worldActorFor(uuid) {
 }
 
 /**
- * Seconde phase : la créature à 0 PV prend aussitôt la forme de son profil, avec ses PV au maximum ; elle garde son initiative,
- * les dégâts excédentaires sont perdus, et elle conserve ses états (sauf `keepConditions: false`). Le TOKEN change d'acteur (même document, même combattant) : ni acteur
- * « transformé » créé à chaque combat (dnd5e, `transformInto`, pour un acteur lié), ni delta perdu. MJ actif.
+ * Second phase: the creature at 0 HP immediately takes the form of its profile, with its HP at maximum; it keeps its Initiative,
+ * excess damage is lost, and it keeps its conditions (except `keepConditions: false`). The TOKEN changes actor (same document,
+ * same combatant): no "transformed" actor created at each combat (dnd5e, `transformInto`, for a linked actor), no lost delta.
+ * Active GM.
  * @returns {Promise<{from: string, to: string}|null>}
  */
 export async function enterSecondPhase(actor) {
@@ -133,8 +134,8 @@ export async function enterSecondPhase(actor) {
 }
 
 /**
- * §76 : l'activité d'un changement de forme à volonté (`changesForm`) vient d'être utilisée : la créature prend sa forme, comme
- * une seconde phase. MJ actif.
+ * §76: the activity of an at-will form change (`changesForm`) has just been used: the creature takes its form, like
+ * a second phase. Active GM.
  * @returns {Promise<{from: string, to: string}|null>}
  */
 export async function changeForm(activity) {
@@ -142,19 +143,19 @@ export async function changeForm(activity) {
   return phase ? swapForm(activity.actor, phase) : null;
 }
 
-/** §498 : le drapeau du token qui garde sa forme d'origine, le temps d'un changement de forme limité (`changesForm.revertAfter`). */
+/** §498: the token flag that keeps its original form, for the duration of a limited form change (`changesForm.revertAfter`). */
 export const FORM_REVERT = "formRevert";
 
-/** §498 : ce qu'un token changé de forme pour un temps garde de sa forme d'origine (drapeau `formRevert`), ou null. */
+/** §498: what a token changed form for a time keeps of its original form (flag `formRevert`), or null. */
 export const formRevertOf = token => (token?.document ?? token)?.getFlag?.(MODULE_ID, FORM_REVERT) ?? null;
 
-/** Les emplacements de sort d'un acteur, en données simples (`{ spell1: { value, max }, … }`) : lus avant que le token change d'acteur. */
+/** An actor's spell slots, as plain data (`{ spell1: { value, max }, … }`): read before the token changes actor. */
 function slotsOf(actor) {
   return Object.fromEntries(Object.entries(actor?.system?.spells ?? {})
     .map(([key, slot]) => [key, { value: Number(slot?.value) || 0, max: Number(slot?.max) || 0 }]));
 }
 
-/** Le token de `actor` change d'acteur pour la forme `phase.uuid` (seconde phase ou changement à volonté). */
+/** The token of `actor` changes actor to the form `phase.uuid` (second phase or at-will change). */
 async function swapForm(actor, phase) {
   const target = await worldActorFor(phase.uuid);
   const token = tokenOf(actor);
@@ -165,8 +166,8 @@ async function swapForm(actor, phase) {
   }
   const proto = target.prototypeToken.toObject();
   const look = { actorLink: proto.actorLink, name: proto.name || target.name, texture: proto.texture, width: proto.width, height: proto.height, ring: proto.ring };
-  // §498 : une forme limitée dans le temps garde sur le token sa forme d'origine (acteur, apparence, delta, PV) pour y revenir. Déjà
-  // changé pour un temps : l'origine reste la première ; revenu à elle par une autre activité : le retour n'a plus lieu d'être.
+  // §498: a time-limited form keeps its original form on the token (actor, appearance, delta, HP) to return to it. Already
+  // changed for a time: the origin stays the first; returned to it by another activity: the return no longer applies.
   let revert;
   const pending = formRevertOf(document);
   if ( pending && (pending.actorId === target.id) ) revert = null;
@@ -194,27 +195,27 @@ async function swapForm(actor, phase) {
 }
 
 /**
- * Le token `document` de `actor` passe à l'acteur `target`, avec l'apparence `look` : PV (gardés si `keepHp`, sinon `hp` donné ou le
- * maximum), états gardés (`keepConditions`), concentration de l'ancienne forme finie, emplacements dépensés partagés (`shareSpellSlots`,
- * §498). `revert` : le drapeau `formRevert` à écrire (objet), à retirer (null) ou à laisser (undefined). `delta` : le delta d'origine à
- * remettre (retour d'un token non lié). MJ actif.
+ * The token `document` of `actor` switches to the actor `target`, with the appearance `look`: HP (kept if `keepHp`, otherwise
+ * the given `hp` or the maximum), kept conditions (`keepConditions`), Concentration on the old form ended, shared spent slots
+ * (`shareSpellSlots`, §498). `revert`: the `formRevert` flag to write (object), to remove (null) or to leave (undefined). `delta`:
+ * the original delta to restore (return of an unlinked token). Active GM.
  */
 async function retoken(actor, document, target, look, { keepHp=false, keepConditions=true, shareSpellSlots=false, hp=null, delta=null, revert=undefined }={}) {
   const from = actor.name;
-  // §78 : `keepHp` — les PV de la forme quittée (lus avant l'échange), dans la limite du maximum de la nouvelle.
+  // §78: `keepHp` — the HP of the form being left (read before the swap), within the new form's maximum.
   const kept = keepHp ? Math.max(0, Number(actor.system.attributes?.hp?.value) || 0) : (Number.isFinite(hp) ? hp : null);
   const slots = shareSpellSlots ? slotsOf(actor) : null;
-  // `keepConditions: false` : la nouvelle forme ne reprend aucun état de l'ancienne.
+  // `keepConditions: false`: the new form takes over no condition from the old one.
   const conditions = keepConditions ? keptConditions(actor) : [];
-  // La concentration de l'ancienne forme prend fin (ses effets sur les autres avec elle, par dnd5e).
-  // Mort ou Inconscient que dnd5e a pu poser sur l'ancienne forme (`updateDowned`) : elle ne tombe pas, elle change.
+  // Concentration on the old form ends (its effects on others with it, by dnd5e).
+  // Dead or Unconscious that dnd5e may have placed on the old form (`updateDowned`): it does not fall, it changes.
   const fallen = actor.effects.filter(e => e.statuses?.has?.("concentrating") || e.statuses?.has?.("dead") || e.statuses?.has?.("unconscious")).map(e => e.id);
   if ( fallen.length ) await actor.deleteEmbeddedDocuments("ActiveEffect", fallen);
 
-  // Un token lié n'a pas de delta à réécrire ; un token non lié repart d'un delta vierge — complet : le cœur refuse `delta: {}`
-  // (« _id, system, items, effects, flags may not be undefined », vu en jeu le 2026-09-26). §78 : un token LIÉ qui devient non lié
-  // n'a pas de delta (null) — on n'en écrit pas, le cœur refuse ce delta-là comme mise à jour partielle ; il part de la fiche.
-  // §498 : au retour, un token non lié retrouve le delta qu'il avait avant le changement.
+  // A linked token has no delta to rewrite; an unlinked token starts from a blank delta — complete: the core refuses `delta: {}`
+  // ("_id, system, items, effects, flags may not be undefined", seen in play on 2026-09-26). §78: a LINKED token that
+  // becomes unlinked has no delta (null) — none is written, the core refuses that delta as a partial update;
+  // it starts from the sheet. §498: on return, an unlinked token gets back the delta it had before the change.
   const blank = (look.actorLink || !document._source?.delta) ? {}
     : { delta: delta ? { system: {}, items: [], effects: [], flags: {}, ...foundry.utils.deepClone(delta), _id: document.delta?.id ?? document.id }
       : { _id: document.delta?.id ?? document.id, system: {}, items: [], effects: [], flags: {} } };
@@ -228,11 +229,11 @@ async function retoken(actor, document, target, look, { keepHp=false, keepCondit
   if ( shaped ) {
     const max = Number(shaped.system.attributes.hp.max) || 0;
     const value = (kept === null) ? max : Math.min(kept, max);
-    // §498 : les emplacements dépensés sous l'ancienne forme le restent sous celle-ci.
+    // §498: slots spent under the old form stay spent under this one.
     shared = slots ? sharedSlotUpdates(slots, slotsOf(shaped)) : null;
     await shaped.update({ "system.attributes.hp.value": value, ...(shared ?? {}), [`flags.${MODULE_ID}.${SYNC}`]: foundry.utils.randomID() },
       { dnd5e: { concentrationCheck: false } });
-    // À 0 PV gardés (§78 : la forme qui meurt reprend sa forme véritable), la chute reste : la Régénération ou la mort en décident.
+    // With 0 HP kept (§78: the form that dies resumes its true form), the fall remains: Regeneration or death decide it.
     const downed = (value > 0) ? shaped.effects.filter(e => ["dead", "unconscious"].some(id => e.statuses?.has?.(id))).map(e => e.id) : [];
     if ( downed.length ) await shaped.deleteEmbeddedDocuments("ActiveEffect", downed);
     if ( conditions.length ) await shaped.createEmbeddedDocuments("ActiveEffect", conditions);
@@ -241,9 +242,9 @@ async function retoken(actor, document, target, look, { keepHp=false, keepCondit
 }
 
 /**
- * §498 : le token reprend la forme d'origine que garde son drapeau `formRevert` — acteur, apparence, delta d'un token non lié ; PV de la
- * forme quittée si `keepHp` (dans la limite du maximum), sinon ceux qu'il avait en partant ; états gardés ; emplacements partagés. Carte
- * de chat `formReverted`. MJ actif.
+ * §498: the token resumes the original form kept by its `formRevert` flag — actor, appearance, delta of an unlinked token;
+ * HP of the form being left if `keepHp` (within the maximum), otherwise those it had when leaving; conditions kept; shared slots.
+ * `formReverted` chat card. Active GM.
  * @param {TokenDocument} document
  * @returns {Promise<{from: string, to: string, item: string}|null>}
  */
@@ -268,19 +269,19 @@ export async function revertToOrigin(document) {
   return { from: done.from, to: document.name, item: snap.item ?? "" };
 }
 
-/** §498 : les tokens (toutes scènes) dont la forme limitée a dépassé sa durée au temps du monde `now`. */
+/** §498: the tokens (all scenes) whose limited form has exceeded its duration at world time `now`. */
 export function expiredFormTokens(now=game.time.worldTime) {
   return game.scenes.contents.flatMap(scene => scene.tokens.filter(t => formExpired(formRevertOf(t)?.expiresAt, now)));
 }
 
-/** §498 : `auto: false` — le rappel au MJ est fait, la forme reste jusqu'au retour à la main. */
+/** §498: `auto: false` — the reminder to the GM is done, the form stays until returned by hand. */
 export const markReminded = document => document.setFlag(MODULE_ID, FORM_REVERT, { ...formRevertOf(document), expiresAt: null, reminded: true });
 
 /* -------------------------------------------- */
 /*  Dernier rempart (§19.6)                     */
 /* -------------------------------------------- */
 
-/** L'item de dernier rempart d'un acteur (contenu `lastStand`) qui a encore une utilisation, ou null. */
+/** The last-stand item of an actor (content `lastStand`) that still has a use, or null. */
 export function lastStandOf(actor) {
   for ( const item of actor?.items ?? [] ) {
     if ( !contentOf(item).entry?.lastStand ) continue;
@@ -291,12 +292,12 @@ export function lastStandOf(actor) {
   return null;
 }
 
-/** À 0 PV, la créature reste-t-elle debout (dernier rempart encore disponible) ? */
+/** At 0 HP, does the creature stay standing (last stand still available)? */
 export const standsAtZero = actor => !!lastStandOf(actor);
 
 /**
- * Met fin à tous les effets qui affectent l'acteur : les effets posés sur l'acteur (états, sorts d'autrui, concentration, chute).
- * Les effets passifs de ses items restent sur les items (dnd5e 6, pas de recopie sur l'acteur). MJ actif.
+ * Ends all effects that affect the actor: the effects placed on the actor (conditions, others' spells, Concentration, fall).
+ * The passive effects of its items stay on the items (dnd5e 6, no copy onto the actor). Active GM.
  */
 export async function purgeEffects(actor) {
   const ids = actor.effects.filter(e => !e.transfer).map(e => e.id);
@@ -305,8 +306,9 @@ export async function purgeEffects(actor) {
 }
 
 /**
- * Dernier rempart à 0 PV : la créature tombe à 1 PV au lieu de 0 — la réaction jouée d'office (le MJ la voudrait toujours), une utilisation dépensée, les effets purgés. MJ actif.
- * @returns {Promise<string|null>}  Le nom de l'item, ou null.
+ * Last stand at 0 HP: the creature drops to 1 HP instead of 0 — the Reaction played automatically (the GM would always want it),
+ * a use spent, effects purged. Active GM.
+ * @returns {Promise<string|null>}  The item's name, or null.
  */
 export async function standAtOne(actor) {
   const item = lastStandOf(actor);

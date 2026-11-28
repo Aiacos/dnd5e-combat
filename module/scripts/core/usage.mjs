@@ -1,20 +1,20 @@
 /**
- * §68 : l'utilisation sans fenêtre — quel emplacement de sort prendre quand celui que dnd5e propose est vide.
- * Fonctions pures, aucune dépendance à Foundry.
+ * §68: use without a window — which spell slot to take when the one dnd5e proposes is empty.
+ * Pure functions, no dependency on Foundry.
  */
 
 /**
- * L'emplacement à dépenser : celui que dnd5e propose s'il en reste, sinon le plus bas qui en a encore, d'un niveau au moins égal
- * à celui du sort (emplacements de pacte compris, à leur niveau ; à niveau égal, l'emplacement ordinaire d'abord). null : plus aucun.
- * @param {Record<string, {value: number, level: number}>} slots  Les emplacements de l'acteur (`system.spells`, clés `spell1`… `pact`).
- * @param {string} proposed  La clé proposée par dnd5e (`usageConfig.spell.slot`).
- * @param {number} spellLevel  Le niveau du sort.
+ * The slot to spend: the one dnd5e proposes if any is left, otherwise the lowest that still has one, of a level at least equal
+ * to the spell's (pact slots included, at their level; at equal level, the ordinary slot first). null: none left.
+ * @param {Record<string, {value: number, level: number}>} slots  The actor's slots (`system.spells`, keys `spell1`… `pact`).
+ * @param {string} proposed  The key proposed by dnd5e (`usageConfig.spell.slot`).
+ * @param {number} spellLevel  The spell's level.
  * @returns {string|null}
  */
 export function pickSpellSlot(slots, proposed, spellLevel) {
   const has = key => (Number(slots?.[key]?.value) || 0) > 0;
-  // §384 : l'emplacement proposé doit aussi être assez haut (un emplacement de pacte de niveau 3 ne lance pas un sort de niveau 6 —
-  // dnd5e le « lancerait » au niveau 3). Un emplacement sans niveau connu est pris tel quel.
+  // §384: the proposed slot must also be high enough (a level 3 pact slot does not cast a level 6 spell —
+  // dnd5e would "cast" it at level 3). A slot with no known level is taken as is.
   const highEnough = key => !Number(slots?.[key]?.level) || (Number(slots[key].level) >= spellLevel);
   if ( has(proposed) && highEnough(proposed) ) return proposed;
   const candidates = Object.entries(slots ?? {})
@@ -24,12 +24,12 @@ export function pickSpellSlot(slots, proposed, spellLevel) {
 }
 
 /**
- * §384 (issue #38, suite) : l'emplacement d'un sort que le MJ lance sans emplacement (« Lancer quand même », §77). dnd5e fixe le niveau
- * de lancement d'après l'emplacement proposé (`_prepareUsageScaling`, documents/activity/mixin.mjs : `scaling` = niveau de l'emplacement
- * − niveau du sort) — un Occultiste qui n'a que des emplacements de pacte de niveau 3 « lançait » Création de morts-vivants (niveau 6)
- * au niveau 3 : 3 − 3 = 0 goule, « There must be at least one Token to be placed » ; Convocation de céleste au niveau 3, esprit faux.
- * Rend l'emplacement à mettre : celui proposé s'il est au moins du niveau du sort, sinon celui du niveau du sort (`spell<n>`, qui
- * existe toujours dans `system.spells`, même à 0). Null pour un tour de magie ou sans emplacement proposé.
+ * §384 (issue #38, continued): the slot of a spell the GM casts without a slot ("Cast anyway", §77). dnd5e sets the casting level
+ * from the proposed slot (`_prepareUsageScaling`, documents/activity/mixin.mjs: `scaling` = slot level
+ * − spell level) — a Warlock who only has level 3 pact slots "cast" Create Undead (level 6)
+ * at level 3: 3 − 3 = 0 ghoul, "There must be at least one Token to be placed"; Summon Celestial at level 3, wrong spirit.
+ * Returns the slot to set: the proposed one if it is at least of the spell's level, otherwise the one of the spell's level
+ * (`spell<n>`, which always exists in `system.spells`, even at 0). Null for a cantrip or with no proposed slot.
  * @param {Record<string, {level: number}>} slots
  * @param {string|null} proposed
  * @param {number} spellLevel
@@ -42,12 +42,12 @@ export function forcedSpellSlot(slots, proposed, spellLevel) {
 }
 
 /**
- * §77 : les consommations d'une activité qui dépensent ses PROPRES utilisations (`activityUses` sans cible) alors qu'elle n'en a pas,
- * quand l'item, lui, en porte (Monster Manual 2024 : « Nuage fétide (1/jour) » du Dretch — la charge est sur l'item) : à lire comme
- * les utilisations de l'item. Les index de ces consommations.
- * @param {Array<{type: string, target?: string}>} targets  Les consommations de l'activité.
- * @param {boolean} activityHasUses  L'activité a-t-elle un maximum d'utilisations ?
- * @param {boolean} itemHasUses  L'item a-t-il un maximum d'utilisations ?
+ * §77: the consumptions of an activity that spend its OWN uses (`activityUses` without a target) when it has none,
+ * when the item does carry some (Monster Manual 2024: the Dretch's "Fetid Cloud (1/Day)" — the charge is on the item): to be
+ * read as the item's uses. The indexes of these consumptions.
+ * @param {Array<{type: string, target?: string}>} targets  The activity's consumptions.
+ * @param {boolean} activityHasUses  Does the activity have a maximum number of uses?
+ * @param {boolean} itemHasUses  Does the item have a maximum number of uses?
  * @returns {number[]}
  */
 export function misplacedSelfUses(targets, activityHasUses, itemHasUses) {
@@ -56,10 +56,10 @@ export function misplacedSelfUses(targets, activityHasUses, itemHasUses) {
 }
 
 /**
- * §106 : le sort peut-il se lancer plus haut que son niveau — reste-t-il un emplacement (pacte compris) d'un niveau supérieur ?
- * C'est alors un vrai choix, que l'utilisation sans fenêtre laisse à celle de dnd5e.
- * @param {Record<string, {value: number, level: number}>} slots  Les emplacements de l'acteur (`system.spells`).
- * @param {number} spellLevel  Le niveau du sort.
+ * §106: can the spell be cast higher than its level — is there a slot (pact included) of a higher level left?
+ * That is then a real choice, which use without a window leaves to dnd5e's.
+ * @param {Record<string, {value: number, level: number}>} slots  The actor's slots (`system.spells`).
+ * @param {number} spellLevel  The spell's level.
  * @returns {boolean}
  */
 export function canCastHigher(slots, spellLevel) {
@@ -68,13 +68,14 @@ export function canCastHigher(slots, spellLevel) {
 }
 
 /**
- * §404 : l'activité au niveau auquel le sort a été lancé. dnd5e note la montée d'emplacement sur le message d'utilisation
- * (`system.scaling`, documents/activity/mixin.mjs : `data.system.scaling`) et la rejoue avant chaque bouton de la carte en clonant
- * l'item (`Activity#onChatAction` : `flags.dnd5e.scaling`), ou par `Item5e#scaledClone` (`ChatMessage5e#getAssociatedActivity({ scaled })`).
- * Une activité relue par son uuid est celle de la fiche, au niveau de base : ses dés « Using a Higher-Level Spell Slot » manquent.
- * Rend la copie mise à l'échelle (même id d'activité), ou l'activité telle quelle sans montée ou sans `scaledClone`.
- * @param {object|null} activity  Une activité (`item.scaledClone(n).system.activities.get(id)`).
- * @param {number|string|null} scaling  La montée d'emplacement (niveau de lancement − niveau du sort).
+ * §404: the activity at the level the spell was cast at. dnd5e records the slot upcast on the use message
+ * (`system.scaling`, documents/activity/mixin.mjs: `data.system.scaling`) and replays it before each button of the card by
+ * cloning the item (`Activity#onChatAction`: `flags.dnd5e.scaling`), or via `Item5e#scaledClone`
+ * (`ChatMessage5e#getAssociatedActivity({ scaled })`).
+ * An activity re-read by its uuid is the sheet's, at base level: its "Using a Higher-Level Spell Slot" dice are missing.
+ * Returns the scaled copy (same activity id), or the activity as is without upcast or without `scaledClone`.
+ * @param {object|null} activity  An activity (`item.scaledClone(n).system.activities.get(id)`).
+ * @param {number|string|null} scaling  The slot upcast (casting level − spell level).
  * @returns {object|null}
  */
 export function atCastLevel(activity, scaling) {
@@ -84,12 +85,12 @@ export function atCastLevel(activity, scaling) {
 }
 
 /**
- * §405 : le niveau d'une activité d'un sort qui ne dépense pas d'emplacement — l'attaque de la Lame de feu (seule « Evoke Blade » en
- * dépense un), les dégâts en action Bonus du Trait ensorcelé. dnd5e note le niveau de lancement sur l'effet de concentration
- * (`beginConcentrating(activity, { "flags.dnd5e.scaling": … })`, documents/activity/mixin.mjs), mais une utilisation suivante le
- * recalcule d'après l'emplacement proposé, celui du niveau du sort (`_prepareUsageConfig` puis `_prepareUsageScaling`) : la montée
- * retombe à 0. Rend `{ scaling, slot }` à mettre dans la configuration d'utilisation, ou null (sort de niveau 0, activité qui dépense
- * un emplacement, montée déjà fixée par l'appelant, pas de concentration montée).
+ * §405: the level of an activity of a spell that does not spend a slot — the attack of Flame Blade (only "Evoke Blade"
+ * spends one), the Bonus Action damage of Witch Bolt. dnd5e records the casting level on the concentration effect
+ * (`beginConcentrating(activity, { "flags.dnd5e.scaling": … })`, documents/activity/mixin.mjs), but a following use
+ * recalculates it from the proposed slot, that of the spell's level (`_prepareUsageConfig` then `_prepareUsageScaling`): the
+ * upcast falls back to 0. Returns `{ scaling, slot }` to put in the use configuration, or null (level 0 spell, activity that
+ * spends a slot, upcast already set by the caller, no upcast concentration).
  * @param {{spellLevel: number, consumesSlot: boolean, scaling?: number|boolean, concentrationScaling?: number}} data
  * @returns {{scaling: number, slot: string}|null}
  */
@@ -101,12 +102,12 @@ export function followUpScaling({ spellLevel, consumesSlot, scaling, concentrati
 }
 
 /**
- * §406 : la configuration d'utilisation qui relance une activité d'un sort au niveau où il a été lancé, sans rien dépenser de plus —
- * pour le moteur qui rejoue une activité plus tard (l'explosion d'une Boule de feu à retardement quand sa zone tombe, `zoneEnd` ; une
- * impulsion `casterPulse` qui utilise une activité). dnd5e recalcule la montée d'après l'emplacement proposé (`_prepareUsageScaling`,
- * §405) : il faut donner les deux. Rend `{}` pour un sort de niveau 0 ou sans montée.
- * @param {number} spellLevel  Le niveau du sort (`item.system.level`).
- * @param {number|string|null} scaling  La montée du message d'utilisation d'origine (`system.scaling`).
+ * §406: the use configuration that replays an activity of a spell at the level it was cast at, spending nothing more —
+ * for the engine that replays an activity later (the explosion of a Delayed Blast Fireball when its area ends, `zoneEnd`; a
+ * `casterPulse` pulse that uses an activity). dnd5e recalculates the upcast from the proposed slot (`_prepareUsageScaling`,
+ * §405): both must be given. Returns `{}` for a level 0 spell or one without upcast.
+ * @param {number} spellLevel  The spell's level (`item.system.level`).
+ * @param {number|string|null} scaling  The upcast of the original use message (`system.scaling`).
  * @returns {{scaling?: number, spell?: {slot: string}}}
  */
 export function castLevelUsage(spellLevel, scaling) {
@@ -117,9 +118,9 @@ export function castLevelUsage(spellLevel, scaling) {
 }
 
 /**
- * §406 : le niveau auquel un sort est lancé, lu sur l'item (une copie mise à l'échelle : `item.scaledClone(n)`,
- * `getAssociatedActivity({ scaled: true })`) — `system.level` plus `flags.dnd5e.scaling`. `system.level` seul reste le niveau du sort
- * (dnd5e.mjs:35309 ; `@item.level` des formules ajoute la montée, dnd5e.mjs:34568). 0 sans item.
+ * §406: the level a spell is cast at, read from the item (a scaled copy: `item.scaledClone(n)`,
+ * `getAssociatedActivity({ scaled: true })`) — `system.level` plus `flags.dnd5e.scaling`. `system.level` alone stays the spell's
+ * level (dnd5e.mjs:35309; the formulas' `@item.level` adds the upcast, dnd5e.mjs:34568). 0 without an item.
  * @param {object|null} item
  * @returns {number}
  */

@@ -1,7 +1,7 @@
 /**
- * §388 : le test de connexion d'un joueur — l'entrée « Tester la connexion (DAS) » du menu clic droit de la liste des joueurs (MJ
- * seulement, joueur connecté, pas soi-même ; retirée avec l'entrée du rapport de bug, réglage de monde `debugMenu`), et sa fenêtre :
- * le diagnostic, du plus grave au moins grave, les mesures dépliables, « Copier » (Markdown, pour Discord ou une issue), « Refaire ».
+ * §388: a player's connection test — the "Test connection (DAS)" entry of the right-click menu of the player list (GM
+ * only, connected player, not oneself; removed with the bug report entry, world setting `debugMenu`), and its window:
+ * the diagnosis, from most to least serious, the expandable measurements, "Copy" (Markdown, for Discord or an issue), "Redo".
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -40,7 +40,7 @@ const TestApp = () => TestClass ??= class ConnectionTest extends foundry.applica
     return t("Titre");
   }
 
-  /** Le rôle du joueur à l'écran du MJ : son nom (la fenêtre ne quitte pas la table ; le texte copié, lui, dit « Player 1 »). */
+  /** The player's role on the GM's screen: their name (the window does not leave the table; the copied text says "Player 1"). */
   get who() {
     return game.users.get(this.userId)?.name ?? "?";
   }
@@ -100,7 +100,7 @@ const TestApp = () => TestClass ??= class ConnectionTest extends foundry.applica
       </footer>`;
   }
 
-  /** Le conseil d'un constat, s'il en a un (clé `Connexion.Conseil.<id>`). */
+  /** A finding's advice, if it has one (key `Connexion.Conseil.<id>`). */
   #advice(finding) {
     const key = `DND5ECOMBAT.Connexion.Conseil.${finding.id}`;
     if ( (finding.level === "ok") || !game.i18n.has(key) ) return "";
@@ -123,7 +123,7 @@ const TestApp = () => TestClass ??= class ConnectionTest extends foundry.applica
   }
 };
 
-/** Ouvre la fenêtre du test pour un joueur et le lance (ou ramène devant celle déjà ouverte). */
+/** Opens the test window for a player and starts it (or brings the one already open to the front). */
 export function openConnectionTest(userId) {
   const open = foundry.applications.instances.get(`das-connection-test-${userId}`);
   if ( open ) {
@@ -140,7 +140,7 @@ function menuShown() {
   try { return game.settings.get(MODULE_ID, DEBUG_MENU_SETTING); } catch { return true; }
 }
 
-/** L'entrée du menu de la liste des joueurs. */
+/** The player list menu entry. */
 function onUserContext(app, options) {
   options.push({
     label: "DND5ECOMBAT.Connexion.Menu",
@@ -154,8 +154,8 @@ function onUserContext(app, options) {
 }
 
 /**
- * Chez le joueur : la fenêtre d'accord. « Autoriser » ou « Refuser » ; fermée ou sans réponse en `CONSENT_MS`, c'est non.
- * Le nom du MJ qui demande est affiché (la demande vient de sa table).
+ * On the player's side: the consent window. "Allow" or "Refuse"; closed or unanswered within `CONSENT_MS`, it is a no.
+ * The name of the requesting GM is displayed (the request comes from their table).
  */
 async function consentPrompt({ gm=null }={}) {
   let dialog = null;

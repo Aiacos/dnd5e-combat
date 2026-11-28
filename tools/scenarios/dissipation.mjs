@@ -1,11 +1,11 @@
 /**
- * Dissipation de la magie (SPEC §37.2), monde `dnd-6`. Le Clerc reçoit Dissipation de la magie et Bénédiction (Manuel des joueurs, à
- * volonté, rien de consommé) ; il bénit le Guerrier, puis dissipe sur lui (l'effet se reconnaît comme le seul nouveau sur le Guerrier :
- * son nom est traduit). Vérifie :
- *  - Bénédiction lancée au niveau 1, Dissipation au niveau 3 : elle cesse d'office, la concentration du Clerc tombe avec ;
- *  - Bénédiction lancée au niveau 4, Dissipation au niveau 3 : test contre DD 14 — cesse ⇔ test réussi (carte `dispel`) ;
- *  - Bénédiction au niveau 4, Dissipation au niveau 4 : cesse d'office.
- * Remet effets et concentration.
+ * Dispel Magic (SPEC §37.2), `dnd-6` world. The Cleric receives Dispel Magic and Bless (Player's Handbook, at will, nothing
+ * consumed); it blesses the Fighter, then dispels on them (the effect is recognized as the only new one on the Fighter: its
+ * name is translated). Checks:
+ *  - Bless cast at level 1, Dispel Magic at level 3: it ends automatically, the Cleric's concentration ends with it;
+ *  - Bless cast at level 4, Dispel Magic at level 3: check against DC 14 — ends ⇔ check succeeded (`dispel` card);
+ *  - Bless at level 4, Dispel Magic at level 4: ends automatically.
+ * Restores effects and concentration.
  */
 const MODULE_ID = "dnd5e-combat";
 const PHB = "Compendium.dnd-players-handbook.spells.Item.";

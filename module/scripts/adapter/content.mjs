@@ -1,12 +1,12 @@
 /**
- * Ce qu'un item déclare au moteur, toutes couches confondues (SPEC §13.4) :
+ * What an item declares to the engine, all layers combined (SPEC §13.4):
  *
- *   flag de l'item  >  surcouche du monde (réglage, MJ)  >  contenu du module  >  texte d'une capacité de PNJ (K1)  >  rien = natif
+ *   item flag  >  world overlay (setting, GM)  >  module content  >  NPC ability text (K1)  >  nothing = native
  *
- * L'identifiant est celui de dnd5e (`system.identifier`, gardé par les copies faites depuis un
- * compendium — vérifié : Spellbook crée le sort avec `toObject()` du sort du compendium). À
- * défaut : l'identifiant de la source de compendium (`_stats.compendiumSource`, que le cœur
- * remplit à la création, client-document.mjs:990), puis le nom en kebab-case.
+ * The identifier is dnd5e's (`system.identifier`, kept by copies made from a
+ * compendium — verified: Spellbook creates the spell with `toObject()` of the compendium spell). Failing
+ * that: the identifier of the compendium source (`_stats.compendiumSource`, which the core
+ * fills in at creation, client-document.mjs:990), then the name in kebab-case.
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -23,28 +23,29 @@ import { sourceKeys } from "../core/source-keys.mjs";
 export const OVERRIDES_SETTING = "contentOverrides";
 
 /**
- * §117 : le contenu par objet ne s'applique qu'au niveau Intégral (runtime/levels.mjs). Fermé, `contentOf` ne rend rien : chaque
- * objet garde le comportement de dnd5e et les règles générales du moteur.
+ * §117: per-item content applies only at the Full level (runtime/levels.mjs). When closed, `contentOf` returns nothing: each
+ * item keeps dnd5e's behavior and the engine's general rules.
  */
-/** §416 : les identifiants des actions de base du moteur (content/actions.mjs) — leur entrée reste lue quand le contenu est fermé. */
+/** §416: the ids of the engine's base actions (content/actions.mjs) — their entry is still read when content is closed. */
 const GENERAL_RULES = new Set(Object.values(BASIC_ACTIONS).map(a => a.identifier).filter(Boolean));
 let contentEnabled = true;
 export function setContentEnabled(enabled) {
   contentEnabled = !!enabled;
 }
 
-/** Les clés de faits que le cœur des conditions connaît (pour valider une entrée). */
+/** The fact keys that the conditions core knows (to validate an entry). */
 export const KNOWN_FACTS = factsFor();
 
 /** Un nom en identifiant, comme dnd5e le forme (utils.mjs:112, `formatIdentifier`). */
 const kebab = name => String(name ?? "").replaceAll(/(\w+)([\\|/])(\w+)/g, "$1-$3").slugify({ strict: true });
 
 /**
- * L'identifiant sous lequel un item est reconnu, et d'où il vient.
+ * The identifier under which an item is recognized, and where it comes from.
  *
- * §19.9 : un item premium sans identifiant (Ravenloft) en reçoit un à sa création sur une fiche — dnd5e 6 l'écrit d'après le nom
- * (documents/item.mjs:1146, `_preCreate`), donc d'après le nom TRADUIT par Babele : « morsure-vampirique ». On le reconnaît par
- * l'id de sa source (content/sources.mjs), sinon par son nom anglais, que Babele garde (`flags.babele.originalName`, 2.9.1).
+ * §19.9: a premium item without an identifier (Ravenloft) gets one when created on a sheet — dnd5e 6 writes it from the name
+ * (documents/item.mjs:1146, `_preCreate`), hence from the name TRANSLATED by Babele: "morsure-vampirique". It is recognized by
+ * the id of its source (content/sources.mjs), otherwise by its English name, which Babele keeps
+ * (`flags.babele.originalName`, 2.9.1).
  */
 export function identifierOf(item) {
   if ( !item || (typeof item !== "object") ) return computeIdentifier(item);
@@ -76,14 +77,14 @@ function identifierSignature(item) {
 }
 
 function computeIdentifier(item) {
-  // §48 : un parchemin est reconnu sous l'identifiant du sort qu'il contient.
+  // §48: a scroll is recognized under the identifier of the spell it contains.
   const scroll = scrollSpellOf(item);
   if ( scroll ) return { id: scroll.identifier, from: "scroll" };
   const sourceUuid = item?._stats?.compendiumSource ?? item?.flags?.dnd5e?.sourceId ?? null;
-  // §277 : les sources livrées (content/sources.mjs) et celles qu'un autre module enregistre avec sa table.
-  // §334 : d'abord « acteur.item » — un id d'item du Monster Manual est partagé entre créatures (« mmBite0000000000 ») ; la clé
-  // « mmHomunculus0000.mmBite0000000000 » vise la morsure de l'Homoncule seule. La source d'un item embarqué désigne le compendium
-  // des capacités, pas la créature : l'acteur se lit alors dans celui qui porte l'item (core/source-keys.mjs).
+  // §277: the shipped sources (content/sources.mjs) and those that another module registers with its table.
+  // §334: first "actor.item" — an item id from the Monster Manual is shared between creatures ("mmBite0000000000"); the key
+  // "mmHomunculus0000.mmBite0000000000" targets the Homunculus's bite alone. The source of an embedded item designates the
+  // abilities compendium, not the creature: the actor is then read from the one that carries the item (core/source-keys.mjs).
   const owner = item?.actor ?? ((item?.parent?.documentName === "Actor") ? item.parent : null);
   const key = sourceKeys({ itemSource: sourceUuid, itemId: item?.id ?? null, actorId: owner?.id ?? null,
     actorSource: owner?._stats?.compendiumSource ?? owner?.flags?.dnd5e?.sourceId ?? null }).find(k => k in SOURCES);
@@ -102,12 +103,12 @@ function computeIdentifier(item) {
 }
 
 /**
- * §431 : la classe d'une aptitude, quand plusieurs classes partagent son identifiant — le SRD de dnd5e 6.1 donne `potent-spellcasting`
- * à l'option du Clerc (`phbClcPotentSpel`) comme à celle du Druide (`phbFuryPotentSpe`). D'abord `system.classIdentifier` (dnd5e 6.1,
- * data/item/feat.mjs:177, la classe qui a donné l'aptitude par avancement), puis l'item racine de l'avancement (dnd5e 6.0,
- * data/abstract/item-data-model.mjs:62), enfin le texte `requirements` (« Cleric », « Druid ») s'il nomme une classe de l'acteur, ou si
- * l'acteur n'a aucune classe (§433).
- * Rien de sûr : null.
+ * §431: the class of a feature, when several classes share its identifier — dnd5e 6.1's SRD gives `potent-spellcasting`
+ * to the Cleric option (`phbClcPotentSpel`) as to the Druid's (`phbFuryPotentSpe`). First `system.classIdentifier` (dnd5e 6.1,
+ * data/item/feat.mjs:177, the class that granted the feature through advancement), then the root item of the advancement
+ * (dnd5e 6.0, data/abstract/item-data-model.mjs:62), finally the `requirements` text ("Cleric", "Druid") if it names a class
+ * of the actor, or if the actor has no class (§433).
+ * Nothing certain: null.
  */
 export function featureClassOf(item) {
   const own = item?.system?.classIdentifier;
@@ -119,13 +120,14 @@ export function featureClassOf(item) {
   if ( !written ) return null;
   const classes = item?.actor?.classes ?? {};
   if ( classes[written] ) return written;
-  // §433 : un acteur sans aucune classe (PNJ qui porte l'aptitude) — le texte seul fait foi, s'il tient en un mot (« Druid »).
+  // §433: an actor with no class at all (NPC carrying the feature) — the text alone is authoritative,
+  // if it fits in one word ("Druid").
   return (!Object.keys(classes).length && /^[a-z]+$/.test(written)) ? written : null;
 }
 
 /**
- * §431 : l'acteur a-t-il une aptitude de cet identifiant (ou de l'un d'eux) pour cette classe ? Une aptitude dont la classe est connue
- * et différente ne compte pas ; dont la classe est inconnue, compte si l'acteur a des niveaux dans la classe demandée.
+ * §431: does the actor have a feature of this identifier (or of one of them) for this class? A feature whose class is known
+ * and different does not count; one whose class is unknown counts if the actor has levels in the requested class.
  */
 export function hasClassFeature(actor, ids, cls) {
   const wanted = [ids].flat();
@@ -137,17 +139,17 @@ export function hasClassFeature(actor, ids, cls) {
 }
 
 /**
- * O5b (§340) : les identifiants des objets dont un enchantement actif est posé sur cet item — par l'id de l'effet d'enchantement
- * (content/sources.mjs, `ENCHANTMENT_SOURCES` : il reste celui de l'effet d'origine), sinon par l'objet qui l'a posé
- * (`system.origin.activity`, activity/enchant.mjs), quand il existe encore.
+ * O5b (§340): the identifiers of the items whose active enchantment is placed on this item — by the id of the enchantment effect
+ * (content/sources.mjs, `ENCHANTMENT_SOURCES`: it remains that of the original effect), otherwise by the item that placed it
+ * (`system.origin.activity`, activity/enchant.mjs), when it still exists.
  */
 export function enchantmentSourcesOf(item) {
   const out = [];
   const effects = item?.effects;
   if ( !effects || (typeof effects[Symbol.iterator] !== "function") ) return out;
   for ( const effect of effects ) {
-    // O9h (§363) : un profil de l'objet activé à la place d'un enchantement de soi (runtime/enchant.mjs) porte sa propre marque de profil —
-    // dnd5e ne le compte pas comme appliqué.
+    // O9h (§363): a profile of the item activated in place of a self-enchantment (runtime/enchant.mjs) carries its own profile
+    // mark — dnd5e does not count it as applied.
     const ownProfile = effect?.flags?.dnd5e?.enchantmentProfile === effect?.id;
     if ( (effect?.type !== "enchantment") || effect.disabled || ((effect.isAppliedEnchantment === false) && !ownProfile) ) continue;
     let id = ENCHANTMENT_SOURCES[effect.id] ?? null;
@@ -163,8 +165,9 @@ export function enchantmentSourcesOf(item) {
 }
 
 /**
- * O5b (§340) : ce que les enchantements d'un item lui apportent — l'entrée `<identifiant>-enchanted` de l'objet qui l'enchante (Tueuse
- * de dragons, Vengeresse sacrée…). Un nom à part : l'objet qui pose l'enchantement, s'il reste sur la fiche, ne déclenche rien lui-même.
+ * O5b (§340): what an item's enchantments bring it — the `<identifiant>-enchanted` entry of the item that enchants it
+ * (Dragon Slayer, Holy Avenger…). A separate name: the item that places the enchantment, if it remains on the sheet,
+ * triggers nothing itself.
  */
 function enchantmentLayer(item) {
   const entries = enchantmentSourcesOf(item).map(id => CONTENT[`${id}-enchanted`]).filter(Boolean);
@@ -172,21 +175,22 @@ function enchantmentLayer(item) {
 }
 
 /**
- * La surcouche du monde déjà lue, et le `game.settings` où elle l'a été. `contentOf` la demande pour chaque item (des centaines de
- * sites, dont des balayages de tous les objets d'une fiche), et lire un réglage de monde n'est pas gratuit : le cœur le cherche
- * parmi tous les réglages du monde à chaque lecture. Elle n'est donc lue qu'une fois, jusqu'à ce que le réglage change
- * (`forgetWorldOverrides`, à son `onChange` : runtime/content.mjs).
+ * The world overlay already read, and the `game.settings` it was read from. `contentOf` asks for it for each item (hundreds of
+ * call sites, including sweeps of all of a sheet's items), and reading a world setting is not free: the core searches for it
+ * among all the world's settings on each read. It is therefore read only once, until the setting changes
+ * (`forgetWorldOverrides`, on its `onChange`: runtime/content.mjs).
  */
 let read = null;
 
-/** Le réglage a changé : la surcouche sera relue à la prochaine demande. */
+/** The setting changed: the overlay will be re-read on the next request. */
 export function forgetWorldOverrides() {
   read = null;
 }
 
-/** La surcouche du monde : `{ identifiant: entrée }`, tenue par le MJ. Ne pas modifier l'objet rendu : il est partagé. */
+/** The world overlay: `{ identifiant: entrée }`, held by the GM. Do not modify the returned object: it is shared. */
 export function worldOverrides() {
-  // `game.settings` est le même objet toute la session ; s'il a changé (un autre monde simulé), ce qui a été lu ne vaut plus.
+  // `game.settings` is the same object for the whole session; if it changed (another simulated world),
+  // what was read is no longer valid.
   if ( read && (read.settings === game.settings) ) return read.entries;
   const stored = game.settings.get(MODULE_ID, OVERRIDES_SETTING);
   const valid = stored && (typeof stored === "object") && (stored.v === CONTENT_VERSION);
@@ -194,7 +198,7 @@ export function worldOverrides() {
   return read.entries;
 }
 
-/** Écrit (ou retire, avec `null`) l'entrée d'un identifiant dans la surcouche du monde. MJ uniquement. */
+/** Writes (or removes, with `null`) the entry of an identifier in the world overlay. GM only. */
 export async function setWorldOverride(identifier, entry) {
   const entries = { ...worldOverrides() };
   if ( entry === null ) delete entries[identifier];
@@ -204,18 +208,18 @@ export async function setWorldOverride(identifier, entry) {
     entries[identifier] = entry;
   }
   await game.settings.set(MODULE_ID, OVERRIDES_SETTING, { v: CONTENT_VERSION, entries });
-  forgetWorldOverrides();   // l'`onChange` du réglage le fait aussi ; ici pour qui lit juste après l'écriture
+  forgetWorldOverrides();   // the setting's `onChange` does it too; here for whoever reads right after the write
   return entries[identifier] ?? null;
 }
 
-/** Le rang de chaque clé d'entrée dans le schéma : l'ordre des clés de la couche d'un item. */
+/** The rank of each entry key in the schema: the order of the keys of an item's layer. */
 const KEY_RANK = new Map(ENTRY_KEYS.map((key, rank) => [key, rank]));
 
 /**
- * Les clés d'entrée que portent les flags d'un item, dans l'ordre du schéma. On parcourt les flags (une poignée, souvent aucun),
- * pas les centaines de clés du schéma : `contentOf` passe ici pour chaque item, et la Barre le demande pour chaque objet de la
- * fiche, plusieurs fois par case (mesuré en jeu sur une fiche de 129 objets : 1 160 ms pour dix sélections, tout dans cette
- * boucle).
+ * The entry keys carried by an item's flags, in schema order. We walk the flags (a handful, often none),
+ * not the hundreds of schema keys: `contentOf` passes here for each item, and the Bar asks for it for each item of the
+ * sheet, several times per cell (measured in play on a sheet of 129 items: 1,160 ms for ten selections, all in this
+ * loop).
  * @param {object} flags
  * @returns {string[]}
  */
@@ -225,7 +229,7 @@ export function entryKeysOf(flags) {
   return (keys.length > 1) ? keys.sort((a, b) => KEY_RANK.get(a) - KEY_RANK.get(b)) : keys;
 }
 
-/** Ce qu'un item porte lui-même, validé ; une entrée fausse est ignorée (et signalée). */
+/** What an item carries itself, validated; a wrong entry is ignored (and reported). */
 function itemLayer(item) {
   const flags = item?.flags?.[MODULE_ID];
   if ( !flags || (typeof flags !== "object") ) return null;
@@ -242,14 +246,14 @@ function itemLayer(item) {
 }
 
 /**
- * L'entrée effective d'un item, couches combinées. `null` si rien n'est déclaré nulle part.
+ * An item's effective entry, layers combined. `null` if nothing is declared anywhere.
  * @returns {{entry: object|null, identifier: string|null, layers: {module: boolean, world: boolean, item: boolean}}}
  */
 export function contentOf(item) {
   const { id } = identifierOf(item);
   if ( !contentEnabled ) {
-    // §416 : une action de base du moteur est une règle générale (niveau Assisté), pas le contenu d'un objet — sans le choix exclusif de
-    // l'Attaque à mains nues, une Lutte ratée posait À terre ET Agrippé à ce niveau.
+    // §416: an engine base action is a general rule (Assisted level), not an item's content — without the exclusive choice of
+    // Unarmed Strike, a failed Grapple set Prone AND Grappled at that level.
     const general = (id && GENERAL_RULES.has(id)) ? (CONTENT[id] ?? null) : null;
     return { identifier: id, entry: general ? mergeEntries([general]) : null, layers: { text: false, module: !!general, world: false, item: false } };
   }
@@ -261,17 +265,17 @@ export function contentOf(item) {
   };
 }
 
-/** Une couche (objet) porte-t-elle cette clé ? Le test de `mergeEntries` (core/content/merge.mjs). */
+/** Does a layer (item) carry this key? The test of `mergeEntries` (core/content/merge.mjs). */
 const carries = (layer, key) => !!layer && (typeof layer === "object") && (key in layer);
 
 /**
- * Une des couches de l'item porte-t-elle la clé `key` ? Les mêmes couches que `contentOf`, sans les fusionner : l'entrée composée
- * n'a que des clés qu'une couche porte, donc « non » ici veut dire `contentOf(item).entry?.[key] === undefined`. Pour qui cherche
- * une clé rare sur tous les objets d'une fiche (la vue, à chaque rafraîchissement) : la fusion n'est faite que pour l'objet qui la
- * déclare. Rien n'est gardé : l'item, ses effets, la surcouche et les tables sont relus à chaque appel.
+ * Does one of the item's layers carry the key `key`? The same layers as `contentOf`, without merging them: the composed entry
+ * only has keys that a layer carries, so "no" here means `contentOf(item).entry?.[key] === undefined`. For whoever looks for
+ * a rare key on all the items of a sheet (the view, on every refresh): the merge is done only for the item that declares
+ * it. Nothing is kept: the item, its effects, the overlay and the tables are re-read on each call.
  * @param {Item} item
- * @param {string} key                 Une clé d'entrée (`ENTRY_KEYS`).
- * @param {object} [overrides]         `worldOverrides()` déjà lu par l'appelant, pour une suite d'items.
+ * @param {string} key                 An entry key (`ENTRY_KEYS`).
+ * @param {object} [overrides]         `worldOverrides()` already read by the caller, for a series of items.
  * @returns {boolean}
  */
 export function declaresKey(item, key, overrides=worldOverrides()) {
@@ -283,14 +287,14 @@ export function declaresKey(item, key, overrides=worldOverrides()) {
 }
 
 /**
- * K1 (SPEC §322) : la couche la plus basse, lue dans le texte anglais d'origine d'une capacité de PNJ (`core/monster-text.mjs`) —
- * sauvegarde répétée à la fin de ses tours, second échec, fin sur dégâts ; K2 (§323) : mort à 0 PV, paliers de PV ; K3 (§324) : un seul effet. Le contenu livré, la surcouche du monde ou le flag de
- * l'item la remplacent dès qu'ils déclarent leurs propres `triggers`. Pas pour un sort (sa copie suit les règles du sort) ni pour un
- * personnage. Mise en cache par item et texte.
+ * K1 (SPEC §322): the lowest layer, read from the original English text of an NPC ability (`core/monster-text.mjs`) —
+ * repeated save at the end of its turns, second failure, ends on damage; K2 (§323): death at 0 HP, HP thresholds; K3 (§324):
+ * a single effect. The shipped content, the world overlay or the item's flag replace it as soon as they declare their
+ * own `triggers`. Not for a spell (its copy follows the spell's rules) nor for a character. Cached per item and text.
  */
 const textCache = new Map();
 
-/** §461 : portée, gabarit et cible d'une activité, tels que la donnée les écrit (la source : pas de portée préparée ni de formule). */
+/** §461: range, template and target of an activity, as the data writes them (the source: no prepared range or formula). */
 const activityShape = a => ({ range: { value: a.range?.value ?? null, units: a.range?.units ?? "", special: a.range?.special ?? "" },
   template: a.target?.template?.type ? { type: a.target.template.type, size: a.target.template.size ?? "", units: a.target.template.units ?? "",
     count: a.target.template.count ?? "" } : false,
@@ -302,7 +306,7 @@ function textLayer(item) {
   if ( !html ) return null;
   const key = `${item.uuid}|${html.length}|${item.effects?.size ?? 0}`;
   if ( textCache.has(key) ) return textCache.get(key);
-  // §460 : le calcul est pur (core/monster-layer.mjs), partagé avec l'ATLAS.
+  // §460: the computation is pure (core/monster-layer.mjs), shared with the ATLAS.
   const layer = monsterTextLayer({ html, identifier: identifierOf(item).id, swallow: !!CONTENT[identifierOf(item).id]?.swallow,
     effects: (item.effects?.contents ?? []).map(e => ({ id: e.id, statuses: [...(e.statuses ?? [])], changes: e.changes ?? [] })),
     activities: Array.from(item.system?.activities ?? []).map(a => ({ id: a.id, name: a.name ?? "", type: a.type,
@@ -313,17 +317,17 @@ function textLayer(item) {
   return layer;
 }
 
-/** §53 : l'entrée d'un identifiant sans item (une potion détruite en étant bue) : contenu du module < surcouche du monde. */
+/** §53: the entry of an identifier without an item (a potion destroyed by drinking it): module content < world overlay. */
 export function entryOfIdentifier(id) {
   if ( !contentEnabled ) return null;
   return id ? mergeEntries([CONTENT[id] ?? null, worldOverrides()[id] ?? null]) : null;
 }
 
 /**
- * L'item qui a lancé une copie de sort (`flags.dnd5e.cachedFor` = uuid relatif de son activité d'incantation,
- * activity/cast.mjs:118-145), ou null. Une créature qui « lance Immobilisation de personne » par une capacité
- * (une créature d'un module tiers) y déclare ce que SA version ajoute au sort : les étapes d'issue du sort
- * lisent aussi celles de cet item (adapter/usage.mjs, `outcomeStepsOf`).
+ * The item that cast a spell copy (`flags.dnd5e.cachedFor` = relative uuid of its casting activity,
+ * activity/cast.mjs:118-145), or null. A creature that "casts Hold Person" through an ability
+ * (a creature from a third-party module) declares there what ITS version adds to the spell: the spell's outcome steps
+ * also read those of this item (adapter/usage.mjs, `outcomeStepsOf`).
  */
 export function castItemOf(item) {
   const cached = item?.flags?.dnd5e?.cachedFor;
@@ -332,10 +336,10 @@ export function castItemOf(item) {
 }
 
 /**
- * §438 : la règle d'invocation (`summon`) d'un item, et celle de l'item qui l'a lancé quand c'est une copie de sort (`castItemOf`), la
- * seconde l'emportant. Le Compagnon sauvage du Manuel des joueurs 3.0.0 n'invoque plus lui-même : son activité « cast » lance Appel de
- * familier, et le familier a pour origine (`flags.dnd5e.summon.origin`) la copie du sort — ce que déclare `wild-companion` (part au
- * Repos long) doit encore s'appliquer. Null si aucun des deux ne déclare rien.
+ * §438: the summoning rule (`summon`) of an item, and that of the item that cast it when it is a spell copy (`castItemOf`), the
+ * latter winning. The Wild Companion from the Player's Handbook 3.0.0 no longer summons itself: its "cast" activity casts Find
+ * Familiar, and the familiar's origin (`flags.dnd5e.summon.origin`) is the spell copy — what `wild-companion` declares
+ * (departs at the Long Rest) must still apply. Null if neither declares anything.
  */
 export function summonRuleOf(item) {
   if ( !item ) return null;
@@ -345,7 +349,7 @@ export function summonRuleOf(item) {
   return (own || from) ? { ...(own ?? {}), ...(from ?? {}) } : null;
 }
 
-/** Pour l'inspection en jeu : ce que chaque item d'un acteur déclare, et d'où. */
+/** For in-play inspection: what each item of an actor declares, and where from. */
 export function inspect(actor) {
   return (actor?.items ?? []).map(item => {
     const { id, from } = identifierOf(item);
@@ -355,47 +359,49 @@ export function inspect(actor) {
 }
 
 /**
- * §123 : l'unité de portée d'une activité, corrigée par le contenu quand les données se trompent (`ranges`, §16.43) — Imposition des
- * mains et la trousse de soins sont « personnelles » dans le Manuel des joueurs alors qu'elles touchent une créature. Ce qui décide
- * « sur soi » (visée au clic, plan de la carte) lit ceci, pas `activity.range.units`.
+ * §123: the range unit of an activity, corrected by the content when the data are wrong (`ranges`, §16.43) — Lay on Hands and the
+ * healer's kit are "personal" in the Player's Handbook although they touch a creature. What decides
+ * "on self" (aiming on click, map layout) reads this, not `activity.range.units`.
  */
 export function rangeUnitsOf(activity) {
   const fixed = activity?.item ? contentOf(activity.item).entry?.ranges?.[activity.id] : null;
   if ( fixed?.units ) return fixed.units;
   const units = activity?.range?.units ?? null;
-  // Règle générale : un SOIN « personnel » qui vise une créature — une seule, sans zone — vise en fait une autre créature (ou soi).
-  // Relevé du Manuel des joueurs (2026-10-10) : Imposition des mains, Main guérisseuse, Ultime miséricorde, Toucher du médecin,
-  // Ralliement, Champ protecteur, Éclat protecteur amélioré, Interception — toutes soignaient le lanceur, quelle que soit la cible.
-  // Sans portée connue (null) : la visée s'ouvre (soi compris), sans contrôle de distance — `ranges` la précise quand le texte la donne.
+  // General rule: a "personal" HEAL that targets a creature — a single one, with no area — actually targets another creature
+  // (or self). Survey of the Player's Handbook (2026-10-10): Lay on Hands, Healing Hands, "Ultimate Mercy", "Physician's Touch",
+  // "Rallying", "Protective Field", "Improved Protective Burst", "Interception" — all healed the caster, whatever the target.
+  // With no known range (null): aiming opens up (self included), with no distance check — `ranges` specifies it when the text
+  // gives it.
   const affects = activity?.target?.affects;
   const one = !activity?.target?.template?.type && ["", "1"].includes(String(affects?.count ?? "").trim());
   if ( (units !== "self") || !one ) return units;
   if ( (activity?.type === "heal") && HEAL_TARGETS.includes(affects?.type) ) return null;
-  // §124 : de même une capacité qu'un joueur lance lui-même (action, action Bonus), hors soin et hors attaque (une attaque se vise
-  // déjà), dont le moteur n'a pas de règle — Paume vibratoire (fin des vibrations), Toucher restaurateur, Bastion de la loi, Nimbe
-  // sacré, Champion ancestral, ordre au compagnon du Rôdeur, Murmures psychiques : sans cible désignée, rien ne se passait. Celles que
-  // le moteur prend en charge (Déluge de coups, Transposition du filou, Prêtre de guerre…) gardent leur propre circuit.
+  // §124: likewise an ability that a player casts themselves (action, Bonus Action), apart from heals and attacks (an attack
+  // is already aimed), for which the engine has no rule — Quivering Palm (ending the vibrations), "Restorative Touch",
+  // Bastion of Law, "Sacred Halo", "Ancestral Champion", the Ranger's command to the companion, "Psychic Whispers":
+  // with no designated target, nothing happened. Those that the engine handles (Flurry of Blows,
+  // "Trickster's Transposition", War Priest…) keep their own circuit.
   if ( (activity?.type !== "attack") && PLAYER_ACTIVATIONS.includes(activity?.activation?.type)
     && TARGETS.includes(affects?.type) && !contentOf(activity.item).entry ) return null;
-  // §253 : un piège (PNJ au type de créature « Trap » des pièges du DMG 2024, ou token objet du moteur) a une portée « personnelle »
-  // dans les données mais frappe une créature : lancé à la main sans cible désignée, la visée s'ouvre (rien ne se passait).
+  // §253: a trap (NPC of the creature type "Trap" from the DMG 2024 traps, or an engine object token) has a "personal" range
+  // in the data but hits a creature: cast by hand with no designated target, aiming opens up (nothing happened).
   if ( TARGETS.includes(affects?.type) && trapLike(activity?.actor) ) return null;
   return units;
 }
 
 const TRAP_TYPE = /^(traps?|pièges?)$/i;
 
-/** §253 : un acteur piège — type de créature personnalisé « Trap » (DMG 2024), ou le token d'un objet du moteur. */
+/** §253: a trap actor — custom creature type "Trap" (DMG 2024), or the token of an engine object. */
 export function trapLike(actor) {
   const type = actor?.system?.details?.type;
   if ( (type?.value === "custom") && TRAP_TYPE.test(String(type.custom ?? "").trim()) ) return true;
   return isObjectToken(actor?.token);
 }
 
-/** §124 : les activations qu'un joueur déclenche lui-même (pas une réaction, pas un supplément au coup). */
+/** §124: the activations that a player triggers themselves (not a Reaction, not an add-on to the hit). */
 const PLAYER_ACTIVATIONS = ["action", "bonus"];
-/** §124 : les cibles qui désignent une créature (ou un objet) autre que le lanceur. */
+/** §124: the targets that designate a creature (or an object) other than the caster. */
 const TARGETS = ["creature", "creatureOrObject", "ally", "willing", "any", "enemy", "object"];
 
-/** Les cibles d'un soin qui désignent une autre créature que le lanceur. */
+/** The targets of a heal that designate a creature other than the caster. */
 const HEAL_TARGETS = ["creature", "creatureOrObject", "ally", "willing", "any"];

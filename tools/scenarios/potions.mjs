@@ -1,10 +1,10 @@
 /**
- * Potions de guérison (SPEC §51). Items prêtés depuis les compendiums du Manuel des joueurs et du Guide du maître.
- *  1. En combat, au tour du Guerrier : il boit la potion du Manuel des joueurs — 2d4 + 2 PV, action Bonus dépensée, potion consommée.
- *  2. Hors combat : il la donne au Clerc blessé, au contact — c'est le Clerc qui est soigné.
- *  3. Hors combat : le Clerc à 0 PV (Inconscient) — la potion le relève (plus Inconscient).
- *  4. La potion du Guide du maître (portée « personnelle »), sans cible désignée : c'est celui qui la boit qui est soigné.
- * Remet PV, états, positions (filet de sécurité) ; retire les potions prêtées. The `potionHealing` house rule is off for the run.
+ * Healing potions (SPEC §51). Items lent from the Player's Handbook and Dungeon Master's Guide compendiums.
+ *  1. In combat, on the Fighter's turn: he drinks the Player's Handbook potion — 2d4 + 2 HP, Bonus Action spent, potion consumed.
+ *  2. Out of combat: he gives it to the wounded Cleric, in contact — the Cleric is the one healed.
+ *  3. Out of combat: the Cleric at 0 HP (Unconscious) — the potion raises him (no longer Unconscious).
+ *  4. The Dungeon Master's Guide potion ("personal" range), with no designated target: the one who drinks it is healed.
+ * Restores HP, conditions, positions (safety net); removes the lent potions. The `potionHealing` house rule is off for the run.
  */
 import { RESTORED_KEEP } from "../lib/stages.mjs";
 
@@ -28,8 +28,8 @@ export default {
     const gActor = await actorOf(guerrier);
     const statuses = async t => (await ctx.effects(t)).flatMap(e => e.statuses ?? []);
     const potions = new Set();
-    // Issue #31: the 2024 rule, whatever the world's house rule says — with `potionHealing` on, the engine would ask « Bonus Action or
-    // action? » in combat and hold the use until answered (no card to roll). Its own scenario: potions-action.
+    // Issue #31: the 2024 rule, whatever the world's house rule says — with `potionHealing` on, the engine would ask
+    // « Bonus Action or action? » in combat and hold the use until answered (no card to roll). Its own scenario: potions-action.
     const rule = await ctx.engine("setting", { key: "potionHealing", value: false });
     ctx.restore(async () => {
       if ( ctx.ownCombat ) { await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {}); ctx.ownCombat = null; }
@@ -40,7 +40,7 @@ export default {
       for ( const id of potions ) await ctx.call("remove-embedded-item", { documentType: "Actor", id: gActor, itemId: id }).catch(() => {});
     });
 
-    /** Une potion fraîche sur le Guerrier (la précédente est détruite à l'usage), d'après le compendium donné. */
+    /** A fresh potion on the Fighter (the previous one is destroyed on use), from the given compendium. */
     const fresh = async (uuid, name) => {
       const { data } = await ctx.call("get-compendium-entry", { uuid });
       const { _id, folder, ownership, _stats, ...itemData } = data;
@@ -51,8 +51,8 @@ export default {
     };
     const drink = async (itemId, targets) => {
       const used = await ctx.use({ tokenId: guerrier.id, itemId, activityType: "heal", targetTokenIds: targets.map(t => t.id), consume: true });
-      // use-activity du connecteur coupe l'enchaînement de dnd5e (`subsequentActions: false`) : le jet de soin se lance par la
-      // carte, comme le clic d'un joueur (api.mcp.rollCard) — la potion est alors déjà détruite, dnd5e la relit dans le message.
+      // The connector's use-activity cuts dnd5e's chaining (`subsequentActions: false`): the healing roll is launched through the
+      // card, like a player's click (api.mcp.rollCard) — the potion is then already destroyed, dnd5e re-reads it from the message.
       await pause(1000);
       await ctx.engine("rollCard", { messageId: used.usageMessageId });
       const r = await ctx.settle(used.usageMessageId, { timeoutMs: 45000 }).catch(() => null);
@@ -62,7 +62,7 @@ export default {
     const exists = async itemId => ((await ctx.call("get-actor", { actorId: gActor })).items ?? []).some(i => (i._id ?? i.id) === itemId);
     const healed = (from, to) => ((to - from) >= 4) && ((to - from) <= 10);
 
-    // 1. Boire, en combat, au tour du Guerrier.
+    // 1. Drinking, in combat, on the Fighter's turn.
     await ctx.setHp(guerrier, Math.max(1, before.g - 15));
     await ctx.startCombat([guerrier, clerc]);
     const state = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
@@ -97,7 +97,7 @@ export default {
       ctx.expect(healed(c0, c1) && (g1 === g0), `donnée au Clerc : lui regagne ${c1 - c0} PV, le Guerrier rien (${g1 - g0})`);
     }
 
-    // 3. Relever le Clerc à 0 PV.
+    // 3. Raising the Cleric at 0 HP.
     await ctx.setHp(clerc, 0);
     await pause(2500);
     ctx.expect((await statuses(clerc)).includes("unconscious"), "le Clerc à 0 PV est Inconscient");
@@ -109,7 +109,7 @@ export default {
       ctx.expect((c1 >= 4) && !(await statuses(clerc)).includes("unconscious"), `relevé : ${c1} PV, plus Inconscient (états : ${(await statuses(clerc)).join(", ")})`);
     }
 
-    // 4. La potion du Guide du maître, sans cible : celui qui la boit.
+    // 4. The Dungeon Master's Guide potion, with no target: the one who drinks it.
     if ( !packs.includes("dnd-dungeon-masters-guide.equipment") ) { ctx.log("Guide du maître absent : partie 4 non applicable"); return; }
     await ctx.setHp(guerrier, Math.max(1, before.g - 15));
     await pause(1000);

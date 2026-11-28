@@ -1,18 +1,18 @@
 import { describe, it, expect } from "vitest";
 import { validateEntry } from "../module/scripts/core/content.mjs";
 
-// §372 : `hitRider` en liste — options exclusives du même item, nommées par une activité ; dés propres, genres d'arme, limite relevée.
+// §372: `hitRider` as a list — exclusive options of the same item, named by an activity; own dice, weapon kinds, raised limit.
 const A = "aaaaaaaaaaaaaaaa", B = "bbbbbbbbbbbbbbbb", E = "eeeeeeeeeeeeeeee";
 
 describe("contenu hitRider en liste", () => {
   it("une faveur seule reste valable", () => expect(validateEntry({ hitRider: { damage: A, oncePerTurn: true } })).toEqual([]));
 
-  it("une liste d'options nommées, limite par tour relevée", () => {
+  it("a list of named options, per-turn limit raised", () => {
     const turn = { oncePerTurn: true, perTurn: { count: 2, while: "other-feature" }, weapons: ["unarmed", "simpleM"] };
     expect(validateEntry({ hitRider: [{ name: A, formula: "1d12", weaponDamage: true, ...turn }, { name: B, effect: E, ...turn }] })).toEqual([]);
   });
 
-  it("refuse une liste d'une seule option, une option sans nom, un genre d'arme inconnu, perTurn sans oncePerTurn", () => {
+  it("refuses a list of a single option, an option without a name, an unknown weapon kind, perTurn without oncePerTurn", () => {
     for ( const bad of [
       [{ name: A }],
       [{ name: A }, { effect: E }],

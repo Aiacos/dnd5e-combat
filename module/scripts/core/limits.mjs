@@ -1,27 +1,27 @@
 /**
- * Limites d'utilisation d'une activité que dnd5e ne contrôle pas (SPEC §16.40, clé `usageLimits` de core/content.mjs) :
- *  - `oncePerTurn` : « une fois à chacun de vos tours » — en combat, seulement à son tour, et une fois ;
- *  - `whenEmpty` : seulement quand l'item de cet identifiant n'a plus d'utilisation (Regain sauvage : « si vous n'avez plus
- *    d'utilisation de Forme sauvage ») ;
- *  - `lowestSlot` : l'emplacement de sort dépensé est d'office le plus bas disponible, sans fenêtre ;
- *  - `unmoved` : seulement si l'on ne s'est pas déplacé ce tour (Visée stable, §20) — en combat ;
- *  - `whileEffect` (§486) : seulement sous un effet (identifiant d'item dont l'effet est porté, ou id d'effet ; une liste = l'un
- *    d'eux) — « Griffes (requiert Modification d'apparence) », armes d'une seule forme ; `unlessEffect` : seulement hors de ces
- *    effets (l'arme de la forme humanoïde). En combat ou non ;
- *  - `light` : seulement dans l'une de ces lumières, là où se tient l'utilisateur (Ne faire qu'un avec les ombres : « dans une
- *    lumière faible ou les ténèbres ») ; lumière inconnue (pas de token, pas de canevas) : rien n'est reproché.
- * Fonctions pures.
+ * Usage limits of an activity that dnd5e does not control (SPEC §16.40, `usageLimits` key of core/content.mjs):
+ *  - `oncePerTurn`: "once on each of your turns" — in combat, only on one's own turn, and once;
+ *  - `whenEmpty`: only when the item with this identifier has no uses left (Wild Resurgence: "if you have no uses
+ *    of Wild Shape left");
+ *  - `lowestSlot`: the spell slot spent is automatically the lowest available, without a window;
+ *  - `unmoved`: only if one has not moved this turn (Steady Aim, §20) — in combat;
+ *  - `whileEffect` (§486): only under an effect (identifier of an item whose effect is carried, or effect id; a list = any one
+ *    of them) — "Claws (requires Change Appearance)", single-form weapons; `unlessEffect`: only outside these
+ *    effects (the weapon of the humanoid form). In combat or not;
+ *  - `light`: only in one of these lights, where the user stands (One with Shadows: "in
+ *    Dim Light or Darkness"); unknown light (no token, no canvas): nothing is objected to.
+ * Pure functions.
  */
 
 /**
- * Ce qui cloche, en mode souple (le joueur peut passer outre).
+ * What is wrong, in flexible mode (the player may override).
  * @param {{oncePerTurn?: boolean, whenEmpty?: string, unmoved?: boolean, light?: string[]}} rule
  * @param {{inCombat: boolean, ownTurn: boolean, usedThisTurn: boolean, remaining: number|null, moved?: boolean,
- *   underEffect?: boolean|null, barredByEffect?: boolean|null}} state  `underEffect` : l'un des effets `whileEffect` est porté ;
- *   `barredByEffect` : l'un des effets `unlessEffect` est porté ;
- *   `light` : « dark », « dim », « bright », ou null si elle n'est pas connue.
- * @returns {string[]}  « notOwnTurn », « oncePerTurn », « notEmpty », « moved », « needsEffect », « barredByEffect »,
- *   « wrongLight ».
+ *   underEffect?: boolean|null, barredByEffect?: boolean|null}} state  `underEffect`: one of the `whileEffect` effects is carried;
+ *   `barredByEffect`: one of the `unlessEffect` effects is carried;
+ *   `light`: "dark", "dim", "bright", or null if it is not known.
+ * @returns {string[]}  "notOwnTurn", "oncePerTurn", "notEmpty", "moved", "needsEffect", "barredByEffect",
+ *   "wrongLight".
  */
 export function usageLimitIssues(rule, { inCombat, ownTurn, usedThisTurn, remaining, moved=false, underEffect=null, barredByEffect=null,
   light=null }) {
@@ -35,29 +35,30 @@ export function usageLimitIssues(rule, { inCombat, ownTurn, usedThisTurn, remain
   if ( rule?.whileEffect && (underEffect === false) ) issues.push("needsEffect");
   if ( rule?.unlessEffect && (barredByEffect === true) ) issues.push("barredByEffect");
   if ( rule?.light && light && !rule.light.includes(light) ) issues.push("wrongLight");
-  // `automatic` : le moteur joue déjà cette activité de lui-même (un déclencheur du même item) ; la lancer en plus à la main la jouerait
-  // deux fois (Marteau de tonnerre, Guide 3.0.0 : « Thunderclap »). Refus forçable, en combat ou non.
+  // `automatic`: the engine already plays this activity by itself (a trigger of the same item); also casting it by hand would
+  // play it twice ("Thunder Hammer", Guide 3.0.0: "Thunderclap"). Forceable refusal, in combat or not.
   if ( rule?.automatic ) issues.push("automatic");
   return issues;
 }
 
 /**
- * §16.40 : le plus bas niveau d'emplacement de sort encore disponible, ou null. Pour une activité où le niveau ne change rien
- * (Regain de Forme sauvage : « en dépensant un emplacement de sort ») : dépenser plus haut, c'est gaspiller.
- * @param {Record<number, number>} available  Emplacements restants par niveau (1 à 9).
+ * §16.40: the lowest spell slot level still available, or null. For an activity where the level changes nothing
+ * (Wild Shape regain: "by expending a spell slot"): spending higher is wasteful.
+ * @param {Record<number, number>} available  Slots remaining per level (1 to 9).
  */
 export function lowestSlotLevel(available) {
   for ( let level = 1; level <= 9; level++ ) if ( (Number(available[level]) || 0) > 0 ) return level;
   return null;
 }
 
-/** §486 : `whileEffect` / `unlessEffect` en liste (une chaîne seule = une liste d'un). */
+/** §486: `whileEffect` / `unlessEffect` as a list (a single string = a list of one). */
 export const effectRefs = value => (value == null) ? [] : [value].flat().filter(v => (typeof v === "string") && v);
 
 /**
- * Core#98 : une aptitude dont on ne prend qu'une option par Rage (Rage du prédateur : « quand vous activez votre Rage, choisissez
- * l'une des options suivantes ») — en Rage, une option déjà prise (une copie d'effet de l'item sur le barbare) refuse la suivante.
- * Hors Rage, rien à refuser ici (l'option n'aurait pas d'effet : `duringRage`).
- * @param {{oneOption?: boolean, raging: boolean, taken: number}} state  `taken` : les effets d'option de l'item déjà portés.
+ * Core#98: a feature of which only one option is taken per Rage (Predator's Rage: "when you activate your Rage, choose
+ * one of the following options") — while raging, an option already taken (a copy of the item's effect on the barbarian)
+ * refuses the next.
+ * Outside Rage, nothing to refuse here (the option would have no effect: `duringRage`).
+ * @param {{oneOption?: boolean, raging: boolean, taken: number}} state  `taken`: the item's option effects already carried.
  */
 export const secondRageOption = ({ oneOption=false, raging=false, taken=0 }={}) => (oneOption === true) && !!raging && (Number(taken) > 0);

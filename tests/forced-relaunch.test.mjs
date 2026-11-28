@@ -2,10 +2,10 @@ import { describe, it, expect, vi } from "vitest";
 import { askKey } from "../module/scripts/core/forced.mjs";
 
 /**
- * §448 : un forçage dans un champ antimagie tient jusqu'au bout de l'utilisation. Le moteur suspend souvent la première utilisation
- * (visée des projectiles, fenêtre de légalité, choix d'une forme…) et la relance ensuite : la relance d'une configuration déjà forcée
- * lève encore le champ (`relaunchUse`), un projectile enchaîné ne dépense rien (`chainedConsumption`), et la même question ouverte deux
- * fois sur un poste (double clic) n'en fait qu'une (`askKey`).
+ * §448: a forcing in an antimagic field holds to the end of the use. The engine often suspends the first use
+ * (aiming projectiles, legality window, choice of a form…) and relaunches it afterwards: relaunching an already forced
+ * configuration still lifts the field (`relaunchUse`), a chained projectile spends nothing (`chainedConsumption`), and the same
+ * question opened twice on one station (double click) makes only one (`askKey`).
  */
 vi.mock("../module/scripts/runtime/antimagic.mjs", () => ({
   withAntimagicLifted: vi.fn(async (actor, item, run) => {
@@ -16,7 +16,7 @@ vi.mock("../module/scripts/runtime/antimagic.mjs", () => ({
 const { relaunchUse } = await import("../module/scripts/runtime/relaunch.mjs");
 const { chainedConsumption } = await import("../module/scripts/runtime/projectiles.mjs");
 
-/** Une activité qui note si le champ était levé au moment de `use`. */
+/** An activity that records whether the field was lifted at the time of `use`. */
 function activity() {
   const actor = { name: "Paladin", lifted: false };
   const a = { actor, item: { name: "Baguette de projectiles magiques" }, calls: [] };
@@ -24,8 +24,8 @@ function activity() {
   return a;
 }
 
-describe("§448 : la relance d'une utilisation forcée garde le champ levé", () => {
-  it("forcée (antimagicForced) : le champ est levé pendant l'appel, rétabli après", async () => {
+describe("§448: relaunching a forced use keeps the field lifted", () => {
+  it("forced (antimagicForced): the field is lifted during the call, restored afterwards", async () => {
     const a = activity();
     const usage = { "dnd5e-combat": { antimagicForced: true, picks: ["Scene.s.Token.a", "Scene.s.Token.b", "Scene.s.Token.a"] } };
     const result = await relaunchUse(a, usage, { configure: false }, { data: {} });
@@ -37,7 +37,7 @@ describe("§448 : la relance d'une utilisation forcée garde le champ levé", ()
     expect(a.actor.lifted).toBe(false);
   });
 
-  it("non forcée : `activity.use` tel quel, le champ n'est pas touché", async () => {
+  it("not forced: `activity.use` as is, the field is not touched", async () => {
     const a = activity();
     await relaunchUse(a, { "dnd5e-combat": { picks: ["x"] } }, {}, {});
     await relaunchUse(a, undefined, undefined, undefined);
@@ -45,37 +45,37 @@ describe("§448 : la relance d'une utilisation forcée garde le champ levé", ()
   });
 });
 
-describe("§448 : un projectile enchaîné ne dépense rien", () => {
+describe("§448: a chained projectile spends nothing", () => {
   const flagged = cachedFor => ({ item: { getFlag: (scope, key) => ((scope === "dnd5e") && (key === "cachedFor") ? cachedFor : undefined) } });
 
   it("sort de l'acteur : ni action, ni ressource, ni emplacement ; pas de `cause`", () => {
     expect(chainedConsumption(flagged(undefined))).toEqual({ consume: { action: false, resources: false, spellSlot: false } });
   });
 
-  it("sort lancé par un objet (mis en cache) : la charge de l'objet non plus (`cause.resources`)", () => {
+  it("spell cast by an item (cached): the item's charge neither (`cause.resources`)", () => {
     expect(chainedConsumption(flagged(".Item.wand.Activity.cast"))).toEqual({
       consume: { action: false, resources: false, spellSlot: false }, cause: { resources: false } });
   });
 
-  it("activité sans item : la consommation coupée quand même", () => {
+  it("activity without an item: the consumption cut all the same", () => {
     expect(chainedConsumption(null)).toEqual({ consume: { action: false, resources: false, spellSlot: false } });
   });
 });
 
-describe("§448 : la même question « le faire quand même » deux fois = un double clic", () => {
-  it("même titre, mêmes raisons : même clé", () => {
+describe("§448: the same \"do it anyway\" question twice = a double click", () => {
+  it("same title, same reasons: same key", () => {
     const lines = ["Champ antimagie : aucun sort ne peut être lancé.", "Hors de portée."];
     expect(askKey("Projectile magique — Paladin", lines)).toBe(askKey("Projectile magique — Paladin", [...lines]));
   });
 
-  it("un autre objet, un autre acteur ou une autre raison : une autre question", () => {
+  it("another item, another actor or another reason: another question", () => {
     const key = askKey("Projectile magique — Paladin", ["Champ"]);
     expect(askKey("Potion de soins — Paladin", ["Champ"])).not.toBe(key);
     expect(askKey("Projectile magique — Magicien", ["Champ"])).not.toBe(key);
     expect(askKey("Projectile magique — Paladin", ["Champ", "Pas de cible"])).not.toBe(key);
   });
 
-  it("sans raisons ou titre manquant : une clé quand même", () => {
+  it("without reasons or missing title: a key all the same", () => {
     expect(askKey("A")).toBe("A");
     expect(askKey(null, null)).toBe("");
   });

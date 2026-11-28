@@ -1,16 +1,17 @@
 /**
- * §295, lot C1 de la repasse terme par terme : corrections déclaratives, jouées dans l'Arène des sorts (Lanceur, Allié, Cible, Héros).
- * Chaque partie prête ses items depuis le Manuel des joueurs (avec leur source, comme un item tiré du compendium) et remet tout.
- *  - Moquerie cruelle : la marque tombe à la fin du prochain tour de la CIBLE, pas à celle du lanceur ;
- *  - Bouclier lancé au tour d'un ennemi : l'effet tombe au début du tour du lanceur ;
- *  - Agrandissement/rapetissement sur l'Allié : il consent, rate d'office, un seul des deux effets ;
- *  - Perturbations synaptiques : la Cible qui a raté rejoue sa sauvegarde à la fin de son tour ;
- *  - Présence intimidante : Effrayé pour une minute (la donnée : un round) ;
- *  - Maléfice du protecteur Grand Ancien : reconnu comme Maléfice — un seul effet au choix, 1d6 nécrotique au coup ;
- *  - Forme gazeuse : Vitesse au sol nulle, vol de 3 m ;
- *  - Quête ratée : aucun dégât au lancement ; Contact avec les plans réussi : aucun dégât ;
- *  - Protégé de dame Nature : immunité à Empoisonné ;
- *  - Credo accru : le Déluge de coups ouvre trois frappes.
+ * §295, batch C1 of the term-by-term review: declarative fixes, played in the Spells Arena (Caster, Ally, Target, Hero).
+ * Each part lends its items from the Player's Handbook (with their source, like an item drawn from the compendium) and restores
+ * everything.
+ *  - Vicious Mockery: the mark ends at the end of the TARGET's next turn, not the caster's;
+ *  - Shield cast on an enemy's turn: the effect ends at the start of the caster's turn;
+ *  - Enlarge/Reduce on the Ally: he consents, fails automatically, only one of the two effects;
+ *  - Synaptic Static: the Target who failed replays their save at the end of their turn;
+ *  - Intimidating Presence: Frightened for one minute (the data: one round);
+ *  - Great Old One patron's Hex: recognized as Hex — a single effect of choice, 1d6 necrotic on the hit;
+ *  - Gaseous Form: ground Speed zero, fly speed 3 m;
+ *  - Geas failed: no damage on casting; Contact Other Plane succeeded: no damage;
+ *  - Nature's Ward: Immunity to Poisoned;
+ *  - "Increased Creed": Flurry of Blows opens three strikes.
  */
 import { ARENE_SORTS } from "../lib/stages.mjs";
 
@@ -38,7 +39,7 @@ export default {
     for ( const t of all ) homes.set(t.id, await ctx.position(t));
 
     const lent = [];
-    /** Un item du Manuel prêté avec sa source (`flags.dnd5e.sourceId`) : reconnu comme l'item tiré du compendium. */
+    /** A Handbook item lent with its source (`flags.dnd5e.sourceId`): recognized as the item drawn from the compendium. */
     const lend = async (t, uuid, extra={}) => {
       const { data } = await ctx.call("get-compendium-entry", { uuid });
       const { _id, folder, ownership, _stats, ...itemData } = data;
@@ -58,7 +59,8 @@ export default {
       if ( ctx.ownCombat ) await ctx.call("end-combat", { combatId: ctx.ownCombat }).catch(() => {});
       ctx.ownCombat = null;
       await unlend();
-      // Retirer un sort retire aussi, juste après, l'effet qu'il a posé : attendre, sinon l'effet relu ici n'existe plus quand on le supprime.
+      // Removing a spell also removes, just after, the effect it placed: wait, otherwise the effect re-read here no longer
+      // exists when we delete it.
       await pause(800);
       await clearEffects();
       for ( const t of all ) {
@@ -76,7 +78,7 @@ export default {
     const settled = async used => (used?.usageMessageId ? ctx.settle(used.usageMessageId, { timeoutMs: 40000 }).catch(() => null) : null);
     const failed = r => r?.targets?.[0]?.save?.success === false;
     const succeeded = r => r?.targets?.[0]?.save?.success === true;
-    /** Pendant `action`, répond aux fenêtres du MJ : le premier bouton de la règle qui correspond, sinon le premier bouton. */
+    /** During `action`, answers the GM's windows: the first button of the matching rule, otherwise the first button. */
     const answering = async (rules, action) => {
       const known = new Set(((await ctx.call("list-dialogs", {}).catch(() => null))?.windows ?? []).map(w => w.id));
       const seen = [];
@@ -97,7 +99,7 @@ export default {
       return { result: await result, seen };
     };
     const combatOf = async () => { const s = await ctx.combat(); return s.combat ?? s.combats?.[0] ?? s; };
-    /** Combat dans cet ordre d'initiative, le premier à jouer. */
+    /** Combat in this Initiative order, the first one to play. */
     const startFight = async order => {
       await ctx.startCombat(order);
       const c = await combatOf();
@@ -112,7 +114,7 @@ export default {
     };
     const next = async () => { await ctx.call("next-turn", { combatId: ctx.ownCombat }); await pause(3500); };
     const has = async (t, id) => (await ctx.effectsFrom(t, id)).length > 0;
-    /** Utilise jusqu'à obtenir la sauvegarde voulue (les jets sont aléatoires). */
+    /** Uses until the wanted save is obtained (the rolls are random). */
     const until = async (want, params, tries=15) => {
       for ( let n = 1; n <= tries; n++ ) {
         const used = await ctx.use(params);
@@ -130,7 +132,7 @@ export default {
       ctx.expect(!!got && await has(target, "vicious-mockery"), "Moquerie : la Cible rate et porte la marque");
       await next();   // tour de la Cible
       ctx.expect(await has(target, "vicious-mockery"), "Moquerie : la marque tient pendant le tour de la Cible");
-      await next();   // fin du tour de la Cible
+      await next();   // end of the Target's turn
       ctx.expect(!await has(target, "vicious-mockery"), "Moquerie : la marque tombe à la fin du prochain tour de la Cible");
     });
 
@@ -140,17 +142,18 @@ export default {
       await settled(await ctx.use({ tokenId: caster.id, itemId: spell, targetTokenIds: [caster.id] }));
       await pause(800);
       ctx.expect(await has(caster, "shield"), "Bouclier : effet posé au tour de la Cible");
-      await next();   // début du tour du Lanceur
+      await next();   // start of the Caster's turn
       ctx.expect(!await has(caster, "shield"), "Bouclier : l'effet tombe au début du tour du Lanceur");
     });
 
     await part("Agrandissement sur un allié consentant", async () => {
-      // §435 : les boutons du moteur sont « unwilling » puis « willing » (runtime/engine.mjs, question « consentant ? ») ; l'ancien motif
-      // (« oui / yes / fail… ») n'en reconnaissait aucun : le premier, « pas consentant », était cliqué, et un Allié qui réussissait sa
-      // sauvegarde ne portait rien (une passe sur deux). Le bouton est choisi par son id : `^willing`.
+      // §435: the engine's buttons are "unwilling" then "willing" (runtime/engine.mjs, question "willing?"); the old pattern
+      // ("oui / yes / fail…") recognized neither: the first, "not willing", was clicked, and an Ally who succeeded on his
+      // save carried nothing (one pass in two). The button is chosen by its id: `^willing`.
       const spell = await lend(caster, `${PHB}.spells.Item.phbsplEnlargeRed`, { "system.method": "atwill" });
       // The buttons are `pick0` "Unwilling (saving throw)" then `pick1` "Willing (no roll)" (adapter/choices.mjs): the rule reads
-      // "<action> <label>", so `^willing` never matched and the first button was clicked — the Allié rolled, and held one pass in two.
+      // "<action> <label>", so `^willing` never matched and the first button was clicked — the Ally rolled, and held one
+      // pass in two.
       const { seen } = await answering([[/consent|willing/i, /(^|\s)willing\b/i]],
         async () => settled(await ctx.use({ tokenId: caster.id, itemId: spell, activityType: "save", targetTokenIds: [ally.id] })));
       const effects = await ctx.effectsFrom(ally, "enlarge-reduce");
@@ -160,15 +163,15 @@ export default {
     await part("Perturbations synaptiques", async () => {
       const spell = await lend(caster, `${PHB}.spells.Item.phbsplSynapticSt`, { "system.method": "atwill" });
       const c = await ctx.position(target);
-      // §435 : la zone prend aussi le Lanceur (et la Cible voisine) — la sauvegarde lue est celle de la Cible, pas celle du premier de la
-      // liste (le Lanceur, qui réussit souvent : quinze lancers sans « raté » lu).
+      // §435: the area also takes the Caster (and the neighboring Target) — the save read is the Target's, not that of the first in
+      // the list (the Caster, who often succeeds: fifteen casts without a "failed" read).
       const cibleFailed = r => r?.targets?.find(t => t.name === "Cible")?.save?.success === false;
       const got = await until(cibleFailed, { tokenId: caster.id, itemId: spell, activityType: "save", targetTokenIds: [target.id],
         area: { shape: "circle", x: c.x + ARENE_SORTS.grid / 2, y: c.y + ARENE_SORTS.grid / 2, radius: ARENE_SORTS.grid * 4 } });
       ctx.expect(!!got && await has(target, "synaptic-static"), "Perturbations : la Cible rate et porte l'effet");
       await startFight([target, caster]);
       const since = await ctx.lastMessageId();
-      await next();   // fin du tour de la Cible
+      await next();   // end of the Target's turn
       await pause(3000);
       const resave = (await ctx.messagesSince(since)).some(m => m.flags?.["dnd5e-combat"]?.resave);
       ctx.expect(resave, "Perturbations : sauvegarde rejouée à la fin du tour de la Cible");
@@ -201,7 +204,7 @@ export default {
       const spell = await lend(caster, `${PHB}.spells.Item.phbsplGaseousFor`, { "system.method": "atwill" });
       await settled(await ctx.use({ tokenId: caster.id, itemId: spell, targetTokenIds: [caster.id] }));
       await pause(1000);
-      // Valeurs préparées (effets compris), lues dans le client du MJ.
+      // Prepared values (effects included), read in the GM's client.
       const stats = await ctx.engine("stats", { tokenId: caster.id }).catch(() => null);
       const walk = stats?.speeds?.walk ?? stats?.speed?.walk;
       const fly = stats?.speeds?.fly ?? stats?.speed?.fly;

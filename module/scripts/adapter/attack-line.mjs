@@ -1,7 +1,8 @@
 /**
- * #33 (suite) : ce que la ligne de visée dessine (ui/attack-line.mjs) — les deux extrémités (centres de l'attaquant, à sa case
- * d'arrivée s'il approche, et de la cible), les tronçons colorés (core/attack-line.mjs) et la distance. Lu sur ce client, avec
- * l'abri de l'aperçu (adapter/cover-preview.mjs) : chez un joueur, une créature qu'il ne perçoit pas ne coupe pas la ligne.
+ * #33 (continued): what the line of sight draws (ui/attack-line.mjs) — the two ends (centers of the attacker,
+ * at its arrival cell if it approaches, and of the target), the colored segments (core/attack-line.mjs) and the distance.
+ * Read on this client, with the preview's cover (adapter/cover-preview.mjs): for a player, a creature they do not
+ * perceive does not cut the line.
  */
 
 import { attackLineSegments, segmentEntry } from "../core/attack-line.mjs";
@@ -15,9 +16,9 @@ import { lengthIn, readUnitFactors } from "./units.mjs";
 const centre = r => ({ x: r.x + (r.width / 2), y: r.y + (r.height / 2) });
 
 /**
- * Où, sur la ligne de a à b (0–1), se trouve le premier obstacle de l'une de ces sources. D'abord sur l'axe des centres ; si l'axe
- * ne croise rien (l'abri vient des lignes de coin : un pan de mur à côté de l'axe), le premier obstacle sur les lignes du centre de
- * l'attaquant aux coins de la cible, ramené sur l'axe ; null si rien.
+ * Where, on the line from a to b (0–1), the first obstacle of one of these sources lies. First on the axis of centers;
+ * if the axis crosses nothing (the cover comes from the corner lines: a wall section beside the axis), the first obstacle on the
+ * lines from the attacker's center to the target's corners, projected onto the axis; null if none.
  */
 function firstObstacle(attacker, target, a, b, pa, sources, seenOnly) {
   const length = Math.hypot(b.x - a.x, b.y - a.y);
@@ -25,7 +26,7 @@ function firstObstacle(attacker, target, a, b, pa, sources, seenOnly) {
   const level = attacker.parent.levels?.get?.(pa.level ?? attacker._source.level) ?? undefined;
   const eye = eyeElevation(attacker, pa);
   const bodies = sources.includes("creature") ? coverBodies(attacker, target, seenOnly).map(t => rectOf(t)) : [];
-  // La position d'un point sur l'axe a → b (projection), en fraction.
+  // The position of a point on the axis a → b (projection), as a fraction.
   const along = p => (((p.x - a.x) * (b.x - a.x)) + ((p.y - a.y) * (b.y - a.y))) / (length * length);
   const hitsOn = end => {
     const hits = [];
@@ -52,13 +53,13 @@ function firstObstacle(attacker, target, a, b, pa, sources, seenOnly) {
 }
 
 /**
- * La ligne de visée d'une attaque, pour ce client ; null hors attaque ou quand la scène n'est pas affichée ici.
+ * The line of sight of an attack, for this client; null outside an attack or when the scene is not displayed here.
  * @param {TokenDocument} attacker
  * @param {TokenDocument} target
  * @param {Activity} activity
  * @param {object} [options]
- * @param {object} [options.posA]          Position de l'attaquant au bout de son approche.
- * @param {boolean} [options.unreachable]  L'approche n'arrive pas, ou la cible est hors de portée : toute la ligne en rouge.
+ * @param {object} [options.posA]          Attacker's position at the end of its approach.
+ * @param {boolean} [options.unreachable]  The approach does not arrive, or the target is out of range: the whole line in red.
  * @returns {{from: {x,y}, to: {x,y}, segments: Array, distance: {value: number, units: string}, range: string|null}|null}
  */
 export function attackLineOf(attacker, target, activity, { posA, unreachable=false, attackMode=null }={}) {

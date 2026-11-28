@@ -1,18 +1,18 @@
 /**
- * Modes de déplacement et élévation (SPEC §17.4) : un PJ (Guerrier dans `dnd-6`, Bramo dans `ravenloft`), hors combat.
- *  - sans vitesse de vol, choisir le vol (HUD du token) l'accorde par un effet du moteur et fait décoller à 5 ft ;
- *    revenir à la marche fait atterrir et retire l'effet ;
- *  - avec une vitesse de vol (effet temporaire « fly (scénario) ») : monter par l'élévation en marchant fait voler,
- *    jamais sous 5 ft en vol, redescendre au sol fait marcher ;
- *  - choisir le fouissement l'accorde et enfonce à −5 ft, marcher ramène au sol et retire l'effet.
- * Le vol monte au plus sous le plafond du niveau (tête comprise : le cœur arrête le token à la Surface du dessus). Sur un
- * plancher en Surface (niveau en dessous), le cœur interdit de le traverser : fouir y est refusé, mode et élévation
- * inchangés, vitesse accordée retirée — c'est ce que le scénario vérifie alors.
+ * Movement modes and elevation (SPEC §17.4): a PC (Fighter in `dnd-6`, Bramo in `ravenloft`), out of combat.
+ *  - without a fly speed, choosing flight (token HUD) grants it through an engine effect and takes off to 5 ft;
+ *    going back to walking lands and removes the effect;
+ *  - with a fly speed (temporary effect "fly (scenario)"): going up by elevation while walking makes it fly,
+ *    never below 5 ft in flight, coming back down to the ground makes it walk;
+ *  - choosing burrowing grants it and sinks to −5 ft, walking brings it back to the ground and removes the effect.
+ * Flight goes up at most under the level's ceiling (head included: the core stops the token at the Surface above). On a
+ * Surface floor (level below), the core forbids crossing it: burrowing is refused there, mode and elevation
+ * unchanged, granted speed removed — that is what the scenario then checks.
  */
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export default {
-  scene: "keep",   // §83 : étages et escaliers, dans Restored Keep
+  scene: "keep",   // §83: floors and stairs, in Restored Keep
   name: "modes — vol, marche, fouissement : élévation cohérente",
 
   async run(ctx) {
@@ -58,7 +58,7 @@ export default {
       await ctx.call("move-token", { tokenId: pc.id, elevation: ground }).catch(() => {});
     });
 
-    // 1. Sans vitesse de vol : choisir le vol l'accorde ; revenir à la marche la retire.
+    // 1. Without a fly speed: choosing flight grants it; going back to walking removes it.
     const actor = await ctx.call("get-actor", { actorId: start.data.actorId });
     const movement = (actor.system ?? actor.actor?.system)?.attributes?.movement ?? {};
     let s;
@@ -75,7 +75,7 @@ export default {
       ctx.expect((s.mode === "walk") && (s.elevation === ground) && (left === 0), `retour à la marche : mode ${s.mode}, élévation ${s.elevation}, effets accordés ${left}`);
     }
 
-    // 2. Vol par l'élévation (vitesse de vol prêtée par un effet du scénario).
+    // 2. Flight by elevation (fly speed lent by a scenario effect).
     await ctx.call("upsert-embedded-effect", { ...target, effectData: speed("fly") });
     await pause(300);
     await setMode("fly").catch(() => {});
@@ -91,9 +91,9 @@ export default {
     ctx.expect((s.mode === "fly") && (s.elevation === high), `monte par l'élévation : mode ${s.mode}, élévation ${s.elevation} (attendu ${high})`);
 
     if ( top !== null ) {
-      // Le niveau suit l'élévation (levelAt) : au-dessus du haut du niveau, le token passe dans celui du dessus — sauf
-      // plancher (Surface) au-dessus de lui, qui l'arrête dessous, tête comprise, niveau inchangé (régression du 2026-09-26 :
-      // monté SUR ce plancher, le token ne pouvait plus redescendre).
+      // The level follows the elevation (levelAt): above the top of the level, the token moves into the one above — except
+      // a floor (Surface) above it, which stops it below, head included, level unchanged (regression of 2026-09-26:
+      // climbed ONTO this floor, the token could no longer come back down).
       const above = levels.find(l => l.elevation?.bottom === top);
       await setElevation(top + 1).catch(() => {});
       await pause(1500);
@@ -113,7 +113,7 @@ export default {
     s = await waitFor(s => (s.mode === "walk") && (s.elevation === ground));
     ctx.expect((s.mode === "walk") && (s.elevation === ground), `redescend au sol : mode ${s.mode}, élévation ${s.elevation}`);
 
-    // 2 bis. Changer de niveau par le HUD (niveau seul) : posé au sol du niveau choisi, dans son mode ; retour au sol de départ.
+    // 2 bis. Changing level through the HUD (level alone): placed on the chosen level's floor, in its mode; back to the start.
     const upper = levels.find(l => (top !== null) && (l.elevation?.bottom === top));
     if ( upper ) {
       const setLevel = level => ctx.call("update-scene-object", { type: "Token", objectId: pc.id, data: { level } });
@@ -126,11 +126,11 @@ export default {
       ctx.expect((s.data.level === start.data.level) && (s.elevation === ground) && (s.mode === "walk"), `retour par le HUD : niveau ${s.data.level}, élévation ${s.elevation}, mode ${s.mode}`);
     }
 
-    // 3. Fouissement : la vitesse est accordée par le choix du mode.
+    // 3. Burrowing: the speed is granted by the mode choice.
     await setMode("burrow").catch(() => {});
     s = await waitFor(s => (s.mode === "burrow") && (s.elevation === ground - 5));
     if ( s.mode !== "burrow" ) {
-      // Plancher en Surface : le cœur ne laisse pas le traverser ; le moteur n'a rien changé et retire ce qu'il a accordé.
+      // Surface floor: the core does not let it be crossed; the engine changed nothing and removes what it granted.
       await pause(500);
       const left = await granted();
       ctx.expect((s.mode === "walk") && (s.elevation === ground) && (left === 0), `fouir à travers un plancher : refusé, mode ${s.mode}, élévation ${s.elevation}, effets accordés ${left}`);

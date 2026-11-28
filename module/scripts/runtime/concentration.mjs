@@ -12,9 +12,9 @@ import { log, notice, tokenOfActor, waitForDice } from "./shared.mjs";
 import { queryPlayer, waitLabel } from "../adapter/player-wait.mjs";
 
 /**
- * §494 (brique B14) : la concentration est perdue (jet raté, Neutralisé). dnd5e met fin à toutes (`endConcentration()`) ; une créature
- * qui déclare `concentration.loseAll` n'en garde aucune, même si un module a refusé la fin de l'une d'elles. Quand plusieurs sorts tombent
- * ensemble, toute la table le voit et l'entend (avis au-dessus du token, son « fin de sort »). Rend les effets retirés.
+ * §494 (brick B14): Concentration is lost (failed roll, Incapacitated). dnd5e ends all of them (`endConcentration()`); a creature
+ * that declares `concentration.loseAll` keeps none, even if a module refused the end of one of them. When several spells fall
+ * together, the whole table sees and hears it (notice above the token, "spell end" sound). Returns the removed effects.
  */
 async function loseConcentration(actor, saveMessage=null) {
   const ended = [...await breakConcentration(actor, saveMessage)];
@@ -34,29 +34,29 @@ async function loseConcentration(actor, saveMessage=null) {
 }
 
 /**
- * Le système vient de demander une sauvegarde de concentration, ou de proposer d'y mettre fin.
- * Pour un PJ dont le joueur est connecté : §141, la fenêtre du jet s'ouvre sur son écran (requête), ce sont ses dés ; sans réponse,
- * la carte native reste, à cliquer. Pour tous les autres, le moteur fait ce que ferait le clic du MJ.
+ * The system has just asked for a Concentration saving throw, or offered to end it.
+ * For a PC whose player is connected: §141, the roll window opens on their screen (request), their dice; without a response,
+ * the native card stays, to be clicked. For all the others, the engine does what the GM's click would do.
  */
 async function onPrompt(message) {
   const prompt = readConcentrationPrompt(message);
   if ( !prompt ) return;
   if ( prompt.kind === "end" ) {
-    // Mort ou neutralisé : la règle ne prévoit aucun jet, la concentration tombe.
+    // Dead or Incapacitated: the rule provides no roll, Concentration drops.
     const ended = await loseConcentration(prompt.actor);
     if ( ended.length ) log(`${prompt.actor.name}: Incapacitated, concentration ended`);
     await message.delete();
     return;
   }
-  // §303 : les dégâts qui font tomber à 0 PV demandent aussi une sauvegarde ; la concentration tombe de toute façon (Inconscient, Mort) —
-  // pas de jet, qui la rompait une seconde fois.
+  // §303: damage that drops to 0 HP also asks for a saving throw; Concentration drops anyway (Unconscious, Dead) —
+  // no roll, which would break it a second time.
   const hp = prompt.actor.system?.attributes?.hp?.value;
   if ( (Number.isFinite(hp) && (hp <= 0)) || prompt.actor.statuses?.has("dead") ) {
     log(`${prompt.actor.name}: at 0 HP, no concentration saving throw (it ends anyway)`);
     await message.delete();
     return;
   }
-  // Relevé des trous : « subir des dégâts ne peut pas rompre votre concentration sur la Marque du chasseur » (Chasseur implacable).
+  // Survey of the gaps: "taking damage can't break your Concentration on Hunter's Mark" (Relentless Hunter).
   const kept = concentrationKeptBy(prompt.actor);
   if ( kept ) {
     log(`${prompt.actor.name}: ${kept.name}, concentration kept without a saving throw`);
@@ -78,7 +78,7 @@ async function onPrompt(message) {
   await rollConcentration(prompt, message.id);
 }
 
-/** Une sauvegarde de concentration ratée rompt la concentration, quel que soit celui qui l'a lancée. */
+/** A failed Concentration saving throw breaks Concentration, whoever rolled it. */
 async function onSave(message) {
   const save = readConcentrationSave(message);
   if ( !save ) return;
@@ -87,51 +87,51 @@ async function onSave(message) {
     const ended = await loseConcentration(save.actor, message);
     log(`${save.actor.name}: concentration saving throw failed${ended.length ? `, ${ended.map(e => e.name).join(", ")} ended` : ""}`);
   } else log(`${save.actor.name}: concentration maintained`);
-  // La carte de demande que le moteur a servie lui-même n'a plus d'objet.
+  // The request card that the engine served itself has no further purpose.
   if ( save.prompt ) await game.messages.get(save.prompt)?.delete();
 }
 
 export function registerConcentration() {
-  CONFIG.queries[CONCENTRATION_QUERY] = handleConcentrationQuery;   // sur tous les clients : c'est le joueur qui répond
+  CONFIG.queries[CONCENTRATION_QUERY] = handleConcentrationQuery;   // on all clients: the player answers
   route("createChatMessage", message => {
     if ( message.type === "prompt" ) return onPrompt(message);
     if ( message.type === "save" ) return onSave(message);
   }, { executor: true, label: "concentration: processing interrupted" });
 
-  // Fin de concentration, quelle qu'en soit la cause (bouton du joueur, nouveau sort à concentration,
-  // sauvegarde ratée, mort, effet supprimé à la main) : la suppression de l'effet est vue par tous les
-  // clients, le MJ actif retire les zones. Pas `dnd5e.endConcentration` : hook local au client qui a mis fin.
+  // End of Concentration, whatever the cause (player's button, new Concentration spell,
+  // failed saving throw, death, effect deleted by hand): the effect's deletion is seen by all
+  // clients, the active GM removes the areas. Not `dnd5e.endConcentration`: a hook local to the client that ended it.
   route("deleteActiveEffect", async effect => {
     if ( !isConcentrationEffect(effect) ) return;
     const removed = await removeRegionsOf(effect.uuid);
     if ( removed ) log(`${effect.parent?.name ?? "?"}: ${removed} area(s) removed with concentration`);
-    // §16.13 : les créatures invoquées que la concentration maintenait disparaissent avec elle.
+    // §16.13: the summoned creatures that Concentration was maintaining vanish with it.
     const gone = await removeSummonsOf(effect.uuid);
     if ( gone ) log(`${effect.parent?.name ?? "?"}: ${gone} summoned creature(s) removed with concentration`);
-    // §16.41 : la trace d'un sort à concentration (Lame de feu).
+    // §16.41: the trace of a Concentration spell (Flame Blade).
     const actor = effect.parent;
     // §554: an expired trace out of combat is being deleted by dnd5e at the same moment.
     const traces = (actor?.effects ?? []).filter(e => (e.getFlag("dnd5e-combat", "traceConcentration") === effect.uuid) && !expiresByItself(e)).map(e => e.id);
     if ( traces.length ) {
-      // Déjà retirée ailleurs entre-temps (à la main, par un scénario) : rien à dire.
+      // Already removed elsewhere in the meantime (by hand, by a scenario): nothing to say.
       const still = traces.filter(id => actor.effects.has(id));
       if ( still.length ) await actor.deleteEmbeddedDocuments("ActiveEffect", still).catch(() => {});
       log(`${actor.name}: trace removed with concentration`);
     }
   }, { executor: true, label: "concentration: areas not removed" });
-  // Désactiver la concentration, c'est y mettre fin : l'effet est supprimé, la route ci-dessus fait le reste (et dnd5e
-  // retire les effets dépendants). `endConcentration` ne le trouverait plus : il ne voit que les effets actifs.
+  // Deactivating Concentration means ending it: the effect is deleted, the route above does the rest (and dnd5e
+  // removes the dependent effects). `endConcentration` would no longer find it: it only sees active effects.
   route("updateActiveEffect", async (effect, changes) => {
     if ( !concentrationDisabled(effect, changes) ) return;
     log(`${effect.parent?.name ?? "?"}: concentration disabled (${effect.name}), ending it`);
     await effect.delete();
   }, { executor: true, label: "concentration disabled: not ended" });
-  // §16.13 : une créature invoquée (activité « summon » de dnd5e) est rattachée à la concentration de son invocateur,
-  // et entre au combat selon le contenu de l'item.
+  // §16.13: a summoned creature (dnd5e "summon" activity) is attached to its summoner's Concentration,
+  // and enters combat according to the item's content.
   route("createToken", async tokenDoc => {
     const item = summonItemOf(tokenDoc);
     if ( !item ) return;
-    // O8f (§349) : une invocation hostile (Le Crâne, Parchemin d'invocation de titan).
+    // O8f (§349): a hostile summon ("The Skull", "Titan Summoning Scroll").
     if ( await makeSummonHostile(tokenDoc) ) log(`${tokenDoc.name}: summoned by ${item.name}, hostile to everyone`);
     const effect = await tieSummonToConcentration(tokenDoc);
     if ( effect ) log(`${tokenDoc.name}: sustained by ${item.actor?.name}'s concentration (${item.name})`);

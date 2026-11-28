@@ -1,4 +1,4 @@
-/** §272 : minuteries au-dessus des tokens — ce qui se calcule sans Foundry. */
+/** §272: timers above the tokens — what can be computed without Foundry. */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { TIMER_GRADIENT, timerSecondsText, timerState } from "../module/scripts/core/timers.mjs";
 
@@ -9,16 +9,16 @@ describe("minuteries", () => {
     expect(timerState({ startedAt: 1000, seconds: 5 }, 9000)).toEqual({ pct: 1, left: 0, done: true });
     expect(timerState({ startedAt: 1000, seconds: 0 }, 1000).done).toBe(true);
   });
-  it("les secondes s'écrivent, sauf si la table les masque", () => {
+  it("seconds are written, unless the table hides them", () => {
     expect(timerSecondsText(4)).toBe("4 s");
     expect(timerSecondsText(4, { hideSeconds: true })).toBe("");
   });
-  it("le dégradé du logo DAS", () => {
+  it("the DAS logo gradient", () => {
     expect(TIMER_GRADIENT).toEqual(["#e005f4", "#ee0388", "#fc0016"]);
   });
 });
 
-/** Le strict nécessaire de Foundry et de PIXI pour faire tourner `ui/timers.mjs` : un token, un ticker, des dessins inertes. */
+/** The bare minimum of Foundry and PIXI to run `ui/timers.mjs`: a token, a ticker, inert drawings. */
 function fakeCanvas() {
   const state = { tick: null, present: true };
   const scene = {};
@@ -48,10 +48,10 @@ function fakeCanvas() {
   return { state, uuid: document.uuid };
 }
 
-describe("minuterie dessinée (ui)", () => {
+describe("drawn timer (ui)", () => {
   afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
-  it("se termine à l'heure même si son token n'est plus là", async () => {
+  it("ends on time even if its token is no longer there", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { state, uuid } = fakeCanvas();
     const { startTimer } = await import("../module/scripts/ui/timers.mjs");
@@ -59,11 +59,11 @@ describe("minuterie dessinée (ui)", () => {
     let done = false;
     timer.done.then(() => { done = true; });
     state.tick({ deltaTime: 1 });
-    state.present = false;                 // le token est supprimé (ou ce client change de scène)
+    state.present = false;                 // the token is deleted (or this client changes scene)
     vi.advanceTimersByTime(60_000);
     state.tick?.({ deltaTime: 1 });
     await Promise.resolve();
     expect(done).toBe(true);
-    expect(state.tick).toBe(null);         // plus rien à animer : le ticker est rendu
+    expect(state.tick).toBe(null);         // nothing left to animate: the ticker is released
   });
 });

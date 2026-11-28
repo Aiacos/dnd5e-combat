@@ -1,12 +1,13 @@
 /**
- * Issue #32 : « Succès à un prix », côté écran du MJ (runtime/success-at-cost.mjs décide).
- *  - **pastille** : pendant la pause d'un jet raté de 1 ou 2, une pastille dorée au-dessus du token du lanceur, chez le MJ seul —
- *    « Raté de 1 · Succès à un prix ? », l'anneau de la pause qui se vide. Un clic l'offre ; la croix laisse l'échec tout de suite ;
- *    sans geste, elle part à la fin de la pause. Le token n'est pas sur la scène affichée : en bas à droite de l'écran.
- *  - **menu contextuel** du moteur (MJ) : « Succès à un prix… » sur ce token tant que la pause dure (ui/pointer-menu.mjs).
- *  - **cartes** : sur un jet de dnd5e portant un DD et sur la ligne d'un jet demandé par le MJ (§242), raté de 1 ou 2, un bouton du MJ ;
- *    un jet accepté porte la marque « Réussite (à un prix) », vue de tous.
- * Côté joueur : rien à offrir (c'est le MJ qui offre) ; la question lui arrive en fenêtre (adapter/success-at-cost.mjs).
+ * Issue #32: "Success at a Cost", GM screen side (runtime/success-at-cost.mjs decides).
+ *  - **badge**: during the pause of a roll that missed by 1 or 2, a golden badge above the caster's token, on the GM's side only —
+ *    "Missed by 1 · Success at a cost?", the pause ring emptying. A click offers it; the cross lets the failure stand right away;
+ *    with no gesture, it leaves at the end of the pause. If the token is not on the displayed scene: at the bottom right of the
+ *    screen.
+ *  - engine **context menu** (GM): "Success at a Cost…" on that token while the pause lasts (ui/pointer-menu.mjs).
+ *  - **cards**: on a dnd5e roll carrying a DC and on the row of a GM-requested roll (§242), missed by 1 or 2, a GM button;
+ *    an accepted roll carries the "Success (at a cost)" mark, seen by all.
+ * Player side: nothing to offer (the GM offers); the question reaches them as a window (adapter/success-at-cost.mjs).
  */
 
 import { MODULE_ID } from "../constants.mjs";
@@ -16,7 +17,7 @@ import { saveInResolution } from "../runtime/engine-messages.mjs";
 import { AT_COST_CANDIDATE_HOOK, atCostCandidateOn, atCostEnabled, atCostLabel, dismissAtCost, nativeCandidate, offerAtCost, offerOnMessage,
   offerOnRow, rowCandidate } from "../runtime/success-at-cost.mjs";
 
-/** Les pastilles affichées, par id d'occasion. */
+/** The badges displayed, by occasion id. */
 const pills = new Map();
 let ticking = false;
 
@@ -46,7 +47,7 @@ function build(c) {
   return el;
 }
 
-/** À chaque image : la pastille au-dessus de son token (ou dans le coin), et l'anneau de la pause. */
+/** At each frame: the badge above its token (or in the corner), and the pause ring. */
 function tick() {
   const now = Date.now();
   for ( const pill of pills.values() ) {
@@ -85,7 +86,7 @@ function onCandidate(c) {
   if ( !ticking ) { ticking = true; requestAnimationFrame(tick); }
 }
 
-/** Le menu contextuel du moteur (MJ) : l'entrée tant que la pause dure sur ce token. */
+/** The engine's context menu (GM): the entry while the pause lasts on this token. */
 export function atCostMenuEntry(target) {
   if ( !game.user.isGM ) return null;
   const c = atCostCandidateOn(target?.uuid ?? target?.document?.uuid ?? null);
@@ -118,13 +119,13 @@ function mark(flag) {
   return p;
 }
 
-/** Ce que le jet teste, d'après sa carte (son en-tête), sinon « test ». */
+/** What the roll tests, from its card (its header), otherwise "check". */
 function whatOf(message) {
   const flavor = new DOMParser().parseFromString(String(message.flavor ?? ""), "text/html").body.textContent?.trim();
   return flavor || loc("APrix.Test");
 }
 
-/** Un jet de dnd5e portant un DD : la marque, ou le bouton du MJ. */
+/** A dnd5e roll carrying a DC: the mark, or the GM's button. */
 function onRenderRoll(message, html) {
   const root = (html instanceof HTMLElement) ? html : html?.[0];
   if ( !root ) return;
@@ -132,7 +133,7 @@ function onRenderRoll(message, html) {
   const flag = message.getFlag(MODULE_ID, "atCost");
   const content = root.querySelector(".message-content") ?? root;
   if ( flag ) {
-    // Le jet de dnd5e reste « échec » sous ses dés : la marque le dit réussi, et l'état du total suit.
+    // The dnd5e roll stays a "failure" under its dice: the mark says it succeeded, and the total's state follows.
     root.querySelectorAll(".dice-total.failure").forEach(e => { e.classList.remove("failure"); e.classList.add("success"); });
     content.append(mark(flag));
     return;
@@ -144,8 +145,8 @@ function onRenderRoll(message, html) {
 }
 
 /**
- * La carte d'un jet demandé par le MJ (§242) : le bouton sur chaque ligne ratée de 1 ou 2, la marque sur chaque ligne acceptée. Appelée
- * par ui/group-roll.mjs après son propre dessin, avec le point de la carte.
+ * The card of a GM-requested roll (§242): the button on each row missed by 1 or 2, the mark on each accepted row. Called
+ * by ui/group-roll.mjs after its own drawing, with the card's point.
  */
 export function decorateGroupCard(message, root, view, { what }) {
   for ( const item of root.querySelectorAll(".targets [data-uuid]") ) {
@@ -163,7 +164,7 @@ export function decorateGroupCard(message, root, view, { what }) {
 export function registerSuccessAtCostUI() {
   route(AT_COST_CANDIDATE_HOOK, onCandidate, { label: "success at a cost: GM pill" });
   route("dnd5e.renderChatMessage", onRenderRoll, { label: "success at a cost: card" });
-  // Le jet marqué : sa carte se redessine (et celle de la demande qui le compte, ui/group-roll.mjs).
+  // The marked roll: its card is redrawn (and that of the request that counts it, ui/group-roll.mjs).
   route("updateChatMessage", (message, changes) => {
     if ( foundry.utils.hasProperty(changes, `flags.${MODULE_ID}.atCost`) ) ui.chat?.updateMessage?.(message);
   }, { label: "success at a cost: card refresh" });

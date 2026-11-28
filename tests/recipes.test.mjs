@@ -3,19 +3,19 @@ import { readFileSync } from "node:fs";
 import { RECIPES, FACTS, FIELD_KINDS, PUBLIC_KEYS, ISSUE_CODES, buildEntry, buildCondition } from "../module/scripts/core/recipes.mjs";
 import { validateEntry, ENTRY_KEYS } from "../module/scripts/core/content.mjs";
 
-// Les faits que l'adaptateur fournit : relus dans sa source (il touche à Foundry, on ne l'importe pas ici).
+// The facts the adapter provides: re-read from its source (it touches Foundry, so it is not imported here).
 const factsSource = readFileSync(new URL("../module/scripts/adapter/facts.mjs", import.meta.url), "utf8");
 const ADAPTER_FACTS = Array.from(factsSource.matchAll(/^\s+"([a-z]+\.[A-Za-z]+)":/gm), m => m[1]);
 const facts = Object.fromEntries(ADAPTER_FACTS.map(k => [k, true]));
 const lang = l => JSON.parse(readFileSync(new URL(`../module/lang/${l}.json`, import.meta.url), "utf8"));
 
 describe("recettes : le catalogue", () => {
-  it("chaque fait proposé existe dans l'adaptateur", () => {
+  it("each proposed fact exists in the adapter", () => {
     expect(ADAPTER_FACTS.length).toBeGreaterThan(30);
     expect(Object.keys(FACTS).filter(k => !ADAPTER_FACTS.includes(k))).toEqual([]);
   });
 
-  it("chaque recette ne produit que des clés connues, avec des champs d'un genre connu", () => {
+  it("each recipe produces only known keys, with fields of a known kind", () => {
     for ( const [type, r] of Object.entries(RECIPES) ) {
       expect(r.keys.every(k => ENTRY_KEYS.includes(k)), type).toBe(true);
       for ( const f of r.fields ) expect(FIELD_KINDS, `${type}.${f.key}`).toContain(f.kind);
@@ -23,7 +23,7 @@ describe("recettes : le catalogue", () => {
     expect(PUBLIC_KEYS).toContain("triggers");
   });
 
-  it("l'exemple de chaque recette donne une entrée valide", () => {
+  it("each recipe's example gives a valid entry", () => {
     for ( const [type, r] of Object.entries(RECIPES) ) {
       const { entry, errors } = buildEntry([{ type, values: r.example }], { identifier: "essai" });
       expect(errors, type).toEqual([]);
@@ -52,8 +52,8 @@ describe("recettes : le catalogue", () => {
   }
 });
 
-describe("recettes : problèmes traduisibles", () => {
-  it("chaque code de problème écrit dans recipes.mjs est déclaré dans ISSUE_CODES (donc a son libellé)", () => {
+describe("recipes: translatable issues", () => {
+  it("each issue code written in recipes.mjs is declared in ISSUE_CODES (so has its label)", () => {
     const src = readFileSync(new URL("../module/scripts/core/recipes.mjs", import.meta.url), "utf8");
     const used = Array.from(src.matchAll(/issue\([^,]+,\s*"(\w+)"/g), m => m[1]);
     expect(used.length).toBeGreaterThan(8);
@@ -61,8 +61,8 @@ describe("recettes : problèmes traduisibles", () => {
   });
 });
 
-describe("recettes : construire une entrée", () => {
-  it("Maléfice : dégâts bonus sur la cible marquée", () => {
+describe("recipes: building an entry", () => {
+  it("Hex: bonus damage on the marked target", () => {
     const { entry } = buildEntry([{ type: "bonusDamage", values: RECIPES.bonusDamage.example }]);
     expect(entry).toEqual({ triggers: [{
       on: "preDamageRoll",
@@ -71,7 +71,7 @@ describe("recettes : construire une entrée", () => {
     }] });
   });
 
-  it("« cet objet seulement » s'appuie sur l'identifiant de la création", () => {
+  it("\"this item only\" relies on the creation's identifier", () => {
     const { entry } = buildEntry([{ type: "bonusDamage", values: { formula: "1d4", damageType: "fire" } }], { identifier: "lame-ardente" });
     expect(entry.triggers[0].if).toEqual({ "activity.identifier": "lame-ardente" });
     const sans = buildEntry([{ type: "bonusDamage", values: { formula: "1d4", damageType: "fire" } }]);
@@ -79,7 +79,7 @@ describe("recettes : construire une entrée", () => {
     expect(sans.issues[0]).toMatchObject({ recipe: 0, type: "bonusDamage", at: "scope", code: "needsIdentifier" });
   });
 
-  it("plusieurs recettes s'ajoutent ; une recette unique ne vient qu'une fois", () => {
+  it("several recipes add up; a unique recipe comes only once", () => {
     const { entry, errors } = buildEntry([
       { type: "outcomeStatus", values: { on: "failedSave", status: "prone" } },
       { type: "forcedMove", values: { on: "failedSave", distance: 10 } },
@@ -92,26 +92,26 @@ describe("recettes : construire une entrée", () => {
     expect(validateEntry(entry, { facts })).toEqual([]);
   });
 
-  it("un champ requis manquant est dit, la recette est écartée", () => {
+  it("a missing required field is reported, the recipe is dropped", () => {
     const { entry, errors, issues } = buildEntry([{ type: "outcomeStatus", values: { on: "hit" } }]);
     expect(errors).toEqual(["recipes[0].status: required"]);
     expect(issues).toEqual([{ recipe: 0, type: "outcomeStatus", at: "status", code: "required", data: { field: "status" }, message: "recipes[0].status: required" }]);
     expect(entry).toEqual({});
   });
 
-  it("un champ requis seulement « quand » n'est pas exigé hors de son cas", () => {
+  it("a field required only \"when\" is not demanded outside its case", () => {
     expect(buildEntry([{ type: "attackModifier", values: { mode: "disadvantage", carrier: "effect" } }]).errors).toEqual([]);
   });
 
-  it("une entrée reprise d'un autre objet est gardée, les recettes s'y ajoutent", () => {
+  it("an entry taken from another item is kept, the recipes are added to it", () => {
     const base = { triggers: [{ on: "isHit", do: [{ type: "use" }] }], aura: { radius: 5, units: "ft" } };
     const { entry } = buildEntry([{ type: "reaction", values: { on: "isDamaged" } }], { base });
     expect(entry.triggers).toHaveLength(2);
     expect(entry.aura).toEqual(base.aura);
-    expect(base.triggers).toHaveLength(1);   // la base n'est pas modifiée
+    expect(base.triggers).toHaveLength(1);   // the base is not modified
   });
 
-  it("les limites d'usage se fusionnent par activité", () => {
+  it("usage limits merge per activity", () => {
     const { entry } = buildEntry([
       { type: "usageLimit", values: { activity: "aaaaaaaaaaaaaaaa" } },
       { type: "usageLimit", values: { activity: "bbbbbbbbbbbbbbbb", oncePerTurn: false, cost: "bonus" } }
@@ -119,20 +119,20 @@ describe("recettes : construire une entrée", () => {
     expect(entry.usageLimits).toEqual({ aaaaaaaaaaaaaaaa: { oncePerTurn: true }, bbbbbbbbbbbbbbbb: { cost: "bonus" } });
   });
 
-  it("une recette inconnue est refusée", () => {
+  it("an unknown recipe is refused", () => {
     expect(buildEntry([{ type: "fireball" }]).issues[0]).toMatchObject({ code: "unknownRecipe", data: { type: "fireball" } });
   });
 });
 
 describe("recettes : conditions", () => {
-  it("aucune clause : pas de condition ; une : telle quelle ; plusieurs : toutes", () => {
+  it("no clause: no condition; one: as is; several: all", () => {
     expect(buildCondition([])).toBe(null);
     expect(buildCondition([{ fact: "target.hasStatus", arg: "prone" }])).toEqual({ "target.hasStatus": "prone" });
     expect(buildCondition([{ fact: "activity.isMelee" }, { fact: "target.wounded", not: true }]))
       .toEqual({ all: [{ "activity.isMelee": true }, { not: { "target.wounded": true } }] });
   });
 
-  it("les arguments sont mis en forme et vérifiés", () => {
+  it("the arguments are formatted and checked", () => {
     expect(buildCondition([{ fact: "target.within", arg: { distance: "10", units: "ft" } }])).toEqual({ "target.within": { distance: 10, units: "ft" } });
     expect(buildCondition([{ fact: "damage.hasType", arg: "fire" }])).toEqual({ "damage.hasType": ["fire"] });
     const errors = [];
