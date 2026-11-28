@@ -25,6 +25,7 @@ import { missingModifications, modifyOrigin } from "../../core/modify-item.mjs";
 import { summonGaps } from "../../core/summon-permissions.mjs";
 import { summonFacts } from "../../adapter/summon-permissions.mjs";
 import { brokenSourceLinks } from "../../core/source-links.mjs";
+import { invalidEffectIds, hasInvalidEffects } from "../../core/invalid-effects.mjs";
 
 /**
  * §202 : les effets d'une référence du compendium, prêts à recopier — un effet au nom d'origine (anglais) de l'objet prend le nom
@@ -144,10 +145,33 @@ function midiReplacement(item, doc) {
   return data;
 }
 
-/** Le nettoyage d'une fiche, tel que la macro le fait : `dry` n'écrit rien. Rend les lignes du compte rendu. */
-export async function cleanActor(actor, dry) {
+/**
+ * Issue #112: the effects of this document that failed to initialize are deleted (the task's root is backed up first, and the
+ * backup keeps them: they are still in the source data). One report line per document; `dry` writes nothing.
+ * @param {Actor|Item} doc
+ * @param {boolean} dry
+ * @param {(key: string, data?: object) => string} t  The check's translator.
+ * @returns {Promise<string[]>}
+ */
+async function deleteInvalidEffects(doc, dry, t) {
+  const invalid = invalidEffectIds(doc);
+  if ( !invalid.length ) return [];
+  if ( !dry ) await doc.deleteEmbeddedDocuments("ActiveEffect", invalid);
+  return [`🧹 ${esc(doc.name)} : ${t("AuraEffectsDeleted", { count: invalid.length })}`];
+}
+
+/**
+ * Le nettoyage d'une fiche, tel que la macro le fait : `dry` n'écrit rien. Rend les lignes du compte rendu.
+ * Issue #112: `onlyInvalid` — a sheet Midi never touched, listed only because one of its effects fails to initialize: nothing
+ * but those effects is removed (no item is replaced, no flag stripped).
+ */
+export async function cleanActor(actor, dry, { onlyInvalid=false }={}) {
   const t = tr("CleanMidi");
   const lines = [];
+  if ( onlyInvalid ) {
+    for ( const doc of [actor, ...actor.items] ) lines.push(...await deleteInvalidEffects(doc, dry, t));
+    return lines;
+  }
   const ids = identifier => actor.items.filter(i => i.system.identifier === identifier);
   for ( const item of [...actor.items] ) {
     // Un sort donné par un objet remplacé plus haut dans la boucle : dnd5e l'a retiré avec lui et recréé sous un autre id (#111).
@@ -211,6 +235,8 @@ export async function cleanActor(actor, dry) {
     lines.push(`🧹 ${esc(e.name)}`);
     if ( !dry ) await e.update(deletion(e.flags));
   }
+  // Issue #112: an invalid effect on the actor itself (the loop above already deletes those of its items).
+  lines.push(...await deleteInvalidEffects(actor, dry, t));
   return lines;
 }
 
@@ -218,11 +244,14 @@ const cleanMidi = {
   id: "clean-midi", icon: "fa-solid fa-flask",
   async scan() {
     const tasks = [];
-    for ( const actor of game.actors.filter(touchedByMidi) ) {
-      const lines = await cleanActor(actor, true);
+    // Issue #112: a sheet is also listed when one of its effects fails to initialize, Midi traces or not — the core logs an
+    // error for it at every preparation. Without Midi traces the repair is limited to those effects (`onlyInvalid`).
+    for ( const actor of game.actors.filter(a => touchedByMidi(a) || hasInvalidEffects(a)) ) {
+      const options = { onlyInvalid: !touchedByMidi(actor) };
+      const lines = await cleanActor(actor, true, options);
       if ( !lines.length ) continue;
       tasks.push({ root: rootOf(actor), where: `<b>${esc(actor.name)}</b>`, text: lines.join("<br>"), preselect: actor.hasPlayerOwner,
-        apply: async () => (await cleanActor(fresh(actor), false)).join("<br>") });
+        apply: async () => (await cleanActor(fresh(actor), false, options)).join("<br>") });
     }
     return tasks;
   }
@@ -467,6 +496,8 @@ async function importedItemsAtRisk(importer) {
     if ( !relevant.some(id => !own.has(id)) ) continue;
     // La vérification « Midi-QOL » remplace déjà cet objet par l'officiel (fiche touchée par Midi, objet à reprendre).
     const actor = item.parent?.documentName === "Actor" ? item.parent : null;
+    // Issue #112: `touchedByMidi` on purpose, not "listed by clean-midi" — a sheet listed only for an invalid effect has
+    // nothing replaced by that check, so its items stay with this one.
     const viaMidi = !!official && !!actor && touchedByMidi(actor) && needsWork(item);
     out.push({ item, official, viaMidi });
   }
