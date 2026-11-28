@@ -7,9 +7,9 @@ const ATTACK_AND_CHECK_DISADVANTAGE = Object.freeze(["str", "dex", "con", "int",
   .map(roll => ({ key: `system.abilities.${a}.${roll}.roll.mode`, value: -1, priority: null, type: "add" }))));
 
 /**
- * La malédiction d'un lycanthrope (SRD 5.2) : « If the target is a Humanoid, it is subjected to the following effect », et
- * « Success: The target is immune to this werewolf's curse for 24 hours ». La marque est tenue dans la porte des effets : une
- * porte des cibles écarterait aussi les dégâts du coup (core/monster-text.mjs, `monsterImmunity`). Une marque par espèce.
+ * A lycanthrope's curse (SRD 5.2): "If the target is a Humanoid, it is subjected to the following effect", and "Success: The
+ * target is immune to this werewolf's curse for 24 hours". The mark is held in the effects gate: a targets gate would also
+ * drop the hit's damage (core/monster-text.mjs, `monsterImmunity`). One mark per kind.
  */
 const lycanthropeCurse = kind => ({
   effectsIf: { "target.creatureType": "humanoid", not: { "target.hasMark": `immune:${kind}-curse` } },
@@ -77,8 +77,8 @@ export const MONSTERS = Object.freeze({
   "aversion-to-fire": { onDamageTaken: { types: ["fire"], effect: "kJYNjmfI0RpvF7CQ" },
     effectEnds: { kJYNjmfI0RpvF7CQ: "bearerTurnEnd" },
     dataFixes: [{ effect: "kJYNjmfI0RpvF7CQ", path: "system.changes", from: [], value: ATTACK_AND_CHECK_DISADVANTAGE }] },
-  // Défense (Sanglier-garou), Morsure (Ours-garou, Rat-garou, Tigre-garou, Loup-garou) : la malédiction ne vise qu'un Humanoïde
-  // (une Bête mordue la recevait), et une sauvegarde réussie en immunise pour 24 heures.
+  // Gore (Wereboar), Bite (Werebear, Wererat, Weretiger, Werewolf): the curse only targets a Humanoid (a bitten Beast used to
+  // receive it), and a successful save makes the target immune for 24 hours.
   "mm-wereboar-gore": lycanthropeCurse("wereboar"),
   "mm-werebear-bite": lycanthropeCurse("werebear"),
   "mm-wererat-bite": lycanthropeCurse("wererat"),

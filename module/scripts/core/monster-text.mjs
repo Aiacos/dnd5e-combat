@@ -624,12 +624,12 @@ export function monsterReactionWindow(html, conditions=[], outward=false, activi
 }
 
 /**
- * §334 : l'Avantage que la condition d'activation d'une attaque donne (« with Advantage if the target doesn't have all its Hit Points »,
- * « … if the target is Grappled by the bugbear », « with Advantage during the first round of each combat ») — le texte du bloc
- * ne le dit que par `[[lookup @activation.condition]]`. Pour les attaques de l'item seulement.
- * @param {string[]} conditions   conditions d'activation des activités d'attaque
+ * §334: the Advantage an attack's activation condition gives ("with Advantage if the target doesn't have all its Hit Points",
+ * "… if the target is Grappled by the bugbear", "with Advantage during the first round of each combat") — the stat block's
+ * text only says it through `[[lookup @activation.condition]]`. For the item's own attacks only.
+ * @param {string[]} conditions   activation conditions of the attack activities
  * @param {string|null} identifier
- * @returns {object[]} déclarations `triggers`
+ * @returns {object[]} `triggers` declarations
  */
 export function monsterActivationAdvantage(conditions=[], identifier=null) {
   if ( !identifier ) return [];
@@ -708,9 +708,9 @@ export function monsterLightChecks(html) {
 }
 
 /**
- * L'autre moitié de « While Bloodied, the X has Advantage on attack rolls and saving throws » (Fureur du péril du Berserker,
- * SRD 5.2) : l'Avantage aux sauvegardes de la créature tant qu'elle est En sang (`rollAdvantage`, « save »). Les jets
- * d'attaque : `monsterAdvantage`.
+ * The other half of "While Bloodied, the X has Advantage on attack rolls and saving throws" (the Berserker's Bloodied Frenzy,
+ * SRD 5.2): Advantage on the creature's saving throws while it is Bloodied (`rollAdvantage`, "save"). The attack rolls:
+ * `monsterAdvantage`.
  * @param {string} html
  * @returns {{on: string[], if: object}|null}
  */

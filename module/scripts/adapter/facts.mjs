@@ -38,7 +38,7 @@ import { attackedDuring } from "./attacked-this-turn.mjs";
 
 /** §484 : ce token se tient-il en lumière vive (torche, sort, jour) ? Sans token : non. */
 const isBright = doc => !!doc && (lightOnToken(doc)?.level === LIGHT.BRIGHT);
-/** Issue #69, bloc 6 : la lumière là où se tient le token vaut ce niveau (faible, ténèbres). Sans token ni scène prête : faux. */
+/** Issue #69, block 6: the light where the token stands is this level (dim, darkness). No token or no ready scene: false. */
 const isLit = (doc, level) => !!doc && (lightOnToken(doc)?.level === level);
 
 /**
@@ -585,9 +585,9 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "target.inSunlight": want => ((!!tokenOf(target, targetToken) && inSunlight(tokenOf(target, targetToken))) === want),
     "target.inBrightLight": want => (isBright(tokenOf(target, targetToken)) === want),
     "target.inRunningWater": want => (inRunningWater(tokenOf(target, targetToken)) === want),
-    // Issue #69, bloc 6 : la lumière là où se tient l'attaquant, la créature elle-même ou la cible — faible, ou ténèbres (des
-    // Ténèbres magiques comprises). La lumière du lieu, pas ce que quiconque en perçoit : « l'Avantage contre une cible en
-    // lumière faible ou dans les ténèbres » s'écrit `any: [{ "target.inDimLight": true }, { "target.inDarkness": true }]`.
+    // Issue #69, block 6: the light where the attacker, the creature itself or the target stands — dim, or darkness (magical
+    // Darkness included). The light of the place, not what anyone perceives of it: "Advantage against a target in dim light
+    // or darkness" is written `any: [{ "target.inDimLight": true }, { "target.inDarkness": true }]`.
     "source.inDimLight": want => (isLit(tokenOf(source, sourceToken), LIGHT.DIM) === want),
     "source.inDarkness": want => (isLit(tokenOf(source, sourceToken), LIGHT.DARK) === want),
     "self.inDimLight": want => (isLit(tokenOf(self, selfToken), LIGHT.DIM) === want),
@@ -627,8 +627,8 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "target.hasTempHp": want => (((target?.system?.attributes?.hp?.temp ?? 0) > 0) === want),
     // Cape de déplacement : « tant que votre Vitesse est de 0 ». { "target.speedZero": true | false }.
     "target.speedZero": want => (speedIsZero(movementSpeedsOf(target)) === want),
-    // Trident de domination aquatique : « une Bête qui a une Vitesse de nage ». { "target.hasSpeed": "swim" } — ce mode, ou
-    // l'un d'une liste, avec une vitesse au-dessus de 0.
+    // Trident of Fish Command: "a Beast that has a Swim Speed". { "target.hasSpeed": "swim" } — this mode, or one of a list,
+    // with a speed above 0.
     "target.hasSpeed": mode => [mode].flat().some(m => Number(movementSpeedsOf(target)?.[m]) > 0),
     // §16.47 : Stabilisation — « à 0 point de vie et qui n'est pas morte ».
     "target.atZero": want => ((((target?.system?.attributes?.hp?.value ?? 1) <= 0)) === want),
@@ -640,8 +640,8 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "target.wounded": want => (isWounded(target) === want),
     // §22 : « à chacun de vos tours » (Fureur divine, Frénésie) — c'est le tour de la source dans le combat en cours.
     "source.onOwnTurn": want => (ownTurn(source) === want),
-    // Le combat en cours en est à son premier round (Coup du Doppelgänger : « with Advantage during the first round of each
-    // combat »).
+    // The current combat is in its first round (Doppelganger's Slam: "with Advantage during the first round of each
+    // combat").
     "combat.firstRound": want => ((!!game.combat?.started && (game.combat.round === 1)) === want),
     // Assassinat (§20) : une créature qui n'a pas encore agi, au premier round du combat.
     "target.hasNotActed": want => (notActedYet(tokenOf(target, targetToken)) === want),
@@ -680,7 +680,7 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "self.seesSource": want => ((seesBetween(self, source) ?? true) === want),
     // §447 : le réacteur porte un effet de l'item (Représailles rôdeuses : seulement transformé par le Courroux sauvage).
     "self.hasEffect": id => hasEffectFrom(self, id),
-    // Le porteur a cet état, ou l'un d'une liste (`rollAdvantage` : « tant qu'il est En sang »).
+    // The bearer has this status, or one of a list (`rollAdvantage`: "while Bloodied").
     "self.hasStatus": id => [id].flat().some(s => self?.statuses?.has(s) === true),
     // §485 : le réacteur porte un effet dont il peut rejouer la sauvegarde (Indomptable) — `savableEffectsOf`.
     "self.hasSavableEffect": want => ((savableEffectsOf(self).length > 0) === want),

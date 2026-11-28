@@ -517,7 +517,7 @@ const onPreRollDisadvantage = kind => config => {
   const roll = config?.rolls?.[0];
   if ( (actor?.documentName !== "Actor") || !roll ) return true;
   const names = declaredRollDisadvantage(actor, kind);
-  // Le pendant (`rollAdvantage`) : dnd5e combine lui-même les deux quand le jet a l'un et l'autre.
+  // The counterpart (`rollAdvantage`): dnd5e itself combines both when the roll has one and the other.
   const favoured = declaredRollAdvantage(actor, kind);
   if ( !names.length && !favoured.length ) return true;
   roll.options ??= {};

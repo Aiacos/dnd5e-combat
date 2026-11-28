@@ -29,9 +29,9 @@ describe("spellTargets : ce que l'item qui lance un sort dit de ses cibles (Anne
   });
 });
 
-describe("spellTargets : le Trident de domination aquatique, une Bête qui a une Vitesse de nage", () => {
+describe("spellTargets: the Trident of Fish Command, a Beast that has a Swim Speed", () => {
   const trident = ITEM_FIXES["trident-of-fish-command"].spellTargets;
-  it("la règle s'ajoute à celle du sort : hors d'atteinte sans Vitesse de nage", () => {
+  it("the rule adds to the spell's: unaffected without a Swim Speed", () => {
     const rule = castTargetRule({ types: ["beast"] }, trident, "ANM9wvqTFJSH2o11");
     expect(rule).toEqual({ types: ["beast"], unaffectedIf: { not: { "target.hasSpeed": "swim" } } });
     const swims = { "target.hasSpeed": mode => mode === "swim" };
@@ -39,7 +39,7 @@ describe("spellTargets : le Trident de domination aquatique, une Bête qui a une
     expect(holds(rule.unaffectedIf, swims)).toBe(false);
     expect(holds(rule.unaffectedIf, walks)).toBe(true);
   });
-  it("l'entrée est valide, le fait connu du moteur", () => {
+  it("the entry is valid, the fact known to the engine", () => {
     expect(validateEntry({ spellTargets: trident }, { facts: { "target.hasSpeed": () => true } })).toEqual([]);
   });
 });

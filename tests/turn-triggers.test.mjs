@@ -164,12 +164,12 @@ describe("§484 : Désavantage déclaré aux tests et aux sauvegardes", () => {
     expect(rollOf("dnd5e.preRollAbilityCheckV2", {}).disadvantage).toBeUndefined();
     expect(rollOf("dnd5e.preRollSavingThrowV2", { disadvantaged: ["Brûle au soleil"] }).disadvantage).toBe(true);
   });
-  it("un trait qui déclare l'Avantage (rollAdvantage) : Avantage ; les deux ensemble : les deux, dnd5e les combine", () => {
-    const save = rollOf("dnd5e.preRollSavingThrowV2", { favoured: ["Fureur"] });
+  it("a trait declaring Advantage (rollAdvantage): Advantage; both together: both, dnd5e combines them", () => {
+    const save = rollOf("dnd5e.preRollSavingThrowV2", { favoured: ["Frenzy"] });
     expect(save.advantage).toBe(true);
     expect(save.disadvantage).toBeUndefined();
-    expect(rollOf("dnd5e.preRollAbilityCheckV2", { favoured: ["Fureur"] }).advantage).toBe(true);
-    const both = rollOf("dnd5e.preRollSavingThrowV2", { favoured: ["Fureur"], disadvantaged: ["Brûle au soleil"] });
+    expect(rollOf("dnd5e.preRollAbilityCheckV2", { favoured: ["Frenzy"] }).advantage).toBe(true);
+    const both = rollOf("dnd5e.preRollSavingThrowV2", { favoured: ["Frenzy"], disadvantaged: ["Sunlight Sensitivity"] });
     expect(both).toMatchObject({ advantage: true, disadvantage: true });
     expect(rollOf("dnd5e.preRollSavingThrowV2", {}).advantage).toBeUndefined();
   });

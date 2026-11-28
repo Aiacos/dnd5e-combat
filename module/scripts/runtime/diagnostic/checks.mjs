@@ -161,7 +161,7 @@ async function deleteInvalidEffects(doc, dry, t) {
 }
 
 /**
- * Le nettoyage d'une fiche, tel que la macro le fait : `dry` n'écrit rien. Rend les lignes du compte rendu.
+ * Cleans one sheet, as the macro does: `dry` writes nothing. Returns the report lines.
  * Issue #112: `onlyInvalid` — a sheet Midi never touched, listed only because one of its effects fails to initialize: nothing
  * but those effects is removed (no item is replaced, no flag stripped).
  */

@@ -56,7 +56,7 @@ export function declaredRollDisadvantage(actor, kind, token=null) {
   return declaredRollMode(actor, kind, token, "rollDisadvantage");
 }
 
-/** Le pendant, pour l'Avantage (`rollAdvantage` : Fureur du péril, « tant qu'il est En sang, Avantage aux sauvegardes »). */
+/** The counterpart, for Advantage (`rollAdvantage`: Bloodied Frenzy, "while Bloodied, Advantage on saving throws"). */
 export function declaredRollAdvantage(actor, kind, token=null) {
   return declaredRollMode(actor, kind, token, "rollAdvantage");
 }

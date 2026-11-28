@@ -84,8 +84,8 @@ export const ITEM_FIXES = Object.freeze({
   "natures-sanctuary": { dataFixes: SANCTUARY_FIXES },
   // Anneau d'influence animale (SRD 5.2) : « Terreur (n'affecte que les Bêtes) » — l'activité de la donnée lance le sort tel quel.
   "ring-of-animal-influence": { spellTargets: { kn4eCuLZrcps7ujc: { types: ["beast"] } } },
-  // Trident de domination aquatique (SRD 5.2) : Domination de bête « sur une Bête qui a une Vitesse de nage ». Le sort dit déjà
-  // « une Bête » ; l'objet y ajoute la nage.
+  // Trident of Fish Command (SRD 5.2): Dominate Beast "on a Beast that has a Swim Speed". The spell already says "a Beast";
+  // the item adds the swimming.
   "trident-of-fish-command": { spellTargets: { ANM9wvqTFJSH2o11: { unaffectedIf: { not: { "target.hasSpeed": "swim" } } } } },
   // Anneaux de maîtrise élémentaire (un identifiant pour les quatre : content/sources.mjs les sépare). Air : « une Vitesse de vol égale à
   // votre Vitesse » — l'effet ne donne que le vol stationnaire. Terre : Mur de pierre au DD 18 de l'anneau, pas à celui du porteur.

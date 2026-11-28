@@ -117,11 +117,11 @@ export const TRIGGERS = Object.freeze({
   // « Sauvegarde de début de tour » agit sur qui commence son tour dedans. Deux identifiants pour la même sœur : `dnd5eactivity000`
   // (Manuel des joueurs, SRD jusqu'à dnd5e 6.0) et `pyaS54TcG7kx15V2` (SRD de dnd5e 6.1) — seule celle que l'item porte est retenue.
   "stinking-cloud": [{ on: "turnStart", do: [{ type: "replay", activity: "dnd5eactivity000" }, { type: "replay", activity: "pyaS54TcG7kx15V2" }] }],
-  // Zone de vérité (SRD 5.2) : « une créature qui entre dans la zone du sort pour la première fois d'un tour ou y commence son tour
-  // effectue un jet de sauvegarde de Charisme » — la donnée ne la fait tirer qu'au lancement.
+  // Zone of Truth (SRD 5.2): "a creature that enters the spell's area for the first time on a turn or starts its turn there makes
+  // a Charisma saving throw" — the item data only rolls it at the cast.
   "zone-of-truth": [{ on: ["enter", "turnStart"], do: [{ type: "replay" }] }],
-  // Contrôle de l'eau, tourbillon (SRD 5.2) : « quand une créature entre dans le tourbillon pour la première fois d'un tour ou y
-  // termine son tour, elle effectue un jet de sauvegarde de Force » (2d8 contondants, moitié sur une réussite).
+  // Control Water, whirlpool (SRD 5.2): "when a creature enters the vortex for the first time on a turn or ends its turn there,
+  // it makes a Strength saving throw" (2d8 Bludgeoning, half on a success).
   "control-water": [{ on: ["enter", "turnEnd"], do: [{ type: "replay", activity: "dnd5eactivity000" }] }],
   // Tempête de neige : « pénètre dans le Cylindre pour la première fois d'un tour ou y commence son tour » :
   // sauvegarde de Dextérité, À terre sur un échec (l'item n'a pas d'effet : l'état est posé par le moteur).

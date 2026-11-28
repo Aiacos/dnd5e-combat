@@ -65,20 +65,20 @@ describe("§484 : sensibilité à la lumière — les tests de caractéristique 
   });
 });
 
-describe("Fureur du péril : En sang, l'Avantage aux sauvegardes aussi", () => {
+describe("Bloodied Frenzy: while Bloodied, Advantage on saving throws too", () => {
   const FRENZY = "<p>While Bloodied, the berserker has Advantage on attack rolls and saving throws.</p>";
-  it("jets d'attaque (déclencheur) et sauvegardes (rollAdvantage)", () => {
+  it("attack rolls (trigger) and saving throws (rollAdvantage)", () => {
     expect(monsterTextLayer({ html: FRENZY })).toEqual({
       triggers: [{ on: "preAttackRoll", if: { "source.hasStatus": "bloodied" }, do: [{ type: "advantage" }] }],
       rollAdvantage: { on: ["save"], if: { "self.hasStatus": "bloodied" } }
     });
   });
-  it("une phrase qui ne nomme que les jets d'attaque : pas d'Avantage aux sauvegardes", () => {
+  it("a sentence naming only attack rolls: no Advantage on saving throws", () => {
     const layer = monsterTextLayer({ html: "<p>While Bloodied, the brute has Advantage on attack rolls.</p>" });
     expect(layer.triggers).toHaveLength(1);
     expect(layer.rollAdvantage).toBeUndefined();
   });
-  it("l'entrée lue passe le validateur ; une forme fausse est refusée", () => {
+  it("the read entry passes the validator; a wrong shape is refused", () => {
     const facts = { "source.hasStatus": () => true, "self.hasStatus": () => true };
     expect(validateEntry(monsterTextLayer({ html: FRENZY }), { facts })).toEqual([]);
     expect(validateEntry({ rollAdvantage: { on: ["attack"] } }, { facts })).toHaveLength(1);

@@ -914,7 +914,7 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     else if ( r.if ) for ( const key of unknownFacts(r.if, facts) ) errors.push(`${at}rollDisadvantage.if: unknown fact "${key}"`);
   }
   if ( "rollAdvantage" in entry ) {
-    // Le pendant : le porteur fait ces jets avec l'Avantage, quand la condition tient sur lui (Fureur du péril : En sang).
+    // The counterpart: the bearer makes these rolls with Advantage when the condition holds on it (Bloodied Frenzy: Bloodied).
     const r = entry.rollAdvantage;
     if ( !(isObject(r) && Array.isArray(r.on) && r.on.length && r.on.every(o => ROLL_DISADVANTAGE_ON.includes(o))
       && (!("if" in r) || isObject(r.if)) && Object.keys(r).every(k => ["on", "if"].includes(k))) ) {
