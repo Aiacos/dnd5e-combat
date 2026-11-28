@@ -9,7 +9,7 @@
  * tient la liste, il ne les remplace pas.
  */
 
-import { GM_QUEUE_HOOK, queue, forceLine, rollBlocked, answerLine } from "../runtime/gm-queue.mjs";
+import { GM_QUEUE_HOOK, queue, refreshQueue, forceLine, rollBlocked, answerLine } from "../runtime/gm-queue.mjs";
 import { combatWindowSeconds, windowsUnlimited } from "../adapter/dialogs.mjs";
 import { openTracker } from "./group-roll-tracker.mjs";
 import { route } from "../runtime/router.mjs";
@@ -115,6 +115,8 @@ const WaitsApp = () => WaitsClass ??= class PlayerWaits extends foundry.applicat
   }
 
   _onRender() {
+    // The toolbar badge always says what the panel lists.
+    showCount(queue());
     // Le temps d'attente avance chaque seconde, sans tout redessiner.
     clearInterval(tick);
     tick = setInterval(() => {
@@ -199,18 +201,19 @@ const TOOL = "das-gm-queue";
  * §427 : la pastille du bouton « File du MJ » (barre d'outils des tokens) — combien de lignes attendent. Posée sur le bouton lui-même :
  * rien n'est redessiné.
  */
-function showCount() {
+function showCount(q=null) {
   if ( !game.user?.isGM ) return;
   const button = document.querySelector(`#scene-controls [data-tool="${TOOL}"]`);
   if ( !button ) return;
-  const count = queue().count;
+  // Never a count of its own: the queue announced (or refreshed now, which announces it if it changed).
+  const count = (q ?? refreshQueue()).count;
   button.classList.toggle("das-queue-waiting", count > 0);
   if ( count > 0 ) button.dataset.count = String(count);
   else delete button.dataset.count;
 }
 
 export function registerPlayerWaitsUI() {
-  route(GM_QUEUE_HOOK, q => { onQueueChanged(q); showCount(); }, { always: true, label: "GM queue: panel not refreshed" });
+  route(GM_QUEUE_HOOK, q => { onQueueChanged(q); showCount(q); }, { always: true, label: "GM queue: panel not refreshed" });
   // §427 : un bouton pour ouvrir la File à la main (elle ne s'ouvre seule que quand la partie est retenue), à côté de « Lancer un combat ».
   route("getSceneControlButtons", controls => {
     const tokens = controls.tokens;

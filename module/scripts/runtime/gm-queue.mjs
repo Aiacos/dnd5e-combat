@@ -56,14 +56,35 @@ function pendingGroupRolls() {
 const GROUP_LOOKBACK = 50;
 
 let last = "";
-function changed() {
-  if ( !game.user?.isGM ) return;
+/**
+ * Recomputes the queue; when it differs from the last one announced, `GM_QUEUE_HOOK` fires. Returns the queue (empty at a player).
+ * 2026-11-28 (badge left at « 1 » on an empty queue): every reader that shows the queue goes through here, so what it shows and what
+ * the next change is compared with are the same snapshot — the toolbar badge used to recompute on its own at each toolbar render
+ * without moving `last`, and a line that came and went between two announcements left it lit for good.
+ */
+export function refreshQueue() {
+  if ( !game.user?.isGM ) return gmQueue();
   const now = queue();
   const signature = queueSignature(now);
-  if ( signature === last ) return;
-  last = signature;
-  Hooks.callAll(GM_QUEUE_HOOK, now);
+  if ( signature !== last ) {
+    last = signature;
+    Hooks.callAll(GM_QUEUE_HOOK, now);
+  }
+  return now;
 }
+const changed = () => { refreshQueue(); };
+
+/**
+ * Chat messages carry two parts of the queue (the requested rolls, §423, and the rolls due by an absent author, §421): a message created,
+ * changed or deleted may add or remove a line. Grouped: one refresh after a burst of messages.
+ */
+let chatTimer = null;
+function chatChanged() {
+  if ( !game.user?.isGM ) return;
+  clearTimeout(chatTimer);
+  chatTimer = setTimeout(() => { chatTimer = null; refreshQueue(); }, CHAT_REFRESH_MS);
+}
+const CHAT_REFRESH_MS = 100;
 
 /**
  * Le MJ force la ligne `id` de « J'attends un joueur » : sa fenêtre se ferme chez lui avec la réponse que le délai aurait donnée. La table
@@ -127,8 +148,10 @@ export function registerGmQueue() {
   route(PLAYER_WAITS_HOOK, changed, { ...always, label: "GM queue: not refreshed (waits)" });
   route(PROMPTS_HOOK, changed, { ...always, label: "GM queue: not refreshed (windows of this client)" });
   // Une résolution qui avance peut lever un blocage (le jet est arrivé).
-  route("updateChatMessage", (message, changes) => { if ( changes.flags?.[MODULE_ID]?.resolution ) changed(); },
-    { ...always, label: "GM queue: not refreshed (resolution)" });
+  // A resolution that moves on may lift a block; a requested roll's card gets its results; a message deleted takes its lines away.
+  route("createChatMessage", chatChanged, { ...always, label: "GM queue: not refreshed (new message)" });
+  route("updateChatMessage", chatChanged, { ...always, label: "GM queue: not refreshed (message changed)" });
+  route("deleteChatMessage", chatChanged, { ...always, label: "GM queue: not refreshed (message deleted)" });
   route("userConnected", (user, connected) => {
     changed();
     if ( connected || !isExecutor() ) return;
