@@ -258,6 +258,8 @@
  *                                               (Toucher de la mort) ; `if` : une condition sur l'auteur (`source`) et l'activité
  *     rollDisadvantage?: { on, if? }            §484 : le porteur fait ces jets (`on` : "check" — tests, compétences et initiative
  *                                               comprises —, "save") avec le Désavantage quand `if` tient sur lui (`self.inSunlight`)
+ *     rollAdvantage?: { on, if? }               le même, avec l'Avantage (Fureur du péril : « tant qu'il est En sang, Avantage aux
+ *                                               sauvegardes », `self.hasStatus: "bloodied"`)
  *     fleeOnFailedSave?: true                   §147 : sauvegarde ratée → la cible fuit le lanceur par sa Réaction (Murmures dissonants)
  *     ritualAdept?: {class: string}           §139 : Savoir rituel — les sorts rituels de ce grimoire, non préparés, en rituel hors combat
  *     slotRecovery?: {class: string, maxLevel?: number, activity?: id}

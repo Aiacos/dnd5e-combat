@@ -913,6 +913,15 @@ export function validateEntry(entry, { facts={}, at="" }={}) {
     }
     else if ( r.if ) for ( const key of unknownFacts(r.if, facts) ) errors.push(`${at}rollDisadvantage.if: unknown fact "${key}"`);
   }
+  if ( "rollAdvantage" in entry ) {
+    // Le pendant : le porteur fait ces jets avec l'Avantage, quand la condition tient sur lui (Fureur du péril : En sang).
+    const r = entry.rollAdvantage;
+    if ( !(isObject(r) && Array.isArray(r.on) && r.on.length && r.on.every(o => ROLL_DISADVANTAGE_ON.includes(o))
+      && (!("if" in r) || isObject(r.if)) && Object.keys(r).every(k => ["on", "if"].includes(k))) ) {
+      errors.push(`${at}rollAdvantage: { on: [${ROLL_DISADVANTAGE_ON.join(", ")}], if?: condition }`);
+    }
+    else if ( r.if ) for ( const key of unknownFacts(r.if, facts) ) errors.push(`${at}rollAdvantage.if: unknown fact "${key}"`);
+  }
   if ( ("quickStand" in entry) && !(isObject(entry.quickStand) && Number.isFinite(entry.quickStand.value) && (entry.quickStand.value > 0)
     && (typeof entry.quickStand.units === "string") && entry.quickStand.units && Object.keys(entry.quickStand).every(k => ["value", "units"].includes(k))) ) {
     errors.push(`${at}quickStand: { value, units }`);

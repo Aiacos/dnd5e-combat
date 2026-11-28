@@ -9,7 +9,7 @@
 import { monsterChoice, monsterDeaths, monsterEndings, monsterPushes, monsterReactions, monsterRecurring, monsterTypeGate, monsterAdvantage,
   monsterSaveDamage, monsterMissingStatus, monsterNoOpportunity, monsterBasicActions, monsterSightGate, monsterImmunity, monsterEffectDurations,
   monsterReactionWindow, monsterActivationAdvantage, monsterDefense, monsterChargeGate, monsterLightSensitivity, monsterSelfTeleport,
-  monsterBreaksOn, monsterLightChecks,
+  monsterBreaksOn, monsterLightChecks, monsterBloodiedSaves,
   monsterTeleportChoice } from "./monster-text.mjs";
 import { readDrain, drains } from "./drain.mjs";
 
@@ -86,6 +86,9 @@ export function monsterTextLayer({ html, identifier=null, activities=[], effects
   // §484 : « au soleil, Désavantage aux tests de caractéristique » — la moitié de la phrase que les déclencheurs ne portent pas.
   const lightChecks = monsterLightChecks(html);
   if ( lightChecks ) recurringRest.rollDisadvantage = lightChecks;
+  // « tant qu'elle est En sang, Avantage aux jets d'attaque et aux sauvegardes » — la moitié que les déclencheurs ne portent pas.
+  const bloodiedSaves = monsterBloodiedSaves(html);
+  if ( bloodiedSaves ) recurringRest.rollAdvantage = bloodiedSaves;
   const basics = monsterBasicActions(html, acts);
   if ( basics ) recurringRest.basicActions = basics;
   if ( drains(readDrain(html)) ) recurringRest.drain = true;
