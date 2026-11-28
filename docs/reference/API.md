@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-355 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
+354 fonctions dans 35 groupes, relevées sur l'objet réel du module chargé. La description est le
 commentaire de la fonction dans le code (début seulement) ; le fichier est relatif à `module/scripts/`. Les valeurs non
 fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de test du connecteur, MJ seulement.
 
@@ -109,7 +109,7 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | Chemin | Signature | Fichier | Description |
 |---|---|---|---|
 | `api.content.builtin` | _données (997 clés)_ |  |  |
-| `api.content.facts` | _liste (95)_ |  |  |
+| `api.content.facts` | _liste (90)_ |  |  |
 | `api.content.identifierOf` | `(item)` | `adapter/content.mjs` | L'identifiant sous lequel un item est reconnu, et d'où il vient. §19.9 : un item premium sans identifiant (Ravenloft) en reçoit un à sa création sur une fiche — dnd5e 6 l'écrit d'après le nom (documents/item.mjs:1146, `… |
 | `api.content.inspect` | `(actor)` | `adapter/content.mjs` | Pour l'inspection en jeu : ce que chaque item d'un acteur déclare, et d'où. |
 | `api.content.of` | `(item)` | `adapter/content.mjs` | L'entrée effective d'un item, couches combinées. `null` si rien n'est déclaré nulle part. @returns {{entry: object\|null, identifier: string\|null, layers: {module: boolean, world: boolean, item: boolean}}} |
@@ -265,7 +265,6 @@ fonctions (`active`, `reason`…) sont l'état du module. `mcp` : fonctions de t
 | `api.mcp.climbToward` | `({ tokenId, targetId, reachCells=1 })` | `runtime/testing-moves.mjs` | §196 : `api.climb.toward` — grimper jusqu'à l'allonge d'une cible ; rend son résultat, les positions et l'écart (3D) avant / après. |
 | `api.mcp.clock` | `()` | `runtime/testing.mjs` | §251 : l'état de l'horloge en temps réel du moteur (null : elle tourne) et le temps du monde. |
 | `api.mcp.closeWindow` | `({ id })` | `runtime/testing.mjs` | Ferme une fenêtre (un dialogue fermé vaut « non » : le déplacement mis en pause par le cœur se termine). |
-| `api.mcp.combatOutcome` | `({ action="read", combatId=null, tokenId=null }={})` | `runtime/testing.mjs` | §555: records the `combatEnded` / `creatureDefeated` hooks on this client. `action`: « watch » (starts, clears), « read » (what was heard), « stop » (stops, returns what was heard), « tracker » (ticks « defeated » for `… |
 | `api.mcp.concentrate` | `({ tokenId, itemId })` | `runtime/testing-rules.mjs` | §285 : le lanceur se concentre sur la première activité de l'item (l'effet de concentration de dnd5e), sans rien lancer. |
 | `api.mcp.connectionTest` | `({ userId, count=5 }={})` | `runtime/testing-debug.mjs` | §388 : le test de connexion d'un joueur connecté, comme l'entrée du menu de la liste des joueurs le lance (sans la fenêtre). |
 | `api.mcp.controls` | `({ tokenId=null }={})` | `runtime/testing.mjs` | §220, §224 : les boutons du moteur dans la barre d'outils des jetons (`present`, `active`) et, pour un token, ce que l'escalade propose dans son menu (libellés) — l'interrupteur de l'escalade lu par le scénario `escalad… |
