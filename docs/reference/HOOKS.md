@@ -161,38 +161,39 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 3. summoned object: start of turn within range _(MJ)_
 4. Death Saving Throw not requested _(MJ)_
 5. initiative event not announced _(MJ)_
-6. targets released at end of turn
-7. start-of-turn activity offered
-8. budget: turn reset _(MJ)_
-9. "enemy's end of turn" window not opened _(MJ)_
-10. creature's turn: triggers interrupted _(MJ)_
-11. area: trigger interrupted _(MJ)_
-12. lingering terrain not removed _(MJ)_
-13. cursed weapon: wrath not ended _(MJ)_
-14. monster emanation _(MJ)_
-15. regeneration at start of turn _(MJ)_
-16. turns in a row: turn not given back _(MJ)_
-17. weapon mastery: mark not removed _(MJ)_
-18. Heroic Warrior: inspiration not given _(MJ)_
-19. feat turn start _(MJ)_
-20. spell effect end not played _(MJ)_
-21. effect end by distance at turn end: not judged _(MJ)_
-22. study to escape: not offered _(MJ)_
-23. Rage: end not evaluated _(MJ)_
-24. swallow: turn not handled _(MJ)_
-25. climbing: check not asked _(MJ)_
-26. Ready: held spell not lost at turn start _(MJ)_
-27. burning: start-of-turn fire damage not dealt _(MJ)_
-28. improvised weapon: not removed at end of turn _(MJ)_
-29. Blink: d6 not rolled _(MJ)_
-30. flammable: not burnt out _(MJ)_
-31. help: ends on the helper's turn _(MJ)_
-32. Stealth Attack: cover not judged _(MJ)_
-33. antimagic: cone not ended _(MJ)_
-34. Compulsion: direction not played _(MJ)_
-35. imposed command: not carried out _(MJ)_
-36. control spells: turn behaviour not played _(MJ)_
-37. involuntary change: not played _(MJ)_
+6. defeated NPC: turn not skipped _(MJ)_
+7. targets released at end of turn
+8. start-of-turn activity offered
+9. budget: turn reset _(MJ)_
+10. "enemy's end of turn" window not opened _(MJ)_
+11. creature's turn: triggers interrupted _(MJ)_
+12. area: trigger interrupted _(MJ)_
+13. lingering terrain not removed _(MJ)_
+14. cursed weapon: wrath not ended _(MJ)_
+15. monster emanation _(MJ)_
+16. regeneration at start of turn _(MJ)_
+17. turns in a row: turn not given back _(MJ)_
+18. weapon mastery: mark not removed _(MJ)_
+19. Heroic Warrior: inspiration not given _(MJ)_
+20. feat turn start _(MJ)_
+21. spell effect end not played _(MJ)_
+22. effect end by distance at turn end: not judged _(MJ)_
+23. study to escape: not offered _(MJ)_
+24. Rage: end not evaluated _(MJ)_
+25. swallow: turn not handled _(MJ)_
+26. climbing: check not asked _(MJ)_
+27. Ready: held spell not lost at turn start _(MJ)_
+28. burning: start-of-turn fire damage not dealt _(MJ)_
+29. improvised weapon: not removed at end of turn _(MJ)_
+30. Blink: d6 not rolled _(MJ)_
+31. flammable: not burnt out _(MJ)_
+32. help: ends on the helper's turn _(MJ)_
+33. Stealth Attack: cover not judged _(MJ)_
+34. antimagic: cone not ended _(MJ)_
+35. Compulsion: direction not played _(MJ)_
+36. imposed command: not carried out _(MJ)_
+37. control spells: turn behaviour not played _(MJ)_
+38. involuntary change: not played _(MJ)_
 
 ### `controlToken`
 
@@ -284,18 +285,19 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 16. effect end when the caster targets another creature: not judged _(MJ)_
 17. Rage: upkeep not recorded _(MJ)_
 18. swallow / engulf: action not tracked _(MJ)_
-19. fall damage not applied _(MJ)_
-20. Ready: "attacks / casts a spell" trigger not checked _(MJ)_
-21. effect ending on the caster's action not removed _(MJ)_
-22. help _(MJ)_
-23. group roll: result not processed
-24. tether: not recorded _(MJ)_
-25. single card: roll not folded
-26. GM alert: not posted _(MJ)_
-27. GM alert: banner not shown
-28. chat log purge _(MJ)_
-29. visual feedback: effect ending
-30. group roll: tracker not opened
+19. GM queue: not refreshed (new message)
+20. fall damage not applied _(MJ)_
+21. Ready: "attacks / casts a spell" trigger not checked _(MJ)_
+22. effect ending on the caster's action not removed _(MJ)_
+23. help _(MJ)_
+24. group roll: result not processed
+25. tether: not recorded _(MJ)_
+26. single card: roll not folded
+27. GM alert: not posted _(MJ)_
+28. GM alert: banner not shown
+29. chat log purge _(MJ)_
+30. visual feedback: effect ending
+31. group roll: tracker not opened
 
 ### `createCombatant`
 
@@ -420,10 +422,11 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 ### `deleteChatMessage`
 
 1. budget: spending refunded on cancel _(MJ)_
-2. group roll: cancellation not announced
-3. single card: dice blocks kept
-4. visual feedback: forget
-5. group roll: tracker not refreshed
+2. GM queue: not refreshed (message deleted)
+3. group roll: cancellation not announced
+4. single card: dice blocks kept
+5. visual feedback: forget
+6. group roll: tracker not refreshed
 
 ### `deleteCombat`
 
@@ -1220,7 +1223,7 @@ ne s'exécute que chez le MJ actif. **stop** : il peut annuler le hook en rendan
 1. chained damage roll
 2. targets released
 3. chained projectiles
-4. GM queue: not refreshed (resolution)
+4. GM queue: not refreshed (message changed)
 5. group roll: progress not announced
 6. visual feedback above tokens
 7. success at a cost: card refresh

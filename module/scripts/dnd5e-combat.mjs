@@ -23,6 +23,7 @@ import { registerWallGrateUi } from "./ui/wall-grate.mjs";
 import { registerSceneBrightUi } from "./ui/scene-bright.mjs";
 import { registerCombatEvents, combatApi } from "./runtime/combat-events.mjs";
 import { registerCombatOutcome } from "./runtime/combat-outcome.mjs";
+import { registerSkipDefeated } from "./runtime/skip-defeated.mjs";
 import { registerTurn } from "./runtime/turn.mjs";
 import { registerFormLock } from "./runtime/form-lock.mjs";
 import { registerMetamagic } from "./runtime/metamagic.mjs";
@@ -420,6 +421,7 @@ Hooks.once("init", () => {
   gated(registerSceneBrightUi);   // Discord (Fanarie, 2026-11-18) : case « Lumière vive » de l'illumination globale, cachée par V14
   gated(registerCombatEvents);   // §250 : évènements dans l'initiative (un piège à son initiative)
   gated(registerCombatOutcome);   // §555: combatEnded / creatureDefeated signals — Essentials, they only observe
+  gated(registerSkipDefeated);   // 2026-11-28: the turn passes defeated NPCs (setting, on by default)
   gated(registerRecast);   // avant la souris : une relance repasse par la visée et la légalité
   gated(registerPointer);
   gated(registerProjectiles);   // après la visée (les cibles sont désignées), avant la légalité

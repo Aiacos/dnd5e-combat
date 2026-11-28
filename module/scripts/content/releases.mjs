@@ -21,7 +21,7 @@ const PHB = "dnd-players-handbook";
 export const RELEASES = Object.freeze([
   {
     version: "0.295.0",
-    highlights: ["fenetreDegatsDnd5e", "finDeCombat", "noteGithub"],
+    highlights: ["fenetreDegatsDnd5e", "sautVaincus", "pastilleFile", "finDeCombat", "noteGithub"],
     tested: {
       foundry: "14.370",
       system: "6.1.1",
@@ -31,7 +31,7 @@ export const RELEASES = Object.freeze([
         "darsh-homebrew": "0.3.2", "darsh-npc": "0.8.0", "darsh-controller": "0.1.0"
       }
     },
-    risks: [{ id: "fenetreDegats" }],
+    risks: [{ id: "fenetreDegats" }, { id: "sautVaincus" }],
     checks: []
   },
   {

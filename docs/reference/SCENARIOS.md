@@ -2,7 +2,7 @@
 
 > Généré par `npm run reference` (`tools/reference.mjs`) : ne pas modifier à la main. `npm test` échoue si cette page n'est plus à jour.
 
-435 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
+436 scénarios (`tools/scenarios/`), joués dans le client du MJ par le connecteur : `node tools/reload.mjs && node
 tools/scenario.mjs <noms>`. **Scène** : vide = l'« Arène de test » ; sinon la scène que le scénario demande (sauté si elle manque).
 Les scénarios d'un sous-dossier ne font pas partie de la passe complète : `node tools/scenario.mjs tools/scenarios/<dossier>`. Les
 `balayage-*` ne se jouent que nommés. Choisir sans connaître les noms : `--grep <mot>`, `--section <§>`, `--scene <nom>` ; `--list` montre
@@ -382,6 +382,7 @@ la sélection sans rien jouer.
 | `sanctuaire` |  | §16 | le Zombi doit réussir une sauvegarde pour attaquer le Magicien |
 | `sans-charge` |  | §77 §410 | Nuage fétide du Dretch, le MJ lance quand même |
 | `sans-opportunite` |  | §18.15 | Agile, Rôder |
+| `saut-vaincus` |  |  | turn skips defeated NPCs (setting skipDefeatedNpcs) |
 | `saut` |  | §208 | longueur avec et sans élan, Bottes, atterrissage, chute automatique |
 | `sauvagerie-choix` |  | §516 | Sauvagerie martiale au choix, réglage automatique |
 | `sauvegarde-repetee` |  | §16 §16.8 | Immobilisation de personne, fin de tour du Guerrier |

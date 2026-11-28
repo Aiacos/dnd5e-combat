@@ -30,10 +30,10 @@ export const SETTINGS_TABS = Object.freeze([
     tools: [{ id: "welcome", icon: "fa-solid fa-dragon" }, { id: "releaseNotes", icon: "fa-solid fa-bullhorn" }, { id: "diagnostic", icon: "fa-solid fa-stethoscope" },
       { id: "reports", icon: "fa-solid fa-flag" }, { id: "debugReport", icon: "fa-solid fa-bug", everyone: true }] },
   { id: "combat", icon: "fa-solid fa-shield-halved",
-    keys: ["heroicInspiration", "cover", "flanking", "flankingSide", "flankingConga", "aurasOnlyInCombat", "zoneChoice", "areaVisibility", "npcSaveChoice", "legendaryResistance", "portent", "combatWindowUnlimited", "combatWindowSeconds",
+    keys: ["heroicInspiration", "skipDefeatedNpcs", "cover", "flanking", "flankingSide", "flankingConga", "aurasOnlyInCombat", "zoneChoice", "areaVisibility", "npcSaveChoice", "legendaryResistance", "portent", "combatWindowUnlimited", "combatWindowSeconds",
       "critMargin", "criticalMode", "criticalTable", "criticalNpc", "successAtCost", "successAtCostHold", "masteryRules", "sneakAttackMode", "savageAttackerMode", "potionHealing", "nonLethalMenu", "endUnaffected", "somaticHands"],
     groups: [
-      g("combatGeneral", "fa-solid fa-shield-halved", ["aurasOnlyInCombat", "zoneChoice", "areaVisibility", "endUnaffected", "combatWindowUnlimited", "combatWindowSeconds"],
+      g("combatGeneral", "fa-solid fa-shield-halved", ["skipDefeatedNpcs", "aurasOnlyInCombat", "zoneChoice", "areaVisibility", "endUnaffected", "combatWindowUnlimited", "combatWindowSeconds"],
         { sub: { combatWindowSeconds: offIf("combatWindowUnlimited", true) } }),
       g("cover", "fa-solid fa-block-brick", ["cover"]),
       g("flanking", "fa-solid fa-people-arrows", ["flanking", "flankingSide", "flankingConga"],
