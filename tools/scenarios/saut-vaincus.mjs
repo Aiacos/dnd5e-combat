@@ -1,7 +1,7 @@
 /**
  * 2026-11-28 (user's request): the turn skips defeated NPCs — world setting `skipDefeatedNpcs`, on by default. On a temporary scene, a
  * hero (character) and three NPCs in initiative order: Hero 20, Goblin A at 0 HP 15, Goblin B dead 12, Ogre 10. Checks:
- *  1. the setting exists, world, shown, on by default (its default value as registered);
+ *  1. the setting exists, world, in the Combat tab of the DAS settings window, on by default (its default value as registered);
  *  2. setting on: « next turn » from the Hero lands on the Ogre (Goblin A at 0 HP and the dead Goblin B passed), same round;
  *  3. from the Ogre (last), the next turn goes to the Hero, next round: a player character is never passed, even at 0 HP;
  *  4. going back from the Ogre lands on Goblin B (back never skips);
@@ -37,8 +37,11 @@ export default {
       await combat.createEmbeddedDocuments("Combatant", [hero, ga, gb, ogre].map(a => ({ tokenId: of(a).id, sceneId: scene.id, actorId: a.id, initiative: init[a.id] })));
       await combat.startCombat();
       await game.settings.set("dnd5e-combat", "skipDefeatedNpcs", true);
+      // The DAS settings window shows the Core's settings (ui/settings.mjs hides them from Foundry's own list): read its layout.
+      const { SETTINGS_TABS } = await import("/modules/dnd5e-combat/scripts/core/settings-layout.mjs");
+      const tab = SETTINGS_TABS.find(t => t.keys.includes("skipDefeatedNpcs"))?.id ?? null;
       return { previous, combat: combat.id, scene: scene.id, actors: [hero.id, ga.id, gb.id, ogre.id], hero: of(hero).id,
-        setting: def ? { scope: def.scope, config: def.config, default: def.default } : null };`);
+        setting: def ? { scope: def.scope, tab, default: def.default } : null };`);
     if ( !ctx.expect(setup?.combat, "test scene, actors and combat ready") ) return;
     ctx.restore(() => gm(`
       await game.combats.get(args.combat)?.delete();
@@ -48,8 +51,8 @@ export default {
       return true;`, setup).catch(err => ctx.log(`cleanup: ${err.message}`)));
 
     // 1. The setting.
-    ctx.expect(setup.setting?.scope === "world" && setup.setting.config === true && setup.setting.default === true,
-      `world setting, shown, on by default (${JSON.stringify(setup.setting)})`);
+    ctx.expect(setup.setting?.scope === "world" && setup.setting.tab === "combat" && setup.setting.default === true,
+      `world setting, in the Combat tab of the DAS settings window, on by default (${JSON.stringify(setup.setting)})`);
 
     /** Puts the turn on `name` (no skip involved), then runs `step` (next / previous), and reads where the turn is. */
     const step = (from, how, args={}) => gm(`
