@@ -7,8 +7,7 @@ import { formExpired, revertSeconds, sharedSlotUpdates } from "../module/scripts
 const facts = Object.fromEntries(["activity.type", "activity.isAttack", "activity.isSpell", "activity.isWeapon", "activity.weaponKind", "activity.baseItem", "activity.identifier", "activity.id",
   "activity.hasProperty", "source.hasStatus", "source.hasEffect", "source.creatureType", "source.allyNearTarget", "source.summonNearTarget", "source.seesTarget",
   "target.hasStatus", "target.speaksLanguage", "target.poisonous", "target.carriesMagic", "target.hasMark", "target.hasEffect", "target.hasEffectFrom", "hit.stoppableBy", "hit.critical", "damage.resisted", "target.grappledBySource", "target.wieldsProperty", "target.isSelf", "self.hasShield", "self.wieldsWeapon", "target.hasFeature", "activity.ability", "target.sizeAtMost", "target.within", "target.seesSource", "target.creatureType", "target.creatureSubtype", "target.immuneTo", "activity.isMelee", "target.hasTempHp", "target.speedZero", "target.atZero", "target.isDead", "damage.hasType", "target.hpAtMost", "condition.gained",
-  "target.wounded", "target.bloodied", "source.classLevelAtLeast", "target.nearSelf", "self.seesTarget", "target.hasNotActed", "source.onOwnTurn", "activity.dealsType", "source.hasFeature", "source.hasClassFeature", "activity.cantripOf", "activity.school", "activity.enchantedBy", "source.wildShaped", "activity.classSpell", "source.resists", "source.nearSelf", "self.seesSource", "self.hasEffect", "source.hasEffectFromTarget", "source.hasSense", "target.allied", "source.inSunlight", "self.inSunlight",
-  "self.inRunningWater"].map(k => [k, true]));
+  "target.hasSpeed", "target.wounded", "target.bloodied", "source.classLevelAtLeast", "target.nearSelf", "self.seesTarget", "target.hasNotActed", "source.onOwnTurn", "activity.dealsType", "source.hasFeature", "source.hasClassFeature", "activity.cantripOf", "activity.school", "activity.enchantedBy", "source.wildShaped", "activity.classSpell", "source.resists", "source.nearSelf", "self.seesSource", "self.hasEffect", "source.hasEffectFromTarget", "source.hasSense", "target.allied", "source.inSunlight", "self.inSunlight", "self.inRunningWater"].map(k => [k, true]));
 const MOMENTS_LIST = "isHit, isDamaged, leavesReach, enemyDisengages, enter, turnStart, turnEnd, moves, preDamageRoll, hit, failedSave, savedSave, startOfTurn, endOfTurn, originTurnStart, preAttackRoll, castsSpell, isMissed, enemyTurnEnd, isTargeted, isAttacked, enemyAttacks, allyAttacks, gainsCondition, allyIsHit, allyIsDamaged, enemyAttacked, falls, allyFalls, savesAgainst, inArea";
 
 describe("validation d'une entrée", () => {
@@ -356,10 +355,10 @@ describe("contenu livré", () => {
       "symbiotic-being", "symbol", "synaptic-static", "tactical-assessment", "tactical-charge", "tactical-mind", "tactical-shift",
       "talisman-of-pure-good", "talisman-of-ultimate-evil", "tashas-hideous-laughter", "tavern-brawler", "telekinesis", "telekinetic",
       "telekinetic-thrust", "teleport", "tensers-floating-disk", "tentacle-rod", "terrifying-aura", "thiefs-reflexes",
-      "thorn-whip", "thrown-weapon-fighting", "thunderous-smite", "thunderwave", "tinderbox", "tiny-hut",
-      "toll-the-dead", "tome-of-clear-thought", "tome-of-leadership-and-influence", "tome-of-understanding", "torch", "torpor",
-      "touch-of-death", "toxic-escape", "trampling-charge", "transmuted-spell",
-      "travel-along-the-tree", "trebuchet", "tricksters-transposition", "trip-attack", "true-resurrection",
+      "thorn-whip", "thrown-weapon-fighting", "thunderous-smite", "thunderwave", "tinderbox", "tiny-hut", "toll-the-dead",
+      "tome-of-clear-thought", "tome-of-leadership-and-influence", "tome-of-understanding", "torch", "torpor", "touch-of-death",
+      "toxic-escape", "trampling-charge", "transmuted-spell", "travel-along-the-tree", "trebuchet", "tricksters-transposition",
+      "trident-of-fish-command", "trip-attack", "true-resurrection",
       "true-seeing-crystal-ball-of", "true-strike", "truth-serum", "tsunami",
       "twinned-spell", "umbral-dagger", "umbral-form", "unarmed-fighting", "unarmed-strike", "unarmored-movement",
       "uncanny-dodge", "uncanny-metabolism", "undead-fortitude", "unraveling-flesh", "unseen-servant", "use-magic-device",

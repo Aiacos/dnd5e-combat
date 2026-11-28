@@ -627,6 +627,9 @@ export function factsFor({ source=null, target=null, activity=null, sourceToken=
     "target.hasTempHp": want => (((target?.system?.attributes?.hp?.temp ?? 0) > 0) === want),
     // Cape de déplacement : « tant que votre Vitesse est de 0 ». { "target.speedZero": true | false }.
     "target.speedZero": want => (speedIsZero(movementSpeedsOf(target)) === want),
+    // Trident de domination aquatique : « une Bête qui a une Vitesse de nage ». { "target.hasSpeed": "swim" } — ce mode, ou
+    // l'un d'une liste, avec une vitesse au-dessus de 0.
+    "target.hasSpeed": mode => [mode].flat().some(m => Number(movementSpeedsOf(target)?.[m]) > 0),
     // §16.47 : Stabilisation — « à 0 point de vie et qui n'est pas morte ».
     "target.atZero": want => ((((target?.system?.attributes?.hp?.value ?? 1) <= 0)) === want),
     "target.isDead": want => (isDeadActor(target) === want),
